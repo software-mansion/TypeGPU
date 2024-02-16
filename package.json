@@ -1,6 +1,6 @@
 {
   "name": "wigsill",
-  "version": "0.1.0",
+  "version": "0.0.0-alpha.0",
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "author": "Iwo Plaza",
   "license": "MIT",
