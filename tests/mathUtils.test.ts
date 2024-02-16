@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { roundUp } from 'wigsill/vanilla/mathUtils';
+import { roundUp } from 'wigsill/mathUtils';
 
 describe('roundUp', () => {
   it('does nothing when value is multiple of modulo', () => {

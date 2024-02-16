@@ -10,15 +10,12 @@
       "plugin:@typescript-eslint/recommended",
       "prettier",
       "plugin:prettier/recommended",
-      "plugin:react-hooks/recommended",
       "plugin:import/errors",
       "plugin:import/warnings"
     ],
     "plugins": [
       "@typescript-eslint",
-      "react",
       "prettier",
-      "react-hooks",
       "import",
       "vitest"
     ],
@@ -36,7 +33,6 @@
       "prefer-const": "error",
       "curly": ["warn", "multi-line", "consistent"],
       "no-console": "off",
-      "import/extensions": ["error", "always"],
       "import/no-unresolved": ["error", { "commonjs": true, "amd": true }],
       "import/export": "error",
       "import/no-duplicates": ["error"],
@@ -88,10 +84,6 @@
       ]
     },
     "settings": {
-      "react": {
-        "version": "detect"
-      },
-      "import/extensions": [".js", ".jsx", ".ts", ".tsx"],
       "import/parsers": {
         "@typescript-eslint/parser": [".js", ".jsx", ".ts", ".tsx"]
       },
@@ -104,19 +96,5 @@
           ]
         }
       }
-    },
-    "overrides": [
-      {
-        "files": ["tests/**/*.ts", "tests/**/*.tsx"],
-        "rules": {
-          "import/extensions": ["error", "never"]
-        }
-      },
-      {
-        "files": ["./*.js"],
-        "rules": {
-          "@typescript-eslint/no-var-requires": "off"
-        }
-      }
-    ]
+    }
   }

@@ -1,6 +1,6 @@
 import { BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
-import { u32 } from 'wigsill/vanilla/std140';
+import { u32 } from 'wigsill/std140';
 
 describe('u32', () => {
   it('does not realign when writing offset is correct', () => {

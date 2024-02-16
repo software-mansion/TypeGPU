@@ -71,12 +71,17 @@ export class AlignedSchema<T> extends Schema<T> {
 export const bool = new AlignedSchema(TB.bool, 4);
 export const u32 = new AlignedSchema(TB.u32, 4);
 export const f32 = new AlignedSchema(TB.f32, 4);
+
 export const vec2u = new AlignedSchema(TB.tupleOf(TB.u32, 2), 8);
+export const vec2i = new AlignedSchema(TB.tupleOf(TB.i32, 2), 8);
 export const vec2f = new AlignedSchema(TB.tupleOf(TB.f32, 2), 8);
 export const vec3u = new AlignedSchema(TB.tupleOf(TB.u32, 3), 16);
+export const vec3i = new AlignedSchema(TB.tupleOf(TB.i32, 3), 16);
 export const vec3f = new AlignedSchema(TB.tupleOf(TB.f32, 3), 16);
 export const vec4u = new AlignedSchema(TB.tupleOf(TB.u32, 4), 16);
+export const vec4i = new AlignedSchema(TB.tupleOf(TB.i32, 4), 16);
 export const vec4f = new AlignedSchema(TB.tupleOf(TB.f32, 4), 16);
+
 export const mat4f = new AlignedSchema(TB.tupleOf(TB.f32, 16), 16); // array of column vectors
 
 type SchemaMap<T> = { [key in keyof T]: AlignedSchema<T[key]> };

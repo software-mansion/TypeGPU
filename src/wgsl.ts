@@ -1,6 +1,6 @@
 import { BufferWriter, MaxValue } from 'typed-binary';
-import { roundUp } from './mathUtils.ts';
-import { type AlignedSchema } from './std140.ts';
+import { roundUp } from './mathUtils';
+import { type AlignedSchema } from './std140';
 
 export class NameRegistry {
   private lastUniqueId = 0;
