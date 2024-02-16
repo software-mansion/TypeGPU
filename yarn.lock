@@ -1764,6 +1764,11 @@
     loupe "^2.3.6"
     pretty-format "^29.5.0"
 
+"@webgpu/types@^0.1.40":
+  version "0.1.40"
+  resolved "https://registry.yarnpkg.com/@webgpu/types/-/types-0.1.40.tgz#cf72d1df6f9f8adc5d39556041f20ff2e8a58885"
+  integrity sha512-/BBkHLS6/eQjyWhY2H7Dx5DHcVrS2ICj9owvSRdgtQT6KcafLZA86tPze0xAOsd4FbsYKCUBUQyNi87q7gV7kw==
+
 acorn-jsx@^5.3.2:
   version "5.3.2"
   resolved "https://registry.yarnpkg.com/acorn-jsx/-/acorn-jsx-5.3.2.tgz#7ed5bb55908b3b2f1bc55c6af1653bada7f07937"
@@ -4576,6 +4581,11 @@ typed-array-length@^1.0.4:
     call-bind "^1.0.2"
     for-each "^0.3.3"
     is-typed-array "^1.1.9"
+
+typed-binary@^3.2.0:
+  version "3.2.0"
+  resolved "https://registry.yarnpkg.com/typed-binary/-/typed-binary-3.2.0.tgz#23b0519041f40e4f3638ee248ec63d8418b99ae3"
+  integrity sha512-Qfc/P0AosTvm9Fgmhw+MmDxRPep2FTjDEYKwT2ics8r0VVu7ExCVCXCOx5Hpn0lEHOmm+oqrT2YjWwmk3pi45g==
 
 typescript@^5.3.3:
   version "5.3.3"

@@ -1,1 +1,1 @@
-export { wgsl } from './vanilla/wgsl.ts';
+export { default as wgsl } from './vanilla/wgsl.ts';

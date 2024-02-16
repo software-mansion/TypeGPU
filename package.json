@@ -85,6 +85,7 @@
     "@typescript-eslint/parser": "^6.20.0",
     "@vitest/coverage-v8": "0.33.0",
     "@vitest/ui": "0.33.0",
+    "@webgpu/types": "^0.1.40",
     "concurrently": "^8.2.2",
     "downlevel-dts": "^0.11.0",
     "esbuild": "^0.20.0",
@@ -110,5 +111,8 @@
     "vitest": "0.33.0",
     "wonka": "^6.3.4"
   },
-  "packageManager": "yarn@1.22.1"
+  "packageManager": "yarn@1.22.1",
+  "dependencies": {
+    "typed-binary": "^3.2.0"
+  }
 }

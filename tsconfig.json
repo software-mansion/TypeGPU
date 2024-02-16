@@ -11,10 +11,12 @@
     "exactOptionalPropertyTypes": true,
     "noEmit": true,
     "baseUrl": ".",
+    "lib": ["es2021"],
     "paths": {
       "wigsill": ["./src/index.ts"],
       "wigsill/*": ["./src/*.ts"],
     },
+    "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"]
   },
   "include": ["src/**/*", "tests/**/*"],
   "exclude": ["node_modules", "dist"],

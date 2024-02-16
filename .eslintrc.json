@@ -99,8 +99,8 @@
         "alias": {
           "extensions": [".js", ".jsx", ".ts", ".tsx"],
           "map": [
-            ["^jotai$", "./src/index.ts"],
-            ["jotai", "./src"]
+            ["^wigsill$", "./src/index.ts"],
+            ["wigsill", "./src"]
           ]
         }
       }
