@@ -63,8 +63,9 @@ class DynamicArrayDataType<TElement extends WGSLDataType<unknown>>
       );
     }
 
+    alignIO(output, this.baseAlignment); // aligning to the start
     u32.write(output, values.length);
-    alignIO(output, this.baseAlignment); // aligning to the start of the array
+    alignIO(output, this._elementType.baseAlignment); // aligning to the start of the array
     const startOffset = output.currentByteOffset;
     for (const value of values) {
       this._elementType.write(output, value);
@@ -75,8 +76,9 @@ class DynamicArrayDataType<TElement extends WGSLDataType<unknown>>
   read(input: ISerialInput): ParseUnwrapped<TElement>[] {
     const array: ParseUnwrapped<TElement>[] = [];
 
+    alignIO(input, this.baseAlignment); // aligning to the start
     const len = u32.read(input);
-    alignIO(input, this.baseAlignment); // aligning to the start of the array
+    alignIO(input, this._elementType.baseAlignment); // aligning to the start of the array
     const startOffset = input.currentByteOffset;
     for (let i = 0; i < len; ++i) {
       array.push(this._elementType.read(input) as ParseUnwrapped<TElement>);
@@ -90,11 +92,13 @@ class DynamicArrayDataType<TElement extends WGSLDataType<unknown>>
     _values: ParseUnwrapped<TElement>[] | typeof MaxValue,
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
+    alignIO(measurer, this.baseAlignment); // aligning to the start
+
     // Length encoding
     u32.measure(MaxValue, measurer);
 
     // Aligning to the start of the array
-    alignIO(measurer, this.baseAlignment);
+    alignIO(measurer, this._elementType.baseAlignment);
 
     // Values encoding
     measurer.add(this._elementType.size * this.capacity);
