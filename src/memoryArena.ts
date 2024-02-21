@@ -3,41 +3,55 @@ import type { WGSLMemoryTrait } from './types';
 import { code } from './wgslCode';
 import { WGSLIdentifier } from './wgslIdentifier';
 
+export type MemoryArenaOptions = {
+  readonly usage: number;
+  readonly bufferBindingType: GPUBufferBindingType;
+  readonly minSize?: number;
+  readonly memoryEntries: WGSLMemoryTrait[];
+};
+
 /**
  * TODO: Documentation
  * A place for grouping WGSL memory items.
  */
 export class MemoryArena {
-  private _size: number = 0;
   private _memoryOffsetMap = new WeakMap<WGSLMemoryTrait, number>();
 
+  public readonly bufferBindingType: GPUBufferBindingType;
+  public readonly usage: number;
+  public readonly size: number = 0;
+  public readonly memoryEntries: WGSLMemoryTrait[];
   public readonly identifier = new WGSLIdentifier();
   public debugLabel?: string | undefined;
 
-  constructor(
-    public readonly usage: number,
-    public readonly bufferBindingType: GPUBufferBindingType,
-    public readonly memoryEntries: WGSLMemoryTrait[],
-  ) {
+  constructor(options: MemoryArenaOptions) {
+    this.bufferBindingType = options.bufferBindingType;
+    this.memoryEntries = options.memoryEntries;
+    this.usage = options.usage;
+
     // Laying out the memory...
-    for (const memoryEntry of memoryEntries) {
+    let size = 0;
+    for (const memoryEntry of this.memoryEntries) {
       // aligning
-      this._size = roundUp(this._size, memoryEntry.baseAlignment);
-      this._memoryOffsetMap.set(memoryEntry, this._size);
-      this._size += memoryEntry.size;
+      size = roundUp(size, memoryEntry.baseAlignment);
+      this._memoryOffsetMap.set(memoryEntry, size);
+      size += memoryEntry.size;
     }
 
     // aligning up to 16 bytes, which is a binding buffer requirement.
-    this._size = roundUp(this._size, 16);
+    size = roundUp(size, 16);
+
+    if (options.minSize) {
+      // applying minimum size
+      size = Math.max(size, options.minSize);
+    }
+
+    this.size = size;
   }
 
   alias(debugLabel: string) {
     this.debugLabel = debugLabel;
     this.identifier.alias(debugLabel);
-  }
-
-  get size() {
-    return this._size;
   }
 
   offsetFor(memoryEntry: WGSLMemoryTrait): number | null {
@@ -78,10 +92,6 @@ export class MemoryArena {
   }
 }
 
-export function makeArena(
-  usage: number,
-  bufferBindingType: GPUBufferBindingType,
-  memoryEntries: WGSLMemoryTrait[],
-) {
-  return new MemoryArena(usage, bufferBindingType, memoryEntries);
+export function makeArena(options: MemoryArenaOptions) {
+  return new MemoryArena(options);
 }

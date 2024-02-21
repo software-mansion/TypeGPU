@@ -15,6 +15,7 @@ export class WGSLConstant implements WGSLItem {
   alias(debugLabel: string) {
     this.debugLabel = debugLabel;
     this.identifier.alias(debugLabel);
+    return this;
   }
 
   resolve(ctx: IResolutionCtx): string {

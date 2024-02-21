@@ -165,7 +165,26 @@ export default class ProgramBuilder {
 
     const ctx = new ResolutionCtx(this.runtime, arenas, this.bindings);
 
-    const codeString = ctx.resolve(this.root); // Resolving
+    // Resolving memory arenas
+    arenas.forEach((arena, idx) => {
+      const definitionCode = arena.definitionCode(options.bindingGroup, idx);
+
+      if (!definitionCode) {
+        return;
+      }
+
+      this.runtime.registerArena(arena);
+      ctx.addDependency(definitionCode);
+
+      // dependencies.splice(
+      //   ctx.memoryArenaDeclarationIdxMap.get(arena) ?? 0,
+      //   0,
+      //   definitionCode,
+      // );
+    });
+
+    // Resolving code
+    const codeString = ctx.resolve(this.root);
 
     const bindGroupLayout = this.runtime.device.createBindGroupLayout({
       entries: arenas.map((arena, idx) => ({
@@ -188,20 +207,6 @@ export default class ProgramBuilder {
     });
 
     const dependencies = ctx.dependencies.slice();
-
-    arenas.forEach((arena, idx) => {
-      const definitionCode = arena.definitionCode(options.bindingGroup, idx);
-
-      if (!definitionCode) {
-        return;
-      }
-
-      dependencies.splice(
-        ctx.memoryArenaDeclarationIdxMap.get(arena) ?? 0,
-        0,
-        definitionCode,
-      );
-    });
 
     return {
       bindGroupLayout,

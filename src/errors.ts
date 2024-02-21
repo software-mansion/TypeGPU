@@ -30,3 +30,12 @@ export class NotAllocatedMemoryError extends Error {
     Object.setPrototypeOf(this, NotAllocatedMemoryError.prototype);
   }
 }
+
+export class RecursiveDataTypeError extends Error {
+  constructor() {
+    super('Recursive types are not supported in WGSL');
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, RecursiveDataTypeError.prototype);
+  }
+}

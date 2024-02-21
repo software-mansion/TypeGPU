@@ -1,41 +1,55 @@
-import { BufferWriter, MaxValue } from 'typed-binary';
+import { BufferWriter, Parsed } from 'typed-binary';
 import { NotAllocatedMemoryError } from './errors';
-import { AlignedSchema } from './std140';
-import {
-  IResolutionCtx,
-  WGSLItem,
-  WGSLMemoryTrait,
-  WGSLSegment,
-} from './types';
-import { code } from './wgslCode';
-import { WGSLIdentifier } from './wgslIdentifier';
+import { AnyWGSLDataType } from './std140/types';
+import { IResolutionCtx, WGSLItem, WGSLMemoryTrait } from './types';
+import { WGSLCode, code } from './wgslCode';
+import { identifier } from './wgslIdentifier';
 import WGSLRuntime from './wgslRuntime';
 
-export class WGSLMemory<T> implements WGSLItem, WGSLMemoryTrait {
-  private fieldIdentifier = new WGSLIdentifier();
+export class WGSLMemory<TSchema extends AnyWGSLDataType>
+  implements WGSLItem, WGSLMemoryTrait
+{
+  private fieldIdentifier = identifier();
+  public structFieldDefinition: WGSLCode;
 
   public debugLabel?: string | undefined;
   public readonly size: number;
   public readonly baseAlignment: number;
 
-  constructor(
-    public readonly typeExpr: WGSLSegment,
-    private readonly typeSchema: AlignedSchema<T>,
-  ) {
-    this.size = this.typeSchema.measure(MaxValue).size;
-    this.baseAlignment = this.typeSchema.baseAlignment;
+  constructor(private readonly _typeSchema: TSchema) {
+    this.structFieldDefinition = code`${this.fieldIdentifier}: ${this._typeSchema},\n`;
+    this.size = this._typeSchema.size;
+    this.baseAlignment = this._typeSchema.baseAlignment;
   }
 
   alias(debugLabel: string) {
     this.debugLabel = debugLabel;
     this.fieldIdentifier.alias(debugLabel);
+    return this;
   }
 
-  get structFieldDefinition(): WGSLSegment {
-    return code`${this.fieldIdentifier}: ${this.typeExpr},\n`;
+  /**
+   * @throws {NotAllocatedMemoryError}
+   */
+  resolve(ctx: IResolutionCtx): string {
+    const arena = ctx.arenaFor(this);
+
+    if (!arena) {
+      throw new NotAllocatedMemoryError(this);
+    }
+
+    const result =
+      ctx.resolve(arena.identifier) + '.' + ctx.resolve(this.fieldIdentifier);
+
+    ctx.resolve(this.structFieldDefinition); // making sure all struct field dependencies are added
+
+    // after resolving all dependencies, add memory.
+    ctx.addMemory(this);
+
+    return result;
   }
 
-  write(runtime: WGSLRuntime, data: T): boolean {
+  write(runtime: WGSLRuntime, data: Parsed<TSchema>): boolean {
     const memoryLocation = runtime.locateMemory(this);
 
     if (!memoryLocation) {
@@ -44,7 +58,7 @@ export class WGSLMemory<T> implements WGSLItem, WGSLMemoryTrait {
     }
 
     const hostBuffer = new ArrayBuffer(this.size);
-    this.typeSchema.write(new BufferWriter(hostBuffer), data);
+    this._typeSchema.write(new BufferWriter(hostBuffer), data);
     runtime.device.queue.writeBuffer(
       memoryLocation.gpuBuffer,
       memoryLocation.offset,
@@ -55,22 +69,8 @@ export class WGSLMemory<T> implements WGSLItem, WGSLMemoryTrait {
 
     return true;
   }
+}
 
-  /**
-   * @throws {NotAllocatedMemoryError}
-   */
-  resolve(ctx: IResolutionCtx): string {
-    ctx.addMemory(this);
-    ctx.resolve(this.typeExpr); // Adding dependencies of this entry
-
-    const arena = ctx.arenaFor(this);
-
-    if (!arena) {
-      throw new NotAllocatedMemoryError(this);
-    }
-
-    return (
-      ctx.resolve(arena.identifier) + '.' + ctx.resolve(this.fieldIdentifier)
-    );
-  }
+export function memory<TSchema extends AnyWGSLDataType>(typeSchema: TSchema) {
+  return new WGSLMemory(typeSchema);
 }

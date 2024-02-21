@@ -11,3 +11,13 @@ export class WGSLIdentifier implements WGSLItem {
     return ctx.nameFor(this);
   }
 }
+
+export function identifier(debugLabel?: string) {
+  const value = new WGSLIdentifier();
+
+  if (debugLabel) {
+    value.alias(debugLabel);
+  }
+
+  return value;
+}

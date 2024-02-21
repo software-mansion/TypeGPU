@@ -15,6 +15,12 @@ class WGSLRuntime {
     // TODO: Clean up all buffers
   }
 
+  registerArena(arena: MemoryArena) {
+    for (const entry of arena.memoryEntries) {
+      this._entryToArenaMap.set(entry, arena);
+    }
+  }
+
   bufferFor(arena: MemoryArena) {
     let buffer = this._arenaToBufferMap.get(arena);
 

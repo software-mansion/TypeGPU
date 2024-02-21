@@ -3036,10 +3036,10 @@ typed-array-length@^1.0.4:
     for-each "^0.3.3"
     is-typed-array "^1.1.9"
 
-typed-binary@^3.2.0:
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/typed-binary/-/typed-binary-3.2.0.tgz#23b0519041f40e4f3638ee248ec63d8418b99ae3"
-  integrity sha512-Qfc/P0AosTvm9Fgmhw+MmDxRPep2FTjDEYKwT2ics8r0VVu7ExCVCXCOx5Hpn0lEHOmm+oqrT2YjWwmk3pi45g==
+typed-binary@^4.0.0-alpha.3:
+  version "4.0.0-alpha.3"
+  resolved "https://registry.yarnpkg.com/typed-binary/-/typed-binary-4.0.0-alpha.3.tgz#061313e1437a7fee0047c73068edebf107e6e918"
+  integrity sha512-y6915oMzQFSySHPZkA9vNPkRRs/vKkwz6p8lUXXmt0q+5XYD4hDvb9S0FoVZvu4AmuNEAN7wxjI9JWHUWeNvsQ==
 
 typescript@^5.3.3:
   version "5.3.3"
