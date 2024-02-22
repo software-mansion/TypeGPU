@@ -5,12 +5,10 @@ import { WGSLIdentifier } from './wgslIdentifier';
 export class WGSLFunction implements WGSLItem {
   private identifier = new WGSLIdentifier();
 
-  public debugLabel?: string | undefined;
-
   constructor(private readonly body: WGSLSegment) {}
 
   alias(debugLabel: string) {
-    this.debugLabel = debugLabel;
+    this.identifier.alias(debugLabel);
     return this;
   }
 

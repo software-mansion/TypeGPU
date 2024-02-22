@@ -6,6 +6,7 @@ import { memory } from './wgslMemory';
 import { param } from './wgslParam';
 import { placeholder } from './wgslPlaceholder';
 import { require } from './wgslRequire';
+import { variable } from './wgslVariable';
 
 export default Object.assign(code, {
   code,
@@ -16,4 +17,5 @@ export default Object.assign(code, {
   placeholder,
   constant,
   require,
+  var: variable,
 });
