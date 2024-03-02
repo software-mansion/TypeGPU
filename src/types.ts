@@ -20,7 +20,11 @@ export interface WGSLItem {
 }
 
 export function isWGSLItem(value: unknown): value is WGSLItem {
-  return !!value && typeof value === 'object' && 'resolve' in value;
+  return (
+    !!value &&
+    (typeof value === 'object' || typeof value === 'function') &&
+    'resolve' in value
+  );
 }
 
 export interface WGSLBindableTrait<TBinding> extends WGSLItem {

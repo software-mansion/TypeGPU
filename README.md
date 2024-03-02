@@ -12,3 +12,8 @@
 ## Miscellaneous
 
 **Name origin**: A way to pronounce WGSL.
+
+TODO:
+
+- [ ] Create bind groups per memory arenas, not per programs
+- [ ] Do not require the input of bindingGroup and shaderStage if we are not using shared memory.

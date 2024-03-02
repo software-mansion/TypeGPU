@@ -4,7 +4,7 @@ export { default as wgsl } from './wgsl';
 export { MemoryArena, makeArena } from './memoryArena';
 export { default as WGSLRuntime } from './wgslRuntime';
 export { default as ProgramBuilder } from './programBuilder';
-export * from './std140/std140';
+export * from './std140';
 
 export { WGSLCode } from './wgslCode';
 export { WGSLConstant } from './wgslConstant';

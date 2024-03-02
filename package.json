@@ -75,10 +75,11 @@
     "prettier": "^3.2.4",
     "tsup": "^8.0.2",
     "typescript": "^5.3.3",
-    "vitest": "0.33.0"
+    "vitest": "0.33.0",
+    "typed-binary": "^4.0.0"
   },
   "packageManager": "yarn@1.22.1",
-  "dependencies": {
-    "typed-binary": "^4.0.0-alpha.3"
+  "peerDependencies": {
+    "typed-binary": "^4.0.0"
   }
 }
