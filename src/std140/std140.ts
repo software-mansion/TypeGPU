@@ -16,6 +16,7 @@ import {
 import * as TB from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import type { IResolutionCtx, WGSLSegment } from '../types';
+import { code } from '../wgslCode';
 import alignIO from './alignIO';
 import DynamicArraySchema from './dynamicArraySchema';
 import StructDataType from './structDataType';
@@ -141,7 +142,7 @@ export const arrayOf = <TSchema extends AnyWGSLDataType>(
   new SimpleWGSLDataType(
     TB.arrayOf(elementType, size),
     elementType.baseAlignment,
-    `array<${elementType}, ${size}>`,
+    code`array<${elementType}, ${size}>`,
   );
 
 export const dynamicArrayOf = <TSchema extends AnyWGSLDataType>(

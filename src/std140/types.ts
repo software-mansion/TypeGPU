@@ -13,7 +13,7 @@ export interface WGSLPointerType<
   TInner extends AnyWGSLDataType,
 > {
   readonly scope: TScope;
-  readonly dataType: TInner;
+  readonly pointsTo: TInner;
 }
 
 /**
@@ -30,5 +30,5 @@ export type WGSLFnArgument = AnyWGSLPointerType | AnyWGSLDataType;
 export function isPointer(
   value: AnyWGSLPointerType | AnyWGSLDataType,
 ): value is AnyWGSLPointerType {
-  return 'dataType' in value;
+  return 'pointsTo' in value;
 }

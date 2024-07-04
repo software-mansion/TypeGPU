@@ -15,6 +15,12 @@ import {
 } from './types';
 import WGSLRuntime from './wgslRuntime';
 
+export type Program = {
+  bindGroupLayout: GPUBindGroupLayout;
+  bindGroup: GPUBindGroup;
+  code: string;
+};
+
 function addUnique<T>(list: T[], value: T) {
   if (list.includes(value)) {
     return;
@@ -160,7 +166,7 @@ export default class ProgramBuilder {
     return this;
   }
 
-  build(options: BuildOptions) {
+  build(options: BuildOptions): Program {
     const arenas = options.arenas ?? [];
 
     const ctx = new ResolutionCtx(this.runtime, arenas, this.bindings);

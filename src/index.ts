@@ -3,7 +3,7 @@ export * from './types';
 export { default as wgsl } from './wgsl';
 export { MemoryArena, makeArena } from './memoryArena';
 export { default as WGSLRuntime } from './wgslRuntime';
-export { default as ProgramBuilder } from './programBuilder';
+export { default as ProgramBuilder, type Program } from './programBuilder';
 export * from './std140';
 
 export { WGSLCode } from './wgslCode';

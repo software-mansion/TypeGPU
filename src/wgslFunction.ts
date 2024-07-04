@@ -69,7 +69,7 @@ export class WGSLFunction<
       const comma = idx < this.argPairs.length - 1 ? ', ' : '';
 
       if (isPointer(argType)) {
-        return code`${ident}: ptr<${argType.scope}, ${argType.dataType}>${comma}`;
+        return code`${ident}: ptr<${argType.scope}, ${argType.pointsTo}>${comma}`;
       }
 
       return code`${ident}: ${argType}${comma}`;
