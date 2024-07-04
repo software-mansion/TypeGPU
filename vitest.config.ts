@@ -4,14 +4,14 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   resolve: {
     alias: [
-      { find: /^wigsill$/, replacement: './src/index.ts' },
-      { find: /^wigsill(.*)$/, replacement: './src/$1.ts' },
+      { find: /^wigsill$/, replacement: './packages/wigsill/src/index.ts' },
+      { find: /^wigsill(.*)$/, replacement: './packages/wigsill/src/$1.ts' },
     ],
   },
   test: {
     name: 'wigsill',
     environment: 'jsdom',
-    dir: 'tests',
+    exclude: ['./**/node_modules'],
     reporters: 'basic',
     coverage: {
       reporter: ['text', 'json', 'html', 'text-summary'],
