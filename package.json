@@ -1,8 +1,8 @@
 {
   "name": "wigsill",
+  "private": true,
   "version": "0.0.0-alpha.4",
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
-  "author": "Iwo Plaza",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -47,7 +47,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iwoplaza/wigsill.git"
+    "url": "git+https://github.com/software-mansion-labs/wigsill.git"
   },
   "keywords": [
     "webgpu",
@@ -55,9 +55,9 @@
     "wgsl"
   ],
   "bugs": {
-    "url": "https://github.com/iwoplaza/wigsill/issues"
+    "url": "https://github.com/software-mansion-labs/wigsill/issues"
   },
-  "homepage": "https://github.com/iwoplaza/wigsill",
+  "homepage": "https://github.com/software-mansion-labs/wigsill",
   "devDependencies": {
     "@types/node": "^20.11.13",
     "@typescript-eslint/eslint-plugin": "^6.20.0",
