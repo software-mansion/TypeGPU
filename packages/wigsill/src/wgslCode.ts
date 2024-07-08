@@ -32,8 +32,6 @@ export function code(
   strings: TemplateStringsArray,
   ...params: (WGSLSegment | WGSLSegment[])[]
 ): WGSLCode {
-  console.log(params);
-  console.log(strings);
   const segments: WGSLSegment[] = strings.flatMap((string, idx) => {
     if (idx >= params.length) {
       return [string];
