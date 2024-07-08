@@ -38,7 +38,5 @@ export function useExampleWithCanvas<
     };
   }, [initExampleFn]);
 
-  return {
-    canvasRef,
-  };
+  return canvasRef;
 }

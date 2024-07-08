@@ -161,7 +161,7 @@ fn main_frag(
 }
 
 export function GradientTilesExample() {
-  const { canvasRef } = useExampleWithCanvas(init);
+  const canvasRef = useExampleWithCanvas(init);
 
   return <canvas className="w-full h-screen" ref={canvasRef}></canvas>;
 }
