@@ -24,7 +24,7 @@ class StructDataType<TProps extends Record<string, AnyWGSLDataType>>
   private readonly _identifier = identifier();
   private readonly _definitionCode: WGSLCode;
 
-  public readonly baseAlignment: number;
+  public readonly byteAlignment: number;
   public readonly size: number;
 
   constructor(properties: TProps) {
@@ -32,8 +32,8 @@ class StructDataType<TProps extends Record<string, AnyWGSLDataType>>
 
     this._innerSchema = object(properties);
 
-    this.baseAlignment = Object.values(properties)
-      .map((prop) => prop.baseAlignment)
+    this.byteAlignment = Object.values(properties)
+      .map((prop) => prop.byteAlignment)
       .reduce((a, b) => (a > b ? a : b));
 
     this.size = this.measure(MaxValue).size;
@@ -74,5 +74,8 @@ class StructDataType<TProps extends Record<string, AnyWGSLDataType>>
     return ctx.resolve(this._identifier);
   }
 }
+export const struct = <P extends Record<string, AnyWGSLDataType>>(
+  properties: P,
+) => new StructDataType(properties);
 
 export default StructDataType;
