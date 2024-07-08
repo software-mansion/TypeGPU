@@ -16,8 +16,10 @@ function App() {
       return <Home />;
     }
 
-    if (currentExample && currentExample in examples) {
-      const Example = examples[currentExample as keyof typeof examples];
+    if (currentExample in examples) {
+      const Example =
+        examples[currentExample as keyof typeof examples].component;
+
       return <Example />;
     }
 
@@ -38,8 +40,11 @@ function App() {
           <nav className="flex flex-col gap-2 overflow-y-auto">
             <ExampleLink exampleKey={undefined}>Home</ExampleLink>
             <hr className="my-2" />
-            <ExampleLink exampleKey="random-tiles">Random tiles</ExampleLink>
-            <ExampleLink exampleKey="another">Another</ExampleLink>
+            {Object.entries(examples).map(([key, example]) => (
+              <ExampleLink key={key} exampleKey={key}>
+                {example.label}
+              </ExampleLink>
+            ))}
           </nav>
         </aside>
         <main className="flex-1 flex flex-col bg-slate-100">

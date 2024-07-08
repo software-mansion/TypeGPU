@@ -1,16 +1,21 @@
 import { useEffect, useRef } from 'react';
 
-import { ExampleState } from './exampleState';
+import type { ExampleState } from './exampleState';
 
-export function useExample<T extends () => Promise<ExampleState>>(
-  initExampleFn: T,
-) {
+export function useExampleWithCanvas<
+  T extends (canvas: HTMLCanvasElement) => Promise<ExampleState>,
+>(initExampleFn: T) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const exampleRef = useRef<ExampleState | null>(null);
 
   useEffect(() => {
+    if (!canvasRef.current) {
+      return;
+    }
+
     let cancelled = false;
 
-    initExampleFn().then((example) => {
+    initExampleFn(canvasRef.current).then((example) => {
       if (cancelled) {
         // Another instance was started in the meantime.
         example.dispose();
@@ -26,4 +31,8 @@ export function useExample<T extends () => Promise<ExampleState>>(
       cancelled = true;
     };
   }, [initExampleFn]);
+
+  return {
+    canvasRef,
+  };
 }

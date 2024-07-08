@@ -1,5 +1,8 @@
 import { RandomTilesExample } from './RandomTilesExample';
 
 export const examples = {
-  'random-tiles': RandomTilesExample,
+  'random-tiles': {
+    label: 'Random tiles',
+    component: RandomTilesExample,
+  },
 };

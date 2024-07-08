@@ -84,6 +84,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wigsill
     devDependencies:
+      '@types/dat.gui':
+        specifier: ^0.7.13
+        version: 0.7.13
       '@types/react':
         specifier: ^18.3.3
         version: 18.3.3
@@ -1312,6 +1315,10 @@ packages:
 
   /@types/chai@4.3.11:
     resolution: {integrity: sha512-qQR1dr2rGIHYlJulmr8Ioq3De0Le9E4MJ5AiaeAETJJpndT1uUNHsGFK3L/UIu+rbkQSdj8J/w2bCsBZc/Y5fQ==}
+    dev: true
+
+  /@types/dat.gui@0.7.13:
+    resolution: {integrity: sha512-LmG4Pr0mbsB/1WVttf8xaHx45BvSBDGY5D9+0/9AZCbI4vvOguwBHZdKyJMxt5Yst8+icRSHKmr7ClV2u5ZtDA==}
     dev: true
 
   /@types/estree@1.0.5:
