@@ -9,7 +9,7 @@
     "prettier": "prettier '*.{js,json,md}' '{src,tests,benchmarks,docs}/**/*.{ts,tsx,md,mdx}' --write",
     "eslint": "eslint --fix --no-eslintrc --c .eslintrc.json '*.{js,json,ts}' '{packages/apps}/**/*.{ts,tsx}'",
     "test": "vitest",
-    "coverage": "vitest coverage",
+    "coverage": "vitest --coverage",
     "ci:test": "vitest --run"
   },
   "engines": {
