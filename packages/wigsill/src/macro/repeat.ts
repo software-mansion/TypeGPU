@@ -1,10 +1,13 @@
+import { WGSLCode, code } from '../wgslCode';
+import { WGSLSegment } from './../types';
+
 export function repeat(
-  code: string | ((idx: number, ...args: any[]) => string),
+  snippet: string | WGSLSegment | ((idx: number) => string | WGSLSegment),
   count: number,
-): string {
-  if (typeof code === 'string') {
-    return Array.from({ length: count }, () => code).join('\n');
+): WGSLCode {
+  if (typeof snippet === 'function') {
+    return code`${Array.from({ length: count }, (_, idx) => snippet(idx))}`;
   }
 
-  return Array.from({ length: count }, (_, idx) => code(idx)).join('\n');
+  return code`${Array.from({ length: count }, () => snippet)}`;
 }
