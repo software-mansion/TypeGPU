@@ -12,6 +12,5 @@ export { WGSLConstant } from './wgslConstant';
 export { WGSLFunction } from './wgslFunction';
 export { WGSLIdentifier } from './wgslIdentifier';
 export { WGSLMemory } from './wgslMemory';
-export { WGSLParam } from './wgslParam';
 export { WGSLPlaceholder } from './wgslPlaceholder';
 export { WGSLRequire } from './wgslRequire';
