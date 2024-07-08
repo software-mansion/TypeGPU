@@ -19,7 +19,7 @@ export class WGSLMemory<TSchema extends AnyWGSLDataType>
   constructor(private readonly _typeSchema: TSchema) {
     this.structFieldDefinition = code`${this.fieldIdentifier}: ${this._typeSchema},\n`;
     this.size = this._typeSchema.size;
-    this.baseAlignment = this._typeSchema.baseAlignment;
+    this.baseAlignment = this._typeSchema.byteAlignment;
   }
 
   alias(debugLabel: string) {
