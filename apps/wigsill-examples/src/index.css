@@ -3,9 +3,11 @@
 @tailwind utilities;
 
 :root {
-  @apply font-inter;
+  @apply font-outfit;
 
+  font-style: normal;
   font-synthesis: none;
+  font-optical-sizing: auto;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

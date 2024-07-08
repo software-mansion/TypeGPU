@@ -10,11 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "classnames": "^2.5.1",
     "jotai": "^2.8.4",
+    "jotai-location": "^0.5.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "wigsill": "workspace:*",
-    "typed-binary": "^4.0.0"
+    "typed-binary": "^4.0.0",
+    "wigsill": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
