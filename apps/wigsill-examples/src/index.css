@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  @apply font-outfit;
+  @apply font-inter;
 
   font-style: normal;
   font-synthesis: none;

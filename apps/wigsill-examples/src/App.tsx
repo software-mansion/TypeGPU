@@ -30,7 +30,7 @@ function App() {
         <aside className="px-4 min-w-64">
           <header className="pb-6">
             <h1
-              className="mx-auto px-4 text-2xl py-4"
+              className="mx-auto px-4 text-2xl py-4 font-outfit"
               onClick={() => setCurrentExample(RESET)}>
               <strong>wigsill</strong> - examples
             </h1>
