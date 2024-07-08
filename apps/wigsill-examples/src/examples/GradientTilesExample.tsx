@@ -4,7 +4,7 @@ import { ProgramBuilder, makeArena, u32, wgsl } from 'wigsill';
 
 import { useExampleWithCanvas } from '../common/useExampleWithCanvas';
 
-async function init(canvas: HTMLCanvasElement) {
+async function init(gui: dat.GUI, canvas: HTMLCanvasElement) {
   const adapter = await navigator.gpu.requestAdapter();
   const device = await adapter!.requestDevice();
   const runtime = new WGSLRuntime(device);
@@ -106,8 +106,6 @@ fn main_frag(
 
   /// UI
 
-  const gui = new dat.GUI({ name: 'Random tiles', closeOnTop: true });
-
   const state = {
     xSpan: 16,
     ySpan: 16,
@@ -158,12 +156,11 @@ fn main_frag(
   return {
     dispose() {
       running = false;
-      gui.destroy();
     },
   };
 }
 
-export function RandomTilesExample() {
+export function GradientTilesExample() {
   const { canvasRef } = useExampleWithCanvas(init);
 
   return <canvas className="w-full h-screen" ref={canvasRef}></canvas>;

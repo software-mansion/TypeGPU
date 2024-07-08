@@ -1,8 +1,8 @@
-import { RandomTilesExample } from './RandomTilesExample';
+import { GradientTilesExample } from './GradientTilesExample';
 
 export const examples = {
-  'random-tiles': {
-    label: 'Random tiles',
-    component: RandomTilesExample,
+  'gradient-tiles': {
+    label: 'Gradient tiles',
+    component: GradientTilesExample,
   },
 };

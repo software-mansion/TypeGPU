@@ -1,9 +1,10 @@
+import { GUI } from 'dat.gui';
 import { useEffect, useRef } from 'react';
 
 import type { ExampleState } from './exampleState';
 
 export function useExampleWithCanvas<
-  T extends (canvas: HTMLCanvasElement) => Promise<ExampleState>,
+  T extends (gui: dat.GUI, canvas: HTMLCanvasElement) => Promise<ExampleState>,
 >(initExampleFn: T) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const exampleRef = useRef<ExampleState | null>(null);
@@ -15,7 +16,10 @@ export function useExampleWithCanvas<
 
     let cancelled = false;
 
-    initExampleFn(canvasRef.current).then((example) => {
+    const gui = new GUI({ closeOnTop: true });
+    gui.hide();
+
+    initExampleFn(gui, canvasRef.current).then((example) => {
       if (cancelled) {
         // Another instance was started in the meantime.
         example.dispose();
@@ -24,10 +28,12 @@ export function useExampleWithCanvas<
 
       // Success
       exampleRef.current = example;
+      gui.show();
     });
 
     return () => {
       exampleRef.current?.dispose();
+      gui.destroy();
       cancelled = true;
     };
   }, [initExampleFn]);
