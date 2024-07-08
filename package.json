@@ -8,7 +8,9 @@
     "build": "tsup",
     "prettier": "prettier '*.{js,json,md}' '{src,tests,benchmarks,docs}/**/*.{ts,tsx,md,mdx}' --write",
     "eslint": "eslint --fix --no-eslintrc --c .eslintrc.json '*.{js,json,ts}' '{packages/apps}/**/*.{ts,tsx}'",
-    "test": "vitest --ui --coverage"
+    "test": "vitest",
+    "coverage": "vitest --coverage",
+    "ci:test": "vitest --run"
   },
   "engines": {
     "node": ">=12.20.0"
