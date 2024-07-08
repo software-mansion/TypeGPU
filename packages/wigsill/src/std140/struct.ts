@@ -74,6 +74,7 @@ class StructDataType<TProps extends Record<string, AnyWGSLDataType>>
     return ctx.resolve(this._identifier);
   }
 }
+
 export const struct = <P extends Record<string, AnyWGSLDataType>>(
   properties: P,
 ) => new StructDataType(properties);
