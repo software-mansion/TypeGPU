@@ -1,48 +1,12 @@
-<<<<<<< HEAD
-import { atom } from 'jotai/vanilla';
-import { useAtomValue } from 'jotai/react';
-import { createRuntime, ProgramBuilder } from 'wigsill';
-
-import { sampleShader } from './sampleShader';
-=======
->>>>>>> main
 import { Suspense } from 'react';
 import { RESET } from 'jotai/utils';
 import { useAtom } from 'jotai/react';
 
-<<<<<<< HEAD
-// using `jōtai` for a simple async resource store.
-const runtimeAtom = atom(async () => {
-  return createRuntime();
-});
-
-const sampleShaderAtom = atom(async (get) => {
-  const runtime = await get(runtimeAtom);
-
-  const program = new ProgramBuilder(runtime, sampleShader).build({
-    bindingGroup: 0,
-    shaderStage: GPUShaderStage.COMPUTE,
-  });
-
-  return program.code;
-});
-
-function ShaderCodeView() {
-  const resolvedCode = useAtomValue(sampleShaderAtom);
-
-  return (
-    <code className="block border p-4 bg-sky-950 text-white rounded-md whitespace-pre">
-      {resolvedCode}
-    </code>
-  );
-}
-=======
 import { currentExampleAtom } from './router';
 import { ExampleLink } from './common/ExampleLink';
 import { examples } from './examples';
 import { ExampleNotFound } from './ExampleNotFound';
 import { Home } from './Home';
->>>>>>> main
 
 function App() {
   const [currentExample, setCurrentExample] = useAtom(currentExampleAtom);
