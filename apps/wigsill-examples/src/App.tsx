@@ -1,16 +1,13 @@
 import { atom } from 'jotai/vanilla';
 import { useAtomValue } from 'jotai/react';
-import { WGSLRuntime, ProgramBuilder } from 'wigsill';
+import { createRuntime, ProgramBuilder } from 'wigsill';
 
 import { sampleShader } from './sampleShader';
 import { Suspense } from 'react';
 
 // using `jōtai` for a simple async resource store.
 const runtimeAtom = atom(async () => {
-  const adapter = await navigator.gpu.requestAdapter();
-  const device = await adapter!.requestDevice();
-
-  return new WGSLRuntime(device);
+  return createRuntime();
 });
 
 const sampleShaderAtom = atom(async (get) => {

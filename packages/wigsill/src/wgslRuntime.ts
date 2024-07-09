@@ -55,4 +55,37 @@ class WGSLRuntime {
   }
 }
 
+export async function createRuntime(
+  options?:
+    | {
+        adapter: GPURequestAdapterOptions | undefined;
+        device: GPUDeviceDescriptor | undefined;
+      }
+    | GPUAdapter
+    | GPUDevice,
+) {
+  let adapter: GPUAdapter | null = null;
+  let device: GPUDevice | null = null;
+
+  if (!options) {
+    adapter = await navigator.gpu.requestAdapter();
+    device = await adapter!.requestDevice();
+    return new WGSLRuntime(device);
+  }
+
+  if (options instanceof GPUAdapter) {
+    adapter = options;
+    device = await adapter.requestDevice();
+    return new WGSLRuntime(device);
+  }
+
+  if (options instanceof GPUDevice) {
+    return new WGSLRuntime(options);
+  }
+
+  adapter = await navigator.gpu.requestAdapter(options.adapter);
+  device = await adapter!.requestDevice(options.device);
+  return new WGSLRuntime(device);
+}
+
 export default WGSLRuntime;
