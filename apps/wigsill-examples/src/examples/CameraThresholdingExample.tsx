@@ -1,6 +1,6 @@
 import * as dat from 'dat.gui';
 import { useExampleWithCanvas } from '../common/useExampleWithCanvas';
-import { createRef, RefObject } from 'react';
+import { createRef, RefObject, useMemo } from 'react';
 
 function init(videoRef: RefObject<HTMLVideoElement>) {
   return async function (gui: dat.GUI, canvas: HTMLCanvasElement) {
@@ -60,6 +60,18 @@ fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
         video: true,
       });
     }
+    const video = videoRef.current!;
+    await Promise.race([
+      new Promise<void>((resolve) => {
+        video.onloadeddata = () => {
+          resolve();
+        };
+      }),
+      // or timeout after 100 ms
+      new Promise((resolve) => setTimeout(resolve, 1000)),
+    ]);
+
+    canvas.height = video.clientHeight;
 
     const context = canvas.getContext('webgpu') as GPUCanvasContext;
     const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -110,7 +122,7 @@ fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
     );
 
     const resultTexture = device.createTexture({
-      size: [canvas.width, canvas.height, 1],
+      size: [video.videoWidth, video.videoHeight, 1],
       format: 'rgba8unorm',
       usage:
         GPUTextureUsage.TEXTURE_BINDING |
@@ -152,7 +164,7 @@ fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
       );
     });
 
-    let running = true;
+    let animationFrameHandle = 0;
 
     function frame() {
       const commandEncoder = device.createCommandEncoder();
@@ -182,16 +194,14 @@ fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
       passEncoder.end();
       device.queue.submit([commandEncoder.finish()]);
 
-      if (running) {
-        requestAnimationFrame(frame);
-      }
+      animationFrameHandle = requestAnimationFrame(frame);
     }
 
-    requestAnimationFrame(frame);
+    frame();
 
     return {
       dispose() {
-        running = false;
+        cancelAnimationFrame(animationFrameHandle);
       },
     };
   };
@@ -199,8 +209,8 @@ fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
 
 export function CameraThresholdingExample() {
   const videoRef: RefObject<HTMLVideoElement> = createRef();
-  const canvasRef = useExampleWithCanvas(init(videoRef));
-  const [width, height] = [500, 375];
+  const innerInit = useMemo(() => init(videoRef), [videoRef]);
+  const canvasRef = useExampleWithCanvas(innerInit);
 
   return (
     <div className="flex flex-wrap h-screen p-4 gap-4 justify-center items-center">
@@ -209,12 +219,11 @@ export function CameraThresholdingExample() {
           ref={videoRef}
           autoPlay={true}
           id="camera-view"
-          width={width}
-          height={height}></video>
+          width={500}></video>
       </div>
 
       <div className="p-4 border-4 border-slate-400 rounded-lg">
-        <canvas width={width} height={height} ref={canvasRef}></canvas>
+        <canvas width={500} ref={canvasRef}></canvas>
       </div>
     </div>
   );
