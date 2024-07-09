@@ -10,13 +10,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "classnames": "^2.5.1",
+    "dat.gui": "^0.7.9",
     "jotai": "^2.8.4",
+    "jotai-location": "^0.5.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "wigsill": "workspace:*",
-    "typed-binary": "^4.0.0"
+    "typed-binary": "^4.0.0",
+    "wigsill": "workspace:*"
   },
   "devDependencies": {
+    "@types/dat.gui": "^0.7.13",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^7.13.1",

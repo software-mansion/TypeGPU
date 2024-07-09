@@ -4,7 +4,8 @@ export default {
 
   theme: {
     fontFamily: {
-      inter: 'Inter, system-ui, Avenir, Helvetica, Arial, sans-serif',
+      inter: '"Inter", system-ui, Avenir, Helvetica, Arial, sans-serif',
+      outfit: '"Outfit", system-ui, Avenir, Helvetica, Arial, sans-serif',
     },
     extend: {},
   },
