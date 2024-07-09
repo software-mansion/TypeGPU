@@ -1,6 +1,7 @@
 import * as dat from 'dat.gui';
-import { useExampleWithCanvas } from '../common/useExampleWithCanvas';
 import { createRef, RefObject } from 'react';
+
+import { useExampleWithCanvas } from '../common/useExampleWithCanvas';
 
 function init(videoRef: RefObject<HTMLVideoElement>) {
   return async function (gui: dat.GUI, canvas: HTMLCanvasElement) {
@@ -200,6 +201,7 @@ fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
 export function CameraThresholdingExample() {
   const videoRef: RefObject<HTMLVideoElement> = createRef();
   const canvasRef = useExampleWithCanvas(init(videoRef));
+  // const canvasRef = useExampleWithCanvas(useCallback(() => init(videoRef), []));
   const [width, height] = [500, 375];
 
   return (
