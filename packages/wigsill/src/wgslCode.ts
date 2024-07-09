@@ -1,5 +1,5 @@
 import {
-  IResolutionCtx,
+  ResolutionCtx,
   WGSLCompoundTrait,
   WGSLItem,
   WGSLSegment,
@@ -13,7 +13,7 @@ export class WGSLCode implements WGSLItem, WGSLCompoundTrait {
     return this.segments.filter(isWGSLItem);
   }
 
-  resolve(ctx: IResolutionCtx) {
+  resolve(ctx: ResolutionCtx) {
     let code = '';
 
     for (const s of this.segments) {

@@ -5,7 +5,7 @@ import {
 } from './errors';
 import { MemoryArena } from './memoryArena';
 import {
-  IResolutionCtx,
+  ResolutionCtx,
   WGSLBindPair,
   WGSLBindableTrait,
   WGSLItem,
@@ -53,7 +53,7 @@ class NameRegistry {
   }
 }
 
-class ResolutionCtx implements IResolutionCtx {
+class ResolutionCtxImpl implements ResolutionCtx {
   private _entryToArenaMap = new WeakMap<WGSLMemoryTrait, MemoryArena>();
   private readonly _names = new NameRegistry();
 
@@ -169,7 +169,7 @@ export default class ProgramBuilder {
   build(options: BuildOptions): Program {
     const arenas = options.arenas ?? [];
 
-    const ctx = new ResolutionCtx(this.runtime, arenas, this.bindings);
+    const ctx = new ResolutionCtxImpl(this.runtime, arenas, this.bindings);
 
     // Resolving memory arenas
     arenas.forEach((arena, idx) => {

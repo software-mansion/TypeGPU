@@ -10,7 +10,7 @@ import {
   ValidationError,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import { IResolutionCtx } from '../types';
+import { ResolutionCtx } from '../types';
 import { WGSLCode, code } from '../wgslCode';
 import { identifier } from '../wgslIdentifier';
 import alignIO from './alignIO';
@@ -106,7 +106,7 @@ class DynamicArrayDataType<TElement extends WGSLDataType<unknown>>
     return measurer;
   }
 
-  resolve(ctx: IResolutionCtx): string {
+  resolve(ctx: ResolutionCtx): string {
     ctx.addDependency(this._definitionCode);
 
     return ctx.resolve(this._identifier);

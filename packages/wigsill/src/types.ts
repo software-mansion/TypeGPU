@@ -2,7 +2,7 @@ import type { MemoryArena } from './memoryArena';
 
 export type WGSLSegment = string | number | WGSLItem;
 
-export interface IResolutionCtx {
+export interface ResolutionCtx {
   addDependency(item: WGSLItem): void;
   addMemory(memoryEntry: WGSLMemoryTrait): void;
   nameFor(token: WGSLItem): string;
@@ -16,7 +16,7 @@ export interface IResolutionCtx {
 export interface WGSLItem {
   readonly debugLabel?: string | undefined;
 
-  resolve(ctx: IResolutionCtx): string;
+  resolve(ctx: ResolutionCtx): string;
 }
 
 export function isWGSLItem(value: unknown): value is WGSLItem {
@@ -35,7 +35,7 @@ export interface WGSLBindableTrait<TBinding> extends WGSLItem {
 export type WGSLBindPair<T> = [WGSLBindableTrait<T>, T];
 
 export interface WGSLCompoundTrait extends WGSLItem {
-  getChildren(ctx: IResolutionCtx): WGSLItem[];
+  getChildren(ctx: ResolutionCtx): WGSLItem[];
 }
 
 export function hasCompoundTrait<T>(value: T): value is T & WGSLCompoundTrait {

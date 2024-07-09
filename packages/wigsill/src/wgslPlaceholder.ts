@@ -1,5 +1,5 @@
 import {
-  IResolutionCtx,
+  ResolutionCtx,
   WGSLBindableTrait,
   WGSLCompoundTrait,
   WGSLItem,
@@ -20,7 +20,7 @@ export class WGSLPlaceholder
     return this;
   }
 
-  private getSegment(ctx: IResolutionCtx) {
+  private getSegment(ctx: ResolutionCtx) {
     if (this.defaultSegment) {
       return ctx.tryBinding(this, this.defaultSegment);
     }
@@ -28,7 +28,7 @@ export class WGSLPlaceholder
     return ctx.requireBinding(this);
   }
 
-  getChildren(ctx: IResolutionCtx): WGSLItem[] {
+  getChildren(ctx: ResolutionCtx): WGSLItem[] {
     const segment = this.getSegment(ctx);
 
     if (hasCompoundTrait(segment)) {
@@ -38,7 +38,7 @@ export class WGSLPlaceholder
     return [];
   }
 
-  resolve(ctx: IResolutionCtx): string {
+  resolve(ctx: ResolutionCtx): string {
     return ctx.resolve(this.getSegment(ctx));
   }
 }
