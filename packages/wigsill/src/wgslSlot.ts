@@ -1,10 +1,8 @@
 import {
   IResolutionCtx,
   WGSLBindableTrait,
-  WGSLCompoundTrait,
   WGSLItem,
   WGSLSegment,
-  hasCompoundTrait,
   isWGSLSegment,
 } from './types';
 
@@ -20,9 +18,7 @@ export interface ResolvableSlot<T extends WGSLSegment> extends WGSLItem {
   __bindingType: T;
 }
 
-export class WGSLSlot<T>
-  implements WGSLItem, WGSLBindableTrait<T>, WGSLCompoundTrait
-{
+export class WGSLSlot<T> implements WGSLItem, WGSLBindableTrait<T> {
   __bindingType!: T;
   __brand = 'Slot' as const;
   public debugLabel?: string | undefined;
@@ -40,16 +36,6 @@ export class WGSLSlot<T>
     }
 
     return ctx.requireBinding(this);
-  }
-
-  getChildren(ctx: IResolutionCtx): WGSLItem[] {
-    const segment = this.getValue(ctx);
-
-    if (hasCompoundTrait(segment)) {
-      return segment.getChildren(ctx);
-    }
-
-    return [];
   }
 
   resolve(ctx: IResolutionCtx): string {

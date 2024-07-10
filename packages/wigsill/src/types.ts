@@ -42,14 +42,6 @@ export interface WGSLBindableTrait<TBinding> {
 
 export type WGSLBindPair<T> = [WGSLBindableTrait<T>, T];
 
-export interface WGSLCompoundTrait extends WGSLItem {
-  getChildren(ctx: IResolutionCtx): WGSLItem[];
-}
-
-export function hasCompoundTrait<T>(value: T): value is T & WGSLCompoundTrait {
-  return !!value && typeof value === 'object' && 'getChildren' in value;
-}
-
 export interface WGSLMemoryTrait extends WGSLItem {
   readonly size: number;
   readonly baseAlignment: number;
