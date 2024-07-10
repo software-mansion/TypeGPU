@@ -164,29 +164,5 @@ fn main_frag(
 export function BasicTriangleExample() {
   const canvasRef = useExampleWithCanvas(init);
 
-  useEffect(() => {
-    import('wigsill').then((wigsill) => {
-      const require = (moduleKey: string) => {
-        if (moduleKey === 'wigsill') {
-          return wigsill;
-        }
-        throw new Error(`Module ${moduleKey} not found.`);
-      };
-
-      const mod = Function(`
-return async (require) => {
-  const { wgsl } = require('wigsill');
-  return 'bruh';
-};
-`);
-
-      const result: Promise<string> = mod()(require);
-
-      result.then((value) => {
-        console.log(value);
-      });
-    }, []);
-  });
-
   return <canvas className="w-full h-screen" ref={canvasRef}></canvas>;
 }
