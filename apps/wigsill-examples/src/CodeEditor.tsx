@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import useEvent from './common/useEvent';
 import { ExampleState } from './common/exampleState';
+import { executeExample } from './exampleRunner';
 
 type Props = {
   code: string;
@@ -18,37 +19,7 @@ function useLayout() {
   return [null, defineLayout] as const;
 }
 
-async function executeExample(
-  exampleCode: string,
-  defineLayout: () => void,
-): Promise<ExampleState> {
-  const wigsill = await import('wigsill');
-
-  const require = (moduleKey: string) => {
-    if (moduleKey === 'wigsill') {
-      return wigsill;
-    }
-    throw new Error(`Module ${moduleKey} not found.`);
-  };
-
-  const mod = Function(`
-return async (require) => {
-${exampleCode}
-};
-`);
-
-  const result: Promise<string> = mod()(require);
-
-  console.log(await result);
-
-  return {
-    dispose: () => {},
-  };
-}
-
-function useExample<T extends (gui: dat.GUI) => Promise<ExampleState>>(
-  exampleCode: string,
-) {
+function useExample(exampleCode: string) {
   const exampleRef = useRef<ExampleState | null>(null);
   const [_layout, defineLayout] = useLayout();
 

@@ -4,15 +4,13 @@
 }
 */
 
-import { wgsl } from 'wigsill';
-import { defineLayout } from '@wigsill/example-toolkit';
+import Default, { wgsl as wigsill } from 'wigsill';
+import { defineLayout, onCleanup } from '@wigsill/example-toolkit';
 
 const some = wgsl.fn()`() -> f32 {
   return 1. + 2.;
 }`;
 
-return {
-  eachFrame: () => {},
-
-  dispose() {},
-};
+onCleanup(() => {
+  console.log(`All cleaned up`);
+});
