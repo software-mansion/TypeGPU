@@ -1,14 +1,12 @@
 import {
   IResolutionCtx,
   WGSLBindableTrait,
-  WGSLCompoundTrait,
   WGSLItem,
   WGSLSegment,
-  hasCompoundTrait,
 } from './types';
 
 export class WGSLPlaceholder
-  implements WGSLItem, WGSLBindableTrait<WGSLSegment>, WGSLCompoundTrait
+  implements WGSLItem, WGSLBindableTrait<WGSLSegment>
 {
   __bindingType!: WGSLSegment;
   public debugLabel?: string | undefined;
@@ -26,16 +24,6 @@ export class WGSLPlaceholder
     }
 
     return ctx.requireBinding(this);
-  }
-
-  getChildren(ctx: IResolutionCtx): WGSLItem[] {
-    const segment = this.getSegment(ctx);
-
-    if (hasCompoundTrait(segment)) {
-      return segment.getChildren(ctx);
-    }
-
-    return [];
   }
 
   resolve(ctx: IResolutionCtx): string {
