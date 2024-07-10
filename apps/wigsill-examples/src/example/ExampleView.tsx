@@ -1,4 +1,3 @@
-import { GUI } from 'dat.gui';
 import { debounce } from 'remeda';
 import { useMemo, useState, useEffect, useRef } from 'react';
 
@@ -17,17 +16,12 @@ type Props = {
 
 function useExample(exampleCode: string) {
   const exampleRef = useRef<ExampleState | null>(null);
-  const { def, createLayout, dispose: deleteLayout, setRef } = useLayout();
+  const { def, createLayout, setRef } = useLayout();
 
   useEffect(() => {
     let cancelled = false;
 
-    const gui = new GUI({ closeOnTop: true });
-    gui.hide();
-
-    const layout = createLayout();
-
-    executeExample(exampleCode, layout).then((example) => {
+    executeExample(exampleCode, createLayout).then((example) => {
       if (cancelled) {
         // Another instance was started in the meantime.
         example.dispose();
@@ -36,16 +30,13 @@ function useExample(exampleCode: string) {
 
       // Success
       exampleRef.current = example;
-      gui.show();
     });
 
     return () => {
       exampleRef.current?.dispose();
       cancelled = true;
-      deleteLayout();
-      gui.destroy();
     };
-  }, [exampleCode, createLayout, deleteLayout]);
+  }, [exampleCode, createLayout]);
 
   return {
     def,

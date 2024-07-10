@@ -5,7 +5,7 @@
 */
 
 import { f32, makeArena, ProgramBuilder, wgsl, WGSLRuntime } from 'wigsill';
-import { addElement, onFrame } from '@wigsill/example-toolkit';
+import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
 
 // Layout
 const video = await addElement('video', { width: 500, height: 375 });
@@ -139,18 +139,11 @@ const sampler = device.createSampler({
   minFilter: 'linear',
 });
 
-const defaultThreshold = 0.4;
-thresholdData.write(runtime, defaultThreshold);
-
 // UI
 
-// const state = {
-//   threshold: defaultThreshold,
-// };
-
-// gui.add(state, 'threshold', 0, 1, 0.1).onChange(() => {
-//   thresholdData.write(runtime, state.threshold);
-// });
+addParameter('threshold', { initial: 0.4, min: 0, max: 1 }, (threshold) =>
+  thresholdData.write(runtime, threshold),
+);
 
 onFrame(() => {
   if (!(video.currentTime > 0)) {

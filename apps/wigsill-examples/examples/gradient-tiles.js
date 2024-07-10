@@ -5,7 +5,12 @@
 */
 
 import { makeArena, ProgramBuilder, u32, wgsl, WGSLRuntime } from 'wigsill';
-import { addElement, onCleanup, onFrame } from '@wigsill/example-toolkit';
+import {
+  addElement,
+  addParameter,
+  onCleanup,
+  onFrame,
+} from '@wigsill/example-toolkit';
 
 const adapter = await navigator.gpu.requestAdapter();
 const device = await adapter.requestDevice();
@@ -108,8 +113,13 @@ const pipeline = device.createRenderPipeline({
   },
 });
 
-xSpanData.write(runtime, 16);
-ySpanData.write(runtime, 16);
+addParameter('x-span', { initial: 16, min: 1, max: 16, step: 1 }, (xSpan) =>
+  xSpanData.write(runtime, xSpan),
+);
+
+addParameter('y-span', { initial: 16, min: 1, max: 16, step: 1 }, (ySpan) =>
+  ySpanData.write(runtime, ySpan),
+);
 
 onFrame(() => {
   const commandEncoder = device.createCommandEncoder();

@@ -1,3 +1,4 @@
+import { GUI } from 'dat.gui';
 import * as Babel from '@babel/standalone';
 import { filter, isNonNull, map, pipe } from 'remeda';
 import type { TraverseOptions } from '@babel/traverse';
@@ -5,7 +6,6 @@ import type TemplateGenerator from '@babel/template';
 
 import { ExampleState } from './exampleState';
 import { LayoutInstance } from './layout';
-
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
 const template = (
@@ -57,9 +57,33 @@ const staticToDynamicImports = {
 
 export async function executeExample(
   exampleCode: string,
-  layout: LayoutInstance,
+  createLayout: () => LayoutInstance,
 ): Promise<ExampleState> {
   const cleanupCallbacks: (() => unknown)[] = [];
+
+  const layout = createLayout();
+  const gui = new GUI({ closeOnTop: true });
+  gui.hide();
+
+  function addParameter(
+    label: string,
+    options: {
+      initial: number;
+      min?: number;
+      max?: number;
+      step?: number;
+    },
+    onChange: (newValue: number) => void,
+  ) {
+    const temp = { [label]: options.initial };
+
+    gui
+      .add(temp, label, options.min, options.max, options.step)
+      .onChange((value) => onChange(value));
+
+    // Eager run to initialize the values.
+    onChange(options.initial);
+  }
 
   /**
    * Simulated imports from within the sandbox, making only a subset of
@@ -85,6 +109,7 @@ export async function executeExample(
           cleanupCallbacks.push(() => cancelAnimationFrame(handle));
         },
         addElement: layout.addElement,
+        addParameter,
       };
     }
     throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
@@ -108,13 +133,16 @@ ${transformedCode}
 };
 `);
 
-  const result: Promise<string> = mod()(_import);
+  // Running the code
+  await mod()(_import);
 
-  console.log(await result);
+  gui.show();
 
   return {
     dispose: () => {
       cleanupCallbacks.forEach((cb) => cb());
+      layout.dispose();
+      gui.destroy();
     },
   };
 }
