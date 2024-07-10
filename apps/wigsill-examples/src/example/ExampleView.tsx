@@ -9,6 +9,7 @@ import { ExampleState } from './exampleState';
 import { executeExample } from './exampleRunner';
 import { useLayout } from './layout';
 import { Canvas } from '../common/Canvas';
+import { Video } from '../common/Video';
 
 type Props = {
   example: Example;
@@ -70,8 +71,16 @@ export function ExampleView({ example }: Props) {
   return (
     <>
       <div className="flex-1 self-stretch flex items-stretch min-h-[50vh]">
-        {def.elements.map((_element, index) => {
-          return <Canvas key={index} ref={(canvas) => setRef(index, canvas)} />;
+        {def.elements.map((element, index) => {
+          if (element.type === 'canvas') {
+            return (
+              <Canvas key={index} ref={(canvas) => setRef(index, canvas)} />
+            );
+          } else if (element.type === 'video') {
+            return <Video key={index} ref={(video) => setRef(index, video)} />;
+          }
+
+          return <p>Unrecognized element</p>;
         })}
       </div>
       <div className="relative w-full flex flex-1">

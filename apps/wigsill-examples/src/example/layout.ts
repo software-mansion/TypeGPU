@@ -7,13 +7,19 @@ export type CanvasDef = {
   height?: number;
 };
 
+export type VideoDef = {
+  type: 'video';
+};
+
+export type ElementDef = CanvasDef | VideoDef;
+
 export type LayoutDef = {
-  elements: CanvasDef[];
+  elements: ElementDef[];
 };
 
 export type AddElement = (
-  type: 'canvas',
-  options: Omit<CanvasDef, 'type'>,
+  type: ElementDef['type'],
+  options: Omit<ElementDef, 'type'>,
 ) => Promise<HTMLElement>;
 
 /**
@@ -36,7 +42,7 @@ export function useLayout(): {
   const instanceRef = useRef<LayoutInstance | null>(null);
 
   const addElement: AddElement = useEvent(
-    (type: CanvasDef['type'], options: Omit<CanvasDef, 'type'>) => {
+    (type: ElementDef['type'], options: Omit<ElementDef, 'type'>) => {
       if (!instanceRef.current) {
         // No instance is active.
         throw new Error(`No layout is active`);
@@ -50,6 +56,14 @@ export function useLayout(): {
         });
 
         return new Promise<HTMLCanvasElement>((resolve) => {
+          elementResolves.current.set(index, resolve as () => void);
+        });
+      } else if (type === 'video') {
+        setDef({
+          elements: [...def.elements, { ...options, type: 'video' }],
+        });
+
+        return new Promise<HTMLVideoElement>((resolve) => {
           elementResolves.current.set(index, resolve as () => void);
         });
       } else {
