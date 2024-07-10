@@ -1,16 +1,18 @@
 import * as dat from 'dat.gui';
 import { useExampleWithCanvas } from '../common/useExampleWithCanvas';
 import { createRef, RefObject } from 'react';
+import { f32, makeArena, ProgramBuilder, wgsl, WGSLRuntime } from 'wigsill';
 
 function init(videoRef: RefObject<HTMLVideoElement>) {
   return async function (gui: dat.GUI, canvas: HTMLCanvasElement) {
     const adapter = await navigator.gpu.requestAdapter();
     const device = await adapter!.requestDevice();
 
-    const shaderCode = `
+    const thresholdData = wgsl.memory(f32).alias('threshold');
+
+    const shaderCode = wgsl`
 @group(0) @binding(0) var sampler_ : sampler;
 @group(0) @binding(1) var videoTexture : texture_external;
-@group(0) @binding(2) var<uniform> threshold : f32;
 
 struct VertexOutput {
   @builtin(position) Position : vec4f,
@@ -48,7 +50,7 @@ fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
   var color = textureSampleBaseClampToEdge(videoTexture, sampler_, fragUV);
   let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
 
-  if grey < threshold {
+  if grey < ${thresholdData} {
     return vec4f(0, 0, 0, 1);
   }
   return vec4f(1);
@@ -70,17 +72,51 @@ fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
       alphaMode: 'premultiplied',
     });
 
-    const renderPipeline = device.createRenderPipeline({
-      layout: 'auto',
-      vertex: {
-        module: device.createShaderModule({
-          code: shaderCode,
+    const runtime = new WGSLRuntime(device);
+
+    const arena = makeArena({
+      bufferBindingType: 'uniform',
+      memoryEntries: [thresholdData],
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
+    });
+
+    const program = new ProgramBuilder(runtime, shaderCode).build({
+      bindingGroup: 1,
+      shaderStage: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+      arenas: [arena],
+    });
+
+    const shaderModule = device.createShaderModule({
+      code: program.code,
+    });
+
+    const layout = device.createPipelineLayout({
+      bindGroupLayouts: [
+        device.createBindGroupLayout({
+          entries: [
+            {
+              binding: 0,
+              visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+              sampler: {},
+            },
+            {
+              binding: 1,
+              visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+              externalTexture: {},
+            },
+          ],
         }),
+        program.bindGroupLayout,
+      ],
+    });
+
+    const renderPipeline = device.createRenderPipeline({
+      layout: layout,
+      vertex: {
+        module: shaderModule,
       },
       fragment: {
-        module: device.createShaderModule({
-          code: shaderCode,
-        }),
+        module: shaderModule,
         targets: [
           {
             format: presentationFormat,
@@ -97,17 +133,9 @@ fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
       minFilter: 'linear',
     });
 
-    const paramsBuffer = device.createBuffer({
-      size: 4,
-      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-    });
-
     const defaultThreshold = 0.4;
-    device.queue.writeBuffer(
-      paramsBuffer,
-      0,
-      new Float32Array([defaultThreshold]),
-    );
+
+    thresholdData.write(runtime, defaultThreshold);
 
     // UI
 
@@ -116,11 +144,7 @@ fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
     };
 
     gui.add(state, 'threshold', 0, 1, 0.1).onChange(() => {
-      device.queue.writeBuffer(
-        paramsBuffer,
-        0,
-        new Float32Array([state.threshold]),
-      );
+      thresholdData.write(runtime, state.threshold);
     });
 
     let running = true;
@@ -148,12 +172,6 @@ fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
             binding: 1,
             resource: resultTexture,
           },
-          {
-            binding: 2,
-            resource: {
-              buffer: paramsBuffer,
-            },
-          },
         ],
       });
 
@@ -172,6 +190,7 @@ fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
 
       passEncoder.setPipeline(renderPipeline);
       passEncoder.setBindGroup(0, bindGroup);
+      passEncoder.setBindGroup(1, program.bindGroup);
       passEncoder.draw(6);
       passEncoder.end();
       device.queue.submit([commandEncoder.finish()]);
