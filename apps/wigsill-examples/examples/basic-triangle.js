@@ -5,9 +5,9 @@
 */
 
 import { wgsl } from 'wigsill';
-import { addCanvas, onCleanup, onFrame } from '@wigsill/example-toolkit';
+import { addElement, onCleanup, onFrame } from '@wigsill/example-toolkit';
 
-const canvas = await addCanvas();
+const canvas = await addElement('canvas');
 console.log(canvas);
 
 wgsl.fn()`() -> f32 {

@@ -4,6 +4,7 @@ import type { TraverseOptions } from '@babel/traverse';
 import type TemplateGenerator from '@babel/template';
 
 import { ExampleState } from './exampleState';
+import { AddElement } from './layout';
 
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
@@ -56,7 +57,7 @@ const staticToDynamicImports = {
 
 export async function executeExample(
   exampleCode: string,
-  defineLayout: () => void,
+  addElement: AddElement,
 ): Promise<ExampleState> {
   const cleanupCallbacks: (() => unknown)[] = [];
 
@@ -83,6 +84,7 @@ export async function executeExample(
 
           cleanupCallbacks.push(() => cancelAnimationFrame(handle));
         },
+        addElement,
       };
     }
     throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
