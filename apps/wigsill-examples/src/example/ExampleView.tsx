@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 
 import useEvent from '../common/useEvent';
 import { CodeEditor } from '../CodeEditor';
-import type { Example } from './types';
+import type { Example } from '../example/types';
 
 type Props = {
   example: Example;

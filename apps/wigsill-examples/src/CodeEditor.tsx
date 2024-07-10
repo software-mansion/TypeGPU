@@ -3,8 +3,8 @@ import Editor from '@monaco-editor/react';
 import { useCallback, useEffect, useRef } from 'react';
 
 import useEvent from './common/useEvent';
-import { ExampleState } from './common/exampleState';
-import { executeExample } from './exampleRunner';
+import { ExampleState } from './example/exampleState';
+import { executeExample } from './example/exampleRunner';
 
 type Props = {
   code: string;

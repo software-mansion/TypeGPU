@@ -5,7 +5,10 @@
 */
 
 import { wgsl } from 'wigsill';
-import { defineLayout, onCleanup, onFrame } from '@wigsill/example-toolkit';
+import { addCanvas, onCleanup, onFrame } from '@wigsill/example-toolkit';
+
+const canvas = await addCanvas();
+console.log(canvas);
 
 wgsl.fn()`() -> f32 {
   return 1. + 2.;

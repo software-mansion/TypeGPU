@@ -4,9 +4,9 @@ import { useAtom } from 'jotai/react';
 
 import { currentExampleAtom } from './router';
 import { ExampleLink } from './common/ExampleLink';
-import { examples } from './ExampleView/examples';
 import { ExampleNotFound } from './ExampleNotFound';
-import { ExampleView } from './ExampleView/ExampleView';
+import { ExampleView } from './example/ExampleView';
+import { examples } from './example/examples';
 import { Home } from './Home';
 
 function App() {

@@ -3,7 +3,7 @@ import { filter, isNonNull, map, pipe } from 'remeda';
 import type { TraverseOptions } from '@babel/traverse';
 import type TemplateGenerator from '@babel/template';
 
-import { ExampleState } from './common/exampleState';
+import { ExampleState } from './exampleState';
 
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
