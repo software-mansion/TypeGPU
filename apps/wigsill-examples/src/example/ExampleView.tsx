@@ -16,7 +16,7 @@ type Props = {
 
 function useExample(exampleCode: string) {
   const exampleRef = useRef<ExampleState | null>(null);
-  const { def, addElement, setRef } = useLayout();
+  const { def, createLayout, dispose: deleteLayout, setRef } = useLayout();
 
   useEffect(() => {
     let cancelled = false;
@@ -24,7 +24,9 @@ function useExample(exampleCode: string) {
     const gui = new GUI({ closeOnTop: true });
     gui.hide();
 
-    executeExample(exampleCode, addElement).then((example) => {
+    const layout = createLayout();
+
+    executeExample(exampleCode, layout).then((example) => {
       if (cancelled) {
         // Another instance was started in the meantime.
         example.dispose();
@@ -39,9 +41,10 @@ function useExample(exampleCode: string) {
     return () => {
       exampleRef.current?.dispose();
       cancelled = true;
+      deleteLayout();
       gui.destroy();
     };
-  }, [exampleCode, addElement]);
+  }, [exampleCode, createLayout, deleteLayout]);
 
   return {
     def,
@@ -50,7 +53,7 @@ function useExample(exampleCode: string) {
 }
 
 export function ExampleView({ example }: Props) {
-  const { code: initialCode, metadata } = example;
+  const { code: initialCode } = example;
   const [code, setCode] = useState(initialCode);
 
   const setCodeDebouncer = useMemo(
@@ -66,8 +69,7 @@ export function ExampleView({ example }: Props) {
 
   return (
     <>
-      <p>Hello {metadata.title}</p>
-      <div className="p-6 flex-1 self-stretch flex items-stretch min-h-[50vh]">
+      <div className="flex-1 self-stretch flex items-stretch min-h-[50vh]">
         {def.elements.map((_element, index) => {
           return <Canvas key={index} ref={(canvas) => setRef(index, canvas)} />;
         })}

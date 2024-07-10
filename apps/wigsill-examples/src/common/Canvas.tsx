@@ -8,29 +8,33 @@ type Props = {
 
 export const Canvas = forwardRef<HTMLCanvasElement, Props>((_props, ref) => {
   const innerRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useImperativeHandle(ref, () => innerRef.current!);
 
   const onResize = useEvent(() => {
-    if (!innerRef.current) {
+    const canvas = innerRef.current;
+    const container = containerRef.current;
+
+    if (!canvas || !container) {
       return;
     }
 
-    const canvas = innerRef.current;
-    const rect: DOMRect | null =
-      canvas.parentNode && 'getBoundingClientRect' in canvas.parentNode
-        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (canvas.parentNode as any).getBoundingClientRect()
-        : null;
+    const width = container.clientWidth;
+    const height = container.clientHeight;
 
-    if (rect) {
-      canvas.width = rect.width;
-      canvas.height = rect.height;
+    if (width && height) {
+      canvas.width = width;
+      canvas.height = height;
     }
   });
 
   useEffect(() => {
     onResize();
+    // Size is wrong when loading the page zoomed-in, so we reset the size a bit after mounting.
+    setTimeout(() => {
+      onResize();
+    }, 1);
     window.addEventListener('resize', onResize);
     return () => {
       window.removeEventListener('resize', onResize);
@@ -38,7 +42,9 @@ export const Canvas = forwardRef<HTMLCanvasElement, Props>((_props, ref) => {
   }, [onResize]);
 
   return (
-    <div className="relative overflow-hidden flex-1 bg-red-500">
+    <div
+      ref={containerRef}
+      className="relative overflow-hidden flex-1 bg-red-500">
       <canvas className="absolute" ref={innerRef} />
     </div>
   );
