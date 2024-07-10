@@ -9,6 +9,8 @@ export type CanvasDef = {
 
 export type VideoDef = {
   type: 'video';
+  width?: number;
+  height?: number;
 };
 
 export type ElementDef = CanvasDef | VideoDef;

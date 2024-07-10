@@ -1,3 +1,4 @@
+import cs from 'classnames';
 import { forwardRef, useImperativeHandle, useRef } from 'react';
 
 type Props = {
@@ -5,7 +6,9 @@ type Props = {
   height?: number;
 };
 
-export const Video = forwardRef<HTMLVideoElement, Props>((_props, ref) => {
+export const Video = forwardRef<HTMLVideoElement, Props>((props, ref) => {
+  const { width, height } = props;
+
   const innerRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -14,8 +17,19 @@ export const Video = forwardRef<HTMLVideoElement, Props>((_props, ref) => {
   return (
     <div
       ref={containerRef}
-      className="relative overflow-hidden flex-1 bg-red-500">
-      <video className="absolute" autoPlay={true} ref={innerRef} />
+      className={cs(
+        'relative overflow-hidden bg-red-500',
+        width && height ? 'flex-initial' : 'flex-1',
+      )}
+      style={{ width, height }}>
+      <video
+        className="absolute object-fill"
+        style={{ width, height }}
+        width={width}
+        height={height}
+        autoPlay={true}
+        ref={innerRef}
+      />
     </div>
   );
 });

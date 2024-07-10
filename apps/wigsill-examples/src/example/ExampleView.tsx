@@ -70,14 +70,26 @@ export function ExampleView({ example }: Props) {
 
   return (
     <>
-      <div className="flex-1 self-stretch flex items-stretch min-h-[50vh]">
+      <div className="flex-1 self-stretch flex justify-evenly items-center min-h-[50vh]">
         {def.elements.map((element, index) => {
           if (element.type === 'canvas') {
             return (
-              <Canvas key={index} ref={(canvas) => setRef(index, canvas)} />
+              <Canvas
+                key={index}
+                ref={(canvas) => setRef(index, canvas)}
+                width={element.width}
+                height={element.height}
+              />
             );
           } else if (element.type === 'video') {
-            return <Video key={index} ref={(video) => setRef(index, video)} />;
+            return (
+              <Video
+                key={index}
+                ref={(video) => setRef(index, video)}
+                width={element.width}
+                height={element.height}
+              />
+            );
           }
 
           return <p>Unrecognized element</p>;

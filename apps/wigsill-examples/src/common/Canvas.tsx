@@ -1,4 +1,6 @@
+import cs from 'classnames';
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+
 import useEvent from './useEvent';
 
 type Props = {
@@ -6,7 +8,8 @@ type Props = {
   height?: number;
 };
 
-export const Canvas = forwardRef<HTMLCanvasElement, Props>((_props, ref) => {
+export const Canvas = forwardRef<HTMLCanvasElement, Props>((props, ref) => {
+  const { width, height } = props;
   const innerRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -20,13 +23,8 @@ export const Canvas = forwardRef<HTMLCanvasElement, Props>((_props, ref) => {
       return;
     }
 
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-
-    if (width && height) {
-      canvas.width = width;
-      canvas.height = height;
-    }
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
   });
 
   useEffect(() => {
@@ -44,7 +42,11 @@ export const Canvas = forwardRef<HTMLCanvasElement, Props>((_props, ref) => {
   return (
     <div
       ref={containerRef}
-      className="relative overflow-hidden flex-1 bg-red-500">
+      className={cs(
+        'relative overflow-hidden',
+        width && height ? 'flex-initial' : 'flex-1 self-stretch',
+      )}
+      style={{ width, height }}>
       <canvas className="absolute" ref={innerRef} />
     </div>
   );

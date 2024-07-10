@@ -4,8 +4,8 @@ import { fn as fun } from './wgslFunction';
 import { fn } from './wgslFunctionOld';
 import { identifier } from './wgslIdentifier';
 import { memory } from './wgslMemory';
-import { placeholder } from './wgslPlaceholder';
 import { require } from './wgslRequire';
+import { slot } from './wgslSlot';
 import { variable } from './wgslVariable';
 
 export default Object.assign(code, {
@@ -14,7 +14,7 @@ export default Object.assign(code, {
   fun,
   identifier,
   memory,
-  placeholder,
+  slot,
   constant,
   require,
   var: variable,

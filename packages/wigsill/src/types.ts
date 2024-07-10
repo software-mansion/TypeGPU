@@ -27,9 +27,17 @@ export function isWGSLItem(value: unknown): value is WGSLItem {
   );
 }
 
-export interface WGSLBindableTrait<TBinding> extends WGSLItem {
+export function isWGSLSegment(value: unknown): value is WGSLSegment {
+  return (
+    typeof value === 'number' || typeof value === 'string' || isWGSLItem(value)
+  );
+}
+
+export interface WGSLBindableTrait<TBinding> {
   /** type-token, not available at runtime */
   readonly __bindingType: TBinding;
+
+  readonly debugLabel?: string | undefined;
 }
 
 export type WGSLBindPair<T> = [WGSLBindableTrait<T>, T];

@@ -4,20 +4,21 @@
 }
 */
 
-import { makeArena, ProgramBuilder, u32, wgsl, WGSLRuntime } from 'wigsill';
-import { addElement, onCleanup, onFrame } from '@wigsill/example-toolkit';
+import { f32, makeArena, ProgramBuilder, wgsl, WGSLRuntime } from 'wigsill';
+import { addElement, onFrame } from '@wigsill/example-toolkit';
 
 // Layout
-const video = await addElement('video');
-const canvas = await addElement('canvas');
+const video = await addElement('video', { width: 500, height: 375 });
+const canvas = await addElement('canvas', { width: 500, height: 375 });
 
 const adapter = await navigator.gpu.requestAdapter();
 const device = await adapter.requestDevice();
 
-const shaderCode = `
-@group(0) @binding(0) var mySampler : sampler;
-@group(0) @binding(1) var myTexture : texture_2d<f32>;
-@group(0) @binding(2) var<uniform> threshold : f32;
+const thresholdData = wgsl.memory(f32).alias('threshold');
+
+const shaderCode = wgsl`
+@group(0) @binding(0) var sampler_ : sampler;
+@group(0) @binding(1) var videoTexture : texture_external;
 
 struct VertexOutput {
 @builtin(position) Position : vec4f,
@@ -52,10 +53,10 @@ return output;
 
 @fragment
 fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
-var color = textureSample(myTexture, mySampler, fragUV);
+var color = textureSampleBaseClampToEdge(videoTexture, sampler_, fragUV);
 let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
 
-if grey < threshold {
+if grey < ${thresholdData} {
 return vec4f(0, 0, 0, 1);
 }
 return vec4f(1);
@@ -77,17 +78,51 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const renderPipeline = device.createRenderPipeline({
-  layout: 'auto',
-  vertex: {
-    module: device.createShaderModule({
-      code: shaderCode,
+const runtime = new WGSLRuntime(device);
+
+const arena = makeArena({
+  bufferBindingType: 'uniform',
+  memoryEntries: [thresholdData],
+  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
+});
+
+const program = new ProgramBuilder(runtime, shaderCode).build({
+  bindingGroup: 1,
+  shaderStage: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+  arenas: [arena],
+});
+
+const shaderModule = device.createShaderModule({
+  code: program.code,
+});
+
+const layout = device.createPipelineLayout({
+  bindGroupLayouts: [
+    device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          sampler: {},
+        },
+        {
+          binding: 1,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          externalTexture: {},
+        },
+      ],
     }),
+    program.bindGroupLayout,
+  ],
+});
+
+const renderPipeline = device.createRenderPipeline({
+  layout: layout,
+  vertex: {
+    module: shaderModule,
   },
   fragment: {
-    module: device.createShaderModule({
-      code: shaderCode,
-    }),
+    module: shaderModule,
     targets: [
       {
         format: presentationFormat,
@@ -104,42 +139,8 @@ const sampler = device.createSampler({
   minFilter: 'linear',
 });
 
-const paramsBuffer = device.createBuffer({
-  size: 4,
-  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-});
-
 const defaultThreshold = 0.4;
-device.queue.writeBuffer(paramsBuffer, 0, new Float32Array([defaultThreshold]));
-
-const resultTexture = device.createTexture({
-  size: [canvas.width, canvas.height, 1],
-  format: 'rgba8unorm',
-  usage:
-    GPUTextureUsage.TEXTURE_BINDING |
-    GPUTextureUsage.COPY_DST |
-    GPUTextureUsage.RENDER_ATTACHMENT,
-});
-
-const bindGroup = device.createBindGroup({
-  layout: renderPipeline.getBindGroupLayout(0),
-  entries: [
-    {
-      binding: 0,
-      resource: sampler,
-    },
-    {
-      binding: 1,
-      resource: resultTexture.createView(),
-    },
-    {
-      binding: 2,
-      resource: {
-        buffer: paramsBuffer,
-      },
-    },
-  ],
-});
+thresholdData.write(runtime, defaultThreshold);
 
 // UI
 
@@ -148,23 +149,33 @@ const bindGroup = device.createBindGroup({
 // };
 
 // gui.add(state, 'threshold', 0, 1, 0.1).onChange(() => {
-//   device.queue.writeBuffer(
-//     paramsBuffer,
-//     0,
-//     new Float32Array([state.threshold]),
-//   );
+//   thresholdData.write(runtime, state.threshold);
 // });
 
 onFrame(() => {
-  const commandEncoder = device.createCommandEncoder();
-
-  if (video.currentTime > 0) {
-    device.queue.copyExternalImageToTexture(
-      { source: video },
-      { texture: resultTexture },
-      [canvas.width, canvas.height],
-    );
+  if (!(video.currentTime > 0)) {
+    return;
   }
+
+  const resultTexture = device.importExternalTexture({
+    source: video,
+  });
+
+  const bindGroup = device.createBindGroup({
+    layout: renderPipeline.getBindGroupLayout(0),
+    entries: [
+      {
+        binding: 0,
+        resource: sampler,
+      },
+      {
+        binding: 1,
+        resource: resultTexture,
+      },
+    ],
+  });
+
+  const commandEncoder = device.createCommandEncoder();
 
   const passEncoder = commandEncoder.beginRenderPass({
     colorAttachments: [
@@ -179,6 +190,7 @@ onFrame(() => {
 
   passEncoder.setPipeline(renderPipeline);
   passEncoder.setBindGroup(0, bindGroup);
+  passEncoder.setBindGroup(1, program.bindGroup);
   passEncoder.draw(6);
   passEncoder.end();
   device.queue.submit([commandEncoder.finish()]);
