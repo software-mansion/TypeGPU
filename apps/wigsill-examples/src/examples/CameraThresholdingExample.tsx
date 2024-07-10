@@ -8,8 +8,8 @@ function init(videoRef: RefObject<HTMLVideoElement>) {
     const device = await adapter!.requestDevice();
 
     const shaderCode = `
-@group(0) @binding(0) var mySampler : sampler;
-@group(0) @binding(1) var myTexture : texture_external;
+@group(0) @binding(0) var sampler_ : sampler;
+@group(0) @binding(1) var videoTexture : texture_external;
 @group(0) @binding(2) var<uniform> threshold : f32;
 
 struct VertexOutput {
@@ -45,7 +45,7 @@ fn vert_main(@builtin(vertex_index) VertexIndex : u32) -> VertexOutput {
 
 @fragment
 fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
-  var color = textureSampleBaseClampToEdge(myTexture, mySampler, fragUV);
+  var color = textureSampleBaseClampToEdge(videoTexture, sampler_, fragUV);
   let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
 
   if grey < threshold {
