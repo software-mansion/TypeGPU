@@ -18,8 +18,6 @@ export function parseExampleCode(rawCode: string): Example {
     );
   }
 
-  rawCode = rawCode.slice(rawCode.indexOf('*/') + 2);
-
   return {
     metadata,
     code: rawCode.slice(rawCode.indexOf('*/') + 2),
