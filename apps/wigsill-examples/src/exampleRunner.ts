@@ -58,6 +58,8 @@ export async function executeExample(
   exampleCode: string,
   defineLayout: () => void,
 ): Promise<ExampleState> {
+  const cleanupCallbacks: (() => unknown)[] = [];
+
   /**
    * Simulated imports from within the sandbox, making only a subset of
    * modules available.
@@ -65,6 +67,23 @@ export async function executeExample(
   const _import = async (moduleKey: string) => {
     if (moduleKey === 'wigsill') {
       return await import('wigsill');
+    }
+    if (moduleKey === '@wigsill/example-toolkit') {
+      return {
+        onCleanup(callback: () => unknown) {
+          cleanupCallbacks.push(callback);
+        },
+        onFrame(callback: () => unknown) {
+          let handle = 0;
+          const runner = () => {
+            callback();
+            handle = requestAnimationFrame(runner);
+          };
+          runner();
+
+          cleanupCallbacks.push(() => cancelAnimationFrame(handle));
+        },
+      };
     }
     throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
   };
@@ -92,6 +111,8 @@ ${transformedCode}
   console.log(await result);
 
   return {
-    dispose: () => {},
+    dispose: () => {
+      cleanupCallbacks.forEach((cb) => cb());
+    },
   };
 }

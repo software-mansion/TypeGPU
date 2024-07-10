@@ -26,7 +26,6 @@ function useExample(exampleCode: string) {
   useEffect(() => {
     let cancelled = false;
 
-    console.log('MAKE');
     const gui = new GUI({ closeOnTop: true });
     gui.hide();
 
@@ -43,7 +42,6 @@ function useExample(exampleCode: string) {
     });
 
     return () => {
-      console.log('BREAK');
       exampleRef.current?.dispose();
       cancelled = true;
       gui.destroy();

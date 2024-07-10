@@ -1,15 +1,19 @@
 /*
 {
-  "title": "Basic Triangle"
+  "title": "Basic Triangles"
 }
 */
 
-import Default, { wgsl as wigsill } from 'wigsill';
-import { defineLayout, onCleanup } from '@wigsill/example-toolkit';
+import { wgsl } from 'wigsill';
+import { defineLayout, onCleanup, onFrame } from '@wigsill/example-toolkit';
 
-const some = wgsl.fn()`() -> f32 {
+wgsl.fn()`() -> f32 {
   return 1. + 2.;
 }`;
+
+onFrame(() => {
+  console.log('Hello from basic triangle!');
+});
 
 onCleanup(() => {
   console.log(`All cleaned up`);

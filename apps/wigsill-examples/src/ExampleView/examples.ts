@@ -12,8 +12,13 @@ import { parseExampleCode } from './parseExampleCode';
 
 export const examples = pipe(
   rawExamples,
-  mapKeys((key) => {
-    return key.replace('^../examples/', '');
-  }),
+  mapKeys((key) =>
+    pipe(
+      key,
+      (key) => key.replace(/^..\/examples\//, ''), // remove parent folder
+      (key) => key.replace(/.js$/, ''), // remove extension
+      (key) => key.replace(/\//, '--'), // / -> --
+    ),
+  ),
   mapValues(parseExampleCode),
 );

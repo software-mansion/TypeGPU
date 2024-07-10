@@ -18,7 +18,9 @@ function App() {
     }
 
     if (currentExample in examples) {
-      return <ExampleView example={examples[currentExample]} />;
+      return (
+        <ExampleView key={currentExample} example={examples[currentExample]} />
+      );
     }
 
     return <ExampleNotFound />;

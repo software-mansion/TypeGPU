@@ -1,8 +1,9 @@
+import { debounce } from 'remeda';
+import { useMemo, useState } from 'react';
+
 import useEvent from '../common/useEvent';
 import { CodeEditor } from '../CodeEditor';
 import type { Example } from './types';
-import { useMemo, useState } from 'react';
-import { debounce } from 'remeda';
 
 type Props = {
   example: Example;
