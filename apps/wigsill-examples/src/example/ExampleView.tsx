@@ -62,12 +62,12 @@ export function ExampleView({ example }: Props) {
   return (
     <>
       <div className="flex-1 self-stretch flex justify-evenly items-center min-h-[50vh]">
-        {def.elements.map((element, index) => {
+        {def.elements.map((element) => {
           if (element.type === 'canvas') {
             return (
               <Canvas
-                key={index}
-                ref={(canvas) => setRef(index, canvas)}
+                key={element.key}
+                ref={(canvas) => setRef(element.key, canvas)}
                 width={element.width}
                 height={element.height}
               />
@@ -75,8 +75,8 @@ export function ExampleView({ example }: Props) {
           } else if (element.type === 'video') {
             return (
               <Video
-                key={index}
-                ref={(video) => setRef(index, video)}
+                key={element.key}
+                ref={(video) => setRef(element.key, video)}
                 width={element.width}
                 height={element.height}
               />

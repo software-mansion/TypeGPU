@@ -8,8 +8,10 @@ import { f32, makeArena, ProgramBuilder, wgsl, WGSLRuntime } from 'wigsill';
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
 
 // Layout
-const video = await addElement('video', { width: 500, height: 375 });
-const canvas = await addElement('canvas', { width: 500, height: 375 });
+const [video, canvas] = await Promise.all([
+  addElement('video', { width: 500, height: 375 }),
+  addElement('canvas', { width: 500, height: 375 }),
+]);
 
 const adapter = await navigator.gpu.requestAdapter();
 const device = await adapter.requestDevice();

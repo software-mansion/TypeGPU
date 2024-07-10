@@ -6,6 +6,7 @@ import type TemplateGenerator from '@babel/template';
 
 import { ExampleState } from './exampleState';
 import { LayoutInstance } from './layout';
+import { ExecutionCancelledError } from './errors';
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
 const template = (
@@ -122,8 +123,6 @@ export async function executeExample(
       plugins: [staticToDynamicImports],
     });
 
-    console.log(output.code);
-
     return output.code;
   })();
 
@@ -134,7 +133,15 @@ ${transformedCode}
 `);
 
   // Running the code
-  await mod()(_import);
+  try {
+    await mod()(_import);
+  } catch (err) {
+    if (err instanceof ExecutionCancelledError) {
+      // Ignore, to be expected.
+    } else {
+      throw err;
+    }
+  }
 
   gui.show();
 

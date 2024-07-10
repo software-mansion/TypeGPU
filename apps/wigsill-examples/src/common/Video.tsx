@@ -1,5 +1,5 @@
 import cs from 'classnames';
-import { forwardRef, useImperativeHandle, useRef } from 'react';
+import { forwardRef } from 'react';
 
 type Props = {
   width?: number;
@@ -9,26 +9,24 @@ type Props = {
 export const Video = forwardRef<HTMLVideoElement, Props>((props, ref) => {
   const { width, height } = props;
 
-  const innerRef = useRef<HTMLVideoElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useImperativeHandle(ref, () => innerRef.current!);
-
   return (
     <div
-      ref={containerRef}
       className={cs(
-        'relative overflow-hidden bg-red-500',
-        width && height ? 'flex-initial' : 'flex-1',
-      )}
-      style={{ width, height }}>
+        'relative overflow-hidden bg-black',
+        width && height ? 'flex-initial' : 'self-stretch flex-1',
+      )}>
       <video
-        className="absolute object-fill"
+        ref={ref}
+        className={cs(
+          'object-fill',
+          width && height
+            ? ''
+            : 'absolute inset-0 self-stretch max-h-none aspect-auto',
+        )}
         style={{ width, height }}
         width={width}
         height={height}
         autoPlay={true}
-        ref={innerRef}
       />
     </div>
   );

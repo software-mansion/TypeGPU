@@ -1,27 +1,34 @@
-import { useCallback, useRef, useState } from 'react';
-import useEvent from '../common/useEvent';
+import { useCallback, useMemo, useRef } from 'react';
+import { atom, useAtomValue, useStore } from 'jotai';
+
+import { ExecutionCancelledError } from './errors';
 
 export type CanvasDef = {
   type: 'canvas';
+  key: string;
   width?: number;
   height?: number;
 };
 
 export type VideoDef = {
   type: 'video';
+  key: string;
   width?: number;
   height?: number;
 };
 
 export type ElementDef = CanvasDef | VideoDef;
 
+export type ElementType = ElementDef['type'];
+export type ElementOptions = Omit<ElementDef, 'type' | 'key'>;
+
 export type LayoutDef = {
   elements: ElementDef[];
 };
 
 export type AddElement = (
-  type: ElementDef['type'],
-  options: Omit<ElementDef, 'type'>,
+  type: ElementType,
+  options: ElementOptions,
 ) => Promise<HTMLElement>;
 
 /**
@@ -29,57 +36,87 @@ export type AddElement = (
  */
 export type LayoutInstance = {
   addElement: AddElement;
-  active: boolean;
   dispose: () => void;
+  resolveElement: (key: string, element: unknown) => void;
+};
+
+const uniqueElementKey = (() => {
+  let nextFreeElementKey = 1;
+
+  return () => `${nextFreeElementKey++}`;
+})();
+
+const makeLayout = (appendToDef: (element: ElementDef) => void) => {
+  const elementResolves = new Map<string, (element: unknown) => void>();
+  const elementRejects: ((err: unknown) => void)[] = [];
+
+  let cancelled = false;
+
+  const newInstance: LayoutInstance = {
+    addElement: (type: ElementType, options: ElementOptions) => {
+      if (cancelled) {
+        throw new ExecutionCancelledError();
+      }
+
+      const elementKey = uniqueElementKey();
+
+      if (type === 'canvas') {
+        appendToDef({ ...options, type: 'canvas', key: elementKey });
+
+        return new Promise<HTMLCanvasElement>((resolve, reject) => {
+          elementResolves.set(elementKey, resolve as () => void);
+          elementRejects.push(reject);
+        });
+      } else if (type === 'video') {
+        appendToDef({ ...options, type: 'video', key: elementKey });
+
+        return new Promise<HTMLVideoElement>((resolve, reject) => {
+          elementResolves.set(elementKey, resolve as () => void);
+          elementRejects.push(reject);
+        });
+      } else {
+        throw new Error(`Tried to add unsupported layout element: ${type}`);
+      }
+    },
+
+    dispose: () => {
+      cancelled = true;
+      elementResolves.clear();
+      elementRejects.forEach((reject) => reject(new ExecutionCancelledError()));
+    },
+
+    resolveElement(key, element) {
+      if (cancelled) {
+        throw new ExecutionCancelledError();
+      }
+
+      const resolve = elementResolves.get(key);
+      if (resolve) {
+        resolve(element);
+      }
+    },
+  };
+
+  return newInstance;
 };
 
 export function useLayout(): {
   def: LayoutDef;
   createLayout: () => LayoutInstance;
   dispose: () => void;
-  setRef: (index: number, element: unknown) => void;
+  setRef: (key: string, element: unknown) => void;
 } {
-  const [def, setDef] = useState<LayoutDef>({ elements: [] });
-  const elementResolves = useRef(new Map<number, (element: unknown) => void>());
+  const store = useStore();
+  const layoutDefAtom = useMemo(() => atom<LayoutDef>({ elements: [] }), []);
   const instanceRef = useRef<LayoutInstance | null>(null);
-
-  const addElement: AddElement = useEvent(
-    (type: ElementDef['type'], options: Omit<ElementDef, 'type'>) => {
-      if (!instanceRef.current) {
-        // No instance is active.
-        throw new Error(`No layout is active`);
-      }
-
-      const index = def.elements.length;
-
-      if (type === 'canvas') {
-        setDef({
-          elements: [...def.elements, { ...options, type: 'canvas' }],
-        });
-
-        return new Promise<HTMLCanvasElement>((resolve) => {
-          elementResolves.current.set(index, resolve as () => void);
-        });
-      } else if (type === 'video') {
-        setDef({
-          elements: [...def.elements, { ...options, type: 'video' }],
-        });
-
-        return new Promise<HTMLVideoElement>((resolve) => {
-          elementResolves.current.set(index, resolve as () => void);
-        });
-      } else {
-        throw new Error(`Tried to add unsupported layout element: ${type}`);
-      }
-    },
-  );
+  const def = useAtomValue(layoutDefAtom);
 
   const dispose = useCallback(() => {
     if (!instanceRef.current) {
       return;
     }
 
-    instanceRef.current.active = false;
+    instanceRef.current.dispose();
     instanceRef.current = null;
   }, []);
 
@@ -87,24 +124,24 @@ export function useLayout(): {
     // Discarding the old one, if it still exists.
     dispose();
 
-    setDef({ elements: [] });
+    store.set(layoutDefAtom, { elements: [] });
 
-    const newInstance: LayoutInstance = {
-      active: true,
-      addElement,
-      dispose,
-    };
+    const newInstance = makeLayout((value: ElementDef) =>
+      store.set(layoutDefAtom, (prev) => ({
+        elements: [...prev.elements, value],
+      })),
+    );
 
     instanceRef.current = newInstance;
     return newInstance;
-  }, [dispose, addElement]);
+  }, [dispose, store, layoutDefAtom]);
 
-  const setRef = useCallback((index: number, element: unknown) => {
-    const resolve = elementResolves.current.get(index);
-    if (!resolve) {
-      throw new Error(`Tried to resolve non-existent layout element`);
+  const setRef = useCallback((key: string, element: unknown) => {
+    if (!instanceRef.current) {
+      throw new Error(`No layout is currently active`);
     }
-    resolve(element);
+
+    instanceRef.current.resolveElement(key, element);
   }, []);
 
   return {
