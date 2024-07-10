@@ -126,8 +126,6 @@ fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
     let running = true;
 
     function frame() {
-      const commandEncoder = device.createCommandEncoder();
-
       if (!(videoRef.current && videoRef.current.currentTime > 0)) {
         if (running) {
           requestAnimationFrame(frame);
@@ -158,6 +156,8 @@ fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
           },
         ],
       });
+
+      const commandEncoder = device.createCommandEncoder();
 
       const passEncoder = commandEncoder.beginRenderPass({
         colorAttachments: [
