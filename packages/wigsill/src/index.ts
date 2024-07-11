@@ -6,11 +6,12 @@ export { MemoryArena, makeArena } from './memoryArena';
 export { default as WGSLRuntime } from './wgslRuntime';
 export { default as ProgramBuilder, type Program } from './programBuilder';
 export * from './std140';
+export * from './macro';
 
 export { WGSLCode } from './wgslCode';
 export { WGSLConstant } from './wgslConstant';
 export { WGSLFunction } from './wgslFunction';
 export { WGSLIdentifier } from './wgslIdentifier';
 export { WGSLMemory } from './wgslMemory';
-export { WGSLPlaceholder } from './wgslPlaceholder';
+export { WGSLSlot } from './wgslSlot';
 export { WGSLRequire } from './wgslRequire';
