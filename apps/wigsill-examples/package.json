@@ -10,16 +10,24 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@babel/standalone": "^7.24.7",
+    "@monaco-editor/react": "^4.6.0",
     "classnames": "^2.5.1",
     "dat.gui": "^0.7.9",
     "jotai": "^2.8.4",
     "jotai-location": "^0.5.5",
+    "monaco-editor": "^0.50.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "remeda": "^2.3.0",
     "typed-binary": "^4.0.0",
-    "wigsill": "workspace:*"
+    "wigsill": "workspace:*",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/babel__standalone": "^7.1.7",
+    "@types/babel__template": "^7.4.4",
+    "@types/babel__traverse": "^7.20.6",
     "@types/dat.gui": "^0.7.13",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
@@ -34,6 +42,7 @@
     "postcss": "^8.4.39",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.2.2",
-    "vite": "^5.3.1"
+    "vite": "^5.3.1",
+    "vitest": "0.33.0"
   }
 }
