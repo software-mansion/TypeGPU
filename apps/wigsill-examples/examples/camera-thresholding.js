@@ -1,6 +1,6 @@
 /*
 {
-  "title": "Camera thresholding"
+  "title": "Camera Thresholding"
 }
 */
 
@@ -23,45 +23,46 @@ const shaderCode = wgsl`
 @group(0) @binding(1) var videoTexture : texture_external;
 
 struct VertexOutput {
-@builtin(position) Position : vec4f,
-@location(0) fragUV : vec2f,
+  @builtin(position) Position : vec4f,
+  @location(0) fragUV : vec2f,
 }
 
 @vertex
 fn vert_main(@builtin(vertex_index) VertexIndex : u32) -> VertexOutput {
-const pos = array(
-vec2( 1.0,  1.0),
-vec2( 1.0, -1.0),
-vec2(-1.0, -1.0),
-vec2( 1.0,  1.0),
-vec2(-1.0, -1.0),
-vec2(-1.0,  1.0),
-);
+  const pos = array(
+    vec2( 1.0,  1.0),
+    vec2( 1.0, -1.0),
+    vec2(-1.0, -1.0),
+    vec2( 1.0,  1.0),
+    vec2(-1.0, -1.0),
+    vec2(-1.0,  1.0),
+  );
 
-const uv = array(
-vec2(1.0, 0.0),
-vec2(1.0, 1.0),
-vec2(0.0, 1.0),
-vec2(1.0, 0.0),
-vec2(0.0, 1.0),
-vec2(0.0, 0.0),
-);
+  const uv = array(
+    vec2(1.0, 0.0),
+    vec2(1.0, 1.0),
+    vec2(0.0, 1.0),
+    vec2(1.0, 0.0),
+    vec2(0.0, 1.0),
+    vec2(0.0, 0.0),
+  );
 
-var output : VertexOutput;
-output.Position = vec4(pos[VertexIndex], 0.0, 1.0);
-output.fragUV = uv[VertexIndex];
-return output;
+  var output : VertexOutput;
+  output.Position = vec4(pos[VertexIndex], 0.0, 1.0);
+  output.fragUV = uv[VertexIndex];
+  return output;
 }
 
 @fragment
 fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
-var color = textureSampleBaseClampToEdge(videoTexture, sampler_, fragUV);
-let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
+  var color = textureSampleBaseClampToEdge(videoTexture, sampler_, fragUV);
+  let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
 
-if grey < ${thresholdData} {
-return vec4f(0, 0, 0, 1);
-}
-return vec4f(1);
+  if grey < ${thresholdData} {
+    return vec4f(0, 0, 0, 1);
+  }
+
+  return vec4f(1);
 }
 `;
 
