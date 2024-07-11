@@ -4,8 +4,9 @@ import { useAtom } from 'jotai/react';
 
 import { currentExampleAtom } from './router';
 import { ExampleLink } from './common/ExampleLink';
-import { examples } from './examples';
 import { ExampleNotFound } from './ExampleNotFound';
+import { ExampleView } from './example/ExampleView';
+import { examples } from './example/examples';
 import { Home } from './Home';
 
 function App() {
@@ -17,10 +18,9 @@ function App() {
     }
 
     if (currentExample in examples) {
-      const Example =
-        examples[currentExample as keyof typeof examples].component;
-
-      return <Example />;
+      return (
+        <ExampleView key={currentExample} example={examples[currentExample]} />
+      );
     }
 
     return <ExampleNotFound />;
@@ -42,7 +42,7 @@ function App() {
             <hr className="my-2" />
             {Object.entries(examples).map(([key, example]) => (
               <ExampleLink key={key} exampleKey={key}>
-                {example.label}
+                {example.metadata.title}
               </ExampleLink>
             ))}
           </nav>
