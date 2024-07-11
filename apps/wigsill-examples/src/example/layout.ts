@@ -87,7 +87,8 @@ const makeLayout = (appendToDef: (element: ElementDef) => void) => {
 
     resolveElement(key, element) {
       if (cancelled) {
-        throw new ExecutionCancelledError();
+        // Happens in the React UI loop, ignore instead of throwing an error.
+        return;
       }
 
       const resolve = elementResolves.get(key);

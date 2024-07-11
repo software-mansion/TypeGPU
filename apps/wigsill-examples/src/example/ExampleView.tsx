@@ -9,6 +9,7 @@ import { executeExample } from './exampleRunner';
 import { useLayout } from './layout';
 import { Canvas } from '../common/Canvas';
 import { Video } from '../common/Video';
+import { ExecutionCancelledError } from './errors';
 
 type Props = {
   example: Example;
@@ -21,16 +22,28 @@ function useExample(exampleCode: string) {
   useEffect(() => {
     let cancelled = false;
 
-    executeExample(exampleCode, createLayout).then((example) => {
-      if (cancelled) {
-        // Another instance was started in the meantime.
-        example.dispose();
-        return;
-      }
+    executeExample(exampleCode, createLayout)
+      .then((example) => {
+        if (cancelled) {
+          // Another instance was started in the meantime.
+          example.dispose();
+          return;
+        }
 
-      // Success
-      exampleRef.current = example;
-    });
+        // Success
+        exampleRef.current = example;
+      })
+      .catch((err) => {
+        if (err instanceof SyntaxError) {
+          // TODO: Surface the error back to the user
+          console.log(err);
+        } else if (err instanceof ExecutionCancelledError) {
+          // Ignore, to be expected.
+          cancelled = true;
+        } else {
+          throw err;
+        }
+      });
 
     return () => {
       exampleRef.current?.dispose();

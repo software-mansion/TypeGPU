@@ -6,7 +6,6 @@ import type TemplateGenerator from '@babel/template';
 
 import { ExampleState } from './exampleState';
 import { LayoutInstance } from './layout';
-import { ExecutionCancelledError } from './errors';
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
 const template = (
@@ -16,7 +15,7 @@ const template = (
 /**
  * A custom babel plugin for turning:
  *
- * `import Default, { one, two } from ''module`
+ * `import Default, { one, two } from 'module'`
  *  into
  * `const { default: Default, one, two } = await _import('module')`
  */
@@ -63,8 +62,20 @@ export async function executeExample(
   const cleanupCallbacks: (() => unknown)[] = [];
 
   const layout = createLayout();
+  let disposed = false;
+  cleanupCallbacks.push(() => layout.dispose());
+
   const gui = new GUI({ closeOnTop: true });
+  cleanupCallbacks.push(() => gui.destroy());
   gui.hide();
+
+  const dispose = () => {
+    if (disposed) {
+      return;
+    }
+    disposed = true;
+    cleanupCallbacks.forEach((cb) => cb());
+  };
 
   function addParameter(
     label: string,
@@ -86,70 +97,60 @@ export async function executeExample(
     onChange(options.initial);
   }
 
-  /**
-   * Simulated imports from within the sandbox, making only a subset of
-   * modules available.
-   */
-  const _import = async (moduleKey: string) => {
-    if (moduleKey === 'wigsill') {
-      return await import('wigsill');
-    }
-    if (moduleKey === '@wigsill/example-toolkit') {
-      return {
-        onCleanup(callback: () => unknown) {
-          cleanupCallbacks.push(callback);
-        },
-        onFrame(callback: () => unknown) {
-          let handle = 0;
-          const runner = () => {
-            callback();
-            handle = requestAnimationFrame(runner);
-          };
-          runner();
+  try {
+    /**
+     * Simulated imports from within the sandbox, making only a subset of
+     * modules available.
+     */
+    const _import = async (moduleKey: string) => {
+      if (moduleKey === 'wigsill') {
+        return await import('wigsill');
+      }
+      if (moduleKey === '@wigsill/example-toolkit') {
+        return {
+          onCleanup(callback: () => unknown) {
+            cleanupCallbacks.push(callback);
+          },
+          onFrame(callback: () => unknown) {
+            let handle = 0;
+            const runner = () => {
+              callback();
+              handle = requestAnimationFrame(runner);
+            };
+            runner();
 
-          cleanupCallbacks.push(() => cancelAnimationFrame(handle));
-        },
-        addElement: layout.addElement,
-        addParameter,
-      };
-    }
-    throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
-  };
+            cleanupCallbacks.push(() => cancelAnimationFrame(handle));
+          },
+          addElement: layout.addElement,
+          addParameter,
+        };
+      }
+      throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
+    };
 
-  const transformedCode = (() => {
-    const output = Babel.transform(exampleCode, {
-      compact: false,
-      retainLines: true,
-      plugins: [staticToDynamicImports],
-    });
+    const transformedCode =
+      Babel.transform(exampleCode, {
+        compact: false,
+        retainLines: true,
+        plugins: [staticToDynamicImports],
+      }).code ?? exampleCode;
 
-    return output.code;
-  })();
-
-  const mod = Function(`
+    const mod = Function(`
 return async (_import) => {
 ${transformedCode}
 };
 `);
 
-  // Running the code
-  try {
+    // Running the code
     await mod()(_import);
+
+    gui.show();
+
+    return {
+      dispose,
+    };
   } catch (err) {
-    if (err instanceof ExecutionCancelledError) {
-      // Ignore, to be expected.
-    } else {
-      throw err;
-    }
+    dispose();
+    throw err;
   }
-
-  gui.show();
-
-  return {
-    dispose: () => {
-      cleanupCallbacks.forEach((cb) => cb());
-      layout.dispose();
-      gui.destroy();
-    },
-  };
 }
