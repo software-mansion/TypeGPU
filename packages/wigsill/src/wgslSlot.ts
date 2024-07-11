@@ -1,5 +1,5 @@
 import {
-  IResolutionCtx,
+  ResolutionCtx,
   WGSLBindableTrait,
   WGSLItem,
   WGSLSegment,
@@ -30,21 +30,17 @@ export class WGSLSlot<T> implements WGSLItem, WGSLBindableTrait<T> {
     return this;
   }
 
-  private getValue(ctx: IResolutionCtx) {
-    if (this.defaultValue) {
-      return ctx.tryBinding(this, this.defaultValue);
-    }
+  resolve(ctx: ResolutionCtx): string {
+    const value = this.defaultValue
+      ? ctx.tryBinding(this, this.defaultValue)
+      : ctx.requireBinding(this);
 
-    return ctx.requireBinding(this);
-  }
-
-  resolve(ctx: IResolutionCtx): string {
-    const value = this.getValue(ctx);
     if (!isWGSLSegment(value)) {
       throw new Error(
         `Cannot resolve value of type ${typeof value} for slot: ${this.debugLabel ?? '<unnamed>'}, type WGSLSegment required`,
       );
     }
+
     return ctx.resolve(value);
   }
 }

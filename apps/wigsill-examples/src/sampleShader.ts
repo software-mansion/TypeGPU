@@ -1,6 +1,6 @@
 import { wgsl } from 'wigsill';
 
-const factor = wgsl.placeholder().alias('factor');
+const factor = wgsl.slot(10);
 
 const multiply = wgsl.fn()`() -> {
   return 12 * ${factor};
