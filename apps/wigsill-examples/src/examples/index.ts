@@ -1,5 +1,6 @@
 import { CameraThresholdingExample } from './CameraThresholdingExample';
 import { GradientTilesExample } from './GradientTilesExample';
+import { FluidSimExample } from './FluidSimExample';
 
 export const examples = {
   'gradient-tiles': {
@@ -9,5 +10,9 @@ export const examples = {
   'camera-thresholding': {
     label: 'Camera thresholding',
     component: CameraThresholdingExample,
+  },
+  'fluid-simulation': {
+    label: 'Fluid simulation',
+    component: () => FluidSimExample(),
   },
 };
