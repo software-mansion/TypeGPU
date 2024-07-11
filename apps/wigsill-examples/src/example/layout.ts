@@ -1,5 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react';
-import { atom, useAtomValue, useStore } from 'jotai';
+import { useCallback, useRef, useState } from 'react';
 
 import { ExecutionCancelledError } from './errors';
 
@@ -107,10 +106,8 @@ export function useLayout(): {
   dispose: () => void;
   setRef: (key: string, element: unknown) => void;
 } {
-  const store = useStore();
-  const layoutDefAtom = useMemo(() => atom<LayoutDef>({ elements: [] }), []);
+  const [layoutDef, setLayoutDef] = useState<LayoutDef>({ elements: [] });
   const instanceRef = useRef<LayoutInstance | null>(null);
-  const def = useAtomValue(layoutDefAtom);
 
   const dispose = useCallback(() => {
     if (!instanceRef.current) {
@@ -125,17 +122,17 @@ export function useLayout(): {
     // Discarding the old one, if it still exists.
     dispose();
 
-    store.set(layoutDefAtom, { elements: [] });
+    setLayoutDef({ elements: [] });
 
     const newInstance = makeLayout((value: ElementDef) =>
-      store.set(layoutDefAtom, (prev) => ({
+      setLayoutDef((prev) => ({
         elements: [...prev.elements, value],
       })),
     );
 
     instanceRef.current = newInstance;
     return newInstance;
-  }, [dispose, store, layoutDefAtom]);
+  }, [dispose, setLayoutDef]);
 
   const setRef = useCallback((key: string, element: unknown) => {
     if (!instanceRef.current) {
@@ -146,7 +143,7 @@ export function useLayout(): {
   }, []);
 
   return {
-    def,
+    def: layoutDef,
     dispose,
     createLayout,
     setRef,
