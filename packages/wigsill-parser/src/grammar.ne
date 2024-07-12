@@ -27,7 +27,7 @@ const lexer = moo.compile({
 });
 
 export type TranslationUnit = ReturnType<typeof pp_translation_unit>;
-function pp_translation_unit([, declarations]: [any, declarations: [GlobalDecl, any][]]) {
+function pp_translation_unit([ , declarations]: [any, declarations: [GlobalDecl, any][]]) {
   return declarations.map((tuple) => tuple[0]);
 }
 
@@ -38,17 +38,17 @@ export type Statement = string; // TODO: Define this
 export type Expression = string; // TODO: Define this
 
 export type CompoundStatement = ReturnType<typeof pp_compound_statement>;
-function pp_compound_statement([,, statements]: [any, any, Statement[]]) {
+function pp_compound_statement([ , , statements]: [any, any, Statement[]]) {
   return { type: 'compound_statement' as const, statements };
 }
 
 export type FunctionDecl = ReturnType<typeof pp_function_decl>;
-function pp_function_decl([header,, body]: [FunctionHeader, any, CompoundStatement]) {
+function pp_function_decl([header, , body]: [FunctionHeader, any, CompoundStatement]) {
   return { type: 'function_decl' as const, header, body };
 }
 
 export type FunctionHeader = ReturnType<typeof pp_function_header>;
-function pp_function_header([,, identifier]: [any, any, Identifier]) {
+function pp_function_header([ , , identifier]: [any, any, Identifier]) {
   return { type: 'function_header' as const, identifier: identifier.value };
 }
 
