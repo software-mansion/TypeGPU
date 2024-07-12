@@ -106,6 +106,13 @@ export async function executeExample(
   function addParameter(
     label: string,
     options: {
+      initial: boolean;
+    },
+    onChange: (newValue: boolean) => void,
+  ) : void;
+  function addParameter(
+    label: string,
+    options: {
       initial: number;
       min?: number;
       max?: number;
@@ -116,8 +123,12 @@ export async function executeExample(
     } | {
       initial: number;
       options: number[],
+    } | {
+      initial: boolean;
     },
-    onChange: ((newValue: string) => void) | ((newValue: number) => void),
+    onChange: ((newValue: string) => void) |
+              ((newValue: number) => void) | 
+              ((newValue: boolean) => void),
   ): void {
     const temp = { [label]: options.initial };
 
@@ -125,7 +136,11 @@ export async function executeExample(
       gui
         .add(temp, label, options.options)
         .onChange((value) => onChange(value as never));
-    }else {
+    }else if (typeof options.initial === 'boolean'){
+      gui
+        .add(temp, label, options.initial)
+        .onChange((value) => onChange(value as never));
+    }else{
       gui
       .add(temp, label, options.min, options.max, options.step)
       .onChange((value) => onChange(value as never));

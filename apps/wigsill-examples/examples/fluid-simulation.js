@@ -683,3 +683,6 @@ addParameter('brushType', {initial: 'water', options: ['wall', 'source', 'drain'
             break;
     }
 });
+addParameter('pause', {initial: false}, (value) => {
+    paused = value;
+});
