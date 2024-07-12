@@ -5,11 +5,12 @@
 // Bypasses TS6133. Allow declared but unused functions.
 // @ts-ignore
 function id(d: any[]): any { return d[0]; }
+declare var ident_pattern: any;
+declare var swizzle_name: any;
 declare var decimal_int_literal: any;
 declare var hex_int_literal: any;
 declare var decimal_float_literal: any;
 declare var hex_float_literal: any;
-declare var ident_pattern: any;
 declare var bool_literal: any;
 declare var WS: any;
 declare var NL: any;
@@ -22,7 +23,7 @@ const lexer = moo.compile({
   keyword: ['if', 'else'],
   comment: /\/\/.*?$/,
   semi: ";",
-  bool_literal: ['true', 'false'],
+  bool_literal: { match: ['true', 'false'], value: (v) => v === 'true' },
   decimal_int_literal: { match: /(?:0|[1-9][0-9]*)[iu]?/ },
   hex_int_literal: { match: /0[xX][0-9a-fA-F]+[iu]?/ },
   decimal_float_literal: /0[fh]|[1-9][0-9]*[fh]|[0-9]*\.[0-9]+(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+\.[0-9]*(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+[eE][+-]?[0-9]+[fh]?/,
@@ -30,17 +31,38 @@ const lexer = moo.compile({
 
   // WGSL spec apparently accepts plenty of Unicode, but lets limit it to just ASCII for now.
   ident_pattern: /\w+/,
+  swizzle_name: { match: /[rgba]|[rgba][rgba]|[rgba][rgba][rgba]|[rgba][rgba][rgba][rgba]|[xyzw]|[xyzw][xyzw]|[xyzw][xyzw][xyzw]|[xyzw][xyzw][xyzw][xyzw]/ },
+  shift_left: '<<',
+  shift_right: '>>',
   _disambiguate_template: '<',
   lt: '<',
   gt: '>',
+  le: '<=',
+  ge: '>=',
   lparen: '(',
   rparen: ')',
   lbrace: '{',
   rbrace: '}',
+  lbracket: '[',
+  rbracket: ']',
+  plus: '+',
+  minus: '-',
+  and: '&&',
+  or: '||',
+  amp: '&',
+  pipe: '|',
+  caret: '^',
+  star: '*',
+  slash: '/',
+  percent: '%',
 });
 
+function token_type([token]: [{ type: string }]) {
+  return token.type;
+}
+
 export type TranslationUnit = ReturnType<typeof pp_translation_unit>;
-function pp_translation_unit([, declarations]: [any, declarations: [GlobalDecl, any][]]) {
+function pp_translation_unit([ , declarations]: [any, declarations: [GlobalDecl, any][]]) {
   return declarations.map((tuple) => tuple[0]);
 }
 
@@ -50,18 +72,23 @@ export type Statement = string; // TODO: Define this
 
 export type Expression = string; // TODO: Define this
 
+export type BoolLiteral = ReturnType<typeof pp_bool_literal>;
+function pp_bool_literal([token]: [{ value: boolean }]) {
+  return { type: 'bool_literal' as const, value: token.value };
+}
+
 export type CompoundStatement = ReturnType<typeof pp_compound_statement>;
-function pp_compound_statement([,, statements]: [any, any, Statement[]]) {
+function pp_compound_statement([ , , statements]: [any, any, Statement[]]) {
   return { type: 'compound_statement' as const, statements };
 }
 
 export type FunctionDecl = ReturnType<typeof pp_function_decl>;
-function pp_function_decl([header,, body]: [FunctionHeader, any, CompoundStatement]) {
+function pp_function_decl([header, , body]: [FunctionHeader, any, CompoundStatement]) {
   return { type: 'function_decl' as const, header, body };
 }
 
 export type FunctionHeader = ReturnType<typeof pp_function_header>;
-function pp_function_header([,, identifier]: [any, any, Identifier]) {
+function pp_function_header([ , , identifier]: [any, any, Identifier]) {
   return { type: 'function_header' as const, identifier: identifier.value };
 }
 
@@ -123,10 +150,6 @@ const grammar: Grammar = {
     {"name": "global_directive", "symbols": [{"literal":"else"}]},
     {"name": "global_decl", "symbols": [{"literal":";"}], "postprocess": () => null},
     {"name": "global_decl", "symbols": ["function_decl"], "postprocess": id},
-    {"name": "int_literal", "symbols": [(lexer.has("decimal_int_literal") ? {type: "decimal_int_literal"} : decimal_int_literal)]},
-    {"name": "int_literal", "symbols": [(lexer.has("hex_int_literal") ? {type: "hex_int_literal"} : hex_int_literal)], "postprocess": id},
-    {"name": "float_literal", "symbols": [(lexer.has("decimal_float_literal") ? {type: "decimal_float_literal"} : decimal_float_literal)]},
-    {"name": "float_literal", "symbols": [(lexer.has("hex_float_literal") ? {type: "hex_float_literal"} : hex_float_literal)], "postprocess": id},
     {"name": "ident", "symbols": [(lexer.has("ident_pattern") ? {type: "ident_pattern"} : ident_pattern)], "postprocess": id},
     {"name": "global_variable_decl", "symbols": [{"literal":"if"}]},
     {"name": "global_value_decl", "symbols": []},
@@ -140,7 +163,74 @@ const grammar: Grammar = {
     {"name": "compound_statement", "symbols": [{"literal":"{"}, "_", "compound_statement$ebnf$1", "_", {"literal":"}"}], "postprocess": pp_compound_statement},
     {"name": "statement", "symbols": [{"literal":";"}], "postprocess": () => null},
     {"name": "statement", "symbols": ["if_statement"], "postprocess": id},
-    {"name": "expression", "symbols": [(lexer.has("bool_literal") ? {type: "bool_literal"} : bool_literal)], "postprocess": id},
+    {"name": "swizzle_name", "symbols": [(lexer.has("swizzle_name") ? {type: "swizzle_name"} : swizzle_name)]},
+    {"name": "literal", "symbols": ["int_literal"], "postprocess": id},
+    {"name": "literal", "symbols": ["float_literal"], "postprocess": id},
+    {"name": "literal", "symbols": ["bool_literal"], "postprocess": id},
+    {"name": "int_literal", "symbols": [(lexer.has("decimal_int_literal") ? {type: "decimal_int_literal"} : decimal_int_literal)], "postprocess": id},
+    {"name": "int_literal", "symbols": [(lexer.has("hex_int_literal") ? {type: "hex_int_literal"} : hex_int_literal)], "postprocess": id},
+    {"name": "float_literal", "symbols": [(lexer.has("decimal_float_literal") ? {type: "decimal_float_literal"} : decimal_float_literal)], "postprocess": id},
+    {"name": "float_literal", "symbols": [(lexer.has("hex_float_literal") ? {type: "hex_float_literal"} : hex_float_literal)], "postprocess": id},
+    {"name": "bool_literal", "symbols": [(lexer.has("bool_literal") ? {type: "bool_literal"} : bool_literal)], "postprocess": pp_bool_literal},
+    {"name": "primary_expression", "symbols": ["literal"]},
+    {"name": "primary_expression", "symbols": ["paren_expression"]},
+    {"name": "paren_expression", "symbols": [{"literal":"("}, "_", "expression", "_", {"literal":")"}]},
+    {"name": "component_or_swizzle_specifier$ebnf$1", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
+    {"name": "component_or_swizzle_specifier$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "component_or_swizzle_specifier", "symbols": [{"literal":"["}, "_", "expression", "_", {"literal":"]"}, "_", "component_or_swizzle_specifier$ebnf$1"]},
+    {"name": "component_or_swizzle_specifier$ebnf$2", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
+    {"name": "component_or_swizzle_specifier$ebnf$2", "symbols": [], "postprocess": () => null},
+    {"name": "component_or_swizzle_specifier", "symbols": [{"literal":"."}, "ident", "_", "component_or_swizzle_specifier$ebnf$2"]},
+    {"name": "component_or_swizzle_specifier$ebnf$3", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
+    {"name": "component_or_swizzle_specifier$ebnf$3", "symbols": [], "postprocess": () => null},
+    {"name": "component_or_swizzle_specifier", "symbols": [{"literal":"."}, "swizzle_name", "_", "component_or_swizzle_specifier$ebnf$3"]},
+    {"name": "unary_expression", "symbols": ["singular_expression"]},
+    {"name": "unary_expression", "symbols": [{"literal":"-"}, "_", "unary_expression"]},
+    {"name": "unary_expression", "symbols": [{"literal":"!"}, "_", "unary_expression"]},
+    {"name": "unary_expression", "symbols": [{"literal":"~"}, "_", "unary_expression"]},
+    {"name": "unary_expression", "symbols": [{"literal":"*"}, "_", "unary_expression"]},
+    {"name": "unary_expression", "symbols": [{"literal":"&"}, "_", "unary_expression"]},
+    {"name": "singular_expression$ebnf$1", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
+    {"name": "singular_expression$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "singular_expression", "symbols": ["primary_expression", "_", "singular_expression$ebnf$1"]},
+    {"name": "multiplicative_operator", "symbols": [{"literal":"*"}], "postprocess": () => 'multiply'},
+    {"name": "multiplicative_operator", "symbols": [{"literal":"/"}], "postprocess": () => 'divide'},
+    {"name": "multiplicative_operator", "symbols": [{"literal":"%"}], "postprocess": () => 'mod'},
+    {"name": "additive_operator", "symbols": [{"literal":"+"}], "postprocess": () => 'add'},
+    {"name": "additive_operator", "symbols": [{"literal":"-"}], "postprocess": () => 'subtract'},
+    {"name": "shift_operator", "symbols": [{"literal":"<<"}], "postprocess": () => 'shift_left'},
+    {"name": "shift_operator", "symbols": [{"literal":">>"}], "postprocess": () => 'shift_right'},
+    {"name": "relational_operator", "symbols": [{"literal":"<"}], "postprocess": () => 'less_than'},
+    {"name": "relational_operator", "symbols": [{"literal":">"}], "postprocess": () => 'greater_than'},
+    {"name": "relational_operator", "symbols": [{"literal":"<="}], "postprocess": () => 'less_than_equal'},
+    {"name": "relational_operator", "symbols": [{"literal":">="}], "postprocess": () => 'greater_than_equal'},
+    {"name": "relational_operator", "symbols": [{"literal":"=="}], "postprocess": () => 'equal'},
+    {"name": "relational_operator", "symbols": [{"literal":"!="}], "postprocess": () => 'not_equal'},
+    {"name": "multiplicative_expression", "symbols": ["unary_expression"], "postprocess": id},
+    {"name": "multiplicative_expression", "symbols": ["multiplicative_expression", "_", "multiplicative_operator", "_", "unary_expression"]},
+    {"name": "additive_expression", "symbols": ["multiplicative_expression"], "postprocess": id},
+    {"name": "additive_expression", "symbols": ["additive_expression", "_", "additive_operator", "_", "multiplicative_expression"]},
+    {"name": "shift_expression", "symbols": ["additive_expression"], "postprocess": id},
+    {"name": "shift_expression", "symbols": ["unary_expression", "_", "shift_operator", "_", "unary_expression"]},
+    {"name": "relational_expression", "symbols": ["shift_expression"], "postprocess": id},
+    {"name": "relational_expression", "symbols": ["shift_expression", "_", "relational_operator", "_", "shift_expression"]},
+    {"name": "short_circuit_and_expression", "symbols": ["relational_expression"], "postprocess": id},
+    {"name": "short_circuit_and_expression", "symbols": ["short_circuit_and_expression", "_", {"literal":"&&"}, "_", "relational_expression"]},
+    {"name": "short_circuit_or_expression", "symbols": ["relational_expression"], "postprocess": id},
+    {"name": "short_circuit_or_expression", "symbols": ["short_circuit_or_expression", "_", {"literal":"||"}, "_", "relational_expression"]},
+    {"name": "binary_or_expression", "symbols": ["unary_expression"], "postprocess": id},
+    {"name": "binary_or_expression", "symbols": ["binary_or_expression", "_", {"literal":"|"}, "_", "unary_expression"]},
+    {"name": "binary_and_expression", "symbols": ["unary_expression"], "postprocess": id},
+    {"name": "binary_and_expression", "symbols": ["binary_and_expression", "_", {"literal":"&"}, "_", "unary_expression"]},
+    {"name": "binary_xor_expression", "symbols": ["unary_expression"], "postprocess": id},
+    {"name": "binary_xor_expression", "symbols": ["binary_xor_expression", "_", {"literal":"^"}, "_", "unary_expression"]},
+    {"name": "bitwise_expression", "symbols": ["binary_and_expression", "_", {"literal":"&"}, "_", "unary_expression"]},
+    {"name": "bitwise_expression", "symbols": ["binary_or_expression", "_", {"literal":"|"}, "_", "unary_expression"]},
+    {"name": "bitwise_expression", "symbols": ["binary_xor_expression", "_", {"literal":"^"}, "_", "unary_expression"]},
+    {"name": "expression", "symbols": ["relational_expression"], "postprocess": id},
+    {"name": "expression", "symbols": ["short_circuit_or_expression", {"literal":"||"}, "relational_expression"]},
+    {"name": "expression", "symbols": ["short_circuit_and_expression", {"literal":"&&"}, "relational_expression"]},
+    {"name": "expression", "symbols": ["bitwise_expression"], "postprocess": id},
     {"name": "if_statement$ebnf$1", "symbols": []},
     {"name": "if_statement$ebnf$1$subexpression$1", "symbols": ["else_if_clause", "_"]},
     {"name": "if_statement$ebnf$1", "symbols": ["if_statement$ebnf$1", "if_statement$ebnf$1$subexpression$1"], "postprocess": (d) => d[0].concat([d[1]])},

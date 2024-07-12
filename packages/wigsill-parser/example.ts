@@ -4,7 +4,7 @@ console.log(
   JSON.stringify(
     parse(`
 fn some() {
-  if false {
+  if 5 > 6 {
   }
 }
 `),

@@ -9,7 +9,7 @@ const lexer = moo.compile({
   keyword: ['if', 'else'],
   comment: /\\/\\/.*?$/,
   semi: ";",
-  bool_literal: ['true', 'false'],
+  bool_literal: { match: ['true', 'false'], value: (v) => v === 'true' },
   decimal_int_literal: { match: /(?:0|[1-9][0-9]*)[iu]?/ },
   hex_int_literal: { match: /0[xX][0-9a-fA-F]+[iu]?/ },
   decimal_float_literal: /0[fh]|[1-9][0-9]*[fh]|[0-9]*\.[0-9]+(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+\.[0-9]*(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+[eE][+-]?[0-9]+[fh]?/,
@@ -17,14 +17,35 @@ const lexer = moo.compile({
 
   // WGSL spec apparently accepts plenty of Unicode, but lets limit it to just ASCII for now.
   ident_pattern: /\\w+/,
+  swizzle_name: { match: /[rgba]|[rgba][rgba]|[rgba][rgba][rgba]|[rgba][rgba][rgba][rgba]|[xyzw]|[xyzw][xyzw]|[xyzw][xyzw][xyzw]|[xyzw][xyzw][xyzw][xyzw]/ },
+  shift_left: '<<',
+  shift_right: '>>',
   _disambiguate_template: '<',
   lt: '<',
   gt: '>',
+  le: '<=',
+  ge: '>=',
   lparen: '(',
   rparen: ')',
   lbrace: '{',
   rbrace: '}',
+  lbracket: '[',
+  rbracket: ']',
+  plus: '+',
+  minus: '-',
+  and: '&&',
+  or: '||',
+  amp: '&',
+  pipe: '|',
+  caret: '^',
+  star: '*',
+  slash: '/',
+  percent: '%',
 });
+
+function token_type([token]: [{ type: string }]) {
+  return token.type;
+}
 
 export type TranslationUnit = ReturnType<typeof pp_translation_unit>;
 function pp_translation_unit([ , declarations]: [any, declarations: [GlobalDecl, any][]]) {
@@ -36,6 +57,11 @@ export type GlobalDecl = null | FunctionDecl;
 export type Statement = string; // TODO: Define this
 
 export type Expression = string; // TODO: Define this
+
+export type BoolLiteral = ReturnType<typeof pp_bool_literal>;
+function pp_bool_literal([token]: [{ value: boolean }]) {
+  return { type: 'bool_literal' as const, value: token.value };
+}
 
 export type CompoundStatement = ReturnType<typeof pp_compound_statement>;
 function pp_compound_statement([ , , statements]: [any, any, Statement[]]) {
@@ -92,9 +118,6 @@ global_decl ->
     | function_decl {% id %}
   # | const_assert_statement ";"
 
-int_literal -> %decimal_int_literal | %hex_int_literal {% id %}
-float_literal -> %decimal_float_literal | %hex_float_literal {% id %}
-
 ident -> %ident_pattern {% id %}
 # member_ident -> %ident_pattern {% id %}
 
@@ -110,7 +133,6 @@ function_decl -> function_header _ compound_statement {% pp_function_decl %}
 # TODO: Add return type
 function_header -> "fn" __ ident _ "(" _ ")" {% pp_function_header %}
 
-# expression -> %number {% id %}
 compound_statement -> "{" _ statement:* _ "}" {% pp_compound_statement %}
 
 # TODO: Add all statements
@@ -118,9 +140,88 @@ statement ->
     ";" {% () => null %}
   | if_statement {% id %}
 
+swizzle_name -> %swizzle_name
+
+#
+# Literals
+#
+
+literal ->
+    int_literal {% id %}
+  | float_literal {% id %}
+  | bool_literal {% id %}
+int_literal -> %decimal_int_literal {% id %} | %hex_int_literal {% id %}
+float_literal -> %decimal_float_literal {% id %} | %hex_float_literal {% id %}
+bool_literal -> %bool_literal {% pp_bool_literal %}
+
+#
+# Expressions
+#
+
+primary_expression ->
+  # template_elaborated_ident
+# | call_expression
+  literal
+  | paren_expression
+
+# call_expression -> template_elaborated_ident _ argument_expression_list
+
+paren_expression -> "(" _ expression _ ")"
+
+component_or_swizzle_specifier ->
+ "[" _ expression _ "]" _ component_or_swizzle_specifier:?
+| "." ident _ component_or_swizzle_specifier:? # TODO: Use member_ident instead of ident if necessary
+| "." swizzle_name _ component_or_swizzle_specifier:?
+
+unary_expression ->
+    singular_expression
+  | "-" _ unary_expression
+  | "!" _ unary_expression
+  | "~" _ unary_expression
+  | "*" _ unary_expression
+  | "&" _ unary_expression
+
+singular_expression ->
+  primary_expression _ component_or_swizzle_specifier:?
+
+multiplicative_operator ->
+    "*" {% () => 'multiply' %}
+  | "/" {% () => 'divide' %}
+  | "%" {% () => 'mod' %}
+additive_operator ->
+    "+" {% () => 'add' %}
+  | "-" {% () => 'subtract' %}
+shift_operator ->
+    "<<" {% () => 'shift_left' %}
+  | ">>" {% () => 'shift_right' %}
+relational_operator ->
+    "<" {% () => 'less_than' %}
+  | ">" {% () => 'greater_than' %}
+  | "<=" {% () => 'less_than_equal' %}
+  | ">=" {% () => 'greater_than_equal' %}
+  | "==" {% () => 'equal' %}
+  | "!=" {% () => 'not_equal' %}
+
+multiplicative_expression -> unary_expression {% id %} | multiplicative_expression _ multiplicative_operator _ unary_expression
+additive_expression -> multiplicative_expression {% id %} | additive_expression _ additive_operator _ multiplicative_expression
+shift_expression -> additive_expression {% id %} | unary_expression _ shift_operator _ unary_expression
+relational_expression -> shift_expression {% id %} | shift_expression _ relational_operator _ shift_expression
+short_circuit_and_expression -> relational_expression {% id %} | short_circuit_and_expression _ "&&" _ relational_expression
+short_circuit_or_expression -> relational_expression {% id %} | short_circuit_or_expression _ "||" _ relational_expression
+binary_or_expression -> unary_expression {% id %} | binary_or_expression _ "|" _ unary_expression
+binary_and_expression -> unary_expression {% id %} | binary_and_expression _ "&" _ unary_expression
+binary_xor_expression -> unary_expression {% id %} | binary_xor_expression _ "^" _ unary_expression
+bitwise_expression ->
+    binary_and_expression _ "&" _ unary_expression
+  | binary_or_expression _ "|" _ unary_expression
+  | binary_xor_expression _ "^" _ unary_expression
+
 # TODO: Add all expressions
 expression ->
-    %bool_literal {% id %}
+    relational_expression {% id %}
+  | short_circuit_or_expression "||" relational_expression
+  | short_circuit_and_expression "&&" relational_expression
+  | bitwise_expression {% id %}
 
 # TODO: Add support for attributes
 if_statement -> if_clause _ (else_if_clause _):* _ else_clause:? {% pp_if_statement %}
