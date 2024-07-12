@@ -4,11 +4,7 @@ import {
   NotAllocatedMemoryError,
 } from './errors';
 import { MemoryArena } from './memoryArena';
-import {
-  NameRegistry,
-  RandomNameRegistry,
-  StrictNameRegistry,
-} from './nameRegistry';
+import { NameRegistry, RandomNameRegistry } from './nameRegistry';
 import {
   IResolutionCtx,
   WGSLBindPair,
@@ -132,7 +128,7 @@ type BuildOptions = {
   shaderStage: number;
   bindingGroup: number;
   arenas?: MemoryArena[];
-  nameRegistryType?: 'random' | 'strict';
+  nameRegistry?: NameRegistry;
 };
 
 export default class ProgramBuilder {
@@ -151,16 +147,11 @@ export default class ProgramBuilder {
   build(options: BuildOptions): Program {
     const arenas = options.arenas ?? [];
 
-    const nameRegistry =
-      options.nameRegistryType === 'strict'
-        ? new StrictNameRegistry()
-        : new RandomNameRegistry();
-
     const ctx = new ResolutionCtx(
       this.runtime,
       arenas,
       this.bindings,
-      nameRegistry,
+      options.nameRegistry ?? new RandomNameRegistry(),
     );
 
     // Resolving memory arenas
