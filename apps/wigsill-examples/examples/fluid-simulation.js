@@ -254,7 +254,7 @@ fn main(@location(0) cell: f32) -> @location(0) vec4f {
     var b = f32(u32(cell) & 0xFF)/255.;
     if (r > 0.) { g = 1.;}
     if (g > 0.) { b = 1.;}
-    if (b > 0. && b < 0.2) { b = 0.2;}
+    if (b > 0. && b < 0.5) { b = 0.5;}
     return vec4f(r, g, b, 1.);
 }
 `;
@@ -548,6 +548,8 @@ function resetGameData() {
         device.queue.submit([commandEncoder.finish()]);
     }
 
+    createSampleScene();
+    applyDrawCanvas();
     render();
 }
 
@@ -592,6 +594,35 @@ canvas.onmousemove = (event) => {
 
         applyDrawCanvas();
         renderChanges();
+    }
+}
+
+const createSampleScene = () => {
+    const middlePoint = Math.floor(Options.size / 2);
+    const radius = Math.floor(Options.size / 8);
+    for (let i = -radius; i <= radius; i++) {
+        for (let j = -radius; j <= radius; j++) {
+            if (i * i + j * j <= radius * radius) {
+                drawCanvasData[(middlePoint + j) * Options.size + middlePoint + i] = 1 << 24;
+            }
+        }
+    }
+
+    const smallRadius = Math.min(Math.floor(radius / 8), 6);
+    for (let i = -smallRadius; i <= smallRadius; i++) {
+        for (let j = -smallRadius; j <= smallRadius; j++) {
+            if (i * i + j * j <= smallRadius * smallRadius) {
+                drawCanvasData[(middlePoint + j + Options.size/4) * Options.size + middlePoint + i] = 2 << 24;
+            }
+        }
+    }
+
+    for (let i = 0; i < Options.size; i++) {
+        drawCanvasData[i] = 1 << 24;
+    }
+
+    for (let i = 0; i < Math.floor(Options.size/8); i++) {
+        drawCanvasData[i * Options.size] = 1 << 24;
     }
 }
 
