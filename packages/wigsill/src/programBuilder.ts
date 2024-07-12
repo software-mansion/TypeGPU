@@ -5,6 +5,11 @@ import {
 } from './errors';
 import { MemoryArena } from './memoryArena';
 import {
+  NameRegistry,
+  RandomNameRegistry,
+  StrictNameRegistry,
+} from './nameRegistry';
+import {
   IResolutionCtx,
   WGSLBindPair,
   WGSLBindableTrait,
@@ -29,33 +34,8 @@ function addUnique<T>(list: T[], value: T) {
   list.push(value);
 }
 
-class NameRegistry {
-  private lastUniqueId = 0;
-  private names = new WeakMap<WGSLItem, string>();
-
-  nameFor(item: WGSLItem) {
-    let name = this.names.get(item);
-
-    if (name === undefined) {
-      // creating sanitized name
-      let label;
-      if (item.debugLabel) {
-        label = item.debugLabel.replaceAll(/\s/g, '_'); // whitespace -> _
-        label = label.replaceAll(/[^\w\d]/g, ''); // removing illegal characters
-      } else {
-        label = 'item';
-      }
-      name = `${label}_${this.lastUniqueId++}`;
-      this.names.set(item, name);
-    }
-
-    return name;
-  }
-}
-
 class ResolutionCtx implements IResolutionCtx {
   private _entryToArenaMap = new WeakMap<WGSLMemoryTrait, MemoryArena>();
-  private readonly _names = new NameRegistry();
 
   public dependencies: WGSLItem[] = [];
   public usedMemoryArenas = new WeakSet<MemoryArena>();
@@ -70,6 +50,7 @@ class ResolutionCtx implements IResolutionCtx {
     private readonly runtime: WGSLRuntime,
     private readonly memoryArenas: MemoryArena[],
     private readonly _bindings: WGSLBindPair<unknown>[],
+    private readonly _names: NameRegistry,
   ) {
     for (const arena of memoryArenas) {
       for (const entry of arena.memoryEntries) {
@@ -151,6 +132,7 @@ type BuildOptions = {
   shaderStage: number;
   bindingGroup: number;
   arenas?: MemoryArena[];
+  nameRegistryType?: 'random' | 'strict';
 };
 
 export default class ProgramBuilder {
@@ -169,7 +151,17 @@ export default class ProgramBuilder {
   build(options: BuildOptions): Program {
     const arenas = options.arenas ?? [];
 
-    const ctx = new ResolutionCtx(this.runtime, arenas, this.bindings);
+    const nameRegistry =
+      options.nameRegistryType === 'strict'
+        ? new StrictNameRegistry()
+        : new RandomNameRegistry();
+
+    const ctx = new ResolutionCtx(
+      this.runtime,
+      arenas,
+      this.bindings,
+      nameRegistry,
+    );
 
     // Resolving memory arenas
     arenas.forEach((arena, idx) => {
