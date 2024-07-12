@@ -31,7 +31,7 @@ const Options = {
     timestep: 25,
     stepsPerTimestep: 1,
     workgroupSize: 16,
-    viscosity: 255,
+    viscosity: 1000,
     brushSize: 0,
     brushType: 'water',
 };
@@ -649,17 +649,17 @@ addParameter('size', {initial: 64, options: [16, 32, 64, 128, 256, 512, 1024]}, 
     Options.size = value;
     resetGameData();
 });
-addParameter('timestep', {initial: 10, min: 1, max: 50, step: 1}, (value) => {
+addParameter('timestep', {initial: 2, min: 1, max: 50, step: 1}, (value) => {
     Options.timestep = value;
 });
-addParameter('stepsPerTimestep', {initial: 1, min: 1, max: 50, step: 1}, (value) => {
+addParameter('stepsPerTimestep', {initial: 10, min: 1, max: 50, step: 1}, (value) => {
     Options.stepsPerTimestep = value;
 });
 addParameter('workgroupSize', {initial: 16, options: [1, 2, 4, 8, 16, 32]}, (value) => {
     Options.workgroupSize = value;
     resetGameData();
 });
-addParameter('viscosity', {initial: 255, min: 10, max: 1000, step: 1}, (value) => {
+addParameter('viscosity', {initial: 1000, min: 10, max: 1000, step: 1}, (value) => {
     Options.viscosity = value;
     viscosity.write(runtime, value);
 });
