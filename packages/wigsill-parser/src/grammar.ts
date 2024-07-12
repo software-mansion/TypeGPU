@@ -23,7 +23,7 @@ const lexer = moo.compile({
   keyword: ['if', 'else'],
   comment: /\/\/.*?$/,
   semi: ";",
-  bool_literal: { match: ['true', 'false'], value: (v) => v === 'true' },
+  bool_literal: ['true', 'false'],
   decimal_int_literal: { match: /(?:0|[1-9][0-9]*)[iu]?/ },
   hex_int_literal: { match: /0[xX][0-9a-fA-F]+[iu]?/ },
   decimal_float_literal: /0[fh]|[1-9][0-9]*[fh]|[0-9]*\.[0-9]+(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+\.[0-9]*(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+[eE][+-]?[0-9]+[fh]?/,
@@ -55,27 +55,29 @@ const lexer = moo.compile({
   star: '*',
   slash: '/',
   percent: '%',
+  bang: '!',
+  tilde: '~',
 });
-
-function token_type([token]: [{ type: string }]) {
-  return token.type;
-}
-
-export type TranslationUnit = ReturnType<typeof pp_translation_unit>;
-function pp_translation_unit([ , declarations]: [any, declarations: [GlobalDecl, any][]]) {
-  return declarations.map((tuple) => tuple[0]);
-}
-
-export type GlobalDecl = null | FunctionDecl;
 
 export type Statement = string; // TODO: Define this
 
-export type Expression = string; // TODO: Define this
+export type Expression = Literal; // TODO: Define this
 
-export type BoolLiteral = ReturnType<typeof pp_bool_literal>;
-function pp_bool_literal([token]: [{ value: boolean }]) {
-  return { type: 'bool_literal' as const, value: token.value };
+export type PrimaryExpression =
+  // template_elaborated_ident
+// | call_expression
+  Literal
+  | ParenExpression
+
+
+
+export type SingularExpression = string; // TODO: Define this
+
+export type ParenExpression = ReturnType<typeof pp_paren_expression>;
+function pp_paren_expression([ , , expression]: [any, any, Expression]) {
+  return { type: 'paren_expression' as const, expression };
 }
+
 
 export type CompoundStatement = ReturnType<typeof pp_compound_statement>;
 function pp_compound_statement([ , , statements]: [any, any, Statement[]]) {
@@ -113,6 +115,35 @@ function pp_else_clause([ , , compound_statement]: [any, any, CompoundStatement]
 }
 
 
+
+export type TranslationUnit = GlobalDecl[];
+
+
+export type GlobalDecl = null | FunctionDecl;
+
+
+export type Ident = { type: 'ident', value: string };
+
+
+export type Literal = BoolLiteral | IntLiteral | FloatLiteral;
+
+export type IntLiteral = { type: 'int_literal', value: string };
+export type FloatLiteral = { type: 'float_literal', value: string };
+export type BoolLiteral = { type: 'bool_literal', value: 'true' | 'false' };
+
+function pp_literal([token]: [{ type: string, value: string }]): Literal {
+  return { type: token.type, value: token.value };
+}
+
+
+export type UnaryExpression =
+    SingularExpression
+  | { type: 'negate', expression: UnaryExpression }
+  | { type: 'logic_not', expression: UnaryExpression }
+  | { type: 'binary_not', expression: UnaryExpression }
+  | { type: 'deref', expression: UnaryExpression }
+  | { type: 'ref', expression: UnaryExpression }
+
 interface NearleyToken {
   value: any;
   [key: string]: any;
@@ -146,11 +177,11 @@ const grammar: Grammar = {
     {"name": "translation_unit$ebnf$1", "symbols": []},
     {"name": "translation_unit$ebnf$1$subexpression$1", "symbols": ["global_decl", "_"]},
     {"name": "translation_unit$ebnf$1", "symbols": ["translation_unit$ebnf$1", "translation_unit$ebnf$1$subexpression$1"], "postprocess": (d) => d[0].concat([d[1]])},
-    {"name": "translation_unit", "symbols": ["_", "translation_unit$ebnf$1"], "postprocess": pp_translation_unit},
+    {"name": "translation_unit", "symbols": ["_", "translation_unit$ebnf$1"], "postprocess": ([ , declarationTuples]) => declarationTuples.map((tuple) => tuple[0])},
     {"name": "global_directive", "symbols": [{"literal":"else"}]},
     {"name": "global_decl", "symbols": [{"literal":";"}], "postprocess": () => null},
     {"name": "global_decl", "symbols": ["function_decl"], "postprocess": id},
-    {"name": "ident", "symbols": [(lexer.has("ident_pattern") ? {type: "ident_pattern"} : ident_pattern)], "postprocess": id},
+    {"name": "ident", "symbols": [(lexer.has("ident_pattern") ? {type: "ident_pattern"} : ident_pattern)], "postprocess": ([token]) => ({ type: 'ident', value: token.value })},
     {"name": "global_variable_decl", "symbols": [{"literal":"if"}]},
     {"name": "global_value_decl", "symbols": []},
     {"name": "type_alias_decl", "symbols": []},
@@ -167,14 +198,14 @@ const grammar: Grammar = {
     {"name": "literal", "symbols": ["int_literal"], "postprocess": id},
     {"name": "literal", "symbols": ["float_literal"], "postprocess": id},
     {"name": "literal", "symbols": ["bool_literal"], "postprocess": id},
-    {"name": "int_literal", "symbols": [(lexer.has("decimal_int_literal") ? {type: "decimal_int_literal"} : decimal_int_literal)], "postprocess": id},
-    {"name": "int_literal", "symbols": [(lexer.has("hex_int_literal") ? {type: "hex_int_literal"} : hex_int_literal)], "postprocess": id},
-    {"name": "float_literal", "symbols": [(lexer.has("decimal_float_literal") ? {type: "decimal_float_literal"} : decimal_float_literal)], "postprocess": id},
-    {"name": "float_literal", "symbols": [(lexer.has("hex_float_literal") ? {type: "hex_float_literal"} : hex_float_literal)], "postprocess": id},
-    {"name": "bool_literal", "symbols": [(lexer.has("bool_literal") ? {type: "bool_literal"} : bool_literal)], "postprocess": pp_bool_literal},
-    {"name": "primary_expression", "symbols": ["literal"]},
-    {"name": "primary_expression", "symbols": ["paren_expression"]},
-    {"name": "paren_expression", "symbols": [{"literal":"("}, "_", "expression", "_", {"literal":")"}]},
+    {"name": "int_literal", "symbols": [(lexer.has("decimal_int_literal") ? {type: "decimal_int_literal"} : decimal_int_literal)], "postprocess": pp_literal},
+    {"name": "int_literal", "symbols": [(lexer.has("hex_int_literal") ? {type: "hex_int_literal"} : hex_int_literal)], "postprocess": pp_literal},
+    {"name": "float_literal", "symbols": [(lexer.has("decimal_float_literal") ? {type: "decimal_float_literal"} : decimal_float_literal)], "postprocess": pp_literal},
+    {"name": "float_literal", "symbols": [(lexer.has("hex_float_literal") ? {type: "hex_float_literal"} : hex_float_literal)], "postprocess": pp_literal},
+    {"name": "bool_literal", "symbols": [(lexer.has("bool_literal") ? {type: "bool_literal"} : bool_literal)], "postprocess": pp_literal},
+    {"name": "primary_expression", "symbols": ["literal"], "postprocess": id},
+    {"name": "primary_expression", "symbols": ["paren_expression"], "postprocess": id},
+    {"name": "paren_expression", "symbols": [{"literal":"("}, "_", "expression", "_", {"literal":")"}], "postprocess": pp_paren_expression},
     {"name": "component_or_swizzle_specifier$ebnf$1", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
     {"name": "component_or_swizzle_specifier$ebnf$1", "symbols": [], "postprocess": () => null},
     {"name": "component_or_swizzle_specifier", "symbols": [{"literal":"["}, "_", "expression", "_", {"literal":"]"}, "_", "component_or_swizzle_specifier$ebnf$1"]},
@@ -184,12 +215,12 @@ const grammar: Grammar = {
     {"name": "component_or_swizzle_specifier$ebnf$3", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
     {"name": "component_or_swizzle_specifier$ebnf$3", "symbols": [], "postprocess": () => null},
     {"name": "component_or_swizzle_specifier", "symbols": [{"literal":"."}, "swizzle_name", "_", "component_or_swizzle_specifier$ebnf$3"]},
-    {"name": "unary_expression", "symbols": ["singular_expression"]},
-    {"name": "unary_expression", "symbols": [{"literal":"-"}, "_", "unary_expression"]},
-    {"name": "unary_expression", "symbols": [{"literal":"!"}, "_", "unary_expression"]},
-    {"name": "unary_expression", "symbols": [{"literal":"~"}, "_", "unary_expression"]},
-    {"name": "unary_expression", "symbols": [{"literal":"*"}, "_", "unary_expression"]},
-    {"name": "unary_expression", "symbols": [{"literal":"&"}, "_", "unary_expression"]},
+    {"name": "unary_expression", "symbols": ["singular_expression"], "postprocess": id},
+    {"name": "unary_expression", "symbols": [{"literal":"-"}, "_", "unary_expression"], "postprocess": ([ , , expression]) => ({ type: 'negate', expression })},
+    {"name": "unary_expression", "symbols": [{"literal":"!"}, "_", "unary_expression"], "postprocess": ([ , , expression]) => ({ type: 'logic_not', expression })},
+    {"name": "unary_expression", "symbols": [{"literal":"~"}, "_", "unary_expression"], "postprocess": ([ , , expression]) => ({ type: 'binary_not', expression })},
+    {"name": "unary_expression", "symbols": [{"literal":"*"}, "_", "unary_expression"], "postprocess": ([ , , expression]) => ({ type: 'deref', expression })},
+    {"name": "unary_expression", "symbols": [{"literal":"&"}, "_", "unary_expression"], "postprocess": ([ , , expression]) => ({ type: 'ref', expression })},
     {"name": "singular_expression$ebnf$1", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
     {"name": "singular_expression$ebnf$1", "symbols": [], "postprocess": () => null},
     {"name": "singular_expression", "symbols": ["primary_expression", "_", "singular_expression$ebnf$1"]},

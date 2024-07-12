@@ -9,7 +9,7 @@ const lexer = moo.compile({
   keyword: ['if', 'else'],
   comment: /\\/\\/.*?$/,
   semi: ";",
-  bool_literal: { match: ['true', 'false'], value: (v) => v === 'true' },
+  bool_literal: ['true', 'false'],
   decimal_int_literal: { match: /(?:0|[1-9][0-9]*)[iu]?/ },
   hex_int_literal: { match: /0[xX][0-9a-fA-F]+[iu]?/ },
   decimal_float_literal: /0[fh]|[1-9][0-9]*[fh]|[0-9]*\.[0-9]+(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+\.[0-9]*(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+[eE][+-]?[0-9]+[fh]?/,
@@ -41,27 +41,29 @@ const lexer = moo.compile({
   star: '*',
   slash: '/',
   percent: '%',
+  bang: '!',
+  tilde: '~',
 });
-
-function token_type([token]: [{ type: string }]) {
-  return token.type;
-}
-
-export type TranslationUnit = ReturnType<typeof pp_translation_unit>;
-function pp_translation_unit([ , declarations]: [any, declarations: [GlobalDecl, any][]]) {
-  return declarations.map((tuple) => tuple[0]);
-}
-
-export type GlobalDecl = null | FunctionDecl;
 
 export type Statement = string; // TODO: Define this
 
-export type Expression = string; // TODO: Define this
+export type Expression = Literal; // TODO: Define this
 
-export type BoolLiteral = ReturnType<typeof pp_bool_literal>;
-function pp_bool_literal([token]: [{ value: boolean }]) {
-  return { type: 'bool_literal' as const, value: token.value };
+export type PrimaryExpression =
+  // template_elaborated_ident
+// | call_expression
+  Literal
+  | ParenExpression
+
+
+
+export type SingularExpression = string; // TODO: Define this
+
+export type ParenExpression = ReturnType<typeof pp_paren_expression>;
+function pp_paren_expression([ , , expression]: [any, any, Expression]) {
+  return { type: 'paren_expression' as const, expression };
 }
+
 
 export type CompoundStatement = ReturnType<typeof pp_compound_statement>;
 function pp_compound_statement([ , , statements]: [any, any, Statement[]]) {
@@ -104,11 +106,17 @@ function pp_else_clause([ , , compound_statement]: [any, any, CompoundStatement]
 
 # entry
 
+@{%
+export type TranslationUnit = GlobalDecl[];
+%}
 # translation_unit -> global_directive:* global_decl:*
-translation_unit -> _ (global_decl _):* {% pp_translation_unit %}
+translation_unit -> _ (global_decl _):* {% ([ , declarationTuples]) => declarationTuples.map((tuple) => tuple[0]) %}
 
 global_directive -> "else" # TODO: Implement the global directive non-terminal
 
+@{%
+export type GlobalDecl = null | FunctionDecl;
+%}
 global_decl ->
     ";" {% () => null %}
   # | global_variable_decl _ ";"
@@ -118,7 +126,10 @@ global_decl ->
     | function_decl {% id %}
   # | const_assert_statement ";"
 
-ident -> %ident_pattern {% id %}
+@{%
+export type Ident = { type: 'ident', value: string };
+%}
+ident -> %ident_pattern {% ([token]) => ({ type: 'ident', value: token.value }) %}
 # member_ident -> %ident_pattern {% id %}
 
 global_variable_decl -> "if" # TODO
@@ -146,13 +157,25 @@ swizzle_name -> %swizzle_name
 # Literals
 #
 
+@{%
+export type Literal = BoolLiteral | IntLiteral | FloatLiteral;
+
+export type IntLiteral = { type: 'int_literal', value: string };
+export type FloatLiteral = { type: 'float_literal', value: string };
+export type BoolLiteral = { type: 'bool_literal', value: 'true' | 'false' };
+
+function pp_literal([token]: [{ type: string, value: string }]): Literal {
+  return { type: token.type, value: token.value };
+}
+%}
 literal ->
     int_literal {% id %}
   | float_literal {% id %}
   | bool_literal {% id %}
-int_literal -> %decimal_int_literal {% id %} | %hex_int_literal {% id %}
-float_literal -> %decimal_float_literal {% id %} | %hex_float_literal {% id %}
-bool_literal -> %bool_literal {% pp_bool_literal %}
+
+int_literal -> %decimal_int_literal {% pp_literal %} | %hex_int_literal {% pp_literal %}
+float_literal -> %decimal_float_literal {% pp_literal %} | %hex_float_literal {% pp_literal %}
+bool_literal -> %bool_literal {% pp_literal %}
 
 #
 # Expressions
@@ -161,25 +184,34 @@ bool_literal -> %bool_literal {% pp_bool_literal %}
 primary_expression ->
   # template_elaborated_ident
 # | call_expression
-  literal
-  | paren_expression
+  literal {% id %}
+  | paren_expression {% id %}
 
 # call_expression -> template_elaborated_ident _ argument_expression_list
 
-paren_expression -> "(" _ expression _ ")"
+paren_expression -> "(" _ expression _ ")" {% pp_paren_expression %}
 
 component_or_swizzle_specifier ->
  "[" _ expression _ "]" _ component_or_swizzle_specifier:?
 | "." ident _ component_or_swizzle_specifier:? # TODO: Use member_ident instead of ident if necessary
 | "." swizzle_name _ component_or_swizzle_specifier:?
 
+@{%
+export type UnaryExpression =
+    SingularExpression
+  | { type: 'negate', expression: UnaryExpression }
+  | { type: 'logic_not', expression: UnaryExpression }
+  | { type: 'binary_not', expression: UnaryExpression }
+  | { type: 'deref', expression: UnaryExpression }
+  | { type: 'ref', expression: UnaryExpression }
+%}
 unary_expression ->
-    singular_expression
-  | "-" _ unary_expression
-  | "!" _ unary_expression
-  | "~" _ unary_expression
-  | "*" _ unary_expression
-  | "&" _ unary_expression
+    singular_expression {% id %}
+  | "-" _ unary_expression {% ([ , , expression]) => ({ type: 'negate', expression }) %}
+  | "!" _ unary_expression {% ([ , , expression]) => ({ type: 'logic_not', expression }) %}
+  | "~" _ unary_expression {% ([ , , expression]) => ({ type: 'binary_not', expression }) %}
+  | "*" _ unary_expression {% ([ , , expression]) => ({ type: 'deref', expression }) %}
+  | "&" _ unary_expression {% ([ , , expression]) => ({ type: 'ref', expression }) %}
 
 singular_expression ->
   primary_expression _ component_or_swizzle_specifier:?
