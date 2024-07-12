@@ -5,7 +5,7 @@
 */
 
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
-import { WGSLRuntime, wgsl, u32, ProgramBuilder, makeArena, arrayOf } from 'wigsill';
+import { WGSLRuntime, wgsl, u32, ProgramBuilder, makeArena, arrayOf, vec2u } from 'wigsill';
 
 const adapter = await navigator.gpu.requestAdapter();
 const device = await adapter.requestDevice();
@@ -40,23 +40,23 @@ const viscosity = wgsl.memory(u32).alias('viscosity');
 const maxWaterLevelUnpressurized = wgsl.constant(wgsl`255u`);
 const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
 const maxCompress = wgsl.constant(wgsl`12u`);
+const currentState = wgsl.memory(arrayOf(u32, (1024**2))).alias('current');
+const size = wgsl.memory(vec2u).alias('size');
 
 const computeWGSL = wgsl`
-@binding(0) @group(0) var<storage, read> size: vec2u;
-@binding(1) @group(0) var<storage, read> current: array<u32>;
-@binding(2) @group(0) var<storage, read_write> next: array<atomic<u32>>;
-@binding(3) @group(0) var<storage, read_write> debugInfo: atomic<u32>;
+@binding(0) @group(0) var<storage, read_write> next: array<atomic<u32>>;
+@binding(1) @group(0) var<storage, read_write> debugInfo: atomic<u32>;
 
 override blockSize = 8;
 
 fn getIndex(x: u32, y: u32) -> u32 {
-    let h = size.y;
-    let w = size.x;
+    let h = ${size}.y;
+    let w = ${size}.x;
     return (y % h) * w + (x % w);
 }
 
 fn getCell(x: u32, y: u32) -> u32 {
-    return current[getIndex(x, y)];
+    return ${currentState}[getIndex(x, y)];
 }
 
 fn getCellNext(x: u32, y: u32) -> u32 {
@@ -137,7 +137,7 @@ fn decideWaterLevel(x: u32, y: u32) {
         updateCell(x, y, 3u << 24);
         return;
     }
-    if (y == 0 || y == size.y - 1u || x == 0 || x == size.x - 1u) {
+    if (y == 0 || y == ${size}.y - 1u || x == 0 || x == ${size}.x - 1u) {
         updateCell(x, y, 0u);
         return;
     }
@@ -267,10 +267,22 @@ const viscosityArena = makeArena({
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
 });
 
+const sizeArena = makeArena({
+    bufferBindingType: 'uniform',
+    memoryEntries: [size],
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM | GPUBufferUsage.VERTEX,
+});
+
+const currentStateArena = makeArena({
+    bufferBindingType: 'storage',
+    memoryEntries: [currentState],
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX,
+});
+
 const computeProgram = new ProgramBuilder(runtime, computeWGSL).build({
     bindingGroup: 1,
     shaderStage: GPUShaderStage.COMPUTE,
-    arenas: [viscosityArena],
+    arenas: [viscosityArena, currentStateArena, sizeArena],
 });
 
 const computeShader = device.createShaderModule({ code: computeProgram.code });
@@ -280,25 +292,11 @@ const bindGroupLayoutCompute = device.createBindGroupLayout({
             binding: 0,
             visibility: GPUShaderStage.COMPUTE,
             buffer: {
-                type: "read-only-storage",
-            },
-        },
-        {
-            binding: 1,
-            visibility: GPUShaderStage.COMPUTE,
-            buffer: {
-                type: "read-only-storage",
-            },
-        },
-        {
-            binding: 2,
-            visibility: GPUShaderStage.COMPUTE,
-            buffer: {
                 type: "storage",
             },
         },
         {
-            binding: 3,
+            binding: 1,
             visibility: GPUShaderStage.COMPUTE,
             buffer: {
                 type: "storage",
@@ -357,7 +355,6 @@ const cellsStride = {
 };
 
 let wholeTime = 0,
-    buffer0,
     buffer1;
 let render;
 let readDebugInfo;
@@ -367,6 +364,7 @@ let renderChanges;
 
 function resetGameData() {
     drawCanvasData = new Uint32Array(Options.size * Options.size);
+    currentState.write(runtime, new Uint32Array(1024**2).fill(0));
 
     const computePipeline = device.createComputePipeline({
         layout: device.createPipelineLayout({
@@ -389,31 +387,10 @@ function resetGameData() {
         usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
     });
 
-    const sizeBuffer = device.createBuffer({
-        size: 2 * Uint32Array.BYTES_PER_ELEMENT,
-        usage:
-            GPUBufferUsage.STORAGE |
-            GPUBufferUsage.UNIFORM |
-            GPUBufferUsage.COPY_DST |
-            GPUBufferUsage.VERTEX,
-        mappedAtCreation: true,
-    });
-    new Uint32Array(sizeBuffer.getMappedRange()).set([
-        Options.size,
-        Options.size,
-    ]);
-    sizeBuffer.unmap();
+    size.write(runtime, [Options.size, Options.size]);
 
     const length = Options.size * Options.size;
     const cells = new Uint32Array(length);
-
-    buffer0 = device.createBuffer({
-        size: cells.byteLength,
-        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-        mappedAtCreation: true,
-    });
-    new Uint32Array(buffer0.getMappedRange()).set(cells);
-    buffer0.unmap();
 
     buffer1 = device.createBuffer({
         size: cells.byteLength,
@@ -423,10 +400,8 @@ function resetGameData() {
     const bindGroup0 = device.createBindGroup({
         layout: bindGroupLayoutCompute,
         entries: [
-            { binding: 0, resource: { buffer: sizeBuffer } },
-            { binding: 1, resource: { buffer: buffer0 } },
-            { binding: 2, resource: { buffer: buffer1 } },
-            { binding: 3, resource: { buffer: debugInfoBuffer } },
+            { binding: 0, resource: { buffer: buffer1 } },
+            { binding: 1, resource: { buffer: debugInfoBuffer } },
         ],
     });
 
@@ -457,7 +432,7 @@ function resetGameData() {
             {
                 binding: 0,
                 resource: {
-                    buffer: sizeBuffer,
+                    buffer: runtime.bufferFor(sizeArena),
                     offset: 0,
                     size: 2 * Uint32Array.BYTES_PER_ELEMENT,
                 },
@@ -502,14 +477,14 @@ function resetGameData() {
         );
         passEncoderCompute.end();
 
-        commandEncoder.copyBufferToBuffer(buffer1, 0, buffer0, 0, cells.byteLength);
+        commandEncoder.copyBufferToBuffer(buffer1, 0, runtime.bufferFor(currentStateArena), 0, cells.byteLength);
         commandEncoder.copyBufferToBuffer(debugInfoBuffer, 0, debugReadBuffer, 0, 4);
 
         // render
         const passEncoderRender =
             commandEncoder.beginRenderPass(renderPass);
         passEncoderRender.setPipeline(renderPipeline);
-        passEncoderRender.setVertexBuffer(0, buffer0);
+        passEncoderRender.setVertexBuffer(0, runtime.bufferFor(currentStateArena));
         passEncoderRender.setVertexBuffer(1, squareBuffer);
         passEncoderRender.setBindGroup(0, uniformBindGroup);
         passEncoderRender.draw(4, length);
@@ -535,7 +510,7 @@ function resetGameData() {
                 if (drawCanvasData[(j * Options.size + i)]) {
                     const index = j * Options.size + i;
                     device.queue.writeBuffer(
-                        buffer0,
+                        runtime.bufferFor(currentStateArena),
                         index * Uint32Array.BYTES_PER_ELEMENT,
                         drawCanvasData,
                         index,
@@ -564,7 +539,7 @@ function resetGameData() {
         const passEncoderRender =
             commandEncoder.beginRenderPass(renderPass);
         passEncoderRender.setPipeline(renderPipeline);
-        passEncoderRender.setVertexBuffer(0, buffer0);
+        passEncoderRender.setVertexBuffer(0, runtime.bufferFor(currentStateArena));
         passEncoderRender.setVertexBuffer(1, squareBuffer);
         passEncoderRender.setBindGroup(0, uniformBindGroup);
         passEncoderRender.draw(4, length);
