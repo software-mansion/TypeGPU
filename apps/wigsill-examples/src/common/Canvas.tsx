@@ -6,11 +6,10 @@ import useEvent from './useEvent';
 type Props = {
   width?: number;
   height?: number;
-  codeEditorShowing: boolean;
 };
 
 export const Canvas = forwardRef<HTMLCanvasElement, Props>((props, ref) => {
-  const { width, height, codeEditorShowing } = props;
+  const { width, height } = props;
   const innerRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -34,15 +33,19 @@ export const Canvas = forwardRef<HTMLCanvasElement, Props>((props, ref) => {
     setTimeout(() => {
       onResize();
     }, 1);
-    window.addEventListener('resize', onResize);
+
+    const resizeObserver = new ResizeObserver(() => onResize());
+    const container = containerRef.current;
+    if (container) {
+      resizeObserver.observe(container);
+    }
+
     return () => {
-      window.removeEventListener('resize', onResize);
+      if (container) {
+        resizeObserver.unobserve(container);
+      }
     };
   }, [onResize]);
-
-  useEffect(() => {
-    onResize();
-  }, [codeEditorShowing, onResize]);
 
   return (
     <div

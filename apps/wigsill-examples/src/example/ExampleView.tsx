@@ -84,7 +84,6 @@ export function ExampleView({ example, codeEditorShowing }: Props) {
                 ref={(canvas) => setRef(element.key, canvas)}
                 width={element.width}
                 height={element.height}
-                codeEditorShowing={codeEditorShowing}
               />
             );
           } else if (element.type === 'video') {
