@@ -23,4 +23,4 @@ dist-ssr
 *.sln
 *.sw?
 
-types/wigsill-types.d.ts
+src/types/wigsill-types.d.ts
