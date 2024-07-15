@@ -30,7 +30,9 @@
     "dev": "tsup --watch",
     "build": "tsup",
     "example": "tsx example.ts",
-    "codegen": "nearleyc src/grammar.ne -o src/grammar.ts && echo \"/* eslint-disable */\n// @ts-nocheck\n$(cat src/grammar.ts)\" > src/grammar.ts"
+    "codegen": "nearleyc src/grammar.ne -o src/grammar.ts && echo \"/* eslint-disable */\n// @ts-nocheck\n$(cat src/grammar.ts)\" > src/grammar.ts",
+    "test": "pnpm run '/^test:.*/'",
+    "test:types": "tsc -p . --noEmit"
   },
   "engines": {
     "node": ">=12.20.0"

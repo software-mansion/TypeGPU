@@ -61,23 +61,6 @@ const lexer = moo.compile({
 
 export type Statement = string; // TODO: Define this
 
-export type Expression = Literal; // TODO: Define this
-
-export type PrimaryExpression =
-  // template_elaborated_ident
-// | call_expression
-  Literal
-  | ParenExpression
-
-
-
-export type SingularExpression = string; // TODO: Define this
-
-export type ParenExpression = ReturnType<typeof pp_paren_expression>;
-function pp_paren_expression([ , , expression]: [any, any, Expression]) {
-  return { type: 'paren_expression' as const, expression };
-}
-
 
 export type CompoundStatement = ReturnType<typeof pp_compound_statement>;
 function pp_compound_statement([ , , statements]: [any, any, Statement[]]) {
@@ -93,6 +76,103 @@ export type FunctionHeader = ReturnType<typeof pp_function_header>;
 function pp_function_header([ , , identifier]: [any, any, Identifier]) {
   return { type: 'function_header' as const, identifier: identifier.value };
 }
+
+
+
+
+export type TranslationUnit = GlobalDecl[];
+
+
+export type GlobalDecl = null | FunctionDecl;
+
+
+export type Ident = { type: 'ident', value: string };
+
+
+type Swizzle = { type: 'swizzle', value: string };
+
+
+export type Literal = BoolLiteral | IntLiteral | FloatLiteral;
+
+export type IntLiteral = { type: 'int_literal', value: string };
+export type FloatLiteral = { type: 'float_literal', value: string };
+export type BoolLiteral = { type: 'bool_literal', value: 'true' | 'false' };
+
+function pp_literal([token]: [{ type: string, value: string }]): Literal {
+  return { type: token.type, value: token.value };
+}
+
+
+export type PrimaryExpression =
+// template_elaborated_ident
+// | call_expression
+    Literal
+  | ParenExpression
+
+
+
+export type ParenExpression = { type: 'paren_expression', expression: Expression };
+
+
+
+export type Accessor =
+    { type: 'index_accessor', index: Expression, next: Accessor | null }
+  | { type: 'member_accessor', member: Ident, next: Accessor | null }
+  | { type: 'swizzle_accessor', swizzle: Swizzle, next: Accessor | null };
+
+
+
+export type SingularExpression =
+    PrimaryExpression
+  | { type: 'accessor', expression: PrimaryExpression, accessor: Accessor };
+
+
+
+export type UnaryExpression =
+    SingularExpression
+  | { type: 'negate', expression: UnaryExpression }
+  | { type: 'logic_not', expression: UnaryExpression }
+  | { type: 'binary_not', expression: UnaryExpression }
+  | { type: 'deref', expression: UnaryExpression }
+  | { type: 'ref', expression: UnaryExpression }
+
+
+
+type MultiplicativeExpression = UnaryExpression | { type: 'multiply' | 'divide', lhs: MultiplicativeExpression, rhs: UnaryExpression };
+type AdditiveExpression = MultiplicativeExpression | { type: 'add' | 'subtract', lhs: AdditiveExpression, rhs: MultiplicativeExpression };
+type ShiftExpression = AdditiveExpression | { type: 'shift_left' | 'shift_right', lhs: UnaryExpression, rhs: UnaryExpression };
+type RelationalExpression =
+    ShiftExpression
+  | {
+      type: 'less_than'
+          | 'greater_than' 
+          | 'less_than_equal' 
+          | 'greater_than_equal' 
+          | 'equal' 
+          | 'not_equal',
+      lhs: ShiftExpression,
+      rhs: ShiftExpression
+    }
+type ShortCircuitAndExpression = RelationalExpression | { type: 'logic_and', lhs: ShortCircuitAndExpression, rhs: RelationalExpression };
+type ShortCircuitOrExpression = RelationalExpression | { type: 'logic_or', lhs: ShortCircuitOrExpression, rhs: RelationalExpression };
+type BinaryAndExpression = UnaryExpression | { type: 'binary_and', lhs: BinaryAndExpression, rhs: UnaryExpression };
+type BinaryOrExpression = UnaryExpression | { type: 'binary_or', lhs: BinaryOrExpression, rhs: UnaryExpression };
+type BinaryXorExpression = UnaryExpression | { type: 'binary_xor', lhs: BinaryXorExpression, rhs: UnaryExpression };
+type BitwiseExpression = 
+    Exclude<BinaryAndExpression, UnaryExpression>
+  | Exclude<BinaryOrExpression, UnaryExpression>
+  | Exclude<BinaryXorExpression, UnaryExpression>
+
+
+
+export type Expression =
+    RelationalExpression
+  | ShortCircuitAndExpression
+  | ShortCircuitOrExpression
+  | BitwiseExpression;
+
+
+
 
 export type IfStatement = ReturnType<typeof pp_if_statement>;
 function pp_if_statement([if_clause, , else_if_clauses, , else_clause]: [IfClause, any, [ElseIfClause, any][], any, ElseClause | null]) {
@@ -114,35 +194,6 @@ function pp_else_clause([ , , compound_statement]: [any, any, CompoundStatement]
   return { type: 'else_clause' as const, compound_statement };
 }
 
-
-
-export type TranslationUnit = GlobalDecl[];
-
-
-export type GlobalDecl = null | FunctionDecl;
-
-
-export type Ident = { type: 'ident', value: string };
-
-
-export type Literal = BoolLiteral | IntLiteral | FloatLiteral;
-
-export type IntLiteral = { type: 'int_literal', value: string };
-export type FloatLiteral = { type: 'float_literal', value: string };
-export type BoolLiteral = { type: 'bool_literal', value: 'true' | 'false' };
-
-function pp_literal([token]: [{ type: string, value: string }]): Literal {
-  return { type: token.type, value: token.value };
-}
-
-
-export type UnaryExpression =
-    SingularExpression
-  | { type: 'negate', expression: UnaryExpression }
-  | { type: 'logic_not', expression: UnaryExpression }
-  | { type: 'binary_not', expression: UnaryExpression }
-  | { type: 'deref', expression: UnaryExpression }
-  | { type: 'ref', expression: UnaryExpression }
 
 interface NearleyToken {
   value: any;
@@ -194,7 +245,7 @@ const grammar: Grammar = {
     {"name": "compound_statement", "symbols": [{"literal":"{"}, "_", "compound_statement$ebnf$1", "_", {"literal":"}"}], "postprocess": pp_compound_statement},
     {"name": "statement", "symbols": [{"literal":";"}], "postprocess": () => null},
     {"name": "statement", "symbols": ["if_statement"], "postprocess": id},
-    {"name": "swizzle_name", "symbols": [(lexer.has("swizzle_name") ? {type: "swizzle_name"} : swizzle_name)]},
+    {"name": "swizzle", "symbols": [(lexer.has("swizzle_name") ? {type: "swizzle_name"} : swizzle_name)], "postprocess": ([value]) => ({ type: 'swizzle', value })},
     {"name": "literal", "symbols": ["int_literal"], "postprocess": id},
     {"name": "literal", "symbols": ["float_literal"], "postprocess": id},
     {"name": "literal", "symbols": ["bool_literal"], "postprocess": id},
@@ -205,25 +256,24 @@ const grammar: Grammar = {
     {"name": "bool_literal", "symbols": [(lexer.has("bool_literal") ? {type: "bool_literal"} : bool_literal)], "postprocess": pp_literal},
     {"name": "primary_expression", "symbols": ["literal"], "postprocess": id},
     {"name": "primary_expression", "symbols": ["paren_expression"], "postprocess": id},
-    {"name": "paren_expression", "symbols": [{"literal":"("}, "_", "expression", "_", {"literal":")"}], "postprocess": pp_paren_expression},
+    {"name": "paren_expression", "symbols": [{"literal":"("}, "_", "expression", "_", {"literal":")"}], "postprocess": ([ , , expression]) => ({ type: 'paren_expression', expression })},
     {"name": "component_or_swizzle_specifier$ebnf$1", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
     {"name": "component_or_swizzle_specifier$ebnf$1", "symbols": [], "postprocess": () => null},
-    {"name": "component_or_swizzle_specifier", "symbols": [{"literal":"["}, "_", "expression", "_", {"literal":"]"}, "_", "component_or_swizzle_specifier$ebnf$1"]},
+    {"name": "component_or_swizzle_specifier", "symbols": [{"literal":"["}, "_", "expression", "_", {"literal":"]"}, "_", "component_or_swizzle_specifier$ebnf$1"], "postprocess": ([ , , index, , , , next]) => ({ type: 'index_accessor', index, next })},
     {"name": "component_or_swizzle_specifier$ebnf$2", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
     {"name": "component_or_swizzle_specifier$ebnf$2", "symbols": [], "postprocess": () => null},
-    {"name": "component_or_swizzle_specifier", "symbols": [{"literal":"."}, "ident", "_", "component_or_swizzle_specifier$ebnf$2"]},
+    {"name": "component_or_swizzle_specifier", "symbols": [{"literal":"."}, "ident", "_", "component_or_swizzle_specifier$ebnf$2"], "postprocess": ([ , ident, , next]) => ({ type: 'member_accessor', member, next })},
     {"name": "component_or_swizzle_specifier$ebnf$3", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
     {"name": "component_or_swizzle_specifier$ebnf$3", "symbols": [], "postprocess": () => null},
-    {"name": "component_or_swizzle_specifier", "symbols": [{"literal":"."}, "swizzle_name", "_", "component_or_swizzle_specifier$ebnf$3"]},
+    {"name": "component_or_swizzle_specifier", "symbols": [{"literal":"."}, "swizzle", "_", "component_or_swizzle_specifier$ebnf$3"], "postprocess": ([ , swizzle, , next]) => ({ type: 'swizzle_accessor', swizzle, next })},
+    {"name": "singular_expression", "symbols": ["primary_expression"], "postprocess": id},
+    {"name": "singular_expression", "symbols": ["primary_expression", "_", "component_or_swizzle_specifier"], "postprocess": ([expression, , accessor]) => ({ type: 'accessor', expression, accessor })},
     {"name": "unary_expression", "symbols": ["singular_expression"], "postprocess": id},
     {"name": "unary_expression", "symbols": [{"literal":"-"}, "_", "unary_expression"], "postprocess": ([ , , expression]) => ({ type: 'negate', expression })},
     {"name": "unary_expression", "symbols": [{"literal":"!"}, "_", "unary_expression"], "postprocess": ([ , , expression]) => ({ type: 'logic_not', expression })},
     {"name": "unary_expression", "symbols": [{"literal":"~"}, "_", "unary_expression"], "postprocess": ([ , , expression]) => ({ type: 'binary_not', expression })},
     {"name": "unary_expression", "symbols": [{"literal":"*"}, "_", "unary_expression"], "postprocess": ([ , , expression]) => ({ type: 'deref', expression })},
     {"name": "unary_expression", "symbols": [{"literal":"&"}, "_", "unary_expression"], "postprocess": ([ , , expression]) => ({ type: 'ref', expression })},
-    {"name": "singular_expression$ebnf$1", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
-    {"name": "singular_expression$ebnf$1", "symbols": [], "postprocess": () => null},
-    {"name": "singular_expression", "symbols": ["primary_expression", "_", "singular_expression$ebnf$1"]},
     {"name": "multiplicative_operator", "symbols": [{"literal":"*"}], "postprocess": () => 'multiply'},
     {"name": "multiplicative_operator", "symbols": [{"literal":"/"}], "postprocess": () => 'divide'},
     {"name": "multiplicative_operator", "symbols": [{"literal":"%"}], "postprocess": () => 'mod'},
@@ -238,29 +288,29 @@ const grammar: Grammar = {
     {"name": "relational_operator", "symbols": [{"literal":"=="}], "postprocess": () => 'equal'},
     {"name": "relational_operator", "symbols": [{"literal":"!="}], "postprocess": () => 'not_equal'},
     {"name": "multiplicative_expression", "symbols": ["unary_expression"], "postprocess": id},
-    {"name": "multiplicative_expression", "symbols": ["multiplicative_expression", "_", "multiplicative_operator", "_", "unary_expression"]},
+    {"name": "multiplicative_expression", "symbols": ["multiplicative_expression", "_", "multiplicative_operator", "_", "unary_expression"], "postprocess": ([lhs, , type, , rhs]) => ({ type, lhs, rhs })},
     {"name": "additive_expression", "symbols": ["multiplicative_expression"], "postprocess": id},
-    {"name": "additive_expression", "symbols": ["additive_expression", "_", "additive_operator", "_", "multiplicative_expression"]},
+    {"name": "additive_expression", "symbols": ["additive_expression", "_", "additive_operator", "_", "multiplicative_expression"], "postprocess": ([lhs, , type, , rhs]) => ({ type, lhs, rhs })},
     {"name": "shift_expression", "symbols": ["additive_expression"], "postprocess": id},
-    {"name": "shift_expression", "symbols": ["unary_expression", "_", "shift_operator", "_", "unary_expression"]},
+    {"name": "shift_expression", "symbols": ["unary_expression", "_", "shift_operator", "_", "unary_expression"], "postprocess": ([lhs, , type, , rhs]) => ({ type, lhs, rhs })},
     {"name": "relational_expression", "symbols": ["shift_expression"], "postprocess": id},
-    {"name": "relational_expression", "symbols": ["shift_expression", "_", "relational_operator", "_", "shift_expression"]},
+    {"name": "relational_expression", "symbols": ["shift_expression", "_", "relational_operator", "_", "shift_expression"], "postprocess": ([lhs, , type, , rhs]) => ({ type, lhs, rhs })},
     {"name": "short_circuit_and_expression", "symbols": ["relational_expression"], "postprocess": id},
-    {"name": "short_circuit_and_expression", "symbols": ["short_circuit_and_expression", "_", {"literal":"&&"}, "_", "relational_expression"]},
+    {"name": "short_circuit_and_expression", "symbols": ["short_circuit_and_expression", "_", {"literal":"&&"}, "_", "relational_expression"], "postprocess": ([lhs, , , , rhs]) => ({ type: 'logic_and', lhs, rhs })},
     {"name": "short_circuit_or_expression", "symbols": ["relational_expression"], "postprocess": id},
-    {"name": "short_circuit_or_expression", "symbols": ["short_circuit_or_expression", "_", {"literal":"||"}, "_", "relational_expression"]},
-    {"name": "binary_or_expression", "symbols": ["unary_expression"], "postprocess": id},
-    {"name": "binary_or_expression", "symbols": ["binary_or_expression", "_", {"literal":"|"}, "_", "unary_expression"]},
+    {"name": "short_circuit_or_expression", "symbols": ["short_circuit_or_expression", "_", {"literal":"||"}, "_", "relational_expression"], "postprocess": ([lhs, , , , rhs]) => ({ type: 'logic_or', lhs, rhs })},
     {"name": "binary_and_expression", "symbols": ["unary_expression"], "postprocess": id},
-    {"name": "binary_and_expression", "symbols": ["binary_and_expression", "_", {"literal":"&"}, "_", "unary_expression"]},
+    {"name": "binary_and_expression", "symbols": ["binary_and_expression", "_", {"literal":"&"}, "_", "unary_expression"], "postprocess": ([lhs, , , , rhs]) => ({ type: 'binary_and', lhs, rhs })},
+    {"name": "binary_or_expression", "symbols": ["unary_expression"], "postprocess": id},
+    {"name": "binary_or_expression", "symbols": ["binary_or_expression", "_", {"literal":"|"}, "_", "unary_expression"], "postprocess": ([lhs, , , , rhs]) => ({ type: 'binary_or', lhs, rhs })},
     {"name": "binary_xor_expression", "symbols": ["unary_expression"], "postprocess": id},
-    {"name": "binary_xor_expression", "symbols": ["binary_xor_expression", "_", {"literal":"^"}, "_", "unary_expression"]},
-    {"name": "bitwise_expression", "symbols": ["binary_and_expression", "_", {"literal":"&"}, "_", "unary_expression"]},
-    {"name": "bitwise_expression", "symbols": ["binary_or_expression", "_", {"literal":"|"}, "_", "unary_expression"]},
-    {"name": "bitwise_expression", "symbols": ["binary_xor_expression", "_", {"literal":"^"}, "_", "unary_expression"]},
+    {"name": "binary_xor_expression", "symbols": ["binary_xor_expression", "_", {"literal":"^"}, "_", "unary_expression"], "postprocess": ([lhs, , , , rhs]) => ({ type: 'binary_xor', lhs, rhs })},
+    {"name": "bitwise_expression", "symbols": ["binary_and_expression", "_", {"literal":"&"}, "_", "unary_expression"], "postprocess": ([lhs, , , , rhs]) => ({ type: 'binary_and', lhs, rhs })},
+    {"name": "bitwise_expression", "symbols": ["binary_or_expression", "_", {"literal":"|"}, "_", "unary_expression"], "postprocess": ([lhs, , , , rhs]) => ({ type: 'binary_or', lhs, rhs })},
+    {"name": "bitwise_expression", "symbols": ["binary_xor_expression", "_", {"literal":"^"}, "_", "unary_expression"], "postprocess": ([lhs, , , , rhs]) => ({ type: 'binary_xor', lhs, rhs })},
     {"name": "expression", "symbols": ["relational_expression"], "postprocess": id},
-    {"name": "expression", "symbols": ["short_circuit_or_expression", {"literal":"||"}, "relational_expression"]},
-    {"name": "expression", "symbols": ["short_circuit_and_expression", {"literal":"&&"}, "relational_expression"]},
+    {"name": "expression", "symbols": ["short_circuit_and_expression", "_", {"literal":"&&"}, "_", "relational_expression"], "postprocess": ([lhs, , , , rhs]) => ({ type: 'logic_and', lhs, rhs })},
+    {"name": "expression", "symbols": ["short_circuit_or_expression", "_", {"literal":"||"}, "_", "relational_expression"], "postprocess": ([lhs, , , , rhs]) => ({ type: 'logic_or', lhs, rhs })},
     {"name": "expression", "symbols": ["bitwise_expression"], "postprocess": id},
     {"name": "if_statement$ebnf$1", "symbols": []},
     {"name": "if_statement$ebnf$1$subexpression$1", "symbols": ["else_if_clause", "_"]},
