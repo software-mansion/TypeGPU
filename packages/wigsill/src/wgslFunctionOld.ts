@@ -1,4 +1,4 @@
-import { IResolutionCtx, WGSLItem, WGSLSegment } from './types';
+import { ResolutionCtx, WGSLItem, WGSLSegment } from './types';
 import { code } from './wgslCode';
 import { WGSLIdentifier } from './wgslIdentifier';
 
@@ -12,7 +12,7 @@ export class WGSLFunction implements WGSLItem {
     return this;
   }
 
-  resolve(ctx: IResolutionCtx): string {
+  resolve(ctx: ResolutionCtx): string {
     ctx.addDependency(code`fn ${this.identifier}${this.body}`);
 
     return ctx.resolve(this.identifier);

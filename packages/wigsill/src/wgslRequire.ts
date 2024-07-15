@@ -1,9 +1,9 @@
-import type { IResolutionCtx, WGSLItem } from './types';
+import type { ResolutionCtx, WGSLItem } from './types';
 
 export class WGSLRequire implements WGSLItem {
   constructor(private readonly item: WGSLItem) {}
 
-  resolve(ctx: IResolutionCtx): string {
+  resolve(ctx: ResolutionCtx): string {
     ctx.addDependency(this.item);
     return '';
   }
