@@ -47,23 +47,6 @@ const lexer = moo.compile({
 
 export type Statement = string; // TODO: Define this
 
-
-export type CompoundStatement = ReturnType<typeof pp_compound_statement>;
-function pp_compound_statement([ , , statements]: [any, any, Statement[]]) {
-  return { type: 'compound_statement' as const, statements };
-}
-
-export type FunctionDecl = ReturnType<typeof pp_function_decl>;
-function pp_function_decl([header, , body]: [FunctionHeader, any, CompoundStatement]) {
-  return { type: 'function_decl' as const, header, body };
-}
-
-export type FunctionHeader = ReturnType<typeof pp_function_header>;
-function pp_function_header([ , , identifier]: [any, any, Identifier]) {
-  return { type: 'function_header' as const, identifier: identifier.value };
-}
-
-
 %}
 
 @lexer lexer
@@ -71,10 +54,10 @@ function pp_function_header([ , , identifier]: [any, any, Identifier]) {
 # entry
 
 @{%
-export type TranslationUnit = GlobalDecl[];
+export type TranslationUnit = { declarations: GlobalDecl[] };
 %}
 # translation_unit -> global_directive:* global_decl:*
-translation_unit -> _ (global_decl _):* {% ([ , declarationTuples]) => declarationTuples.map((tuple) => tuple[0]) %}
+translation_unit -> _ (global_decl _):* {% ([ , declarationTuples]) => ({ declarations: declarationTuples.map((tuple) => tuple[0]) }) %}
 
 global_directive -> "else" # TODO: Implement the global directive non-terminal
 
@@ -102,13 +85,26 @@ type_alias_decl -> null # TODO
 struct_decl -> null # TODO
 const_assert_statement -> null # TODO
 
+@{%
+export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement };
+
+export type FunctionHeader = ReturnType<typeof pp_function_header>;
+function pp_function_header([ , , identifier]: [any, any, Identifier]) {
+  return { type: 'function_header' as const, identifier: identifier.value };
+}
+%}
 # TODO: Add support for attributes
-function_decl -> function_header _ compound_statement {% pp_function_decl %}
+function_decl -> function_header _ compound_statement {% ([header, , body]) => ({ type: 'function_decl', header, body }) %}
 # TODO: Add param list
 # TODO: Add return type
 function_header -> "fn" __ ident _ "(" _ ")" {% pp_function_header %}
 
-compound_statement -> "{" _ statement:* _ "}" {% pp_compound_statement %}
+@{%
+export type CompoundStatement = Statement[];
+
+%}
+
+compound_statement -> "{" _ statement:* _ "}" {% ([ , , statements]) => statements %}
 
 # TODO: Add all statements
 statement ->
@@ -306,18 +302,18 @@ function pp_if_statement([if_clause, , else_if_clauses, , else_clause]: [IfClaus
 }
 
 type IfClause = ReturnType<typeof pp_if_clause>;
-function pp_if_clause([ , , expression, , compound_statement]: [any, any, Expression, any, CompoundStatement]) {
-  return { type: 'if_clause' as const, expression, compound_statement };
+function pp_if_clause([ , , expression, , body]: [any, any, Expression, any, CompoundStatement]) {
+  return { type: 'if_clause' as const, expression, body };
 }
 
 type ElseIfClause = ReturnType<typeof pp_else_if_clause>;
-function pp_else_if_clause([ , , , , expression, , compound_statement]: [any, any, any, any, Expression, any, CompoundStatement]) {
-  return { type: 'else_if_clause' as const, expression, compound_statement };
+function pp_else_if_clause([ , , , , expression, , body]: [any, any, any, any, Expression, any, CompoundStatement]) {
+  return { type: 'else_if_clause' as const, expression, body };
 }
 
 type ElseClause = ReturnType<typeof pp_else_clause>;
-function pp_else_clause([ , , compound_statement]: [any, any, CompoundStatement]) {
-  return { type: 'else_clause' as const, compound_statement };
+function pp_else_clause([ , , body]: [any, any, CompoundStatement]) {
+  return { type: 'else_clause' as const, body };
 }
 
 %}

@@ -62,15 +62,17 @@ const lexer = moo.compile({
 export type Statement = string; // TODO: Define this
 
 
-export type CompoundStatement = ReturnType<typeof pp_compound_statement>;
-function pp_compound_statement([ , , statements]: [any, any, Statement[]]) {
-  return { type: 'compound_statement' as const, statements };
-}
 
-export type FunctionDecl = ReturnType<typeof pp_function_decl>;
-function pp_function_decl([header, , body]: [FunctionHeader, any, CompoundStatement]) {
-  return { type: 'function_decl' as const, header, body };
-}
+export type TranslationUnit = { declarations: GlobalDecl[] };
+
+
+export type GlobalDecl = null | FunctionDecl;
+
+
+export type Ident = { type: 'ident', value: string };
+
+
+export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement };
 
 export type FunctionHeader = ReturnType<typeof pp_function_header>;
 function pp_function_header([ , , identifier]: [any, any, Identifier]) {
@@ -78,15 +80,8 @@ function pp_function_header([ , , identifier]: [any, any, Identifier]) {
 }
 
 
+export type CompoundStatement = Statement[];
 
-
-export type TranslationUnit = GlobalDecl[];
-
-
-export type GlobalDecl = null | FunctionDecl;
-
-
-export type Ident = { type: 'ident', value: string };
 
 
 type Swizzle = { type: 'swizzle', value: string };
@@ -180,18 +175,18 @@ function pp_if_statement([if_clause, , else_if_clauses, , else_clause]: [IfClaus
 }
 
 type IfClause = ReturnType<typeof pp_if_clause>;
-function pp_if_clause([ , , expression, , compound_statement]: [any, any, Expression, any, CompoundStatement]) {
-  return { type: 'if_clause' as const, expression, compound_statement };
+function pp_if_clause([ , , expression, , body]: [any, any, Expression, any, CompoundStatement]) {
+  return { type: 'if_clause' as const, expression, body };
 }
 
 type ElseIfClause = ReturnType<typeof pp_else_if_clause>;
-function pp_else_if_clause([ , , , , expression, , compound_statement]: [any, any, any, any, Expression, any, CompoundStatement]) {
-  return { type: 'else_if_clause' as const, expression, compound_statement };
+function pp_else_if_clause([ , , , , expression, , body]: [any, any, any, any, Expression, any, CompoundStatement]) {
+  return { type: 'else_if_clause' as const, expression, body };
 }
 
 type ElseClause = ReturnType<typeof pp_else_clause>;
-function pp_else_clause([ , , compound_statement]: [any, any, CompoundStatement]) {
-  return { type: 'else_clause' as const, compound_statement };
+function pp_else_clause([ , , body]: [any, any, CompoundStatement]) {
+  return { type: 'else_clause' as const, body };
 }
 
 
@@ -228,7 +223,7 @@ const grammar: Grammar = {
     {"name": "translation_unit$ebnf$1", "symbols": []},
     {"name": "translation_unit$ebnf$1$subexpression$1", "symbols": ["global_decl", "_"]},
     {"name": "translation_unit$ebnf$1", "symbols": ["translation_unit$ebnf$1", "translation_unit$ebnf$1$subexpression$1"], "postprocess": (d) => d[0].concat([d[1]])},
-    {"name": "translation_unit", "symbols": ["_", "translation_unit$ebnf$1"], "postprocess": ([ , declarationTuples]) => declarationTuples.map((tuple) => tuple[0])},
+    {"name": "translation_unit", "symbols": ["_", "translation_unit$ebnf$1"], "postprocess": ([ , declarationTuples]) => ({ declarations: declarationTuples.map((tuple) => tuple[0]) })},
     {"name": "global_directive", "symbols": [{"literal":"else"}]},
     {"name": "global_decl", "symbols": [{"literal":";"}], "postprocess": () => null},
     {"name": "global_decl", "symbols": ["function_decl"], "postprocess": id},
@@ -238,11 +233,11 @@ const grammar: Grammar = {
     {"name": "type_alias_decl", "symbols": []},
     {"name": "struct_decl", "symbols": []},
     {"name": "const_assert_statement", "symbols": []},
-    {"name": "function_decl", "symbols": ["function_header", "_", "compound_statement"], "postprocess": pp_function_decl},
+    {"name": "function_decl", "symbols": ["function_header", "_", "compound_statement"], "postprocess": ([header, , body]) => ({ type: 'function_decl', header, body })},
     {"name": "function_header", "symbols": [{"literal":"fn"}, "__", "ident", "_", {"literal":"("}, "_", {"literal":")"}], "postprocess": pp_function_header},
     {"name": "compound_statement$ebnf$1", "symbols": []},
     {"name": "compound_statement$ebnf$1", "symbols": ["compound_statement$ebnf$1", "statement"], "postprocess": (d) => d[0].concat([d[1]])},
-    {"name": "compound_statement", "symbols": [{"literal":"{"}, "_", "compound_statement$ebnf$1", "_", {"literal":"}"}], "postprocess": pp_compound_statement},
+    {"name": "compound_statement", "symbols": [{"literal":"{"}, "_", "compound_statement$ebnf$1", "_", {"literal":"}"}], "postprocess": ([ , , statements]) => statements},
     {"name": "statement", "symbols": [{"literal":";"}], "postprocess": () => null},
     {"name": "statement", "symbols": ["if_statement"], "postprocess": id},
     {"name": "swizzle", "symbols": [(lexer.has("swizzle_name") ? {type: "swizzle_name"} : swizzle_name)], "postprocess": ([value]) => ({ type: 'swizzle', value })},
