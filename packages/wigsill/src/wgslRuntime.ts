@@ -61,7 +61,6 @@ export async function createRuntime(
         adapter: GPURequestAdapterOptions | undefined;
         device: GPUDeviceDescriptor | undefined;
       }
-    | GPUAdapter
     | GPUDevice,
 ) {
   let adapter: GPUAdapter | null = null;
@@ -76,12 +75,6 @@ export async function createRuntime(
     if (!adapter) {
       throw new Error('Could not find a compatible GPU');
     }
-    device = await adapter.requestDevice();
-    return new WGSLRuntime(device);
-  }
-
-  if (options instanceof GPUAdapter) {
-    adapter = options;
     device = await adapter.requestDevice();
     return new WGSLRuntime(device);
   }
