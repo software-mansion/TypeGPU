@@ -1,6 +1,5 @@
-import cs from 'classnames';
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-
+import cs from 'classnames';
 import useEvent from './useEvent';
 
 type Props = {

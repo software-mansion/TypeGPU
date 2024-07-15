@@ -1,9 +1,8 @@
-import { GUI } from 'dat.gui';
 import * as Babel from '@babel/standalone';
-import { filter, isNonNull, map, pipe } from 'remeda';
-import type { TraverseOptions } from '@babel/traverse';
 import type TemplateGenerator from '@babel/template';
-
+import type { TraverseOptions } from '@babel/traverse';
+import { GUI } from 'dat.gui';
+import { filter, isNonNull, map, pipe } from 'remeda';
 import { ExampleState } from './exampleState';
 import { LayoutInstance } from './layout';
 
@@ -95,15 +94,73 @@ export async function executeExample(
       step?: number;
     },
     onChange: (newValue: number) => void,
-  ) {
+  ): void;
+  function addParameter(
+    label: string,
+    options: {
+      initial: string;
+      options: string[];
+    },
+    onChange: (newValue: string) => void,
+  ): void;
+  function addParameter(
+    label: string,
+    options: {
+      initial: number;
+      options: number[];
+    },
+    onChange: (number: string) => void,
+  ): void;
+  function addParameter(
+    label: string,
+    options: {
+      initial: boolean;
+    },
+    onChange: (newValue: boolean) => void,
+  ): void;
+  function addParameter(
+    label: string,
+    options:
+      | {
+          initial: number;
+          min?: number;
+          max?: number;
+          step?: number;
+        }
+      | {
+          initial: string;
+          options: string[];
+        }
+      | {
+          initial: number;
+          options: number[];
+        }
+      | {
+          initial: boolean;
+        },
+    onChange:
+      | ((newValue: string) => void)
+      | ((newValue: number) => void)
+      | ((newValue: boolean) => void),
+  ): void {
     const temp = { [label]: options.initial };
 
-    gui
-      .add(temp, label, options.min, options.max, options.step)
-      .onChange((value) => onChange(value));
+    if ('options' in options) {
+      gui
+        .add(temp, label, options.options)
+        .onChange((value) => onChange(value as never));
+    } else if (typeof options.initial === 'boolean') {
+      gui
+        .add(temp, label, options.initial)
+        .onChange((value) => onChange(value as never));
+    } else {
+      gui
+        .add(temp, label, options.min, options.max, options.step)
+        .onChange((value) => onChange(value as never));
+    }
 
     // Eager run to initialize the values.
-    onChange(options.initial);
+    onChange(options.initial as never);
   }
 
   try {

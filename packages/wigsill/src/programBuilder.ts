@@ -30,7 +30,7 @@ function addUnique<T>(list: T[], value: T) {
   list.push(value);
 }
 
-class ResolutionCtx implements IResolutionCtx {
+class ResolutionCtxImpl implements IResolutionCtx {
   private _entryToArenaMap = new WeakMap<WGSLMemoryTrait, MemoryArena>();
 
   public dependencies: WGSLItem[] = [];
@@ -147,7 +147,7 @@ export default class ProgramBuilder {
   build(options: BuildOptions): Program {
     const arenas = options.arenas ?? [];
 
-    const ctx = new ResolutionCtx(
+    const ctx = new ResolutionCtxImpl(
       this.runtime,
       arenas,
       this.bindings,
