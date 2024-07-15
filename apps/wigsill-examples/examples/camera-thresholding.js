@@ -4,7 +4,7 @@
 }
 */
 
-import { f32, makeArena, ProgramBuilder, wgsl, WGSLRuntime } from 'wigsill';
+import { f32, makeArena, ProgramBuilder, wgsl, createRuntime } from 'wigsill';
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
 
 // Layout
@@ -12,9 +12,6 @@ const [video, canvas] = await Promise.all([
   addElement('video', { width: 500, height: 375 }),
   addElement('canvas', { width: 500, height: 375 }),
 ]);
-
-const adapter = await navigator.gpu.requestAdapter();
-const device = await adapter.requestDevice();
 
 const thresholdData = wgsl.memory(f32).alias('threshold');
 
@@ -75,13 +72,14 @@ if (navigator.mediaDevices.getUserMedia) {
 const context = canvas.getContext('webgpu');
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
+const runtime = await createRuntime();
+const device = runtime.device;
+
 context.configure({
   device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
-
-const runtime = new WGSLRuntime(device);
 
 const arena = makeArena({
   bufferBindingType: 'uniform',
