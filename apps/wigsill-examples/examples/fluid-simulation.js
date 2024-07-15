@@ -7,7 +7,7 @@
 
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
 import {
-  WGSLRuntime,
+  createRuntime,
   wgsl,
   u32,
   ProgramBuilder,
@@ -16,9 +16,8 @@ import {
   vec2u,
 } from 'wigsill';
 
-const adapter = await navigator.gpu.requestAdapter();
-const device = await adapter.requestDevice();
-const runtime = new WGSLRuntime(device);
+const runtime = await createRuntime();
+const device = runtime.device;
 
 const canvas = await addElement('canvas', { width: 500, height: 500 });
 
