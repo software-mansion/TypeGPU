@@ -53,167 +53,171 @@ const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
 const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
 const maxCompress = wgsl.constant(wgsl`12u`);
 
+const getIndex = wgsl.fn()`(x: u32, y: u32) -> u32 {
+  let h = ${size}.y;
+  let w = ${size}.x;
+  return (y % h) * w + (x % w);
+}`;
+
+const getCell = wgsl.fn()`(x: u32, y: u32) -> u32 {
+    return ${currentState}[${getIndex}(x, y)];
+}`;
+
+const getCellNext = wgsl.fn()`(x: u32, y: u32) -> u32 {
+    return atomicLoad(&next[${getIndex}(x, y)]);
+}`;
+
+const updateCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
+    atomicStore(&next[${getIndex}(x, y)], value);
+}`;
+
+const addToCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
+    let cell = ${getCellNext}(x, y);
+    let waterLevel = cell & ${maxWaterLevel};
+    let newWaterLevel = min(waterLevel + value, ${maxWaterLevel});
+    atomicAdd(&next[${getIndex}(x, y)], newWaterLevel - waterLevel);
+}`;
+
+const subtractFromCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
+    let cell = ${getCellNext}(x, y);
+    let waterLevel = cell & ${maxWaterLevel};
+    let newWaterLevel = max(waterLevel - min(value, waterLevel), 0u);
+    atomicSub(&next[${getIndex}(x, y)], waterLevel - newWaterLevel);
+}`;
+
+const persistFlags = wgsl.fn()`(x: u32, y: u32) {
+    let cell = ${getCell}(x, y);
+    let waterLevel = cell & ${maxWaterLevel};
+    let flags = cell >> 24;
+    ${updateCell}(x, y, (flags << 24) | waterLevel);
+}`;
+
+const getStableStateBelow = wgsl.fn()`(upper: u32, lower: u32) -> u32 {
+  let totalMass = upper + lower;
+  if (totalMass <= ${maxWaterLevelUnpressurized}) {
+      return totalMass;
+  } else if (totalMass >= ${maxWaterLevelUnpressurized}*2 && upper > lower) {
+      return totalMass/2 + ${maxCompress};
+  }
+  return ${maxWaterLevelUnpressurized};
+}`;
+
+const isWall = wgsl.fn()`(x: u32, y: u32) -> bool {
+    return (${getCell}(x, y) >> 24) == 1u;
+}`;
+
+const isWaterSource = wgsl.fn()`(x: u32, y: u32) -> bool {
+    return (${getCell}(x, y) >> 24) == 2u;
+}`;
+
+const isWaterDrain = wgsl.fn()`(x: u32, y: u32) -> bool {
+    return (${getCell}(x, y) >> 24) == 3u;
+}`;
+
+const isClearCell = wgsl.fn()`(x: u32, y: u32) -> bool {
+    return (${getCell}(x, y) >> 24) == 4u;
+}`;
+
+const getWaterLevel = wgsl.fn()`(x: u32, y: u32) -> u32 {
+    return ${getCell}(x, y) & ${maxWaterLevel};
+}`;
+
+const checkForFlagsAndBounds = wgsl.fn()`(x: u32, y: u32) -> bool {
+  if (${isClearCell}(x, y)) {
+      ${updateCell}(x, y, 0u);
+      return true;
+  }
+  if (${isWall}(x, y)) {
+      ${persistFlags}(x, y);
+      return true;
+  }
+  if (${isWaterSource}(x, y)) {
+      ${persistFlags}(x, y);
+      ${addToCell}(x, y, 10u);
+      return false;
+  }
+  if (${isWaterDrain}(x, y)) {
+      ${persistFlags}(x, y);
+      ${updateCell}(x, y, 3u << 24);
+      return true;
+  }
+  if (y == 0 || y == ${size}.y - 1u || x == 0 || x == ${size}.x - 1u) {
+      ${updateCell}(x, y, 0u);
+      return true;
+  }
+  return false;
+}`;
+
+const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
+  if (${checkForFlagsAndBounds}(x, y)) {return;};
+  var remainingWater: u32 = ${getWaterLevel}(x, y);
+
+  if (remainingWater == 0u) {return;};
+
+  if (!${isWall}(x, y - 1u)) {
+      let waterLevelBelow = ${getWaterLevel}(x, y - 1u);
+      let stable = ${getStableStateBelow}(remainingWater, waterLevelBelow);
+      if (waterLevelBelow < stable) {
+          let change = stable - waterLevelBelow;
+          let flow = min(change, ${viscosity});
+          ${subtractFromCell}(x, y, flow);
+          ${addToCell}(x, y - 1u, flow);
+          remainingWater -= flow;
+      }
+  }
+
+  if (remainingWater == 0u) {return;};
+
+  let waterLevelBefore = remainingWater;
+  if (!${isWall}(x - 1u, y)) {
+      let flowRaw = (i32(waterLevelBefore) - i32(${getWaterLevel}(x - 1u, y)));
+      if (flowRaw > 0) {
+          let change = max(min(4u, remainingWater), u32(flowRaw)/4);
+          let flow = min(change, ${viscosity});
+          ${subtractFromCell}(x, y, flow);
+          ${addToCell}(x - 1u, y, flow);
+          remainingWater -= flow;
+      }
+  }
+
+  if (remainingWater == 0u) {return;};
+
+  if (!${isWall}(x + 1u, y)) {
+      let flowRaw = (i32(waterLevelBefore) - i32(${getWaterLevel}(x + 1, y)));
+      if (flowRaw > 0) {
+          let change = max(min(4u, remainingWater), u32(flowRaw)/4);
+          let flow = min(change, ${viscosity});
+          ${subtractFromCell}(x, y, flow);
+          ${addToCell}(x + 1u, y, flow);
+          remainingWater -= flow;
+      }
+  }
+
+  if (remainingWater == 0u) {return;};
+
+  if (!${isWall}(x, y + 1u)) {
+      let stable = ${getStableStateBelow}(${getWaterLevel}(x, y + 1u), remainingWater);
+      if (stable < remainingWater) {
+          let flow = min(remainingWater - stable, ${viscosity});
+          ${subtractFromCell}(x, y, flow);
+          ${addToCell}(x, y + 1u, flow);
+          remainingWater -= flow;
+      }
+  }
+}`;
+
 const computeWGSL = wgsl`
 @binding(0) @group(0) var<storage, read_write> next: array<atomic<u32>>;
 @binding(1) @group(0) var<storage, read_write> debugInfo: atomic<u32>;
 
 override blockSize = 8;
 
-fn getIndex(x: u32, y: u32) -> u32 {
-    let h = ${size}.y;
-    let w = ${size}.x;
-    return (y % h) * w + (x % w);
-}
-
-fn getCell(x: u32, y: u32) -> u32 {
-    return ${currentState}[getIndex(x, y)];
-}
-
-fn getCellNext(x: u32, y: u32) -> u32 {
-    let val = atomicLoad(&next[getIndex(x, y)]);
-    return val;
-}
-
-fn updateCell(x: u32, y: u32, value: u32) {
-    atomicStore(&next[getIndex(x, y)], value);
-}
-
-fn addToCell(x: u32, y: u32, value: u32) {
-    let cell = getCellNext(x, y);
-    let waterLevel = cell & ${maxWaterLevel};
-    let newWaterLevel = min(waterLevel + value, ${maxWaterLevel});
-    atomicAdd(&next[getIndex(x, y)], newWaterLevel - waterLevel);
-}
-
-fn subtractFromCell(x: u32, y: u32, value: u32) {
-    let cell = getCellNext(x, y);
-    let waterLevel = cell & ${maxWaterLevel};
-    let newWaterLevel = max(waterLevel - min(value, waterLevel), 0u);
-    atomicSub(&next[getIndex(x, y)], waterLevel - newWaterLevel);
-}
-
-fn persistFlags(x: u32, y: u32) {
-    let cell = getCell(x, y);
-    let waterLevel = cell & ${maxWaterLevel};
-    let flags = cell >> 24;
-    updateCell(x, y, (flags << 24) | waterLevel);
-}
-
-fn getStableStateBelow(upper: u32, lower: u32) -> u32 {
-    let totalMass = upper + lower;
-    if (totalMass <= ${maxWaterLevelUnpressurized}) {
-        return totalMass;
-    } else if (totalMass >= ${maxWaterLevelUnpressurized}*2 && upper > lower) {
-        return totalMass/2 + ${maxCompress};
-    }
-    return ${maxWaterLevelUnpressurized};
-}
-
-fn isWall(x: u32, y: u32) -> bool {
-    return (getCell(x, y) >> 24) == 1u;
-}
-
-fn isWaterSource(x: u32, y: u32) -> bool {
-    return (getCell(x, y) >> 24) == 2u;
-}
-
-fn isWaterDrain(x: u32, y: u32) -> bool {
-    return (getCell(x, y) >> 24) == 3u;
-}
-
-fn isClearCell(x: u32, y: u32) -> bool {
-    return (getCell(x, y) >> 24) == 4u;
-}
-
-fn getWaterLevel(x: u32, y: u32) -> u32 {
-    return getCell(x, y) & ${maxWaterLevel};
-}
-
-fn decideWaterLevel(x: u32, y: u32) {
-    if (isClearCell(x, y)) {
-        updateCell(x, y, 0u);
-        return;
-    }
-    if (isWall(x, y)) {
-        persistFlags(x, y);
-        return;
-    }
-    if (isWaterSource(x, y)) {
-        persistFlags(x, y);
-        addToCell(x, y, 10u);
-    }
-    if (isWaterDrain(x, y)) {
-        persistFlags(x, y);
-        updateCell(x, y, 3u << 24);
-        return;
-    }
-    if (y == 0 || y == ${size}.y - 1u || x == 0 || x == ${size}.x - 1u) {
-        updateCell(x, y, 0u);
-        return;
-    }
-
-    var remainingWater: u32 = getWaterLevel(x, y);
-
-    if (remainingWater == 0u) {return;};
-
-    if (!isWall(x, y - 1u)) {
-        let waterLevelBelow = getWaterLevel(x, y - 1u);
-        let stable = getStableStateBelow(remainingWater, waterLevelBelow);
-        if (waterLevelBelow < stable) {
-            let change = stable - waterLevelBelow;
-            let flow = min(change, ${viscosity});
-            subtractFromCell(x, y, flow);
-            addToCell(x, y - 1u, flow);
-            remainingWater -= flow;
-        }
-    }
-
-    if (remainingWater == 0u) {return;};
-
-    let waterLevelBefore = remainingWater;
-    if (!isWall(x - 1u, y)) {
-        let flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel(x - 1u, y)));
-        if (flowRaw > 0) {
-            let change = max(min(4u, remainingWater), u32(flowRaw)/4);
-            let flow = min(change, ${viscosity});
-            subtractFromCell(x, y, flow);
-            addToCell(x - 1u, y, flow);
-            remainingWater -= flow;
-        }
-    }
-
-    if (remainingWater == 0u) {return;};
-
-    if (!isWall(x + 1u, y)) {
-        let flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel(x + 1, y)));
-        if (flowRaw > 0) {
-            let change = max(min(4u, remainingWater), u32(flowRaw)/4);
-            let flow = min(change, ${viscosity});
-            subtractFromCell(x, y, flow);
-            addToCell(x + 1u, y, flow);
-            remainingWater -= flow;
-        }
-    }
-
-    if (remainingWater == 0u) {return;};
-
-    if (!isWall(x, y + 1u)) {
-        let stable = getStableStateBelow(getWaterLevel(x, y + 1u), remainingWater);
-        if (stable < remainingWater) {
-            let flow = min(remainingWater - stable, ${viscosity});
-            subtractFromCell(x, y, flow);
-            addToCell(x, y + 1u, flow);
-            remainingWater -= flow;
-        }
-    }
-}
-
 @compute @workgroup_size(blockSize, blockSize)
 fn main(@builtin(global_invocation_id) grid: vec3u) {
     let x = grid.x;
     let y = grid.y;
-    atomicAdd(&debugInfo, getWaterLevel(x, y));
-    decideWaterLevel(x, y);
+    atomicAdd(&debugInfo, ${getWaterLevel}(x, y));
+    ${decideWaterLevel}(x, y);
 }
 `;
 
@@ -642,11 +646,6 @@ async function loop() {
   }
 }
 
-resetGameData();
-onFrame(() => {
-  loop();
-});
-
 addParameter(
   'size',
   { initial: 64, options: [16, 32, 64, 128, 256, 512, 1024] },
@@ -707,4 +706,9 @@ addParameter(
 );
 addParameter('pause', { initial: false }, (value) => {
   paused = value;
+});
+
+resetGameData();
+onFrame(() => {
+  loop();
 });
