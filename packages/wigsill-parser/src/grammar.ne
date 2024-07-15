@@ -89,7 +89,7 @@ const_assert_statement -> null # TODO
 export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement };
 
 export type FunctionHeader = ReturnType<typeof pp_function_header>;
-function pp_function_header([ , , identifier]: [any, any, Identifier]) {
+function pp_function_header([ , , identifier]: [any, any, Ident]) {
   return { type: 'function_header' as const, identifier: identifier.value };
 }
 %}

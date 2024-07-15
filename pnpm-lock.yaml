@@ -162,6 +162,9 @@ importers:
       '@webgpu/types':
         specifier: ^0.1.43
         version: 0.1.43
+      '@wigsill/parser':
+        specifier: workspace:*
+        version: link:../wigsill-parser
       tsup:
         specifier: ^8.0.2
         version: 8.0.2(typescript@5.3.3)

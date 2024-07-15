@@ -11,6 +11,9 @@
     "exactOptionalPropertyTypes": true,
     "baseUrl": ".",
     "lib": ["DOM", "es2021"],
+    "paths": {
+      "wigsill": ["./src"]
+    },
     "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"]
   }
 }
