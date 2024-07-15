@@ -67,9 +67,9 @@ export async function createRuntime(
   let adapter: GPUAdapter | null = null;
   let device: GPUDevice | null = null;
 
-if (!navigator.gpu) {
-  throw new Error('WebGPU is not supported by this browser.');
-}
+  if (!navigator.gpu) {
+    throw new Error('WebGPU is not supported by this browser.');
+  }
 
   if (!options) {
     adapter = await navigator.gpu.requestAdapter();
