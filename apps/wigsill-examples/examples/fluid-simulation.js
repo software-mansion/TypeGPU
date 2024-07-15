@@ -46,11 +46,12 @@ const Options = {
 };
 
 const viscosity = wgsl.memory(u32).alias('viscosity');
-const maxWaterLevelUnpressurized = wgsl.constant(wgsl`255u`);
-const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
-const maxCompress = wgsl.constant(wgsl`12u`);
 const currentState = wgsl.memory(arrayOf(u32, 1024 ** 2)).alias('current');
 const size = wgsl.memory(vec2u).alias('size');
+
+const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
+const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
+const maxCompress = wgsl.constant(wgsl`12u`);
 
 const computeWGSL = wgsl`
 @binding(0) @group(0) var<storage, read_write> next: array<atomic<u32>>;
@@ -666,7 +667,7 @@ addParameter(
 );
 addParameter(
   'workgroupSize',
-  { initial: 16, options: [1, 2, 4, 8, 16, 32] },
+  { initial: 16, options: [1, 2, 4, 8, 16] },
   (value) => {
     Options.workgroupSize = value;
     resetGameData();
