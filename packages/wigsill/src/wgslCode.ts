@@ -1,17 +1,7 @@
-import {
-  IResolutionCtx,
-  WGSLCompoundTrait,
-  WGSLItem,
-  WGSLSegment,
-  isWGSLItem,
-} from './types';
+import { IResolutionCtx, WGSLItem, WGSLSegment, isWGSLItem } from './types';
 
-export class WGSLCode implements WGSLItem, WGSLCompoundTrait {
+export class WGSLCode implements WGSLItem {
   constructor(public readonly segments: WGSLSegment[]) {}
-
-  getChildren(): WGSLItem[] {
-    return this.segments.filter(isWGSLItem);
-  }
 
   resolve(ctx: IResolutionCtx) {
     let code = '';
