@@ -14,7 +14,7 @@ const [video, canvas] = await Promise.all([
 ]);
 
 const adapter = await navigator.gpu.requestAdapter();
-const device = await adapter.requestDevice();
+const device = await adapter!.requestDevice();
 
 const thresholdData = wgsl.memory(f32).alias('threshold');
 
@@ -75,7 +75,7 @@ if (navigator.mediaDevices.getUserMedia) {
 const context = canvas.getContext('webgpu');
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-context.configure({
+context!.configure({
   device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
@@ -144,8 +144,10 @@ const sampler = device.createSampler({
 
 // UI
 
-addParameter('threshold', { initial: 0.4, min: 0, max: 1 }, (threshold) =>
-  thresholdData.write(runtime, threshold),
+addParameter(
+  'threshold',
+  { initial: 0.4, min: 0, max: 1 },
+  (threshold: number) => thresholdData.write(runtime, threshold),
 );
 
 onFrame(() => {
@@ -176,7 +178,7 @@ onFrame(() => {
   const passEncoder = commandEncoder.beginRenderPass({
     colorAttachments: [
       {
-        view: context.getCurrentTexture().createView(),
+        view: context!.getCurrentTexture().createView(),
         clearValue: [0, 0, 0, 1],
         loadOp: 'clear',
         storeOp: 'store',

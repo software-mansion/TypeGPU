@@ -5,15 +5,10 @@
 */
 
 import { makeArena, ProgramBuilder, u32, wgsl, WGSLRuntime } from 'wigsill';
-import {
-  addElement,
-  addParameter,
-  onCleanup,
-  onFrame,
-} from '@wigsill/example-toolkit';
+import { addElement, addParameter, onCleanup, onFrame } from '@wigsill/example-toolkit';
 
 const adapter = await navigator.gpu.requestAdapter();
-const device = await adapter.requestDevice();
+const device = await adapter!.requestDevice();
 const runtime = new WGSLRuntime(device);
 
 const xSpanData = wgsl.memory(u32).alias('x-span');
@@ -34,7 +29,7 @@ canvas.width = canvas.clientWidth * devicePixelRatio;
 canvas.height = canvas.clientHeight * devicePixelRatio;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-context.configure({
+context!.configure({
   device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
@@ -113,19 +108,23 @@ const pipeline = device.createRenderPipeline({
   },
 });
 
-addParameter('x-span', { initial: 16, min: 1, max: 16, step: 1 }, (xSpan) =>
-  xSpanData.write(runtime, xSpan),
+addParameter(
+  'x-span',
+  { initial: 16, min: 1, max: 16, step: 1 },
+  (xSpan: number) => xSpanData.write(runtime, xSpan),
 );
 
-addParameter('y-span', { initial: 16, min: 1, max: 16, step: 1 }, (ySpan) =>
-  ySpanData.write(runtime, ySpan),
+addParameter(
+  'y-span',
+  { initial: 16, min: 1, max: 16, step: 1 },
+  (ySpan: number) => ySpanData.write(runtime, ySpan),
 );
 
 onFrame(() => {
   const commandEncoder = device.createCommandEncoder();
-  const textureView = context.getCurrentTexture().createView();
+  const textureView = context!.getCurrentTexture().createView();
 
-  const renderPassDescriptor = {
+  const renderPassDescriptor: GPURenderPassDescriptor = {
     colorAttachments: [
       {
         view: textureView,
