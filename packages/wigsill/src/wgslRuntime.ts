@@ -67,9 +67,16 @@ export async function createRuntime(
   let adapter: GPUAdapter | null = null;
   let device: GPUDevice | null = null;
 
+if (!navigator.gpu) {
+  throw new Error('WebGPU is not supported by this browser.');
+}
+
   if (!options) {
     adapter = await navigator.gpu.requestAdapter();
-    device = await adapter!.requestDevice();
+    if (!adapter) {
+      throw new Error('Could not find a compatible GPU');
+    }
+    device = await adapter.requestDevice();
     return new WGSLRuntime(device);
   }
 
@@ -84,7 +91,10 @@ export async function createRuntime(
   }
 
   adapter = await navigator.gpu.requestAdapter(options.adapter);
-  device = await adapter!.requestDevice(options.device);
+  if (!adapter) {
+    throw new Error('Could not find a compatible GPU');
+  }
+  device = await adapter.requestDevice(options.device);
   return new WGSLRuntime(device);
 }
 
