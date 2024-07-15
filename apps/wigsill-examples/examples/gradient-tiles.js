@@ -4,7 +4,7 @@
 }
 */
 
-import { makeArena, ProgramBuilder, u32, wgsl, WGSLRuntime } from 'wigsill';
+import { makeArena, ProgramBuilder, u32, wgsl, createRuntime } from 'wigsill';
 import {
   addElement,
   addParameter,
@@ -12,9 +12,8 @@ import {
   onFrame,
 } from '@wigsill/example-toolkit';
 
-const adapter = await navigator.gpu.requestAdapter();
-const device = await adapter.requestDevice();
-const runtime = new WGSLRuntime(device);
+const runtime = await createRuntime();
+const device = runtime.device;
 
 const xSpanData = wgsl.memory(u32).alias('x-span');
 const ySpanData = wgsl.memory(u32).alias('y-span');
