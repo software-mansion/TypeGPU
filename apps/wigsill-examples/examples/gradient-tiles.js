@@ -12,7 +12,7 @@ import {
   onFrame,
 } from '@wigsill/example-toolkit';
 
-const runtime = createRuntime;
+const runtime = await createRuntime();
 const device = runtime.device;
 
 const xSpanData = wgsl.memory(u32).alias('x-span');
