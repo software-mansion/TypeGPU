@@ -44,6 +44,20 @@ const Options = {
   brushType: 'water',
 };
 
+const BrushTypes = ['wall', 'source', 'drain', 'water'];
+function encodeBrushType(brushType) {
+  switch (brushType) {
+    case 'wall':
+      return 1 << 24;
+    case 'source':
+      return 2 << 24;
+    case 'drain':
+      return 3 << 24;
+    default:
+      return 100;
+  }
+}
+
 const viscosity = wgsl.memory(u32).alias('viscosity');
 const currentState = wgsl.memory(arrayOf(u32, 1024 ** 2)).alias('current');
 const size = wgsl.memory(vec2u).alias('size');
@@ -590,7 +604,9 @@ canvas.onmousemove = (event) => {
       }
     } else {
       for (const cell of allAffectedCells) {
-        drawCanvasData[cell.y * Options.size + cell.x] = drawType;
+        drawCanvasData[cell.y * Options.size + cell.x] = encodeBrushType(
+          Options.brushType,
+        );
       }
     }
 
@@ -682,25 +698,11 @@ addParameter(
 addParameter('brushSize', { initial: 0, min: 0, max: 10, step: 1 }, (value) => {
   Options.brushSize = value;
 });
-let drawType = 100;
 addParameter(
   'brushType',
-  { initial: 'water', options: ['wall', 'source', 'drain', 'water'] },
+  { initial: 'water', options: BrushTypes },
   (value) => {
-    switch (value) {
-      case 'wall':
-        drawType = 1 << 24;
-        break;
-      case 'source':
-        drawType = 2 << 24;
-        break;
-      case 'drain':
-        drawType = 3 << 24;
-        break;
-      default:
-        drawType = 100;
-        break;
-    }
+    Options.brushType = value;
   },
 );
 addParameter('pause', { initial: false }, (value) => {
