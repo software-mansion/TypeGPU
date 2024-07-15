@@ -1,14 +1,13 @@
 import { Suspense, useState } from 'react';
-import { RESET } from 'jotai/utils';
 import { useAtom } from 'jotai/react';
-
-import { currentExampleAtom } from './router';
+import { RESET } from 'jotai/utils';
 import { ExampleLink } from './common/ExampleLink';
-import { ExampleNotFound } from './ExampleNotFound';
-import { ExampleView } from './example/ExampleView';
-import { examples } from './example/examples';
-import { Home } from './Home';
 import { Switch } from './common/Switch';
+import { examples } from './example/examples';
+import { ExampleView } from './example/ExampleView';
+import { ExampleNotFound } from './ExampleNotFound';
+import { Home } from './Home';
+import { currentExampleAtom } from './router';
 
 function App() {
   const [currentExample, setCurrentExample] = useAtom(currentExampleAtom);

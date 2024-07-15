@@ -1,9 +1,8 @@
-import { GUI } from 'dat.gui';
 import * as Babel from '@babel/standalone';
-import { filter, isNonNull, map, pipe } from 'remeda';
-import type { TraverseOptions } from '@babel/traverse';
 import type TemplateGenerator from '@babel/template';
-
+import type { TraverseOptions } from '@babel/traverse';
+import { GUI } from 'dat.gui';
+import { filter, isNonNull, map, pipe } from 'remeda';
 import { ExampleState } from './exampleState';
 import { LayoutInstance } from './layout';
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the

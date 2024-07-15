@@ -1,5 +1,4 @@
 import Editor from '@monaco-editor/react';
-
 import useEvent from './common/useEvent';
 
 type Props = {

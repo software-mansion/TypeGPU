@@ -1,5 +1,5 @@
-import cs from 'classnames';
 import { forwardRef } from 'react';
+import cs from 'classnames';
 
 type Props = {
   width?: number;

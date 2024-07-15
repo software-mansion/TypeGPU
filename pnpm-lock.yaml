@@ -171,6 +171,9 @@ importers:
       typescript:
         specifier: ^5.3.3
         version: 5.3.3
+      wigsill:
+        specifier: workspace:*
+        version: 'link:'
 
 packages:
 
