@@ -35,4 +35,27 @@ describe('call_expression', () => {
 
     expect(parse('perform(true)')).toEqual(expected);
   });
+
+  it('parses function call with two args', () => {
+    const expected = {
+      type: 'call_expression',
+      ident: {
+        type: 'template_elaborated_ident',
+        value: 'perform',
+        template_list: null,
+      },
+      args: [
+        {
+          type: 'bool_literal',
+          value: 'true',
+        },
+        {
+          type: 'float_literal',
+          value: '0.15',
+        },
+      ],
+    } satisfies CallExpression;
+
+    expect(parse('perform(true, 0.15)')).toEqual(expected);
+  });
 });
