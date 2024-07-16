@@ -16,6 +16,16 @@ describe('wgsl.fn', () => {
       // ${empty}();
     }`;
 
-    expect(parse(ctx.resolve(shader)));
+    expect(parse(ctx.resolve(shader))).toEqual(
+      parse(`
+fn empty() {
+  // still does nothing
+}
+
+fn main() {
+  // empty();
+}
+`),
+    );
   });
 });

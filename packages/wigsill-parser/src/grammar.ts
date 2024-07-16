@@ -39,7 +39,6 @@ const lexer = moo.compile({
   swizzle_name: { match: /[rgba]|[rgba][rgba]|[rgba][rgba][rgba]|[rgba][rgba][rgba][rgba]|[xyzw]|[xyzw][xyzw]|[xyzw][xyzw][xyzw]|[xyzw][xyzw][xyzw][xyzw]/ },
   shift_left: '<<',
   shift_right: '>>',
-  _disambiguate_template: '<',
   lt: '<',
   gt: '>',
   le: '<=',
@@ -75,6 +74,10 @@ export type Statement = string; // TODO: Define this
 
 
 
+export type Main = TranslationUnit | Statement | Expression;
+
+
+
 export type TranslationUnit = { type: 'translation_unit', declarations: GlobalDecl[] };
 
 
@@ -82,6 +85,15 @@ export type GlobalDecl = null | FunctionDecl;
 
 
 export type Ident = { type: 'ident', value: string };
+
+
+
+export type TemplateElaboratedIdent = { type: 'template_elaborated_ident', value: string, template_list: TemplateList | null };
+
+
+
+export type TemplateList = Expression[];
+
 
 
 export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement };
@@ -92,22 +104,40 @@ function pp_function_header([ , identifier]: [any, Ident]) {
 }
 
 
+
+export type ReturnStatement = { type: 'return_statement', expression: Expression };
+
+
+
 export type CompoundStatement = Statement[];
 
 
 
-type Swizzle = { type: 'swizzle', value: string };
+export type Swizzle = { type: 'swizzle', value: string };
+
+
+
+export type FuncCallStatement = { type: 'call_statement', ident: TemplateElaboratedIdent, args: Expression[] };
+
+
+
+
+export type IfStatement = { type: 'if_statement', if_clause: IfClause, else_if_clauses: ElseIfClause[], else_clause: ElseClause | null };
+export type IfClause = { type: 'if_clause', expression: Expression, body: CompoundStatement };
+export type ElseIfClause = { type: 'else_if_clause', expression: Expression, body: CompoundStatement };
+export type ElseClause = { type: 'else_clause', body: CompoundStatement };
+
+function pp_else_clause([ , , body]: [any, any, CompoundStatement]) {
+  return { type: 'else_clause' as const, body };
+}
+
 
 
 export type Literal = BoolLiteral | IntLiteral | FloatLiteral;
-
 export type IntLiteral = { type: 'int_literal', value: string };
 export type FloatLiteral = { type: 'float_literal', value: string };
 export type BoolLiteral = { type: 'bool_literal', value: 'true' | 'false' };
 
-function pp_literal([token]: [{ type: string, value: string }]): Literal {
-  return { type: token.type, value: token.value };
-}
 
 
 export type PrimaryExpression =
@@ -118,7 +148,15 @@ export type PrimaryExpression =
 
 
 
+export type CallExpression = { type: 'function_call', ident: TemplateElaboratedIdent, args: ArgumentExpressionList };
+
+
+
 export type ParenExpression = { type: 'paren_expression', expression: Expression };
+
+
+
+export type ArgumentExpressionList = Expression[];
 
 
 
@@ -179,18 +217,6 @@ export type Expression =
   | BitwiseExpression;
 
 
-
-
-export type IfStatement = { type: 'if_statement', if_clause: IfClause, else_if_clauses: ElseIfClause[], else_clause: ElseClause | null };
-export type IfClause = { type: 'if_clause', expression: Expression, body: CompoundStatement };
-export type ElseIfClause = { type: 'else_if_clause', expression: Expression, body: CompoundStatement };
-export type ElseClause = { type: 'else_clause', body: CompoundStatement };
-
-function pp_else_clause([ , , body]: [any, any, CompoundStatement]) {
-  return { type: 'else_clause' as const, body };
-}
-
-
 interface NearleyToken {
   value: any;
   [key: string]: any;
@@ -221,6 +247,9 @@ interface Grammar {
 const grammar: Grammar = {
   Lexer: lexer,
   ParserRules: [
+    {"name": "main", "symbols": ["translation_unit"], "postprocess": id},
+    {"name": "main", "symbols": ["statement"], "postprocess": id},
+    {"name": "main", "symbols": ["expression"], "postprocess": id},
     {"name": "translation_unit$ebnf$1", "symbols": []},
     {"name": "translation_unit$ebnf$1", "symbols": ["translation_unit$ebnf$1", "global_decl"], "postprocess": (d) => d[0].concat([d[1]])},
     {"name": "translation_unit", "symbols": ["translation_unit$ebnf$1"], "postprocess": ([declarations]) => ({ type: 'translation_unit', declarations })},
@@ -232,26 +261,61 @@ const grammar: Grammar = {
     {"name": "type_alias_decl", "symbols": []},
     {"name": "struct_decl", "symbols": []},
     {"name": "const_assert_statement", "symbols": []},
+    {"name": "type_specifier", "symbols": ["template_elaborated_ident"]},
+    {"name": "template_elaborated_ident$ebnf$1", "symbols": ["template_list"], "postprocess": id},
+    {"name": "template_elaborated_ident$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "template_elaborated_ident", "symbols": ["ident", "template_elaborated_ident$ebnf$1"], "postprocess": ([ident, template_list]) => ({ type: 'template_elaborated_ident', value: ident.value, template_list })},
+    {"name": "template_list", "symbols": [{"literal":"<"}, "template_arg_comma_list", {"literal":">"}], "postprocess": ([ , template_list]) => template_list},
+    {"name": "template_arg_comma_list$ebnf$1", "symbols": []},
+    {"name": "template_arg_comma_list$ebnf$1$subexpression$1", "symbols": [{"literal":","}, "expression"]},
+    {"name": "template_arg_comma_list$ebnf$1", "symbols": ["template_arg_comma_list$ebnf$1", "template_arg_comma_list$ebnf$1$subexpression$1"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "template_arg_comma_list$ebnf$2", "symbols": [{"literal":","}], "postprocess": id},
+    {"name": "template_arg_comma_list$ebnf$2", "symbols": [], "postprocess": () => null},
+    {"name": "template_arg_comma_list", "symbols": ["expression", "template_arg_comma_list$ebnf$1", "template_arg_comma_list$ebnf$2"], "postprocess": ([first, rest]) => [first, ...rest.map(tuple => tuple[1])]},
     {"name": "function_decl", "symbols": ["function_header", "compound_statement"], "postprocess": ([header, body]) => ({ type: 'function_decl', header, body })},
     {"name": "function_header", "symbols": [{"literal":"fn"}, "ident", {"literal":"("}, {"literal":")"}], "postprocess": pp_function_header},
+    {"name": "return_statement$ebnf$1", "symbols": ["expression"], "postprocess": id},
+    {"name": "return_statement$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "return_statement", "symbols": [{"literal":"return"}, "return_statement$ebnf$1"], "postprocess": ([ , expression]) => ({ type: 'return_statement', expression })},
     {"name": "compound_statement$ebnf$1", "symbols": []},
     {"name": "compound_statement$ebnf$1", "symbols": ["compound_statement$ebnf$1", "statement"], "postprocess": (d) => d[0].concat([d[1]])},
-    {"name": "compound_statement", "symbols": [{"literal":"{"}, "compound_statement$ebnf$1", {"literal":"}"}], "postprocess": ([ , statements]) => statements},
+    {"name": "compound_statement", "symbols": [{"literal":"{"}, "compound_statement$ebnf$1", {"literal":"}"}], "postprocess": ([ , statements]) => statements.filter((val) => val !== null)},
     {"name": "statement", "symbols": [{"literal":";"}], "postprocess": () => null},
+    {"name": "statement", "symbols": ["return_statement", {"literal":";"}], "postprocess": ([val]) => val},
+    {"name": "statement", "symbols": ["func_call_statement", {"literal":";"}], "postprocess": ([val]) => val},
     {"name": "statement", "symbols": ["if_statement"], "postprocess": id},
+    {"name": "func_call_statement", "symbols": ["call_phrase"], "postprocess": ([phrase]) => ({ type: 'call_statement', ident: phrase.ident, args: phrase.args })},
     {"name": "swizzle", "symbols": [(lexer.has("swizzle_name") ? {type: "swizzle_name"} : swizzle_name)], "postprocess": ([value]) => ({ type: 'swizzle', value })},
+    {"name": "if_statement$ebnf$1", "symbols": []},
+    {"name": "if_statement$ebnf$1", "symbols": ["if_statement$ebnf$1", "else_if_clause"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "if_statement$ebnf$2", "symbols": ["else_clause"], "postprocess": id},
+    {"name": "if_statement$ebnf$2", "symbols": [], "postprocess": () => null},
+    {"name": "if_statement", "symbols": ["if_clause", "if_statement$ebnf$1", "if_statement$ebnf$2"], "postprocess": ([if_clause, else_if_clauses, else_clause]) => ({ type: 'if_statement' as const, if_clause, else_if_clauses, else_clause })},
+    {"name": "if_clause", "symbols": [{"literal":"if"}, "expression", "compound_statement"], "postprocess": ([ , expression, body]) => ({ type: 'if_clause', expression, body })},
+    {"name": "else_if_clause", "symbols": [{"literal":"else"}, {"literal":"if"}, "expression", "compound_statement"], "postprocess": ([ , , expression, body]) => ({ type: 'else_if_clause', expression, body })},
+    {"name": "else_clause", "symbols": [{"literal":"else"}, "compound_statement"], "postprocess": ([, body]) => ({ type: 'else_clause', body })},
     {"name": "literal", "symbols": ["int_literal"], "postprocess": id},
     {"name": "literal", "symbols": ["float_literal"], "postprocess": id},
     {"name": "literal", "symbols": ["bool_literal"], "postprocess": id},
-    {"name": "int_literal", "symbols": [(lexer.has("decimal_int_literal") ? {type: "decimal_int_literal"} : decimal_int_literal)], "postprocess": pp_literal},
-    {"name": "int_literal", "symbols": [(lexer.has("hex_int_literal") ? {type: "hex_int_literal"} : hex_int_literal)], "postprocess": pp_literal},
-    {"name": "float_literal", "symbols": [(lexer.has("decimal_float_literal") ? {type: "decimal_float_literal"} : decimal_float_literal)], "postprocess": pp_literal},
-    {"name": "float_literal", "symbols": [(lexer.has("hex_float_literal") ? {type: "hex_float_literal"} : hex_float_literal)], "postprocess": pp_literal},
+    {"name": "int_literal", "symbols": [(lexer.has("decimal_int_literal") ? {type: "decimal_int_literal"} : decimal_int_literal)], "postprocess": ([token]) => ({ type: 'int_literal', value: token.value })},
+    {"name": "int_literal", "symbols": [(lexer.has("hex_int_literal") ? {type: "hex_int_literal"} : hex_int_literal)], "postprocess": ([token]) => ({ type: 'int_literal', value: token.value })},
+    {"name": "float_literal", "symbols": [(lexer.has("decimal_float_literal") ? {type: "decimal_float_literal"} : decimal_float_literal)], "postprocess": ([token]) => ({ type: 'float_literal', value: token.value })},
+    {"name": "float_literal", "symbols": [(lexer.has("hex_float_literal") ? {type: "hex_float_literal"} : hex_float_literal)], "postprocess": ([token]) => ({ type: 'float_literal', value: token.value })},
     {"name": "bool_literal", "symbols": [{"literal":"true"}], "postprocess": () => ({ type: 'bool_literal', value: 'true' })},
     {"name": "bool_literal", "symbols": [{"literal":"false"}], "postprocess": () => ({ type: 'bool_literal', value: 'false' })},
     {"name": "primary_expression", "symbols": ["literal"], "postprocess": id},
     {"name": "primary_expression", "symbols": ["paren_expression"], "postprocess": id},
+    {"name": "call_expression", "symbols": ["call_phrase"], "postprocess": ([phrase]) => ({ type: 'call_expression', ident: phrase.ident, args: phrase.args })},
     {"name": "paren_expression", "symbols": [{"literal":"("}, "expression", {"literal":")"}], "postprocess": ([ , expression]) => ({ type: 'paren_expression', expression })},
+    {"name": "argument_expression_list$ebnf$1", "symbols": ["expression_comma_list"], "postprocess": id},
+    {"name": "argument_expression_list$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "argument_expression_list", "symbols": [{"literal":"("}, "argument_expression_list$ebnf$1", {"literal":")"}], "postprocess": ([ , list]) => list ?? []},
+    {"name": "expression_comma_list$ebnf$1", "symbols": []},
+    {"name": "expression_comma_list$ebnf$1$subexpression$1", "symbols": [{"literal":","}, "expression"]},
+    {"name": "expression_comma_list$ebnf$1", "symbols": ["expression_comma_list$ebnf$1", "expression_comma_list$ebnf$1$subexpression$1"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "expression_comma_list$ebnf$2", "symbols": [{"literal":","}], "postprocess": id},
+    {"name": "expression_comma_list$ebnf$2", "symbols": [], "postprocess": () => null},
+    {"name": "expression_comma_list", "symbols": ["expression", "expression_comma_list$ebnf$1", "expression_comma_list$ebnf$2"], "postprocess": ([first, rest]) => [first, ...rest.map(tuple => tuple[1])]},
     {"name": "component_or_swizzle_specifier$ebnf$1", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
     {"name": "component_or_swizzle_specifier$ebnf$1", "symbols": [], "postprocess": () => null},
     {"name": "component_or_swizzle_specifier", "symbols": [{"literal":"["}, "expression", {"literal":"]"}, "component_or_swizzle_specifier$ebnf$1"], "postprocess": ([ , index, , next]) => ({ type: 'index_accessor', index, next })},
@@ -307,16 +371,9 @@ const grammar: Grammar = {
     {"name": "expression", "symbols": ["short_circuit_and_expression", {"literal":"&&"}, "relational_expression"], "postprocess": ([lhs, , rhs]) => ({ type: 'logic_and', lhs, rhs })},
     {"name": "expression", "symbols": ["short_circuit_or_expression", {"literal":"||"}, "relational_expression"], "postprocess": ([lhs, , rhs]) => ({ type: 'logic_or', lhs, rhs })},
     {"name": "expression", "symbols": ["bitwise_expression"], "postprocess": id},
-    {"name": "if_statement$ebnf$1", "symbols": []},
-    {"name": "if_statement$ebnf$1", "symbols": ["if_statement$ebnf$1", "else_if_clause"], "postprocess": (d) => d[0].concat([d[1]])},
-    {"name": "if_statement$ebnf$2", "symbols": ["else_clause"], "postprocess": id},
-    {"name": "if_statement$ebnf$2", "symbols": [], "postprocess": () => null},
-    {"name": "if_statement", "symbols": ["if_clause", "if_statement$ebnf$1", "if_statement$ebnf$2"], "postprocess": ([if_clause, else_if_clauses, else_clause]) => ({ type: 'if_statement' as const, if_clause, else_if_clauses, else_clause })},
-    {"name": "if_clause", "symbols": [{"literal":"if"}, "expression", "compound_statement"], "postprocess": ([ , expression, body]) => ({ type: 'if_clause', expression, body })},
-    {"name": "else_if_clause", "symbols": [{"literal":"else"}, {"literal":"if"}, "expression", "compound_statement"], "postprocess": ([ , , expression, body]) => ({ type: 'else_if_clause', expression, body })},
-    {"name": "else_clause", "symbols": [{"literal":"else"}, "compound_statement"], "postprocess": ([, body]) => ({ type: 'else_clause', body })}
+    {"name": "call_phrase", "symbols": ["template_elaborated_ident", "argument_expression_list"], "postprocess": ([ident, args]) => ({ ident, args })}
   ],
-  ParserStart: "translation_unit",
+  ParserStart: "main",
 };
 
 export default grammar;

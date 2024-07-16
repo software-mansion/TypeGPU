@@ -28,7 +28,6 @@ const lexer = moo.compile({
   swizzle_name: { match: /[rgba]|[rgba][rgba]|[rgba][rgba][rgba]|[rgba][rgba][rgba][rgba]|[xyzw]|[xyzw][xyzw]|[xyzw][xyzw][xyzw]|[xyzw][xyzw][xyzw][xyzw]/ },
   shift_left: '<<',
   shift_right: '>>',
-  _disambiguate_template: '<',
   lt: '<',
   gt: '>',
   le: '<=',
@@ -69,6 +68,15 @@ export type Statement = string; // TODO: Define this
 # entry
 
 @{%
+export type Main = TranslationUnit | Statement | Expression;
+
+%}
+main ->
+    translation_unit {% id %}
+  | statement        {% id %}
+  | expression       {% id %}
+
+@{%
 export type TranslationUnit = { type: 'translation_unit', declarations: GlobalDecl[] };
 %}
 # translation_unit -> global_directive:* global_decl:*
@@ -90,6 +98,7 @@ global_decl ->
 
 @{%
 export type Ident = { type: 'ident', value: string };
+
 %}
 ident -> %ident_pattern {% ([token]) => ({ type: 'ident', value: token.value }) %}
 # member_ident -> %ident_pattern {% id %}
@@ -100,6 +109,27 @@ type_alias_decl -> null # TODO
 struct_decl -> null # TODO
 const_assert_statement -> null # TODO
 
+type_specifier -> template_elaborated_ident
+
+@{%
+export type TemplateElaboratedIdent = { type: 'template_elaborated_ident', value: string, template_list: TemplateList | null };
+
+%}
+
+template_elaborated_ident ->
+  ident template_list:? {% ([ident, template_list]) => ({ type: 'template_elaborated_ident', value: ident.value, template_list }) %}
+
+@{%
+export type TemplateList = Expression[];
+
+%}
+
+template_list ->
+  "<" template_arg_comma_list ">" {% ([ , template_list]) => template_list %}
+
+template_arg_comma_list ->
+  expression ("," expression):* ",":? {% ([first, rest]) => [first, ...rest.map(tuple => tuple[1])] %}
+
 @{%
 export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement };
 
@@ -107,6 +137,7 @@ export type FunctionHeader = ReturnType<typeof pp_function_header>;
 function pp_function_header([ , identifier]: [any, Ident]) {
   return { type: 'function_header' as const, identifier: identifier.value };
 }
+
 %}
 # TODO: Add support for attributes
 function_decl -> function_header compound_statement {% ([header, body]) => ({ type: 'function_decl', header, body }) %}
@@ -114,22 +145,64 @@ function_decl -> function_header compound_statement {% ([header, body]) => ({ ty
 # TODO: Add return type
 function_header -> "fn" ident "(" ")" {% pp_function_header %}
 
+#
+# Statements
+#
+
+@{%
+export type ReturnStatement = { type: 'return_statement', expression: Expression };
+
+%}
+
+return_statement -> "return" expression:? {% ([ , expression]) => ({ type: 'return_statement', expression }) %}
+
 @{%
 export type CompoundStatement = Statement[];
 
 %}
 
-compound_statement -> "{" statement:* "}" {% ([ , statements]) => statements %}
+compound_statement -> "{" statement:* "}" {% ([ , statements]) => statements.filter((val) => val !== null) %}
 
 # TODO: Add all statements
 statement ->
     ";" {% () => null %}
+  | return_statement ";" {% ([val]) => val %}
+  | func_call_statement ";" {% ([val]) => val %}
   | if_statement {% id %}
 @{%
-type Swizzle = { type: 'swizzle', value: string };
+export type Swizzle = { type: 'swizzle', value: string };
+
 %}
 
+@{%
+export type FuncCallStatement = { type: 'call_statement', ident: TemplateElaboratedIdent, args: Expression[] };
+
+%}
+func_call_statement -> call_phrase {% ([phrase]) => ({ type: 'call_statement', ident: phrase.ident, args: phrase.args }) %}
+
 swizzle -> %swizzle_name {% ([value]) => ({ type: 'swizzle', value }) %}
+
+@{%
+
+export type IfStatement = { type: 'if_statement', if_clause: IfClause, else_if_clauses: ElseIfClause[], else_clause: ElseClause | null };
+export type IfClause = { type: 'if_clause', expression: Expression, body: CompoundStatement };
+export type ElseIfClause = { type: 'else_if_clause', expression: Expression, body: CompoundStatement };
+export type ElseClause = { type: 'else_clause', body: CompoundStatement };
+
+function pp_else_clause([ , , body]: [any, any, CompoundStatement]) {
+  return { type: 'else_clause' as const, body };
+}
+
+%}
+
+# TODO: Add support for attributes
+if_statement -> if_clause else_if_clause:* else_clause:? {% ([if_clause, else_if_clauses, else_clause]) => ({ type: 'if_statement' as const, if_clause, else_if_clauses, else_clause }) %}
+
+if_clause -> "if" expression compound_statement {% ([ , expression, body]) => ({ type: 'if_clause', expression, body }) %}
+
+else_if_clause -> "else" "if" expression compound_statement {% ([ , , expression, body]) => ({ type: 'else_if_clause', expression, body }) %}
+
+else_clause -> "else" compound_statement {% ([, body]) => ({ type: 'else_clause', body }) %}
 
 #
 # Literals
@@ -137,24 +210,26 @@ swizzle -> %swizzle_name {% ([value]) => ({ type: 'swizzle', value }) %}
 
 @{%
 export type Literal = BoolLiteral | IntLiteral | FloatLiteral;
-
 export type IntLiteral = { type: 'int_literal', value: string };
 export type FloatLiteral = { type: 'float_literal', value: string };
 export type BoolLiteral = { type: 'bool_literal', value: 'true' | 'false' };
 
-function pp_literal([token]: [{ type: string, value: string }]): Literal {
-  return { type: token.type, value: token.value };
-}
 %}
 literal ->
     int_literal {% id %}
   | float_literal {% id %}
   | bool_literal {% id %}
 
-int_literal -> %decimal_int_literal {% pp_literal %} | %hex_int_literal {% pp_literal %}
-float_literal -> %decimal_float_literal {% pp_literal %} | %hex_float_literal {% pp_literal %}
+int_literal ->
+    %decimal_int_literal {% ([token]) => ({ type: 'int_literal', value: token.value }) %}
+  | %hex_int_literal     {% ([token]) => ({ type: 'int_literal', value: token.value }) %}
+
+float_literal ->
+    %decimal_float_literal {% ([token]) => ({ type: 'float_literal', value: token.value }) %}
+  | %hex_float_literal     {% ([token]) => ({ type: 'float_literal', value: token.value }) %}
+
 bool_literal ->
-    "true" {% () => ({ type: 'bool_literal', value: 'true' }) %}
+    "true"  {% () => ({ type: 'bool_literal', value: 'true' }) %}
   | "false" {% () => ({ type: 'bool_literal', value: 'false' }) %}
 
 #
@@ -176,7 +251,12 @@ primary_expression ->
   literal {% id %}
   | paren_expression {% id %}
 
-# call_expression -> template_elaborated_ident argument_expression_list
+@{%
+export type CallExpression = { type: 'function_call', ident: TemplateElaboratedIdent, args: ArgumentExpressionList };
+
+%}
+
+call_expression -> call_phrase {% ([phrase]) => ({ type: 'call_expression', ident: phrase.ident, args: phrase.args }) %}
 
 @{%
 export type ParenExpression = { type: 'paren_expression', expression: Expression };
@@ -184,6 +264,16 @@ export type ParenExpression = { type: 'paren_expression', expression: Expression
 %}
 
 paren_expression -> "(" expression ")" {% ([ , expression]) => ({ type: 'paren_expression', expression }) %}
+
+@{%
+export type ArgumentExpressionList = Expression[];
+
+%}
+argument_expression_list ->
+  "(" expression_comma_list:? ")" {% ([ , list]) => list ?? [] %}
+
+expression_comma_list ->
+  expression ("," expression):* ",":? {% ([first, rest]) => [first, ...rest.map(tuple => tuple[1])] %}
 
 @{%
 export type Accessor =
@@ -325,24 +415,9 @@ expression ->
   | short_circuit_or_expression "||" relational_expression {% ([lhs, , rhs]) => ({ type: 'logic_or', lhs, rhs }) %}
   | bitwise_expression {% id %}
 
-@{%
+#
+# Partials
+#
 
-export type IfStatement = { type: 'if_statement', if_clause: IfClause, else_if_clauses: ElseIfClause[], else_clause: ElseClause | null };
-export type IfClause = { type: 'if_clause', expression: Expression, body: CompoundStatement };
-export type ElseIfClause = { type: 'else_if_clause', expression: Expression, body: CompoundStatement };
-export type ElseClause = { type: 'else_clause', body: CompoundStatement };
-
-function pp_else_clause([ , , body]: [any, any, CompoundStatement]) {
-  return { type: 'else_clause' as const, body };
-}
-
-%}
-
-# TODO: Add support for attributes
-if_statement -> if_clause else_if_clause:* else_clause:? {% ([if_clause, else_if_clauses, else_clause]) => ({ type: 'if_statement' as const, if_clause, else_if_clauses, else_clause }) %}
-
-if_clause -> "if" expression compound_statement {% ([ , expression, body]) => ({ type: 'if_clause', expression, body }) %}
-
-else_if_clause -> "else" "if" expression compound_statement {% ([ , , expression, body]) => ({ type: 'else_if_clause', expression, body }) %}
-
-else_clause -> "else" compound_statement {% ([, body]) => ({ type: 'else_clause', body }) %}
+call_phrase ->
+  template_elaborated_ident argument_expression_list {% ([ident, args]) => ({ ident, args }) %}
