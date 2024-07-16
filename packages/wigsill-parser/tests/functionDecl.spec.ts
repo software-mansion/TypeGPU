@@ -57,9 +57,9 @@ describe('function_decl', () => {
     expect(parse(code)).toEqual(expected);
   });
 
-  it('parses function with attribute', () => {
+  it('parses function with attributes', () => {
     const code = `
-      @compute
+      @compute @attr1(0.5) @attr2(true, 123)
       fn example() {
         return;
       }
@@ -70,7 +70,22 @@ describe('function_decl', () => {
       declarations: [
         {
           type: 'function_decl' as const,
-          attrs: [{ type: 'attribute', ident: 'compute', args: [] }],
+          attrs: [
+            { type: 'attribute', ident: 'compute', args: [] },
+            {
+              type: 'attribute',
+              ident: 'attr1',
+              args: [{ type: 'float_literal', value: '0.5' }],
+            },
+            {
+              type: 'attribute',
+              ident: 'attr2',
+              args: [
+                { type: 'bool_literal', value: 'true' },
+                { type: 'int_literal', value: '123' },
+              ],
+            },
+          ],
           header: {
             type: 'function_header' as const,
             identifier: 'example' as const,
