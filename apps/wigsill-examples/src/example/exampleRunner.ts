@@ -3,8 +3,11 @@ import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
 import { GUI } from 'dat.gui';
 import { filter, isNonNull, map, pipe } from 'remeda';
+import { transpileModule } from 'typescript';
+import { tsCompilerOptions } from '../embeddedTypeScript';
 import { ExampleState } from './exampleState';
 import { LayoutInstance } from './layout';
+
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
 const template = (
@@ -53,6 +56,12 @@ const staticToDynamicImports = {
     },
   } satisfies TraverseOptions,
 };
+
+function tsToJs(code: string): string {
+  return transpileModule(code, {
+    compilerOptions: tsCompilerOptions,
+  }).outputText;
+}
 
 export async function executeExample(
   exampleCode: string,
@@ -185,12 +194,14 @@ export async function executeExample(
       throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
     };
 
+    const jsCode = tsToJs(exampleCode);
+
     const transformedCode =
-      Babel.transform(exampleCode, {
+      Babel.transform(jsCode, {
         compact: false,
         retainLines: true,
         plugins: [staticToDynamicImports],
-      }).code ?? exampleCode;
+      }).code ?? jsCode;
 
     const mod = Function(`
 return async (_import) => {
