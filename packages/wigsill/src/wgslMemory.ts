@@ -1,7 +1,7 @@
 import { BufferWriter, Parsed } from 'typed-binary';
 import { NotAllocatedMemoryError } from './errors';
 import { AnyWGSLDataType } from './std140/types';
-import { IResolutionCtx, WGSLItem, WGSLMemoryTrait } from './types';
+import { ResolutionCtx, WGSLItem, WGSLMemoryTrait } from './types';
 import { WGSLCode, code } from './wgslCode';
 import { identifier } from './wgslIdentifier';
 import WGSLRuntime from './wgslRuntime';
@@ -31,7 +31,7 @@ export class WGSLMemory<TSchema extends AnyWGSLDataType>
   /**
    * @throws {NotAllocatedMemoryError}
    */
-  resolve(ctx: IResolutionCtx): string {
+  resolve(ctx: ResolutionCtx): string {
     const arena = ctx.arenaFor(this);
 
     if (!arena) {

@@ -73,149 +73,160 @@ const getIndex = wgsl.fn()`(x: u32, y: u32) -> u32 {
 }`;
 
 const getCell = wgsl.fn()`(x: u32, y: u32) -> u32 {
-    return ${currentState}[${getIndex}(x, y)];
+  return ${currentState}[${getIndex}(x, y)];
 }`;
 
 const getCellNext = wgsl.fn()`(x: u32, y: u32) -> u32 {
-    return atomicLoad(&next[${getIndex}(x, y)]);
+  return atomicLoad(&next[${getIndex}(x, y)]);
 }`;
 
 const updateCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
-    atomicStore(&next[${getIndex}(x, y)], value);
+  atomicStore(&next[${getIndex}(x, y)], value);
 }`;
 
 const addToCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
-    let cell = ${getCellNext}(x, y);
-    let waterLevel = cell & ${maxWaterLevel};
-    let newWaterLevel = min(waterLevel + value, ${maxWaterLevel});
-    atomicAdd(&next[${getIndex}(x, y)], newWaterLevel - waterLevel);
+  let cell = ${getCellNext}(x, y);
+  let waterLevel = cell & ${maxWaterLevel};
+  let newWaterLevel = min(waterLevel + value, ${maxWaterLevel});
+  atomicAdd(&next[${getIndex}(x, y)], newWaterLevel - waterLevel);
 }`;
 
 const subtractFromCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
-    let cell = ${getCellNext}(x, y);
-    let waterLevel = cell & ${maxWaterLevel};
-    let newWaterLevel = max(waterLevel - min(value, waterLevel), 0u);
-    atomicSub(&next[${getIndex}(x, y)], waterLevel - newWaterLevel);
+  let cell = ${getCellNext}(x, y);
+  let waterLevel = cell & ${maxWaterLevel};
+  let newWaterLevel = max(waterLevel - min(value, waterLevel), 0u);
+  atomicSub(&next[${getIndex}(x, y)], waterLevel - newWaterLevel);
 }`;
 
 const persistFlags = wgsl.fn()`(x: u32, y: u32) {
-    let cell = ${getCell}(x, y);
-    let waterLevel = cell & ${maxWaterLevel};
-    let flags = cell >> 24;
-    ${updateCell}(x, y, (flags << 24) | waterLevel);
+  let cell = ${getCell}(x, y);
+  let waterLevel = cell & ${maxWaterLevel};
+  let flags = cell >> 24;
+  ${updateCell}(x, y, (flags << 24) | waterLevel);
 }`;
 
 const getStableStateBelow = wgsl.fn()`(upper: u32, lower: u32) -> u32 {
   let totalMass = upper + lower;
   if (totalMass <= ${maxWaterLevelUnpressurized}) {
-      return totalMass;
+    return totalMass;
   } else if (totalMass >= ${maxWaterLevelUnpressurized}*2 && upper > lower) {
-      return totalMass/2 + ${maxCompress};
+    return totalMass/2 + ${maxCompress};
   }
   return ${maxWaterLevelUnpressurized};
 }`;
 
 const isWall = wgsl.fn()`(x: u32, y: u32) -> bool {
-    return (${getCell}(x, y) >> 24) == 1u;
+  return (${getCell}(x, y) >> 24) == 1u;
 }`;
 
 const isWaterSource = wgsl.fn()`(x: u32, y: u32) -> bool {
-    return (${getCell}(x, y) >> 24) == 2u;
+  return (${getCell}(x, y) >> 24) == 2u;
 }`;
 
 const isWaterDrain = wgsl.fn()`(x: u32, y: u32) -> bool {
-    return (${getCell}(x, y) >> 24) == 3u;
+  return (${getCell}(x, y) >> 24) == 3u;
 }`;
 
 const isClearCell = wgsl.fn()`(x: u32, y: u32) -> bool {
-    return (${getCell}(x, y) >> 24) == 4u;
+  return (${getCell}(x, y) >> 24) == 4u;
 }`;
 
 const getWaterLevel = wgsl.fn()`(x: u32, y: u32) -> u32 {
-    return ${getCell}(x, y) & ${maxWaterLevel};
+  return ${getCell}(x, y) & ${maxWaterLevel};
 }`;
 
 const checkForFlagsAndBounds = wgsl.fn()`(x: u32, y: u32) -> bool {
   if (${isClearCell}(x, y)) {
-      ${updateCell}(x, y, 0u);
-      return true;
+    ${updateCell}(x, y, 0u);
+    return true;
   }
   if (${isWall}(x, y)) {
-      ${persistFlags}(x, y);
-      return true;
+    ${persistFlags}(x, y);
+    return true;
   }
   if (${isWaterSource}(x, y)) {
-      ${persistFlags}(x, y);
-      ${addToCell}(x, y, 10u);
-      return false;
+    ${persistFlags}(x, y);
+    ${addToCell}(x, y, 10u);
+    return false;
   }
   if (${isWaterDrain}(x, y)) {
-      ${persistFlags}(x, y);
-      ${updateCell}(x, y, 3u << 24);
-      return true;
+    ${persistFlags}(x, y);
+    ${updateCell}(x, y, 3u << 24);
+    return true;
   }
   if (y == 0 || y == ${size}.y - 1u || x == 0 || x == ${size}.x - 1u) {
-      ${updateCell}(x, y, 0u);
-      return true;
+    ${updateCell}(x, y, 0u);
+    return true;
   }
   return false;
 }`;
 
 const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
-  if (${checkForFlagsAndBounds}(x, y)) {return;};
-  var remainingWater: u32 = ${getWaterLevel}(x, y);
-
-  if (remainingWater == 0u) {return;};
-
-  if (!${isWall}(x, y - 1u)) {
-      let waterLevelBelow = ${getWaterLevel}(x, y - 1u);
-      let stable = ${getStableStateBelow}(remainingWater, waterLevelBelow);
-      if (waterLevelBelow < stable) {
-          let change = stable - waterLevelBelow;
-          let flow = min(change, ${viscosity});
-          ${subtractFromCell}(x, y, flow);
-          ${addToCell}(x, y - 1u, flow);
-          remainingWater -= flow;
-      }
+  if (${checkForFlagsAndBounds}(x, y)) {
+    return;
   }
 
-  if (remainingWater == 0u) {return;};
+  var remainingWater: u32 = ${getWaterLevel}(x, y);
+
+  if (remainingWater == 0u) {
+    return;
+  }
+
+  if (!${isWall}(x, y - 1u)) {
+    let waterLevelBelow = ${getWaterLevel}(x, y - 1u);
+    let stable = ${getStableStateBelow}(remainingWater, waterLevelBelow);
+    if (waterLevelBelow < stable) {
+      let change = stable - waterLevelBelow;
+      let flow = min(change, ${viscosity});
+      ${subtractFromCell}(x, y, flow);
+      ${addToCell}(x, y - 1u, flow);
+      remainingWater -= flow;
+    }
+  }
+
+  if (remainingWater == 0u) {
+    return;
+  }
 
   let waterLevelBefore = remainingWater;
   if (!${isWall}(x - 1u, y)) {
-      let flowRaw = (i32(waterLevelBefore) - i32(${getWaterLevel}(x - 1u, y)));
-      if (flowRaw > 0) {
-          let change = max(min(4u, remainingWater), u32(flowRaw)/4);
-          let flow = min(change, ${viscosity});
-          ${subtractFromCell}(x, y, flow);
-          ${addToCell}(x - 1u, y, flow);
-          remainingWater -= flow;
-      }
+    let flowRaw = (i32(waterLevelBefore) - i32(${getWaterLevel}(x - 1u, y)));
+    if (flowRaw > 0) {
+      let change = max(min(4u, remainingWater), u32(flowRaw)/4);
+      let flow = min(change, ${viscosity});
+      ${subtractFromCell}(x, y, flow);
+      ${addToCell}(x - 1u, y, flow);
+      remainingWater -= flow;
+    }
   }
 
-  if (remainingWater == 0u) {return;};
+  if (remainingWater == 0u) {
+    return;
+  }
 
   if (!${isWall}(x + 1u, y)) {
-      let flowRaw = (i32(waterLevelBefore) - i32(${getWaterLevel}(x + 1, y)));
-      if (flowRaw > 0) {
-          let change = max(min(4u, remainingWater), u32(flowRaw)/4);
-          let flow = min(change, ${viscosity});
-          ${subtractFromCell}(x, y, flow);
-          ${addToCell}(x + 1u, y, flow);
-          remainingWater -= flow;
-      }
+    let flowRaw = (i32(waterLevelBefore) - i32(${getWaterLevel}(x + 1, y)));
+    if (flowRaw > 0) {
+      let change = max(min(4u, remainingWater), u32(flowRaw)/4);
+      let flow = min(change, ${viscosity});
+      ${subtractFromCell}(x, y, flow);
+      ${addToCell}(x + 1u, y, flow);
+      remainingWater -= flow;
+    }
   }
 
-  if (remainingWater == 0u) {return;};
+  if (remainingWater == 0u) {
+    return;
+  }
 
   if (!${isWall}(x, y + 1u)) {
-      let stable = ${getStableStateBelow}(${getWaterLevel}(x, y + 1u), remainingWater);
-      if (stable < remainingWater) {
-          let flow = min(remainingWater - stable, ${viscosity});
-          ${subtractFromCell}(x, y, flow);
-          ${addToCell}(x, y + 1u, flow);
-          remainingWater -= flow;
-      }
+    let stable = ${getStableStateBelow}(${getWaterLevel}(x, y + 1u), remainingWater);
+    if (stable < remainingWater) {
+      let flow = min(remainingWater - stable, ${viscosity});
+      ${subtractFromCell}(x, y, flow);
+      ${addToCell}(x, y + 1u, flow);
+      remainingWater -= flow;
+    }
   }
 }`;
 
@@ -227,60 +238,62 @@ override blockSize = 8;
 
 @compute @workgroup_size(blockSize, blockSize)
 fn main(@builtin(global_invocation_id) grid: vec3u) {
-    let x = grid.x;
-    let y = grid.y;
-    atomicAdd(&debugInfo, ${getWaterLevel}(x, y));
-    ${decideWaterLevel}(x, y);
+  let x = grid.x;
+  let y = grid.y;
+  atomicAdd(&debugInfo, ${getWaterLevel}(x, y));
+  ${decideWaterLevel}(x, y);
 }
 `;
 
 const vertWGSL = wgsl`
 struct Out {
-    @builtin(position) pos: vec4f,
-    @location(0) cell: f32,
+  @builtin(position) pos: vec4f,
+  @location(0) cell: f32,
 }
 
 @vertex
 fn main(@builtin(instance_index) i: u32, @location(0) cell: u32, @location(1) pos: vec2u) -> Out {
-    let w = ${size}.x;
-    let h = ${size}.y;
-    let x = (f32(i % w + pos.x) / f32(w) - 0.5) * 2. * f32(w) / f32(max(w, h));
-    let y = (f32((i - (i % w)) / w + pos.y) / f32(h) - 0.5) * 2. * f32(h) / f32(max(w, h));
-    let cellFlags = cell >> 24;
-    let cellVal = f32(cell & 0xFFFFFF);
-    if (cellFlags == 1u) {
-        return Out(vec4f(x, y, 0., 1.), -1.);
-    }
-    if (cellFlags == 2u) {
-        return Out(vec4f(x, y, 0., 1.), -2.);
-    }
-    if (cellFlags == 3u) {
-        return Out(vec4f(x, y, 0., 1.), -3.);
-    }
+  let w = ${size}.x;
+  let h = ${size}.y;
+  let x = (f32(i % w + pos.x) / f32(w) - 0.5) * 2. * f32(w) / f32(max(w, h));
+  let y = (f32((i - (i % w)) / w + pos.y) / f32(h) - 0.5) * 2. * f32(h) / f32(max(w, h));
+  let cellFlags = cell >> 24;
+  let cellVal = f32(cell & 0xFFFFFF);
+  if (cellFlags == 1u) {
+    return Out(vec4f(x, y, 0., 1.), -1.);
+  }
+  if (cellFlags == 2u) {
+    return Out(vec4f(x, y, 0., 1.), -2.);
+  }
+  if (cellFlags == 3u) {
+    return Out(vec4f(x, y, 0., 1.), -3.);
+  }
 
-    return Out(vec4f(x, y, 0., 1.), cellVal);
+  return Out(vec4f(x, y, 0., 1.), cellVal);
 }
 `;
 
 const fragWGSL = `
 @fragment
 fn main(@location(0) cell: f32) -> @location(0) vec4f {
-    if (cell == -1.) {
-        return vec4f(0.5, 0.5, 0.5, 1.);
-    }
-    if (cell == -2.) {
-        return vec4f(0., 1., 0., 1.);
-    }
-    if (cell == -3.) {
-        return vec4f(1., 0., 0., 1.);
-    }
-    var r = f32((u32(cell) >> 16) & 0xFF)/255.;
-    var g = f32((u32(cell) >> 8) & 0xFF)/255.;
-    var b = f32(u32(cell) & 0xFF)/255.;
-    if (r > 0.) { g = 1.;}
-    if (g > 0.) { b = 1.;}
-    if (b > 0. && b < 0.5) { b = 0.5;}
-    return vec4f(r, g, b, 1.);
+  if (cell == -1.) {
+    return vec4f(0.5, 0.5, 0.5, 1.);
+  }
+  if (cell == -2.) {
+    return vec4f(0., 1., 0., 1.);
+  }
+  if (cell == -3.) {
+    return vec4f(1., 0., 0., 1.);
+  }
+
+  var r = f32((u32(cell) >> 16) & 0xFF)/255.;
+  var g = f32((u32(cell) >> 8) & 0xFF)/255.;
+  var b = f32(u32(cell) & 0xFF)/255.;
+  if (r > 0.) { g = 1.;}
+  if (g > 0.) { b = 1.;}
+  if (b > 0. && b < 0.5) { b = 0.5;}
+
+  return vec4f(r, g, b, 1.);
 }
 `;
 
@@ -518,18 +531,22 @@ function resetGameData() {
 
   applyDrawCanvas = () => {
     const commandEncoder = device.createCommandEncoder();
+    const stateBuffer = runtime.bufferFor(currentStateArena);
+
     for (let i = 0; i < Options.size; i++) {
       for (let j = 0; j < Options.size; j++) {
-        if (drawCanvasData[j * Options.size + i]) {
-          const index = j * Options.size + i;
-          device.queue.writeBuffer(
-            runtime.bufferFor(currentStateArena),
-            index * Uint32Array.BYTES_PER_ELEMENT,
-            drawCanvasData,
-            index,
-            1,
-          );
+        if (drawCanvasData[j * Options.size + i] === 0) {
+          continue;
         }
+
+        const index = j * Options.size + i;
+        device.queue.writeBuffer(
+          stateBuffer,
+          index * Uint32Array.BYTES_PER_ELEMENT,
+          drawCanvasData,
+          index,
+          1,
+        );
       }
     }
 
@@ -579,40 +596,42 @@ canvas.onmouseup = () => {
 };
 
 canvas.onmousemove = (event) => {
-  if (isDrawing) {
-    const cellSize = canvas.width / Options.size;
-    const x = Math.floor(event.offsetX / cellSize);
-    const y = Options.size - Math.floor(event.offsetY / cellSize) - 1;
-    const allAffectedCells = [];
-    for (let i = -Options.brushSize; i <= Options.brushSize; i++) {
-      for (let j = -Options.brushSize; j <= Options.brushSize; j++) {
-        if (
-          i * i + j * j <= Options.brushSize * Options.brushSize &&
-          x + i >= 0 &&
-          x + i < Options.size &&
-          y + j >= 0 &&
-          y + j < Options.size
-        ) {
-          allAffectedCells.push({ x: x + i, y: y + j });
-        }
-      }
-    }
-
-    if (isErasing) {
-      for (const cell of allAffectedCells) {
-        drawCanvasData[cell.y * Options.size + cell.x] = 4 << 24;
-      }
-    } else {
-      for (const cell of allAffectedCells) {
-        drawCanvasData[cell.y * Options.size + cell.x] = encodeBrushType(
-          Options.brushType,
-        );
-      }
-    }
-
-    applyDrawCanvas();
-    renderChanges();
+  if (!isDrawing) {
+    return;
   }
+
+  const cellSize = canvas.width / Options.size;
+  const x = Math.floor(event.offsetX / cellSize);
+  const y = Options.size - Math.floor(event.offsetY / cellSize) - 1;
+  const allAffectedCells = [];
+  for (let i = -Options.brushSize; i <= Options.brushSize; i++) {
+    for (let j = -Options.brushSize; j <= Options.brushSize; j++) {
+      if (
+        i * i + j * j <= Options.brushSize * Options.brushSize &&
+        x + i >= 0 &&
+        x + i < Options.size &&
+        y + j >= 0 &&
+        y + j < Options.size
+      ) {
+        allAffectedCells.push({ x: x + i, y: y + j });
+      }
+    }
+  }
+
+  if (isErasing) {
+    for (const cell of allAffectedCells) {
+      drawCanvasData[cell.y * Options.size + cell.x] = 4 << 24;
+    }
+  } else {
+    for (const cell of allAffectedCells) {
+      drawCanvasData[cell.y * Options.size + cell.x] = encodeBrushType(
+        Options.brushType,
+      );
+    }
+  }
+
+  applyDrawCanvas();
+  renderChanges();
 };
 
 const createSampleScene = () => {
@@ -669,9 +688,11 @@ addParameter(
     resetGameData();
   },
 );
+
 addParameter('timestep', { initial: 2, min: 1, max: 50, step: 1 }, (value) => {
   Options.timestep = value;
 });
+
 addParameter(
   'stepsPerTimestep',
   { initial: 10, min: 1, max: 50, step: 1 },
@@ -679,6 +700,7 @@ addParameter(
     Options.stepsPerTimestep = value;
   },
 );
+
 addParameter(
   'workgroupSize',
   { initial: 16, options: [1, 2, 4, 8, 16] },
@@ -687,6 +709,7 @@ addParameter(
     resetGameData();
   },
 );
+
 addParameter(
   'viscosity',
   { initial: 1000, min: 10, max: 1000, step: 1 },
@@ -695,9 +718,11 @@ addParameter(
     viscosity.write(runtime, value);
   },
 );
+
 addParameter('brushSize', { initial: 0, min: 0, max: 10, step: 1 }, (value) => {
   Options.brushSize = value;
 });
+
 addParameter(
   'brushType',
   { initial: 'water', options: BrushTypes },
@@ -705,6 +730,7 @@ addParameter(
     Options.brushType = value;
   },
 );
+
 addParameter('pause', { initial: false }, (value) => {
   paused = value;
 });

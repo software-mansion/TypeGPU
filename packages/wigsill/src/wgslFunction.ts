@@ -5,7 +5,7 @@ import {
   WGSLValue,
   isPointer,
 } from './std140/types';
-import { IResolutionCtx, WGSLItem, WGSLSegment } from './types';
+import { ResolutionCtx, WGSLItem, WGSLSegment } from './types';
 import { WGSLCode, code } from './wgslCode';
 import { WGSLIdentifier, identifier } from './wgslIdentifier';
 
@@ -31,7 +31,7 @@ class WGSLFunctionCall<
     private readonly args: SegmentsFromTypes<TArgTypes>,
   ) {}
 
-  resolve(ctx: IResolutionCtx): string {
+  resolve(ctx: ResolutionCtx): string {
     const argsCode = this.args.map((argSegment, idx) => {
       const comma = idx < this.args.length - 1 ? ', ' : '';
       return code`${argSegment}${comma}`;
@@ -64,7 +64,7 @@ export class WGSLFunction<
     return this;
   }
 
-  resolve(ctx: IResolutionCtx): string {
+  resolve(ctx: ResolutionCtx): string {
     const argsCode = this.argPairs.map(([ident, argType], idx) => {
       const comma = idx < this.argPairs.length - 1 ? ', ' : '';
 
