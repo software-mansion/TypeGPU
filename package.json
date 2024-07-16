@@ -1,50 +1,50 @@
 {
-	"name": "wigsill-monorepo",
-	"private": true,
-	"version": "0.0.0",
-	"description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
-	"license": "MIT",
-	"scripts": {
-		"prepare": "husky",
-		"dev:test": "vitest",
-		"check": "biome check --write .",
-		"coverage": "vitest --coverage",
-		"test": "pnpm run '/^test:.*/'",
-		"test:types-packages": "find packages -mindepth 2 -maxdepth 2 -name 'tsconfig.json' | xargs -I % pnpm tsc --p % --noEmit",
-		"test:types-apps": "find apps -mindepth 2 -maxdepth 2 -name 'tsconfig.json' | xargs -I % pnpm tsc --p % --noEmit",
-		"test:spec": "vitest run"
-	},
-	"engines": {
-		"node": ">=12.20.0"
-	},
-	"prettier": {
-		"semi": true,
-		"singleQuote": true,
-		"trailingComma": "all",
-		"bracketSameLine": true,
-		"tabWidth": 2,
-		"printWidth": 80
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/software-mansion-labs/wigsill.git"
-	},
-	"keywords": ["webgpu", "wgpu", "wgsl"],
-	"bugs": {
-		"url": "https://github.com/software-mansion-labs/wigsill/issues"
-	},
-	"homepage": "https://github.com/software-mansion-labs/wigsill",
-	"devDependencies": {
-		"@biomejs/biome": "^1.8.3",
-		"@types/node": "^20.11.13",
-		"@vitest/coverage-v8": "0.33.0",
-		"@vitest/ui": "0.33.0",
-		"husky": "^9.0.11",
-		"jsdom": "^24.0.0",
-		"prettier": "^3.2.4",
-		"tsup": "^8.0.2",
-		"typescript": "^5.3.3",
-		"vitest": "0.33.0"
-	},
-	"packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e"
+  "name": "wigsill-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
+  "license": "MIT",
+  "scripts": {
+    "prepare": "husky",
+    "dev:test": "vitest",
+    "check": "biome check --write .",
+    "coverage": "vitest --coverage",
+    "test": "pnpm run '/^test:.*/'",
+    "test:types-packages": "find packages -mindepth 2 -maxdepth 2 -name 'tsconfig.json' | xargs -I % pnpm tsc --p % --noEmit",
+    "test:types-apps": "find apps -mindepth 2 -maxdepth 2 -name 'tsconfig.json' | xargs -I % pnpm tsc --p % --noEmit",
+    "test:spec": "vitest run"
+  },
+  "engines": {
+    "node": ">=12.20.0"
+  },
+  "prettier": {
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "all",
+    "bracketSameLine": true,
+    "tabWidth": 2,
+    "printWidth": 80
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/software-mansion-labs/wigsill.git"
+  },
+  "keywords": ["webgpu", "wgpu", "wgsl"],
+  "bugs": {
+    "url": "https://github.com/software-mansion-labs/wigsill/issues"
+  },
+  "homepage": "https://github.com/software-mansion-labs/wigsill",
+  "devDependencies": {
+    "@biomejs/biome": "^1.8.3",
+    "@types/node": "^20.11.13",
+    "@vitest/coverage-v8": "0.33.0",
+    "@vitest/ui": "0.33.0",
+    "husky": "^9.0.11",
+    "jsdom": "^24.0.0",
+    "prettier": "^3.2.4",
+    "tsup": "^8.0.2",
+    "typescript": "^5.3.3",
+    "vitest": "0.33.0"
+  },
+  "packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e"
 }

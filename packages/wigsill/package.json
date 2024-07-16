@@ -1,54 +1,54 @@
 {
-	"name": "wigsill",
-	"private": true,
-	"version": "0.0.0-alpha.4",
-	"description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
-	"license": "MIT",
-	"type": "module",
-	"main": "./dist/index.js",
-	"types": "./index.d.ts",
-	"exports": {
-		"./package.json": "./package.json",
-		".": {
-			"types": "./dist/index.d.ts",
-			"module": "./dist/index.js",
-			"import": "./dist/index.js",
-			"default": "./dist/index.cjs"
-		},
-		"./*": {
-			"types": "./*.d.ts",
-			"module": "./dist/*.js",
-			"import": "./dist/*.js",
-			"default": "./dist/*.cjs"
-		}
-	},
-	"files": ["dist"],
-	"sideEffects": false,
-	"scripts": {
-		"dev": "tsup --watch",
-		"build": "tsup"
-	},
-	"engines": {
-		"node": ">=12.20.0"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/software-mansion-labs/wigsill.git"
-	},
-	"keywords": ["webgpu", "wgpu", "wgsl"],
-	"bugs": {
-		"url": "https://github.com/software-mansion-labs/wigsill/issues"
-	},
-	"homepage": "https://github.com/software-mansion-labs/wigsill",
-	"devDependencies": {
-		"tsup": "^8.0.2",
-		"typescript": "^5.3.3",
-		"typed-binary": "^4.0.0",
-		"@webgpu/types": "^0.1.43",
-		"wigsill": "workspace:*"
-	},
-	"packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e",
-	"peerDependencies": {
-		"typed-binary": "^4.0.0"
-	}
+  "name": "wigsill",
+  "private": true,
+  "version": "0.0.0-alpha.4",
+  "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "module": "./dist/index.js",
+      "import": "./dist/index.js",
+      "default": "./dist/index.cjs"
+    },
+    "./*": {
+      "types": "./*.d.ts",
+      "module": "./dist/*.js",
+      "import": "./dist/*.js",
+      "default": "./dist/*.cjs"
+    }
+  },
+  "files": ["dist"],
+  "sideEffects": false,
+  "scripts": {
+    "dev": "tsup --watch",
+    "build": "tsup"
+  },
+  "engines": {
+    "node": ">=12.20.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/software-mansion-labs/wigsill.git"
+  },
+  "keywords": ["webgpu", "wgpu", "wgsl"],
+  "bugs": {
+    "url": "https://github.com/software-mansion-labs/wigsill/issues"
+  },
+  "homepage": "https://github.com/software-mansion-labs/wigsill",
+  "devDependencies": {
+    "tsup": "^8.0.2",
+    "typescript": "^5.3.3",
+    "typed-binary": "^4.0.0",
+    "@webgpu/types": "^0.1.43",
+    "wigsill": "workspace:*"
+  },
+  "packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e",
+  "peerDependencies": {
+    "typed-binary": "^4.0.0"
+  }
 }

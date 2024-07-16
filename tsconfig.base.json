@@ -1,16 +1,16 @@
 {
-	"compilerOptions": {
-		"target": "esnext",
-		"strict": true,
-		"esModuleInterop": true,
-		"module": "esnext",
-		"moduleResolution": "bundler",
-		"noUncheckedIndexedAccess": true,
-		"noEmit": true,
-		"skipLibCheck": true,
-		"exactOptionalPropertyTypes": true,
-		"baseUrl": ".",
-		"lib": ["DOM", "es2021"],
-		"typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"]
-	}
+  "compilerOptions": {
+    "target": "esnext",
+    "strict": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "exactOptionalPropertyTypes": true,
+    "baseUrl": ".",
+    "lib": ["DOM", "es2021"],
+    "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"]
+  }
 }
