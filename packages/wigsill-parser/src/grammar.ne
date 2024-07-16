@@ -145,22 +145,18 @@ function_header ->
 # Statements
 #
 
-@{%
-export type ReturnStatement = { type: 'return_statement', expression: Expression | null };
-
-%}
-
+@{% export type ReturnStatement = { type: 'return_statement', expression: Expression | null }; %}
 return_statement -> "return" expression:? {% ([ , expression]) => ({ type: 'return_statement', expression }) %}
 
-@{%
-export type CompoundStatement = Statement[];
-
-%}
-
+@{% export type CompoundStatement = Statement[]; %}
 compound_statement -> "{" statement:* "}" {% ([ , statements]) => statements.filter((val) => val !== null) %}
 
 @{%
-export type Statement = null | ReturnStatement | CallStatement | IfStatement;
+export type Statement =
+    null
+  | ReturnStatement
+  | CallStatement
+  | IfStatement;
 
 %}
 # TODO: Add all statements
@@ -169,6 +165,7 @@ statement ->
   | return_statement ";" {% ([val]) => val %}
   | call_statement ";" {% ([val]) => val %}
   | if_statement {% id %}
+
 @{%
 export type Swizzle = { type: 'swizzle', value: string };
 
@@ -188,10 +185,6 @@ export type IfStatement = { type: 'if_statement', if_clause: IfClause, else_if_c
 export type IfClause = { type: 'if_clause', expression: Expression, body: CompoundStatement };
 export type ElseIfClause = { type: 'else_if_clause', expression: Expression, body: CompoundStatement };
 export type ElseClause = { type: 'else_clause', body: CompoundStatement };
-
-function pp_else_clause([ , , body]: [any, any, CompoundStatement]) {
-  return { type: 'else_clause' as const, body };
-}
 
 %}
 
