@@ -14,7 +14,7 @@ import {
   type Unwrap,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { IResolutionCtx, WGSLSegment } from '../types';
+import type { ResolutionCtx, WGSLSegment } from '../types';
 import alignIO from './alignIO';
 import type { WGSLDataType } from './types';
 
@@ -73,7 +73,7 @@ export class SimpleWGSLDataType<TSchema extends AnySchema>
     return measurer;
   }
 
-  resolve(ctx: IResolutionCtx): string {
+  resolve(ctx: ResolutionCtx): string {
     return ctx.resolve(this._expressionCode);
   }
 }

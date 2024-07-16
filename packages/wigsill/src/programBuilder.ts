@@ -6,7 +6,7 @@ import {
 import { MemoryArena } from './memoryArena';
 import { NameRegistry, RandomNameRegistry } from './nameRegistry';
 import {
-  IResolutionCtx,
+  ResolutionCtx,
   WGSLBindPair,
   WGSLBindableTrait,
   WGSLItem,
@@ -30,24 +30,34 @@ function addUnique<T>(list: T[], value: T) {
   list.push(value);
 }
 
-class ResolutionCtxImpl implements IResolutionCtx {
+export type ResolutionCtxImplOptions = {
+  readonly memoryArenas?: MemoryArena[];
+  readonly bindings?: WGSLBindPair<unknown>[];
+  readonly names: NameRegistry;
+};
+
+export class ResolutionCtxImpl implements ResolutionCtx {
   private _entryToArenaMap = new WeakMap<WGSLMemoryTrait, MemoryArena>();
+  private readonly _bindings: WGSLBindPair<unknown>[];
+  private readonly _names: NameRegistry;
 
   public dependencies: WGSLItem[] = [];
   public usedMemoryArenas = new WeakSet<MemoryArena>();
   public memoryArenaDeclarationIdxMap = new WeakMap<MemoryArena, number>();
 
-  private memoizedResults = new WeakMap<WGSLItem, string>();
+  private _memoizedResults = new WeakMap<WGSLItem, string>();
 
   /**
    * @throws {MemoryArenaConflict}
    */
-  constructor(
-    private readonly runtime: WGSLRuntime,
-    private readonly memoryArenas: MemoryArena[],
-    private readonly _bindings: WGSLBindPair<unknown>[],
-    private readonly _names: NameRegistry,
-  ) {
+  constructor({
+    memoryArenas = [],
+    bindings = [],
+    names,
+  }: ResolutionCtxImplOptions) {
+    this._bindings = bindings;
+    this._names = names;
+
     for (const arena of memoryArenas) {
       for (const entry of arena.memoryEntries) {
         if (this._entryToArenaMap.has(entry)) {
@@ -113,13 +123,13 @@ class ResolutionCtxImpl implements IResolutionCtx {
       return String(item);
     }
 
-    const memoizedResult = this.memoizedResults.get(item);
+    const memoizedResult = this._memoizedResults.get(item);
     if (memoizedResult !== undefined) {
       return memoizedResult;
     }
 
     const result = item.resolve(this);
-    this.memoizedResults.set(item, result);
+    this._memoizedResults.set(item, result);
     return result;
   }
 }
@@ -147,12 +157,11 @@ export default class ProgramBuilder {
   build(options: BuildOptions): Program {
     const arenas = options.arenas ?? [];
 
-    const ctx = new ResolutionCtxImpl(
-      this.runtime,
-      arenas,
-      this.bindings,
-      options.nameRegistry ?? new RandomNameRegistry(),
-    );
+    const ctx = new ResolutionCtxImpl({
+      memoryArenas: arenas,
+      bindings: this.bindings,
+      names: options.nameRegistry ?? new RandomNameRegistry(),
+    });
 
     // Resolving memory arenas
     arenas.forEach((arena, idx) => {

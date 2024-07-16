@@ -1,5 +1,5 @@
 import { AnyWGSLDataType } from './std140/types';
-import type { IResolutionCtx, WGSLItem, WGSLSegment } from './types';
+import type { ResolutionCtx, WGSLItem, WGSLSegment } from './types';
 import { code } from './wgslCode';
 import { identifier } from './wgslIdentifier';
 
@@ -24,7 +24,7 @@ export class WGSLVariable<TDataType extends AnyWGSLDataType>
     return this;
   }
 
-  resolve(ctx: IResolutionCtx): string {
+  resolve(ctx: ResolutionCtx): string {
     if (this._initialValue) {
       ctx.addDependency(
         code`var<${this.scope}> ${this.identifier}: ${this._dataType} = ${this._initialValue};`,

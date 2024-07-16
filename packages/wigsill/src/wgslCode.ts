@@ -1,9 +1,9 @@
-import { IResolutionCtx, WGSLItem, WGSLSegment, isWGSLItem } from './types';
+import { ResolutionCtx, WGSLItem, WGSLSegment, isWGSLItem } from './types';
 
 export class WGSLCode implements WGSLItem {
   constructor(public readonly segments: WGSLSegment[]) {}
 
-  resolve(ctx: IResolutionCtx) {
+  resolve(ctx: ResolutionCtx) {
     let code = '';
 
     for (const s of this.segments) {

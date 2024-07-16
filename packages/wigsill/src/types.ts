@@ -2,7 +2,7 @@ import type { MemoryArena } from './memoryArena';
 
 export type WGSLSegment = string | number | WGSLItem;
 
-export interface IResolutionCtx {
+export interface ResolutionCtx {
   addDependency(item: WGSLItem): void;
   addMemory(memoryEntry: WGSLMemoryTrait): void;
   nameFor(token: WGSLItem): string;
@@ -16,7 +16,7 @@ export interface IResolutionCtx {
 export interface WGSLItem {
   readonly debugLabel?: string | undefined;
 
-  resolve(ctx: IResolutionCtx): string;
+  resolve(ctx: ResolutionCtx): string;
 }
 
 export function isWGSLItem(value: unknown): value is WGSLItem {
