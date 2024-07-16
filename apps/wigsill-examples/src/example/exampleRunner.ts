@@ -5,8 +5,8 @@ import { GUI } from 'dat.gui';
 import { filter, isNonNull, map, pipe } from 'remeda';
 import { ExampleState } from './exampleState';
 import { LayoutInstance } from './layout';
-
-import * as ts from 'typescript';
+import { transpileModule } from 'typescript';
+import { tsCompilerOptions } from '../embeddedTypeScript';
 
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
@@ -58,8 +58,8 @@ const staticToDynamicImports = {
 };
 
 function tsToJs(code: string): string {
-  return ts.transpileModule(code, {
-    compilerOptions: { module: ts.ModuleKind.ESNext },
+  return transpileModule(code, {
+    compilerOptions: tsCompilerOptions,
   }).outputText;
 }
 
