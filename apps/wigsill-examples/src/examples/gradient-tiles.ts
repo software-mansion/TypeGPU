@@ -26,14 +26,14 @@ const mainArena = makeArena({
 
 const canvas = await addElement('canvas');
 
-const context = canvas.getContext('webgpu');
+const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
 const devicePixelRatio = window.devicePixelRatio;
 canvas.width = canvas.clientWidth * devicePixelRatio;
 canvas.height = canvas.clientHeight * devicePixelRatio;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-context!.configure({
+context.configure({
   device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
@@ -126,7 +126,7 @@ addParameter(
 
 onFrame(() => {
   const commandEncoder = device.createCommandEncoder();
-  const textureView = context!.getCurrentTexture().createView();
+  const textureView = context.getCurrentTexture().createView();
 
   const renderPassDescriptor: GPURenderPassDescriptor = {
     colorAttachments: [
@@ -149,5 +149,5 @@ onFrame(() => {
 });
 
 onCleanup(() => {
-  console.log(`All cleaned up`);
+  // TODO: Clean up
 });

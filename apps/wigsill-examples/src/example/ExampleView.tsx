@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'remeda';
 import { CodeEditor } from '../CodeEditor';
 import { Canvas } from '../common/Canvas';
-import useEvent from '../common/useEvent';
 import { Video } from '../common/Video';
+import useEvent from '../common/useEvent';
 import type { Example } from '../example/types';
 import { ExecutionCancelledError } from './errors';
 import { executeExample } from './exampleRunner';
-import { ExampleState } from './exampleState';
+import type { ExampleState } from './exampleState';
 import { useLayout } from './layout';
 
 type Props = {
@@ -63,7 +63,7 @@ export function ExampleView({ example, codeEditorShowing }: Props) {
 
   const setCodeDebouncer = useMemo(
     () => debounce(setCode, { waitMs: 500 }),
-    [setCode],
+    [],
   );
 
   const handleCodeChange = useEvent((newCode: string) => {
@@ -85,7 +85,9 @@ export function ExampleView({ example, codeEditorShowing }: Props) {
                 height={element.height}
               />
             );
-          } else if (element.type === 'video') {
+          }
+
+          if (element.type === 'video') {
             return (
               <Video
                 key={element.key}
@@ -96,7 +98,7 @@ export function ExampleView({ example, codeEditorShowing }: Props) {
             );
           }
 
-          return <p>Unrecognized element</p>;
+          return <p key={element}>Unrecognized element</p>;
         })}
       </div>
 

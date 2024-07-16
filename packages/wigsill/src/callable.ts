@@ -1,3 +1,4 @@
+// biome-ignore lint/suspicious/noExplicitAny: <generics>
 abstract class Callable<TArgs extends [...any[]], TReturn> extends Function {
   _bound: Callable<TArgs, TReturn>;
 
@@ -16,16 +17,19 @@ abstract class Callable<TArgs extends [...any[]], TReturn> extends Function {
     // super('return this._bound._call.apply(this._bound, arguments)')
     this._bound = this.bind(this);
 
+    // biome-ignore lint/correctness/noConstructorReturn: <quirks of creating a custom callabke>
     return this._bound;
   }
 
   abstract _call(...args: TArgs): TReturn;
 }
 
-export interface ICallable<TArgs extends [...any[]], TReturn> {
-  (...args: TArgs): TReturn;
-}
+// biome-ignore lint/suspicious/noExplicitAny: <generics>
+export type ICallable<TArgs extends [...any[]], TReturn> = (
+  ...args: TArgs
+) => TReturn;
 
+// biome-ignore lint/suspicious/noExplicitAny: <generics>
 export type AsCallable<T, TArgs extends [...any[]], TReturn> = T &
   ICallable<TArgs, TReturn>;
 

@@ -1,12 +1,12 @@
-import { Suspense, useState } from 'react';
 import { useAtom } from 'jotai/react';
 import { RESET } from 'jotai/utils';
-import { ExampleLink } from './common/ExampleLink';
-import { Switch } from './common/Switch';
-import { examples } from './example/examples';
-import { ExampleView } from './example/ExampleView';
+import { Suspense, useState } from 'react';
 import { ExampleNotFound } from './ExampleNotFound';
 import { Home } from './Home';
+import { ExampleLink } from './common/ExampleLink';
+import { Switch } from './common/Switch';
+import { ExampleView } from './example/ExampleView';
+import { examples } from './example/examples';
 import { currentExampleAtom } from './router';
 
 function App() {
@@ -36,11 +36,13 @@ function App() {
       <div className="flex h-screen">
         <aside className="flex flex-col p-4 min-w-64">
           <header className="pb-6">
-            <h1
+            <button
+              type="button"
               className="mx-auto p-4 text-2xl font-outfit cursor-pointer"
-              onClick={() => setCurrentExample(RESET)}>
+              onClick={() => setCurrentExample(RESET)}
+            >
               <strong>wigsill</strong> - examples
-            </h1>
+            </button>
           </header>
           <nav className="flex flex-col flex-1 gap-2 overflow-y-auto">
             <ExampleLink exampleKey={undefined}>Home</ExampleLink>

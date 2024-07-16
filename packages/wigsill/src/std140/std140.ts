@@ -3,7 +3,7 @@
  */
 
 import {
-  AnySchema,
+  type AnySchema,
   type IMeasurer,
   type ISerialInput,
   type ISerialOutput,

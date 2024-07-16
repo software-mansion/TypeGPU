@@ -3,18 +3,18 @@ import {
   MissingBindingError,
   NotAllocatedMemoryError,
 } from './errors';
-import { MemoryArena } from './memoryArena';
-import { NameRegistry, RandomNameRegistry } from './nameRegistry';
+import type { MemoryArena } from './memoryArena';
+import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import {
-  ResolutionCtx,
-  WGSLBindPair,
-  WGSLBindableTrait,
-  WGSLItem,
-  WGSLMemoryTrait,
-  WGSLSegment,
+  type ResolutionCtx,
+  type WGSLBindPair,
+  type WGSLBindableTrait,
+  type WGSLItem,
+  type WGSLMemoryTrait,
+  type WGSLSegment,
   isWGSLItem,
 } from './types';
-import WGSLRuntime from './wgslRuntime';
+import type WGSLRuntime from './wgslRuntime';
 
 export type Program = {
   bindGroupLayout: GPUBindGroupLayout;
@@ -199,7 +199,7 @@ export default class ProgramBuilder {
       entries: arenas.map((arena, idx) => ({
         binding: idx,
         resource: {
-          buffer: this.runtime.bufferFor(arena)!,
+          buffer: this.runtime.bufferFor(arena),
         },
       })),
     });
@@ -209,8 +209,7 @@ export default class ProgramBuilder {
     return {
       bindGroupLayout,
       bindGroup,
-      code:
-        dependencies.map((d) => ctx.resolve(d)).join('\n') + '\n' + codeString,
+      code: `${dependencies.map((d) => ctx.resolve(d)).join('\n')}\n${codeString}`,
     };
   }
 }

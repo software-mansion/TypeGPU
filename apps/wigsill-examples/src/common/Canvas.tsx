@@ -1,5 +1,5 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import cs from 'classnames';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import useEvent from './useEvent';
 
 type Props = {
@@ -12,7 +12,7 @@ export const Canvas = forwardRef<HTMLCanvasElement, Props>((props, ref) => {
   const innerRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useImperativeHandle(ref, () => innerRef.current!);
+  useImperativeHandle(ref, () => innerRef.current as HTMLCanvasElement);
 
   const onResize = useEvent(() => {
     const canvas = innerRef.current;
@@ -53,7 +53,8 @@ export const Canvas = forwardRef<HTMLCanvasElement, Props>((props, ref) => {
         'relative overflow-hidden',
         width && height ? 'flex-initial' : 'flex-1 self-stretch',
       )}
-      style={{ width, height }}>
+      style={{ width, height }}
+    >
       <canvas className="absolute" ref={innerRef} />
     </div>
   );

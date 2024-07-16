@@ -1,12 +1,12 @@
-import Callable, { AsCallable } from './callable';
+import Callable, { type AsCallable } from './callable';
 import {
-  AnyWGSLDataType,
-  WGSLFnArgument,
-  WGSLValue,
+  type AnyWGSLDataType,
+  type WGSLFnArgument,
+  type WGSLValue,
   isPointer,
 } from './std140/types';
-import { ResolutionCtx, WGSLItem, WGSLSegment } from './types';
-import { WGSLCode, code } from './wgslCode';
+import type { ResolutionCtx, WGSLItem, WGSLSegment } from './types';
+import { type WGSLCode, code } from './wgslCode';
 import { WGSLIdentifier, identifier } from './wgslIdentifier';
 
 type ValuesFromTypes<TArgTypes extends WGSLFnArgument[]> = {
@@ -53,7 +53,7 @@ export class WGSLFunction<
 
   constructor(
     private argPairs: PairsFromTypes<TArgTypes>,
-    private returnType: TReturn | undefined = undefined,
+    private returnType: TReturn | undefined,
     private readonly body: WGSLSegment,
   ) {
     super();
