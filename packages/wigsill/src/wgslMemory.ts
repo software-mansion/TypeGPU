@@ -1,7 +1,7 @@
 import { BufferWriter, Parsed } from 'typed-binary';
 import { NotAllocatedMemoryError } from './errors';
 import { AnyWGSLDataType } from './std140/types';
-import { ResolutionCtx, WGSLItem, WGSLMemoryTrait } from './types';
+import { ResolutionCtx, WGSLItem, WGSLMemoryTrait, isWGSLItem } from './types';
 import { WGSLCode, code } from './wgslCode';
 import { identifier } from './wgslIdentifier';
 import WGSLRuntime from './wgslRuntime';
@@ -68,6 +68,14 @@ export class WGSLMemory<TSchema extends AnyWGSLDataType>
     );
 
     return true;
+  }
+
+  getChildItems(): WGSLItem[] | [] {
+    const items: WGSLItem[] = [this.fieldIdentifier];
+    if (isWGSLItem(this._typeSchema)) {
+      items.push(this._typeSchema);
+    }
+    return items;
   }
 }
 

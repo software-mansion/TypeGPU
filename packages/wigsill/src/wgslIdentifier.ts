@@ -10,6 +10,10 @@ export class WGSLIdentifier implements WGSLItem {
   resolve(ctx: ResolutionCtx): string {
     return ctx.nameFor(this);
   }
+
+  getChildItems(): WGSLItem[] | [] {
+    return [];
+  }
 }
 
 export function identifier(debugLabel?: string) {

@@ -1,4 +1,5 @@
 import type { MemoryArena } from './memoryArena';
+import { WGSLMemory } from './wgslMemory';
 
 export type WGSLSegment = string | number | WGSLItem;
 
@@ -17,6 +18,7 @@ export interface WGSLItem {
   readonly debugLabel?: string | undefined;
 
   resolve(ctx: ResolutionCtx): string;
+  getChildItems(ctx: ResolutionCtx): WGSLItem[] | [];
 }
 
 export function isWGSLItem(value: unknown): value is WGSLItem {
@@ -24,6 +26,12 @@ export function isWGSLItem(value: unknown): value is WGSLItem {
     !!value &&
     (typeof value === 'object' || typeof value === 'function') &&
     'resolve' in value
+  );
+}
+
+export function isWGSLMemory(value: unknown): value is WGSLMemoryTrait {
+  return (
+    !!value && isWGSLItem(value) && 'size' in value && 'baseAlignment' in value
   );
 }
 

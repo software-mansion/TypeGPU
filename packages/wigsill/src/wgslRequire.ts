@@ -7,6 +7,10 @@ export class WGSLRequire implements WGSLItem {
     ctx.addDependency(this.item);
     return '';
   }
+
+  getChildItems(): WGSLItem[] {
+    return [...new Set([this.item])];
+  }
 }
 
 export function require(item: WGSLItem) {

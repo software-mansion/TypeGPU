@@ -5,7 +5,7 @@ import {
   WGSLValue,
   isPointer,
 } from './std140/types';
-import { ResolutionCtx, WGSLItem, WGSLSegment } from './types';
+import { isWGSLItem, ResolutionCtx, WGSLItem, WGSLSegment } from './types';
 import { WGSLCode, code } from './wgslCode';
 import { WGSLIdentifier, identifier } from './wgslIdentifier';
 
@@ -38,6 +38,19 @@ class WGSLFunctionCall<
     });
 
     return ctx.resolve(code`${this.usedFn}(${argsCode})`);
+  }
+
+  getChildItems(): WGSLItem[] | [] {
+    const items: WGSLItem[] = [];
+    if (isWGSLItem(this.usedFn)) {
+      items.push(this.usedFn);
+    }
+    for (const arg of this.args) {
+      if (isWGSLItem(arg)) {
+        items.push(arg);
+      }
+    }
+    return items;
   }
 }
 
@@ -86,6 +99,22 @@ export class WGSLFunction<
     }
 
     return ctx.resolve(this.identifier);
+  }
+
+  getChildItems(ctx: ResolutionCtx): WGSLItem[] | [] {
+    const items: WGSLItem[] = [this.identifier];
+    if (isWGSLItem(this.body)) {
+      items.push(this.body);
+    }
+    for (const [ident, type] of this.argPairs) {
+      if (isWGSLItem(ident)) {
+        items.push(ident);
+      }
+      if (isWGSLItem(type)) {
+        items.push(type);
+      }
+    }
+    return items;
   }
 
   _call(...args: SegmentsFromTypes<TArgTypes>) {

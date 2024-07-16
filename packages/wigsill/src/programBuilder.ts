@@ -13,6 +13,7 @@ import {
   WGSLMemoryTrait,
   WGSLSegment,
   isWGSLItem,
+  isWGSLMemory,
 } from './types';
 import WGSLRuntime from './wgslRuntime';
 
@@ -66,6 +67,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
         this._entryToArenaMap.set(entry, arena);
       }
+    }
+  }
+
+  addMemoryArena(arena: MemoryArena) {
+    for (const entry of arena.memoryEntries) {
+      this._entryToArenaMap.set(entry, arena);
     }
   }
 
@@ -180,6 +187,65 @@ export default class ProgramBuilder {
       //   definitionCode,
       // );
     });
+
+    console.log('-------------------');
+
+    const memoryEntries = new Set(
+      this.root
+        .getChildItems(ctx)
+        .filter((value) => isWGSLMemory(value))
+        .map((value) => value as WGSLMemoryTrait),
+    );
+
+    console.log('all memory entries', memoryEntries);
+
+    const unassignedMemoryEntries = Array.from(memoryEntries).filter(
+      (entry) => !ctx.arenaFor(entry),
+    );
+
+    console.log('unassigned memory entries', unassignedMemoryEntries);
+
+    if (unassignedMemoryEntries.length > 0) {
+      const existingArenas = new Set();
+      unassignedMemoryEntries.forEach((entry) => {
+        const arena = this.runtime.arenaFor(entry);
+        if (arena) {
+          existingArenas.add(arena);
+        }
+      });
+      let fallbackArena: MemoryArena;
+      if (existingArenas.size === 1) {
+        fallbackArena = existingArenas.values().next().value;
+        console.log(
+          'reusing existing fallback arena at',
+          Math.max(0, arenas.length - 1),
+          fallbackArena,
+        );
+      } else {
+        fallbackArena = new MemoryArena({
+          memoryEntries: unassignedMemoryEntries,
+          bufferBindingType: 'uniform',
+          usage:
+            GPUBufferUsage.UNIFORM |
+            GPUBufferUsage.COPY_DST |
+            GPUBufferUsage.COPY_SRC |
+            GPUBufferUsage.VERTEX,
+        });
+        this.runtime.registerArena(fallbackArena);
+        console.log(
+          'creating fallback arena at',
+          Math.max(0, arenas.length - 1),
+          fallbackArena,
+        );
+      }
+      arenas.push(fallbackArena);
+      ctx.addMemoryArena(fallbackArena);
+      const definitionCode = fallbackArena.definitionCode(
+        options.bindingGroup,
+        Math.max(0, arenas.length - 1),
+      );
+      if (definitionCode) ctx.addDependency(definitionCode);
+    }
 
     // Resolving code
     const codeString = ctx.resolve(this.root);

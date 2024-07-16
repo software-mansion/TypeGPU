@@ -16,6 +16,18 @@ export class WGSLCode implements WGSLItem {
 
     return code;
   }
+
+  getChildItems(ctx: ResolutionCtx): WGSLItem[] {
+    const items: WGSLItem[] = [];
+    for (const s of this.segments) {
+      if (isWGSLItem(s)) {
+        items.push(s);
+        const childItems = s.getChildItems(ctx);
+        items.push(...new Set(childItems));
+      }
+    }
+    return items;
+  }
 }
 
 export function code(

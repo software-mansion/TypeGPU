@@ -1,5 +1,10 @@
 import { AnyWGSLDataType } from './std140/types';
-import type { ResolutionCtx, WGSLItem, WGSLSegment } from './types';
+import {
+  isWGSLItem,
+  type ResolutionCtx,
+  type WGSLItem,
+  type WGSLSegment,
+} from './types';
 import { code } from './wgslCode';
 import { identifier } from './wgslIdentifier';
 
@@ -36,6 +41,16 @@ export class WGSLVariable<TDataType extends AnyWGSLDataType>
     }
 
     return ctx.resolve(this.identifier);
+  }
+
+  getChildItems(ctx: ResolutionCtx): WGSLItem[] {
+    const items: WGSLItem[] = [this.identifier];
+    if (isWGSLItem(this._initialValue)) {
+      items.push(this._initialValue);
+      const initialValueItems = this._initialValue.getChildItems(ctx);
+      items.push(...new Set(initialValueItems));
+    }
+    return items;
   }
 }
 

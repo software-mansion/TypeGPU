@@ -1,4 +1,9 @@
-import type { ResolutionCtx, WGSLItem, WGSLSegment } from './types';
+import {
+  isWGSLItem,
+  type ResolutionCtx,
+  type WGSLItem,
+  type WGSLSegment,
+} from './types';
 import { code } from './wgslCode';
 import { WGSLIdentifier } from './wgslIdentifier';
 
@@ -22,6 +27,16 @@ export class WGSLConstant implements WGSLItem {
     ctx.addDependency(code`const ${this.identifier} = ${this.expr};`);
 
     return ctx.resolve(this.identifier);
+  }
+
+  getChildItems(ctx: ResolutionCtx): WGSLItem[] | [] {
+    const items: WGSLItem[] = [this.identifier];
+    if (isWGSLItem(this.expr)) {
+      items.push(this.expr);
+      const exprItems = this.expr.getChildItems(ctx);
+      items.push(...new Set(exprItems));
+    }
+    return items;
   }
 }
 

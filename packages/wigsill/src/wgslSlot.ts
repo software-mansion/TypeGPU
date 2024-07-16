@@ -3,6 +3,7 @@ import {
   WGSLBindableTrait,
   WGSLItem,
   WGSLSegment,
+  isWGSLItem,
   isWGSLSegment,
 } from './types';
 
@@ -50,6 +51,17 @@ export class WGSLSlot<T> implements WGSLItem, WGSLBindableTrait<T> {
       );
     }
     return ctx.resolve(value);
+  }
+
+  getChildItems(ctx: ResolutionCtx): WGSLItem[] {
+    const value = this.getValue(ctx);
+    if (isWGSLItem(value)) {
+      const items: WGSLItem[] = [value];
+      const nestedItems = value.getChildItems(ctx);
+      items.push(...new Set(nestedItems));
+      return items;
+    }
+    return [];
   }
 }
 

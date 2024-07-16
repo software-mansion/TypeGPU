@@ -37,6 +37,10 @@ class WGSLRuntime {
     return buffer;
   }
 
+  arenaFor(memoryEntry: WGSLMemoryTrait): MemoryArena | null {
+    return this._entryToArenaMap.get(memoryEntry) ?? null;
+  }
+
   locateMemory(memoryEntry: WGSLMemoryTrait): MemoryLocation | null {
     const arena = this._entryToArenaMap.get(memoryEntry);
 
