@@ -52,6 +52,7 @@ const lexer = moo.compile({
   period: '.',
   semi: ";",
   comma: ",",
+  at: "@",
 });
 
 // Ignoring whitespace and comments
@@ -145,7 +146,7 @@ function_header ->
 #
 
 @{%
-export type ReturnStatement = { type: 'return_statement', expression: Expression };
+export type ReturnStatement = { type: 'return_statement', expression: Expression | null };
 
 %}
 
@@ -410,6 +411,6 @@ expression ->
 call_phrase ->
   template_elaborated_ident argument_expression_list {% ([ident, args]) => ({ ident, args }) %}
 
-@{% type Attribute = { type: 'attribute', ident: string }; %}
+@{% type Attribute = { type: 'attribute', ident: string, args: ArgumentExpressionList }; %}
 attribute ->
   "@" ident argument_expression_list:? {% ([ , ident, args]) => ({ type: 'attribute', ident: ident.value, args: args ?? [] }) %}

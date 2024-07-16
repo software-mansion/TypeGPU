@@ -63,6 +63,7 @@ const lexer = moo.compile({
   period: '.',
   semi: ";",
   comma: ",",
+  at: "@",
 });
 
 // Ignoring whitespace and comments
@@ -101,7 +102,7 @@ export type FunctionHeader = { type: 'function_header', identifier: string };
 
 
 
-export type ReturnStatement = { type: 'return_statement', expression: Expression };
+export type ReturnStatement = { type: 'return_statement', expression: Expression | null };
 
 
 
@@ -208,7 +209,7 @@ export type Expression =
   | BitwiseExpression;
 
 
- type Attribute = { type: 'attribute', ident: string }; 
+ type Attribute = { type: 'attribute', ident: string, args: ArgumentExpressionList }; 
 interface NearleyToken {
   value: any;
   [key: string]: any;
