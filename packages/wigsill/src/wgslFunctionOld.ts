@@ -19,13 +19,12 @@ export class WGSLFunction implements WGSLItem {
   }
 
   getChildItems(ctx: ResolutionCtx): WGSLItem[] {
-    const items: WGSLItem[] = [this.identifier];
+    const items = new Set<WGSLItem>();
     if (isWGSLItem(this.body)) {
-      items.push(this.body);
-      const bodyItems = this.body.getChildItems(ctx);
-      items.push(...new Set(bodyItems));
+      items.add(this.body);
+      this.body.getChildItems(ctx).forEach((item) => items.add(item));
     }
-    return items;
+    return Array.from(items);
   }
 }
 

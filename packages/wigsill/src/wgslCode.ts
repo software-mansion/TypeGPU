@@ -18,15 +18,14 @@ export class WGSLCode implements WGSLItem {
   }
 
   getChildItems(ctx: ResolutionCtx): WGSLItem[] {
-    const items: WGSLItem[] = [];
+    const items = new Set<WGSLItem>();
     for (const s of this.segments) {
       if (isWGSLItem(s)) {
-        items.push(s);
-        const childItems = s.getChildItems(ctx);
-        items.push(...new Set(childItems));
+        items.add(s);
+        s.getChildItems(ctx).forEach((item) => items.add(item));
       }
     }
-    return items;
+    return Array.from(items);
   }
 }
 

@@ -41,16 +41,16 @@ class WGSLFunctionCall<
   }
 
   getChildItems(): WGSLItem[] | [] {
-    const items: WGSLItem[] = [];
+    const items = new Set<WGSLItem>();
     if (isWGSLItem(this.usedFn)) {
-      items.push(this.usedFn);
+      items.add(this.usedFn);
     }
     for (const arg of this.args) {
       if (isWGSLItem(arg)) {
-        items.push(arg);
+        items.add(arg);
       }
     }
-    return items;
+    return Array.from(items);
   }
 }
 
@@ -102,19 +102,19 @@ export class WGSLFunction<
   }
 
   getChildItems(ctx: ResolutionCtx): WGSLItem[] | [] {
-    const items: WGSLItem[] = [this.identifier];
+    const items = new Set<WGSLItem>([this.identifier]);
     if (isWGSLItem(this.body)) {
-      items.push(this.body);
+      items.add(this.body);
     }
     for (const [ident, type] of this.argPairs) {
       if (isWGSLItem(ident)) {
-        items.push(ident);
+        items.add(ident);
       }
       if (isWGSLItem(type)) {
-        items.push(type);
+        items.add(type);
       }
     }
-    return items;
+    return Array.from(items);
   }
 
   _call(...args: SegmentsFromTypes<TArgTypes>) {

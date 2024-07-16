@@ -30,13 +30,12 @@ export class WGSLConstant implements WGSLItem {
   }
 
   getChildItems(ctx: ResolutionCtx): WGSLItem[] | [] {
-    const items: WGSLItem[] = [this.identifier];
+    const items = new Set<WGSLItem>([this.identifier]);
     if (isWGSLItem(this.expr)) {
-      items.push(this.expr);
-      const exprItems = this.expr.getChildItems(ctx);
-      items.push(...new Set(exprItems));
+      items.add(this.expr);
+      this.expr.getChildItems(ctx).forEach((item) => items.add(item));
     }
-    return items;
+    return Array.from(items);
   }
 }
 

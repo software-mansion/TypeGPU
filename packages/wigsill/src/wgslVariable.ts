@@ -44,13 +44,12 @@ export class WGSLVariable<TDataType extends AnyWGSLDataType>
   }
 
   getChildItems(ctx: ResolutionCtx): WGSLItem[] {
-    const items: WGSLItem[] = [this.identifier];
+    const items = new Set<WGSLItem>();
     if (isWGSLItem(this._initialValue)) {
-      items.push(this._initialValue);
-      const initialValueItems = this._initialValue.getChildItems(ctx);
-      items.push(...new Set(initialValueItems));
+      items.add(this._initialValue);
+      this._initialValue.getChildItems(ctx).forEach((item) => items.add(item));
     }
-    return items;
+    return Array.from(items);
   }
 }
 

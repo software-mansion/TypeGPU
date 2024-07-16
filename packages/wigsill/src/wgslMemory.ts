@@ -71,11 +71,11 @@ export class WGSLMemory<TSchema extends AnyWGSLDataType>
   }
 
   getChildItems(): WGSLItem[] | [] {
-    const items: WGSLItem[] = [this.fieldIdentifier];
+    const items = new Set<WGSLItem>();
     if (isWGSLItem(this._typeSchema)) {
-      items.push(this._typeSchema);
+      items.add(this._typeSchema);
     }
-    return items;
+    return Array.from(items);
   }
 }
 

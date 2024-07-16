@@ -56,10 +56,9 @@ export class WGSLSlot<T> implements WGSLItem, WGSLBindableTrait<T> {
   getChildItems(ctx: ResolutionCtx): WGSLItem[] {
     const value = this.getValue(ctx);
     if (isWGSLItem(value)) {
-      const items: WGSLItem[] = [value];
-      const nestedItems = value.getChildItems(ctx);
-      items.push(...new Set(nestedItems));
-      return items;
+      const items = new Set<WGSLItem>();
+      value.getChildItems(ctx).forEach((item) => items.add(item));
+      return Array.from(items);
     }
     return [];
   }
