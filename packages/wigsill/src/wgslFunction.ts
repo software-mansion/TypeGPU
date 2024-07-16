@@ -5,7 +5,7 @@ import {
   WGSLValue,
   isPointer,
 } from './std140/types';
-import { isWGSLItem, ResolutionCtx, WGSLItem, WGSLSegment } from './types';
+import { ResolutionCtx, WGSLItem, WGSLSegment, isWGSLItem } from './types';
 import { WGSLCode, code } from './wgslCode';
 import { WGSLIdentifier, identifier } from './wgslIdentifier';
 
@@ -40,14 +40,16 @@ class WGSLFunctionCall<
     return ctx.resolve(code`${this.usedFn}(${argsCode})`);
   }
 
-  getChildItems(): WGSLItem[] | [] {
+  getChildItems(ctx: ResolutionCtx): WGSLItem[] | [] {
     const items = new Set<WGSLItem>();
     if (isWGSLItem(this.usedFn)) {
       items.add(this.usedFn);
+      this.usedFn.getChildItems(ctx).forEach((item) => items.add(item));
     }
     for (const arg of this.args) {
       if (isWGSLItem(arg)) {
         items.add(arg);
+        arg.getChildItems(ctx).forEach((item) => items.add(item));
       }
     }
     return Array.from(items);
@@ -112,6 +114,7 @@ export class WGSLFunction<
       }
       if (isWGSLItem(type)) {
         items.add(type);
+        type.getChildItems(ctx).forEach((item) => items.add(item));
       }
     }
     return Array.from(items);
