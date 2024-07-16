@@ -2,7 +2,7 @@ import { mapKeys, mapValues, pipe } from 'remeda';
 import { parseExampleCode } from './parseExampleCode';
 
 const rawExamples: Record<string, string> = import.meta.glob(
-  '../../examples/**/*.js',
+  '../examples/**/*.ts',
   {
     query: 'raw',
     eager: true,

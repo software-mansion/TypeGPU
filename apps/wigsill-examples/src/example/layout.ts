@@ -1,34 +1,12 @@
 import { useCallback, useRef, useState } from 'react';
-
+import type {
+  AddElement,
+  ElementDef,
+  ElementOptions,
+  ElementType,
+  LayoutDef,
+} from '@wigsill/example-toolkit';
 import { ExecutionCancelledError } from './errors';
-
-export type CanvasDef = {
-  type: 'canvas';
-  key: string;
-  width?: number;
-  height?: number;
-};
-
-export type VideoDef = {
-  type: 'video';
-  key: string;
-  width?: number;
-  height?: number;
-};
-
-export type ElementDef = CanvasDef | VideoDef;
-
-export type ElementType = ElementDef['type'];
-export type ElementOptions = Omit<ElementDef, 'type' | 'key'>;
-
-export type LayoutDef = {
-  elements: ElementDef[];
-};
-
-export type AddElement = (
-  type: ElementType,
-  options: ElementOptions,
-) => Promise<HTMLElement>;
 
 /**
  * One per example instance.
@@ -52,7 +30,7 @@ const makeLayout = (appendToDef: (element: ElementDef) => void) => {
   let cancelled = false;
 
   const newInstance: LayoutInstance = {
-    addElement: (type: ElementType, options: ElementOptions) => {
+    addElement: ((type: ElementType, options?: ElementOptions) => {
       if (cancelled) {
         throw new ExecutionCancelledError();
       }
@@ -76,7 +54,7 @@ const makeLayout = (appendToDef: (element: ElementDef) => void) => {
       } else {
         throw new Error(`Tried to add unsupported layout element: ${type}`);
       }
-    },
+    }) as AddElement,
 
     dispose: () => {
       cancelled = true;

@@ -1,8 +1,7 @@
-import cs from 'classnames';
 import { MouseEvent } from 'react';
-import { RESET } from 'jotai/utils';
+import cs from 'classnames';
 import { useAtom } from 'jotai/react';
-
+import { RESET } from 'jotai/utils';
 import { currentExampleAtom } from '../router';
 import useEvent from './useEvent';
 

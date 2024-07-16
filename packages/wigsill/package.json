@@ -28,11 +28,7 @@
   "sideEffects": false,
   "scripts": {
     "dev": "tsup --watch",
-    "build": "tsup",
-    "prettier": "prettier '*.{js,json,md}' '{src,tests,benchmarks,docs}/**/*.{ts,tsx,md,mdx}' --write",
-    "eslint": "eslint --fix --no-eslintrc --c .eslintrc.json '*.{js,json,ts}' '{src,tests,benchmarks}/**/*.{ts,tsx}'",
-    "pretest": "tsc",
-    "test": "vitest --ui --coverage"
+    "build": "tsup"
   },
   "engines": {
     "node": ">=12.20.0"
@@ -63,6 +59,7 @@
     "typescript": "^5.3.3",
     "typed-binary": "^4.0.0",
     "@webgpu/types": "^0.1.43",
+    "wigsill": "workspace:*",
     "@wigsill/parser": "workspace:*"
   },
   "packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e",

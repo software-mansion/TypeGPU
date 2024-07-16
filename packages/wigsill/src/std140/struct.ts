@@ -11,7 +11,7 @@ import {
   object,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { IResolutionCtx } from '../types';
+import type { ResolutionCtx } from '../types';
 import { type WGSLCode, code } from '../wgslCode';
 import { identifier } from '../wgslIdentifier';
 import { AnyWGSLDataType, WGSLDataType } from './types';
@@ -68,7 +68,7 @@ class StructDataType<TProps extends Record<string, AnyWGSLDataType>>
     return measurer;
   }
 
-  resolve(ctx: IResolutionCtx): string {
+  resolve(ctx: ResolutionCtx): string {
     ctx.addDependency(this._definitionCode);
 
     return ctx.resolve(this._identifier);

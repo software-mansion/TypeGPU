@@ -4,8 +4,9 @@ import {
   NotAllocatedMemoryError,
 } from './errors';
 import { MemoryArena } from './memoryArena';
+import { NameRegistry, RandomNameRegistry } from './nameRegistry';
 import {
-  IResolutionCtx,
+  ResolutionCtx,
   WGSLBindPair,
   WGSLBindableTrait,
   WGSLItem,
@@ -29,48 +30,34 @@ function addUnique<T>(list: T[], value: T) {
   list.push(value);
 }
 
-class NameRegistry {
-  private lastUniqueId = 0;
-  private names = new WeakMap<WGSLItem, string>();
+export type ResolutionCtxImplOptions = {
+  readonly memoryArenas?: MemoryArena[];
+  readonly bindings?: WGSLBindPair<unknown>[];
+  readonly names: NameRegistry;
+};
 
-  nameFor(item: WGSLItem) {
-    let name = this.names.get(item);
-
-    if (name === undefined) {
-      // creating sanitized name
-      let label;
-      if (item.debugLabel) {
-        label = item.debugLabel.replaceAll(/\s/g, '_'); // whitespace -> _
-        label = label.replaceAll(/[^\w\d]/g, ''); // removing illegal characters
-      } else {
-        label = 'item';
-      }
-      name = `${label}_${this.lastUniqueId++}`;
-      this.names.set(item, name);
-    }
-
-    return name;
-  }
-}
-
-class ResolutionCtx implements IResolutionCtx {
+export class ResolutionCtxImpl implements ResolutionCtx {
   private _entryToArenaMap = new WeakMap<WGSLMemoryTrait, MemoryArena>();
-  private readonly _names = new NameRegistry();
+  private readonly _bindings: WGSLBindPair<unknown>[];
+  private readonly _names: NameRegistry;
 
   public dependencies: WGSLItem[] = [];
   public usedMemoryArenas = new WeakSet<MemoryArena>();
   public memoryArenaDeclarationIdxMap = new WeakMap<MemoryArena, number>();
 
-  private memoizedResults = new WeakMap<WGSLItem, string>();
+  private _memoizedResults = new WeakMap<WGSLItem, string>();
 
   /**
    * @throws {MemoryArenaConflict}
    */
-  constructor(
-    private readonly runtime: WGSLRuntime,
-    private readonly memoryArenas: MemoryArena[],
-    private readonly _bindings: WGSLBindPair<unknown>[],
-  ) {
+  constructor({
+    memoryArenas = [],
+    bindings = [],
+    names,
+  }: ResolutionCtxImplOptions) {
+    this._bindings = bindings;
+    this._names = names;
+
     for (const arena of memoryArenas) {
       for (const entry of arena.memoryEntries) {
         if (this._entryToArenaMap.has(entry)) {
@@ -136,13 +123,13 @@ class ResolutionCtx implements IResolutionCtx {
       return String(item);
     }
 
-    const memoizedResult = this.memoizedResults.get(item);
+    const memoizedResult = this._memoizedResults.get(item);
     if (memoizedResult !== undefined) {
       return memoizedResult;
     }
 
     const result = item.resolve(this);
-    this.memoizedResults.set(item, result);
+    this._memoizedResults.set(item, result);
     return result;
   }
 }
@@ -151,6 +138,7 @@ type BuildOptions = {
   shaderStage: number;
   bindingGroup: number;
   arenas?: MemoryArena[];
+  nameRegistry?: NameRegistry;
 };
 
 export default class ProgramBuilder {
@@ -169,7 +157,11 @@ export default class ProgramBuilder {
   build(options: BuildOptions): Program {
     const arenas = options.arenas ?? [];
 
-    const ctx = new ResolutionCtx(this.runtime, arenas, this.bindings);
+    const ctx = new ResolutionCtxImpl({
+      memoryArenas: arenas,
+      bindings: this.bindings,
+      names: options.nameRegistry ?? new RandomNameRegistry(),
+    });
 
     // Resolving memory arenas
     arenas.forEach((arena, idx) => {

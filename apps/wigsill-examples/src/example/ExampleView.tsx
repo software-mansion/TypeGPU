@@ -1,18 +1,18 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'remeda';
-import { useMemo, useState, useEffect, useRef } from 'react';
-
-import useEvent from '../common/useEvent';
 import { CodeEditor } from '../CodeEditor';
-import type { Example } from '../example/types';
-import { ExampleState } from './exampleState';
-import { executeExample } from './exampleRunner';
-import { useLayout } from './layout';
 import { Canvas } from '../common/Canvas';
+import useEvent from '../common/useEvent';
 import { Video } from '../common/Video';
+import type { Example } from '../example/types';
 import { ExecutionCancelledError } from './errors';
+import { executeExample } from './exampleRunner';
+import { ExampleState } from './exampleState';
+import { useLayout } from './layout';
 
 type Props = {
   example: Example;
+  codeEditorShowing: boolean;
 };
 
 function useExample(exampleCode: string) {
@@ -57,7 +57,7 @@ function useExample(exampleCode: string) {
   };
 }
 
-export function ExampleView({ example }: Props) {
+export function ExampleView({ example, codeEditorShowing }: Props) {
   const { code: initialCode } = example;
   const [code, setCode] = useState(initialCode);
 
@@ -99,11 +99,14 @@ export function ExampleView({ example }: Props) {
           return <p>Unrecognized element</p>;
         })}
       </div>
-      <div className="relative w-full flex flex-1">
-        <div className="absolute inset-0">
-          <CodeEditor code={code} onCodeChange={handleCodeChange} />
+
+      {codeEditorShowing ? (
+        <div className="relative w-full flex flex-1">
+          <div className="absolute inset-0">
+            <CodeEditor code={code} onCodeChange={handleCodeChange} />
+          </div>
         </div>
-      </div>
+      ) : null}
     </>
   );
 }

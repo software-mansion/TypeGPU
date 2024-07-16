@@ -1,6 +1,6 @@
 import type { RESET } from 'jotai/utils';
-import { atomWithHash } from 'jotai-location';
 import type { WritableAtom } from 'jotai/vanilla';
+import { atomWithHash } from 'jotai-location';
 
 const serializer = {
   serialize(val: string | undefined) {
@@ -11,9 +11,17 @@ const serializer = {
   },
 };
 
-type SetStateActionWithReset<Value> = Value | typeof RESET | ((prev: Value) => Value | typeof RESET);
+type SetStateActionWithReset<Value> =
+  | Value
+  | typeof RESET
+  | ((prev: Value) => Value | typeof RESET);
 
-type CurrentExampleAtom = WritableAtom<string | undefined, [SetStateActionWithReset<string | undefined>], void>;
+type CurrentExampleAtom = WritableAtom<
+  string | undefined,
+  [SetStateActionWithReset<string | undefined>],
+  void
+>;
 
-export const currentExampleAtom: CurrentExampleAtom = atomWithHash<string | undefined>('example', undefined, serializer);
-
+export const currentExampleAtom: CurrentExampleAtom = atomWithHash<
+  string | undefined
+>('example', undefined, serializer);

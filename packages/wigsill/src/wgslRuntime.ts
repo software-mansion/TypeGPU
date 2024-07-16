@@ -55,4 +55,40 @@ class WGSLRuntime {
   }
 }
 
+export async function createRuntime(
+  options?:
+    | {
+        adapter: GPURequestAdapterOptions | undefined;
+        device: GPUDeviceDescriptor | undefined;
+      }
+    | GPUDevice,
+) {
+  let adapter: GPUAdapter | null = null;
+  let device: GPUDevice | null = null;
+
+  if (!navigator.gpu) {
+    throw new Error('WebGPU is not supported by this browser.');
+  }
+
+  if (!options) {
+    adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) {
+      throw new Error('Could not find a compatible GPU');
+    }
+    device = await adapter.requestDevice();
+    return new WGSLRuntime(device);
+  }
+
+  if (options instanceof GPUDevice) {
+    return new WGSLRuntime(options);
+  }
+
+  adapter = await navigator.gpu.requestAdapter(options.adapter);
+  if (!adapter) {
+    throw new Error('Could not find a compatible GPU');
+  }
+  device = await adapter.requestDevice(options.device);
+  return new WGSLRuntime(device);
+}
+
 export default WGSLRuntime;

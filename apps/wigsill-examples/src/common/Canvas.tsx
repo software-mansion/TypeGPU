@@ -1,6 +1,5 @@
-import cs from 'classnames';
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-
+import cs from 'classnames';
 import useEvent from './useEvent';
 
 type Props = {
@@ -33,9 +32,17 @@ export const Canvas = forwardRef<HTMLCanvasElement, Props>((props, ref) => {
     setTimeout(() => {
       onResize();
     }, 1);
-    window.addEventListener('resize', onResize);
+
+    const resizeObserver = new ResizeObserver(() => onResize());
+    const container = containerRef.current;
+    if (container) {
+      resizeObserver.observe(container);
+    }
+
     return () => {
-      window.removeEventListener('resize', onResize);
+      if (container) {
+        resizeObserver.unobserve(container);
+      }
     };
   }, [onResize]);
 

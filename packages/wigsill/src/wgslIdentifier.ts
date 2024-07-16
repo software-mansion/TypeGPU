@@ -1,4 +1,4 @@
-import { IResolutionCtx, WGSLItem } from './types';
+import { ResolutionCtx, WGSLItem } from './types';
 
 export class WGSLIdentifier implements WGSLItem {
   debugLabel?: string | undefined;
@@ -7,7 +7,7 @@ export class WGSLIdentifier implements WGSLItem {
     this.debugLabel = debugLabel;
   }
 
-  resolve(ctx: IResolutionCtx): string {
+  resolve(ctx: ResolutionCtx): string {
     return ctx.nameFor(this);
   }
 }

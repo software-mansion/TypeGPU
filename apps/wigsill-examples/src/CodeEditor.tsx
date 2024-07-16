@@ -1,6 +1,21 @@
-import Editor from '@monaco-editor/react';
-
+import Editor, { Monaco } from '@monaco-editor/react';
+import webgpuTypes from '@webgpu/types/dist/index.d.ts?raw';
+import typedBinary from 'typed-binary/dist/index.d.ts?raw';
 import useEvent from './common/useEvent';
+import { tsCompilerOptions } from './embeddedTypeScript';
+import toolkitTypes from './types/example-toolkit.d.ts?raw';
+import wigsill from './types/wigsill-types.d.ts?raw';
+
+function handleEditorWillMount(monaco: Monaco) {
+  const tsDefaults = monaco?.languages.typescript.typescriptDefaults;
+
+  tsDefaults.addExtraLib(webgpuTypes);
+  tsDefaults.addExtraLib(wigsill, 'wigsill.d.ts');
+  tsDefaults.addExtraLib(toolkitTypes, 'example-toolkit.d.ts');
+  tsDefaults.addExtraLib(typedBinary, 'typed-binary.d.ts');
+
+  tsDefaults.setCompilerOptions(tsCompilerOptions);
+}
 
 type Props = {
   code: string;
@@ -15,6 +30,11 @@ export function CodeEditor(props: Props) {
   });
 
   return (
-    <Editor defaultLanguage="javascript" value={code} onChange={handleChange} />
+    <Editor
+      defaultLanguage="typescript"
+      value={code}
+      onChange={handleChange}
+      beforeMount={handleEditorWillMount}
+    />
   );
 }

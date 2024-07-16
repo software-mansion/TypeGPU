@@ -147,6 +147,9 @@ importers:
       tailwindcss:
         specifier: ^3.4.4
         version: 3.4.4
+      tsx:
+        specifier: ^4.16.2
+        version: 4.16.2
       typescript:
         specifier: ^5.2.2
         version: 5.3.3
@@ -174,6 +177,9 @@ importers:
       typescript:
         specifier: ^5.3.3
         version: 5.3.3
+      wigsill:
+        specifier: workspace:*
+        version: 'link:'
 
   packages/wigsill-parser:
     dependencies:

@@ -5,12 +5,14 @@
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "license": "MIT",
   "scripts": {
-    "build": "tsup",
+    "dev:test": "vitest",
     "prettier": "prettier '*.{js,json,md}' '{src,tests,benchmarks,docs}/**/*.{ts,tsx,md,mdx}' --write",
-    "eslint": "eslint --fix --no-eslintrc --c .eslintrc.json '*.{js,json,ts}' '{packages/apps}/**/*.{ts,tsx}'",
-    "test": "vitest",
+    "eslint": "eslint --fix --no-eslintrc --c .eslintrc.json '*.{js,json,ts,tsx}' '{packages,apps}/**/*.{ts,tsx}'",
     "coverage": "vitest --coverage",
-    "ci:test": "vitest --run"
+    "test": "pnpm run '/^test:.*/'",
+    "test:types-packages": "find packages -mindepth 2 -maxdepth 2 -name 'tsconfig.json' | xargs -I % pnpm tsc --p % --noEmit",
+    "test:types-apps": "find apps -mindepth 2 -maxdepth 2 -name 'tsconfig.json' | xargs -I % pnpm tsc --p % --noEmit",
+    "test:spec": "vitest run"
   },
   "engines": {
     "node": ">=12.20.0"
