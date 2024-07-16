@@ -7,13 +7,13 @@
 
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
 import {
-  createRuntime,
-  wgsl,
-  u32,
   ProgramBuilder,
-  makeArena,
   arrayOf,
+  createRuntime,
+  makeArena,
+  u32,
   vec2u,
+  wgsl,
 } from 'wigsill';
 
 const runtime = await createRuntime();
@@ -23,7 +23,7 @@ const canvas = await addElement('canvas', { width: 500, height: 500 });
 
 const context = canvas.getContext('webgpu');
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-context.configure({
+context!.configure({
   device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
@@ -45,7 +45,7 @@ const Options = {
 };
 
 const BrushTypes = ['wall', 'source', 'drain', 'water'];
-function encodeBrushType(brushType) {
+function encodeBrushType(brushType: (typeof BrushTypes)[number]) {
   switch (brushType) {
     case 'wall':
       return 1 << 24;
@@ -469,7 +469,7 @@ function resetGameData() {
 
   render = () => {
     device.queue.writeBuffer(debugInfoBuffer, 0, new Uint32Array([0]), 0, 1);
-    const view = context.getCurrentTexture().createView();
+    const view = context!.getCurrentTexture().createView();
     const renderPass = {
       colorAttachments: [
         {

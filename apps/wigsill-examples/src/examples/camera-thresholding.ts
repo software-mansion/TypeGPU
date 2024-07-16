@@ -4,15 +4,14 @@
 }
 */
 
-import { f32, makeArena, ProgramBuilder, wgsl, createRuntime } from 'wigsill';
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
+import { ProgramBuilder, createRuntime, f32, makeArena, wgsl } from 'wigsill';
 
 // Layout
 const [video, canvas] = await Promise.all([
   addElement('video', { width: 500, height: 375 }),
   addElement('canvas', { width: 500, height: 375 }),
 ]);
-
 const thresholdData = wgsl.memory(f32).alias('threshold');
 
 const shaderCode = wgsl`
@@ -75,7 +74,7 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const runtime = await createRuntime();
 const device = runtime.device;
 
-context.configure({
+context!.configure({
   device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
@@ -142,8 +141,10 @@ const sampler = device.createSampler({
 
 // UI
 
-addParameter('threshold', { initial: 0.4, min: 0, max: 1 }, (threshold) =>
-  thresholdData.write(runtime, threshold),
+addParameter(
+  'threshold',
+  { initial: 0.4, min: 0, max: 1 },
+  (threshold: number) => thresholdData.write(runtime, threshold),
 );
 
 onFrame(() => {
@@ -174,7 +175,7 @@ onFrame(() => {
   const passEncoder = commandEncoder.beginRenderPass({
     colorAttachments: [
       {
-        view: context.getCurrentTexture().createView(),
+        view: context!.getCurrentTexture().createView(),
         clearValue: [0, 0, 0, 1],
         loadOp: 'clear',
         storeOp: 'store',
