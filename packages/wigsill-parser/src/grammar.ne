@@ -54,10 +54,10 @@ export type Statement = string; // TODO: Define this
 # entry
 
 @{%
-export type TranslationUnit = { declarations: GlobalDecl[] };
+export type TranslationUnit = { type: 'translation_unit', declarations: GlobalDecl[] };
 %}
 # translation_unit -> global_directive:* global_decl:*
-translation_unit -> _ (global_decl _):* {% ([ , declarationTuples]) => ({ declarations: declarationTuples.map((tuple) => tuple[0]) }) %}
+translation_unit -> _ (global_decl _):* {% ([ , declarationTuples]) => ({ type: 'translation_unit', declarations: declarationTuples.map((tuple) => tuple[0]) }) %}
 
 global_directive -> "else" # TODO: Implement the global directive non-terminal
 
