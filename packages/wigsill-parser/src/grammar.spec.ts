@@ -60,9 +60,11 @@ describe('function declaration', () => {
   });
 
   it('parses function with one statement', () => {
-    const code = `fn example() {
-    if true {}
-  }`;
+    const code = `
+      fn example() {
+        if true {}
+      }
+    `;
 
     const expected = {
       type: 'translation_unit',

@@ -8,10 +8,10 @@ const lexer = moo.compile({
   NL:      { match: /\\n/, lineBreaks: true },
   comment: /\\/\\/.*?$/,
   semi: ";",
+  decimal_float_literal: /0[fh]|[1-9][0-9]*[fh]|[0-9]*\\.[0-9]+(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+\\.[0-9]*(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+[eE][+-]?[0-9]+[fh]?/,
+  hex_float_literal: /0[xX][0-9a-fA-F]*\\.[0-9a-fA-F]+(?:[pP][+-]?[0-9]+[fh]?)?|0[xX][0-9a-fA-F]+\\.[0-9a-fA-F]*(?:[pP][+-]?[0-9]+[fh]?)?|0[xX][0-9a-fA-F]+[pP][+-]?[0-9]+[fh]?/,
   decimal_int_literal: { match: /(?:0|[1-9][0-9]*)[iu]?/ },
   hex_int_literal: { match: /0[xX][0-9a-fA-F]+[iu]?/ },
-  decimal_float_literal: /0[fh]|[1-9][0-9]*[fh]|[0-9]*\.[0-9]+(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+\.[0-9]*(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+[eE][+-]?[0-9]+[fh]?/,
-  hex_float_literal: /0[xX][0-9a-fA-F]*\.[0-9a-fA-F]+(?:[pP][+-]?[0-9]+[fh]?)?|0[xX][0-9a-fA-F]+\.[0-9a-fA-F]*(?:[pP][+-]?[0-9]+[fh]?)?|0[xX][0-9a-fA-F]+[pP][+-]?[0-9]+[fh]?/,
 
   // WGSL spec apparently accepts plenty of Unicode, but lets limit it to just ASCII for now.
   ident_pattern: {
@@ -50,6 +50,7 @@ const lexer = moo.compile({
   percent: '%',
   bang: '!',
   tilde: '~',
+  period: '.',
 });
 
 // Ignoring whitespace and comments
