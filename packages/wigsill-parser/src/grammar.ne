@@ -6,17 +6,25 @@ import moo from 'moo';
 const lexer = moo.compile({
   WS:      /[ \\t\\v\\f]+/,
   NL:      { match: /\\n/, lineBreaks: true },
-  keyword: ['if', 'else'],
   comment: /\\/\\/.*?$/,
   semi: ";",
-  bool_literal: ['true', 'false'],
   decimal_int_literal: { match: /(?:0|[1-9][0-9]*)[iu]?/ },
   hex_int_literal: { match: /0[xX][0-9a-fA-F]+[iu]?/ },
   decimal_float_literal: /0[fh]|[1-9][0-9]*[fh]|[0-9]*\.[0-9]+(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+\.[0-9]*(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+[eE][+-]?[0-9]+[fh]?/,
   hex_float_literal: /0[xX][0-9a-fA-F]*\.[0-9a-fA-F]+(?:[pP][+-]?[0-9]+[fh]?)?|0[xX][0-9a-fA-F]+\.[0-9a-fA-F]*(?:[pP][+-]?[0-9]+[fh]?)?|0[xX][0-9a-fA-F]+[pP][+-]?[0-9]+[fh]?/,
 
   // WGSL spec apparently accepts plenty of Unicode, but lets limit it to just ASCII for now.
-  ident_pattern: /\\w+/,
+  ident_pattern: {
+    match: /[a-z_][a-z_0-9]+/,
+    type: moo.keywords({
+      if: 'if',
+      else: 'else',
+      return: 'return',
+      break: 'break',
+      'true': 'true',
+      'false': 'false'
+    })
+  },
   swizzle_name: { match: /[rgba]|[rgba][rgba]|[rgba][rgba][rgba]|[rgba][rgba][rgba][rgba]|[xyzw]|[xyzw][xyzw]|[xyzw][xyzw][xyzw]|[xyzw][xyzw][xyzw][xyzw]/ },
   shift_left: '<<',
   shift_right: '>>',
@@ -45,6 +53,13 @@ const lexer = moo.compile({
   tilde: '~',
 });
 
+// Ignoring whitespace and comments
+lexer.next = (next => () => {
+  let tok;
+  while ((tok = next.call(lexer)) && (tok.type === "comment" || tok.type === "WS" || tok.type === "NL")) {}
+  return tok;
+})(lexer.next);
+
 export type Statement = string; // TODO: Define this
 
 %}
@@ -57,18 +72,18 @@ export type Statement = string; // TODO: Define this
 export type TranslationUnit = { type: 'translation_unit', declarations: GlobalDecl[] };
 %}
 # translation_unit -> global_directive:* global_decl:*
-translation_unit -> _ (global_decl _):* {% ([ , declarationTuples]) => ({ type: 'translation_unit', declarations: declarationTuples.map((tuple) => tuple[0]) }) %}
+translation_unit -> global_decl:* {% ([declarations]) => ({ type: 'translation_unit', declarations }) %}
 
-global_directive -> "else" # TODO: Implement the global directive non-terminal
+# global_directive -> null # TODO: Implement the global directive non-terminal
 
 @{%
 export type GlobalDecl = null | FunctionDecl;
 %}
 global_decl ->
     ";" {% () => null %}
-  # | global_variable_decl _ ";"
-  # | global_value_decl _ ";"
-  # | type_alias_decl _ ";"
+  # | global_variable_decl ";"
+  # | global_value_decl ";"
+  # | type_alias_decl ";"
   # | struct_decl
     | function_decl {% id %}
   # | const_assert_statement ";"
@@ -89,22 +104,22 @@ const_assert_statement -> null # TODO
 export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement };
 
 export type FunctionHeader = ReturnType<typeof pp_function_header>;
-function pp_function_header([ , , identifier]: [any, any, Ident]) {
+function pp_function_header([ , identifier]: [any, Ident]) {
   return { type: 'function_header' as const, identifier: identifier.value };
 }
 %}
 # TODO: Add support for attributes
-function_decl -> function_header _ compound_statement {% ([header, , body]) => ({ type: 'function_decl', header, body }) %}
+function_decl -> function_header compound_statement {% ([header, body]) => ({ type: 'function_decl', header, body }) %}
 # TODO: Add param list
 # TODO: Add return type
-function_header -> "fn" __ ident _ "(" _ ")" {% pp_function_header %}
+function_header -> "fn" ident "(" ")" {% pp_function_header %}
 
 @{%
 export type CompoundStatement = Statement[];
 
 %}
 
-compound_statement -> "{" _ statement:* _ "}" {% ([ , , statements]) => statements %}
+compound_statement -> "{" statement:* "}" {% ([ , statements]) => statements %}
 
 # TODO: Add all statements
 statement ->
@@ -138,7 +153,9 @@ literal ->
 
 int_literal -> %decimal_int_literal {% pp_literal %} | %hex_int_literal {% pp_literal %}
 float_literal -> %decimal_float_literal {% pp_literal %} | %hex_float_literal {% pp_literal %}
-bool_literal -> %bool_literal {% pp_literal %}
+bool_literal ->
+    "true" {% () => ({ type: 'bool_literal', value: 'true' }) %}
+  | "false" {% () => ({ type: 'bool_literal', value: 'false' }) %}
 
 #
 # Expressions
@@ -159,14 +176,14 @@ primary_expression ->
   literal {% id %}
   | paren_expression {% id %}
 
-# call_expression -> template_elaborated_ident _ argument_expression_list
+# call_expression -> template_elaborated_ident argument_expression_list
 
 @{%
 export type ParenExpression = { type: 'paren_expression', expression: Expression };
 
 %}
 
-paren_expression -> "(" _ expression _ ")" {% ([ , , expression]) => ({ type: 'paren_expression', expression }) %}
+paren_expression -> "(" expression ")" {% ([ , expression]) => ({ type: 'paren_expression', expression }) %}
 
 @{%
 export type Accessor =
@@ -177,10 +194,10 @@ export type Accessor =
 %}
 
 component_or_swizzle_specifier ->
-    "[" _ expression _ "]" _ component_or_swizzle_specifier:? {% ([ , , index, , , , next]) => ({ type: 'index_accessor', index, next }) %}
+    "[" expression "]" component_or_swizzle_specifier:? {% ([ , index, , next]) => ({ type: 'index_accessor', index, next }) %}
     # TODO: Use member_ident instead of ident if necessary
-  | "." ident _ component_or_swizzle_specifier:? {% ([ , ident, , next]) => ({ type: 'member_accessor', member, next }) %}
-  | "." swizzle _ component_or_swizzle_specifier:?  {% ([ , swizzle, , next]) => ({ type: 'swizzle_accessor', swizzle, next }) %}
+  | "." ident component_or_swizzle_specifier:? {% ([ , ident, next]) => ({ type: 'member_accessor', member, next }) %}
+  | "." swizzle component_or_swizzle_specifier:?  {% ([ , swizzle, next]) => ({ type: 'swizzle_accessor', swizzle, next }) %}
 
 @{%
 export type SingularExpression =
@@ -191,7 +208,7 @@ export type SingularExpression =
 
 singular_expression ->
     primary_expression {% id %}
-  | primary_expression _ component_or_swizzle_specifier  {% ([expression, , accessor]) => ({ type: 'accessor', expression, accessor }) %}
+  | primary_expression component_or_swizzle_specifier  {% ([expression, accessor]) => ({ type: 'accessor', expression, accessor }) %}
 
 @{%
 export type UnaryExpression =
@@ -206,11 +223,11 @@ export type UnaryExpression =
 
 unary_expression ->
     singular_expression {% id %}
-  | "-" _ unary_expression {% ([ , , expression]) => ({ type: 'negate', expression }) %}
-  | "!" _ unary_expression {% ([ , , expression]) => ({ type: 'logic_not', expression }) %}
-  | "~" _ unary_expression {% ([ , , expression]) => ({ type: 'binary_not', expression }) %}
-  | "*" _ unary_expression {% ([ , , expression]) => ({ type: 'deref', expression }) %}
-  | "&" _ unary_expression {% ([ , , expression]) => ({ type: 'ref', expression }) %}
+  | "-" unary_expression {% ([ , expression]) => ({ type: 'negate', expression }) %}
+  | "!" unary_expression {% ([ , expression]) => ({ type: 'logic_not', expression }) %}
+  | "~" unary_expression {% ([ , expression]) => ({ type: 'binary_not', expression }) %}
+  | "*" unary_expression {% ([ , expression]) => ({ type: 'deref', expression }) %}
+  | "&" unary_expression {% ([ , expression]) => ({ type: 'ref', expression }) %}
 
 multiplicative_operator ->
     "*" {% () => 'multiply' %}
@@ -263,21 +280,35 @@ type BitwiseExpression =
 
 multiplicative_expression ->
     unary_expression {% id %}
-  | multiplicative_expression _ multiplicative_operator _ unary_expression {% ([lhs, , type, , rhs]) => ({ type, lhs, rhs }) %}
+  | multiplicative_expression multiplicative_operator unary_expression {% ([lhs, type, rhs]) => ({ type, lhs, rhs }) %}
 additive_expression ->
     multiplicative_expression {% id %}
-  | additive_expression _ additive_operator _ multiplicative_expression {% ([lhs, , type, , rhs]) => ({ type, lhs, rhs }) %}
-shift_expression -> additive_expression {% id %} | unary_expression _ shift_operator _ unary_expression {% ([lhs, , type, , rhs]) => ({ type, lhs, rhs }) %}
-relational_expression -> shift_expression {% id %} | shift_expression _ relational_operator _ shift_expression {% ([lhs, , type, , rhs]) => ({ type, lhs, rhs }) %}
-short_circuit_and_expression -> relational_expression {% id %} | short_circuit_and_expression _ "&&" _ relational_expression {% ([lhs, , , , rhs]) => ({ type: 'logic_and', lhs, rhs }) %}
-short_circuit_or_expression -> relational_expression {% id %} | short_circuit_or_expression _ "||" _ relational_expression {% ([lhs, , , , rhs]) => ({ type: 'logic_or', lhs, rhs }) %}
-binary_and_expression -> unary_expression {% id %} | binary_and_expression _ "&" _ unary_expression {% ([lhs, , , , rhs]) => ({ type: 'binary_and', lhs, rhs }) %}
-binary_or_expression -> unary_expression {% id %} | binary_or_expression _ "|" _ unary_expression {% ([lhs, , , , rhs]) => ({ type: 'binary_or', lhs, rhs }) %}
-binary_xor_expression -> unary_expression {% id %} | binary_xor_expression _ "^" _ unary_expression {% ([lhs, , , , rhs]) => ({ type: 'binary_xor', lhs, rhs }) %}
+  | additive_expression additive_operator multiplicative_expression {% ([lhs, type, rhs]) => ({ type, lhs, rhs }) %}
+shift_expression ->
+    additive_expression {% id %}
+  | unary_expression shift_operator unary_expression {% ([lhs, type, rhs]) => ({ type, lhs, rhs }) %}
+relational_expression ->
+    shift_expression {% id %}
+  | shift_expression relational_operator shift_expression {% ([lhs, type, rhs]) => ({ type, lhs, rhs }) %}
+short_circuit_and_expression ->
+    relational_expression {% id %}
+  | short_circuit_and_expression "&&" relational_expression {% ([lhs, , rhs]) => ({ type: 'logic_and', lhs, rhs }) %}
+short_circuit_or_expression ->
+    relational_expression {% id %}
+  | short_circuit_or_expression "||" relational_expression {% ([lhs, , rhs]) => ({ type: 'logic_or', lhs, rhs }) %}
+binary_and_expression ->
+    unary_expression {% id %}
+  | binary_and_expression "&" unary_expression {% ([lhs, , rhs]) => ({ type: 'binary_and', lhs, rhs }) %}
+binary_or_expression ->
+    unary_expression {% id %}
+  | binary_or_expression "|" unary_expression {% ([lhs, , rhs]) => ({ type: 'binary_or', lhs, rhs }) %}
+binary_xor_expression ->
+    unary_expression {% id %}
+  | binary_xor_expression "^" unary_expression {% ([lhs, , rhs]) => ({ type: 'binary_xor', lhs, rhs }) %}
 bitwise_expression ->
-    binary_and_expression _ "&" _ unary_expression {% ([lhs, , , , rhs]) => ({ type: 'binary_and', lhs, rhs }) %}
-  | binary_or_expression _ "|" _ unary_expression {% ([lhs, , , , rhs]) => ({ type: 'binary_or', lhs, rhs }) %}
-  | binary_xor_expression _ "^" _ unary_expression {% ([lhs, , , , rhs]) => ({ type: 'binary_xor', lhs, rhs }) %}
+    binary_and_expression "&" unary_expression {% ([lhs, , rhs]) => ({ type: 'binary_and', lhs, rhs }) %}
+  | binary_or_expression "|" unary_expression {% ([lhs, , rhs]) => ({ type: 'binary_or', lhs, rhs }) %}
+  | binary_xor_expression "^" unary_expression {% ([lhs, , rhs]) => ({ type: 'binary_xor', lhs, rhs }) %}
 
 @{%
 export type Expression =
@@ -290,28 +321,17 @@ export type Expression =
 # TODO: Add all expressions
 expression ->
     relational_expression {% id %}
-  | short_circuit_and_expression _ "&&" _ relational_expression {% ([lhs, , , , rhs]) => ({ type: 'logic_and', lhs, rhs }) %}
-  | short_circuit_or_expression _ "||" _ relational_expression {% ([lhs, , , , rhs]) => ({ type: 'logic_or', lhs, rhs }) %}
+  | short_circuit_and_expression "&&" relational_expression {% ([lhs, , rhs]) => ({ type: 'logic_and', lhs, rhs }) %}
+  | short_circuit_or_expression "||" relational_expression {% ([lhs, , rhs]) => ({ type: 'logic_or', lhs, rhs }) %}
   | bitwise_expression {% id %}
 
 @{%
 
-export type IfStatement = ReturnType<typeof pp_if_statement>;
-function pp_if_statement([if_clause, , else_if_clauses, , else_clause]: [IfClause, any, [ElseIfClause, any][], any, ElseClause | null]) {
-  return { type: 'if_statement' as const, if_clause, else_if_clauses: else_if_clauses.map(tuple => tuple[0]), else_clause };
-}
+export type IfStatement = { type: 'if_statement', if_clause: IfClause, else_if_clauses: ElseIfClause[], else_clause: ElseClause | null };
+export type IfClause = { type: 'if_clause', expression: Expression, body: CompoundStatement };
+export type ElseIfClause = { type: 'else_if_clause', expression: Expression, body: CompoundStatement };
+export type ElseClause = { type: 'else_clause', body: CompoundStatement };
 
-type IfClause = ReturnType<typeof pp_if_clause>;
-function pp_if_clause([ , , expression, , body]: [any, any, Expression, any, CompoundStatement]) {
-  return { type: 'if_clause' as const, expression, body };
-}
-
-type ElseIfClause = ReturnType<typeof pp_else_if_clause>;
-function pp_else_if_clause([ , , , , expression, , body]: [any, any, any, any, Expression, any, CompoundStatement]) {
-  return { type: 'else_if_clause' as const, expression, body };
-}
-
-type ElseClause = ReturnType<typeof pp_else_clause>;
 function pp_else_clause([ , , body]: [any, any, CompoundStatement]) {
   return { type: 'else_clause' as const, body };
 }
@@ -319,15 +339,10 @@ function pp_else_clause([ , , body]: [any, any, CompoundStatement]) {
 %}
 
 # TODO: Add support for attributes
-if_statement -> if_clause _ (else_if_clause _):* _ else_clause:? {% pp_if_statement %}
+if_statement -> if_clause else_if_clause:* else_clause:? {% ([if_clause, else_if_clauses, else_clause]) => ({ type: 'if_statement' as const, if_clause, else_if_clauses, else_clause }) %}
 
-if_clause -> "if" _ expression _ compound_statement {% pp_if_clause %}
+if_clause -> "if" expression compound_statement {% ([ , expression, body]) => ({ type: 'if_clause', expression, body }) %}
 
-else_if_clause -> "else" __ "if" _ expression _ compound_statement {% pp_else_if_clause %}
+else_if_clause -> "else" "if" expression compound_statement {% ([ , , expression, body]) => ({ type: 'else_if_clause', expression, body }) %}
 
-else_clause -> "else" _ compound_statement {% pp_else_clause %}
-
-# whitespace: `_` is optional, `__` is mandatory.
-_  -> wschar:* {% (d) => null %}
-__ -> wschar:+ {% (d) => null %}
-wschar -> %WS|%NL {% id %}
+else_clause -> "else" compound_statement {% ([, body]) => ({ type: 'else_clause', body }) %}
