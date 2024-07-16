@@ -3,9 +3,11 @@
 	"organizeImports": {
 		"enabled": true
 	},
+	"files": {
+		"ignore": ["**/dist/*", "**/coverage/*", "**/*.d.ts"]
+	},
 	"linter": {
 		"enabled": true,
-		"ignore": ["**/dist/*", "./packages/wigsill/coverage/**/*", "**/*.d.ts"],
 		"rules": {
 			"recommended": true
 		}
