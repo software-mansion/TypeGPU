@@ -4,13 +4,13 @@
 }
 */
 
-import { makeArena, ProgramBuilder, u32, wgsl, createRuntime } from 'wigsill';
 import {
   addElement,
   addParameter,
   onCleanup,
   onFrame,
 } from '@wigsill/example-toolkit';
+import { ProgramBuilder, createRuntime, makeArena, u32, wgsl } from 'wigsill';
 
 const runtime = await createRuntime();
 const device = runtime.device;

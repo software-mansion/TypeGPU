@@ -7,13 +7,13 @@
 
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
 import {
-  createRuntime,
-  wgsl,
-  u32,
   ProgramBuilder,
-  makeArena,
   arrayOf,
+  createRuntime,
+  makeArena,
+  u32,
   vec2u,
+  wgsl,
 } from 'wigsill';
 
 const runtime = await createRuntime();

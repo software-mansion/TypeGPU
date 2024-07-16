@@ -4,8 +4,8 @@
 }
 */
 
-import { f32, makeArena, ProgramBuilder, wgsl, createRuntime } from 'wigsill';
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
+import { ProgramBuilder, createRuntime, f32, makeArena, wgsl } from 'wigsill';
 
 // Layout
 const [video, canvas] = await Promise.all([

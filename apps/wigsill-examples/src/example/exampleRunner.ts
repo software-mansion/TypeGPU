@@ -3,10 +3,10 @@ import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
 import { GUI } from 'dat.gui';
 import { filter, isNonNull, map, pipe } from 'remeda';
-import { ExampleState } from './exampleState';
-import { LayoutInstance } from './layout';
 import { transpileModule } from 'typescript';
 import { tsCompilerOptions } from '../embeddedTypeScript';
+import { ExampleState } from './exampleState';
+import { LayoutInstance } from './layout';
 
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.

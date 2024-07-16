@@ -1,5 +1,4 @@
 import { useCallback, useRef, useState } from 'react';
-import { ExecutionCancelledError } from './errors';
 import type {
   AddElement,
   ElementDef,
@@ -7,6 +6,7 @@ import type {
   ElementType,
   LayoutDef,
 } from '@wigsill/example-toolkit';
+import { ExecutionCancelledError } from './errors';
 
 /**
  * One per example instance.

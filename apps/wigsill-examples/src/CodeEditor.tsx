@@ -1,10 +1,10 @@
 import Editor, { Monaco } from '@monaco-editor/react';
 import webgpuTypes from '@webgpu/types/dist/index.d.ts?raw';
-import wigsill from './types/wigsill-types.d.ts?raw';
-import toolkitTypes from './types/example-toolkit.d.ts?raw';
 import typedBinary from 'typed-binary/dist/index.d.ts?raw';
 import useEvent from './common/useEvent';
 import { tsCompilerOptions } from './embeddedTypeScript';
+import toolkitTypes from './types/example-toolkit.d.ts?raw';
+import wigsill from './types/wigsill-types.d.ts?raw';
 
 function handleEditorWillMount(monaco: Monaco) {
   const tsDefaults = monaco?.languages.typescript.typescriptDefaults;
