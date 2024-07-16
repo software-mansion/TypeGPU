@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { BoolLiteral } from './grammar';
-import { parse } from './index';
+import type { BoolLiteral } from '../src/grammar';
+import { parse } from '../src/index';
 
 describe('bool_literal', () => {
   it('parses "true"', () => {

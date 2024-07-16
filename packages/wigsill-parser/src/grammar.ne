@@ -60,8 +60,6 @@ lexer.next = (next => () => {
   return tok;
 })(lexer.next);
 
-export type Statement = string; // TODO: Define this
-
 %}
 
 @lexer lexer
@@ -102,7 +100,6 @@ export type Ident = { type: 'ident', value: string };
 
 %}
 ident -> %ident_pattern {% ([token]) => ({ type: 'ident', value: token.value }) %}
-# member_ident -> %ident_pattern {% id %}
 
 global_variable_decl -> "if" # TODO
 global_value_decl -> null # TODO
@@ -133,18 +130,15 @@ template_arg_comma_list ->
 
 @{%
 export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement };
-
-export type FunctionHeader = ReturnType<typeof pp_function_header>;
-function pp_function_header([ , identifier]: [any, Ident]) {
-  return { type: 'function_header' as const, identifier: identifier.value };
-}
+export type FunctionHeader = { type: 'function_header', identifier: string };
 
 %}
 # TODO: Add support for attributes
 function_decl -> function_header compound_statement {% ([header, body]) => ({ type: 'function_decl', header, body }) %}
 # TODO: Add param list
 # TODO: Add return type
-function_header -> "fn" ident "(" ")" {% pp_function_header %}
+function_header ->
+  "fn" ident "(" ")" {% ([ , identifier]) => ({ type: 'function_header', identifier: identifier.value }) %}
 
 #
 # Statements
@@ -164,11 +158,15 @@ export type CompoundStatement = Statement[];
 
 compound_statement -> "{" statement:* "}" {% ([ , statements]) => statements.filter((val) => val !== null) %}
 
+@{%
+export type Statement = null | ReturnStatement | CallStatement | IfStatement;
+
+%}
 # TODO: Add all statements
 statement ->
     ";" {% () => null %}
   | return_statement ";" {% ([val]) => val %}
-  | func_call_statement ";" {% ([val]) => val %}
+  | call_statement ";" {% ([val]) => val %}
   | if_statement {% id %}
 @{%
 export type Swizzle = { type: 'swizzle', value: string };
@@ -176,10 +174,10 @@ export type Swizzle = { type: 'swizzle', value: string };
 %}
 
 @{%
-export type FuncCallStatement = { type: 'call_statement', ident: TemplateElaboratedIdent, args: Expression[] };
+export type CallStatement = { type: 'call_statement', ident: TemplateElaboratedIdent, args: Expression[] };
 
 %}
-func_call_statement -> call_phrase {% ([phrase]) => ({ type: 'call_statement', ident: phrase.ident, args: phrase.args }) %}
+call_statement -> call_phrase {% ([phrase]) => ({ type: 'call_statement', ident: phrase.ident, args: phrase.args }) %}
 
 swizzle -> %swizzle_name {% ([value]) => ({ type: 'swizzle', value }) %}
 
@@ -239,37 +237,26 @@ bool_literal ->
 
 @{%
 export type PrimaryExpression =
-// template_elaborated_ident
-// | call_expression
-    Literal
+    TemplateElaboratedIdent
+  | CallExpression
+  | Literal
   | ParenExpression
 
 %}
 
 primary_expression ->
-  # template_elaborated_ident
-  # | call_expression
-  literal {% id %}
+  template_elaborated_ident {% id %}
+  | call_expression {% id %}
+  | literal {% id %}
   | paren_expression {% id %}
 
-@{%
-export type CallExpression = { type: 'function_call', ident: TemplateElaboratedIdent, args: ArgumentExpressionList };
-
-%}
-
+@{% export type CallExpression = { type: 'call_expression', ident: TemplateElaboratedIdent, args: ArgumentExpressionList }; %}
 call_expression -> call_phrase {% ([phrase]) => ({ type: 'call_expression', ident: phrase.ident, args: phrase.args }) %}
 
-@{%
-export type ParenExpression = { type: 'paren_expression', expression: Expression };
-
-%}
-
+@{% export type ParenExpression = { type: 'paren_expression', expression: Expression }; %}
 paren_expression -> "(" expression ")" {% ([ , expression]) => ({ type: 'paren_expression', expression }) %}
 
-@{%
-export type ArgumentExpressionList = Expression[];
-
-%}
+@{% export type ArgumentExpressionList = Expression[]; %}
 argument_expression_list ->
   "(" expression_comma_list:? ")" {% ([ , list]) => list ?? [] %}
 
@@ -279,7 +266,7 @@ expression_comma_list ->
 @{%
 export type Accessor =
     { type: 'index_accessor', index: Expression, next: Accessor | null }
-  | { type: 'member_accessor', member: Ident, next: Accessor | null }
+  | { type: 'member_accessor', member: string, next: Accessor | null }
   | { type: 'swizzle_accessor', swizzle: Swizzle, next: Accessor | null };
 
 %}
@@ -287,7 +274,7 @@ export type Accessor =
 component_or_swizzle_specifier ->
     "[" expression "]" component_or_swizzle_specifier:? {% ([ , index, , next]) => ({ type: 'index_accessor', index, next }) %}
     # TODO: Use member_ident instead of ident if necessary
-  | "." ident component_or_swizzle_specifier:? {% ([ , ident, next]) => ({ type: 'member_accessor', member, next }) %}
+  | "." ident component_or_swizzle_specifier:? {% ([ , ident, next]) => ({ type: 'member_accessor', member: ident.value, next }) %}
   | "." swizzle component_or_swizzle_specifier:?  {% ([ , swizzle, next]) => ({ type: 'swizzle_accessor', swizzle, next }) %}
 
 @{%

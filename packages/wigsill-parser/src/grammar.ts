@@ -71,8 +71,6 @@ lexer.next = (next => () => {
   return tok;
 })(lexer.next);
 
-export type Statement = string; // TODO: Define this
-
 
 
 export type Main = TranslationUnit | Statement | Expression;
@@ -98,11 +96,7 @@ export type TemplateList = Expression[];
 
 
 export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement };
-
-export type FunctionHeader = ReturnType<typeof pp_function_header>;
-function pp_function_header([ , identifier]: [any, Ident]) {
-  return { type: 'function_header' as const, identifier: identifier.value };
-}
+export type FunctionHeader = { type: 'function_header', identifier: string };
 
 
 
@@ -114,11 +108,15 @@ export type CompoundStatement = Statement[];
 
 
 
+export type Statement = null | ReturnStatement | CallStatement | IfStatement;
+
+
+
 export type Swizzle = { type: 'swizzle', value: string };
 
 
 
-export type FuncCallStatement = { type: 'call_statement', ident: TemplateElaboratedIdent, args: Expression[] };
+export type CallStatement = { type: 'call_statement', ident: TemplateElaboratedIdent, args: Expression[] };
 
 
 
@@ -142,28 +140,19 @@ export type BoolLiteral = { type: 'bool_literal', value: 'true' | 'false' };
 
 
 export type PrimaryExpression =
-// template_elaborated_ident
-// | call_expression
-    Literal
+    TemplateElaboratedIdent
+  | CallExpression
+  | Literal
   | ParenExpression
 
 
-
-export type CallExpression = { type: 'function_call', ident: TemplateElaboratedIdent, args: ArgumentExpressionList };
-
-
-
-export type ParenExpression = { type: 'paren_expression', expression: Expression };
-
-
-
-export type ArgumentExpressionList = Expression[];
-
-
+ export type CallExpression = { type: 'call_expression', ident: TemplateElaboratedIdent, args: ArgumentExpressionList }; 
+ export type ParenExpression = { type: 'paren_expression', expression: Expression }; 
+ export type ArgumentExpressionList = Expression[]; 
 
 export type Accessor =
     { type: 'index_accessor', index: Expression, next: Accessor | null }
-  | { type: 'member_accessor', member: Ident, next: Accessor | null }
+  | { type: 'member_accessor', member: string, next: Accessor | null }
   | { type: 'swizzle_accessor', swizzle: Swizzle, next: Accessor | null };
 
 
@@ -274,7 +263,7 @@ const grammar: Grammar = {
     {"name": "template_arg_comma_list$ebnf$2", "symbols": [], "postprocess": () => null},
     {"name": "template_arg_comma_list", "symbols": ["expression", "template_arg_comma_list$ebnf$1", "template_arg_comma_list$ebnf$2"], "postprocess": ([first, rest]) => [first, ...rest.map(tuple => tuple[1])]},
     {"name": "function_decl", "symbols": ["function_header", "compound_statement"], "postprocess": ([header, body]) => ({ type: 'function_decl', header, body })},
-    {"name": "function_header", "symbols": [{"literal":"fn"}, "ident", {"literal":"("}, {"literal":")"}], "postprocess": pp_function_header},
+    {"name": "function_header", "symbols": [{"literal":"fn"}, "ident", {"literal":"("}, {"literal":")"}], "postprocess": ([ , identifier]) => ({ type: 'function_header', identifier: identifier.value })},
     {"name": "return_statement$ebnf$1", "symbols": ["expression"], "postprocess": id},
     {"name": "return_statement$ebnf$1", "symbols": [], "postprocess": () => null},
     {"name": "return_statement", "symbols": [{"literal":"return"}, "return_statement$ebnf$1"], "postprocess": ([ , expression]) => ({ type: 'return_statement', expression })},
@@ -283,9 +272,9 @@ const grammar: Grammar = {
     {"name": "compound_statement", "symbols": [{"literal":"{"}, "compound_statement$ebnf$1", {"literal":"}"}], "postprocess": ([ , statements]) => statements.filter((val) => val !== null)},
     {"name": "statement", "symbols": [{"literal":";"}], "postprocess": () => null},
     {"name": "statement", "symbols": ["return_statement", {"literal":";"}], "postprocess": ([val]) => val},
-    {"name": "statement", "symbols": ["func_call_statement", {"literal":";"}], "postprocess": ([val]) => val},
+    {"name": "statement", "symbols": ["call_statement", {"literal":";"}], "postprocess": ([val]) => val},
     {"name": "statement", "symbols": ["if_statement"], "postprocess": id},
-    {"name": "func_call_statement", "symbols": ["call_phrase"], "postprocess": ([phrase]) => ({ type: 'call_statement', ident: phrase.ident, args: phrase.args })},
+    {"name": "call_statement", "symbols": ["call_phrase"], "postprocess": ([phrase]) => ({ type: 'call_statement', ident: phrase.ident, args: phrase.args })},
     {"name": "swizzle", "symbols": [(lexer.has("swizzle_name") ? {type: "swizzle_name"} : swizzle_name)], "postprocess": ([value]) => ({ type: 'swizzle', value })},
     {"name": "if_statement$ebnf$1", "symbols": []},
     {"name": "if_statement$ebnf$1", "symbols": ["if_statement$ebnf$1", "else_if_clause"], "postprocess": (d) => d[0].concat([d[1]])},
@@ -304,6 +293,8 @@ const grammar: Grammar = {
     {"name": "float_literal", "symbols": [(lexer.has("hex_float_literal") ? {type: "hex_float_literal"} : hex_float_literal)], "postprocess": ([token]) => ({ type: 'float_literal', value: token.value })},
     {"name": "bool_literal", "symbols": [{"literal":"true"}], "postprocess": () => ({ type: 'bool_literal', value: 'true' })},
     {"name": "bool_literal", "symbols": [{"literal":"false"}], "postprocess": () => ({ type: 'bool_literal', value: 'false' })},
+    {"name": "primary_expression", "symbols": ["template_elaborated_ident"], "postprocess": id},
+    {"name": "primary_expression", "symbols": ["call_expression"], "postprocess": id},
     {"name": "primary_expression", "symbols": ["literal"], "postprocess": id},
     {"name": "primary_expression", "symbols": ["paren_expression"], "postprocess": id},
     {"name": "call_expression", "symbols": ["call_phrase"], "postprocess": ([phrase]) => ({ type: 'call_expression', ident: phrase.ident, args: phrase.args })},
@@ -322,7 +313,7 @@ const grammar: Grammar = {
     {"name": "component_or_swizzle_specifier", "symbols": [{"literal":"["}, "expression", {"literal":"]"}, "component_or_swizzle_specifier$ebnf$1"], "postprocess": ([ , index, , next]) => ({ type: 'index_accessor', index, next })},
     {"name": "component_or_swizzle_specifier$ebnf$2", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
     {"name": "component_or_swizzle_specifier$ebnf$2", "symbols": [], "postprocess": () => null},
-    {"name": "component_or_swizzle_specifier", "symbols": [{"literal":"."}, "ident", "component_or_swizzle_specifier$ebnf$2"], "postprocess": ([ , ident, next]) => ({ type: 'member_accessor', member, next })},
+    {"name": "component_or_swizzle_specifier", "symbols": [{"literal":"."}, "ident", "component_or_swizzle_specifier$ebnf$2"], "postprocess": ([ , ident, next]) => ({ type: 'member_accessor', member: ident.value, next })},
     {"name": "component_or_swizzle_specifier$ebnf$3", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
     {"name": "component_or_swizzle_specifier$ebnf$3", "symbols": [], "postprocess": () => null},
     {"name": "component_or_swizzle_specifier", "symbols": [{"literal":"."}, "swizzle", "component_or_swizzle_specifier$ebnf$3"], "postprocess": ([ , swizzle, next]) => ({ type: 'swizzle_accessor', swizzle, next })},

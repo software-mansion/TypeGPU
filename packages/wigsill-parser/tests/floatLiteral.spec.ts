@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { FloatLiteral } from './grammar';
-import { parse } from './index';
+import type { FloatLiteral } from '../src/grammar';
+import { parse } from '../src/index';
 
 describe('float_literal', () => {
   const EXAMPLE_FLOAT_LITERALS = [
