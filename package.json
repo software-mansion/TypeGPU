@@ -6,8 +6,8 @@
   "license": "MIT",
   "scripts": {
     "dev:test": "vitest",
-    "prettier": "prettier '*.{js,json,md}' '{src,tests,benchmarks,docs}/**/*.{ts,tsx,md,mdx}' --write",
-    "eslint": "eslint --fix --no-eslintrc --c .eslintrc.json '*.{js,json,ts,tsx}' '{packages,apps}/**/*.{ts,tsx}'",
+    "prettier": "prettier '{packages,apps}/**/*.{ts,tsx,md,mdx}' --write",
+    "eslint": "eslint --fix --no-eslintrc --c .eslintrc.json '{packages,apps}/**/*.{ts,tsx}'",
     "coverage": "vitest --coverage",
     "test": "pnpm run '/^test:.*/'",
     "test:types-packages": "find packages -mindepth 2 -maxdepth 2 -name 'tsconfig.json' | xargs -I % pnpm tsc --p % --noEmit",
