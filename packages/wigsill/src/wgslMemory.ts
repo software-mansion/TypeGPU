@@ -10,14 +10,15 @@ export class WGSLMemory<TSchema extends AnyWGSLDataType>
   implements WGSLItem, WGSLMemoryTrait
 {
   private fieldIdentifier = identifier();
-  public structFieldDefinition: WGSLCode;
 
   public debugLabel?: string | undefined;
   public readonly size: number;
   public readonly baseAlignment: number;
+  public usage: 'uniform' | 'storage' = 'uniform';
+  public flags: GPUBufferUsageFlags =
+    GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST;
 
   constructor(private readonly _typeSchema: TSchema) {
-    this.structFieldDefinition = code`${this.fieldIdentifier}: ${this._typeSchema},\n`;
     this.size = this._typeSchema.size;
     this.baseAlignment = this._typeSchema.byteAlignment;
   }
@@ -28,28 +29,26 @@ export class WGSLMemory<TSchema extends AnyWGSLDataType>
     return this;
   }
 
+  setFlags(flags: GPUBufferUsageFlags) {
+    this.flags = flags;
+    if (flags & GPUBufferUsage.STORAGE) {
+      this.usage = 'storage';
+    }
+    return this;
+  }
+
   /**
    * @throws {NotAllocatedMemoryError}
    */
   resolve(ctx: ResolutionCtx): string {
-    const arena = ctx.arenaFor(this);
-
-    if (!arena) {
-      throw new NotAllocatedMemoryError(this);
-    }
-
-    const result = `${ctx.resolve(arena.identifier)}.${ctx.resolve(this.fieldIdentifier)}`;
-
-    ctx.resolve(this.structFieldDefinition); // making sure all struct field dependencies are added
-
     // after resolving all dependencies, add memory.
-    ctx.addMemory(this);
+    ctx.registerMemory(this);
 
-    return result;
+    return ctx.resolve(this.fieldIdentifier);
   }
 
   write(runtime: WGSLRuntime, data: Parsed<TSchema>): boolean {
-    const memoryLocation = runtime.locateMemory(this);
+    const memoryLocation = runtime.bufferFor(this);
 
     if (!memoryLocation) {
       console.warn('Cannot write to the memory, as it has not been allocated');
@@ -59,14 +58,30 @@ export class WGSLMemory<TSchema extends AnyWGSLDataType>
     const hostBuffer = new ArrayBuffer(this.size);
     this._typeSchema.write(new BufferWriter(hostBuffer), data);
     runtime.device.queue.writeBuffer(
-      memoryLocation.gpuBuffer,
-      memoryLocation.offset,
+      memoryLocation,
+      0,
       hostBuffer,
       0,
       this.size,
     );
 
     return true;
+  }
+
+  definitionCode(bindingGroup: number, bindingIdx: number) {
+    let bindingType = 'storage, read';
+
+    if (this.usage === 'uniform') {
+      bindingType = 'uniform';
+    }
+
+    if (this.usage === 'storage') {
+      bindingType = 'storage, read_write';
+    }
+
+    return code`
+    @group(${bindingGroup}) @binding(${bindingIdx}) var<${bindingType}> ${this.fieldIdentifier}: ${this._typeSchema};
+    `;
   }
 }
 

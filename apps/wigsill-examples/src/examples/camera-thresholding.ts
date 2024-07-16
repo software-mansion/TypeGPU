@@ -5,7 +5,7 @@
 */
 
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
-import { ProgramBuilder, createRuntime, f32, makeArena, wgsl } from 'wigsill';
+import { ProgramBuilder, createRuntime, f32, wgsl } from 'wigsill';
 
 // Layout
 const [video, canvas] = await Promise.all([
@@ -80,16 +80,9 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const arena = makeArena({
-  bufferBindingType: 'uniform',
-  memoryEntries: [thresholdData],
-  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-});
-
 const program = new ProgramBuilder(runtime, shaderCode).build({
   bindingGroup: 1,
   shaderStage: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-  arenas: [arena],
 });
 
 const shaderModule = device.createShaderModule({

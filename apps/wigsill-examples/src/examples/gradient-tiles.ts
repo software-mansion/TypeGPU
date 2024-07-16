@@ -10,19 +10,13 @@ import {
   onCleanup,
   onFrame,
 } from '@wigsill/example-toolkit';
-import { ProgramBuilder, createRuntime, makeArena, u32, wgsl } from 'wigsill';
+import { ProgramBuilder, createRuntime, u32, wgsl } from 'wigsill';
 
 const runtime = await createRuntime();
 const device = runtime.device;
 
 const xSpanData = wgsl.memory(u32).alias('x-span');
 const ySpanData = wgsl.memory(u32).alias('y-span');
-
-const mainArena = makeArena({
-  bufferBindingType: 'uniform',
-  memoryEntries: [xSpanData, ySpanData],
-  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-});
 
 const canvas = await addElement('canvas');
 
@@ -83,7 +77,6 @@ fn main_frag(
 const program = new ProgramBuilder(runtime, mainCode).build({
   bindingGroup: 0,
   shaderStage: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-  arenas: [mainArena],
 });
 
 const shaderModule = device.createShaderModule({

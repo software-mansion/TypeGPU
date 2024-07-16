@@ -1,16 +1,15 @@
-import type { MemoryArena } from './memoryArena';
+import { WGSLCode } from './wgslCode';
 
 export type WGSLSegment = string | number | WGSLItem;
 
 export interface ResolutionCtx {
   addDependency(item: WGSLItem): void;
-  addMemory(memoryEntry: WGSLMemoryTrait): void;
   nameFor(token: WGSLItem): string;
-  arenaFor(memoryEntry: WGSLMemoryTrait): MemoryArena | null;
   /** @throws {MissingBindingError}  */
   requireBinding<T>(bindable: WGSLBindableTrait<T>): T;
   tryBinding<T>(bindable: WGSLBindableTrait<T>, defaultValue: T): T;
   resolve(item: WGSLSegment): string;
+  registerMemory(memoryEntry: WGSLMemoryTrait): void;
 }
 
 export interface WGSLItem {
@@ -45,7 +44,9 @@ export type WGSLBindPair<T> = [WGSLBindableTrait<T>, T];
 export interface WGSLMemoryTrait extends WGSLItem {
   readonly size: number;
   readonly baseAlignment: number;
-  readonly structFieldDefinition: WGSLSegment;
+  usage: 'uniform' | 'storage';
+  flags: GPUBufferUsageFlags;
+  definitionCode(bindingGroup: number, bindingIdx: number): WGSLCode;
 }
 
 export type MemoryLocation = { gpuBuffer: GPUBuffer; offset: number };

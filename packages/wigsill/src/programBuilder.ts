@@ -1,9 +1,4 @@
-import {
-  MemoryArenaConflictError,
-  MissingBindingError,
-  NotAllocatedMemoryError,
-} from './errors';
-import type { MemoryArena } from './memoryArena';
+import { MissingBindingError } from './errors';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import {
   type ResolutionCtx,
@@ -31,42 +26,22 @@ function addUnique<T>(list: T[], value: T) {
 }
 
 export type ResolutionCtxImplOptions = {
-  readonly memoryArenas?: MemoryArena[];
   readonly bindings?: WGSLBindPair<unknown>[];
   readonly names: NameRegistry;
 };
 
 export class ResolutionCtxImpl implements ResolutionCtx {
-  private _entryToArenaMap = new WeakMap<WGSLMemoryTrait, MemoryArena>();
   private readonly _bindings: WGSLBindPair<unknown>[];
   private readonly _names: NameRegistry;
 
   public dependencies: WGSLItem[] = [];
-  public usedMemoryArenas = new WeakSet<MemoryArena>();
-  public memoryArenaDeclarationIdxMap = new WeakMap<MemoryArena, number>();
+  public usedMemory = new Set<WGSLMemoryTrait>();
 
   private _memoizedResults = new WeakMap<WGSLItem, string>();
 
-  /**
-   * @throws {MemoryArenaConflict}
-   */
-  constructor({
-    memoryArenas = [],
-    bindings = [],
-    names,
-  }: ResolutionCtxImplOptions) {
+  constructor({ bindings = [], names }: ResolutionCtxImplOptions) {
     this._bindings = bindings;
     this._names = names;
-
-    for (const arena of memoryArenas) {
-      for (const entry of arena.memoryEntries) {
-        if (this._entryToArenaMap.has(entry)) {
-          throw new MemoryArenaConflictError(entry);
-        }
-
-        this._entryToArenaMap.set(entry, arena);
-      }
-    }
   }
 
   addDependency(item: WGSLItem) {
@@ -74,24 +49,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     addUnique(this.dependencies, item);
   }
 
-  /**
-   * @throws {NotAllocatedMemoryError}
-   */
-  addMemory(memoryEntry: WGSLMemoryTrait): void {
-    const arena = this._entryToArenaMap.get(memoryEntry);
-    if (!arena) {
-      throw new NotAllocatedMemoryError(memoryEntry);
-    }
-
-    this.memoryArenaDeclarationIdxMap.set(arena, this.dependencies.length);
+  registerMemory(memoryEntry: WGSLMemoryTrait) {
+    this.usedMemory.add(memoryEntry);
   }
 
   nameFor(item: WGSLItem): string {
     return this._names.nameFor(item);
-  }
-
-  arenaFor(memoryEntry: WGSLMemoryTrait): MemoryArena | null {
-    return this._entryToArenaMap.get(memoryEntry) ?? null;
   }
 
   requireBinding<T>(bindable: WGSLBindableTrait<T>): T {
@@ -137,7 +100,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 type BuildOptions = {
   shaderStage: number;
   bindingGroup: number;
-  arenas?: MemoryArena[];
   nameRegistry?: NameRegistry;
 };
 
@@ -155,51 +117,35 @@ export default class ProgramBuilder {
   }
 
   build(options: BuildOptions): Program {
-    const arenas = options.arenas ?? [];
-
     const ctx = new ResolutionCtxImpl({
-      memoryArenas: arenas,
       bindings: this.bindings,
       names: options.nameRegistry ?? new RandomNameRegistry(),
     });
 
-    // Resolving memory arenas
-    arenas.forEach((arena, idx) => {
-      const definitionCode = arena.definitionCode(options.bindingGroup, idx);
-
-      if (!definitionCode) {
-        return;
-      }
-
-      this.runtime.registerArena(arena);
-      ctx.addDependency(definitionCode);
-
-      // dependencies.splice(
-      //   ctx.memoryArenaDeclarationIdxMap.get(arena) ?? 0,
-      //   0,
-      //   definitionCode,
-      // );
-    });
-
     // Resolving code
     const codeString = ctx.resolve(this.root);
+    const usedMemory = Array.from(ctx.usedMemory);
+
+    usedMemory.forEach((memory, idx) => {
+      ctx.addDependency(memory.definitionCode(options.bindingGroup, idx));
+    });
 
     const bindGroupLayout = this.runtime.device.createBindGroupLayout({
-      entries: arenas.map((arena, idx) => ({
+      entries: usedMemory.map((memory, idx) => ({
         binding: idx,
         visibility: options.shaderStage,
         buffer: {
-          type: arena.bufferBindingType,
+          type: memory.usage,
         },
       })),
     });
 
     const bindGroup = this.runtime.device.createBindGroup({
       layout: bindGroupLayout,
-      entries: arenas.map((arena, idx) => ({
+      entries: usedMemory.map((memory, idx) => ({
         binding: idx,
         resource: {
-          buffer: this.runtime.bufferFor(arena),
+          buffer: this.runtime.bufferFor(memory)!,
         },
       })),
     });

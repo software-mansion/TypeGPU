@@ -10,7 +10,6 @@ import {
   ProgramBuilder,
   arrayOf,
   createRuntime,
-  makeArena,
   u32,
   vec2u,
   wgsl,
@@ -60,7 +59,12 @@ function encodeBrushType(brushType: (typeof BrushTypes)[number]) {
 }
 
 const viscosity = wgsl.memory(u32).alias('viscosity');
-const currentState = wgsl.memory(arrayOf(u32, 1024 ** 2)).alias('current');
+const currentState = wgsl
+  .memory(arrayOf(u32, 1024 ** 2))
+  .setFlags(
+    GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.VERTEX,
+  )
+  .alias('current');
 const size = wgsl.memory(vec2u).alias('size');
 
 const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
@@ -300,36 +304,14 @@ fn main(@location(0) cell: f32) -> @location(0) vec4f {
 
 let drawCanvasData = new Uint32Array(Options.size * Options.size);
 
-const viscosityArena = makeArena({
-  bufferBindingType: 'uniform',
-  memoryEntries: [viscosity],
-  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-});
-
-const sizeArena = makeArena({
-  bufferBindingType: 'uniform',
-  memoryEntries: [size],
-  usage:
-    GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM | GPUBufferUsage.VERTEX,
-});
-
-const currentStateArena = makeArena({
-  bufferBindingType: 'storage',
-  memoryEntries: [currentState],
-  usage:
-    GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX,
-});
-
 const computeProgram = new ProgramBuilder(runtime, computeWGSL).build({
   bindingGroup: 1,
   shaderStage: GPUShaderStage.COMPUTE,
-  arenas: [viscosityArena, currentStateArena, sizeArena],
 });
 
 const vertexProgram = new ProgramBuilder(runtime, vertWGSL).build({
   bindingGroup: 0,
   shaderStage: GPUShaderStage.VERTEX,
-  arenas: [sizeArena],
 });
 
 const computeShader = device.createShaderModule({ code: computeProgram.code });
@@ -500,7 +482,7 @@ function resetGameData() {
     commandEncoder.copyBufferToBuffer(
       buffer1,
       0,
-      runtime.bufferFor(currentStateArena),
+      runtime.bufferFor(currentState),
       0,
       cells.byteLength,
     );
@@ -515,7 +497,7 @@ function resetGameData() {
     // render
     const passEncoderRender = commandEncoder.beginRenderPass(renderPass);
     passEncoderRender.setPipeline(renderPipeline);
-    passEncoderRender.setVertexBuffer(0, runtime.bufferFor(currentStateArena));
+    passEncoderRender.setVertexBuffer(0, runtime.bufferFor(currentState));
     passEncoderRender.setVertexBuffer(1, squareBuffer);
     passEncoderRender.setBindGroup(0, vertexProgram.bindGroup);
     passEncoderRender.draw(4, length);
@@ -536,7 +518,7 @@ function resetGameData() {
 
   applyDrawCanvas = () => {
     const commandEncoder = device.createCommandEncoder();
-    const stateBuffer = runtime.bufferFor(currentStateArena);
+    const stateBuffer = runtime.bufferFor(currentState);
 
     for (let i = 0; i < Options.size; i++) {
       for (let j = 0; j < Options.size; j++) {
@@ -573,7 +555,7 @@ function resetGameData() {
     commandEncoder = device.createCommandEncoder();
     const passEncoderRender = commandEncoder.beginRenderPass(renderPass);
     passEncoderRender.setPipeline(renderPipeline);
-    passEncoderRender.setVertexBuffer(0, runtime.bufferFor(currentStateArena));
+    passEncoderRender.setVertexBuffer(0, runtime.bufferFor(currentState));
     passEncoderRender.setVertexBuffer(1, squareBuffer);
     passEncoderRender.setBindGroup(0, vertexProgram.bindGroup);
     passEncoderRender.draw(4, length);

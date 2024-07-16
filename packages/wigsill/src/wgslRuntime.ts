@@ -1,13 +1,11 @@
-import type { MemoryArena } from './memoryArena';
-import type { MemoryLocation, WGSLMemoryTrait } from './types';
+import type { WGSLMemoryTrait } from './types';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a runtime can interact via GPU buffers.
  */
 class WGSLRuntime {
-  private _arenaToBufferMap = new WeakMap<MemoryArena, GPUBuffer>();
-  private _entryToArenaMap = new WeakMap<WGSLMemoryTrait, MemoryArena>();
+  private _entryToBufferMap = new WeakMap<WGSLMemoryTrait, GPUBuffer>();
 
   constructor(public readonly device: GPUDevice) {}
 
@@ -15,43 +13,24 @@ class WGSLRuntime {
     // TODO: Clean up all buffers
   }
 
-  registerArena(arena: MemoryArena) {
-    for (const entry of arena.memoryEntries) {
-      this._entryToArenaMap.set(entry, arena);
-    }
-  }
-
-  bufferFor(arena: MemoryArena) {
-    let buffer = this._arenaToBufferMap.get(arena);
+  bufferFor(memory: WGSLMemoryTrait) {
+    let buffer = this._entryToBufferMap.get(memory);
 
     if (!buffer) {
       // creating buffer
+      console.log('creating buffer for', memory);
       buffer = this.device.createBuffer({
-        usage: arena.usage,
-        size: arena.size,
+        usage: memory.flags,
+        size: memory.size,
       });
 
-      this._arenaToBufferMap.set(arena, buffer);
+      if (!buffer) {
+        throw new Error(`Failed to create buffer for ${memory}`);
+      }
+      this._entryToBufferMap.set(memory, buffer);
     }
 
     return buffer;
-  }
-
-  locateMemory(memoryEntry: WGSLMemoryTrait): MemoryLocation | null {
-    const arena = this._entryToArenaMap.get(memoryEntry);
-
-    if (!arena) {
-      return null;
-    }
-
-    const gpuBuffer = this._arenaToBufferMap.get(arena);
-    const offset = arena.offsetFor(memoryEntry);
-
-    if (!gpuBuffer || offset === null) {
-      throw new Error('Invalid state');
-    }
-
-    return { gpuBuffer, offset };
   }
 }
 

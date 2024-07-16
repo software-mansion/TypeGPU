@@ -64,9 +64,7 @@ export class MemoryArena {
       storageTypeIdentifier.alias(`${this.debugLabel}_type`);
     }
 
-    const fieldDefinitions = this.memoryEntries.map(
-      (e) => e.structFieldDefinition,
-    );
+    const fieldDefinitions = 'temp';
 
     if (fieldDefinitions.length === 0) {
       return undefined;
@@ -86,7 +84,7 @@ export class MemoryArena {
     struct ${storageTypeIdentifier} {
       ${fieldDefinitions}
     }
-  
+
     @group(${bindingGroup}) @binding(${bindingIdx}) var<${bindingType}> ${this.identifier}: ${storageTypeIdentifier};
     `;
   }
