@@ -102,11 +102,11 @@ export type Ident = { type: 'ident', value: string };
 %}
 ident -> %ident_pattern {% ([token]) => ({ type: 'ident', value: token.value }) %}
 
-global_variable_decl -> "if" # TODO
-global_value_decl -> null # TODO
-type_alias_decl -> null # TODO
-struct_decl -> null # TODO
-const_assert_statement -> null # TODO
+# global_variable_decl -> "if" # TODO
+# global_value_decl -> null # TODO
+# type_alias_decl -> null # TODO
+# struct_decl -> null # TODO
+# const_assert_statement -> null # TODO
 
 type_specifier -> template_elaborated_ident
 
@@ -130,12 +130,11 @@ template_arg_comma_list ->
   expression ("," expression):* ",":? {% ([first, rest]) => [first, ...rest.map(tuple => tuple[1])] %}
 
 @{%
-export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement };
+export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement, attrs: Attribute[] };
 export type FunctionHeader = { type: 'function_header', identifier: string };
 
 %}
-# TODO: Add support for attributes
-function_decl -> function_header compound_statement {% ([header, body]) => ({ type: 'function_decl', header, body }) %}
+function_decl -> attribute:* function_header compound_statement {% ([attrs, header, body]) => ({ type: 'function_decl', header, body, attrs }) %}
 # TODO: Add param list
 # TODO: Add return type
 function_header ->
@@ -410,3 +409,7 @@ expression ->
 
 call_phrase ->
   template_elaborated_ident argument_expression_list {% ([ident, args]) => ({ ident, args }) %}
+
+@{% type Attribute = { type: 'attribute', ident: string }; %}
+attribute ->
+  "@" ident argument_expression_list:? {% ([ , ident, args]) => ({ type: 'attribute', ident: ident.value, args: args ?? [] }) %}

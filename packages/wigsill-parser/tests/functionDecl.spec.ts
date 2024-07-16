@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { TranslationUnit } from '../src/grammar';
 import { parse } from '../src/index';
 
-describe('function declaration', () => {
+describe('function_decl', () => {
   it('parses empty function', () => {
     const code = `fn example() {
     }`;
@@ -11,6 +12,7 @@ describe('function declaration', () => {
       declarations: [
         {
           type: 'function_decl' as const,
+          attrs: [],
           header: {
             type: 'function_header' as const,
             identifier: 'example' as const,
@@ -18,7 +20,7 @@ describe('function declaration', () => {
           body: [],
         },
       ],
-    };
+    } satisfies TranslationUnit;
 
     expect(parse(code)).toEqual(expected);
   });
@@ -35,6 +37,7 @@ describe('function declaration', () => {
       declarations: [
         {
           type: 'function_decl' as const,
+          attrs: [],
           header: {
             type: 'function_header' as const,
             identifier: 'example' as const,
@@ -56,7 +59,7 @@ describe('function declaration', () => {
           ],
         },
       ],
-    };
+    } satisfies TranslationUnit;
 
     expect(parse(code)).toEqual(expected);
   });

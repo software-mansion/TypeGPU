@@ -96,7 +96,7 @@ export type TemplateList = Expression[];
 
 
 
-export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement };
+export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement, attrs: Attribute[] };
 export type FunctionHeader = { type: 'function_header', identifier: string };
 
 
@@ -208,6 +208,7 @@ export type Expression =
   | BitwiseExpression;
 
 
+ type Attribute = { type: 'attribute', ident: string }; 
 interface NearleyToken {
   value: any;
   [key: string]: any;
@@ -247,11 +248,6 @@ const grammar: Grammar = {
     {"name": "global_decl", "symbols": [{"literal":";"}], "postprocess": () => null},
     {"name": "global_decl", "symbols": ["function_decl"], "postprocess": id},
     {"name": "ident", "symbols": [(lexer.has("ident_pattern") ? {type: "ident_pattern"} : ident_pattern)], "postprocess": ([token]) => ({ type: 'ident', value: token.value })},
-    {"name": "global_variable_decl", "symbols": [{"literal":"if"}]},
-    {"name": "global_value_decl", "symbols": []},
-    {"name": "type_alias_decl", "symbols": []},
-    {"name": "struct_decl", "symbols": []},
-    {"name": "const_assert_statement", "symbols": []},
     {"name": "type_specifier", "symbols": ["template_elaborated_ident"]},
     {"name": "template_elaborated_ident$ebnf$1", "symbols": ["template_list"], "postprocess": id},
     {"name": "template_elaborated_ident$ebnf$1", "symbols": [], "postprocess": () => null},
@@ -263,7 +259,9 @@ const grammar: Grammar = {
     {"name": "template_arg_comma_list$ebnf$2", "symbols": [{"literal":","}], "postprocess": id},
     {"name": "template_arg_comma_list$ebnf$2", "symbols": [], "postprocess": () => null},
     {"name": "template_arg_comma_list", "symbols": ["expression", "template_arg_comma_list$ebnf$1", "template_arg_comma_list$ebnf$2"], "postprocess": ([first, rest]) => [first, ...rest.map(tuple => tuple[1])]},
-    {"name": "function_decl", "symbols": ["function_header", "compound_statement"], "postprocess": ([header, body]) => ({ type: 'function_decl', header, body })},
+    {"name": "function_decl$ebnf$1", "symbols": []},
+    {"name": "function_decl$ebnf$1", "symbols": ["function_decl$ebnf$1", "attribute"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "function_decl", "symbols": ["function_decl$ebnf$1", "function_header", "compound_statement"], "postprocess": ([attrs, header, body]) => ({ type: 'function_decl', header, body, attrs })},
     {"name": "function_header", "symbols": [{"literal":"fn"}, "ident", {"literal":"("}, {"literal":")"}], "postprocess": ([ , identifier]) => ({ type: 'function_header', identifier: identifier.value })},
     {"name": "return_statement$ebnf$1", "symbols": ["expression"], "postprocess": id},
     {"name": "return_statement$ebnf$1", "symbols": [], "postprocess": () => null},
@@ -364,7 +362,10 @@ const grammar: Grammar = {
     {"name": "expression", "symbols": ["short_circuit_and_expression", {"literal":"&&"}, "relational_expression"], "postprocess": ([lhs, , rhs]) => ({ type: 'logic_and', lhs, rhs })},
     {"name": "expression", "symbols": ["short_circuit_or_expression", {"literal":"||"}, "relational_expression"], "postprocess": ([lhs, , rhs]) => ({ type: 'logic_or', lhs, rhs })},
     {"name": "expression", "symbols": ["bitwise_expression"], "postprocess": id},
-    {"name": "call_phrase", "symbols": ["template_elaborated_ident", "argument_expression_list"], "postprocess": ([ident, args]) => ({ ident, args })}
+    {"name": "call_phrase", "symbols": ["template_elaborated_ident", "argument_expression_list"], "postprocess": ([ident, args]) => ({ ident, args })},
+    {"name": "attribute$ebnf$1", "symbols": ["argument_expression_list"], "postprocess": id},
+    {"name": "attribute$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "attribute", "symbols": [{"literal":"@"}, "ident", "attribute$ebnf$1"], "postprocess": ([ , ident, args]) => ({ type: 'attribute', ident: ident.value, args: args ?? [] })}
   ],
   ParserStart: "main",
 };
