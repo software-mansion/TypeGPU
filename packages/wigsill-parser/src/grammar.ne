@@ -69,7 +69,10 @@ lexer.next = (next => () => {
 # entry
 
 @{%
-export type Main = TranslationUnit | Statement | Expression;
+export type Main =
+    TranslationUnit
+  | Statement
+  | Expression;
 
 %}
 main ->
@@ -77,16 +80,17 @@ main ->
   | statement        {% id %}
   | expression       {% id %}
 
-@{%
-export type TranslationUnit = { type: 'translation_unit', declarations: GlobalDecl[] };
-%}
+@{% export type TranslationUnit = { type: 'translation_unit', declarations: GlobalDecl[] }; %}
 # translation_unit -> global_directive:* global_decl:*
 translation_unit -> global_decl:* {% ([declarations]) => ({ type: 'translation_unit', declarations }) %}
 
 # global_directive -> null # TODO: Implement the global directive non-terminal
 
 @{%
-export type GlobalDecl = null | FunctionDecl;
+export type GlobalDecl =
+    null
+  | FunctionDecl;
+
 %}
 global_decl ->
     ";" {% () => null %}
@@ -97,10 +101,7 @@ global_decl ->
     | function_decl {% id %}
   # | const_assert_statement ";"
 
-@{%
-export type Ident = { type: 'ident', value: string };
-
-%}
+@{% export type Ident = { type: 'ident', value: string }; %}
 ident -> %ident_pattern {% ([token]) => ({ type: 'ident', value: token.value }) %}
 
 # global_variable_decl -> "if" # TODO
@@ -119,10 +120,7 @@ export type TemplateElaboratedIdent = { type: 'template_elaborated_ident', value
 template_elaborated_ident ->
   ident template_list:? {% ([ident, template_list]) => ({ type: 'template_elaborated_ident', value: ident.value, template_list }) %}
 
-@{%
-export type TemplateList = Expression[];
-
-%}
+@{% export type TemplateList = Expression[]; %}
 
 template_list ->
   "<" template_arg_comma_list ">" {% ([ , template_list]) => template_list %}
@@ -166,21 +164,13 @@ statement ->
   | call_statement ";" {% ([val]) => val %}
   | if_statement {% id %}
 
-@{%
-export type Swizzle = { type: 'swizzle', value: string };
-
-%}
-
-@{%
-export type CallStatement = { type: 'call_statement', ident: TemplateElaboratedIdent, args: Expression[] };
-
-%}
+@{% export type CallStatement = { type: 'call_statement', ident: TemplateElaboratedIdent, args: Expression[] }; %}
 call_statement -> call_phrase {% ([phrase]) => ({ type: 'call_statement', ident: phrase.ident, args: phrase.args }) %}
 
+@{% export type Swizzle = { type: 'swizzle', value: string }; %}
 swizzle -> %swizzle_name {% ([value]) => ({ type: 'swizzle', value }) %}
 
 @{%
-
 export type IfStatement = { type: 'if_statement', if_clause: IfClause, else_if_clauses: ElseIfClause[], else_clause: ElseClause | null };
 export type IfClause = { type: 'if_clause', expression: Expression, body: CompoundStatement };
 export type ElseIfClause = { type: 'else_if_clause', expression: Expression, body: CompoundStatement };
