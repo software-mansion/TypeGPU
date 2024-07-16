@@ -1,7 +1,7 @@
 import nearley from 'nearley';
-import grammar from './grammar';
+import grammar, { Main } from './grammar';
 
-export function parse(code: string) {
+export function parse(code: string): Main {
   const parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar));
   parser.feed(code);
 
