@@ -190,16 +190,14 @@ export default class ProgramBuilder {
 
     console.log('-------------------');
 
-    const memoryEntries = new Set(
-      this.root
-        .getChildItems(ctx)
-        .filter((value) => isWGSLMemory(value))
-        .map((value) => value as WGSLMemoryTrait),
-    );
+    const memoryEntries = this.root
+      .getChildItems(ctx)
+      .filter((value) => isWGSLMemory(value))
+      .map((value) => value as WGSLMemoryTrait);
 
     console.log('all memory entries', memoryEntries);
 
-    const unassignedMemoryEntries = Array.from(memoryEntries).filter(
+    const unassignedMemoryEntries = memoryEntries.filter(
       (entry) => !ctx.arenaFor(entry),
     );
 
