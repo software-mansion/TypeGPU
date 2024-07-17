@@ -1,4 +1,4 @@
-import { BufferWriter, type Parsed } from 'typed-binary';
+import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import { NotAllocatedMemoryError } from './errors';
 import type { AnyWGSLDataType } from './std140/types';
 import type { ResolutionCtx, WGSLItem, WGSLMemoryTrait } from './types';
@@ -66,6 +66,16 @@ export class WGSLMemory<TSchema extends AnyWGSLDataType>
     );
 
     return true;
+  }
+
+  async read(runtime: WGSLRuntime) {
+    const arrayBuffer = await runtime.valueFor(this);
+    if (!arrayBuffer) {
+      throw new Error('Value could not be received by runtime');
+    }
+
+    const res = this._typeSchema.read(new BufferReader(arrayBuffer));
+    return res;
   }
 
   definitionCode(bindingGroup: number, bindingIdx: number) {

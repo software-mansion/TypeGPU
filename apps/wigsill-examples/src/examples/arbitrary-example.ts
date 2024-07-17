@@ -4,18 +4,20 @@
 }
 */
 
-import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
-import { ProgramBuilder, createRuntime, f32, wgsl } from 'wigsill';
+import { ProgramBuilder, createRuntime, u32, wgsl } from 'wigsill';
 
-const mem1 = wgsl.memory(f32).alias('mem1');
-const mem2 = wgsl.memory(f32).alias('mem2');
-const mem3 = wgsl.memory(f32).alias('mem3');
-const mem4 = wgsl.memory(f32).alias('mem4');
-const mem5 = wgsl.memory(f32).alias('mem5');
-const mem6 = wgsl.memory(f32).alias('mem6');
-const mem7 = wgsl.memory(f32).alias('mem7');
-const mem8 = wgsl.memory(f32).alias('mem8');
-const mem9 = wgsl.memory(f32).alias('mem9');
+const mem1 = wgsl.memory(u32).alias('mem1');
+const mem2 = wgsl.memory(u32).alias('mem2');
+const mem3 = wgsl.memory(u32).alias('mem3');
+const mem4 = wgsl.memory(u32).alias('mem4');
+const mem5 = wgsl.memory(u32).alias('mem5');
+const mem6 = wgsl.memory(u32).alias('mem6');
+const mem7 = wgsl.memory(u32).alias('mem7');
+const mem8 = wgsl.memory(u32).alias('mem8');
+const mem9 = wgsl
+  .memory(u32)
+  .setFlags(GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC)
+  .alias('mem9');
 
 const shaderCode = wgsl`
 @compute @workgroup_size(1) fn main(@builtin(global_invocation_id) grid: vec3u) {
@@ -27,7 +29,8 @@ const shaderCode = wgsl`
   let mem6 = ${mem6};
   let mem7 = ${mem7};
   let mem8 = ${mem8};
-  let mem9 = ${mem9};
+
+  ${mem9} = mem1 + mem2 + mem3 + mem4 + mem5 + mem6 + mem7 + mem8;
 }
 `;
 
@@ -57,4 +60,10 @@ computePass.setBindGroup(0, program.bindGroup);
 computePass.dispatchWorkgroups(1);
 computePass.end();
 
+mem1.write(runtime, 3);
+
 device.queue.submit([commandEncoder.finish()]);
+
+const val = await mem9.read(runtime);
+
+console.log(val);
