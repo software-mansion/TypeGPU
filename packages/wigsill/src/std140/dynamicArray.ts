@@ -1,17 +1,17 @@
 import {
-  IMeasurer,
-  ISerialInput,
-  ISerialOutput,
+  type IMeasurer,
+  type ISerialInput,
+  type ISerialOutput,
   MaxValue,
   Measurer,
-  ParseUnwrapped,
+  type ParseUnwrapped,
   Schema,
-  Unwrap,
+  type Unwrap,
   ValidationError,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import { ResolutionCtx } from '../types';
-import { WGSLCode, code } from '../wgslCode';
+import type { ResolutionCtx } from '../types';
+import { type WGSLCode, code } from '../wgslCode';
 import { identifier } from '../wgslIdentifier';
 import alignIO from './alignIO';
 import { u32 } from './numeric';

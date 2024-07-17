@@ -1,10 +1,10 @@
-import { BufferWriter, Parsed } from 'typed-binary';
+import { BufferWriter, type Parsed } from 'typed-binary';
 import { NotAllocatedMemoryError } from './errors';
-import { AnyWGSLDataType } from './std140/types';
-import { ResolutionCtx, WGSLItem, WGSLMemoryTrait } from './types';
-import { WGSLCode, code } from './wgslCode';
+import type { AnyWGSLDataType } from './std140/types';
+import type { ResolutionCtx, WGSLItem, WGSLMemoryTrait } from './types';
+import { type WGSLCode, code } from './wgslCode';
 import { identifier } from './wgslIdentifier';
-import WGSLRuntime from './wgslRuntime';
+import type WGSLRuntime from './wgslRuntime';
 
 export class WGSLMemory<TSchema extends AnyWGSLDataType>
   implements WGSLItem, WGSLMemoryTrait
@@ -38,8 +38,7 @@ export class WGSLMemory<TSchema extends AnyWGSLDataType>
       throw new NotAllocatedMemoryError(this);
     }
 
-    const result =
-      ctx.resolve(arena.identifier) + '.' + ctx.resolve(this.fieldIdentifier);
+    const result = `${ctx.resolve(arena.identifier)}.${ctx.resolve(this.fieldIdentifier)}`;
 
     ctx.resolve(this.structFieldDefinition); // making sure all struct field dependencies are added
 
@@ -53,7 +52,7 @@ export class WGSLMemory<TSchema extends AnyWGSLDataType>
     const memoryLocation = runtime.locateMemory(this);
 
     if (!memoryLocation) {
-      console.warn(`Cannot write to the memory, as it has not been allocated`);
+      console.warn('Cannot write to the memory, as it has not been allocated');
       return false;
     }
 

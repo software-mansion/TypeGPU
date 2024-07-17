@@ -1,4 +1,4 @@
-import { WGSLBindableTrait, WGSLMemoryTrait } from './types';
+import type { WGSLBindableTrait, WGSLMemoryTrait } from './types';
 
 export class MissingBindingError extends Error {
   constructor(public readonly bindable: WGSLBindableTrait<unknown>) {

@@ -1,7 +1,7 @@
-import { MouseEvent } from 'react';
 import cs from 'classnames';
 import { useAtom } from 'jotai/react';
 import { RESET } from 'jotai/utils';
+import type { MouseEvent } from 'react';
 import { currentExampleAtom } from '../router';
 import useEvent from './useEvent';
 
@@ -31,7 +31,8 @@ export function ExampleLink(props: {
         active
           ? 'border-gray-500 text-black'
           : 'border-transparent text-gray-600',
-      )}>
+      )}
+    >
       {children}
     </a>
   );

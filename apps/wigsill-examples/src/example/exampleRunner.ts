@@ -5,8 +5,8 @@ import { GUI } from 'dat.gui';
 import { filter, isNonNull, map, pipe } from 'remeda';
 import { transpileModule } from 'typescript';
 import { tsCompilerOptions } from '../embeddedTypeScript';
-import { ExampleState } from './exampleState';
-import { LayoutInstance } from './layout';
+import type { ExampleState } from './exampleState';
+import type { LayoutInstance } from './layout';
 
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
@@ -82,7 +82,9 @@ export async function executeExample(
       return;
     }
     disposed = true;
-    cleanupCallbacks.forEach((cb) => cb());
+    for (const cb of cleanupCallbacks) {
+      cb();
+    }
   };
 
   function addParameter(

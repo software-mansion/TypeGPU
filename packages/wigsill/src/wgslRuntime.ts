@@ -1,4 +1,4 @@
-import { MemoryArena } from './memoryArena';
+import type { MemoryArena } from './memoryArena';
 import type { MemoryLocation, WGSLMemoryTrait } from './types';
 
 /**
@@ -48,7 +48,7 @@ class WGSLRuntime {
     const offset = arena.offsetFor(memoryEntry);
 
     if (!gpuBuffer || offset === null) {
-      throw new Error(`Invalid state`);
+      throw new Error('Invalid state');
     }
 
     return { gpuBuffer, offset };
