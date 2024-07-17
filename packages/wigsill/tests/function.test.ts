@@ -1,17 +1,7 @@
 import { parse } from '@wigsill/parser';
 import { describe, expect, it } from 'vitest';
-import { StrictNameRegistry, type WGSLSegment, wgsl } from '../src';
-import { ResolutionCtxImpl } from '../src/programBuilder';
-
-function parseWGSL(segment: WGSLSegment) {
-  const ctx = new ResolutionCtxImpl({ names: new StrictNameRegistry() });
-
-  const resolved = ctx.resolve(segment);
-
-  const resolvedWithDependencies = `${ctx.dependencies.map((d) => ctx.resolve(d)).join('\n')}\n${resolved}`;
-
-  return parse(resolvedWithDependencies);
-}
+import { wgsl } from '../src';
+import { parseWGSL } from './utils/parseWGSL';
 
 describe('wgsl.fn', () => {
   it('should inject function declaration of called function', () => {

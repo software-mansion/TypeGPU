@@ -13,11 +13,11 @@ describe('function_decl', () => {
       type: 'translation_unit',
       declarations: [
         {
-          type: 'function_decl' as const,
+          type: 'function_decl',
           attrs: [],
           header: {
-            type: 'function_header' as const,
-            identifier: 'example' as const,
+            type: 'function_header',
+            identifier: 'example',
           },
           body: [],
         },
@@ -38,15 +38,15 @@ describe('function_decl', () => {
       type: 'translation_unit',
       declarations: [
         {
-          type: 'function_decl' as const,
+          type: 'function_decl',
           attrs: [],
           header: {
-            type: 'function_header' as const,
-            identifier: 'example' as const,
+            type: 'function_header',
+            identifier: 'example',
           },
           body: [
             {
-              type: 'return_statement' as const,
+              type: 'return_statement',
               expression: null,
             },
           ],
@@ -69,7 +69,7 @@ describe('function_decl', () => {
       type: 'translation_unit',
       declarations: [
         {
-          type: 'function_decl' as const,
+          type: 'function_decl',
           attrs: [
             { type: 'attribute', ident: 'compute', args: [] },
             {
@@ -87,12 +87,12 @@ describe('function_decl', () => {
             },
           ],
           header: {
-            type: 'function_header' as const,
-            identifier: 'example' as const,
+            type: 'function_header',
+            identifier: 'example',
           },
           body: [
             {
-              type: 'return_statement' as const,
+              type: 'return_statement',
               expression: null,
             },
           ],
