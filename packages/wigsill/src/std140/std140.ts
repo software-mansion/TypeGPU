@@ -14,7 +14,7 @@ import {
   type Unwrap,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { ResolutionCtx, WGSLSegment } from '../types';
+import type { ResolutionCtx, Wgsl } from '../types';
 import alignIO from './alignIO';
 import type { WGSLDataType } from './types';
 
@@ -26,7 +26,7 @@ export class SimpleWGSLDataType<TSchema extends AnySchema>
   public readonly byteAlignment: number;
 
   private readonly _innerSchema: TSchema;
-  private readonly _expressionCode: WGSLSegment;
+  private readonly _expressionCode: Wgsl;
 
   /**
    * byteAlignment has to be a power of 2
@@ -38,7 +38,7 @@ export class SimpleWGSLDataType<TSchema extends AnySchema>
   }: {
     schema: TSchema;
     byteAlignment: number;
-    code: WGSLSegment;
+    code: Wgsl;
   }) {
     super();
 

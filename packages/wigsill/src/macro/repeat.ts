@@ -1,9 +1,9 @@
 import { type WGSLCode, code } from '../wgslCode';
-import type { WGSLSegment } from './../types';
+import type { Wgsl } from './../types';
 
 export function repeat(
   count: number,
-  snippet: string | WGSLSegment | ((idx: number) => string | WGSLSegment),
+  snippet: Wgsl | ((idx: number) => Wgsl),
 ): WGSLCode {
   if (typeof snippet === 'function') {
     return code`${Array.from({ length: count }, (_, idx) => snippet(idx))}`;

@@ -1,11 +1,11 @@
-import type { ResolutionCtx, WGSLItem, WGSLSegment } from './types';
+import type { ResolutionCtx, WGSLItem, Wgsl } from './types';
 import { code } from './wgslCode';
 import { WGSLIdentifier } from './wgslIdentifier';
 
 export class WGSLFunction implements WGSLItem {
   private identifier = new WGSLIdentifier();
 
-  constructor(private readonly body: WGSLSegment) {}
+  constructor(private readonly body: Wgsl) {}
 
   alias(debugLabel: string) {
     this.identifier.alias(debugLabel);
@@ -20,10 +20,7 @@ export class WGSLFunction implements WGSLItem {
 }
 
 export function fn(debugLabel?: string) {
-  return (
-    strings: TemplateStringsArray,
-    ...params: WGSLSegment[]
-  ): WGSLFunction => {
+  return (strings: TemplateStringsArray, ...params: Wgsl[]): WGSLFunction => {
     const func = new WGSLFunction(code(strings, ...params));
     if (debugLabel) {
       func.alias(debugLabel);

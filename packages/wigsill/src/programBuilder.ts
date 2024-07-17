@@ -11,7 +11,7 @@ import {
   type WGSLBindableTrait,
   type WGSLItem,
   type WGSLMemoryTrait,
-  type WGSLSegment,
+  type Wgsl,
   isWGSLItem,
 } from './types';
 import type WGSLRuntime from './wgslRuntime';
@@ -118,7 +118,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return binding[1];
   }
 
-  resolve(item: WGSLSegment) {
+  resolve(item: Wgsl) {
     if (!isWGSLItem(item)) {
       return String(item);
     }

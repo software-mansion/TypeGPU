@@ -1,4 +1,4 @@
-import type { ResolutionCtx, WGSLItem, WGSLSegment } from './types';
+import type { ResolutionCtx, WGSLItem, Wgsl } from './types';
 import { code } from './wgslCode';
 import { WGSLIdentifier } from './wgslIdentifier';
 
@@ -10,7 +10,7 @@ export class WGSLConstant implements WGSLItem {
   public debugLabel?: string | undefined;
   public identifier = new WGSLIdentifier();
 
-  constructor(private readonly expr: WGSLSegment) {}
+  constructor(private readonly expr: Wgsl) {}
 
   alias(debugLabel: string) {
     this.debugLabel = debugLabel;
@@ -25,6 +25,6 @@ export class WGSLConstant implements WGSLItem {
   }
 }
 
-export function constant(expr: WGSLSegment): WGSLConstant {
+export function constant(expr: Wgsl): WGSLConstant {
   return new WGSLConstant(expr);
 }

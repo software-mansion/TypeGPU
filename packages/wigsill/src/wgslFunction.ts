@@ -5,7 +5,7 @@ import {
   type WGSLValue,
   isPointer,
 } from './std140/types';
-import type { ResolutionCtx, WGSLItem, WGSLSegment } from './types';
+import type { ResolutionCtx, WGSLItem, Wgsl } from './types';
 import { type WGSLCode, code } from './wgslCode';
 import { WGSLIdentifier, identifier } from './wgslIdentifier';
 
@@ -18,7 +18,7 @@ type PairsFromTypes<TArgTypes extends WGSLFnArgument[]> = {
 };
 
 type SegmentsFromTypes<TArgTypes extends WGSLFnArgument[]> = {
-  [K in keyof TArgTypes]: WGSLSegment;
+  [K in keyof TArgTypes]: Wgsl;
 };
 
 class WGSLFunctionCall<
@@ -54,7 +54,7 @@ export class WGSLFunction<
   constructor(
     private argPairs: PairsFromTypes<TArgTypes>,
     private returnType: TReturn | undefined,
-    private readonly body: WGSLSegment,
+    private readonly body: Wgsl,
   ) {
     super();
   }

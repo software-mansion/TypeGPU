@@ -1,6 +1,6 @@
 import type { MemoryArena } from './memoryArena';
 
-export type WGSLSegment = string | number | WGSLItem;
+export type Wgsl = string | number | WGSLItem;
 
 export interface ResolutionCtx {
   addDependency(item: WGSLItem): void;
@@ -10,7 +10,7 @@ export interface ResolutionCtx {
   /** @throws {MissingBindingError}  */
   requireBinding<T>(bindable: WGSLBindableTrait<T>): T;
   tryBinding<T>(bindable: WGSLBindableTrait<T>, defaultValue: T): T;
-  resolve(item: WGSLSegment): string;
+  resolve(item: Wgsl): string;
 }
 
 export interface WGSLItem {
@@ -27,7 +27,7 @@ export function isWGSLItem(value: unknown): value is WGSLItem {
   );
 }
 
-export function isWGSLSegment(value: unknown): value is WGSLSegment {
+export function isWgsl(value: unknown): value is Wgsl {
   return (
     typeof value === 'number' || typeof value === 'string' || isWGSLItem(value)
   );
@@ -45,7 +45,7 @@ export type WGSLBindPair<T> = [WGSLBindableTrait<T>, T];
 export interface WGSLMemoryTrait extends WGSLItem {
   readonly size: number;
   readonly baseAlignment: number;
-  readonly structFieldDefinition: WGSLSegment;
+  readonly structFieldDefinition: Wgsl;
 }
 
 export type MemoryLocation = { gpuBuffer: GPUBuffer; offset: number };

@@ -1,12 +1,12 @@
 import {
   type ResolutionCtx,
   type WGSLItem,
-  type WGSLSegment,
+  type Wgsl,
   isWGSLItem,
 } from './types';
 
 export class WGSLCode implements WGSLItem {
-  constructor(public readonly segments: WGSLSegment[]) {}
+  constructor(public readonly segments: Wgsl[]) {}
 
   resolve(ctx: ResolutionCtx) {
     let code = '';
@@ -25,9 +25,9 @@ export class WGSLCode implements WGSLItem {
 
 export function code(
   strings: TemplateStringsArray,
-  ...params: (WGSLSegment | WGSLSegment[])[]
+  ...params: (Wgsl | Wgsl[])[]
 ): WGSLCode {
-  const segments: WGSLSegment[] = strings.flatMap((string, idx) => {
+  const segments: Wgsl[] = strings.flatMap((string, idx) => {
     const param = params[idx];
     if (param === undefined) {
       return [string];

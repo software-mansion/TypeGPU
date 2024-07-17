@@ -1,5 +1,5 @@
 import type { AnyWGSLDataType } from './std140/types';
-import type { ResolutionCtx, WGSLItem, WGSLSegment } from './types';
+import type { ResolutionCtx, WGSLItem, Wgsl } from './types';
 import { code } from './wgslCode';
 import { identifier } from './wgslIdentifier';
 
@@ -15,7 +15,7 @@ export class WGSLVariable<TDataType extends AnyWGSLDataType>
 
   constructor(
     private readonly _dataType: TDataType,
-    private readonly _initialValue: WGSLSegment | undefined,
+    private readonly _initialValue: Wgsl | undefined,
     public readonly scope: VariableScope,
   ) {}
 
@@ -41,5 +41,5 @@ export class WGSLVariable<TDataType extends AnyWGSLDataType>
 
 export const variable = <TDataType extends AnyWGSLDataType>(
   dataType: TDataType,
-  initialValue?: WGSLSegment,
+  initialValue?: Wgsl,
 ) => new WGSLVariable(dataType, initialValue, 'private');
