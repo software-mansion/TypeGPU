@@ -6,6 +6,7 @@ import type { WGSLMemoryTrait } from './types';
  */
 class WGSLRuntime {
   private _entryToBufferMap = new WeakMap<WGSLMemoryTrait, GPUBuffer>();
+  private _readBuffer: GPUBuffer | null = null;
 
   constructor(public readonly device: GPUDevice) {}
 
@@ -31,6 +32,40 @@ class WGSLRuntime {
     }
 
     return buffer;
+  }
+
+  async valueFor(memory: WGSLMemoryTrait): Promise<ArrayBuffer | null> {
+    if (!this._readBuffer) {
+      this._readBuffer = this.device.createBuffer({
+        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        size: memory.size,
+      });
+    }
+
+    if (this._readBuffer.size < memory.size) {
+      this._readBuffer = this.device.createBuffer({
+        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        size: memory.size,
+      });
+    }
+
+    const buffer = this.bufferFor(memory);
+    const commandEncoder = this.device.createCommandEncoder();
+    commandEncoder.copyBufferToBuffer(
+      buffer,
+      0,
+      this._readBuffer,
+      0,
+      memory.size,
+    );
+    this.device.queue.submit([commandEncoder.finish()]);
+    await this.device.queue.onSubmittedWorkDone().then(async () => {
+      await this._readBuffer!.mapAsync(GPUMapMode.READ);
+      const value = this._readBuffer!.getMappedRange().slice(0);
+      this._readBuffer!.unmap();
+      return value;
+    });
+    return null;
   }
 }
 
