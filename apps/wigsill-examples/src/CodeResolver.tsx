@@ -1,13 +1,15 @@
-import { atom } from 'jotai/vanilla';
 import { useAtomValue } from 'jotai/react';
-import { WGSLRuntime, ProgramBuilder } from 'wigsill';
-
+import { atom } from 'jotai/vanilla';
+import { ProgramBuilder, WGSLRuntime } from 'wigsill';
 import { sampleShader } from './sampleShader';
 
 // using `jōtai` for a simple async resource store.
 const runtimeAtom = atom(async () => {
   const adapter = await navigator.gpu.requestAdapter();
-  const device = await adapter!.requestDevice();
+  if (!adapter) {
+    throw new Error('No WebGPU compatible GPU found.');
+  }
+  const device = await adapter.requestDevice();
 
   return new WGSLRuntime(device);
 });

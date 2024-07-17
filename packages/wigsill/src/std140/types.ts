@@ -1,4 +1,4 @@
-import { ISchema } from 'typed-binary';
+import type { ISchema } from 'typed-binary';
 import type { WGSLItem } from '../types';
 
 export interface WGSLDataType<TInner> extends ISchema<TInner>, WGSLItem {

@@ -1,5 +1,5 @@
-import { MemoryArena } from './memoryArena';
-import {
+import type { MemoryArena } from './memoryArena';
+import type {
   ResolutionCtx,
   WGSLBindableTrait,
   WGSLItem,

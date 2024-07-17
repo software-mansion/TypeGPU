@@ -1,5 +1,5 @@
-import { WGSLCode, code } from '../wgslCode';
-import { WGSLSegment } from './../types';
+import { type WGSLCode, code } from '../wgslCode';
+import type { WGSLSegment } from './../types';
 
 export function repeat(
   count: number,

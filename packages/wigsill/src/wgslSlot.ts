@@ -1,8 +1,8 @@
 import {
-  ResolutionCtx,
-  WGSLBindableTrait,
-  WGSLItem,
-  WGSLSegment,
+  type ResolutionCtx,
+  type WGSLBindableTrait,
+  type WGSLItem,
+  type WGSLSegment,
   isWGSLSegment,
 } from './types';
 
@@ -10,12 +10,16 @@ export interface Slot<T> {
   __brand: 'Slot';
   /** type-token, not available at runtime */
   __bindingType: T;
+
+  alias(label: string): Slot<T>;
 }
 
 export interface ResolvableSlot<T extends WGSLSegment> extends WGSLItem {
   __brand: 'Slot';
   /** type-token, not available at runtime */
   __bindingType: T;
+
+  alias(label: string): ResolvableSlot<T>;
 }
 
 export class WGSLSlot<T> implements WGSLItem, WGSLBindableTrait<T> {
@@ -25,16 +29,21 @@ export class WGSLSlot<T> implements WGSLItem, WGSLBindableTrait<T> {
 
   constructor(public defaultValue?: T) {}
 
-  public alias(debugLabel: string) {
-    this.debugLabel = debugLabel;
+  public alias(label: string) {
+    this.debugLabel = label;
     return this;
   }
 
-  resolve(ctx: ResolutionCtx): string {
-    const value = this.defaultValue
-      ? ctx.tryBinding(this, this.defaultValue)
-      : ctx.requireBinding(this);
+  private getValue(ctx: ResolutionCtx) {
+    if (this.defaultValue !== undefined) {
+      return ctx.tryBinding(this, this.defaultValue);
+    }
 
+    return ctx.requireBinding(this);
+  }
+
+  resolve(ctx: ResolutionCtx): string {
+    const value = this.getValue(ctx);
     if (!isWGSLSegment(value)) {
       throw new Error(
         `Cannot resolve value of type ${typeof value} for slot: ${this.debugLabel ?? '<unnamed>'}, type WGSLSegment required`,

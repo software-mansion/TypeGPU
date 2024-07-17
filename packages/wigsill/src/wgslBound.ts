@@ -1,5 +1,5 @@
 import { BoundResolutionCtx } from './boundResolutionCtx';
-import { ResolutionCtx, WGSLBindableTrait, WGSLItem } from './types';
+import type { ResolutionCtx, WGSLBindableTrait, WGSLItem } from './types';
 
 export class WGSLBound<TItem extends WGSLItem, TBinding> implements WGSLItem {
   debugLabel?: string | undefined;

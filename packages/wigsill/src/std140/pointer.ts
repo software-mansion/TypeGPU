@@ -1,4 +1,4 @@
-import { AnyWGSLDataType, WGSLPointerType } from './types';
+import type { AnyWGSLDataType, WGSLPointerType } from './types';
 
 export function ptr<TDataType extends AnyWGSLDataType>(
   pointsTo: TDataType,

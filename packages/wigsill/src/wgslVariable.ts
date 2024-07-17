@@ -1,4 +1,4 @@
-import { AnyWGSLDataType } from './std140/types';
+import type { AnyWGSLDataType } from './std140/types';
 import type { ResolutionCtx, WGSLItem, WGSLSegment } from './types';
 import { code } from './wgslCode';
 import { identifier } from './wgslIdentifier';
