@@ -1,10 +1,9 @@
-import { MemoryArena } from './memoryArena';
+import type { MemoryArena } from './memoryArena';
 import ProgramBuilder, { type Program } from './programBuilder';
-import StructDataType from './std140/struct';
+import type StructDataType from './std140/struct';
 import type { MemoryLocation, WGSLMemoryTrait, WGSLSegment } from './types';
 import wgsl from './wgsl';
-import { WGSLCode } from './wgslCode';
-
+import type { WGSLCode } from './wgslCode';
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a runtime can interact via GPU buffers.
@@ -56,7 +55,7 @@ class WGSLRuntime {
     const offset = arena.offsetFor(memoryEntry);
 
     if (!gpuBuffer || offset === null) {
-      throw new Error(`Invalid state`);
+      throw new Error('Invalid state');
     }
 
     return { gpuBuffer, offset };
@@ -66,6 +65,7 @@ class WGSLRuntime {
     vertex?: {
       args: WGSLSegment[];
       code: WGSLCode;
+      // biome-ignore lint/suspicious/noExplicitAny:
       output: StructDataType<any>;
     };
     fragment?: {

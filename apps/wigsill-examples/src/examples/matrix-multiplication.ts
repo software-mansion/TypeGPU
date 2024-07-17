@@ -6,13 +6,13 @@
 
 import { addElement, onFrame } from '@wigsill/example-toolkit';
 import {
+  arrayOf,
   createRuntime,
   f32,
   makeArena,
   struct,
   vec2f,
   wgsl,
-  arrayOf,
 } from 'wigsill';
 
 const runtime = await createRuntime();
@@ -107,12 +107,12 @@ const multiplicationResult = new Float32Array(arrayBuffer);
 console.log(multiplicationResult);
 
 const canvas = await addElement('canvas', { width: 400, height: 400 });
-const context = canvas.getContext('2d');
+const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
 onFrame(() => {
-  context!.font = '30px Arial';
-  context!.fillStyle = 'white';
-  context!.fillRect(0, 0, 400, 400);
-  context!.fillStyle = 'darkblue';
-  context!.fillText(multiplicationResult.toString(), 70, 200);
+  context.font = '30px Arial';
+  context.fillStyle = 'white';
+  context.fillRect(0, 0, 400, 400);
+  context.fillStyle = 'darkblue';
+  context.fillText(multiplicationResult.toString(), 70, 200);
 });

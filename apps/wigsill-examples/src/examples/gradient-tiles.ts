@@ -13,25 +13,25 @@ import {
 import {
   createRuntime,
   makeArena,
-  u32,
-  wgsl,
   struct,
+  u32,
   vec2f,
   vec4f,
+  wgsl,
 } from 'wigsill';
 
 const runtime = await createRuntime();
 const device = runtime.device;
 
 const canvas = await addElement('canvas');
-const context = canvas.getContext('webgpu');
+const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
 const devicePixelRatio = window.devicePixelRatio;
 canvas.width = canvas.clientWidth * devicePixelRatio;
 canvas.height = canvas.clientHeight * devicePixelRatio;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-context!.configure({
+context.configure({
   device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
@@ -116,7 +116,7 @@ addParameter(
 );
 
 onFrame(() => {
-  const textureView = context!.getCurrentTexture().createView();
+  const textureView = context.getCurrentTexture().createView();
 
   renderPipeline.execute(4, {
     colorAttachments: [
@@ -133,5 +133,5 @@ onFrame(() => {
 });
 
 onCleanup(() => {
-  console.log(`All cleaned up`);
+  // TODO: Clean up
 });

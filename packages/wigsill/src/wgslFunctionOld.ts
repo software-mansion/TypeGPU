@@ -1,6 +1,6 @@
-import StructDataType from './std140/struct';
-import { ResolutionCtx, WGSLItem, WGSLSegment } from './types';
-import { WGSLCode, code } from './wgslCode';
+import type StructDataType from './std140/struct';
+import type { ResolutionCtx, WGSLItem, WGSLSegment } from './types';
+import { type WGSLCode, code } from './wgslCode';
 import { WGSLIdentifier } from './wgslIdentifier';
 
 export class WGSLFunction implements WGSLItem {
@@ -24,6 +24,7 @@ export class WGSLVertexFunction implements WGSLItem {
   private identifier = new WGSLIdentifier();
   private _args: WGSLSegment[];
   private _code: WGSLCode;
+  // biome-ignore lint/suspicious/noExplicitAny:
   private _output: StructDataType<any>;
 
   alias(debugLabel: string) {
@@ -38,6 +39,7 @@ export class WGSLVertexFunction implements WGSLItem {
   }: {
     args: WGSLSegment[];
     code: WGSLCode;
+    // biome-ignore lint/suspicious/noExplicitAny:
     output: StructDataType<any>;
   }) {
     this._args = args;
@@ -136,6 +138,7 @@ export function vertexFn({
 }: {
   args: WGSLSegment[];
   code: WGSLCode;
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   output: StructDataType<any>;
 }) {
   return new WGSLVertexFunction({ args, code, output });

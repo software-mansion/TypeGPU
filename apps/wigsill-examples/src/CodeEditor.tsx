@@ -1,4 +1,4 @@
-import Editor, { Monaco } from '@monaco-editor/react';
+import Editor, { type Monaco } from '@monaco-editor/react';
 import webgpuTypes from '@webgpu/types/dist/index.d.ts?raw';
 import typedBinary from 'typed-binary/dist/index.d.ts?raw';
 import useEvent from './common/useEvent';

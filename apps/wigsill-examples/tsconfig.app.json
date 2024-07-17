@@ -7,9 +7,12 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
-    "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types", "src/types"],
+    "typeRoots": [
+      "./node_modules/@webgpu/types",
+      "./node_modules/@types",
+      "src/types"
+    ],
 
-    /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
@@ -18,7 +21,6 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,

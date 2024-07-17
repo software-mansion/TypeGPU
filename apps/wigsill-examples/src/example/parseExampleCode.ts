@@ -1,4 +1,4 @@
-import { Example, ExampleMetadata } from './types';
+import { type Example, ExampleMetadata } from './types';
 
 export function parseExampleCode(rawCode: string): Example {
   // extracting metadata from the first comment

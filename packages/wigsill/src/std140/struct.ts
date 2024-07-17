@@ -1,20 +1,20 @@
 import {
-  IMeasurer,
-  ISchema,
-  ISerialInput,
-  ISerialOutput,
+  type IMeasurer,
+  type ISchema,
+  type ISerialInput,
+  type ISerialOutput,
   MaxValue,
   Measurer,
-  Parsed,
+  type Parsed,
   Schema,
-  UnwrapRecord,
+  type UnwrapRecord,
   object,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import type { ResolutionCtx } from '../types';
 import { type WGSLCode, code } from '../wgslCode';
 import { identifier } from '../wgslIdentifier';
-import { AnyWGSLDataType, WGSLDataType } from './types';
+import type { AnyWGSLDataType, WGSLDataType } from './types';
 
 class StructDataType<TProps extends Record<string, AnyWGSLDataType>>
   extends Schema<UnwrapRecord<TProps>>

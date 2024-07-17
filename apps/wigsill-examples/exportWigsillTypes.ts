@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import * as fs from 'node:fs';
 
 fs.writeFile(
   './src/types/wigsill-types.d.ts',

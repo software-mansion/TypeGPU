@@ -1,6 +1,6 @@
+import { atomWithHash } from 'jotai-location';
 import type { RESET } from 'jotai/utils';
 import type { WritableAtom } from 'jotai/vanilla';
-import { atomWithHash } from 'jotai-location';
 
 const serializer = {
   serialize(val: string | undefined) {
