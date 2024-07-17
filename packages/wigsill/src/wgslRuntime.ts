@@ -7,6 +7,7 @@ import type { WGSLMemoryTrait } from './types';
 class WGSLRuntime {
   private _entryToBufferMap = new WeakMap<WGSLMemoryTrait, GPUBuffer>();
   private _readBuffer: GPUBuffer | null = null;
+  private _taskQueue = new TaskQueue();
 
   constructor(public readonly device: GPUDevice) {}
 
@@ -18,8 +19,6 @@ class WGSLRuntime {
     let buffer = this._entryToBufferMap.get(memory);
 
     if (!buffer) {
-      // creating buffer
-      console.log('creating buffer for', memory);
       buffer = this.device.createBuffer({
         usage: memory.flags,
         size: memory.size,
@@ -35,35 +34,72 @@ class WGSLRuntime {
   }
 
   async valueFor(memory: WGSLMemoryTrait): Promise<ArrayBuffer | null> {
-    if (!this._readBuffer) {
-      this._readBuffer = this.device.createBuffer({
-        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-        size: memory.size,
-      });
-    }
+    // return this.taskQueue.enqueue(() => {
+    //   // the code below
+    // }
+    return this._taskQueue.enqueue(async () => {
+      if (!this._readBuffer) {
+        this._readBuffer = this.device.createBuffer({
+          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+          size: memory.size,
+        });
+      }
 
-    if (this._readBuffer.size < memory.size) {
-      this._readBuffer = this.device.createBuffer({
-        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-        size: memory.size,
-      });
-    }
+      if (this._readBuffer.size < memory.size) {
+        this._readBuffer = this.device.createBuffer({
+          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+          size: memory.size,
+        });
+      }
 
-    const buffer = this.bufferFor(memory);
-    const commandEncoder = this.device.createCommandEncoder();
-    commandEncoder.copyBufferToBuffer(
-      buffer,
-      0,
-      this._readBuffer,
-      0,
-      memory.size,
-    );
-    this.device.queue.submit([commandEncoder.finish()]);
-    await this.device.queue.onSubmittedWorkDone();
-    await this._readBuffer.mapAsync(GPUMapMode.READ, 0, memory.size);
-    const value = this._readBuffer.getMappedRange().slice(0);
-    this._readBuffer.unmap();
-    return value;
+      const buffer = this.bufferFor(memory);
+      const commandEncoder = this.device.createCommandEncoder();
+      commandEncoder.copyBufferToBuffer(
+        buffer,
+        0,
+        this._readBuffer,
+        0,
+        memory.size,
+      );
+      this.device.queue.submit([commandEncoder.finish()]);
+      await this.device.queue.onSubmittedWorkDone();
+      await this._readBuffer.mapAsync(GPUMapMode.READ, 0, memory.size);
+      const value = this._readBuffer.getMappedRange().slice(0);
+      this._readBuffer.unmap();
+      return value;
+    });
+  }
+}
+
+class TaskQueue<T> {
+  private _queue: (() => Promise<void>)[] = [];
+  private _pending = false;
+
+  enqueue<T>(task: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this._queue.push(async () => {
+        try {
+          resolve(await task());
+        } catch (e) {
+          reject(e);
+        }
+      });
+      this._processQueue();
+    });
+  }
+
+  private async _processQueue() {
+    if (this._pending) {
+      return;
+    }
+    this._pending = true;
+    while (this._queue.length > 0) {
+      const task = this._queue.shift();
+      if (task) {
+        await task();
+      }
+    }
+    this._pending = false;
   }
 }
 

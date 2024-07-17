@@ -4,6 +4,7 @@
 }
 */
 
+import { onFrame } from '@wigsill/example-toolkit';
 import { ProgramBuilder, createRuntime, u32, wgsl } from 'wigsill';
 
 const mem1 = wgsl.memory(u32).alias('mem1');
@@ -18,19 +19,15 @@ const mem9 = wgsl
   .memory(u32)
   .setFlags(GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC)
   .alias('mem9');
+const mem10 = wgsl.memory(u32).alias('mem10');
+const mem11 = wgsl.memory(u32).alias('mem11');
+const mem12 = wgsl.memory(u32).alias('mem12');
+// const mem13 = wgsl.memory(u32).alias('mem13');
+// const mem14 = wgsl.memory(u32).alias('mem14');
 
 const shaderCode = wgsl`
 @compute @workgroup_size(1) fn main(@builtin(global_invocation_id) grid: vec3u) {
-  let mem1 = ${mem1};
-  let mem2 = ${mem2};
-  let mem3 = ${mem3};
-  let mem4 = ${mem4};
-  let mem5 = ${mem5};
-  let mem6 = ${mem6};
-  let mem7 = ${mem7};
-  let mem8 = ${mem8};
-
-  ${mem9} = mem1 + mem2 + mem3 + mem4 + mem5 + mem6 + mem7 + mem8;
+  ${mem9} = ${mem1} + ${mem2} + ${mem3} + ${mem4} + ${mem5} + ${mem6} + ${mem7} + ${mem8} + ${mem10} + ${mem11} + ${mem12};
 }
 `;
 
@@ -59,11 +56,23 @@ computePass.setPipeline(computePipeline);
 computePass.setBindGroup(0, program.bindGroup);
 computePass.dispatchWorkgroups(1);
 computePass.end();
+const commandBuffer = commandEncoder.finish();
 
-mem1.write(runtime, 3);
+device.queue.submit([commandBuffer]);
+await device.queue.onSubmittedWorkDone();
 
-device.queue.submit([commandEncoder.finish()]);
+onFrame(async () => {
+  const val = await mem9.read(runtime);
+  const commandEncoder = device.createCommandEncoder();
+  const computePass = commandEncoder.beginComputePass();
+  computePass.setPipeline(computePipeline);
+  computePass.setBindGroup(0, program.bindGroup);
+  computePass.dispatchWorkgroups(1);
+  computePass.end();
+  const commandBuffer = commandEncoder.finish();
+  device.queue.submit([commandBuffer]);
+  await device.queue.onSubmittedWorkDone();
 
-const val = await mem9.read(runtime);
-
-console.log(val);
+  mem1.write(runtime, val + 1);
+  console.log(val);
+});
