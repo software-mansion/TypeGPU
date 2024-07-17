@@ -60,9 +60,9 @@ class WGSLRuntime {
     );
     this.device.queue.submit([commandEncoder.finish()]);
     await this.device.queue.onSubmittedWorkDone().then(async () => {
-      await this._readBuffer!.mapAsync(GPUMapMode.READ);
-      const value = this._readBuffer!.getMappedRange().slice(0);
-      this._readBuffer!.unmap();
+      await this._readBuffer?.mapAsync(GPUMapMode.READ);
+      const value = this._readBuffer?.getMappedRange().slice(0);
+      this._readBuffer?.unmap();
       return value;
     });
     return null;
