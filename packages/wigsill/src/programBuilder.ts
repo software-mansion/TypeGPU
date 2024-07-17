@@ -145,7 +145,7 @@ export default class ProgramBuilder {
       entries: usedMemory.map((memory, idx) => ({
         binding: idx,
         resource: {
-          buffer: this.runtime.bufferFor(memory)!,
+          buffer: this.runtime.bufferFor(memory),
         },
       })),
     });

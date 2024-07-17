@@ -1,4 +1,4 @@
-import { WGSLCode } from './wgslCode';
+import type { WGSLCode } from './wgslCode';
 
 export type WGSLSegment = string | number | WGSLItem;
 
