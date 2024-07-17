@@ -1,16 +1,33 @@
-import type {
-  ResolutionCtx,
-  WGSLBindableTrait,
-  WGSLItem,
-  WGSLSegment,
-} from './types';
+import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
 import { code } from './wgslCode';
-import { WGSLIdentifier } from './wgslIdentifier';
+import { WgslIdentifier } from './wgslIdentifier';
 
-export class WGSLFunction implements WGSLItem {
-  private identifier = new WGSLIdentifier();
+// ----------
+// Public API
+// ----------
 
-  constructor(private readonly body: WGSLSegment) {}
+export interface WgslFn extends WgslResolvable {
+  alias(debugLabel: string): WgslFn;
+}
+
+export function fn(debugLabel?: string) {
+  return (strings: TemplateStringsArray, ...params: Wgsl[]): WgslFn => {
+    const func = new WgslFnImpl(code(strings, ...params));
+    if (debugLabel) {
+      func.alias(debugLabel);
+    }
+    return func;
+  };
+}
+
+// --------------
+// Implementation
+// --------------
+
+class WgslFnImpl implements WgslFn {
+  private identifier = new WgslIdentifier();
+
+  constructor(private readonly body: Wgsl) {}
 
   alias(debugLabel: string) {
     this.identifier.alias(debugLabel);
@@ -22,17 +39,4 @@ export class WGSLFunction implements WGSLItem {
 
     return ctx.resolve(this.identifier);
   }
-}
-
-export function fn(debugLabel?: string) {
-  return (
-    strings: TemplateStringsArray,
-    ...params: WGSLSegment[]
-  ): WGSLFunction => {
-    const func = new WGSLFunction(code(strings, ...params));
-    if (debugLabel) {
-      func.alias(debugLabel);
-    }
-    return func;
-  };
 }

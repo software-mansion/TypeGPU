@@ -1,13 +1,15 @@
 import * as TB from 'typed-binary';
 import { code } from '../wgslCode';
-import { SimpleWGSLDataType } from './std140';
-import type { AnyWGSLDataType } from './types';
+import { SimpleWgslData } from './std140';
+import type { AnyWgslData, WgslData } from './types';
 
-export const arrayOf = <TSchema extends AnyWGSLDataType>(
-  elementType: TSchema,
+type WgslArray<TElement extends AnyWgslData> = WgslData<TB.Unwrap<TElement>[]>;
+
+export const arrayOf = <TElement extends AnyWgslData>(
+  elementType: TElement,
   size: number,
-) =>
-  new SimpleWGSLDataType({
+): WgslArray<TElement> =>
+  new SimpleWgslData({
     schema: TB.arrayOf(elementType, size),
     byteAlignment: elementType.byteAlignment,
     code: code`array<${elementType}, ${size}>`,

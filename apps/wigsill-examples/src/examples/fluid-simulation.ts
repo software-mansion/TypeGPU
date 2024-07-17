@@ -59,9 +59,9 @@ function encodeBrushType(brushType: (typeof BrushTypes)[number]) {
   }
 }
 
-const viscosity = wgsl.memory(u32).alias('viscosity');
-const currentState = wgsl.memory(arrayOf(u32, 1024 ** 2)).alias('current');
-const size = wgsl.memory(vec2u).alias('size');
+const viscosity = wgsl.buffer(u32).alias('viscosity');
+const currentState = wgsl.buffer(arrayOf(u32, 1024 ** 2)).alias('current');
+const size = wgsl.buffer(vec2u).alias('size');
 
 const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
 const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
@@ -731,7 +731,7 @@ addParameter('brushSize', { initial: 0, min: 0, max: 10, step: 1 }, (value) => {
 addParameter(
   'brushType',
   { initial: 'water', options: BrushTypes },
-  (value) => {
+  (value: string) => {
     Options.brushType = value;
   },
 );

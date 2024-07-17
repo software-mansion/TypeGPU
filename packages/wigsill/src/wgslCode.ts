@@ -1,33 +1,21 @@
 import {
   type ResolutionCtx,
-  type WGSLItem,
-  type WGSLSegment,
-  isWGSLItem,
+  type Wgsl,
+  type WgslResolvable,
+  isResolvable,
 } from './types';
 
-export class WGSLCode implements WGSLItem {
-  constructor(public readonly segments: WGSLSegment[]) {}
+// ----------
+// Public API
+// ----------
 
-  resolve(ctx: ResolutionCtx) {
-    let code = '';
-
-    for (const s of this.segments) {
-      if (isWGSLItem(s)) {
-        code += ctx.resolve(s);
-      } else {
-        code += String(s);
-      }
-    }
-
-    return code;
-  }
-}
+export interface WgslCode extends WgslResolvable {}
 
 export function code(
   strings: TemplateStringsArray,
-  ...params: (WGSLSegment | WGSLSegment[])[]
-): WGSLCode {
-  const segments: WGSLSegment[] = strings.flatMap((string, idx) => {
+  ...params: (Wgsl | Wgsl[])[]
+): WgslCode {
+  const segments: Wgsl[] = strings.flatMap((string, idx) => {
     const param = params[idx];
     if (param === undefined) {
       return [string];
@@ -36,5 +24,27 @@ export function code(
     return Array.isArray(param) ? [string, ...param] : [string, param];
   });
 
-  return new WGSLCode(segments);
+  return new WgslCodeImpl(segments);
+}
+
+// --------------
+// Implementation
+// --------------
+
+class WgslCodeImpl implements WgslCode {
+  constructor(public readonly segments: Wgsl[]) {}
+
+  resolve(ctx: ResolutionCtx) {
+    let code = '';
+
+    for (const s of this.segments) {
+      if (isResolvable(s)) {
+        code += ctx.resolve(s);
+      } else {
+        code += String(s);
+      }
+    }
+
+    return code;
+  }
 }

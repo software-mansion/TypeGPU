@@ -1,30 +1,30 @@
 import Callable, { type AsCallable } from './callable';
 import {
-  type AnyWGSLDataType,
+  type AnyWgslData,
   type WGSLFnArgument,
   type WGSLValue,
   isPointer,
 } from './std140/types';
-import type { ResolutionCtx, WGSLItem, WGSLSegment } from './types';
-import { type WGSLCode, code } from './wgslCode';
-import { WGSLIdentifier, identifier } from './wgslIdentifier';
+import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
+import { code } from './wgslCode';
+import { WgslIdentifier } from './wgslIdentifier';
 
 type ValuesFromTypes<TArgTypes extends WGSLFnArgument[]> = {
-  [K in keyof TArgTypes]: WGSLValue<TArgTypes[K]> & WGSLIdentifier;
+  [K in keyof TArgTypes]: WGSLValue<TArgTypes[K]> & WgslIdentifier;
 };
 
 type PairsFromTypes<TArgTypes extends WGSLFnArgument[]> = {
-  [K in keyof TArgTypes]: readonly [WGSLIdentifier, TArgTypes[K]];
+  [K in keyof TArgTypes]: readonly [WgslIdentifier, TArgTypes[K]];
 };
 
 type SegmentsFromTypes<TArgTypes extends WGSLFnArgument[]> = {
-  [K in keyof TArgTypes]: WGSLSegment;
+  [K in keyof TArgTypes]: Wgsl;
 };
 
 class WGSLFunctionCall<
   TArgTypes extends [WGSLFnArgument, ...WGSLFnArgument[]] | [],
-  TReturn extends AnyWGSLDataType | undefined = undefined,
-> implements WGSLItem
+  TReturn extends AnyWgslData | undefined = undefined,
+> implements WgslResolvable
 {
   constructor(
     private usedFn: WGSLFunction<TArgTypes, TReturn>,
@@ -43,18 +43,18 @@ class WGSLFunctionCall<
 
 export class WGSLFunction<
     TArgTypes extends [WGSLFnArgument, ...WGSLFnArgument[]] | [],
-    // TArgPairs extends (readonly [WGSLIdentifier, WGSLFnArgument])[],
-    TReturn extends AnyWGSLDataType | undefined = undefined,
+    // TArgPairs extends (readonly [WgslIdentifier, WGSLFnArgument])[],
+    TReturn extends AnyWgslData | undefined = undefined,
   >
   extends Callable<SegmentsFromTypes<TArgTypes>, WGSLFunctionCall<TArgTypes>>
-  implements WGSLItem
+  implements WgslResolvable
 {
-  private identifier = new WGSLIdentifier();
+  private identifier = new WgslIdentifier();
 
   constructor(
     private argPairs: PairsFromTypes<TArgTypes>,
     private returnType: TReturn | undefined,
-    private readonly body: WGSLSegment,
+    private readonly body: Wgsl,
   ) {
     super();
   }
@@ -95,19 +95,19 @@ export class WGSLFunction<
 
 export function fn<
   TArgTypes extends [WGSLFnArgument, ...WGSLFnArgument[]] | [],
-  TReturn extends AnyWGSLDataType | undefined = undefined,
+  TReturn extends AnyWgslData | undefined = undefined,
 >(argTypes: TArgTypes, returnType?: TReturn) {
   const argPairs = argTypes.map(
-    (argType) => [identifier(), argType] as const,
+    (argType) => [new WgslIdentifier(), argType] as const,
   ) as PairsFromTypes<TArgTypes>;
 
   const argValues = argPairs.map(
     ([argIdent, argType]) =>
-      argIdent as WGSLValue<typeof argType> & WGSLIdentifier,
+      argIdent as WGSLValue<typeof argType> & WgslIdentifier,
   );
 
   type TArgValues = ValuesFromTypes<TArgTypes>;
-  return (bodyProducer: (...args: TArgValues) => WGSLCode) => {
+  return (bodyProducer: (...args: TArgValues) => Wgsl) => {
     const body = bodyProducer(...(argValues as TArgValues));
 
     const fnInstance = new WGSLFunction<TArgTypes, TReturn>(

@@ -6,13 +6,13 @@ import {
 import type { MemoryArena } from './memoryArena';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import {
+  type BindPair,
   type ResolutionCtx,
-  type WGSLBindPair,
-  type WGSLBindableTrait,
-  type WGSLItem,
-  type WGSLMemoryTrait,
-  type WGSLSegment,
-  isWGSLItem,
+  type Wgsl,
+  type WgslAllocatable,
+  type WgslBindable,
+  type WgslResolvable,
+  isResolvable,
 } from './types';
 import type WGSLRuntime from './wgslRuntime';
 
@@ -32,20 +32,20 @@ function addUnique<T>(list: T[], value: T) {
 
 export type ResolutionCtxImplOptions = {
   readonly memoryArenas?: MemoryArena[];
-  readonly bindings?: WGSLBindPair<unknown>[];
+  readonly bindings?: BindPair<unknown>[];
   readonly names: NameRegistry;
 };
 
 export class ResolutionCtxImpl implements ResolutionCtx {
-  private _entryToArenaMap = new WeakMap<WGSLMemoryTrait, MemoryArena>();
-  private readonly _bindings: WGSLBindPair<unknown>[];
+  private _entryToArenaMap = new WeakMap<WgslAllocatable, MemoryArena>();
+  private readonly _bindings: BindPair<unknown>[];
   private readonly _names: NameRegistry;
 
-  public dependencies: WGSLItem[] = [];
+  public dependencies: WgslResolvable[] = [];
   public usedMemoryArenas = new WeakSet<MemoryArena>();
   public memoryArenaDeclarationIdxMap = new WeakMap<MemoryArena, number>();
 
-  private _memoizedResults = new WeakMap<WGSLItem, string>();
+  private _memoizedResults = new WeakMap<WgslResolvable, string>();
 
   /**
    * @throws {MemoryArenaConflict}
@@ -69,7 +69,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  addDependency(item: WGSLItem) {
+  addDependency(item: WgslResolvable) {
     this.resolve(item);
     addUnique(this.dependencies, item);
   }
@@ -77,26 +77,26 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   /**
    * @throws {NotAllocatedMemoryError}
    */
-  addMemory(memoryEntry: WGSLMemoryTrait): void {
-    const arena = this._entryToArenaMap.get(memoryEntry);
+  addAllocatable(allocatable: WgslAllocatable): void {
+    const arena = this._entryToArenaMap.get(allocatable);
     if (!arena) {
-      throw new NotAllocatedMemoryError(memoryEntry);
+      throw new NotAllocatedMemoryError(allocatable);
     }
 
     this.memoryArenaDeclarationIdxMap.set(arena, this.dependencies.length);
   }
 
-  nameFor(item: WGSLItem): string {
+  nameFor(item: WgslResolvable): string {
     return this._names.nameFor(item);
   }
 
-  arenaFor(memoryEntry: WGSLMemoryTrait): MemoryArena | null {
+  arenaFor(memoryEntry: WgslAllocatable): MemoryArena | null {
     return this._entryToArenaMap.get(memoryEntry) ?? null;
   }
 
-  requireBinding<T>(bindable: WGSLBindableTrait<T>): T {
+  requireBinding<T>(bindable: WgslBindable<T>): T {
     const binding = this._bindings.find(([b]) => b === bindable) as
-      | WGSLBindPair<T>
+      | BindPair<T>
       | undefined;
 
     if (!binding) {
@@ -106,9 +106,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return binding[1];
   }
 
-  tryBinding<T>(bindable: WGSLBindableTrait<T>, defaultValue: T): T {
+  tryBinding<T>(bindable: WgslBindable<T>, defaultValue: T): T {
     const binding = this._bindings.find(([b]) => b === bindable) as
-      | WGSLBindPair<T>
+      | BindPair<T>
       | undefined;
 
     if (!binding) {
@@ -118,8 +118,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return binding[1];
   }
 
-  resolve(item: WGSLSegment) {
-    if (!isWGSLItem(item)) {
+  resolve(item: Wgsl) {
+    if (!isResolvable(item)) {
       return String(item);
     }
 
@@ -142,14 +142,14 @@ type BuildOptions = {
 };
 
 export default class ProgramBuilder {
-  private bindings: WGSLBindPair<unknown>[] = [];
+  private bindings: BindPair<unknown>[] = [];
 
   constructor(
     private runtime: WGSLRuntime,
-    private root: WGSLItem,
+    private root: WgslResolvable,
   ) {}
 
-  provide<T>(bindable: WGSLBindableTrait<T>, value: T) {
+  provide<T>(bindable: WgslBindable<T>, value: T) {
     this.bindings.push([bindable, value]);
     return this;
   }

@@ -4,12 +4,18 @@
     "enabled": true
   },
   "files": {
-    "ignore": ["**/dist/*", "**/coverage/*", "**/*.d.ts"]
+    "ignore": [
+      "**/dist/*",
+      "**/coverage/*",
+      "**/*.d.ts",
+      "packages/wigsill-parser/src/grammar.ts"
+    ]
   },
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "recommended": true,
+      "correctness": { "noUnusedImports": "error" }
     }
   },
   "json": {
