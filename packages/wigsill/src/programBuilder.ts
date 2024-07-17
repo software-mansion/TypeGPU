@@ -6,8 +6,8 @@ import {
 import type { MemoryArena } from './memoryArena';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import {
+  type BindPair,
   type ResolutionCtx,
-  type WGSLBindPair,
   type Wgsl,
   type WgslAllocatable,
   type WgslBindable,
@@ -32,13 +32,13 @@ function addUnique<T>(list: T[], value: T) {
 
 export type ResolutionCtxImplOptions = {
   readonly memoryArenas?: MemoryArena[];
-  readonly bindings?: WGSLBindPair<unknown>[];
+  readonly bindings?: BindPair<unknown>[];
   readonly names: NameRegistry;
 };
 
 export class ResolutionCtxImpl implements ResolutionCtx {
   private _entryToArenaMap = new WeakMap<WgslAllocatable, MemoryArena>();
-  private readonly _bindings: WGSLBindPair<unknown>[];
+  private readonly _bindings: BindPair<unknown>[];
   private readonly _names: NameRegistry;
 
   public dependencies: WgslResolvable[] = [];
@@ -96,7 +96,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   requireBinding<T>(bindable: WgslBindable<T>): T {
     const binding = this._bindings.find(([b]) => b === bindable) as
-      | WGSLBindPair<T>
+      | BindPair<T>
       | undefined;
 
     if (!binding) {
@@ -108,7 +108,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   tryBinding<T>(bindable: WgslBindable<T>, defaultValue: T): T {
     const binding = this._bindings.find(([b]) => b === bindable) as
-      | WGSLBindPair<T>
+      | BindPair<T>
       | undefined;
 
     if (!binding) {
@@ -142,7 +142,7 @@ type BuildOptions = {
 };
 
 export default class ProgramBuilder {
-  private bindings: WGSLBindPair<unknown>[] = [];
+  private bindings: BindPair<unknown>[] = [];
 
   constructor(
     private runtime: WGSLRuntime,

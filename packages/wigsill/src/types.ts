@@ -43,7 +43,7 @@ export interface WgslBindable<TBinding> {
   readonly debugLabel?: string | undefined;
 }
 
-export type WGSLBindPair<T> = [WgslBindable<T>, T];
+export type BindPair<T> = [WgslBindable<T>, T];
 
 export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData>
   extends WgslResolvable {
