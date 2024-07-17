@@ -1,5 +1,6 @@
 import type { MemoryArena } from './memoryArena';
-import type { MemoryLocation, WGSLMemoryTrait } from './types';
+import type { AnyWgslData } from './std140/types';
+import type { MemoryLocation, WgslAllocatable } from './types';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
@@ -7,7 +8,10 @@ import type { MemoryLocation, WGSLMemoryTrait } from './types';
  */
 class WGSLRuntime {
   private _arenaToBufferMap = new WeakMap<MemoryArena, GPUBuffer>();
-  private _entryToArenaMap = new WeakMap<WGSLMemoryTrait, MemoryArena>();
+  private _entryToArenaMap = new WeakMap<
+    WgslAllocatable<AnyWgslData>,
+    MemoryArena
+  >();
 
   constructor(public readonly device: GPUDevice) {}
 
@@ -37,7 +41,9 @@ class WGSLRuntime {
     return buffer;
   }
 
-  locateMemory(memoryEntry: WGSLMemoryTrait): MemoryLocation | null {
+  locateMemory(
+    memoryEntry: WgslAllocatable<AnyWgslData>,
+  ): MemoryLocation | null {
     const arena = this._entryToArenaMap.get(memoryEntry);
 
     if (!arena) {

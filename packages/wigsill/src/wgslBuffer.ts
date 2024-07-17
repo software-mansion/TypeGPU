@@ -3,28 +3,44 @@ import { NotAllocatedMemoryError } from './errors';
 import type { AnyWgslData } from './std140/types';
 import type {
   ResolutionCtx,
-  WGSLMemoryTrait,
   Wgsl,
+  WgslAllocatable,
   WgslResolvable,
 } from './types';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
 import type WGSLRuntime from './wgslRuntime';
 
-export class WGSLMemory<TSchema extends AnyWgslData>
-  implements WgslResolvable, WGSLMemoryTrait
-{
+// ----------
+// Public API
+// ----------
+
+export interface WgslBuffer<TData extends AnyWgslData>
+  extends WgslResolvable,
+    WgslAllocatable<TData> {
+  alias(label: string): WgslBuffer<TData>;
+
+  write(runtime: WGSLRuntime, data: Parsed<TData>): void;
+}
+
+export function buffer<TData extends AnyWgslData>(
+  typeSchema: TData,
+): WgslBuffer<TData> {
+  return new WgslBufferImpl(typeSchema);
+}
+
+// --------------
+// Implementation
+// --------------
+
+class WgslBufferImpl<TData extends AnyWgslData> implements WgslBuffer<TData> {
   private fieldIdentifier = new WgslIdentifier();
   public structFieldDefinition: Wgsl;
 
   public debugLabel?: string | undefined;
-  public readonly size: number;
-  public readonly baseAlignment: number;
 
-  constructor(private readonly _typeSchema: TSchema) {
-    this.structFieldDefinition = code`${this.fieldIdentifier}: ${this._typeSchema},\n`;
-    this.size = this._typeSchema.size;
-    this.baseAlignment = this._typeSchema.byteAlignment;
+  constructor(public readonly dataType: TData) {
+    this.structFieldDefinition = code`${this.fieldIdentifier}: ${this.dataType},\n`;
   }
 
   alias(debugLabel: string) {
@@ -48,12 +64,12 @@ export class WGSLMemory<TSchema extends AnyWgslData>
     ctx.resolve(this.structFieldDefinition); // making sure all struct field dependencies are added
 
     // after resolving all dependencies, add memory.
-    ctx.addMemory(this);
+    ctx.addAllocatable(this);
 
     return result;
   }
 
-  write(runtime: WGSLRuntime, data: Parsed<TSchema>): boolean {
+  write(runtime: WGSLRuntime, data: Parsed<TData>): boolean {
     const memoryLocation = runtime.locateMemory(this);
 
     if (!memoryLocation) {
@@ -61,20 +77,16 @@ export class WGSLMemory<TSchema extends AnyWgslData>
       return false;
     }
 
-    const hostBuffer = new ArrayBuffer(this.size);
-    this._typeSchema.write(new BufferWriter(hostBuffer), data);
+    const hostBuffer = new ArrayBuffer(this.dataType.size);
+    this.dataType.write(new BufferWriter(hostBuffer), data);
     runtime.device.queue.writeBuffer(
       memoryLocation.gpuBuffer,
       memoryLocation.offset,
       hostBuffer,
       0,
-      this.size,
+      this.dataType.size,
     );
 
     return true;
   }
-}
-
-export function memory<TSchema extends AnyWgslData>(typeSchema: TSchema) {
-  return new WGSLMemory(typeSchema);
 }

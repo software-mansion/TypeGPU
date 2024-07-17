@@ -1,5 +1,6 @@
 import { roundUp } from './mathUtils';
-import type { WGSLMemoryTrait } from './types';
+import type { AnyWgslData } from './std140/types';
+import type { WgslAllocatable } from './types';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
 
@@ -7,7 +8,7 @@ export type MemoryArenaOptions = {
   readonly usage: number;
   readonly bufferBindingType: GPUBufferBindingType;
   readonly minSize?: number;
-  readonly memoryEntries: WGSLMemoryTrait[];
+  readonly memoryEntries: WgslAllocatable<AnyWgslData>[];
 };
 
 /**
@@ -15,12 +16,15 @@ export type MemoryArenaOptions = {
  * A place for grouping WGSL memory items.
  */
 export class MemoryArena {
-  private _memoryOffsetMap = new WeakMap<WGSLMemoryTrait, number>();
+  private _memoryOffsetMap = new WeakMap<
+    WgslAllocatable<AnyWgslData>,
+    number
+  >();
 
   public readonly bufferBindingType: GPUBufferBindingType;
   public readonly usage: number;
   public readonly size: number = 0;
-  public readonly memoryEntries: WGSLMemoryTrait[];
+  public readonly memoryEntries: WgslAllocatable<AnyWgslData>[];
   public readonly identifier = new WgslIdentifier();
   public debugLabel?: string | undefined;
 
@@ -33,9 +37,9 @@ export class MemoryArena {
     let size = 0;
     for (const memoryEntry of this.memoryEntries) {
       // aligning
-      size = roundUp(size, memoryEntry.baseAlignment);
+      size = roundUp(size, memoryEntry.dataType.byteAlignment);
       this._memoryOffsetMap.set(memoryEntry, size);
-      size += memoryEntry.size;
+      size += memoryEntry.dataType.size;
     }
 
     // aligning up to 16 bytes, which is a binding buffer requirement.
@@ -54,7 +58,7 @@ export class MemoryArena {
     this.identifier.alias(debugLabel);
   }
 
-  offsetFor(memoryEntry: WGSLMemoryTrait): number | null {
+  offsetFor(memoryEntry: WgslAllocatable<AnyWgslData>): number | null {
     return this._memoryOffsetMap.get(memoryEntry) ?? null;
   }
 

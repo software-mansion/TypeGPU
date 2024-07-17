@@ -1,7 +1,7 @@
 import {
   type ResolutionCtx,
   type Wgsl,
-  type WgslBindableTrait,
+  type WgslBindable,
   type WgslResolvable,
   isWgsl,
 } from './types';
@@ -10,7 +10,7 @@ import {
 // Public API
 // ----------
 
-export interface WgslSlot<T> extends WgslBindableTrait<T> {
+export interface WgslSlot<T> extends WgslBindable<T> {
   alias(label: string): WgslSlot<T>;
 }
 
@@ -38,7 +38,7 @@ export function slot<T>(defaultValue?: T): WgslSlot<T> {
 // Implementation
 // --------------
 
-class WgslSlotImpl<T> implements WgslResolvable, WgslBindableTrait<T> {
+class WgslSlotImpl<T> implements WgslResolvable, WgslBindable<T> {
   __bindingType!: T;
   public debugLabel?: string | undefined;
 

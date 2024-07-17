@@ -1,15 +1,16 @@
 import type { MemoryArena } from './memoryArena';
+import type { AnyWgslData } from './std140/types';
 
 export type Wgsl = string | number | WgslResolvable;
 
 export interface ResolutionCtx {
   addDependency(item: WgslResolvable): void;
-  addMemory(memoryEntry: WGSLMemoryTrait): void;
+  addAllocatable(allocatable: WgslAllocatable<AnyWgslData>): void;
   nameFor(token: WgslResolvable): string;
-  arenaFor(memoryEntry: WGSLMemoryTrait): MemoryArena | null;
+  arenaFor(memoryEntry: WgslAllocatable<AnyWgslData>): MemoryArena | null;
   /** @throws {MissingBindingError}  */
-  requireBinding<T>(bindable: WgslBindableTrait<T>): T;
-  tryBinding<T>(bindable: WgslBindableTrait<T>, defaultValue: T): T;
+  requireBinding<T>(bindable: WgslBindable<T>): T;
+  tryBinding<T>(bindable: WgslBindable<T>, defaultValue: T): T;
   resolve(item: Wgsl): string;
 }
 
@@ -35,18 +36,27 @@ export function isWgsl(value: unknown): value is Wgsl {
   );
 }
 
-export interface WgslBindableTrait<TBinding> {
+export interface WgslBindable<TBinding> {
   /** type-token, not available at runtime */
   readonly __bindingType: TBinding;
 
   readonly debugLabel?: string | undefined;
 }
 
-export type WGSLBindPair<T> = [WgslBindableTrait<T>, T];
+export type WGSLBindPair<T> = [WgslBindable<T>, T];
 
-export interface WGSLMemoryTrait extends WgslResolvable {
-  readonly size: number;
-  readonly baseAlignment: number;
+export interface WgslAllocatable<TData extends AnyWgslData>
+  extends WgslResolvable {
+  /**
+   * The data type this allocatable was constructed with.
+   * It informs the size and format of data in both JS and
+   * binary.
+   */
+  readonly dataType: TData;
+
+  /**
+   * @deprecated to be removed along with memory arenas.
+   */
   readonly structFieldDefinition: Wgsl;
 }
 

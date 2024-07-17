@@ -5,12 +5,13 @@ import {
 } from './errors';
 import type { MemoryArena } from './memoryArena';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
+import type { AnyWgslData } from './std140/types';
 import {
   type ResolutionCtx,
   type WGSLBindPair,
-  type WGSLMemoryTrait,
   type Wgsl,
-  type WgslBindableTrait,
+  type WgslAllocatable,
+  type WgslBindable,
   type WgslResolvable,
   isResolvable,
 } from './types';
@@ -37,7 +38,10 @@ export type ResolutionCtxImplOptions = {
 };
 
 export class ResolutionCtxImpl implements ResolutionCtx {
-  private _entryToArenaMap = new WeakMap<WGSLMemoryTrait, MemoryArena>();
+  private _entryToArenaMap = new WeakMap<
+    WgslAllocatable<AnyWgslData>,
+    MemoryArena
+  >();
   private readonly _bindings: WGSLBindPair<unknown>[];
   private readonly _names: NameRegistry;
 
@@ -77,10 +81,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   /**
    * @throws {NotAllocatedMemoryError}
    */
-  addMemory(memoryEntry: WGSLMemoryTrait): void {
-    const arena = this._entryToArenaMap.get(memoryEntry);
+  addAllocatable(allocatable: WgslAllocatable<AnyWgslData>): void {
+    const arena = this._entryToArenaMap.get(allocatable);
     if (!arena) {
-      throw new NotAllocatedMemoryError(memoryEntry);
+      throw new NotAllocatedMemoryError(allocatable);
     }
 
     this.memoryArenaDeclarationIdxMap.set(arena, this.dependencies.length);
@@ -90,11 +94,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._names.nameFor(item);
   }
 
-  arenaFor(memoryEntry: WGSLMemoryTrait): MemoryArena | null {
+  arenaFor(memoryEntry: WgslAllocatable<AnyWgslData>): MemoryArena | null {
     return this._entryToArenaMap.get(memoryEntry) ?? null;
   }
 
-  requireBinding<T>(bindable: WgslBindableTrait<T>): T {
+  requireBinding<T>(bindable: WgslBindable<T>): T {
     const binding = this._bindings.find(([b]) => b === bindable) as
       | WGSLBindPair<T>
       | undefined;
@@ -106,7 +110,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return binding[1];
   }
 
-  tryBinding<T>(bindable: WgslBindableTrait<T>, defaultValue: T): T {
+  tryBinding<T>(bindable: WgslBindable<T>, defaultValue: T): T {
     const binding = this._bindings.find(([b]) => b === bindable) as
       | WGSLBindPair<T>
       | undefined;
@@ -149,7 +153,7 @@ export default class ProgramBuilder {
     private root: WgslResolvable,
   ) {}
 
-  provide<T>(bindable: WgslBindableTrait<T>, value: T) {
+  provide<T>(bindable: WgslBindable<T>, value: T) {
     this.bindings.push([bindable, value]);
     return this;
   }
