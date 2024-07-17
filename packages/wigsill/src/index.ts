@@ -15,4 +15,3 @@ export { WGSLFunction } from './wgslFunction';
 export { WGSLIdentifier } from './wgslIdentifier';
 export { WGSLMemory } from './wgslMemory';
 export { WGSLSlot } from './wgslSlot';
-export { WGSLRequire } from './wgslRequire';

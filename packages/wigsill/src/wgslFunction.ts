@@ -1,11 +1,11 @@
 import Callable, { type AsCallable } from './callable';
 import {
-  type AnyWGSLDataType,
+  type AnyWgslData,
   type WGSLFnArgument,
   type WGSLValue,
   isPointer,
 } from './std140/types';
-import type { ResolutionCtx, WGSLItem, Wgsl } from './types';
+import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
 import { type WGSLCode, code } from './wgslCode';
 import { WGSLIdentifier, identifier } from './wgslIdentifier';
 
@@ -23,8 +23,8 @@ type SegmentsFromTypes<TArgTypes extends WGSLFnArgument[]> = {
 
 class WGSLFunctionCall<
   TArgTypes extends [WGSLFnArgument, ...WGSLFnArgument[]] | [],
-  TReturn extends AnyWGSLDataType | undefined = undefined,
-> implements WGSLItem
+  TReturn extends AnyWgslData | undefined = undefined,
+> implements WgslResolvable
 {
   constructor(
     private usedFn: WGSLFunction<TArgTypes, TReturn>,
@@ -44,10 +44,10 @@ class WGSLFunctionCall<
 export class WGSLFunction<
     TArgTypes extends [WGSLFnArgument, ...WGSLFnArgument[]] | [],
     // TArgPairs extends (readonly [WGSLIdentifier, WGSLFnArgument])[],
-    TReturn extends AnyWGSLDataType | undefined = undefined,
+    TReturn extends AnyWgslData | undefined = undefined,
   >
   extends Callable<SegmentsFromTypes<TArgTypes>, WGSLFunctionCall<TArgTypes>>
-  implements WGSLItem
+  implements WgslResolvable
 {
   private identifier = new WGSLIdentifier();
 
@@ -95,7 +95,7 @@ export class WGSLFunction<
 
 export function fn<
   TArgTypes extends [WGSLFnArgument, ...WGSLFnArgument[]] | [],
-  TReturn extends AnyWGSLDataType | undefined = undefined,
+  TReturn extends AnyWgslData | undefined = undefined,
 >(argTypes: TArgTypes, returnType?: TReturn) {
   const argPairs = argTypes.map(
     (argType) => [identifier(), argType] as const,

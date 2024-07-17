@@ -1,13 +1,13 @@
 import { BufferWriter, type Parsed } from 'typed-binary';
 import { NotAllocatedMemoryError } from './errors';
-import type { AnyWGSLDataType } from './std140/types';
-import type { ResolutionCtx, WGSLItem, WGSLMemoryTrait } from './types';
+import type { AnyWgslData } from './std140/types';
+import type { ResolutionCtx, WGSLMemoryTrait, WgslResolvable } from './types';
 import { type WGSLCode, code } from './wgslCode';
 import { identifier } from './wgslIdentifier';
 import type WGSLRuntime from './wgslRuntime';
 
-export class WGSLMemory<TSchema extends AnyWGSLDataType>
-  implements WGSLItem, WGSLMemoryTrait
+export class WGSLMemory<TSchema extends AnyWgslData>
+  implements WgslResolvable, WGSLMemoryTrait
 {
   private fieldIdentifier = identifier();
   public structFieldDefinition: WGSLCode;
@@ -70,6 +70,6 @@ export class WGSLMemory<TSchema extends AnyWGSLDataType>
   }
 }
 
-export function memory<TSchema extends AnyWGSLDataType>(typeSchema: TSchema) {
+export function memory<TSchema extends AnyWgslData>(typeSchema: TSchema) {
   return new WGSLMemory(typeSchema);
 }

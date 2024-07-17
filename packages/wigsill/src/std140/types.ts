@@ -1,16 +1,16 @@
 import type { ISchema } from 'typed-binary';
-import type { WGSLItem } from '../types';
+import type { WgslResolvable } from '../types';
 
-export interface WGSLDataType<TInner> extends ISchema<TInner>, WGSLItem {
+export interface WgslData<TInner> extends ISchema<TInner>, WgslResolvable {
   readonly byteAlignment: number;
   readonly size: number;
 }
 
-export type AnyWGSLDataType = WGSLDataType<unknown>;
+export type AnyWgslData = WgslData<unknown>;
 
 export interface WGSLPointerType<
   TScope extends 'function',
-  TInner extends AnyWGSLDataType,
+  TInner extends AnyWgslData,
 > {
   readonly scope: TScope;
   readonly pointsTo: TInner;
@@ -23,12 +23,12 @@ export type WGSLValue<TDataType> = {
   readonly __dataType: TDataType;
 };
 
-export type AnyWGSLPointerType = WGSLPointerType<'function', AnyWGSLDataType>;
+export type AnyWGSLPointerType = WGSLPointerType<'function', AnyWgslData>;
 
-export type WGSLFnArgument = AnyWGSLPointerType | AnyWGSLDataType;
+export type WGSLFnArgument = AnyWGSLPointerType | AnyWgslData;
 
 export function isPointer(
-  value: AnyWGSLPointerType | AnyWGSLDataType,
+  value: AnyWGSLPointerType | AnyWgslData,
 ): value is AnyWGSLPointerType {
   return 'pointsTo' in value;
 }

@@ -1,5 +1,5 @@
-import type { AnyWGSLDataType } from './std140/types';
-import type { ResolutionCtx, WGSLItem, Wgsl } from './types';
+import type { AnyWgslData } from './std140/types';
+import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
 import { code } from './wgslCode';
 import { identifier } from './wgslIdentifier';
 
@@ -8,8 +8,8 @@ export type VariableScope = 'private';
 /**
  * Creates a variable, with an optional initial value.
  */
-export class WGSLVariable<TDataType extends AnyWGSLDataType>
-  implements WGSLItem
+export class WGSLVariable<TDataType extends AnyWgslData>
+  implements WgslResolvable
 {
   public identifier = identifier();
 
@@ -39,7 +39,7 @@ export class WGSLVariable<TDataType extends AnyWGSLDataType>
   }
 }
 
-export const variable = <TDataType extends AnyWGSLDataType>(
+export const variable = <TDataType extends AnyWgslData>(
   dataType: TDataType,
   initialValue?: Wgsl,
 ) => new WGSLVariable(dataType, initialValue, 'private');

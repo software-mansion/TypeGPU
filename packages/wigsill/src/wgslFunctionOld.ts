@@ -1,8 +1,12 @@
-import type { ResolutionCtx, WGSLItem, Wgsl } from './types';
+import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
 import { code } from './wgslCode';
 import { WGSLIdentifier } from './wgslIdentifier';
 
-export class WGSLFunction implements WGSLItem {
+export interface WgslFn extends WgslResolvable {
+  alias(debugLabel: string): WgslFn;
+}
+
+class WGSLFunction implements WgslFn {
   private identifier = new WGSLIdentifier();
 
   constructor(private readonly body: Wgsl) {}
@@ -20,7 +24,7 @@ export class WGSLFunction implements WGSLItem {
 }
 
 export function fn(debugLabel?: string) {
-  return (strings: TemplateStringsArray, ...params: Wgsl[]): WGSLFunction => {
+  return (strings: TemplateStringsArray, ...params: Wgsl[]): WgslFn => {
     const func = new WGSLFunction(code(strings, ...params));
     if (debugLabel) {
       func.alias(debugLabel);

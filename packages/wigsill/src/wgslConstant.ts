@@ -1,4 +1,4 @@
-import type { ResolutionCtx, WGSLItem, Wgsl } from './types';
+import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
 import { code } from './wgslCode';
 import { WGSLIdentifier } from './wgslIdentifier';
 
@@ -6,7 +6,7 @@ import { WGSLIdentifier } from './wgslIdentifier';
  * Creates a constant is computed at shader initialization according
  * to the passed in expression.
  */
-export class WGSLConstant implements WGSLItem {
+export class WGSLConstant implements WgslResolvable {
   public debugLabel?: string | undefined;
   public identifier = new WGSLIdentifier();
 

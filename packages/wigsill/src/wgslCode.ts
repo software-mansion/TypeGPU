@@ -1,18 +1,18 @@
 import {
   type ResolutionCtx,
-  type WGSLItem,
   type Wgsl,
-  isWGSLItem,
+  type WgslResolvable,
+  isResolvable,
 } from './types';
 
-export class WGSLCode implements WGSLItem {
+export class WGSLCode implements WgslResolvable {
   constructor(public readonly segments: Wgsl[]) {}
 
   resolve(ctx: ResolutionCtx) {
     let code = '';
 
     for (const s of this.segments) {
-      if (isWGSLItem(s)) {
+      if (isResolvable(s)) {
         code += ctx.resolve(s);
       } else {
         code += String(s);

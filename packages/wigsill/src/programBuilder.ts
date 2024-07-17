@@ -9,10 +9,10 @@ import {
   type ResolutionCtx,
   type WGSLBindPair,
   type WGSLBindableTrait,
-  type WGSLItem,
   type WGSLMemoryTrait,
   type Wgsl,
-  isWGSLItem,
+  type WgslResolvable,
+  isResolvable,
 } from './types';
 import type WGSLRuntime from './wgslRuntime';
 
@@ -41,11 +41,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _bindings: WGSLBindPair<unknown>[];
   private readonly _names: NameRegistry;
 
-  public dependencies: WGSLItem[] = [];
+  public dependencies: WgslResolvable[] = [];
   public usedMemoryArenas = new WeakSet<MemoryArena>();
   public memoryArenaDeclarationIdxMap = new WeakMap<MemoryArena, number>();
 
-  private _memoizedResults = new WeakMap<WGSLItem, string>();
+  private _memoizedResults = new WeakMap<WgslResolvable, string>();
 
   /**
    * @throws {MemoryArenaConflict}
@@ -69,7 +69,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  addDependency(item: WGSLItem) {
+  addDependency(item: WgslResolvable) {
     this.resolve(item);
     addUnique(this.dependencies, item);
   }
@@ -86,7 +86,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.memoryArenaDeclarationIdxMap.set(arena, this.dependencies.length);
   }
 
-  nameFor(item: WGSLItem): string {
+  nameFor(item: WgslResolvable): string {
     return this._names.nameFor(item);
   }
 
@@ -119,7 +119,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   resolve(item: Wgsl) {
-    if (!isWGSLItem(item)) {
+    if (!isResolvable(item)) {
       return String(item);
     }
 
@@ -146,7 +146,7 @@ export default class ProgramBuilder {
 
   constructor(
     private runtime: WGSLRuntime,
-    private root: WGSLItem,
+    private root: WgslResolvable,
   ) {}
 
   provide<T>(bindable: WGSLBindableTrait<T>, value: T) {

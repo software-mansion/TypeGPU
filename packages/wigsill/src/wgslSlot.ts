@@ -1,8 +1,8 @@
 import {
   type ResolutionCtx,
   type WGSLBindableTrait,
-  type WGSLItem,
   type Wgsl,
+  type WgslResolvable,
   isWgsl,
 } from './types';
 
@@ -14,7 +14,7 @@ export interface Slot<T> {
   alias(label: string): Slot<T>;
 }
 
-export interface ResolvableSlot<T extends Wgsl> extends WGSLItem {
+export interface ResolvableSlot<T extends Wgsl> extends WgslResolvable {
   __brand: 'Slot';
   /** type-token, not available at runtime */
   __bindingType: T;
@@ -22,7 +22,7 @@ export interface ResolvableSlot<T extends Wgsl> extends WGSLItem {
   alias(label: string): ResolvableSlot<T>;
 }
 
-export class WGSLSlot<T> implements WGSLItem, WGSLBindableTrait<T> {
+export class WGSLSlot<T> implements WgslResolvable, WGSLBindableTrait<T> {
   __bindingType!: T;
   __brand = 'Slot' as const;
   public debugLabel?: string | undefined;

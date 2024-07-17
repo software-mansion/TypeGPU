@@ -16,11 +16,11 @@ import {
 import { RecursiveDataTypeError } from '../errors';
 import type { ResolutionCtx, Wgsl } from '../types';
 import alignIO from './alignIO';
-import type { WGSLDataType } from './types';
+import type { WgslData } from './types';
 
-export class SimpleWGSLDataType<TSchema extends AnySchema>
+export class SimpleWgslData<TSchema extends AnySchema>
   extends Schema<Unwrap<TSchema>>
-  implements WGSLDataType<Unwrap<TSchema>>
+  implements WgslData<Unwrap<TSchema>>
 {
   public readonly size: number;
   public readonly byteAlignment: number;

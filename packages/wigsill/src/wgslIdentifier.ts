@@ -1,6 +1,6 @@
-import type { ResolutionCtx, WGSLItem } from './types';
+import type { ResolutionCtx, WgslResolvable } from './types';
 
-export class WGSLIdentifier implements WGSLItem {
+export class WGSLIdentifier implements WgslResolvable {
   debugLabel?: string | undefined;
 
   alias(debugLabel: string) {

@@ -1,11 +1,11 @@
 import type { MemoryArena } from './memoryArena';
 
-export type Wgsl = string | number | WGSLItem;
+export type Wgsl = string | number | WgslResolvable;
 
 export interface ResolutionCtx {
-  addDependency(item: WGSLItem): void;
+  addDependency(item: WgslResolvable): void;
   addMemory(memoryEntry: WGSLMemoryTrait): void;
-  nameFor(token: WGSLItem): string;
+  nameFor(token: WgslResolvable): string;
   arenaFor(memoryEntry: WGSLMemoryTrait): MemoryArena | null;
   /** @throws {MissingBindingError}  */
   requireBinding<T>(bindable: WGSLBindableTrait<T>): T;
@@ -13,13 +13,13 @@ export interface ResolutionCtx {
   resolve(item: Wgsl): string;
 }
 
-export interface WGSLItem {
+export interface WgslResolvable {
   readonly debugLabel?: string | undefined;
 
   resolve(ctx: ResolutionCtx): string;
 }
 
-export function isWGSLItem(value: unknown): value is WGSLItem {
+export function isResolvable(value: unknown): value is WgslResolvable {
   return (
     !!value &&
     (typeof value === 'object' || typeof value === 'function') &&
@@ -29,7 +29,9 @@ export function isWGSLItem(value: unknown): value is WGSLItem {
 
 export function isWgsl(value: unknown): value is Wgsl {
   return (
-    typeof value === 'number' || typeof value === 'string' || isWGSLItem(value)
+    typeof value === 'number' ||
+    typeof value === 'string' ||
+    isResolvable(value)
   );
 }
 
@@ -42,7 +44,7 @@ export interface WGSLBindableTrait<TBinding> {
 
 export type WGSLBindPair<T> = [WGSLBindableTrait<T>, T];
 
-export interface WGSLMemoryTrait extends WGSLItem {
+export interface WGSLMemoryTrait extends WgslResolvable {
   readonly size: number;
   readonly baseAlignment: number;
   readonly structFieldDefinition: Wgsl;
