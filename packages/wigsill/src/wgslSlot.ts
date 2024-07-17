@@ -14,9 +14,15 @@ export interface WgslSlot<T> extends WgslBindableTrait<T> {
   alias(label: string): WgslSlot<T>;
 }
 
+/**
+ * Represents a value that is available at resolution time.
+ * (constant after compilation)
+ */
+export type Potential<T> = T | WgslSlot<T>;
+
 export interface WgslResolvableSlot<T extends Wgsl>
   extends WgslResolvable,
-    WgslBindableTrait<T> {
+    WgslSlot<T> {
   alias(label: string): WgslResolvableSlot<T>;
 }
 
