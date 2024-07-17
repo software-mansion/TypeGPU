@@ -1,5 +1,4 @@
 import type { MemoryArena } from './memoryArena';
-import type { AnyWgslData } from './std140/types';
 import type { MemoryLocation, WgslAllocatable } from './types';
 
 /**

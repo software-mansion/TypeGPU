@@ -1,4 +1,3 @@
-import type { AnyWgslData } from './std140/types';
 import type { WgslAllocatable, WgslBindable } from './types';
 
 export class MissingBindingError extends Error {

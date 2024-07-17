@@ -1,5 +1,4 @@
 import { roundUp } from './mathUtils';
-import type { AnyWgslData } from './std140/types';
 import type { WgslAllocatable } from './types';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';

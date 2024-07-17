@@ -11,7 +11,7 @@ import {
   object,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { ResolutionCtx, Wgsl, WgslResolvable } from '../types';
+import type { ResolutionCtx, WgslResolvable } from '../types';
 import { code } from '../wgslCode';
 import { WgslIdentifier } from '../wgslIdentifier';
 import type { AnyWgslData, WgslData } from './types';

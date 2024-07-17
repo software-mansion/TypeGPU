@@ -5,7 +5,6 @@ import {
 } from './errors';
 import type { MemoryArena } from './memoryArena';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
-import type { AnyWgslData } from './std140/types';
 import {
   type ResolutionCtx,
   type WGSLBindPair,
