@@ -18,7 +18,7 @@ import {
 const runtime = await createRuntime();
 const device = runtime.device;
 
-const workgroupSize = [8, 8];
+const workgroupSize = [8, 8] as [number, number];
 
 const firstMatrix = {
   size: [2, 4] as [number, number],

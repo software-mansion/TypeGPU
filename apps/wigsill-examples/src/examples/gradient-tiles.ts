@@ -23,6 +23,20 @@ import {
 const runtime = await createRuntime();
 const device = runtime.device;
 
+const canvas = await addElement('canvas');
+const context = canvas.getContext('webgpu');
+
+const devicePixelRatio = window.devicePixelRatio;
+canvas.width = canvas.clientWidth * devicePixelRatio;
+canvas.height = canvas.clientHeight * devicePixelRatio;
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+context!.configure({
+  device,
+  format: presentationFormat,
+  alphaMode: 'premultiplied',
+});
+
 const xSpanData = wgsl.memory(u32).alias('x-span');
 const ySpanData = wgsl.memory(u32).alias('y-span');
 
@@ -75,6 +89,11 @@ const renderPipeline = runtime.makeRenderPipeline({
   let green = floor(uv.y * f32(${ySpanData})) / f32(${ySpanData});
   return vec4(red, green, 0.5, 1.0);`,
     output: '@location(0) vec4f',
+    target: [
+      {
+        format: presentationFormat,
+      },
+    ],
   },
 
   primitive: {
@@ -82,20 +101,6 @@ const renderPipeline = runtime.makeRenderPipeline({
   },
 
   arenas: [mainArena],
-});
-
-const canvas = await addElement('canvas');
-const context = canvas.getContext('webgpu');
-
-const devicePixelRatio = window.devicePixelRatio;
-canvas.width = canvas.clientWidth * devicePixelRatio;
-canvas.height = canvas.clientHeight * devicePixelRatio;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context!.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
 });
 
 addParameter(

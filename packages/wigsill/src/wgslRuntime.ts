@@ -72,6 +72,7 @@ class WGSLRuntime {
       args: WGSLSegment[];
       code: WGSLCode;
       output: WGSLSegment;
+      target: Iterable<GPUColorTargetState | null>;
     };
     primitive: {
       topology: GPUPrimitiveTopology;
@@ -123,11 +124,7 @@ class WGSLRuntime {
       },
       fragment: {
         module: shaderModule,
-        targets: [
-          {
-            format: navigator.gpu.getPreferredCanvasFormat(),
-          },
-        ],
+        targets: options.fragment?.target ?? [],
       },
       primitive: options.primitive,
     });
