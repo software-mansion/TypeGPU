@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TranslationUnit } from '../src/grammar';
+import type { TranslationUnit } from '../src/grammar';
 import { parse } from '../src/index';
 
 describe('function_decl', () => {

@@ -1,6 +1,6 @@
 import { parse } from '@wigsill/parser';
 import { describe, expect, it } from 'vitest';
-import { StrictNameRegistry, WGSLSegment, wgsl } from '../src';
+import { StrictNameRegistry, type WGSLSegment, wgsl } from '../src';
 import { ResolutionCtxImpl } from '../src/programBuilder';
 
 function parseWGSL(segment: WGSLSegment) {
@@ -8,8 +8,7 @@ function parseWGSL(segment: WGSLSegment) {
 
   const resolved = ctx.resolve(segment);
 
-  const resolvedWithDependencies =
-    ctx.dependencies.map((d) => ctx.resolve(d)).join('\n') + '\n' + resolved;
+  const resolvedWithDependencies = `${ctx.dependencies.map((d) => ctx.resolve(d)).join('\n')}\n${resolved}`;
 
   return parse(resolvedWithDependencies);
 }

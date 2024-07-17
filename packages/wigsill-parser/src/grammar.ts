@@ -75,62 +75,47 @@ lexer.next = (next => () => {
 
 
 
-export type Main = TranslationUnit | Statement | Expression;
+export type Main =
+    TranslationUnit
+  | Statement
+  | Expression;
 
 
+ export type TranslationUnit = { type: 'translation_unit', declarations: GlobalDecl[] }; 
 
-export type TranslationUnit = { type: 'translation_unit', declarations: GlobalDecl[] };
-
-
-export type GlobalDecl = null | FunctionDecl;
-
-
-export type Ident = { type: 'ident', value: string };
+export type GlobalDecl =
+    null
+  | FunctionDecl;
 
 
+ export type Ident = { type: 'ident', value: string }; 
 
 export type TemplateElaboratedIdent = { type: 'template_elaborated_ident', value: string, template_list: TemplateList | null };
 
 
-
-export type TemplateList = Expression[];
-
-
+ export type TemplateList = Expression[]; 
 
 export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement, attrs: Attribute[] };
 export type FunctionHeader = { type: 'function_header', identifier: string };
 
 
+ export type ReturnStatement = { type: 'return_statement', expression: Expression | null }; 
+ export type CompoundStatement = Statement[]; 
 
-export type ReturnStatement = { type: 'return_statement', expression: Expression | null };
-
-
-
-export type CompoundStatement = Statement[];
-
-
-
-export type Statement = null | ReturnStatement | CallStatement | IfStatement;
+export type Statement =
+    null
+  | ReturnStatement
+  | CallStatement
+  | IfStatement;
 
 
-
-export type Swizzle = { type: 'swizzle', value: string };
-
-
-
-export type CallStatement = { type: 'call_statement', ident: TemplateElaboratedIdent, args: Expression[] };
-
-
-
+ export type CallStatement = { type: 'call_statement', ident: TemplateElaboratedIdent, args: Expression[] }; 
+ export type Swizzle = { type: 'swizzle', value: string }; 
 
 export type IfStatement = { type: 'if_statement', if_clause: IfClause, else_if_clauses: ElseIfClause[], else_clause: ElseClause | null };
 export type IfClause = { type: 'if_clause', expression: Expression, body: CompoundStatement };
 export type ElseIfClause = { type: 'else_if_clause', expression: Expression, body: CompoundStatement };
 export type ElseClause = { type: 'else_clause', body: CompoundStatement };
-
-function pp_else_clause([ , , body]: [any, any, CompoundStatement]) {
-  return { type: 'else_clause' as const, body };
-}
 
 
 
