@@ -8,8 +8,8 @@ export interface ResolutionCtx {
   nameFor(token: WgslResolvable): string;
   arenaFor(memoryEntry: WGSLMemoryTrait): MemoryArena | null;
   /** @throws {MissingBindingError}  */
-  requireBinding<T>(bindable: WGSLBindableTrait<T>): T;
-  tryBinding<T>(bindable: WGSLBindableTrait<T>, defaultValue: T): T;
+  requireBinding<T>(bindable: WgslBindableTrait<T>): T;
+  tryBinding<T>(bindable: WgslBindableTrait<T>, defaultValue: T): T;
   resolve(item: Wgsl): string;
 }
 
@@ -35,14 +35,14 @@ export function isWgsl(value: unknown): value is Wgsl {
   );
 }
 
-export interface WGSLBindableTrait<TBinding> {
+export interface WgslBindableTrait<TBinding> {
   /** type-token, not available at runtime */
   readonly __bindingType: TBinding;
 
   readonly debugLabel?: string | undefined;
 }
 
-export type WGSLBindPair<T> = [WGSLBindableTrait<T>, T];
+export type WGSLBindPair<T> = [WgslBindableTrait<T>, T];
 
 export interface WGSLMemoryTrait extends WgslResolvable {
   readonly size: number;

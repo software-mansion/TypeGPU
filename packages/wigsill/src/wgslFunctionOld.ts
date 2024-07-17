@@ -1,13 +1,31 @@
 import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
 import { code } from './wgslCode';
-import { WGSLIdentifier } from './wgslIdentifier';
+import { WgslIdentifier } from './wgslIdentifier';
+
+// ----------
+// Public API
+// ----------
 
 export interface WgslFn extends WgslResolvable {
   alias(debugLabel: string): WgslFn;
 }
 
-class WGSLFunction implements WgslFn {
-  private identifier = new WGSLIdentifier();
+export function fn(debugLabel?: string) {
+  return (strings: TemplateStringsArray, ...params: Wgsl[]): WgslFn => {
+    const func = new WgslFnImpl(code(strings, ...params));
+    if (debugLabel) {
+      func.alias(debugLabel);
+    }
+    return func;
+  };
+}
+
+// --------------
+// Implementation
+// --------------
+
+class WgslFnImpl implements WgslFn {
+  private identifier = new WgslIdentifier();
 
   constructor(private readonly body: Wgsl) {}
 
@@ -21,14 +39,4 @@ class WGSLFunction implements WgslFn {
 
     return ctx.resolve(this.identifier);
   }
-}
-
-export function fn(debugLabel?: string) {
-  return (strings: TemplateStringsArray, ...params: Wgsl[]): WgslFn => {
-    const func = new WGSLFunction(code(strings, ...params));
-    if (debugLabel) {
-      func.alias(debugLabel);
-    }
-    return func;
-  };
 }

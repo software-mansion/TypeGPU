@@ -1,17 +1,32 @@
 import type { AnyWgslData } from './std140/types';
 import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
 import { code } from './wgslCode';
-import { identifier } from './wgslIdentifier';
+import { WgslIdentifier } from './wgslIdentifier';
+
+// ----------
+// Public API
+// ----------
 
 export type VariableScope = 'private';
+
+export interface WgslVar<TDataType extends AnyWgslData> extends WgslResolvable {
+  alias(label: string): WgslVar<TDataType>;
+}
 
 /**
  * Creates a variable, with an optional initial value.
  */
-export class WGSLVariable<TDataType extends AnyWgslData>
-  implements WgslResolvable
-{
-  public identifier = identifier();
+export const variable = <TDataType extends AnyWgslData>(
+  dataType: TDataType,
+  initialValue?: Wgsl,
+): WgslVar<TDataType> => new WgslVarImpl(dataType, initialValue, 'private');
+
+// --------------
+// Implementation
+// --------------
+
+class WgslVarImpl<TDataType extends AnyWgslData> implements WgslVar<TDataType> {
+  public identifier = new WgslIdentifier();
 
   constructor(
     private readonly _dataType: TDataType,
@@ -38,8 +53,3 @@ export class WGSLVariable<TDataType extends AnyWgslData>
     return ctx.resolve(this.identifier);
   }
 }
-
-export const variable = <TDataType extends AnyWgslData>(
-  dataType: TDataType,
-  initialValue?: Wgsl,
-) => new WGSLVariable(dataType, initialValue, 'private');

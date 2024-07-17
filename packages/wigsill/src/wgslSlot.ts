@@ -1,30 +1,39 @@
 import {
   type ResolutionCtx,
-  type WGSLBindableTrait,
   type Wgsl,
+  type WgslBindableTrait,
   type WgslResolvable,
   isWgsl,
 } from './types';
 
-export interface Slot<T> {
-  __brand: 'Slot';
-  /** type-token, not available at runtime */
-  __bindingType: T;
+// ----------
+// Public API
+// ----------
 
-  alias(label: string): Slot<T>;
+export interface WgslSlot<T> extends WgslBindableTrait<T> {
+  alias(label: string): WgslSlot<T>;
 }
 
-export interface ResolvableSlot<T extends Wgsl> extends WgslResolvable {
-  __brand: 'Slot';
-  /** type-token, not available at runtime */
-  __bindingType: T;
-
-  alias(label: string): ResolvableSlot<T>;
+export interface WgslResolvableSlot<T extends Wgsl>
+  extends WgslResolvable,
+    WgslBindableTrait<T> {
+  alias(label: string): WgslResolvableSlot<T>;
 }
 
-export class WGSLSlot<T> implements WgslResolvable, WGSLBindableTrait<T> {
+export function slot<T extends Wgsl>(defaultValue?: T): WgslResolvableSlot<T>;
+
+export function slot<T>(defaultValue?: T): WgslSlot<T>;
+
+export function slot<T>(defaultValue?: T): WgslSlot<T> {
+  return new WgslSlotImpl(defaultValue);
+}
+
+// --------------
+// Implementation
+// --------------
+
+class WgslSlotImpl<T> implements WgslResolvable, WgslBindableTrait<T> {
   __bindingType!: T;
-  __brand = 'Slot' as const;
   public debugLabel?: string | undefined;
 
   constructor(public defaultValue?: T) {}
@@ -34,16 +43,14 @@ export class WGSLSlot<T> implements WgslResolvable, WGSLBindableTrait<T> {
     return this;
   }
 
-  private getValue(ctx: ResolutionCtx) {
+  resolve(ctx: ResolutionCtx): string {
+    let value: T;
     if (this.defaultValue !== undefined) {
-      return ctx.tryBinding(this, this.defaultValue);
+      value = ctx.tryBinding(this, this.defaultValue);
+    } else {
+      value = ctx.requireBinding(this);
     }
 
-    return ctx.requireBinding(this);
-  }
-
-  resolve(ctx: ResolutionCtx): string {
-    const value = this.getValue(ctx);
     if (!isWgsl(value)) {
       throw new Error(
         `Cannot resolve value of type ${typeof value} for slot: ${this.debugLabel ?? '<unnamed>'}. Value is not valid WGSL.`,
@@ -52,12 +59,4 @@ export class WGSLSlot<T> implements WgslResolvable, WGSLBindableTrait<T> {
 
     return ctx.resolve(value);
   }
-}
-
-export function slot<T extends Wgsl>(defaultValue?: T): ResolvableSlot<T>;
-
-export function slot<T>(defaultValue?: T): Slot<T>;
-
-export function slot<T>(defaultValue?: T): Slot<T> {
-  return new WGSLSlot(defaultValue);
 }

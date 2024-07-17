@@ -8,9 +8,9 @@ import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import {
   type ResolutionCtx,
   type WGSLBindPair,
-  type WGSLBindableTrait,
   type WGSLMemoryTrait,
   type Wgsl,
+  type WgslBindableTrait,
   type WgslResolvable,
   isResolvable,
 } from './types';
@@ -94,7 +94,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._entryToArenaMap.get(memoryEntry) ?? null;
   }
 
-  requireBinding<T>(bindable: WGSLBindableTrait<T>): T {
+  requireBinding<T>(bindable: WgslBindableTrait<T>): T {
     const binding = this._bindings.find(([b]) => b === bindable) as
       | WGSLBindPair<T>
       | undefined;
@@ -106,7 +106,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return binding[1];
   }
 
-  tryBinding<T>(bindable: WGSLBindableTrait<T>, defaultValue: T): T {
+  tryBinding<T>(bindable: WgslBindableTrait<T>, defaultValue: T): T {
     const binding = this._bindings.find(([b]) => b === bindable) as
       | WGSLBindPair<T>
       | undefined;
@@ -149,7 +149,7 @@ export default class ProgramBuilder {
     private root: WgslResolvable,
   ) {}
 
-  provide<T>(bindable: WGSLBindableTrait<T>, value: T) {
+  provide<T>(bindable: WgslBindableTrait<T>, value: T) {
     this.bindings.push([bindable, value]);
     return this;
   }

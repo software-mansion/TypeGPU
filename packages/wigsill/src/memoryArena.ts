@@ -1,7 +1,7 @@
 import { roundUp } from './mathUtils';
 import type { WGSLMemoryTrait } from './types';
 import { code } from './wgslCode';
-import { WGSLIdentifier } from './wgslIdentifier';
+import { WgslIdentifier } from './wgslIdentifier';
 
 export type MemoryArenaOptions = {
   readonly usage: number;
@@ -21,7 +21,7 @@ export class MemoryArena {
   public readonly usage: number;
   public readonly size: number = 0;
   public readonly memoryEntries: WGSLMemoryTrait[];
-  public readonly identifier = new WGSLIdentifier();
+  public readonly identifier = new WgslIdentifier();
   public debugLabel?: string | undefined;
 
   constructor(options: MemoryArenaOptions) {
@@ -59,7 +59,7 @@ export class MemoryArena {
   }
 
   definitionCode(bindingGroup: number, bindingIdx: number) {
-    const storageTypeIdentifier = new WGSLIdentifier();
+    const storageTypeIdentifier = new WgslIdentifier();
     if (this.debugLabel) {
       storageTypeIdentifier.alias(`${this.debugLabel}_type`);
     }

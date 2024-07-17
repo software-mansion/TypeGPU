@@ -1,14 +1,30 @@
 import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
 import { code } from './wgslCode';
-import { WGSLIdentifier } from './wgslIdentifier';
+import { WgslIdentifier } from './wgslIdentifier';
+
+// ----------
+// Public API
+// ----------
+
+export interface WgslConst {
+  alias(label: string): WgslConst;
+}
 
 /**
  * Creates a constant is computed at shader initialization according
  * to the passed in expression.
  */
-export class WGSLConstant implements WgslResolvable {
+export function constant(expr: Wgsl): WgslConst {
+  return new WgslConstImpl(expr);
+}
+
+// --------------
+// Implementation
+// --------------
+
+class WgslConstImpl implements WgslConst {
   public debugLabel?: string | undefined;
-  public identifier = new WGSLIdentifier();
+  public identifier = new WgslIdentifier();
 
   constructor(private readonly expr: Wgsl) {}
 
@@ -23,8 +39,4 @@ export class WGSLConstant implements WgslResolvable {
 
     return ctx.resolve(this.identifier);
   }
-}
-
-export function constant(expr: Wgsl): WGSLConstant {
-  return new WGSLConstant(expr);
 }

@@ -8,10 +8,3 @@ export { default as ProgramBuilder, type Program } from './programBuilder';
 export { StrictNameRegistry, RandomNameRegistry } from './nameRegistry';
 export * from './std140';
 export * from './macro';
-
-export { WGSLCode } from './wgslCode';
-export { WGSLConstant } from './wgslConstant';
-export { WGSLFunction } from './wgslFunction';
-export { WGSLIdentifier } from './wgslIdentifier';
-export { WGSLMemory } from './wgslMemory';
-export { WGSLSlot } from './wgslSlot';

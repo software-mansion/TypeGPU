@@ -10,9 +10,9 @@ import {
   ValidationError,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { ResolutionCtx } from '../types';
-import { type WGSLCode, code } from '../wgslCode';
-import { identifier } from '../wgslIdentifier';
+import type { ResolutionCtx, WgslResolvable } from '../types';
+import { code } from '../wgslCode';
+import { WgslIdentifier } from '../wgslIdentifier';
 import alignIO from './alignIO';
 import { u32 } from './numeric';
 import type { AnyWgslData, WgslData } from './types';
@@ -21,8 +21,8 @@ class DynamicArrayDataType<TElement extends WgslData<unknown>>
   extends Schema<Unwrap<TElement>[]>
   implements WgslData<Unwrap<TElement>[]>
 {
-  private readonly _identifier = identifier();
-  private readonly _definitionCode: WGSLCode;
+  private readonly _identifier = new WgslIdentifier();
+  private readonly _definitionCode: WgslResolvable;
 
   public readonly byteAlignment: number;
   public readonly size: number;

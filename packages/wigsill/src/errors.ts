@@ -1,7 +1,7 @@
-import type { WGSLBindableTrait, WGSLMemoryTrait } from './types';
+import type { WGSLMemoryTrait, WgslBindableTrait } from './types';
 
 export class MissingBindingError extends Error {
-  constructor(public readonly bindable: WGSLBindableTrait<unknown>) {
+  constructor(public readonly bindable: WgslBindableTrait<unknown>) {
     super(`Missing binding for ${bindable.debugLabel ?? '<unnamed>'}`);
 
     // Set the prototype explicitly.

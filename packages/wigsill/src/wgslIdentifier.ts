@@ -1,6 +1,9 @@
 import type { ResolutionCtx, WgslResolvable } from './types';
 
-export class WGSLIdentifier implements WgslResolvable {
+/**
+ * Helpful when creating new Resolvable types. For internal use.
+ */
+export class WgslIdentifier implements WgslResolvable {
   debugLabel?: string | undefined;
 
   alias(debugLabel: string) {
@@ -10,14 +13,4 @@ export class WGSLIdentifier implements WgslResolvable {
   resolve(ctx: ResolutionCtx): string {
     return ctx.nameFor(this);
   }
-}
-
-export function identifier(debugLabel?: string) {
-  const value = new WGSLIdentifier();
-
-  if (debugLabel) {
-    value.alias(debugLabel);
-  }
-
-  return value;
 }

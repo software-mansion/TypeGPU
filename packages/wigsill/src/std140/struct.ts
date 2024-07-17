@@ -11,9 +11,9 @@ import {
   object,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { ResolutionCtx } from '../types';
-import { type WGSLCode, code } from '../wgslCode';
-import { identifier } from '../wgslIdentifier';
+import type { ResolutionCtx, Wgsl, WgslResolvable } from '../types';
+import { code } from '../wgslCode';
+import { WgslIdentifier } from '../wgslIdentifier';
 import type { AnyWgslData, WgslData } from './types';
 
 class StructDataType<TProps extends Record<string, AnyWgslData>>
@@ -21,8 +21,8 @@ class StructDataType<TProps extends Record<string, AnyWgslData>>
   implements WgslData<UnwrapRecord<TProps>>
 {
   private _innerSchema: ISchema<UnwrapRecord<TProps>>;
-  private readonly _identifier = identifier();
-  private readonly _definitionCode: WGSLCode;
+  private readonly _identifier = new WgslIdentifier();
+  private readonly _definitionCode: WgslResolvable;
 
   public readonly byteAlignment: number;
   public readonly size: number;
