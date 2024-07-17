@@ -3,7 +3,7 @@ import ProgramBuilder, { type Program } from './programBuilder';
 import type StructDataType from './std140/struct';
 import type { MemoryLocation, WGSLMemoryTrait, WGSLSegment } from './types';
 import wgsl from './wgsl';
-import type { WGSLCode } from './wgslCode';
+import { type WGSLCode, code } from './wgslCode';
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a runtime can interact via GPU buffers.
@@ -84,20 +84,16 @@ class WGSLRuntime {
       wgsl`
       ${
         options.vertex
-          ? wgsl.vertexFn({
-              args: options.vertex.args,
-              code: options.vertex.code,
-              output: options.vertex.output,
-            })
+          ? code`@vertex fn main_vertex(${options.vertex.args}) -> ${options.vertex.output} {
+            ${options.vertex.code}
+          }`
           : ''
       }
       ${
         options.fragment
-          ? wgsl.fragmentFn({
-              args: options.fragment.args,
-              code: options.fragment.code,
-              output: options.fragment.output,
-            })
+          ? code`@fragment fn main_frag(${options.fragment.args}) -> ${options.fragment.output} {
+            ${options.fragment.code}
+          }`
           : ''
       }
       `,
@@ -142,16 +138,15 @@ class WGSLRuntime {
     workgroupSize: [number, number?, number?];
     code: WGSLCode;
     arenas?: MemoryArena[];
+    firstFreeBindingGroup?: number;
   }) {
     const program = new ProgramBuilder(
       this,
-      wgsl.computeFn({
-        args: ['@builtin(global_invocation_id) global_id : vec3<u32>'],
-        code: options.code,
-        workgroupSize: options.workgroupSize,
-      }),
+      code`@compute @workgroup_size(${options.workgroupSize.join(', ')}) fn main_compute(${['@builtin(global_invocation_id) global_id: vec3<u32>']}) {
+        ${options.code}
+      }`,
     ).build({
-      bindingGroup: 0,
+      bindingGroup: options.firstFreeBindingGroup ?? 0,
       shaderStage: GPUShaderStage.COMPUTE,
       arenas: options.arenas ?? [],
     });
