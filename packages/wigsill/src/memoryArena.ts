@@ -8,7 +8,7 @@ export type MemoryArenaOptions = {
   readonly usage: number;
   readonly bufferBindingType: GPUBufferBindingType;
   readonly minSize?: number;
-  readonly memoryEntries: WgslAllocatable<AnyWgslData>[];
+  readonly memoryEntries: WgslAllocatable[];
 };
 
 /**
@@ -16,15 +16,12 @@ export type MemoryArenaOptions = {
  * A place for grouping WGSL memory items.
  */
 export class MemoryArena {
-  private _memoryOffsetMap = new WeakMap<
-    WgslAllocatable<AnyWgslData>,
-    number
-  >();
+  private _memoryOffsetMap = new WeakMap<WgslAllocatable, number>();
 
   public readonly bufferBindingType: GPUBufferBindingType;
   public readonly usage: number;
   public readonly size: number = 0;
-  public readonly memoryEntries: WgslAllocatable<AnyWgslData>[];
+  public readonly memoryEntries: WgslAllocatable[];
   public readonly identifier = new WgslIdentifier();
   public debugLabel?: string | undefined;
 
@@ -58,7 +55,7 @@ export class MemoryArena {
     this.identifier.alias(debugLabel);
   }
 
-  offsetFor(memoryEntry: WgslAllocatable<AnyWgslData>): number | null {
+  offsetFor(memoryEntry: WgslAllocatable): number | null {
     return this._memoryOffsetMap.get(memoryEntry) ?? null;
   }
 

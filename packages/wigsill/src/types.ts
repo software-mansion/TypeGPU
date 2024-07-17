@@ -5,9 +5,9 @@ export type Wgsl = string | number | WgslResolvable;
 
 export interface ResolutionCtx {
   addDependency(item: WgslResolvable): void;
-  addAllocatable(allocatable: WgslAllocatable<AnyWgslData>): void;
+  addAllocatable(allocatable: WgslAllocatable): void;
   nameFor(token: WgslResolvable): string;
-  arenaFor(memoryEntry: WgslAllocatable<AnyWgslData>): MemoryArena | null;
+  arenaFor(memoryEntry: WgslAllocatable): MemoryArena | null;
   /** @throws {MissingBindingError}  */
   requireBinding<T>(bindable: WgslBindable<T>): T;
   tryBinding<T>(bindable: WgslBindable<T>, defaultValue: T): T;
@@ -45,7 +45,7 @@ export interface WgslBindable<TBinding> {
 
 export type WGSLBindPair<T> = [WgslBindable<T>, T];
 
-export interface WgslAllocatable<TData extends AnyWgslData>
+export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData>
   extends WgslResolvable {
   /**
    * The data type this allocatable was constructed with.

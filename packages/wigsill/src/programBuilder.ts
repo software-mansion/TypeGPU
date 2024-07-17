@@ -38,10 +38,7 @@ export type ResolutionCtxImplOptions = {
 };
 
 export class ResolutionCtxImpl implements ResolutionCtx {
-  private _entryToArenaMap = new WeakMap<
-    WgslAllocatable<AnyWgslData>,
-    MemoryArena
-  >();
+  private _entryToArenaMap = new WeakMap<WgslAllocatable, MemoryArena>();
   private readonly _bindings: WGSLBindPair<unknown>[];
   private readonly _names: NameRegistry;
 
@@ -81,7 +78,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   /**
    * @throws {NotAllocatedMemoryError}
    */
-  addAllocatable(allocatable: WgslAllocatable<AnyWgslData>): void {
+  addAllocatable(allocatable: WgslAllocatable): void {
     const arena = this._entryToArenaMap.get(allocatable);
     if (!arena) {
       throw new NotAllocatedMemoryError(allocatable);
@@ -94,7 +91,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._names.nameFor(item);
   }
 
-  arenaFor(memoryEntry: WgslAllocatable<AnyWgslData>): MemoryArena | null {
+  arenaFor(memoryEntry: WgslAllocatable): MemoryArena | null {
     return this._entryToArenaMap.get(memoryEntry) ?? null;
   }
 

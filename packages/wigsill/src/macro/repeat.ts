@@ -1,5 +1,5 @@
+import type { Wgsl } from '../types';
 import { code } from '../wgslCode';
-import type { Wgsl } from './../types';
 
 export function repeat(
   count: number,

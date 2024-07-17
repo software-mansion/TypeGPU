@@ -8,10 +8,7 @@ import type { MemoryLocation, WgslAllocatable } from './types';
  */
 class WGSLRuntime {
   private _arenaToBufferMap = new WeakMap<MemoryArena, GPUBuffer>();
-  private _entryToArenaMap = new WeakMap<
-    WgslAllocatable<AnyWgslData>,
-    MemoryArena
-  >();
+  private _entryToArenaMap = new WeakMap<WgslAllocatable, MemoryArena>();
 
   constructor(public readonly device: GPUDevice) {}
 
@@ -41,9 +38,7 @@ class WGSLRuntime {
     return buffer;
   }
 
-  locateMemory(
-    memoryEntry: WgslAllocatable<AnyWgslData>,
-  ): MemoryLocation | null {
+  locateMemory(memoryEntry: WgslAllocatable): MemoryLocation | null {
     const arena = this._entryToArenaMap.get(memoryEntry);
 
     if (!arena) {
