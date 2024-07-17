@@ -6,7 +6,7 @@ import { WgslIdentifier } from './wgslIdentifier';
 // Public API
 // ----------
 
-export interface WgslConst {
+export interface WgslConst extends WgslResolvable {
   alias(label: string): WgslConst;
 }
 
