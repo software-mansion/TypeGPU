@@ -4,7 +4,6 @@ import type {
   WGSLItem,
   WGSLSegment,
 } from './types';
-import { WGSLBound } from './wgslBound';
 import { code } from './wgslCode';
 import { WGSLIdentifier } from './wgslIdentifier';
 
@@ -22,15 +21,6 @@ export class WGSLFunction implements WGSLItem {
     ctx.addDependency(code`fn ${this.identifier}${this.body}`);
 
     return ctx.resolve(this.identifier);
-  }
-
-  with<T>(
-    bindable: WGSLBindableTrait<T>,
-    value: T,
-  ): WGSLBound<WGSLFunction, T> {
-    // We are duplicating the function, giving it the same body, but a
-    // different identifier and binding context.
-    return new WGSLBound(new WGSLFunction(this.body), bindable, value);
   }
 }
 
