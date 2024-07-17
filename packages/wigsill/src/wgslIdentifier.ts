@@ -1,4 +1,4 @@
-import { ResolutionCtx, WGSLItem } from './types';
+import type { ResolutionCtx, WGSLItem } from './types';
 
 export class WGSLIdentifier implements WGSLItem {
   debugLabel?: string | undefined;

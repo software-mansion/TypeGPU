@@ -6,7 +6,8 @@ import { useCallback, useLayoutEffect, useRef } from 'react';
  * @param handler
  * @returns A stable reference of the passed in function.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+// biome-ignore lint/suspicious/noExplicitAny: <makes the generic infer properly>
 function useEvent<TFunction extends (...params: any[]) => any>(
   handler: TFunction,
 ) {

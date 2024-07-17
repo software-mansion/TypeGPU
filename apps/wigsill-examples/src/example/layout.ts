@@ -1,4 +1,3 @@
-import { useCallback, useRef, useState } from 'react';
 import type {
   AddElement,
   ElementDef,
@@ -6,6 +5,7 @@ import type {
   ElementType,
   LayoutDef,
 } from '@wigsill/example-toolkit';
+import { useCallback, useRef, useState } from 'react';
 import { ExecutionCancelledError } from './errors';
 
 /**
@@ -44,22 +44,26 @@ const makeLayout = (appendToDef: (element: ElementDef) => void) => {
           elementResolves.set(elementKey, resolve as () => void);
           elementRejects.push(reject);
         });
-      } else if (type === 'video') {
+      }
+
+      if (type === 'video') {
         appendToDef({ ...options, type: 'video', key: elementKey });
 
         return new Promise<HTMLVideoElement>((resolve, reject) => {
           elementResolves.set(elementKey, resolve as () => void);
           elementRejects.push(reject);
         });
-      } else {
-        throw new Error(`Tried to add unsupported layout element: ${type}`);
       }
+
+      throw new Error(`Tried to add unsupported layout element: ${type}`);
     }) as AddElement,
 
     dispose: () => {
       cancelled = true;
       elementResolves.clear();
-      elementRejects.forEach((reject) => reject(new ExecutionCancelledError()));
+      for (const reject of elementRejects) {
+        reject(new ExecutionCancelledError());
+      }
     },
 
     resolveElement(key, element) {
@@ -110,11 +114,11 @@ export function useLayout(): {
 
     instanceRef.current = newInstance;
     return newInstance;
-  }, [dispose, setLayoutDef]);
+  }, [dispose]);
 
   const setRef = useCallback((key: string, element: unknown) => {
     if (!instanceRef.current) {
-      throw new Error(`No layout is currently active`);
+      throw new Error('No layout is currently active');
     }
 
     instanceRef.current.resolveElement(key, element);

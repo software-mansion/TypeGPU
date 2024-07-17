@@ -21,9 +21,10 @@ const device = runtime.device;
 
 const canvas = await addElement('canvas', { width: 500, height: 500 });
 
-const context = canvas.getContext('webgpu');
+const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-context!.configure({
+
+context.configure({
   device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
@@ -362,42 +363,46 @@ squareBuffer.unmap();
 
 const squareStride = {
   arrayStride: 2 * squareVertices.BYTES_PER_ELEMENT,
-  stepMode: 'vertex',
+  stepMode: 'vertex' as const,
   attributes: [
     {
       shaderLocation: 1,
       offset: 0,
-      format: 'uint32x2',
+      format: 'uint32x2' as const,
     },
   ],
 };
 
 const vertexShader = device.createShaderModule({ code: vertexProgram.code });
 const fragmentShader = device.createShaderModule({ code: fragWGSL });
-let commandEncoder;
+let commandEncoder: GPUCommandEncoder;
 
 const cellsStride = {
   arrayStride: Uint32Array.BYTES_PER_ELEMENT,
-  stepMode: 'instance',
+  stepMode: 'instance' as const,
   attributes: [
     {
       shaderLocation: 0,
       offset: 0,
-      format: 'uint32',
+      format: 'uint32' as const,
     },
   ],
 };
 
-let wholeTime = 0,
-  buffer1;
-let render;
-let readDebugInfo;
-let applyDrawCanvas;
-let renderChanges;
+let wholeTime = 0;
+let buffer1: GPUBuffer;
+let render: () => void;
+let readDebugInfo: () => Promise<number>;
+let applyDrawCanvas: () => void;
+let renderChanges: () => void;
 
 function resetGameData() {
   drawCanvasData = new Uint32Array(Options.size * Options.size);
-  currentState.write(runtime, new Uint32Array(1024 ** 2).fill(0));
+
+  currentState.write(
+    runtime,
+    Array.from({ length: 1024 ** 2 }, () => 0),
+  );
 
   const computePipeline = device.createComputePipeline({
     layout: device.createPipelineLayout({
@@ -469,8 +474,8 @@ function resetGameData() {
 
   render = () => {
     device.queue.writeBuffer(debugInfoBuffer, 0, new Uint32Array([0]), 0, 1);
-    const view = context!.getCurrentTexture().createView();
-    const renderPass = {
+    const view = context.getCurrentTexture().createView();
+    const renderPass: GPURenderPassDescriptor = {
       colorAttachments: [
         {
           view,
@@ -556,7 +561,7 @@ function resetGameData() {
 
   renderChanges = () => {
     const view = context.getCurrentTexture().createView();
-    const renderPass = {
+    const renderPass: GPURenderPassDescriptor = {
       colorAttachments: [
         {
           view,

@@ -1,4 +1,4 @@
-import { WGSLItem } from './types';
+import type { WGSLItem } from './types';
 
 export interface NameRegistry {
   nameFor(item: WGSLItem): string;
@@ -13,7 +13,7 @@ export class RandomNameRegistry implements NameRegistry {
 
     if (name === undefined) {
       // creating sanitized name
-      let label;
+      let label: string;
       if (item.debugLabel) {
         label = item.debugLabel.replaceAll(/\s/g, '_'); // whitespace -> _
         label = label.replaceAll(/[^\w\d]/g, ''); // removing illegal characters
@@ -33,7 +33,7 @@ export class StrictNameRegistry implements NameRegistry {
     const label = item.debugLabel;
 
     if (label === undefined) {
-      throw new Error(`Unaliased item found when using a strict NameRegistry`);
+      throw new Error('Unaliased item found when using a strict NameRegistry');
     }
 
     return label;

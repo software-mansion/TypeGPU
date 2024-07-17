@@ -1,4 +1,4 @@
-import { BufferReader, BufferWriter, Parsed } from 'typed-binary';
+import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
 import { dynamicArrayOf, struct, u32, vec4f } from 'wigsill';
 

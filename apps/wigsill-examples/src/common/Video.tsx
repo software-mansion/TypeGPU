@@ -1,5 +1,5 @@
-import { forwardRef } from 'react';
 import cs from 'classnames';
+import { forwardRef } from 'react';
 
 type Props = {
   width?: number;
@@ -14,7 +14,9 @@ export const Video = forwardRef<HTMLVideoElement, Props>((props, ref) => {
       className={cs(
         'relative overflow-hidden bg-black',
         width && height ? 'flex-initial' : 'self-stretch flex-1',
-      )}>
+      )}
+    >
+      {/* biome-ignore lint/a11y/useMediaCaption: <captions not applicable, purely visual content> */}
       <video
         ref={ref}
         className={cs(

@@ -1,4 +1,9 @@
-import { ResolutionCtx, WGSLItem, WGSLSegment, isWGSLItem } from './types';
+import {
+  type ResolutionCtx,
+  type WGSLItem,
+  type WGSLSegment,
+  isWGSLItem,
+} from './types';
 
 export class WGSLCode implements WGSLItem {
   constructor(public readonly segments: WGSLSegment[]) {}
@@ -23,12 +28,12 @@ export function code(
   ...params: (WGSLSegment | WGSLSegment[])[]
 ): WGSLCode {
   const segments: WGSLSegment[] = strings.flatMap((string, idx) => {
-    if (idx >= params.length) {
+    const param = params[idx];
+    if (param === undefined) {
       return [string];
     }
 
-    const param = params[idx]!;
-    return param instanceof Array ? [string, ...param] : [string, param];
+    return Array.isArray(param) ? [string, ...param] : [string, param];
   });
 
   return new WGSLCode(segments);

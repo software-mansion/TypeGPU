@@ -1,8 +1,8 @@
 import {
-  ResolutionCtx,
-  WGSLBindableTrait,
-  WGSLItem,
-  WGSLSegment,
+  type ResolutionCtx,
+  type WGSLBindableTrait,
+  type WGSLItem,
+  type WGSLSegment,
   isWGSLSegment,
 } from './types';
 
