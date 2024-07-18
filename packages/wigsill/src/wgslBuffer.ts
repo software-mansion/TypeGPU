@@ -1,7 +1,7 @@
-import { BufferWriter, BufferReader, type Parsed } from 'typed-binary';
+import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import type { AnyWgslData } from './std140/types';
-import { code } from './wgslCode';
 import type { ResolutionCtx, WgslAllocatable, WgslResolvable } from './types';
+import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
 import type WigsillRuntime from './wigsillRuntime';
 
