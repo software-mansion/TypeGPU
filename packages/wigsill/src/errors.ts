@@ -1,7 +1,7 @@
-import type { WGSLBindableTrait, WGSLMemoryTrait } from './types';
+import type { WgslAllocatable, WgslBindable } from './types';
 
 export class MissingBindingError extends Error {
-  constructor(public readonly bindable: WGSLBindableTrait<unknown>) {
+  constructor(public readonly bindable: WgslBindable<unknown>) {
     super(`Missing binding for ${bindable.debugLabel ?? '<unnamed>'}`);
 
     // Set the prototype explicitly.
@@ -9,8 +9,11 @@ export class MissingBindingError extends Error {
   }
 }
 
+/**
+ * @deprecated To be removed along with memory arenas.
+ */
 export class MemoryArenaConflictError extends Error {
-  constructor(memoryEntry: WGSLMemoryTrait) {
+  constructor(memoryEntry: WgslAllocatable) {
     super(
       `Multiple arenas contain the same entry: ${memoryEntry.debugLabel ?? '<unnamed>'}`,
     );
@@ -20,8 +23,11 @@ export class MemoryArenaConflictError extends Error {
   }
 }
 
+/**
+ * @deprecated To be removed along with memory arenas.
+ */
 export class NotAllocatedMemoryError extends Error {
-  constructor(memoryEntry: WGSLMemoryTrait) {
+  constructor(memoryEntry: WgslAllocatable) {
     super(
       `An unallocated memory entry was used: ${memoryEntry.debugLabel ?? '<unnamed>'}. Every memory entry has to be in exactly one arena used during program building.`,
     );

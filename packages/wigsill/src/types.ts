@@ -1,24 +1,24 @@
-import type { WGSLCode } from './wgslCode';
+import type { AnyWgslData } from './std140/types';
 
-export type WGSLSegment = string | number | WGSLItem;
+export type Wgsl = string | number | WgslResolvable;
 
 export interface ResolutionCtx {
-  addDependency(item: WGSLItem): void;
-  nameFor(token: WGSLItem): string;
+  addDependency(item: WgslResolvable): void;
+  addAllocatable(allocatable: WgslAllocatable): void;
+  nameFor(token: WgslResolvable): string;
   /** @throws {MissingBindingError}  */
-  requireBinding<T>(bindable: WGSLBindableTrait<T>): T;
-  tryBinding<T>(bindable: WGSLBindableTrait<T>, defaultValue: T): T;
-  resolve(item: WGSLSegment): string;
-  registerMemory(memoryEntry: WGSLMemoryTrait): void;
+  requireBinding<T>(bindable: WgslBindable<T>): T;
+  tryBinding<T>(bindable: WgslBindable<T>, defaultValue: T): T;
+  resolve(item: Wgsl): string;
 }
 
-export interface WGSLItem {
+export interface WgslResolvable {
   readonly debugLabel?: string | undefined;
 
   resolve(ctx: ResolutionCtx): string;
 }
 
-export function isWGSLItem(value: unknown): value is WGSLItem {
+export function isResolvable(value: unknown): value is WgslResolvable {
   return (
     !!value &&
     (typeof value === 'object' || typeof value === 'function') &&
@@ -26,27 +26,34 @@ export function isWGSLItem(value: unknown): value is WGSLItem {
   );
 }
 
-export function isWGSLSegment(value: unknown): value is WGSLSegment {
+export function isWgsl(value: unknown): value is Wgsl {
   return (
-    typeof value === 'number' || typeof value === 'string' || isWGSLItem(value)
+    typeof value === 'number' ||
+    typeof value === 'string' ||
+    isResolvable(value)
   );
 }
 
-export interface WGSLBindableTrait<TBinding> {
+export interface WgslBindable<TBinding> {
   /** type-token, not available at runtime */
   readonly __bindingType: TBinding;
 
   readonly debugLabel?: string | undefined;
 }
 
-export type WGSLBindPair<T> = [WGSLBindableTrait<T>, T];
+export type BindPair<T> = [WgslBindable<T>, T];
 
-export interface WGSLMemoryTrait extends WGSLItem {
-  readonly size: number;
-  readonly baseAlignment: number;
-  usage: 'uniform' | 'storage';
+export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData>
+  extends WgslResolvable {
+  /**
+   * The data type this allocatable was constructed with.
+   * It informs the size and format of data in both JS and
+   * binary.
+   */
+  readonly dataType: TData;
   flags: GPUBufferUsageFlags;
-  definitionCode(bindingGroup: number, bindingIdx: number): WGSLCode;
+  usage: 'uniform' | 'storage' | 'read-only-storage';
+  definitionCode(bindingGroup: number, bindingIdx: number): WgslResolvable;
 }
 
 export type MemoryLocation = { gpuBuffer: GPUBuffer; offset: number };

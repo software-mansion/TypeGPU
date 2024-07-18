@@ -1,20 +1,36 @@
-import type { ResolutionCtx, WGSLItem, WGSLSegment } from './types';
+import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
 import { code } from './wgslCode';
-import { WGSLIdentifier } from './wgslIdentifier';
+import { WgslIdentifier } from './wgslIdentifier';
+
+// ----------
+// Public API
+// ----------
+
+export interface WgslConst extends WgslResolvable {
+  $name(label: string): WgslConst;
+}
 
 /**
  * Creates a constant is computed at shader initialization according
  * to the passed in expression.
  */
-export class WGSLConstant implements WGSLItem {
+export function constant(expr: Wgsl): WgslConst {
+  return new WgslConstImpl(expr);
+}
+
+// --------------
+// Implementation
+// --------------
+
+class WgslConstImpl implements WgslConst {
   public debugLabel?: string | undefined;
-  public identifier = new WGSLIdentifier();
+  public identifier = new WgslIdentifier();
 
-  constructor(private readonly expr: WGSLSegment) {}
+  constructor(private readonly expr: Wgsl) {}
 
-  alias(debugLabel: string) {
+  $name(debugLabel: string) {
     this.debugLabel = debugLabel;
-    this.identifier.alias(debugLabel);
+    this.identifier.$name(debugLabel);
     return this;
   }
 
@@ -23,8 +39,4 @@ export class WGSLConstant implements WGSLItem {
 
     return ctx.resolve(this.identifier);
   }
-}
-
-export function constant(expr: WGSLSegment): WGSLConstant {
-  return new WGSLConstant(expr);
 }

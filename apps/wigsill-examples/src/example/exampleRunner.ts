@@ -97,21 +97,13 @@ export async function executeExample(
     },
     onChange: (newValue: number) => void,
   ): void;
-  function addParameter(
+  function addParameter<TOption extends string | number>(
     label: string,
     options: {
-      initial: string;
-      options: string[];
+      initial: TOption;
+      options: TOption[];
     },
-    onChange: (newValue: string) => void,
-  ): void;
-  function addParameter(
-    label: string,
-    options: {
-      initial: number;
-      options: number[];
-    },
-    onChange: (number: string) => void,
+    onChange: (newValue: TOption) => void,
   ): void;
   function addParameter(
     label: string,
@@ -120,7 +112,7 @@ export async function executeExample(
     },
     onChange: (newValue: boolean) => void,
   ): void;
-  function addParameter(
+  function addParameter<TOption extends string | number>(
     label: string,
     options:
       | {
@@ -130,35 +122,27 @@ export async function executeExample(
           step?: number;
         }
       | {
-          initial: string;
-          options: string[];
-        }
-      | {
-          initial: number;
-          options: number[];
+          initial: TOption;
+          options: TOption;
         }
       | {
           initial: boolean;
         },
-    onChange:
-      | ((newValue: string) => void)
-      | ((newValue: number) => void)
-      | ((newValue: boolean) => void),
+    onChange: (newValue: TOption | boolean) => void,
   ): void {
     const temp = { [label]: options.initial };
-
     if ('options' in options) {
       gui
         .add(temp, label, options.options)
-        .onChange((value) => onChange(value as never));
-    } else if (typeof options.initial === 'boolean') {
-      gui
-        .add(temp, label, options.initial)
-        .onChange((value) => onChange(value as never));
-    } else {
+        .onChange((value) => onChange(value));
+    } else if ('min' in options || 'max' in options || 'step' in options) {
       gui
         .add(temp, label, options.min, options.max, options.step)
-        .onChange((value) => onChange(value as never));
+        .onChange((value) => onChange(value));
+    } else {
+      gui
+        .add(temp, label, options.initial)
+        .onChange((value) => onChange(value));
     }
 
     // Eager run to initialize the values.
