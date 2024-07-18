@@ -14,7 +14,7 @@ import {
   type WgslResolvable,
   isResolvable,
 } from './types';
-import type WGSLRuntime from './wgslRuntime';
+import type WigsillRuntime from './wigsillRuntime';
 
 export type Program = {
   bindGroupLayout: GPUBindGroupLayout;
@@ -145,7 +145,7 @@ export default class ProgramBuilder {
   private bindings: BindPair<unknown>[] = [];
 
   constructor(
-    private runtime: WGSLRuntime,
+    private runtime: WigsillRuntime,
     private root: WgslResolvable,
   ) {}
 
