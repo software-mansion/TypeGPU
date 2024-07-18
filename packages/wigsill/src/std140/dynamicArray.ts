@@ -107,7 +107,7 @@ class DynamicArrayDataType<TElement extends WgslData<unknown>>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    ctx.addDependency(this._definitionCode);
+    ctx.addDeclaration(this._definitionCode);
 
     return ctx.resolve(this._identifier);
   }

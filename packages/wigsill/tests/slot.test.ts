@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MissingBindingError, StrictNameRegistry, wgsl } from '../src';
-import { ResolutionCtxImpl } from '../src/programBuilder';
+import { ResolutionCtxImpl } from '../src/resolutionCtx';
 
 describe('wgsl.slot', () => {
   it('resolves to default value if no binding provided', () => {

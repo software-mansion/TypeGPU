@@ -35,7 +35,7 @@ class WgslConstImpl implements WgslConst {
   resolve(ctx: ResolutionCtx): string {
     const identifier = new WgslIdentifier().$name(this.debugLabel);
 
-    ctx.addDependency(code`const ${identifier} = ${this.expr};`);
+    ctx.addDeclaration(code`const ${identifier} = ${this.expr};`);
 
     return ctx.resolve(identifier);
   }

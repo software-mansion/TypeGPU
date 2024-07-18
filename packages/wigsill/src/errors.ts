@@ -1,7 +1,7 @@
-import type { WgslAllocatable, WgslBindable } from './types';
+import type { WgslAllocatable, WgslSlot } from './types';
 
 export class MissingBindingError extends Error {
-  constructor(public readonly bindable: WgslBindable<unknown>) {
+  constructor(public readonly bindable: WgslSlot<unknown>) {
     super(`Missing binding for ${bindable.debugLabel ?? '<unnamed>'}`);
 
     // Set the prototype explicitly.

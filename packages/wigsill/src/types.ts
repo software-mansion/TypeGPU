@@ -9,18 +9,26 @@ export type Wgsl = string | number | WgslResolvable;
  */
 export interface ResolutionCtx {
   /**
-   * Bindings passed down from above the tree.
+   * Slots that were used by items resolved by this context.
    */
-  bindings: BindPair<unknown>[];
+  readonly usedSlots: Iterable<WgslSlot<unknown>>;
 
-  addDependency(item: WgslResolvable): void;
+  /**
+   * Used to prevent cyclical code definitions.
+   * TODO: Use to prevent cyclical code definitions.
+   */
+  readonly ancestors: Iterable<WgslResolvable>;
+
+  addDeclaration(
+    item: WgslResolvable,
+    localBindings?: BindPair<unknown>[],
+  ): void;
   addAllocatable(allocatable: WgslAllocatable): void;
   nameFor(token: WgslResolvable): string;
   arenaFor(memoryEntry: WgslAllocatable): MemoryArena | null;
   /** @throws {MissingBindingError}  */
-  requireBinding<T>(bindable: WgslBindable<T>): T;
-  tryBinding<T>(bindable: WgslBindable<T>, defaultValue: T): T;
-  resolve(item: Wgsl): string;
+  readSlot<T>(slot: WgslSlot<T>): T;
+  resolve(item: Wgsl, localBindings?: BindPair<unknown>[]): string;
 }
 
 export interface WgslResolvable {
@@ -45,14 +53,36 @@ export function isWgsl(value: unknown): value is Wgsl {
   );
 }
 
-export interface WgslBindable<TBinding> {
+export interface WgslSlot<T> {
   /** type-token, not available at runtime */
-  readonly __bindingType: TBinding;
+  readonly __bindingType: T;
+
+  readonly defaultValue: T | undefined;
 
   readonly debugLabel?: string | undefined;
+
+  $name(label: string): WgslSlot<T>;
+
+  /**
+   * Used to determine if code generated using either value `a` or `b` in place
+   * of the bindable will be equivalent. Defaults to `Object.is`.
+   */
+  areEqual(a: T, b: T): boolean;
 }
 
-export type BindPair<T> = [WgslBindable<T>, T];
+/**
+ * Represents a value that is available at resolution time.
+ * (constant after compilation)
+ */
+export type Potential<T> = T | WgslSlot<T>;
+
+export interface WgslResolvableSlot<T extends Wgsl>
+  extends WgslResolvable,
+    WgslSlot<T> {
+  $name(label: string): WgslResolvableSlot<T>;
+}
+
+export type BindPair<T> = [WgslSlot<T>, T];
 
 export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData>
   extends WgslResolvable {

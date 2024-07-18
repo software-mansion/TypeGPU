@@ -1,4 +1,4 @@
-import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
+import type { BindPair, ResolutionCtx, Wgsl, WgslResolvable } from './types';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
 
@@ -7,14 +7,14 @@ import { WgslIdentifier } from './wgslIdentifier';
 // ----------
 
 export interface WgslFn extends WgslResolvable {
-  $name(debugLabel: string): WgslFn;
+  $name(label: string): WgslFn;
 }
 
-export function fn(debugLabel?: string) {
+export function fn(label?: string) {
   return (strings: TemplateStringsArray, ...params: Wgsl[]): WgslFn => {
-    const func = new WgslFnImpl(code(strings, ...params));
-    if (debugLabel) {
-      func.$name(debugLabel);
+    const func = new WgslFnImpl(code(strings, ...params), []);
+    if (label) {
+      func.$name(label);
     }
     return func;
   };
@@ -25,18 +25,23 @@ export function fn(debugLabel?: string) {
 // --------------
 
 class WgslFnImpl implements WgslFn {
-  private identifier = new WgslIdentifier();
+  private _label: string | undefined;
 
-  constructor(private readonly body: Wgsl) {}
+  constructor(
+    private readonly body: Wgsl,
+    private readonly _bindings: BindPair<unknown>[],
+  ) {}
 
-  $name(debugLabel: string) {
-    this.identifier.$name(debugLabel);
+  $name(label: string) {
+    this._label = label;
     return this;
   }
 
   resolve(ctx: ResolutionCtx): string {
-    ctx.addDependency(code`fn ${this.identifier}${this.body}`);
+    const identifier = new WgslIdentifier().$name(this._label);
 
-    return ctx.resolve(this.identifier);
+    ctx.addDeclaration(code`fn ${identifier}${this.body}`, this._bindings);
+
+    return ctx.resolve(identifier, this._bindings);
   }
 }

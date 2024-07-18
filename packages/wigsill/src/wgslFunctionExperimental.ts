@@ -120,11 +120,11 @@ class WgslFnImpl<
     });
 
     if (this.returnType !== undefined) {
-      ctx.addDependency(code`fn ${this.identifier}(${argsCode}) -> ${this.returnType} {
+      ctx.addDeclaration(code`fn ${this.identifier}(${argsCode}) -> ${this.returnType} {
         ${this.body}
       }`);
     } else {
-      ctx.addDependency(code`fn ${this.identifier}(${argsCode}) {
+      ctx.addDeclaration(code`fn ${this.identifier}(${argsCode}) {
         ${this.body}
       }`);
     }
