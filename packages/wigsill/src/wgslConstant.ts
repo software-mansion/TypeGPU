@@ -7,7 +7,7 @@ import { WgslIdentifier } from './wgslIdentifier';
 // ----------
 
 export interface WgslConst extends WgslResolvable {
-  alias(label: string): WgslConst;
+  $name(label: string): WgslConst;
 }
 
 /**
@@ -27,13 +27,13 @@ class WgslConstImpl implements WgslConst {
 
   constructor(private readonly expr: Wgsl) {}
 
-  alias(debugLabel: string) {
+  $name(debugLabel: string) {
     this.debugLabel = debugLabel;
     return this;
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().alias(this.debugLabel);
+    const identifier = new WgslIdentifier().$name(this.debugLabel);
 
     ctx.addDependency(code`const ${identifier} = ${this.expr};`);
 

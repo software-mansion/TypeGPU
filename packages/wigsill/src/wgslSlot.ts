@@ -11,7 +11,7 @@ import {
 // ----------
 
 export interface WgslSlot<T> extends WgslBindable<T> {
-  alias(label: string): WgslSlot<T>;
+  $name(label: string): WgslSlot<T>;
 }
 
 /**
@@ -23,7 +23,7 @@ export type Potential<T> = T | WgslSlot<T>;
 export interface WgslResolvableSlot<T extends Wgsl>
   extends WgslResolvable,
     WgslSlot<T> {
-  alias(label: string): WgslResolvableSlot<T>;
+  $name(label: string): WgslResolvableSlot<T>;
 }
 
 export function slot<T extends Wgsl>(defaultValue?: T): WgslResolvableSlot<T>;
@@ -44,7 +44,7 @@ class WgslSlotImpl<T> implements WgslResolvable, WgslBindable<T> {
 
   constructor(public defaultValue?: T) {}
 
-  public alias(label: string) {
+  public $name(label: string) {
     this.debugLabel = label;
     return this;
   }

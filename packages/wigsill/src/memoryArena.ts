@@ -49,9 +49,9 @@ export class MemoryArena {
     this.size = size;
   }
 
-  alias(debugLabel: string) {
+  $name(debugLabel: string) {
     this.debugLabel = debugLabel;
-    this.identifier.alias(debugLabel);
+    this.identifier.$name(debugLabel);
   }
 
   offsetFor(memoryEntry: WgslAllocatable): number | null {
@@ -61,7 +61,7 @@ export class MemoryArena {
   definitionCode(bindingGroup: number, bindingIdx: number) {
     const storageTypeIdentifier = new WgslIdentifier();
     if (this.debugLabel) {
-      storageTypeIdentifier.alias(`${this.debugLabel}_type`);
+      storageTypeIdentifier.$name(`${this.debugLabel}_type`);
     }
 
     const fieldDefinitions = this.memoryEntries.map(
@@ -86,7 +86,7 @@ export class MemoryArena {
     struct ${storageTypeIdentifier} {
       ${fieldDefinitions}
     }
-  
+
     @group(${bindingGroup}) @binding(${bindingIdx}) var<${bindingType}> ${this.identifier}: ${storageTypeIdentifier};
     `;
   }

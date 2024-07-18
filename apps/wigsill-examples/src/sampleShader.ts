@@ -11,6 +11,6 @@ fn add(a: f32, b: f32) -> f32 {
   ${multiply}();
   ${multiply}();
 
-  return a + ${wgsl.constant('123 + 5')};
+  return a + ${wgsl.constant('123 + 5').$name('x')};
 }
 `;

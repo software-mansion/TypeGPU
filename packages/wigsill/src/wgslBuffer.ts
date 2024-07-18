@@ -9,7 +9,7 @@ import type {
 } from './types';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
-import type WGSLRuntime from './wgslRuntime';
+import type WigsillRuntime from './wigsillRuntime';
 
 // ----------
 // Public API
@@ -18,9 +18,9 @@ import type WGSLRuntime from './wgslRuntime';
 export interface WgslBuffer<TData extends AnyWgslData>
   extends WgslResolvable,
     WgslAllocatable<TData> {
-  alias(label: string): WgslBuffer<TData>;
+  $name(label: string): WgslBuffer<TData>;
 
-  write(runtime: WGSLRuntime, data: Parsed<TData>): void;
+  write(runtime: WigsillRuntime, data: Parsed<TData>): void;
 }
 
 export function buffer<TData extends AnyWgslData>(
@@ -43,9 +43,9 @@ class WgslBufferImpl<TData extends AnyWgslData> implements WgslBuffer<TData> {
     this.structFieldDefinition = code`${this.fieldIdentifier}: ${this.dataType},\n`;
   }
 
-  alias(debugLabel: string) {
+  $name(debugLabel: string) {
     this.debugLabel = debugLabel;
-    this.fieldIdentifier.alias(debugLabel);
+    this.fieldIdentifier.$name(debugLabel);
     return this;
   }
 
@@ -69,7 +69,7 @@ class WgslBufferImpl<TData extends AnyWgslData> implements WgslBuffer<TData> {
     return result;
   }
 
-  write(runtime: WGSLRuntime, data: Parsed<TData>): boolean {
+  write(runtime: WigsillRuntime, data: Parsed<TData>): boolean {
     const memoryLocation = runtime.locateMemory(this);
 
     if (!memoryLocation) {

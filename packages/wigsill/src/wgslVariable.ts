@@ -10,7 +10,7 @@ import { WgslIdentifier } from './wgslIdentifier';
 export type VariableScope = 'private';
 
 export interface WgslVar<TDataType extends AnyWgslData> extends WgslResolvable {
-  alias(label: string): WgslVar<TDataType>;
+  $name(label: string): WgslVar<TDataType>;
 }
 
 /**
@@ -34,8 +34,8 @@ class WgslVarImpl<TDataType extends AnyWgslData> implements WgslVar<TDataType> {
     public readonly scope: VariableScope,
   ) {}
 
-  alias(debugLabel: string) {
-    this.identifier.alias(debugLabel);
+  $name(debugLabel: string) {
+    this.identifier.$name(debugLabel);
     return this;
   }
 

@@ -33,7 +33,7 @@ export class StrictNameRegistry implements NameRegistry {
     const label = item.debugLabel;
 
     if (label === undefined) {
-      throw new Error('Unaliased item found when using a strict NameRegistry');
+      throw new Error('Unnamed item found when using a strict NameRegistry');
     }
 
     return label;

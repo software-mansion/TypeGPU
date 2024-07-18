@@ -1,8 +1,8 @@
-import type { AnyWgslData, WGSLPointerType } from './types';
+import type { AnyWgslData, WgslPointer } from './types';
 
 export function ptr<TDataType extends AnyWgslData>(
   pointsTo: TDataType,
-): WGSLPointerType<'function', TDataType> {
+): WgslPointer<'function', TDataType> {
   return {
     scope: 'function',
     pointsTo,
