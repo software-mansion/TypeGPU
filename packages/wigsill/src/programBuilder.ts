@@ -1,5 +1,6 @@
 import { MissingBindingError } from './errors';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
+import type { AnyWgslData } from './std140/types';
 import {
   type BindPair,
   type ResolutionCtx,
@@ -9,6 +10,7 @@ import {
   type WgslResolvable,
   isResolvable,
 } from './types';
+import type { WgslBufferUsage } from './wgslBufferUsage';
 import type WigsillRuntime from './wigsillRuntime';
 
 export type Program = {
@@ -36,6 +38,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   public dependencies: WgslResolvable[] = [];
   public usedMemory = new Set<WgslAllocatable>();
+  public usedBuffers = new Set<WgslBufferUsage<AnyWgslData, string>>();
 
   private _memoizedResults = new WeakMap<WgslResolvable, string>();
 
@@ -51,6 +54,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   addAllocatable(allocatable: WgslAllocatable): void {
     this.usedMemory.add(allocatable);
+  }
+
+  addBufferUsage<TData extends AnyWgslData, TUsage extends string>(
+    bufferUsage: WgslBufferUsage<TData, TUsage>,
+  ) {
+    this.usedBuffers.add(bufferUsage);
   }
 
   nameFor(item: WgslResolvable): string {
@@ -125,27 +134,30 @@ export default class ProgramBuilder {
     // Resolving code
     const codeString = ctx.resolve(this.root);
     const usedMemory = Array.from(ctx.usedMemory);
+    const usedBuffers = Array.from(ctx.usedBuffers);
 
-    usedMemory.forEach((memory, idx) => {
+    console.log('usedMemory', usedBuffers);
+
+    usedBuffers.forEach((memory, idx) => {
       ctx.addDependency(memory.definitionCode(options.bindingGroup, idx));
     });
 
     const bindGroupLayout = this.runtime.device.createBindGroupLayout({
-      entries: usedMemory.map((memory, idx) => ({
+      entries: usedBuffers.map((memory, idx) => ({
         binding: idx,
         visibility: options.shaderStage,
         buffer: {
-          type: memory.usage,
+          type: memory.usage as GPUBufferBindingType,
         },
       })),
     });
 
     const bindGroup = this.runtime.device.createBindGroup({
       layout: bindGroupLayout,
-      entries: usedMemory.map((memory, idx) => ({
+      entries: usedBuffers.map((memory, idx) => ({
         binding: idx,
         resource: {
-          buffer: this.runtime.bufferFor(memory),
+          buffer: this.runtime.bufferFor(memory.buffer),
         },
       })),
     });

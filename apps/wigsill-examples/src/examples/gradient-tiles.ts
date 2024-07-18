@@ -15,8 +15,12 @@ import { ProgramBuilder, createRuntime, u32, wgsl } from 'wigsill';
 const runtime = await createRuntime();
 const device = runtime.device;
 
-const xSpanData = wgsl.buffer(u32).$name('x-span');
-const ySpanData = wgsl.buffer(u32).$name('y-span');
+const xSpanData = wgsl.buffer(u32).$name('x-span').$allowUniform().asUniform();
+const ySpanData = wgsl.buffer(u32).$name('y-span').$allowUniform().asUniform();
+
+if (!xSpanData || !ySpanData) {
+  throw new Error('Failed to create buffer');
+}
 
 const canvas = await addElement('canvas');
 
@@ -78,6 +82,8 @@ const program = new ProgramBuilder(runtime, mainCode).build({
   bindingGroup: 0,
   shaderStage: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
 });
+
+console.log(program.code);
 
 const shaderModule = device.createShaderModule({
   code: program.code,

@@ -4,6 +4,7 @@ import type { ResolutionCtx, WgslAllocatable, WgslResolvable } from './types';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
 import type WigsillRuntime from './wigsillRuntime';
+import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
 
 // ----------
 // Public API
@@ -13,15 +14,18 @@ export interface WgslBuffer<TData extends AnyWgslData>
   extends WgslResolvable,
     WgslAllocatable<TData> {
   $name(label: string): WgslBuffer<TData>;
+  fieldIdentifier: WgslIdentifier;
 
   write(runtime: WigsillRuntime, data: Parsed<TData>): void;
   read(runtime: WigsillRuntime): Promise<Parsed<TData>>;
   flags: GPUBufferUsageFlags;
-  usage: 'uniform' | 'storage' | 'read-only-storage';
   definitionCode(bindingGroup: number, bindingIdx: number): WgslResolvable;
   $allowUniform(): WgslBuffer<TData>;
   $allowReadonlyStorage(): WgslBuffer<TData>;
   $allowMutableStorage(): WgslBuffer<TData>;
+  asUniform(): WgslBufferUsage<TData, 'uniform'> | null;
+  asStorage(): WgslBufferUsage<TData, 'storage'> | null;
+  asReadOnlyStorage(): WgslBufferUsage<TData, 'read-only-storage'> | null;
   $addFlags(flags: GPUBufferUsageFlags): WgslBuffer<TData>;
 }
 
@@ -36,11 +40,18 @@ export function buffer<TData extends AnyWgslData>(
 // --------------
 
 class WgslBufferImpl<TData extends AnyWgslData> implements WgslBuffer<TData> {
-  private fieldIdentifier = new WgslIdentifier();
+  public fieldIdentifier = new WgslIdentifier();
   public flags: GPUBufferUsageFlags =
     GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
-  public usage: 'uniform' | 'storage' | 'read-only-storage' = 'uniform';
-
+  private allowedUsages: {
+    uniform: WgslBufferUsage<TData, 'uniform'> | null;
+    storage: WgslBufferUsage<TData, 'storage'> | null;
+    readOnlyStorage: WgslBufferUsage<TData, 'read-only-storage'> | null;
+  } = {
+    uniform: null,
+    storage: null,
+    readOnlyStorage: null,
+  };
   public debugLabel?: string | undefined;
 
   constructor(public readonly dataType: TData) {}
@@ -92,48 +103,34 @@ class WgslBufferImpl<TData extends AnyWgslData> implements WgslBuffer<TData> {
   }
 
   definitionCode(bindingGroup: number, bindingIdx: number): WgslResolvable {
-    let bindingType = 'storage, read';
-
-    if (this.usage === 'uniform') {
-      bindingType = 'uniform';
-    }
-
-    if (this.usage === 'storage') {
-      bindingType = 'storage, read_write';
-    }
+    const bindingType = 'uniform';
 
     return code`
     @group(${bindingGroup}) @binding(${bindingIdx}) var<${bindingType}> ${this.fieldIdentifier}: ${this.dataType};
     `;
   }
 
-  // Temporary implementation
   $allowUniform() {
-    this.flags =
-      GPUBufferUsage.UNIFORM |
-      GPUBufferUsage.COPY_DST |
-      GPUBufferUsage.COPY_SRC;
-    this.usage = 'uniform';
+    if (!this.allowedUsages.uniform) {
+      this.allowedUsages.uniform = bufferUsage(this, 'uniform');
+    }
     return this;
   }
 
-  // Temporary implementation
   $allowReadonlyStorage() {
-    this.flags =
-      GPUBufferUsage.STORAGE |
-      GPUBufferUsage.COPY_DST |
-      GPUBufferUsage.COPY_SRC;
-    this.usage = 'read-only-storage';
+    if (!this.allowedUsages.readOnlyStorage) {
+      this.allowedUsages.readOnlyStorage = bufferUsage(
+        this,
+        'read-only-storage',
+      );
+    }
     return this;
   }
 
-  // Temporary implementation
   $allowMutableStorage() {
-    this.flags =
-      GPUBufferUsage.STORAGE |
-      GPUBufferUsage.COPY_DST |
-      GPUBufferUsage.COPY_SRC;
-    this.usage = 'storage';
+    if (!this.allowedUsages.storage) {
+      this.allowedUsages.storage = bufferUsage(this, 'storage');
+    }
     return this;
   }
 
@@ -141,5 +138,17 @@ class WgslBufferImpl<TData extends AnyWgslData> implements WgslBuffer<TData> {
   $addFlags(flags: GPUBufferUsageFlags) {
     this.flags |= flags;
     return this;
+  }
+
+  asUniform(): WgslBufferUsage<TData, 'uniform'> | null {
+    return this.allowedUsages.uniform;
+  }
+
+  asStorage(): WgslBufferUsage<TData, 'storage'> | null {
+    return this.allowedUsages.storage;
+  }
+
+  asReadOnlyStorage(): WgslBufferUsage<TData, 'read-only-storage'> | null {
+    return this.allowedUsages.readOnlyStorage;
   }
 }

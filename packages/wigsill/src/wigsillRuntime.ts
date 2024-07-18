@@ -19,6 +19,7 @@ class WigsillRuntime {
     let buffer = this._entryToBufferMap.get(memory);
 
     if (!buffer) {
+      console.log('Creating buffer for', memory);
       buffer = this.device.createBuffer({
         usage: memory.flags,
         size: memory.dataType.size,

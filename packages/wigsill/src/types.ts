@@ -1,4 +1,5 @@
 import type { AnyWgslData } from './std140/types';
+import type { WgslBufferUsage } from './wgslBufferUsage';
 
 export type Wgsl = string | number | WgslResolvable;
 
@@ -10,6 +11,9 @@ export interface ResolutionCtx {
   requireBinding<T>(bindable: WgslBindable<T>): T;
   tryBinding<T>(bindable: WgslBindable<T>, defaultValue: T): T;
   resolve(item: Wgsl): string;
+  addBufferUsage<TData extends AnyWgslData, TUsage extends string>(
+    bufferUsage: WgslBufferUsage<TData, TUsage>,
+  ): void;
 }
 
 export interface WgslResolvable {
@@ -52,7 +56,6 @@ export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData>
    */
   readonly dataType: TData;
   flags: GPUBufferUsageFlags;
-  usage: 'uniform' | 'storage' | 'read-only-storage';
   definitionCode(bindingGroup: number, bindingIdx: number): WgslResolvable;
 }
 
