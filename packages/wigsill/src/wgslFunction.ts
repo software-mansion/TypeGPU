@@ -1,63 +1,33 @@
-import Callable, { type AsCallable } from './callable';
-import {
-  type AnyWGSLDataType,
-  type WGSLFnArgument,
-  type WGSLValue,
-  isPointer,
-} from './std140/types';
-import type { ResolutionCtx, WGSLItem, WGSLSegment } from './types';
-import { type WGSLCode, code } from './wgslCode';
-import { WGSLIdentifier, identifier } from './wgslIdentifier';
+import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
+import { code } from './wgslCode';
+import { WgslIdentifier } from './wgslIdentifier';
 
-type ValuesFromTypes<TArgTypes extends WGSLFnArgument[]> = {
-  [K in keyof TArgTypes]: WGSLValue<TArgTypes[K]> & WGSLIdentifier;
-};
+// ----------
+// Public API
+// ----------
 
-type PairsFromTypes<TArgTypes extends WGSLFnArgument[]> = {
-  [K in keyof TArgTypes]: readonly [WGSLIdentifier, TArgTypes[K]];
-};
-
-type SegmentsFromTypes<TArgTypes extends WGSLFnArgument[]> = {
-  [K in keyof TArgTypes]: WGSLSegment;
-};
-
-class WGSLFunctionCall<
-  TArgTypes extends [WGSLFnArgument, ...WGSLFnArgument[]] | [],
-  TReturn extends AnyWGSLDataType | undefined = undefined,
-> implements WGSLItem
-{
-  constructor(
-    private usedFn: WGSLFunction<TArgTypes, TReturn>,
-    private readonly args: SegmentsFromTypes<TArgTypes>,
-  ) {}
-
-  resolve(ctx: ResolutionCtx): string {
-    const argsCode = this.args.map((argSegment, idx) => {
-      const comma = idx < this.args.length - 1 ? ', ' : '';
-      return code`${argSegment}${comma}`;
-    });
-
-    return ctx.resolve(code`${this.usedFn}(${argsCode})`);
-  }
+export interface WgslFn extends WgslResolvable {
+  $name(debugLabel: string): WgslFn;
 }
 
-export class WGSLFunction<
-    TArgTypes extends [WGSLFnArgument, ...WGSLFnArgument[]] | [],
-    // TArgPairs extends (readonly [WGSLIdentifier, WGSLFnArgument])[],
-    TReturn extends AnyWGSLDataType | undefined = undefined,
-  >
-  extends Callable<SegmentsFromTypes<TArgTypes>, WGSLFunctionCall<TArgTypes>>
-  implements WGSLItem
-{
-  private identifier = new WGSLIdentifier();
+export function fn(debugLabel?: string) {
+  return (strings: TemplateStringsArray, ...params: Wgsl[]): WgslFn => {
+    const func = new WgslFnImpl(code(strings, ...params));
+    if (debugLabel) {
+      func.$name(debugLabel);
+    }
+    return func;
+  };
+}
 
-  constructor(
-    private argPairs: PairsFromTypes<TArgTypes>,
-    private returnType: TReturn | undefined,
-    private readonly body: WGSLSegment,
-  ) {
-    super();
-  }
+// --------------
+// Implementation
+// --------------
+
+class WgslFnImpl implements WgslFn {
+  private identifier = new WgslIdentifier();
+
+  constructor(private readonly body: Wgsl) {}
 
   $name(debugLabel: string) {
     this.identifier.$name(debugLabel);
@@ -65,61 +35,8 @@ export class WGSLFunction<
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const argsCode = this.argPairs.map(([ident, argType], idx) => {
-      const comma = idx < this.argPairs.length - 1 ? ', ' : '';
-
-      if (isPointer(argType)) {
-        return code`${ident}: ptr<${argType.scope}, ${argType.pointsTo}>${comma}`;
-      }
-
-      return code`${ident}: ${argType}${comma}`;
-    });
-
-    if (this.returnType !== undefined) {
-      ctx.addDependency(code`fn ${this.identifier}(${argsCode}) -> ${this.returnType} {
-        ${this.body}
-      }`);
-    } else {
-      ctx.addDependency(code`fn ${this.identifier}(${argsCode}) {
-        ${this.body}
-      }`);
-    }
+    ctx.addDependency(code`fn ${this.identifier}${this.body}`);
 
     return ctx.resolve(this.identifier);
   }
-
-  _call(...args: SegmentsFromTypes<TArgTypes>) {
-    return new WGSLFunctionCall(this, args);
-  }
-}
-
-export function fn<
-  TArgTypes extends [WGSLFnArgument, ...WGSLFnArgument[]] | [],
-  TReturn extends AnyWGSLDataType | undefined = undefined,
->(argTypes: TArgTypes, returnType?: TReturn) {
-  const argPairs = argTypes.map(
-    (argType) => [identifier(), argType] as const,
-  ) as PairsFromTypes<TArgTypes>;
-
-  const argValues = argPairs.map(
-    ([argIdent, argType]) =>
-      argIdent as WGSLValue<typeof argType> & WGSLIdentifier,
-  );
-
-  type TArgValues = ValuesFromTypes<TArgTypes>;
-  return (bodyProducer: (...args: TArgValues) => WGSLCode) => {
-    const body = bodyProducer(...(argValues as TArgValues));
-
-    const fnInstance = new WGSLFunction<TArgTypes, TReturn>(
-      argPairs,
-      returnType,
-      body,
-    );
-
-    return fnInstance as AsCallable<
-      typeof fnInstance,
-      SegmentsFromTypes<TArgTypes>,
-      WGSLFunctionCall<TArgTypes>
-    >;
-  };
 }

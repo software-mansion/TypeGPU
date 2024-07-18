@@ -1,14 +1,14 @@
-import type { WGSLItem } from './types';
+import type { WgslResolvable } from './types';
 
 export interface NameRegistry {
-  nameFor(item: WGSLItem): string;
+  nameFor(item: WgslResolvable): string;
 }
 
 export class RandomNameRegistry implements NameRegistry {
   private lastUniqueId = 0;
-  private names = new WeakMap<WGSLItem, string>();
+  private names = new WeakMap<WgslResolvable, string>();
 
-  nameFor(item: WGSLItem) {
+  nameFor(item: WgslResolvable) {
     let name = this.names.get(item);
 
     if (name === undefined) {
@@ -29,11 +29,11 @@ export class RandomNameRegistry implements NameRegistry {
 }
 
 export class StrictNameRegistry implements NameRegistry {
-  nameFor(item: WGSLItem): string {
+  nameFor(item: WgslResolvable): string {
     const label = item.debugLabel;
 
     if (label === undefined) {
-      throw new Error('Unaliased item found when using a strict NameRegistry');
+      throw new Error('Unnamed item found when using a strict NameRegistry');
     }
 
     return label;

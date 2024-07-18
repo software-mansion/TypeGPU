@@ -1,6 +1,9 @@
-import type { ResolutionCtx, WGSLItem } from './types';
+import type { ResolutionCtx, WgslResolvable } from './types';
 
-export class WGSLIdentifier implements WGSLItem {
+/**
+ * Helpful when creating new Resolvable types. For internal use.
+ */
+export class WgslIdentifier implements WgslResolvable {
   debugLabel?: string | undefined;
 
   $name(debugLabel: string) {
@@ -10,14 +13,4 @@ export class WGSLIdentifier implements WGSLItem {
   resolve(ctx: ResolutionCtx): string {
     return ctx.nameFor(this);
   }
-}
-
-export function identifier(debugLabel?: string) {
-  const value = new WGSLIdentifier();
-
-  if (debugLabel) {
-    value.$name(debugLabel);
-  }
-
-  return value;
 }

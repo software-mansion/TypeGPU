@@ -15,8 +15,8 @@ import { ProgramBuilder, createRuntime, makeArena, u32, wgsl } from 'wigsill';
 const runtime = await createRuntime();
 const device = runtime.device;
 
-const xSpanData = wgsl.memory(u32).$name('x-span');
-const ySpanData = wgsl.memory(u32).$name('y-span');
+const xSpanData = wgsl.buffer(u32).$name('x-span');
+const ySpanData = wgsl.buffer(u32).$name('y-span');
 
 const mainArena = makeArena({
   bufferBindingType: 'uniform',
