@@ -7,8 +7,8 @@ export class WGSLFunction implements WGSLItem {
 
   constructor(private readonly body: WGSLSegment) {}
 
-  alias(debugLabel: string) {
-    this.identifier.alias(debugLabel);
+  $name(debugLabel: string) {
+    this.identifier.$name(debugLabel);
     return this;
   }
 
@@ -26,7 +26,7 @@ export function fn(debugLabel?: string) {
   ): WGSLFunction => {
     const func = new WGSLFunction(code(strings, ...params));
     if (debugLabel) {
-      func.alias(debugLabel);
+      func.$name(debugLabel);
     }
     return func;
   };
