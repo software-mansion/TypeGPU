@@ -373,7 +373,6 @@ const cellsStride = {
 let wholeTime = 0;
 let buffer1: GPUBuffer;
 let render: () => void;
-let readDebugInfo: () => Promise<number>;
 let applyDrawCanvas: () => void;
 let renderChanges: () => void;
 
@@ -503,16 +502,6 @@ function resetGameData() {
     passEncoderRender.end();
 
     device.queue.submit([commandEncoder.finish()]);
-  };
-
-  readDebugInfo = async () => {
-    await debugReadBuffer.mapAsync(GPUMapMode.READ);
-    const arrayBuffer = debugReadBuffer.getMappedRange();
-    const view = new DataView(arrayBuffer);
-    const value = view.getUint32(0, true);
-    debugReadBuffer.unmap();
-
-    return value;
   };
 
   applyDrawCanvas = () => {
