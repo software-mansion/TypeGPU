@@ -12,9 +12,9 @@ export class WGSLConstant implements WGSLItem {
 
   constructor(private readonly expr: WGSLSegment) {}
 
-  alias(debugLabel: string) {
+  $name(debugLabel: string) {
     this.debugLabel = debugLabel;
-    this.identifier.alias(debugLabel);
+    this.identifier.$name(debugLabel);
     return this;
   }
 

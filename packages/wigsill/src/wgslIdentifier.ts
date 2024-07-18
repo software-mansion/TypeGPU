@@ -3,7 +3,7 @@ import type { ResolutionCtx, WGSLItem } from './types';
 export class WGSLIdentifier implements WGSLItem {
   debugLabel?: string | undefined;
 
-  alias(debugLabel: string) {
+  $name(debugLabel: string) {
     this.debugLabel = debugLabel;
   }
 
@@ -16,7 +16,7 @@ export function identifier(debugLabel?: string) {
   const value = new WGSLIdentifier();
 
   if (debugLabel) {
-    value.alias(debugLabel);
+    value.$name(debugLabel);
   }
 
   return value;
