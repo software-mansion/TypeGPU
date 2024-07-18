@@ -8,7 +8,7 @@ export interface WgslData<TInner> extends ISchema<TInner>, WgslResolvable {
 
 export type AnyWgslData = WgslData<unknown>;
 
-export interface WGSLPointerType<
+export interface WgslPointer<
   TScope extends 'function',
   TInner extends AnyWgslData,
 > {
@@ -19,16 +19,16 @@ export interface WGSLPointerType<
 /**
  * A virtual representation of a WGSL value.
  */
-export type WGSLValue<TDataType> = {
+export type WgslValue<TDataType> = {
   readonly __dataType: TDataType;
 };
 
-export type AnyWGSLPointerType = WGSLPointerType<'function', AnyWgslData>;
+export type AnyWgslPointer = WgslPointer<'function', AnyWgslData>;
 
-export type WGSLFnArgument = AnyWGSLPointerType | AnyWgslData;
+export type WgslFnArgument = AnyWgslPointer | AnyWgslData;
 
 export function isPointer(
-  value: AnyWGSLPointerType | AnyWgslData,
-): value is AnyWGSLPointerType {
+  value: AnyWgslPointer | AnyWgslData,
+): value is AnyWgslPointer {
   return 'pointsTo' in value;
 }

@@ -1,8 +1,8 @@
 import { buffer } from './wgslBuffer';
 import { code } from './wgslCode';
 import { constant } from './wgslConstant';
-import { fn as fun } from './wgslFunction';
-import { fn } from './wgslFunctionOld';
+import { fn } from './wgslFunction';
+import { fn as fun } from './wgslFunctionExperimental';
 import { slot } from './wgslSlot';
 import { variable } from './wgslVariable';
 
