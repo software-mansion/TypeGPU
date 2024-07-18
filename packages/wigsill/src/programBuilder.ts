@@ -1,7 +1,7 @@
 import type { MemoryArena } from './memoryArena';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
-import type { BindPair, WgslResolvable, WgslSlot } from './types';
+import type { WgslResolvable } from './types';
 import type WigsillRuntime from './wigsillRuntime';
 
 export type Program = {
@@ -26,24 +26,16 @@ type BuildOptions = {
 };
 
 export default class ProgramBuilder {
-  private bindings: BindPair<unknown>[] = [];
-
   constructor(
     private runtime: WigsillRuntime,
     private root: WgslResolvable,
   ) {}
-
-  provide<T>(bindable: WgslSlot<T>, value: T) {
-    this.bindings.push([bindable, value]);
-    return this;
-  }
 
   build(options: BuildOptions): Program {
     const arenas = options.arenas ?? [];
 
     const ctx = new ResolutionCtxImpl({
       memoryArenas: arenas,
-      bindings: this.bindings,
       names: options.nameRegistry ?? new RandomNameRegistry(),
     });
 

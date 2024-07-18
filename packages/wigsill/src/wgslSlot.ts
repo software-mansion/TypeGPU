@@ -25,12 +25,12 @@ export function slot<T>(defaultValue?: T): WgslSlot<T> {
 
 class WgslSlotImpl<T> implements WgslResolvable, WgslSlot<T> {
   __bindingType!: T;
-  public debugLabel?: string | undefined;
+  public label?: string | undefined;
 
   constructor(public defaultValue: T | undefined = undefined) {}
 
   public $name(label: string) {
-    this.debugLabel = label;
+    this.label = label;
     return this;
   }
 
@@ -43,10 +43,14 @@ class WgslSlotImpl<T> implements WgslResolvable, WgslSlot<T> {
 
     if (!isWgsl(value)) {
       throw new Error(
-        `Cannot inject value of type ${typeof value} of slot '${this.debugLabel ?? '<unnamed>'}' in code.`,
+        `Cannot inject value of type ${typeof value} of slot '${this.label ?? '<unnamed>'}' in code.`,
       );
     }
 
     return ctx.resolve(value);
+  }
+
+  toString(): string {
+    return `slot:${this.label ?? '<unnamed>'}`;
   }
 }

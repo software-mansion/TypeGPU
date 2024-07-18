@@ -47,8 +47,8 @@ class DynamicArrayDataType<TElement extends WgslData<unknown>>
     }`;
   }
 
-  $name(debugLabel: string) {
-    this._identifier.$name(debugLabel);
+  $name(label: string) {
+    this._identifier.$name(label);
     return this;
   }
 

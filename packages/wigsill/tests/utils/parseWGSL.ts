@@ -5,5 +5,6 @@ import { ResolutionCtxImpl } from '../../src/resolutionCtx';
 export function parseWGSL(segment: Wgsl) {
   const ctx = new ResolutionCtxImpl({ names: new StrictNameRegistry() });
 
-  return parse(ctx.resolve(segment));
+  const parsed = parse(ctx.resolve(segment));
+  return parsed;
 }

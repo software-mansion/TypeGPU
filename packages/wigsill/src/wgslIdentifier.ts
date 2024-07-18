@@ -4,14 +4,18 @@ import type { ResolutionCtx, WgslResolvable } from './types';
  * Helpful when creating new Resolvable types. For internal use.
  */
 export class WgslIdentifier implements WgslResolvable {
-  debugLabel?: string | undefined;
+  label?: string | undefined;
 
-  $name(debugLabel: string | undefined) {
-    this.debugLabel = debugLabel;
+  $name(label: string | undefined) {
+    this.label = label;
     return this;
   }
 
   resolve(ctx: ResolutionCtx): string {
     return ctx.nameFor(this);
+  }
+
+  toString(): string {
+    return `id:${this.label ?? '<unnamed>'}`;
   }
 }

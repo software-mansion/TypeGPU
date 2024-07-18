@@ -103,8 +103,8 @@ class WgslFnImpl<
     super();
   }
 
-  $name(debugLabel: string) {
-    this.identifier.$name(debugLabel);
+  $name(label: string) {
+    this.identifier.$name(label);
     return this;
   }
 

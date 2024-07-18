@@ -17,7 +17,6 @@ import {
 
 export type ResolutionCtxImplOptions = {
   readonly memoryArenas?: MemoryArena[];
-  readonly bindings?: BindPair<unknown>[];
   readonly names: NameRegistry;
 };
 
@@ -38,17 +37,27 @@ class ResolutionCache {
    */
   get(
     item: WgslResolvable,
+    readSlot: <T>(slot: WgslSlot<T>) => T,
     compute: () => {
       result: string;
       bindingMap: Map<WgslSlot<unknown>, unknown>;
     },
-  ): string {
-    // TODO: Decrease redundant `resolves` by checking whether there exists a cache entry whose bindingMap's values are equal in the current context.
-
-    const { result, bindingMap } = compute();
-
+  ): { result: string; cacheHit: boolean } {
     // All memoized versions of `item`
     const memoizedEntries = this._memoizedResults.get(item) ?? [];
+
+    for (const memoizedEntry of memoizedEntries) {
+      const bindPairs = [...memoizedEntry.bindingMap.entries()];
+      if (
+        bindPairs.every(
+          ([slot, expectedValue]) => readSlot(slot) === expectedValue,
+        )
+      ) {
+        return { result: memoizedEntry.result, cacheHit: true };
+      }
+    }
+
+    const { result, bindingMap } = compute();
 
     // Check for cache hits
     for (const entry of memoizedEntries) {
@@ -64,7 +73,7 @@ class ResolutionCache {
 
       if (matchesEntry) {
         // None of the values reported an inequality, return cached value and discard resolution result.
-        return entry.result;
+        return { result: entry.result, cacheHit: true };
       }
     }
 
@@ -72,7 +81,7 @@ class ResolutionCache {
     memoizedEntries.push({ bindingMap, result });
     this._memoizedResults.set(item, memoizedEntries);
 
-    return result;
+    return { result, cacheHit: false };
   }
 }
 
@@ -80,7 +89,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private _entryToArenaMap = new WeakMap<WgslAllocatable, MemoryArena>();
   private readonly _names: NameRegistry;
   private readonly _cache = new ResolutionCache();
-  private readonly _bindings: BindPair<unknown>[];
 
   private _declarations = new Set<string>();
   public usedMemoryArenas = new WeakSet<MemoryArena>();
@@ -89,12 +97,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   /**
    * @throws {MemoryArenaConflict}
    */
-  constructor({
-    memoryArenas = [],
-    bindings = [],
-    names,
-  }: ResolutionCtxImplOptions) {
-    this._bindings = bindings;
+  constructor({ memoryArenas = [], names }: ResolutionCtxImplOptions) {
     this._names = names;
 
     for (const arena of memoryArenas) {
@@ -112,11 +115,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   usedSlots = new Set<WgslSlot<unknown>>();
 
-  addDeclaration(
-    declaration: WgslResolvable,
-    localBindings?: BindPair<unknown>[],
-  ) {
-    this.recordDeclaration(this.resolve(declaration, localBindings));
+  addDeclaration(_declaration: WgslResolvable) {
+    throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
   /**
@@ -135,31 +135,18 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._entryToArenaMap.get(memoryEntry) ?? null;
   }
 
-  recordUsedSlot(slot: WgslSlot<unknown>) {
-    this.usedSlots.add(slot);
-  }
-
-  recordDeclaration(declaration: string) {
-    this._declarations.add(declaration);
+  recordDeclarations(declarations: Iterable<string>) {
+    for (const decl of declarations) {
+      this._declarations.add(decl);
+    }
   }
 
   readSlot<T>(slot: WgslSlot<T>): T {
-    const bindPair = this._bindings.find(([boundSlot]) => boundSlot === slot) as
-      | BindPair<T>
-      | undefined;
-
-    // Recording the fact that `slot` was used
-    this.recordUsedSlot(slot);
-
-    if (!bindPair) {
-      if (slot.defaultValue === undefined) {
-        throw new MissingBindingError(slot);
-      }
-
-      return slot.defaultValue;
+    if (slot.defaultValue === undefined) {
+      throw new MissingBindingError(slot);
     }
 
-    return bindPair[1];
+    return slot.defaultValue;
   }
 
   resolve(item: Wgsl, localBindings: BindPair<unknown>[] = []) {
@@ -168,37 +155,47 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     const itemCtx = new ScopedResolutionCtx(this, this._cache, localBindings);
-    const result = this._cache.get(item, () => {
-      const result = item.resolve(itemCtx);
+    const { result, cacheHit } = this._cache.get(
+      item,
+      (slot) => itemCtx.readSlot(slot),
+      () => {
+        const result = item.resolve(itemCtx);
 
-      // We know which bindables the item used while resolving
-      const bindingMap = new Map<WgslSlot<unknown>, unknown>();
-      for (const usedSlot of itemCtx.usedSlots) {
-        bindingMap.set(usedSlot, itemCtx.readSlot(usedSlot));
-      }
+        // We know which bindables the item used while resolving
+        const bindingMap = new Map<WgslSlot<unknown>, unknown>();
+        for (const usedSlot of itemCtx.usedSlots) {
+          bindingMap.set(usedSlot, itemCtx.readSlot(usedSlot));
+        }
 
-      return { result, bindingMap };
-    });
+        return { result, bindingMap };
+      },
+    );
 
-    return `${result}${[...this._declarations.values()].join('\n\n')}`;
+    // Only adding declarations of those items that did not exist in the cache already
+    if (!cacheHit) {
+      this.recordDeclarations(itemCtx.declarations);
+    }
+
+    return `${[...this._declarations.values()].join('\n\n')}${result}`;
   }
 }
 
 class ScopedResolutionCtx implements ResolutionCtx {
-  ancestors: WgslResolvable[] = [];
+  readonly ancestors: WgslResolvable[];
   usedSlots = new Set<WgslSlot<unknown>>();
+
+  public readonly declarations: string[] = [];
 
   constructor(
     private readonly _parent: ResolutionCtxImpl | ScopedResolutionCtx,
     private readonly _cache: ResolutionCache,
     private readonly _bindings: BindPair<unknown>[],
-  ) {}
+  ) {
+    this.ancestors = [..._parent.ancestors, _parent];
+  }
 
-  addDeclaration(
-    declaration: WgslResolvable,
-    localBindings: BindPair<unknown>[] = [],
-  ): void {
-    this.recordDeclaration(this.resolve(declaration, localBindings));
+  addDeclaration(declaration: WgslResolvable): void {
+    this.declarations.push(this.resolve(declaration));
   }
 
   addAllocatable(allocatable: WgslAllocatable): void {
@@ -213,13 +210,8 @@ class ScopedResolutionCtx implements ResolutionCtx {
     return this._parent.arenaFor(memoryEntry);
   }
 
-  recordUsedSlot(slot: WgslSlot<unknown>) {
-    this.usedSlots.add(slot);
-    this._parent.recordUsedSlot(slot);
-  }
-
-  recordDeclaration(declaration: string) {
-    this._parent.recordDeclaration(declaration);
+  recordDeclarations(declarations: Iterable<string>) {
+    this._parent.recordDeclarations(declarations);
   }
 
   readSlot<T>(slot: WgslSlot<T>): T {
@@ -227,13 +219,15 @@ class ScopedResolutionCtx implements ResolutionCtx {
       | BindPair<T>
       | undefined;
 
-    this.recordUsedSlot(slot);
-
     if (!bindPair) {
+      // Not yet available locally, ctx's owner resolvable depends on `slot`.
+      this.usedSlots.add(slot);
       // Maybe the parent ctx has it.
       return this._parent.readSlot(slot);
     }
 
+    // Available locally, ctx's owner resolvable depends on `slot`.
+    this.usedSlots.add(slot);
     return bindPair[1];
   }
 
@@ -243,17 +237,26 @@ class ScopedResolutionCtx implements ResolutionCtx {
     }
 
     const itemCtx = new ScopedResolutionCtx(this, this._cache, localBindings);
-    const result = this._cache.get(item, () => {
-      const result = item.resolve(itemCtx);
+    const { result, cacheHit } = this._cache.get(
+      item,
+      (slot) => itemCtx.readSlot(slot),
+      () => {
+        const result = item.resolve(itemCtx);
 
-      // We know which bindables the item used while resolving
-      const bindingMap = new Map<WgslSlot<unknown>, unknown>();
-      for (const usedSlot of itemCtx.usedSlots) {
-        bindingMap.set(usedSlot, itemCtx.readSlot(usedSlot));
-      }
+        // We know which bindables the item used while resolving
+        const bindingMap = new Map<WgslSlot<unknown>, unknown>();
+        for (const usedSlot of itemCtx.usedSlots) {
+          bindingMap.set(usedSlot, itemCtx.readSlot(usedSlot));
+        }
 
-      return { result, bindingMap };
-    });
+        return { result, bindingMap };
+      },
+    );
+
+    // Only adding declarations of those items that did not exist in the cache already
+    if (!cacheHit) {
+      this.recordDeclarations(itemCtx.declarations);
+    }
 
     return result;
   }

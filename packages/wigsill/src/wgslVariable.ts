@@ -34,8 +34,8 @@ class WgslVarImpl<TDataType extends AnyWgslData> implements WgslVar<TDataType> {
     public readonly scope: VariableScope,
   ) {}
 
-  $name(debugLabel: string) {
-    this.identifier.$name(debugLabel);
+  $name(label: string) {
+    this.identifier.$name(label);
     return this;
   }
 

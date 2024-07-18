@@ -43,8 +43,8 @@ class StructDataType<TProps extends Record<string, AnyWgslData>>
     }`;
   }
 
-  $name(debugLabel: string) {
-    this._identifier.$name(debugLabel);
+  $name(label: string) {
+    this._identifier.$name(label);
     return this;
   }
 

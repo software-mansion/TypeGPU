@@ -16,11 +16,11 @@ describe('wgsl.fn', () => {
     `);
 
     const expected = parse(`
+      fn empty() {}
+
       fn main() {
         empty();
       }
-
-      fn empty() {}
     `);
 
     expect(actual).toEqual(expected);
@@ -39,12 +39,12 @@ describe('wgsl.fn', () => {
     `);
 
     const expected = parse(`
+      fn empty() {}
+
       fn main() {
         empty();
         empty();
       }
-
-      fn empty() {}
     `);
 
     expect(actual).toEqual(expected);
@@ -71,19 +71,19 @@ describe('wgsl.fn', () => {
     `);
 
     const expected = parse(`
-      fn main() {
-        nested_a();
-        nested_b();
-      }
-
       fn empty() {}
-
+      
       fn nested_a() {
         empty();
       }
-
+      
       fn nested_b() {
         empty();
+      }
+
+      fn main() {
+        nested_a();
+        nested_b();
       }
     `);
 

@@ -1,8 +1,8 @@
 import type { WgslAllocatable, WgslSlot } from './types';
 
 export class MissingBindingError extends Error {
-  constructor(public readonly bindable: WgslSlot<unknown>) {
-    super(`Missing binding for ${bindable.debugLabel ?? '<unnamed>'}`);
+  constructor(public readonly slot: WgslSlot<unknown>) {
+    super(`Missing binding for '${slot.label ?? '<unnamed>'}'`);
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, MissingBindingError.prototype);
@@ -15,7 +15,7 @@ export class MissingBindingError extends Error {
 export class MemoryArenaConflictError extends Error {
   constructor(memoryEntry: WgslAllocatable) {
     super(
-      `Multiple arenas contain the same entry: ${memoryEntry.debugLabel ?? '<unnamed>'}`,
+      `Multiple arenas contain the same entry: ${memoryEntry.label ?? '<unnamed>'}`,
     );
 
     // Set the prototype explicitly.
@@ -29,7 +29,7 @@ export class MemoryArenaConflictError extends Error {
 export class NotAllocatedMemoryError extends Error {
   constructor(memoryEntry: WgslAllocatable) {
     super(
-      `An unallocated memory entry was used: ${memoryEntry.debugLabel ?? '<unnamed>'}. Every memory entry has to be in exactly one arena used during program building.`,
+      `An unallocated memory entry was used: ${memoryEntry.label ?? '<unnamed>'}. Every memory entry has to be in exactly one arena used during program building.`,
     );
 
     // Set the prototype explicitly.

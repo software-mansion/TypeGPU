@@ -37,15 +37,15 @@ class WgslBufferImpl<TData extends AnyWgslData> implements WgslBuffer<TData> {
   private fieldIdentifier = new WgslIdentifier();
   public structFieldDefinition: Wgsl;
 
-  public debugLabel?: string | undefined;
+  public label?: string | undefined;
 
   constructor(public readonly dataType: TData) {
     this.structFieldDefinition = code`${this.fieldIdentifier}: ${this.dataType},\n`;
   }
 
-  $name(debugLabel: string) {
-    this.debugLabel = debugLabel;
-    this.fieldIdentifier.$name(debugLabel);
+  $name(label: string) {
+    this.label = label;
+    this.fieldIdentifier.$name(label);
     return this;
   }
 

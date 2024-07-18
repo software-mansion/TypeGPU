@@ -22,7 +22,7 @@ export class MemoryArena {
   public readonly size: number = 0;
   public readonly memoryEntries: WgslAllocatable[];
   public readonly identifier = new WgslIdentifier();
-  public debugLabel?: string | undefined;
+  public label?: string | undefined;
 
   constructor(options: MemoryArenaOptions) {
     this.bufferBindingType = options.bufferBindingType;
@@ -49,9 +49,9 @@ export class MemoryArena {
     this.size = size;
   }
 
-  $name(debugLabel: string) {
-    this.debugLabel = debugLabel;
-    this.identifier.$name(debugLabel);
+  $name(label: string) {
+    this.label = label;
+    this.identifier.$name(label);
   }
 
   offsetFor(memoryEntry: WgslAllocatable): number | null {
@@ -60,8 +60,8 @@ export class MemoryArena {
 
   definitionCode(bindingGroup: number, bindingIdx: number) {
     const storageTypeIdentifier = new WgslIdentifier();
-    if (this.debugLabel) {
-      storageTypeIdentifier.$name(`${this.debugLabel}_type`);
+    if (this.label) {
+      storageTypeIdentifier.$name(`${this.label}_type`);
     }
 
     const fieldDefinitions = this.memoryEntries.map(

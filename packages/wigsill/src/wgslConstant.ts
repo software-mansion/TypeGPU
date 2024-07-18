@@ -23,17 +23,17 @@ export function constant(expr: Wgsl): WgslConst {
 // --------------
 
 class WgslConstImpl implements WgslConst {
-  public debugLabel?: string | undefined;
+  public label?: string | undefined;
 
   constructor(private readonly expr: Wgsl) {}
 
-  $name(debugLabel: string) {
-    this.debugLabel = debugLabel;
+  $name(label: string) {
+    this.label = label;
     return this;
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this.debugLabel);
+    const identifier = new WgslIdentifier().$name(this.label);
 
     ctx.addDeclaration(code`const ${identifier} = ${this.expr};`);
 

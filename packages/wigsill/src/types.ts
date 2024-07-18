@@ -19,10 +19,7 @@ export interface ResolutionCtx {
    */
   readonly ancestors: Iterable<WgslResolvable>;
 
-  addDeclaration(
-    item: WgslResolvable,
-    localBindings?: BindPair<unknown>[],
-  ): void;
+  addDeclaration(item: WgslResolvable): void;
   addAllocatable(allocatable: WgslAllocatable): void;
   nameFor(token: WgslResolvable): string;
   arenaFor(memoryEntry: WgslAllocatable): MemoryArena | null;
@@ -32,7 +29,7 @@ export interface ResolutionCtx {
 }
 
 export interface WgslResolvable {
-  readonly debugLabel?: string | undefined;
+  readonly label?: string | undefined;
 
   resolve(ctx: ResolutionCtx): string;
 }
@@ -59,7 +56,7 @@ export interface WgslSlot<T> {
 
   readonly defaultValue: T | undefined;
 
-  readonly debugLabel?: string | undefined;
+  readonly label?: string | undefined;
 
   $name(label: string): WgslSlot<T>;
 
