@@ -44,6 +44,21 @@ declare module '@wigsill/example-toolkit' {
     },
     onChange: (newValue: number) => void,
   ): void;
+  export function addParameter<TOption extends string | number>(
+    label: string,
+    options: {
+      initial: TOption;
+      options: TOption[];
+    },
+    onChange: (newValue: TOption) => void,
+  ): void;
+  export function addParameter(
+    label: string,
+    options: {
+      initial: boolean;
+    },
+    onChange: (newValue: boolean) => void,
+  ): void;
 
   export function onCleanup(callback: () => unknown): void;
   export function onFrame(callback: () => unknown): void;

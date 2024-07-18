@@ -11,7 +11,7 @@ export interface Slot<T> {
   /** type-token, not available at runtime */
   __bindingType: T;
 
-  alias(label: string): Slot<T>;
+  $name(label: string): Slot<T>;
 }
 
 export interface ResolvableSlot<T extends WGSLSegment> extends WGSLItem {
@@ -19,7 +19,7 @@ export interface ResolvableSlot<T extends WGSLSegment> extends WGSLItem {
   /** type-token, not available at runtime */
   __bindingType: T;
 
-  alias(label: string): ResolvableSlot<T>;
+  $name(label: string): ResolvableSlot<T>;
 }
 
 export class WGSLSlot<T> implements WGSLItem, WGSLBindableTrait<T> {
@@ -29,7 +29,7 @@ export class WGSLSlot<T> implements WGSLItem, WGSLBindableTrait<T> {
 
   constructor(public defaultValue?: T) {}
 
-  public alias(label: string) {
+  public $name(label: string) {
     this.debugLabel = label;
     return this;
   }

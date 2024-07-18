@@ -19,8 +19,8 @@ export class WGSLVariable<TDataType extends AnyWGSLDataType>
     public readonly scope: VariableScope,
   ) {}
 
-  alias(debugLabel: string) {
-    this.identifier.alias(debugLabel);
+  $name(debugLabel: string) {
+    this.identifier.$name(debugLabel);
     return this;
   }
 

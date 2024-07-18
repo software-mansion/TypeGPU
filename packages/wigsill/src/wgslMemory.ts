@@ -22,9 +22,9 @@ export class WGSLMemory<TSchema extends AnyWGSLDataType>
     this.baseAlignment = this._typeSchema.byteAlignment;
   }
 
-  alias(debugLabel: string) {
+  $name(debugLabel: string) {
     this.debugLabel = debugLabel;
-    this.fieldIdentifier.alias(debugLabel);
+    this.fieldIdentifier.$name(debugLabel);
     return this;
   }
 
