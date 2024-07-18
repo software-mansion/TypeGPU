@@ -1,6 +1,7 @@
 import type { MemoryArena } from './memoryArena';
 import ProgramBuilder, { type Program } from './programBuilder';
 import type StructDataType from './std140/struct';
+import type { AnyWGSLDataType } from './std140/types';
 import type { MemoryLocation, WGSLMemoryTrait, WGSLSegment } from './types';
 import wgsl from './wgsl';
 import { type WGSLCode, code } from './wgslCode';
@@ -12,7 +13,7 @@ class WGSLRuntime {
   private _arenaToBufferMap = new WeakMap<MemoryArena, GPUBuffer>();
   private _entryToArenaMap = new WeakMap<WGSLMemoryTrait, MemoryArena>();
 
-  private programExecutors: PipelineExecutor<
+  private pipelineExecutors: PipelineExecutor<
     GPURenderPipeline | GPUComputePipeline
   >[] = [];
 
@@ -65,8 +66,7 @@ class WGSLRuntime {
     vertex?: {
       args: WGSLSegment[];
       code: WGSLCode;
-      // biome-ignore lint/suspicious/noExplicitAny:
-      output: StructDataType<any>;
+      output: StructDataType<Record<string, AnyWGSLDataType>>;
     };
     fragment?: {
       args: WGSLSegment[];
@@ -74,10 +74,10 @@ class WGSLRuntime {
       output: WGSLSegment;
       target: Iterable<GPUColorTargetState | null>;
     };
-    primitive: {
-      topology: GPUPrimitiveTopology;
-    };
+    primitive: GPUPrimitiveState;
     arenas?: MemoryArena[];
+    externalLayouts?: GPUBindGroupLayout[];
+    additionalShaderCode?: WGSLCode;
   }) {
     const program = new ProgramBuilder(
       this,
@@ -91,15 +91,19 @@ class WGSLRuntime {
       }
       ${
         options.fragment
-          ? code`@fragment fn main_frag(${options.fragment.args}) -> ${options.fragment.output} {
+          ? code`@fragment fn main_frag(${options.fragment.args.flatMap((arg) => [arg, ', '])}) -> ${options.fragment.output} {
             ${options.fragment.code}
           }`
           : ''
       }
+
+      ${options.additionalShaderCode ?? ''}
       `,
     ).build({
-      bindingGroup: 0,
-      shaderStage: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+      bindingGroup: (options.externalLayouts ?? []).length,
+      shaderStage:
+        (options.vertex ? GPUShaderStage.VERTEX : 0) |
+        (options.fragment ? GPUShaderStage.FRAGMENT : 0),
       arenas: options.arenas ?? [],
     });
 
@@ -107,10 +111,11 @@ class WGSLRuntime {
       code: program.code,
     });
 
-    console.log(program.code);
-
     const layout = this.device.createPipelineLayout({
-      bindGroupLayouts: [program.bindGroupLayout],
+      bindGroupLayouts: [
+        ...(options.externalLayouts ?? []),
+        program.bindGroupLayout,
+      ],
     });
 
     const renderPipeline = this.device.createRenderPipeline({
@@ -130,7 +135,8 @@ class WGSLRuntime {
       renderPipeline,
       program,
     );
-    this.programExecutors.push(executor);
+
+    this.pipelineExecutors.push(executor);
     return executor;
   }
 
@@ -138,15 +144,19 @@ class WGSLRuntime {
     workgroupSize: [number, number?, number?];
     code: WGSLCode;
     arenas?: MemoryArena[];
-    firstFreeBindingGroup?: number;
+    externalLayouts?: GPUBindGroupLayout[];
+    additionalShaderCode?: WGSLCode;
   }) {
     const program = new ProgramBuilder(
       this,
       code`@compute @workgroup_size(${options.workgroupSize.join(', ')}) fn main_compute(${['@builtin(global_invocation_id) global_id: vec3<u32>']}) {
         ${options.code}
-      }`,
+      }
+
+      ${options.additionalShaderCode ?? ''}
+      `,
     ).build({
-      bindingGroup: options.firstFreeBindingGroup ?? 0,
+      bindingGroup: (options.externalLayouts ?? []).length,
       shaderStage: GPUShaderStage.COMPUTE,
       arenas: options.arenas ?? [],
     });
@@ -155,10 +165,11 @@ class WGSLRuntime {
       code: program.code,
     });
 
-    console.log(program.code);
-
     const layout = this.device.createPipelineLayout({
-      bindGroupLayouts: [program.bindGroupLayout],
+      bindGroupLayouts: [
+        ...(options.externalLayouts ?? []),
+        program.bindGroupLayout,
+      ],
     });
 
     const computePipeline = this.device.createComputePipeline({
@@ -173,13 +184,13 @@ class WGSLRuntime {
       computePipeline,
       program,
     );
-    this.programExecutors.push(executor);
+    this.pipelineExecutors.push(executor);
     return executor;
   }
 
   flush() {
     this.device.queue.submit(
-      this.programExecutors.flatMap((executor) =>
+      this.pipelineExecutors.flatMap((executor) =>
         executor.commandEncoder ? [executor.commandEncoder.finish()] : [],
       ),
     );
@@ -190,18 +201,33 @@ class PipelineExecutor<T extends GPURenderPipeline | GPUComputePipeline> {
   public commandEncoder?: GPUCommandEncoder;
   constructor(
     public device: GPUDevice,
-    public renderPipeline: T,
+    public pipeline: T,
     public program: Program,
   ) {}
 }
 
 class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
-  execute(vertexCount: number, descriptor: GPURenderPassDescriptor) {
+  execute(
+    options: GPURenderPassDescriptor & {
+      vertexCount: number;
+      externalBindGroups?: GPUBindGroup[];
+    },
+  ) {
+    const { vertexCount, externalBindGroups, ...descriptor } = options;
     this.commandEncoder = this.device.createCommandEncoder();
     const passEncoder = this.commandEncoder.beginRenderPass(descriptor);
 
-    passEncoder.setPipeline(this.renderPipeline);
-    passEncoder.setBindGroup(0, this.program.bindGroup);
+    passEncoder.setPipeline(this.pipeline);
+
+    (externalBindGroups ?? []).forEach((group, index) =>
+      passEncoder.setBindGroup(index, group),
+    );
+
+    passEncoder.setBindGroup(
+      (externalBindGroups ?? []).length,
+      this.program.bindGroup,
+    );
+
     passEncoder.draw(vertexCount);
     passEncoder.end();
   }
@@ -212,7 +238,7 @@ class ComputePipelineExecutor extends PipelineExecutor<GPUComputePipeline> {
     this.commandEncoder = this.device.createCommandEncoder();
     const passEncoder = this.commandEncoder.beginComputePass();
 
-    passEncoder.setPipeline(this.renderPipeline);
+    passEncoder.setPipeline(this.pipeline);
     passEncoder.setBindGroup(0, this.program.bindGroup);
     passEncoder.dispatchWorkgroups(...workgroupCounts);
 

@@ -78,12 +78,7 @@ const renderPipeline = runtime.makeRenderPipeline({
   },
 
   fragment: {
-    args: [
-      `
-  @builtin(position) Position: vec4f,
-  @location(0) uv: vec2f,
-  `,
-    ],
+    args: ['@builtin(position) Position: vec4f', '@location(0) uv: vec2f'],
     code: wgsl.code`
   let red = floor(uv.x * f32(${xSpanData})) / f32(${xSpanData});
   let green = floor(uv.y * f32(${ySpanData})) / f32(${ySpanData});
@@ -118,7 +113,7 @@ addParameter(
 onFrame(() => {
   const textureView = context.getCurrentTexture().createView();
 
-  renderPipeline.execute(4, {
+  renderPipeline.execute({
     colorAttachments: [
       {
         view: textureView,
@@ -127,6 +122,8 @@ onFrame(() => {
         storeOp: 'store',
       },
     ],
+
+    vertexCount: 4,
   });
 
   runtime.flush();

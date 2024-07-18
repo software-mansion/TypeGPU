@@ -6,8 +6,8 @@
 
 import { addElement, onFrame } from '@wigsill/example-toolkit';
 import {
-  arrayOf,
   createRuntime,
+  dynamicArrayOf,
   f32,
   makeArena,
   struct,
@@ -21,8 +21,8 @@ const device = runtime.device;
 const workgroupSize = [8, 8] as [number, number];
 
 const firstMatrix = {
-  size: [2, 4] as [number, number],
-  numbers: [1, 2, 3, 4, 5, 6, 7, 8],
+  size: [3, 4] as [number, number],
+  numbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
 };
 
 const secondMatrix = {
@@ -32,7 +32,7 @@ const secondMatrix = {
 
 const matrixStruct = struct({
   size: vec2f,
-  numbers: arrayOf(f32, 8),
+  numbers: dynamicArrayOf(f32, 64),
 });
 
 const firstMatrixData = wgsl.memory(matrixStruct).alias('first_matrix');
@@ -66,11 +66,11 @@ const program = runtime.makeComputePipeline({
     for (var i = 0u; i < u32(${firstMatrixData}.size.y); i = i + 1u) {
       let a = i + resultCell.x * u32(${firstMatrixData}.size.y);
       let b = resultCell.y + i * u32(${secondMatrixData}.size.y);
-      result = result + ${firstMatrixData}.numbers[a] * ${secondMatrixData}.numbers[b];
+      result = result + ${firstMatrixData}.numbers.values[a] * ${secondMatrixData}.numbers.values[b];
     }
 
     let index = resultCell.y + resultCell.x * u32(${secondMatrixData}.size.y);
-    ${resultMatrixData}.numbers[index] = result;
+    ${resultMatrixData}.numbers.values[index] = result;
 `,
   arenas: [arena, resultArena],
 });
@@ -78,7 +78,7 @@ const program = runtime.makeComputePipeline({
 firstMatrixData.write(runtime, firstMatrix);
 secondMatrixData.write(runtime, secondMatrix);
 
-const resultMatrixSize = firstMatrix.size[0] * secondMatrix.size[1] + 2;
+const resultMatrixSize = firstMatrix.size[0] * secondMatrix.size[1];
 
 const gpuReadBuffer = device.createBuffer({
   size: resultMatrixSize * 4,
@@ -93,7 +93,7 @@ runtime.flush();
 const encoder = device.createCommandEncoder();
 encoder.copyBufferToBuffer(
   runtime.bufferFor(resultArena),
-  0,
+  12,
   gpuReadBuffer,
   0,
   resultMatrixSize * 4,
@@ -114,5 +114,14 @@ onFrame(() => {
   context.fillStyle = 'white';
   context.fillRect(0, 0, 400, 400);
   context.fillStyle = 'darkblue';
-  context.fillText(multiplicationResult.toString(), 70, 200);
+
+  for (let i = 0; i < secondMatrix.size[1]; i++) {
+    for (let j = 0; j < firstMatrix.size[0]; j++) {
+      context.fillText(
+        multiplicationResult[j * secondMatrix.size[1] + i]?.toString() ?? '_',
+        i * 80 + 120,
+        j * 80 + 120,
+      );
+    }
+  }
 });
