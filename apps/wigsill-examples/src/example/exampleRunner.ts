@@ -111,7 +111,7 @@ export async function executeExample(
       initial: number;
       options: number[];
     },
-    onChange: (number: string) => void,
+    onChange: (number: number) => void,
   ): void;
   function addParameter(
     label: string,
