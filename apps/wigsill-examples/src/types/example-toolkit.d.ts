@@ -34,7 +34,7 @@ declare module '@wigsill/example-toolkit' {
 
   export const addElement: AddElement;
 
-  function addParameter(
+  export function addParameter(
     label: string,
     options: {
       initial: number;
@@ -44,7 +44,7 @@ declare module '@wigsill/example-toolkit' {
     },
     onChange: (newValue: number) => void,
   ): void;
-  function addParameter<TOption extends string | number>(
+  export function addParameter<TOption extends string | number>(
     label: string,
     options: {
       initial: TOption;
@@ -52,7 +52,7 @@ declare module '@wigsill/example-toolkit' {
     },
     onChange: (newValue: TOption) => void,
   ): void;
-  function addParameter(
+  export function addParameter(
     label: string,
     options: {
       initial: boolean;
