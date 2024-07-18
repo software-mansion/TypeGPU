@@ -83,8 +83,6 @@ const program = new ProgramBuilder(runtime, mainCode).build({
   shaderStage: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
 });
 
-console.log(program.code);
-
 const shaderModule = device.createShaderModule({
   code: program.code,
 });

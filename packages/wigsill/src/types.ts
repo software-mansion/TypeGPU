@@ -11,9 +11,10 @@ export interface ResolutionCtx {
   requireBinding<T>(bindable: WgslBindable<T>): T;
   tryBinding<T>(bindable: WgslBindable<T>, defaultValue: T): T;
   resolve(item: Wgsl): string;
-  addBufferUsage<TData extends AnyWgslData, TUsage extends string>(
-    bufferUsage: WgslBufferUsage<TData, TUsage>,
-  ): void;
+  addBufferUsage<
+    TData extends AnyWgslData,
+    TUsage extends 'uniform' | 'readonlyStorage' | 'mutableStorage',
+  >(bufferUsage: WgslBufferUsage<TData, TUsage>): void;
 }
 
 export interface WgslResolvable {

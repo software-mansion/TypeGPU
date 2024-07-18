@@ -38,7 +38,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   public dependencies: WgslResolvable[] = [];
   public usedMemory = new Set<WgslAllocatable>();
-  public usedBuffers = new Set<WgslBufferUsage<AnyWgslData, string>>();
+  public usedBuffers = new Set<
+    WgslBufferUsage<
+      AnyWgslData,
+      'uniform' | 'readonlyStorage' | 'mutableStorage'
+    >
+  >();
 
   private _memoizedResults = new WeakMap<WgslResolvable, string>();
 
@@ -56,10 +61,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.usedMemory.add(allocatable);
   }
 
-  addBufferUsage<TData extends AnyWgslData, TUsage extends string>(
-    bufferUsage: WgslBufferUsage<TData, TUsage>,
-  ) {
-    this.usedBuffers.add(bufferUsage);
+  addBufferUsage<
+    TData extends AnyWgslData,
+    TUsage extends 'uniform' | 'readonlyStorage' | 'mutableStorage',
+  >(bufferUsage: WgslBufferUsage<TData, TUsage>) {
+    this.usedBuffers.add(
+      bufferUsage as WgslBufferUsage<
+        AnyWgslData,
+        'uniform' | 'readonlyStorage' | 'mutableStorage'
+      >,
+    );
   }
 
   nameFor(item: WgslResolvable): string {
@@ -135,8 +146,6 @@ export default class ProgramBuilder {
     const codeString = ctx.resolve(this.root);
     const usedMemory = Array.from(ctx.usedMemory);
     const usedBuffers = Array.from(ctx.usedBuffers);
-
-    console.log('usedMemory', usedBuffers);
 
     usedBuffers.forEach((memory, idx) => {
       ctx.addDependency(memory.definitionCode(options.bindingGroup, idx));

@@ -7,29 +7,34 @@ import type WigsillRuntime from './wigsillRuntime';
 
 export interface WgslBufferUsage<
   TData extends AnyWgslData,
-  TUsage extends string,
+  TUsage extends 'uniform' | 'readonlyStorage' | 'mutableStorage',
 > extends WgslAllocatable<TData> {
-  readonly buffer: WgslBuffer<TData>;
+  readonly buffer: WgslBuffer<TData, TUsage>;
   readonly usage: TUsage;
   write(runtime: WigsillRuntime, data: Parsed<TData>): void;
   read(runtime: WigsillRuntime): Promise<Parsed<TData>>;
 }
 
-export function bufferUsage<TData extends AnyWgslData, TUsage extends string>(
-  buffer: WgslBuffer<TData>,
+export function bufferUsage<
+  TData extends AnyWgslData,
+  TUsage extends 'uniform' | 'readonlyStorage' | 'mutableStorage',
+>(
+  buffer: WgslBuffer<TData, TUsage>,
   usage: TUsage,
 ): WgslBufferUsage<TData, TUsage> {
   return new WgslBufferUsageImpl(buffer, usage);
 }
 
-class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends string>
-  implements WgslBufferUsage<TData, TUsage>
+class WgslBufferUsageImpl<
+  TData extends AnyWgslData,
+  TUsage extends 'uniform' | 'readonlyStorage' | 'mutableStorage',
+> implements WgslBufferUsage<TData, TUsage>
 {
   public readonly flags: GPUBufferUsageFlags;
   public readonly dataType: TData;
 
   constructor(
-    public readonly buffer: WgslBuffer<TData>,
+    public readonly buffer: WgslBuffer<TData, TUsage>,
     public readonly usage: TUsage,
   ) {
     this.flags = buffer.flags;
@@ -43,7 +48,7 @@ class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends string>
       bindingType = 'uniform';
     }
 
-    if (this.usage === 'storage') {
+    if (this.usage === 'mutableStorage') {
       bindingType = 'storage, read_write';
     }
 

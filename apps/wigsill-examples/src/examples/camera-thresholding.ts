@@ -12,7 +12,15 @@ const [video, canvas] = await Promise.all([
   addElement('video', { width: 500, height: 375 }),
   addElement('canvas', { width: 500, height: 375 }),
 ]);
-const thresholdData = wgsl.buffer(f32).$name('threshold');
+const thresholdData = wgsl
+  .buffer(f32)
+  .$name('threshold')
+  .$allowUniform()
+  .asUniform();
+
+if (!thresholdData) {
+  throw new Error('Failed to create buffer');
+}
 
 const shaderCode = wgsl`
 @group(0) @binding(0) var sampler_ : sampler;
