@@ -22,6 +22,7 @@ export interface WgslBuffer<TData extends AnyWgslData>
   $allowUniform(): WgslBuffer<TData>;
   $allowReadonlyStorage(): WgslBuffer<TData>;
   $allowMutableStorage(): WgslBuffer<TData>;
+  $addFlags(flags: GPUBufferUsageFlags): WgslBuffer<TData>;
 }
 
 export function buffer<TData extends AnyWgslData>(
@@ -133,6 +134,12 @@ class WgslBufferImpl<TData extends AnyWgslData> implements WgslBuffer<TData> {
       GPUBufferUsage.COPY_DST |
       GPUBufferUsage.COPY_SRC;
     this.usage = 'storage';
+    return this;
+  }
+
+  // Temporary solution
+  $addFlags(flags: GPUBufferUsageFlags) {
+    this.flags |= flags;
     return this;
   }
 }

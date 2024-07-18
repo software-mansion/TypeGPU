@@ -59,7 +59,11 @@ function encodeBrushType(brushType: (typeof BrushTypes)[number]) {
 }
 
 const viscosity = wgsl.buffer(u32).$name('viscosity');
-const currentState = wgsl.buffer(arrayOf(u32, 1024 ** 2)).$name('current');
+const currentState = wgsl
+  .buffer(arrayOf(u32, 1024 ** 2))
+  .$name('current')
+  .$allowMutableStorage()
+  .$addFlags(GPUBufferUsage.VERTEX);
 const size = wgsl.buffer(vec2u).$name('size');
 
 const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
