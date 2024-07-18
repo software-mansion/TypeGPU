@@ -4,6 +4,7 @@ import type StructDataType from './std140/struct';
 import type { AnyWgslData } from './std140/types';
 import type { MemoryLocation, Wgsl, WgslAllocatable } from './types';
 import { type WgslCode, code } from './wgslCode';
+import { WgslIdentifier } from './wgslIdentifier';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
@@ -77,13 +78,14 @@ class WigsillRuntime {
     arenas?: MemoryArena[];
     externalLayouts?: GPUBindGroupLayout[];
     additionalShaderCode?: WgslCode;
+    label?: string;
   }) {
     const program = new ProgramBuilder(
       this,
       code`
       ${
         options.vertex
-          ? code`@vertex fn main_vertex(${options.vertex.args}) -> ${options.vertex.output} {
+          ? code`@vertex fn main_vertex(${options.vertex.args.flatMap((arg) => [arg, ', '])}) -> ${options.vertex.output} {
             ${options.vertex.code}
           }`
           : ''
@@ -109,7 +111,8 @@ class WigsillRuntime {
       code: program.code,
     });
 
-    const layout = this.device.createPipelineLayout({
+    const pipelineLayout = this.device.createPipelineLayout({
+      label: options.label ?? '',
       bindGroupLayouts: [
         ...(options.externalLayouts ?? []),
         program.bindGroupLayout,
@@ -117,7 +120,8 @@ class WigsillRuntime {
     });
 
     const renderPipeline = this.device.createRenderPipeline({
-      layout: layout,
+      label: options.label ?? '',
+      layout: pipelineLayout,
       vertex: {
         module: shaderModule,
       },
@@ -132,6 +136,7 @@ class WigsillRuntime {
       this.device,
       renderPipeline,
       program,
+      options.externalLayouts?.length ?? 0,
     );
 
     this._pipelineExecutors.push(executor);
@@ -140,14 +145,16 @@ class WigsillRuntime {
 
   makeComputePipeline(options: {
     workgroupSize: [number, number?, number?];
+    args: Wgsl[];
     code: WgslCode;
     arenas?: MemoryArena[];
     externalLayouts?: GPUBindGroupLayout[];
     additionalShaderCode?: WgslCode;
+    label?: string;
   }) {
     const program = new ProgramBuilder(
       this,
-      code`@compute @workgroup_size(${options.workgroupSize.join(', ')}) fn main_compute(${['@builtin(global_invocation_id) global_id: vec3<u32>']}) {
+      code`@compute @workgroup_size(${options.workgroupSize.join(', ')}) fn main_compute(${options.args.flatMap((arg) => [arg, ', '])}) {
         ${options.code}
       }
       ${options.additionalShaderCode ?? ''}
@@ -162,7 +169,8 @@ class WigsillRuntime {
       code: program.code,
     });
 
-    const layout = this.device.createPipelineLayout({
+    const pipelineLayout = this.device.createPipelineLayout({
+      label: options.label ?? '',
       bindGroupLayouts: [
         ...(options.externalLayouts ?? []),
         program.bindGroupLayout,
@@ -170,7 +178,8 @@ class WigsillRuntime {
     });
 
     const computePipeline = this.device.createComputePipeline({
-      layout: layout,
+      label: options.label ?? '',
+      layout: pipelineLayout,
       compute: {
         module: shaderModule,
       },
@@ -180,6 +189,7 @@ class WigsillRuntime {
       this.device,
       computePipeline,
       program,
+      options.externalLayouts?.length ?? 0,
     );
     this._pipelineExecutors.push(executor);
     return executor;
@@ -200,6 +210,8 @@ class PipelineExecutor<T extends GPURenderPipeline | GPUComputePipeline> {
     public device: GPUDevice,
     public pipeline: T,
     public program: Program,
+    public externalLayoutCount: number,
+    protected label?: string,
   ) {}
 }
 
@@ -211,9 +223,21 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
     },
   ) {
     const { vertexCount, externalBindGroups, ...descriptor } = options;
-    this.commandEncoder = this.device.createCommandEncoder();
-    const passEncoder = this.commandEncoder.beginRenderPass(descriptor);
 
+    if ((externalBindGroups?.length ?? 0) !== this.externalLayoutCount) {
+      throw new Error(
+        `External bind group count doesn't match the external bind group layout configuration. Expected ${this.externalLayoutCount}, got: ${externalBindGroups?.length ?? 0}`,
+      );
+    }
+
+    this.commandEncoder = this.device.createCommandEncoder({
+      label: this.label ?? '',
+    });
+
+    const passEncoder = this.commandEncoder.beginRenderPass({
+      ...descriptor,
+      label: this.label ?? '',
+    });
     passEncoder.setPipeline(this.pipeline);
 
     (externalBindGroups ?? []).forEach((group, index) =>
@@ -232,13 +256,16 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
 
 class ComputePipelineExecutor extends PipelineExecutor<GPUComputePipeline> {
   execute(workgroupCounts: [number, number?, number?]) {
-    this.commandEncoder = this.device.createCommandEncoder();
-    const passEncoder = this.commandEncoder.beginComputePass();
+    this.commandEncoder = this.device.createCommandEncoder({
+      label: this.label ?? '',
+    });
 
+    const passEncoder = this.commandEncoder.beginComputePass({
+      label: this.label ?? '',
+    });
     passEncoder.setPipeline(this.pipeline);
     passEncoder.setBindGroup(0, this.program.bindGroup);
     passEncoder.dispatchWorkgroups(...workgroupCounts);
-
     passEncoder.end();
   }
 }

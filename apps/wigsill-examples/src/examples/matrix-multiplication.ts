@@ -53,6 +53,7 @@ const resultArena = makeArena({
 
 const program = runtime.makeComputePipeline({
   workgroupSize: workgroupSize,
+  args: ['@builtin(global_invocation_id)  global_id: vec3<u32>'],
   code: wgsl`
     // Guard against out-of-bounds work group sizes
     if (global_id.x >= u32(${firstMatrixData}.size.x) || global_id.y >= u32(${secondMatrixData}.size.y)) {
