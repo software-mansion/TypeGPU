@@ -4,7 +4,7 @@ import { ResolutionCtxImpl } from '../src/programBuilder';
 
 describe('wgsl.slot', () => {
   it('resolves to default value if no binding provided', () => {
-    const colorSlot = wgsl.slot('vec3f(1., 0., 0.)').alias('color');
+    const colorSlot = wgsl.slot('vec3f(1., 0., 0.)').$name('color');
     const ctx = new ResolutionCtxImpl({ names: new StrictNameRegistry() });
 
     const program = wgsl`
@@ -20,7 +20,7 @@ describe('wgsl.slot', () => {
 
   it('resolves to binding rather than default value', () => {
     // red by default
-    const colorSlot = wgsl.slot('vec3f(1., 0., 0.)').alias('color');
+    const colorSlot = wgsl.slot('vec3f(1., 0., 0.)').$name('color');
     const ctx = new ResolutionCtxImpl({
       names: new StrictNameRegistry(),
       // overriding to green
@@ -41,7 +41,7 @@ describe('wgsl.slot', () => {
 
   it('resolves to binding', () => {
     // no default
-    const colorSlot = wgsl.slot<string>().alias('color');
+    const colorSlot = wgsl.slot<string>().$name('color');
     const ctx = new ResolutionCtxImpl({
       names: new StrictNameRegistry(),
       // overriding to green
@@ -61,7 +61,7 @@ describe('wgsl.slot', () => {
   });
 
   it('throws error when no default nor binding provided', () => {
-    const colorSlot = wgsl.slot().alias('color');
+    const colorSlot = wgsl.slot().$name('color');
     const ctx = new ResolutionCtxImpl({ names: new StrictNameRegistry() });
 
     const shader = wgsl`

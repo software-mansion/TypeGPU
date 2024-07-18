@@ -35,9 +35,9 @@ const matrixStruct = struct({
   numbers: dynamicArrayOf(f32, 64),
 });
 
-const firstMatrixData = wgsl.memory(matrixStruct).alias('first_matrix');
-const secondMatrixData = wgsl.memory(matrixStruct).alias('second_matrix');
-const resultMatrixData = wgsl.memory(matrixStruct).alias('result_matrix');
+const firstMatrixData = wgsl.buffer(matrixStruct).$name('first_matrix');
+const secondMatrixData = wgsl.buffer(matrixStruct).$name('second_matrix');
+const resultMatrixData = wgsl.buffer(matrixStruct).$name('result_matrix');
 
 const arena = makeArena({
   bufferBindingType: 'storage',

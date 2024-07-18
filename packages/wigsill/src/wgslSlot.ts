@@ -1,64 +1,68 @@
 import {
   type ResolutionCtx,
-  type WGSLBindableTrait,
-  type WGSLItem,
-  type WGSLSegment,
-  isWGSLSegment,
+  type Wgsl,
+  type WgslBindable,
+  type WgslResolvable,
+  isWgsl,
 } from './types';
 
-export interface Slot<T> {
-  __brand: 'Slot';
-  /** type-token, not available at runtime */
-  __bindingType: T;
+// ----------
+// Public API
+// ----------
 
-  alias(label: string): Slot<T>;
+export interface WgslSlot<T> extends WgslBindable<T> {
+  $name(label: string): WgslSlot<T>;
 }
 
-export interface ResolvableSlot<T extends WGSLSegment> extends WGSLItem {
-  __brand: 'Slot';
-  /** type-token, not available at runtime */
-  __bindingType: T;
+/**
+ * Represents a value that is available at resolution time.
+ * (constant after compilation)
+ */
+export type Potential<T> = T | WgslSlot<T>;
 
-  alias(label: string): ResolvableSlot<T>;
+export interface WgslResolvableSlot<T extends Wgsl>
+  extends WgslResolvable,
+    WgslSlot<T> {
+  $name(label: string): WgslResolvableSlot<T>;
 }
 
-export class WGSLSlot<T> implements WGSLItem, WGSLBindableTrait<T> {
+export function slot<T extends Wgsl>(defaultValue?: T): WgslResolvableSlot<T>;
+
+export function slot<T>(defaultValue?: T): WgslSlot<T>;
+
+export function slot<T>(defaultValue?: T): WgslSlot<T> {
+  return new WgslSlotImpl(defaultValue);
+}
+
+// --------------
+// Implementation
+// --------------
+
+class WgslSlotImpl<T> implements WgslResolvable, WgslBindable<T> {
   __bindingType!: T;
-  __brand = 'Slot' as const;
   public debugLabel?: string | undefined;
 
   constructor(public defaultValue?: T) {}
 
-  public alias(label: string) {
+  public $name(label: string) {
     this.debugLabel = label;
     return this;
   }
 
-  private getValue(ctx: ResolutionCtx) {
+  resolve(ctx: ResolutionCtx): string {
+    let value: T;
     if (this.defaultValue !== undefined) {
-      return ctx.tryBinding(this, this.defaultValue);
+      value = ctx.tryBinding(this, this.defaultValue);
+    } else {
+      value = ctx.requireBinding(this);
     }
 
-    return ctx.requireBinding(this);
-  }
-
-  resolve(ctx: ResolutionCtx): string {
-    const value = this.getValue(ctx);
-    if (!isWGSLSegment(value)) {
+    if (!isWgsl(value)) {
       throw new Error(
-        `Cannot resolve value of type ${typeof value} for slot: ${this.debugLabel ?? '<unnamed>'}, type WGSLSegment required`,
+        `Cannot resolve value of type ${typeof value} for slot: ${this.debugLabel ?? '<unnamed>'}. Value is not valid WGSL.`,
       );
     }
+
     return ctx.resolve(value);
   }
-}
-
-export function slot<T extends WGSLSegment>(
-  defaultValue?: T,
-): ResolvableSlot<T>;
-
-export function slot<T>(defaultValue?: T): Slot<T>;
-
-export function slot<T>(defaultValue?: T): Slot<T> {
-  return new WGSLSlot(defaultValue);
 }

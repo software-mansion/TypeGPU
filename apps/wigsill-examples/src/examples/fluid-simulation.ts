@@ -59,9 +59,9 @@ function encodeBrushType(brushType: (typeof BrushTypes)[number]) {
   }
 }
 
-const viscosity = wgsl.memory(u32).alias('viscosity');
-const currentState = wgsl.memory(arrayOf(u32, 1024 ** 2)).alias('current');
-const size = wgsl.memory(vec2u).alias('size');
+const viscosity = wgsl.buffer(u32).$name('viscosity');
+const currentState = wgsl.buffer(arrayOf(u32, 1024 ** 2)).$name('current');
+const size = wgsl.buffer(vec2u).$name('size');
 
 const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
 const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
@@ -392,7 +392,6 @@ const cellsStride = {
 let wholeTime = 0;
 let buffer1: GPUBuffer;
 let render: () => void;
-let readDebugInfo: () => Promise<number>;
 let applyDrawCanvas: () => void;
 let renderChanges: () => void;
 
@@ -522,16 +521,6 @@ function resetGameData() {
     passEncoderRender.end();
 
     device.queue.submit([commandEncoder.finish()]);
-  };
-
-  readDebugInfo = async () => {
-    await debugReadBuffer.mapAsync(GPUMapMode.READ);
-    const arrayBuffer = debugReadBuffer.getMappedRange();
-    const view = new DataView(arrayBuffer);
-    const value = view.getUint32(0, true);
-    debugReadBuffer.unmap();
-
-    return value;
   };
 
   applyDrawCanvas = () => {

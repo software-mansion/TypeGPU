@@ -11,18 +11,18 @@ import {
   object,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { ResolutionCtx } from '../types';
-import { type WGSLCode, code } from '../wgslCode';
-import { identifier } from '../wgslIdentifier';
-import type { AnyWGSLDataType, WGSLDataType } from './types';
+import type { ResolutionCtx, WgslResolvable } from '../types';
+import { code } from '../wgslCode';
+import { WgslIdentifier } from '../wgslIdentifier';
+import type { AnyWgslData, WgslData } from './types';
 
-class StructDataType<TProps extends Record<string, AnyWGSLDataType>>
+class StructDataType<TProps extends Record<string, AnyWgslData>>
   extends Schema<UnwrapRecord<TProps>>
-  implements WGSLDataType<UnwrapRecord<TProps>>
+  implements WgslData<UnwrapRecord<TProps>>
 {
   private _innerSchema: ISchema<UnwrapRecord<TProps>>;
-  private readonly _identifier = identifier();
-  private readonly _definitionCode: WGSLCode;
+  private readonly _identifier = new WgslIdentifier();
+  private readonly _definitionCode: WgslResolvable;
 
   public readonly byteAlignment: number;
   public readonly size: number;
@@ -43,8 +43,8 @@ class StructDataType<TProps extends Record<string, AnyWGSLDataType>>
     }`;
   }
 
-  alias(debugLabel: string) {
-    this._identifier.alias(debugLabel);
+  $name(debugLabel: string) {
+    this._identifier.$name(debugLabel);
     return this;
   }
 
@@ -75,8 +75,7 @@ class StructDataType<TProps extends Record<string, AnyWGSLDataType>>
   }
 }
 
-export const struct = <P extends Record<string, AnyWGSLDataType>>(
-  properties: P,
-) => new StructDataType(properties);
+export const struct = <P extends Record<string, AnyWgslData>>(properties: P) =>
+  new StructDataType(properties);
 
 export default StructDataType;

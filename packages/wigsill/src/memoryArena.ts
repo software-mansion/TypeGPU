@@ -1,13 +1,13 @@
 import { roundUp } from './mathUtils';
-import type { WGSLMemoryTrait } from './types';
+import type { WgslAllocatable } from './types';
 import { code } from './wgslCode';
-import { WGSLIdentifier } from './wgslIdentifier';
+import { WgslIdentifier } from './wgslIdentifier';
 
 export type MemoryArenaOptions = {
   readonly usage: number;
   readonly bufferBindingType: GPUBufferBindingType;
   readonly minSize?: number;
-  readonly memoryEntries: WGSLMemoryTrait[];
+  readonly memoryEntries: WgslAllocatable[];
 };
 
 /**
@@ -15,13 +15,13 @@ export type MemoryArenaOptions = {
  * A place for grouping WGSL memory items.
  */
 export class MemoryArena {
-  private _memoryOffsetMap = new WeakMap<WGSLMemoryTrait, number>();
+  private _memoryOffsetMap = new WeakMap<WgslAllocatable, number>();
 
   public readonly bufferBindingType: GPUBufferBindingType;
   public readonly usage: number;
   public readonly size: number = 0;
-  public readonly memoryEntries: WGSLMemoryTrait[];
-  public readonly identifier = new WGSLIdentifier();
+  public readonly memoryEntries: WgslAllocatable[];
+  public readonly identifier = new WgslIdentifier();
   public debugLabel?: string | undefined;
 
   constructor(options: MemoryArenaOptions) {
@@ -33,9 +33,9 @@ export class MemoryArena {
     let size = 0;
     for (const memoryEntry of this.memoryEntries) {
       // aligning
-      size = roundUp(size, memoryEntry.baseAlignment);
+      size = roundUp(size, memoryEntry.dataType.byteAlignment);
       this._memoryOffsetMap.set(memoryEntry, size);
-      size += memoryEntry.size;
+      size += memoryEntry.dataType.size;
     }
 
     // aligning up to 16 bytes, which is a binding buffer requirement.
@@ -49,19 +49,19 @@ export class MemoryArena {
     this.size = size;
   }
 
-  alias(debugLabel: string) {
+  $name(debugLabel: string) {
     this.debugLabel = debugLabel;
-    this.identifier.alias(debugLabel);
+    this.identifier.$name(debugLabel);
   }
 
-  offsetFor(memoryEntry: WGSLMemoryTrait): number | null {
+  offsetFor(memoryEntry: WgslAllocatable): number | null {
     return this._memoryOffsetMap.get(memoryEntry) ?? null;
   }
 
   definitionCode(bindingGroup: number, bindingIdx: number) {
-    const storageTypeIdentifier = new WGSLIdentifier();
+    const storageTypeIdentifier = new WgslIdentifier();
     if (this.debugLabel) {
-      storageTypeIdentifier.alias(`${this.debugLabel}_type`);
+      storageTypeIdentifier.$name(`${this.debugLabel}_type`);
     }
 
     const fieldDefinitions = this.memoryEntries.map(
@@ -86,7 +86,7 @@ export class MemoryArena {
     struct ${storageTypeIdentifier} {
       ${fieldDefinitions}
     }
-  
+
     @group(${bindingGroup}) @binding(${bindingIdx}) var<${bindingType}> ${this.identifier}: ${storageTypeIdentifier};
     `;
   }

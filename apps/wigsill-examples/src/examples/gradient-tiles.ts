@@ -23,6 +23,15 @@ import {
 const runtime = await createRuntime();
 const device = runtime.device;
 
+const xSpanData = wgsl.buffer(u32).$name('x-span');
+const ySpanData = wgsl.buffer(u32).$name('y-span');
+
+const mainArena = makeArena({
+  bufferBindingType: 'uniform',
+  memoryEntries: [xSpanData, ySpanData],
+  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
+});
+
 const canvas = await addElement('canvas');
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
@@ -35,15 +44,6 @@ context.configure({
   device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
-});
-
-const xSpanData = wgsl.memory(u32).alias('x-span');
-const ySpanData = wgsl.memory(u32).alias('y-span');
-
-const mainArena = makeArena({
-  bufferBindingType: 'uniform',
-  memoryEntries: [xSpanData, ySpanData],
-  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
 });
 
 const outputStruct = struct({

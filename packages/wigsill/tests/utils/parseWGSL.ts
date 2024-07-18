@@ -1,8 +1,8 @@
 import { parse } from '@wigsill/parser';
-import { StrictNameRegistry, type WGSLSegment } from '../../src';
+import { StrictNameRegistry, type Wgsl } from '../../src';
 import { ResolutionCtxImpl } from '../../src/programBuilder';
 
-export function parseWGSL(segment: WGSLSegment) {
+export function parseWGSL(segment: Wgsl) {
   const ctx = new ResolutionCtxImpl({ names: new StrictNameRegistry() });
 
   const resolved = ctx.resolve(segment);
