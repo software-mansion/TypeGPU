@@ -4,7 +4,6 @@ import type StructDataType from './std140/struct';
 import type { AnyWgslData } from './std140/types';
 import type { MemoryLocation, Wgsl, WgslAllocatable } from './types';
 import { type WgslCode, code } from './wgslCode';
-import { WgslIdentifier } from './wgslIdentifier';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
