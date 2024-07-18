@@ -731,7 +731,7 @@ addParameter('brushSize', { initial: 0, min: 0, max: 10, step: 1 }, (value) => {
 addParameter(
   'brushType',
   { initial: 'water', options: BrushTypes },
-  (value: string) => {
+  (value) => {
     Options.brushType = value;
   },
 );
