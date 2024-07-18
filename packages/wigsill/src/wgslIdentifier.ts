@@ -6,7 +6,7 @@ import type { ResolutionCtx, WgslResolvable } from './types';
 export class WgslIdentifier implements WgslResolvable {
   debugLabel?: string | undefined;
 
-  alias(debugLabel: string) {
+  $name(debugLabel: string) {
     this.debugLabel = debugLabel;
   }
 

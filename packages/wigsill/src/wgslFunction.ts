@@ -7,14 +7,14 @@ import { WgslIdentifier } from './wgslIdentifier';
 // ----------
 
 export interface WgslFn extends WgslResolvable {
-  alias(debugLabel: string): WgslFn;
+  $name(debugLabel: string): WgslFn;
 }
 
 export function fn(debugLabel?: string) {
   return (strings: TemplateStringsArray, ...params: Wgsl[]): WgslFn => {
     const func = new WgslFnImpl(code(strings, ...params));
     if (debugLabel) {
-      func.alias(debugLabel);
+      func.$name(debugLabel);
     }
     return func;
   };
@@ -29,8 +29,8 @@ class WgslFnImpl implements WgslFn {
 
   constructor(private readonly body: Wgsl) {}
 
-  alias(debugLabel: string) {
-    this.identifier.alias(debugLabel);
+  $name(debugLabel: string) {
+    this.identifier.$name(debugLabel);
     return this;
   }
 

@@ -103,8 +103,8 @@ class WgslFnImpl<
     super();
   }
 
-  alias(debugLabel: string) {
-    this.identifier.alias(debugLabel);
+  $name(debugLabel: string) {
+    this.identifier.$name(debugLabel);
     return this;
   }
 

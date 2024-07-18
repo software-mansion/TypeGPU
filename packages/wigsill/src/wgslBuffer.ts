@@ -18,7 +18,7 @@ import type WigsillRuntime from './wigsillRuntime';
 export interface WgslBuffer<TData extends AnyWgslData>
   extends WgslResolvable,
     WgslAllocatable<TData> {
-  alias(label: string): WgslBuffer<TData>;
+  $name(label: string): WgslBuffer<TData>;
 
   write(runtime: WigsillRuntime, data: Parsed<TData>): void;
 }
@@ -43,9 +43,9 @@ class WgslBufferImpl<TData extends AnyWgslData> implements WgslBuffer<TData> {
     this.structFieldDefinition = code`${this.fieldIdentifier}: ${this.dataType},\n`;
   }
 
-  alias(debugLabel: string) {
+  $name(debugLabel: string) {
     this.debugLabel = debugLabel;
-    this.fieldIdentifier.alias(debugLabel);
+    this.fieldIdentifier.$name(debugLabel);
     return this;
   }
 
