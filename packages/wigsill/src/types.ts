@@ -3,7 +3,16 @@ import type { AnyWgslData } from './std140/types';
 
 export type Wgsl = string | number | WgslResolvable;
 
+/**
+ * Passed into each resolvable item. All sibling items share a resolution ctx,
+ * and a new resolution ctx is made when going down each level in the tree.
+ */
 export interface ResolutionCtx {
+  /**
+   * Bindings passed down from above the tree.
+   */
+  bindings: BindPair<unknown>[];
+
   addDependency(item: WgslResolvable): void;
   addAllocatable(allocatable: WgslAllocatable): void;
   nameFor(token: WgslResolvable): string;

@@ -47,6 +47,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   private _memoizedResults = new WeakMap<WgslResolvable, string>();
 
+  public get bindings() {
+    return this._bindings;
+  }
+
   /**
    * @throws {MemoryArenaConflict}
    */

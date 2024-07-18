@@ -24,19 +24,19 @@ export function constant(expr: Wgsl): WgslConst {
 
 class WgslConstImpl implements WgslConst {
   public debugLabel?: string | undefined;
-  public identifier = new WgslIdentifier();
 
   constructor(private readonly expr: Wgsl) {}
 
   alias(debugLabel: string) {
     this.debugLabel = debugLabel;
-    this.identifier.alias(debugLabel);
     return this;
   }
 
   resolve(ctx: ResolutionCtx): string {
-    ctx.addDependency(code`const ${this.identifier} = ${this.expr};`);
+    const identifier = new WgslIdentifier().alias(this.debugLabel);
 
-    return ctx.resolve(this.identifier);
+    ctx.addDependency(code`const ${identifier} = ${this.expr};`);
+
+    return ctx.resolve(identifier);
   }
 }
