@@ -1,9 +1,9 @@
+import type { Parsed } from 'typed-binary';
 import type { AnyWgslData } from './std140/types';
-import type { WgslAllocatable, WgslResolvable, ResolutionCtx } from './types';
+import type { ResolutionCtx, WgslAllocatable, WgslResolvable } from './types';
 import type { WgslBuffer } from './wgslBuffer';
 import { code } from './wgslCode';
 import type WigsillRuntime from './wigsillRuntime';
-import type { Parsed } from 'typed-binary';
 
 export interface WgslBufferUsage<
   TData extends AnyWgslData,

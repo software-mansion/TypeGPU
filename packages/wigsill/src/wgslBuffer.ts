@@ -1,10 +1,10 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import type { AnyWgslData } from './std140/types';
 import type { ResolutionCtx, WgslAllocatable, WgslResolvable } from './types';
+import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
 import type WigsillRuntime from './wigsillRuntime';
-import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
 
 // ----------
 // Public API
