@@ -70,42 +70,42 @@ const renderProgram = runtime.makeRenderPipeline({
   vertex: {
     args: ['@builtin(vertex_index) VertexIndex: u32'],
     code: wgsl`
-    const pos = array(
-    vec2( 1.0,  1.0),
-    vec2( 1.0, -1.0),
-    vec2(-1.0, -1.0),
-    vec2( 1.0,  1.0),
-    vec2(-1.0, -1.0),
-    vec2(-1.0,  1.0),
-  );
+      const pos = array(
+        vec2( 1.0,  1.0),
+        vec2( 1.0, -1.0),
+        vec2(-1.0, -1.0),
+        vec2( 1.0,  1.0),
+        vec2(-1.0, -1.0),
+        vec2(-1.0,  1.0),
+      );
 
-  const uv = array(
-    vec2(1.0, 0.0),
-    vec2(1.0, 1.0),
-    vec2(0.0, 1.0),
-    vec2(1.0, 0.0),
-    vec2(0.0, 1.0),
-    vec2(0.0, 0.0),
-  );
+      const uv = array(
+        vec2(1.0, 0.0),
+        vec2(1.0, 1.0),
+        vec2(0.0, 1.0),
+        vec2(1.0, 0.0),
+        vec2(0.0, 1.0),
+        vec2(0.0, 0.0),
+      );
 
-  var output : ${outputStruct};
-  output.Position = vec4(pos[VertexIndex], 0.0, 1.0);
-  output.fragUV = uv[VertexIndex];
-  return output;
+      var output : ${outputStruct};
+      output.Position = vec4(pos[VertexIndex], 0.0, 1.0);
+      output.fragUV = uv[VertexIndex];
+      return output;
     `,
     output: outputStruct,
   },
   fragment: {
     args: ['@location(0) fragUV : vec2f'],
     code: wgsl`
-  var color = textureSampleBaseClampToEdge(videoTexture, sampler_, fragUV);
-  let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
+      var color = textureSampleBaseClampToEdge(videoTexture, sampler_, fragUV);
+      let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
 
-  if grey < ${thresholdData} {
-    return vec4f(0, 0, 0, 1);
-  }
+      if grey < ${thresholdData} {
+        return vec4f(0, 0, 0, 1);
+      }
 
-  return vec4f(1);
+      return vec4f(1);
     `,
     output: '@location(0) vec4f',
     target: [
@@ -119,10 +119,10 @@ const renderProgram = runtime.makeRenderPipeline({
   },
   arenas: [arena],
   externalLayouts: [bindGroupLayout],
-  additionalShaderCode: wgsl`
-  @group(0) @binding(0) var sampler_ : sampler;
-  @group(0) @binding(1) var videoTexture : texture_external;
-  `,
+  externalDeclarations: [
+    wgsl`@group(0) @binding(0) var sampler_ : sampler;`,
+    wgsl`@group(0) @binding(1) var videoTexture : texture_external;`,
+  ],
 });
 
 const sampler = device.createSampler({

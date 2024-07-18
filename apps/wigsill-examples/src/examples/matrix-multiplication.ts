@@ -55,7 +55,6 @@ const program = runtime.makeComputePipeline({
   workgroupSize: workgroupSize,
   args: ['@builtin(global_invocation_id)  global_id: vec3<u32>'],
   code: wgsl`
-    // Guard against out-of-bounds work group sizes
     if (global_id.x >= u32(${firstMatrixData}.size.x) || global_id.y >= u32(${secondMatrixData}.size.y)) {
       return;
     }
@@ -105,7 +104,6 @@ device.queue.submit([encoder.finish()]);
 await gpuReadBuffer.mapAsync(GPUMapMode.READ);
 const arrayBuffer = gpuReadBuffer.getMappedRange();
 const multiplicationResult = new Float32Array(arrayBuffer);
-console.log(multiplicationResult);
 
 const canvas = await addElement('canvas', { width: 400, height: 400 });
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;

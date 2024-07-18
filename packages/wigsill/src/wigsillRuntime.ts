@@ -76,7 +76,7 @@ class WigsillRuntime {
     primitive: GPUPrimitiveState;
     arenas?: MemoryArena[];
     externalLayouts?: GPUBindGroupLayout[];
-    additionalShaderCode?: WgslCode;
+    externalDeclarations?: Wgsl[];
     label?: string;
   }) {
     const program = new ProgramBuilder(
@@ -84,19 +84,22 @@ class WigsillRuntime {
       code`
       ${
         options.vertex
-          ? code`@vertex fn main_vertex(${options.vertex.args.flatMap((arg) => [arg, ', '])}) -> ${options.vertex.output} {
-            ${options.vertex.code}
-          }`
+          ? code`
+              @vertex fn main_vertex(${options.vertex.args.flatMap((arg) => [arg, ', '])}) -> ${options.vertex.output} {
+                ${options.vertex.code}
+              }
+            `
           : ''
       }
       ${
         options.fragment
-          ? code`@fragment fn main_frag(${options.fragment.args.flatMap((arg) => [arg, ', '])}) -> ${options.fragment.output} {
-            ${options.fragment.code}
-          }`
+          ? code`
+              @fragment fn main_frag(${options.fragment.args.flatMap((arg) => [arg, ', '])}) -> ${options.fragment.output} {
+                ${options.fragment.code}
+            }`
           : ''
       }
-      ${options.additionalShaderCode ?? ''}
+      ${options.externalDeclarations?.flatMap((arg) => [arg, '\n']) ?? ''}
       `,
     ).build({
       bindingGroup: (options.externalLayouts ?? []).length,
@@ -148,15 +151,17 @@ class WigsillRuntime {
     code: WgslCode;
     arenas?: MemoryArena[];
     externalLayouts?: GPUBindGroupLayout[];
-    additionalShaderCode?: WgslCode;
+    externalDeclarations?: Wgsl[];
     label?: string;
   }) {
     const program = new ProgramBuilder(
       this,
-      code`@compute @workgroup_size(${options.workgroupSize.join(', ')}) fn main_compute(${options.args.flatMap((arg) => [arg, ', '])}) {
-        ${options.code}
-      }
-      ${options.additionalShaderCode ?? ''}
+      code`
+        @compute @workgroup_size(${options.workgroupSize.join(', ')}) fn main_compute(${options.args.flatMap((arg) => [arg, ', '])}) {
+          ${options.code}
+        }
+          
+        ${options.externalDeclarations?.flatMap((arg) => [arg, '\n']) ?? ''}
       `,
     ).build({
       bindingGroup: (options.externalLayouts ?? []).length,
@@ -196,15 +201,16 @@ class WigsillRuntime {
 
   flush() {
     this.device.queue.submit(
-      this._pipelineExecutors.flatMap((executor) =>
-        executor.commandEncoder ? [executor.commandEncoder.finish()] : [],
-      ),
+      this._pipelineExecutors
+        .map((executor) => executor.flush())
+        .filter((encoded): encoded is GPUCommandBuffer => !!encoded),
     );
   }
 }
 
 class PipelineExecutor<T extends GPURenderPipeline | GPUComputePipeline> {
-  public commandEncoder?: GPUCommandEncoder;
+  public commandEncoder: GPUCommandEncoder | undefined;
+
   constructor(
     public device: GPUDevice,
     public pipeline: T,
@@ -212,6 +218,12 @@ class PipelineExecutor<T extends GPURenderPipeline | GPUComputePipeline> {
     public externalLayoutCount: number,
     protected label?: string,
   ) {}
+
+  flush() {
+    const commandBuffer = this.commandEncoder?.finish();
+    this.commandEncoder = undefined;
+    return commandBuffer;
+  }
 }
 
 class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
@@ -229,9 +241,11 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
       );
     }
 
-    this.commandEncoder = this.device.createCommandEncoder({
-      label: this.label ?? '',
-    });
+    if (!this.commandEncoder) {
+      this.commandEncoder = this.device.createCommandEncoder({
+        label: this.label ?? '',
+      });
+    }
 
     const passEncoder = this.commandEncoder.beginRenderPass({
       ...descriptor,
@@ -255,9 +269,11 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
 
 class ComputePipelineExecutor extends PipelineExecutor<GPUComputePipeline> {
   execute(workgroupCounts: [number, number?, number?]) {
-    this.commandEncoder = this.device.createCommandEncoder({
-      label: this.label ?? '',
-    });
+    if (!this.commandEncoder) {
+      this.commandEncoder = this.device.createCommandEncoder({
+        label: this.label ?? '',
+      });
+    }
 
     const passEncoder = this.commandEncoder.beginComputePass({
       label: this.label ?? '',
