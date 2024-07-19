@@ -3,11 +3,15 @@ import type { BufferUsage, ResolutionCtx, WgslBufferBindable } from './types';
 import type { WgslBuffer } from './wgslBuffer';
 import { WgslIdentifier } from './wgslIdentifier';
 
+// ----------
+// Public API
+// ----------
+
 export interface WgslBufferUsage<
   TData extends AnyWgslData,
   TUsage extends BufferUsage,
 > extends WgslBufferBindable<TData, TUsage> {
-  $name(debugLabel: string): WgslBufferUsage<TData, TUsage>;
+  $name(label: string): WgslBufferUsage<TData, TUsage>;
 }
 
 export function bufferUsage<
@@ -20,33 +24,36 @@ export function bufferUsage<
   return new WgslBufferUsageImpl(buffer, usage);
 }
 
+// --------------
+// Implementation
+// --------------
+
 class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
   implements WgslBufferUsage<TData, TUsage>
 {
-  private readonly _identifier = new WgslIdentifier();
-  private _debugLabel: string | undefined;
+  private _label: string | undefined;
 
   constructor(
     public readonly buffer: WgslBuffer<TData, TUsage>,
     public readonly usage: TUsage,
   ) {}
 
-  public get debugLabel() {
-    return this._debugLabel;
+  get label() {
+    return this._label;
   }
 
   get allocatable() {
     return this.buffer;
   }
 
-  $name(debugLabel: string | undefined) {
-    this._debugLabel = debugLabel;
+  $name(label: string | undefined) {
+    this._label = label;
     return this;
   }
 
   resolve(ctx: ResolutionCtx): string {
     ctx.addBinding(this);
 
-    return ctx.resolve(this._identifier);
+    return ctx.resolve(new WgslIdentifier());
   }
 }

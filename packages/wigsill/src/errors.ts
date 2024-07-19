@@ -17,12 +17,3 @@ export class RecursiveDataTypeError extends Error {
     Object.setPrototypeOf(this, RecursiveDataTypeError.prototype);
   }
 }
-
-export class RecursiveCodeError extends Error {
-  constructor() {
-    super('Recursive code is not supported in WGSL');
-
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, RecursiveCodeError.prototype);
-  }
-}
