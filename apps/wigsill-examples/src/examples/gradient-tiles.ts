@@ -18,10 +18,6 @@ const device = runtime.device;
 const xSpanData = wgsl.buffer(u32).$name('x-span').$allowUniform().asUniform();
 const ySpanData = wgsl.buffer(u32).$name('y-span').$allowUniform().asUniform();
 
-if (!xSpanData || !ySpanData) {
-  throw new Error('Failed to create buffer');
-}
-
 const canvas = await addElement('canvas');
 
 const context = canvas.getContext('webgpu') as GPUCanvasContext;

@@ -67,13 +67,9 @@ const currentState = wgsl
   .buffer(arrayOf(u32, 1024 ** 2))
   .$name('current')
   .$addFlags(GPUBufferUsage.VERTEX)
-  .$allowMutableStorage()
-  .asStorage();
+  .$allowReadonlyStorage()
+  .asReadOnlyStorage();
 const size = wgsl.buffer(vec2u).$name('size').$allowUniform().asUniform();
-
-if (!viscosity || !currentState || !size) {
-  throw new Error('Failed to create buffer');
-}
 
 const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
 const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);

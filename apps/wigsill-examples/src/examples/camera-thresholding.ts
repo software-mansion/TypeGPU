@@ -18,10 +18,6 @@ const thresholdData = wgsl
   .$allowUniform()
   .asUniform();
 
-if (!thresholdData) {
-  throw new Error('Failed to create buffer');
-}
-
 const shaderCode = wgsl`
 @group(0) @binding(0) var sampler_ : sampler;
 @group(0) @binding(1) var videoTexture : texture_external;

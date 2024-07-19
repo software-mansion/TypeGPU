@@ -2,6 +2,7 @@ import { MissingBindingError } from './errors';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import type { AnyWgslData } from './std140/types';
 import {
+  type BufferUsage,
   type BindPair,
   type ResolutionCtx,
   type Wgsl,
@@ -38,12 +39,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   public dependencies: WgslResolvable[] = [];
   public usedMemory = new Set<WgslAllocatable>();
-  public usedBuffers = new Set<
-    WgslBufferUsage<
-      AnyWgslData,
-      'uniform' | 'readonlyStorage' | 'mutableStorage'
-    >
-  >();
+  public usedBuffers = new Set<WgslBufferUsage<AnyWgslData, BufferUsage>>();
 
   private _memoizedResults = new WeakMap<WgslResolvable, string>();
 
@@ -61,15 +57,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.usedMemory.add(allocatable);
   }
 
-  addBufferUsage<
-    TData extends AnyWgslData,
-    TUsage extends 'uniform' | 'readonlyStorage' | 'mutableStorage',
-  >(bufferUsage: WgslBufferUsage<TData, TUsage>) {
+  addBufferUsage<TData extends AnyWgslData, TUsage extends BufferUsage>(
+    bufferUsage: WgslBufferUsage<TData, TUsage>,
+  ) {
     this.usedBuffers.add(
-      bufferUsage as WgslBufferUsage<
-        AnyWgslData,
-        'uniform' | 'readonlyStorage' | 'mutableStorage'
-      >,
+      bufferUsage as WgslBufferUsage<AnyWgslData, BufferUsage>,
     );
   }
 
@@ -156,7 +148,7 @@ export default class ProgramBuilder {
         binding: idx,
         visibility: options.shaderStage,
         buffer: {
-          type: memory.usage as GPUBufferBindingType,
+          type: memory.getBindingType(),
         },
       })),
     });

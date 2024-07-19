@@ -11,10 +11,9 @@ export interface ResolutionCtx {
   requireBinding<T>(bindable: WgslBindable<T>): T;
   tryBinding<T>(bindable: WgslBindable<T>, defaultValue: T): T;
   resolve(item: Wgsl): string;
-  addBufferUsage<
-    TData extends AnyWgslData,
-    TUsage extends 'uniform' | 'readonlyStorage' | 'mutableStorage',
-  >(bufferUsage: WgslBufferUsage<TData, TUsage>): void;
+  addBufferUsage<TData extends AnyWgslData, TUsage extends BufferUsage>(
+    bufferUsage: WgslBufferUsage<TData, TUsage>,
+  ): void;
 }
 
 export interface WgslResolvable {
@@ -59,5 +58,7 @@ export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData>
   flags: GPUBufferUsageFlags;
   definitionCode(bindingGroup: number, bindingIdx: number): WgslResolvable;
 }
+
+export type BufferUsage = 'uniform' | 'readonlyStorage' | 'mutableStorage';
 
 export type MemoryLocation = { gpuBuffer: GPUBuffer; offset: number };

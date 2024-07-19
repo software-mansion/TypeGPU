@@ -1,23 +1,29 @@
 import type { Parsed } from 'typed-binary';
 import type { AnyWgslData } from './std140/types';
-import type { ResolutionCtx, WgslAllocatable, WgslResolvable } from './types';
+import type {
+  ResolutionCtx,
+  WgslAllocatable,
+  WgslResolvable,
+  BufferUsage,
+} from './types';
 import type { WgslBuffer } from './wgslBuffer';
 import { code } from './wgslCode';
 import type WigsillRuntime from './wigsillRuntime';
 
 export interface WgslBufferUsage<
   TData extends AnyWgslData,
-  TUsage extends 'uniform' | 'readonlyStorage' | 'mutableStorage',
+  TUsage extends BufferUsage,
 > extends WgslAllocatable<TData> {
   readonly buffer: WgslBuffer<TData, TUsage>;
   readonly usage: TUsage;
   write(runtime: WigsillRuntime, data: Parsed<TData>): void;
   read(runtime: WigsillRuntime): Promise<Parsed<TData>>;
+  getBindingType(): GPUBufferBindingType;
 }
 
 export function bufferUsage<
   TData extends AnyWgslData,
-  TUsage extends 'uniform' | 'readonlyStorage' | 'mutableStorage',
+  TUsage extends BufferUsage,
 >(
   buffer: WgslBuffer<TData, TUsage>,
   usage: TUsage,
@@ -25,10 +31,8 @@ export function bufferUsage<
   return new WgslBufferUsageImpl(buffer, usage);
 }
 
-class WgslBufferUsageImpl<
-  TData extends AnyWgslData,
-  TUsage extends 'uniform' | 'readonlyStorage' | 'mutableStorage',
-> implements WgslBufferUsage<TData, TUsage>
+class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
+  implements WgslBufferUsage<TData, TUsage>
 {
   public readonly flags: GPUBufferUsageFlags;
   public readonly dataType: TData;
@@ -69,5 +73,17 @@ class WgslBufferUsageImpl<
 
   read(runtime: WigsillRuntime): Promise<Parsed<TData>> {
     return this.buffer.read(runtime);
+  }
+
+  getBindingType(): GPUBufferBindingType {
+    if (this.usage === 'uniform') {
+      return 'uniform';
+    }
+
+    if (this.usage === 'readonlyStorage') {
+      return 'read-only-storage';
+    }
+
+    return 'storage';
   }
 }

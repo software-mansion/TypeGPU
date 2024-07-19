@@ -1,6 +1,11 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import type { AnyWgslData } from './std140/types';
-import type { ResolutionCtx, WgslAllocatable, WgslResolvable } from './types';
+import type {
+  ResolutionCtx,
+  WgslAllocatable,
+  WgslResolvable,
+  BufferUsage,
+} from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
@@ -12,7 +17,7 @@ import type WigsillRuntime from './wigsillRuntime';
 
 export interface WgslBuffer<
   TData extends AnyWgslData,
-  TAllows extends 'uniform' | 'readonlyStorage' | 'mutableStorage' = never,
+  TAllows extends BufferUsage = never,
 > extends WgslResolvable,
     WgslAllocatable<TData> {
   $name(label: string): WgslBuffer<TData, TAllows>;
@@ -37,10 +42,10 @@ export interface WgslBuffer<
   $addFlags(flags: GPUBufferUsageFlags): WgslBuffer<TData, TAllows>;
 }
 
-export function buffer<TData extends AnyWgslData>(
+export function buffer<TUsage extends BufferUsage, TData extends AnyWgslData>(
   typeSchema: TData,
-): WgslBuffer<TData> {
-  return new WgslBufferImpl<TData, never>(typeSchema);
+): WgslBuffer<TData, TUsage> {
+  return new WgslBufferImpl<TData, TUsage>(typeSchema);
 }
 
 // --------------
@@ -49,12 +54,12 @@ export function buffer<TData extends AnyWgslData>(
 
 class WgslBufferImpl<
   TData extends AnyWgslData,
-  TAllows extends 'uniform' | 'readonlyStorage' | 'mutableStorage' = never,
+  TAllows extends BufferUsage = never,
 > implements WgslBuffer<TData, TAllows>
 {
   public fieldIdentifier = new WgslIdentifier();
   public flags: GPUBufferUsageFlags =
-    GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
+    GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
   private allowedUsages: {
     uniform: WgslBufferUsage<TData, TAllows | 'uniform'> | null;
     storage: WgslBufferUsage<TData, TAllows | 'mutableStorage'> | null;
@@ -124,6 +129,7 @@ class WgslBufferImpl<
 
   $allowUniform() {
     const enrichedThis = this as WgslBuffer<TData, TAllows | 'uniform'>;
+    this.$addFlags(GPUBufferUsage.UNIFORM);
     if (!this.allowedUsages.uniform) {
       this.allowedUsages.uniform = bufferUsage(enrichedThis, 'uniform');
     }
@@ -132,6 +138,7 @@ class WgslBufferImpl<
 
   $allowReadonlyStorage() {
     const enrichedThis = this as WgslBuffer<TData, TAllows | 'readonlyStorage'>;
+    this.$addFlags(GPUBufferUsage.STORAGE);
     if (!this.allowedUsages.readOnlyStorage) {
       this.allowedUsages.readOnlyStorage = bufferUsage(
         enrichedThis,
@@ -143,6 +150,7 @@ class WgslBufferImpl<
 
   $allowMutableStorage() {
     const enrichedThis = this as WgslBuffer<TData, TAllows | 'mutableStorage'>;
+    this.$addFlags(GPUBufferUsage.STORAGE);
     if (!this.allowedUsages.storage) {
       this.allowedUsages.storage = bufferUsage(enrichedThis, 'mutableStorage');
     }
