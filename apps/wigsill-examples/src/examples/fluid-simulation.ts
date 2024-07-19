@@ -389,7 +389,7 @@ const cellsStride = {
   ],
 };
 
-let wholeTime = 0;
+let msSinceLastTick = 0;
 let buffer1: GPUBuffer;
 let render: () => void;
 let applyDrawCanvas: () => void;
@@ -662,17 +662,20 @@ const createSampleScene = () => {
 
 let paused = false;
 
-async function loop() {
-  wholeTime++;
-  if (wholeTime >= Options.timestep) {
+onFrame((deltaTime: number) => {
+  msSinceLastTick += deltaTime;
+
+  if (msSinceLastTick >= Options.timestep) {
     if (!paused) {
       for (let i = 0; i < Options.stepsPerTimestep; i++) {
         render();
       }
     }
-    wholeTime -= Options.timestep;
+    msSinceLastTick -= Options.timestep;
   }
-}
+});
+
+resetGameData();
 
 addParameter(
   'size',
@@ -683,9 +686,13 @@ addParameter(
   },
 );
 
-addParameter('timestep', { initial: 2, min: 1, max: 50, step: 1 }, (value) => {
-  Options.timestep = value;
-});
+addParameter(
+  'timestep (ms)',
+  { initial: 15, min: 15, max: 100, step: 1 },
+  (value) => {
+    Options.timestep = value;
+  },
+);
 
 addParameter(
   'stepsPerTimestep',
@@ -727,9 +734,4 @@ addParameter(
 
 addParameter('pause', { initial: false }, (value) => {
   paused = value;
-});
-
-resetGameData();
-onFrame(() => {
-  loop();
 });
