@@ -105,17 +105,17 @@ type BuildOptions = {
   nameRegistry?: NameRegistry;
 };
 
-function usageToBindingType(usage: BufferUsage): GPUBufferBindingType {
-  if (usage === 'uniform') {
-    return 'uniform';
-  }
+const usageToBindingTypeMap: Record<BufferUsage, GPUBufferBindingType> = {
+  uniform: 'uniform',
+  mutable_storage: 'storage',
+  readonly_storage: 'read-only-storage',
+};
 
-  if (usage === 'mutableStorage') {
-    return 'storage';
-  }
-
-  return 'read-only-storage';
-}
+const usageToVarTemplateMap: Record<BufferUsage, string> = {
+  uniform: 'uniform',
+  mutable_storage: 'storage, read_write',
+  readonly_storage: 'storage, read',
+};
 
 export default class ProgramBuilder {
   private bindings: BindPair<unknown>[] = [];
@@ -141,18 +141,8 @@ export default class ProgramBuilder {
     const usedBindables = Array.from(ctx.usedBindables);
 
     usedBindables.forEach((bindable, idx) => {
-      let bindingType = 'storage, read';
-
-      if (bindable.usage === 'uniform') {
-        bindingType = 'uniform';
-      }
-
-      if (bindable.usage === 'mutableStorage') {
-        bindingType = 'storage, read_write';
-      }
-
       ctx.addDependency(
-        code`@group(${options.bindingGroup}) @binding(${idx}) var<${bindingType}> ${bindable}: ${bindable.allocatable.dataType};`,
+        code`@group(${options.bindingGroup}) @binding(${idx}) var<${usageToVarTemplateMap[bindable.usage]}> ${bindable}: ${bindable.allocatable.dataType};`,
       );
     });
 
@@ -161,7 +151,7 @@ export default class ProgramBuilder {
         binding: idx,
         visibility: options.shaderStage,
         buffer: {
-          type: usageToBindingType(bindable.usage),
+          type: usageToBindingTypeMap[bindable.usage],
         },
       })),
     });

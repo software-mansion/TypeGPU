@@ -35,7 +35,7 @@ canvas.addEventListener('contextmenu', (event) => {
   }
 });
 
-const Options = {
+const options = {
   size: 64,
   timestep: 25,
   stepsPerTimestep: 1,
@@ -313,7 +313,7 @@ fn main(@location(0) cell: f32) -> @location(0) vec4f {
 }
 `;
 
-let drawCanvasData = new Uint32Array(Options.size * Options.size);
+let drawCanvasData = new Uint32Array(options.size * options.size);
 
 const computeProgram = new ProgramBuilder(runtime, computeWGSL).build({
   bindingGroup: 0,
@@ -370,7 +370,7 @@ let applyDrawCanvas: () => void;
 let renderChanges: () => void;
 
 function resetGameData() {
-  drawCanvasData = new Uint32Array(Options.size * Options.size);
+  drawCanvasData = new Uint32Array(options.size * options.size);
 
   currentStateBuffer.write(
     runtime,
@@ -388,14 +388,14 @@ function resetGameData() {
     compute: {
       module: computeShader,
       constants: {
-        blockSize: Options.workgroupSize,
+        blockSize: options.workgroupSize,
       },
     },
   });
 
-  sizeBuffer.write(runtime, [Options.size, Options.size]);
+  sizeBuffer.write(runtime, [options.size, options.size]);
 
-  const length = Options.size * Options.size;
+  const length = options.size * options.size;
   const cells = new Uint32Array(length);
 
   const renderPipeline = device.createRenderPipeline({
@@ -438,8 +438,8 @@ function resetGameData() {
     passEncoderCompute.setPipeline(computePipeline);
     passEncoderCompute.setBindGroup(0, computeProgram.bindGroup);
     passEncoderCompute.dispatchWorkgroups(
-      Options.size / Options.workgroupSize,
-      Options.size / Options.workgroupSize,
+      options.size / options.workgroupSize,
+      options.size / options.workgroupSize,
     );
     passEncoderCompute.end();
 
@@ -467,13 +467,13 @@ function resetGameData() {
     const commandEncoder = device.createCommandEncoder();
     const stateBuffer = runtime.bufferFor(currentStateBuffer);
 
-    for (let i = 0; i < Options.size; i++) {
-      for (let j = 0; j < Options.size; j++) {
-        if (drawCanvasData[j * Options.size + i] === 0) {
+    for (let i = 0; i < options.size; i++) {
+      for (let j = 0; j < options.size; j++) {
+        if (drawCanvasData[j * options.size + i] === 0) {
           continue;
         }
 
-        const index = j * Options.size + i;
+        const index = j * options.size + i;
         device.queue.writeBuffer(
           stateBuffer,
           index * Uint32Array.BYTES_PER_ELEMENT,
@@ -534,18 +534,18 @@ canvas.onmousemove = (event) => {
     return;
   }
 
-  const cellSize = canvas.width / Options.size;
+  const cellSize = canvas.width / options.size;
   const x = Math.floor(event.offsetX / cellSize);
-  const y = Options.size - Math.floor(event.offsetY / cellSize) - 1;
+  const y = options.size - Math.floor(event.offsetY / cellSize) - 1;
   const allAffectedCells = [];
-  for (let i = -Options.brushSize; i <= Options.brushSize; i++) {
-    for (let j = -Options.brushSize; j <= Options.brushSize; j++) {
+  for (let i = -options.brushSize; i <= options.brushSize; i++) {
+    for (let j = -options.brushSize; j <= options.brushSize; j++) {
       if (
-        i * i + j * j <= Options.brushSize * Options.brushSize &&
+        i * i + j * j <= options.brushSize * options.brushSize &&
         x + i >= 0 &&
-        x + i < Options.size &&
+        x + i < options.size &&
         y + j >= 0 &&
-        y + j < Options.size
+        y + j < options.size
       ) {
         allAffectedCells.push({ x: x + i, y: y + j });
       }
@@ -554,12 +554,12 @@ canvas.onmousemove = (event) => {
 
   if (isErasing) {
     for (const cell of allAffectedCells) {
-      drawCanvasData[cell.y * Options.size + cell.x] = 4 << 24;
+      drawCanvasData[cell.y * options.size + cell.x] = 4 << 24;
     }
   } else {
     for (const cell of allAffectedCells) {
-      drawCanvasData[cell.y * Options.size + cell.x] = encodeBrushType(
-        Options.brushType,
+      drawCanvasData[cell.y * options.size + cell.x] = encodeBrushType(
+        options.brushType,
       );
     }
   }
@@ -569,12 +569,12 @@ canvas.onmousemove = (event) => {
 };
 
 const createSampleScene = () => {
-  const middlePoint = Math.floor(Options.size / 2);
-  const radius = Math.floor(Options.size / 8);
+  const middlePoint = Math.floor(options.size / 2);
+  const radius = Math.floor(options.size / 8);
   for (let i = -radius; i <= radius; i++) {
     for (let j = -radius; j <= radius; j++) {
       if (i * i + j * j <= radius * radius) {
-        drawCanvasData[(middlePoint + j) * Options.size + middlePoint + i] =
+        drawCanvasData[(middlePoint + j) * options.size + middlePoint + i] =
           1 << 24;
       }
     }
@@ -585,18 +585,18 @@ const createSampleScene = () => {
     for (let j = -smallRadius; j <= smallRadius; j++) {
       if (i * i + j * j <= smallRadius * smallRadius) {
         drawCanvasData[
-          (middlePoint + j + Options.size / 4) * Options.size + middlePoint + i
+          (middlePoint + j + options.size / 4) * options.size + middlePoint + i
         ] = 2 << 24;
       }
     }
   }
 
-  for (let i = 0; i < Options.size; i++) {
+  for (let i = 0; i < options.size; i++) {
     drawCanvasData[i] = 1 << 24;
   }
 
-  for (let i = 0; i < Math.floor(Options.size / 8); i++) {
-    drawCanvasData[i * Options.size] = 1 << 24;
+  for (let i = 0; i < Math.floor(options.size / 8); i++) {
+    drawCanvasData[i * options.size] = 1 << 24;
   }
 };
 
@@ -604,13 +604,13 @@ let paused = false;
 
 async function loop() {
   wholeTime++;
-  if (wholeTime >= Options.timestep) {
+  if (wholeTime >= options.timestep) {
     if (!paused) {
-      for (let i = 0; i < Options.stepsPerTimestep; i++) {
+      for (let i = 0; i < options.stepsPerTimestep; i++) {
         render();
       }
     }
-    wholeTime -= Options.timestep;
+    wholeTime -= options.timestep;
   }
 }
 
@@ -618,20 +618,20 @@ addParameter(
   'size',
   { initial: 64, options: [16, 32, 64, 128, 256, 512, 1024] },
   (value) => {
-    Options.size = value;
+    options.size = value;
     resetGameData();
   },
 );
 
 addParameter('timestep', { initial: 2, min: 1, max: 50, step: 1 }, (value) => {
-  Options.timestep = value;
+  options.timestep = value;
 });
 
 addParameter(
   'stepsPerTimestep',
   { initial: 10, min: 1, max: 50, step: 1 },
   (value) => {
-    Options.stepsPerTimestep = value;
+    options.stepsPerTimestep = value;
   },
 );
 
@@ -639,7 +639,7 @@ addParameter(
   'workgroupSize',
   { initial: 16, options: [1, 2, 4, 8, 16] },
   (value) => {
-    Options.workgroupSize = value;
+    options.workgroupSize = value;
     resetGameData();
   },
 );
@@ -648,20 +648,20 @@ addParameter(
   'viscosity',
   { initial: 1000, min: 10, max: 1000, step: 1 },
   (value) => {
-    Options.viscosity = value;
+    options.viscosity = value;
     viscosityBuffer.write(runtime, value);
   },
 );
 
 addParameter('brushSize', { initial: 0, min: 0, max: 10, step: 1 }, (value) => {
-  Options.brushSize = value;
+  options.brushSize = value;
 });
 
 addParameter(
   'brushType',
   { initial: 'water', options: BrushTypes },
   (value) => {
-    Options.brushType = value;
+    options.brushType = value;
   },
 );
 

@@ -21,8 +21,8 @@ export interface WgslBuffer<
 > extends WgslAllocatable<TData> {
   $name(label: string): WgslBuffer<TData, TAllows>;
   $allowUniform(): WgslBuffer<TData, TAllows | 'uniform'>;
-  $allowReadonlyStorage(): WgslBuffer<TData, TAllows | 'readonlyStorage'>;
-  $allowMutableStorage(): WgslBuffer<TData, TAllows | 'mutableStorage'>;
+  $allowReadonlyStorage(): WgslBuffer<TData, TAllows | 'readonly_storage'>;
+  $allowMutableStorage(): WgslBuffer<TData, TAllows | 'mutable_storage'>;
   $addFlags(flags: GPUBufferUsageFlags): WgslBuffer<TData, TAllows>;
 
   write(runtime: WigsillRuntime, data: Parsed<TData>): void;
@@ -32,12 +32,12 @@ export interface WgslBuffer<
     ? WgslBufferUsage<TData, 'uniform'>
     : null;
 
-  asStorage(): 'mutableStorage' extends TAllows
-    ? WgslBufferUsage<TData, 'mutableStorage'>
+  asStorage(): 'mutable_storage' extends TAllows
+    ? WgslBufferUsage<TData, 'mutable_storage'>
     : null;
 
-  asReadonlyStorage(): 'readonlyStorage' extends TAllows
-    ? WgslBufferUsage<TData, 'readonlyStorage'>
+  asReadonlyStorage(): 'readonly_storage' extends TAllows
+    ? WgslBufferUsage<TData, 'readonly_storage'>
     : null;
 }
 
@@ -63,8 +63,11 @@ class WgslBufferImpl<
 
   private allowedUsages: {
     uniform: WgslBufferUsage<TData, TAllows | 'uniform'> | null;
-    storage: WgslBufferUsage<TData, TAllows | 'mutableStorage'> | null;
-    readOnlyStorage: WgslBufferUsage<TData, TAllows | 'readonlyStorage'> | null;
+    storage: WgslBufferUsage<TData, TAllows | 'mutable_storage'> | null;
+    readOnlyStorage: WgslBufferUsage<
+      TData,
+      TAllows | 'readonly_storage'
+    > | null;
   } = {
     uniform: null,
     storage: null,
@@ -136,22 +139,25 @@ class WgslBufferImpl<
   }
 
   $allowReadonlyStorage() {
-    const enrichedThis = this as WgslBuffer<TData, TAllows | 'readonlyStorage'>;
+    const enrichedThis = this as WgslBuffer<
+      TData,
+      TAllows | 'readonly_storage'
+    >;
     this.$addFlags(GPUBufferUsage.STORAGE);
     if (!this.allowedUsages.readOnlyStorage) {
       this.allowedUsages.readOnlyStorage = bufferUsage(
         enrichedThis,
-        'readonlyStorage',
+        'readonly_storage',
       );
     }
     return enrichedThis;
   }
 
   $allowMutableStorage() {
-    const enrichedThis = this as WgslBuffer<TData, TAllows | 'mutableStorage'>;
+    const enrichedThis = this as WgslBuffer<TData, TAllows | 'mutable_storage'>;
     this.$addFlags(GPUBufferUsage.STORAGE);
     if (!this.allowedUsages.storage) {
-      this.allowedUsages.storage = bufferUsage(enrichedThis, 'mutableStorage');
+      this.allowedUsages.storage = bufferUsage(enrichedThis, 'mutable_storage');
     }
     return enrichedThis;
   }
@@ -170,20 +176,20 @@ class WgslBufferImpl<
       : null;
   }
 
-  asStorage(): 'mutableStorage' extends TAllows
-    ? WgslBufferUsage<TData, 'mutableStorage'>
+  asStorage(): 'mutable_storage' extends TAllows
+    ? WgslBufferUsage<TData, 'mutable_storage'>
     : null {
-    return this.allowedUsages.storage as 'mutableStorage' extends TAllows
-      ? WgslBufferUsage<TData, 'mutableStorage'>
+    return this.allowedUsages.storage as 'mutable_storage' extends TAllows
+      ? WgslBufferUsage<TData, 'mutable_storage'>
       : null;
   }
 
-  asReadonlyStorage(): 'readonlyStorage' extends TAllows
-    ? WgslBufferUsage<TData, 'readonlyStorage'>
+  asReadonlyStorage(): 'readonly_storage' extends TAllows
+    ? WgslBufferUsage<TData, 'readonly_storage'>
     : null {
     return this.allowedUsages
-      .readOnlyStorage as 'readonlyStorage' extends TAllows
-      ? WgslBufferUsage<TData, 'readonlyStorage'>
+      .readOnlyStorage as 'readonly_storage' extends TAllows
+      ? WgslBufferUsage<TData, 'readonly_storage'>
       : null;
   }
 }
