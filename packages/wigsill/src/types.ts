@@ -43,15 +43,14 @@ export interface WgslBindable<TBinding> {
 
 export type BindPair<T> = [WgslBindable<T>, T];
 
-export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData>
-  extends WgslResolvable {
+export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
   /**
    * The data type this allocatable was constructed with.
    * It informs the size and format of data in both JS and
    * binary.
    */
   readonly dataType: TData;
-  readonly extraFlags: GPUBufferUsageFlags;
+  readonly flags: GPUBufferUsageFlags;
 }
 
 /**

@@ -3,6 +3,7 @@ import type StructDataType from './std140/struct';
 import type { AnyWgslData } from './std140/types';
 import type { Wgsl, WgslAllocatable } from './types';
 import { type WgslCode, code } from './wgslCode';
+
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a runtime can interact via GPU buffers.
@@ -21,19 +22,19 @@ class WigsillRuntime {
     // TODO: Clean up all buffers
   }
 
-  bufferFor(memory: WgslAllocatable) {
-    let buffer = this._entryToBufferMap.get(memory);
+  bufferFor(allocatable: WgslAllocatable) {
+    let buffer = this._entryToBufferMap.get(allocatable);
 
     if (!buffer) {
       buffer = this.device.createBuffer({
-        usage: memory.extraFlags,
-        size: memory.dataType.size,
+        usage: allocatable.flags,
+        size: allocatable.dataType.size,
       });
 
       if (!buffer) {
-        throw new Error(`Failed to create buffer for ${memory}`);
+        throw new Error(`Failed to create buffer for ${allocatable}`);
       }
-      this._entryToBufferMap.set(memory, buffer);
+      this._entryToBufferMap.set(allocatable, buffer);
     }
 
     return buffer;
@@ -41,14 +42,10 @@ class WigsillRuntime {
 
   async valueFor(memory: WgslAllocatable): Promise<ArrayBuffer | null> {
     return this._taskQueue.enqueue(async () => {
-      if (!this._readBuffer) {
-        this._readBuffer = this.device.createBuffer({
-          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-          size: memory.dataType.size,
-        });
-      }
+      if (!this._readBuffer || this._readBuffer.size < memory.dataType.size) {
+        // destroying the previous buffer
+        this._readBuffer?.destroy();
 
-      if (this._readBuffer.size < memory.dataType.size) {
         this._readBuffer = this.device.createBuffer({
           usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
           size: memory.dataType.size,
