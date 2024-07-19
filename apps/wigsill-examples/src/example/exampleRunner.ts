@@ -1,6 +1,7 @@
 import * as Babel from '@babel/standalone';
 import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
+import type { OnFrameFn } from '@wigsill/example-toolkit';
 import { GUI } from 'dat.gui';
 import { filter, isNonNull, map, pipe } from 'remeda';
 import { transpileModule } from 'typescript';
@@ -163,16 +164,22 @@ export async function executeExample(
           onCleanup(callback: () => unknown) {
             cleanupCallbacks.push(callback);
           },
-          onFrame(callback: () => unknown) {
+          onFrame: ((loop: (deltaTime: number) => unknown) => {
+            let lastTime = Date.now();
+
             let handle = 0;
             const runner = () => {
-              callback();
+              const now = Date.now();
+              const dt = now - lastTime;
+              lastTime = now;
+              loop(dt);
+
               handle = requestAnimationFrame(runner);
             };
-            runner();
+            handle = requestAnimationFrame(runner);
 
             cleanupCallbacks.push(() => cancelAnimationFrame(handle));
-          },
+          }) satisfies OnFrameFn,
           addElement: layout.addElement,
           addParameter,
         };
