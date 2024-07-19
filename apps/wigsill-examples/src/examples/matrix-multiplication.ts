@@ -4,7 +4,7 @@
 }
 */
 
-import { addElement, onFrame } from '@wigsill/example-toolkit';
+import { addElement } from '@wigsill/example-toolkit';
 import {
   createRuntime,
   dynamicArrayOf,
@@ -20,20 +20,22 @@ const device = runtime.device;
 
 const workgroupSize = [8, 8] as [number, number];
 
-const firstMatrix = {
-  size: [3, 4] as [number, number],
-  numbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-};
-
-const secondMatrix = {
-  size: [4, 2] as [number, number],
-  numbers: [1, 2, 3, 4, 5, 6, 7, 8],
-};
-
 const matrixStruct = struct({
   size: vec2f,
   numbers: dynamicArrayOf(f32, 64),
 });
+
+type MatrixType = typeof matrixStruct.__unwrapped;
+
+const firstMatrix = {
+  size: [3, 4],
+  numbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+} satisfies MatrixType;
+
+const secondMatrix = {
+  size: [4, 2],
+  numbers: [1, 2, 3, 4, 5, 6, 7, 8],
+} satisfies MatrixType;
 
 const firstMatrixData = wgsl.buffer(matrixStruct).$name('first_matrix');
 const secondMatrixData = wgsl.buffer(matrixStruct).$name('second_matrix');
@@ -59,10 +61,14 @@ const program = runtime.makeComputePipeline({
       return;
     }
 
-    ${resultMatrixData}.size = vec2(${firstMatrixData}.size.x, ${secondMatrixData}.size.y);
+    if (global_id.x == 0 && global_id.y == 0) {
+      ${resultMatrixData}.size = vec2(${firstMatrixData}.size.x, ${secondMatrixData}.size.y);
+      ${resultMatrixData}.numbers.count = u32(${firstMatrixData}.size.x * ${secondMatrixData}.size.y);
+    }
 
     let resultCell = vec2(global_id.x, global_id.y);
     var result = 0.0;
+
     for (var i = 0u; i < u32(${firstMatrixData}.size.y); i = i + 1u) {
       let a = i + resultCell.x * u32(${firstMatrixData}.size.y);
       let b = resultCell.y + i * u32(${secondMatrixData}.size.y);
@@ -77,7 +83,6 @@ const program = runtime.makeComputePipeline({
 
 firstMatrixData.write(runtime, firstMatrix);
 secondMatrixData.write(runtime, secondMatrix);
-
 const resultMatrixSize = firstMatrix.size[0] * secondMatrix.size[1];
 
 const gpuReadBuffer = device.createBuffer({
@@ -103,24 +108,33 @@ device.queue.submit([encoder.finish()]);
 
 await gpuReadBuffer.mapAsync(GPUMapMode.READ);
 const arrayBuffer = gpuReadBuffer.getMappedRange();
-const multiplicationResult = new Float32Array(arrayBuffer);
+const multiplicationResult = [...new Float32Array(arrayBuffer)];
 
-const canvas = await addElement('canvas', { width: 400, height: 400 });
-const context = canvas.getContext('2d') as CanvasRenderingContext2D;
-
-onFrame(() => {
-  context.font = '30px Arial';
-  context.fillStyle = 'white';
-  context.fillRect(0, 0, 400, 400);
-  context.fillStyle = 'darkblue';
-
-  for (let i = 0; i < secondMatrix.size[1]; i++) {
-    for (let j = 0; j < firstMatrix.size[0]; j++) {
-      context.fillText(
-        multiplicationResult[j * secondMatrix.size[1] + i]?.toString() ?? '_',
-        i * 80 + 120,
-        j * 80 + 120,
-      );
-    }
-  }
+const firstTable = await addElement('table', {
+  label: 'first matrix',
 });
+const secondTable = await addElement('table', {
+  label: 'second matrix',
+});
+const resultTable = await addElement('table', {
+  label: 'result matrix',
+});
+
+const unflatMatrix = (matrix: MatrixType) =>
+  Array(matrix.size[0])
+    .fill(0)
+    .map((_, i) =>
+      Array(matrix.size[1])
+        .fill(0)
+        .map((_, j) => matrix.numbers[i * matrix.size[1] + j]),
+    );
+
+firstTable.setMatrix(unflatMatrix(firstMatrix));
+secondTable.setMatrix(unflatMatrix(secondMatrix));
+
+resultTable.setMatrix(
+  unflatMatrix({
+    size: [firstMatrix.size[0], secondMatrix.size[1]],
+    numbers: multiplicationResult,
+  }),
+);
