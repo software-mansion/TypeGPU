@@ -1,8 +1,7 @@
-import type { MemoryArena } from './memoryArena';
 import ProgramBuilder, { type Program } from './programBuilder';
 import type StructDataType from './std140/struct';
 import type { AnyWgslData } from './std140/types';
-import type { MemoryLocation, Wgsl, WgslAllocatable } from './types';
+import type { Wgsl, WgslAllocatable } from './types';
 import { type WgslCode, code } from './wgslCode';
 
 /**
@@ -10,8 +9,9 @@ import { type WgslCode, code } from './wgslCode';
  * Programs that share a runtime can interact via GPU buffers.
  */
 class WigsillRuntime {
-  private _arenaToBufferMap = new WeakMap<MemoryArena, GPUBuffer>();
-  private _entryToArenaMap = new WeakMap<WgslAllocatable, MemoryArena>();
+  private _entryToBufferMap = new WeakMap<WgslAllocatable, GPUBuffer>();
+  private _readBuffer: GPUBuffer | null = null;
+  private _taskQueue = new TaskQueue();
   private _pipelineExecutors: PipelineExecutor<
     GPURenderPipeline | GPUComputePipeline
   >[] = [];
@@ -22,43 +22,52 @@ class WigsillRuntime {
     // TODO: Clean up all buffers
   }
 
-  registerArena(arena: MemoryArena) {
-    for (const entry of arena.memoryEntries) {
-      this._entryToArenaMap.set(entry, arena);
-    }
-  }
-
-  bufferFor(arena: MemoryArena) {
-    let buffer = this._arenaToBufferMap.get(arena);
+  bufferFor(allocatable: WgslAllocatable) {
+    let buffer = this._entryToBufferMap.get(allocatable);
 
     if (!buffer) {
-      // creating buffer
       buffer = this.device.createBuffer({
-        usage: arena.usage,
-        size: arena.size,
+        usage: allocatable.flags,
+        size: allocatable.dataType.size,
       });
 
-      this._arenaToBufferMap.set(arena, buffer);
+      if (!buffer) {
+        throw new Error(`Failed to create buffer for ${allocatable}`);
+      }
+      this._entryToBufferMap.set(allocatable, buffer);
     }
 
     return buffer;
   }
 
-  locateMemory(memoryEntry: WgslAllocatable): MemoryLocation | null {
-    const arena = this._entryToArenaMap.get(memoryEntry);
+  async valueFor(memory: WgslAllocatable): Promise<ArrayBuffer> {
+    return this._taskQueue.enqueue(async () => {
+      if (!this._readBuffer || this._readBuffer.size < memory.dataType.size) {
+        // destroying the previous buffer
+        this._readBuffer?.destroy();
 
-    if (!arena) {
-      return null;
-    }
+        this._readBuffer = this.device.createBuffer({
+          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+          size: memory.dataType.size,
+        });
+      }
 
-    const gpuBuffer = this._arenaToBufferMap.get(arena);
-    const offset = arena.offsetFor(memoryEntry);
-
-    if (!gpuBuffer || offset === null) {
-      throw new Error('Invalid state');
-    }
-
-    return { gpuBuffer, offset };
+      const buffer = this.bufferFor(memory);
+      const commandEncoder = this.device.createCommandEncoder();
+      commandEncoder.copyBufferToBuffer(
+        buffer,
+        0,
+        this._readBuffer,
+        0,
+        memory.dataType.size,
+      );
+      this.device.queue.submit([commandEncoder.finish()]);
+      await this.device.queue.onSubmittedWorkDone();
+      await this._readBuffer.mapAsync(GPUMapMode.READ, 0, memory.dataType.size);
+      const value = this._readBuffer.getMappedRange().slice(0);
+      this._readBuffer.unmap();
+      return value;
+    });
   }
 
   makeRenderPipeline(options: {
@@ -74,7 +83,6 @@ class WigsillRuntime {
       target: Iterable<GPUColorTargetState | null>;
     };
     primitive: GPUPrimitiveState;
-    arenas?: MemoryArena[];
     externalLayouts?: GPUBindGroupLayout[];
     externalDeclarations?: Wgsl[];
     label?: string;
@@ -106,7 +114,6 @@ class WigsillRuntime {
       shaderStage:
         (options.vertex ? GPUShaderStage.VERTEX : 0) |
         (options.fragment ? GPUShaderStage.FRAGMENT : 0),
-      arenas: options.arenas ?? [],
     });
 
     const shaderModule = this.device.createShaderModule({
@@ -149,7 +156,6 @@ class WigsillRuntime {
     workgroupSize: [number, number?, number?];
     args: Wgsl[];
     code: WgslCode;
-    arenas?: MemoryArena[];
     externalLayouts?: GPUBindGroupLayout[];
     externalDeclarations?: Wgsl[];
     label?: string;
@@ -160,13 +166,12 @@ class WigsillRuntime {
         @compute @workgroup_size(${options.workgroupSize.join(', ')}) fn main_compute(${options.args.flatMap((arg) => [arg, ', '])}) {
           ${options.code}
         }
-          
+
         ${options.externalDeclarations?.flatMap((arg) => [arg, '\n']) ?? ''}
       `,
     ).build({
       bindingGroup: (options.externalLayouts ?? []).length,
       shaderStage: GPUShaderStage.COMPUTE,
-      arenas: options.arenas ?? [],
     });
 
     const shaderModule = this.device.createShaderModule({
@@ -205,6 +210,38 @@ class WigsillRuntime {
         .map((executor) => executor.flush())
         .filter((encoded): encoded is GPUCommandBuffer => !!encoded),
     );
+  }
+}
+
+class TaskQueue<T> {
+  private _queue: (() => Promise<void>)[] = [];
+  private _pending = false;
+
+  enqueue<T>(task: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this._queue.push(async () => {
+        try {
+          resolve(await task());
+        } catch (e) {
+          reject(e);
+        }
+      });
+      this._processQueue();
+    });
+  }
+
+  private async _processQueue() {
+    if (this._pending) {
+      return;
+    }
+    this._pending = true;
+    while (this._queue.length > 0) {
+      const task = this._queue.shift();
+      if (task) {
+        await task();
+      }
+    }
+    this._pending = false;
   }
 }
 

@@ -1,13 +1,11 @@
-import type { MemoryArena } from './memoryArena';
 import type { AnyWgslData } from './std140/types';
 
 export type Wgsl = string | number | WgslResolvable;
 
 export interface ResolutionCtx {
   addDependency(item: WgslResolvable): void;
-  addAllocatable(allocatable: WgslAllocatable): void;
+  addBinding(bindable: WgslBufferBindable): void;
   nameFor(token: WgslResolvable): string;
-  arenaFor(memoryEntry: WgslAllocatable): MemoryArena | null;
   /** @throws {MissingBindingError}  */
   requireBinding<T>(bindable: WgslBindable<T>): T;
   tryBinding<T>(bindable: WgslBindable<T>, defaultValue: T): T;
@@ -45,19 +43,25 @@ export interface WgslBindable<TBinding> {
 
 export type BindPair<T> = [WgslBindable<T>, T];
 
-export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData>
-  extends WgslResolvable {
+export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
   /**
    * The data type this allocatable was constructed with.
    * It informs the size and format of data in both JS and
    * binary.
    */
   readonly dataType: TData;
-
-  /**
-   * @deprecated to be removed along with memory arenas.
-   */
-  readonly structFieldDefinition: Wgsl;
+  readonly flags: GPUBufferUsageFlags;
 }
 
-export type MemoryLocation = { gpuBuffer: GPUBuffer; offset: number };
+/**
+ * TODO: Rename to `WgslBindable` after granular bindings are merged.
+ */
+export interface WgslBufferBindable<
+  TData extends AnyWgslData = AnyWgslData,
+  TUsage extends BufferUsage = BufferUsage,
+> extends WgslResolvable {
+  readonly allocatable: WgslAllocatable<TData>;
+  readonly usage: TUsage;
+}
+
+export type BufferUsage = 'uniform' | 'readonly_storage' | 'mutable_storage';
