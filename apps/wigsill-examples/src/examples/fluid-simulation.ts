@@ -250,8 +250,6 @@ const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
 }`;
 
 const computeWGSL = wgsl`
-@binding(0) @group(0) var<storage, read_write> debugInfo: atomic<u32>;
-
 override blockSize = 8;
 
 @compute @workgroup_size(blockSize, blockSize)
