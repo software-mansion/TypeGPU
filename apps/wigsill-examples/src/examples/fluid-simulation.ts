@@ -13,6 +13,7 @@ import {
   u32,
   vec2u,
   wgsl,
+  atomic,
 } from 'wigsill';
 
 const runtime = await createRuntime();
@@ -70,6 +71,16 @@ const currentState = wgsl
   .$allowReadonlyStorage()
   .asReadOnlyStorage();
 const size = wgsl.buffer(vec2u).$name('size').$allowUniform().asUniform();
+const nextState = wgsl
+  .buffer(arrayOf(atomic(u32), 1024 ** 2))
+  .$name('next')
+  .$allowMutableStorage()
+  .asStorage();
+const debugInfo = wgsl
+  .buffer(atomic(u32))
+  .$name('debug')
+  .$allowMutableStorage()
+  .asStorage();
 
 const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
 const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
@@ -86,25 +97,25 @@ const getCell = wgsl.fn()`(x: u32, y: u32) -> u32 {
 }`;
 
 const getCellNext = wgsl.fn()`(x: u32, y: u32) -> u32 {
-  return atomicLoad(&next[${getIndex}(x, y)]);
+  return atomicLoad(&${nextState}[${getIndex}(x, y)]);
 }`;
 
 const updateCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
-  atomicStore(&next[${getIndex}(x, y)], value);
+  atomicStore(&${nextState}[${getIndex}(x, y)], value);
 }`;
 
 const addToCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
   let cell = ${getCellNext}(x, y);
   let waterLevel = cell & ${maxWaterLevel};
   let newWaterLevel = min(waterLevel + value, ${maxWaterLevel});
-  atomicAdd(&next[${getIndex}(x, y)], newWaterLevel - waterLevel);
+  atomicAdd(&${nextState}[${getIndex}(x, y)], newWaterLevel - waterLevel);
 }`;
 
 const subtractFromCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
   let cell = ${getCellNext}(x, y);
   let waterLevel = cell & ${maxWaterLevel};
   let newWaterLevel = max(waterLevel - min(value, waterLevel), 0u);
-  atomicSub(&next[${getIndex}(x, y)], waterLevel - newWaterLevel);
+  atomicSub(&${nextState}[${getIndex}(x, y)], waterLevel - newWaterLevel);
 }`;
 
 const persistFlags = wgsl.fn()`(x: u32, y: u32) {
@@ -240,8 +251,7 @@ const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
 }`;
 
 const computeWGSL = wgsl`
-@binding(0) @group(0) var<storage, read_write> next: array<atomic<u32>>;
-@binding(1) @group(0) var<storage, read_write> debugInfo: atomic<u32>;
+@binding(0) @group(0) var<storage, read_write> debugInfo: atomic<u32>;
 
 override blockSize = 8;
 
@@ -249,7 +259,7 @@ override blockSize = 8;
 fn main(@builtin(global_invocation_id) grid: vec3u) {
   let x = grid.x;
   let y = grid.y;
-  atomicAdd(&debugInfo, ${getWaterLevel}(x, y));
+  atomicAdd(&${debugInfo}, ${getWaterLevel}(x, y));
   ${decideWaterLevel}(x, y);
 }
 `;
@@ -309,7 +319,7 @@ fn main(@location(0) cell: f32) -> @location(0) vec4f {
 let drawCanvasData = new Uint32Array(Options.size * Options.size);
 
 const computeProgram = new ProgramBuilder(runtime, computeWGSL).build({
-  bindingGroup: 1,
+  bindingGroup: 0,
   shaderStage: GPUShaderStage.COMPUTE,
 });
 
@@ -319,24 +329,6 @@ const vertexProgram = new ProgramBuilder(runtime, vertWGSL).build({
 });
 
 const computeShader = device.createShaderModule({ code: computeProgram.code });
-const bindGroupLayoutCompute = device.createBindGroupLayout({
-  entries: [
-    {
-      binding: 0,
-      visibility: GPUShaderStage.COMPUTE,
-      buffer: {
-        type: 'storage',
-      },
-    },
-    {
-      binding: 1,
-      visibility: GPUShaderStage.COMPUTE,
-      buffer: {
-        type: 'storage',
-      },
-    },
-  ],
-});
 
 const squareVertices = new Uint32Array([0, 0, 0, 1, 1, 0, 1, 1]);
 const squareBuffer = device.createBuffer({
@@ -376,7 +368,6 @@ const cellsStride = {
 };
 
 let wholeTime = 0;
-let buffer1: GPUBuffer;
 let render: () => void;
 let applyDrawCanvas: () => void;
 let renderChanges: () => void;
@@ -391,10 +382,7 @@ function resetGameData() {
 
   const computePipeline = device.createComputePipeline({
     layout: device.createPipelineLayout({
-      bindGroupLayouts: [
-        bindGroupLayoutCompute,
-        computeProgram.bindGroupLayout,
-      ],
+      bindGroupLayouts: [computeProgram.bindGroupLayout],
     }),
     compute: {
       module: computeShader,
@@ -404,37 +392,10 @@ function resetGameData() {
     },
   });
 
-  const debugInfoBuffer = device.createBuffer({
-    size: 4,
-    usage:
-      GPUBufferUsage.STORAGE |
-      GPUBufferUsage.COPY_SRC |
-      GPUBufferUsage.COPY_DST,
-  });
-  const debugReadBuffer = device.createBuffer({
-    size: 4,
-    usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-  });
-
   size.write(runtime, [Options.size, Options.size]);
 
   const length = Options.size * Options.size;
   const cells = new Uint32Array(length);
-
-  buffer1 = device.createBuffer({
-    size: cells.byteLength,
-    usage:
-      GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC,
-  });
-
-  // to be replaced when wigsill supports atomic variables
-  const bindGroup0 = device.createBindGroup({
-    layout: bindGroupLayoutCompute,
-    entries: [
-      { binding: 0, resource: { buffer: buffer1 } },
-      { binding: 1, resource: { buffer: debugInfoBuffer } },
-    ],
-  });
 
   const renderPipeline = device.createRenderPipeline({
     layout: device.createPipelineLayout({
@@ -458,7 +419,7 @@ function resetGameData() {
   });
 
   render = () => {
-    device.queue.writeBuffer(debugInfoBuffer, 0, new Uint32Array([0]), 0, 1);
+    debugInfo.write(runtime, 0);
     const view = context.getCurrentTexture().createView();
     const renderPass: GPURenderPassDescriptor = {
       colorAttachments: [
@@ -474,8 +435,7 @@ function resetGameData() {
     // compute
     const passEncoderCompute = commandEncoder.beginComputePass();
     passEncoderCompute.setPipeline(computePipeline);
-    passEncoderCompute.setBindGroup(0, bindGroup0);
-    passEncoderCompute.setBindGroup(1, computeProgram.bindGroup);
+    passEncoderCompute.setBindGroup(0, computeProgram.bindGroup);
     passEncoderCompute.dispatchWorkgroups(
       Options.size / Options.workgroupSize,
       Options.size / Options.workgroupSize,
@@ -483,18 +443,11 @@ function resetGameData() {
     passEncoderCompute.end();
 
     commandEncoder.copyBufferToBuffer(
-      buffer1,
+      runtime.bufferFor(nextState),
       0,
       runtime.bufferFor(currentState),
       0,
       cells.byteLength,
-    );
-    commandEncoder.copyBufferToBuffer(
-      debugInfoBuffer,
-      0,
-      debugReadBuffer,
-      0,
-      4,
     );
 
     // render
