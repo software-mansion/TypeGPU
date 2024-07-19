@@ -1,4 +1,3 @@
-import type { U32, I32 } from './numeric';
 import {
   type IMeasurer,
   type ISerialInput,
@@ -9,9 +8,10 @@ import {
   Schema,
   type Unwrap,
 } from 'typed-binary';
-import type { WgslData } from './types';
 import { RecursiveDataTypeError } from '../errors';
-import type { ResolutionCtx, Wgsl } from '../types';
+import type { ResolutionCtx } from '../types';
+import type { I32, U32 } from './numeric';
+import type { WgslData } from './types';
 
 export function atomic<TSchema extends U32 | I32>(
   data: TSchema,

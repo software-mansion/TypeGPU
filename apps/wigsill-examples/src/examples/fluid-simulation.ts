@@ -9,11 +9,11 @@ import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
 import {
   ProgramBuilder,
   arrayOf,
+  atomic,
   createRuntime,
   u32,
   vec2u,
   wgsl,
-  atomic,
 } from 'wigsill';
 
 const runtime = await createRuntime();
