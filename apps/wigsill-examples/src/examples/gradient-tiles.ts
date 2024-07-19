@@ -10,27 +10,16 @@ import {
   onCleanup,
   onFrame,
 } from '@wigsill/example-toolkit';
-import {
-  createRuntime,
-  makeArena,
-  struct,
-  u32,
-  vec2f,
-  vec4f,
-  wgsl,
-} from 'wigsill';
+import { createRuntime, struct, u32, vec2f, vec4f, wgsl } from 'wigsill';
 
 const runtime = await createRuntime();
 const device = runtime.device;
 
-const xSpanData = wgsl.buffer(u32).$name('x-span');
-const ySpanData = wgsl.buffer(u32).$name('y-span');
+const xSpanBuffer = wgsl.buffer(u32).$name('x-span').$allowUniform();
+const ySpanBuffer = wgsl.buffer(u32).$name('y-span').$allowUniform();
 
-const mainArena = makeArena({
-  bufferBindingType: 'uniform',
-  memoryEntries: [xSpanData, ySpanData],
-  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-});
+const xSpanData = xSpanBuffer.asUniform();
+const ySpanData = ySpanBuffer.asUniform();
 
 const canvas = await addElement('canvas');
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -95,20 +84,18 @@ const renderPipeline = runtime.makeRenderPipeline({
   primitive: {
     topology: 'triangle-strip',
   },
-
-  arenas: [mainArena],
 });
 
 addParameter(
   'x-span',
   { initial: 16, min: 1, max: 16, step: 1 },
-  (xSpan: number) => xSpanData.write(runtime, xSpan),
+  (xSpan: number) => xSpanBuffer.write(runtime, xSpan),
 );
 
 addParameter(
   'y-span',
   { initial: 16, min: 1, max: 16, step: 1 },
-  (ySpan: number) => ySpanData.write(runtime, ySpan),
+  (ySpan: number) => ySpanBuffer.write(runtime, ySpan),
 );
 
 onFrame(() => {

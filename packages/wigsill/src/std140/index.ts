@@ -5,3 +5,4 @@ export * from './struct';
 export * from './array';
 export { type WgslPointer, type WgslData } from './types';
 export { ptr } from './pointer';
+export { atomic } from './atomic';
