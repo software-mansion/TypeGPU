@@ -9,14 +9,12 @@ import {
   createRuntime,
   dynamicArrayOf,
   f32,
-  makeArena,
   struct,
   vec2f,
   wgsl,
 } from 'wigsill';
 
 const runtime = await createRuntime();
-const device = runtime.device;
 
 const workgroupSize = [8, 8] as [number, number];
 
@@ -32,24 +30,27 @@ const secondMatrix = {
 
 const matrixStruct = struct({
   size: vec2f,
-  numbers: dynamicArrayOf(f32, 64),
+  numbers: dynamicArrayOf(f32, 65),
 });
 
-const firstMatrixData = wgsl.buffer(matrixStruct).$name('first_matrix');
-const secondMatrixData = wgsl.buffer(matrixStruct).$name('second_matrix');
-const resultMatrixData = wgsl.buffer(matrixStruct).$name('result_matrix');
+const firstMatrixBuffer = wgsl
+  .buffer(matrixStruct)
+  .$name('first_matrix')
+  .$allowReadonlyStorage();
 
-const arena = makeArena({
-  bufferBindingType: 'storage',
-  memoryEntries: [firstMatrixData, secondMatrixData],
-  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE,
-});
+const secondMatrixBuffer = wgsl
+  .buffer(matrixStruct)
+  .$name('second_matrix')
+  .$allowReadonlyStorage();
 
-const resultArena = makeArena({
-  bufferBindingType: 'storage',
-  memoryEntries: [resultMatrixData],
-  usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.STORAGE,
-});
+const resultMatrixBuffer = wgsl
+  .buffer(matrixStruct)
+  .$name('result_matrix')
+  .$allowMutableStorage();
+
+const firstMatrixData = firstMatrixBuffer.asReadonlyStorage();
+const secondMatrixData = secondMatrixBuffer.asReadonlyStorage();
+const resultMatrixData = resultMatrixBuffer.asStorage();
 
 const program = runtime.makeComputePipeline({
   workgroupSize: workgroupSize,
@@ -59,7 +60,10 @@ const program = runtime.makeComputePipeline({
       return;
     }
 
-    ${resultMatrixData}.size = vec2(${firstMatrixData}.size.x, ${secondMatrixData}.size.y);
+    if (global_id.x + global_id.y == 0u) {
+      ${resultMatrixData}.size = vec2(${firstMatrixData}.size.x, ${secondMatrixData}.size.y);
+      ${resultMatrixData}.numbers.count = u32(${firstMatrixData}.size.x) * u32(${secondMatrixData}.size.y);
+    }
 
     let resultCell = vec2(global_id.x, global_id.y);
     var result = 0.0;
@@ -72,38 +76,17 @@ const program = runtime.makeComputePipeline({
     let index = resultCell.y + resultCell.x * u32(${secondMatrixData}.size.y);
     ${resultMatrixData}.numbers.values[index] = result;
 `,
-  arenas: [arena, resultArena],
 });
 
-firstMatrixData.write(runtime, firstMatrix);
-secondMatrixData.write(runtime, secondMatrix);
-
-const resultMatrixSize = firstMatrix.size[0] * secondMatrix.size[1];
-
-const gpuReadBuffer = device.createBuffer({
-  size: resultMatrixSize * 4,
-  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-});
+firstMatrixBuffer.write(runtime, firstMatrix);
+secondMatrixBuffer.write(runtime, secondMatrix);
 
 const workgroupCountX = Math.ceil(firstMatrix.size[0] / workgroupSize[0]);
 const workgroupCountY = Math.ceil(secondMatrix.size[1] / workgroupSize[1]);
 program.execute([workgroupCountX, workgroupCountY]);
 runtime.flush();
 
-const encoder = device.createCommandEncoder();
-encoder.copyBufferToBuffer(
-  runtime.bufferFor(resultArena),
-  12,
-  gpuReadBuffer,
-  0,
-  resultMatrixSize * 4,
-);
-
-device.queue.submit([encoder.finish()]);
-
-await gpuReadBuffer.mapAsync(GPUMapMode.READ);
-const arrayBuffer = gpuReadBuffer.getMappedRange();
-const multiplicationResult = new Float32Array(arrayBuffer);
+const multiplicationResult = await resultMatrixBuffer.read(runtime);
 
 const canvas = await addElement('canvas', { width: 400, height: 400 });
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -117,7 +100,9 @@ onFrame(() => {
   for (let i = 0; i < secondMatrix.size[1]; i++) {
     for (let j = 0; j < firstMatrix.size[0]; j++) {
       context.fillText(
-        multiplicationResult[j * secondMatrix.size[1] + i]?.toString() ?? '_',
+        multiplicationResult.numbers[
+          j * secondMatrix.size[1] + i
+        ]?.toString() ?? '_',
         i * 80 + 120,
         j * 80 + 120,
       );

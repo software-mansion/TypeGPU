@@ -5,22 +5,17 @@
 */
 
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
-import {
-  createRuntime,
-  f32,
-  makeArena,
-  struct,
-  vec2f,
-  vec4f,
-  wgsl,
-} from 'wigsill';
+import { createRuntime, f32, struct, vec2f, vec4f, wgsl } from 'wigsill';
 
 // Layout
 const [video, canvas] = await Promise.all([
   addElement('video', { width: 500, height: 375 }),
   addElement('canvas', { width: 500, height: 375 }),
 ]);
-const thresholdData = wgsl.buffer(f32).$name('threshold');
+
+const thresholdBuffer = wgsl.buffer(f32).$name('threshold').$allowUniform();
+
+const thresholdData = thresholdBuffer.asUniform();
 
 if (navigator.mediaDevices.getUserMedia) {
   video.srcObject = await navigator.mediaDevices.getUserMedia({
@@ -38,12 +33,6 @@ context.configure({
   device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
-});
-
-const arena = makeArena({
-  bufferBindingType: 'uniform',
-  memoryEntries: [thresholdData],
-  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
 });
 
 const bindGroupLayout = device.createBindGroupLayout({
@@ -117,7 +106,6 @@ const renderProgram = runtime.makeRenderPipeline({
   primitive: {
     topology: 'triangle-list',
   },
-  arenas: [arena],
   externalLayouts: [bindGroupLayout],
   externalDeclarations: [
     wgsl`@group(0) @binding(0) var sampler_ : sampler;`,
@@ -135,7 +123,7 @@ const sampler = device.createSampler({
 addParameter(
   'threshold',
   { initial: 0.4, min: 0, max: 1 },
-  (threshold: number) => thresholdData.write(runtime, threshold),
+  (threshold: number) => thresholdBuffer.write(runtime, threshold),
 );
 
 onFrame(() => {

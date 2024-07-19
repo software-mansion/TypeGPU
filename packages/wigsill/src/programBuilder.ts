@@ -1,19 +1,16 @@
-import {
-  MemoryArenaConflictError,
-  MissingBindingError,
-  NotAllocatedMemoryError,
-} from './errors';
-import type { MemoryArena } from './memoryArena';
+import { MissingBindingError } from './errors';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import {
   type BindPair,
+  type BufferUsage,
   type ResolutionCtx,
   type Wgsl,
-  type WgslAllocatable,
   type WgslBindable,
+  type WgslBufferBindable,
   type WgslResolvable,
   isResolvable,
 } from './types';
+import { code } from './wgslCode';
 import type WigsillRuntime from './wigsillRuntime';
 
 export type Program = {
@@ -31,42 +28,22 @@ function addUnique<T>(list: T[], value: T) {
 }
 
 export type ResolutionCtxImplOptions = {
-  readonly memoryArenas?: MemoryArena[];
   readonly bindings?: BindPair<unknown>[];
   readonly names: NameRegistry;
 };
 
 export class ResolutionCtxImpl implements ResolutionCtx {
-  private _entryToArenaMap = new WeakMap<WgslAllocatable, MemoryArena>();
   private readonly _bindings: BindPair<unknown>[];
   private readonly _names: NameRegistry;
 
   public dependencies: WgslResolvable[] = [];
-  public usedMemoryArenas = new WeakSet<MemoryArena>();
-  public memoryArenaDeclarationIdxMap = new WeakMap<MemoryArena, number>();
+  public usedBindables = new Set<WgslBufferBindable>();
 
   private _memoizedResults = new WeakMap<WgslResolvable, string>();
 
-  /**
-   * @throws {MemoryArenaConflict}
-   */
-  constructor({
-    memoryArenas = [],
-    bindings = [],
-    names,
-  }: ResolutionCtxImplOptions) {
+  constructor({ bindings = [], names }: ResolutionCtxImplOptions) {
     this._bindings = bindings;
     this._names = names;
-
-    for (const arena of memoryArenas) {
-      for (const entry of arena.memoryEntries) {
-        if (this._entryToArenaMap.has(entry)) {
-          throw new MemoryArenaConflictError(entry);
-        }
-
-        this._entryToArenaMap.set(entry, arena);
-      }
-    }
   }
 
   addDependency(item: WgslResolvable) {
@@ -74,24 +51,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     addUnique(this.dependencies, item);
   }
 
-  /**
-   * @throws {NotAllocatedMemoryError}
-   */
-  addAllocatable(allocatable: WgslAllocatable): void {
-    const arena = this._entryToArenaMap.get(allocatable);
-    if (!arena) {
-      throw new NotAllocatedMemoryError(allocatable);
-    }
-
-    this.memoryArenaDeclarationIdxMap.set(arena, this.dependencies.length);
+  addBinding(bindable: WgslBufferBindable): void {
+    this.usedBindables.add(bindable);
   }
 
   nameFor(item: WgslResolvable): string {
     return this._names.nameFor(item);
-  }
-
-  arenaFor(memoryEntry: WgslAllocatable): MemoryArena | null {
-    return this._entryToArenaMap.get(memoryEntry) ?? null;
   }
 
   requireBinding<T>(bindable: WgslBindable<T>): T {
@@ -137,8 +102,19 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 type BuildOptions = {
   shaderStage: number;
   bindingGroup: number;
-  arenas?: MemoryArena[];
   nameRegistry?: NameRegistry;
+};
+
+const usageToBindingTypeMap: Record<BufferUsage, GPUBufferBindingType> = {
+  uniform: 'uniform',
+  mutable_storage: 'storage',
+  readonly_storage: 'read-only-storage',
+};
+
+const usageToVarTemplateMap: Record<BufferUsage, string> = {
+  uniform: 'uniform',
+  mutable_storage: 'storage, read_write',
+  readonly_storage: 'storage, read',
 };
 
 export default class ProgramBuilder {
@@ -155,51 +131,37 @@ export default class ProgramBuilder {
   }
 
   build(options: BuildOptions): Program {
-    const arenas = options.arenas ?? [];
-
     const ctx = new ResolutionCtxImpl({
-      memoryArenas: arenas,
       bindings: this.bindings,
       names: options.nameRegistry ?? new RandomNameRegistry(),
     });
 
-    // Resolving memory arenas
-    arenas.forEach((arena, idx) => {
-      const definitionCode = arena.definitionCode(options.bindingGroup, idx);
-
-      if (!definitionCode) {
-        return;
-      }
-
-      this.runtime.registerArena(arena);
-      ctx.addDependency(definitionCode);
-
-      // dependencies.splice(
-      //   ctx.memoryArenaDeclarationIdxMap.get(arena) ?? 0,
-      //   0,
-      //   definitionCode,
-      // );
-    });
-
     // Resolving code
     const codeString = ctx.resolve(this.root);
+    const usedBindables = Array.from(ctx.usedBindables);
+
+    usedBindables.forEach((bindable, idx) => {
+      ctx.addDependency(
+        code`@group(${options.bindingGroup}) @binding(${idx}) var<${usageToVarTemplateMap[bindable.usage]}> ${bindable}: ${bindable.allocatable.dataType};`,
+      );
+    });
 
     const bindGroupLayout = this.runtime.device.createBindGroupLayout({
-      entries: arenas.map((arena, idx) => ({
+      entries: usedBindables.map((bindable, idx) => ({
         binding: idx,
         visibility: options.shaderStage,
         buffer: {
-          type: arena.bufferBindingType,
+          type: usageToBindingTypeMap[bindable.usage],
         },
       })),
     });
 
     const bindGroup = this.runtime.device.createBindGroup({
       layout: bindGroupLayout,
-      entries: arenas.map((arena, idx) => ({
+      entries: usedBindables.map((bindable, idx) => ({
         binding: idx,
         resource: {
-          buffer: this.runtime.bufferFor(arena),
+          buffer: this.runtime.bufferFor(bindable.allocatable),
         },
       })),
     });
