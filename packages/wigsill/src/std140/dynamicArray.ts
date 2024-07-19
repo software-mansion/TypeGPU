@@ -10,7 +10,7 @@ import {
   ValidationError,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { ResolutionCtx, WgslResolvable } from '../types';
+import type { ResolutionCtx } from '../types';
 import { code } from '../wgslCode';
 import { WgslIdentifier } from '../wgslIdentifier';
 import alignIO from './alignIO';
@@ -21,8 +21,7 @@ class DynamicArrayDataType<TElement extends WgslData<unknown>>
   extends Schema<Unwrap<TElement>[]>
   implements WgslData<Unwrap<TElement>[]>
 {
-  private readonly _identifier = new WgslIdentifier();
-  private readonly _definitionCode: WgslResolvable;
+  private _label: string | undefined;
 
   public readonly byteAlignment: number;
   public readonly size: number;
@@ -39,16 +38,10 @@ class DynamicArrayDataType<TElement extends WgslData<unknown>>
     );
 
     this.size = this.measure(MaxValue).size;
-
-    this._definitionCode = code`
-    struct ${this._identifier} {
-      count: u32,
-      values: array<${this._elementType}, ${this.capacity}>,
-    }`;
   }
 
   $name(label: string) {
-    this._identifier.$name(label);
+    this._label = label;
     return this;
   }
 
@@ -107,9 +100,15 @@ class DynamicArrayDataType<TElement extends WgslData<unknown>>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    ctx.addDeclaration(this._definitionCode);
+    const identifier = new WgslIdentifier().$name(this._label);
 
-    return ctx.resolve(this._identifier);
+    ctx.addDeclaration(code`
+      struct ${identifier} {
+        count: u32,
+        values: array<${this._elementType}, ${this.capacity}>,
+      }`);
+
+    return ctx.resolve(identifier);
   }
 }
 

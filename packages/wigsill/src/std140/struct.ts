@@ -11,7 +11,7 @@ import {
   object,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { ResolutionCtx, WgslResolvable } from '../types';
+import type { ResolutionCtx } from '../types';
 import { code } from '../wgslCode';
 import { WgslIdentifier } from '../wgslIdentifier';
 import type { AnyWgslData, WgslData } from './types';
@@ -20,31 +20,26 @@ class StructDataType<TProps extends Record<string, AnyWgslData>>
   extends Schema<UnwrapRecord<TProps>>
   implements WgslData<UnwrapRecord<TProps>>
 {
+  private _label: string | undefined;
   private _innerSchema: ISchema<UnwrapRecord<TProps>>;
-  private readonly _identifier = new WgslIdentifier();
-  private readonly _definitionCode: WgslResolvable;
 
   public readonly byteAlignment: number;
   public readonly size: number;
 
-  constructor(properties: TProps) {
+  constructor(private readonly _properties: TProps) {
     super();
 
-    this._innerSchema = object(properties);
+    this._innerSchema = object(_properties);
 
-    this.byteAlignment = Object.values(properties)
+    this.byteAlignment = Object.values(_properties)
       .map((prop) => prop.byteAlignment)
       .reduce((a, b) => (a > b ? a : b));
 
     this.size = this.measure(MaxValue).size;
-
-    this._definitionCode = code`struct ${this._identifier} {
-      ${Object.entries(properties).map(([key, field]) => code`${key}: ${field},\n`)}
-    }`;
   }
 
   $name(label: string) {
-    this._identifier.$name(label);
+    this._label = label;
     return this;
   }
 
@@ -69,9 +64,15 @@ class StructDataType<TProps extends Record<string, AnyWgslData>>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    ctx.addDeclaration(this._definitionCode);
+    const identifier = new WgslIdentifier().$name(this._label);
 
-    return ctx.resolve(this._identifier);
+    ctx.addDeclaration(code`
+      struct ${identifier} {
+        ${Object.entries(this._properties).map(([key, field]) => code`${key}: ${field},\n`)}
+      }
+    `);
+
+    return ctx.resolve(identifier);
   }
 }
 
