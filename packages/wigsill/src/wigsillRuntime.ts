@@ -1,8 +1,8 @@
-import type { WgslBufferUsage } from './wgslBufferUsage';
 import ProgramBuilder, { type Program } from './programBuilder';
 import type StructDataType from './std140/struct';
 import type { AnyWgslData } from './std140/types';
 import type { BufferUsage, Wgsl, WgslAllocatable } from './types';
+import type { WgslBufferUsage } from './wgslBufferUsage';
 import { type WgslCode, code } from './wgslCode';
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
