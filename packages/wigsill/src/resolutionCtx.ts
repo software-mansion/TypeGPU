@@ -34,9 +34,18 @@ class ResolutionCache {
   >();
 
   private _nextFreeBindingIdx = 0;
-  public readonly usedBindables = new Set<WgslBufferBindable>();
+  private readonly _usedBindables = new Set<WgslBufferBindable>();
+  private readonly _declarations: string[] = [];
 
   constructor(private readonly _bindingGroup: number) {}
+
+  get usedBindables(): Iterable<WgslBufferBindable> {
+    return this._usedBindables;
+  }
+
+  get declarations(): Iterable<string> {
+    return this._declarations;
+  }
 
   /**
    * @param item The item whose resolution should be either retrieved from the cache (if there is a cache hit), or resolved
@@ -75,15 +84,19 @@ class ResolutionCache {
   }
 
   reserveBindingEntry(_bindable: WgslBufferBindable) {
-    this.usedBindables.add(_bindable);
+    this._usedBindables.add(_bindable);
+
     return { group: this._bindingGroup, idx: this._nextFreeBindingIdx++ };
+  }
+
+  addDeclaration(declaration: string) {
+    this._declarations.push(declaration);
   }
 }
 
 export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _names: NameRegistry;
   private readonly _cache: ResolutionCache;
-  private readonly _declarations = new Set<string>();
 
   ancestors: WgslResolvable[] = [];
   usedSlots = new Set<WgslSlot<unknown>>();
@@ -110,12 +123,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   nameFor(item: WgslResolvable): string {
     return this._names.nameFor(item);
-  }
-
-  recordDeclarations(declarations: Iterable<string>) {
-    for (const decl of declarations) {
-      this._declarations.add(decl);
-    }
   }
 
   readSlot<T>(slot: WgslSlot<T>): T {
@@ -148,20 +155,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       },
     );
 
-    // Only adding declarations of those items that did not exist in the cache already
-    if (!cacheHit) {
-      this.recordDeclarations(itemCtx.declarations);
-    }
-
-    return `${[...this._declarations.values()].join('\n\n')}${result}`;
+    return `${[...this._cache.declarations].join('\n\n')}${result}`;
   }
 }
 
 class ScopedResolutionCtx implements ResolutionCtx {
   readonly ancestors: WgslResolvable[];
   usedSlots = new Set<WgslSlot<unknown>>();
-
-  public readonly declarations: string[] = [];
 
   constructor(
     private readonly _parent: ResolutionCtxImpl | ScopedResolutionCtx,
@@ -172,7 +172,7 @@ class ScopedResolutionCtx implements ResolutionCtx {
   }
 
   addDeclaration(declaration: WgslResolvable): void {
-    this.declarations.push(this.resolve(declaration));
+    this._cache.addDeclaration(this.resolve(declaration));
   }
 
   addBinding(bindable: WgslBufferBindable): void {
@@ -185,10 +185,6 @@ class ScopedResolutionCtx implements ResolutionCtx {
 
   nameFor(token: WgslResolvable): string {
     return this._parent.nameFor(token);
-  }
-
-  recordDeclarations(declarations: Iterable<string>) {
-    this._parent.recordDeclarations(declarations);
   }
 
   readSlot<T>(slot: WgslSlot<T>): T {
@@ -229,11 +225,6 @@ class ScopedResolutionCtx implements ResolutionCtx {
         return { result, bindingMap };
       },
     );
-
-    // Only adding declarations of those items that did not exist in the cache already
-    if (!cacheHit) {
-      this.recordDeclarations(itemCtx.declarations);
-    }
 
     return result;
   }
