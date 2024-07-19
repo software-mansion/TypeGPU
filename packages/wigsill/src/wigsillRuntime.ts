@@ -1,7 +1,9 @@
-import type { AnyWgslData } from './std140/types';
-import type { BufferUsage, WgslAllocatable } from './types';
 import type { WgslBufferUsage } from './wgslBufferUsage';
-
+import ProgramBuilder, { type Program } from './programBuilder';
+import type StructDataType from './std140/struct';
+import type { AnyWgslData } from './std140/types';
+import type { BufferUsage, Wgsl, WgslAllocatable } from './types';
+import { type WgslCode, code } from './wgslCode';
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a runtime can interact via GPU buffers.
@@ -10,6 +12,9 @@ class WigsillRuntime {
   private _entryToBufferMap = new WeakMap<WgslAllocatable, GPUBuffer>();
   private _readBuffer: GPUBuffer | null = null;
   private _taskQueue = new TaskQueue();
+  private _pipelineExecutors: PipelineExecutor<
+    GPURenderPipeline | GPUComputePipeline
+  >[] = [];
 
   constructor(public readonly device: GPUDevice) {}
 
@@ -74,6 +79,148 @@ class WigsillRuntime {
       return value;
     });
   }
+
+  makeRenderPipeline(options: {
+    vertex?: {
+      args: Wgsl[];
+      code: WgslCode;
+      output: StructDataType<Record<string, AnyWgslData>>;
+    };
+    fragment?: {
+      args: Wgsl[];
+      code: WgslCode;
+      output: Wgsl;
+      target: Iterable<GPUColorTargetState | null>;
+    };
+    primitive: GPUPrimitiveState;
+    externalLayouts?: GPUBindGroupLayout[];
+    externalDeclarations?: Wgsl[];
+    label?: string;
+  }) {
+    const program = new ProgramBuilder(
+      this,
+      code`
+      ${
+        options.vertex
+          ? code`
+              @vertex fn main_vertex(${options.vertex.args.flatMap((arg) => [arg, ', '])}) -> ${options.vertex.output} {
+                ${options.vertex.code}
+              }
+            `
+          : ''
+      }
+      ${
+        options.fragment
+          ? code`
+              @fragment fn main_frag(${options.fragment.args.flatMap((arg) => [arg, ', '])}) -> ${options.fragment.output} {
+                ${options.fragment.code}
+            }`
+          : ''
+      }
+      ${options.externalDeclarations?.flatMap((arg) => [arg, '\n']) ?? ''}
+      `,
+    ).build({
+      bindingGroup: (options.externalLayouts ?? []).length,
+      shaderStage:
+        (options.vertex ? GPUShaderStage.VERTEX : 0) |
+        (options.fragment ? GPUShaderStage.FRAGMENT : 0),
+    });
+
+    const shaderModule = this.device.createShaderModule({
+      code: program.code,
+    });
+
+    const pipelineLayout = this.device.createPipelineLayout({
+      label: options.label ?? '',
+      bindGroupLayouts: [
+        ...(options.externalLayouts ?? []),
+        program.bindGroupLayout,
+      ],
+    });
+
+    const renderPipeline = this.device.createRenderPipeline({
+      label: options.label ?? '',
+      layout: pipelineLayout,
+      vertex: {
+        module: shaderModule,
+      },
+      fragment: {
+        module: shaderModule,
+        targets: options.fragment?.target ?? [],
+      },
+      primitive: options.primitive,
+    });
+
+    const executor = new RenderPipelineExecutor(
+      this.device,
+      renderPipeline,
+      program,
+      options.externalLayouts?.length ?? 0,
+    );
+
+    this._pipelineExecutors.push(executor);
+    return executor;
+  }
+
+  makeComputePipeline(options: {
+    workgroupSize: [number, number?, number?];
+    args: Wgsl[];
+    code: WgslCode;
+    externalLayouts?: GPUBindGroupLayout[];
+    externalDeclarations?: Wgsl[];
+    label?: string;
+  }) {
+    const program = new ProgramBuilder(
+      this,
+      code`
+        @compute @workgroup_size(${options.workgroupSize.join(', ')}) fn main_compute(${options.args.flatMap((arg) => [arg, ', '])}) {
+          ${options.code}
+        }
+
+        ${options.externalDeclarations?.flatMap((arg) => [arg, '\n']) ?? ''}
+      `,
+    ).build({
+      bindingGroup: (options.externalLayouts ?? []).length,
+      shaderStage: GPUShaderStage.COMPUTE,
+    });
+
+    const shaderModule = this.device.createShaderModule({
+      code: program.code,
+    });
+
+    const pipelineLayout = this.device.createPipelineLayout({
+      label: options.label ?? '',
+      bindGroupLayouts: [
+        ...(options.externalLayouts ?? []),
+        program.bindGroupLayout,
+      ],
+    });
+
+    const computePipeline = this.device.createComputePipeline({
+      label: options.label ?? '',
+      layout: pipelineLayout,
+      compute: {
+        module: shaderModule,
+      },
+    });
+
+    const executor = new ComputePipelineExecutor(
+      this.device,
+      computePipeline,
+      program,
+      options.externalLayouts?.length ?? 0,
+    );
+    this._pipelineExecutors.push(executor);
+    return executor;
+  }
+
+  flush() {
+    this.device.queue.submit(
+      this._pipelineExecutors
+        .map((executor) => executor.flush())
+        .filter((encoded): encoded is GPUCommandBuffer => !!encoded),
+    );
+  }
 }
 
 class TaskQueue<T> {
@@ -105,6 +252,83 @@ class TaskQueue<T> {
       }
     }
     this._pending = false;
+  }
+}
+
+class PipelineExecutor<T extends GPURenderPipeline | GPUComputePipeline> {
+  public commandEncoder: GPUCommandEncoder | undefined;
+
+  constructor(
+    public device: GPUDevice,
+    public pipeline: T,
+    public program: Program,
+    public externalLayoutCount: number,
+    protected label?: string,
+  ) {}
+
+  flush() {
+    const commandBuffer = this.commandEncoder?.finish();
+    this.commandEncoder = undefined;
+    return commandBuffer;
+  }
+}
+
+class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
+  execute(
+    options: GPURenderPassDescriptor & {
+      vertexCount: number;
+      externalBindGroups?: GPUBindGroup[];
+    },
+  ) {
+    const { vertexCount, externalBindGroups, ...descriptor } = options;
+
+    if ((externalBindGroups?.length ?? 0) !== this.externalLayoutCount) {
+      throw new Error(
+        `External bind group count doesn't match the external bind group layout configuration. Expected ${this.externalLayoutCount}, got: ${externalBindGroups?.length ?? 0}`,
+      );
+    }
+
+    if (!this.commandEncoder) {
+      this.commandEncoder = this.device.createCommandEncoder({
+        label: this.label ?? '',
+      });
+    }
+
+    const passEncoder = this.commandEncoder.beginRenderPass({
+      ...descriptor,
+      label: this.label ?? '',
+    });
+    passEncoder.setPipeline(this.pipeline);
+
+    (externalBindGroups ?? []).forEach((group, index) =>
+      passEncoder.setBindGroup(index, group),
+    );
+
+    passEncoder.setBindGroup(
+      (externalBindGroups ?? []).length,
+      this.program.bindGroup,
+    );
+
+    passEncoder.draw(vertexCount);
+    passEncoder.end();
+  }
+}
+
+class ComputePipelineExecutor extends PipelineExecutor<GPUComputePipeline> {
+  execute(workgroupCounts: [number, number?, number?]) {
+    if (!this.commandEncoder) {
+      this.commandEncoder = this.device.createCommandEncoder({
+        label: this.label ?? '',
+      });
+    }
+
+    const passEncoder = this.commandEncoder.beginComputePass({
+      label: this.label ?? '',
+    });
+    passEncoder.setPipeline(this.pipeline);
+    passEncoder.setBindGroup(0, this.program.bindGroup);
+    passEncoder.dispatchWorkgroups(...workgroupCounts);
+    passEncoder.end();
   }
 }
 

@@ -5,7 +5,7 @@
 */
 
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
-import { ProgramBuilder, createRuntime, f32, wgsl } from 'wigsill';
+import { createRuntime, f32, struct, vec2f, vec4f, wgsl } from 'wigsill';
 
 // Layout
 const [video, canvas] = await Promise.all([
@@ -17,54 +17,6 @@ const thresholdData = wgsl
   .$name('threshold')
   .$allowUniform()
   .asUniform();
-
-const shaderCode = wgsl`
-@group(0) @binding(0) var sampler_ : sampler;
-@group(0) @binding(1) var videoTexture : texture_external;
-
-struct VertexOutput {
-  @builtin(position) Position : vec4f,
-  @location(0) fragUV : vec2f,
-}
-
-@vertex
-fn vert_main(@builtin(vertex_index) VertexIndex: u32) -> VertexOutput {
-  const pos = array(
-    vec2( 1.0,  1.0),
-    vec2( 1.0, -1.0),
-    vec2(-1.0, -1.0),
-    vec2( 1.0,  1.0),
-    vec2(-1.0, -1.0),
-    vec2(-1.0,  1.0),
-  );
-
-  const uv = array(
-    vec2(1.0, 0.0),
-    vec2(1.0, 1.0),
-    vec2(0.0, 1.0),
-    vec2(1.0, 0.0),
-    vec2(0.0, 1.0),
-    vec2(0.0, 0.0),
-  );
-
-  var output : VertexOutput;
-  output.Position = vec4(pos[VertexIndex], 0.0, 1.0);
-  output.fragUV = uv[VertexIndex];
-  return output;
-}
-
-@fragment
-fn frag_main(@location(0) fragUV : vec2f) -> @location(0) vec4f {
-  var color = textureSampleBaseClampToEdge(videoTexture, sampler_, fragUV);
-  let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
-
-  if grey < ${thresholdData} {
-    return vec4f(0, 0, 0, 1);
-  }
-
-  return vec4f(1);
-}
-`;
 
 if (navigator.mediaDevices.getUserMedia) {
   video.srcObject = await navigator.mediaDevices.getUserMedia({
@@ -84,43 +36,69 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const program = new ProgramBuilder(runtime, shaderCode).build({
-  bindingGroup: 1,
-  shaderStage: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-});
-
-const shaderModule = device.createShaderModule({
-  code: program.code,
-});
-
-const layout = device.createPipelineLayout({
-  bindGroupLayouts: [
-    device.createBindGroupLayout({
-      entries: [
-        {
-          binding: 0,
-          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-          sampler: {},
-        },
-        {
-          binding: 1,
-          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-          externalTexture: {},
-        },
-      ],
-    }),
-    program.bindGroupLayout,
+const bindGroupLayout = device.createBindGroupLayout({
+  entries: [
+    {
+      binding: 0,
+      visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+      sampler: {},
+    },
+    {
+      binding: 1,
+      visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+      externalTexture: {},
+    },
   ],
 });
 
-const renderPipeline = device.createRenderPipeline({
-  layout: layout,
+const outputStruct = struct({
+  '@builtin(position) Position': vec4f,
+  '@location(0) fragUV': vec2f,
+});
+
+const renderProgram = runtime.makeRenderPipeline({
   vertex: {
-    module: shaderModule,
+    args: ['@builtin(vertex_index) VertexIndex: u32'],
+    code: wgsl`
+      const pos = array(
+        vec2( 1.0,  1.0),
+        vec2( 1.0, -1.0),
+        vec2(-1.0, -1.0),
+        vec2( 1.0,  1.0),
+        vec2(-1.0, -1.0),
+        vec2(-1.0,  1.0),
+      );
+
+      const uv = array(
+        vec2(1.0, 0.0),
+        vec2(1.0, 1.0),
+        vec2(0.0, 1.0),
+        vec2(1.0, 0.0),
+        vec2(0.0, 1.0),
+        vec2(0.0, 0.0),
+      );
+
+      var output : ${outputStruct};
+      output.Position = vec4(pos[VertexIndex], 0.0, 1.0);
+      output.fragUV = uv[VertexIndex];
+      return output;
+    `,
+    output: outputStruct,
   },
   fragment: {
-    module: shaderModule,
-    targets: [
+    args: ['@location(0) fragUV : vec2f'],
+    code: wgsl`
+      var color = textureSampleBaseClampToEdge(videoTexture, sampler_, fragUV);
+      let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
+
+      if grey < ${thresholdData} {
+        return vec4f(0, 0, 0, 1);
+      }
+
+      return vec4f(1);
+    `,
+    output: '@location(0) vec4f',
+    target: [
       {
         format: presentationFormat,
       },
@@ -129,6 +107,11 @@ const renderPipeline = device.createRenderPipeline({
   primitive: {
     topology: 'triangle-list',
   },
+  externalLayouts: [bindGroupLayout],
+  externalDeclarations: [
+    wgsl`@group(0) @binding(0) var sampler_ : sampler;`,
+    wgsl`@group(0) @binding(1) var videoTexture : texture_external;`,
+  ],
 });
 
 const sampler = device.createSampler({
@@ -148,13 +131,12 @@ onFrame(() => {
   if (!(video.currentTime > 0)) {
     return;
   }
-
   const resultTexture = device.importExternalTexture({
     source: video,
   });
 
   const bindGroup = device.createBindGroup({
-    layout: renderPipeline.getBindGroupLayout(0),
+    layout: bindGroupLayout,
     entries: [
       {
         binding: 0,
@@ -167,9 +149,7 @@ onFrame(() => {
     ],
   });
 
-  const commandEncoder = device.createCommandEncoder();
-
-  const passEncoder = commandEncoder.beginRenderPass({
+  renderProgram.execute({
     colorAttachments: [
       {
         view: context.getCurrentTexture().createView(),
@@ -178,12 +158,10 @@ onFrame(() => {
         storeOp: 'store',
       },
     ],
+
+    vertexCount: 6,
+    externalBindGroups: [bindGroup],
   });
 
-  passEncoder.setPipeline(renderPipeline);
-  passEncoder.setBindGroup(0, bindGroup);
-  passEncoder.setBindGroup(1, program.bindGroup);
-  passEncoder.draw(6);
-  passEncoder.end();
-  device.queue.submit([commandEncoder.finish()]);
+  runtime.flush();
 });

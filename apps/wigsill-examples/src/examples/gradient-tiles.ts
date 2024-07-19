@@ -10,7 +10,7 @@ import {
   onCleanup,
   onFrame,
 } from '@wigsill/example-toolkit';
-import { ProgramBuilder, createRuntime, u32, wgsl } from 'wigsill';
+import { createRuntime, struct, u32, vec2f, vec4f, wgsl } from 'wigsill';
 
 const runtime = await createRuntime();
 const device = runtime.device;
@@ -19,7 +19,6 @@ const xSpanData = wgsl.buffer(u32).$name('x-span').$allowUniform().asUniform();
 const ySpanData = wgsl.buffer(u32).$name('y-span').$allowUniform().asUniform();
 
 const canvas = await addElement('canvas');
-
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
 const devicePixelRatio = window.devicePixelRatio;
@@ -33,73 +32,52 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const mainCode = wgsl`
-struct VertexOutput {
-  @builtin(position) pos: vec4f,
-  @location(0) uv: vec2f,
-}
-
-@vertex
-fn main_vert(
-  @builtin(vertex_index) VertexIndex: u32
-) -> VertexOutput {
-  var pos = array<vec2f, 4>(
-    vec2(0.5, 0.5), // top-right
-    vec2(-0.5, 0.5), // top-left
-    vec2(0.5, -0.5), // bottom-right
-    vec2(-0.5, -0.5) // bottom-left
-  );
-
-  var uv = array<vec2f, 4>(
-    vec2(1., 1.), // top-right
-    vec2(0., 1.), // top-left
-    vec2(1., 0.), // bottom-right
-    vec2(0., 0.) // bottom-left
-  );
-
-  var output: VertexOutput;
-  output.pos = vec4f(pos[VertexIndex], 0.0, 1.0);
-  output.uv = uv[VertexIndex];
-  return output;
-}
-
-@fragment
-fn main_frag(
-  @builtin(position) Position: vec4f,
-  @location(0) uv: vec2f,
-) -> @location(0) vec4f {
-  let red = floor(uv.x * f32(${xSpanData})) / f32(${xSpanData});
-  let green = floor(uv.y * f32(${ySpanData})) / f32(${ySpanData});
-  return vec4(red, green, 0.5, 1.0);
-}
-  `;
-
-const program = new ProgramBuilder(runtime, mainCode).build({
-  bindingGroup: 0,
-  shaderStage: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+const outputStruct = struct({
+  '@builtin(position) pos': vec4f,
+  '@location(0) uv': vec2f,
 });
 
-const shaderModule = device.createShaderModule({
-  code: program.code,
-});
-
-const pipeline = device.createRenderPipeline({
-  layout: device.createPipelineLayout({
-    bindGroupLayouts: [program.bindGroupLayout],
-  }),
+const renderPipeline = runtime.makeRenderPipeline({
   vertex: {
-    module: shaderModule,
-    entryPoint: 'main_vert',
+    args: ['@builtin(vertex_index) VertexIndex: u32'],
+    output: outputStruct,
+    code: wgsl`
+      var pos = array<vec2f, 4>(
+        vec2(0.5, 0.5), // top-right
+        vec2(-0.5, 0.5), // top-left
+        vec2(0.5, -0.5), // bottom-right
+        vec2(-0.5, -0.5) // bottom-left
+      );
+
+      var uv = array<vec2f, 4>(
+        vec2(1., 1.), // top-right
+        vec2(0., 1.), // top-left
+        vec2(1., 0.), // bottom-right
+        vec2(0., 0.) // bottom-left
+      );
+
+      var output: ${outputStruct};
+      output.pos = vec4f(pos[VertexIndex], 0.0, 1.0);
+      output.uv = uv[VertexIndex];
+      return output;
+    `,
   },
+
   fragment: {
-    module: shaderModule,
-    entryPoint: 'main_frag',
-    targets: [
+    args: ['@builtin(position) Position: vec4f', '@location(0) uv: vec2f'],
+    code: wgsl.code`
+      let red = floor(uv.x * f32(${xSpanData})) / f32(${xSpanData});
+      let green = floor(uv.y * f32(${ySpanData})) / f32(${ySpanData});
+      return vec4(red, green, 0.5, 1.0);
+    `,
+    output: '@location(0) vec4f',
+    target: [
       {
         format: presentationFormat,
       },
     ],
   },
+
   primitive: {
     topology: 'triangle-strip',
   },
@@ -118,27 +96,22 @@ addParameter(
 );
 
 onFrame(() => {
-  const commandEncoder = device.createCommandEncoder();
   const textureView = context.getCurrentTexture().createView();
 
-  const renderPassDescriptor: GPURenderPassDescriptor = {
+  renderPipeline.execute({
     colorAttachments: [
       {
         view: textureView,
-        clearValue: [0, 0, 0, 1],
+        clearValue: [0, 0, 0, 0],
         loadOp: 'clear',
         storeOp: 'store',
       },
     ],
-  };
 
-  const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-  passEncoder.setPipeline(pipeline);
-  passEncoder.setBindGroup(0, program.bindGroup);
-  passEncoder.draw(4);
-  passEncoder.end();
+    vertexCount: 4,
+  });
 
-  device.queue.submit([commandEncoder.finish()]);
+  runtime.flush();
 });
 
 onCleanup(() => {
