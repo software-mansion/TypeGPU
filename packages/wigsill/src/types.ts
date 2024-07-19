@@ -1,19 +1,15 @@
 import type { AnyWgslData } from './std140/types';
-import type { WgslBufferUsage } from './wgslBufferUsage';
 
 export type Wgsl = string | number | WgslResolvable;
 
 export interface ResolutionCtx {
   addDependency(item: WgslResolvable): void;
-  addAllocatable(allocatable: WgslAllocatable): void;
+  addBinding(bindable: WgslBufferBindable): void;
   nameFor(token: WgslResolvable): string;
   /** @throws {MissingBindingError}  */
   requireBinding<T>(bindable: WgslBindable<T>): T;
   tryBinding<T>(bindable: WgslBindable<T>, defaultValue: T): T;
   resolve(item: Wgsl): string;
-  addBufferUsage<TData extends AnyWgslData, TUsage extends BufferUsage>(
-    bufferUsage: WgslBufferUsage<TData, TUsage>,
-  ): void;
 }
 
 export interface WgslResolvable {
@@ -55,8 +51,18 @@ export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData>
    * binary.
    */
   readonly dataType: TData;
-  flags: GPUBufferUsageFlags;
-  definitionCode(bindingGroup: number, bindingIdx: number): WgslResolvable;
+  readonly extraFlags: GPUBufferUsageFlags;
+}
+
+/**
+ * TODO: Rename to `WgslBindable` after granular bindings are merged.
+ */
+export interface WgslBufferBindable<
+  TData extends AnyWgslData = AnyWgslData,
+  TUsage extends BufferUsage = BufferUsage,
+> extends WgslResolvable {
+  readonly allocatable: WgslAllocatable<TData>;
+  readonly usage: TUsage;
 }
 
 export type BufferUsage = 'uniform' | 'readonlyStorage' | 'mutableStorage';

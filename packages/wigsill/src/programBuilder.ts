@@ -1,17 +1,16 @@
 import { MissingBindingError } from './errors';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
-import type { AnyWgslData } from './std140/types';
 import {
   type BindPair,
   type BufferUsage,
   type ResolutionCtx,
   type Wgsl,
-  type WgslAllocatable,
   type WgslBindable,
+  type WgslBufferBindable,
   type WgslResolvable,
   isResolvable,
 } from './types';
-import type { WgslBufferUsage } from './wgslBufferUsage';
+import { code } from './wgslCode';
 import type WigsillRuntime from './wigsillRuntime';
 
 export type Program = {
@@ -38,8 +37,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _names: NameRegistry;
 
   public dependencies: WgslResolvable[] = [];
-  public usedMemory = new Set<WgslAllocatable>();
-  public usedBuffers = new Set<WgslBufferUsage<AnyWgslData, BufferUsage>>();
+  public usedBindables = new Set<WgslBufferBindable>();
 
   private _memoizedResults = new WeakMap<WgslResolvable, string>();
 
@@ -53,16 +51,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     addUnique(this.dependencies, item);
   }
 
-  addAllocatable(allocatable: WgslAllocatable): void {
-    this.usedMemory.add(allocatable);
-  }
-
-  addBufferUsage<TData extends AnyWgslData, TUsage extends BufferUsage>(
-    bufferUsage: WgslBufferUsage<TData, TUsage>,
-  ) {
-    this.usedBuffers.add(
-      bufferUsage as WgslBufferUsage<AnyWgslData, BufferUsage>,
-    );
+  addBinding(bindable: WgslBufferBindable): void {
+    this.usedBindables.add(bindable);
   }
 
   nameFor(item: WgslResolvable): string {
@@ -115,6 +105,18 @@ type BuildOptions = {
   nameRegistry?: NameRegistry;
 };
 
+function usageToBindingType(usage: BufferUsage): GPUBufferBindingType {
+  if (usage === 'uniform') {
+    return 'uniform';
+  }
+
+  if (usage === 'mutableStorage') {
+    return 'storage';
+  }
+
+  return 'read-only-storage';
+}
+
 export default class ProgramBuilder {
   private bindings: BindPair<unknown>[] = [];
 
@@ -136,29 +138,40 @@ export default class ProgramBuilder {
 
     // Resolving code
     const codeString = ctx.resolve(this.root);
-    const usedMemory = Array.from(ctx.usedMemory);
-    const usedBuffers = Array.from(ctx.usedBuffers);
+    const usedBindables = Array.from(ctx.usedBindables);
 
-    usedBuffers.forEach((memory, idx) => {
-      ctx.addDependency(memory.definitionCode(options.bindingGroup, idx));
+    usedBindables.forEach((bindable, idx) => {
+      let bindingType = 'storage, read';
+
+      if (bindable.usage === 'uniform') {
+        bindingType = 'uniform';
+      }
+
+      if (bindable.usage === 'mutableStorage') {
+        bindingType = 'storage, read_write';
+      }
+
+      ctx.addDependency(
+        code`@group(${options.bindingGroup}) @binding(${idx}) var<${bindingType}> ${bindable}: ${bindable.allocatable.dataType};`,
+      );
     });
 
     const bindGroupLayout = this.runtime.device.createBindGroupLayout({
-      entries: usedBuffers.map((memory, idx) => ({
+      entries: usedBindables.map((bindable, idx) => ({
         binding: idx,
         visibility: options.shaderStage,
         buffer: {
-          type: memory.getBindingType(),
+          type: usageToBindingType(bindable.usage),
         },
       })),
     });
 
     const bindGroup = this.runtime.device.createBindGroup({
       layout: bindGroupLayout,
-      entries: usedBuffers.map((memory, idx) => ({
+      entries: usedBindables.map((bindable, idx) => ({
         binding: idx,
         resource: {
-          buffer: this.runtime.bufferFor(memory.buffer),
+          buffer: this.runtime.bufferFor(bindable.allocatable),
         },
       })),
     });

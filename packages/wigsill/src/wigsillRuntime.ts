@@ -26,7 +26,7 @@ class WigsillRuntime {
 
     if (!buffer) {
       buffer = this.device.createBuffer({
-        usage: memory.flags,
+        usage: memory.extraFlags,
         size: memory.dataType.size,
       });
 

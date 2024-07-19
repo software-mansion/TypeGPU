@@ -37,17 +37,19 @@ const firstMatrixBuffer = wgsl
   .buffer(matrixStruct)
   .$name('first_matrix')
   .$allowReadonlyStorage();
+
 const secondMatrixBuffer = wgsl
   .buffer(matrixStruct)
   .$name('second_matrix')
   .$allowReadonlyStorage();
+
 const resultMatrixBuffer = wgsl
   .buffer(matrixStruct)
   .$name('result_matrix')
   .$allowMutableStorage();
 
-const firstMatrixData = firstMatrixBuffer.asReadOnlyStorage();
-const secondMatrixData = secondMatrixBuffer.asReadOnlyStorage();
+const firstMatrixData = firstMatrixBuffer.asReadonlyStorage();
+const secondMatrixData = secondMatrixBuffer.asReadonlyStorage();
 const resultMatrixData = resultMatrixBuffer.asStorage();
 
 const program = runtime.makeComputePipeline({

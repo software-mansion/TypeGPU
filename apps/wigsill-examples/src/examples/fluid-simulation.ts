@@ -76,7 +76,7 @@ const nextStateBuffer = wgsl
   .$allowMutableStorage();
 
 const viscosityData = viscosityBuffer.asUniform();
-const currentStateData = currentStateBuffer.asReadOnlyStorage();
+const currentStateData = currentStateBuffer.asReadonlyStorage();
 const sizeData = sizeBuffer.asUniform();
 const nextStateData = nextStateBuffer.asStorage();
 const debugInfoData = debugInfoBuffer.asStorage();

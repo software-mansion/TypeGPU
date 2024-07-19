@@ -18,33 +18,33 @@ import type WigsillRuntime from './wigsillRuntime';
 export interface WgslBuffer<
   TData extends AnyWgslData,
   TAllows extends BufferUsage = never,
-> extends WgslResolvable,
-    WgslAllocatable<TData> {
+> extends WgslAllocatable<TData> {
   $name(label: string): WgslBuffer<TData, TAllows>;
-  fieldIdentifier: WgslIdentifier;
-
-  write(runtime: WigsillRuntime, data: Parsed<TData>): void;
-  read(runtime: WigsillRuntime): Promise<Parsed<TData>>;
-  flags: GPUBufferUsageFlags;
-  definitionCode(bindingGroup: number, bindingIdx: number): WgslResolvable;
   $allowUniform(): WgslBuffer<TData, TAllows | 'uniform'>;
   $allowReadonlyStorage(): WgslBuffer<TData, TAllows | 'readonlyStorage'>;
   $allowMutableStorage(): WgslBuffer<TData, TAllows | 'mutableStorage'>;
+  $addFlags(flags: GPUBufferUsageFlags): WgslBuffer<TData, TAllows>;
+
+  write(runtime: WigsillRuntime, data: Parsed<TData>): void;
+  read(runtime: WigsillRuntime): Promise<Parsed<TData>>;
+
   asUniform(): 'uniform' extends TAllows
     ? WgslBufferUsage<TData, 'uniform'>
     : null;
+
   asStorage(): 'mutableStorage' extends TAllows
     ? WgslBufferUsage<TData, 'mutableStorage'>
     : null;
-  asReadOnlyStorage(): 'readonlyStorage' extends TAllows
+
+  asReadonlyStorage(): 'readonlyStorage' extends TAllows
     ? WgslBufferUsage<TData, 'readonlyStorage'>
     : null;
-  $addFlags(flags: GPUBufferUsageFlags): WgslBuffer<TData, TAllows>;
 }
 
-export function buffer<TUsage extends BufferUsage, TData extends AnyWgslData>(
-  typeSchema: TData,
-): WgslBuffer<TData, TUsage> {
+export function buffer<
+  TData extends AnyWgslData,
+  TUsage extends BufferUsage = never,
+>(typeSchema: TData): WgslBuffer<TData, TUsage> {
   return new WgslBufferImpl<TData, TUsage>(typeSchema);
 }
 
@@ -58,8 +58,9 @@ class WgslBufferImpl<
 > implements WgslBuffer<TData, TAllows>
 {
   public fieldIdentifier = new WgslIdentifier();
-  public flags: GPUBufferUsageFlags =
+  public extraFlags: GPUBufferUsageFlags =
     GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
+
   private allowedUsages: {
     uniform: WgslBufferUsage<TData, TAllows | 'uniform'> | null;
     storage: WgslBufferUsage<TData, TAllows | 'mutableStorage'> | null;
@@ -69,6 +70,7 @@ class WgslBufferImpl<
     storage: null,
     readOnlyStorage: null,
   };
+
   public debugLabel?: string | undefined;
 
   constructor(public readonly dataType: TData) {}
@@ -80,9 +82,6 @@ class WgslBufferImpl<
   }
 
   resolve(ctx: ResolutionCtx): string {
-    // after resolving all dependencies, add memory.
-    ctx.addAllocatable(this);
-
     return ctx.resolve(this.fieldIdentifier);
   }
 
@@ -159,7 +158,7 @@ class WgslBufferImpl<
 
   // Temporary solution
   $addFlags(flags: GPUBufferUsageFlags) {
-    this.flags |= flags;
+    this.extraFlags |= flags;
     return this;
   }
 
@@ -179,7 +178,7 @@ class WgslBufferImpl<
       : null;
   }
 
-  asReadOnlyStorage(): 'readonlyStorage' extends TAllows
+  asReadonlyStorage(): 'readonlyStorage' extends TAllows
     ? WgslBufferUsage<TData, 'readonlyStorage'>
     : null {
     return this.allowedUsages
