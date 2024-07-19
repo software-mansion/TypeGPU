@@ -110,7 +110,7 @@ describe('wgsl.slot', () => {
 
     const wrapperFn = wgsl.fn('wrapper')`() {
       return ${getColorWithGreen}();
-    }`;
+    }`.with(colorSlot, RED);
 
     const actual = wgsl`
       fn main() {
