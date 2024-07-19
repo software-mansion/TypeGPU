@@ -17,7 +17,7 @@ export type ResolutionCtxImplOptions = {
   readonly bindingGroup?: number;
 };
 
-type BindingMap = Map<WgslSlot<unknown>, unknown>;
+type SlotToValueMap = Map<WgslSlot<unknown>, unknown>;
 
 const usageToVarTemplateMap: Record<BufferUsage, string> = {
   uniform: 'uniform',
@@ -26,11 +26,11 @@ const usageToVarTemplateMap: Record<BufferUsage, string> = {
 };
 
 class ResolutionCache {
-  private readonly _memoizedResults = new WeakMap<
+  private readonly _memoizedResolves = new WeakMap<
     // WeakMap because if the resolvable does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
     WgslResolvable,
-    { bindingMap: BindingMap; result: string }[]
+    { slotToValueMap: SlotToValueMap; result: string }[]
   >();
 
   private _nextFreeBindingIdx = 0;
@@ -52,35 +52,35 @@ class ResolutionCache {
    * with the `compute` method.
    * @param compute Returns the resolved item and the corresponding bindingMap. This result will be discarded if a sufficient cache entry is found.
    */
-  get(
-    item: WgslResolvable,
-    readSlot: <T>(slot: WgslSlot<T>) => T,
-    compute: () => {
-      result: string;
-      bindingMap: Map<WgslSlot<unknown>, unknown>;
-    },
-  ): { result: string; cacheHit: boolean } {
+  getOrInstantiate(item: WgslResolvable, itemCtx: ResolutionCtx): string {
     // All memoized versions of `item`
-    const memoizedEntries = this._memoizedResults.get(item) ?? [];
+    const instances = this._memoizedResolves.get(item) ?? [];
 
-    for (const memoizedEntry of memoizedEntries) {
-      const bindPairs = [...memoizedEntry.bindingMap.entries()];
+    for (const instance of instances) {
+      const slotValuePairs = [...instance.slotToValueMap.entries()];
+
       if (
-        bindPairs.every(
-          ([slot, expectedValue]) => readSlot(slot) === expectedValue,
+        slotValuePairs.every(
+          ([slot, expectedValue]) => itemCtx.readSlot(slot) === expectedValue,
         )
       ) {
-        return { result: memoizedEntry.result, cacheHit: true };
+        return instance.result;
       }
     }
 
-    // If we got here, no item with the given bindings exists in cache yet
-    const { result, bindingMap } = compute();
+    // If we got here, no item with the given slot-to-value combo exists in cache yet
+    const result = item.resolve(itemCtx);
 
-    memoizedEntries.push({ bindingMap, result });
-    this._memoizedResults.set(item, memoizedEntries);
+    // We know which bindables the item used while resolving
+    const slotToValueMap = new Map<WgslSlot<unknown>, unknown>();
+    for (const usedSlot of itemCtx.usedSlots) {
+      slotToValueMap.set(usedSlot, itemCtx.readSlot(usedSlot));
+    }
 
-    return { result, cacheHit: false };
+    instances.push({ slotToValueMap, result });
+    this._memoizedResolves.set(item, instances);
+
+    return result;
   }
 
   reserveBindingEntry(_bindable: WgslBufferBindable) {
@@ -139,21 +139,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     const itemCtx = new ScopedResolutionCtx(this, this._cache, localBindings);
-    const { result, cacheHit } = this._cache.get(
-      item,
-      (slot) => itemCtx.readSlot(slot),
-      () => {
-        const result = item.resolve(itemCtx);
-
-        // We know which bindables the item used while resolving
-        const bindingMap = new Map<WgslSlot<unknown>, unknown>();
-        for (const usedSlot of itemCtx.usedSlots) {
-          bindingMap.set(usedSlot, itemCtx.readSlot(usedSlot));
-        }
-
-        return { result, bindingMap };
-      },
-    );
+    const result = this._cache.getOrInstantiate(item, itemCtx);
 
     return `${[...this._cache.declarations].join('\n\n')}${result}`;
   }
@@ -210,22 +196,6 @@ class ScopedResolutionCtx implements ResolutionCtx {
     }
 
     const itemCtx = new ScopedResolutionCtx(this, this._cache, localBindings);
-    const { result, cacheHit } = this._cache.get(
-      item,
-      (slot) => itemCtx.readSlot(slot),
-      () => {
-        const result = item.resolve(itemCtx);
-
-        // We know which bindables the item used while resolving
-        const bindingMap = new Map<WgslSlot<unknown>, unknown>();
-        for (const usedSlot of itemCtx.usedSlots) {
-          bindingMap.set(usedSlot, itemCtx.readSlot(usedSlot));
-        }
-
-        return { result, bindingMap };
-      },
-    );
-
-    return result;
+    return this._cache.getOrInstantiate(item, itemCtx);
   }
 }
