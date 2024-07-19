@@ -40,7 +40,7 @@ class WigsillRuntime {
     return buffer;
   }
 
-  async valueFor(memory: WgslAllocatable): Promise<ArrayBuffer | null> {
+  async valueFor(memory: WgslAllocatable): Promise<ArrayBuffer> {
     return this._taskQueue.enqueue(async () => {
       if (!this._readBuffer || this._readBuffer.size < memory.dataType.size) {
         // destroying the previous buffer

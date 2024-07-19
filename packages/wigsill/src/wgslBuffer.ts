@@ -92,10 +92,6 @@ class WgslBufferImpl<
   async read(runtime: WigsillRuntime): Promise<Parsed<TData>> {
     const arrayBuffer = await runtime.valueFor(this);
 
-    if (!arrayBuffer) {
-      throw new Error('Value could not be received by runtime');
-    }
-
     const res = this.dataType.read(
       new BufferReader(arrayBuffer),
     ) as Parsed<TData>;
