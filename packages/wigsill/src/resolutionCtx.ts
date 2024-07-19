@@ -25,7 +25,7 @@ const usageToVarTemplateMap: Record<BufferUsage, string> = {
   readonly_storage: 'storage, read',
 };
 
-class ResolutionCache {
+class SharedResolutionState {
   private readonly _memoizedResolves = new WeakMap<
     // WeakMap because if the resolvable does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
@@ -37,7 +37,10 @@ class ResolutionCache {
   private readonly _usedBindables = new Set<WgslBufferBindable>();
   private readonly _declarations: string[] = [];
 
-  constructor(private readonly _bindingGroup: number) {}
+  constructor(
+    public readonly names: NameRegistry,
+    private readonly _bindingGroup: number,
+  ) {}
 
   get usedBindables(): Iterable<WgslBufferBindable> {
     return this._usedBindables;
@@ -95,8 +98,7 @@ class ResolutionCache {
 }
 
 export class ResolutionCtxImpl implements ResolutionCtx {
-  private readonly _names: NameRegistry;
-  private readonly _cache: ResolutionCache;
+  private readonly _shared: SharedResolutionState;
 
   ancestors: WgslResolvable[] = [];
   usedSlots = new Set<WgslSlot<unknown>>();
@@ -105,12 +107,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
    * @throws {MemoryArenaConflict}
    */
   constructor({ names, bindingGroup }: ResolutionCtxImplOptions) {
-    this._names = names;
-    this._cache = new ResolutionCache(bindingGroup ?? 0);
+    this._shared = new SharedResolutionState(names, bindingGroup ?? 0);
   }
 
   get usedBindables() {
-    return this._cache.usedBindables;
+    return this._shared.usedBindables;
   }
 
   addDeclaration(_declaration: WgslResolvable) {
@@ -122,7 +123,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   nameFor(item: WgslResolvable): string {
-    return this._names.nameFor(item);
+    return this._shared.names.nameFor(item);
   }
 
   readSlot<T>(slot: WgslSlot<T>): T {
@@ -140,12 +141,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     const itemCtx = new ScopedResolutionCtx(
       this,
-      this._cache,
+      this._shared,
       slotValueOverrides,
     );
-    const result = this._cache.getOrInstantiate(item, itemCtx);
+    const result = this._shared.getOrInstantiate(item, itemCtx);
 
-    return `${[...this._cache.declarations].join('\n\n')}${result}`;
+    return `${[...this._shared.declarations].join('\n\n')}${result}`;
   }
 }
 
@@ -155,18 +156,18 @@ class ScopedResolutionCtx implements ResolutionCtx {
 
   constructor(
     private readonly _parent: ResolutionCtxImpl | ScopedResolutionCtx,
-    private readonly _cache: ResolutionCache,
+    private readonly _shared: SharedResolutionState,
     private readonly _slotValuePairs: SlotValuePair<unknown>[],
   ) {
     this.ancestors = [..._parent.ancestors, _parent];
   }
 
   addDeclaration(declaration: WgslResolvable): void {
-    this._cache.addDeclaration(this.resolve(declaration));
+    this._shared.addDeclaration(this.resolve(declaration));
   }
 
   addBinding(bindable: WgslBufferBindable): void {
-    const { group, idx } = this._cache.reserveBindingEntry(bindable);
+    const { group, idx } = this._shared.reserveBindingEntry(bindable);
 
     this.addDeclaration(
       code`@group(${group}) @binding(${idx}) var<${usageToVarTemplateMap[bindable.usage]}> ${bindable}: ${bindable.allocatable.dataType};`,
@@ -174,7 +175,7 @@ class ScopedResolutionCtx implements ResolutionCtx {
   }
 
   nameFor(token: WgslResolvable): string {
-    return this._parent.nameFor(token);
+    return this._shared.names.nameFor(token);
   }
 
   readSlot<T>(slot: WgslSlot<T>): T {
@@ -201,9 +202,9 @@ class ScopedResolutionCtx implements ResolutionCtx {
 
     const itemCtx = new ScopedResolutionCtx(
       this,
-      this._cache,
+      this._shared,
       slotValueOverrides,
     );
-    return this._cache.getOrInstantiate(item, itemCtx);
+    return this._shared.getOrInstantiate(item, itemCtx);
   }
 }
