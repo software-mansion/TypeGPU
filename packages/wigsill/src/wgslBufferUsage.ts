@@ -56,4 +56,8 @@ class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
 
     return ctx.resolve(new WgslIdentifier());
   }
+
+  toString(): string {
+    return `${this.usage}:${this._label ?? '<unnamed>'}`;
+  }
 }
