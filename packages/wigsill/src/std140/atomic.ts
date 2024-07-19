@@ -55,6 +55,6 @@ class AtomicImpl<TSchema extends U32 | I32>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    return `atomic<${this.innerData.resolve(ctx)}>`;
+    return `atomic<${ctx.resolve(this.innerData)}>`;
   }
 }
