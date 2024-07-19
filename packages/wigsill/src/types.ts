@@ -65,5 +65,3 @@ export interface WgslBufferBindable<
 }
 
 export type BufferUsage = 'uniform' | 'readonly_storage' | 'mutable_storage';
-
-export type MemoryLocation = { gpuBuffer: GPUBuffer; offset: number };

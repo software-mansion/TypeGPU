@@ -60,16 +60,20 @@ function encodeBrushType(brushType: (typeof BrushTypes)[number]) {
 }
 
 const sizeBuffer = wgsl.buffer(vec2u).$name('size').$allowUniform();
+
 const viscosityBuffer = wgsl.buffer(u32).$name('viscosity').$allowUniform();
+
 const debugInfoBuffer = wgsl
   .buffer(atomic(u32))
   .$name('debug')
   .$allowMutableStorage();
+
 const currentStateBuffer = wgsl
   .buffer(arrayOf(u32, 1024 ** 2))
   .$name('current')
   .$addFlags(GPUBufferUsage.VERTEX)
   .$allowReadonlyStorage();
+
 const nextStateBuffer = wgsl
   .buffer(arrayOf(atomic(u32), 1024 ** 2))
   .$name('next')
