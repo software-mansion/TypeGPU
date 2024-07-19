@@ -378,6 +378,10 @@ function resetGameData() {
     runtime,
     Array.from({ length: 1024 ** 2 }, () => 0),
   );
+  nextStateBuffer.write(
+    runtime,
+    Array.from({ length: 1024 ** 2 }, () => 0),
+  );
 
   const computePipeline = device.createComputePipeline({
     layout: device.createPipelineLayout({
