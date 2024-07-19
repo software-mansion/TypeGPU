@@ -21,11 +21,11 @@ export const Table = forwardRef<TableRef, Props>((props, ref) => {
           gridTemplateColumns: `repeat(${matrix[0]?.length ?? 0}, 1fr)`,
         }}
       >
-        {matrix.flatMap((row) =>
-          row.map((value) => (
+        {matrix.flatMap((row, rowIndex) =>
+          row.map((value, index) => (
             <div
               className="p-2 grid place-items-center text-slate-600"
-              key={value}
+              key={`${value} ${rowIndex} ${index * 1}`}
             >
               {value}
             </div>
