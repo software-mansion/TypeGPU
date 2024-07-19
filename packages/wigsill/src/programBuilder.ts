@@ -2,8 +2,8 @@ import { MissingBindingError } from './errors';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import type { AnyWgslData } from './std140/types';
 import {
-  type BufferUsage,
   type BindPair,
+  type BufferUsage,
   type ResolutionCtx,
   type Wgsl,
   type WgslAllocatable,

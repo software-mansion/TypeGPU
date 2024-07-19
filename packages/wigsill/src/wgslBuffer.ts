@@ -1,10 +1,10 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import type { AnyWgslData } from './std140/types';
 import type {
+  BufferUsage,
   ResolutionCtx,
   WgslAllocatable,
   WgslResolvable,
-  BufferUsage,
 } from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
 import { code } from './wgslCode';
