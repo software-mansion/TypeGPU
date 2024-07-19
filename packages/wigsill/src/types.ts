@@ -21,9 +21,9 @@ export interface ResolutionCtx {
   addDeclaration(item: WgslResolvable): void;
   addBinding(bindable: WgslBufferBindable): void;
   nameFor(token: WgslResolvable): string;
-  /** @throws {MissingBindingError}  */
+  /** @throws {MissingSlotValueError}  */
   readSlot<T>(slot: WgslSlot<T>): T;
-  resolve(item: Wgsl, localBindings?: BindPair<unknown>[]): string;
+  resolve(item: Wgsl, slotValueOverrides?: SlotValuePair<unknown>[]): string;
 }
 
 export interface WgslResolvable {
@@ -49,9 +49,6 @@ export function isWgsl(value: unknown): value is Wgsl {
 }
 
 export interface WgslSlot<T> {
-  /** type-token, not available at runtime */
-  readonly __bindingType: T;
-
   readonly defaultValue: T | undefined;
 
   readonly label?: string | undefined;
@@ -60,7 +57,7 @@ export interface WgslSlot<T> {
 
   /**
    * Used to determine if code generated using either value `a` or `b` in place
-   * of the bindable will be equivalent. Defaults to `Object.is`.
+   * of the slot will be equivalent. Defaults to `Object.is`.
    */
   areEqual(a: T, b: T): boolean;
 }
@@ -77,7 +74,7 @@ export interface WgslResolvableSlot<T extends Wgsl>
   $name(label: string): WgslResolvableSlot<T>;
 }
 
-export type BindPair<T> = [WgslSlot<T>, T];
+export type SlotValuePair<T> = [WgslSlot<T>, T];
 
 export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
   /**

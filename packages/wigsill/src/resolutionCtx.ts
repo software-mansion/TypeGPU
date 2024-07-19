@@ -1,9 +1,9 @@
-import { MissingBindingError } from './errors';
+import { MissingSlotValueError } from './errors';
 import type { NameRegistry } from './nameRegistry';
 import {
-  type BindPair,
   type BufferUsage,
   type ResolutionCtx,
+  type SlotValuePair,
   type Wgsl,
   type WgslBufferBindable,
   type WgslResolvable,
@@ -127,18 +127,22 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   readSlot<T>(slot: WgslSlot<T>): T {
     if (slot.defaultValue === undefined) {
-      throw new MissingBindingError(slot);
+      throw new MissingSlotValueError(slot);
     }
 
     return slot.defaultValue;
   }
 
-  resolve(item: Wgsl, localBindings: BindPair<unknown>[] = []) {
+  resolve(item: Wgsl, slotValueOverrides: SlotValuePair<unknown>[] = []) {
     if (!isResolvable(item)) {
       return String(item);
     }
 
-    const itemCtx = new ScopedResolutionCtx(this, this._cache, localBindings);
+    const itemCtx = new ScopedResolutionCtx(
+      this,
+      this._cache,
+      slotValueOverrides,
+    );
     const result = this._cache.getOrInstantiate(item, itemCtx);
 
     return `${[...this._cache.declarations].join('\n\n')}${result}`;
@@ -152,7 +156,7 @@ class ScopedResolutionCtx implements ResolutionCtx {
   constructor(
     private readonly _parent: ResolutionCtxImpl | ScopedResolutionCtx,
     private readonly _cache: ResolutionCache,
-    private readonly _bindings: BindPair<unknown>[],
+    private readonly _slotValuePairs: SlotValuePair<unknown>[],
   ) {
     this.ancestors = [..._parent.ancestors, _parent];
   }
@@ -174,11 +178,11 @@ class ScopedResolutionCtx implements ResolutionCtx {
   }
 
   readSlot<T>(slot: WgslSlot<T>): T {
-    const bindPair = this._bindings.find(([boundSlot]) => boundSlot === slot) as
-      | BindPair<T>
-      | undefined;
+    const slotToValuePair = this._slotValuePairs.find(
+      ([boundSlot]) => boundSlot === slot,
+    ) as SlotValuePair<T> | undefined;
 
-    if (!bindPair) {
+    if (!slotToValuePair) {
       // Not yet available locally, ctx's owner resolvable depends on `slot`.
       this.usedSlots.add(slot);
       // Maybe the parent ctx has it.
@@ -187,15 +191,19 @@ class ScopedResolutionCtx implements ResolutionCtx {
 
     // Available locally, ctx's owner resolvable depends on `slot`.
     this.usedSlots.add(slot);
-    return bindPair[1];
+    return slotToValuePair[1];
   }
 
-  resolve(item: Wgsl, localBindings: BindPair<unknown>[] = []) {
+  resolve(item: Wgsl, slotValueOverrides: SlotValuePair<unknown>[] = []) {
     if (!isResolvable(item)) {
       return String(item);
     }
 
-    const itemCtx = new ScopedResolutionCtx(this, this._cache, localBindings);
+    const itemCtx = new ScopedResolutionCtx(
+      this,
+      this._cache,
+      slotValueOverrides,
+    );
     return this._cache.getOrInstantiate(item, itemCtx);
   }
 }

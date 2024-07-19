@@ -1,11 +1,11 @@
 import type { WgslSlot } from './types';
 
-export class MissingBindingError extends Error {
+export class MissingSlotValueError extends Error {
   constructor(public readonly slot: WgslSlot<unknown>) {
-    super(`Missing binding for '${slot.label ?? '<unnamed>'}'`);
+    super(`Missing value for '${slot}'`);
 
     // Set the prototype explicitly.
-    Object.setPrototypeOf(this, MissingBindingError.prototype);
+    Object.setPrototypeOf(this, MissingSlotValueError.prototype);
   }
 }
 
@@ -15,5 +15,14 @@ export class RecursiveDataTypeError extends Error {
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, RecursiveDataTypeError.prototype);
+  }
+}
+
+export class RecursiveCodeError extends Error {
+  constructor() {
+    super('Recursive code is not supported in WGSL');
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, RecursiveCodeError.prototype);
   }
 }

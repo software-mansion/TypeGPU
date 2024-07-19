@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MissingBindingError, StrictNameRegistry, wgsl } from '../src';
+import { MissingSlotValueError, StrictNameRegistry, wgsl } from '../src';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
 import { parseWGSL } from './utils/parseWGSL';
 
@@ -7,7 +7,7 @@ const RED = 'vec3f(1., 0., 0.)';
 const GREEN = 'vec3f(0., 1., 0.)';
 
 describe('wgsl.slot', () => {
-  it('resolves to default value if no binding provided', () => {
+  it('resolves to default value if no value provided', () => {
     const colorSlot = wgsl.slot(RED).$name('color'); // red by default
 
     const actual = wgsl`
@@ -25,7 +25,7 @@ describe('wgsl.slot', () => {
     expect(parseWGSL(actual)).toEqual(parseWGSL(expected));
   });
 
-  it('resolves to binding rather than default value', () => {
+  it('resolves to provided value rather than default value', () => {
     const colorSlot = wgsl.slot(RED).$name('color'); // red by default
 
     const getColor = wgsl.fn('get_color')`() {
@@ -54,7 +54,7 @@ describe('wgsl.slot', () => {
     expect(parseWGSL(actual)).toEqual(parseWGSL(expected));
   });
 
-  it('resolves to binding', () => {
+  it('resolves to provided value', () => {
     const colorSlot = wgsl.slot<string>().$name('color'); // no default
 
     const getColor = wgsl.fn('get_color')`() {
@@ -83,7 +83,7 @@ describe('wgsl.slot', () => {
     );
   });
 
-  it('throws error when no default nor binding provided', () => {
+  it('throws error when no default nor value provided', () => {
     const colorSlot = wgsl.slot().$name('color');
     const ctx = new ResolutionCtxImpl({ names: new StrictNameRegistry() });
 
@@ -94,11 +94,11 @@ describe('wgsl.slot', () => {
     `;
 
     expect(() => ctx.resolve(shader)).toThrowError(
-      new MissingBindingError(colorSlot),
+      new MissingSlotValueError(colorSlot),
     );
   });
 
-  it('prefers closer binding', () => {
+  it('prefers closer scope', () => {
     const colorSlot = wgsl.slot().$name('color'); // no default
 
     const getColor = wgsl.fn('get_color')`() {

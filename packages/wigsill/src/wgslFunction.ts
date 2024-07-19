@@ -1,6 +1,6 @@
 import type {
-  BindPair,
   ResolutionCtx,
+  SlotValuePair,
   Wgsl,
   WgslResolvable,
   WgslSlot,
@@ -68,23 +68,23 @@ class WgslFnImpl implements WgslFn {
 class BoundWgslFnImpl<T> implements BoundWgslFn {
   constructor(
     private readonly _innerFn: BoundWgslFn,
-    private readonly _bindPair: BindPair<T>,
+    private readonly _slotValuePair: SlotValuePair<T>,
   ) {}
 
   get label() {
     return this._innerFn.label;
   }
 
-  with<TBinding>(slot: WgslSlot<TBinding>, value: TBinding): BoundWgslFn {
+  with<TValue>(slot: WgslSlot<TValue>, value: TValue): BoundWgslFn {
     return new BoundWgslFnImpl(this, [slot, value]);
   }
 
   resolve(ctx: ResolutionCtx): string {
-    return ctx.resolve(this._innerFn, [this._bindPair]);
+    return ctx.resolve(this._innerFn, [this._slotValuePair]);
   }
 
   toString(): string {
-    const [slot, binding] = this._bindPair;
-    return `fn:${this.label ?? '<unnamed>'}[${slot.label ?? '<unnamed>'}=${binding}]`;
+    const [slot, value] = this._slotValuePair;
+    return `fn:${this.label ?? '<unnamed>'}[${slot.label ?? '<unnamed>'}=${value}]`;
   }
 }

@@ -24,7 +24,6 @@ export function slot<T>(defaultValue?: T): WgslSlot<T> {
 // --------------
 
 class WgslSlotImpl<T> implements WgslResolvable, WgslSlot<T> {
-  __bindingType!: T;
   public label?: string | undefined;
 
   constructor(public defaultValue: T | undefined = undefined) {}
