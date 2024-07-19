@@ -100,7 +100,6 @@ class SharedResolutionState {
 export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _shared: SharedResolutionState;
 
-  ancestors: WgslResolvable[] = [];
   usedSlots = new Set<WgslSlot<unknown>>();
 
   /**
@@ -151,16 +150,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 }
 
 class ScopedResolutionCtx implements ResolutionCtx {
-  readonly ancestors: WgslResolvable[];
   usedSlots = new Set<WgslSlot<unknown>>();
 
   constructor(
     private readonly _parent: ResolutionCtxImpl | ScopedResolutionCtx,
     private readonly _shared: SharedResolutionState,
     private readonly _slotValuePairs: SlotValuePair<unknown>[],
-  ) {
-    this.ancestors = [..._parent.ancestors, _parent];
-  }
+  ) {}
 
   addDeclaration(declaration: WgslResolvable): void {
     this._shared.addDeclaration(this.resolve(declaration));

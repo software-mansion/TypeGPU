@@ -12,12 +12,6 @@ export interface ResolutionCtx {
    */
   readonly usedSlots: Iterable<WgslSlot<unknown>>;
 
-  /**
-   * Used to prevent cyclical code definitions.
-   * TODO: Use to prevent cyclical code definitions.
-   */
-  readonly ancestors: Iterable<WgslResolvable>;
-
   addDeclaration(item: WgslResolvable): void;
   addBinding(bindable: WgslBufferBindable): void;
   nameFor(token: WgslResolvable): string;
