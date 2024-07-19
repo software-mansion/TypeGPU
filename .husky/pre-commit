@@ -1,2 +1,2 @@
-COREPACK_ENABLE_STRICT=0 pnpm biome check .
+COREPACK_ENABLE_STRICT=0 pnpm check
 COREPACK_ENABLE_STRICT=0 pnpm test

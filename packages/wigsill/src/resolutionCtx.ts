@@ -1,26 +1,29 @@
-import {
-  MemoryArenaConflictError,
-  MissingBindingError,
-  NotAllocatedMemoryError,
-} from './errors';
-import type { MemoryArena } from './memoryArena';
+import { MissingBindingError } from './errors';
 import type { NameRegistry } from './nameRegistry';
 import {
   type BindPair,
+  type BufferUsage,
   type ResolutionCtx,
   type Wgsl,
-  type WgslAllocatable,
+  type WgslBufferBindable,
   type WgslResolvable,
   type WgslSlot,
   isResolvable,
 } from './types';
+import { code } from './wgslCode';
 
 export type ResolutionCtxImplOptions = {
-  readonly memoryArenas?: MemoryArena[];
   readonly names: NameRegistry;
+  readonly bindingGroup?: number;
 };
 
 type BindingMap = Map<WgslSlot<unknown>, unknown>;
+
+const usageToVarTemplateMap: Record<BufferUsage, string> = {
+  uniform: 'uniform',
+  mutable_storage: 'storage, read_write',
+  readonly_storage: 'storage, read',
+};
 
 class ResolutionCache {
   private readonly _memoizedResults = new WeakMap<
@@ -29,6 +32,11 @@ class ResolutionCache {
     WgslResolvable,
     { bindingMap: BindingMap; result: string }[]
   >();
+
+  private _nextFreeBindingIdx = 0;
+  public readonly usedBindables = new Set<WgslBufferBindable>();
+
+  constructor(private readonly _bindingGroup: number) {}
 
   /**
    * @param item The item whose resolution should be either retrieved from the cache (if there is a cache hit), or resolved
@@ -65,56 +73,43 @@ class ResolutionCache {
 
     return { result, cacheHit: false };
   }
+
+  reserveBindingEntry(_bindable: WgslBufferBindable) {
+    this.usedBindables.add(_bindable);
+    return { group: this._bindingGroup, idx: this._nextFreeBindingIdx++ };
+  }
 }
 
 export class ResolutionCtxImpl implements ResolutionCtx {
-  private _entryToArenaMap = new WeakMap<WgslAllocatable, MemoryArena>();
   private readonly _names: NameRegistry;
-  private readonly _cache = new ResolutionCache();
+  private readonly _cache: ResolutionCache;
+  private readonly _declarations = new Set<string>();
 
-  private _declarations = new Set<string>();
-  public usedMemoryArenas = new WeakSet<MemoryArena>();
-  public memoryArenaDeclarationIdxMap = new WeakMap<MemoryArena, number>();
+  ancestors: WgslResolvable[] = [];
+  usedSlots = new Set<WgslSlot<unknown>>();
 
   /**
    * @throws {MemoryArenaConflict}
    */
-  constructor({ memoryArenas = [], names }: ResolutionCtxImplOptions) {
+  constructor({ names, bindingGroup }: ResolutionCtxImplOptions) {
     this._names = names;
-
-    for (const arena of memoryArenas) {
-      for (const entry of arena.memoryEntries) {
-        if (this._entryToArenaMap.has(entry)) {
-          throw new MemoryArenaConflictError(entry);
-        }
-
-        this._entryToArenaMap.set(entry, arena);
-      }
-    }
+    this._cache = new ResolutionCache(bindingGroup ?? 0);
   }
 
-  ancestors: WgslResolvable[] = [];
-
-  usedSlots = new Set<WgslSlot<unknown>>();
+  get usedBindables() {
+    return this._cache.usedBindables;
+  }
 
   addDeclaration(_declaration: WgslResolvable) {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
-  /**
-   * @throws {NotAllocatedMemoryError}
-   */
-  addAllocatable(allocatable: WgslAllocatable): void {
-    // TODO: Switch out for actual implementation of arena-less allocation.
-    throw new NotAllocatedMemoryError(allocatable);
+  addBinding(_bindable: WgslBufferBindable): void {
+    throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
   nameFor(item: WgslResolvable): string {
     return this._names.nameFor(item);
-  }
-
-  arenaFor(memoryEntry: WgslAllocatable): MemoryArena | null {
-    return this._entryToArenaMap.get(memoryEntry) ?? null;
   }
 
   recordDeclarations(declarations: Iterable<string>) {
@@ -180,16 +175,16 @@ class ScopedResolutionCtx implements ResolutionCtx {
     this.declarations.push(this.resolve(declaration));
   }
 
-  addAllocatable(allocatable: WgslAllocatable): void {
-    this._parent.addAllocatable(allocatable);
+  addBinding(bindable: WgslBufferBindable): void {
+    const { group, idx } = this._cache.reserveBindingEntry(bindable);
+
+    this.addDeclaration(
+      code`@group(${group}) @binding(${idx}) var<${usageToVarTemplateMap[bindable.usage]}> ${bindable}: ${bindable.allocatable.dataType};`,
+    );
   }
 
   nameFor(token: WgslResolvable): string {
     return this._parent.nameFor(token);
-  }
-
-  arenaFor(memoryEntry: WgslAllocatable): MemoryArena | null {
-    return this._parent.arenaFor(memoryEntry);
   }
 
   recordDeclarations(declarations: Iterable<string>) {

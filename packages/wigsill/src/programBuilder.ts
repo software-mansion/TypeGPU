@@ -1,7 +1,6 @@
-import type { MemoryArena } from './memoryArena';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
-import type { WgslResolvable } from './types';
+import type { BufferUsage, WgslResolvable } from './types';
 import type WigsillRuntime from './wigsillRuntime';
 
 export type Program = {
@@ -10,19 +9,22 @@ export type Program = {
   code: string;
 };
 
-function addUnique<T>(list: T[], value: T) {
-  if (list.includes(value)) {
-    return;
-  }
-
-  list.push(value);
-}
-
 type BuildOptions = {
   shaderStage: number;
   bindingGroup: number;
-  arenas?: MemoryArena[];
   nameRegistry?: NameRegistry;
+};
+
+const usageToBindingTypeMap: Record<BufferUsage, GPUBufferBindingType> = {
+  uniform: 'uniform',
+  mutable_storage: 'storage',
+  readonly_storage: 'read-only-storage',
+};
+
+const usageToVarTemplateMap: Record<BufferUsage, string> = {
+  uniform: 'uniform',
+  mutable_storage: 'storage, read_write',
+  readonly_storage: 'storage, read',
 };
 
 export default class ProgramBuilder {
@@ -32,25 +34,33 @@ export default class ProgramBuilder {
   ) {}
 
   build(options: BuildOptions): Program {
-    const arenas = options.arenas ?? [];
-
     const ctx = new ResolutionCtxImpl({
-      memoryArenas: arenas,
       names: options.nameRegistry ?? new RandomNameRegistry(),
+      bindingGroup: options.bindingGroup,
     });
 
     // Resolving code
     const codeString = ctx.resolve(this.root);
+    const usedBindables = Array.from(ctx.usedBindables);
 
     const bindGroupLayout = this.runtime.device.createBindGroupLayout({
-      // TODO: Fix this
-      entries: [],
+      entries: usedBindables.map((bindable, idx) => ({
+        binding: idx,
+        visibility: options.shaderStage,
+        buffer: {
+          type: usageToBindingTypeMap[bindable.usage],
+        },
+      })),
     });
 
     const bindGroup = this.runtime.device.createBindGroup({
       layout: bindGroupLayout,
-      // TODO: Fix this
-      entries: [],
+      entries: usedBindables.map((bindable, idx) => ({
+        binding: idx,
+        resource: {
+          buffer: this.runtime.bufferFor(bindable.allocatable),
+        },
+      })),
     });
 
     return {

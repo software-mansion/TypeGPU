@@ -9,8 +9,8 @@ import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
 import {
   ProgramBuilder,
   arrayOf,
+  atomic,
   createRuntime,
-  makeArena,
   u32,
   vec2u,
   wgsl,
@@ -35,7 +35,7 @@ canvas.addEventListener('contextmenu', (event) => {
   }
 });
 
-const Options = {
+const options = {
   size: 64,
   timestep: 25,
   stepsPerTimestep: 1,
@@ -59,44 +59,66 @@ function encodeBrushType(brushType: (typeof BrushTypes)[number]) {
   }
 }
 
-const viscosity = wgsl.buffer(u32).$name('viscosity');
-const currentState = wgsl.buffer(arrayOf(u32, 1024 ** 2)).$name('current');
-const size = wgsl.buffer(vec2u).$name('size');
+const sizeBuffer = wgsl.buffer(vec2u).$name('size').$allowUniform();
+
+const viscosityBuffer = wgsl.buffer(u32).$name('viscosity').$allowUniform();
+
+const debugInfoBuffer = wgsl
+  .buffer(atomic(u32))
+  .$name('debug')
+  .$allowMutableStorage();
+
+const currentStateBuffer = wgsl
+  .buffer(arrayOf(u32, 1024 ** 2))
+  .$name('current')
+  .$addFlags(GPUBufferUsage.VERTEX)
+  .$allowReadonlyStorage();
+
+const nextStateBuffer = wgsl
+  .buffer(arrayOf(atomic(u32), 1024 ** 2))
+  .$name('next')
+  .$allowMutableStorage();
+
+const viscosityData = viscosityBuffer.asUniform();
+const currentStateData = currentStateBuffer.asReadonlyStorage();
+const sizeData = sizeBuffer.asUniform();
+const nextStateData = nextStateBuffer.asStorage();
+const debugInfoData = debugInfoBuffer.asStorage();
 
 const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
 const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
 const maxCompress = wgsl.constant(wgsl`12u`);
 
 const getIndex = wgsl.fn()`(x: u32, y: u32) -> u32 {
-  let h = ${size}.y;
-  let w = ${size}.x;
+  let h = ${sizeData}.y;
+  let w = ${sizeData}.x;
   return (y % h) * w + (x % w);
 }`;
 
 const getCell = wgsl.fn()`(x: u32, y: u32) -> u32 {
-  return ${currentState}[${getIndex}(x, y)];
+  return ${currentStateData}[${getIndex}(x, y)];
 }`;
 
 const getCellNext = wgsl.fn()`(x: u32, y: u32) -> u32 {
-  return atomicLoad(&next[${getIndex}(x, y)]);
+  return atomicLoad(&${nextStateData}[${getIndex}(x, y)]);
 }`;
 
 const updateCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
-  atomicStore(&next[${getIndex}(x, y)], value);
+  atomicStore(&${nextStateData}[${getIndex}(x, y)], value);
 }`;
 
 const addToCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
   let cell = ${getCellNext}(x, y);
   let waterLevel = cell & ${maxWaterLevel};
   let newWaterLevel = min(waterLevel + value, ${maxWaterLevel});
-  atomicAdd(&next[${getIndex}(x, y)], newWaterLevel - waterLevel);
+  atomicAdd(&${nextStateData}[${getIndex}(x, y)], newWaterLevel - waterLevel);
 }`;
 
 const subtractFromCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
   let cell = ${getCellNext}(x, y);
   let waterLevel = cell & ${maxWaterLevel};
   let newWaterLevel = max(waterLevel - min(value, waterLevel), 0u);
-  atomicSub(&next[${getIndex}(x, y)], waterLevel - newWaterLevel);
+  atomicSub(&${nextStateData}[${getIndex}(x, y)], waterLevel - newWaterLevel);
 }`;
 
 const persistFlags = wgsl.fn()`(x: u32, y: u32) {
@@ -155,7 +177,7 @@ const checkForFlagsAndBounds = wgsl.fn()`(x: u32, y: u32) -> bool {
     ${updateCell}(x, y, 3u << 24);
     return true;
   }
-  if (y == 0 || y == ${size}.y - 1u || x == 0 || x == ${size}.x - 1u) {
+  if (y == 0 || y == ${sizeData}.y - 1u || x == 0 || x == ${sizeData}.x - 1u) {
     ${updateCell}(x, y, 0u);
     return true;
   }
@@ -178,7 +200,7 @@ const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
     let stable = ${getStableStateBelow}(remainingWater, waterLevelBelow);
     if (waterLevelBelow < stable) {
       let change = stable - waterLevelBelow;
-      let flow = min(change, ${viscosity});
+      let flow = min(change, ${viscosityData});
       ${subtractFromCell}(x, y, flow);
       ${addToCell}(x, y - 1u, flow);
       remainingWater -= flow;
@@ -194,7 +216,7 @@ const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
     let flowRaw = (i32(waterLevelBefore) - i32(${getWaterLevel}(x - 1u, y)));
     if (flowRaw > 0) {
       let change = max(min(4u, remainingWater), u32(flowRaw)/4);
-      let flow = min(change, ${viscosity});
+      let flow = min(change, ${viscosityData});
       ${subtractFromCell}(x, y, flow);
       ${addToCell}(x - 1u, y, flow);
       remainingWater -= flow;
@@ -209,7 +231,7 @@ const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
     let flowRaw = (i32(waterLevelBefore) - i32(${getWaterLevel}(x + 1, y)));
     if (flowRaw > 0) {
       let change = max(min(4u, remainingWater), u32(flowRaw)/4);
-      let flow = min(change, ${viscosity});
+      let flow = min(change, ${viscosityData});
       ${subtractFromCell}(x, y, flow);
       ${addToCell}(x + 1u, y, flow);
       remainingWater -= flow;
@@ -223,7 +245,7 @@ const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
   if (!${isWall}(x, y + 1u)) {
     let stable = ${getStableStateBelow}(${getWaterLevel}(x, y + 1u), remainingWater);
     if (stable < remainingWater) {
-      let flow = min(remainingWater - stable, ${viscosity});
+      let flow = min(remainingWater - stable, ${viscosityData});
       ${subtractFromCell}(x, y, flow);
       ${addToCell}(x, y + 1u, flow);
       remainingWater -= flow;
@@ -232,16 +254,13 @@ const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
 }`;
 
 const computeWGSL = wgsl`
-@binding(0) @group(0) var<storage, read_write> next: array<atomic<u32>>;
-@binding(1) @group(0) var<storage, read_write> debugInfo: atomic<u32>;
-
 override blockSize = 8;
 
 @compute @workgroup_size(blockSize, blockSize)
 fn main(@builtin(global_invocation_id) grid: vec3u) {
   let x = grid.x;
   let y = grid.y;
-  atomicAdd(&debugInfo, ${getWaterLevel}(x, y));
+  atomicAdd(&${debugInfoData}, ${getWaterLevel}(x, y));
   ${decideWaterLevel}(x, y);
 }
 `;
@@ -254,8 +273,8 @@ struct Out {
 
 @vertex
 fn main(@builtin(instance_index) i: u32, @location(0) cell: u32, @location(1) pos: vec2u) -> Out {
-  let w = ${size}.x;
-  let h = ${size}.y;
+  let w = ${sizeData}.x;
+  let h = ${sizeData}.y;
   let x = (f32(i % w + pos.x) / f32(w) - 0.5) * 2. * f32(w) / f32(max(w, h));
   let y = (f32((i - (i % w)) / w + pos.y) / f32(h) - 0.5) * 2. * f32(h) / f32(max(w, h));
   let cellFlags = cell >> 24;
@@ -298,59 +317,19 @@ fn main(@location(0) cell: f32) -> @location(0) vec4f {
 }
 `;
 
-let drawCanvasData = new Uint32Array(Options.size * Options.size);
-
-const viscosityArena = makeArena({
-  bufferBindingType: 'uniform',
-  memoryEntries: [viscosity],
-  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-});
-
-const sizeArena = makeArena({
-  bufferBindingType: 'uniform',
-  memoryEntries: [size],
-  usage:
-    GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM | GPUBufferUsage.VERTEX,
-});
-
-const currentStateArena = makeArena({
-  bufferBindingType: 'storage',
-  memoryEntries: [currentState],
-  usage:
-    GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX,
-});
+let drawCanvasData = new Uint32Array(options.size * options.size);
 
 const computeProgram = new ProgramBuilder(runtime, computeWGSL).build({
-  bindingGroup: 1,
+  bindingGroup: 0,
   shaderStage: GPUShaderStage.COMPUTE,
-  arenas: [viscosityArena, currentStateArena, sizeArena],
 });
 
 const vertexProgram = new ProgramBuilder(runtime, vertWGSL).build({
   bindingGroup: 0,
   shaderStage: GPUShaderStage.VERTEX,
-  arenas: [sizeArena],
 });
 
 const computeShader = device.createShaderModule({ code: computeProgram.code });
-const bindGroupLayoutCompute = device.createBindGroupLayout({
-  entries: [
-    {
-      binding: 0,
-      visibility: GPUShaderStage.COMPUTE,
-      buffer: {
-        type: 'storage',
-      },
-    },
-    {
-      binding: 1,
-      visibility: GPUShaderStage.COMPUTE,
-      buffer: {
-        type: 'storage',
-      },
-    },
-  ],
-});
 
 const squareVertices = new Uint32Array([0, 0, 0, 1, 1, 0, 1, 1]);
 const squareBuffer = device.createBuffer({
@@ -389,67 +368,39 @@ const cellsStride = {
   ],
 };
 
-let wholeTime = 0;
-let buffer1: GPUBuffer;
+let msSinceLastTick = 0;
 let render: () => void;
-let readDebugInfo: () => Promise<number>;
 let applyDrawCanvas: () => void;
 let renderChanges: () => void;
 
 function resetGameData() {
-  drawCanvasData = new Uint32Array(Options.size * Options.size);
+  drawCanvasData = new Uint32Array(options.size * options.size);
 
-  currentState.write(
+  currentStateBuffer.write(
+    runtime,
+    Array.from({ length: 1024 ** 2 }, () => 0),
+  );
+  nextStateBuffer.write(
     runtime,
     Array.from({ length: 1024 ** 2 }, () => 0),
   );
 
   const computePipeline = device.createComputePipeline({
     layout: device.createPipelineLayout({
-      bindGroupLayouts: [
-        bindGroupLayoutCompute,
-        computeProgram.bindGroupLayout,
-      ],
+      bindGroupLayouts: [computeProgram.bindGroupLayout],
     }),
     compute: {
       module: computeShader,
       constants: {
-        blockSize: Options.workgroupSize,
+        blockSize: options.workgroupSize,
       },
     },
   });
 
-  const debugInfoBuffer = device.createBuffer({
-    size: 4,
-    usage:
-      GPUBufferUsage.STORAGE |
-      GPUBufferUsage.COPY_SRC |
-      GPUBufferUsage.COPY_DST,
-  });
-  const debugReadBuffer = device.createBuffer({
-    size: 4,
-    usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-  });
+  sizeBuffer.write(runtime, [options.size, options.size]);
 
-  size.write(runtime, [Options.size, Options.size]);
-
-  const length = Options.size * Options.size;
+  const length = options.size * options.size;
   const cells = new Uint32Array(length);
-
-  buffer1 = device.createBuffer({
-    size: cells.byteLength,
-    usage:
-      GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC,
-  });
-
-  // to be replaced when wigsill supports atomic variables
-  const bindGroup0 = device.createBindGroup({
-    layout: bindGroupLayoutCompute,
-    entries: [
-      { binding: 0, resource: { buffer: buffer1 } },
-      { binding: 1, resource: { buffer: debugInfoBuffer } },
-    ],
-  });
 
   const renderPipeline = device.createRenderPipeline({
     layout: device.createPipelineLayout({
@@ -473,7 +424,7 @@ function resetGameData() {
   });
 
   render = () => {
-    device.queue.writeBuffer(debugInfoBuffer, 0, new Uint32Array([0]), 0, 1);
+    debugInfoBuffer.write(runtime, 0);
     const view = context.getCurrentTexture().createView();
     const renderPass: GPURenderPassDescriptor = {
       colorAttachments: [
@@ -489,33 +440,25 @@ function resetGameData() {
     // compute
     const passEncoderCompute = commandEncoder.beginComputePass();
     passEncoderCompute.setPipeline(computePipeline);
-    passEncoderCompute.setBindGroup(0, bindGroup0);
-    passEncoderCompute.setBindGroup(1, computeProgram.bindGroup);
+    passEncoderCompute.setBindGroup(0, computeProgram.bindGroup);
     passEncoderCompute.dispatchWorkgroups(
-      Options.size / Options.workgroupSize,
-      Options.size / Options.workgroupSize,
+      options.size / options.workgroupSize,
+      options.size / options.workgroupSize,
     );
     passEncoderCompute.end();
 
     commandEncoder.copyBufferToBuffer(
-      buffer1,
+      runtime.bufferFor(nextStateBuffer),
       0,
-      runtime.bufferFor(currentStateArena),
+      runtime.bufferFor(currentStateBuffer),
       0,
       cells.byteLength,
-    );
-    commandEncoder.copyBufferToBuffer(
-      debugInfoBuffer,
-      0,
-      debugReadBuffer,
-      0,
-      4,
     );
 
     // render
     const passEncoderRender = commandEncoder.beginRenderPass(renderPass);
     passEncoderRender.setPipeline(renderPipeline);
-    passEncoderRender.setVertexBuffer(0, runtime.bufferFor(currentStateArena));
+    passEncoderRender.setVertexBuffer(0, runtime.bufferFor(currentStateBuffer));
     passEncoderRender.setVertexBuffer(1, squareBuffer);
     passEncoderRender.setBindGroup(0, vertexProgram.bindGroup);
     passEncoderRender.draw(4, length);
@@ -524,27 +467,17 @@ function resetGameData() {
     device.queue.submit([commandEncoder.finish()]);
   };
 
-  readDebugInfo = async () => {
-    await debugReadBuffer.mapAsync(GPUMapMode.READ);
-    const arrayBuffer = debugReadBuffer.getMappedRange();
-    const view = new DataView(arrayBuffer);
-    const value = view.getUint32(0, true);
-    debugReadBuffer.unmap();
-
-    return value;
-  };
-
   applyDrawCanvas = () => {
     const commandEncoder = device.createCommandEncoder();
-    const stateBuffer = runtime.bufferFor(currentStateArena);
+    const stateBuffer = runtime.bufferFor(currentStateBuffer);
 
-    for (let i = 0; i < Options.size; i++) {
-      for (let j = 0; j < Options.size; j++) {
-        if (drawCanvasData[j * Options.size + i] === 0) {
+    for (let i = 0; i < options.size; i++) {
+      for (let j = 0; j < options.size; j++) {
+        if (drawCanvasData[j * options.size + i] === 0) {
           continue;
         }
 
-        const index = j * Options.size + i;
+        const index = j * options.size + i;
         device.queue.writeBuffer(
           stateBuffer,
           index * Uint32Array.BYTES_PER_ELEMENT,
@@ -573,7 +506,7 @@ function resetGameData() {
     commandEncoder = device.createCommandEncoder();
     const passEncoderRender = commandEncoder.beginRenderPass(renderPass);
     passEncoderRender.setPipeline(renderPipeline);
-    passEncoderRender.setVertexBuffer(0, runtime.bufferFor(currentStateArena));
+    passEncoderRender.setVertexBuffer(0, runtime.bufferFor(currentStateBuffer));
     passEncoderRender.setVertexBuffer(1, squareBuffer);
     passEncoderRender.setBindGroup(0, vertexProgram.bindGroup);
     passEncoderRender.draw(4, length);
@@ -605,18 +538,18 @@ canvas.onmousemove = (event) => {
     return;
   }
 
-  const cellSize = canvas.width / Options.size;
+  const cellSize = canvas.width / options.size;
   const x = Math.floor(event.offsetX / cellSize);
-  const y = Options.size - Math.floor(event.offsetY / cellSize) - 1;
+  const y = options.size - Math.floor(event.offsetY / cellSize) - 1;
   const allAffectedCells = [];
-  for (let i = -Options.brushSize; i <= Options.brushSize; i++) {
-    for (let j = -Options.brushSize; j <= Options.brushSize; j++) {
+  for (let i = -options.brushSize; i <= options.brushSize; i++) {
+    for (let j = -options.brushSize; j <= options.brushSize; j++) {
       if (
-        i * i + j * j <= Options.brushSize * Options.brushSize &&
+        i * i + j * j <= options.brushSize * options.brushSize &&
         x + i >= 0 &&
-        x + i < Options.size &&
+        x + i < options.size &&
         y + j >= 0 &&
-        y + j < Options.size
+        y + j < options.size
       ) {
         allAffectedCells.push({ x: x + i, y: y + j });
       }
@@ -625,12 +558,12 @@ canvas.onmousemove = (event) => {
 
   if (isErasing) {
     for (const cell of allAffectedCells) {
-      drawCanvasData[cell.y * Options.size + cell.x] = 4 << 24;
+      drawCanvasData[cell.y * options.size + cell.x] = 4 << 24;
     }
   } else {
     for (const cell of allAffectedCells) {
-      drawCanvasData[cell.y * Options.size + cell.x] = encodeBrushType(
-        Options.brushType,
+      drawCanvasData[cell.y * options.size + cell.x] = encodeBrushType(
+        options.brushType,
       );
     }
   }
@@ -640,12 +573,12 @@ canvas.onmousemove = (event) => {
 };
 
 const createSampleScene = () => {
-  const middlePoint = Math.floor(Options.size / 2);
-  const radius = Math.floor(Options.size / 8);
+  const middlePoint = Math.floor(options.size / 2);
+  const radius = Math.floor(options.size / 8);
   for (let i = -radius; i <= radius; i++) {
     for (let j = -radius; j <= radius; j++) {
       if (i * i + j * j <= radius * radius) {
-        drawCanvasData[(middlePoint + j) * Options.size + middlePoint + i] =
+        drawCanvasData[(middlePoint + j) * options.size + middlePoint + i] =
           1 << 24;
       }
     }
@@ -656,53 +589,60 @@ const createSampleScene = () => {
     for (let j = -smallRadius; j <= smallRadius; j++) {
       if (i * i + j * j <= smallRadius * smallRadius) {
         drawCanvasData[
-          (middlePoint + j + Options.size / 4) * Options.size + middlePoint + i
+          (middlePoint + j + options.size / 4) * options.size + middlePoint + i
         ] = 2 << 24;
       }
     }
   }
 
-  for (let i = 0; i < Options.size; i++) {
+  for (let i = 0; i < options.size; i++) {
     drawCanvasData[i] = 1 << 24;
   }
 
-  for (let i = 0; i < Math.floor(Options.size / 8); i++) {
-    drawCanvasData[i * Options.size] = 1 << 24;
+  for (let i = 0; i < Math.floor(options.size / 8); i++) {
+    drawCanvasData[i * options.size] = 1 << 24;
   }
 };
 
 let paused = false;
 
-async function loop() {
-  wholeTime++;
-  if (wholeTime >= Options.timestep) {
+onFrame((deltaTime: number) => {
+  msSinceLastTick += deltaTime;
+
+  if (msSinceLastTick >= options.timestep) {
     if (!paused) {
-      for (let i = 0; i < Options.stepsPerTimestep; i++) {
+      for (let i = 0; i < options.stepsPerTimestep; i++) {
         render();
       }
     }
-    wholeTime -= Options.timestep;
+    msSinceLastTick -= options.timestep;
   }
-}
+});
+
+resetGameData();
 
 addParameter(
   'size',
   { initial: 64, options: [16, 32, 64, 128, 256, 512, 1024] },
   (value) => {
-    Options.size = value;
+    options.size = value;
     resetGameData();
   },
 );
 
-addParameter('timestep', { initial: 2, min: 1, max: 50, step: 1 }, (value) => {
-  Options.timestep = value;
-});
+addParameter(
+  'timestep (ms)',
+  { initial: 15, min: 15, max: 100, step: 1 },
+  (value) => {
+    options.timestep = value;
+  },
+);
 
 addParameter(
   'stepsPerTimestep',
   { initial: 10, min: 1, max: 50, step: 1 },
   (value) => {
-    Options.stepsPerTimestep = value;
+    options.stepsPerTimestep = value;
   },
 );
 
@@ -710,7 +650,7 @@ addParameter(
   'workgroupSize',
   { initial: 16, options: [1, 2, 4, 8, 16] },
   (value) => {
-    Options.workgroupSize = value;
+    options.workgroupSize = value;
     resetGameData();
   },
 );
@@ -719,28 +659,23 @@ addParameter(
   'viscosity',
   { initial: 1000, min: 10, max: 1000, step: 1 },
   (value) => {
-    Options.viscosity = value;
-    viscosity.write(runtime, value);
+    options.viscosity = value;
+    viscosityBuffer.write(runtime, value);
   },
 );
 
 addParameter('brushSize', { initial: 0, min: 0, max: 10, step: 1 }, (value) => {
-  Options.brushSize = value;
+  options.brushSize = value;
 });
 
 addParameter(
   'brushType',
   { initial: 'water', options: BrushTypes },
   (value) => {
-    Options.brushType = value;
+    options.brushType = value;
   },
 );
 
 addParameter('pause', { initial: false }, (value) => {
   paused = value;
-});
-
-resetGameData();
-onFrame(() => {
-  loop();
 });
