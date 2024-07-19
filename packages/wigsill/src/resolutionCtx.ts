@@ -57,27 +57,9 @@ class ResolutionCache {
       }
     }
 
+    // If we got here, no item with the given bindings exists in cache yet
     const { result, bindingMap } = compute();
 
-    // Check for cache hits
-    for (const entry of memoizedEntries) {
-      if (entry.bindingMap.size !== bindingMap.size) {
-        // Definitely not the same.
-        continue;
-      }
-
-      const matchesEntry = [...bindingMap.entries()].every(
-        ([bindable, value]) =>
-          bindable.areEqual(value, entry.bindingMap.get(bindable)),
-      );
-
-      if (matchesEntry) {
-        // None of the values reported an inequality, return cached value and discard resolution result.
-        return { result: entry.result, cacheHit: true };
-      }
-    }
-
-    // If we got here, no item with the given bindings exists in cache yet
     memoizedEntries.push({ bindingMap, result });
     this._memoizedResults.set(item, memoizedEntries);
 
