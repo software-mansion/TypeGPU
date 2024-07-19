@@ -1,11 +1,6 @@
 import type { Parsed } from 'typed-binary';
 import type { AnyWgslData } from './std140/types';
-import type {
-  BufferUsage,
-  ResolutionCtx,
-  WgslAllocatable,
-  WgslResolvable,
-} from './types';
+import type { BufferUsage, ResolutionCtx, WgslResolvable } from './types';
 import type { WgslBuffer } from './wgslBuffer';
 import { code } from './wgslCode';
 import type WigsillRuntime from './wigsillRuntime';
@@ -13,12 +8,13 @@ import type WigsillRuntime from './wigsillRuntime';
 export interface WgslBufferUsage<
   TData extends AnyWgslData,
   TUsage extends BufferUsage,
-> extends WgslAllocatable<TData> {
+> extends WgslResolvable {
   readonly buffer: WgslBuffer<TData, TUsage>;
   readonly usage: TUsage;
   write(runtime: WigsillRuntime, data: Parsed<TData>): void;
   read(runtime: WigsillRuntime): Promise<Parsed<TData>>;
   getBindingType(): GPUBufferBindingType;
+  definitionCode(bindingGroup: number, bindingIdx: number): WgslResolvable;
 }
 
 export function bufferUsage<

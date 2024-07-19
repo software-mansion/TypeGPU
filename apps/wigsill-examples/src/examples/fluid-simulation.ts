@@ -59,63 +59,62 @@ function encodeBrushType(brushType: (typeof BrushTypes)[number]) {
   }
 }
 
-const viscosity = wgsl
-  .buffer(u32)
-  .$name('viscosity')
-  .$allowUniform()
-  .asUniform();
-const currentState = wgsl
+const sizeBuffer = wgsl.buffer(vec2u).$name('size').$allowUniform();
+const viscosityBuffer = wgsl.buffer(u32).$name('viscosity').$allowUniform();
+const debugInfoBuffer = wgsl
+  .buffer(atomic(u32))
+  .$name('debug')
+  .$allowMutableStorage();
+const currentStateBuffer = wgsl
   .buffer(arrayOf(u32, 1024 ** 2))
   .$name('current')
   .$addFlags(GPUBufferUsage.VERTEX)
-  .$allowReadonlyStorage()
-  .asReadOnlyStorage();
-const size = wgsl.buffer(vec2u).$name('size').$allowUniform().asUniform();
-const nextState = wgsl
+  .$allowReadonlyStorage();
+const nextStateBuffer = wgsl
   .buffer(arrayOf(atomic(u32), 1024 ** 2))
   .$name('next')
-  .$allowMutableStorage()
-  .asStorage();
-const debugInfo = wgsl
-  .buffer(atomic(u32))
-  .$name('debug')
-  .$allowMutableStorage()
-  .asStorage();
+  .$allowMutableStorage();
+
+const viscosityData = viscosityBuffer.asUniform();
+const currentStateData = currentStateBuffer.asReadOnlyStorage();
+const sizeData = sizeBuffer.asUniform();
+const nextStateData = nextStateBuffer.asStorage();
+const debugInfoData = debugInfoBuffer.asStorage();
 
 const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
 const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
 const maxCompress = wgsl.constant(wgsl`12u`);
 
 const getIndex = wgsl.fn()`(x: u32, y: u32) -> u32 {
-  let h = ${size}.y;
-  let w = ${size}.x;
+  let h = ${sizeData}.y;
+  let w = ${sizeData}.x;
   return (y % h) * w + (x % w);
 }`;
 
 const getCell = wgsl.fn()`(x: u32, y: u32) -> u32 {
-  return ${currentState}[${getIndex}(x, y)];
+  return ${currentStateData}[${getIndex}(x, y)];
 }`;
 
 const getCellNext = wgsl.fn()`(x: u32, y: u32) -> u32 {
-  return atomicLoad(&${nextState}[${getIndex}(x, y)]);
+  return atomicLoad(&${nextStateData}[${getIndex}(x, y)]);
 }`;
 
 const updateCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
-  atomicStore(&${nextState}[${getIndex}(x, y)], value);
+  atomicStore(&${nextStateData}[${getIndex}(x, y)], value);
 }`;
 
 const addToCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
   let cell = ${getCellNext}(x, y);
   let waterLevel = cell & ${maxWaterLevel};
   let newWaterLevel = min(waterLevel + value, ${maxWaterLevel});
-  atomicAdd(&${nextState}[${getIndex}(x, y)], newWaterLevel - waterLevel);
+  atomicAdd(&${nextStateData}[${getIndex}(x, y)], newWaterLevel - waterLevel);
 }`;
 
 const subtractFromCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
   let cell = ${getCellNext}(x, y);
   let waterLevel = cell & ${maxWaterLevel};
   let newWaterLevel = max(waterLevel - min(value, waterLevel), 0u);
-  atomicSub(&${nextState}[${getIndex}(x, y)], waterLevel - newWaterLevel);
+  atomicSub(&${nextStateData}[${getIndex}(x, y)], waterLevel - newWaterLevel);
 }`;
 
 const persistFlags = wgsl.fn()`(x: u32, y: u32) {
@@ -174,7 +173,7 @@ const checkForFlagsAndBounds = wgsl.fn()`(x: u32, y: u32) -> bool {
     ${updateCell}(x, y, 3u << 24);
     return true;
   }
-  if (y == 0 || y == ${size}.y - 1u || x == 0 || x == ${size}.x - 1u) {
+  if (y == 0 || y == ${sizeData}.y - 1u || x == 0 || x == ${sizeData}.x - 1u) {
     ${updateCell}(x, y, 0u);
     return true;
   }
@@ -197,7 +196,7 @@ const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
     let stable = ${getStableStateBelow}(remainingWater, waterLevelBelow);
     if (waterLevelBelow < stable) {
       let change = stable - waterLevelBelow;
-      let flow = min(change, ${viscosity});
+      let flow = min(change, ${viscosityData});
       ${subtractFromCell}(x, y, flow);
       ${addToCell}(x, y - 1u, flow);
       remainingWater -= flow;
@@ -213,7 +212,7 @@ const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
     let flowRaw = (i32(waterLevelBefore) - i32(${getWaterLevel}(x - 1u, y)));
     if (flowRaw > 0) {
       let change = max(min(4u, remainingWater), u32(flowRaw)/4);
-      let flow = min(change, ${viscosity});
+      let flow = min(change, ${viscosityData});
       ${subtractFromCell}(x, y, flow);
       ${addToCell}(x - 1u, y, flow);
       remainingWater -= flow;
@@ -228,7 +227,7 @@ const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
     let flowRaw = (i32(waterLevelBefore) - i32(${getWaterLevel}(x + 1, y)));
     if (flowRaw > 0) {
       let change = max(min(4u, remainingWater), u32(flowRaw)/4);
-      let flow = min(change, ${viscosity});
+      let flow = min(change, ${viscosityData});
       ${subtractFromCell}(x, y, flow);
       ${addToCell}(x + 1u, y, flow);
       remainingWater -= flow;
@@ -242,7 +241,7 @@ const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
   if (!${isWall}(x, y + 1u)) {
     let stable = ${getStableStateBelow}(${getWaterLevel}(x, y + 1u), remainingWater);
     if (stable < remainingWater) {
-      let flow = min(remainingWater - stable, ${viscosity});
+      let flow = min(remainingWater - stable, ${viscosityData});
       ${subtractFromCell}(x, y, flow);
       ${addToCell}(x, y + 1u, flow);
       remainingWater -= flow;
@@ -259,7 +258,7 @@ override blockSize = 8;
 fn main(@builtin(global_invocation_id) grid: vec3u) {
   let x = grid.x;
   let y = grid.y;
-  atomicAdd(&${debugInfo}, ${getWaterLevel}(x, y));
+  atomicAdd(&${debugInfoData}, ${getWaterLevel}(x, y));
   ${decideWaterLevel}(x, y);
 }
 `;
@@ -272,8 +271,8 @@ struct Out {
 
 @vertex
 fn main(@builtin(instance_index) i: u32, @location(0) cell: u32, @location(1) pos: vec2u) -> Out {
-  let w = ${size}.x;
-  let h = ${size}.y;
+  let w = ${sizeData}.x;
+  let h = ${sizeData}.y;
   let x = (f32(i % w + pos.x) / f32(w) - 0.5) * 2. * f32(w) / f32(max(w, h));
   let y = (f32((i - (i % w)) / w + pos.y) / f32(h) - 0.5) * 2. * f32(h) / f32(max(w, h));
   let cellFlags = cell >> 24;
@@ -375,7 +374,7 @@ let renderChanges: () => void;
 function resetGameData() {
   drawCanvasData = new Uint32Array(Options.size * Options.size);
 
-  currentState.write(
+  currentStateBuffer.write(
     runtime,
     Array.from({ length: 1024 ** 2 }, () => 0),
   );
@@ -392,7 +391,7 @@ function resetGameData() {
     },
   });
 
-  size.write(runtime, [Options.size, Options.size]);
+  sizeBuffer.write(runtime, [Options.size, Options.size]);
 
   const length = Options.size * Options.size;
   const cells = new Uint32Array(length);
@@ -419,7 +418,7 @@ function resetGameData() {
   });
 
   render = () => {
-    debugInfo.write(runtime, 0);
+    debugInfoBuffer.write(runtime, 0);
     const view = context.getCurrentTexture().createView();
     const renderPass: GPURenderPassDescriptor = {
       colorAttachments: [
@@ -443,9 +442,9 @@ function resetGameData() {
     passEncoderCompute.end();
 
     commandEncoder.copyBufferToBuffer(
-      runtime.bufferFor(nextState),
+      runtime.bufferFor(nextStateBuffer),
       0,
-      runtime.bufferFor(currentState),
+      runtime.bufferFor(currentStateBuffer),
       0,
       cells.byteLength,
     );
@@ -453,7 +452,7 @@ function resetGameData() {
     // render
     const passEncoderRender = commandEncoder.beginRenderPass(renderPass);
     passEncoderRender.setPipeline(renderPipeline);
-    passEncoderRender.setVertexBuffer(0, runtime.bufferFor(currentState));
+    passEncoderRender.setVertexBuffer(0, runtime.bufferFor(currentStateBuffer));
     passEncoderRender.setVertexBuffer(1, squareBuffer);
     passEncoderRender.setBindGroup(0, vertexProgram.bindGroup);
     passEncoderRender.draw(4, length);
@@ -464,7 +463,7 @@ function resetGameData() {
 
   applyDrawCanvas = () => {
     const commandEncoder = device.createCommandEncoder();
-    const stateBuffer = runtime.bufferFor(currentState);
+    const stateBuffer = runtime.bufferFor(currentStateBuffer);
 
     for (let i = 0; i < Options.size; i++) {
       for (let j = 0; j < Options.size; j++) {
@@ -501,7 +500,7 @@ function resetGameData() {
     commandEncoder = device.createCommandEncoder();
     const passEncoderRender = commandEncoder.beginRenderPass(renderPass);
     passEncoderRender.setPipeline(renderPipeline);
-    passEncoderRender.setVertexBuffer(0, runtime.bufferFor(currentState));
+    passEncoderRender.setVertexBuffer(0, runtime.bufferFor(currentStateBuffer));
     passEncoderRender.setVertexBuffer(1, squareBuffer);
     passEncoderRender.setBindGroup(0, vertexProgram.bindGroup);
     passEncoderRender.draw(4, length);
@@ -648,7 +647,7 @@ addParameter(
   { initial: 1000, min: 10, max: 1000, step: 1 },
   (value) => {
     Options.viscosity = value;
-    viscosity.write(runtime, value);
+    viscosityBuffer.write(runtime, value);
   },
 );
 

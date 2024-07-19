@@ -33,21 +33,22 @@ const matrixStruct = struct({
   numbers: dynamicArrayOf(f32, 65),
 });
 
-const firstMatrixData = wgsl
+const firstMatrixBuffer = wgsl
   .buffer(matrixStruct)
   .$name('first_matrix')
-  .$allowReadonlyStorage()
-  .asReadOnlyStorage();
-const secondMatrixData = wgsl
+  .$allowReadonlyStorage();
+const secondMatrixBuffer = wgsl
   .buffer(matrixStruct)
   .$name('second_matrix')
-  .$allowReadonlyStorage()
-  .asReadOnlyStorage();
-const resultMatrixData = wgsl
+  .$allowReadonlyStorage();
+const resultMatrixBuffer = wgsl
   .buffer(matrixStruct)
   .$name('result_matrix')
-  .$allowMutableStorage()
-  .asStorage();
+  .$allowMutableStorage();
+
+const firstMatrixData = firstMatrixBuffer.asReadOnlyStorage();
+const secondMatrixData = secondMatrixBuffer.asReadOnlyStorage();
+const resultMatrixData = resultMatrixBuffer.asStorage();
 
 const program = runtime.makeComputePipeline({
   workgroupSize: workgroupSize,
@@ -75,15 +76,15 @@ const program = runtime.makeComputePipeline({
 `,
 });
 
-firstMatrixData.write(runtime, firstMatrix);
-secondMatrixData.write(runtime, secondMatrix);
+firstMatrixBuffer.write(runtime, firstMatrix);
+secondMatrixBuffer.write(runtime, secondMatrix);
 
 const workgroupCountX = Math.ceil(firstMatrix.size[0] / workgroupSize[0]);
 const workgroupCountY = Math.ceil(secondMatrix.size[1] / workgroupSize[1]);
 program.execute([workgroupCountX, workgroupCountY]);
 runtime.flush();
 
-const multiplicationResult = await resultMatrixData.read(runtime);
+const multiplicationResult = await resultMatrixBuffer.read(runtime);
 
 const canvas = await addElement('canvas', { width: 400, height: 400 });
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;

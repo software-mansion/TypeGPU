@@ -12,11 +12,10 @@ const [video, canvas] = await Promise.all([
   addElement('video', { width: 500, height: 375 }),
   addElement('canvas', { width: 500, height: 375 }),
 ]);
-const thresholdData = wgsl
-  .buffer(f32)
-  .$name('threshold')
-  .$allowUniform()
-  .asUniform();
+
+const thresholdBuffer = wgsl.buffer(f32).$name('threshold').$allowUniform();
+
+const thresholdData = thresholdBuffer.asUniform();
 
 if (navigator.mediaDevices.getUserMedia) {
   video.srcObject = await navigator.mediaDevices.getUserMedia({
@@ -124,7 +123,7 @@ const sampler = device.createSampler({
 addParameter(
   'threshold',
   { initial: 0.4, min: 0, max: 1 },
-  (threshold: number) => thresholdData.write(runtime, threshold),
+  (threshold: number) => thresholdBuffer.write(runtime, threshold),
 );
 
 onFrame(() => {

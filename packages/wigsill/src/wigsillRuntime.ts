@@ -1,8 +1,7 @@
 import ProgramBuilder, { type Program } from './programBuilder';
 import type StructDataType from './std140/struct';
 import type { AnyWgslData } from './std140/types';
-import type { BufferUsage, Wgsl, WgslAllocatable } from './types';
-import type { WgslBufferUsage } from './wgslBufferUsage';
+import type { Wgsl, WgslAllocatable } from './types';
 import { type WgslCode, code } from './wgslCode';
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
@@ -22,14 +21,8 @@ class WigsillRuntime {
     // TODO: Clean up all buffers
   }
 
-  bufferFor(
-    memory: WgslBufferUsage<AnyWgslData, BufferUsage> | WgslAllocatable,
-  ) {
+  bufferFor(memory: WgslAllocatable) {
     let buffer = this._entryToBufferMap.get(memory);
-
-    if ('buffer' in memory) {
-      buffer = this._entryToBufferMap.get(memory.buffer);
-    }
 
     if (!buffer) {
       buffer = this.device.createBuffer({
