@@ -102,9 +102,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   usedSlots = new Set<WgslSlot<unknown>>();
 
-  /**
-   * @throws {MemoryArenaConflict}
-   */
   constructor({ names, bindingGroup }: ResolutionCtxImplOptions) {
     this._shared = new SharedResolutionState(names, bindingGroup ?? 0);
   }
