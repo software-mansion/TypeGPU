@@ -11,7 +11,6 @@ import {
   type WgslBuffer,
   arrayOf,
   createRuntime,
-  f32,
   struct,
   u32,
   vec2f,
@@ -52,7 +51,7 @@ const VertexOutputStruct = struct({
 const MAX_GRID_SIZE = 1024;
 
 type GridData = typeof GridData;
-const GridData = arrayOf(f32, MAX_GRID_SIZE ** 2);
+const GridData = arrayOf(vec4f, MAX_GRID_SIZE ** 2);
 
 const gridSize = 8;
 const gridSizeBuffer = wgsl.buffer(u32).$allowUniform();
@@ -63,6 +62,8 @@ const gridAlphaBuffer = wgsl
   .$allowMutableStorage()
   .$allowReadonlyStorage();
 
+const gridAlphaMutable = gridAlphaBuffer.asStorage();
+
 const gridBetaBuffer = wgsl
   .buffer(GridData)
   .$allowMutableStorage()
@@ -71,14 +72,33 @@ const gridBetaBuffer = wgsl
 const inputGridSlot = wgsl.slot<WgslBindable<GridData, 'readonly_storage'>>();
 const outputGridSlot = wgsl.slot<WgslBindable<GridData, 'mutable_storage'>>();
 
-const mainCompute = wgsl.fn()`() {
-  ${outputGridSlot}[0] = 1.0;
-  ${outputGridSlot}[10] = 1.0;
+const initWorldPipeline = runtime.makeComputePipeline({
+  workgroupSize: [1, 1],
+  args: ['@builtin(global_invocation_id)  global_id: vec3<u32>'],
+  code: wgsl`
+    let index = global_id.x + global_id.y * ${gridSizeData};
+    
+    if (global_id.y < ${gridSizeData} / 2) {
+      ${gridAlphaMutable}[index] = vec4f(0., 0., 1., 0.);
+    }
+    else {
+      ${gridAlphaMutable}[index] = vec4f(0., 0., 0., 0.);
+    }
+  `,
+});
+
+const mainCompute = wgsl.fn()`(index: u32) {
+  let prev = ${inputGridSlot}[index];
+  ${outputGridSlot}[index] = prev;
 }`.$name('main_compute');
 
 const mainFragment = wgsl.fn()`(index: u32) -> vec4f {
-  let value: f32 = ${inputGridSlot}[index];
-  return vec4f(value, f32(index) / f32(${gridSizeData}) / f32(${gridSizeData}), 0.0, 1.0);
+  let cell = ${inputGridSlot}[index];
+  let velocity = cell.xy;
+  let density = cell.z;
+  let spread = cell.w;
+
+  return vec4f(0., 0., density, 1.0);
 }`.$name('main_fragment');
 
 function makePipelines(
@@ -96,9 +116,10 @@ function makePipelines(
 
   const computePipeline = runtime.makeComputePipeline({
     workgroupSize: [1, 1],
-    args: [],
+    args: ['@builtin(global_invocation_id)  global_id: vec3<u32>'],
     code: wgsl`
-      ${mainComputeWithIO}();
+      let index = global_id.x + global_id.y * ${gridSizeData};
+      ${mainComputeWithIO}(index);
     `,
   });
 
@@ -180,6 +201,7 @@ let primary = even;
 const paused = false;
 
 gridSizeBuffer.write(runtime, gridSize);
+initWorldPipeline.execute([gridSize, gridSize]);
 
 onFrame(() => {
   if (!paused) {
