@@ -4,6 +4,7 @@ import type {
   ElementOptions,
   ElementType,
   LayoutDef,
+  TableRef,
 } from '@wigsill/example-toolkit';
 import { useCallback, useRef, useState } from 'react';
 import { ExecutionCancelledError } from './errors';
@@ -50,6 +51,15 @@ const makeLayout = (appendToDef: (element: ElementDef) => void) => {
         appendToDef({ ...options, type: 'video', key: elementKey });
 
         return new Promise<HTMLVideoElement>((resolve, reject) => {
+          elementResolves.set(elementKey, resolve as () => void);
+          elementRejects.push(reject);
+        });
+      }
+
+      if (type === 'table') {
+        appendToDef({ ...options, type: 'table', key: elementKey });
+
+        return new Promise<TableRef>((resolve, reject) => {
           elementResolves.set(elementKey, resolve as () => void);
           elementRejects.push(reject);
         });
