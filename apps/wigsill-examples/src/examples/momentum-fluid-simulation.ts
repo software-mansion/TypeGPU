@@ -11,6 +11,7 @@ import {
   type WgslBuffer,
   arrayOf,
   createRuntime,
+  f32,
   struct,
   u32,
   vec2f,
@@ -50,36 +51,26 @@ const VertexOutputStruct = struct({
 
 const MAX_GRID_SIZE = 1024;
 
-// const randSeed = wgsl.var(vec2f).$name('rand_seed');
+const randSeed = wgsl.var(vec2f).$name('rand_seed');
 
-// const setupRandomSeed = wgsl.fn('setup_random_seed')`(coord: vec2f) {
-//   ${randSeed} = coord;
-// }`;
+const setupRandomSeed = wgsl.fn('setup_random_seed')`(coord: vec2f) {
+  ${randSeed} = coord;
+}`;
 
-// /**
-//  * Yoinked from https://www.cg.tuwien.ac.at/research/publications/2023/PETER-2023-PSW/PETER-2023-PSW-.pdf
-//  * "Particle System in WebGPU" by Benedikt Peter
-//  */
-// const rand01 = wgsl.fn('rand01')`() -> f32 {
-//   ${randSeed}.x = fract(cos(dot(${randSeed}, vec2<f32>(23.14077926, 232.61690225))) * 136.8168);
-//   ${randSeed}.y = fract(cos(dot(${randSeed}, vec2<f32>(54.47856553, 345.84153136))) * 534.7645);
-//   return ${randSeed}.y;
-// }`;
-
-// const randInCircle = wgsl.fn('rand_in_circle')`() -> vec2f {
-//   let radius = sqrt(${rand01}());
-//   let angle = ${rand01}() * ${Math.PI * 2};
-
-//   return vec2f(
-//     cos(angle) * radius,
-//     sin(angle) * radius,
-//   );
-// }`;
+/**
+ * Yoinked from https://www.cg.tuwien.ac.at/research/publications/2023/PETER-2023-PSW/PETER-2023-PSW-.pdf
+ * "Particle System in WebGPU" by Benedikt Peter
+ */
+const rand01 = wgsl.fn('rand01')`() -> f32 {
+  ${randSeed}.x = fract(cos(dot(${randSeed}, vec2<f32>(23.14077926, 232.61690225))) * 136.8168);
+  ${randSeed}.y = fract(cos(dot(${randSeed}, vec2<f32>(54.47856553, 345.84153136))) * 534.7645);
+  return ${randSeed}.y;
+}`;
 
 type GridData = typeof GridData;
 const GridData = arrayOf(vec4f, MAX_GRID_SIZE ** 2);
 
-const gridSize = 32;
+const gridSize = 128;
 const gridSizeBuffer = wgsl.buffer(u32).$allowUniform();
 const gridSizeData = gridSizeBuffer.asUniform();
 
@@ -110,12 +101,46 @@ const initWorldPipeline = runtime.makeComputePipeline({
     
     var value = vec4f(0., 0., 0., 0.);
 
+    let center = vec2f(f32(${gridSizeData}), f32(${gridSizeData})) / 2.;
+    let topCenter = vec2f(f32(${gridSizeData}) / 2., f32(${gridSizeData}));
+
     if (x != 0 && y != 0 && x != ${gridSizeData} - 1 && y != ${gridSizeData} - 1) {
       // ^ leaving a 1-cell border around the world.
 
-      if (y < ${gridSizeData} / 2 && x < ${gridSizeData} / 2) {
+      if (length(vec2f(f32(x), f32(y)) - center) < f32(${gridSizeData}) / 4.) {
         value = vec4f(0., 0., 1., 0.);
       }
+
+      if (
+        x > ${gridSizeData} / 4 &&
+        x < ${gridSizeData} * 3 / 4 &&
+        y > ${gridSizeData} * 2 / 10 &&
+        y < ${gridSizeData} * 3 / 10
+      ) {
+        value = vec4f(0., 0., 0., 1.);
+      }
+
+      if (
+        x > ${gridSizeData} * 2 / 10 &&
+        x < ${gridSizeData} * 3 / 10 &&
+        y > ${gridSizeData} * 2 / 10 &&
+        y < ${gridSizeData} / 2
+      ) {
+        value = vec4f(0., 0., 0., 1.);
+      }
+
+      if (
+        x > ${gridSizeData} * 7 / 10 &&
+        x < ${gridSizeData} * 8 / 10 &&
+        y > ${gridSizeData} * 2 / 10 &&
+        y < ${gridSizeData} / 2
+      ) {
+        value = vec4f(0., 0., 0., 1.);
+      }
+
+      // if (y < ${gridSizeData} / 2 && x < ${gridSizeData} / 2) {
+      //   value = vec4f(0., 0., 1., 0.);
+      // }
     }
 
     ${gridAlphaMutable}[index] = value;
@@ -130,53 +155,59 @@ const getCell = wgsl.fn()`(x: u32, y: u32) -> vec4f {
 
 const flowFromCell = wgsl.fn()`(my_x: u32, my_y: u32, x: u32, y: u32) -> f32 {
   let cell = ${getCell}(x, y);
-  var dir = cell.xy;
   let mag = length(cell.xy);
-  if (mag > 1.) {
-    dir = normalize(dir);
+  var dir = cell.xy;
+
+  // var out_flow = min(0.2, cell.z);
+  var out_flow = min(max(0.01, 0.2 + cell.z * 0.2), cell.z);
+
+  if (mag < 0.5) {
+    out_flow = 0.;
+  }
+
+  if (my_x == x && my_y == y) {
+    // 'cell.z - out_flow' is how much is left in the cell
+    return cell.z - out_flow;
   }
 
   let dest = vec2f(f32(x), f32(y)) + dir;
-  if (dest.x < 0. || dest.y < 0.) {
-    return 0.;
-  }
 
   if (u32(dest.x) == my_x && u32(dest.y) == my_y) {
-    return cell.z;
+    return out_flow;
   }
 
   return 0.;
 }`.$name('flow_from_cell');
 
-const isValidFlowOut = wgsl.fn()`(x: f32, y: f32) -> bool {
-  if (x >= f32(${gridSizeData}) - 1.) {
+const isValidFlowOut = wgsl.fn()`(x: u32, y: u32) -> bool {
+  if (
+    x > ${gridSizeData} - 1 ||
+    x <= 1 ||
+    y > ${gridSizeData} - 1 ||
+    y <= 1
+  ) {
     return false;
   }
 
-  if (x <= 1.) {
-    return false;
-  }
+  let cell = ${getCell}(x, y);
 
-  if (y >= f32(${gridSizeData}) - 1.) {
-    return false;
-  }
-
-  if (y <= 1.) {
+  if (cell.w > 0.5) {
+    // wall
     return false;
   }
 
   return true;
 }`.$name('is_valid_flow_out');
 
+const timeBuffer = wgsl.buffer(f32).$allowUniform();
+const timeData = timeBuffer.asUniform();
+
 const mainCompute = wgsl.fn()`(x: u32, y: u32) {
   let index = x + y * ${gridSizeData};
 
-  let prev = ${inputGridSlot}[index];
-  let nw = ${getCell}(x - 1, y + 1);
-  let ne = ${getCell}(x + 1, y + 1);
-  let se = ${getCell}(x + 1, y - 1);
-  let sw = ${getCell}(x - 1, y - 1);
+  ${setupRandomSeed}(vec2f(f32(index), ${timeData}));
 
+  let prev = ${inputGridSlot}[index];
   let n = ${getCell}(x, y + 1);
   let s = ${getCell}(x, y - 1);
   let e = ${getCell}(x + 1, y);
@@ -184,37 +215,57 @@ const mainCompute = wgsl.fn()`(x: u32, y: u32) {
 
   var next = prev;
 
+  let gravity_cost = 1.;
+
   // Computing density gradient
-  var velocity = vec2f(0., 0.);
-  velocity -= (nw.z - prev.z) * vec2f(-1., 1.);
-  velocity -= (ne.z - prev.z) * vec2f(1., 1.);
-  velocity -= (se.z - prev.z) * vec2f(1., -1.);
-  velocity -= (sw.z - prev.z) * vec2f(-1., -1.);
-  velocity -= (n.z - prev.z) * vec2f(0., 1.);
-  velocity -= (s.z - prev.z) * vec2f(0., -1.);
-  velocity -= (e.z - prev.z) * vec2f(1., 0.);
-  velocity -= (w.z - prev.z) * vec2f(-1., 0.);
+  var least_cost_dir = vec2f(0., 0.);
+  var least_cost = prev.z;
 
-  if (!${isValidFlowOut}(f32(x) + velocity.x, f32(y) + velocity.y)) {
-    velocity.y = 0.;
+  let n_cost = n.z + gravity_cost;
+  let s_cost = s.z - gravity_cost;
+  let n_valid = ${isValidFlowOut}(x, y + 1);
+  let s_valid = ${isValidFlowOut}(x, y - 1);
+  let e_valid = ${isValidFlowOut}(x + 1, y);
+  let w_valid = ${isValidFlowOut}(x - 1, y);
+
+  if (n_valid && n_cost < least_cost) {
+    least_cost_dir = vec2f(0., 1.);
+    least_cost = n_cost;
   }
 
-  // checking again
-  if (!${isValidFlowOut}(f32(x) + velocity.x, f32(y) + velocity.y)) {
-    velocity.x = 0.;
+  if (s_valid && s_cost < least_cost) {
+    least_cost_dir = vec2f(0., -1.);
+    least_cost = s_cost;
   }
 
-  next.x = velocity.x;
-  next.y = velocity.y;
+  if (e_valid && w_valid && e.z == w.z && e.z < least_cost) {
+    least_cost = e.z; // both are equal, arbitrary choice
+
+    if (${rand01}() < 0.5) {
+      least_cost_dir = vec2f(1., 0.);
+    }
+    else {
+      least_cost_dir = vec2f(-1., 0.);
+    }
+  }
+  else {
+    if (e_valid && e.z < least_cost) {
+      least_cost_dir = vec2f(1., 0.);
+      least_cost = e.z;
+    }
+
+    if (w_valid && w.z < least_cost) {
+      least_cost_dir = vec2f(-1., 0.);
+      least_cost = w.z;
+    }
+  }
+
+  next.x = least_cost_dir.x;
+  next.y = least_cost_dir.y;
 
   // Processing in-flow
 
-  next.z = 0.;
-  next.z += ${flowFromCell}(x, y, x, y);
-  next.z += ${flowFromCell}(x, y, x - 1, y + 1);
-  next.z += ${flowFromCell}(x, y, x + 1, y + 1);
-  next.z += ${flowFromCell}(x, y, x + 1, y - 1);
-  next.z += ${flowFromCell}(x, y, x - 1, y - 1);
+  next.z = ${flowFromCell}(x, y, x, y);
   next.z += ${flowFromCell}(x, y, x, y + 1);
   next.z += ${flowFromCell}(x, y, x, y - 1);
   next.z += ${flowFromCell}(x, y, x + 1, y);
@@ -226,10 +277,22 @@ const mainCompute = wgsl.fn()`(x: u32, y: u32) {
 const mainFragment = wgsl.fn()`(index: u32) -> vec4f {
   let cell = ${inputGridSlot}[index];
   let velocity = cell.xy;
-  let density = cell.z;
-  let spread = cell.w;
+  let density = max(0., cell.z);
+  let solidity = cell.w;
 
-  return vec4f(0., max(0., density - 1.), density, 1.0);
+  if (solidity > 0.5) {
+    return vec4f(1., 1., 1., 1.);
+  }
+
+  if (density <= 0.) {
+    return vec4f(0., 0., 0., 1.);
+  }
+
+  let density_1 = max(0., density - 1.);
+  let density_2 = max(0., density - 2.);
+
+  return vec4f(density_2 * 0.02, density_1 * 0.02, 0.5 + max(0., density) * 0.5, 1.0);
+  // return vec4f(abs(velocity.x) * 10., abs(velocity.y) * 10., 0.5 + max(0., density) * 0.5, 1.0);
 }`.$name('main_fragment');
 
 function makePipelines(
@@ -334,9 +397,12 @@ gridSizeBuffer.write(runtime, gridSize);
 initWorldPipeline.execute([gridSize, gridSize]);
 
 let msSinceLastTick = 0;
-const timestep = 100;
+const timestep = 15;
+const stepsPerTick = 1;
 
 function tick() {
+  timeBuffer.write(runtime, Date.now() % 1000);
+
   if (!paused) {
     primary.compute();
     primary = primary === even ? odd : even;
@@ -345,17 +411,19 @@ function tick() {
   primary.render();
 }
 
-async function computeTotalDensity() {
-  const grid = await gridAlphaBuffer.read(runtime);
-  return grid.reduce((acc, cell) => acc + cell[2], 0);
-}
+// async function computeTotalDensity() {
+//   const grid = await gridAlphaBuffer.read(runtime);
+//   return grid.reduce((acc, cell) => acc + cell[2], 0);
+// }
 
 onFrame((deltaTime) => {
   msSinceLastTick += deltaTime;
 
   if (msSinceLastTick >= timestep) {
     if (!paused) {
-      tick();
+      for (let i = 0; i < stepsPerTick; ++i) {
+        tick();
+      }
     }
     msSinceLastTick -= timestep;
   }
@@ -364,7 +432,7 @@ onFrame((deltaTime) => {
 });
 
 const debugInterval = setInterval(async () => {
-  console.log('Total density', await computeTotalDensity());
+  // console.log('Total density', await computeTotalDensity());
 }, 1000);
 
 onCleanup(() => {
