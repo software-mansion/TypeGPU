@@ -21,7 +21,7 @@ const ySpanBuffer = wgsl.buffer(u32).$name('y-span').$allowUniform();
 const xSpanData = xSpanBuffer.asUniform();
 const ySpanData = ySpanBuffer.asUniform();
 
-const canvas = await addElement('canvas');
+const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
 const devicePixelRatio = window.devicePixelRatio;
@@ -46,10 +46,10 @@ const renderPipeline = runtime.makeRenderPipeline({
     output: outputStruct,
     code: wgsl`
       var pos = array<vec2f, 4>(
-        vec2(0.5, 0.5), // top-right
-        vec2(-0.5, 0.5), // top-left
-        vec2(0.5, -0.5), // bottom-right
-        vec2(-0.5, -0.5) // bottom-left
+        vec2(1, 1), // top-right
+        vec2(-1, 1), // top-left
+        vec2(1, -1), // bottom-right
+        vec2(-1, -1) // bottom-left
       );
 
       var uv = array<vec2f, 4>(
@@ -60,7 +60,7 @@ const renderPipeline = runtime.makeRenderPipeline({
       );
 
       var output: ${outputStruct};
-      output.pos = vec4f(pos[VertexIndex], 0.0, 1.0);
+      output.pos = vec4f(pos[VertexIndex] * 0.9, 0.0, 1.0);
       output.uv = uv[VertexIndex];
       return output;
     `,
