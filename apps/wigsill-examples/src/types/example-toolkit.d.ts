@@ -14,9 +14,20 @@ declare module '@wigsill/example-toolkit' {
     height?: number;
   };
 
+  export type TableDef = {
+    type: 'table';
+    key: string;
+    label?: string;
+  };
+
+  export type TableRef = {
+    setMatrix: (data: number[][]) => void;
+  };
+
   export type ElementDefs = {
     'canvas': CanvasDef;
     'video': VideoDef;
+    'table': TableDef;
   };
 
   export type ElementDef = ElementDefs[keyof ElementDefs];
@@ -30,9 +41,10 @@ declare module '@wigsill/example-toolkit' {
   type ElementResults = {
     canvas: HTMLCanvasElement;
     video: HTMLVideoElement;
+    table: TableRef;
   };
 
-  export type AddElement = <T extends 'canvas' | 'video'>(
+  export type AddElement = <T extends 'canvas' | 'video' | 'table'>(
     type: T,
     options?: ElementOptions<T>,
   ) => Promise<ElementResults[T]>;

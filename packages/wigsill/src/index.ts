@@ -14,3 +14,4 @@ export type { WgslConst } from './wgslConstant';
 export type { WgslFn } from './wgslFunction';
 export type { WgslFn as WgslFnExperimental } from './wgslFunction';
 export type { WgslVar } from './wgslVariable';
+export type { Parsed, Unwrap } from 'typed-binary';
