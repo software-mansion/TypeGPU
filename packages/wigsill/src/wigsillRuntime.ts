@@ -267,6 +267,9 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
   execute(
     options: GPURenderPassDescriptor & {
       vertexCount: number;
+      instanceCount?: number;
+      firstVertex?: number;
+      firstInstance?: number;
       externalBindGroups?: GPUBindGroup[];
     },
   ) {
@@ -299,7 +302,12 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
       this.program.bindGroup,
     );
 
-    passEncoder.draw(vertexCount);
+    passEncoder.draw(
+      vertexCount,
+      options.instanceCount,
+      options.firstVertex,
+      options.firstInstance,
+    );
     passEncoder.end();
   }
 }
