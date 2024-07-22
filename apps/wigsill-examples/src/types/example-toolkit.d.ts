@@ -23,7 +23,7 @@ declare module '@wigsill/example-toolkit' {
     setMatrix: (data: number[][]) => void;
   };
 
-  export type ElementDef = CanvasDef | VideoDef | TableDef ;
+  export type ElementDef = CanvasDef | VideoDef | TableDef;
 
   export type ElementType = ElementDef['type'];
   export type ElementOptions = Omit<ElementDef, 'type' | 'key'>;

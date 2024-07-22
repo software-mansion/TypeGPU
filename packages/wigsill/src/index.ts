@@ -15,3 +15,4 @@ export type { WgslFn } from './wgslFunction';
 export type { WgslFn as WgslFnExperimental } from './wgslFunction';
 export type { Potential, WgslSlot, WgslResolvableSlot } from './wgslSlot';
 export type { WgslVar } from './wgslVariable';
+export type { Parsed, Unwrap } from 'typed-binary';

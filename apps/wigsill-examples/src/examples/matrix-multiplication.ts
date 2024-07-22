@@ -6,6 +6,7 @@
 
 import { addElement, addParameter } from '@wigsill/example-toolkit';
 import {
+  type Parsed,
   createRuntime,
   dynamicArrayOf,
   f32,
@@ -23,7 +24,7 @@ const matrixStruct = struct({
   numbers: dynamicArrayOf(f32, 65),
 });
 
-type MatrixType = typeof matrixStruct.__unwrapped;
+type MatrixType = Parsed<typeof matrixStruct>;
 
 let firstMatrix: MatrixType;
 let secondMatrix: MatrixType;
@@ -88,22 +89,30 @@ const resultTable = await addElement('table', {
   label: 'result matrix',
 });
 
-async function run() {
-  firstMatrix = {
-    size: [firstMatrixRowCount, firstMatrixColumnCount],
-    numbers: Array(firstMatrixRowCount * firstMatrixColumnCount)
+function createMatrix(
+  size: [number, number],
+  initValue: (row: number, col: number) => number,
+) {
+  return {
+    size: size,
+    numbers: Array(size[0] * size[1])
       .fill(0)
-      .map(() => Math.floor(Math.random() * 10)),
+      .map((_, i) => initValue(Math.floor(i / size[1]), i % size[1])),
   };
+}
+
+async function run() {
+  firstMatrix = createMatrix(
+    [firstMatrixRowCount, firstMatrixColumnCount],
+    () => Math.floor(Math.random() * 10),
+  );
 
   firstMatrixBuffer.write(runtime, firstMatrix);
 
-  secondMatrix = {
-    size: [firstMatrixColumnCount, secondMatrixColumnCount],
-    numbers: Array(firstMatrixColumnCount * secondMatrixColumnCount)
-      .fill(0)
-      .map(() => Math.floor(Math.random() * 10)),
-  };
+  secondMatrix = createMatrix(
+    [firstMatrixColumnCount, secondMatrixColumnCount],
+    () => Math.floor(Math.random() * 10),
+  );
 
   secondMatrixBuffer.write(runtime, secondMatrix);
 
