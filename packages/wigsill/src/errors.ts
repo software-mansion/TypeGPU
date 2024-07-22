@@ -1,11 +1,11 @@
-import type { WgslBindable } from './types';
+import type { WgslSlot } from './types';
 
-export class MissingBindingError extends Error {
-  constructor(public readonly bindable: WgslBindable<unknown>) {
-    super(`Missing binding for ${bindable.debugLabel ?? '<unnamed>'}`);
+export class MissingSlotValueError extends Error {
+  constructor(public readonly slot: WgslSlot<unknown>) {
+    super(`Missing value for '${slot}'`);
 
     // Set the prototype explicitly.
-    Object.setPrototypeOf(this, MissingBindingError.prototype);
+    Object.setPrototypeOf(this, MissingSlotValueError.prototype);
   }
 }
 

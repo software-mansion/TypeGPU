@@ -17,7 +17,7 @@ abstract class Callable<TArgs extends [...any[]], TReturn> extends Function {
     // super('return this._bound._call.apply(this._bound, arguments)')
     this._bound = this.bind(this);
 
-    // biome-ignore lint/correctness/noConstructorReturn: <quirks of creating a custom callabke>
+    // biome-ignore lint/correctness/noConstructorReturn: <quirks of creating a custom callable>
     return this._bound;
   }
 

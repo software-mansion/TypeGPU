@@ -9,7 +9,9 @@ import {
 // Public API
 // ----------
 
-export interface WgslCode extends WgslResolvable {}
+export interface WgslCode extends WgslResolvable {
+  $name(label?: string | undefined): WgslCode;
+}
 
 export function code(
   strings: TemplateStringsArray,
@@ -32,7 +34,18 @@ export function code(
 // --------------
 
 class WgslCodeImpl implements WgslCode {
+  private _label: string | undefined;
+
   constructor(public readonly segments: Wgsl[]) {}
+
+  get label() {
+    return this._label;
+  }
+
+  $name(label?: string | undefined) {
+    this._label = label;
+    return this;
+  }
 
   resolve(ctx: ResolutionCtx) {
     let code = '';
@@ -46,5 +59,9 @@ class WgslCodeImpl implements WgslCode {
     }
 
     return code;
+  }
+
+  toString(): string {
+    return `code:${this._label ?? '<unnamed>'}`;
   }
 }
