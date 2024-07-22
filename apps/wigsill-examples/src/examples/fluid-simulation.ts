@@ -178,7 +178,7 @@ const checkForFlagsAndBounds = wgsl.fn()`(x: u32, y: u32) -> bool {
     return true;
   }
   if (y == 0 || y == ${sizeData}.y - 1u || x == 0 || x == ${sizeData}.x - 1u) {
-    ${updateCell}(x, y, 0u);
+    ${subtractFromCell}(x, y, ${getWaterLevel}(x, y));
     return true;
   }
   return false;
