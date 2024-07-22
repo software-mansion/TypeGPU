@@ -5,7 +5,7 @@ import {
   type ResolutionCtx,
   type SlotValuePair,
   type Wgsl,
-  type WgslBufferBindable,
+  type WgslBindable,
   type WgslResolvable,
   type WgslSlot,
   isResolvable,
@@ -35,7 +35,7 @@ class SharedResolutionState {
   >();
 
   private _nextFreeBindingIdx = 0;
-  private readonly _usedBindables = new Set<WgslBufferBindable>();
+  private readonly _usedBindables = new Set<WgslBindable>();
   private readonly _declarations: string[] = [];
 
   constructor(
@@ -43,7 +43,7 @@ class SharedResolutionState {
     private readonly _bindingGroup: number,
   ) {}
 
-  get usedBindables(): Iterable<WgslBufferBindable> {
+  get usedBindables(): Iterable<WgslBindable> {
     return this._usedBindables;
   }
 
@@ -87,7 +87,7 @@ class SharedResolutionState {
     return result;
   }
 
-  reserveBindingEntry(_bindable: WgslBufferBindable) {
+  reserveBindingEntry(_bindable: WgslBindable) {
     this._usedBindables.add(_bindable);
 
     return { group: this._bindingGroup, idx: this._nextFreeBindingIdx++ };
@@ -115,7 +115,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
-  addBinding(_bindable: WgslBufferBindable, _identifier: WgslIdentifier): void {
+  addBinding(_bindable: WgslBindable, _identifier: WgslIdentifier): void {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
@@ -160,7 +160,7 @@ class ScopedResolutionCtx implements ResolutionCtx {
     this._shared.addDeclaration(this.resolve(declaration));
   }
 
-  addBinding(bindable: WgslBufferBindable, identifier: WgslIdentifier): void {
+  addBinding(bindable: WgslBindable, identifier: WgslIdentifier): void {
     const { group, idx } = this._shared.reserveBindingEntry(bindable);
 
     this.addDeclaration(

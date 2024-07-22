@@ -21,12 +21,6 @@ const usageToBindingTypeMap: Record<BufferUsage, GPUBufferBindingType> = {
   readonly_storage: 'read-only-storage',
 };
 
-const usageToVarTemplateMap: Record<BufferUsage, string> = {
-  uniform: 'uniform',
-  mutable_storage: 'storage, read_write',
-  readonly_storage: 'storage, read',
-};
-
 export default class ProgramBuilder {
   constructor(
     private runtime: WigsillRuntime,

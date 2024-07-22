@@ -14,7 +14,7 @@ export interface ResolutionCtx {
   readonly usedSlots: Iterable<WgslSlot<unknown>>;
 
   addDeclaration(item: WgslResolvable): void;
-  addBinding(bindable: WgslBufferBindable, identifier: WgslIdentifier): void;
+  addBinding(bindable: WgslBindable, identifier: WgslIdentifier): void;
   nameFor(token: WgslResolvable): string;
   /** @throws {MissingSlotValueError}  */
   readSlot<T>(slot: WgslSlot<T>): T;
@@ -81,10 +81,7 @@ export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
   readonly flags: GPUBufferUsageFlags;
 }
 
-/**
- * TODO: Rename to `WgslBindable` after granular bindings are merged.
- */
-export interface WgslBufferBindable<
+export interface WgslBindable<
   TData extends AnyWgslData = AnyWgslData,
   TUsage extends BufferUsage = BufferUsage,
 > extends WgslResolvable {

@@ -1,5 +1,5 @@
 import type { AnyWgslData } from './std140/types';
-import type { BufferUsage, ResolutionCtx, WgslBufferBindable } from './types';
+import type { BufferUsage, ResolutionCtx, WgslBindable } from './types';
 import type { WgslBuffer } from './wgslBuffer';
 import { WgslIdentifier } from './wgslIdentifier';
 
@@ -10,7 +10,7 @@ import { WgslIdentifier } from './wgslIdentifier';
 export interface WgslBufferUsage<
   TData extends AnyWgslData,
   TUsage extends BufferUsage,
-> extends WgslBufferBindable<TData, TUsage> {
+> extends WgslBindable<TData, TUsage> {
   $name(label: string): WgslBufferUsage<TData, TUsage>;
 }
 
