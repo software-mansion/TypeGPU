@@ -77,7 +77,7 @@ const GridData = arrayOf(vec4f, MAX_GRID_SIZE ** 2);
 //   enabled: bool,
 // });
 
-const gridSize = 128;
+const gridSize = 256;
 const gridSizeBuffer = wgsl.buffer(u32).$allowUniform();
 const gridSizeData = gridSizeBuffer.asUniform();
 
@@ -232,7 +232,7 @@ const mainCompute = wgsl.fn()`(x: u32, y: u32) {
 
   var next = prev;
 
-  let gravity_cost = 0.5;
+  let gravity_cost = 0.3;
 
   // Computing density gradient
   var least_cost_dir = vec2f(0., 0.);
@@ -425,7 +425,7 @@ initWorldPipeline.execute([gridSize, gridSize]);
 
 let msSinceLastTick = 0;
 const timestep = 15;
-const stepsPerTick = 1;
+const stepsPerTick = 10;
 
 function tick() {
   timeBuffer.write(runtime, Date.now() % 1000);
@@ -434,8 +434,6 @@ function tick() {
     primary.compute();
     primary = primary === even ? odd : even;
   }
-
-  primary.render();
 }
 
 onFrame((deltaTime) => {
@@ -446,6 +444,7 @@ onFrame((deltaTime) => {
       for (let i = 0; i < stepsPerTick; ++i) {
         tick();
       }
+      primary.render();
     }
     msSinceLastTick -= timestep;
   }
