@@ -4,6 +4,7 @@ declare module '@wigsill/example-toolkit' {
     key: string;
     width?: number;
     height?: number;
+    aspectRatio?: number;
   };
 
   export type VideoDef = {
@@ -13,10 +14,14 @@ declare module '@wigsill/example-toolkit' {
     height?: number;
   };
 
-  export type ElementDef = CanvasDef | VideoDef;
+  export type ElementDefs = {
+    'canvas': CanvasDef;
+    'video': VideoDef;
+  };
 
-  export type ElementType = ElementDef['type'];
-  export type ElementOptions = Omit<ElementDef, 'type' | 'key'>;
+  export type ElementDef = ElementDefs[keyof ElementDefs];
+  export type ElementType = keyof ElementDefs;
+  export type ElementOptions<T> = Omit<ElementDefs[T], 'type' | 'key'>;
 
   export type LayoutDef = {
     elements: ElementDef[];
@@ -29,7 +34,7 @@ declare module '@wigsill/example-toolkit' {
 
   export type AddElement = <T extends 'canvas' | 'video'>(
     type: T,
-    options?: ElementOptions,
+    options?: ElementOptions<T>,
   ) => Promise<ElementResults[T]>;
 
   export const addElement: AddElement;

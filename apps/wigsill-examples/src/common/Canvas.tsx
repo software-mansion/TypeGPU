@@ -5,10 +5,11 @@ import useEvent from './useEvent';
 type Props = {
   width?: number;
   height?: number;
+  aspectRatio?: number;
 };
 
 export const Canvas = forwardRef<HTMLCanvasElement, Props>((props, ref) => {
-  const { width, height } = props;
+  const { width, height, aspectRatio } = props;
   const innerRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -51,9 +52,12 @@ export const Canvas = forwardRef<HTMLCanvasElement, Props>((props, ref) => {
       ref={containerRef}
       className={cs(
         'relative overflow-hidden',
-        width && height ? 'flex-initial' : 'flex-1 self-stretch',
+        (width && height) || aspectRatio
+          ? 'flex-initial'
+          : 'flex-1 self-stretch',
+        aspectRatio && 'w-full',
       )}
-      style={{ width, height }}
+      style={{ width, height, aspectRatio }}
     >
       <canvas className="absolute" ref={innerRef} />
     </div>

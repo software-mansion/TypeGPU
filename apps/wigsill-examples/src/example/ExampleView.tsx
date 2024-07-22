@@ -83,6 +83,7 @@ export function ExampleView({ example, codeEditorShowing }: Props) {
                 ref={(canvas) => setRef(element.key, canvas)}
                 width={element.width}
                 height={element.height}
+                aspectRatio={element.aspectRatio}
               />
             );
           }
