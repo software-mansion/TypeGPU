@@ -70,6 +70,13 @@ const rand01 = wgsl.fn('rand01')`() -> f32 {
 type GridData = typeof GridData;
 const GridData = arrayOf(vec4f, MAX_GRID_SIZE ** 2);
 
+// type BoxObstacle = typeof BoxObstacle;
+// const BoxObstacle = struct({
+//   center: vec2u,
+//   size: vec2u,
+//   enabled: bool,
+// });
+
 const gridSize = 128;
 const gridSizeBuffer = wgsl.buffer(u32).$allowUniform();
 const gridSizeData = gridSizeBuffer.asUniform();
@@ -90,6 +97,14 @@ const gridBetaMutable = gridBetaBuffer.asStorage();
 
 const inputGridSlot = wgsl.slot<WgslBindable<GridData, 'readonly_storage'>>();
 const outputGridSlot = wgsl.slot<WgslBindable<GridData, 'mutable_storage'>>();
+
+// const prevObstaclesBuffer = wgsl
+//   .buffer(arrayOf(BoxObstacle, 5))
+//   .$allowReadonlyStorage();
+
+// const obstaclesBuffer = wgsl
+//   .buffer(arrayOf(BoxObstacle, 5))
+//   .$allowMutableStorage();
 
 const initWorldPipeline = runtime.makeComputePipeline({
   workgroupSize: [1, 1],
@@ -217,7 +232,7 @@ const mainCompute = wgsl.fn()`(x: u32, y: u32) {
 
   var next = prev;
 
-  let gravity_cost = 1.;
+  let gravity_cost = 0.5;
 
   // Computing density gradient
   var least_cost_dir = vec2f(0., 0.);
@@ -293,8 +308,7 @@ const mainFragment = wgsl.fn()`(index: u32) -> vec4f {
   let density_1 = max(0., density - 1.);
   let density_2 = max(0., density - 2.);
 
-  return vec4f(density_2 * 0.02, density_1 * 0.02, 0.5 + max(0., density) * 0.5, 1.0);
-  // return vec4f(abs(velocity.x) * 10., abs(velocity.y) * 10., 0.5 + max(0., density) * 0.5, 1.0);
+  return vec4f(density_2 * 0.05, density_1 * 0.05, 0.5 + max(0., density) * 0.5, 1.0);
 }`.$name('main_fragment');
 
 function makePipelines(
@@ -317,6 +331,12 @@ function makePipelines(
       ${mainComputeWithIO}(global_id.x + 1, global_id.y + 1);
     `,
   });
+
+  // const moveObstaclesPipeline = runtime.makeComputePipeline({
+  //   workgroupSize: [1, 1],
+  //   args: [],
+  //   code: wgsl``,
+  // });
 
   const renderPipeline = runtime.makeRenderPipeline({
     vertex: {
@@ -366,6 +386,11 @@ function makePipelines(
   });
 
   return {
+    setObstaclePosition() {
+      // obstaclesBuffer.write();
+      // moveObstaclesPipeline.execute([1, 1]);
+    },
+
     compute() {
       computePipeline.execute([gridSize - 2, gridSize - 2]);
     },
@@ -413,11 +438,6 @@ function tick() {
   primary.render();
 }
 
-// async function computeTotalDensity() {
-//   const grid = await gridAlphaBuffer.read(runtime);
-//   return grid.reduce((acc, cell) => acc + cell[2], 0);
-// }
-
 onFrame((deltaTime) => {
   msSinceLastTick += deltaTime;
 
@@ -433,12 +453,6 @@ onFrame((deltaTime) => {
   runtime.flush();
 });
 
-const debugInterval = setInterval(async () => {
-  // console.log('Total density', await computeTotalDensity());
-}, 1000);
-
 onCleanup(() => {
-  clearInterval(debugInterval);
-
   // TODO: Cleanup runtime
 });
