@@ -18,7 +18,7 @@ function wigsillTypesImportPlugin(): PluginOption {
      * If there is any change in `wigsill` code, reload the whole page.
      */
     handleHotUpdate(ctx) {
-      if (!ctx.file.includes('wigsill/dist/index.d.ts')) {
+      if (!ctx.file.includes('/wigsill/dist')) {
         return;
       }
 
