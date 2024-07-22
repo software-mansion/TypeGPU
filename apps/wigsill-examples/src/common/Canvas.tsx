@@ -11,20 +11,20 @@ type Props = {
 export const Canvas = forwardRef<HTMLCanvasElement, Props>((props, ref) => {
   const { width, height, aspectRatio } = props;
   const innerRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const sizerRef = useRef<HTMLDivElement>(null);
 
   useImperativeHandle(ref, () => innerRef.current as HTMLCanvasElement);
 
   const onResize = useEvent(() => {
     const canvas = innerRef.current;
-    const container = containerRef.current;
+    const container = sizerRef.current;
 
     if (!canvas || !container) {
       return;
     }
 
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
+    canvas.width = Math.max(1, container.clientWidth);
+    canvas.height = Math.max(1, container.clientHeight);
   });
 
   useEffect(() => {
@@ -35,7 +35,7 @@ export const Canvas = forwardRef<HTMLCanvasElement, Props>((props, ref) => {
     }, 1);
 
     const resizeObserver = new ResizeObserver(() => onResize());
-    const container = containerRef.current;
+    const container = sizerRef.current;
     if (container) {
       resizeObserver.observe(container);
     }
@@ -49,17 +49,28 @@ export const Canvas = forwardRef<HTMLCanvasElement, Props>((props, ref) => {
 
   return (
     <div
-      ref={containerRef}
+      style={{ containerType: aspectRatio ? 'size' : undefined }}
       className={cs(
-        'relative overflow-hidden',
+        'flex',
         (width && height) || aspectRatio
           ? 'flex-initial'
           : 'flex-1 self-stretch',
-        aspectRatio && 'w-full',
+        aspectRatio && 'flex-col items-center justify-center w-full h-full',
       )}
-      style={{ width, height, aspectRatio }}
     >
-      <canvas className="absolute" ref={innerRef} />
+      <div
+        ref={sizerRef}
+        className={cs(
+          'relative',
+          (width && height) || aspectRatio
+            ? 'flex-initial'
+            : 'flex-1 self-stretch',
+          aspectRatio && 'w-[min(100cqw,100cqh)]',
+        )}
+        style={{ width, height, aspectRatio }}
+      >
+        <canvas className="absolute" ref={innerRef} />
+      </div>
     </div>
   );
 });
