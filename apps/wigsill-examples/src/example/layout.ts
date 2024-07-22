@@ -30,7 +30,10 @@ const makeLayout = (appendToDef: (element: ElementDef) => void) => {
   let cancelled = false;
 
   const newInstance: LayoutInstance = {
-    addElement: ((type: ElementType, options?: ElementOptions) => {
+    addElement: (<T extends ElementType>(
+      type: T,
+      options?: ElementOptions<T>,
+    ) => {
       if (cancelled) {
         throw new ExecutionCancelledError();
       }
