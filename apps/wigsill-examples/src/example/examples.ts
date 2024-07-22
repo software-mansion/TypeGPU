@@ -15,8 +15,8 @@ export const examples = pipe(
   mapKeys((key) =>
     pipe(
       key,
-      (key) => key.replace(/^..\/..\/examples\//, ''), // remove parent folder
-      (key) => key.replace(/.js$/, ''), // remove extension
+      (key) => key.replace(/^..\/examples\//, ''), // remove parent folder
+      (key) => key.replace(/.ts$/, ''), // remove extension
       (key) => key.replace(/\//, '--'), // / -> --
     ),
   ),

@@ -72,5 +72,11 @@ declare module '@wigsill/example-toolkit' {
   ): void;
 
   export function onCleanup(callback: () => unknown): void;
-  export function onFrame(callback: () => unknown): void;
+
+  export type OnFrameFn = (loop: (deltaTime: number) => unknown) => void;
+
+  /**
+   * `deltaTime` is time elapsed since last frame in milliseconds
+   */
+  export const onFrame: OnFrameFn;
 }

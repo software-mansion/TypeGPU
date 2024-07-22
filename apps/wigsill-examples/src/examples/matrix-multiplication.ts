@@ -9,20 +9,18 @@ import {
   createRuntime,
   dynamicArrayOf,
   f32,
-  makeArena,
   struct,
   vec2f,
   wgsl,
 } from 'wigsill';
 
 const runtime = await createRuntime();
-const device = runtime.device;
 
 const workgroupSize = [8, 8] as [number, number];
 
 const matrixStruct = struct({
   size: vec2f,
-  numbers: dynamicArrayOf(f32, 64),
+  numbers: dynamicArrayOf(f32, 65),
 });
 
 type MatrixType = typeof matrixStruct.__unwrapped;
@@ -30,21 +28,24 @@ type MatrixType = typeof matrixStruct.__unwrapped;
 let firstMatrix: MatrixType;
 let secondMatrix: MatrixType;
 
-const firstMatrixData = wgsl.buffer(matrixStruct).$name('first_matrix');
-const secondMatrixData = wgsl.buffer(matrixStruct).$name('second_matrix');
-const resultMatrixData = wgsl.buffer(matrixStruct).$name('result_matrix');
+const firstMatrixBuffer = wgsl
+  .buffer(matrixStruct)
+  .$name('first_matrix')
+  .$allowReadonlyStorage();
 
-const arena = makeArena({
-  bufferBindingType: 'storage',
-  memoryEntries: [firstMatrixData, secondMatrixData],
-  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE,
-});
+const secondMatrixBuffer = wgsl
+  .buffer(matrixStruct)
+  .$name('second_matrix')
+  .$allowReadonlyStorage();
 
-const resultArena = makeArena({
-  bufferBindingType: 'storage',
-  memoryEntries: [resultMatrixData],
-  usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.STORAGE,
-});
+const resultMatrixBuffer = wgsl
+  .buffer(matrixStruct)
+  .$name('result_matrix')
+  .$allowMutableStorage();
+
+const firstMatrixData = firstMatrixBuffer.asReadonlyStorage();
+const secondMatrixData = secondMatrixBuffer.asReadonlyStorage();
+const resultMatrixData = resultMatrixBuffer.asStorage();
 
 const program = runtime.makeComputePipeline({
   workgroupSize: workgroupSize,
@@ -54,9 +55,9 @@ const program = runtime.makeComputePipeline({
       return;
     }
 
-    if (global_id.x == 0 && global_id.y == 0) {
+    if (global_id.x + global_id.y == 0u) {
       ${resultMatrixData}.size = vec2(${firstMatrixData}.size.x, ${secondMatrixData}.size.y);
-      ${resultMatrixData}.numbers.count = u32(${firstMatrixData}.size.x * ${secondMatrixData}.size.y);
+      ${resultMatrixData}.numbers.count = u32(${firstMatrixData}.size.x) * u32(${secondMatrixData}.size.y);
     }
 
     let resultCell = vec2(global_id.x, global_id.y);
@@ -71,7 +72,6 @@ const program = runtime.makeComputePipeline({
     let index = resultCell.y + resultCell.x * u32(${secondMatrixData}.size.y);
     ${resultMatrixData}.numbers.values[index] = result;
 `,
-  arenas: [arena, resultArena],
 });
 
 let firstMatrixRowCount = 3;
@@ -96,7 +96,7 @@ async function run() {
       .map(() => Math.floor(Math.random() * 10)),
   };
 
-  firstMatrixData.write(runtime, firstMatrix);
+  firstMatrixBuffer.write(runtime, firstMatrix);
 
   secondMatrix = {
     size: [firstMatrixColumnCount, secondMatrixColumnCount],
@@ -105,14 +105,7 @@ async function run() {
       .map(() => Math.floor(Math.random() * 10)),
   };
 
-  secondMatrixData.write(runtime, secondMatrix);
-
-  const resultMatrixSize = firstMatrix.size[0] * secondMatrix.size[1];
-
-  const gpuReadBuffer = device.createBuffer({
-    size: resultMatrixSize * 4,
-    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-  });
+  secondMatrixBuffer.write(runtime, secondMatrix);
 
   const workgroupCountX = Math.ceil(firstMatrix.size[0] / workgroupSize[0]);
   const workgroupCountY = Math.ceil(secondMatrix.size[1] / workgroupSize[1]);
@@ -120,20 +113,7 @@ async function run() {
   program.execute([workgroupCountX, workgroupCountY]);
   runtime.flush();
 
-  const encoder = device.createCommandEncoder();
-  encoder.copyBufferToBuffer(
-    runtime.bufferFor(resultArena),
-    12,
-    gpuReadBuffer,
-    0,
-    resultMatrixSize * 4,
-  );
-
-  device.queue.submit([encoder.finish()]);
-
-  await gpuReadBuffer.mapAsync(GPUMapMode.READ);
-  const arrayBuffer = gpuReadBuffer.getMappedRange();
-  const multiplicationResult = [...new Float32Array(arrayBuffer)];
+  const multiplicationResult = await resultMatrixBuffer.read(runtime);
 
   const unflatMatrix = (matrix: MatrixType) =>
     Array(matrix.size[0])
@@ -147,12 +127,7 @@ async function run() {
   firstTable.setMatrix(unflatMatrix(firstMatrix));
   secondTable.setMatrix(unflatMatrix(secondMatrix));
 
-  resultTable.setMatrix(
-    unflatMatrix({
-      size: [firstMatrixRowCount, secondMatrixColumnCount],
-      numbers: multiplicationResult,
-    }),
-  );
+  resultTable.setMatrix(unflatMatrix(multiplicationResult));
 }
 
 let initializing = true;
