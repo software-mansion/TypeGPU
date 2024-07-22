@@ -1,4 +1,10 @@
-import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
+import type {
+  ResolutionCtx,
+  SlotValuePair,
+  Wgsl,
+  WgslResolvable,
+  WgslSlot,
+} from './types';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
 
@@ -7,14 +13,18 @@ import { WgslIdentifier } from './wgslIdentifier';
 // ----------
 
 export interface WgslFn extends WgslResolvable {
-  $name(debugLabel: string): WgslFn;
+  $name(label: string): WgslFn;
+
+  with<T>(slot: WgslSlot<T>, value: T): BoundWgslFn;
 }
 
-export function fn(debugLabel?: string) {
+export type BoundWgslFn = Omit<WgslFn, '$name'>;
+
+export function fn(label?: string) {
   return (strings: TemplateStringsArray, ...params: Wgsl[]): WgslFn => {
     const func = new WgslFnImpl(code(strings, ...params));
-    if (debugLabel) {
-      func.$name(debugLabel);
+    if (label) {
+      func.$name(label);
     }
     return func;
   };
@@ -25,18 +35,56 @@ export function fn(debugLabel?: string) {
 // --------------
 
 class WgslFnImpl implements WgslFn {
-  private identifier = new WgslIdentifier();
+  private _label: string | undefined;
 
   constructor(private readonly body: Wgsl) {}
 
-  $name(debugLabel: string) {
-    this.identifier.$name(debugLabel);
+  get label() {
+    return this._label;
+  }
+
+  $name(label: string) {
+    this._label = label;
     return this;
   }
 
   resolve(ctx: ResolutionCtx): string {
-    ctx.addDependency(code`fn ${this.identifier}${this.body}`);
+    const identifier = new WgslIdentifier().$name(this._label);
 
-    return ctx.resolve(this.identifier);
+    ctx.addDeclaration(code`fn ${identifier}${this.body}`.$name(this._label));
+
+    return ctx.resolve(identifier);
+  }
+
+  with<T>(slot: WgslSlot<T>, value: T): BoundWgslFn {
+    return new BoundWgslFnImpl(this, [slot, value]);
+  }
+
+  toString(): string {
+    return `fn:${this.label ?? '<unnamed>'}`;
+  }
+}
+
+class BoundWgslFnImpl<T> implements BoundWgslFn {
+  constructor(
+    private readonly _innerFn: BoundWgslFn,
+    private readonly _slotValuePair: SlotValuePair<T>,
+  ) {}
+
+  get label() {
+    return this._innerFn.label;
+  }
+
+  with<TValue>(slot: WgslSlot<TValue>, value: TValue): BoundWgslFn {
+    return new BoundWgslFnImpl(this, [slot, value]);
+  }
+
+  resolve(ctx: ResolutionCtx): string {
+    return ctx.resolve(this._innerFn, [this._slotValuePair]);
+  }
+
+  toString(): string {
+    const [slot, value] = this._slotValuePair;
+    return `fn:${this.label ?? '<unnamed>'}[${slot.label ?? '<unnamed>'}=${value}]`;
   }
 }

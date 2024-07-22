@@ -14,8 +14,8 @@ export class RandomNameRegistry implements NameRegistry {
     if (name === undefined) {
       // creating sanitized name
       let label: string;
-      if (item.debugLabel) {
-        label = item.debugLabel.replaceAll(/\s/g, '_'); // whitespace -> _
+      if (item.label) {
+        label = item.label.replaceAll(/\s/g, '_'); // whitespace -> _
         label = label.replaceAll(/[^\w\d]/g, ''); // removing illegal characters
       } else {
         label = 'item';
@@ -29,13 +29,33 @@ export class RandomNameRegistry implements NameRegistry {
 }
 
 export class StrictNameRegistry implements NameRegistry {
-  nameFor(item: WgslResolvable): string {
-    const label = item.debugLabel;
+  /**
+   * Allows to provide a good fallback for instances of the
+   * same function that are bound to different slot values.
+   */
+  private readonly _usedNames = new Set<string>();
 
-    if (label === undefined) {
+  private readonly _assignedNames = new WeakMap<WgslResolvable, string>();
+
+  nameFor(item: WgslResolvable): string {
+    const assignedName = this._assignedNames.get(item);
+    if (assignedName !== undefined) {
+      return assignedName;
+    }
+
+    if (item.label === undefined) {
       throw new Error('Unnamed item found when using a strict NameRegistry');
     }
 
-    return label;
+    let index = 0;
+    let unusedName = item.label;
+    while (this._usedNames.has(unusedName)) {
+      index++;
+      unusedName = `${item.label}_${index}`;
+    }
+
+    this._usedNames.add(unusedName);
+    this._assignedNames.set(item, unusedName);
+    return unusedName;
   }
 }

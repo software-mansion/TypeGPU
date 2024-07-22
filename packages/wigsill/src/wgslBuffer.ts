@@ -53,7 +53,7 @@ class WgslBufferImpl<
   public flags: GPUBufferUsageFlags =
     GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
 
-  private allowedUsages: {
+  private _allowedUsages: {
     uniform: WgslBufferUsage<TData, TAllows | 'uniform'> | null;
     mutableStorage: WgslBufferUsage<TData, TAllows | 'mutable_storage'> | null;
     readonlyStorage: WgslBufferUsage<
@@ -66,12 +66,16 @@ class WgslBufferImpl<
     readonlyStorage: null,
   };
 
-  public debugLabel?: string | undefined;
+  private _label: string | undefined;
 
   constructor(public readonly dataType: TData) {}
 
-  $name(debugLabel: string) {
-    this.debugLabel = debugLabel;
+  get label() {
+    return this._label;
+  }
+
+  $name(label: string) {
+    this._label = label;
     return this;
   }
 
@@ -101,8 +105,8 @@ class WgslBufferImpl<
   $allowUniform() {
     const enrichedThis = this as WgslBuffer<TData, TAllows | 'uniform'>;
     this.$addFlags(GPUBufferUsage.UNIFORM);
-    if (!this.allowedUsages.uniform) {
-      this.allowedUsages.uniform = bufferUsage(enrichedThis, 'uniform');
+    if (!this._allowedUsages.uniform) {
+      this._allowedUsages.uniform = bufferUsage(enrichedThis, 'uniform');
     }
     return enrichedThis;
   }
@@ -113,8 +117,8 @@ class WgslBufferImpl<
       TAllows | 'readonly_storage'
     >;
     this.$addFlags(GPUBufferUsage.STORAGE);
-    if (!this.allowedUsages.readonlyStorage) {
-      this.allowedUsages.readonlyStorage = bufferUsage(
+    if (!this._allowedUsages.readonlyStorage) {
+      this._allowedUsages.readonlyStorage = bufferUsage(
         enrichedThis,
         'readonly_storage',
       );
@@ -125,8 +129,8 @@ class WgslBufferImpl<
   $allowMutableStorage() {
     const enrichedThis = this as WgslBuffer<TData, TAllows | 'mutable_storage'>;
     this.$addFlags(GPUBufferUsage.STORAGE);
-    if (!this.allowedUsages.mutableStorage) {
-      this.allowedUsages.mutableStorage = bufferUsage(
+    if (!this._allowedUsages.mutableStorage) {
+      this._allowedUsages.mutableStorage = bufferUsage(
         enrichedThis,
         'mutable_storage',
       );
@@ -141,22 +145,26 @@ class WgslBufferImpl<
   }
 
   asUniform() {
-    return this.allowedUsages.uniform as 'uniform' extends TAllows
+    return this._allowedUsages.uniform as 'uniform' extends TAllows
       ? WgslBufferUsage<TData, 'uniform'>
       : null;
   }
 
   asStorage() {
-    return this.allowedUsages
+    return this._allowedUsages
       .mutableStorage as 'mutable_storage' extends TAllows
       ? WgslBufferUsage<TData, 'mutable_storage'>
       : null;
   }
 
   asReadonlyStorage() {
-    return this.allowedUsages
+    return this._allowedUsages
       .readonlyStorage as 'readonly_storage' extends TAllows
       ? WgslBufferUsage<TData, 'readonly_storage'>
       : null;
+  }
+
+  toString(): string {
+    return `buffer:${this._label ?? '<unnamed>'}`;
   }
 }

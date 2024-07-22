@@ -1,19 +1,28 @@
 import type { AnyWgslData } from './std140/types';
+import type { WgslIdentifier } from './wgslIdentifier';
 
 export type Wgsl = string | number | WgslResolvable;
 
+/**
+ * Passed into each resolvable item. All sibling items share a resolution ctx,
+ * and a new resolution ctx is made when going down each level in the tree.
+ */
 export interface ResolutionCtx {
-  addDependency(item: WgslResolvable): void;
-  addBinding(bindable: WgslBufferBindable): void;
+  /**
+   * Slots that were used by items resolved by this context.
+   */
+  readonly usedSlots: Iterable<WgslSlot<unknown>>;
+
+  addDeclaration(item: WgslResolvable): void;
+  addBinding(bindable: WgslBindable, identifier: WgslIdentifier): void;
   nameFor(token: WgslResolvable): string;
-  /** @throws {MissingBindingError}  */
-  requireBinding<T>(bindable: WgslBindable<T>): T;
-  tryBinding<T>(bindable: WgslBindable<T>, defaultValue: T): T;
-  resolve(item: Wgsl): string;
+  /** @throws {MissingSlotValueError}  */
+  readSlot<T>(slot: WgslSlot<T>): T;
+  resolve(item: Wgsl, slotValueOverrides?: SlotValuePair<unknown>[]): string;
 }
 
 export interface WgslResolvable {
-  readonly debugLabel?: string | undefined;
+  readonly label?: string | undefined;
 
   resolve(ctx: ResolutionCtx): string;
 }
@@ -34,14 +43,33 @@ export function isWgsl(value: unknown): value is Wgsl {
   );
 }
 
-export interface WgslBindable<TBinding> {
-  /** type-token, not available at runtime */
-  readonly __bindingType: TBinding;
+export interface WgslSlot<T> {
+  readonly defaultValue: T | undefined;
 
-  readonly debugLabel?: string | undefined;
+  readonly label?: string | undefined;
+
+  $name(label: string): WgslSlot<T>;
+
+  /**
+   * Used to determine if code generated using either value `a` or `b` in place
+   * of the slot will be equivalent. Defaults to `Object.is`.
+   */
+  areEqual(a: T, b: T): boolean;
 }
 
-export type BindPair<T> = [WgslBindable<T>, T];
+/**
+ * Represents a value that is available at resolution time.
+ * (constant after compilation)
+ */
+export type Potential<T> = T | WgslSlot<T>;
+
+export interface WgslResolvableSlot<T extends Wgsl>
+  extends WgslResolvable,
+    WgslSlot<T> {
+  $name(label: string): WgslResolvableSlot<T>;
+}
+
+export type SlotValuePair<T> = [WgslSlot<T>, T];
 
 export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
   /**
@@ -53,10 +81,7 @@ export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
   readonly flags: GPUBufferUsageFlags;
 }
 
-/**
- * TODO: Rename to `WgslBindable` after granular bindings are merged.
- */
-export interface WgslBufferBindable<
+export interface WgslBindable<
   TData extends AnyWgslData = AnyWgslData,
   TUsage extends BufferUsage = BufferUsage,
 > extends WgslResolvable {
