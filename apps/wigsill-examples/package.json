@@ -4,11 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "pnpm wigsill-types-copy && vite",
-    "build": "pnpm wigsill-types-copy && tsc -b && vite build",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview",
-    "wigsill-types-copy": "tsx exportWigsillTypes.ts"
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@babel/standalone": "^7.24.7",
