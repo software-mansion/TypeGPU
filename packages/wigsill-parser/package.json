@@ -26,8 +26,7 @@
   "sideEffects": false,
   "scripts": {
     "dev": "tsup --watch",
-    "build": "tsup",
-    "codegen": "nearleyc src/grammar.ne -o src/grammar.ts && echo \"/* eslint-disable */\n// @ts-nocheck\n$(cat src/grammar.ts)\" > src/grammar.ts"
+    "build": "tsup"
   },
   "engines": {
     "node": ">=12.20.0"
@@ -38,6 +37,7 @@
     "nearley": "^2.20.1"
   },
   "devDependencies": {
+    "@types/moo": "^0.5.9",
     "@types/nearley": "^2.11.5",
     "@webgpu/types": "^0.1.43",
     "moo": "^0.5.2",
