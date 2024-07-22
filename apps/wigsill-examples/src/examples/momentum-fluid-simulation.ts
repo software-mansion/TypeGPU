@@ -154,25 +154,27 @@ const getCell = wgsl.fn()`(x: u32, y: u32) -> vec4f {
 }`.$name('get_cell');
 
 const flowFromCell = wgsl.fn()`(my_x: u32, my_y: u32, x: u32, y: u32) -> f32 {
-  let cell = ${getCell}(x, y);
-  let mag = length(cell.xy);
-  var dir = cell.xy;
+  let src = ${getCell}(x, y);
 
-  // var out_flow = min(0.2, cell.z);
-  var out_flow = min(max(0.01, 0.2 + cell.z * 0.2), cell.z);
+  let dest_pos = vec2f(f32(x), f32(y)) + src.xy;
+  let dest = ${getCell}(u32(dest_pos.x), u32(dest_pos.y));
 
-  if (mag < 0.5) {
+  let diff = src.z - dest.z;
+  // var out_flow = max(0., min(diff * 2.0, src.z));
+  // var out_flow = min(0.2, src.z);
+  var out_flow = min(max(0.01, 0.3 + diff * 0.2), src.z);
+
+  if (length(src.xy) < 0.5) {
     out_flow = 0.;
   }
 
   if (my_x == x && my_y == y) {
-    // 'cell.z - out_flow' is how much is left in the cell
-    return cell.z - out_flow;
+    // 'src.z - out_flow' is how much is left in the src
+    return src.z - out_flow;
   }
 
-  let dest = vec2f(f32(x), f32(y)) + dir;
 
-  if (u32(dest.x) == my_x && u32(dest.y) == my_y) {
+  if (u32(dest_pos.x) == my_x && u32(dest_pos.y) == my_y) {
     return out_flow;
   }
 
