@@ -1,4 +1,5 @@
 import type { AnyWgslData } from './std140/types';
+import type { WgslIdentifier } from './wgslIdentifier';
 
 export type Wgsl = string | number | WgslResolvable;
 
@@ -13,7 +14,7 @@ export interface ResolutionCtx {
   readonly usedSlots: Iterable<WgslSlot<unknown>>;
 
   addDeclaration(item: WgslResolvable): void;
-  addBinding(bindable: WgslBufferBindable): void;
+  addBinding(bindable: WgslBufferBindable, identifier: WgslIdentifier): void;
   nameFor(token: WgslResolvable): string;
   /** @throws {MissingSlotValueError}  */
   readSlot<T>(slot: WgslSlot<T>): T;

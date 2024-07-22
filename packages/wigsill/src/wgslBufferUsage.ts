@@ -52,9 +52,11 @@ class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    ctx.addBinding(this);
+    const identifier = new WgslIdentifier();
 
-    return ctx.resolve(new WgslIdentifier());
+    ctx.addBinding(this, identifier);
+
+    return ctx.resolve(identifier);
   }
 
   toString(): string {

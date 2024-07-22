@@ -11,6 +11,7 @@ import {
   isResolvable,
 } from './types';
 import { code } from './wgslCode';
+import type { WgslIdentifier } from './wgslIdentifier';
 
 export type ResolutionCtxImplOptions = {
   readonly names: NameRegistry;
@@ -114,7 +115,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
-  addBinding(_bindable: WgslBufferBindable): void {
+  addBinding(_bindable: WgslBufferBindable, _identifier: WgslIdentifier): void {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
@@ -159,11 +160,11 @@ class ScopedResolutionCtx implements ResolutionCtx {
     this._shared.addDeclaration(this.resolve(declaration));
   }
 
-  addBinding(bindable: WgslBufferBindable): void {
+  addBinding(bindable: WgslBufferBindable, identifier: WgslIdentifier): void {
     const { group, idx } = this._shared.reserveBindingEntry(bindable);
 
     this.addDeclaration(
-      code`@group(${group}) @binding(${idx}) var<${usageToVarTemplateMap[bindable.usage]}> ${bindable}: ${bindable.allocatable.dataType};`,
+      code`@group(${group}) @binding(${idx}) var<${usageToVarTemplateMap[bindable.usage]}> ${identifier}: ${bindable.allocatable.dataType};`,
     );
   }
 
