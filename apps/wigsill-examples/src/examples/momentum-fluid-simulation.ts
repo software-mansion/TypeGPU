@@ -54,7 +54,7 @@ const MAX_GRID_SIZE = 1024;
 type GridData = typeof GridData;
 const GridData = arrayOf(f32, MAX_GRID_SIZE ** 2);
 
-let gridSize = 8;
+const gridSize = 8;
 const gridSizeBuffer = wgsl.buffer(u32).$allowUniform();
 const gridSizeData = gridSizeBuffer.asUniform();
 
@@ -177,7 +177,7 @@ const even = makePipelines(gridAlphaBuffer, gridBetaBuffer);
 const odd = makePipelines(gridBetaBuffer, gridAlphaBuffer);
 
 let primary = even;
-let paused = false;
+const paused = false;
 
 gridSizeBuffer.write(runtime, gridSize);
 
