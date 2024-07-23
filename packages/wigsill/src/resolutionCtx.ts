@@ -20,7 +20,7 @@ export type ResolutionCtxImplOptions = {
 
 type SlotToValueMap = Map<WgslSlot<unknown>, unknown>;
 
-const usageToVarTemplateMap: Record<BufferUsage, string> = {
+const usageToVarTemplateMap: Record<Exclude<BufferUsage, 'vertex'>, string> = {
   uniform: 'uniform',
   mutable_storage: 'storage, read_write',
   readonly_storage: 'storage, read',
@@ -162,6 +162,10 @@ class ScopedResolutionCtx implements ResolutionCtx {
 
   addBinding(bindable: WgslBindable, identifier: WgslIdentifier): void {
     const { group, idx } = this._shared.reserveBindingEntry(bindable);
+
+    if (bindable.usage === 'vertex') {
+      throw new Error('Vertex buffers must be bound in the vertex shader');
+    }
 
     this.addDeclaration(
       code`@group(${group}) @binding(${idx}) var<${usageToVarTemplateMap[bindable.usage]}> ${identifier}: ${bindable.allocatable.dataType};`,

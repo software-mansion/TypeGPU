@@ -4,6 +4,7 @@ import {
   type WgslResolvable,
   isResolvable,
 } from './types';
+import { getBuiltinInfo } from './wgslBuiltin';
 
 // ----------
 // Public API
@@ -53,6 +54,9 @@ class WgslCodeImpl implements WgslCode {
     for (const s of this.segments) {
       if (isResolvable(s)) {
         code += ctx.resolve(s);
+      } else if (typeof s === 'symbol') {
+        const builtin = getBuiltinInfo(s);
+        code += builtin.name;
       } else {
         code += String(s);
       }

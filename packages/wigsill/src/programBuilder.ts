@@ -15,7 +15,10 @@ type BuildOptions = {
   nameRegistry?: NameRegistry;
 };
 
-const usageToBindingTypeMap: Record<BufferUsage, GPUBufferBindingType> = {
+const usageToBindingTypeMap: Record<
+  Exclude<BufferUsage, 'vertex'>,
+  GPUBufferBindingType
+> = {
   uniform: 'uniform',
   mutable_storage: 'storage',
   readonly_storage: 'read-only-storage',
@@ -35,14 +38,18 @@ export default class ProgramBuilder {
 
     // Resolving code
     const codeString = ctx.resolve(this.root);
-    const usedBindables = Array.from(ctx.usedBindables);
+    const usedBindables = Array.from(ctx.usedBindables).filter(
+      (bindable) => bindable.usage !== 'vertex',
+    );
 
     const bindGroupLayout = this.runtime.device.createBindGroupLayout({
       entries: usedBindables.map((bindable, idx) => ({
         binding: idx,
         visibility: options.shaderStage,
         buffer: {
-          type: usageToBindingTypeMap[bindable.usage],
+          type: usageToBindingTypeMap[
+            bindable.usage as Exclude<BufferUsage, 'vertex'>
+          ],
         },
       })),
     });

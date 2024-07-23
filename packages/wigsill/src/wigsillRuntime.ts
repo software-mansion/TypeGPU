@@ -1,8 +1,9 @@
 import ProgramBuilder, { type Program } from './programBuilder';
-import type StructDataType from './std140/struct';
+import StructDataType from './std140/struct';
 import type { AnyWgslData } from './std140/types';
 import type { Wgsl, WgslAllocatable } from './types';
 import { type WgslCode, code } from './wgslCode';
+import { getUsedBuiltinsNamed } from './wgslBuiltin';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
@@ -71,15 +72,16 @@ class WigsillRuntime {
   }
 
   makeRenderPipeline(options: {
-    vertex?: {
-      args: Wgsl[];
+    vertex: {
       code: WgslCode;
-      output: StructDataType<Record<string, AnyWgslData>>;
+      output: {
+        [K in symbol]: string;
+      } & {
+        [K in string]: [AnyWgslData, string];
+      };
     };
     fragment?: {
-      args: Wgsl[];
       code: WgslCode;
-      output: Wgsl;
       target: Iterable<GPUColorTargetState | null>;
     };
     primitive: GPUPrimitiveState;
@@ -87,13 +89,70 @@ class WigsillRuntime {
     externalDeclarations?: Wgsl[];
     label?: string;
   }) {
+    const symbolOutputs = Object.getOwnPropertySymbols(
+      options.vertex.output,
+    ).map((symbol) => {
+      const name = options.vertex.output[symbol];
+      if (typeof name !== 'string') {
+        throw new Error('Output names must be strings.');
+      }
+      return { symbol, name };
+    });
+    const symbolRecord: Record<symbol, string> = Object.fromEntries(
+      symbolOutputs.map(({ symbol, name }) => [symbol, name]),
+    );
+
+    const vertexOutputBuiltins = getUsedBuiltinsNamed(symbolRecord);
+    for (const entry of vertexOutputBuiltins) {
+      if (entry.builtin.stage !== 'vertex') {
+        throw new Error(
+          `Built-in ${entry.name} is used illegally in the vertex shader stage.`,
+        );
+      }
+      if (entry.builtin.direction !== 'output') {
+        throw new Error(
+          `Built-in ${entry.name} is used illegally as an output in the vertex shader stage.`,
+        );
+      }
+    }
+    const outputVars = Object.keys(options.vertex.output);
+    const vertexOutput = outputVars.map((name, index) => {
+      const varInfo = options.vertex.output[name];
+      if (!varInfo) {
+        throw new Error('Output names must be strings.');
+      }
+      return { name, varInfo, index };
+    });
+
+    const structFields = [
+      ...vertexOutputBuiltins.map(
+        (entry) =>
+          code`
+          @builtin(${entry.builtin.name}) ${entry.name}: ${entry.builtin.type};
+        `,
+      ),
+      ...vertexOutput.map(
+        ({ name, varInfo, index }) =>
+          code`
+          @location(${index}) ${name}: ${varInfo[0]};
+        `,
+      ),
+    ];
+
+    // we also need to construct a struct - the constructor of StructDataType accepts an object with name: vartype pairs
+    const vertexOutputStruct = new StructDataType(
+      Object.fromEntries(
+        vertexOutput.map(({ name, varInfo }) => [name, varInfo[0]]),
+      ),
+    );
+
     const program = new ProgramBuilder(
       this,
       code`
       ${
         options.vertex
           ? code`
-              @vertex fn main_vertex(${options.vertex.args.flatMap((arg) => [arg, ', '])}) -> ${options.vertex.output} {
+              @vertex fn main_vertex() -> {
                 ${options.vertex.code}
               }
             `
@@ -102,7 +161,7 @@ class WigsillRuntime {
       ${
         options.fragment
           ? code`
-              @fragment fn main_frag(${options.fragment.args.flatMap((arg) => [arg, ', '])}) -> ${options.fragment.output} {
+              @fragment fn main_frag() ->  {
                 ${options.fragment.code}
             }`
           : ''

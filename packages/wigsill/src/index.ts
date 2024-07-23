@@ -7,6 +7,7 @@ export { default as ProgramBuilder, type Program } from './programBuilder';
 export { StrictNameRegistry, RandomNameRegistry } from './nameRegistry';
 export * from './std140';
 export * from './macro';
+export * from './wgslBuiltin';
 
 export type { WgslBuffer } from './wgslBuffer';
 export type { WgslCode } from './wgslCode';

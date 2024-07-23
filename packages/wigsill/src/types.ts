@@ -1,7 +1,7 @@
 import type { AnyWgslData } from './std140/types';
 import type { WgslIdentifier } from './wgslIdentifier';
 
-export type Wgsl = string | number | WgslResolvable;
+export type Wgsl = string | number | WgslResolvable | symbol;
 
 /**
  * Passed into each resolvable item. All sibling items share a resolution ctx,
@@ -89,4 +89,8 @@ export interface WgslBindable<
   readonly usage: TUsage;
 }
 
-export type BufferUsage = 'uniform' | 'readonly_storage' | 'mutable_storage';
+export type BufferUsage =
+  | 'uniform'
+  | 'readonly_storage'
+  | 'mutable_storage'
+  | 'vertex';

@@ -16,7 +16,9 @@ export interface WgslBuffer<
   $allowUniform(): WgslBuffer<TData, TAllows | 'uniform'>;
   $allowReadonlyStorage(): WgslBuffer<TData, TAllows | 'readonly_storage'>;
   $allowMutableStorage(): WgslBuffer<TData, TAllows | 'mutable_storage'>;
-  $allowVertex(stepMode: 'vertex' | 'instance'): WgslBuffer<TData, TAllows>;
+  $allowVertex(
+    stepMode: 'vertex' | 'instance',
+  ): WgslBuffer<TData, TAllows | 'vertex'>;
   $addFlags(flags: GPUBufferUsageFlags): WgslBuffer<TData, TAllows>;
 
   write(runtime: WigsillRuntime, data: Parsed<TData>): void;
@@ -32,6 +34,10 @@ export interface WgslBuffer<
 
   asReadonlyStorage(): 'readonly_storage' extends TAllows
     ? WgslBufferUsage<TData, 'readonly_storage'>
+    : null;
+
+  asVertex(): 'vertex' extends TAllows
+    ? WgslBufferUsage<TData, 'vertex'>
     : null;
 }
 
@@ -54,7 +60,7 @@ class WgslBufferImpl<
   public flags: GPUBufferUsageFlags =
     GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
 
-  private _vertexLayout: GPUVertexBufferLayout | null = null;
+  public vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null = null;
   private _allowedUsages: {
     uniform: WgslBufferUsage<TData, TAllows | 'uniform'> | null;
     mutableStorage: WgslBufferUsage<TData, TAllows | 'mutable_storage'> | null;
@@ -141,7 +147,15 @@ class WgslBufferImpl<
   }
 
   $allowVertex(stepMode: 'vertex' | 'instance' = 'vertex') {
-    return this;
+    const enrichedThis = this as WgslBuffer<TData, TAllows | 'vertex'>;
+    this.$addFlags(GPUBufferUsage.VERTEX);
+    if (!this.vertexLayout) {
+      this.vertexLayout = {
+        arrayStride: this.dataType.size,
+        stepMode,
+      };
+    }
+    return enrichedThis;
   }
 
   // Temporary solution
@@ -167,6 +181,12 @@ class WgslBufferImpl<
     return this._allowedUsages
       .readonlyStorage as 'readonly_storage' extends TAllows
       ? WgslBufferUsage<TData, 'readonly_storage'>
+      : null;
+  }
+
+  asVertex() {
+    return this.vertexLayout as 'vertex' extends TAllows
+      ? WgslBufferUsage<TData, 'vertex'>
       : null;
   }
 
