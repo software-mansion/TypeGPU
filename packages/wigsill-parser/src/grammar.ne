@@ -4,11 +4,11 @@
 import moo from 'moo';
 
 const lexer = moo.compile({
-  WS:      /[ \\t\\v\\f]+/,
-  NL:      { match: /\\n/, lineBreaks: true },
-  comment: /\\/\\/.*?$/,
-  decimal_float_literal: /0[fh]|[1-9][0-9]*[fh]|[0-9]*\\.[0-9]+(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+\\.[0-9]*(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+[eE][+-]?[0-9]+[fh]?/,
-  hex_float_literal: /0[xX][0-9a-fA-F]*\\.[0-9a-fA-F]+(?:[pP][+-]?[0-9]+[fh]?)?|0[xX][0-9a-fA-F]+\\.[0-9a-fA-F]*(?:[pP][+-]?[0-9]+[fh]?)?|0[xX][0-9a-fA-F]+[pP][+-]?[0-9]+[fh]?/,
+  WS:      /[ \t\v\f]+/,
+  NL:      { match: /\n/, lineBreaks: true },
+  comment: /\/\/.*?$/,
+  decimal_float_literal: /0[fh]|[1-9][0-9]*[fh]|[0-9]*\.[0-9]+(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+\.[0-9]*(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+[eE][+-]?[0-9]+[fh]?/,
+  hex_float_literal: /0[xX][0-9a-fA-F]*\.[0-9a-fA-F]+(?:[pP][+-]?[0-9]+[fh]?)?|0[xX][0-9a-fA-F]+\.[0-9a-fA-F]*(?:[pP][+-]?[0-9]+[fh]?)?|0[xX][0-9a-fA-F]+[pP][+-]?[0-9]+[fh]?/,
   decimal_int_literal: { match: /(?:0|[1-9][0-9]*)[iu]?/ },
   hex_int_literal: { match: /0[xX][0-9a-fA-F]+[iu]?/ },
 
