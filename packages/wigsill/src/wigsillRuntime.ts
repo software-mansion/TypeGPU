@@ -273,7 +273,14 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
       externalBindGroups?: GPUBindGroup[];
     },
   ) {
-    const { vertexCount, externalBindGroups, ...descriptor } = options;
+    const {
+      vertexCount,
+      instanceCount,
+      firstVertex,
+      firstInstance,
+      externalBindGroups,
+      ...descriptor
+    } = options;
 
     if ((externalBindGroups?.length ?? 0) !== this.externalLayoutCount) {
       throw new Error(
@@ -302,12 +309,7 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
       this.program.bindGroup,
     );
 
-    passEncoder.draw(
-      vertexCount,
-      options.instanceCount,
-      options.firstVertex,
-      options.firstInstance,
-    );
+    passEncoder.draw(vertexCount, instanceCount, firstVertex, firstInstance);
     passEncoder.end();
   }
 }
