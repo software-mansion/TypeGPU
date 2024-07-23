@@ -71,6 +71,11 @@ export function ExampleView({ example, codeEditorShowing }: Props) {
     setCodeDebouncer.call(newCode);
   });
 
+  // Handling example HMR
+  useEffect(() => {
+    setCode(initialCode);
+  }, [initialCode]);
+
   const { def, setRef } = useExample(code);
 
   return (

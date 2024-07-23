@@ -1,4 +1,5 @@
 import type {
+  Potential,
   ResolutionCtx,
   SlotValuePair,
   Wgsl,
@@ -15,7 +16,7 @@ import { WgslIdentifier } from './wgslIdentifier';
 export interface WgslFn extends WgslResolvable {
   $name(label: string): WgslFn;
 
-  with<T>(slot: WgslSlot<T>, value: T): BoundWgslFn;
+  with<T>(slot: WgslSlot<T>, value: Potential<T>): BoundWgslFn;
 }
 
 export type BoundWgslFn = Omit<WgslFn, '$name'>;
@@ -75,7 +76,7 @@ class BoundWgslFnImpl<T> implements BoundWgslFn {
     return this._innerFn.label;
   }
 
-  with<TValue>(slot: WgslSlot<TValue>, value: TValue): BoundWgslFn {
+  with<TValue>(slot: WgslSlot<TValue>, value: Potential<TValue>): BoundWgslFn {
     return new BoundWgslFnImpl(this, [slot, value]);
   }
 
