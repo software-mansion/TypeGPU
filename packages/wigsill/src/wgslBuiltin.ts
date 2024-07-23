@@ -1,6 +1,5 @@
-import type { U32, F32, Vec3u, Vec4f } from './std140';
-import { u32, f32, vec3u, vec4f, arrayOf } from './std140';
-import { WgslResolvable } from './types';
+import type { F32, U32, Vec3u, Vec4f } from './std140';
+import { arrayOf, f32, u32, vec3u, vec4f } from './std140';
 
 export type BuiltInPossibleTypes =
   | U32
