@@ -374,6 +374,26 @@ const mainMoveObstacles = wgsl.fn()`() {
   }
 }`.$name('main_move_obstacles');
 
+const SourceParams = struct({
+  center: vec2f,
+  radius: f32,
+  intensity: f32,
+});
+const sourceParamsBuffer = wgsl.buffer(SourceParams).$allowUniform();
+const sourceParamsUniform = sourceParamsBuffer.asUniform();
+const getMinimumInFlow = wgsl.fn()`(x: u32, y: u32) -> f32 {
+  let source_params = ${sourceParamsUniform};
+  let grid_size_f = f32(${gridSizeData});
+  let source_radius = max(1., source_params.radius * grid_size_f);
+  let source_pos = vec2f(source_params.center.x * grid_size_f, source_params.center.y * grid_size_f);
+
+  if (length(vec2f(f32(x), f32(y)) - source_pos) < source_radius) {
+    return source_params.intensity;
+  }
+
+  return 0.;
+}`;
+
 const mainCompute = wgsl.fn()`(x: u32, y: u32) {
   let index = x + y * ${gridSizeData};
 
@@ -392,6 +412,9 @@ const mainCompute = wgsl.fn()`(x: u32, y: u32) {
   next.z += ${flowFromCell}(x, y, x, y - 1);
   next.z += ${flowFromCell}(x, y, x + 1, y);
   next.z += ${flowFromCell}(x, y, x - 1, y);
+
+  let min_inflow = ${getMinimumInFlow}(x, y);
+  next.z = max(min_inflow, next.z);
 
   ${outputGridSlot}[index] = next;
 }`.$name('main_compute');
@@ -629,11 +652,11 @@ onFrame((deltaTime) => {
   }
 });
 
-addParameter('box x', { initial: 0.5, min: 0, max: 1, step: 0.1 }, (boxX) => {
+addParameter('box x', { initial: 0.5, min: 0, max: 1, step: 0.01 }, (boxX) => {
   setObstacleX(0, boxX);
 });
 
-addParameter('box y', { initial: 0.2, min: 0, max: 1, step: 0.1 }, (boxY) => {
+addParameter('box y', { initial: 0.2, min: 0, max: 1, step: 0.01 }, (boxY) => {
   setObstacleY(0, boxY);
 });
 
@@ -642,6 +665,30 @@ addParameter(
   { initial: 0, min: 0, max: 1, step: 0.01 },
   (leftX) => {
     setObstacleX(1, leftX);
+  },
+);
+
+const sourceParams: Parsed<typeof SourceParams> = {
+  center: [0.5, 0.75],
+  intensity: 1,
+  radius: 0.01,
+};
+
+addParameter(
+  'source intensity',
+  { initial: 0.1, min: 0, max: 1, step: 0.01 },
+  (intensity) => {
+    sourceParams.intensity = intensity;
+    sourceParamsBuffer.write(runtime, sourceParams);
+  },
+);
+
+addParameter(
+  'source radius',
+  { initial: 0.01, min: 0.01, max: 0.1, step: 0.01 },
+  (radius) => {
+    sourceParams.radius = radius;
+    sourceParamsBuffer.write(runtime, sourceParams);
   },
 );
 
