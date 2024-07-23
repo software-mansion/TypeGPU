@@ -723,7 +723,7 @@ addParameter(
 
 addParameter(
   'box y',
-  { initial: 0.2, min: 0.2, max: 1, step: 0.01 },
+  { initial: 0.2, min: 0.2, max: 0.85, step: 0.01 },
   (boxY) => {
     setObstacleY(0, boxY);
   },
