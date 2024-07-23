@@ -16,6 +16,7 @@ export interface WgslBuffer<
   $allowUniform(): WgslBuffer<TData, TAllows | 'uniform'>;
   $allowReadonlyStorage(): WgslBuffer<TData, TAllows | 'readonly_storage'>;
   $allowMutableStorage(): WgslBuffer<TData, TAllows | 'mutable_storage'>;
+  $allowVertex(stepMode: 'vertex' | 'instance'): WgslBuffer<TData, TAllows>;
   $addFlags(flags: GPUBufferUsageFlags): WgslBuffer<TData, TAllows>;
 
   write(runtime: WigsillRuntime, data: Parsed<TData>): void;
@@ -53,6 +54,7 @@ class WgslBufferImpl<
   public flags: GPUBufferUsageFlags =
     GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
 
+  private _vertexLayout: GPUVertexBufferLayout | null = null;
   private _allowedUsages: {
     uniform: WgslBufferUsage<TData, TAllows | 'uniform'> | null;
     mutableStorage: WgslBufferUsage<TData, TAllows | 'mutable_storage'> | null;
@@ -136,6 +138,10 @@ class WgslBufferImpl<
       );
     }
     return enrichedThis;
+  }
+
+  $allowVertex(stepMode: 'vertex' | 'instance' = 'vertex') {
+    return this;
   }
 
   // Temporary solution
