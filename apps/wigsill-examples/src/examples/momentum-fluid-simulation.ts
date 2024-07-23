@@ -84,7 +84,7 @@ const BoxObstacle = struct({
   enabled: u32,
 });
 
-const gridSize = 64;
+const gridSize = 128;
 const gridSizeBuffer = wgsl.buffer(u32).$allowUniform();
 const gridSizeData = gridSizeBuffer.asUniform();
 
@@ -353,6 +353,36 @@ const mainMoveObstacles = wgsl.fn()`() {
         }
         
         ${addDensity}(next_min_x - 1, y, row_density);
+      }
+    }
+
+    // does it move up
+    if (diff.y > 0) {
+      for (var x = min_x; x <= max_x; x += 1) {
+        var col_density = 0.;
+        for (var y = max_y; y <= next_max_y; y += 1) {
+          var cell = ${getCell}(x, y);
+          col_density += cell.z;
+          cell.z = 0;
+          ${setCell}(x, y, cell);
+        }
+        
+        ${addDensity}(x, next_max_y + 1, col_density);
+      }
+    }
+
+    // does it move down
+    if (diff.y < 0) {
+      for (var x = min_x; x <= max_x; x += 1) {
+        var col_density = 0.;
+        for (var y = next_min_y; y < min_y; y += 1) {
+          var cell = ${getCell}(x, y);
+          col_density += cell.z;
+          cell.z = 0;
+          ${setCell}(x, y, cell);
+        }
+        
+        ${addDensity}(x, next_min_y - 1, col_density);
       }
     }
 
