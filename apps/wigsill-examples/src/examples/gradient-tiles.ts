@@ -10,7 +10,15 @@ import {
   onCleanup,
   onFrame,
 } from '@wigsill/example-toolkit';
-import { createRuntime, struct, u32, vec2f, vec4f, wgsl } from 'wigsill';
+import {
+  createRuntime,
+  struct,
+  u32,
+  vec2f,
+  vec4f,
+  wgsl,
+  builtin,
+} from 'wigsill';
 
 const runtime = await createRuntime();
 const device = runtime.device;
@@ -35,15 +43,8 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const outputStruct = struct({
-  '@builtin(position) pos': vec4f,
-  '@location(0) uv': vec2f,
-});
-
 const renderPipeline = runtime.makeRenderPipeline({
   vertex: {
-    args: ['@builtin(vertex_index) VertexIndex: u32'],
-    output: outputStruct,
     code: wgsl`
       var pos = array<vec2f, 4>(
         vec2(0.5, 0.5), // top-right
@@ -59,21 +60,21 @@ const renderPipeline = runtime.makeRenderPipeline({
         vec2(0., 0.) // bottom-left
       );
 
-      var output: ${outputStruct};
-      output.pos = vec4f(pos[VertexIndex], 0.0, 1.0);
-      output.uv = uv[VertexIndex];
-      return output;
+      let posOut = vec4f(pos[${builtin.vertexIndex}], 0.0, 1.0);
+      let uvOut = uv[${builtin.vertexIndex}];
     `,
+    output: {
+      [builtin.position]: 'posOut',
+      uvOut: [vec2f, 'uv'],
+    },
   },
 
   fragment: {
-    args: ['@builtin(position) Position: vec4f', '@location(0) uv: vec2f'],
     code: wgsl.code`
-      let red = floor(uv.x * f32(${xSpanData})) / f32(${xSpanData});
-      let green = floor(uv.y * f32(${ySpanData})) / f32(${ySpanData});
+      let red = floor(uvOut.x * f32(${xSpanData})) / f32(${xSpanData});
+      let green = floor(uvOut.y * f32(${ySpanData})) / f32(${ySpanData});
       return vec4(red, green, 0.5, 1.0);
     `,
-    output: '@location(0) vec4f',
     target: [
       {
         format: presentationFormat,

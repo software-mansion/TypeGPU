@@ -79,6 +79,7 @@ export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
    */
   readonly dataType: TData;
   readonly flags: GPUBufferUsageFlags;
+  vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null;
 }
 
 export interface WgslBindable<

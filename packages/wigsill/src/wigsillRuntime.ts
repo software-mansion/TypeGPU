@@ -1,9 +1,12 @@
-import ProgramBuilder, { type Program } from './programBuilder';
-import StructDataType from './std140/struct';
+import ProgramBuilder, {
+  type Program,
+  RenderProgramBuilder,
+} from './programBuilder';
 import type { AnyWgslData } from './std140/types';
 import type { Wgsl, WgslAllocatable } from './types';
-import { getUsedBuiltinsNamed } from './wgslBuiltin';
 import { type WgslCode, code } from './wgslCode';
+import type { SimpleWgslData } from './std140';
+import type { AnySchema } from 'typed-binary';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
@@ -80,110 +83,60 @@ class WigsillRuntime {
         [K in string]: [AnyWgslData, string];
       };
     };
-    fragment?: {
+    fragment: {
       code: WgslCode;
       target: Iterable<GPUColorTargetState | null>;
     };
     primitive: GPUPrimitiveState;
-    externalLayouts?: GPUBindGroupLayout[];
-    externalDeclarations?: Wgsl[];
     label?: string;
   }) {
-    const symbolOutputs = Object.getOwnPropertySymbols(
-      options.vertex.output,
-    ).map((symbol) => {
-      const name = options.vertex.output[symbol];
-      if (typeof name !== 'string') {
-        throw new Error('Output names must be strings.');
-      }
-      return { symbol, name };
-    });
-    const symbolRecord: Record<symbol, string> = Object.fromEntries(
-      symbolOutputs.map(({ symbol, name }) => [symbol, name]),
-    );
+    const [vertexProgram, fragmentProgram, vertexBuffers] =
+      new RenderProgramBuilder(
+        this,
+        options.vertex.code,
+        options.fragment.code,
+        options.vertex.output,
+      ).build({
+        bindingGroup: 0,
+      });
 
-    const vertexOutputBuiltins = getUsedBuiltinsNamed(symbolRecord);
-    for (const entry of vertexOutputBuiltins) {
-      if (entry.builtin.stage !== 'vertex') {
+    const vertexBufferDescriptors = vertexBuffers.map((buffer, idx) => {
+      if (!buffer.allocatable.vertexLayout) {
         throw new Error(
-          `Built-in ${entry.name} is used illegally in the vertex shader stage.`,
+          `Buffer ${buffer.allocatable} does not have a vertex layout`,
         );
       }
-      if (entry.builtin.direction !== 'output') {
-        throw new Error(
-          `Built-in ${entry.name} is used illegally as an output in the vertex shader stage.`,
-        );
-      }
-    }
-    const outputVars = Object.keys(options.vertex.output);
-    const vertexOutput = outputVars.map((name, index) => {
-      const varInfo = options.vertex.output[name];
-      if (!varInfo) {
-        throw new Error('Output names must be strings.');
-      }
-      return { name, varInfo, index };
+      return {
+        ...buffer.allocatable.vertexLayout,
+        attributes: [
+          {
+            shaderLocation: idx,
+            offset: 0,
+            format: deriveVertexFormat(
+              buffer.allocatable.dataType as SimpleWgslData<AnySchema>,
+            ),
+          },
+        ],
+      };
     });
 
-    const structFields = [
-      ...vertexOutputBuiltins.map(
-        (entry) =>
-          code`
-          @builtin(${entry.builtin.name}) ${entry.name}: ${entry.builtin.type};
-        `,
-      ),
-      ...vertexOutput.map(
-        ({ name, varInfo, index }) =>
-          code`
-          @location(${index}) ${name}: ${varInfo[0]};
-        `,
-      ),
-    ];
-
-    // we also need to construct a struct - the constructor of StructDataType accepts an object with name: vartype pairs
-    const vertexOutputStruct = new StructDataType(
-      Object.fromEntries(
-        vertexOutput.map(({ name, varInfo }) => [name, varInfo[0]]),
-      ),
-    );
-
-    const program = new ProgramBuilder(
-      this,
-      code`
-      ${
-        options.vertex
-          ? code`
-              @vertex fn main_vertex() -> {
-                ${options.vertex.code}
-              }
-            `
-          : ''
-      }
-      ${
-        options.fragment
-          ? code`
-              @fragment fn main_frag() ->  {
-                ${options.fragment.code}
-            }`
-          : ''
-      }
-      ${options.externalDeclarations?.flatMap((arg) => [arg, '\n']) ?? ''}
-      `,
-    ).build({
-      bindingGroup: (options.externalLayouts ?? []).length,
-      shaderStage:
-        (options.vertex ? GPUShaderStage.VERTEX : 0) |
-        (options.fragment ? GPUShaderStage.FRAGMENT : 0),
+    const vertexShaderModule = this.device.createShaderModule({
+      code: vertexProgram.code,
+    });
+    const fragmentShaderModule = this.device.createShaderModule({
+      code: fragmentProgram.code,
     });
 
-    const shaderModule = this.device.createShaderModule({
-      code: program.code,
-    });
+    console.log('vertexProgram', vertexProgram.code);
+    console.log('fragmentProgram', fragmentProgram.code);
+    console.log('vertexBindGroupLayout', vertexProgram.bindGroupLayout);
+    console.log('fragmentBindGroupLayout', fragmentProgram.bindGroupLayout);
 
     const pipelineLayout = this.device.createPipelineLayout({
       label: options.label ?? '',
       bindGroupLayouts: [
-        ...(options.externalLayouts ?? []),
-        program.bindGroupLayout,
+        vertexProgram.bindGroupLayout,
+        fragmentProgram.bindGroupLayout,
       ],
     });
 
@@ -191,20 +144,27 @@ class WigsillRuntime {
       label: options.label ?? '',
       layout: pipelineLayout,
       vertex: {
-        module: shaderModule,
+        module: vertexShaderModule,
+        buffers: vertexBufferDescriptors,
       },
       fragment: {
-        module: shaderModule,
+        module: fragmentShaderModule,
         targets: options.fragment?.target ?? [],
       },
       primitive: options.primitive,
     });
 
+    const buffers = vertexBuffers.map(
+      (buffer, idx) => [this.bufferFor(buffer.allocatable), idx] as const,
+    );
+
     const executor = new RenderPipelineExecutor(
       this.device,
       renderPipeline,
-      program,
-      options.externalLayouts?.length ?? 0,
+      vertexProgram,
+      fragmentProgram,
+      0,
+      buffers,
     );
 
     this._pipelineExecutors.push(executor);
@@ -323,6 +283,23 @@ class PipelineExecutor<T extends GPURenderPipeline | GPUComputePipeline> {
 }
 
 class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
+  private _vertexProgram: Program;
+  private _fragmentProgram: Program;
+  private _usedVertexBuffers: Set<readonly [GPUBuffer, number]>;
+
+  constructor(
+    device: GPUDevice,
+    pipeline: GPURenderPipeline,
+    vertexProgram: Program,
+    fragmentProgram: Program,
+    externalLayoutCount: number,
+    usedVertexBuffers: (readonly [GPUBuffer, number])[],
+  ) {
+    super(device, pipeline, vertexProgram, externalLayoutCount);
+    this._vertexProgram = vertexProgram;
+    this._fragmentProgram = fragmentProgram;
+    this._usedVertexBuffers = new Set(usedVertexBuffers);
+  }
   execute(
     options: GPURenderPassDescriptor & {
       vertexCount: number;
@@ -365,8 +342,16 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
 
     passEncoder.setBindGroup(
       (externalBindGroups ?? []).length,
-      this.program.bindGroup,
+      this._vertexProgram.bindGroup,
     );
+    passEncoder.setBindGroup(
+      (externalBindGroups ?? []).length + 1,
+      this._fragmentProgram.bindGroup,
+    );
+
+    for (const [buffer, index] of this._usedVertexBuffers) {
+      passEncoder.setVertexBuffer(index, buffer);
+    }
 
     passEncoder.draw(vertexCount, instanceCount, firstVertex, firstInstance);
     passEncoder.end();
@@ -425,6 +410,35 @@ export async function createRuntime(
   }
   device = await adapter.requestDevice(options.device);
   return new WigsillRuntime(device);
+}
+
+const typeToVertexFormatMap: Record<string, GPUVertexFormat> = {
+  f32: 'float32',
+  vec2f: 'float32x2',
+  vec3f: 'float32x3',
+  vec4f: 'float32x4',
+  u32: 'uint32',
+  vec2u: 'uint32x2',
+  vec3u: 'uint32x3',
+  vec4u: 'uint32x4',
+  i32: 'sint32',
+  vec2i: 'sint32x2',
+  vec3i: 'sint32x3',
+  vec4i: 'sint32x4',
+};
+
+function deriveVertexFormat<TData extends SimpleWgslData<AnySchema>>(
+  typeSchema: TData,
+): GPUVertexFormat {
+  if (!('code' in typeSchema)) {
+    throw new Error(`Type schema must contain a 'code' field`);
+  }
+  const code = typeSchema.code as string;
+  const vertexFormat = typeToVertexFormatMap[code];
+  if (!vertexFormat) {
+    throw new Error(`Unknown vertex format for type code: ${code}`);
+  }
+  return vertexFormat;
 }
 
 export default WigsillRuntime;

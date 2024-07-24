@@ -1,12 +1,13 @@
-import type { F32, U32, Vec3u, Vec4f } from './std140';
-import { arrayOf, f32, u32, vec3u, vec4f } from './std140';
+import type { F32, U32, Vec3u, Vec4f, WgslData } from './std140';
+import { f32, SimpleWgslData, u32, vec3u, vec4f } from './std140';
+import * as TB from 'typed-binary';
 
 export type BuiltInPossibleTypes =
   | U32
   | F32
   | Vec3u
   | Vec4f
-  | ReturnType<typeof arrayOf<U32>>;
+  | WgslData<TB.Unwrap<U32>[]>;
 
 export const builtin = {
   vertexIndex: Symbol('builtin_vertexIndex'),
@@ -55,7 +56,11 @@ const builtinSymbolToObj: Record<symbol, Builtin> = {
     name: 'clip_distances',
     stage: 'vertex',
     direction: 'output',
-    type: arrayOf(f32, 8),
+    type: new SimpleWgslData({
+      schema: TB.arrayOf(u32, 8),
+      byteAlignment: 16,
+      code: 'array<u32, 8>',
+    }),
   },
   [builtin.frontFacing]: {
     name: 'front_facing',
