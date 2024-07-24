@@ -1,6 +1,6 @@
-import type { F32, U32, Vec3u, Vec4f, WgslData } from './std140';
-import { f32, SimpleWgslData, u32, vec3u, vec4f } from './std140';
 import * as TB from 'typed-binary';
+import type { F32, U32, Vec3u, Vec4f, WgslData } from './std140';
+import { SimpleWgslData, f32, u32, vec3u, vec4f } from './std140';
 
 export type BuiltInPossibleTypes =
   | U32

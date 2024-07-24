@@ -1,10 +1,10 @@
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
-import type { BufferUsage, WgslBindable, WgslResolvable } from './types';
-import type WigsillRuntime from './wigsillRuntime';
 import type { AnyWgslData } from './std140/types';
-import { getUsedBuiltinsNamed, getBuiltinInfo } from './wgslBuiltin';
-import { code, type WgslCode } from './wgslCode';
+import type { BufferUsage, WgslBindable, WgslResolvable } from './types';
+import { getBuiltinInfo, getUsedBuiltinsNamed } from './wgslBuiltin';
+import { type WgslCode, code } from './wgslCode';
+import type WigsillRuntime from './wigsillRuntime';
 
 export type Program = {
   bindGroupLayout: GPUBindGroupLayout;

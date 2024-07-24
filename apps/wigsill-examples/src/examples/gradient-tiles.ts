@@ -10,15 +10,7 @@ import {
   onCleanup,
   onFrame,
 } from '@wigsill/example-toolkit';
-import {
-  createRuntime,
-  struct,
-  u32,
-  vec2f,
-  vec4f,
-  wgsl,
-  builtin,
-} from 'wigsill';
+import { builtin, createRuntime, u32, vec2f, wgsl } from 'wigsill';
 
 const runtime = await createRuntime();
 const device = runtime.device;

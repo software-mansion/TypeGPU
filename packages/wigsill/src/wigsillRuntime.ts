@@ -1,12 +1,12 @@
+import type { AnySchema } from 'typed-binary';
 import ProgramBuilder, {
   type Program,
   RenderProgramBuilder,
 } from './programBuilder';
+import type { SimpleWgslData } from './std140';
 import type { AnyWgslData } from './std140/types';
 import type { Wgsl, WgslAllocatable } from './types';
 import { type WgslCode, code } from './wgslCode';
-import type { SimpleWgslData } from './std140';
-import type { AnySchema } from 'typed-binary';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.

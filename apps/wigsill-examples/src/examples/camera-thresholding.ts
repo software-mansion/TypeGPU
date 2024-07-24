@@ -5,7 +5,15 @@
 */
 
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
-import { createRuntime, f32, struct, vec2f, vec4f, wgsl } from 'wigsill';
+import {
+  createRuntime,
+  f32,
+  struct,
+  vec2f,
+  vec4f,
+  wgsl,
+  builtin,
+} from 'wigsill';
 
 // Layout
 const [video, canvas] = await Promise.all([
@@ -57,7 +65,6 @@ const outputStruct = struct({
 
 const renderProgram = runtime.makeRenderPipeline({
   vertex: {
-    args: ['@builtin(vertex_index) VertexIndex: u32'],
     code: wgsl`
       const pos = array(
         vec2( 1.0,  1.0),
@@ -77,15 +84,15 @@ const renderProgram = runtime.makeRenderPipeline({
         vec2(0.0, 0.0),
       );
 
-      var output : ${outputStruct};
-      output.Position = vec4(pos[VertexIndex], 0.0, 1.0);
-      output.fragUV = uv[VertexIndex];
-      return output;
+      let Position = vec4(pos[${builtin.vertexIndex}], 0.0, 1.0);
+      let fragUV = uv[${builtin.vertexIndex}];
     `,
-    output: outputStruct,
+    output: {
+      [builtin.position]: 'Position',
+      fragUV: [vec2f, 'fragUV'],
+    },
   },
   fragment: {
-    args: ['@location(0) fragUV : vec2f'],
     code: wgsl`
       var color = textureSampleBaseClampToEdge(videoTexture, sampler_, fragUV);
       let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
@@ -96,7 +103,6 @@ const renderProgram = runtime.makeRenderPipeline({
 
       return vec4f(1);
     `,
-    output: '@location(0) vec4f',
     target: [
       {
         format: presentationFormat,
