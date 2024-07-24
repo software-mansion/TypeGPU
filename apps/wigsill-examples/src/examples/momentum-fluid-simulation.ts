@@ -18,6 +18,7 @@ import {
   arrayOf,
   createRuntime,
   f32,
+  i32,
   struct,
   u32,
   vec2f,
@@ -85,7 +86,7 @@ const BoxObstacle = struct({
 });
 
 const gridSize = 256;
-const gridSizeBuffer = wgsl.buffer(u32).$allowUniform();
+const gridSizeBuffer = wgsl.buffer(i32).$allowUniform();
 const gridSizeData = gridSizeBuffer.asUniform();
 
 const gridAlphaBuffer = wgsl
@@ -123,30 +124,30 @@ const obstaclesData = obstaclesBuffer.asReadonlyStorage();
 
 const isValidCoord = wgsl.fn()`(x: i32, y: i32) -> bool {
   return
-    x < i32(${gridSizeData}) &&
+    x < ${gridSizeData} &&
     x >= 0 &&
-    y < i32(${gridSizeData}) &&
+    y < ${gridSizeData} &&
     y >= 0;
 }`;
 
 const getCell = wgsl.fn()`(x: i32, y: i32) -> vec4f {
-  let index = x + y * i32(${gridSizeData});
+  let index = x + y * ${gridSizeData};
   return ${inputGridSlot}[index];
 }`.$name('get_cell');
 
 const setCell = wgsl.fn()`(x: i32, y: i32, value: vec4f) {
-  let index = x + y * i32(${gridSizeData});
+  let index = x + y * ${gridSizeData};
   ${outputGridSlot}[index] = value;
 }`.$name('set_cell');
 
 const setVelocity = wgsl.fn()`(x: i32, y: i32, velocity: vec2f) {
-  let index = x + y * i32(${gridSizeData});
+  let index = x + y * ${gridSizeData};
   ${outputGridSlot}[index].x = velocity.x;
   ${outputGridSlot}[index].y = velocity.y;
 }`.$name('set_velocity');
 
 const addDensity = wgsl.fn()`(x: i32, y: i32, density: f32) {
-  let index = x + y * i32(${gridSizeData});
+  let index = x + y * ${gridSizeData};
   ${outputGridSlot}[index].z = ${inputGridSlot}[index].z + density;
 }`.$name('add_density');
 
@@ -280,7 +281,7 @@ const computeVelocity = wgsl.fn()`(x: i32, y: i32) -> vec2f {
 }`;
 
 const mainInitWorld = wgsl.fn()`(x: i32, y: i32) {
-  let index = x + y * i32(${gridSizeData});
+  let index = x + y * ${gridSizeData};
   
   var value = vec4f(0., 0., 0., 0.);
 
@@ -397,7 +398,7 @@ const mainMoveObstacles = wgsl.fn()`() {
     }
     
     // right column
-    for (var y = max(1, next_min_y); y <= min(next_max_y, i32(${gridSizeData}) - 2); y += 1) {
+    for (var y = max(1, next_min_y); y <= min(next_max_y, ${gridSizeData} - 2); y += 1) {
       let new_vel = ${computeVelocity}(next_max_x + 2, y);
       // let new_vel = vec2f(0, 1.);
       ${setVelocity}(next_max_x + 2, y, new_vel);
@@ -426,7 +427,7 @@ const getMinimumInFlow = wgsl.fn()`(x: i32, y: i32) -> f32 {
 }`;
 
 const mainCompute = wgsl.fn()`(x: i32, y: i32) {
-  let index = x + y * i32(${gridSizeData});
+  let index = x + y * ${gridSizeData};
 
   ${setupRandomSeed}(vec2f(f32(index), ${timeData}));
 
@@ -451,7 +452,7 @@ const mainCompute = wgsl.fn()`(x: i32, y: i32) {
 }`.$name('main_compute');
 
 const mainFragment = wgsl.fn()`(x: i32, y: i32) -> vec4f {
-  let index = x + y * i32(${gridSizeData});
+  let index = x + y * ${gridSizeData};
   let cell = ${inputGridSlot}[index];
   let velocity = cell.xy;
   let density = max(0., cell.z);
