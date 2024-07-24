@@ -6,7 +6,8 @@ import { Home } from './Home';
 import { ExampleLink } from './common/ExampleLink';
 import { Switch } from './common/Switch';
 import { ExampleView } from './example/ExampleView';
-import { examples } from './example/examples';
+import { examples, examplesByCategory } from './example/examples';
+import { exampleCategories } from './example/types';
 import { currentExampleAtom } from './router';
 
 function App() {
@@ -47,10 +48,15 @@ function App() {
           <nav className="flex flex-col flex-1 gap-2 overflow-y-auto">
             <ExampleLink exampleKey={undefined}>Home</ExampleLink>
             <hr className="my-2" />
-            {Object.entries(examples).map(([key, example]) => (
-              <ExampleLink key={key} exampleKey={key}>
-                {example.metadata.title}
-              </ExampleLink>
+            {exampleCategories.map((category) => (
+              <section key={category.key} className="pb-4">
+                <h2 className="text-sm text-slate-500">{category.label}</h2>
+                {(examplesByCategory[category.key] ?? []).map((example) => (
+                  <ExampleLink key={example.key} exampleKey={example.key}>
+                    {example.metadata.title}
+                  </ExampleLink>
+                ))}
+              </section>
             ))}
           </nav>
           <label className="flex gap-3 items-center justify-center cursor-pointer p-4 bg-slate-100 rounded-lg">
