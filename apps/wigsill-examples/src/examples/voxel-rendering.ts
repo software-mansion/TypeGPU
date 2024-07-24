@@ -1,6 +1,6 @@
 /*
 {
-  "title": "Voxel Rendering"
+  "title": "Voxel Raytracing"
 }
 */
 
@@ -78,7 +78,7 @@ const cameraAxesData = cameraAxesBuffer.asReadonlyStorage();
 
 const canvasDimsBuffer = wgsl
   .buffer(struct({ width: u32, height: u32 }))
-  .$name('width')
+  .$name('canvas_dims')
   .$allowReadonlyStorage();
 const canvasDimsData = canvasDimsBuffer.asReadonlyStorage();
 
