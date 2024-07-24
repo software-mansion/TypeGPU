@@ -28,7 +28,10 @@ class WigsillRuntime {
     if (!buffer) {
       buffer = this.device.createBuffer({
         usage: allocatable.flags,
-        size: allocatable.dataType.size,
+        size:
+          Math.ceil(
+            allocatable.dataType.size / allocatable.dataType.byteAlignment,
+          ) * allocatable.dataType.byteAlignment,
       });
 
       if (!buffer) {
@@ -71,12 +74,13 @@ class WigsillRuntime {
   }
 
   makeRenderPipeline(options: {
-    vertex?: {
+    vertex: {
       args: Wgsl[];
       code: WgslCode;
       output: StructDataType<Record<string, AnyWgslData>>;
+      buffersLayouts?: Iterable<GPUVertexBufferLayout | null>;
     };
-    fragment?: {
+    fragment: {
       args: Wgsl[];
       code: WgslCode;
       output: Wgsl;
@@ -87,44 +91,48 @@ class WigsillRuntime {
     externalDeclarations?: Wgsl[];
     label?: string;
   }) {
-    const program = new ProgramBuilder(
+    const vertexProgram = new ProgramBuilder(
       this,
       code`
-      ${
-        options.vertex
-          ? code`
-              @vertex fn main_vertex(${options.vertex.args.flatMap((arg) => [arg, ', '])}) -> ${options.vertex.output} {
-                ${options.vertex.code}
-              }
-            `
-          : ''
-      }
-      ${
-        options.fragment
-          ? code`
-              @fragment fn main_frag(${options.fragment.args.flatMap((arg) => [arg, ', '])}) -> ${options.fragment.output} {
-                ${options.fragment.code}
-            }`
-          : ''
-      }
-      ${options.externalDeclarations?.flatMap((arg) => [arg, '\n']) ?? ''}
+        @vertex fn main_vertex(${options.vertex.args.flatMap((arg) => [arg, ', '])}) -> ${options.vertex.output} {
+          ${options.vertex.code}
+        }
+
+        ${options.externalDeclarations?.flatMap((arg) => [arg, '\n']) ?? ''}
       `,
     ).build({
       bindingGroup: (options.externalLayouts ?? []).length,
-      shaderStage:
-        (options.vertex ? GPUShaderStage.VERTEX : 0) |
-        (options.fragment ? GPUShaderStage.FRAGMENT : 0),
+      shaderStage: GPUShaderStage.VERTEX,
     });
 
-    const shaderModule = this.device.createShaderModule({
-      code: program.code,
+    const fragmentProgram = new ProgramBuilder(
+      this,
+      code`
+        @fragment fn main_frag(${options.fragment.args.flatMap((arg) => [arg, ', '])}) -> ${options.fragment.output} {
+            ${options.fragment.code}
+        }
+
+        ${options.externalDeclarations?.flatMap((arg) => [arg, '\n']) ?? ''}
+      `,
+    ).build({
+      bindingGroup: (options.externalLayouts ?? []).length + 1,
+      shaderStage: GPUShaderStage.FRAGMENT,
+    });
+
+    const vertexShaderModule = this.device.createShaderModule({
+      code: vertexProgram.code,
+    });
+
+    const fragmentShaderModule = this.device.createShaderModule({
+      code: fragmentProgram.code,
     });
 
     const pipelineLayout = this.device.createPipelineLayout({
       label: options.label ?? '',
       bindGroupLayouts: [
         ...(options.externalLayouts ?? []),
-        program.bindGroupLayout,
+        vertexProgram.bindGroupLayout,
+        fragmentProgram.bindGroupLayout,
       ],
     });
 
@@ -132,11 +140,12 @@ class WigsillRuntime {
       label: options.label ?? '',
       layout: pipelineLayout,
       vertex: {
-        module: shaderModule,
+        module: vertexShaderModule,
+        buffers: options.vertex.buffersLayouts ?? [],
       },
       fragment: {
-        module: shaderModule,
-        targets: options.fragment?.target ?? [],
+        module: fragmentShaderModule,
+        targets: options.fragment.target ?? [],
       },
       primitive: options.primitive,
     });
@@ -144,7 +153,7 @@ class WigsillRuntime {
     const executor = new RenderPipelineExecutor(
       this.device,
       renderPipeline,
-      program,
+      [vertexProgram, fragmentProgram],
       options.externalLayouts?.length ?? 0,
     );
 
@@ -197,7 +206,7 @@ class WigsillRuntime {
     const executor = new ComputePipelineExecutor(
       this.device,
       computePipeline,
-      program,
+      [program],
       options.externalLayouts?.length ?? 0,
     );
     this._pipelineExecutors.push(executor);
@@ -251,7 +260,7 @@ class PipelineExecutor<T extends GPURenderPipeline | GPUComputePipeline> {
   constructor(
     public device: GPUDevice,
     public pipeline: T,
-    public program: Program,
+    public programs: Program[],
     public externalLayoutCount: number,
     protected label?: string,
   ) {}
@@ -268,9 +277,15 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
     options: GPURenderPassDescriptor & {
       vertexCount: number;
       externalBindGroups?: GPUBindGroup[];
+      externalVertexBuffers?: GPUBuffer[];
     },
   ) {
-    const { vertexCount, externalBindGroups, ...descriptor } = options;
+    const {
+      vertexCount,
+      externalBindGroups,
+      externalVertexBuffers,
+      ...descriptor
+    } = options;
 
     if ((externalBindGroups?.length ?? 0) !== this.externalLayoutCount) {
       throw new Error(
@@ -294,10 +309,16 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
       passEncoder.setBindGroup(index, group),
     );
 
-    passEncoder.setBindGroup(
-      (externalBindGroups ?? []).length,
-      this.program.bindGroup,
+    (externalVertexBuffers ?? []).forEach((group, index) =>
+      passEncoder.setVertexBuffer(index, group),
     );
+
+    this.programs.forEach((program, i) => {
+      passEncoder.setBindGroup(
+        (externalBindGroups ?? []).length + i,
+        program.bindGroup,
+      );
+    });
 
     passEncoder.draw(vertexCount);
     passEncoder.end();
@@ -316,7 +337,9 @@ class ComputePipelineExecutor extends PipelineExecutor<GPUComputePipeline> {
       label: this.label ?? '',
     });
     passEncoder.setPipeline(this.pipeline);
-    passEncoder.setBindGroup(0, this.program.bindGroup);
+    this.programs.forEach((program, i) =>
+      passEncoder.setBindGroup(i, program.bindGroup),
+    );
     passEncoder.dispatchWorkgroups(...workgroupCounts);
     passEncoder.end();
   }

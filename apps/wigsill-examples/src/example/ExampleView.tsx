@@ -62,6 +62,10 @@ export function ExampleView({ example, codeEditorShowing }: Props) {
   const { code: initialCode } = example;
   const [code, setCode] = useState(initialCode);
 
+  useEffect(() => {
+    setCode(initialCode);
+  }, [initialCode]);
+
   const setCodeDebouncer = useMemo(
     () => debounce(setCode, { waitMs: 500 }),
     [],
