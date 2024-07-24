@@ -1,13 +1,17 @@
-import type { Wgsl } from '../types';
+import type { Eventual, Wgsl } from '../types';
 import { code } from '../wgslCode';
 
-export function repeat(
-  count: number,
-  snippet: Wgsl | ((idx: number) => Wgsl),
-): Wgsl {
-  if (typeof snippet === 'function') {
-    return code`${Array.from({ length: count }, (_, idx) => snippet(idx))}`;
-  }
+export const repeat = (
+  count: Eventual<number>,
+  snippet: Eventual<Wgsl | ((idx: number) => Wgsl)>,
+): Wgsl =>
+  code`${(get) => {
+    const snippetValue = get(snippet);
+    const countValue = get(count);
 
-  return code`${Array.from({ length: count }, () => snippet)}`;
-}
+    if (typeof snippetValue === 'function') {
+      return code`${Array.from({ length: countValue }, (_, idx) => snippetValue(idx))}`;
+    }
+
+    return code`${Array.from({ length: countValue }, () => snippetValue)}`;
+  }}`;

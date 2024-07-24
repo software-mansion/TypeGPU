@@ -2,6 +2,7 @@ import { MissingSlotValueError } from './errors';
 import type { NameRegistry } from './nameRegistry';
 import {
   type BufferUsage,
+  type Eventual,
   type ResolutionCtx,
   type SlotValuePair,
   type Wgsl,
@@ -9,6 +10,7 @@ import {
   type WgslResolvable,
   type WgslSlot,
   isResolvable,
+  isSlot,
 } from './types';
 import { code } from './wgslCode';
 import type { WgslIdentifier } from './wgslIdentifier';
@@ -65,7 +67,8 @@ class SharedResolutionState {
 
       if (
         slotValuePairs.every(
-          ([slot, expectedValue]) => itemCtx.readSlot(slot) === expectedValue,
+          ([slot, expectedValue]) =>
+            itemCtx.readEventual(slot) === expectedValue,
         )
       ) {
         return instance.result;
@@ -78,7 +81,7 @@ class SharedResolutionState {
     // We know which bindables the item used while resolving
     const slotToValueMap = new Map<WgslSlot<unknown>, unknown>();
     for (const usedSlot of itemCtx.usedSlots) {
-      slotToValueMap.set(usedSlot, itemCtx.readSlot(usedSlot));
+      slotToValueMap.set(usedSlot, itemCtx.readEventual(usedSlot));
     }
 
     instances.push({ slotToValueMap, result });
@@ -123,12 +126,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._shared.names.nameFor(item);
   }
 
-  readSlot<T>(slot: WgslSlot<T>): T {
-    if (slot.defaultValue === undefined) {
-      throw new MissingSlotValueError(slot);
+  readEventual<T>(eventual: Eventual<T>): T {
+    if (!isSlot(eventual)) {
+      return eventual;
     }
 
-    return slot.defaultValue;
+    if (eventual.defaultValue === undefined) {
+      throw new MissingSlotValueError(eventual);
+    }
+
+    return eventual.defaultValue;
   }
 
   resolve(item: Wgsl, slotValueOverrides: SlotValuePair<unknown>[] = []) {
@@ -141,6 +148,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       this._shared,
       slotValueOverrides,
     );
+
     const result = this._shared.getOrInstantiate(item, itemCtx);
 
     return `${[...this._shared.declarations].join('\n\n')}${result}`;
@@ -172,24 +180,31 @@ class ScopedResolutionCtx implements ResolutionCtx {
     return this._shared.names.nameFor(token);
   }
 
-  readSlot<T>(slot: WgslSlot<T>): T {
+  readEventual<T>(eventual: Eventual<T>): T {
+    if (!isSlot(eventual)) {
+      return eventual;
+    }
+
     const slotToValuePair = this._slotValuePairs.find(
-      ([boundSlot]) => boundSlot === slot,
+      ([boundSlot]) => boundSlot === eventual,
     ) as SlotValuePair<T> | undefined;
 
     if (!slotToValuePair) {
-      // Not yet available locally, ctx's owner resolvable depends on `slot`.
-      this.usedSlots.add(slot);
+      // Not yet available locally, ctx's owner resolvable depends on `eventual`.
+      this.usedSlots.add(eventual);
       // Maybe the parent ctx has it.
-      return this._parent.readSlot(slot);
+      return this._parent.readEventual(eventual);
     }
 
-    // Available locally, ctx's owner resolvable depends on `slot`.
-    this.usedSlots.add(slot);
+    // Available locally, ctx's owner resolvable depends on `eventual`.
+    this.usedSlots.add(eventual);
     return slotToValuePair[1];
   }
 
-  resolve(item: Wgsl, slotValueOverrides: SlotValuePair<unknown>[] = []) {
+  resolve(
+    item: Wgsl,
+    slotValueOverrides: SlotValuePair<unknown>[] = [],
+  ): string {
     if (!isResolvable(item)) {
       return String(item);
     }
@@ -199,6 +214,7 @@ class ScopedResolutionCtx implements ResolutionCtx {
       this._shared,
       slotValueOverrides,
     );
+
     return this._shared.getOrInstantiate(item, itemCtx);
   }
 }

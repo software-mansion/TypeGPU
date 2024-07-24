@@ -1,4 +1,5 @@
 import type {
+  Eventual,
   ResolutionCtx,
   SlotValuePair,
   Wgsl,
@@ -75,7 +76,7 @@ class BoundWgslFnImpl<T> implements BoundWgslFn {
     return this._innerFn.label;
   }
 
-  with<TValue>(slot: WgslSlot<TValue>, value: TValue): BoundWgslFn {
+  with<TValue>(slot: WgslSlot<TValue>, value: Eventual<TValue>): BoundWgslFn {
     return new BoundWgslFnImpl(this, [slot, value]);
   }
 
