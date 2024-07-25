@@ -1,6 +1,7 @@
 /*
 {
-  "title": "Momentum Fluid Simulation"
+  "title": "Fluid (double-buffering)",
+  "category": "simulation"
 }
 */
 
