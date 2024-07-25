@@ -23,20 +23,24 @@ export function constant(expr: Wgsl): WgslConst {
 // --------------
 
 class WgslConstImpl implements WgslConst {
-  public debugLabel?: string | undefined;
-  public identifier = new WgslIdentifier();
+  private _label: string | undefined;
 
   constructor(private readonly expr: Wgsl) {}
 
-  $name(debugLabel: string) {
-    this.debugLabel = debugLabel;
-    this.identifier.$name(debugLabel);
+  get label() {
+    return this._label;
+  }
+
+  $name(label: string) {
+    this._label = label;
     return this;
   }
 
   resolve(ctx: ResolutionCtx): string {
-    ctx.addDependency(code`const ${this.identifier} = ${this.expr};`);
+    const identifier = new WgslIdentifier().$name(this._label);
 
-    return ctx.resolve(this.identifier);
+    ctx.addDeclaration(code`const ${identifier} = ${this.expr};`);
+
+    return ctx.resolve(identifier);
   }
 }

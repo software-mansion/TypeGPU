@@ -6,7 +6,6 @@ export const tsCompilerOptions: languages.typescript.CompilerOptions = {
   strict: true,
   esModuleInterop: true,
   module: languages.typescript.ModuleKind.ESNext,
-  noUncheckedIndexedAccess: true,
   noEmit: true,
   skipLibCheck: true,
   exactOptionalPropertyTypes: true,

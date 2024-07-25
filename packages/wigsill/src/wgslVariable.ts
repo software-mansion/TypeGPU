@@ -34,18 +34,18 @@ class WgslVarImpl<TDataType extends AnyWgslData> implements WgslVar<TDataType> {
     public readonly scope: VariableScope,
   ) {}
 
-  $name(debugLabel: string) {
-    this.identifier.$name(debugLabel);
+  $name(label: string) {
+    this.identifier.$name(label);
     return this;
   }
 
   resolve(ctx: ResolutionCtx): string {
     if (this._initialValue) {
-      ctx.addDependency(
+      ctx.addDeclaration(
         code`var<${this.scope}> ${this.identifier}: ${this._dataType} = ${this._initialValue};`,
       );
     } else {
-      ctx.addDependency(
+      ctx.addDeclaration(
         code`var<${this.scope}> ${this.identifier}: ${this._dataType};`,
       );
     }

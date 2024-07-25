@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'remeda';
 import { CodeEditor } from '../CodeEditor';
 import { Canvas } from '../common/Canvas';
+import { Table } from '../common/Table';
 import { Video } from '../common/Video';
 import useEvent from '../common/useEvent';
 import type { Example } from '../example/types';
@@ -61,6 +62,10 @@ export function ExampleView({ example, codeEditorShowing }: Props) {
   const { code: initialCode } = example;
   const [code, setCode] = useState(initialCode);
 
+  useEffect(() => {
+    setCode(initialCode);
+  }, [initialCode]);
+
   const setCodeDebouncer = useMemo(
     () => debounce(setCode, { waitMs: 500 }),
     [],
@@ -74,7 +79,7 @@ export function ExampleView({ example, codeEditorShowing }: Props) {
 
   return (
     <>
-      <div className="flex-1 self-stretch flex justify-evenly items-center min-h-[50vh]">
+      <div className="flex-1 self-stretch flex justify-evenly items-center flex-wrap min-h-[50vh]">
         {def.elements.map((element) => {
           if (element.type === 'canvas') {
             return (
@@ -94,6 +99,16 @@ export function ExampleView({ example, codeEditorShowing }: Props) {
                 ref={(video) => setRef(element.key, video)}
                 width={element.width}
                 height={element.height}
+              />
+            );
+          }
+
+          if (element.type === 'table') {
+            return (
+              <Table
+                key={element.key}
+                ref={(table) => setRef(element.key, table)}
+                label={element.label}
               />
             );
           }

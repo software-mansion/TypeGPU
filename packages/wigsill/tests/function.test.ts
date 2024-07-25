@@ -72,11 +72,11 @@ describe('wgsl.fn', () => {
 
     const expected = parse(`
       fn empty() {}
-
+      
       fn nested_a() {
         empty();
       }
-
+      
       fn nested_b() {
         empty();
       }
