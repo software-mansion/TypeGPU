@@ -25,15 +25,15 @@ export function repeat(
 
       if (typeof snippetValue === 'function') {
         return code`
-for (var ${index} = 0; ${index} < ${countValue}; ${index} += 1) {
-  ${snippetValue(index as unknown as number)}
-}`;
+          for (var ${index} = 0; ${index} < ${countValue}; ${index} += 1) {
+            ${snippetValue(index as unknown as number) /* silencing TypeScript with the cast */}
+          }`;
       }
 
       return code`
-for (var ${index} = 0; ${index} < ${countValue}; ${index} += 1) {
-  ${snippetValue}
-}`;
+        for (var ${index} = 0; ${index} < ${countValue}; ${index} += 1) {
+          ${snippetValue}
+        }`;
     }
 
     if (typeof snippetValue === 'function') {

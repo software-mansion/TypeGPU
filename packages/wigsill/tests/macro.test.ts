@@ -8,7 +8,7 @@ describe('repeat', () => {
       { ${repeat(3, 'a();')} }
     `);
 
-    const expected = parseWGSL(wgsl`
+    const expected = parseWGSL(`
       { a(); a(); a(); }
     `);
 
@@ -20,7 +20,7 @@ describe('repeat', () => {
       { ${repeat(3, (idx) => `a(${idx});`)} }
     `);
 
-    const expected = parseWGSL(wgsl`
+    const expected = parseWGSL(`
       { a(0); a(1); a(2); }
     `);
 
@@ -34,7 +34,7 @@ describe('repeat', () => {
       { ${repeat(countSlot, (idx) => `a(${idx});`)} }
     `);
 
-    const expected = parseWGSL(wgsl`
+    const expected = parseWGSL(`
       { a(0); a(1); a(2); }
     `);
 
@@ -48,7 +48,7 @@ describe('repeat', () => {
       { ${repeat(countCode, (idx) => wgsl`a(${idx});`)} }
     `);
 
-    const expected = parseWGSL(wgsl`
+    const expected = parseWGSL(`
       {
         for (var i = 0; i < 3; i += 1) {
           a(i);
