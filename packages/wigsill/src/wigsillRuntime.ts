@@ -1,3 +1,4 @@
+import { roundUp } from './mathUtils';
 import ProgramBuilder, { type Program } from './programBuilder';
 import type StructDataType from './std140/struct';
 import type { AnyWgslData } from './std140/types';
@@ -28,10 +29,10 @@ class WigsillRuntime {
     if (!buffer) {
       buffer = this.device.createBuffer({
         usage: allocatable.flags,
-        size:
-          Math.ceil(
-            allocatable.dataType.size / allocatable.dataType.byteAlignment,
-          ) * allocatable.dataType.byteAlignment,
+        size: roundUp(
+          allocatable.dataType.size,
+          allocatable.dataType.byteAlignment,
+        ),
       });
 
       if (!buffer) {

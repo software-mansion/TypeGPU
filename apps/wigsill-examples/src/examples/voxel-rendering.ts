@@ -55,7 +55,7 @@ const cubeSize = [X * VOXEL_SIZE, Y * VOXEL_SIZE, Z * VOXEL_SIZE];
 
 const voxelMatrixBuffer = wgsl
   .buffer(arrayOf(arrayOf(arrayOf(voxelStruct, Z), Y), X))
-  .$name('vexel_array')
+  .$name('voxel_array')
   .$allowReadonlyStorage();
 const voxelMatrixData = voxelMatrixBuffer.asReadonlyStorage();
 
@@ -68,6 +68,7 @@ const cameraPositionData = cameraPositionBuffer.asReadonlyStorage();
 const cameraAxesBuffer = wgsl
   .buffer(
     struct({
+      right: vec3f,
       up: vec3f,
       forward: vec3f,
     }),
@@ -82,28 +83,12 @@ const canvasDimsBuffer = wgsl
   .$allowReadonlyStorage();
 const canvasDimsData = canvasDimsBuffer.asReadonlyStorage();
 
-const normalizeVectorFn = wgsl.fn('normalize')` (vector: ${vec3f}) -> ${vec3f} {
-  let length = sqrt(pow(vector.x, 2) + pow(vector.y, 2) + pow(vector.z, 2));
-  return vector / length;
-}`;
-
-const crossProductFn = wgsl.fn(
-  'cross_product',
-)` (vectorA: ${vec3f}, vectorB: ${vec3f}) -> ${vec3f} {
-  return vec3f(
-    vectorA.y * vectorB.z - vectorA.z * vectorB.y,
-		vectorA.z * vectorB.x - vectorA.x * vectorB.z,
-		vectorA.x * vectorB.y - vectorA.y * vectorB.x  
-  );
-}
-`;
-
 const getBoxIntersectionFn = wgsl.fn('box_intersection')`(
   boundMin: vec3f,
   boundMax: vec3f,
   ray: ${rayStruct}
 ) -> ${intersectionStruct} {
-    var output = ${intersectionStruct}();
+    var output: ${intersectionStruct};
 
     var tMin: f32; 
     var tMax: f32;
@@ -198,10 +183,10 @@ const renderPipeline = runtime.makeRenderPipeline({
 
       var ray: ${rayStruct};
       ray.origin = ${cameraPositionData};
-      ray.direction += -${crossProductFn}(${cameraAxesData}.forward, ${cameraAxesData}.up) * (pos.x - f32(${canvasDimsData}.width)/2)/minDim;
+      ray.direction += ${cameraAxesData}.right * (pos.x - f32(${canvasDimsData}.width)/2)/minDim;
       ray.direction += ${cameraAxesData}.up * (pos.y - f32(${canvasDimsData}.height)/2)/minDim;
       ray.direction += ${cameraAxesData}.forward;
-      ray.direction = ${normalizeVectorFn}(ray.direction);
+      ray.direction = normalize(ray.direction);
 
       let bigBoxIntersection = ${getBoxIntersectionFn}(
         vec3f(0), 
@@ -227,17 +212,9 @@ const renderPipeline = runtime.makeRenderPipeline({
               }
 
               let intersection = ${getBoxIntersectionFn}(
-                vec3f(
-                  f32(i) * ${cubeSize[0] / X}, 
-                  f32(j) * ${cubeSize[1] / Y}, 
-                  f32(k) * ${cubeSize[2] / Z},
-                ), 
-                vec3f(
-                  f32(i+1) * ${cubeSize[0] / X}, 
-                  f32(j+1) * ${cubeSize[1] / Y}, 
-                  f32(k+1) * ${cubeSize[2] / Z},
-                ), 
-                ray
+                vec3f(f32(i), f32(j), f32(k)) * ${VOXEL_SIZE}, 
+                vec3f(f32(i+1), f32(j+1), f32(k+1)) * ${VOXEL_SIZE}, 
+                ray,
               );
 
               if intersection.intersects && (!intersectionFound || intersection.tMin < tMin) {
@@ -279,19 +256,28 @@ voxelMatrixBuffer.write(
 
 type Vector = [number, number, number];
 
-function normalize(vector: Vector) {
+const boxCenter = cubeSize.map((value) => value / 2);
+const upAxis = [0, 1, 0] as Vector;
+
+let frame = 0;
+let radiansPerSecond = 2;
+let cameraDist = 350;
+
+function normalize(vector: Vector): Vector {
   const length = Math.sqrt(vector[0] ** 2 + vector[1] ** 2 + vector[2] ** 2);
   return vector.map((value) => value / length) as Vector;
 }
 
-const boxCenter = cubeSize.map((value) => value / 2);
+function crossProduct(vectorA: Vector, vectorB: Vector): Vector {
+  return [
+    vectorA[1] * vectorB[2] - vectorA[2] * vectorB[1],
+    vectorA[2] * vectorB[0] - vectorA[0] * vectorB[2],
+    vectorA[0] * vectorB[1] - vectorA[1] * vectorB[0],
+  ];
+}
 
-let frame = 0;
-let timeDelta = 0.05;
-let cameraDist = 350;
-
-onFrame(() => {
-  frame += timeDelta;
+onFrame((deltaTime) => {
+  frame += (radiansPerSecond * deltaTime) / 1000;
 
   const cameraPosition: Vector = [
     Math.cos(frame) * cameraDist + boxCenter[0],
@@ -301,13 +287,14 @@ onFrame(() => {
 
   cameraPositionBuffer.write(runtime, cameraPosition);
 
-  const forward = normalize(
+  const forwardAxis = normalize(
     cameraPosition.map((value, i) => boxCenter[i] - value) as Vector,
   );
 
   cameraAxesBuffer.write(runtime, {
-    forward: forward,
-    up: [0, 1, 0],
+    forward: forwardAxis,
+    up: upAxis,
+    right: crossProduct(upAxis, forwardAxis) as Vector,
   });
 
   canvasDimsBuffer.write(runtime, {
@@ -326,7 +313,6 @@ onFrame(() => {
         storeOp: 'store',
       },
     ],
-
     vertexCount: 6,
   });
 
@@ -334,14 +320,14 @@ onFrame(() => {
 });
 
 addParameter(
-  'timeDelta',
+  'radiansPerSecond',
   {
-    initial: timeDelta,
+    initial: radiansPerSecond,
     min: 0,
-    max: 1,
+    max: 10,
   },
   (newValue) => {
-    timeDelta = newValue;
+    radiansPerSecond = newValue;
   },
 );
 
