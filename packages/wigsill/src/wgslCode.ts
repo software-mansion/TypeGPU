@@ -53,7 +53,7 @@ class WgslCodeImpl implements WgslCode {
 
     for (const s of this.segments) {
       if (typeof s === 'function') {
-        const result = s((eventual) => ctx.readEventual(eventual));
+        const result = s((eventual) => ctx.unwrap(eventual));
         code += ctx.resolve(result);
       } else if (isResolvable(s)) {
         code += ctx.resolve(s);

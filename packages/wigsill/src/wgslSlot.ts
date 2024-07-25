@@ -39,7 +39,7 @@ class WgslSlotImpl<T> implements WgslResolvable, WgslSlot<T> {
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const value = ctx.readEventual(this);
+    const value = ctx.unwrap(this);
 
     if (!isWgsl(value)) {
       throw new Error(

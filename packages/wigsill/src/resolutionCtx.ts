@@ -58,7 +58,7 @@ class SharedResolutionState {
    * with the `compute` method.
    * @param compute Returns the resolved item and the corresponding bindingMap. This result will be discarded if a sufficient cache entry is found.
    */
-  getOrInstantiate(item: WgslResolvable, itemCtx: ResolutionCtx): string {
+  getOrInstantiate(item: WgslResolvable, itemCtx: ScopedResolutionCtx): string {
     // All memoized versions of `item`
     const instances = this._memoizedResolves.get(item) ?? [];
 
@@ -67,8 +67,7 @@ class SharedResolutionState {
 
       if (
         slotValuePairs.every(
-          ([slot, expectedValue]) =>
-            itemCtx.readEventual(slot) === expectedValue,
+          ([slot, expectedValue]) => itemCtx.readSlot(slot) === expectedValue,
         )
       ) {
         return instance.result;
@@ -81,7 +80,7 @@ class SharedResolutionState {
     // We know which bindables the item used while resolving
     const slotToValueMap = new Map<WgslSlot<unknown>, unknown>();
     for (const usedSlot of itemCtx.usedSlots) {
-      slotToValueMap.set(usedSlot, itemCtx.readEventual(usedSlot));
+      slotToValueMap.set(usedSlot, itemCtx.readSlot(usedSlot));
     }
 
     instances.push({ slotToValueMap, result });
@@ -126,16 +125,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._shared.names.nameFor(item);
   }
 
-  readEventual<T>(eventual: Eventual<T>): T {
-    if (!isSlot(eventual)) {
-      return eventual;
+  readSlot<T>(slot: WgslSlot<T>): T {
+    if (slot.defaultValue === undefined) {
+      throw new MissingSlotValueError(slot);
     }
 
-    if (eventual.defaultValue === undefined) {
-      throw new MissingSlotValueError(eventual);
-    }
+    return slot.defaultValue;
+  }
 
-    return eventual.defaultValue;
+  unwrap<T>(eventual: Eventual<T>): T {
+    throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
   resolve(item: Wgsl, slotValueOverrides: SlotValuePair<unknown>[] = []) {
@@ -180,25 +179,32 @@ class ScopedResolutionCtx implements ResolutionCtx {
     return this._shared.names.nameFor(token);
   }
 
-  readEventual<T>(eventual: Eventual<T>): T {
-    if (!isSlot(eventual)) {
-      return eventual;
-    }
-
+  readSlot<T>(slot: WgslSlot<T>): T {
     const slotToValuePair = this._slotValuePairs.find(
-      ([boundSlot]) => boundSlot === eventual,
+      ([boundSlot]) => boundSlot === slot,
     ) as SlotValuePair<T> | undefined;
 
     if (!slotToValuePair) {
-      // Not yet available locally, ctx's owner resolvable depends on `eventual`.
-      this.usedSlots.add(eventual);
+      // Not yet available locally, ctx's owner resolvable depends on `slot`.
+      this.usedSlots.add(slot);
       // Maybe the parent ctx has it.
-      return this._parent.readEventual(eventual);
+      return this._parent.readSlot(slot);
     }
 
-    // Available locally, ctx's owner resolvable depends on `eventual`.
-    this.usedSlots.add(eventual);
+    // Available locally, ctx's owner resolvable depends on `slot`.
+    this.usedSlots.add(slot);
     return slotToValuePair[1];
+  }
+
+  unwrap<T>(eventual: Eventual<T>): T {
+    let maybeSlot = eventual;
+
+    // Unwrapping all layers of slots.
+    while (isSlot(maybeSlot)) {
+      maybeSlot = this.readSlot(maybeSlot);
+    }
+
+    return maybeSlot;
   }
 
   resolve(

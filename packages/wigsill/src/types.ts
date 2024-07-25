@@ -16,8 +16,11 @@ export interface ResolutionCtx {
   addDeclaration(item: WgslResolvable): void;
   addBinding(bindable: WgslBindable, identifier: WgslIdentifier): void;
   nameFor(token: WgslResolvable): string;
-  /** @throws {MissingSlotValueError}  */
-  readEventual<T>(eventual: Eventual<T>): T;
+  /**
+   * Unwraps all layers of slot indirection and returns the concrete value if available.
+   * @throws {MissingSlotValueError}
+   */
+  unwrap<T>(eventual: Eventual<T>): T;
   resolve(item: Wgsl, slotValueOverrides?: SlotValuePair<unknown>[]): string;
 }
 
