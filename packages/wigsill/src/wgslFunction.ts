@@ -16,7 +16,7 @@ import { WgslIdentifier } from './wgslIdentifier';
 export interface WgslFn extends WgslResolvable {
   $name(label: string): WgslFn;
 
-  with<T>(slot: WgslSlot<T>, value: T): BoundWgslFn;
+  with<T>(slot: WgslSlot<T>, value: Eventual<T>): BoundWgslFn;
 }
 
 export type BoundWgslFn = Omit<WgslFn, '$name'>;

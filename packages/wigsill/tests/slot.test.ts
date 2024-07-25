@@ -247,4 +247,28 @@ describe('wgsl.slot', () => {
 
     expect(parseWGSL(actual)).toEqual(parseWGSL(expected));
   });
+
+  it('unwraps layers of slots', () => {
+    const slotA = wgsl.slot<number>(1).$name('a');
+    const slotB = wgsl.slot<number>(2).$name('b');
+    const slotC = wgsl.slot<number>(3).$name('c');
+    const slotD = wgsl.slot<number>(4).$name('d');
+
+    const fn1 = wgsl.fn()`() { let value = ${slotA}; }`.$name('fn1');
+    const fn2 = wgsl.fn()`() { ${fn1}(); }`.$name('fn2').with(slotC, slotD);
+    const fn3 = wgsl.fn()`() { ${fn2}(); }`.$name('fn3').with(slotB, slotC);
+    const fn4 = wgsl.fn()`() { ${fn3}(); }`.$name('fn4').with(slotA, slotB);
+
+    const actual = wgsl`fn main() { ${fn4}(); }`;
+
+    const expected = wgsl`
+      fn fn1() { let value = 4; }
+      fn fn2() { fn1(); }
+      fn fn3() { fn2(); }
+      fn fn4() { fn3(); }
+      fn main() { fn4(); }
+    `;
+
+    expect(parseWGSL(actual)).toEqual(parseWGSL(expected));
+  });
 });
