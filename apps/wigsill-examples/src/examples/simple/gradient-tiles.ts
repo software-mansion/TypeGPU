@@ -1,6 +1,7 @@
 /*
 {
-  "title": "Gradient Tiles"
+  "title": "Gradient Tiles",
+  "category": "simple"
 }
 */
 

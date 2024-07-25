@@ -1,6 +1,7 @@
 /*
 {
-  "title": "Camera Thresholding"
+  "title": "Camera Thresholding",
+  "category": "image-processing"
 }
 */
 

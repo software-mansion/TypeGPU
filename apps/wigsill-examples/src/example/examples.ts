@@ -1,5 +1,14 @@
-import { mapKeys, mapValues, pipe } from 'remeda';
+import {
+  entries,
+  filter,
+  fromEntries,
+  groupBy,
+  isNonNull,
+  map,
+  pipe,
+} from 'remeda';
 import { parseExampleCode } from './parseExampleCode';
+import type { Example } from './types';
 
 const rawExamples: Record<string, string> = import.meta.glob(
   '../examples/**/*.ts',
@@ -12,13 +21,22 @@ const rawExamples: Record<string, string> = import.meta.glob(
 
 export const examples = pipe(
   rawExamples,
-  mapKeys((key) =>
-    pipe(
-      key,
-      (key) => key.replace(/^..\/examples\//, ''), // remove parent folder
-      (key) => key.replace(/.ts$/, ''), // remove extension
-      (key) => key.replace(/\//, '--'), // / -> --
-    ),
-  ),
-  mapValues(parseExampleCode),
+  entries(),
+  map(([path, value]) => {
+    const key = pipe(
+      path,
+      (path) => path.replace(/^..\/examples\//, ''), // remove parent folder
+      (path) => path.replace(/.ts$/, ''), // remove extension
+      (path) => path.replace(/\//, '--'), // / -> --
+    );
+
+    return [key, parseExampleCode(key, value)] as const;
+  }),
+  filter((pair): pair is [string, Example] => isNonNull(pair[1])),
+  fromEntries(),
+);
+
+export const examplesByCategory = groupBy(
+  Object.values(examples),
+  (example) => example.metadata.category,
 );
