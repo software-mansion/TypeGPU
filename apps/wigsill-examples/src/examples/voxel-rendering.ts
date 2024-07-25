@@ -1,6 +1,7 @@
 /*
 {
-  "title": "Voxel Raytracing"
+  "title": "Voxel Raytracing",
+  "category": "rendering"
 }
 */
 

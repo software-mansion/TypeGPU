@@ -8,6 +8,7 @@ export const ExampleMetadata = z.object({
 
 export const exampleCategories = [
   { key: 'simple', label: 'Simple' },
+  { key: 'rendering', label: 'Rendering' },
   { key: 'image-processing', label: 'Image processing' },
   { key: 'simulation', label: 'Simulation' },
   { key: 'algorithms', label: 'Algorithms' },
