@@ -1,5 +1,6 @@
 import type { AnyWgslData } from './std140/types';
 import type { WgslIdentifier } from './wgslIdentifier';
+import type { F32, U32, I32 } from './std140';
 
 export type Wgsl = string | number | WgslResolvable;
 
@@ -15,6 +16,10 @@ export interface ResolutionCtx {
 
   addDeclaration(item: WgslResolvable): void;
   addBinding(bindable: WgslBindable, identifier: WgslIdentifier): void;
+  addRenderResource(
+    resource: WgslRenderResource,
+    identifier: WgslIdentifier,
+  ): void;
   nameFor(token: WgslResolvable): string;
   /** @throws {MissingSlotValueError}  */
   readSlot<T>(slot: WgslSlot<T>): T;
@@ -87,6 +92,40 @@ export interface WgslBindable<
 > extends WgslResolvable {
   readonly allocatable: WgslAllocatable<TData>;
   readonly usage: TUsage;
+}
+
+export type WgslSamplerType = 'sampler' | 'sampler_comparison';
+export type WgslTypedTextureType =
+  | 'texture_1d'
+  | 'texture_2d'
+  | 'texture_2d_array'
+  | 'texture_3d'
+  | 'texture_cube'
+  | 'texture_cube_array'
+  | 'texture_multisampled_2d';
+export type WgslDepthTextureType =
+  | 'texture_depth_2d'
+  | 'texture_depth_2d_array'
+  | 'texture_depth_cube'
+  | 'texture_depth_cube_array'
+  | 'texture_depth_multisampled_2d';
+export type WgslStorageTextureType =
+  | 'texture_storage_1d'
+  | 'texture_storage_2d'
+  | 'texture_storage_2d_array'
+  | 'texture_storage_3d';
+export type WgslExternalTextureType = 'texture_external';
+
+export type WgslRenderResourceType =
+  | WgslSamplerType
+  | WgslTypedTextureType
+  | WgslDepthTextureType
+  | WgslStorageTextureType
+  | WgslExternalTextureType;
+
+export interface WgslRenderResource<T extends WgslRenderResourceType>
+  extends WgslResolvable {
+  $name(label: string): WgslRenderResource<T>;
 }
 
 export type BufferUsage = 'uniform' | 'readonly_storage' | 'mutable_storage';

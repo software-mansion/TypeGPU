@@ -6,6 +6,7 @@ import {
   type SlotValuePair,
   type Wgsl,
   type WgslBindable,
+  type WgslRenderResource,
   type WgslResolvable,
   type WgslSlot,
   isResolvable,
@@ -36,6 +37,7 @@ class SharedResolutionState {
 
   private _nextFreeBindingIdx = 0;
   private readonly _usedBindables = new Set<WgslBindable>();
+  private readonly _usedRenderResources = new Set<WgslRenderResource>();
   private readonly _declarations: string[] = [];
 
   constructor(
@@ -45,6 +47,10 @@ class SharedResolutionState {
 
   get usedBindables(): Iterable<WgslBindable> {
     return this._usedBindables;
+  }
+
+  get usedRenderResources(): Iterable<WgslRenderResource> {
+    return this._usedRenderResources;
   }
 
   get declarations(): Iterable<string> {
@@ -93,6 +99,12 @@ class SharedResolutionState {
     return { group: this._bindingGroup, idx: this._nextFreeBindingIdx++ };
   }
 
+  reserveRenderResourceEntry(_resource: WgslRenderResource) {
+    this._usedRenderResources.add(_resource);
+
+    return { group: this._bindingGroup, idx: this._nextFreeBindingIdx++ };
+  }
+
   addDeclaration(declaration: string) {
     this._declarations.push(declaration);
   }
@@ -116,6 +128,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   addBinding(_bindable: WgslBindable, _identifier: WgslIdentifier): void {
+    throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
+  }
+
+  addRenderResource(
+    resource: WgslRenderResource,
+    identifier: WgslIdentifier,
+  ): void {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
@@ -165,6 +184,17 @@ class ScopedResolutionCtx implements ResolutionCtx {
 
     this.addDeclaration(
       code`@group(${group}) @binding(${idx}) var<${usageToVarTemplateMap[bindable.usage]}> ${identifier}: ${bindable.allocatable.dataType};`,
+    );
+  }
+
+  addRenderResource(
+    resource: WgslRenderResource,
+    identifier: WgslIdentifier,
+  ): void {
+    const { group, idx } = this._shared.reserveRenderResourceEntry(resource);
+
+    this.addDeclaration(
+      code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type};`,
     );
   }
 
