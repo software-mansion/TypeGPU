@@ -1,4 +1,5 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
+import type { WgslPlum } from './plum';
 import type { AnyWgslData } from './std140/types';
 import type { BufferUsage, WgslAllocatable } from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
@@ -68,7 +69,10 @@ class WgslBufferImpl<
 
   private _label: string | undefined;
 
-  constructor(public readonly dataType: TData) {}
+  constructor(
+    public readonly dataType: TData,
+    private initialOrPlum?: TData | WgslPlum<TData>,
+  ) {}
 
   get label() {
     return this._label;
