@@ -377,12 +377,13 @@ let renderChanges: () => void;
 function resetGameData() {
   drawCanvasData = new Uint32Array(options.size * options.size);
 
-  currentStateBuffer.write(
-    runtime,
+  runtime.write(
+    currentStateBuffer,
     Array.from({ length: 1024 ** 2 }, () => 0),
   );
-  nextStateBuffer.write(
-    runtime,
+
+  runtime.write(
+    nextStateBuffer,
     Array.from({ length: 1024 ** 2 }, () => 0),
   );
 
@@ -398,7 +399,7 @@ function resetGameData() {
     },
   });
 
-  sizeBuffer.write(runtime, [options.size, options.size]);
+  runtime.write(sizeBuffer, [options.size, options.size]);
 
   const length = options.size * options.size;
   const cells = new Uint32Array(length);
@@ -425,7 +426,7 @@ function resetGameData() {
   });
 
   render = () => {
-    debugInfoBuffer.write(runtime, 0);
+    runtime.write(debugInfoBuffer, 0);
     const view = context.getCurrentTexture().createView();
     const renderPass: GPURenderPassDescriptor = {
       colorAttachments: [
@@ -661,7 +662,7 @@ addParameter(
   { initial: 1000, min: 10, max: 1000, step: 1 },
   (value) => {
     options.viscosity = value;
-    viscosityBuffer.write(runtime, value);
+    runtime.write(viscosityBuffer, value);
   },
 );
 

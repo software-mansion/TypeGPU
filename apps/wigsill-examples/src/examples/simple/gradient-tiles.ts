@@ -17,11 +17,11 @@ const xSpanPlum = plum<number>(16).$name('x_span');
 const ySpanPlum = plum<number>(16).$name('y_span');
 
 xSpanPlum.subscribe(() => {
-  xSpanBuffer.write(runtime, xSpanPlum.latest);
+  runtime.write(xSpanBuffer, xSpanPlum.latest);
 });
 
 ySpanPlum.subscribe(() => {
-  ySpanBuffer.write(runtime, ySpanPlum.latest);
+  runtime.write(ySpanBuffer, ySpanPlum.latest);
 });
 
 const runtime = await createRuntime();

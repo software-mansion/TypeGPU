@@ -243,13 +243,13 @@ const renderPipeline = runtime.makeRenderPipeline({
   },
 });
 
-voxelMatrixBuffer.write(
-  runtime,
+runtime.write(
+  voxelMatrixBuffer,
   Array.from({ length: X }, (_, i) =>
     Array.from({ length: Y }, (_, j) =>
       Array.from({ length: Z }, (_, k) => ({
         isActive: X - i + j + (Z - k) > 10 ? 1 : 0,
-        albedo: [i / X, j / Y, k / Z, 1],
+        albedo: [i / X, j / Y, k / Z, 1] as [number, number, number, number],
       })),
     ),
   ),
@@ -286,19 +286,19 @@ onFrame((deltaTime) => {
     Math.sin(frame) * cameraDist + boxCenter[2],
   ];
 
-  cameraPositionBuffer.write(runtime, cameraPosition);
+  runtime.write(cameraPositionBuffer, cameraPosition);
 
   const forwardAxis = normalize(
     cameraPosition.map((value, i) => boxCenter[i] - value) as Vector,
   );
 
-  cameraAxesBuffer.write(runtime, {
+  runtime.write(cameraAxesBuffer, {
     forward: forwardAxis,
     up: upAxis,
     right: crossProduct(upAxis, forwardAxis) as Vector,
   });
 
-  canvasDimsBuffer.write(runtime, {
+  runtime.write(canvasDimsBuffer, {
     width: canvas.width,
     height: canvas.height,
   });

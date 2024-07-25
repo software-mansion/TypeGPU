@@ -1,3 +1,4 @@
+import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import { roundUp } from './mathUtils';
 import ProgramBuilder, { type Program } from './programBuilder';
 import type StructDataType from './std140/struct';
@@ -44,34 +45,65 @@ class WigsillRuntime {
     return buffer;
   }
 
-  async valueFor(memory: WgslAllocatable): Promise<ArrayBuffer> {
+  async read<TData extends AnyWgslData>(
+    allocatable: WgslAllocatable<TData>,
+  ): Promise<Parsed<TData>> {
     return this._taskQueue.enqueue(async () => {
-      if (!this._readBuffer || this._readBuffer.size < memory.dataType.size) {
+      if (
+        !this._readBuffer ||
+        this._readBuffer.size < allocatable.dataType.size
+      ) {
         // destroying the previous buffer
         this._readBuffer?.destroy();
 
         this._readBuffer = this.device.createBuffer({
           usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-          size: memory.dataType.size,
+          size: allocatable.dataType.size,
         });
       }
 
-      const buffer = this.bufferFor(memory);
+      const buffer = this.bufferFor(allocatable);
       const commandEncoder = this.device.createCommandEncoder();
       commandEncoder.copyBufferToBuffer(
         buffer,
         0,
         this._readBuffer,
         0,
-        memory.dataType.size,
+        allocatable.dataType.size,
       );
       this.device.queue.submit([commandEncoder.finish()]);
       await this.device.queue.onSubmittedWorkDone();
-      await this._readBuffer.mapAsync(GPUMapMode.READ, 0, memory.dataType.size);
-      const value = this._readBuffer.getMappedRange().slice(0);
+      await this._readBuffer.mapAsync(
+        GPUMapMode.READ,
+        0,
+        allocatable.dataType.size,
+      );
+      const mappedBuffer = this._readBuffer.getMappedRange().slice(0);
+
+      const res = allocatable.dataType.read(
+        new BufferReader(mappedBuffer),
+      ) as Parsed<TData>;
+
       this._readBuffer.unmap();
-      return value;
+
+      return res;
     });
+  }
+
+  write<TValue extends AnyWgslData>(
+    allocatable: WgslAllocatable<TValue>,
+    data: Parsed<TValue>,
+  ) {
+    const gpuBuffer = this.bufferFor(allocatable);
+
+    const size = roundUp(
+      allocatable.dataType.size,
+      allocatable.dataType.byteAlignment,
+    );
+
+    const hostBuffer = new ArrayBuffer(size);
+    allocatable.dataType.write(new BufferWriter(hostBuffer), data);
+    this.device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
   }
 
   makeRenderPipeline(options: {
