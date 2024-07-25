@@ -1,7 +1,7 @@
 import type {
+  ResolutionCtx,
   WgslRenderResource,
   WgslRenderResourceType,
-  ResolutionCtx,
   WgslSamplerType,
 } from './types';
 import { WgslIdentifier } from './wgslIdentifier';

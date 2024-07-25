@@ -1,6 +1,5 @@
 import type { AnyWgslData } from './std140/types';
 import type { WgslIdentifier } from './wgslIdentifier';
-import type { F32, U32, I32 } from './std140';
 
 export type Wgsl = string | number | WgslResolvable;
 
