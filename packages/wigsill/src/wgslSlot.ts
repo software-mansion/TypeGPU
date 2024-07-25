@@ -24,6 +24,7 @@ export function slot<T>(defaultValue?: T): WgslSlot<T> {
 // --------------
 
 class WgslSlotImpl<T> implements WgslResolvable, WgslSlot<T> {
+  readonly __brand = 'WgslSlot';
   public label?: string | undefined;
 
   constructor(public defaultValue: T | undefined = undefined) {}
@@ -38,7 +39,7 @@ class WgslSlotImpl<T> implements WgslResolvable, WgslSlot<T> {
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const value = ctx.readSlot(this);
+    const value = ctx.unwrap(this);
 
     if (!isWgsl(value)) {
       throw new Error(

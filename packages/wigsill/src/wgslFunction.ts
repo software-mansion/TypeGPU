@@ -1,4 +1,6 @@
 import type {
+  Eventual,
+  InlineResolve,
   ResolutionCtx,
   SlotValuePair,
   Wgsl,
@@ -15,13 +17,16 @@ import { WgslIdentifier } from './wgslIdentifier';
 export interface WgslFn extends WgslResolvable {
   $name(label: string): WgslFn;
 
-  with<T>(slot: WgslSlot<T>, value: T): BoundWgslFn;
+  with<T>(slot: WgslSlot<T>, value: Eventual<T>): BoundWgslFn;
 }
 
 export type BoundWgslFn = Omit<WgslFn, '$name'>;
 
 export function fn(label?: string) {
-  return (strings: TemplateStringsArray, ...params: Wgsl[]): WgslFn => {
+  return (
+    strings: TemplateStringsArray,
+    ...params: (Wgsl | InlineResolve)[]
+  ): WgslFn => {
     const func = new WgslFnImpl(code(strings, ...params));
     if (label) {
       func.$name(label);
@@ -75,7 +80,7 @@ class BoundWgslFnImpl<T> implements BoundWgslFn {
     return this._innerFn.label;
   }
 
-  with<TValue>(slot: WgslSlot<TValue>, value: TValue): BoundWgslFn {
+  with<TValue>(slot: WgslSlot<TValue>, value: Eventual<TValue>): BoundWgslFn {
     return new BoundWgslFnImpl(this, [slot, value]);
   }
 
