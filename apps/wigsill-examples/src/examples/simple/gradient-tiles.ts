@@ -11,24 +11,24 @@ import {
   onCleanup,
   onFrame,
 } from '@wigsill/example-toolkit';
-import { createRuntime, plum, struct, u32, vec2f, vec4f, wgsl } from 'wigsill';
+import { createRuntime, struct, u32, vec2f, vec4f, wgsl } from 'wigsill';
 
-const xSpanPlum = plum<number>(16).$name('x_span');
-const ySpanPlum = plum<number>(16).$name('y_span');
-
-xSpanPlum.subscribe(() => {
-  runtime.write(xSpanBuffer, xSpanPlum.latest);
-});
-
-ySpanPlum.subscribe(() => {
-  runtime.write(ySpanBuffer, ySpanPlum.latest);
-});
+const xSpanPlum = wgsl.plum<number>(16).$name('x_span');
+const ySpanPlum = wgsl.plum<number>(16).$name('y_span');
 
 const runtime = await createRuntime();
 const device = runtime.device;
 
 const xSpanBuffer = wgsl.buffer(u32).$name('x-span').$allowUniform();
 const ySpanBuffer = wgsl.buffer(u32).$name('y-span').$allowUniform();
+
+xSpanPlum.subscribe(runtime, () => {
+  runtime.write(xSpanBuffer, xSpanPlum.read(runtime));
+});
+
+ySpanPlum.subscribe(runtime, () => {
+  runtime.write(ySpanBuffer, ySpanPlum.read(runtime));
+});
 
 const xSpanData = xSpanBuffer.asUniform();
 const ySpanData = ySpanBuffer.asUniform();
@@ -98,16 +98,12 @@ const renderPipeline = runtime.makeRenderPipeline({
   },
 });
 
-addParameter(
-  'x-span',
-  { initial: 16, min: 1, max: 16, step: 1 },
-  (value: number) => xSpanPlum.set(value),
+addParameter('x-span', { initial: 16, min: 1, max: 16, step: 1 }, (value) =>
+  xSpanPlum.set(runtime, value),
 );
 
-addParameter(
-  'y-span',
-  { initial: 16, min: 1, max: 16, step: 1 },
-  (value: number) => ySpanPlum.set(value),
+addParameter('y-span', { initial: 16, min: 1, max: 16, step: 1 }, (value) =>
+  ySpanPlum.set(runtime, value),
 );
 
 onFrame(() => {

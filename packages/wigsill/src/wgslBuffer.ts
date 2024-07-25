@@ -1,7 +1,7 @@
-import type { WgslPlum } from './plum';
 import type { AnyWgslData } from './std140/types';
 import type { BufferUsage, WgslAllocatable } from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
+import type { WgslPlum } from './wgslPlum';
 
 // ----------
 // Public API

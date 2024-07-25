@@ -11,17 +11,24 @@ import { type WgslCode, code } from './wgslCode';
  * Programs that share a runtime can interact via GPU buffers.
  */
 class WigsillRuntime {
-  private _entryToBufferMap = new WeakMap<WgslAllocatable, GPUBuffer>();
-  private _readBuffer: GPUBuffer | null = null;
-  private _taskQueue = new TaskQueue();
+  private _entryToBufferMap = new Map<WgslAllocatable, GPUBuffer>();
   private _pipelineExecutors: PipelineExecutor<
     GPURenderPipeline | GPUComputePipeline
   >[] = [];
 
+  // Used for reading GPU buffers ad hoc.
+  private _readBuffer: GPUBuffer | null = null;
+  private _taskQueue = new TaskQueue();
+
   constructor(public readonly device: GPUDevice) {}
 
   dispose() {
-    // TODO: Clean up all buffers
+    for (const buffer of this._entryToBufferMap.values()) {
+      buffer.destroy();
+    }
+    this._entryToBufferMap.clear();
+
+    this._readBuffer?.destroy();
   }
 
   bufferFor(allocatable: WgslAllocatable) {
