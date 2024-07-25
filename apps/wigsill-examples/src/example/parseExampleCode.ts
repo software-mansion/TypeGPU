@@ -1,9 +1,10 @@
-import { type Example, ExampleMetadata } from './types';
+import { type Example, ExampleMetadata, exampleCategories } from './types';
 
-export function parseExampleCode(rawCode: string): Example {
+export function parseExampleCode(key: string, rawCode: string): Example | null {
   // extracting metadata from the first comment
   let metadata: ExampleMetadata = {
     title: '<Unnamed>',
+    category: '<No category>',
   };
 
   try {
@@ -13,12 +14,21 @@ export function parseExampleCode(rawCode: string): Example {
     );
     metadata = ExampleMetadata.parse(JSON.parse(snippet));
   } catch (err) {
-    console.error(
-      `Malformed example, expected metadata json at the beginning. Reason: ${err}`,
+    // Not an example, bail
+    return null;
+  }
+
+  if (
+    !exampleCategories.find((category) => category.key === metadata.category)
+  ) {
+    console.warn(
+      `Example '${metadata.title}' used unknown category: ${metadata.category}.`,
     );
+    return null;
   }
 
   return {
+    key,
     metadata,
     code: rawCode.slice(rawCode.indexOf('*/') + 2),
   };

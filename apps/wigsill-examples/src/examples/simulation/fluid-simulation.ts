@@ -1,6 +1,7 @@
 /*
 {
-  "title": "Fluid Simulation"
+  "title": "Fluid Simulation",
+  "category": "simulation"
 }
 */
 /* global GPUShaderStage, GPUBufferUsage, GPUMapMode */

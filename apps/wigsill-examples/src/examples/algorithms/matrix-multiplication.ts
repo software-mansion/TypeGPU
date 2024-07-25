@@ -1,6 +1,7 @@
 /*
 {
-  "title": "Matrix Multiplication"
+  "title": "Matrix Multiplication",
+  "category": "algorithms"
 }
 */
 
