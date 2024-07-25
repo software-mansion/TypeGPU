@@ -16,7 +16,7 @@ export interface ResolutionCtx {
   addDeclaration(item: WgslResolvable): void;
   addBinding(bindable: WgslBindable, identifier: WgslIdentifier): void;
   addRenderResource(
-    resource: WgslRenderResource,
+    resource: WgslRenderResource<WgslRenderResourceType>,
     identifier: WgslIdentifier,
   ): void;
   nameFor(token: WgslResolvable): string;
@@ -82,7 +82,7 @@ export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
    * binary.
    */
   readonly dataType: TData;
-  readonly flags: GPUBufferUsageFlags;
+  readonly flags: GPUBufferUsageFlags | GPUTextureUsageFlags;
 }
 
 export interface WgslBindable<
@@ -124,7 +124,57 @@ export type WgslRenderResourceType =
 
 export interface WgslRenderResource<T extends WgslRenderResourceType>
   extends WgslResolvable {
-  $name(label: string): WgslRenderResource<T>;
+  readonly type: T;
 }
 
 export type BufferUsage = 'uniform' | 'readonly_storage' | 'mutable_storage';
+export type StorageTextureAccess = 'read' | 'write' | 'read_write';
+
+export function isSamplerType(
+  type: WgslRenderResourceType,
+): type is WgslSamplerType {
+  return type === 'sampler' || type === 'sampler_comparison';
+}
+
+export function isTypedTextureType(
+  type: WgslRenderResourceType,
+): type is WgslTypedTextureType {
+  return [
+    'texture_1d',
+    'texture_2d',
+    'texture_2d_array',
+    'texture_3d',
+    'texture_cube',
+    'texture_cube_array',
+    'texture_multisampled_2d',
+  ].includes(type);
+}
+
+export function isDepthTextureType(
+  type: WgslRenderResourceType,
+): type is WgslDepthTextureType {
+  return [
+    'texture_depth_2d',
+    'texture_depth_2d_array',
+    'texture_depth_cube',
+    'texture_depth_cube_array',
+    'texture_depth_multisampled_2d',
+  ].includes(type);
+}
+
+export function isStorageTextureType(
+  type: WgslRenderResourceType,
+): type is WgslStorageTextureType {
+  return [
+    'texture_storage_1d',
+    'texture_storage_2d',
+    'texture_storage_2d_array',
+    'texture_storage_3d',
+  ].includes(type);
+}
+
+export function isExternalTextureType(
+  type: WgslRenderResourceType,
+): type is WgslExternalTextureType {
+  return type === 'texture_external';
+}

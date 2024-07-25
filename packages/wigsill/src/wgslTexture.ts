@@ -1,39 +1,122 @@
+import type { U32, I32, F32 } from './std140';
 import type {
   ResolutionCtx,
+  WgslExternalTextureType,
   WgslRenderResource,
+  StorageTextureAccess,
+  WgslStorageTextureType,
+  WgslTypedTextureType,
+  WgslAllocatable,
   WgslRenderResourceType,
 } from './types';
 import { WgslIdentifier } from './wgslIdentifier';
 
-export interface WgslTexture extends WgslRenderResource {
+export interface WgslTexture<TData extends U32 | I32 | F32> {
   createView(descriptor?: GPUTextureViewDescriptor): WgslTextureView;
+  readonly dataType: TData;
 }
 
-export interface WgslTextureView extends WgslRenderResource {}
+export interface WgslStorageTexture<
+  TData extends U32 | I32 | F32,
+  TAccess extends StorageTextureAccess,
+> extends WgslAllocatable<TData> {
+  createView(descriptor?: GPUTextureViewDescriptor): WgslTextureView;
+  readonly access: TAccess;
+  readonly dataType: TData;
+}
 
-export interface WgslTextureExternal extends WgslRenderResource {}
+export interface WgslTextureView
+  extends WgslRenderResource<WgslRenderResourceType> {}
 
-class WgslTextureImpl implements WgslTexture {
+export interface WgslTextureExternal
+  extends WgslRenderResource<WgslExternalTextureType> {}
+
+export function texture<TData extends U32 | I32 | F32>(
+  descriptor: GPUTextureDescriptor,
+  dataType: TData,
+  type: WgslTypedTextureType | WgslStorageTextureType,
+  access?: StorageTextureAccess,
+): WgslTexture<TData> | WgslStorageTexture<TData, StorageTextureAccess> {
+  if (access) {
+    return new WgslStorageTextureImpl(
+      descriptor,
+      dataType,
+      type as WgslStorageTextureType,
+      access,
+    );
+  }
+
+  return new WgslTextureImpl(
+    descriptor,
+    dataType,
+    type as WgslTypedTextureType,
+  );
+}
+
+export function textureExternal(descriptor: GPUExternalTextureDescriptor) {
+  return new WgslTextureExternalImpl(descriptor);
+}
+
+class WgslTextureImpl<TData extends U32 | I32 | F32>
+  implements WgslTexture<TData>
+{
   private _label: string | undefined;
-  private _type: WgslRenderResourceType;
 
-  constructor(private _descriptor: GPUTextureDescriptor) {}
+  constructor(
+    public readonly descriptor: GPUTextureDescriptor,
+    public readonly dataType: TData,
+    public readonly type: WgslTypedTextureType,
+  ) {}
 
   get label() {
     return this._label;
   }
 
-  get descriptor() {
-    return this._descriptor;
+  createView(descriptor: GPUTextureViewDescriptor): WgslTextureView {
+    return new WgslTextureViewImpl(this, descriptor, this.type);
+  }
+}
+
+class WgslStorageTextureImpl<
+  TData extends U32 | I32 | F32,
+  TAccess extends StorageTextureAccess,
+> implements WgslStorageTexture<TData, TAccess>
+{
+  readonly flags: number;
+  constructor(
+    public readonly descriptor: GPUTextureDescriptor,
+    public readonly dataType: TData,
+    public readonly type: WgslStorageTextureType,
+    public readonly access: TAccess,
+  ) {
+    this.flags = this.descriptor.usage;
+  }
+
+  createView(descriptor: GPUTextureViewDescriptor): WgslTextureView {
+    return new WgslTextureViewImpl(this, descriptor, this.type);
+  }
+}
+
+class WgslTextureViewImpl<TData extends U32 | I32 | F32>
+  implements WgslTextureView
+{
+  private _label: string | undefined;
+
+  constructor(
+    public readonly texture:
+      | WgslTexture<TData>
+      | WgslStorageTexture<TData, StorageTextureAccess>,
+    public readonly descriptor: GPUTextureViewDescriptor,
+    public readonly type: WgslRenderResourceType,
+  ) {}
+
+  get label() {
+    return this._label;
   }
 
   $name(label: string | undefined) {
     this._label = label;
     return this;
-  }
-
-  createView(descriptor?: GPUTextureViewDescriptor): WgslTextureView {
-    return new WgslTextureViewImpl(this, descriptor);
   }
 
   resolve(ctx: ResolutionCtx): string {
@@ -45,24 +128,14 @@ class WgslTextureImpl implements WgslTexture {
   }
 }
 
-class WgslTextureViewImpl implements WgslTextureView {
+class WgslTextureExternalImpl implements WgslTextureExternal {
   private _label: string | undefined;
+  public readonly type = 'texture_external';
 
-  constructor(
-    private _texture: WgslTexture,
-    private _descriptor?: GPUTextureViewDescriptor,
-  ) {}
+  constructor(public readonly descriptor: GPUExternalTextureDescriptor) {}
 
   get label() {
     return this._label;
-  }
-
-  get texture() {
-    return this._texture;
-  }
-
-  get descriptor() {
-    return this._descriptor;
   }
 
   $name(label: string | undefined) {

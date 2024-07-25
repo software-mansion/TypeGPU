@@ -1,7 +1,6 @@
 import type {
   ResolutionCtx,
   WgslRenderResource,
-  WgslRenderResourceType,
   WgslSamplerType,
 } from './types';
 import { WgslIdentifier } from './wgslIdentifier';
@@ -14,19 +13,15 @@ export function sampler(descriptor: GPUSamplerDescriptor): WgslSampler {
 
 class WgslSamplerImpl implements WgslSampler {
   private _label: string | undefined;
-  private _type: WgslRenderResourceType;
+  private _type: WgslSamplerType;
 
-  constructor(private readonly _descriptor: GPUSamplerDescriptor) {
-    if (_descriptor.compare === null) this._type = 'sampler';
+  constructor(public readonly descriptor: GPUSamplerDescriptor) {
+    if (descriptor.compare === undefined) this._type = 'sampler';
     else this._type = 'sampler_comparison';
   }
 
   get label() {
     return this._label;
-  }
-
-  get descriptor() {
-    return this._descriptor;
   }
 
   get type() {

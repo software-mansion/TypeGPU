@@ -2,6 +2,7 @@ import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
 import type { BufferUsage, WgslResolvable } from './types';
 import type WigsillRuntime from './wigsillRuntime';
+import { isSamplerType } from './types';
 
 export type Program = {
   bindGroupLayout: GPUBindGroupLayout;
@@ -36,16 +37,58 @@ export default class ProgramBuilder {
     // Resolving code
     const codeString = ctx.resolve(this.root);
     const usedBindables = Array.from(ctx.usedBindables);
-
-    const bindGroupLayout = this.runtime.device.createBindGroupLayout({
-      entries: usedBindables.map((bindable, idx) => ({
-        binding: idx,
+    const usedRenderResources = Array.from(ctx.usedRenderResources);
+    const usedSamplers = usedRenderResources.filter((resource) =>
+      isSamplerType(resource.type),
+    );
+    const usedTextures = usedRenderResources.filter(
+      (resource) => !isSamplerType(resource.type),
+    );
+    const allEntries = [];
+    let idx = 0;
+    for (const bindable of usedBindables) {
+      allEntries.push({
+        binding: idx++,
         visibility: options.shaderStage,
         buffer: {
           type: usageToBindingTypeMap[bindable.usage],
         },
-      })),
+      });
+    }
+    for (const sampler of usedSamplers) {
+      allEntries.push({
+        binding: idx++,
+        visibility: options.shaderStage,
+        sampler: {},
+      });
+    }
+    for (const texture of usedTextures) {
+      allEntries.push({
+        binding: idx++,
+        visibility: options.shaderStage,
+        texture: {},
+      });
+    }
+
+    const bindGroupLayout = this.runtime.device.createBindGroupLayout({
+      entries: allEntries,
     });
+
+    const allBindGroupEntries = [];
+    idx = 0;
+    for (const bindable of usedBindables) {
+      allBindGroupEntries.push({
+        binding: idx++,
+        resource: {
+          buffer: this.runtime.bufferFor(bindable.allocatable),
+        },
+      });
+    }
+
+    for (const sampler of usedSamplers) {
+      allBindGroupEntries.push({
+        binding: idx++,
+        resource: sampler.
 
     const bindGroup = this.runtime.device.createBindGroup({
       layout: bindGroupLayout,

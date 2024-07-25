@@ -3,6 +3,8 @@ import type StructDataType from './std140/struct';
 import type { AnyWgslData } from './std140/types';
 import type { Wgsl, WgslAllocatable } from './types';
 import { type WgslCode, code } from './wgslCode';
+import type { WgslSampler } from './wgslSampler';
+import type { WgslTextureView } from './wgslTexture';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
@@ -10,6 +12,8 @@ import { type WgslCode, code } from './wgslCode';
  */
 class WigsillRuntime {
   private _entryToBufferMap = new WeakMap<WgslAllocatable, GPUBuffer>();
+  private _samplers = new WeakMap<WgslSampler, GPUSampler>();
+  private _textures = new WeakMap<WgslTextureView, GPUTexture>();
   private _readBuffer: GPUBuffer | null = null;
   private _taskQueue = new TaskQueue();
   private _pipelineExecutors: PipelineExecutor<
@@ -39,6 +43,13 @@ class WigsillRuntime {
 
     return buffer;
   }
+
+  textureFor(view: WgslTextureView): GPUTexture {
+    let texture = this._textures.get(view);
+
+    if (!texture) {
+      texture = this.device.createTexture(view.
+
 
   async valueFor(memory: WgslAllocatable): Promise<ArrayBuffer> {
     return this._taskQueue.enqueue(async () => {
@@ -140,6 +151,8 @@ class WigsillRuntime {
       },
       primitive: options.primitive,
     });
+
+    console.log(program.code);
 
     const executor = new RenderPipelineExecutor(
       this.device,
