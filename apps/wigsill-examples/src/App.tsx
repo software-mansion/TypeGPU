@@ -42,7 +42,9 @@ function App() {
               className="mx-auto p-4 text-2xl font-outfit cursor-pointer"
               onClick={() => setCurrentExample(RESET)}
             >
-              <strong>wigsill</strong> - examples
+              <h1>
+                <strong>wigsill</strong> - examples
+              </h1>
             </button>
           </header>
           <nav className="flex flex-col flex-1 gap-2 overflow-y-auto">
