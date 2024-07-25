@@ -17,13 +17,13 @@ state, and the other will be updated and become the next state. After every cell
 swapped.
 
 ```ts
-import wgsl, { plum } from 'wigsill';
+import wgsl from 'wigsill';
 import { arrayOf, f32 } from 'wigsill/data';
 
-const gridSize = plum(512);
+const gridSize = wgsl.plum(512);
 
 function makeGridBuffer() {
-  return plum((get) => {
+  return wgsl.plum((get) => {
     // if `gridSize` changes value, we recreate the buffer.
     const gridArea = get(gridSize) ** 2;
 
@@ -44,11 +44,11 @@ To access the buffers in WGSL code, we need to do it through bindings. This allo
 we define how we want to use the buffer explicitly.
 
 ```ts
-const readonlyEvenGrid = plum((get) => get(evenGridBuffer).asReadonlyStorage());
-const readonlyOddGrid = plum((get) => get(oddGridBuffer).asReadonlyStorage());
+const readonlyEvenGrid = wgsl.plum((get) => get(evenGridBuffer).asReadonlyStorage());
+const readonlyOddGrid = wgsl.plum((get) => get(oddGridBuffer).asReadonlyStorage());
 
-const mutableEvenGrid = plum((get) => get(evenGridBuffer).asMutableStorage());
-const mutableOddGrid = plum((get) => get(oddGridBuffer).asMutableStorage());
+const mutableEvenGrid = wgsl.plum((get) => get(evenGridBuffer).asMutableStorage());
+const mutableOddGrid = wgsl.plum((get) => get(oddGridBuffer).asMutableStorage());
 ```
 
 ```ts
