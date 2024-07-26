@@ -14,6 +14,7 @@ import { WgslIdentifier } from './wgslIdentifier';
 export interface WgslTexture<TData extends U32 | I32 | F32> {
   createView(descriptor?: GPUTextureViewDescriptor): WgslTextureView;
   readonly dataType: TData;
+  readonly descriptor: GPUTextureDescriptor;
 }
 
 export interface WgslStorageTexture<
@@ -23,10 +24,17 @@ export interface WgslStorageTexture<
   createView(descriptor?: GPUTextureViewDescriptor): WgslTextureView;
   readonly access: TAccess;
   readonly dataType: TData;
+  readonly descriptor: GPUTextureDescriptor;
 }
 
 export interface WgslTextureView
-  extends WgslRenderResource<WgslRenderResourceType> {}
+  extends WgslRenderResource<WgslRenderResourceType> {
+  readonly texture:
+    | WgslTexture<U32 | I32 | F32>
+    | WgslStorageTexture<U32 | I32 | F32, StorageTextureAccess>;
+  readonly descriptor: GPUTextureViewDescriptor;
+  readonly type: WgslRenderResourceType;
+}
 
 export interface WgslTextureExternal
   extends WgslRenderResource<WgslExternalTextureType> {}

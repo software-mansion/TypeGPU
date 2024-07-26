@@ -5,7 +5,9 @@ import type {
 } from './types';
 import { WgslIdentifier } from './wgslIdentifier';
 
-export interface WgslSampler extends WgslRenderResource<WgslSamplerType> {}
+export interface WgslSampler extends WgslRenderResource<WgslSamplerType> {
+  readonly descriptor: GPUSamplerDescriptor;
+}
 
 export function sampler(descriptor: GPUSamplerDescriptor): WgslSampler {
   return new WgslSamplerImpl(descriptor);
