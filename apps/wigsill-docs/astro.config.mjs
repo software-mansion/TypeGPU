@@ -14,6 +14,9 @@ export default defineConfig({
         alt: 'Wigsill Logo',
         replacesTitle: true,
       },
+      components: {
+        Head: './src/components/starlight/Head.astro',
+      },
       social: {
         github: 'https://github.com/software-mansion-labs/wigsill',
       },

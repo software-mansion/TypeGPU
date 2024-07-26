@@ -62,6 +62,10 @@ importers:
       typescript:
         specifier: ^5.5.4
         version: 5.5.4
+    devDependencies:
+      astro-vtbot:
+        specifier: ^1.8.2
+        version: 1.8.2
 
   apps/wigsill-examples:
     dependencies:
@@ -2466,6 +2470,10 @@ packages:
     resolution: {integrity: sha512-KYSIHVmslkaCDyw013pphY+d7x1qV8IZupYfeIfzNA+nsaWHbn5uPuQRvdRFsa9zFzGeudPuoGoZ1Op4jrJXIQ==}
     dev: false
 
+  /@vtbag/inspection-chamber@1.0.2:
+    resolution: {integrity: sha512-TpodnFfljDlxaNTDu0Bs4rcQ5KF9vPzEoU4vj2Rh2c+l5uQG9FXEagpNXEU4UWaVj1AJM6s0jNB3dsWrThdpWQ==}
+    dev: true
+
   /@webgpu/types@0.1.43:
     resolution: {integrity: sha512-HoP+d+m+Kuq8CsE63BZ3+BYBKAemrqbHUNrCalxrUju5XW+q/094Q3oeIa+2pTraEbO8ckJmGpibzyGT4OV4YQ==}
     dev: true
@@ -2595,6 +2603,12 @@ packages:
       astro: 4.12.2(@types/node@20.11.19)(typescript@5.5.4)
       rehype-expressive-code: 0.35.3
     dev: false
+
+  /astro-vtbot@1.8.2:
+    resolution: {integrity: sha512-JZYVbdxnrp4tiz8uSjnVgv29/xeGtSFdZDMQPNRJbfB0a0HF95JkLcgkLieRrXTwpkhrR5Tm7Yu5QIpw5ZvFPA==}
+    dependencies:
+      '@vtbag/inspection-chamber': 1.0.2
+    dev: true
 
   /astro@4.12.2(@types/node@20.11.19)(typescript@5.5.4):
     resolution: {integrity: sha512-l6OmqlL+FiuSi9x6F+EGZitteOznq1JffOil7st7cdqeMCTEIym4oagI1a6zp6QekliKWEEZWdplGhgh1k1f7Q==}
