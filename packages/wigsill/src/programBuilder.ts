@@ -172,18 +172,6 @@ export class RenderProgramBuilder {
     );
 
     const vertexOutputBuiltins = getUsedBuiltinsNamed(symbolRecord);
-    for (const entry of vertexOutputBuiltins) {
-      if (entry.builtin.stage !== 'vertex') {
-        throw new Error(
-          `Built-in ${entry.name} is used illegally in the vertex shader stage.`,
-        );
-      }
-      // if (entry.builtin.direction !== 'output') {
-      //   throw new Error(
-      //     `Built-in ${entry.name} is used illegally as an output in the vertex shader stage.`,
-      //   );
-      // }
-    }
     const outputVars = Object.keys(this.vertexOutputFormat);
     const vertexOutput = outputVars.map((name, index) => {
       const varInfo = this.vertexOutputFormat[name];
@@ -257,6 +245,11 @@ export class RenderProgramBuilder {
         return output;
       }
     `;
+    const fragmentContext = new ResolutionCtxImpl({
+      names: options.nameRegistry ?? new RandomNameRegistry(),
+      bindingGroup: options.bindingGroup,
+    });
+    fragmentContext.resolve(this.fragmentRoot);
 
     const fragmentUsedBuiltins = this.fragmentRoot
       .getUsedBuiltins()
@@ -266,6 +259,7 @@ export class RenderProgramBuilder {
       @builtin(${builtin.name}) ${builtin.name}: ${builtin.type}
     `,
     );
+
     const fragmentInputs = vertexOutput.map(
       ({ name, varInfo }, idx) => code`
       @location(${idx}) ${name}: ${varInfo[0]}

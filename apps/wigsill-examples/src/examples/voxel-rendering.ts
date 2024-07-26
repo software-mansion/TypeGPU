@@ -174,7 +174,7 @@ const renderPipeline = runtime.makeRenderPipeline({
   },
 
   fragment: {
-    code: wgsl.code`
+    code: wgsl`
       let minDim = f32(min(${canvasDimsData}.width, ${canvasDimsData}.height));
 
       var ray: ${rayStruct};

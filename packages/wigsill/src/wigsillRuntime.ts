@@ -171,8 +171,6 @@ class WigsillRuntime {
 
     console.log('vertexProgram', vertexProgram.code);
     console.log('fragmentProgram', fragmentProgram.code);
-    console.log('vertexBindGroupLayout', vertexProgram.bindGroupLayout);
-    console.log('fragmentBindGroupLayout', fragmentProgram.bindGroupLayout);
 
     const pipelineLayout = this.device.createPipelineLayout({
       label: options.label ?? '',
