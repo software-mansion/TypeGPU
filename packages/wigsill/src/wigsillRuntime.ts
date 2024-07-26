@@ -3,6 +3,7 @@ import { roundUp } from './mathUtils';
 import ProgramBuilder, { type Program } from './programBuilder';
 import type StructDataType from './std140/struct';
 import type { AnyWgslData } from './std140/types';
+import { TaskQueue } from './taskQueue';
 import type { Wgsl, WgslAllocatable } from './types';
 import { type WgslCode, code } from './wgslCode';
 
@@ -259,38 +260,6 @@ class WigsillRuntime {
         .map((executor) => executor.flush())
         .filter((encoded): encoded is GPUCommandBuffer => !!encoded),
     );
-  }
-}
-
-class TaskQueue<T> {
-  private _queue: (() => Promise<void>)[] = [];
-  private _pending = false;
-
-  enqueue<T>(task: () => Promise<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
-      this._queue.push(async () => {
-        try {
-          resolve(await task());
-        } catch (e) {
-          reject(e);
-        }
-      });
-      this._processQueue();
-    });
-  }
-
-  private async _processQueue() {
-    if (this._pending) {
-      return;
-    }
-    this._pending = true;
-    while (this._queue.length > 0) {
-      const task = this._queue.shift();
-      if (task) {
-        await task();
-      }
-    }
-    this._pending = false;
   }
 }
 
