@@ -2,9 +2,9 @@ import type {
   AddElement,
   ElementDef,
   ElementOptions,
+  ElementResults,
   ElementType,
   LayoutDef,
-  TableRef,
 } from '@wigsill/example-toolkit';
 import { useCallback, useRef, useState } from 'react';
 import { ExecutionCancelledError } from './errors';
@@ -31,45 +31,22 @@ const makeLayout = (appendToDef: (element: ElementDef) => void) => {
   let cancelled = false;
 
   const newInstance: LayoutInstance = {
-    addElement: (<T extends ElementType>(
+    addElement: <T extends ElementType>(
       type: T,
-      options?: ElementOptions<T>,
+      options?: ElementOptions[T],
     ) => {
       if (cancelled) {
         throw new ExecutionCancelledError();
       }
 
       const elementKey = uniqueElementKey();
+      appendToDef({ ...options, type, key: elementKey });
 
-      if (type === 'canvas') {
-        appendToDef({ ...options, type: 'canvas', key: elementKey });
-
-        return new Promise<HTMLCanvasElement>((resolve, reject) => {
-          elementResolves.set(elementKey, resolve as () => void);
-          elementRejects.push(reject);
-        });
-      }
-
-      if (type === 'video') {
-        appendToDef({ ...options, type: 'video', key: elementKey });
-
-        return new Promise<HTMLVideoElement>((resolve, reject) => {
-          elementResolves.set(elementKey, resolve as () => void);
-          elementRejects.push(reject);
-        });
-      }
-
-      if (type === 'table') {
-        appendToDef({ ...options, type: 'table', key: elementKey });
-
-        return new Promise<TableRef>((resolve, reject) => {
-          elementResolves.set(elementKey, resolve as () => void);
-          elementRejects.push(reject);
-        });
-      }
-
-      throw new Error(`Tried to add unsupported layout element: ${type}`);
-    }) as AddElement,
+      return new Promise<ElementResults[T]>((resolve, reject) => {
+        elementResolves.set(elementKey, resolve as () => void);
+        elementRejects.push(reject);
+      });
+    },
 
     dispose: () => {
       cancelled = true;
