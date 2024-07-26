@@ -86,7 +86,6 @@ export default class ProgramBuilder {
         },
       });
     }
-    console.log(allEntries);
 
     const bindGroupLayout = this.runtime.device.createBindGroupLayout({
       entries: allEntries,
@@ -122,7 +121,6 @@ export default class ProgramBuilder {
         },
       });
     }
-    console.log(allBindGroupEntries);
 
     const bindGroup = this.runtime.device.createBindGroup({
       layout: bindGroupLayout,

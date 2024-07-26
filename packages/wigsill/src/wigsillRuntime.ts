@@ -179,8 +179,6 @@ class WigsillRuntime {
       primitive: options.primitive,
     });
 
-    console.log(program.code);
-
     const executor = new RenderPipelineExecutor(
       this.device,
       renderPipeline,
