@@ -11,10 +11,9 @@ import {
   object,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { ResolutionCtx } from '../types';
+import type { AnyWgslData, ResolutionCtx, WgslData } from '../types';
 import { code } from '../wgslCode';
 import { WgslIdentifier } from '../wgslIdentifier';
-import type { AnyWgslData, WgslData } from './types';
 
 // ----------
 // Public API

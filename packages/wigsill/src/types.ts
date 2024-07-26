@@ -1,4 +1,4 @@
-import type { AnyWgslData } from './data';
+import type { ISchema } from 'typed-binary';
 import type { WgslIdentifier } from './wgslIdentifier';
 
 export type Wgsl = string | number | WgslResolvable;
@@ -102,3 +102,35 @@ export interface WgslBindable<
 }
 
 export type BufferUsage = 'uniform' | 'readonly_storage' | 'mutable_storage';
+
+export interface WgslData<TInner> extends ISchema<TInner>, WgslResolvable {
+  readonly byteAlignment: number;
+  readonly size: number;
+}
+
+export type AnyWgslData = WgslData<unknown>;
+
+export interface WgslPointer<
+  TScope extends 'function',
+  TInner extends AnyWgslData,
+> {
+  readonly scope: TScope;
+  readonly pointsTo: TInner;
+}
+
+/**
+ * A virtual representation of a WGSL value.
+ */
+export type WgslValue<TDataType> = {
+  readonly __dataType: TDataType;
+};
+
+export type AnyWgslPointer = WgslPointer<'function', AnyWgslData>;
+
+export type WgslFnArgument = AnyWgslPointer | AnyWgslData;
+
+export function isPointer(
+  value: AnyWgslPointer | AnyWgslData,
+): value is AnyWgslPointer {
+  return 'pointsTo' in value;
+}

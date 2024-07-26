@@ -1,5 +1,4 @@
-import type { AnyWgslData } from './data';
-import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
+import type { AnyWgslData, ResolutionCtx, Wgsl, WgslResolvable } from './types';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
 

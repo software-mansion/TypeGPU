@@ -1,6 +1,6 @@
 import * as TB from 'typed-binary';
+import type { WgslData } from '../types';
 import { SimpleWgslData } from './std140';
-import type { WgslData } from './types';
 
 export type Bool = WgslData<boolean>;
 export const bool: Bool = new SimpleWgslData({
