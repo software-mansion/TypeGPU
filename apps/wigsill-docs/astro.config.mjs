@@ -1,5 +1,6 @@
 import starlight from '@astrojs/starlight';
 import { defineConfig } from 'astro/config';
+import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 
 import tailwind from '@astrojs/tailwind';
 
@@ -35,12 +36,19 @@ export default defineConfig({
             },
           ],
         },
-        {
-          label: 'Reference',
-          autogenerate: {
-            directory: 'reference',
-          },
-        },
+        typeDocSidebarGroup,
+      ],
+      plugins: [
+        // Generate the documentation.
+        starlightTypeDoc({
+          entryPoints: [
+            '../../packages/wigsill/src/index.ts',
+            '../../packages/wigsill/src/data/index.ts',
+            '../../packages/wigsill/macro/index.ts',
+            '../../packages/wigsill/web/index.ts',
+          ],
+          tsconfig: '../../packages/wigsill/tsconfig.json',
+        }),
       ],
     }),
     tailwind(),
