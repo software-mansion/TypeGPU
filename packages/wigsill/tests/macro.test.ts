@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { wgsl } from 'wigsill';
+import wgsl from 'wigsill';
 import { repeat } from 'wigsill/macro';
 import { parseWGSL } from './utils/parseWGSL';
 
