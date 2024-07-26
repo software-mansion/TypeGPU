@@ -1,58 +1,41 @@
 declare module '@wigsill/example-toolkit' {
-  export type CanvasOptions = {
+  export type CanvasDef = {
+    type: 'canvas';
+    key: string;
     width?: number;
     height?: number;
     aspectRatio?: number;
   };
 
-  export type VideoOptions = {
+  export type VideoDef = {
+    type: 'video';
+    key: string;
     width?: number;
     height?: number;
   };
 
-  export type TableOptions = {
+  export type TableDef = {
+    type: 'table';
+    key: string;
     label?: string;
   };
 
-  export type ButtonOptions = {
+  export type ButtonDef = {
+    type: 'button';
+    key: string;
     label?: string;
     onClick?: () => void;
-  }
-
-  export type ElementOptions = {
-    canvas: CanvasOptions;
-    video: VideoOptions;
-    table: TableOptions;
-    button: ButtonOptions;
-  };
-
-  export type ElementResults = {
-    canvas: HTMLCanvasElement;
-    video: HTMLVideoElement;
-    table: TableRef;
-    button: HTMLButtonElement;
-  };
-
-  export type ElementType = keyof ElementOptions;
-
-  type Merge<A, B> = {
-    [K in keyof A]: K extends keyof B ? B[K] : A[K];
-  } & B extends infer O
-    ? { [K in keyof O]: O[K] }
-    : never;
-  
-  type ElementDefs = {
-    [K in ElementType]: Merge<
-      ElementOptions[K],
-      {
-        type: K;
-        key: string;
-      }
-    >;
   };
 
   export type TableRef = {
     setMatrix: (data: number[][]) => void;
+  };
+
+  export type ElementDefs = {
+    'canvas': CanvasDef;
+    'video': VideoDef;
+    'table': TableDef;
+    'button': ButtonDef;
   };
 
   export type ElementDef = ElementDefs[keyof ElementDefs];
@@ -63,9 +46,16 @@ declare module '@wigsill/example-toolkit' {
     elements: ElementDef[];
   };
 
+  type ElementResults = {
+    canvas: HTMLCanvasElement;
+    video: HTMLVideoElement;
+    table: TableRef;
+    button: HTMLButtonElement;
+  };
+
   export type AddElement = <T extends 'canvas' | 'video' | 'table' | 'button'>(
     type: T,
-    options?: ElementOptions[T],
+    options?: ElementOptions<T>,
   ) => Promise<ElementResults[T]>;
 
   export const addElement: AddElement;
