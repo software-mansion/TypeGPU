@@ -95,6 +95,8 @@ export default class ProgramBuilder {
       });
     }
 
+    console.log(allEntries);
+
     const bindGroupLayout = this.runtime.device.createBindGroupLayout({
       entries: allEntries,
     });
@@ -129,6 +131,8 @@ export default class ProgramBuilder {
         },
       });
     }
+
+    console.log(allBindGroupEntries);
 
     const bindGroup = this.runtime.device.createBindGroup({
       layout: bindGroupLayout,
@@ -273,11 +277,13 @@ export class RenderProgramBuilder {
       }
     `;
 
+    console.log('constructing vertex program');
     const vertexProgram = new ProgramBuilder(this.runtime, vertexCode).build({
       bindingGroup: options.bindingGroup,
       shaderStage: GPUShaderStage.VERTEX,
       nameRegistry: options.nameRegistry ?? new RandomNameRegistry(),
     });
+    console.log('constructing fragment program');
     const fragmentProgram = new ProgramBuilder(
       this.runtime,
       fragmentCode,
@@ -288,5 +294,47 @@ export class RenderProgramBuilder {
     });
 
     return [vertexProgram, fragmentProgram, vertexBuffers];
+  }
+}
+
+export class ComputeProgramBuilder {
+  constructor(
+    private runtime: WigsillRuntime,
+    private computeRoot: WgslCode,
+    private workgroupSize: [number, (number | null)?, (number | null)?],
+  ) {}
+
+  build(options: Omit<BuildOptions, 'shaderStage'>): Program {
+    const context = new ResolutionCtxImpl({
+      names: options.nameRegistry ?? new RandomNameRegistry(),
+      bindingGroup: options.bindingGroup,
+    });
+    context.resolve(this.computeRoot);
+
+    const usedBuiltins = this.computeRoot
+      .getUsedBuiltins()
+      .map((builtin) => getBuiltinInfo(builtin));
+    const builtinArgs = usedBuiltins.map(
+      (builtin) => code`
+      @builtin(${builtin.name}) ${builtin.name}: ${builtin.type}
+    `,
+    );
+
+    const workgroupSizeDeclaration = `@workgroup_size(${this.workgroupSize[0]}, ${this.workgroupSize[1] ?? 1}, ${this.workgroupSize[2] ?? 1})`;
+
+    const shaderCode = code`
+      @compute ${workgroupSizeDeclaration}
+      fn main(${builtinArgs}) {
+        ${this.computeRoot}
+      }
+    `;
+
+    const program = new ProgramBuilder(this.runtime, shaderCode).build({
+      bindingGroup: options.bindingGroup,
+      shaderStage: GPUShaderStage.COMPUTE,
+      nameRegistry: options.nameRegistry ?? new RandomNameRegistry(),
+    });
+
+    return program;
   }
 }

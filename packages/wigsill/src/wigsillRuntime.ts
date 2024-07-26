@@ -1,6 +1,7 @@
 import type { AnySchema } from 'typed-binary';
 import { roundUp } from './mathUtils';
 import ProgramBuilder, {
+  ComputeProgramBuilder,
   type Program,
   RenderProgramBuilder,
 } from './programBuilder';
@@ -213,24 +214,15 @@ class WigsillRuntime {
 
   makeComputePipeline(options: {
     workgroupSize: [number, number?, number?];
-    args: Wgsl[];
     code: WgslCode;
-    externalLayouts?: GPUBindGroupLayout[];
-    externalDeclarations?: Wgsl[];
     label?: string;
   }) {
-    const program = new ProgramBuilder(
+    const program = new ComputeProgramBuilder(
       this,
-      code`
-        @compute @workgroup_size(${options.workgroupSize.join(', ')}) fn main_compute(${options.args.flatMap((arg) => [arg, ', '])}) {
-          ${options.code}
-        }
-
-        ${options.externalDeclarations?.flatMap((arg) => [arg, '\n']) ?? ''}
-      `,
+      options.code,
+      options.workgroupSize,
     ).build({
-      bindingGroup: (options.externalLayouts ?? []).length,
-      shaderStage: GPUShaderStage.COMPUTE,
+      bindingGroup: 0,
     });
 
     const shaderModule = this.device.createShaderModule({
@@ -239,10 +231,7 @@ class WigsillRuntime {
 
     const pipelineLayout = this.device.createPipelineLayout({
       label: options.label ?? '',
-      bindGroupLayouts: [
-        ...(options.externalLayouts ?? []),
-        program.bindGroupLayout,
-      ],
+      bindGroupLayouts: [program.bindGroupLayout],
     });
 
     const computePipeline = this.device.createComputePipeline({
@@ -257,7 +246,7 @@ class WigsillRuntime {
       this.device,
       computePipeline,
       [program],
-      options.externalLayouts?.length ?? 0,
+      0,
     );
     this._pipelineExecutors.push(executor);
     return executor;
