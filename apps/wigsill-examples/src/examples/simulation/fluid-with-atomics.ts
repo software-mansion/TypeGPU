@@ -1,6 +1,6 @@
 /*
 {
-  "title": "Fluid Simulation",
+  "title": "Fluid (with atomics)",
   "category": "simulation"
 }
 */

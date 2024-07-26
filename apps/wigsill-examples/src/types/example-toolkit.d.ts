@@ -2,6 +2,7 @@ declare module '@wigsill/example-toolkit' {
   export type CanvasOptions = {
     width?: number;
     height?: number;
+    aspectRatio?: number;
   };
 
   export type VideoOptions = {
@@ -50,11 +51,13 @@ declare module '@wigsill/example-toolkit' {
     >;
   };
 
-  export type ElementDef = ElementDefs[ElementType];
-
   export type TableRef = {
     setMatrix: (data: number[][]) => void;
   };
+
+  export type ElementDef = ElementDefs[keyof ElementDefs];
+  export type ElementType = keyof ElementDefs;
+  export type ElementOptions<T> = Omit<ElementDefs[T], 'type' | 'key'>;
 
   export type LayoutDef = {
     elements: ElementDef[];
