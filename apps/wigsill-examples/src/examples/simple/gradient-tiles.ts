@@ -22,12 +22,12 @@ const device = runtime.device;
 const xSpanBuffer = wgsl.buffer(u32).$name('x-span').$allowUniform();
 const ySpanBuffer = wgsl.buffer(u32).$name('y-span').$allowUniform();
 
-xSpanPlum.subscribe(runtime, () => {
-  runtime.write(xSpanBuffer, xSpanPlum.read(runtime));
+runtime.onPlumChange(xSpanPlum, () => {
+  runtime.write(xSpanBuffer, runtime.readPlum(xSpanPlum));
 });
 
-ySpanPlum.subscribe(runtime, () => {
-  runtime.write(ySpanBuffer, ySpanPlum.read(runtime));
+runtime.onPlumChange(ySpanPlum, () => {
+  runtime.write(ySpanBuffer, runtime.readPlum(ySpanPlum));
 });
 
 const xSpanData = xSpanBuffer.asUniform();
@@ -99,11 +99,11 @@ const renderPipeline = runtime.makeRenderPipeline({
 });
 
 addParameter('x-span', { initial: 16, min: 1, max: 16, step: 1 }, (value) =>
-  xSpanPlum.set(runtime, value),
+  runtime.setPlum(xSpanPlum, value),
 );
 
 addParameter('y-span', { initial: 16, min: 1, max: 16, step: 1 }, (value) =>
-  ySpanPlum.set(runtime, value),
+  runtime.setPlum(ySpanPlum, value),
 );
 
 onFrame(() => {

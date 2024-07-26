@@ -2,7 +2,7 @@ export * from './errors';
 export * from './types';
 export { default as wgsl } from './wgsl';
 export { AsCallable, ICallable } from './callable';
-export { default as WigsillRuntime, createRuntime } from './wigsillRuntime';
+export { WigsillRuntime, createRuntime } from './wigsillRuntime';
 export { default as ProgramBuilder, type Program } from './programBuilder';
 export { StrictNameRegistry, RandomNameRegistry } from './nameRegistry';
 export * from './std140';

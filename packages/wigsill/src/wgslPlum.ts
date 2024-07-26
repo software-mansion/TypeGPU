@@ -1,6 +1,4 @@
-import PerRuntimeState from './perRuntimeState';
 import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
-import type WigsillRuntime from './wigsillRuntime';
 
 // ----------
 // Public API
@@ -14,21 +12,25 @@ export type Getter = <T>(plum: WgslPlum<T>) => T;
 export interface WgslPlum<TValue = unknown> {
   $name(label: string): this;
 
-  read(runtime: WigsillRuntime): TValue;
-  subscribe(runtime: WigsillRuntime, listener: () => unknown): Unsubscribe;
+  /**
+   * Computes the value of this plum. Circumvents the store
+   * memoization, so use with care.
+   */
+  compute(get: Getter): TValue;
 }
 
-export interface WgslSettable<TValue> {
-  set(runtime: WigsillRuntime, value: TValue): void;
+export const WgslSettableTrait = Symbol('This item can be set');
+export interface WgslSettable {
+  readonly [WgslSettableTrait]: true;
 }
 
 export function plum<T extends Wgsl>(
   initial: T,
-): WgslPlum<T> & WgslSettable<T> & WgslResolvable;
+): WgslPlum<T> & WgslSettable & WgslResolvable;
 
-export function plum<T>(initial: T): WgslPlum<T> & WgslSettable<T>;
+export function plum<T>(initial: T): WgslPlum<T> & WgslSettable;
 
-export function plum<T>(initial: T): WgslPlum<T> & WgslSettable<T> {
+export function plum<T>(initial: T): WgslPlum<T> & WgslSettable {
   return new WgslSourcePlumImpl(initial);
 }
 
@@ -52,20 +54,17 @@ type PlumActiveState = {
   listeners: Set<Listener>;
 };
 
-class PlumStore {
-  private readonly _stateMap = new WeakMap<WgslPlumImpl, PlumState>();
-  private readonly _activeStateMap = new WeakMap<
-    WgslPlumImpl,
-    PlumActiveState
-  >();
+export class PlumStore {
+  private readonly _stateMap = new WeakMap<WgslPlum, PlumState>();
+  private readonly _activeStateMap = new WeakMap<WgslPlum, PlumActiveState>();
 
-  private _getState<T>(plum: WgslPlumImpl<T>): PlumState<T> {
+  private _getState<T>(plum: WgslPlum<T>): PlumState<T> {
     let state = this._stateMap.get(plum) as PlumState<T> | undefined;
 
     if (!state) {
-      const dependencies = new Set<WgslPlumImpl>();
+      const dependencies = new Set<WgslPlum>();
 
-      const getter = (<T>(dep: WgslPlumImpl<T>) => {
+      const getter = (<T>(dep: WgslPlum<T>) => {
         // registering dependency.
         if (!dependencies.has(dep)) {
           dependencies.add(dep);
@@ -85,11 +84,11 @@ class PlumStore {
     return state;
   }
 
-  get<T>(plum: WgslPlumImpl<T>): T {
+  get<T>(plum: WgslPlum<T>): T {
     return this._getState(plum).value;
   }
 
-  set<T>(plum: WgslPlumImpl<T>, value: T): void {
+  set<T>(plum: WgslPlum<T> & WgslSettable, value: T): void {
     const state = this._getState(plum);
     state.value = value;
 
@@ -103,7 +102,7 @@ class PlumStore {
     }
   }
 
-  subscribe(plum: WgslPlumImpl, listener: Listener): Unsubscribe {
+  subscribe(plum: WgslPlum, listener: Listener): Unsubscribe {
     const activeState = (() => {
       let state = this._activeStateMap.get(plum);
       if (!state) {
@@ -129,13 +128,11 @@ class PlumStore {
   }
 }
 
-type WgslPlumImpl<T = unknown> = WgslSourcePlumImpl<T> | WgslDerivedPlumImpl<T>;
-
-const stores = new PerRuntimeState(() => new PlumStore());
-
 class WgslSourcePlumImpl<TValue>
-  implements WgslPlum<TValue>, WgslSettable<TValue>, WgslResolvable
+  implements WgslPlum<TValue>, WgslSettable, WgslResolvable
 {
+  readonly [WgslSettableTrait] = true;
+
   private _label: string | undefined;
 
   constructor(private readonly _initial: TValue) {}
@@ -155,21 +152,6 @@ class WgslSourcePlumImpl<TValue>
 
   resolve(ctx: ResolutionCtx): string {
     throw new Error('Method not implemented.');
-  }
-
-  read(runtime: WigsillRuntime): TValue {
-    const store = stores.get(runtime);
-    return store.get(this);
-  }
-
-  set(runtime: WigsillRuntime, value: TValue) {
-    const store = stores.get(runtime);
-    store.set(this, value);
-  }
-
-  subscribe(runtime: WigsillRuntime, listener: () => unknown): Unsubscribe {
-    const store = stores.get(runtime);
-    return store.subscribe(this, listener);
   }
 }
 
@@ -194,15 +176,5 @@ class WgslDerivedPlumImpl<TValue> implements WgslPlum<TValue>, WgslResolvable {
 
   compute(get: Getter): TValue {
     return this._compute(get);
-  }
-
-  read(runtime: WigsillRuntime): TValue {
-    const store = stores.get(runtime);
-    return store.get(this);
-  }
-
-  subscribe(runtime: WigsillRuntime, listener: () => unknown): Unsubscribe {
-    const store = stores.get(runtime);
-    return store.subscribe(this, listener);
   }
 }

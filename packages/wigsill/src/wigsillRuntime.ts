@@ -6,12 +6,61 @@ import type { AnyWgslData } from './std140/types';
 import { TaskQueue } from './taskQueue';
 import type { Wgsl, WgslAllocatable } from './types';
 import { type WgslCode, code } from './wgslCode';
+import { PlumStore, type WgslPlum, type WgslSettable } from './wgslPlum';
+
+// ----------
+// Public API
+// ----------
+
+export interface WigsillRuntime {
+  readonly device: GPUDevice;
+
+  bufferFor(allocatable: WgslAllocatable): GPUBuffer;
+  dispose(): void;
+
+  makeRenderPipeline(options: RenderPipelineOptions): RenderPipelineExecutor;
+  makeComputePipeline(options: ComputePipelineOptions): ComputePipelineExecutor;
+}
+
+export interface RenderPipelineOptions {
+  vertex: {
+    args: Wgsl[];
+    code: WgslCode;
+    output: StructDataType<Record<string, AnyWgslData>>;
+    buffersLayouts?: Iterable<GPUVertexBufferLayout | null>;
+  };
+  fragment: {
+    args: Wgsl[];
+    code: WgslCode;
+    output: Wgsl;
+    target: Iterable<GPUColorTargetState | null>;
+  };
+  primitive: GPUPrimitiveState;
+  externalLayouts?: GPUBindGroupLayout[];
+  externalDeclarations?: Wgsl[];
+  label?: string;
+}
+
+export interface ComputePipelineOptions {
+  workgroupSize: [number, number?, number?];
+  args: Wgsl[];
+  code: WgslCode;
+  externalLayouts?: GPUBindGroupLayout[];
+  externalDeclarations?: Wgsl[];
+  label?: string;
+}
+
+// --------------
+// Implementation
+// --------------
+
+type Unsubscribe = () => void;
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a runtime can interact via GPU buffers.
  */
-class WigsillRuntime {
+class WigsillRuntimeImpl {
   private _entryToBufferMap = new Map<WgslAllocatable, GPUBuffer>();
   private _pipelineExecutors: PipelineExecutor<
     GPURenderPipeline | GPUComputePipeline
@@ -20,6 +69,7 @@ class WigsillRuntime {
   // Used for reading GPU buffers ad hoc.
   private _readBuffer: GPUBuffer | null = null;
   private _taskQueue = new TaskQueue();
+  private readonly _plumStore = new PlumStore();
 
   constructor(public readonly device: GPUDevice) {}
 
@@ -114,24 +164,22 @@ class WigsillRuntime {
     this.device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
   }
 
-  makeRenderPipeline(options: {
-    vertex: {
-      args: Wgsl[];
-      code: WgslCode;
-      output: StructDataType<Record<string, AnyWgslData>>;
-      buffersLayouts?: Iterable<GPUVertexBufferLayout | null>;
-    };
-    fragment: {
-      args: Wgsl[];
-      code: WgslCode;
-      output: Wgsl;
-      target: Iterable<GPUColorTargetState | null>;
-    };
-    primitive: GPUPrimitiveState;
-    externalLayouts?: GPUBindGroupLayout[];
-    externalDeclarations?: Wgsl[];
-    label?: string;
-  }) {
+  readPlum<TValue>(plum: WgslPlum<TValue>): TValue {
+    return this._plumStore.get(plum);
+  }
+
+  setPlum<TValue>(plum: WgslPlum<TValue> & WgslSettable, value: TValue) {
+    this._plumStore.set(plum, value);
+  }
+
+  onPlumChange<TValue>(
+    plum: WgslPlum<TValue>,
+    listener: () => unknown,
+  ): Unsubscribe {
+    return this._plumStore.subscribe(plum, listener);
+  }
+
+  makeRenderPipeline(options: RenderPipelineOptions): RenderPipelineExecutor {
     const vertexProgram = new ProgramBuilder(
       this,
       code`
@@ -202,14 +250,9 @@ class WigsillRuntime {
     return executor;
   }
 
-  makeComputePipeline(options: {
-    workgroupSize: [number, number?, number?];
-    args: Wgsl[];
-    code: WgslCode;
-    externalLayouts?: GPUBindGroupLayout[];
-    externalDeclarations?: Wgsl[];
-    label?: string;
-  }) {
+  makeComputePipeline(
+    options: ComputePipelineOptions,
+  ): ComputePipelineExecutor {
     const program = new ProgramBuilder(
       this,
       code`
@@ -381,11 +424,11 @@ export async function createRuntime(
       throw new Error('Could not find a compatible GPU');
     }
     device = await adapter.requestDevice();
-    return new WigsillRuntime(device);
+    return new WigsillRuntimeImpl(device);
   }
 
   if (options instanceof GPUDevice) {
-    return new WigsillRuntime(options);
+    return new WigsillRuntimeImpl(options);
   }
 
   adapter = await navigator.gpu.requestAdapter(options.adapter);
@@ -393,7 +436,5 @@ export async function createRuntime(
     throw new Error('Could not find a compatible GPU');
   }
   device = await adapter.requestDevice(options.device);
-  return new WigsillRuntime(device);
+  return new WigsillRuntimeImpl(device);
 }
-
-export default WigsillRuntime;
