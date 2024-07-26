@@ -151,8 +151,10 @@ addParameter(
     step: 1,
   },
   (value) => {
-    firstMatrixRowCount = value;
-    if (!initializing) run();
+    if (value !== firstMatrixRowCount) {
+      firstMatrixRowCount = value;
+      if (!initializing) run();
+    }
   },
 );
 
@@ -165,8 +167,10 @@ addParameter(
     step: 1,
   },
   (value) => {
-    firstMatrixColumnCount = value;
-    if (!initializing) run();
+    if (value !== firstMatrixColumnCount) {
+      firstMatrixColumnCount = value;
+      if (!initializing) run();
+    }
   },
 );
 
@@ -179,10 +183,17 @@ addParameter(
     step: 1,
   },
   (value) => {
-    secondMatrixColumnCount = value;
-    if (!initializing) run();
+    if (value !== secondMatrixColumnCount) {
+      secondMatrixColumnCount = value;
+      if (!initializing) run();
+    }
   },
 );
+
+addElement('button', {
+  label: 'Reshuffle',
+  onClick: run,
+});
 
 initializing = false;
 run();

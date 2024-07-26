@@ -4,7 +4,6 @@
   "category": "simulation"
 }
 */
-/* global GPUShaderStage, GPUBufferUsage, GPUMapMode */
 
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
 import {
