@@ -2,9 +2,9 @@ import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
 import type { AnyWgslData } from './std140/types';
 import type { BufferUsage, WgslBindable, WgslResolvable } from './types';
+import { isSamplerType } from './types';
 import { getBuiltinInfo, getUsedBuiltinsNamed } from './wgslBuiltin';
 import { type WgslCode, code } from './wgslCode';
-import { isSamplerType } from './types';
 import type { WgslSampler } from './wgslSampler';
 import {
   type WgslTextureExternal,

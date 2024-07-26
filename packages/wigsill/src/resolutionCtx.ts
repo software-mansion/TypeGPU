@@ -2,6 +2,7 @@ import { MissingSlotValueError } from './errors';
 import type { NameRegistry } from './nameRegistry';
 import type {
   BufferUsage,
+  Eventual,
   ResolutionCtx,
   SlotValuePair,
   Wgsl,
@@ -10,14 +11,13 @@ import type {
   WgslRenderResourceType,
   WgslResolvable,
   WgslSlot,
-  Eventual,
 } from './types';
 import {
-  isSlot,
   isDepthTextureType,
   isExternalTextureType,
   isResolvable,
   isSamplerType,
+  isSlot,
   isStorageTextureType,
   isTypedTextureType,
 } from './types';
