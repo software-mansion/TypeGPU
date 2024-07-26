@@ -6,6 +6,7 @@
 */
 
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
+import { builtin } from 'wigsill';
 import {
   arrayOf,
   bool,
@@ -91,76 +92,70 @@ const getBoxIntersectionFn = wgsl.fn('box_intersection')`(
 ) -> ${intersectionStruct} {
     var output: ${intersectionStruct};
 
-    var tMin: f32; 
+    var tMin: f32;
     var tMax: f32;
     var tMinY: f32;
     var tMaxY: f32;
     var tMinZ: f32;
     var tMaxZ: f32;
 
-    if (ray.direction.x >= 0) { 
-        tMin = (boundMin.x - ray.origin.x) / ray.direction.x; 
-        tMax = (boundMax.x - ray.origin.x) / ray.direction.x; 
-    } else { 
-        tMin = (boundMax.x - ray.origin.x) / ray.direction.x; 
-        tMax = (boundMin.x - ray.origin.x) / ray.direction.x; 
+    if (ray.direction.x >= 0) {
+        tMin = (boundMin.x - ray.origin.x) / ray.direction.x;
+        tMax = (boundMax.x - ray.origin.x) / ray.direction.x;
+    } else {
+        tMin = (boundMax.x - ray.origin.x) / ray.direction.x;
+        tMax = (boundMin.x - ray.origin.x) / ray.direction.x;
     }
 
-    if (ray.direction.y >= 0) { 
-        tMinY = (boundMin.y - ray.origin.y) / ray.direction.y; 
-        tMaxY = (boundMax.y - ray.origin.y) / ray.direction.y; 
-    } else { 
-        tMinY = (boundMax.y - ray.origin.y) / ray.direction.y; 
-        tMaxY = (boundMin.y - ray.origin.y) / ray.direction.y; 
+    if (ray.direction.y >= 0) {
+        tMinY = (boundMin.y - ray.origin.y) / ray.direction.y;
+        tMaxY = (boundMax.y - ray.origin.y) / ray.direction.y;
+    } else {
+        tMinY = (boundMax.y - ray.origin.y) / ray.direction.y;
+        tMaxY = (boundMin.y - ray.origin.y) / ray.direction.y;
     }
 
     if (tMin > tMaxY) || (tMinY > tMax) {
-        return output; 
+        return output;
     }
 
     if (tMinY > tMin) {
-      tMin = tMinY; 
+      tMin = tMinY;
     }
 
     if (tMaxY < tMax) {
-      tMax = tMaxY; 
+      tMax = tMaxY;
     }
 
-    if (ray.direction.z >= 0) { 
-        tMinZ = (boundMin.z - ray.origin.z) / ray.direction.z; 
-        tMaxZ = (boundMax.z - ray.origin.z) / ray.direction.z; 
-    } else { 
-        tMinZ = (boundMax.z - ray.origin.z) / ray.direction.z; 
-        tMaxZ = (boundMin.z - ray.origin.z) / ray.direction.z; 
+    if (ray.direction.z >= 0) {
+        tMinZ = (boundMin.z - ray.origin.z) / ray.direction.z;
+        tMaxZ = (boundMax.z - ray.origin.z) / ray.direction.z;
+    } else {
+        tMinZ = (boundMax.z - ray.origin.z) / ray.direction.z;
+        tMaxZ = (boundMin.z - ray.origin.z) / ray.direction.z;
     }
 
     if (tMin > tMaxZ) || (tMinZ > tMax) {
-        return output; 
+        return output;
     }
 
     if tMinZ > tMin {
-      tMin = tMinZ; 
+      tMin = tMinZ;
     }
 
     if tMaxZ < tMax {
-      tMax = tMaxZ; 
+      tMax = tMaxZ;
     }
 
     output.intersects = tMin > 0 && tMax > 0;
     output.tMin = tMin;
     output.tMax = tMax;
-    return output; 
+    return output;
 }
 `;
 
-const vertexOutputStruct = struct({
-  '@builtin(position) pos': vec4f,
-});
-
 const renderPipeline = runtime.makeRenderPipeline({
   vertex: {
-    args: ['@builtin(vertex_index) VertexIndex: u32'],
-    output: vertexOutputStruct,
     code: wgsl`
       var pos = array<vec2f, 6>(
         vec2<f32>( 1,  1),
@@ -171,31 +166,31 @@ const renderPipeline = runtime.makeRenderPipeline({
         vec2<f32>(-1,  1)
       );
 
-      var output: ${vertexOutputStruct};
-      output.pos = vec4f(pos[VertexIndex], 0, 1);
-      return output;
+      let outPos = vec4f(pos[${builtin.vertexIndex}], 0, 1);
     `,
+    output: {
+      [builtin.position]: 'outPos',
+    },
   },
 
   fragment: {
-    args: ['@builtin(position) pos: vec4f'],
     code: wgsl.code`
       let minDim = f32(min(${canvasDimsData}.width, ${canvasDimsData}.height));
 
       var ray: ${rayStruct};
       ray.origin = ${cameraPositionData};
-      ray.direction += ${cameraAxesData}.right * (pos.x - f32(${canvasDimsData}.width)/2)/minDim;
-      ray.direction += ${cameraAxesData}.up * (pos.y - f32(${canvasDimsData}.height)/2)/minDim;
+      ray.direction += ${cameraAxesData}.right * (${builtin.position}.x - f32(${canvasDimsData}.width)/2)/minDim;
+      ray.direction += ${cameraAxesData}.up * (${builtin.position}.y - f32(${canvasDimsData}.height)/2)/minDim;
       ray.direction += ${cameraAxesData}.forward;
       ray.direction = normalize(ray.direction);
 
       let bigBoxIntersection = ${getBoxIntersectionFn}(
-        vec3f(0), 
+        vec3f(0),
         vec3f(
-          ${cubeSize[0]}, 
-          ${cubeSize[1]}, 
+          ${cubeSize[0]},
+          ${cubeSize[1]},
           ${cubeSize[2]},
-        ), 
+        ),
         ray,
       );
 
@@ -213,8 +208,8 @@ const renderPipeline = runtime.makeRenderPipeline({
               }
 
               let intersection = ${getBoxIntersectionFn}(
-                vec3f(f32(i), f32(j), f32(k)) * ${VOXEL_SIZE}, 
-                vec3f(f32(i+1), f32(j+1), f32(k+1)) * ${VOXEL_SIZE}, 
+                vec3f(f32(i), f32(j), f32(k)) * ${VOXEL_SIZE},
+                vec3f(f32(i+1), f32(j+1), f32(k+1)) * ${VOXEL_SIZE},
                 ray,
               );
 
@@ -230,7 +225,6 @@ const renderPipeline = runtime.makeRenderPipeline({
 
       return color;
     `,
-    output: '@location(0) vec4f',
     target: [
       {
         format: presentationFormat,

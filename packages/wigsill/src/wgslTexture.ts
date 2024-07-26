@@ -94,6 +94,8 @@ class WgslStorageTextureImpl<
 > implements WgslStorageTexture<TData, TAccess>
 {
   readonly flags: number;
+  readonly vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null =
+    null;
   constructor(
     public readonly descriptor: GPUTextureDescriptor,
     public readonly dataType: TData,
