@@ -11,12 +11,29 @@ import {
   object,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { ResolutionCtx } from '../types';
+import type { AnyWgslData, ResolutionCtx, WgslData } from '../types';
 import { code } from '../wgslCode';
 import { WgslIdentifier } from '../wgslIdentifier';
-import type { AnyWgslData, WgslData } from './types';
 
-class StructDataType<TProps extends Record<string, AnyWgslData>>
+// ----------
+// Public API
+// ----------
+
+export interface WgslStruct<TProps extends Record<string, AnyWgslData>>
+  extends ISchema<UnwrapRecord<TProps>>,
+    WgslData<UnwrapRecord<TProps>> {
+  $name(label: string): this;
+}
+
+export const struct = <TProps extends Record<string, AnyWgslData>>(
+  properties: TProps,
+): WgslStruct<TProps> => new WgslStructImpl(properties);
+
+// --------------
+// Implementation
+// --------------
+
+class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
   extends Schema<UnwrapRecord<TProps>>
   implements WgslData<UnwrapRecord<TProps>>
 {
@@ -75,8 +92,3 @@ class StructDataType<TProps extends Record<string, AnyWgslData>>
     return ctx.resolve(identifier);
   }
 }
-
-export const struct = <P extends Record<string, AnyWgslData>>(properties: P) =>
-  new StructDataType(properties);
-
-export default StructDataType;

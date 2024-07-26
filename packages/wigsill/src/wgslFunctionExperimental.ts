@@ -1,11 +1,13 @@
 import Callable, { type AsCallable } from './callable';
-import {
-  type AnyWgslData,
-  type WgslFnArgument,
-  type WgslValue,
-  isPointer,
-} from './std140/types';
-import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
+import { isPointer } from './types';
+import type {
+  AnyWgslData,
+  ResolutionCtx,
+  Wgsl,
+  WgslFnArgument,
+  WgslResolvable,
+  WgslValue,
+} from './types';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
 
