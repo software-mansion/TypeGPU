@@ -1,5 +1,8 @@
 import type { WgslSlot } from './types';
 
+/**
+ * @category Errors
+ */
 export class MissingSlotValueError extends Error {
   constructor(public readonly slot: WgslSlot<unknown>) {
     super(`Missing value for '${slot}'`);
@@ -9,6 +12,9 @@ export class MissingSlotValueError extends Error {
   }
 }
 
+/**
+ * @category Errors
+ */
 export class RecursiveDataTypeError extends Error {
   constructor() {
     super('Recursive types are not supported in WGSL');

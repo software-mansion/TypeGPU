@@ -42,10 +42,10 @@ export default defineConfig({
         // Generate the documentation.
         starlightTypeDoc({
           entryPoints: [
-            '../../packages/wigsill/src/index.ts',
-            '../../packages/wigsill/src/data/index.ts',
-            '../../packages/wigsill/macro/index.ts',
-            '../../packages/wigsill/web/index.ts',
+            '../../packages/wigsill/src',
+            '../../packages/wigsill/src/data',
+            '../../packages/wigsill/src/macro',
+            '../../packages/wigsill/src/web',
           ],
           tsconfig: '../../packages/wigsill/tsconfig.json',
         }),
