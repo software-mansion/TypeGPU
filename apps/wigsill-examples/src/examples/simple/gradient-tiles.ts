@@ -91,13 +91,13 @@ const renderPipeline = runtime.makeRenderPipeline({
 addParameter(
   'x-span',
   { initial: 16, min: 1, max: 16, step: 1 },
-  (xSpan: number) => runtime.write(xSpanBuffer, xSpan),
+  (xSpan: number) => runtime.writeBuffer(xSpanBuffer, xSpan),
 );
 
 addParameter(
   'y-span',
   { initial: 16, min: 1, max: 16, step: 1 },
-  (ySpan: number) => runtime.write(ySpanBuffer, ySpan),
+  (ySpan: number) => runtime.writeBuffer(ySpanBuffer, ySpan),
 );
 
 onFrame(() => {

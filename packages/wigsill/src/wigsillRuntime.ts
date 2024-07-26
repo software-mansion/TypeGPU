@@ -1,3 +1,4 @@
+import type { Parsed } from 'typed-binary';
 import type StructDataType from './std140/struct';
 import type { AnyWgslData } from './std140/types';
 import type { Wgsl, WgslAllocatable } from './types';
@@ -10,8 +11,18 @@ import type { WgslCode } from './wgslCode';
 export interface WigsillRuntime {
   readonly device: GPUDevice;
 
+  writeBuffer<TValue extends AnyWgslData>(
+    allocatable: WgslAllocatable<TValue>,
+    data: Parsed<TValue>,
+  ): void;
+
+  readBuffer<TData extends AnyWgslData>(
+    allocatable: WgslAllocatable<TData>,
+  ): Promise<Parsed<TData>>;
+
   bufferFor(allocatable: WgslAllocatable): GPUBuffer;
   dispose(): void;
+  flush(): void;
 
   makeRenderPipeline(options: RenderPipelineOptions): RenderPipelineExecutor;
   makeComputePipeline(options: ComputePipelineOptions): ComputePipelineExecutor;
