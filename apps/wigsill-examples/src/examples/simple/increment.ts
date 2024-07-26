@@ -5,6 +5,10 @@
 }
 */
 
+// -- Hooks into the example environment
+import { addElement } from '@wigsill/example-toolkit';
+// --
+
 import wgsl from 'wigsill';
 import { f32 } from 'wigsill/data';
 import { createRuntime } from 'wigsill/web';
@@ -27,4 +31,7 @@ async function increment() {
   console.log(await runtime.readBuffer(countBuffer));
 }
 
-increment();
+addElement('button', {
+  label: 'Increment',
+  onClick: increment,
+});

@@ -1,52 +1,60 @@
 declare module '@wigsill/example-toolkit' {
-  export type CanvasDef = {
-    type: 'canvas';
-    key: string;
+  export type CanvasOptions = {
     width?: number;
     height?: number;
     aspectRatio?: number;
   };
 
-  export type VideoDef = {
-    type: 'video';
-    key: string;
+  export type VideoOptions = {
     width?: number;
     height?: number;
   };
 
-  export type TableDef = {
-    type: 'table';
-    key: string;
+  export type TableOptions = {
     label?: string;
   };
+
+  export type ButtonOptions = {
+    label?: string;
+    onClick?: () => void;
+  }
 
   export type TableRef = {
     setMatrix: (data: number[][]) => void;
   };
 
-  export type ElementDefs = {
-    'canvas': CanvasDef;
-    'video': VideoDef;
-    'table': TableDef;
+  export type ElementOptions = {
+    canvas: CanvasOptions;
+    video: VideoOptions;
+    table: TableOptions;
+    button: ButtonOptions;
   };
 
-  export type ElementDef = ElementDefs[keyof ElementDefs];
-  export type ElementType = keyof ElementDefs;
-  export type ElementOptions<T> = Omit<ElementDefs[T], 'type' | 'key'>;
+  export type ElementResults = {
+    canvas: HTMLCanvasElement;
+    video: HTMLVideoElement;
+    table: TableRef;
+    button: HTMLButtonElement;
+  };
+
+  export type ElementType = keyof ElementOptions;
+
+  type ElementDefs = {
+    [K in ElementType]: ElementOptions[K] & {
+      type: K;
+      key: string;
+    };
+  };
+
+  export type ElementDef = ElementDefs[ElementType];
 
   export type LayoutDef = {
     elements: ElementDef[];
   };
 
-  type ElementResults = {
-    canvas: HTMLCanvasElement;
-    video: HTMLVideoElement;
-    table: TableRef;
-  };
-
-  export type AddElement = <T extends 'canvas' | 'video' | 'table'>(
+  export type AddElement = <T extends 'canvas' | 'video' | 'table' | 'button'>(
     type: T,
-    options?: ElementOptions<T>,
+    options?: ElementOptions[T],
   ) => Promise<ElementResults[T]>;
 
   export const addElement: AddElement;
