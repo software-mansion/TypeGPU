@@ -1,4 +1,4 @@
-import type { AnyWgslData } from './std140/types';
+import type { AnyWgslData } from './data';
 import type { BufferUsage, WgslAllocatable } from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
 

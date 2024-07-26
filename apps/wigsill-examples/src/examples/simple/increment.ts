@@ -5,7 +5,8 @@
 }
 */
 
-import { f32, wgsl } from 'wigsill';
+import wgsl from 'wigsill';
+import { f32 } from 'wigsill/data';
 import { createRuntime } from 'wigsill/web';
 
 const countBuffer = wgsl.buffer(f32).$allowMutableStorage();

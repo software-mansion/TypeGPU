@@ -1,6 +1,6 @@
 import type { Parsed } from 'typed-binary';
-import type StructDataType from './std140/struct';
-import type { AnyWgslData } from './std140/types';
+import type { AnyWgslData } from './data';
+import type { WgslStruct } from './data';
 import type { Wgsl, WgslAllocatable } from './types';
 import type { WgslCode } from './wgslCode';
 
@@ -32,7 +32,7 @@ export interface RenderPipelineOptions {
   vertex: {
     args: Wgsl[];
     code: WgslCode;
-    output: StructDataType<Record<string, AnyWgslData>>;
+    output: WgslStruct<Record<string, AnyWgslData>>;
     buffersLayouts?: Iterable<GPUVertexBufferLayout | null>;
   };
   fragment: {

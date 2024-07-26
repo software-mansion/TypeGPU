@@ -4,10 +4,13 @@
   "category": "simulation"
 }
 */
-/* global GPUShaderStage, GPUBufferUsage, GPUMapMode */
 
+// -- Hooks into the example environment
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
-import { ProgramBuilder, arrayOf, atomic, u32, vec2u, wgsl } from 'wigsill';
+// --
+
+import wgsl, { ProgramBuilder } from 'wigsill';
+import { arrayOf, atomic, u32, vec2u } from 'wigsill/data';
 import { createRuntime } from 'wigsill/web';
 
 const runtime = await createRuntime();

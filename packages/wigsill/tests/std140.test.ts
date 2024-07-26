@@ -1,6 +1,6 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
-import { mat4f, u32 } from 'wigsill';
+import { mat4f, u32 } from 'wigsill/data';
 
 describe('u32', () => {
   it('does not realign when writing offset is correct', () => {

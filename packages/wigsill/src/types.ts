@@ -1,4 +1,4 @@
-import type { AnyWgslData } from './std140/types';
+import type { AnyWgslData } from './data';
 import type { WgslIdentifier } from './wgslIdentifier';
 
 export type Wgsl = string | number | WgslResolvable;

@@ -4,7 +4,7 @@ import {
   type WgslFnArgument,
   type WgslValue,
   isPointer,
-} from './std140/types';
+} from './data';
 import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';

@@ -1,7 +1,7 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
+import type { AnyWgslData } from '../data';
 import { roundUp } from '../mathUtils';
 import ProgramBuilder, { type Program } from '../programBuilder';
-import type { AnyWgslData } from '../std140/types';
 import { TaskQueue } from '../taskQueue';
 import type { WgslAllocatable } from '../types';
 import { code } from '../wgslCode';
