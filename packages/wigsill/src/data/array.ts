@@ -1,7 +1,7 @@
 import * as TB from 'typed-binary';
+import type { AnyWgslData, WgslData } from '../types';
 import { code } from '../wgslCode';
 import { SimpleWgslData } from './std140';
-import type { AnyWgslData, WgslData } from './types';
 
 type WgslArray<TElement extends AnyWgslData> = WgslData<TB.Unwrap<TElement>[]>;
 

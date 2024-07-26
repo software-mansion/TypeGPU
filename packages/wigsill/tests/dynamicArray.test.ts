@@ -1,6 +1,6 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
-import { dynamicArrayOf, struct, u32, vec4f } from 'wigsill';
+import { dynamicArrayOf, struct, u32, vec4f } from 'wigsill/data';
 
 describe('dynamicArray', () => {
   it('encodes SceneSpheres properly', () => {

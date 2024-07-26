@@ -5,8 +5,13 @@
 }
 */
 
+// -- Hooks into the example environment
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
-import { createRuntime, f32, struct, vec2f, vec4f, wgsl } from 'wigsill';
+// --
+
+import wgsl from 'wigsill';
+import { f32, struct, vec2f, vec4f } from 'wigsill/data';
+import { createRuntime } from 'wigsill/web';
 
 // Layout
 const [video, canvas] = await Promise.all([
@@ -124,7 +129,7 @@ const sampler = device.createSampler({
 addParameter(
   'threshold',
   { initial: 0.4, min: 0, max: 1 },
-  (threshold: number) => thresholdBuffer.write(runtime, threshold),
+  (threshold: number) => runtime.writeBuffer(thresholdBuffer, threshold),
 );
 
 onFrame(() => {

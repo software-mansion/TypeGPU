@@ -5,16 +5,13 @@
 }
 */
 
+// -- Hooks into the example environment
 import { addElement, addParameter } from '@wigsill/example-toolkit';
-import {
-  type Parsed,
-  createRuntime,
-  dynamicArrayOf,
-  f32,
-  struct,
-  vec2f,
-  wgsl,
-} from 'wigsill';
+// --
+
+import wgsl from 'wigsill';
+import { type Parsed, dynamicArrayOf, f32, struct, vec2f } from 'wigsill/data';
+import { createRuntime } from 'wigsill/web';
 
 const runtime = await createRuntime();
 
@@ -108,14 +105,14 @@ async function run() {
     () => Math.floor(Math.random() * 10),
   );
 
-  firstMatrixBuffer.write(runtime, firstMatrix);
+  runtime.writeBuffer(firstMatrixBuffer, firstMatrix);
 
   secondMatrix = createMatrix(
     [firstMatrixColumnCount, secondMatrixColumnCount],
     () => Math.floor(Math.random() * 10),
   );
 
-  secondMatrixBuffer.write(runtime, secondMatrix);
+  runtime.writeBuffer(secondMatrixBuffer, secondMatrix);
 
   const workgroupCountX = Math.ceil(firstMatrix.size[0] / workgroupSize[0]);
   const workgroupCountY = Math.ceil(secondMatrix.size[1] / workgroupSize[1]);
@@ -123,7 +120,7 @@ async function run() {
   program.execute([workgroupCountX, workgroupCountY]);
   runtime.flush();
 
-  const multiplicationResult = await resultMatrixBuffer.read(runtime);
+  const multiplicationResult = await runtime.readBuffer(resultMatrixBuffer);
 
   const unflatMatrix = (matrix: MatrixType) =>
     Array(matrix.size[0])
