@@ -7,13 +7,13 @@
 
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
 import {
+  builtin,
   createRuntime,
   f32,
   struct,
   vec2f,
   vec4f,
   wgsl,
-  builtin,
 } from 'wigsill';
 
 // Layout
