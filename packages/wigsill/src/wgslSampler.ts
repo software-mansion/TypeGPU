@@ -1,6 +1,7 @@
 import type {
   ResolutionCtx,
   WgslRenderResource,
+  WgslRenderResourceType,
   WgslSamplerType,
 } from './types';
 import { WgslIdentifier } from './wgslIdentifier';
@@ -42,4 +43,10 @@ class WgslSamplerImpl implements WgslSampler {
 
     return ctx.resolve(identifier);
   }
+}
+
+export function isSampler(
+  resource: WgslRenderResource<WgslRenderResourceType>,
+): resource is WgslSampler {
+  return resource.type === 'sampler' || resource.type === 'sampler_comparison';
 }

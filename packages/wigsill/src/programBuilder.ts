@@ -3,6 +3,8 @@ import { ResolutionCtxImpl } from './resolutionCtx';
 import type { BufferUsage, WgslResolvable } from './types';
 import { isSamplerType } from './types';
 import type WigsillRuntime from './wigsillRuntime';
+import type { WgslSampler } from './wgslSampler';
+import type { WgslTextureView } from './wgslTexture';
 
 export type Program = {
   bindGroupLayout: GPUBindGroupLayout;
@@ -88,16 +90,20 @@ export default class ProgramBuilder {
     for (const sampler of usedSamplers) {
       allBindGroupEntries.push({
         binding: idx++,
-        resource: sampler.
+        resource: this.runtime.samplerFor(sampler as WgslSampler),
+      });
+    }
+
+    for (const texture of usedTextures) {
+      allBindGroupEntries.push({
+        binding: idx++,
+        resource: this.runtime.textureFor(texture as WgslTextureView),
+      });
+    }
 
     const bindGroup = this.runtime.device.createBindGroup({
       layout: bindGroupLayout,
-      entries: usedBindables.map((bindable, idx) => ({
-        binding: idx,
-        resource: {
-          buffer: this.runtime.bufferFor(bindable.allocatable),
-        },
-      })),
+      entries: allBindGroupEntries as Iterable<GPUBindGroupEntry>,
     });
 
     return {
