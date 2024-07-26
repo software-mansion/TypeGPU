@@ -11,7 +11,8 @@ import {
   onCleanup,
   onFrame,
 } from '@wigsill/example-toolkit';
-import { createRuntime, struct, u32, vec2f, vec4f, wgsl } from 'wigsill';
+import { struct, u32, vec2f, vec4f, wgsl } from 'wigsill';
+import { createRuntime } from 'wigsill/web';
 
 const runtime = await createRuntime();
 const device = runtime.device;
@@ -90,13 +91,13 @@ const renderPipeline = runtime.makeRenderPipeline({
 addParameter(
   'x-span',
   { initial: 16, min: 1, max: 16, step: 1 },
-  (xSpan: number) => xSpanBuffer.write(runtime, xSpan),
+  (xSpan: number) => runtime.write(xSpanBuffer, xSpan),
 );
 
 addParameter(
   'y-span',
   { initial: 16, min: 1, max: 16, step: 1 },
-  (ySpan: number) => ySpanBuffer.write(runtime, ySpan),
+  (ySpan: number) => runtime.write(ySpanBuffer, ySpan),
 );
 
 onFrame(() => {

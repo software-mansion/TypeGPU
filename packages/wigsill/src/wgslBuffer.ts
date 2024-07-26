@@ -1,8 +1,6 @@
-import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import type { AnyWgslData } from './std140/types';
 import type { BufferUsage, WgslAllocatable } from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
-import type WigsillRuntime from './wigsillRuntime';
 
 // ----------
 // Public API
@@ -17,9 +15,6 @@ export interface WgslBuffer<
   $allowReadonlyStorage(): WgslBuffer<TData, TAllows | 'readonly_storage'>;
   $allowMutableStorage(): WgslBuffer<TData, TAllows | 'mutable_storage'>;
   $addFlags(flags: GPUBufferUsageFlags): WgslBuffer<TData, TAllows>;
-
-  write(runtime: WigsillRuntime, data: Parsed<TData>): void;
-  read(runtime: WigsillRuntime): Promise<Parsed<TData>>;
 
   asUniform(): 'uniform' extends TAllows
     ? WgslBufferUsage<TData, 'uniform'>
@@ -77,29 +72,6 @@ class WgslBufferImpl<
   $name(label: string) {
     this._label = label;
     return this;
-  }
-
-  write(runtime: WigsillRuntime, data: Parsed<TData>): void {
-    const gpuBuffer = runtime.bufferFor(this);
-
-    const hostBuffer = new ArrayBuffer(this.dataType.size);
-    this.dataType.write(new BufferWriter(hostBuffer), data);
-    runtime.device.queue.writeBuffer(
-      gpuBuffer,
-      0,
-      hostBuffer,
-      0,
-      this.dataType.size,
-    );
-  }
-
-  async read(runtime: WigsillRuntime): Promise<Parsed<TData>> {
-    const arrayBuffer = await runtime.valueFor(this);
-
-    const res = this.dataType.read(
-      new BufferReader(arrayBuffer),
-    ) as Parsed<TData>;
-    return res;
   }
 
   $allowUniform() {

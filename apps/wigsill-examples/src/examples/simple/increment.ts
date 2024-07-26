@@ -5,7 +5,8 @@
 }
 */
 
-import { createRuntime, f32, wgsl } from 'wigsill';
+import { f32, wgsl } from 'wigsill';
+import { createRuntime } from 'wigsill/web';
 
 const countBuffer = wgsl.buffer(f32).$allowMutableStorage();
 const countData = countBuffer.asStorage();
@@ -22,7 +23,7 @@ const pipeline = runtime.makeComputePipeline({
 async function increment() {
   pipeline.execute([1, 1]);
   runtime.flush();
-  console.log(await countBuffer.read(runtime));
+  console.log(await runtime.read(countBuffer));
 }
 
 increment();
