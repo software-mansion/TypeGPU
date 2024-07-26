@@ -1,4 +1,5 @@
 import {
+  type InlineResolve,
   type ResolutionCtx,
   type Wgsl,
   type WgslResolvable,
@@ -17,9 +18,9 @@ export interface WgslCode extends WgslResolvable {
 
 export function code(
   strings: TemplateStringsArray,
-  ...params: (Wgsl | Wgsl[])[]
+  ...params: (Wgsl | Wgsl[] | InlineResolve)[]
 ): WgslCode {
-  const segments: Wgsl[] = strings.flatMap((string, idx) => {
+  const segments: (Wgsl | InlineResolve)[] = strings.flatMap((string, idx) => {
     const param = params[idx];
     if (param === undefined) {
       return [string];
@@ -39,7 +40,7 @@ class WgslCodeImpl implements WgslCode {
   private _label: string | undefined;
   private _usedBuiltins: symbol[] = [];
 
-  constructor(public readonly segments: Wgsl[]) {}
+  constructor(public readonly segments: (Wgsl | InlineResolve)[]) {}
 
   get label() {
     return this._label;
@@ -54,7 +55,10 @@ class WgslCodeImpl implements WgslCode {
     let code = '';
 
     for (const s of this.segments) {
-      if (isResolvable(s)) {
+      if (typeof s === 'function') {
+        const result = s((eventual) => ctx.unwrap(eventual));
+        code += ctx.resolve(result);
+      } else if (isResolvable(s)) {
         code += ctx.resolve(s);
       } else if (typeof s === 'symbol') {
         const builtin = getBuiltinInfo(s);

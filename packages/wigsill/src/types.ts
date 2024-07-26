@@ -16,8 +16,11 @@ export interface ResolutionCtx {
   addDeclaration(item: WgslResolvable): void;
   addBinding(bindable: WgslBindable, identifier: WgslIdentifier): void;
   nameFor(token: WgslResolvable): string;
-  /** @throws {MissingSlotValueError}  */
-  readSlot<T>(slot: WgslSlot<T>): T;
+  /**
+   * Unwraps all layers of slot indirection and returns the concrete value if available.
+   * @throws {MissingSlotValueError}
+   */
+  unwrap<T>(eventual: Eventual<T>): T;
   resolve(item: Wgsl, slotValueOverrides?: SlotValuePair<unknown>[]): string;
 }
 
@@ -44,6 +47,8 @@ export function isWgsl(value: unknown): value is Wgsl {
 }
 
 export interface WgslSlot<T> {
+  readonly __brand: 'WgslSlot';
+
   readonly defaultValue: T | undefined;
 
   readonly label?: string | undefined;
@@ -57,11 +62,18 @@ export interface WgslSlot<T> {
   areEqual(a: T, b: T): boolean;
 }
 
+export function isSlot<T>(value: unknown | WgslSlot<T>): value is WgslSlot<T> {
+  return (value as WgslSlot<T>).__brand === 'WgslSlot';
+}
+
 /**
  * Represents a value that is available at resolution time.
- * (constant after compilation)
  */
-export type Potential<T> = T | WgslSlot<T>;
+export type Eventual<T> = T | WgslSlot<T>;
+
+export type EventualGetter = <T>(value: Eventual<T>) => T;
+
+export type InlineResolve = (get: EventualGetter) => Wgsl;
 
 export interface WgslResolvableSlot<T extends Wgsl>
   extends WgslResolvable,

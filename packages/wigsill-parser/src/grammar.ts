@@ -25,7 +25,7 @@ const lexer = moo.compile({
 
   // WGSL spec apparently accepts plenty of Unicode, but lets limit it to just ASCII for now.
   ident_pattern: {
-    match: /[a-z_][a-z_0-9]+/,
+    match: /[a-z_][a-z_0-9]*/,
     type: moo.keywords({
       if: 'if',
       else: 'else',
@@ -36,6 +36,8 @@ const lexer = moo.compile({
     })
   },
   swizzle_name: { match: /[rgba]|[rgba][rgba]|[rgba][rgba][rgba]|[rgba][rgba][rgba][rgba]|[xyzw]|[xyzw][xyzw]|[xyzw][xyzw][xyzw]|[xyzw][xyzw][xyzw][xyzw]/ },
+  shift_left_assign: '<<=',
+  shift_right_assign: '>>=',
   shift_left: '<<',
   shift_right: '>>',
   lt: '<',
@@ -48,6 +50,16 @@ const lexer = moo.compile({
   rbrace: '}',
   lbracket: '[',
   rbracket: ']',
+  plus_eq: '+=',
+  minus_eq: '-=',
+  star_eq: '*=',
+  slash_eq: '/=',
+  percent_eq: '%=',
+  amp_eq: '&=',
+  pipe_eq: '|=',
+  caret_eq: '^=',
+  plus_plus: '++',
+  minus_minus: '--',
   plus: '+',
   minus: '-',
   and: '&&',
@@ -61,9 +73,12 @@ const lexer = moo.compile({
   bang: '!',
   tilde: '~',
   period: '.',
-  semi: ";",
-  comma: ",",
-  at: "@",
+  semi: ';',
+  colon: ':',
+  comma: ',',
+  at: '@',
+  assign: '=',
+  underscore: '_',
 });
 
 // Ignoring whitespace and comments
@@ -85,14 +100,15 @@ export type Main =
 
 export type GlobalDecl =
     null
+  | VariableDecl
+  | ValueDecl
+  | OverrideDecl
   | FunctionDecl;
 
 
  export type Ident = { type: 'ident', value: string }; 
-
-export type TemplateElaboratedIdent = { type: 'template_elaborated_ident', value: string, template_list: TemplateList | null };
-
-
+ export type TypeSpecifier = TemplateElaboratedIdent; 
+ export type TemplateElaboratedIdent = { type: 'template_elaborated_ident', ident: string, template_list: TemplateList | null }; 
  export type TemplateList = Expression[]; 
 
 export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement, attrs: Attribute[] };
@@ -105,19 +121,38 @@ export type FunctionHeader = { type: 'function_header', identifier: string };
 export type Statement =
     null
   | ReturnStatement
+  | IfStatement
+  | ForStatement
   | CallStatement
-  | IfStatement;
+  | CompoundStatement;
 
 
+ export type VariableUpdatingStatement = AssignmentStatement; 
  export type CallStatement = { type: 'call_statement', ident: TemplateElaboratedIdent, args: Expression[] }; 
  export type Swizzle = { type: 'swizzle', value: string }; 
 
-export type IfStatement = { type: 'if_statement', if_clause: IfClause, else_if_clauses: ElseIfClause[], else_clause: ElseClause | null };
-export type IfClause = { type: 'if_clause', expression: Expression, body: CompoundStatement };
+export type IfStatement =  { type: 'if_statement', if_clause: IfClause, else_if_clauses: ElseIfClause[], else_clause: ElseClause | null };
+export type IfClause =     { type: 'if_clause', expression: Expression, body: CompoundStatement };
 export type ElseIfClause = { type: 'else_if_clause', expression: Expression, body: CompoundStatement };
-export type ElseClause = { type: 'else_clause', body: CompoundStatement };
+export type ElseClause =   { type: 'else_clause', body: CompoundStatement };
 
 
+
+export type ForStatement = {
+  type: 'for_statement',
+  attrs: Attribute[],
+  init: VariableOrValueStatement | VariableUpdatingStatement | CallStatement | null,
+  check: Expression | null,
+  update: VariableUpdatingStatement | CallStatement | null,
+  body: CompoundStatement,
+};
+
+
+ export type VariableOrValueStatement = VariableDecl | LetDecl | ValueDecl; 
+ export type LetDecl = { type: 'let_decl', ident: string, typespec: TypeSpecifier, expr: Expression }; 
+ export type VariableDecl = { type: 'variable_decl', template_list: TemplateList | null, ident: string, typespec: TypeSpecifier | null, expr: Expression | null }; 
+ export type ValueDecl = { type: 'value_decl', ident: string, typespec: TypeSpecifier | null, expr: Expression }; 
+ export type OverrideDecl = { type: 'override_decl', attrs: Attribute[], ident: string, typespec: TypeSpecifier | null, expr: Expression | null }; 
 
 export type Literal = BoolLiteral | IntLiteral | FloatLiteral;
 export type IntLiteral = { type: 'int_literal', value: string };
@@ -159,6 +194,13 @@ export type UnaryExpression =
   | { type: 'ref', expression: UnaryExpression }
 
 
+ export type LhsExpression =
+    { type: 'access_expr', expression: CoreLhsExpression, accessor: Accessor | null }
+  | { type: 'deref', expression: LhsExpression }
+  | { type: 'ref', expression: LhsExpression };
+
+
+ type CoreLhsExpression = Ident | { type: 'paren_expression', expression: LhsExpression }; 
 
 type MultiplicativeExpression = UnaryExpression | { type: 'multiply' | 'divide', lhs: MultiplicativeExpression, rhs: UnaryExpression };
 type AdditiveExpression = MultiplicativeExpression | { type: 'add' | 'subtract', lhs: AdditiveExpression, rhs: MultiplicativeExpression };
@@ -195,6 +237,9 @@ export type Expression =
 
 
  type Attribute = { type: 'attribute', ident: string, args: ArgumentExpressionList }; 
+ export type AssignmentStatement = { type: 'assignment_statement', lhs: LhsExpression | '_', op: string, rhs: Expression }; 
+ export type IncrementStatement = { type: 'increment_statement', expression: LhsExpression }; 
+ export type DecrementStatement = { type: 'decrement_statement', expression: LhsExpression }; 
 interface NearleyToken {
   value: any;
   [key: string]: any;
@@ -232,12 +277,15 @@ const grammar: Grammar = {
     {"name": "translation_unit$ebnf$1", "symbols": ["translation_unit$ebnf$1", "global_decl"], "postprocess": (d) => d[0].concat([d[1]])},
     {"name": "translation_unit", "symbols": ["translation_unit$ebnf$1"], "postprocess": ([declarations]) => ({ type: 'translation_unit', declarations })},
     {"name": "global_decl", "symbols": [{"literal":";"}], "postprocess": () => null},
+    {"name": "global_decl", "symbols": ["variable_decl", {"literal":";"}], "postprocess": id},
+    {"name": "global_decl", "symbols": ["value_decl", {"literal":";"}], "postprocess": id},
+    {"name": "global_decl", "symbols": ["override_decl", {"literal":";"}], "postprocess": id},
     {"name": "global_decl", "symbols": ["function_decl"], "postprocess": id},
     {"name": "ident", "symbols": [(lexer.has("ident_pattern") ? {type: "ident_pattern"} : ident_pattern)], "postprocess": ([token]) => ({ type: 'ident', value: token.value })},
-    {"name": "type_specifier", "symbols": ["template_elaborated_ident"]},
+    {"name": "type_specifier", "symbols": ["template_elaborated_ident"], "postprocess": id},
     {"name": "template_elaborated_ident$ebnf$1", "symbols": ["template_list"], "postprocess": id},
     {"name": "template_elaborated_ident$ebnf$1", "symbols": [], "postprocess": () => null},
-    {"name": "template_elaborated_ident", "symbols": ["ident", "template_elaborated_ident$ebnf$1"], "postprocess": ([ident, template_list]) => ({ type: 'template_elaborated_ident', value: ident.value, template_list })},
+    {"name": "template_elaborated_ident", "symbols": ["ident", "template_elaborated_ident$ebnf$1"], "postprocess": ([ident, template_list]) => ({ type: 'template_elaborated_ident', ident: ident.value, template_list })},
     {"name": "template_list", "symbols": [{"literal":"<"}, "template_arg_comma_list", {"literal":">"}], "postprocess": ([ , template_list]) => template_list},
     {"name": "template_arg_comma_list$ebnf$1", "symbols": []},
     {"name": "template_arg_comma_list$ebnf$1$subexpression$1", "symbols": [{"literal":","}, "expression"]},
@@ -256,9 +304,16 @@ const grammar: Grammar = {
     {"name": "compound_statement$ebnf$1", "symbols": ["compound_statement$ebnf$1", "statement"], "postprocess": (d) => d[0].concat([d[1]])},
     {"name": "compound_statement", "symbols": [{"literal":"{"}, "compound_statement$ebnf$1", {"literal":"}"}], "postprocess": ([ , statements]) => statements.filter((val) => val !== null)},
     {"name": "statement", "symbols": [{"literal":";"}], "postprocess": () => null},
-    {"name": "statement", "symbols": ["return_statement", {"literal":";"}], "postprocess": ([val]) => val},
-    {"name": "statement", "symbols": ["call_statement", {"literal":";"}], "postprocess": ([val]) => val},
+    {"name": "statement", "symbols": ["return_statement", {"literal":";"}], "postprocess": id},
     {"name": "statement", "symbols": ["if_statement"], "postprocess": id},
+    {"name": "statement", "symbols": ["for_statement"], "postprocess": id},
+    {"name": "statement", "symbols": ["call_statement", {"literal":";"}], "postprocess": id},
+    {"name": "statement", "symbols": ["variable_or_value_statement", {"literal":";"}], "postprocess": id},
+    {"name": "statement", "symbols": ["variable_updating_statement", {"literal":";"}], "postprocess": id},
+    {"name": "statement", "symbols": ["compound_statement"], "postprocess": id},
+    {"name": "variable_updating_statement", "symbols": ["assignment_statement"], "postprocess": id},
+    {"name": "variable_updating_statement", "symbols": ["increment_statement"], "postprocess": id},
+    {"name": "variable_updating_statement", "symbols": ["decrement_statement"], "postprocess": id},
     {"name": "call_statement", "symbols": ["call_phrase"], "postprocess": ([phrase]) => ({ type: 'call_statement', ident: phrase.ident, args: phrase.args })},
     {"name": "swizzle", "symbols": [(lexer.has("swizzle_name") ? {type: "swizzle_name"} : swizzle_name)], "postprocess": ([value]) => ({ type: 'swizzle', value })},
     {"name": "if_statement$ebnf$1", "symbols": []},
@@ -269,6 +324,42 @@ const grammar: Grammar = {
     {"name": "if_clause", "symbols": [{"literal":"if"}, "expression", "compound_statement"], "postprocess": ([ , expression, body]) => ({ type: 'if_clause', expression, body })},
     {"name": "else_if_clause", "symbols": [{"literal":"else"}, {"literal":"if"}, "expression", "compound_statement"], "postprocess": ([ , , expression, body]) => ({ type: 'else_if_clause', expression, body })},
     {"name": "else_clause", "symbols": [{"literal":"else"}, "compound_statement"], "postprocess": ([, body]) => ({ type: 'else_clause', body })},
+    {"name": "for_statement$ebnf$1", "symbols": []},
+    {"name": "for_statement$ebnf$1", "symbols": ["for_statement$ebnf$1", "attribute"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "for_statement", "symbols": ["for_statement$ebnf$1", {"literal":"for"}, {"literal":"("}, "for_header", {"literal":")"}, "compound_statement"], "postprocess": ([attrs, , , header, , body]) => ({ type: 'for_statement', attrs, ...header, body })},
+    {"name": "for_header$ebnf$1", "symbols": ["for_init"], "postprocess": id},
+    {"name": "for_header$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "for_header$ebnf$2", "symbols": ["expression"], "postprocess": id},
+    {"name": "for_header$ebnf$2", "symbols": [], "postprocess": () => null},
+    {"name": "for_header$ebnf$3", "symbols": ["for_update"], "postprocess": id},
+    {"name": "for_header$ebnf$3", "symbols": [], "postprocess": () => null},
+    {"name": "for_header", "symbols": ["for_header$ebnf$1", {"literal":";"}, "for_header$ebnf$2", {"literal":";"}, "for_header$ebnf$3"], "postprocess": ([init, , check, , update]) => ({ init, check, update })},
+    {"name": "for_init", "symbols": ["variable_or_value_statement"], "postprocess": id},
+    {"name": "for_init", "symbols": ["variable_updating_statement"], "postprocess": id},
+    {"name": "for_init", "symbols": ["func_call_statement"], "postprocess": id},
+    {"name": "for_update", "symbols": ["variable_updating_statement"], "postprocess": id},
+    {"name": "for_update", "symbols": ["func_call_statement"], "postprocess": id},
+    {"name": "variable_or_value_statement", "symbols": ["variable_decl"], "postprocess": id},
+    {"name": "variable_or_value_statement", "symbols": ["let_decl"], "postprocess": id},
+    {"name": "variable_or_value_statement", "symbols": ["value_decl"], "postprocess": id},
+    {"name": "let_decl", "symbols": [{"literal":"let"}, "optionally_typed_ident", {"literal":"="}, "expression"], "postprocess": ([ , typed_ident, , expr]) => ({ type: 'let_decl', ...typed_ident, expr })},
+    {"name": "variable_decl$ebnf$1", "symbols": ["template_list"], "postprocess": id},
+    {"name": "variable_decl$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "variable_decl$ebnf$2$subexpression$1", "symbols": [{"literal":"="}, "expression"]},
+    {"name": "variable_decl$ebnf$2", "symbols": ["variable_decl$ebnf$2$subexpression$1"], "postprocess": id},
+    {"name": "variable_decl$ebnf$2", "symbols": [], "postprocess": () => null},
+    {"name": "variable_decl", "symbols": [{"literal":"var"}, "variable_decl$ebnf$1", "optionally_typed_ident", "variable_decl$ebnf$2"], "postprocess": ([ , template_list, typed_ident, opt_expr]) => ({ type: 'variable_decl', template_list: template_list, ...typed_ident, expr: opt_expr ? opt_expr[1] : null })},
+    {"name": "optionally_typed_ident$ebnf$1$subexpression$1", "symbols": [{"literal":":"}, "type_specifier"]},
+    {"name": "optionally_typed_ident$ebnf$1", "symbols": ["optionally_typed_ident$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "optionally_typed_ident$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "optionally_typed_ident", "symbols": ["ident", "optionally_typed_ident$ebnf$1"], "postprocess": ([ident, typespec]) => ({ ident: ident.value, typespec: typespec ? typespec[1] : null })},
+    {"name": "value_decl", "symbols": [{"literal":"const"}, "optionally_typed_ident", {"literal":"="}, "expression"], "postprocess": ([ , typed_ident, , expr]) => ({ type: 'value_decl', ...typed_ident, expr })},
+    {"name": "override_decl$ebnf$1", "symbols": []},
+    {"name": "override_decl$ebnf$1", "symbols": ["override_decl$ebnf$1", "attribute"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "override_decl$ebnf$2$subexpression$1", "symbols": [{"literal":"="}, "expression"]},
+    {"name": "override_decl$ebnf$2", "symbols": ["override_decl$ebnf$2$subexpression$1"], "postprocess": id},
+    {"name": "override_decl$ebnf$2", "symbols": [], "postprocess": () => null},
+    {"name": "override_decl", "symbols": ["override_decl$ebnf$1", {"literal":"override"}, "optionally_typed_ident", "override_decl$ebnf$2"], "postprocess": ([attrs, , typed_ident, opt_expr]) => ({ type: 'override_decl', attrs, ...typed_ident, expr: opt_expr ? opt_expr[1] : null })},
     {"name": "literal", "symbols": ["int_literal"], "postprocess": id},
     {"name": "literal", "symbols": ["float_literal"], "postprocess": id},
     {"name": "literal", "symbols": ["bool_literal"], "postprocess": id},
@@ -310,6 +401,13 @@ const grammar: Grammar = {
     {"name": "unary_expression", "symbols": [{"literal":"~"}, "unary_expression"], "postprocess": ([ , expression]) => ({ type: 'binary_not', expression })},
     {"name": "unary_expression", "symbols": [{"literal":"*"}, "unary_expression"], "postprocess": ([ , expression]) => ({ type: 'deref', expression })},
     {"name": "unary_expression", "symbols": [{"literal":"&"}, "unary_expression"], "postprocess": ([ , expression]) => ({ type: 'ref', expression })},
+    {"name": "lhs_expression$ebnf$1", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
+    {"name": "lhs_expression$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "lhs_expression", "symbols": ["core_lhs_expression", "lhs_expression$ebnf$1"], "postprocess": ([expression, accessor]) => ({ type: 'access_expr', expression, accessor })},
+    {"name": "lhs_expression", "symbols": [{"literal":"*"}, "lhs_expression"], "postprocess": ([ , expression]) => ({ type: 'deref', expression })},
+    {"name": "lhs_expression", "symbols": [{"literal":"&"}, "lhs_expression"], "postprocess": ([ , expression]) => ({ type: 'ref', expression })},
+    {"name": "core_lhs_expression", "symbols": ["ident"], "postprocess": id},
+    {"name": "core_lhs_expression", "symbols": [{"literal":"("}, "lhs_expression", {"literal":")"}], "postprocess": ([ , expression]) => ({ type: 'paren_expression', expression })},
     {"name": "multiplicative_operator", "symbols": [{"literal":"*"}], "postprocess": () => 'multiply'},
     {"name": "multiplicative_operator", "symbols": [{"literal":"/"}], "postprocess": () => 'divide'},
     {"name": "multiplicative_operator", "symbols": [{"literal":"%"}], "postprocess": () => 'mod'},
@@ -351,7 +449,22 @@ const grammar: Grammar = {
     {"name": "call_phrase", "symbols": ["template_elaborated_ident", "argument_expression_list"], "postprocess": ([ident, args]) => ({ ident, args })},
     {"name": "attribute$ebnf$1", "symbols": ["argument_expression_list"], "postprocess": id},
     {"name": "attribute$ebnf$1", "symbols": [], "postprocess": () => null},
-    {"name": "attribute", "symbols": [{"literal":"@"}, "ident", "attribute$ebnf$1"], "postprocess": ([ , ident, args]) => ({ type: 'attribute', ident: ident.value, args: args ?? [] })}
+    {"name": "attribute", "symbols": [{"literal":"@"}, "ident", "attribute$ebnf$1"], "postprocess": ([ , ident, args]) => ({ type: 'attribute', ident: ident.value, args: args ?? [] })},
+    {"name": "assignment_statement", "symbols": ["lhs_expression", {"literal":"="}, "expression"], "postprocess": ([lhs, , rhs]) => ({ type: 'assignment_statement', lhs, op: '=', rhs })},
+    {"name": "assignment_statement", "symbols": ["lhs_expression", "compound_assignment_operator", "expression"], "postprocess": ([lhs, op, rhs]) => ({ type: 'assignment_statement', lhs, op: op.value, rhs })},
+    {"name": "assignment_statement", "symbols": [{"literal":"_"}, {"literal":"="}, "expression"], "postprocess": ([ , , rhs]) => ({ type: 'assignment_statement', lhs: '_', op: '=', rhs })},
+    {"name": "compound_assignment_operator", "symbols": [{"literal":"+="}], "postprocess": id},
+    {"name": "compound_assignment_operator", "symbols": [{"literal":"-="}], "postprocess": id},
+    {"name": "compound_assignment_operator", "symbols": [{"literal":"*="}], "postprocess": id},
+    {"name": "compound_assignment_operator", "symbols": [{"literal":"/="}], "postprocess": id},
+    {"name": "compound_assignment_operator", "symbols": [{"literal":"%="}], "postprocess": id},
+    {"name": "compound_assignment_operator", "symbols": [{"literal":"&="}], "postprocess": id},
+    {"name": "compound_assignment_operator", "symbols": [{"literal":"|="}], "postprocess": id},
+    {"name": "compound_assignment_operator", "symbols": [{"literal":"^="}], "postprocess": id},
+    {"name": "compound_assignment_operator", "symbols": [{"literal":">>="}], "postprocess": id},
+    {"name": "compound_assignment_operator", "symbols": [{"literal":"<<="}], "postprocess": id},
+    {"name": "increment_statement", "symbols": ["lhs_expression", {"literal":"++"}], "postprocess": ([expression]) => ({ type: 'increment_statement', expression })},
+    {"name": "decrement_statement", "symbols": ["lhs_expression", {"literal":"--"}], "postprocess": ([expression]) => ({ type: 'decrement_statement', expression })}
   ],
   ParserStart: "main",
 };

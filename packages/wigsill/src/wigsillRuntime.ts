@@ -7,6 +7,7 @@ import type { SimpleWgslData } from './std140';
 import type { AnyWgslData } from './std140/types';
 import type { Wgsl, WgslAllocatable } from './types';
 import { type WgslCode, code } from './wgslCode';
+import { roundUp } from './mathUtils';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
@@ -32,7 +33,10 @@ class WigsillRuntime {
     if (!buffer) {
       buffer = this.device.createBuffer({
         usage: allocatable.flags,
-        size: allocatable.dataType.size,
+        size: roundUp(
+          allocatable.dataType.size,
+          allocatable.dataType.byteAlignment,
+        ),
       });
 
       if (!buffer) {
@@ -216,7 +220,7 @@ class WigsillRuntime {
     const executor = new ComputePipelineExecutor(
       this.device,
       computePipeline,
-      program,
+      [program],
       options.externalLayouts?.length ?? 0,
     );
     this._pipelineExecutors.push(executor);
@@ -270,7 +274,7 @@ class PipelineExecutor<T extends GPURenderPipeline | GPUComputePipeline> {
   constructor(
     public device: GPUDevice,
     public pipeline: T,
-    public program: Program,
+    public programs: Program[],
     public externalLayoutCount: number,
     protected label?: string,
   ) {}
@@ -295,7 +299,12 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
     externalLayoutCount: number,
     usedVertexBuffers: (readonly [GPUBuffer, number])[],
   ) {
-    super(device, pipeline, vertexProgram, externalLayoutCount);
+    super(
+      device,
+      pipeline,
+      [vertexProgram, fragmentProgram],
+      externalLayoutCount,
+    );
     this._vertexProgram = vertexProgram;
     this._fragmentProgram = fragmentProgram;
     this._usedVertexBuffers = new Set(usedVertexBuffers);
@@ -307,6 +316,7 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
       firstVertex?: number;
       firstInstance?: number;
       externalBindGroups?: GPUBindGroup[];
+      externalVertexBuffers?: GPUBuffer[];
     },
   ) {
     const {
@@ -370,7 +380,9 @@ class ComputePipelineExecutor extends PipelineExecutor<GPUComputePipeline> {
       label: this.label ?? '',
     });
     passEncoder.setPipeline(this.pipeline);
-    passEncoder.setBindGroup(0, this.program.bindGroup);
+    this.programs.forEach((program, i) =>
+      passEncoder.setBindGroup(i, program.bindGroup),
+    );
     passEncoder.dispatchWorkgroups(...workgroupCounts);
     passEncoder.end();
   }
