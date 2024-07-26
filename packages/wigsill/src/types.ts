@@ -15,6 +15,10 @@ export interface ResolutionCtx {
 
   addDeclaration(item: WgslResolvable): void;
   addBinding(bindable: WgslBindable, identifier: WgslIdentifier): void;
+  addRenderResource(
+    resource: WgslRenderResource<WgslRenderResourceType>,
+    identifier: WgslIdentifier,
+  ): void;
   nameFor(token: WgslResolvable): string;
   /**
    * Unwraps all layers of slot indirection and returns the concrete value if available.
@@ -90,8 +94,8 @@ export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
    * binary.
    */
   readonly dataType: TData;
-  readonly flags: GPUBufferUsageFlags;
   vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null;
+  readonly flags: GPUBufferUsageFlags | GPUTextureUsageFlags;
 }
 
 export interface WgslBindable<
@@ -102,8 +106,92 @@ export interface WgslBindable<
   readonly usage: TUsage;
 }
 
+export type WgslSamplerType = 'sampler' | 'sampler_comparison';
+export type WgslTypedTextureType =
+  | 'texture_1d'
+  | 'texture_2d'
+  | 'texture_2d_array'
+  | 'texture_3d'
+  | 'texture_cube'
+  | 'texture_cube_array'
+  | 'texture_multisampled_2d';
+export type WgslDepthTextureType =
+  | 'texture_depth_2d'
+  | 'texture_depth_2d_array'
+  | 'texture_depth_cube'
+  | 'texture_depth_cube_array'
+  | 'texture_depth_multisampled_2d';
+export type WgslStorageTextureType =
+  | 'texture_storage_1d'
+  | 'texture_storage_2d'
+  | 'texture_storage_2d_array'
+  | 'texture_storage_3d';
+export type WgslExternalTextureType = 'texture_external';
+
+export type WgslRenderResourceType =
+  | WgslSamplerType
+  | WgslTypedTextureType
+  | WgslDepthTextureType
+  | WgslStorageTextureType
+  | WgslExternalTextureType;
+
+export interface WgslRenderResource<T extends WgslRenderResourceType>
+  extends WgslResolvable {
+  readonly type: T;
+}
+
 export type BufferUsage =
   | 'uniform'
   | 'readonly_storage'
   | 'mutable_storage'
   | 'vertex';
+export type StorageTextureAccess = 'read' | 'write' | 'read_write';
+
+export function isSamplerType(
+  type: WgslRenderResourceType,
+): type is WgslSamplerType {
+  return type === 'sampler' || type === 'sampler_comparison';
+}
+
+export function isTypedTextureType(
+  type: WgslRenderResourceType,
+): type is WgslTypedTextureType {
+  return [
+    'texture_1d',
+    'texture_2d',
+    'texture_2d_array',
+    'texture_3d',
+    'texture_cube',
+    'texture_cube_array',
+    'texture_multisampled_2d',
+  ].includes(type);
+}
+
+export function isDepthTextureType(
+  type: WgslRenderResourceType,
+): type is WgslDepthTextureType {
+  return [
+    'texture_depth_2d',
+    'texture_depth_2d_array',
+    'texture_depth_cube',
+    'texture_depth_cube_array',
+    'texture_depth_multisampled_2d',
+  ].includes(type);
+}
+
+export function isStorageTextureType(
+  type: WgslRenderResourceType,
+): type is WgslStorageTextureType {
+  return [
+    'texture_storage_1d',
+    'texture_storage_2d',
+    'texture_storage_2d_array',
+    'texture_storage_3d',
+  ].includes(type);
+}
+
+export function isExternalTextureType(
+  type: WgslRenderResourceType,
+): type is WgslExternalTextureType {
+  return type === 'texture_external';
+}

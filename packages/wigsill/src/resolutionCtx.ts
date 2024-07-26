@@ -1,16 +1,25 @@
 import { MissingSlotValueError } from './errors';
 import type { NameRegistry } from './nameRegistry';
+import type {
+  BufferUsage,
+  ResolutionCtx,
+  SlotValuePair,
+  Wgsl,
+  WgslBindable,
+  WgslRenderResource,
+  WgslRenderResourceType,
+  WgslResolvable,
+  WgslSlot,
+  Eventual,
+} from './types';
 import {
-  type BufferUsage,
-  type Eventual,
-  type ResolutionCtx,
-  type SlotValuePair,
-  type Wgsl,
-  type WgslBindable,
-  type WgslResolvable,
-  type WgslSlot,
-  isResolvable,
   isSlot,
+  isDepthTextureType,
+  isExternalTextureType,
+  isResolvable,
+  isSamplerType,
+  isStorageTextureType,
+  isTypedTextureType,
 } from './types';
 import { code } from './wgslCode';
 import type { WgslIdentifier } from './wgslIdentifier';
@@ -38,6 +47,9 @@ class SharedResolutionState {
 
   private _nextFreeBindingIdx = 0;
   private readonly _usedBindables = new Set<WgslBindable>();
+  private readonly _usedRenderResources = new Set<
+    WgslRenderResource<WgslRenderResourceType>
+  >();
   private readonly _declarations: string[] = [];
 
   constructor(
@@ -47,6 +59,12 @@ class SharedResolutionState {
 
   get usedBindables(): Iterable<WgslBindable> {
     return this._usedBindables;
+  }
+
+  get usedRenderResources(): Iterable<
+    WgslRenderResource<WgslRenderResourceType>
+  > {
+    return this._usedRenderResources;
   }
 
   get declarations(): Iterable<string> {
@@ -95,6 +113,14 @@ class SharedResolutionState {
     return { group: this._bindingGroup, idx: this._nextFreeBindingIdx++ };
   }
 
+  reserveRenderResourceEntry(
+    _resource: WgslRenderResource<WgslRenderResourceType>,
+  ) {
+    this._usedRenderResources.add(_resource);
+
+    return { group: this._bindingGroup, idx: this._nextFreeBindingIdx++ };
+  }
+
   addDeclaration(declaration: string) {
     this._declarations.push(declaration);
   }
@@ -113,11 +139,22 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._shared.usedBindables;
   }
 
+  get usedRenderResources() {
+    return this._shared.usedRenderResources;
+  }
+
   addDeclaration(_declaration: WgslResolvable) {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
   addBinding(_bindable: WgslBindable, _identifier: WgslIdentifier): void {
+    throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
+  }
+
+  addRenderResource(
+    resource: WgslRenderResource<WgslRenderResourceType>,
+    identifier: WgslIdentifier,
+  ): void {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
@@ -177,6 +214,44 @@ class ScopedResolutionCtx implements ResolutionCtx {
     this.addDeclaration(
       code`@group(${group}) @binding(${idx}) var<${usageToVarTemplateMap[bindable.usage]}> ${identifier}: ${bindable.allocatable.dataType};`,
     );
+  }
+
+  addRenderResource(
+    resource: WgslRenderResource<WgslRenderResourceType>,
+    identifier: WgslIdentifier,
+  ): void {
+    const { group, idx } = this._shared.reserveRenderResourceEntry(resource);
+
+    if (
+      isSamplerType(resource.type) ||
+      isExternalTextureType(resource.type) ||
+      isDepthTextureType(resource.type)
+    ) {
+      this.addDeclaration(
+        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type};`,
+      );
+      return;
+    }
+
+    if (
+      isStorageTextureType(resource.type) &&
+      'access' in resource &&
+      'dataType' in resource
+    ) {
+      this.addDeclaration(
+        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.access as Wgsl}, ${resource.dataType as Wgsl}>;`,
+      );
+      return;
+    }
+
+    if (isTypedTextureType(resource.type) && 'dataType' in resource) {
+      this.addDeclaration(
+        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.dataType as Wgsl}>;`,
+      );
+      return;
+    }
+
+    throw new Error(`Unsupported resource type: ${resource.type}`);
   }
 
   nameFor(token: WgslResolvable): string {

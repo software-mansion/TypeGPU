@@ -3,7 +3,9 @@ import { code } from './wgslCode';
 import { constant } from './wgslConstant';
 import { fn } from './wgslFunction';
 import { fn as fun } from './wgslFunctionExperimental';
+import { sampler } from './wgslSampler';
 import { slot } from './wgslSlot';
+import { texture, textureExternal } from './wgslTexture';
 import { variable } from './wgslVariable';
 
 export default Object.assign(code, {
@@ -14,4 +16,7 @@ export default Object.assign(code, {
   slot,
   constant,
   var: variable,
+  sampler,
+  texture,
+  textureExternal,
 });

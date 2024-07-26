@@ -8,6 +8,8 @@ import type { SimpleWgslData } from './std140';
 import type { AnyWgslData } from './std140/types';
 import type { Wgsl, WgslAllocatable } from './types';
 import { type WgslCode, code } from './wgslCode';
+import type { WgslSampler } from './wgslSampler';
+import type { WgslTextureExternal, WgslTextureView } from './wgslTexture';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
@@ -15,6 +17,8 @@ import { type WgslCode, code } from './wgslCode';
  */
 class WigsillRuntime {
   private _entryToBufferMap = new WeakMap<WgslAllocatable, GPUBuffer>();
+  private _samplers = new WeakMap<WgslSampler, GPUSampler>();
+  private _textures = new WeakMap<WgslTextureView, GPUTexture>();
   private _readBuffer: GPUBuffer | null = null;
   private _taskQueue = new TaskQueue();
   private _pipelineExecutors: PipelineExecutor<
@@ -46,6 +50,40 @@ class WigsillRuntime {
     }
 
     return buffer;
+  }
+
+  textureFor(view: WgslTextureView): GPUTexture {
+    let texture = this._textures.get(view);
+
+    if (!texture) {
+      texture = this.device.createTexture(view.texture.descriptor);
+
+      if (!texture) {
+        throw new Error(`Failed to create texture for ${view}`);
+      }
+      this._textures.set(view, texture);
+    }
+
+    return texture;
+  }
+
+  externalTextureFor(texture: WgslTextureExternal): GPUExternalTexture {
+    return this.device.importExternalTexture(texture.descriptor);
+  }
+
+  samplerFor(sampler: WgslSampler): GPUSampler {
+    let gpuSampler = this._samplers.get(sampler);
+
+    if (!gpuSampler) {
+      gpuSampler = this.device.createSampler(sampler.descriptor);
+
+      if (!gpuSampler) {
+        throw new Error(`Failed to create sampler for ${sampler}`);
+      }
+      this._samplers.set(sampler, gpuSampler);
+    }
+
+    return gpuSampler;
   }
 
   async valueFor(memory: WgslAllocatable): Promise<ArrayBuffer> {

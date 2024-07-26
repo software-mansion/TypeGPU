@@ -22,6 +22,11 @@ const [video, canvas] = await Promise.all([
   addElement('canvas', { width: 500, height: 375 }),
 ]);
 
+const sampler = wgsl.sampler({
+  magFilter: 'linear',
+  minFilter: 'linear',
+});
+
 const thresholdBuffer = wgsl.buffer(f32).$name('threshold').$allowUniform();
 
 const thresholdData = thresholdBuffer.asUniform();
@@ -31,6 +36,10 @@ if (navigator.mediaDevices.getUserMedia) {
     video: true,
   });
 }
+
+let resultTexture = wgsl.textureExternal({
+  source: video,
+});
 
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -42,21 +51,6 @@ context.configure({
   device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
-});
-
-const bindGroupLayout = device.createBindGroupLayout({
-  entries: [
-    {
-      binding: 0,
-      visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-      sampler: {},
-    },
-    {
-      binding: 1,
-      visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-      externalTexture: {},
-    },
-  ],
 });
 
 const outputStruct = struct({
@@ -95,7 +89,7 @@ const renderProgram = runtime.makeRenderPipeline({
   },
   fragment: {
     code: wgsl`
-      var color = textureSampleBaseClampToEdge(videoTexture, sampler_, fragUV);
+      var color = textureSampleBaseClampToEdge(${resultTexture}, ${sampler}, fragUV);
       let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
 
       if grey < ${thresholdData} {
@@ -113,16 +107,6 @@ const renderProgram = runtime.makeRenderPipeline({
   primitive: {
     topology: 'triangle-list',
   },
-  externalLayouts: [bindGroupLayout],
-  externalDeclarations: [
-    wgsl`@group(0) @binding(0) var sampler_ : sampler;`,
-    wgsl`@group(0) @binding(1) var videoTexture : texture_external;`,
-  ],
-});
-
-const sampler = device.createSampler({
-  magFilter: 'linear',
-  minFilter: 'linear',
 });
 
 // UI
@@ -137,22 +121,9 @@ onFrame(() => {
   if (!(video.currentTime > 0)) {
     return;
   }
-  const resultTexture = device.importExternalTexture({
-    source: video,
-  });
 
-  const bindGroup = device.createBindGroup({
-    layout: bindGroupLayout,
-    entries: [
-      {
-        binding: 0,
-        resource: sampler,
-      },
-      {
-        binding: 1,
-        resource: resultTexture,
-      },
-    ],
+  resultTexture = wgsl.textureExternal({
+    source: video,
   });
 
   renderProgram.execute({
@@ -166,7 +137,6 @@ onFrame(() => {
     ],
 
     vertexCount: 6,
-    externalBindGroups: [bindGroup],
   });
 
   runtime.flush();
