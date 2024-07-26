@@ -6,7 +6,8 @@
 */
 
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
-import { createRuntime, f32, struct, vec2f, vec4f, wgsl } from 'wigsill';
+import { f32, struct, vec2f, vec4f, wgsl } from 'wigsill';
+import { createRuntime } from 'wigsill/web';
 
 // Layout
 const [video, canvas] = await Promise.all([

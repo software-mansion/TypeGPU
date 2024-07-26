@@ -6,15 +6,8 @@
 */
 
 import { addElement, addParameter } from '@wigsill/example-toolkit';
-import {
-  type Parsed,
-  createRuntime,
-  dynamicArrayOf,
-  f32,
-  struct,
-  vec2f,
-  wgsl,
-} from 'wigsill';
+import { type Parsed, dynamicArrayOf, f32, struct, vec2f, wgsl } from 'wigsill';
+import { createRuntime } from 'wigsill/web';
 
 const runtime = await createRuntime();
 

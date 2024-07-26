@@ -11,7 +11,8 @@ import {
   onCleanup,
   onFrame,
 } from '@wigsill/example-toolkit';
-import { createRuntime, struct, u32, vec2f, vec4f, wgsl } from 'wigsill';
+import { struct, u32, vec2f, vec4f, wgsl } from 'wigsill';
+import { createRuntime } from 'wigsill/web';
 
 const xSpanPlum = wgsl.plum<number>(16).$name('x_span');
 const ySpanPlum = wgsl.plum<number>(16).$name('y_span');

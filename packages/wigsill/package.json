@@ -20,6 +20,12 @@
       "module": "./dist/*.js",
       "import": "./dist/*.js",
       "default": "./dist/*.cjs"
+    },
+    "./web": {
+      "types": "./dist/web/index.d.ts",
+      "module": "./dist/web/index.js",
+      "import": "./dist/web/index.js",
+      "default": "./dist/web/index.cjs"
     }
   },
   "files": ["dist"],

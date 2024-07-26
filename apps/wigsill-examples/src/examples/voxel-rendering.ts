@@ -6,17 +6,8 @@
 */
 
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
-import {
-  arrayOf,
-  bool,
-  createRuntime,
-  f32,
-  struct,
-  u32,
-  vec3f,
-  vec4f,
-  wgsl,
-} from 'wigsill';
+import { arrayOf, bool, f32, struct, u32, vec3f, vec4f, wgsl } from 'wigsill';
+import { createRuntime } from 'wigsill/web';
 
 const runtime = await createRuntime();
 const device = runtime.device;

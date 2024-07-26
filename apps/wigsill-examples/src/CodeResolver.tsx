@@ -1,6 +1,7 @@
 import { useAtomValue } from 'jotai/react';
 import { atom } from 'jotai/vanilla';
-import { ProgramBuilder, createRuntime } from 'wigsill';
+import { ProgramBuilder } from 'wigsill';
+import { createRuntime } from 'wigsill/web';
 import { sampleShader } from './sampleShader';
 
 // using `jōtai` for a simple async resource store.

@@ -7,15 +7,8 @@
 /* global GPUShaderStage, GPUBufferUsage, GPUMapMode */
 
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
-import {
-  ProgramBuilder,
-  arrayOf,
-  atomic,
-  createRuntime,
-  u32,
-  vec2u,
-  wgsl,
-} from 'wigsill';
+import { ProgramBuilder, arrayOf, atomic, u32, vec2u, wgsl } from 'wigsill';
+import { createRuntime } from 'wigsill/web';
 
 const runtime = await createRuntime();
 const device = runtime.device;
