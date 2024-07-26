@@ -4,7 +4,7 @@ import type { AnyWgslData } from './std140/types';
 import type { Wgsl, WgslAllocatable } from './types';
 import { type WgslCode, code } from './wgslCode';
 import type { WgslSampler } from './wgslSampler';
-import type { WgslTextureView } from './wgslTexture';
+import type { WgslTextureExternal, WgslTextureView } from './wgslTexture';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
@@ -59,6 +59,10 @@ class WigsillRuntime {
     return texture;
   }
 
+  externalTextureFor(texture: WgslTextureExternal): GPUExternalTexture {
+    return this.device.importExternalTexture(texture.descriptor);
+  }
+
   samplerFor(sampler: WgslSampler): GPUSampler {
     let gpuSampler = this._samplers.get(sampler);
 
@@ -105,16 +109,20 @@ class WigsillRuntime {
   }
 
   makeRenderPipeline(options: {
-    vertex: {
+    vertex?: {
+      args: Wgsl[];
       code: WgslCode;
       output: StructDataType<Record<string, AnyWgslData>>;
     };
-    fragment: {
+    fragment?: {
+      args: Wgsl[];
       code: WgslCode;
       output: Wgsl;
       target: Iterable<GPUColorTargetState | null>;
     };
     primitive: GPUPrimitiveState;
+    externalLayouts?: GPUBindGroupLayout[];
+    externalDeclarations?: Wgsl[];
     label?: string;
   }) {
     const program = new ProgramBuilder(

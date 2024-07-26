@@ -18,10 +18,6 @@ const sampler = wgsl.sampler({
   minFilter: 'linear',
 });
 
-let resultTexture = wgsl.textureExternal({
-  source: video,
-});
-
 const thresholdBuffer = wgsl.buffer(f32).$name('threshold').$allowUniform();
 
 const thresholdData = thresholdBuffer.asUniform();
@@ -31,6 +27,10 @@ if (navigator.mediaDevices.getUserMedia) {
     video: true,
   });
 }
+
+let resultTexture = wgsl.textureExternal({
+  source: video,
+});
 
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();

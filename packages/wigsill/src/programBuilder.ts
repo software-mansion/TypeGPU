@@ -4,7 +4,11 @@ import type { BufferUsage, WgslResolvable } from './types';
 import { isSamplerType } from './types';
 import type WigsillRuntime from './wigsillRuntime';
 import type { WgslSampler } from './wgslSampler';
-import type { WgslTextureView } from './wgslTexture';
+import {
+  type WgslTextureExternal,
+  type WgslTextureView,
+  isExternalTexture,
+} from './wgslTexture';
 
 export type Program = {
   bindGroupLayout: GPUBindGroupLayout;
@@ -44,10 +48,35 @@ export default class ProgramBuilder {
       isSamplerType(resource.type),
     );
     const usedTextures = usedRenderResources.filter(
-      (resource) => !isSamplerType(resource.type),
+      (resource) =>
+        !isSamplerType(resource.type) && !isExternalTexture(resource),
+    );
+    const usedExternalTextures = usedRenderResources.filter((resource) =>
+      isExternalTexture(resource),
     );
     const allEntries = [];
     let idx = 0;
+    for (const _ of usedTextures) {
+      allEntries.push({
+        binding: idx++,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        texture: {},
+      });
+    }
+    for (const _ of usedExternalTextures) {
+      allEntries.push({
+        binding: idx++,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        externalTexture: {},
+      });
+    }
+    for (const _ of usedSamplers) {
+      allEntries.push({
+        binding: idx++,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        sampler: {},
+      });
+    }
     for (const bindable of usedBindables) {
       allEntries.push({
         binding: idx++,
@@ -57,20 +86,7 @@ export default class ProgramBuilder {
         },
       });
     }
-    for (const sampler of usedSamplers) {
-      allEntries.push({
-        binding: idx++,
-        visibility: options.shaderStage,
-        sampler: {},
-      });
-    }
-    for (const texture of usedTextures) {
-      allEntries.push({
-        binding: idx++,
-        visibility: options.shaderStage,
-        texture: {},
-      });
-    }
+    console.log(allEntries);
 
     const bindGroupLayout = this.runtime.device.createBindGroupLayout({
       entries: allEntries,
@@ -78,6 +94,26 @@ export default class ProgramBuilder {
 
     const allBindGroupEntries = [];
     idx = 0;
+    for (const texture of usedTextures) {
+      allBindGroupEntries.push({
+        binding: idx++,
+        resource: this.runtime.textureFor(texture as WgslTextureView),
+      });
+    }
+    for (const externalTexture of usedExternalTextures) {
+      allBindGroupEntries.push({
+        binding: idx++,
+        resource: this.runtime.externalTextureFor(
+          externalTexture as WgslTextureExternal,
+        ),
+      });
+    }
+    for (const sampler of usedSamplers) {
+      allBindGroupEntries.push({
+        binding: idx++,
+        resource: this.runtime.samplerFor(sampler as WgslSampler),
+      });
+    }
     for (const bindable of usedBindables) {
       allBindGroupEntries.push({
         binding: idx++,
@@ -86,20 +122,7 @@ export default class ProgramBuilder {
         },
       });
     }
-
-    for (const sampler of usedSamplers) {
-      allBindGroupEntries.push({
-        binding: idx++,
-        resource: this.runtime.samplerFor(sampler as WgslSampler),
-      });
-    }
-
-    for (const texture of usedTextures) {
-      allBindGroupEntries.push({
-        binding: idx++,
-        resource: this.runtime.textureFor(texture as WgslTextureView),
-      });
-    }
+    console.log(allBindGroupEntries);
 
     const bindGroup = this.runtime.device.createBindGroup({
       layout: bindGroupLayout,

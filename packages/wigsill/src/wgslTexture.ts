@@ -10,6 +10,7 @@ import type {
   WgslTypedTextureType,
 } from './types';
 import { WgslIdentifier } from './wgslIdentifier';
+import { isSampler } from './wgslSampler';
 
 export interface WgslTexture<TData extends U32 | I32 | F32> {
   createView(descriptor?: GPUTextureViewDescriptor): WgslTextureView;
@@ -37,7 +38,9 @@ export interface WgslTextureView
 }
 
 export interface WgslTextureExternal
-  extends WgslRenderResource<WgslExternalTextureType> {}
+  extends WgslRenderResource<WgslExternalTextureType> {
+  readonly descriptor: GPUExternalTextureDescriptor;
+}
 
 export function texture<TData extends U32 | I32 | F32>(
   descriptor: GPUTextureDescriptor,
@@ -158,4 +161,10 @@ class WgslTextureExternalImpl implements WgslTextureExternal {
 
     return ctx.resolve(identifier);
   }
+}
+
+export function isExternalTexture(
+  texture: WgslRenderResource<WgslRenderResourceType>,
+): texture is WgslTextureExternal {
+  return !('texture' in texture) && !isSampler(texture);
 }
