@@ -5,12 +5,15 @@
 }
 */
 
+// -- Hooks into the example environment
 import {
   addElement,
   addParameter,
   onCleanup,
   onFrame,
 } from '@wigsill/example-toolkit';
+// --
+
 import wgsl, {
   type AnyWgslData,
   type Wgsl,
