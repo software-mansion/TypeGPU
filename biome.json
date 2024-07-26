@@ -8,7 +8,8 @@
       "**/dist/*",
       "**/coverage/*",
       "**/*.d.ts",
-      "packages/wigsill-parser/src/grammar.ts"
+      "packages/wigsill-parser/src/grammar.ts",
+      "**/*.astro"
     ]
   },
   "linter": {
