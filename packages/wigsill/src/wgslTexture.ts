@@ -1,13 +1,13 @@
-import type { U32, I32, F32 } from './std140';
+import type { F32, I32, U32 } from './std140';
 import type {
   ResolutionCtx,
+  StorageTextureAccess,
+  WgslAllocatable,
   WgslExternalTextureType,
   WgslRenderResource,
-  StorageTextureAccess,
+  WgslRenderResourceType,
   WgslStorageTextureType,
   WgslTypedTextureType,
-  WgslAllocatable,
-  WgslRenderResourceType,
 } from './types';
 import { WgslIdentifier } from './wgslIdentifier';
 

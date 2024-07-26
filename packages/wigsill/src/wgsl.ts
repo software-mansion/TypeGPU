@@ -3,10 +3,10 @@ import { code } from './wgslCode';
 import { constant } from './wgslConstant';
 import { fn } from './wgslFunction';
 import { fn as fun } from './wgslFunctionExperimental';
-import { slot } from './wgslSlot';
-import { variable } from './wgslVariable';
 import { sampler } from './wgslSampler';
+import { slot } from './wgslSlot';
 import { texture, textureExternal } from './wgslTexture';
+import { variable } from './wgslVariable';
 
 export default Object.assign(code, {
   code,

@@ -12,12 +12,12 @@ import type {
   WgslSlot,
 } from './types';
 import {
+  isDepthTextureType,
+  isExternalTextureType,
   isResolvable,
   isSamplerType,
-  isDepthTextureType,
-  isTypedTextureType,
   isStorageTextureType,
-  isExternalTextureType,
+  isTypedTextureType,
 } from './types';
 import { code } from './wgslCode';
 import type { WgslIdentifier } from './wgslIdentifier';

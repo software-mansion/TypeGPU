@@ -1,8 +1,8 @@
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
 import type { BufferUsage, WgslResolvable } from './types';
-import type WigsillRuntime from './wigsillRuntime';
 import { isSamplerType } from './types';
+import type WigsillRuntime from './wigsillRuntime';
 
 export type Program = {
   bindGroupLayout: GPUBindGroupLayout;
