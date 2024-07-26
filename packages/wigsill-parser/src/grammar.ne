@@ -14,7 +14,7 @@ const lexer = moo.compile({
 
   // WGSL spec apparently accepts plenty of Unicode, but lets limit it to just ASCII for now.
   ident_pattern: {
-    match: /[a-z_][a-z_0-9]+/,
+    match: /[a-z_][a-z_0-9]*/,
     type: moo.keywords({
       if: 'if',
       else: 'else',
@@ -25,6 +25,8 @@ const lexer = moo.compile({
     })
   },
   swizzle_name: { match: /[rgba]|[rgba][rgba]|[rgba][rgba][rgba]|[rgba][rgba][rgba][rgba]|[xyzw]|[xyzw][xyzw]|[xyzw][xyzw][xyzw]|[xyzw][xyzw][xyzw][xyzw]/ },
+  shift_left_assign: '<<=',
+  shift_right_assign: '>>=',
   shift_left: '<<',
   shift_right: '>>',
   lt: '<',
@@ -37,6 +39,16 @@ const lexer = moo.compile({
   rbrace: '}',
   lbracket: '[',
   rbracket: ']',
+  plus_eq: '+=',
+  minus_eq: '-=',
+  star_eq: '*=',
+  slash_eq: '/=',
+  percent_eq: '%=',
+  amp_eq: '&=',
+  pipe_eq: '|=',
+  caret_eq: '^=',
+  plus_plus: '++',
+  minus_minus: '--',
   plus: '+',
   minus: '-',
   and: '&&',
@@ -50,9 +62,12 @@ const lexer = moo.compile({
   bang: '!',
   tilde: '~',
   period: '.',
-  semi: ";",
-  comma: ",",
-  at: "@",
+  semi: ';',
+  colon: ':',
+  comma: ',',
+  at: '@',
+  assign: '=',
+  underscore: '_',
 });
 
 // Ignoring whitespace and comments
@@ -89,13 +104,17 @@ translation_unit -> global_decl:* {% ([declarations]) => ({ type: 'translation_u
 @{%
 export type GlobalDecl =
     null
+  | VariableDecl
+  | ValueDecl
+  | OverrideDecl
   | FunctionDecl;
 
 %}
 global_decl ->
     ";" {% () => null %}
-  # | global_variable_decl ";"
-  # | global_value_decl ";"
+  | variable_decl ";" {% id %}
+  | value_decl ";" {% id %}
+  | override_decl ";" {% id %}
   # | type_alias_decl ";"
   # | struct_decl
     | function_decl {% id %}
@@ -104,21 +123,22 @@ global_decl ->
 @{% export type Ident = { type: 'ident', value: string }; %}
 ident -> %ident_pattern {% ([token]) => ({ type: 'ident', value: token.value }) %}
 
-# global_variable_decl -> "if" # TODO
-# global_value_decl -> null # TODO
 # type_alias_decl -> null # TODO
 # struct_decl -> null # TODO
 # const_assert_statement -> null # TODO
 
-type_specifier -> template_elaborated_ident
+#
+# 6.8. Type Specifier Grammar
+# https://www.w3.org/TR/WGSL/#type-specifiers
+#
 
-@{%
-export type TemplateElaboratedIdent = { type: 'template_elaborated_ident', value: string, template_list: TemplateList | null };
+@{% export type TypeSpecifier = TemplateElaboratedIdent; %}
+type_specifier -> template_elaborated_ident {% id %}
 
-%}
+@{% export type TemplateElaboratedIdent = { type: 'template_elaborated_ident', ident: string, template_list: TemplateList | null }; %}
 
 template_elaborated_ident ->
-  ident template_list:? {% ([ident, template_list]) => ({ type: 'template_elaborated_ident', value: ident.value, template_list }) %}
+  ident template_list:? {% ([ident, template_list]) => ({ type: 'template_elaborated_ident', ident: ident.value, template_list }) %}
 
 @{% export type TemplateList = Expression[]; %}
 
@@ -153,16 +173,41 @@ compound_statement -> "{" statement:* "}" {% ([ , statements]) => statements.fil
 export type Statement =
     null
   | ReturnStatement
+  | IfStatement
+  | ForStatement
   | CallStatement
-  | IfStatement;
+  | CompoundStatement;
 
 %}
-# TODO: Add all statements
+
+#
+# 9.7. Statements Grammar Summary
+# https://www.w3.org/TR/WGSL/#statements-summary
+#
+
 statement ->
     ";" {% () => null %}
-  | return_statement ";" {% ([val]) => val %}
-  | call_statement ";" {% ([val]) => val %}
+  | return_statement ";" {% id %}
   | if_statement {% id %}
+# | switch_statement {% id %}
+# | loop_statement {% id %}
+  | for_statement {% id %}
+# | while_statement {% id %}
+  | call_statement ";" {% id %}
+# | func_call_statement ";" {% id %}
+  | variable_or_value_statement ";" {% id %}
+# | break_statement ";" {% id %}
+# | continue_statement ";" {% id %}
+# | "discard" ";" {% id %}
+  | variable_updating_statement ";" {% id %}
+  | compound_statement {% id %}
+# | const_assert_statement ";" {% id %}
+
+@{% export type VariableUpdatingStatement = AssignmentStatement; %}
+variable_updating_statement ->
+    assignment_statement {% id %}
+  | increment_statement {% id %}
+  | decrement_statement {% id %}
 
 @{% export type CallStatement = { type: 'call_statement', ident: TemplateElaboratedIdent, args: Expression[] }; %}
 call_statement -> call_phrase {% ([phrase]) => ({ type: 'call_statement', ident: phrase.ident, args: phrase.args }) %}
@@ -171,10 +216,10 @@ call_statement -> call_phrase {% ([phrase]) => ({ type: 'call_statement', ident:
 swizzle -> %swizzle_name {% ([value]) => ({ type: 'swizzle', value }) %}
 
 @{%
-export type IfStatement = { type: 'if_statement', if_clause: IfClause, else_if_clauses: ElseIfClause[], else_clause: ElseClause | null };
-export type IfClause = { type: 'if_clause', expression: Expression, body: CompoundStatement };
+export type IfStatement =  { type: 'if_statement', if_clause: IfClause, else_if_clauses: ElseIfClause[], else_clause: ElseClause | null };
+export type IfClause =     { type: 'if_clause', expression: Expression, body: CompoundStatement };
 export type ElseIfClause = { type: 'else_if_clause', expression: Expression, body: CompoundStatement };
-export type ElseClause = { type: 'else_clause', body: CompoundStatement };
+export type ElseClause =   { type: 'else_clause', body: CompoundStatement };
 
 %}
 
@@ -186,6 +231,64 @@ if_clause -> "if" expression compound_statement {% ([ , expression, body]) => ({
 else_if_clause -> "else" "if" expression compound_statement {% ([ , , expression, body]) => ({ type: 'else_if_clause', expression, body }) %}
 
 else_clause -> "else" compound_statement {% ([, body]) => ({ type: 'else_clause', body }) %}
+
+@{%
+export type ForStatement = {
+  type: 'for_statement',
+  attrs: Attribute[],
+  init: VariableOrValueStatement | VariableUpdatingStatement | CallStatement | null,
+  check: Expression | null,
+  update: VariableUpdatingStatement | CallStatement | null,
+  body: CompoundStatement,
+};
+
+%}
+
+
+for_statement ->
+  attribute:* "for" "(" for_header ")" compound_statement {% ([attrs, , , header, , body]) => ({ type: 'for_statement', attrs, ...header, body }) %}
+
+for_header ->
+  for_init:? ";" expression:? ";" for_update:? {% ([init, , check, , update]) => ({ init, check, update }) %}
+
+for_init ->
+    variable_or_value_statement {% id %}
+  | variable_updating_statement {% id %}
+  | func_call_statement {% id %}
+
+for_update ->
+    variable_updating_statement {% id %}
+  | func_call_statement {% id %}
+
+#
+# 7.4. Variable and Value Declaration Grammar Summary
+# https://www.w3.org/TR/WGSL/#var-and-value-decl-grammar
+#
+
+@{% export type VariableOrValueStatement = VariableDecl | LetDecl | ValueDecl; %}
+variable_or_value_statement ->
+    variable_decl {% id %}
+  | let_decl {% id %}
+  | value_decl {% id %}
+
+@{% export type LetDecl = { type: 'let_decl', ident: string, typespec: TypeSpecifier, expr: Expression }; %}
+let_decl ->
+  "let" optionally_typed_ident "=" expression {% ([ , typed_ident, , expr]) => ({ type: 'let_decl', ...typed_ident, expr }) %}
+
+@{% export type VariableDecl = { type: 'variable_decl', template_list: TemplateList | null, ident: string, typespec: TypeSpecifier | null, expr: Expression | null }; %}
+variable_decl ->
+  "var" template_list:? optionally_typed_ident ("=" expression):? {% ([ , template_list, typed_ident, opt_expr]) => ({ type: 'variable_decl', template_list: template_list, ...typed_ident, expr: opt_expr ? opt_expr[1] : null }) %}
+
+optionally_typed_ident ->
+  ident (":" type_specifier):? {% ([ident, typespec]) => ({ ident: ident.value, typespec: typespec ? typespec[1] : null }) %}
+
+@{% export type ValueDecl = { type: 'value_decl', ident: string, typespec: TypeSpecifier | null, expr: Expression }; %}
+value_decl ->
+  "const" optionally_typed_ident "=" expression {% ([ , typed_ident, , expr]) => ({ type: 'value_decl', ...typed_ident, expr }) %}
+
+@{% export type OverrideDecl = { type: 'override_decl', attrs: Attribute[], ident: string, typespec: TypeSpecifier | null, expr: Expression | null }; %}
+override_decl ->
+  attribute:* "override" optionally_typed_ident ("=" expression):? {% ([attrs, , typed_ident, opt_expr]) => ({ type: 'override_decl', attrs, ...typed_ident, expr: opt_expr ? opt_expr[1] : null }) %}
 
 #
 # Literals
@@ -216,7 +319,13 @@ bool_literal ->
   | "false" {% () => ({ type: 'bool_literal', value: 'false' }) %}
 
 #
-# Expressions
+# 8. Expressions
+# https://www.w3.org/TR/WGSL/#expressions
+#
+
+#
+# 8.18. Expression Grammar Summary
+# https://www.w3.org/TR/WGSL/#expression-grammar
 #
 
 @{%
@@ -290,6 +399,23 @@ unary_expression ->
   | "~" unary_expression {% ([ , expression]) => ({ type: 'binary_not', expression }) %}
   | "*" unary_expression {% ([ , expression]) => ({ type: 'deref', expression }) %}
   | "&" unary_expression {% ([ , expression]) => ({ type: 'ref', expression }) %}
+
+@{% export type LhsExpression =
+    { type: 'access_expr', expression: CoreLhsExpression, accessor: Accessor | null }
+  | { type: 'deref', expression: LhsExpression }
+  | { type: 'ref', expression: LhsExpression };
+
+%}
+
+lhs_expression ->
+    core_lhs_expression component_or_swizzle_specifier:? {% ([expression, accessor]) => ({ type: 'access_expr', expression, accessor }) %}
+  | "*" lhs_expression {% ([ , expression]) => ({ type: 'deref', expression }) %}
+  | "&" lhs_expression {% ([ , expression]) => ({ type: 'ref', expression }) %}
+
+@{% type CoreLhsExpression = Ident | { type: 'paren_expression', expression: LhsExpression }; %}
+core_lhs_expression ->
+    ident {% id %}
+  | "(" lhs_expression ")" {% ([ , expression]) => ({ type: 'paren_expression', expression }) %}
 
 multiplicative_operator ->
     "*" {% () => 'multiply' %}
@@ -397,3 +523,44 @@ call_phrase ->
 @{% type Attribute = { type: 'attribute', ident: string, args: ArgumentExpressionList }; %}
 attribute ->
   "@" ident argument_expression_list:? {% ([ , ident, args]) => ({ type: 'attribute', ident: ident.value, args: args ?? [] }) %}
+
+#
+# 9.2. Assignment Statement
+# https://www.w3.org/TR/WGSL/#assignment
+#
+
+@{% export type AssignmentStatement = { type: 'assignment_statement', lhs: LhsExpression | '_', op: string, rhs: Expression }; %}
+assignment_statement ->
+  lhs_expression "=" expression                            {% ([lhs, , rhs]) => ({ type: 'assignment_statement', lhs, op: '=', rhs }) %}
+  | lhs_expression compound_assignment_operator expression {% ([lhs, op, rhs]) => ({ type: 'assignment_statement', lhs, op: op.value, rhs }) %}
+  | "_" "=" expression                                     {% ([ , , rhs]) => ({ type: 'assignment_statement', lhs: '_', op: '=', rhs }) %}
+
+#
+# 9.2.3. Compound Assignment
+# https://www.w3.org/TR/WGSL/#compound-assignment-sec
+#
+
+compound_assignment_operator ->
+    "+=" {% id %}
+  | "-=" {% id %}
+  | "*=" {% id %}
+  | "/=" {% id %}
+  | "%=" {% id %}
+  | "&=" {% id %}
+  | "|=" {% id %}
+  | "^=" {% id %}
+  | ">>=" {% id %}
+  | "<<=" {% id %}
+
+#
+# 9.3. Increment and Decrement Statements
+# https://www.w3.org/TR/WGSL/#increment-decrement
+#
+
+@{% export type IncrementStatement = { type: 'increment_statement', expression: LhsExpression }; %}
+increment_statement ->
+  lhs_expression "++" {% ([expression]) => ({ type: 'increment_statement', expression }) %}
+
+@{% export type DecrementStatement = { type: 'decrement_statement', expression: LhsExpression }; %}
+decrement_statement ->
+  lhs_expression "--" {% ([expression]) => ({ type: 'decrement_statement', expression }) %}

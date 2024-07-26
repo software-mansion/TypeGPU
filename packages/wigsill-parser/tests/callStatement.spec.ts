@@ -8,7 +8,7 @@ describe('call_statement', () => {
       type: 'call_statement',
       ident: {
         type: 'template_elaborated_ident',
-        value: 'perform',
+        ident: 'perform',
         template_list: null,
       },
       args: [],
@@ -22,7 +22,7 @@ describe('call_statement', () => {
       type: 'call_statement',
       ident: {
         type: 'template_elaborated_ident',
-        value: 'perform',
+        ident: 'perform',
         template_list: null,
       },
       args: [
@@ -41,7 +41,7 @@ describe('call_statement', () => {
       type: 'call_statement',
       ident: {
         type: 'template_elaborated_ident',
-        value: 'perform',
+        ident: 'perform',
         template_list: null,
       },
       args: [

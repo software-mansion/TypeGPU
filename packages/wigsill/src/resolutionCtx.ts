@@ -2,6 +2,7 @@ import { MissingSlotValueError } from './errors';
 import type { NameRegistry } from './nameRegistry';
 import {
   type BufferUsage,
+  type Eventual,
   type ResolutionCtx,
   type SlotValuePair,
   type Wgsl,
@@ -9,6 +10,7 @@ import {
   type WgslResolvable,
   type WgslSlot,
   isResolvable,
+  isSlot,
 } from './types';
 import { code } from './wgslCode';
 import type { WgslIdentifier } from './wgslIdentifier';
@@ -56,7 +58,7 @@ class SharedResolutionState {
    * with the `compute` method.
    * @param compute Returns the resolved item and the corresponding bindingMap. This result will be discarded if a sufficient cache entry is found.
    */
-  getOrInstantiate(item: WgslResolvable, itemCtx: ResolutionCtx): string {
+  getOrInstantiate(item: WgslResolvable, itemCtx: ScopedResolutionCtx): string {
     // All memoized versions of `item`
     const instances = this._memoizedResolves.get(item) ?? [];
 
@@ -131,6 +133,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return slot.defaultValue;
   }
 
+  unwrap<T>(eventual: Eventual<T>): T {
+    throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
+  }
+
   resolve(item: Wgsl, slotValueOverrides: SlotValuePair<unknown>[] = []) {
     if (!isResolvable(item)) {
       return String(item);
@@ -141,6 +147,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       this._shared,
       slotValueOverrides,
     );
+
     const result = this._shared.getOrInstantiate(item, itemCtx);
 
     return `${[...this._shared.declarations].join('\n\n')}${result}`;
@@ -189,7 +196,21 @@ class ScopedResolutionCtx implements ResolutionCtx {
     return slotToValuePair[1];
   }
 
-  resolve(item: Wgsl, slotValueOverrides: SlotValuePair<unknown>[] = []) {
+  unwrap<T>(eventual: Eventual<T>): T {
+    let maybeSlot = eventual;
+
+    // Unwrapping all layers of slots.
+    while (isSlot(maybeSlot)) {
+      maybeSlot = this.readSlot(maybeSlot);
+    }
+
+    return maybeSlot;
+  }
+
+  resolve(
+    item: Wgsl,
+    slotValueOverrides: SlotValuePair<unknown>[] = [],
+  ): string {
     if (!isResolvable(item)) {
       return String(item);
     }
@@ -199,6 +220,7 @@ class ScopedResolutionCtx implements ResolutionCtx {
       this._shared,
       slotValueOverrides,
     );
+
     return this._shared.getOrInstantiate(item, itemCtx);
   }
 }
