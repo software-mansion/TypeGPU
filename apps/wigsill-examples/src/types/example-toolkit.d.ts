@@ -39,20 +39,11 @@ declare module '@wigsill/example-toolkit' {
 
   export type ElementType = keyof ElementOptions;
 
-  type Merge<A, B> = {
-    [K in keyof A]: K extends keyof B ? B[K] : A[K];
-  } & B extends infer O
-    ? { [K in keyof O]: O[K] }
-    : never;
-
   type ElementDefs = {
-    [K in ElementType]: Merge<
-      ElementOptions[K],
-      {
-        type: K;
-        key: string;
-      }
-    >;
+    [K in ElementType]: ElementOptions[K] & {
+      type: K;
+      key: string;
+    };
   };
 
   export type ElementDef = ElementDefs[ElementType];
@@ -63,7 +54,7 @@ declare module '@wigsill/example-toolkit' {
 
   export type AddElement = <T extends 'canvas' | 'video' | 'table' | 'button'>(
     type: T,
-    options?: ElementOptions<T>,
+    options?: ElementOptions[T],
   ) => Promise<ElementResults[T]>;
 
   export const addElement: AddElement;
