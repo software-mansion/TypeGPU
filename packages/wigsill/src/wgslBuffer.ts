@@ -1,4 +1,5 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
+import { roundUp } from './mathUtils';
 import type { AnyWgslData } from './std140/types';
 import type { BufferUsage, WgslAllocatable } from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
@@ -82,15 +83,10 @@ class WgslBufferImpl<
   write(runtime: WigsillRuntime, data: Parsed<TData>): void {
     const gpuBuffer = runtime.bufferFor(this);
 
-    const hostBuffer = new ArrayBuffer(this.dataType.size);
+    const size = roundUp(this.dataType.size, this.dataType.byteAlignment);
+    const hostBuffer = new ArrayBuffer(size);
     this.dataType.write(new BufferWriter(hostBuffer), data);
-    runtime.device.queue.writeBuffer(
-      gpuBuffer,
-      0,
-      hostBuffer,
-      0,
-      this.dataType.size,
-    );
+    runtime.device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
   }
 
   async read(runtime: WigsillRuntime): Promise<Parsed<TData>> {
