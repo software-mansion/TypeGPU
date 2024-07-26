@@ -1,13 +1,16 @@
 /*
 {
-  "title": "Fluid Simulation",
+  "title": "Fluid (with atomics)",
   "category": "simulation"
 }
 */
-/* global GPUShaderStage, GPUBufferUsage, GPUMapMode */
 
+// -- Hooks into the example environment
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
-import { ProgramBuilder, arrayOf, atomic, u32, vec2u, wgsl } from 'wigsill';
+// --
+
+import wgsl, { ProgramBuilder } from 'wigsill';
+import { arrayOf, atomic, u32, vec2u } from 'wigsill/data';
 import { createRuntime } from 'wigsill/web';
 
 const runtime = await createRuntime();
@@ -370,12 +373,12 @@ let renderChanges: () => void;
 function resetGameData() {
   drawCanvasData = new Uint32Array(options.size * options.size);
 
-  runtime.write(
+  runtime.writeBuffer(
     currentStateBuffer,
     Array.from({ length: 1024 ** 2 }, () => 0),
   );
 
-  runtime.write(
+  runtime.writeBuffer(
     nextStateBuffer,
     Array.from({ length: 1024 ** 2 }, () => 0),
   );
@@ -392,7 +395,7 @@ function resetGameData() {
     },
   });
 
-  runtime.write(sizeBuffer, [options.size, options.size]);
+  runtime.writeBuffer(sizeBuffer, [options.size, options.size]);
 
   const length = options.size * options.size;
   const cells = new Uint32Array(length);
@@ -419,7 +422,7 @@ function resetGameData() {
   });
 
   render = () => {
-    runtime.write(debugInfoBuffer, 0);
+    runtime.writeBuffer(debugInfoBuffer, 0);
     const view = context.getCurrentTexture().createView();
     const renderPass: GPURenderPassDescriptor = {
       colorAttachments: [
@@ -655,7 +658,7 @@ addParameter(
   { initial: 1000, min: 10, max: 1000, step: 1 },
   (value) => {
     options.viscosity = value;
-    runtime.write(viscosityBuffer, value);
+    runtime.writeBuffer(viscosityBuffer, value);
   },
 );
 

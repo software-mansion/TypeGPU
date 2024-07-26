@@ -5,7 +5,12 @@
 }
 */
 
-import { f32, wgsl } from 'wigsill';
+// -- Hooks into the example environment
+import { addElement } from '@wigsill/example-toolkit';
+// --
+
+import wgsl from 'wigsill';
+import { f32 } from 'wigsill/data';
 import { createRuntime } from 'wigsill/web';
 
 const countBuffer = wgsl.buffer(f32).$allowMutableStorage();
@@ -23,7 +28,10 @@ const pipeline = runtime.makeComputePipeline({
 async function increment() {
   pipeline.execute([1, 1]);
   runtime.flush();
-  console.log(await runtime.read(countBuffer));
+  console.log(await runtime.readBuffer(countBuffer));
 }
 
-increment();
+addElement('button', {
+  label: 'Increment',
+  onClick: increment,
+});

@@ -5,8 +5,12 @@
 }
 */
 
+// -- Hooks into the example environment
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
-import { arrayOf, bool, f32, struct, u32, vec3f, vec4f, wgsl } from 'wigsill';
+// --
+
+import wgsl from 'wigsill';
+import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'wigsill/data';
 import { createRuntime } from 'wigsill/web';
 
 const runtime = await createRuntime();
@@ -234,7 +238,7 @@ const renderPipeline = runtime.makeRenderPipeline({
   },
 });
 
-runtime.write(
+runtime.writeBuffer(
   voxelMatrixBuffer,
   Array.from({ length: X }, (_, i) =>
     Array.from({ length: Y }, (_, j) =>
@@ -277,19 +281,19 @@ onFrame((deltaTime) => {
     Math.sin(frame) * cameraDist + boxCenter[2],
   ];
 
-  runtime.write(cameraPositionBuffer, cameraPosition);
+  runtime.writeBuffer(cameraPositionBuffer, cameraPosition);
 
   const forwardAxis = normalize(
     cameraPosition.map((value, i) => boxCenter[i] - value) as Vector,
   );
 
-  runtime.write(cameraAxesBuffer, {
+  runtime.writeBuffer(cameraAxesBuffer, {
     forward: forwardAxis,
     up: upAxis,
     right: crossProduct(upAxis, forwardAxis) as Vector,
   });
 
-  runtime.write(canvasDimsBuffer, {
+  runtime.writeBuffer(canvasDimsBuffer, {
     width: canvas.width,
     height: canvas.height,
   });

@@ -1,17 +1,40 @@
-import type StructDataType from './std140/struct';
-import type { AnyWgslData } from './std140/types';
+import type { Parsed } from 'typed-binary';
+import type { WgslStruct } from './data';
+import type { AnyWgslData } from './types';
 import type { Wgsl, WgslAllocatable } from './types';
 import type { WgslCode } from './wgslCode';
+import type { WgslPlum, WgslSettable } from './wgslPlum';
 
 // ----------
 // Public API
 // ----------
 
+type Unsubscribe = () => void;
+
 export interface WigsillRuntime {
   readonly device: GPUDevice;
 
+  readPlum<TValue>(plum: WgslPlum<TValue>): TValue;
+
+  setPlum<TValue>(plum: WgslPlum<TValue> & WgslSettable, value: TValue): void;
+
+  onPlumChange<TValue>(
+    plum: WgslPlum<TValue>,
+    listener: () => unknown,
+  ): Unsubscribe;
+
+  writeBuffer<TValue extends AnyWgslData>(
+    allocatable: WgslAllocatable<TValue>,
+    data: Parsed<TValue>,
+  ): void;
+
+  readBuffer<TData extends AnyWgslData>(
+    allocatable: WgslAllocatable<TData>,
+  ): Promise<Parsed<TData>>;
+
   bufferFor(allocatable: WgslAllocatable): GPUBuffer;
   dispose(): void;
+  flush(): void;
 
   makeRenderPipeline(options: RenderPipelineOptions): RenderPipelineExecutor;
   makeComputePipeline(options: ComputePipelineOptions): ComputePipelineExecutor;
@@ -21,7 +44,7 @@ export interface RenderPipelineOptions {
   vertex: {
     args: Wgsl[];
     code: WgslCode;
-    output: StructDataType<Record<string, AnyWgslData>>;
+    output: WgslStruct<Record<string, AnyWgslData>>;
     buffersLayouts?: Iterable<GPUVertexBufferLayout | null>;
   };
   fragment: {

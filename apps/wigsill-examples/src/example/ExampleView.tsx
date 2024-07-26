@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'remeda';
 import { CodeEditor } from '../CodeEditor';
+import { Button } from '../common/Button';
 import { Canvas } from '../common/Canvas';
 import { Table } from '../common/Table';
 import { Video } from '../common/Video';
@@ -88,6 +89,7 @@ export function ExampleView({ example, codeEditorShowing }: Props) {
                 ref={(canvas) => setRef(element.key, canvas)}
                 width={element.width}
                 height={element.height}
+                aspectRatio={element.aspectRatio}
               />
             );
           }
@@ -109,6 +111,17 @@ export function ExampleView({ example, codeEditorShowing }: Props) {
                 key={element.key}
                 ref={(table) => setRef(element.key, table)}
                 label={element.label}
+              />
+            );
+          }
+
+          if (element.type === 'button') {
+            return (
+              <Button
+                key={element.key}
+                ref={(button) => setRef(element.key, button)}
+                label={element.label}
+                onClick={element.onClick}
               />
             );
           }

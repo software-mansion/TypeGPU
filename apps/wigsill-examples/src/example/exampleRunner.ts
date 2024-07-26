@@ -159,6 +159,15 @@ export async function executeExample(
       if (moduleKey === 'wigsill') {
         return await import('wigsill');
       }
+      if (moduleKey === 'wigsill/data') {
+        return await import('wigsill/data');
+      }
+      if (moduleKey === 'wigsill/macro') {
+        return await import('wigsill/macro');
+      }
+      if (moduleKey === 'wigsill/web') {
+        return await import('wigsill/web');
+      }
       if (moduleKey === '@wigsill/example-toolkit') {
         return {
           onCleanup(callback: () => unknown) {

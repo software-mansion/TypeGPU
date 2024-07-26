@@ -1,15 +1,15 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import { roundUp } from '../mathUtils';
 import ProgramBuilder, { type Program } from '../programBuilder';
-import type { AnyWgslData } from '../std140/types';
 import { TaskQueue } from '../taskQueue';
-import type { WgslAllocatable } from '../types';
+import type { AnyWgslData, WgslAllocatable } from '../types';
 import { code } from '../wgslCode';
 import { PlumStore, type WgslPlum, type WgslSettable } from '../wgslPlum';
 import type {
   ComputePipelineOptions,
   RenderPipelineExecutorOptions,
   RenderPipelineOptions,
+  WigsillRuntime,
 } from '../wigsillRuntime';
 
 type Unsubscribe = () => void;
@@ -61,7 +61,7 @@ class WebWigsillRuntime {
     return buffer;
   }
 
-  async read<TData extends AnyWgslData>(
+  async readBuffer<TData extends AnyWgslData>(
     allocatable: WgslAllocatable<TData>,
   ): Promise<Parsed<TData>> {
     return this._taskQueue.enqueue(async () => {
@@ -106,7 +106,7 @@ class WebWigsillRuntime {
     });
   }
 
-  write<TValue extends AnyWgslData>(
+  writeBuffer<TValue extends AnyWgslData>(
     allocatable: WgslAllocatable<TValue>,
     data: Parsed<TValue>,
   ) {
@@ -359,7 +359,7 @@ export async function createRuntime(
         device: GPUDeviceDescriptor | undefined;
       }
     | GPUDevice,
-) {
+): Promise<WigsillRuntime> {
   let adapter: GPUAdapter | null = null;
   let device: GPUDevice | null = null;
 
