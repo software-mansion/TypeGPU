@@ -14,6 +14,7 @@ import {
 import {
   type AnyWgslData,
   type Parsed,
+  type Wgsl,
   type WgslBindable,
   type WgslBuffer,
   arrayOf,
@@ -77,6 +78,12 @@ const rand01 = wgsl.fn('rand01')`() -> f32 {
 }`;
 
 type GridData = typeof GridData;
+/**
+ * x - velocity.x
+ * y - velocity.y
+ * z - density
+ * w - solidity (0 - void, 1 - wall) -- not used in the example
+ */
 const GridData = arrayOf(vec4f, MAX_GRID_SIZE ** 2);
 
 type BoxObstacle = typeof BoxObstacle;
@@ -131,24 +138,26 @@ const isValidCoord = wgsl.fn()`(x: i32, y: i32) -> bool {
     y >= 0;
 }`;
 
+const coordsToIndex = (x: Wgsl, y: Wgsl) => wgsl`${x} + ${y} * ${gridSizeData}`;
+
 const getCell = wgsl.fn()`(x: i32, y: i32) -> vec4f {
-  let index = x + y * ${gridSizeData};
+  let index = ${coordsToIndex('x', 'y')};
   return ${inputGridSlot}[index];
 }`.$name('get_cell');
 
 const setCell = wgsl.fn()`(x: i32, y: i32, value: vec4f) {
-  let index = x + y * ${gridSizeData};
+  let index = ${coordsToIndex('x', 'y')};
   ${outputGridSlot}[index] = value;
 }`.$name('set_cell');
 
 const setVelocity = wgsl.fn()`(x: i32, y: i32, velocity: vec2f) {
-  let index = x + y * ${gridSizeData};
+  let index = ${coordsToIndex('x', 'y')};
   ${outputGridSlot}[index].x = velocity.x;
   ${outputGridSlot}[index].y = velocity.y;
 }`.$name('set_velocity');
 
 const addDensity = wgsl.fn()`(x: i32, y: i32, density: f32) {
-  let index = x + y * ${gridSizeData};
+  let index = ${coordsToIndex('x', 'y')};
   ${outputGridSlot}[index].z = ${inputGridSlot}[index].z + density;
 }`.$name('add_density');
 
@@ -282,12 +291,9 @@ const computeVelocity = wgsl.fn()`(x: i32, y: i32) -> vec2f {
 }`;
 
 const mainInitWorld = wgsl.fn()`(x: i32, y: i32) {
-  let index = x + y * ${gridSizeData};
+  let index = ${coordsToIndex('x', 'y')};
   
-  var value = vec4f(0., 0., 0., 0.);
-
-  let center = vec2f(f32(${gridSizeData}), f32(${gridSizeData})) / 2.;
-  let topCenter = vec2f(f32(${gridSizeData}) / 2., f32(${gridSizeData}));
+  var value = vec4f();
 
   if (!${isValidFlowOut}(x, y)) {
     value = vec4f(0., 0., 0., 0.);
@@ -298,11 +304,6 @@ const mainInitWorld = wgsl.fn()`(x: i32, y: i32) {
       let depth = 1. - f32(y) / (f32(${gridSizeData}) / 2.);
       value = vec4f(0., 0., 10. + depth * 10., 0.);
     }
-
-    // Ball
-    // if (length(vec2f(f32(x), f32(y)) - center) < f32(${gridSizeData}) / 4.) {
-    //   value = vec4f(0., 0., 1., 0.);
-    // }
   }
 
   ${outputGridSlot}[index] = value;
@@ -401,7 +402,6 @@ const mainMoveObstacles = wgsl.fn()`() {
     // right column
     for (var y = max(1, next_min_y); y <= min(next_max_y, ${gridSizeData} - 2); y += 1) {
       let new_vel = ${computeVelocity}(next_max_x + 2, y);
-      // let new_vel = vec2f(0, 1.);
       ${setVelocity}(next_max_x + 2, y, new_vel);
     }
   }
@@ -428,7 +428,7 @@ const getMinimumInFlow = wgsl.fn()`(x: i32, y: i32) -> f32 {
 }`;
 
 const mainCompute = wgsl.fn()`(x: i32, y: i32) {
-  let index = x + y * ${gridSizeData};
+  let index = ${coordsToIndex('x', 'y')};
 
   ${setupRandomSeed}(vec2f(f32(index), ${timeData}));
 
@@ -453,7 +453,7 @@ const mainCompute = wgsl.fn()`(x: i32, y: i32) {
 }`.$name('main_compute');
 
 const mainFragment = wgsl.fn()`(x: i32, y: i32) -> vec4f {
-  let index = x + y * ${gridSizeData};
+  let index = ${coordsToIndex('x', 'y')};
   let cell = ${inputGridSlot}[index];
   let velocity = cell.xy;
   let density = max(0., cell.z);
@@ -511,10 +511,10 @@ const obstacles: {
 function obstaclesToConcrete(): Parsed<BoxObstacle>[] {
   return obstacles.map(({ x, y, width, height, enabled }) => ({
     center: [Math.round(x * gridSize), Math.round(y * gridSize)],
-    size: [
-      Math.round(width * gridSize),
-      Math.round(height * gridSize),
-    ] as const,
+    size: [Math.round(width * gridSize), Math.round(height * gridSize)] as [
+      number,
+      number,
+    ],
     enabled: enabled ? 1 : 0,
   }));
 }
@@ -679,7 +679,6 @@ const even = makePipelines(gridAlphaBuffer, gridBetaBuffer);
 const odd = makePipelines(gridBetaBuffer, gridAlphaBuffer);
 
 let primary = even;
-const paused = false;
 
 gridSizeBuffer.write(runtime, gridSize);
 obstaclesBuffer.write(runtime, obstaclesToConcrete());
@@ -693,24 +692,20 @@ const stepsPerTick = 64;
 function tick() {
   timeBuffer.write(runtime, Date.now() % 1000);
 
-  if (!paused) {
-    primary.compute();
-    runtime.flush();
-    primary = primary === even ? odd : even;
-  }
+  primary.compute();
+  runtime.flush();
+  primary = primary === even ? odd : even;
 }
 
 onFrame((deltaTime) => {
   msSinceLastTick += deltaTime;
 
   if (msSinceLastTick >= timestep) {
-    if (!paused) {
-      for (let i = 0; i < stepsPerTick; ++i) {
-        tick();
-      }
-      primary.render();
-      runtime.flush();
+    for (let i = 0; i < stepsPerTick; ++i) {
+      tick();
     }
+    primary.render();
+    runtime.flush();
     msSinceLastTick -= timestep;
   }
 });
