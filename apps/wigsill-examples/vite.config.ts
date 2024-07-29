@@ -1,21 +1,36 @@
 import { readFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import react from '@vitejs/plugin-react-swc';
+import { mapValues, values } from 'remeda';
 import { type ModuleNode, type PluginOption, defineConfig } from 'vite';
 
-function wigsillTypesImportPlugin(): PluginOption {
-  const wigsillEntryPath = new URL(import.meta.resolve('wigsill')).pathname;
-  const wigsillDistPath = path.dirname(wigsillEntryPath);
-  const wigsillTypeDeclPath = path.join(wigsillDistPath, 'index.d.ts');
+type RawTypesEntry = {
+  moduleName: string;
+  relativePath: string;
+};
 
-  const virtualModuleId = 'wigsill/dist/index.d.ts?raw';
-  const resolvedVirtualModuleId = '\0wigsill-types';
+function importRawRedirectPlugin(
+  moduleMap: Record<string, RawTypesEntry>,
+): PluginOption {
+  const resolvedMap = mapValues(moduleMap, (entry, virtualModuleId) => {
+    const resolvedVirtualModuleId = `\0${virtualModuleId}`;
+
+    const moduleEntryPath = new URL(import.meta.resolve(entry.moduleName))
+      .pathname;
+    const moduleDistPath = path.dirname(moduleEntryPath);
+    const redirectedPath = path.join(moduleDistPath, entry.relativePath);
+
+    return {
+      resolvedVirtualModuleId,
+      redirectedPath,
+    };
+  });
 
   return {
-    name: 'wigsill-types-import',
+    name: 'import-raw-types',
 
     /**
-     * If there is any change in `wigsill` code, reload the whole page.
+     * If there is any change in those type declarations, reload the whole page.
      */
     handleHotUpdate(ctx) {
       if (!ctx.file.includes('/wigsill/dist')) {
@@ -38,22 +53,28 @@ function wigsillTypesImportPlugin(): PluginOption {
     },
 
     resolveId(id) {
-      if (id === virtualModuleId) {
-        this.addWatchFile(wigsillTypeDeclPath);
-        return resolvedVirtualModuleId;
+      const resolved = resolvedMap[id];
+
+      if (resolved) {
+        this.addWatchFile(resolved.redirectedPath);
+        return resolved.resolvedVirtualModuleId;
       }
     },
 
     async load(id) {
-      if (id !== resolvedVirtualModuleId) {
+      const resolved = values(resolvedMap).find(
+        (entry) => entry.resolvedVirtualModuleId === id,
+      );
+
+      if (!resolved) {
         return;
       }
 
-      this.addWatchFile(wigsillTypeDeclPath);
-      const dts = await readFile(wigsillTypeDeclPath, 'utf-8');
+      this.addWatchFile(resolved.redirectedPath);
+      const rawFileContents = await readFile(resolved.redirectedPath, 'utf-8');
 
       return `
-const content = ${JSON.stringify(dts)
+const content = ${JSON.stringify(rawFileContents)
         .replace(/\u2028/g, '\\u2028')
         .replace(/\u2029/g, '\\u2029')};
 
@@ -65,5 +86,25 @@ export default content;
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), wigsillTypesImportPlugin()],
+  plugins: [
+    react(),
+    importRawRedirectPlugin({
+      'wigsill/dist/index.d.ts?raw': {
+        moduleName: 'wigsill',
+        relativePath: 'index.d.ts',
+      },
+      'wigsill/dist/data/index.d.ts?raw': {
+        moduleName: 'wigsill',
+        relativePath: 'data/index.d.ts',
+      },
+      'wigsill/dist/macro/index.d.ts?raw': {
+        moduleName: 'wigsill',
+        relativePath: 'macro/index.d.ts',
+      },
+      'wigsill/dist/web/index.d.ts?raw': {
+        moduleName: 'wigsill',
+        relativePath: 'web/index.d.ts',
+      },
+    }),
+  ],
 });

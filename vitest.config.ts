@@ -29,6 +29,18 @@ function nearleyRedirectPlugin(): PluginOption {
 export default defineConfig({
   resolve: {
     alias: [
+      {
+        find: /^wigsill\/data$/,
+        replacement: './packages/wigsill/src/data/index.ts',
+      },
+      {
+        find: /^wigsill\/macro$/,
+        replacement: './packages/wigsill/src/macro/index.ts',
+      },
+      {
+        find: /^wigsill\/web$/,
+        replacement: './packages/wigsill/src/web/index.ts',
+      },
       { find: /^wigsill$/, replacement: './packages/wigsill/src/index.ts' },
       { find: /^wigsill(.*)$/, replacement: './packages/wigsill/src/$1.ts' },
     ],

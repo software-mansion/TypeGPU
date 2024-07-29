@@ -5,20 +5,24 @@
 }
 */
 
+// -- Hooks into the example environment
 import {
   addElement,
   addParameter,
   onCleanup,
   onFrame,
 } from '@wigsill/example-toolkit';
-import {
+// --
+
+import wgsl, {
   type AnyWgslData,
-  type Parsed,
   type Wgsl,
   type WgslBindable,
   type WgslBuffer,
+} from 'wigsill';
+import {
+  type Parsed,
   arrayOf,
-  createRuntime,
   f32,
   i32,
   struct,
@@ -26,8 +30,8 @@ import {
   vec2f,
   vec2u,
   vec4f,
-  wgsl,
-} from 'wigsill';
+} from 'wigsill/data';
+import { createRuntime } from 'wigsill/web';
 
 // type ReadableBuffer<T extends AnyWgslData> =
 //   | WgslBuffer<T, 'readonly_storage'>
@@ -630,11 +634,11 @@ function makePipelines(
   });
 
   const applyMovedObstacles = (bufferData: Parsed<BoxObstacle>[]) => {
-    obstaclesBuffer.write(runtime, bufferData);
+    runtime.writeBuffer(obstaclesBuffer, bufferData);
     moveObstaclesPipeline.execute([1, 1]);
     runtime.flush();
 
-    prevObstaclesBuffer.write(runtime, bufferData);
+    runtime.writeBuffer(prevObstaclesBuffer, bufferData);
     runtime.flush();
   };
 
@@ -680,9 +684,9 @@ const odd = makePipelines(gridBetaBuffer, gridAlphaBuffer);
 
 let primary = even;
 
-gridSizeBuffer.write(runtime, gridSize);
-obstaclesBuffer.write(runtime, obstaclesToConcrete());
-prevObstaclesBuffer.write(runtime, obstaclesToConcrete());
+runtime.writeBuffer(gridSizeBuffer, gridSize);
+runtime.writeBuffer(obstaclesBuffer, obstaclesToConcrete());
+runtime.writeBuffer(prevObstaclesBuffer, obstaclesToConcrete());
 primary.init();
 
 let msSinceLastTick = 0;
@@ -690,7 +694,7 @@ const timestep = 15;
 const stepsPerTick = 64;
 
 function tick() {
-  timeBuffer.write(runtime, Date.now() % 1000);
+  runtime.writeBuffer(timeBuffer, Date.now() % 1000);
 
   primary.compute();
   runtime.flush();
@@ -745,7 +749,7 @@ addParameter(
   { initial: 0.1, min: 0, max: 1, step: 0.01 },
   (intensity) => {
     sourceParams.intensity = intensity;
-    sourceParamsBuffer.write(runtime, sourceParams);
+    runtime.writeBuffer(sourceParamsBuffer, sourceParams);
   },
 );
 
@@ -754,7 +758,7 @@ addParameter(
   { initial: 0.01, min: 0.01, max: 0.1, step: 0.01 },
   (radius) => {
     sourceParams.radius = radius;
-    sourceParamsBuffer.write(runtime, sourceParams);
+    runtime.writeBuffer(sourceParamsBuffer, sourceParams);
   },
 );
 

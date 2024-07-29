@@ -20,6 +20,24 @@
       "module": "./dist/*.js",
       "import": "./dist/*.js",
       "default": "./dist/*.cjs"
+    },
+    "./data": {
+      "types": "./dist/data/index.d.ts",
+      "module": "./dist/data/index.js",
+      "import": "./dist/data/index.js",
+      "default": "./dist/data/index.cjs"
+    },
+    "./macro": {
+      "types": "./dist/macro/index.d.ts",
+      "module": "./dist/macro/index.js",
+      "import": "./dist/macro/index.js",
+      "default": "./dist/macro/index.cjs"
+    },
+    "./web": {
+      "types": "./dist/web/index.d.ts",
+      "module": "./dist/web/index.js",
+      "import": "./dist/web/index.js",
+      "default": "./dist/web/index.cjs"
     }
   },
   "files": ["dist"],
