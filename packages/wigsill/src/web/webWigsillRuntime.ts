@@ -13,7 +13,7 @@ import type {
   WigsillRuntime,
 } from '../wigsillRuntime';
 
-type Unsubscribe = () => void;
+type Unsubscribe = () => unknown;
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
@@ -386,38 +386,55 @@ class ComputePipelineExecutor extends PipelineExecutor<GPUComputePipeline> {
   }
 }
 
+/**
+ * Options passed into {@link createRuntime}.
+ */
+export type CreateRuntimeOptions = {
+  adapter: GPURequestAdapterOptions | undefined;
+  device: GPUDeviceDescriptor | undefined;
+};
+
+/**
+ * @param options
+ * @returns
+ *
+ * @example
+ * When given no options, the function will ask the browser for a suitable GPU device.
+ * ```ts
+ * createRuntime();
+ * ```
+ *
+ * @example
+ * If there are specific options that should be used when requesting a device, you can pass those in.
+ * ```ts
+ * const adapterOptions: GPURequestAdapterOptions = ...;
+ * const deviceDescriptor: GPUDeviceDescriptor = ...;
+ * createRuntime({ adapter: adapterOptions, device: deviceDescriptor });
+ * ```
+ *
+ * @example
+ * If a specific device should be used instead, it can be passed in as a parameter.
+ * ```ts
+ * const device: GPUDevice = ...;
+ * createRuntime(device);
+ * ```
+ */
 export async function createRuntime(
-  options?:
-    | {
-        adapter: GPURequestAdapterOptions | undefined;
-        device: GPUDeviceDescriptor | undefined;
-      }
-    | GPUDevice,
+  options?: CreateRuntimeOptions | GPUDevice,
 ): Promise<WigsillRuntime> {
-  let adapter: GPUAdapter | null = null;
-  let device: GPUDevice | null = null;
+  if (options instanceof GPUDevice) {
+    return new WebWigsillRuntime(options);
+  }
 
   if (!navigator.gpu) {
     throw new Error('WebGPU is not supported by this browser.');
   }
 
-  if (!options) {
-    adapter = await navigator.gpu.requestAdapter();
-    if (!adapter) {
-      throw new Error('Could not find a compatible GPU');
-    }
-    device = await adapter.requestDevice();
-    return new WebWigsillRuntime(device);
-  }
+  const adapter = await navigator.gpu.requestAdapter(options?.adapter);
 
-  if (options instanceof GPUDevice) {
-    return new WebWigsillRuntime(options);
-  }
-
-  adapter = await navigator.gpu.requestAdapter(options.adapter);
   if (!adapter) {
     throw new Error('Could not find a compatible GPU');
   }
-  device = await adapter.requestDevice(options.device);
-  return new WebWigsillRuntime(device);
+
+  return new WebWigsillRuntime(await adapter.requestDevice(options?.device));
 }

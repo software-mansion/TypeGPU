@@ -1,3 +1,7 @@
+/**
+ * @module wigsill
+ */
+
 export * from './errors';
 export * from './types';
 export { AsCallable, ICallable } from './callable';
@@ -16,6 +20,5 @@ export type { WgslBuffer } from './wgslBuffer';
 export type { WgslCode } from './wgslCode';
 export type { WgslConst } from './wgslConstant';
 export type { WgslFn } from './wgslFunction';
-export type { WgslFn as WgslFnExperimental } from './wgslFunction';
 export type { WgslPlum, WgslSettable } from './wgslPlum';
 export type { WgslVar } from './wgslVariable';
