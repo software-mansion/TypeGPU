@@ -158,7 +158,11 @@ export class PlumStore {
       };
       // subscribing to dependencies
       for (const [dep] of state.dependencies) {
-        unsubs.add(this.subscribe(dep, () => {}));
+        unsubs.add(
+          this.subscribe(dep, () => {
+            this._recompute(plum);
+          }),
+        );
       }
     }
 

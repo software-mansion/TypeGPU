@@ -87,40 +87,40 @@ describe('PlumStore', () => {
     expect(compute).toBeCalledTimes(2);
   });
 
-  // it('should notify subscriber when source plum changes', () => {
-  //   const store = new PlumStore();
-  //   const fooPlum = plum<number>(10).$name('foo');
+  it('should notify subscriber when source plum changes', () => {
+    const store = new PlumStore();
+    const fooPlum = plum<number>(10).$name('foo');
 
-  //   const listener = vi.fn(() => {});
-  //   const unsubscribe = store.subscribe(fooPlum, listener);
+    const listener = vi.fn(() => {});
+    const unsubscribe = store.subscribe(fooPlum, listener);
 
-  //   expect(listener).not.toBeCalled();
+    expect(listener).not.toBeCalled();
 
-  //   store.set(fooPlum, 20);
+    store.set(fooPlum, 20);
 
-  //   expect(listener).toBeCalledTimes(1);
+    expect(listener).toBeCalledTimes(1);
 
-  //   expect(store.get(fooPlum)).toEqual(20);
+    expect(store.get(fooPlum)).toEqual(20);
 
-  //   unsubscribe();
-  // });
+    unsubscribe();
+  });
 
-  // it('should notify subscriber when computed plum changes', () => {
-  //   const store = new PlumStore();
-  //   const fooPlum = plum<number>(10).$name('foo');
-  //   const doubledPlum = plum((get) => get(fooPlum) * 2).$name('doubled');
+  it('should notify subscriber when computed plum changes', () => {
+    const store = new PlumStore();
+    const fooPlum = plum<number>(10).$name('foo');
+    const doubledPlum = plum((get) => get(fooPlum) * 2).$name('doubled');
 
-  //   const listener = vi.fn(() => {});
-  //   const unsubscribe = store.subscribe(doubledPlum, listener);
+    const listener = vi.fn(() => {});
+    const unsubscribe = store.subscribe(doubledPlum, listener);
 
-  //   expect(listener).not.toBeCalled();
+    expect(listener).not.toBeCalled();
 
-  //   store.set(fooPlum, 20);
+    store.set(fooPlum, 20);
 
-  //   expect(listener).toBeCalledTimes(1);
+    expect(listener).toBeCalledTimes(1);
 
-  //   expect(store.get(doubledPlum)).toEqual(40);
+    expect(store.get(doubledPlum)).toEqual(40);
 
-  //   unsubscribe();
-  // });
+    unsubscribe();
+  });
 });
