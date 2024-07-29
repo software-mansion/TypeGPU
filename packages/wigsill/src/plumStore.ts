@@ -87,7 +87,11 @@ export class PlumStore {
     if (state.active) {
       // subscribing to dependencies
       for (const [dep] of state.dependencies) {
-        state.active.unsubs.add(this.subscribe(dep, () => {}));
+        state.active.unsubs.add(
+          this.subscribe(dep, () => {
+            this._recompute(plum);
+          }),
+        );
       }
     }
 
