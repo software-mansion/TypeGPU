@@ -21,19 +21,8 @@ import { createRuntime } from 'wigsill/web';
 const xSpanPlum = wgsl.plum<number>(16).$name('x_span');
 const ySpanPlum = wgsl.plum<number>(16).$name('y_span');
 
-const runtime = await createRuntime();
-const device = runtime.device;
-
-const xSpanBuffer = wgsl.buffer(u32).$name('x-span').$allowUniform();
-const ySpanBuffer = wgsl.buffer(u32).$name('y-span').$allowUniform();
-
-runtime.onPlumChange(xSpanPlum, () => {
-  runtime.writeBuffer(xSpanBuffer, runtime.readPlum(xSpanPlum));
-});
-
-runtime.onPlumChange(ySpanPlum, () => {
-  runtime.writeBuffer(ySpanBuffer, runtime.readPlum(ySpanPlum));
-});
+const xSpanBuffer = wgsl.buffer(u32, xSpanPlum).$name('x-span').$allowUniform();
+const ySpanBuffer = wgsl.buffer(u32, ySpanPlum).$name('y-span').$allowUniform();
 
 const xSpanData = xSpanBuffer.asUniform();
 const ySpanData = ySpanBuffer.asUniform();
@@ -45,6 +34,9 @@ const devicePixelRatio = window.devicePixelRatio;
 canvas.width = canvas.clientWidth * devicePixelRatio;
 canvas.height = canvas.clientHeight * devicePixelRatio;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+const runtime = await createRuntime();
+const device = runtime.device;
 
 context.configure({
   device,
@@ -131,5 +123,5 @@ onFrame(() => {
 });
 
 onCleanup(() => {
-  // TODO: Clean up
+  runtime.dispose();
 });

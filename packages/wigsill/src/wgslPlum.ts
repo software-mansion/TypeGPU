@@ -7,6 +7,8 @@ import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
 export type Getter = <T>(plum: WgslPlum<T>) => T;
 
 export interface WgslPlum<TValue = unknown> {
+  readonly __brand: 'WgslPlum';
+
   $name(label: string): this;
 
   /**
@@ -43,6 +45,10 @@ export function plum<T>(
   return new WgslSourcePlumImpl(initialOrCompute);
 }
 
+export function isPlum<T>(value: WgslPlum<T> | unknown): value is WgslPlum<T> {
+  return (value as WgslPlum).__brand === 'WgslPlum';
+}
+
 // --------------
 // Implementation
 // --------------
@@ -50,6 +56,7 @@ export function plum<T>(
 class WgslSourcePlumImpl<TValue>
   implements WgslPlum<TValue>, WgslSettable, WgslResolvable
 {
+  readonly __brand = 'WgslPlum';
   readonly [WgslSettableTrait] = true;
 
   private _label: string | undefined;
@@ -79,6 +86,7 @@ class WgslSourcePlumImpl<TValue>
 }
 
 class WgslDerivedPlumImpl<TValue> implements WgslPlum<TValue>, WgslResolvable {
+  readonly __brand = 'WgslPlum';
   private _label: string | undefined;
 
   constructor(private readonly _compute: (get: Getter) => TValue) {}

@@ -5,7 +5,7 @@ import ProgramBuilder, { type Program } from '../programBuilder';
 import { TaskQueue } from '../taskQueue';
 import type { AnyWgslData, WgslAllocatable } from '../types';
 import { code } from '../wgslCode';
-import type { WgslPlum, WgslSettable } from '../wgslPlum';
+import { type WgslPlum, type WgslSettable, isPlum } from '../wgslPlum';
 import type {
   ComputePipelineOptions,
   RenderPipelineExecutorOptions,
@@ -29,13 +29,23 @@ class WebWigsillRuntime {
   private _readBuffer: GPUBuffer | null = null;
   private _taskQueue = new TaskQueue();
   private readonly _plumStore = new PlumStore();
+  private readonly _allocSubscriptions = new Map<
+    WgslAllocatable,
+    Unsubscribe
+  >();
 
   constructor(public readonly device: GPUDevice) {}
 
   dispose() {
+    for (const unsub of this._allocSubscriptions.values()) {
+      unsub();
+    }
+    this._allocSubscriptions.clear();
+
     for (const buffer of this._entryToBufferMap.values()) {
       buffer.destroy();
     }
+
     this._entryToBufferMap.clear();
 
     this._readBuffer?.destroy();
@@ -51,11 +61,34 @@ class WebWigsillRuntime {
           allocatable.dataType.size,
           allocatable.dataType.byteAlignment,
         ),
+        mappedAtCreation: allocatable.initial !== undefined,
       });
 
       if (!buffer) {
         throw new Error(`Failed to create buffer for ${allocatable}`);
       }
+
+      if (allocatable.initial !== undefined) {
+        const writer = new BufferWriter(buffer.getMappedRange());
+
+        if (isPlum(allocatable.initial)) {
+          const plum = allocatable.initial;
+
+          allocatable.dataType.write(writer, this._plumStore.get(plum));
+
+          this._allocSubscriptions.set(
+            allocatable,
+            this._plumStore.subscribe(plum, () => {
+              this.writeBuffer(allocatable, this._plumStore.get(plum));
+            }),
+          );
+        } else {
+          allocatable.dataType.write(writer, allocatable.initial);
+        }
+
+        buffer.unmap();
+      }
+
       this._entryToBufferMap.set(allocatable, buffer);
     }
 

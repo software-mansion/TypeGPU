@@ -23,8 +23,6 @@ const wigsillExtraLibs = pipe(
   })),
 );
 
-console.log(wigsillExtraLibs);
-
 function handleEditorWillMount(monaco: Monaco) {
   const tsDefaults = monaco?.languages.typescript.typescriptDefaults;
 
