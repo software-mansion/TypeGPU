@@ -35,7 +35,7 @@ class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
   extends WgslResolvableBase
   implements WgslBufferUsage<TData, TUsage>
 {
-  typeInfo = 'data';
+  typeInfo = 'buffer_usage';
 
   constructor(
     public readonly buffer: WgslBuffer<TData, TUsage>,

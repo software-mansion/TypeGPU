@@ -3,10 +3,23 @@ import { ResolvableToStringError, StrictNameRegistry, wgsl } from '../src';
 import { u32 } from '../src/data';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
 
-describe('resolvable base', () => {
-  const ctx = new ResolutionCtxImpl({ names: new StrictNameRegistry() });
+global.GPUBufferUsage = {
+  COPY_DST: 8,
+  COPY_SRC: 4,
+  INDEX: 16,
+  INDIRECT: 256,
+  MAP_READ: 1,
+  MAP_WRITE: 2,
+  QUERY_RESOLVE: 512,
+  STORAGE: 128,
+  UNIFORM: 64,
+  VERTEX: 32,
+};
 
+describe('resolvable base', () => {
   it('throws an error when resolving wgsl items not in tagged functions', () => {
+    const ctx = new ResolutionCtxImpl({ names: new StrictNameRegistry() });
+
     const slot = wgsl.slot(123).$name('slot');
 
     expect(() => ctx.resolve(`const something = ${slot};`)).toThrow(
@@ -34,5 +47,16 @@ describe('resolvable base', () => {
 
     expect(() => `${slot}`).toThrow(new ResolvableToStringError(slot));
     expect(`${slot.debugRepr}`).toEqual('slot:<unnamed>');
+
+    const bufferUsage = wgsl
+      .buffer(u32)
+      .$allowMutableStorage()
+      .asStorage()
+      .$name('ghi');
+
+    expect(() => `${bufferUsage}`).toThrow(
+      new ResolvableToStringError(bufferUsage),
+    );
+    expect(`${bufferUsage.debugRepr}`).toEqual('mutable_storage:ghi');
   });
 });
