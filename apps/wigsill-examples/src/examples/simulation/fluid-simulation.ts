@@ -285,6 +285,7 @@ const vertWGSL = wgsl`
   let cellVal = f32(${currentStateVertex} & 0xFFFFFF);
   let pos = vec4<f32>(x, y, 0., 1.);
   var cell: f32;
+  cell = cellVal;
   if (cellFlags == 1u) {
     cell = -1.;
   }
@@ -367,7 +368,10 @@ function resetGameData() {
     const view = context.getCurrentTexture().createView();
 
     // compute
-    computePipeline.execute([options.workgroupSize, options.workgroupSize]);
+    computePipeline.execute([
+      options.size / options.workgroupSize,
+      options.size / options.workgroupSize,
+    ]);
 
     // render
     renderPipeline.execute({
