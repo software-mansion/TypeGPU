@@ -377,17 +377,11 @@ export async function createRuntime(
     throw new Error('WebGPU is not supported by this browser.');
   }
 
-  const adapterOptions =
-    options && 'adapter' in options ? options.adapter : undefined;
-
-  const deviceOptions =
-    options && 'device' in options ? options.device : undefined;
-
-  const adapter = await navigator.gpu.requestAdapter(adapterOptions);
+  const adapter = await navigator.gpu.requestAdapter(options?.adapter);
 
   if (!adapter) {
     throw new Error('Could not find a compatible GPU');
   }
 
-  return new WebWigsillRuntime(await adapter.requestDevice(deviceOptions));
+  return new WebWigsillRuntime(await adapter.requestDevice(options?.device));
 }
