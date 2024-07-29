@@ -208,7 +208,7 @@ class ScopedResolutionCtx implements ResolutionCtx {
     const { group, idx } = this._shared.reserveBindingEntry(bindable);
 
     if (bindable.usage === 'vertex') {
-      throw new Error('Vertex buffers must be bound in the vertex shader');
+      return;
     }
 
     this.addDeclaration(

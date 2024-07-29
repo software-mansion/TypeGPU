@@ -1,8 +1,14 @@
-import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
+import {
+  type AnySchema,
+  BufferReader,
+  BufferWriter,
+  type Parsed,
+} from 'typed-binary';
 import type { AnyWgslData } from './std140/types';
 import type { BufferUsage, WgslAllocatable } from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
 import type WigsillRuntime from './wigsillRuntime';
+import { SimpleWgslData } from './std140';
 
 // ----------
 // Public API
@@ -68,10 +74,12 @@ class WgslBufferImpl<
       TData,
       TAllows | 'readonly_storage'
     > | null;
+    vertex: WgslBufferUsage<TData, TAllows | 'vertex'> | null;
   } = {
     uniform: null,
     mutableStorage: null,
     readonlyStorage: null,
+    vertex: null,
   };
 
   private _label: string | undefined;
@@ -150,10 +158,16 @@ class WgslBufferImpl<
     const enrichedThis = this as WgslBuffer<TData, TAllows | 'vertex'>;
     this.$addFlags(GPUBufferUsage.VERTEX);
     if (!this.vertexLayout) {
+      if (!(this.dataType instanceof SimpleWgslData)) {
+        throw new Error('Only simple data types can be used as vertex buffers');
+      }
+      let underlyingThis = this.dataType as SimpleWgslData<AnySchema>;
+      underlyingThis = underlyingThis.getUnderlyingType();
       this.vertexLayout = {
-        arrayStride: this.dataType.size,
+        arrayStride: underlyingThis.size,
         stepMode,
       };
+      this._allowedUsages.vertex = bufferUsage(enrichedThis, 'vertex');
     }
     return enrichedThis;
   }
@@ -185,7 +199,7 @@ class WgslBufferImpl<
   }
 
   asVertex() {
-    return this.vertexLayout as 'vertex' extends TAllows
+    return this._allowedUsages.vertex as 'vertex' extends TAllows
       ? WgslBufferUsage<TData, 'vertex'>
       : null;
   }

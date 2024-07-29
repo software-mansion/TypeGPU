@@ -92,7 +92,10 @@ const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
 const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
 const maxCompress = wgsl.constant(wgsl`12u`);
 
-const squareBuffer = wgsl.buffer(arrayOf(vec2u, 4)).$allowVertex('vertex');
+const squareBuffer = wgsl
+  .buffer(arrayOf(vec2u, 4))
+  .$allowVertex('vertex')
+  .$allowUniform();
 const squareBufferData = squareBuffer.asVertex();
 squareBuffer.write(runtime, [
   [0, 0],
@@ -266,15 +269,10 @@ const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
 }`;
 
 const computeWGSL = wgsl`
-override blockSize = 8;
-
-@compute @workgroup_size(blockSize, blockSize)
-fn main(@builtin(global_invocation_id) grid: vec3u) {
-  let x = grid.x;
-  let y = grid.y;
+  let x = ${builtin.globalInvocationId}.x;
+  let y = ${builtin.globalInvocationId}.y;
   atomicAdd(&${debugInfoData}, ${getWaterLevel}(x, y));
   ${decideWaterLevel}(x, y);
-}
 `;
 
 const vertWGSL = wgsl`
@@ -295,23 +293,22 @@ const vertWGSL = wgsl`
   if (cellFlags == 3u) {
     cell = -3.;
   }
-}
 `;
 
 const fragWGSL = wgsl`
-  if (${currentStateVertex} == -1.) {
+  if (cell == -1.) {
     return vec4f(0.5, 0.5, 0.5, 1.);
   }
-  if (${currentStateVertex} == -2.) {
+  if (cell == -2.) {
     return vec4f(0., 1., 0., 1.);
   }
-  if (${currentStateVertex} == -3.) {
+  if (cell == -3.) {
     return vec4f(1., 0., 0., 1.);
   }
 
-  var r = f32((u32(${currentStateVertex}) >> 16) & 0xFF)/255.;
-  var g = f32((u32(${currentStateVertex}) >> 8) & 0xFF)/255.;
-  var b = f32(u32(${currentStateVertex}) & 0xFF)/255.;
+  var r = f32((u32(cell) >> 16) & 0xFF)/255.;
+  var g = f32((u32(cell) >> 8) & 0xFF)/255.;
+  var b = f32(u32(cell) & 0xFF)/255.;
   if (r > 0.) { g = 1.;}
   if (g > 0.) { b = 1.;}
   if (b > 0. && b < 0.5) { b = 0.5;}
@@ -319,6 +316,10 @@ const fragWGSL = wgsl`
   return vec4f(r, g, b, 1.);
 `;
 
+const computePipeline = runtime.makeComputePipeline({
+  workgroupSize: [options.workgroupSize, options.workgroupSize, 1],
+  code: computeWGSL,
+});
 const renderPipeline = runtime.makeRenderPipeline({
   vertex: {
     code: vertWGSL,
@@ -329,13 +330,9 @@ const renderPipeline = runtime.makeRenderPipeline({
   },
   fragment: {
     code: fragWGSL,
-    target: [{ format: 'bgra8unorm' }],
+    target: [{ format: presentationFormat }],
   },
   primitive: { topology: 'triangle-strip' },
-});
-const computePipeline = runtime.makeComputePipeline({
-  workgroupSize: [options.workgroupSize, options.workgroupSize, 1],
-  code: computeWGSL,
 });
 
 let drawCanvasData = new Uint32Array(options.size * options.size);
@@ -364,13 +361,15 @@ function resetGameData() {
   const length = options.size * options.size;
   const cells = new Uint32Array(length);
 
-  render = () => {
+  render = async () => {
     debugInfoBuffer.write(runtime, 0);
     const view = context.getCurrentTexture().createView();
 
     // compute
     computePipeline.execute([options.workgroupSize, options.workgroupSize]);
     computePipeline.flush();
+
+    await device.queue.onSubmittedWorkDone();
 
     commandEncoder.copyBufferToBuffer(
       runtime.bufferFor(nextStateBuffer),

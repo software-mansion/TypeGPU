@@ -24,9 +24,9 @@ export class SimpleWgslData<TSchema extends AnySchema>
 {
   public readonly size: number;
   public readonly byteAlignment: number;
+  public readonly expressionCode: Wgsl;
 
   private readonly _innerSchema: TSchema;
-  private readonly _expressionCode: Wgsl;
 
   /**
    * byteAlignment has to be a power of 2
@@ -44,7 +44,7 @@ export class SimpleWgslData<TSchema extends AnySchema>
 
     this._innerSchema = schema;
     this.byteAlignment = byteAlignment;
-    this._expressionCode = code;
+    this.expressionCode = code;
     this.size = this.measure(MaxValue).size;
   }
 
@@ -73,7 +73,28 @@ export class SimpleWgslData<TSchema extends AnySchema>
     return measurer;
   }
 
+  getUnderlyingTypeString(): string {
+    if (typeof this.expressionCode === 'string') {
+      return this.expressionCode;
+    }
+    if ('elementSchema' in this._innerSchema) {
+      const underlyingType = this._innerSchema
+        .elementSchema as SimpleWgslData<AnySchema>;
+      return underlyingType.getUnderlyingTypeString();
+    }
+    throw new Error('Unexpected type used as vertex buffer element');
+  }
+
+  getUnderlyingType(): SimpleWgslData<AnySchema> {
+    if ('elementSchema' in this._innerSchema) {
+      const underlyingType = this._innerSchema
+        .elementSchema as SimpleWgslData<AnySchema>;
+      return underlyingType.getUnderlyingType();
+    }
+    return this;
+  }
+
   resolve(ctx: ResolutionCtx): string {
-    return ctx.resolve(this._expressionCode);
+    return ctx.resolve(this.expressionCode);
   }
 }

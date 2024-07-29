@@ -13,7 +13,7 @@ import { getBuiltinInfo } from './wgslBuiltin';
 
 export interface WgslCode extends WgslResolvable {
   $name(label?: string | undefined): WgslCode;
-  getUsedBuiltins(): symbol[];
+  getUsedBuiltins(): readonly symbol[];
 }
 
 export function code(
@@ -29,7 +29,9 @@ export function code(
     return Array.isArray(param) ? [string, ...param] : [string, param];
   });
 
-  return new WgslCodeImpl(segments);
+  const symbols = segments.filter((s) => typeof s === 'symbol') as symbol[];
+
+  return new WgslCodeImpl(segments, symbols);
 }
 
 // --------------
@@ -38,9 +40,11 @@ export function code(
 
 class WgslCodeImpl implements WgslCode {
   private _label: string | undefined;
-  private _usedBuiltins: symbol[] = [];
 
-  constructor(public readonly segments: (Wgsl | InlineResolve)[]) {}
+  constructor(
+    public readonly segments: (Wgsl | InlineResolve)[],
+    private readonly _usedBuiltins: symbol[],
+  ) {}
 
   get label() {
     return this._label;
@@ -62,7 +66,6 @@ class WgslCodeImpl implements WgslCode {
         code += ctx.resolve(s);
       } else if (typeof s === 'symbol') {
         const builtin = getBuiltinInfo(s);
-        this._usedBuiltins.push(s);
         code += builtin.name;
       } else {
         code += String(s);

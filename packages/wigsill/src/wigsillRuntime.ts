@@ -1,14 +1,14 @@
 import type { AnySchema } from 'typed-binary';
 import { roundUp } from './mathUtils';
-import ProgramBuilder, {
+import {
   ComputeProgramBuilder,
   type Program,
   RenderProgramBuilder,
 } from './programBuilder';
 import type { SimpleWgslData } from './std140';
 import type { AnyWgslData } from './std140/types';
-import type { Wgsl, WgslAllocatable } from './types';
-import { type WgslCode, code } from './wgslCode';
+import type { WgslAllocatable } from './types';
+import type { WgslCode } from './wgslCode';
 import type { WgslSampler } from './wgslSampler';
 import type { WgslTextureExternal, WgslTextureView } from './wgslTexture';
 
@@ -142,6 +142,8 @@ class WigsillRuntime {
       ).build({
         bindingGroup: 0,
       });
+
+    console.log('vertexBuffers', vertexBuffers);
 
     const vertexBufferDescriptors = vertexBuffers.map((buffer, idx) => {
       if (!buffer.allocatable.vertexLayout) {
@@ -467,10 +469,12 @@ const typeToVertexFormatMap: Record<string, GPUVertexFormat> = {
 function deriveVertexFormat<TData extends SimpleWgslData<AnySchema>>(
   typeSchema: TData,
 ): GPUVertexFormat {
-  if (!('code' in typeSchema)) {
+  console.log('deriving vertex format', typeSchema);
+  if (!('expressionCode' in typeSchema)) {
     throw new Error(`Type schema must contain a 'code' field`);
   }
-  const code = typeSchema.code as string;
+  const code = typeSchema.getUnderlyingTypeString();
+
   const vertexFormat = typeToVertexFormatMap[code];
   if (!vertexFormat) {
     throw new Error(`Unknown vertex format for type code: ${code}`);

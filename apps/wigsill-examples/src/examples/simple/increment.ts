@@ -22,7 +22,6 @@ const pipeline = runtime.makeComputePipeline({
 async function increment() {
   pipeline.execute([1, 1]);
   runtime.flush();
-  console.log(await countBuffer.read(runtime));
 }
 
 increment();

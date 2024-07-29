@@ -1,5 +1,7 @@
+import type { AnySchema } from 'typed-binary';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
+import type { SimpleWgslData } from './std140';
 import type { AnyWgslData } from './std140/types';
 import type { BufferUsage, WgslBindable, WgslResolvable } from './types';
 import { isSamplerType } from './types';
@@ -95,8 +97,6 @@ export default class ProgramBuilder {
       });
     }
 
-    console.log(allEntries);
-
     const bindGroupLayout = this.runtime.device.createBindGroupLayout({
       entries: allEntries,
     });
@@ -131,8 +131,6 @@ export default class ProgramBuilder {
         },
       });
     }
-
-    console.log(allBindGroupEntries);
 
     const bindGroup = this.runtime.device.createBindGroup({
       layout: bindGroupLayout,
@@ -208,10 +206,16 @@ export class RenderProgramBuilder {
     const vertexBuffers = Array.from(vertexContext.usedBindables).filter(
       (bindable) => bindable.usage === 'vertex',
     ) as WgslBindable<AnyWgslData, 'vertex'>[];
+    const entries = vertexBuffers.map((elem) => {
+      return {
+        bindable: elem,
+        underlyingType: elem.allocatable.dataType as SimpleWgslData<AnySchema>,
+      };
+    });
 
-    const vertexUserArgs = vertexBuffers.map(
-      (bindable, idx) => code`
-      @location(${idx}) ${bindable} : ${bindable.allocatable.dataType}
+    const vertexUserArgs = entries.map(
+      (entry, idx) => code`
+        @location(${idx}) ${entry.bindable} : ${entry.underlyingType.getUnderlyingTypeString()},
     `,
     );
     const usedVertexBuiltins = this.vertexRoot.getUsedBuiltins();
@@ -220,7 +224,7 @@ export class RenderProgramBuilder {
     );
     const vertexBuiltinsArgs = vertexBuiltins.map(
       (builtin) => code`
-      @builtin(${builtin.name}) ${builtin.name}: ${builtin.type}
+      @builtin(${builtin.name}) ${builtin.name}: ${builtin.type},
     `,
     );
     const vertexArgs = [...vertexBuiltinsArgs, ...vertexUserArgs];
@@ -260,13 +264,13 @@ export class RenderProgramBuilder {
       .map((builtin) => getBuiltinInfo(builtin));
     const fragmentBuiltinArgs = fragmentUsedBuiltins.map(
       (builtin) => code`
-      @builtin(${builtin.name}) ${builtin.name}: ${builtin.type}
+      @builtin(${builtin.name}) ${builtin.name}: ${builtin.type},
     `,
     );
 
     const fragmentInputs = vertexOutput.map(
       ({ name, varInfo }, idx) => code`
-      @location(${idx}) ${name}: ${varInfo[0]}
+      @location(${idx}) ${name}: ${varInfo[0]},
     `,
     );
     const fragmentArgs = [...fragmentBuiltinArgs, ...fragmentInputs];
@@ -316,7 +320,7 @@ export class ComputeProgramBuilder {
       .map((builtin) => getBuiltinInfo(builtin));
     const builtinArgs = usedBuiltins.map(
       (builtin) => code`
-      @builtin(${builtin.name}) ${builtin.name}: ${builtin.type}
+      @builtin(${builtin.name}) ${builtin.name}: ${builtin.type},
     `,
     );
 
@@ -329,11 +333,14 @@ export class ComputeProgramBuilder {
       }
     `;
 
+    console.log('constructing compute program');
     const program = new ProgramBuilder(this.runtime, shaderCode).build({
       bindingGroup: options.bindingGroup,
       shaderStage: GPUShaderStage.COMPUTE,
       nameRegistry: options.nameRegistry ?? new RandomNameRegistry(),
     });
+
+    console.log('compute program', program.code);
 
     return program;
   }
