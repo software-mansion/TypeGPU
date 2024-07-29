@@ -2,4 +2,7 @@
  * @module wigsill/web
  */
 
-export { createRuntime } from './webWigsillRuntime';
+export {
+  createRuntime,
+  CreateRuntimeOptions,
+} from './webWigsillRuntime';
