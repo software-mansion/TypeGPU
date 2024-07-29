@@ -23,16 +23,40 @@ export interface WgslSettable {
   readonly [WgslSettableTrait]: true;
 }
 
+/**
+ * Creates a computed plum. Its value depends on the plums read using `get`
+ * inside the `compute` function, so cannot be set imperatively.
+ *
+ * @param compute A pure function that describes this plum's value.
+ */
 export function plum<T extends Wgsl>(
   compute: (get: Getter) => T,
 ): WgslPlum<T> & WgslResolvable;
 
+/**
+ * Creates a computed plum. Its value depends on the plums read using `get`
+ * inside the `compute` function, so cannot be set imperatively.
+ *
+ * @param compute A pure function that describes this plum's value.
+ */
 export function plum<T>(compute: (get: Getter) => T): WgslPlum<T>;
 
+/**
+ * Creates a plum with an initial value of `initial`.
+ * Its value can be updated by calling `runtime.setPlum(thePlum, newValue)`.
+ *
+ * @param initial The initial value of this plum.
+ */
 export function plum<T extends Wgsl>(
   initial: T,
 ): WgslPlum<T> & WgslSettable & WgslResolvable;
 
+/**
+ * Creates a plum with an initial value of `initial`.
+ * Its value can be updated by calling `runtime.setPlum(thePlum, newValue)`.
+ *
+ * @param initial The initial value of this plum.
+ */
 export function plum<T>(initial: T): WgslPlum<T> & WgslSettable;
 
 export function plum<T>(
