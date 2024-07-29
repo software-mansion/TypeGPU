@@ -1,4 +1,5 @@
 import Callable, { type AsCallable } from './callable';
+import { ResolvableToStringError } from './errors';
 import { isPointer } from './types';
 import type {
   AnyWgslData,
@@ -152,8 +153,6 @@ class WgslFnImpl<
   }
 
   toString(): string {
-    throw new Error(
-      'Use wgsl`...` when interpolating wgsl code. For console logging use the debugRepr property',
-    );
+    throw new ResolvableToStringError(this);
   }
 }
