@@ -25,7 +25,7 @@ export interface ResolutionCtx {
 }
 
 export interface WgslResolvable {
-  label: string;
+  label: string | undefined;
   $name(label?: string | undefined): this;
   resolve(ctx: ResolutionCtx): string;
   get debugRepr(): string;
@@ -49,7 +49,7 @@ export function isWgsl(value: unknown): value is Wgsl {
 
 export interface WgslSlot<T> {
   readonly __brand: 'WgslSlot';
-  label: string;
+  label: string | undefined;
 
   readonly defaultValue: T | undefined;
 

@@ -53,12 +53,9 @@ class WgslVarImpl<TDataType extends AnyWgslData>
     return ctx.resolve(this.identifier);
   }
 
-  $name(label: string) {
+  $name(label: string | undefined) {
+    this.label = label;
     this.identifier.$name(label);
     return this;
-  }
-
-  get debugRepr() {
-    return `${this.typeInfo}:${this.identifier.label}`;
   }
 }

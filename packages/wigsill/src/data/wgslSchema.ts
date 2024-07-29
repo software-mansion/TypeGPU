@@ -2,10 +2,10 @@ import { Schema } from 'typed-binary';
 
 export abstract class WgslSchema<T> extends Schema<T> {
   abstract typeInfo: string;
-  public label = '<unnamed>';
+  public label: string | undefined;
 
   $name(label?: string | undefined) {
-    this.label = label ?? '<unnamed>';
+    this.label = label;
     return this;
   }
 
@@ -16,6 +16,6 @@ export abstract class WgslSchema<T> extends Schema<T> {
   }
 
   get debugRepr(): string {
-    return `${this.typeInfo}: ${this.label}`;
+    return `${this.typeInfo}:${this.label ?? '<unnamed>'}`;
   }
 }

@@ -17,3 +17,14 @@ export class RecursiveDataTypeError extends Error {
     Object.setPrototypeOf(this, RecursiveDataTypeError.prototype);
   }
 }
+
+export class ResolvableToStringError extends Error {
+  constructor(public readonly item: { debugRepr: string }) {
+    super(
+      `Use wgsl\`...\` when interpolating wgsl item: ${item.debugRepr}. For console logging use the debugRepr property`,
+    );
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, ResolvableToStringError.prototype);
+  }
+}

@@ -102,7 +102,7 @@ class WgslFnImpl<
   extends Callable<SegmentsFromTypes<TArgTypes>, WgslFunctionCall<TArgTypes>>
   implements WgslFn<TArgTypes, TReturn>
 {
-  public label = '';
+  public label: string | undefined;
   private identifier = new WgslIdentifier();
 
   constructor(
@@ -114,6 +114,7 @@ class WgslFnImpl<
   }
 
   $name(label: string | undefined) {
+    this.label = label;
     this.identifier.$name(label);
     return this;
   }
@@ -147,7 +148,7 @@ class WgslFnImpl<
   }
 
   get debugRepr(): string {
-    return `fn:${this.identifier.label}`;
+    return `fn:${this.label ?? '<unnamed>'}`;
   }
 
   toString(): string {
