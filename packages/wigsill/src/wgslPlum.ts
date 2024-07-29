@@ -27,7 +27,7 @@ export function plum<T extends Wgsl>(
   compute: (get: Getter) => T,
 ): WgslPlum<T> & WgslResolvable;
 
-export function plum<T extends Wgsl>(compute: () => T): WgslPlum<T>;
+export function plum<T>(compute: (get: Getter) => T): WgslPlum<T>;
 
 export function plum<T extends Wgsl>(
   initial: T,

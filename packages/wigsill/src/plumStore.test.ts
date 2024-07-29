@@ -118,8 +118,12 @@ describe('PlumStore', () => {
     store.set(fooPlum, 20);
 
     expect(listener).toBeCalledTimes(1);
-
     expect(store.get(doubledPlum)).toEqual(40);
+
+    store.set(fooPlum, 30);
+
+    expect(listener).toBeCalledTimes(2);
+    expect(store.get(doubledPlum)).toEqual(60);
 
     unsubscribe();
   });

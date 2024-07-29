@@ -11,12 +11,17 @@ import type { WgslPlum, WgslSettable } from './wgslPlum';
 
 type Unsubscribe = () => void;
 
+type ExtractPlumValue<T> = T extends WgslPlum<infer TValue> ? TValue : never;
+
 export interface WigsillRuntime {
   readonly device: GPUDevice;
 
   readPlum<TValue>(plum: WgslPlum<TValue>): TValue;
 
-  setPlum<TValue>(plum: WgslPlum<TValue> & WgslSettable, value: TValue): void;
+  setPlum<TPlum extends WgslPlum & WgslSettable>(
+    plum: TPlum,
+    value: ExtractPlumValue<TPlum>,
+  ): void;
 
   onPlumChange<TValue>(
     plum: WgslPlum<TValue>,

@@ -21,11 +21,13 @@ import { createRuntime } from 'wigsill/web';
 const xSpanPlum = wgsl.plum<number>(16).$name('x_span');
 const ySpanPlum = wgsl.plum<number>(16).$name('y_span');
 
-const xSpanBuffer = wgsl.buffer(u32, xSpanPlum).$name('x-span').$allowUniform();
-const ySpanBuffer = wgsl.buffer(u32, ySpanPlum).$name('y-span').$allowUniform();
+const spanPlum = wgsl.plum((get) => ({ x: get(xSpanPlum), y: get(ySpanPlum) }));
 
-const xSpanData = xSpanBuffer.asUniform();
-const ySpanData = ySpanBuffer.asUniform();
+const spanBuffer = wgsl
+  .buffer(struct({ x: u32, y: u32 }), spanPlum)
+  .$name('span')
+  .$allowUniform();
+const spanUniform = spanBuffer.asUniform();
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -78,8 +80,9 @@ const renderPipeline = runtime.makeRenderPipeline({
   fragment: {
     args: ['@builtin(position) Position: vec4f', '@location(0) uv: vec2f'],
     code: wgsl.code`
-      let red = floor(uv.x * f32(${xSpanData})) / f32(${xSpanData});
-      let green = floor(uv.y * f32(${ySpanData})) / f32(${ySpanData});
+      let span = ${spanUniform};
+      let red = floor(uv.x * f32(span.x)) / f32(span.x);
+      let green = floor(uv.y * f32(span.y)) / f32(span.y);
       return vec4(red, green, 0.5, 1.0);
     `,
     output: '@location(0) vec4f',
