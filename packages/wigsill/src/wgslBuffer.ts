@@ -4,11 +4,11 @@ import {
   BufferWriter,
   type Parsed,
 } from 'typed-binary';
+import { SimpleWgslData } from './std140';
 import type { AnyWgslData } from './std140/types';
 import type { BufferUsage, WgslAllocatable } from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
 import type WigsillRuntime from './wigsillRuntime';
-import { SimpleWgslData } from './std140';
 
 // ----------
 // Public API

@@ -10,12 +10,12 @@ import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
 import {
   arrayOf,
   atomic,
+  builtin,
   createRuntime,
+  f32,
   u32,
   vec2u,
   wgsl,
-  builtin,
-  f32,
 } from 'wigsill';
 
 const runtime = await createRuntime();
