@@ -39,11 +39,6 @@ class WgslVarImpl<TDataType extends AnyWgslData>
     super();
   }
 
-  $name(label: string) {
-    this.identifier.$name(label);
-    return this;
-  }
-
   resolve(ctx: ResolutionCtx): string {
     if (this._initialValue) {
       ctx.addDeclaration(
@@ -56,5 +51,14 @@ class WgslVarImpl<TDataType extends AnyWgslData>
     }
 
     return ctx.resolve(this.identifier);
+  }
+
+  $name(label: string) {
+    this.identifier.$name(label);
+    return this;
+  }
+
+  get debugRepr() {
+    return `${this.typeInfo}:${this.identifier.label}`;
   }
 }

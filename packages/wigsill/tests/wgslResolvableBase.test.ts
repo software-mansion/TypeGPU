@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { StrictNameRegistry, wgsl } from '../src';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
 
-describe('resolving errors', () => {
-  it('throws errors when resolving wgsl items not in tagged functions', () => {
+describe('resolvable base', () => {
+  it('throws an error when resolving wgsl items not in tagged functions', () => {
     const valueSlot = wgsl.slot(123).$name('value');
     const ctx = new ResolutionCtxImpl({ names: new StrictNameRegistry() });
 

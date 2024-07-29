@@ -74,7 +74,7 @@ class BoundWgslFnImpl<T> extends WgslResolvableBase implements WgslFn {
     return ctx.resolve(this._innerFn, [this._slotValuePair]);
   }
 
-  toDebugRepr(): string {
+  get debugRepr(): string {
     const [slot, value] = this._slotValuePair;
     return `${this.typeInfo}:${this.label ?? '<unnamed>'}[${slot.label ?? '<unnamed>'}=${value}]`;
   }

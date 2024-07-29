@@ -28,7 +28,7 @@ export interface WgslResolvable {
   label: string;
   $name(label?: string | undefined): this;
   resolve(ctx: ResolutionCtx): string;
-  toDebugRepr(): string;
+  get debugRepr(): string;
 }
 
 export function isResolvable(value: unknown): value is WgslResolvable {

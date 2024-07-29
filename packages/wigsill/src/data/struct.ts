@@ -20,10 +20,8 @@ import { WgslSchema } from './wgslSchema';
 // ----------
 
 export interface WgslStruct<TProps extends Record<string, AnyWgslData>>
-  extends ISchema<UnwrapRecord<TProps>>,
-    WgslData<UnwrapRecord<TProps>> {
-  $name(label: string): this;
-}
+  extends WgslSchema<UnwrapRecord<TProps>>,
+    WgslData<UnwrapRecord<TProps>> {}
 
 export const struct = <TProps extends Record<string, AnyWgslData>>(
   properties: TProps,

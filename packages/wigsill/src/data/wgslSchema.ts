@@ -11,11 +11,11 @@ export abstract class WgslSchema<T> extends Schema<T> {
 
   toString(): string {
     throw new Error(
-      'Use wgsl`...` when interpolating wgsl code. For console logging use the .toDebugRepr() method',
+      'Use wgsl`...` when interpolating wgsl code. For console logging use the debugRepr property',
     );
   }
 
-  toDebugRepr(): string {
+  get debugRepr(): string {
     return `${this.typeInfo}: ${this.label}`;
   }
 }

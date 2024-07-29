@@ -146,7 +146,13 @@ class WgslFnImpl<
     return new WgslFunctionCall(this, args);
   }
 
-  toDebugRepr(): string {
+  get debugRepr(): string {
     return `fn:${this.identifier.label}`;
+  }
+
+  toString(): string {
+    throw new Error(
+      'Use wgsl`...` when interpolating wgsl code. For console logging use the debugRepr property',
+    );
   }
 }

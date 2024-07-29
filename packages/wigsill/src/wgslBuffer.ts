@@ -28,7 +28,7 @@ export interface WgslBuffer<
     : null;
 
   $name(label?: string | undefined): this;
-  toDebugRepr(): string;
+  get debugRepr(): string;
 }
 
 export function buffer<
