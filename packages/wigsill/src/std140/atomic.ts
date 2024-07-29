@@ -5,13 +5,13 @@ import {
   type MaxValue,
   Measurer,
   type ParseUnwrapped,
-  Schema,
   type Unwrap,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import type { ResolutionCtx } from '../types';
 import type { I32, U32 } from './numeric';
 import type { WgslData } from './types';
+import { WgslSchema } from './wgslSchema';
 
 export function atomic<TSchema extends U32 | I32>(
   data: TSchema,
@@ -23,9 +23,10 @@ export interface Atomic<TSchema extends U32 | I32>
   extends WgslData<Unwrap<TSchema>> {}
 
 class AtomicImpl<TSchema extends U32 | I32>
-  extends Schema<Unwrap<TSchema>>
+  extends WgslSchema<Unwrap<TSchema>>
   implements Atomic<TSchema>
 {
+  typeInfo = 'atomic';
   public readonly size: number;
   public readonly byteAlignment: number;
 

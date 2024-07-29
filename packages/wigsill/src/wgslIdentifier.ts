@@ -1,21 +1,16 @@
 import type { ResolutionCtx, WgslResolvable } from './types';
+import { WgslResolvableBase } from './wgslResolvableBase';
 
 /**
  * Helpful when creating new Resolvable types. For internal use.
  */
-export class WgslIdentifier implements WgslResolvable {
-  label?: string | undefined;
-
-  $name(label: string | undefined) {
-    this.label = label;
-    return this;
-  }
+export class WgslIdentifier
+  extends WgslResolvableBase
+  implements WgslResolvable
+{
+  typeInfo = 'id';
 
   resolve(ctx: ResolutionCtx): string {
     return ctx.nameFor(this);
-  }
-
-  toString(): string {
-    return `id:${this.label ?? '<unnamed>'}`;
   }
 }

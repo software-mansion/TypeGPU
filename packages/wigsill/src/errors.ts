@@ -2,7 +2,7 @@ import type { WgslSlot } from './types';
 
 export class MissingSlotValueError extends Error {
   constructor(public readonly slot: WgslSlot<unknown>) {
-    super(`Missing value for '${slot}'`);
+    super(`Missing value for ${slot.label}`);
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, MissingSlotValueError.prototype);

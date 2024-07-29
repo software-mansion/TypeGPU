@@ -25,9 +25,10 @@ export interface ResolutionCtx {
 }
 
 export interface WgslResolvable {
-  readonly label?: string | undefined;
-
+  label: string;
+  $name(label?: string | undefined): this;
   resolve(ctx: ResolutionCtx): string;
+  toDebugRepr(): string;
 }
 
 export function isResolvable(value: unknown): value is WgslResolvable {
@@ -48,12 +49,9 @@ export function isWgsl(value: unknown): value is Wgsl {
 
 export interface WgslSlot<T> {
   readonly __brand: 'WgslSlot';
+  label: string;
 
   readonly defaultValue: T | undefined;
-
-  readonly label?: string | undefined;
-
-  $name(label: string): WgslSlot<T>;
 
   /**
    * Used to determine if code generated using either value `a` or `b` in place
@@ -77,9 +75,7 @@ export type InlineResolve = (get: EventualGetter) => Wgsl;
 
 export interface WgslResolvableSlot<T extends Wgsl>
   extends WgslResolvable,
-    WgslSlot<T> {
-  $name(label: string): WgslResolvableSlot<T>;
-}
+    WgslSlot<T> {}
 
 export type SlotValuePair<T> = [WgslSlot<T>, T];
 

@@ -3,6 +3,7 @@ import { roundUp } from './mathUtils';
 import type { AnyWgslData } from './std140/types';
 import type { BufferUsage, WgslAllocatable } from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
+import { WgslResolvableBase } from './wgslResolvableBase';
 import type WigsillRuntime from './wigsillRuntime';
 
 // ----------
@@ -13,7 +14,6 @@ export interface WgslBuffer<
   TData extends AnyWgslData,
   TAllows extends BufferUsage = never,
 > extends WgslAllocatable<TData> {
-  $name(label: string): WgslBuffer<TData, TAllows>;
   $allowUniform(): WgslBuffer<TData, TAllows | 'uniform'>;
   $allowReadonlyStorage(): WgslBuffer<TData, TAllows | 'readonly_storage'>;
   $allowMutableStorage(): WgslBuffer<TData, TAllows | 'mutable_storage'>;
@@ -33,6 +33,9 @@ export interface WgslBuffer<
   asReadonlyStorage(): 'readonly_storage' extends TAllows
     ? WgslBufferUsage<TData, 'readonly_storage'>
     : null;
+
+  $name(label?: string | undefined): this;
+  toDebugRepr(): string;
 }
 
 export function buffer<
@@ -47,10 +50,13 @@ export function buffer<
 // --------------
 
 class WgslBufferImpl<
-  TData extends AnyWgslData,
-  TAllows extends BufferUsage = never,
-> implements WgslBuffer<TData, TAllows>
+    TData extends AnyWgslData,
+    TAllows extends BufferUsage = never,
+  >
+  extends WgslResolvableBase
+  implements WgslBuffer<TData, TAllows>
 {
+  typeInfo = 'buffer';
   public flags: GPUBufferUsageFlags =
     GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
 
@@ -67,17 +73,8 @@ class WgslBufferImpl<
     readonlyStorage: null,
   };
 
-  private _label: string | undefined;
-
-  constructor(public readonly dataType: TData) {}
-
-  get label() {
-    return this._label;
-  }
-
-  $name(label: string) {
-    this._label = label;
-    return this;
+  constructor(public readonly dataType: TData) {
+    super();
   }
 
   write(runtime: WigsillRuntime, data: Parsed<TData>): void {
@@ -158,9 +155,5 @@ class WgslBufferImpl<
       .readonlyStorage as 'readonly_storage' extends TAllows
       ? WgslBufferUsage<TData, 'readonly_storage'>
       : null;
-  }
-
-  toString(): string {
-    return `buffer:${this._label ?? '<unnamed>'}`;
   }
 }

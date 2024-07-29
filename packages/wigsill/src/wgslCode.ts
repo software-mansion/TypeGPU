@@ -5,14 +5,13 @@ import {
   type WgslResolvable,
   isResolvable,
 } from './types';
+import { WgslResolvableBase } from './wgslResolvableBase';
 
 // ----------
 // Public API
 // ----------
 
-export interface WgslCode extends WgslResolvable {
-  $name(label?: string | undefined): WgslCode;
-}
+export interface WgslCode extends WgslResolvable {}
 
 export function code(
   strings: TemplateStringsArray,
@@ -34,18 +33,11 @@ export function code(
 // Implementation
 // --------------
 
-class WgslCodeImpl implements WgslCode {
-  private _label: string | undefined;
+class WgslCodeImpl extends WgslResolvableBase implements WgslCode {
+  typeInfo = 'code';
 
-  constructor(public readonly segments: (Wgsl | InlineResolve)[]) {}
-
-  get label() {
-    return this._label;
-  }
-
-  $name(label?: string | undefined) {
-    this._label = label;
-    return this;
+  constructor(public readonly segments: (Wgsl | InlineResolve)[]) {
+    super();
   }
 
   resolve(ctx: ResolutionCtx) {
@@ -63,9 +55,5 @@ class WgslCodeImpl implements WgslCode {
     }
 
     return code;
-  }
-
-  toString(): string {
-    return `code:${this._label ?? '<unnamed>'}`;
   }
 }

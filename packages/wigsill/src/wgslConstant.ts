@@ -1,14 +1,13 @@
 import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
+import { WgslResolvableBase } from './wgslResolvableBase';
 
 // ----------
 // Public API
 // ----------
 
-export interface WgslConst extends WgslResolvable {
-  $name(label: string): WgslConst;
-}
+export interface WgslConst extends WgslResolvable {}
 
 /**
  * Creates a constant is computed at shader initialization according
@@ -22,22 +21,15 @@ export function constant(expr: Wgsl): WgslConst {
 // Implementation
 // --------------
 
-class WgslConstImpl implements WgslConst {
-  private _label: string | undefined;
+class WgslConstImpl extends WgslResolvableBase implements WgslConst {
+  typeInfo = 'const';
 
-  constructor(private readonly expr: Wgsl) {}
-
-  get label() {
-    return this._label;
-  }
-
-  $name(label: string) {
-    this._label = label;
-    return this;
+  constructor(private readonly expr: Wgsl) {
+    super();
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this._label);
+    const identifier = new WgslIdentifier().$name(this.label);
 
     ctx.addDeclaration(code`const ${identifier} = ${this.expr};`);
 

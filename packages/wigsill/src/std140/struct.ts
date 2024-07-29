@@ -6,7 +6,6 @@ import {
   MaxValue,
   Measurer,
   type Parsed,
-  Schema,
   type UnwrapRecord,
   object,
 } from 'typed-binary';
@@ -15,12 +14,13 @@ import type { ResolutionCtx } from '../types';
 import { code } from '../wgslCode';
 import { WgslIdentifier } from '../wgslIdentifier';
 import type { AnyWgslData, WgslData } from './types';
+import { WgslSchema } from './wgslSchema';
 
 class StructDataType<TProps extends Record<string, AnyWgslData>>
-  extends Schema<UnwrapRecord<TProps>>
+  extends WgslSchema<UnwrapRecord<TProps>>
   implements WgslData<UnwrapRecord<TProps>>
 {
-  private _label: string | undefined;
+  typeInfo = 'struct';
   private _innerSchema: ISchema<UnwrapRecord<TProps>>;
 
   public readonly byteAlignment: number;
@@ -36,11 +36,6 @@ class StructDataType<TProps extends Record<string, AnyWgslData>>
       .reduce((a, b) => (a > b ? a : b));
 
     this.size = this.measure(MaxValue).size;
-  }
-
-  $name(label: string) {
-    this._label = label;
-    return this;
   }
 
   resolveReferences(): void {
@@ -64,7 +59,7 @@ class StructDataType<TProps extends Record<string, AnyWgslData>>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this._label);
+    const identifier = new WgslIdentifier().$name(this.label);
 
     ctx.addDeclaration(code`
       struct ${identifier} {

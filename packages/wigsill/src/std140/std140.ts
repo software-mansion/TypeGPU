@@ -10,18 +10,19 @@ import {
   MaxValue,
   Measurer,
   type ParseUnwrapped,
-  Schema,
   type Unwrap,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import type { ResolutionCtx, Wgsl } from '../types';
 import alignIO from './alignIO';
 import type { WgslData } from './types';
+import { WgslSchema } from './wgslSchema';
 
 export class SimpleWgslData<TSchema extends AnySchema>
-  extends Schema<Unwrap<TSchema>>
+  extends WgslSchema<Unwrap<TSchema>>
   implements WgslData<Unwrap<TSchema>>
 {
+  typeInfo = 'data';
   public readonly size: number;
   public readonly byteAlignment: number;
 

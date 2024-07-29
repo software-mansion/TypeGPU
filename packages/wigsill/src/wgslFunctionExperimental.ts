@@ -8,6 +8,7 @@ import {
 import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
+import { WgslResolvableBase } from './wgslResolvableBase';
 
 // ----------
 // Public API
@@ -66,14 +67,20 @@ type SegmentsFromTypes<TArgTypes extends WgslFnArgument[]> = {
 };
 
 class WgslFunctionCall<
-  TArgTypes extends [WgslFnArgument, ...WgslFnArgument[]] | [],
-  TReturn extends AnyWgslData | undefined = undefined,
-> implements WgslResolvable
+    TArgTypes extends [WgslFnArgument, ...WgslFnArgument[]] | [],
+    TReturn extends AnyWgslData | undefined = undefined,
+  >
+  extends WgslResolvableBase
+  implements WgslResolvable
 {
+  typeInfo = 'fn';
+
   constructor(
     private usedFn: WgslFn<TArgTypes, TReturn>,
     private readonly args: SegmentsFromTypes<TArgTypes>,
-  ) {}
+  ) {
+    super();
+  }
 
   resolve(ctx: ResolutionCtx): string {
     const argsCode = this.args.map((argSegment, idx) => {
@@ -93,6 +100,7 @@ class WgslFnImpl<
   extends Callable<SegmentsFromTypes<TArgTypes>, WgslFunctionCall<TArgTypes>>
   implements WgslFn<TArgTypes, TReturn>
 {
+  public label = '';
   private identifier = new WgslIdentifier();
 
   constructor(
@@ -103,7 +111,7 @@ class WgslFnImpl<
     super();
   }
 
-  $name(label: string) {
+  $name(label: string | undefined) {
     this.identifier.$name(label);
     return this;
   }
@@ -134,5 +142,9 @@ class WgslFnImpl<
 
   _call(...args: SegmentsFromTypes<TArgTypes>) {
     return new WgslFunctionCall(this, args);
+  }
+
+  toDebugRepr(): string {
+    return `fn:${this.identifier.label}`;
   }
 }

@@ -6,6 +6,7 @@ import {
   type WgslSlot,
   isWgsl,
 } from './types';
+import { WgslResolvableBase } from './wgslResolvableBase';
 
 // ----------
 // Public API
@@ -23,15 +24,15 @@ export function slot<T>(defaultValue?: T): WgslSlot<T> {
 // Implementation
 // --------------
 
-class WgslSlotImpl<T> implements WgslResolvable, WgslSlot<T> {
+class WgslSlotImpl<T>
+  extends WgslResolvableBase
+  implements WgslResolvable, WgslSlot<T>
+{
+  typeInfo = 'slot';
   readonly __brand = 'WgslSlot';
-  public label?: string | undefined;
 
-  constructor(public defaultValue: T | undefined = undefined) {}
-
-  public $name(label: string) {
-    this.label = label;
-    return this;
+  constructor(public defaultValue: T | undefined = undefined) {
+    super();
   }
 
   areEqual(a: T, b: T): boolean {
@@ -48,9 +49,5 @@ class WgslSlotImpl<T> implements WgslResolvable, WgslSlot<T> {
     }
 
     return ctx.resolve(value);
-  }
-
-  toString(): string {
-    return `slot:${this.label ?? '<unnamed>'}`;
   }
 }

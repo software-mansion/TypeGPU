@@ -2,6 +2,7 @@ import type { AnyWgslData } from './std140/types';
 import type { BufferUsage, ResolutionCtx, WgslBindable } from './types';
 import type { WgslBuffer } from './wgslBuffer';
 import { WgslIdentifier } from './wgslIdentifier';
+import { WgslResolvableBase } from './wgslResolvableBase';
 
 // ----------
 // Public API
@@ -10,9 +11,7 @@ import { WgslIdentifier } from './wgslIdentifier';
 export interface WgslBufferUsage<
   TData extends AnyWgslData,
   TUsage extends BufferUsage,
-> extends WgslBindable<TData, TUsage> {
-  $name(label: string): WgslBufferUsage<TData, TUsage>;
-}
+> extends WgslBindable<TData, TUsage> {}
 
 export function bufferUsage<
   TData extends AnyWgslData,
@@ -29,26 +28,21 @@ export function bufferUsage<
 // --------------
 
 class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
+  extends WgslResolvableBase
   implements WgslBufferUsage<TData, TUsage>
 {
-  private _label: string | undefined;
+  typeInfo = 'data';
 
   constructor(
     public readonly buffer: WgslBuffer<TData, TUsage>,
     public readonly usage: TUsage,
-  ) {}
-
-  get label() {
-    return this._label;
+  ) {
+    super();
+    this.typeInfo = this.usage;
   }
 
   get allocatable() {
     return this.buffer;
-  }
-
-  $name(label: string | undefined) {
-    this._label = label;
-    return this;
   }
 
   resolve(ctx: ResolutionCtx): string {
@@ -57,9 +51,5 @@ class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
     ctx.addBinding(this, identifier);
 
     return ctx.resolve(identifier);
-  }
-
-  toString(): string {
-    return `${this.usage}:${this._label ?? '<unnamed>'}`;
   }
 }

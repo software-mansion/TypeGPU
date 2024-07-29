@@ -5,7 +5,6 @@ import {
   MaxValue,
   Measurer,
   type ParseUnwrapped,
-  Schema,
   type Unwrap,
   ValidationError,
 } from 'typed-binary';
@@ -16,12 +15,13 @@ import { WgslIdentifier } from '../wgslIdentifier';
 import alignIO from './alignIO';
 import { u32 } from './numeric';
 import type { AnyWgslData, WgslData } from './types';
+import { WgslSchema } from './wgslSchema';
 
 class DynamicArrayDataType<TElement extends WgslData<unknown>>
-  extends Schema<Unwrap<TElement>[]>
+  extends WgslSchema<Unwrap<TElement>[]>
   implements WgslData<Unwrap<TElement>[]>
 {
-  private _label: string | undefined;
+  typeInfo = 'dynamicArray';
 
   public readonly byteAlignment: number;
   public readonly size: number;
@@ -38,11 +38,6 @@ class DynamicArrayDataType<TElement extends WgslData<unknown>>
     );
 
     this.size = this.measure(MaxValue).size;
-  }
-
-  $name(label: string) {
-    this._label = label;
-    return this;
   }
 
   resolveReferences(): void {
@@ -100,7 +95,7 @@ class DynamicArrayDataType<TElement extends WgslData<unknown>>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this._label);
+    const identifier = new WgslIdentifier().$name(this.label);
 
     ctx.addDeclaration(code`
       struct ${identifier} {

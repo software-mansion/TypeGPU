@@ -2,6 +2,7 @@ import type { AnyWgslData } from './std140/types';
 import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
+import { WgslResolvableBase } from './wgslResolvableBase';
 
 // ----------
 // Public API
@@ -9,9 +10,8 @@ import { WgslIdentifier } from './wgslIdentifier';
 
 export type VariableScope = 'private';
 
-export interface WgslVar<TDataType extends AnyWgslData> extends WgslResolvable {
-  $name(label: string): WgslVar<TDataType>;
-}
+export interface WgslVar<TDataType extends AnyWgslData>
+  extends WgslResolvable {}
 
 /**
  * Creates a variable, with an optional initial value.
@@ -25,14 +25,20 @@ export const variable = <TDataType extends AnyWgslData>(
 // Implementation
 // --------------
 
-class WgslVarImpl<TDataType extends AnyWgslData> implements WgslVar<TDataType> {
+class WgslVarImpl<TDataType extends AnyWgslData>
+  extends WgslResolvableBase
+  implements WgslVar<TDataType>
+{
+  typeInfo = 'var';
   public identifier = new WgslIdentifier();
 
   constructor(
     private readonly _dataType: TDataType,
     private readonly _initialValue: Wgsl | undefined,
     public readonly scope: VariableScope,
-  ) {}
+  ) {
+    super();
+  }
 
   $name(label: string) {
     this.identifier.$name(label);
