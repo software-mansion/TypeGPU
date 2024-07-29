@@ -27,7 +27,6 @@ const spanBuffer = wgsl
   .buffer(struct({ x: u32, y: u32 }), spanPlum)
   .$name('span')
   .$allowUniform();
-const spanUniform = spanBuffer.asUniform();
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -80,7 +79,7 @@ const renderPipeline = runtime.makeRenderPipeline({
   fragment: {
     args: ['@builtin(position) Position: vec4f', '@location(0) uv: vec2f'],
     code: wgsl.code`
-      let span = ${spanUniform};
+      let span = ${spanBuffer.asUniform()};
       let red = floor(uv.x * f32(span.x)) / f32(span.x);
       let green = floor(uv.y * f32(span.y)) / f32(span.y);
       return vec4(red, green, 0.5, 1.0);
