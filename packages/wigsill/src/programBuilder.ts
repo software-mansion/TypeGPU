@@ -98,8 +98,6 @@ export default class ProgramBuilder {
       });
     }
 
-    console.log('bindGroupLayout', allEntries);
-
     const bindGroupLayout = this.runtime.device.createBindGroupLayout({
       entries: allEntries,
     });
@@ -134,8 +132,6 @@ export default class ProgramBuilder {
         },
       });
     }
-
-    console.log('bindGroup', allBindGroupEntries);
 
     const bindGroup = this.runtime.device.createBindGroup({
       layout: bindGroupLayout,
@@ -286,13 +282,11 @@ export class RenderProgramBuilder {
       }
     `;
 
-    console.log('constructing vertex program');
     const vertexProgram = new ProgramBuilder(this.runtime, vertexCode).build({
       bindingGroup: options.bindingGroup,
       shaderStage: GPUShaderStage.VERTEX,
       nameRegistry: options.nameRegistry ?? new RandomNameRegistry(),
     });
-    console.log('constructing fragment program');
     const fragmentProgram = new ProgramBuilder(
       this.runtime,
       fragmentCode,
@@ -338,14 +332,11 @@ export class ComputeProgramBuilder {
       }
     `;
 
-    console.log('constructing compute program');
     const program = new ProgramBuilder(this.runtime, shaderCode).build({
       bindingGroup: options.bindingGroup,
       shaderStage: GPUShaderStage.COMPUTE,
       nameRegistry: options.nameRegistry ?? new RandomNameRegistry(),
     });
-
-    console.log('compute program', program.code);
 
     return program;
   }

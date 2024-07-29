@@ -144,8 +144,6 @@ class WigsillRuntime {
         bindingGroup: 0,
       });
 
-    console.log('vertexBuffers', vertexBuffers);
-
     const vertexBufferDescriptors = vertexBuffers.map((buffer, idx) => {
       if (!buffer.allocatable.vertexLayout) {
         throw new Error(
@@ -172,9 +170,6 @@ class WigsillRuntime {
     const fragmentShaderModule = this.device.createShaderModule({
       code: fragmentProgram.code,
     });
-
-    console.log('vertexProgram', vertexProgram.code);
-    console.log('fragmentProgram', fragmentProgram.code);
 
     const pipelineLayout = this.device.createPipelineLayout({
       label: options.label ?? '',
@@ -470,7 +465,6 @@ const typeToVertexFormatMap: Record<string, GPUVertexFormat> = {
 function deriveVertexFormat<TData extends SimpleWgslData<AnySchema>>(
   typeSchema: TData,
 ): GPUVertexFormat {
-  console.log('deriving vertex format', typeSchema);
   if (!('expressionCode' in typeSchema)) {
     throw new Error(`Type schema must contain a 'code' field`);
   }

@@ -6,6 +6,7 @@
 */
 
 import { addElement, addParameter } from '@wigsill/example-toolkit';
+import { builtin } from 'wigsill';
 import {
   type Parsed,
   createRuntime,
@@ -51,18 +52,17 @@ const resultMatrixData = resultMatrixBuffer.asStorage();
 
 const program = runtime.makeComputePipeline({
   workgroupSize: workgroupSize,
-  args: ['@builtin(global_invocation_id)  global_id: vec3<u32>'],
   code: wgsl`
-    if (global_id.x >= u32(${firstMatrixData}.size.x) || global_id.y >= u32(${secondMatrixData}.size.y)) {
+    if (${builtin.globalInvocationId}.x >= u32(${firstMatrixData}.size.x) || ${builtin.globalInvocationId}.y >= u32(${secondMatrixData}.size.y)) {
       return;
     }
 
-    if (global_id.x + global_id.y == 0u) {
+    if (${builtin.globalInvocationId}.x + ${builtin.globalInvocationId}.y == 0u) {
       ${resultMatrixData}.size = vec2(${firstMatrixData}.size.x, ${secondMatrixData}.size.y);
       ${resultMatrixData}.numbers.count = u32(${firstMatrixData}.size.x) * u32(${secondMatrixData}.size.y);
     }
 
-    let resultCell = vec2(global_id.x, global_id.y);
+    let resultCell = vec2(${builtin.globalInvocationId}.x, ${builtin.globalInvocationId}.y);
     var result = 0.0;
 
     for (var i = 0u; i < u32(${firstMatrixData}.size.y); i = i + 1u) {
