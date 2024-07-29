@@ -67,21 +67,21 @@ export default class ProgramBuilder {
     for (const _ of usedTextures) {
       allEntries.push({
         binding: idx++,
-        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        visibility: options.shaderStage,
         texture: {},
       });
     }
     for (const _ of usedExternalTextures) {
       allEntries.push({
         binding: idx++,
-        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        visibility: options.shaderStage,
         externalTexture: {},
       });
     }
     for (const _ of usedSamplers) {
       allEntries.push({
         binding: idx++,
-        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        visibility: options.shaderStage,
         sampler: {},
       });
     }
@@ -90,12 +90,15 @@ export default class ProgramBuilder {
         binding: idx++,
         visibility: options.shaderStage,
         buffer: {
-          type: usageToBindingTypeMap[
-            bindable.usage as Exclude<BufferUsage, 'vertex'>
-          ],
+          type:
+            bindable.usage === 'vertex'
+              ? usageToBindingTypeMap[bindable.vertexUsage]
+              : usageToBindingTypeMap[bindable.usage],
         },
       });
     }
+
+    console.log('bindGroupLayout', allEntries);
 
     const bindGroupLayout = this.runtime.device.createBindGroupLayout({
       entries: allEntries,
@@ -131,6 +134,8 @@ export default class ProgramBuilder {
         },
       });
     }
+
+    console.log('bindGroup', allBindGroupEntries);
 
     const bindGroup = this.runtime.device.createBindGroup({
       layout: bindGroupLayout,

@@ -93,6 +93,7 @@ class WgslStorageTextureImpl<
   TAccess extends StorageTextureAccess,
 > implements WgslStorageTexture<TData, TAccess>
 {
+  private _label: string | undefined;
   readonly flags: number;
   readonly vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null =
     null;
@@ -107,6 +108,15 @@ class WgslStorageTextureImpl<
 
   createView(descriptor: GPUTextureViewDescriptor): WgslTextureView {
     return new WgslTextureViewImpl(this, descriptor, this.type);
+  }
+
+  get label() {
+    return this._label;
+  }
+
+  $name(label: string | undefined) {
+    this._label = label;
+    return this;
   }
 }
 

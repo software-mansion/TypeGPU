@@ -83,7 +83,7 @@ const nextStateBuffer = wgsl
 
 const viscosityData = viscosityBuffer.asUniform();
 const currentStateData = currentStateBuffer.asReadonlyStorage();
-const currentStateVertex = currentStateBuffer.asVertex();
+const currentStateVertex = currentStateBuffer.asVertex('readonly_storage');
 const sizeData = sizeBuffer.asUniform();
 const nextStateData = nextStateBuffer.asStorage();
 const debugInfoData = debugInfoBuffer.asStorage();
@@ -95,8 +95,9 @@ const maxCompress = wgsl.constant(wgsl`12u`);
 const squareBuffer = wgsl
   .buffer(arrayOf(vec2u, 4))
   .$allowVertex('vertex')
-  .$allowUniform();
-const squareBufferData = squareBuffer.asVertex();
+  .$allowUniform()
+  .$name('square');
+const squareBufferData = squareBuffer.asVertex('uniform');
 squareBuffer.write(runtime, [
   [0, 0],
   [0, 1],
@@ -271,7 +272,7 @@ const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
 const computeWGSL = wgsl`
   let x = ${builtin.globalInvocationId}.x;
   let y = ${builtin.globalInvocationId}.y;
-  atomicAdd(&${debugInfoData}, ${getWaterLevel}(x, y));
+  //atomicAdd(&${debugInfoData}, ${getWaterLevel}(x, y));
   ${decideWaterLevel}(x, y);
 `;
 
@@ -316,27 +317,7 @@ const fragWGSL = wgsl`
   return vec4f(r, g, b, 1.);
 `;
 
-const computePipeline = runtime.makeComputePipeline({
-  workgroupSize: [options.workgroupSize, options.workgroupSize, 1],
-  code: computeWGSL,
-});
-const renderPipeline = runtime.makeRenderPipeline({
-  vertex: {
-    code: vertWGSL,
-    output: {
-      [builtin.position]: 'pos',
-      cell: [f32, 'cell'],
-    },
-  },
-  fragment: {
-    code: fragWGSL,
-    target: [{ format: presentationFormat }],
-  },
-  primitive: { topology: 'triangle-strip' },
-});
-
 let drawCanvasData = new Uint32Array(options.size * options.size);
-
 let commandEncoder: GPUCommandEncoder;
 
 let msSinceLastTick = 0;
@@ -346,6 +327,26 @@ let renderChanges: () => void;
 
 function resetGameData() {
   drawCanvasData = new Uint32Array(options.size * options.size);
+
+  const computePipeline = runtime.makeComputePipeline({
+    workgroupSize: [options.workgroupSize, options.workgroupSize, 1],
+    code: computeWGSL,
+  });
+
+  const renderPipeline = runtime.makeRenderPipeline({
+    vertex: {
+      code: vertWGSL,
+      output: {
+        [builtin.position]: 'pos',
+        cell: [f32, 'cell'],
+      },
+    },
+    fragment: {
+      code: fragWGSL,
+      target: [{ format: presentationFormat }],
+    },
+    primitive: { topology: 'triangle-strip' },
+  });
 
   currentStateBuffer.write(
     runtime,
@@ -361,23 +362,12 @@ function resetGameData() {
   const length = options.size * options.size;
   const cells = new Uint32Array(length);
 
-  render = async () => {
+  render = () => {
     debugInfoBuffer.write(runtime, 0);
     const view = context.getCurrentTexture().createView();
 
     // compute
     computePipeline.execute([options.workgroupSize, options.workgroupSize]);
-    computePipeline.flush();
-
-    await device.queue.onSubmittedWorkDone();
-
-    commandEncoder.copyBufferToBuffer(
-      runtime.bufferFor(nextStateBuffer),
-      0,
-      runtime.bufferFor(currentStateBuffer),
-      0,
-      cells.byteLength,
-    );
 
     // render
     renderPipeline.execute({
@@ -389,10 +379,21 @@ function resetGameData() {
         },
       ],
       vertexCount: 4,
-      instanceCount: length,
+      instanceCount: options.size ** 2,
     });
 
-    renderPipeline.flush();
+    runtime.flush();
+
+    commandEncoder = device.createCommandEncoder();
+    commandEncoder.copyBufferToBuffer(
+      runtime.bufferFor(nextStateBuffer),
+      0,
+      runtime.bufferFor(currentStateBuffer),
+      0,
+      cells.byteLength,
+    );
+
+    device.queue.submit([commandEncoder.finish()]);
   };
 
   applyDrawCanvas = () => {
@@ -431,8 +432,9 @@ function resetGameData() {
         },
       ],
       vertexCount: 4,
-      instanceCount: options.size * options.size,
+      instanceCount: options.size ** 2,
     });
+    runtime.flush();
   };
 
   createSampleScene();
@@ -538,8 +540,6 @@ onFrame((deltaTime: number) => {
     msSinceLastTick -= options.timestep;
   }
 });
-
-resetGameData();
 
 addParameter(
   'size',

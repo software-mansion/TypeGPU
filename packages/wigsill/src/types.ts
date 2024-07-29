@@ -96,6 +96,7 @@ export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
   readonly dataType: TData;
   vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null;
   readonly flags: GPUBufferUsageFlags | GPUTextureUsageFlags;
+  get label(): string | undefined;
 }
 
 export interface WgslBindable<
@@ -104,6 +105,7 @@ export interface WgslBindable<
 > extends WgslResolvable {
   readonly allocatable: WgslAllocatable<TData>;
   readonly usage: TUsage;
+  vertexUsage: 'uniform' | 'readonly_storage' | 'mutable_storage';
 }
 
 export type WgslSamplerType = 'sampler' | 'sampler_comparison';

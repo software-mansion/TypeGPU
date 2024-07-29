@@ -47,6 +47,7 @@ class WigsillRuntime {
       if (!buffer) {
         throw new Error(`Failed to create buffer for ${allocatable}`);
       }
+      buffer.label = allocatable.label ?? 'WgslBuffer';
       this._entryToBufferMap.set(allocatable, buffer);
     }
 
