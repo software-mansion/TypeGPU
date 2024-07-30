@@ -23,7 +23,7 @@ export interface WigsillRuntime {
   ): Promise<Parsed<TData>>;
 
   bufferFor(allocatable: WgslAllocatable): GPUBuffer;
-  textureFor(view: WgslTextureView): GPUTexture;
+  textureFor(view: WgslTextureView): GPUTextureView;
   externalTextureFor(texture: WgslTextureExternal): GPUExternalTexture;
   samplerFor(sampler: WgslSampler): GPUSampler;
   dispose(): void;

@@ -106,7 +106,7 @@ export default class ProgramBuilder {
       entries: allEntries,
     });
 
-    const allBindGroupEntries: object[] = [];
+    const allBindGroupEntries: GPUBindGroupEntry[] = [];
     idx = 0;
     for (const texture of usedTextures) {
       allBindGroupEntries.push({
@@ -139,7 +139,7 @@ export default class ProgramBuilder {
 
     const bindGroup = this.runtime.device.createBindGroup({
       layout: bindGroupLayout,
-      entries: allBindGroupEntries as Iterable<GPUBindGroupEntry>,
+      entries: allBindGroupEntries,
     });
 
     return {

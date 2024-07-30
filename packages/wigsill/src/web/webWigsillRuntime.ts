@@ -62,7 +62,7 @@ class WebWigsillRuntime {
     return buffer;
   }
 
-  textureFor(view: WgslTextureView): GPUTexture {
+  textureFor(view: WgslTextureView): GPUTextureView {
     let texture = this._textures.get(view);
 
     if (!texture) {
@@ -74,7 +74,7 @@ class WebWigsillRuntime {
       this._textures.set(view, texture);
     }
 
-    return texture;
+    return texture.createView(view.descriptor);
   }
 
   externalTextureFor(texture: WgslTextureExternal): GPUExternalTexture {
