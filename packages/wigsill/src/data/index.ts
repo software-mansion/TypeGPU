@@ -1,3 +1,7 @@
+/**
+ * @module wigsill/data
+ */
+
 export * from './std140';
 export * from './numeric';
 export * from './dynamicArray';
