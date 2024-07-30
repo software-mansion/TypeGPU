@@ -2,6 +2,7 @@ import {
   type InlineResolve,
   type ResolutionCtx,
   type Wgsl,
+  type WgslNamable,
   type WgslResolvable,
   isResolvable,
 } from './types';
@@ -11,7 +12,7 @@ import { WgslResolvableBase } from './wgslResolvableBase';
 // Public API
 // ----------
 
-export interface WgslCode extends WgslResolvable {}
+export interface WgslCode extends WgslResolvable, WgslNamable {}
 
 export function code(
   strings: TemplateStringsArray,
@@ -34,7 +35,7 @@ export function code(
 // --------------
 
 class WgslCodeImpl extends WgslResolvableBase implements WgslCode {
-  typeInfo = 'code';
+  readonly typeInfo = 'code';
 
   constructor(public readonly segments: (Wgsl | InlineResolve)[]) {
     super();

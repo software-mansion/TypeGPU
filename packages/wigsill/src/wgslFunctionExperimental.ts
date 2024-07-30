@@ -6,6 +6,7 @@ import type {
   ResolutionCtx,
   Wgsl,
   WgslFnArgument,
+  WgslNamable,
   WgslResolvable,
   WgslValue,
 } from './types';
@@ -20,7 +21,8 @@ import { WgslResolvableBase } from './wgslResolvableBase';
 export interface WgslFn<
   TArgTypes extends [WgslFnArgument, ...WgslFnArgument[]] | [],
   TReturn extends AnyWgslData | undefined = undefined,
-> extends WgslResolvable {}
+> extends WgslResolvable,
+    WgslNamable {}
 
 export function fn<
   TArgTypes extends [WgslFnArgument, ...WgslFnArgument[]] | [],
@@ -74,9 +76,9 @@ class WgslFunctionCall<
     TReturn extends AnyWgslData | undefined = undefined,
   >
   extends WgslResolvableBase
-  implements WgslResolvable
+  implements WgslResolvable, WgslNamable
 {
-  typeInfo = 'fn';
+  readonly typeInfo = 'fn';
 
   constructor(
     private usedFn: WgslFn<TArgTypes, TReturn>,
@@ -103,8 +105,8 @@ class WgslFnImpl<
   extends Callable<SegmentsFromTypes<TArgTypes>, WgslFunctionCall<TArgTypes>>
   implements WgslFn<TArgTypes, TReturn>
 {
-  public label: string | undefined;
-  private identifier = new WgslIdentifier();
+  private _label: string | undefined;
+  readonly typeInfo = 'fn';
 
   constructor(
     private argPairs: PairsFromTypes<TArgTypes>,
@@ -114,13 +116,17 @@ class WgslFnImpl<
     super();
   }
 
+  get label() {
+    return this._label;
+  }
+
   $name(label: string | undefined) {
-    this.label = label;
-    this.identifier.$name(label);
+    this._label = label;
     return this;
   }
 
   resolve(ctx: ResolutionCtx): string {
+    const identifier = new WgslIdentifier();
     const argsCode = this.argPairs.map(([ident, argType], idx) => {
       const comma = idx < this.argPairs.length - 1 ? ', ' : '';
 
@@ -132,16 +138,16 @@ class WgslFnImpl<
     });
 
     if (this.returnType !== undefined) {
-      ctx.addDeclaration(code`fn ${this.identifier}(${argsCode}) -> ${this.returnType} {
+      ctx.addDeclaration(code`fn ${identifier}(${argsCode}) -> ${this.returnType} {
         ${this.body}
       }`);
     } else {
-      ctx.addDeclaration(code`fn ${this.identifier}(${argsCode}) {
+      ctx.addDeclaration(code`fn ${identifier}(${argsCode}) {
         ${this.body}
       }`);
     }
 
-    return ctx.resolve(this.identifier);
+    return ctx.resolve(identifier);
   }
 
   _call(...args: SegmentsFromTypes<TArgTypes>) {
@@ -149,7 +155,7 @@ class WgslFnImpl<
   }
 
   get debugRepr(): string {
-    return `fn:${this.label ?? '<unnamed>'}`;
+    return `${this.typeInfo}:${this.label ?? '<unnamed>'}`;
   }
 
   toString(): string {

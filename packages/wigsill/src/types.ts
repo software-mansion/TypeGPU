@@ -25,10 +25,13 @@ export interface ResolutionCtx {
 }
 
 export interface WgslResolvable {
-  label: string | undefined;
-  $name(label?: string | undefined): this;
   resolve(ctx: ResolutionCtx): string;
+  get label(): string | undefined;
   get debugRepr(): string;
+}
+
+export interface WgslNamable {
+  $name(label?: string | undefined): this;
 }
 
 export function isResolvable(value: unknown): value is WgslResolvable {
@@ -47,9 +50,9 @@ export function isWgsl(value: unknown): value is Wgsl {
   );
 }
 
-export interface WgslSlot<T> {
+export interface WgslSlot<T> extends WgslNamable {
   readonly __brand: 'WgslSlot';
-  label: string | undefined;
+  get label(): string | undefined;
 
   readonly defaultValue: T | undefined;
 
@@ -75,6 +78,7 @@ export type InlineResolve = (get: EventualGetter) => Wgsl;
 
 export interface WgslResolvableSlot<T extends Wgsl>
   extends WgslResolvable,
+    WgslNamable,
     WgslSlot<T> {}
 
 export type SlotValuePair<T> = [WgslSlot<T>, T];
@@ -92,7 +96,8 @@ export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
 export interface WgslBindable<
   TData extends AnyWgslData = AnyWgslData,
   TUsage extends BufferUsage = BufferUsage,
-> extends WgslResolvable {
+> extends WgslResolvable,
+    WgslNamable {
   readonly allocatable: WgslAllocatable<TData>;
   readonly usage: TUsage;
 }

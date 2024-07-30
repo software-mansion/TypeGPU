@@ -1,11 +1,18 @@
 import { ResolvableToStringError } from './errors';
+import type { WgslNamable, WgslResolvable } from './types';
 
-export abstract class WgslResolvableBase {
-  abstract typeInfo: string;
-  public label: string | undefined;
+export abstract class WgslResolvableBase
+  implements WgslNamable, Omit<WgslResolvable, 'resolve'>
+{
+  abstract readonly typeInfo: string;
+  private _label: string | undefined;
+
+  get label() {
+    return this._label;
+  }
 
   $name(label?: string | undefined) {
-    this.label = label;
+    this._label = label;
     return this;
   }
 

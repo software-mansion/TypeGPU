@@ -1,4 +1,4 @@
-import type { ResolutionCtx, WgslResolvable } from './types';
+import type { ResolutionCtx, WgslNamable, WgslResolvable } from './types';
 import { WgslResolvableBase } from './wgslResolvableBase';
 
 /**
@@ -6,9 +6,9 @@ import { WgslResolvableBase } from './wgslResolvableBase';
  */
 export class WgslIdentifier
   extends WgslResolvableBase
-  implements WgslResolvable
+  implements WgslResolvable, WgslNamable
 {
-  typeInfo = 'id';
+  readonly typeInfo = 'id';
 
   resolve(ctx: ResolutionCtx): string {
     return ctx.nameFor(this);

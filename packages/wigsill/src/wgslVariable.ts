@@ -1,4 +1,10 @@
-import type { AnyWgslData, ResolutionCtx, Wgsl, WgslResolvable } from './types';
+import type {
+  AnyWgslData,
+  ResolutionCtx,
+  Wgsl,
+  WgslNamable,
+  WgslResolvable,
+} from './types';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
 import { WgslResolvableBase } from './wgslResolvableBase';
@@ -10,7 +16,8 @@ import { WgslResolvableBase } from './wgslResolvableBase';
 export type VariableScope = 'private';
 
 export interface WgslVar<TDataType extends AnyWgslData>
-  extends WgslResolvable {}
+  extends WgslResolvable,
+    WgslNamable {}
 
 /**
  * Creates a variable, with an optional initial value.
@@ -28,8 +35,7 @@ class WgslVarImpl<TDataType extends AnyWgslData>
   extends WgslResolvableBase
   implements WgslVar<TDataType>
 {
-  typeInfo = 'var';
-  public identifier = new WgslIdentifier();
+  readonly typeInfo = 'var';
 
   constructor(
     private readonly _dataType: TDataType,
@@ -40,22 +46,17 @@ class WgslVarImpl<TDataType extends AnyWgslData>
   }
 
   resolve(ctx: ResolutionCtx): string {
+    const identifier = new WgslIdentifier();
     if (this._initialValue) {
       ctx.addDeclaration(
-        code`var<${this.scope}> ${this.identifier}: ${this._dataType} = ${this._initialValue};`,
+        code`var<${this.scope}> ${identifier}: ${this._dataType} = ${this._initialValue};`,
       );
     } else {
       ctx.addDeclaration(
-        code`var<${this.scope}> ${this.identifier}: ${this._dataType};`,
+        code`var<${this.scope}> ${identifier}: ${this._dataType};`,
       );
     }
 
-    return ctx.resolve(this.identifier);
-  }
-
-  $name(label: string | undefined) {
-    this.label = label;
-    this.identifier.$name(label);
-    return this;
+    return ctx.resolve(identifier);
   }
 }

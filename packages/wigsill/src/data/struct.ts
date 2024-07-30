@@ -35,7 +35,7 @@ class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
   extends WgslSchema<UnwrapRecord<TProps>>
   implements WgslData<UnwrapRecord<TProps>>
 {
-  typeInfo = 'struct';
+  readonly typeInfo = 'struct';
   private _innerSchema: ISchema<UnwrapRecord<TProps>>;
 
   public readonly byteAlignment: number;

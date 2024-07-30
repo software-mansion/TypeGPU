@@ -1,4 +1,10 @@
-import type { AnyWgslData, BufferUsage, WgslAllocatable } from './types';
+import type {
+  AnyWgslData,
+  BufferUsage,
+  WgslAllocatable,
+  WgslNamable,
+  WgslResolvable,
+} from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
 import { WgslResolvableBase } from './wgslResolvableBase';
 
@@ -9,7 +15,9 @@ import { WgslResolvableBase } from './wgslResolvableBase';
 export interface WgslBuffer<
   TData extends AnyWgslData,
   TAllows extends BufferUsage = never,
-> extends WgslAllocatable<TData> {
+> extends WgslAllocatable<TData>,
+    WgslNamable,
+    Omit<WgslResolvable, 'resolve'> {
   $allowUniform(): WgslBuffer<TData, TAllows | 'uniform'>;
   $allowReadonlyStorage(): WgslBuffer<TData, TAllows | 'readonly_storage'>;
   $allowMutableStorage(): WgslBuffer<TData, TAllows | 'mutable_storage'>;
@@ -26,9 +34,6 @@ export interface WgslBuffer<
   asReadonlyStorage(): 'readonly_storage' extends TAllows
     ? WgslBufferUsage<TData, 'readonly_storage'>
     : null;
-
-  $name(label?: string | undefined): this;
-  get debugRepr(): string;
 }
 
 export function buffer<
@@ -49,7 +54,7 @@ class WgslBufferImpl<
   extends WgslResolvableBase
   implements WgslBuffer<TData, TAllows>
 {
-  typeInfo = 'buffer';
+  readonly typeInfo = 'buffer';
   public flags: GPUBufferUsageFlags =
     GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
 

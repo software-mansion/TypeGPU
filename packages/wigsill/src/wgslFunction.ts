@@ -4,6 +4,7 @@ import type {
   ResolutionCtx,
   SlotValuePair,
   Wgsl,
+  WgslNamable,
   WgslResolvable,
   WgslSlot,
 } from './types';
@@ -15,9 +16,11 @@ import { WgslResolvableBase } from './wgslResolvableBase';
 // Public API
 // ----------
 
-export interface WgslFn extends WgslResolvable {
-  with<T>(slot: WgslSlot<T>, value: Eventual<T>): WgslFn;
+export interface WgslFn extends WgslResolvable, WgslNamable {
+  with<T>(slot: WgslSlot<T>, value: Eventual<T>): BoundWgslFn;
 }
+
+export type BoundWgslFn = Omit<WgslFn, '$name'>;
 
 export function fn(label?: string) {
   return (
@@ -37,7 +40,7 @@ export function fn(label?: string) {
 // --------------
 
 class WgslFnImpl extends WgslResolvableBase implements WgslFn {
-  typeInfo = 'fn';
+  readonly typeInfo = 'fn';
 
   constructor(private readonly body: Wgsl) {
     super();
@@ -51,27 +54,29 @@ class WgslFnImpl extends WgslResolvableBase implements WgslFn {
     return ctx.resolve(identifier);
   }
 
-  with<T>(slot: WgslSlot<T>, value: T): WgslFn {
+  with<T>(slot: WgslSlot<T>, value: T): BoundWgslFn {
     return new BoundWgslFnImpl(this, [slot, value]);
   }
 }
 
-class BoundWgslFnImpl<T> extends WgslResolvableBase implements WgslFn {
-  typeInfo = 'fn';
-
+class BoundWgslFnImpl<T> implements BoundWgslFn {
   constructor(
-    private readonly _innerFn: WgslFn,
+    private readonly _innerFn: BoundWgslFn,
     private readonly _slotValuePair: SlotValuePair<T>,
-  ) {
-    super();
-  }
+  ) {}
 
-  with<TValue>(slot: WgslSlot<TValue>, value: Eventual<TValue>): WgslFn {
+  readonly typeInfo = 'fn';
+
+  with<TValue>(slot: WgslSlot<TValue>, value: Eventual<TValue>): BoundWgslFn {
     return new BoundWgslFnImpl(this, [slot, value]);
   }
 
   resolve(ctx: ResolutionCtx): string {
     return ctx.resolve(this._innerFn, [this._slotValuePair]);
+  }
+
+  get label() {
+    return this._innerFn.label;
   }
 
   get debugRepr(): string {

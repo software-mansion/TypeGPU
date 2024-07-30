@@ -21,7 +21,7 @@ export class SimpleWgslData<TSchema extends AnySchema>
   extends WgslSchema<Unwrap<TSchema>>
   implements WgslData<Unwrap<TSchema>>
 {
-  typeInfo = 'data';
+  readonly typeInfo = 'data';
   public readonly size: number;
   public readonly byteAlignment: number;
 

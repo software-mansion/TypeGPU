@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { ResolvableToStringError, StrictNameRegistry, wgsl } from '../src';
-import { u32 } from '../src/data';
+import { f32, struct } from '../src/data';
+import { u32, vec3f } from '../src/data';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
+import { WgslIdentifier } from '../src/wgslIdentifier';
 
 global.GPUBufferUsage = {
   COPY_DST: 8,
@@ -58,5 +60,42 @@ describe('resolvable base', () => {
       new ResolvableToStringError(bufferUsage),
     );
     expect(`${bufferUsage.debugRepr}`).toEqual('mutable_storage:ghi');
+  });
+
+  it('makes items namable', () => {
+    wgsl.var(u32, 123).$name('abc');
+    wgsl.constant(123).$name('abc');
+    wgsl.code`2+2`.$name('code');
+    wgsl.slot(123).$name();
+    wgsl.slot({ a: 'a' }).$name();
+    wgsl.buffer(u32).$allowMutableStorage().asStorage().$name('ghi');
+    wgsl.buffer(u32).$name('ghi');
+    new WgslIdentifier().$name('id');
+
+    wgsl.fn()`() -> u32 {
+      return 1;
+    }`.$name('def');
+
+    wgsl
+      .fun(
+        [f32, u32],
+        f32,
+      )((one, two) => wgsl`${one} + ${two}`)
+      .$name('def');
+
+    struct({
+      a: vec3f,
+    }).$name('s');
+  });
+
+  it('allows debug logging bounded functions with labels of their parent functions', () => {
+    const slot = wgsl.slot(123).$name('s');
+
+    const fun = wgsl.fn()`() -> u32 {
+      return 1;
+    }`.$name('def');
+
+    const boundedFun = fun.with(slot, 246);
+    expect(boundedFun.debugRepr).toEqual('fn:def[s=246]');
   });
 });

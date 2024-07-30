@@ -25,7 +25,7 @@ class AtomicImpl<TSchema extends U32 | I32>
   extends WgslSchema<Unwrap<TSchema>>
   implements Atomic<TSchema>
 {
-  typeInfo = 'atomic';
+  readonly typeInfo = 'atomic';
   public readonly size: number;
   public readonly byteAlignment: number;
 

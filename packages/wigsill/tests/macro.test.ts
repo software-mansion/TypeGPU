@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import wgsl from 'wigsill';
-import { repeat } from 'wigsill/macro';
+import wgsl from '../src';
+import { repeat } from '../src/macro';
 import { parseWGSL } from './utils/parseWGSL';
 
 describe('repeat', () => {

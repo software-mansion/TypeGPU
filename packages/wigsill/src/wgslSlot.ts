@@ -1,6 +1,7 @@
 import {
   type ResolutionCtx,
   type Wgsl,
+  type WgslNamable,
   type WgslResolvable,
   type WgslResolvableSlot,
   type WgslSlot,
@@ -26,9 +27,9 @@ export function slot<T>(defaultValue?: T): WgslSlot<T> {
 
 class WgslSlotImpl<T>
   extends WgslResolvableBase
-  implements WgslResolvable, WgslSlot<T>
+  implements WgslResolvable, WgslNamable, WgslSlot<T>
 {
-  typeInfo = 'slot';
+  readonly typeInfo = 'slot';
   readonly __brand = 'WgslSlot';
 
   constructor(public defaultValue: T | undefined = undefined) {

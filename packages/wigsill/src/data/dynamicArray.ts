@@ -20,7 +20,7 @@ class DynamicArrayDataType<TElement extends WgslData<unknown>>
   extends WgslSchema<Unwrap<TElement>[]>
   implements WgslData<Unwrap<TElement>[]>
 {
-  typeInfo = 'dynamic_array';
+  readonly typeInfo = 'dynamic_array';
 
   public readonly byteAlignment: number;
   public readonly size: number;

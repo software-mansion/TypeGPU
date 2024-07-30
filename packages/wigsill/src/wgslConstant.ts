@@ -1,4 +1,4 @@
-import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
+import type { ResolutionCtx, Wgsl, WgslNamable, WgslResolvable } from './types';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
 import { WgslResolvableBase } from './wgslResolvableBase';
@@ -7,7 +7,7 @@ import { WgslResolvableBase } from './wgslResolvableBase';
 // Public API
 // ----------
 
-export interface WgslConst extends WgslResolvable {}
+export interface WgslConst extends WgslResolvable, WgslNamable {}
 
 /**
  * Creates a constant is computed at shader initialization according
@@ -22,7 +22,7 @@ export function constant(expr: Wgsl): WgslConst {
 // --------------
 
 class WgslConstImpl extends WgslResolvableBase implements WgslConst {
-  typeInfo = 'const';
+  readonly typeInfo = 'const';
 
   constructor(private readonly expr: Wgsl) {
     super();
