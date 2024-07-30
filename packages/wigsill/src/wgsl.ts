@@ -1,4 +1,5 @@
 import { buffer } from './wgslBuffer';
+import { builtin } from './wgslBuiltin';
 import { code } from './wgslCode';
 import { constant } from './wgslConstant';
 import { fn } from './wgslFunction';
@@ -19,4 +20,5 @@ export default Object.assign(code, {
   sampler,
   texture,
   textureExternal,
+  builtin,
 });

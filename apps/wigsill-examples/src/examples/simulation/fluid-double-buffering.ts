@@ -602,14 +602,14 @@ function makePipelines(
       `,
       output: {
         [builtin.position]: 'outPos',
-        uv: [vec2f, 'outUv'],
+        outUv: [vec2f, 'outUv'],
       },
     },
 
     fragment: {
       code: wgsl.code`
-        let x = i32(uv.x * f32(${gridSizeData}));
-        let y = i32(uv.y * f32(${gridSizeData}));
+        let x = i32(outUv.x * f32(${gridSizeData}));
+        let y = i32(outUv.y * f32(${gridSizeData}));
         return ${mainFragmentWithInput}(x, y);
       `,
       target: [
