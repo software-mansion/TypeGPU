@@ -28,13 +28,19 @@ export interface WigsillRuntime {
   samplerFor(sampler: WgslSampler): GPUSampler;
   dispose(): void;
   flush(): void;
+
+  makeRenderPipeline(options: RenderPipelineOptions): RenderPipelineExecutor;
+  makeComputePipeline(options: ComputePipelineOptions): ComputePipelineExecutor;
 }
 
 export interface RenderPipelineOptions {
   vertex: {
     code: WgslCode;
-    output: WgslStruct<Record<string, AnyWgslData>>;
-    buffersLayouts?: Iterable<GPUVertexBufferLayout | null>;
+    output: {
+      [K in symbol]: string;
+    } & {
+      [K in string]: [AnyWgslData, string];
+    };
   };
   fragment: {
     code: WgslCode;
