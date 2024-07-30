@@ -1,4 +1,9 @@
-import type { Getter, WgslPlum, WgslSettable } from './wgslPlum';
+import {
+  type Getter,
+  type WgslPlum,
+  type WgslSettable,
+  isExternalPlum,
+} from './wgslPlum';
 
 type Listener = () => unknown;
 type Unsubscribe = () => void;
@@ -56,6 +61,12 @@ export class PlumStore {
       this._stateMap.set(plum, state);
     }
 
+    if (isExternalPlum(plum)) {
+      // external plums do not use `get`
+      state.value = plum.compute(null as unknown as Getter);
+      state.version = plum.version;
+    }
+
     return state;
   }
 
@@ -95,12 +106,14 @@ export class PlumStore {
       }
     }
 
-    if (Object.is(state.value, newValue)) {
-      return state.value;
-    }
+    if (!isExternalPlum(plum)) {
+      if (Object.is(state.value, newValue)) {
+        return state.value;
+      }
 
-    state.value = newValue;
-    state.version++;
+      state.value = newValue;
+      state.version++;
+    }
 
     if (state.active) {
       for (const listener of state.active.listeners) {
@@ -154,6 +167,9 @@ export class PlumStore {
 
   subscribe(plum: WgslPlum, listener: Listener): Unsubscribe {
     const state = this._getState(plum);
+
+    let externalUnsub: (() => unknown) | undefined;
+
     if (!state.active) {
       const unsubs = new Set<Unsubscribe>();
       state.active = {
@@ -168,6 +184,12 @@ export class PlumStore {
           }),
         );
       }
+      // if external, subscribing to itself
+      if (isExternalPlum(plum)) {
+        externalUnsub = plum.subscribe(() => {
+          this._recompute(plum);
+        });
+      }
     }
 
     state.active.listeners.add(listener);
@@ -180,6 +202,12 @@ export class PlumStore {
       state.active.listeners.delete(listener);
 
       if (state.active.listeners.size === 0) {
+        // Unsubscribing from dependencies
+        for (const unsub of state.active.unsubs) {
+          unsub();
+        }
+        externalUnsub?.();
+
         // no listeners left, deactivate
         state.active = undefined;
       }

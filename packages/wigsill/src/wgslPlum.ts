@@ -5,6 +5,7 @@ import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
 // ----------
 
 export type Getter = <T>(plum: WgslPlum<T>) => T;
+export type Unsubscribe = () => unknown;
 
 export interface WgslPlum<TValue = unknown> {
   readonly __brand: 'WgslPlum';
@@ -21,6 +22,22 @@ export interface WgslPlum<TValue = unknown> {
 export const WgslSettableTrait = Symbol('This item can be set');
 export interface WgslSettable {
   readonly [WgslSettableTrait]: true;
+}
+
+export const WgslExternalPlumTrait = Symbol(
+  `This plum's value is sourced from outside the runtime.`,
+);
+export interface WgslExternalPlum {
+  readonly [WgslExternalPlumTrait]: true;
+
+  readonly version: number;
+  subscribe(listener: () => unknown): Unsubscribe;
+}
+
+export function isExternalPlum(
+  value: unknown | WgslExternalPlum,
+): value is WgslExternalPlum {
+  return (value as WgslExternalPlum)[WgslExternalPlumTrait] === true;
 }
 
 /**
@@ -67,6 +84,13 @@ export function plum<T>(
   }
 
   return new WgslSourcePlumImpl(initialOrCompute);
+}
+
+export function plumFromEvent<T>(
+  subscribe: (listener: () => unknown) => Unsubscribe,
+  getLatest: () => T,
+): WgslPlum<T> & WgslExternalPlum {
+  return new WgslExternalPlumImpl(subscribe, getLatest);
 }
 
 export function isPlum<T>(value: WgslPlum<T> | unknown): value is WgslPlum<T> {
@@ -130,6 +154,60 @@ class WgslDerivedPlumImpl<TValue> implements WgslPlum<TValue>, WgslResolvable {
 
   compute(get: Getter): TValue {
     return this._compute(get);
+  }
+
+  toString(): string {
+    return `plum:${this._label ?? '<unnamed>'}`;
+  }
+}
+
+class WgslExternalPlumImpl<TValue>
+  implements WgslPlum<TValue>, WgslResolvable, WgslExternalPlum
+{
+  readonly __brand = 'WgslPlum';
+  readonly [WgslExternalPlumTrait] = true;
+
+  private _label: string | undefined;
+  private _prev: TValue;
+  private _version = 0;
+
+  constructor(
+    private readonly _subscribe: (listener: () => unknown) => Unsubscribe,
+    private readonly _getLatest: () => TValue,
+  ) {
+    this._prev = _getLatest();
+  }
+
+  $name(label: string): this {
+    this._label = label;
+    return this;
+  }
+
+  get label(): string | undefined {
+    return this._label;
+  }
+
+  get version(): number {
+    return this._version;
+  }
+
+  resolve(ctx: ResolutionCtx): string {
+    throw new Error('Method not implemented.');
+  }
+
+  subscribe(listener: () => unknown): Unsubscribe {
+    return this._subscribe(listener);
+  }
+
+  compute(): TValue {
+    const latest = this._getLatest();
+
+    if (!Object.is(latest, this._prev)) {
+      this._version++;
+      this._prev = latest;
+    }
+
+    return this._prev;
   }
 
   toString(): string {
