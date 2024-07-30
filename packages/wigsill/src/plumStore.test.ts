@@ -2,6 +2,29 @@ import { describe, expect, it, vi } from 'vitest';
 import { PlumStore } from './plumStore';
 import { type Getter, plum, plumFromEvent } from './wgslPlum';
 
+function makeSubject<T>(initial: T) {
+  let value = initial;
+  const listeners = new Set<() => unknown>();
+
+  return {
+    listeners,
+    set: (newValue: T) => {
+      value = newValue;
+      for (const listener of listeners) {
+        listener();
+      }
+    },
+    getLatest: () => {
+      return value;
+    },
+    subscribe: vi.fn((listener: () => unknown) => {
+      listeners.add(listener);
+
+      return () => listeners.delete(listener);
+    }),
+  };
+}
+
 describe('PlumStore', () => {
   it('should return initial value of source plum', () => {
     const store = new PlumStore();
@@ -129,53 +152,45 @@ describe('PlumStore', () => {
   });
 
   it('should read external plum', () => {
-    let latest = 123;
-
-    const subscribe = () => {
-      // noop
-      return () => {};
-    };
-
-    const externalPlum = plumFromEvent(subscribe, () => latest);
+    const subject = makeSubject(123);
+    const externalPlum = plumFromEvent(subject.subscribe, subject.getLatest);
 
     const store = new PlumStore();
     expect(store.get(externalPlum)).toEqual(123);
 
-    latest = 234;
+    subject.set(234);
 
     expect(store.get(externalPlum)).toEqual(234);
   });
 
   it('should notify subscriber when external plum changes', () => {
-    const listeners = new Set<() => unknown>();
-    const subscribe = vi.fn((l: () => unknown) => {
-      listeners.add(l);
-      return () => listeners.delete(l);
-    });
-    let latest = 123;
+    const subject = makeSubject(123);
 
-    const externalPlum = plumFromEvent(subscribe, () => latest).$name(
-      'external',
-    );
+    const externalPlum = plumFromEvent(
+      subject.subscribe,
+      subject.getLatest,
+    ).$name('external');
 
     const store = new PlumStore();
 
     const listener = vi.fn(() => {});
     const unsubscribe = store.subscribe(externalPlum, listener);
 
-    expect(subscribe).toBeCalledTimes(1);
+    expect(subject.subscribe).toBeCalledTimes(1);
     expect(listener).not.toBeCalled();
-    expect(listeners.size).toEqual(1);
+    expect(subject.listeners.size).toEqual(1);
 
     expect(store.get(externalPlum)).toEqual(123);
 
-    latest = 245;
-    for (const l of listeners) {
-      l();
-    }
+    subject.set(245);
 
-    expect(store.get(externalPlum)).toEqual(245);
     expect(listener).toBeCalledTimes(1);
+    expect(store.get(externalPlum)).toEqual(245);
+
+    subject.set(111);
+
+    expect(listener).toBeCalledTimes(2);
+    expect(store.get(externalPlum)).toEqual(111);
 
     unsubscribe();
   });
