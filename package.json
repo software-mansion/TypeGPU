@@ -11,8 +11,7 @@
     "check": "biome check --write .",
     "coverage": "vitest --coverage",
     "test": "pnpm run '/^test:.*/'",
-    "test:types-packages": "find packages -mindepth 2 -maxdepth 2 -name 'tsconfig.json' | xargs -I % pnpm tsc --p % --noEmit",
-    "test:types-apps": "find apps -mindepth 2 -maxdepth 2 -name 'tsconfig.app.json' | xargs -I % pnpm tsc --p % --noEmit",
+    "test:types": "pnpm run -r test:types",
     "test:spec": "vitest run"
   },
   "engines": {
