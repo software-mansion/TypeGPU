@@ -127,7 +127,7 @@ const imageTexture = wgsl.texture(
 
 device.queue.copyExternalImageToTexture(
   { source: imageBitmap },
-  { texture: runtime.textureFor(imageTexture.createView()) },
+  { texture: runtime.textureFor(imageTexture) },
   [imageBitmap.width, imageBitmap.height],
 );
 
