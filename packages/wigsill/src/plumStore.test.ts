@@ -232,10 +232,56 @@ describe('PlumStore', () => {
 
     store.set(fooPlum, 5);
 
-    // expect(doubledListener).toBeCalledTimes(1);
-    // expect(tripledListener).toBeCalledTimes(1);
-    // expect(store.get(doubledPlum)).toEqual(10);
-    // expect(store.get(tripledPlum)).toEqual(15);
+    expect(doubledListener).toBeCalledTimes(1);
+    expect(tripledListener).toBeCalledTimes(1);
+    expect(store.get(doubledPlum)).toEqual(10);
+    expect(store.get(tripledPlum)).toEqual(15);
+  });
+
+  it('should handle listeners on multiple levels', () => {
+    const store = new PlumStore();
+    const fooPlum = plum<number>(2).$name('foo');
+    const doubledPlum = plum((get) => get(fooPlum) * 2).$name('doubled');
+    const tripledPlum = plum((get) => get(fooPlum) * 3).$name('tripled');
+
+    const doubledListener = vi.fn(() => {});
+    store.subscribe(doubledPlum, doubledListener);
+
+    const tripledListener = vi.fn(() => {});
+    store.subscribe(tripledPlum, tripledListener);
+
+    expect(store.get(doubledPlum)).toEqual(4);
+    expect(store.get(tripledPlum)).toEqual(6);
+
+    expect(store.inspect(fooPlum)).toMatchObject({
+      value: 2,
+      version: 0,
+      dependencies: new Map(),
+      active: {},
+    });
+    expect(store.inspect(doubledPlum)).toMatchObject({
+      value: 4,
+      version: 0,
+      dependencies: new Map([[fooPlum, 0]]),
+      active: {
+        listeners: new Set([doubledListener]),
+      },
+    });
+    expect(store.inspect(tripledPlum)).toMatchObject({
+      value: 6,
+      version: 0,
+      dependencies: new Map([[fooPlum, 0]]),
+      active: {
+        listeners: new Set([tripledListener]),
+      },
+    });
+
+    store.set(fooPlum, 5);
+
+    expect(doubledListener).toBeCalledTimes(1);
+    expect(tripledListener).toBeCalledTimes(1);
+    expect(store.get(doubledPlum)).toEqual(10);
+    expect(store.get(tripledPlum)).toEqual(15);
   });
 
   it('should read external plum', () => {

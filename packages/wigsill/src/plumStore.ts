@@ -116,7 +116,9 @@ export class PlumStore {
     state.version = isExternalPlum(plum) ? plum.version : state.version + 1;
 
     if (state.active) {
-      for (const listener of state.active.listeners) {
+      // copying, because listeners may change after we notify our dependents.
+      const listeners = [...state.active.listeners];
+      for (const listener of listeners) {
         listener();
       }
     }

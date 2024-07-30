@@ -20,10 +20,10 @@ const createSliderParam = (
   gui: GUI,
   label: string,
   initial: number,
-  min?: number,
-  max?: number,
-  step?: number,
+  opts?: { min?: number; max?: number; step?: number },
 ) => {
+  const { min, max, step } = opts ?? {};
+
   const temp = {
     [label]: initial,
   };
@@ -33,19 +33,22 @@ const createSliderParam = (
 
   gui.add(temp, label, min, max, step).onChange((newValue) => {
     value = newValue;
-    console.log(`Notifying ${listeners.size} listeners`);
-    for (const l of listeners) {
-      l();
+    // Calling `listener` may cause more listeners to
+    // be attached, so copying.
+    for (const listener of [...listeners]) {
+      listener();
     }
   });
 
-  return wgsl.plumFromEvent(
-    (listener) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    () => value,
-  );
+  return wgsl
+    .plumFromEvent(
+      (listener) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+      () => value,
+    )
+    .$name(label);
 };
 
 /**
@@ -224,14 +227,8 @@ export async function executeExample(
           }) satisfies OnFrameFn,
           addElement: layout.addElement,
           addParameter,
-          addSliderParam: ((
-            label: string,
-            initial: number,
-            min?: number,
-            max?: number,
-            step?: number,
-          ) => {
-            return createSliderParam(gui, label, initial, min, max, step);
+          addSliderParam: ((label, initial, opts) => {
+            return createSliderParam(gui, label, initial, opts);
           }) satisfies AddSliderParam,
         };
       }

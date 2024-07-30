@@ -86,7 +86,7 @@ declare module '@wigsill/example-toolkit' {
   ): void;
 
   import type { WgslPlum } from 'wigsill';
-  export type AddSliderParam = (label: string, initial: number, min?: number, max?: number, step?: number) => WgslPlum<number>;
+  export type AddSliderParam = (label: string, initial: number, opts: { min?: number, max?: number, step?: number }) => WgslPlum<number>;
 
   export const addSliderParam: AddSliderParam;
 
