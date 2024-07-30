@@ -5,17 +5,13 @@
 }
 */
 
+// -- Hooks into the example environment
 import { addElement, addParameter } from '@wigsill/example-toolkit';
-import { builtin } from 'wigsill';
-import {
-  type Parsed,
-  createRuntime,
-  dynamicArrayOf,
-  f32,
-  struct,
-  vec2f,
-  wgsl,
-} from 'wigsill';
+// --
+
+import wgsl from 'wigsill';
+import { type Parsed, dynamicArrayOf, f32, struct, vec2f } from 'wigsill/data';
+import { createRuntime } from 'wigsill/web';
 
 const runtime = await createRuntime();
 
@@ -53,16 +49,16 @@ const resultMatrixData = resultMatrixBuffer.asStorage();
 const program = runtime.makeComputePipeline({
   workgroupSize: workgroupSize,
   code: wgsl`
-    if (${builtin.globalInvocationId}.x >= u32(${firstMatrixData}.size.x) || ${builtin.globalInvocationId}.y >= u32(${secondMatrixData}.size.y)) {
+    if (${wgsl.builtin.globalInvocationId}.x >= u32(${firstMatrixData}.size.x) || ${wgsl.builtin.globalInvocationId}.y >= u32(${secondMatrixData}.size.y)) {
       return;
     }
 
-    if (${builtin.globalInvocationId}.x + ${builtin.globalInvocationId}.y == 0u) {
+    if (${wgsl.builtin.globalInvocationId}.x + ${wgsl.builtin.globalInvocationId}.y == 0u) {
       ${resultMatrixData}.size = vec2(${firstMatrixData}.size.x, ${secondMatrixData}.size.y);
       ${resultMatrixData}.numbers.count = u32(${firstMatrixData}.size.x) * u32(${secondMatrixData}.size.y);
     }
 
-    let resultCell = vec2(${builtin.globalInvocationId}.x, ${builtin.globalInvocationId}.y);
+    let resultCell = vec2(${wgsl.builtin.globalInvocationId}.x, ${wgsl.builtin.globalInvocationId}.y);
     var result = 0.0;
 
     for (var i = 0u; i < u32(${firstMatrixData}.size.y); i = i + 1u) {
@@ -108,14 +104,14 @@ async function run() {
     () => Math.floor(Math.random() * 10),
   );
 
-  firstMatrixBuffer.write(runtime, firstMatrix);
+  runtime.writeBuffer(firstMatrixBuffer, firstMatrix);
 
   secondMatrix = createMatrix(
     [firstMatrixColumnCount, secondMatrixColumnCount],
     () => Math.floor(Math.random() * 10),
   );
 
-  secondMatrixBuffer.write(runtime, secondMatrix);
+  runtime.writeBuffer(secondMatrixBuffer, secondMatrix);
 
   const workgroupCountX = Math.ceil(firstMatrix.size[0] / workgroupSize[0]);
   const workgroupCountY = Math.ceil(secondMatrix.size[1] / workgroupSize[1]);
@@ -123,7 +119,7 @@ async function run() {
   program.execute([workgroupCountX, workgroupCountY]);
   runtime.flush();
 
-  const multiplicationResult = await resultMatrixBuffer.read(runtime);
+  const multiplicationResult = await runtime.readBuffer(resultMatrixBuffer);
 
   const unflatMatrix = (matrix: MatrixType) =>
     Array(matrix.size[0])
@@ -151,8 +147,10 @@ addParameter(
     step: 1,
   },
   (value) => {
-    firstMatrixRowCount = value;
-    if (!initializing) run();
+    if (value !== firstMatrixRowCount) {
+      firstMatrixRowCount = value;
+      if (!initializing) run();
+    }
   },
 );
 
@@ -165,8 +163,10 @@ addParameter(
     step: 1,
   },
   (value) => {
-    firstMatrixColumnCount = value;
-    if (!initializing) run();
+    if (value !== firstMatrixColumnCount) {
+      firstMatrixColumnCount = value;
+      if (!initializing) run();
+    }
   },
 );
 
@@ -179,10 +179,17 @@ addParameter(
     step: 1,
   },
   (value) => {
-    secondMatrixColumnCount = value;
-    if (!initializing) run();
+    if (value !== secondMatrixColumnCount) {
+      secondMatrixColumnCount = value;
+      if (!initializing) run();
+    }
   },
 );
+
+addElement('button', {
+  label: 'Reshuffle',
+  onClick: run,
+});
 
 initializing = false;
 run();

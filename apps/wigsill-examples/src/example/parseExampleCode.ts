@@ -30,6 +30,6 @@ export function parseExampleCode(key: string, rawCode: string): Example | null {
   return {
     key,
     metadata,
-    code: rawCode.slice(rawCode.indexOf('*/') + 2),
+    code: rawCode.slice(rawCode.indexOf('*/') + 2).trimStart(),
   };
 }

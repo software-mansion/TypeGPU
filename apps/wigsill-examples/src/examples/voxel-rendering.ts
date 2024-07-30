@@ -5,19 +5,13 @@
 }
 */
 
+// -- Hooks into the example environment
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
-import { builtin } from 'wigsill';
-import {
-  arrayOf,
-  bool,
-  createRuntime,
-  f32,
-  struct,
-  u32,
-  vec3f,
-  vec4f,
-  wgsl,
-} from 'wigsill';
+// --
+
+import wgsl from 'wigsill';
+import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'wigsill/data';
+import { createRuntime } from 'wigsill/web';
 
 const runtime = await createRuntime();
 const device = runtime.device;
@@ -166,10 +160,10 @@ const renderPipeline = runtime.makeRenderPipeline({
         vec2<f32>(-1,  1)
       );
 
-      let outPos = vec4f(pos[${builtin.vertexIndex}], 0, 1);
+      let outPos = vec4f(pos[${wgsl.builtin.vertexIndex}], 0, 1);
     `,
     output: {
-      [builtin.position]: 'outPos',
+      [wgsl.builtin.position]: 'outPos',
     },
   },
 
@@ -179,8 +173,8 @@ const renderPipeline = runtime.makeRenderPipeline({
 
       var ray: ${rayStruct};
       ray.origin = ${cameraPositionData};
-      ray.direction += ${cameraAxesData}.right * (${builtin.position}.x - f32(${canvasDimsData}.width)/2)/minDim;
-      ray.direction += ${cameraAxesData}.up * (${builtin.position}.y - f32(${canvasDimsData}.height)/2)/minDim;
+      ray.direction += ${cameraAxesData}.right * (${wgsl.builtin.position}.x - f32(${canvasDimsData}.width)/2)/minDim;
+      ray.direction += ${cameraAxesData}.up * (${wgsl.builtin.position}.y - f32(${canvasDimsData}.height)/2)/minDim;
       ray.direction += ${cameraAxesData}.forward;
       ray.direction = normalize(ray.direction);
 
@@ -237,13 +231,13 @@ const renderPipeline = runtime.makeRenderPipeline({
   },
 });
 
-voxelMatrixBuffer.write(
-  runtime,
+runtime.writeBuffer(
+  voxelMatrixBuffer,
   Array.from({ length: X }, (_, i) =>
     Array.from({ length: Y }, (_, j) =>
       Array.from({ length: Z }, (_, k) => ({
         isActive: X - i + j + (Z - k) > 10 ? 1 : 0,
-        albedo: [i / X, j / Y, k / Z, 1],
+        albedo: [i / X, j / Y, k / Z, 1] as [number, number, number, number],
       })),
     ),
   ),
@@ -280,19 +274,19 @@ onFrame((deltaTime) => {
     Math.sin(frame) * cameraDist + boxCenter[2],
   ];
 
-  cameraPositionBuffer.write(runtime, cameraPosition);
+  runtime.writeBuffer(cameraPositionBuffer, cameraPosition);
 
   const forwardAxis = normalize(
     cameraPosition.map((value, i) => boxCenter[i] - value) as Vector,
   );
 
-  cameraAxesBuffer.write(runtime, {
+  runtime.writeBuffer(cameraAxesBuffer, {
     forward: forwardAxis,
     up: upAxis,
     right: crossProduct(upAxis, forwardAxis) as Vector,
   });
 
-  canvasDimsBuffer.write(runtime, {
+  runtime.writeBuffer(canvasDimsBuffer, {
     width: canvas.width,
     height: canvas.height,
   });

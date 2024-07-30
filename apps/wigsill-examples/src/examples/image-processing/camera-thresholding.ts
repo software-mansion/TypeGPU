@@ -5,8 +5,13 @@
 }
 */
 
+// -- Hooks into the example environment
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
-import { builtin, createRuntime, f32, vec2f, wgsl } from 'wigsill';
+// --
+
+import wgsl from 'wigsill';
+import { f32, vec2f } from 'wigsill/data';
+import { createRuntime } from 'wigsill/web';
 
 // Layout
 const [video, canvas] = await Promise.all([
@@ -50,7 +55,7 @@ context.configure({
 addParameter(
   'threshold',
   { initial: 0.4, min: 0, max: 1 },
-  (threshold: number) => thresholdBuffer.write(runtime, threshold),
+  (threshold: number) => runtime.writeBuffer(thresholdBuffer, threshold),
 );
 
 onFrame(() => {
@@ -80,11 +85,11 @@ onFrame(() => {
           vec2(0.0, 0.0),
         );
 
-        let Position = vec4(pos[${builtin.vertexIndex}], 0.0, 1.0);
-        let fragUV = uv[${builtin.vertexIndex}];
+        let Position = vec4(pos[${wgsl.builtin.vertexIndex}], 0.0, 1.0);
+        let fragUV = uv[${wgsl.builtin.vertexIndex}];
       `,
       output: {
-        [builtin.position]: 'Position',
+        [wgsl.builtin.position]: 'Position',
         fragUV: [vec2f, 'fragUV'],
       },
     },

@@ -1,450 +1,68 @@
 import type { AnySchema } from 'typed-binary';
-import { roundUp } from './mathUtils';
-import {
-  ComputeProgramBuilder,
-  type Program,
-  RenderProgramBuilder,
-} from './programBuilder';
-import type { SimpleWgslData } from './std140';
-import type { AnyWgslData } from './std140/types';
-import type { WgslAllocatable } from './types';
+import type { Parsed } from 'typed-binary';
+import type { SimpleWgslData, WgslStruct } from './data';
+import type { AnyWgslData, WgslAllocatable } from './types';
 import type { WgslCode } from './wgslCode';
+import type { WgslTextureView, WgslTextureExternal } from './wgslTexture';
 import type { WgslSampler } from './wgslSampler';
-import type { WgslTextureExternal, WgslTextureView } from './wgslTexture';
 
-/**
- * Holds all data that is necessary to facilitate CPU and GPU communication.
- * Programs that share a runtime can interact via GPU buffers.
- */
-class WigsillRuntime {
-  private _entryToBufferMap = new WeakMap<WgslAllocatable, GPUBuffer>();
-  private _samplers = new WeakMap<WgslSampler, GPUSampler>();
-  private _textures = new WeakMap<WgslTextureView, GPUTexture>();
-  private _readBuffer: GPUBuffer | null = null;
-  private _taskQueue = new TaskQueue();
-  private _pipelineExecutors: PipelineExecutor<
-    GPURenderPipeline | GPUComputePipeline
-  >[] = [];
+// ----------
+// Public API
+// ----------
 
-  constructor(public readonly device: GPUDevice) {}
+export interface WigsillRuntime {
+  readonly device: GPUDevice;
 
-  dispose() {
-    // TODO: Clean up all buffers
-  }
+  writeBuffer<TValue extends AnyWgslData>(
+    allocatable: WgslAllocatable<TValue>,
+    data: Parsed<TValue>,
+  ): void;
 
-  bufferFor(allocatable: WgslAllocatable) {
-    let buffer = this._entryToBufferMap.get(allocatable);
+  readBuffer<TData extends AnyWgslData>(
+    allocatable: WgslAllocatable<TData>,
+  ): Promise<Parsed<TData>>;
 
-    if (!buffer) {
-      buffer = this.device.createBuffer({
-        usage: allocatable.flags,
-        size: roundUp(
-          allocatable.dataType.size,
-          allocatable.dataType.byteAlignment,
-        ),
-      });
+  bufferFor(allocatable: WgslAllocatable): GPUBuffer;
+  textureFor(view: WgslTextureView): GPUTexture;
+  externalTextureFor(texture: WgslTextureExternal): GPUExternalTexture;
+  samplerFor(sampler: WgslSampler): GPUSampler;
+  dispose(): void;
+  flush(): void;
+}
 
-      if (!buffer) {
-        throw new Error(`Failed to create buffer for ${allocatable}`);
-      }
-      buffer.label = allocatable.label ?? 'WgslBuffer';
-      this._entryToBufferMap.set(allocatable, buffer);
-    }
-
-    return buffer;
-  }
-
-  textureFor(view: WgslTextureView): GPUTexture {
-    let texture = this._textures.get(view);
-
-    if (!texture) {
-      texture = this.device.createTexture(view.texture.descriptor);
-
-      if (!texture) {
-        throw new Error(`Failed to create texture for ${view}`);
-      }
-      this._textures.set(view, texture);
-    }
-
-    return texture;
-  }
-
-  externalTextureFor(texture: WgslTextureExternal): GPUExternalTexture {
-    return this.device.importExternalTexture(texture.descriptor);
-  }
-
-  samplerFor(sampler: WgslSampler): GPUSampler {
-    let gpuSampler = this._samplers.get(sampler);
-
-    if (!gpuSampler) {
-      gpuSampler = this.device.createSampler(sampler.descriptor);
-
-      if (!gpuSampler) {
-        throw new Error(`Failed to create sampler for ${sampler}`);
-      }
-      this._samplers.set(sampler, gpuSampler);
-    }
-
-    return gpuSampler;
-  }
-
-  async valueFor(memory: WgslAllocatable): Promise<ArrayBuffer> {
-    return this._taskQueue.enqueue(async () => {
-      if (!this._readBuffer || this._readBuffer.size < memory.dataType.size) {
-        // destroying the previous buffer
-        this._readBuffer?.destroy();
-
-        this._readBuffer = this.device.createBuffer({
-          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-          size: memory.dataType.size,
-        });
-      }
-
-      const buffer = this.bufferFor(memory);
-      const commandEncoder = this.device.createCommandEncoder();
-      commandEncoder.copyBufferToBuffer(
-        buffer,
-        0,
-        this._readBuffer,
-        0,
-        memory.dataType.size,
-      );
-      this.device.queue.submit([commandEncoder.finish()]);
-      await this.device.queue.onSubmittedWorkDone();
-      await this._readBuffer.mapAsync(GPUMapMode.READ, 0, memory.dataType.size);
-      const value = this._readBuffer.getMappedRange().slice(0);
-      this._readBuffer.unmap();
-      return value;
-    });
-  }
-
-  makeRenderPipeline(options: {
-    vertex: {
-      code: WgslCode;
-      output: {
-        [K in symbol]: string;
-      } & {
-        [K in string]: [AnyWgslData, string];
-      };
-    };
-    fragment: {
-      code: WgslCode;
-      target: Iterable<GPUColorTargetState | null>;
-    };
-    primitive: GPUPrimitiveState;
-    label?: string;
-  }) {
-    const [vertexProgram, fragmentProgram, vertexBuffers] =
-      new RenderProgramBuilder(
-        this,
-        options.vertex.code,
-        options.fragment.code,
-        options.vertex.output,
-      ).build({
-        bindingGroup: 0,
-      });
-
-    const vertexBufferDescriptors = vertexBuffers.map((buffer, idx) => {
-      if (!buffer.allocatable.vertexLayout) {
-        throw new Error(
-          `Buffer ${buffer.allocatable} does not have a vertex layout`,
-        );
-      }
-      return {
-        ...buffer.allocatable.vertexLayout,
-        attributes: [
-          {
-            shaderLocation: idx,
-            offset: 0,
-            format: deriveVertexFormat(
-              buffer.allocatable.dataType as SimpleWgslData<AnySchema>,
-            ),
-          },
-        ],
-      };
-    });
-
-    const vertexShaderModule = this.device.createShaderModule({
-      code: vertexProgram.code,
-    });
-    const fragmentShaderModule = this.device.createShaderModule({
-      code: fragmentProgram.code,
-    });
-
-    const pipelineLayout = this.device.createPipelineLayout({
-      label: options.label ?? '',
-      bindGroupLayouts: [
-        vertexProgram.bindGroupLayout,
-        fragmentProgram.bindGroupLayout,
-      ],
-    });
-
-    const renderPipeline = this.device.createRenderPipeline({
-      label: options.label ?? '',
-      layout: pipelineLayout,
-      vertex: {
-        module: vertexShaderModule,
-        buffers: vertexBufferDescriptors,
-      },
-      fragment: {
-        module: fragmentShaderModule,
-        targets: options.fragment?.target ?? [],
-      },
-      primitive: options.primitive,
-    });
-
-    const buffers = vertexBuffers.map(
-      (buffer, idx) => [this.bufferFor(buffer.allocatable), idx] as const,
-    );
-
-    const executor = new RenderPipelineExecutor(
-      this.device,
-      renderPipeline,
-      vertexProgram,
-      fragmentProgram,
-      0,
-      buffers,
-    );
-
-    this._pipelineExecutors.push(executor);
-    return executor;
-  }
-
-  makeComputePipeline(options: {
-    workgroupSize: [number, number?, number?];
+export interface RenderPipelineOptions {
+  vertex: {
     code: WgslCode;
-    label?: string;
-  }) {
-    const program = new ComputeProgramBuilder(
-      this,
-      options.code,
-      options.workgroupSize,
-    ).build({
-      bindingGroup: 0,
-    });
-
-    const shaderModule = this.device.createShaderModule({
-      code: program.code,
-    });
-
-    const pipelineLayout = this.device.createPipelineLayout({
-      label: options.label ?? '',
-      bindGroupLayouts: [program.bindGroupLayout],
-    });
-
-    const computePipeline = this.device.createComputePipeline({
-      label: options.label ?? '',
-      layout: pipelineLayout,
-      compute: {
-        module: shaderModule,
-      },
-    });
-
-    const executor = new ComputePipelineExecutor(
-      this.device,
-      computePipeline,
-      [program],
-      0,
-    );
-    this._pipelineExecutors.push(executor);
-    return executor;
-  }
-
-  flush() {
-    this.device.queue.submit(
-      this._pipelineExecutors
-        .map((executor) => executor.flush())
-        .filter((encoded): encoded is GPUCommandBuffer => !!encoded),
-    );
-  }
+    output: WgslStruct<Record<string, AnyWgslData>>;
+    buffersLayouts?: Iterable<GPUVertexBufferLayout | null>;
+  };
+  fragment: {
+    code: WgslCode;
+    target: Iterable<GPUColorTargetState | null>;
+  };
+  primitive: GPUPrimitiveState;
+  label?: string;
 }
 
-class TaskQueue<T> {
-  private _queue: (() => Promise<void>)[] = [];
-  private _pending = false;
-
-  enqueue<T>(task: () => Promise<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
-      this._queue.push(async () => {
-        try {
-          resolve(await task());
-        } catch (e) {
-          reject(e);
-        }
-      });
-      this._processQueue();
-    });
-  }
-
-  private async _processQueue() {
-    if (this._pending) {
-      return;
-    }
-    this._pending = true;
-    while (this._queue.length > 0) {
-      const task = this._queue.shift();
-      if (task) {
-        await task();
-      }
-    }
-    this._pending = false;
-  }
+export interface ComputePipelineOptions {
+  workgroupSize: [number, number?, number?];
+  code: WgslCode;
+  label?: string;
 }
 
-class PipelineExecutor<T extends GPURenderPipeline | GPUComputePipeline> {
-  public commandEncoder: GPUCommandEncoder | undefined;
+export type RenderPipelineExecutorOptions = GPURenderPassDescriptor & {
+  vertexCount: number;
+  instanceCount?: number;
+  firstVertex?: number;
+  firstInstance?: number;
+};
 
-  constructor(
-    public device: GPUDevice,
-    public pipeline: T,
-    public programs: Program[],
-    public externalLayoutCount: number,
-    protected label?: string,
-  ) {}
-
-  flush() {
-    const commandBuffer = this.commandEncoder?.finish();
-    this.commandEncoder = undefined;
-    return commandBuffer;
-  }
+export interface RenderPipelineExecutor {
+  execute(options: RenderPipelineExecutorOptions): void;
 }
 
-class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
-  private _vertexProgram: Program;
-  private _fragmentProgram: Program;
-  private _usedVertexBuffers: Set<readonly [GPUBuffer, number]>;
-
-  constructor(
-    device: GPUDevice,
-    pipeline: GPURenderPipeline,
-    vertexProgram: Program,
-    fragmentProgram: Program,
-    externalLayoutCount: number,
-    usedVertexBuffers: (readonly [GPUBuffer, number])[],
-  ) {
-    super(
-      device,
-      pipeline,
-      [vertexProgram, fragmentProgram],
-      externalLayoutCount,
-    );
-    this._vertexProgram = vertexProgram;
-    this._fragmentProgram = fragmentProgram;
-    this._usedVertexBuffers = new Set(usedVertexBuffers);
-  }
-  execute(
-    options: GPURenderPassDescriptor & {
-      vertexCount: number;
-      instanceCount?: number;
-      firstVertex?: number;
-      firstInstance?: number;
-      externalBindGroups?: GPUBindGroup[];
-      externalVertexBuffers?: GPUBuffer[];
-    },
-  ) {
-    const {
-      vertexCount,
-      instanceCount,
-      firstVertex,
-      firstInstance,
-      externalBindGroups,
-      ...descriptor
-    } = options;
-
-    if ((externalBindGroups?.length ?? 0) !== this.externalLayoutCount) {
-      throw new Error(
-        `External bind group count doesn't match the external bind group layout configuration. Expected ${this.externalLayoutCount}, got: ${externalBindGroups?.length ?? 0}`,
-      );
-    }
-
-    if (!this.commandEncoder) {
-      this.commandEncoder = this.device.createCommandEncoder({
-        label: this.label ?? '',
-      });
-    }
-
-    const passEncoder = this.commandEncoder.beginRenderPass({
-      ...descriptor,
-      label: this.label ?? '',
-    });
-    passEncoder.setPipeline(this.pipeline);
-
-    (externalBindGroups ?? []).forEach((group, index) =>
-      passEncoder.setBindGroup(index, group),
-    );
-
-    passEncoder.setBindGroup(
-      (externalBindGroups ?? []).length,
-      this._vertexProgram.bindGroup,
-    );
-    passEncoder.setBindGroup(
-      (externalBindGroups ?? []).length + 1,
-      this._fragmentProgram.bindGroup,
-    );
-
-    for (const [buffer, index] of this._usedVertexBuffers) {
-      passEncoder.setVertexBuffer(index, buffer);
-    }
-
-    passEncoder.draw(vertexCount, instanceCount, firstVertex, firstInstance);
-    passEncoder.end();
-  }
-}
-
-class ComputePipelineExecutor extends PipelineExecutor<GPUComputePipeline> {
-  execute(workgroupCounts: [number, number?, number?]) {
-    if (!this.commandEncoder) {
-      this.commandEncoder = this.device.createCommandEncoder({
-        label: this.label ?? '',
-      });
-    }
-
-    const passEncoder = this.commandEncoder.beginComputePass({
-      label: this.label ?? '',
-    });
-    passEncoder.setPipeline(this.pipeline);
-    this.programs.forEach((program, i) =>
-      passEncoder.setBindGroup(i, program.bindGroup),
-    );
-    passEncoder.dispatchWorkgroups(...workgroupCounts);
-    passEncoder.end();
-  }
-}
-
-export async function createRuntime(
-  options?:
-    | {
-        adapter: GPURequestAdapterOptions | undefined;
-        device: GPUDeviceDescriptor | undefined;
-      }
-    | GPUDevice,
-) {
-  let adapter: GPUAdapter | null = null;
-  let device: GPUDevice | null = null;
-
-  if (!navigator.gpu) {
-    throw new Error('WebGPU is not supported by this browser.');
-  }
-
-  if (!options) {
-    adapter = await navigator.gpu.requestAdapter();
-    if (!adapter) {
-      throw new Error('Could not find a compatible GPU');
-    }
-    device = await adapter.requestDevice();
-    return new WigsillRuntime(device);
-  }
-
-  if (options instanceof GPUDevice) {
-    return new WigsillRuntime(options);
-  }
-
-  adapter = await navigator.gpu.requestAdapter(options.adapter);
-  if (!adapter) {
-    throw new Error('Could not find a compatible GPU');
-  }
-  device = await adapter.requestDevice(options.device);
-  return new WigsillRuntime(device);
+export interface ComputePipelineExecutor {
+  execute(workgroupCounts: [number, number?, number?]): void;
 }
 
 const typeToVertexFormatMap: Record<string, GPUVertexFormat> = {
@@ -462,7 +80,7 @@ const typeToVertexFormatMap: Record<string, GPUVertexFormat> = {
   vec4i: 'sint32x4',
 };
 
-function deriveVertexFormat<TData extends SimpleWgslData<AnySchema>>(
+export function deriveVertexFormat<TData extends SimpleWgslData<AnySchema>>(
   typeSchema: TData,
 ): GPUVertexFormat {
   if (!('expressionCode' in typeSchema)) {
@@ -476,5 +94,3 @@ function deriveVertexFormat<TData extends SimpleWgslData<AnySchema>>(
   }
   return vertexFormat;
 }
-
-export default WigsillRuntime;

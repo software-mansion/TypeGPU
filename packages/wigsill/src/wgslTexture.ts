@@ -1,4 +1,4 @@
-import type { F32, I32, U32 } from './std140';
+import type { F32, I32, U32 } from './data';
 import type {
   ResolutionCtx,
   StorageTextureAccess,

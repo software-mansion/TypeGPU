@@ -1,9 +1,13 @@
 import type { AnySchema } from 'typed-binary';
+import type { SimpleWgslData } from './data';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
-import type { SimpleWgslData } from './std140';
-import type { AnyWgslData } from './std140/types';
-import type { BufferUsage, WgslBindable, WgslResolvable } from './types';
+import type {
+  AnyWgslData,
+  BufferUsage,
+  WgslBindable,
+  WgslResolvable,
+} from './types';
 import { isSamplerType } from './types';
 import { getBuiltinInfo, getUsedBuiltinsNamed } from './wgslBuiltin';
 import { type WgslCode, code } from './wgslCode';
@@ -13,7 +17,7 @@ import {
   type WgslTextureView,
   isExternalTexture,
 } from './wgslTexture';
-import type WigsillRuntime from './wigsillRuntime';
+import type { WigsillRuntime } from './wigsillRuntime';
 
 export type Program = {
   bindGroupLayout: GPUBindGroupLayout;
@@ -62,7 +66,7 @@ export default class ProgramBuilder {
     const usedExternalTextures = usedRenderResources.filter((resource) =>
       isExternalTexture(resource),
     );
-    const allEntries = [];
+    const allEntries: GPUBindGroupLayoutEntry[] = [];
     let idx = 0;
     for (const _ of usedTextures) {
       allEntries.push({
@@ -102,7 +106,7 @@ export default class ProgramBuilder {
       entries: allEntries,
     });
 
-    const allBindGroupEntries = [];
+    const allBindGroupEntries: object[] = [];
     idx = 0;
     for (const texture of usedTextures) {
       allBindGroupEntries.push({

@@ -1,20 +1,47 @@
 import Editor, { type Monaco } from '@monaco-editor/react';
 import webgpuTypes from '@webgpu/types/dist/index.d.ts?raw';
+import { entries, map, pipe } from 'remeda';
 import typedBinary from 'typed-binary/dist/index.d.ts?raw';
-import wigsill from 'wigsill/dist/index.d.ts?raw';
 import useEvent from './common/useEvent';
 import { tsCompilerOptions } from './embeddedTypeScript';
 import toolkitTypes from './types/example-toolkit.d.ts?raw';
+
+const wigsillDtsFiles: Record<string, string> = import.meta.glob(
+  '../../../packages/wigsill/dist/**/*.d.ts',
+  {
+    query: 'raw',
+    eager: true,
+    import: 'default',
+  },
+);
+
+const wigsillExtraLibs = pipe(
+  entries(wigsillDtsFiles),
+  map(([path, content]) => ({
+    filename: path.replace('../../../packages/wigsill/dist', 'wigsill/dist'),
+    content,
+  })),
+);
 
 function handleEditorWillMount(monaco: Monaco) {
   const tsDefaults = monaco?.languages.typescript.typescriptDefaults;
 
   tsDefaults.addExtraLib(webgpuTypes);
-  tsDefaults.addExtraLib(wigsill, 'wigsill.d.ts');
+  for (const lib of wigsillExtraLibs) {
+    tsDefaults.addExtraLib(lib.content, lib.filename);
+  }
   tsDefaults.addExtraLib(toolkitTypes, 'example-toolkit.d.ts');
   tsDefaults.addExtraLib(typedBinary, 'typed-binary.d.ts');
 
-  tsDefaults.setCompilerOptions(tsCompilerOptions);
+  tsDefaults.setCompilerOptions({
+    ...tsCompilerOptions,
+    paths: {
+      wigsill: ['wigsill/dist/index.d.ts'],
+      'wigsill/data': ['wigsill/dist/data/index.d.ts'],
+      'wigsill/macro': ['wigsill/dist/macro/index.d.ts'],
+      'wigsill/web': ['wigsill/dist/web/index.d.ts'],
+    },
+  });
 }
 
 type Props = {
