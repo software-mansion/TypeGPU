@@ -1,10 +1,12 @@
 import { MissingSlotValueError } from './errors';
 import type { NameRegistry } from './nameRegistry';
 import type {
+  AnyWgslPrimitive,
   BufferUsage,
   Eventual,
   ResolutionCtx,
   SlotValuePair,
+  StorageTextureAccess,
   Wgsl,
   WgslBindable,
   WgslRenderResource,
@@ -23,6 +25,11 @@ import {
 } from './types';
 import { code } from './wgslCode';
 import type { WgslIdentifier } from './wgslIdentifier';
+import {
+  isTextureView,
+  type WgslStorageTexture,
+  type WgslTexture,
+} from './wgslTexture';
 
 export type ResolutionCtxImplOptions = {
   readonly names: NameRegistry;
@@ -233,22 +240,25 @@ class ScopedResolutionCtx implements ResolutionCtx {
       return;
     }
 
-    if (
-      isStorageTextureType(resource.type) &&
-      'access' in resource &&
-      'dataType' in resource
-    ) {
-      this.addDeclaration(
-        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.access as Wgsl}, ${resource.dataType as Wgsl}>;`,
-      );
-      return;
-    }
+    if (isTextureView(resource)) {
+      if (isStorageTextureType(resource.type)) {
+        const storageTexture = resource.texture as WgslStorageTexture<
+          AnyWgslPrimitive,
+          StorageTextureAccess
+        >;
+        this.addDeclaration(
+          code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${storageTexture.descriptor.format}, ${storageTexture.access}>;`,
+        );
+        return;
+      }
 
-    if (isTypedTextureType(resource.type) && 'dataType' in resource) {
-      this.addDeclaration(
-        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.dataType as Wgsl}>;`,
-      );
-      return;
+      if (isTypedTextureType(resource.type)) {
+        const typedTexture = resource.texture as WgslTexture<AnyWgslPrimitive>;
+        this.addDeclaration(
+          code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${typedTexture.dataType}>;`,
+        );
+        return;
+      }
     }
 
     throw new Error(`Unsupported resource type: ${resource.type}`);

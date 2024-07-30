@@ -2,7 +2,6 @@ import type {
   AnyWgslPrimitive,
   ResolutionCtx,
   StorageTextureAccess,
-  WgslAllocatable,
   WgslExternalTextureType,
   WgslRenderResource,
   WgslRenderResourceType,
@@ -21,7 +20,7 @@ export interface WgslTexture<TData extends AnyWgslPrimitive> {
 export interface WgslStorageTexture<
   TData extends AnyWgslPrimitive,
   TAccess extends StorageTextureAccess,
-> extends WgslAllocatable<TData> {
+> {
   createView(descriptor?: GPUTextureViewDescriptor): WgslTextureView;
   readonly access: TAccess;
   readonly dataType: TData;
@@ -179,4 +178,10 @@ export function isExternalTexture(
   texture: WgslRenderResource<WgslRenderResourceType>,
 ): texture is WgslTextureExternal {
   return !('texture' in texture) && !isSampler(texture);
+}
+
+export function isTextureView(
+  texture: WgslRenderResource<WgslRenderResourceType>,
+): texture is WgslTextureView {
+  return 'texture' in texture;
 }
