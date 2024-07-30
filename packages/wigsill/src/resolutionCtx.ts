@@ -27,9 +27,9 @@ import {
 import { code } from './wgslCode';
 import type { WgslIdentifier } from './wgslIdentifier';
 import {
-  isTextureView,
   type WgslStorageTexture,
   type WgslTexture,
+  isTextureView,
 } from './wgslTexture';
 
 export type ResolutionCtxImplOptions = {

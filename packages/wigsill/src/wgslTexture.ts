@@ -1,6 +1,7 @@
 import { vec4f, vec4i, vec4u } from './data';
 import type {
   AnyWgslPrimitive,
+  AnyWgslTexelFormat,
   ResolutionCtx,
   StorageTextureAccess,
   WgslExternalTextureType,
@@ -8,7 +9,6 @@ import type {
   WgslRenderResourceType,
   WgslStorageTextureType,
   WgslTypedTextureType,
-  AnyWgslTexelFormat,
 } from './types';
 import { WgslIdentifier } from './wgslIdentifier';
 import { isSampler } from './wgslSampler';

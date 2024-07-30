@@ -4,7 +4,6 @@ import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
 import type {
   AnyWgslData,
-  AnyWgslPrimitive,
   BufferUsage,
   WgslBindable,
   WgslResolvable,
@@ -16,7 +15,6 @@ import type { WgslSampler } from './wgslSampler';
 import {
   type WgslTextureExternal,
   type WgslTextureView,
-  type WgslTexture,
   isExternalTexture,
 } from './wgslTexture';
 import type { WigsillRuntime } from './wigsillRuntime';
