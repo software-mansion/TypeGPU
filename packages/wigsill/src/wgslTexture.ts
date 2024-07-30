@@ -1,5 +1,5 @@
-import type { F32, I32, U32 } from './data';
 import type {
+  AnyWgslPrimitive,
   ResolutionCtx,
   StorageTextureAccess,
   WgslAllocatable,
@@ -12,14 +12,14 @@ import type {
 import { WgslIdentifier } from './wgslIdentifier';
 import { isSampler } from './wgslSampler';
 
-export interface WgslTexture<TData extends U32 | I32 | F32> {
+export interface WgslTexture<TData extends AnyWgslPrimitive> {
   createView(descriptor?: GPUTextureViewDescriptor): WgslTextureView;
   readonly dataType: TData;
   readonly descriptor: GPUTextureDescriptor;
 }
 
 export interface WgslStorageTexture<
-  TData extends U32 | I32 | F32,
+  TData extends AnyWgslPrimitive,
   TAccess extends StorageTextureAccess,
 > extends WgslAllocatable<TData> {
   createView(descriptor?: GPUTextureViewDescriptor): WgslTextureView;
@@ -31,8 +31,8 @@ export interface WgslStorageTexture<
 export interface WgslTextureView
   extends WgslRenderResource<WgslRenderResourceType> {
   readonly texture:
-    | WgslTexture<U32 | I32 | F32>
-    | WgslStorageTexture<U32 | I32 | F32, StorageTextureAccess>;
+    | WgslTexture<AnyWgslPrimitive>
+    | WgslStorageTexture<AnyWgslPrimitive, StorageTextureAccess>;
   readonly descriptor: GPUTextureViewDescriptor;
   readonly type: WgslRenderResourceType;
 }
@@ -42,7 +42,7 @@ export interface WgslTextureExternal
   readonly descriptor: GPUExternalTextureDescriptor;
 }
 
-export function texture<TData extends U32 | I32 | F32>(
+export function texture<TData extends AnyWgslPrimitive>(
   descriptor: GPUTextureDescriptor,
   dataType: TData,
   type: WgslTypedTextureType | WgslStorageTextureType,
@@ -68,7 +68,7 @@ export function textureExternal(descriptor: GPUExternalTextureDescriptor) {
   return new WgslTextureExternalImpl(descriptor);
 }
 
-class WgslTextureImpl<TData extends U32 | I32 | F32>
+class WgslTextureImpl<TData extends AnyWgslPrimitive>
   implements WgslTexture<TData>
 {
   private _label: string | undefined;
@@ -89,7 +89,7 @@ class WgslTextureImpl<TData extends U32 | I32 | F32>
 }
 
 class WgslStorageTextureImpl<
-  TData extends U32 | I32 | F32,
+  TData extends AnyWgslPrimitive,
   TAccess extends StorageTextureAccess,
 > implements WgslStorageTexture<TData, TAccess>
 {
@@ -120,7 +120,7 @@ class WgslStorageTextureImpl<
   }
 }
 
-class WgslTextureViewImpl<TData extends U32 | I32 | F32>
+class WgslTextureViewImpl<TData extends AnyWgslPrimitive>
   implements WgslTextureView
 {
   private _label: string | undefined;
