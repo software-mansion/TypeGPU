@@ -5,6 +5,7 @@ import { TaskQueue } from '../taskQueue';
 import type { AnyWgslData, WgslAllocatable } from '../types';
 import { code } from '../wgslCode';
 import type {
+  ComputePipelineExecutorOptions,
   ComputePipelineOptions,
   RenderPipelineExecutorOptions,
   RenderPipelineOptions,
@@ -20,12 +21,21 @@ class WebWigsillRuntime {
   private _pipelineExecutors: PipelineExecutor<
     GPURenderPipeline | GPUComputePipeline
   >[] = [];
+  private _commandEncoder: GPUCommandEncoder | null = null;
 
   // Used for reading GPU buffers ad hoc.
   private _readBuffer: GPUBuffer | null = null;
   private _taskQueue = new TaskQueue();
 
   constructor(public readonly device: GPUDevice) {}
+
+  get commandEncoder() {
+    if (!this._commandEncoder) {
+      this._commandEncoder = this.device.createCommandEncoder();
+    }
+
+    return this._commandEncoder;
+  }
 
   dispose() {
     for (const buffer of this._entryToBufferMap.values()) {
@@ -137,7 +147,7 @@ class WebWigsillRuntime {
       this,
       code`
         @fragment fn main_frag(${options.fragment.args.flatMap((arg) => [arg, ', '])}) -> ${options.fragment.output} {
-            ${options.fragment.code}
+          ${options.fragment.code}
         }
 
         ${options.externalDeclarations?.flatMap((arg) => [arg, '\n']) ?? ''}
@@ -179,7 +189,7 @@ class WebWigsillRuntime {
     });
 
     const executor = new RenderPipelineExecutor(
-      this.device,
+      this,
       renderPipeline,
       [vertexProgram, fragmentProgram],
       options.externalLayouts?.length ?? 0,
@@ -227,7 +237,7 @@ class WebWigsillRuntime {
     });
 
     const executor = new ComputePipelineExecutor(
-      this.device,
+      this,
       computePipeline,
       [program],
       options.externalLayouts?.length ?? 0,
@@ -237,30 +247,23 @@ class WebWigsillRuntime {
   }
 
   flush() {
-    this.device.queue.submit(
-      this._pipelineExecutors
-        .map((executor) => executor.flush())
-        .filter((encoded): encoded is GPUCommandBuffer => !!encoded),
-    );
+    if (!this._commandEncoder) {
+      return;
+    }
+
+    this.device.queue.submit([this._commandEncoder.finish()]);
+    this._commandEncoder = null;
   }
 }
 
 class PipelineExecutor<T extends GPURenderPipeline | GPUComputePipeline> {
-  public commandEncoder: GPUCommandEncoder | undefined;
-
   constructor(
-    public device: GPUDevice,
+    protected _runtime: WigsillRuntime,
     public pipeline: T,
     public programs: Program[],
     public externalLayoutCount: number,
     protected label?: string,
   ) {}
-
-  flush() {
-    const commandBuffer = this.commandEncoder?.finish();
-    this.commandEncoder = undefined;
-    return commandBuffer;
-  }
 }
 
 class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
@@ -281,13 +284,7 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
       );
     }
 
-    if (!this.commandEncoder) {
-      this.commandEncoder = this.device.createCommandEncoder({
-        label: this.label ?? '',
-      });
-    }
-
-    const passEncoder = this.commandEncoder.beginRenderPass({
+    const passEncoder = this._runtime.commandEncoder.beginRenderPass({
       ...descriptor,
       label: this.label ?? '',
     });
@@ -314,21 +311,31 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
 }
 
 class ComputePipelineExecutor extends PipelineExecutor<GPUComputePipeline> {
-  execute(workgroupCounts: [number, number?, number?]) {
-    if (!this.commandEncoder) {
-      this.commandEncoder = this.device.createCommandEncoder({
-        label: this.label ?? '',
-      });
+  execute(options: ComputePipelineExecutorOptions) {
+    const { workgroups, externalBindGroups } = options;
+
+    if ((externalBindGroups?.length ?? 0) !== this.externalLayoutCount) {
+      throw new Error(
+        `External bind group count doesn't match the external bind group layout configuration. Expected ${this.externalLayoutCount}, got: ${externalBindGroups?.length ?? 0}`,
+      );
     }
 
-    const passEncoder = this.commandEncoder.beginComputePass({
+    const passEncoder = this._runtime.commandEncoder.beginComputePass({
       label: this.label ?? '',
     });
     passEncoder.setPipeline(this.pipeline);
-    this.programs.forEach((program, i) =>
-      passEncoder.setBindGroup(i, program.bindGroup),
+
+    (externalBindGroups ?? []).forEach((group, index) =>
+      passEncoder.setBindGroup(index, group),
     );
-    passEncoder.dispatchWorkgroups(...workgroupCounts);
+
+    this.programs.forEach((program, i) =>
+      passEncoder.setBindGroup(
+        (externalBindGroups ?? []).length + i,
+        program.bindGroup,
+      ),
+    );
+    passEncoder.dispatchWorkgroups(...workgroups);
     passEncoder.end();
   }
 }

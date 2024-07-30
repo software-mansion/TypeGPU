@@ -1,7 +1,7 @@
 import type { ISchema } from 'typed-binary';
 import type { WgslIdentifier } from './wgslIdentifier';
 
-export type Wgsl = string | number | WgslResolvable;
+export type Wgsl = string | boolean | number | WgslResolvable;
 
 /**
  * Passed into each resolvable item. All sibling items share a resolution ctx,
