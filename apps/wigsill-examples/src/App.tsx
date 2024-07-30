@@ -3,6 +3,7 @@ import { RESET } from 'jotai/utils';
 import { Suspense, useState } from 'react';
 import { ExampleNotFound } from './ExampleNotFound';
 import { Home } from './Home';
+import wigsillLogoLight from './assets/wigsill-logo-light.svg';
 import { ExampleLink } from './common/ExampleLink';
 import { Switch } from './common/Switch';
 import { ExampleView } from './example/ExampleView';
@@ -39,12 +40,10 @@ function App() {
           <header className="pb-6">
             <button
               type="button"
-              className="mx-auto p-4 text-2xl font-outfit cursor-pointer"
+              className="mx-auto p-2 text-2xl font-outfit cursor-pointer"
               onClick={() => setCurrentExample(RESET)}
             >
-              <h1>
-                <strong>wigsill</strong> - examples
-              </h1>
+              <img className="h-12" src={wigsillLogoLight} alt="Wigsill Logo" />
             </button>
           </header>
           <nav className="flex flex-col flex-1 gap-2 overflow-y-auto">
@@ -61,7 +60,7 @@ function App() {
               </section>
             ))}
           </nav>
-          <label className="flex gap-3 items-center justify-center cursor-pointer p-4 bg-slate-100 rounded-lg">
+          <label className="flex gap-3 items-center justify-center cursor-pointer p-4 bg-[#f6f6ff] rounded-lg">
             <span>Code editor</span>
             <Switch
               checked={codeEditorShowing}
@@ -69,7 +68,7 @@ function App() {
             />
           </label>
         </aside>
-        <main className="flex-1 flex flex-col bg-slate-100">
+        <main className="flex-1 flex flex-col bg-[#f6f6ff]">
           <Suspense fallback={'Loading...'}>{content}</Suspense>
         </main>
       </div>
