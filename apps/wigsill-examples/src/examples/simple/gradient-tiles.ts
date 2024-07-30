@@ -9,6 +9,7 @@
 import {
   addElement,
   addParameter,
+  addSliderParam,
   onCleanup,
   onFrame,
 } from '@wigsill/example-toolkit';
@@ -18,7 +19,9 @@ import wgsl from 'wigsill';
 import { struct, u32, vec2f, vec4f } from 'wigsill/data';
 import { createRuntime } from 'wigsill/web';
 
-const xSpanPlum = wgsl.plum<number>(16).$name('x_span');
+const xSpanPlum = addSliderParam('x span', 1, 1, 16, 1);
+
+// const xSpanPlum = wgsl.plum<number>(16).$name('x_span');
 const ySpanPlum = wgsl.plum<number>(16).$name('y_span');
 
 const spanPlum = wgsl.plum((get) => ({ x: get(xSpanPlum), y: get(ySpanPlum) }));
@@ -38,6 +41,10 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const runtime = await createRuntime();
 const device = runtime.device;
+
+runtime.onPlumChange(xSpanPlum, () => {
+  console.log('Changed');
+});
 
 context.configure({
   device,
@@ -96,10 +103,6 @@ const renderPipeline = runtime.makeRenderPipeline({
     topology: 'triangle-strip',
   },
 });
-
-addParameter('x-span', { initial: 16, min: 1, max: 16, step: 1 }, (value) =>
-  runtime.setPlum(xSpanPlum, value),
-);
 
 addParameter('y-span', { initial: 16, min: 1, max: 16, step: 1 }, (value) =>
   runtime.setPlum(ySpanPlum, value),

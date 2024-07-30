@@ -1,10 +1,11 @@
 import * as Babel from '@babel/standalone';
 import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
-import type { OnFrameFn } from '@wigsill/example-toolkit';
+import type { AddSliderParam, OnFrameFn } from '@wigsill/example-toolkit';
 import { GUI } from 'dat.gui';
 import { filter, isNonNull, map, pipe } from 'remeda';
 import { transpileModule } from 'typescript';
+import { wgsl } from 'wigsill';
 import { tsCompilerOptions } from '../embeddedTypeScript';
 import type { ExampleState } from './exampleState';
 import type { LayoutInstance } from './layout';
@@ -14,6 +15,38 @@ import type { LayoutInstance } from './layout';
 const template = (
   Babel as unknown as { packages: { template: typeof TemplateGenerator } }
 ).packages.template;
+
+const createSliderParam = (
+  gui: GUI,
+  label: string,
+  initial: number,
+  min?: number,
+  max?: number,
+  step?: number,
+) => {
+  const temp = {
+    [label]: initial,
+  };
+
+  let value = initial;
+  const listeners = new Set<() => unknown>();
+
+  gui.add(temp, label, min, max, step).onChange((newValue) => {
+    value = newValue;
+    console.log(`Notifying ${listeners.size} listeners`);
+    for (const l of listeners) {
+      l();
+    }
+  });
+
+  return wgsl.plumFromEvent(
+    (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    () => value,
+  );
+};
 
 /**
  * A custom babel plugin for turning:
@@ -191,6 +224,15 @@ export async function executeExample(
           }) satisfies OnFrameFn,
           addElement: layout.addElement,
           addParameter,
+          addSliderParam: ((
+            label: string,
+            initial: number,
+            min?: number,
+            max?: number,
+            step?: number,
+          ) => {
+            return createSliderParam(gui, label, initial, min, max, step);
+          }) satisfies AddSliderParam,
         };
       }
       throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
