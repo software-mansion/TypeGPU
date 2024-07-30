@@ -2,6 +2,7 @@ import { MissingSlotValueError } from './errors';
 import type { NameRegistry } from './nameRegistry';
 import type {
   AnyWgslPrimitive,
+  AnyWgslTexelFormat,
   BufferUsage,
   Eventual,
   ResolutionCtx,
@@ -243,7 +244,7 @@ class ScopedResolutionCtx implements ResolutionCtx {
     if (isTextureView(resource)) {
       if (isStorageTextureType(resource.type)) {
         const storageTexture = resource.texture as WgslStorageTexture<
-          AnyWgslPrimitive,
+          AnyWgslTexelFormat,
           StorageTextureAccess
         >;
         this.addDeclaration(

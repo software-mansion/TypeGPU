@@ -7,10 +7,17 @@ import {
   RenderProgramBuilder,
 } from '../programBuilder';
 import { TaskQueue } from '../taskQueue';
-import type { AnyWgslData, AnyWgslPrimitive, WgslAllocatable } from '../types';
+import type {
+  AnyWgslData,
+  AnyWgslPrimitive,
+  AnyWgslTexelFormat,
+  StorageTextureAccess,
+  WgslAllocatable,
+} from '../types';
 import type { WgslCode } from '../wgslCode';
 import type { WgslSampler } from '../wgslSampler';
 import type {
+  WgslStorageTexture,
   WgslTexture,
   WgslTextureExternal,
   WgslTextureView,
@@ -25,7 +32,11 @@ import { deriveVertexFormat } from '../wigsillRuntime';
 class WebWigsillRuntime {
   private _entryToBufferMap = new Map<WgslAllocatable, GPUBuffer>();
   private _samplers = new WeakMap<WgslSampler, GPUSampler>();
-  private _textures = new WeakMap<WgslTexture<AnyWgslPrimitive>, GPUTexture>();
+  private _textures = new WeakMap<
+    | WgslTexture<AnyWgslPrimitive>
+    | WgslStorageTexture<AnyWgslTexelFormat, StorageTextureAccess>,
+    GPUTexture
+  >();
   private _pipelineExecutors: PipelineExecutor<
     GPURenderPipeline | GPUComputePipeline
   >[] = [];
@@ -67,7 +78,10 @@ class WebWigsillRuntime {
   }
 
   viewFor(
-    view: WgslTextureView | WgslTexture<AnyWgslPrimitive>,
+    view:
+      | WgslTextureView
+      | WgslTexture<AnyWgslPrimitive>
+      | WgslStorageTexture<AnyWgslTexelFormat, StorageTextureAccess>,
   ): GPUTextureView {
     let texture: GPUTexture;
     if ('texture' in view) {
@@ -96,7 +110,11 @@ class WebWigsillRuntime {
     return texture.createView(view.descriptor);
   }
 
-  textureFor(view: WgslTexture<AnyWgslPrimitive>): GPUTexture {
+  textureFor(
+    view:
+      | WgslTexture<AnyWgslPrimitive>
+      | WgslStorageTexture<AnyWgslTexelFormat, StorageTextureAccess>,
+  ): GPUTexture {
     let texture = this._textures.get(view);
 
     if (!texture) {

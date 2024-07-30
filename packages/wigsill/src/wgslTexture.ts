@@ -1,3 +1,4 @@
+import { vec4f, vec4i, vec4u } from './data';
 import type {
   AnyWgslPrimitive,
   ResolutionCtx,
@@ -7,6 +8,7 @@ import type {
   WgslRenderResourceType,
   WgslStorageTextureType,
   WgslTypedTextureType,
+  AnyWgslTexelFormat,
 } from './types';
 import { WgslIdentifier } from './wgslIdentifier';
 import { isSampler } from './wgslSampler';
@@ -18,7 +20,7 @@ export interface WgslTexture<TData extends AnyWgslPrimitive> {
 }
 
 export interface WgslStorageTexture<
-  TData extends AnyWgslPrimitive,
+  TData extends AnyWgslTexelFormat,
   TAccess extends StorageTextureAccess,
 > {
   createView(descriptor?: GPUTextureViewDescriptor): WgslTextureView;
@@ -31,7 +33,7 @@ export interface WgslTextureView
   extends WgslRenderResource<WgslRenderResourceType> {
   readonly texture:
     | WgslTexture<AnyWgslPrimitive>
-    | WgslStorageTexture<AnyWgslPrimitive, StorageTextureAccess>;
+    | WgslStorageTexture<AnyWgslTexelFormat, StorageTextureAccess>;
   readonly descriptor: GPUTextureViewDescriptor;
   readonly type: WgslRenderResourceType;
 }
@@ -41,21 +43,38 @@ export interface WgslTextureExternal
   readonly descriptor: GPUExternalTextureDescriptor;
 }
 
-export function texture<TData extends AnyWgslPrimitive>(
+export function texture(
   descriptor: GPUTextureDescriptor,
-  dataType: TData,
+  type: WgslStorageTextureType,
+  access: StorageTextureAccess,
+): WgslStorageTexture<AnyWgslTexelFormat, StorageTextureAccess>;
+export function texture(
+  descriptor: GPUTextureDescriptor,
+  type: WgslTypedTextureType,
+  dataType: AnyWgslPrimitive,
+): WgslTexture<AnyWgslPrimitive>;
+export function texture(
+  descriptor: GPUTextureDescriptor,
   type: WgslTypedTextureType | WgslStorageTextureType,
-  access?: StorageTextureAccess,
-): WgslTexture<TData> | WgslStorageTexture<TData, StorageTextureAccess> {
-  if (access) {
+  dataTypeOrAccess: AnyWgslPrimitive | StorageTextureAccess,
+):
+  | WgslTexture<AnyWgslPrimitive>
+  | WgslStorageTexture<AnyWgslTexelFormat, StorageTextureAccess> {
+  if (typeof dataTypeOrAccess === 'string') {
+    const access = dataTypeOrAccess as StorageTextureAccess;
+    const format = texelFormatToWgslType[descriptor.format];
+    if (!format) {
+      throw new Error(`Unsupported texture format ${descriptor.format}`);
+    }
     return new WgslStorageTextureImpl(
       descriptor,
-      dataType,
+      format,
       type as WgslStorageTextureType,
       access,
     );
   }
 
+  const dataType = dataTypeOrAccess as AnyWgslPrimitive;
   return new WgslTextureImpl(
     descriptor,
     dataType,
@@ -88,7 +107,7 @@ class WgslTextureImpl<TData extends AnyWgslPrimitive>
 }
 
 class WgslStorageTextureImpl<
-  TData extends AnyWgslPrimitive,
+  TData extends AnyWgslTexelFormat,
   TAccess extends StorageTextureAccess,
 > implements WgslStorageTexture<TData, TAccess>
 {
@@ -119,15 +138,13 @@ class WgslStorageTextureImpl<
   }
 }
 
-class WgslTextureViewImpl<TData extends AnyWgslPrimitive>
-  implements WgslTextureView
-{
+class WgslTextureViewImpl implements WgslTextureView {
   private _label: string | undefined;
 
   constructor(
     public readonly texture:
-      | WgslTexture<TData>
-      | WgslStorageTexture<TData, StorageTextureAccess>,
+      | WgslTexture<AnyWgslPrimitive>
+      | WgslStorageTexture<AnyWgslTexelFormat, StorageTextureAccess>,
     public readonly descriptor: GPUTextureViewDescriptor,
     public readonly type: WgslRenderResourceType,
   ) {}
@@ -185,3 +202,23 @@ export function isTextureView(
 ): texture is WgslTextureView {
   return 'texture' in texture;
 }
+
+const texelFormatToWgslType: Record<string, AnyWgslTexelFormat> = {
+  rgba8unorm: vec4f,
+  rgba8snorm: vec4f,
+  rgba8uint: vec4u,
+  rgba8sint: vec4i,
+  rgba16uint: vec4u,
+  rgba16sint: vec4i,
+  rgba16float: vec4f,
+  r32uint: vec4u,
+  r32sint: vec4i,
+  r32float: vec4f,
+  rg32uint: vec4u,
+  rg32sint: vec4i,
+  rg32float: vec4f,
+  rgba32uint: vec4u,
+  rgba32sint: vec4i,
+  rgba32float: vec4f,
+  bgra8unorm: vec4f,
+};
