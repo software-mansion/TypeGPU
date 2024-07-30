@@ -1,4 +1,5 @@
 import type { ISchema } from 'typed-binary';
+import type { F32, I32, U32 } from './data';
 import type { WgslIdentifier } from './wgslIdentifier';
 
 export type Wgsl = string | number | WgslResolvable | symbol;
@@ -204,6 +205,7 @@ export interface WgslData<TInner> extends ISchema<TInner>, WgslResolvable {
 }
 
 export type AnyWgslData = WgslData<unknown>;
+export type AnyWgslPrimitive = U32 | I32 | F32;
 
 export interface WgslPointer<
   TScope extends 'function',
