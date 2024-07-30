@@ -4,6 +4,7 @@ import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
 import type {
   AnyWgslData,
+  AnyWgslPrimitive,
   BufferUsage,
   WgslBindable,
   WgslResolvable,
@@ -15,6 +16,7 @@ import type { WgslSampler } from './wgslSampler';
 import {
   type WgslTextureExternal,
   type WgslTextureView,
+  type WgslTexture,
   isExternalTexture,
 } from './wgslTexture';
 import type { WigsillRuntime } from './wigsillRuntime';
@@ -111,7 +113,7 @@ export default class ProgramBuilder {
     for (const texture of usedTextures) {
       allBindGroupEntries.push({
         binding: idx++,
-        resource: this.runtime.textureFor(texture as WgslTextureView),
+        resource: this.runtime.viewFor(texture as WgslTextureView),
       });
     }
     for (const externalTexture of usedExternalTextures) {
