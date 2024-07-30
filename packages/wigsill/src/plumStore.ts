@@ -37,6 +37,14 @@ type PlumActiveState = {
 export class PlumStore {
   private readonly _stateMap = new WeakMap<WgslPlum, PlumState>();
 
+  /**
+   * Used to inspect the current state of a plum.
+   * To be used mostly in unit tests.
+   */
+  inspect(plum: WgslPlum): PlumState | undefined {
+    return this._stateMap.get(plum);
+  }
+
   private _getState<T>(plum: WgslPlum<T>): PlumState<T> {
     let state = this._stateMap.get(plum) as PlumState<T> | undefined;
 
@@ -59,12 +67,6 @@ export class PlumStore {
         version: 0,
       };
       this._stateMap.set(plum, state);
-    }
-
-    if (isExternalPlum(plum)) {
-      // external plums do not use `get`
-      state.value = plum.compute(null as unknown as Getter);
-      state.version = plum.version;
     }
 
     return state;
@@ -106,14 +108,12 @@ export class PlumStore {
       }
     }
 
-    if (!isExternalPlum(plum)) {
-      if (Object.is(state.value, newValue)) {
-        return state.value;
-      }
-
-      state.value = newValue;
-      state.version++;
+    if (Object.is(state.value, newValue)) {
+      return state.value;
     }
+
+    state.value = newValue;
+    state.version = isExternalPlum(plum) ? plum.version : state.version + 1;
 
     if (state.active) {
       for (const listener of state.active.listeners) {
@@ -127,17 +127,24 @@ export class PlumStore {
   get<T>(plum: WgslPlum<T>): T {
     const state = this._getState(plum);
 
-    if (state.dependencies.size === 0 || state.active) {
+    if (state.active) {
       // Return memoized value, the dependencies are keeping it up to date.
       return state.value;
     }
 
-    const dirty = [...state.dependencies.entries()].some(
-      ([dep, prevVersion]) => {
+    let dirty = false;
+
+    if (isExternalPlum(plum)) {
+      plum.compute(null as unknown as Getter); // external plums do not use 'get'
+      dirty = state.version !== plum.version;
+    } else if (state.dependencies.size > 0) {
+      dirty = [...state.dependencies.entries()].some(([dep, prevVersion]) => {
+        this.get(dep); // allowing dependencies to recompute if necessary.
         const depState = this._getState(dep);
+
         return depState.version !== prevVersion;
-      },
-    );
+      });
+    }
 
     if (!dirty) {
       // No need to recompute
@@ -159,7 +166,10 @@ export class PlumStore {
     state.version++;
 
     if (state.active) {
-      for (const listener of state.active.listeners) {
+      // copying, because listeners may change after we notify our dependents.
+      const listeners = [...state.active.listeners];
+
+      for (const listener of listeners) {
         listener();
       }
     }

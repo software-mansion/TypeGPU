@@ -19,7 +19,7 @@ import wgsl from 'wigsill';
 import { struct, u32, vec2f, vec4f } from 'wigsill/data';
 import { createRuntime } from 'wigsill/web';
 
-const xSpanPlum = addSliderParam('x span', 1, 1, 16, 1);
+const xSpanPlum = addSliderParam('x span', 16, 1, 16, 1);
 
 // const xSpanPlum = wgsl.plum<number>(16).$name('x_span');
 const ySpanPlum = wgsl.plum<number>(16).$name('y_span');
