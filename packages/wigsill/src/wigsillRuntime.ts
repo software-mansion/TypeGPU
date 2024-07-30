@@ -1,6 +1,6 @@
 import type { AnySchema } from 'typed-binary';
 import type { Parsed } from 'typed-binary';
-import type { SimpleWgslData, WgslStruct } from './data';
+import type { SimpleWgslData } from './data';
 import type { AnyWgslData, WgslAllocatable } from './types';
 import type { WgslCode } from './wgslCode';
 import type { WgslSampler } from './wgslSampler';
