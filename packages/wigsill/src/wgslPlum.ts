@@ -1,3 +1,4 @@
+import { type WgslSettable, WgslSettableTrait } from './settableTrait';
 import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
 
 // ----------
@@ -20,11 +21,6 @@ export interface WgslPlum<TValue = unknown> {
    * memoization, so use with care.
    */
   compute(get: Getter): TValue;
-}
-
-export const WgslSettableTrait = Symbol('This item can be set');
-export interface WgslSettable {
-  readonly [WgslSettableTrait]: true;
 }
 
 export const WgslExternalPlumTrait = Symbol(

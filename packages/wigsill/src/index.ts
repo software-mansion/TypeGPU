@@ -20,5 +20,6 @@ export type { WgslBuffer } from './wgslBuffer';
 export type { WgslCode } from './wgslCode';
 export type { WgslConst } from './wgslConstant';
 export type { WgslFn } from './wgslFunction';
-export type { WgslPlum, WgslSettable } from './wgslPlum';
+export type { WgslPlum } from './wgslPlum';
+export type { WgslSettable } from './settableTrait';
 export type { WgslVar } from './wgslVariable';

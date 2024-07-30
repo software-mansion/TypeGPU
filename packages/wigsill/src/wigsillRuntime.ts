@@ -1,14 +1,10 @@
 import type { Parsed } from 'typed-binary';
 import type { WgslStruct } from './data';
+import type { WgslSettable } from './settableTrait';
 import type { AnyWgslData } from './types';
 import type { Wgsl, WgslAllocatable } from './types';
 import type { WgslCode } from './wgslCode';
-import type {
-  ExtractPlumValue,
-  Unsubscribe,
-  WgslPlum,
-  WgslSettable,
-} from './wgslPlum';
+import type { ExtractPlumValue, Unsubscribe, WgslPlum } from './wgslPlum';
 
 // ----------
 // Public API

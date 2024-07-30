@@ -1,8 +1,8 @@
+import type { WgslSettable } from './settableTrait';
 import {
   type ExtractPlumValue,
   type Getter,
   type WgslPlum,
-  type WgslSettable,
   isExternalPlum,
 } from './wgslPlum';
 

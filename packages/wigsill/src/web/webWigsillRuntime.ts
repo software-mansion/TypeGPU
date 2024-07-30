@@ -2,13 +2,14 @@ import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import { roundUp } from '../mathUtils';
 import { PlumStore } from '../plumStore';
 import ProgramBuilder, { type Program } from '../programBuilder';
+import type { WgslSettable } from '../settableTrait';
 import { TaskQueue } from '../taskQueue';
 import type { AnyWgslData, WgslAllocatable } from '../types';
 import { code } from '../wgslCode';
 import {
   type ExtractPlumValue,
+  type Unsubscribe,
   type WgslPlum,
-  type WgslSettable,
   isPlum,
 } from '../wgslPlum';
 import type {
@@ -17,8 +18,6 @@ import type {
   RenderPipelineOptions,
   WigsillRuntime,
 } from '../wigsillRuntime';
-
-type Unsubscribe = () => unknown;
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
