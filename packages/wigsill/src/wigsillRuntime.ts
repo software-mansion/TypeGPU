@@ -3,8 +3,8 @@ import type { Parsed } from 'typed-binary';
 import type { SimpleWgslData, WgslStruct } from './data';
 import type { AnyWgslData, WgslAllocatable } from './types';
 import type { WgslCode } from './wgslCode';
-import type { WgslTextureView, WgslTextureExternal } from './wgslTexture';
 import type { WgslSampler } from './wgslSampler';
+import type { WgslTextureExternal, WgslTextureView } from './wgslTexture';
 
 // ----------
 // Public API

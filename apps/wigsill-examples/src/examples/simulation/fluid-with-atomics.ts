@@ -10,7 +10,7 @@ import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
 // --
 
 import wgsl from 'wigsill';
-import { arrayOf, atomic, u32, vec2u, f32 } from 'wigsill/data';
+import { arrayOf, atomic, f32, u32, vec2u } from 'wigsill/data';
 import { createRuntime } from 'wigsill/web';
 
 const runtime = await createRuntime();

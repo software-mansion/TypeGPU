@@ -1,4 +1,5 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
+import type { SimpleWgslData } from '../data';
 import { roundUp } from '../mathUtils';
 import {
   ComputeProgramBuilder,
@@ -10,12 +11,8 @@ import type { AnyWgslData, WgslAllocatable } from '../types';
 import type { WgslCode } from '../wgslCode';
 import type { WgslSampler } from '../wgslSampler';
 import type { WgslTextureExternal, WgslTextureView } from '../wgslTexture';
-import type {
-  RenderPipelineExecutorOptions,
-  WigsillRuntime,
-} from '../wigsillRuntime';
+import type { WigsillRuntime } from '../wigsillRuntime';
 import { deriveVertexFormat } from '../wigsillRuntime';
-import type { SimpleWgslData } from '../data';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
