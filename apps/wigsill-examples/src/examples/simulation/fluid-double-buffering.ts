@@ -19,6 +19,7 @@ import wgsl, {
   type Wgsl,
   type WgslBindable,
   type WgslBuffer,
+  builtin,
 } from 'wigsill';
 import {
   type Parsed,
@@ -546,7 +547,7 @@ function makePipelines(
   const initWorldPipeline = runtime.makeComputePipeline({
     workgroupSize: [1, 1],
     code: wgsl`
-      ${initWorldFn}(i32(${wgsl.builtin.globalInvocationId}.x), i32(${wgsl.builtin.globalInvocationId}.y));
+      ${initWorldFn}(i32(${builtin.globalInvocationId}.x), i32(${builtin.globalInvocationId}.y));
     `,
   });
 
@@ -558,7 +559,7 @@ function makePipelines(
   const computePipeline = runtime.makeComputePipeline({
     workgroupSize: [computeWorkgroupSize, computeWorkgroupSize],
     code: wgsl`
-      ${mainComputeWithIO}(i32(${wgsl.builtin.globalInvocationId}.x), i32(${wgsl.builtin.globalInvocationId}.y));
+      ${mainComputeWithIO}(i32(${builtin.globalInvocationId}.x), i32(${builtin.globalInvocationId}.y));
     `,
   });
 
@@ -596,11 +597,11 @@ function makePipelines(
           vec2(0., 0.) // bottom-left
         );
 
-        let outPos = vec4f(pos[${wgsl.builtin.vertexIndex}].x, pos[${wgsl.builtin.vertexIndex}].y, 0.0, 1.0);
-        let outUv = uv[${wgsl.builtin.vertexIndex}];
+        let outPos = vec4f(pos[${builtin.vertexIndex}].x, pos[${builtin.vertexIndex}].y, 0.0, 1.0);
+        let outUv = uv[${builtin.vertexIndex}];
       `,
       output: {
-        [wgsl.builtin.position]: 'outPos',
+        [builtin.position]: 'outPos',
         uv: [vec2f, 'outUv'],
       },
     },

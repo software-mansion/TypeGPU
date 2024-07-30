@@ -14,7 +14,7 @@ import {
 } from '@wigsill/example-toolkit';
 // --
 
-import wgsl from 'wigsill';
+import wgsl, { builtin } from 'wigsill';
 import { u32, vec2f } from 'wigsill/data';
 import { createRuntime } from 'wigsill/web';
 
@@ -58,11 +58,11 @@ const renderPipeline = runtime.makeRenderPipeline({
         vec2(0., 0.) // bottom-left
       );
 
-      let posOut = vec4f(pos[${wgsl.builtin.vertexIndex}], 0.0, 1.0);
-      let uvOut = uv[${wgsl.builtin.vertexIndex}];
+      let posOut = vec4f(pos[${builtin.vertexIndex}], 0.0, 1.0);
+      let uvOut = uv[${builtin.vertexIndex}];
     `,
     output: {
-      [wgsl.builtin.position]: 'posOut',
+      [builtin.position]: 'posOut',
       uvOut: [vec2f, 'uv'],
     },
   },

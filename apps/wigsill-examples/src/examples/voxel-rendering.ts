@@ -9,7 +9,7 @@
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
 // --
 
-import wgsl from 'wigsill';
+import wgsl, { builtin } from 'wigsill';
 import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'wigsill/data';
 import { createRuntime } from 'wigsill/web';
 
@@ -160,10 +160,10 @@ const renderPipeline = runtime.makeRenderPipeline({
         vec2<f32>(-1,  1)
       );
 
-      let outPos = vec4f(pos[${wgsl.builtin.vertexIndex}], 0, 1);
+      let outPos = vec4f(pos[${builtin.vertexIndex}], 0, 1);
     `,
     output: {
-      [wgsl.builtin.position]: 'outPos',
+      [builtin.position]: 'outPos',
     },
   },
 
@@ -173,8 +173,8 @@ const renderPipeline = runtime.makeRenderPipeline({
 
       var ray: ${rayStruct};
       ray.origin = ${cameraPositionData};
-      ray.direction += ${cameraAxesData}.right * (${wgsl.builtin.position}.x - f32(${canvasDimsData}.width)/2)/minDim;
-      ray.direction += ${cameraAxesData}.up * (${wgsl.builtin.position}.y - f32(${canvasDimsData}.height)/2)/minDim;
+      ray.direction += ${cameraAxesData}.right * (${builtin.position}.x - f32(${canvasDimsData}.width)/2)/minDim;
+      ray.direction += ${cameraAxesData}.up * (${builtin.position}.y - f32(${canvasDimsData}.height)/2)/minDim;
       ray.direction += ${cameraAxesData}.forward;
       ray.direction = normalize(ray.direction);
 

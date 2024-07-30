@@ -9,7 +9,7 @@
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
 // --
 
-import wgsl from 'wigsill';
+import wgsl, { builtin } from 'wigsill';
 import { f32, vec2f } from 'wigsill/data';
 import { createRuntime } from 'wigsill/web';
 
@@ -85,11 +85,11 @@ onFrame(() => {
           vec2(0.0, 0.0),
         );
 
-        let Position = vec4(pos[${wgsl.builtin.vertexIndex}], 0.0, 1.0);
-        let fragUV = uv[${wgsl.builtin.vertexIndex}];
+        let Position = vec4(pos[${builtin.vertexIndex}], 0.0, 1.0);
+        let fragUV = uv[${builtin.vertexIndex}];
       `,
       output: {
-        [wgsl.builtin.position]: 'Position',
+        [builtin.position]: 'Position',
         fragUV: [vec2f, 'fragUV'],
       },
     },

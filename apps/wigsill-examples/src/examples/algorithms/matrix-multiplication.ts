@@ -9,7 +9,7 @@
 import { addElement, addParameter } from '@wigsill/example-toolkit';
 // --
 
-import wgsl from 'wigsill';
+import wgsl, { builtin } from 'wigsill';
 import { type Parsed, dynamicArrayOf, f32, struct, vec2f } from 'wigsill/data';
 import { createRuntime } from 'wigsill/web';
 
@@ -49,16 +49,16 @@ const resultMatrixData = resultMatrixBuffer.asStorage();
 const program = runtime.makeComputePipeline({
   workgroupSize: workgroupSize,
   code: wgsl`
-    if (${wgsl.builtin.globalInvocationId}.x >= u32(${firstMatrixData}.size.x) || ${wgsl.builtin.globalInvocationId}.y >= u32(${secondMatrixData}.size.y)) {
+    if (${builtin.globalInvocationId}.x >= u32(${firstMatrixData}.size.x) || ${builtin.globalInvocationId}.y >= u32(${secondMatrixData}.size.y)) {
       return;
     }
 
-    if (${wgsl.builtin.globalInvocationId}.x + ${wgsl.builtin.globalInvocationId}.y == 0u) {
+    if (${builtin.globalInvocationId}.x + ${builtin.globalInvocationId}.y == 0u) {
       ${resultMatrixData}.size = vec2(${firstMatrixData}.size.x, ${secondMatrixData}.size.y);
       ${resultMatrixData}.numbers.count = u32(${firstMatrixData}.size.x) * u32(${secondMatrixData}.size.y);
     }
 
-    let resultCell = vec2(${wgsl.builtin.globalInvocationId}.x, ${wgsl.builtin.globalInvocationId}.y);
+    let resultCell = vec2(${builtin.globalInvocationId}.x, ${builtin.globalInvocationId}.y);
     var result = 0.0;
 
     for (var i = 0u; i < u32(${firstMatrixData}.size.y); i = i + 1u) {

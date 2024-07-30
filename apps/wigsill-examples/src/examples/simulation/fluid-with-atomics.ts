@@ -9,7 +9,7 @@
 import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
 // --
 
-import wgsl from 'wigsill';
+import wgsl, { builtin } from 'wigsill';
 import { arrayOf, atomic, f32, u32, vec2u } from 'wigsill/data';
 import { createRuntime } from 'wigsill/web';
 
@@ -93,7 +93,7 @@ const squareBuffer = wgsl
   .$allowUniform()
   .$name('square');
 const squareBufferData = squareBuffer.asVertex('uniform');
-squareBuffer.write(runtime, [
+runtime.writeBuffer(squareBuffer, [
   [0, 0],
   [0, 1],
   [1, 0],
@@ -265,8 +265,8 @@ const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
 }`;
 
 const computeWGSL = wgsl`
-  let x = ${wgsl.builtin.globalInvocationId}.x;
-  let y = ${wgsl.builtin.globalInvocationId}.y;
+  let x = ${builtin.globalInvocationId}.x;
+  let y = ${builtin.globalInvocationId}.y;
   //atomicAdd(&${debugInfoData}, ${getWaterLevel}(x, y));
   ${decideWaterLevel}(x, y);
 `;
@@ -274,8 +274,8 @@ const computeWGSL = wgsl`
 const vertWGSL = wgsl`
   let w = ${sizeData}.x;
   let h = ${sizeData}.y;
-  let x = (f32(${wgsl.builtin.instanceIndex} % w + ${squareBufferData}.x) / f32(w) - 0.5) * 2. * f32(w) / f32(max(w, h));
-  let y = (f32((${wgsl.builtin.instanceIndex} - (${wgsl.builtin.instanceIndex} % w)) / w + ${squareBufferData}.y) / f32(h) - 0.5) * 2. * f32(h) / f32(max(w, h));
+  let x = (f32(${builtin.instanceIndex} % w + ${squareBufferData}.x) / f32(w) - 0.5) * 2. * f32(w) / f32(max(w, h));
+  let y = (f32((${builtin.instanceIndex} - (${builtin.instanceIndex} % w)) / w + ${squareBufferData}.y) / f32(h) - 0.5) * 2. * f32(h) / f32(max(w, h));
   let cellFlags = ${currentStateVertex} >> 24;
   let cellVal = f32(${currentStateVertex} & 0xFFFFFF);
   let pos = vec4<f32>(x, y, 0., 1.);
@@ -333,7 +333,7 @@ function resetGameData() {
     vertex: {
       code: vertWGSL,
       output: {
-        [wgsl.builtin.position]: 'pos',
+        [builtin.position]: 'pos',
         cell: [f32, 'cell'],
       },
     },
