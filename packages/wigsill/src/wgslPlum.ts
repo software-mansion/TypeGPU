@@ -6,6 +6,9 @@ import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
 
 export type Getter = <T>(plum: WgslPlum<T>) => T;
 export type Unsubscribe = () => unknown;
+export type ExtractPlumValue<T> = T extends WgslPlum<infer TValue>
+  ? TValue
+  : never;
 
 export interface WgslPlum<TValue = unknown> {
   readonly __brand: 'WgslPlum';

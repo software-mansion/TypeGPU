@@ -3,20 +3,21 @@ import type { WgslStruct } from './data';
 import type { AnyWgslData } from './types';
 import type { Wgsl, WgslAllocatable } from './types';
 import type { WgslCode } from './wgslCode';
-import type { WgslPlum, WgslSettable } from './wgslPlum';
+import type {
+  ExtractPlumValue,
+  Unsubscribe,
+  WgslPlum,
+  WgslSettable,
+} from './wgslPlum';
 
 // ----------
 // Public API
 // ----------
 
-type Unsubscribe = () => void;
-
-type ExtractPlumValue<T> = T extends WgslPlum<infer TValue> ? TValue : never;
-
 export interface WigsillRuntime {
   readonly device: GPUDevice;
 
-  readPlum<TValue>(plum: WgslPlum<TValue>): TValue;
+  readPlum<TPlum extends WgslPlum>(plum: TPlum): ExtractPlumValue<TPlum>;
 
   setPlum<TPlum extends WgslPlum & WgslSettable>(
     plum: TPlum,

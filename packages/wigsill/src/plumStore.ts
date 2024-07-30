@@ -1,4 +1,5 @@
 import {
+  type ExtractPlumValue,
   type Getter,
   type WgslPlum,
   type WgslSettable,
@@ -45,8 +46,12 @@ export class PlumStore {
     return this._stateMap.get(plum);
   }
 
-  private _getState<T>(plum: WgslPlum<T>): PlumState<T> {
-    let state = this._stateMap.get(plum) as PlumState<T> | undefined;
+  private _getState<TPlum extends WgslPlum>(
+    plum: TPlum,
+  ): PlumState<ExtractPlumValue<TPlum>> {
+    type Value = ExtractPlumValue<TPlum>;
+
+    let state = this._stateMap.get(plum) as PlumState<Value> | undefined;
 
     if (!state) {
       const dependencies = new Map<WgslPlum, number>();
@@ -62,7 +67,7 @@ export class PlumStore {
       }) as Getter;
 
       state = {
-        value: plum.compute(getter),
+        value: plum.compute(getter) as Value,
         dependencies,
         version: 0,
       };
@@ -72,7 +77,9 @@ export class PlumStore {
     return state;
   }
 
-  private _recompute<T>(plum: WgslPlum<T>): T {
+  private _recompute<TPlum extends WgslPlum>(
+    plum: TPlum,
+  ): ExtractPlumValue<TPlum> {
     const state = this._getState(plum);
 
     if (state.active) {
@@ -112,7 +119,7 @@ export class PlumStore {
       return state.value;
     }
 
-    state.value = newValue;
+    state.value = newValue as ExtractPlumValue<TPlum>;
     state.version = isExternalPlum(plum) ? plum.version : state.version + 1;
 
     if (state.active) {
@@ -126,7 +133,7 @@ export class PlumStore {
     return state.value;
   }
 
-  get<T>(plum: WgslPlum<T>): T {
+  get<TPlum extends WgslPlum>(plum: TPlum): ExtractPlumValue<TPlum> {
     const state = this._getState(plum);
 
     if (state.active) {

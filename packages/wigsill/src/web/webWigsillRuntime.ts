@@ -5,7 +5,12 @@ import ProgramBuilder, { type Program } from '../programBuilder';
 import { TaskQueue } from '../taskQueue';
 import type { AnyWgslData, WgslAllocatable } from '../types';
 import { code } from '../wgslCode';
-import { type WgslPlum, type WgslSettable, isPlum } from '../wgslPlum';
+import {
+  type ExtractPlumValue,
+  type WgslPlum,
+  type WgslSettable,
+  isPlum,
+} from '../wgslPlum';
 import type {
   ComputePipelineOptions,
   RenderPipelineExecutorOptions,
@@ -156,11 +161,14 @@ class WebWigsillRuntime {
     this.device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
   }
 
-  readPlum<TValue>(plum: WgslPlum<TValue>): TValue {
+  readPlum<TPlum extends WgslPlum>(plum: TPlum): ExtractPlumValue<TPlum> {
     return this._plumStore.get(plum);
   }
 
-  setPlum<TValue>(plum: WgslPlum<TValue> & WgslSettable, value: TValue) {
+  setPlum<TPlum extends WgslPlum & WgslSettable>(
+    plum: TPlum,
+    value: ExtractPlumValue<TPlum>,
+  ) {
     this._plumStore.set(plum, value);
   }
 
