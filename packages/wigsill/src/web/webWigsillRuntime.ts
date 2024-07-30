@@ -172,7 +172,7 @@ class WebWigsillRuntime {
     };
     primitive: GPUPrimitiveState;
     label?: string;
-  }) {
+  }): RenderPipelineExecutor {
     const [vertexProgram, fragmentProgram, vertexBuffers] =
       new RenderProgramBuilder(
         this,
