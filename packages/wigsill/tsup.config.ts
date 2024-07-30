@@ -11,8 +11,9 @@ export default defineConfig({
   format: ['cjs', 'esm'],
   tsconfig: './tsconfig.json',
   target: 'es2017',
-  splitting: false,
+  splitting: true,
   sourcemap: true,
+  minify: true,
   clean: true,
   dts: true,
 });
