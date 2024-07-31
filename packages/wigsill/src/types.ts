@@ -1,5 +1,6 @@
-import type { ISchema } from 'typed-binary';
+import type { ISchema, Parsed } from 'typed-binary';
 import type { WgslIdentifier } from './wgslIdentifier';
+import type { WgslPlum } from './wgslPlum';
 
 export type Wgsl = string | boolean | number | WgslResolvable;
 
@@ -90,6 +91,7 @@ export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
    * binary.
    */
   readonly dataType: TData;
+  readonly initial?: Parsed<TData> | WgslPlum<Parsed<TData>> | undefined;
   readonly flags: GPUBufferUsageFlags;
 }
 

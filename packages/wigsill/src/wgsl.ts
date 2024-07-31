@@ -3,6 +3,7 @@ import { code } from './wgslCode';
 import { constant } from './wgslConstant';
 import { fn } from './wgslFunction';
 import { fn as fun } from './wgslFunctionExperimental';
+import { plum, plumFromEvent } from './wgslPlum';
 import { slot } from './wgslSlot';
 import { variable } from './wgslVariable';
 
@@ -11,6 +12,8 @@ export default Object.assign(code, {
   fn,
   fun,
   buffer,
+  plum,
+  plumFromEvent,
   slot,
   constant,
   var: variable,

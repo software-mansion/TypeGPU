@@ -85,6 +85,11 @@ declare module '@wigsill/example-toolkit' {
     onChange: (newValue: boolean) => void,
   ): void;
 
+  import type { WgslPlum } from 'wigsill';
+  export type AddSliderParam = (label: string, initial: number, opts: { min?: number, max?: number, step?: number }) => WgslPlum<number>;
+
+  export const addSliderParam: AddSliderParam;
+
   export function onCleanup(callback: () => unknown): void;
 
   export type OnFrameFn = (loop: (deltaTime: number) => unknown) => void;
