@@ -11,13 +11,12 @@ import type {
   AnyWgslData,
   AnyWgslPrimitive,
   AnyWgslTexelFormat,
-  StorageTextureAccess,
+  TextureUsage,
   WgslAllocatable,
 } from '../types';
 import type { WgslCode } from '../wgslCode';
 import type { WgslSampler } from '../wgslSampler';
 import type {
-  WgslStorageTexture,
   WgslTexture,
   WgslTextureExternal,
   WgslTextureView,
@@ -35,10 +34,10 @@ import {
 class WebWigsillRuntime {
   private _entryToBufferMap = new Map<WgslAllocatable, GPUBuffer>();
   private _samplers = new WeakMap<WgslSampler, GPUSampler>();
-  private _textures = new WeakMap<
-    | WgslTexture<AnyWgslPrimitive>
-    | WgslStorageTexture<AnyWgslTexelFormat, StorageTextureAccess>,
-    GPUTexture
+  private _textures = new WeakMap<WgslTexture<TextureUsage>, GPUTexture>();
+  private _textureViews = new WeakMap<
+    WgslTextureView<AnyWgslPrimitive | AnyWgslTexelFormat, TextureUsage>,
+    GPUTextureView
   >();
   private _pipelineExecutors: PipelineExecutor<
     GPURenderPipeline | GPUComputePipeline
@@ -89,56 +88,40 @@ class WebWigsillRuntime {
     return buffer;
   }
 
-  viewFor(
-    view:
-      | WgslTextureView
-      | WgslTexture<AnyWgslPrimitive>
-      | WgslStorageTexture<AnyWgslTexelFormat, StorageTextureAccess>,
-  ): GPUTextureView {
-    let texture: GPUTexture;
-    if ('texture' in view) {
-      texture = this.textureFor(view.texture);
-    } else {
-      texture = this.textureFor(view);
-    }
-
-    if (!texture) {
-      if ('texture' in view) {
-        texture = this.device.createTexture(view.texture.descriptor);
-      } else {
-        texture = this.device.createTexture(view.descriptor);
-      }
-
-      if (!texture) {
-        throw new Error(`Failed to create texture for ${view}`);
-      }
-      if ('texture' in view) {
-        this._textures.set(view.texture, texture);
-      } else {
-        this._textures.set(view, texture);
-      }
-    }
-
-    return texture.createView(view.descriptor);
-  }
-
   textureFor(
     view:
-      | WgslTexture<AnyWgslPrimitive>
-      | WgslStorageTexture<AnyWgslTexelFormat, StorageTextureAccess>,
+      | WgslTexture<TextureUsage>
+      | WgslTextureView<AnyWgslPrimitive | AnyWgslTexelFormat, TextureUsage>,
   ): GPUTexture {
-    let texture = this._textures.get(view);
+    let source: WgslTexture<TextureUsage>;
+    if ('texture' in view) {
+      source = view.texture;
+    } else {
+      source = view;
+    }
+
+    let texture = this._textures.get(source);
 
     if (!texture) {
-      texture = this.device.createTexture(view.descriptor);
+      texture = this.device.createTexture(source.descriptor);
 
       if (!texture) {
         throw new Error(`Failed to create texture for ${view}`);
       }
-      this._textures.set(view, texture);
+      this._textures.set(source, texture);
     }
 
     return texture;
+  }
+
+  viewFor(
+    view: WgslTextureView<AnyWgslPrimitive | AnyWgslTexelFormat, TextureUsage>,
+  ): GPUTextureView {
+    let textureView = this._textureViews.get(view);
+    if (!textureView) {
+      textureView = this.textureFor(view.texture).createView(view.descriptor);
+    }
+    return textureView;
   }
 
   externalTextureFor(texture: WgslTextureExternal): GPUExternalTexture {
