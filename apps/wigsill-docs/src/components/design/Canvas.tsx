@@ -1,6 +1,6 @@
 import cs from 'classnames';
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import useEvent from './useEvent';
+import useEvent from '../../utils/useEvent';
 
 type Props = {
   width?: number;

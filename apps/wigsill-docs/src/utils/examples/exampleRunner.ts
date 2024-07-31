@@ -5,7 +5,7 @@ import type { OnFrameFn } from '@wigsill/example-toolkit';
 import { GUI } from 'dat.gui';
 import { filter, isNonNull, map, pipe } from 'remeda';
 import { transpileModule } from 'typescript';
-import { tsCompilerOptions } from '../embeddedTypeScript';
+import { tsCompilerOptions } from '../liveEditor/embeddedTypeScript';
 import type { ExampleState } from './exampleState';
 import type { LayoutInstance } from './layout';
 

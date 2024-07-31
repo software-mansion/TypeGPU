@@ -1,14 +1,16 @@
 import cs from 'classnames';
-import { useAtom } from 'jotai/react';
+import { useAtom } from 'jotai';
 import { RESET } from 'jotai/utils';
 import type { MouseEvent } from 'react';
-import { currentExampleAtom } from '../router';
-import useEvent from './useEvent';
+import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
+import useEvent from '../utils/useEvent';
 
-export function ExampleLink(props: {
+type Props = {
   exampleKey: string | undefined;
   children?: string;
-}) {
+};
+
+export function ExampleLink(props: Props) {
   const { exampleKey, children } = props;
 
   const [currentExample, setCurrentExample] = useAtom(currentExampleAtom);

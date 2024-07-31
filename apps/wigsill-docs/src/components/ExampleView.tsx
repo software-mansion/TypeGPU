@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'remeda';
-import { CodeEditor } from '../CodeEditor';
-import { Button } from '../common/Button';
-import { Canvas } from '../common/Canvas';
-import { Table } from '../common/Table';
-import { Video } from '../common/Video';
-import useEvent from '../common/useEvent';
-import type { Example } from '../example/types';
-import { ExecutionCancelledError } from './errors';
-import { executeExample } from './exampleRunner';
-import type { ExampleState } from './exampleState';
-import { useLayout } from './layout';
+import { ExecutionCancelledError } from '../utils/examples/errors';
+import { executeExample } from '../utils/examples/exampleRunner';
+import type { ExampleState } from '../utils/examples/exampleState';
+import { useLayout } from '../utils/examples/layout';
+import type { Example } from '../utils/examples/types';
+import useEvent from '../utils/useEvent';
+import { CodeEditor } from './CodeEditor';
+import { Button } from './design/Button';
+import { Canvas } from './design/Canvas';
+import { Table } from './design/Table';
+import { Video } from './design/Video';
 
 type Props = {
   example: Example;

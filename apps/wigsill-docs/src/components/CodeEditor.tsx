@@ -2,12 +2,12 @@ import Editor, { type Monaco } from '@monaco-editor/react';
 import webgpuTypes from '@webgpu/types/dist/index.d.ts?raw';
 import { entries, map, pipe } from 'remeda';
 import typedBinary from 'typed-binary/dist/index.d.ts?raw';
-import useEvent from './common/useEvent';
-import { tsCompilerOptions } from './embeddedTypeScript';
-import toolkitTypes from './types/example-toolkit.d.ts?raw';
+import toolkitTypes from '../types/example-toolkit.d.ts?raw';
+import { tsCompilerOptions } from '../utils/liveEditor/embeddedTypeScript';
+import useEvent from '../utils/useEvent';
 
 const wigsillDtsFiles: Record<string, string> = import.meta.glob(
-  '../../../packages/wigsill/dist/**/*.d.ts',
+  '../../../../packages/wigsill/dist/**/*.d.ts',
   {
     query: 'raw',
     eager: true,
@@ -18,7 +18,7 @@ const wigsillDtsFiles: Record<string, string> = import.meta.glob(
 const wigsillExtraLibs = pipe(
   entries(wigsillDtsFiles),
   map(([path, content]) => ({
-    filename: path.replace('../../../packages/wigsill/dist', 'wigsill/dist'),
+    filename: path.replace('../../../../packages/wigsill/dist', 'wigsill/dist'),
     content,
   })),
 );

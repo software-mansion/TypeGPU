@@ -1,7 +1,7 @@
 import { useSetAtom } from 'jotai';
 import type { MouseEvent } from 'react';
-import useEvent from './common/useEvent';
-import { currentExampleAtom } from './router';
+import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
+import useEvent from '../utils/useEvent';
 
 export function ExampleNotFound() {
   const setCurrentExample = useSetAtom(currentExampleAtom);

@@ -1,11 +1,25 @@
+// import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
+import react from '@astrojs/react';
 import starlight from '@astrojs/starlight';
-import { defineConfig } from 'astro/config';
-import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
-
 import tailwind from '@astrojs/tailwind';
+import { defineConfig } from 'astro/config';
+import importRawRedirectPlugin from './vite-import-raw-redirect-plugin';
 
 // https://astro.build/config
 export default defineConfig({
+  vite: {
+    plugins: [
+      importRawRedirectPlugin({
+        'wigsill/dist/index.d.ts?raw': '../../packages/wigsill/dist/index.d.ts',
+        'wigsill/dist/data/index.d.ts?raw':
+          '../../packages/wigsill/dist/data/index.d.ts',
+        'wigsill/dist/macro/index.d.ts?raw':
+          '../../packages/wigsill/dist/macro/index.d.ts',
+        'wigsill/dist/web/index.d.ts?raw':
+          '../../packages/wigsill/dist/web/index.d.ts',
+      }),
+    ],
+  },
   integrations: [
     starlight({
       title: 'wigsill',
@@ -23,6 +37,17 @@ export default defineConfig({
       },
       sidebar: [
         {
+          label: '⭐️ Examples',
+          link: 'examples',
+          attrs: {
+            'data-astro-reload': true,
+          },
+        },
+        {
+          label: '🧩 Playground',
+          link: 'playground',
+        },
+        {
           label: 'Guides',
           items: [
             // Each item here is one entry in the navigation menu.
@@ -36,21 +61,22 @@ export default defineConfig({
             },
           ],
         },
-        typeDocSidebarGroup,
+        // typeDocSidebarGroup,
       ],
       plugins: [
         // Generate the documentation.
-        starlightTypeDoc({
-          entryPoints: [
-            '../../packages/wigsill/src',
-            '../../packages/wigsill/src/data',
-            '../../packages/wigsill/src/macro',
-            '../../packages/wigsill/src/web',
-          ],
-          tsconfig: '../../packages/wigsill/tsconfig.json',
-        }),
+        // starlightTypeDoc({
+        //   entryPoints: [
+        //     '../../packages/wigsill/src',
+        //     '../../packages/wigsill/src/data',
+        //     '../../packages/wigsill/src/macro',
+        //     '../../packages/wigsill/src/web',
+        //   ],
+        //   tsconfig: '../../packages/wigsill/tsconfig.json',
+        // }),
       ],
     }),
     tailwind(),
+    react(),
   ],
 });

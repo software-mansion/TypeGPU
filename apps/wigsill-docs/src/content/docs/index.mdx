@@ -11,11 +11,32 @@ hero:
       link: /guides/getting-started/
       icon: right-arrow
       variant: primary
+    - text: Playground
+      link: /playground
+      icon: puzzle
+    - text: See examples
+      attrs:
+        'data-astro-reload': true
+      link: /examples
+      icon: external
 ---
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
+<Card>
+## Ongoing development!
+
+The library is still under heavy development, and is a little-ways off from being production ready.
+
+Use the [Playground](/playground) and <a href="/examples" data-astro-reload>Examples</a> to experiment with wigsill, and shape its future
+by giving us feedback on our <a href="https://discord.com/invite/2gjSqPQc9Q" target="_blank" rel="noopener">Discord server</a>.
+</Card>
+
 ## Main features
+
+We are creating a TypeScript library that enhances the WebGPU API with the ability to modularly compose
+WGSL programs, and manage resources in a type-safe and declarative way.
+
 
 <CardGrid stagger>
 	<Card title="More flexibility at zero runtime cost" icon="star">

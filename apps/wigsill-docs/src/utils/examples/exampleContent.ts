@@ -11,7 +11,7 @@ import { parseExampleCode } from './parseExampleCode';
 import type { Example } from './types';
 
 const rawExamples: Record<string, string> = import.meta.glob(
-  '../examples/**/*.ts',
+  '../../content/examples/**/*.ts',
   {
     query: 'raw',
     eager: true,
@@ -25,7 +25,7 @@ export const examples = pipe(
   map(([path, value]) => {
     const key = pipe(
       path,
-      (path) => path.replace(/^..\/examples\//, ''), // remove parent folder
+      (path) => path.replace(/^..\/..\/content\/examples\//, ''), // remove parent folder
       (path) => path.replace(/.ts$/, ''), // remove extension
       (path) => path.replace(/\//, '--'), // / -> --
     );

@@ -1,28 +1,22 @@
-import { readFile } from 'node:fs/promises';
-import * as path from 'node:path';
-import react from '@vitejs/plugin-react-swc';
 import { mapValues, values } from 'remeda';
-import { type ModuleNode, type PluginOption, defineConfig } from 'vite';
 
-type RawTypesEntry = {
-  moduleName: string;
-  relativePath: string;
-};
-
+/**
+ *
+ * @param {*} moduleMap
+ * @returns {PluginOption}
+ */
 function importRawRedirectPlugin(
-  moduleMap: Record<string, RawTypesEntry>,
-): PluginOption {
-  const resolvedMap = mapValues(moduleMap, (entry, virtualModuleId) => {
+  /**
+   * @type Record<string, string>
+   */
+  moduleMap,
+) {
+  const resolvedMap = mapValues(moduleMap, (relativePath, virtualModuleId) => {
     const resolvedVirtualModuleId = `\0${virtualModuleId}`;
-
-    const moduleEntryPath = new URL(import.meta.resolve(entry.moduleName))
-      .pathname;
-    const moduleDistPath = path.dirname(moduleEntryPath);
-    const redirectedPath = path.join(moduleDistPath, entry.relativePath);
 
     return {
       resolvedVirtualModuleId,
-      redirectedPath,
+      redirectedPath: relativePath,
     };
   });
 
@@ -39,7 +33,7 @@ function importRawRedirectPlugin(
 
       ctx.server.ws.send({ type: 'full-reload' });
       // Invalidate modules manually
-      const invalidatedModules = new Set<ModuleNode>();
+      const invalidatedModules = new Set();
       for (const mod of ctx.modules) {
         ctx.server.moduleGraph.invalidateModule(
           mod,
@@ -84,27 +78,4 @@ export default content;
   };
 }
 
-// https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [
-    react(),
-    importRawRedirectPlugin({
-      'wigsill/dist/index.d.ts?raw': {
-        moduleName: 'wigsill',
-        relativePath: 'index.d.ts',
-      },
-      'wigsill/dist/data/index.d.ts?raw': {
-        moduleName: 'wigsill',
-        relativePath: 'data/index.d.ts',
-      },
-      'wigsill/dist/macro/index.d.ts?raw': {
-        moduleName: 'wigsill',
-        relativePath: 'macro/index.d.ts',
-      },
-      'wigsill/dist/web/index.d.ts?raw': {
-        moduleName: 'wigsill',
-        relativePath: 'web/index.d.ts',
-      },
-    }),
-  ],
-});
+export default importRawRedirectPlugin;
