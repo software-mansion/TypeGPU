@@ -51,9 +51,8 @@ export function isWgsl(value: unknown): value is Wgsl {
   );
 }
 
-export interface WgslSlot<T> extends WgslNamable {
+export interface WgslSlot<T> extends WgslNamable, WgslResolvable {
   readonly __brand: 'WgslSlot';
-  get label(): string | undefined;
 
   readonly defaultValue: T | undefined;
 
