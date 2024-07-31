@@ -46,28 +46,14 @@ export class PlumStore {
     return this._stateMap.get(plum);
   }
 
-  private _getState<TPlum extends WgslPlum>(
-    plum: TPlum,
-  ): PlumState<ExtractPlumValue<TPlum>> {
-    type Value = ExtractPlumValue<TPlum>;
-
-    let state = this._stateMap.get(plum) as PlumState<Value> | undefined;
+  private _getState<T>(plum: WgslPlum<T>): PlumState<T> {
+    let state = this._stateMap.get(plum) as PlumState<T> | undefined;
 
     if (!state) {
-      const dependencies = new Map<WgslPlum, number>();
-
-      const getter = (<T>(dep: WgslPlum<T>) => {
-        // registering dependency.
-        if (!dependencies.has(dep)) {
-          const depState = this._getState(dep);
-          dependencies.set(dep, depState.version);
-        }
-
-        return this.get(dep);
-      }) as Getter;
+      const { value, dependencies } = this._computeAndGatherDependencies(plum);
 
       state = {
-        value: plum.compute(getter) as Value,
+        value,
         dependencies,
         version: 0,
       };
@@ -77,9 +63,23 @@ export class PlumStore {
     return state;
   }
 
-  private _recompute<TPlum extends WgslPlum>(
-    plum: TPlum,
-  ): ExtractPlumValue<TPlum> {
+  private _computeAndGatherDependencies<T>(plum: WgslPlum<T>) {
+    const dependencies = new Map<WgslPlum, number>();
+
+    const getter = (<T>(dep: WgslPlum<T>) => {
+      // registering dependency.
+      if (!dependencies.has(dep)) {
+        const depState = this._getState(dep);
+        dependencies.set(dep, depState.version);
+      }
+
+      return this.get(dep);
+    }) as Getter;
+
+    return { value: plum.compute(getter), dependencies };
+  }
+
+  private _recompute<T>(plum: WgslPlum<T>): T {
     const state = this._getState(plum);
 
     if (state.active) {
@@ -89,21 +89,9 @@ export class PlumStore {
       }
     }
 
-    const newDependencies = new Map<WgslPlum, number>();
+    const { value, dependencies } = this._computeAndGatherDependencies(plum);
 
-    const getter = (<T>(dep: WgslPlum<T>) => {
-      // registering dependency.
-      if (!newDependencies.has(dep)) {
-        const depState = this._getState(dep);
-        newDependencies.set(dep, depState.version);
-      }
-
-      return this.get(dep);
-    }) as Getter;
-
-    const newValue = plum.compute(getter);
-
-    state.dependencies = newDependencies;
+    state.dependencies = dependencies;
     if (state.active) {
       // subscribing to dependencies
       for (const [dep] of state.dependencies) {
@@ -115,11 +103,11 @@ export class PlumStore {
       }
     }
 
-    if (Object.is(state.value, newValue)) {
+    if (Object.is(state.value, value)) {
       return state.value;
     }
 
-    state.value = newValue as ExtractPlumValue<TPlum>;
+    state.value = value;
     state.version = isExternalPlum(plum) ? plum.version : state.version + 1;
 
     if (state.active) {
@@ -138,7 +126,7 @@ export class PlumStore {
 
     if (state.active) {
       // Return memoized value, the dependencies are keeping it up to date.
-      return state.value;
+      return state.value as ExtractPlumValue<TPlum>;
     }
 
     let dirty = false;
@@ -157,10 +145,10 @@ export class PlumStore {
 
     if (!dirty) {
       // No need to recompute
-      return state.value;
+      return state.value as ExtractPlumValue<TPlum>;
     }
 
-    return this._recompute(plum);
+    return this._recompute(plum) as ExtractPlumValue<TPlum>;
   }
 
   set<T>(plum: WgslPlum<T> & WgslSettable, value: T): void {

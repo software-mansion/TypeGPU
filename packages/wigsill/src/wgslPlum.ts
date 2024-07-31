@@ -1,5 +1,5 @@
 import { type WgslSettable, WgslSettableTrait } from './settableTrait';
-import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
+import type { Wgsl, WgslResolvable } from './types';
 
 // ----------
 // Public API
@@ -100,9 +100,7 @@ export function isPlum<T>(value: WgslPlum<T> | unknown): value is WgslPlum<T> {
 // Implementation
 // --------------
 
-class WgslSourcePlumImpl<TValue>
-  implements WgslPlum<TValue>, WgslSettable, WgslResolvable
-{
+class WgslSourcePlumImpl<TValue> implements WgslPlum<TValue>, WgslSettable {
   readonly __brand = 'WgslPlum';
   readonly [WgslSettableTrait] = true;
 
@@ -123,16 +121,12 @@ class WgslSourcePlumImpl<TValue>
     return this._label;
   }
 
-  resolve(ctx: ResolutionCtx): string {
-    throw new Error('Method not implemented.');
-  }
-
   toString(): string {
     return `plum:${this._label ?? '<unnamed>'}`;
   }
 }
 
-class WgslDerivedPlumImpl<TValue> implements WgslPlum<TValue>, WgslResolvable {
+class WgslDerivedPlumImpl<TValue> implements WgslPlum<TValue> {
   readonly __brand = 'WgslPlum';
   private _label: string | undefined;
 
@@ -147,10 +141,6 @@ class WgslDerivedPlumImpl<TValue> implements WgslPlum<TValue>, WgslResolvable {
     return this._label;
   }
 
-  resolve(ctx: ResolutionCtx): string {
-    throw new Error('Method not implemented.');
-  }
-
   compute(get: Getter): TValue {
     return this._compute(get);
   }
@@ -161,7 +151,7 @@ class WgslDerivedPlumImpl<TValue> implements WgslPlum<TValue>, WgslResolvable {
 }
 
 class WgslExternalPlumImpl<TValue>
-  implements WgslPlum<TValue>, WgslResolvable, WgslExternalPlum
+  implements WgslPlum<TValue>, WgslExternalPlum
 {
   readonly __brand = 'WgslPlum';
   readonly [WgslExternalPlumTrait] = true;
@@ -188,10 +178,6 @@ class WgslExternalPlumImpl<TValue>
 
   get version(): number {
     return this._version;
-  }
-
-  resolve(ctx: ResolutionCtx): string {
-    throw new Error('Method not implemented.');
   }
 
   subscribe(listener: () => unknown): Unsubscribe {
