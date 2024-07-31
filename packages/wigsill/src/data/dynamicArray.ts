@@ -33,8 +33,7 @@ export interface WgslDynamicArray<TElement extends WgslData<unknown>>
 export const dynamicArrayOf = <TSchema extends AnyWgslData>(
   elementType: TSchema,
   capacity: number,
-): WgslDynamicArray<TSchema> =>
-  new WgslDynamicArrayImpl(elementType, capacity);
+): WgslDynamicArray<TSchema> => new WgslDynamicArrayImpl(elementType, capacity);
 
 // --------------
 // Implementation
