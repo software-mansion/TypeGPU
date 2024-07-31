@@ -1,10 +1,12 @@
 import { ResolvableToStringError } from './errors';
-import type { WgslNamable, WgslResolvable } from './types';
+import type { ResolutionCtx, WgslNamable, WgslResolvable } from './types';
 
 export abstract class WgslResolvableBase
-  implements WgslNamable, Omit<WgslResolvable, 'resolve'>
+  implements WgslResolvable, WgslNamable
 {
   abstract readonly typeInfo: string;
+  abstract resolve(ctx: ResolutionCtx): string;
+
   private _label: string | undefined;
 
   get label() {

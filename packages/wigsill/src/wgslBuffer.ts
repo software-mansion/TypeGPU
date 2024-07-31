@@ -3,10 +3,8 @@ import type {
   BufferUsage,
   WgslAllocatable,
   WgslNamable,
-  WgslResolvable,
 } from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
-import { WgslResolvableBase } from './wgslResolvableBase';
 
 // ----------
 // Public API
@@ -16,8 +14,7 @@ export interface WgslBuffer<
   TData extends AnyWgslData,
   TAllows extends BufferUsage = never,
 > extends WgslAllocatable<TData>,
-    WgslNamable,
-    Omit<WgslResolvable, 'resolve'> {
+    WgslNamable {
   $allowUniform(): WgslBuffer<TData, TAllows | 'uniform'>;
   $allowReadonlyStorage(): WgslBuffer<TData, TAllows | 'readonly_storage'>;
   $allowMutableStorage(): WgslBuffer<TData, TAllows | 'mutable_storage'>;
@@ -34,6 +31,9 @@ export interface WgslBuffer<
   asReadonlyStorage(): 'readonly_storage' extends TAllows
     ? WgslBufferUsage<TData, 'readonly_storage'>
     : null;
+
+  get label(): string | undefined;
+  get debugRepr(): string;
 }
 
 export function buffer<
@@ -48,15 +48,15 @@ export function buffer<
 // --------------
 
 class WgslBufferImpl<
-    TData extends AnyWgslData,
-    TAllows extends BufferUsage = never,
-  >
-  extends WgslResolvableBase
-  implements WgslBuffer<TData, TAllows>
+  TData extends AnyWgslData,
+  TAllows extends BufferUsage = never,
+> implements WgslBuffer<TData, TAllows>
 {
   readonly typeInfo = 'buffer';
   public flags: GPUBufferUsageFlags =
     GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
+
+  private _label: string | undefined;
 
   private _allowedUsages: {
     uniform: WgslBufferUsage<TData, TAllows | 'uniform'> | null;
@@ -71,9 +71,7 @@ class WgslBufferImpl<
     readonlyStorage: null,
   };
 
-  constructor(public readonly dataType: TData) {
-    super();
-  }
+  constructor(public readonly dataType: TData) {}
 
   $allowUniform() {
     const enrichedThis = this as WgslBuffer<TData, TAllows | 'uniform'>;
@@ -135,5 +133,22 @@ class WgslBufferImpl<
       .readonlyStorage as 'readonly_storage' extends TAllows
       ? WgslBufferUsage<TData, 'readonly_storage'>
       : null;
+  }
+
+  get label() {
+    return this._label;
+  }
+
+  $name(label?: string | undefined) {
+    this._label = label;
+    return this;
+  }
+
+  toString(): string {
+    return this.debugRepr;
+  }
+
+  get debugRepr(): string {
+    return `${this.typeInfo}:${this.label ?? '<unnamed>'}`;
   }
 }

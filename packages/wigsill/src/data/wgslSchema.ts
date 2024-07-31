@@ -1,11 +1,13 @@
 import { Schema } from 'typed-binary';
-import type { WgslNamable, WgslResolvable } from '../types';
+import type { ResolutionCtx, WgslNamable, WgslResolvable } from '../types';
 
 export abstract class WgslSchema<T>
   extends Schema<T>
-  implements WgslNamable, Omit<WgslResolvable, 'resolve'>
+  implements WgslNamable, WgslResolvable
 {
   abstract readonly typeInfo: string;
+  abstract resolve(ctx: ResolutionCtx): string;
+
   private _label: string | undefined;
 
   get label() {
