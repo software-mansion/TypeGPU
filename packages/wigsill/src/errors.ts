@@ -1,4 +1,4 @@
-import type { WgslSlot } from './types';
+import type { WgslResolvable, WgslSlot } from './types';
 
 /**
  * @category Errors
@@ -25,7 +25,7 @@ export class RecursiveDataTypeError extends Error {
 }
 
 export class ResolvableToStringError extends Error {
-  constructor(public readonly item: { debugRepr: string }) {
+  constructor(public readonly item: WgslResolvable) {
     super(
       `Use wgsl\`...\` when interpolating wgsl item: ${item.debugRepr}. For console logging use the debugRepr property`,
     );

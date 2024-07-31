@@ -1,14 +1,15 @@
 import type { WgslResolvable } from './types';
+import type { WgslIdentifier } from './wgslIdentifier';
 
 export interface NameRegistry {
-  nameFor(item: WgslResolvable): string;
+  nameFor(item: WgslIdentifier): string;
 }
 
 export class RandomNameRegistry implements NameRegistry {
   private lastUniqueId = 0;
   private names = new WeakMap<WgslResolvable, string>();
 
-  nameFor(item: WgslResolvable) {
+  nameFor(item: WgslIdentifier) {
     let name = this.names.get(item);
 
     if (name === undefined) {
@@ -37,7 +38,7 @@ export class StrictNameRegistry implements NameRegistry {
 
   private readonly _assignedNames = new WeakMap<WgslResolvable, string>();
 
-  nameFor(item: WgslResolvable): string {
+  nameFor(item: WgslIdentifier): string {
     const assignedName = this._assignedNames.get(item);
     if (assignedName !== undefined) {
       return assignedName;

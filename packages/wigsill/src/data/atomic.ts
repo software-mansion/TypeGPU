@@ -5,12 +5,16 @@ import {
   type MaxValue,
   Measurer,
   type ParseUnwrapped,
+  Schema,
   type Unwrap,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import type { ResolutionCtx, WgslData } from '../types';
 import type { I32, U32 } from './numeric';
-import { WgslSchema } from './wgslSchema';
+
+// ----------
+// Public API
+// ----------
 
 export function atomic<TSchema extends U32 | I32>(
   data: TSchema,
@@ -21,18 +25,29 @@ export function atomic<TSchema extends U32 | I32>(
 export interface Atomic<TSchema extends U32 | I32>
   extends WgslData<Unwrap<TSchema>> {}
 
+// --------------
+// Implementation
+// --------------
+
 class AtomicImpl<TSchema extends U32 | I32>
-  extends WgslSchema<Unwrap<TSchema>>
+  extends Schema<Unwrap<TSchema>>
   implements Atomic<TSchema>
 {
-  readonly typeInfo = 'atomic';
+  readonly typeInfo: string = 'atomic';
   public readonly size: number;
   public readonly byteAlignment: number;
+  private readonly innerDebugRepr: () => string;
 
   constructor(private readonly innerData: TSchema) {
     super();
     this.size = this.innerData.size;
     this.byteAlignment = this.innerData.byteAlignment;
+
+    this.innerDebugRepr = () => innerData.debugRepr;
+  }
+
+  get debugRepr(): string {
+    return `${this.typeInfo}:${this.innerDebugRepr()}`;
   }
 
   resolveReferences(): void {

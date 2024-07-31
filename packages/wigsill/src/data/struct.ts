@@ -6,22 +6,27 @@ import {
   MaxValue,
   Measurer,
   type Parsed,
+  Schema,
   type UnwrapRecord,
   object,
 } from 'typed-binary';
-import { RecursiveDataTypeError } from '../errors';
-import type { AnyWgslData, ResolutionCtx, WgslData } from '../types';
+import { RecursiveDataTypeError, ResolvableToStringError } from '../errors';
+import type {
+  AnyWgslData,
+  ResolutionCtx,
+  WgslData,
+  WgslNamable,
+} from '../types';
 import { code } from '../wgslCode';
 import { WgslIdentifier } from '../wgslIdentifier';
-import { WgslSchema } from './wgslSchema';
 
 // ----------
 // Public API
 // ----------
 
 export interface WgslStruct<TProps extends Record<string, AnyWgslData>>
-  extends WgslSchema<UnwrapRecord<TProps>>,
-    WgslData<UnwrapRecord<TProps>> {}
+  extends WgslData<UnwrapRecord<TProps>>,
+    WgslNamable {}
 
 export const struct = <TProps extends Record<string, AnyWgslData>>(
   properties: TProps,
@@ -32,11 +37,12 @@ export const struct = <TProps extends Record<string, AnyWgslData>>(
 // --------------
 
 class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
-  extends WgslSchema<UnwrapRecord<TProps>>
-  implements WgslData<UnwrapRecord<TProps>>
+  extends Schema<UnwrapRecord<TProps>>
+  implements WgslData<UnwrapRecord<TProps>>, WgslNamable
 {
   readonly typeInfo = 'struct';
   private _innerSchema: ISchema<UnwrapRecord<TProps>>;
+  private _label: string | undefined;
 
   public readonly byteAlignment: number;
   public readonly size: number;
@@ -51,6 +57,15 @@ class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
       .reduce((a, b) => (a > b ? a : b));
 
     this.size = this.measure(MaxValue).size;
+  }
+
+  get label(): string | undefined {
+    return this._label;
+  }
+
+  $name(label?: string | undefined) {
+    this._label = label;
+    return this;
   }
 
   resolveReferences(): void {
@@ -83,5 +98,13 @@ class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
     `);
 
     return ctx.resolve(identifier);
+  }
+
+  toString(): string {
+    throw new ResolvableToStringError(this);
+  }
+
+  get debugRepr(): string {
+    return `${this.typeInfo}:${this.label ?? '<unnamed>'}`;
   }
 }

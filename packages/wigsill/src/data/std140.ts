@@ -10,18 +10,18 @@ import {
   MaxValue,
   Measurer,
   type ParseUnwrapped,
+  Schema,
   type Unwrap,
 } from 'typed-binary';
-import { RecursiveDataTypeError } from '../errors';
+import { RecursiveDataTypeError, ResolvableToStringError } from '../errors';
 import type { ResolutionCtx, Wgsl, WgslData } from '../types';
 import alignIO from './alignIO';
-import { WgslSchema } from './wgslSchema';
 
 export class SimpleWgslData<TSchema extends AnySchema>
-  extends WgslSchema<Unwrap<TSchema>>
+  extends Schema<Unwrap<TSchema>>
   implements WgslData<Unwrap<TSchema>>
 {
-  readonly typeInfo = 'data';
+  readonly typeInfo = 'data_type';
   public readonly size: number;
   public readonly byteAlignment: number;
 
@@ -75,5 +75,13 @@ export class SimpleWgslData<TSchema extends AnySchema>
 
   resolve(ctx: ResolutionCtx): string {
     return ctx.resolve(this._expressionCode);
+  }
+
+  get debugRepr(): string {
+    return `${this.typeInfo}:${this._expressionCode}`;
+  }
+
+  toString(): string {
+    throw new ResolvableToStringError(this);
   }
 }

@@ -26,11 +26,11 @@ export interface ResolutionCtx {
 
 export interface WgslResolvable {
   resolve(ctx: ResolutionCtx): string;
-  get label(): string | undefined;
   get debugRepr(): string;
 }
 
 export interface WgslNamable {
+  get label(): string | undefined;
   $name(label?: string | undefined): this;
 }
 
@@ -38,7 +38,8 @@ export function isResolvable(value: unknown): value is WgslResolvable {
   return (
     !!value &&
     (typeof value === 'object' || typeof value === 'function') &&
-    'resolve' in value
+    'resolve' in value &&
+    'debugRepr' in value
   );
 }
 

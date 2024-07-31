@@ -5,25 +5,60 @@ import {
   MaxValue,
   Measurer,
   type ParseUnwrapped,
+  Schema,
   type Unwrap,
   ValidationError,
 } from 'typed-binary';
-import { RecursiveDataTypeError } from '../errors';
-import type { AnyWgslData, ResolutionCtx, WgslData } from '../types';
+import { RecursiveDataTypeError, ResolvableToStringError } from '../errors';
+import type {
+  AnyWgslData,
+  ResolutionCtx,
+  WgslData,
+  WgslNamable,
+} from '../types';
 import { code } from '../wgslCode';
 import { WgslIdentifier } from '../wgslIdentifier';
 import alignIO from './alignIO';
 import { u32 } from './numeric';
-import { WgslSchema } from './wgslSchema';
 
-class DynamicArrayDataType<TElement extends WgslData<unknown>>
-  extends WgslSchema<Unwrap<TElement>[]>
-  implements WgslData<Unwrap<TElement>[]>
+// ----------
+// Public API
+// ----------
+
+export interface WgslDynamicArray<TElement extends WgslData<unknown>>
+  extends Schema<Unwrap<TElement>[]>,
+    WgslData<Unwrap<TElement>[]>,
+    WgslNamable {}
+
+export const dynamicArrayOf = <TSchema extends AnyWgslData>(
+  elementType: TSchema,
+  capacity: number,
+): WgslDynamicArray<TSchema> =>
+  new WgslDynamicArrayImpl(elementType, capacity);
+
+// --------------
+// Implementation
+// --------------
+
+class WgslDynamicArrayImpl<TElement extends WgslData<unknown>>
+  extends Schema<Unwrap<TElement>[]>
+  implements WgslData<Unwrap<TElement>[]>, WgslNamable
 {
   readonly typeInfo = 'dynamic_array';
 
   public readonly byteAlignment: number;
   public readonly size: number;
+
+  private _label: string | undefined;
+
+  get label() {
+    return this._label;
+  }
+
+  $name(label?: string | undefined) {
+    this._label = label;
+    return this;
+  }
 
   constructor(
     private readonly _elementType: TElement,
@@ -104,11 +139,12 @@ class DynamicArrayDataType<TElement extends WgslData<unknown>>
 
     return ctx.resolve(identifier);
   }
+
+  toString(): string {
+    throw new ResolvableToStringError(this);
+  }
+
+  get debugRepr(): string {
+    return `${this.typeInfo}:${this.label ?? '<unnamed>'}`;
+  }
 }
-
-export const dynamicArrayOf = <TSchema extends AnyWgslData>(
-  elementType: TSchema,
-  capacity: number,
-) => new DynamicArrayDataType(elementType, capacity);
-
-export default DynamicArrayDataType;

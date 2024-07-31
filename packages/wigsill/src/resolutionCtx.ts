@@ -121,7 +121,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
-  nameFor(item: WgslResolvable): string {
+  nameFor(item: WgslIdentifier): string {
     return this._shared.names.nameFor(item);
   }
 
@@ -175,7 +175,7 @@ class ScopedResolutionCtx implements ResolutionCtx {
     );
   }
 
-  nameFor(token: WgslResolvable): string {
+  nameFor(token: WgslIdentifier): string {
     return this._shared.names.nameFor(token);
   }
 
