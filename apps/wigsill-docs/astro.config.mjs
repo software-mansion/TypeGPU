@@ -37,15 +37,11 @@ export default defineConfig({
       },
       sidebar: [
         {
-          label: '⭐️ Examples',
+          label: '⭐️ Live Examples',
           link: 'examples',
           attrs: {
             'data-astro-reload': true,
           },
-        },
-        {
-          label: '🧩 Playground',
-          link: 'playground',
         },
         {
           label: 'Guides',
