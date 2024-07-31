@@ -626,7 +626,9 @@ function makePipelines(
 
   const applyMovedObstacles = (bufferData: Parsed<BoxObstacle>[]) => {
     runtime.writeBuffer(obstaclesBuffer, bufferData);
-    moveObstaclesPipeline.execute([1, 1]);
+    moveObstaclesPipeline.execute({
+      workgroups: [1, 1],
+    });
     runtime.flush();
 
     runtime.writeBuffer(prevObstaclesBuffer, bufferData);
@@ -640,15 +642,17 @@ function makePipelines(
     applyMovedObstacles,
 
     init() {
-      initWorldPipeline.execute([gridSize, gridSize]);
+      initWorldPipeline.execute({ workgroups: [gridSize, gridSize] });
       runtime.flush();
     },
 
     compute() {
-      computePipeline.execute([
-        gridSize / computeWorkgroupSize,
-        gridSize / computeWorkgroupSize,
-      ]);
+      computePipeline.execute({
+        workgroups: [
+          gridSize / computeWorkgroupSize,
+          gridSize / computeWorkgroupSize,
+        ],
+      });
     },
 
     render() {

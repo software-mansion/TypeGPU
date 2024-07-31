@@ -2,7 +2,7 @@ import type { ISchema } from 'typed-binary';
 import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from './data';
 import type { WgslIdentifier } from './wgslIdentifier';
 
-export type Wgsl = string | number | WgslResolvable | symbol;
+export type Wgsl = string | number | WgslResolvable | symbol | boolean;
 
 /**
  * Passed into each resolvable item. All sibling items share a resolution ctx,
@@ -96,7 +96,7 @@ export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
    */
   readonly dataType: TData;
   vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null;
-  readonly flags: GPUBufferUsageFlags | GPUTextureUsageFlags;
+  readonly flags: GPUBufferUsageFlags;
   get label(): string | undefined;
 }
 
@@ -148,7 +148,19 @@ export type BufferUsage =
   | 'readonly_storage'
   | 'mutable_storage'
   | 'vertex';
+export type TextureUsage = 'sampled' | 'storage';
 export type StorageTextureAccess = 'read' | 'write' | 'read_write';
+
+export type StorageTextureParams = {
+  type: WgslStorageTextureType;
+  access: StorageTextureAccess;
+  descriptor: GPUTextureViewDescriptor | undefined;
+};
+export type SampledTextureParams = {
+  type: WgslTypedTextureType;
+  dataType: AnyWgslPrimitive;
+  descriptor: GPUTextureViewDescriptor | undefined;
+};
 
 export function isSamplerType(
   type: WgslRenderResourceType,

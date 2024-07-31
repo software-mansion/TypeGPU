@@ -11,19 +11,21 @@ import type {
   AnyWgslData,
   AnyWgslPrimitive,
   AnyWgslTexelFormat,
-  StorageTextureAccess,
+  TextureUsage,
   WgslAllocatable,
 } from '../types';
 import type { WgslCode } from '../wgslCode';
 import type { WgslSampler } from '../wgslSampler';
 import type {
-  WgslStorageTexture,
   WgslTexture,
   WgslTextureExternal,
   WgslTextureView,
 } from '../wgslTexture';
-import type { WigsillRuntime } from '../wigsillRuntime';
-import { deriveVertexFormat } from '../wigsillRuntime';
+import {
+  type ComputePipelineExecutorOptions,
+  type WigsillRuntime,
+  deriveVertexFormat,
+} from '../wigsillRuntime';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
@@ -32,20 +34,29 @@ import { deriveVertexFormat } from '../wigsillRuntime';
 class WebWigsillRuntime {
   private _entryToBufferMap = new Map<WgslAllocatable, GPUBuffer>();
   private _samplers = new WeakMap<WgslSampler, GPUSampler>();
-  private _textures = new WeakMap<
-    | WgslTexture<AnyWgslPrimitive>
-    | WgslStorageTexture<AnyWgslTexelFormat, StorageTextureAccess>,
-    GPUTexture
+  private _textures = new WeakMap<WgslTexture<TextureUsage>, GPUTexture>();
+  private _textureViews = new WeakMap<
+    WgslTextureView<AnyWgslPrimitive | AnyWgslTexelFormat, TextureUsage>,
+    GPUTextureView
   >();
   private _pipelineExecutors: PipelineExecutor<
     GPURenderPipeline | GPUComputePipeline
   >[] = [];
+  private _commandEncoder: GPUCommandEncoder | null = null;
 
   // Used for reading GPU buffers ad hoc.
   private _readBuffer: GPUBuffer | null = null;
   private _taskQueue = new TaskQueue();
 
   constructor(public readonly device: GPUDevice) {}
+
+  get commandEncoder() {
+    if (!this._commandEncoder) {
+      this._commandEncoder = this.device.createCommandEncoder();
+    }
+
+    return this._commandEncoder;
+  }
 
   dispose() {
     for (const buffer of this._entryToBufferMap.values()) {
@@ -77,56 +88,40 @@ class WebWigsillRuntime {
     return buffer;
   }
 
-  viewFor(
-    view:
-      | WgslTextureView
-      | WgslTexture<AnyWgslPrimitive>
-      | WgslStorageTexture<AnyWgslTexelFormat, StorageTextureAccess>,
-  ): GPUTextureView {
-    let texture: GPUTexture;
-    if ('texture' in view) {
-      texture = this.textureFor(view.texture);
-    } else {
-      texture = this.textureFor(view);
-    }
-
-    if (!texture) {
-      if ('texture' in view) {
-        texture = this.device.createTexture(view.texture.descriptor);
-      } else {
-        texture = this.device.createTexture(view.descriptor);
-      }
-
-      if (!texture) {
-        throw new Error(`Failed to create texture for ${view}`);
-      }
-      if ('texture' in view) {
-        this._textures.set(view.texture, texture);
-      } else {
-        this._textures.set(view, texture);
-      }
-    }
-
-    return texture.createView(view.descriptor);
-  }
-
   textureFor(
     view:
-      | WgslTexture<AnyWgslPrimitive>
-      | WgslStorageTexture<AnyWgslTexelFormat, StorageTextureAccess>,
+      | WgslTexture<TextureUsage>
+      | WgslTextureView<AnyWgslPrimitive | AnyWgslTexelFormat, TextureUsage>,
   ): GPUTexture {
-    let texture = this._textures.get(view);
+    let source: WgslTexture<TextureUsage>;
+    if ('texture' in view) {
+      source = view.texture;
+    } else {
+      source = view;
+    }
+
+    let texture = this._textures.get(source);
 
     if (!texture) {
-      texture = this.device.createTexture(view.descriptor);
+      texture = this.device.createTexture(source.descriptor);
 
       if (!texture) {
         throw new Error(`Failed to create texture for ${view}`);
       }
-      this._textures.set(view, texture);
+      this._textures.set(source, texture);
     }
 
     return texture;
+  }
+
+  viewFor(
+    view: WgslTextureView<AnyWgslPrimitive | AnyWgslTexelFormat, TextureUsage>,
+  ): GPUTextureView {
+    let textureView = this._textureViews.get(view);
+    if (!textureView) {
+      textureView = this.textureFor(view.texture).createView(view.descriptor);
+    }
+    return textureView;
   }
 
   externalTextureFor(texture: WgslTextureExternal): GPUExternalTexture {
@@ -289,7 +284,7 @@ class WebWigsillRuntime {
     );
 
     const executor = new RenderPipelineExecutor(
-      this.device,
+      this,
       renderPipeline,
       vertexProgram,
       fragmentProgram,
@@ -332,7 +327,7 @@ class WebWigsillRuntime {
     });
 
     const executor = new ComputePipelineExecutor(
-      this.device,
+      this,
       computePipeline,
       [program],
       0,
@@ -342,30 +337,23 @@ class WebWigsillRuntime {
   }
 
   flush() {
-    this.device.queue.submit(
-      this._pipelineExecutors
-        .map((executor) => executor.flush())
-        .filter((encoded): encoded is GPUCommandBuffer => !!encoded),
-    );
+    if (!this._commandEncoder) {
+      return;
+    }
+
+    this.device.queue.submit([this._commandEncoder.finish()]);
+    this._commandEncoder = null;
   }
 }
 
 class PipelineExecutor<T extends GPURenderPipeline | GPUComputePipeline> {
-  public commandEncoder: GPUCommandEncoder | undefined;
-
   constructor(
-    public device: GPUDevice,
+    protected _runtime: WigsillRuntime,
     public pipeline: T,
     public programs: Program[],
     public externalLayoutCount: number,
     protected label?: string,
   ) {}
-
-  flush() {
-    const commandBuffer = this.commandEncoder?.finish();
-    this.commandEncoder = undefined;
-    return commandBuffer;
-  }
 }
 
 class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
@@ -374,7 +362,7 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
   private _usedVertexBuffers: Set<readonly [GPUBuffer, number]>;
 
   constructor(
-    device: GPUDevice,
+    runtime: WigsillRuntime,
     pipeline: GPURenderPipeline,
     vertexProgram: Program,
     fragmentProgram: Program,
@@ -382,7 +370,7 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
     usedVertexBuffers: (readonly [GPUBuffer, number])[],
   ) {
     super(
-      device,
+      runtime,
       pipeline,
       [vertexProgram, fragmentProgram],
       externalLayoutCount,
@@ -416,13 +404,7 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
       );
     }
 
-    if (!this.commandEncoder) {
-      this.commandEncoder = this.device.createCommandEncoder({
-        label: this.label ?? '',
-      });
-    }
-
-    const passEncoder = this.commandEncoder.beginRenderPass({
+    const passEncoder = this._runtime.commandEncoder.beginRenderPass({
       ...descriptor,
       label: this.label ?? '',
     });
@@ -451,21 +433,31 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
 }
 
 class ComputePipelineExecutor extends PipelineExecutor<GPUComputePipeline> {
-  execute(workgroupCounts: [number, number?, number?]) {
-    if (!this.commandEncoder) {
-      this.commandEncoder = this.device.createCommandEncoder({
-        label: this.label ?? '',
-      });
+  execute(options: ComputePipelineExecutorOptions) {
+    const { workgroups, externalBindGroups } = options;
+
+    if ((externalBindGroups?.length ?? 0) !== this.externalLayoutCount) {
+      throw new Error(
+        `External bind group count doesn't match the external bind group layout configuration. Expected ${this.externalLayoutCount}, got: ${externalBindGroups?.length ?? 0}`,
+      );
     }
 
-    const passEncoder = this.commandEncoder.beginComputePass({
+    const passEncoder = this._runtime.commandEncoder.beginComputePass({
       label: this.label ?? '',
     });
     passEncoder.setPipeline(this.pipeline);
-    this.programs.forEach((program, i) =>
-      passEncoder.setBindGroup(i, program.bindGroup),
+
+    (externalBindGroups ?? []).forEach((group, index) =>
+      passEncoder.setBindGroup(index, group),
     );
-    passEncoder.dispatchWorkgroups(...workgroupCounts);
+
+    this.programs.forEach((program, i) =>
+      passEncoder.setBindGroup(
+        (externalBindGroups ?? []).length + i,
+        program.bindGroup,
+      ),
+    );
+    passEncoder.dispatchWorkgroups(...workgroups);
     passEncoder.end();
   }
 }

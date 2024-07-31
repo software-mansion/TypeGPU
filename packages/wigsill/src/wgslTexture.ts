@@ -3,39 +3,47 @@ import type {
   AnyWgslPrimitive,
   AnyWgslTexelFormat,
   ResolutionCtx,
+  SampledTextureParams,
   StorageTextureAccess,
+  StorageTextureParams,
+  TextureUsage,
   WgslExternalTextureType,
   WgslRenderResource,
   WgslRenderResourceType,
-  WgslStorageTextureType,
-  WgslTypedTextureType,
 } from './types';
 import { WgslIdentifier } from './wgslIdentifier';
 import { isSampler } from './wgslSampler';
 
-export interface WgslTexture<TData extends AnyWgslPrimitive> {
-  createView(descriptor?: GPUTextureViewDescriptor): WgslTextureView;
-  readonly dataType: TData;
+export interface WgslTexture<TAllows extends TextureUsage = never> {
   readonly descriptor: GPUTextureDescriptor;
+  get label(): string | undefined;
+  readonly flags: GPUTextureUsageFlags;
+
+  $name(label: string): WgslTexture<TAllows>;
+  $allowSampled(): WgslTexture<TAllows | 'sampled'>;
+  $allowStorage(): WgslTexture<TAllows | 'storage'>;
+
+  asStorage(
+    params: StorageTextureParams,
+  ): 'storage' extends TAllows
+    ? WgslTextureView<AnyWgslTexelFormat, 'storage'>
+    : null;
+  asSampled(
+    params: SampledTextureParams,
+  ): 'sampled' extends TAllows
+    ? WgslTextureView<AnyWgslPrimitive, 'sampled'>
+    : null;
 }
 
-export interface WgslStorageTexture<
-  TData extends AnyWgslTexelFormat,
-  TAccess extends StorageTextureAccess,
-> {
-  createView(descriptor?: GPUTextureViewDescriptor): WgslTextureView;
-  readonly access: TAccess;
-  readonly dataType: TData;
-  readonly descriptor: GPUTextureDescriptor;
-}
-
-export interface WgslTextureView
-  extends WgslRenderResource<WgslRenderResourceType> {
-  readonly texture:
-    | WgslTexture<AnyWgslPrimitive>
-    | WgslStorageTexture<AnyWgslTexelFormat, StorageTextureAccess>;
+export interface WgslTextureView<
+  TData extends AnyWgslPrimitive | AnyWgslTexelFormat,
+  TUsage extends TextureUsage,
+> extends WgslRenderResource<WgslRenderResourceType> {
+  readonly texture: WgslTexture<TUsage>;
   readonly descriptor: GPUTextureViewDescriptor;
   readonly type: WgslRenderResourceType;
+  readonly dataType: TData;
+  readonly access: StorageTextureAccess | undefined;
 }
 
 export interface WgslTextureExternal
@@ -43,110 +51,143 @@ export interface WgslTextureExternal
   readonly descriptor: GPUExternalTextureDescriptor;
 }
 
-export function texture(
+export function texture<TUsage extends TextureUsage = never>(
   descriptor: GPUTextureDescriptor,
-  type: WgslStorageTextureType,
-  access: StorageTextureAccess,
-): WgslStorageTexture<AnyWgslTexelFormat, StorageTextureAccess>;
-export function texture(
-  descriptor: GPUTextureDescriptor,
-  type: WgslTypedTextureType,
-  dataType: AnyWgslPrimitive,
-): WgslTexture<AnyWgslPrimitive>;
-export function texture(
-  descriptor: GPUTextureDescriptor,
-  type: WgslTypedTextureType | WgslStorageTextureType,
-  dataTypeOrAccess: AnyWgslPrimitive | StorageTextureAccess,
-):
-  | WgslTexture<AnyWgslPrimitive>
-  | WgslStorageTexture<AnyWgslTexelFormat, StorageTextureAccess> {
-  if (typeof dataTypeOrAccess === 'string') {
-    const access = dataTypeOrAccess as StorageTextureAccess;
-    const format = texelFormatToWgslType[descriptor.format];
-    if (!format) {
-      throw new Error(`Unsupported texture format ${descriptor.format}`);
-    }
-    return new WgslStorageTextureImpl(
-      descriptor,
-      format,
-      type as WgslStorageTextureType,
-      access,
-    );
-  }
-
-  const dataType = dataTypeOrAccess as AnyWgslPrimitive;
-  return new WgslTextureImpl(
-    descriptor,
-    dataType,
-    type as WgslTypedTextureType,
-  );
+): WgslTexture<TUsage> {
+  return new WgslTextureImpl(descriptor);
 }
 
 export function textureExternal(descriptor: GPUExternalTextureDescriptor) {
   return new WgslTextureExternalImpl(descriptor);
 }
 
-class WgslTextureImpl<TData extends AnyWgslPrimitive>
-  implements WgslTexture<TData>
+class WgslTextureImpl<TAllows extends TextureUsage = never>
+  implements WgslTexture<TAllows>
 {
+  public flags: GPUTextureUsageFlags =
+    GPUTextureUsage.COPY_DST |
+    GPUTextureUsage.COPY_SRC |
+    GPUTextureUsage.RENDER_ATTACHMENT;
+  private _allowedUsages: {
+    sampled: WeakMap<
+      SampledTextureParams,
+      WgslTextureView<AnyWgslPrimitive, 'sampled'>
+    > | null;
+    storage: WeakMap<
+      StorageTextureParams,
+      WgslTextureView<AnyWgslTexelFormat, 'storage'>
+    > | null;
+  } = {
+    sampled: null,
+    storage: null,
+  };
   private _label: string | undefined;
 
-  constructor(
-    public readonly descriptor: GPUTextureDescriptor,
-    public readonly dataType: TData,
-    public readonly type: WgslTypedTextureType,
-  ) {}
+  constructor(public readonly descriptor: GPUTextureDescriptor) {}
 
   get label() {
     return this._label;
   }
 
-  createView(descriptor: GPUTextureViewDescriptor): WgslTextureView {
-    return new WgslTextureViewImpl(this, descriptor, this.type);
-  }
-}
-
-class WgslStorageTextureImpl<
-  TData extends AnyWgslTexelFormat,
-  TAccess extends StorageTextureAccess,
-> implements WgslStorageTexture<TData, TAccess>
-{
-  private _label: string | undefined;
-  readonly flags: number;
-  readonly vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null =
-    null;
-  constructor(
-    public readonly descriptor: GPUTextureDescriptor,
-    public readonly dataType: TData,
-    public readonly type: WgslStorageTextureType,
-    public readonly access: TAccess,
-  ) {
-    this.flags = this.descriptor.usage;
-  }
-
-  createView(descriptor: GPUTextureViewDescriptor): WgslTextureView {
-    return new WgslTextureViewImpl(this, descriptor, this.type);
-  }
-
-  get label() {
-    return this._label;
-  }
-
-  $name(label: string | undefined) {
+  $name(label: string) {
     this._label = label;
     return this;
   }
+
+  $addFlags(flags: GPUTextureUsageFlags) {
+    this.flags |= flags;
+    return this;
+  }
+
+  $allowSampled() {
+    const enrichedThis = this as WgslTexture<TAllows | 'sampled'>;
+    if (!this._allowedUsages.sampled) {
+      this._allowedUsages.sampled = new WeakMap();
+    }
+    this.$addFlags(GPUTextureUsage.TEXTURE_BINDING);
+    return enrichedThis;
+  }
+
+  $allowStorage() {
+    const enrichedThis = this as WgslTexture<TAllows | 'storage'>;
+    if (!this._allowedUsages.storage) {
+      this._allowedUsages.storage = new WeakMap();
+    }
+    this.$addFlags(GPUTextureUsage.STORAGE_BINDING);
+    return enrichedThis;
+  }
+
+  private getStorageIfAllowed(
+    params: StorageTextureParams,
+  ): WgslTextureView<AnyWgslTexelFormat, 'storage'> | null {
+    if (!this._allowedUsages.storage) {
+      return null;
+    }
+    const existing = this._allowedUsages.storage.get(params);
+    if (existing) {
+      return existing;
+    }
+    const type = texelFormatToWgslType[this.descriptor.format];
+    if (!type) {
+      throw new Error(`Unsupported texture format ${this.descriptor.format}`);
+    }
+    const view = new WgslTextureViewImpl(
+      params.type,
+      this,
+      type,
+      params.descriptor,
+      params.access,
+    ) as unknown as WgslTextureView<typeof type, 'storage'>;
+    this._allowedUsages.storage.set(params, view);
+    return view;
+  }
+
+  private getSampledIfAllowed(
+    params: SampledTextureParams,
+  ): WgslTextureView<AnyWgslPrimitive, 'sampled'> | null {
+    if (!this._allowedUsages.sampled) {
+      return null;
+    }
+    const existing = this._allowedUsages.sampled.get(params);
+    if (existing) {
+      return existing;
+    }
+    const view = new WgslTextureViewImpl(
+      params.type,
+      this,
+      params.dataType,
+      params.descriptor,
+    ) as unknown as WgslTextureView<typeof params.dataType, 'sampled'>;
+    this._allowedUsages.sampled.set(params, view);
+    return view;
+  }
+
+  asStorage(params: StorageTextureParams) {
+    return this.getStorageIfAllowed(params) as 'storage' extends TAllows
+      ? WgslTextureView<AnyWgslTexelFormat, 'storage'>
+      : null;
+  }
+
+  asSampled(params: SampledTextureParams) {
+    return this.getSampledIfAllowed(params) as 'sampled' extends TAllows
+      ? WgslTextureView<AnyWgslPrimitive, 'sampled'>
+      : null;
+  }
 }
 
-class WgslTextureViewImpl implements WgslTextureView {
+class WgslTextureViewImpl<
+  TData extends AnyWgslPrimitive | AnyWgslTexelFormat,
+  TUsage extends TextureUsage,
+> implements WgslTextureView<TData, TUsage>
+{
   private _label: string | undefined;
 
   constructor(
-    public readonly texture:
-      | WgslTexture<AnyWgslPrimitive>
-      | WgslStorageTexture<AnyWgslTexelFormat, StorageTextureAccess>,
-    public readonly descriptor: GPUTextureViewDescriptor,
     public readonly type: WgslRenderResourceType,
+    public readonly texture: WgslTexture<TUsage>,
+    public readonly dataType: TData,
+    public readonly descriptor: GPUTextureViewDescriptor = {},
+    public readonly access: StorageTextureAccess | undefined = undefined,
   ) {}
 
   get label() {
@@ -199,7 +240,10 @@ export function isExternalTexture(
 
 export function isTextureView(
   texture: WgslRenderResource<WgslRenderResourceType>,
-): texture is WgslTextureView {
+): texture is WgslTextureView<
+  AnyWgslPrimitive | AnyWgslTexelFormat,
+  TextureUsage
+> {
   return 'texture' in texture;
 }
 

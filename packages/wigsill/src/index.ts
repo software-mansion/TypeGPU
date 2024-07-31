@@ -21,6 +21,7 @@ export type { WgslBuffer } from './wgslBuffer';
 export type { WgslCode } from './wgslCode';
 export type { WgslConst } from './wgslConstant';
 export type { WgslFn } from './wgslFunction';
+export type { WgslFn as WgslFnExperimental } from './wgslFunctionExperimental';
 export type { WgslVar } from './wgslVariable';
 export type { WgslSampler } from './wgslSampler';
 export type { WgslTexture, WgslTextureExternal } from './wgslTexture';
