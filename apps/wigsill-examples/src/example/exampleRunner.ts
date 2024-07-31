@@ -58,11 +58,11 @@ const staticToDynamicImports = {
   } satisfies TraverseOptions,
 };
 
-/**
- * from https://github.com/facebook/react/blob/d906de7f602df810c38aa622c83023228b047db6/scripts/babel/transform-prevent-infinite-loops.js
- * **/
 const MAX_ITERATIONS = 2000;
 
+/**
+ * from https://github.com/facebook/react/blob/d906de7f602df810c38aa622c83023228b047db6/scripts/babel/transform-prevent-infinite-loops.js
+ */
 // biome-ignore lint/suspicious/noExplicitAny:
 const preventInfiniteLoops = ({ types: t, template }: any) => {
   const buildGuard = template(`
