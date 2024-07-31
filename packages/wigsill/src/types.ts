@@ -26,6 +26,8 @@ export interface ResolutionCtx {
 
 export interface WgslResolvable {
   resolve(ctx: ResolutionCtx): string;
+
+  /** for logging WgslResolvables when debugging, since toString is blocked so as to prevent interpolating resolvables outside wgsl`...`*/
   get debugRepr(): string;
 }
 
