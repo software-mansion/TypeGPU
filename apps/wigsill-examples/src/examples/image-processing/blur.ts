@@ -13,9 +13,9 @@ import {
   onFrame,
 } from '@wigsill/example-toolkit';
 // --
-import wgsl, { builtin } from 'wigsill';
+import wgsl, { builtin, WgslTextureView } from 'wigsill';
 import { createRuntime } from 'wigsill/web';
-import { f32 } from 'wigsill/data';
+import { arrayOf, f32, i32, struct, u32, vec2f, vec3f } from 'wigsill/data';
 
 const tileDim = 128;
 const batch = [4, 4];
@@ -33,82 +33,12 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const blurWGSL = wgsl`
-  let filterOffset = (params.filterDim - 1) / 2;
-  let dims = vec2i(textureDimensions(inputTex, 0));
-  let baseIndex = vec2i(${builtin.workgroupId}.xy * vec2(params.blockDim, 4) +
-                            ${builtin.localInvocationId}.xy * vec2(4, 1))
-                  - vec2(filterOffset, 0);
-
-  for (var r = 0; r < 4; r++) {
-    for (var c = 0; c < 4; c++) {
-      var loadIndex = baseIndex + vec2(c, r);
-      if (flip.value != 0u) {
-        loadIndex = loadIndex.yx;
-      }
-
-      tile[r][4 * ${builtin.localInvocationId}.x + u32(c)] = textureSampleLevel(
-        inputTex,
-        samp,
-        (vec2f(loadIndex) + vec2f(0.25, 0.25)) / vec2f(dims),
-        0.0
-      ).rgb;
-    }
-  }
-
-  workgroupBarrier();
-
-  for (var r = 0; r < 4; r++) {
-    for (var c = 0; c < 4; c++) {
-      var writeIndex = baseIndex + vec2(c, r);
-      if (flip.value != 0) {
-        writeIndex = writeIndex.yx;
-      }
-
-      let center = i32(4 * ${builtin.localInvocationId}.x) + c;
-      if (center >= filterOffset &&
-          center < 128 - filterOffset &&
-          all(writeIndex < dims)) {
-        var acc = vec3(0.0, 0.0, 0.0);
-        for (var f = 0; f < params.filterDim; f++) {
-          var i = center + f - filterOffset;
-          acc = acc + (1.0 / f32(params.filterDim)) * tile[r][i];
-        }
-        textureStore(outputTex, writeIndex, vec4(acc, 1.0));
-      }
-    }
-  }
-}
-`;
-
-const fullscreenQuadPipeline = device.createRenderPipeline({
-  layout: 'auto',
-  vertex: {
-    module: device.createShaderModule({
-      code: fullscreenTexturedQuadWGSL,
-    }),
-  },
-  fragment: {
-    module: device.createShaderModule({
-      code: fullscreenTexturedQuadWGSL,
-    }),
-    targets: [
-      {
-        format: presentationFormat,
-      },
-    ],
-  },
-  primitive: {
-    topology: 'triangle-list',
-  },
-});
-
 const sampler = wgsl.sampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
 
-const response = await fetch('../../assets/favicon.png');
+const response = await fetch('/favicon.png');
 const imageBitmap = await createImageBitmap(await response.blob());
 
 const [srcWidth, srcHeight] = [imageBitmap.width, imageBitmap.height];
@@ -121,8 +51,8 @@ const imageTexture = wgsl.texture(
       GPUTextureUsage.COPY_DST |
       GPUTextureUsage.RENDER_ATTACHMENT,
   },
-  f32,
   'texture_2d',
+  f32,
 );
 
 device.queue.copyExternalImageToTexture(
@@ -132,134 +62,163 @@ device.queue.copyExternalImageToTexture(
 );
 
 const textures = [0, 1].map(() => {
-  return device.createTexture({
-    size: {
-      width: srcWidth,
-      height: srcHeight,
+  return wgsl.texture(
+    {
+      size: [srcWidth, srcHeight, 1],
+      format: 'rgba8unorm',
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.STORAGE_BINDING,
     },
-    format: 'rgba8unorm',
-    usage:
-      GPUTextureUsage.COPY_DST |
-      GPUTextureUsage.STORAGE_BINDING |
-      GPUTextureUsage.TEXTURE_BINDING,
+    'texture_storage_2d',
+    'write',
+  );
+});
+
+const blurParamsBuffer = wgsl
+  .buffer(
+    struct({
+      filterDim: i32,
+      blockDim: u32,
+    }),
+  )
+  .$name('BlurParams')
+  .$allowUniform();
+const params = blurParamsBuffer.asUniform();
+
+const flipSlot = wgsl.slot<number>();
+const inTextureSlot = wgsl.slot<WgslTextureView>();
+const outTextureSlot = wgsl.slot<WgslTextureView>();
+
+const tileVar = wgsl.var(
+  arrayOf(arrayOf(vec3f, 128), 4),
+  undefined,
+  'workgroup',
+);
+
+const mainComputeFun = wgsl.fn()`(wid: vec3u, lid: vec3u) {
+  let filterOffset = (${params}.filterDim - 1) / 2;
+  let dims = vec2i(textureDimensions(${inTextureSlot}, 0));
+  let baseIndex = vec2i(wid.xy * vec2(${params}.blockDim, 4) +
+                            lid.xy * vec2(4, 1))
+                  - vec2(filterOffset, 0);
+
+  for (var r = 0; r < 4; r++) {
+    for (var c = 0; c < 4; c++) {
+      var loadIndex = baseIndex + vec2(c, r);
+      if (${flipSlot} != 0u) {
+        loadIndex = loadIndex.yx;
+      }
+
+      ${tileVar}[r][4 * lid.x + u32(c)] = textureSampleLevel(
+        ${inTextureSlot},
+        ${sampler},
+        (vec2f(loadIndex) + vec2f(0.25, 0.25)) / vec2f(dims),
+        0.0
+      ).rgb;
+    }
+  }
+
+  workgroupBarrier();
+
+  for (var r = 0; r < 4; r++) {
+    for (var c = 0; c < 4; c++) {
+      var writeIndex = baseIndex + vec2(c, r);
+      if (${flipSlot} != 0) {
+        writeIndex = writeIndex.yx;
+      }
+
+      let center = i32(4 * lid.x) + c;
+      if (center >= filterOffset &&
+          center < 128 - filterOffset &&
+          all(writeIndex < dims)) {
+        var acc = vec3(0.0, 0.0, 0.0);
+        for (var f = 0; f < ${params}.filterDim; f++) {
+          var i = center + f - filterOffset;
+          acc = acc + (1.0 / f32(${params}.filterDim)) * ${tileVar}[r][i];
+        }
+        textureStore(${outTextureSlot}, writeIndex, vec4(acc, 1.0));
+      }
+    }
+  }
+  }
+`;
+
+function makeComputePipeline(
+  inTexture: WgslTextureView,
+  outTexture: WgslTextureView,
+  flip: number,
+) {
+  return runtime.makeComputePipeline({
+    workgroupSize: [32],
+    code: wgsl`
+      ${mainComputeFun
+        .with(inTextureSlot, inTexture)
+        .with(outTextureSlot, outTexture)
+        .with(flipSlot, flip)}
+        (${builtin.globalInvocationId}, ${builtin.localInvocationId});
+    `,
   });
-});
+}
 
-const buffer0 = (() => {
-  const buffer = device.createBuffer({
-    size: 4,
-    mappedAtCreation: true,
-    usage: GPUBufferUsage.UNIFORM,
-  });
-  new Uint32Array(buffer.getMappedRange())[0] = 0;
-  buffer.unmap();
-  return buffer;
-})();
+const inputs: [WgslTextureView, WgslTextureView, number][] = [
+  [imageTexture.createView(), textures[0].createView(), 0],
+  [textures[0].createView(), textures[1].createView(), 1],
+  [textures[1].createView(), textures[0].createView(), 0],
+];
 
-const buffer1 = (() => {
-  const buffer = device.createBuffer({
-    size: 4,
-    mappedAtCreation: true,
-    usage: GPUBufferUsage.UNIFORM,
-  });
-  new Uint32Array(buffer.getMappedRange())[0] = 1;
-  buffer.unmap();
-  return buffer;
-})();
+const computePipelines = inputs.map(([inTexture, outTexture, flip]) =>
+  makeComputePipeline(inTexture, outTexture, flip),
+);
 
-const blurParamsBuffer = device.createBuffer({
-  size: 8,
-  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-});
+const blurVertexWGSL = wgsl`
+  const pos = array(
+    vec2( 1.0,  1.0),
+    vec2( 1.0, -1.0),
+    vec2(-1.0, -1.0),
+    vec2( 1.0,  1.0),
+    vec2(-1.0, -1.0),
+    vec2(-1.0,  1.0),
+  );
 
-const computeConstants = device.createBindGroup({
-  layout: blurPipeline.getBindGroupLayout(0),
-  entries: [
-    {
-      binding: 0,
-      resource: sampler,
+  const uv = array(
+    vec2(1.0, 0.0),
+    vec2(1.0, 1.0),
+    vec2(0.0, 1.0),
+    vec2(1.0, 0.0),
+    vec2(0.0, 1.0),
+    vec2(0.0, 0.0),
+  );
+
+  let Position = vec4(pos[${builtin.vertexIndex}], 0.0, 1.0);
+  let fragUV = uv[${builtin.vertexIndex}];
+}
+`;
+
+const blurFragmentWGSL = wgsl`
+  return textureSample(${textures[1].createView()}, ${sampler}, fragUV);
+`;
+
+const renderPipeline = runtime.makeRenderPipeline({
+  vertex: {
+    code: blurVertexWGSL,
+    output: {
+      [builtin.position]: 'Position',
+      fragUV: [vec2f, 'fragUV'],
     },
-    {
-      binding: 1,
-      resource: {
-        buffer: blurParamsBuffer,
+  },
+  fragment: {
+    code: blurFragmentWGSL,
+    target: [
+      {
+        format: presentationFormat,
       },
-    },
-  ],
-});
-
-const computeBindGroup0 = device.createBindGroup({
-  layout: blurPipeline.getBindGroupLayout(1),
-  entries: [
-    {
-      binding: 1,
-      resource: cubeTexture.createView(),
-    },
-    {
-      binding: 2,
-      resource: textures[0].createView(),
-    },
-    {
-      binding: 3,
-      resource: {
-        buffer: buffer0,
-      },
-    },
-  ],
-});
-
-const computeBindGroup1 = device.createBindGroup({
-  layout: blurPipeline.getBindGroupLayout(1),
-  entries: [
-    {
-      binding: 1,
-      resource: textures[0].createView(),
-    },
-    {
-      binding: 2,
-      resource: textures[1].createView(),
-    },
-    {
-      binding: 3,
-      resource: {
-        buffer: buffer1,
-      },
-    },
-  ],
-});
-
-const computeBindGroup2 = device.createBindGroup({
-  layout: blurPipeline.getBindGroupLayout(1),
-  entries: [
-    {
-      binding: 1,
-      resource: textures[1].createView(),
-    },
-    {
-      binding: 2,
-      resource: textures[0].createView(),
-    },
-    {
-      binding: 3,
-      resource: {
-        buffer: buffer0,
-      },
-    },
-  ],
-});
-
-const showResultBindGroup = device.createBindGroup({
-  layout: fullscreenQuadPipeline.getBindGroupLayout(0),
-  entries: [
-    {
-      binding: 0,
-      resource: sampler,
-    },
-    {
-      binding: 1,
-      resource: textures[1].createView(),
-    },
-  ],
+    ],
+  },
+  primitive: {
+    topology: 'triangle-list',
+  },
 });
 
 const settings = {
@@ -268,56 +227,41 @@ const settings = {
 };
 
 let blockDim: number;
+
 const updateSettings = () => {
   blockDim = tileDim - (settings.filterSize - 1);
-  device.queue.writeBuffer(
-    blurParamsBuffer,
-    0,
-    new Uint32Array([settings.filterSize, blockDim]),
-  );
+  runtime.writeBuffer(blurParamsBuffer, {
+    filterDim: settings.filterSize,
+    blockDim,
+  });
 };
-const gui = new GUI();
-gui.add(settings, 'filterSize', 1, 33).step(2).onChange(updateSettings);
-gui.add(settings, 'iterations', 1, 10).step(1);
 
 updateSettings();
 
-function frame() {
-  const commandEncoder = device.createCommandEncoder();
-
-  const computePass = commandEncoder.beginComputePass();
-  computePass.setPipeline(blurPipeline);
-  computePass.setBindGroup(0, computeConstants);
-
-  computePass.setBindGroup(1, computeBindGroup0);
-  computePass.dispatchWorkgroups(
+onFrame(() => {
+  computePipelines[0].execute([
     Math.ceil(srcWidth / blockDim),
     Math.ceil(srcHeight / batch[1]),
-  );
-
-  computePass.setBindGroup(1, computeBindGroup1);
-  computePass.dispatchWorkgroups(
-    Math.ceil(srcHeight / blockDim),
-    Math.ceil(srcWidth / batch[1]),
-  );
-
-  for (let i = 0; i < settings.iterations - 1; ++i) {
-    computePass.setBindGroup(1, computeBindGroup2);
-    computePass.dispatchWorkgroups(
+  ]);
+  computePipelines[1].execute([
+    Math.ceil(srcWidth / blockDim),
+    Math.ceil(srcHeight / batch[1]),
+  ]);
+  for (let i = 0; i < settings.iterations - 1; i++) {
+    computePipelines[2].execute([
       Math.ceil(srcWidth / blockDim),
       Math.ceil(srcHeight / batch[1]),
-    );
-
-    computePass.setBindGroup(1, computeBindGroup1);
-    computePass.dispatchWorkgroups(
-      Math.ceil(srcHeight / blockDim),
-      Math.ceil(srcWidth / batch[1]),
-    );
+    ]);
+    computePipelines[1].execute([
+      Math.ceil(srcWidth / blockDim),
+      Math.ceil(srcHeight / batch[1]),
+    ]);
   }
 
-  computePass.end();
+  runtime.flush();
 
-  const passEncoder = commandEncoder.beginRenderPass({
+  renderPipeline.execute({
+    vertexCount: 6,
     colorAttachments: [
       {
         view: context.getCurrentTexture().createView(),
@@ -328,12 +272,5 @@ function frame() {
     ],
   });
 
-  passEncoder.setPipeline(fullscreenQuadPipeline);
-  passEncoder.setBindGroup(0, showResultBindGroup);
-  passEncoder.draw(6);
-  passEncoder.end();
-  device.queue.submit([commandEncoder.finish()]);
-
-  requestAnimationFrame(frame);
-}
-requestAnimationFrame(frame);
+  runtime.flush();
+});
