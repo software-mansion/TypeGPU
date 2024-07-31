@@ -12,22 +12,9 @@ const getRandomExampleKey = () => {
   return keys[randomIdx];
 };
 
-function RedirectToRandom() {
-  const setCurrentExample = useSetAtom(currentExampleAtom);
-  const redirectedRef = useRef(false);
-
-  useEffect(() => {
-    if (redirectedRef.current) {
-      return;
-    }
-    redirectedRef.current = true;
-
-    setCurrentExample(getRandomExampleKey());
-  }, [setCurrentExample]);
-
-  return null;
-}
-
+/**
+ * The example we want to show off first.
+ */
 const FLAGSHIP = 'voxel-rendering';
 
 function RedirectToFlagship() {
