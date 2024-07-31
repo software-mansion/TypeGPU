@@ -10,6 +10,11 @@ import type { WgslCode } from './wgslCode';
 
 export interface WigsillRuntime {
   readonly device: GPUDevice;
+  /**
+   * The current command encoder. This property will
+   * hold the same value until `flush()` is called.
+   */
+  readonly commandEncoder: GPUCommandEncoder;
 
   writeBuffer<TValue extends AnyWgslData>(
     allocatable: WgslAllocatable<TValue>,
@@ -22,6 +27,11 @@ export interface WigsillRuntime {
 
   bufferFor(allocatable: WgslAllocatable): GPUBuffer;
   dispose(): void;
+
+  /**
+   * Causes all commands enqueued by pipelines to be
+   * submitted to the GPU.
+   */
   flush(): void;
 
   makeRenderPipeline(options: RenderPipelineOptions): RenderPipelineExecutor;
@@ -69,6 +79,11 @@ export interface RenderPipelineExecutor {
   execute(options: RenderPipelineExecutorOptions): void;
 }
 
+export type ComputePipelineExecutorOptions = {
+  workgroups: [number, number?, number?];
+  externalBindGroups?: GPUBindGroup[];
+};
+
 export interface ComputePipelineExecutor {
-  execute(workgroupCounts: [number, number?, number?]): void;
+  execute(options: ComputePipelineExecutorOptions): void;
 }

@@ -117,7 +117,7 @@ async function run() {
   const workgroupCountX = Math.ceil(firstMatrix.size[0] / workgroupSize[0]);
   const workgroupCountY = Math.ceil(secondMatrix.size[1] / workgroupSize[1]);
 
-  program.execute([workgroupCountX, workgroupCountY]);
+  program.execute({ workgroups: [workgroupCountX, workgroupCountY] });
   runtime.flush();
 
   const multiplicationResult = await runtime.readBuffer(resultMatrixBuffer);

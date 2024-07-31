@@ -22,7 +22,11 @@ export interface WgslFn<
   TArgTypes extends [WgslFnArgument, ...WgslFnArgument[]] | [],
   TReturn extends AnyWgslData | undefined = undefined,
 > extends WgslResolvable,
-    WgslNamable {}
+    WgslNamable,
+    Callable<
+      SegmentsFromTypes<TArgTypes>,
+      WgslFunctionCall<TArgTypes, TReturn>
+    > {}
 
 export function fn<
   TArgTypes extends [WgslFnArgument, ...WgslFnArgument[]] | [],
@@ -102,7 +106,10 @@ class WgslFnImpl<
     // TArgPairs extends (readonly [WgslIdentifier, WgslFnArgument])[],
     TReturn extends AnyWgslData | undefined = undefined,
   >
-  extends Callable<SegmentsFromTypes<TArgTypes>, WgslFunctionCall<TArgTypes>>
+  extends Callable<
+    SegmentsFromTypes<TArgTypes>,
+    WgslFunctionCall<TArgTypes, TReturn>
+  >
   implements WgslFn<TArgTypes, TReturn>
 {
   private _label: string | undefined;
@@ -150,7 +157,9 @@ class WgslFnImpl<
     return ctx.resolve(identifier);
   }
 
-  _call(...args: SegmentsFromTypes<TArgTypes>) {
+  _call(
+    ...args: SegmentsFromTypes<TArgTypes>
+  ): WgslFunctionCall<TArgTypes, TReturn> {
     return new WgslFunctionCall(this, args);
   }
 
