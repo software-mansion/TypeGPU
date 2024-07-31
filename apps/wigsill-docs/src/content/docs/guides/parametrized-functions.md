@@ -3,6 +3,10 @@ title: Parametrized Functions
 description: A guide on how parametrized functions can help manage large programs.
 ---
 
+:::caution
+This guide is a work-in-progress, and may include stale or not-yet-available functionality.
+:::
+
 Lets say we want to create a cellular automata simulation that involves producing a new grid state based on the previous state,
 without mutating it in place.
 
