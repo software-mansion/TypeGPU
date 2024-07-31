@@ -7,19 +7,13 @@ import {
   RenderProgramBuilder,
 } from '../programBuilder';
 import { TaskQueue } from '../taskQueue';
-import type {
-  AnyWgslData,
-  AnyWgslPrimitive,
-  AnyWgslTexelFormat,
-  TextureUsage,
-  WgslAllocatable,
-} from '../types';
+import type { AnyWgslData, WgslAllocatable } from '../types';
 import type { WgslCode } from '../wgslCode';
 import type { WgslSampler } from '../wgslSampler';
 import type {
-  WgslTexture,
+  WgslAnyTexture,
+  WgslAnyTextureView,
   WgslTextureExternal,
-  WgslTextureView,
 } from '../wgslTexture';
 import {
   type ComputePipelineExecutorOptions,
@@ -34,11 +28,8 @@ import {
 class WebWigsillRuntime {
   private _entryToBufferMap = new Map<WgslAllocatable, GPUBuffer>();
   private _samplers = new WeakMap<WgslSampler, GPUSampler>();
-  private _textures = new WeakMap<WgslTexture<TextureUsage>, GPUTexture>();
-  private _textureViews = new WeakMap<
-    WgslTextureView<AnyWgslPrimitive | AnyWgslTexelFormat, TextureUsage>,
-    GPUTextureView
-  >();
+  private _textures = new WeakMap<WgslAnyTexture, GPUTexture>();
+  private _textureViews = new WeakMap<WgslAnyTextureView, GPUTextureView>();
   private _pipelineExecutors: PipelineExecutor<
     GPURenderPipeline | GPUComputePipeline
   >[] = [];
@@ -88,12 +79,8 @@ class WebWigsillRuntime {
     return buffer;
   }
 
-  textureFor(
-    view:
-      | WgslTexture<TextureUsage>
-      | WgslTextureView<AnyWgslPrimitive | AnyWgslTexelFormat, TextureUsage>,
-  ): GPUTexture {
-    let source: WgslTexture<TextureUsage>;
+  textureFor(view: WgslAnyTexture | WgslAnyTextureView): GPUTexture {
+    let source: WgslAnyTexture;
     if ('texture' in view) {
       source = view.texture;
     } else {
@@ -114,9 +101,7 @@ class WebWigsillRuntime {
     return texture;
   }
 
-  viewFor(
-    view: WgslTextureView<AnyWgslPrimitive | AnyWgslTexelFormat, TextureUsage>,
-  ): GPUTextureView {
+  viewFor(view: WgslAnyTextureView): GPUTextureView {
     let textureView = this._textureViews.get(view);
     if (!textureView) {
       textureView = this.textureFor(view.texture).createView(view.descriptor);
