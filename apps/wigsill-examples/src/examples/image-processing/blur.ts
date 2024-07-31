@@ -6,16 +6,11 @@
 */
 
 // -- Hooks into the example environment
-import {
-  addElement,
-  addParameter,
-  onCleanup,
-  onFrame,
-} from '@wigsill/example-toolkit';
+import { addElement, onFrame } from '@wigsill/example-toolkit';
 // --
-import wgsl, { builtin, WgslTextureView } from 'wigsill';
-import { createRuntime } from 'wigsill/web';
+import wgsl, { builtin, type WgslTextureView } from 'wigsill';
 import { arrayOf, f32, i32, struct, u32, vec2f, vec3f } from 'wigsill/data';
+import { createRuntime } from 'wigsill/web';
 
 const tileDim = 128;
 const batch = [4, 4];
@@ -38,22 +33,24 @@ const sampler = wgsl.sampler({
   minFilter: 'linear',
 });
 
-const response = await fetch('/favicon.png');
+const response = await fetch('/Di-3d.png');
 const imageBitmap = await createImageBitmap(await response.blob());
 
 const [srcWidth, srcHeight] = [imageBitmap.width, imageBitmap.height];
-const imageTexture = wgsl.texture(
-  {
+const imageTexture = wgsl
+  .texture({
     size: [srcWidth, srcHeight, 1],
     format: 'rgba8unorm',
     usage:
       GPUTextureUsage.TEXTURE_BINDING |
       GPUTextureUsage.COPY_DST |
       GPUTextureUsage.RENDER_ATTACHMENT,
-  },
-  'texture_2d',
-  f32,
-);
+  })
+  .$allowSampled();
+const imageTextureView = imageTexture.asSampled({
+  type: 'texture_2d',
+  dataType: f32,
+});
 
 device.queue.copyExternalImageToTexture(
   { source: imageBitmap },
@@ -62,18 +59,17 @@ device.queue.copyExternalImageToTexture(
 );
 
 const textures = [0, 1].map(() => {
-  return wgsl.texture(
-    {
+  return wgsl
+    .texture({
       size: [srcWidth, srcHeight, 1],
       format: 'rgba8unorm',
       usage:
         GPUTextureUsage.TEXTURE_BINDING |
         GPUTextureUsage.COPY_DST |
         GPUTextureUsage.STORAGE_BINDING,
-    },
-    'texture_storage_2d',
-    'write',
-  );
+    })
+    .$allowSampled()
+    .$allowStorage();
 });
 
 const blurParamsBuffer = wgsl
@@ -107,7 +103,7 @@ const mainComputeFun = wgsl.fn()`(wid: vec3u, lid: vec3u) {
   for (var r = 0; r < 4; r++) {
     for (var c = 0; c < 4; c++) {
       var loadIndex = baseIndex + vec2(c, r);
-      if (${flipSlot} != 0u) {
+      if (${flipSlot} != 0) {
         loadIndex = loadIndex.yx;
       }
 
@@ -163,9 +159,36 @@ function makeComputePipeline(
 }
 
 const inputs: [WgslTextureView, WgslTextureView, number][] = [
-  [imageTexture.createView(), textures[0].createView(), 0],
-  [textures[0].createView(), textures[1].createView(), 1],
-  [textures[1].createView(), textures[0].createView(), 0],
+  [
+    imageTextureView,
+    textures[0].asStorage({
+      type: 'texture_storage_2d',
+      access: 'write',
+    }),
+    0,
+  ],
+  [
+    textures[0].asSampled({
+      type: 'texture_2d',
+      dataType: f32,
+    }),
+    textures[1].asStorage({
+      type: 'texture_storage_2d',
+      access: 'write',
+    }),
+    1,
+  ],
+  [
+    textures[1].asSampled({
+      type: 'texture_2d',
+      dataType: f32,
+    }),
+    textures[0].asStorage({
+      type: 'texture_storage_2d',
+      access: 'write',
+    }),
+    0,
+  ],
 ];
 
 const computePipelines = inputs.map(([inTexture, outTexture, flip]) =>
@@ -193,11 +216,10 @@ const blurVertexWGSL = wgsl`
 
   let Position = vec4(pos[${builtin.vertexIndex}], 0.0, 1.0);
   let fragUV = uv[${builtin.vertexIndex}];
-}
 `;
 
 const blurFragmentWGSL = wgsl`
-  return textureSample(${textures[1].createView()}, ${sampler}, fragUV);
+  return textureSample(${textures[0].asSampled({ type: 'texture_2d', dataType: f32 })}, ${sampler}, fragUV);
 `;
 
 const renderPipeline = runtime.makeRenderPipeline({
@@ -222,43 +244,49 @@ const renderPipeline = runtime.makeRenderPipeline({
 });
 
 const settings = {
-  filterSize: 15,
-  iterations: 2,
+  filterSize: 1,
+  iterations: 1,
 };
 
-let blockDim: number;
+let blockDim = tileDim - (settings.filterSize - 1);
 
 const updateSettings = () => {
   blockDim = tileDim - (settings.filterSize - 1);
   runtime.writeBuffer(blurParamsBuffer, {
     filterDim: settings.filterSize,
-    blockDim,
+    blockDim: blockDim,
   });
 };
 
 updateSettings();
 
 onFrame(() => {
-  computePipelines[0].execute([
-    Math.ceil(srcWidth / blockDim),
-    Math.ceil(srcHeight / batch[1]),
-  ]);
-  computePipelines[1].execute([
-    Math.ceil(srcWidth / blockDim),
-    Math.ceil(srcHeight / batch[1]),
-  ]);
-  for (let i = 0; i < settings.iterations - 1; i++) {
-    computePipelines[2].execute([
+  computePipelines[0].execute({
+    workgroups: [
       Math.ceil(srcWidth / blockDim),
       Math.ceil(srcHeight / batch[1]),
-    ]);
-    computePipelines[1].execute([
+    ],
+  });
+  computePipelines[1].execute({
+    workgroups: [
       Math.ceil(srcWidth / blockDim),
       Math.ceil(srcHeight / batch[1]),
-    ]);
-  }
-
-  runtime.flush();
+    ],
+  });
+  // for (let i = 0; i < settings.iterations - 1; i++) {
+  //   computePipelines[2].execute({
+  //     workgroups: [
+  //       Math.ceil(srcWidth / blockDim),
+  //       Math.ceil(srcHeight / batch[1]),
+  //     ],
+  //   });
+  //   computePipelines[1].execute({
+  //     workgroups: [
+  //       Math.ceil(srcWidth / blockDim),
+  //       Math.ceil(srcHeight / batch[1]),
+  //     ],
+  //   });
+  // }
 
   renderPipeline.execute({
     vertexCount: 6,
