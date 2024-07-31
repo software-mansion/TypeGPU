@@ -364,10 +364,12 @@ function resetGameData() {
     const view = context.getCurrentTexture().createView();
 
     // compute
-    computePipeline.execute([
-      options.size / options.workgroupSize,
-      options.size / options.workgroupSize,
-    ]);
+    computePipeline.execute({
+      workgroups: [
+        options.size / options.workgroupSize,
+        options.size / options.workgroupSize,
+      ],
+    });
 
     // render
     renderPipeline.execute({

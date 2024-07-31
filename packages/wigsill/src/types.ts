@@ -2,7 +2,7 @@ import type { ISchema } from 'typed-binary';
 import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from './data';
 import type { WgslIdentifier } from './wgslIdentifier';
 
-export type Wgsl = string | number | WgslResolvable | symbol;
+export type Wgsl = string | number | WgslResolvable | symbol | boolean;
 
 /**
  * Passed into each resolvable item. All sibling items share a resolution ctx,
