@@ -1,5 +1,5 @@
 {
-  "name": "wigsill-monorepo",
+  "name": "typegpu-monorepo",
   "private": true,
   "version": "0.0.0",
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
@@ -27,13 +27,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/software-mansion-labs/wigsill.git"
+    "url": "git+https://github.com/software-mansion/typegpu.git"
   },
   "keywords": ["webgpu", "wgpu", "wgsl"],
   "bugs": {
-    "url": "https://github.com/software-mansion-labs/wigsill/issues"
+    "url": "https://github.com/software-mansion/typegpu/issues"
   },
-  "homepage": "https://github.com/software-mansion-labs/wigsill",
+  "homepage": "https://docs.swmansion.com/typegpu",
   "devDependencies": {
     "@biomejs/biome": "^1.8.3",
     "@types/node": "^20.11.13",
