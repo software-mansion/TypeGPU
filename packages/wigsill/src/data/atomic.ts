@@ -10,6 +10,7 @@ import {
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import type { ResolutionCtx, WgslData } from '../types';
+import { ResolvableToStringError } from './../errors';
 import type { I32, U32 } from './numeric';
 
 // ----------
@@ -67,6 +68,10 @@ class AtomicImpl<TSchema extends U32 | I32>
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
     return this.innerData.measure(value, measurer);
+  }
+
+  toString(): string {
+    throw new ResolvableToStringError(this);
   }
 
   resolve(ctx: ResolutionCtx): string {
