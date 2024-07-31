@@ -23,9 +23,9 @@ import type {
   WgslTextureView,
 } from '../wgslTexture';
 import {
-  deriveVertexFormat,
   type ComputePipelineExecutorOptions,
   type WigsillRuntime,
+  deriveVertexFormat,
 } from '../wigsillRuntime';
 
 /**
