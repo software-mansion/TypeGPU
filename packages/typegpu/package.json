@@ -1,7 +1,7 @@
 {
   "name": "typegpu",
   "private": true,
-  "version": "0.0.0-alpha.4",
+  "version": "0.0.0",
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "license": "MIT",
   "type": "module",
@@ -45,7 +45,8 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
-    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit && pnpm tsc --p ./tsconfig.test.json --noEmit"
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit && pnpm tsc --p ./tsconfig.test.json --noEmit",
+    "prepublishOnly": "pnpm build && pnpm -w test:spec && pnpm test:types && biome check ."
   },
   "engines": {
     "node": ">=12.20.0"
@@ -54,7 +55,16 @@
     "type": "git",
     "url": "git+https://github.com/software-mansion/typegpu.git"
   },
-  "keywords": ["webgpu", "wgpu", "wgsl"],
+  "keywords": [
+    "webgpu",
+    "wgpu",
+    "wgsl",
+    "typescript",
+    "compute",
+    "shader",
+    "shaders",
+    "gpgpu"
+  ],
   "bugs": {
     "url": "https://github.com/software-mansion/typegpu/issues"
   },
