@@ -1,19 +1,13 @@
 import type { AnySchema } from 'typed-binary';
 import type { Parsed } from 'typed-binary';
 import type { SimpleWgslData } from './data';
-import type {
-  AnyWgslData,
-  AnyWgslPrimitive,
-  AnyWgslTexelFormat,
-  TextureUsage,
-  WgslAllocatable,
-} from './types';
+import type { AnyWgslData, WgslAllocatable } from './types';
 import type { WgslCode } from './wgslCode';
 import type { WgslSampler } from './wgslSampler';
 import type {
-  WgslTexture,
+  WgslAnyTexture,
+  WgslAnyTextureView,
   WgslTextureExternal,
-  WgslTextureView,
 } from './wgslTexture';
 
 // ----------
@@ -38,14 +32,8 @@ export interface WigsillRuntime {
   ): Promise<Parsed<TData>>;
 
   bufferFor(allocatable: WgslAllocatable): GPUBuffer;
-  textureFor(
-    view:
-      | WgslTexture<TextureUsage>
-      | WgslTextureView<AnyWgslPrimitive | AnyWgslTexelFormat, TextureUsage>,
-  ): GPUTexture;
-  viewFor(
-    view: WgslTextureView<AnyWgslPrimitive | AnyWgslTexelFormat, TextureUsage>,
-  ): GPUTextureView;
+  textureFor(view: WgslAnyTexture | WgslAnyTextureView): GPUTexture;
+  viewFor(view: WgslAnyTextureView): GPUTextureView;
   externalTextureFor(texture: WgslTextureExternal): GPUExternalTexture;
   samplerFor(sampler: WgslSampler): GPUSampler;
   dispose(): void;

@@ -14,6 +14,16 @@ import type {
 import { WgslIdentifier } from './wgslIdentifier';
 import { isSampler } from './wgslSampler';
 
+export interface WgslAnyTextureView {
+  readonly descriptor: GPUTextureViewDescriptor;
+  readonly texture: WgslAnyTexture;
+}
+
+export interface WgslAnyTexture {
+  readonly descriptor: GPUTextureDescriptor;
+  readonly flags: GPUTextureUsageFlags;
+}
+
 export interface WgslTexture<TAllows extends TextureUsage = never> {
   readonly descriptor: GPUTextureDescriptor;
   get label(): string | undefined;
@@ -31,7 +41,7 @@ export interface WgslTexture<TAllows extends TextureUsage = never> {
   asSampled(
     params: SampledTextureParams,
   ): 'sampled' extends TAllows
-    ? WgslTextureView<AnyWgslPrimitive, 'sampled'>
+    ? WgslTextureView<typeof params.dataType, 'sampled'>
     : null;
 }
 
@@ -62,7 +72,7 @@ export function textureExternal(descriptor: GPUExternalTextureDescriptor) {
 }
 
 class WgslTextureImpl<TAllows extends TextureUsage = never>
-  implements WgslTexture<TAllows>
+  implements WgslTexture<TAllows>, WgslAnyTexture
 {
   public flags: GPUTextureUsageFlags =
     GPUTextureUsage.COPY_DST |
@@ -163,14 +173,19 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
   }
 
   asStorage(params: StorageTextureParams) {
-    return this.getStorageIfAllowed(params) as 'storage' extends TAllows
-      ? WgslTextureView<AnyWgslTexelFormat, 'storage'>
+    const maybeView = this.getStorageIfAllowed(params);
+    const maybeType = texelFormatToWgslType[this.descriptor.format];
+    if (!maybeType) {
+      throw new Error(`Unsupported texture format ${this.descriptor.format}`);
+    }
+    return maybeView as 'storage' extends TAllows
+      ? WgslTextureView<typeof maybeType, 'storage'>
       : null;
   }
 
   asSampled(params: SampledTextureParams) {
     return this.getSampledIfAllowed(params) as 'sampled' extends TAllows
-      ? WgslTextureView<AnyWgslPrimitive, 'sampled'>
+      ? WgslTextureView<typeof params.dataType, 'sampled'>
       : null;
   }
 }
@@ -178,7 +193,7 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
 class WgslTextureViewImpl<
   TData extends AnyWgslPrimitive | AnyWgslTexelFormat,
   TUsage extends TextureUsage,
-> implements WgslTextureView<TData, TUsage>
+> implements WgslTextureView<TData, TUsage>, WgslAnyTextureView
 {
   private _label: string | undefined;
 
