@@ -23,8 +23,13 @@ export const Canvas = forwardRef<HTMLCanvasElement, Props>((props, ref) => {
       return;
     }
 
-    canvas.width = Math.max(1, container.clientWidth);
-    canvas.height = Math.max(1, container.clientHeight);
+    const devicePixelRatio = window.devicePixelRatio;
+    const clientWidth = Math.max(1, container.clientWidth);
+    const clientHeight = Math.max(1, container.clientHeight);
+    canvas.width = clientWidth * devicePixelRatio;
+    canvas.height = clientHeight * devicePixelRatio;
+    canvas.style.width = `${clientWidth}px`;
+    canvas.style.height = `${clientHeight}px`;
   });
 
   useEffect(() => {

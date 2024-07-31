@@ -9,6 +9,7 @@ import useEvent from '../utils/useEvent';
 import { CodeEditor } from './CodeEditor';
 import { Button } from './design/Button';
 import { Canvas } from './design/Canvas';
+import { Snackbar } from './design/Snackbar';
 import { Table } from './design/Table';
 import { Video } from './design/Video';
 
@@ -17,12 +18,16 @@ type Props = {
   codeEditorShowing: boolean;
 };
 
-function useExample(exampleCode: string) {
+function useExample(
+  exampleCode: string,
+  setSnackbarText: (text: string | undefined) => void,
+) {
   const exampleRef = useRef<ExampleState | null>(null);
   const { def, createLayout, setRef } = useLayout();
 
   useEffect(() => {
     let cancelled = false;
+    setSnackbarText(undefined);
 
     executeExample(exampleCode, createLayout)
       .then((example) => {
@@ -37,12 +42,13 @@ function useExample(exampleCode: string) {
       })
       .catch((err) => {
         if (err instanceof SyntaxError) {
-          // TODO: Surface the error back to the user
+          setSnackbarText(`${err.name}: ${err.message}`);
           console.log(err);
         } else if (err instanceof ExecutionCancelledError) {
           // Ignore, to be expected.
           cancelled = true;
         } else {
+          setSnackbarText(`${err.name}: ${err.message}`);
           throw err;
         }
       });
@@ -51,7 +57,7 @@ function useExample(exampleCode: string) {
       exampleRef.current?.dispose();
       cancelled = true;
     };
-  }, [exampleCode, createLayout]);
+  }, [exampleCode, createLayout, setSnackbarText]);
 
   return {
     def,
@@ -62,6 +68,7 @@ function useExample(exampleCode: string) {
 export function ExampleView({ example, codeEditorShowing }: Props) {
   const { code: initialCode } = example;
   const [code, setCode] = useState(initialCode);
+  const [snackbarText, setSnackbarText] = useState<string | undefined>();
 
   useEffect(() => {
     setCode(initialCode);
@@ -76,10 +83,11 @@ export function ExampleView({ example, codeEditorShowing }: Props) {
     setCodeDebouncer.call(newCode);
   });
 
-  const { def, setRef } = useExample(code);
+  const { def, setRef } = useExample(code, setSnackbarText);
 
   return (
     <>
+      {snackbarText ? <Snackbar text={snackbarText} /> : null}
       <div className="flex-1 self-stretch flex justify-evenly items-center flex-wrap min-h-[50vh]">
         {def.elements.map((element) => {
           if (element.type === 'canvas') {

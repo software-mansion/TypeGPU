@@ -1,10 +1,11 @@
 import * as Babel from '@babel/standalone';
 import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
-import type { OnFrameFn } from '@wigsill/example-toolkit';
+import type { AddSliderParam, OnFrameFn } from '@wigsill/example-toolkit';
 import { GUI } from 'dat.gui';
 import { filter, isNonNull, map, pipe } from 'remeda';
 import { transpileModule } from 'typescript';
+import { wgsl } from 'wigsill';
 import { tsCompilerOptions } from '../liveEditor/embeddedTypeScript';
 import type { ExampleState } from './exampleState';
 import type { LayoutInstance } from './layout';
@@ -14,6 +15,41 @@ import type { LayoutInstance } from './layout';
 const template = (
   Babel as unknown as { packages: { template: typeof TemplateGenerator } }
 ).packages.template;
+
+const createSliderParam = (
+  gui: GUI,
+  label: string,
+  initial: number,
+  opts?: { min?: number; max?: number; step?: number },
+) => {
+  const { min, max, step } = opts ?? {};
+
+  const temp = {
+    [label]: initial,
+  };
+
+  let value = initial;
+  const listeners = new Set<() => unknown>();
+
+  gui.add(temp, label, min, max, step).onChange((newValue) => {
+    value = newValue;
+    // Calling `listener` may cause more listeners to
+    // be attached, so copying.
+    for (const listener of [...listeners]) {
+      listener();
+    }
+  });
+
+  return wgsl
+    .plumFromEvent(
+      (listener) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+      () => value,
+    )
+    .$name(label);
+};
 
 /**
  * A custom babel plugin for turning:
@@ -56,6 +92,49 @@ const staticToDynamicImports = {
       );
     },
   } satisfies TraverseOptions,
+};
+
+const MAX_ITERATIONS = 2000;
+
+/**
+ * from https://github.com/facebook/react/blob/d906de7f602df810c38aa622c83023228b047db6/scripts/babel/transform-prevent-infinite-loops.js
+ */
+// biome-ignore lint/suspicious/noExplicitAny:
+const preventInfiniteLoops = ({ types: t, template }: any) => {
+  const buildGuard = template(`
+    if (ITERATOR++ > MAX_ITERATIONS) {
+      throw new RangeError(
+        'Potential infinite loop: exceeded ' +
+        MAX_ITERATIONS +
+        ' iterations.'
+      );
+    }
+  `);
+
+  return {
+    visitor: {
+      // biome-ignore lint/suspicious/noExplicitAny:
+      'WhileStatement|ForStatement|DoWhileStatement': (path: any) => {
+        const iterator = path.scope.parent.generateUidIdentifier('loopIt');
+        const iteratorInit = t.numericLiteral(0);
+        path.scope.parent.push({
+          id: iterator,
+          init: iteratorInit,
+        });
+        const guard = buildGuard({
+          ITERATOR: iterator,
+          MAX_ITERATIONS: t.numericLiteral(MAX_ITERATIONS),
+        });
+
+        if (!path.get('body').isBlockStatement()) {
+          const statement = path.get('body').node;
+          path.get('body').replaceWith(t.blockStatement([guard, statement]));
+        } else {
+          path.get('body').unshiftContainer('body', guard);
+        }
+      },
+    },
+  };
 };
 
 function tsToJs(code: string): string {
@@ -191,6 +270,9 @@ export async function executeExample(
           }) satisfies OnFrameFn,
           addElement: layout.addElement,
           addParameter,
+          addSliderParam: ((label, initial, opts) => {
+            return createSliderParam(gui, label, initial, opts);
+          }) satisfies AddSliderParam,
         };
       }
       throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
@@ -202,7 +284,7 @@ export async function executeExample(
       Babel.transform(jsCode, {
         compact: false,
         retainLines: true,
-        plugins: [staticToDynamicImports],
+        plugins: [staticToDynamicImports, preventInfiniteLoops],
       }).code ?? jsCode;
 
     const mod = Function(`

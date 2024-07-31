@@ -56,6 +56,10 @@ export default defineConfig({
               slug: 'guides/getting-started',
             },
             {
+              label: 'State Management',
+              slug: 'guides/state-management',
+            },
+            {
               label: 'Parametrized Functions',
               slug: 'guides/parametrized-functions',
             },
