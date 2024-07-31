@@ -63,6 +63,21 @@ export class PlumStore {
     return state;
   }
 
+  private _notifyListeners<T>(plum: WgslPlum<T>): void {
+    const state = this._getState(plum);
+
+    if (!state.active) {
+      return;
+    }
+
+    // Copying, because listeners may change after we notify our dependents.
+    const listeners = [...state.active.listeners];
+
+    for (const listener of listeners) {
+      listener();
+    }
+  }
+
   private _computeAndGatherDependencies<T>(plum: WgslPlum<T>) {
     const dependencies = new Map<WgslPlum, number>();
 
@@ -110,13 +125,7 @@ export class PlumStore {
     state.value = value;
     state.version = isExternalPlum(plum) ? plum.version : state.version + 1;
 
-    if (state.active) {
-      // copying, because listeners may change after we notify our dependents.
-      const listeners = [...state.active.listeners];
-      for (const listener of listeners) {
-        listener();
-      }
-    }
+    this._notifyListeners(plum);
 
     return state.value;
   }
@@ -162,14 +171,7 @@ export class PlumStore {
     state.value = value;
     state.version++;
 
-    if (state.active) {
-      // copying, because listeners may change after we notify our dependents.
-      const listeners = [...state.active.listeners];
-
-      for (const listener of listeners) {
-        listener();
-      }
-    }
+    this._notifyListeners(plum);
   }
 
   subscribe(plum: WgslPlum, listener: Listener): Unsubscribe {

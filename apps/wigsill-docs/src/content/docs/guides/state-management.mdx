@@ -1,6 +1,7 @@
 ---
 title: State Management
 description: A guide on state is managed through plums in wigsill.
+draft: true
 ---
 
 When a WebGPU application runs over multiple frames, the data that is accessed by shaders often changes between executions.
@@ -39,7 +40,7 @@ import ListItem from '../../../components/ListItem.astro';
     <details>
     <summary>Before each shader execution</summary>
     
-    Optimal when states updates more frequently than shaders are ran.
+    Optimal when state updates more frequently than shaders are run.
 
     ```ts
     function updateA(value: number) {
@@ -68,7 +69,7 @@ import ListItem from '../../../components/ListItem.astro';
     <details>
     <summary>After each state change</summary>
 
-    Optimal when states updates are rarer than shader executions.
+    Optimal when state updates are rarer than shader executions.
 
     ```ts
     function updateA(value: number) {
