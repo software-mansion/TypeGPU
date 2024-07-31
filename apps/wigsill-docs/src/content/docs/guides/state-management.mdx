@@ -1,6 +1,6 @@
 ---
 title: State Management
-description: A guide on state is managed through plums in wigsill.
+description: A guide on state is managed through plums in TypeGPU.
 ---
 
 :::caution
@@ -101,14 +101,11 @@ import ListItem from '../../../components/ListItem.astro';
 </ol>
 
 Optimising manually for minimizing redundant synchronization or reencoding of binary can lead to less readable code, hard to
-catch bugs and is usually not worth it. **wigsill** makes this a breeze.
+catch bugs and is usually not worth it. **TypeGPU** makes this a breeze.
 
 ```ts
-import wgsl from 'wigsill';
-import { struct, f32 } from 'wigsill/data';
-import { createRuntime } from 'wigsill/web';
-
-const runtime = createRuntime();
+import { wgsl, createRuntime } from 'typegpu';
+import { struct, f32 } from 'typegpu/data';
 
 const aPlum = wgsl.plum(1).$name('a');
 const bPlum = wgsl.plum(2).$name('b');
@@ -122,6 +119,8 @@ const stateBuffer = wgsl.buffer(State, {
   a: aPlum,
   b: bPlum,
 });
+
+const runtime = createRuntime();
 
 function updateA(value: number) {
   runtime.setPlum(aPlum, 3);

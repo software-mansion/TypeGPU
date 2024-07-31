@@ -22,11 +22,11 @@ export default defineConfig({
   },
   integrations: [
     starlight({
-      title: 'wigsill',
+      title: 'TypeGPU',
       logo: {
-        light: '/public/wigsill-logo-light.svg',
-        dark: '/public/wigsill-logo-dark.svg',
-        alt: 'Wigsill Logo',
+        light: '/public/typegpu-logo-light.svg',
+        dark: '/public/typegpu-logo-dark.svg',
+        alt: 'TypeGPU Logo',
         replacesTitle: true,
       },
       components: {

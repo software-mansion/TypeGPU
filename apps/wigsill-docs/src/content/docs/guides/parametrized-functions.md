@@ -10,7 +10,7 @@ This guide is a work-in-progress, and may include stale or not-yet-available fun
 Lets say we want to create a cellular automata simulation that involves producing a new grid state based on the previous state,
 without mutating it in place.
 
-<!-- TODO: Link to an implementation of Conway's Game of Life in wigsill -->
+<!-- TODO: Link to an implementation of Conway's Game of Life in TypeGPU -->
 :::note
 Examples of cellular automata include [Conway's Game of Life](https://playgameoflife.com/), our [Fluid Simulation](LINK_HERE)
 example and many more.
@@ -21,8 +21,8 @@ state, and the other will be updated and become the next state. After every cell
 swapped.
 
 ```ts
-import wgsl from 'wigsill';
-import { arrayOf, f32 } from 'wigsill/data';
+import { wgsl } from 'typegpu';
+import { arrayOf, f32 } from 'typegpu/data';
 
 const gridSize = wgsl.plum(512);
 
