@@ -16,6 +16,9 @@ import { createRuntime } from 'wigsill/web';
 const countBuffer = wgsl.buffer(f32).$allowMutableStorage();
 const countData = countBuffer.asStorage();
 
+const table = await addElement('table');
+table.setMatrix([[0]]);
+
 const runtime = await createRuntime();
 const pipeline = runtime.makeComputePipeline({
   args: [],
@@ -28,7 +31,7 @@ const pipeline = runtime.makeComputePipeline({
 async function increment() {
   pipeline.execute({ workgroups: [1, 1] });
   runtime.flush();
-  console.log(await runtime.readBuffer(countBuffer));
+  table.setMatrix([[await runtime.readBuffer(countBuffer)]]);
 }
 
 addElement('button', {
