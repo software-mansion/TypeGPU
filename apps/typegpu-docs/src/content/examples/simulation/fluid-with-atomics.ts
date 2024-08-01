@@ -334,7 +334,7 @@ function resetGameData() {
       code: vertWGSL,
       output: {
         [builtin.position]: 'pos',
-        cell: [f32, 'cell'],
+        cell: f32,
       },
     },
     fragment: {

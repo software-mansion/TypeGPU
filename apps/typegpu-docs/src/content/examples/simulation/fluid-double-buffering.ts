@@ -600,7 +600,7 @@ function makePipelines(
       `,
       output: {
         [builtin.position]: 'outPos',
-        outUv: [vec2f, 'outUv'],
+        outUv: vec2f,
       },
     },
 

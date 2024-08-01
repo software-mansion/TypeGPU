@@ -68,7 +68,7 @@ export interface RenderPipelineOptions {
     output: {
       [K in symbol]: string;
     } & {
-      [K in string]: [AnyWgslData, string];
+      [K in string]: AnyWgslData;
     };
   };
   fragment: {

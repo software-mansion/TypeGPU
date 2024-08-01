@@ -174,7 +174,7 @@ export class RenderProgramBuilder {
     private vertexOutputFormat: {
       [K in symbol]: string;
     } & {
-      [K in string]: [AnyWgslData, string];
+      [K in string]: AnyWgslData;
     },
   ) {}
 
@@ -214,7 +214,7 @@ export class RenderProgramBuilder {
       ...vertexOutput.map(
         ({ name, varInfo, index }) =>
           code`
-          @location(${index}) ${name}: ${varInfo[0]},
+          @location(${index}) ${name}: ${varInfo},
         `,
       ),
     ];
@@ -291,7 +291,7 @@ export class RenderProgramBuilder {
 
     const fragmentInputs = vertexOutput.map(
       ({ name, varInfo }, idx) => code`
-      @location(${idx}) ${name}: ${varInfo[0]},
+      @location(${idx}) ${name}: ${varInfo},
     `,
     );
     const fragmentArgs = [...fragmentBuiltinArgs, ...fragmentInputs];

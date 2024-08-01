@@ -60,7 +60,7 @@ const renderPipeline = runtime.makeRenderPipeline({
     `,
     output: {
       [builtin.position]: 'posOut',
-      uvOut: [vec2f, 'uvOut'],
+      uvOut: vec2f,
     },
   },
 

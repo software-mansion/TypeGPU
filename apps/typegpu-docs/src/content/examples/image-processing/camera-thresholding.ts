@@ -90,7 +90,7 @@ onFrame(() => {
       `,
       output: {
         [builtin.position]: 'Position',
-        fragUV: [vec2f, 'fragUV'],
+        fragUV: vec2f,
       },
     },
     fragment: {
