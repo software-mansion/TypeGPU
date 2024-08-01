@@ -10,8 +10,8 @@ import { addElement, addParameter, onFrame } from '@typegpu/example-toolkit';
 // --
 
 import wgsl from 'typegpu';
-import { f32, struct, vec2f, vec4f } from 'typegpu/data';
-import { createRuntime } from 'typegpu/web';
+import { f32 } from 'typegpu/data';
+import { createRuntime, fullScreenVertexShaderOptions } from 'typegpu/web';
 
 // Layout
 const [video, canvas] = await Promise.all([
@@ -56,44 +56,12 @@ const bindGroupLayout = device.createBindGroupLayout({
   ],
 });
 
-const outputStruct = struct({
-  '@builtin(position) Position': vec4f,
-  '@location(0) fragUV': vec2f,
-});
-
 const renderProgram = runtime.makeRenderPipeline({
-  vertex: {
-    args: ['@builtin(vertex_index) VertexIndex: u32'],
-    code: wgsl`
-      const pos = array(
-        vec2( 1.0,  1.0),
-        vec2( 1.0, -1.0),
-        vec2(-1.0, -1.0),
-        vec2( 1.0,  1.0),
-        vec2(-1.0, -1.0),
-        vec2(-1.0,  1.0),
-      );
-
-      const uv = array(
-        vec2(1.0, 0.0),
-        vec2(1.0, 1.0),
-        vec2(0.0, 1.0),
-        vec2(1.0, 0.0),
-        vec2(0.0, 1.0),
-        vec2(0.0, 0.0),
-      );
-
-      var output : ${outputStruct};
-      output.Position = vec4(pos[VertexIndex], 0.0, 1.0);
-      output.fragUV = uv[VertexIndex];
-      return output;
-    `,
-    output: outputStruct,
-  },
+  vertex: fullScreenVertexShaderOptions,
   fragment: {
-    args: ['@location(0) fragUV : vec2f'],
+    args: ['@location(0) uv : vec2f'],
     code: wgsl`
-      var color = textureSampleBaseClampToEdge(videoTexture, sampler_, fragUV);
+      var color = textureSampleBaseClampToEdge(videoTexture, sampler_, uv);
       let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
 
       if grey < ${thresholdData} {
@@ -164,7 +132,7 @@ onFrame(() => {
       },
     ],
 
-    vertexCount: 6,
+    vertexCount: 3,
     externalBindGroups: [bindGroup],
   });
 

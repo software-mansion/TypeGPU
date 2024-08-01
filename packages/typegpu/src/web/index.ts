@@ -6,3 +6,5 @@ export {
   createRuntime,
   CreateRuntimeOptions,
 } from './webWigsillRuntime';
+
+export { fullScreenVertexShaderOptions } from './shaderUtils';

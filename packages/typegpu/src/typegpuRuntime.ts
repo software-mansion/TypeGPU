@@ -52,13 +52,15 @@ export interface TypeGpuRuntime {
   makeComputePipeline(options: ComputePipelineOptions): ComputePipelineExecutor;
 }
 
+export interface VertexShaderOptions {
+  args: Wgsl[];
+  code: WgslCode;
+  output: WgslStruct<Record<string, AnyWgslData>>;
+  buffersLayouts?: Iterable<GPUVertexBufferLayout | null>;
+}
+
 export interface RenderPipelineOptions {
-  vertex: {
-    args: Wgsl[];
-    code: WgslCode;
-    output: WgslStruct<Record<string, AnyWgslData>>;
-    buffersLayouts?: Iterable<GPUVertexBufferLayout | null>;
-  };
+  vertex: VertexShaderOptions;
   fragment: {
     args: Wgsl[];
     code: WgslCode;

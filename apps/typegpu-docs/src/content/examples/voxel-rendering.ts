@@ -11,7 +11,7 @@ import { addElement, addSliderParam, onFrame } from '@typegpu/example-toolkit';
 
 import wgsl from 'typegpu';
 import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'typegpu/data';
-import { createRuntime } from 'typegpu/web';
+import { createRuntime, fullScreenVertexShaderOptions } from 'typegpu/web';
 
 const X = 10;
 const Y = 11;
@@ -204,30 +204,8 @@ const getBoxIntersectionFn = wgsl.fn('box_intersection')`(
 }
 `;
 
-const vertexOutputStruct = struct({
-  '@builtin(position) pos': vec4f,
-});
-
 const renderPipeline = runtime.makeRenderPipeline({
-  vertex: {
-    args: ['@builtin(vertex_index) VertexIndex: u32'],
-    output: vertexOutputStruct,
-    code: wgsl`
-      var pos = array<vec2f, 6>(
-        vec2<f32>( 1,  1),
-        vec2<f32>( 1, -1),
-        vec2<f32>(-1, -1),
-        vec2<f32>( 1,  1),
-        vec2<f32>(-1, -1),
-        vec2<f32>(-1,  1)
-      );
-
-      var output: ${vertexOutputStruct};
-      output.pos = vec4f(pos[VertexIndex], 0, 1);
-      return output;
-    `,
-  },
-
+  vertex: fullScreenVertexShaderOptions,
   fragment: {
     args: ['@builtin(position) pos: vec4f'],
     code: wgsl.code`
@@ -329,7 +307,7 @@ onFrame((deltaTime) => {
         storeOp: 'store',
       },
     ],
-    vertexCount: 6,
+    vertexCount: 3,
   });
 
   runtime.flush();
