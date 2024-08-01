@@ -348,15 +348,15 @@ class WebWigsillRuntime {
   }
 
   makeComputePipeline(options: {
-    workgroupSize: [number, number?, number?];
     code: WgslCode;
+    workgroupSize?: [number, number?, number?];
     externalLayouts?: GPUBindGroupLayout[];
     label?: string;
   }) {
     const program = new ComputeProgramBuilder(
       this,
       options.code,
-      options.workgroupSize,
+      options.workgroupSize ?? [1],
     ).build({
       bindingGroup: (options.externalLayouts ?? []).length,
     });

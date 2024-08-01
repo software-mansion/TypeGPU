@@ -81,8 +81,8 @@ export interface RenderPipelineOptions {
 }
 
 export interface ComputePipelineOptions {
-  workgroupSize: [number, number?, number?];
   code: WgslCode;
+  workgroupSize?: [number, number?, number?];
   externalLayouts?: GPUBindGroupLayout[];
   label?: string;
 }
