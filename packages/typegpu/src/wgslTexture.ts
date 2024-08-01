@@ -55,6 +55,8 @@ export interface WgslTextureView<
   readonly type: WgslRenderResourceType;
   readonly dataType: TData;
   readonly access: StorageTextureAccess | undefined;
+
+  $name(label: string): WgslTextureView<TData, TUsage>;
 }
 
 export interface WgslTextureExternal

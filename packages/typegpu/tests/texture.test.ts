@@ -1,6 +1,8 @@
 import { wgsl } from 'typegpu';
 import { u32 } from 'typegpu/data';
 import { describe, expect, it } from 'vitest';
+import { ResolutionCtx, StrictNameRegistry } from '../src';
+import { ResolutionCtxImpl } from '../src/resolutionCtx';
 
 global.GPUTextureUsage = {
   COPY_SRC: 0x01,
@@ -11,17 +13,25 @@ global.GPUTextureUsage = {
 };
 
 describe('texture', () => {
-  it('creates a texture with no usage', () => {
-    const texture = wgsl.texture({
-      size: [1, 1],
-      format: 'rgba8unorm',
+  it;
+
+  it('creates a texture view', () => {
+    const texture = wgsl
+      .texture({
+        size: [1, 1],
+        format: 'rgba8unorm',
+      })
+      .$name('texture')
+      .$allowSampled();
+
+    const resolutionCtx = new ResolutionCtxImpl({
+      names: new StrictNameRegistry(),
     });
-    // should be null
-    expect(
-      texture.asSampled({
-        dataType: u32,
-        type: 'texture_2d',
-      }),
-    ).toBeNull();
+
+    const code = wgsl`
+      let x = ${texture.asSampled({ type: 'texture_2d', dataType: u32 }).$name('view')};
+    `;
+
+    expect(resolutionCtx.resolve(code)).toContain('texture_2d<u32>');
   });
 });
