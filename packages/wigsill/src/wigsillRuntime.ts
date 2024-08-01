@@ -76,12 +76,14 @@ export interface RenderPipelineOptions {
     target: Iterable<GPUColorTargetState | null>;
   };
   primitive: GPUPrimitiveState;
+  externalLayouts?: GPUBindGroupLayout[];
   label?: string;
 }
 
 export interface ComputePipelineOptions {
   workgroupSize: [number, number?, number?];
   code: WgslCode;
+  externalLayouts?: GPUBindGroupLayout[];
   label?: string;
 }
 
@@ -90,6 +92,7 @@ export type RenderPipelineExecutorOptions = GPURenderPassDescriptor & {
   instanceCount?: number;
   firstVertex?: number;
   firstInstance?: number;
+  externalBindGroups?: GPUBindGroup[];
 };
 
 export interface RenderPipelineExecutor {

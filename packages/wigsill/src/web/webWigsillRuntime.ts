@@ -267,6 +267,7 @@ class WebWigsillRuntime {
       target: Iterable<GPUColorTargetState | null>;
     };
     primitive: GPUPrimitiveState;
+    externalLayouts?: GPUBindGroupLayout[];
     label?: string;
   }): RenderPipelineExecutor {
     const [vertexProgram, fragmentProgram, vertexBuffers] =
@@ -276,7 +277,7 @@ class WebWigsillRuntime {
         options.fragment.code,
         options.vertex.output,
       ).build({
-        bindingGroup: 0,
+        bindingGroup: (options.externalLayouts ?? []).length,
       });
 
     const vertexBufferDescriptors = vertexBuffers.map((buffer, idx) => {
@@ -309,6 +310,7 @@ class WebWigsillRuntime {
     const pipelineLayout = this.device.createPipelineLayout({
       label: options.label ?? '',
       bindGroupLayouts: [
+        ...(options.externalLayouts ?? []),
         vertexProgram.bindGroupLayout,
         fragmentProgram.bindGroupLayout,
       ],
@@ -337,7 +339,7 @@ class WebWigsillRuntime {
       renderPipeline,
       vertexProgram,
       fragmentProgram,
-      0,
+      options.externalLayouts?.length ?? 0,
       buffers,
     );
 
@@ -348,6 +350,7 @@ class WebWigsillRuntime {
   makeComputePipeline(options: {
     workgroupSize: [number, number?, number?];
     code: WgslCode;
+    externalLayouts?: GPUBindGroupLayout[];
     label?: string;
   }) {
     const program = new ComputeProgramBuilder(
@@ -355,7 +358,7 @@ class WebWigsillRuntime {
       options.code,
       options.workgroupSize,
     ).build({
-      bindingGroup: 0,
+      bindingGroup: (options.externalLayouts ?? []).length,
     });
 
     const shaderModule = this.device.createShaderModule({
@@ -364,7 +367,10 @@ class WebWigsillRuntime {
 
     const pipelineLayout = this.device.createPipelineLayout({
       label: options.label ?? '',
-      bindGroupLayouts: [program.bindGroupLayout],
+      bindGroupLayouts: [
+        ...(options.externalLayouts ?? []),
+        program.bindGroupLayout,
+      ],
     });
 
     const computePipeline = this.device.createComputePipeline({
@@ -379,7 +385,7 @@ class WebWigsillRuntime {
       this,
       computePipeline,
       [program],
-      0,
+      options.externalLayouts?.length ?? 0,
     );
     this._pipelineExecutors.push(executor);
     return executor;
