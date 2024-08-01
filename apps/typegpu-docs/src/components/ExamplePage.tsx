@@ -15,7 +15,7 @@ const getRandomExampleKey = () => {
 /**
  * The example we want to show off first.
  */
-const FLAGSHIP = 'voxel-rendering';
+const FLAGSHIP = 'rendering--box-raytracing';
 
 function RedirectToFlagship() {
   const setCurrentExample = useSetAtom(currentExampleAtom);
