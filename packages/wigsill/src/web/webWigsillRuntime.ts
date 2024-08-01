@@ -90,7 +90,11 @@ class WebWigsillRuntime {
     let texture = this._textures.get(source);
 
     if (!texture) {
-      texture = this.device.createTexture(source.descriptor);
+      const descriptor = {
+        ...source.descriptor,
+        usage: source.flags,
+      } as GPUTextureDescriptor;
+      texture = this.device.createTexture(descriptor);
 
       if (!texture) {
         throw new Error(`Failed to create texture for ${view}`);

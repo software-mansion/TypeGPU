@@ -21,14 +21,14 @@ export interface WgslAnyTextureView {
 }
 
 export interface WgslAnyTexture {
-  readonly descriptor: GPUTextureDescriptor;
-  readonly flags: GPUTextureUsageFlags;
+  readonly descriptor: Omit<GPUTextureDescriptor, 'usage'>;
+  get flags(): GPUTextureUsageFlags;
 }
 
 export interface WgslTexture<TAllows extends TextureUsage = never> {
-  readonly descriptor: GPUTextureDescriptor;
+  readonly descriptor: Omit<GPUTextureDescriptor, 'usage'>;
   get label(): string | undefined;
-  readonly flags: GPUTextureUsageFlags;
+  get flags(): GPUTextureUsageFlags;
 
   $name(label: string): WgslTexture<TAllows>;
   $allowSampled(): WgslTexture<TAllows | 'sampled'>;
@@ -51,7 +51,7 @@ export interface WgslTextureView<
   TUsage extends TextureUsage,
 > extends WgslRenderResource<WgslRenderResourceType> {
   readonly texture: WgslTexture<TUsage>;
-  readonly descriptor: GPUTextureViewDescriptor;
+  readonly descriptor: Omit<GPUTextureViewDescriptor, 'usage'>;
   readonly type: WgslRenderResourceType;
   readonly dataType: TData;
   readonly access: StorageTextureAccess | undefined;
@@ -75,7 +75,7 @@ export function textureExternal(descriptor: GPUExternalTextureDescriptor) {
 class WgslTextureImpl<TAllows extends TextureUsage = never>
   implements WgslTexture<TAllows>, WgslAnyTexture
 {
-  public flags: GPUTextureUsageFlags =
+  private _flags: GPUTextureUsageFlags =
     GPUTextureUsage.COPY_DST |
     GPUTextureUsage.COPY_SRC |
     GPUTextureUsage.RENDER_ATTACHMENT;
@@ -100,13 +100,17 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
     return this._label;
   }
 
+  get flags() {
+    return this._flags;
+  }
+
   $name(label: string) {
     this._label = label;
     return this;
   }
 
   $addFlags(flags: GPUTextureUsageFlags) {
-    this.flags |= flags;
+    this._flags |= flags;
     return this;
   }
 
