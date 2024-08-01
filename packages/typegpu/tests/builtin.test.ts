@@ -11,8 +11,10 @@ describe('builtin', () => {
 
     const code = wgsl`
       let x = ${builtin.position};
+      let y = ${builtin.frontFacing};
     `;
 
     expect(resolutionCtx.resolve(code)).toContain('position');
+    expect(resolutionCtx.resolve(code)).toContain('front_facing');
   });
 });
