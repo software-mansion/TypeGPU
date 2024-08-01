@@ -1,14 +1,22 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import type { SimpleWgslData } from '../data';
 import { roundUp } from '../mathUtils';
+import { PlumStore } from '../plumStore';
 import {
   ComputeProgramBuilder,
   type Program,
   RenderProgramBuilder,
 } from '../programBuilder';
+import type { WgslSettable } from '../settableTrait';
 import { TaskQueue } from '../taskQueue';
 import type { AnyWgslData, WgslAllocatable } from '../types';
 import type { WgslCode } from '../wgslCode';
+import {
+  type ExtractPlumValue,
+  type Unsubscribe,
+  type WgslPlum,
+  isPlum,
+} from '../wgslPlum';
 import type { WgslSampler } from '../wgslSampler';
 import type {
   WgslAnyTexture,
@@ -38,6 +46,11 @@ class WebWigsillRuntime {
   // Used for reading GPU buffers ad hoc.
   private _readBuffer: GPUBuffer | null = null;
   private _taskQueue = new TaskQueue();
+  private readonly _plumStore = new PlumStore();
+  private readonly _allocSubscriptions = new Map<
+    WgslAllocatable,
+    Unsubscribe
+  >();
 
   constructor(public readonly device: GPUDevice) {}
 
@@ -50,9 +63,15 @@ class WebWigsillRuntime {
   }
 
   dispose() {
+    for (const unsub of this._allocSubscriptions.values()) {
+      unsub();
+    }
+    this._allocSubscriptions.clear();
+
     for (const buffer of this._entryToBufferMap.values()) {
       buffer.destroy();
     }
+
     this._entryToBufferMap.clear();
 
     this._readBuffer?.destroy();
@@ -68,11 +87,34 @@ class WebWigsillRuntime {
           allocatable.dataType.size,
           allocatable.dataType.byteAlignment,
         ),
+        mappedAtCreation: allocatable.initial !== undefined,
       });
 
       if (!buffer) {
         throw new Error(`Failed to create buffer for ${allocatable}`);
       }
+
+      if (allocatable.initial !== undefined) {
+        const writer = new BufferWriter(buffer.getMappedRange());
+
+        if (isPlum(allocatable.initial)) {
+          const plum = allocatable.initial;
+
+          allocatable.dataType.write(writer, this._plumStore.get(plum));
+
+          this._allocSubscriptions.set(
+            allocatable,
+            this._plumStore.subscribe(plum, () => {
+              this.writeBuffer(allocatable, this._plumStore.get(plum));
+            }),
+          );
+        } else {
+          allocatable.dataType.write(writer, allocatable.initial);
+        }
+
+        buffer.unmap();
+      }
+
       this._entryToBufferMap.set(allocatable, buffer);
     }
 
@@ -191,6 +233,24 @@ class WebWigsillRuntime {
     const hostBuffer = new ArrayBuffer(size);
     allocatable.dataType.write(new BufferWriter(hostBuffer), data);
     this.device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
+  }
+
+  readPlum<TPlum extends WgslPlum>(plum: TPlum): ExtractPlumValue<TPlum> {
+    return this._plumStore.get(plum);
+  }
+
+  setPlum<TPlum extends WgslPlum & WgslSettable>(
+    plum: TPlum,
+    value: ExtractPlumValue<TPlum>,
+  ) {
+    this._plumStore.set(plum, value);
+  }
+
+  onPlumChange<TValue>(
+    plum: WgslPlum<TValue>,
+    listener: () => unknown,
+  ): Unsubscribe {
+    return this._plumStore.subscribe(plum, listener);
   }
 
   makeRenderPipeline(options: {

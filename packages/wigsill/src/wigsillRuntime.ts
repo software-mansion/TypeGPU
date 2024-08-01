@@ -1,8 +1,10 @@
 import type { AnySchema } from 'typed-binary';
 import type { Parsed } from 'typed-binary';
 import type { SimpleWgslData } from './data';
+import type { WgslSettable } from './settableTrait';
 import type { AnyWgslData, WgslAllocatable } from './types';
 import type { WgslCode } from './wgslCode';
+import type { ExtractPlumValue, Unsubscribe, WgslPlum } from './wgslPlum';
 import type { WgslSampler } from './wgslSampler';
 import type {
   WgslAnyTexture,
@@ -21,6 +23,18 @@ export interface WigsillRuntime {
    * hold the same value until `flush()` is called.
    */
   readonly commandEncoder: GPUCommandEncoder;
+
+  readPlum<TPlum extends WgslPlum>(plum: TPlum): ExtractPlumValue<TPlum>;
+
+  setPlum<TPlum extends WgslPlum & WgslSettable>(
+    plum: TPlum,
+    value: ExtractPlumValue<TPlum>,
+  ): void;
+
+  onPlumChange<TValue>(
+    plum: WgslPlum<TValue>,
+    listener: () => unknown,
+  ): Unsubscribe;
 
   writeBuffer<TValue extends AnyWgslData>(
     allocatable: WgslAllocatable<TValue>,

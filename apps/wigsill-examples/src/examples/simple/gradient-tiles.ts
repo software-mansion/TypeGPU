@@ -8,35 +8,32 @@
 // -- Hooks into the example environment
 import {
   addElement,
-  addParameter,
+  addSliderParam,
   onCleanup,
   onFrame,
 } from '@wigsill/example-toolkit';
 // --
 
 import wgsl, { builtin } from 'wigsill';
-import { u32, vec2f } from 'wigsill/data';
+import { struct, u32, vec2f } from 'wigsill/data';
 import { createRuntime } from 'wigsill/web';
 
+const xSpanPlum = addSliderParam('x span', 16, { min: 1, max: 16, step: 1 });
+const ySpanPlum = addSliderParam('y span', 16, { min: 1, max: 16, step: 1 });
+
+const spanPlum = wgsl.plum((get) => ({ x: get(xSpanPlum), y: get(ySpanPlum) }));
+const spanBuffer = wgsl
+  .buffer(struct({ x: u32, y: u32 }), spanPlum)
+  .$name('span')
+  .$allowUniform();
+
 const runtime = await createRuntime();
-const device = runtime.device;
-
-const xSpanBuffer = wgsl.buffer(u32).$name('x-span').$allowUniform();
-const ySpanBuffer = wgsl.buffer(u32).$name('y-span').$allowUniform();
-
-const xSpanData = xSpanBuffer.asUniform();
-const ySpanData = ySpanBuffer.asUniform();
-
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
-const devicePixelRatio = window.devicePixelRatio;
-canvas.width = canvas.clientWidth * devicePixelRatio;
-canvas.height = canvas.clientHeight * devicePixelRatio;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 context.configure({
-  device,
+  device: runtime.device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
@@ -63,14 +60,15 @@ const renderPipeline = runtime.makeRenderPipeline({
     `,
     output: {
       [builtin.position]: 'posOut',
-      uvOut: [vec2f, 'uv'],
+      uvOut: [vec2f, 'uvOut'],
     },
   },
 
   fragment: {
     code: wgsl.code`
-      let red = floor(uvOut.x * f32(${xSpanData})) / f32(${xSpanData});
-      let green = floor(uvOut.y * f32(${ySpanData})) / f32(${ySpanData});
+      let span = ${spanBuffer.asUniform()};
+      let red = floor(uvOut.x * f32(span.x)) / f32(span.x);
+      let green = floor(uvOut.y * f32(span.y)) / f32(span.y);
       return vec4(red, green, 0.5, 1.0);
     `,
     target: [
@@ -84,18 +82,6 @@ const renderPipeline = runtime.makeRenderPipeline({
     topology: 'triangle-strip',
   },
 });
-
-addParameter(
-  'x-span',
-  { initial: 16, min: 1, max: 16, step: 1 },
-  (xSpan: number) => runtime.writeBuffer(xSpanBuffer, xSpan),
-);
-
-addParameter(
-  'y-span',
-  { initial: 16, min: 1, max: 16, step: 1 },
-  (ySpan: number) => runtime.writeBuffer(ySpanBuffer, ySpan),
-);
 
 onFrame(() => {
   const textureView = context.getCurrentTexture().createView();
@@ -117,5 +103,5 @@ onFrame(() => {
 });
 
 onCleanup(() => {
-  // TODO: Clean up
+  runtime.dispose();
 });

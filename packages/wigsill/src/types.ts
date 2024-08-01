@@ -1,6 +1,7 @@
-import type { ISchema } from 'typed-binary';
+import type { ISchema, Parsed } from 'typed-binary';
 import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from './data';
 import type { WgslIdentifier } from './wgslIdentifier';
+import type { WgslPlum } from './wgslPlum';
 
 export type Wgsl = string | number | WgslResolvable | symbol | boolean;
 
@@ -96,6 +97,7 @@ export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
    */
   readonly dataType: TData;
   vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null;
+  readonly initial?: Parsed<TData> | WgslPlum<Parsed<TData>> | undefined;
   readonly flags: GPUBufferUsageFlags;
   get label(): string | undefined;
 }

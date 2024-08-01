@@ -1,7 +1,8 @@
-import type { AnySchema } from 'typed-binary';
+import type { AnySchema, Parsed } from 'typed-binary';
 import { SimpleWgslData } from './data';
 import type { AnyWgslData, BufferUsage, WgslAllocatable } from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
+import type { WgslPlum } from './wgslPlum';
 
 // ----------
 // Public API
@@ -40,8 +41,11 @@ export interface WgslBuffer<
 export function buffer<
   TData extends AnyWgslData,
   TUsage extends BufferUsage = never,
->(typeSchema: TData): WgslBuffer<TData, TUsage> {
-  return new WgslBufferImpl<TData, TUsage>(typeSchema);
+>(
+  typeSchema: TData,
+  initial?: Parsed<TData> | WgslPlum<Parsed<TData>> | undefined,
+): WgslBuffer<TData, TUsage> {
+  return new WgslBufferImpl<TData, TUsage>(typeSchema, initial);
 }
 
 // --------------
@@ -74,7 +78,10 @@ class WgslBufferImpl<
 
   private _label: string | undefined;
 
-  constructor(public readonly dataType: TData) {}
+  constructor(
+    public readonly dataType: TData,
+    public readonly initial?: Parsed<TData> | WgslPlum<Parsed<TData>>,
+  ) {}
 
   get label() {
     return this._label;

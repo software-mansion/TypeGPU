@@ -6,19 +6,65 @@
 */
 
 // -- Hooks into the example environment
-import { addElement, addParameter, onFrame } from '@wigsill/example-toolkit';
+import { addElement, addSliderParam, onFrame } from '@wigsill/example-toolkit';
 // --
 
 import wgsl, { builtin } from 'wigsill';
 import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'wigsill/data';
 import { createRuntime } from 'wigsill/web';
 
-const runtime = await createRuntime();
-const device = runtime.device;
+const X = 10;
+const Y = 11;
+const Z = 12;
+
+const VOXEL_SIZE = 15;
+const cubeSize = [X * VOXEL_SIZE, Y * VOXEL_SIZE, Z * VOXEL_SIZE];
+const boxCenter = cubeSize.map((value) => value / 2);
+const upAxis = [0, 1, 0] as Vector;
+
+const rotationSpeedPlum = addSliderParam('rotation speed', 2, {
+  min: 0,
+  max: 10,
+});
+
+const cameraDistancePlum = addSliderParam('camera distance', 350, {
+  min: 100,
+  max: 1200,
+});
+
+const framePlum = wgsl.plum<number>(0);
+
+const cameraPositionPlum = wgsl.plum<Vector>((get) => {
+  const frame = get(framePlum);
+
+  return [
+    Math.cos(frame) * get(cameraDistancePlum) + boxCenter[0],
+    boxCenter[1],
+    Math.sin(frame) * get(cameraDistancePlum) + boxCenter[2],
+  ];
+});
+
+const cameraAxesPlum = wgsl.plum((get) => {
+  const forwardAxis = normalize(
+    get(cameraPositionPlum).map((value, i) => boxCenter[i] - value) as Vector,
+  );
+
+  return {
+    forward: forwardAxis,
+    up: upAxis,
+    right: crossProduct(upAxis, forwardAxis) as Vector,
+  };
+});
 
 const canvas = await addElement('canvas');
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+const canvasWidthPlum = wgsl.plum(canvas.width).$name('canvas_width');
+const canvasHeightPlum = wgsl.plum(canvas.height).$name('canvas_height');
+
+const runtime = await createRuntime();
+const device = runtime.device;
 
 context.configure({
   device,
@@ -42,21 +88,24 @@ const intersectionStruct = struct({
   tMax: f32,
 });
 
-const X = 10;
-const Y = 11;
-const Z = 12;
-
-const VOXEL_SIZE = 15;
-const cubeSize = [X * VOXEL_SIZE, Y * VOXEL_SIZE, Z * VOXEL_SIZE];
-
 const voxelMatrixBuffer = wgsl
-  .buffer(arrayOf(arrayOf(arrayOf(voxelStruct, Z), Y), X))
+  .buffer(
+    arrayOf(arrayOf(arrayOf(voxelStruct, Z), Y), X),
+    Array.from({ length: X }, (_, i) =>
+      Array.from({ length: Y }, (_, j) =>
+        Array.from({ length: Z }, (_, k) => ({
+          isActive: X - i + j + (Z - k) > 10 ? 1 : 0,
+          albedo: [i / X, j / Y, k / Z, 1] as [number, number, number, number],
+        })),
+      ),
+    ),
+  )
   .$name('voxel_array')
   .$allowReadonlyStorage();
 const voxelMatrixData = voxelMatrixBuffer.asReadonlyStorage();
 
 const cameraPositionBuffer = wgsl
-  .buffer(vec3f)
+  .buffer(vec3f, cameraPositionPlum)
   .$name('camera_position')
   .$allowReadonlyStorage();
 const cameraPositionData = cameraPositionBuffer.asReadonlyStorage();
@@ -68,16 +117,23 @@ const cameraAxesBuffer = wgsl
       up: vec3f,
       forward: vec3f,
     }),
+    cameraAxesPlum,
   )
   .$name('camera_axes')
   .$allowReadonlyStorage();
 const cameraAxesData = cameraAxesBuffer.asReadonlyStorage();
 
 const canvasDimsBuffer = wgsl
-  .buffer(struct({ width: u32, height: u32 }))
+  .buffer(
+    struct({ width: u32, height: u32 }),
+    wgsl.plum((get) => ({
+      width: get(canvasWidthPlum),
+      height: get(canvasHeightPlum),
+    })),
+  )
   .$name('canvas_dims')
-  .$allowReadonlyStorage();
-const canvasDimsData = canvasDimsBuffer.asReadonlyStorage();
+  .$allowUniform();
+const canvasDimsData = canvasDimsBuffer.asUniform();
 
 const getBoxIntersectionFn = wgsl.fn('box_intersection')`(
   boundMin: vec3f,
@@ -231,26 +287,7 @@ const renderPipeline = runtime.makeRenderPipeline({
   },
 });
 
-runtime.writeBuffer(
-  voxelMatrixBuffer,
-  Array.from({ length: X }, (_, i) =>
-    Array.from({ length: Y }, (_, j) =>
-      Array.from({ length: Z }, (_, k) => ({
-        isActive: X - i + j + (Z - k) > 10 ? 1 : 0,
-        albedo: [i / X, j / Y, k / Z, 1] as [number, number, number, number],
-      })),
-    ),
-  ),
-);
-
 type Vector = [number, number, number];
-
-const boxCenter = cubeSize.map((value) => value / 2);
-const upAxis = [0, 1, 0] as Vector;
-
-let frame = 0;
-let radiansPerSecond = 2;
-let cameraDist = 350;
 
 function normalize(vector: Vector): Vector {
   const length = Math.sqrt(vector[0] ** 2 + vector[1] ** 2 + vector[2] ** 2);
@@ -266,30 +303,13 @@ function crossProduct(vectorA: Vector, vectorB: Vector): Vector {
 }
 
 onFrame((deltaTime) => {
-  frame += (radiansPerSecond * deltaTime) / 1000;
+  runtime.setPlum(canvasWidthPlum, canvas.width);
+  runtime.setPlum(canvasHeightPlum, canvas.height);
 
-  const cameraPosition: Vector = [
-    Math.cos(frame) * cameraDist + boxCenter[0],
-    boxCenter[1],
-    Math.sin(frame) * cameraDist + boxCenter[2],
-  ];
+  const lastFrame = runtime.readPlum(framePlum);
+  const rotationSpeed = runtime.readPlum(rotationSpeedPlum);
 
-  runtime.writeBuffer(cameraPositionBuffer, cameraPosition);
-
-  const forwardAxis = normalize(
-    cameraPosition.map((value, i) => boxCenter[i] - value) as Vector,
-  );
-
-  runtime.writeBuffer(cameraAxesBuffer, {
-    forward: forwardAxis,
-    up: upAxis,
-    right: crossProduct(upAxis, forwardAxis) as Vector,
-  });
-
-  runtime.writeBuffer(canvasDimsBuffer, {
-    width: canvas.width,
-    height: canvas.height,
-  });
+  runtime.setPlum(framePlum, lastFrame + (rotationSpeed * deltaTime) / 1000);
 
   const textureView = context.getCurrentTexture().createView();
 
@@ -307,27 +327,3 @@ onFrame((deltaTime) => {
 
   runtime.flush();
 });
-
-addParameter(
-  'radiansPerSecond',
-  {
-    initial: radiansPerSecond,
-    min: 0,
-    max: 10,
-  },
-  (newValue) => {
-    radiansPerSecond = newValue;
-  },
-);
-
-addParameter(
-  'cameraDistance',
-  {
-    initial: cameraDist,
-    min: 100,
-    max: 1200,
-  },
-  (newValue) => {
-    cameraDist = newValue;
-  },
-);

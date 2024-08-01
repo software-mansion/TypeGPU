@@ -24,9 +24,9 @@ import {
 import type { WigsillRuntime } from './wigsillRuntime';
 
 export type Program = {
-  bindGroupLayout: GPUBindGroupLayout;
-  bindGroup: GPUBindGroup;
-  code: string;
+  readonly bindGroupLayout: GPUBindGroupLayout;
+  readonly bindGroup: GPUBindGroup;
+  readonly code: string;
 };
 
 type BuildOptions = {
