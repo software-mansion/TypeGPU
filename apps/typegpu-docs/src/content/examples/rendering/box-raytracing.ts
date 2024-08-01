@@ -1,6 +1,6 @@
 /*
 {
-  "title": "Voxel Raytracing",
+  "title": "Box Raytracing",
   "category": "rendering"
 }
 */
@@ -12,23 +12,28 @@ import { addElement, addSliderParam, onFrame } from '@typegpu/example-toolkit';
 import { createRuntime, wgsl } from 'typegpu';
 import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'typegpu/data';
 
-const X = 10;
-const Y = 11;
-const Z = 12;
+const X = 7;
+const Y = 7;
+const Z = 7;
 
-const VOXEL_SIZE = 15;
-const cubeSize = [X * VOXEL_SIZE, Y * VOXEL_SIZE, Z * VOXEL_SIZE];
+const MAX_BOX_SIZE = 15;
+const cubeSize = [X * MAX_BOX_SIZE, Y * MAX_BOX_SIZE, Z * MAX_BOX_SIZE];
 const boxCenter = cubeSize.map((value) => value / 2);
 const upAxis = [0, 1, 0] as Vector;
 
 const rotationSpeedPlum = addSliderParam('rotation speed', 2, {
   min: 0,
-  max: 10,
+  max: 5,
 });
 
-const cameraDistancePlum = addSliderParam('camera distance', 350, {
+const cameraDistancePlum = addSliderParam('camera distance', 250, {
   min: 100,
   max: 1200,
+});
+
+const boxSizePlum = addSliderParam('box size', MAX_BOX_SIZE, {
+  min: 1,
+  max: MAX_BOX_SIZE,
 });
 
 const framePlum = wgsl.plum<number>(0);
@@ -71,7 +76,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const voxelStruct = struct({
+const boxStruct = struct({
   isActive: u32,
   albedo: vec4f,
 });
@@ -87,21 +92,21 @@ const intersectionStruct = struct({
   tMax: f32,
 });
 
-const voxelMatrixBuffer = wgsl
+const boxMatrixBuffer = wgsl
   .buffer(
-    arrayOf(arrayOf(arrayOf(voxelStruct, Z), Y), X),
+    arrayOf(arrayOf(arrayOf(boxStruct, Z), Y), X),
     Array.from({ length: X }, (_, i) =>
       Array.from({ length: Y }, (_, j) =>
         Array.from({ length: Z }, (_, k) => ({
-          isActive: X - i + j + (Z - k) > 10 ? 1 : 0,
+          isActive: X - i + j + (Z - k) > 6 ? 1 : 0,
           albedo: [i / X, j / Y, k / Z, 1] as [number, number, number, number],
         })),
       ),
     ),
   )
-  .$name('voxel_array')
+  .$name('box_array')
   .$allowReadonlyStorage();
-const voxelMatrixData = voxelMatrixBuffer.asReadonlyStorage();
+const boxMatrixData = boxMatrixBuffer.asReadonlyStorage();
 
 const cameraPositionBuffer = wgsl
   .buffer(vec3f, cameraPositionPlum)
@@ -134,72 +139,78 @@ const canvasDimsBuffer = wgsl
   .$allowUniform();
 const canvasDimsData = canvasDimsBuffer.asUniform();
 
+const boxSizeBuffer = wgsl
+  .buffer(u32, boxSizePlum)
+  .$name('box_size')
+  .$allowUniform();
+const boxSizeData = boxSizeBuffer.asUniform();
+
 const getBoxIntersectionFn = wgsl.fn('box_intersection')`(
   boundMin: vec3f,
   boundMax: vec3f,
   ray: ${rayStruct}
 ) -> ${intersectionStruct} {
-    var output: ${intersectionStruct};
+  var output: ${intersectionStruct};
 
-    var tMin: f32; 
-    var tMax: f32;
-    var tMinY: f32;
-    var tMaxY: f32;
-    var tMinZ: f32;
-    var tMaxZ: f32;
+  var tMin: f32; 
+  var tMax: f32;
+  var tMinY: f32;
+  var tMaxY: f32;
+  var tMinZ: f32;
+  var tMaxZ: f32;
 
-    if (ray.direction.x >= 0) { 
-        tMin = (boundMin.x - ray.origin.x) / ray.direction.x; 
-        tMax = (boundMax.x - ray.origin.x) / ray.direction.x; 
-    } else { 
-        tMin = (boundMax.x - ray.origin.x) / ray.direction.x; 
-        tMax = (boundMin.x - ray.origin.x) / ray.direction.x; 
-    }
+  if (ray.direction.x >= 0) { 
+    tMin = (boundMin.x - ray.origin.x) / ray.direction.x; 
+    tMax = (boundMax.x - ray.origin.x) / ray.direction.x; 
+  } else { 
+    tMin = (boundMax.x - ray.origin.x) / ray.direction.x; 
+    tMax = (boundMin.x - ray.origin.x) / ray.direction.x; 
+  }
 
-    if (ray.direction.y >= 0) { 
-        tMinY = (boundMin.y - ray.origin.y) / ray.direction.y; 
-        tMaxY = (boundMax.y - ray.origin.y) / ray.direction.y; 
-    } else { 
-        tMinY = (boundMax.y - ray.origin.y) / ray.direction.y; 
-        tMaxY = (boundMin.y - ray.origin.y) / ray.direction.y; 
-    }
+  if (ray.direction.y >= 0) { 
+    tMinY = (boundMin.y - ray.origin.y) / ray.direction.y; 
+    tMaxY = (boundMax.y - ray.origin.y) / ray.direction.y; 
+  } else { 
+    tMinY = (boundMax.y - ray.origin.y) / ray.direction.y; 
+    tMaxY = (boundMin.y - ray.origin.y) / ray.direction.y; 
+  }
 
-    if (tMin > tMaxY) || (tMinY > tMax) {
-        return output; 
-    }
-
-    if (tMinY > tMin) {
-      tMin = tMinY; 
-    }
-
-    if (tMaxY < tMax) {
-      tMax = tMaxY; 
-    }
-
-    if (ray.direction.z >= 0) { 
-        tMinZ = (boundMin.z - ray.origin.z) / ray.direction.z; 
-        tMaxZ = (boundMax.z - ray.origin.z) / ray.direction.z; 
-    } else { 
-        tMinZ = (boundMax.z - ray.origin.z) / ray.direction.z; 
-        tMaxZ = (boundMin.z - ray.origin.z) / ray.direction.z; 
-    }
-
-    if (tMin > tMaxZ) || (tMinZ > tMax) {
-        return output; 
-    }
-
-    if tMinZ > tMin {
-      tMin = tMinZ; 
-    }
-
-    if tMaxZ < tMax {
-      tMax = tMaxZ; 
-    }
-
-    output.intersects = tMin > 0 && tMax > 0;
-    output.tMin = tMin;
-    output.tMax = tMax;
+  if (tMin > tMaxY) || (tMinY > tMax) {
     return output; 
+  }
+
+  if (tMinY > tMin) {
+    tMin = tMinY; 
+  }
+
+  if (tMaxY < tMax) {
+    tMax = tMaxY; 
+  }
+
+  if (ray.direction.z >= 0) { 
+    tMinZ = (boundMin.z - ray.origin.z) / ray.direction.z; 
+    tMaxZ = (boundMax.z - ray.origin.z) / ray.direction.z; 
+  } else { 
+    tMinZ = (boundMax.z - ray.origin.z) / ray.direction.z; 
+    tMaxZ = (boundMin.z - ray.origin.z) / ray.direction.z; 
+  }
+
+  if (tMin > tMaxZ) || (tMinZ > tMax) {
+    return output; 
+  }
+
+  if tMinZ > tMin {
+    tMin = tMinZ; 
+  }
+
+  if tMaxZ < tMax {
+    tMax = tMaxZ; 
+  }
+
+  output.intersects = tMin > 0 && tMax > 0;
+  output.tMin = tMin;
+  output.tMax = tMax;
+  return output; 
 }
 `;
 
@@ -258,18 +269,18 @@ const renderPipeline = runtime.makeRenderPipeline({
         for (var i = 0; i < ${X}; i = i+1) {
           for (var j = 0; j < ${Y}; j = j+1) {
             for (var k = 0; k < ${Z}; k = k+1) {
-              if ${voxelMatrixData}[i][j][k].isActive == 0 {
+              if ${boxMatrixData}[i][j][k].isActive == 0 {
                 continue;
               }
 
               let intersection = ${getBoxIntersectionFn}(
-                vec3f(f32(i), f32(j), f32(k)) * ${VOXEL_SIZE}, 
-                vec3f(f32(i+1), f32(j+1), f32(k+1)) * ${VOXEL_SIZE}, 
+                vec3f(f32(i), f32(j), f32(k)) * ${MAX_BOX_SIZE} - vec3f(f32(${boxSizeData}))/2, 
+                vec3f(f32(i), f32(j), f32(k)) * ${MAX_BOX_SIZE} + vec3f(f32(${boxSizeData}))/2, 
                 ray,
               );
 
               if intersection.intersects && (!intersectionFound || intersection.tMin < tMin) {
-                color = ${voxelMatrixData}[i][j][k].albedo;
+                color = ${boxMatrixData}[i][j][k].albedo;
                 tMin = intersection.tMin;
                 intersectionFound = true;
               }
