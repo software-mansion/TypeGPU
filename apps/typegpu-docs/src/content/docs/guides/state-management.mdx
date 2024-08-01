@@ -1,0 +1,133 @@
+---
+title: State Management
+description: A guide on state is managed through plums in TypeGPU.
+---
+
+:::caution
+This guide is a work-in-progress, and may include stale or not-yet-available functionality.
+:::
+
+
+When a WebGPU application runs over multiple frames, the data that is accessed by shaders often changes between executions.
+Even though it might not always be optimal, the easiest and least error-prone way to synchronize state is to reencode
+it as a whole into binary, even if only one value has changed.
+
+```ts
+// vanilla-webgpu.ts
+
+//
+// Vanilla WebGPU boilerplate omitted for brevity.
+//
+
+// Our application state, something we want to
+// access from within GPU shaders.
+const state = { a: 1, b: 2 };
+
+// Allocating space on the GPU.
+const gpuBuffer = device.createBuffer(...);
+
+// Used to synchronize GPU buffers with JavaScript values.
+function updateGPU() {
+  // construct `jsBuffer` from `aState` and `bState`.
+  const jsBuffer = ...;
+
+  device.queue.writeBuffer(gpuBuffer, 0, jsBuffer, 0, size);
+}
+```
+
+Determining **when** to synchronize the state depends on the use case, but it usually falls into one of two strategies:
+
+import ListItem from '../../../components/ListItem.astro';
+
+<ol>
+  <ListItem idx="A">
+    <details>
+    <summary>Before each shader execution</summary>
+    
+    Optimal when state updates more frequently than shaders are run.
+
+    ```ts
+    function updateA(value: number) {
+      state.a = value;
+    }
+
+    function updateB(value: number) {
+      state.b = value;
+    }
+
+    function loop() {
+      // updating before each pipeline
+      updateGPU();
+
+      // run pipeline
+      // ...
+
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+    ```
+    </details>
+  </ListItem>
+  <ListItem idx="B">
+    <details>
+    <summary>After each state change</summary>
+
+    Optimal when state updates are rarer than shader executions.
+
+    ```ts
+    function updateA(value: number) {
+      state.a = value;
+      updateGPU();
+    }
+
+    function updateB(value: number) {
+      state.b = value;
+      updateGPU();
+    }
+
+    function loop() {
+      // run pipeline
+      // ...
+
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+    ```
+
+    </details>
+  </ListItem>
+</ol>
+
+Optimising manually for minimizing redundant synchronization or reencoding of binary can lead to less readable code, hard to
+catch bugs and is usually not worth it. **TypeGPU** makes this a breeze.
+
+```ts
+import { wgsl, createRuntime } from 'typegpu';
+import { struct, f32 } from 'typegpu/data';
+
+const aPlum = wgsl.plum(1).$name('a');
+const bPlum = wgsl.plum(2).$name('b');
+
+const State = struct({
+  a: f32,
+  b: f32,
+});
+
+const stateBuffer = wgsl.buffer(State, {
+  a: aPlum,
+  b: bPlum,
+});
+
+const runtime = createRuntime();
+
+function updateA(value: number) {
+  runtime.setPlum(aPlum, 3);
+}
+
+function updateB(value: number) {
+  runtime.setPlum(bPlum, 6);
+}
+
+```
