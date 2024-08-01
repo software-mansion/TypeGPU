@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { wgsl } from 'wigsill';
-import { parseWGSL } from './utils/parseWGSL';
 
 describe('texture', () => {
   it('creates a texture with no usage', () => {
