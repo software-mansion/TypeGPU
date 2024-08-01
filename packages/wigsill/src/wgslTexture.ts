@@ -63,7 +63,7 @@ export interface WgslTextureExternal
 }
 
 export function texture<TUsage extends TextureUsage = never>(
-  descriptor: GPUTextureDescriptor,
+  descriptor: Omit<GPUTextureDescriptor, 'usage'>,
 ): WgslTexture<TUsage> {
   return new WgslTextureImpl(descriptor);
 }
@@ -94,7 +94,9 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
   };
   private _label: string | undefined;
 
-  constructor(public readonly descriptor: GPUTextureDescriptor) {}
+  constructor(
+    public readonly descriptor: Omit<GPUTextureDescriptor, 'usage'>,
+  ) {}
 
   get label() {
     return this._label;
