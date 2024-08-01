@@ -17,6 +17,9 @@ const counterBuffer = wgsl
   .$name('counter')
   .$allowMutableStorage();
 
+const table = await addElement('table');
+table.setMatrix([[0]]);
+
 const runtime = await createRuntime();
 const pipeline = runtime.makeComputePipeline({
   code: wgsl`${counterBuffer.asMutableStorage()} += 1;`,
@@ -24,8 +27,7 @@ const pipeline = runtime.makeComputePipeline({
 
 async function increment() {
   pipeline.execute();
-  const output = await runtime.readBuffer(counterBuffer);
-  console.log(output);
+  table.setMatrix([[await runtime.readBuffer(counterBuffer)]]);
 }
 
 addElement('button', {
