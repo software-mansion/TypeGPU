@@ -156,8 +156,6 @@ describe('sampler', () => {
       names: new StrictNameRegistry(),
     });
 
-    console.log(sampler);
-
     const code = wgsl`
       let x = ${sampler};
     `;
