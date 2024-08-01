@@ -1,0 +1,376 @@
+---
+title: Basic Principles
+description: A guide on how to start using the TypeGPU library.
+---
+
+**TypeGPU** introduces an alternative API for WebGPU, one that aims to be type-safe and modular, but
+under the hood is still WebGPU.
+
+## Running a compute shader
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+<Tabs>
+  <TabItem label="TypeGPU">
+    ```ts
+    import { createRuntime, wgsl } from 'typegpu';
+    import { u32 } from 'typegpu/data';
+
+    // Declaring a buffer of type `u32` which can be
+    // bound as mutable storage. Its initial value is 0.
+    const counterBuffer = wgsl
+      .buffer(u32, 0)
+      .$name('counter')
+      .$allowMutableStorage();
+
+    // All buffers are allocated on the `runtime` object,
+    // and cleaned up when calling `runtime.dispose()`
+    const runtime = await createRuntime();
+
+    const pipeline = runtime.makeComputePipeline({
+      // This code will run on the GPU. Simply using `counterBuffer` in code
+      // will create a layout and bind group to house it.
+      code: wgsl`${counterBuffer.asMutableStorage()} += 1;`,
+    });
+
+    pipeline.execute();
+    
+    // Reading the result of the computation from the GPU.
+    // Type infered to be `number` because the buffer is of
+    // type `u32`.
+    const output = await runtime.readBuffer(counterBuffer);
+
+    runtime.dispose();
+    ```
+  </TabItem>
+  <TabItem label="Equivalent WebGPU">
+    ```ts
+    const adapter = await navigator.gpu.requestAdapter();
+    const device = await adapter.requestDevice();
+
+    // Declaring a buffer. The type of data is unknown at this point,
+    // we operate on pure bytes.
+    const counterBuffer = device.createBuffer({
+      usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.STORAGE,
+      size: 4, // size has to be passed in by developer, cannot be infered from data type.
+      mappedAtCreation: true,
+    });
+
+    // Setting the initial value to 0
+    new Uint32Array(counterBuffer.getMappedRange())[0] = 0;
+    counterBuffer.unmap();
+
+    const code = `
+      @group(0) @binding(0) var<storage, read_write> counter: u32;
+
+      @compute @workgroup_size(1, 1)
+      fn main() {
+        // This code will run on the GPU.
+        counter += 1;
+      }
+    `;
+
+    const shader = device.createShaderModule({ code });
+    const bindGroupLayout = device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.COMPUTE,
+          buffer: {
+            type: 'storage',
+          },
+        },
+      ],
+    });
+
+    const bindGroup = device.createBindGroup({
+      layout: bindGroupLayout,
+      entries: [
+        {
+          binding: 0,
+          resource: {
+            buffer: counterBuffer,
+          },
+        }
+      ],
+    });
+
+    const pipeline = device.createComputePipeline({
+      layout: device.createPipelineLayout({
+        bindGroupLayouts: [bindGroupLayout],
+      }),
+      compute: {
+        module: shader,
+      },
+    });
+
+    (() => {
+      const commandEncoder = device.createCommandEncoder();
+      const passEncoder = commandEncoder.beginComputePass();
+      passEncoder.setPipeline(pipeline);
+      passEncoder.setBindGroup(0, bindGroup),
+
+      passEncoder.dispatchWorkgroups(1, 1);
+      passEncoder.end();
+
+      device.queue.submit([commandEncoder.finish()]);
+    })();
+
+    (async () => {
+      // To read the result from the GPU, we need to copy it
+      // into a buffer that we can map for reading.
+      const readBuffer = device.createBuffer({
+        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        size: 4,
+      });
+
+      const commandEncoder = device.createCommandEncoder();
+      commandEncoder.copyBufferToBuffer(counterBuffer, 0, readBuffer, 0, 4, /* copying over 4 bytes */);
+      device.queue.submit([commandEncoder.finish()]);
+      await device.queue.onSubmittedWorkDone();
+      await readBuffer.mapAsync(GPUMapMode.READ, 0, 4);
+
+      const output = new Uint32Array(readBuffer.getMappedRange())[0];
+    })();
+
+    // cleaning up
+    readBuffer.destroy();
+    counterBuffer.destroy();
+    ```
+  </TabItem>
+</Tabs>
+
+import { LinkCard } from '@astrojs/starlight/components';
+
+<LinkCard
+  title="Run this Live Example in the browser"
+  href="/examples/#example=simple--increment"
+  target="_blank"
+/>
+
+**TypeGPU** generates a full WGSL shader based on the context it was compiled in. Here's what the result
+of that generation might look like:
+
+```wgsl
+@group(0) @binding(0) var<storage, read_write> counter: u32;
+
+@compute @workgroup_size(1, 1)
+fn main() {
+  // This code will run on the GPU.
+  counter += 1;
+}
+```
+
+Notice that because `counterBuffer` was used with a mutable storage binding, it appeared in the generated code
+with the correct type.
+
+```wgsl "counter"
+@group(0) @binding(0) var<storage, read_write> counter: u32;
+
+@compute @workgroup_size(1, 1)
+fn main() {
+  // This code will run on the GPU.
+  counter += 1;
+}
+```
+
+A bind group layout and bind group were created to accomodate this buffer, since it is being used in code.
+
+```wgsl "@group(0) @binding(0)"
+@group(0) @binding(0) var<storage, read_write> counter: u32;
+
+@compute @workgroup_size(1, 1)
+fn main() {
+  // This code will run on the GPU.
+  counter += 1;
+}
+```
+
+
+## Passing a uniform to the GPU
+
+<Tabs>
+  <TabItem label="TypeGPU">
+    ```ts
+    import { createRuntime, wgsl } from 'typegpu';
+    import { struct, u32 } from 'typegpu/data';
+
+    // Type-safe struct definition.
+    // Only accepts values of type { width: number, height: number }
+    const CanvasProps = struct({
+      width: u32,
+      height: u32,
+    }).$name('CanvasProps');
+
+    const canvasPropsBuffer = wgsl
+      .buffer(CanvasProps, { width: 1024, height: 1024 })
+      .$name('canvas_props')
+      .$allowUniform();
+
+    const runtime = await createRuntime();
+
+    const pipeline = runtime.makeComputePipeline({
+      code: wgsl`
+        let x = ${builtin.globalInvocationId}.x;
+        let y = ${builtin.globalInvocationId}.y;
+        let idx = x + y * ${canvasPropsBuffer.asUniform()}.width;
+
+        // do something with 'idx'
+      `,
+    });
+
+    pipeline.execute({ workgroups: [1024, 1024] });
+
+    // Reading values automatically flushes, but since we do not
+    // retrieve any output from the GPU, we flush manually.
+    runtime.flush();
+    ```
+  </TabItem>
+  <TabItem label="Equivalent WebGPU">
+    ```ts
+    const adapter = await navigator.gpu.requestAdapter();
+    const device = await adapter.requestDevice();
+
+    // Declaring a buffer. The type of data is unknown at this point,
+    // we operate on pure bytes.
+    const canvasPropsBuffer = device.createBuffer({
+      usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.UNIFORM,
+      size: 8, // size has to be passed in by developer, cannot be infered from data type.
+      mappedAtCreation: true,
+    });
+
+    // Setting the initial value. We can use the fact that the struct
+    // is just two Uint32 values, but this would be much more complex
+    // for structs with fields of different types and alignment rules.
+    const canvasPropsArray = new Uint32Array(canvasPropsBuffer.getMappedRange());
+    canvasPropsArray[0] = 1024;
+    canvasPropsArray[1] = 1024;
+    
+    canvasPropsBuffer.unmap();
+
+    const code = `
+      struct CanvasProps {
+        width: u32,
+        height: u32,
+      }
+
+      @group(0) @binding(0) var<uniform> canvas_props: CanvasProps;
+
+      @compute @workgroup_size(1, 1)
+      fn main(@builtin(global_invocation_id) globalInvocationId: vec3u) {
+        let x = globalInvocationId.x;
+        let y = globalInvocationId.y;
+        let idx = x + y * canvas_props.width;
+
+        // do something with 'idx'
+      }
+    `;
+
+    const shader = device.createShaderModule({ code });
+
+    const bindGroupLayout = device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.COMPUTE,
+          buffer: {
+            type: 'storage',
+          },
+        },
+      ],
+    });
+
+    const bindGroup = device.createBindGroup({
+      layout: bindGroupLayout,
+      entries: [
+        {
+          binding: 0,
+          resource: {
+            buffer: canvasPropsBuffer,
+          },
+        }
+      ],
+    });
+
+    const pipeline = device.createComputePipeline({
+      layout: device.createPipelineLayout({
+        bindGroupLayouts: [bindGroupLayout],
+      }),
+      compute: {
+        module: shader,
+      },
+    });
+
+    const commandEncoder = device.createCommandEncoder();
+    const passEncoder = commandEncoder.beginComputePass();
+    passEncoder.setPipeline(pipeline);
+    passEncoder.setBindGroup(0, bindGroup),
+
+    passEncoder.dispatchWorkgroups(1024, 1024);
+    passEncoder.end();
+
+    device.queue.submit([commandEncoder.finish()]);
+    ```
+  </TabItem>
+</Tabs>
+
+In this example, **TypeGPU** has to do a little more of the heavy-lifting to generate the appropriate WGSL code.
+
+```wgsl
+struct CanvasProps {
+  width: u32,
+  height: u32,
+}
+
+@group(0) @binding(0) var<uniform> canvas_props: CanvasProps;
+
+@compute @workgroup_size(1, 1)
+fn main(@builtin(global_invocation_id) globalInvocationId: vec3u) {
+  let x = globalInvocationId.x;
+  let y = globalInvocationId.y;
+  let idx = x + y * canvas_props.width;
+
+  // do something with 'idx'
+}
+```
+
+Because `canvasPropsBuffer` was used with a uniform binding, its
+declaration appears in code.
+
+```wgsl "canvas_props"
+struct CanvasProps {
+  width: u32,
+  height: u32,
+}
+
+@group(0) @binding(0) var<uniform> canvas_props: CanvasProps;
+
+@compute @workgroup_size(1, 1)
+fn main(@builtin(global_invocation_id) globalInvocationId: vec3u) {
+  let x = globalInvocationId.x;
+  let y = globalInvocationId.y;
+  let idx = x + y * canvas_props.width;
+
+  // do something with 'idx'
+}
+```
+
+Furthermore, `canvas_props`'s type signature includes `CanvasProps`, so it has to be defined as well
+
+```wgsl {1-4} "canvas_props: CanvasProps"
+struct CanvasProps {
+  width: u32,
+  height: u32,
+}
+
+@group(0) @binding(0) var<uniform> canvas_props: CanvasProps;
+
+@compute @workgroup_size(1, 1)
+fn main(@builtin(global_invocation_id) globalInvocationId: vec3u) {
+  let x = globalInvocationId.x;
+  let y = globalInvocationId.y;
+  let idx = x + y * canvas_props.width;
+
+  // do something with 'idx'
+}
+```

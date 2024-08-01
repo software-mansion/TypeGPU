@@ -52,6 +52,10 @@ export default defineConfig({
               slug: 'guides/getting-started',
             },
             {
+              label: 'Basic Principles',
+              slug: 'guides/basic-principles',
+            },
+            {
               label: 'State Management',
               slug: 'guides/state-management',
             },

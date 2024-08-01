@@ -9,32 +9,30 @@
 import { addElement } from '@typegpu/example-toolkit';
 // --
 
-import wgsl from 'typegpu';
-import { f32 } from 'typegpu/data';
-import { createRuntime } from 'typegpu/web';
+import { createRuntime, wgsl } from 'typegpu';
+import { u32 } from 'typegpu/data';
 
-const countBuffer = wgsl.buffer(f32).$allowMutableStorage();
-const countData = countBuffer.asStorage();
-
-const table = await addElement('table');
-table.setMatrix([[0]]);
+const counterBuffer = wgsl
+  .buffer(u32, 0)
+  .$name('counter')
+  .$allowMutableStorage();
 
 const runtime = await createRuntime();
 const pipeline = runtime.makeComputePipeline({
-  args: [],
-  workgroupSize: [1, 1],
-  code: wgsl`
-    ${countData} = ${countData} + 1;
-  `,
+  code: wgsl`${counterBuffer.asMutableStorage()} += 1;`,
 });
 
 async function increment() {
-  pipeline.execute({ workgroups: [1, 1] });
-  runtime.flush();
-  table.setMatrix([[await runtime.readBuffer(countBuffer)]]);
+  pipeline.execute();
+  table.setMatrix([[await runtime.readBuffer(counterBuffer)]]);
 }
 
 addElement('button', {
   label: 'Increment',
   onClick: increment,
 });
+
+const table = await addElement('table', {
+  label: 'I am incremented on the GPU!',
+});
+table.setMatrix([[0]]);
