@@ -1,4 +1,9 @@
-import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
+import type {
+  InlineResolve,
+  ResolutionCtx,
+  Wgsl,
+  WgslResolvable,
+} from './types';
 import { code } from './wgslCode';
 
 // ----------
@@ -7,8 +12,12 @@ import { code } from './wgslCode';
 
 export interface WgslDeclare extends WgslResolvable {}
 
-export const declare = (declaration: Wgsl): WgslDeclare =>
-  new WgslDeclareImpl(declaration);
+export function declare(
+  strings: TemplateStringsArray,
+  ...params: (Wgsl | Wgsl[] | InlineResolve)[]
+): WgslDeclare {
+  return new WgslDeclareImpl(code(strings, ...params));
+}
 
 // --------------
 // Implementation
