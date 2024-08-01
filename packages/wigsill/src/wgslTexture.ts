@@ -17,6 +17,7 @@ import { isSampler } from './wgslSampler';
 export interface WgslAnyTextureView {
   readonly descriptor: GPUTextureViewDescriptor;
   readonly texture: WgslAnyTexture;
+  readonly access: StorageTextureAccess | undefined;
 }
 
 export interface WgslAnyTexture {

@@ -16,6 +16,7 @@ import { getBuiltinInfo, getUsedBuiltinsNamed } from './wgslBuiltin';
 import { type WgslCode, code } from './wgslCode';
 import type { WgslSampler } from './wgslSampler';
 import {
+  type WgslAnyTextureView,
   type WgslTextureExternal,
   type WgslTextureView,
   isExternalTexture,
@@ -70,31 +71,39 @@ export default class ProgramBuilder {
       isExternalTexture(resource),
     );
     const allEntries: GPUBindGroupLayoutEntry[] = [];
-    let idx = 0;
-    for (const _ of usedTextures) {
-      allEntries.push({
-        binding: idx++,
-        visibility: options.shaderStage,
-        texture: {},
-      });
+    for (const texture of usedTextures) {
+      const textureView = texture as unknown as WgslAnyTextureView;
+      if (textureView.access === undefined) {
+        allEntries.push({
+          binding: ctx.getIndexFor(texture),
+          visibility: options.shaderStage,
+          texture: {},
+        });
+      } else {
+        allEntries.push({
+          binding: ctx.getIndexFor(texture),
+          visibility: options.shaderStage,
+          storageTexture: { format: textureView.texture.descriptor.format },
+        });
+      }
     }
-    for (const _ of usedExternalTextures) {
+    for (const external of usedExternalTextures) {
       allEntries.push({
-        binding: idx++,
+        binding: ctx.getIndexFor(external),
         visibility: options.shaderStage,
         externalTexture: {},
       });
     }
-    for (const _ of usedSamplers) {
+    for (const sampler of usedSamplers) {
       allEntries.push({
-        binding: idx++,
+        binding: ctx.getIndexFor(sampler),
         visibility: options.shaderStage,
         sampler: {},
       });
     }
     for (const bindable of usedBindables) {
       allEntries.push({
-        binding: idx++,
+        binding: ctx.getIndexFor(bindable),
         visibility: options.shaderStage,
         buffer: {
           type:
@@ -110,10 +119,9 @@ export default class ProgramBuilder {
     });
 
     const allBindGroupEntries: GPUBindGroupEntry[] = [];
-    idx = 0;
     for (const texture of usedTextures) {
       allBindGroupEntries.push({
-        binding: idx++,
+        binding: ctx.getIndexFor(texture),
         resource: this.runtime.viewFor(
           texture as WgslTextureView<
             AnyWgslPrimitive | AnyWgslTexelFormat,
@@ -124,7 +132,7 @@ export default class ProgramBuilder {
     }
     for (const externalTexture of usedExternalTextures) {
       allBindGroupEntries.push({
-        binding: idx++,
+        binding: ctx.getIndexFor(externalTexture),
         resource: this.runtime.externalTextureFor(
           externalTexture as WgslTextureExternal,
         ),
@@ -132,13 +140,13 @@ export default class ProgramBuilder {
     }
     for (const sampler of usedSamplers) {
       allBindGroupEntries.push({
-        binding: idx++,
+        binding: ctx.getIndexFor(sampler),
         resource: this.runtime.samplerFor(sampler as WgslSampler),
       });
     }
     for (const bindable of usedBindables) {
       allBindGroupEntries.push({
-        binding: idx++,
+        binding: ctx.getIndexFor(bindable),
         resource: {
           buffer: this.runtime.bufferFor(bindable.allocatable),
         },
@@ -149,6 +157,10 @@ export default class ProgramBuilder {
       layout: bindGroupLayout,
       entries: allBindGroupEntries,
     });
+
+    console.log('code', codeString);
+    console.log('bindGroupLayout', allEntries);
+    console.log('bindGroup', allBindGroupEntries);
 
     return {
       bindGroupLayout,

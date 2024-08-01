@@ -49,6 +49,10 @@ class SharedResolutionState {
   private readonly _usedRenderResources = new Set<
     WgslRenderResource<WgslRenderResourceType>
   >();
+  private readonly _resourceToIndexMap = new WeakMap<
+    WgslRenderResource<WgslRenderResourceType> | WgslBindable,
+    number
+  >();
   private readonly _declarations: string[] = [];
 
   constructor(
@@ -108,16 +112,26 @@ class SharedResolutionState {
 
   reserveBindingEntry(_bindable: WgslBindable) {
     this._usedBindables.add(_bindable);
+    const nextIdx = this._nextFreeBindingIdx++;
+    this._resourceToIndexMap.set(_bindable, nextIdx);
 
-    return { group: this._bindingGroup, idx: this._nextFreeBindingIdx++ };
+    return { group: this._bindingGroup, idx: nextIdx };
   }
 
   reserveRenderResourceEntry(
     _resource: WgslRenderResource<WgslRenderResourceType>,
   ) {
     this._usedRenderResources.add(_resource);
+    const nextIdx = this._nextFreeBindingIdx++;
+    this._resourceToIndexMap.set(_resource, nextIdx);
 
-    return { group: this._bindingGroup, idx: this._nextFreeBindingIdx++ };
+    return { group: this._bindingGroup, idx: nextIdx };
+  }
+
+  getBindingIndex(
+    resource: WgslRenderResource<WgslRenderResourceType> | WgslBindable,
+  ) {
+    return this._resourceToIndexMap.get(resource);
   }
 
   addDeclaration(declaration: string) {
@@ -188,6 +202,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     return `${[...this._shared.declarations].join('\n\n')}${result}`;
   }
+
+  getIndexFor(item: WgslBindable | WgslRenderResource<WgslRenderResourceType>) {
+    const index = this._shared.getBindingIndex(item);
+    if (index === undefined) {
+      throw new Error('No index found for item');
+    }
+    return index;
+  }
 }
 
 class ScopedResolutionCtx implements ResolutionCtx {
@@ -237,10 +259,12 @@ class ScopedResolutionCtx implements ResolutionCtx {
         this.addDeclaration(
           code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.texture.descriptor.format}, ${resource.access}>;`,
         );
+        return;
       }
       this.addDeclaration(
         code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.dataType}>;`,
       );
+      return;
     }
 
     throw new Error(`Unsupported resource type: ${resource.type}`);

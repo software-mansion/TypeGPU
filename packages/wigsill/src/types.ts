@@ -154,12 +154,12 @@ export type StorageTextureAccess = 'read' | 'write' | 'read_write';
 export type StorageTextureParams = {
   type: WgslStorageTextureType;
   access: StorageTextureAccess;
-  descriptor: GPUTextureViewDescriptor | undefined;
+  descriptor?: GPUTextureViewDescriptor;
 };
 export type SampledTextureParams = {
   type: WgslTypedTextureType;
   dataType: AnyWgslPrimitive;
-  descriptor: GPUTextureViewDescriptor | undefined;
+  descriptor?: GPUTextureViewDescriptor;
 };
 
 export function isSamplerType(
