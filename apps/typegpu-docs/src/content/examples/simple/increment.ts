@@ -17,9 +17,6 @@ const counterBuffer = wgsl
   .$name('counter')
   .$allowMutableStorage();
 
-const table = await addElement('table');
-table.setMatrix([[0]]);
-
 const runtime = await createRuntime();
 const pipeline = runtime.makeComputePipeline({
   code: wgsl`${counterBuffer.asMutableStorage()} += 1;`,
@@ -34,3 +31,8 @@ addElement('button', {
   label: 'Increment',
   onClick: increment,
 });
+
+const table = await addElement('table', {
+  label: 'I am incremented on the GPU!',
+});
+table.setMatrix([[0]]);
