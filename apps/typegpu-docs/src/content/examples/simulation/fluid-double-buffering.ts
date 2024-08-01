@@ -68,19 +68,19 @@ const MAX_GRID_SIZE = 1024;
 
 const randSeed = wgsl.var(vec2f).$name('rand_seed');
 
-const setupRandomSeed = wgsl.fn('setup_random_seed')`(coord: vec2f) {
+const setupRandomSeed = wgsl.fn`(coord: vec2f) {
   ${randSeed} = coord;
-}`;
+}`.$name('setup_random_seed');
 
 /**
  * Yoinked from https://www.cg.tuwien.ac.at/research/publications/2023/PETER-2023-PSW/PETER-2023-PSW-.pdf
  * "Particle System in WebGPU" by Benedikt Peter
  */
-const rand01 = wgsl.fn('rand01')`() -> f32 {
+const rand01 = wgsl.fn`() -> f32 {
   ${randSeed}.x = fract(cos(dot(${randSeed}, vec2<f32>(23.14077926, 232.61690225))) * 136.8168);
   ${randSeed}.y = fract(cos(dot(${randSeed}, vec2<f32>(54.47856553, 345.84153136))) * 534.7645);
   return ${randSeed}.y;
-}`;
+}`.$name('rand01');
 
 type GridData = typeof GridData;
 /**
