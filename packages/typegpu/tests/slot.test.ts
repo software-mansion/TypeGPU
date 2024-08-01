@@ -28,9 +28,9 @@ describe('wgsl.slot', () => {
   it('resolves to provided value rather than default value', () => {
     const colorSlot = wgsl.slot(RED).$name('color'); // red by default
 
-    const getColor = wgsl.fn('get_color')`() {
+    const getColor = wgsl.fn`() {
       return ${colorSlot};
-    }`;
+    }`.$name('get_color');
 
     // overriding to green
     const getColorWithGreen = getColor.with(colorSlot, GREEN);
@@ -57,9 +57,9 @@ describe('wgsl.slot', () => {
   it('resolves to provided value', () => {
     const colorSlot = wgsl.slot<string>().$name('color'); // no default
 
-    const getColor = wgsl.fn('get_color')`() {
+    const getColor = wgsl.fn`() {
       return ${colorSlot};
-    }`;
+    }`.$name('get_color');
 
     // overriding to green
     const getColorWithGreen = getColor.with(colorSlot, 'vec3f(0., 1., 0.)');
@@ -101,16 +101,18 @@ describe('wgsl.slot', () => {
   it('prefers closer scope', () => {
     const colorSlot = wgsl.slot().$name('color'); // no default
 
-    const getColor = wgsl.fn('get_color')`() {
+    const getColor = wgsl.fn`() {
       return ${colorSlot};
-    }`;
+    }`.$name('get_color');
 
     const getColorWithRed = getColor.with(colorSlot, RED);
     const getColorWithGreen = getColor.with(colorSlot, GREEN);
 
-    const wrapperFn = wgsl.fn('wrapper')`() {
+    const wrapperFn = wgsl.fn`() {
       return ${getColorWithGreen}();
-    }`.with(colorSlot, RED);
+    }`
+      .$name('wrapper')
+      .with(colorSlot, RED);
 
     const actual = wgsl`
       fn main() {
@@ -145,22 +147,22 @@ describe('wgsl.slot', () => {
     const sizeSlot = wgsl.slot<1 | 100>().$name('size');
     const colorSlot = wgsl.slot<typeof RED | typeof GREEN>().$name('color');
 
-    const sizeFn = wgsl.fn('get_size')`() {
+    const sizeFn = wgsl.fn`() {
       return ${sizeSlot};
-    }`;
+    }`.$name('get_size');
 
-    const colorFn = wgsl.fn('get_color')`() {
+    const colorFn = wgsl.fn`() {
       return ${colorSlot};
-    }`;
+    }`.$name('get_color');
 
-    const sizeAndColorFn = wgsl.fn('size_and_color')`() {
+    const sizeAndColorFn = wgsl.fn`() {
       ${sizeFn}();
       ${colorFn}();
-    }`;
+    }`.$name('size_and_color');
 
-    const wrapperFn = wgsl.fn('wrapper')`() {
+    const wrapperFn = wgsl.fn`() {
       ${sizeAndColorFn}();
-    }`;
+    }`.$name('wrapper');
 
     const wrapperWithSmallRed = wrapperFn
       .with(sizeSlot, 1)
@@ -254,10 +256,10 @@ describe('wgsl.slot', () => {
     const slotC = wgsl.slot<number>(3).$name('c');
     const slotD = wgsl.slot<number>(4).$name('d');
 
-    const fn1 = wgsl.fn()`() { let value = ${slotA}; }`.$name('fn1');
-    const fn2 = wgsl.fn()`() { ${fn1}(); }`.$name('fn2').with(slotC, slotD);
-    const fn3 = wgsl.fn()`() { ${fn2}(); }`.$name('fn3').with(slotB, slotC);
-    const fn4 = wgsl.fn()`() { ${fn3}(); }`.$name('fn4').with(slotA, slotB);
+    const fn1 = wgsl.fn`() { let value = ${slotA}; }`.$name('fn1');
+    const fn2 = wgsl.fn`() { ${fn1}(); }`.$name('fn2').with(slotC, slotD);
+    const fn3 = wgsl.fn`() { ${fn2}(); }`.$name('fn3').with(slotB, slotC);
+    const fn4 = wgsl.fn`() { ${fn3}(); }`.$name('fn4').with(slotA, slotB);
 
     const actual = wgsl`fn main() { ${fn4}(); }`;
 

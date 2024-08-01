@@ -6,6 +6,60 @@ description: A guide on how to start using the TypeGPU library.
 **TypeGPU** introduces an alternative API for WebGPU, one that aims to be type-safe and modular, but
 under the hood is still WebGPU.
 
+The `wgsl` tagged function, and functions attached to it (`wgsl.fn`, `wgsl.var`, etc.) create descriptions
+of WebGPU resources.
+```ts
+import { wgsl } from 'typegpu';
+
+const snippet = wgsl`1 + 5`; // a piece of code
+const variable = wgsl.var(u32, snippet); // a variable of type u32 set to `1 + 5`
+const buffer = wgsl.buffer(f32, 3.14).$allowUniform(); // a uniform buffer
+```
+
+Functions and code snippets can declare their dependencies by just using other resources.
+
+```ts
+// execute.ts
+
+const executionsVar = wgsl.var(u32, 0);
+
+// using `executeFn` in a program will automatically
+// declare `executionsVar`.
+export const executeFn = wgsl.fn`() {
+  // We are in WGSL land, this runs on the GPU.
+  ${executionsVar}++;
+}`;
+
+export const getExecutionsFn = wgsl.fn`() -> u32 {
+  return ${executionsVar};
+}`
+```
+
+Only those resources that are used by our minimal runtime get defined in the WGSL code
+sent to the GPU.
+
+```ts
+import { createRuntime } from 'typegpu';
+import { executeFn, getExecutionsFn } from './execute';
+
+const runtime = await createRuntime();
+
+// Because we used `executeFn`, a variable that
+// matches what is described by `executionsVar` will
+// be generated.
+const pipeline = runtime.makeComputePipeline({
+  code: wgsl`
+    ${executeFn}();
+    ${executeFn}();
+    ${executeFn}();
+    // 'count' should be equal to 3
+    let count = ${getExecutionsFn}();
+  `,
+});
+
+pipeline.execute();
+```
+
 ## Running a compute shader
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
@@ -13,15 +67,27 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 <Tabs>
   <TabItem label="TypeGPU">
     ```ts
-    import { createRuntime, wgsl } from 'typegpu';
+    // counter.ts
+
+    import { wgsl } from 'typegpu';
     import { u32 } from 'typegpu/data';
 
-    // Declaring a buffer of type `u32` which can be
-    // bound as mutable storage. Its initial value is 0.
-    const counterBuffer = wgsl
-      .buffer(u32, 0)
-      .$name('counter')
-      .$allowMutableStorage();
+    /**
+     * Description of a buffer. An actual GPUBuffer will be created
+     * ONLY when used by the runtime.
+     */
+    export const counterBuffer = wgsl
+      // `u32` describes the type and size of the buffer.
+      .buffer(u32, 0) // `0` is a valid because it matches the `u32` type.
+      .$name('counter') // helps when generating WGSL, used in debugging
+      .$allowMutableStorage(); // can be bound as mutable storage
+
+    ```
+
+    ```ts
+    // main.ts
+    import { createRuntime, wgsl } from 'typegpu';
+    import { counterBuffer } from './counter';
 
     // All buffers are allocated on the `runtime` object,
     // and cleaned up when calling `runtime.dispose()`
