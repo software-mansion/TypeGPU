@@ -545,7 +545,6 @@ function makePipelines(
     .with(outputGridSlot, inputGridBuffer.asStorage());
 
   const initWorldPipeline = runtime.makeComputePipeline({
-    workgroupSize: [1, 1],
     code: wgsl`
       ${initWorldFn}(i32(${builtin.globalInvocationId}.x), i32(${builtin.globalInvocationId}.y));
     `,
@@ -569,7 +568,6 @@ function makePipelines(
     .with(outputGridSlot, inputGridBuffer.asStorage());
 
   const moveObstaclesPipeline = runtime.makeComputePipeline({
-    workgroupSize: [1, 1],
     code: wgsl`
       ${moveObstaclesFn}();
     `,

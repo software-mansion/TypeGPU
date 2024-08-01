@@ -18,7 +18,6 @@ const countData = countBuffer.asStorage();
 
 const runtime = await createRuntime();
 const pipeline = runtime.makeComputePipeline({
-  workgroupSize: [1, 1],
   code: wgsl`
     ${countData} = ${countData} + 1;
   `,

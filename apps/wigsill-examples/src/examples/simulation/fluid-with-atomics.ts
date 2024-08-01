@@ -325,7 +325,7 @@ function resetGameData() {
   drawCanvasData = new Uint32Array(options.size * options.size);
 
   const computePipeline = runtime.makeComputePipeline({
-    workgroupSize: [options.workgroupSize, options.workgroupSize, 1],
+    workgroupSize: [options.workgroupSize, options.workgroupSize],
     code: computeWGSL,
   });
 
