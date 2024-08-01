@@ -251,12 +251,12 @@ const renderPipeline = runtime.makeRenderPipeline({
       ray.direction = normalize(ray.direction);
 
       let bigBoxIntersection = ${getBoxIntersectionFn}(
-        vec3f(0), 
+        -vec3f(f32(${boxSizeData}))/2, 
         vec3f(
           ${cubeSize[0]}, 
           ${cubeSize[1]}, 
           ${cubeSize[2]},
-        ), 
+        ) + vec3f(f32(${boxSizeData}))/2, 
         ray,
       );
 
