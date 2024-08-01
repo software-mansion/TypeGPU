@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { MissingSlotValueError, StrictNameRegistry, wgsl } from '../src';
+import {
+  MissingSlotValueError,
+  ResolutionError,
+  StrictNameRegistry,
+  wgsl,
+} from '../src';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
 import { parseWGSL } from './utils/parseWGSL';
 
@@ -91,10 +96,13 @@ describe('wgsl.slot', () => {
     fn get_color() {
       return ${colorSlot};
     }
-    `;
+    `.$name('root');
 
     expect(() => ctx.resolve(shader)).toThrowError(
-      new MissingSlotValueError(colorSlot),
+      new ResolutionError(new MissingSlotValueError(colorSlot), [
+        shader,
+        colorSlot,
+      ]),
     );
   });
 

@@ -3,7 +3,6 @@ import type { WgslStruct } from './data';
 import type { WgslSettable } from './settableTrait';
 import type { AnyWgslData } from './types';
 import type { Wgsl, WgslAllocatable } from './types';
-import type { WgslCode } from './wgslCode';
 import type { ExtractPlumValue, Unsubscribe, WgslPlum } from './wgslPlum';
 
 // ----------
@@ -55,13 +54,13 @@ export interface TypeGpuRuntime {
 export interface RenderPipelineOptions {
   vertex: {
     args: Wgsl[];
-    code: WgslCode;
+    code: Wgsl;
     output: WgslStruct<Record<string, AnyWgslData>>;
     buffersLayouts?: Iterable<GPUVertexBufferLayout | null>;
   };
   fragment: {
     args: Wgsl[];
-    code: WgslCode;
+    code: Wgsl;
     output: Wgsl;
     target: Iterable<GPUColorTargetState | null>;
   };
@@ -72,9 +71,9 @@ export interface RenderPipelineOptions {
 }
 
 export interface ComputePipelineOptions {
-  workgroupSize?: [number, number?, number?];
+  workgroupSize?: readonly [number, number?, number?];
   args?: Wgsl[];
-  code: WgslCode;
+  code: Wgsl;
   externalLayouts?: GPUBindGroupLayout[];
   externalDeclarations?: Wgsl[];
   label?: string;
@@ -94,7 +93,7 @@ export interface RenderPipelineExecutor {
 }
 
 export type ComputePipelineExecutorOptions = {
-  workgroups?: [number, number?, number?];
+  workgroups?: readonly [number, number?, number?];
   externalBindGroups?: GPUBindGroup[];
 };
 

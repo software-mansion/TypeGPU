@@ -1,8 +1,11 @@
 import {
+  type Eventual,
   type InlineResolve,
   type ResolutionCtx,
+  type SlotValuePair,
   type Wgsl,
   type WgslResolvable,
+  type WgslSlot,
   isResolvable,
 } from './types';
 
@@ -12,7 +15,11 @@ import {
 
 export interface WgslCode extends WgslResolvable {
   $name(label?: string | undefined): WgslCode;
+
+  with<T>(slot: WgslSlot<T>, value: Eventual<T>): BoundWgslCode;
 }
+
+export type BoundWgslCode = Omit<WgslCode, '$name'>;
 
 export function code(
   strings: TemplateStringsArray,
@@ -65,7 +72,35 @@ class WgslCodeImpl implements WgslCode {
     return code;
   }
 
+  with<TValue>(slot: WgslSlot<TValue>, value: Eventual<TValue>): BoundWgslCode {
+    return new BoundWgslCodeImpl(this, [slot, value]);
+  }
+
   toString(): string {
     return `code:${this._label ?? '<unnamed>'}`;
+  }
+}
+
+class BoundWgslCodeImpl<T> implements BoundWgslCode {
+  constructor(
+    private readonly _innerFn: BoundWgslCode,
+    private readonly _slotValuePair: SlotValuePair<T>,
+  ) {}
+
+  get label() {
+    return this._innerFn.label;
+  }
+
+  with<TValue>(slot: WgslSlot<TValue>, value: Eventual<TValue>): BoundWgslCode {
+    return new BoundWgslCodeImpl(this, [slot, value]);
+  }
+
+  resolve(ctx: ResolutionCtx): string {
+    return ctx.resolve(this._innerFn, [this._slotValuePair]);
+  }
+
+  toString(): string {
+    const [slot, value] = this._slotValuePair;
+    return `code:${this.label ?? '<unnamed>'}[${slot.label ?? '<unnamed>'}=${value}]`;
   }
 }
