@@ -158,10 +158,6 @@ export default class ProgramBuilder {
       entries: allBindGroupEntries,
     });
 
-    console.log('code', codeString);
-    console.log('bindGroupLayout', allEntries);
-    console.log('bindGroup', allBindGroupEntries);
-
     return {
       bindGroupLayout,
       bindGroup,
