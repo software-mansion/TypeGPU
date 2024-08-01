@@ -8,6 +8,7 @@ import { WgslIdentifier } from './wgslIdentifier';
 
 export interface WgslSampler extends WgslRenderResource<WgslSamplerType> {
   readonly descriptor: GPUSamplerDescriptor;
+  $name(label: string): WgslSampler;
 }
 
 export function sampler(descriptor: GPUSamplerDescriptor): WgslSampler {
@@ -37,7 +38,7 @@ class WgslSamplerImpl implements WgslSampler {
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier();
+    const identifier = new WgslIdentifier().$name(this._label);
 
     ctx.addRenderResource(this, identifier);
 

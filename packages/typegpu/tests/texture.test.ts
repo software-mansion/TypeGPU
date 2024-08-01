@@ -147,3 +147,21 @@ describe('texture', () => {
     expect(resolutionCtx.resolve(code)).toContain('texture_external');
   });
 });
+
+describe('sampler', () => {
+  it('creates a sampler with correct type', () => {
+    const sampler = wgsl.sampler({}).$name('sampler');
+
+    const resolutionCtx = new ResolutionCtxImpl({
+      names: new StrictNameRegistry(),
+    });
+
+    console.log(sampler);
+
+    const code = wgsl`
+      let x = ${sampler};
+    `;
+
+    expect(resolutionCtx.resolve(code)).toContain('var sampler: sampler');
+  });
+});
