@@ -245,7 +245,7 @@ export class RenderProgramBuilder {
     );
     const vertexBuiltinsArgs = vertexBuiltins.map(
       (builtin) => code`
-      @builtin(${builtin.name}) ${builtin.name}: ${builtin.type},
+      @builtin(${builtin.name}) ${builtin.identifier}: ${builtin.type},
     `,
     );
     const vertexArgs = [...vertexBuiltinsArgs, ...vertexUserArgs];
@@ -285,7 +285,7 @@ export class RenderProgramBuilder {
       .map((builtin) => getBuiltinInfo(builtin));
     const fragmentBuiltinArgs = fragmentUsedBuiltins.map(
       (builtin) => code`
-      @builtin(${builtin.name}) ${builtin.name}: ${builtin.type},
+      @builtin(${builtin.name}) ${builtin.identifier}: ${builtin.type},
     `,
     );
 
@@ -339,7 +339,7 @@ export class ComputeProgramBuilder {
       .map((builtin) => getBuiltinInfo(builtin));
     const builtinArgs = usedBuiltins.map(
       (builtin) => code`
-      @builtin(${builtin.name}) ${builtin.name}: ${builtin.type},
+      @builtin(${builtin.name}) ${builtin.identifier}: ${builtin.type},
     `,
     );
 

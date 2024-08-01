@@ -66,7 +66,7 @@ class WgslCodeImpl implements WgslCode {
         code += ctx.resolve(s);
       } else if (typeof s === 'symbol') {
         const builtin = getBuiltinInfo(s);
-        code += builtin.name;
+        code += ctx.resolve(builtin.identifier);
       } else {
         code += String(s);
       }
