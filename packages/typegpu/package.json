@@ -1,11 +1,11 @@
 {
   "name": "typegpu",
-  "version": "0.0.0-alpha.1",
+  "version": "0.0.0-alpha.2",
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
-  "types": "./index.d.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
     "./package.json": "./package.json",
     ".": {
@@ -15,7 +15,7 @@
       "default": "./dist/index.cjs"
     },
     "./*": {
-      "types": "./*.d.ts",
+      "types": "./dist/*.d.ts",
       "module": "./dist/*.js",
       "import": "./dist/*.js",
       "default": "./dist/*.cjs"
