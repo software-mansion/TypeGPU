@@ -72,8 +72,8 @@ export interface RenderPipelineOptions {
 }
 
 export interface ComputePipelineOptions {
-  workgroupSize: [number, number?, number?];
-  args: Wgsl[];
+  workgroupSize?: [number, number?, number?];
+  args?: Wgsl[];
   code: WgslCode;
   externalLayouts?: GPUBindGroupLayout[];
   externalDeclarations?: Wgsl[];
@@ -94,10 +94,10 @@ export interface RenderPipelineExecutor {
 }
 
 export type ComputePipelineExecutorOptions = {
-  workgroups: [number, number?, number?];
+  workgroups?: [number, number?, number?];
   externalBindGroups?: GPUBindGroup[];
 };
 
 export interface ComputePipelineExecutor {
-  execute(options: ComputePipelineExecutorOptions): void;
+  execute(options?: ComputePipelineExecutorOptions): void;
 }

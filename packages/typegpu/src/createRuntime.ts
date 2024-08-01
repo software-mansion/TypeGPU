@@ -1,30 +1,30 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
-import { roundUp } from '../mathUtils';
-import { PlumStore } from '../plumStore';
-import ProgramBuilder, { type Program } from '../programBuilder';
-import type { WgslSettable } from '../settableTrait';
-import { TaskQueue } from '../taskQueue';
+import { roundUp } from './mathUtils';
+import { PlumStore } from './plumStore';
+import ProgramBuilder, { type Program } from './programBuilder';
+import type { WgslSettable } from './settableTrait';
+import { TaskQueue } from './taskQueue';
 import type {
   ComputePipelineExecutorOptions,
   ComputePipelineOptions,
   RenderPipelineExecutorOptions,
   RenderPipelineOptions,
   TypeGpuRuntime,
-} from '../typegpuRuntime';
-import type { AnyWgslData, WgslAllocatable } from '../types';
-import { code } from '../wgslCode';
+} from './typegpuRuntime';
+import type { AnyWgslData, WgslAllocatable } from './types';
+import { code } from './wgslCode';
 import {
   type ExtractPlumValue,
   type Unsubscribe,
   type WgslPlum,
   isPlum,
-} from '../wgslPlum';
+} from './wgslPlum';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a runtime can interact via GPU buffers.
  */
-class WebWigsillRuntime {
+class TypeGpuRuntimeImpl {
   private _entryToBufferMap = new Map<WgslAllocatable, GPUBuffer>();
   private _pipelineExecutors: PipelineExecutor<
     GPURenderPipeline | GPUComputePipeline
@@ -113,6 +113,9 @@ class WebWigsillRuntime {
     allocatable: WgslAllocatable<TData>,
   ): Promise<Parsed<TData>> {
     return this._taskQueue.enqueue(async () => {
+      // Flushing any commands to be encoded.
+      this.flush();
+
       if (
         !this._readBuffer ||
         this._readBuffer.size < allocatable.dataType.size
@@ -135,6 +138,7 @@ class WebWigsillRuntime {
         0,
         allocatable.dataType.size,
       );
+
       this.device.queue.submit([commandEncoder.finish()]);
       await this.device.queue.onSubmittedWorkDone();
       await this._readBuffer.mapAsync(
@@ -142,10 +146,9 @@ class WebWigsillRuntime {
         0,
         allocatable.dataType.size,
       );
-      const mappedBuffer = this._readBuffer.getMappedRange().slice(0);
 
       const res = allocatable.dataType.read(
-        new BufferReader(mappedBuffer),
+        new BufferReader(this._readBuffer.getMappedRange()),
       ) as Parsed<TData>;
 
       this._readBuffer.unmap();
@@ -262,10 +265,12 @@ class WebWigsillRuntime {
   makeComputePipeline(
     options: ComputePipelineOptions,
   ): ComputePipelineExecutor {
+    const { args = [], workgroupSize = [1, 1] } = options;
+
     const program = new ProgramBuilder(
       this,
       code`
-        @compute @workgroup_size(${options.workgroupSize.join(', ')}) fn main_compute(${options.args.flatMap((arg) => [arg, ', '])}) {
+        @compute @workgroup_size(${workgroupSize.join(', ')}) fn main_compute(${args.flatMap((arg) => [arg, ', '])}) {
           ${options.code}
         }
 
@@ -371,8 +376,8 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
 }
 
 class ComputePipelineExecutor extends PipelineExecutor<GPUComputePipeline> {
-  execute(options: ComputePipelineExecutorOptions) {
-    const { workgroups, externalBindGroups } = options;
+  execute(options?: ComputePipelineExecutorOptions) {
+    const { workgroups = [1, 1], externalBindGroups } = options ?? {};
 
     if ((externalBindGroups?.length ?? 0) !== this.externalLayoutCount) {
       throw new Error(
@@ -437,7 +442,7 @@ export async function createRuntime(
   options?: CreateRuntimeOptions | GPUDevice,
 ): Promise<TypeGpuRuntime> {
   if (options instanceof GPUDevice) {
-    return new WebWigsillRuntime(options);
+    return new TypeGpuRuntimeImpl(options);
   }
 
   if (!navigator.gpu) {
@@ -450,5 +455,5 @@ export async function createRuntime(
     throw new Error('Could not find a compatible GPU');
   }
 
-  return new WebWigsillRuntime(await adapter.requestDevice(options?.device));
+  return new TypeGpuRuntimeImpl(await adapter.requestDevice(options?.device));
 }
