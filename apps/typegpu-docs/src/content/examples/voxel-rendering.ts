@@ -9,9 +9,8 @@
 import { addElement, addSliderParam, onFrame } from '@typegpu/example-toolkit';
 // --
 
-import wgsl, { builtin } from 'typegpu';
+import { builtin, createRuntime, wgsl } from 'typegpu';
 import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'typegpu/data';
-import { createRuntime } from 'typegpu/web';
 
 const X = 10;
 const Y = 11;

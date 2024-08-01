@@ -1,41 +1,41 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
-import type { SimpleWgslData } from '../data';
-import { roundUp } from '../mathUtils';
-import { PlumStore } from '../plumStore';
+import type { SimpleWgslData } from './data';
+import { roundUp } from './mathUtils';
+import { PlumStore } from './plumStore';
 import {
   ComputeProgramBuilder,
   type Program,
   RenderProgramBuilder,
-} from '../programBuilder';
-import type { WgslSettable } from '../settableTrait';
-import { TaskQueue } from '../taskQueue';
+} from './programBuilder';
+import type { WgslSettable } from './settableTrait';
+import { TaskQueue } from './taskQueue';
 import type {
   ComputePipelineExecutorOptions,
   ComputePipelineOptions,
   RenderPipelineExecutorOptions,
   RenderPipelineOptions,
   TypeGpuRuntime,
-} from '../typegpuRuntime';
-import { deriveVertexFormat } from '../typegpuRuntime';
-import type { AnyWgslData, WgslAllocatable } from '../types';
+} from './typegpuRuntime';
+import { deriveVertexFormat } from './typegpuRuntime';
+import type { AnyWgslData, WgslAllocatable } from './types';
 import {
   type ExtractPlumValue,
   type Unsubscribe,
   type WgslPlum,
   isPlum,
-} from '../wgslPlum';
-import type { WgslSampler } from '../wgslSampler';
+} from './wgslPlum';
+import type { WgslSampler } from './wgslSampler';
 import type {
   WgslAnyTexture,
   WgslAnyTextureView,
   WgslTextureExternal,
-} from '../wgslTexture';
+} from './wgslTexture';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a runtime can interact via GPU buffers.
  */
-class WebWigsillRuntime {
+class TypeGpuRuntimeImpl {
   private _entryToBufferMap = new Map<WgslAllocatable, GPUBuffer>();
   private _samplers = new WeakMap<WgslSampler, GPUSampler>();
   private _textures = new WeakMap<WgslAnyTexture, GPUTexture>();
@@ -180,6 +180,9 @@ class WebWigsillRuntime {
     allocatable: WgslAllocatable<TData>,
   ): Promise<Parsed<TData>> {
     return this._taskQueue.enqueue(async () => {
+      // Flushing any commands to be encoded.
+      this.flush();
+
       if (
         !this._readBuffer ||
         this._readBuffer.size < allocatable.dataType.size
@@ -202,6 +205,7 @@ class WebWigsillRuntime {
         0,
         allocatable.dataType.size,
       );
+
       this.device.queue.submit([commandEncoder.finish()]);
       await this.device.queue.onSubmittedWorkDone();
       await this._readBuffer.mapAsync(
@@ -209,10 +213,9 @@ class WebWigsillRuntime {
         0,
         allocatable.dataType.size,
       );
-      const mappedBuffer = this._readBuffer.getMappedRange().slice(0);
 
       const res = allocatable.dataType.read(
-        new BufferReader(mappedBuffer),
+        new BufferReader(this._readBuffer.getMappedRange()),
       ) as Parsed<TData>;
 
       this._readBuffer.unmap();
@@ -462,8 +465,8 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
 }
 
 class ComputePipelineExecutor extends PipelineExecutor<GPUComputePipeline> {
-  execute(options: ComputePipelineExecutorOptions) {
-    const { workgroups, externalBindGroups } = options;
+  execute(options?: ComputePipelineExecutorOptions) {
+    const { workgroups = [1, 1], externalBindGroups } = options ?? {};
 
     if ((externalBindGroups?.length ?? 0) !== this.externalLayoutCount) {
       throw new Error(
@@ -528,7 +531,7 @@ export async function createRuntime(
   options?: CreateRuntimeOptions | GPUDevice,
 ): Promise<TypeGpuRuntime> {
   if (options instanceof GPUDevice) {
-    return new WebWigsillRuntime(options);
+    return new TypeGpuRuntimeImpl(options);
   }
 
   if (!navigator.gpu) {
@@ -541,5 +544,5 @@ export async function createRuntime(
     throw new Error('Could not find a compatible GPU');
   }
 
-  return new WebWigsillRuntime(await adapter.requestDevice(options?.device));
+  return new TypeGpuRuntimeImpl(await adapter.requestDevice(options?.device));
 }

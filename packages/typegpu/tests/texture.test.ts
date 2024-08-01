@@ -78,7 +78,7 @@ describe('texture', () => {
       .$allowSampled();
 
     const view1 = texture.asSampled({ type: 'texture_2d', dataType: u32 });
-    const view2 = texture.asSampled({ type: 'texture_2d', dataType: u32 });
+    const view2 = texture.asSampled({ dataType: u32, type: 'texture_2d' });
 
     expect(view1).toBe(view2);
   });

@@ -9,9 +9,8 @@
 import { addElement, addParameter, onFrame } from '@typegpu/example-toolkit';
 // --
 
-import wgsl, { builtin } from 'typegpu';
+import { builtin, createRuntime, wgsl } from 'typegpu';
 import { f32, vec2f } from 'typegpu/data';
-import { createRuntime } from 'typegpu/web';
 
 // Layout
 const [video, canvas] = await Promise.all([

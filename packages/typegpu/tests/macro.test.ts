@@ -1,4 +1,4 @@
-import wgsl from 'typegpu';
+import { wgsl } from 'typegpu';
 import { repeat } from 'typegpu/macro';
 import { describe, expect, it } from 'vitest';
 import { parseWGSL } from './utils/parseWGSL';

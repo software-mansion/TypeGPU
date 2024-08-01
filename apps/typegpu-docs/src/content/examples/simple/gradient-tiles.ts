@@ -14,9 +14,8 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import wgsl, { builtin } from 'typegpu';
+import { builtin, createRuntime, wgsl } from 'typegpu';
 import { struct, u32, vec2f } from 'typegpu/data';
-import { createRuntime } from 'typegpu/web';
 
 const xSpanPlum = addSliderParam('x span', 16, { min: 1, max: 16, step: 1 });
 const ySpanPlum = addSliderParam('y span', 16, { min: 1, max: 16, step: 1 });

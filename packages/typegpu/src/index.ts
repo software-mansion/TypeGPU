@@ -10,12 +10,8 @@ export { default as ProgramBuilder, type Program } from './programBuilder';
 export { StrictNameRegistry, RandomNameRegistry } from './nameRegistry';
 export * from './wgslBuiltin';
 
-// Can import `wgsl` in two ways:
-//   import { wgsl } from 'typegpu';
-// and:
-//   import wgsl from 'typegpu';
 export { default as wgsl } from './wgsl';
-export { default } from './wgsl';
+export { createRuntime, CreateRuntimeOptions } from './createRuntime';
 
 export type { WgslBuffer } from './wgslBuffer';
 export type { WgslCode } from './wgslCode';

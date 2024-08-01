@@ -14,12 +14,14 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import wgsl, {
+import {
   type AnyWgslData,
   type Wgsl,
   type WgslBindable,
   type WgslBuffer,
   builtin,
+  createRuntime,
+  wgsl,
 } from 'typegpu';
 import {
   type Parsed,
@@ -32,7 +34,6 @@ import {
   vec2u,
   vec4f,
 } from 'typegpu/data';
-import { createRuntime } from 'typegpu/web';
 
 // type ReadableBuffer<T extends AnyWgslData> =
 //   | WgslBuffer<T, 'readonly_storage'>
@@ -541,8 +542,8 @@ function makePipelines(
   outputGridBuffer: MutableBuffer<GridData>,
 ) {
   const initWorldFn = mainInitWorld
-    .with(inputGridSlot, inputGridBuffer.asStorage())
-    .with(outputGridSlot, inputGridBuffer.asStorage());
+    .with(inputGridSlot, inputGridBuffer.asMutableStorage())
+    .with(outputGridSlot, inputGridBuffer.asMutableStorage());
 
   const initWorldPipeline = runtime.makeComputePipeline({
     code: wgsl`
@@ -552,7 +553,7 @@ function makePipelines(
 
   const mainComputeWithIO = mainCompute
     .with(inputGridSlot, inputGridBuffer.asReadonlyStorage())
-    .with(outputGridSlot, outputGridBuffer.asStorage());
+    .with(outputGridSlot, outputGridBuffer.asMutableStorage());
 
   const computeWorkgroupSize = 8;
   const computePipeline = runtime.makeComputePipeline({
@@ -563,9 +564,9 @@ function makePipelines(
   });
 
   const moveObstaclesFn = mainMoveObstacles
-    .with(inPlaceGridSlot, inputGridBuffer.asStorage())
-    .with(inputGridSlot, inputGridBuffer.asStorage())
-    .with(outputGridSlot, inputGridBuffer.asStorage());
+    .with(inPlaceGridSlot, inputGridBuffer.asMutableStorage())
+    .with(inputGridSlot, inputGridBuffer.asMutableStorage())
+    .with(outputGridSlot, inputGridBuffer.asMutableStorage());
 
   const moveObstaclesPipeline = runtime.makeComputePipeline({
     code: wgsl`

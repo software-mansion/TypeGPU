@@ -9,9 +9,8 @@
 import { addElement, addParameter } from '@typegpu/example-toolkit';
 // --
 
-import wgsl, { builtin } from 'typegpu';
+import { builtin, createRuntime, wgsl } from 'typegpu';
 import { type Parsed, dynamicArrayOf, f32, struct, vec2f } from 'typegpu/data';
-import { createRuntime } from 'typegpu/web';
 
 const runtime = await createRuntime();
 
@@ -44,7 +43,7 @@ const resultMatrixBuffer = wgsl
 
 const firstMatrixData = firstMatrixBuffer.asReadonlyStorage();
 const secondMatrixData = secondMatrixBuffer.asReadonlyStorage();
-const resultMatrixData = resultMatrixBuffer.asStorage();
+const resultMatrixData = resultMatrixBuffer.asMutableStorage();
 
 const program = runtime.makeComputePipeline({
   workgroupSize: workgroupSize,

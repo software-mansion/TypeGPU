@@ -9,9 +9,8 @@
 import { addElement, addParameter, onFrame } from '@typegpu/example-toolkit';
 // --
 
-import wgsl, { builtin } from 'typegpu';
+import { builtin, createRuntime, wgsl } from 'typegpu';
 import { arrayOf, atomic, f32, u32, vec2u } from 'typegpu/data';
-import { createRuntime } from 'typegpu/web';
 
 const runtime = await createRuntime();
 const device = runtime.device;
@@ -80,8 +79,8 @@ const viscosityData = viscosityBuffer.asUniform();
 const currentStateData = currentStateBuffer.asReadonlyStorage();
 const currentStateVertex = currentStateBuffer.asVertex('readonly_storage');
 const sizeData = sizeBuffer.asUniform();
-const nextStateData = nextStateBuffer.asStorage();
-const debugInfoData = debugInfoBuffer.asStorage();
+const nextStateData = nextStateBuffer.asMutableStorage();
+const debugInfoData = debugInfoBuffer.asMutableStorage();
 
 const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
 const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);

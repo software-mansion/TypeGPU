@@ -25,7 +25,7 @@ export interface WgslBuffer<
     ? WgslBufferUsage<TData, 'uniform'>
     : null;
 
-  asStorage(): 'mutable_storage' extends TAllows
+  asMutableStorage(): 'mutable_storage' extends TAllows
     ? WgslBufferUsage<TData, 'mutable_storage'>
     : null;
 
@@ -158,7 +158,7 @@ class WgslBufferImpl<
       : null;
   }
 
-  asStorage() {
+  asMutableStorage() {
     return this._allowedUsages
       .mutableStorage as 'mutable_storage' extends TAllows
       ? WgslBufferUsage<TData, 'mutable_storage'>
