@@ -82,19 +82,19 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
     GPUTextureUsage.COPY_SRC |
     GPUTextureUsage.RENDER_ATTACHMENT;
   private _allowedUsages: {
-    sampled: WeakMap<
-      SampledTextureParams,
-      WgslTextureView<AnyWgslPrimitive, 'sampled'>
-    > | null;
-    storage: WeakMap<
-      StorageTextureParams,
-      WgslTextureView<AnyWgslTexelFormat, 'storage'>
-    > | null;
+    sampled: Map<string, WgslTextureView<AnyWgslPrimitive, 'sampled'>> | null;
+    storage: Map<string, WgslTextureView<AnyWgslTexelFormat, 'storage'>> | null;
   } = {
     sampled: null,
     storage: null,
   };
   private _label: string | undefined;
+  private GetStringRepresentation(obj: object): string {
+    const withKeysSorted = Object.fromEntries(
+      Object.entries(obj).sort(([a], [b]) => a.localeCompare(b)),
+    );
+    return JSON.stringify(withKeysSorted);
+  }
 
   constructor(
     public readonly descriptor: Omit<GPUTextureDescriptor, 'usage'>,
@@ -121,7 +121,7 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
   $allowSampled() {
     const enrichedThis = this as WgslTexture<TAllows | 'sampled'>;
     if (!this._allowedUsages.sampled) {
-      this._allowedUsages.sampled = new WeakMap();
+      this._allowedUsages.sampled = new Map();
     }
     this.$addFlags(GPUTextureUsage.TEXTURE_BINDING);
     return enrichedThis;
@@ -130,7 +130,7 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
   $allowStorage() {
     const enrichedThis = this as WgslTexture<TAllows | 'storage'>;
     if (!this._allowedUsages.storage) {
-      this._allowedUsages.storage = new WeakMap();
+      this._allowedUsages.storage = new Map();
     }
     this.$addFlags(GPUTextureUsage.STORAGE_BINDING);
     return enrichedThis;
@@ -142,7 +142,8 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
     if (!this._allowedUsages.storage) {
       return null;
     }
-    const existing = this._allowedUsages.storage.get(params);
+    const stringified = this.GetStringRepresentation(params);
+    const existing = this._allowedUsages.storage.get(stringified);
     if (existing) {
       return existing;
     }
@@ -157,7 +158,7 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
       params.descriptor,
       params.access,
     ) as unknown as WgslTextureView<typeof type, 'storage'>;
-    this._allowedUsages.storage.set(params, view);
+    this._allowedUsages.storage.set(stringified, view);
     return view;
   }
 
@@ -167,7 +168,8 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
     if (!this._allowedUsages.sampled) {
       return null;
     }
-    const existing = this._allowedUsages.sampled.get(params);
+    const stringified = this.GetStringRepresentation(params);
+    const existing = this._allowedUsages.sampled.get(stringified);
     if (existing) {
       return existing;
     }
@@ -177,7 +179,7 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
       params.dataType,
       params.descriptor,
     ) as unknown as WgslTextureView<typeof params.dataType, 'sampled'>;
-    this._allowedUsages.sampled.set(params, view);
+    this._allowedUsages.sampled.set(stringified, view);
     return view;
   }
 
