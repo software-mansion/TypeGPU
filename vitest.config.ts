@@ -30,24 +30,24 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: /^wigsill\/data$/,
-        replacement: './packages/wigsill/src/data/index.ts',
+        find: /^typegpu\/data$/,
+        replacement: './packages/typegpu/src/data/index.ts',
       },
       {
-        find: /^wigsill\/macro$/,
-        replacement: './packages/wigsill/src/macro/index.ts',
+        find: /^typegpu\/macro$/,
+        replacement: './packages/typegpu/src/macro/index.ts',
       },
       {
-        find: /^wigsill\/web$/,
-        replacement: './packages/wigsill/src/web/index.ts',
+        find: /^typegpu\/web$/,
+        replacement: './packages/typegpu/src/web/index.ts',
       },
-      { find: /^wigsill$/, replacement: './packages/wigsill/src/index.ts' },
-      { find: /^wigsill(.*)$/, replacement: './packages/wigsill/src/$1.ts' },
+      { find: /^typegpu$/, replacement: './packages/typegpu/src/index.ts' },
+      { find: /^typegpu(.*)$/, replacement: './packages/typegpu/src/$1.ts' },
     ],
   },
   plugins: [nearleyRedirectPlugin()],
   test: {
-    name: 'wigsill',
+    name: 'typegpu',
     environment: 'jsdom',
     exclude: ['./**/node_modules'],
     reporters: 'basic',
