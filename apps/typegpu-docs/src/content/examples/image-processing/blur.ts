@@ -6,15 +6,46 @@
 */
 
 // -- Hooks into the example environment
-import { addElement, onFrame } from '@typegpu/example-toolkit';
+import { addElement, addSliderParam, onFrame } from '@typegpu/example-toolkit';
 // --
-import { type WgslTextureView, builtin, createRuntime, wgsl } from 'typegpu';
+import {
+  type WgslTexture,
+  type WgslTextureView,
+  builtin,
+  createRuntime,
+  wgsl,
+} from 'typegpu';
 import { arrayOf, f32, i32, struct, u32, vec2f, vec3f } from 'typegpu/data';
 
 const tileDim = 128;
 const batch = [4, 4];
 
-///change
+const filterSize = addSliderParam('Filter Size', 2, {
+  min: 1,
+  max: 15,
+  step: 2,
+});
+const iterations = addSliderParam('Iterations', 1, {
+  min: 1,
+  max: 10,
+  step: 1,
+});
+const settingsPlum = wgsl.plum((get) => ({
+  blockDim: tileDim - (get(filterSize) - 1),
+  filterDim: get(filterSize),
+}));
+
+const blurParamsBuffer = wgsl
+  .buffer(
+    struct({
+      filterDim: i32,
+      blockDim: u32,
+    }),
+    settingsPlum,
+  )
+  .$name('BlurParams')
+  .$allowUniform();
+const params = blurParamsBuffer.asUniform();
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -37,6 +68,15 @@ const sampler = wgsl.sampler({
 const response = await fetch('/Di-3d.png');
 const imageBitmap = await createImageBitmap(await response.blob());
 
+const inParams = {
+  type: 'texture_2d',
+  dataType: f32,
+};
+const outParams = {
+  type: 'texture_storage_2d',
+  access: 'write',
+};
+
 const [srcWidth, srcHeight] = [imageBitmap.width, imageBitmap.height];
 const imageTexture = wgsl
   .texture({
@@ -44,10 +84,6 @@ const imageTexture = wgsl
     format: 'rgba8unorm',
   })
   .$allowSampled();
-const imageTextureView = imageTexture.asSampled({
-  type: 'texture_2d',
-  dataType: f32,
-});
 
 device.queue.copyExternalImageToTexture(
   { source: imageBitmap },
@@ -64,17 +100,6 @@ const textures = [0, 1].map(() => {
     .$allowSampled()
     .$allowStorage();
 });
-
-const blurParamsBuffer = wgsl
-  .buffer(
-    struct({
-      filterDim: i32,
-      blockDim: u32,
-    }),
-  )
-  .$name('BlurParams')
-  .$allowUniform();
-const params = blurParamsBuffer.asUniform();
 
 const flipSlot = wgsl.slot<number>();
 const inTextureSlot = wgsl.slot<WgslTextureView>();
@@ -135,53 +160,26 @@ const mainComputeFun = wgsl.fn()`(wid: vec3u, lid: vec3u) {
 `;
 
 function makeComputePipeline(
-  inTexture: WgslTextureView,
-  outTexture: WgslTextureView,
+  inTexture: WgslTexture,
+  outTexture: WgslTexture,
   flip: number,
 ) {
   return runtime.makeComputePipeline({
     workgroupSize: [32],
     code: wgsl`
       ${mainComputeFun
-        .with(inTextureSlot, inTexture)
-        .with(outTextureSlot, outTexture)
+        .with(inTextureSlot, inTexture.asSampled(inParams))
+        .with(outTextureSlot, outTexture.asStorage(outParams))
         .with(flipSlot, flip)}
-        (${builtin.globalInvocationId}, ${builtin.localInvocationId});
+        (${builtin.workgroupId}, ${builtin.localInvocationId});
     `,
   });
 }
 
-const inputs: [WgslTextureView, WgslTextureView, number][] = [
-  [
-    imageTextureView,
-    textures[0].asStorage({
-      type: 'texture_storage_2d',
-      access: 'write',
-    }),
-    0,
-  ],
-  [
-    textures[0].asSampled({
-      type: 'texture_2d',
-      dataType: f32,
-    }),
-    textures[1].asStorage({
-      type: 'texture_storage_2d',
-      access: 'write',
-    }),
-    1,
-  ],
-  [
-    textures[1].asSampled({
-      type: 'texture_2d',
-      dataType: f32,
-    }),
-    textures[0].asStorage({
-      type: 'texture_storage_2d',
-      access: 'write',
-    }),
-    0,
-  ],
+const inputs: [WgslTexture, WgslTexture, number][] = [
+  [imageTexture, textures[0], 0],
+  [textures[0], textures[1], 1],
+  [textures[1], textures[0], 0],
 ];
 
 const computePipelines = inputs.map(([inTexture, outTexture, flip]) =>
@@ -212,7 +210,7 @@ const blurVertexWGSL = wgsl`
 `;
 
 const blurFragmentWGSL = wgsl`
-  return textureSample(${textures[1].asSampled({ type: 'texture_2d', dataType: f32 })}, ${sampler}, fragUV);
+  return textureSample(${textures[1].asSampled(inParams)}, ${sampler}, fragUV);
 `;
 
 const renderPipeline = runtime.makeRenderPipeline({
@@ -236,50 +234,33 @@ const renderPipeline = runtime.makeRenderPipeline({
   },
 });
 
-const settings = {
-  filterSize: 1,
-  iterations: 1,
-};
-
-let blockDim = tileDim - (settings.filterSize - 1);
-
-const updateSettings = () => {
-  blockDim = tileDim - (settings.filterSize - 1);
-  runtime.writeBuffer(blurParamsBuffer, {
-    filterDim: settings.filterSize,
-    blockDim: blockDim,
-  });
-};
-
-updateSettings();
-
 onFrame(() => {
   computePipelines[0].execute({
     workgroups: [
-      Math.ceil(srcWidth / blockDim),
+      Math.ceil(srcWidth / runtime.readPlum(settingsPlum).blockDim),
       Math.ceil(srcHeight / batch[1]),
     ],
   });
   computePipelines[1].execute({
     workgroups: [
-      Math.ceil(srcWidth / blockDim),
+      Math.ceil(srcWidth / runtime.readPlum(settingsPlum).blockDim),
       Math.ceil(srcHeight / batch[1]),
     ],
   });
-  // for (let i = 0; i < settings.iterations - 1; i++) {
-  //   computePipelines[2].execute({
-  //     workgroups: [
-  //       Math.ceil(srcWidth / blockDim),
-  //       Math.ceil(srcHeight / batch[1]),
-  //     ],
-  //   });
-  //   computePipelines[1].execute({
-  //     workgroups: [
-  //       Math.ceil(srcWidth / blockDim),
-  //       Math.ceil(srcHeight / batch[1]),
-  //     ],
-  //   });
-  // }
+  for (let i = 0; i < runtime.readPlum(iterations) - 1; i++) {
+    computePipelines[2].execute({
+      workgroups: [
+        Math.ceil(srcWidth / runtime.readPlum(settingsPlum).blockDim),
+        Math.ceil(srcHeight / batch[1]),
+      ],
+    });
+    computePipelines[1].execute({
+      workgroups: [
+        Math.ceil(srcWidth / runtime.readPlum(settingsPlum).blockDim),
+        Math.ceil(srcHeight / batch[1]),
+      ],
+    });
+  }
 
   renderPipeline.execute({
     vertexCount: 6,
