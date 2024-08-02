@@ -1,0 +1,13 @@
+---
+const content = await Astro.slots.render('default');
+const { idx } = Astro.props;
+---
+
+<li class="flex gap-2">
+  <div class:list={[
+    "mt-0.5 flex-shrink-0 flex justify-center items-center w-6 h-6 bg-indigo-600 text-white rounded",
+  ]}>
+    {idx}
+  </div>
+  <span set:html={content} />
+</li>
