@@ -15,6 +15,8 @@ import { createRuntime } from 'wigsill/web';
 const tileDim = 128;
 const batch = [4, 4];
 
+///change
+
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
