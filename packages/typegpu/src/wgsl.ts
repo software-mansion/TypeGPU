@@ -2,6 +2,7 @@ import { buffer } from './wgslBuffer';
 import { builtin } from './wgslBuiltin';
 import { code } from './wgslCode';
 import { constant } from './wgslConstant';
+import { declare } from './wgslDeclare';
 import { fn } from './wgslFunction';
 import { fn as fun } from './wgslFunctionExperimental';
 import { plum, plumFromEvent } from './wgslPlum';
@@ -19,6 +20,7 @@ export default Object.assign(code, {
   plumFromEvent,
   slot,
   constant,
+  declare,
   var: variable,
   sampler,
   texture,

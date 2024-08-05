@@ -145,7 +145,7 @@ const boxSizeBuffer = wgsl
   .$allowUniform();
 const boxSizeData = boxSizeBuffer.asUniform();
 
-const getBoxIntersectionFn = wgsl.fn('box_intersection')`(
+const getBoxIntersectionFn = wgsl.fn`(
   boundMin: vec3f,
   boundMax: vec3f,
   ray: ${rayStruct}
@@ -212,7 +212,7 @@ const getBoxIntersectionFn = wgsl.fn('box_intersection')`(
   output.tMax = tMax;
   return output;
 }
-`;
+`.$name('box_intersection');
 
 const renderPipeline = runtime.makeRenderPipeline({
   vertex: {
