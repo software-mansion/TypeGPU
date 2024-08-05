@@ -67,7 +67,7 @@ const outGridSlot = wgsl.slot<MutableBuffer<GridState>>();
 // and write to the `output` buffer, whichever are
 // currently bound to the program.
 
-const addToCell = wgsl.fn()`(x: i32, y: i32, value: f32) => {
+const addToCell = wgsl.fn`(x: i32, y: i32, value: f32) => {
   let index = x + y * ${gridSize};
   ${outGridSlot}[index] = ${inGridSlot}[index] + value;
 }`;

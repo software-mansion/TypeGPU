@@ -15,7 +15,7 @@ import { arrayOf, atomic, f32, u32, vec2u } from 'typegpu/data';
 const runtime = await createRuntime();
 const device = runtime.device;
 
-const canvas = await addElement('canvas', { width: 500, height: 500 });
+const canvas = await addElement('canvas', { aspectRatio: 1 });
 
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -99,46 +99,46 @@ runtime.writeBuffer(squareBuffer, [
   [1, 1],
 ]);
 
-const getIndex = wgsl.fn()`(x: u32, y: u32) -> u32 {
+const getIndex = wgsl.fn`(x: u32, y: u32) -> u32 {
   let h = ${sizeData}.y;
   let w = ${sizeData}.x;
   return (y % h) * w + (x % w);
 }`;
 
-const getCell = wgsl.fn()`(x: u32, y: u32) -> u32 {
+const getCell = wgsl.fn`(x: u32, y: u32) -> u32 {
   return ${currentStateData}[${getIndex}(x, y)];
 }`;
 
-const getCellNext = wgsl.fn()`(x: u32, y: u32) -> u32 {
+const getCellNext = wgsl.fn`(x: u32, y: u32) -> u32 {
   return atomicLoad(&${nextStateData}[${getIndex}(x, y)]);
 }`;
 
-const updateCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
+const updateCell = wgsl.fn`(x: u32, y: u32, value: u32) {
   atomicStore(&${nextStateData}[${getIndex}(x, y)], value);
 }`;
 
-const addToCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
+const addToCell = wgsl.fn`(x: u32, y: u32, value: u32) {
   let cell = ${getCellNext}(x, y);
   let waterLevel = cell & ${maxWaterLevel};
   let newWaterLevel = min(waterLevel + value, ${maxWaterLevel});
   atomicAdd(&${nextStateData}[${getIndex}(x, y)], newWaterLevel - waterLevel);
 }`;
 
-const subtractFromCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
+const subtractFromCell = wgsl.fn`(x: u32, y: u32, value: u32) {
   let cell = ${getCellNext}(x, y);
   let waterLevel = cell & ${maxWaterLevel};
   let newWaterLevel = max(waterLevel - min(value, waterLevel), 0u);
   atomicSub(&${nextStateData}[${getIndex}(x, y)], waterLevel - newWaterLevel);
 }`;
 
-const persistFlags = wgsl.fn()`(x: u32, y: u32) {
+const persistFlags = wgsl.fn`(x: u32, y: u32) {
   let cell = ${getCell}(x, y);
   let waterLevel = cell & ${maxWaterLevel};
   let flags = cell >> 24;
   ${updateCell}(x, y, (flags << 24) | waterLevel);
 }`;
 
-const getStableStateBelow = wgsl.fn()`(upper: u32, lower: u32) -> u32 {
+const getStableStateBelow = wgsl.fn`(upper: u32, lower: u32) -> u32 {
   let totalMass = upper + lower;
   if (totalMass <= ${maxWaterLevelUnpressurized}) {
     return totalMass;
@@ -148,27 +148,27 @@ const getStableStateBelow = wgsl.fn()`(upper: u32, lower: u32) -> u32 {
   return ${maxWaterLevelUnpressurized};
 }`;
 
-const isWall = wgsl.fn()`(x: u32, y: u32) -> bool {
+const isWall = wgsl.fn`(x: u32, y: u32) -> bool {
   return (${getCell}(x, y) >> 24) == 1u;
 }`;
 
-const isWaterSource = wgsl.fn()`(x: u32, y: u32) -> bool {
+const isWaterSource = wgsl.fn`(x: u32, y: u32) -> bool {
   return (${getCell}(x, y) >> 24) == 2u;
 }`;
 
-const isWaterDrain = wgsl.fn()`(x: u32, y: u32) -> bool {
+const isWaterDrain = wgsl.fn`(x: u32, y: u32) -> bool {
   return (${getCell}(x, y) >> 24) == 3u;
 }`;
 
-const isClearCell = wgsl.fn()`(x: u32, y: u32) -> bool {
+const isClearCell = wgsl.fn`(x: u32, y: u32) -> bool {
   return (${getCell}(x, y) >> 24) == 4u;
 }`;
 
-const getWaterLevel = wgsl.fn()`(x: u32, y: u32) -> u32 {
+const getWaterLevel = wgsl.fn`(x: u32, y: u32) -> u32 {
   return ${getCell}(x, y) & ${maxWaterLevel};
 }`;
 
-const checkForFlagsAndBounds = wgsl.fn()`(x: u32, y: u32) -> bool {
+const checkForFlagsAndBounds = wgsl.fn`(x: u32, y: u32) -> bool {
   if (${isClearCell}(x, y)) {
     ${updateCell}(x, y, 0u);
     return true;
@@ -194,7 +194,7 @@ const checkForFlagsAndBounds = wgsl.fn()`(x: u32, y: u32) -> bool {
   return false;
 }`;
 
-const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
+const decideWaterLevel = wgsl.fn`(x: u32, y: u32) {
   if (${checkForFlagsAndBounds}(x, y)) {
     return;
   }
@@ -462,8 +462,11 @@ canvas.onmousemove = (event) => {
   }
 
   const cellSize = canvas.width / options.size;
-  const x = Math.floor(event.offsetX / cellSize);
-  const y = options.size - Math.floor(event.offsetY / cellSize) - 1;
+  const x = Math.floor((event.offsetX * window.devicePixelRatio) / cellSize);
+  const y =
+    options.size -
+    Math.floor((event.offsetY * window.devicePixelRatio) / cellSize) -
+    1;
   const allAffectedCells = [];
   for (let i = -options.brushSize; i <= options.brushSize; i++) {
     for (let j = -options.brushSize; j <= options.brushSize; j++) {

@@ -64,19 +64,19 @@ const MAX_GRID_SIZE = 1024;
 
 const randSeed = wgsl.var(vec2f).$name('rand_seed');
 
-const setupRandomSeed = wgsl.fn('setup_random_seed')`(coord: vec2f) {
+const setupRandomSeed = wgsl.fn`(coord: vec2f) {
   ${randSeed} = coord;
-}`;
+}`.$name('setup_random_seed');
 
 /**
  * Yoinked from https://www.cg.tuwien.ac.at/research/publications/2023/PETER-2023-PSW/PETER-2023-PSW-.pdf
  * "Particle System in WebGPU" by Benedikt Peter
  */
-const rand01 = wgsl.fn('rand01')`() -> f32 {
+const rand01 = wgsl.fn`() -> f32 {
   ${randSeed}.x = fract(cos(dot(${randSeed}, vec2<f32>(23.14077926, 232.61690225))) * 136.8168);
   ${randSeed}.y = fract(cos(dot(${randSeed}, vec2<f32>(54.47856553, 345.84153136))) * 534.7645);
   return ${randSeed}.y;
-}`;
+}`.$name('rand01');
 
 type GridData = typeof GridData;
 /**
@@ -131,7 +131,7 @@ const obstaclesBuffer = wgsl
 
 const obstaclesData = obstaclesBuffer.asReadonlyStorage();
 
-const isValidCoord = wgsl.fn()`(x: i32, y: i32) -> bool {
+const isValidCoord = wgsl.fn`(x: i32, y: i32) -> bool {
   return
     x < ${gridSizeData} &&
     x >= 0 &&
@@ -141,28 +141,28 @@ const isValidCoord = wgsl.fn()`(x: i32, y: i32) -> bool {
 
 const coordsToIndex = (x: Wgsl, y: Wgsl) => wgsl`${x} + ${y} * ${gridSizeData}`;
 
-const getCell = wgsl.fn()`(x: i32, y: i32) -> vec4f {
+const getCell = wgsl.fn`(x: i32, y: i32) -> vec4f {
   let index = ${coordsToIndex('x', 'y')};
   return ${inputGridSlot}[index];
 }`.$name('get_cell');
 
-const setCell = wgsl.fn()`(x: i32, y: i32, value: vec4f) {
+const setCell = wgsl.fn`(x: i32, y: i32, value: vec4f) {
   let index = ${coordsToIndex('x', 'y')};
   ${outputGridSlot}[index] = value;
 }`.$name('set_cell');
 
-const setVelocity = wgsl.fn()`(x: i32, y: i32, velocity: vec2f) {
+const setVelocity = wgsl.fn`(x: i32, y: i32, velocity: vec2f) {
   let index = ${coordsToIndex('x', 'y')};
   ${outputGridSlot}[index].x = velocity.x;
   ${outputGridSlot}[index].y = velocity.y;
 }`.$name('set_velocity');
 
-const addDensity = wgsl.fn()`(x: i32, y: i32, density: f32) {
+const addDensity = wgsl.fn`(x: i32, y: i32, density: f32) {
   let index = ${coordsToIndex('x', 'y')};
   ${outputGridSlot}[index].z = ${inputGridSlot}[index].z + density;
 }`.$name('add_density');
 
-const flowFromCell = wgsl.fn()`(my_x: i32, my_y: i32, x: i32, y: i32) -> f32 {
+const flowFromCell = wgsl.fn`(my_x: i32, my_y: i32, x: i32, y: i32) -> f32 {
   if (!${isValidCoord}(x, y)) {
     return 0.;
   }
@@ -193,11 +193,11 @@ const flowFromCell = wgsl.fn()`(my_x: i32, my_y: i32, x: i32, y: i32) -> f32 {
 const timeBuffer = wgsl.buffer(f32).$allowUniform();
 const timeData = timeBuffer.asUniform();
 
-const isSolid = wgsl.fn()`(cell: vec4f) -> bool {
+const isSolid = wgsl.fn`(cell: vec4f) -> bool {
   return cell.w > 0.5;
 }`.$name('is_solid');
 
-const isInsideObstacle = wgsl.fn()`(x: i32, y: i32) -> bool {
+const isInsideObstacle = wgsl.fn`(x: i32, y: i32) -> bool {
   for (var obs_idx = 0; obs_idx < ${MAX_OBSTACLES}; obs_idx += 1) {
     let obs = ${obstaclesData}[obs_idx];
 
@@ -218,7 +218,7 @@ const isInsideObstacle = wgsl.fn()`(x: i32, y: i32) -> bool {
   return false;
 }`.$name('is_inside_obstacle');
 
-const isValidFlowOut = wgsl.fn()`(x: i32, y: i32) -> bool {
+const isValidFlowOut = wgsl.fn`(x: i32, y: i32) -> bool {
   if (!${isValidCoord}(x, y)) {
     return false;
   }
@@ -237,7 +237,7 @@ const isValidFlowOut = wgsl.fn()`(x: i32, y: i32) -> bool {
   return true;
 }`.$name('is_valid_flow_out');
 
-const computeVelocity = wgsl.fn()`(x: i32, y: i32) -> vec2f {
+const computeVelocity = wgsl.fn`(x: i32, y: i32) -> vec2f {
   let gravity_cost = 0.5;
 
   let cell = ${getCell}(x, y);
@@ -291,7 +291,7 @@ const computeVelocity = wgsl.fn()`(x: i32, y: i32) -> vec2f {
   return least_cost_dir;
 }`;
 
-const mainInitWorld = wgsl.fn()`(x: i32, y: i32) {
+const mainInitWorld = wgsl.fn`(x: i32, y: i32) {
   let index = ${coordsToIndex('x', 'y')};
 
   var value = vec4f();
@@ -310,7 +310,7 @@ const mainInitWorld = wgsl.fn()`(x: i32, y: i32) {
   ${outputGridSlot}[index] = value;
 }`;
 
-const mainMoveObstacles = wgsl.fn()`() {
+const mainMoveObstacles = wgsl.fn`() {
   for (var obs_idx = 0; obs_idx < ${MAX_OBSTACLES}; obs_idx += 1) {
     let obs = ${prevObstacleData}[obs_idx];
     let next_obs = ${obstaclesData}[obs_idx];
@@ -415,7 +415,7 @@ const SourceParams = struct({
 });
 const sourceParamsBuffer = wgsl.buffer(SourceParams).$allowUniform();
 const sourceParamsUniform = sourceParamsBuffer.asUniform();
-const getMinimumInFlow = wgsl.fn()`(x: i32, y: i32) -> f32 {
+const getMinimumInFlow = wgsl.fn`(x: i32, y: i32) -> f32 {
   let source_params = ${sourceParamsUniform};
   let grid_size_f = f32(${gridSizeData});
   let source_radius = max(1., source_params.radius * grid_size_f);
@@ -428,7 +428,7 @@ const getMinimumInFlow = wgsl.fn()`(x: i32, y: i32) -> f32 {
   return 0.;
 }`;
 
-const mainCompute = wgsl.fn()`(x: i32, y: i32) {
+const mainCompute = wgsl.fn`(x: i32, y: i32) {
   let index = ${coordsToIndex('x', 'y')};
 
   ${setupRandomSeed}(vec2f(f32(index), ${timeData}));
@@ -453,7 +453,7 @@ const mainCompute = wgsl.fn()`(x: i32, y: i32) {
   ${outputGridSlot}[index] = next;
 }`.$name('main_compute');
 
-const mainFragment = wgsl.fn()`(x: i32, y: i32) -> vec4f {
+const mainFragment = wgsl.fn`(x: i32, y: i32) -> vec4f {
   let index = ${coordsToIndex('x', 'y')};
   let cell = ${inputGridSlot}[index];
   let velocity = cell.xy;

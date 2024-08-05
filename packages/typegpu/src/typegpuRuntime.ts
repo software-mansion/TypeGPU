@@ -3,7 +3,7 @@ import type { Parsed } from 'typed-binary';
 import type { SimpleWgslData } from './data';
 import type { WgslSettable } from './settableTrait';
 import type { AnyWgslData, WgslAllocatable } from './types';
-import type { WgslCode } from './wgslCode';
+import type { BoundWgslCode, WgslCode } from './wgslCode';
 import type { ExtractPlumValue, Unsubscribe, WgslPlum } from './wgslPlum';
 import type { WgslSampler } from './wgslSampler';
 import type {
@@ -64,7 +64,7 @@ export interface TypeGpuRuntime {
 
 export interface RenderPipelineOptions {
   vertex: {
-    code: WgslCode;
+    code: WgslCode | BoundWgslCode;
     output: {
       [K in symbol]: string;
     } & {
@@ -72,7 +72,7 @@ export interface RenderPipelineOptions {
     };
   };
   fragment: {
-    code: WgslCode;
+    code: WgslCode | BoundWgslCode;
     target: Iterable<GPUColorTargetState | null>;
   };
   primitive: GPUPrimitiveState;
@@ -81,8 +81,8 @@ export interface RenderPipelineOptions {
 }
 
 export interface ComputePipelineOptions {
-  code: WgslCode;
-  workgroupSize?: [number, number?, number?];
+  code: WgslCode | BoundWgslCode;
+  workgroupSize?: readonly [number, number?, number?];
   externalLayouts?: GPUBindGroupLayout[];
   label?: string;
 }
@@ -100,7 +100,7 @@ export interface RenderPipelineExecutor {
 }
 
 export type ComputePipelineExecutorOptions = {
-  workgroups?: [number, number?, number?];
+  workgroups?: readonly [number, number?, number?];
   externalBindGroups?: GPUBindGroup[];
 };
 

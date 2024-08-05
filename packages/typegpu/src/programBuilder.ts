@@ -14,7 +14,7 @@ import type {
 } from './types';
 import { isSamplerType } from './types';
 import { getBuiltinInfo, getUsedBuiltinsNamed } from './wgslBuiltin';
-import { type WgslCode, code } from './wgslCode';
+import { type BoundWgslCode, type WgslCode, code } from './wgslCode';
 import type { WgslSampler } from './wgslSampler';
 import {
   type WgslAnyTextureView,
@@ -169,8 +169,8 @@ export default class ProgramBuilder {
 export class RenderProgramBuilder {
   constructor(
     private runtime: TypeGpuRuntime,
-    private vertexRoot: WgslCode,
-    private fragmentRoot: WgslCode,
+    private vertexRoot: WgslCode | BoundWgslCode,
+    private fragmentRoot: WgslCode | BoundWgslCode,
     private vertexOutputFormat: {
       [K in symbol]: string;
     } & {
@@ -323,8 +323,12 @@ export class RenderProgramBuilder {
 export class ComputeProgramBuilder {
   constructor(
     private runtime: TypeGpuRuntime,
-    private computeRoot: WgslCode,
-    private workgroupSize: [number, (number | null)?, (number | null)?],
+    private computeRoot: WgslCode | BoundWgslCode,
+    private workgroupSize: readonly [
+      number,
+      (number | null)?,
+      (number | null)?,
+    ],
   ) {}
 
   build(options: Omit<BuildOptions, 'shaderStage'>): Program {
