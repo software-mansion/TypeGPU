@@ -122,54 +122,6 @@ const tileVar = wgsl.var(
   'workgroup',
 );
 
-const mainComputeFun = wgsl.fn()`(wid: vec3u, lid: vec3u) {
-  let filterOffset = (${params}.filterDim - 1) / 2;
-  let dims = vec2i(textureDimensions(${inTextureSlot}, 0));
-  let baseIndex = vec2i(wid.xy * vec2(${params}.blockDim, 4) +
-                            lid.xy * vec2(4, 1))
-                  - vec2(filterOffset, 0);
-
-  for (var r = 0; r < 4; r++) {
-    for (var c = 0; c < 4; c++) {
-      var loadIndex = baseIndex + vec2(c, r);
-      if (${flipSlot} != 0) {
-        loadIndex = loadIndex.yx;
-      }
-
-      ${tileVar}[r][4 * lid.x + u32(c)] = textureSampleLevel(
-        ${inTextureSlot},
-        ${sampler},
-        (vec2f(loadIndex) + vec2f(0.25, 0.25)) / vec2f(dims),
-        0.0
-      ).rgb;
-    }
-  }
-
-  workgroupBarrier();
-
-  for (var r = 0; r < 4; r++) {
-    for (var c = 0; c < 4; c++) {
-      var writeIndex = baseIndex + vec2(c, r);
-      if (${flipSlot} != 0) {
-        writeIndex = writeIndex.yx;
-      }
-
-      let center = i32(4 * lid.x) + c;
-      if (center >= filterOffset &&
-          center < 128 - filterOffset &&
-          all(writeIndex < dims)) {
-        var acc = vec3(0.0, 0.0, 0.0);
-        for (var f = 0; f < ${params}.filterDim; f++) {
-          var i = center + f - filterOffset;
-          acc = acc + (1.0 / f32(${params}.filterDim)) * ${tileVar}[r][i];
-        }
-        textureStore(${outTextureSlot}, writeIndex, vec4(acc, 1.0));
-      }
-    }
-  }
-  }
-`;
-
 type inTextureType =
   | WgslTexture<'sampled'>
   | WgslTexture<'sampled' | 'storage'>;
@@ -185,12 +137,54 @@ function makeComputePipeline(
   return runtime.makeComputePipeline({
     workgroupSize: [32],
     code: wgsl`
-      ${mainComputeFun
-        .with(inTextureSlot, inTexture.asSampled(inParams))
-        .with(outTextureSlot, outTexture.asStorage(outParams))
-        .with(flipSlot, flip)}
-        (${builtin.workgroupId}, ${builtin.localInvocationId});
-    `,
+      let filterOffset = (${params}.filterDim - 1) / 2;
+      let dims = vec2i(textureDimensions(${inTextureSlot}, 0));
+      let baseIndex = vec2i(${builtin.workgroupId}.xy * vec2(${params}.blockDim, 4) +
+                                ${builtin.localInvocationId}.xy * vec2(4, 1))
+                      - vec2(filterOffset, 0);
+
+      for (var r = 0; r < 4; r++) {
+        for (var c = 0; c < 4; c++) {
+          var loadIndex = baseIndex + vec2(c, r);
+          if (${flipSlot} != 0) {
+            loadIndex = loadIndex.yx;
+          }
+
+          ${tileVar}[r][4 * ${builtin.localInvocationId}.x + u32(c)] = textureSampleLevel(
+            ${inTextureSlot},
+            ${sampler},
+            (vec2f(loadIndex) + vec2f(0.25, 0.25)) / vec2f(dims),
+            0.0
+          ).rgb;
+        }
+      }
+
+      workgroupBarrier();
+
+      for (var r = 0; r < 4; r++) {
+        for (var c = 0; c < 4; c++) {
+          var writeIndex = baseIndex + vec2(c, r);
+          if (${flipSlot} != 0) {
+            writeIndex = writeIndex.yx;
+          }
+
+          let center = i32(4 * ${builtin.localInvocationId}.x) + c;
+          if (center >= filterOffset &&
+              center < 128 - filterOffset &&
+              all(writeIndex < dims)) {
+            var acc = vec3(0.0, 0.0, 0.0);
+            for (var f = 0; f < ${params}.filterDim; f++) {
+              var i = center + f - filterOffset;
+              acc = acc + (1.0 / f32(${params}.filterDim)) * ${tileVar}[r][i];
+            }
+            textureStore(${outTextureSlot}, writeIndex, vec4(acc, 1.0));
+          }
+        }
+      }
+    `
+      .with(inTextureSlot, inTexture.asSampled(inParams))
+      .with(outTextureSlot, outTexture.asStorage(outParams))
+      .with(flipSlot, flip),
   });
 }
 
