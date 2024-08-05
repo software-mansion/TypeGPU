@@ -78,7 +78,7 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
      */
     export const counterBuffer = wgsl
       // `u32` describes the type and size of the buffer.
-      .buffer(u32, 0) // `0` is a valid because it matches the `u32` type.
+      .buffer(u32, 0) // `0` is a valid value, because it matches the `u32` type.
       .$name('counter') // helps when generating WGSL, used in debugging
       .$allowMutableStorage(); // can be bound as mutable storage
 
