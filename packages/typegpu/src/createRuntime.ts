@@ -186,39 +186,27 @@ class TypeGpuRuntimeImpl {
     if (mask) {
       const hostBuffer = new ArrayBuffer(size);
       source.dataType.write(new BufferWriter(hostBuffer), mask);
-      const readBuffer = new Uint8Array(hostBuffer);
-      console.log(readBuffer);
-      const chunks: number[] = [];
+      const readBuffer = new Uint32Array(hostBuffer);
+
       const toCopy: { offset: number; size: number }[] = [];
 
-      let chunkIndex = 0;
-      while (chunkIndex < size / 4) {
-        let isZero = true;
-        for (let i = 0; i < 4; i++) {
-          if (readBuffer[chunkIndex * 4 + i] !== 0) {
-            isZero = false;
-            break;
+      let i = 0;
+      while (i < readBuffer.length) {
+        if (readBuffer[i] !== 0) {
+          let j = i + 1;
+          while (j < readBuffer.length && readBuffer[j] !== 0) {
+            j++;
           }
-        }
-        if (!isZero) {
-          chunks.push(chunkIndex);
-        }
-        chunkIndex++;
-      }
 
-      chunkIndex = 0;
-      while (chunkIndex < chunks.length) {
-        const start = chunks[chunkIndex];
-        if (start === undefined) break;
-        let end = start;
-        while (chunks[chunkIndex] === end) {
-          end++;
-          chunkIndex++;
+          toCopy.push({
+            offset: i * 4,
+            size: (j - i) * 4,
+          });
+
+          i = j;
+        } else {
+          i++;
         }
-        toCopy.push({
-          offset: start * 4,
-          size: (end - start) * 4,
-        });
       }
 
       const commandEncoder = this.device.createCommandEncoder();
