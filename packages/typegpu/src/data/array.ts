@@ -3,7 +3,9 @@ import type { AnyWgslData, WgslData } from '../types';
 import { code } from '../wgslCode';
 import { SimpleWgslData } from './std140';
 
-type WgslArray<TElement extends AnyWgslData> = WgslData<TB.Unwrap<TElement>[]>;
+export type WgslArray<TElement extends AnyWgslData> = WgslData<
+  TB.Unwrap<TElement>[]
+>;
 
 export const arrayOf = <TElement extends AnyWgslData>(
   elementType: TElement,

@@ -42,6 +42,7 @@ export function isResolvable(value: unknown): value is WgslResolvable {
 export function isWgsl(value: unknown): value is Wgsl {
   return (
     typeof value === 'number' ||
+    typeof value === 'boolean' ||
     typeof value === 'string' ||
     isResolvable(value)
   );

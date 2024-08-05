@@ -87,7 +87,11 @@ class WgslFunctionCall<
       return code`${argSegment}${comma}`;
     });
 
-    return ctx.resolve(code`${this.usedFn}(${argsCode})`);
+    return ctx.resolve(code`${this.usedFn}(${argsCode})`.$name('internal'));
+  }
+
+  toString(): string {
+    return `fun:${this.usedFn.label ?? '<unnamed>'}()`;
   }
 }
 
@@ -102,7 +106,7 @@ class WgslFnImpl<
   >
   implements WgslFn<TArgTypes, TReturn>
 {
-  private identifier = new WgslIdentifier();
+  private _label: string | undefined;
 
   constructor(
     private argPairs: PairsFromTypes<TArgTypes>,
@@ -112,12 +116,18 @@ class WgslFnImpl<
     super();
   }
 
+  get label() {
+    return this._label;
+  }
+
   $name(label: string) {
-    this.identifier.$name(label);
+    this._label = label;
     return this;
   }
 
   resolve(ctx: ResolutionCtx): string {
+    const identifier = new WgslIdentifier().$name(this._label);
+
     const argsCode = this.argPairs.map(([ident, argType], idx) => {
       const comma = idx < this.argPairs.length - 1 ? ', ' : '';
 
@@ -129,21 +139,25 @@ class WgslFnImpl<
     });
 
     if (this.returnType !== undefined) {
-      ctx.addDeclaration(code`fn ${this.identifier}(${argsCode}) -> ${this.returnType} {
+      ctx.addDeclaration(code`fn ${identifier}(${argsCode}) -> ${this.returnType} {
         ${this.body}
       }`);
     } else {
-      ctx.addDeclaration(code`fn ${this.identifier}(${argsCode}) {
+      ctx.addDeclaration(code`fn ${identifier}(${argsCode}) {
         ${this.body}
       }`);
     }
 
-    return ctx.resolve(this.identifier);
+    return ctx.resolve(identifier);
   }
 
   _call(
     ...args: SegmentsFromTypes<TArgTypes>
   ): WgslFunctionCall<TArgTypes, TReturn> {
     return new WgslFunctionCall(this, args);
+  }
+
+  toString(): string {
+    return `fun:${this._label ?? '<unnamed>'}`;
   }
 }

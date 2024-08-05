@@ -1,4 +1,4 @@
-import { MissingSlotValueError } from './errors';
+import { MissingSlotValueError, ResolutionError } from './errors';
 import type { NameRegistry } from './nameRegistry';
 import {
   type BufferUsage,
@@ -75,7 +75,16 @@ class SharedResolutionState {
     }
 
     // If we got here, no item with the given slot-to-value combo exists in cache yet
-    const result = item.resolve(itemCtx);
+    let result: string;
+    try {
+      result = item.resolve(itemCtx);
+    } catch (err) {
+      if (err instanceof ResolutionError) {
+        throw err.appendToTrace(item);
+      }
+
+      throw new ResolutionError(err, [item]);
+    }
 
     // We know which bindables the item used while resolving
     const slotToValueMap = new Map<WgslSlot<unknown>, unknown>();

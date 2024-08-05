@@ -92,6 +92,9 @@ const renderProgram = runtime.makeRenderPipeline({
   fragment: {
     args: ['@location(0) fragUV : vec2f'],
     code: wgsl`
+      ${wgsl.declare`@group(0) @binding(0) var sampler_: sampler;`}
+      ${wgsl.declare`@group(0) @binding(1) var videoTexture: texture_external;`}
+
       var color = textureSampleBaseClampToEdge(videoTexture, sampler_, fragUV);
       let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
 
@@ -112,10 +115,6 @@ const renderProgram = runtime.makeRenderPipeline({
     topology: 'triangle-list',
   },
   externalLayouts: [bindGroupLayout],
-  externalDeclarations: [
-    wgsl`@group(0) @binding(0) var sampler_ : sampler;`,
-    wgsl`@group(0) @binding(1) var videoTexture : texture_external;`,
-  ],
 });
 
 const sampler = device.createSampler({
