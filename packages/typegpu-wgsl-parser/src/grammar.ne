@@ -286,7 +286,6 @@ global_variable_decl ->
 optionally_typed_ident ->
   ident (":" type_specifier):? {% ([ident, typespec]) => ({ ident: ident.value, typespec: typespec ? typespec[1] : null }) %}
 
-# TODO: Add support for 'override' global values
 @{% export type ValueDecl = { type: 'value_decl', ident: string, typespec: TypeSpecifier | null, expr: Expression }; %}
 value_decl ->
   "const" optionally_typed_ident "=" expression {% ([ , typed_ident, , expr]) => ({ type: 'value_decl', ...typed_ident, expr }) %}
