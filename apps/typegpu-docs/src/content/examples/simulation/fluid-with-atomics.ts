@@ -15,7 +15,7 @@ import { arrayOf, atomic, u32, vec2u } from 'typegpu/data';
 const runtime = await createRuntime();
 const device = runtime.device;
 
-const canvas = await addElement('canvas', { width: 500, height: 500 });
+const canvas = await addElement('canvas', { aspectRatio: 1 });
 
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -536,8 +536,11 @@ canvas.onmousemove = (event) => {
   }
 
   const cellSize = canvas.width / options.size;
-  const x = Math.floor(event.offsetX / cellSize);
-  const y = options.size - Math.floor(event.offsetY / cellSize) - 1;
+  const x = Math.floor((event.offsetX * window.devicePixelRatio) / cellSize);
+  const y =
+    options.size -
+    Math.floor((event.offsetY * window.devicePixelRatio) / cellSize) -
+    1;
   const allAffectedCells = [];
   for (let i = -options.brushSize; i <= options.brushSize; i++) {
     for (let j = -options.brushSize; j <= options.brushSize; j++) {
