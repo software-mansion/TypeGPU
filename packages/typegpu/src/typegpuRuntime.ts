@@ -38,6 +38,12 @@ export interface TypeGpuRuntime {
     allocatable: WgslAllocatable<TData>,
   ): Promise<Parsed<TData>>;
 
+  copyBuffer<TData extends AnyWgslData>(
+    source: WgslAllocatable<TData>,
+    destination: WgslAllocatable<TData>,
+    mask?: Parsed<TData>,
+  ): void;
+
   bufferFor(allocatable: WgslAllocatable): GPUBuffer;
   dispose(): void;
 

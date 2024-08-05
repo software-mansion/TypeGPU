@@ -173,6 +173,78 @@ class TypeGpuRuntimeImpl {
     this.device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
   }
 
+  copyBuffer<TData extends AnyWgslData>(
+    source: WgslAllocatable<TData>,
+    destination: WgslAllocatable<TData>,
+    mask?: Parsed<TData>,
+  ) {
+    const sourceBuffer = this.bufferFor(source);
+    const destinationBuffer = this.bufferFor(destination);
+
+    const size = roundUp(source.dataType.size, source.dataType.byteAlignment);
+
+    if (mask) {
+      const hostBuffer = new ArrayBuffer(size);
+      source.dataType.write(new BufferWriter(hostBuffer), mask);
+      const readBuffer = new Uint8Array(hostBuffer);
+      console.log(readBuffer);
+      const chunks: number[] = [];
+      const toCopy: { offset: number; size: number }[] = [];
+
+      let chunkIndex = 0;
+      while (chunkIndex < size / 4) {
+        let isZero = true;
+        for (let i = 0; i < 4; i++) {
+          if (readBuffer[chunkIndex * 4 + i] !== 0) {
+            isZero = false;
+            break;
+          }
+        }
+        if (!isZero) {
+          chunks.push(chunkIndex);
+        }
+        chunkIndex++;
+      }
+
+      chunkIndex = 0;
+      while (chunkIndex < chunks.length) {
+        const start = chunks[chunkIndex];
+        if (start === undefined) break;
+        let end = start;
+        while (chunks[chunkIndex] === end) {
+          end++;
+          chunkIndex++;
+        }
+        toCopy.push({
+          offset: start * 4,
+          size: (end - start) * 4,
+        });
+      }
+
+      const commandEncoder = this.device.createCommandEncoder();
+      for (const { offset, size } of toCopy) {
+        commandEncoder.copyBufferToBuffer(
+          sourceBuffer,
+          offset,
+          destinationBuffer,
+          offset,
+          size,
+        );
+      }
+      this.device.queue.submit([commandEncoder.finish()]);
+    } else {
+      const commandEncoder = this.device.createCommandEncoder();
+      commandEncoder.copyBufferToBuffer(
+        sourceBuffer,
+        0,
+        destinationBuffer,
+        0,
+        size,
+      );
+      this.device.queue.submit([commandEncoder.finish()]);
+    }
+  }
+
   readPlum<TPlum extends WgslPlum>(plum: TPlum): ExtractPlumValue<TPlum> {
     return this._plumStore.get(plum);
   }
