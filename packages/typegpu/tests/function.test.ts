@@ -5,7 +5,7 @@ import { parseWGSL } from './utils/parseWGSL';
 
 describe('wgsl.fn', () => {
   it('should inject function declaration of called function', () => {
-    const emptyFn = wgsl.fn()`() {
+    const emptyFn = wgsl.fn`() {
       // do nothing
     }`.$name('empty');
 
@@ -27,7 +27,7 @@ describe('wgsl.fn', () => {
   });
 
   it('should inject function declaration only once', () => {
-    const emptyFn = wgsl.fn()`() {
+    const emptyFn = wgsl.fn`() {
       // do nothing
     }`.$name('empty');
 
@@ -51,15 +51,15 @@ describe('wgsl.fn', () => {
   });
 
   it('should inject function declaration only once (calls are nested)', () => {
-    const emptyFn = wgsl.fn()`() {
+    const emptyFn = wgsl.fn`() {
       // do nothing
     }`.$name('empty');
 
-    const nestedAFn = wgsl.fn()`() {
+    const nestedAFn = wgsl.fn`() {
       ${emptyFn}();
     }`.$name('nested_a');
 
-    const nestedBFn = wgsl.fn()`() {
+    const nestedBFn = wgsl.fn`() {
       ${emptyFn}();
     }`.$name('nested_b');
 
