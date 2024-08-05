@@ -9,13 +9,24 @@
 import { addElement, addSliderParam, onFrame } from '@typegpu/example-toolkit';
 // --
 import {
+  type SampledTextureParams,
+  type StorageTextureParams,
   type WgslTexture,
   type WgslTextureView,
   builtin,
   createRuntime,
   wgsl,
 } from 'typegpu';
-import { arrayOf, f32, i32, struct, u32, vec2f, vec3f } from 'typegpu/data';
+import {
+  arrayOf,
+  f32,
+  i32,
+  struct,
+  u32,
+  vec2f,
+  vec3f,
+  type vec4f,
+} from 'typegpu/data';
 
 const tileDim = 128;
 const batch = [4, 4];
@@ -65,14 +76,14 @@ const sampler = wgsl.sampler({
   minFilter: 'linear',
 });
 
-const response = await fetch('/Di-3d.png');
+const response = await fetch('/plums.jpg');
 const imageBitmap = await createImageBitmap(await response.blob());
 
-const inParams = {
+const inParams: SampledTextureParams = {
   type: 'texture_2d',
   dataType: f32,
 };
-const outParams = {
+const outParams: StorageTextureParams = {
   type: 'texture_storage_2d',
   access: 'write',
 };
@@ -102,8 +113,8 @@ const textures = [0, 1].map(() => {
 });
 
 const flipSlot = wgsl.slot<number>();
-const inTextureSlot = wgsl.slot<WgslTextureView>();
-const outTextureSlot = wgsl.slot<WgslTextureView>();
+const inTextureSlot = wgsl.slot<WgslTextureView<typeof f32, 'sampled'>>();
+const outTextureSlot = wgsl.slot<WgslTextureView<typeof vec4f, 'storage'>>();
 
 const tileVar = wgsl.var(
   arrayOf(arrayOf(vec3f, 128), 4),
@@ -159,9 +170,16 @@ const mainComputeFun = wgsl.fn()`(wid: vec3u, lid: vec3u) {
   }
 `;
 
+type inTextureType =
+  | WgslTexture<'sampled'>
+  | WgslTexture<'sampled' | 'storage'>;
+type outTextureType =
+  | WgslTexture<'storage'>
+  | WgslTexture<'sampled' | 'storage'>;
+
 function makeComputePipeline(
-  inTexture: WgslTexture,
-  outTexture: WgslTexture,
+  inTexture: inTextureType,
+  outTexture: outTextureType,
   flip: number,
 ) {
   return runtime.makeComputePipeline({
@@ -176,7 +194,7 @@ function makeComputePipeline(
   });
 }
 
-const inputs: [WgslTexture, WgslTexture, number][] = [
+const inputs: [inTextureType, outTextureType, number][] = [
   [imageTexture, textures[0], 0],
   [textures[0], textures[1], 1],
   [textures[1], textures[0], 0],
