@@ -536,8 +536,11 @@ canvas.onmousemove = (event) => {
   }
 
   const cellSize = canvas.width / options.size;
-  const x = Math.floor((event.offsetX * 2) / cellSize);
-  const y = options.size - Math.floor((event.offsetY * 2) / cellSize) - 1;
+  const x = Math.floor((event.offsetX * window.devicePixelRatio) / cellSize);
+  const y =
+    options.size -
+    Math.floor((event.offsetY * window.devicePixelRatio) / cellSize) -
+    1;
   const allAffectedCells = [];
   for (let i = -options.brushSize; i <= options.brushSize; i++) {
     for (let j = -options.brushSize; j <= options.brushSize; j++) {
