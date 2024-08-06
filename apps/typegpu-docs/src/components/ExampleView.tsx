@@ -1,5 +1,5 @@
 import { useSetAtom } from 'jotai';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'remeda';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
 import { ExecutionCancelledError } from '../utils/examples/errors';
@@ -79,22 +79,24 @@ export function ExampleView({
   const [snackbarText, setSnackbarText] = useState<string | undefined>();
   const setCurrentExample = useSetAtom(currentExampleAtom);
 
-  useEffect(() => {
-    setCode(initialCode);
-  }, [initialCode]);
-
-  const setCodeDebouncer = useMemo(
-    () =>
-      debounce(
-        (code) => {
-          if (isPlayground) {
-            setCurrentExample(`${PLAYGROUND_KEY}${encodeURIComponent(code)}`);
-          }
+  const setCodeWrapper = isPlayground
+    ? useCallback(
+        (code: string) => {
+          setCurrentExample(`${PLAYGROUND_KEY}${encodeURIComponent(code)}`);
+          localStorage.setItem(PLAYGROUND_KEY, code);
           setCode(code);
         },
-        { waitMs: 500 },
-      ),
-    [isPlayground, setCurrentExample],
+        [setCurrentExample],
+      )
+    : setCode;
+
+  useEffect(() => {
+    setCodeWrapper(initialCode);
+  }, [initialCode, setCodeWrapper]);
+
+  const setCodeDebouncer = useMemo(
+    () => debounce(setCodeWrapper, { waitMs: 500 }),
+    [setCodeWrapper],
   );
 
   const handleCodeChange = useEvent((newCode: string) => {

@@ -48,9 +48,12 @@ function ExamplePage() {
           key={PLAYGROUND_KEY}
           example={{
             key: PLAYGROUND_KEY,
-            code: decodeURIComponent(
-              currentExample.slice(PLAYGROUND_KEY.length),
-            ),
+            code:
+              currentExample === PLAYGROUND_KEY
+                ? localStorage.getItem(PLAYGROUND_KEY) ?? ''
+                : decodeURIComponent(
+                    currentExample.slice(PLAYGROUND_KEY.length),
+                  ),
             metadata: {
               title: 'Playground',
               category: '',
