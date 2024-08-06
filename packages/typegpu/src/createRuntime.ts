@@ -182,13 +182,12 @@ class TypeGpuRuntimeImpl {
     const destinationBuffer = this.bufferFor(destination);
 
     const size = roundUp(source.dataType.size, source.dataType.byteAlignment);
+    const toCopy: { offset: number; size: number }[] = [];
 
     if (mask) {
       const hostBuffer = new ArrayBuffer(size);
       source.dataType.write(new BufferWriter(hostBuffer), mask);
       const readBuffer = new Uint32Array(hostBuffer);
-
-      const toCopy: { offset: number; size: number }[] = [];
 
       let i = 0;
       while (i < readBuffer.length) {
@@ -208,28 +207,20 @@ class TypeGpuRuntimeImpl {
           i++;
         }
       }
-
-      const commandEncoder = this.device.createCommandEncoder();
-      for (const { offset, size } of toCopy) {
-        commandEncoder.copyBufferToBuffer(
-          sourceBuffer,
-          offset,
-          destinationBuffer,
-          offset,
-          size,
-        );
-      }
-      this.device.queue.submit([commandEncoder.finish()]);
     } else {
-      const commandEncoder = this.device.createCommandEncoder();
-      commandEncoder.copyBufferToBuffer(
+      toCopy.push({
+        offset: 0,
+        size,
+      });
+    }
+    for (const { offset, size } of toCopy) {
+      this.commandEncoder.copyBufferToBuffer(
         sourceBuffer,
-        0,
+        offset,
         destinationBuffer,
-        0,
+        offset,
         size,
       );
-      this.device.queue.submit([commandEncoder.finish()]);
     }
   }
 

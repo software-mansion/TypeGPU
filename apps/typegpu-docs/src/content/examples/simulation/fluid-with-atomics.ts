@@ -443,15 +443,12 @@ function resetGameData() {
       options.size / options.workgroupSize,
     );
     passEncoderCompute.end();
+    device.queue.submit([commandEncoder.finish()]);
 
-    commandEncoder.copyBufferToBuffer(
-      runtime.bufferFor(nextStateBuffer),
-      0,
-      runtime.bufferFor(currentStateBuffer),
-      0,
-      cells.byteLength,
-    );
+    runtime.copyBuffer(nextStateBuffer, currentStateBuffer);
+    runtime.flush();
 
+    commandEncoder = device.createCommandEncoder();
     // render
     const passEncoderRender = commandEncoder.beginRenderPass(renderPass);
     passEncoderRender.setPipeline(renderPipeline);
