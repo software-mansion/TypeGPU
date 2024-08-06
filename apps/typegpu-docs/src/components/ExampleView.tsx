@@ -1,6 +1,9 @@
+import { useSetAtom } from 'jotai';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'remeda';
+import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
 import { ExecutionCancelledError } from '../utils/examples/errors';
+import { PLAYGROUND_KEY } from '../utils/examples/exampleContent';
 import { executeExample } from '../utils/examples/exampleRunner';
 import type { ExampleState } from '../utils/examples/exampleState';
 import { useLayout } from '../utils/examples/layout';
@@ -16,6 +19,7 @@ import { Video } from './design/Video';
 type Props = {
   example: Example;
   codeEditorShowing: boolean;
+  isPlayground?: boolean;
 };
 
 function useExample(
@@ -65,18 +69,32 @@ function useExample(
   };
 }
 
-export function ExampleView({ example, codeEditorShowing }: Props) {
+export function ExampleView({
+  example,
+  codeEditorShowing,
+  isPlayground = false,
+}: Props) {
   const { code: initialCode } = example;
   const [code, setCode] = useState(initialCode);
   const [snackbarText, setSnackbarText] = useState<string | undefined>();
+  const setCurrentExample = useSetAtom(currentExampleAtom);
 
   useEffect(() => {
     setCode(initialCode);
   }, [initialCode]);
 
   const setCodeDebouncer = useMemo(
-    () => debounce(setCode, { waitMs: 500 }),
-    [],
+    () =>
+      debounce(
+        (code) => {
+          if (isPlayground) {
+            setCurrentExample(`${PLAYGROUND_KEY}${encodeURIComponent(code)}`);
+          }
+          setCode(code);
+        },
+        { waitMs: 500 },
+      ),
+    [isPlayground, setCurrentExample],
   );
 
   const handleCodeChange = useEvent((newCode: string) => {

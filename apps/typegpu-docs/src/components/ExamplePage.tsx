@@ -2,7 +2,7 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { Suspense, useEffect, useRef } from 'react';
 import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
-import { examples } from '../utils/examples/exampleContent';
+import { PLAYGROUND_KEY, examples } from '../utils/examples/exampleContent';
 import { ExampleNotFound } from './ExampleNotFound';
 import { ExampleView } from './ExampleView';
 
@@ -40,6 +40,26 @@ function ExamplePage() {
   const content = (() => {
     if (!currentExample) {
       return <RedirectToFlagship />;
+    }
+
+    if (currentExample.startsWith(PLAYGROUND_KEY)) {
+      return (
+        <ExampleView
+          key={PLAYGROUND_KEY}
+          example={{
+            key: PLAYGROUND_KEY,
+            code: decodeURIComponent(
+              currentExample.slice(PLAYGROUND_KEY.length),
+            ),
+            metadata: {
+              title: 'Playground',
+              category: '',
+            },
+          }}
+          isPlayground={true}
+          codeEditorShowing={codeEditorShown}
+        />
+      );
     }
 
     if (currentExample in examples) {

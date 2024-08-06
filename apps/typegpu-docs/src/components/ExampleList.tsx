@@ -1,6 +1,9 @@
 import { useAtom } from 'jotai';
 import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
-import { examplesByCategory } from '../utils/examples/exampleContent';
+import {
+  PLAYGROUND_KEY,
+  examplesByCategory,
+} from '../utils/examples/exampleContent';
 import { exampleCategories } from '../utils/examples/types';
 import { ExampleLink } from './ExampleLink';
 import { Switch } from './design/Switch';
@@ -12,6 +15,10 @@ function ExampleList() {
   return (
     <>
       <nav className="flex flex-col flex-1 gap-2 p-4  overflow-y-auto min-w-64">
+        <ExampleLink key={PLAYGROUND_KEY} exampleKey={PLAYGROUND_KEY}>
+          Playground
+        </ExampleLink>
+        <hr />
         {exampleCategories.map((category) => (
           <section key={category.key} className="pb-4">
             <h2 className="text-sm text-slate-500">{category.label}</h2>
