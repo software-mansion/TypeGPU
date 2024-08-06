@@ -80,6 +80,9 @@ importers:
       jotai-location:
         specifier: ^0.5.5
         version: 0.5.5(jotai@2.8.4)
+      lz-string:
+        specifier: ^1.5.0
+        version: 1.5.0
       monaco-editor:
         specifier: ^0.50.0
         version: 0.50.0
@@ -4310,6 +4313,11 @@ packages:
 
   /lunr@2.3.9:
     resolution: {integrity: sha512-zTU3DaZaF3Rt9rhN3uBMGQD3dD2/vFQqnvZCDv4dl5iOzq2IZQqTxu90r4E5J+nP70J3ilqVCrbho2eWaeW8Ow==}
+    dev: false
+
+  /lz-string@1.5.0:
+    resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
+    hasBin: true
     dev: false
 
   /magic-string@0.30.10:
