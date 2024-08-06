@@ -3,6 +3,8 @@ import type { RESET } from 'jotai/utils';
 import type { WritableAtom } from 'jotai/vanilla';
 import { PLAYGROUND_KEY } from './exampleContent';
 
+const exampleHashPrefix = `example=${PLAYGROUND_KEY}`;
+
 const options = {
   serialize(val: string | undefined) {
     return val ?? '';
@@ -12,17 +14,17 @@ const options = {
   },
   setHash: (searchParams: string) => {
     if (
-      window.location.hash &&
-      (!searchParams.startsWith(`example=${PLAYGROUND_KEY}`) ||
-        searchParams === `example=${PLAYGROUND_KEY}`)
+      !window.location.hash ||
+      (window.location.hash.startsWith(`#${exampleHashPrefix}`) &&
+        searchParams.startsWith(exampleHashPrefix))
     ) {
-      window.location.hash = searchParams;
-    } else {
       window.history.replaceState(
         null,
         '',
         `${window.location.pathname}${window.location.search}#${searchParams}`,
       );
+    } else {
+      window.location.hash = searchParams;
     }
   },
 };
