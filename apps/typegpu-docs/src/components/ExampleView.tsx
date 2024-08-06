@@ -1,4 +1,5 @@
 import { useSetAtom } from 'jotai';
+import { compressToEncodedURIComponent } from 'lz-string';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'remeda';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
@@ -82,8 +83,9 @@ export function ExampleView({
   const setCodeWrapper = isPlayground
     ? useCallback(
         (code: string) => {
-          setCurrentExample(`${PLAYGROUND_KEY}${encodeURIComponent(code)}`);
-          localStorage.setItem(PLAYGROUND_KEY, code);
+          const encoded = compressToEncodedURIComponent(code);
+          setCurrentExample(`${PLAYGROUND_KEY}${encoded}`);
+          localStorage.setItem(PLAYGROUND_KEY, encoded);
           setCode(code);
         },
         [setCurrentExample],

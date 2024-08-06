@@ -1,4 +1,5 @@
-import { useAtomValue, useSetAtom } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { decompressFromEncodedURIComponent } from 'lz-string';
 import { Suspense, useEffect, useRef } from 'react';
 import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
@@ -34,12 +35,18 @@ function RedirectToFlagship() {
 }
 
 function ExamplePage() {
-  const currentExample = useAtomValue(currentExampleAtom);
+  const [currentExample, setCurrentExample] = useAtom(currentExampleAtom);
   const codeEditorShown = useAtomValue(codeEditorShownAtom);
 
   const content = (() => {
     if (!currentExample) {
       return <RedirectToFlagship />;
+    }
+
+    if (currentExample === PLAYGROUND_KEY) {
+      setCurrentExample(
+        `${PLAYGROUND_KEY}${localStorage.getItem(PLAYGROUND_KEY) ?? ''}`,
+      );
     }
 
     if (currentExample.startsWith(PLAYGROUND_KEY)) {
@@ -48,12 +55,9 @@ function ExamplePage() {
           key={PLAYGROUND_KEY}
           example={{
             key: PLAYGROUND_KEY,
-            code:
-              currentExample === PLAYGROUND_KEY
-                ? localStorage.getItem(PLAYGROUND_KEY) ?? ''
-                : decodeURIComponent(
-                    currentExample.slice(PLAYGROUND_KEY.length),
-                  ),
+            code: decompressFromEncodedURIComponent(
+              currentExample.slice(PLAYGROUND_KEY.length),
+            ),
             metadata: {
               title: 'Playground',
               category: '',
