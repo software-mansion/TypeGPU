@@ -457,3 +457,7 @@ export async function createRuntime(
 
   return new TypeGpuRuntimeImpl(await adapter.requestDevice(options?.device));
 }
+
+export const exportedForTesting = {
+  TypeGpuRuntimeImpl,
+};
