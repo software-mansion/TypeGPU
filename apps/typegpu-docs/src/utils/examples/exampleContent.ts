@@ -40,3 +40,5 @@ export const examplesByCategory = groupBy(
   Object.values(examples),
   (example) => example.metadata.category,
 );
+
+export const PLAYGROUND_KEY = 'playground__';

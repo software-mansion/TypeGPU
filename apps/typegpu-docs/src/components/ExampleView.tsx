@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSetAtom } from 'jotai';
+import { compressToEncodedURIComponent } from 'lz-string';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'remeda';
+import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
 import { ExecutionCancelledError } from '../utils/examples/errors';
+import { PLAYGROUND_KEY } from '../utils/examples/exampleContent';
 import { executeExample } from '../utils/examples/exampleRunner';
 import type { ExampleState } from '../utils/examples/exampleState';
 import { useLayout } from '../utils/examples/layout';
@@ -16,6 +20,7 @@ import { Video } from './design/Video';
 type Props = {
   example: Example;
   codeEditorShowing: boolean;
+  isPlayground?: boolean;
 };
 
 function useExample(
@@ -65,18 +70,35 @@ function useExample(
   };
 }
 
-export function ExampleView({ example, codeEditorShowing }: Props) {
+export function ExampleView({
+  example,
+  codeEditorShowing,
+  isPlayground = false,
+}: Props) {
   const { code: initialCode } = example;
   const [code, setCode] = useState(initialCode);
   const [snackbarText, setSnackbarText] = useState<string | undefined>();
+  const setCurrentExample = useSetAtom(currentExampleAtom);
+
+  const setCodeWrapper = isPlayground
+    ? useCallback(
+        (code: string) => {
+          const encoded = compressToEncodedURIComponent(code);
+          setCurrentExample(`${PLAYGROUND_KEY}${encoded}`);
+          localStorage.setItem(PLAYGROUND_KEY, encoded);
+          setCode(code);
+        },
+        [setCurrentExample],
+      )
+    : setCode;
 
   useEffect(() => {
-    setCode(initialCode);
-  }, [initialCode]);
+    setCodeWrapper(initialCode);
+  }, [initialCode, setCodeWrapper]);
 
   const setCodeDebouncer = useMemo(
-    () => debounce(setCode, { waitMs: 500 }),
-    [],
+    () => debounce(setCodeWrapper, { waitMs: 500 }),
+    [setCodeWrapper],
   );
 
   const handleCodeChange = useEvent((newCode: string) => {

@@ -100,7 +100,7 @@ export type Main =
 
 export type GlobalDecl =
     null
-  | VariableDecl
+  | GlobalVariableDecl
   | ValueDecl
   | OverrideDecl
   | FunctionDecl;
@@ -151,6 +151,7 @@ export type ForStatement = {
  export type VariableOrValueStatement = VariableDecl | LetDecl | ValueDecl; 
  export type LetDecl = { type: 'let_decl', ident: string, typespec: TypeSpecifier, expr: Expression }; 
  export type VariableDecl = { type: 'variable_decl', template_list: TemplateList | null, ident: string, typespec: TypeSpecifier | null, expr: Expression | null }; 
+ export type GlobalVariableDecl = {type: 'global_variable_decl', attributes: Attribute[] | null, variable_decl: VariableDecl}; 
  export type ValueDecl = { type: 'value_decl', ident: string, typespec: TypeSpecifier | null, expr: Expression }; 
  export type OverrideDecl = { type: 'override_decl', attrs: Attribute[], ident: string, typespec: TypeSpecifier | null, expr: Expression | null }; 
 
@@ -209,10 +210,10 @@ type RelationalExpression =
     ShiftExpression
   | {
       type: 'less_than'
-          | 'greater_than' 
-          | 'less_than_equal' 
-          | 'greater_than_equal' 
-          | 'equal' 
+          | 'greater_than'
+          | 'less_than_equal'
+          | 'greater_than_equal'
+          | 'equal'
           | 'not_equal',
       lhs: ShiftExpression,
       rhs: ShiftExpression
@@ -222,7 +223,7 @@ type ShortCircuitOrExpression = RelationalExpression | { type: 'logic_or', lhs: 
 type BinaryAndExpression = UnaryExpression | { type: 'binary_and', lhs: BinaryAndExpression, rhs: UnaryExpression };
 type BinaryOrExpression = UnaryExpression | { type: 'binary_or', lhs: BinaryOrExpression, rhs: UnaryExpression };
 type BinaryXorExpression = UnaryExpression | { type: 'binary_xor', lhs: BinaryXorExpression, rhs: UnaryExpression };
-type BitwiseExpression = 
+type BitwiseExpression =
     Exclude<BinaryAndExpression, UnaryExpression>
   | Exclude<BinaryOrExpression, UnaryExpression>
   | Exclude<BinaryXorExpression, UnaryExpression>
@@ -277,7 +278,7 @@ const grammar: Grammar = {
     {"name": "translation_unit$ebnf$1", "symbols": ["translation_unit$ebnf$1", "global_decl"], "postprocess": (d) => d[0].concat([d[1]])},
     {"name": "translation_unit", "symbols": ["translation_unit$ebnf$1"], "postprocess": ([declarations]) => ({ type: 'translation_unit', declarations })},
     {"name": "global_decl", "symbols": [{"literal":";"}], "postprocess": () => null},
-    {"name": "global_decl", "symbols": ["variable_decl", {"literal":";"}], "postprocess": id},
+    {"name": "global_decl", "symbols": ["global_variable_decl", {"literal":";"}], "postprocess": id},
     {"name": "global_decl", "symbols": ["value_decl", {"literal":";"}], "postprocess": id},
     {"name": "global_decl", "symbols": ["override_decl", {"literal":";"}], "postprocess": id},
     {"name": "global_decl", "symbols": ["function_decl"], "postprocess": id},
@@ -349,6 +350,9 @@ const grammar: Grammar = {
     {"name": "variable_decl$ebnf$2", "symbols": ["variable_decl$ebnf$2$subexpression$1"], "postprocess": id},
     {"name": "variable_decl$ebnf$2", "symbols": [], "postprocess": () => null},
     {"name": "variable_decl", "symbols": [{"literal":"var"}, "variable_decl$ebnf$1", "optionally_typed_ident", "variable_decl$ebnf$2"], "postprocess": ([ , template_list, typed_ident, opt_expr]) => ({ type: 'variable_decl', template_list: template_list, ...typed_ident, expr: opt_expr ? opt_expr[1] : null })},
+    {"name": "global_variable_decl$ebnf$1", "symbols": []},
+    {"name": "global_variable_decl$ebnf$1", "symbols": ["global_variable_decl$ebnf$1", "attribute"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "global_variable_decl", "symbols": ["global_variable_decl$ebnf$1", "variable_decl"], "postprocess": ([attrs, variable_decl]) => ({ type: 'global_variable_decl', attributes: attrs, variable_decl })},
     {"name": "optionally_typed_ident$ebnf$1$subexpression$1", "symbols": [{"literal":":"}, "type_specifier"]},
     {"name": "optionally_typed_ident$ebnf$1", "symbols": ["optionally_typed_ident$ebnf$1$subexpression$1"], "postprocess": id},
     {"name": "optionally_typed_ident$ebnf$1", "symbols": [], "postprocess": () => null},

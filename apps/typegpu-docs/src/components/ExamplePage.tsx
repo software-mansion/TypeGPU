@@ -1,8 +1,9 @@
-import { useAtomValue, useSetAtom } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { decompressFromEncodedURIComponent } from 'lz-string';
 import { Suspense, useEffect, useRef } from 'react';
 import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
-import { examples } from '../utils/examples/exampleContent';
+import { PLAYGROUND_KEY, examples } from '../utils/examples/exampleContent';
 import { ExampleNotFound } from './ExampleNotFound';
 import { ExampleView } from './ExampleView';
 
@@ -34,12 +35,39 @@ function RedirectToFlagship() {
 }
 
 function ExamplePage() {
-  const currentExample = useAtomValue(currentExampleAtom);
+  const [currentExample, setCurrentExample] = useAtom(currentExampleAtom);
   const codeEditorShown = useAtomValue(codeEditorShownAtom);
 
   const content = (() => {
     if (!currentExample) {
       return <RedirectToFlagship />;
+    }
+
+    if (currentExample === PLAYGROUND_KEY) {
+      setCurrentExample(
+        `${PLAYGROUND_KEY}${localStorage.getItem(PLAYGROUND_KEY) ?? ''}`,
+      );
+    }
+
+    if (currentExample.startsWith(PLAYGROUND_KEY)) {
+      return (
+        <ExampleView
+          key={PLAYGROUND_KEY}
+          example={{
+            key: PLAYGROUND_KEY,
+            code:
+              decompressFromEncodedURIComponent(
+                currentExample.slice(PLAYGROUND_KEY.length),
+              ) ?? '',
+            metadata: {
+              title: 'Playground',
+              category: '',
+            },
+          }}
+          isPlayground={true}
+          codeEditorShowing={codeEditorShown}
+        />
+      );
     }
 
     if (currentExample in examples) {
