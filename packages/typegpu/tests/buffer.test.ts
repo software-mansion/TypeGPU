@@ -2,7 +2,7 @@ import { wgsl } from 'typegpu';
 import { describe, expect, it, vi } from 'vitest';
 import { afterEach } from 'vitest';
 import { createRuntime, exportedForTesting } from '../src/createRuntime';
-import { struct, u32, vec3i } from '../src/data';
+import { struct, u32, vec3i, vec4u } from '../src/data';
 import { plum } from '../src/wgslPlum';
 const { TypeGpuRuntimeImpl } = exportedForTesting;
 
@@ -165,47 +165,43 @@ describe('TypeGpuRuntime', () => {
     );
   });
 
-  // TODO: This should pass!
-  // it('should properly write to complex buffer', async () => {
-  //   const runtime = await createRuntime();
+  it('should properly write to complex buffer', async () => {
+    const runtime = await createRuntime();
 
-  //   const s1 = struct({ a: u32, b: u32, c: vec3i });
-  //   const s2 = struct({ a: u32, b: s1, c: vec4u });
+    const s1 = struct({ a: u32, b: u32, c: vec3i });
+    const s2 = struct({ a: u32, b: s1, c: vec4u });
 
-  //   console.log('s1 size:', s1.size, ', s1 alignment:', s1.byteAlignment);
-  //   console.log('s2 size:', s2.size, ', s2 alignment:', s2.byteAlignment);
+    const bufferData = wgsl.buffer(s2).$allowUniform();
+    const buffer = bufferData.asUniform();
 
-  //   const bufferData = wgsl.buffer(s2).$allowUniform();
-  //   const buffer = bufferData.asUniform();
+    const testPipeline = runtime.makeComputePipeline({
+      code: wgsl`let x = ${buffer};`,
+    });
 
-  //   const testPipeline = runtime.makeComputePipeline({
-  //     code: wgsl`let x = ${buffer};`,
-  //   });
+    expect(testPipeline).toBeDefined();
+    expect(runtime.device.createBuffer).toBeCalledWith({
+      mappedAtCreation: false,
+      size: 64,
+      usage: 76,
+    });
 
-  //   expect(testPipeline).toBeDefined();
-  //   expect(runtime.device.createBuffer).toBeCalledWith({
-  //     mappedAtCreation: false,
-  //     size: 64,
-  //     usage: 76,
-  //   });
+    runtime.writeBuffer(bufferData, {
+      a: 3,
+      b: { a: 4, b: 5, c: [6, 7, 8] },
+      c: [9, 10, 11, 12],
+    });
 
-  //   runtime.writeBuffer(bufferData, {
-  //     a: 3,
-  //     b: { a: 4, b: 5, c: [6, 7, 8] },
-  //     c: [9, 10, 11, 12],
-  //   });
+    const mockBuffer = runtime.bufferFor(bufferData);
+    expect(mockBuffer).toBeDefined();
 
-  //   const mockBuffer = runtime.bufferFor(bufferData);
-  //   expect(mockBuffer).toBeDefined();
-
-  //   expect(runtime.device.queue.writeBuffer).toBeCalledWith(
-  //     mockBuffer,
-  //     0,
-  //     new ArrayBuffer(64),
-  //     0,
-  //     64,
-  //   );
-  // });
+    expect(runtime.device.queue.writeBuffer).toBeCalledWith(
+      mockBuffer,
+      0,
+      new ArrayBuffer(64),
+      0,
+      64,
+    );
+  });
 
   it('should properly write to buffer with plum initialization', async () => {
     const runtime = await createRuntime();
