@@ -2,7 +2,8 @@ import { wgsl } from 'typegpu';
 import { describe, expect, it, vi } from 'vitest';
 import { afterEach } from 'vitest';
 import { createRuntime, exportedForTesting } from '../src/createRuntime';
-import { u32, vec3i } from '../src/data';
+import { struct, u32, vec3i } from '../src/data';
+import { plum } from '../src/wgslPlum';
 const { TypeGpuRuntimeImpl } = exportedForTesting;
 
 global.GPUBufferUsage = {
@@ -94,6 +95,10 @@ describe('TypeGpuRuntime', () => {
       code: wgsl`${buffer}`,
     });
 
+    const mockBuffer = runtime.bufferFor(bufferData);
+    expect(mockBuffer).toBeDefined();
+    expect(mockBuffer.getMappedRange).not.toBeCalled();
+
     expect(testPipeline).toBeDefined();
     expect(runtime.device.createBuffer).toBeCalledWith({
       mappedAtCreation: false,
@@ -111,11 +116,127 @@ describe('TypeGpuRuntime', () => {
       code: wgsl`${buffer}`,
     });
 
+    const mockBuffer = runtime.bufferFor(bufferData);
+    expect(mockBuffer).toBeDefined();
+    expect(mockBuffer.getMappedRange).toBeCalled();
+
     expect(testPipeline).toBeDefined();
     expect(runtime.device.createBuffer).toBeCalledWith({
       mappedAtCreation: true,
       size: 16,
       usage: 76,
     });
+  });
+
+  it('should allocate buffer with proper size for nested structs', async () => {
+    const runtime = await createRuntime();
+    const s1 = struct({ a: u32, b: u32 });
+    const s2 = struct({ a: u32, b: s1 });
+    const bufferData = wgsl.buffer(s2).$allowUniform();
+    const buffer = bufferData.asUniform();
+
+    const testPipeline = runtime.makeComputePipeline({
+      code: wgsl`${buffer}`,
+    });
+
+    expect(testPipeline).toBeDefined();
+    expect(runtime.device.createBuffer).toBeCalledWith({
+      mappedAtCreation: false,
+      size: 12,
+      usage: 76,
+    });
+  });
+
+  it('should properly write to buffer', async () => {
+    const runtime = await createRuntime();
+    const bufferData = wgsl.buffer(u32);
+
+    runtime.writeBuffer(bufferData, 3);
+
+    const mockBuffer = runtime.bufferFor(bufferData);
+    expect(mockBuffer).toBeDefined();
+
+    expect(runtime.device.queue.writeBuffer).toBeCalledWith(
+      mockBuffer,
+      0,
+      new ArrayBuffer(4),
+      0,
+      4,
+    );
+  });
+
+  // TODO: This should pass!
+  // it('should properly write to complex buffer', async () => {
+  //   const runtime = await createRuntime();
+
+  //   const s1 = struct({ a: u32, b: u32, c: vec3i });
+  //   const s2 = struct({ a: u32, b: s1, c: vec4u });
+
+  //   console.log('s1 size:', s1.size, ', s1 alignment:', s1.byteAlignment);
+  //   console.log('s2 size:', s2.size, ', s2 alignment:', s2.byteAlignment);
+
+  //   const bufferData = wgsl.buffer(s2).$allowUniform();
+  //   const buffer = bufferData.asUniform();
+
+  //   const testPipeline = runtime.makeComputePipeline({
+  //     code: wgsl`let x = ${buffer};`,
+  //   });
+
+  //   expect(testPipeline).toBeDefined();
+  //   expect(runtime.device.createBuffer).toBeCalledWith({
+  //     mappedAtCreation: false,
+  //     size: 64,
+  //     usage: 76,
+  //   });
+
+  //   runtime.writeBuffer(bufferData, {
+  //     a: 3,
+  //     b: { a: 4, b: 5, c: [6, 7, 8] },
+  //     c: [9, 10, 11, 12],
+  //   });
+
+  //   const mockBuffer = runtime.bufferFor(bufferData);
+  //   expect(mockBuffer).toBeDefined();
+
+  //   expect(runtime.device.queue.writeBuffer).toBeCalledWith(
+  //     mockBuffer,
+  //     0,
+  //     new ArrayBuffer(64),
+  //     0,
+  //     64,
+  //   );
+  // });
+
+  it('should properly write to buffer with plum initialization', async () => {
+    const runtime = await createRuntime();
+    const spy = vi.spyOn(runtime, 'writeBuffer');
+    const intPlum = plum<number>(3);
+
+    const bufferData = wgsl.buffer(u32, intPlum).$allowUniform();
+    const buffer = bufferData.asUniform();
+
+    const testPipeline = runtime.makeComputePipeline({
+      code: wgsl`${buffer}`,
+    });
+
+    expect(spy).toBeCalledTimes(0);
+    expect(testPipeline).toBeDefined();
+    expect(runtime.device.createBuffer).toBeCalledWith({
+      mappedAtCreation: true,
+      size: 4,
+      usage: 76,
+    });
+
+    runtime.setPlum(intPlum, 5);
+
+    expect(spy).toBeCalledTimes(1);
+    const mockBuffer = runtime.bufferFor(bufferData);
+    expect(runtime.device.queue.writeBuffer).toBeCalledWith(
+      mockBuffer,
+      0,
+      new ArrayBuffer(4),
+      0,
+      4,
+    );
   });
 });
