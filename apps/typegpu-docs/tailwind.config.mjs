@@ -1,8 +1,28 @@
 /** @type {import('tailwindcss').Config} */
+import defaultTheme from 'tailwindcss/defaultTheme';
+
 export default {
   content: ['./src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}'],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ['Aeonik', ...defaultTheme.fontFamily.sans],
+      },
+      colors: {
+        grayscale: {
+          100: '#000000',
+          80: '#333333',
+          60: '#808080',
+          20: '#EBEBED',
+          0: '#FFF',
+        },
+
+        gradient: {
+          purple: '#C464FF',
+          blue: '#1D72F0',
+        },
+      },
+    },
   },
   plugins: [],
 };

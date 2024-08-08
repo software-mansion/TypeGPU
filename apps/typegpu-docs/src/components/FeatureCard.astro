@@ -1,0 +1,15 @@
+---
+const { image, header, class: className } = Astro.props;
+const content = await Astro.slots.render('default');
+---
+
+<article class:list={["flex flex-col justify-between h-[30rem] p-14 bg-grayscale-0 rounded-[5rem]", className]}>
+  <div class="border-2 border-solid border-[#00000029] rounded-3xl self-start p-3">
+    <img src={`/assets/${image}.svg`} alt="" />
+  </div>
+  <div>
+    <h3 class="pb-4 text-4xl font-medium text-grayscale-100">{header}</h3>
+    <p class="text-2xl text-grayscale-80">{content}</p>
+  </div>
+</article>
+  
