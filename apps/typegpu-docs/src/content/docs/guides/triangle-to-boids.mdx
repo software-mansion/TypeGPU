@@ -1,0 +1,768 @@
+---
+title: Triangle to boids
+description: A guide on how to start a simple project and scale it leveraging the power of TypeGPU.
+---
+
+Let's start off with a simple program that draws a triangle on the screen. First we need to setup the canvas and our runtime.
+This setup will most look very similar in every project which draws to the screen.
+
+```ts
+// triangle.ts
+import { createRuntime } from 'typegpu'
+import { addElement } from '@typegpu/example-toolkit';
+
+// create the runtime and get the GPUDevice
+const runtime = await createRuntime();
+const device = runtime.device;
+
+// add the canvas element and get the context
+const canvas = await addElement('canvas', {aspectRatio: 1});
+const context = canvas.getContext('webgpu') as GPUCanvasContext;
+
+// configure the canvas context
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+context.configure({
+  device,
+  format: presentationFormat,
+  alphaMode: 'premultiplied',
+});
+```
+
+import { Aside } from '@astrojs/starlight/components';
+import { LinkCard } from '@astrojs/starlight/components';
+
+<Aside type="tip">
+
+Im creating a canvas by running addElement form our example toolkit but that is not the only way! You can use the standard `document.createElement('canvas')` and append it to the document.
+
+</Aside>
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Let's draw a triangle!
+
+Now that we have our canvas setup, we can start drawing on it. We will start by creating a simple shader that will draw a triangle.
+
+```ts
+import { wgsl, builtin } from 'typegpu'
+
+const vertexCode = wgsl`
+  var verticies = array<vec2f, 3>(
+    vec2(0.0, 0.5),
+    vec2(-0.5, -0.5),
+    vec2(0.5, -0.5)
+  );
+
+  // here we can use builtin.vertexIndex to let TypeGPU
+  // know that we want to use the @builtin(vertexIndex)
+  let pos = vec4f(verticies[${builtin.vertexIndex}], 0.0, 1.0);
+`;
+```
+
+<Aside type="caution" title="Pay attention to how the vertex shader code looks!">
+  There is no function declaration and no return statement! That is by design - TypeGPU will take care of that.
+</Aside>
+
+Since there is no function declaration there is no place for parameters - but don't worry,
+every used builtin and vertex shader will be properly added by TypeGPU.
+
+```ts
+const fragmentCode = wgsl`
+  // let's go with a simple purple for now
+  return vec4(0.7686, 0.3922, 1.0, 1.0);
+`;
+```
+
+### Time to create a render pipeline
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+The API for creating a pipeline in TypeGPU is similar to the WebGPU API, but with a few differences.
+<CardGrid>
+  <Card title="Layouts" icon="seti:bicep">
+    There is no need pass a layout. It's automated.
+  </Card>
+  <Card title="Modules" icon="setting">
+    The module field in both vertex and fragment objects is replaced with "code" which accepts wgsl code.
+  </Card>
+  <Card title="Vertex" icon="setting">
+    Apart from the code field, the vertex object has an output field which maps the output of the vertex shader to the next stage.
+    It works basically as an "export" from the vertex shader. The variables with matching keys will be packed into a struct and passed to the fragment shader.
+  </Card>
+  <Card title="Fragment" icon="setting">
+    Variables present in the vertex output can be used inside the fragment code with no additional setup. The target field remains unchanged.
+  </Card>
+</CardGrid>
+
+```ts
+const pipeline = runtime.makeRenderPipeline({
+  vertex: {
+    code: vertexCode,
+    output: {
+      [builtin.position] : 'pos'
+    }
+  },
+  fragment: {
+    code: fragmentCode,
+    target: [{
+      format: presentationFormat
+    }]
+  },
+  primitive: {
+    topology: 'triangle-list'
+  }
+})
+```
+
+Now all we need to do is execute the pipeline! To execute it we need to pass GPURenderPassDescriptor along with the vertexCount.
+
+```ts
+import { onFrame } from '@typegpu/example-toolkit';
+
+onFrame(() => {
+  pipeline.execute({
+    colorAttachments: [
+      {
+        view: context.getCurrentTexture().createView(),
+        clearValue: [0, 0, 0, 0],
+        loadOp: 'clear',
+        storeOp: 'store',
+      },
+    ],
+    vertexCount: 3,
+  });
+});
+```
+<Aside type="danger" title="The code above draws nothing!">
+  The pipeline.execute() method encodes all the necessary
+  commands but they will not be queued until we read from a buffer or call runtime.flush().
+</Aside>
+
+```ts
+onFrame(() => {
+  pipeline.execute({
+    colorAttachments: [
+      {
+        view: context.getCurrentTexture().createView(),
+        clearValue: [0, 0, 0, 0],
+        loadOp: 'clear',
+        storeOp: 'store',
+      },
+    ],
+    vertexCount: 3,
+  });
+```
+``` diff
++  runtime.flush();
+```
+```ts
+})
+```
+
+## Now let's have a look at our final program and compare it to WebGPU.
+
+<Tabs>
+  <TabItem label="TypeGPU">
+    ```ts
+    import { wgsl, createRuntime, builtin } from 'typegpu'
+    import { addElement, onFrame } from '@typegpu/example-toolkit';
+
+    const runtime = await createRuntime();
+    const device = runtime.device;
+
+    const canvas = await addElement('canvas', {aspectRatio: 1});
+    const context = canvas.getContext('webgpu') as GPUCanvasContext;
+    const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+    context.configure({
+      device,
+      format: presentationFormat,
+      alphaMode: 'premultiplied',
+    });
+
+    const pipeline = runtime.makeRenderPipeline({
+      vertex: {
+        code: wgsl`
+          var verticies = array<vec2f, 3>(
+            vec2(0.0, 0.5),
+            vec2(-0.5, -0.5),
+            vec2(0.5, -0.5)
+          );
+
+          let pos = vec4f(verticies[${builtin.vertexIndex}], 0.0, 1.0);
+        `,
+        output: {
+          [builtin.position] : 'pos'
+        }
+      },
+      fragment: {
+        code: wgsl`
+          return vec4(0.7686, 0.3922, 1., 1.0);
+        `,
+        target: [{
+          format: presentationFormat
+        }]
+      },
+      primitive: {
+        topology: 'triangle-list'
+      }
+    })
+
+    onFrame(() => {
+      pipeline.execute({
+      colorAttachments: [
+          {
+            view: context.getCurrentTexture().createView(),
+            clearValue: [0, 0, 0, 0],
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        ],
+        vertexCount: 3,
+    })
+
+    runtime.flush();
+    })
+    ```
+    <LinkCard
+      title="Run this in the playground"
+      href="/examples#example=playground__JYWwDg9gTgLgBAbzgdwOYGcA2AaOBjKAUwEMZCAlAVwDsZRDcAjS4TO6uAXzgDMoIQcAOQwAnmEKowlIQChQkWIjjEAJqoCimQiEK1cEagDEoxXV179BQgAJiJUygHpCADzNhtAWhgQImAGtgGCEAbllZPEN0eCgaOnMAXhVkYmD8IlIKePoACgBKcKjqGLhVQgA3YDxCOGS42noAOnKqmvDI6Pg8YmoK4nQ6lLT4NU1tXVpcoR6%2BgaFcBAGJPBhyUmAIAC44AEZOQs6S7sMyV3hk2f70JtRCGABhU7cYaeRCRkchfJVBgHEAAoAVQevWuT1oLyKXTgYCI6D0MA2hiM0BApCG1GIVVQpGgt2kt3uAKIPEIUCIqlBc3QqKg6NehyOZxgTWKPGAqEoRFyCFkcDKlWqDH5vDRpB2cMICNoyOM4pg2FFxEwYAAFsQALIQco7IRSkCUNjATzAQiqBayA4dYqlMAmwiYYDUWr1HK6JrogIUPTlKAAh1Ol280UVclnHZ8gUCqK6lAYTAAA1F0bg-SgafD1TNg2SxApxFEAB4w3gAEw8XAAZgAfLkU6nM%2BXcgAGJot3BtgCs%2BSVjejpbLuS83dwI6aPb7-abQ9HcHHPYbAqZ-e08EguabABYeLkw7Bs9KANoAEgQzFY7Ca%2B7OAElqOVXJwALqd9u4Xbtw6pxNTgUQSgYGkGBIyXOAjwvY1qCaDdgk2ahnzgPUNzkVNOFFTgpz4YhUEmEDEAbWNCB2NAsGTfsiBgbkOFLLdWyaAB2AA2AAOJi3yrABOMsyw-Jo%2BJbb9o1-BskSgO58KPKNGx4BVJXhRE5TpBkGxfDCpzhUA4LDUDU18SBMAgVBRD1GAoGAXpUG8J0YlQrgrXyCIUVMXRcgKOoawIgV7QkINCCaNxCDwQDCBDGN-GgABBGAkTwNU8PQHYjzA6T%2ByqQhkB2YoWSJR5uSIWgABUXm5UL8jZTIyAANTNZACj-Rs8G0fMqpVShiPAjs4C6nrXzAgVDLUAB5MA9SakgoEtac4BiaBCBGvVZqIKbG0whs%2BtTG83CeeIdirKcDgiAUGgSfyeEwSh0DVApwgOIA"
+      target="_blank"
+    />
+  </TabItem>
+  <TabItem label="WebGPU">
+    ```ts
+    import { addElement, onFrame } from '@typegpu/example-toolkit';
+
+    const adapter = await navigator.gpu?.requestAdapter();
+    const device = await adapter?.requestDevice();
+
+    if(!device) {
+      throw new Error('Failed to acquire a device')
+    }
+
+    const canvas = await addElement('canvas', {aspectRatio: 1});
+    const context = canvas.getContext('webgpu') as GPUCanvasContext;
+    const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+    context.configure({
+      device,
+      format: presentationFormat,
+      alphaMode: 'premultiplied',
+    });
+
+    const pipeline = device.createRenderPipeline({
+      layout: 'auto',
+      vertex: {
+        module: device.createShaderModule({
+          code: `
+            @vertex
+            fn main(
+              @builtin(vertex_index) VertexIndex : u32
+            ) -> @builtin(position) vec4f {
+              var pos = array<vec2f, 3>(
+                vec2(0.0, 0.5),
+                vec2(-0.5, -0.5),
+                vec2(0.5, -0.5)
+              );
+
+              return vec4f(pos[VertexIndex], 0.0, 1.0);
+            }
+          `,
+        }),
+      },
+      fragment: {
+        module: device.createShaderModule({
+          code: `
+            @fragment
+            fn main() -> @location(0) vec4f {
+              return vec4(0.7686, 0.3922, 1.0, 1.0);
+            }
+          `,
+        }),
+        targets: [
+          {
+            format: presentationFormat,
+          },
+        ],
+      },
+      primitive: {
+        topology: 'triangle-list',
+      },
+    });
+
+
+    onFrame(() => {
+      const commandEncoder = device.createCommandEncoder();
+      const textureView = context.getCurrentTexture().createView();
+
+      const renderPassDescriptor: GPURenderPassDescriptor = {
+        colorAttachments: [
+          {
+            view: textureView,
+            clearValue: [0, 0, 0, 0],
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        ],
+      };
+
+      const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+      passEncoder.setPipeline(pipeline);
+      passEncoder.draw(3);
+      passEncoder.end();
+
+      device.queue.submit([commandEncoder.finish()]);
+    })
+
+    ```
+    <LinkCard
+      title="Run this in the playground"
+      href="/examples#example=playground__JYWwDg9gTgLgBAbzgQwCaoKIBsCmIcB2MANHBAQGJTL5wC%2BcAZlBCHAOQACMAnmDgHMwAVwD0OAB40wuALQwIELAGtgMdgG4AUFoDG5AM7w0yMDBxQ4AXhQB3ZGrgFkAN2ADkCqADohwgPzeUDgAjsI4RgCCqKbmUAAUAJTa%2BgRGcKg4bro41nYOxjFmFoHBYREwACJZwDlJ2lrAjPEAhJnZOImIWnBwMAAWLLZOOMMYUCwJ7BQOuKh9ECi6YcDBKBk1OeyJWnQ6qem6yAQuyAZ5yPaOaJi4%2BETx7EcnZ%2BykCGf8ujAASp7AEAAXHAAIx0ZJ6QzwVLmCTwGzPU4GXw4GAAYXIsJgj1sOAARn5tihzgBxAAKAFU0cckRiiJIYCkoXAwMEDIQYP9yBRoCBPHlnG4PF5fCIUTAycFGBZgqhqS8DDyoHzsRDIfS4d5Uox3MJgvEED0Nh1iEbGLzPMDWREOVzKBaSEbkFgwP1kABZCCZYHsa0gYRYGDAGTAHCoN67NUHeBgYM4LDAAi5GztWo4LXBTw4H6ETJQMlxhNJg1GrDIHgQYQwH3IKsQCO9FwWWHAw29XogL0BnDA1M5DM4LMAZTdec9qG7Jfb7f03rgAAMjdPepwm7BJEvl4wCHA%2BYn4pvl3BOHjhMBA-u17CAPqJzISLoANWbkgAkgR73BgcIAMwAJkPdsulkAA%2BY9T3PIMCHiSADDUAECC6JtdAAFkYboj2nU5LFgi4JnLAAeZC-0YUgfxAg9MOXYj4gABm8WjSHogBWRJTSorCcF0P94lkFjSD47xWPYjjGy4nj%2BLgQTWMA6c1VE4IYD1HdkLQmCIAMABtZ91wkd97wAXSYhjSBBBiISovYj3nETenBES6BE5hkAEe5qww9tOwnXBe02dNdEzcwRzQCxx0nNtl1nHsF1k49nNcjlYu3XcHGg4CwM4LAICOINyDopCuLQjyqMU5S4FUujvAAdgANgADhq4yfwATj-P9TJM0FzO0SzAJszd7M3TkoAEVEDGBTTAIio9zWVS0WTZW1cvtObHSPRzNyMo0Nt6VlQHgptWyGiBICygQeB9GAoGAY4BDkBMjAbehTXBBotG5ah8HiJJrDAiLozgfQQD5D8MAIKLLBTPyByzDFgeOTBwa9Cx6iNAGsT1HBH1DYYEUxBlxTRPVgiIAAVBlMaSGHzGx0ZUbR5kSbzMkzgMaoDAC4MvGBckKRzD8LBZgw2YiTmzGgPJpsBpRoEiGBOV0fo3PGuBJqPKWsJx4EMeCWnbFsyLcGQKBH2dcIJsYuBLetraqKytAAHkwB9XQjagJ6jyMaAcCdn0veCD32x29tbfoBpegBsBWbBiG8iBkHEYh7w8UERN%2BeZ1n4iZwXWfZsWvAsllo6RvNvHZCVC0THAYMrpNC6j4WY%2BRnxUGoWx4h-evi6T3N6d6Pt03KcIy%2BEPEQDUeJNPjhGm9LnUCGAAx%2BiSAyIXBLQgA"
+      target="_blank"
+    />
+  </TabItem>
+</Tabs>
+
+<Aside>The benefit of using TypeGPU may not be very obvious yet. Sure we lost some lines of code - but is it worth it? Let's keep going!</Aside>
+
+## Let's add some parametrization!
+
+There is nothing wrong with a simple static triangle, but let's make it a *bit more interesting* by adding some parameters to our shader.
+We will add x and y position buffers and a rotation buffer that will let us move the triangle around! Now isn't that **awesome**?
+
+#### But first let's upgrade our program a little.
+
+Currently the verices are hardcoded in the shader.
+
+```wgsl
+var verticies = array<vec2f, 3>(
+  vec2(0.0, 0.5),
+  vec2(-0.5, -0.5),
+  vec2(0.5, -0.5)
+);
+
+let pos = vec4f(verticies[${builtin.vertexIndex}], 0.0, 1.0);
+```
+
+That is certainly not the best way to do it. Let's create a vertex buffer that stores the coordinates and use it in the shader.
+
+```ts
+import { vec2f, arrayOf } from 'typegpu/data';
+
+const triangleVertex = wgsl
+  .buffer(arrayOf(vec2f, 3), [
+    [0.0, 0.5],
+    [-0.5, -0.5],
+    [0.5, -0.5],
+  ])
+  .$allowVertex('vertex');
+```
+<Aside type="tip">
+You can also pass `'instance'` into the `$allowVertex()` method. This will change the way the values are read.
+</Aside>
+
+Now we can use the buffer in the shader.
+
+<Tabs>
+  <TabItem label="Before">
+    ```ts
+    const vertexCode = wgsl`
+      var verticies = array<vec2f, 3>(
+        vec2(0.0, 0.5),
+        vec2(-0.5, -0.5),
+        vec2(0.5, -0.5)
+      );
+
+      let pos = vec4f(verticies[${builtin.vertexIndex}], 0.0, 1.0);
+    `;
+    ```
+  </TabItem>
+  <TabItem label="After">
+    ```ts
+    const vertexCode = wgsl`
+      let pos = vec4f(${triangleVertex.asVertex()}, 0.0, 1.0);
+    `;
+    ```
+    <Aside title="Thats it!">TypeGPU will take care of the rest.</Aside>
+  </TabItem>
+</Tabs>
+
+Great! Now that we have that out of the way, let's add some parameters to our shader. Here is the game plan:
+
+import { Steps } from '@astrojs/starlight/components';
+
+<Steps>
+
+1. Create the parameters:
+
+   ```ts
+   import { addSliderParam } from '@typegpu/example-toolkit';
+
+   const params = {
+     rotation: addSliderParam('rotation (rad)', 0, {
+       min: 0,
+       max: 3.14 * 2,
+       step: 0.1,
+     }),
+     x: addSliderParam('x', 0, {
+       min: -1,
+       max: 1,
+       step: 0.1,
+     }),
+     y: addSliderParam('y', 0, {
+       min: -1,
+       max: 1,
+       step: 0.1,
+     }),
+   };
+   ```
+
+2. Create the buffers:
+
+   ```ts
+   import { f32 } from 'typegpu/data';
+
+   const rotationBuffer = wgsl.buffer(f32, params.rotation).$allowUniform();
+   const xBuffer = wgsl.buffer(f32, params.x).$allowUniform();
+   const yBuffer = wgsl.buffer(f32, params.y).$allowUniform();
+   ```
+
+3. Prepare a helper function to rotate the triangle:
+
+   ```ts
+   const rotate = wgsl.fn`(v: vec2f, angle: f32) -> vec2f {
+     let pos = vec2(
+       (v.x * cos(angle)) - (v.y * sin(angle)),
+       (v.x * sin(angle)) + (v.y * cos(angle))
+     );
+     return pos;
+   }`;
+   ```
+
+4. Use the buffers inside the shader code:
+
+   ```ts
+   const vertexCode = wgsl`
+    let rotated = ${rotate}(
+      ${triangleVertex.asVertex('readonly_storage')},
+      ${rotationBuffer.asUniform()}
+    );
+
+    let offset = vec2f(
+      ${xBuffer.asUniform()},
+      ${yBuffer.asUniform()}
+    );
+
+    let pos = vec4f(rotated + offset, 0.0, 1.0);
+   `;
+   ```
+
+4. Voilà! You have a movable and rotatable triangle!
+
+</Steps>
+
+<LinkCard
+  title="Run it in the playground!"
+  href="/examples#example=playground__JYWwDg9gTgLgBAbzgdwOYGcA2AaOBjKAUwEMZCAlAVwDsZRDcAjS4TO6uAXzgDMoIQcAOQwAnmEKowlIQG4AUKEixEvAMwAmXADdCeDT1zEoUYqIDyPLr36CR4ydID0AE1LE5i8NHhJiLlwBRTEIQQlpcCGoAMVMwowCAZUxgF0IoAAVjYkFuPgFhAAExCSlKJ0IADxywEIBaGAgITABrYBhPeTwo9HgoGjowuABeOGJkYnb8IlIKAfoACgBKBW7qXrg07WA8QhG4ftp6ADotncIFLp74PGJqbWJ0ffHJ%2BH8gkLDaBaFb%2B8ehLg-OgJHgYORSMAIAAuOAARi4Kyu6xuUTIlXgoz%2BD3Qx1QhBgAGE0VUYD9kIRGGUhEsxk8AOIZACqhLuOOJtFJq2ucDARHQ4RgkKi0WgIFI%2B2oxG2qFI0Dx0jxBIyRB46SILlZ-3Qoqg4rJSOR6JgxzWPGAqEoRAWCHkcE2hG2u2wdt4YtIsL5hAFtGFMXdMBd9uImDAAAtiABZCBpWFCL0gShsYC1YCEFyA%2BScQ1rDZgbIgJ6jW32-hCuhRWHvZKpdJZOI-Mt%2BuALUwuJaAuAABiBrvtIGA1FhPb7cHFlVhamOcIALHAAFRwLSj3qEMDD6dBxFbidjJIpNKZAs-SqdnuIUcDodwOpwrf94i7u8rsjr7ub13ZreiKv72tHhshFEM9e3tftB1hW97zHR9YWfMC4FXN8uw-e0vyzS5cz6CByyhagACFKB4NUoH2NAsGOZhiPSBYeE0XB8ziXEmwraglmOAASENMAgZAmWoYAeDFZZuRROBKkI6jSNGcjMEooiSNo%2BjeQLXFKnYrjMB4viBKEvURORDZREkkiyIwOSqMUuitBUpjjlEDTuN4-jBOEnMeRgKBgDuVAQgANXSdEzKwV15KkhZjFMCweAWXR9EMOA1CWXAAG1RxSlDzxQgBWABdaCUrqHLcCK448oK4qbxy-LXVypZQs07SAtgKofl0FrT3csSWL2GTzOOHhqAAA1i2E4oMIxqF8whYWs2k6gAPjgcarBLOAQngSAi2WvQNAWUdYuOSoF3wCB0AiqaQiWeaW20eyTvQQcLum67oMO47F0e6hnqu2kAGpbvuxdunOnzftdJFSwJK0OC2hROCGzCeTAFNCBSaheoOeYwmOcUWgocJDwyVH0cIG1XXa9FYTW%2B1uljFBzKG0d7Q2g4cNmFx9g4hAes4faEIQ7nPO8y7CGa9FjkecXWqWThoMFnn2dYkz0kl9AXL0kBlk4Zm4ENAX1oJOAIGIgVMR2%2BL%2BYNuBuYkhTVceDW3Ll3X7W54z7agNWnf02Xdf1gXWa2-Y4pnGKes5gGTZ4M3cEy3A4WOLtIbAoboIgSgYGkGBqd1lLmFYdhji29o8NyuMtszBCXbQrc%2BGIVAvhzi8ELpmaGawJmDaIGAYYtmcFhQgB2AA2AAOEe4%2BONQAE4NBsxOE6TlP7TT0chSgfFm7Sg2aYFzWPV5flBT9XV9XlrhoJq2vXT5UBS90XOEMaSAeNQH9hGFsHCDqFJeiry%2BWZDQijiGTZYIwlprRRhIUmxwqh6EzmTPe3QeJQAAIIwCFHgMMTd0Cwh3gLPeCFtiEGQLCNYxolREitEQWgAAVUkVoybsQICQMgfk0zIGWBfWmIRjB%2BRDJQduGU46iO7Nfa2PF-DmDfL8PhUAAEG16NAQgMi4zKKIIosCNcwISPtJTKoxIBiTi3NmS4pZsaEAGpgSg6AwwGTMfIIAA"
+  target="_blank"
+/>
+
+#### Let's compare TypeGPU to WebGPU again:
+
+<Tabs>
+  <TabItem label="TypeGPU">
+    ```ts
+    import { wgsl, createRuntime, builtin } from 'typegpu';
+    import { f32, vec2f, arrayOf } from 'typegpu/data';
+    import { addElement, onFrame, addSliderParam } from '@typegpu/example-toolkit';
+
+    const runtime = await createRuntime();
+    const device = runtime.device;
+
+    const canvas = await addElement('canvas', { aspectRatio: 1 });
+    const context = canvas.getContext('webgpu') as GPUCanvasContext;
+    const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+    context.configure({
+      device,
+      format: presentationFormat,
+      alphaMode: 'premultiplied',
+    });
+
+    const params = {
+      rotation: addSliderParam('rotation (rad)', 0, {
+        min: 0,
+        max: 3.14 * 2,
+        step: 0.1,
+      }),
+      x: addSliderParam('x', 0, {
+        min: -1,
+        max: 1,
+        step: 0.1,
+      }),
+      y: addSliderParam('y', 0, {
+        min: -1,
+        max: 1,
+        step: 0.1,
+      }),
+    };
+
+    const rotationBuffer = wgsl.buffer(f32, params.rotation).$allowUniform();
+    const xBuffer = wgsl.buffer(f32, params.x).$allowUniform();
+    const yBuffer = wgsl.buffer(f32, params.y).$allowUniform();
+
+    const triangleVertex = wgsl
+      .buffer(arrayOf(vec2f, 3), [
+        [0.0, 0.5],
+        [-0.5, -0.5],
+        [0.5, -0.5],
+      ])
+      .$allowVertex('vertex');
+
+    const rotate = wgsl.fn`(v: vec2f, angle: f32) -> vec2f {
+      let pos = vec2(
+        (v.x * cos(angle)) - (v.y * sin(angle)),
+        (v.x * sin(angle)) + (v.y * cos(angle))
+      );
+      return pos;
+    }`;
+
+    const pipeline = runtime.makeRenderPipeline({
+      vertex: {
+        code: wgsl`
+          let rotated = ${rotate}(
+            ${triangleVertex.asVertex()},
+            ${rotationBuffer.asUniform()}
+          );
+
+          let offset = vec2f(
+            ${xBuffer.asUniform()},
+            ${yBuffer.asUniform()}
+          );
+
+          let pos = vec4f(rotated + offset, 0.0, 1.0);
+        `,
+        output: {
+          [builtin.position]: 'pos',
+        },
+      },
+      fragment: {
+        code: wgsl`
+          return vec4(0.7686, 0.3922, 1., 1.0);
+        `,
+        target: [
+          {
+            format: presentationFormat,
+          },
+        ],
+      },
+      primitive: {
+        topology: 'triangle-list',
+      },
+    });
+
+    onFrame(() => {
+      pipeline.execute({
+        colorAttachments: [
+          {
+            view: context.getCurrentTexture().createView(),
+            clearValue: [0, 0, 0, 0],
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        ],
+        vertexCount: 3,
+      });
+
+      runtime.flush();
+    });
+
+    ```
+  </TabItem>
+  <TabItem label="WebGPU">
+    ```ts
+    import { addElement, onFrame, addParameter } from '@typegpu/example-toolkit';
+
+    const adapter = await navigator.gpu?.requestAdapter();
+    const device = await adapter?.requestDevice();
+
+    if (!device) {
+      throw new Error('Failed to acquire a device');
+    }
+
+    const canvas = await addElement('canvas', { aspectRatio: 1 });
+    const context = canvas.getContext('webgpu') as GPUCanvasContext;
+    const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+    context.configure({
+      device,
+      format: presentationFormat,
+      alphaMode: 'premultiplied',
+    });
+
+    const triangleVertexData = new Float32Array([0.0, 0.5, -0.5, -0.5, 0.5, -0.5]);
+
+    const triangleVertexBuffer = device.createBuffer({
+      size: triangleVertexData.byteLength,
+      usage: GPUBufferUsage.VERTEX,
+      mappedAtCreation: true,
+    });
+    new Float32Array(triangleVertexBuffer.getMappedRange()).set(triangleVertexData);
+    triangleVertexBuffer.unmap();
+
+    const parametersBuffer = device.createBuffer({
+      size: 4 * 3,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
+    addParameter(
+      'rotation',
+      {
+        initial: 0,
+        min: 0,
+        max: 3.14 * 2,
+        step: 0.1,
+      },
+      (value) => {
+        const data = new Float32Array([value]);
+        device.queue.writeBuffer(parametersBuffer, 0, data);
+      },
+    );
+
+    addParameter(
+      'x',
+      {
+        initial: 0,
+        min: -1,
+        max: 1,
+        step: 0.1,
+      },
+      (value) => {
+        const data = new Float32Array([value]);
+        device.queue.writeBuffer(parametersBuffer, 4, data);
+      },
+    );
+
+    addParameter(
+      'y',
+      {
+        initial: 0,
+        min: -1,
+        max: 1,
+        step: 0.1,
+      },
+      (value) => {
+        const data = new Float32Array([value]);
+        device.queue.writeBuffer(parametersBuffer, 8, data);
+      },
+    );
+
+    const wgslCode = `
+      fn rotate(v: vec2f, angle: f32) -> vec2f {
+        let pos = vec2(
+          (v.x * cos(angle)) - (v.y * sin(angle)),
+          (v.x * sin(angle)) + (v.y * cos(angle))
+        );
+        return pos;
+      };
+
+      struct Parameters {
+        rotation : f32,
+        x : f32,
+        y : f32,
+      };
+
+      @binding(0) @group(0) var<uniform> params : Parameters;
+
+      struct VertexOutput {
+        @builtin(position) position : vec4f
+      };
+
+      @vertex
+      fn mainVert(@location(0) v: vec2f) -> VertexOutput {
+        let rotated = rotate(v, params.rotation);
+        let offset = vec2(params.x, params.y);
+
+        return VertexOutput(vec4f(rotated + offset, 0.0, 1.0));
+      }
+
+      @fragment
+      fn mainFrag() -> @location(0) vec4f {
+        return vec4(0.7686, 0.3922, 1.0, 1.0);
+      }
+    `;
+
+    const module = device.createShaderModule({
+      code: wgslCode,
+    });
+
+    const pipeline = device.createRenderPipeline({
+      layout: 'auto',
+      vertex: {
+        module: module,
+        buffers: [
+          {
+            arrayStride: 2 * 4,
+            attributes: [
+              {
+                shaderLocation: 0,
+                offset: 0,
+                format: 'float32x2',
+              },
+            ],
+          },
+        ],
+      },
+      fragment: {
+        module: module,
+        targets: [
+          {
+            format: presentationFormat,
+          },
+        ],
+      },
+      primitive: {
+        topology: 'triangle-list',
+      },
+    });
+
+    const bindGroup = device.createBindGroup({
+      layout: pipeline.getBindGroupLayout(0),
+      entries: [
+        {
+          binding: 0,
+          resource: {
+            buffer: parametersBuffer,
+          },
+        },
+      ],
+    });
+
+    onFrame(() => {
+      const commandEncoder = device.createCommandEncoder();
+      const textureView = context.getCurrentTexture().createView();
+
+      const renderPassDescriptor: GPURenderPassDescriptor = {
+        colorAttachments: [
+          {
+            view: textureView,
+            clearValue: [0, 0, 0, 0],
+            loadOp: 'clear',
+            storeOp: 'store',
+          },
+        ],
+      };
+
+      const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+      passEncoder.setPipeline(pipeline);
+      passEncoder.setVertexBuffer(0, triangleVertexBuffer);
+      passEncoder.setBindGroup(0, bindGroup);
+      passEncoder.draw(3);
+      passEncoder.end();
+
+      device.queue.submit([commandEncoder.finish()]);
+    });
+
+    ```
+  </TabItem>
+</Tabs>

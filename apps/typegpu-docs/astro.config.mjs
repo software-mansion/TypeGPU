@@ -37,7 +37,7 @@ export default defineConfig({
       },
       sidebar: [
         {
-          label: '⭐️ Live Examples',
+          label: '⭐ Live Examples',
           link: 'examples',
           attrs: {
             'data-astro-reload': true,
@@ -62,6 +62,10 @@ export default defineConfig({
             {
               label: 'Parametrized Functions',
               slug: 'guides/parametrized-functions',
+            },
+            {
+              label: 'Triangle to boids',
+              slug: 'guides/triangle-to-boids',
             },
           ],
         },
