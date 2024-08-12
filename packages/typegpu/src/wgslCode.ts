@@ -36,9 +36,7 @@ export function code(
     return Array.isArray(param) ? [string, ...param] : [string, param];
   });
 
-  const symbols = segments.filter((s) => typeof s === 'symbol') as symbol[];
-
-  return new WgslCodeImpl(segments, symbols);
+  return new WgslCodeImpl(segments);
 }
 
 // --------------
@@ -48,10 +46,7 @@ export function code(
 class WgslCodeImpl implements WgslCode {
   private _label: string | undefined;
 
-  constructor(
-    public readonly segments: (Wgsl | InlineResolve)[],
-    private readonly _usedBuiltins: symbol[],
-  ) {}
+  constructor(public readonly segments: (Wgsl | InlineResolve)[]) {}
 
   get label() {
     return this._label;
@@ -83,7 +78,10 @@ class WgslCodeImpl implements WgslCode {
   }
 
   getUsedBuiltins() {
-    return Array.from(new Set(this._usedBuiltins));
+    const usedBuiltins = this.segments.filter(
+      (s) => typeof s === 'symbol',
+    ) as symbol[];
+    return Array.from(new Set(usedBuiltins));
   }
 
   with<TValue>(slot: WgslSlot<TValue>, value: Eventual<TValue>): BoundWgslCode {

@@ -87,17 +87,16 @@ const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
 const maxCompress = wgsl.constant(wgsl`12u`);
 
 const squareBuffer = wgsl
-  .buffer(arrayOf(vec2u, 4))
+  .buffer(arrayOf(vec2u, 4), [
+    [0, 0],
+    [0, 1],
+    [1, 0],
+    [1, 1],
+  ])
   .$allowVertex('vertex')
   .$allowUniform()
   .$name('square');
 const squareBufferData = squareBuffer.asVertex('uniform');
-runtime.writeBuffer(squareBuffer, [
-  [0, 0],
-  [0, 1],
-  [1, 0],
-  [1, 1],
-]);
 
 const getIndex = wgsl.fn`(x: u32, y: u32) -> u32 {
   let h = ${sizeData}.y;
