@@ -5,9 +5,9 @@
 }
 */
 
-import { addElement, addSliderParam, onFrame } from '@typegpu/example-toolkit';
+import { addButton, addElement, onFrame } from '@typegpu/example-toolkit';
 import { builtin, createRuntime, wgsl } from 'typegpu';
-import { arrayOf, f32, vec2f } from 'typegpu/data';
+import { arrayOf, vec2f, vec3f } from 'typegpu/data';
 
 const runtime = await createRuntime();
 const device = runtime.device;
@@ -22,27 +22,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const params = {
-  rotation: addSliderParam('rotation (rad)', 0, {
-    min: 0,
-    max: 3.14 * 2,
-    step: 0.1,
-  }),
-  x: addSliderParam('x', 0, {
-    min: -1,
-    max: 1,
-    step: 0.1,
-  }),
-  y: addSliderParam('y', 0, {
-    min: -1,
-    max: 1,
-    step: 0.1,
-  }),
-};
-
-const rotationBuffer = wgsl.buffer(f32, params.rotation).$allowUniform();
-const xBuffer = wgsl.buffer(f32, params.x).$allowUniform();
-const yBuffer = wgsl.buffer(f32, params.y).$allowUniform();
+addButton('Randomize', randomizeTriangles);
 
 const triangleVertex = wgsl
   .buffer(arrayOf(vec2f, 3), [
@@ -51,6 +31,22 @@ const triangleVertex = wgsl
     [0.5, -0.5],
   ])
   .$allowVertex('vertex');
+
+const triangleAmount = 10;
+const trianglePos = wgsl
+  .buffer(arrayOf(vec3f, triangleAmount))
+  .$allowVertex('instance');
+
+function randomizeTriangles() {
+  const positions = [];
+  for (let i = 0; i < triangleAmount; i++) {
+    const x = Math.random() * 2 - 1;
+    const y = Math.random() * 2 - 1;
+    const rotation = Math.random() * Math.PI * 2;
+    positions.push([x, y, rotation] as [number, number, number]);
+  }
+  runtime.writeBuffer(trianglePos, positions);
+}
 
 const rotate = wgsl.fn`(v: vec2f, angle: f32) -> vec2f {
   let pos = vec2(
@@ -63,25 +59,35 @@ const rotate = wgsl.fn`(v: vec2f, angle: f32) -> vec2f {
 const pipeline = runtime.makeRenderPipeline({
   vertex: {
     code: wgsl`
+      let instanceInfo = ${trianglePos.asVertex()};
       let rotated = ${rotate}(
         ${triangleVertex.asVertex()},
-        ${rotationBuffer.asUniform()}
+        instanceInfo[2]
       );
 
       let offset = vec2f(
-        ${xBuffer.asUniform()},
-        ${yBuffer.asUniform()}
+        instanceInfo[0],
+        instanceInfo[1]
       );
 
       let pos = vec4f(rotated + offset, 0.0, 1.0);
+      let fragUV = vec2f((rotated.x + 1.0) / 2.0, (rotated.y + 1.0) / 2.0);
     `,
     output: {
       [builtin.position]: 'pos',
+      fragUV: vec2f,
     },
   },
   fragment: {
     code: wgsl`
-      return vec4(0.7686, 0.3922, 1., 1.0);
+      let color1 = vec3(196.0 / 255.0, 100.0 / 255.0, 255.0 / 255.0);
+      let color2 = vec3(29.0 / 255.0, 114.0 / 255.0, 240.0 / 255.0);
+
+      let dist = length(fragUV - vec2(0.5, 0.5));
+
+      let color = mix(color1, color2, dist);
+
+      return vec4(color, 1.0);
     `,
     target: [
       {
@@ -94,6 +100,7 @@ const pipeline = runtime.makeRenderPipeline({
   },
 });
 
+randomizeTriangles();
 onFrame(() => {
   pipeline.execute({
     colorAttachments: [
@@ -105,6 +112,7 @@ onFrame(() => {
       },
     ],
     vertexCount: 3,
+    instanceCount: triangleAmount,
   });
 
   runtime.flush();

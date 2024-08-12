@@ -229,6 +229,10 @@ export async function executeExample(
     onChange(options.initial as never);
   }
 
+  function addButton(label: string, onClick: () => void): void {
+    gui.add({ [label]: () => onClick() }, label);
+  }
+
   try {
     /**
      * Simulated imports from within the sandbox, making only a subset of
@@ -270,6 +274,7 @@ export async function executeExample(
           addSliderParam: ((label, initial, opts) => {
             return createSliderParam(gui, label, initial, opts);
           }) satisfies AddSliderParam,
+          addButton,
         };
       }
       throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
