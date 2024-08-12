@@ -16,7 +16,6 @@ export interface WgslBufferUsage<
   TUsage extends BufferUsage,
 > extends WgslBindable<TData, TUsage> {
   $name(label: string): WgslBufferUsage<TData, TUsage>;
-  vertexUsage: 'uniform' | 'readonly_storage' | 'mutable_storage';
 }
 
 export function bufferUsage<
@@ -41,10 +40,6 @@ class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
   constructor(
     public readonly buffer: WgslBuffer<TData, TUsage>,
     public readonly usage: TUsage,
-    public vertexUsage:
-      | 'uniform'
-      | 'readonly_storage'
-      | 'mutable_storage' = 'uniform',
   ) {}
 
   get label() {

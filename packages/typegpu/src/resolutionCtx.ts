@@ -127,6 +127,10 @@ class SharedResolutionState {
     return { group: this._bindingGroup, idx: nextIdx };
   }
 
+  registerBindingNoEntry(_bindable: WgslBindable) {
+    this._usedBindables.add(_bindable);
+  }
+
   reserveRenderResourceEntry(
     _resource: WgslRenderResource<WgslRenderResourceType>,
   ) {
@@ -235,11 +239,11 @@ class ScopedResolutionCtx implements ResolutionCtx {
   }
 
   addBinding(bindable: WgslBindable, identifier: WgslIdentifier): void {
-    const { group, idx } = this._shared.reserveBindingEntry(bindable);
-
     if (bindable.usage === 'vertex') {
+      this._shared.registerBindingNoEntry(bindable);
       return;
     }
+    const { group, idx } = this._shared.reserveBindingEntry(bindable);
 
     this.addDeclaration(
       code`@group(${group}) @binding(${idx}) var<${usageToVarTemplateMap[bindable.usage]}> ${identifier}: ${bindable.allocatable.dataType};`,

@@ -33,9 +33,9 @@ export interface WgslBuffer<
     ? WgslBufferUsage<TData, 'readonly_storage'>
     : null;
 
-  asVertex(
-    permissons: Exclude<TAllows, 'vertex'>,
-  ): 'vertex' extends TAllows ? WgslBufferUsage<TData, 'vertex'> : null;
+  asVertex(): 'vertex' extends TAllows
+    ? WgslBufferUsage<TData, 'vertex'>
+    : null;
 }
 
 export function buffer<
@@ -172,10 +172,7 @@ class WgslBufferImpl<
       : null;
   }
 
-  asVertex(permissions: Exclude<TAllows, 'vertex'>) {
-    if (this._allowedUsages.vertex) {
-      this._allowedUsages.vertex.vertexUsage = permissions;
-    }
+  asVertex() {
     return this._allowedUsages.vertex as 'vertex' extends TAllows
       ? WgslBufferUsage<TData, 'vertex'>
       : null;

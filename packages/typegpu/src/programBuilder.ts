@@ -102,14 +102,12 @@ export default class ProgramBuilder {
       });
     }
     for (const bindable of usedBindables) {
+      if (bindable.usage === 'vertex') continue;
       allEntries.push({
         binding: ctx.getIndexFor(bindable),
         visibility: options.shaderStage,
         buffer: {
-          type:
-            bindable.usage === 'vertex'
-              ? usageToBindingTypeMap[bindable.vertexUsage]
-              : usageToBindingTypeMap[bindable.usage],
+          type: usageToBindingTypeMap[bindable.usage],
         },
       });
     }
@@ -145,6 +143,7 @@ export default class ProgramBuilder {
       });
     }
     for (const bindable of usedBindables) {
+      if (bindable.usage === 'vertex') continue;
       allBindGroupEntries.push({
         binding: ctx.getIndexFor(bindable),
         resource: {
