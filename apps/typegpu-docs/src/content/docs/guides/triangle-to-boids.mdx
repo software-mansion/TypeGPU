@@ -777,4 +777,271 @@ You can experiment with different approaches to find the one that suits your nee
 
 ## Let's create some more triangles
 
-Now that we have a single movable triangle, let's create him some friends.
+Now that we have a single movable triangle, let's create him some friends. But first let's upgrade our program a little.
+At the moment the size of our triangle is defined by the values written to the buffer at its creation. That's ok but let's make it a little more convenient by extracting it to a variable. We should also make it a little smaller so that we can fit more triangles on the screen.
+
+<Tabs>
+  <TabItem label='Before'>
+  ```ts
+  const triangleVertex = wgsl
+    .buffer(arrayOf(vec2f, 3), [
+      [0.0, 0.5],
+      [-0.5, -0.5],
+      [0.5, -0.5],
+    ])
+    .$allowVertex('vertex');
+  ```
+  </TabItem>
+  <TabItem label='After'>
+  ```ts
+  const triangleSize = 0.2;
+  const triangleVertex = wgsl
+    .buffer(arrayOf(vec2f, 3), [
+      [0.0, triangleSize],
+      [-triangleSize, -triangleSize],
+      [triangleSize, -triangleSize],
+    ])
+    .$allowVertex('vertex');
+  ```
+  </TabItem>
+</Tabs>
+
+As for the triangles, we will need to create a buffer containing the positions and rotations of each triangle. We will also need to update the vertex shader to use these values. There are two different approaches - each with its own pros and cons. We can either create another vertex
+buffer (this time using the 'instance' version) or we can use a uniform/storage buffer. Let's explore both options.
+
+<Tabs>
+  <TabItem label='Instance vertex buffer'>
+  ```ts
+  const triangleAmount = 10;
+  const trianglePos = wgsl
+    .buffer(arrayOf(vec3f, triangleAmount))
+    .$allowVertex('instance');
+  ```
+
+  One potential downside of this approach is that the data type of the buffer is limited to scalar types. This means that our data type can't be a struct, which could possibly make our code less readable.
+
+  ```diff
+  const vertexCode =  wgsl`
++  let instanceInfo = ${trianglePos.asVertex()};
+    let rotated = ${rotate}(
+      ${triangleVertex.asVertex()},
+-    ${rotationBuffer.asUniform()}
++    instanceInfo[2]
+    );
+    );
+
+    let offset = vec2f(
+-    ${xBuffer.asUniform()},
+-    ${yBuffer.asUniform()}
++    instanceInfo[0],
++    instanceInfo[1]
+    );
+
+    let pos = vec4f(rotated + offset, 0.0, 1.0);
+  `;
+  ```
+  <Aside type='tip'>
+    In the above code we extracted `trianglePos` to a `instanceInfo` variable. This is not necessary as each call to `trianglePos.asVertex()` will return the same value. `${trianglePos.asVertex()}[x]` is equivalent to `instanceInfo[x]` in this case.
+  </Aside>
+  As we are using a vertex buffer, we don't need to index into the buffer data in the vertex shader. One downside of this approach is that
+  we need to know which variable is at which index in the vector. This can be a little confusing and less readable than using a struct.
+  Lastly, we need to provide our render pipeline with the number of instances we want to render.
+
+  ```diff
+  onFrame(() => {
+    pipeline.execute({
+      colorAttachments: [
+        {
+          view: context.getCurrentTexture().createView(),
+          clearValue: [0, 0, 0, 0],
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      ],
+      vertexCount: 3,
++    instanceCount: triangleAmount,
+    });
+
+    runtime.flush();
+  });
+  ```
+  </TabItem>
+  <TabItem label='Uniform buffer'>
+  ```ts
+  const triangleAmount = 10;
+  const trianglePos = wgsl
+    .buffer(
+      arrayOf(
+        struct({
+          x: f32,
+          y: f32,
+          rotation: f32,
+        }),
+        triangleAmount,
+      ),
+    )
+    .$allowReadonlyStorage();
+  ```
+  This time we are using a buffer of structs. This makes our code a little more readable as we can access the data using the struct fields.
+  We are using a readonly storage buffer as the current alignement of the data in the buffer is 12 bytes. This is not a multiple of 16 bytes which is required for a uniform buffer. We could also pad the struct to make it 16 bytes but let's stick to readonly storage for now.
+
+  ```diff
+  const vertexCode =  wgsl`
++  let instanceInfo = ${trianglePos.asReadOnlyStorage()}[${builtin.instanceIndex}];
+    let rotated = ${rotate}(
+      ${triangleVertex.asVertex()},
+-    ${rotationBuffer.asUniform()}
++    instanceInfo.rotation
+    );
+    );
+
+    let offset = vec2f(
+-    ${xBuffer.asUniform()},
+-    ${yBuffer.asUniform()}
++    instanceInfo.x,
++    instanceInfo.y
+    );
+
+    let pos = vec4f(rotated + offset, 0.0, 1.0);
+  `;
+  ```
+  In the vertex shader we need to index into the buffer data using the `builtin.instanceIndex` variable. This variable will contain the index of the current instance being rendered. This step was not necessary when using a vertex buffer as the data was already indexed for us. Lastly, we need to provide our render pipeline with the number of instances we want to render (just like in the other approach).
+
+  ```diff
+  onFrame(() => {
+    pipeline.execute({
+      colorAttachments: [
+        {
+          view: context.getCurrentTexture().createView(),
+          clearValue: [0, 0, 0, 0],
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      ],
+      vertexCount: 3,
++    instanceCount: triangleAmount,
+    });
+
+    runtime.flush();
+  });
+  ```
+
+  </TabItem>
+</Tabs>
+
+In the rest of this guide we will assume the use of the storage buffer approach. If you prefer the vertex buffer approach, you can try to adapt the code to use that instead.
+#### Initializing the buffer
+Since we have no initial values for the buffer, we will create a helper function that fills the buffer with random values.
+
+```ts
+function randomizeTriangles() {
+  const positions = [];
+  for (let i = 0; i < triangleAmount; i++) {
+    const x = Math.random() * 2 - 1;
+    const y = Math.random() * 2 - 1;
+    const rotation = Math.random() * Math.PI * 2;
+    positions.push({ x, y, rotation });
+  }
+  runtime.writeBuffer(trianglePos, positions);
+}
+```
+<Aside type='tip'>
+  If you went with the vertex buffer approach, remember to have the correct data type when writing to the buffer. The writeBuffer function will hint at the correct data type for you.
+</Aside>
+
+We will call this function before the first frame is rendered to ensure that the buffer is initialized with random values. Let's also add a button that will call this function when clicked.
+
+```ts
+addButton('Randomize', randomizeTriangles);
+```
+
+```diff
++randomizeTriangles();
+onFrame(() => {
+  pipeline.execute({
+    colorAttachments: [
+      {
+        view: context.getCurrentTexture().createView(),
+        clearValue: [0, 0, 0, 0],
+        loadOp: 'clear',
+        storeOp: 'store',
+      },
+    ],
+    vertexCount: 3,
+    instanceCount: triangleAmount,
+  });
+
+  runtime.flush();
+});
+```
+
+<LinkCard
+  title="Run it in the playground!"
+  href="/examples#example=playground__JYWwDg9gTgLgBAbzgQwCaoEIFcYwgOwBoV0BRAGwFMRL8ZiCAxKZGuAXzgDMoIQ4A5AAEYATzCUA5mCwB6SgA9WYKgFo8EcgGtgMAQG4AUKEixEcAEZZg5GMCJwAxlErIYlAEpY6oSsQDukgDO5BzcvPwCYhLSWAbG4NDwSMhQLKIA8lzEXADMAEzEQTBQWI70cABulI752VU1uVxhPHyC0VIysqhuyPGGjgTFcKU%2BbAC8KP7Iuk4ubp7edjQAFACURoP4w6iUlcCOlHCTo8uUAHS7%2B4dGA0Pwjsj4lchBx1Mz8GioFNS0MCsBI9nq8BMQUkEJOUPG5gBAAFxwACMHA2d22DwI7gU8EmwJeQXOkkoMAAwljFACBP5KBZYgI1ig3gBxAAKAFVSU8CeS6JTNvc4GAXEF-rCmNAQG53vhkPtJG5oESZESSayXFxKGlKKguSCgoxJW51rcttiYOctlxgJIsC4VghDHA4FcDn4ndwjTBEcLKKK6OL8IaoFL6B7kOQwAALZAAWQgu0RAl9ICwtmAKmAOrBhnYaMM32wuAIgJh%2BFQfGAAC9KGCRk8KyBq5QACpQYBPSRUIL5rbDEod-BdygAZWb7wADOd8gKMXAB52qAA1LXY96BEIe85WLiaqArVLpLIraq1eq5NbEADaHudV6nE%2BIC6HVDHNYAuoRb3Ar%2Bp24vR2bYg-0HYc30oT9vyvZ8wKAuAQIA8DIOdd81i3AASCNyAgfwV1gRRAWqfCFAZU1BRgqgAEEQAgJZ3iRCdZ37f8X0oVkIDeSYN3ILcdz3FZv0PZBMi4ATnXEuBilKcoHW-CSFERPJCjk8TREUgovwkiTeBgQN1OUrTUU0rSKMoajaLoYznUvD00Odc5MPIbD-A8VwK3wchRBHPAWGJE1DEMLhvHKOF8HrctKxrNtQO7dZEA9Pt4EgIJdFCzif3fIxnS4aA4BWKh4GASd9DgIqAB55xY4dzKWErgAAanqxlHQkxK4AUd5YzcKNzhYCKQDigAqOB8ng5EsvEtrRE67reobPghpGsakQm502p0wMZpgHq%2BsbRauu285WQASTgYaZ2-ZLUqGc4ZCCKMHXa4hRGIDa7AIVEJvYD1Tl8c5-HbdxsF3LUVlM9igmIK73u2NFvvRYY3qOLjgnIc4uHwAADE9EVPOpiAA-TGVUAA%2BBoz3i50CqFDj3jxsTxJPc4OuGwYggPVi1mJvLKnOabhpS-AOeHLmrJ55mzsk%2BxhaoLm4Hq8X%2BacDiZcoLnbImlwYDtMLkqMdhMbIucwAzShyHsZGRiWP6pS0TxaF2KBWVN838EoWTnSI7FERayaE0oRFuMxlTqfsYonkOY78By950IQcGOPOV5XLQAhPO86BkD8tZ2CvOOrBsOx8HOMPdPwSPy0UdhMpDkkRggXT3FQWOECR9gGcMuPTLw7Ek6CHuCJzsWJNLiPKCjnLeobwMVPzQzqYgXdRVxcm6g7rTR-L8fo4gZnh-EzeK8n0RZ9uee6%2BSumagAFlEpHm4VxeuGX4gH2IJFzgnNEJMxsXaJgGQ3pKZaSvAXdMxdoahXfEmZKOYJLsGMggj0PAs40DoD7b8gxExwCDipLWOtybXxWFOAA7AANgABxkNfucXIABOfIhRkTnHfp-b%2B4lf7fl0lAYkQCbyGV9oZHKIY3A%2BhFGKGGwZQz7yQRJZCHBjLClAKlaoGCJJ4EgNhSQal2hVTUObYocCFG5nzLtSKrY9F%2Bn8kwFgqw4rjDJr7E2EhXYXEUDUHA7tBHK2wlASiuBkCOCjGgmAQRET8K0t4iS%2BxKD%2BERGaSkqoyR2hcHQFslI7TuzWJaeY7glxZn8Osfea0qCpCXBGLAAcfyPjgDUup8j54QDQBkMASZHClKgEYwyxRoCUBaUmHpLguniVkeJBpDRiLkiWIiXIYtD6UCmegyqMUzI0SWIgueVsxgXC4OQLA91-J5iMEAA"
+  target="_blank"
+/>
+
+Great! But now we have a little problem. When we had just one triangle, we could easily see the triangles. But now, with multiple triangles, it's hard to see the individual triangles. Let's add a gradient color to each triangle to make them more distinguishable.
+
+<Steps>
+
+1. Add additional output to the vertex shader that will represent the UV coordinates inside the triangle:
+
+   ```diff
+   output: {
+     [builtin.position]: 'pos',
+   +  fragUV: vec2f,
+    },
+   ```
+
+2. Create the UV coordinates inside the vertex shader:
+
+   ```diff
+   const vertexCode = wgsl`
+     let instanceInfo = ${trianglePos.asReadonlyStorage()}[${builtin.instanceIndex}];
+     let rotated = ${rotate}(
+       ${triangleVertex.asVertex()},
+       instanceInfo.rotation
+     );
+
+     let offset = vec2f(
+       instanceInfo.x,
+       instanceInfo.y
+     );
+
+     let pos = vec4f(rotated + offset, 0.0, 1.0);
+   +  let fragUV = (rotated + vec2f(${triangleSize}, ${triangleSize})) / vec2f(${triangleSize} * 2.0);
+   `;
+   ```
+   To calculate the UV coordinates, first we add a vector of the triangle size to the rotated postion to get rid of the negative values. Then we divide the result by the size of the triangle multiplied by 2 to get the UV coordinates.
+
+3. Update the fragment shader:
+
+   ```ts
+   const fragCode = wgsl`
+     let color1 = vec3(196.0 / 255.0, 100.0 / 255.0, 255.0 / 255.0);
+     let color2 = vec3(29.0 / 255.0, 114.0 / 255.0, 240.0 / 255.0);
+
+     let dist = length(fragUV - vec2(0.5, 0.5));
+
+     let color = mix(color1, color2, dist);
+
+     return vec4(color, 1.0);
+   `;
+   ```
+   <Aside>
+    Notice that we can just use `fragUV` directly in the fragment shader. This is because the `fragUV` value was present in the vertex shader output. TypeGPU will automatically pass this value to the fragment shader.
+   </Aside>
+   First, we define two colors. Then we calculate the distance from the center of the triangle to the current fragment. We use this distance to mix the two colors. The closer the fragment is to the center, the closer the color will be to `color1`. The further the fragment is from the center, the closer the color will be to `color2`. This way we get a nice radial gradient.
+
+</Steps>
+
+<Aside type="tip">
+  The proposed solution is totally arbitrary. Feel free to experiment with different ways to color the your triangles!
+</Aside>
+
+<LinkCard
+  title="Run it in the playground!"
+  href="/examples#example=playground__JYWwDg9gTgLgBAbzgQwCaoEIFcYwgOwBoV0BRAGwFMRL8ZiCAxKZGuAXzgDMoIQ4A5AAEYATzCUA5mCwB6SgA9WYKgFo8EcgGtgMAQG4AUKEixEcAEZZg5GMCJwAxlErIYlAEpY6oSsQDukgDO5BzcvPwCYhLSWAbG4NDwSMhQLKIA8lzEXADMAEzEQTBQWI70cABulI752VU1uVxhPHyC0VIysqhuyPGGjgTFcKU%2BbAC8KP7Iuk4ubp7edjQAFACURoP4w6iUlcCOlHCTo8uUAHS7%2B4dGA0Pwjsj4lchBx1Mz8GioFNS0MCsBI9nq8BMQUkEJOUPG5gBAAFxwACMHA2d22DwI7gU8EmwJeQXOkkoMAAwljFACBP5KBZYgI1ig3gBxAAKAFVSU8CeS6JTNvc4GAXEF-rCmNAQG53vhkPtJG5oESZESSayXFxKGlKKguSCgoxJW51rcttiYOctlxgJIsC4VghDHA4FcDn4ndwjTBEcLKKK6OL8IaoFL6B7kOQwAALZAAWQgu0RAl9ICwtmAKmAOrBhnYaMM32wuAIgJh%2BFQfGAAC9KGCRk8KyBq5QACpQYBPSRUIL5rbDEod-BdygAZWb7wADOd8gKMXAB52qAA1LXY96BEIe85WLiaqArVLpLIraq1eq5NbEADaHudV6nE%2BIC6HVDHNYAuoRb3Ar%2Bp24vR2bYg-0HYc30oT9vyvZ8wKAuAQIA8DIOdd81i3AASCNyAgfwV1gRRAWqfCFAZU1BRgqgAEEQAgJZ3iRCdZ37f8X0oVkIDeSYN3ILcdz3FZv0PZBMi4ATnXEuBilKcoHW-CSFERPJCjk8TREUgovwkiTeBgQN1OUrTUU0rSKMoajaLoYznUvD00Odc5MPIbD-A8VwK3wchRBHPAWGJE1DEMLhvHKOF8HrctKxrNtQO7dZEA9Pt4EgIJdFCzif3fIxnS4aA4BWKh4GASd9DgIqAB55xY4dzKWErgAAanqxlHQkxK4AUd5YzcKNzhYCKQDigAqOB8ng5EsvEtrRE67reobPghpGsakQm502p0wMZpgHq%2BsbRauu285WQASTgYaZ2-ZLUqGc4ZCCKMHXa4hRGIDa7AIVEJvYD1Tl8c5-HbdxsF3LUVlM9igmIK73u2NFvvRYY3qOLjgnIc4uHwAADE9EVPOpiAA-TGVUAA%2BBoz3i50CqFDj3jxsTxJPc4OuGwYggPVi1mJvLKnOabhpS-AOeHLmrJ55mzsk%2BxhaoLm4Hq8X%2BacDiZcoLnbImlwYDtMLkqMdhMbIucwAzShyHsZGRiWP6pS0TxaF2KBWVN838EoWTnSI7FERayaE0oRFuMxlTqfsYonkOY78By950IQcGOPOV5XLQAhPO86BkD8tZ2CvOOrBsOx8HOMPdPwSPy0UdhMpDkkRggXT3FQWOECR9gGcMuPTLw7Ek6CHuCJzsWJNLiPKCjnLeobwMVPzQzqYgXdRVxcm6g7rTR-L8fo4gZnh-EzeK8n0RZ9uee6%2BSumagAFlEpHm4VxeuGX4gH2IJFzgnNFz-gHgs-ZJc7wVj33lqvUSXcqqvmbOwYgECYqARrHmRksgwErDgYhaBkt8if2-uJTGYtaIwBkN6SmWkrwF3TMXaGoV3xJmSjmQyf9JAANxjUfG34YEek4dlXyNA6A%2B2-IMRMcAg610xNhKAKJJinlyCsJEABOAAbJ-OAKD8gAFZ1Gf3fhOB8qiRqaO0QYrRE59EaJMbgiS1NBgSNGtIxoKx8jyJUWowxj5kRImvi44xRj8jXz0a4ixZ8tLU1QMAYYkwqBDm2isJhACxr0ynOo1%2B5x1Fc2CVYuuNjcqTCbAoFY2TJHEEKYUF04SYBzy0lrHW5Nr4FM0NAd%2BODVpwHwd%2BXSUBiQkJvIZX2jCvQ%2BhFGKGGwZQz724eJZCHBjLClAKlaoAiJJ4EgNhSQal2iQMoKoc2xQGHTNzPmXakVWybPZmiJgLBVhxXGGTX2JsJCuwuIoGoOB3Z9OVhIyiuBkCOCjHwmAQREQ9K0u8iS%2BxKD%2BERGaSkqoyR2hcHQFslI7TuzWJaeY7glxZn8Osfea0qCpCXBGLAAcfzuPJa-KZ88IBoAyGAJMjgCVQD2YZYo0BKB0qTGylwLLxITJQmLL2ihyRLERLkMWh9KAiv4ZVeBNVLJcMqb9Gg6NyBYHuv5PMRggA"
+  target="_blank"
+/>

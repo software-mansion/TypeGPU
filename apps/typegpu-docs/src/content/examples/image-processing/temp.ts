@@ -7,7 +7,7 @@
 
 import { addButton, addElement, onFrame } from '@typegpu/example-toolkit';
 import { builtin, createRuntime, wgsl } from 'typegpu';
-import { arrayOf, vec2f, vec3f } from 'typegpu/data';
+import { arrayOf, f32, struct, vec2f } from 'typegpu/data';
 
 const runtime = await createRuntime();
 const device = runtime.device;
@@ -24,18 +24,28 @@ context.configure({
 
 addButton('Randomize', randomizeTriangles);
 
+const triangleSize = 0.1;
 const triangleVertex = wgsl
   .buffer(arrayOf(vec2f, 3), [
-    [0.0, 0.5],
-    [-0.5, -0.5],
-    [0.5, -0.5],
+    [0.0, triangleSize],
+    [-triangleSize, -triangleSize],
+    [triangleSize, -triangleSize],
   ])
   .$allowVertex('vertex');
 
 const triangleAmount = 10;
 const trianglePos = wgsl
-  .buffer(arrayOf(vec3f, triangleAmount))
-  .$allowVertex('instance');
+  .buffer(
+    arrayOf(
+      struct({
+        x: f32,
+        y: f32,
+        rotation: f32,
+      }),
+      triangleAmount,
+    ),
+  )
+  .$allowReadonlyStorage();
 
 function randomizeTriangles() {
   const positions = [];
@@ -43,7 +53,7 @@ function randomizeTriangles() {
     const x = Math.random() * 2 - 1;
     const y = Math.random() * 2 - 1;
     const rotation = Math.random() * Math.PI * 2;
-    positions.push([x, y, rotation] as [number, number, number]);
+    positions.push({ x, y, rotation });
   }
   runtime.writeBuffer(trianglePos, positions);
 }
@@ -59,19 +69,19 @@ const rotate = wgsl.fn`(v: vec2f, angle: f32) -> vec2f {
 const pipeline = runtime.makeRenderPipeline({
   vertex: {
     code: wgsl`
-      let instanceInfo = ${trianglePos.asVertex()};
+      let instanceInfo = ${trianglePos.asReadonlyStorage()}[${builtin.instanceIndex}];
       let rotated = ${rotate}(
         ${triangleVertex.asVertex()},
-        instanceInfo[2]
+        instanceInfo.rotation
       );
 
       let offset = vec2f(
-        instanceInfo[0],
-        instanceInfo[1]
+        instanceInfo.x,
+        instanceInfo.y
       );
 
       let pos = vec4f(rotated + offset, 0.0, 1.0);
-      let fragUV = vec2f((rotated.x + 1.0) / 2.0, (rotated.y + 1.0) / 2.0);
+      let fragUV = (rotated + vec2f(${triangleSize}, ${triangleSize})) / vec2f(${triangleSize} * 2.0);
     `,
     output: {
       [builtin.position]: 'pos',
