@@ -1,7 +1,6 @@
 ---
-
 import FeatureCard from '../components/FeatureCard.astro';
-
+import GetStartedButton from '../components/GetStartedButton.astro';
 ---
 
 <html>
@@ -27,85 +26,71 @@ import FeatureCard from '../components/FeatureCard.astro';
     </style>
   </head>
   <body>
-    <div class="grid w-full h-20 place-items-center">
-        <div class="text-base font-greyscale-80">
+    <div class="grid w-full min-h-20 place-items-center">
+        <div class="p-4 text-sm text-center lg:text-base font-greyscale-80">
             <span class="font-medium font-greyscale-100">Ongoing development:</span> TypeGPU is under heavy development and is far from being production-ready.
         </div>
     </div>
 
-    <main class="flex flex-col items-center bg-grayscale-20 rounded-t-[5rem] p-20 gap-[7.5rem]">
-        <section class="grid gap-20 place-content-center">
-            <div class="grid gap-20 place-items-center max-w-7xl">
-                <img src="/assets/logo.svg" alt="logo">
-                <h1 class="self-stretch font-medium text-center font-greyscale-100 text-7xl">GPU rendering and computing easier than ever before</h1>
-                <p class="text-2xl text-center">Make use of the GPU power right from your browser through a brand new, 
+    <main class="flex flex-col items-center bg-grayscale-20 sm:rounded-t-[5rem] rounded-t-[2.5rem] p-4 pt-10 sm:pt-20 lg:gap-[7.5rem] gap-10 md:gap-20">
+        <section class="grid gap-10 md:gap-[3.75rem] lg:gap-20 place-content-center lg:max-w-[85rem] md:max-w-[48.5rem] max-w-[34.5rem]">
+            <div class="grid gap-6 lg:gap-12 md:gap-8 place-items-center max-w-7xl">
+                <img src="/assets/logo.svg" alt="logo" class="w-[3.75rem] md:w-20 lg:w-[6.25rem]">
+                <h1 class="self-stretch font-medium text-center font-greyscale-100 md:text-[3.375rem] lg:text-[4.75rem] text-[2rem] leading-[130%]">GPU rendering and computing easier than ever before</h1>
+                <p class="leading-6 text-center lg:text-2xl md:text-xl">Make use of the GPU power right from your browser through a brand new, 
                     modern TypeScript API.
                 </p>
 
-                <div class="flex gap-10">
-                    <a href="/guides/getting-started">
-                        <button class="flex gap-3 py-6 px-8 rounded-[6.25rem] bg-gradient-to-r from-gradient-purple to-gradient-blue text-grayscale-0 text-2xl">
-                            <div>Get started with TypeGPU</div>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30" fill="none">
-                                <path d="M25 15L5 15M25 15L17.5 22.5M25 15L17.5 7.5" stroke="white" stroke-width="2" stroke-linecap="square" stroke-linejoin="round"/>
-                            </svg>
-                        </button>
-                    </a>
-                    <a href="/examples"><button class="py-6 px-8 rounded-[6.25rem] bg-grayscale-0 text-grayscale-100 text-2xl">Explore live examples</button></a>
+                <div class="flex flex-col items-center justify-center w-full gap-4 lg:gap-10 sm:flex-row">
+                    <GetStartedButton/>
+                    <a class="w-full sm:w-auto" href="/examples"><button class="py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] bg-grayscale-0 text-grayscale-100 md:text-xl lg:text-2xl w-full">Explore live examples</button></a>
                 </div>
             </div>
 
-            <div class="bg-grayscale-0 w-[85rem] p-14 rounded-[5rem] border-2 border-solid border-[#00000029]">
-                <video src="/assets/example.mov" autoplay="true" loop="true" muted="true" class="rounded-[2.5rem]"></video>
+            <div class="bg-grayscale-0 lg:w-[85rem] md:w-[53.5rem] lg:p-14 md:p-10 p-6 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-[2rem] border-2 border-special-stroke">
+                <video src="/assets/example.mp4" autoplay="true" loop="true" muted="true" class="lg:rounded-[2.5rem] md:rounded-[1.875rem] rounded-2xl"></video>
             </div>
         </section>
 
-        <section class="flex flex-col justify-center gap-20">
+        <section class="flex flex-col justify-center lg:gap-20 gap-10 lg:max-w-[85rem] md:max-w-[53.5rem] max-w-[34.5rem]">
             <div>
-                <h2 class="mb-8 text-5xl font-medium text-center">Get to know TypeGPU</h2>
-                <p class="text-2xl text-center">Discover how it can change the way you work with GPU rendering.</p>
+                <h2 class="mb-4 md:mb-8 text-2xl font-medium text-center lg:mb-8 center lg:text-5xl md:text-[2.625rem]">Get to know TypeGPU</h2>
+                <p class="text-center md:text-xl lg:text-2xl">Discover how it can change the way you work with GPU rendering.</p>
             </div>
 
-            <div class="grid grid-flow-row grid-cols-2 gap-6 mb-20 max-w-7xl">
+            <div class="grid grid-flow-row gap-4 md:gap-6 lg:gap-8 md:grid-cols-2 md:mb-20 max-w-7xl">
                 <FeatureCard image="doublechevron-down" header="Reduce WebGPU boilerplate">No more never-ending bind layout and group definitions, command encoders and pipeline layouts.</FeatureCard>
-                <FeatureCard image="key-alt" header="Keep everything safe" class="translate-y-20">TypeScript is ensuring type safety when performing a lot of crucial operations like writing to and reading data from the GPU.</FeatureCard>
+                <FeatureCard image="key-alt" header="Keep everything safe" class="md:translate-y-20">TypeScript is ensuring type safety when performing a lot of crucial operations like writing to and reading data from the GPU.</FeatureCard>
                 <FeatureCard image="task-check" header="Automate data marshaling">Leveraged "typed-binary" library ensures you don't have to think about bytes when writing your GPU programs ever again.</FeatureCard>
-                <FeatureCard image="label-alt" header="Welcome declarative style" class="translate-y-20">Replace imperative style of the WebGPU API with a declaritive one, using signal-like objects that make it easy and fun for reactive simulations.</FeatureCard>
+                <FeatureCard image="label-alt" header="Welcome declarative style" class="md:translate-y-20">Replace imperative style of the WebGPU API with a declaritive one, using signal-like objects that make it easy and fun for reactive simulations.</FeatureCard>
                 <FeatureCard image="grid-mixed" header="Boost up modularity">Different computing and rendering functionalities can be spread across files or even npm modules, then combined into a bigger program.</FeatureCard>
-                <FeatureCard image="code" header="Make it more flexible" class="translate-y-20">Modern functionalities allow you to write code in a concise and expressive way, helping you through dependency injection or higher order functions.</FeatureCard>
+                <FeatureCard image="code" header="Make it more flexible" class="md:translate-y-20">Modern functionalities allow you to write code in a concise and expressive way, helping you through dependency injection or higher order functions.</FeatureCard>
             </div>
         </section>
 
-        <section class="flex flex-col items-center gap-20">
+        <section class="flex flex-col items-center lg:gap-20 md:gap-[3.75rem] gap-10 mb-10 w-full max-w-[34.5rem] lg:max-w-[85rem]">
             <div>
-                <h2 class="mb-8 font-medium text-center text-7xl">Got hooked?</h2>
-                <p class="text-2xl text-center">Try TypeGPU and reshape your GPU rendering.</p>
+                <h2 class="md:mb-8 mb-4 font-medium text-center md:text-[3.375rem] lg:text-7xl text-[2rem]">Got hooked?</h2>
+                <p class="text-center md:text-xl lg:text-2xl">Try TypeGPU and reshape your GPU rendering.</p>
             </div>
 
-            <a href="/guides/getting-started">
-                <button class="flex gap-3 py-6 px-8 rounded-[6.25rem] bg-gradient-to-r from-gradient-purple to-gradient-blue text-grayscale-0 text-2xl">
-                    <div>Get started with TypeGPU</div>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30" fill="none">
-                        <path d="M25 15L5 15M25 15L17.5 22.5M25 15L17.5 7.5" stroke="white" stroke-width="2" stroke-linecap="square" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-            </a>
+            <GetStartedButton/>
 
-            <img src="/assets/illustration.svg" alt="">
+            <img class="hidden md:block lg:w-[56rem] w-[38.5rem]" src="/assets/illustration.svg" alt="">
         </section>
     </main>
 
-    <footer class="bg-grayscale-20">
-        <div class="flex flex-col items-center gap-20 bg-grayscale-0 self-stretch rounded-t-[5rem]">
-            <div class="flex flex-col items-center gap-20 pt-24 max-w-[85rem] w-full">
+    <footer class="text-xs bg-grayscale-20 md:text-sm lg:text-base">
+        <div class="grid place-items-center gap-20 bg-grayscale-0 self-stretch md:rounded-t-[5rem] rounded-t-[2.5rem] px-4 pt-10 pb-10 md:pb-0 md:pt-20">
+            <div class="flex flex-col items-center lg:gap-20 gap-10 lg:max-w-[85rem] md:max-w-[58.5rem] w-full max-w-[34.5rem]">
                 <div class="w-full">
                     <img src="/assets/logo-black.svg" alt="logo" class="pb-6">
-                    <div class="flex justify-between text-grayscale-80">
-                        <div class="w-[27rem]">
+                    <div class="flex flex-col justify-between gap-10 md:flex-row text-grayscale-80">
+                        <div class="md:w-[27rem]">
                             <span class="font-medium">TypeGPU</span> <span class="text-grayscale-100">&mdash;</span> TypeScript library that enhances the WebGPU API, allows to modularly compose WGSL programs, and to manage resources in a type-safe, declarative way.
                         </div>
 
-                        <div class="grid gap-6 w-96">
+                        <div class="grid gap-6 lg:w-96 md:w-[24rem]">
                             <div class="flex justify-between">
                                 <div>Made by Software Mansion</div>
                                 <a href="https://swmansion.com/" class="underline">Learn more about us</a>
@@ -115,11 +100,6 @@ import FeatureCard from '../components/FeatureCard.astro';
                                 <div>Check what's underneath</div>
                                 <a href="https://github.com/software-mansion/TypeGPU" class="underline">Open Github repository</a>
                             </div>
-<!-- 
-                            <div class="flex self-stretch justify-between">
-                                <div>Share feedback with us</div>
-                                <a class="underline">Join our Discord server</a>
-                            </div> -->
                         </div>
                     </div>
                 </div>
@@ -127,19 +107,11 @@ import FeatureCard from '../components/FeatureCard.astro';
                 <div class="self-start text-grayscale-60">
                     &copy; 2024 Software Mansion S.A.
                 </div>
-            </div>
 
-            <div class="grid ">
-                <div class="col-start-1 row-start-1 z-10 bg-gradient-to-b from-[#FFF0] to-[#FFF]"></div>
-                <svg class="col-start-1 row-start-1" xmlns="http://www.w3.org/2000/svg" width="1360" height="250" viewBox="0 0 1360 250" fill="none">
-                    <path d="M1360 50.333V230.563H1326.56L1322.33 207.682C1308.61 224.579 1289.95 232.675 1266.72 232.675C1245.6 232.675 1228.35 226.339 1215.32 212.962C1201.95 199.938 1195.61 178.817 1195.61 149.6V50.333H1233.63V145.728C1233.63 163.329 1237.15 176.705 1244.19 185.857C1251.23 195.01 1261.44 199.586 1275.52 199.586C1289.95 199.586 1301.21 194.306 1309.66 183.745C1317.76 173.185 1321.98 158.4 1321.98 139.744V50.333H1360Z" fill="#EBEBED"/>
-                    <path d="M1119.74 59.4889C1132.41 66.8811 1142.62 77.4414 1150.01 91.5219C1157.05 105.602 1160.92 121.795 1160.92 140.451C1160.92 158.756 1157.05 174.948 1150.01 189.029C1142.62 203.109 1132.41 213.67 1119.74 221.414C1106.71 229.158 1091.93 232.678 1075.74 232.678C1062.36 232.678 1050.74 230.214 1040.89 225.286C1031.03 220.358 1022.94 213.67 1017.3 205.221V300.968H979.286V50.3366H1012.38L1016.95 77.0894C1031.38 58.0808 1051.1 48.2245 1075.74 48.2245C1091.93 48.2245 1106.71 52.0966 1119.74 59.4889ZM1107.42 183.749C1117.27 172.484 1122.2 158.052 1122.2 140.451C1122.2 122.851 1117.27 108.418 1107.42 97.154C1097.56 86.2417 1084.89 80.6095 1069.4 80.6095C1053.56 80.6095 1040.89 86.2417 1031.38 97.154C1021.53 108.066 1016.95 122.147 1016.95 139.747C1016.95 158.052 1021.53 172.484 1031.38 183.749C1040.89 195.013 1053.56 200.645 1069.4 200.645C1084.89 200.645 1097.56 195.013 1107.42 183.749Z" fill="#EBEBED"/>
-                    <path d="M935.095 50.3366V223.174C935.095 248.519 927.351 268.231 912.567 282.312C897.43 296.392 874.198 303.081 842.869 303.081C818.228 303.081 798.515 297.8 783.379 286.888C767.89 275.976 759.442 260.487 758.034 240.423H796.755C798.867 250.631 804.499 258.375 812.948 264.007C821.396 269.639 832.308 272.104 845.685 272.104C880.182 272.104 897.43 255.559 897.43 221.766V201.701C884.054 221.414 864.693 231.27 838.644 231.27C822.1 231.27 807.315 227.75 794.643 220.358C781.619 212.966 771.41 202.405 764.37 188.677C756.978 174.949 753.458 158.756 753.458 139.747C753.458 121.795 756.978 105.954 764.37 91.8739C771.762 78.1455 781.971 67.5851 794.995 59.8409C807.667 52.0966 822.452 48.2245 838.644 48.2245C852.021 48.2245 863.989 51.0406 873.846 56.3208C883.702 61.9529 891.446 69.3452 897.782 78.4975L902.006 50.3366H935.095ZM882.998 183.045C892.502 172.132 897.43 158.052 897.43 140.451C897.43 122.851 892.502 108.418 882.998 97.154C873.141 85.8897 860.469 80.2575 844.981 80.2575C829.14 80.2575 816.468 85.8897 806.963 96.802C797.107 108.066 792.531 122.147 792.531 139.747C792.531 157.348 797.107 171.78 806.963 182.693C816.468 193.957 829.14 199.237 844.981 199.237C860.469 199.237 873.141 193.957 882.998 183.045Z" fill="#EBEBED"/>
-                    <path d="M556.573 92.2259C563.966 78.1454 574.174 67.5851 587.55 59.8409C600.927 52.0966 616.063 48.2245 633.312 48.2245C650.56 48.2245 665.697 51.7446 679.073 58.7848C692.45 65.8251 702.658 76.0334 710.402 88.7058C718.146 101.73 722.019 116.867 722.371 134.115C722.371 139.043 722.019 143.62 721.315 148.548H585.438V150.66C586.142 166.5 591.07 178.821 600.223 187.973C609.023 197.125 620.991 201.701 635.776 201.701C647.392 201.701 657.248 199.237 665.345 193.605C673.089 187.973 678.369 180.229 681.185 170.02H719.202C715.682 188.325 706.882 203.461 692.45 215.078C678.017 227.046 660.065 232.678 638.592 232.678C619.583 232.678 603.391 229.158 589.31 221.414C575.23 213.67 564.67 203.109 556.925 189.029C549.181 175.301 545.661 159.108 545.661 140.803C545.661 122.499 549.181 106.306 556.573 92.2259ZM683.649 120.739C681.889 107.714 676.609 97.5061 667.809 90.1138C659.008 82.7216 648.096 78.8495 634.72 78.8495C622.047 78.8495 611.487 82.7216 602.335 90.4658C593.182 98.2101 588.254 108.066 586.846 120.739H683.649Z" fill="#EBEBED"/>
-                    <path d="M473.661 59.4889C486.334 66.8811 496.542 77.4414 503.934 91.5219C510.974 105.602 514.847 121.795 514.847 140.451C514.847 158.756 510.974 174.948 503.934 189.029C496.542 203.109 486.334 213.67 473.661 221.414C460.637 229.158 445.852 232.678 429.66 232.678C416.283 232.678 404.667 230.214 394.811 225.286C384.954 220.358 376.858 213.67 371.226 205.221V300.968H333.209V50.3366H366.298L370.874 77.0894C385.306 58.0808 405.019 48.2245 429.66 48.2245C445.852 48.2245 460.637 52.0966 473.661 59.4889ZM461.341 183.749C471.197 172.484 476.125 158.052 476.125 140.451C476.125 122.851 471.197 108.418 461.341 97.154C451.485 86.2417 438.812 80.6095 423.324 80.6095C407.483 80.6095 394.811 86.2417 385.306 97.154C375.45 108.066 370.874 122.147 370.874 139.747C370.874 158.052 375.45 172.484 385.306 183.749C394.811 195.013 407.483 200.645 423.324 200.645C438.812 200.645 451.485 195.013 461.341 183.749Z" fill="#EBEBED"/>
-                    <path d="M167.191 50.333L217.529 189.377L266.458 50.333H306.94L225.273 258.724C221.049 269.636 217.177 278.084 213.657 283.716C210.137 289.349 205.56 293.925 200.632 296.741C195.352 299.557 188.312 300.965 179.864 300.965H139.03V267.524H165.783C172.823 267.524 178.104 266.468 180.92 264.356C183.736 262.244 186.552 256.964 189.72 249.219L197.112 231.971L126.71 50.333H167.191Z" fill="#EBEBED"/>
-                    <path d="M31.329 83.7786H0V50.3376H31.329V0H69.6982V50.3376H112.996V83.7786H69.6982V177.766C69.6982 184.806 71.1063 190.086 73.9223 192.902C76.7384 195.718 81.3146 197.126 88.3548 197.126H117.22V230.567H80.6105C63.362 230.567 50.6896 226.695 42.9454 218.599C35.2011 210.855 31.329 198.534 31.329 181.638V83.7786Z" fill="#EBEBED"/>
-                </svg>
+                <div class="hidden md:grid">
+                    <div class="col-start-1 row-start-1 z-10 bg-gradient-to-b from-[#FFF0] to-[#FFF]"></div>
+                    <img class="col-start-1 row-start-1" src="/assets/typegpu.svg">
+                </div>
             </div>
         </div>
     </footer>

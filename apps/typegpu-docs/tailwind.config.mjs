@@ -1,4 +1,3 @@
-/** @type {import('tailwindcss').Config} */
 import defaultTheme from 'tailwindcss/defaultTheme';
 
 export default {
@@ -16,13 +15,21 @@ export default {
           20: '#EBEBED',
           0: '#FFF',
         },
-
+        special: {
+          stroke: '#00000029'
+        },
         gradient: {
           purple: '#C464FF',
           blue: '#1D72F0',
         },
       },
     },
+
+    screens: {
+      sm: '601px',
+      md: '1025px',
+      lg: '1441px',
+    }
   },
   plugins: [],
 };
