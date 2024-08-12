@@ -162,6 +162,8 @@ onFrame(() => {
 
 <Tabs>
   <TabItem label="TypeGPU">
+  <details>
+  <summary>See code</summary>
     ```ts
     import { wgsl, createRuntime, builtin } from 'typegpu'
     import { addElement, onFrame } from '@typegpu/example-toolkit';
@@ -223,6 +225,7 @@ onFrame(() => {
     runtime.flush();
     })
     ```
+    </details>
     <LinkCard
       title="Run this in the playground"
       href="/examples#example=playground__JYWwDg9gTgLgBAbzgdwOYGcA2AaOBjKAUwEMZCAlAVwDsZRDcAjS4TO6uAXzgDMoIQcAOQwAnmEKowlIQChQkWIjjEAJqoCimQiEK1cEagDEoxXV179BQgAJiJUygHpCADzNhtAWhgQImAGtgGCEAbllZPEN0eCgaOnMAXhVkYmD8IlIKePoACgBKcKjqGLhVQgA3YDxCOGS42noAOnKqmvDI6Pg8YmoK4nQ6lLT4NU1tXVpcoR6%2BgaFcBAGJPBhyUmAIAC44AEZOQs6S7sMyV3hk2f70JtRCGABhU7cYaeRCRkchfJVBgHEAAoAVQevWuT1oLyKXTgYCI6D0MA2hiM0BApCG1GIVVQpGgt2kt3uAKIPEIUCIqlBc3QqKg6NehyOZxgTWKPGAqEoRFyCFkcDKlWqDH5vDRpB2cMICNoyOM4pg2FFxEwYAAFsQALIQco7IRSkCUNjATzAQiqBayA4dYqlMAmwiYYDUWr1HK6JrogIUPTlKAAh1Ol280UVclnHZ8gUCqK6lAYTAAA1F0bg-SgafD1TNg2SxApxFEAB4w3gAEw8XAAZgAfLkU6nM%2BXcgAGJot3BtgCs%2BSVjejpbLuS83dwI6aPb7-abQ9HcHHPYbAqZ-e08EguabABYeLkw7Bs9KANoAEgQzFY7Ca%2B7OAElqOVXJwALqd9u4Xbtw6pxNTgUQSgYGkGBIyXOAjwvY1qCaDdgk2ahnzgPUNzkVNOFFTgpz4YhUEmEDEAbWNCB2NAsGTfsiBgbkOFLLdWyaAB2AA2AAOJi3yrABOMsyw-Jo%2BJbb9o1-BskSgO58KPKNGx4BVJXhRE5TpBkGxfDCpzhUA4LDUDU18SBMAgVBRD1GAoGAXpUG8J0YlQrgrXyCIUVMXRcgKOoawIgV7QkINCCaNxCDwQDCBDGN-GgABBGAkTwNU8PQHYjzA6T%2ByqQhkB2YoWSJR5uSIWgABUXm5UL8jZTIyAANTNZACj-Rs8G0fMqpVShiPAjs4C6nrXzAgVDLUAB5MA9SakgoEtac4BiaBCBGvVZqIKbG0whs%2BtTG83CeeIdirKcDgiAUGgSfyeEwSh0DVApwgOIA"
@@ -230,6 +233,8 @@ onFrame(() => {
     />
   </TabItem>
   <TabItem label="WebGPU">
+  <details>
+  <summary>See code</summary>
     ```ts
     import { addElement, onFrame } from '@typegpu/example-toolkit';
 
@@ -315,6 +320,7 @@ onFrame(() => {
     })
 
     ```
+    </details>
     <LinkCard
       title="Run this in the playground"
       href="/examples#example=playground__JYWwDg9gTgLgBAbzgQwCaoKIBsCmIcB2MANHBAQGJTL5wC%2BcAZlBCHAOQACMAnmDgHMwAVwD0OAB40wuALQwIELAGtgMdgG4AUFoDG5AM7w0yMDBxQ4AXhQB3ZGrgFkAN2ADkCqADohwgPzeUDgAjsI4RgCCqKbmUAAUAJTa%2BgRGcKg4bro41nYOxjFmFoHBYREwACJZwDlJ2lrAjPEAhJnZOImIWnBwMAAWLLZOOMMYUCwJ7BQOuKh9ECi6YcDBKBk1OeyJWnQ6qem6yAQuyAZ5yPaOaJi4%2BETx7EcnZ%2BykCGf8ujAASp7AEAAXHAAIx0ZJ6QzwVLmCTwGzPU4GXw4GAAYXIsJgj1sOAARn5tihzgBxAAKAFU0cckRiiJIYCkoXAwMEDIQYP9yBRoCBPHlnG4PF5fCIUTAycFGBZgqhqS8DDyoHzsRDIfS4d5Uox3MJgvEED0Nh1iEbGLzPMDWREOVzKBaSEbkFgwP1kABZCCZYHsa0gYRYGDAGTAHCoN67NUHeBgYM4LDAAi5GztWo4LXBTw4H6ETJQMlxhNJg1GrDIHgQYQwH3IKsQCO9FwWWHAw29XogL0BnDA1M5DM4LMAZTdec9qG7Jfb7f03rgAAMjdPepwm7BJEvl4wCHA%2BYn4pvl3BOHjhMBA-u17CAPqJzISLoANWbkgAkgR73BgcIAMwAJkPdsulkAA%2BY9T3PIMCHiSADDUAECC6JtdAAFkYboj2nU5LFgi4JnLAAeZC-0YUgfxAg9MOXYj4gABm8WjSHogBWRJTSorCcF0P94lkFjSD47xWPYjjGy4nj%2BLgQTWMA6c1VE4IYD1HdkLQmCIAMABtZ91wkd97wAXSYhjSBBBiISovYj3nETenBES6BE5hkAEe5qww9tOwnXBe02dNdEzcwRzQCxx0nNtl1nHsF1k49nNcjlYu3XcHGg4CwM4LAICOINyDopCuLQjyqMU5S4FUujvAAdgANgADhq4yfwATj-P9TJM0FzO0SzAJszd7M3TkoAEVEDGBTTAIio9zWVS0WTZW1cvtObHSPRzNyMo0Nt6VlQHgptWyGiBICygQeB9GAoGAY4BDkBMjAbehTXBBotG5ah8HiJJrDAiLozgfQQD5D8MAIKLLBTPyByzDFgeOTBwa9Cx6iNAGsT1HBH1DYYEUxBlxTRPVgiIAAVBlMaSGHzGx0ZUbR5kSbzMkzgMaoDAC4MvGBckKRzD8LBZgw2YiTmzGgPJpsBpRoEiGBOV0fo3PGuBJqPKWsJx4EMeCWnbFsyLcGQKBH2dcIJsYuBLetraqKytAAHkwB9XQjagJ6jyMaAcCdn0veCD32x29tbfoBpegBsBWbBiG8iBkHEYh7w8UERN%2BeZ1n4iZwXWfZsWvAsllo6RvNvHZCVC0THAYMrpNC6j4WY%2BRnxUGoWx4h-evi6T3N6d6Pt03KcIy%2BEPEQDUeJNPjhGm9LnUCGAAx%2BiSAyIXBLQgA"
@@ -470,6 +476,8 @@ You can experiment with different approaches to find the one that suits your nee
 
 <Tabs>
   <TabItem label="TypeGPU">
+  <details>
+  <summary>See code</summary>
     ```ts
     import { wgsl, createRuntime, builtin } from 'typegpu';
     import { f32, vec2f, arrayOf } from 'typegpu/data';
@@ -577,6 +585,7 @@ You can experiment with different approaches to find the one that suits your nee
     });
 
     ```
+    </details>
     <LinkCard
       title="Run it in the playground!"
       href="/examples#example=playground__JYWwDg9gTgLgBAbzgdwOYGcA2AaOBjKAUwEMZCAlAVwDsZRDcAjS4TO6uAXzgDMoIQcAOQwAnmEKowlIQG4AUKEixEvAMwAmXADdCeDT1zEoUYqIDyPLr36CR4ydID0AE1LE5i8NHhJiLlwBRTEIQQlpcCGoAMVMwowCAZUxgF0IoAAVjYkFuPgFhAAExCSlKJ0IADxywEIBaGAgITABrYBhPeTwo9HgoGjowuABeOGJkYnb8IlIKAfoACgBKBW7qXrg07WA8QhG4ftp6ADotncIFLp74PGJqbWJ0ffHJ%2BH8gkLDaBaFb%2B8ehLg-OgJHgYORSMAIAAuOAARi4Kyu6xuUTIlXgoz%2BD3Qx1QhBgAGE0VUYD9kIRGGUhEsxk8AOIZACqhLuOOJtFJq2ucDARHQ4RgkKi0WgIFI%2B2oxG2qFI0Dx0jxBIyRB46SILlZ-3Qoqg4rJSOR6JgxzWPGAqEoRAWCHkcE2hG2u2wdt4YtIsL5hAFtGFMXdMBd9uImDAAAtiABZCBpWFCL0gShsYC1YCEFyA%2BScQ1rDZgbIgJ6jW32-hCuhRWHvZKpdJZOI-Mt%2BuALUwuJaAuAABiBrvtIGA1FhPb7cHFlVhamOcIALHAAFRwLSj3qEMDD6dBxFbidjJIpNKZAs-SqdnuIUcDodwOpwrf94i7u8rsjr7ub13ZreiKv72tHhshFEM9e3tftB1hW97zHR9YWfMC4FXN8uw-e0vyzS5cz6CByyhagACFKB4NUoH2NAsGOZhiPSBYeE0XB8ziXEmwraglmOAASENMAgZAmWoYAeDFZZuRROBKkI6jSNGcjMEooiSNo%2BjeQLXFKnYrjMB4viBKEvURORDZREkkiyIwOSqMUuitBUpjjlEDTuN4-jBOEnMeRgKBgDuVAQgANXSdEzKwV15KkhZjFMCweAWXR9EMOA1CWXAAG1RxSlDzxQgBWABdaCUrqHLcCK448oK4qbxy-LXVypZQs07SAtgKofl0FrT3csSWL2GTzOOHhqAAA1i2E4oMIxqF8whYWs2k6gAPjgcarBLOAQngSAi2WvQNAWUdYuOSoF3wCB0AiqaQiWeaW20eyTvQQcLum67oMO47F0e6hnqu2kAGpbvuxdunOnzftdJFSwJK0OC2hROCGzCeTAFNCBSaheoOeYwmOcUWgocJDwyVH0cIG1XXa9FYTW%2B1uljFBzKG0d7Q2g4cNmFx9g4hAes4faEIQ7nPO8y7CGa9FjkecXWqWThoMFnn2dYkz0kl9AXL0kBlk4Zm4ENAX1oJOAIGIgVMR2%2BL%2BYNuBuYkhTVceDW3Ll3X7W54z7agNWnf02Xdf1gXWa2-Y4pnGKes5gGTZ4M3cEy3A4WOLtIbAoboIgSgYGkGBqd1lLmFYdhji29o8NyuMtszBCXbQrc%2BGIVAvhzi8ELpmaGawJmDaIGAYYtmcFhQgB2AA2AAOEe4%2BONQAE4NBsxOE6TlP7TT0chSgfFm7Sg2aYFzWPV5flBT9XV9XlrhoJq2vXT5UBS90XOEMaSAeNQH9hGFsHCDqFJeiry%2BWZDQijiGTZYIwlprRRhIUmxwqh6EzmTPe3QeJQAAIIwCFHgMMTd0Cwh3gLPeCFtiEGQLCNYxolREitEQWgAAVUkVoybsQICQMgfk0zIGWBfWmIRjB%2BRDJQduGU46iO7Nfa2PF-DmDfL8PhUAAEG16NAQgMi4zKKIIosCNcwISPtJTKoxIBiTi3NmS4pZsaEAGpgSg6AwwGTMfIIAA"
@@ -584,6 +593,8 @@ You can experiment with different approaches to find the one that suits your nee
     />
   </TabItem>
   <TabItem label="WebGPU">
+  <details>
+  <summary>See code</summary>
     ```ts
     import { addElement, onFrame, addParameter } from '@typegpu/example-toolkit';
 
@@ -767,6 +778,7 @@ You can experiment with different approaches to find the one that suits your nee
       device.queue.submit([commandEncoder.finish()]);
     });
     ```
+    </details>
     <LinkCard
       title="Run it in the playground!"
       href="/examples#example=playground__JYWwDg9gTgLgBAbzgQwCaoKIBsCmIcB2MANCugArJTL4w5SkQEBi1%2BcAvnAGZQQhwA5AAEYATzA4A5mACuAehwAPGmFwBaGBAhYA1sBiCA3ACgTAYyYBneGmRg6UOAF4UAd2QG4BZADdgUshaUAB0MrIA-CFQOACOsjg2AIKo9o4AFACUppYENnCoOP7mOC7unrapDvRRMfGJMAAiRcAlWaYmwNxw6QCEhcU4mYgmcHAwABZ8bt44MxhQfFDpgsyeuKjjECjm8cAxKAUtJYLZJhxmufnmyAS%2ByFZlyB5eaJi4%2BEQrN3cPgqRIB6ScwwABKQWAEAAXHAAIycM5XeC5OhKeCuH73KxhHAwADCTFRMBWbhwACNwqcUI8AOLkACqeNuWIJRGUMBy1ngYBiVkIMAhTGY0BAQTKPn8gWCYTkOJg5Bi3HoMVQTN%2BVmFUFFxLOFkJ7JCuW4AVkMXSCFGR0GxEt3BFQRhPMS-MFLHtJEtyCwYAmyAAshBCjDBE6QLIsDBgGpgDhUP9zrqkeMoMBblJcAA1eioxpBZDiuZwZhYCBBADMACYkotkGJ0gBtAAMIUbpGbAFZSOoO12e3A%2B92Qu2ALqJrnJ1MEdM4LOwZQAIVk3CVTlcA1aOENMSCOEXy-o5stVmAAC8cDCYCm05ns8pcwKQmSxHQADKEKSTG1jWRWZBSc9wHS9J7iu9K-v%2BIQZhgoIACoYAAGl%2BcCimAkioEk%2BLbpGTAXlACQ2hwZwEIWxaljAlbVtQdaXpO06zqiIH0HKfr2Gh4JTjgWSZCEfLEjR14zreSj3sgZz8VON5zkojGhLIBAoe0lzjmAVA0Li9BWDJZTriUW44DuMmHmMx5njCAAscAAFRwGWSE-n%2BAFATJYEOSE9IAHIAJLMAA8qCfpwAAPoBDLOeBm54j55AAJoAPqNAAyjBBG6m8lBsOpyyWoIfACthBDxmMFpjGMwAEAYqZYDCraWmMIBldVSF1cgSgwmWISwhZ1kVk1cA2DgYDVR1SEcEh6T3FgCTDM4AB8IwlXASapAKBYzKR5ZVjWdb1hNCSjqYC06Zu9QJCEbgpnQhkqRljiaUuK5tqQy2iQdnA2qlFCqbQB7ZUohXzSVZUVV6jW1chDVwOosK9aKrVwr1-WDf2w2WqNlrjV6U0uHNxUlUtearUWJYbZRtYNrtOD7WDR0hCdm7nQYu73Qe11qbdMmkGZT15mcYxox9qDpWzP1jIIYj-bjpXlZGIP9jDENQzDLUwtDYOI0Nqt82NFPTTjYP4ytrjEWtxPkZtVHk5jlO8yVNN02dF1M-uyys99UB3c7pAABzcwKNv8x0SZuFIVhYAShRlAABraBBwLlO7jTCvg4OYFbcKQAkwtwlbDOoc3J6n3SS3AuDchAjyuAXFbpGDYzjSEShWYt5fpAJmS5z0vghGITfHgQrcSUMmS9XXXeN9ZfcD9O7dwAA1J33dN5YVhT7g7dgzbYwxDApqx5AVivRwHTGZesggnAQtu48xfx-lcBZ5WvWNw-PVgz3L8jcfcDCGSZWoGVUh0iNmGMIKQfBZBgCAcMe4UAAA8ckugijmq7R4MJL6ZQPmYE%2BeFz70WUD5WQMA5DwGLj-WQwAIxlXSPvCqTBhg0LvknFOZluCoy-sIZOUkY7IU8AQei6RhAlhuPlKBcBfBMMLrnOaeClAEKIYQgGYxS5xwgHlWMZRb6cV8KQFB0RVGuk3iXXEcAIDLl4mUKu1CvrYiUDo6x3ddQLW3rvOAMi5HEPGsw7g6RNGbHnqY7gvE2wtlILCFs7dD5YO-rwP8nwYDcNFGVVgf4siQzmoIiAwjIT92AWIrxii464hcQXMyQCQgAHYABsXtKnBLLAATgrD1OEISWnAMiZHQO44QCBnDKUNcxxNzmCwjgBKvpChQADKgPpRlm5BjgMHUO4ccApS6XkbkUYcBYDKv0q0G49I7lBIQCZ5BNnbOIrMrAtYICEODMgQhEB-qcNRDCYuPTpm4BhO8vpvUyTM3djCestcCkLSoFRBKNF5kViblzYFYwgg0T%2BXQKwgK4UlWLgtBaVhxn0BfJk10oNMVEpMWY3EhLiULTtFqB0QhuCm0rEoCs-0KVowpcOEeb0wbstRkhGJUg4mvLBt8z5yFem4F6gKKA-4YAorgEColGKSpUu1I6XkLp8qam1By1lJVuVa0tDyUAFVk6CoWloSAJYpBiGDOJac6htk2H%2BmjQiaz8i-wIKgGk4CwDaUGQcy6f8vU3MgbjK5YgbkwEdGcnZcp5yBu9S%2Ba5hCoFIX5CmRIqKFqKvdf-Kc5KnGJBuVAEopriV-Odo6L6GCObAp1fqsY3KXVmCFBldIqTZoAyTJYEAooPUYAIJYCZvrBj%2BpwASHttxMADsDAeG2SYiSmhnDGGYGJ9RojlHiU0MQiAwXZIurIo6MzLsUpaJM26TkPCsM0KwwyozBBhEBI5Hr6CUCsFexIt6HDQDKMXSwJYoAYQFOYCYcTZXysxYqsY-g5gXj3TEI9cwOVjHMLgKgGYraAtbHLbDjY9XEuJqgHySNBAof0lAZlmKbDQBwER4MVGYgUfrbqz%2BUSkwqTff2wd9Ayjdt7VOrjoQyTSDKk%2Bi9b6fHHJfZe69n7gg23Y1YTjM7Qi8VOZIc5nEwDRuIvJy9SmJk8VxDIwyWHbWSQYv83THHp0Gd4nGj1QaIFANIDmxzYArOKZs0xVA1A3DpDLB5-TTFjknrGHbBIp0rCyDJPVYk9ZeOTqC6EY05VsVZCpk2oAA"
@@ -1068,6 +1080,8 @@ Great! But now we have a little problem. When we had just one triangle, we could
 
 <Tabs>
   <TabItem label="TypeGPU">
+  <details>
+  <summary>See code</summary>
   ```ts
   import { addButton, addElement, onFrame } from '@typegpu/example-toolkit';
   import { builtin, createRuntime, wgsl } from 'typegpu';
@@ -1192,6 +1206,7 @@ Great! But now we have a little problem. When we had just one triangle, we could
     runtime.flush();
   });
   ```
+  </details>
   <LinkCard
     title="Run it in the playground!"
     href="/examples#example=playground__JYWwDg9gTgLgBAbzgQwCaoEIFcYwgOwBoV0BRAGwFMRL8ZiCAxKZGuAXzgDMoIQ4A5AAEYATzCUA5mCwB6SgA9WYKgFo8EcgGtgMAQG4AUKEixEcAEZZg5GMCJwAxlErIYlAEpY6oSsQDukgDO5BzcvPwCYhLSWAbG4NDwSMhQLKIA8lzEXADMAEzEQTBQWI70cABulI752VU1uVxhPHyC0VIysqhuyPGGjgTFcKU%2BbAC8KP7Iuk4ubp7edjQAFACURoP4w6iUlcCOlHCTo8uUAHS7%2B4dGA0Pwjsj4lchBx1Mz8GioFNS0MCsBI9nq8BMQUkEJOUPG5gBAAFxwACMHA2d22DwI7gU8EmwJeQXOkkoMAAwljFACBP5KBZYgI1ig3gBxAAKAFVSU8CeS6JTNvc4GAXEF-rCmNAQG53vhkPtJG5oESZESSayXFxKGlKKguSCgoxJW51rcttiYOctlxgJIsC4VghDHA4FcDn4ndwjTBEcLKKK6OL8IaoFL6B7kOQwAALZAAWQgu0RAl9ICwtmAKmAOrBhnYaMM32wuAIgJh%2BFQfGAAC9KGCRk8KyBq5QACpQYBPSRUIL5rbDEod-BdygAZWb7wADOd8gKMXAB52qAA1LXY96BEIe85WLiaqArVLpLIraq1eq5NbEADaHudV6nE%2BIC6HVDHNYAuoRb3Ar%2Bp24vR2bYg-0HYc30oT9vyvZ8wKAuAQIA8DIOdd81i3AASCNyAgfwV1gRRAWqfCFAZU1BRgqgAEEQAgJZ3iRCdZ37f8X0oVkIDeSYN3ILcdz3FZv0PZBMi4ATnXEuBilKcoHW-CSFERPJCjk8TREUgovwkiTeBgQN1OUrTUU0rSKMoajaLoYznUvD00Odc5MPIbD-A8VwK3wchRBHPAWGJE1DEMLhvHKOF8HrctKxrNtQO7dZEA9Pt4EgIJdFCzif3fIxnS4aA4BWKh4GASd9DgIqAB55xY4dzKWErgAAanqxlHQkxK4AUd5YzcKNzhYCKQDigAqOB8ng5EsvEtrRE67reobPghpGsakQm502p0wMZpgHq%2BsbRauu285WQASTgYaZ2-ZLUqGc4ZCCKMHXa4hRGIDa7AIVEJvYD1Tl8c5-HbdxsF3LUVlM9igmIK73u2NFvvRYY3qOLjgnIc4uHwAADE9EVPOpiAA-TGVUAA%2BBoz3i50CqFDj3jxsTxJPc4OuGwYggPVi1mJvLKnOabhpS-AOeHLmrJ55mzsk%2BxhaoLm4Hq8X%2BacDiZcoLnbImlwYDtMLkqMdhMbIucwAzShyHsZGRiWP6pS0TxaF2KBWVN838EoWTnSI7FERayaE0oRFuMxlTqfsYonkOY78By950IQcGOPOV5XLQAhPO86BkD8tZ2CvOOrBsOx8HOMPdPwSPy0UdhMpDkkRggXT3FQWOECR9gGcMuPTLw7Ek6CHuCJzsWJNLiPKCjnLeobwMVPzQzqYgXdRVxcm6g7rTR-L8fo4gZnh-EzeK8n0RZ9uee6%2BSumagAFlEpHm4VxeuGX4gH2IJFzgnNFz-gHgs-ZJc7wVj33lqvUSXcqqvmbOwYgECYqARrHmRksgwErDgYhaBkt8if2-uJTGYtaIwBkN6SmWkrwF3TMXaGoV3xJmSjmQyf9JAANxjUfG34YEek4dlXyNA6A%2B2-IMRMcAg610xNhKAKJJinlyCsJEABOAAbJ-OAKD8gAFZ1Gf3fhOB8qiRqaO0QYrRE59EaJMbgiS1NBgSNGtIxoKx8jyJUWowxj5kRImvi44xRj8jXz0a4ixZ8tLU1QMAYYkwqBDm2isJhACxr0ynOo1%2B5x1Fc2CVYuuNjcqTCbAoFY2TJHEEKYUF04SYBzy0lrHW5Nr4FM0NAd%2BODVpwHwd%2BXSUBiQkJvIZX2jCvQ%2BhFGKGGwZQz724eJZCHBjLClAKlaoAiJJ4EgNhSQal2iQMoKoc2xQGHTNzPmXakVWybPZmiJgLBVhxXGGTX2JsJCuwuIoGoOB3Z9OVhIyiuBkCOCjHwmAQREQ9K0u8iS%2BxKD%2BERGaSkqoyR2hcHQFslI7TuzWJaeY7glxZn8Osfea0qCpCXBGLAAcfzuPJa-KZ88IBoAyGAJMjgCVQD2YZYo0BKB0qTGylwLLxITJQmLL2ihyRLERLkMWh9KAiv4ZVeBNVLJcMqb9Gg6NyBYHuv5PMRggA"
@@ -1199,6 +1214,8 @@ Great! But now we have a little problem. When we had just one triangle, we could
   />
   </TabItem>
   <TabItem label="WebGPU">
+  <details>
+  <summary>See code</summary>
   ```ts
   import { addElement, addButton, onFrame } from '@typegpu/example-toolkit';
 
@@ -1378,6 +1395,7 @@ Great! But now we have a little problem. When we had just one triangle, we could
   });
 
   ```
+  </details>
   <LinkCard
     title="Run it in the playground!"
     href="/examples#example=playground__JYWwDg9gTgLgBAbzgQwCaoKIBsCmIcB2MANCugEICuMMEBpdAYlMvnAL5wBmUEIcAcgACMAJ5gcAczCUA9DgAerMLgC0tCFgDWwGAIDcAKEMBjOgGd4aZGBg4ocALwoA7sl1wCyAG7BJyWigAOmlKAH4gqBwAR0ocSwBBVBs7KAAKAEojMwJLOFQcXxMcJ1d3K2Tbewio2PiYABFC4GLMo0NgLjg0gEICopwMxEM4OBgAC14XTxxpjChedIFGd1xUMYgUE1jgKJR85uKBLMN2Yxy8k2QCb2RzUuQ3DzRMXHwiNIErm7uBUiQ7hITDAAEoBYAQABccAAjBwThd4Dk7Ap4M5vrdzCEcDAAMJ0FEwT4uHAAI1CxxQ9wA4gAFACquOumPxREUMGyFngYCi5kIMHBTGgIACpS8vn8gRCMmxMFpUS49iiqCZP3MjGFATa5wJ7KCOS4fkoUTSCBGBwGxHNXE1MGhPPi-MFBA1UBFJHNyCwYHGyAAshACtCBA6QJQsDBgCpgDhUH9TidDC8qDQ6J8wQRUHxgAAvHB-OAsTPZvMAFSgwGuklw5kTiLGFaruAAyrmSs4AAxBABMnNy8BgjYI1ZwADV7CiGgFkGLZnBGFgIAEAMzdhILZCiNIAbXNXY7VtGg8rw5bbcPcHUQ5HrbzF6vJ5v5-Nx6bOFvOHvr9P7%2BfAF06y5BtH1wBIQAgSgiFKGEOz7PJvxHWkIHuZx%2BhaHB9SiAIcCoLhFXSM1RnMNtoQQ0DwMg%2BAACo4GXOAaIAFgvShzGQSQcGhOl6Vw-D6VY9igmbUsAHkQQSakMDgAAfOAuJ4%2Bw%2BLYjDcWE2kAE0AH0GiEq12EA-tgLfcdYEUeSHFQw4MJMLC7DM01zWIvNSOvXBjMnacglJUQ7AAGUISQJmY-iONkhkzMUgTRwwEFSwwAANC8RTACRUASPEbIhAhnLiXSTgIOcFyXGBV3XFgtzIscJ1Myg8PsWU-RsFKM3YzIMiCPkiQqtzFCnAUTi6qqFDMoJIKS7VDC4SDgUywtrizEA23LED4kyYZRk6bo%2BksoZCNGQscWNAgjFGM5RnrZIBVnaZCpXNcN3KlycDAiCoJo5cTlGG0HDSXB4GAUpYLgf6AB5DJ-Z7KP0IGAGpoZ281Rgu5Bt3%2Bt6-1KBqJkiOa%2BFWmju0vWFjr2pGUfo2i4Gh2F0ecTHxmx4sQDxuACdUImEfyacybeymWZpuA6YZ%2BbmcF2kAElyd7c1TotdCgjqOIghcCtbJq-C0gqpDzFIA9Ob6owzlMICXEkcwsHxApSgAA2tAhCwgAU7DSbxoW8HATG7LhSDfaEuFXIZVAAPjgN2Pa6XbRl%2BuBIBQkP3e7NIOdGZ2ggUcmzHMNI3wyAPum8IJRHJ4iCCzn8c4vPa89TovgBL7OhiplPC5ojPS5HHOOY%2BvaohgQ7o%2BQ4n2HaIjB0oYE4CWt9epnCO4DT33VwruBC4X7sl94R2ZtXi8h%2BMEeoDH%2BBuoUYTqBkeBZ6EUlKGACNa7SGPdEyoZH8jOg4Fd92GK9jmhEXK434lxhEMHgbF6Sjg-nHMOO9h5wCvrXVAtdJBpA7EMIQkheCUDACgoYtwoDA0sNAJSpAsKoGDprZCkDkD3WBpPH809A6wKEG7EyChbZwBFLXNyaQr43zviXWulhrjFA0ggxQQxgDAGhJQVccBiB-wgAAzKOCQ6fzDgHYOx9T4wHPmtPaUdBECgIMUMWBAbSlAoeYFGwA-ywMjjie2jtYylA3thZ2pBDHCJwKYm0kQHbOi7vY%2BAEA8IdVKKHBOnjjHeLMRAVOHj%2BxeJ8XE0QiZK5RxjuEr%2BaRXF2HWFTEJXAOo6yCLrGEpTAlwCjqAyQ4DSg5P8Xk3mESuBpAACQIAqh%2BdgpAOldLbHpIYsgoGe3aZ0x63TJYVOJqMHufctFn2oA-ZCpAangK7obUYQganvBgOwzhLoWDIIUUotMwDuBHLqWoz2Gi4H-2dCo0O389FBLgGYRcUA4TOFDsuNIMIACcAA2UpcBhndgAKzgtKaQGC%2B5QUs0hdChFUKOzwohSiypUd3nQAJt892vzuz-JBWCxFZSYQMWJcipF3YGJwpJRiuxVSHGILyM4XAw4JhpDWRAtmESUFBHBSU8FOdGVYs0NAUoC0FBpGxZ80gsq175GAJYNJ3cDpQDtk8mV4qoAwumdLQwVt2j1nAqgcM7ZZbFEwjgbCzZfQFCgAGM1uB7JnUDCFE2ZsLafgTMaoCYAow4CwLXC1aErXWRtXYEEhAHW0kDcG-KrqqmbggnaQQyBqAQHjKMFhKJoSz1Nea6EhbcBL2vrVKA5hoS7krqMWeldqFlWbMeIMLNyZMSTntAIx5r52CrXAGttbK71qHXAcw9r7A%2BUUc6aEB5O1DsKR1WdS9R3cFtMGLgi5boKG7Nm1dHAV17T-IenpHNj3SwvDs-k%2BaOYlpCnepeAooDsRgP2wdw751rrdAEe0vInSANdO6E9S9z0nQvDyUAT83Y3srrQSAi5JCiGDBVVQwbLB7tPXpP1BlSQIOpJgsApQw1WRsjhPDBGk1YBTdQe08aQ2ynIORiCYAfLUaJKgi8-IKzxGrRzEduHMxIOXZ23kEEoDFBg6O8t%2BFnLLS1sBjmp7Rjnqw8YIs81FqPUzicJgLB8BpFWo4YOu16xmBACKTMGBjHuvMpakjkacD4nM3NKzZgHXajdQZQkxoxwxmmOiXUqJZS4mNFEIgpZ2Q%2BcyNa7Co4-PjU83kMLsa7jmCaOYayUZAicQZNGzM9haSpfS5l2wErnCz1lWlAUJhxi7LfZ2kdOa-OkUi1EOLsxD1nVwNQ0cXo4jVt1oNnWoHR1btQMJMAwYTDdagHuodhCogTeDAt-MCnK4jd3uaesYBUuuZs6UMzFnMDWYdZ5KQtc8spfMJnZLBWivxBK4ELuO3rt7dOx1ONEgE04AfnR-Kz3dsnbqh1Y%2BdldYDVYWZAHr2gfBA6oxzM%2BHmMoNIAJ1ASOsHQ-MG9uqqAWAuDSMuUgFUIZECxzj4IMaEt2flnERW5hKCkgWkSbch2XOw6CIaAgyrxiZAAgbE4QA"
@@ -1388,3 +1406,497 @@ Great! But now we have a little problem. When we had just one triangle, we could
 
 
 ## Incorporating a compute shader to move the triangles
+
+Now that we have a basic triangle rendering, we can start to incorporate a compute shader to move the triangles.
+For now we will just try to apply some simple movement to the triangles.
+
+Let's create the compute shader:
+
+```ts
+const computePipeline = runtime.makeComputePipeline({
+  code: wgsl`
+    let index = ${builtin.globalInvocationId}.x;
+    var instanceInfo = ${trianglePos.asMutableStorage()}[index];
+    let triangleSize = ${triangleSize};
+
+    if (instanceInfo.x > 1.0 + triangleSize) {
+      instanceInfo.x = -1.0 - triangleSize;
+    }
+    if (instanceInfo.y > 1.0 + triangleSize) {
+      instanceInfo.y = -1.0 - triangleSize;
+    }
+
+    instanceInfo.rotation += 0.01;
+    instanceInfo.x += 0.01;
+    instanceInfo.y += 0.01;
+
+    ${trianglePos.asMutableStorage()}[index] = instanceInfo;
+  `,
+});
+```
+
+<Aside type="danger" title="Remember to add proper permissions!">
+  The code above will not compile because `trianglePos.asMutableStorage()` returns null. That is because we need to add the proper permissions to the buffer.
+  ```diff
+  const triangleAmount = 10;
+  const trianglePos = wgsl
+    .buffer(
+      arrayOf(
+        struct({
+          x: f32,
+          y: f32,
+          rotation: f32,
+        }),
+        triangleAmount,
+      ),
+    )
+    .$allowReadonlyStorage()
+  +  .$allowMutableStorage();
+  ```
+</Aside>
+
+If you do not specify the workgroup size, the default is 1, 1, 1. To specify the workgroup size, you can use the `workgroupSize` property in the `makeComputePipeline` function.
+
+```diff
+const computePipeline = runtime.makeComputePipeline({
+  code: wgsl`
+    ...
+  `,
++  workgroupSize: [1, 1, 1],
+});
+```
+
+Now all we need to do is execute the compute pipeline before rendering the triangles.
+
+```diff
+randomizeTriangles();
+onFrame(() => {
++  computePipeline.execute({
++    workgroups: [triangleAmount],
++  });
+  pipeline.execute({
+    colorAttachments: [
+      {
+        view: context.getCurrentTexture().createView(),
+        clearValue: [0, 0, 0, 0],
+        loadOp: 'clear',
+        storeOp: 'store',
+      },
+    ],
+    vertexCount: 3,
+    instanceCount: triangleAmount,
+  });
+
+  runtime.flush();
+});
+```
+
+<Tabs>
+  <TabItem label="TypeGPU">
+    <details>
+      <summary>Click to see the full code</summary>
+      ```ts
+      import { addButton, addElement, onFrame } from '@typegpu/example-toolkit';
+      import { builtin, createRuntime, wgsl } from 'typegpu';
+      import { arrayOf, f32, struct, vec2f } from 'typegpu/data';
+
+      const runtime = await createRuntime();
+      const device = runtime.device;
+
+      const canvas = await addElement('canvas', { aspectRatio: 1 });
+      const context = canvas.getContext('webgpu') as GPUCanvasContext;
+      const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+      context.configure({
+        device,
+        format: presentationFormat,
+        alphaMode: 'premultiplied',
+      });
+
+      addButton('Randomize', randomizeTriangles);
+
+      const triangleSize = 0.2;
+      const triangleVertex = wgsl
+        .buffer(arrayOf(vec2f, 3), [
+          [0.0, triangleSize],
+          [-triangleSize, -triangleSize],
+          [triangleSize, -triangleSize],
+        ])
+        .$allowVertex('vertex');
+
+      const triangleAmount = 10;
+      const trianglePos = wgsl
+        .buffer(
+          arrayOf(
+            struct({
+              x: f32,
+              y: f32,
+              rotation: f32,
+            }),
+            triangleAmount,
+          ),
+        )
+        .$allowReadonlyStorage()
+        .$allowMutableStorage();
+
+      function randomizeTriangles() {
+        const positions = [];
+        for (let i = 0; i < triangleAmount; i++) {
+          const x = Math.random() * 2 - 1;
+          const y = Math.random() * 2 - 1;
+          const rotation = Math.random() * Math.PI * 2;
+          positions.push({ x, y, rotation });
+        }
+        runtime.writeBuffer(trianglePos, positions);
+      }
+
+      const rotate = wgsl.fn`(v: vec2f, angle: f32) -> vec2f {
+        let pos = vec2(
+          (v.x * cos(angle)) - (v.y * sin(angle)),
+          (v.x * sin(angle)) + (v.y * cos(angle))
+        );
+        return pos;
+      }`;
+
+      const pipeline = runtime.makeRenderPipeline({
+        vertex: {
+          code: wgsl`
+            let instanceInfo = ${trianglePos.asReadonlyStorage()}[${builtin.instanceIndex}];
+            let rotated = ${rotate}(
+              ${triangleVertex.asVertex()},
+              instanceInfo.rotation
+            );
+
+            let offset = vec2f(
+              instanceInfo.x,
+              instanceInfo.y
+            );
+
+            let pos = vec4f(rotated + offset, 0.0, 1.0);
+            let fragUV = (rotated + vec2f(${triangleSize}, ${triangleSize})) / vec2f(${triangleSize} * 2.0);
+          `,
+          output: {
+            [builtin.position]: 'pos',
+            fragUV: vec2f,
+          },
+        },
+        fragment: {
+          code: wgsl`
+            let color1 = vec3(196.0 / 255.0, 100.0 / 255.0, 255.0 / 255.0);
+            let color2 = vec3(29.0 / 255.0, 114.0 / 255.0, 240.0 / 255.0);
+
+            let dist = length(fragUV - vec2(0.5, 0.5));
+
+            let color = mix(color1, color2, dist);
+
+            return vec4(color, 1.0);
+          `,
+          target: [
+            {
+              format: presentationFormat,
+            },
+          ],
+        },
+        primitive: {
+          topology: 'triangle-list',
+        },
+      });
+
+      const computePipeline = runtime.makeComputePipeline({
+        code: wgsl`
+          let index = ${builtin.globalInvocationId}.x;
+          var instanceInfo = ${trianglePos.asMutableStorage()}[index];
+          let triangleSize = ${triangleSize};
+
+          if (instanceInfo.x > 1.0 + triangleSize) {
+            instanceInfo.x = -1.0 - triangleSize;
+          }
+          if (instanceInfo.y > 1.0 + triangleSize) {
+            instanceInfo.y = -1.0 - triangleSize;
+          }
+
+          instanceInfo.rotation += 0.01;
+          instanceInfo.x += 0.01;
+          instanceInfo.y += 0.01;
+
+          ${trianglePos.asMutableStorage()}[index] = instanceInfo;
+        `,
+      });
+
+      randomizeTriangles();
+      onFrame(() => {
+        computePipeline.execute({
+          workgroups: [triangleAmount],
+        });
+        pipeline.execute({
+          colorAttachments: [
+            {
+              view: context.getCurrentTexture().createView(),
+              clearValue: [0, 0, 0, 0],
+              loadOp: 'clear',
+              storeOp: 'store',
+            },
+          ],
+          vertexCount: 3,
+          instanceCount: triangleAmount,
+        });
+
+        runtime.flush();
+      });
+
+      ```
+    </details>
+    <LinkCard
+      title="Run it in the playground!"
+      href="/examples#example=playground__JYWwDg9gTgLgBAbzgQwCaoEIFcYwgOwBoV0BRAGwFMRL8ZiCAxKZGuAXzgDMoIQ4A5AAEYATzCUA5mCwB6SgA9WYKgFo8EcgGtgMAQG4AUKEixEcAEZZg5GMCJwAxlErIYlAEpY6oSsQDukgDO5BzcvPwCYhLSWAbG4NDwSMhQLKIA8lzEXADMAEzEQTBQWI70cABulI75XGE8fILRUjKyqG7I8YaOBMVwpT5sALwo-si6Ti5unt52NAAUAJRGvfj9qJSVwI6UcKOD85QAdJvbu0Y9ffCOyPiVyEH7YxPwaKgU1LQwCwK3948BMQUkEJOUPG5gBAAFxwACMHBWV3WNwI7gU8FG-weQWOkkoMAAwmjFD8BP5KBZYgIligngBxAAKAFVCXcccS6KTVtc4GAXEFvpCmNAQG5nvhkNtJG5oHiZHiCYyXFxKGlKKg2QCgoxRW5lpc1uiYMc1lxgJIsC4FghDHA4Gcdn47dw9TBYfzKIK6ML8LqoGL6C7kOQwAALZAAWQgm1hAk9ICwtmAKmAGqBhnYSMM72wuAIvwh%2BFQfGAAC9KECBncSyBy5QACpQYB3SRUILZtb9Eot-BtygAZXrzwADMd8jyUXAe62qAA1NXo56BEIu45WLiqqALVLpLILaq1bJwXJLYgAbRd9vPY5HxBnfaoQ4rAF1CFe4Of1M3Z4P68Rv17ftn0oN8P3PB9gP-OBAN-ECwPtF8ljXAASENyAgfwF1gRRfmqHCFBpQ1eUgqgAEEQAgOZnjhEdJ27H9H0oRkICeUYV3INcNy3BYP13ZBMi4Xj7REuBilKcobQ-USFFhPJCmkkTRDkgp31E0TeBgX0VIU9TETU9TSMoCiqLoAz7TPF1kPtY40PIDD-A8VwS3wchRAHPAWHxZZUPQzDIxwZALCfTzkG87MuG8cooXwati1LCsmyA9tlkQF0u3gSAgl0GK2M-F8jHtLhoDgBYqHgYBR30OBKoAHmnRj%2BxMuZquAABqNraVtUSMrgBRnkjNww2OFh4pAVKACo4HyGD4UKkTetEAahpGms%2BEm6bZrheb7V6zTfWWmBhtG2sNsGo7jkZABJOAponD8spyvpjhkIIwxtPriFEYh9rsAhEXm9gXUOXxjn8Zt3GwTc1QWIyWKCYhHr%2B9YkSB5F%2Bl%2BvZ2OCchji4fAAAMD1hQ86mIX8dNpVQAD4qhqOo0vtcq%2BVY55SeEkSD2Ofqpt6IIdyYpYqdKypjiWqbsvwAX%2ByF8yRe526xPsaWqCFuA2vl8WnFYlXKCFqz5pcGArVirKjHYAniKnMAU0och7CxgY5lBsUtE8WhNigRlbft-BKCk%2B18PRWFuoWmNKFhDiCcU5n7GKO5diu-BiueFCEDh1jjkeJy0AINyPOgML-aWdhzzTqwbDsfBjjjrT8ET4tFHYAqY4JAYIC09xUFThBMfYDm9LTozsPRLOghH3CS7l0Ta4Tygk%2BKkaO99RTsz05mIE3QVMTpo8B-U2f6-n5OIG56eRMPhvF9EVfLnXtusrZmoABYhMx7uNc3rht%2BIW9iDhY4I4kT33gDwMKzI5zPAWO-dWu86gLCHo1J89Z2DEEQclP8FYsy0lkHAoS6C4IoMVvkQBwCRIEzllRGAMh3SM3UueCuyZq5Ixii%2BOMWUMx6TAZICBJN6bZA-Kgl0QiipeRoHQEOH5eixjgFHVuqIMJQARKMQ8uQFhwgAJwADZAFwFwfkAArAYwB-8Ry3j0dNIxJjLHGJHBYwxtiyGiWZr0RRM0VE1DUfkDRuj9FWLvPCOEz9fE2OsfkZ%2B5i-GOLvupZmqBgD9FGFQPsR0FjcIgbNdmY4DG-2OAYoWMTnFt1cSVUYdYFALBKUo4gVTCgOgSTANe6kjYm13s-SpmhoD-1ITtOAFCPxaSgPiWhl49Khy4W6D0AohTI39IGc%2BIiRIIQ4AZfkoAcrVEkaJPAkAMKSGUs0JBlBVD22KJwlZmZOy8l6OAHAzEfYO2eCDGgxxXaUGJLc9w3sJC%2B39qHaREdZE42jkUiqjd%2BqjHLtYJheIMIWBDEnSoEBbjIyuqgdg3NekPCgDVFEc8F4QB7hnXEjwApaWCoOUK4VS72E2AoFuoKGoYJAkSo5IF2CFJqvUBYl9j6L36rTABdiNZGRAl1RSvKCUK1GKoIVs1RX1l6UDGe3LJUnzFnAQVuiRVsvrOKvSarr7PFlbo1QTLCEViVYYD8hrT6-RiurUYt5to2rxUfKV-U2pOsAS6mebqr6nyWl6uAzrOUEKYvDMeZKgohULtS88tLFAvmeLa%2Ba-SsyXBOglRsRz%2BZIiYCwRYqVhi03%2BXwGh9yfkO2OIoGodyA4iX8NALQkheBYDAEEWEEEjnNToMsjNLobZVr9jWhQdb3ANt2p0qAZFcDIEcGGcRMBO2fkUuM9S2xKD%2BFhEaUkioiRWhcHQBspIrTF1NNMdwc40z%2BGWOfXaVBUhzhDFgQFN5f4fpDcs9eEA0AZDAHGRwj6oDnL0sUaAlB-1xnAy4UDIlFmITlkHRQxI5iwlyHLXlqGJHmqYr2oM9oB3A2di8rg5AsBvQNJcowQA"
+      target="_blank"
+    />
+  </TabItem>
+  <TabItem label="WebGPU">
+    <details>
+      <summary>Click to see the full code</summary>
+      ```ts
+      import { addButton, addElement, onFrame } from '@typegpu/example-toolkit';
+
+      const adapter = await navigator.gpu?.requestAdapter();
+      const device = await adapter?.requestDevice();
+
+      if (!device) {
+        throw new Error('Failed to acquire a device');
+      }
+
+      const canvas = await addElement('canvas', { aspectRatio: 1 });
+      const context = canvas.getContext('webgpu') as GPUCanvasContext;
+      const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+      context.configure({
+        device,
+        format: presentationFormat,
+        alphaMode: 'premultiplied',
+      });
+
+      addButton('Randomize', randomizeTriangles);
+
+      const triangleSize = 0.2;
+      const triangleVertexData = new Float32Array([
+        0.0,
+        triangleSize,
+        -triangleSize,
+        -triangleSize,
+        triangleSize,
+        -triangleSize,
+      ]);
+
+      const triangleAmount = 10;
+      const trianglePos = device.createBuffer({
+        size: triangleAmount * 3 * 4,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      });
+
+      const triangleVertexBuffer = device.createBuffer({
+        size: triangleVertexData.byteLength,
+        usage: GPUBufferUsage.VERTEX,
+        mappedAtCreation: true,
+      });
+      new Float32Array(triangleVertexBuffer.getMappedRange()).set(triangleVertexData);
+      triangleVertexBuffer.unmap();
+
+      function randomizeTriangles() {
+        if (!device) {
+          return;
+        }
+        const data = new Float32Array(triangleAmount * 3);
+        for (let i = 0; i < triangleAmount; i++) {
+          data[i * 3] = Math.random() * 2 - 1;
+          data[i * 3 + 1] = Math.random() * 2 - 1;
+          data[i * 3 + 2] = Math.random() * Math.PI * 2;
+        }
+        device.queue.writeBuffer(trianglePos, 0, data);
+      }
+
+      const wgslCode = `
+        fn rotate(v: vec2f, angle: f32) -> vec2f {
+          let pos = vec2(
+            (v.x * cos(angle)) - (v.y * sin(angle)),
+            (v.x * sin(angle)) + (v.y * cos(angle))
+          );
+          return pos;
+        };
+
+        struct TriangleData {
+          x : f32,
+          y : f32,
+          rotation : f32,
+        };
+
+        struct VertexOutput {
+          @builtin(position) position : vec4f,
+          @location(1) fragUV : vec2f,
+        };
+
+        @binding(0) @group(0) var<storage, read> trianglePos : array<TriangleData>;
+
+        @vertex
+        fn mainVert(@builtin(instance_index) ii: u32 ,@location(0) v: vec2f) -> VertexOutput {
+          let instanceInfo = trianglePos[ii];
+
+          let rotated = rotate(v, instanceInfo.rotation);
+          let offset = vec2(instanceInfo.x, instanceInfo.y);
+
+          let pos = vec4(rotated + offset, 0.0, 1.0);
+          let fragUV = (rotated + vec2f(${triangleSize}, ${triangleSize})) / vec2f(${triangleSize} * 2.0);
+          return VertexOutput(pos, fragUV);
+        }
+
+        @fragment
+        fn mainFrag(@location(1) fragUV : vec2f) -> @location(0) vec4f {
+          let color1 = vec3(196.0 / 255.0, 100.0 / 255.0, 255.0 / 255.0);
+          let color2 = vec3(29.0 / 255.0, 114.0 / 255.0, 240.0 / 255.0);
+
+          let dist = length(fragUV - vec2(0.5, 0.5));
+
+          let color = mix(color1, color2, dist);
+
+          return vec4(color, 1.0);
+        }
+      `;
+
+      const wgslCodeCompute = `
+        struct TriangleData {
+          x : f32,
+          y : f32,
+          rotation : f32,
+        };
+
+        @binding(0) @group(0) var<storage, read_write> trianglePos : array<TriangleData>;
+
+        @compute @workgroup_size(1)
+        fn mainCompute(@builtin(global_invocation_id) gid: vec3u) {
+          let index = gid.x;
+          var instanceInfo = trianglePos[index];
+          let triangleSize = ${triangleSize};
+
+          if (instanceInfo.x > 1.0 + triangleSize) {
+            instanceInfo.x = -1.0 - triangleSize;
+          }
+          if (instanceInfo.y > 1.0 + triangleSize) {
+            instanceInfo.y = -1.0 - triangleSize;
+          }
+
+          instanceInfo.rotation += 0.01;
+          instanceInfo.x += 0.01;
+          instanceInfo.y += 0.01;
+
+          trianglePos[index] = instanceInfo;
+        }
+      `;
+
+      const module = device.createShaderModule({
+        code: wgslCode,
+      });
+      const moduleCompute = device.createShaderModule({
+        code: wgslCodeCompute,
+      });
+
+      const pipeline = device.createRenderPipeline({
+        layout: 'auto',
+        vertex: {
+          module: module,
+          buffers: [
+            {
+              arrayStride: 2 * 4,
+              attributes: [
+                {
+                  shaderLocation: 0,
+                  offset: 0,
+                  format: 'float32x2',
+                },
+              ],
+            },
+          ],
+        },
+        fragment: {
+          module: module,
+          targets: [
+            {
+              format: presentationFormat,
+            },
+          ],
+        },
+        primitive: {
+          topology: 'triangle-list',
+        },
+      });
+
+      const computePipeline = device.createComputePipeline({
+        layout: 'auto',
+        compute: {
+          module: moduleCompute,
+        },
+      });
+
+      const bindGroup = device.createBindGroup({
+        layout: pipeline.getBindGroupLayout(0),
+        entries: [
+          {
+            binding: 0,
+            resource: {
+              buffer: trianglePos,
+            },
+          },
+        ],
+      });
+
+      const bindGroupCompute = device.createBindGroup({
+        layout: computePipeline.getBindGroupLayout(0),
+        entries: [
+          {
+            binding: 0,
+            resource: {
+              buffer: trianglePos,
+            },
+          },
+        ],
+      });
+
+      randomizeTriangles();
+      onFrame(() => {
+        const commandEncoder = device.createCommandEncoder();
+        const textureView = context.getCurrentTexture().createView();
+
+        const renderPassDescriptor: GPURenderPassDescriptor = {
+          colorAttachments: [
+            {
+              view: textureView,
+              clearValue: [0, 0, 0, 0],
+              loadOp: 'clear',
+              storeOp: 'store',
+            },
+          ],
+        };
+
+        const computePass = commandEncoder.beginComputePass();
+        computePass.setPipeline(computePipeline);
+        computePass.setBindGroup(0, bindGroupCompute);
+        computePass.dispatchWorkgroups(triangleAmount);
+        computePass.end();
+
+        const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+        passEncoder.setPipeline(pipeline);
+        passEncoder.setVertexBuffer(0, triangleVertexBuffer);
+        passEncoder.setBindGroup(0, bindGroup);
+        passEncoder.draw(3, triangleAmount);
+        passEncoder.end();
+
+        device.queue.submit([commandEncoder.finish()]);
+      });
+
+      ```
+    </details>
+    <LinkCard
+      title="Run it in the playground!"
+      href="/examples#example=playground__JYWwDg9gTgLgBAbzgQwCaoEIFcYwgOwBoV0BRAGwFMRL8ZiCAxKZGuAXzgDMoIQ4A5AAEYATzCUA5mCwB6SgA9WYKgFo8EcgGtgMAQG4AUIYDGBAM7w0yMDEpQ4AXhQB3ZLrj5kAN2CTkeFAAdNJYAPxBUJQAjliUlgCCqDZ2UAAUAJRGZviWcKiUviaUTq7uVsm29hFRsfEwACKFwMWZRobAXHBpAIQFRZQZiIZwcDAAFrwunpTTpFC86QKM7lSoYxAoJrHAUSj5zcUCWYbsxjl5Jsj43sjmpchuHmioFNS0MGkCVzd3AsRIO4SEwwABKAWAEAAXHAAIwcE4XeA5OwKeDOH63cwhSgwADCBFRnwELkoACNQscUPcAOIABQAqnjrliCXRFDBshZ4GAouYPhCmNAQAFSl5fP5AiEZDiYHSolx7FFUMzfuZGMKAm1zoSOUEclw-FgomkECMDgNCOauJqYDDefEBTBIfgNVARfRzchyGBxsgALIQAowgQOkBYcjOlTASiof6nE6GF7YXAEL7g-CoPjAABelH%2BcBYmezeYAKlBgNdJFRzImkWMK1WqABlXMlZwABiCACYubl4DBG-hq5QAGr2VENALIMWzOCMcgQAIAZm7CQWyFEaQA2uaux2raNB5Xhy224e4OohyPW3mL1eTzfz%2Bbj03KLfKPfX6f38%2BALp1tyDaPlQCQgBAWB0KUsIdn2eTfiOdIQPczj9C0lD6lEASUNgXCKukZqjOYbYwghoHgZB8AAFRwMucA0QALBeWDmMgkiUDC9IMrh%2BEMqx7FBM2pYAPKggkNKkHAAA%2BcBcTx9h8WxGF4sJdIAJoAPoNEJVrsIB-bAW%2B46wIo8kOKhhwYSYWF2GZprmsReakdeVDGZO05BGSoh2AAMrQkgTMx-EcbJjJmYpAmjqQoKlqQAAaF4imAEioAk%2BI2S6zlxLpJz4HOC5LjAq7riwW5kWOE6mVgeH2LK-o2ClGbsZkGRBPynzlW5ihTjAyAnJ1lUKGZQSQUl2qGFwkEgi6hbXFmIBtuWIHxJkwyjJ03R9JZQyEaMha4sa%2BBGKMZyjPWyS9bO0wFSua4bmVLmUGBEFQTRy4nKMNoOGkVDwMApSwXA-0ADyGT%2Bz2UfoQMANTQzt5qjBdyDbv9b1-qU9UTJEc18KtNHdpecLHXtSMo-RtFwNDcLo84mPjNjxYgHjcAE6oRMI-k05k29lMszTcB0wz83M4LdIAJLk725qnRa6FBHUcRBC4Fa2dV%2BFpOVSHmMQB6c71JxnKYQEuJI5jkASBSlAABta%2BCFhAvV2Gk3gwt4lAmN2XDEG%2BMJcKuQyqAAfHAbse10u2jL9cCQChIfu92aQc6MztBAo5NmOYaRvhkAfdN4QSiOTxH4FnP45xee156nRfACX2dDFTKeFzRGelyOOccx9e1RDAh3R8hxPsO0RGDlgIJwEtb49TOEdwGnvurhXcCFwv3ZL7wjszavF5D8YI9QGP8BdQowk4DI8Cz0IZJYMAka12kMe6C6QyP86BBwK77sMV7HNCIuVxvxLrCIYPA2IMlHB-OOYcd7DzgFfWuqBa6SDSB2IYQhJC8CwGAFBQxbhQGBpYaASliBYVQMHTWyFIHIHusDSeP5p6B1gUIN2JkFC2zgCKWubk0hXxvnfEutdLDXGKBpBBighjAGADCLAq44CED-hAABLocEh0-mHAOwdj6nxgOfNae0o6CN6vgYoYt8A2lKBQ8wKNgB-lgZHXE9tHaxlKBvbCztiCGOEZQUxNpIgO0FPgLu9j4AQDwu1UoocE6eOMd4sxEBU4eP7F4nx8TRCJkrlHGOESv5pFcXYdYVNQlcHajrIIutYRlKCXAKOoDJDgNKLk-x%2BTeaRK4GkAAJAgcqH52DEE6d0tsekhiyCgZ7DpXTHo9MlpU4mowe59y0WfHAD9kLEFqeAruhtRhCFqTQOg7DOGuhYMghRSi0zAO4Mc%2BpajPYaLgf-AJKjQ7fz0cEuAZhFxQHhM4UOy40iwgAJwADYylwBGd2AArBCspxAYL7jBSzKFMLEXQo7AiyFqKqlRw%2BdAAmPz3Z-O7AC0F4KkXlNhAxElKLkXdgYvC0lmK7HVIcYgvIzgqDDgmGkdZEC2aRJQUECFpSIU5yZdizQ0BSgLQUGkHFXziByrXvkYAlh0ndwOlAO2zzZUSqgLCmZ0tDBW3aPWE2ZsLaUAJOAHA7Y4A233ofCej1p6vLnpAv2a8OYr24IvDmeSt4%2Bs9SdJhZIEFIJUegzB2DUEh2oQQwIxD9poA0srXQlByGPS1lQmhdCRwMKYWYa1dg4EuGgFoDBEEwAaUcpQf5GQDnuHwFa8%2BtbeG32dCXasEAyTelETcRRATRGoCGJIYAqA1HLiwPDDJDixFp2cKO1AqdZmxocNEkxcSLGZuQijTMihbEcyjgMvMpR%2BmTMGUyjaaR12xN8WnYOFS0VU2PYMV160kkxJSdXZwqhH2ExfSumW60ujXo-Ru3xhcH2gufeevM07K5AzA7e1JpRf2grZgBjmWy9o3q-f69%2B0NOxlNhCu3DcTq6EbgPuEjHMyMQcpkRjsNGOaWN3QUBQ-M6MQEHkak1QFwKoAjLatCxRMKUGws2P0BQoCBkE1QeyZ0gwhTNebJTOU4LwAE0J5tNrSgiasjZd8Un7CyaEwp95SmYQqYtTpuw6mdQGTAMACQ5Ba7CcsmJ7CoJaDSbpM5ygrm8rmfIJuCCdpBDIBwBAeMowWGohhLPLTVAYRJc-Bza%2BNUoDmBhLuBDb69rUNKs2Y8wYWbkyYknAruAKzXzsNluAuW8t7Vnk1uA5hjNQB8gOwBMIDyVby0U9qvWl6ta%2Bh6EMXBFy3QUN2GLrWOAjb2n%2BRbvSObLelheXZHwEsc1SyloMQml69SgOxGA9XGuVxa3tMbAR7R8idC6N0HoVtL3WydC8vJQBPzdjtyueBICLkkKIEM5VVCucsHN1bek%2BMGULS2vzLm3N6Y89ZcTdhbOUARwFtzwXQs4BDJFvAc24c2t%2B3tPbHCDtUAxzvezRsDKhszDSKNyOBiedsgg5nlbceiDC-afzgWMKnYwJzqNPk8efFQReD4FZ4g5Y5ldxniDhzDcq3yCCUBihk7yxl-Czllpaxe1hi863ocObyErrnWCMes7lqj7CIumdRp53zizRbMcC7c7KR3qArdgHF7z5ZUvzQy5jOdhXlWldINV3l9Xxotf5dGLr%2Bw%2Bu3yG8q6tyume4Cm8TEWeai1HqZxOEwFgNA0irUcMHXa9ZC0ikzKQYxSnzKy1E-b9HfB6%2BvCb9J7UimDJEmNGOGM0wMS6jRLKPExooh0FLByIfmR2fD9mONfveQZ%2B%2BbuOYJo5hrLOcCJxRk3m91QDpFvnfe-bCSucLPOVaVeomHGHss78u8tXdiyP0i8%2BoijhH4ts6VA1Co43ocQOWus4BOsb2TWU2qAwkYAIYJggBUAc2eWhCUQcBIYaB%2BYRulcUBu85otefA8OW%2BpQdec0jeZg0mnkUgtcGOZ%2B5gxexMJOdg9B2I7UWOguOq7uHBbmXczBmOW%2BbUuIPufuKCxAluUaGOfBRBNqrBQQrKYAAQj%2BAA6mWhWlgpnOVBDHQNIdwYIT5qvhZo5lvhQc3qQZ3uQT3rVGSDQfgMfpvgwbkj5vYKwRfhWFflAF3IoQwaYVQewZ7kFk5ojnlF4SYVYcEO1MfHZLrANKwmZKET4eEUITACIc7rrBIZWgkeYL4bVKgCwC4GkMuMQFoRRDocTN4dkUkQYWqvpvLHEIrOYFgGSAtJ8NuGQQ3kkYaPgCquMJkABEYGbkAA"
+      target="_blank"
+    />
+  </TabItem>
+</Tabs>

@@ -24,7 +24,7 @@ context.configure({
 
 addButton('Randomize', randomizeTriangles);
 
-const triangleSize = 0.1;
+const triangleSize = 0.2;
 const triangleVertex = wgsl
   .buffer(arrayOf(vec2f, 3), [
     [0.0, triangleSize],
@@ -45,7 +45,8 @@ const trianglePos = wgsl
       triangleAmount,
     ),
   )
-  .$allowReadonlyStorage();
+  .$allowReadonlyStorage()
+  .$allowMutableStorage();
 
 function randomizeTriangles() {
   const positions = [];
@@ -110,8 +111,32 @@ const pipeline = runtime.makeRenderPipeline({
   },
 });
 
+const computePipeline = runtime.makeComputePipeline({
+  code: wgsl`
+    let index = ${builtin.globalInvocationId}.x;
+    var instanceInfo = ${trianglePos.asMutableStorage()}[index];
+    let triangleSize = ${triangleSize};
+
+    if (instanceInfo.x > 1.0 + triangleSize) {
+      instanceInfo.x = -1.0 - triangleSize;
+    }
+    if (instanceInfo.y > 1.0 + triangleSize) {
+      instanceInfo.y = -1.0 - triangleSize;
+    }
+
+    instanceInfo.rotation += 0.01;
+    instanceInfo.x += 0.01;
+    instanceInfo.y += 0.01;
+
+    ${trianglePos.asMutableStorage()}[index] = instanceInfo;
+  `,
+});
+
 randomizeTriangles();
 onFrame(() => {
+  computePipeline.execute({
+    workgroups: [triangleAmount],
+  });
   pipeline.execute({
     colorAttachments: [
       {

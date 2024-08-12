@@ -110,8 +110,41 @@ const wgslCode = `
   }
 `;
 
+const wgslCodeCompute = `
+  struct TriangleData {
+    x : f32,
+    y : f32,
+    rotation : f32,
+  };
+
+  @binding(0) @group(0) var<storage, read_write> trianglePos : array<TriangleData>;
+
+  @compute @workgroup_size(1)
+  fn mainCompute(@builtin(global_invocation_id) gid: vec3u) {
+    let index = gid.x;
+    var instanceInfo = trianglePos[index];
+    let triangleSize = ${triangleSize};
+
+    if (instanceInfo.x > 1.0 + triangleSize) {
+      instanceInfo.x = -1.0 - triangleSize;
+    }
+    if (instanceInfo.y > 1.0 + triangleSize) {
+      instanceInfo.y = -1.0 - triangleSize;
+    }
+
+    instanceInfo.rotation += 0.01;
+    instanceInfo.x += 0.01;
+    instanceInfo.y += 0.01;
+
+    trianglePos[index] = instanceInfo;
+  }
+`;
+
 const module = device.createShaderModule({
   code: wgslCode,
+});
+const moduleCompute = device.createShaderModule({
+  code: wgslCodeCompute,
 });
 
 const pipeline = device.createRenderPipeline({
@@ -144,8 +177,27 @@ const pipeline = device.createRenderPipeline({
   },
 });
 
+const computePipeline = device.createComputePipeline({
+  layout: 'auto',
+  compute: {
+    module: moduleCompute,
+  },
+});
+
 const bindGroup = device.createBindGroup({
   layout: pipeline.getBindGroupLayout(0),
+  entries: [
+    {
+      binding: 0,
+      resource: {
+        buffer: trianglePos,
+      },
+    },
+  ],
+});
+
+const bindGroupCompute = device.createBindGroup({
+  layout: computePipeline.getBindGroupLayout(0),
   entries: [
     {
       binding: 0,
@@ -171,6 +223,12 @@ onFrame(() => {
       },
     ],
   };
+
+  const computePass = commandEncoder.beginComputePass();
+  computePass.setPipeline(computePipeline);
+  computePass.setBindGroup(0, bindGroupCompute);
+  computePass.dispatchWorkgroups(triangleAmount);
+  computePass.end();
 
   const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
   passEncoder.setPipeline(pipeline);
