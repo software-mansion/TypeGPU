@@ -1,17 +1,12 @@
 /*
 {
-  "title": "Temp",
+  "title": "Temp3",
   "category": "image-processing"
 }
 */
 
-import {
-  addButton,
-  addElement,
-  addParameter,
-  onFrame,
-} from '@typegpu/example-toolkit';
-import { builtin, createRuntime, wgsl } from 'typegpu';
+import { addButton, addElement, onFrame } from '@typegpu/example-toolkit';
+import { type WgslBufferUsage, builtin, createRuntime, wgsl } from 'typegpu';
 import { arrayOf, f32, struct, vec2f } from 'typegpu/data';
 
 const runtime = await createRuntime();
@@ -29,8 +24,6 @@ context.configure({
 
 addButton('Randomize', randomizeTriangles);
 
-const rotationDirection = wgsl.slot<number>();
-
 const triangleSize = 0.2;
 const triangleVertex = wgsl
   .buffer(arrayOf(vec2f, 3), [
@@ -41,19 +34,41 @@ const triangleVertex = wgsl
   .$allowVertex('vertex');
 
 const triangleAmount = 10;
-const trianglePos = wgsl
-  .buffer(
-    arrayOf(
-      struct({
-        x: f32,
-        y: f32,
-        rotation: f32,
-      }),
-      triangleAmount,
-    ),
-  )
-  .$allowReadonlyStorage()
-  .$allowMutableStorage();
+const trianglePosData = arrayOf(
+  struct({
+    x: f32,
+    y: f32,
+    rotation: f32,
+  }),
+  triangleAmount,
+);
+type TrianglePosData = typeof trianglePosData;
+
+const trianglePosBuffers = Array.from({ length: 2 }, () => {
+  return wgsl
+    .buffer(trianglePosData)
+    .$allowReadonlyStorage()
+    .$allowMutableStorage();
+});
+
+const pairs = [
+  [
+    trianglePosBuffers[0].asReadonlyStorage(),
+    trianglePosBuffers[1].asMutableStorage(),
+  ],
+  [
+    trianglePosBuffers[1].asReadonlyStorage(),
+    trianglePosBuffers[0].asMutableStorage(),
+  ],
+] as [
+  WgslBufferUsage<TrianglePosData, 'readonly_storage'>,
+  WgslBufferUsage<TrianglePosData, 'mutable_storage'>,
+][];
+
+const readSlot =
+  wgsl.slot<WgslBufferUsage<TrianglePosData, 'readonly_storage'>>();
+const writeSlot =
+  wgsl.slot<WgslBufferUsage<TrianglePosData, 'mutable_storage'>>();
 
 function randomizeTriangles() {
   const positions = [];
@@ -63,7 +78,8 @@ function randomizeTriangles() {
     const rotation = Math.random() * Math.PI * 2;
     positions.push({ x, y, rotation });
   }
-  runtime.writeBuffer(trianglePos, positions);
+  runtime.writeBuffer(trianglePosBuffers[0], positions);
+  runtime.writeBuffer(trianglePosBuffers[1], positions);
 }
 
 const rotate = wgsl.fn`(v: vec2f, angle: f32) -> vec2f {
@@ -74,10 +90,11 @@ const rotate = wgsl.fn`(v: vec2f, angle: f32) -> vec2f {
   return pos;
 }`;
 
-const pipeline = runtime.makeRenderPipeline({
-  vertex: {
-    code: wgsl`
-      let instanceInfo = ${trianglePos.asReadonlyStorage()}[${builtin.instanceIndex}];
+const renderPipelines = [0, 1].map((idx) =>
+  runtime.makeRenderPipeline({
+    vertex: {
+      code: wgsl`
+      let instanceInfo = ${pairs[idx][0]}[${builtin.instanceIndex}];
       let rotated = ${rotate}(
         ${triangleVertex.asVertex()},
         instanceInfo.rotation
@@ -91,13 +108,13 @@ const pipeline = runtime.makeRenderPipeline({
       let pos = vec4f(rotated + offset, 0.0, 1.0);
       let fragUV = (rotated + vec2f(${triangleSize}, ${triangleSize})) / vec2f(${triangleSize} * 2.0);
     `,
-    output: {
-      [builtin.position]: 'pos',
-      fragUV: vec2f,
+      output: {
+        [builtin.position]: 'pos',
+        fragUV: vec2f,
+      },
     },
-  },
-  fragment: {
-    code: wgsl`
+    fragment: {
+      code: wgsl`
       let color1 = vec3(196.0 / 255.0, 100.0 / 255.0, 255.0 / 255.0);
       let color2 = vec3(29.0 / 255.0, 114.0 / 255.0, 240.0 / 255.0);
 
@@ -107,22 +124,23 @@ const pipeline = runtime.makeRenderPipeline({
 
       return vec4(color, 1.0);
     `,
-    target: [
-      {
-        format: presentationFormat,
-      },
-    ],
-  },
-  primitive: {
-    topology: 'triangle-list',
-  },
-});
+      target: [
+        {
+          format: presentationFormat,
+        },
+      ],
+    },
+    primitive: {
+      topology: 'triangle-list',
+    },
+  }),
+);
 
-const computePipelines = [-1, 1].map((direction) =>
+const computePipelines = [0, 1].map((idx) =>
   runtime.makeComputePipeline({
     code: wgsl`
     let index = ${builtin.globalInvocationId}.x;
-    var instanceInfo = ${trianglePos.asMutableStorage()}[index];
+    var instanceInfo = ${readSlot}[index];
     let triangleSize = ${triangleSize};
 
     if (instanceInfo.x > 1.0 + triangleSize) {
@@ -132,32 +150,25 @@ const computePipelines = [-1, 1].map((direction) =>
       instanceInfo.y = -1.0 - triangleSize;
     }
 
-    instanceInfo.rotation += 0.01 * ${rotationDirection};
+    instanceInfo.rotation += 0.01;
     instanceInfo.x += 0.01;
     instanceInfo.y += 0.01;
 
-    ${trianglePos.asMutableStorage()}[index] = instanceInfo;
-  `.with(rotationDirection, direction),
+    ${writeSlot}[index] = instanceInfo;
+  `
+      .with(readSlot, pairs[idx][0])
+      .with(writeSlot, pairs[idx][1]),
   }),
 );
 
-let invertRotation = false;
-addParameter(
-  'Invert Rotation',
-  {
-    initial: false,
-  },
-  (value) => {
-    invertRotation = value;
-  },
-);
-
 randomizeTriangles();
+let even = true;
 onFrame(() => {
-  computePipelines[invertRotation ? 0 : 1].execute({
+  even = !even;
+  computePipelines[even ? 0 : 1].execute({
     workgroups: [triangleAmount],
   });
-  pipeline.execute({
+  renderPipelines[even ? 1 : 0].execute({
     colorAttachments: [
       {
         view: context.getCurrentTexture().createView(),
