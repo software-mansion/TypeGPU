@@ -16,7 +16,6 @@ import { getBuiltinInfo } from './wgslBuiltin';
 
 export interface WgslCode extends WgslResolvable {
   $name(label?: string | undefined): WgslCode;
-  getUsedBuiltins(): readonly symbol[];
 
   with<T>(slot: WgslSlot<T>, value: Eventual<T>): BoundWgslCode;
 }
@@ -68,6 +67,7 @@ class WgslCodeImpl implements WgslCode {
         code += ctx.resolve(s);
       } else if (typeof s === 'symbol') {
         const builtin = getBuiltinInfo(s);
+        ctx.addBuiltin(builtin);
         code += ctx.resolve(builtin.identifier);
       } else {
         code += String(s);
@@ -75,13 +75,6 @@ class WgslCodeImpl implements WgslCode {
     }
 
     return code;
-  }
-
-  getUsedBuiltins() {
-    const usedBuiltins = this.segments.filter(
-      (s) => typeof s === 'symbol',
-    ) as symbol[];
-    return Array.from(new Set(usedBuiltins));
   }
 
   with<TValue>(slot: WgslSlot<TValue>, value: Eventual<TValue>): BoundWgslCode {
@@ -101,10 +94,6 @@ class BoundWgslCodeImpl<T> implements BoundWgslCode {
 
   get label() {
     return this._innerFn.label;
-  }
-
-  getUsedBuiltins(): readonly symbol[] {
-    return this._innerFn.getUsedBuiltins();
   }
 
   with<TValue>(slot: WgslSlot<TValue>, value: Eventual<TValue>): BoundWgslCode {
