@@ -16,7 +16,7 @@ export default {
           0: '#FFF',
         },
         special: {
-          stroke: '#00000029'
+          stroke: '#00000029',
         },
         gradient: {
           purple: '#C464FF',
@@ -29,7 +29,7 @@ export default {
       sm: '601px',
       md: '1025px',
       lg: '1441px',
-    }
+    },
   },
   plugins: [],
 };
