@@ -975,6 +975,32 @@ onFrame(() => {
 });
 ```
 
+Since they are no longer used, we can remove the parameters we used to position the triangle.
+
+```diff
+-const params = {
+-  rotation: addSliderParam('rotation (rad)', 0, {
+-    min: 0,
+-    max: 3.14 * 2,
+-    step: 0.1,
+-  }),
+-  x: addSliderParam('x', 0, {
+-    min: -1,
+-    max: 1,
+-    step: 0.1,
+-  }),
+-  y: addSliderParam('y', 0, {
+-    min: -1,
+-    max: 1,
+-    step: 0.1,
+-  }),
+-};
+-
+-const rotationBuffer = wgsl.buffer(f32, params.rotation).$allowUniform();
+-const xBuffer = wgsl.buffer(f32, params.x).$allowUniform();
+-const yBuffer = wgsl.buffer(f32, params.y).$allowUniform();
+```
+
 <LinkCard
   title="Run it in the playground!"
   href="/examples#example=playground__JYWwDg9gTgLgBAbzgQwCaoEIFcYwgOwBoV0BRAGwFMRL8ZiCAxKZGuAXzgDMoIQ4A5AAEYATzCUA5mCwB6SgA9WYKgFo8EcgGtgMAQG4AUKEixEcAEZZg5GMCJwAxlErIYlAEpY6oSsQDukgDO5BzcvPwCYhLSWAbG4NDwSMhQLKIA8lzEXADMAEzEQTBQWI70cABulI752VU1uVxhPHyC0VIysqhuyPGGjgTFcKU%2BbAC8KP7Iuk4ubp7edjQAFACURoP4w6iUlcCOlHCTo8uUAHS7%2B4dGA0Pwjsj4lchBx1Mz8GioFNS0MCsBI9nq8BMQUkEJOUPG5gBAAFxwACMHA2d22DwI7gU8EmwJeQXOkkoMAAwljFACBP5KBZYgI1ig3gBxAAKAFVSU8CeS6JTNvc4GAXEF-rCmNAQG53vhkPtJG5oESZESSayXFxKGlKKguSCgoxJW51rcttiYOctlxgJIsC4VghDHA4FcDn4ndwjTBEcLKKK6OL8IaoFL6B7kOQwAALZAAWQgu0RAl9ICwtmAKmAOrBhnYaMM32wuAIgJh%2BFQfGAAC9KGCRk8KyBq5QACpQYBPSRUIL5rbDEod-BdygAZWb7wADOd8gKMXAB52qAA1LXY96BEIe85WLiaqArVLpLIraq1eq5NbEADaHudV6nE%2BIC6HVDHNYAuoRb3Ar%2Bp24vR2bYg-0HYc30oT9vyvZ8wKAuAQIA8DIOdd81i3AASCNyAgfwV1gRRAWqfCFAZU1BRgqgAEEQAgJZ3iRCdZ37f8X0oVkIDeSYN3ILcdz3FZv0PZBMi4ATnXEuBilKcoHW-CSFERPJCjk8TREUgovwkiTeBgQN1OUrTUU0rSKMoajaLoYznUvD00Odc5MPIbD-A8VwK3wchRBHPAWGJE1DEMLhvHKOF8HrctKxrNtQO7dZEA9Pt4EgIJdFCzif3fIxnS4aA4BWKh4GASd9DgIqAB55xY4dzKWErgAAanqxlHQkxK4AUd5YzcKNzhYCKQDigAqOB8ng5EsvEtrRE67reobPghpGsakQm502p0wMZpgHq%2BsbRauu285WQASTgYaZ2-ZLUqGc4ZCCKMHXa4hRGIDa7AIVEJvYD1Tl8c5-HbdxsF3LUVlM9igmIK73u2NFvvRYY3qOLjgnIc4uHwAADE9EVPOpiAA-TGVUAA%2BBoz3i50CqFDj3jxsTxJPc4OuGwYggPVi1mJvLKnOabhpS-AOeHLmrJ55mzsk%2BxhaoLm4Hq8X%2BacDiZcoLnbImlwYDtMLkqMdhMbIucwAzShyHsZGRiWP6pS0TxaF2KBWVN838EoWTnSI7FERayaE0oRFuMxlTqfsYonkOY78By950IQcGOPOV5XLQAhPO86BkD8tZ2CvOOrBsOx8HOMPdPwSPy0UdhMpDkkRggXT3FQWOECR9gGcMuPTLw7Ek6CHuCJzsWJNLiPKCjnLeobwMVPzQzqYgXdRVxcm6g7rTR-L8fo4gZnh-EzeK8n0RZ9uee6%2BSumagAFlEpHm4VxeuGX4gH2IJFzgnNEJMxsXaJgGQ3pKZaSvAXdMxdoahXfEmZKOYJLsGMggj0PAs40DoD7b8gxExwCDipLWOtybXxWFOAA7AANgABxkNfucXIABOfIhRkTnHfp-b%2B4lf7fl0lAYkQCbyGV9oZHKIY3A%2BhFGKGGwZQz7yQRJZCHBjLClAKlaoGCJJ4EgNhSQal2hVTUObYocCFG5nzLtSKrY9F%2Bn8kwFgqw4rjDJr7E2EhXYXEUDUHA7tBHK2wlASiuBkCOCjGgmAQRET8K0t4iS%2BxKD%2BERGaSkqoyR2hcHQFslI7TuzWJaeY7glxZn8Osfea0qCpCXBGLAAcfyPjgDUup8j54QDQBkMASZHClKgEYwyxRoCUBaUmHpLguniVkeJBpDRiLkiWIiXIYtD6UCmegyqMUzI0SWIgueVsxgXC4OQLA91-J5iMEAA"
@@ -1040,8 +1066,325 @@ Great! But now we have a little problem. When we had just one triangle, we could
   The proposed solution is totally arbitrary. Feel free to experiment with different ways to color the your triangles!
 </Aside>
 
-<LinkCard
-  title="Run it in the playground!"
-  href="/examples#example=playground__JYWwDg9gTgLgBAbzgQwCaoEIFcYwgOwBoV0BRAGwFMRL8ZiCAxKZGuAXzgDMoIQ4A5AAEYATzCUA5mCwB6SgA9WYKgFo8EcgGtgMAQG4AUKEixEcAEZZg5GMCJwAxlErIYlAEpY6oSsQDukgDO5BzcvPwCYhLSWAbG4NDwSMhQLKIA8lzEXADMAEzEQTBQWI70cABulI752VU1uVxhPHyC0VIysqhuyPGGjgTFcKU%2BbAC8KP7Iuk4ubp7edjQAFACURoP4w6iUlcCOlHCTo8uUAHS7%2B4dGA0Pwjsj4lchBx1Mz8GioFNS0MCsBI9nq8BMQUkEJOUPG5gBAAFxwACMHA2d22DwI7gU8EmwJeQXOkkoMAAwljFACBP5KBZYgI1ig3gBxAAKAFVSU8CeS6JTNvc4GAXEF-rCmNAQG53vhkPtJG5oESZESSayXFxKGlKKguSCgoxJW51rcttiYOctlxgJIsC4VghDHA4FcDn4ndwjTBEcLKKK6OL8IaoFL6B7kOQwAALZAAWQgu0RAl9ICwtmAKmAOrBhnYaMM32wuAIgJh%2BFQfGAAC9KGCRk8KyBq5QACpQYBPSRUIL5rbDEod-BdygAZWb7wADOd8gKMXAB52qAA1LXY96BEIe85WLiaqArVLpLIraq1eq5NbEADaHudV6nE%2BIC6HVDHNYAuoRb3Ar%2Bp24vR2bYg-0HYc30oT9vyvZ8wKAuAQIA8DIOdd81i3AASCNyAgfwV1gRRAWqfCFAZU1BRgqgAEEQAgJZ3iRCdZ37f8X0oVkIDeSYN3ILcdz3FZv0PZBMi4ATnXEuBilKcoHW-CSFERPJCjk8TREUgovwkiTeBgQN1OUrTUU0rSKMoajaLoYznUvD00Odc5MPIbD-A8VwK3wchRBHPAWGJE1DEMLhvHKOF8HrctKxrNtQO7dZEA9Pt4EgIJdFCzif3fIxnS4aA4BWKh4GASd9DgIqAB55xY4dzKWErgAAanqxlHQkxK4AUd5YzcKNzhYCKQDigAqOB8ng5EsvEtrRE67reobPghpGsakQm502p0wMZpgHq%2BsbRauu285WQASTgYaZ2-ZLUqGc4ZCCKMHXa4hRGIDa7AIVEJvYD1Tl8c5-HbdxsF3LUVlM9igmIK73u2NFvvRYY3qOLjgnIc4uHwAADE9EVPOpiAA-TGVUAA%2BBoz3i50CqFDj3jxsTxJPc4OuGwYggPVi1mJvLKnOabhpS-AOeHLmrJ55mzsk%2BxhaoLm4Hq8X%2BacDiZcoLnbImlwYDtMLkqMdhMbIucwAzShyHsZGRiWP6pS0TxaF2KBWVN838EoWTnSI7FERayaE0oRFuMxlTqfsYonkOY78By950IQcGOPOV5XLQAhPO86BkD8tZ2CvOOrBsOx8HOMPdPwSPy0UdhMpDkkRggXT3FQWOECR9gGcMuPTLw7Ek6CHuCJzsWJNLiPKCjnLeobwMVPzQzqYgXdRVxcm6g7rTR-L8fo4gZnh-EzeK8n0RZ9uee6%2BSumagAFlEpHm4VxeuGX4gH2IJFzgnNFz-gHgs-ZJc7wVj33lqvUSXcqqvmbOwYgECYqARrHmRksgwErDgYhaBkt8if2-uJTGYtaIwBkN6SmWkrwF3TMXaGoV3xJmSjmQyf9JAANxjUfG34YEek4dlXyNA6A%2B2-IMRMcAg610xNhKAKJJinlyCsJEABOAAbJ-OAKD8gAFZ1Gf3fhOB8qiRqaO0QYrRE59EaJMbgiS1NBgSNGtIxoKx8jyJUWowxj5kRImvi44xRj8jXz0a4ixZ8tLU1QMAYYkwqBDm2isJhACxr0ynOo1%2B5x1Fc2CVYuuNjcqTCbAoFY2TJHEEKYUF04SYBzy0lrHW5Nr4FM0NAd%2BODVpwHwd%2BXSUBiQkJvIZX2jCvQ%2BhFGKGGwZQz724eJZCHBjLClAKlaoAiJJ4EgNhSQal2iQMoKoc2xQGHTNzPmXakVWybPZmiJgLBVhxXGGTX2JsJCuwuIoGoOB3Z9OVhIyiuBkCOCjHwmAQREQ9K0u8iS%2BxKD%2BERGaSkqoyR2hcHQFslI7TuzWJaeY7glxZn8Osfea0qCpCXBGLAAcfzuPJa-KZ88IBoAyGAJMjgCVQD2YZYo0BKB0qTGylwLLxITJQmLL2ihyRLERLkMWh9KAiv4ZVeBNVLJcMqb9Gg6NyBYHuv5PMRggA"
-  target="_blank"
-/>
+<Tabs>
+  <TabItem label="TypeGPU">
+  ```ts
+  import { addButton, addElement, onFrame } from '@typegpu/example-toolkit';
+  import { builtin, createRuntime, wgsl } from 'typegpu';
+  import { arrayOf, f32, struct, vec2f } from 'typegpu/data';
+
+  const runtime = await createRuntime();
+  const device = runtime.device;
+
+  const canvas = await addElement('canvas', { aspectRatio: 1 });
+  const context = canvas.getContext('webgpu') as GPUCanvasContext;
+  const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+  context.configure({
+    device,
+    format: presentationFormat,
+    alphaMode: 'premultiplied',
+  });
+
+  addButton('Randomize', randomizeTriangles);
+
+  const triangleSize = 0.2;
+  const triangleVertex = wgsl
+    .buffer(arrayOf(vec2f, 3), [
+      [0.0, triangleSize],
+      [-triangleSize, -triangleSize],
+      [triangleSize, -triangleSize],
+    ])
+    .$allowVertex('vertex');
+
+  const triangleAmount = 10;
+  const trianglePos = wgsl
+    .buffer(
+      arrayOf(
+        struct({
+          x: f32,
+          y: f32,
+          rotation: f32,
+        }),
+        triangleAmount,
+      ),
+    )
+    .$allowReadonlyStorage();
+
+  function randomizeTriangles() {
+    const positions = [];
+    for (let i = 0; i < triangleAmount; i++) {
+      const x = Math.random() * 2 - 1;
+      const y = Math.random() * 2 - 1;
+      const rotation = Math.random() * Math.PI * 2;
+      positions.push({ x, y, rotation });
+    }
+    runtime.writeBuffer(trianglePos, positions);
+  }
+
+  const rotate = wgsl.fn`(v: vec2f, angle: f32) -> vec2f {
+    let pos = vec2(
+      (v.x * cos(angle)) - (v.y * sin(angle)),
+      (v.x * sin(angle)) + (v.y * cos(angle))
+    );
+    return pos;
+  }`;
+
+  const pipeline = runtime.makeRenderPipeline({
+    vertex: {
+      code: wgsl`
+        let instanceInfo = ${trianglePos.asReadonlyStorage()}[${builtin.instanceIndex}];
+        let rotated = ${rotate}(
+          ${triangleVertex.asVertex()},
+          instanceInfo.rotation
+        );
+
+        let offset = vec2f(
+          instanceInfo.x,
+          instanceInfo.y
+        );
+
+        let pos = vec4f(rotated + offset, 0.0, 1.0);
+        let fragUV = (rotated + vec2f(${triangleSize}, ${triangleSize})) / vec2f(${triangleSize} * 2.0);
+      `,
+      output: {
+        [builtin.position]: 'pos',
+        fragUV: vec2f,
+      },
+    },
+    fragment: {
+      code: wgsl`
+        let color1 = vec3(196.0 / 255.0, 100.0 / 255.0, 255.0 / 255.0);
+        let color2 = vec3(29.0 / 255.0, 114.0 / 255.0, 240.0 / 255.0);
+
+        let dist = length(fragUV - vec2(0.5, 0.5));
+
+        let color = mix(color1, color2, dist);
+
+        return vec4(color, 1.0);
+      `,
+      target: [
+        {
+          format: presentationFormat,
+        },
+      ],
+    },
+    primitive: {
+      topology: 'triangle-list',
+    },
+  });
+
+  randomizeTriangles();
+  onFrame(() => {
+    pipeline.execute({
+      colorAttachments: [
+        {
+          view: context.getCurrentTexture().createView(),
+          clearValue: [0, 0, 0, 0],
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      ],
+      vertexCount: 3,
+      instanceCount: triangleAmount,
+    });
+
+    runtime.flush();
+  });
+  ```
+  <LinkCard
+    title="Run it in the playground!"
+    href="/examples#example=playground__JYWwDg9gTgLgBAbzgQwCaoEIFcYwgOwBoV0BRAGwFMRL8ZiCAxKZGuAXzgDMoIQ4A5AAEYATzCUA5mCwB6SgA9WYKgFo8EcgGtgMAQG4AUKEixEcAEZZg5GMCJwAxlErIYlAEpY6oSsQDukgDO5BzcvPwCYhLSWAbG4NDwSMhQLKIA8lzEXADMAEzEQTBQWI70cABulI752VU1uVxhPHyC0VIysqhuyPGGjgTFcKU%2BbAC8KP7Iuk4ubp7edjQAFACURoP4w6iUlcCOlHCTo8uUAHS7%2B4dGA0Pwjsj4lchBx1Mz8GioFNS0MCsBI9nq8BMQUkEJOUPG5gBAAFxwACMHA2d22DwI7gU8EmwJeQXOkkoMAAwljFACBP5KBZYgI1ig3gBxAAKAFVSU8CeS6JTNvc4GAXEF-rCmNAQG53vhkPtJG5oESZESSayXFxKGlKKguSCgoxJW51rcttiYOctlxgJIsC4VghDHA4FcDn4ndwjTBEcLKKK6OL8IaoFL6B7kOQwAALZAAWQgu0RAl9ICwtmAKmAOrBhnYaMM32wuAIgJh%2BFQfGAAC9KGCRk8KyBq5QACpQYBPSRUIL5rbDEod-BdygAZWb7wADOd8gKMXAB52qAA1LXY96BEIe85WLiaqArVLpLIraq1eq5NbEADaHudV6nE%2BIC6HVDHNYAuoRb3Ar%2Bp24vR2bYg-0HYc30oT9vyvZ8wKAuAQIA8DIOdd81i3AASCNyAgfwV1gRRAWqfCFAZU1BRgqgAEEQAgJZ3iRCdZ37f8X0oVkIDeSYN3ILcdz3FZv0PZBMi4ATnXEuBilKcoHW-CSFERPJCjk8TREUgovwkiTeBgQN1OUrTUU0rSKMoajaLoYznUvD00Odc5MPIbD-A8VwK3wchRBHPAWGJE1DEMLhvHKOF8HrctKxrNtQO7dZEA9Pt4EgIJdFCzif3fIxnS4aA4BWKh4GASd9DgIqAB55xY4dzKWErgAAanqxlHQkxK4AUd5YzcKNzhYCKQDigAqOB8ng5EsvEtrRE67reobPghpGsakQm502p0wMZpgHq%2BsbRauu285WQASTgYaZ2-ZLUqGc4ZCCKMHXa4hRGIDa7AIVEJvYD1Tl8c5-HbdxsF3LUVlM9igmIK73u2NFvvRYY3qOLjgnIc4uHwAADE9EVPOpiAA-TGVUAA%2BBoz3i50CqFDj3jxsTxJPc4OuGwYggPVi1mJvLKnOabhpS-AOeHLmrJ55mzsk%2BxhaoLm4Hq8X%2BacDiZcoLnbImlwYDtMLkqMdhMbIucwAzShyHsZGRiWP6pS0TxaF2KBWVN838EoWTnSI7FERayaE0oRFuMxlTqfsYonkOY78By950IQcGOPOV5XLQAhPO86BkD8tZ2CvOOrBsOx8HOMPdPwSPy0UdhMpDkkRggXT3FQWOECR9gGcMuPTLw7Ek6CHuCJzsWJNLiPKCjnLeobwMVPzQzqYgXdRVxcm6g7rTR-L8fo4gZnh-EzeK8n0RZ9uee6%2BSumagAFlEpHm4VxeuGX4gH2IJFzgnNFz-gHgs-ZJc7wVj33lqvUSXcqqvmbOwYgECYqARrHmRksgwErDgYhaBkt8if2-uJTGYtaIwBkN6SmWkrwF3TMXaGoV3xJmSjmQyf9JAANxjUfG34YEek4dlXyNA6A%2B2-IMRMcAg610xNhKAKJJinlyCsJEABOAAbJ-OAKD8gAFZ1Gf3fhOB8qiRqaO0QYrRE59EaJMbgiS1NBgSNGtIxoKx8jyJUWowxj5kRImvi44xRj8jXz0a4ixZ8tLU1QMAYYkwqBDm2isJhACxr0ynOo1%2B5x1Fc2CVYuuNjcqTCbAoFY2TJHEEKYUF04SYBzy0lrHW5Nr4FM0NAd%2BODVpwHwd%2BXSUBiQkJvIZX2jCvQ%2BhFGKGGwZQz724eJZCHBjLClAKlaoAiJJ4EgNhSQal2iQMoKoc2xQGHTNzPmXakVWybPZmiJgLBVhxXGGTX2JsJCuwuIoGoOB3Z9OVhIyiuBkCOCjHwmAQREQ9K0u8iS%2BxKD%2BERGaSkqoyR2hcHQFslI7TuzWJaeY7glxZn8Osfea0qCpCXBGLAAcfzuPJa-KZ88IBoAyGAJMjgCVQD2YZYo0BKB0qTGylwLLxITJQmLL2ihyRLERLkMWh9KAiv4ZVeBNVLJcMqb9Gg6NyBYHuv5PMRggA"
+    target="_blank"
+  />
+  </TabItem>
+  <TabItem label="WebGPU">
+  ```ts
+  import { addElement, addButton, onFrame } from '@typegpu/example-toolkit';
+
+  const adapter = await navigator.gpu?.requestAdapter();
+  const device = await adapter?.requestDevice();
+
+  if (!device) {
+    throw new Error('Failed to acquire a device');
+  }
+
+  const canvas = await addElement('canvas', { aspectRatio: 1 });
+  const context = canvas.getContext('webgpu') as GPUCanvasContext;
+  const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+  context.configure({
+    device,
+    format: presentationFormat,
+    alphaMode: 'premultiplied',
+  });
+
+  addButton('Randomize', randomizeTriangles);
+
+  const triangleSize = 0.2;
+  const triangleVertexData = new Float32Array([
+    0.0,
+    triangleSize,
+    -triangleSize,
+    -triangleSize,
+    triangleSize,
+    -triangleSize,
+  ]);
+
+  const triangleAmount = 10;
+  const trianglePos = device.createBuffer({
+    size: triangleAmount * 3 * 4,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  });
+
+  const triangleVertexBuffer = device.createBuffer({
+    size: triangleVertexData.byteLength,
+    usage: GPUBufferUsage.VERTEX,
+    mappedAtCreation: true,
+  });
+  new Float32Array(triangleVertexBuffer.getMappedRange()).set(triangleVertexData);
+  triangleVertexBuffer.unmap();
+
+  function randomizeTriangles() {
+    if (!device) {
+      return;
+    }
+    const data = new Float32Array(triangleAmount * 3);
+    for (let i = 0; i < triangleAmount; i++) {
+      data[i * 3] = Math.random() * 2 - 1;
+      data[i * 3 + 1] = Math.random() * 2 - 1;
+      data[i * 3 + 2] = Math.random() * Math.PI * 2;
+    }
+    device.queue.writeBuffer(trianglePos, 0, data);
+  }
+
+  const wgslCode = `
+    fn rotate(v: vec2f, angle: f32) -> vec2f {
+      let pos = vec2(
+        (v.x * cos(angle)) - (v.y * sin(angle)),
+        (v.x * sin(angle)) + (v.y * cos(angle))
+      );
+      return pos;
+    };
+
+    struct TriangleData {
+      x : f32,
+      y : f32,
+      rotation : f32,
+    };
+
+    struct VertexOutput {
+      @builtin(position) position : vec4f,
+      @location(1) fragUV : vec2f,
+    };
+
+    @binding(0) @group(0) var<storage, read> trianglePos : array<TriangleData>;
+
+    @vertex
+    fn mainVert(@builtin(instance_index) ii: u32 ,@location(0) v: vec2f) -> VertexOutput {
+      let instanceInfo = trianglePos[ii];
+
+      let rotated = rotate(v, instanceInfo.rotation);
+      let offset = vec2(instanceInfo.x, instanceInfo.y);
+
+      let pos = vec4(rotated + offset, 0.0, 1.0);
+      let fragUV = (rotated + vec2f(${triangleSize}, ${triangleSize})) / vec2f(${triangleSize} * 2.0);
+      return VertexOutput(pos, fragUV);
+    }
+
+    @fragment
+    fn mainFrag(@location(1) fragUV : vec2f) -> @location(0) vec4f {
+      let color1 = vec3(196.0 / 255.0, 100.0 / 255.0, 255.0 / 255.0);
+      let color2 = vec3(29.0 / 255.0, 114.0 / 255.0, 240.0 / 255.0);
+
+      let dist = length(fragUV - vec2(0.5, 0.5));
+
+      let color = mix(color1, color2, dist);
+
+      return vec4(color, 1.0);
+    }
+  `;
+
+  const module = device.createShaderModule({
+    code: wgslCode,
+  });
+
+  const pipeline = device.createRenderPipeline({
+    layout: 'auto',
+    vertex: {
+      module: module,
+      buffers: [
+        {
+          arrayStride: 2 * 4,
+          attributes: [
+            {
+              shaderLocation: 0,
+              offset: 0,
+              format: 'float32x2',
+            },
+          ],
+        },
+      ],
+    },
+    fragment: {
+      module: module,
+      targets: [
+        {
+          format: presentationFormat,
+        },
+      ],
+    },
+    primitive: {
+      topology: 'triangle-list',
+    },
+  });
+
+  const bindGroup = device.createBindGroup({
+    layout: pipeline.getBindGroupLayout(0),
+    entries: [
+      {
+        binding: 0,
+        resource: {
+          buffer: trianglePos,
+        },
+      },
+    ],
+  });
+
+  randomizeTriangles();
+  onFrame(() => {
+    const commandEncoder = device.createCommandEncoder();
+    const textureView = context.getCurrentTexture().createView();
+
+    const renderPassDescriptor: GPURenderPassDescriptor = {
+      colorAttachments: [
+        {
+          view: textureView,
+          clearValue: [0, 0, 0, 0],
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      ],
+    };
+
+    const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+    passEncoder.setPipeline(pipeline);
+    passEncoder.setVertexBuffer(0, triangleVertexBuffer);
+    passEncoder.setBindGroup(0, bindGroup);
+    passEncoder.draw(3, triangleAmount);
+    passEncoder.end();
+
+    device.queue.submit([commandEncoder.finish()]);
+  });
+
+  ```
+  <LinkCard
+    title="Run it in the playground!"
+    href="/examples#example=playground__JYWwDg9gTgLgBAbzgQwCaoKIBsCmIcB2MANCugEICuMMEBpdAYlMvnAL5wBmUEIcAcgACMAJ5gcAczCUA9DgAerMLgC0tCFgDWwGAIDcAKEMBjOgGd4aZGBg4ocALwoA7sl1wCyAG7BJyWigAOmlKAH4gqBwAR0ocSwBBVBs7KAAKAEojMwJLOFQcXxMcJ1d3K2Tbewio2PiYABFC4GLMo0NgLjg0gEICopwMxEM4OBgAC14XTxxpjChedIFGd1xUMYgUE1jgKJR85uKBLMN2Yxy8k2QCb2RzUuQ3DzRMXHwiNIErm7uBUiQ7hITDAAEoBYAQABccAAjBwThd4Dk7Ap4M5vrdzCEcDAAMJ0FEwT4uHAAI1CxxQ9wA4gAFACquOumPxREUMGyFngYCi5kIMHBTGgIACpS8vn8gRCMmxMFpUS49iiqCZP3MjGFATa5wJ7KCOS4fkoUTSCBGBwGxHNXE1MGhPPi-MFBA1UBFJHNyCwYHGyAAshACtCBA6QJQsDBgCpgDhUH9TidDC8qDQ6J8wQRUHxgAAvHB-OAsTPZvMAFSgwGuklw5kTiLGFaruAAyrmSs4AAxBABMnNy8BgjYI1ZwADV7CiGgFkGLZnBGFgIAEAMzdhILZCiNIAbXNXY7VtGg8rw5bbcPcHUQ5HrbzF6vJ5v5-Nx6bOFvOHvr9P7%2BfAF06y5BtH1wBIQAgSgiFKGEOz7PJvxHWkIHuZx%2BhaHB9SiAIcCoLhFXSM1RnMNtoQQ0DwMg%2BAACo4GXOAaIAFgvShzGQSQcGhOl6Vw-D6VY9igmbUsAHkQQSakMDgAAfOAuJ4%2Bw%2BLYjDcWE2kAE0AH0GiEq12EA-tgLfcdYEUeSHFQw4MJMLC7DM01zWIvNSOvXBjMnacglJUQ7AAGUISQJmY-iONkhkzMUgTRwwEFSwwAANC8RTACRUASPEbIhAhnLiXSTgIOcFyXGBV3XFgtzIscJ1Myg8PsWU-RsFKM3YzIMiCPkiQqtzFCnAUTi6qqFDMoJIKS7VDC4SDgUywtrizEA23LED4kyYZRk6bo%2BksoZCNGQscWNAgjFGM5RnrZIBVnaZCpXNcN3KlycDAiCoJo5cTlGG0HDSXB4GAUpYLgf6AB5DJ-Z7KP0IGAGpoZ281Rgu5Bt3%2Bt6-1KBqJkiOa%2BFWmju0vWFjr2pGUfo2i4Gh2F0ecTHxmx4sQDxuACdUImEfyacybeymWZpuA6YZ%2BbmcF2kAElyd7c1TotdCgjqOIghcCtbJq-C0gqpDzFIA9Ob6owzlMICXEkcwsHxApSgAA2tAhCwgAU7DSbxoW8HATG7LhSDfaEuFXIZVAAPjgN2Pa6XbRl%2BuBIBQkP3e7NIOdGZ2ggUcmzHMNI3wyAPum8IJRHJ4iCCzn8c4vPa89TovgBL7OhiplPC5ojPS5HHOOY%2BvaohgQ7o%2BQ4n2HaIjB0oYE4CWt9epnCO4DT33VwruBC4X7sl94R2ZtXi8h%2BMEeoDH%2BBuoUYTqBkeBZ6EUlKGACNa7SGPdEyoZH8jOg4Fd92GK9jmhEXK434lxhEMHgbF6Sjg-nHMOO9h5wCvrXVAtdJBpA7EMIQkheCUDACgoYtwoDA0sNAJSpAsKoGDprZCkDkD3WBpPH809A6wKEG7EyChbZwBFLXNyaQr43zviXWulhrjFA0ggxQQxgDAGhJQVccBiB-wgAAzKOCQ6fzDgHYOx9T4wHPmtPaUdBECgIMUMWBAbSlAoeYFGwA-ywMjjie2jtYylA3thZ2pBDHCJwKYm0kQHbOi7vY%2BAEA8IdVKKHBOnjjHeLMRAVOHj%2BxeJ8XE0QiZK5RxjuEr%2BaRXF2HWFTEJXAOo6yCLrGEpTAlwCjqAyQ4DSg5P8Xk3mESuBpAACQIAqh%2BdgpAOldLbHpIYsgoGe3aZ0x63TJYVOJqMHufctFn2oA-ZCpAangK7obUYQganvBgOwzhLoWDIIUUotMwDuBHLqWoz2Gi4H-2dCo0O389FBLgGYRcUA4TOFDsuNIMIACcAA2UpcBhndgAKzgtKaQGC%2B5QUs0hdChFUKOzwohSiypUd3nQAJt892vzuz-JBWCxFZSYQMWJcipF3YGJwpJRiuxVSHGILyM4XAw4JhpDWRAtmESUFBHBSU8FOdGVYs0NAUoC0FBpGxZ80gsq175GAJYNJ3cDpQDtk8mV4qoAwumdLQwVt2j1nAqgcM7ZZbFEwjgbCzZfQFCgAGM1uB7JnUDCFE2ZsLafgTMaoCYAow4CwLXC1aErXWRtXYEEhAHW0kDcG-KrqqmbggnaQQyBqAQHjKMFhKJoSz1Nea6EhbcBL2vrVKA5hoS7krqMWeldqFlWbMeIMLNyZMSTntAIx5r52CrXAGttbK71qHXAcw9r7A%2BUUc6aEB5O1DsKR1WdS9R3cFtMGLgi5boKG7Nm1dHAV17T-IenpHNj3SwvDs-k%2BaOYlpCnepeAooDsRgP2wdw751rrdAEe0vInSANdO6E9S9z0nQvDyUAT83Y3srrQSAi5JCiGDBVVQwbLB7tPXpP1BlSQIOpJgsApQw1WRsjhPDBGk1YBTdQe08aQ2ynIORiCYAfLUaJKgi8-IKzxGrRzEduHMxIOXZ23kEEoDFBg6O8t%2BFnLLS1sBjmp7Rjnqw8YIs81FqPUzicJgLB8BpFWo4YOu16xmBACKTMGBjHuvMpakjkacD4nM3NKzZgHXajdQZQkxoxwxmmOiXUqJZS4mNFEIgpZ2Q%2BcyNa7Co4-PjU83kMLsa7jmCaOYayUZAicQZNGzM9haSpfS5l2wErnCz1lWlAUJhxi7LfZ2kdOa-OkUi1EOLsxD1nVwNQ0cXo4jVt1oNnWoHR1btQMJMAwYTDdagHuodhCogTeDAt-MCnK4jd3uaesYBUuuZs6UMzFnMDWYdZ5KQtc8spfMJnZLBWivxBK4ELuO3rt7dOx1ONEgE04AfnR-Kz3dsnbqh1Y%2BdldYDVYWZAHr2gfBA6oxzM%2BHmMoNIAJ1ASOsHQ-MG9uqqAWAuDSMuUgFUIZECxzj4IMaEt2flnERW5hKCkgWkSbch2XOw6CIaAgyrxiZAAgbE4QA"
+    target="_blank"
+  />
+  </TabItem>
+</Tabs>
+
+
+## Incorporating a compute shader to move the triangles

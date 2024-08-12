@@ -5,7 +5,7 @@
 }
 */
 
-import { addElement, addParameter, onFrame } from '@typegpu/example-toolkit';
+import { addButton, addElement, onFrame } from '@typegpu/example-toolkit';
 
 const adapter = await navigator.gpu?.requestAdapter();
 const device = await adapter?.requestDevice();
@@ -24,7 +24,23 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const triangleVertexData = new Float32Array([0.0, 0.5, -0.5, -0.5, 0.5, -0.5]);
+addButton('Randomize', randomizeTriangles);
+
+const triangleSize = 0.2;
+const triangleVertexData = new Float32Array([
+  0.0,
+  triangleSize,
+  -triangleSize,
+  -triangleSize,
+  triangleSize,
+  -triangleSize,
+]);
+
+const triangleAmount = 10;
+const trianglePos = device.createBuffer({
+  size: triangleAmount * 3 * 4,
+  usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+});
 
 const triangleVertexBuffer = device.createBuffer({
   size: triangleVertexData.byteLength,
@@ -34,52 +50,18 @@ const triangleVertexBuffer = device.createBuffer({
 new Float32Array(triangleVertexBuffer.getMappedRange()).set(triangleVertexData);
 triangleVertexBuffer.unmap();
 
-const parametersBuffer = device.createBuffer({
-  size: 4 * 3,
-  usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-});
-
-addParameter(
-  'rotation',
-  {
-    initial: 0,
-    min: 0,
-    max: 3.14 * 2,
-    step: 0.1,
-  },
-  (value) => {
-    const data = new Float32Array([value]);
-    device.queue.writeBuffer(parametersBuffer, 0, data);
-  },
-);
-
-addParameter(
-  'x',
-  {
-    initial: 0,
-    min: -1,
-    max: 1,
-    step: 0.1,
-  },
-  (value) => {
-    const data = new Float32Array([value]);
-    device.queue.writeBuffer(parametersBuffer, 4, data);
-  },
-);
-
-addParameter(
-  'y',
-  {
-    initial: 0,
-    min: -1,
-    max: 1,
-    step: 0.1,
-  },
-  (value) => {
-    const data = new Float32Array([value]);
-    device.queue.writeBuffer(parametersBuffer, 8, data);
-  },
-);
+function randomizeTriangles() {
+  if (!device) {
+    return;
+  }
+  const data = new Float32Array(triangleAmount * 3);
+  for (let i = 0; i < triangleAmount; i++) {
+    data[i * 3] = Math.random() * 2 - 1;
+    data[i * 3 + 1] = Math.random() * 2 - 1;
+    data[i * 3 + 2] = Math.random() * Math.PI * 2;
+  }
+  device.queue.writeBuffer(trianglePos, 0, data);
+}
 
 const wgslCode = `
   fn rotate(v: vec2f, angle: f32) -> vec2f {
@@ -90,29 +72,41 @@ const wgslCode = `
     return pos;
   };
 
-  struct Parameters {
-    rotation : f32,
+  struct TriangleData {
     x : f32,
     y : f32,
+    rotation : f32,
   };
-
-  @binding(0) @group(0) var<uniform> params : Parameters;
 
   struct VertexOutput {
-    @builtin(position) position : vec4f
+    @builtin(position) position : vec4f,
+    @location(1) fragUV : vec2f,
   };
 
-  @vertex
-  fn mainVert(@location(0) v: vec2f) -> VertexOutput {
-    let rotated = rotate(v, params.rotation);
-    let offset = vec2(params.x, params.y);
+  @binding(0) @group(0) var<storage, read> trianglePos : array<TriangleData>;
 
-    return VertexOutput(vec4f(rotated + offset, 0.0, 1.0));
+  @vertex
+  fn mainVert(@builtin(instance_index) ii: u32 ,@location(0) v: vec2f) -> VertexOutput {
+    let instanceInfo = trianglePos[ii];
+
+    let rotated = rotate(v, instanceInfo.rotation);
+    let offset = vec2(instanceInfo.x, instanceInfo.y);
+
+    let pos = vec4(rotated + offset, 0.0, 1.0);
+    let fragUV = (rotated + vec2f(${triangleSize}, ${triangleSize})) / vec2f(${triangleSize} * 2.0);
+    return VertexOutput(pos, fragUV);
   }
 
   @fragment
-  fn mainFrag() -> @location(0) vec4f {
-    return vec4(0.7686, 0.3922, 1.0, 1.0);
+  fn mainFrag(@location(1) fragUV : vec2f) -> @location(0) vec4f {
+    let color1 = vec3(196.0 / 255.0, 100.0 / 255.0, 255.0 / 255.0);
+    let color2 = vec3(29.0 / 255.0, 114.0 / 255.0, 240.0 / 255.0);
+
+    let dist = length(fragUV - vec2(0.5, 0.5));
+
+    let color = mix(color1, color2, dist);
+
+    return vec4(color, 1.0);
   }
 `;
 
@@ -156,12 +150,13 @@ const bindGroup = device.createBindGroup({
     {
       binding: 0,
       resource: {
-        buffer: parametersBuffer,
+        buffer: trianglePos,
       },
     },
   ],
 });
 
+randomizeTriangles();
 onFrame(() => {
   const commandEncoder = device.createCommandEncoder();
   const textureView = context.getCurrentTexture().createView();
@@ -181,7 +176,7 @@ onFrame(() => {
   passEncoder.setPipeline(pipeline);
   passEncoder.setVertexBuffer(0, triangleVertexBuffer);
   passEncoder.setBindGroup(0, bindGroup);
-  passEncoder.draw(3);
+  passEncoder.draw(3, triangleAmount);
   passEncoder.end();
 
   device.queue.submit([commandEncoder.finish()]);
