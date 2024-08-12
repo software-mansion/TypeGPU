@@ -119,10 +119,10 @@ class SharedResolutionState {
     return result;
   }
 
-  reserveBindingEntry(_bindable: WgslBindable) {
-    this._usedBindables.add(_bindable);
+  reserveBindingEntry(bindable: WgslBindable) {
+    this._usedBindables.add(bindable);
     const nextIdx = this._nextFreeBindingIdx++;
-    this._resourceToIndexMap.set(_bindable, nextIdx);
+    this._resourceToIndexMap.set(bindable, nextIdx);
 
     return { group: this._bindingGroup, idx: nextIdx };
   }
