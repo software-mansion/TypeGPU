@@ -1900,3 +1900,18 @@ onFrame(() => {
     />
   </TabItem>
 </Tabs>
+
+## Adding the boids logic
+
+Now that we have the basic structure of our program, we can start thinking about the logic that will make our triangles behave like boids.
+First, we need to think about how we read/write to our buffer. The current implementation only reads and writes to a single element
+in the buffer so there is no need to worry about race conditions. However, if we want to implement boids logic, we will need to
+read from multiple elements in the buffer to calculate the new position of each boid. Now this sounds like a race condition waiting to happen.
+To avoid this, we can take multiple approaches. We will opt for the simplest one, which is to create two buffers, one for reading and one for writing.
+
+<Aside type="tip">
+  In this particular case, we could also use a single buffer but use atomic operations to read and write to it.
+  However, this would make our simulation nondeterminisric! There would be no way to guarantee that the order of the operations is the same every time.
+</Aside>
+
+To create
