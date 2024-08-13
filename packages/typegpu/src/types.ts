@@ -111,7 +111,6 @@ export interface WgslBindable<
 > extends WgslResolvable {
   readonly allocatable: WgslAllocatable<TData>;
   readonly usage: TUsage;
-  vertexUsage: 'uniform' | 'readonly_storage' | 'mutable_storage';
 }
 
 export type WgslSamplerType = 'sampler' | 'sampler_comparison';

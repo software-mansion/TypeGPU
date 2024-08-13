@@ -16,7 +16,6 @@ import { getBuiltinInfo } from './wgslBuiltin';
 
 export interface WgslCode extends WgslResolvable {
   $name(label?: string | undefined): WgslCode;
-  getUsedBuiltins(): readonly symbol[];
 
   with<T>(slot: WgslSlot<T>, value: Eventual<T>): BoundWgslCode;
 }
@@ -36,9 +35,7 @@ export function code(
     return Array.isArray(param) ? [string, ...param] : [string, param];
   });
 
-  const symbols = segments.filter((s) => typeof s === 'symbol') as symbol[];
-
-  return new WgslCodeImpl(segments, symbols);
+  return new WgslCodeImpl(segments);
 }
 
 // --------------
@@ -48,10 +45,7 @@ export function code(
 class WgslCodeImpl implements WgslCode {
   private _label: string | undefined;
 
-  constructor(
-    public readonly segments: (Wgsl | InlineResolve)[],
-    private readonly _usedBuiltins: symbol[],
-  ) {}
+  constructor(public readonly segments: (Wgsl | InlineResolve)[]) {}
 
   get label() {
     return this._label;
@@ -83,10 +77,6 @@ class WgslCodeImpl implements WgslCode {
     return code;
   }
 
-  getUsedBuiltins() {
-    return Array.from(new Set(this._usedBuiltins));
-  }
-
   with<TValue>(slot: WgslSlot<TValue>, value: Eventual<TValue>): BoundWgslCode {
     return new BoundWgslCodeImpl(this, [slot, value]);
   }
@@ -104,10 +94,6 @@ class BoundWgslCodeImpl<T> implements BoundWgslCode {
 
   get label() {
     return this._innerFn.label;
-  }
-
-  getUsedBuiltins(): readonly symbol[] {
-    return this._innerFn.getUsedBuiltins();
   }
 
   with<TValue>(slot: WgslSlot<TValue>, value: Eventual<TValue>): BoundWgslCode {
