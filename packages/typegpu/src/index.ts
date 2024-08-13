@@ -22,4 +22,7 @@ export type { WgslSettable } from './settableTrait';
 export type { WgslFn as WgslFnExperimental } from './wgslFunctionExperimental';
 export type { WgslVar } from './wgslVariable';
 export type { WgslSampler } from './wgslSampler';
-export type { WgslTexture } from './wgslTexture';
+export type {
+  WgslTexture,
+  WgslTextureView,
+} from './wgslTexture';
