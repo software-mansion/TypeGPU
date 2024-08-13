@@ -137,7 +137,7 @@ onFrame(() => {
   commands but they will not be queued until we read from a buffer or call runtime.flush().
 </Aside>
 
-```ts
+```diff lang=ts
 onFrame(() => {
   pipeline.execute({
     colorAttachments: [
@@ -150,11 +150,7 @@ onFrame(() => {
     ],
     vertexCount: 3,
   });
-```
-``` diff
-+  runtime.flush();
-```
-```ts
+  runtime.flush();
 })
 ```
 
@@ -832,7 +828,7 @@ buffer (this time using the 'instance' version) or we can use a uniform/storage 
 
   One potential downside of this approach is that the data type of the buffer is limited to scalar types. This means that our data type can't be a struct, which could possibly make our code less readable.
 
-  ```diff
+  ```diff lang=ts
   const vertexCode =  wgsl`
 +  let instanceInfo = ${trianglePos.asVertex()};
     let rotated = ${rotate}(
@@ -859,7 +855,7 @@ buffer (this time using the 'instance' version) or we can use a uniform/storage 
   we need to know which variable is at which index in the vector. This can be a little confusing and less readable than using a struct.
   Lastly, we need to provide our render pipeline with the number of instances we want to render.
 
-  ```diff
+  ```diff lang=ts
   onFrame(() => {
     pipeline.execute({
       colorAttachments: [
@@ -897,7 +893,7 @@ buffer (this time using the 'instance' version) or we can use a uniform/storage 
   This time we are using a buffer of structs. This makes our code a little more readable as we can access the data using the struct fields.
   We are using a readonly storage buffer as the current alignement of the data in the buffer is 12 bytes. This is not a multiple of 16 bytes which is required for a uniform buffer. We could also pad the struct to make it 16 bytes but let's stick to readonly storage for now.
 
-  ```diff
+  ```diff lang=ts
   const vertexCode =  wgsl`
 +  let instanceInfo = ${trianglePos.asReadOnlyStorage()}[${builtin.instanceIndex}];
     let rotated = ${rotate}(
@@ -919,7 +915,7 @@ buffer (this time using the 'instance' version) or we can use a uniform/storage 
   ```
   In the vertex shader we need to index into the buffer data using the `builtin.instanceIndex` variable. This variable will contain the index of the current instance being rendered. This step was not necessary when using a vertex buffer as the data was already indexed for us. Lastly, we need to provide our render pipeline with the number of instances we want to render (just like in the other approach).
 
-  ```diff
+  ```diff lang=ts
   onFrame(() => {
     pipeline.execute({
       colorAttachments: [
@@ -967,7 +963,7 @@ We will call this function before the first frame is rendered to ensure that the
 addButton('Randomize', randomizeTriangles);
 ```
 
-```diff
+```diff lang=ts
 +randomizeTriangles();
 onFrame(() => {
   pipeline.execute({
@@ -989,7 +985,7 @@ onFrame(() => {
 
 Since they are no longer used, we can remove the parameters we used to position the triangle.
 
-```diff
+```diff lang=ts
 -const params = {
 -  rotation: addSliderParam('rotation (rad)', 0, {
 -    min: 0,
@@ -1025,7 +1021,7 @@ Great! But now we have a little problem. When we had just one triangle, we could
 
 1. Add additional output to the vertex shader that will represent the UV coordinates inside the triangle:
 
-   ```diff
+   ```diff lang=ts
    output: {
      [builtin.position]: 'pos',
    +  fragUV: vec2f,
@@ -1034,7 +1030,7 @@ Great! But now we have a little problem. When we had just one triangle, we could
 
 2. Create the UV coordinates inside the vertex shader:
 
-   ```diff
+   ```diff lang=ts
    const vertexCode = wgsl`
      let instanceInfo = ${trianglePos.asReadonlyStorage()}[${builtin.instanceIndex}];
      let rotated = ${rotate}(
@@ -1437,7 +1433,7 @@ const computePipeline = runtime.makeComputePipeline({
 
 <Aside type="danger" title="Remember to add proper permissions!">
   The code above will not compile because `trianglePos.asMutableStorage()` returns null. That is because we need to add the proper permissions to the buffer.
-  ```diff
+  ```diff lang=ts
   const triangleAmount = 10;
   const trianglePos = wgsl
     .buffer(
@@ -1457,7 +1453,7 @@ const computePipeline = runtime.makeComputePipeline({
 
 If you do not specify the workgroup size, the default is 1, 1, 1. To specify the workgroup size, you can use the `workgroupSize` property in the `makeComputePipeline` function.
 
-```diff
+```diff lang=ts
 const computePipeline = runtime.makeComputePipeline({
   code: wgsl`
     ...
@@ -1468,7 +1464,7 @@ const computePipeline = runtime.makeComputePipeline({
 
 Now all we need to do is execute the compute pipeline before rendering the triangles.
 
-```diff
+```diff lang=ts
 randomizeTriangles();
 onFrame(() => {
 +  computePipeline.execute({
@@ -1923,7 +1919,7 @@ const rotationDirection = wgsl.slot<number>();
 
 Now that we have our slot we can use it in our wgsl code.
 
-```diff
+```diff lang=ts
 const computeCode = wgsl`
   let index = ${builtin.globalInvocationId}.x;
   var instanceInfo = ${trianglePos.asMutableStorage()}[index];
@@ -1993,7 +1989,7 @@ addParameter(
 
 And add some logic to the main loop.
 
-```diff
+```diff lang=ts
 randomizeTriangles();
 onFrame(() => {
 -  computePipeline.execute({
@@ -2022,3 +2018,5 @@ onFrame(() => {
   href="/examples#example=playground__JYWwDg9gTgLgBAbwFBzgQwCYYEIFcYwQB2ANCulgKIA2ApiLUTGasQGJRoMsUYAKaTgxi0oZAL5wAZlAgg4AcgACMAJ5haAczC4A9LQAeXMHQC0hCNQDWwGAoDcSUJFiI4AI1zBqMYKTgAxlC0aCIASrhMoLQkcADumgDO1HCSMnKKahrauA5O4NDwCOhQnKoA8lKxUgDMAEyxiTBQuAHMcAButAF1UqnSsvIKWVo6uhihaHlIAcRNcC1RDHAAvOhxaLaBwaG0EUu0ABQAlI6zRPMYtB3AAbSrC5G%2BDAB0Vzd3jjNz8AFoRB00IkHmgNltMBgaPRGDBDgo-gCgQpYsUgRo2mFQsAIAAuOAARlSp2%2BF1%2BxBEBngawRgMSL00tBgAGFyYZYQo4rR3DkFMd0MCAOJ8ACqTP%2BtJZTDZZx%2BcDAwUSMKx7GgIFCDyIaBumlC0HpOnpjL4wSkomCGDFiMSbFVoROX3OFJgL3OUmAmlwwUOyFQ71uMXIUltMDx8toiqYyqINqgauY5DQ1DAAAs0ABZCBXPEKMMgXA%2BYAmYC0DDIpDiYlICF4AjEOGYogYOTAABetGRC3%2BTZArdoABUoMB-po6IlK%2Bd5rIYFGACLAYJtbFEB4JZIvZIQGAAHiIuBA7lEAD57UgSfNmkOiCPaABlXsPAAMLzqMtJcAvw7oADVRBSV0lqHIF5PCkU0oEOQQykqQ4uh6Ko4BqY5YgAbXIVBkKfB9Yg-K86DvNsAF0eHQ8xB0-W9e1iUjL2vfDaCItC4GQnDaMouBqPIuiGNQAjjiAgASRNqAgOIf1gQw4S6cSDF5B1ZRYugAEEQAgJ4HnxB9X3PMjcNoPgIGBNZV0A1BgNwUDREORjILQCopCs1BHLgJoWjab1GKcgw8VqBoPMc1RvPqYinIWTco0C3yQqJYLUAU2hlNUphgqQ8g%2BNMwTqGEuIwhCJsiGoVQb0ITgGROAShJEtN8DQdw8OKtBSsrKRIkXYhO0bZs2wHGjRxORByAneBIESWwl0MpiCMcVAgygOBDjoeBgEfew4CWrd3x068EqeFbgAAaj2vkfUcwa4AMB401CZMXk4DqQD6gAqOA6nYgkppO2VVAuq6bq7ORHue178Xe1BTqnKNvpga7bu7AHLqhl4%2BAASTgJ6X0Y4bRrmF4dESZNvTO2JVFicHfDait3vEchFmeWgXjiQcRDwCzwLi-TEliTGyYuYkqbPeBSfuIyAJeKQiAAAxgvFYN6WJyIivlTEPTpul6frUAWuUDIeGWHMcmCXnOp7ZkSCDdOORW5o6F4vqekaiDN68LeCg2jecvxHboC24D2q2bdRwIDM92gLdS97ghgT1l2GxxxHFuS3zAQtaGoPwhceA4XjVKw9kYK4oD4ZPU6II5jqkik8WO0HM1oPFjPFvzNb8Jp-juJGiCDB5%2BIQNmDJeIEcswYgCqK6AGqOY5xGQ7vPG8XwiBeZvpyINvG0McRJsbxlQunEQMC7hBBfEPWou7uKxIpfvEgviTJ5ixyl9b2h26DG6wu5vzKyizWIFAxUqRVnBE%2BIVH4r2fh3CAht76oFAavV%2BqhP5fG-tvYaOtugABZ7KC33r7X%2BUh-6xEwrEfELwHzEmQfAGQDVhRfgeIcbBPtAG9EOGfTaeFeziFiKwnqFE2wVj5LoJh9luGcQ4QHOopDyGOXFsFVSMAdAhnViFZCs8CwLy5kuAi2ZhpliilQzQNDpaqyqIxTh5AzHTRKgwJgldGKzCzPEACDcKGB2ElAQkaxYI1EOPiAAnAANlIXAQRdQACsoTSHEIfJhYJz1wmRLiREh8sSwlJKkU5TWsw3EvU8d0bxdRfFBJCfErCBJ8ToKKYkhJdR0ExOKWkpBIVNYYGAPMNYdArxQ0OPomhr1dZPlCYQl4oSLaNIydvLJ0AHg9gMIcSZ7jYjzIaHAFpTQv4hQjlHQB6C5mWGgMQyRIM4AyMYtOKADJFGoSilXEKM04yhgVEqbmMY4z3wsY5biqQeDylAKNLotinKEEgMJTQAVMhsNoKYVOTRdFfPLOOWUsxwD4D0kXNO41kKmHxMQgiWc0BgEOIcFpC5uZ8hWIeamTxoh4pziyZFIhC4aGLqXOxNc65OMYk3Ne501gzy8Go%2Bkwl3CJnbh0CAfxuZIwwOIQ2RzASzVgeAzuvKe4QvZlfKq05aq3nqo1KefgrgGE3uM%2BAcU6IHzNRwsZq0%2BiHEVS-SB51lYkOSb7S1bYjp%2BXtRAw2DwsVBNMBtHhdEjlUycsAW13r4FwGdUEt1EK6KeqilGyBX01j%2BuSYG91tBQ2nnDaSJ%2BDq367yXD7NYmFCRPW7qTJcc4SVLnEEclNvq9rltIcDRizavqtrgBW61IjdLqqBJqmqdUx56uQgawwBEHgpveuLemth8Y1uIHW7o3NYjEvXUuFKqAKxkErFy8uYR36lrWFIRMipHAQgEEIRkllyAKFFb%2BOAJ6S3EFhTcvwo1EzeUvQGPdPAYKJlwCHVYysv0Al-G%2BiGniQM5vMQer4MNOr9ghabYk7A72ErJRBgacgFGoqZeiydUHYAwe5nAAA-L2uAeJ8S4sMN0FF7knJxGgFYTQshcBgESHiZiELtpME%2BRTcgSdiMlxeExgILGbnzMUgQNAARkzWJgHxpifkblORuLQOIeJHRskNMyT0wQmB9jZJ6CeLodgiC-MWOIJxoGBDoIIL88H%2BOlM84Qz538ICYHKGAbMAQXNQFhVFJo0BaABezBF4IYXHLvJ4sFcuhgWRPDxDUYKiq0s2KDeRIT8Y93rJptSqQ1BcB4xPKJoAA"
   target="_blank"
 />
+
+Now that we know how slots work, let's use them to implement our double buffer mechanic.
