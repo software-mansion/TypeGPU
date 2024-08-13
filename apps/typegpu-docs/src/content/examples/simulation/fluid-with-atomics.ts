@@ -77,7 +77,7 @@ const nextStateBuffer = wgsl
 
 const viscosityData = viscosityBuffer.asUniform();
 const currentStateData = currentStateBuffer.asReadonlyStorage();
-const currentStateVertex = currentStateBuffer.asVertex('readonly_storage');
+const currentStateVertex = currentStateBuffer.asVertex();
 const sizeData = sizeBuffer.asUniform();
 const nextStateData = nextStateBuffer.asMutableStorage();
 const debugInfoData = debugInfoBuffer.asMutableStorage();
@@ -96,7 +96,7 @@ const squareBuffer = wgsl
   .$allowVertex('vertex')
   .$allowUniform()
   .$name('square');
-const squareBufferData = squareBuffer.asVertex('uniform');
+const squareBufferData = squareBuffer.asVertex();
 
 const getIndex = wgsl.fn`(x: u32, y: u32) -> u32 {
   let h = ${sizeData}.y;
@@ -265,7 +265,6 @@ const decideWaterLevel = wgsl.fn`(x: u32, y: u32) {
 const computeWGSL = wgsl`
   let x = ${builtin.globalInvocationId}.x;
   let y = ${builtin.globalInvocationId}.y;
-  //atomicAdd(&${debugInfoData}, ${getWaterLevel}(x, y));
   ${decideWaterLevel}(x, y);
 `;
 
