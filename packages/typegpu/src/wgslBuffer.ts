@@ -1,4 +1,5 @@
-import type { Parsed } from 'typed-binary';
+import type { AnySchema, Parsed } from 'typed-binary';
+import { SimpleWgslData } from './data';
 import type { AnyWgslData, BufferUsage, WgslAllocatable } from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
 import type { WgslPlum } from './wgslPlum';
@@ -15,6 +16,9 @@ export interface WgslBuffer<
   $allowUniform(): WgslBuffer<TData, TAllows | 'uniform'>;
   $allowReadonlyStorage(): WgslBuffer<TData, TAllows | 'readonly_storage'>;
   $allowMutableStorage(): WgslBuffer<TData, TAllows | 'mutable_storage'>;
+  $allowVertex(
+    stepMode: 'vertex' | 'instance',
+  ): WgslBuffer<TData, TAllows | 'vertex'>;
   $addFlags(flags: GPUBufferUsageFlags): WgslBuffer<TData, TAllows>;
 
   asUniform(): 'uniform' extends TAllows
@@ -27,6 +31,10 @@ export interface WgslBuffer<
 
   asReadonlyStorage(): 'readonly_storage' extends TAllows
     ? WgslBufferUsage<TData, 'readonly_storage'>
+    : null;
+
+  asVertex(): 'vertex' extends TAllows
+    ? WgslBufferUsage<TData, 'vertex'>
     : null;
 }
 
@@ -52,6 +60,7 @@ class WgslBufferImpl<
   public flags: GPUBufferUsageFlags =
     GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
 
+  public vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null = null;
   private _allowedUsages: {
     uniform: WgslBufferUsage<TData, TAllows | 'uniform'> | null;
     mutableStorage: WgslBufferUsage<TData, TAllows | 'mutable_storage'> | null;
@@ -59,10 +68,12 @@ class WgslBufferImpl<
       TData,
       TAllows | 'readonly_storage'
     > | null;
+    vertex: WgslBufferUsage<TData, TAllows | 'vertex'> | null;
   } = {
     uniform: null,
     mutableStorage: null,
     readonlyStorage: null,
+    vertex: null,
   };
 
   private _label: string | undefined;
@@ -117,6 +128,27 @@ class WgslBufferImpl<
     return enrichedThis;
   }
 
+  $allowVertex(stepMode: 'vertex' | 'instance' = 'vertex') {
+    const enrichedThis = this as WgslBuffer<TData, TAllows | 'vertex'>;
+    this.$addFlags(GPUBufferUsage.VERTEX);
+    if (!this.vertexLayout) {
+      if (!(this.dataType instanceof SimpleWgslData)) {
+        throw new Error('Only simple data types can be used as vertex buffers');
+      }
+      let underlyingThis = this.dataType as SimpleWgslData<AnySchema>;
+      underlyingThis = underlyingThis.getUnderlyingType();
+      this.vertexLayout = {
+        arrayStride: underlyingThis.size,
+        stepMode,
+      };
+      this._allowedUsages.vertex = bufferUsage(enrichedThis, 'vertex');
+    }
+    if (this.vertexLayout.stepMode !== stepMode) {
+      throw new Error('Cannot change step mode of a vertex buffer');
+    }
+    return enrichedThis;
+  }
+
   // Temporary solution
   $addFlags(flags: GPUBufferUsageFlags) {
     this.flags |= flags;
@@ -140,6 +172,12 @@ class WgslBufferImpl<
     return this._allowedUsages
       .readonlyStorage as 'readonly_storage' extends TAllows
       ? WgslBufferUsage<TData, 'readonly_storage'>
+      : null;
+  }
+
+  asVertex() {
+    return this._allowedUsages.vertex as 'vertex' extends TAllows
+      ? WgslBufferUsage<TData, 'vertex'>
       : null;
   }
 

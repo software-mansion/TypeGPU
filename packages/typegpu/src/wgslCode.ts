@@ -8,6 +8,7 @@ import {
   type WgslSlot,
   isResolvable,
 } from './types';
+import { getBuiltinInfo } from './wgslBuiltin';
 
 // ----------
 // Public API
@@ -64,6 +65,10 @@ class WgslCodeImpl implements WgslCode {
         code += ctx.resolve(result);
       } else if (isResolvable(s)) {
         code += ctx.resolve(s);
+      } else if (typeof s === 'symbol') {
+        const builtin = getBuiltinInfo(s);
+        ctx.addBuiltin(builtin);
+        code += ctx.resolve(builtin.identifier);
       } else {
         code += String(s);
       }

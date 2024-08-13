@@ -8,6 +8,7 @@ export { AsCallable, ICallable } from './callable';
 export * from './typegpuRuntime';
 export { default as ProgramBuilder, type Program } from './programBuilder';
 export { StrictNameRegistry, RandomNameRegistry } from './nameRegistry';
+export * from './wgslBuiltin';
 
 export { default as wgsl } from './wgsl';
 export { createRuntime, CreateRuntimeOptions } from './createRuntime';
@@ -20,3 +21,5 @@ export type { WgslPlum } from './wgslPlum';
 export type { WgslSettable } from './settableTrait';
 export type { WgslFn as WgslFnExperimental } from './wgslFunctionExperimental';
 export type { WgslVar } from './wgslVariable';
+export type { WgslSampler } from './wgslSampler';
+export type { WgslTexture } from './wgslTexture';

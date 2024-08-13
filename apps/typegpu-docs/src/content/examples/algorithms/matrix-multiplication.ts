@@ -9,7 +9,7 @@
 import { addElement, addParameter } from '@typegpu/example-toolkit';
 // --
 
-import { createRuntime, wgsl } from 'typegpu';
+import { builtin, createRuntime, wgsl } from 'typegpu';
 import { type Parsed, dynamicArrayOf, f32, struct, vec2f } from 'typegpu/data';
 
 const runtime = await createRuntime();
@@ -47,8 +47,8 @@ const resultMatrixData = resultMatrixBuffer.asMutableStorage();
 
 const program = runtime.makeComputePipeline({
   workgroupSize: workgroupSize,
-  args: ['@builtin(global_invocation_id)  global_id: vec3<u32>'],
   code: wgsl`
+    let global_id = ${builtin.globalInvocationId};
     if (global_id.x >= u32(${firstMatrixData}.size.x) || global_id.y >= u32(${secondMatrixData}.size.y)) {
       return;
     }
