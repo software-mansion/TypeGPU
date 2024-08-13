@@ -2227,3 +2227,52 @@ You can test it in the playground!
 />
 
 Now it's time to finally add some logic to how our triangles move. This guide assumes some familiarity with [boids](https://en.wikipedia.org/wiki/Boids) but I'll explain some of the concepts as we go along.
+First, let's adapt our triangle information struct to include velocity, not just position.
+
+```diff lang=ts
+const trianglePosData = arrayOf(
+  struct({
+-    x: f32,
+-    y: f32,
+-    rotation: f32,
++    position: vec2f,
++    velocity: vec2f,
+  }),
+  triangleAmount,
+);
+```
+<Aside>
+  We can remove the rotation field since the triangles will infer their rotation from their velocity.
+  This will also make our struct have 16 byte alignment, which will allow us to use it as a uniform buffer.
+  All the calls to `.allowReadonlyStorage()` and `.asReadonlyStorage()` will be replaced with `.allowUniform()` and `.asUniform()`.
+  This will make the memory faster but will limit us to 4096 triangles. You don't need to change that as ReadonlyStorage will work just fine.
+</Aside>
+
+Let's also create a helper function that will calculate triangle rotation based on its velocity.
+
+```ts
+const getRotationFromVelocity = wgsl.fn`(velocity: vec2f) -> f32 {
+  return -atan2(velocity.x, velocity.y);
+}`;
+```
+
+And use it in our vertex shader.
+
+```diff lang=wgsl
+const vertexCode = wgsl`
+  let instanceInfo = ${pairs[idx][0]}[${builtin.instanceIndex}];
+  let rotated = ${rotate}(
+    ${triangleVertex.asVertex()},
+-    instanceInfo.rotation
++    ${getRotationFromVelocity}(instanceInfo.velocity)
+  );
+
+-  let offset = vec2f(
+-    instanceInfo.x,
+-    instanceInfo.y
+-  );
++  let offset = instanceInfo.position;
+
+  let pos = vec4f(rotated + offset, 0.0, 1.0);
+  let fragUV = (rotated + vec2f(${triangleSize}, ${triangleSize})) / vec2f(${triangleSize} * 2.0);
+`,

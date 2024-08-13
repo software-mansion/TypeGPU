@@ -7,7 +7,7 @@
 
 import { addButton, addElement, onFrame } from '@typegpu/example-toolkit';
 import { type WgslBufferUsage, builtin, createRuntime, wgsl } from 'typegpu';
-import { arrayOf, f32, struct, vec2f } from 'typegpu/data';
+import { arrayOf, struct, vec2f } from 'typegpu/data';
 
 const runtime = await createRuntime();
 const device = runtime.device;
@@ -36,47 +36,41 @@ const triangleVertex = wgsl
 const triangleAmount = 10;
 const trianglePosData = arrayOf(
   struct({
-    x: f32,
-    y: f32,
-    rotation: f32,
+    position: vec2f,
+    velocity: vec2f,
   }),
   triangleAmount,
 );
 type TrianglePosData = typeof trianglePosData;
 
 const trianglePosBuffers = Array.from({ length: 2 }, () => {
-  return wgsl
-    .buffer(trianglePosData)
-    .$allowReadonlyStorage()
-    .$allowMutableStorage();
+  return wgsl.buffer(trianglePosData).$allowUniform().$allowMutableStorage();
 });
 
 const pairs = [
-  [
-    trianglePosBuffers[0].asReadonlyStorage(),
-    trianglePosBuffers[1].asMutableStorage(),
-  ],
-  [
-    trianglePosBuffers[1].asReadonlyStorage(),
-    trianglePosBuffers[0].asMutableStorage(),
-  ],
+  [trianglePosBuffers[0].asUniform(), trianglePosBuffers[1].asMutableStorage()],
+  [trianglePosBuffers[1].asUniform(), trianglePosBuffers[0].asMutableStorage()],
 ] as [
-  WgslBufferUsage<TrianglePosData, 'readonly_storage'>,
+  WgslBufferUsage<TrianglePosData, 'uniform'>,
   WgslBufferUsage<TrianglePosData, 'mutable_storage'>,
 ][];
 
-const readSlot =
-  wgsl.slot<WgslBufferUsage<TrianglePosData, 'readonly_storage'>>();
+const readSlot = wgsl.slot<WgslBufferUsage<TrianglePosData, 'uniform'>>();
 const writeSlot =
   wgsl.slot<WgslBufferUsage<TrianglePosData, 'mutable_storage'>>();
 
 function randomizeTriangles() {
   const positions = [];
   for (let i = 0; i < triangleAmount; i++) {
-    const x = Math.random() * 2 - 1;
-    const y = Math.random() * 2 - 1;
-    const rotation = Math.random() * Math.PI * 2;
-    positions.push({ x, y, rotation });
+    const position = [Math.random() * 2 - 1, Math.random() * 2 - 1] as [
+      number,
+      number,
+    ];
+    const velocity = [
+      Math.random() * 0.01 - 0.005,
+      Math.random() * 0.01 - 0.005,
+    ] as [number, number];
+    positions.push({ position, velocity });
   }
   runtime.writeBuffer(trianglePosBuffers[0], positions);
   runtime.writeBuffer(trianglePosBuffers[1], positions);
@@ -90,6 +84,10 @@ const rotate = wgsl.fn`(v: vec2f, angle: f32) -> vec2f {
   return pos;
 }`;
 
+const getRotationFromVelocity = wgsl.fn`(velocity: vec2f) -> f32 {
+  return -atan2(velocity.x, velocity.y);
+}`;
+
 const renderPipelines = [0, 1].map((idx) =>
   runtime.makeRenderPipeline({
     vertex: {
@@ -97,13 +95,10 @@ const renderPipelines = [0, 1].map((idx) =>
       let instanceInfo = ${pairs[idx][0]}[${builtin.instanceIndex}];
       let rotated = ${rotate}(
         ${triangleVertex.asVertex()},
-        instanceInfo.rotation
+        ${getRotationFromVelocity}(instanceInfo.velocity),
       );
 
-      let offset = vec2f(
-        instanceInfo.x,
-        instanceInfo.y
-      );
+      let offset = instanceInfo.position;
 
       let pos = vec4f(rotated + offset, 0.0, 1.0);
       let fragUV = (rotated + vec2f(${triangleSize}, ${triangleSize})) / vec2f(${triangleSize} * 2.0);
@@ -143,16 +138,20 @@ const computePipelines = [0, 1].map((idx) =>
     var instanceInfo = ${readSlot}[index];
     let triangleSize = ${triangleSize};
 
-    if (instanceInfo.x > 1.0 + triangleSize) {
-      instanceInfo.x = -1.0 - triangleSize;
+    if (instanceInfo.position[0] > 1.0 + triangleSize) {
+      instanceInfo.position[0] = -1.0 - triangleSize;
     }
-    if (instanceInfo.y > 1.0 + triangleSize) {
-      instanceInfo.y = -1.0 - triangleSize;
+    if (instanceInfo.position[1] > 1.0 + triangleSize) {
+      instanceInfo.position[1] = -1.0 - triangleSize;
+    }
+    if (instanceInfo.position[0] < -1.0 - triangleSize) {
+      instanceInfo.position[0] = 1.0 + triangleSize;
+    }
+    if (instanceInfo.position[1] < -1.0 - triangleSize) {
+      instanceInfo.position[1] = 1.0 + triangleSize;
     }
 
-    instanceInfo.rotation += 0.01;
-    instanceInfo.x += 0.01;
-    instanceInfo.y += 0.01;
+    instanceInfo.position += instanceInfo.velocity;
 
     ${writeSlot}[index] = instanceInfo;
   `
