@@ -125,14 +125,14 @@ describe('texture', () => {
   });
 
   it('properly defines external texture', () => {
-    const mockHTMLMedaiElement = {
+    const mockHTMLMediaElement = {
       width: 1,
       height: 1,
     } as HTMLVideoElement;
 
     const texture = wgsl
       .textureExternal({
-        source: mockHTMLMedaiElement,
+        source: mockHTMLMediaElement,
       })
       .$name('texture');
 

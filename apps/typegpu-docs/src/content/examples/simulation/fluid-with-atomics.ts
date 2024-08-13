@@ -77,7 +77,7 @@ const nextStateBuffer = wgsl
 
 const viscosityData = viscosityBuffer.asUniform();
 const currentStateData = currentStateBuffer.asReadonlyStorage();
-const currentStateVertex = currentStateBuffer.asVertex('readonly_storage');
+const currentStateVertex = currentStateBuffer.asVertex();
 const sizeData = sizeBuffer.asUniform();
 const nextStateData = nextStateBuffer.asMutableStorage();
 const debugInfoData = debugInfoBuffer.asMutableStorage();
@@ -87,17 +87,16 @@ const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
 const maxCompress = wgsl.constant(wgsl`12u`);
 
 const squareBuffer = wgsl
-  .buffer(arrayOf(vec2u, 4))
+  .buffer(arrayOf(vec2u, 4), [
+    [0, 0],
+    [0, 1],
+    [1, 0],
+    [1, 1],
+  ])
   .$allowVertex('vertex')
   .$allowUniform()
   .$name('square');
-const squareBufferData = squareBuffer.asVertex('uniform');
-runtime.writeBuffer(squareBuffer, [
-  [0, 0],
-  [0, 1],
-  [1, 0],
-  [1, 1],
-]);
+const squareBufferData = squareBuffer.asVertex();
 
 const getIndex = wgsl.fn`(x: u32, y: u32) -> u32 {
   let h = ${sizeData}.y;
@@ -266,7 +265,6 @@ const decideWaterLevel = wgsl.fn`(x: u32, y: u32) {
 const computeWGSL = wgsl`
   let x = ${builtin.globalInvocationId}.x;
   let y = ${builtin.globalInvocationId}.y;
-  //atomicAdd(&${debugInfoData}, ${getWaterLevel}(x, y));
   ${decideWaterLevel}(x, y);
 `;
 

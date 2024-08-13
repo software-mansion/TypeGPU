@@ -143,6 +143,9 @@ class WgslBufferImpl<
       };
       this._allowedUsages.vertex = bufferUsage(enrichedThis, 'vertex');
     }
+    if (this.vertexLayout.stepMode !== stepMode) {
+      throw new Error('Cannot change step mode of a vertex buffer');
+    }
     return enrichedThis;
   }
 

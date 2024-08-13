@@ -48,7 +48,8 @@ const resultMatrixData = resultMatrixBuffer.asMutableStorage();
 const program = runtime.makeComputePipeline({
   workgroupSize: workgroupSize,
   code: wgsl`
-    if (${builtin.globalInvocationId}.x >= u32(${firstMatrixData}.size.x) || ${builtin.globalInvocationId}.y >= u32(${secondMatrixData}.size.y)) {
+    let global_id = ${builtin.globalInvocationId};
+    if (global_id.x >= u32(${firstMatrixData}.size.x) || global_id.y >= u32(${secondMatrixData}.size.y)) {
       return;
     }
 
