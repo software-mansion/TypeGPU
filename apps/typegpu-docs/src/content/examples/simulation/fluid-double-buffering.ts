@@ -124,272 +124,294 @@ const isValidCoord = wgsl.fn`(x: i32, y: i32) -> bool {
 const coordsToIndex = (x: Wgsl, y: Wgsl) =>
   wgsl`${x} + ${y} * ${gridSizeUniform}`;
 
-const getCell = wgsl.fn`(x: i32, y: i32) -> vec4f {
-  let index = ${coordsToIndex('x', 'y')};
-  return ${inputGridSlot}[index];
-}`.$name('get_cell');
+const getCell = wgsl.fn`
+  (x: i32, y: i32) -> vec4f {
+    let index = ${coordsToIndex('x', 'y')};
+    return ${inputGridSlot}[index];
+  }
+`.$name('get_cell');
 
-const setCell = wgsl.fn`(x: i32, y: i32, value: vec4f) {
-  let index = ${coordsToIndex('x', 'y')};
-  ${outputGridSlot}[index] = value;
-}`.$name('set_cell');
+const setCell = wgsl.fn`
+  (x: i32, y: i32, value: vec4f) {
+    let index = ${coordsToIndex('x', 'y')};
+    ${outputGridSlot}[index] = value;
+  }
+`.$name('set_cell');
 
-const setVelocity = wgsl.fn`(x: i32, y: i32, velocity: vec2f) {
-  let index = ${coordsToIndex('x', 'y')};
-  ${outputGridSlot}[index].x = velocity.x;
-  ${outputGridSlot}[index].y = velocity.y;
-}`.$name('set_velocity');
+const setVelocity = wgsl.fn`
+  (x: i32, y: i32, velocity: vec2f) {
+    let index = ${coordsToIndex('x', 'y')};
+    ${outputGridSlot}[index].x = velocity.x;
+    ${outputGridSlot}[index].y = velocity.y;
+  }
+`.$name('set_velocity');
 
-const addDensity = wgsl.fn`(x: i32, y: i32, density: f32) {
-  let index = ${coordsToIndex('x', 'y')};
-  ${outputGridSlot}[index].z = ${inputGridSlot}[index].z + density;
-}`.$name('add_density');
+const addDensity = wgsl.fn`
+  (x: i32, y: i32, density: f32) {
+    let index = ${coordsToIndex('x', 'y')};
+    ${outputGridSlot}[index].z = ${inputGridSlot}[index].z + density;
+  }
+`.$name('add_density');
 
-const flowFromCell = wgsl.fn`(my_x: i32, my_y: i32, x: i32, y: i32) -> f32 {
-  if (!${isValidCoord}(x, y)) {
+const flowFromCell = wgsl.fn`
+  (my_x: i32, my_y: i32, x: i32, y: i32) -> f32 {
+    if (!${isValidCoord}(x, y)) {
+      return 0.;
+    }
+
+    let src = ${getCell}(x, y);
+
+    let dest_pos = vec2i(vec2f(f32(x), f32(y)) + src.xy);
+    let dest = ${getCell}(dest_pos.x, dest_pos.y);
+    let diff = src.z - dest.z;
+    var out_flow = min(max(0.01, 0.3 + diff * 0.1), src.z);
+
+    if (length(src.xy) < 0.5) {
+      out_flow = 0.;
+    }
+
+    if (my_x == x && my_y == y) {
+      // 'src.z - out_flow' is how much is left in the src
+      return src.z - out_flow;
+    }
+
+    if (dest_pos.x == my_x && dest_pos.y == my_y) {
+      return out_flow;
+    }
+
     return 0.;
   }
-
-  let src = ${getCell}(x, y);
-
-  let dest_pos = vec2i(vec2f(f32(x), f32(y)) + src.xy);
-  let dest = ${getCell}(dest_pos.x, dest_pos.y);
-  let diff = src.z - dest.z;
-  var out_flow = min(max(0.01, 0.3 + diff * 0.1), src.z);
-
-  if (length(src.xy) < 0.5) {
-    out_flow = 0.;
-  }
-
-  if (my_x == x && my_y == y) {
-    // 'src.z - out_flow' is how much is left in the src
-    return src.z - out_flow;
-  }
-
-  if (dest_pos.x == my_x && dest_pos.y == my_y) {
-    return out_flow;
-  }
-
-  return 0.;
-}`.$name('flow_from_cell');
+`.$name('flow_from_cell');
 
 const timeBuffer = wgsl.buffer(f32).$allowUniform();
 const timeUniform = timeBuffer.asUniform();
 
-const isSolid = wgsl.fn`(cell: vec4f) -> bool {
-  return cell.w > 0.5;
-}`.$name('is_solid');
+const isSolid = wgsl.fn`
+  (cell: vec4f) -> bool {
+    return cell.w > 0.5;
+  }
+`.$name('is_solid');
 
-const isInsideObstacle = wgsl.fn`(x: i32, y: i32) -> bool {
-  for (var obs_idx = 0; obs_idx < ${MAX_OBSTACLES}; obs_idx += 1) {
-    let obs = ${obstaclesReadonly}[obs_idx];
+const isInsideObstacle = wgsl.fn`
+  (x: i32, y: i32) -> bool {
+    for (var obs_idx = 0; obs_idx < ${MAX_OBSTACLES}; obs_idx += 1) {
+      let obs = ${obstaclesReadonly}[obs_idx];
 
-    if (obs.enabled == 0) {
-      continue;
+      if (obs.enabled == 0) {
+        continue;
+      }
+
+      let min_x = i32(max(0, i32(obs.center.x) - i32(obs.size.x/2)));
+      let max_x = i32(max(0, i32(obs.center.x) + i32(obs.size.x/2)));
+      let min_y = i32(max(0, i32(obs.center.y) - i32(obs.size.y/2)));
+      let max_y = i32(max(0, i32(obs.center.y) + i32(obs.size.y/2)));
+
+      if (x >= min_x && x <= max_x && y >= min_y && y <= max_y) {
+        return true;
+      }
     }
 
-    let min_x = i32(max(0, i32(obs.center.x) - i32(obs.size.x/2)));
-    let max_x = i32(max(0, i32(obs.center.x) + i32(obs.size.x/2)));
-    let min_y = i32(max(0, i32(obs.center.y) - i32(obs.size.y/2)));
-    let max_y = i32(max(0, i32(obs.center.y) + i32(obs.size.y/2)));
+    return false;
+  }
+`.$name('is_inside_obstacle');
 
-    if (x >= min_x && x <= max_x && y >= min_y && y <= max_y) {
-      return true;
+const isValidFlowOut = wgsl.fn`
+  (x: i32, y: i32) -> bool {
+    if (!${isValidCoord}(x, y)) {
+      return false;
     }
+
+    if (${isInsideObstacle}(x, y)) {
+      return false;
+    }
+
+    let cell = ${getCell}(x, y);
+
+    if (${isSolid}(cell)) {
+      // wall
+      return false;
+    }
+
+    return true;
   }
+`.$name('is_valid_flow_out');
 
-  return false;
-}`.$name('is_inside_obstacle');
+const computeVelocity = wgsl.fn`
+  (x: i32, y: i32) -> vec2f {
+    let gravity_cost = 0.5;
 
-const isValidFlowOut = wgsl.fn`(x: i32, y: i32) -> bool {
-  if (!${isValidCoord}(x, y)) {
-    return false;
-  }
+    let cell = ${getCell}(x, y);
+    let n = ${getCell}(x, y + 1);
+    let s = ${getCell}(x, y - 1);
+    let e = ${getCell}(x + 1, y);
+    let w = ${getCell}(x - 1, y);
 
-  if (${isInsideObstacle}(x, y)) {
-    return false;
-  }
+    var least_cost_dir = vec2f(0., 0.);
+    var least_cost = cell.z;
 
-  let cell = ${getCell}(x, y);
+    let n_cost = n.z + gravity_cost;
+    let s_cost = s.z - gravity_cost;
+    let n_valid = ${isValidFlowOut}(x, y + 1);
+    let s_valid = ${isValidFlowOut}(x, y - 1);
+    let e_valid = ${isValidFlowOut}(x + 1, y);
+    let w_valid = ${isValidFlowOut}(x - 1, y);
 
-  if (${isSolid}(cell)) {
-    // wall
-    return false;
-  }
+    if (e_valid && w_valid && e.z == w.z && e.z < least_cost) {
+      least_cost = e.z; // both are equal, arbitrary choice
 
-  return true;
-}`.$name('is_valid_flow_out');
-
-const computeVelocity = wgsl.fn`(x: i32, y: i32) -> vec2f {
-  let gravity_cost = 0.5;
-
-  let cell = ${getCell}(x, y);
-  let n = ${getCell}(x, y + 1);
-  let s = ${getCell}(x, y - 1);
-  let e = ${getCell}(x + 1, y);
-  let w = ${getCell}(x - 1, y);
-
-  var least_cost_dir = vec2f(0., 0.);
-  var least_cost = cell.z;
-
-  let n_cost = n.z + gravity_cost;
-  let s_cost = s.z - gravity_cost;
-  let n_valid = ${isValidFlowOut}(x, y + 1);
-  let s_valid = ${isValidFlowOut}(x, y - 1);
-  let e_valid = ${isValidFlowOut}(x + 1, y);
-  let w_valid = ${isValidFlowOut}(x - 1, y);
-
-  if (e_valid && w_valid && e.z == w.z && e.z < least_cost) {
-    least_cost = e.z; // both are equal, arbitrary choice
-
-    if (${rand01}() < 0.5) {
-      least_cost_dir = vec2f(1., 0.);
+      if (${rand01}() < 0.5) {
+        least_cost_dir = vec2f(1., 0.);
+      }
+      else {
+        least_cost_dir = vec2f(-1., 0.);
+      }
     }
     else {
-      least_cost_dir = vec2f(-1., 0.);
-    }
-  }
-  else {
-    if (e_valid && e.z < least_cost) {
-      least_cost_dir = vec2f(1., 0.);
-      least_cost = e.z;
-    }
+      if (e_valid && e.z < least_cost) {
+        least_cost_dir = vec2f(1., 0.);
+        least_cost = e.z;
+      }
 
-    if (w_valid && w.z < least_cost) {
-      least_cost_dir = vec2f(-1., 0.);
-      least_cost = w.z;
-    }
-  }
-
-  if (s_valid && s_cost < least_cost) {
-    least_cost_dir = vec2f(0., -1.);
-    least_cost = s_cost;
-  }
-
-  if (n_valid && n_cost < least_cost) {
-    least_cost_dir = vec2f(0., 1.);
-    least_cost = n_cost;
-  }
-
-  return least_cost_dir;
-}`;
-
-const mainInitWorld = wgsl.fn`(x: i32, y: i32) {
-  let index = ${coordsToIndex('x', 'y')};
-
-  var value = vec4f();
-
-  if (!${isValidFlowOut}(x, y)) {
-    value = vec4f(0., 0., 0., 0.);
-  }
-  else {
-    // Ocean
-    if (y < i32(${gridSizeUniform}) / 2) {
-      let depth = 1. - f32(y) / (f32(${gridSizeUniform}) / 2.);
-      value = vec4f(0., 0., 10. + depth * 10., 0.);
-    }
-  }
-
-  ${outputGridSlot}[index] = value;
-}`;
-
-const mainMoveObstacles = wgsl.fn`() {
-  for (var obs_idx = 0; obs_idx < ${MAX_OBSTACLES}; obs_idx += 1) {
-    let obs = ${prevObstacleReadonly}[obs_idx];
-    let next_obs = ${obstaclesReadonly}[obs_idx];
-
-    if (obs.enabled == 0) {
-      continue;
-    }
-
-    let diff = vec2i(next_obs.center) - vec2i(obs.center);
-
-    let min_x = i32(max(0, i32(obs.center.x) - i32(obs.size.x/2)));
-    let max_x = i32(max(0, i32(obs.center.x) + i32(obs.size.x/2)));
-    let min_y = i32(max(0, i32(obs.center.y) - i32(obs.size.y/2)));
-    let max_y = i32(max(0, i32(obs.center.y) + i32(obs.size.y/2)));
-
-    let next_min_x = i32(max(0, i32(next_obs.center.x) - i32(obs.size.x/2)));
-    let next_max_x = i32(max(0, i32(next_obs.center.x) + i32(obs.size.x/2)));
-    let next_min_y = i32(max(0, i32(next_obs.center.y) - i32(obs.size.y/2)));
-    let next_max_y = i32(max(0, i32(next_obs.center.y) + i32(obs.size.y/2)));
-
-    // does it move right
-    if (diff.x > 0) {
-      for (var y = min_y; y <= max_y; y += 1) {
-        var row_density = 0.;
-        for (var x = max_x; x <= next_max_x; x += 1) {
-          var cell = ${getCell}(x, y);
-          row_density += cell.z;
-          cell.z = 0;
-          ${setCell}(x, y, cell);
-        }
-
-        ${addDensity}(next_max_x + 1, y, row_density);
+      if (w_valid && w.z < least_cost) {
+        least_cost_dir = vec2f(-1., 0.);
+        least_cost = w.z;
       }
     }
 
-    // does it move left
-    if (diff.x < 0) {
-      for (var y = min_y; y <= max_y; y += 1) {
-        var row_density = 0.;
-        for (var x = next_min_x; x < min_x; x += 1) {
-          var cell = ${getCell}(x, y);
-          row_density += cell.z;
-          cell.z = 0;
-          ${setCell}(x, y, cell);
-        }
+    if (s_valid && s_cost < least_cost) {
+      least_cost_dir = vec2f(0., -1.);
+      least_cost = s_cost;
+    }
 
-        ${addDensity}(next_min_x - 1, y, row_density);
+    if (n_valid && n_cost < least_cost) {
+      least_cost_dir = vec2f(0., 1.);
+      least_cost = n_cost;
+    }
+
+    return least_cost_dir;
+  }
+`;
+
+const mainInitWorld = wgsl.fn`
+  (x: i32, y: i32) {
+    let index = ${coordsToIndex('x', 'y')};
+
+    var value = vec4f();
+
+    if (!${isValidFlowOut}(x, y)) {
+      value = vec4f(0., 0., 0., 0.);
+    }
+    else {
+      // Ocean
+      if (y < i32(${gridSizeUniform}) / 2) {
+        let depth = 1. - f32(y) / (f32(${gridSizeUniform}) / 2.);
+        value = vec4f(0., 0., 10. + depth * 10., 0.);
       }
     }
 
-    // does it move up
-    if (diff.y > 0) {
-      for (var x = min_x; x <= max_x; x += 1) {
-        var col_density = 0.;
-        for (var y = max_y; y <= next_max_y; y += 1) {
-          var cell = ${getCell}(x, y);
-          col_density += cell.z;
-          cell.z = 0;
-          ${setCell}(x, y, cell);
-        }
+    ${outputGridSlot}[index] = value;
+  }
+`;
 
-        ${addDensity}(x, next_max_y + 1, col_density);
+const mainMoveObstacles = wgsl.fn`
+  () {
+    for (var obs_idx = 0; obs_idx < ${MAX_OBSTACLES}; obs_idx += 1) {
+      let obs = ${prevObstacleReadonly}[obs_idx];
+      let next_obs = ${obstaclesReadonly}[obs_idx];
+
+      if (obs.enabled == 0) {
+        continue;
       }
-    }
 
-    // does it move down
-    if (diff.y < 0) {
-      for (var x = min_x; x <= max_x; x += 1) {
-        var col_density = 0.;
-        for (var y = next_min_y; y < min_y; y += 1) {
-          var cell = ${getCell}(x, y);
-          col_density += cell.z;
-          cell.z = 0;
-          ${setCell}(x, y, cell);
+      let diff = vec2i(next_obs.center) - vec2i(obs.center);
+
+      let min_x = i32(max(0, i32(obs.center.x) - i32(obs.size.x/2)));
+      let max_x = i32(max(0, i32(obs.center.x) + i32(obs.size.x/2)));
+      let min_y = i32(max(0, i32(obs.center.y) - i32(obs.size.y/2)));
+      let max_y = i32(max(0, i32(obs.center.y) + i32(obs.size.y/2)));
+
+      let next_min_x = i32(max(0, i32(next_obs.center.x) - i32(obs.size.x/2)));
+      let next_max_x = i32(max(0, i32(next_obs.center.x) + i32(obs.size.x/2)));
+      let next_min_y = i32(max(0, i32(next_obs.center.y) - i32(obs.size.y/2)));
+      let next_max_y = i32(max(0, i32(next_obs.center.y) + i32(obs.size.y/2)));
+
+      // does it move right
+      if (diff.x > 0) {
+        for (var y = min_y; y <= max_y; y += 1) {
+          var row_density = 0.;
+          for (var x = max_x; x <= next_max_x; x += 1) {
+            var cell = ${getCell}(x, y);
+            row_density += cell.z;
+            cell.z = 0;
+            ${setCell}(x, y, cell);
+          }
+
+          ${addDensity}(next_max_x + 1, y, row_density);
         }
-
-        ${addDensity}(x, next_min_y - 1, col_density);
       }
-    }
 
-    // Recompute velocity around the obstacle so that no cells end up inside it on the
-    // next tick.
+      // does it move left
+      if (diff.x < 0) {
+        for (var y = min_y; y <= max_y; y += 1) {
+          var row_density = 0.;
+          for (var x = next_min_x; x < min_x; x += 1) {
+            var cell = ${getCell}(x, y);
+            row_density += cell.z;
+            cell.z = 0;
+            ${setCell}(x, y, cell);
+          }
 
-    // left column
-    for (var y = next_min_y; y <= next_max_y; y += 1) {
-      let new_vel = ${computeVelocity}(next_min_x - 1, y);
-      ${setVelocity}(next_min_x - 1, y, new_vel);
-    }
+          ${addDensity}(next_min_x - 1, y, row_density);
+        }
+      }
 
-    // right column
-    for (var y = max(1, next_min_y); y <= min(next_max_y, ${gridSizeUniform} - 2); y += 1) {
-      let new_vel = ${computeVelocity}(next_max_x + 2, y);
-      ${setVelocity}(next_max_x + 2, y, new_vel);
+      // does it move up
+      if (diff.y > 0) {
+        for (var x = min_x; x <= max_x; x += 1) {
+          var col_density = 0.;
+          for (var y = max_y; y <= next_max_y; y += 1) {
+            var cell = ${getCell}(x, y);
+            col_density += cell.z;
+            cell.z = 0;
+            ${setCell}(x, y, cell);
+          }
+
+          ${addDensity}(x, next_max_y + 1, col_density);
+        }
+      }
+
+      // does it move down
+      if (diff.y < 0) {
+        for (var x = min_x; x <= max_x; x += 1) {
+          var col_density = 0.;
+          for (var y = next_min_y; y < min_y; y += 1) {
+            var cell = ${getCell}(x, y);
+            col_density += cell.z;
+            cell.z = 0;
+            ${setCell}(x, y, cell);
+          }
+
+          ${addDensity}(x, next_min_y - 1, col_density);
+        }
+      }
+
+      // Recompute velocity around the obstacle so that no cells end up inside it on the
+      // next tick.
+
+      // left column
+      for (var y = next_min_y; y <= next_max_y; y += 1) {
+        let new_vel = ${computeVelocity}(next_min_x - 1, y);
+        ${setVelocity}(next_min_x - 1, y, new_vel);
+      }
+
+      // right column
+      for (var y = max(1, next_min_y); y <= min(next_max_y, ${gridSizeUniform} - 2); y += 1) {
+        let new_vel = ${computeVelocity}(next_max_x + 2, y);
+        ${setVelocity}(next_max_x + 2, y, new_vel);
+      }
     }
   }
-}`.$name('main_move_obstacles');
+`.$name('main_move_obstacles');
 
 const SourceParams = struct({
   center: vec2f,
@@ -398,81 +420,87 @@ const SourceParams = struct({
 });
 const sourceParamsBuffer = wgsl.buffer(SourceParams).$allowUniform();
 const sourceParamsUniform = sourceParamsBuffer.asUniform();
-const getMinimumInFlow = wgsl.fn`(x: i32, y: i32) -> f32 {
-  let source_params = ${sourceParamsUniform};
-  let grid_size_f = f32(${gridSizeUniform});
-  let source_radius = max(1., source_params.radius * grid_size_f);
-  let source_pos = vec2f(source_params.center.x * grid_size_f, source_params.center.y * grid_size_f);
+const getMinimumInFlow = wgsl.fn`
+  (x: i32, y: i32) -> f32 {
+    let source_params = ${sourceParamsUniform};
+    let grid_size_f = f32(${gridSizeUniform});
+    let source_radius = max(1., source_params.radius * grid_size_f);
+    let source_pos = vec2f(source_params.center.x * grid_size_f, source_params.center.y * grid_size_f);
 
-  if (length(vec2f(f32(x), f32(y)) - source_pos) < source_radius) {
-    return source_params.intensity;
+    if (length(vec2f(f32(x), f32(y)) - source_pos) < source_radius) {
+      return source_params.intensity;
+    }
+
+    return 0.;
   }
+`;
 
-  return 0.;
-}`;
+const mainCompute = wgsl.fn`
+  (x: i32, y: i32) {
+    let index = ${coordsToIndex('x', 'y')};
 
-const mainCompute = wgsl.fn`(x: i32, y: i32) {
-  let index = ${coordsToIndex('x', 'y')};
+    ${setupRandomSeed}(vec2f(f32(index), ${timeUniform}));
 
-  ${setupRandomSeed}(vec2f(f32(index), ${timeUniform}));
+    var next = ${getCell}(x, y);
 
-  var next = ${getCell}(x, y);
+    let next_velocity = ${computeVelocity}(x, y);
+    next.x = next_velocity.x;
+    next.y = next_velocity.y;
 
-  let next_velocity = ${computeVelocity}(x, y);
-  next.x = next_velocity.x;
-  next.y = next_velocity.y;
+    // Processing in-flow
 
-  // Processing in-flow
+    next.z = ${flowFromCell}(x, y, x, y);
+    next.z += ${flowFromCell}(x, y, x, y + 1);
+    next.z += ${flowFromCell}(x, y, x, y - 1);
+    next.z += ${flowFromCell}(x, y, x + 1, y);
+    next.z += ${flowFromCell}(x, y, x - 1, y);
 
-  next.z = ${flowFromCell}(x, y, x, y);
-  next.z += ${flowFromCell}(x, y, x, y + 1);
-  next.z += ${flowFromCell}(x, y, x, y - 1);
-  next.z += ${flowFromCell}(x, y, x + 1, y);
-  next.z += ${flowFromCell}(x, y, x - 1, y);
+    let min_inflow = ${getMinimumInFlow}(x, y);
+    next.z = max(min_inflow, next.z);
 
-  let min_inflow = ${getMinimumInFlow}(x, y);
-  next.z = max(min_inflow, next.z);
-
-  ${outputGridSlot}[index] = next;
-}`.$name('main_compute');
-
-const mainFragment = wgsl.fn`(x: i32, y: i32) -> vec4f {
-  let index = ${coordsToIndex('x', 'y')};
-  let cell = ${inputGridSlot}[index];
-  let velocity = cell.xy;
-  let density = max(0., cell.z);
-  let solidity = cell.w;
-
-  let obstacle_color = vec4f(0.1, 0.1, 0.1, 1.);
-
-  let background = vec4f(0.9, 0.9, 0.9, 1.);
-  let first_color = vec4f(0.2, 0.6, 1., 1.);
-  let second_color = vec4f(0.2, 0.3, 0.6, 1.);
-  let third_color = vec4f(0.1, 0.2, 0.4, 1.);
-
-  let first_threshold = 2.;
-  let second_threshold = 10.;
-  let third_threshold = 20.;
-
-  if (solidity > 0.5 || ${isInsideObstacle}(x, y)) {
-    return obstacle_color;
+    ${outputGridSlot}[index] = next;
   }
+`.$name('main_compute');
 
-  if (density <= 0.) {
-    return background;
+const mainFragment = wgsl.fn`
+  (x: i32, y: i32) -> vec4f {
+    let index = ${coordsToIndex('x', 'y')};
+    let cell = ${inputGridSlot}[index];
+    let velocity = cell.xy;
+    let density = max(0., cell.z);
+    let solidity = cell.w;
+
+    let obstacle_color = vec4f(0.1, 0.1, 0.1, 1.);
+
+    let background = vec4f(0.9, 0.9, 0.9, 1.);
+    let first_color = vec4f(0.2, 0.6, 1., 1.);
+    let second_color = vec4f(0.2, 0.3, 0.6, 1.);
+    let third_color = vec4f(0.1, 0.2, 0.4, 1.);
+
+    let first_threshold = 2.;
+    let second_threshold = 10.;
+    let third_threshold = 20.;
+
+    if (solidity > 0.5 || ${isInsideObstacle}(x, y)) {
+      return obstacle_color;
+    }
+
+    if (density <= 0.) {
+      return background;
+    }
+
+    if (density <= first_threshold) {
+      let t = 1 - pow(1 - density / first_threshold, 2.);
+      return mix(background, first_color, t);
+    }
+
+    if (density <= second_threshold) {
+      return mix(first_color, second_color, (density - first_threshold) / (second_threshold - first_threshold));
+    }
+
+    return mix(second_color, third_color, min((density - second_threshold) / third_threshold, 1.));
   }
-
-  if (density <= first_threshold) {
-    let t = 1 - pow(1 - density / first_threshold, 2.);
-    return mix(background, first_color, t);
-  }
-
-  if (density <= second_threshold) {
-    return mix(first_color, second_color, (density - first_threshold) / (second_threshold - first_threshold));
-  }
-
-  return mix(second_color, third_color, min((density - second_threshold) / third_threshold, 1.));
-}`.$name('main_fragment');
+`.$name('main_fragment');
 
 const OBSTACLE_BOX = 0;
 const OBSTACLE_LEFT_WALL = 1;
