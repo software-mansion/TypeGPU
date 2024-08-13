@@ -244,6 +244,9 @@ export async function executeExample(
       if (moduleKey === 'typegpu/macro') {
         return await import('typegpu/macro');
       }
+      if (moduleKey === 'typegpu/code') {
+        return await import('typegpu/code');
+      }
       if (moduleKey === '@typegpu/example-toolkit') {
         return {
           onCleanup(callback: () => unknown) {

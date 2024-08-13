@@ -32,11 +32,11 @@
       "import": "./dist/macro/index.js",
       "default": "./dist/macro/index.cjs"
     },
-    "./web": {
-      "types": "./dist/web/index.d.ts",
-      "module": "./dist/web/index.js",
-      "import": "./dist/web/index.js",
-      "default": "./dist/web/index.cjs"
+    "./code": {
+      "types": "./dist/code/index.d.ts",
+      "module": "./dist/code/index.js",
+      "import": "./dist/code/index.js",
+      "default": "./dist/code/index.cjs"
     }
   },
   "files": ["dist", "README.md"],

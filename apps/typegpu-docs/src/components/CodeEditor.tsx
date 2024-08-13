@@ -39,6 +39,7 @@ function handleEditorWillMount(monaco: Monaco) {
       typegpu: ['typegpu/dist/index.d.ts'],
       'typegpu/data': ['typegpu/dist/data/index.d.ts'],
       'typegpu/macro': ['typegpu/dist/macro/index.d.ts'],
+      'typegpu/code': ['typegpu/dist/code/index.d.ts'],
     },
   });
 }
