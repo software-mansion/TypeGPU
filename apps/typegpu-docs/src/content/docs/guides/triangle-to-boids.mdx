@@ -2019,4 +2019,99 @@ onFrame(() => {
   target="_blank"
 />
 
-Now that we know how slots work, let's use them to implement our double buffer mechanic.
+Now that we know how slots work, let's use them to implement our double buffer mechanic. We will replace the rotation direction slot with two slots, one for reading the buffer and one for writing to it.
+
+```ts
+const readSlot =
+  wgsl.slot<
+    WgslBufferUsage<
+      WgslData<
+        {
+          x: number;
+          y: number;
+          rotation: number;
+        }[]
+      >,
+      'readonly_storage'
+    >
+  >();
+const writeSlot =
+  wgsl.slot<
+    WgslBufferUsage<
+      WgslData<
+        {
+          x: number;
+          y: number;
+          rotation: number;
+        }[]
+      >,
+      'mutable_storage'
+    >
+  >();
+```
+<Aside type="caution" title="Well, that's not very readable!">
+  To make the code more readable and concise, we can use a type alias for the buffer data type.
+  ```ts
+  const triangleAmount = 10;
+  const trianglePosData = arrayOf(
+    struct({
+      x: f32,
+      y: f32,
+      rotation: f32,
+    }),
+    triangleAmount,
+  );
+  type TrianglePosData = typeof trianglePosData;
+  ```
+  Now we can simplify the slot definitions.
+  ```ts
+  const readSlot = wgsl.slot<WgslBufferUsage<TrianglePosData, 'readonly_storage'>>();
+  const writeSlot = wgsl.slot<WgslBufferUsage<TrianglePosData, 'mutable_storage'>>();
+  ```
+</Aside>
+
+Now that we have our data type extracted, we can also shorten the buffer definition. While we're at it, let's also make two of them.
+
+```diff lang=ts
+-const trianglePos = wgsl
+-  .buffer(
+-    arrayOf(
+-      struct({
+-        x: f32,
+-        y: f32,
+-        rotation: f32,
+-      }),
+-      triangleAmount,
+-    ),
+-  )
+-  .$allowReadonlyStorage()
+-  .$allowMutableStorage();
+
++const trianglePosBuffers = Array.from({ length: 2 }, () => {
++  return wgsl
++    .buffer(trianglePosData)
++    .$allowReadonlyStorage()
++    .$allowMutableStorage();
++});
+```
+
+#### Great! Now that we have our buffers set up, we can adapt our pipelines to properly use them.
+<Aside>
+I will make a convinience object to hold the buffer pairs, but you can skip this step and easily adapt the code to use the buffers directly.
+
+```ts
+const pairs = [
+  [
+    trianglePosBuffers[0].asReadonlyStorage(),
+    trianglePosBuffers[1].asMutableStorage(),
+  ],
+  [
+    trianglePosBuffers[1].asReadonlyStorage(),
+    trianglePosBuffers[0].asMutableStorage(),
+  ],
+] as [
+  WgslBufferUsage<TrianglePosData, 'readonly_storage'>,
+  WgslBufferUsage<TrianglePosData, 'mutable_storage'>,
+][];
+```
+</Aside>
