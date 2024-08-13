@@ -153,6 +153,7 @@ class TypeGpuRuntimeImpl {
     let textureView = this._textureViews.get(view);
     if (!textureView) {
       textureView = this.textureFor(view.texture).createView(view.descriptor);
+      this._textureViews.set(view, textureView);
     }
     return textureView;
   }

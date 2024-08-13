@@ -89,12 +89,6 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
     storage: null,
   };
   private _label: string | undefined;
-  private GetStringRepresentation(obj: object): string {
-    const withKeysSorted = Object.fromEntries(
-      Object.entries(obj).sort(([a], [b]) => a.localeCompare(b)),
-    );
-    return JSON.stringify(withKeysSorted);
-  }
 
   constructor(
     public readonly descriptor: Omit<GPUTextureDescriptor, 'usage'>,
@@ -142,7 +136,7 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
     if (!this._allowedUsages.storage) {
       return null;
     }
-    const stringified = this.GetStringRepresentation(params);
+    const stringified = hashFromShallowObj(params);
     const existing = this._allowedUsages.storage.get(stringified);
     if (existing) {
       return existing;
@@ -168,7 +162,7 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
     if (!this._allowedUsages.sampled) {
       return null;
     }
-    const stringified = this.GetStringRepresentation(params);
+    const stringified = hashFromShallowObj(params);
     const existing = this._allowedUsages.sampled.get(stringified);
     if (existing) {
       return existing;
@@ -292,3 +286,11 @@ const texelFormatToWgslType: Record<string, AnyWgslTexelFormat> = {
   rgba32float: vec4f,
   bgra8unorm: vec4f,
 };
+
+function hashFromShallowObj(obj: object): string {
+  const withKeysSorted = Object.fromEntries(
+    Object.entries(obj).sort(([a], [b]) => a.localeCompare(b)),
+  );
+
+  return JSON.stringify(withKeysSorted);
+}

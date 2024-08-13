@@ -23,6 +23,7 @@
     "dat.gui": "^0.7.9",
     "jotai": "^2.8.4",
     "jotai-location": "^0.5.5",
+    "lz-string": "^1.5.0",
     "monaco-editor": "^0.50.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -33,8 +34,8 @@
     "typed-binary": "^4.0.0",
     "typedoc": "^0.26.5",
     "typedoc-plugin-markdown": "^4.2.3",
-    "typescript": "^5.5.4",
     "typegpu": "workspace:*",
+    "typescript": "^5.5.4",
     "zod": "^3.23.8"
   },
   "devDependencies": {

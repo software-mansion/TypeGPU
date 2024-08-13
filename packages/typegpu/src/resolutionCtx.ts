@@ -19,6 +19,7 @@ import {
   isSamplerType,
   isSlot,
 } from './types';
+import type { Builtin } from './wgslBuiltin';
 import { code } from './wgslCode';
 import type { WgslIdentifier } from './wgslIdentifier';
 import { isTextureView } from './wgslTexture';
@@ -53,6 +54,7 @@ class SharedResolutionState {
     WgslRenderResource<WgslRenderResourceType> | WgslBindable,
     number
   >();
+  private readonly _usedBuiltins = new Set<Builtin>();
   private readonly _declarations: string[] = [];
 
   constructor(
@@ -72,6 +74,10 @@ class SharedResolutionState {
 
   get declarations(): Iterable<string> {
     return this._declarations;
+  }
+
+  get usedBuiltins(): Iterable<Builtin> {
+    return this._usedBuiltins;
   }
 
   /**
@@ -119,20 +125,24 @@ class SharedResolutionState {
     return result;
   }
 
-  reserveBindingEntry(_bindable: WgslBindable) {
-    this._usedBindables.add(_bindable);
+  reserveBindingEntry(bindable: WgslBindable) {
+    this._usedBindables.add(bindable);
     const nextIdx = this._nextFreeBindingIdx++;
-    this._resourceToIndexMap.set(_bindable, nextIdx);
+    this._resourceToIndexMap.set(bindable, nextIdx);
 
     return { group: this._bindingGroup, idx: nextIdx };
   }
 
+  registerBindingNoEntry(bindable: WgslBindable) {
+    this._usedBindables.add(bindable);
+  }
+
   reserveRenderResourceEntry(
-    _resource: WgslRenderResource<WgslRenderResourceType>,
+    resource: WgslRenderResource<WgslRenderResourceType>,
   ) {
-    this._usedRenderResources.add(_resource);
+    this._usedRenderResources.add(resource);
     const nextIdx = this._nextFreeBindingIdx++;
-    this._resourceToIndexMap.set(_resource, nextIdx);
+    this._resourceToIndexMap.set(resource, nextIdx);
 
     return { group: this._bindingGroup, idx: nextIdx };
   }
@@ -145,6 +155,10 @@ class SharedResolutionState {
 
   addDeclaration(declaration: string) {
     this._declarations.push(declaration);
+  }
+
+  addBuiltin(builtin: Builtin) {
+    this._usedBuiltins.add(builtin);
   }
 }
 
@@ -165,6 +179,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._shared.usedRenderResources;
   }
 
+  get usedBuiltins() {
+    return this._shared.usedBuiltins;
+  }
+
   addDeclaration(_declaration: WgslResolvable) {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
@@ -177,6 +195,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     resource: WgslRenderResource<WgslRenderResourceType>,
     identifier: WgslIdentifier,
   ): void {
+    throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
+  }
+
+  addBuiltin(builtin: Builtin): void {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
@@ -235,11 +257,11 @@ class ScopedResolutionCtx implements ResolutionCtx {
   }
 
   addBinding(bindable: WgslBindable, identifier: WgslIdentifier): void {
-    const { group, idx } = this._shared.reserveBindingEntry(bindable);
-
     if (bindable.usage === 'vertex') {
+      this._shared.registerBindingNoEntry(bindable);
       return;
     }
+    const { group, idx } = this._shared.reserveBindingEntry(bindable);
 
     this.addDeclaration(
       code`@group(${group}) @binding(${idx}) var<${usageToVarTemplateMap[bindable.usage]}> ${identifier}: ${bindable.allocatable.dataType};`,
@@ -277,6 +299,10 @@ class ScopedResolutionCtx implements ResolutionCtx {
     }
 
     throw new Error(`Unsupported resource type: ${resource.type}`);
+  }
+
+  addBuiltin(builtin: Builtin): void {
+    this._shared.addBuiltin(builtin);
   }
 
   nameFor(token: WgslResolvable): string {

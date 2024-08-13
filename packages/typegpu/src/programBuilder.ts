@@ -13,7 +13,7 @@ import type {
   WgslResolvable,
 } from './types';
 import { isSamplerType } from './types';
-import { getBuiltinInfo, getUsedBuiltinsNamed } from './wgslBuiltin';
+import { getUsedBuiltinsNamed } from './wgslBuiltin';
 import { type BoundWgslCode, type WgslCode, code } from './wgslCode';
 import type { WgslSampler } from './wgslSampler';
 import {
@@ -102,14 +102,12 @@ export default class ProgramBuilder {
       });
     }
     for (const bindable of usedBindables) {
+      if (bindable.usage === 'vertex') continue;
       allEntries.push({
         binding: ctx.getIndexFor(bindable),
         visibility: options.shaderStage,
         buffer: {
-          type:
-            bindable.usage === 'vertex'
-              ? usageToBindingTypeMap[bindable.vertexUsage]
-              : usageToBindingTypeMap[bindable.usage],
+          type: usageToBindingTypeMap[bindable.usage],
         },
       });
     }
@@ -145,6 +143,7 @@ export default class ProgramBuilder {
       });
     }
     for (const bindable of usedBindables) {
+      if (bindable.usage === 'vertex') continue;
       allBindGroupEntries.push({
         binding: ctx.getIndexFor(bindable),
         resource: {
@@ -239,10 +238,7 @@ export class RenderProgramBuilder {
         @location(${idx}) ${entry.bindable} : ${entry.underlyingType.getUnderlyingTypeString()},
     `,
     );
-    const usedVertexBuiltins = this.vertexRoot.getUsedBuiltins();
-    const vertexBuiltins = usedVertexBuiltins.map((builtin) =>
-      getBuiltinInfo(builtin),
-    );
+    const vertexBuiltins = Array.from(vertexContext.usedBuiltins);
     const vertexBuiltinsArgs = vertexBuiltins.map(
       (builtin) => code`
       @builtin(${builtin.name}) ${builtin.identifier}: ${builtin.type},
@@ -280,9 +276,7 @@ export class RenderProgramBuilder {
     });
     fragmentContext.resolve(this.fragmentRoot);
 
-    const fragmentUsedBuiltins = this.fragmentRoot
-      .getUsedBuiltins()
-      .map((builtin) => getBuiltinInfo(builtin));
+    const fragmentUsedBuiltins = Array.from(fragmentContext.usedBuiltins);
     const fragmentBuiltinArgs = fragmentUsedBuiltins.map(
       (builtin) => code`
       @builtin(${builtin.name}) ${builtin.identifier}: ${builtin.type},
@@ -338,9 +332,7 @@ export class ComputeProgramBuilder {
     });
     context.resolve(this.computeRoot);
 
-    const usedBuiltins = this.computeRoot
-      .getUsedBuiltins()
-      .map((builtin) => getBuiltinInfo(builtin));
+    const usedBuiltins = Array.from(context.usedBuiltins);
     const builtinArgs = usedBuiltins.map(
       (builtin) => code`
       @builtin(${builtin.name}) ${builtin.identifier}: ${builtin.type},
