@@ -2,10 +2,11 @@ import * as Babel from '@babel/standalone';
 import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
 import type { AddSliderParam, OnFrameFn } from '@typegpu/example-toolkit';
-import { GUI } from 'dat.gui';
+import type { SetStateAction } from 'jotai';
 import { filter, isNonNull, map, pipe } from 'remeda';
 import { wgsl } from 'typegpu';
 import { transpileModule } from 'typescript';
+import type { ExampleControlParam } from '../../components/ExampleView';
 import { tsCompilerOptions } from '../liveEditor/embeddedTypeScript';
 import type { ExampleState } from './exampleState';
 import type { LayoutInstance } from './layout';
@@ -17,7 +18,9 @@ const template = (
 ).packages.template;
 
 const createSliderParam = (
-  gui: GUI,
+  setExampleControlParams: (
+    _: SetStateAction<ExampleControlParam<string | number>[]>,
+  ) => void,
   label: string,
   initial: number,
   opts?: { min?: number; max?: number; step?: number },
@@ -28,17 +31,29 @@ const createSliderParam = (
     [label]: initial,
   };
 
-  let value = initial;
+  let value: string | number | boolean = initial;
   const listeners = new Set<() => unknown>();
 
-  gui.add(temp, label, min, max, step).onChange((newValue) => {
-    value = newValue;
-    // Calling `listener` may cause more listeners to
-    // be attached, so copying.
-    for (const listener of [...listeners]) {
-      listener();
-    }
-  });
+  setExampleControlParams((params) => [
+    ...params,
+    {
+      label: label,
+      options: {
+        min,
+        max,
+        step,
+        initial,
+      },
+      onChange: (newValue) => {
+        value = newValue;
+        // Calling `listener` may cause more listeners to
+        // be attached, so copying.
+        for (const listener of [...listeners]) {
+          listener();
+        }
+      },
+    },
+  ]);
 
   return wgsl
     .plumFromEvent(
@@ -146,6 +161,9 @@ function tsToJs(code: string): string {
 export async function executeExample(
   exampleCode: string,
   createLayout: () => LayoutInstance,
+  setExampleControlParams: (
+    _: SetStateAction<ExampleControlParam<string | number>[]>,
+  ) => void,
 ): Promise<ExampleState> {
   const cleanupCallbacks: (() => unknown)[] = [];
 
@@ -153,9 +171,7 @@ export async function executeExample(
   let disposed = false;
   cleanupCallbacks.push(() => layout.dispose());
 
-  const gui = new GUI({ closeOnTop: true });
-  cleanupCallbacks.push(() => gui.destroy());
-  gui.hide();
+  setExampleControlParams([]);
 
   const dispose = () => {
     if (disposed) {
@@ -203,26 +219,40 @@ export async function executeExample(
         }
       | {
           initial: TOption;
-          options: TOption;
+          options: TOption[];
         }
       | {
           initial: boolean;
         },
     onChange: (newValue: TOption | boolean) => void,
   ): void {
-    const temp = { [label]: options.initial };
     if ('options' in options) {
-      gui
-        .add(temp, label, options.options)
-        .onChange((value) => onChange(value));
+      setExampleControlParams((controls) => [
+        ...controls,
+        {
+          label,
+          options: options,
+          onChange: (value) => onChange(value as never),
+        },
+      ]);
     } else if ('min' in options || 'max' in options || 'step' in options) {
-      gui
-        .add(temp, label, options.min, options.max, options.step)
-        .onChange((value) => onChange(value));
+      setExampleControlParams((controls) => [
+        ...controls,
+        {
+          label,
+          options: options,
+          onChange: (value) => onChange(value as never),
+        },
+      ]);
     } else {
-      gui
-        .add(temp, label, options.initial)
-        .onChange((value) => onChange(value));
+      setExampleControlParams((controls) => [
+        ...controls,
+        {
+          label,
+          options: options,
+          onChange: (value) => onChange(value as never),
+        },
+      ]);
     }
 
     // Eager run to initialize the values.
@@ -268,8 +298,13 @@ export async function executeExample(
           addElement: layout.addElement,
           addParameter,
           addSliderParam: ((label, initial, opts) => {
-            return createSliderParam(gui, label, initial, opts);
-          }) satisfies AddSliderParam,
+            return createSliderParam(
+              setExampleControlParams,
+              label,
+              initial,
+              opts,
+            );
+          }) as AddSliderParam,
         };
       }
       throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
@@ -292,8 +327,6 @@ ${transformedCode}
 
     // Running the code
     await mod()(_import);
-
-    gui.show();
 
     return {
       dispose,

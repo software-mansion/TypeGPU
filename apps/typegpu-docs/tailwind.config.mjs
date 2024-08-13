@@ -20,8 +20,10 @@ export default {
           stroke: '#00000029',
         },
         gradient: {
-          purple: '#C464FF',
-          blue: '#1D72F0',
+          'purple': '#C464FF',
+          'purple-dark': '#A91EFF',
+          'blue': '#1D72F0',
+          'blue-dark': '#0058DD',
         },
       },
     },
