@@ -1,7 +1,8 @@
 import { useAtom, useAtomValue } from 'jotai';
 import { useState } from 'react';
 import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
-import { exampleControlsAtom } from './ExampleView';
+import { exampleControlsAtom } from '../utils/examples/exampleControlAtom';
+import { menuShownAtom } from '../utils/examples/menuShownAtom';
 import { Switch } from './design/Switch';
 
 function SwitchRow({
@@ -13,7 +14,7 @@ function SwitchRow({
   return (
     <label className="cursor-pointer">
       <div className="flex justify-between">
-        <div>{label}</div>
+        <div className="text-sm">{label}</div>
 
         <Switch
           checked={value}
@@ -37,15 +38,15 @@ function SliderRow({
 }: {
   label: string;
   initial: number;
-  min: number;
-  max: number;
-  step: number;
+  min?: number;
+  max?: number;
+  step?: number;
   onChange: (value: number) => void;
 }) {
   const [value, setValue] = useState(initial);
   return (
     <div className="flex justify-between">
-      <div>{label}</div>
+      <div className="text-sm">{label}</div>
 
       <input
         type="range"
@@ -76,7 +77,7 @@ function DropdownRow({
   const [value, setValue] = useState(initial);
   return (
     <div className="flex justify-between">
-      <div>{label}</div>
+      <div className="text-sm">{label}</div>
 
       <select
         value={value}
@@ -96,18 +97,25 @@ function DropdownRow({
 }
 
 export function ControlPanel() {
+  const [menuShowing, setMenuShowing] = useAtom(menuShownAtom);
   const [codeEditorShowing, setCodeEditorShowing] =
     useAtom(codeEditorShownAtom);
   const exampleControlParams = useAtomValue(exampleControlsAtom);
-
-  console.log(exampleControlParams);
 
   return (
     <div className="flex flex-col gap-4 bg-grayscale-0 rounded-xl p-6">
       <h2 className="text-xl font-medium">Control panel</h2>
 
-      <label className="flex gap-3 items-center justify-between cursor-pointer">
-        <span>Hide code editor</span>
+      <label className="flex gap-3 items-center justify-between cursor-pointer text-sm">
+        <span>Show left menu</span>
+        <Switch
+          checked={menuShowing}
+          onChange={(e) => setMenuShowing(e.target.checked)}
+        />
+      </label>
+
+      <label className="flex gap-3 items-center justify-between cursor-pointer text-sm">
+        <span>Show code editor</span>
         <Switch
           checked={codeEditorShowing}
           onChange={(e) => setCodeEditorShowing(e.target.checked)}
@@ -130,17 +138,17 @@ export function ControlPanel() {
             key={param.label}
             label={param.label}
             onChange={param.onChange}
-            min={param.options.min ?? 0}
-            max={param.options.max ?? 10}
-            step={param.options.step ?? 1}
-            initial={param.options.initial ?? 0}
+            min={param.options.min}
+            max={param.options.max}
+            step={param.options.step}
+            initial={param.options.initial}
           />
         ) : 'options' in param.options ? (
           <DropdownRow
             label={param.label}
             key={param.label}
             options={param.options.options}
-            initial={param.options.initial}
+            initial={param.options.initial ?? 0}
             onChange={param.onChange}
           />
         ) : (

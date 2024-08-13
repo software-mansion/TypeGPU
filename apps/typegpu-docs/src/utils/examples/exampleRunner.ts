@@ -6,8 +6,8 @@ import type { SetStateAction } from 'jotai';
 import { filter, isNonNull, map, pipe } from 'remeda';
 import { wgsl } from 'typegpu';
 import { transpileModule } from 'typescript';
-import type { ExampleControlParam } from '../../components/ExampleView';
 import { tsCompilerOptions } from '../liveEditor/embeddedTypeScript';
+import type { ExampleControlParam } from './exampleControlAtom';
 import type { ExampleState } from './exampleState';
 import type { LayoutInstance } from './layout';
 

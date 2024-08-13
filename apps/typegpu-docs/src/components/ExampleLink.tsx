@@ -33,7 +33,7 @@ export function ExampleLink(props: Props) {
       href={`#example=${exampleKey}`}
       onClick={handleClick}
       className={cs(
-        'flex justify-between items-center',
+        'flex justify-between items-center cursor-pointer',
         active
           ? 'bg-clip-text bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark text-transparent'
           : '',

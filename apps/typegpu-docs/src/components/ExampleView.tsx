@@ -1,5 +1,5 @@
 import cs from 'classnames';
-import { atom, useAtomValue, useSetAtom } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
 import { compressToEncodedURIComponent } from 'lz-string';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'remeda';
@@ -7,6 +7,7 @@ import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
 import { ExecutionCancelledError } from '../utils/examples/errors';
 import { PLAYGROUND_KEY } from '../utils/examples/exampleContent';
+import { exampleControlsAtom } from '../utils/examples/exampleControlAtom';
 import { executeExample } from '../utils/examples/exampleRunner';
 import type { ExampleState } from '../utils/examples/exampleState';
 import { useLayout } from '../utils/examples/layout';
@@ -24,28 +25,6 @@ type Props = {
   example: Example;
   isPlayground?: boolean;
 };
-
-export type ExampleControlParam<TOption extends string | number> = {
-  label: string;
-  options:
-    | {
-        initial: number;
-        min?: number;
-        max?: number;
-        step?: number;
-      }
-    | {
-        initial: TOption;
-        options: TOption[];
-      }
-    | {
-        initial: boolean;
-      };
-  onChange: (newValue: TOption | boolean) => void;
-};
-export const exampleControlsAtom = atom<ExampleControlParam<string | number>[]>(
-  [],
-);
 
 function useExample(
   exampleCode: string,
