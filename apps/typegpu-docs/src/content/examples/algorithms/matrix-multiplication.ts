@@ -29,21 +29,21 @@ let secondMatrix: MatrixType;
 const firstMatrixBuffer = wgsl
   .buffer(matrixStruct)
   .$name('first_matrix')
-  .$allowReadonlyStorage();
+  .$allowReadonly();
 
 const secondMatrixBuffer = wgsl
   .buffer(matrixStruct)
   .$name('second_matrix')
-  .$allowReadonlyStorage();
+  .$allowReadonly();
 
 const resultMatrixBuffer = wgsl
   .buffer(matrixStruct)
   .$name('result_matrix')
-  .$allowMutableStorage();
+  .$allowMutable();
 
-const firstMatrixData = firstMatrixBuffer.asReadonlyStorage();
-const secondMatrixData = secondMatrixBuffer.asReadonlyStorage();
-const resultMatrixData = resultMatrixBuffer.asMutableStorage();
+const firstMatrixData = firstMatrixBuffer.asReadonly();
+const secondMatrixData = secondMatrixBuffer.asReadonly();
+const resultMatrixData = resultMatrixBuffer.asMutable();
 
 const program = runtime.makeComputePipeline({
   workgroupSize: workgroupSize,

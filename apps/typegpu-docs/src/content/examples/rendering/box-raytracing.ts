@@ -105,14 +105,14 @@ const boxMatrixBuffer = wgsl
     ),
   )
   .$name('box_array')
-  .$allowReadonlyStorage();
-const boxMatrixData = boxMatrixBuffer.asReadonlyStorage();
+  .$allowReadonly();
+const boxMatrixData = boxMatrixBuffer.asReadonly();
 
 const cameraPositionBuffer = wgsl
   .buffer(vec3f, cameraPositionPlum)
   .$name('camera_position')
-  .$allowReadonlyStorage();
-const cameraPositionData = cameraPositionBuffer.asReadonlyStorage();
+  .$allowReadonly();
+const cameraPositionData = cameraPositionBuffer.asReadonly();
 
 const cameraAxesBuffer = wgsl
   .buffer(
@@ -124,8 +124,8 @@ const cameraAxesBuffer = wgsl
     cameraAxesPlum,
   )
   .$name('camera_axes')
-  .$allowReadonlyStorage();
-const cameraAxesData = cameraAxesBuffer.asReadonlyStorage();
+  .$allowReadonly();
+const cameraAxesData = cameraAxesBuffer.asReadonly();
 
 const canvasDimsBuffer = wgsl
   .buffer(

@@ -36,16 +36,16 @@ import {
 } from 'typegpu/data';
 
 // type ReadableBuffer<T extends AnyWgslData> =
-//   | WgslBuffer<T, 'readonly_storage'>
-//   | WgslBuffer<T, 'readonly_storage' | 'uniform'>
-//   | WgslBuffer<T, 'readonly_storage' | 'mutable_storage'>
-//   | WgslBuffer<T, 'readonly_storage' | 'uniform' | 'mutable_storage'>;
+//   | WgslBuffer<T, 'readonly'>
+//   | WgslBuffer<T, 'readonly' | 'uniform'>
+//   | WgslBuffer<T, 'readonly' | 'mutable'>
+//   | WgslBuffer<T, 'readonly' | 'uniform' | 'mutable'>;
 
 type MutableBuffer<T extends AnyWgslData> =
-  | WgslBuffer<T, 'mutable_storage'>
-  | WgslBuffer<T, 'mutable_storage' | 'uniform'>
-  | WgslBuffer<T, 'mutable_storage' | 'readonly_storage'>
-  | WgslBuffer<T, 'mutable_storage' | 'uniform' | 'readonly_storage'>;
+  | WgslBuffer<T, 'mutable'>
+  | WgslBuffer<T, 'mutable' | 'uniform'>
+  | WgslBuffer<T, 'mutable' | 'readonly'>
+  | WgslBuffer<T, 'mutable' | 'uniform' | 'readonly'>;
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -98,38 +98,32 @@ const gridSize = 256;
 const gridSizeBuffer = wgsl.buffer(i32).$allowUniform();
 const gridSizeData = gridSizeBuffer.asUniform();
 
-const gridAlphaBuffer = wgsl
-  .buffer(GridData)
-  .$allowMutableStorage()
-  .$allowReadonlyStorage();
+const gridAlphaBuffer = wgsl.buffer(GridData).$allowMutable().$allowReadonly();
 
-const gridBetaBuffer = wgsl
-  .buffer(GridData)
-  .$allowMutableStorage()
-  .$allowReadonlyStorage();
+const gridBetaBuffer = wgsl.buffer(GridData).$allowMutable().$allowReadonly();
 
 const inPlaceGridSlot = wgsl
-  .slot<WgslBindable<GridData, 'mutable_storage'>>()
+  .slot<WgslBindable<GridData, 'mutable'>>()
   .$name('in_place_grid');
 const inputGridSlot = wgsl.slot<WgslBindable<GridData>>().$name('input_grid');
 const outputGridSlot = wgsl
-  .slot<WgslBindable<GridData, 'mutable_storage'>>()
+  .slot<WgslBindable<GridData, 'mutable'>>()
   .$name('output_grid');
 
 const MAX_OBSTACLES = 4;
 
 const prevObstaclesBuffer = wgsl
   .buffer(arrayOf(BoxObstacle, MAX_OBSTACLES))
-  .$allowReadonlyStorage();
+  .$allowReadonly();
 
-const prevObstacleData = prevObstaclesBuffer.asReadonlyStorage();
+const prevObstacleData = prevObstaclesBuffer.asReadonly();
 
 const obstaclesBuffer = wgsl
   .buffer(arrayOf(BoxObstacle, MAX_OBSTACLES))
-  .$allowMutableStorage()
-  .$allowReadonlyStorage();
+  .$allowMutable()
+  .$allowReadonly();
 
-const obstaclesData = obstaclesBuffer.asReadonlyStorage();
+const obstaclesData = obstaclesBuffer.asReadonly();
 
 const isValidCoord = wgsl.fn`(x: i32, y: i32) -> bool {
   return
@@ -542,8 +536,8 @@ function makePipelines(
   outputGridBuffer: MutableBuffer<GridData>,
 ) {
   const initWorldFn = mainInitWorld
-    .with(inputGridSlot, inputGridBuffer.asMutableStorage())
-    .with(outputGridSlot, inputGridBuffer.asMutableStorage());
+    .with(inputGridSlot, inputGridBuffer.asMutable())
+    .with(outputGridSlot, inputGridBuffer.asMutable());
 
   const initWorldPipeline = runtime.makeComputePipeline({
     code: wgsl`
@@ -552,8 +546,8 @@ function makePipelines(
   });
 
   const mainComputeWithIO = mainCompute
-    .with(inputGridSlot, inputGridBuffer.asReadonlyStorage())
-    .with(outputGridSlot, outputGridBuffer.asMutableStorage());
+    .with(inputGridSlot, inputGridBuffer.asReadonly())
+    .with(outputGridSlot, outputGridBuffer.asMutable());
 
   const computeWorkgroupSize = 8;
   const computePipeline = runtime.makeComputePipeline({
@@ -564,9 +558,9 @@ function makePipelines(
   });
 
   const moveObstaclesFn = mainMoveObstacles
-    .with(inPlaceGridSlot, inputGridBuffer.asMutableStorage())
-    .with(inputGridSlot, inputGridBuffer.asMutableStorage())
-    .with(outputGridSlot, inputGridBuffer.asMutableStorage());
+    .with(inPlaceGridSlot, inputGridBuffer.asMutable())
+    .with(inputGridSlot, inputGridBuffer.asMutable())
+    .with(outputGridSlot, inputGridBuffer.asMutable());
 
   const moveObstaclesPipeline = runtime.makeComputePipeline({
     code: wgsl`
@@ -576,7 +570,7 @@ function makePipelines(
 
   const mainFragmentWithInput = mainFragment.with(
     inputGridSlot,
-    inputGridBuffer.asReadonlyStorage(),
+    inputGridBuffer.asReadonly(),
   );
 
   const renderPipeline = runtime.makeRenderPipeline({

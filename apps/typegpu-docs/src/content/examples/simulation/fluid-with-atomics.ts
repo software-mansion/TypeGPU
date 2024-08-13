@@ -59,28 +59,25 @@ const sizeBuffer = wgsl.buffer(vec2u).$name('size').$allowUniform();
 
 const viscosityBuffer = wgsl.buffer(u32).$name('viscosity').$allowUniform();
 
-const debugInfoBuffer = wgsl
-  .buffer(atomic(u32))
-  .$name('debug')
-  .$allowMutableStorage();
+const debugInfoBuffer = wgsl.buffer(atomic(u32)).$name('debug').$allowMutable();
 
 const currentStateBuffer = wgsl
   .buffer(arrayOf(u32, 1024 ** 2))
   .$name('current')
   .$allowVertex('instance')
-  .$allowReadonlyStorage();
+  .$allowReadonly();
 
 const nextStateBuffer = wgsl
   .buffer(arrayOf(atomic(u32), 1024 ** 2))
   .$name('next')
-  .$allowMutableStorage();
+  .$allowMutable();
 
 const viscosityData = viscosityBuffer.asUniform();
-const currentStateData = currentStateBuffer.asReadonlyStorage();
+const currentStateData = currentStateBuffer.asReadonly();
 const currentStateVertex = currentStateBuffer.asVertex();
 const sizeData = sizeBuffer.asUniform();
-const nextStateData = nextStateBuffer.asMutableStorage();
-const debugInfoData = debugInfoBuffer.asMutableStorage();
+const nextStateData = nextStateBuffer.asMutable();
+const debugInfoData = debugInfoBuffer.asMutable();
 
 const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
 const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
