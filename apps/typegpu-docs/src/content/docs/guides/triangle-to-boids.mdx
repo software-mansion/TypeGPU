@@ -2115,3 +2115,115 @@ const pairs = [
 ][];
 ```
 </Aside>
+
+We will adapt the pipelines using slots just like we did when adding the rotation direction slot.
+
+```diff lang=ts
+-const computePipeline = runtime.makeComputePipeline({
++const computePipelines = [0, 1].map((idx) =>
++  runtime.makeComputePipeline({
+    code: wgsl`
+    let index = ${builtin.globalInvocationId}.x;
+-    var instanceInfo = ${trianglePos.asMutableStorage()}[index];
++    var instanceInfo = ${readSlot}[index];
+    let triangleSize = ${triangleSize};
+
+    if (instanceInfo.x > 1.0 + triangleSize) {
+      instanceInfo.x = -1.0 - triangleSize;
+    }
+    if (instanceInfo.y > 1.0 + triangleSize) {
+      instanceInfo.y = -1.0 - triangleSize;
+    }
+
+    instanceInfo.rotation += 0.01;
+    instanceInfo.x += 0.01;
+    instanceInfo.y += 0.01;
+
+-    ${trianglePos.asMutableStorage()}[index] = instanceInfo;
++    ${writeSlot}[index] = instanceInfo;
+  `
++   .with(readSlot, pairs[idx][0])
++   .with(writeSlot, pairs[idx][1]),
+  }),
+);
+```
+
+```diff lang=ts
+const renderPipelines = [0, 1].map((idx) =>
+  runtime.makeRenderPipeline({
+    vertex: {
+      code: wgsl`
+-      let instanceInfo = ${trianglePos.asReadonlyStorage()}[${builtin.instanceIndex}];
++      let instanceInfo = ${pairs[idx][0]}[${builtin.instanceIndex}];
+      let rotated = ${rotate}(
+        ${triangleVertex.asVertex()},
+        instanceInfo.rotation
+      );
+
+      ...
+
+  })
+);
+```
+
+Finally, all that's left to do is to add some logic to switch between the pipelines. And adapt our initialization code to write the init
+
+```diff lang=ts
+randomizeTriangles();
++let even = false;
+onFrame(() => {
++  even = !even;
+-  computePipeline.execute({
++  computePipelines[even ? 0 : 1].execute({
+    workgroups: [triangleAmount],
+  });
+-  pipeline.execute({
++  renderPipelines[even ? 1 : 0].execute({
+    colorAttachments: [
+      {
+        view: context.getCurrentTexture().createView(),
+        clearValue: [0, 0, 0, 0],
+        loadOp: 'clear',
+        storeOp: 'store',
+      },
+    ],
+    vertexCount: 3,
+    instanceCount: triangleAmount,
+  });
+
+  runtime.flush();
+});
+```
+
+<Aside type="tip">
+  You probably noticed that we are calling `renderPipelines` in reverse order to the `computePipelines`. This is because we want to display the buffer that was just written to.
+  The code works just fine if you don't switch the order, but you will not see the most recent updates.
+</Aside>
+
+We will write the randomized positions to both buffers. This is beacuse when we call the function there is no guarantee which buffer is used as the source and which as the destination.
+
+```diff lang=ts
+function randomizeTriangles() {
+  const positions = [];
+  for (let i = 0; i < triangleAmount; i++) {
+    const x = Math.random() * 2 - 1;
+    const y = Math.random() * 2 - 1;
+    const rotation = Math.random() * Math.PI * 2;
+    positions.push({ x, y, rotation });
+  }
+-  runtime.writeBuffer(trianglePos, positions);
++  runtime.writeBuffer(trianglePosBuffers[0], positions);
++  runtime.writeBuffer(trianglePosBuffers[1], positions);
+}
+```
+
+And that's it! We have successfully implemented double buffering in our example.
+You can test it in the playground!
+
+<LinkCard
+  title="Run it in the playground!"
+  href="/examples#example=playground__JYWwDg9gTgLgBAbzgQwCaoEIFcYwgOwBoV0BRAGwFMRL8ZiCAxKZGuAXzgDMoIQ4A5AAEYATzCUA5mCwB6SgA9WYKgFo8EcgGtgMAQG4AUKEixEcMRLgB1SQGdy2Ll0pQAqneSTKxAEZZgchhgIjgAYyhKZBhKACUsOlAfOAB3e3IObl5%2BAUspGQNjcGh4JGQoFlEAeS5iLgBmACZiOxgoLDD6OAA3SjDGrkyePkE86TlUaORCwzCCVrh2xLYAXhQU5F1wyOi4hOCaAAoASiM5-AXUSm7gMMo4NaWDygA6K5u7o1n5%2BDDkfG6yDsD3Wm3gaFQFGotBghwEfwBQIExDKdgknVi0WAEAAXHAAIwcU7fC6-AgxBTwNYIwF2F7eGAAYXJilhAhSlF84wExxQwIA4gAFNyM-605l0VlnH5wMCROwwrFMaAgaIg-DIG6SaLQekyemUGCCyIuCqUVCixF2Rgq6InL7nCkwF7nLjASRYSKHBCGOBwd63Hy%2B7i2mB4uWUBV0JX4G1QVX0YPIchgAAWyAAshArniBBGQFggsAVMBzcjDOxiYYIdhcAQ4Zj8Kg%2BMAAF6UZGLf7NkBtygAFSgwH%2Bkiodir5wWbWH%2BFHlAAyn2QQAGF6NaWkixDkdUABqrgpILSDmDL38zlch3KlRqh16-VqcHqx2IAG1g37X6vl8RpzuF32AC6hAfnAr7qNus5UIu7bEBBM5zjBlDAaBr5-lBAGwXA8H-khKF%2BoBxyngAJMm5AQCk%2B6wIocK9NRCg8g6MroXOACCIAQPsIL4suG5TpBc6ChAdgACJTCC17INUXCHMGrTtJ03qgQoeINM0oGiKpTQgX6fq8DAMZaepfqVjpW4IVQ7GcXQIHEnkcCDhZlBCaJ4lrHkECDCxVAuWJBlMZu3nOcJTimsCaysRUUkvMMIDenAVCzjAqZ4o0HDECcDwAHyIMGkQwJ6%2BCpOkoFnlgF5QIcQW%2BVMRG6XALykeQ5EpLEUTNvg5CiPOeAsN4JylU1LUZjgyC%2BNBvVeJQ9oVhOMpgJsUDhWBwbvvV1UheVYVfoBLxAm1aAEF1PXQFNJxmX6G12KFrh2K%2B%2BK7UCI0GeNC6Tf1L7BvhK3rQJPmbRVd0PXtdgHR1x3vdNn2-U5Lk3UtO0g89Y0TadH1mShgF8j9NjpPDHhTQAPI5-41QZxACDs4OiAA%2Bq0aMdllZm2A4%2BOeN4xN-cFrnk4IBYvVQdOQwITOGIBr6AQFCxU-O5FUsGx7kC8DgQDAhMs44W2uATHMkxhZPIBTVNHbT9N9YzWUzZO8ApEOMSy6rDwK%2Bkyty%2BreNa%2B47OUJzsPCX5ht86Nr1CwzIuW1WXAJJ02JFSwTYtu2etznYmU%2Bn61uysJuix8tEtGH6XDQHAhxUPAwArvocAV4T5n-lZ%2BxV8AADUze8unumZwoIIZtEqYvPHPaZQAVHAaWqASBedzKog933A-dnwI9j9hk%2BgZn%2BkxnPyULwncW8qPvc74KACScCj%2BuoGQHYOfzC8Mh2Km8UKMQojEJvwQEESU-sHl%2BxJC8W2uhKDwyqlzOGns7rLmAlnG%2Bn8LjEj0v-GggC7YgM9mAv211IH3RgdfW%2BCCjC-xJNLVWuwjwuy4PgAABnePE94BjEH-EZXkqgcoMMGB3MusCQQMNkvVO8Lxu6jzmKnf8xxWEl26C8Weo8b74CvBhCRF0pFCPPnAeRii5wSLgM3VRsjwjCS0VQCRwZEGLENIVWBRDqFS3gJEJsrhBTFkoOQEIkYQRfmIMDVUYBDiHGAKgBQvIVhZT-ssV4qotBxFoFcKAziJBuPwNNDufo6IUjxKk6eOZioOGoaBP03CQitH%2BHcE%2B%2BAi4gmIggBawAEaBIUOLaB7BXzVP8IEYI%2BAXjFIMvgMpjiFDsElgUhKhpFhkJiKgKpCAP6UHYPw%2BqulqlBSohSEGqyaLHHYCo%2BqPTSmUHKUXAeEzY4jKrIs0Z8BPJcAVFSHofQBgLIuXsvpByKkQCETs3SLz%2BlHNEGcr4FzuHX14X0AALDJWZUy9HXNucQb83iXjLnMfVbhPAvBuF3CCQ4ULdH3IfIcZZXMkLbLgESpyJKdGyHxY88luE%2BycAvkilFcBqFfM4jAGQYZcoXM-O0osXT8HwMArma%2B5ZeVZAxbuehDzagjO2aBBV9V0WSBoHQTJIy5g5MVvkoFYy5jkSgISNY956iHHxAATgAGxIrgNSxoABWB1SLvHLm-HaseTqXWeudcuD1jrfUssKfqzQ0A0omr6GaxoFrbX2q9T%2BAk%2BIwWxp9d6xoYL3VxsDYCxZ3DUDAAWGsRKkhkqHBVZi1efDVwOvhS8B1Eic2opDYakEvYFCHANdAfExBO1QGaP6AtMBzmLPylY%2B8YKO2hqgIi5FU8-RspGQZKADI8RrV5Vki5Rd4zRHDPKRU8C4wJi%2BSZL530T1XyHL2YIvQNUXLwJAcikhNKjC5qoNxrRxW6SVUSWydjDHgBwM5FxSSPFrC8QSXavj-ENJCWEpBESXhRMoMyADMQEmuPcUpeqWrKB4h1aBIpAzpn8s6fScivhkzlO6BAP48CT6oHYEIudPRyjV1JPsw5EBpkyzli0kIVxGnMe4UFJC0yRMMsbdXQYAT2OvM42onK%2BJbV6PE%2B2duIyflvKOd3NYqglN%2BonqpygzHf67Ok5p%2BTs9FPKbrhhJC6nnmyd%2BR82eun9OryMyZwwoELPvOOQZeBui1jfnxMx3z2mgtwBC2FpzWmXORei95%2Bq1SgH2146%2BfjigsZrHCxAKeurFmAN0E-HjqtiC1PqUEpphERlFdLalhcctyuLTug08WD1oY-sMFWQeicBxc1TsSbh1xaAgi4MmBURgmAsCOJlUJPK4AjaKmsAAhEtqecxUNAcSe4u6S24AAH4otwDxMDRQfRANYd0ikaAWhJC8CwGAOwq6goNzoN9SsU8HFxPQyBvbvQipHcJHiaBLxzthEu1k3trFcDIDCKmNVMBns43qhu3SNxKApDxI6VkBomSegcTAfsrJPRQxdDsGIu5SwpHOiMjOVByi7mTFgXDYEE3s-hWe3NEA0BVDALmMIDOoCfouWbSgfPcxi5F1%2BlRXP0mKGZPsPE9QVGacV%2Bq2zbEOL7DMp9pLixkGvC4OQLAj8Zp66AA"
+  target="_blank"
+/>
+
+Now it's time to finally add some logic to how our triangles move. This guide assumes some familiarity with [boids](https://en.wikipedia.org/wiki/Boids) but I'll explain some of the concepts as we go along.

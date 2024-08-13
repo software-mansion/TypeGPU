@@ -162,7 +162,7 @@ const computePipelines = [0, 1].map((idx) =>
 );
 
 randomizeTriangles();
-let even = true;
+let even = false;
 onFrame(() => {
   even = !even;
   computePipelines[even ? 0 : 1].execute({
