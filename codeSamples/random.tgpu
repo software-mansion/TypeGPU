@@ -1,0 +1,9 @@
+var<private> seed = vec2f(0., 0.);
+
+@export fn init_seed() {
+  // TODO: Set seed
+}
+
+@export fn rand01(): f32 {
+  return 15.0;
+}

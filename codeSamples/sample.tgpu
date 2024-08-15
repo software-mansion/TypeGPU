@@ -1,0 +1,11 @@
+---
+import { rand01 } from './random.tgpu';
+---
+
+@export fn randomize_grid(grid: mutable<array<f32>>, width: u32, height: u32): u32 {
+  for (var i = 0; i < width; i += 1) {
+    for (var j = 0; j < height; j += 1) {
+      grid[i + j * width] = rand01();
+    }
+  }
+}

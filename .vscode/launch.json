@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--disable-updates",
+        "--disable-workspace-trust",
+        "--profile-temp",
+        "--skip-release-notes",
+        "--skip-welcome",
+        "--extensionDevelopmentPath=${workspaceRoot}/packages/vscode",
+        "--folder-uri=${workspaceRoot}/codeSamples"
+      ],
+      "outFiles": ["${workspaceRoot}/packages/vscode/dist/*.js"]
+    }
+  ]
+}

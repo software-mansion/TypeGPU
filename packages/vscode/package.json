@@ -1,0 +1,48 @@
+{
+  "name": "@typegpu/vscode",
+  "displayName": "TypeGPU",
+  "icon": "./assets/icon.png",
+  "description": "A VS Code extension for TypeGPU.",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.22.0"
+  },
+  "activationEvents": ["onLanguage:typegpu"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "typegpu",
+        "aliases": ["TypeGPU", "typegpu", "tgpu"],
+        "extensions": [".tgpu"],
+        "configuration": "./languages/typegpu-language-configuration.json",
+        "icon": {
+          "light": "./assets/icon.png",
+          "dark": "./assets/icon.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "typegpu",
+        "scopeName": "source.tgpu",
+        "path": "./syntaxes/typegpu-generated.json",
+        "embeddedLanguages": {
+          "source.ts": "typescript"
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "generate-grammar": "npx js-yaml syntaxes/typegpu.yaml > syntaxes/typegpu-generated.json"
+  },
+  "dependencies": {
+    "@types/vscode": "^1.92.0",
+    "@volar/language-server": "^2.3.4",
+    "@typegpu/language-server": "workspace:*",
+    "@volar/vscode": "^2.3.4",
+    "vscode-languageclient": "^9.0.1"
+  }
+}

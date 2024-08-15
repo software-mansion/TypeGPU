@@ -1,0 +1,390 @@
+{
+  "name": "TypeGPU",
+  "scopeName": "source.tgpu",
+  "patterns": [
+    {
+      "include": "#line_comments"
+    },
+    {
+      "include": "#block_comments"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#attributes"
+    },
+    {
+      "include": "#functions"
+    },
+    {
+      "include": "#function_calls"
+    },
+    {
+      "include": "#constants"
+    },
+    {
+      "include": "#types"
+    },
+    {
+      "include": "#variables"
+    },
+    {
+      "include": "#punctuation"
+    }
+  ],
+  "repository": {
+    "line_comments": {
+      "comment": "single line comment",
+      "name": "comment.line.double-slash.tgpu",
+      "match": "\\s*//.*"
+    },
+    "block_comments": {
+      "patterns": [
+        {
+          "comment": "empty block comments",
+          "name": "comment.block.tgpu",
+          "match": "/\\*\\*/"
+        },
+        {
+          "comment": "block documentation comments",
+          "name": "comment.block.documentation.tgpu",
+          "begin": "/\\*\\*",
+          "end": "\\*/",
+          "patterns": [
+            {
+              "include": "#block_comments"
+            }
+          ]
+        },
+        {
+          "comment": "block comments",
+          "name": "comment.block.tgpu",
+          "begin": "/\\*(?!\\*)",
+          "end": "\\*/",
+          "patterns": [
+            {
+              "include": "#block_comments"
+            }
+          ]
+        }
+      ]
+    },
+    "attributes": {
+      "patterns": [
+        {
+          "comment": "attribute declaration",
+          "name": "meta.attribute.tgpu",
+          "match": "(@)([A-Za-z_]+)",
+          "captures": {
+            "1": {
+              "name": "keyword.operator.attribute.at"
+            },
+            "2": {
+              "name": "entity.name.attribute.tgpu"
+            }
+          }
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "comment": "function definition",
+          "name": "meta.function.definition.tgpu",
+          "begin": "\\b(fn)\\s+([A-Za-z0-9_]+)((\\()|(<))",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.other.fn.tgpu"
+            },
+            "2": {
+              "name": "entity.name.function.tgpu"
+            },
+            "4": {
+              "name": "punctuation.brackets.round.tgpu"
+            }
+          },
+          "end": "\\{",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.brackets.curly.tgpu"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#line_comments"
+            },
+            {
+              "include": "#block_comments"
+            },
+            {
+              "include": "#keywords"
+            },
+            {
+              "include": "#attributes"
+            },
+            {
+              "include": "#function_calls"
+            },
+            {
+              "include": "#constants"
+            },
+            {
+              "include": "#types"
+            },
+            {
+              "include": "#variables"
+            },
+            {
+              "include": "#punctuation"
+            }
+          ]
+        }
+      ]
+    },
+    "function_calls": {
+      "patterns": [
+        {
+          "comment": "function/method calls",
+          "name": "meta.function.call.tgpu",
+          "begin": "([A-Za-z0-9_]+)(\\()",
+          "beginCaptures": {
+            "1": {
+              "name": "entity.name.function.tgpu"
+            },
+            "2": {
+              "name": "punctuation.brackets.round.tgpu"
+            }
+          },
+          "end": "\\)",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.brackets.round.tgpu"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#line_comments"
+            },
+            {
+              "include": "#block_comments"
+            },
+            {
+              "include": "#keywords"
+            },
+            {
+              "include": "#attributes"
+            },
+            {
+              "include": "#function_calls"
+            },
+            {
+              "include": "#constants"
+            },
+            {
+              "include": "#types"
+            },
+            {
+              "include": "#variables"
+            },
+            {
+              "include": "#punctuation"
+            }
+          ]
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "comment": "decimal float literal",
+          "name": "constant.numeric.float.tgpu",
+          "match": "(-?\\b[0-9][0-9]*\\.[0-9][0-9]*)([eE][+-]?[0-9]+)?\\b"
+        },
+        {
+          "comment": "int literal",
+          "name": "constant.numeric.decimal.tgpu",
+          "match": "-?\\b0x[0-9a-fA-F]+\\b|\\b0\\b|-?\\b[1-9][0-9]*\\b"
+        },
+        {
+          "comment": "uint literal",
+          "name": "constant.numeric.decimal.tgpu",
+          "match": "\\b0x[0-9a-fA-F]+u\\b|\\b0u\\b|\\b[1-9][0-9]*u\\b"
+        },
+        {
+          "comment": "boolean constant",
+          "name": "constant.language.boolean.tgpu",
+          "match": "\\b(true|false)\\b"
+        }
+      ]
+    },
+    "types": {
+      "comment": "types",
+      "name": "storage.type.tgpu",
+      "patterns": [
+        {
+          "comment": "scalar Types",
+          "name": "storage.type.tgpu",
+          "match": "\\b(bool|i32|u32|f32)\\b"
+        },
+        {
+          "comment": "reserved scalar Types",
+          "name": "storage.type.tgpu",
+          "match": "\\b(i64|u64|f64)\\b"
+        },
+        {
+          "comment": "vector type aliasses",
+          "name": "storage.type.tgpu",
+          "match": "\\b(vec2i|vec3i|vec4i|vec2u|vec3u|vec4u|vec2f|vec3f|vec4f|vec2h|vec3h|vec4h)\\b"
+        },
+        {
+          "comment": "matrix type aliasses",
+          "name": "storage.type.tgpu",
+          "match": "\\b(mat2x2f|mat2x3f|mat2x4f|mat3x2f|mat3x3f|mat3x4f|mat4x2f|mat4x3f|mat4x4f|mat2x2h|mat2x3h|mat2x4h|mat3x2h|mat3x3h|mat3x4h|mat4x2h|mat4x3h|mat4x4h)\\b"
+        },
+        {
+          "comment": "vector/matrix types",
+          "name": "storage.type.tgpu",
+          "match": "\\b(vec[2-4]|mat[2-4]x[2-4])\\b"
+        },
+        {
+          "comment": "atomic types",
+          "name": "storage.type.tgpu",
+          "match": "\\b(atomic)\\b"
+        },
+        {
+          "comment": "array types",
+          "name": "storage.type.tgpu",
+          "match": "\\b(array)\\b"
+        },
+        {
+          "comment": "Custom type",
+          "name": "entity.name.type.tgpu",
+          "match": "\\b([A-Z][A-Za-z0-9]*)\\b"
+        }
+      ]
+    },
+    "variables": {
+      "patterns": [
+        {
+          "comment": "variables",
+          "name": "variable.other.tgpu",
+          "match": "\\b(?<!(?<!\\.)\\.)(?:r#(?!(crate|[Ss]elf|super)))?[a-z0-9_]+\\b"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "comment": "comma",
+          "name": "punctuation.comma.tgpu",
+          "match": ","
+        },
+        {
+          "comment": "curly braces",
+          "name": "punctuation.brackets.curly.tgpu",
+          "match": "[{}]"
+        },
+        {
+          "comment": "parentheses, round brackets",
+          "name": "punctuation.brackets.round.tgpu",
+          "match": "[()]"
+        },
+        {
+          "comment": "semicolon",
+          "name": "punctuation.semi.tgpu",
+          "match": ";"
+        },
+        {
+          "comment": "square brackets",
+          "name": "punctuation.brackets.square.tgpu",
+          "match": "[\\[\\]]"
+        },
+        {
+          "comment": "angle brackets",
+          "name": "punctuation.brackets.angle.tgpu",
+          "match": "(?<![=-])[<>]"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "comment": "other keywords",
+          "name": "keyword.control.tgpu",
+          "match": "\\b(bitcast|block|break|case|continue|continuing|default|discard|else|elseif|enable|fallthrough|for|function|if|loop|private|read|read_write|return|storage|switch|uniform|while|workgroup|write)\\b"
+        },
+        {
+          "comment": "reserved keywords",
+          "name": "keyword.control.tgpu",
+          "match": "\\b(asm|const|do|enum|handle|mat|premerge|regardless|typedef|unless|using|vec|void)\\b"
+        },
+        {
+          "comment": "storage keywords",
+          "name": "keyword.other.tgpu storage.type.tgpu",
+          "match": "\\b(let|var)\\b"
+        },
+        {
+          "comment": "type keyword",
+          "name": "keyword.declaration.type.tgpu storage.type.tgpu",
+          "match": "\\b(type)\\b"
+        },
+        {
+          "comment": "enum keyword",
+          "name": "keyword.declaration.enum.tgpu storage.type.tgpu",
+          "match": "\\b(enum)\\b"
+        },
+        {
+          "comment": "struct keyword",
+          "name": "keyword.declaration.struct.tgpu storage.type.tgpu",
+          "match": "\\b(struct)\\b"
+        },
+        {
+          "comment": "fn",
+          "name": "keyword.other.fn.tgpu",
+          "match": "\\bfn\\b"
+        },
+        {
+          "comment": "logical operators",
+          "name": "keyword.operator.logical.tgpu",
+          "match": "(\\^|\\||\\|\\||&&|<<|>>|!)(?!=)"
+        },
+        {
+          "comment": "logical AND, borrow references",
+          "name": "keyword.operator.borrow.and.tgpu",
+          "match": "&(?![&=])"
+        },
+        {
+          "comment": "assignment operators",
+          "name": "keyword.operator.assignment.tgpu",
+          "match": "(\\+=|-=|\\*=|/=|%=|\\^=|&=|\\|=|<<=|>>=)"
+        },
+        {
+          "comment": "single equal",
+          "name": "keyword.operator.assignment.equal.tgpu",
+          "match": "(?<![<>])=(?!=|>)"
+        },
+        {
+          "comment": "comparison operators",
+          "name": "keyword.operator.comparison.tgpu",
+          "match": "(=(=)?(?!>)|!=|<=|(?<!=)>=)"
+        },
+        {
+          "comment": "math operators",
+          "name": "keyword.operator.math.tgpu",
+          "match": "(([+%]|(\\*(?!\\w)))(?!=))|(-(?!>))|(/(?!/))"
+        },
+        {
+          "comment": "dot access",
+          "name": "keyword.operator.access.dot.tgpu",
+          "match": "\\.(?!\\.)"
+        },
+        {
+          "comment": "dashrocket, skinny arrow",
+          "name": "keyword.operator.arrow.skinny.tgpu",
+          "match": "->"
+        }
+      ]
+    }
+  }
+}
