@@ -8,7 +8,6 @@
 // -- Hooks into the example environment
 import {
   addElement,
-  addParameter,
   addSliderParam,
   onCleanup,
   onFrame,
@@ -551,22 +550,45 @@ function obstaclesToConcrete(): Parsed<BoxObstacle>[] {
   }));
 }
 
-function setObstacleX(idx: number, x: number) {
-  obstacles[idx].x = x;
+const boxXPlum = addSliderParam('box x', 0.5, {
+  min: 0.2,
+  max: 0.8,
+  step: 0.01,
+});
 
-  if (idx === OBSTACLE_BOX || OBSTACLE_LEFT_WALL) {
-    const box = obstacles[OBSTACLE_BOX];
-    const leftWall = obstacles[OBSTACLE_LEFT_WALL];
-    box.x = Math.max(box.x, leftWall.x + leftWall.width / 2 + 0.15);
-  }
+const limitedBoxXPlum = wgsl.plum((get) => {
+  const boxX = get(boxXPlum);
+  const leftWallX = get(leftWallXPlum);
+  const leftWallWidth = obstacles[OBSTACLE_LEFT_WALL].width;
+  return Math.max(boxX, leftWallX + leftWallWidth / 2 + 0.15);
+});
 
+const boxYPlum = addSliderParam('box y', 0.2, {
+  min: 0.2,
+  max: 0.85,
+  step: 0.01,
+});
+
+const leftWallXPlum = addSliderParam('left wall: x', 0, {
+  min: 0,
+  max: 0.6,
+  step: 0.01,
+});
+
+runtime.onPlumChange(limitedBoxXPlum, () => {
+  obstacles[OBSTACLE_BOX].x = runtime.readPlum(limitedBoxXPlum);
   primary.applyMovedObstacles(obstaclesToConcrete());
-}
+});
 
-function setObstacleY(idx: number, y: number) {
-  obstacles[idx].y = y;
+runtime.onPlumChange(boxYPlum, () => {
+  obstacles[OBSTACLE_BOX].y = runtime.readPlum(boxYPlum);
   primary.applyMovedObstacles(obstaclesToConcrete());
-}
+});
+
+runtime.onPlumChange(leftWallXPlum, () => {
+  obstacles[OBSTACLE_LEFT_WALL].x = runtime.readPlum(leftWallXPlum);
+  primary.applyMovedObstacles(obstaclesToConcrete());
+});
 
 function makePipelines(
   inputGridReadonly: WgslBufferUsage<GridData, 'readonly'>,
@@ -746,30 +768,6 @@ onFrame((deltaTime) => {
     msSinceLastTick -= timestep;
   }
 });
-
-addParameter(
-  'box x',
-  { initial: 0.5, min: 0.2, max: 0.8, step: 0.01 },
-  (boxX) => {
-    setObstacleX(0, boxX);
-  },
-);
-
-addParameter(
-  'box y',
-  { initial: 0.2, min: 0.2, max: 0.85, step: 0.01 },
-  (boxY) => {
-    setObstacleY(0, boxY);
-  },
-);
-
-addParameter(
-  'left wall: x',
-  { initial: 0, min: 0, max: 0.6, step: 0.01 },
-  (leftX) => {
-    setObstacleX(1, leftX);
-  },
-);
 
 onCleanup(() => {
   runtime.dispose();
