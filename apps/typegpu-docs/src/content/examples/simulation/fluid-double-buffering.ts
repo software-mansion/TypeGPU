@@ -72,7 +72,7 @@ type GridData = typeof GridData;
  * x - velocity.x
  * y - velocity.y
  * z - density
- * w - solidity (0 - void, 1 - wall) -- not used in the example
+ * w - <unused>
  */
 const GridData = arrayOf(vec4f, MAX_GRID_SIZE ** 2);
 
@@ -183,13 +183,6 @@ const flowFromCell = wgsl.fn`
 `.$name('flow_from_cell');
 
 const timeBuffer = wgsl.buffer(f32).$allowUniform();
-const timeUniform = timeBuffer.asUniform();
-
-const isSolid = wgsl.fn`
-  (cell: vec4f) -> bool {
-    return cell.w > 0.5;
-  }
-`.$name('is_solid');
 
 const isInsideObstacle = wgsl.fn`
   (x: i32, y: i32) -> bool {
@@ -226,11 +219,6 @@ const isValidFlowOut = wgsl.fn`
 
     let cell = ${getCell}(x, y);
 
-    if (${isSolid}(cell)) {
-      // wall
-      return false;
-    }
-
     return true;
   }
 `.$name('is_valid_flow_out');
@@ -239,54 +227,46 @@ const computeVelocity = wgsl.fn`
   (x: i32, y: i32) -> vec2f {
     let gravity_cost = 0.5;
 
-    let cell = ${getCell}(x, y);
-    let n = ${getCell}(x, y + 1);
-    let s = ${getCell}(x, y - 1);
-    let e = ${getCell}(x + 1, y);
-    let w = ${getCell}(x - 1, y);
+    let neighbor_offsets = array<vec2i, 4>(
+      vec2i( 0,  1),
+      vec2i( 0, -1),
+      vec2i( 1,  0),
+      vec2i(-1,  0),
+    );
 
-    var least_cost_dir = vec2f(0., 0.);
+    let cell = ${getCell}(x, y);
     var least_cost = cell.z;
 
-    let n_cost = n.z + gravity_cost;
-    let s_cost = s.z - gravity_cost;
-    let n_valid = ${isValidFlowOut}(x, y + 1);
-    let s_valid = ${isValidFlowOut}(x, y - 1);
-    let e_valid = ${isValidFlowOut}(x + 1, y);
-    let w_valid = ${isValidFlowOut}(x - 1, y);
+    // Direction choices of the same cost, one is chosen
+    // randomly at the end of the process.
+    var dir_choices: array<vec2f, 4>;
+    var dir_choice_count: u32 = 1;
+    dir_choices[0] = vec2f(0., 0.);
 
-    if (e_valid && w_valid && e.z == w.z && e.z < least_cost) {
-      least_cost = e.z; // both are equal, arbitrary choice
+    for (var i = 0; i < 4; i++) {
+      let offset = neighbor_offsets[i];
+      let neighbor_density = ${getCell}(x + offset.x, y + offset.y).z;
+      let cost = neighbor_density + f32(offset.y) * gravity_cost;
+      let is_valid_flow_out = ${isValidFlowOut}(x + offset.x, y + offset.y);
 
-      if (${rand01}() < 0.5) {
-        least_cost_dir = vec2f(1., 0.);
-      }
-      else {
-        least_cost_dir = vec2f(-1., 0.);
-      }
-    }
-    else {
-      if (e_valid && e.z < least_cost) {
-        least_cost_dir = vec2f(1., 0.);
-        least_cost = e.z;
+      if (!is_valid_flow_out) {
+        continue;
       }
 
-      if (w_valid && w.z < least_cost) {
-        least_cost_dir = vec2f(-1., 0.);
-        least_cost = w.z;
+      if (cost == least_cost) {
+        // another valid direction
+        dir_choices[dir_choice_count] = vec2f(f32(offset.x), f32(offset.y));
+        dir_choice_count++;
+      }
+      else if (cost < least_cost) {
+        // new best choice
+        least_cost = cost;
+        dir_choices[0] = vec2f(f32(offset.x), f32(offset.y));
+        dir_choice_count = 1;
       }
     }
 
-    if (s_valid && s_cost < least_cost) {
-      least_cost_dir = vec2f(0., -1.);
-      least_cost = s_cost;
-    }
-
-    if (n_valid && n_cost < least_cost) {
-      least_cost_dir = vec2f(0., 1.);
-      least_cost = n_cost;
-    }
-
+    let least_cost_dir = dir_choices[u32(${rand01}() * f32(dir_choice_count))];
     return least_cost_dir;
   }
 `;
@@ -458,7 +438,7 @@ const mainCompute = wgsl.fn`
   (x: i32, y: i32) {
     let index = ${coordsToIndex('x', 'y')};
 
-    ${setupRandomSeed}(vec2f(f32(index), ${timeUniform}));
+    ${setupRandomSeed}(vec2f(f32(index), ${timeBuffer.asUniform()}));
 
     var next = ${getCell}(x, y);
 
@@ -487,7 +467,6 @@ const mainFragment = wgsl.fn`
     let cell = ${inputGridSlot}[index];
     let velocity = cell.xy;
     let density = max(0., cell.z);
-    let solidity = cell.w;
 
     let obstacle_color = vec4f(0.1, 0.1, 0.1, 1.);
 
@@ -500,7 +479,7 @@ const mainFragment = wgsl.fn`
     let second_threshold = 10.;
     let third_threshold = 20.;
 
-    if (solidity > 0.5 || ${isInsideObstacle}(x, y)) {
+    if (${isInsideObstacle}(x, y)) {
       return obstacle_color;
     }
 
@@ -523,8 +502,6 @@ const mainFragment = wgsl.fn`
 
 const OBSTACLE_BOX = 0;
 const OBSTACLE_LEFT_WALL = 1;
-// const OBSTACLE_RIGHT_WALL = 2;
-// const OBSTACLE_FLOOR = 3;
 
 const obstacles: {
   x: number;
