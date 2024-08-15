@@ -316,10 +316,12 @@ onFrame((deltaTime) => {
   runtime.setPlum(canvasWidthPlum, canvas.width);
   runtime.setPlum(canvasHeightPlum, canvas.height);
 
-  const lastFrame = runtime.readPlum(framePlum);
   const rotationSpeed = runtime.readPlum(rotationSpeedPlum);
 
-  runtime.setPlum(framePlum, lastFrame + (rotationSpeed * deltaTime) / 1000);
+  runtime.setPlum(
+    framePlum,
+    (prev) => prev + (rotationSpeed * deltaTime) / 1000,
+  );
 
   const textureView = context.getCurrentTexture().createView();
 

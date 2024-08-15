@@ -9,6 +9,7 @@
 import {
   addElement,
   addParameter,
+  addSliderParam,
   onCleanup,
   onFrame,
 } from '@typegpu/example-toolkit';
@@ -88,7 +89,6 @@ const gridSizeBuffer = wgsl.buffer(i32).$allowUniform();
 const gridSizeUniform = gridSizeBuffer.asUniform();
 
 const gridAlphaBuffer = wgsl.buffer(GridData).$allowMutable().$allowReadonly();
-
 const gridBetaBuffer = wgsl.buffer(GridData).$allowMutable().$allowReadonly();
 
 const inputGridSlot = wgsl
@@ -413,16 +413,36 @@ const mainMoveObstacles = wgsl.fn`
   }
 `.$name('main_move_obstacles');
 
-const SourceParams = struct({
-  center: vec2f,
-  radius: f32,
-  intensity: f32,
+const sourceIntensityPlum = addSliderParam('source intensity', 0.1, {
+  min: 0,
+  max: 1,
+  step: 0.01,
 });
-const sourceParamsBuffer = wgsl.buffer(SourceParams).$allowUniform();
-const sourceParamsUniform = sourceParamsBuffer.asUniform();
+
+const sourceRadiusPlum = addSliderParam('source radius', 0.01, {
+  min: 0.01,
+  max: 0.1,
+  step: 0.01,
+});
+
+const sourceParamsBuffer = wgsl
+  .buffer(
+    struct({
+      center: vec2f,
+      radius: f32,
+      intensity: f32,
+    }),
+    wgsl.plum((get) => ({
+      center: [0.5, 0.9] as [number, number],
+      intensity: get(sourceIntensityPlum),
+      radius: get(sourceRadiusPlum),
+    })),
+  )
+  .$allowUniform();
+
 const getMinimumInFlow = wgsl.fn`
   (x: i32, y: i32) -> f32 {
-    let source_params = ${sourceParamsUniform};
+    let source_params = ${sourceParamsBuffer.asUniform()};
     let grid_size_f = f32(${gridSizeUniform});
     let source_radius = max(1., source_params.radius * grid_size_f);
     let source_pos = vec2f(source_params.center.x * grid_size_f, source_params.center.y * grid_size_f);
@@ -636,9 +656,7 @@ function makePipelines(
 
   const applyMovedObstacles = (bufferData: Parsed<BoxObstacle>[]) => {
     runtime.writeBuffer(obstaclesBuffer, bufferData);
-    moveObstaclesPipeline.execute({
-      workgroups: [1, 1],
-    });
+    moveObstaclesPipeline.execute();
     runtime.flush();
 
     runtime.writeBuffer(prevObstaclesBuffer, bufferData);
@@ -753,30 +771,6 @@ addParameter(
   },
 );
 
-const sourceParams: Parsed<typeof SourceParams> = {
-  center: [0.5, 0.9],
-  intensity: 1,
-  radius: 0.01,
-};
-
-addParameter(
-  'source intensity',
-  { initial: 0.1, min: 0, max: 1, step: 0.01 },
-  (intensity) => {
-    sourceParams.intensity = intensity;
-    runtime.writeBuffer(sourceParamsBuffer, sourceParams);
-  },
-);
-
-addParameter(
-  'source radius',
-  { initial: 0.01, min: 0.01, max: 0.1, step: 0.01 },
-  (radius) => {
-    sourceParams.radius = radius;
-    runtime.writeBuffer(sourceParamsBuffer, sourceParams);
-  },
-);
-
 onCleanup(() => {
-  // TODO: Cleanup runtime
+  runtime.dispose();
 });
