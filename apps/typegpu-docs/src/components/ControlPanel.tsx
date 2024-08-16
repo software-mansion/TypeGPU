@@ -86,7 +86,8 @@ function DropdownRow({
         onChange={(e) => {
           setValue(e.target.value);
           onChange(e.target.value);
-        }}>
+        }}
+      >
         {options.map((option) => (
           <option key={option} value={option}>
             {option}

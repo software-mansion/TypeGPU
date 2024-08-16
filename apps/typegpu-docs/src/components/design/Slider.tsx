@@ -39,7 +39,8 @@ export function Slider({ min, max, step, initial, onChange }: Props) {
           const rounded = Math.round(value / step) * step;
           setValue(rounded);
         }
-      }}>
+      }}
+    >
       <div
         style={{
           width: `${((value - min) / (max - min)) * 100}%`,

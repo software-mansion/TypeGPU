@@ -37,7 +37,8 @@ export function ExampleLink(props: Props) {
         active
           ? 'bg-clip-text bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark text-transparent'
           : '',
-      )}>
+      )}
+    >
       {children}
 
       {active ? <img src="/assets/selected-dot.svg" alt="" /> : null}
