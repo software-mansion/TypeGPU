@@ -63,9 +63,14 @@ export default defineConfig({
               label: 'Parametrized Functions',
               slug: 'guides/parametrized-functions',
             },
+          ],
+        },
+        {
+          label: 'Tutorials',
+          items: [
             {
-              label: 'Triangle to boids',
-              slug: 'guides/triangle-to-boids',
+              label: 'From Triangle to Boids Simulation',
+              slug: 'tutorials/triangle-to-boids',
             },
           ],
         },
