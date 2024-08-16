@@ -1,5 +1,5 @@
 ---
-title: From Triangle to Boids Simulation: A Tutorial
+title: From Triangle to Boids Simulation
 description: A tutorial that will guide you through the process of creating a simple triangle rendering program and incrementally adding features to create a boids simulation.
 ---
 
@@ -11,6 +11,10 @@ While creating the boids simulation, we will learn about the following TypeGPU c
 - Creating vertex and storage buffers and using them in shaders
 - Creating render and compute pipelines
 - What are slots and how to use them
+
+Along the way there will be some places when you want to follow a different path than the one in the tutorial. Feel free to do so!
+There will be some checkpoints where you can compare your code with the tutorial code and see if it works as expected.
+The checkpoints will also include comparisons with WebGPU code, so you can see how TypeGPU helps you write less boilerplate code.
 
 Let's start off with a simple program that draws a triangle on the screen. First we need to setup the canvas and our runtime.
 This setup will most look very similar in every project which draws to the screen.
