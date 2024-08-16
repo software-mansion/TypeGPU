@@ -113,8 +113,13 @@ export function ExampleView({ example, isPlayground = false }: Props) {
       {snackbarText ? <Snackbar text={snackbarText} /> : null}
 
       <div className="grid gap-4 grid-cols-[1fr_18.75rem] h-full">
-        <div className={cs('grid', codeEditorShowing ? 'grid-rows-2' : '')}>
-          <div className="flex justify-evenly items-center flex-wrap min-h-[50vh]">
+        <div
+          className={cs('grid gap-4', codeEditorShowing ? 'grid-rows-2' : '')}>
+          <div
+            className={cs(
+              'flex justify-evenly items-center flex-wrap overflow-auto h-full',
+              codeEditorShowing ? 'max-h-[calc(50vh-3rem)]' : '',
+            )}>
             {def.elements.map((element) => {
               if (element.type === 'canvas') {
                 return (
@@ -165,7 +170,7 @@ export function ExampleView({ example, isPlayground = false }: Props) {
           </div>
 
           {codeEditorShowing ? (
-            <div className="relative rounded-xl overflow-hidden bg-grayscale-0">
+            <div className="relative rounded-xl h-full bg-grayscale-0 overflow-hidden">
               <div className="absolute inset-0">
                 <CodeEditor code={code} onCodeChange={handleCodeChange} />
               </div>

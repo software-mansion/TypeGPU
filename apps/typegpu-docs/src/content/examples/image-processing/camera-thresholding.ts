@@ -126,7 +126,7 @@ const sampler = device.createSampler({
 
 addParameter(
   'threshold',
-  { initial: 0.4, min: 0, max: 1 },
+  { initial: 0.4, min: 0, max: 1, step: 0.1 },
   (threshold: number) => runtime.writeBuffer(thresholdBuffer, threshold),
 );
 
