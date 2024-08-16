@@ -3,6 +3,15 @@ title: From Triangle to Boids Simulation: A Tutorial
 description: A tutorial that will guide you through the process of creating a simple triangle rendering program and incrementally adding features to create a boids simulation.
 ---
 
+In this tutorial, we will explore the capabilities of TypeGPU by transforming a simple program that draws a triangle on the screen into a boids simulation.
+While creating the boids simulation, we will learn about the following TypeGPU concepts:
+
+- Creating and using a TypeGPU runtime
+- How to write shader code in TypeGPU
+- Creating vertex and storage buffers and using them in shaders
+- Creating render and compute pipelines
+- What are slots and how to use them
+
 Let's start off with a simple program that draws a triangle on the screen. First we need to setup the canvas and our runtime.
 This setup will most look very similar in every project which draws to the screen.
 
@@ -33,7 +42,7 @@ import { LinkCard } from '@astrojs/starlight/components';
 
 <Aside type="tip">
 
-Im creating a canvas by running addElement form our example toolkit but that is not the only way! You can use the standard `document.createElement('canvas')` and append it to the document.
+We're creating a canvas by running the `addElement` function from our example toolkit, but that is not the only way! You can use the standard `document.createElement('canvas')` and append it to the document.
 
 </Aside>
 
