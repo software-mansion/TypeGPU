@@ -3,21 +3,30 @@ title: From Triangle to Boids Simulation
 description: A tutorial that will guide you through the process of creating a simple triangle rendering program and incrementally adding features to create a boids simulation.
 ---
 
-In this tutorial, we will explore the capabilities of TypeGPU by transforming a simple program that draws a triangle on the screen into a boids simulation.
-While creating the boids simulation, we will learn about the following TypeGPU concepts:
+import { Icon } from '@astrojs/starlight/components';
+
+
+<div class="container flex flex-row justify-around content-evenly">
+  <img src="/assets/ttbt-triangle.png" alt="Triangle" class="rounded-lg !size-1/3 !aspect-square !m-0 !p-1"/>
+  <Icon name="right-arrow" color="white" size="5rem" />
+  <img src="/assets/ttbt-boids.png" alt="Triangle" class="rounded-lg !size-1/3 !aspect-square !m-0 !p-1"/>
+</div>
+
+In this tutorial, we will explore the capabilities of TypeGPU by transforming a simple program that draws a triangle on the screen into a boids simulation. While creating the boids simulation, we will learn about the following TypeGPU concepts:
 
 - Creating and using a TypeGPU runtime
-- How to write shader code in TypeGPU
+- Writing shader code in TypeGPU
 - Creating vertex and storage buffers and using them in shaders
 - Creating render and compute pipelines
-- What are slots and how to use them
+- Understanding and using slots
 
-Along the way, there will be some places where you will want to follow a path different from the one in the tutorial. Feel free to do so!
-There will be checkpoints where you can compare your code with the tutorial code and see if it works as expected.
+Along the way, there will be places where you might want to follow a different path from the one in the tutorial.
+Feel free to do so! There will be checkpoints where you can compare your code with the tutorial code and see if it works as expected.
 The checkpoints will also include comparisons with WebGPU code, showing how TypeGPU helps you write less boilerplate code.
 
-Let's start with a simple program that draws a triangle on the screen. First, we need to set up the canvas and our runtime.
-This setup will mostly look very similar in every project which draws something to the screen.
+Let’s start with a simple program that draws a triangle on the screen.
+First, we need to set up the canvas and our runtime.
+This setup will mostly look very similar in every project that draws something to the screen.
 
 ```ts
 // triangle.ts
