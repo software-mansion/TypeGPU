@@ -12,12 +12,12 @@ While creating the boids simulation, we will learn about the following TypeGPU c
 - Creating render and compute pipelines
 - What are slots and how to use them
 
-Along the way there will be some places when you want to follow a different path than the one in the tutorial. Feel free to do so!
-There will be some checkpoints where you can compare your code with the tutorial code and see if it works as expected.
-The checkpoints will also include comparisons with WebGPU code, so you can see how TypeGPU helps you write less boilerplate code.
+Along the way, there will be some places where you will want to follow a path different from the one in the tutorial. Feel free to do so!
+There will be checkpoints where you can compare your code with the tutorial code and see if it works as expected.
+The checkpoints will also include comparisons with WebGPU code, showing how TypeGPU helps you write less boilerplate code.
 
-Let's start off with a simple program that draws a triangle on the screen. First we need to setup the canvas and our runtime.
-This setup will most look very similar in every project which draws to the screen.
+Let's start with a simple program that draws a triangle on the screen. First, we need to set up the canvas and our runtime.
+This setup will mostly look very similar in every project which draws something to the screen.
 
 ```ts
 // triangle.ts
@@ -66,17 +66,18 @@ const vertexCode = wgsl`
     vec2(0.5, -0.5)
   );
 
-  // here we can use builtin.vertexIndex to let TypeGPU
-  // know that we want to use the @builtin(vertexIndex)
+  // we can use builtin.vertexIndex to let TypeGPU
+  // know that we want to access the `vertexIndex` WGSL builtin
   let pos = vec4f(verticies[${builtin.vertexIndex}], 0.0, 1.0);
 `;
 ```
 
-<Aside type="caution" title="Pay attention to how the vertex shader code looks!">
+<Aside type="caution">
+  Pay attention to how the vertex shader code looks.
   There is no function declaration and no return statement! That is by design - TypeGPU will take care of that.
 </Aside>
 
-Since there is no function declaration there is no place for parameters - but don't worry,
+Since there is no function declaration, there is no place for defining parameters - but don't worry,
 every used builtin and vertex shader will be properly added by TypeGPU.
 
 ```ts
@@ -89,16 +90,16 @@ const fragmentCode = wgsl`
 ### Time to create a render pipeline
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-The API for creating a pipeline in TypeGPU is similar to the WebGPU API, but with a few differences.
+The API for creating a pipeline in TypeGPU is similar to the WebGPU API but with a few differences.
 <CardGrid>
   <Card title="Layouts" icon="seti:bicep">
-    There is no need pass a layout. It's automated.
+    There is no need to pass any group layouts. They are all inferred automatically by the library.
   </Card>
   <Card title="Modules" icon="setting">
     The module field in both vertex and fragment objects is replaced with "code" which accepts wgsl code.
   </Card>
   <Card title="Vertex" icon="setting">
-    Apart from the code field, the vertex object has an output field which maps the output of the vertex shader to the next stage.
+    Apart from the code field, the vertex object has an output field, which maps the output of the vertex shader to the next stage.
     It works basically as an "export" from the vertex shader. The variables with matching keys will be packed into a struct and passed to the fragment shader.
   </Card>
   <Card title="Fragment" icon="setting">
@@ -146,8 +147,7 @@ onFrame(() => {
 });
 ```
 <Aside type="danger" title="The code above draws nothing!">
-  The pipeline.execute() method encodes all the necessary
-  commands but they will not be queued until we read from a buffer or call runtime.flush().
+  The `pipeline.execute()` method encodes all the necessary commands, but they will not be queued until we either read from a buffer or call `runtime.flush()`.
 </Aside>
 
 ```diff lang=ts
@@ -167,7 +167,7 @@ onFrame(() => {
 })
 ```
 
-## Now let's have a look at our final program and compare it to WebGPU.
+## Now let's have a look at our program and compare it to WebGPU.
 
 <Tabs>
   <TabItem label="TypeGPU">
@@ -338,16 +338,16 @@ onFrame(() => {
   </TabItem>
 </Tabs>
 
-<Aside>The benefit of using TypeGPU may not be very obvious yet. Sure we lost some lines of code - but is it worth it? Let's keep going!</Aside>
+<Aside>The advantages of using TypeGPU may not be immediately apparent. While we've reduced some lines of code, is it truly worth it? Let's continue and find out!</Aside>
 
 ## Let's add some parametrization!
 
-There is nothing wrong with a simple static triangle, but let's make it a *bit more interesting* by adding some parameters to our shader.
-We will add x and y position buffers and a rotation buffer that will let us move the triangle around! Now isn't that **awesome**?
+A simple static triangle has its charm, but let's add some excitement by incorporating parameters into our shader.
+We'll introduce x and y position buffers, along with a rotation buffer, allowing us to move the triangle around. Isn't that **awesome**?
 
-#### But first let's upgrade our program a little.
+#### But first let's upgrade our program a little
 
-Currently the verices are hardcoded in the shader.
+Currently, the vertices are hardcoded in the shader.
 
 ```wgsl
 var verticies = array<vec2f, 3>(
@@ -359,7 +359,7 @@ var verticies = array<vec2f, 3>(
 let pos = vec4f(verticies[${builtin.vertexIndex}], 0.0, 1.0);
 ```
 
-That is certainly not the best way to do it. Let's create a vertex buffer that stores the coordinates and use it in the shader.
+That's certainly not the best approach. Instead, let's create a vertex buffer to store the coordinates and use that in the shader.
 
 ```ts
 import { vec2f, arrayOf } from 'typegpu/data';
@@ -373,7 +373,7 @@ const triangleVertex = wgsl
   .$allowVertex('vertex');
 ```
 <Aside type="tip">
-You can also pass `'instance'` into the `$allowVertex()` method. This will change the way the values are read.
+You can also pass `'instance'` into the `$allowVertex()` method, which will alter how the values are read.
 </Aside>
 
 Now we can use the buffer in the shader.
@@ -402,7 +402,7 @@ Now we can use the buffer in the shader.
   </TabItem>
 </Tabs>
 
-Great! Now that we have that out of the way, let's add some parameters to our shader. Here is the game plan:
+Great! Now that we have that sorted, let's add some parameters to our shader. Here's the game plan:
 
 import { Steps } from '@astrojs/starlight/components';
 
@@ -472,13 +472,13 @@ import { Steps } from '@astrojs/starlight/components';
    `;
    ```
 
-4. Voilà! You have a movable and rotatable triangle!
+4. Voilà! We now have a movable and rotatable triangle!
 
 </Steps>
 <Aside type="tip">
-Remember that there are many ways to achieve the same result.
-This is just one of them. Having three separate buffers for x, y, and rotation may not be the most efficient way to do it.
-You can experiment with different approaches to find the one that suits your needs best.
+Remember, there are many ways to achieve the same result.
+This is just one method. Having three separate buffers for x, y, and rotation might not be the most efficient approach.
+Feel free to experiment with different methods to find the one that best suits your needs.
 </Aside>
 
 #### Let's compare TypeGPU to WebGPU again:
@@ -798,8 +798,10 @@ You can experiment with different approaches to find the one that suits your nee
 
 ## Let's create some more triangles
 
-Now that we have a single movable triangle, let's create him some friends. But first let's upgrade our program a little.
-At the moment the size of our triangle is defined by the values written to the buffer at its creation. That's ok but let's make it a little more convenient by extracting it to a variable. We should also make it a little smaller so that we can fit more triangles on the screen.
+Now that we have a single movable triangle, let's create some friends for it.
+But first, let's upgrade our program a bit. Currently, the size of our triangle is defined by the values written to the buffer during its creation.
+While this is acceptable, let's make it more convenient by extracting the size into a variable.
+Additionally, we should make the triangle slightly smaller to fit more on the screen.
 
 <Tabs>
   <TabItem label='Before'>
@@ -827,8 +829,11 @@ At the moment the size of our triangle is defined by the values written to the b
   </TabItem>
 </Tabs>
 
-As for the triangles, we will need to create a buffer containing the positions and rotations of each triangle. We will also need to update the vertex shader to use these values. There are two different approaches - each with its own pros and cons. We can either create another vertex
-buffer (this time using the 'instance' version) or we can use a uniform/storage buffer. Let's explore both options.
+Regarding the triangles, we'll need to create a buffer containing the positions and rotations of each one.
+We'll also need to update the vertex shader to utilize these values.
+There are two different approaches, each with its own pros and cons.
+We can either create another vertex buffer (this time using the 'instance' version) or use a uniform/storage buffer.
+Let's explore both options.
 
 <Tabs>
   <TabItem label='Instance vertex buffer'>
@@ -839,7 +844,8 @@ buffer (this time using the 'instance' version) or we can use a uniform/storage 
     .$allowVertex('instance');
   ```
 
-  One potential downside of this approach is that the data type of the buffer is limited to scalar types. This means that our data type can't be a struct, which could possibly make our code less readable.
+  One potential downside of this approach is that the data type of the buffer is limited to scalar types.
+  This means that our data type can't be a struct, which could potentially make our code less readable.
 
   ```diff lang=ts
   const vertexCode =  wgsl`
@@ -862,11 +868,12 @@ buffer (this time using the 'instance' version) or we can use a uniform/storage 
   `;
   ```
   <Aside type='tip'>
-    In the above code we extracted `trianglePos` to a `instanceInfo` variable. This is not necessary as each call to `trianglePos.asVertex()` will return the same value. `${trianglePos.asVertex()}[x]` is equivalent to `instanceInfo[x]` in this case.
+    In the above code, we extracted `trianglePos` to an `instanceInfo` variable. This step is unnecessary because each call to `trianglePos.asVertex()` returns the same value. Therefore, `${trianglePos.asVertex()}[x]` is equivalent to `instanceInfo[x]` in this context.
   </Aside>
-  As we are using a vertex buffer, we don't need to index into the buffer data in the vertex shader. One downside of this approach is that
-  we need to know which variable is at which index in the vector. This can be a little confusing and less readable than using a struct.
-  Lastly, we need to provide our render pipeline with the number of instances we want to render.
+  Since we are using a vertex buffer, we don't need to index into the buffer data within the vertex shader.
+  One downside of this approach is that we must keep track of which variable is at which index in the vector.
+  This can be somewhat confusing and less readable compared to using a struct.
+  Additionally, we need to specify the number of instances we want to render to our render pipeline.
 
   ```diff lang=ts
   onFrame(() => {
@@ -903,9 +910,9 @@ buffer (this time using the 'instance' version) or we can use a uniform/storage 
     )
     .$allowReadonlyStorage();
   ```
-  This time we are using a buffer of structs. This makes our code a little more readable as we can access the data using the struct fields.
-  We are using a readonly storage buffer as the current alignement of the data in the buffer is 12 bytes. This is not a multiple of 16 bytes which is required for a uniform buffer. We could also pad the struct to make it 16 bytes but let's stick to readonly storage for now.
-
+  This time, we are using a buffer of structs, making our code more readable as we can access the data using the struct fields.
+  We are using a readonly storage buffer because the current alignment of the data in the buffer is 12 bytes, which is not a multiple of 16 bytes — a requirement for a uniform buffer.
+  While we could pad the struct to make it 16 bytes, let's stick to using readonly storage for now.
   ```diff lang=ts
   const vertexCode =  wgsl`
 +  let instanceInfo = ${trianglePos.asReadOnlyStorage()}[${builtin.instanceIndex}];
@@ -926,8 +933,7 @@ buffer (this time using the 'instance' version) or we can use a uniform/storage 
     let pos = vec4f(rotated + offset, 0.0, 1.0);
   `;
   ```
-  In the vertex shader we need to index into the buffer data using the `builtin.instanceIndex` variable. This variable will contain the index of the current instance being rendered. This step was not necessary when using a vertex buffer as the data was already indexed for us. Lastly, we need to provide our render pipeline with the number of instances we want to render (just like in the other approach).
-
+  In the vertex shader, we need to index into the buffer data using the `builtin.instanceIndex` variable, which contains the index of the current instance being rendered. This step was unnecessary when using a vertex buffer, as the data was already indexed for us. Lastly, we need to specify the number of instances we want to render to our render pipeline, just as we did with the previous approach.
   ```diff lang=ts
   onFrame(() => {
     pipeline.execute({
@@ -950,9 +956,9 @@ buffer (this time using the 'instance' version) or we can use a uniform/storage 
   </TabItem>
 </Tabs>
 
-In the rest of this guide we will assume the use of the storage buffer approach. If you prefer the vertex buffer approach, you can try to adapt the code to use that instead.
+For the remainder of this tutorial, we will assume the use of the storage buffer approach. If you prefer the vertex buffer approach, feel free to adapt the code accordingly.
 #### Initializing the buffer
-Since we have no initial values for the buffer, we will create a helper function that fills the buffer with random values.
+Since we don't have initial values for the buffer, we'll create a helper function that populates the buffer with random values.
 
 ```ts
 function randomizeTriangles() {
@@ -967,7 +973,7 @@ function randomizeTriangles() {
 }
 ```
 <Aside type='tip'>
-  If you went with the vertex buffer approach, remember to have the correct data type when writing to the buffer. The writeBuffer function will hint at the correct data type for you.
+  If you chose the vertex buffer approach, ensure you use the correct data type when writing to the buffer. The `writeBuffer` function will provide hints about the appropriate data type.
 </Aside>
 
 We will call this function before the first frame is rendered to ensure that the buffer is initialized with random values. Let's also add a button that will call this function when clicked.
@@ -996,7 +1002,7 @@ onFrame(() => {
 });
 ```
 
-Since they are no longer used, we can remove the parameters we used to position the triangle.
+Since they are no longer used, we can remove the parameters that were used to position the triangle.
 
 ```diff lang=ts
 -const params = {
@@ -1028,7 +1034,9 @@ Since they are no longer used, we can remove the parameters we used to position 
   target="_blank"
 />
 
-Great! But now we have a little problem. When we had just one triangle, we could easily see the triangles. But now, with multiple triangles, it's hard to see the individual triangles. Let's add a gradient color to each triangle to make them more distinguishable.
+Great! But now we have a little problem. When we had just one triangle, we could easily see it.
+But now, with multiple triangles, it's hard to distinguish the individual shapes.
+Let's add a gradient color to each triangle to make them more distinguishable.
 
 <Steps>
 
@@ -1060,7 +1068,8 @@ Great! But now we have a little problem. When we had just one triangle, we could
    +  let fragUV = (rotated + vec2f(${triangleSize}, ${triangleSize})) / vec2f(${triangleSize} * 2.0);
    `;
    ```
-   To calculate the UV coordinates, first we add a vector of the triangle size to the rotated postion to get rid of the negative values. Then we divide the result by the size of the triangle multiplied by 2 to get the UV coordinates.
+   To calculate the UV coordinates, first add a vector of the triangle size to the rotated position to eliminate negative values.
+   Then, divide the result by twice the triangle size to obtain the UV coordinates.
 
 3. Update the fragment shader:
 
@@ -1077,14 +1086,15 @@ Great! But now we have a little problem. When we had just one triangle, we could
    `;
    ```
    <Aside>
-    Notice that we can just use `fragUV` directly in the fragment shader. This is because the `fragUV` value was present in the vertex shader output. TypeGPU will automatically pass this value to the fragment shader.
+    Note that we can use fragUV directly in the fragment shader. This is because the `fragUV` value was present in the vertex shader output. TypeGPU will automatically pass this value to the fragment shader.
    </Aside>
-   First, we define two colors. Then we calculate the distance from the center of the triangle to the current fragment. We use this distance to mix the two colors. The closer the fragment is to the center, the closer the color will be to `color1`. The further the fragment is from the center, the closer the color will be to `color2`. This way we get a nice radial gradient.
-
+   First, we define two colors. Then, we calculate the distance from the center of the triangle to the current fragment.
+   We use this distance to blend the two colors. The closer the fragment is to the center, the closer the color will be to color1.
+   The further the fragment is from the center, the closer the color will be to color2. This way, we achieve a nice radial gradient.
 </Steps>
 
 <Aside type="tip">
-  The proposed solution is totally arbitrary. Feel free to experiment with different ways to color your triangles!
+  The proposed solution is completely arbitrary. Feel free to experiment with different ways to color your triangles!
 </Aside>
 
 <Tabs>
@@ -1416,8 +1426,8 @@ Great! But now we have a little problem. When we had just one triangle, we could
 
 ## Incorporating a compute shader to move the triangles
 
-Now that we have a basic triangle rendering, we can start to incorporate a compute shader to move the triangles.
-For now we will just try to apply some simple movement to the triangles.
+Now that we have basic triangle rendering, we can start incorporating a compute shader to move the triangles.
+For now, we will apply some simple movement to the triangles.
 
 Let's create the compute shader:
 
@@ -1445,7 +1455,8 @@ const computePipeline = runtime.makeComputePipeline({
 ```
 
 <Aside type="danger" title="Remember to add proper permissions!">
-  The code above will not compile because `trianglePos.asMutableStorage()` returns null. That is because we need to add the proper permissions to the buffer.
+  The code above will not compile because trianglePos.asMutableStorage() returns null.
+  This happens because we need to add the proper permissions to the buffer.
   ```diff lang=ts
   const triangleAmount = 10;
   const trianglePos = wgsl
@@ -1464,7 +1475,8 @@ const computePipeline = runtime.makeComputePipeline({
   ```
 </Aside>
 
-If you do not specify the workgroup size, the default is 1, 1, 1. To specify the workgroup size, you can use the `workgroupSize` property in the `makeComputePipeline` function.
+If you do not specify the workgroup size, the default is `[1, 1, 1]`.
+To define the workgroup size, you can use the workgroupSize property in the makeComputePipeline function.
 
 ```diff lang=ts
 const computePipeline = runtime.makeComputePipeline({
@@ -1475,7 +1487,7 @@ const computePipeline = runtime.makeComputePipeline({
 });
 ```
 
-Now all we need to do is execute the compute pipeline before rendering the triangles.
+Now, all we need to do is execute the compute pipeline before rendering the triangles.
 
 ```diff lang=ts
 randomizeTriangles();
@@ -1913,24 +1925,26 @@ onFrame(() => {
 ## Adding the boids logic
 
 Now that we have the basic structure of our program, we can start thinking about the logic that will make our triangles behave like boids.
-First, we need to think about how we read/write to our buffer. The current implementation only reads and writes to a single element
-in the buffer so there is no need to worry about race conditions. However, if we want to implement boids logic, we will need to
-read from multiple elements in the buffer to calculate the new position of each boid. Now this sounds like a race condition waiting to happen.
-To avoid this, we can take multiple approaches. We will opt for the simplest one, which is to create two buffers, one for reading and one for writing.
+First, we need to consider how we read and write to our buffer.
+The current implementation only reads and writes to a single element in the buffer, so there is no need to worry about race conditions.
+However, to implement boids logic, we need to read from multiple elements in the buffer to calculate the new position of each boid.
+This situation seems prone to race conditions. To avoid this, we can take multiple approaches.
+We'll opt for the simplest one, which is to create two buffers: one for reading and one for writing.
 
 <Aside type="tip">
-  In this particular case, we could also use a single buffer but use atomic operations to read and write to it.
-  However, this would make our simulation nondeterminisric! There would be no way to guarantee that the order of the operations is the same every time.
+  In this particular case, we could also use a single buffer but employ atomic operations to read and write to it.
+  However, this would make our simulation nondeterministic, as there would be no way to guarantee that the order of operations is the same every time.
 </Aside>
 
-Just before we jump into the boids logic, let's get familiar with the concept of slots. A slot in TypeGPU is similar to a template.
-We can define typed slots and use them in our wgsl code as their underlying type. As an exercise, let's use a slot to make our triangles rotation invertible.
+Before we jump into the boids logic, let's get familiar with the concept of slots.
+A slot in TypeGPU is similar to a template. We can define typed slots and use them in our WGSL code as their underlying type.
+As an exercise, let's use a slot to make our triangle rotations invertible.
 
 ```ts
 const rotationDirection = wgsl.slot<number>();
 ```
 
-Now that we have our slot we can use it in our wgsl code.
+Now that we have our slot, we can use it in our WGSL code.
 
 ```diff lang=ts
 const computeCode = wgsl`
@@ -1955,10 +1969,10 @@ const computeCode = wgsl`
 ```
 
 <Aside type="caution">
-  Now that we have some code that uses a slot, we need to make sure that the slot is bound to a value before we create the compute pipeline.
+  Now that we have code that uses a slot, we need to ensure the slot is bound to a value before creating the compute pipeline.
 </Aside>
 
-Let's create two compute pipelines, one inverted and one not inverted.
+Let's create two compute pipelines: one inverted and one not inverted.
 
 ```ts
 const computePipelines = [-1, 1].map((direction) =>
@@ -1985,7 +1999,7 @@ const computePipelines = [-1, 1].map((direction) =>
 );
 ```
 
-To check if our brand new pipelines work, we will create a toggle that switches between them.
+To check if our new pipelines work, we will create a toggle to switch between them.
 
 ```ts
 let invertRotation = false;
@@ -2032,7 +2046,8 @@ onFrame(() => {
   target="_blank"
 />
 
-Now that we know how slots work, let's use them to implement our double buffer mechanic. We will replace the rotation direction slot with two slots, one for reading the buffer and one for writing to it.
+Now that we understand how slots work, let's use them to implement our double-buffer mechanic.
+We will replace the rotation direction slot with two slots: one for reading from the buffer and one for writing to it.
 
 ```ts
 const readSlot =
@@ -2083,7 +2098,7 @@ const writeSlot =
   ```
 </Aside>
 
-Now that we have our data type extracted, we can also shorten the buffer definition. While we're at it, let's also make two of them.
+Now that we have our data type extracted, we can also shorten the buffer definition. While we're at it, let's create two of them.
 
 ```diff lang=ts
 -const trianglePos = wgsl
@@ -2108,9 +2123,9 @@ Now that we have our data type extracted, we can also shorten the buffer definit
 +});
 ```
 
-#### Great! Now that we have our buffers set up, we can adapt our pipelines to properly use them.
+#### Great! Now that we have our buffers set up, we can adapt our pipelines to use them properly.
 <Aside>
-I will make a convinience object to hold the buffer pairs, but you can skip this step and easily adapt the code to use the buffers directly.
+We will create a convenience object to hold the buffer pairs, but you can skip this step and easily adapt the code to use the buffers directly if you prefer.
 
 ```ts
 const pairs = [
@@ -2129,7 +2144,7 @@ const pairs = [
 ```
 </Aside>
 
-We will adapt the pipelines using slots just like we did when adding the rotation direction slot.
+We will adapt the pipelines using slots, just as we did when adding the rotation direction slot.
 
 ```diff lang=ts
 -const computePipeline = runtime.makeComputePipeline({
@@ -2179,7 +2194,7 @@ const renderPipelines = [0, 1].map((idx) =>
 );
 ```
 
-Finally, all that's left to do is to add some logic to switch between the pipelines. And adapt our initialization code to write the init
+Finally, all that's left to do is add some logic to switch between the pipelines and adapt our initialization code to write the initial values.
 
 ```diff lang=ts
 randomizeTriangles();
@@ -2209,11 +2224,13 @@ onFrame(() => {
 ```
 
 <Aside type="tip">
-  You probably noticed that we are calling `renderPipelines` in reverse order to the `computePipelines`. This is because we want to display the buffer that was just written to.
-  The code works just fine if you don't switch the order, but you will not see the most recent updates.
+  You probably noticed that we are calling renderPipelines in the reverse order of computePipelines.
+  This is because we want to display the buffer that was just written to.
+  The code will still work if you don't switch the order, but you will not see the most recent updates.
 </Aside>
 
-We will write the randomized positions to both buffers. This is beacuse when we call the function there is no guarantee which buffer is used as the source and which as the destination.
+We will write the randomized positions to both buffers.
+This is because, when we call the function, there is no guarantee which buffer is used as the source and which as the destination.
 
 ```diff lang=ts
 function randomizeTriangles() {
@@ -2239,8 +2256,7 @@ You can test it in the playground!
   target="_blank"
 />
 
-Now it's time to finally add some logic to how our triangles move. This guide assumes some familiarity with [boids](https://en.wikipedia.org/wiki/Boids) but I'll explain some of the concepts as we go along.
-First, let's adapt our triangle information struct to include velocity, not just position.
+Now it's time to finally add some logic to how our triangles move. This guide assumes some familiarity with [boids](https://en.wikipedia.org/wiki/Boids), but some of the concepts will be explained as we go along. First, let's adapt our triangle information struct to include velocity in addition to position.
 
 ```diff lang=ts
 const trianglePosData = arrayOf(
@@ -2256,12 +2272,12 @@ const trianglePosData = arrayOf(
 ```
 <Aside>
   We can remove the rotation field since the triangles will infer their rotation from their velocity.
-  This will also make our struct have 16 byte alignment, which will allow us to use it as a uniform buffer.
-  All the calls to `.allowReadonlyStorage()` and `.asReadonlyStorage()` will be replaced with `.allowUniform()` and `.asUniform()`.
-  This will make the memory faster but will limit us to 4096 triangles. You don't need to change that as ReadonlyStorage will work just fine.
+  This change will also align our struct to 16 bytes, allowing us to use it as a uniform buffer.
+  All calls to .allowReadonlyStorage() and .asReadonlyStorage() will be replaced with .allowUniform() and .asUniform().
+  This adjustment will improve memory speed but will limit us to 4096 triangles. You don't need to make this change, as ReadonlyStorage will work just fine.
 </Aside>
 
-Let's also create a helper function that will calculate triangle rotation based on its velocity.
+Let's also create a helper function to calculate a triangle's rotation based on its velocity.
 
 ```ts
 const getRotationFromVelocity = wgsl.fn`(velocity: vec2f) -> f32 {
@@ -2322,7 +2338,7 @@ Now we need to update our compute shader to account for the changes in the trian
 ```
 
 <Aside type="caution">
-  Now that our triangles will move in less predictable ways, we need to add some more clipping logic.
+  Now that our triangles will move in less predictable ways, we need to add additional clipping logic.
   ```diff lang=ts
   +  if (instanceInfo.position[0] < -1.0 - triangleSize) {
   +    instanceInfo.position[0] = 1.0 + triangleSize;
@@ -2333,7 +2349,7 @@ Now we need to update our compute shader to account for the changes in the trian
   ```
 </Aside>
 
-The last step of our mini-rework is to update the initialization of the triangles to include velocity.
+The final step of our mini-rework is to update the initialization of the triangles to include velocity.
 
 ```diff lang=ts
   function randomizeTriangles() {
@@ -2367,14 +2383,13 @@ The last step of our mini-rework is to update the initialization of the triangle
   target="_blank"
 />
 
-Well, that was a lot of changes! But now all that's left to do is to manipulate the velocity of our triangles in a way that they move in a flocking-like behavior.
-Boids work by following three simple rules:
+Well, that was a lot of changes! Now, all that's left to do is to manipulate the velocity of our triangles so they move in a flocking-like behavior. Boids work by following three simple rules:
 
 - Separation: Boids will try to avoid each other by steering away from their neighbors.
 - Alignment: Boids will try to align their velocity with their neighbors.
 - Cohesion: Boids will try to move towards the center of mass of their neighbors.
 
-Let's prepare a buffer that will store the parameters for each of these rules:
+Let's prepare a buffer that will store the parameters for each of these rules.
 
 ```ts
 const parametesBuffer = wgsl
@@ -2399,9 +2414,9 @@ const parametesBuffer = wgsl
   .$allowReadonlyStorage();
 ```
 
-Now for the implementation of the rules:
+Now, for the implementation of the rules:
 <Aside type="caution">
-  The following snippets are just the logic for the rules. They are separated for better readability. Later we will combine them into a single code block and add them to the shader.
+  The following snippets contain the logic for the rules. They are separated for better readability. Later, we will combine them into a single code block and add them to the shader.
 </Aside>
 
 <Steps>
@@ -2456,8 +2471,9 @@ Now for the implementation of the rules:
     instanceInfo.velocity += alignment * params.alignmentStrength;
    `;
    ```
-    Alignment is implemented in a similar way to separation. We create a vector to store the combined alignment forces, which are just the velocities of the other triangles.
-    This time, we also keep track of the number of triangles that are within the alignment distance. This is used to normalize the alignment vector.
+   Alignment is implemented similarly to separation.
+   We create a vector to store the combined alignment forces, which are just the velocities of the other triangles.
+   This time, we also keep track of the number of triangles within the alignment distance. This count is used to normalize the alignment vector.
 
 3. Add the logic for cohesion:
 
@@ -2485,7 +2501,8 @@ Now for the implementation of the rules:
     instanceInfo.velocity += cohesion * params.cohesionStrength;
    `;
    ```
-    Cohesion basically reduces to calculating the center of mass of the other triangles and moving towards it. After calculating the sum of the positions of the other triangles within the cohesion distance, we normalize the vector and subtract the current position to get the direction to move towards.
+   Cohesion essentially involves calculating the center of mass of the other triangles and moving towards it.
+   After summing the positions of the triangles within the cohesion distance, we normalize the vector and subtract the current position to determine the direction to move towards.
 
 4. Combine the rules into a single code block and normalize the velocity of the triangles:
 
@@ -2532,10 +2549,10 @@ Now for the implementation of the rules:
 </Steps>
 
 <Aside type="tip">
-  The boids logic is the most subjective part of the implementation. Feel free to experiment with the parameters and the rules to get different flocking behaviors.
+  The boids logic is the most subjective part of the implementation. Feel free to experiment with the parameters and rules to achieve different flocking behaviors.
 </Aside>
 
-To properly see the flocking behavior, we will increase the number of triangles to 500 and reduce their size:
+To properly observe the flocking behavior, we will increase the number of triangles to 500 and reduce their size:
 
 ```ts
 const triangleSize = 0.04;
@@ -2550,7 +2567,7 @@ const triangleVertex = wgsl
 const triangleAmount = 500;
 ```
 
-Thats it! You have implemented the boids flocking algorithm in WebGPU. Let's see how our code looks and compare it to WebGPU:
+That's it! We've implemented the boids flocking algorithm in WebGPU. Let's see how our code looks and compare it to WebGPU:
 
 <Tabs>
   <TabItem label="TypeGPU">
