@@ -1,6 +1,7 @@
 {
   "name": "typegpu",
-  "version": "0.0.0-alpha.2",
+  "private": true,
+  "version": "0.0.0-alpha.4",
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "license": "MIT",
   "type": "module",
@@ -39,13 +40,13 @@
       "default": "./dist/web/index.cjs"
     }
   },
-  "files": ["dist", "README.md"],
   "sideEffects": false,
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit && pnpm tsc --p ./tsconfig.test.json --noEmit",
-    "prepublishOnly": "tsx scripts/prepublish.ts"
+    "publish": "echo \"Use pnpm prepare-package instead!\" && exit 1",
+    "prepare-package": "tsx scripts/preparePackage.ts"
   },
   "engines": {
     "node": ">=12.20.0"
@@ -67,10 +68,11 @@
   "bugs": {
     "url": "https://github.com/software-mansion/typegpu/issues"
   },
-  "homepage": "https://github.com/software-mansion/typegpu",
+  "homepage": "https://docs.swmansion.com/typegpu",
   "devDependencies": {
     "@typegpu/wgsl-parser": "workspace:*",
     "@webgpu/types": "^0.1.43",
+    "remeda": "^2.3.0",
     "tsup": "^8.0.2",
     "tsx": "^4.16.2",
     "typed-binary": "^4.0.0",
