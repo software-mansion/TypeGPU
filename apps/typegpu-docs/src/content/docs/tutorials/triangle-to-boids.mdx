@@ -136,7 +136,7 @@ const pipeline = runtime.makeRenderPipeline({
 })
 ```
 
-Now all we need to do is execute the pipeline! To execute it we need to pass GPURenderPassDescriptor along with the vertexCount.
+Now all we need to do is execute the pipeline. To do so, we need to pass `GPURenderPassDescriptor` along with the `vertexCount`.
 
 ```ts
 import { onFrame } from '@typegpu/example-toolkit';
@@ -176,12 +176,12 @@ onFrame(() => {
 })
 ```
 
-## Now let's have a look at our program and compare it to WebGPU.
+## Now let's have a look at our program and compare it to WebGPU
 
 <Tabs>
   <TabItem label="TypeGPU">
   <details>
-  <summary>See code</summary>
+  <summary>Show code</summary>
     ```ts
     import { wgsl, createRuntime, builtin } from 'typegpu'
     import { addElement, onFrame } from '@typegpu/example-toolkit';
@@ -252,14 +252,14 @@ onFrame(() => {
   </TabItem>
   <TabItem label="WebGPU">
   <details>
-  <summary>See code</summary>
+  <summary>Show code</summary>
     ```ts
     import { addElement, onFrame } from '@typegpu/example-toolkit';
 
     const adapter = await navigator.gpu?.requestAdapter();
     const device = await adapter?.requestDevice();
 
-    if(!device) {
+    if (!device) {
       throw new Error('Failed to acquire a device')
     }
 
@@ -349,12 +349,12 @@ onFrame(() => {
 
 <Aside>The advantages of using TypeGPU may not be immediately apparent. While we've reduced some lines of code, is it truly worth it? Let's continue and find out!</Aside>
 
-## Let's add some parametrization!
+## Let's add some parametrization
 
 A simple static triangle has its charm, but let's add some excitement by incorporating parameters into our shader.
 We'll introduce x and y position buffers, along with a rotation buffer, allowing us to move the triangle around. Isn't that **awesome**?
 
-#### But first let's upgrade our program a little
+### But first, let's upgrade our program a little
 
 Currently, the vertices are hardcoded in the shader.
 
@@ -481,7 +481,7 @@ import { Steps } from '@astrojs/starlight/components';
    `;
    ```
 
-4. Voilà! We now have a movable and rotatable triangle!
+4. Voilà! We now have a movable and rotatable triangle.
 
 </Steps>
 <Aside type="tip">
@@ -490,7 +490,7 @@ This is just one method. Having three separate buffers for x, y, and rotation mi
 Feel free to experiment with different methods to find the one that best suits your needs.
 </Aside>
 
-#### Let's compare TypeGPU to WebGPU again:
+### Let's compare TypeGPU to WebGPU again:
 
 <Tabs>
   <TabItem label="TypeGPU">
@@ -903,7 +903,7 @@ Let's explore both options.
   });
   ```
   </TabItem>
-  <TabItem label='Uniform buffer'>
+  <TabItem label='Storage buffer'>
   ```ts
   const triangleAmount = 10;
   const trianglePos = wgsl
@@ -966,8 +966,8 @@ Let's explore both options.
 </Tabs>
 
 For the remainder of this tutorial, we will assume the use of the storage buffer approach. If you prefer the vertex buffer approach, feel free to adapt the code accordingly.
-#### Initializing the buffer
-Since we don't have initial values for the buffer, we'll create a helper function that populates the buffer with random values.
+### Initializing the buffer
+Since we don't have initial values for the buffer, we'll create a helper function that populates it with random values.
 
 ```ts
 function randomizeTriangles() {
@@ -1447,6 +1447,7 @@ const computePipeline = runtime.makeComputePipeline({
     var instanceInfo = ${trianglePos.asMutableStorage()}[index];
     let triangleSize = ${triangleSize};
 
+// wrapping the 2d space around the edges
     if (instanceInfo.x > 1.0 + triangleSize) {
       instanceInfo.x = -1.0 - triangleSize;
     }
@@ -1485,7 +1486,7 @@ const computePipeline = runtime.makeComputePipeline({
 </Aside>
 
 If you do not specify the workgroup size, the default is `[1, 1, 1]`.
-To define the workgroup size, you can use the workgroupSize property in the makeComputePipeline function.
+To define it, you can use the `workgroupSize` property in the `makeComputePipeline` function.
 
 ```diff lang=ts
 const computePipeline = runtime.makeComputePipeline({
@@ -1941,7 +1942,7 @@ This situation seems prone to race conditions. To avoid this, we can take multip
 We'll opt for the simplest one, which is to create two buffers: one for reading and one for writing.
 
 <Aside type="tip">
-  In this particular case, we could also use a single buffer but employ atomic operations to read and write to it.
+  In this particular case, we could also use a single buffer and employ atomic operations to read and write to it.
   However, this would make our simulation nondeterministic, as there would be no way to guarantee that the order of operations is the same every time.
 </Aside>
 
@@ -2086,7 +2087,7 @@ const writeSlot =
     >
   >();
 ```
-<Aside type="caution" title="Well, that's not very readable!">
+<Aside type="caution" title="Well, that's not very readable">
   To make the code more readable and concise, we can use a type alias for the buffer data type.
   ```ts
   const triangleAmount = 10;
@@ -2132,7 +2133,7 @@ Now that we have our data type extracted, we can also shorten the buffer definit
 +});
 ```
 
-#### Great! Now that we have our buffers set up, we can adapt our pipelines to use them properly.
+### Great! Now that we have our buffers set up, we can adapt our pipelines to use them properly.
 <Aside>
 We will create a convenience object to hold the buffer pairs, but you can skip this step and easily adapt the code to use the buffers directly if you prefer.
 
@@ -2233,7 +2234,7 @@ onFrame(() => {
 ```
 
 <Aside type="tip">
-  You probably noticed that we are calling renderPipelines in the reverse order of computePipelines.
+  You probably noticed that we are calling `renderPipelines` in the reverse order of `computePipelines`.
   This is because we want to display the buffer that was just written to.
   The code will still work if you don't switch the order, but you will not see the most recent updates.
 </Aside>
@@ -2282,8 +2283,8 @@ const trianglePosData = arrayOf(
 <Aside>
   We can remove the rotation field since the triangles will infer their rotation from their velocity.
   This change will also align our struct to 16 bytes, allowing us to use it as a uniform buffer.
-  All calls to .allowReadonlyStorage() and .asReadonlyStorage() will be replaced with .allowUniform() and .asUniform().
-  This adjustment will improve memory speed but will limit us to 4096 triangles. You don't need to make this change, as ReadonlyStorage will work just fine.
+  All calls to `allowReadonlyStorage` and `asReadonlyStorage` will be replaced with `allowUniform` and `asUniform`.
+  This adjustment will improve memory speed but will limit us to 4096 triangles. You don't need to make this change, as readonly storage will work just fine.
 </Aside>
 
 Let's also create a helper function to calculate a triangle's rotation based on its velocity.
@@ -3173,4 +3174,4 @@ That's it! We've implemented the boids flocking algorithm in WebGPU. Let's see h
 </Tabs>
 
 Congratulations! You've successfully implemented the boids flocking algorithm in WebGPU using TypeGPU.
-Along the way, you learned about creating and using a TypeGPU runtime, writing shader code, managing buffers, creating pipelines, and using slots. This tutorial showed how TypeGPU can reduce boilerplate code compared to WebGPU. For more information, refer to the TypeGPU documentation. Thank you for following along, and happy coding!
+Along the way, you learned about creating and using a TypeGPU runtime, writing shader code, managing buffers, creating pipelines, and using slots. For more information, refer to the TypeGPU documentation. Thank you for following along and happy coding!
