@@ -5,7 +5,7 @@ const content = await Astro.slots.render('default');
 
 <article class:list={["flex flex-col gap-8 justify-between lg:h-[30rem] md:p-10 lg:p-14 p-6 bg-grayscale-0 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-[2rem] border-2 border-special-stroke", className]}>
   <div class="self-start p-3 border-2 border-special-stroke lg:rounded-3xl md:rounded-2xl rounded-xl">
-    <img class="w-8 md:w-12" src={`/assets/${image}.svg`} alt="" />
+    <img class="w-8 md:w-12" src={`/typegpu/assets/${image}.svg`} alt={image} />
   </div>
   <div>
     <h3 class="pb-3 text-xl font-medium md:pb-4 md:text-2xl lg:text-4xl text-grayscale-100">{header}</h3>
