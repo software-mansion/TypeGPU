@@ -9,9 +9,10 @@
 
 **TypeGPU** is a TypeScript library simplifying the WebGPU API and WGSL with zero-cost abstractions, type-safe data transfer and dependency injection.
 
-## Addressed problems
+## Repository structure
+**Packages**:
+- [packages/typegpu](/packages/typegpu) - the core library.
+- [packages/typegpu-wgsl-parser](/packages/typegpu-wgsl-parser) - a WGSL parser, aiding in unit tests and pretty code formatting in DEV.
 
-- Minimizing mismatches between what we write to buffers on the CPU and what we receive on the GPU by generating WGSL types from typed-binary schemas.
-- Ability to compose code blocks in a reusable way, opening up the possibility of WebGPU/WGSL JavaScript libraries that expose utility code.
-- Automatically resolves conflicts in variable names, function names and binding indices.
-- Allows to easily define memory shared between JS and WebGPU.
+**Apps**:
+- [apps/typegpu-docs](/apps/typegpu-docs) - the documentation webpage, along with live examples.
