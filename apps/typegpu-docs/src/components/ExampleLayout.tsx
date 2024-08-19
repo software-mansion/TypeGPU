@@ -31,8 +31,7 @@ export function ExampleLayout() {
               </p>
               <a
                 href="/guides/getting-started"
-                className="underline text-sm bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-transparent"
-              >
+                className="underline text-sm bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-transparent">
                 Learn more about TypeGPU here
               </a>
             </div>
@@ -44,9 +43,14 @@ export function ExampleLayout() {
 
           <div className="flex justify-between text-grayscale-60 text-xs">
             <div>&copy; 2024 Software Mansion S.A.</div>
-            <a href="https://github.com/software-mansion/TypeGPU">
-              <img src="/assets/github-icon.svg" alt="github logo" />
-            </a>
+            <div className="flex gap-3 items-center">
+              <a href="https://github.com/software-mansion/TypeGPU">
+                <img src="/assets/github-icon.svg" alt="github logo" />
+              </a>
+              <a href="https://discord.swmansion.com">
+                <img src="/assets/discord-icon.svg" alt="discord logo" />
+              </a>
+            </div>
           </div>
         </aside>
       ) : null}

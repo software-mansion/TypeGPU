@@ -19,6 +19,4 @@ export type ExampleControlParam<TOption extends string | number> = {
   onChange: (newValue: TOption | boolean) => void;
 };
 
-export const exampleControlsAtom = atom<ExampleControlParam<string | number>[]>(
-  [],
-);
+export const exampleControlsAtom = atom<ExampleControlParam<string>[]>([]);

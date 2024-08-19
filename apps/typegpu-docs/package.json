@@ -16,6 +16,8 @@
     "@astrojs/tailwind": "^5.1.0",
     "@babel/standalone": "^7.24.7",
     "@monaco-editor/react": "^4.6.0",
+    "@radix-ui/react-select": "^2.1.1",
+    "@radix-ui/react-slider": "^1.2.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "astro": "^4.10.2",

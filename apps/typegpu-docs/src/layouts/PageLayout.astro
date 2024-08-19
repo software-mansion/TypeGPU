@@ -5,7 +5,7 @@ const { title } = Astro.props;
 
 <html>
   <head>
-    <title> { title ?? "TypeGPU" } </title>
+    <title> { title ? `${title} |` : '' } TypeGPU</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="favicon.svg">

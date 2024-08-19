@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
 import { exampleControlsAtom } from '../utils/examples/exampleControlAtom';
 import { menuShownAtom } from '../utils/examples/menuShownAtom';
+import { Select } from './design/Select';
 import { Slider } from './design/Slider';
 import { Switch } from './design/Switch';
 
@@ -21,7 +22,7 @@ function SwitchRow({
     <>
       <div className="text-sm text-pretty text-ellipsis">{label}</div>
 
-      <label className="grid justify-end cursor-pointer h-10">
+      <label className="grid justify-end items-center cursor-pointer h-10">
         <Switch
           checked={value}
           onChange={(e) => {
@@ -64,36 +65,22 @@ function SliderRow({
   );
 }
 
-function DropdownRow({
+function SelectRow({
   label,
   initial,
   options,
   onChange,
 }: {
   label: string;
-  initial: string | number;
-  options: (string | number)[];
-  onChange: (value: string | number) => void;
+  initial: string;
+  options: string[];
+  onChange: (value: string) => void;
 }) {
-  const [value, setValue] = useState(initial);
   return (
     <>
-      <div className="text-sm text-pretty text-ellipsis">{label}</div>
+      <div className="text-sm">{label}</div>
 
-      <select
-        className="h-10 border border-grayscale-20 hover:border-grayscale-60 rounded-[0.25rem] px-3"
-        value={value}
-        onChange={(e) => {
-          setValue(e.target.value);
-          onChange(e.target.value);
-        }}
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
+      <Select initial={initial} options={options} onChange={onChange} />
     </>
   );
 }
@@ -147,7 +134,7 @@ export function ControlPanel() {
               initial={param.options.initial}
             />
           ) : 'options' in param.options ? (
-            <DropdownRow
+            <SelectRow
               label={param.label}
               key={param.label}
               options={param.options.options}
