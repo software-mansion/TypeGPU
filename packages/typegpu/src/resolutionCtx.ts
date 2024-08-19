@@ -8,7 +8,6 @@ import type {
   Wgsl,
   WgslBindable,
   WgslRenderResource,
-  WgslRenderResourceType,
   WgslResolvable,
   WgslSlot,
 } from './types';
@@ -47,11 +46,9 @@ class SharedResolutionState {
 
   private _nextFreeBindingIdx = 0;
   private readonly _usedBindables = new Set<WgslBindable>();
-  private readonly _usedRenderResources = new Set<
-    WgslRenderResource<WgslRenderResourceType>
-  >();
+  private readonly _usedRenderResources = new Set<WgslRenderResource>();
   private readonly _resourceToIndexMap = new WeakMap<
-    WgslRenderResource<WgslRenderResourceType> | WgslBindable,
+    WgslRenderResource | WgslBindable,
     number
   >();
   private readonly _usedBuiltins = new Set<Builtin>();
@@ -66,9 +63,7 @@ class SharedResolutionState {
     return this._usedBindables;
   }
 
-  get usedRenderResources(): Iterable<
-    WgslRenderResource<WgslRenderResourceType>
-  > {
+  get usedRenderResources(): Iterable<WgslRenderResource> {
     return this._usedRenderResources;
   }
 
@@ -137,9 +132,7 @@ class SharedResolutionState {
     this._usedBindables.add(bindable);
   }
 
-  reserveRenderResourceEntry(
-    resource: WgslRenderResource<WgslRenderResourceType>,
-  ) {
+  reserveRenderResourceEntry(resource: WgslRenderResource) {
     this._usedRenderResources.add(resource);
     const nextIdx = this._nextFreeBindingIdx++;
     this._resourceToIndexMap.set(resource, nextIdx);
@@ -147,9 +140,7 @@ class SharedResolutionState {
     return { group: this._bindingGroup, idx: nextIdx };
   }
 
-  getBindingIndex(
-    resource: WgslRenderResource<WgslRenderResourceType> | WgslBindable,
-  ) {
+  getBindingIndex(resource: WgslRenderResource | WgslBindable) {
     return this._resourceToIndexMap.get(resource);
   }
 
@@ -192,7 +183,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   addRenderResource(
-    resource: WgslRenderResource<WgslRenderResourceType>,
+    resource: WgslRenderResource,
     identifier: WgslIdentifier,
   ): void {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
@@ -234,7 +225,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return `${[...this._shared.declarations].join('\n\n')}${result}`;
   }
 
-  getIndexFor(item: WgslBindable | WgslRenderResource<WgslRenderResourceType>) {
+  getIndexFor(item: WgslBindable | WgslRenderResource) {
     const index = this._shared.getBindingIndex(item);
     if (index === undefined) {
       throw new Error('No index found for item');
@@ -269,7 +260,7 @@ class ScopedResolutionCtx implements ResolutionCtx {
   }
 
   addRenderResource(
-    resource: WgslRenderResource<WgslRenderResourceType>,
+    resource: WgslRenderResource,
     identifier: WgslIdentifier,
   ): void {
     const { group, idx } = this._shared.reserveRenderResourceEntry(resource);
