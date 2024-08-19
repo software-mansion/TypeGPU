@@ -2268,6 +2268,8 @@ You can test it in the playground!
   target="_blank"
 />
 
+### Boids logic
+
 Now it's time to finally add some logic to how our triangles move. This guide assumes some familiarity with [boids](https://en.wikipedia.org/wiki/Boids), but some of the concepts will be explained as we go along. First, let's adapt our triangle information struct to include velocity in addition to position.
 
 ```diff lang=ts
@@ -2578,6 +2580,8 @@ const triangleVertex = wgsl
 
 const triangleAmount = 500;
 ```
+
+## Final result
 
 That's it! We've implemented the boids flocking algorithm in WebGPU. Let's see how our code looks and compare it to WebGPU:
 
