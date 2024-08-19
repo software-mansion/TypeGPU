@@ -33,8 +33,8 @@ type SlotToValueMap = Map<WgslSlot<unknown>, unknown>;
 
 const usageToVarTemplateMap: Record<Exclude<BufferUsage, 'vertex'>, string> = {
   uniform: 'uniform',
-  mutable_storage: 'storage, read_write',
-  readonly_storage: 'storage, read',
+  mutable: 'storage, read_write',
+  readonly: 'storage, read',
 };
 
 class SharedResolutionState {

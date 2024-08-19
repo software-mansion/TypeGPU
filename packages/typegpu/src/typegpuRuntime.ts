@@ -16,6 +16,8 @@ import type {
 // Public API
 // ----------
 
+export type SetPlumAction<T> = T | ((prev: T) => T);
+
 export interface TypeGpuRuntime {
   readonly device: GPUDevice;
   /**
@@ -28,7 +30,7 @@ export interface TypeGpuRuntime {
 
   setPlum<TPlum extends WgslPlum & WgslSettable>(
     plum: TPlum,
-    value: ExtractPlumValue<TPlum>,
+    value: SetPlumAction<ExtractPlumValue<TPlum>>,
   ): void;
 
   onPlumChange<TValue>(
