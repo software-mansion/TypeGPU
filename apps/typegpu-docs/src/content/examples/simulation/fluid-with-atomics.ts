@@ -56,10 +56,7 @@ function encodeBrushType(brushType: (typeof BrushTypes)[number]) {
 }
 
 const sizeBuffer = wgsl.buffer(vec2u).$name('size').$allowUniform();
-
 const viscosityBuffer = wgsl.buffer(u32).$name('viscosity').$allowUniform();
-
-const debugInfoBuffer = wgsl.buffer(atomic(u32)).$name('debug').$allowMutable();
 
 const currentStateBuffer = wgsl
   .buffer(arrayOf(u32, 1024 ** 2))
@@ -77,7 +74,6 @@ const currentStateData = currentStateBuffer.asReadonly();
 const currentStateVertex = currentStateBuffer.asVertex();
 const sizeData = sizeBuffer.asUniform();
 const nextStateData = nextStateBuffer.asMutable();
-const debugInfoData = debugInfoBuffer.asMutable();
 
 const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
 const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
@@ -354,7 +350,6 @@ function resetGameData() {
   const cells = new Uint32Array(length);
 
   render = () => {
-    runtime.writeBuffer(debugInfoBuffer, 0);
     const view = context.getCurrentTexture().createView();
 
     // compute
