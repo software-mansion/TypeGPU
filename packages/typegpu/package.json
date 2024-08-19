@@ -39,10 +39,7 @@
       "default": "./dist/web/index.cjs"
     }
   },
-  "files": [
-    "dist",
-    "README.md"
-  ],
+  "files": ["dist", "README.md"],
   "sideEffects": false,
   "scripts": {
     "dev": "tsup --watch",
