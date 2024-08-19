@@ -8,11 +8,11 @@ import GetStartedButton from '../components/GetStartedButton.astro';
     <title>TypeGPU</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="favicon.svg">
+    <link rel="icon" href="typegpu/favicon.svg">
     <style is:global>
         @font-face {
             font-family: 'Aeonik';
-            src: url('/fonts/Aeonik-Regular.woff') format('woff');
+            src: url('/typegpu/fonts/Aeonik-Regular.woff') format('woff');
             font-weight: 400;
             font-style: normal;
             font-display: swap;
@@ -20,7 +20,7 @@ import GetStartedButton from '../components/GetStartedButton.astro';
 
         @font-face {
             font-family: 'Aeonik';
-            src: url('/fonts/Aeonik-Medium.otf') format('opentype');
+            src: url('/typegpu/fonts/Aeonik-Medium.otf') format('opentype');
             font-weight: 500;
             font-style: normal;
             font-display: swap;
@@ -37,20 +37,20 @@ import GetStartedButton from '../components/GetStartedButton.astro';
     <main class="flex flex-col items-center bg-grayscale-20 sm:rounded-t-[5rem] rounded-t-[2.5rem] p-4 pt-10 sm:pt-20 lg:gap-[7.5rem] gap-10 md:gap-20">
         <section class="grid gap-10 md:gap-[3.75rem] lg:gap-20 place-content-center lg:max-w-[85rem] md:max-w-[48.5rem] max-w-[34.5rem]">
             <div class="grid gap-6 lg:gap-12 md:gap-8 place-items-center max-w-7xl">
-                <img src="/assets/logo.svg" alt="logo" class="w-[3.75rem] md:w-20 lg:w-[6.25rem]">
+                <img src="/typegpu/assets/logo.svg" alt="logo" class="w-[3.75rem] md:w-20 lg:w-[6.25rem]">
                 <h1 class="self-stretch font-medium text-center font-greyscale-100 md:text-[3.375rem] lg:text-[4.75rem] text-[2rem] leading-[130%]">GPU rendering and computing easier than ever before</h1>
                 <p class="leading-6 text-center lg:text-2xl md:text-xl">Make use of the GPU power right from your browser through a brand new, 
                     modern TypeScript API.
                 </p>
 
                 <div class="flex flex-col items-center justify-center w-full gap-4 lg:gap-10 sm:flex-row">
-                    <GetStartedButton/>
-                    <a class="w-full sm:w-auto" href="/examples"><button class="py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] bg-grayscale-0 text-grayscale-100 md:text-xl lg:text-2xl w-full">Explore live examples</button></a>
+                    <GetStartedButton />
+                    <a class="w-full sm:w-auto" href="/typegpu/examples"><button class="py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] bg-grayscale-0 text-grayscale-100 md:text-xl lg:text-2xl w-full">Explore live examples</button></a>
                 </div>
             </div>
 
             <div class="bg-grayscale-0 lg:w-[85rem] md:w-[53.5rem] lg:p-14 md:p-10 p-6 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-[2rem] border-2 border-special-stroke">
-                <video src="/assets/example.mp4" autoplay="true" loop="true" muted="true" class="lg:rounded-[2.5rem] md:rounded-[1.875rem] rounded-2xl"></video>
+                <video src="/typegpu/assets/example.mp4" autoplay="true" loop="true" muted="true" class="lg:rounded-[2.5rem] md:rounded-[1.875rem] rounded-2xl"></video>
             </div>
         </section>
 
@@ -86,7 +86,7 @@ import GetStartedButton from '../components/GetStartedButton.astro';
         <div class="grid place-items-center gap-20 bg-grayscale-0 self-stretch md:rounded-t-[5rem] rounded-t-[2.5rem] px-4 pt-10 pb-10 md:pb-0 md:pt-20">
             <div class="flex flex-col items-center lg:gap-20 gap-10 lg:max-w-[85rem] md:max-w-[58.5rem] w-full max-w-[34.5rem]">
                 <div class="w-full">
-                    <img src="/assets/logo-black.svg" alt="logo" class="pb-6">
+                    <img src="/typegpu/assets/logo-black.svg" alt="logo" class="pb-6">
                     <div class="flex flex-col justify-between gap-10 md:flex-row text-grayscale-80">
                         <div class="md:w-[27rem]">
                             <span class="font-medium">TypeGPU</span> <span class="text-grayscale-100">&mdash;</span> TypeScript library that enhances the WebGPU API, allows to modularly compose WGSL programs, and to manage resources in a type-safe, declarative way.
@@ -112,7 +112,7 @@ import GetStartedButton from '../components/GetStartedButton.astro';
 
                 <div class="hidden md:grid">
                     <div class="col-start-1 row-start-1 z-10 bg-gradient-to-b from-[#FFF0] to-[#FFF]"></div>
-                    <img class="col-start-1 row-start-1" src="/assets/typegpu.svg">
+                    <img class="col-start-1 row-start-1" src="/typegpu/assets/typegpu.svg">
                 </div>
             </div>
         </div>
