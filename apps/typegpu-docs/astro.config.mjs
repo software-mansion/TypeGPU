@@ -70,7 +70,7 @@ export default defineConfig({
           items: [
             {
               label: 'From Triangle to Boids Simulation',
-              slug: 'tutorials/triangle-to-boids',
+              slug: 'tutorials/triangle-to-boids/triangle-to-boids',
             },
           ],
         },

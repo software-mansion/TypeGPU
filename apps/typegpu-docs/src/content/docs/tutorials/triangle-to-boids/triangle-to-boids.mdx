@@ -4,12 +4,14 @@ description: A tutorial that will guide you through the process of creating a si
 ---
 
 import { Icon } from '@astrojs/starlight/components';
-
+import { Image } from 'astro:assets';
+import triangleImage from './ttbt-triangle.png';
+import boidsImage from './ttbt-boids.png';
 
 <div class="container flex flex-row justify-around content-evenly">
-  <img src="/assets/ttbt-triangle.png" alt="Triangle" class="rounded-lg !size-1/3 !aspect-square !m-0 !p-1"/>
+  <Image src={triangleImage} alt="Triangle" class="rounded-lg !size-1/3 !aspect-square !m-0 !p-1"/>
   <Icon name="right-arrow" color="white" size="5rem" />
-  <img src="/assets/ttbt-boids.png" alt="Triangle" class="rounded-lg !size-1/3 !aspect-square !m-0 !p-1"/>
+  <Image src={boidsImage} alt="Boids" class="rounded-lg !size-1/3 !aspect-square !m-0 !p-1"/>
 </div>
 
 In this tutorial, we will explore the capabilities of TypeGPU by transforming a simple program that draws a triangle on the screen into a boids simulation. While creating the boids simulation, we will learn about the following TypeGPU concepts:
