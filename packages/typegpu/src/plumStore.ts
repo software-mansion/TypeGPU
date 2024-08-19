@@ -6,7 +6,7 @@ import {
   isExternalPlum,
 } from './wgslPlum';
 
-export type PlumListener = <TValue>(newValue: TValue) => unknown;
+type Listener = () => unknown;
 type Unsubscribe = () => void;
 
 type PlumState<T = unknown> = {
@@ -31,7 +31,7 @@ type PlumActiveState = {
   /**
    * Cannot be a WeakSet, because we need to iterate on them.
    */
-  listeners: Set<PlumListener>;
+  listeners: Set<Listener>;
   unsubs: Set<Unsubscribe>;
 };
 
@@ -74,7 +74,7 @@ export class PlumStore {
     const listeners = [...state.active.listeners];
 
     for (const listener of listeners) {
-      listener(state.value);
+      listener();
     }
   }
 
@@ -174,7 +174,7 @@ export class PlumStore {
     this._notifyListeners(plum);
   }
 
-  subscribe(plum: WgslPlum, listener: PlumListener): Unsubscribe {
+  subscribe(plum: WgslPlum, listener: Listener): Unsubscribe {
     const state = this._getState(plum);
 
     let externalUnsub: (() => unknown) | undefined;

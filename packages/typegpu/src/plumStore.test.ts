@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { type PlumListener, PlumStore } from '../src/plumStore';
-import { type Getter, plum, plumFromEvent } from '../src/wgslPlum';
+import { PlumStore } from './plumStore';
+import { type Getter, plum, plumFromEvent } from './wgslPlum';
 
 function makeSubject<T>(initial: T) {
   let value = initial;
@@ -339,34 +339,5 @@ describe('PlumStore', () => {
     expect(store.get(doubledPlum)).toEqual(12);
 
     unsubscribe();
-  });
-
-  it('should provide a new value to the subscriber', () => {
-    const store = new PlumStore();
-    const fooPlum = plum<number>(2).$name('foo');
-
-    const listener = vi.fn((newValue: number) => {});
-    const unsubscribe = store.subscribe(fooPlum, listener as PlumListener);
-
-    expect(listener).toBeCalledTimes(0);
-
-    store.set(fooPlum, 3);
-    expect(listener).toBeCalledTimes(1);
-    expect(listener).toBeCalledWith(3);
-  });
-
-  it('should provide a new value to the subscriber when derived', () => {
-    const store = new PlumStore();
-    const fooPlum = plum<number>(2).$name('foo');
-    const doubledPlum = plum((get) => get(fooPlum) * 2).$name('doubled');
-
-    const listener = vi.fn((_: number) => {});
-    const unsubscribe = store.subscribe(doubledPlum, listener as PlumListener);
-
-    expect(listener).toBeCalledTimes(0);
-
-    store.set(fooPlum, 3);
-    expect(listener).toBeCalledTimes(1);
-    expect(listener).toBeCalledWith(6);
   });
 });
