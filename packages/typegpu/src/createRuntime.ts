@@ -14,6 +14,7 @@ import type {
   ComputePipelineOptions,
   RenderPipelineExecutorOptions,
   RenderPipelineOptions,
+  SetPlumAction,
   TypeGpuRuntime,
 } from './typegpuRuntime';
 import { deriveVertexFormat } from './typegpuRuntime';
@@ -247,9 +248,16 @@ class TypeGpuRuntimeImpl {
 
   setPlum<TPlum extends WgslPlum & WgslSettable>(
     plum: TPlum,
-    value: ExtractPlumValue<TPlum>,
+    value: SetPlumAction<ExtractPlumValue<TPlum>>,
   ) {
-    this._plumStore.set(plum, value);
+    type Value = ExtractPlumValue<TPlum>;
+
+    if (typeof value === 'function') {
+      const compute = value as (prev: Value) => Value;
+      this._plumStore.set(plum, compute(this._plumStore.get(plum)));
+    } else {
+      this._plumStore.set(plum, value);
+    }
   }
 
   onPlumChange<TValue>(
