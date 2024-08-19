@@ -569,12 +569,11 @@ runtime.onPlumChange(leftWallXPlum, () => {
 
 function makePipelines(
   inputGridReadonly: WgslBufferUsage<GridData, 'readonly'>,
-  inputGridMutable: WgslBufferUsage<GridData, 'mutable'>,
   outputGridMutable: WgslBufferUsage<GridData, 'mutable'>,
 ) {
   const initWorldFn = mainInitWorld
-    .with(inputGridSlot, inputGridMutable)
-    .with(outputGridSlot, inputGridMutable);
+    .with(inputGridSlot, outputGridMutable)
+    .with(outputGridSlot, outputGridMutable);
 
   const initWorldPipeline = runtime.makeComputePipeline({
     code: wgsl`
@@ -595,8 +594,8 @@ function makePipelines(
   });
 
   const moveObstaclesFn = mainMoveObstacles
-    .with(inputGridSlot, inputGridMutable)
-    .with(outputGridSlot, inputGridMutable);
+    .with(inputGridSlot, outputGridMutable)
+    .with(outputGridSlot, outputGridMutable);
 
   const moveObstaclesPipeline = runtime.makeComputePipeline({
     code: wgsl`
@@ -653,20 +652,18 @@ function makePipelines(
     },
   });
 
-  const applyMovedObstacles = (bufferData: Parsed<BoxObstacle>[]) => {
-    runtime.writeBuffer(obstaclesBuffer, bufferData);
-    moveObstaclesPipeline.execute();
-    runtime.flush();
-
-    runtime.writeBuffer(prevObstaclesBuffer, bufferData);
-    runtime.flush();
-  };
-
   return {
-    applyMovedObstacles,
-
     init() {
       initWorldPipeline.execute({ workgroups: [gridSize, gridSize] });
+      runtime.flush();
+    },
+
+    applyMovedObstacles(bufferData: Parsed<BoxObstacle>[]) {
+      runtime.writeBuffer(obstaclesBuffer, bufferData);
+      moveObstaclesPipeline.execute();
+      runtime.flush();
+
+      runtime.writeBuffer(prevObstaclesBuffer, bufferData);
       runtime.flush();
     },
 
@@ -701,7 +698,6 @@ function makePipelines(
 const even = makePipelines(
   // in
   gridAlphaBuffer.asReadonly(),
-  gridAlphaBuffer.asMutable(), // <- used for in-place computation
   // out
   gridBetaBuffer.asMutable(),
 );
@@ -709,7 +705,6 @@ const even = makePipelines(
 const odd = makePipelines(
   // in
   gridBetaBuffer.asReadonly(),
-  gridBetaBuffer.asMutable(), // <- used for in-place computation
   // out
   gridAlphaBuffer.asMutable(),
 );
@@ -728,9 +723,9 @@ const stepsPerTick = 64;
 function tick() {
   runtime.writeBuffer(timeBuffer, Date.now() % 1000);
 
+  primary = primary === even ? odd : even;
   primary.compute();
   runtime.flush();
-  primary = primary === even ? odd : even;
 }
 
 onFrame((deltaTime) => {
