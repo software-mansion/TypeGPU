@@ -76,7 +76,7 @@ const sampler = wgsl.sampler({
   minFilter: 'linear',
 });
 
-const response = await fetch('/plums.jpg');
+const response = await fetch('/typegpu/plums.jpg');
 const imageBitmap = await createImageBitmap(await response.blob());
 
 const inParams: SampledTextureParams = {
