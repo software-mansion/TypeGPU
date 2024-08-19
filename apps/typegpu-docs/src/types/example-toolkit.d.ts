@@ -17,7 +17,7 @@ declare module '@typegpu/example-toolkit' {
   export type ButtonOptions = {
     label?: string;
     onClick?: () => void;
-  }
+  };
 
   export type TableRef = {
     setMatrix: (data: number[][]) => void;
@@ -85,8 +85,14 @@ declare module '@typegpu/example-toolkit' {
     onChange: (newValue: boolean) => void,
   ): void;
 
+  export function addButton(label: string, onClick: () => void): void;
+
   import type { WgslPlum } from 'typegpu';
-  export type AddSliderParam = (label: string, initial: number, opts: { min?: number, max?: number, step?: number }) => WgslPlum<number>;
+  export type AddSliderParam = (
+    label: string,
+    initial: number,
+    opts: { min?: number; max?: number; step?: number },
+  ) => WgslPlum<number>;
 
   export const addSliderParam: AddSliderParam;
 
