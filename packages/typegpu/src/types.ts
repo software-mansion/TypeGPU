@@ -166,9 +166,9 @@ export type SampledTextureParams = {
 };
 
 export function isSamplerType(
-  resource: WgslRenderResourceType,
-): resource is WgslSamplerType {
-  return resource === 'sampler' || resource === 'sampler_comparison';
+  type: WgslRenderResourceType,
+): type is WgslSamplerType {
+  return type === 'sampler' || type === 'sampler_comparison';
 }
 
 export function isTypedTextureType(
