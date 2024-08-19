@@ -468,7 +468,7 @@ import { Steps } from '@astrojs/starlight/components';
    ```ts
    const vertexCode = wgsl`
     let rotated = ${rotate}(
-      ${triangleVertex.asVertex('readonly_storage')},
+      ${triangleVertex.asVertex()},
       ${rotationBuffer.asUniform()}
     );
 
@@ -480,6 +480,9 @@ import { Steps } from '@astrojs/starlight/components';
     let pos = vec4f(rotated + offset, 0.0, 1.0);
    `;
    ```
+   <Aside>
+    Remember that we don't need to index into `triangleVertex` because we made it a vertex buffer.
+    </Aside>
 
 4. Voilà! We now have a movable and rotatable triangle.
 
