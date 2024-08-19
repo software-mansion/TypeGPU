@@ -14,6 +14,7 @@ export { default as wgsl } from './wgsl';
 export { createRuntime, CreateRuntimeOptions } from './createRuntime';
 
 export type { WgslBuffer } from './wgslBuffer';
+export type { WgslBufferUsage } from './wgslBufferUsage';
 export type { WgslCode } from './wgslCode';
 export type { WgslConst } from './wgslConstant';
 export type { WgslFn } from './wgslFunction';
@@ -22,5 +23,4 @@ export type { WgslSettable } from './settableTrait';
 export type { WgslFn as WgslFnExperimental } from './wgslFunctionExperimental';
 export type { WgslVar } from './wgslVariable';
 export type { WgslSampler } from './wgslSampler';
-export type { WgslTexture } from './wgslTexture';
-export type { WgslBufferUsage } from './wgslBufferUsage';
+export type { WgslTexture, WgslTextureView } from './wgslTexture';

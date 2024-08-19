@@ -40,8 +40,8 @@ const usageToBindingTypeMap: Record<
   GPUBufferBindingType
 > = {
   uniform: 'uniform',
-  mutable_storage: 'storage',
-  readonly_storage: 'read-only-storage',
+  mutable: 'storage',
+  readonly: 'read-only-storage',
 };
 
 export default class ProgramBuilder {
