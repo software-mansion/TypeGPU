@@ -49,7 +49,8 @@ export function Slider({ min, max, step, initial, onChange }: Props) {
       onClick={(e) => {
         onUserInput(e);
       }}
-      onKeyDown={() => {}}>
+      onKeyDown={() => {}}
+    >
       <div
         style={{
           width: `${((value - min) / (max - min)) * 100}%`,
