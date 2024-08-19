@@ -113,8 +113,6 @@ onFrame(() => {
     return;
   }
 
-  // TODO: Take this out of the loop - we don't want to create a pipeline every frame
-
   renderProgram.execute({
     colorAttachments: [
       {
