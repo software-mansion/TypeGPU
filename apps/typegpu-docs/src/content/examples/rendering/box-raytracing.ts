@@ -6,7 +6,11 @@
 */
 
 // -- Hooks into the example environment
-import { addElement, addSliderParam, onFrame } from '@typegpu/example-toolkit';
+import {
+  addElement,
+  addSliderPlumParameter,
+  onFrame,
+} from '@typegpu/example-toolkit';
 // --
 
 import { createRuntime, wgsl } from 'typegpu';
@@ -21,17 +25,17 @@ const cubeSize = [X * MAX_BOX_SIZE, Y * MAX_BOX_SIZE, Z * MAX_BOX_SIZE];
 const boxCenter = cubeSize.map((value) => value / 2);
 const upAxis = [0, 1, 0] as Vector;
 
-const rotationSpeedPlum = addSliderParam('rotation speed', 2, {
+const rotationSpeedPlum = addSliderPlumParameter('rotation speed', 2, {
   min: 0,
   max: 5,
 });
 
-const cameraDistancePlum = addSliderParam('camera distance', 250, {
+const cameraDistancePlum = addSliderPlumParameter('camera distance', 250, {
   min: 100,
   max: 1200,
 });
 
-const boxSizePlum = addSliderParam('box size', MAX_BOX_SIZE, {
+const boxSizePlum = addSliderPlumParameter('box size', MAX_BOX_SIZE, {
   min: 1,
   max: MAX_BOX_SIZE,
 });

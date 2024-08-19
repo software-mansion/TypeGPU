@@ -6,7 +6,11 @@
 */
 
 // -- Hooks into the example environment
-import { addElement, addParameter, onFrame } from '@typegpu/example-toolkit';
+import {
+  addElement,
+  addSliderParameter,
+  onFrame,
+} from '@typegpu/example-toolkit';
 // --
 
 import { createRuntime, wgsl } from 'typegpu';
@@ -124,9 +128,10 @@ const sampler = device.createSampler({
 
 // UI
 
-addParameter(
+addSliderParameter(
   'threshold',
-  { initial: 0.4, min: 0, max: 1, step: 0.1 },
+  0.4,
+  { min: 0, max: 1, step: 0.1 },
   (threshold: number) => runtime.writeBuffer(thresholdBuffer, threshold),
 );
 

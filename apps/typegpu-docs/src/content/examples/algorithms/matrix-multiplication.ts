@@ -6,7 +6,11 @@
 */
 
 // -- Hooks into the example environment
-import { addElement, addParameter } from '@typegpu/example-toolkit';
+import {
+  addButtonParameter,
+  addElement,
+  addSliderParameter,
+} from '@typegpu/example-toolkit';
 // --
 
 import { createRuntime, wgsl } from 'typegpu';
@@ -138,10 +142,10 @@ async function run() {
 
 let initializing = true;
 
-addParameter(
-  'firstMatrixRowCount',
+addSliderParameter(
+  '#1 rows',
+  firstMatrixRowCount,
   {
-    initial: firstMatrixRowCount,
     min: 1,
     max: 6,
     step: 1,
@@ -154,10 +158,10 @@ addParameter(
   },
 );
 
-addParameter(
-  'firstMatrixColumnCount',
+addSliderParameter(
+  '#1 columns',
+  firstMatrixColumnCount,
   {
-    initial: firstMatrixColumnCount,
     min: 1,
     max: 6,
     step: 1,
@@ -170,10 +174,10 @@ addParameter(
   },
 );
 
-addParameter(
-  'secondMatrixColumnCount',
+addSliderParameter(
+  '#2 columns',
+  secondMatrixColumnCount,
   {
-    initial: secondMatrixColumnCount,
     min: 1,
     max: 6,
     step: 1,
@@ -186,10 +190,7 @@ addParameter(
   },
 );
 
-addElement('button', {
-  label: 'Reshuffle',
-  onClick: run,
-});
+addButtonParameter('Reshuffle', run);
 
 initializing = false;
 run();

@@ -8,7 +8,7 @@
 // -- Hooks into the example environment
 import {
   addElement,
-  addSliderParam,
+  addSliderPlumParameter,
   onCleanup,
   onFrame,
 } from '@typegpu/example-toolkit';
@@ -17,8 +17,8 @@ import {
 import { createRuntime, wgsl } from 'typegpu';
 import { struct, u32, vec2f, vec4f } from 'typegpu/data';
 
-const xSpanPlum = addSliderParam('x span', 16, { min: 1, max: 16, step: 1 });
-const ySpanPlum = addSliderParam('y span', 16, { min: 1, max: 16, step: 1 });
+const xSpanPlum = addSliderPlumParameter('x span', 16, { min: 1, max: 16, step: 1 });
+const ySpanPlum = addSliderPlumParameter('y span', 16, { min: 1, max: 16, step: 1 });
 
 const spanPlum = wgsl.plum((get) => ({ x: get(xSpanPlum), y: get(ySpanPlum) }));
 const spanBuffer = wgsl

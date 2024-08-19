@@ -1,13 +1,17 @@
 import { useAtom, useAtomValue } from 'jotai';
 import { useState } from 'react';
 import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
-import { exampleControlsAtom } from '../utils/examples/exampleControlAtom';
+import {
+  type ExampleControlParam,
+  exampleControlsAtom,
+} from '../utils/examples/exampleControlAtom';
 import { menuShownAtom } from '../utils/examples/menuShownAtom';
+import { Button } from './design/Button';
 import { Select } from './design/Select';
 import { Slider } from './design/Slider';
 import { Switch } from './design/Switch';
 
-function SwitchRow({
+function ToggleRow({
   label,
   initial,
   onChange,
@@ -57,7 +61,7 @@ function SliderRow({
       <Slider
         min={min ?? 0}
         max={max ?? 1}
-        step={step ?? 1}
+        step={step ?? 0.1}
         initial={initial}
         onChange={onChange}
       />
@@ -85,6 +89,53 @@ function SelectRow({
   );
 }
 
+function ButtonRow({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <>
+      <div />
+      <Button label={label} onClick={onClick} />
+    </>
+  );
+}
+
+function paramToControlRow(param: ExampleControlParam) {
+  switch (param.type) {
+    case 'select':
+      return (
+        <SelectRow
+          label={param.label}
+          key={param.label}
+          options={param.options}
+          initial={param.initial ?? 0}
+          onChange={param.onChange}
+        />
+      );
+    case 'toggle':
+      return (
+        <ToggleRow
+          key={param.label}
+          label={param.label}
+          onChange={param.onChange}
+          initial={param.initial}
+        />
+      );
+    case 'slider':
+      return (
+        <SliderRow
+          key={param.label}
+          label={param.label}
+          onChange={param.onChange}
+          min={param.options.min}
+          max={param.options.max}
+          step={param.options.step}
+          initial={param.initial}
+        />
+      );
+    case 'button':
+      return <ButtonRow label={param.label} onClick={param.onClick} />;
+  }
+}
+
 export function ControlPanel() {
   const [menuShowing, setMenuShowing] = useAtom(menuShownAtom);
   const [codeEditorShowing, setCodeEditorShowing] =
@@ -94,7 +145,6 @@ export function ControlPanel() {
   return (
     <div className="flex flex-col gap-4 bg-grayscale-0 rounded-xl p-6">
       <h2 className="text-xl font-medium">Control panel</h2>
-
       <label className="flex gap-3 items-center justify-between cursor-pointer text-sm">
         <span>Show left menu</span>
         <Switch
@@ -102,7 +152,6 @@ export function ControlPanel() {
           onChange={(e) => setMenuShowing(e.target.checked)}
         />
       </label>
-
       <label className="flex gap-3 items-center justify-between cursor-pointer text-sm">
         <span>Show code editor</span>
         <Switch
@@ -115,38 +164,7 @@ export function ControlPanel() {
 
       <h2 className="text-xl font-medium">Example controls</h2>
       <div className="grid grid-cols-2 gap-4 items-center">
-        {exampleControlParams.map((param) =>
-          typeof param.options.initial === 'boolean' ? (
-            <SwitchRow
-              key={param.label}
-              label={param.label}
-              onChange={param.onChange}
-              initial={param.options.initial}
-            />
-          ) : 'min' in param.options ? (
-            <SliderRow
-              key={param.label}
-              label={param.label}
-              onChange={param.onChange}
-              min={param.options.min}
-              max={param.options.max}
-              step={param.options.step}
-              initial={param.options.initial}
-            />
-          ) : 'options' in param.options ? (
-            <SelectRow
-              label={param.label}
-              key={param.label}
-              options={param.options.options}
-              initial={param.options.initial ?? 0}
-              onChange={param.onChange}
-            />
-          ) : (
-            <div className="flex justify-between" key={param.label}>
-              <div>{param.label}</div>
-            </div>
-          ),
-        )}
+        {exampleControlParams.map((param) => paramToControlRow(param))}
       </div>
     </div>
   );

@@ -6,7 +6,13 @@
 */
 
 // -- Hooks into the example environment
-import { addElement, addParameter, onFrame } from '@typegpu/example-toolkit';
+import {
+  addElement,
+  addSelectParameter,
+  addSliderParameter,
+  addToggleParameter,
+  onFrame,
+} from '@typegpu/example-toolkit';
 // --
 
 import { ProgramBuilder, createRuntime, wgsl } from 'typegpu';
@@ -621,61 +627,62 @@ onFrame((deltaTime: number) => {
 
 resetGameData();
 
-addParameter(
+addSelectParameter(
   'size',
-  { initial: 64, options: [16, 32, 64, 128, 256, 512, 1024] },
+  '64',
+  [16, 32, 64, 128, 256, 512, 1024].map((x) => x.toString()),
   (value) => {
-    options.size = value;
+    options.size = Number.parseInt(value);
     resetGameData();
   },
 );
 
-addParameter(
+addSliderParameter(
   'timestep (ms)',
-  { initial: 15, min: 15, max: 100, step: 1 },
+  15,
+  { min: 15, max: 100, step: 1 },
   (value) => {
     options.timestep = value;
   },
 );
 
-addParameter(
+addSliderParameter(
   'stepsPerTimestep',
-  { initial: 10, min: 1, max: 50, step: 1 },
+  10,
+  { min: 1, max: 50, step: 1 },
   (value) => {
     options.stepsPerTimestep = value;
   },
 );
 
-addParameter(
+addSelectParameter(
   'workgroupSize',
-  { initial: 16, options: [1, 2, 4, 8, 16] },
+  '16',
+  [1, 2, 4, 8, 16].map((x) => x.toString()),
   (value) => {
-    options.workgroupSize = value;
+    options.workgroupSize = Number.parseInt(value);
     resetGameData();
   },
 );
 
-addParameter(
+addSliderParameter(
   'viscosity',
-  { initial: 1000, min: 10, max: 1000, step: 1 },
+  1000,
+  { min: 10, max: 1000, step: 1 },
   (value) => {
     options.viscosity = value;
     runtime.writeBuffer(viscosityBuffer, value);
   },
 );
 
-addParameter('brushSize', { initial: 0, min: 0, max: 10, step: 1 }, (value) => {
+addSliderParameter('brushSize', 0, { min: 0, max: 10, step: 1 }, (value) => {
   options.brushSize = value;
 });
 
-addParameter(
-  'brushType',
-  { initial: 'water', options: BrushTypes },
-  (value) => {
-    options.brushType = value;
-  },
-);
+addSelectParameter('brushType', 'water', BrushTypes, (value) => {
+  options.brushType = value;
+});
 
-addParameter('pause', { initial: false }, (value) => {
+addToggleParameter('pause', false, (value) => {
   paused = value;
 });

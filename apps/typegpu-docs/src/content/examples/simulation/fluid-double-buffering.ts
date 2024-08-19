@@ -8,7 +8,7 @@
 // -- Hooks into the example environment
 import {
   addElement,
-  addParameter,
+  addSliderParameter,
   onCleanup,
   onFrame,
 } from '@typegpu/example-toolkit';
@@ -719,25 +719,23 @@ onFrame((deltaTime) => {
   }
 });
 
-addParameter(
-  'box x',
-  { initial: 0.5, min: 0.2, max: 0.8, step: 0.01 },
-  (boxX) => {
-    setObstacleX(0, boxX);
-  },
-);
+addSliderParameter('box x', 0.5, { min: 0.2, max: 0.8, step: 0.01 }, (boxX) => {
+  setObstacleX(0, boxX);
+});
 
-addParameter(
+addSliderParameter(
   'box y',
-  { initial: 0.2, min: 0.2, max: 0.85, step: 0.01 },
+  0.2,
+  { min: 0.2, max: 0.85, step: 0.01 },
   (boxY) => {
     setObstacleY(0, boxY);
   },
 );
 
-addParameter(
+addSliderParameter(
   'left wall: x',
-  { initial: 0, min: 0, max: 0.6, step: 0.01 },
+  0,
+  { min: 0, max: 0.6, step: 0.01 },
   (leftX) => {
     setObstacleX(1, leftX);
   },
@@ -749,18 +747,20 @@ const sourceParams: Parsed<typeof SourceParams> = {
   radius: 0.01,
 };
 
-addParameter(
+addSliderParameter(
   'source intensity',
-  { initial: 0.1, min: 0, max: 1, step: 0.01 },
+  0.1,
+  { min: 0, max: 1, step: 0.01 },
   (intensity) => {
     sourceParams.intensity = intensity;
     runtime.writeBuffer(sourceParamsBuffer, sourceParams);
   },
 );
 
-addParameter(
+addSliderParameter(
   'source radius',
-  { initial: 0.01, min: 0.01, max: 0.1, step: 0.01 },
+  0.01,
+  { min: 0.01, max: 0.1, step: 0.01 },
   (radius) => {
     sourceParams.radius = radius;
     runtime.writeBuffer(sourceParamsBuffer, sourceParams);
