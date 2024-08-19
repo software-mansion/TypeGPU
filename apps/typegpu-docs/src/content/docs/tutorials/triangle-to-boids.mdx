@@ -14,11 +14,23 @@ import { Icon } from '@astrojs/starlight/components';
 
 In this tutorial, we will explore the capabilities of TypeGPU by transforming a simple program that draws a triangle on the screen into a boids simulation. While creating the boids simulation, we will learn about the following TypeGPU concepts:
 
-- Creating and using a TypeGPU runtime
-- Writing shader code in TypeGPU
-- Creating vertex and storage buffers and using them in shaders
-- Creating render and compute pipelines
-- Understanding and using slots
+<ul class="list-disc pl-5">
+  <li>
+    Creating and using a TypeGPU runtime
+  </li>
+  <li>
+    Writing shader code in TypeGPU
+  </li>
+  <li>
+    Creating vertex and storage buffers and using them in shaders
+  </li>
+  <li>
+    Creating render and compute pipelines
+  </li>
+  <li>
+    Understanding and using slots
+  </li>
+</ul>
 
 Along the way, there will be places where you might want to follow a different path from the one in the tutorial.
 Feel free to do so! There will be checkpoints where you can compare your code with the tutorial code and see if it works as expected.
@@ -104,14 +116,14 @@ The API for creating a pipeline in TypeGPU is similar to the WebGPU API but with
   <Card title="Layouts" icon="seti:bicep">
     There is no need to pass any group layouts. They are all inferred automatically by the library.
   </Card>
-  <Card title="Modules" icon="setting">
+  <Card title="Modules" icon="seti:happenings">
     The module field in both vertex and fragment objects is replaced with "code" which accepts wgsl code.
   </Card>
-  <Card title="Vertex" icon="setting">
+  <Card title="Vertex" icon="seti:svg">
     Apart from the code field, the vertex object has an output field, which maps the output of the vertex shader to the next stage.
     It works basically as an "export" from the vertex shader. The variables with matching keys will be packed into a struct and passed to the fragment shader.
   </Card>
-  <Card title="Fragment" icon="setting">
+  <Card title="Fragment" icon="pencil">
     Variables present in the vertex output can be used inside the fragment code with no additional setup. The target field remains unchanged.
   </Card>
 </CardGrid>
