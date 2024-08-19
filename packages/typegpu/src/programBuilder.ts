@@ -11,13 +11,8 @@ import type {
 } from './types';
 import { getUsedBuiltinsNamed } from './wgslBuiltin';
 import { type BoundWgslCode, type WgslCode, code } from './wgslCode';
-import { type WgslSampler, isSampler } from './wgslSampler';
-import {
-  type WgslAnyTextureView,
-  type WgslTextureExternal,
-  isExternalTexture,
-  isTextureView,
-} from './wgslTexture';
+import { isSampler } from './wgslSampler';
+import { isExternalTexture, isTextureView } from './wgslTexture';
 
 export type Program = {
   readonly bindGroupLayout: GPUBindGroupLayout;
@@ -56,15 +51,9 @@ export default class ProgramBuilder {
     const codeString = ctx.resolve(this.root);
     const usedBindables = Array.from(ctx.usedBindables);
     const usedRenderResources = Array.from(ctx.usedRenderResources);
-    const usedSamplers = usedRenderResources.filter((resource) =>
-      isSampler(resource),
-    ) as WgslSampler[];
-    const usedTextures = usedRenderResources.filter((resource) =>
-      isTextureView(resource),
-    ) as WgslAnyTextureView[];
-    const usedExternalTextures = usedRenderResources.filter((resource) =>
-      isExternalTexture(resource),
-    ) as WgslTextureExternal[];
+    const usedSamplers = usedRenderResources.filter(isSampler);
+    const usedTextures = usedRenderResources.filter(isTextureView);
+    const usedExternalTextures = usedRenderResources.filter(isExternalTexture);
 
     const allEntries: GPUBindGroupLayoutEntry[] = [];
     for (const textureView of usedTextures) {
