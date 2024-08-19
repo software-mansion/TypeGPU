@@ -146,11 +146,7 @@ export interface WgslRenderResource extends WgslResolvable {
   readonly type: WgslRenderResourceType;
 }
 
-export type BufferUsage =
-  | 'uniform'
-  | 'readonly_storage'
-  | 'mutable_storage'
-  | 'vertex';
+export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
 export type TextureUsage = 'sampled' | 'storage';
 export type StorageTextureAccess = 'read' | 'write' | 'read_write';
 

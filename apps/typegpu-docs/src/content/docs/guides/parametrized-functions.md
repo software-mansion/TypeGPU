@@ -34,8 +34,8 @@ function makeGridBuffer() {
     return wgsl
       .buffer(arrayOf(f32, gridArea))
       // How can we use this buffer?
-      .$allowReadonlyStorage()
-      .$allowMutableStorage()
+      .$allowReadonly()
+      .$allowMutable()
   });
 }
 
@@ -48,11 +48,11 @@ To access the buffers in WGSL code, we need to do it through bindings. This allo
 we define how we want to use the buffer explicitly.
 
 ```ts
-const readonlyEvenGrid = wgsl.plum((get) => get(evenGridBuffer).asReadonlyStorage());
-const readonlyOddGrid = wgsl.plum((get) => get(oddGridBuffer).asReadonlyStorage());
+const readonlyEvenGrid = wgsl.plum((get) => get(evenGridBuffer).asReadonly());
+const readonlyOddGrid = wgsl.plum((get) => get(oddGridBuffer).asReadonly());
 
-const mutableEvenGrid = wgsl.plum((get) => get(evenGridBuffer).asMutableStorage());
-const mutableOddGrid = wgsl.plum((get) => get(oddGridBuffer).asMutableStorage());
+const mutableEvenGrid = wgsl.plum((get) => get(evenGridBuffer).asMutable());
+const mutableOddGrid = wgsl.plum((get) => get(oddGridBuffer).asMutable());
 ```
 
 ```ts

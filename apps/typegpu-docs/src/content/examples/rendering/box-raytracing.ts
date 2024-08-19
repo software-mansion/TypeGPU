@@ -105,14 +105,14 @@ const boxMatrixBuffer = wgsl
     ),
   )
   .$name('box_array')
-  .$allowReadonlyStorage();
-const boxMatrixData = boxMatrixBuffer.asReadonlyStorage();
+  .$allowReadonly();
+const boxMatrixData = boxMatrixBuffer.asReadonly();
 
 const cameraPositionBuffer = wgsl
   .buffer(vec3f, cameraPositionPlum)
   .$name('camera_position')
-  .$allowReadonlyStorage();
-const cameraPositionData = cameraPositionBuffer.asReadonlyStorage();
+  .$allowReadonly();
+const cameraPositionData = cameraPositionBuffer.asReadonly();
 
 const cameraAxesBuffer = wgsl
   .buffer(
@@ -124,8 +124,8 @@ const cameraAxesBuffer = wgsl
     cameraAxesPlum,
   )
   .$name('camera_axes')
-  .$allowReadonlyStorage();
-const cameraAxesData = cameraAxesBuffer.asReadonlyStorage();
+  .$allowReadonly();
+const cameraAxesData = cameraAxesBuffer.asReadonly();
 
 const canvasDimsBuffer = wgsl
   .buffer(
@@ -316,10 +316,12 @@ onFrame((deltaTime) => {
   runtime.setPlum(canvasWidthPlum, canvas.width);
   runtime.setPlum(canvasHeightPlum, canvas.height);
 
-  const lastFrame = runtime.readPlum(framePlum);
   const rotationSpeed = runtime.readPlum(rotationSpeedPlum);
 
-  runtime.setPlum(framePlum, lastFrame + (rotationSpeed * deltaTime) / 1000);
+  runtime.setPlum(
+    framePlum,
+    (prev) => prev + (rotationSpeed * deltaTime) / 1000,
+  );
 
   const textureView = context.getCurrentTexture().createView();
 
