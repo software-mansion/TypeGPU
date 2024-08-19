@@ -31,7 +31,8 @@ export function ExampleLayout() {
               </p>
               <a
                 href="/typegpu/guides/getting-started"
-                className="underline text-sm bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-transparent">
+                className="underline text-sm bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-transparent"
+              >
                 Learn more about TypeGPU here
               </a>
             </div>
