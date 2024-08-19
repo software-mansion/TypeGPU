@@ -59,22 +59,22 @@ declare module '@typegpu/example-toolkit' {
 
   export const addElement: AddElement;
 
-  function addSelectParameter(
+  export function addSelectParameter(
     label: string,
     initial: string,
     options: string[],
     onChange: (newValue: string) => void,
   ): void;
 
-  function addToggleParameter(
+  export function addToggleParameter(
     label: string,
     initial: boolean,
     onChange: (newValue: boolean) => void,
   ): void;
 
-  function addButtonParameter(label: string, onClick: () => void): void;
+  export function addButtonParameter(label: string, onClick: () => void): void;
 
-  function addSliderParameter(
+  export function addSliderParameter(
     label: string,
     initial: number,
     options: {
@@ -87,7 +87,7 @@ declare module '@typegpu/example-toolkit' {
 
   import type { WgslPlum } from 'typegpu';
 
-  function addSliderPlumParameter(
+  export function addSliderPlumParameter(
     label: string,
     initial: number,
     options?: { min?: number; max?: number; step?: number },

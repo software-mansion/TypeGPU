@@ -6,7 +6,11 @@
 */
 
 // -- Hooks into the example environment
-import { addElement, addSliderParam, onFrame } from '@typegpu/example-toolkit';
+import {
+  addElement,
+  addSliderPlumParameter,
+  onFrame,
+} from '@typegpu/example-toolkit';
 // --
 import {
   type SampledTextureParams,
@@ -31,12 +35,12 @@ import {
 const tileDim = 128;
 const batch = [4, 4];
 
-const filterSize = addSliderParam('Filter Size', 2, {
+const filterSize = addSliderPlumParameter('filter size', 2, {
   min: 1,
   max: 15,
   step: 2,
 });
-const iterations = addSliderParam('Iterations', 1, {
+const iterations = addSliderPlumParameter('iterations', 1, {
   min: 1,
   max: 10,
   step: 1,
@@ -76,7 +80,7 @@ const sampler = wgsl.sampler({
   minFilter: 'linear',
 });
 
-const response = await fetch('/plums.jpg');
+const response = await fetch('/typegpu/plums.jpg');
 const imageBitmap = await createImageBitmap(await response.blob());
 
 const inParams: SampledTextureParams = {

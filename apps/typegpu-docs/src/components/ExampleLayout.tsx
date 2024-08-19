@@ -12,10 +12,10 @@ export function ExampleLayout() {
         <aside className="flex flex-col bg-grayscale-0 rounded-2xl w-[18.75rem] p-5 gap-5">
           <header className="grid gap-5">
             <div className="grid place-items-center">
-              <a href="/" className="block cursor-pointer">
+              <a href="/typegpu" className="block cursor-pointer">
                 <img
                   className="my-7"
-                  src="/typegpu-logo-light.svg"
+                  src="/typegpu/typegpu-logo-light.svg"
                   alt="TypeGPU Logo"
                 />
               </a>
@@ -30,9 +30,8 @@ export function ExampleLayout() {
                 TypeGPU.
               </p>
               <a
-                href="/guides/getting-started"
-                className="underline text-sm bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-transparent"
-              >
+                href="/typegpu/guides/getting-started"
+                className="underline text-sm bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-transparent">
                 Learn more about TypeGPU here
               </a>
             </div>
@@ -46,10 +45,13 @@ export function ExampleLayout() {
             <div>&copy; 2024 Software Mansion S.A.</div>
             <div className="flex gap-3 items-center">
               <a href="https://github.com/software-mansion/TypeGPU">
-                <img src="/assets/github-icon.svg" alt="github logo" />
+                <img src="/typegpu/assets/github-icon.svg" alt="github logo" />
               </a>
               <a href="https://discord.swmansion.com">
-                <img src="/assets/discord-icon.svg" alt="discord logo" />
+                <img
+                  src="/typegpu/assets/discord-icon.svg"
+                  alt="discord logo"
+                />
               </a>
             </div>
           </div>

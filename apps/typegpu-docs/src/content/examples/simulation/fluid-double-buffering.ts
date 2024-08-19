@@ -527,7 +527,7 @@ function obstaclesToConcrete(): Parsed<BoxObstacle>[] {
   }));
 }
 
-const boxXPlum = addSliderParam('box x', 0.5, {
+const boxXPlum = addSliderPlumParameter('box x', 0.5, {
   min: 0.2,
   max: 0.8,
   step: 0.01,
