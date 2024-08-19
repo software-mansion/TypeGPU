@@ -346,7 +346,10 @@ describe('PlumStore', () => {
     const fooPlum = plum<number>(2).$name('foo');
 
     const listener = vi.fn((newValue: number) => {});
-    const unsubscribe = store.subscribe(fooPlum, listener as PlumListener);
+    const unsubscribe = store.subscribe(
+      fooPlum,
+      listener as PlumListener<number>,
+    );
 
     expect(listener).toBeCalledTimes(0);
 
@@ -361,7 +364,10 @@ describe('PlumStore', () => {
     const doubledPlum = plum((get) => get(fooPlum) * 2).$name('doubled');
 
     const listener = vi.fn((_: number) => {});
-    const unsubscribe = store.subscribe(doubledPlum, listener as PlumListener);
+    const unsubscribe = store.subscribe(
+      doubledPlum,
+      listener as PlumListener<number>,
+    );
 
     expect(listener).toBeCalledTimes(0);
 

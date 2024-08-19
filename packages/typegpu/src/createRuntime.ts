@@ -262,7 +262,7 @@ class TypeGpuRuntimeImpl {
 
   onPlumChange<TValue>(
     plum: WgslPlum<TValue>,
-    listener: PlumListener,
+    listener: PlumListener<TValue>,
   ): Unsubscribe {
     return this._plumStore.subscribe(plum, listener);
   }

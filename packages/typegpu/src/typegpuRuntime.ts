@@ -36,7 +36,7 @@ export interface TypeGpuRuntime {
 
   onPlumChange<TValue>(
     plum: WgslPlum<TValue>,
-    listener: PlumListener,
+    listener: PlumListener<TValue>,
   ): Unsubscribe;
 
   writeBuffer<TValue extends AnyWgslData>(
