@@ -1,7 +1,7 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import type { SimpleWgslData } from './data';
 import { roundUp } from './mathUtils';
-import { PlumStore } from './plumStore';
+import { type PlumListener, PlumStore } from './plumStore';
 import {
   ComputeProgramBuilder,
   type Program,
@@ -254,7 +254,7 @@ class TypeGpuRuntimeImpl {
 
   onPlumChange<TValue>(
     plum: WgslPlum<TValue>,
-    listener: () => unknown,
+    listener: PlumListener,
   ): Unsubscribe {
     return this._plumStore.subscribe(plum, listener);
   }
