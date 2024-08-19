@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { type MouseEvent, useCallback, useEffect, useState } from 'react';
 
 type Props = {
   min: number;
@@ -8,39 +8,48 @@ type Props = {
   onChange: (value: number) => void;
 };
 
-let isMouseDown = false;
-
 export function Slider({ min, max, step, initial, onChange }: Props) {
   const [value, setValue] = useState(initial);
+  const [mouseDown, setMouseDown] = useState(false);
 
   useEffect(() => {
     onChange(value);
   }, [value, onChange]);
 
+  useEffect(() => {
+    window.addEventListener('mouseup', () => {
+      setMouseDown(false);
+    });
+  }, []);
+
+  const onUserInput = useCallback(
+    (e: MouseEvent) => {
+      const rect = (
+        e.nativeEvent.target as HTMLDivElement
+      ).getBoundingClientRect();
+      const clickedXRatio = (e.clientX - rect.x) / rect.width;
+      const value = min + clickedXRatio * (max - min);
+      const rounded = Math.round(value / step) * step;
+      setValue(rounded);
+    },
+    [max, min, step],
+  );
+
   return (
     <div
       className="grid relative bg-grayscale-20 items-center h-10 rounded-[0.25rem] overflow-hidden cursor-ew-resize"
       onMouseDown={() => {
-        isMouseDown = true;
-      }}
-      onMouseUp={() => {
-        isMouseDown = false;
-      }}
-      onMouseLeave={() => {
-        isMouseDown = false;
+        setMouseDown(true);
       }}
       onMouseMove={(e) => {
-        if (isMouseDown) {
-          const rect = (
-            e.nativeEvent.target as HTMLDivElement
-          ).getBoundingClientRect();
-          const clickedXRatio = (e.clientX - rect.x) / rect.width;
-          const value = min + clickedXRatio * (max - min);
-          const rounded = Math.round(value / step) * step;
-          setValue(rounded);
+        if (mouseDown) {
+          onUserInput(e);
         }
       }}
-    >
+      onClick={(e) => {
+        onUserInput(e);
+      }}
+      onKeyDown={() => {}}>
       <div
         style={{
           width: `${((value - min) / (max - min)) * 100}%`,

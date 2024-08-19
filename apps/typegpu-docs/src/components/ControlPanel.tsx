@@ -81,7 +81,7 @@ function DropdownRow({
       <div className="text-sm text-pretty text-ellipsis">{label}</div>
 
       <select
-        className="h-10 border border-grayscale-20 rounded-[0.25rem] px-3"
+        className="h-10 border border-grayscale-20 hover:border-grayscale-60 rounded-[0.25rem] px-3"
         value={value}
         onChange={(e) => {
           setValue(e.target.value);

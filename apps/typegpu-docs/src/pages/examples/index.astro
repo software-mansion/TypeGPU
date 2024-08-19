@@ -1,36 +1,8 @@
 ---
 import { ExampleLayout } from '../../components/ExampleLayout';
+import PageLayout from '../../layouts/PageLayout.astro';
 ---
 
-<html>
-  <head>
-    <title>Live examples</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="favicon.svg">
-    <style is:global>
-        @font-face {
-            font-family: 'Aeonik';
-            src: url('/fonts/Aeonik-Regular.woff') format('woff');
-            font-weight: 400;
-            font-style: normal;
-            font-display: swap;
-        }
-
-        @font-face {
-            font-family: 'Aeonik';
-            src: url('/fonts/Aeonik-Medium.otf') format('opentype');
-            font-weight: 500;
-            font-style: normal;
-            font-display: swap;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-    </style>
-  </head>
-  <body class="bg-grayscale-20">
-    <ExampleLayout client:only="react"/>
-  </body>
-</html>
+<PageLayout title="Live examples">
+  <ExampleLayout client:only="react"/>
+</PageLayout>

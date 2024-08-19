@@ -7,7 +7,7 @@ export function ExampleLayout() {
   const menuShown = useAtomValue(menuShownAtom);
 
   return (
-    <div className="flex h-screen p-4 gap-4">
+    <div className="flex h-screen p-4 gap-4 bg-grayscale-20">
       {menuShown ? (
         <aside className="flex flex-col bg-grayscale-0 rounded-2xl w-[18.75rem] p-5 gap-5">
           <header className="grid gap-5">
