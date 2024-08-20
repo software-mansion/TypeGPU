@@ -1,12 +1,11 @@
 import type {
   ResolutionCtx,
   WgslRenderResource,
-  WgslRenderResourceType,
   WgslSamplerType,
 } from './types';
 import { WgslIdentifier } from './wgslIdentifier';
 
-export interface WgslSampler extends WgslRenderResource<WgslSamplerType> {
+export interface WgslSampler extends WgslRenderResource {
   readonly descriptor: GPUSamplerDescriptor;
   $name(label: string): WgslSampler;
 }
@@ -47,7 +46,7 @@ class WgslSamplerImpl implements WgslSampler {
 }
 
 export function isSampler(
-  resource: WgslRenderResource<WgslRenderResourceType>,
+  resource: WgslRenderResource,
 ): resource is WgslSampler {
   return resource.type === 'sampler' || resource.type === 'sampler_comparison';
 }

@@ -552,18 +552,18 @@ const leftWallXPlum = addSliderPlumParameter('left wall: x', 0, {
   step: 0.01,
 });
 
-runtime.onPlumChange(limitedBoxXPlum, () => {
-  obstacles[OBSTACLE_BOX].x = runtime.readPlum(limitedBoxXPlum);
+runtime.onPlumChange(limitedBoxXPlum, (newVal) => {
+  obstacles[OBSTACLE_BOX].x = newVal;
   primary.applyMovedObstacles(obstaclesToConcrete());
 });
 
-runtime.onPlumChange(boxYPlum, () => {
-  obstacles[OBSTACLE_BOX].y = runtime.readPlum(boxYPlum);
+runtime.onPlumChange(boxYPlum, (newVal) => {
+  obstacles[OBSTACLE_BOX].y = newVal;
   primary.applyMovedObstacles(obstaclesToConcrete());
 });
 
-runtime.onPlumChange(leftWallXPlum, () => {
-  obstacles[OBSTACLE_LEFT_WALL].x = runtime.readPlum(leftWallXPlum);
+runtime.onPlumChange(leftWallXPlum, (newVal) => {
+  obstacles[OBSTACLE_LEFT_WALL].x = newVal;
   primary.applyMovedObstacles(obstaclesToConcrete());
 });
 

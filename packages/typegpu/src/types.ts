@@ -19,7 +19,7 @@ export interface ResolutionCtx {
   addDeclaration(item: WgslResolvable): void;
   addBinding(bindable: WgslBindable, identifier: WgslIdentifier): void;
   addRenderResource(
-    resource: WgslRenderResource<WgslRenderResourceType>,
+    resource: WgslRenderResource,
     identifier: WgslIdentifier,
   ): void;
   addBuiltin(builtin: Builtin): void;
@@ -142,9 +142,8 @@ export type WgslRenderResourceType =
   | WgslStorageTextureType
   | WgslExternalTextureType;
 
-export interface WgslRenderResource<T extends WgslRenderResourceType>
-  extends WgslResolvable {
-  readonly type: T;
+export interface WgslRenderResource extends WgslResolvable {
+  readonly type: WgslRenderResourceType;
 }
 
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';

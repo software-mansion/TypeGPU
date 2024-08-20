@@ -5,23 +5,14 @@ import { ResolutionCtxImpl } from './resolutionCtx';
 import type { TypeGpuRuntime } from './typegpuRuntime';
 import type {
   AnyWgslData,
-  AnyWgslPrimitive,
-  AnyWgslTexelFormat,
   BufferUsage,
-  TextureUsage,
   WgslBindable,
   WgslResolvable,
 } from './types';
-import { isSamplerType } from './types';
 import { getUsedBuiltinsNamed } from './wgslBuiltin';
 import { type BoundWgslCode, type WgslCode, code } from './wgslCode';
-import type { WgslSampler } from './wgslSampler';
-import {
-  type WgslAnyTextureView,
-  type WgslTextureExternal,
-  type WgslTextureView,
-  isExternalTexture,
-} from './wgslTexture';
+import { isSampler } from './wgslSampler';
+import { isExternalTexture, isTextureView } from './wgslTexture';
 
 export type Program = {
   readonly bindGroupLayout: GPUBindGroupLayout;
@@ -60,28 +51,21 @@ export default class ProgramBuilder {
     const codeString = ctx.resolve(this.root);
     const usedBindables = Array.from(ctx.usedBindables);
     const usedRenderResources = Array.from(ctx.usedRenderResources);
-    const usedSamplers = usedRenderResources.filter((resource) =>
-      isSamplerType(resource.type),
-    );
-    const usedTextures = usedRenderResources.filter(
-      (resource) =>
-        !isSamplerType(resource.type) && !isExternalTexture(resource),
-    );
-    const usedExternalTextures = usedRenderResources.filter((resource) =>
-      isExternalTexture(resource),
-    );
+    const usedSamplers = usedRenderResources.filter(isSampler);
+    const usedTextures = usedRenderResources.filter(isTextureView);
+    const usedExternalTextures = usedRenderResources.filter(isExternalTexture);
+
     const allEntries: GPUBindGroupLayoutEntry[] = [];
-    for (const texture of usedTextures) {
-      const textureView = texture as unknown as WgslAnyTextureView;
+    for (const textureView of usedTextures) {
       if (textureView.access === undefined) {
         allEntries.push({
-          binding: ctx.getIndexFor(texture),
+          binding: ctx.getIndexFor(textureView),
           visibility: options.shaderStage,
           texture: {},
         });
       } else {
         allEntries.push({
-          binding: ctx.getIndexFor(texture),
+          binding: ctx.getIndexFor(textureView),
           visibility: options.shaderStage,
           storageTexture: { format: textureView.texture.descriptor.format },
         });
@@ -112,34 +96,23 @@ export default class ProgramBuilder {
       });
     }
 
-    const bindGroupLayout = this.runtime.device.createBindGroupLayout({
-      entries: allEntries,
-    });
-
     const allBindGroupEntries: GPUBindGroupEntry[] = [];
     for (const texture of usedTextures) {
       allBindGroupEntries.push({
         binding: ctx.getIndexFor(texture),
-        resource: this.runtime.viewFor(
-          texture as WgslTextureView<
-            AnyWgslPrimitive | AnyWgslTexelFormat,
-            TextureUsage
-          >,
-        ),
+        resource: this.runtime.viewFor(texture),
       });
     }
     for (const externalTexture of usedExternalTextures) {
       allBindGroupEntries.push({
         binding: ctx.getIndexFor(externalTexture),
-        resource: this.runtime.externalTextureFor(
-          externalTexture as WgslTextureExternal,
-        ),
+        resource: this.runtime.externalTextureFor(externalTexture),
       });
     }
     for (const sampler of usedSamplers) {
       allBindGroupEntries.push({
         binding: ctx.getIndexFor(sampler),
-        resource: this.runtime.samplerFor(sampler as WgslSampler),
+        resource: this.runtime.samplerFor(sampler),
       });
     }
     for (const bindable of usedBindables) {
@@ -151,6 +124,10 @@ export default class ProgramBuilder {
         },
       });
     }
+
+    const bindGroupLayout = this.runtime.device.createBindGroupLayout({
+      entries: allEntries,
+    });
 
     const bindGroup = this.runtime.device.createBindGroup({
       layout: bindGroupLayout,
