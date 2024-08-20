@@ -6,7 +6,7 @@ import { WgslIdentifier } from './wgslIdentifier';
 // Public API
 // ----------
 
-export type VariableScope = 'private';
+export type VariableScope = 'private' | 'workgroup';
 
 export interface WgslVar<TDataType extends AnyWgslData> extends WgslResolvable {
   $name(label: string): WgslVar<TDataType>;
@@ -18,7 +18,8 @@ export interface WgslVar<TDataType extends AnyWgslData> extends WgslResolvable {
 export const variable = <TDataType extends AnyWgslData>(
   dataType: TDataType,
   initialValue?: Wgsl,
-): WgslVar<TDataType> => new WgslVarImpl(dataType, initialValue, 'private');
+  scope: VariableScope = 'private',
+): WgslVar<TDataType> => new WgslVarImpl(dataType, initialValue, scope);
 
 // --------------
 // Implementation

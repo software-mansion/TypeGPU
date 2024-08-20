@@ -13,7 +13,7 @@ import { WgslIdentifier } from './wgslIdentifier';
 
 export interface WgslBufferUsage<
   TData extends AnyWgslData,
-  TUsage extends BufferUsage,
+  TUsage extends BufferUsage = BufferUsage,
 > extends WgslBindable<TData, TUsage> {
   $name(label: string): WgslBufferUsage<TData, TUsage>;
 }

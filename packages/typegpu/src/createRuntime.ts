@@ -1,7 +1,12 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
+import type { SimpleWgslData } from './data';
 import { roundUp } from './mathUtils';
-import { PlumStore } from './plumStore';
-import ProgramBuilder, { type Program } from './programBuilder';
+import { type PlumListener, PlumStore } from './plumStore';
+import {
+  ComputeProgramBuilder,
+  type Program,
+  RenderProgramBuilder,
+} from './programBuilder';
 import type { WgslSettable } from './settableTrait';
 import { TaskQueue } from './taskQueue';
 import type {
@@ -9,16 +14,23 @@ import type {
   ComputePipelineOptions,
   RenderPipelineExecutorOptions,
   RenderPipelineOptions,
+  SetPlumAction,
   TypeGpuRuntime,
 } from './typegpuRuntime';
+import { deriveVertexFormat } from './typegpuRuntime';
 import type { AnyWgslData, WgslAllocatable } from './types';
-import { code } from './wgslCode';
 import {
   type ExtractPlumValue,
   type Unsubscribe,
   type WgslPlum,
   isPlum,
 } from './wgslPlum';
+import type { WgslSampler } from './wgslSampler';
+import type {
+  WgslAnyTexture,
+  WgslAnyTextureView,
+  WgslTextureExternal,
+} from './wgslTexture';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
@@ -26,6 +38,9 @@ import {
  */
 class TypeGpuRuntimeImpl {
   private _entryToBufferMap = new Map<WgslAllocatable, GPUBuffer>();
+  private _samplers = new WeakMap<WgslSampler, GPUSampler>();
+  private _textures = new WeakMap<WgslAnyTexture, GPUTexture>();
+  private _textureViews = new WeakMap<WgslAnyTextureView, GPUTextureView>();
   private _pipelineExecutors: PipelineExecutor<
     GPURenderPipeline | GPUComputePipeline
   >[] = [];
@@ -109,6 +124,60 @@ class TypeGpuRuntimeImpl {
     return buffer;
   }
 
+  textureFor(view: WgslAnyTexture | WgslAnyTextureView): GPUTexture {
+    let source: WgslAnyTexture;
+    if ('texture' in view) {
+      source = view.texture;
+    } else {
+      source = view;
+    }
+
+    let texture = this._textures.get(source);
+
+    if (!texture) {
+      const descriptor = {
+        ...source.descriptor,
+        usage: source.flags,
+      } as GPUTextureDescriptor;
+      texture = this.device.createTexture(descriptor);
+
+      if (!texture) {
+        throw new Error(`Failed to create texture for ${view}`);
+      }
+      this._textures.set(source, texture);
+    }
+
+    return texture;
+  }
+
+  viewFor(view: WgslAnyTextureView): GPUTextureView {
+    let textureView = this._textureViews.get(view);
+    if (!textureView) {
+      textureView = this.textureFor(view.texture).createView(view.descriptor);
+      this._textureViews.set(view, textureView);
+    }
+    return textureView;
+  }
+
+  externalTextureFor(texture: WgslTextureExternal): GPUExternalTexture {
+    return this.device.importExternalTexture(texture.descriptor);
+  }
+
+  samplerFor(sampler: WgslSampler): GPUSampler {
+    let gpuSampler = this._samplers.get(sampler);
+
+    if (!gpuSampler) {
+      gpuSampler = this.device.createSampler(sampler.descriptor);
+
+      if (!gpuSampler) {
+        throw new Error(`Failed to create sampler for ${sampler}`);
+      }
+      this._samplers.set(sampler, gpuSampler);
+    }
+
+    return gpuSampler;
+  }
+
   async readBuffer<TData extends AnyWgslData>(
     allocatable: WgslAllocatable<TData>,
   ): Promise<Parsed<TData>> {
@@ -179,51 +248,59 @@ class TypeGpuRuntimeImpl {
 
   setPlum<TPlum extends WgslPlum & WgslSettable>(
     plum: TPlum,
-    value: ExtractPlumValue<TPlum>,
+    value: SetPlumAction<ExtractPlumValue<TPlum>>,
   ) {
-    this._plumStore.set(plum, value);
+    type Value = ExtractPlumValue<TPlum>;
+
+    if (typeof value === 'function') {
+      const compute = value as (prev: Value) => Value;
+      this._plumStore.set(plum, compute(this._plumStore.get(plum)));
+    } else {
+      this._plumStore.set(plum, value);
+    }
   }
 
   onPlumChange<TValue>(
     plum: WgslPlum<TValue>,
-    listener: () => unknown,
+    listener: PlumListener<TValue>,
   ): Unsubscribe {
     return this._plumStore.subscribe(plum, listener);
   }
 
   makeRenderPipeline(options: RenderPipelineOptions): RenderPipelineExecutor {
-    const vertexProgram = new ProgramBuilder(
-      this,
-      code`
-        @vertex fn main_vertex(${options.vertex.args.flatMap((arg) => [arg, ', '])}) -> ${options.vertex.output} {
-          ${options.vertex.code}
-        }
+    const [vertexProgram, fragmentProgram, vertexBuffers] =
+      new RenderProgramBuilder(
+        this,
+        options.vertex.code,
+        options.fragment.code,
+        options.vertex.output,
+      ).build({
+        bindingGroup: (options.externalLayouts ?? []).length,
+      });
 
-        ${options.externalDeclarations?.flatMap((arg) => [arg, '\n']) ?? ''}
-      `,
-    ).build({
-      bindingGroup: (options.externalLayouts ?? []).length,
-      shaderStage: GPUShaderStage.VERTEX,
-    });
-
-    const fragmentProgram = new ProgramBuilder(
-      this,
-      code`
-        @fragment fn main_frag(${options.fragment.args.flatMap((arg) => [arg, ', '])}) -> ${options.fragment.output} {
-          ${options.fragment.code}
-        }
-
-        ${options.externalDeclarations?.flatMap((arg) => [arg, '\n']) ?? ''}
-      `,
-    ).build({
-      bindingGroup: (options.externalLayouts ?? []).length + 1,
-      shaderStage: GPUShaderStage.FRAGMENT,
+    const vertexBufferDescriptors = vertexBuffers.map((buffer, idx) => {
+      if (!buffer.allocatable.vertexLayout) {
+        throw new Error(
+          `Buffer ${buffer.allocatable} does not have a vertex layout`,
+        );
+      }
+      return {
+        ...buffer.allocatable.vertexLayout,
+        attributes: [
+          {
+            shaderLocation: idx,
+            offset: 0,
+            format: deriveVertexFormat(
+              buffer.allocatable.dataType as SimpleWgslData<AnyWgslData>,
+            ),
+          },
+        ],
+      };
     });
 
     const vertexShaderModule = this.device.createShaderModule({
       code: vertexProgram.code,
     });
-
     const fragmentShaderModule = this.device.createShaderModule({
       code: fragmentProgram.code,
     });
@@ -242,20 +319,26 @@ class TypeGpuRuntimeImpl {
       layout: pipelineLayout,
       vertex: {
         module: vertexShaderModule,
-        buffers: options.vertex.buffersLayouts ?? [],
+        buffers: vertexBufferDescriptors,
       },
       fragment: {
         module: fragmentShaderModule,
-        targets: options.fragment.target ?? [],
+        targets: options.fragment?.target ?? [],
       },
       primitive: options.primitive,
     });
 
+    const buffers = vertexBuffers.map(
+      (buffer, idx) => [this.bufferFor(buffer.allocatable), idx] as const,
+    );
+
     const executor = new RenderPipelineExecutor(
       this,
       renderPipeline,
-      [vertexProgram, fragmentProgram],
+      vertexProgram,
+      fragmentProgram,
       options.externalLayouts?.length ?? 0,
+      buffers,
     );
 
     this._pipelineExecutors.push(executor);
@@ -265,20 +348,12 @@ class TypeGpuRuntimeImpl {
   makeComputePipeline(
     options: ComputePipelineOptions,
   ): ComputePipelineExecutor {
-    const { args = [], workgroupSize = [1, 1] } = options;
-
-    const program = new ProgramBuilder(
+    const program = new ComputeProgramBuilder(
       this,
-      code`
-        @compute @workgroup_size(${workgroupSize.join(', ')}) fn main_compute(${args.flatMap((arg) => [arg, ', '])}) {
-          ${options.code}
-        }
-
-        ${options.externalDeclarations?.flatMap((arg) => [arg, '\n']) ?? ''}
-      `,
+      options.code,
+      options.workgroupSize ?? [1],
     ).build({
       bindingGroup: (options.externalLayouts ?? []).length,
-      shaderStage: GPUShaderStage.COMPUTE,
     });
 
     const shaderModule = this.device.createShaderModule({
@@ -332,6 +407,28 @@ class PipelineExecutor<T extends GPURenderPipeline | GPUComputePipeline> {
 }
 
 class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
+  private _vertexProgram: Program;
+  private _fragmentProgram: Program;
+  private _usedVertexBuffers: Set<readonly [GPUBuffer, number]>;
+
+  constructor(
+    runtime: TypeGpuRuntime,
+    pipeline: GPURenderPipeline,
+    vertexProgram: Program,
+    fragmentProgram: Program,
+    externalLayoutCount: number,
+    usedVertexBuffers: (readonly [GPUBuffer, number])[],
+  ) {
+    super(
+      runtime,
+      pipeline,
+      [vertexProgram, fragmentProgram],
+      externalLayoutCount,
+    );
+    this._vertexProgram = vertexProgram;
+    this._fragmentProgram = fragmentProgram;
+    this._usedVertexBuffers = new Set(usedVertexBuffers);
+  }
   execute(options: RenderPipelineExecutorOptions) {
     const {
       vertexCount,
@@ -339,7 +436,6 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
       firstVertex,
       firstInstance,
       externalBindGroups,
-      externalVertexBuffers,
       ...descriptor
     } = options;
 
@@ -359,16 +455,18 @@ class RenderPipelineExecutor extends PipelineExecutor<GPURenderPipeline> {
       passEncoder.setBindGroup(index, group),
     );
 
-    (externalVertexBuffers ?? []).forEach((group, index) =>
-      passEncoder.setVertexBuffer(index, group),
+    passEncoder.setBindGroup(
+      (externalBindGroups ?? []).length,
+      this._vertexProgram.bindGroup,
+    );
+    passEncoder.setBindGroup(
+      (externalBindGroups ?? []).length + 1,
+      this._fragmentProgram.bindGroup,
     );
 
-    this.programs.forEach((program, i) => {
-      passEncoder.setBindGroup(
-        (externalBindGroups ?? []).length + i,
-        program.bindGroup,
-      );
-    });
+    for (const [buffer, index] of this._usedVertexBuffers) {
+      passEncoder.setVertexBuffer(index, buffer);
+    }
 
     passEncoder.draw(vertexCount, instanceCount, firstVertex, firstInstance);
     passEncoder.end();

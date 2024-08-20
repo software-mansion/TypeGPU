@@ -1,8 +1,10 @@
 import type { ISchema, Parsed } from 'typed-binary';
+import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from './data';
+import type { Builtin } from './wgslBuiltin';
 import type { WgslIdentifier } from './wgslIdentifier';
 import type { WgslPlum } from './wgslPlum';
 
-export type Wgsl = string | boolean | number | WgslResolvable;
+export type Wgsl = string | number | WgslResolvable | symbol | boolean;
 
 /**
  * Passed into each resolvable item. All sibling items share a resolution ctx,
@@ -16,6 +18,11 @@ export interface ResolutionCtx {
 
   addDeclaration(item: WgslResolvable): void;
   addBinding(bindable: WgslBindable, identifier: WgslIdentifier): void;
+  addRenderResource(
+    resource: WgslRenderResource,
+    identifier: WgslIdentifier,
+  ): void;
+  addBuiltin(builtin: Builtin): void;
   nameFor(token: WgslResolvable): string;
   /**
    * Unwraps all layers of slot indirection and returns the concrete value if available.
@@ -92,8 +99,10 @@ export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
    * binary.
    */
   readonly dataType: TData;
+  vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null;
   readonly initial?: Parsed<TData> | WgslPlum<Parsed<TData>> | undefined;
   readonly flags: GPUBufferUsageFlags;
+  get label(): string | undefined;
 }
 
 export interface WgslBindable<
@@ -104,7 +113,102 @@ export interface WgslBindable<
   readonly usage: TUsage;
 }
 
-export type BufferUsage = 'uniform' | 'readonly_storage' | 'mutable_storage';
+export type WgslSamplerType = 'sampler' | 'sampler_comparison';
+export type WgslTypedTextureType =
+  | 'texture_1d'
+  | 'texture_2d'
+  | 'texture_2d_array'
+  | 'texture_3d'
+  | 'texture_cube'
+  | 'texture_cube_array'
+  | 'texture_multisampled_2d';
+export type WgslDepthTextureType =
+  | 'texture_depth_2d'
+  | 'texture_depth_2d_array'
+  | 'texture_depth_cube'
+  | 'texture_depth_cube_array'
+  | 'texture_depth_multisampled_2d';
+export type WgslStorageTextureType =
+  | 'texture_storage_1d'
+  | 'texture_storage_2d'
+  | 'texture_storage_2d_array'
+  | 'texture_storage_3d';
+export type WgslExternalTextureType = 'texture_external';
+
+export type WgslRenderResourceType =
+  | WgslSamplerType
+  | WgslTypedTextureType
+  | WgslDepthTextureType
+  | WgslStorageTextureType
+  | WgslExternalTextureType;
+
+export interface WgslRenderResource extends WgslResolvable {
+  readonly type: WgslRenderResourceType;
+}
+
+export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
+export type TextureUsage = 'sampled' | 'storage';
+export type StorageTextureAccess = 'read' | 'write' | 'read_write';
+
+export type StorageTextureParams = {
+  type: WgslStorageTextureType;
+  access: StorageTextureAccess;
+  descriptor?: GPUTextureViewDescriptor;
+};
+export type SampledTextureParams = {
+  type: WgslTypedTextureType;
+  dataType: AnyWgslPrimitive;
+  descriptor?: GPUTextureViewDescriptor;
+};
+
+export function isSamplerType(
+  type: WgslRenderResourceType,
+): type is WgslSamplerType {
+  return type === 'sampler' || type === 'sampler_comparison';
+}
+
+export function isTypedTextureType(
+  type: WgslRenderResourceType,
+): type is WgslTypedTextureType {
+  return [
+    'texture_1d',
+    'texture_2d',
+    'texture_2d_array',
+    'texture_3d',
+    'texture_cube',
+    'texture_cube_array',
+    'texture_multisampled_2d',
+  ].includes(type);
+}
+
+export function isDepthTextureType(
+  type: WgslRenderResourceType,
+): type is WgslDepthTextureType {
+  return [
+    'texture_depth_2d',
+    'texture_depth_2d_array',
+    'texture_depth_cube',
+    'texture_depth_cube_array',
+    'texture_depth_multisampled_2d',
+  ].includes(type);
+}
+
+export function isStorageTextureType(
+  type: WgslRenderResourceType,
+): type is WgslStorageTextureType {
+  return [
+    'texture_storage_1d',
+    'texture_storage_2d',
+    'texture_storage_2d_array',
+    'texture_storage_3d',
+  ].includes(type);
+}
+
+export function isExternalTextureType(
+  type: WgslRenderResourceType,
+): type is WgslExternalTextureType {
+  return type === 'texture_external';
+}
 
 export interface WgslData<TInner> extends ISchema<TInner>, WgslResolvable {
   readonly byteAlignment: number;
@@ -112,6 +216,8 @@ export interface WgslData<TInner> extends ISchema<TInner>, WgslResolvable {
 }
 
 export type AnyWgslData = WgslData<unknown>;
+export type AnyWgslPrimitive = U32 | I32 | F32;
+export type AnyWgslTexelFormat = Vec4u | Vec4i | Vec4f;
 
 export interface WgslPointer<
   TScope extends 'function',

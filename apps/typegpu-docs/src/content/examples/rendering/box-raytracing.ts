@@ -9,7 +9,7 @@
 import { addElement, addSliderParam, onFrame } from '@typegpu/example-toolkit';
 // --
 
-import { createRuntime, wgsl } from 'typegpu';
+import { builtin, createRuntime, wgsl } from 'typegpu';
 import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'typegpu/data';
 
 const X = 7;
@@ -105,14 +105,14 @@ const boxMatrixBuffer = wgsl
     ),
   )
   .$name('box_array')
-  .$allowReadonlyStorage();
-const boxMatrixData = boxMatrixBuffer.asReadonlyStorage();
+  .$allowReadonly();
+const boxMatrixData = boxMatrixBuffer.asReadonly();
 
 const cameraPositionBuffer = wgsl
   .buffer(vec3f, cameraPositionPlum)
   .$name('camera_position')
-  .$allowReadonlyStorage();
-const cameraPositionData = cameraPositionBuffer.asReadonlyStorage();
+  .$allowReadonly();
+const cameraPositionData = cameraPositionBuffer.asReadonly();
 
 const cameraAxesBuffer = wgsl
   .buffer(
@@ -124,8 +124,8 @@ const cameraAxesBuffer = wgsl
     cameraAxesPlum,
   )
   .$name('camera_axes')
-  .$allowReadonlyStorage();
-const cameraAxesData = cameraAxesBuffer.asReadonlyStorage();
+  .$allowReadonly();
+const cameraAxesData = cameraAxesBuffer.asReadonly();
 
 const canvasDimsBuffer = wgsl
   .buffer(
@@ -152,76 +152,70 @@ const getBoxIntersectionFn = wgsl.fn`(
 ) -> ${intersectionStruct} {
   var output: ${intersectionStruct};
 
-  var tMin: f32; 
+  var tMin: f32;
   var tMax: f32;
   var tMinY: f32;
   var tMaxY: f32;
   var tMinZ: f32;
   var tMaxZ: f32;
 
-  if (ray.direction.x >= 0) { 
-    tMin = (boundMin.x - ray.origin.x) / ray.direction.x; 
-    tMax = (boundMax.x - ray.origin.x) / ray.direction.x; 
-  } else { 
-    tMin = (boundMax.x - ray.origin.x) / ray.direction.x; 
-    tMax = (boundMin.x - ray.origin.x) / ray.direction.x; 
+  if (ray.direction.x >= 0) {
+    tMin = (boundMin.x - ray.origin.x) / ray.direction.x;
+    tMax = (boundMax.x - ray.origin.x) / ray.direction.x;
+  } else {
+    tMin = (boundMax.x - ray.origin.x) / ray.direction.x;
+    tMax = (boundMin.x - ray.origin.x) / ray.direction.x;
   }
 
-  if (ray.direction.y >= 0) { 
-    tMinY = (boundMin.y - ray.origin.y) / ray.direction.y; 
-    tMaxY = (boundMax.y - ray.origin.y) / ray.direction.y; 
-  } else { 
-    tMinY = (boundMax.y - ray.origin.y) / ray.direction.y; 
-    tMaxY = (boundMin.y - ray.origin.y) / ray.direction.y; 
+  if (ray.direction.y >= 0) {
+    tMinY = (boundMin.y - ray.origin.y) / ray.direction.y;
+    tMaxY = (boundMax.y - ray.origin.y) / ray.direction.y;
+  } else {
+    tMinY = (boundMax.y - ray.origin.y) / ray.direction.y;
+    tMaxY = (boundMin.y - ray.origin.y) / ray.direction.y;
   }
 
   if (tMin > tMaxY) || (tMinY > tMax) {
-    return output; 
+    return output;
   }
 
   if (tMinY > tMin) {
-    tMin = tMinY; 
+    tMin = tMinY;
   }
 
   if (tMaxY < tMax) {
-    tMax = tMaxY; 
+    tMax = tMaxY;
   }
 
-  if (ray.direction.z >= 0) { 
-    tMinZ = (boundMin.z - ray.origin.z) / ray.direction.z; 
-    tMaxZ = (boundMax.z - ray.origin.z) / ray.direction.z; 
-  } else { 
-    tMinZ = (boundMax.z - ray.origin.z) / ray.direction.z; 
-    tMaxZ = (boundMin.z - ray.origin.z) / ray.direction.z; 
+  if (ray.direction.z >= 0) {
+    tMinZ = (boundMin.z - ray.origin.z) / ray.direction.z;
+    tMaxZ = (boundMax.z - ray.origin.z) / ray.direction.z;
+  } else {
+    tMinZ = (boundMax.z - ray.origin.z) / ray.direction.z;
+    tMaxZ = (boundMin.z - ray.origin.z) / ray.direction.z;
   }
 
   if (tMin > tMaxZ) || (tMinZ > tMax) {
-    return output; 
+    return output;
   }
 
   if tMinZ > tMin {
-    tMin = tMinZ; 
+    tMin = tMinZ;
   }
 
   if tMaxZ < tMax {
-    tMax = tMaxZ; 
+    tMax = tMaxZ;
   }
 
   output.intersects = tMin > 0 && tMax > 0;
   output.tMin = tMin;
   output.tMax = tMax;
-  return output; 
+  return output;
 }
 `.$name('box_intersection');
 
-const vertexOutputStruct = struct({
-  '@builtin(position) pos': vec4f,
-});
-
 const renderPipeline = runtime.makeRenderPipeline({
   vertex: {
-    args: ['@builtin(vertex_index) VertexIndex: u32'],
-    output: vertexOutputStruct,
     code: wgsl`
       var pos = array<vec2f, 6>(
         vec2<f32>( 1,  1),
@@ -232,31 +226,31 @@ const renderPipeline = runtime.makeRenderPipeline({
         vec2<f32>(-1,  1)
       );
 
-      var output: ${vertexOutputStruct};
-      output.pos = vec4f(pos[VertexIndex], 0, 1);
-      return output;
+      let outPos = vec4f(pos[${builtin.vertexIndex}], 0, 1);
     `,
+    output: {
+      [builtin.position]: 'outPos',
+    },
   },
 
   fragment: {
-    args: ['@builtin(position) pos: vec4f'],
-    code: wgsl.code`
+    code: wgsl`
       let minDim = f32(min(${canvasDimsData}.width, ${canvasDimsData}.height));
 
       var ray: ${rayStruct};
       ray.origin = ${cameraPositionData};
-      ray.direction += ${cameraAxesData}.right * (pos.x - f32(${canvasDimsData}.width)/2)/minDim;
-      ray.direction += ${cameraAxesData}.up * (pos.y - f32(${canvasDimsData}.height)/2)/minDim;
+      ray.direction += ${cameraAxesData}.right * (${builtin.position}.x - f32(${canvasDimsData}.width)/2)/minDim;
+      ray.direction += ${cameraAxesData}.up * (${builtin.position}.y - f32(${canvasDimsData}.height)/2)/minDim;
       ray.direction += ${cameraAxesData}.forward;
       ray.direction = normalize(ray.direction);
 
       let bigBoxIntersection = ${getBoxIntersectionFn}(
-        -vec3f(f32(${boxSizeData}))/2, 
+        -vec3f(f32(${boxSizeData}))/2,
         vec3f(
-          ${cubeSize[0]}, 
-          ${cubeSize[1]}, 
+          ${cubeSize[0]},
+          ${cubeSize[1]},
           ${cubeSize[2]},
-        ) + vec3f(f32(${boxSizeData}))/2, 
+        ) + vec3f(f32(${boxSizeData}))/2,
         ray,
       );
 
@@ -274,8 +268,8 @@ const renderPipeline = runtime.makeRenderPipeline({
               }
 
               let intersection = ${getBoxIntersectionFn}(
-                vec3f(f32(i), f32(j), f32(k)) * ${MAX_BOX_SIZE} - vec3f(f32(${boxSizeData}))/2, 
-                vec3f(f32(i), f32(j), f32(k)) * ${MAX_BOX_SIZE} + vec3f(f32(${boxSizeData}))/2, 
+                vec3f(f32(i), f32(j), f32(k)) * ${MAX_BOX_SIZE} - vec3f(f32(${boxSizeData}))/2,
+                vec3f(f32(i), f32(j), f32(k)) * ${MAX_BOX_SIZE} + vec3f(f32(${boxSizeData}))/2,
                 ray,
               );
 
@@ -291,7 +285,6 @@ const renderPipeline = runtime.makeRenderPipeline({
 
       return color;
     `,
-    output: '@location(0) vec4f',
     target: [
       {
         format: presentationFormat,
@@ -323,10 +316,12 @@ onFrame((deltaTime) => {
   runtime.setPlum(canvasWidthPlum, canvas.width);
   runtime.setPlum(canvasHeightPlum, canvas.height);
 
-  const lastFrame = runtime.readPlum(framePlum);
   const rotationSpeed = runtime.readPlum(rotationSpeedPlum);
 
-  runtime.setPlum(framePlum, lastFrame + (rotationSpeed * deltaTime) / 1000);
+  runtime.setPlum(
+    framePlum,
+    (prev) => prev + (rotationSpeed * deltaTime) / 1000,
+  );
 
   const textureView = context.getCurrentTexture().createView();
 
