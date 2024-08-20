@@ -3,6 +3,7 @@ import react from '@astrojs/react';
 import starlight from '@astrojs/starlight';
 import tailwind from '@astrojs/tailwind';
 import { defineConfig } from 'astro/config';
+import starlightBlog from 'starlight-blog';
 import importRawRedirectPlugin from './vite-import-raw-redirect-plugin';
 
 // https://astro.build/config
@@ -39,11 +40,8 @@ export default defineConfig({
       },
       sidebar: [
         {
-          label: '⭐️ Live Examples',
-          link: 'examples',
-          attrs: {
-            'data-astro-reload': true,
-          },
+          label: 'Why TypeGPU?',
+          slug: 'why-typegpu',
         },
         {
           label: 'Guides',
@@ -69,11 +67,23 @@ export default defineConfig({
         },
         // typeDocSidebarGroup,
         {
-          label: '🙋 FAQ',
+          label: 'Examples',
+          link: 'examples',
+          attrs: {
+            class: `before:content-['👁️'] before:inline-flex before:justify-center before:items-center before:w-5 before:h-5`,
+            'data-astro-reload': true,
+          },
+        },
+        {
+          label: 'FAQ',
           slug: 'faq',
+          attrs: {
+            class: `before:content-['🙋'] before:inline-flex before:justify-center before:items-center before:w-5 before:h-5`,
+          },
         },
       ],
       plugins: [
+        starlightBlog(),
         // Generate the documentation.
         // starlightTypeDoc({
         //   entryPoints: [
