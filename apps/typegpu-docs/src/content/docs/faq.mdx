@@ -1,0 +1,46 @@
+---
+title: FAQ
+description: Frequently Asked Questions
+---
+
+<details>
+<summary>🙋 Why does the API differ from WebGPU?</summary>
+
+The API differs from what can be seen in WebGPU due to a difference in behavior between the two.
+Resource management in TypeGPU is, for the most part, automated. When defining a GPU buffer, we
+can do so using the `wgsl.buffer` API like so:
+
+```ts
+const fooBuffer = wgsl.buffer(f32).$name('foo');
+```
+
+This however does not allocate any memory on the GPU, as opposed to the `device.createBuffer` WebGPU
+API.
+
+</details>
+
+<details>
+<summary>🙋 How does TypeGPU differ from Three.js or Babylon.js?</summary>
+
+TypeGPU is a set of primitives for building WebGPU solutions, as opposed to a framework created for a
+specific use case like Three.js or Babylon.js. Our hope is that libraries built on top of TypeGPU can interact with
+each other with the common language of our primitives, even though they are built with different use
+cases in mind (Visualization, AI inference, etc.).
+
+</details>
+
+<details>
+<summary>🙋 Which browsers support TypeGPU?</summary>
+
+TypeGPU can be used on any browser that supports WebGPU. The current coverage can be [checked here](https://caniuse.com/webgpu).
+Additionally, thanks to [react-native-wgpu](https://github.com/wcandillon/react-native-webgpu), TypeGPU also works on React Native!
+
+</details>
+
+
+<details>
+<summary>🙋 Can I use it on React Native?</summary>
+
+Yes! Thanks to [react-native-wgpu](https://github.com/wcandillon/react-native-webgpu), TypeGPU also works on React Native.
+
+</details>
