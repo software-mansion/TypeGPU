@@ -69,7 +69,10 @@ export class BindGroupResolver {
   }
 
   getBindGroupLayout() {
-    if (this.layout) return this.layout;
+    if (this.layout) {
+      return this.layout;
+    }
+    
     const entries: GPUBindGroupLayoutEntry[] = [];
     for (const textureView of this.textureViews) {
       if (textureView.access === undefined) {
@@ -118,7 +121,10 @@ export class BindGroupResolver {
   }
 
   getBindGroup() {
-    if (this.bindGroup) return this.bindGroup;
+    if (this.bindGroup) {
+      return this.bindGroup;
+    }
+    
     const entries: GPUBindGroupEntry[] = [];
     for (const textureView of this.textureViews) {
       entries.push({
@@ -170,7 +176,9 @@ export class BindGroupResolver {
       throw new Error('Vertex buffers not set');
     }
 
-    if (this.vertexLayout) return this.vertexLayout;
+    if (this.vertexLayout) {
+      return this.vertexLayout;
+    }
 
     const vertexBufferDescriptors: GPUVertexBufferLayout[] = [];
     for (const [buffer, idx] of this.vertexBuffers.entries()) {
@@ -206,9 +214,9 @@ export class BindGroupResolver {
 
   getVertexBufferIndex(buffer: WgslBindable<AnyWgslData, 'vertex'>) {
     const index = this.vertexBuffers?.get(buffer);
-    if (this.vertexBuffers === null || !index) {
+    if (this.vertexBuffers === null || index === undefined) {
       throw new Error('Vertex buffers not set');
     }
-    return this.vertexBuffers.get(buffer);
+    return index;
   }
 }
