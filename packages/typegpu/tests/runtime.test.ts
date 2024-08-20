@@ -34,7 +34,6 @@ const mockBuffer = vi.fn(() => ({
 const mockCommandEncoder = vi.fn(() => ({
   beginComputePass: vi.fn(() => mockComputePassEncoder()),
   beginRenderPass: vi.fn(),
-  clearBuffer: vi.fn(),
   copyBufferToBuffer: vi.fn(),
   copyBufferToTexture: vi.fn(),
   copyTextureToBuffer: vi.fn(),
@@ -70,24 +69,13 @@ const mockDevice = vi.fn(() => ({
   },
 }));
 
-vi.stubGlobal('GPUDevice', mockDevice);
-
-vi.mock('../src/createRuntime', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../src/createRuntime')>();
-  return {
-    ...actual,
-    // @ts-ignore
-    createRuntime: vi.fn(() => new TypeGpuRuntimeImpl(mockDevice())),
-  };
-});
-
 describe('TypeGpuRuntime', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
   it('should create buffer with no initialization', async () => {
-    const runtime = await createRuntime();
+    const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
     const bufferData = wgsl.buffer(u32).$allowUniform();
     const buffer = bufferData.asUniform();
 
@@ -108,7 +96,7 @@ describe('TypeGpuRuntime', () => {
   });
 
   it('should create buffer with initialization', async () => {
-    const runtime = await createRuntime();
+    const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
     const bufferData = wgsl.buffer(vec3i, [0, 0, 0]).$allowUniform();
     const buffer = bufferData.asUniform();
 
@@ -129,7 +117,7 @@ describe('TypeGpuRuntime', () => {
   });
 
   it('should allocate buffer with proper size for nested structs', async () => {
-    const runtime = await createRuntime();
+    const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
     const s1 = struct({ a: u32, b: u32 });
     const s2 = struct({ a: u32, b: s1 });
     const bufferData = wgsl.buffer(s2).$allowUniform();
@@ -148,7 +136,7 @@ describe('TypeGpuRuntime', () => {
   });
 
   it('should properly write to buffer', async () => {
-    const runtime = await createRuntime();
+    const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
     const bufferData = wgsl.buffer(u32);
 
     runtime.writeBuffer(bufferData, 3);
@@ -166,7 +154,7 @@ describe('TypeGpuRuntime', () => {
   });
 
   it('should properly write to complex buffer', async () => {
-    const runtime = await createRuntime();
+    const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
 
     const s1 = struct({ a: u32, b: u32, c: vec3i });
     const s2 = struct({ a: u32, b: s1, c: vec4u });
@@ -204,7 +192,7 @@ describe('TypeGpuRuntime', () => {
   });
 
   it('should properly write to buffer with plum initialization', async () => {
-    const runtime = await createRuntime();
+    const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
     const spy = vi.spyOn(runtime, 'writeBuffer');
     const intPlum = plum<number>(3);
 

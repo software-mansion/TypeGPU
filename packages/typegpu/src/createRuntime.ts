@@ -539,7 +539,12 @@ export type CreateRuntimeOptions = {
 export async function createRuntime(
   options?: CreateRuntimeOptions | GPUDevice,
 ): Promise<TypeGpuRuntime> {
-  if (options instanceof GPUDevice) {
+  if (
+    options &&
+    typeof options === 'object' &&
+    'queue' in options &&
+    'createBuffer' in options
+  ) {
     return new TypeGpuRuntimeImpl(options);
   }
 
