@@ -150,9 +150,15 @@ importers:
       '@webgpu/types':
         specifier: ^0.1.43
         version: 0.1.43
+      remeda:
+        specifier: ^2.3.0
+        version: 2.3.0
       tsup:
         specifier: ^8.0.2
         version: 8.0.2(typescript@5.5.4)
+      tsx:
+        specifier: ^4.16.2
+        version: 4.16.2
       typed-binary:
         specifier: ^4.0.0
         version: 4.0.0
@@ -5704,7 +5710,6 @@ packages:
     resolution: {integrity: sha512-J9djcCyFL9D1ZGnfiNJ6MMhcUT8BmNCT+dj2SApdrTNz+CxqW1dScPVaDCopivHTShiYXh4sRSPYKMzlGrgyQw==}
     dependencies:
       type-fest: 4.21.0
-    dev: false
 
   /request-light@0.7.0:
     resolution: {integrity: sha512-lMbBMrDoxgsyO+yB3sDcrDuX85yYt7sS8BfQd11jtbW/z5ZWgLZRcEGLsLoYw7I0WSUGQBs8CC8ScIxkTX1+6Q==}
@@ -6521,7 +6526,6 @@ packages:
   /type-fest@4.21.0:
     resolution: {integrity: sha512-ADn2w7hVPcK6w1I0uWnM//y1rLXZhzB9mr0a3OirzclKF1Wp6VzevUmzz/NRAWunOT6E8HrnpGY7xOfc6K57fA==}
     engines: {node: '>=16'}
-    dev: false
 
   /typed-binary@4.0.0:
     resolution: {integrity: sha512-6ZXhbBePH4XZY57o23PV6O/HAYWcsAkCSwTKI6DrN5xMBwOV+I1G+MtytSY2v+QU3VPzB5Kz6268Q3qYD0XIYA==}
