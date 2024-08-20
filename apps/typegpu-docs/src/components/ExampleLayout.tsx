@@ -23,7 +23,7 @@ function SideMenu() {
         <div className="grid place-items-center">
           <a href="/typegpu" className="block cursor-pointer">
             <img
-              className="my-7"
+              className="my-7 w-40"
               src="/typegpu/typegpu-logo-light.svg"
               alt="TypeGPU Logo"
             />
