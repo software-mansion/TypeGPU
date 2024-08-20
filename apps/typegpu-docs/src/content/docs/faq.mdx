@@ -7,7 +7,11 @@ description: Frequently Asked Questions
 <summary>🙋 Why does the API differ from WebGPU?</summary>
 
 The API differs from what can be seen in WebGPU due to a difference in behavior between the two.
-Resource management in TypeGPU is, for the most part, automated. When defining a GPU buffer, we
+
+The glue code necessary to link WGSL bindings with TypeScript values is not present in TypeGPU,
+which does greatly reduce the boilerplate, but requires a different API.
+
+Furthermore, resource management in TypeGPU is, for the most part, automated. When defining a GPU buffer, we
 can do so using the `wgsl.buffer` API like so:
 
 ```ts
@@ -15,7 +19,8 @@ const fooBuffer = wgsl.buffer(f32).$name('foo');
 ```
 
 This however does not allocate any memory on the GPU, as opposed to the `device.createBuffer` WebGPU
-API.
+API. Buffers in TypeGPU get allocated eventually, when code using them is executed by a `runtime`.
+They then get destroyed when calling `runtime.dispose()`.
 
 </details>
 
