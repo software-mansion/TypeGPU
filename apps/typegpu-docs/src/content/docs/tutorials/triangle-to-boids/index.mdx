@@ -421,8 +421,8 @@ There are two different approaches, each with its own pros and cons.
 We can either create another vertex buffer (this time using the 'instance' version) or use a uniform/storage buffer.
 Let's explore both options.
 
-<Tabs>
-  <TabItem label='Instance vertex buffer'>
+### Instance vertex buffer approach
+
   ```ts
   const triangleAmount = 10;
   const trianglePos = wgsl
@@ -479,8 +479,9 @@ Let's explore both options.
     runtime.flush();
   });
   ```
-  </TabItem>
-  <TabItem label='Storage buffer'>
+
+### Storage buffer approach
+
   ```ts
   const triangleAmount = 10;
   const trianglePos = wgsl
@@ -494,14 +495,14 @@ Let's explore both options.
         triangleAmount,
       ),
     )
-    .$allowReadonlyStorage();
+    .$allowReadonly();
   ```
   This time, we are using a buffer of structs, making our code more readable as we can access the data using the struct fields.
   We are using a readonly storage buffer because the current alignment of the data in the buffer is 12 bytes, which is not a multiple of 16 bytes — a requirement for a uniform buffer.
   While we could pad the struct to make it 16 bytes, let's stick to using readonly storage for now.
   ```diff lang=ts
   const vertexCode =  wgsl`
-+  let instanceInfo = ${trianglePos.asReadOnlyStorage()}[${builtin.instanceIndex}];
++  let instanceInfo = ${trianglePos.asReadOnly()}[${builtin.instanceIndex}];
     let rotated = ${rotate}(
       ${triangleVertex.asVertex()},
 -    ${rotationBuffer.asUniform()}
@@ -539,10 +540,9 @@ Let's explore both options.
   });
   ```
 
-  </TabItem>
-</Tabs>
-
+<Aside>
 For the remainder of this tutorial, we will assume the use of the storage buffer approach. If you prefer the vertex buffer approach, feel free to adapt the code accordingly.
+</Aside>
 ### Initializing the buffer
 Since we don't have initial values for the buffer, we'll create a helper function that populates it with random values.
 
@@ -637,7 +637,7 @@ Let's add a gradient color to each triangle to make them more distinguishable.
 
    ```diff lang=ts
    const vertexCode = wgsl`
-     let instanceInfo = ${trianglePos.asReadonlyStorage()}[${builtin.instanceIndex}];
+     let instanceInfo = ${trianglePos.asReadonly()}[${builtin.instanceIndex}];
      let rotated = ${rotate}(
        ${triangleVertex.asVertex()},
        instanceInfo.rotation
@@ -712,7 +712,7 @@ Let's create the compute shader:
 const computePipeline = runtime.makeComputePipeline({
   code: wgsl`
     let index = ${builtin.globalInvocationId}.x;
-    var instanceInfo = ${trianglePos.asMutableStorage()}[index];
+    var instanceInfo = ${trianglePos.asMutable()}[index];
     let triangleSize = ${triangleSize};
 
 // wrapping the 2d space around the edges
@@ -727,13 +727,13 @@ const computePipeline = runtime.makeComputePipeline({
     instanceInfo.x += 0.01;
     instanceInfo.y += 0.01;
 
-    ${trianglePos.asMutableStorage()}[index] = instanceInfo;
+    ${trianglePos.asMutable()}[index] = instanceInfo;
   `,
 });
 ```
 
 <Aside type="danger" title="Remember to add proper permissions!">
-  The code above will not compile because trianglePos.asMutableStorage() returns null.
+  The code above will not compile because trianglePos.asMutable() returns null.
   This happens because we need to add the proper permissions to the buffer.
   ```diff lang=ts
   const triangleAmount = 10;
@@ -748,8 +748,8 @@ const computePipeline = runtime.makeComputePipeline({
         triangleAmount,
       ),
     )
-    .$allowReadonlyStorage()
-  +  .$allowMutableStorage();
+    .$allowReadonly()
+  +  .$allowMutable();
   ```
 </Aside>
 
@@ -837,7 +837,7 @@ Now that we have our slot, we can use it in our WGSL code.
 ```diff lang=ts
 const computeCode = wgsl`
   let index = ${builtin.globalInvocationId}.x;
-  var instanceInfo = ${trianglePos.asMutableStorage()}[index];
+  var instanceInfo = ${trianglePos.asMutable()}[index];
   let triangleSize = ${triangleSize};
 
   if (instanceInfo.x > 1.0 + triangleSize) {
@@ -852,7 +852,7 @@ const computeCode = wgsl`
   instanceInfo.x += 0.01;
   instanceInfo.y += 0.01;
 
-  ${trianglePos.asMutableStorage()}[index] = instanceInfo;
+  ${trianglePos.asMutable()}[index] = instanceInfo;
 `,
 ```
 
@@ -867,7 +867,7 @@ const computePipelines = [-1, 1].map((direction) =>
   runtime.makeComputePipeline({
     code: wgsl`
     let index = ${builtin.globalInvocationId}.x;
-    var instanceInfo = ${trianglePos.asMutableStorage()}[index];
+    var instanceInfo = ${trianglePos.asMutable()}[index];
     let triangleSize = ${triangleSize};
 
     if (instanceInfo.x > 1.0 + triangleSize) {
@@ -881,7 +881,7 @@ const computePipelines = [-1, 1].map((direction) =>
     instanceInfo.x += 0.01;
     instanceInfo.y += 0.01;
 
-    ${trianglePos.asMutableStorage()}[index] = instanceInfo;
+    ${trianglePos.asMutable()}[index] = instanceInfo;
   `.with(rotationDirection, direction),
   }),
 );
@@ -948,7 +948,7 @@ const readSlot =
           rotation: number;
         }[]
       >,
-      'readonly_storage'
+      'readonly'
     >
   >();
 const writeSlot =
@@ -961,7 +961,7 @@ const writeSlot =
           rotation: number;
         }[]
       >,
-      'mutable_storage'
+      'mutable'
     >
   >();
 ```
@@ -981,8 +981,8 @@ const writeSlot =
   ```
   Now we can simplify the slot definitions.
   ```ts
-  const readSlot = wgsl.slot<WgslBufferUsage<TrianglePosData, 'readonly_storage'>>();
-  const writeSlot = wgsl.slot<WgslBufferUsage<TrianglePosData, 'mutable_storage'>>();
+  const readSlot = wgsl.slot<WgslBufferUsage<TrianglePosData, 'readonly'>>();
+  const writeSlot = wgsl.slot<WgslBufferUsage<TrianglePosData, 'mutable'>>();
   ```
 </Aside>
 
@@ -1000,14 +1000,14 @@ Now that we have our data type extracted, we can also shorten the buffer definit
 -      triangleAmount,
 -    ),
 -  )
--  .$allowReadonlyStorage()
--  .$allowMutableStorage();
+-  .$allowReadonly()
+-  .$allowMutable();
 
 +const trianglePosBuffers = Array.from({ length: 2 }, () => {
 +  return wgsl
 +    .buffer(trianglePosData)
-+    .$allowReadonlyStorage()
-+    .$allowMutableStorage();
++    .$allowReadonly()
++    .$allowMutable();
 +});
 ```
 
@@ -1018,12 +1018,12 @@ We will create a convenience object to hold the buffer pairs, but you can skip t
 ```ts
 const pairs = [
   [
-    trianglePosBuffers[0].asReadonlyStorage(),
-    trianglePosBuffers[1].asMutableStorage(),
+    trianglePosBuffers[0].asReadonly(),
+    trianglePosBuffers[1].asMutable(),
   ],
   [
-    trianglePosBuffers[1].asReadonlyStorage(),
-    trianglePosBuffers[0].asMutableStorage(),
+    trianglePosBuffers[1].asReadonly(),
+    trianglePosBuffers[0].asMutable(),
   ],
 ];
 ```
@@ -1037,7 +1037,7 @@ We will adapt the pipelines using slots, just as we did when adding the rotation
 +  runtime.makeComputePipeline({
     code: wgsl`
     let index = ${builtin.globalInvocationId}.x;
--    var instanceInfo = ${trianglePos.asMutableStorage()}[index];
+-    var instanceInfo = ${trianglePos.asMutable()}[index];
 +    var instanceInfo = ${readSlot}[index];
     let triangleSize = ${triangleSize};
 
@@ -1052,7 +1052,7 @@ We will adapt the pipelines using slots, just as we did when adding the rotation
     instanceInfo.x += 0.01;
     instanceInfo.y += 0.01;
 
--    ${trianglePos.asMutableStorage()}[index] = instanceInfo;
+-    ${trianglePos.asMutable()}[index] = instanceInfo;
 +    ${writeSlot}[index] = instanceInfo;
   `
 +   .with(readSlot, pairs[idx][0])
@@ -1066,7 +1066,7 @@ const renderPipelines = [0, 1].map((idx) =>
   runtime.makeRenderPipeline({
     vertex: {
       code: wgsl`
--      let instanceInfo = ${trianglePos.asReadonlyStorage()}[${builtin.instanceIndex}];
+-      let instanceInfo = ${trianglePos.asReadonly()}[${builtin.instanceIndex}];
 +      let instanceInfo = ${pairs[idx][0]}[${builtin.instanceIndex}];
       let rotated = ${rotate}(
         ${triangleVertex.asVertex()},
@@ -1158,7 +1158,7 @@ const trianglePosData = arrayOf(
 <Aside>
   We can remove the rotation field since the triangles will infer their rotation from their velocity.
   This change will also align our struct to 16 bytes, allowing us to use it as a uniform buffer.
-  All calls to `allowReadonlyStorage` and `asReadonlyStorage` will be replaced with `allowUniform` and `asUniform`.
+  All calls to `allowReadonly` and `asReadonly` will be replaced with `allowUniform` and `asUniform`.
   This adjustment will improve memory speed but will limit us to 4096 triangles. You don't need to make this change, as readonly storage will work just fine.
 </Aside>
 
@@ -1294,7 +1294,7 @@ const parametesBuffer = wgsl
       cohesionStrength: 0.001,
     },
   )
-  .$allowReadonlyStorage();
+  .$allowReadonly();
 ```
 
 Now, for the implementation of the rules:
