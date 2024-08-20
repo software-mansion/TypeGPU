@@ -1,32 +1,26 @@
 import * as RadixSelect from '@radix-ui/react-select';
-import { useState } from 'react';
 
 export function Select({
-  initial,
+  value,
   options,
   onChange,
 }: {
-  initial: string;
+  value: string;
   options: string[];
   onChange: (value: string) => void;
 }) {
-  const [value, setValue] = useState<string>(initial);
-
   return (
-    <RadixSelect.Root
-      value={value}
-      onValueChange={(selected) => {
-        setValue(selected);
-        onChange(selected);
-      }}
-    >
-      <RadixSelect.Trigger className="h-10 border border-grayscale-20 hover:border-grayscale-60 rounded-[0.25rem] px-3 text-sm justify-end">
+    <RadixSelect.Root value={value} onValueChange={onChange}>
+      <RadixSelect.Trigger className="flex justify-between items-center w-full h-10 border border-grayscale-20 hover:border-grayscale-60 rounded-[0.25rem] px-3 text-sm">
         <RadixSelect.Value>{value}</RadixSelect.Value>
-        <RadixSelect.Icon className="px-3" />
+        <RadixSelect.Icon />
       </RadixSelect.Trigger>
 
       <RadixSelect.Portal>
-        <RadixSelect.Content position="popper">
+        <RadixSelect.Content
+          position="popper"
+          className="relative -top-4 min-w-[7.5rem]"
+        >
           <RadixSelect.Viewport className="rounded-[0.25rem] bg-grayscale-20">
             {options.map((option) => (
               <RadixSelect.Item

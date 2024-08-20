@@ -2,7 +2,6 @@ import * as Babel from '@babel/standalone';
 import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
 import type { OnFrameFn } from '@typegpu/example-toolkit';
-import type { SetStateAction } from 'jotai';
 import { filter, isNonNull, map, pipe } from 'remeda';
 import { wgsl } from 'typegpu';
 import { transpileModule } from 'typescript';
@@ -112,7 +111,6 @@ function tsToJs(code: string): string {
 export async function executeExample(
   exampleCode: string,
   createLayout: () => LayoutInstance,
-  setExampleControlParams: (_: SetStateAction<ExampleControlParam[]>) => void,
 ): Promise<ExampleState> {
   const cleanupCallbacks: (() => unknown)[] = [];
 
@@ -120,7 +118,7 @@ export async function executeExample(
   let disposed = false;
   cleanupCallbacks.push(() => layout.dispose());
 
-  setExampleControlParams([]);
+  const controlParams: ExampleControlParam[] = [];
 
   const dispose = () => {
     if (disposed) {
@@ -138,16 +136,17 @@ export async function executeExample(
     options: string[],
     onChange: (newValue: string) => void,
   ) {
-    setExampleControlParams((controls) => [
-      ...controls,
-      {
-        type: 'select',
-        label,
-        initial,
-        options,
-        onChange,
-      },
-    ]);
+    if (disposed) {
+      return;
+    }
+
+    controlParams.push({
+      type: 'select',
+      label,
+      initial,
+      options,
+      onChange,
+    });
 
     // Eager run to initialize the values.
     onChange(initial);
@@ -158,15 +157,16 @@ export async function executeExample(
     initial: boolean,
     onChange: (newValue: boolean) => void,
   ) {
-    setExampleControlParams((controls) => [
-      ...controls,
-      {
-        type: 'toggle',
-        label,
-        initial,
-        onChange,
-      },
-    ]);
+    if (disposed) {
+      return;
+    }
+
+    controlParams.push({
+      type: 'toggle',
+      label,
+      initial,
+      onChange,
+    });
 
     // Eager run to initialize the values.
     onChange(initial);
@@ -182,30 +182,32 @@ export async function executeExample(
     },
     onChange: (newValue: number) => void,
   ) {
-    setExampleControlParams((controls) => [
-      ...controls,
-      {
-        type: 'slider',
-        initial,
-        label,
-        options,
-        onChange,
-      },
-    ]);
+    if (disposed) {
+      return;
+    }
+
+    controlParams.push({
+      type: 'slider',
+      initial,
+      label,
+      options,
+      onChange,
+    });
 
     // Eager run to initialize the values.
     onChange(initial);
   }
 
   function addButtonParameter(label: string, onClick: () => void) {
-    setExampleControlParams((controls) => [
-      ...controls,
-      {
-        type: 'button',
-        label,
-        onClick,
-      },
-    ]);
+    if (disposed) {
+      return;
+    }
+
+    controlParams.push({
+      type: 'button',
+      label,
+      onClick,
+    });
   }
 
   function addSliderPlumParameter(
@@ -216,23 +218,24 @@ export async function executeExample(
     let value: string | number | boolean = initial;
     const listeners = new Set<() => unknown>();
 
-    setExampleControlParams((params) => [
-      ...params,
-      {
-        type: 'slider',
-        label,
-        initial,
-        options: options ?? {},
-        onChange: (newValue) => {
-          value = newValue;
-          // Calling `listener` may cause more listeners to
-          // be attached, so copying.
-          for (const listener of [...listeners]) {
-            listener();
-          }
-        },
+    if (disposed) {
+      return;
+    }
+
+    controlParams.push({
+      type: 'slider',
+      label,
+      initial,
+      options: options ?? {},
+      onChange: (newValue) => {
+        value = newValue;
+        // Calling `listener` may cause more listeners to
+        // be attached, so copying.
+        for (const listener of [...listeners]) {
+          listener();
+        }
       },
-    ]);
+    });
 
     return wgsl
       .plumFromEvent(
@@ -312,6 +315,7 @@ ${transformedCode}
 
     return {
       dispose,
+      controlParams,
     };
   } catch (err) {
     dispose();

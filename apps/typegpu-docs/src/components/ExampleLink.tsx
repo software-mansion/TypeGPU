@@ -2,6 +2,7 @@ import cs from 'classnames';
 import { useAtom } from 'jotai';
 import { RESET } from 'jotai/utils';
 import type { MouseEvent } from 'react';
+import SelectedDotSvg from '../assets/selected-dot.svg';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
 import { PLAYGROUND_KEY } from '../utils/examples/exampleContent';
 import useEvent from '../utils/useEvent';
@@ -41,7 +42,7 @@ export function ExampleLink(props: Props) {
     >
       {children}
 
-      {active ? <img src="/assets/selected-dot.svg" alt="" /> : null}
+      {active ? <img src={SelectedDotSvg.src} alt="" /> : null}
     </a>
   );
 }

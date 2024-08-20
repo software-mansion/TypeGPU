@@ -9,7 +9,7 @@ import { menuShownAtom } from '../utils/examples/menuShownAtom';
 import { Button } from './design/Button';
 import { Select } from './design/Select';
 import { Slider } from './design/Slider';
-import { Switch } from './design/Switch';
+import { Toggle } from './design/Toggle';
 
 function ToggleRow({
   label,
@@ -24,10 +24,10 @@ function ToggleRow({
 
   return (
     <>
-      <div className="text-sm text-pretty text-ellipsis">{label}</div>
+      <div className="text-sm">{label}</div>
 
       <label className="grid justify-end items-center cursor-pointer h-10">
-        <Switch
+        <Toggle
           checked={value}
           onChange={(e) => {
             onChange(e.target.checked);
@@ -54,16 +54,21 @@ function SliderRow({
   step?: number;
   onChange: (value: number) => void;
 }) {
+  const [value, setValue] = useState(initial);
+
   return (
     <>
-      <div className="text-sm text-pretty text-ellipsis">{label}</div>
+      <div className="text-sm">{label}</div>
 
       <Slider
         min={min ?? 0}
         max={max ?? 1}
         step={step ?? 0.1}
-        initial={initial}
-        onChange={onChange}
+        value={value}
+        onChange={(newValue) => {
+          setValue(newValue);
+          onChange(newValue);
+        }}
       />
     </>
   );
@@ -80,11 +85,20 @@ function SelectRow({
   options: string[];
   onChange: (value: string) => void;
 }) {
+  const [value, setValue] = useState(initial);
+
   return (
     <>
       <div className="text-sm">{label}</div>
 
-      <Select initial={initial} options={options} onChange={onChange} />
+      <Select
+        value={value}
+        options={options}
+        onChange={(newValue) => {
+          setValue(newValue);
+          onChange(newValue);
+        }}
+      />
     </>
   );
 }
@@ -132,7 +146,13 @@ function paramToControlRow(param: ExampleControlParam) {
         />
       );
     case 'button':
-      return <ButtonRow label={param.label} onClick={param.onClick} />;
+      return (
+        <ButtonRow
+          key={param.label}
+          label={param.label}
+          onClick={param.onClick}
+        />
+      );
   }
 }
 
@@ -147,14 +167,14 @@ export function ControlPanel() {
       <h2 className="text-xl font-medium">Control panel</h2>
       <label className="flex gap-3 items-center justify-between cursor-pointer text-sm">
         <span>Show left menu</span>
-        <Switch
+        <Toggle
           checked={menuShowing}
           onChange={(e) => setMenuShowing(e.target.checked)}
         />
       </label>
       <label className="flex gap-3 items-center justify-between cursor-pointer text-sm">
         <span>Show code editor</span>
-        <Switch
+        <Toggle
           checked={codeEditorShowing}
           onChange={(e) => setCodeEditorShowing(e.target.checked)}
         />

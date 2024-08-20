@@ -5,7 +5,7 @@ type Props = {
   onChange?: ChangeEventHandler<HTMLInputElement>;
 };
 
-export function Switch(props: Props) {
+export function Toggle(props: Props) {
   const { checked, onChange } = props;
 
   return (

@@ -1,25 +1,21 @@
 import * as RadixSlider from '@radix-ui/react-slider';
-import { useState } from 'react';
 
 type Props = {
   min: number;
   max: number;
   step: number;
-  initial: number;
+  value: number;
   onChange: (value: number) => void;
 };
 
-export function Slider({ min, max, step, initial, onChange }: Props) {
-  const [value, setValue] = useState(initial);
-
+export function Slider({ min, max, step, value, onChange }: Props) {
   return (
     <RadixSlider.Root
-      defaultValue={[initial]}
+      value={[value]}
       min={min}
       max={max}
       step={step}
       onValueChange={(value) => {
-        setValue(value[0]);
         onChange(value[0]);
       }}
       className="bg-grayscale-20 h-10 rounded-[0.25rem] relative flex overflow-hidden"

@@ -38,7 +38,7 @@ function useExample(
     let cancelled = false;
     setSnackbarText(undefined);
 
-    executeExample(exampleCode, createLayout, setExampleControlParams)
+    executeExample(exampleCode, createLayout)
       .then((example) => {
         if (cancelled) {
           // Another instance was started in the meantime.
@@ -47,6 +47,7 @@ function useExample(
         }
 
         // Success
+        setExampleControlParams(example.controlParams);
         exampleRef.current = example;
       })
       .catch((err) => {
