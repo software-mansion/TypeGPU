@@ -1,10 +1,9 @@
 import { wgsl } from 'typegpu';
 import { describe, expect, it, vi } from 'vitest';
 import { afterEach } from 'vitest';
-import { createRuntime, exportedForTesting } from '../src/createRuntime';
+import { createRuntime } from '../src/createRuntime';
 import { struct, u32, vec3i, vec4u } from '../src/data';
 import { plum } from '../src/wgslPlum';
-const { TypeGpuRuntimeImpl } = exportedForTesting;
 
 global.GPUBufferUsage = {
   MAP_READ: 1,
@@ -91,7 +90,10 @@ describe('TypeGpuRuntime', () => {
     expect(runtime.device.createBuffer).toBeCalledWith({
       mappedAtCreation: false,
       size: 4,
-      usage: 76,
+      usage:
+        global.GPUBufferUsage.UNIFORM |
+        global.GPUBufferUsage.COPY_DST |
+        global.GPUBufferUsage.COPY_SRC,
     });
   });
 
@@ -112,7 +114,10 @@ describe('TypeGpuRuntime', () => {
     expect(runtime.device.createBuffer).toBeCalledWith({
       mappedAtCreation: true,
       size: 16,
-      usage: 76,
+      usage:
+        global.GPUBufferUsage.UNIFORM |
+        global.GPUBufferUsage.COPY_DST |
+        global.GPUBufferUsage.COPY_SRC,
     });
   });
 
@@ -131,7 +136,10 @@ describe('TypeGpuRuntime', () => {
     expect(runtime.device.createBuffer).toBeCalledWith({
       mappedAtCreation: false,
       size: 12,
-      usage: 76,
+      usage:
+        global.GPUBufferUsage.UNIFORM |
+        global.GPUBufferUsage.COPY_DST |
+        global.GPUBufferUsage.COPY_SRC,
     });
   });
 
@@ -170,7 +178,10 @@ describe('TypeGpuRuntime', () => {
     expect(runtime.device.createBuffer).toBeCalledWith({
       mappedAtCreation: false,
       size: 64,
-      usage: 76,
+      usage:
+        global.GPUBufferUsage.UNIFORM |
+        global.GPUBufferUsage.COPY_DST |
+        global.GPUBufferUsage.COPY_SRC,
     });
 
     runtime.writeBuffer(bufferData, {
@@ -196,8 +207,8 @@ describe('TypeGpuRuntime', () => {
     const spy = vi.spyOn(runtime, 'writeBuffer');
     const intPlum = plum<number>(3);
 
-    const bufferData = wgsl.buffer(u32, intPlum).$allowUniform();
-    const buffer = bufferData.asUniform();
+    const bufferData = wgsl.buffer(u32, intPlum).$allowReadonly();
+    const buffer = bufferData.asReadonly();
 
     const testPipeline = runtime.makeComputePipeline({
       code: wgsl`${buffer}`,
@@ -208,7 +219,10 @@ describe('TypeGpuRuntime', () => {
     expect(runtime.device.createBuffer).toBeCalledWith({
       mappedAtCreation: true,
       size: 4,
-      usage: 76,
+      usage:
+        global.GPUBufferUsage.STORAGE |
+        global.GPUBufferUsage.COPY_DST |
+        global.GPUBufferUsage.COPY_SRC,
     });
 
     runtime.setPlum(intPlum, 5);

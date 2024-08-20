@@ -539,12 +539,7 @@ export type CreateRuntimeOptions = {
 export async function createRuntime(
   options?: CreateRuntimeOptions | GPUDevice,
 ): Promise<TypeGpuRuntime> {
-  if (
-    options &&
-    typeof options === 'object' &&
-    'queue' in options &&
-    'createBuffer' in options
-  ) {
+  if (doesResembleDevice(options)) {
     return new TypeGpuRuntimeImpl(options);
   }
 
@@ -561,6 +556,11 @@ export async function createRuntime(
   return new TypeGpuRuntimeImpl(await adapter.requestDevice(options?.device));
 }
 
-export const exportedForTesting = {
-  TypeGpuRuntimeImpl,
-};
+function doesResembleDevice(value: unknown): value is GPUDevice {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    'createBuffer' in value &&
+    'queue' in value
+  );
+}
