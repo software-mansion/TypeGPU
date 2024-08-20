@@ -72,7 +72,7 @@ export class BindGroupResolver {
     if (this.layout) {
       return this.layout;
     }
-    
+
     const entries: GPUBindGroupLayoutEntry[] = [];
     for (const textureView of this.textureViews) {
       if (textureView.access === undefined) {
@@ -121,10 +121,12 @@ export class BindGroupResolver {
   }
 
   getBindGroup() {
+    this.checkBindGroupInvalidation();
+
     if (this.bindGroup) {
       return this.bindGroup;
     }
-    
+
     const entries: GPUBindGroupEntry[] = [];
     for (const textureView of this.textureViews) {
       entries.push({
@@ -158,9 +160,7 @@ export class BindGroupResolver {
       entries,
     });
 
-    if (this.externalTextures.length === 0) {
-      this.bindGroup = bindGroup;
-    }
+    this.bindGroup = bindGroup;
     return bindGroup;
   }
 
@@ -218,5 +218,21 @@ export class BindGroupResolver {
       throw new Error('Vertex buffers not set');
     }
     return index;
+  }
+
+  invlidateBindGroup() {
+    this.bindGroup = null;
+  }
+
+  checkBindGroupInvalidation() {
+    // check if any external texture is of type HTMLVideoElement -> if so, invalidate bind group as it expires on bind
+    if (
+      this.externalTextures.some(
+        (ext) => ext.descriptor.source instanceof HTMLVideoElement,
+      )
+    ) {
+      this.invlidateBindGroup();
+    }
+    // future invalidation logic will go here
   }
 }
