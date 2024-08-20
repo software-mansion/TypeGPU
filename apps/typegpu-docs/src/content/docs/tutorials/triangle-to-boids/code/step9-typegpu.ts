@@ -5,7 +5,7 @@ import {
   onFrame,
 } from '@typegpu/example-toolkit';
 import { type WgslBufferUsage, builtin, createRuntime, wgsl } from 'typegpu';
-import { arrayOf, struct, vec2f, f32 } from 'typegpu/data';
+import { arrayOf, f32, struct, vec2f } from 'typegpu/data';
 
 const runtime = await createRuntime();
 const device = runtime.device;

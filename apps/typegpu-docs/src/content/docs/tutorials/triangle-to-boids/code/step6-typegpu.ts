@@ -1,8 +1,8 @@
 import {
   addButton,
   addElement,
-  onFrame,
   addParameter,
+  onFrame,
 } from '@typegpu/example-toolkit';
 import { builtin, createRuntime, wgsl } from 'typegpu';
 import { arrayOf, f32, struct, vec2f } from 'typegpu/data';

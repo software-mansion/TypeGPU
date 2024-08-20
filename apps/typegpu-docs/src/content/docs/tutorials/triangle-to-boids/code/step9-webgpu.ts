@@ -1,8 +1,8 @@
 import {
   addButton,
   addElement,
-  onFrame,
   addParameter,
+  onFrame,
 } from '@typegpu/example-toolkit';
 
 const adapter = await navigator.gpu?.requestAdapter();

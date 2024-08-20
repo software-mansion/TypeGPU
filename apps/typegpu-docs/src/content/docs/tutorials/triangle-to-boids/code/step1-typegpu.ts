@@ -1,5 +1,5 @@
-import { wgsl, createRuntime, builtin } from 'typegpu';
 import { addElement, onFrame } from '@typegpu/example-toolkit';
+import { builtin, createRuntime, wgsl } from 'typegpu';
 
 const runtime = await createRuntime();
 const device = runtime.device;

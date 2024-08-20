@@ -1,4 +1,4 @@
-import { addElement, addButton, onFrame } from '@typegpu/example-toolkit';
+import { addButton, addElement, onFrame } from '@typegpu/example-toolkit';
 
 const adapter = await navigator.gpu?.requestAdapter();
 const device = await adapter?.requestDevice();
