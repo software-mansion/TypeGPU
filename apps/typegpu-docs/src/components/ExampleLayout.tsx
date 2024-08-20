@@ -54,11 +54,27 @@ function SideMenu() {
       <div className="flex justify-between text-grayscale-60 text-xs">
         <div>&copy; 2024 Software Mansion S.A.</div>
         <div className="flex gap-3 items-center">
-          <a href="https://github.com/software-mansion/TypeGPU">
-            <img src={DiscordIconSvg.src} alt="github logo" />
+          <a
+            href="https://discord.swmansion.com"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <img
+              src={DiscordIconSvg.src}
+              className="opacity-50"
+              alt="github logo"
+            />
           </a>
-          <a href="https://discord.swmansion.com">
-            <img src={GithubIconSvg.src} alt="discord logo" />
+          <a
+            href="https://github.com/software-mansion/TypeGPU"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <img
+              src={GithubIconSvg.src}
+              className="opacity-50"
+              alt="discord logo"
+            />
           </a>
         </div>
       </div>

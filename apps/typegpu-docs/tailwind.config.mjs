@@ -17,7 +17,7 @@ export default {
           0: '#FFF',
         },
         special: {
-          stroke: '#00000029',
+          stroke: '#2a0a6629',
         },
         gradient: {
           purple: '#C464FF',
