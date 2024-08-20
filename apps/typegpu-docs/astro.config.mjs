@@ -68,6 +68,10 @@ export default defineConfig({
           ],
         },
         // typeDocSidebarGroup,
+        {
+          label: '🙋 FAQ',
+          slug: 'faq',
+        },
       ],
       plugins: [
         // Generate the documentation.
