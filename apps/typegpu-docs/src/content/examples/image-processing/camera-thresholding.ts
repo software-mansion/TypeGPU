@@ -37,7 +37,7 @@ if (navigator.mediaDevices.getUserMedia) {
   });
 }
 
-let resultTexture = wgsl.textureExternal({
+const resultTexture = wgsl.textureExternal({
   source: video,
 });
 
@@ -53,6 +53,57 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
+const renderProgram = runtime.makeRenderPipeline({
+  vertex: {
+    code: wgsl`
+      const pos = array(
+        vec2( 1.0,  1.0),
+        vec2( 1.0, -1.0),
+        vec2(-1.0, -1.0),
+        vec2( 1.0,  1.0),
+        vec2(-1.0, -1.0),
+        vec2(-1.0,  1.0),
+      );
+
+      const uv = array(
+        vec2(1.0, 0.0),
+        vec2(1.0, 1.0),
+        vec2(0.0, 1.0),
+        vec2(1.0, 0.0),
+        vec2(0.0, 1.0),
+        vec2(0.0, 0.0),
+      );
+
+      let Position = vec4(pos[${builtin.vertexIndex}], 0.0, 1.0);
+      let fragUV = uv[${builtin.vertexIndex}];
+    `,
+    output: {
+      [builtin.position]: 'Position',
+      fragUV: vec2f,
+    },
+  },
+  fragment: {
+    code: wgsl`
+      var color = textureSampleBaseClampToEdge(${resultTexture}, ${sampler}, fragUV);
+      let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
+
+      if grey < ${thresholdData} {
+        return vec4f(0, 0, 0, 1);
+      }
+
+      return vec4f(1);
+    `,
+    target: [
+      {
+        format: presentationFormat,
+      },
+    ],
+  },
+  primitive: {
+    topology: 'triangle-list',
+  },
+});
+
 // UI
 
 addSliderParameter(
@@ -66,62 +117,6 @@ onFrame(() => {
   if (!(video.currentTime > 0)) {
     return;
   }
-
-  // TODO: Take this out of the loop - we don't want to create a pipeline every frame
-  const renderProgram = runtime.makeRenderPipeline({
-    vertex: {
-      code: wgsl`
-        const pos = array(
-          vec2( 1.0,  1.0),
-          vec2( 1.0, -1.0),
-          vec2(-1.0, -1.0),
-          vec2( 1.0,  1.0),
-          vec2(-1.0, -1.0),
-          vec2(-1.0,  1.0),
-        );
-
-        const uv = array(
-          vec2(1.0, 0.0),
-          vec2(1.0, 1.0),
-          vec2(0.0, 1.0),
-          vec2(1.0, 0.0),
-          vec2(0.0, 1.0),
-          vec2(0.0, 0.0),
-        );
-
-        let Position = vec4(pos[${builtin.vertexIndex}], 0.0, 1.0);
-        let fragUV = uv[${builtin.vertexIndex}];
-      `,
-      output: {
-        [builtin.position]: 'Position',
-        fragUV: vec2f,
-      },
-    },
-    fragment: {
-      code: wgsl`
-        var color = textureSampleBaseClampToEdge(${resultTexture}, ${sampler}, fragUV);
-        let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
-
-        if grey < ${thresholdData} {
-          return vec4f(0, 0, 0, 1);
-        }
-
-        return vec4f(1);
-      `,
-      target: [
-        {
-          format: presentationFormat,
-        },
-      ],
-    },
-    primitive: {
-      topology: 'triangle-list',
-    },
-  });
-
-  resultTexture = wgsl.textureExternal({
-    source: video,
-  });
 
   renderProgram.execute({
     colorAttachments: [
