@@ -379,9 +379,9 @@ function resetGameData() {
       instanceCount: options.size ** 2,
     });
 
-    runtime.writeBuffer(currentStateBuffer, nextStateBuffer);
-
     runtime.flush();
+
+    runtime.writeBuffer(currentStateBuffer, nextStateBuffer);
   };
 
   applyDrawCanvas = () => {
