@@ -1,14 +1,16 @@
 ---
 import FeatureCard from '../components/FeatureCard.astro';
 import GetStartedButton from '../components/GetStartedButton.astro';
+import FooterLink from '../components/FooterLink.astro';
 import PageLayout from '../layouts/PageLayout.astro';
 import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
+import SwmLogomarkSvg from '../assets/swm-logomark.svg';
 ---
 
 <PageLayout>
   <main
-    class="flex flex-col items-center bg-[#EFEFF9] lg:gap-[7.5rem] gap-10 md:gap-20">
+    class="flex flex-col items-center bg-tameplum-50 lg:gap-[7.5rem] gap-10 md:gap-20">
     <section
       class="self-stretch flex flex-col items-center gap-10 bg-white sm:rounded-b-[5rem] rounded-b-[2.5rem] md:gap-[3.75rem] lg:gap-20">
       <header
@@ -27,7 +29,7 @@ import GithubIconSvg from '../assets/github-icon.svg';
         </a>
       </header>
       <div
-        class="relative isolate flex flex-col justify-center px-4 gap-6 lg:gap-12 md:gap-8 items-center max-w-7xl min-h-[50vh]">
+        class="relative isolate flex flex-col justify-center px-4 gap-6 lg:gap-12 md:gap-8 items-center max-w-7xl min-h-[65svh]">
         <div class="absolute inset-0 bg-blurred-radial-purple -z-10">
           {/* Blurred background */}
         </div>
@@ -36,20 +38,20 @@ import GithubIconSvg from '../assets/github-icon.svg';
           alt="TypeGPU Logo"
           class="w-[12rem] md:w-[16rem] lg:w-[20rem]"
         />
-        <p class="leading-6 text-center lg:text-2xl md:text-xl">
-          TypeScript library simplifying the WebGPU API and WGSL with<br
+        <h1 class="leading-6 text-center lg:text-2xl md:text-xl">
+          TypeScript library enhancing the WebGPU API and WGSL with<br
             class="hidden sm:block"
           /> zero-cost abstractions, type-safe data transfer and <br
             class="hidden sm:block"
           />dependency injection.
-        </p>
+        </h1>
 
         <div
           class="flex flex-col items-center justify-center w-full gap-4 lg:gap-10 sm:flex-row">
           <GetStartedButton />
           <a class="w-full sm:w-auto" href="/typegpu/examples"
             ><button
-              class="py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] bg-grayscale-0 text-grayscale-100 md:text-xl lg:text-2xl w-full"
+              class="py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] bg-gradient-to-br bg-white text-grayscale-100 md:text-xl lg:text-2xl w-full"
               >Explore live examples</button
             ></a
           >
@@ -57,7 +59,7 @@ import GithubIconSvg from '../assets/github-icon.svg';
       </div>
 
       <div
-        class="lg:-mt-[15rem] md:-mt-[7rem] bg-grayscale-0 lg:w-[75rem] md:w-[53.5rem] lg:p-14 md:p-10 p-6 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-[2rem] relative lg:top-[20rem] md:top-[16rem]">
+        class="overflow-hidden lg:-mt-[15rem] md:-mt-[7rem] bg-grayscale-0 lg:w-[75rem] md:w-[53.5rem] lg:p-14 md:p-10 p-6 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-[2rem] relative lg:top-[20rem] md:top-[16rem]">
         <div class="absolute inset-0 mix-blend-overlay bg-[#A1A1E0]"></div>
         <video
           src="/typegpu/assets/example.mp4"
@@ -74,7 +76,7 @@ import GithubIconSvg from '../assets/github-icon.svg';
       class="flex flex-col justify-center px-4 lg:gap-20 gap-10 lg:max-w-[85rem] md:max-w-[53.5rem] max-w-[34.5rem]">
       <div>
         <h2
-          class="mb-4 md:mb-8 text-2xl font-medium text-center lg:mb-8 center lg:text-5xl md:text-[2.625rem]">
+          class="mb-4 md:mb-8 text-2xl font-normal text-center lg:mb-8 center lg:text-5xl md:text-[2.625rem]">
           Get to know TypeGPU
         </h2>
         <p class="text-center md:text-xl lg:text-2xl">
@@ -83,7 +85,7 @@ import GithubIconSvg from '../assets/github-icon.svg';
       </div>
 
       <div
-        class="grid grid-flow-row gap-4 md:gap-6 lg:gap-8 md:grid-cols-2 md:mb-20 max-w-7xl">
+        class="grid grid-flow-row gap-4 md:gap-6 lg:gap-8 md:grid-cols-2 md:mb-20 max-w-6xl">
         <FeatureCard
           image="doublechevron-down"
           header="Reduce WebGPU boilerplate"
@@ -128,7 +130,7 @@ import GithubIconSvg from '../assets/github-icon.svg';
       class="flex flex-col items-center px-4 lg:gap-20 md:gap-[3.75rem] gap-10 mb-10 w-full max-w-[34.5rem] lg:max-w-[85rem]">
       <div>
         <h2
-          class="md:mb-8 mb-4 font-medium text-center md:text-[3.375rem] lg:text-7xl text-[2rem]">
+          class="md:mb-8 mb-4 font-normal text-center md:text-[3.375rem] lg:text-7xl text-[2rem]">
           Got hooked?
         </h2>
         <p class="text-center md:text-xl lg:text-2xl">
@@ -146,7 +148,7 @@ import GithubIconSvg from '../assets/github-icon.svg';
     </section>
   </main>
 
-  <footer class="text-xs bg-grayscale-20 md:text-sm lg:text-base">
+  <footer class="text-xs bg-tameplum-50 md:text-sm lg:text-base pt-32">
     <div
       class="grid place-items-center gap-20 bg-grayscale-0 self-stretch md:rounded-t-[5rem] rounded-t-[2.5rem] px-4 pt-10 pb-10 md:pb-0 md:pt-20">
       <div
@@ -166,26 +168,30 @@ import GithubIconSvg from '../assets/github-icon.svg';
               and to manage resources in a type-safe, declarative way.
             </div>
 
-            <div class="grid gap-6 lg:w-96 md:w-[24rem]">
-              <div class="flex justify-between">
-                <div>Made by Software Mansion</div>
-                <a href="https://swmansion.com/" class="underline"
-                  >Learn more about us</a
-                >
-              </div>
+            <div class="grid gap-6">
+              <FooterLink
+                label="Made by Software Mansion"
+                callToAction="Learn more about us"
+                href="https://swmansion.com"
+              />
 
-              <div class="flex justify-between">
-                <div>Check what's underneath</div>
-                <a
-                  href="https://github.com/software-mansion/TypeGPU"
-                  class="underline">Open Github repository</a
-                >
-              </div>
+              <FooterLink
+                label="Check what's underneath"
+                callToAction="Open Github repository"
+                href="https://github.com/software-mansion/TypeGPU"
+              />
+
+              <FooterLink
+                label="Share feedback with us"
+                callToAction="Join our Discord server"
+                href="https://discord.swmansion.com"
+              />
             </div>
           </div>
         </div>
 
-        <div class="self-start text-grayscale-60">
+        <div class="self-start flex gap-2 text-black">
+          <img src={SwmLogomarkSvg.src} alt="Software Mansion Logomark" />
           &copy; 2024 Software Mansion S.A.
         </div>
 

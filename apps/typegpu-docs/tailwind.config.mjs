@@ -9,6 +9,11 @@ export default {
         sans: ['Aeonik', ...defaultTheme.fontFamily.sans],
       },
       colors: {
+        tameplum: {
+          50: '#EFEFF9',
+          600: '#757387',
+          800: '#515061',
+        },
         grayscale: {
           100: '#000000',
           80: '#333333',

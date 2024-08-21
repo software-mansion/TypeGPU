@@ -5,7 +5,7 @@ const content = await Astro.slots.render('default');
 
 <article
   class:list={[
-    'flex flex-col gap-8 justify-between lg:h-[30rem] md:p-10 lg:p-14 p-6 bg-grayscale-0 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-[2rem] border-2 border-special-stroke',
+    'flex flex-col gap-8 justify-between lg:h-[28rem] md:p-10 lg:p-14 p-6 bg-white md:rounded-[3.75rem] lg:rounded-[5rem] rounded-[2rem]',
     className,
   ]}>
   <div
@@ -14,9 +14,9 @@ const content = await Astro.slots.render('default');
   </div>
   <div>
     <h3
-      class="pb-3 text-xl font-medium md:pb-4 md:text-2xl lg:text-4xl text-grayscale-100">
+      class="pb-3 text-xl font-normal md:pb-4 md:text-2xl lg:text-4xl text-grayscale-100">
       {header}
     </h3>
-    <p class="lg:text-2xl md:text-xl text-grayscale-80">{content}</p>
+    <p class="lg:text-xl md:text-xl text-grayscale-80">{content}</p>
   </div>
 </article>
