@@ -75,7 +75,7 @@ We're creating a canvas by running the `addElement` function from our example to
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-## Let's draw a triangle!
+## Drawing a Triangle
 
 Now that we have our canvas setup, we can start drawing on it. We will start by creating a simple shader that will draw a triangle.
 
@@ -110,7 +110,7 @@ const fragmentCode = wgsl`
 `;
 ```
 
-### Time to create a render pipeline
+### Creating a render pipeline
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
 The API for creating a pipeline in TypeGPU is similar to the WebGPU API but with a few differences.
@@ -190,7 +190,8 @@ onFrame(() => {
 })
 ```
 
-## Now let's have a look at our program and compare it to WebGPU
+## TypeGPU and WebGPU comparison
+Now that we have a working example, let's compare the TypeGPU code with the WebGPU code.
 
 import { Code } from '@astrojs/starlight/components';
 import TryInPlaygroundButton from '../../../../components/TryInPlaygroundButton.astro';
@@ -216,12 +217,13 @@ import step1webgpu from 'code/step1-webgpu.ts?raw';
 
 <Aside>The advantages of using TypeGPU may not be immediately apparent. While we've reduced some lines of code, is it truly worth it? Let's continue and find out!</Aside>
 
-## Let's add some parametrization
+## Adding parametrization
 
 A simple static triangle has its charm, but let's add some excitement by incorporating parameters into our shader.
 We'll introduce x and y position buffers, along with a rotation buffer, allowing us to move the triangle around.
+But first, let's upgrade our program a little
 
-### But first, let's upgrade our program a little
+### Introducing a vertex buffer
 
 Currently, the vertices are hardcoded in the shader.
 
@@ -380,8 +382,6 @@ This is just one method. Having three separate buffers for x, y, and rotation mi
 Feel free to experiment with different methods to find the one that best suits your needs.
 </Aside>
 
-### Let's compare TypeGPU to WebGPU again:
-
 import step2typegpu from 'code/step2-typegpu.ts?raw';
 import step2webgpu from 'code/step2-webgpu.ts?raw';
 
@@ -402,7 +402,7 @@ import step2webgpu from 'code/step2-webgpu.ts?raw';
   </TabItem>
 </Tabs>
 
-## Let's create some more triangles
+## Creating more triangles
 
 Now that we have a single movable triangle, let's create some friends for it.
 But first, let's upgrade our program a bit. Currently, the size of our triangle is defined by the values written to the buffer during its creation.
@@ -1025,7 +1025,8 @@ Now that we have our data type extracted, we can also shorten the buffer definit
 +});
 ```
 
-### Great! Now that we have our buffers set up, we can adapt our pipelines to use them properly.
+### Setting up buffers
+Great! Now that we have our buffers set up, we can adapt our pipelines to use them properly.
 <Aside>
 We will create a convenience object to hold the buffer pairs, but you can skip this step and easily adapt the code to use the buffers directly if you prefer.
 
