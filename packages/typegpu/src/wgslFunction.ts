@@ -22,17 +22,11 @@ export interface WgslFn extends WgslResolvable, WgslNamable {
 
 export type BoundWgslFn = Omit<WgslFn, '$name'>;
 
-export function fn(label?: string) {
-  return (
-    strings: TemplateStringsArray,
-    ...params: (Wgsl | InlineResolve)[]
-  ): WgslFn => {
-    const func = new WgslFnImpl(code(strings, ...params));
-    if (label) {
-      func.$name(label);
-    }
-    return func;
-  };
+export function fn(
+  strings: TemplateStringsArray,
+  ...params: (Wgsl | InlineResolve)[]
+): WgslFn {
+  return new WgslFnImpl(code(strings, ...params));
 }
 
 // --------------

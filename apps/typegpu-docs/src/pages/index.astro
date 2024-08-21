@@ -1,0 +1,97 @@
+---
+import FeatureCard from '../components/FeatureCard.astro';
+import GetStartedButton from '../components/GetStartedButton.astro';
+import PageLayout from '../layouts/PageLayout.astro';
+---
+
+<PageLayout>
+    <div class="grid w-full min-h-20 place-items-center">
+        <div class="p-4 text-sm text-center lg:text-base font-greyscale-80">
+            <span class="font-medium font-greyscale-100">Ongoing development:</span> TypeGPU is under heavy development and is far from being production-ready.
+        </div>
+    </div>
+
+    <main class="flex flex-col items-center bg-grayscale-20 sm:rounded-t-[5rem] rounded-t-[2.5rem] p-4 pt-10 sm:pt-20 lg:gap-[7.5rem] gap-10 md:gap-20">
+        <section class="grid gap-10 md:gap-[3.75rem] lg:gap-20 place-content-center lg:max-w-[85rem] md:max-w-[48.5rem] max-w-[34.5rem]">
+            <div class="grid gap-6 lg:gap-12 md:gap-8 place-items-center max-w-7xl">
+                <img src="/typegpu/assets/logo.svg" alt="logo" class="w-[3.75rem] md:w-20 lg:w-[6.25rem]">
+                <h1 class="self-stretch font-medium text-center font-greyscale-100 md:text-[3.375rem] lg:text-[4.75rem] text-[2rem] leading-[130%]">GPU rendering and computing easier than ever before</h1>
+                <p class="leading-6 text-center lg:text-2xl md:text-xl">Make use of the GPU power right from your browser through a brand new, 
+                    modern TypeScript API.
+                </p>
+
+                <div class="flex flex-col items-center justify-center w-full gap-4 lg:gap-10 sm:flex-row">
+                    <GetStartedButton />
+                    <a class="w-full sm:w-auto" href="/typegpu/examples"><button class="py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] bg-grayscale-0 text-grayscale-100 md:text-xl lg:text-2xl w-full">Explore live examples</button></a>
+                </div>
+            </div>
+
+            <div class="bg-grayscale-0 lg:w-[85rem] md:w-[53.5rem] lg:p-14 md:p-10 p-6 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-[2rem] border-2 border-special-stroke">
+                <video src="/typegpu/assets/example.mp4" autoplay="true" loop="true" muted="true" class="lg:rounded-[2.5rem] md:rounded-[1.875rem] rounded-2xl"></video>
+            </div>
+        </section>
+
+        <section class="flex flex-col justify-center lg:gap-20 gap-10 lg:max-w-[85rem] md:max-w-[53.5rem] max-w-[34.5rem]">
+            <div>
+                <h2 class="mb-4 md:mb-8 text-2xl font-medium text-center lg:mb-8 center lg:text-5xl md:text-[2.625rem]">Get to know TypeGPU</h2>
+                <p class="text-center md:text-xl lg:text-2xl">Discover how it can change the way you work with GPU rendering.</p>
+            </div>
+
+            <div class="grid grid-flow-row gap-4 md:gap-6 lg:gap-8 md:grid-cols-2 md:mb-20 max-w-7xl">
+                <FeatureCard image="doublechevron-down" header="Reduce WebGPU boilerplate">No more never-ending bind layout and group definitions, command encoders and pipeline layouts.</FeatureCard>
+                <FeatureCard image="key-alt" header="Keep everything safe" class="md:translate-y-20">TypeScript is ensuring type safety when performing a lot of crucial operations like writing to and reading data from the GPU.</FeatureCard>
+                <FeatureCard image="task-check" header="Automate data marshaling">Leveraged "typed-binary" library ensures you don't have to think about bytes when writing your GPU programs ever again.</FeatureCard>
+                <FeatureCard image="label-alt" header="Welcome declarative style" class="md:translate-y-20">Replace imperative style of the WebGPU API with a declaritive one, using signal-like objects that make it easy and fun for reactive simulations.</FeatureCard>
+                <FeatureCard image="grid-mixed" header="Boost up modularity">Different computing and rendering functionalities can be spread across files or even npm modules, then combined into a bigger program.</FeatureCard>
+                <FeatureCard image="code" header="Make it more flexible" class="md:translate-y-20">Modern functionalities allow you to write code in a concise and expressive way, helping you through dependency injection or higher order functions.</FeatureCard>
+            </div>
+        </section>
+
+        <section class="flex flex-col items-center lg:gap-20 md:gap-[3.75rem] gap-10 mb-10 w-full max-w-[34.5rem] lg:max-w-[85rem]">
+            <div>
+                <h2 class="md:mb-8 mb-4 font-medium text-center md:text-[3.375rem] lg:text-7xl text-[2rem]">Got hooked?</h2>
+                <p class="text-center md:text-xl lg:text-2xl">Try TypeGPU and reshape your GPU rendering.</p>
+            </div>
+
+            <GetStartedButton/>
+
+            <img class="hidden md:block lg:w-[56rem] w-[38.5rem]" src="/assets/illustration.svg" alt="">
+        </section>
+    </main>
+
+    <footer class="text-xs bg-grayscale-20 md:text-sm lg:text-base">
+        <div class="grid place-items-center gap-20 bg-grayscale-0 self-stretch md:rounded-t-[5rem] rounded-t-[2.5rem] px-4 pt-10 pb-10 md:pb-0 md:pt-20">
+            <div class="flex flex-col items-center lg:gap-20 gap-10 lg:max-w-[85rem] md:max-w-[58.5rem] w-full max-w-[34.5rem]">
+                <div class="w-full">
+                    <img src="/typegpu/assets/logo-black.svg" alt="logo" class="pb-6">
+                    <div class="flex flex-col justify-between gap-10 md:flex-row text-grayscale-80">
+                        <div class="md:w-[27rem]">
+                            <span class="font-medium">TypeGPU</span> <span class="text-grayscale-100">&mdash;</span> TypeScript library that enhances the WebGPU API, allows to modularly compose WGSL programs, and to manage resources in a type-safe, declarative way.
+                        </div>
+
+                        <div class="grid gap-6 lg:w-96 md:w-[24rem]">
+                            <div class="flex justify-between">
+                                <div>Made by Software Mansion</div>
+                                <a href="https://swmansion.com/" class="underline">Learn more about us</a>
+                            </div>
+
+                            <div class="flex justify-between">
+                                <div>Check what's underneath</div>
+                                <a href="https://github.com/software-mansion/TypeGPU" class="underline">Open Github repository</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="self-start text-grayscale-60">
+                    &copy; 2024 Software Mansion S.A.
+                </div>
+
+                <div class="hidden md:grid">
+                    <div class="col-start-1 row-start-1 z-10 bg-gradient-to-b from-[#FFF0] to-[#FFF]"></div>
+                    <img class="col-start-1 row-start-1" src="/typegpu/assets/typegpu.svg">
+                </div>
+            </div>
+        </div>
+    </footer>
+</PageLayout>

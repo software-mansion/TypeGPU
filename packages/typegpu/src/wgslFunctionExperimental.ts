@@ -82,7 +82,7 @@ class WgslFunctionCall<
   extends WgslResolvableBase
   implements WgslResolvable, WgslNamable
 {
-  readonly typeInfo = 'fn';
+  readonly typeInfo = 'fun';
 
   constructor(
     private usedFn: WgslFn<TArgTypes, TReturn>,
@@ -97,7 +97,11 @@ class WgslFunctionCall<
       return code`${argSegment}${comma}`;
     });
 
-    return ctx.resolve(code`${this.usedFn}(${argsCode})`);
+    return ctx.resolve(code`${this.usedFn}(${argsCode})`.$name('internal'));
+  }
+
+  get debugRepr(): string {
+    return `${this.typeInfo}:${this.usedFn.label ?? '<unnamed>'}()`;
   }
 }
 
@@ -113,7 +117,7 @@ class WgslFnImpl<
   implements WgslFn<TArgTypes, TReturn>
 {
   private _label: string | undefined;
-  readonly typeInfo = 'fn';
+  readonly typeInfo = 'fun';
 
   constructor(
     private argPairs: PairsFromTypes<TArgTypes>,
@@ -127,13 +131,14 @@ class WgslFnImpl<
     return this._label;
   }
 
-  $name(label: string | undefined) {
+  $name(label: string) {
     this._label = label;
     return this;
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier();
+    const identifier = new WgslIdentifier().$name(this._label);
+
     const argsCode = this.argPairs.map(([ident, argType], idx) => {
       const comma = idx < this.argPairs.length - 1 ? ', ' : '';
 

@@ -6,17 +6,22 @@
 */
 
 // -- Hooks into the example environment
-import { addElement, addParameter, onFrame } from '@typegpu/example-toolkit';
+import {
+  addElement,
+  addSelectParameter,
+  addSliderParameter,
+  addToggleParameter,
+  onFrame,
+} from '@typegpu/example-toolkit';
 // --
 
-import wgsl, { ProgramBuilder } from 'typegpu';
-import { arrayOf, atomic, u32, vec2u } from 'typegpu/data';
-import { createRuntime } from 'typegpu/web';
+import { builtin, createRuntime, wgsl } from 'typegpu';
+import { arrayOf, atomic, f32, u32, vec2u } from 'typegpu/data';
 
 const runtime = await createRuntime();
 const device = runtime.device;
 
-const canvas = await addElement('canvas', { width: 500, height: 500 });
+const canvas = await addElement('canvas', { aspectRatio: 1 });
 
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -57,75 +62,81 @@ function encodeBrushType(brushType: (typeof BrushTypes)[number]) {
 }
 
 const sizeBuffer = wgsl.buffer(vec2u).$name('size').$allowUniform();
-
 const viscosityBuffer = wgsl.buffer(u32).$name('viscosity').$allowUniform();
-
-const debugInfoBuffer = wgsl
-  .buffer(atomic(u32))
-  .$name('debug')
-  .$allowMutableStorage();
 
 const currentStateBuffer = wgsl
   .buffer(arrayOf(u32, 1024 ** 2))
   .$name('current')
-  .$addFlags(GPUBufferUsage.VERTEX)
-  .$allowReadonlyStorage();
+  .$allowVertex('instance')
+  .$allowReadonly();
 
 const nextStateBuffer = wgsl
   .buffer(arrayOf(atomic(u32), 1024 ** 2))
   .$name('next')
-  .$allowMutableStorage();
+  .$allowMutable();
 
 const viscosityData = viscosityBuffer.asUniform();
-const currentStateData = currentStateBuffer.asReadonlyStorage();
+const currentStateData = currentStateBuffer.asReadonly();
+const currentStateVertex = currentStateBuffer.asVertex();
 const sizeData = sizeBuffer.asUniform();
-const nextStateData = nextStateBuffer.asStorage();
-const debugInfoData = debugInfoBuffer.asStorage();
+const nextStateData = nextStateBuffer.asMutable();
 
 const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
 const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
 const maxCompress = wgsl.constant(wgsl`12u`);
 
-const getIndex = wgsl.fn()`(x: u32, y: u32) -> u32 {
+const squareBuffer = wgsl
+  .buffer(arrayOf(vec2u, 4), [
+    [0, 0],
+    [0, 1],
+    [1, 0],
+    [1, 1],
+  ])
+  .$allowVertex('vertex')
+  .$allowUniform()
+  .$name('square');
+const squareBufferData = squareBuffer.asVertex();
+
+const getIndex = wgsl.fn`(x: u32, y: u32) -> u32 {
   let h = ${sizeData}.y;
   let w = ${sizeData}.x;
   return (y % h) * w + (x % w);
 }`;
 
-const getCell = wgsl.fn()`(x: u32, y: u32) -> u32 {
+const getCell = wgsl.fn`(x: u32, y: u32) -> u32 {
   return ${currentStateData}[${getIndex}(x, y)];
 }`;
 
-const getCellNext = wgsl.fn()`(x: u32, y: u32) -> u32 {
+const getCellNext = wgsl.fn`(x: u32, y: u32) -> u32 {
   return atomicLoad(&${nextStateData}[${getIndex}(x, y)]);
 }`;
 
-const updateCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
+const updateCell = wgsl.fn`(x: u32, y: u32, value: u32) {
   atomicStore(&${nextStateData}[${getIndex}(x, y)], value);
 }`;
 
-const addToCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
+const addToCell = wgsl.fn`(x: u32, y: u32, value: u32) {
   let cell = ${getCellNext}(x, y);
   let waterLevel = cell & ${maxWaterLevel};
   let newWaterLevel = min(waterLevel + value, ${maxWaterLevel});
   atomicAdd(&${nextStateData}[${getIndex}(x, y)], newWaterLevel - waterLevel);
 }`;
 
-const subtractFromCell = wgsl.fn()`(x: u32, y: u32, value: u32) {
+const subtractFromCell = wgsl.fn`(x: u32, y: u32, value: u32) {
   let cell = ${getCellNext}(x, y);
   let waterLevel = cell & ${maxWaterLevel};
   let newWaterLevel = max(waterLevel - min(value, waterLevel), 0u);
   atomicSub(&${nextStateData}[${getIndex}(x, y)], waterLevel - newWaterLevel);
 }`;
 
-const persistFlags = wgsl.fn()`(x: u32, y: u32) {
+const persistFlags = wgsl.fn`(x: u32, y: u32) {
   let cell = ${getCell}(x, y);
   let waterLevel = cell & ${maxWaterLevel};
   let flags = cell >> 24;
   ${updateCell}(x, y, (flags << 24) | waterLevel);
 }`;
 
-const getStableStateBelow = wgsl.fn()`(upper: u32, lower: u32) -> u32 {
+const getStableStateBelow = wgsl.fn`(upper: u32, lower: u32) -> u32 {
   let totalMass = upper + lower;
   if (totalMass <= ${maxWaterLevelUnpressurized}) {
     return totalMass;
@@ -135,27 +146,27 @@ const getStableStateBelow = wgsl.fn()`(upper: u32, lower: u32) -> u32 {
   return ${maxWaterLevelUnpressurized};
 }`;
 
-const isWall = wgsl.fn()`(x: u32, y: u32) -> bool {
+const isWall = wgsl.fn`(x: u32, y: u32) -> bool {
   return (${getCell}(x, y) >> 24) == 1u;
 }`;
 
-const isWaterSource = wgsl.fn()`(x: u32, y: u32) -> bool {
+const isWaterSource = wgsl.fn`(x: u32, y: u32) -> bool {
   return (${getCell}(x, y) >> 24) == 2u;
 }`;
 
-const isWaterDrain = wgsl.fn()`(x: u32, y: u32) -> bool {
+const isWaterDrain = wgsl.fn`(x: u32, y: u32) -> bool {
   return (${getCell}(x, y) >> 24) == 3u;
 }`;
 
-const isClearCell = wgsl.fn()`(x: u32, y: u32) -> bool {
+const isClearCell = wgsl.fn`(x: u32, y: u32) -> bool {
   return (${getCell}(x, y) >> 24) == 4u;
 }`;
 
-const getWaterLevel = wgsl.fn()`(x: u32, y: u32) -> u32 {
+const getWaterLevel = wgsl.fn`(x: u32, y: u32) -> u32 {
   return ${getCell}(x, y) & ${maxWaterLevel};
 }`;
 
-const checkForFlagsAndBounds = wgsl.fn()`(x: u32, y: u32) -> bool {
+const checkForFlagsAndBounds = wgsl.fn`(x: u32, y: u32) -> bool {
   if (${isClearCell}(x, y)) {
     ${updateCell}(x, y, 0u);
     return true;
@@ -181,7 +192,7 @@ const checkForFlagsAndBounds = wgsl.fn()`(x: u32, y: u32) -> bool {
   return false;
 }`;
 
-const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
+const decideWaterLevel = wgsl.fn`(x: u32, y: u32) {
   if (${checkForFlagsAndBounds}(x, y)) {
     return;
   }
@@ -251,48 +262,33 @@ const decideWaterLevel = wgsl.fn()`(x: u32, y: u32) {
 }`;
 
 const computeWGSL = wgsl`
-override blockSize = 8;
-
-@compute @workgroup_size(blockSize, blockSize)
-fn main(@builtin(global_invocation_id) grid: vec3u) {
-  let x = grid.x;
-  let y = grid.y;
-  atomicAdd(&${debugInfoData}, ${getWaterLevel}(x, y));
+  let x = ${builtin.globalInvocationId}.x;
+  let y = ${builtin.globalInvocationId}.y;
   ${decideWaterLevel}(x, y);
-}
 `;
 
 const vertWGSL = wgsl`
-struct Out {
-  @builtin(position) pos: vec4f,
-  @location(0) cell: f32,
-}
-
-@vertex
-fn main(@builtin(instance_index) i: u32, @location(0) cell: u32, @location(1) pos: vec2u) -> Out {
   let w = ${sizeData}.x;
   let h = ${sizeData}.y;
-  let x = (f32(i % w + pos.x) / f32(w) - 0.5) * 2. * f32(w) / f32(max(w, h));
-  let y = (f32((i - (i % w)) / w + pos.y) / f32(h) - 0.5) * 2. * f32(h) / f32(max(w, h));
-  let cellFlags = cell >> 24;
-  let cellVal = f32(cell & 0xFFFFFF);
+  let x = (f32(${builtin.instanceIndex} % w + ${squareBufferData}.x) / f32(w) - 0.5) * 2. * f32(w) / f32(max(w, h));
+  let y = (f32((${builtin.instanceIndex} - (${builtin.instanceIndex} % w)) / w + ${squareBufferData}.y) / f32(h) - 0.5) * 2. * f32(h) / f32(max(w, h));
+  let cellFlags = ${currentStateVertex} >> 24;
+  let cellVal = f32(${currentStateVertex} & 0xFFFFFF);
+  let pos = vec4<f32>(x, y, 0., 1.);
+  var cell: f32;
+  cell = cellVal;
   if (cellFlags == 1u) {
-    return Out(vec4f(x, y, 0., 1.), -1.);
+    cell = -1.;
   }
   if (cellFlags == 2u) {
-    return Out(vec4f(x, y, 0., 1.), -2.);
+    cell = -2.;
   }
   if (cellFlags == 3u) {
-    return Out(vec4f(x, y, 0., 1.), -3.);
+    cell = -3.;
   }
-
-  return Out(vec4f(x, y, 0., 1.), cellVal);
-}
 `;
 
-const fragWGSL = `
-@fragment
-fn main(@location(0) cell: f32) -> @location(0) vec4f {
+const fragWGSL = wgsl`
   if (cell == -1.) {
     return vec4f(0.5, 0.5, 0.5, 1.);
   }
@@ -311,59 +307,10 @@ fn main(@location(0) cell: f32) -> @location(0) vec4f {
   if (b > 0. && b < 0.5) { b = 0.5;}
 
   return vec4f(r, g, b, 1.);
-}
 `;
 
 let drawCanvasData = new Uint32Array(options.size * options.size);
-
-const computeProgram = new ProgramBuilder(runtime, computeWGSL).build({
-  bindingGroup: 0,
-  shaderStage: GPUShaderStage.COMPUTE,
-});
-
-const vertexProgram = new ProgramBuilder(runtime, vertWGSL).build({
-  bindingGroup: 0,
-  shaderStage: GPUShaderStage.VERTEX,
-});
-
-const computeShader = device.createShaderModule({ code: computeProgram.code });
-
-const squareVertices = new Uint32Array([0, 0, 0, 1, 1, 0, 1, 1]);
-const squareBuffer = device.createBuffer({
-  size: squareVertices.byteLength,
-  usage: GPUBufferUsage.VERTEX,
-  mappedAtCreation: true,
-});
-new Uint32Array(squareBuffer.getMappedRange()).set(squareVertices);
-squareBuffer.unmap();
-
-const squareStride = {
-  arrayStride: 2 * squareVertices.BYTES_PER_ELEMENT,
-  stepMode: 'vertex' as const,
-  attributes: [
-    {
-      shaderLocation: 1,
-      offset: 0,
-      format: 'uint32x2' as const,
-    },
-  ],
-};
-
-const vertexShader = device.createShaderModule({ code: vertexProgram.code });
-const fragmentShader = device.createShaderModule({ code: fragWGSL });
 let commandEncoder: GPUCommandEncoder;
-
-const cellsStride = {
-  arrayStride: Uint32Array.BYTES_PER_ELEMENT,
-  stepMode: 'instance' as const,
-  attributes: [
-    {
-      shaderLocation: 0,
-      offset: 0,
-      format: 'uint32' as const,
-    },
-  ],
-};
 
 let msSinceLastTick = 0;
 let render: () => void;
@@ -372,6 +319,26 @@ let renderChanges: () => void;
 
 function resetGameData() {
   drawCanvasData = new Uint32Array(options.size * options.size);
+
+  const computePipeline = runtime.makeComputePipeline({
+    workgroupSize: [options.workgroupSize, options.workgroupSize],
+    code: computeWGSL,
+  });
+
+  const renderPipeline = runtime.makeRenderPipeline({
+    vertex: {
+      code: vertWGSL,
+      output: {
+        [builtin.position]: 'pos',
+        cell: f32,
+      },
+    },
+    fragment: {
+      code: fragWGSL,
+      target: [{ format: presentationFormat }],
+    },
+    primitive: { topology: 'triangle-strip' },
+  });
 
   runtime.writeBuffer(
     currentStateBuffer,
@@ -383,48 +350,24 @@ function resetGameData() {
     Array.from({ length: 1024 ** 2 }, () => 0),
   );
 
-  const computePipeline = device.createComputePipeline({
-    layout: device.createPipelineLayout({
-      bindGroupLayouts: [computeProgram.bindGroupLayout],
-    }),
-    compute: {
-      module: computeShader,
-      constants: {
-        blockSize: options.workgroupSize,
-      },
-    },
-  });
-
   runtime.writeBuffer(sizeBuffer, [options.size, options.size]);
 
   const length = options.size * options.size;
   const cells = new Uint32Array(length);
 
-  const renderPipeline = device.createRenderPipeline({
-    layout: device.createPipelineLayout({
-      bindGroupLayouts: [vertexProgram.bindGroupLayout],
-    }),
-    primitive: {
-      topology: 'triangle-strip',
-    },
-    vertex: {
-      module: vertexShader,
-      buffers: [cellsStride, squareStride],
-    },
-    fragment: {
-      module: fragmentShader,
-      targets: [
-        {
-          format: presentationFormat,
-        },
-      ],
-    },
-  });
-
   render = () => {
-    runtime.writeBuffer(debugInfoBuffer, 0);
     const view = context.getCurrentTexture().createView();
-    const renderPass: GPURenderPassDescriptor = {
+
+    // compute
+    computePipeline.execute({
+      workgroups: [
+        options.size / options.workgroupSize,
+        options.size / options.workgroupSize,
+      ],
+    });
+
+    // render
+    renderPipeline.execute({
       colorAttachments: [
         {
           view,
@@ -432,19 +375,13 @@ function resetGameData() {
           storeOp: 'store',
         },
       ],
-    };
+      vertexCount: 4,
+      instanceCount: options.size ** 2,
+    });
+
+    runtime.flush();
+
     commandEncoder = device.createCommandEncoder();
-
-    // compute
-    const passEncoderCompute = commandEncoder.beginComputePass();
-    passEncoderCompute.setPipeline(computePipeline);
-    passEncoderCompute.setBindGroup(0, computeProgram.bindGroup);
-    passEncoderCompute.dispatchWorkgroups(
-      options.size / options.workgroupSize,
-      options.size / options.workgroupSize,
-    );
-    passEncoderCompute.end();
-
     commandEncoder.copyBufferToBuffer(
       runtime.bufferFor(nextStateBuffer),
       0,
@@ -452,15 +389,6 @@ function resetGameData() {
       0,
       cells.byteLength,
     );
-
-    // render
-    const passEncoderRender = commandEncoder.beginRenderPass(renderPass);
-    passEncoderRender.setPipeline(renderPipeline);
-    passEncoderRender.setVertexBuffer(0, runtime.bufferFor(currentStateBuffer));
-    passEncoderRender.setVertexBuffer(1, squareBuffer);
-    passEncoderRender.setBindGroup(0, vertexProgram.bindGroup);
-    passEncoderRender.draw(4, length);
-    passEncoderRender.end();
 
     device.queue.submit([commandEncoder.finish()]);
   };
@@ -492,7 +420,7 @@ function resetGameData() {
 
   renderChanges = () => {
     const view = context.getCurrentTexture().createView();
-    const renderPass: GPURenderPassDescriptor = {
+    renderPipeline.execute({
       colorAttachments: [
         {
           view,
@@ -500,17 +428,10 @@ function resetGameData() {
           storeOp: 'store',
         },
       ],
-    };
-    commandEncoder = device.createCommandEncoder();
-    const passEncoderRender = commandEncoder.beginRenderPass(renderPass);
-    passEncoderRender.setPipeline(renderPipeline);
-    passEncoderRender.setVertexBuffer(0, runtime.bufferFor(currentStateBuffer));
-    passEncoderRender.setVertexBuffer(1, squareBuffer);
-    passEncoderRender.setBindGroup(0, vertexProgram.bindGroup);
-    passEncoderRender.draw(4, length);
-    passEncoderRender.end();
-
-    device.queue.submit([commandEncoder.finish()]);
+      vertexCount: 4,
+      instanceCount: options.size ** 2,
+    });
+    runtime.flush();
   };
 
   createSampleScene();
@@ -537,8 +458,11 @@ canvas.onmousemove = (event) => {
   }
 
   const cellSize = canvas.width / options.size;
-  const x = Math.floor(event.offsetX / cellSize);
-  const y = options.size - Math.floor(event.offsetY / cellSize) - 1;
+  const x = Math.floor((event.offsetX * window.devicePixelRatio) / cellSize);
+  const y =
+    options.size -
+    Math.floor((event.offsetY * window.devicePixelRatio) / cellSize) -
+    1;
   const allAffectedCells = [];
   for (let i = -options.brushSize; i <= options.brushSize; i++) {
     for (let j = -options.brushSize; j <= options.brushSize; j++) {
@@ -617,63 +541,62 @@ onFrame((deltaTime: number) => {
   }
 });
 
-resetGameData();
-
-addParameter(
+addSelectParameter(
   'size',
-  { initial: 64, options: [16, 32, 64, 128, 256, 512, 1024] },
+  '64',
+  [16, 32, 64, 128, 256, 512, 1024].map((x) => x.toString()),
   (value) => {
-    options.size = value;
+    options.size = Number.parseInt(value);
     resetGameData();
   },
 );
 
-addParameter(
+addSliderParameter(
   'timestep (ms)',
-  { initial: 15, min: 15, max: 100, step: 1 },
+  15,
+  { min: 15, max: 100, step: 1 },
   (value) => {
     options.timestep = value;
   },
 );
 
-addParameter(
+addSliderParameter(
   'stepsPerTimestep',
-  { initial: 10, min: 1, max: 50, step: 1 },
+  10,
+  { min: 1, max: 50, step: 1 },
   (value) => {
     options.stepsPerTimestep = value;
   },
 );
 
-addParameter(
+addSelectParameter(
   'workgroupSize',
-  { initial: 16, options: [1, 2, 4, 8, 16] },
+  '16',
+  [1, 2, 4, 8, 16].map((x) => x.toString()),
   (value) => {
-    options.workgroupSize = value;
+    options.workgroupSize = Number.parseInt(value);
     resetGameData();
   },
 );
 
-addParameter(
+addSliderParameter(
   'viscosity',
-  { initial: 1000, min: 10, max: 1000, step: 1 },
+  1000,
+  { min: 10, max: 1000, step: 1 },
   (value) => {
     options.viscosity = value;
     runtime.writeBuffer(viscosityBuffer, value);
   },
 );
 
-addParameter('brushSize', { initial: 0, min: 0, max: 10, step: 1 }, (value) => {
+addSliderParameter('brushSize', 0, { min: 0, max: 10, step: 1 }, (value) => {
   options.brushSize = value;
 });
 
-addParameter(
-  'brushType',
-  { initial: 'water', options: BrushTypes },
-  (value) => {
-    options.brushType = value;
-  },
-);
+addSelectParameter('brushType', 'water', BrushTypes, (value) => {
+  options.brushType = value;
+});
 
-addParameter('pause', { initial: false }, (value) => {
+addToggleParameter('pause', false, (value) => {
   paused = value;
 });

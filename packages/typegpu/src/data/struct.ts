@@ -19,6 +19,7 @@ import type {
 } from '../types';
 import { code } from '../wgslCode';
 import { WgslIdentifier } from '../wgslIdentifier';
+import alignIO from './alignIO';
 
 // ----------
 // Public API
@@ -84,6 +85,7 @@ class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
     value: MaxValue | Parsed<UnwrapRecord<TProps>>,
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
+    alignIO(measurer, this.byteAlignment);
     this._innerSchema.measure(value, measurer);
     return measurer;
   }

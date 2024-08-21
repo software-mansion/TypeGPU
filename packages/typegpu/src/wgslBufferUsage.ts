@@ -14,7 +14,7 @@ import { WgslResolvableBase } from './wgslResolvableBase';
 
 export interface WgslBufferUsage<
   TData extends AnyWgslData,
-  TUsage extends BufferUsage,
+  TUsage extends BufferUsage = BufferUsage,
 > extends WgslBindable<TData, TUsage> {}
 
 export function bufferUsage<

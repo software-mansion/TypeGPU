@@ -1,5 +1,5 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
-import { dynamicArrayOf, struct, u32, vec4f } from 'typegpu/data';
+import { dynamicArrayOf, struct, u32, vec4f } from '../src/data';
 import { describe, expect, it } from 'vitest';
 
 describe('dynamicArray', () => {

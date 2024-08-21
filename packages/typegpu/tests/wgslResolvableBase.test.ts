@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ResolvableToStringError, StrictNameRegistry, wgsl } from '../src';
-import { f32, struct } from '../src/data';
-import { u32, vec3f } from '../src/data';
+import { f32, struct, u32, vec3f } from '../src/data';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
 import { WgslIdentifier } from '../src/wgslIdentifier';
 
@@ -38,7 +37,7 @@ describe('resolvable base', () => {
     expect(() => `${variable}`).toThrow(new ResolvableToStringError(variable));
     expect(`${variable.debugRepr}`).toEqual('var:abc');
 
-    const fun = wgsl.fn()`() -> u32 {
+    const fun = wgsl.fn`() -> u32 {
       return 1;
     }`.$name('def');
 
@@ -52,14 +51,14 @@ describe('resolvable base', () => {
 
     const bufferUsage = wgsl
       .buffer(u32)
-      .$allowMutableStorage()
-      .asStorage()
+      .$allowMutable()
+      .asMutable()
       .$name('ghi');
 
     expect(() => `${bufferUsage}`).toThrow(
       new ResolvableToStringError(bufferUsage),
     );
-    expect(`${bufferUsage.debugRepr}`).toEqual('mutable_storage:ghi');
+    expect(`${bufferUsage.debugRepr}`).toEqual('mutable:ghi');
   });
 
   it('makes items namable', () => {
@@ -68,11 +67,11 @@ describe('resolvable base', () => {
     wgsl.code`2+2`.$name('code');
     wgsl.slot(123).$name();
     wgsl.slot({ a: 'a' }).$name();
-    wgsl.buffer(u32).$allowMutableStorage().asStorage().$name('ghi');
+    wgsl.buffer(u32).$allowMutable().asMutable().$name('ghi');
     wgsl.buffer(u32).$name('ghi');
     new WgslIdentifier().$name('id');
 
-    wgsl.fn()`() -> u32 {
+    wgsl.fn`() -> u32 {
       return 1;
     }`.$name('def');
 
@@ -91,7 +90,7 @@ describe('resolvable base', () => {
   it('allows debug logging bounded functions with labels of their parent functions', () => {
     const slot = wgsl.slot(123).$name('s');
 
-    const fun = wgsl.fn()`() -> u32 {
+    const fun = wgsl.fn`() -> u32 {
       return 1;
     }`.$name('def');
 

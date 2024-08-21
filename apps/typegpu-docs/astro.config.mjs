@@ -7,6 +7,8 @@ import importRawRedirectPlugin from './vite-import-raw-redirect-plugin';
 
 // https://astro.build/config
 export default defineConfig({
+  site: 'https://docs.swmansion.com',
+  base: 'typegpu',
   vite: {
     plugins: [
       importRawRedirectPlugin({
@@ -52,6 +54,10 @@ export default defineConfig({
               slug: 'guides/getting-started',
             },
             {
+              label: 'Basic Principles',
+              slug: 'guides/basic-principles',
+            },
+            {
               label: 'State Management',
               slug: 'guides/state-management',
             },
@@ -62,6 +68,10 @@ export default defineConfig({
           ],
         },
         // typeDocSidebarGroup,
+        {
+          label: '🙋 FAQ',
+          slug: 'faq',
+        },
       ],
       plugins: [
         // Generate the documentation.

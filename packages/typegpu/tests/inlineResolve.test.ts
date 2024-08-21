@@ -11,7 +11,7 @@ describe('inline resolve', () => {
   });
 
   it('injects returned function call in code', () => {
-    const foo = wgsl.fn()`() { return 123; }`.$name('foo');
+    const foo = wgsl.fn`() { return 123; }`.$name('foo');
 
     const actual = wgsl`fn main() { ${() => foo}(); }`;
 
@@ -38,7 +38,7 @@ describe('inline resolve', () => {
   it('injects processed slot in function body', () => {
     const slot = wgsl.slot(8).$name('slot');
 
-    const bar = wgsl.fn()`() { let foo = ${(get) => get(slot) ** 2}; }`.$name(
+    const bar = wgsl.fn`() { let foo = ${(get) => get(slot) ** 2}; }`.$name(
       'bar',
     );
 

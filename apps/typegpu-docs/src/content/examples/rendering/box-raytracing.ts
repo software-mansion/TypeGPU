@@ -1,35 +1,43 @@
 /*
 {
-  "title": "Voxel Raytracing",
+  "title": "Box Raytracing",
   "category": "rendering"
 }
 */
 
 // -- Hooks into the example environment
-import { addElement, addSliderParam, onFrame } from '@typegpu/example-toolkit';
+import {
+  addElement,
+  addSliderPlumParameter,
+  onFrame,
+} from '@typegpu/example-toolkit';
 // --
 
-import wgsl from 'typegpu';
+import { builtin, createRuntime, wgsl } from 'typegpu';
 import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'typegpu/data';
-import { createRuntime } from 'typegpu/web';
 
-const X = 10;
-const Y = 11;
-const Z = 12;
+const X = 7;
+const Y = 7;
+const Z = 7;
 
-const VOXEL_SIZE = 15;
-const cubeSize = [X * VOXEL_SIZE, Y * VOXEL_SIZE, Z * VOXEL_SIZE];
+const MAX_BOX_SIZE = 15;
+const cubeSize = [X * MAX_BOX_SIZE, Y * MAX_BOX_SIZE, Z * MAX_BOX_SIZE];
 const boxCenter = cubeSize.map((value) => value / 2);
 const upAxis = [0, 1, 0] as Vector;
 
-const rotationSpeedPlum = addSliderParam('rotation speed', 2, {
+const rotationSpeedPlum = addSliderPlumParameter('rotation speed', 2, {
   min: 0,
-  max: 10,
+  max: 5,
 });
 
-const cameraDistancePlum = addSliderParam('camera distance', 350, {
+const cameraDistancePlum = addSliderPlumParameter('camera distance', 250, {
   min: 100,
   max: 1200,
+});
+
+const boxSizePlum = addSliderPlumParameter('box size', MAX_BOX_SIZE, {
+  min: 1,
+  max: MAX_BOX_SIZE,
 });
 
 const framePlum = wgsl.plum<number>(0);
@@ -56,7 +64,7 @@ const cameraAxesPlum = wgsl.plum((get) => {
   };
 });
 
-const canvas = await addElement('canvas');
+const canvas = await addElement('canvas', { aspectRatio: 1 / 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
@@ -72,7 +80,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const voxelStruct = struct({
+const boxStruct = struct({
   isActive: u32,
   albedo: vec4f,
 });
@@ -88,27 +96,27 @@ const intersectionStruct = struct({
   tMax: f32,
 });
 
-const voxelMatrixBuffer = wgsl
+const boxMatrixBuffer = wgsl
   .buffer(
-    arrayOf(arrayOf(arrayOf(voxelStruct, Z), Y), X),
+    arrayOf(arrayOf(arrayOf(boxStruct, Z), Y), X),
     Array.from({ length: X }, (_, i) =>
       Array.from({ length: Y }, (_, j) =>
         Array.from({ length: Z }, (_, k) => ({
-          isActive: X - i + j + (Z - k) > 10 ? 1 : 0,
+          isActive: X - i + j + (Z - k) > 6 ? 1 : 0,
           albedo: [i / X, j / Y, k / Z, 1] as [number, number, number, number],
         })),
       ),
     ),
   )
-  .$name('voxel_array')
-  .$allowReadonlyStorage();
-const voxelMatrixData = voxelMatrixBuffer.asReadonlyStorage();
+  .$name('box_array')
+  .$allowReadonly();
+const boxMatrixData = boxMatrixBuffer.asReadonly();
 
 const cameraPositionBuffer = wgsl
   .buffer(vec3f, cameraPositionPlum)
   .$name('camera_position')
-  .$allowReadonlyStorage();
-const cameraPositionData = cameraPositionBuffer.asReadonlyStorage();
+  .$allowReadonly();
+const cameraPositionData = cameraPositionBuffer.asReadonly();
 
 const cameraAxesBuffer = wgsl
   .buffer(
@@ -120,8 +128,8 @@ const cameraAxesBuffer = wgsl
     cameraAxesPlum,
   )
   .$name('camera_axes')
-  .$allowReadonlyStorage();
-const cameraAxesData = cameraAxesBuffer.asReadonlyStorage();
+  .$allowReadonly();
+const cameraAxesData = cameraAxesBuffer.asReadonly();
 
 const canvasDimsBuffer = wgsl
   .buffer(
@@ -135,83 +143,83 @@ const canvasDimsBuffer = wgsl
   .$allowUniform();
 const canvasDimsData = canvasDimsBuffer.asUniform();
 
-const getBoxIntersectionFn = wgsl.fn('box_intersection')`(
+const boxSizeBuffer = wgsl
+  .buffer(u32, boxSizePlum)
+  .$name('box_size')
+  .$allowUniform();
+const boxSizeData = boxSizeBuffer.asUniform();
+
+const getBoxIntersectionFn = wgsl.fn`(
   boundMin: vec3f,
   boundMax: vec3f,
   ray: ${rayStruct}
 ) -> ${intersectionStruct} {
-    var output: ${intersectionStruct};
+  var output: ${intersectionStruct};
 
-    var tMin: f32; 
-    var tMax: f32;
-    var tMinY: f32;
-    var tMaxY: f32;
-    var tMinZ: f32;
-    var tMaxZ: f32;
+  var tMin: f32;
+  var tMax: f32;
+  var tMinY: f32;
+  var tMaxY: f32;
+  var tMinZ: f32;
+  var tMaxZ: f32;
 
-    if (ray.direction.x >= 0) { 
-        tMin = (boundMin.x - ray.origin.x) / ray.direction.x; 
-        tMax = (boundMax.x - ray.origin.x) / ray.direction.x; 
-    } else { 
-        tMin = (boundMax.x - ray.origin.x) / ray.direction.x; 
-        tMax = (boundMin.x - ray.origin.x) / ray.direction.x; 
-    }
+  if (ray.direction.x >= 0) {
+    tMin = (boundMin.x - ray.origin.x) / ray.direction.x;
+    tMax = (boundMax.x - ray.origin.x) / ray.direction.x;
+  } else {
+    tMin = (boundMax.x - ray.origin.x) / ray.direction.x;
+    tMax = (boundMin.x - ray.origin.x) / ray.direction.x;
+  }
 
-    if (ray.direction.y >= 0) { 
-        tMinY = (boundMin.y - ray.origin.y) / ray.direction.y; 
-        tMaxY = (boundMax.y - ray.origin.y) / ray.direction.y; 
-    } else { 
-        tMinY = (boundMax.y - ray.origin.y) / ray.direction.y; 
-        tMaxY = (boundMin.y - ray.origin.y) / ray.direction.y; 
-    }
+  if (ray.direction.y >= 0) {
+    tMinY = (boundMin.y - ray.origin.y) / ray.direction.y;
+    tMaxY = (boundMax.y - ray.origin.y) / ray.direction.y;
+  } else {
+    tMinY = (boundMax.y - ray.origin.y) / ray.direction.y;
+    tMaxY = (boundMin.y - ray.origin.y) / ray.direction.y;
+  }
 
-    if (tMin > tMaxY) || (tMinY > tMax) {
-        return output; 
-    }
+  if (tMin > tMaxY) || (tMinY > tMax) {
+    return output;
+  }
 
-    if (tMinY > tMin) {
-      tMin = tMinY; 
-    }
+  if (tMinY > tMin) {
+    tMin = tMinY;
+  }
 
-    if (tMaxY < tMax) {
-      tMax = tMaxY; 
-    }
+  if (tMaxY < tMax) {
+    tMax = tMaxY;
+  }
 
-    if (ray.direction.z >= 0) { 
-        tMinZ = (boundMin.z - ray.origin.z) / ray.direction.z; 
-        tMaxZ = (boundMax.z - ray.origin.z) / ray.direction.z; 
-    } else { 
-        tMinZ = (boundMax.z - ray.origin.z) / ray.direction.z; 
-        tMaxZ = (boundMin.z - ray.origin.z) / ray.direction.z; 
-    }
+  if (ray.direction.z >= 0) {
+    tMinZ = (boundMin.z - ray.origin.z) / ray.direction.z;
+    tMaxZ = (boundMax.z - ray.origin.z) / ray.direction.z;
+  } else {
+    tMinZ = (boundMax.z - ray.origin.z) / ray.direction.z;
+    tMaxZ = (boundMin.z - ray.origin.z) / ray.direction.z;
+  }
 
-    if (tMin > tMaxZ) || (tMinZ > tMax) {
-        return output; 
-    }
+  if (tMin > tMaxZ) || (tMinZ > tMax) {
+    return output;
+  }
 
-    if tMinZ > tMin {
-      tMin = tMinZ; 
-    }
+  if tMinZ > tMin {
+    tMin = tMinZ;
+  }
 
-    if tMaxZ < tMax {
-      tMax = tMaxZ; 
-    }
+  if tMaxZ < tMax {
+    tMax = tMaxZ;
+  }
 
-    output.intersects = tMin > 0 && tMax > 0;
-    output.tMin = tMin;
-    output.tMax = tMax;
-    return output; 
+  output.intersects = tMin > 0 && tMax > 0;
+  output.tMin = tMin;
+  output.tMax = tMax;
+  return output;
 }
-`;
-
-const vertexOutputStruct = struct({
-  '@builtin(position) pos': vec4f,
-});
+`.$name('box_intersection');
 
 const renderPipeline = runtime.makeRenderPipeline({
   vertex: {
-    args: ['@builtin(vertex_index) VertexIndex: u32'],
-    output: vertexOutputStruct,
     code: wgsl`
       var pos = array<vec2f, 6>(
         vec2<f32>( 1,  1),
@@ -222,31 +230,31 @@ const renderPipeline = runtime.makeRenderPipeline({
         vec2<f32>(-1,  1)
       );
 
-      var output: ${vertexOutputStruct};
-      output.pos = vec4f(pos[VertexIndex], 0, 1);
-      return output;
+      let outPos = vec4f(pos[${builtin.vertexIndex}], 0, 1);
     `,
+    output: {
+      [builtin.position]: 'outPos',
+    },
   },
 
   fragment: {
-    args: ['@builtin(position) pos: vec4f'],
-    code: wgsl.code`
+    code: wgsl`
       let minDim = f32(min(${canvasDimsData}.width, ${canvasDimsData}.height));
 
       var ray: ${rayStruct};
       ray.origin = ${cameraPositionData};
-      ray.direction += ${cameraAxesData}.right * (pos.x - f32(${canvasDimsData}.width)/2)/minDim;
-      ray.direction += ${cameraAxesData}.up * (pos.y - f32(${canvasDimsData}.height)/2)/minDim;
+      ray.direction += ${cameraAxesData}.right * (${builtin.position}.x - f32(${canvasDimsData}.width)/2)/minDim;
+      ray.direction += ${cameraAxesData}.up * (${builtin.position}.y - f32(${canvasDimsData}.height)/2)/minDim;
       ray.direction += ${cameraAxesData}.forward;
       ray.direction = normalize(ray.direction);
 
       let bigBoxIntersection = ${getBoxIntersectionFn}(
-        vec3f(0), 
+        -vec3f(f32(${boxSizeData}))/2,
         vec3f(
-          ${cubeSize[0]}, 
-          ${cubeSize[1]}, 
+          ${cubeSize[0]},
+          ${cubeSize[1]},
           ${cubeSize[2]},
-        ), 
+        ) + vec3f(f32(${boxSizeData}))/2,
         ray,
       );
 
@@ -259,18 +267,18 @@ const renderPipeline = runtime.makeRenderPipeline({
         for (var i = 0; i < ${X}; i = i+1) {
           for (var j = 0; j < ${Y}; j = j+1) {
             for (var k = 0; k < ${Z}; k = k+1) {
-              if ${voxelMatrixData}[i][j][k].isActive == 0 {
+              if ${boxMatrixData}[i][j][k].isActive == 0 {
                 continue;
               }
 
               let intersection = ${getBoxIntersectionFn}(
-                vec3f(f32(i), f32(j), f32(k)) * ${VOXEL_SIZE}, 
-                vec3f(f32(i+1), f32(j+1), f32(k+1)) * ${VOXEL_SIZE}, 
+                vec3f(f32(i), f32(j), f32(k)) * ${MAX_BOX_SIZE} - vec3f(f32(${boxSizeData}))/2,
+                vec3f(f32(i), f32(j), f32(k)) * ${MAX_BOX_SIZE} + vec3f(f32(${boxSizeData}))/2,
                 ray,
               );
 
               if intersection.intersects && (!intersectionFound || intersection.tMin < tMin) {
-                color = ${voxelMatrixData}[i][j][k].albedo;
+                color = ${boxMatrixData}[i][j][k].albedo;
                 tMin = intersection.tMin;
                 intersectionFound = true;
               }
@@ -281,7 +289,6 @@ const renderPipeline = runtime.makeRenderPipeline({
 
       return color;
     `,
-    output: '@location(0) vec4f',
     target: [
       {
         format: presentationFormat,
@@ -313,10 +320,12 @@ onFrame((deltaTime) => {
   runtime.setPlum(canvasWidthPlum, canvas.width);
   runtime.setPlum(canvasHeightPlum, canvas.height);
 
-  const lastFrame = runtime.readPlum(framePlum);
   const rotationSpeed = runtime.readPlum(rotationSpeedPlum);
 
-  runtime.setPlum(framePlum, lastFrame + (rotationSpeed * deltaTime) / 1000);
+  runtime.setPlum(
+    framePlum,
+    (prev) => prev + (rotationSpeed * deltaTime) / 1000,
+  );
 
   const textureView = context.getCurrentTexture().createView();
 

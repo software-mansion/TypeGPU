@@ -1,5 +1,5 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
-import { mat4f, u32 } from 'typegpu/data';
+import { mat4f, u32 } from '../src/data';
 import { describe, expect, it } from 'vitest';
 
 describe('u32', () => {
