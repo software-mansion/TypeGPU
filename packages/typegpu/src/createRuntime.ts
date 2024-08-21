@@ -16,7 +16,7 @@ import type {
   SetPlumAction,
   TypeGpuRuntime,
 } from './typegpuRuntime';
-import { isAllocatable, type AnyWgslData, type WgslAllocatable } from './types';
+import { type AnyWgslData, type WgslAllocatable, isAllocatable } from './types';
 import {
   type ExtractPlumValue,
   type Unsubscribe,
