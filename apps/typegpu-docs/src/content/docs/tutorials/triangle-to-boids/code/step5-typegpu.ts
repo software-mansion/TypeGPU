@@ -42,8 +42,8 @@ const trianglePos = wgsl
       triangleAmount,
     ),
   )
-  .$allowReadonlyStorage()
-  .$allowMutableStorage();
+  .$allowReadonly()
+  .$allowMutable();
 
 function randomizeTriangles() {
   const positions = [];
@@ -67,7 +67,7 @@ const rotate = wgsl.fn`(v: vec2f, angle: f32) -> vec2f {
 const pipeline = runtime.makeRenderPipeline({
   vertex: {
     code: wgsl`
-      let instanceInfo = ${trianglePos.asReadonlyStorage()}[${builtin.instanceIndex}];
+      let instanceInfo = ${trianglePos.asReadonly()}[${builtin.instanceIndex}];
       let rotated = ${rotate}(
         ${triangleVertex.asVertex()},
         instanceInfo.rotation
@@ -111,7 +111,7 @@ const pipeline = runtime.makeRenderPipeline({
 const computePipeline = runtime.makeComputePipeline({
   code: wgsl`
     let index = ${builtin.globalInvocationId}.x;
-    var instanceInfo = ${trianglePos.asMutableStorage()}[index];
+    var instanceInfo = ${trianglePos.asMutable()}[index];
     let triangleSize = ${triangleSize};
 
     if (instanceInfo.x > 1.0 + triangleSize) {
@@ -125,7 +125,7 @@ const computePipeline = runtime.makeComputePipeline({
     instanceInfo.x += 0.01;
     instanceInfo.y += 0.01;
 
-    ${trianglePos.asMutableStorage()}[index] = instanceInfo;
+    ${trianglePos.asMutable()}[index] = instanceInfo;
   `,
 });
 

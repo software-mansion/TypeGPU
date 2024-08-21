@@ -42,7 +42,7 @@ const trianglePos = wgsl
       triangleAmount,
     ),
   )
-  .$allowReadonlyStorage();
+  .$allowReadonly();
 
 function randomizeTriangles() {
   const positions = [];
@@ -66,7 +66,7 @@ const rotate = wgsl.fn`(v: vec2f, angle: f32) -> vec2f {
 const pipeline = runtime.makeRenderPipeline({
   vertex: {
     code: wgsl`
-      let instanceInfo = ${trianglePos.asReadonlyStorage()}[${builtin.instanceIndex}];
+      let instanceInfo = ${trianglePos.asReadonly()}[${builtin.instanceIndex}];
       let rotated = ${rotate}(
         ${triangleVertex.asVertex()},
         instanceInfo.rotation
