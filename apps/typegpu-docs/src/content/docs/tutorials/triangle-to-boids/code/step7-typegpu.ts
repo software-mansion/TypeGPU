@@ -1,4 +1,8 @@
-import { addButton, addElement, onFrame } from '@typegpu/example-toolkit';
+import {
+  addButtonParameter,
+  addElement,
+  onFrame,
+} from '@typegpu/example-toolkit';
 import { type WgslBufferUsage, builtin, createRuntime, wgsl } from 'typegpu';
 import { arrayOf, f32, struct, vec2f } from 'typegpu/data';
 
@@ -15,7 +19,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-addButton('Randomize', randomizeTriangles);
+addButtonParameter('Randomize', randomizeTriangles);
 
 const triangleSize = 0.2;
 const triangleVertex = wgsl

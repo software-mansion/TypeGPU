@@ -1,4 +1,8 @@
-import { addButton, addElement, onFrame } from '@typegpu/example-toolkit';
+import {
+  addButtonParameter,
+  addElement,
+  onFrame,
+} from '@typegpu/example-toolkit';
 
 const adapter = await navigator.gpu?.requestAdapter();
 const device = await adapter?.requestDevice();
@@ -17,7 +21,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-addButton('Randomize', randomizeTriangles);
+addButtonParameter('Randomize', randomizeTriangles);
 
 const triangleSize = 0.2;
 const triangleVertexData = new Float32Array([

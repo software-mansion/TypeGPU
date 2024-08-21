@@ -1,4 +1,8 @@
-import { addElement, addSliderParam, onFrame } from '@typegpu/example-toolkit';
+import {
+  addElement,
+  addSliderPlumParameter,
+  onFrame,
+} from '@typegpu/example-toolkit';
 import { builtin, createRuntime, wgsl } from 'typegpu';
 import { arrayOf, f32, vec2f } from 'typegpu/data';
 
@@ -16,17 +20,17 @@ context.configure({
 });
 
 const params = {
-  rotation: addSliderParam('rotation (rad)', 0, {
+  rotation: addSliderPlumParameter('rotation (rad)', 0, {
     min: 0,
     max: 3.14 * 2,
     step: 0.1,
   }),
-  x: addSliderParam('x', 0, {
+  x: addSliderPlumParameter('x', 0, {
     min: -1,
     max: 1,
     step: 0.1,
   }),
-  y: addSliderParam('y', 0, {
+  y: addSliderPlumParameter('y', 0, {
     min: -1,
     max: 1,
     step: 0.1,

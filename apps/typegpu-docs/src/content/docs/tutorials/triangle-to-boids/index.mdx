@@ -287,20 +287,20 @@ import { Steps } from '@astrojs/starlight/components';
 1. Create the parameters:
 
    ```ts
-   import { addSliderParam } from '@typegpu/example-toolkit';
+   import { addSliderPlumParameter } from '@typegpu/example-toolkit';
 
    const params = {
-     rotation: addSliderParam('rotation (rad)', 0, {
+     rotation: addSliderPlumParameter('rotation (rad)', 0, {
        min: 0,
        max: 3.14 * 2,
        step: 0.1,
      }),
-     x: addSliderParam('x', 0, {
+     x: addSliderPlumParameter('x', 0, {
        min: -1,
        max: 1,
        step: 0.1,
      }),
-     y: addSliderParam('y', 0, {
+     y: addSliderPlumParameter('y', 0, {
        min: -1,
        max: 1,
        step: 0.1,
@@ -592,17 +592,17 @@ Since they are no longer used, we can remove the parameters that were used to po
 
 ```diff lang=ts
 -const params = {
--  rotation: addSliderParam('rotation (rad)', 0, {
+-  rotation: addSliderPlumParameter('rotation (rad)', 0, {
 -    min: 0,
 -    max: 3.14 * 2,
 -    step: 0.1,
 -  }),
--  x: addSliderParam('x', 0, {
+-  x: addSliderPlumParameter('x', 0, {
 -    min: -1,
 -    max: 1,
 -    step: 0.1,
 -  }),
--  y: addSliderParam('y', 0, {
+-  y: addSliderPlumParameter('y', 0, {
 -    min: -1,
 -    max: 1,
 -    step: 0.1,
@@ -890,16 +890,12 @@ const computePipelines = [-1, 1].map((direction) =>
 To check if our new pipelines work, we will create a toggle to switch between them.
 
 ```ts
+import { addToggleParameter } from '@typegpu/example-toolkit';
+
 let invertRotation = false;
-addParameter(
-  'Invert Rotation',
-  {
-    initial: false,
-  },
-  (value) => {
-    invertRotation = value;
-  },
-);
+addToggleParameter('Invert Rotation', false, (value) => {
+  invertRotation = value;
+});
 ```
 
 And add some logic to the main loop.

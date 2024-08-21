@@ -1,4 +1,8 @@
-import { addElement, addParameter, onFrame } from '@typegpu/example-toolkit';
+import {
+  addElement,
+  addSliderParameter,
+  onFrame,
+} from '@typegpu/example-toolkit';
 
 const adapter = await navigator.gpu?.requestAdapter();
 const device = await adapter?.requestDevice();
@@ -32,10 +36,10 @@ const parametersBuffer = device.createBuffer({
   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
-addParameter(
+addSliderParameter(
   'rotation',
+  0,
   {
-    initial: 0,
     min: 0,
     max: 3.14 * 2,
     step: 0.1,
@@ -46,10 +50,10 @@ addParameter(
   },
 );
 
-addParameter(
+addSliderParameter(
   'x',
+  0,
   {
-    initial: 0,
     min: -1,
     max: 1,
     step: 0.1,
@@ -60,10 +64,10 @@ addParameter(
   },
 );
 
-addParameter(
+addSliderParameter(
   'y',
+  0,
   {
-    initial: 0,
     min: -1,
     max: 1,
     step: 0.1,

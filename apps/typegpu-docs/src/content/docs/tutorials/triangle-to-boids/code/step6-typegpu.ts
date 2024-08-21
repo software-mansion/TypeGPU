@@ -1,7 +1,7 @@
 import {
-  addButton,
+  addButtonParameter,
   addElement,
-  addParameter,
+  addToggleParameter,
   onFrame,
 } from '@typegpu/example-toolkit';
 import { builtin, createRuntime, wgsl } from 'typegpu';
@@ -20,7 +20,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-addButton('Randomize', randomizeTriangles);
+addButtonParameter('Randomize', randomizeTriangles);
 
 const rotationDirection = wgsl.slot<number>();
 
@@ -135,15 +135,9 @@ const computePipelines = [-1, 1].map((direction) =>
 );
 
 let invertRotation = false;
-addParameter(
-  'Invert Rotation',
-  {
-    initial: false,
-  },
-  (value) => {
-    invertRotation = value;
-  },
-);
+addToggleParameter('Invert Rotation', false, (value) => {
+  invertRotation = value;
+});
 
 randomizeTriangles();
 onFrame(() => {

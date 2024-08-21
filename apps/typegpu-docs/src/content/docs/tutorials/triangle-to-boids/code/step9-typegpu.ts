@@ -1,7 +1,7 @@
 import {
-  addButton,
+  addButtonParameter,
   addElement,
-  addParameter,
+  addSliderParameter,
   onFrame,
 } from '@typegpu/example-toolkit';
 import { type WgslBufferUsage, builtin, createRuntime, wgsl } from 'typegpu';
@@ -20,7 +20,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-addButton('Randomize', randomizeTriangles);
+addButtonParameter('Randomize', randomizeTriangles);
 
 const parametesBuffer = wgsl
   .buffer(
@@ -247,10 +247,10 @@ function applyOptions() {
   runtime.writeBuffer(parametesBuffer, options);
 }
 
-addParameter(
+addSliderParameter(
   'Separation Dist',
+  options.separationDistance,
   {
-    initial: options.separationDistance,
     min: 0.0,
     max: 0.5,
     step: 0.001,
@@ -261,10 +261,10 @@ addParameter(
   },
 );
 
-addParameter(
+addSliderParameter(
   'Separation Str',
+  options.separationStrength,
   {
-    initial: options.separationStrength,
     min: 0.0,
     max: 0.1,
     step: 0.001,
@@ -275,10 +275,10 @@ addParameter(
   },
 );
 
-addParameter(
+addSliderParameter(
   'Align Dist',
+  options.alignmentDistance,
   {
-    initial: options.alignmentDistance,
     min: 0.0,
     max: 0.5,
     step: 0.001,
@@ -289,10 +289,10 @@ addParameter(
   },
 );
 
-addParameter(
+addSliderParameter(
   'Align Str',
+  options.alignmentStrength,
   {
-    initial: options.alignmentStrength,
     min: 0.0,
     max: 0.1,
     step: 0.001,
@@ -303,10 +303,10 @@ addParameter(
   },
 );
 
-addParameter(
+addSliderParameter(
   'Cohesion Dist',
+  options.cohesionDistance,
   {
-    initial: options.cohesionDistance,
     min: 0.0,
     max: 0.5,
     step: 0.001,
@@ -317,10 +317,10 @@ addParameter(
   },
 );
 
-addParameter(
+addSliderParameter(
   'Cohesion Str',
+  options.cohesionStrength,
   {
-    initial: options.cohesionStrength,
     min: 0.0,
     max: 0.1,
     step: 0.001,
