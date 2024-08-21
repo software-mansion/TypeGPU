@@ -18,7 +18,7 @@ describe('repeat', () => {
 
   it('repeats a parametrized function call N times', () => {
     const actual = parseWGSL(wgsl`
-      { ${repeat(3, (idx) => `a(${idx});`)} }
+      { ${repeat(3, (idx) => wgsl`a(${idx});`)} }
     `);
 
     const expected = parseWGSL(`
@@ -32,7 +32,7 @@ describe('repeat', () => {
     const countSlot = wgsl.slot(3).$name('count');
 
     const actual = parseWGSL(wgsl`
-      { ${repeat(countSlot, (idx) => `a(${idx});`)} }
+      { ${repeat(countSlot, (idx) => wgsl`a(${idx});`)} }
     `);
 
     const expected = parseWGSL(`

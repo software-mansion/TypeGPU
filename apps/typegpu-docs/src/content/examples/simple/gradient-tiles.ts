@@ -8,17 +8,25 @@
 // -- Hooks into the example environment
 import {
   addElement,
-  addSliderParam,
+  addSliderPlumParameter,
   onCleanup,
   onFrame,
 } from '@typegpu/example-toolkit';
 // --
 
-import { createRuntime, wgsl } from 'typegpu';
-import { struct, u32, vec2f, vec4f } from 'typegpu/data';
+import { builtin, createRuntime, wgsl } from 'typegpu';
+import { struct, u32, vec2f } from 'typegpu/data';
 
-const xSpanPlum = addSliderParam('x span', 16, { min: 1, max: 16, step: 1 });
-const ySpanPlum = addSliderParam('y span', 16, { min: 1, max: 16, step: 1 });
+const xSpanPlum = addSliderPlumParameter('x span', 16, {
+  min: 1,
+  max: 16,
+  step: 1,
+});
+const ySpanPlum = addSliderPlumParameter('y span', 16, {
+  min: 1,
+  max: 16,
+  step: 1,
+});
 
 const spanPlum = wgsl.plum((get) => ({ x: get(xSpanPlum), y: get(ySpanPlum) }));
 const spanBuffer = wgsl
@@ -37,15 +45,8 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const outputStruct = struct({
-  '@builtin(position) pos': vec4f,
-  '@location(0) uv': vec2f,
-});
-
 const renderPipeline = runtime.makeRenderPipeline({
   vertex: {
-    args: ['@builtin(vertex_index) VertexIndex: u32'],
-    output: outputStruct,
     code: wgsl`
       var pos = array<vec2f, 4>(
         vec2(1, 1), // top-right
@@ -61,22 +62,22 @@ const renderPipeline = runtime.makeRenderPipeline({
         vec2(0., 0.) // bottom-left
       );
 
-      var output: ${outputStruct};
-      output.pos = vec4f(pos[VertexIndex] * 0.9, 0.0, 1.0);
-      output.uv = uv[VertexIndex];
-      return output;
+      let posOut = vec4f(pos[${builtin.vertexIndex}], 0.0, 1.0);
+      let uvOut = uv[${builtin.vertexIndex}];
     `,
+    output: {
+      [builtin.position]: 'posOut',
+      uvOut: vec2f,
+    },
   },
 
   fragment: {
-    args: ['@builtin(position) Position: vec4f', '@location(0) uv: vec2f'],
     code: wgsl.code`
       let span = ${spanBuffer.asUniform()};
-      let red = floor(uv.x * f32(span.x)) / f32(span.x);
-      let green = floor(uv.y * f32(span.y)) / f32(span.y);
+      let red = floor(uvOut.x * f32(span.x)) / f32(span.x);
+      let green = floor(uvOut.y * f32(span.y)) / f32(span.y);
       return vec4(red, green, 0.5, 1.0);
     `,
-    output: '@location(0) vec4f',
     target: [
       {
         format: presentationFormat,

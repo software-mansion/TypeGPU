@@ -1,8 +1,8 @@
-import { useAtomValue, useSetAtom } from 'jotai';
+import { useAtom, useSetAtom } from 'jotai';
+import { decompressFromEncodedURIComponent } from 'lz-string';
 import { Suspense, useEffect, useRef } from 'react';
-import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
-import { examples } from '../utils/examples/exampleContent';
+import { PLAYGROUND_KEY, examples } from '../utils/examples/exampleContent';
 import { ExampleNotFound } from './ExampleNotFound';
 import { ExampleView } from './ExampleView';
 
@@ -34,21 +34,42 @@ function RedirectToFlagship() {
 }
 
 function ExamplePage() {
-  const currentExample = useAtomValue(currentExampleAtom);
-  const codeEditorShown = useAtomValue(codeEditorShownAtom);
+  const [currentExample, setCurrentExample] = useAtom(currentExampleAtom);
 
   const content = (() => {
     if (!currentExample) {
       return <RedirectToFlagship />;
     }
 
-    if (currentExample in examples) {
+    if (currentExample === PLAYGROUND_KEY) {
+      setCurrentExample(
+        `${PLAYGROUND_KEY}${localStorage.getItem(PLAYGROUND_KEY) ?? ''}`,
+      );
+    }
+
+    if (currentExample.startsWith(PLAYGROUND_KEY)) {
       return (
         <ExampleView
-          key={currentExample}
-          example={examples[currentExample]}
-          codeEditorShowing={codeEditorShown}
+          key={PLAYGROUND_KEY}
+          example={{
+            key: PLAYGROUND_KEY,
+            code:
+              decompressFromEncodedURIComponent(
+                currentExample.slice(PLAYGROUND_KEY.length),
+              ) ?? '',
+            metadata: {
+              title: 'Playground',
+              category: '',
+            },
+          }}
+          isPlayground={true}
         />
+      );
+    }
+
+    if (currentExample in examples) {
+      return (
+        <ExampleView key={currentExample} example={examples[currentExample]} />
       );
     }
 
@@ -56,7 +77,7 @@ function ExamplePage() {
   })();
 
   return (
-    <main className="flex-1 flex flex-col bg-[#f6f6ff]">
+    <main className="flex-1">
       <Suspense fallback={'Loading...'}>{content}</Suspense>
     </main>
   );

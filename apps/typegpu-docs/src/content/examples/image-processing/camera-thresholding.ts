@@ -6,17 +6,26 @@
 */
 
 // -- Hooks into the example environment
-import { addElement, addParameter, onFrame } from '@typegpu/example-toolkit';
+import {
+  addElement,
+  addSliderParameter,
+  onFrame,
+} from '@typegpu/example-toolkit';
 // --
 
-import { createRuntime, wgsl } from 'typegpu';
-import { f32, struct, vec2f, vec4f } from 'typegpu/data';
+import { builtin, createRuntime, wgsl } from 'typegpu';
+import { f32, vec2f } from 'typegpu/data';
 
 // Layout
 const [video, canvas] = await Promise.all([
   addElement('video', { width: 500, height: 375 }),
   addElement('canvas', { width: 500, height: 375 }),
 ]);
+
+const sampler = wgsl.sampler({
+  magFilter: 'linear',
+  minFilter: 'linear',
+});
 
 const thresholdBuffer = wgsl.buffer(f32).$name('threshold').$allowUniform();
 
@@ -27,6 +36,10 @@ if (navigator.mediaDevices.getUserMedia) {
     video: true,
   });
 }
+
+const resultTexture = wgsl.textureExternal({
+  source: video,
+});
 
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -40,29 +53,8 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const bindGroupLayout = device.createBindGroupLayout({
-  entries: [
-    {
-      binding: 0,
-      visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-      sampler: {},
-    },
-    {
-      binding: 1,
-      visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-      externalTexture: {},
-    },
-  ],
-});
-
-const outputStruct = struct({
-  '@builtin(position) Position': vec4f,
-  '@location(0) fragUV': vec2f,
-});
-
 const renderProgram = runtime.makeRenderPipeline({
   vertex: {
-    args: ['@builtin(vertex_index) VertexIndex: u32'],
     code: wgsl`
       const pos = array(
         vec2( 1.0,  1.0),
@@ -82,20 +74,17 @@ const renderProgram = runtime.makeRenderPipeline({
         vec2(0.0, 0.0),
       );
 
-      var output : ${outputStruct};
-      output.Position = vec4(pos[VertexIndex], 0.0, 1.0);
-      output.fragUV = uv[VertexIndex];
-      return output;
+      let Position = vec4(pos[${builtin.vertexIndex}], 0.0, 1.0);
+      let fragUV = uv[${builtin.vertexIndex}];
     `,
-    output: outputStruct,
+    output: {
+      [builtin.position]: 'Position',
+      fragUV: vec2f,
+    },
   },
   fragment: {
-    args: ['@location(0) fragUV : vec2f'],
     code: wgsl`
-      ${wgsl.declare`@group(0) @binding(0) var sampler_: sampler;`}
-      ${wgsl.declare`@group(0) @binding(1) var videoTexture: texture_external;`}
-
-      var color = textureSampleBaseClampToEdge(videoTexture, sampler_, fragUV);
+      var color = textureSampleBaseClampToEdge(${resultTexture}, ${sampler}, fragUV);
       let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
 
       if grey < ${thresholdData} {
@@ -104,7 +93,6 @@ const renderProgram = runtime.makeRenderPipeline({
 
       return vec4f(1);
     `,
-    output: '@location(0) vec4f',
     target: [
       {
         format: presentationFormat,
@@ -114,19 +102,14 @@ const renderProgram = runtime.makeRenderPipeline({
   primitive: {
     topology: 'triangle-list',
   },
-  externalLayouts: [bindGroupLayout],
-});
-
-const sampler = device.createSampler({
-  magFilter: 'linear',
-  minFilter: 'linear',
 });
 
 // UI
 
-addParameter(
+addSliderParameter(
   'threshold',
-  { initial: 0.4, min: 0, max: 1 },
+  0.4,
+  { min: 0, max: 1, step: 0.1 },
   (threshold: number) => runtime.writeBuffer(thresholdBuffer, threshold),
 );
 
@@ -134,23 +117,6 @@ onFrame(() => {
   if (!(video.currentTime > 0)) {
     return;
   }
-  const resultTexture = device.importExternalTexture({
-    source: video,
-  });
-
-  const bindGroup = device.createBindGroup({
-    layout: bindGroupLayout,
-    entries: [
-      {
-        binding: 0,
-        resource: sampler,
-      },
-      {
-        binding: 1,
-        resource: resultTexture,
-      },
-    ],
-  });
 
   renderProgram.execute({
     colorAttachments: [
@@ -163,7 +129,6 @@ onFrame(() => {
     ],
 
     vertexCount: 6,
-    externalBindGroups: [bindGroup],
   });
 
   runtime.flush();

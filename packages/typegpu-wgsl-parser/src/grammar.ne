@@ -104,7 +104,7 @@ translation_unit -> global_decl:* {% ([declarations]) => ({ type: 'translation_u
 @{%
 export type GlobalDecl =
     null
-  | VariableDecl
+  | GlobalVariableDecl
   | ValueDecl
   | OverrideDecl
   | FunctionDecl;
@@ -112,7 +112,7 @@ export type GlobalDecl =
 %}
 global_decl ->
     ";" {% () => null %}
-  | variable_decl ";" {% id %}
+  | global_variable_decl ";" {% id %}
   | value_decl ";" {% id %}
   | override_decl ";" {% id %}
   # | type_alias_decl ";"
@@ -278,6 +278,10 @@ let_decl ->
 @{% export type VariableDecl = { type: 'variable_decl', template_list: TemplateList | null, ident: string, typespec: TypeSpecifier | null, expr: Expression | null }; %}
 variable_decl ->
   "var" template_list:? optionally_typed_ident ("=" expression):? {% ([ , template_list, typed_ident, opt_expr]) => ({ type: 'variable_decl', template_list: template_list, ...typed_ident, expr: opt_expr ? opt_expr[1] : null }) %}
+
+@{% export type GlobalVariableDecl = {type: 'global_variable_decl', attributes: Attribute[] | null, variable_decl: VariableDecl}; %}
+global_variable_decl ->
+  attribute:* variable_decl {% ([attrs, variable_decl]) => ({ type: 'global_variable_decl', attributes: attrs, variable_decl }) %}
 
 optionally_typed_ident ->
   ident (":" type_specifier):? {% ([ident, typespec]) => ({ ident: ident.value, typespec: typespec ? typespec[1] : null }) %}
@@ -446,10 +450,10 @@ type RelationalExpression =
     ShiftExpression
   | {
       type: 'less_than'
-          | 'greater_than' 
-          | 'less_than_equal' 
-          | 'greater_than_equal' 
-          | 'equal' 
+          | 'greater_than'
+          | 'less_than_equal'
+          | 'greater_than_equal'
+          | 'equal'
           | 'not_equal',
       lhs: ShiftExpression,
       rhs: ShiftExpression
@@ -459,7 +463,7 @@ type ShortCircuitOrExpression = RelationalExpression | { type: 'logic_or', lhs: 
 type BinaryAndExpression = UnaryExpression | { type: 'binary_and', lhs: BinaryAndExpression, rhs: UnaryExpression };
 type BinaryOrExpression = UnaryExpression | { type: 'binary_or', lhs: BinaryOrExpression, rhs: UnaryExpression };
 type BinaryXorExpression = UnaryExpression | { type: 'binary_xor', lhs: BinaryXorExpression, rhs: UnaryExpression };
-type BitwiseExpression = 
+type BitwiseExpression =
     Exclude<BinaryAndExpression, UnaryExpression>
   | Exclude<BinaryOrExpression, UnaryExpression>
   | Exclude<BinaryXorExpression, UnaryExpression>
