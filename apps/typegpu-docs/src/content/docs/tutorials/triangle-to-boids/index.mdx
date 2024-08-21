@@ -291,8 +291,8 @@ import step1sidetypegpu from 'code/step1side-typegpu.ts?raw';
       [Math.random() - 0.5, Math.random()],
       [Math.random() - 1, Math.random() - 1],
       [Math.random(), Math.random() - 1]
-    ] as [number, number][]
-    runtime.writeBuffer(triangleVertex, vert)
+    ] as [number, number][];
+    runtime.writeBuffer(triangleVertex, vert);
   }
   ```
   <TryInPlaygroundButton code={step1sidetypegpu} />
@@ -461,7 +461,6 @@ Let's explore both options.
 -    ${rotationBuffer.asUniform()}
 +    instanceInfo[2]
     );
-    );
 
     let offset = vec2f(
 -    ${xBuffer.asUniform()},
@@ -527,7 +526,6 @@ Let's explore both options.
       ${triangleVertex.asVertex()},
 -    ${rotationBuffer.asUniform()}
 +    instanceInfo.rotation
-    );
     );
 
     let offset = vec2f(
@@ -735,7 +733,7 @@ const computePipeline = runtime.makeComputePipeline({
     var instanceInfo = ${trianglePos.asMutable()}[index];
     let triangleSize = ${triangleSize};
 
-// wrapping the 2d space around the edges
+    // wrapping the 2d space around the edges
     if (instanceInfo.x > 1.0 + triangleSize) {
       instanceInfo.x = -1.0 - triangleSize;
     }
