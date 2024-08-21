@@ -3,6 +3,8 @@ title: Why TypeGPU?
 description: TypeGPU is a TypeScript library that allows for building modular and type-safe WebGPU solutions.
 ---
 
+import { Icon } from '@astrojs/starlight/components';
+
 ## Our philosophy
 {/* Our goal is to create a set of primitives that are easy to compose into complex GPU programs, thus
 facilitating community collaboration. */}
@@ -14,3 +16,14 @@ We believe that developing a flexible and approachable TypeScript API around it 
 Our goal is to create a set of primitives that are easy to compose into complex GPU programs, thus
 facilitating community collaboration. Modules that are built on top of TypeGPU can interact with each other
 through the shared language of primitives.
+
+
+## Roadmap
+
+To achieve our goal, we must complete the following tasks:
+<p class="flex gap-2"><Icon name="approve-check" class="text-green-600" /> API for defining WGSL data, and inferring their types in TypeScript.</p>
+<p class="flex gap-2"><Icon name="approve-check" class="text-green-600" /> Streamlined data transfer to and from the GPU.</p>
+<p class="flex gap-2"><Icon name="approve-check" class="text-green-600" /> Composing code into complex programs.</p>
+<p class="flex gap-2"><Icon name="seti:clock" class="text-purple-500" /> Type-safe WGSL.</p>
+<p class="flex gap-2"><Icon name="seti:clock" class="text-purple-500" /> Developer tooling.</p>
+<p class="flex gap-2"><Icon name="seti:clock" class="text-purple-500" /> Utility modules (pseudo-randomness, image processing, AI inference).</p>
