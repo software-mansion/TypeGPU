@@ -105,7 +105,7 @@ function SelectRow({
 
 function ButtonRow({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <div className="grid h-10 col-span-2 place-items-center">
+    <div className="grid h-10 col-span-2">
       <Button label={label} onClick={onClick} />
     </div>
   );
