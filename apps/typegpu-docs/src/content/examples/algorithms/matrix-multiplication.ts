@@ -6,7 +6,11 @@
 */
 
 // -- Hooks into the example environment
-import { addElement, addSliderParam } from '@typegpu/example-toolkit';
+import {
+  addButtonParameter,
+  addElement,
+  addSliderPlumParameter,
+} from '@typegpu/example-toolkit';
 // --
 
 import { builtin, createRuntime, wgsl } from 'typegpu';
@@ -31,9 +35,17 @@ const paramSettings = {
  * Used to force recomputation of all matrices.
  */
 const forceShufflePlum = wgsl.plum<number>(0);
-const firstRowCountPlum = addSliderParam('#1 rows', 3, paramSettings);
-const firstColumnCountPlum = addSliderParam('#1 columns', 4, paramSettings);
-const secondColumnCountPlum = addSliderParam('#2 columns', 2, paramSettings);
+const firstRowCountPlum = addSliderPlumParameter('#1 rows', 3, paramSettings);
+const firstColumnCountPlum = addSliderPlumParameter(
+  '#1 columns',
+  4,
+  paramSettings,
+);
+const secondColumnCountPlum = addSliderPlumParameter(
+  '#2 columns',
+  2,
+  paramSettings,
+);
 
 const firstMatrixPlum = wgsl.plum((get) => {
   get(forceShufflePlum); // depending to force recomputation
@@ -144,11 +156,8 @@ async function run() {
   resultTable.setMatrix(unflatMatrix(multiplicationResult));
 }
 
-addElement('button', {
-  label: 'Reshuffle',
-  onClick() {
-    runtime.setPlum(forceShufflePlum, (prev) => 1 - prev);
-  },
+addButtonParameter('Reshuffle', () => {
+  runtime.setPlum(forceShufflePlum, (prev) => 1 - prev);
 });
 
 run();

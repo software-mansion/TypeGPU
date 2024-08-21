@@ -1,33 +1,10 @@
 ---
 import FeatureCard from '../components/FeatureCard.astro';
 import GetStartedButton from '../components/GetStartedButton.astro';
+import PageLayout from '../layouts/PageLayout.astro';
 ---
 
-<html>
-  <head>
-    <title>TypeGPU</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="typegpu/favicon.svg">
-    <style is:global>
-        @font-face {
-            font-family: 'Aeonik';
-            src: url('/typegpu/fonts/Aeonik-Regular.woff') format('woff');
-            font-weight: 400;
-            font-style: normal;
-            font-display: swap;
-        }
-
-        @font-face {
-            font-family: 'Aeonik';
-            src: url('/typegpu/fonts/Aeonik-Medium.otf') format('opentype');
-            font-weight: 500;
-            font-style: normal;
-            font-display: swap;
-        }
-    </style>
-  </head>
-  <body>
+<PageLayout>
     <div class="grid w-full min-h-20 place-items-center">
         <div class="p-4 text-sm text-center lg:text-base font-greyscale-80">
             <span class="font-medium font-greyscale-100">Ongoing development:</span> TypeGPU is under heavy development and is far from being production-ready.
@@ -117,5 +94,4 @@ import GetStartedButton from '../components/GetStartedButton.astro';
             </div>
         </div>
     </footer>
-  </body>
-</html>
+</PageLayout>

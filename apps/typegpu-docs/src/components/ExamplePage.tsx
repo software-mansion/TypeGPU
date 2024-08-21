@@ -1,7 +1,6 @@
-import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { useAtom, useSetAtom } from 'jotai';
 import { decompressFromEncodedURIComponent } from 'lz-string';
 import { Suspense, useEffect, useRef } from 'react';
-import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
 import { PLAYGROUND_KEY, examples } from '../utils/examples/exampleContent';
 import { ExampleNotFound } from './ExampleNotFound';
@@ -36,7 +35,6 @@ function RedirectToFlagship() {
 
 function ExamplePage() {
   const [currentExample, setCurrentExample] = useAtom(currentExampleAtom);
-  const codeEditorShown = useAtomValue(codeEditorShownAtom);
 
   const content = (() => {
     if (!currentExample) {
@@ -65,18 +63,13 @@ function ExamplePage() {
             },
           }}
           isPlayground={true}
-          codeEditorShowing={codeEditorShown}
         />
       );
     }
 
     if (currentExample in examples) {
       return (
-        <ExampleView
-          key={currentExample}
-          example={examples[currentExample]}
-          codeEditorShowing={codeEditorShown}
-        />
+        <ExampleView key={currentExample} example={examples[currentExample]} />
       );
     }
 
@@ -84,7 +77,7 @@ function ExamplePage() {
   })();
 
   return (
-    <main className="flex-1 flex flex-col bg-[#f6f6ff]">
+    <main className="flex-1">
       <Suspense fallback={'Loading...'}>{content}</Suspense>
     </main>
   );

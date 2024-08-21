@@ -1,5 +1,8 @@
 ---
-import ExampleLayout from "../../layouts/ExampleLayout.astro";
+import { ExampleLayout } from '../../components/ExampleLayout';
+import PageLayout from '../../layouts/PageLayout.astro';
 ---
 
-<ExampleLayout title="Live Examples" />
+<PageLayout title="Live examples">
+  <ExampleLayout client:only="react"/>
+</PageLayout>

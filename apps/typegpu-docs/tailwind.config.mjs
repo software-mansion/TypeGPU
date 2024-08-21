@@ -21,7 +21,9 @@ export default {
         },
         gradient: {
           purple: '#C464FF',
+          'purple-dark': '#A91EFF',
           blue: '#1D72F0',
+          'blue-dark': '#0058DD',
         },
       },
     },

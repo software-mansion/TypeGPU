@@ -59,42 +59,39 @@ declare module '@typegpu/example-toolkit' {
 
   export const addElement: AddElement;
 
-  export function addParameter(
+  export function addSelectParameter(
     label: string,
+    initial: string,
+    options: string[],
+    onChange: (newValue: string) => void,
+  ): void;
+
+  export function addToggleParameter(
+    label: string,
+    initial: boolean,
+    onChange: (newValue: boolean) => void,
+  ): void;
+
+  export function addButtonParameter(label: string, onClick: () => void): void;
+
+  export function addSliderParameter(
+    label: string,
+    initial: number,
     options: {
-      initial: number;
       min?: number;
       max?: number;
       step?: number;
     },
     onChange: (newValue: number) => void,
   ): void;
-  export function addParameter<TOption extends string | number>(
-    label: string,
-    options: {
-      initial: TOption;
-      options: TOption[];
-    },
-    onChange: (newValue: TOption) => void,
-  ): void;
-  export function addParameter(
-    label: string,
-    options: {
-      initial: boolean;
-    },
-    onChange: (newValue: boolean) => void,
-  ): void;
-
-  export function addButton(label: string, onClick: () => void): void;
 
   import type { WgslPlum } from 'typegpu';
-  export type AddSliderParam = (
+
+  export function addSliderPlumParameter(
     label: string,
     initial: number,
-    opts: { min?: number; max?: number; step?: number },
-  ) => WgslPlum<number>;
-
-  export const addSliderParam: AddSliderParam;
+    options?: { min?: number; max?: number; step?: number },
+  ): WgslPlum<number>;
 
   export function onCleanup(callback: () => unknown): void;
 

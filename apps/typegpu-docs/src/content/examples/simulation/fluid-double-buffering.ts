@@ -8,7 +8,7 @@
 // -- Hooks into the example environment
 import {
   addElement,
-  addSliderParam,
+  addSliderPlumParameter,
   onCleanup,
   onFrame,
 } from '@typegpu/example-toolkit';
@@ -392,13 +392,13 @@ const mainMoveObstacles = wgsl.fn`
   }
 `.$name('main_move_obstacles');
 
-const sourceIntensityPlum = addSliderParam('source intensity', 0.1, {
+const sourceIntensityPlum = addSliderPlumParameter('source intensity', 0.1, {
   min: 0,
   max: 1,
   step: 0.01,
 });
 
-const sourceRadiusPlum = addSliderParam('source radius', 0.01, {
+const sourceRadiusPlum = addSliderPlumParameter('source radius', 0.01, {
   min: 0.01,
   max: 0.1,
   step: 0.01,
@@ -527,7 +527,7 @@ function obstaclesToConcrete(): Parsed<BoxObstacle>[] {
   }));
 }
 
-const boxXPlum = addSliderParam('box x', 0.5, {
+const boxXPlum = addSliderPlumParameter('box x', 0.5, {
   min: 0.2,
   max: 0.8,
   step: 0.01,
@@ -540,13 +540,13 @@ const limitedBoxXPlum = wgsl.plum((get) => {
   return Math.max(boxX, leftWallX + leftWallWidth / 2 + 0.15);
 });
 
-const boxYPlum = addSliderParam('box y', 0.2, {
+const boxYPlum = addSliderPlumParameter('box y', 0.2, {
   min: 0.2,
   max: 0.85,
   step: 0.01,
 });
 
-const leftWallXPlum = addSliderParam('left wall: x', 0, {
+const leftWallXPlum = addSliderPlumParameter('left wall: x', 0, {
   min: 0,
   max: 0.6,
   step: 0.01,
