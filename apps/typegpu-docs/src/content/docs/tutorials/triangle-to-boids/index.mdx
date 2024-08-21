@@ -946,7 +946,7 @@ import step6typegpu from 'code/step6-typegpu.ts?raw';
 
 <TryInPlaygroundButton code={step6typegpu} />
 
-### Double buffering
+### Setting up the buffers
 
 Now that we understand how slots work, let's use them to implement our double-buffer mechanic.
 We will replace the rotation direction slot with two slots: one for reading from the buffer and one for writing to it.
@@ -1025,7 +1025,7 @@ Now that we have our data type extracted, we can also shorten the buffer definit
 +});
 ```
 
-### Setting up buffers
+### Double buffering
 Great! Now that we have our buffers set up, we can adapt our pipelines to use them properly.
 <Aside>
 We will create a convenience object to hold the buffer pairs, but you can skip this step and easily adapt the code to use the buffers directly if you prefer.
