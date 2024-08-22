@@ -1,3 +1,4 @@
+import { namable, resolvable } from './decorators';
 import type {
   Eventual,
   InlineResolve,
@@ -9,8 +10,7 @@ import type {
   WgslSlot,
 } from './types';
 import { code } from './wgslCode';
-import { WgslIdentifier } from './wgslIdentifier';
-import { WgslResolvableBase } from './wgslResolvableBase';
+import { makeIdentifier } from './wgslIdentifier';
 
 // ----------
 // Public API
@@ -18,63 +18,69 @@ import { WgslResolvableBase } from './wgslResolvableBase';
 
 export interface WgslFn extends WgslResolvable, WgslNamable {
   with<T>(slot: WgslSlot<T>, value: Eventual<T>): BoundWgslFn;
+  body: Wgsl;
 }
 
-export type BoundWgslFn = Omit<WgslFn, '$name'>;
+export type BoundWgslFn = Omit<WgslFn, '$name'> & {
+  _innerFn: BoundWgslFn;
+  _slotValuePair: SlotValuePair<unknown>;
+};
 
 export function fn(
   strings: TemplateStringsArray,
   ...params: (Wgsl | InlineResolve)[]
 ): WgslFn {
-  return new WgslFnImpl(code(strings, ...params));
+  return makeFn(code(strings, ...params));
 }
 
 // --------------
 // Implementation
 // --------------
 
-class WgslFnImpl extends WgslResolvableBase implements WgslFn {
-  readonly typeInfo = 'fn';
-
-  constructor(private readonly body: Wgsl) {
-    super();
-  }
-
-  resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this.label);
-
-    ctx.addDeclaration(code`fn ${identifier}${this.body}`.$name(this.label));
-
-    return ctx.resolve(identifier);
-  }
-
-  with<T>(slot: WgslSlot<T>, value: T): BoundWgslFn {
-    return new BoundWgslFnImpl(this, [slot, value]);
-  }
+function resolveFn(this: WgslFn, ctx: ResolutionCtx) {
+  const identifier = makeIdentifier().$name(this.label);
+  ctx.addDeclaration(code`fn ${identifier}${this.body}`.$name(this.label));
+  return ctx.resolve(identifier);
 }
 
-class BoundWgslFnImpl<T> implements BoundWgslFn {
-  constructor(
-    private readonly _innerFn: BoundWgslFn,
-    private readonly _slotValuePair: SlotValuePair<T>,
-  ) {}
+const makeFn = (body: Wgsl) =>
+  namable(
+    resolvable(
+      { typeInfo: 'fn' },
+      {
+        resolve: resolveFn,
+        body,
+        with<T>(slot: WgslSlot<T>, value: T) {
+          return makeBoundFn(this as BoundWgslFn, [slot, value]);
+        },
+      },
+    ),
+  );
 
-  readonly typeInfo = 'fn';
+function resolveBoundFn(this: BoundWgslFn, ctx: ResolutionCtx) {
+  return ctx.resolve(this._innerFn, [this._slotValuePair]);
+}
+
+const makeBoundFn = <T>(
+  _innerFn: BoundWgslFn,
+  _slotValuePair: SlotValuePair<T>,
+) => ({
+  _innerFn,
+  _slotValuePair,
 
   with<TValue>(slot: WgslSlot<TValue>, value: Eventual<TValue>): BoundWgslFn {
-    return new BoundWgslFnImpl(this, [slot, value]);
-  }
-
-  resolve(ctx: ResolutionCtx): string {
-    return ctx.resolve(this._innerFn, [this._slotValuePair]);
-  }
+    return makeBoundFn(this as BoundWgslFn, [slot, value]);
+  },
 
   get label() {
     return this._innerFn.label;
-  }
+  },
 
   get debugRepr(): string {
     const [slot, value] = this._slotValuePair;
-    return `${this.typeInfo}:${this.label ?? '<unnamed>'}[${slot.label ?? '<unnamed>'}=${value}]`;
-  }
-}
+    return `fn:${this.label ?? '<unnamed>'}[${slot.label ?? '<unnamed>'}=${value}]`;
+  },
+
+  resolve: resolveBoundFn,
+  body: _innerFn.body,
+});

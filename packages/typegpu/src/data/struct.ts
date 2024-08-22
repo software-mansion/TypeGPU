@@ -18,7 +18,7 @@ import type {
   WgslNamable,
 } from '../types';
 import { code } from '../wgslCode';
-import { WgslIdentifier } from '../wgslIdentifier';
+import { makeIdentifier } from '../wgslIdentifier';
 import alignIO from './alignIO';
 
 // ----------
@@ -91,7 +91,7 @@ class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this.label);
+    const identifier = makeIdentifier().$name(this.label);
 
     ctx.addDeclaration(code`
       struct ${identifier} {

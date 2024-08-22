@@ -1,38 +1,41 @@
+import { namable, resolvable } from './decorators';
 import type { ResolutionCtx, Wgsl, WgslNamable, WgslResolvable } from './types';
 import { code } from './wgslCode';
-import { WgslIdentifier } from './wgslIdentifier';
-import { WgslResolvableBase } from './wgslResolvableBase';
+import { makeIdentifier } from './wgslIdentifier';
 
 // ----------
 // Public API
 // ----------
 
-export interface WgslConst extends WgslResolvable, WgslNamable {}
+export interface WgslConst extends WgslResolvable, WgslNamable {
+  expr: Wgsl;
+}
 
 /**
  * Creates a constant is computed at shader initialization according
  * to the passed in expression.
  */
 export function constant(expr: Wgsl): WgslConst {
-  return new WgslConstImpl(expr);
+  return makeConst(expr);
 }
 
 // --------------
 // Implementation
 // --------------
 
-class WgslConstImpl extends WgslResolvableBase implements WgslConst {
-  readonly typeInfo = 'const';
-
-  constructor(private readonly expr: Wgsl) {
-    super();
-  }
-
-  resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this.label);
-
-    ctx.addDeclaration(code`const ${identifier} = ${this.expr};`);
-
-    return ctx.resolve(identifier);
-  }
+function resolveConst(this: WgslConst, ctx: ResolutionCtx) {
+  const identifier = makeIdentifier().$name(this.label);
+  ctx.addDeclaration(code`const ${identifier} = ${this.expr};`);
+  return ctx.resolve(identifier);
 }
+
+const makeConst = (expr: Wgsl) =>
+  namable(
+    resolvable(
+      { typeInfo: 'const' },
+      {
+        expr,
+        resolve: resolveConst,
+      },
+    ),
+  );

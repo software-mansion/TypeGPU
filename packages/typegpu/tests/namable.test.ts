@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ResolvableToStringError, StrictNameRegistry, wgsl } from '../src';
 import { f32, struct, u32, vec3f } from '../src/data';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
-import { WgslIdentifier } from '../src/wgslIdentifier';
+import { makeIdentifier } from '../src/wgslIdentifier';
 
 global.GPUBufferUsage = {
   COPY_DST: 8,
@@ -69,7 +69,7 @@ describe('resolvable base', () => {
     wgsl.slot({ a: 'a' }).$name();
     wgsl.buffer(u32).$allowMutable().asMutable().$name('ghi');
     wgsl.buffer(u32).$name('ghi');
-    new WgslIdentifier().$name('id');
+    makeIdentifier().$name('id');
 
     wgsl.fn`() -> u32 {
       return 1;

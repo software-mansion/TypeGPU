@@ -1,6 +1,6 @@
 import type { Eventual, Wgsl } from '../types';
 import { code } from '../wgslCode';
-import { WgslIdentifier } from '../wgslIdentifier';
+import { makeIdentifier } from '../wgslIdentifier';
 
 export function repeat(
   count: Eventual<Wgsl>,
@@ -21,7 +21,7 @@ export function repeat(
     const snippetValue = get(snippet);
 
     if (typeof countValue !== 'number') {
-      const index = new WgslIdentifier().$name('i');
+      const index = makeIdentifier().$name('i');
 
       if (typeof snippetValue === 'function') {
         return code`

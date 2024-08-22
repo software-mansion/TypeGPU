@@ -1,3 +1,4 @@
+import { namable, resolvable } from './decorators';
 import type {
   AnyWgslData,
   BufferUsage,
@@ -5,8 +6,7 @@ import type {
   WgslBindable,
 } from './types';
 import type { WgslBuffer } from './wgslBuffer';
-import { WgslIdentifier } from './wgslIdentifier';
-import { WgslResolvableBase } from './wgslResolvableBase';
+import { makeIdentifier } from './wgslIdentifier';
 
 // ----------
 // Public API
@@ -24,36 +24,38 @@ export function bufferUsage<
   buffer: WgslBuffer<TData, TUsage>,
   usage: TUsage,
 ): WgslBufferUsage<TData, TUsage> {
-  return new WgslBufferUsageImpl(buffer, usage);
+  return makeBufferUsage(buffer, usage);
 }
 
 // --------------
 // Implementation
 // --------------
 
-class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
-  extends WgslResolvableBase
-  implements WgslBufferUsage<TData, TUsage>
-{
-  typeInfo = 'buffer_usage';
-
-  constructor(
-    public readonly buffer: WgslBuffer<TData, TUsage>,
-    public readonly usage: TUsage,
-  ) {
-    super();
-    this.typeInfo = this.usage;
-  }
-
-  get allocatable() {
-    return this.buffer;
-  }
-
-  resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier();
-
-    ctx.addBinding(this, identifier);
-
-    return ctx.resolve(identifier);
-  }
+function resolveBufferUsage<
+  TData extends AnyWgslData,
+  TUsage extends BufferUsage,
+>(this: WgslBufferUsage<TData, TUsage>, ctx: ResolutionCtx) {
+  const identifier = makeIdentifier();
+  ctx.addBinding(this, identifier);
+  return ctx.resolve(identifier);
 }
+
+const makeBufferUsage = <TData extends AnyWgslData, TUsage extends BufferUsage>(
+  buffer: WgslBuffer<TData, TUsage>,
+  usage: TUsage,
+) =>
+  namable(
+    resolvable(
+      { typeInfo: usage },
+      {
+        buffer,
+        usage,
+
+        resolve: resolveBufferUsage,
+
+        get allocatable() {
+          return this.buffer;
+        },
+      },
+    ),
+  );

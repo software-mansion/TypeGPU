@@ -1,13 +1,11 @@
+import { namable, resolvable } from './decorators';
 import {
   type ResolutionCtx,
   type Wgsl,
-  type WgslNamable,
-  type WgslResolvable,
   type WgslResolvableSlot,
   type WgslSlot,
   isWgsl,
 } from './types';
-import { WgslResolvableBase } from './wgslResolvableBase';
 
 // ----------
 // Public API
@@ -18,37 +16,37 @@ export function slot<T extends Wgsl>(defaultValue?: T): WgslResolvableSlot<T>;
 export function slot<T>(defaultValue?: T): WgslSlot<T>;
 
 export function slot<T>(defaultValue?: T): WgslSlot<T> {
-  return new WgslSlotImpl(defaultValue);
+  return makeSlot(defaultValue);
 }
 
 // --------------
 // Implementation
 // --------------
 
-class WgslSlotImpl<T>
-  extends WgslResolvableBase
-  implements WgslResolvable, WgslNamable, WgslSlot<T>
-{
-  readonly typeInfo = 'slot';
-  readonly __brand = 'WgslSlot';
+function resolveSlot<T>(this: WgslSlot<T>, ctx: ResolutionCtx): string {
+  const value = ctx.unwrap(this);
 
-  constructor(public defaultValue: T | undefined = undefined) {
-    super();
+  if (!isWgsl(value)) {
+    throw new Error(
+      `Cannot inject value of type ${typeof value} of slot '${this.label ?? '<unnamed>'}' in code.`,
+    );
   }
 
-  areEqual(a: T, b: T): boolean {
-    return Object.is(a, b);
-  }
-
-  resolve(ctx: ResolutionCtx): string {
-    const value = ctx.unwrap(this);
-
-    if (!isWgsl(value)) {
-      throw new Error(
-        `Cannot inject value of type ${typeof value} of slot '${this.label ?? '<unnamed>'}' in code.`,
-      );
-    }
-
-    return ctx.resolve(value);
-  }
+  return ctx.resolve(value);
 }
+
+const makeSlot = <T>(defaultValue: T | undefined) =>
+  namable(
+    resolvable(
+      { typeInfo: 'slot' },
+      {
+        __brand: 'WgslSlot' as const,
+        defaultValue,
+        resolve: resolveSlot,
+
+        areEqual(a: T, b: T): boolean {
+          return Object.is(a, b);
+        },
+      },
+    ),
+  );

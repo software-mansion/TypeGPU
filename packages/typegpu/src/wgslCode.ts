@@ -1,3 +1,4 @@
+import { namable, resolvable } from './decorators';
 import {
   type Eventual,
   type InlineResolve,
@@ -10,7 +11,6 @@ import {
   isResolvable,
 } from './types';
 import { getBuiltinInfo } from './wgslBuiltin';
-import { WgslResolvableBase } from './wgslResolvableBase';
 
 // ----------
 // Public API
@@ -18,9 +18,10 @@ import { WgslResolvableBase } from './wgslResolvableBase';
 
 export interface WgslCode extends WgslResolvable, WgslNamable {
   with<T>(slot: WgslSlot<T>, value: Eventual<T>): BoundWgslCode;
+  segments: (Wgsl | InlineResolve)[];
 }
 
-export type BoundWgslCode = Omit<WgslCode, '$name'>;
+export type BoundWgslCode = Omit<Omit<WgslCode, '$name'>, 'segments'>;
 
 export function code(
   strings: TemplateStringsArray,
@@ -35,72 +36,69 @@ export function code(
     return Array.isArray(param) ? [string, ...param] : [string, param];
   });
 
-  return new WgslCodeImpl(segments);
+  return makeCode(segments);
 }
 
 // --------------
 // Implementation
 // --------------
 
-class WgslCodeImpl extends WgslResolvableBase implements WgslCode {
-  readonly typeInfo = 'code';
+function resolveCode(this: WgslCode, ctx: ResolutionCtx) {
+  let code = '';
 
-  constructor(public readonly segments: (Wgsl | InlineResolve)[]) {
-    super();
-  }
-
-  resolve(ctx: ResolutionCtx) {
-    let code = '';
-
-    for (const s of this.segments) {
-      if (typeof s === 'function') {
-        const result = s((eventual) => ctx.unwrap(eventual));
-        code += ctx.resolve(result);
-      } else if (isResolvable(s)) {
-        code += ctx.resolve(s);
-      } else if (typeof s === 'symbol') {
-        const builtin = getBuiltinInfo(s);
-        ctx.addBuiltin(builtin);
-        code += ctx.resolve(builtin.identifier);
-      } else {
-        code += String(s);
-      }
+  for (const s of this.segments) {
+    if (typeof s === 'function') {
+      const result = s((eventual) => ctx.unwrap(eventual));
+      code += ctx.resolve(result);
+    } else if (isResolvable(s)) {
+      code += ctx.resolve(s);
+    } else if (typeof s === 'symbol') {
+      const builtin = getBuiltinInfo(s);
+      ctx.addBuiltin(builtin);
+      code += ctx.resolve(builtin.identifier);
+    } else {
+      code += String(s);
     }
-
-    return code;
   }
 
-  with<TValue>(slot: WgslSlot<TValue>, value: Eventual<TValue>): BoundWgslCode {
-    return new BoundWgslCodeImpl(this, [slot, value]);
-  }
-
-  get debugRepr(): string {
-    return `${this.typeInfo}:${this.label ?? '<unnamed>'}`;
-  }
+  return code;
 }
 
-class BoundWgslCodeImpl<T> implements BoundWgslCode {
-  constructor(
-    private readonly _innerFn: BoundWgslCode,
-    private readonly _slotValuePair: SlotValuePair<T>,
-  ) {}
+const makeCode = (segments: (Wgsl | InlineResolve)[]) =>
+  namable(
+    resolvable(
+      { typeInfo: 'code' },
+      {
+        segments,
+        resolve: resolveCode,
+        with<TValue>(
+          slot: WgslSlot<TValue>,
+          value: Eventual<TValue>,
+        ): BoundWgslCode {
+          return makeBoundCode(this as WgslCode, [slot, value]);
+        },
+      },
+    ),
+  );
 
-  readonly typeInfo = 'code';
-
+const makeBoundCode = <T>(
+  _innerFn: BoundWgslCode,
+  _slotValuePair: SlotValuePair<T>,
+) => ({
   get label() {
-    return this._innerFn.label;
-  }
+    return _innerFn.label;
+  },
 
   with<TValue>(slot: WgslSlot<TValue>, value: Eventual<TValue>): BoundWgslCode {
-    return new BoundWgslCodeImpl(this, [slot, value]);
-  }
+    return makeBoundCode(this, [slot, value]);
+  },
 
   resolve(ctx: ResolutionCtx): string {
-    return ctx.resolve(this._innerFn, [this._slotValuePair]);
-  }
+    return ctx.resolve(_innerFn, [_slotValuePair]);
+  },
 
   get debugRepr(): string {
-    const [slot, value] = this._slotValuePair;
-    return `${this.typeInfo}:${this.label ?? '<unnamed>'}[${slot.label ?? '<unnamed>'}=${value}]`;
-  }
-}
+    const [slot, value] = _slotValuePair;
+    return `code:${this.label ?? '<unnamed>'}[${slot.label ?? '<unnamed>'}=${value}]`;
+  },
+});

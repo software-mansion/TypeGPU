@@ -1,4 +1,5 @@
 import { vec4f, vec4i, vec4u } from './data';
+import { namable, resolvable } from './decorators';
 import type {
   AnyWgslPrimitive,
   AnyWgslTexelFormat,
@@ -10,8 +11,7 @@ import type {
   WgslRenderResource,
   WgslRenderResourceType,
 } from './types';
-import { WgslIdentifier } from './wgslIdentifier';
-import { WgslResolvableBase } from './wgslResolvableBase';
+import { makeIdentifier } from './wgslIdentifier';
 import { isSampler } from './wgslSampler';
 
 export interface WgslAnyTextureView extends WgslRenderResource {
@@ -56,8 +56,6 @@ export interface WgslTextureView<
   readonly type: WgslRenderResourceType;
   readonly dataType: TData;
   readonly access: StorageTextureAccess | undefined;
-
-  $name(label: string): WgslTextureView<TData, TUsage>;
 }
 
 export interface WgslTextureExternal extends WgslRenderResource {
@@ -71,7 +69,7 @@ export function texture<TUsage extends TextureUsage = never>(
 }
 
 export function textureExternal(descriptor: GPUExternalTextureDescriptor) {
-  return new WgslTextureExternalImpl(descriptor);
+  return makeTextureExternal(descriptor);
 }
 
 class WgslTextureImpl<TAllows extends TextureUsage = never>
@@ -145,7 +143,7 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
     if (!type) {
       throw new Error(`Unsupported texture format ${this.descriptor.format}`);
     }
-    const view = new WgslTextureViewImpl(
+    const view = makeTextureView(
       params.type,
       this,
       type,
@@ -167,7 +165,7 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
     if (existing) {
       return existing;
     }
-    const view = new WgslTextureViewImpl(
+    const view = makeTextureView(
       params.type,
       this,
       params.dataType,
@@ -195,53 +193,57 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
   }
 }
 
-class WgslTextureViewImpl<
-    TData extends AnyWgslPrimitive | AnyWgslTexelFormat,
-    TUsage extends TextureUsage,
-  >
-  extends WgslResolvableBase
-  implements WgslTextureView<TData, TUsage>, WgslAnyTextureView
-{
-  readonly typeInfo = 'texture';
-
-  constructor(
-    public readonly type: WgslRenderResourceType,
-    public readonly texture: WgslTexture<TUsage>,
-    public readonly dataType: TData,
-    public readonly descriptor: GPUTextureViewDescriptor = {},
-    public readonly access: StorageTextureAccess | undefined = undefined,
-  ) {
-    super();
-  }
-
-  resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this.label);
-
-    ctx.addRenderResource(this, identifier);
-
-    return ctx.resolve(identifier);
-  }
+function resolveTextureView(this: WgslAnyTextureView, ctx: ResolutionCtx) {
+  const identifier = makeIdentifier().$name(this.label);
+  ctx.addRenderResource(this, identifier);
+  return ctx.resolve(identifier);
 }
 
-class WgslTextureExternalImpl
-  extends WgslResolvableBase
-  implements WgslTextureExternal
-{
-  public readonly type = 'texture_external';
-  readonly typeInfo = 'texture_external';
+const makeTextureView = <
+  TData extends AnyWgslPrimitive | AnyWgslTexelFormat,
+  TUsage extends TextureUsage,
+>(
+  type: WgslRenderResourceType,
+  texture: WgslTexture<TUsage>,
+  dataType: TData,
+  descriptor: GPUTextureViewDescriptor = {},
+  access: StorageTextureAccess | undefined = undefined,
+) =>
+  namable(
+    resolvable(
+      {
+        typeInfo: 'texture_view',
+      },
+      {
+        type,
+        texture,
+        dataType,
+        descriptor,
+        access,
+        resolve: resolveTextureView,
+      },
+    ),
+  );
 
-  constructor(public readonly descriptor: GPUExternalTextureDescriptor) {
-    super();
-  }
-
-  resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this.label);
-
-    ctx.addRenderResource(this, identifier);
-
-    return ctx.resolve(identifier);
-  }
+function resolveTextureExternal(this: WgslTextureExternal, ctx: ResolutionCtx) {
+  const identifier = makeIdentifier().$name(this.label);
+  ctx.addRenderResource(this, identifier);
+  return ctx.resolve(identifier);
 }
+
+const makeTextureExternal = (descriptor: GPUExternalTextureDescriptor) =>
+  namable(
+    resolvable(
+      {
+        typeInfo: 'texture_external',
+      },
+      {
+        type: 'texture_external',
+        resolve: resolveTextureExternal,
+        descriptor,
+      },
+    ),
+  );
 
 export function isExternalTexture(
   texture: WgslRenderResource,

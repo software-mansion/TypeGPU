@@ -57,7 +57,7 @@ export class RecursiveDataTypeError extends Error {
 }
 
 export class ResolvableToStringError extends Error {
-  constructor(public readonly item: WgslResolvable) {
+  constructor(public readonly item: { debugRepr: string }) {
     super(
       `Use wgsl\`...\` when interpolating wgsl item: ${item.debugRepr}. For console logging use the debugRepr property`,
     );

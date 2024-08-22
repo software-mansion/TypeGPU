@@ -2,7 +2,7 @@ import * as TB from 'typed-binary';
 import type { F32, U32, Vec3u, Vec4f } from './data';
 import { SimpleWgslData, f32, u32, vec3u, vec4f } from './data';
 import type { WgslData } from './types';
-import { WgslIdentifier } from './wgslIdentifier';
+import { type WgslIdentifier, makeIdentifier } from './wgslIdentifier';
 
 export type BuiltInPossibleTypes =
   | U32
@@ -42,21 +42,21 @@ const builtinSymbolToObj: Record<symbol, Builtin> = {
     stage: 'vertex',
     direction: 'input',
     type: u32,
-    identifier: new WgslIdentifier().$name('vertex_index'),
+    identifier: makeIdentifier().$name('vertex_index'),
   },
   [builtin.instanceIndex]: {
     name: 'instance_index',
     stage: 'vertex',
     direction: 'input',
     type: u32,
-    identifier: new WgslIdentifier().$name('instance_index'),
+    identifier: makeIdentifier().$name('instance_index'),
   },
   [builtin.position]: {
     name: 'position',
     stage: 'vertex',
     direction: 'output',
     type: vec4f,
-    identifier: new WgslIdentifier().$name('position'),
+    identifier: makeIdentifier().$name('position'),
   },
   [builtin.clipDistances]: {
     name: 'clip_distances',
@@ -67,77 +67,77 @@ const builtinSymbolToObj: Record<symbol, Builtin> = {
       byteAlignment: 16,
       code: 'array<u32, 8>',
     }),
-    identifier: new WgslIdentifier().$name('clip_distances'),
+    identifier: makeIdentifier().$name('clip_distances'),
   },
   [builtin.frontFacing]: {
     name: 'front_facing',
     stage: 'fragment',
     direction: 'input',
     type: f32,
-    identifier: new WgslIdentifier().$name('front_facing'),
+    identifier: makeIdentifier().$name('front_facing'),
   },
   [builtin.fragDepth]: {
     name: 'frag_depth',
     stage: 'fragment',
     direction: 'output',
     type: f32,
-    identifier: new WgslIdentifier().$name('frag_depth'),
+    identifier: makeIdentifier().$name('frag_depth'),
   },
   [builtin.sampleIndex]: {
     name: 'sample_index',
     stage: 'fragment',
     direction: 'input',
     type: u32,
-    identifier: new WgslIdentifier().$name('sample_index'),
+    identifier: makeIdentifier().$name('sample_index'),
   },
   [builtin.sampleMask]: {
     name: 'sample_mask',
     stage: 'fragment',
     direction: 'input',
     type: u32,
-    identifier: new WgslIdentifier().$name('sample_mask'),
+    identifier: makeIdentifier().$name('sample_mask'),
   },
   [builtin.fragment]: {
     name: 'fragment',
     stage: 'fragment',
     direction: 'input',
     type: vec4f,
-    identifier: new WgslIdentifier().$name('fragment'),
+    identifier: makeIdentifier().$name('fragment'),
   },
   [builtin.localInvocationId]: {
     name: 'local_invocation_id',
     stage: 'compute',
     direction: 'input',
     type: vec3u,
-    identifier: new WgslIdentifier().$name('local_invocation_id'),
+    identifier: makeIdentifier().$name('local_invocation_id'),
   },
   [builtin.localInvocationIndex]: {
     name: 'local_invocation_index',
     stage: 'compute',
     direction: 'input',
     type: u32,
-    identifier: new WgslIdentifier().$name('local_invocation_index'),
+    identifier: makeIdentifier().$name('local_invocation_index'),
   },
   [builtin.globalInvocationId]: {
     name: 'global_invocation_id',
     stage: 'compute',
     direction: 'input',
     type: vec3u,
-    identifier: new WgslIdentifier().$name('global_invocation_id'),
+    identifier: makeIdentifier().$name('global_invocation_id'),
   },
   [builtin.workgroupId]: {
     name: 'workgroup_id',
     stage: 'compute',
     direction: 'input',
     type: vec3u,
-    identifier: new WgslIdentifier().$name('workgroup_id'),
+    identifier: makeIdentifier().$name('workgroup_id'),
   },
   [builtin.numWorkgroups]: {
     name: 'num_workgroups',
     stage: 'compute',
     direction: 'input',
     type: vec3u,
-    identifier: new WgslIdentifier().$name('num_workgroups'),
+    identifier: makeIdentifier().$name('num_workgroups'),
   },
 };
 

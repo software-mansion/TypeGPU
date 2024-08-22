@@ -1,3 +1,4 @@
+import { namable, resolvable } from './decorators';
 import type {
   AnyWgslData,
   ResolutionCtx,
@@ -6,8 +7,7 @@ import type {
   WgslResolvable,
 } from './types';
 import { code } from './wgslCode';
-import { WgslIdentifier } from './wgslIdentifier';
-import { WgslResolvableBase } from './wgslResolvableBase';
+import { makeIdentifier } from './wgslIdentifier';
 
 // ----------
 // Public API
@@ -17,7 +17,11 @@ export type VariableScope = 'private' | 'workgroup';
 
 export interface WgslVar<TDataType extends AnyWgslData>
   extends WgslResolvable,
-    WgslNamable {}
+    WgslNamable {
+  readonly dataType: TDataType;
+  readonly initialValue: Wgsl | undefined;
+  readonly scope: VariableScope;
+}
 
 /**
  * Creates a variable, with an optional initial value.
@@ -26,38 +30,38 @@ export const variable = <TDataType extends AnyWgslData>(
   dataType: TDataType,
   initialValue?: Wgsl,
   scope: VariableScope = 'private',
-): WgslVar<TDataType> => new WgslVarImpl(dataType, initialValue, scope);
+): WgslVar<TDataType> => makeVar(dataType, initialValue, scope);
 
 // --------------
 // Implementation
 // --------------
 
-class WgslVarImpl<TDataType extends AnyWgslData>
-  extends WgslResolvableBase
-  implements WgslVar<TDataType>
-{
-  readonly typeInfo = 'var';
-
-  constructor(
-    private readonly _dataType: TDataType,
-    private readonly _initialValue: Wgsl | undefined,
-    public readonly scope: VariableScope,
-  ) {
-    super();
+function resolveVar<TDataType extends AnyWgslData>(
+  this: WgslVar<TDataType>,
+  ctx: ResolutionCtx,
+) {
+  const identifier = makeIdentifier();
+  if (this.initialValue) {
+    ctx.addDeclaration(
+      code`var<${this.scope}> ${identifier}: ${this.dataType} = ${this.initialValue};`,
+    );
+  } else {
+    ctx.addDeclaration(
+      code`var<${this.scope}> ${identifier}: ${this.dataType};`,
+    );
   }
 
-  resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier();
-    if (this._initialValue) {
-      ctx.addDeclaration(
-        code`var<${this.scope}> ${identifier}: ${this._dataType} = ${this._initialValue};`,
-      );
-    } else {
-      ctx.addDeclaration(
-        code`var<${this.scope}> ${identifier}: ${this._dataType};`,
-      );
-    }
-
-    return ctx.resolve(identifier);
-  }
+  return ctx.resolve(identifier);
 }
+
+const makeVar = <TDataType extends AnyWgslData>(
+  dataType: TDataType,
+  initialValue: Wgsl | undefined,
+  scope: VariableScope,
+) =>
+  namable(
+    resolvable(
+      { typeInfo: 'var' },
+      { resolve: resolveVar, dataType, initialValue, scope },
+    ),
+  );

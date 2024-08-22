@@ -145,7 +145,7 @@ export type WgslRenderResourceType =
   | WgslStorageTextureType
   | WgslExternalTextureType;
 
-export interface WgslRenderResource extends WgslResolvable {
+export interface WgslRenderResource extends WgslResolvable, WgslNamable {
   readonly type: WgslRenderResourceType;
 }
 

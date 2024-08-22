@@ -17,7 +17,7 @@ import type {
   WgslNamable,
 } from '../types';
 import { code } from '../wgslCode';
-import { WgslIdentifier } from '../wgslIdentifier';
+import { makeIdentifier } from '../wgslIdentifier';
 import alignIO from './alignIO';
 import { u32 } from './numeric';
 
@@ -128,7 +128,7 @@ class WgslDynamicArrayImpl<TElement extends WgslData<unknown>>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this.label);
+    const identifier = makeIdentifier().$name(this.label);
 
     ctx.addDeclaration(code`
       struct ${identifier} {
