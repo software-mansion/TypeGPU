@@ -9,10 +9,11 @@ import {
   addButtonParameter,
   addElement,
   addSliderParameter,
+  addSliderPlumParameter,
   onFrame,
 } from '@typegpu/example-toolkit';
 import { type WgslBufferUsage, builtin, createRuntime, wgsl } from 'typegpu';
-import { arrayOf, f32, struct, vec2f } from 'typegpu/data';
+import { arrayOf, f32, struct, u32, vec2f } from 'typegpu/data';
 
 const runtime = await createRuntime();
 const device = runtime.device;
@@ -50,40 +51,56 @@ const parametesBuffer = wgsl
   )
   .$allowReadonly();
 
-const triangleSize = 0.04;
+const triangleSize = addSliderPlumParameter('Triangle size', 0.04, {
+  min: 0.01,
+  max: 0.1,
+  step: 0.01,
+});
+const triangleSizeBuffer = wgsl.buffer(f32, triangleSize).$allowUniform();
+const triangleSizePlum = wgsl.plum((get) => {
+  const size = get(triangleSize);
+  return [
+    [0.0, size],
+    [-size / 2, -size / 2],
+    [size / 2, -size / 2],
+  ] as [number, number][];
+});
+
 const triangleVertex = wgsl
-  .buffer(arrayOf(vec2f, 3), [
-    [0.0, triangleSize],
-    [-triangleSize / 2, -triangleSize / 2],
-    [triangleSize / 2, -triangleSize / 2],
-  ])
+  .buffer(arrayOf(vec2f, 3), triangleSizePlum)
   .$allowVertex('vertex');
 
-const triangleAmount = 500;
+const MAX_TRIANGLES = 10000;
+const triangleAmount = addSliderPlumParameter('Triangle amount', 500, {
+  min: 1,
+  max: 10000,
+  step: 1,
+});
+const triangleAmountBuffer = wgsl.buffer(u32, triangleAmount).$allowUniform();
 const trianglePosData = arrayOf(
   struct({
     position: vec2f,
     velocity: vec2f,
   }),
-  triangleAmount,
+  MAX_TRIANGLES,
 );
 type TrianglePosData = typeof trianglePosData;
 
 const trianglePosBuffers = Array.from({ length: 2 }, () => {
-  return wgsl.buffer(trianglePosData).$allowUniform().$allowMutable();
+  return wgsl.buffer(trianglePosData).$allowReadonly().$allowMutable();
 });
 
 const pairs = [
-  [trianglePosBuffers[0].asUniform(), trianglePosBuffers[1].asMutable()],
-  [trianglePosBuffers[1].asUniform(), trianglePosBuffers[0].asMutable()],
+  [trianglePosBuffers[0].asReadonly(), trianglePosBuffers[1].asMutable()],
+  [trianglePosBuffers[1].asReadonly(), trianglePosBuffers[0].asMutable()],
 ];
 
-const readSlot = wgsl.slot<WgslBufferUsage<TrianglePosData, 'uniform'>>();
+const readSlot = wgsl.slot<WgslBufferUsage<TrianglePosData, 'readonly'>>();
 const writeSlot = wgsl.slot<WgslBufferUsage<TrianglePosData, 'mutable'>>();
 
 function randomizeTriangles() {
   const positions = [];
-  for (let i = 0; i < triangleAmount; i++) {
+  for (let i = 0; i < MAX_TRIANGLES; i++) {
     const position = [Math.random() * 2 - 1, Math.random() * 2 - 1] as [
       number,
       number,
@@ -114,6 +131,7 @@ const renderPipelines = [0, 1].map((idx) =>
   runtime.makeRenderPipeline({
     vertex: {
       code: wgsl`
+      let triangleSize = ${triangleSizeBuffer.asUniform()};
       let instanceInfo = ${pairs[idx][0]}[${builtin.instanceIndex}];
       let rotated = ${rotate}(
         ${triangleVertex.asVertex()},
@@ -123,7 +141,7 @@ const renderPipelines = [0, 1].map((idx) =>
       let offset = instanceInfo.position;
 
       let pos = vec4f(rotated + offset, 0.0, 1.0);
-      let fragUV = (rotated + vec2f(${triangleSize}, ${triangleSize})) / vec2f(${triangleSize} * 2.0);
+      let fragUV = (rotated + vec2f(triangleSize, triangleSize)) / vec2f(triangleSize * 2.0);
     `,
       output: {
         [builtin.position]: 'pos',
@@ -156,6 +174,7 @@ const renderPipelines = [0, 1].map((idx) =>
 const computePipelines = [0, 1].map((idx) =>
   runtime.makeComputePipeline({
     code: wgsl`
+    let triangleSize = ${triangleSizeBuffer.asUniform()};
     let index = ${builtin.globalInvocationId}.x;
     var instanceInfo = ${readSlot}[index];
     let params = ${parametesBuffer.asReadonly()};
@@ -165,7 +184,7 @@ const computePipelines = [0, 1].map((idx) =>
     var alignmentCount = 0u;
     var cohesion = vec2(0.0, 0.0);
     var cohesionCount = 0u;
-    for (var i = 0u; i < ${triangleAmount}; i = i + 1) {
+    for (var i = 0u; i < ${triangleAmountBuffer.asUniform()}; i = i + 1) {
       if (i == index) {
         continue;
       }
@@ -195,7 +214,6 @@ const computePipelines = [0, 1].map((idx) =>
     instanceInfo.velocity += (separation * params.separationStrength) + (alignment * params.alignmentStrength) + (cohesion * params.cohesionStrength);
     instanceInfo.velocity = normalize(instanceInfo.velocity) * clamp(length(instanceInfo.velocity), 0.0, 0.01);
 
-    let triangleSize = ${triangleSize};
     if (instanceInfo.position[0] > 1.0 + triangleSize) {
       instanceInfo.position[0] = -1.0 - triangleSize;
     }
@@ -223,7 +241,7 @@ let even = false;
 onFrame(() => {
   even = !even;
   computePipelines[even ? 0 : 1].execute({
-    workgroups: [triangleAmount],
+    workgroups: [runtime.readPlum(triangleAmount)],
   });
   renderPipelines[even ? 1 : 0].execute({
     colorAttachments: [
@@ -235,7 +253,7 @@ onFrame(() => {
       },
     ],
     vertexCount: 3,
-    instanceCount: triangleAmount,
+    instanceCount: runtime.readPlum(triangleAmount),
   });
 
   runtime.flush();
