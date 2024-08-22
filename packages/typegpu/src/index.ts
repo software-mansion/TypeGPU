@@ -4,6 +4,7 @@
 
 export * from './errors';
 export * from './types';
+export * from './tests';
 export { AsCallable, ICallable } from './callable';
 export * from './typegpuRuntime';
 export { default as ProgramBuilder, type Program } from './programBuilder';
@@ -23,7 +24,4 @@ export type { WgslSettable } from './settableTrait';
 export type { WgslFn as WgslFnExperimental } from './wgslFunctionExperimental';
 export type { WgslVar } from './wgslVariable';
 export type { WgslSampler } from './wgslSampler';
-export type {
-  WgslTexture,
-  WgslTextureView,
-} from './wgslTexture';
+export type { WgslTexture, WgslTextureView } from './wgslTexture';
