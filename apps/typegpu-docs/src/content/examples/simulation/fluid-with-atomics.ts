@@ -381,7 +381,16 @@ function resetGameData() {
 
     runtime.flush();
 
-    runtime.writeBuffer(currentStateBuffer, nextStateBuffer);
+    commandEncoder = device.createCommandEncoder();
+    commandEncoder.copyBufferToBuffer(
+      runtime.bufferFor(nextStateBuffer),
+      0,
+      runtime.bufferFor(currentStateBuffer),
+      0,
+      cells.byteLength,
+    );
+
+    device.queue.submit([commandEncoder.finish()]);
   };
 
   applyDrawCanvas = () => {

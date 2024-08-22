@@ -41,7 +41,7 @@ export interface TypeGpuRuntime {
 
   writeBuffer<TValue extends AnyWgslData>(
     allocatable: WgslAllocatable<TValue>,
-    data: Parsed<TValue> | WgslAllocatable<TValue>,
+    data: Parsed<TValue>,
   ): void;
 
   readBuffer<TData extends AnyWgslData>(
