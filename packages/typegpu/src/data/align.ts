@@ -37,10 +37,12 @@ export class WgslAlignDataImpl<TAlign extends number, TData extends AnyWgslData>
   }
 
   write(output: ISerialOutput, value: ParseUnwrapped<TData>): void {
+    alignIO(output, this.byteAlignment);
     this.data.write(output, value);
   }
 
   read(input: ISerialInput): ParseUnwrapped<TData> {
+    alignIO(input, this.byteAlignment);
     return this.data.read(input) as ParseUnwrapped<TData>;
   }
 
