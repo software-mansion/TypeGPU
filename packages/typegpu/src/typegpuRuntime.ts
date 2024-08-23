@@ -39,7 +39,7 @@ export interface TypeGpuRuntime {
     listener: PlumListener<TValue>,
   ): Unsubscribe;
 
-  writeBuffer<TValue extends AnyWgslData, TElem extends AnyWgslData>(
+  writeBuffer<TValue extends AnyWgslData>(
     allocatable: WgslAllocatable<TValue>,
     data: Parsed<TValue>,
   ): void;
