@@ -85,7 +85,10 @@ export function typedDevice(device: GPUDevice): GPUDeviceTyped {
         ) => {
           if ('type' in descriptor) {
             const buffer = device.createBuffer({
-              size: descriptor.type.byteAlignment,
+              size: roundUp(
+                descriptor.type.size,
+                descriptor.type.byteAlignment,
+              ),
               usage: descriptor.usage,
               mappedAtCreation: descriptor.mappedAtCreation ?? false,
             }) as GPUBufferTyped<typeof descriptor.type>;
