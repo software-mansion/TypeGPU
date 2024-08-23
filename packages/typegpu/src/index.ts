@@ -4,7 +4,7 @@
 
 export * from './errors';
 export * from './types';
-export * from './tests';
+export * from './typedDevice';
 export { AsCallable, ICallable } from './callable';
 export * from './typegpuRuntime';
 export { default as ProgramBuilder, type Program } from './programBuilder';
