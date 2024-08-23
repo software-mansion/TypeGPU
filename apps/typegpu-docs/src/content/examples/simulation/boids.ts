@@ -28,7 +28,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-addButtonParameter('Randomize', randomizeTriangles);
+addButtonParameter('randomize', randomizeTriangles);
 
 const parametesBuffer = wgsl
   .buffer(
@@ -51,7 +51,7 @@ const parametesBuffer = wgsl
   )
   .$allowReadonly();
 
-const triangleSize = addSliderPlumParameter('Triangle size', 0.04, {
+const triangleSize = addSliderPlumParameter('triangle size', 0.04, {
   min: 0.01,
   max: 0.1,
   step: 0.01,
@@ -71,7 +71,7 @@ const triangleVertex = wgsl
   .$allowVertex('vertex');
 
 const MAX_TRIANGLES = 10000;
-const triangleAmount = addSliderPlumParameter('Triangle amount', 500, {
+const triangleAmount = addSliderPlumParameter('triangle amount', 500, {
   min: 1,
   max: 10000,
   step: 1,
@@ -90,7 +90,7 @@ const trianglePosBuffers = Array.from({ length: 2 }, () => {
   return wgsl.buffer(trianglePosData).$allowReadonly().$allowMutable();
 });
 
-const pairs = [
+const bufferPairs = [
   [trianglePosBuffers[0].asReadonly(), trianglePosBuffers[1].asMutable()],
   [trianglePosBuffers[1].asReadonly(), trianglePosBuffers[0].asMutable()],
 ];
@@ -131,18 +131,18 @@ const renderPipelines = [0, 1].map((idx) =>
   runtime.makeRenderPipeline({
     vertex: {
       code: wgsl`
-      let triangleSize = ${triangleSizeBuffer.asUniform()};
-      let instanceInfo = ${pairs[idx][0]}[${builtin.instanceIndex}];
-      let rotated = ${rotate}(
-        ${triangleVertex.asVertex()},
-        ${getRotationFromVelocity}(instanceInfo.velocity),
-      );
+        let triangleSize = ${triangleSizeBuffer.asUniform()};
+        let instanceInfo = ${bufferPairs[idx][0]}[${builtin.instanceIndex}];
+        let rotated = ${rotate}(
+          ${triangleVertex.asVertex()},
+          ${getRotationFromVelocity}(instanceInfo.velocity),
+        );
 
-      let offset = instanceInfo.position;
+        let offset = instanceInfo.position;
 
-      let pos = vec4f(rotated + offset, 0.0, 1.0);
-      let fragUV = (rotated + vec2f(triangleSize, triangleSize)) / vec2f(triangleSize * 2.0);
-    `,
+        let pos = vec4f(rotated + offset, 0.0, 1.0);
+        let fragUV = (rotated + vec2f(triangleSize, triangleSize)) / vec2f(triangleSize * 2.0);
+      `,
       output: {
         [builtin.position]: 'pos',
         fragUV: vec2f,
@@ -150,15 +150,15 @@ const renderPipelines = [0, 1].map((idx) =>
     },
     fragment: {
       code: wgsl`
-      let color1 = vec3(196.0 / 255.0, 100.0 / 255.0, 255.0 / 255.0);
-      let color2 = vec3(29.0 / 255.0, 114.0 / 255.0, 240.0 / 255.0);
+        let color1 = vec3(196.0 / 255.0, 100.0 / 255.0, 255.0 / 255.0);
+        let color2 = vec3(29.0 / 255.0, 114.0 / 255.0, 240.0 / 255.0);
 
-      let dist = length(fragUV - vec2(0.5, 0.5));
+        let dist = length(fragUV - vec2(0.5, 0.5));
 
-      let color = mix(color1, color2, dist);
+        let color = mix(color1, color2, dist);
 
-      return vec4(color, 1.0);
-    `,
+        return vec4(color, 1.0);
+      `,
       target: [
         {
           format: presentationFormat,
@@ -174,65 +174,65 @@ const renderPipelines = [0, 1].map((idx) =>
 const computePipelines = [0, 1].map((idx) =>
   runtime.makeComputePipeline({
     code: wgsl`
-    let triangleSize = ${triangleSizeBuffer.asUniform()};
-    let index = ${builtin.globalInvocationId}.x;
-    var instanceInfo = ${readSlot}[index];
-    let params = ${parametesBuffer.asReadonly()};
+      let triangleSize = ${triangleSizeBuffer.asUniform()};
+      let index = ${builtin.globalInvocationId}.x;
+      var instanceInfo = ${readSlot}[index];
+      let params = ${parametesBuffer.asReadonly()};
 
-    var separation = vec2(0.0, 0.0);
-    var alignment = vec2(0.0, 0.0);
-    var alignmentCount = 0u;
-    var cohesion = vec2(0.0, 0.0);
-    var cohesionCount = 0u;
-    for (var i = 0u; i < ${triangleAmountBuffer.asUniform()}; i = i + 1) {
-      if (i == index) {
-        continue;
+      var separation = vec2(0.0, 0.0);
+      var alignment = vec2(0.0, 0.0);
+      var alignmentCount = 0u;
+      var cohesion = vec2(0.0, 0.0);
+      var cohesionCount = 0u;
+      for (var i = 0u; i < ${triangleAmountBuffer.asUniform()}; i = i + 1) {
+        if (i == index) {
+          continue;
+        }
+        var other = ${readSlot}[i];
+        var dist = distance(instanceInfo.position, other.position);
+        if (dist < params.separationDistance) {
+          separation += instanceInfo.position - other.position;
+        }
+        if (dist < params.alignmentDistance) {
+          alignment += other.velocity;
+          alignmentCount++;
+        }
+        if (dist < params.cohesionDistance) {
+          cohesion += other.position;
+          cohesionCount++;
+        }
+      };
+
+      if (alignmentCount > 0u) {
+        alignment = alignment / f32(alignmentCount);
       }
-      var other = ${readSlot}[i];
-      var dist = distance(instanceInfo.position, other.position);
-      if (dist < params.separationDistance) {
-        separation += instanceInfo.position - other.position;
+
+      if (cohesionCount > 0u) {
+        cohesion = (cohesion / f32(cohesionCount)) - instanceInfo.position;
       }
-      if (dist < params.alignmentDistance) {
-        alignment += other.velocity;
-        alignmentCount++;
+
+      instanceInfo.velocity += (separation * params.separationStrength) + (alignment * params.alignmentStrength) + (cohesion * params.cohesionStrength);
+      instanceInfo.velocity = normalize(instanceInfo.velocity) * clamp(length(instanceInfo.velocity), 0.0, 0.01);
+
+      if (instanceInfo.position[0] > 1.0 + triangleSize) {
+        instanceInfo.position[0] = -1.0 - triangleSize;
       }
-      if (dist < params.cohesionDistance) {
-        cohesion += other.position;
-        cohesionCount++;
+      if (instanceInfo.position[1] > 1.0 + triangleSize) {
+        instanceInfo.position[1] = -1.0 - triangleSize;
       }
-    };
+      if (instanceInfo.position[0] < -1.0 - triangleSize) {
+        instanceInfo.position[0] = 1.0 + triangleSize;
+      }
+      if (instanceInfo.position[1] < -1.0 - triangleSize) {
+        instanceInfo.position[1] = 1.0 + triangleSize;
+      }
 
-    if (alignmentCount > 0u) {
-      alignment = alignment / f32(alignmentCount);
-    }
+      instanceInfo.position += instanceInfo.velocity;
 
-    if (cohesionCount > 0u) {
-      cohesion = (cohesion / f32(cohesionCount)) - instanceInfo.position;
-    }
-
-    instanceInfo.velocity += (separation * params.separationStrength) + (alignment * params.alignmentStrength) + (cohesion * params.cohesionStrength);
-    instanceInfo.velocity = normalize(instanceInfo.velocity) * clamp(length(instanceInfo.velocity), 0.0, 0.01);
-
-    if (instanceInfo.position[0] > 1.0 + triangleSize) {
-      instanceInfo.position[0] = -1.0 - triangleSize;
-    }
-    if (instanceInfo.position[1] > 1.0 + triangleSize) {
-      instanceInfo.position[1] = -1.0 - triangleSize;
-    }
-    if (instanceInfo.position[0] < -1.0 - triangleSize) {
-      instanceInfo.position[0] = 1.0 + triangleSize;
-    }
-    if (instanceInfo.position[1] < -1.0 - triangleSize) {
-      instanceInfo.position[1] = 1.0 + triangleSize;
-    }
-
-    instanceInfo.position += instanceInfo.velocity;
-
-    ${writeSlot}[index] = instanceInfo;
-  `
-      .with(readSlot, pairs[idx][0])
-      .with(writeSlot, pairs[idx][1]),
+      ${writeSlot}[index] = instanceInfo;
+    `
+      .with(readSlot, bufferPairs[idx][0])
+      .with(writeSlot, bufferPairs[idx][1]),
   }),
 );
 
@@ -273,7 +273,7 @@ function applyOptions() {
 }
 
 addSliderParameter(
-  'Separation Dist',
+  'separation dist',
   options.separationDistance,
   {
     min: 0.0,
@@ -287,7 +287,7 @@ addSliderParameter(
 );
 
 addSliderParameter(
-  'Separation Str',
+  'separation str',
   options.separationStrength,
   {
     min: 0.0,
@@ -301,7 +301,7 @@ addSliderParameter(
 );
 
 addSliderParameter(
-  'Align Dist',
+  'align dist',
   options.alignmentDistance,
   {
     min: 0.0,
@@ -315,7 +315,7 @@ addSliderParameter(
 );
 
 addSliderParameter(
-  'Align Str',
+  'align str',
   options.alignmentStrength,
   {
     min: 0.0,
@@ -329,7 +329,7 @@ addSliderParameter(
 );
 
 addSliderParameter(
-  'Cohesion Dist',
+  'cohesion dist',
   options.cohesionDistance,
   {
     min: 0.0,
@@ -343,7 +343,7 @@ addSliderParameter(
 );
 
 addSliderParameter(
-  'Cohesion Str',
+  'cohesion str',
   options.cohesionStrength,
   {
     min: 0.0,
