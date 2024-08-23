@@ -9,6 +9,7 @@ export * from './struct';
 export * from './array';
 export { ptr } from './pointer';
 export { atomic } from './atomic';
+export { align, WgslAlignData } from './align';
 
 // Reexporting type-binary utility types
 export type { Parsed, Unwrap } from 'typed-binary';
