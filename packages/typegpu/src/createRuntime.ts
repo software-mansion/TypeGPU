@@ -1,4 +1,5 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
+import type { WgslArray } from './data';
 import { roundUp } from './mathUtils';
 import { type PlumListener, PlumStore } from './plumStore';
 import {
@@ -222,11 +223,25 @@ class TypeGpuRuntimeImpl {
     });
   }
 
-  writeBuffer<TValue extends AnyWgslData>(
+  writeBuffer<TValue extends AnyWgslData, TElem extends AnyWgslData>(
     allocatable: WgslAllocatable<TValue>,
-    data: Parsed<TValue>,
+    data: TValue extends WgslArray<infer TElem>
+      ? Parsed<TElem>[]
+      : Parsed<TValue>,
+    skip?: TValue extends WgslArray<infer TElem> ? number : never,
   ) {
     const gpuBuffer = this.bufferFor(allocatable);
+
+    if ('elementType' in allocatable.dataType && Array.isArray(data)) {
+      const element = allocatable.dataType.elementType as TElem;
+      const elementSize = roundUp(element.size, element.byteAlignment);
+      const offset = (skip ?? 0) * elementSize;
+      const size = data.length * elementSize;
+      const hostBuffer = new ArrayBuffer(size);
+      allocatable.dataType.write(new BufferWriter(hostBuffer), data);
+      this.device.queue.writeBuffer(gpuBuffer, offset, hostBuffer, 0, size);
+      return;
+    }
 
     const size = roundUp(
       allocatable.dataType.size,
