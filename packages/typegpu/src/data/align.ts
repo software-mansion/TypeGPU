@@ -46,9 +46,9 @@ export class WgslAlignDataImpl<TAlign extends number, TData extends AnyWgslData>
 
   measure(
     value: MaxValue | ParseUnwrapped<TData>,
-    measurer?: IMeasurer | undefined,
+    measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
-    alignIO(measurer ?? new Measurer(), this.byteAlignment);
+    alignIO(measurer, this.byteAlignment);
     return this.data.measure(value, measurer);
   }
 
