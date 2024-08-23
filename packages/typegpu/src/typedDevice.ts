@@ -1,4 +1,5 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
+import { roundUp } from './mathUtils';
 import type { AnyWgslData } from './types';
 
 declare global {
@@ -151,9 +152,3 @@ export function typedDevice(device: GPUDevice): GPUDeviceTyped {
   const typed = new Proxy<GPUDevice, GPUDeviceTyped>(device, deviceProxy);
   return typed;
 }
-
-const roundUp = (value: number, modulo: number) => {
-  const bitMask = modulo - 1;
-  const invBitMask = ~bitMask;
-  return (value & bitMask) === 0 ? value : (value & invBitMask) + modulo;
-};
