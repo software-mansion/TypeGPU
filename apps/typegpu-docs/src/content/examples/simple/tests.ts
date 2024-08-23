@@ -13,8 +13,13 @@ const runtime = await createRuntime();
 
 const device = typedDevice(runtime.device);
 
+function f(d: GPUDevice) {
+  console.log('device accepted');
+}
+f(device);
+
 // will write to mapped range and unmap
-const buffer2 = device.createBufferTyped(
+const buffer2 = device.createBuffer(
   {
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
     mappedAtCreation: true,
