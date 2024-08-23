@@ -7,6 +7,7 @@ import {
   Schema,
   type Unwrap,
 } from 'typed-binary';
+import { roundUp } from '../mathUtils';
 import type { AnyWgslData, ResolutionCtx, WgslData } from '../types';
 import alignIO from './alignIO';
 
@@ -33,13 +34,15 @@ export class WgslArrayImpl<TElement extends AnyWgslData>
   }
 
   write(output: TB.ISerialOutput, value: Parsed<Unwrap<TElement>>[]) {
-    for (let i = 0; i < this.elementCount; i++) {
-      if (i >= value.length) {
-        output.skipBytes(this.elementType.size);
-        continue;
-      }
+    alignIO(output, this.byteAlignment);
+    const beginning = output.currentByteOffset;
+    for (let i = 0; i < Math.min(this.elementCount, value.length); i++) {
       this.elementType.write(output, value[i]);
     }
+    output.seekTo(
+      beginning +
+        roundUp(this.elementType.size, this.byteAlignment) * this.elementCount,
+    );
   }
 
   read(input: TB.ISerialInput): Parsed<Unwrap<TElement>>[] {
