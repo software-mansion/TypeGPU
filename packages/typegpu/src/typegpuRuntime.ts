@@ -1,6 +1,6 @@
 import type { AnySchema } from 'typed-binary';
 import type { Parsed } from 'typed-binary';
-import type { SimpleWgslData, WgslArray } from './data';
+import type { SimpleWgslData } from './data';
 import type { PlumListener } from './plumStore';
 import type { WgslSettable } from './settableTrait';
 import type { AnyWgslData, WgslAllocatable } from './types';
@@ -41,10 +41,7 @@ export interface TypeGpuRuntime {
 
   writeBuffer<TValue extends AnyWgslData, TElem extends AnyWgslData>(
     allocatable: WgslAllocatable<TValue>,
-    data: TValue extends WgslArray<infer TElem>
-      ? Parsed<TElem>[]
-      : Parsed<TValue>,
-    skip?: TValue extends WgslArray<infer TElem> ? number : never,
+    data: Parsed<TValue>,
   ): void;
 
   readBuffer<TData extends AnyWgslData>(
