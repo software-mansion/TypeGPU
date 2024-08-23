@@ -1,12 +1,12 @@
 import * as Babel from '@babel/standalone';
 import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
-import type { AddSliderParam, OnFrameFn } from '@typegpu/example-toolkit';
-import { GUI } from 'dat.gui';
+import type { OnFrameFn } from '@typegpu/example-toolkit';
 import { filter, isNonNull, map, pipe } from 'remeda';
 import { wgsl } from 'typegpu';
 import { transpileModule } from 'typescript';
 import { tsCompilerOptions } from '../liveEditor/embeddedTypeScript';
+import type { ExampleControlParam } from './exampleControlAtom';
 import type { ExampleState } from './exampleState';
 import type { LayoutInstance } from './layout';
 
@@ -15,41 +15,6 @@ import type { LayoutInstance } from './layout';
 const template = (
   Babel as unknown as { packages: { template: typeof TemplateGenerator } }
 ).packages.template;
-
-const createSliderParam = (
-  gui: GUI,
-  label: string,
-  initial: number,
-  opts?: { min?: number; max?: number; step?: number },
-) => {
-  const { min, max, step } = opts ?? {};
-
-  const temp = {
-    [label]: initial,
-  };
-
-  let value = initial;
-  const listeners = new Set<() => unknown>();
-
-  gui.add(temp, label, min, max, step).onChange((newValue) => {
-    value = newValue;
-    // Calling `listener` may cause more listeners to
-    // be attached, so copying.
-    for (const listener of [...listeners]) {
-      listener();
-    }
-  });
-
-  return wgsl
-    .plumFromEvent(
-      (listener) => {
-        listeners.add(listener);
-        return () => listeners.delete(listener);
-      },
-      () => value,
-    )
-    .$name(label);
-};
 
 /**
  * A custom babel plugin for turning:
@@ -153,9 +118,7 @@ export async function executeExample(
   let disposed = false;
   cleanupCallbacks.push(() => layout.dispose());
 
-  const gui = new GUI({ closeOnTop: true });
-  cleanupCallbacks.push(() => gui.destroy());
-  gui.hide();
+  const controlParams: ExampleControlParam[] = [];
 
   const dispose = () => {
     if (disposed) {
@@ -167,66 +130,122 @@ export async function executeExample(
     }
   };
 
-  function addParameter(
+  function addSelectParameter(
     label: string,
+    initial: string,
+    options: string[],
+    onChange: (newValue: string) => void,
+  ) {
+    if (disposed) {
+      return;
+    }
+
+    controlParams.push({
+      type: 'select',
+      label,
+      initial,
+      options,
+      onChange,
+    });
+
+    // Eager run to initialize the values.
+    onChange(initial);
+  }
+
+  function addToggleParameter(
+    label: string,
+    initial: boolean,
+    onChange: (newValue: boolean) => void,
+  ) {
+    if (disposed) {
+      return;
+    }
+
+    controlParams.push({
+      type: 'toggle',
+      label,
+      initial,
+      onChange,
+    });
+
+    // Eager run to initialize the values.
+    onChange(initial);
+  }
+
+  function addSliderParameter(
+    label: string,
+    initial: number,
     options: {
-      initial: number;
       min?: number;
       max?: number;
       step?: number;
     },
     onChange: (newValue: number) => void,
-  ): void;
-  function addParameter<TOption extends string | number>(
-    label: string,
-    options: {
-      initial: TOption;
-      options: TOption[];
-    },
-    onChange: (newValue: TOption) => void,
-  ): void;
-  function addParameter(
-    label: string,
-    options: {
-      initial: boolean;
-    },
-    onChange: (newValue: boolean) => void,
-  ): void;
-  function addParameter<TOption extends string | number>(
-    label: string,
-    options:
-      | {
-          initial: number;
-          min?: number;
-          max?: number;
-          step?: number;
-        }
-      | {
-          initial: TOption;
-          options: TOption;
-        }
-      | {
-          initial: boolean;
-        },
-    onChange: (newValue: TOption | boolean) => void,
-  ): void {
-    const temp = { [label]: options.initial };
-    if ('options' in options) {
-      gui
-        .add(temp, label, options.options)
-        .onChange((value) => onChange(value));
-    } else if ('min' in options || 'max' in options || 'step' in options) {
-      gui
-        .add(temp, label, options.min, options.max, options.step)
-        .onChange((value) => onChange(value));
-    } else {
-      gui
-        .add(temp, label, options.initial)
-        .onChange((value) => onChange(value));
+  ) {
+    if (disposed) {
+      return;
     }
 
+    controlParams.push({
+      type: 'slider',
+      initial,
+      label,
+      options,
+      onChange,
+    });
+
     // Eager run to initialize the values.
-    onChange(options.initial as never);
+    onChange(initial);
+  }
+
+  function addButtonParameter(label: string, onClick: () => void) {
+    if (disposed) {
+      return;
+    }
+
+    controlParams.push({
+      type: 'button',
+      label,
+      onClick,
+    });
+  }
+
+  function addSliderPlumParameter(
+    label: string,
+    initial: number,
+    options?: { min?: number; max?: number; step?: number },
+  ) {
+    let value: string | number | boolean = initial;
+    const listeners = new Set<() => unknown>();
+
+    if (disposed) {
+      return;
+    }
+
+    controlParams.push({
+      type: 'slider',
+      label,
+      initial,
+      options: options ?? {},
+      onChange: (newValue) => {
+        value = newValue;
+        // Calling `listener` may cause more listeners to
+        // be attached, so copying.
+        for (const listener of [...listeners]) {
+          listener();
+        }
+      },
+    });
+
+    return wgsl
+      .plumFromEvent(
+        (listener) => {
+          listeners.add(listener);
+          return () => listeners.delete(listener);
+        },
+        () => value,
+      )
+      .$name(label);
   }
 
   try {
@@ -266,10 +285,11 @@ export async function executeExample(
             cleanupCallbacks.push(() => cancelAnimationFrame(handle));
           }) satisfies OnFrameFn,
           addElement: layout.addElement,
-          addParameter,
-          addSliderParam: ((label, initial, opts) => {
-            return createSliderParam(gui, label, initial, opts);
-          }) satisfies AddSliderParam,
+          addSelectParameter,
+          addSliderParameter,
+          addButtonParameter,
+          addToggleParameter,
+          addSliderPlumParameter,
         };
       }
       throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
@@ -293,10 +313,9 @@ ${transformedCode}
     // Running the code
     await mod()(_import);
 
-    gui.show();
-
     return {
       dispose,
+      controlParams,
     };
   } catch (err) {
     dispose();

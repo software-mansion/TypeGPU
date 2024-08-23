@@ -7,16 +7,16 @@ import type {
   StorageTextureAccess,
   StorageTextureParams,
   TextureUsage,
-  WgslExternalTextureType,
   WgslRenderResource,
   WgslRenderResourceType,
 } from './types';
 import { WgslIdentifier } from './wgslIdentifier';
 import { isSampler } from './wgslSampler';
 
-export interface WgslAnyTextureView {
+export interface WgslAnyTextureView extends WgslRenderResource {
   readonly descriptor: GPUTextureViewDescriptor;
   readonly texture: WgslAnyTexture;
+  readonly dataType: AnyWgslPrimitive | AnyWgslTexelFormat;
   readonly access: StorageTextureAccess | undefined;
 }
 
@@ -49,7 +49,7 @@ export interface WgslTexture<TAllows extends TextureUsage = never> {
 export interface WgslTextureView<
   TData extends AnyWgslPrimitive | AnyWgslTexelFormat,
   TUsage extends TextureUsage,
-> extends WgslRenderResource<WgslRenderResourceType> {
+> extends WgslRenderResource {
   readonly texture: WgslTexture<TUsage>;
   readonly descriptor: Omit<GPUTextureViewDescriptor, 'usage'>;
   readonly type: WgslRenderResourceType;
@@ -59,8 +59,7 @@ export interface WgslTextureView<
   $name(label: string): WgslTextureView<TData, TUsage>;
 }
 
-export interface WgslTextureExternal
-  extends WgslRenderResource<WgslExternalTextureType> {
+export interface WgslTextureExternal extends WgslRenderResource {
   readonly descriptor: GPUExternalTextureDescriptor;
 }
 
@@ -253,17 +252,14 @@ class WgslTextureExternalImpl implements WgslTextureExternal {
 }
 
 export function isExternalTexture(
-  texture: WgslRenderResource<WgslRenderResourceType>,
+  texture: WgslRenderResource,
 ): texture is WgslTextureExternal {
   return !('texture' in texture) && !isSampler(texture);
 }
 
 export function isTextureView(
-  texture: WgslRenderResource<WgslRenderResourceType>,
-): texture is WgslTextureView<
-  AnyWgslPrimitive | AnyWgslTexelFormat,
-  TextureUsage
-> {
+  texture: WgslRenderResource,
+): texture is WgslAnyTextureView {
   return 'texture' in texture;
 }
 

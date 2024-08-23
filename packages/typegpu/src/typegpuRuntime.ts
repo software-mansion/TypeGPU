@@ -1,6 +1,7 @@
 import type { AnySchema } from 'typed-binary';
 import type { Parsed } from 'typed-binary';
 import type { SimpleWgslData } from './data';
+import type { PlumListener } from './plumStore';
 import type { WgslSettable } from './settableTrait';
 import type { AnyWgslData, WgslAllocatable } from './types';
 import type { BoundWgslCode, WgslCode } from './wgslCode';
@@ -16,6 +17,8 @@ import type {
 // Public API
 // ----------
 
+export type SetPlumAction<T> = T | ((prev: T) => T);
+
 export interface TypeGpuRuntime {
   readonly device: GPUDevice;
   /**
@@ -28,12 +31,12 @@ export interface TypeGpuRuntime {
 
   setPlum<TPlum extends WgslPlum & WgslSettable>(
     plum: TPlum,
-    value: ExtractPlumValue<TPlum>,
+    value: SetPlumAction<ExtractPlumValue<TPlum>>,
   ): void;
 
   onPlumChange<TValue>(
     plum: WgslPlum<TValue>,
-    listener: () => unknown,
+    listener: PlumListener<TValue>,
   ): Unsubscribe;
 
   writeBuffer<TValue extends AnyWgslData>(

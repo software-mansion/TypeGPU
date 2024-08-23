@@ -6,7 +6,11 @@
 */
 
 // -- Hooks into the example environment
-import { addElement, addParameter } from '@typegpu/example-toolkit';
+import {
+  addButtonParameter,
+  addElement,
+  addSliderPlumParameter,
+} from '@typegpu/example-toolkit';
 // --
 
 import { builtin, createRuntime, wgsl } from 'typegpu';
@@ -16,34 +20,68 @@ const runtime = await createRuntime();
 
 const workgroupSize = [8, 8] as [number, number];
 
-const matrixStruct = struct({
+const MatrixStruct = struct({
   size: vec2f,
   numbers: dynamicArrayOf(f32, 65),
 });
 
-type MatrixType = Parsed<typeof matrixStruct>;
+const paramSettings = {
+  min: 1,
+  max: 6,
+  step: 1,
+};
 
-let firstMatrix: MatrixType;
-let secondMatrix: MatrixType;
+/**
+ * Used to force recomputation of all matrices.
+ */
+const forceShufflePlum = wgsl.plum<number>(0);
+const firstRowCountPlum = addSliderPlumParameter('#1 rows', 3, paramSettings);
+const firstColumnCountPlum = addSliderPlumParameter(
+  '#1 columns',
+  4,
+  paramSettings,
+);
+const secondColumnCountPlum = addSliderPlumParameter(
+  '#2 columns',
+  2,
+  paramSettings,
+);
+
+const firstMatrixPlum = wgsl.plum((get) => {
+  get(forceShufflePlum); // depending to force recomputation
+
+  return createMatrix([get(firstRowCountPlum), get(firstColumnCountPlum)], () =>
+    Math.floor(Math.random() * 10),
+  );
+});
+
+const secondMatrixPlum = wgsl.plum((get) => {
+  get(forceShufflePlum); // depending to force recomputation
+
+  return createMatrix(
+    [get(firstColumnCountPlum), get(secondColumnCountPlum)],
+    () => Math.floor(Math.random() * 10),
+  );
+});
 
 const firstMatrixBuffer = wgsl
-  .buffer(matrixStruct)
+  .buffer(MatrixStruct, firstMatrixPlum)
   .$name('first_matrix')
-  .$allowReadonlyStorage();
+  .$allowReadonly();
 
 const secondMatrixBuffer = wgsl
-  .buffer(matrixStruct)
+  .buffer(MatrixStruct, secondMatrixPlum)
   .$name('second_matrix')
-  .$allowReadonlyStorage();
+  .$allowReadonly();
 
 const resultMatrixBuffer = wgsl
-  .buffer(matrixStruct)
+  .buffer(MatrixStruct)
   .$name('result_matrix')
-  .$allowMutableStorage();
+  .$allowMutable();
 
-const firstMatrixData = firstMatrixBuffer.asReadonlyStorage();
-const secondMatrixData = secondMatrixBuffer.asReadonlyStorage();
-const resultMatrixData = resultMatrixBuffer.asMutableStorage();
+const firstMatrixData = firstMatrixBuffer.asReadonly();
+const secondMatrixData = secondMatrixBuffer.asReadonly();
+const resultMatrixData = resultMatrixBuffer.asMutable();
 
 const program = runtime.makeComputePipeline({
   workgroupSize: workgroupSize,
@@ -72,10 +110,6 @@ const program = runtime.makeComputePipeline({
 `,
 });
 
-let firstMatrixRowCount = 3;
-let firstMatrixColumnCount = 4;
-let secondMatrixColumnCount = 2;
-
 const firstTable = await addElement('table', {
   label: 'first matrix',
 });
@@ -99,29 +133,15 @@ function createMatrix(
 }
 
 async function run() {
-  firstMatrix = createMatrix(
-    [firstMatrixRowCount, firstMatrixColumnCount],
-    () => Math.floor(Math.random() * 10),
-  );
-
-  runtime.writeBuffer(firstMatrixBuffer, firstMatrix);
-
-  secondMatrix = createMatrix(
-    [firstMatrixColumnCount, secondMatrixColumnCount],
-    () => Math.floor(Math.random() * 10),
-  );
-
-  runtime.writeBuffer(secondMatrixBuffer, secondMatrix);
-
+  const firstMatrix = runtime.readPlum(firstMatrixPlum);
+  const secondMatrix = runtime.readPlum(secondMatrixPlum);
   const workgroupCountX = Math.ceil(firstMatrix.size[0] / workgroupSize[0]);
   const workgroupCountY = Math.ceil(secondMatrix.size[1] / workgroupSize[1]);
 
   program.execute({ workgroups: [workgroupCountX, workgroupCountY] });
-  runtime.flush();
-
   const multiplicationResult = await runtime.readBuffer(resultMatrixBuffer);
 
-  const unflatMatrix = (matrix: MatrixType) =>
+  const unflatMatrix = (matrix: Parsed<typeof MatrixStruct>) =>
     Array(matrix.size[0])
       .fill(0)
       .map((_, i) =>
@@ -136,60 +156,13 @@ async function run() {
   resultTable.setMatrix(unflatMatrix(multiplicationResult));
 }
 
-let initializing = true;
-
-addParameter(
-  'firstMatrixRowCount',
-  {
-    initial: firstMatrixRowCount,
-    min: 1,
-    max: 6,
-    step: 1,
-  },
-  (value) => {
-    if (value !== firstMatrixRowCount) {
-      firstMatrixRowCount = value;
-      if (!initializing) run();
-    }
-  },
-);
-
-addParameter(
-  'firstMatrixColumnCount',
-  {
-    initial: firstMatrixColumnCount,
-    min: 1,
-    max: 6,
-    step: 1,
-  },
-  (value) => {
-    if (value !== firstMatrixColumnCount) {
-      firstMatrixColumnCount = value;
-      if (!initializing) run();
-    }
-  },
-);
-
-addParameter(
-  'secondMatrixColumnCount',
-  {
-    initial: secondMatrixColumnCount,
-    min: 1,
-    max: 6,
-    step: 1,
-  },
-  (value) => {
-    if (value !== secondMatrixColumnCount) {
-      secondMatrixColumnCount = value;
-      if (!initializing) run();
-    }
-  },
-);
-
-addElement('button', {
-  label: 'Reshuffle',
-  onClick: run,
+addButtonParameter('Reshuffle', () => {
+  runtime.setPlum(forceShufflePlum, (prev) => 1 - prev);
 });
 
-initializing = false;
 run();
+
+runtime.onPlumChange(firstRowCountPlum, run);
+runtime.onPlumChange(firstColumnCountPlum, run);
+runtime.onPlumChange(secondColumnCountPlum, run);
+runtime.onPlumChange(forceShufflePlum, run);

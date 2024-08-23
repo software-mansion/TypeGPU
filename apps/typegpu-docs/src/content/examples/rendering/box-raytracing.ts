@@ -6,7 +6,11 @@
 */
 
 // -- Hooks into the example environment
-import { addElement, addSliderParam, onFrame } from '@typegpu/example-toolkit';
+import {
+  addElement,
+  addSliderPlumParameter,
+  onFrame,
+} from '@typegpu/example-toolkit';
 // --
 
 import { builtin, createRuntime, wgsl } from 'typegpu';
@@ -21,17 +25,17 @@ const cubeSize = [X * MAX_BOX_SIZE, Y * MAX_BOX_SIZE, Z * MAX_BOX_SIZE];
 const boxCenter = cubeSize.map((value) => value / 2);
 const upAxis = [0, 1, 0] as Vector;
 
-const rotationSpeedPlum = addSliderParam('rotation speed', 2, {
+const rotationSpeedPlum = addSliderPlumParameter('rotation speed', 2, {
   min: 0,
   max: 5,
 });
 
-const cameraDistancePlum = addSliderParam('camera distance', 250, {
+const cameraDistancePlum = addSliderPlumParameter('camera distance', 250, {
   min: 100,
   max: 1200,
 });
 
-const boxSizePlum = addSliderParam('box size', MAX_BOX_SIZE, {
+const boxSizePlum = addSliderPlumParameter('box size', MAX_BOX_SIZE, {
   min: 1,
   max: MAX_BOX_SIZE,
 });
@@ -60,7 +64,7 @@ const cameraAxesPlum = wgsl.plum((get) => {
   };
 });
 
-const canvas = await addElement('canvas');
+const canvas = await addElement('canvas', { aspectRatio: 1 / 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
@@ -105,14 +109,14 @@ const boxMatrixBuffer = wgsl
     ),
   )
   .$name('box_array')
-  .$allowReadonlyStorage();
-const boxMatrixData = boxMatrixBuffer.asReadonlyStorage();
+  .$allowReadonly();
+const boxMatrixData = boxMatrixBuffer.asReadonly();
 
 const cameraPositionBuffer = wgsl
   .buffer(vec3f, cameraPositionPlum)
   .$name('camera_position')
-  .$allowReadonlyStorage();
-const cameraPositionData = cameraPositionBuffer.asReadonlyStorage();
+  .$allowReadonly();
+const cameraPositionData = cameraPositionBuffer.asReadonly();
 
 const cameraAxesBuffer = wgsl
   .buffer(
@@ -124,8 +128,8 @@ const cameraAxesBuffer = wgsl
     cameraAxesPlum,
   )
   .$name('camera_axes')
-  .$allowReadonlyStorage();
-const cameraAxesData = cameraAxesBuffer.asReadonlyStorage();
+  .$allowReadonly();
+const cameraAxesData = cameraAxesBuffer.asReadonly();
 
 const canvasDimsBuffer = wgsl
   .buffer(
@@ -316,10 +320,12 @@ onFrame((deltaTime) => {
   runtime.setPlum(canvasWidthPlum, canvas.width);
   runtime.setPlum(canvasHeightPlum, canvas.height);
 
-  const lastFrame = runtime.readPlum(framePlum);
   const rotationSpeed = runtime.readPlum(rotationSpeedPlum);
 
-  runtime.setPlum(framePlum, lastFrame + (rotationSpeed * deltaTime) / 1000);
+  runtime.setPlum(
+    framePlum,
+    (prev) => prev + (rotationSpeed * deltaTime) / 1000,
+  );
 
   const textureView = context.getCurrentTexture().createView();
 

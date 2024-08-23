@@ -8,7 +8,6 @@ import type {
   Wgsl,
   WgslBindable,
   WgslRenderResource,
-  WgslRenderResourceType,
   WgslResolvable,
   WgslSlot,
 } from './types';
@@ -33,8 +32,8 @@ type SlotToValueMap = Map<WgslSlot<unknown>, unknown>;
 
 const usageToVarTemplateMap: Record<Exclude<BufferUsage, 'vertex'>, string> = {
   uniform: 'uniform',
-  mutable_storage: 'storage, read_write',
-  readonly_storage: 'storage, read',
+  mutable: 'storage, read_write',
+  readonly: 'storage, read',
 };
 
 class SharedResolutionState {
@@ -46,12 +45,15 @@ class SharedResolutionState {
   >();
 
   private _nextFreeBindingIdx = 0;
+  private _nextFreeVertexBindingIdx = 0;
   private readonly _usedBindables = new Set<WgslBindable>();
-  private readonly _usedRenderResources = new Set<
-    WgslRenderResource<WgslRenderResourceType>
-  >();
+  private readonly _usedRenderResources = new Set<WgslRenderResource>();
   private readonly _resourceToIndexMap = new WeakMap<
-    WgslRenderResource<WgslRenderResourceType> | WgslBindable,
+    WgslRenderResource | WgslBindable,
+    number
+  >();
+  private readonly _vertexBufferToIndexMap = new WeakMap<
+    WgslBindable,
     number
   >();
   private readonly _usedBuiltins = new Set<Builtin>();
@@ -66,9 +68,7 @@ class SharedResolutionState {
     return this._usedBindables;
   }
 
-  get usedRenderResources(): Iterable<
-    WgslRenderResource<WgslRenderResourceType>
-  > {
+  get usedRenderResources(): Iterable<WgslRenderResource> {
     return this._usedRenderResources;
   }
 
@@ -133,13 +133,13 @@ class SharedResolutionState {
     return { group: this._bindingGroup, idx: nextIdx };
   }
 
-  registerBindingNoEntry(bindable: WgslBindable) {
+  registerVertexEntry(bindable: WgslBindable) {
     this._usedBindables.add(bindable);
+    const nextIdx = this._nextFreeVertexBindingIdx++;
+    this._vertexBufferToIndexMap.set(bindable, nextIdx);
   }
 
-  reserveRenderResourceEntry(
-    resource: WgslRenderResource<WgslRenderResourceType>,
-  ) {
+  reserveRenderResourceEntry(resource: WgslRenderResource) {
     this._usedRenderResources.add(resource);
     const nextIdx = this._nextFreeBindingIdx++;
     this._resourceToIndexMap.set(resource, nextIdx);
@@ -147,9 +147,7 @@ class SharedResolutionState {
     return { group: this._bindingGroup, idx: nextIdx };
   }
 
-  getBindingIndex(
-    resource: WgslRenderResource<WgslRenderResourceType> | WgslBindable,
-  ) {
+  getBindingIndex(resource: WgslRenderResource | WgslBindable) {
     return this._resourceToIndexMap.get(resource);
   }
 
@@ -192,7 +190,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   addRenderResource(
-    resource: WgslRenderResource<WgslRenderResourceType>,
+    resource: WgslRenderResource,
     identifier: WgslIdentifier,
   ): void {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
@@ -234,7 +232,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return `${[...this._shared.declarations].join('\n\n')}${result}`;
   }
 
-  getIndexFor(item: WgslBindable | WgslRenderResource<WgslRenderResourceType>) {
+  getIndexFor(item: WgslBindable | WgslRenderResource) {
     const index = this._shared.getBindingIndex(item);
     if (index === undefined) {
       throw new Error('No index found for item');
@@ -258,7 +256,7 @@ class ScopedResolutionCtx implements ResolutionCtx {
 
   addBinding(bindable: WgslBindable, identifier: WgslIdentifier): void {
     if (bindable.usage === 'vertex') {
-      this._shared.registerBindingNoEntry(bindable);
+      this._shared.registerVertexEntry(bindable);
       return;
     }
     const { group, idx } = this._shared.reserveBindingEntry(bindable);
@@ -269,7 +267,7 @@ class ScopedResolutionCtx implements ResolutionCtx {
   }
 
   addRenderResource(
-    resource: WgslRenderResource<WgslRenderResourceType>,
+    resource: WgslRenderResource,
     identifier: WgslIdentifier,
   ): void {
     const { group, idx } = this._shared.reserveRenderResourceEntry(resource);
