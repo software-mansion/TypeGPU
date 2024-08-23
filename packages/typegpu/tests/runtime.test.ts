@@ -132,6 +132,8 @@ describe('TypeGpuRuntime', () => {
       code: wgsl`${buffer}`,
     });
 
+    testPipeline.execute();
+
     expect(testPipeline).toBeDefined();
     expect(runtime.device.createBuffer).toBeCalledWith({
       mappedAtCreation: false,
@@ -174,6 +176,8 @@ describe('TypeGpuRuntime', () => {
       code: wgsl`let x = ${buffer};`,
     });
 
+    testPipeline.execute();
+
     expect(testPipeline).toBeDefined();
     expect(runtime.device.createBuffer).toBeCalledWith({
       mappedAtCreation: false,
@@ -213,6 +217,8 @@ describe('TypeGpuRuntime', () => {
     const testPipeline = runtime.makeComputePipeline({
       code: wgsl`${buffer}`,
     });
+
+    testPipeline.execute();
 
     expect(spy).toBeCalledTimes(0);
     expect(testPipeline).toBeDefined();

@@ -3,20 +3,13 @@ import type { SimpleWgslData } from './data';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
 import type { TypeGpuRuntime } from './typegpuRuntime';
-import type {
-  AnyWgslData,
-  BufferUsage,
-  WgslBindable,
-  WgslResolvable,
-} from './types';
+import type { AnyWgslData, WgslBindable, WgslResolvable } from './types';
+import { BindGroupResolver } from './wgslBindGroupResolver';
 import { getUsedBuiltinsNamed } from './wgslBuiltin';
 import { type BoundWgslCode, type WgslCode, code } from './wgslCode';
-import { isSampler } from './wgslSampler';
-import { isExternalTexture, isTextureView } from './wgslTexture';
 
 export type Program = {
-  readonly bindGroupLayout: GPUBindGroupLayout;
-  readonly bindGroup: GPUBindGroup;
+  readonly bindGroupResolver: BindGroupResolver;
   readonly code: string;
 };
 
@@ -24,15 +17,6 @@ type BuildOptions = {
   shaderStage: number;
   bindingGroup: number;
   nameRegistry?: NameRegistry;
-};
-
-const usageToBindingTypeMap: Record<
-  Exclude<BufferUsage, 'vertex'>,
-  GPUBufferBindingType
-> = {
-  uniform: 'uniform',
-  mutable: 'storage',
-  readonly: 'read-only-storage',
 };
 
 export default class ProgramBuilder {
@@ -49,94 +33,13 @@ export default class ProgramBuilder {
 
     // Resolving code
     const codeString = ctx.resolve(this.root);
-    const usedBindables = Array.from(ctx.usedBindables);
-    const usedRenderResources = Array.from(ctx.usedRenderResources);
-    const usedSamplers = usedRenderResources.filter(isSampler);
-    const usedTextures = usedRenderResources.filter(isTextureView);
-    const usedExternalTextures = usedRenderResources.filter(isExternalTexture);
-
-    const allEntries: GPUBindGroupLayoutEntry[] = [];
-    for (const textureView of usedTextures) {
-      if (textureView.access === undefined) {
-        allEntries.push({
-          binding: ctx.getIndexFor(textureView),
-          visibility: options.shaderStage,
-          texture: {},
-        });
-      } else {
-        allEntries.push({
-          binding: ctx.getIndexFor(textureView),
-          visibility: options.shaderStage,
-          storageTexture: { format: textureView.texture.descriptor.format },
-        });
-      }
-    }
-    for (const external of usedExternalTextures) {
-      allEntries.push({
-        binding: ctx.getIndexFor(external),
-        visibility: options.shaderStage,
-        externalTexture: {},
-      });
-    }
-    for (const sampler of usedSamplers) {
-      allEntries.push({
-        binding: ctx.getIndexFor(sampler),
-        visibility: options.shaderStage,
-        sampler: {},
-      });
-    }
-    for (const bindable of usedBindables) {
-      if (bindable.usage === 'vertex') continue;
-      allEntries.push({
-        binding: ctx.getIndexFor(bindable),
-        visibility: options.shaderStage,
-        buffer: {
-          type: usageToBindingTypeMap[bindable.usage],
-        },
-      });
-    }
-
-    const allBindGroupEntries: GPUBindGroupEntry[] = [];
-    for (const texture of usedTextures) {
-      allBindGroupEntries.push({
-        binding: ctx.getIndexFor(texture),
-        resource: this.runtime.viewFor(texture),
-      });
-    }
-    for (const externalTexture of usedExternalTextures) {
-      allBindGroupEntries.push({
-        binding: ctx.getIndexFor(externalTexture),
-        resource: this.runtime.externalTextureFor(externalTexture),
-      });
-    }
-    for (const sampler of usedSamplers) {
-      allBindGroupEntries.push({
-        binding: ctx.getIndexFor(sampler),
-        resource: this.runtime.samplerFor(sampler),
-      });
-    }
-    for (const bindable of usedBindables) {
-      if (bindable.usage === 'vertex') continue;
-      allBindGroupEntries.push({
-        binding: ctx.getIndexFor(bindable),
-        resource: {
-          buffer: this.runtime.bufferFor(bindable.allocatable),
-        },
-      });
-    }
-
-    const bindGroupLayout = this.runtime.device.createBindGroupLayout({
-      entries: allEntries,
-    });
-
-    const bindGroup = this.runtime.device.createBindGroup({
-      layout: bindGroupLayout,
-      entries: allBindGroupEntries,
-    });
 
     return {
-      bindGroupLayout,
-      bindGroup,
+      bindGroupResolver: new BindGroupResolver(
+        this.runtime,
+        ctx,
+        options.shaderStage,
+      ),
       code: codeString,
     };
   }
@@ -154,9 +57,10 @@ export class RenderProgramBuilder {
     },
   ) {}
 
-  build(
-    options: Omit<BuildOptions, 'shaderStage'>,
-  ): [Program, Program, WgslBindable<AnyWgslData, 'vertex'>[]] {
+  build(options: Omit<BuildOptions, 'shaderStage'>): {
+    vertexProgram: Program;
+    fragmentProgram: Program;
+  } {
     const symbolOutputs = Object.getOwnPropertySymbols(
       this.vertexOutputFormat,
     ).map((symbol) => {
@@ -203,16 +107,20 @@ export class RenderProgramBuilder {
     const vertexBuffers = Array.from(vertexContext.usedBindables).filter(
       (bindable) => bindable.usage === 'vertex',
     ) as WgslBindable<AnyWgslData, 'vertex'>[];
-    const entries = vertexBuffers.map((elem) => {
+    const entries = vertexBuffers.map((elem, idx) => {
       return {
-        bindable: elem,
-        underlyingType: elem.allocatable.dataType as SimpleWgslData<AnySchema>,
+        idx: idx,
+        entry: {
+          bindable: elem,
+          underlyingType: elem.allocatable
+            .dataType as SimpleWgslData<AnySchema>,
+        },
       };
     });
 
     const vertexUserArgs = entries.map(
-      (entry, idx) => code`
-        @location(${idx}) ${entry.bindable} : ${entry.underlyingType.getUnderlyingTypeString()},
+      (entry) => code`
+        @location(${entry.idx}) ${entry.entry.bindable} : ${entry.entry.underlyingType.getUnderlyingTypeString()},
     `,
     );
     const vertexBuiltins = Array.from(vertexContext.usedBuiltins);
@@ -287,7 +195,16 @@ export class RenderProgramBuilder {
       nameRegistry: options.nameRegistry ?? new RandomNameRegistry(),
     });
 
-    return [vertexProgram, fragmentProgram, vertexBuffers];
+    vertexProgram.bindGroupResolver.setVertexBuffers(
+      entries.map((entry) => {
+        return {
+          index: entry.idx,
+          buffer: entry.entry.bindable,
+        };
+      }),
+    );
+
+    return { vertexProgram, fragmentProgram };
   }
 }
 

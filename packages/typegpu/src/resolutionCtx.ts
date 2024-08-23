@@ -45,10 +45,15 @@ class SharedResolutionState {
   >();
 
   private _nextFreeBindingIdx = 0;
+  private _nextFreeVertexBindingIdx = 0;
   private readonly _usedBindables = new Set<WgslBindable>();
   private readonly _usedRenderResources = new Set<WgslRenderResource>();
   private readonly _resourceToIndexMap = new WeakMap<
     WgslRenderResource | WgslBindable,
+    number
+  >();
+  private readonly _vertexBufferToIndexMap = new WeakMap<
+    WgslBindable,
     number
   >();
   private readonly _usedBuiltins = new Set<Builtin>();
@@ -128,8 +133,10 @@ class SharedResolutionState {
     return { group: this._bindingGroup, idx: nextIdx };
   }
 
-  registerBindingNoEntry(bindable: WgslBindable) {
+  registerVertexEntry(bindable: WgslBindable) {
     this._usedBindables.add(bindable);
+    const nextIdx = this._nextFreeVertexBindingIdx++;
+    this._vertexBufferToIndexMap.set(bindable, nextIdx);
   }
 
   reserveRenderResourceEntry(resource: WgslRenderResource) {
@@ -249,7 +256,7 @@ class ScopedResolutionCtx implements ResolutionCtx {
 
   addBinding(bindable: WgslBindable, identifier: WgslIdentifier): void {
     if (bindable.usage === 'vertex') {
-      this._shared.registerBindingNoEntry(bindable);
+      this._shared.registerVertexEntry(bindable);
       return;
     }
     const { group, idx } = this._shared.reserveBindingEntry(bindable);

@@ -26,7 +26,7 @@ function ToggleRow({
     <>
       <div className="text-sm">{label}</div>
 
-      <label className="grid justify-end items-center cursor-pointer h-10">
+      <label className="grid items-center justify-end h-10 cursor-pointer">
         <Toggle
           checked={value}
           onChange={(e) => {
@@ -105,10 +105,9 @@ function SelectRow({
 
 function ButtonRow({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <>
-      <div />
+    <div className="grid h-10 col-span-2">
       <Button label={label} onClick={onClick} />
-    </>
+    </div>
   );
 }
 
@@ -163,16 +162,16 @@ export function ControlPanel() {
   const exampleControlParams = useAtomValue(exampleControlsAtom);
 
   return (
-    <div className="flex flex-col gap-4 bg-grayscale-0 rounded-xl p-6">
+    <div className="flex flex-col gap-4 p-6 bg-grayscale-0 rounded-xl">
       <h2 className="text-xl font-medium">Control panel</h2>
-      <label className="flex gap-3 items-center justify-between cursor-pointer text-sm">
+      <label className="flex items-center justify-between gap-3 text-sm cursor-pointer">
         <span>Show left menu</span>
         <Toggle
           checked={menuShowing}
           onChange={(e) => setMenuShowing(e.target.checked)}
         />
       </label>
-      <label className="flex gap-3 items-center justify-between cursor-pointer text-sm">
+      <label className="flex items-center justify-between gap-3 text-sm cursor-pointer">
         <span>Show code editor</span>
         <Toggle
           checked={codeEditorShowing}
@@ -183,7 +182,7 @@ export function ControlPanel() {
       <hr />
 
       <h2 className="text-xl font-medium">Example controls</h2>
-      <div className="grid grid-cols-2 gap-4 items-center">
+      <div className="grid items-center grid-cols-2 gap-4">
         {exampleControlParams.map((param) => paramToControlRow(param))}
       </div>
     </div>
