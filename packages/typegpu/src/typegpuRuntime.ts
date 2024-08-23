@@ -1,6 +1,6 @@
 import type { AnySchema } from 'typed-binary';
 import type { Parsed } from 'typed-binary';
-import type { SimpleWgslData } from './data';
+import type { SimpleWgslData, WgslArray } from './data';
 import type { PlumListener } from './plumStore';
 import type { WgslSettable } from './settableTrait';
 import type { AnyWgslData, WgslAllocatable } from './types';
@@ -126,17 +126,21 @@ const typeToVertexFormatMap: Record<string, GPUVertexFormat> = {
   vec4i: 'sint32x4',
 };
 
-export function deriveVertexFormat<TData extends SimpleWgslData<AnySchema>>(
-  typeSchema: TData,
-): GPUVertexFormat {
-  if (!('expressionCode' in typeSchema)) {
-    throw new Error(`Type schema must contain a 'code' field`);
+export function deriveVertexFormat<
+  TData extends SimpleWgslData<AnySchema> | WgslArray<AnyWgslData>,
+>(typeSchema: TData): GPUVertexFormat {
+  let code: string;
+  if ('expressionCode' in typeSchema) {
+    code = typeSchema.expressionCode;
+  } else {
+    if (!('expressionCode' in typeSchema.elementType)) {
+      throw new Error('Only simple types are supported');
+    }
+    code = typeSchema.elementType.expressionCode as string;
   }
-  const code = typeSchema.getUnderlyingTypeString();
-
-  const vertexFormat = typeToVertexFormatMap[code];
-  if (!vertexFormat) {
-    throw new Error(`Unknown vertex format for type code: ${code}`);
+  const format = typeToVertexFormatMap[code];
+  if (!format) {
+    throw new Error(`Unsupported vertex format: ${code}`);
   }
-  return vertexFormat;
+  return format;
 }

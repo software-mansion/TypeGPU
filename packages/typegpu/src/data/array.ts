@@ -16,7 +16,7 @@ export interface WgslArray<TElement extends AnyWgslData>
   readonly elementCount: number;
 }
 
-class WgslArrayImpl<TElement extends AnyWgslData>
+export class WgslArrayImpl<TElement extends AnyWgslData>
   extends Schema<Unwrap<TElement>[]>
   implements WgslArray<TElement>
 {
@@ -29,7 +29,7 @@ class WgslArrayImpl<TElement extends AnyWgslData>
     this.elementType = elementType;
     this.elementCount = count;
     this.byteAlignment = elementType.byteAlignment;
-    this.size = elementType.size * count;
+    this.size = this.measure(MaxValue).size;
   }
 
   write(output: TB.ISerialOutput, value: Parsed<Unwrap<TElement>>[]) {
@@ -66,9 +66,9 @@ class WgslArrayImpl<TElement extends AnyWgslData>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    return `
-      array<${this.elementType.resolve(ctx)}, ${this.elementCount}>;
-    `;
+    return ctx.resolve(`
+      array<${ctx.resolve(this.elementType)}, ${this.elementCount}>
+    `);
   }
 }
 
