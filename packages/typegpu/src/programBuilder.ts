@@ -33,7 +33,6 @@ export default class ProgramBuilder {
 
     // Resolving code
     const codeString = ctx.resolve(this.root);
-    console.log(codeString);
     return {
       bindGroupResolver: new BindGroupResolver(
         this.runtime,
