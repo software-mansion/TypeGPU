@@ -1,7 +1,7 @@
 import type * as TB from 'typed-binary';
 import {
   type IMeasurer,
-  MaxValue,
+  type MaxValue,
   Measurer,
   type Parsed,
   Schema,
@@ -25,12 +25,17 @@ export class WgslArrayImpl<TElement extends AnyWgslData>
   readonly elementCount: number;
   readonly byteAlignment: number;
   readonly size: number;
+  readonly stride: number;
   constructor(elementType: TElement, count: number) {
     super();
     this.elementType = elementType;
     this.elementCount = count;
     this.byteAlignment = elementType.byteAlignment;
-    this.size = this.measure(MaxValue).size;
+    this.stride = roundUp(
+      this.elementType.size,
+      this.elementType.byteAlignment,
+    );
+    this.size = this.stride * this.elementCount;
   }
 
   write(output: TB.ISerialOutput, value: Parsed<Unwrap<TElement>>[]) {
@@ -39,13 +44,11 @@ export class WgslArrayImpl<TElement extends AnyWgslData>
     for (let i = 0; i < Math.min(this.elementCount, value.length); i++) {
       this.elementType.write(output, value[i]);
     }
-    output.seekTo(
-      beginning +
-        roundUp(this.elementType.size, this.byteAlignment) * this.elementCount,
-    );
+    output.seekTo(beginning + this.stride * this.elementCount);
   }
 
   read(input: TB.ISerialInput): Parsed<Unwrap<TElement>>[] {
+    alignIO(input, this.byteAlignment);
     const elements: Parsed<Unwrap<TElement>>[] = [];
     for (let i = 0; i < this.elementCount; i++) {
       elements.push(this.elementType.read(input) as Parsed<Unwrap<TElement>>);
@@ -58,14 +61,7 @@ export class WgslArrayImpl<TElement extends AnyWgslData>
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
     alignIO(measurer, this.byteAlignment);
-    for (let i = 0; i < this.elementCount; i++) {
-      this.elementType.measure(
-        value === MaxValue ? MaxValue : value[i],
-        measurer,
-      );
-    }
-
-    return measurer;
+    return measurer.add(this.stride * this.elementCount);
   }
 
   resolve(ctx: ResolutionCtx): string {
