@@ -118,6 +118,9 @@ export function ExampleView({ example, isPlayground = false }: Props) {
           className={cs('grid gap-4', codeEditorShowing ? 'grid-rows-2' : '')}
         >
           <div
+            style={{
+              scrollbarGutter: 'stable both-edges',
+            }}
             className={cs(
               'flex justify-evenly items-center flex-wrap overflow-auto h-full',
               codeEditorShowing ? 'max-h-[calc(50vh-3rem)]' : '',
