@@ -18,7 +18,7 @@ import { arrayOf, f32, struct, u32, vec2f } from 'typegpu/data';
 const runtime = await createRuntime();
 const device = runtime.device;
 
-const canvas = await addElement('canvas');
+const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
