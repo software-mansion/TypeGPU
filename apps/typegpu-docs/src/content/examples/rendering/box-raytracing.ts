@@ -64,7 +64,7 @@ const cameraAxesPlum = wgsl.plum((get) => {
   };
 });
 
-const canvas = await addElement('canvas', { aspectRatio: 1 / 1 });
+const canvas = await addElement('canvas');
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
