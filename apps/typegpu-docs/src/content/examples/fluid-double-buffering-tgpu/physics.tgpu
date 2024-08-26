@@ -1,0 +1,168 @@
+import { rand01 } from './random.tgpu';
+
+override grid_size: i32 = 512;
+override max_obstacles: i32;
+
+/**
+ * x - velocity.x
+ * y - velocity.y
+ * z - density
+ * w - <unused>
+ */
+alias GridData = array<vec4f, grid_size ** 2>;
+
+struct BoxObstacle {
+  center: vec2u,
+  size: vec2u,
+  enabled: u32,
+}
+
+var<storage, read> input_grid: array<f32, grid_size * grid_size>;
+var<storage, read_write> output_grid: array<f32, grid_size * grid_size>;
+var<storage, read> obstacles_readonly: array<BoxObstacle, max_obstacles>;
+
+fn is_valid_coord(x: i32, y: i32) -> bool {
+  return
+    x < grid_size &&
+    x >= 0 &&
+    y < grid_size &&
+    y >= 0;
+}
+
+fn coords_to_index(x: i32, y: i32) -> i32 {
+  return x + y * grid_size;
+}
+
+fn get_cell(x: i32, y: i32) -> vec4f {
+  let index = coords_to_index(x, y);
+  return input_grid[index];
+}
+
+fn set_cell(x: i32, y: i32, value: vec4f) {
+  let index = coords_to_index(x, y);
+  output_grid[index] = value;
+}
+
+fn set_velocity(x: i32, y: i32, velocity: vec2f) {
+  let index = coords_to_index(x, y);
+  output_grid[index].x = velocity.x;
+  output_grid[index].y = velocity.y;
+}
+
+fn add_density(x: i32, y: i32, density: f32) {
+  let index = coords_to_index(x, y);
+  output_grid[index].z = input_grid[index].z + density;
+}
+
+fn flow_from_cell(my_x: i32, my_y: i32, x: i32, y: i32) -> f32 {
+  if (!is_valid_coord(x, y)) {
+    return 0.;
+  }
+
+  let src = get_cell(x, y);
+
+  let dest_pos = vec2i(vec2f(f32(x), f32(y)) + src.xy);
+  let dest = get_cell(dest_pos.x, dest_pos.y);
+  let diff = src.z - dest.z;
+  var out_flow = min(max(0.01, 0.3 + diff * 0.1), src.z);
+
+  if (length(src.xy) < 0.5) {
+    out_flow = 0.;
+  }
+
+  if (my_x == x && my_y == y) {
+    // 'src.z - out_flow' is how much is left in the src
+    return src.z - out_flow;
+  }
+
+  if (dest_pos.x == my_x && dest_pos.y == my_y) {
+    return out_flow;
+  }
+
+  return 0.;
+}
+
+fn is_inside_obstacle(x: i32, y: i32) -> bool {
+  for (var obs_idx = 0; obs_idx < max_obstacles; obs_idx += 1) {
+    let obs = obstacles_readonly[obs_idx];
+
+    if (obs.enabled == 0) {
+      continue;
+    }
+
+    let min_x = i32(max(0, i32(obs.center.x) - i32(obs.size.x/2)));
+    let max_x = i32(max(0, i32(obs.center.x) + i32(obs.size.x/2)));
+    let min_y = i32(max(0, i32(obs.center.y) - i32(obs.size.y/2)));
+    let max_y = i32(max(0, i32(obs.center.y) + i32(obs.size.y/2)));
+
+    if (x >= min_x && x <= max_x && y >= min_y && y <= max_y) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+fn is_valid_flow_out(x: i32, y: i32) -> bool {
+  if (!is_valid_coord(x, y)) {
+    return false;
+  }
+
+  if (is_inside_obstacle(x, y)) {
+    return false;
+  }
+
+  return true;
+}
+
+
+fn compute_velocity(x: i32, y: i32) -> vec2f {
+  let gravity_cost = 0.5;
+
+  let neighbor_offsets = array<vec2i, 4>(
+    vec2i( 0,  1),
+    vec2i( 0, -1),
+    vec2i( 1,  0),
+    vec2i(-1,  0),
+  );
+
+  let cell = get_cell(x, y);
+  var least_cost = cell.z;
+
+  // Direction choices of the same cost, one is chosen
+  // randomly at the end of the process.
+  var dir_choices: array<vec2f, 4>;
+  var dir_choice_count: u32 = 1;
+  dir_choices[0] = vec2f(0., 0.);
+
+  for (var i = 0; i < 4; i++) {
+    let offset = neighbor_offsets[i];
+    let neighbor_density = get_cell(x + offset.x, y + offset.y).z;
+    let cost = neighbor_density + f32(offset.y) * gravity_cost;
+    let is_valid_flow_out = is_valid_flow_out(x + offset.x, y + offset.y);
+
+    if (!is_valid_flow_out) {
+      continue;
+    }
+
+    if (cost == least_cost) {
+      // another valid direction
+      dir_choices[dir_choice_count] = vec2f(f32(offset.x), f32(offset.y));
+      dir_choice_count++;
+    }
+    else if (cost < least_cost) {
+      // new best choice
+      least_cost = cost;
+      dir_choices[0] = vec2f(f32(offset.x), f32(offset.y));
+      dir_choice_count = 1;
+    }
+  }
+
+  let least_cost_dir = dir_choices[u32(rand01() * f32(dir_choice_count))];
+  return least_cost_dir;
+}
+
+@compute
+fn main() {
+  // ...
+}

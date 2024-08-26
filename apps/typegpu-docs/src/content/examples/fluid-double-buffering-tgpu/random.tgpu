@@ -1,0 +1,16 @@
+var<private> rand_seed: vec2f;
+
+fn setup_random_seed(coord: vec2f) {
+  rand_seed = coord;
+}
+
+/**
+ * Yoinked from https://www.cg.tuwien.ac.at/research/publications/2023/PETER-2023-PSW/PETER-2023-PSW-.pdf
+ * "Particle System in WebGPU" by Benedikt Peter
+ */
+fn rand01() -> f32 {
+  rand_seed.x = fract(cos(dot(rand_seed, vec2<f32>(23.14077926, 232.61690225))) * 136.8168);
+  rand_seed.y = fract(cos(dot(rand_seed, vec2<f32>(54.47856553, 345.84153136))) * 534.7645);
+  return rand_seed.y;
+}
+
