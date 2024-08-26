@@ -83,6 +83,6 @@ onFrame((delta) => {
     pass.end();
     device.queue.submit([encoder.finish()]);
 
-    device.readBufferAsync(buffer2).then((v) => console.log(v.u));
+    device.readBuffer(buffer2).then((v) => console.log(v.u));
   }
 });
