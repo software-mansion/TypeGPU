@@ -59,7 +59,7 @@ const staticToDynamicImports = {
   } satisfies TraverseOptions,
 };
 
-const MAX_ITERATIONS = 2000;
+const MAX_ITERATIONS = 10000;
 
 /**
  * from https://github.com/facebook/react/blob/d906de7f602df810c38aa622c83023228b047db6/scripts/babel/transform-prevent-infinite-loops.js
