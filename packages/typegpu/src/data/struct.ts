@@ -14,8 +14,9 @@ import { RecursiveDataTypeError } from '../errors';
 import type { AnyWgslData, ResolutionCtx, WgslData } from '../types';
 import { code } from '../wgslCode';
 import { WgslIdentifier } from '../wgslIdentifier';
-import { WgslAlignDataImpl } from './align';
+import { WgslDataCustomAlignedImpl } from './align';
 import alignIO from './alignIO';
+import { WgslDataCustomSizedImpl } from './size';
 
 // ----------
 // Public API
@@ -90,10 +91,19 @@ class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
 
     ctx.addDeclaration(code`
       struct ${identifier} {
-        ${Object.entries(this._properties).map(([key, field]) => code`${field instanceof WgslAlignDataImpl ? `@align(${field.byteAlignment})` : ''} ${key}: ${field},\n`)}
+        ${Object.entries(this._properties).map(([key, field]) => code`${getAttribute(field) ?? ''}${key}: ${field},\n`)}
       }
     `);
 
     return ctx.resolve(identifier);
+  }
+}
+
+function getAttribute(field: AnyWgslData): string | undefined {
+  if (field instanceof WgslDataCustomAlignedImpl) {
+    return `@align(${field.byteAlignment}) `;
+  }
+  if (field instanceof WgslDataCustomSizedImpl) {
+    return `@size(${field.size}) `;
   }
 }
