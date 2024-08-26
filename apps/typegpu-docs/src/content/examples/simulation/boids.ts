@@ -259,7 +259,7 @@ onFrame(() => {
   runtime.flush();
 });
 
-const options = {
+const parameters = {
   separationDistance: 0.05,
   separationStrength: 0.001,
   alignmentDistance: 0.3,
@@ -269,89 +269,89 @@ const options = {
 };
 
 function applyOptions() {
-  runtime.writeBuffer(parametesBuffer, options);
+  runtime.writeBuffer(parametesBuffer, parameters);
 }
 
 addSliderParameter(
   'separation dist',
-  options.separationDistance,
+  parameters.separationDistance,
   {
     min: 0.0,
     max: 0.5,
     step: 0.001,
   },
   (v) => {
-    options.separationDistance = v;
+    parameters.separationDistance = v;
     applyOptions();
   },
 );
 
 addSliderParameter(
   'separation str',
-  options.separationStrength,
+  parameters.separationStrength,
   {
     min: 0.0,
     max: 0.1,
     step: 0.001,
   },
   (v) => {
-    options.separationStrength = v;
+    parameters.separationStrength = v;
     applyOptions();
   },
 );
 
 addSliderParameter(
   'align dist',
-  options.alignmentDistance,
+  parameters.alignmentDistance,
   {
     min: 0.0,
     max: 0.5,
     step: 0.001,
   },
   (v) => {
-    options.alignmentDistance = v;
+    parameters.alignmentDistance = v;
     applyOptions();
   },
 );
 
 addSliderParameter(
   'align str',
-  options.alignmentStrength,
+  parameters.alignmentStrength,
   {
     min: 0.0,
     max: 0.1,
     step: 0.001,
   },
   (v) => {
-    options.alignmentStrength = v;
+    parameters.alignmentStrength = v;
     applyOptions();
   },
 );
 
 addSliderParameter(
   'cohesion dist',
-  options.cohesionDistance,
+  parameters.cohesionDistance,
   {
     min: 0.0,
     max: 0.5,
     step: 0.001,
   },
   (v) => {
-    options.cohesionDistance = v;
+    parameters.cohesionDistance = v;
     applyOptions();
   },
 );
 
 addSliderParameter(
   'cohesion str',
-  options.cohesionStrength,
+  parameters.cohesionStrength,
   {
     min: 0.0,
     max: 0.1,
     step: 0.001,
   },
   (v) => {
-    options.cohesionStrength = v;
+    parameters.cohesionStrength = v;
     applyOptions();
   },
 );
