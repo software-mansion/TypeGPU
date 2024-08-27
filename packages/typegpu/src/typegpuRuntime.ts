@@ -3,6 +3,7 @@ import type { Parsed } from 'typed-binary';
 import type { SimpleWgslData } from './data';
 import type { PlumListener } from './plumStore';
 import type { WgslSettable } from './settableTrait';
+import type { TgpuFn } from './tgpuFn';
 import type { AnyWgslData, WgslAllocatable } from './types';
 import type { BoundWgslCode, WgslCode } from './wgslCode';
 import type { ExtractPlumValue, Unsubscribe, WgslPlum } from './wgslPlum';
@@ -63,6 +64,8 @@ export interface TypeGpuRuntime {
 
   makeRenderPipeline(options: RenderPipelineOptions): RenderPipelineExecutor;
   makeComputePipeline(options: ComputePipelineOptions): ComputePipelineExecutor;
+
+  compute(fn: TgpuFn<[]>): void;
 }
 
 export interface RenderPipelineOptions {

@@ -3,7 +3,7 @@ import type { SimpleWgslData } from './data';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
 import type { TypeGpuRuntime } from './typegpuRuntime';
-import type { AnyWgslData, WgslBindable, WgslResolvable } from './types';
+import type { AnyWgslData, Wgsl, WgslBindable, WgslResolvable } from './types';
 import { BindGroupResolver } from './wgslBindGroupResolver';
 import { getUsedBuiltinsNamed } from './wgslBuiltin';
 import { type BoundWgslCode, type WgslCode, code } from './wgslCode';
@@ -211,7 +211,7 @@ export class RenderProgramBuilder {
 export class ComputeProgramBuilder {
   constructor(
     private runtime: TypeGpuRuntime,
-    private computeRoot: WgslCode | BoundWgslCode,
+    private computeRoot: Wgsl,
     private workgroupSize: readonly [
       number,
       (number | null)?,

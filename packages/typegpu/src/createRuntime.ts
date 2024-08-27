@@ -1,4 +1,5 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
+import { setGPUMode } from './gpuMode';
 import { roundUp } from './mathUtils';
 import { type PlumListener, PlumStore } from './plumStore';
 import {
@@ -8,6 +9,7 @@ import {
 } from './programBuilder';
 import type { WgslSettable } from './settableTrait';
 import { TaskQueue } from './taskQueue';
+import type { TgpuFn } from './tgpuFn';
 import type {
   ComputePipelineExecutorOptions,
   ComputePipelineOptions,
@@ -319,6 +321,7 @@ class TypeGpuRuntimeImpl {
   makeComputePipeline(
     options: ComputePipelineOptions,
   ): ComputePipelineExecutor {
+    setGPUMode(true);
     const program = new ComputeProgramBuilder(
       this,
       options.code,
@@ -326,6 +329,7 @@ class TypeGpuRuntimeImpl {
     ).build({
       bindingGroup: (options.externalLayouts ?? []).length,
     });
+    setGPUMode(false);
 
     const shaderModule = this.device.createShaderModule({
       code: program.code,
@@ -355,6 +359,43 @@ class TypeGpuRuntimeImpl {
     );
     this._pipelineExecutors.push(executor);
     return executor;
+  }
+
+  compute(fn: TgpuFn<[]>): void {
+    // TODO: Cache the pipeline
+
+    setGPUMode(true);
+    const program = new ComputeProgramBuilder(
+      this,
+      fn.wgslSegments.body,
+      [1],
+    ).build({
+      bindingGroup: 0,
+    });
+    setGPUMode(false);
+
+    const shaderModule = this.device.createShaderModule({
+      code: program.code,
+    });
+
+    const pipelineLayout = this.device.createPipelineLayout({
+      bindGroupLayouts: [program.bindGroupResolver.getBindGroupLayout()],
+    });
+
+    const computePipeline = this.device.createComputePipeline({
+      layout: pipelineLayout,
+      compute: {
+        module: shaderModule,
+      },
+    });
+
+    const executor = new ComputePipelineExecutor(
+      this,
+      computePipeline,
+      [program],
+      0,
+    );
+    executor.execute();
   }
 
   flush() {

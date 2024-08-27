@@ -60,11 +60,11 @@ class WgslCodeImpl implements WgslCode {
     let code = '';
 
     for (const s of this.segments) {
-      if (typeof s === 'function') {
+      if (isResolvable(s)) {
+        code += ctx.resolve(s);
+      } else if (typeof s === 'function') {
         const result = s((eventual) => ctx.unwrap(eventual));
         code += ctx.resolve(result);
-      } else if (isResolvable(s)) {
-        code += ctx.resolve(s);
       } else if (typeof s === 'symbol') {
         const builtin = getBuiltinInfo(s);
         ctx.addBuiltin(builtin);

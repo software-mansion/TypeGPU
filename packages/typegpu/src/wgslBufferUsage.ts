@@ -1,3 +1,5 @@
+import type { Unwrap } from 'typed-binary';
+import { inGPUMode } from './gpuMode';
 import type {
   AnyWgslData,
   BufferUsage,
@@ -15,7 +17,7 @@ export interface WgslBufferUsage<
   TData extends AnyWgslData,
   TUsage extends BufferUsage = BufferUsage,
 > extends WgslBindable<TData, TUsage> {
-  $name(label: string): WgslBufferUsage<TData, TUsage>;
+  value: Unwrap<TData>;
 }
 
 export function bufferUsage<
@@ -35,28 +37,21 @@ export function bufferUsage<
 class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
   implements WgslBufferUsage<TData, TUsage>
 {
-  private _label: string | undefined;
-
   constructor(
     public readonly buffer: WgslBuffer<TData, TUsage>,
     public readonly usage: TUsage,
   ) {}
 
   get label() {
-    return this._label;
+    return this.buffer.label;
   }
 
   get allocatable() {
     return this.buffer;
   }
 
-  $name(label: string | undefined) {
-    this._label = label;
-    return this;
-  }
-
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier();
+    const identifier = new WgslIdentifier().$name(this.label);
 
     ctx.addBinding(this, identifier);
 
@@ -64,6 +59,13 @@ class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
   }
 
   toString(): string {
-    return `${this.usage}:${this._label ?? '<unnamed>'}`;
+    return `${this.usage}:${this.label ?? '<unnamed>'}`;
+  }
+
+  get value(): Unwrap<TData> {
+    if (!inGPUMode()) {
+      throw new Error(`Cannot access buffer's value directly in JS.`);
+    }
+    return this as Unwrap<TData>;
   }
 }
