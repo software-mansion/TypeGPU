@@ -1,7 +1,12 @@
 import { BufferWriter, type Parsed } from 'typed-binary';
 import { roundUp } from './mathUtils';
 import { TaskQueue } from './taskQueue';
-import { getBufferMappable, readMappableBuffer } from './typedDeviceUtils';
+import {
+  bufferUnwrapped,
+  getBufferMappable,
+  isBufferTyped,
+  readMappableBuffer,
+} from './typedDeviceUtils';
 import type { AnyWgslData } from './types';
 
 declare global {
@@ -51,31 +56,32 @@ declare global {
 
 function typedQueue(queue: GPUQueue): GPUQueueTyped {
   const queueProxy: ProxyHandler<GPUQueueTyped> = {
-    get(target, prop, receiver) {
-      const baseValue = Reflect.get(target, prop, receiver);
+    get(target, prop) {
+      const baseValue = Reflect.get(target, prop);
 
       if (prop === 'writeBuffer') {
-        return (
+        return <T extends AnyWgslData>(
           buffer: GPUBufferTyped<AnyWgslData> | GPUBuffer,
-          data: Parsed<AnyWgslData> | BufferSource | SharedArrayBuffer,
-          bufferOffset: GPUSize64 | undefined,
+          dataOrOffset: Parsed<T> | GPUSize64,
+          maybeData: BufferSource | SharedArrayBuffer | undefined,
           dataOffset?: GPUSize64 | undefined,
           size?: GPUSize64 | undefined,
         ) => {
-          if (bufferOffset !== undefined) {
-            return baseValue.apply(queue, [
+          if (maybeData !== undefined) {
+            queue.writeBuffer(
               buffer,
-              data,
-              bufferOffset,
+              dataOrOffset as number,
+              maybeData,
               dataOffset,
               size,
-            ]);
+            );
+            return;
           }
 
           const typedBuffer = buffer as GPUBufferTyped<AnyWgslData>;
           if (typedBuffer.mapState === 'mapped') {
             const writer = new BufferWriter(buffer.getMappedRange());
-            typedBuffer.typeInfo.write(writer, data);
+            typedBuffer.typeInfo.write(writer, dataOrOffset);
             typedBuffer.unmap();
             return;
           }
@@ -84,8 +90,11 @@ function typedQueue(queue: GPUQueue): GPUQueueTyped {
             typedBuffer.typeInfo.byteAlignment,
           );
           const arrayBuffer = new ArrayBuffer(typeSize);
-          typedBuffer.typeInfo.write(new BufferWriter(arrayBuffer), data);
-          queue.writeBuffer(buffer, 0, arrayBuffer);
+          typedBuffer.typeInfo.write(
+            new BufferWriter(arrayBuffer),
+            dataOrOffset,
+          );
+          queue.writeBuffer(bufferUnwrapped(buffer), 0, arrayBuffer);
         };
       }
 
@@ -107,8 +116,12 @@ export function typedBuffer<T extends AnyWgslData>(
   type: T,
 ): GPUBufferTyped<T> {
   const bufferProxy: ProxyHandler<GPUBufferTyped<T>> = {
-    get(target, prop, receiver) {
-      const baseValue = Reflect.get(target, prop, receiver);
+    get(target, prop) {
+      if (prop === '_internalBuffer') {
+        return buffer;
+      }
+
+      const baseValue = Reflect.get(target, prop);
 
       if (prop === 'typeInfo') {
         return type;
@@ -124,14 +137,18 @@ export function typedBuffer<T extends AnyWgslData>(
     },
   };
 
-  return new Proxy<GPUBuffer, GPUBufferTyped<T>>(buffer, bufferProxy);
+  const proxy = new Proxy<GPUBuffer, GPUBufferTyped<T>>(buffer, bufferProxy);
+  Object.defineProperty(proxy, '_internalBuffer', {
+    value: buffer,
+  });
+  return proxy;
 }
 
 export function typedDevice(device: GPUDevice): GPUDeviceTyped {
   const taskQueue = new TaskQueue();
 
   const deviceProxy: ProxyHandler<GPUDeviceTyped> = {
-    get(target, prop, receiver) {
+    get(target, prop) {
       if (prop === 'queue') {
         if ('typedQueue' in target) {
           return target.typedQueue;
@@ -173,14 +190,11 @@ export function typedDevice(device: GPUDevice): GPUDeviceTyped {
           buffer: GPUBufferTyped<T> | GPUBuffer,
         ) => {
           const _readBuffer = async (buffer: GPUBufferTyped<T> | GPUBuffer) => {
-            if ('typeInfo' in buffer) {
+            if (isBufferTyped(buffer)) {
               if (buffer.usage & GPUBufferUsage.MAP_READ) {
                 return readMappableBuffer(buffer);
               }
-              const mappable = getBufferMappable(
-                device,
-                buffer,
-              ) as GPUBufferTyped<T>;
+              const mappable = getBufferMappable(device, buffer);
               const value = (await readMappableBuffer(mappable)) as Parsed<T>;
               mappable.destroy();
               return value;
@@ -202,7 +216,19 @@ export function typedDevice(device: GPUDevice): GPUDeviceTyped {
         };
       }
 
-      const baseValue = Reflect.get(target, prop, receiver);
+      if (prop === 'createBindGroup') {
+        return <T extends AnyWgslData>(descriptor: GPUBindGroupDescriptor) => {
+          for (const entry of descriptor.entries) {
+            if ('buffer' in entry.resource) {
+              const buffer = entry.resource.buffer as GPUBufferTyped<T>;
+              entry.resource.buffer = bufferUnwrapped(buffer);
+            }
+          }
+          return device.createBindGroup(descriptor);
+        };
+      }
+
+      const baseValue = Reflect.get(target, prop);
       if (typeof baseValue === 'function') {
         return (...args: unknown[]) => {
           return baseValue.apply(device, args);
