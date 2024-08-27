@@ -4,15 +4,18 @@
 
 export * from './errors';
 export * from './types';
-export { AsCallable, ICallable } from './callable';
+export { AsCallable, Callable } from './callable';
 export * from './typegpuRuntime';
 export { default as ProgramBuilder, type Program } from './programBuilder';
 export { StrictNameRegistry, RandomNameRegistry } from './nameRegistry';
 export * from './wgslBuiltin';
 
+export { tgpu } from './tgpu';
+export { runOnGPU } from './tgpuFn';
 export { default as wgsl } from './wgsl';
 export { createRuntime, CreateRuntimeOptions } from './createRuntime';
 
+export { ResolutionCtxImpl } from './resolutionCtx';
 export type { WgslBuffer } from './wgslBuffer';
 export type { WgslBufferUsage } from './wgslBufferUsage';
 export type { WgslCode } from './wgslCode';

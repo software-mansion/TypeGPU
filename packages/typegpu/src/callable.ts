@@ -1,6 +1,8 @@
-// biome-ignore lint/suspicious/noExplicitAny: <generics>
-abstract class Callable<TArgs extends [...any[]], TReturn> extends Function {
-  _bound: Callable<TArgs, TReturn>;
+export abstract class CallableImpl<
+  TArgs extends [...unknown[]],
+  TReturn,
+> extends Function {
+  _bound: CallableImpl<TArgs, TReturn>;
 
   constructor() {
     // We create a new Function object using `super`, with a `this` reference
@@ -24,13 +26,9 @@ abstract class Callable<TArgs extends [...any[]], TReturn> extends Function {
   abstract _call(...args: TArgs): TReturn;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: <generics>
-export type ICallable<TArgs extends [...any[]], TReturn> = (
+export type Callable<TArgs extends [...unknown[]], TReturn> = (
   ...args: TArgs
 ) => TReturn;
 
-// biome-ignore lint/suspicious/noExplicitAny: <generics>
-export type AsCallable<T, TArgs extends [...any[]], TReturn> = T &
-  ICallable<TArgs, TReturn>;
-
-export default Callable;
+export type AsCallable<T, TArgs extends [...unknown[]], TReturn> = T &
+  Callable<TArgs, TReturn>;

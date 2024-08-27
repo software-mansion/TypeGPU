@@ -1,4 +1,4 @@
-import Callable, { type AsCallable } from './callable';
+import { type AsCallable, CallableImpl } from './callable';
 import { isPointer } from './types';
 import type {
   AnyWgslData,
@@ -18,11 +18,7 @@ import { WgslIdentifier } from './wgslIdentifier';
 export interface WgslFn<
   TArgTypes extends [WgslFnArgument, ...WgslFnArgument[]] | [],
   TReturn extends AnyWgslData | undefined = undefined,
-> extends WgslResolvable,
-    Callable<
-      SegmentsFromTypes<TArgTypes>,
-      WgslFunctionCall<TArgTypes, TReturn>
-    > {}
+> extends WgslResolvable {}
 
 export function fn<
   TArgTypes extends [WgslFnArgument, ...WgslFnArgument[]] | [],
@@ -100,7 +96,7 @@ class WgslFnImpl<
     // TArgPairs extends (readonly [WgslIdentifier, WgslFnArgument])[],
     TReturn extends AnyWgslData | undefined = undefined,
   >
-  extends Callable<
+  extends CallableImpl<
     SegmentsFromTypes<TArgTypes>,
     WgslFunctionCall<TArgTypes, TReturn>
   >
@@ -154,7 +150,14 @@ class WgslFnImpl<
   _call(
     ...args: SegmentsFromTypes<TArgTypes>
   ): WgslFunctionCall<TArgTypes, TReturn> {
-    return new WgslFunctionCall(this, args);
+    return new WgslFunctionCall(
+      this as AsCallable<
+        typeof this,
+        SegmentsFromTypes<TArgTypes>,
+        WgslFunctionCall<TArgTypes, TReturn>
+      >,
+      args,
+    );
   }
 
   toString(): string {
