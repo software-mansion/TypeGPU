@@ -10,7 +10,12 @@ import {
   ValidationError,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { AnyWgslData, ResolutionCtx, WgslData } from '../types';
+import type {
+  AnyWgslData,
+  ResolutionCtx,
+  WgslData,
+  WgslNamable,
+} from '../types';
 import { code } from '../wgslCode';
 import { WgslIdentifier } from '../wgslIdentifier';
 import alignIO from './alignIO';
@@ -18,7 +23,7 @@ import { u32 } from './numeric';
 
 class DynamicArrayDataType<TElement extends WgslData<unknown>>
   extends Schema<Unwrap<TElement>[]>
-  implements WgslData<Unwrap<TElement>[]>
+  implements WgslData<Unwrap<TElement>[]>, WgslNamable
 {
   private _label: string | undefined;
 

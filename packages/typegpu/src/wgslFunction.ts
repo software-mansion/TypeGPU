@@ -4,6 +4,7 @@ import type {
   ResolutionCtx,
   SlotValuePair,
   Wgsl,
+  WgslNamable,
   WgslResolvable,
   WgslSlot,
 } from './types';
@@ -14,9 +15,7 @@ import { WgslIdentifier } from './wgslIdentifier';
 // Public API
 // ----------
 
-export interface WgslFn extends WgslResolvable {
-  $name(label: string): WgslFn;
-
+export interface WgslFn extends WgslResolvable, WgslNamable {
   with<T>(slot: WgslSlot<T>, value: Eventual<T>): BoundWgslFn;
 }
 

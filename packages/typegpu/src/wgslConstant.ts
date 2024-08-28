@@ -1,4 +1,4 @@
-import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
+import type { ResolutionCtx, Wgsl, WgslNamable, WgslResolvable } from './types';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
 
@@ -6,9 +6,7 @@ import { WgslIdentifier } from './wgslIdentifier';
 // Public API
 // ----------
 
-export interface WgslConst extends WgslResolvable {
-  $name(label: string): WgslConst;
-}
+export interface WgslConst extends WgslResolvable, WgslNamable {}
 
 /**
  * Creates a constant is computed at shader initialization according
