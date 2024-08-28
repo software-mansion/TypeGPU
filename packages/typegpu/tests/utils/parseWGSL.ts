@@ -1,6 +1,6 @@
 import { parse } from '@typegpu/wgsl-parser';
-import { StrictNameRegistry, type Wgsl } from '../../src';
-import { ResolutionCtxImpl } from '../../src/resolutionCtx';
+import { StrictNameRegistry, type Wgsl } from '../../src/future';
+import { ResolutionCtxImpl } from '../../src/future/resolutionCtx';
 
 export function parseWGSL(segment: Wgsl) {
   const ctx = new ResolutionCtxImpl({ names: new StrictNameRegistry() });

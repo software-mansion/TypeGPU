@@ -14,8 +14,8 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { builtin, createRuntime, wgsl } from 'typegpu';
 import { struct, u32, vec2f } from 'typegpu/data';
+import { builtin, createRuntime, wgsl } from 'typegpu/future';
 
 const xSpanPlum = addSliderPlumParameter('x span', 16, {
   min: 1,

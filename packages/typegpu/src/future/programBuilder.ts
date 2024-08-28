@@ -1,5 +1,5 @@
 import type { AnySchema } from 'typed-binary';
-import type { SimpleWgslData } from './data';
+import type { SimpleWgslData } from '../data';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
 import type { TypeGpuRuntime } from './typegpuRuntime';

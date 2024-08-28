@@ -11,9 +11,9 @@ import {
   object,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { AnyWgslData, ResolutionCtx, WgslData } from '../types';
-import { code } from '../wgslCode';
-import { WgslIdentifier } from '../wgslIdentifier';
+import type { AnyWgslData, ResolutionCtx, WgslData } from '../future/types';
+import { code } from '../future/wgslCode';
+import { WgslIdentifier } from '../future/wgslIdentifier';
 import alignIO from './alignIO';
 
 // ----------

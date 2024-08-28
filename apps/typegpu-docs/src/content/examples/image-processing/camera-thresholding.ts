@@ -13,8 +13,8 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { builtin, createRuntime, wgsl } from 'typegpu';
 import { f32, vec2f } from 'typegpu/data';
+import { builtin, createRuntime, wgsl } from 'typegpu/future';
 
 // Layout
 const [video, canvas] = await Promise.all([

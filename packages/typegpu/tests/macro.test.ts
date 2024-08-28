@@ -1,6 +1,6 @@
-import { wgsl } from 'typegpu';
-import { repeat } from 'typegpu/macro';
 import { describe, expect, it } from 'vitest';
+import { wgsl } from '../src/future';
+import { repeat } from '../src/macro';
 import { parseWGSL } from './utils/parseWGSL';
 
 describe('repeat', () => {

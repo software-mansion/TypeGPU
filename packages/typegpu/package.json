@@ -33,11 +33,11 @@
       "import": "./dist/macro/index.js",
       "default": "./dist/macro/index.cjs"
     },
-    "./web": {
-      "types": "./dist/web/index.d.ts",
-      "module": "./dist/web/index.js",
-      "import": "./dist/web/index.js",
-      "default": "./dist/web/index.cjs"
+    "./future": {
+      "types": "./dist/future/index.d.ts",
+      "module": "./dist/future/index.js",
+      "import": "./dist/future/index.js",
+      "default": "./dist/future/index.cjs"
     }
   },
   "sideEffects": false,

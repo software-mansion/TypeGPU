@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { type PlumListener, PlumStore } from '../src/plumStore';
-import { type Getter, plum, plumFromEvent } from '../src/wgslPlum';
+import { type PlumListener, PlumStore } from '../src/future/plumStore';
+import { type Getter, plum, plumFromEvent } from '../src/future/wgslPlum';
 
 function makeSubject<T>(initial: T) {
   let value = initial;

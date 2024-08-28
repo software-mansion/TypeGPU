@@ -1,9 +1,9 @@
-import { wgsl } from 'typegpu';
 import { describe, expect, it, vi } from 'vitest';
 import { afterEach } from 'vitest';
-import { createRuntime } from '../src/createRuntime';
 import { struct, u32, vec3i, vec4u } from '../src/data';
-import { plum } from '../src/wgslPlum';
+import { wgsl } from '../src/future';
+import { createRuntime } from '../src/future/createRuntime';
+import { plum } from '../src/future/wgslPlum';
 
 global.GPUBufferUsage = {
   MAP_READ: 1,

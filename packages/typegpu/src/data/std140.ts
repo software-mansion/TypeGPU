@@ -14,7 +14,7 @@ import {
   type Unwrap,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { ResolutionCtx, Wgsl, WgslData } from '../types';
+import type { ResolutionCtx, Wgsl, WgslData } from '../future/types';
 import alignIO from './alignIO';
 
 export class SimpleWgslData<TSchema extends AnySchema>

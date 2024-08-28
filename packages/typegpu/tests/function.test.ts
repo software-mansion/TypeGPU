@@ -1,6 +1,6 @@
 import { parse } from '@typegpu/wgsl-parser';
 import { describe, expect, it } from 'vitest';
-import { wgsl } from '../src';
+import { wgsl } from '../src/future';
 import { parseWGSL } from './utils/parseWGSL';
 
 describe('wgsl.fn', () => {

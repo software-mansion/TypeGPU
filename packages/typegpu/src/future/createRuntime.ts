@@ -1,5 +1,5 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
-import { roundUp } from './mathUtils';
+import { roundUp } from '../mathUtils';
 import { type PlumListener, PlumStore } from './plumStore';
 import {
   ComputeProgramBuilder,

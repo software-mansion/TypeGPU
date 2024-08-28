@@ -12,8 +12,14 @@ import {
   addSliderPlumParameter,
   onFrame,
 } from '@typegpu/example-toolkit';
-import { type WgslBufferUsage, builtin, createRuntime, wgsl } from 'typegpu';
 import { arrayOf, f32, struct, u32, vec2f } from 'typegpu/data';
+import {
+  type WgslBufferUsage,
+  type WgslPlum,
+  builtin,
+  createRuntime,
+  wgsl,
+} from 'typegpu/future';
 
 const runtime = await createRuntime();
 const device = runtime.device;
@@ -51,11 +57,17 @@ const parametesBuffer = wgsl
   )
   .$allowReadonly();
 
-const triangleSize = addSliderPlumParameter('triangle size', 0.04, {
-  min: 0.01,
-  max: 0.1,
-  step: 0.01,
-});
+const triangleSize: WgslPlum<number> = addSliderPlumParameter(
+  'triangle size',
+  0.04,
+  {
+    min: 0.01,
+    max: 0.1,
+    step: 0.01,
+  },
+);
+
+// const triangleSize = wgsl.plum(1);
 const triangleSizeBuffer = wgsl.buffer(f32, triangleSize).$allowUniform();
 const triangleSizePlum = wgsl.plum((get) => {
   const size = get(triangleSize);

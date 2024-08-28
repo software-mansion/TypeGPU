@@ -1,6 +1,6 @@
 import * as TB from 'typed-binary';
-import type { F32, U32, Vec3u, Vec4f } from './data';
-import { SimpleWgslData, f32, u32, vec3u, vec4f } from './data';
+import type { F32, U32, Vec3u, Vec4f } from '../data';
+import { SimpleWgslData, f32, u32, vec3u, vec4f } from '../data';
 import type { WgslData } from './types';
 import { WgslIdentifier } from './wgslIdentifier';
 

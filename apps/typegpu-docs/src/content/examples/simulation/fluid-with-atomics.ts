@@ -15,8 +15,8 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { builtin, createRuntime, wgsl } from 'typegpu';
 import { arrayOf, atomic, f32, u32, vec2u } from 'typegpu/data';
+import { builtin, createRuntime, wgsl } from 'typegpu/future';
 
 const runtime = await createRuntime();
 const device = runtime.device;

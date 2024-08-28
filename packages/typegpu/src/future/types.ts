@@ -1,5 +1,5 @@
 import type { ISchema, Parsed } from 'typed-binary';
-import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from './data';
+import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../data';
 import type { Builtin } from './wgslBuiltin';
 import type { WgslIdentifier } from './wgslIdentifier';
 import type { WgslPlum } from './wgslPlum';

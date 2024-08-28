@@ -16,15 +16,6 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 import {
-  type SampledTextureParams,
-  type StorageTextureParams,
-  type WgslTexture,
-  type WgslTextureView,
-  builtin,
-  createRuntime,
-  wgsl,
-} from 'typegpu';
-import {
   arrayOf,
   f32,
   i32,
@@ -34,6 +25,15 @@ import {
   vec3f,
   type vec4f,
 } from 'typegpu/data';
+import {
+  type SampledTextureParams,
+  type StorageTextureParams,
+  type WgslTexture,
+  type WgslTextureView,
+  builtin,
+  createRuntime,
+  wgsl,
+} from 'typegpu/future';
 
 const tileDim = 128;
 const batch = [4, 4];

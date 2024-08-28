@@ -12,9 +12,8 @@ import {
   onFrame,
 } from '@typegpu/example-toolkit';
 // --
-
-import { builtin, createRuntime, wgsl } from 'typegpu';
 import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'typegpu/data';
+import { builtin, createRuntime, wgsl } from 'typegpu/future';
 
 const X = 7;
 const Y = 7;

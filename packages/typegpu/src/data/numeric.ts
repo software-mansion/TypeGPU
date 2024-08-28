@@ -1,5 +1,5 @@
 import * as TB from 'typed-binary';
-import type { WgslData } from '../types';
+import type { WgslData } from '../future/types';
 import { SimpleWgslData } from './std140';
 
 export type Bool = WgslData<boolean>;

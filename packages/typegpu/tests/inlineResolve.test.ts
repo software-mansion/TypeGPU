@@ -1,5 +1,5 @@
-import { wgsl } from 'typegpu';
 import { describe, expect, it } from 'vitest';
+import { wgsl } from '../src/future';
 import { parseWGSL } from './utils/parseWGSL';
 
 describe('inline resolve', () => {

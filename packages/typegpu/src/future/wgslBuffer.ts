@@ -1,5 +1,5 @@
 import type { AnySchema, Parsed } from 'typed-binary';
-import { SimpleWgslData } from './data';
+import { SimpleWgslData } from '../data';
 import type { AnyWgslData, BufferUsage, WgslAllocatable } from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
 import type { WgslPlum } from './wgslPlum';

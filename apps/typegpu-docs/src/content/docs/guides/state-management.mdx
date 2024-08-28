@@ -104,7 +104,7 @@ Optimising manually for minimizing redundant synchronization or reencoding of bi
 catch bugs and is usually not worth it. **TypeGPU** makes this a breeze.
 
 ```ts
-import { wgsl, createRuntime } from 'typegpu';
+import { wgsl, createRuntime } from 'typegpu/future';
 import { struct, f32 } from 'typegpu/data';
 
 const aPlum = wgsl.plum(1).$name('a');

@@ -13,8 +13,8 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { builtin, createRuntime, wgsl } from 'typegpu';
 import { type Parsed, dynamicArrayOf, f32, struct, vec2f } from 'typegpu/data';
+import { builtin, createRuntime, wgsl } from 'typegpu/future';
 
 const runtime = await createRuntime();
 

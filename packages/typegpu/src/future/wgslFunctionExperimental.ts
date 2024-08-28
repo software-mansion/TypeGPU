@@ -1,4 +1,4 @@
-import Callable, { type AsCallable } from './callable';
+import Callable, { type AsCallable } from '../callable';
 import { isPointer } from './types';
 import type {
   AnyWgslData,

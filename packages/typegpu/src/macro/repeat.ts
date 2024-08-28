@@ -1,6 +1,6 @@
-import type { Eventual, Wgsl } from '../types';
-import { code } from '../wgslCode';
-import { WgslIdentifier } from '../wgslIdentifier';
+import type { Eventual, Wgsl } from '../future/types';
+import { code } from '../future/wgslCode';
+import { WgslIdentifier } from '../future/wgslIdentifier';
 
 export function repeat(
   count: Eventual<Wgsl>,

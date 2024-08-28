@@ -9,7 +9,7 @@ under the hood is still WebGPU.
 The `wgsl` tagged function, and functions attached to it (`wgsl.fn`, `wgsl.var`, etc.) create descriptions
 of WebGPU resources.
 ```ts
-import { wgsl } from 'typegpu';
+import { wgsl } from 'typegpu/future';
 
 const snippet = wgsl`1 + 5`; // a piece of code
 const variable = wgsl.var(u32, snippet); // a variable of type u32 set to `1 + 5`
@@ -39,7 +39,7 @@ Only those resources that are used by our minimal runtime get defined in the WGS
 sent to the GPU.
 
 ```ts
-import { createRuntime } from 'typegpu';
+import { createRuntime } from 'typegpu/future';
 import { executeFn, getExecutionsFn } from './execute';
 
 const runtime = await createRuntime();
@@ -69,7 +69,7 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
     ```ts
     // counter.ts
 
-    import { wgsl } from 'typegpu';
+    import { wgsl } from 'typegpu/future';
     import { u32 } from 'typegpu/data';
 
     /**
@@ -86,7 +86,7 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
     ```ts
     // main.ts
-    import { createRuntime, wgsl } from 'typegpu';
+    import { createRuntime, wgsl } from 'typegpu/future';
     import { counterBuffer } from './counter';
 
     // All buffers are allocated on the `runtime` object,
@@ -258,7 +258,7 @@ fn main() {
 <Tabs>
   <TabItem label="TypeGPU">
     ```ts
-    import { createRuntime, wgsl } from 'typegpu';
+    import { createRuntime, wgsl } from 'typegpu/future';
     import { struct, u32 } from 'typegpu/data';
 
     // Type-safe struct definition.

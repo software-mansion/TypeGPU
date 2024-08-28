@@ -1,4 +1,4 @@
-import type { SimpleWgslData } from './data';
+import type { SimpleWgslData } from '../data';
 import type { ResolutionCtxImpl } from './resolutionCtx';
 import { deriveVertexFormat } from './typegpuRuntime';
 import type { TypeGpuRuntime } from './typegpuRuntime';

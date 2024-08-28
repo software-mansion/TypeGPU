@@ -1,7 +1,6 @@
-import { builtin, wgsl } from 'typegpu';
 import { describe, expect, it } from 'vitest';
-import { StrictNameRegistry } from '../src';
-import { ResolutionCtxImpl } from '../src/resolutionCtx';
+import { StrictNameRegistry, builtin, wgsl } from '../src/future';
+import { ResolutionCtxImpl } from '../src/future/resolutionCtx';
 
 describe('builtin', () => {
   it('creates a builtin variable', () => {

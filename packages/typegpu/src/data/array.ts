@@ -1,6 +1,6 @@
 import * as TB from 'typed-binary';
-import type { AnyWgslData, WgslData } from '../types';
-import { code } from '../wgslCode';
+import type { AnyWgslData, WgslData } from '../future/types';
+import { code } from '../future/wgslCode';
 import { SimpleWgslData } from './std140';
 
 export type WgslArray<TElement extends AnyWgslData> = WgslData<

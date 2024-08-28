@@ -1,4 +1,4 @@
-import { MissingSlotValueError, ResolutionError } from './errors';
+import { MissingSlotValueError, ResolutionError } from '../errors';
 import type { NameRegistry } from './nameRegistry';
 import type {
   BufferUsage,

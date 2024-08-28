@@ -1,4 +1,4 @@
-import { vec4f, vec4i, vec4u } from './data';
+import { vec4f, vec4i, vec4u } from '../data';
 import type {
   AnyWgslPrimitive,
   AnyWgslTexelFormat,

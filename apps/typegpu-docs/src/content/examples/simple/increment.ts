@@ -9,8 +9,8 @@
 import { addElement } from '@typegpu/example-toolkit';
 // --
 
-import { createRuntime, wgsl } from 'typegpu';
 import { u32 } from 'typegpu/data';
+import { createRuntime, wgsl } from 'typegpu/future';
 
 const counterBuffer = wgsl.buffer(u32, 0).$name('counter').$allowMutable();
 

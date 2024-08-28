@@ -21,7 +21,7 @@ state, and the other will be updated and become the next state. After every cell
 swapped.
 
 ```ts
-import { wgsl } from 'typegpu';
+import { wgsl } from 'typegpu/future';
 import { arrayOf, f32 } from 'typegpu/data';
 
 const gridSize = wgsl.plum(512);

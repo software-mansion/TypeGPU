@@ -13,14 +13,6 @@ import {
   onFrame,
 } from '@typegpu/example-toolkit';
 // --
-
-import {
-  type Wgsl,
-  type WgslBufferUsage,
-  builtin,
-  createRuntime,
-  wgsl,
-} from 'typegpu';
 import {
   type Parsed,
   arrayOf,
@@ -32,6 +24,13 @@ import {
   vec2u,
   vec4f,
 } from 'typegpu/data';
+import {
+  type Wgsl,
+  type WgslBufferUsage,
+  builtin,
+  createRuntime,
+  wgsl,
+} from 'typegpu/future';
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;

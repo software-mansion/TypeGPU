@@ -1,4 +1,4 @@
-import type { WgslResolvable, WgslSlot } from './types';
+import type { WgslResolvable, WgslSlot } from './future/types';
 
 /**
  * An error that happens during resolution of WGSL code.

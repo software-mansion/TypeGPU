@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import {
-  MissingSlotValueError,
-  ResolutionError,
-  StrictNameRegistry,
-  wgsl,
-} from '../src';
-import { ResolutionCtxImpl } from '../src/resolutionCtx';
+import { MissingSlotValueError, ResolutionError } from '../src';
+import { StrictNameRegistry, wgsl } from '../src/future';
+import { ResolutionCtxImpl } from '../src/future/resolutionCtx';
 import { parseWGSL } from './utils/parseWGSL';
 
 const RED = 'vec3f(1., 0., 0.)';
