@@ -62,7 +62,6 @@ const triangleSize = addSliderPlumParameter('triangle size', 0.04, {
   step: 0.01,
 });
 
-// const triangleSize = wgsl.plum(1);
 const triangleSizeBuffer = wgsl.buffer(f32, triangleSize).$allowUniform();
 const triangleSizePlum = wgsl.plum((get) => {
   const size = get(triangleSize);
