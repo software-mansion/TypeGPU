@@ -9,6 +9,7 @@
 import {
   addElement,
   addSliderParameter,
+  onCleanup,
   onFrame,
 } from '@typegpu/example-toolkit';
 // --
@@ -132,4 +133,14 @@ onFrame(() => {
   });
 
   runtime.flush();
+});
+
+onCleanup(() => {
+  if (video.srcObject) {
+    for (const track of (video.srcObject as MediaStream).getTracks()) {
+      track.stop();
+    }
+  }
+
+  runtime.dispose();
 });
