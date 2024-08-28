@@ -1,4 +1,5 @@
 import { MissingSlotValueError, ResolutionError } from './errors';
+import { onGPU } from './gpuMode';
 import type { NameRegistry } from './nameRegistry';
 import type {
   BufferUsage,
@@ -227,7 +228,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       slotValueOverrides,
     );
 
-    const result = this._shared.getOrInstantiate(item, itemCtx);
+    const result = onGPU(() => this._shared.getOrInstantiate(item, itemCtx));
 
     return `${[...this._shared.declarations].join('\n\n')}${result}`;
   }

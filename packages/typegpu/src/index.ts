@@ -11,7 +11,6 @@ export { StrictNameRegistry, RandomNameRegistry } from './nameRegistry';
 export * from './wgslBuiltin';
 
 export { tgpu } from './tgpu';
-export { runOnGPU } from './gpuMode';
 export { default as wgsl } from './wgsl';
 export { createRuntime, CreateRuntimeOptions } from './createRuntime';
 

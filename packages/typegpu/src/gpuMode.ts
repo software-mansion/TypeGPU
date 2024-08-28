@@ -1,13 +1,12 @@
-let GPU_MODE = false;
+let gpuDepth = 0;
 
-export function setGPUMode(value: boolean) {
-  GPU_MODE = value;
+export function onGPU<T>(callback: () => T): T {
+  gpuDepth++;
+  try {
+    return callback();
+  } finally {
+    gpuDepth--;
+  }
 }
 
-export function runOnGPU(callback: () => void) {
-  GPU_MODE = true;
-  callback();
-  GPU_MODE = false;
-}
-
-export const inGPUMode = () => GPU_MODE;
+export const inGPUMode = () => gpuDepth > 0;

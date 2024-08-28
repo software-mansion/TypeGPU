@@ -48,26 +48,29 @@ context.configure({
 
 const VertexOutput = struct({ uv: vec2f });
 
-const vertexStep = tgpu.fn([], VertexOutput).impl(() => {
-  const pos = [
-    vec2f(1, 1), // top-right
-    vec2f(-1, 1), // top-left
-    vec2f(1, -1), // bottom-right
-    vec2f(-1, -1), // bottom-left
-  ];
+const vertexStep = tgpu
+  .fn([], VertexOutput)
+  .impl(() => {
+    const pos = [
+      vec2f(1, 1), // top-right
+      vec2f(-1, 1), // top-left
+      vec2f(1, -1), // bottom-right
+      vec2f(-1, -1), // bottom-left
+    ];
 
-  const uv = [
-    vec2f(1, 1), // top-right
-    vec2f(0, 1), // top-left
-    vec2f(1, 0), // bottom-right
-    vec2f(0, 0), // bottom-left
-  ];
+    const uv = [
+      vec2f(1, 1), // top-right
+      vec2f(0, 1), // top-left
+      vec2f(1, 0), // bottom-right
+      vec2f(0, 0), // bottom-left
+    ];
 
-  return {
-    [builtin.position]: vec4f(pos[builtin.vertexIndex.value], 0.0, 1.0),
-    uv: uv[builtin.vertexIndex.value],
-  };
-});
+    return {
+      [builtin.position]: vec4f(pos[builtin.vertexIndex.value], 0.0, 1.0),
+      uv: uv[builtin.vertexIndex.value],
+    };
+  })
+  .$uses({});
 
 const fragmentStep = tgpu
   .fn([VertexOutput])

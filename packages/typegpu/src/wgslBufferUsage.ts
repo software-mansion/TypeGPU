@@ -50,6 +50,10 @@ class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
     return this.buffer;
   }
 
+  $name(label: string) {
+    this.buffer.$name(label);
+  }
+
   resolve(ctx: ResolutionCtx): string {
     const identifier = new WgslIdentifier().$name(this.label);
 

@@ -1,5 +1,5 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
-import { setGPUMode } from './gpuMode';
+import { onGPU } from './gpuMode';
 import { roundUp } from './mathUtils';
 import { type PlumListener, PlumStore } from './plumStore';
 import {
@@ -321,15 +321,15 @@ class TypeGpuRuntimeImpl {
   makeComputePipeline(
     options: ComputePipelineOptions,
   ): ComputePipelineExecutor {
-    setGPUMode(true);
-    const program = new ComputeProgramBuilder(
-      this,
-      options.code,
-      options.workgroupSize ?? [1],
-    ).build({
-      bindingGroup: (options.externalLayouts ?? []).length,
-    });
-    setGPUMode(false);
+    const program = onGPU(() =>
+      new ComputeProgramBuilder(
+        this,
+        options.code,
+        options.workgroupSize ?? [1],
+      ).build({
+        bindingGroup: (options.externalLayouts ?? []).length,
+      }),
+    );
 
     const shaderModule = this.device.createShaderModule({
       code: program.code,
@@ -364,15 +364,11 @@ class TypeGpuRuntimeImpl {
   compute(fn: TgpuFn<[]>): void {
     // TODO: Cache the pipeline
 
-    setGPUMode(true);
-    const program = new ComputeProgramBuilder(
-      this,
-      fn.wgslSegments.body,
-      [1],
-    ).build({
-      bindingGroup: 0,
-    });
-    setGPUMode(false);
+    const program = onGPU(() =>
+      new ComputeProgramBuilder(this, fn.wgslSegments.body, [1]).build({
+        bindingGroup: 0,
+      }),
+    );
 
     const shaderModule = this.device.createShaderModule({
       code: program.code,
