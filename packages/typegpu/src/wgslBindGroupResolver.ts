@@ -228,7 +228,9 @@ export class BindGroupResolver {
     // check if any external texture is of type HTMLVideoElement -> if so, invalidate bind group as it expires on bind
     if (
       this.externalTextures.some(
-        (ext) => ext.descriptor.source instanceof HTMLVideoElement,
+        (ext) =>
+          ext.descriptor.source instanceof HTMLVideoElement ||
+          ext.descriptor.source instanceof VideoFrame,
       )
     ) {
       this.invlidateBindGroup();
