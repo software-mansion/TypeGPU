@@ -1,11 +1,7 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entryPoints: [
-    'src/index.ts',
-    'src/data/index.ts',
-    'src/future/index.ts',
-  ],
+  entryPoints: ['src/index.ts', 'src/data/index.ts', 'src/future/index.ts'],
   outDir: 'dist',
   format: ['cjs', 'esm'],
   tsconfig: './tsconfig.json',
