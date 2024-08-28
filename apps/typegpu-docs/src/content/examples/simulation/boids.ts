@@ -57,15 +57,11 @@ const parametesBuffer = wgsl
   )
   .$allowReadonly();
 
-const triangleSize: WgslPlum<number> = addSliderPlumParameter(
-  'triangle size',
-  0.04,
-  {
-    min: 0.01,
-    max: 0.1,
-    step: 0.01,
-  },
-);
+const triangleSize = addSliderPlumParameter('triangle size', 0.04, {
+  min: 0.01,
+  max: 0.1,
+  step: 0.01,
+});
 
 // const triangleSize = wgsl.plum(1);
 const triangleSizeBuffer = wgsl.buffer(f32, triangleSize).$allowUniform();
