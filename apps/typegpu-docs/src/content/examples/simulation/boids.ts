@@ -15,7 +15,6 @@ import {
 import { arrayOf, f32, struct, u32, vec2f } from 'typegpu/data';
 import {
   type WgslBufferUsage,
-  type WgslPlum,
   builtin,
   createRuntime,
   wgsl,
