@@ -29,3 +29,6 @@ export type {
   WgslTexture,
   WgslTextureView,
 } from './wgslTexture';
+
+export type { TgpuFn } from './tgpuFn';
+export { std } from './std';

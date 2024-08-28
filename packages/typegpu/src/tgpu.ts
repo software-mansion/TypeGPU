@@ -1,8 +1,8 @@
-import { fn, proc } from './tgpuFn';
+import { fn, procedure } from './tgpuFn';
 import { buffer } from './wgslBuffer';
 
 export const tgpu = {
   fn,
-  proc,
+  procedure,
   buffer,
 };

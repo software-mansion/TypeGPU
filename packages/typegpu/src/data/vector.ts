@@ -24,7 +24,7 @@ interface VecSchemaOptions<T> {
   make: (...args: number[]) => T;
 }
 
-class VecfSchemaImpl<T extends BaseVec>
+class VecfSchemaImpl<T extends vecBase>
   extends CallableImpl<number[], T>
   implements WgslData<T>
 {
@@ -226,14 +226,14 @@ class vec4fImpl implements vec4f {
   }
 }
 
-interface BaseVec {
-  length: number;
-  at(idx: number): number;
-}
-
 // ----------
 // Public API
 // ----------
+
+export interface vecBase {
+  length: number;
+  at(idx: number): number;
+}
 
 export interface vec2f {
   x: number;

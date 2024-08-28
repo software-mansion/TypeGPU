@@ -28,7 +28,7 @@ const counterBuffer = tgpu.buffer(vec2f, vec2f(0, 1)).$allowMutable();
 const counter = counterBuffer.asMutable();
 
 const increment = tgpu
-  .proc(() => {
+  .procedure(() => {
     const tmp = counter.value.x;
     counter.value.x = counter.value.y;
     counter.value.y += tmp;

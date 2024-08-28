@@ -34,7 +34,7 @@ interface TgpuFnShell<
   /**
    * Creates an type-safe implementation of this signature
    */
-  impl(
+  implement(
     body: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
   ): TgpuFn<Args, Return>;
 }
@@ -81,8 +81,8 @@ export function fn<
   return new TgpuFnShellImpl([] as Args, first as Return);
 }
 
-export function proc(body: () => void) {
-  return fn().impl(body);
+export function procedure(body: () => void) {
+  return fn().implement(body);
 }
 
 // --------------
@@ -99,7 +99,9 @@ class TgpuFnShellImpl<
     public readonly returnType: Return,
   ) {}
 
-  impl(body: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>) {
+  implement(
+    body: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
+  ): TgpuFn<Args, Return> {
     return new TgpuFnImpl<Args, Return>(this, body) as unknown as TgpuFn<
       Args,
       Return

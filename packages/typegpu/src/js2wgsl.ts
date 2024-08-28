@@ -1,4 +1,5 @@
 import * as acorn from 'acorn';
+import { valueList } from './resolutionUtils';
 import { type AnyWgslData, type Wgsl, isNamable, isResolvable } from './types';
 import { code } from './wgslCode';
 
@@ -88,6 +89,11 @@ const Generators: Partial<{
     const object = generate(ctx, node.object);
     const property = generate(ctx, node.property);
 
+    if (object === 'std') {
+      // All values on `std.` should exist in the WGSL global scope, so fallback.
+      return property;
+    }
+
     if (isResolvable(object)) {
       // A resolvable, for now we can use that fact to assume it is external
 
@@ -118,7 +124,7 @@ const Generators: Partial<{
       return (callee as unknown as (...a: typeof args) => Wgsl)(...args);
     }
 
-    return code`${callee}(${args})`;
+    return code`${callee}(${valueList(args)})`;
   },
 
   VariableDeclaration(ctx, node) {
@@ -131,6 +137,14 @@ const Generators: Partial<{
     const decl = node.declarations[0];
 
     return code`let ${generate(ctx, decl.id)} ${decl.init ? code`= ${generate(ctx, decl.init)}` : ''};`;
+  },
+
+  IfStatement(ctx, node) {
+    const test = generate(ctx, node.test);
+    const consequent = generate(ctx, node.consequent);
+    const alternate = node.alternate ? generate(ctx, node.alternate) : null;
+
+    return code`if (${test}) ${consequent} ${alternate ? code`else ${alternate}` : ''}`;
   },
 };
 
