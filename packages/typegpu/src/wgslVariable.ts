@@ -1,3 +1,5 @@
+import type { Unwrap } from 'typed-binary';
+import { inGPUMode } from './gpuMode';
 import type { AnyWgslData, ResolutionCtx, Wgsl, WgslResolvable } from './types';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
@@ -10,6 +12,7 @@ export type VariableScope = 'private' | 'workgroup';
 
 export interface WgslVar<TDataType extends AnyWgslData> extends WgslResolvable {
   $name(label: string): WgslVar<TDataType>;
+  value: Unwrap<TDataType>;
 }
 
 /**
@@ -51,5 +54,12 @@ class WgslVarImpl<TDataType extends AnyWgslData> implements WgslVar<TDataType> {
     }
 
     return ctx.resolve(this.identifier);
+  }
+
+  get value(): Unwrap<TDataType> {
+    if (!inGPUMode()) {
+      throw new Error(`Cannot access wgsl.var's value directly in JS.`);
+    }
+    return this as Unwrap<TDataType>;
   }
 }

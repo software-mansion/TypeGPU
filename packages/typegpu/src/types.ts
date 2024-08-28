@@ -1,5 +1,6 @@
-import type { ISchema, Parsed } from 'typed-binary';
+import type { ISchema, Parsed, Unwrap } from 'typed-binary';
 import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from './data';
+import type { WgslBufferUsage } from './wgslBufferUsage';
 import type { Builtin } from './wgslBuiltin';
 import type { WgslIdentifier } from './wgslIdentifier';
 import type { WgslPlum } from './wgslPlum';
@@ -85,6 +86,8 @@ export interface WgslSlot<T> {
    * of the slot will be equivalent. Defaults to `Object.is`.
    */
   areEqual(a: T, b: T): boolean;
+
+  value: ValueOf<T>;
 }
 
 export function isSlot<T>(value: unknown | WgslSlot<T>): value is WgslSlot<T> {
@@ -225,6 +228,14 @@ export function isExternalTextureType(
 ): type is WgslExternalTextureType {
   return type === 'texture_external';
 }
+
+export type ValueOf<T> = T extends WgslSlot<infer I>
+  ? ValueOf<I>
+  : T extends WgslBufferUsage<infer D>
+    ? ValueOf<D>
+    : T extends WgslData<unknown>
+      ? Unwrap<T>
+      : T;
 
 export interface WgslData<TInner> extends ISchema<TInner>, WgslResolvable {
   readonly byteAlignment: number;

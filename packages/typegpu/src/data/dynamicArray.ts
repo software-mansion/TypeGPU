@@ -1,11 +1,12 @@
 import {
   type IMeasurer,
+  type ISchema,
   type ISerialInput,
   type ISerialOutput,
   MaxValue,
   Measurer,
   type ParseUnwrapped,
-  Schema,
+  type Parsed,
   type Unwrap,
   ValidationError,
 } from 'typed-binary';
@@ -17,9 +18,10 @@ import alignIO from './alignIO';
 import { u32 } from './numeric';
 
 class DynamicArrayDataType<TElement extends WgslData<unknown>>
-  extends Schema<Unwrap<TElement>[]>
   implements WgslData<Unwrap<TElement>[]>
 {
+  __unwrapped!: Unwrap<TElement>[]; // type-token, not available at runtime
+
   private _label: string | undefined;
 
   public readonly byteAlignment: number;
@@ -29,8 +31,6 @@ class DynamicArrayDataType<TElement extends WgslData<unknown>>
     private readonly _elementType: TElement,
     public readonly capacity: number,
   ) {
-    super();
-
     this.byteAlignment = Math.max(
       4 /* u32 base alignment */,
       this._elementType.byteAlignment,
@@ -39,9 +39,13 @@ class DynamicArrayDataType<TElement extends WgslData<unknown>>
     this.size = this.measure(MaxValue).size;
   }
 
-  $name(label: string) {
-    this._label = label;
-    return this;
+  seekProperty(
+    reference:
+      | Parsed<Unwrap<TElement>, Record<string, never>>[]
+      | typeof MaxValue,
+    prop: keyof Unwrap<TElement>[],
+  ): { bufferOffset: number; schema: ISchema<unknown> } | null {
+    throw new Error('Cannot seek property of dynamic array.');
   }
 
   resolveReferences(): void {

@@ -73,6 +73,12 @@ const Generators: Partial<{
     return code`${generate(ctx, node.left)} ${node.operator} ${generate(ctx, node.right)}`;
   },
 
+  LogicalExpression(ctx, node) {
+    const left = generate(ctx, node.left);
+    const right = generate(ctx, node.right);
+    return code`${left} ${node.operator} ${right}`;
+  },
+
   AssignmentExpression(ctx, node) {
     // TODO: Verify if all assignment operators map 1-to-1 (they probably do not)
     return code`${generate(ctx, node.left)} ${node.operator} ${generate(ctx, node.right)}`;
@@ -89,6 +95,10 @@ const Generators: Partial<{
         // .value is a special property of external resources, giving access to the value within.
         return object.value as Wgsl;
       }
+    }
+
+    if (node.computed) {
+      return code`${object}[${property}]`;
     }
 
     return code`${object}.${property}`;
@@ -109,6 +119,18 @@ const Generators: Partial<{
     }
 
     return code`${callee}(${args})`;
+  },
+
+  VariableDeclaration(ctx, node) {
+    if (node.declarations.length !== 1 || !node.declarations[0]) {
+      throw new Error(
+        'Currently only one declaration in a statement is supported.',
+      );
+    }
+
+    const decl = node.declarations[0];
+
+    return code`let ${generate(ctx, decl.id)} ${decl.init ? code`= ${generate(ctx, decl.init)}` : ''};`;
   },
 };
 

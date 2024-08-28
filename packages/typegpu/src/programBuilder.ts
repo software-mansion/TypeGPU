@@ -1,11 +1,16 @@
 import type { AnySchema } from 'typed-binary';
+import { builtinToType } from './builtinTypes';
 import type { SimpleWgslData } from './data';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
 import type { TypeGpuRuntime } from './typegpuRuntime';
 import type { AnyWgslData, Wgsl, WgslBindable, WgslResolvable } from './types';
 import { BindGroupResolver } from './wgslBindGroupResolver';
-import { getUsedBuiltinsNamed } from './wgslBuiltin';
+import {
+  getBuiltinInfo,
+  getUsedBuiltins,
+  getUsedBuiltinsNamed,
+} from './wgslBuiltin';
 import { type BoundWgslCode, type WgslCode, code } from './wgslCode';
 
 export type Program = {
@@ -74,7 +79,8 @@ export class RenderProgramBuilder {
       symbolOutputs.map(({ symbol, name }) => [symbol, name]),
     );
 
-    const vertexOutputBuiltins = getUsedBuiltinsNamed(symbolRecord);
+    const vertexOutputBuiltins = getUsedBuiltins(symbolRecord);
+    const vertexOutputBuiltinObjects = getUsedBuiltinsNamed(symbolRecord);
     const outputVars = Object.keys(this.vertexOutputFormat);
     const vertexOutput = outputVars.map((name, index) => {
       const varInfo = this.vertexOutputFormat[name];
@@ -85,12 +91,15 @@ export class RenderProgramBuilder {
     });
 
     const structFields = [
-      ...vertexOutputBuiltins.map(
-        (entry) =>
-          code`
-          @builtin(${entry.builtin.name}) ${entry.name}: ${entry.builtin.type},
-        `,
-      ),
+      ...vertexOutputBuiltins.map((builtin) => {
+        const outputName = this.vertexOutputFormat[builtin] ?? '';
+        const builtinName = getBuiltinInfo(builtin).name;
+        const builtinType = builtinToType[builtin] ?? '';
+
+        return code`
+          @builtin(${builtinName}) ${outputName}: ${builtinType},
+        `;
+      }),
       ...vertexOutput.map(
         ({ name, varInfo, index }) =>
           code`
@@ -124,11 +133,12 @@ export class RenderProgramBuilder {
     `,
     );
     const vertexBuiltins = Array.from(vertexContext.usedBuiltins);
-    const vertexBuiltinsArgs = vertexBuiltins.map(
-      (builtin) => code`
-      @builtin(${builtin.name}) ${builtin.identifier}: ${builtin.type},
-    `,
-    );
+    const vertexBuiltinsArgs = vertexBuiltins.map((builtin) => {
+      const type = builtinToType[builtin.symbol] ?? '';
+      return code`
+      @builtin(${builtin.name}) ${builtin.identifier}: ${type},
+    `;
+    });
     const vertexArgs = [...vertexBuiltinsArgs, ...vertexUserArgs];
 
     const vertexCode = code`
@@ -140,7 +150,7 @@ export class RenderProgramBuilder {
       fn main(${vertexArgs}) -> VertexOutput {
         ${this.vertexRoot}
         var output: VertexOutput;
-        ${vertexOutputBuiltins.map(
+        ${vertexOutputBuiltinObjects.map(
           (entry) =>
             code`
             output.${entry.name} = ${entry.name};
@@ -162,11 +172,12 @@ export class RenderProgramBuilder {
     fragmentContext.resolve(this.fragmentRoot);
 
     const fragmentUsedBuiltins = Array.from(fragmentContext.usedBuiltins);
-    const fragmentBuiltinArgs = fragmentUsedBuiltins.map(
-      (builtin) => code`
-      @builtin(${builtin.name}) ${builtin.identifier}: ${builtin.type},
-    `,
-    );
+    const fragmentBuiltinArgs = fragmentUsedBuiltins.map((builtin) => {
+      const type = builtinToType[builtin.symbol] ?? '';
+      return code`
+      @builtin(${builtin.name}) ${builtin.identifier}: ${type},
+    `;
+    });
 
     const fragmentInputs = vertexOutput.map(
       ({ name, varInfo }, idx) => code`
@@ -227,11 +238,12 @@ export class ComputeProgramBuilder {
     context.resolve(this.computeRoot);
 
     const usedBuiltins = Array.from(context.usedBuiltins);
-    const builtinArgs = usedBuiltins.map(
-      (builtin) => code`
-      @builtin(${builtin.name}) ${builtin.identifier}: ${builtin.type},
-    `,
-    );
+    const builtinArgs = usedBuiltins.map((builtin) => {
+      const type = builtinToType[builtin.symbol] ?? '';
+      return code`
+      @builtin(${builtin.name}) ${builtin.identifier}: ${type},
+    `;
+    });
 
     const workgroupSizeDeclaration = `@workgroup_size(${this.workgroupSize[0]}, ${this.workgroupSize[1] ?? 1}, ${this.workgroupSize[2] ?? 1})`;
 

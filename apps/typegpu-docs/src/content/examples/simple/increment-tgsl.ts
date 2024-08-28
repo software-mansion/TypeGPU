@@ -7,13 +7,14 @@
 
 import { addElement } from '@typegpu/example-toolkit';
 import { createRuntime, tgpu } from 'typegpu';
-import { u32 } from 'typegpu/data';
+import { vec2f } from 'typegpu/data';
 
 // ---
 addElement('button', {
   label: 'Increment',
   onClick: async () => {
-    table.setMatrix([[await doIncrement()]]);
+    const result = await doIncrement();
+    table.setMatrix([[result.x, result.y]]);
   },
 });
 
@@ -23,18 +24,20 @@ const table = await addElement('table', {
 table.setMatrix([[0]]);
 // ---
 
-const countBuffer = tgpu.buffer(u32, 0).$allowMutable();
-const count = countBuffer.asMutable();
+const counterBuffer = tgpu.buffer(vec2f, vec2f(0, 1)).$allowMutable();
+const counter = counterBuffer.asMutable();
 
 const increment = tgpu
   .proc(() => {
-    count.value += 1;
+    const tmp = counter.value.x;
+    counter.value.x = counter.value.y;
+    counter.value.y += tmp;
   })
-  .$uses({ count });
+  .$uses({ counter });
 
 const runtime = await createRuntime();
 
 async function doIncrement() {
   runtime.compute(increment);
-  return await runtime.readBuffer(countBuffer);
+  return await runtime.readBuffer(counterBuffer);
 }
