@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { wgsl } from '../src/future';
-import { repeat } from '../src/macro';
+import { repeat } from '../src/future/macro';
 import { parseWGSL } from './utils/parseWGSL';
 
 describe('repeat', () => {

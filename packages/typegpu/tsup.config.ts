@@ -4,7 +4,6 @@ export default defineConfig({
   entryPoints: [
     'src/index.ts',
     'src/data/index.ts',
-    'src/macro/index.ts',
     'src/future/index.ts',
   ],
   outDir: 'dist',

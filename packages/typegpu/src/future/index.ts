@@ -28,3 +28,5 @@ export type {
   WgslTexture,
   WgslTextureView,
 } from './wgslTexture';
+
+export * from './macro';

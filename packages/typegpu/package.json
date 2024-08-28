@@ -27,12 +27,6 @@
       "import": "./dist/data/index.js",
       "default": "./dist/data/index.cjs"
     },
-    "./macro": {
-      "types": "./dist/macro/index.d.ts",
-      "module": "./dist/macro/index.js",
-      "import": "./dist/macro/index.js",
-      "default": "./dist/macro/index.cjs"
-    },
     "./future": {
       "types": "./dist/future/index.d.ts",
       "module": "./dist/future/index.js",

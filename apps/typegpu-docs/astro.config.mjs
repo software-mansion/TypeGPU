@@ -15,8 +15,6 @@ export default defineConfig({
         'typegpu/dist/index.d.ts?raw': '../../packages/typegpu/dist/index.d.ts',
         'typegpu/dist/data/index.d.ts?raw':
           '../../packages/typegpu/dist/data/index.d.ts',
-        'typegpu/dist/macro/index.d.ts?raw':
-          '../../packages/typegpu/dist/macro/index.d.ts',
         'typegpu/dist/future/index.d.ts?raw':
           '../../packages/typegpu/dist/future/index.d.ts',
       }),
@@ -73,18 +71,7 @@ export default defineConfig({
           slug: 'faq',
         },
       ],
-      plugins: [
-        // Generate the documentation.
-        // starlightTypeDoc({
-        //   entryPoints: [
-        //     '../../packages/typegpu/src',
-        //     '../../packages/typegpu/src/data',
-        //     '../../packages/typegpu/src/macro',
-        //     '../../packages/typegpu/src/web',
-        //   ],
-        //   tsconfig: '../../packages/typegpu/tsconfig.json',
-        // }),
-      ],
+      plugins: [],
     }),
     tailwind(),
     react(),
