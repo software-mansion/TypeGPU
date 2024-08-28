@@ -9,6 +9,7 @@ export * from './typegpuRuntime';
 export { default as ProgramBuilder, type Program } from './programBuilder';
 export { StrictNameRegistry, RandomNameRegistry } from './nameRegistry';
 export * from './wgslBuiltin';
+export * from './shaderUtils';
 
 export { default as wgsl } from './wgsl';
 export { createRuntime, CreateRuntimeOptions } from './createRuntime';

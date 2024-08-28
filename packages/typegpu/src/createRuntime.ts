@@ -299,7 +299,7 @@ class TypeGpuRuntimeImpl {
       },
       fragment: {
         module: fragmentShaderModule,
-        targets: options.fragment?.target ?? [],
+        targets: options.fragment?.targets ?? [],
       },
       primitive: options.primitive,
     });
@@ -310,6 +310,8 @@ class TypeGpuRuntimeImpl {
       vertexProgram,
       fragmentProgram,
       options.externalLayouts?.length ?? 0,
+      options.vertex.defaultVertexCount,
+      options.label,
     );
 
     this._pipelineExecutors.push(executor);
@@ -380,8 +382,10 @@ class RenderPipelineExecutor implements PipelineExecutor {
     private vertexProgram: Program,
     private fragmentProgram: Program,
     private externalLayoutCount: number,
+    private defaultVertexCount?: number,
     private label?: string,
   ) {}
+
   execute(options: RenderPipelineExecutorOptions) {
     const {
       vertexCount,
@@ -427,7 +431,19 @@ class RenderPipelineExecutor implements PipelineExecutor {
       );
     }
 
-    passEncoder.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+    if (vertexCount === undefined && this.defaultVertexCount === undefined) {
+      throw new Error(
+        `Neither defaultVertexCount in RenderPipelineOptions nor vertexCount in RenderPipelineExecutorOptions provided for pipeline: ${options.label ?? '<unnamed>'}`,
+      );
+    }
+
+    passEncoder.draw(
+      // biome-ignore lint/style/noNonNullAssertion: asserted via if statement above
+      (vertexCount ?? this.defaultVertexCount)!,
+      instanceCount,
+      firstVertex,
+      firstInstance,
+    );
     passEncoder.end();
   }
 }

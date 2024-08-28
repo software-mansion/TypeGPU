@@ -640,7 +640,7 @@ function makePipelines(
         let y = i32(outUv.y * f32(${gridSizeUniform}));
         return ${mainFragmentWithInput}(x, y);
       `,
-      target: [
+      targets: [
         {
           format: presentationFormat,
         },

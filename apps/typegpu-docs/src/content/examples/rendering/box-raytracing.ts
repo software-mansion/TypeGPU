@@ -13,7 +13,12 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { builtin, createRuntime, wgsl } from 'typegpu';
+import {
+  builtin,
+  createRuntime,
+  fullScreenRectVertexOptions,
+  wgsl,
+} from 'typegpu';
 import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'typegpu/data';
 
 const X = 7;
@@ -219,24 +224,7 @@ const getBoxIntersectionFn = wgsl.fn`(
 `.$name('box_intersection');
 
 const renderPipeline = runtime.makeRenderPipeline({
-  vertex: {
-    code: wgsl`
-      var pos = array<vec2f, 6>(
-        vec2<f32>( 1,  1),
-        vec2<f32>( 1, -1),
-        vec2<f32>(-1, -1),
-        vec2<f32>( 1,  1),
-        vec2<f32>(-1, -1),
-        vec2<f32>(-1,  1)
-      );
-
-      let outPos = vec4f(pos[${builtin.vertexIndex}], 0, 1);
-    `,
-    output: {
-      [builtin.position]: 'outPos',
-    },
-  },
-
+  vertex: fullScreenRectVertexOptions,
   fragment: {
     code: wgsl`
       let minDim = f32(min(${canvasDimsData}.width, ${canvasDimsData}.height));
@@ -289,7 +277,7 @@ const renderPipeline = runtime.makeRenderPipeline({
 
       return color;
     `,
-    target: [
+    targets: [
       {
         format: presentationFormat,
       },
@@ -338,7 +326,6 @@ onFrame((deltaTime) => {
         storeOp: 'store',
       },
     ],
-    vertexCount: 6,
   });
 
   runtime.flush();

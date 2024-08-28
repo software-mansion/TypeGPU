@@ -78,7 +78,7 @@ const renderPipeline = runtime.makeRenderPipeline({
       let green = floor(uvOut.y * f32(span.y)) / f32(span.y);
       return vec4(red, green, 0.5, 1.0);
     `,
-    target: [
+    targets: [
       {
         format: presentationFormat,
       },

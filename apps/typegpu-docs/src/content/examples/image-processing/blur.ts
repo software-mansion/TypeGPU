@@ -242,7 +242,7 @@ const renderPipeline = runtime.makeRenderPipeline({
   },
   fragment: {
     code: blurFragmentWGSL,
-    target: [
+    targets: [
       {
         format: presentationFormat,
       },

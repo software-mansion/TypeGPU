@@ -13,8 +13,8 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { builtin, createRuntime, wgsl } from 'typegpu';
-import { f32, vec2f } from 'typegpu/data';
+import { createRuntime, fullScreenRectVertexOptions, wgsl } from 'typegpu';
+import { f32 } from 'typegpu/data';
 
 // Layout
 const [video, canvas] = await Promise.all([
@@ -54,37 +54,10 @@ context.configure({
 });
 
 const renderProgram = runtime.makeRenderPipeline({
-  vertex: {
-    code: wgsl`
-      const pos = array(
-        vec2( 1.0,  1.0),
-        vec2( 1.0, -1.0),
-        vec2(-1.0, -1.0),
-        vec2( 1.0,  1.0),
-        vec2(-1.0, -1.0),
-        vec2(-1.0,  1.0),
-      );
-
-      const uv = array(
-        vec2(1.0, 0.0),
-        vec2(1.0, 1.0),
-        vec2(0.0, 1.0),
-        vec2(1.0, 0.0),
-        vec2(0.0, 1.0),
-        vec2(0.0, 0.0),
-      );
-
-      let Position = vec4(pos[${builtin.vertexIndex}], 0.0, 1.0);
-      let fragUV = uv[${builtin.vertexIndex}];
-    `,
-    output: {
-      [builtin.position]: 'Position',
-      fragUV: vec2f,
-    },
-  },
+  vertex: fullScreenRectVertexOptions,
   fragment: {
     code: wgsl`
-      var color = textureSampleBaseClampToEdge(${resultTexture}, ${sampler}, fragUV);
+      var color = textureSampleBaseClampToEdge(${resultTexture}, ${sampler}, uv);
       let grey = 0.299*color.r + 0.587*color.g + 0.114*color.b;
 
       if grey < ${thresholdData} {
@@ -93,7 +66,7 @@ const renderProgram = runtime.makeRenderPipeline({
 
       return vec4f(1);
     `,
-    target: [
+    targets: [
       {
         format: presentationFormat,
       },
@@ -127,8 +100,6 @@ onFrame(() => {
         storeOp: 'store',
       },
     ],
-
-    vertexCount: 6,
   });
 
   runtime.flush();

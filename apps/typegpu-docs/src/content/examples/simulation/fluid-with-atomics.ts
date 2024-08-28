@@ -335,7 +335,7 @@ function resetGameData() {
     },
     fragment: {
       code: fragWGSL,
-      target: [{ format: presentationFormat }],
+      targets: [{ format: presentationFormat }],
     },
     primitive: { topology: 'triangle-strip' },
   });

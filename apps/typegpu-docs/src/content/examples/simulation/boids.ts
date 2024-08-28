@@ -159,7 +159,7 @@ const renderPipelines = [0, 1].map((idx) =>
 
         return vec4(color, 1.0);
       `,
-      target: [
+      targets: [
         {
           format: presentationFormat,
         },

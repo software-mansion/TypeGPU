@@ -73,10 +73,11 @@ export interface RenderPipelineOptions {
     } & {
       [K in string]: AnyWgslData;
     };
+    defaultVertexCount?: number;
   };
   fragment: {
     code: WgslCode | BoundWgslCode;
-    target: Iterable<GPUColorTargetState | null>;
+    targets: Iterable<GPUColorTargetState | null>;
   };
   primitive: GPUPrimitiveState;
   externalLayouts?: GPUBindGroupLayout[];
@@ -91,7 +92,7 @@ export interface ComputePipelineOptions {
 }
 
 export type RenderPipelineExecutorOptions = GPURenderPassDescriptor & {
-  vertexCount: number;
+  vertexCount?: number;
   instanceCount?: number;
   firstVertex?: number;
   firstInstance?: number;
