@@ -64,8 +64,7 @@ export class WgslDataCustomSizedImpl<
     value: MaxValue | ParseUnwrapped<TData>,
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
-    measurer.add(this.size - this.data.size);
-    return this.data.measure(value, measurer);
+    return measurer.add(this.size);
   }
 
   resolve(ctx: ResolutionCtx): string {
