@@ -23,7 +23,7 @@ export type BuiltInPossibleTypes =
 export const builtinToType: Record<symbol, BuiltInPossibleTypes> = {
   [builtin.vertexIndex]: u32,
   [builtin.instanceIndex]: u32,
-  [builtin.position]: vec4f,
+  [builtin.position as unknown as symbol]: vec4f,
   [builtin.clipDistances]: new SimpleWgslData({
     schema: TB.arrayOf(u32, 8),
     byteAlignment: 16,

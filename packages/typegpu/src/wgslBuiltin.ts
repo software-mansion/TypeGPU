@@ -1,9 +1,10 @@
+import type { vec4f } from './data';
 import { WgslIdentifier } from './wgslIdentifier';
 
 export const builtin = {
   vertexIndex: Symbol('builtin_vertexIndex'),
   instanceIndex: Symbol('builtin_instanceIndex'),
-  position: Symbol('builtin_position'),
+  position: Symbol('builtin_position') as unknown as vec4f,
   clipDistances: Symbol('builtin_clipDistances'),
   frontFacing: Symbol('builtin_frontFacing'),
   fragDepth: Symbol('builtin_fragDepth'),
@@ -40,8 +41,8 @@ const builtinSymbolToObj: Record<symbol, Builtin> = {
     direction: 'input',
     identifier: new WgslIdentifier().$name('instance_index'),
   },
-  [builtin.position]: {
-    symbol: builtin.position,
+  [builtin.position as unknown as symbol]: {
+    symbol: builtin.position as unknown as symbol,
     name: 'position',
     stage: 'vertex',
     direction: 'output',
