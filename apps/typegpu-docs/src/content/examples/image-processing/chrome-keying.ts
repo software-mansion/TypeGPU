@@ -64,34 +64,11 @@ const thresholdBuffer = wgsl
   .buffer(f32, thresholdPlum)
   .$name('threshold')
   .$allowUniform();
+
 const colorBuffer = wgsl
   .buffer(vec3f, [0, 1.0, 0])
   .$name('colorBuffer')
   .$allowUniform();
-
-video.addEventListener('click', (event) => {
-  const x = event.offsetX;
-  const y = event.offsetY;
-  const canvas = document.createElement('canvas');
-  const context2d = canvas.getContext('2d');
-  if (!context2d) throw new Error('2d context not supported');
-  canvas.width = width;
-  canvas.height = height;
-  context2d.drawImage(video, 0, 0, width, height);
-  const pixel = context2d.getImageData(x, y, 1, 1).data;
-  table.setMatrix([[pixel[0], pixel[1], pixel[2]]]);
-  runtime.writeBuffer(colorBuffer, [
-    pixel[0] / 255.0,
-    pixel[1] / 255.0,
-    pixel[2] / 255.0,
-  ]);
-});
-
-async function getFrame() {
-  const frame = (await reader.read()).value;
-  if (!frame) throw new Error('No frame');
-  return frame;
-}
 
 const sampler = wgsl.sampler({
   magFilter: 'linear',
@@ -169,7 +146,14 @@ const renderProgram = runtime.makeRenderPipeline({
   },
   fragment: {
     code: wgsl`
-      return textureSampleBaseClampToEdge(${resultTexture.asSampled({ type: 'texture_2d', dataType: f32 })}, ${sampler}, fragUV);
+      return textureSampleBaseClampToEdge(
+        ${resultTexture.asSampled({
+          type: 'texture_2d',
+          dataType: f32,
+        })},
+        ${sampler},
+        fragUV
+      );
     `,
     target: [
       {
@@ -181,6 +165,27 @@ const renderProgram = runtime.makeRenderPipeline({
     topology: 'triangle-list',
   },
 });
+
+video.addEventListener('click', (event) => {
+  const { offsetX: x, offsetY: y } = event;
+  const canvas = document.createElement('canvas');
+  const context2d = canvas.getContext('2d');
+  if (!context2d) throw new Error('2d context not supported');
+
+  canvas.width = width;
+  canvas.height = height;
+  context2d.drawImage(video, 0, 0, width, height);
+
+  const [r, g, b] = context2d.getImageData(x, y, 1, 1).data;
+  table.setMatrix([[r, g, b]]);
+  runtime.writeBuffer(colorBuffer, [r / 255, g / 255, b / 255]);
+});
+
+async function getFrame() {
+  const { value: frame } = await reader.read();
+  if (!frame) throw new Error('No frame');
+  return frame;
+}
 
 async function drawFrame() {
   const frame = await getFrame();
@@ -194,7 +199,7 @@ async function drawFrame() {
     colorAttachments: [
       {
         view: context.getCurrentTexture().createView(),
-        clearValue: [0, 0, 0, 1],
+        clearValue: [0, 0, 0, 0],
         loadOp: 'clear',
         storeOp: 'store',
       },
