@@ -27,44 +27,6 @@ export const f32: F32 = new SimpleWgslData({
   code: 'f32',
 });
 
-export type Vec2u = WgslData<[number, number]>;
-export const vec2u: Vec2u = new SimpleWgslData({
-  schema: TB.tupleOf([TB.u32, TB.u32]),
-  byteAlignment: 8,
-  code: 'vec2u',
-});
-
-export type Vec2i = WgslData<[number, number]>;
-export const vec2i: Vec2i = new SimpleWgslData({
-  schema: TB.tupleOf([TB.i32, TB.i32]),
-  byteAlignment: 8,
-  code: 'vec2i',
-});
-export type Vec3u = WgslData<[number, number, number]>;
-export const vec3u: Vec3u = new SimpleWgslData({
-  schema: TB.tupleOf([TB.u32, TB.u32, TB.u32]),
-  byteAlignment: 16,
-  code: 'vec3u',
-});
-export type Vec3i = WgslData<[number, number, number]>;
-export const vec3i: Vec3i = new SimpleWgslData({
-  schema: TB.tupleOf([TB.i32, TB.i32, TB.i32]),
-  byteAlignment: 16,
-  code: 'vec3i',
-});
-export type Vec4u = WgslData<[number, number, number, number]>;
-export const vec4u: Vec4u = new SimpleWgslData({
-  schema: TB.tupleOf([TB.u32, TB.u32, TB.u32, TB.u32]),
-  byteAlignment: 16,
-  code: 'vec4u',
-});
-export type Vec4i = WgslData<[number, number, number, number]>;
-export const vec4i: Vec4i = new SimpleWgslData({
-  schema: TB.tupleOf([TB.i32, TB.i32, TB.i32, TB.i32]),
-  byteAlignment: 16,
-  code: 'vec4i',
-});
-
 /**
  * Array of column vectors
  */

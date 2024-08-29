@@ -412,7 +412,7 @@ const sourceParamsBuffer = wgsl
       intensity: f32,
     }),
     wgsl.plum((get) => ({
-      center: [0.5, 0.9] as [number, number],
+      center: vec2f(0.5, 0.9),
       intensity: get(sourceIntensityPlum),
       radius: get(sourceRadiusPlum),
     })),
@@ -518,11 +518,8 @@ const obstacles: {
 
 function obstaclesToConcrete(): Parsed<BoxObstacle>[] {
   return obstacles.map(({ x, y, width, height, enabled }) => ({
-    center: [Math.round(x * gridSize), Math.round(y * gridSize)],
-    size: [Math.round(width * gridSize), Math.round(height * gridSize)] as [
-      number,
-      number,
-    ],
+    center: vec2u(Math.round(x * gridSize), Math.round(y * gridSize)),
+    size: vec2u(Math.round(width * gridSize), Math.round(height * gridSize)),
     enabled: enabled ? 1 : 0,
   }));
 }

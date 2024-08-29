@@ -87,10 +87,10 @@ const maxCompress = wgsl.constant(wgsl`12u`);
 
 const squareBuffer = wgsl
   .buffer(arrayOf(vec2u, 4), [
-    [0, 0],
-    [0, 1],
-    [1, 0],
-    [1, 1],
+    vec2u(0, 0),
+    vec2u(0, 1),
+    vec2u(1, 0),
+    vec2u(1, 1),
   ])
   .$allowVertex('vertex')
   .$allowUniform()
@@ -350,7 +350,7 @@ function resetGameData() {
     Array.from({ length: 1024 ** 2 }, () => 0),
   );
 
-  runtime.writeBuffer(sizeBuffer, [options.size, options.size]);
+  runtime.writeBuffer(sizeBuffer, vec2u(options.size, options.size));
 
   const length = options.size * options.size;
   const cells = new Uint32Array(length);

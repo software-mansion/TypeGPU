@@ -42,14 +42,14 @@ const boxSizePlum = addSliderPlumParameter('box size', MAX_BOX_SIZE, {
 
 const framePlum = wgsl.plum<number>(0);
 
-const cameraPositionPlum = wgsl.plum<Vector>((get) => {
+const cameraPositionPlum = wgsl.plum((get) => {
   const frame = get(framePlum);
 
-  return [
+  return vec3f(
     Math.cos(frame) * get(cameraDistancePlum) + boxCenter[0],
     boxCenter[1],
     Math.sin(frame) * get(cameraDistancePlum) + boxCenter[2],
-  ];
+  );
 });
 
 const cameraAxesPlum = wgsl.plum((get) => {
@@ -103,7 +103,7 @@ const boxMatrixBuffer = wgsl
       Array.from({ length: Y }, (_, j) =>
         Array.from({ length: Z }, (_, k) => ({
           isActive: X - i + j + (Z - k) > 6 ? 1 : 0,
-          albedo: [i / X, j / Y, k / Z, 1] as [number, number, number, number],
+          albedo: vec4f(i / X, j / Y, k / Z, 1),
         })),
       ),
     ),
