@@ -213,7 +213,9 @@ class TypeGpuRuntimeImpl {
       );
 
       const res = allocatable.dataType.read(
-        new BufferReader(this._readBuffer.getMappedRange()),
+        new BufferReader(
+          this._readBuffer.getMappedRange(0, allocatable.dataType.size),
+        ),
       ) as Parsed<TData>;
 
       this._readBuffer.unmap();
