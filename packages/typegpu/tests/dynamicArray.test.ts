@@ -1,6 +1,6 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
-import { dynamicArrayOf, struct, u32, vec4f } from 'typegpu/data';
 import { describe, expect, it } from 'vitest';
+import { dynamicArrayOf, struct, u32, vec4f } from '../src/data';
 
 describe('dynamicArray', () => {
   it('encodes SceneSpheres properly', () => {
@@ -14,11 +14,11 @@ describe('dynamicArray', () => {
 
     const value: Parsed<typeof SceneSpheres> = [
       {
-        xyzr: [0, 0.1, 0.2, 1],
+        xyzr: vec4f(0, 0.1, 0.2, 1),
         material_idx: 12,
       },
       {
-        xyzr: [0.75, 0.012, 0.54, 6.1],
+        xyzr: vec4f(0.75, 0.012, 0.54, 6.1),
         material_idx: 2,
       },
     ];

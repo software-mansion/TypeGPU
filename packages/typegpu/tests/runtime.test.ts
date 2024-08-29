@@ -1,6 +1,6 @@
-import { wgsl } from 'typegpu';
 import { describe, expect, it, vi } from 'vitest';
 import { afterEach } from 'vitest';
+import { wgsl } from '../src';
 import { createRuntime } from '../src/createRuntime';
 import { struct, u32, vec3i, vec4u } from '../src/data';
 import { plum } from '../src/wgslPlum';

@@ -4,7 +4,7 @@
 
 export * from './errors';
 export * from './types';
-export { AsCallable, ICallable } from './callable';
+export { AsCallable, Callable } from './callable';
 export * from './typegpuRuntime';
 export { default as ProgramBuilder, type Program } from './programBuilder';
 export { StrictNameRegistry, RandomNameRegistry } from './nameRegistry';

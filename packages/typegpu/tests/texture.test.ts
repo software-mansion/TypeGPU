@@ -1,7 +1,6 @@
-import { wgsl } from 'typegpu';
-import { f32, u32 } from 'typegpu/data';
 import { describe, expect, it } from 'vitest';
-import { StrictNameRegistry } from '../src';
+import { StrictNameRegistry, wgsl } from '../src';
+import { f32, u32 } from '../src/data';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
 
 global.GPUTextureUsage = {

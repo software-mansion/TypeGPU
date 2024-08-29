@@ -38,11 +38,27 @@ export interface WgslResolvable {
   resolve(ctx: ResolutionCtx): string;
 }
 
+/**
+ * Can be assigned a name. Not to be confused with
+ * being able to HAVE a name.
+ */
+export interface WgslNamable {
+  $name(label: string): this;
+}
+
 export function isResolvable(value: unknown): value is WgslResolvable {
   return (
     !!value &&
     (typeof value === 'object' || typeof value === 'function') &&
     'resolve' in value
+  );
+}
+
+export function isNamable(value: unknown): value is WgslNamable {
+  return (
+    !!value &&
+    (typeof value === 'object' || typeof value === 'function') &&
+    '$name' in value
   );
 }
 
