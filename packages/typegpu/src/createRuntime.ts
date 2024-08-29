@@ -209,7 +209,7 @@ class TypeGpuRuntimeImpl {
       await this._readBuffer.mapAsync(
         GPUMapMode.READ,
         0,
-        allocatable.dataType.size,
+        this._readBuffer.size,
       );
 
       const res = allocatable.dataType.read(
