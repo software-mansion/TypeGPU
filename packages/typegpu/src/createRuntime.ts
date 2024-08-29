@@ -39,6 +39,10 @@ class TypeGpuRuntimeImpl {
   private _samplers = new WeakMap<WgslSampler, GPUSampler>();
   private _textures = new WeakMap<WgslAnyTexture, GPUTexture>();
   private _textureViews = new WeakMap<WgslAnyTextureView, GPUTextureView>();
+  private _externalTexturesStatus = new WeakMap<
+    WgslTextureExternal,
+    'dirty' | 'clean'
+  >();
   private _pipelineExecutors: PipelineExecutor[] = [];
   private _commandEncoder: GPUCommandEncoder | null = null;
 
@@ -156,7 +160,13 @@ class TypeGpuRuntimeImpl {
   }
 
   externalTextureFor(texture: WgslTextureExternal): GPUExternalTexture {
-    return this.device.importExternalTexture(texture.descriptor);
+    this._externalTexturesStatus.set(texture, 'clean');
+    if (texture.descriptor.source === undefined) {
+      throw new Error('External texture source needs to be defined before use');
+    }
+    return this.device.importExternalTexture(
+      texture.descriptor as GPUExternalTextureDescriptor,
+    );
   }
 
   samplerFor(sampler: WgslSampler): GPUSampler {
@@ -236,6 +246,22 @@ class TypeGpuRuntimeImpl {
     const hostBuffer = new ArrayBuffer(size);
     allocatable.dataType.write(new BufferWriter(hostBuffer), data);
     this.device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
+  }
+
+  setSource(
+    texture: WgslTextureExternal,
+    source: HTMLVideoElement | VideoFrame,
+  ) {
+    this._externalTexturesStatus.set(texture, 'dirty');
+    texture.descriptor.source = source;
+  }
+
+  isDirty(texture: WgslTextureExternal): boolean {
+    return this._externalTexturesStatus.get(texture) === 'dirty';
+  }
+
+  markClean(texture: WgslTextureExternal) {
+    this._externalTexturesStatus.set(texture, 'clean');
   }
 
   readPlum<TPlum extends WgslPlum>(plum: TPlum): ExtractPlumValue<TPlum> {

@@ -48,6 +48,14 @@ export interface TypeGpuRuntime {
     allocatable: WgslAllocatable<TData>,
   ): Promise<Parsed<TData>>;
 
+  setSource(
+    texture: WgslTextureExternal,
+    source: HTMLVideoElement | VideoFrame,
+  ): void;
+
+  isDirty(texture: WgslTextureExternal): boolean;
+  markClean(texture: WgslTextureExternal): void;
+
   bufferFor(allocatable: WgslAllocatable): GPUBuffer;
   textureFor(view: WgslAnyTexture | WgslAnyTextureView): GPUTexture;
   viewFor(view: WgslAnyTextureView): GPUTextureView;

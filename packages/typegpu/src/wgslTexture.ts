@@ -13,6 +13,10 @@ import type {
 import { WgslIdentifier } from './wgslIdentifier';
 import { isSampler } from './wgslSampler';
 
+type Optional<T> = {
+  [P in keyof T]?: T[P] | undefined;
+};
+
 export interface WgslAnyTextureView extends WgslRenderResource {
   readonly descriptor: GPUTextureViewDescriptor;
   readonly texture: WgslAnyTexture;
@@ -60,7 +64,9 @@ export interface WgslTextureView<
 }
 
 export interface WgslTextureExternal extends WgslRenderResource {
-  readonly descriptor: GPUExternalTextureDescriptor;
+  $name(label: string): WgslTextureExternal;
+  readonly descriptor: Optional<GPUExternalTextureDescriptor>;
+  get source(): HTMLVideoElement | VideoFrame | undefined;
 }
 
 export function texture<TUsage extends TextureUsage = never>(
@@ -69,8 +75,11 @@ export function texture<TUsage extends TextureUsage = never>(
   return new WgslTextureImpl(descriptor);
 }
 
-export function textureExternal(descriptor: GPUExternalTextureDescriptor) {
-  return new WgslTextureExternalImpl(descriptor);
+export function textureExternal(
+  source?: HTMLVideoElement | VideoFrame,
+  colorSpace?: PredefinedColorSpace,
+): WgslTextureExternal {
+  return new WgslTextureExternalImpl(source, colorSpace);
 }
 
 class WgslTextureImpl<TAllows extends TextureUsage = never>
@@ -230,11 +239,21 @@ class WgslTextureViewImpl<
 class WgslTextureExternalImpl implements WgslTextureExternal {
   private _label: string | undefined;
   public readonly type = 'texture_external';
+  public readonly descriptor: Optional<GPUExternalTextureDescriptor>;
 
-  constructor(public readonly descriptor: GPUExternalTextureDescriptor) {}
+  constructor(
+    source: HTMLVideoElement | VideoFrame | undefined,
+    colorSpace: PredefinedColorSpace | undefined,
+  ) {
+    this.descriptor = { source, colorSpace };
+  }
 
   get label() {
     return this._label;
+  }
+
+  get source() {
+    return this.descriptor.source;
   }
 
   $name(label: string | undefined) {

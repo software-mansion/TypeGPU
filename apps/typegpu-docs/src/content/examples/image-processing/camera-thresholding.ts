@@ -37,9 +37,7 @@ if (navigator.mediaDevices.getUserMedia) {
   });
 }
 
-const resultTexture = wgsl.textureExternal({
-  source: video,
-});
+const resultTexture = wgsl.textureExternal(video);
 
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();

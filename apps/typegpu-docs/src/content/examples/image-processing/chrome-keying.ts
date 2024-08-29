@@ -8,18 +8,23 @@
 import {
   addElement,
   addSliderPlumParameter,
+  onCleanup,
   onFrame,
 } from '@typegpu/example-toolkit';
 import { builtin, createRuntime, wgsl } from 'typegpu';
-import { arrayOf, f32, vec2f, vec3f, vec4u } from 'typegpu/data';
+import { f32, vec2f, vec3f } from 'typegpu/data';
 
 const width = 500;
 const height = 375;
-
-const [video, canvas] = await Promise.all([
+const [table, video, canvas] = await Promise.all([
+  addElement('table', {
+    label: 'Press anywhere on the video to pick a color',
+  }),
   addElement('video', { width, height }),
   addElement('canvas', { width, height }),
 ]);
+table.setMatrix([[0, 255, 0]]);
+
 let stream: MediaStream;
 
 if (navigator.mediaDevices.getUserMedia) {
@@ -49,7 +54,7 @@ const mediaProcessor = new MediaStreamTrackProcessor({
 });
 const reader = mediaProcessor.readable.getReader();
 
-const thresholdPlum = addSliderPlumParameter('threshold', 0, {
+const thresholdPlum = addSliderPlumParameter('threshold', 0.5, {
   min: 0.0,
   max: 1.0,
   step: 0.01,
@@ -74,6 +79,7 @@ video.addEventListener('click', (event) => {
   canvas.height = height;
   context2d.drawImage(video, 0, 0, width, height);
   const pixel = context2d.getImageData(x, y, 1, 1).data;
+  table.setMatrix([[pixel[0], pixel[1], pixel[2]]]);
   runtime.writeBuffer(colorBuffer, [
     pixel[0] / 255.0,
     pixel[1] / 255.0,
@@ -92,17 +98,9 @@ const sampler = wgsl.sampler({
   minFilter: 'linear',
 });
 
-const first: VideoFrame = await getFrame();
-const externalTexture = wgsl.textureExternal({
-  source: first,
-});
-first.close();
+const externalTexture = wgsl.textureExternal();
 
-const resultBuffer = wgsl
-  .buffer(arrayOf(vec4u, width * height))
-  .$name('resultBuffer')
-  .$allowMutable();
-const alphaTexture = wgsl
+const resultTexture = wgsl
   .texture({
     size: {
       width,
@@ -110,7 +108,35 @@ const alphaTexture = wgsl
     },
     format: 'rgba8unorm',
   })
-  .$allowSampled();
+  .$allowSampled()
+  .$allowStorage();
+
+const computeProgram = runtime.makeComputePipeline({
+  code: wgsl`
+    let coords = vec2u(${builtin.globalInvocationId}.xy);
+    if (coords.x >= ${width} || coords.y >= ${height}) {
+      return;
+    }
+    let xyAsUv = vec2f(coords) / vec2f(${width}, ${height});
+    var col = textureSampleBaseClampToEdge(${externalTexture}, ${sampler}, xyAsUv);
+    let toKey = ${colorBuffer.asUniform()};
+    let distance = distance(col.rgb, toKey);
+
+    if (distance < ${thresholdBuffer.asUniform()}) {
+      col = vec4f();
+    }
+
+    textureStore(
+      ${resultTexture.asStorage({
+        type: 'texture_storage_2d',
+        access: 'write',
+      })},
+      coords,
+      col,
+    );
+  `,
+  workgroupSize: [8, 8],
+});
 
 const renderProgram = runtime.makeRenderPipeline({
   vertex: {
@@ -143,12 +169,7 @@ const renderProgram = runtime.makeRenderPipeline({
   },
   fragment: {
     code: wgsl`
-      let alpha = textureSample(${alphaTexture.asSampled({
-        type: 'texture_2d',
-        dataType: f32,
-      })}, ${sampler}, fragUV).a;
-      let color = textureSampleBaseClampToEdge(${externalTexture}, ${sampler}, fragUV) * alpha;
-      return vec4f(color.rgb, alpha);
+      return textureSampleBaseClampToEdge(${resultTexture.asSampled({ type: 'texture_2d', dataType: f32 })}, ${sampler}, fragUV);
     `,
     target: [
       {
@@ -161,166 +182,43 @@ const renderProgram = runtime.makeRenderPipeline({
   },
 });
 
-const computeProgram = runtime.makeComputePipeline({
-  code: wgsl`
-    let coords = vec2u(${builtin.globalInvocationId}.xy);
-    let xyAsUv = vec2f(coords) / vec2f(${width}, ${height});
-    var col = textureSampleBaseClampToEdge(${externalTexture}, ${sampler}, xyAsUv);
-    let toKey = ${colorBuffer.asUniform()};
-    let distance = distance(col.rgb, toKey);
+async function drawFrame() {
+  const frame = await getFrame();
+  runtime.setSource(externalTexture, frame);
 
-    if (distance < ${thresholdBuffer.asUniform()}) {
-      col = vec4f();
-    }
-
-    let index = coords.y * ${width} + coords.x;
-    let colUInt = vec4u(min(col * 255, vec4f(255.0)));
-    ${resultBuffer.asMutable()}[index] = colUInt;
-  `,
-});
-
-const frameStorage = {
-  frames: [] as EncodedVideoChunk[],
-  async push(frame: EncodedVideoChunk) {
-    this.frames.push(frame);
-  },
-  async pop(): Promise<EncodedVideoChunk | undefined> {
-    return this.frames.shift();
-  },
-};
-
-const pendingFrames = [] as VideoFrame[];
-
-const startTimestamp = performance.now();
-const encoderConfig: VideoEncoderConfig = {
-  codec: 'vp09.00.10.08',
-  width,
-  height,
-  bitrate: 2_000_000,
-  framerate: 30,
-};
-const decoderConfig: VideoDecoderConfig = {
-  codec: 'vp09.00.10.08',
-  codedWidth: width,
-  codedHeight: height,
-};
-const [supportedEncoder, supportedDecoder] = await Promise.all([
-  await VideoEncoder.isConfigSupported(encoderConfig),
-  await VideoDecoder.isConfigSupported(decoderConfig),
-]);
-let encoder: VideoEncoder;
-let decoder: VideoDecoder;
-if (supportedEncoder && supportedDecoder) {
-  encoder = new VideoEncoder({
-    output(chunk, metadata) {
-      const data = new Uint8Array(chunk.byteLength);
-      chunk.copyTo(data);
-      const encoded = new EncodedVideoChunk({
-        timestamp: performance.now() - startTimestamp,
-        type: 'key',
-        data,
-      });
-      frameStorage.push(encoded);
-    },
-    error(e) {
-      console.error('Error', e);
-    },
+  computeProgram.execute({
+    workgroups: [Math.ceil(width / 8), Math.ceil(height / 8), 1],
   });
-  encoder.configure(encoderConfig);
 
-  decoder = new VideoDecoder({
-    output(frame) {
-      pendingFrames.push(frame);
-    },
-    error(e) {
-      console.error('Error', e);
-    },
+  renderProgram.execute({
+    colorAttachments: [
+      {
+        view: context.getCurrentTexture().createView(),
+        clearValue: [0, 0, 0, 1],
+        loadOp: 'clear',
+        storeOp: 'store',
+      },
+    ],
+
+    vertexCount: 6,
   });
-  decoder.configure(decoderConfig);
-} else {
-  throw new Error('Unsupported configuration');
+
+  runtime.flush();
+
+  frame.close();
 }
 
-let frameInProcess = false;
-let frameCounter = 0;
-let time = 0;
-onFrame((delta) => {
-  if (time <= 0) {
-    time += delta;
-    return;
-  }
-  time = 0;
-
+onFrame(() => {
   if (!(video.currentTime > 0)) {
     return;
   }
 
-  (async () => {
-    if (frameInProcess) {
-      return;
-    }
-    frameInProcess = true;
-    const frame = await getFrame();
-    externalTexture.descriptor.source = frame;
+  drawFrame();
+});
 
-    computeProgram.execute({
-      workgroups: [width, height],
-    });
-    const res = (await runtime.readBuffer(resultBuffer)).flat();
-    const data = new Uint8Array(res);
-    device.queue.writeTexture(
-      { texture: runtime.textureFor(alphaTexture) },
-      data,
-      { bytesPerRow: width * 4, rowsPerImage: height },
-      {
-        width,
-        height,
-      },
-    );
-
-    const processedFrame = new VideoFrame(data, {
-      format: 'RGBA',
-      codedHeight: height,
-      codedWidth: width,
-      timestamp: performance.now() - startTimestamp,
-    });
-
-    const keyFrame = frameCounter % 150 === 0;
-    encoder.encode(frame, { keyFrame });
-    processedFrame.close();
-    frame.close();
-    frameCounter++;
-    frameInProcess = false;
-  })();
-
-  if (frameStorage.frames.length > 0) {
-    (async () => {
-      const frame = await frameStorage.pop();
-      if (frame) {
-        decoder.decode(frame);
-      }
-    })();
+onCleanup(() => {
+  for (const track of stream.getTracks()) {
+    track.stop();
   }
-
-  if (pendingFrames.length > 0) {
-    const frame = pendingFrames.shift();
-    if (frame) {
-      externalTexture.descriptor.source = frame;
-      renderProgram.execute({
-        colorAttachments: [
-          {
-            view: context.getCurrentTexture().createView(),
-            clearValue: [0, 0, 0, 0],
-            loadOp: 'clear',
-            storeOp: 'store',
-          },
-        ],
-
-        vertexCount: 6,
-      });
-
-      runtime.flush();
-      frame.close();
-    }
-  }
+  reader.cancel();
 });
