@@ -5,6 +5,9 @@
 }
 */
 
+// Original implementation:
+// https://webgpu.github.io/webgpu-samples/?sample=imageBlur
+
 // -- Hooks into the example environment
 import {
   addElement,
@@ -36,8 +39,8 @@ const tileDim = 128;
 const batch = [4, 4];
 
 const filterSize = addSliderPlumParameter('filter size', 2, {
-  min: 1,
-  max: 15,
+  min: 2,
+  max: 40,
   step: 2,
 });
 const iterations = addSliderPlumParameter('iterations', 1, {

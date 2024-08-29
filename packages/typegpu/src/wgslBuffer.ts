@@ -1,5 +1,5 @@
-import type { AnySchema, Parsed } from 'typed-binary';
-import { SimpleWgslData } from './data';
+import type { Parsed } from 'typed-binary';
+import { SimpleWgslData, WgslArrayImpl } from './data';
 import type { AnyWgslData, BufferUsage, WgslAllocatable } from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
 import type { WgslPlum } from './wgslPlum';
@@ -122,18 +122,23 @@ class WgslBufferImpl<
 
     const enrichedThis = this as WgslBuffer<TData, TAllows | 'vertex'>;
     if (!this.vertexLayout) {
-      if (!(this.dataType instanceof SimpleWgslData)) {
+      if (this.dataType instanceof SimpleWgslData) {
+        this.vertexLayout = {
+          arrayStride: this.dataType.size,
+          stepMode,
+        };
+
+        this._allowedUsages.vertex = bufferUsage(enrichedThis, 'vertex');
+      } else if (this.dataType instanceof WgslArrayImpl) {
+        this.vertexLayout = {
+          arrayStride: this.dataType.elementType.size,
+          stepMode,
+        };
+
+        this._allowedUsages.vertex = bufferUsage(enrichedThis, 'vertex');
+      } else {
         throw new Error('Only simple data types can be used as vertex buffers');
       }
-
-      let underlyingThis = this.dataType as SimpleWgslData<AnySchema>;
-      underlyingThis = underlyingThis.getUnderlyingType();
-      this.vertexLayout = {
-        arrayStride: underlyingThis.size,
-        stepMode,
-      };
-
-      this._allowedUsages.vertex = bufferUsage(enrichedThis, 'vertex');
     }
 
     if (this.vertexLayout.stepMode !== stepMode) {

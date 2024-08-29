@@ -105,6 +105,15 @@ export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
   get label(): string | undefined;
 }
 
+export function isAllocatable(value: unknown): value is WgslAllocatable {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    'dataType' in value &&
+    'flags' in value
+  );
+}
+
 export interface WgslBindable<
   TData extends AnyWgslData = AnyWgslData,
   TUsage extends BufferUsage = BufferUsage,

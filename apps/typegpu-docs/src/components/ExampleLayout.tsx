@@ -9,7 +9,7 @@ export function ExampleLayout() {
   const menuShown = useAtomValue(menuShownAtom);
 
   return (
-    <div className="flex h-screen p-4 gap-4 bg-grayscale-20">
+    <div className="flex h-screen p-4 gap-4 bg-tameplum-50">
       {menuShown ? <SideMenu /> : null}
       <ExamplePage />
     </div>
@@ -18,12 +18,12 @@ export function ExampleLayout() {
 
 function SideMenu() {
   return (
-    <aside className="flex flex-col bg-grayscale-0 rounded-2xl w-[18.75rem] p-5 gap-5">
+    <aside className="flex flex-col bg-white rounded-2xl w-[18.75rem] p-5 gap-5">
       <header className="grid gap-5">
         <div className="grid place-items-center">
           <a href="/typegpu" className="block cursor-pointer">
             <img
-              className="my-7 w-40"
+              className="my-4 w-40"
               src="/typegpu/typegpu-logo-light.svg"
               alt="TypeGPU Logo"
             />
@@ -51,14 +51,30 @@ function SideMenu() {
 
       <ExampleList />
 
-      <div className="flex justify-between text-grayscale-60 text-xs">
+      <div className="flex justify-between text-tameplum-800 text-xs">
         <div>&copy; 2024 Software Mansion S.A.</div>
         <div className="flex gap-3 items-center">
-          <a href="https://github.com/software-mansion/TypeGPU">
-            <img src={DiscordIconSvg.src} alt="github logo" />
+          <a
+            href="https://discord.swmansion.com"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <img
+              src={DiscordIconSvg.src}
+              className="opacity-75"
+              alt="github logo"
+            />
           </a>
-          <a href="https://discord.swmansion.com">
-            <img src={GithubIconSvg.src} alt="discord logo" />
+          <a
+            href="https://github.com/software-mansion/TypeGPU"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <img
+              src={GithubIconSvg.src}
+              className="opacity-75"
+              alt="discord logo"
+            />
           </a>
         </div>
       </div>

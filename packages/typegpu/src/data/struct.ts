@@ -66,10 +66,12 @@ class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
   }
 
   write(output: ISerialOutput, value: Parsed<UnwrapRecord<TProps>>): void {
+    alignIO(output, this.byteAlignment);
     this._innerSchema.write(output, value);
   }
 
   read(input: ISerialInput): Parsed<UnwrapRecord<TProps>> {
+    alignIO(input, this.byteAlignment);
     return this._innerSchema.read(input);
   }
 
