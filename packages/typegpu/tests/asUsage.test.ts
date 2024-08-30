@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { asMutable, asReadonly, asUniform, asVertex, wgsl } from '../src';
 import { u32 } from '../src/data';
+import {
+  asMutable,
+  asReadonly,
+  asUniform,
+  asVertex,
+  wgsl,
+} from '../src/experimental';
 
 global.GPUBufferUsage = {
   MAP_READ: 1,
