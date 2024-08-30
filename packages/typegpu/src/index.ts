@@ -2,6 +2,9 @@
  * @module typegpu
  */
 
+import tgpu from './tgpu';
+export default tgpu;
+
 export * from './errors';
 export * from './types';
 export { AsCallable, ICallable } from './callable';
