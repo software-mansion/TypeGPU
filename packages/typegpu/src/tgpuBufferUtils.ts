@@ -1,12 +1,84 @@
-import type { Parsed } from 'typed-binary';
-import type { WgslBuffer } from '.';
-import type { AnyWgslData, BufferUsage } from './types';
+import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
+import { roundUp } from './mathUtils';
+import type { AnyWgslData, WgslAllocatable } from './types';
 import type { Unmanaged } from './wgslBuffer';
 
 export function write<TData extends AnyWgslData>(
-  buffer: WgslBuffer<TData, BufferUsage> & Unmanaged,
+  buffer: WgslAllocatable<TData> & Unmanaged,
   data: Parsed<TData>,
 ): void {
   const gpuBuffer = buffer.buffer;
   const device = buffer.device;
+
+  if (gpuBuffer.mapState === 'mapped') {
+    const mapped = gpuBuffer.getMappedRange();
+    buffer.dataType.write(new BufferWriter(mapped), data);
+    gpuBuffer.unmap();
+    return;
+  }
+
+  const size = roundUp(buffer.dataType.size, buffer.dataType.byteAlignment);
+  const hostBuffer = new ArrayBuffer(size);
+  buffer.dataType.write(new BufferWriter(hostBuffer), data);
+  device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
+}
+
+export async function mapWrite<TData extends AnyWgslData>(
+  buffer: WgslAllocatable<TData> & Unmanaged,
+  data: Parsed<TData>,
+): Promise<void> {
+  const gpuBuffer = buffer.buffer;
+  if (!(gpuBuffer.usage & GPUBufferUsage.MAP_WRITE)) {
+    throw new Error('Buffer does not have the proper usage flags');
+  }
+  await gpuBuffer.mapAsync(GPUMapMode.WRITE);
+  write(buffer, data);
+}
+
+export async function read<TData extends AnyWgslData>(
+  buffer: WgslAllocatable<TData> & Unmanaged,
+): Promise<Parsed<TData>> {
+  const gpuBuffer = buffer.buffer;
+  const device = buffer.device;
+
+  if (
+    gpuBuffer.usage & GPUBufferUsage.MAP_READ &&
+    gpuBuffer.mapState !== 'mapped'
+  ) {
+    await gpuBuffer.mapAsync(GPUMapMode.READ);
+  }
+
+  if (gpuBuffer.mapState === 'mapped') {
+    const mapped = gpuBuffer.getMappedRange();
+    const res = buffer.dataType.read(new BufferReader(mapped)) as Parsed<TData>;
+    gpuBuffer.unmap();
+    return res;
+  }
+
+  const stagingBuffer = device.createBuffer({
+    size: buffer.dataType.size,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
+
+  const commandEncoder = device.createCommandEncoder();
+  commandEncoder.copyBufferToBuffer(
+    gpuBuffer,
+    0,
+    stagingBuffer,
+    0,
+    buffer.dataType.size,
+  );
+
+  device.queue.submit([commandEncoder.finish()]);
+  await device.queue.onSubmittedWorkDone();
+  await stagingBuffer.mapAsync(GPUMapMode.READ, 0, buffer.dataType.size);
+
+  const res = buffer.dataType.read(
+    new BufferReader(stagingBuffer.getMappedRange()),
+  ) as Parsed<TData>;
+
+  stagingBuffer.unmap();
+  stagingBuffer.destroy();
+
+  return res;
 }
