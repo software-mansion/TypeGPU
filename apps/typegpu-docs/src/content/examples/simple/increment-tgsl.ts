@@ -6,18 +6,8 @@
 */
 
 import { addElement } from '@typegpu/example-toolkit';
-import {
-  type AnyWgslData,
-  type BufferUsage,
-  type WgslBuffer,
-  createRuntime,
-  tgpu,
-} from 'typegpu';
+import { createRuntime, tgpu } from 'typegpu';
 import { vec2f } from 'typegpu/data';
-
-const asMutable = <TData extends AnyWgslData, TAllows extends BufferUsage>(
-  buffer: WgslBuffer<TData, TAllows>,
-) => buffer.asMutable();
 
 // ---
 addElement('button', {
@@ -35,7 +25,7 @@ table.setMatrix([[0]]);
 // ---
 
 const counterBuffer = tgpu.buffer(vec2f, vec2f(0, 1)).$allowMutable();
-const counter = asMutable(counterBuffer);
+const counter = counterBuffer.asMutable();
 
 const increment = tgpu
   .procedure(() => {
