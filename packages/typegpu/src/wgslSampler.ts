@@ -1,13 +1,13 @@
 import type {
   ResolutionCtx,
+  WgslNamable,
   WgslRenderResource,
   WgslSamplerType,
 } from './types';
 import { WgslIdentifier } from './wgslIdentifier';
 
-export interface WgslSampler extends WgslRenderResource {
+export interface WgslSampler extends WgslRenderResource, WgslNamable {
   readonly descriptor: GPUSamplerDescriptor;
-  $name(label: string): WgslSampler;
 }
 
 export function sampler(descriptor: GPUSamplerDescriptor): WgslSampler {

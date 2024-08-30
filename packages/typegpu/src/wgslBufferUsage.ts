@@ -14,9 +14,7 @@ import { WgslIdentifier } from './wgslIdentifier';
 export interface WgslBufferUsage<
   TData extends AnyWgslData,
   TUsage extends BufferUsage = BufferUsage,
-> extends WgslBindable<TData, TUsage> {
-  $name(label: string): WgslBufferUsage<TData, TUsage>;
-}
+> extends WgslBindable<TData, TUsage> {}
 
 export function bufferUsage<
   TData extends AnyWgslData,
@@ -35,28 +33,21 @@ export function bufferUsage<
 class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
   implements WgslBufferUsage<TData, TUsage>
 {
-  private _label: string | undefined;
-
   constructor(
     public readonly buffer: WgslBuffer<TData, TUsage>,
     public readonly usage: TUsage,
   ) {}
 
   get label() {
-    return this._label;
+    return this.buffer.label;
   }
 
   get allocatable() {
     return this.buffer;
   }
 
-  $name(label: string | undefined) {
-    this._label = label;
-    return this;
-  }
-
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier();
+    const identifier = new WgslIdentifier().$name(this.label);
 
     ctx.addBinding(this, identifier);
 
@@ -64,6 +55,6 @@ class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
   }
 
   toString(): string {
-    return `${this.usage}:${this._label ?? '<unnamed>'}`;
+    return `${this.usage}:${this.label ?? '<unnamed>'}`;
   }
 }

@@ -1,6 +1,11 @@
 import type { Parsed } from 'typed-binary';
 import { SimpleWgslData, WgslArrayImpl } from './data';
-import type { AnyWgslData, BufferUsage, WgslAllocatable } from './types';
+import type {
+  AnyWgslData,
+  BufferUsage,
+  WgslAllocatable,
+  WgslNamable,
+} from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
 import type { WgslPlum } from './wgslPlum';
 
@@ -17,8 +22,8 @@ type UsageGuard<
 export interface WgslBuffer<
   TData extends AnyWgslData,
   TAllows extends BufferUsage = never,
-> extends WgslAllocatable<TData> {
-  $name(label: string): WgslBuffer<TData, TAllows>;
+> extends WgslAllocatable<TData>,
+    WgslNamable {
   $allowUniform(): WgslBuffer<TData, TAllows | 'uniform'>;
   $allowReadonly(): WgslBuffer<TData, TAllows | 'readonly'>;
   $allowMutable(): WgslBuffer<TData, TAllows | 'mutable'>;
@@ -31,6 +36,8 @@ export interface WgslBuffer<
   asMutable(): UsageGuard<'mutable', TData, TAllows>;
   asReadonly(): UsageGuard<'readonly', TData, TAllows>;
   asVertex(): UsageGuard<'vertex', TData, TAllows>;
+
+  readonly label: string | undefined;
 }
 
 export function buffer<
