@@ -12,6 +12,7 @@ export * from '../wgslBuiltin';
 
 export { default as wgsl } from '../wgsl';
 export { createRuntime, CreateRuntimeOptions } from '../createRuntime';
+export { asReadonly, asUniform, asMutable, asVertex } from '../wgslBuffer';
 
 export type { WgslBuffer } from '../wgslBuffer';
 export type { WgslBufferUsage } from '../wgslBufferUsage';

@@ -12,7 +12,16 @@ import {
   addSliderPlumParameter,
   onFrame,
 } from '@typegpu/example-toolkit';
-import { type WgslBufferUsage, builtin, createRuntime, wgsl } from 'typegpu';
+import {
+  type WgslBufferUsage,
+  asMutable,
+  asReadonly,
+  asUniform,
+  asVertex,
+  builtin,
+  createRuntime,
+  wgsl,
+} from 'typegpu';
 import { arrayOf, f32, struct, u32, vec2f } from 'typegpu/data';
 
 const runtime = await createRuntime();
@@ -91,8 +100,8 @@ const trianglePosBuffers = Array.from({ length: 2 }, () => {
 });
 
 const bufferPairs = [
-  [trianglePosBuffers[0].asReadonly(), trianglePosBuffers[1].asMutable()],
-  [trianglePosBuffers[1].asReadonly(), trianglePosBuffers[0].asMutable()],
+  [asReadonly(trianglePosBuffers[0]), asMutable(trianglePosBuffers[1])],
+  [asReadonly(trianglePosBuffers[1]), asMutable(trianglePosBuffers[0])],
 ];
 
 const readSlot = wgsl.slot<WgslBufferUsage<TrianglePosData, 'readonly'>>();
@@ -131,10 +140,10 @@ const renderPipelines = [0, 1].map((idx) =>
   runtime.makeRenderPipeline({
     vertex: {
       code: wgsl`
-        let triangleSize = ${triangleSizeBuffer.asUniform()};
+        let triangleSize = ${asUniform(triangleSizeBuffer)};
         let instanceInfo = ${bufferPairs[idx][0]}[${builtin.instanceIndex}];
         let rotated = ${rotate}(
-          ${triangleVertex.asVertex()},
+          ${asVertex(triangleVertex)},
           ${getRotationFromVelocity}(instanceInfo.velocity),
         );
 
@@ -174,17 +183,17 @@ const renderPipelines = [0, 1].map((idx) =>
 const computePipelines = [0, 1].map((idx) =>
   runtime.makeComputePipeline({
     code: wgsl`
-      let triangleSize = ${triangleSizeBuffer.asUniform()};
+      let triangleSize = ${asUniform(triangleSizeBuffer)};
       let index = ${builtin.globalInvocationId}.x;
       var instanceInfo = ${readSlot}[index];
-      let params = ${parametesBuffer.asReadonly()};
+      let params = ${asReadonly(parametesBuffer)};
 
       var separation = vec2(0.0, 0.0);
       var alignment = vec2(0.0, 0.0);
       var alignmentCount = 0u;
       var cohesion = vec2(0.0, 0.0);
       var cohesionCount = 0u;
-      for (var i = 0u; i < ${triangleAmountBuffer.asUniform()}; i = i + 1) {
+      for (var i = 0u; i < ${asUniform(triangleAmountBuffer)}; i = i + 1) {
         if (i == index) {
           continue;
         }
