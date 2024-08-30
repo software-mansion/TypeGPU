@@ -13,7 +13,7 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { builtin, createRuntime, wgsl } from 'typegpu';
+import { asMutable, asReadonly, builtin, createRuntime, wgsl } from 'typegpu';
 import { type Parsed, dynamicArrayOf, f32, struct, vec2f } from 'typegpu/data';
 
 const runtime = await createRuntime();
@@ -72,16 +72,17 @@ const firstMatrixBuffer = wgsl
 const secondMatrixBuffer = wgsl
   .buffer(MatrixStruct, secondMatrixPlum)
   .$name('second_matrix')
-  .$allowReadonly();
+  .$allowReadonly()
+  .$allowMutable();
 
 const resultMatrixBuffer = wgsl
   .buffer(MatrixStruct)
   .$name('result_matrix')
   .$allowMutable();
 
-const firstMatrixData = firstMatrixBuffer.asReadonly();
-const secondMatrixData = secondMatrixBuffer.asReadonly();
-const resultMatrixData = resultMatrixBuffer.asMutable();
+const firstMatrixData = asReadonly(firstMatrixBuffer);
+const secondMatrixData = asReadonly(secondMatrixBuffer);
+const resultMatrixData = asMutable(resultMatrixBuffer);
 
 const program = runtime.makeComputePipeline({
   workgroupSize: workgroupSize,

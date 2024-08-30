@@ -20,6 +20,7 @@ import {
   type StorageTextureParams,
   type WgslTexture,
   type WgslTextureView,
+  asUniform,
   builtin,
   createRuntime,
   wgsl,
@@ -63,7 +64,7 @@ const blurParamsBuffer = wgsl
   )
   .$name('BlurParams')
   .$allowUniform();
-const params = blurParamsBuffer.asUniform();
+const params = asUniform(blurParamsBuffer);
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
