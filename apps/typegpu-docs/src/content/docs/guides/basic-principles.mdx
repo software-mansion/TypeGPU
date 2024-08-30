@@ -69,7 +69,7 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
     ```ts
     // counter.ts
 
-    import { wgsl } from 'typegpu';
+    import { wgsl, asMutable } from 'typegpu';
     import { u32 } from 'typegpu/data';
 
     /**
@@ -96,7 +96,7 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
     const pipeline = runtime.makeComputePipeline({
       // This code will run on the GPU. Simply using `counterBuffer` in code
       // will create a layout and bind group to house it.
-      code: wgsl`${counterBuffer.asMutable()} += 1;`,
+      code: wgsl`${asMutable(counterBuffer)} += 1;`,
     });
 
     pipeline.execute();
@@ -258,7 +258,7 @@ fn main() {
 <Tabs>
   <TabItem label="TypeGPU">
     ```ts
-    import { createRuntime, wgsl } from 'typegpu';
+    import { createRuntime, wgsl, asUniform } from 'typegpu';
     import { struct, u32 } from 'typegpu/data';
 
     // Type-safe struct definition.
@@ -279,7 +279,7 @@ fn main() {
       code: wgsl`
         let x = ${builtin.globalInvocationId}.x;
         let y = ${builtin.globalInvocationId}.y;
-        let idx = x + y * ${canvasPropsBuffer.asUniform()}.width;
+        let idx = x + y * ${asUniform(canvasPropsBuffer)}.width;
 
         // do something with 'idx'
       `,
