@@ -1,6 +1,11 @@
 import type { Parsed } from 'typed-binary';
 import { SimpleWgslData, WgslArrayImpl } from './data';
-import type { AnyWgslData, BufferUsage, WgslAllocatable, WgslNamable } from './types';
+import type {
+  AnyWgslData,
+  BufferUsage,
+  WgslAllocatable,
+  WgslNamable,
+} from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
 import type { WgslPlum } from './wgslPlum';
 

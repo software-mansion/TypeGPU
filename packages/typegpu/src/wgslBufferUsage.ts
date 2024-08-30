@@ -47,7 +47,7 @@ class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier();
+    const identifier = new WgslIdentifier().$name(this.label);
 
     ctx.addBinding(this, identifier);
 
