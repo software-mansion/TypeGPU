@@ -1,10 +1,11 @@
 import { BufferWriter, type Parsed } from 'typed-binary';
 import { SimpleWgslData, WgslArrayImpl } from './data';
-import type {
-  AnyWgslData,
-  BufferUsage,
-  WgslAllocatable,
-  WgslNamable,
+import {
+  type AnyWgslData,
+  type BufferUsage,
+  type WgslAllocatable,
+  type WgslNamable,
+  isGPUBuffer,
 } from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
 import type { WgslPlum } from './wgslPlum';
@@ -124,8 +125,8 @@ class WgslBufferImpl<
       | GPUBuffer
       | undefined,
   ) {
-    if (initialOrBuffer instanceof GPUBuffer) {
-      this._buffer = initialOrBuffer;
+    if (isGPUBuffer(initialOrBuffer)) {
+      this._buffer = initialOrBuffer as GPUBuffer;
     } else {
       this.initial = initialOrBuffer;
     }

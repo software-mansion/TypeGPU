@@ -249,3 +249,12 @@ export function isPointer(
 ): value is AnyWgslPointer {
   return 'pointsTo' in value;
 }
+
+export function isGPUBuffer(value: unknown): value is GPUBuffer {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    'getMappedRange' in value &&
+    'mapAsync' in value
+  );
+}
