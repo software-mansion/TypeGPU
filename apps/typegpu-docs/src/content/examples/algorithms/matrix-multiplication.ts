@@ -72,8 +72,7 @@ const firstMatrixBuffer = wgsl
 const secondMatrixBuffer = wgsl
   .buffer(MatrixStruct, secondMatrixPlum)
   .$name('second_matrix')
-  .$allowReadonly()
-  .$allowMutable();
+  .$allowReadonly();
 
 const resultMatrixBuffer = wgsl
   .buffer(MatrixStruct)
