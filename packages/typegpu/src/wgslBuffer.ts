@@ -14,7 +14,7 @@ import type { WgslPlum } from './wgslPlum';
 // Public API
 // ----------
 
-interface Unmanaged {
+export interface Unmanaged {
   get device(): GPUDevice;
   get buffer(): GPUBuffer;
 }
