@@ -4,6 +4,7 @@ import {
   type ResolutionCtx,
   type SlotValuePair,
   type Wgsl,
+  type WgslNamable,
   type WgslResolvable,
   type WgslSlot,
   isResolvable,
@@ -14,9 +15,7 @@ import { getBuiltinInfo } from './wgslBuiltin';
 // Public API
 // ----------
 
-export interface WgslCode extends WgslResolvable {
-  $name(label?: string | undefined): WgslCode;
-
+export interface WgslCode extends WgslResolvable, WgslNamable {
   with<T>(slot: WgslSlot<T>, value: Eventual<T>): BoundWgslCode;
 }
 

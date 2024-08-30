@@ -1,6 +1,11 @@
 import { BufferWriter, type Parsed } from 'typed-binary';
 import { SimpleWgslData, WgslArrayImpl } from './data';
-import type { AnyWgslData, BufferUsage, WgslAllocatable } from './types';
+import type {
+  AnyWgslData,
+  BufferUsage,
+  WgslAllocatable,
+  WgslNamable,
+} from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
 import type { WgslPlum } from './wgslPlum';
 
@@ -24,8 +29,8 @@ type UsageGuard<
 export interface WgslBuffer<
   TData extends AnyWgslData,
   TAllows extends BufferUsage = never,
-> extends WgslAllocatable<TData> {
-  $name(label: string): KeepUnion<this, Unmanaged, WgslBuffer<TData, TAllows>>;
+> extends WgslAllocatable<TData>,
+    WgslNamable {
   $allowUniform(): KeepUnion<
     this,
     Unmanaged,
@@ -55,6 +60,8 @@ export interface WgslBuffer<
   asMutable(): UsageGuard<'mutable', TData, TAllows>;
   asReadonly(): UsageGuard<'readonly', TData, TAllows>;
   asVertex(): UsageGuard<'vertex', TData, TAllows>;
+
+  readonly label: string | undefined;
 }
 
 export function buffer<
