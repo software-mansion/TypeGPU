@@ -146,7 +146,7 @@ class WgslBufferImpl<
       this._buffer = this._device.createBuffer({
         size: this.dataType.size,
         usage: this.flags,
-        mappedAtCreation: true,
+        mappedAtCreation: !!this.initial,
       });
       if (this.initial) {
         const writer = new BufferWriter(this._buffer.getMappedRange());
