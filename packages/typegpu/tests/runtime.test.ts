@@ -1,8 +1,8 @@
-import { wgsl } from 'typegpu';
 import { describe, expect, it, vi } from 'vitest';
 import { afterEach } from 'vitest';
 import { createRuntime } from '../src/createRuntime';
 import { struct, u32, vec3i, vec4u } from '../src/data';
+import { wgsl } from '../src/index';
 import { plum } from '../src/wgslPlum';
 
 global.GPUBufferUsage = {
