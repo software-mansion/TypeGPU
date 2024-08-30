@@ -32,12 +32,6 @@ export interface AllowVertex {
   vertexAllowed: true;
 }
 
-type UsageGuard<
-  TUsage extends BufferUsage,
-  TData extends AnyWgslData,
-  TAllows,
-> = TUsage extends TAllows ? WgslBufferUsage<TData, TUsage> : null;
-
 type AllowedUsages<TData extends AnyWgslData> = {
   uniform: WgslBufferUsage<TData, 'uniform'> | null;
   mutable: WgslBufferUsage<TData, 'mutable'> | null;
@@ -234,16 +228,14 @@ function capitalizeFirstLetter(string: string) {
 function asUsage<
   TUsage extends BufferUsage,
   TType extends AllowVertex | AllowUniform | AllowReadonly | AllowMutable,
->(usage: TUsage, usageType: TType) {
-  return <TData extends AnyWgslData, TAllows extends BufferUsage>(
-    buffer: WgslBuffer<TData> & typeof usageType,
-  ) => {
+>(usage: TUsage, _: TType) {
+  return <TData extends AnyWgslData>(buffer: WgslBuffer<TData> & TType) => {
     if (buffer._usages[usage] === null) {
       throw new Error(
         `Cannot pass ${buffer} to as${capitalizeFirstLetter(usage)} function, as the buffer does not allow ${usage} usage. To allow it, use $allow${capitalizeFirstLetter(usage)} WgslBuffer method.`,
       );
     }
-    return buffer._usages[usage] as UsageGuard<TUsage, TData, TAllows>;
+    return buffer._usages[usage];
   };
 }
 
