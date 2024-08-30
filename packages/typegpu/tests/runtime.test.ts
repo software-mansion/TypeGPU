@@ -1,4 +1,4 @@
-import { asUniform, wgsl, asReadonly } from 'typegpu';
+import { asReadonly, asUniform, wgsl } from 'typegpu';
 import { describe, expect, it, vi } from 'vitest';
 import { afterEach } from 'vitest';
 import { createRuntime } from '../src/createRuntime';
