@@ -13,7 +13,7 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { builtin, createRuntime, wgsl } from 'typegpu';
+import { asReadonly, asUniform, builtin, createRuntime, wgsl } from 'typegpu';
 import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'typegpu/data';
 
 const X = 7;
@@ -110,13 +110,13 @@ const boxMatrixBuffer = wgsl
   )
   .$name('box_array')
   .$allowReadonly();
-const boxMatrixData = boxMatrixBuffer.asReadonly();
+const boxMatrixData = asReadonly(boxMatrixBuffer);
 
 const cameraPositionBuffer = wgsl
   .buffer(vec3f, cameraPositionPlum)
   .$name('camera_position')
   .$allowReadonly();
-const cameraPositionData = cameraPositionBuffer.asReadonly();
+const cameraPositionData = asReadonly(cameraPositionBuffer);
 
 const cameraAxesBuffer = wgsl
   .buffer(
@@ -129,7 +129,7 @@ const cameraAxesBuffer = wgsl
   )
   .$name('camera_axes')
   .$allowReadonly();
-const cameraAxesData = cameraAxesBuffer.asReadonly();
+const cameraAxesData = asReadonly(cameraAxesBuffer);
 
 const canvasDimsBuffer = wgsl
   .buffer(
@@ -141,13 +141,13 @@ const canvasDimsBuffer = wgsl
   )
   .$name('canvas_dims')
   .$allowUniform();
-const canvasDimsData = canvasDimsBuffer.asUniform();
+const canvasDimsData = asUniform(canvasDimsBuffer);
 
 const boxSizeBuffer = wgsl
   .buffer(u32, boxSizePlum)
   .$name('box_size')
   .$allowUniform();
-const boxSizeData = boxSizeBuffer.asUniform();
+const boxSizeData = asUniform(boxSizeBuffer);
 
 const getBoxIntersectionFn = wgsl.fn`(
   boundMin: vec3f,

@@ -14,7 +14,7 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { builtin, createRuntime, wgsl } from 'typegpu';
+import { asUniform, builtin, createRuntime, wgsl } from 'typegpu';
 import { f32, vec2f } from 'typegpu/data';
 
 // Layout
@@ -30,7 +30,7 @@ const sampler = wgsl.sampler({
 
 const thresholdBuffer = wgsl.buffer(f32).$name('threshold').$allowUniform();
 
-const thresholdData = thresholdBuffer.asUniform();
+const thresholdData = asUniform(thresholdBuffer);
 
 if (navigator.mediaDevices.getUserMedia) {
   video.srcObject = await navigator.mediaDevices.getUserMedia({

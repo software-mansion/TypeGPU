@@ -27,6 +27,16 @@ type UsageGuard<
   TAllows,
 > = TUsage extends TAllows ? WgslBufferUsage<TData, TUsage> : null;
 
+type AllowedUsages<
+  TData extends AnyWgslData,
+  TAllows extends BufferUsage = never,
+> = {
+  uniform: WgslBufferUsage<TData, TAllows | 'uniform'> | null;
+  mutable: WgslBufferUsage<TData, TAllows | 'mutable'> | null;
+  readonly: WgslBufferUsage<TData, TAllows | 'readonly'> | null;
+  vertex: WgslBufferUsage<TData, TAllows | 'vertex'> | null;
+};
+
 export interface WgslBuffer<
   TData extends AnyWgslData,
   TAllows extends BufferUsage = never,
@@ -57,11 +67,7 @@ export interface WgslBuffer<
 
   get buffer(): GPUBuffer;
 
-  asUniform(): UsageGuard<'uniform', TData, TAllows>;
-  asMutable(): UsageGuard<'mutable', TData, TAllows>;
-  asReadonly(): UsageGuard<'readonly', TData, TAllows>;
-  asVertex(): UsageGuard<'vertex', TData, TAllows>;
-
+  _usages: AllowedUsages<TData, TAllows>;
   readonly label: string | undefined;
 }
 
@@ -102,12 +108,7 @@ class WgslBufferImpl<
   private _buffer: GPUBuffer | null = null;
 
   public vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null = null;
-  private _allowedUsages: {
-    uniform: WgslBufferUsage<TData, TAllows | 'uniform'> | null;
-    mutable: WgslBufferUsage<TData, TAllows | 'mutable'> | null;
-    readonly: WgslBufferUsage<TData, TAllows | 'readonly'> | null;
-    vertex: WgslBufferUsage<TData, TAllows | 'vertex'> | null;
-  } = {
+  public _usages: AllowedUsages<TData, TAllows> = {
     uniform: null,
     mutable: null,
     readonly: null,
@@ -179,8 +180,8 @@ class WgslBufferImpl<
       Unmanaged,
       WgslBuffer<TData, TAllows | 'uniform'>
     >;
-    if (!this._allowedUsages.uniform) {
-      this._allowedUsages.uniform = bufferUsage(enrichedThis, 'uniform');
+    if (!this._usages.uniform) {
+      this._usages.uniform = bufferUsage(enrichedThis, 'uniform');
     }
 
     return enrichedThis;
@@ -194,8 +195,8 @@ class WgslBufferImpl<
       Unmanaged,
       WgslBuffer<TData, TAllows | 'readonly'>
     >;
-    if (!this._allowedUsages.readonly) {
-      this._allowedUsages.readonly = bufferUsage(enrichedThis, 'readonly');
+    if (!this._usages.readonly) {
+      this._usages.readonly = bufferUsage(enrichedThis, 'readonly');
     }
 
     return enrichedThis;
@@ -209,8 +210,8 @@ class WgslBufferImpl<
       Unmanaged,
       WgslBuffer<TData, TAllows | 'mutable'>
     >;
-    if (!this._allowedUsages.mutable) {
-      this._allowedUsages.mutable = bufferUsage(enrichedThis, 'mutable');
+    if (!this._usages.mutable) {
+      this._usages.mutable = bufferUsage(enrichedThis, 'mutable');
     }
 
     return enrichedThis;
@@ -231,14 +232,14 @@ class WgslBufferImpl<
           stepMode,
         };
 
-        this._allowedUsages.vertex = bufferUsage(enrichedThis, 'vertex');
+        this._usages.vertex = bufferUsage(enrichedThis, 'vertex');
       } else if (this.dataType instanceof WgslArrayImpl) {
         this.vertexLayout = {
           arrayStride: this.dataType.elementType.size,
           stepMode,
         };
 
-        this._allowedUsages.vertex = bufferUsage(enrichedThis, 'vertex');
+        this._usages.vertex = bufferUsage(enrichedThis, 'vertex');
       } else {
         throw new Error('Only simple data types can be used as vertex buffers');
       }
@@ -262,27 +263,29 @@ class WgslBufferImpl<
     return this as WgslBuffer<TData, TAllows> & Unmanaged;
   }
 
-  asUniform() {
-    return this._allowedUsages.uniform as UsageGuard<'uniform', TData, TAllows>;
-  }
-
-  asMutable() {
-    return this._allowedUsages.mutable as UsageGuard<'mutable', TData, TAllows>;
-  }
-
-  asReadonly() {
-    return this._allowedUsages.readonly as UsageGuard<
-      'readonly',
-      TData,
-      TAllows
-    >;
-  }
-
-  asVertex() {
-    return this._allowedUsages.vertex as UsageGuard<'vertex', TData, TAllows>;
-  }
-
   toString(): string {
     return `buffer:${this._label ?? '<unnamed>'}`;
   }
 }
+
+function capitalizeFirstLetter(string: string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+function asUsage<TUsage extends BufferUsage>(usage: TUsage) {
+  return <TData extends AnyWgslData, TAllows extends BufferUsage>(
+    buffer: WgslBuffer<TData, TAllows>,
+  ) => {
+    if (buffer._usages[usage] === null) {
+      throw new Error(
+        `Cannot pass ${buffer} to as${capitalizeFirstLetter(usage)} function, as the buffer does not allow ${usage} usage. To allow it, use $allow${capitalizeFirstLetter(usage)} WgslBuffer method.`,
+      );
+    }
+    return buffer._usages[usage] as UsageGuard<TUsage, TData, TAllows>;
+  };
+}
+
+export const asUniform = asUsage('uniform');
+export const asReadonly = asUsage('readonly');
+export const asMutable = asUsage('mutable');
+export const asVertex = asUsage('vertex');

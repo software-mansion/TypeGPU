@@ -143,6 +143,10 @@ importers:
         version: 1.8.2
 
   packages/typegpu:
+    dependencies:
+      typed-binary:
+        specifier: ^4.0.1
+        version: 4.0.1
     devDependencies:
       '@typegpu/wgsl-parser':
         specifier: workspace:*
@@ -159,9 +163,6 @@ importers:
       tsx:
         specifier: ^4.16.2
         version: 4.16.2
-      typed-binary:
-        specifier: ^4.0.0
-        version: 4.0.0
       typegpu:
         specifier: workspace:*
         version: 'link:'
@@ -7058,6 +7059,11 @@ packages:
 
   /typed-binary@4.0.0:
     resolution: {integrity: sha512-6ZXhbBePH4XZY57o23PV6O/HAYWcsAkCSwTKI6DrN5xMBwOV+I1G+MtytSY2v+QU3VPzB5Kz6268Q3qYD0XIYA==}
+    dev: false
+
+  /typed-binary@4.0.1:
+    resolution: {integrity: sha512-nne2iMvXX8Qi3KI7do55udYsPNIUr7zFhPJNdWpujkWUzr6sJK6gQjCUcZGMM6+lws75oiFtGk8if6S2KgWppg==}
+    dev: false
 
   /typedoc-plugin-markdown@4.2.3(typedoc@0.26.5):
     resolution: {integrity: sha512-esucQj79SFYOv0f5XVha7QWdLUH5C5HRlDf7Z8CXzHedmVPn7jox6Gt7FdoBXN8AFxyHpa3Lbuxu65Dobwt+4Q==}
