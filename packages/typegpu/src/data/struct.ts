@@ -19,7 +19,9 @@ import type {
 } from '../types';
 import { code } from '../wgslCode';
 import { WgslIdentifier } from '../wgslIdentifier';
+import { WgslDataCustomAlignedImpl } from './align';
 import alignIO from './alignIO';
+import { WgslDataCustomSizedImpl } from './size';
 
 // ----------
 // Public API
@@ -70,10 +72,12 @@ class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
   }
 
   write(output: ISerialOutput, value: Parsed<UnwrapRecord<TProps>>): void {
+    alignIO(output, this.byteAlignment);
     this._innerSchema.write(output, value);
   }
 
   read(input: ISerialInput): Parsed<UnwrapRecord<TProps>> {
+    alignIO(input, this.byteAlignment);
     return this._innerSchema.read(input);
   }
 
@@ -91,10 +95,19 @@ class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
 
     ctx.addDeclaration(code`
       struct ${identifier} {
-        ${Object.entries(this._properties).map(([key, field]) => code`${key}: ${field},\n`)}
+        ${Object.entries(this._properties).map(([key, field]) => code`${getAttribute(field) ?? ''}${key}: ${field},\n`)}
       }
     `);
 
     return ctx.resolve(identifier);
+  }
+}
+
+function getAttribute(field: AnyWgslData): string | undefined {
+  if (field instanceof WgslDataCustomAlignedImpl) {
+    return `@align(${field.byteAlignment}) `;
+  }
+  if (field instanceof WgslDataCustomSizedImpl) {
+    return `@size(${field.size}) `;
   }
 }

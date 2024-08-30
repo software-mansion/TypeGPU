@@ -14,7 +14,7 @@ import {
   type Unwrap,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { ResolutionCtx, Wgsl, WgslData } from '../types';
+import type { ResolutionCtx, WgslData } from '../types';
 import alignIO from './alignIO';
 
 export class SimpleWgslData<TSchema extends AnySchema>
@@ -23,7 +23,7 @@ export class SimpleWgslData<TSchema extends AnySchema>
 {
   public readonly size: number;
   public readonly byteAlignment: number;
-  public readonly expressionCode: Wgsl;
+  public readonly expressionCode: string;
 
   private readonly _innerSchema: TSchema;
 
@@ -37,7 +37,7 @@ export class SimpleWgslData<TSchema extends AnySchema>
   }: {
     schema: TSchema;
     byteAlignment: number;
-    code: Wgsl;
+    code: string;
   }) {
     super();
 
@@ -94,6 +94,6 @@ export class SimpleWgslData<TSchema extends AnySchema>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    return ctx.resolve(this.expressionCode);
+    return this.expressionCode;
   }
 }

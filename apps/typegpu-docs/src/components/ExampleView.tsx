@@ -176,7 +176,7 @@ export function ExampleView({ example, isPlayground = false }: Props) {
           </div>
 
           {codeEditorShowing ? (
-            <div className="relative rounded-xl h-full bg-grayscale-0 overflow-hidden">
+            <div className="relative h-full">
               <div className="absolute inset-0">
                 <CodeEditor code={code} onCodeChange={handleCodeChange} />
               </div>
