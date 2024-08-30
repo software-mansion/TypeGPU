@@ -126,7 +126,7 @@ class WgslBufferImpl<
       | undefined,
   ) {
     if (isGPUBuffer(initialOrBuffer)) {
-      this._buffer = initialOrBuffer as GPUBuffer;
+      this._buffer = initialOrBuffer;
     } else {
       this.initial = initialOrBuffer;
     }
