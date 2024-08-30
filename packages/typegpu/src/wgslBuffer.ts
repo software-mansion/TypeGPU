@@ -19,7 +19,18 @@ export interface Unmanaged {
   get buffer(): GPUBuffer;
 }
 
-type KeepUnion<T, U, N> = T extends U ? N & U : N;
+export interface AllowUniform {
+  uniformAllowed: true;
+}
+export interface AllowReadonly {
+  readonlyAllowed: true;
+}
+export interface AllowMutable {
+  mutableAllowed: true;
+}
+export interface AllowVertex {
+  vertexAllowed: true;
+}
 
 type UsageGuard<
   TUsage extends BufferUsage,
@@ -27,69 +38,41 @@ type UsageGuard<
   TAllows,
 > = TUsage extends TAllows ? WgslBufferUsage<TData, TUsage> : null;
 
-type AllowedUsages<
-  TData extends AnyWgslData,
-  TAllows extends BufferUsage = never,
-> = {
-  uniform: WgslBufferUsage<TData, TAllows | 'uniform'> | null;
-  mutable: WgslBufferUsage<TData, TAllows | 'mutable'> | null;
-  readonly: WgslBufferUsage<TData, TAllows | 'readonly'> | null;
-  vertex: WgslBufferUsage<TData, TAllows | 'vertex'> | null;
+type AllowedUsages<TData extends AnyWgslData> = {
+  uniform: WgslBufferUsage<TData, 'uniform'> | null;
+  mutable: WgslBufferUsage<TData, 'mutable'> | null;
+  readonly: WgslBufferUsage<TData, 'readonly'> | null;
+  vertex: WgslBufferUsage<TData, 'vertex'> | null;
 };
 
-export interface WgslBuffer<
-  TData extends AnyWgslData,
-  TAllows extends BufferUsage = never,
-> extends WgslAllocatable<TData>,
+export interface WgslBuffer<TData extends AnyWgslData>
+  extends WgslAllocatable<TData>,
     WgslNamable {
-  $allowUniform(): KeepUnion<
-    this,
-    Unmanaged,
-    WgslBuffer<TData, TAllows | 'uniform'>
-  >;
-  $allowReadonly(): KeepUnion<
-    this,
-    Unmanaged,
-    WgslBuffer<TData, TAllows | 'readonly'>
-  >;
-  $allowMutable(): KeepUnion<
-    this,
-    Unmanaged,
-    WgslBuffer<TData, TAllows | 'mutable'>
-  >;
-  $allowVertex(
-    stepMode: 'vertex' | 'instance',
-  ): KeepUnion<this, Unmanaged, WgslBuffer<TData, TAllows | 'vertex'>>;
-  $addFlags(
-    flags: GPUBufferUsageFlags,
-  ): KeepUnion<this, Unmanaged, WgslBuffer<TData, TAllows>>;
-  $device(device: GPUDevice): WgslBuffer<TData, TAllows> & Unmanaged;
+  $allowUniform(): this & AllowUniform;
+  $allowReadonly(): this & AllowReadonly;
+  $allowMutable(): this & AllowMutable;
+  $allowVertex(stepMode: 'vertex' | 'instance'): this & AllowVertex;
+  $addFlags(flags: GPUBufferUsageFlags): this;
+  $device(device: GPUDevice): this & Unmanaged;
 
-  get buffer(): GPUBuffer;
-
-  _usages: AllowedUsages<TData, TAllows>;
+  _usages: AllowedUsages<TData>;
   readonly label: string | undefined;
 }
 
-export function buffer<
-  TData extends AnyWgslData,
-  TUsage extends BufferUsage = never,
->(
+export function buffer<TData extends AnyWgslData>(
   typeSchema: TData,
   initial?: Parsed<TData> | WgslPlum<Parsed<TData>> | undefined,
-): WgslBuffer<TData, TUsage>;
+): WgslBuffer<TData>;
 
-export function buffer<
-  TData extends AnyWgslData,
-  TUsage extends BufferUsage = never,
->(typeSchema: TData, gpuBuffer: GPUBuffer): WgslBuffer<TData, TUsage>;
-export function buffer<
-  TData extends AnyWgslData,
-  TUsage extends BufferUsage = never,
->(
+export function buffer<TData extends AnyWgslData>(
+  typeSchema: TData,
+  gpuBuffer: GPUBuffer,
+): WgslBuffer<TData>;
+
+export function buffer<TData extends AnyWgslData>(
   typeSchema: TData,
   initialOrBuffer?: Parsed<TData> | WgslPlum<Parsed<TData>> | GPUBuffer,
-): WgslBuffer<TData, TUsage> {
+): WgslBuffer<TData> {
   return new WgslBufferImpl(typeSchema, initialOrBuffer);
 }
 
@@ -97,23 +80,20 @@ export function buffer<
 // Implementation
 // --------------
 
-class WgslBufferImpl<
-  TData extends AnyWgslData,
-  TAllows extends BufferUsage = never,
-> implements WgslBuffer<TData, TAllows>
-{
+class WgslBufferImpl<TData extends AnyWgslData> implements WgslBuffer<TData> {
   public flags: GPUBufferUsageFlags =
     GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
   private _device: GPUDevice | null = null;
   private _buffer: GPUBuffer | null = null;
 
-  public vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null = null;
-  public _usages: AllowedUsages<TData, TAllows> = {
+  _usages: AllowedUsages<TData> = {
     uniform: null,
     mutable: null,
     readonly: null,
     vertex: null,
   };
+
+  public vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null = null;
 
   private _label: string | undefined;
   readonly initial: Parsed<TData> | WgslPlum<Parsed<TData>> | undefined;
@@ -174,57 +154,36 @@ class WgslBufferImpl<
 
   $allowUniform() {
     this.$addFlags(GPUBufferUsage.UNIFORM);
-
-    const enrichedThis = this as KeepUnion<
-      this,
-      Unmanaged,
-      WgslBuffer<TData, TAllows | 'uniform'>
-    >;
     if (!this._usages.uniform) {
-      this._usages.uniform = bufferUsage(enrichedThis, 'uniform');
+      this._usages.uniform = bufferUsage(this, 'uniform');
     }
 
-    return enrichedThis;
+    return this as this & AllowUniform;
   }
 
   $allowReadonly() {
     this.$addFlags(GPUBufferUsage.STORAGE);
 
-    const enrichedThis = this as KeepUnion<
-      this,
-      Unmanaged,
-      WgslBuffer<TData, TAllows | 'readonly'>
-    >;
     if (!this._usages.readonly) {
-      this._usages.readonly = bufferUsage(enrichedThis, 'readonly');
+      this._usages.readonly = bufferUsage(this, 'readonly');
     }
 
-    return enrichedThis;
+    return this as this & AllowReadonly;
   }
 
   $allowMutable() {
     this.$addFlags(GPUBufferUsage.STORAGE);
 
-    const enrichedThis = this as KeepUnion<
-      this,
-      Unmanaged,
-      WgslBuffer<TData, TAllows | 'mutable'>
-    >;
     if (!this._usages.mutable) {
-      this._usages.mutable = bufferUsage(enrichedThis, 'mutable');
+      this._usages.mutable = bufferUsage(this, 'mutable');
     }
 
-    return enrichedThis;
+    return this as this & AllowMutable;
   }
 
   $allowVertex(stepMode: 'vertex' | 'instance' = 'vertex') {
     this.$addFlags(GPUBufferUsage.VERTEX);
 
-    const enrichedThis = this as KeepUnion<
-      this,
-      Unmanaged,
-      WgslBuffer<TData, TAllows | 'vertex'>
-    >;
     if (!this.vertexLayout) {
       if (this.dataType instanceof SimpleWgslData) {
         this.vertexLayout = {
@@ -232,14 +191,14 @@ class WgslBufferImpl<
           stepMode,
         };
 
-        this._usages.vertex = bufferUsage(enrichedThis, 'vertex');
+        this._usages.vertex = bufferUsage(this, 'vertex');
       } else if (this.dataType instanceof WgslArrayImpl) {
         this.vertexLayout = {
           arrayStride: this.dataType.elementType.size,
           stepMode,
         };
 
-        this._usages.vertex = bufferUsage(enrichedThis, 'vertex');
+        this._usages.vertex = bufferUsage(this, 'vertex');
       } else {
         throw new Error('Only simple data types can be used as vertex buffers');
       }
@@ -249,7 +208,7 @@ class WgslBufferImpl<
       throw new Error('Cannot change step mode of a vertex buffer');
     }
 
-    return enrichedThis;
+    return this as this & AllowVertex;
   }
 
   // Temporary solution
@@ -260,7 +219,7 @@ class WgslBufferImpl<
 
   $device(device: GPUDevice) {
     this._device = device;
-    return this as WgslBuffer<TData, TAllows> & Unmanaged;
+    return this;
   }
 
   toString(): string {
@@ -272,9 +231,12 @@ function capitalizeFirstLetter(string: string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-function asUsage<TUsage extends BufferUsage>(usage: TUsage) {
+function asUsage<
+  TUsage extends BufferUsage,
+  TType extends AllowVertex | AllowUniform | AllowReadonly | AllowMutable,
+>(usage: TUsage, usageType: TType) {
   return <TData extends AnyWgslData, TAllows extends BufferUsage>(
-    buffer: WgslBuffer<TData, TAllows>,
+    buffer: WgslBuffer<TData> & typeof usageType,
   ) => {
     if (buffer._usages[usage] === null) {
       throw new Error(
@@ -285,7 +247,15 @@ function asUsage<TUsage extends BufferUsage>(usage: TUsage) {
   };
 }
 
-export const asUniform = asUsage('uniform');
-export const asReadonly = asUsage('readonly');
-export const asMutable = asUsage('mutable');
-export const asVertex = asUsage('vertex');
+export const asUniform = asUsage('uniform', {
+  uniformAllowed: true,
+} as AllowUniform);
+export const asReadonly = asUsage('readonly', {
+  readonlyAllowed: true,
+} as AllowReadonly);
+export const asMutable = asUsage('mutable', {
+  mutableAllowed: true,
+} as AllowMutable);
+export const asVertex = asUsage('vertex', {
+  vertexAllowed: true,
+} as AllowVertex);
