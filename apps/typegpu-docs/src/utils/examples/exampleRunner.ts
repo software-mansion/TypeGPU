@@ -3,7 +3,7 @@ import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
 import type { OnFrameFn } from '@typegpu/example-toolkit';
 import { filter, isNonNull, map, pipe } from 'remeda';
-import { wgsl } from 'typegpu';
+import { wgsl } from 'typegpu/experimental';
 import { transpileModule } from 'typescript';
 import { tsCompilerOptions } from '../liveEditor/embeddedTypeScript';
 import type { ExampleControlParam } from './exampleControlAtom';
@@ -255,7 +255,7 @@ export async function executeExample(
      */
     const _import = async (moduleKey: string) => {
       if (moduleKey === 'typegpu') {
-        return await import('typegpu');
+        return await import('typegpu/experimental');
       }
       if (moduleKey === 'typegpu/data') {
         return await import('typegpu/data');

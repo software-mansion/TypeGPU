@@ -1,4 +1,4 @@
-import { wgsl } from 'typegpu';
+import { wgsl } from 'typegpu/experimental';
 import { describe, expect, it, vi } from 'vitest';
 import { afterEach } from 'vitest';
 import { createRuntime } from '../src/createRuntime';

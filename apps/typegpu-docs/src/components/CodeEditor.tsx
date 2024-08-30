@@ -36,7 +36,7 @@ function handleEditorWillMount(monaco: Monaco) {
   tsDefaults.setCompilerOptions({
     ...tsCompilerOptions,
     paths: {
-      typegpu: ['typegpu/dist/index.d.ts'],
+      typegpu: ['typegpu/dist/experimental/index.d.ts'],
       'typegpu/data': ['typegpu/dist/data/index.d.ts'],
       'typegpu/macro': ['typegpu/dist/macro/index.d.ts'],
     },
