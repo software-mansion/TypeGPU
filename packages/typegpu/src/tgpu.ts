@@ -1,9 +1,8 @@
-import { mapWrite, read, write } from './tgpuBufferUtils';
+import { read, write } from './tgpuBufferUtils';
 import { buffer } from './wgslBuffer';
 
 export default {
-  buffer,
+  createBuffer: buffer,
   read,
   write,
-  mapWrite,
 };

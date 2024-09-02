@@ -1,10 +1,10 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import { roundUp } from './mathUtils';
-import type { AnyWgslData, WgslAllocatable } from './types';
-import type { Unmanaged } from './wgslBuffer';
+import type { AnyWgslData } from './types';
+import type { Unmanaged, WgslBuffer } from './wgslBuffer';
 
 export function write<TData extends AnyWgslData>(
-  buffer: WgslAllocatable<TData> & Unmanaged,
+  buffer: WgslBuffer<TData> & Unmanaged,
   data: Parsed<TData>,
 ): void {
   const gpuBuffer = buffer.buffer;
@@ -13,7 +13,6 @@ export function write<TData extends AnyWgslData>(
   if (gpuBuffer.mapState === 'mapped') {
     const mapped = gpuBuffer.getMappedRange();
     buffer.dataType.write(new BufferWriter(mapped), data);
-    gpuBuffer.unmap();
     return;
   }
 
@@ -23,32 +22,20 @@ export function write<TData extends AnyWgslData>(
   device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
 }
 
-export async function mapWrite<TData extends AnyWgslData>(
-  buffer: WgslAllocatable<TData> & Unmanaged,
-  data: Parsed<TData>,
-): Promise<void> {
-  const gpuBuffer = buffer.buffer;
-  if (!(gpuBuffer.usage & GPUBufferUsage.MAP_WRITE)) {
-    throw new Error('Buffer does not have the proper usage flags');
-  }
-  await gpuBuffer.mapAsync(GPUMapMode.WRITE);
-  write(buffer, data);
-}
-
 export async function read<TData extends AnyWgslData>(
-  buffer: WgslAllocatable<TData> & Unmanaged,
+  buffer: WgslBuffer<TData> & Unmanaged,
 ): Promise<Parsed<TData>> {
   const gpuBuffer = buffer.buffer;
   const device = buffer.device;
 
-  if (
-    gpuBuffer.usage & GPUBufferUsage.MAP_READ &&
-    gpuBuffer.mapState !== 'mapped'
-  ) {
-    await gpuBuffer.mapAsync(GPUMapMode.READ);
+  if (gpuBuffer.mapState === 'mapped') {
+    const mapped = gpuBuffer.getMappedRange();
+    const res = buffer.dataType.read(new BufferReader(mapped)) as Parsed<TData>;
+    return res;
   }
 
-  if (gpuBuffer.mapState === 'mapped') {
+  if (gpuBuffer.usage & GPUBufferUsage.MAP_READ) {
+    await gpuBuffer.mapAsync(GPUMapMode.READ);
     const mapped = gpuBuffer.getMappedRange();
     const res = buffer.dataType.read(new BufferReader(mapped)) as Parsed<TData>;
     gpuBuffer.unmap();
