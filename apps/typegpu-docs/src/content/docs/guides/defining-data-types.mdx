@@ -1,0 +1,175 @@
+---
+title: Defining Data Types
+description: A guide on how to use the TypeGPU built-in and custom-defined data types.
+
+---
+
+## Basic idea
+
+Writing a GPU program usually involves manipulating data that resides on both sides of the computing world -- on GPU and CPU, on WGSL and JS. While data types defined in the WGSL shader code are strongly typed, we lose the type safety completely when writing and reading data in JavaScript/TypeScript. It would be very useful to have a way of ensuring that we read and write data of expected schema in our TypeScript programs. This is precisely what TypeGPU data types help to achieve. 
+
+Another aspect that is commonly problematic when writing a WebGPU program is dealing with memory layouts, taking into account data byte sizes, alignments and offsets. That's another thing that TypeGPU automates, so that there's no room for data marshalling related errors.
+
+## Examples
+
+Let's look at some examples of defining custom data types using the `typegpu/data` module. If you're familiar with [Zod](https://zod.dev/), then this style of schema definitions may already seem familiar.
+
+```ts
+import { struct, f32, vec3i, Parsed } from 'typegpu/data';
+
+const circleStruct = struct({
+  centerPos: vec3i,
+  radius: f32,
+});
+
+type Circle = Parsed<typeof circleStruct>;
+
+const redCircle: Circle = {
+  centerPos: [2, 4, 0],
+  radius: 0.2,
+};
+```
+
+By defining the `circleStruct` struct in TypeScript via TypeGPU, in a similar way to how we would in WGSL, we gain access to its TypeScript type definition, which we can use to validate our data values. When reading from or writing data to the GPU, the type of the JavaScript value is inferred automatically, and it's enforced by TypeScript. That's a big improvement to the development process.
+
+Here the `Circle` type evaluates to: 
+
+```ts
+type Circle = {
+  centerPos: [number, number, number];
+  radius: number;
+}
+```
+
+Thanks to that, whenever we mistakenly set or assume a wrong value for an object, we get a type error, avoiding unnecessary debugging afterwards.
+
+```ts
+const redCircle: Circle = {
+  // Error: Type '[number, number]' is not assignable to type '[number, number, number]'.
+  centerPos: [2, 4], 
+  radius: 0.2,
+};
+
+const redCircle: Circle = {
+  centerPos: [2, 4, 0], 
+  // Error: Type 'string' is not assignable to type 'number'.
+  radius: "0.2",
+};
+
+// Error: Property 'radius' is missing in type '{ centerPos: [number, number, number]; }' 
+// but required in type '{ centerPos: [number, number, number]; radius: number; }'.
+const redCircle: Circle = {
+  centerPos: [2, 4, 0], 
+};
+
+// Error: Property 'rad' does not exist on type '{ centerPos: [number, number, number]; radius: number; }'
+const diam = redCircle.rad * 2;
+
+// Error: Operator '+' cannot be applied to types '[number, number, number]' and 'number'.
+const newPos = redCircle.centerPos + 1;
+```
+
+Defined data structures automatically measure and hold information about their memory layout parameters, which is useful for writing to and reading data from the GPU.
+
+```ts
+circleStruct.size // 16
+circleStruct.byteAlignment // 16
+```
+
+TypeGPU data types are essential for the library's automated data marshalling capabilities. You can read more about it in the chapter dedicated to `tgpu.writeBuffer`.
+
+## Built-in primitive data types
+
+| constructor | type |  TS type | byte alignment|
+| --- | --- | --- | --- |
+| u32 | U32 | number | 4 |
+| f32 | F32 | number | 4 |
+| i32 | I32 | number | 4 |
+| bool | Bool | boolean | 4 |
+| vec2u | Vec2u | [number, number] | 8 |
+| vec2f | Vec2f | [number, number] | 8 |
+| vec2i | Vec2i | [number, number] | 8 |
+| vec3u | Vec3u | [number, number, number] | 8 |
+| vec3f | Vec3f | [number, number, number] | 8 |
+| vec3i | Vec3i | [number, number, number] | 8 |
+| vec4u | Vec4u | [number, number, number, number] | 16 |
+| vec4f | Vec4f | [number, number, number, number] | 16 |
+| vec4i | Vec4i | [number, number, number, number] | 16 |
+| mat4d | Mat4f | number[] | 16 |
+
+## Complex data structures
+
+### struct
+
+```ts 
+import { struct, vec3u, vec3f, vec4f, bool, Parsed } from 'typegpu/data';
+
+const boid = struct({
+  position: vec3u,
+  velocity: vec3f,
+  color: vec4f,
+  isActive: bool,
+});
+
+const mainCircle: Parsed<typeof boid> = {
+  position: [0, 0, 0],
+  velocity: [1, 0.5, 0.5],
+  color: [1.0, 0.2, 0.3, 1.0],
+  isActive: true,
+};
+```
+
+Each struct has its `byteAlignment` equal to the biggest byteAlignment of its properties. It is also possible to override default byte alignment and size for particular fields via the `align` and `size ` functions.
+
+```ts 
+import { struct, vec3u, vec3f, vec4f, bool, align, size } from 'typegpu/data';
+
+const boid = struct({
+  position: align(32, vec3u),
+  velocity: vec3f,
+  color: vec4f,
+  isActive: size(8, bool),
+});
+```
+
+### arrayOf
+
+To define arrays of known constant length, use the `arrayOf` function. It accepts as arguments the array's elements data type constructor and the length of the array.
+
+```ts
+import { arrayOf, f32, Parsed } from 'typegpu/data';
+
+const recentResultsArray = arrayOf(f32, 4);
+
+// evaluated to number[];
+type RecentResultsArray = Parsed<typeof recentResultsArray>;
+
+const recentResults: RecentResultsArray = [
+    1, 0, 0.5, 20
+];
+
+recentResults.shift();
+recentResults[3] = -1;
+```
+
+### dynamicArrayOf
+
+For arrays of dynamically changing lengths, use the `dynamicArrayOf` function. It accepts as arguments the array's elements data type constructor and the array's initial capacity. When it comes to inferred types, there is currently no difference between the usage of `arrayOf` and `dynamicArrayOf` for arrays, however the difference will eventually become apparent when one day using defined data types from within the GPU code.
+
+```ts
+
+import { dynamicArrayOf, f32, Parsed } from 'typegpu/data';
+
+const recentResultsArray = dynamicArrayOf(f32, 4);
+
+// evaluated to number[];
+type RecentResultsArray = Parsed<typeof recentResultsArray>;
+
+const recentResults: RecentResultsArray = [
+    1, 0, 0.5,
+];
+
+recentResults.push(2);
+
+```
+

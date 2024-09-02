@@ -58,6 +58,10 @@ export default defineConfig({
               slug: 'guides/basic-principles',
             },
             {
+              label: 'Defining Data Types',
+              slug: 'guides/defining-data-types',
+            },
+            {
               label: 'State Management',
               slug: 'guides/state-management',
             },
