@@ -13,17 +13,24 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { asReadonly, asUniform, builtin, createRuntime, wgsl } from 'typegpu';
 import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'typegpu/data';
+import {
+  asReadonly,
+  asUniform,
+  builtin,
+  createRuntime,
+  std,
+  wgsl,
+} from 'typegpu/experimental';
 
 const X = 7;
 const Y = 7;
 const Z = 7;
 
 const MAX_BOX_SIZE = 15;
-const cubeSize = [X * MAX_BOX_SIZE, Y * MAX_BOX_SIZE, Z * MAX_BOX_SIZE];
-const boxCenter = cubeSize.map((value) => value / 2);
-const upAxis = [0, 1, 0] as Vector;
+const cubeSize = vec3f(X * MAX_BOX_SIZE, Y * MAX_BOX_SIZE, Z * MAX_BOX_SIZE);
+const boxCenter = std.mul(0.5, cubeSize);
+const upAxis = vec3f(0, 1, 0);
 
 const rotationSpeedPlum = addSliderPlumParameter('rotation speed', 2, {
   min: 0,
@@ -46,21 +53,21 @@ const cameraPositionPlum = wgsl.plum((get) => {
   const frame = get(framePlum);
 
   return vec3f(
-    Math.cos(frame) * get(cameraDistancePlum) + boxCenter[0],
-    boxCenter[1],
-    Math.sin(frame) * get(cameraDistancePlum) + boxCenter[2],
+    Math.cos(frame) * get(cameraDistancePlum) + boxCenter.x,
+    boxCenter.y,
+    Math.sin(frame) * get(cameraDistancePlum) + boxCenter.z,
   );
 });
 
 const cameraAxesPlum = wgsl.plum((get) => {
-  const forwardAxis = normalize(
-    get(cameraPositionPlum).map((value, i) => boxCenter[i] - value) as Vector,
+  const forwardAxis = std.normalize(
+    std.sub(boxCenter, get(cameraPositionPlum)),
   );
 
   return {
     forward: forwardAxis,
     up: upAxis,
-    right: crossProduct(upAxis, forwardAxis) as Vector,
+    right: std.cross(upAxis, forwardAxis),
   };
 });
 
@@ -251,9 +258,9 @@ const renderPipeline = runtime.makeRenderPipeline({
       let bigBoxIntersection = ${getBoxIntersectionFn}(
         -vec3f(f32(${boxSizeData}))/2,
         vec3f(
-          ${cubeSize[0]},
-          ${cubeSize[1]},
-          ${cubeSize[2]},
+          ${cubeSize.x},
+          ${cubeSize.y},
+          ${cubeSize.z},
         ) + vec3f(f32(${boxSizeData}))/2,
         ray,
       );
@@ -300,21 +307,6 @@ const renderPipeline = runtime.makeRenderPipeline({
     topology: 'triangle-strip',
   },
 });
-
-type Vector = [number, number, number];
-
-function normalize(vector: Vector): Vector {
-  const length = Math.sqrt(vector[0] ** 2 + vector[1] ** 2 + vector[2] ** 2);
-  return vector.map((value) => value / length) as Vector;
-}
-
-function crossProduct(vectorA: Vector, vectorB: Vector): Vector {
-  return [
-    vectorA[1] * vectorB[2] - vectorA[2] * vectorB[1],
-    vectorA[2] * vectorB[0] - vectorA[0] * vectorB[2],
-    vectorA[0] * vectorB[1] - vectorA[1] * vectorB[0],
-  ];
-}
 
 onFrame((deltaTime) => {
   runtime.setPlum(canvasWidthPlum, canvas.width);

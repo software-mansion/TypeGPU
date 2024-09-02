@@ -414,6 +414,23 @@ interface vec2 {
   at(idx: 0 | 1): number;
 }
 
+interface vec3 {
+  x: number;
+  y: number;
+  z: number;
+  length: 3;
+  at(idx: 0 | 1 | 2): number;
+}
+
+interface vec4 {
+  x: number;
+  y: number;
+  z: number;
+  w: number;
+  length: 4;
+  at(idx: 0 | 1 | 2 | 3): number;
+}
+
 // ----------
 // Public API
 // ----------
@@ -448,14 +465,6 @@ export interface vec2u extends vec2, Swizzle2<vec2u> {
   kind: 'vec2u';
 }
 
-export interface vec3 {
-  x: number;
-  y: number;
-  z: number;
-  length: 3;
-  at(idx: 0 | 1 | 2): number;
-}
-
 export interface vec3f extends vec3, Swizzle3<vec2f, vec3f> {
   /** use to distinguish between vectors of the same size on the type level */
   kind: 'vec3f';
@@ -467,15 +476,6 @@ export interface vec3i extends vec3, Swizzle3<vec2i, vec3i> {
 export interface vec3u extends vec3, Swizzle3<vec2u, vec3u> {
   /** use to distinguish between vectors of the same size on the type level */
   kind: 'vec3u';
-}
-
-export interface vec4 {
-  x: number;
-  y: number;
-  z: number;
-  w: number;
-  length: 4;
-  at(idx: 0 | 1 | 2 | 3): number;
 }
 
 export interface vec4f extends vec4, Swizzle4<vec2f, vec3f, vec4f> {
