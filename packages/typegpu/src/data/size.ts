@@ -14,16 +14,13 @@ export function size<TSize extends number, TData extends AnyTgpuData>(
   size: TSize,
   data: TData,
 ): TgpuSized<TSize, TData> {
-  return new TgpuDataCustomSizedImpl(data, size);
+  return new TgpuSizedImpl(data, size);
 }
 
 export interface TgpuSized<TSize extends number, TData extends AnyTgpuData>
   extends TgpuData<Unwrap<TData>> {}
 
-export class TgpuDataCustomSizedImpl<
-    TSize extends number,
-    TData extends AnyTgpuData,
-  >
+export class TgpuSizedImpl<TSize extends number, TData extends AnyTgpuData>
   extends Schema<Unwrap<TData>>
   implements TgpuSized<TSize, TData>
 {

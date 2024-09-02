@@ -21,7 +21,7 @@ import { code } from '../wgslCode';
 import { TgpuIdentifier } from '../wgslIdentifier';
 import { TgpuAlignedImpl } from './align';
 import alignIO from './alignIO';
-import { TgpuDataCustomSizedImpl } from './size';
+import { TgpuSizedImpl } from './size';
 
 // ----------
 // Public API
@@ -107,7 +107,7 @@ function getAttribute(field: AnyTgpuData): string | undefined {
   if (field instanceof TgpuAlignedImpl) {
     return `@align(${field.byteAlignment}) `;
   }
-  if (field instanceof TgpuDataCustomSizedImpl) {
+  if (field instanceof TgpuSizedImpl) {
     return `@size(${field.size}) `;
   }
 }
