@@ -147,30 +147,14 @@ abstract class vec2Impl<T2> extends Swizzle2Impl<T2> implements vec2 {
   readonly length = 2;
 
   constructor(
-    private _x: number,
-    private _y: number,
+    public x: number,
+    public y: number,
   ) {
     super();
   }
 
   at(idx: 0 | 1): number {
-    return idx === 0 ? this._x : this._y;
-  }
-
-  get x() {
-    return this._x;
-  }
-
-  get y() {
-    return this._y;
-  }
-
-  set x(value: number) {
-    this._x = value;
-  }
-
-  set y(value: number) {
-    this._y = value;
+    return idx === 0 ? this.x : this.y;
   }
 }
 
@@ -208,39 +192,15 @@ abstract class vec3Impl<T2, T3> extends Swizzle3Impl<T2, T3> implements vec3 {
   readonly length = 3;
 
   constructor(
-    private _x: number,
-    private _y: number,
-    private _z: number,
+    public x: number,
+    public y: number,
+    public z: number,
   ) {
     super();
   }
 
   at(idx: 0 | 1 | 2): number {
-    return idx === 0 ? this._x : idx === 1 ? this._y : this._z;
-  }
-
-  get x() {
-    return this._x;
-  }
-
-  get y() {
-    return this._y;
-  }
-
-  get z() {
-    return this._z;
-  }
-
-  set x(value: number) {
-    this._x = value;
-  }
-
-  set y(value: number) {
-    this._y = value;
-  }
-
-  set z(value: number) {
-    this._z = value;
+    return idx === 0 ? this.x : idx === 1 ? this.y : this.z;
   }
 }
 
@@ -293,54 +253,22 @@ abstract class vec4Impl<T2, T3, T4>
   readonly length = 4;
 
   constructor(
-    private _x: number,
-    private _y: number,
-    private _z: number,
-    private _w: number,
+    public x: number,
+    public y: number,
+    public z: number,
+    public w: number,
   ) {
     super();
   }
 
   at(idx: 0 | 1 | 2 | 3): number {
     return idx === 0
-      ? this._x
+      ? this.x
       : idx === 1
-        ? this._y
+        ? this.y
         : idx === 2
-          ? this._z
-          : this._w;
-  }
-
-  get x() {
-    return this._x;
-  }
-
-  get y() {
-    return this._y;
-  }
-
-  get z() {
-    return this._z;
-  }
-
-  get w() {
-    return this._w;
-  }
-
-  set x(value: number) {
-    this._x = value;
-  }
-
-  set y(value: number) {
-    this._y = value;
-  }
-
-  set z(value: number) {
-    this._z = value;
-  }
-
-  set w(value: number) {
-    this._w = value;
+          ? this.z
+          : this.w;
   }
 }
 
