@@ -15,8 +15,8 @@ import type { WgslPlum } from './wgslPlum';
 // ----------
 
 export interface Unmanaged {
-  get device(): GPUDevice;
-  get buffer(): GPUBuffer;
+  readonly device: GPUDevice;
+  readonly buffer: GPUBuffer;
 }
 
 export interface AllowUniform {
