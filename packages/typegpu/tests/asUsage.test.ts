@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { asMutable, asReadonly, asUniform, asVertex, wgsl } from '../src';
 import { u32 } from '../src/data';
+import {
+  asMutable,
+  asReadonly,
+  asUniform,
+  asVertex,
+  wgsl,
+} from '../src/experimental';
 
 global.GPUBufferUsage = {
   MAP_READ: 1,
@@ -20,25 +26,33 @@ describe('asUsage', () => {
     asReadonly(wgsl.buffer(u32, 2).$allowReadonly());
     asReadonly(wgsl.buffer(u32, 2).$allowReadonly().$allowUniform());
     asReadonly(wgsl.buffer(u32, 2).$allowVertex('vertex').$allowReadonly());
+    // @ts-expect-error
     expect(() => asReadonly(wgsl.buffer(u32, 2))).toThrow();
+    // @ts-expect-error
     expect(() => asReadonly(wgsl.buffer(u32, 2).$allowUniform())).toThrow();
 
     asUniform(wgsl.buffer(u32, 2).$allowUniform());
     asUniform(wgsl.buffer(u32, 2).$allowUniform().$allowReadonly());
     asUniform(wgsl.buffer(u32, 2).$allowVertex('vertex').$allowUniform());
+    // @ts-expect-error
     expect(() => asUniform(wgsl.buffer(u32, 2))).toThrow();
+    // @ts-expect-error
     expect(() => asUniform(wgsl.buffer(u32, 2).$allowReadonly())).toThrow();
 
     asMutable(wgsl.buffer(u32, 2).$allowMutable());
     asMutable(wgsl.buffer(u32, 2).$allowMutable().$allowUniform());
     asMutable(wgsl.buffer(u32, 2).$allowVertex('vertex').$allowMutable());
+    // @ts-expect-error
     expect(() => asMutable(wgsl.buffer(u32, 2))).toThrow();
+    // @ts-expect-error
     expect(() => asMutable(wgsl.buffer(u32, 2).$allowUniform())).toThrow();
 
     asVertex(wgsl.buffer(u32, 2).$allowVertex('instance'));
     asVertex(wgsl.buffer(u32, 2).$allowVertex('instance').$allowUniform());
     asVertex(wgsl.buffer(u32, 2).$allowReadonly().$allowVertex('instance'));
+    // @ts-expect-error
     expect(() => asVertex(wgsl.buffer(u32, 2))).toThrow();
+    // @ts-expect-error
     expect(() => asVertex(wgsl.buffer(u32, 2).$allowMutable())).toThrow();
   });
 });

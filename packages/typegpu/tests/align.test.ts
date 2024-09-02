@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { StrictNameRegistry } from '../src';
 import { align, f32, struct, u32, vec3f } from '../src/data';
+import { StrictNameRegistry } from '../src/experimental';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
 
 describe('align', () => {

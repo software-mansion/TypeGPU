@@ -38,10 +38,13 @@ export default defineConfig({
         replacement: './packages/typegpu/src/macro/index.ts',
       },
       {
-        find: /^typegpu\/web$/,
-        replacement: './packages/typegpu/src/web/index.ts',
+        find: /^typegpu\/experimental$/,
+        replacement: './packages/typegpu/src/experimental/index.ts',
       },
-      { find: /^typegpu$/, replacement: './packages/typegpu/src/index.ts' },
+      {
+        find: /^typegpu$/,
+        replacement: './packages/typegpu/src/index.ts',
+      },
       { find: /^typegpu(.*)$/, replacement: './packages/typegpu/src/$1.ts' },
     ],
   },
