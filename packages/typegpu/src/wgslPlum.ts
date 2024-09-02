@@ -1,5 +1,5 @@
 import { type TgpuSettable, TgpuSettableTrait } from './settableTrait';
-import type { Tgpu, TgpuNamable, TgpuResolvable } from './types';
+import type { TgpuNamable, TgpuResolvable, Wgsl } from './types';
 
 // ----------
 // Public API
@@ -43,7 +43,7 @@ export function isExternalPlum(
  *
  * @param compute A pure function that describes this plum's value.
  */
-export function plum<T extends Tgpu>(
+export function plum<T extends Wgsl>(
   compute: (get: Getter) => T,
 ): TgpuPlum<T> & TgpuResolvable;
 
@@ -61,7 +61,7 @@ export function plum<T>(compute: (get: Getter) => T): TgpuPlum<T>;
  *
  * @param initial The initial value of this plum.
  */
-export function plum<T extends Tgpu>(
+export function plum<T extends Wgsl>(
   initial: T,
 ): TgpuPlum<T> & TgpuSettable & TgpuResolvable;
 

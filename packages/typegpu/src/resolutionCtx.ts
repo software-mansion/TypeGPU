@@ -5,11 +5,11 @@ import type {
   Eventual,
   ResolutionCtx,
   SlotValuePair,
-  Tgpu,
   TgpuBindable,
   TgpuRenderResource,
   TgpuResolvable,
   TgpuSlot,
+  Wgsl,
 } from './types';
 import {
   isDepthTextureType,
@@ -216,7 +216,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
-  resolve(item: Tgpu, slotValueOverrides: SlotValuePair<unknown>[] = []) {
+  resolve(item: Wgsl, slotValueOverrides: SlotValuePair<unknown>[] = []) {
     if (!isResolvable(item)) {
       return String(item);
     }
@@ -336,7 +336,7 @@ class ScopedResolutionCtx implements ResolutionCtx {
   }
 
   resolve(
-    item: Tgpu,
+    item: Wgsl,
     slotValueOverrides: SlotValuePair<unknown>[] = [],
   ): string {
     if (!isResolvable(item)) {

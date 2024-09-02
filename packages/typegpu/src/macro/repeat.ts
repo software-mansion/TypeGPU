@@ -1,21 +1,21 @@
-import type { Eventual, Tgpu } from '../types';
+import type { Eventual, Wgsl } from '../types';
 import { code } from '../wgslCode';
 import { TgpuIdentifier } from '../wgslIdentifier';
 
 export function repeat(
-  count: Eventual<Tgpu>,
-  snippet: Eventual<Tgpu | ((idx: Tgpu) => Tgpu)>,
-): Tgpu;
+  count: Eventual<Wgsl>,
+  snippet: Eventual<Wgsl | ((idx: Wgsl) => Wgsl)>,
+): Wgsl;
 
 export function repeat(
   count: Eventual<number>,
-  snippet: Eventual<Tgpu | ((idx: number) => Tgpu)>,
-): Tgpu;
+  snippet: Eventual<Wgsl | ((idx: number) => Wgsl)>,
+): Wgsl;
 
 export function repeat(
-  count: Eventual<Tgpu>,
-  snippet: Eventual<Tgpu | ((idx: number) => Tgpu) | ((idx: Tgpu) => Tgpu)>,
-): Tgpu {
+  count: Eventual<Wgsl>,
+  snippet: Eventual<Wgsl | ((idx: number) => Wgsl) | ((idx: Wgsl) => Wgsl)>,
+): Wgsl {
   return code`${(get) => {
     const countValue = get(count);
     const snippetValue = get(snippet);

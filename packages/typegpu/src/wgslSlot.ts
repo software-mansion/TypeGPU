@@ -1,9 +1,9 @@
 import {
   type ResolutionCtx,
-  type Tgpu,
   type TgpuResolvable,
   type TgpuResolvableSlot,
   type TgpuSlot,
+  type Wgsl,
   isTgpu,
 } from './types';
 
@@ -11,7 +11,7 @@ import {
 // Public API
 // ----------
 
-export function slot<T extends Tgpu>(defaultValue?: T): TgpuResolvableSlot<T>;
+export function slot<T extends Wgsl>(defaultValue?: T): TgpuResolvableSlot<T>;
 
 export function slot<T>(defaultValue?: T): TgpuSlot<T>;
 

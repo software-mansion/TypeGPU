@@ -3,11 +3,11 @@ import { isPointer } from './types';
 import type {
   AnyTgpuData,
   ResolutionCtx,
-  Tgpu,
   TgpuFnArgument,
   TgpuNamable,
   TgpuResolvable,
   TgpuValue,
+  Wgsl,
 } from './types';
 import { code } from './wgslCode';
 import { TgpuIdentifier } from './wgslIdentifier';
@@ -40,7 +40,7 @@ export function fn<
   );
 
   type TArgValues = ValuesFromTypes<TArgTypes>;
-  return (bodyProducer: (...args: TArgValues) => Tgpu) => {
+  return (bodyProducer: (...args: TArgValues) => Wgsl) => {
     const body = bodyProducer(...(argValues as TArgValues));
 
     const fnInstance = new TgpuFnImpl<TArgTypes, TReturn>(
@@ -70,7 +70,7 @@ type PairsFromTypes<TArgTypes extends TgpuFnArgument[]> = {
 };
 
 type SegmentsFromTypes<TArgTypes extends TgpuFnArgument[]> = {
-  [K in keyof TArgTypes]: Tgpu;
+  [K in keyof TArgTypes]: Wgsl;
 };
 
 class TgpuFunctionCall<
@@ -113,7 +113,7 @@ class TgpuFnImpl<
   constructor(
     private argPairs: PairsFromTypes<TArgTypes>,
     private returnType: TReturn | undefined,
-    private readonly body: Tgpu,
+    private readonly body: Wgsl,
   ) {
     super();
   }

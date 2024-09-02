@@ -3,10 +3,10 @@ import type {
   InlineResolve,
   ResolutionCtx,
   SlotValuePair,
-  Tgpu,
   TgpuNamable,
   TgpuResolvable,
   TgpuSlot,
+  Wgsl,
 } from './types';
 import { code } from './wgslCode';
 import { TgpuIdentifier } from './wgslIdentifier';
@@ -23,7 +23,7 @@ export type BoundTgpuFn = Omit<TgpuFn, '$name'>;
 
 export function fn(
   strings: TemplateStringsArray,
-  ...params: (Tgpu | InlineResolve)[]
+  ...params: (Wgsl | InlineResolve)[]
 ): TgpuFn {
   return new TgpuFnImpl(code(strings, ...params));
 }
@@ -35,7 +35,7 @@ export function fn(
 class TgpuFnImpl implements TgpuFn {
   private _label: string | undefined;
 
-  constructor(private readonly body: Tgpu) {}
+  constructor(private readonly body: Wgsl) {}
 
   get label() {
     return this._label;

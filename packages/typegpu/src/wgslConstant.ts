@@ -1,4 +1,4 @@
-import type { ResolutionCtx, Tgpu, TgpuNamable, TgpuResolvable } from './types';
+import type { ResolutionCtx, TgpuNamable, TgpuResolvable, Wgsl } from './types';
 import { code } from './wgslCode';
 import { TgpuIdentifier } from './wgslIdentifier';
 
@@ -12,7 +12,7 @@ export interface TgpuConst extends TgpuResolvable, TgpuNamable {}
  * Creates a constant is computed at shader initialization according
  * to the passed in expression.
  */
-export function constant(expr: Tgpu): TgpuConst {
+export function constant(expr: Wgsl): TgpuConst {
   return new TgpuConstImpl(expr);
 }
 
@@ -23,7 +23,7 @@ export function constant(expr: Tgpu): TgpuConst {
 class TgpuConstImpl implements TgpuConst {
   private _label: string | undefined;
 
-  constructor(private readonly expr: Tgpu) {}
+  constructor(private readonly expr: Wgsl) {}
 
   get label() {
     return this._label;

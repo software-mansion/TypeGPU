@@ -6,7 +6,7 @@ export { RecursiveDataTypeError } from './errors';
 export {
   TgpuData,
   AnyTgpuData,
-  AnyTgpuTexelFormat,
+  TexelFormat as AnyTgpuTexelFormat,
 } from './types';
 
 export type { TgpuBuffer } from './wgslBuffer';

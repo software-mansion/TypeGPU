@@ -1,9 +1,9 @@
 import type {
   AnyTgpuData,
   ResolutionCtx,
-  Tgpu,
   TgpuNamable,
   TgpuResolvable,
+  Wgsl,
 } from './types';
 import { code } from './wgslCode';
 import { TgpuIdentifier } from './wgslIdentifier';
@@ -23,7 +23,7 @@ export interface TgpuVar<TDataType extends AnyTgpuData>
  */
 export const variable = <TDataType extends AnyTgpuData>(
   dataType: TDataType,
-  initialValue?: Tgpu,
+  initialValue?: Wgsl,
   scope: VariableScope = 'private',
 ): TgpuVar<TDataType> => new TgpuVarImpl(dataType, initialValue, scope);
 
@@ -36,7 +36,7 @@ class TgpuVarImpl<TDataType extends AnyTgpuData> implements TgpuVar<TDataType> {
 
   constructor(
     private readonly _dataType: TDataType,
-    private readonly _initialValue: Tgpu | undefined,
+    private readonly _initialValue: Wgsl | undefined,
     public readonly scope: VariableScope,
   ) {}
 

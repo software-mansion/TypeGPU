@@ -1,11 +1,11 @@
 import { vec4f, vec4i, vec4u } from './data';
 import type {
-  AnyTgpuPrimitive,
-  AnyTgpuTexelFormat,
   ResolutionCtx,
   SampledTextureParams,
   StorageTextureAccess,
   StorageTextureParams,
+  TexelFormat,
+  TextureScalarFormat,
   TextureUsage,
   TgpuNamable,
   TgpuRenderResource,
@@ -17,7 +17,7 @@ import { isSampler } from './wgslSampler';
 export interface TgpuAnyTextureView extends TgpuRenderResource {
   readonly descriptor: GPUTextureViewDescriptor;
   readonly texture: TgpuAnyTexture;
-  readonly dataType: AnyTgpuPrimitive | AnyTgpuTexelFormat;
+  readonly dataType: TextureScalarFormat | TexelFormat;
   readonly access: StorageTextureAccess | undefined;
 }
 
@@ -37,9 +37,7 @@ export interface TgpuTexture<TAllows extends TextureUsage = never>
 
   asStorage(
     params: StorageTextureParams,
-  ): 'storage' extends TAllows
-    ? TgpuTextureView<AnyTgpuTexelFormat, 'storage'>
-    : null;
+  ): 'storage' extends TAllows ? TgpuTextureView<TexelFormat, 'storage'> : null;
   asSampled(
     params: SampledTextureParams,
   ): 'sampled' extends TAllows
@@ -48,7 +46,7 @@ export interface TgpuTexture<TAllows extends TextureUsage = never>
 }
 
 export interface TgpuTextureView<
-  TData extends AnyTgpuPrimitive | AnyTgpuTexelFormat,
+  TData extends TextureScalarFormat | TexelFormat,
   TUsage extends TextureUsage,
 > extends TgpuRenderResource,
     TgpuNamable {
@@ -81,8 +79,11 @@ class TgpuTextureImpl<TAllows extends TextureUsage = never>
     GPUTextureUsage.COPY_SRC |
     GPUTextureUsage.RENDER_ATTACHMENT;
   private _allowedUsages: {
-    sampled: Map<string, TgpuTextureView<AnyTgpuPrimitive, 'sampled'>> | null;
-    storage: Map<string, TgpuTextureView<AnyTgpuTexelFormat, 'storage'>> | null;
+    sampled: Map<
+      string,
+      TgpuTextureView<TextureScalarFormat, 'sampled'>
+    > | null;
+    storage: Map<string, TgpuTextureView<TexelFormat, 'storage'>> | null;
   } = {
     sampled: null,
     storage: null,
@@ -131,7 +132,7 @@ class TgpuTextureImpl<TAllows extends TextureUsage = never>
 
   private getStorageIfAllowed(
     params: StorageTextureParams,
-  ): TgpuTextureView<AnyTgpuTexelFormat, 'storage'> | null {
+  ): TgpuTextureView<TexelFormat, 'storage'> | null {
     if (!this._allowedUsages.storage) {
       return null;
     }
@@ -157,7 +158,7 @@ class TgpuTextureImpl<TAllows extends TextureUsage = never>
 
   private getSampledIfAllowed(
     params: SampledTextureParams,
-  ): TgpuTextureView<AnyTgpuPrimitive, 'sampled'> | null {
+  ): TgpuTextureView<TextureScalarFormat, 'sampled'> | null {
     if (!this._allowedUsages.sampled) {
       return null;
     }
@@ -195,7 +196,7 @@ class TgpuTextureImpl<TAllows extends TextureUsage = never>
 }
 
 class TgpuTextureViewImpl<
-  TData extends AnyTgpuPrimitive | AnyTgpuTexelFormat,
+  TData extends TextureScalarFormat | TexelFormat,
   TUsage extends TextureUsage,
 > implements TgpuTextureView<TData, TUsage>, TgpuAnyTextureView
 {
@@ -263,7 +264,7 @@ export function isTextureView(
   return 'texture' in texture;
 }
 
-const texelFormatToTgpuType: Record<string, AnyTgpuTexelFormat> = {
+const texelFormatToTgpuType: Record<string, TexelFormat> = {
   rgba8unorm: vec4f,
   rgba8snorm: vec4f,
   rgba8uint: vec4u,

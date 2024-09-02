@@ -1,8 +1,8 @@
 import type {
   InlineResolve,
   ResolutionCtx,
-  Tgpu,
   TgpuResolvable,
+  Wgsl,
 } from './types';
 import { code } from './wgslCode';
 
@@ -14,7 +14,7 @@ export interface TgpuDeclare extends TgpuResolvable {}
 
 export function declare(
   strings: TemplateStringsArray,
-  ...params: (Tgpu | Tgpu[] | InlineResolve)[]
+  ...params: (Wgsl | Wgsl[] | InlineResolve)[]
 ): TgpuDeclare {
   return new TgpuDeclareImpl(code(strings, ...params));
 }
@@ -24,7 +24,7 @@ export function declare(
 // --------------
 
 class TgpuDeclareImpl implements TgpuDeclare {
-  constructor(private readonly _declaration: Tgpu) {}
+  constructor(private readonly _declaration: Wgsl) {}
 
   resolve(ctx: ResolutionCtx): string {
     ctx.addDeclaration(code`${this._declaration}`);

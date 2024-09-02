@@ -3,10 +3,10 @@ import {
   type InlineResolve,
   type ResolutionCtx,
   type SlotValuePair,
-  type Tgpu,
   type TgpuNamable,
   type TgpuResolvable,
   type TgpuSlot,
+  type Wgsl,
   isResolvable,
 } from './types';
 import { getBuiltinInfo } from './wgslBuiltin';
@@ -23,9 +23,9 @@ export type BoundTgpuCode = Omit<TgpuCode, '$name'>;
 
 export function code(
   strings: TemplateStringsArray,
-  ...params: (Tgpu | Tgpu[] | InlineResolve)[]
+  ...params: (Wgsl | Wgsl[] | InlineResolve)[]
 ): TgpuCode {
-  const segments: (Tgpu | InlineResolve)[] = strings.flatMap((string, idx) => {
+  const segments: (Wgsl | InlineResolve)[] = strings.flatMap((string, idx) => {
     const param = params[idx];
     if (param === undefined) {
       return [string];
@@ -44,7 +44,7 @@ export function code(
 class TgpuCodeImpl implements TgpuCode {
   private _label: string | undefined;
 
-  constructor(public readonly segments: (Tgpu | InlineResolve)[]) {}
+  constructor(public readonly segments: (Wgsl | InlineResolve)[]) {}
 
   get label() {
     return this._label;

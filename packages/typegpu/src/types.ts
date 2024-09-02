@@ -4,7 +4,7 @@ import type { Builtin } from './wgslBuiltin';
 import type { TgpuIdentifier } from './wgslIdentifier';
 import type { TgpuPlum } from './wgslPlum';
 
-export type Tgpu = string | number | TgpuResolvable | symbol | boolean;
+export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
 
 /**
  * Passed into each resolvable item. All sibling items share a resolution ctx,
@@ -29,7 +29,7 @@ export interface ResolutionCtx {
    * @throws {MissingSlotValueError}
    */
   unwrap<T>(eventual: Eventual<T>): T;
-  resolve(item: Tgpu, slotValueOverrides?: SlotValuePair<unknown>[]): string;
+  resolve(item: Wgsl, slotValueOverrides?: SlotValuePair<unknown>[]): string;
 }
 
 export interface TgpuResolvable {
@@ -49,7 +49,7 @@ export function isResolvable(value: unknown): value is TgpuResolvable {
   );
 }
 
-export function isTgpu(value: unknown): value is Tgpu {
+export function isTgpu(value: unknown): value is Wgsl {
   return (
     typeof value === 'number' ||
     typeof value === 'boolean' ||
@@ -82,9 +82,9 @@ export type Eventual<T> = T | TgpuSlot<T>;
 
 export type EventualGetter = <T>(value: Eventual<T>) => T;
 
-export type InlineResolve = (get: EventualGetter) => Tgpu;
+export type InlineResolve = (get: EventualGetter) => Wgsl;
 
-export interface TgpuResolvableSlot<T extends Tgpu>
+export interface TgpuResolvableSlot<T extends Wgsl>
   extends TgpuResolvable,
     TgpuSlot<T> {}
 
@@ -163,7 +163,7 @@ export type StorageTextureParams = {
 };
 export type SampledTextureParams = {
   type: TgpuTypedTextureType;
-  dataType: AnyTgpuPrimitive;
+  dataType: TextureScalarFormat;
   descriptor?: GPUTextureViewDescriptor;
 };
 
@@ -222,8 +222,8 @@ export interface TgpuData<TInner> extends ISchema<TInner>, TgpuResolvable {
 }
 
 export type AnyTgpuData = TgpuData<unknown>;
-export type AnyTgpuPrimitive = U32 | I32 | F32;
-export type AnyTgpuTexelFormat = Vec4u | Vec4i | Vec4f;
+export type TextureScalarFormat = U32 | I32 | F32;
+export type TexelFormat = Vec4u | Vec4i | Vec4f;
 
 export interface TgpuPointer<
   TScope extends 'function',
