@@ -1,10 +1,11 @@
-import type { Parsed } from 'typed-binary';
+import { BufferWriter, type Parsed } from 'typed-binary';
 import { SimpleTgpuData, TgpuArrayImpl } from './data';
-import type {
-  AnyTgpuData,
-  BufferUsage,
-  TgpuAllocatable,
-  TgpuNamable,
+import {
+  type AnyTgpuData,
+  type BufferUsage,
+  type TgpuAllocatable,
+  type TgpuNamable,
+  isGPUBuffer,
 } from './types';
 import { type TgpuBufferUsage, bufferUsage } from './wgslBufferUsage';
 import type { TgpuPlum } from './wgslPlum';
@@ -13,78 +14,131 @@ import type { TgpuPlum } from './wgslPlum';
 // Public API
 // ----------
 
-type UsageGuard<
-  TUsage extends BufferUsage,
-  TData extends AnyTgpuData,
-  TAllows,
-> = TUsage extends TAllows ? TgpuBufferUsage<TData, TUsage> : null;
+export interface Unmanaged {
+  readonly device: GPUDevice;
+  readonly buffer: GPUBuffer;
+}
 
-type AllowedUsages<
-  TData extends AnyTgpuData,
-  TAllows extends BufferUsage = never,
-> = {
-  uniform: TgpuBufferUsage<TData, TAllows | 'uniform'> | null;
-  mutable: TgpuBufferUsage<TData, TAllows | 'mutable'> | null;
-  readonly: TgpuBufferUsage<TData, TAllows | 'readonly'> | null;
-  vertex: TgpuBufferUsage<TData, TAllows | 'vertex'> | null;
+export interface AllowUniform {
+  uniformAllowed: true;
+}
+export interface AllowReadonly {
+  readonlyAllowed: true;
+}
+export interface AllowMutable {
+  mutableAllowed: true;
+}
+export interface AllowVertex {
+  vertexAllowed: true;
+}
+
+type AllowedUsages<TData extends AnyTgpuData> = {
+  uniform: TgpuBufferUsage<TData, 'uniform'> | null;
+  mutable: TgpuBufferUsage<TData, 'mutable'> | null;
+  readonly: TgpuBufferUsage<TData, 'readonly'> | null;
+  vertex: TgpuBufferUsage<TData, 'vertex'> | null;
 };
 
-export interface TgpuBuffer<
-  TData extends AnyTgpuData,
-  TAllows extends BufferUsage = never,
-> extends TgpuAllocatable<TData>,
+export interface TgpuBuffer<TData extends AnyTgpuData>
+  extends TgpuAllocatable<TData>,
     TgpuNamable {
-  $allowUniform(): TgpuBuffer<TData, TAllows | 'uniform'>;
-  $allowReadonly(): TgpuBuffer<TData, TAllows | 'readonly'>;
-  $allowMutable(): TgpuBuffer<TData, TAllows | 'mutable'>;
-  $allowVertex(
-    stepMode: 'vertex' | 'instance',
-  ): TgpuBuffer<TData, TAllows | 'vertex'>;
-  $addFlags(flags: GPUBufferUsageFlags): TgpuBuffer<TData, TAllows>;
+  $allowUniform(): this & AllowUniform;
+  $allowReadonly(): this & AllowReadonly;
+  $allowMutable(): this & AllowMutable;
+  $allowVertex(stepMode: 'vertex' | 'instance'): this & AllowVertex;
+  $addFlags(flags: GPUBufferUsageFlags): this;
+  $device(device: GPUDevice): this & Unmanaged;
 
-  _usages: AllowedUsages<TData, TAllows>;
+  _usages: AllowedUsages<TData>;
   readonly label: string | undefined;
 }
 
-export function buffer<
-  TData extends AnyTgpuData,
-  TUsage extends BufferUsage = never,
->(
+export function buffer<TData extends AnyTgpuData>(
   typeSchema: TData,
   initial?: Parsed<TData> | TgpuPlum<Parsed<TData>> | undefined,
-): TgpuBuffer<TData, TUsage> {
-  return new TgpuBufferImpl<TData, TUsage>(typeSchema, initial);
+): TgpuBuffer<TData>;
+
+export function buffer<TData extends AnyTgpuData>(
+  typeSchema: TData,
+  gpuBuffer: GPUBuffer,
+): TgpuBuffer<TData>;
+
+export function buffer<TData extends AnyTgpuData>(
+  typeSchema: TData,
+  initialOrBuffer?: Parsed<TData> | TgpuPlum<Parsed<TData>> | GPUBuffer,
+): TgpuBuffer<TData> {
+  return new TgpuBufferImpl(typeSchema, initialOrBuffer);
 }
 
 // --------------
 // Implementation
 // --------------
 
-class TgpuBufferImpl<
-  TData extends AnyTgpuData,
-  TAllows extends BufferUsage = never,
-> implements TgpuBuffer<TData, TAllows>
-{
+class TgpuBufferImpl<TData extends AnyTgpuData> implements TgpuBuffer<TData> {
   public flags: GPUBufferUsageFlags =
     GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
+  private _device: GPUDevice | null = null;
+  private _buffer: GPUBuffer | null = null;
 
-  public vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null = null;
-  public _usages: AllowedUsages<TData, TAllows> = {
+  _usages: AllowedUsages<TData> = {
     uniform: null,
     mutable: null,
     readonly: null,
     vertex: null,
   };
 
+  public vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null = null;
+
   private _label: string | undefined;
+  readonly initial: Parsed<TData> | TgpuPlum<Parsed<TData>> | undefined;
 
   constructor(
     public readonly dataType: TData,
-    public readonly initial?: Parsed<TData> | TgpuPlum<Parsed<TData>>,
-  ) {}
+    public readonly initialOrBuffer?:
+      | Parsed<TData>
+      | TgpuPlum<Parsed<TData>>
+      | GPUBuffer
+      | undefined,
+  ) {
+    if (isGPUBuffer(initialOrBuffer)) {
+      this._buffer = initialOrBuffer;
+    } else {
+      this.initial = initialOrBuffer;
+    }
+  }
 
   get label() {
     return this._label;
+  }
+
+  get buffer() {
+    if (!this._device) {
+      throw new Error(
+        'To use this property, make the buffer unmanaged by passing a GPUDevice to $device',
+      );
+    }
+    if (!this._buffer) {
+      this._buffer = this._device.createBuffer({
+        size: this.dataType.size,
+        usage: this.flags,
+        mappedAtCreation: !!this.initial,
+      });
+      if (this.initial) {
+        const writer = new BufferWriter(this._buffer.getMappedRange());
+        this.dataType.write(writer, this.initial);
+        this._buffer.unmap();
+      }
+    }
+    return this._buffer;
+  }
+
+  get device() {
+    if (!this._device) {
+      throw new Error(
+        'This buffer is managed by TypeGPU and cannot be used directly',
+      );
+    }
+    return this._device;
   }
 
   $name(label: string) {
@@ -94,41 +148,36 @@ class TgpuBufferImpl<
 
   $allowUniform() {
     this.$addFlags(GPUBufferUsage.UNIFORM);
-
-    const enrichedThis = this as TgpuBuffer<TData, TAllows | 'uniform'>;
     if (!this._usages.uniform) {
-      this._usages.uniform = bufferUsage(enrichedThis, 'uniform');
+      this._usages.uniform = bufferUsage(this, 'uniform');
     }
 
-    return enrichedThis;
+    return this as this & AllowUniform;
   }
 
   $allowReadonly() {
     this.$addFlags(GPUBufferUsage.STORAGE);
 
-    const enrichedThis = this as TgpuBuffer<TData, TAllows | 'readonly'>;
     if (!this._usages.readonly) {
-      this._usages.readonly = bufferUsage(enrichedThis, 'readonly');
+      this._usages.readonly = bufferUsage(this, 'readonly');
     }
 
-    return enrichedThis;
+    return this as this & AllowReadonly;
   }
 
   $allowMutable() {
     this.$addFlags(GPUBufferUsage.STORAGE);
 
-    const enrichedThis = this as TgpuBuffer<TData, TAllows | 'mutable'>;
     if (!this._usages.mutable) {
-      this._usages.mutable = bufferUsage(enrichedThis, 'mutable');
+      this._usages.mutable = bufferUsage(this, 'mutable');
     }
 
-    return enrichedThis;
+    return this as this & AllowMutable;
   }
 
   $allowVertex(stepMode: 'vertex' | 'instance' = 'vertex') {
     this.$addFlags(GPUBufferUsage.VERTEX);
 
-    const enrichedThis = this as TgpuBuffer<TData, TAllows | 'vertex'>;
     if (!this.vertexLayout) {
       if (this.dataType instanceof SimpleTgpuData) {
         this.vertexLayout = {
@@ -136,14 +185,14 @@ class TgpuBufferImpl<
           stepMode,
         };
 
-        this._usages.vertex = bufferUsage(enrichedThis, 'vertex');
+        this._usages.vertex = bufferUsage(this, 'vertex');
       } else if (this.dataType instanceof TgpuArrayImpl) {
         this.vertexLayout = {
           arrayStride: this.dataType.elementType.size,
           stepMode,
         };
 
-        this._usages.vertex = bufferUsage(enrichedThis, 'vertex');
+        this._usages.vertex = bufferUsage(this, 'vertex');
       } else {
         throw new Error('Only simple data types can be used as vertex buffers');
       }
@@ -153,12 +202,17 @@ class TgpuBufferImpl<
       throw new Error('Cannot change step mode of a vertex buffer');
     }
 
-    return enrichedThis;
+    return this as this & AllowVertex;
   }
 
   // Temporary solution
   $addFlags(flags: GPUBufferUsageFlags) {
     this.flags |= flags;
+    return this;
+  }
+
+  $device(device: GPUDevice) {
+    this._device = device;
     return this;
   }
 
@@ -171,20 +225,31 @@ function capitalizeFirstLetter(string: string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-function asUsage<TUsage extends BufferUsage>(usage: TUsage) {
-  return <TData extends AnyTgpuData, TAllows extends BufferUsage>(
-    buffer: TgpuBuffer<TData, TAllows>,
-  ) => {
+function asUsage<
+  TUsage extends BufferUsage,
+  TType extends AllowVertex | AllowUniform | AllowReadonly | AllowMutable,
+>(usage: TUsage, _: TType) {
+  return <TData extends AnyTgpuData>(
+    buffer: TgpuBuffer<TData> & TType,
+  ): TgpuBufferUsage<TData, TUsage> => {
     if (buffer._usages[usage] === null) {
       throw new Error(
         `Cannot pass ${buffer} to as${capitalizeFirstLetter(usage)} function, as the buffer does not allow ${usage} usage. To allow it, use $allow${capitalizeFirstLetter(usage)} TgpuBuffer method.`,
       );
     }
-    return buffer._usages[usage] as UsageGuard<TUsage, TData, TAllows>;
+    return buffer._usages[usage] as TgpuBufferUsage<TData, TUsage>;
   };
 }
 
-export const asUniform = asUsage('uniform');
-export const asReadonly = asUsage('readonly');
-export const asMutable = asUsage('mutable');
-export const asVertex = asUsage('vertex');
+export const asUniform = asUsage('uniform', {
+  uniformAllowed: true,
+} as AllowUniform);
+export const asReadonly = asUsage('readonly', {
+  readonlyAllowed: true,
+} as AllowReadonly);
+export const asMutable = asUsage('mutable', {
+  mutableAllowed: true,
+} as AllowMutable);
+export const asVertex = asUsage('vertex', {
+  vertexAllowed: true,
+} as AllowVertex);

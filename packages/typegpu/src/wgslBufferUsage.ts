@@ -19,10 +19,7 @@ export interface TgpuBufferUsage<
 export function bufferUsage<
   TData extends AnyTgpuData,
   TUsage extends BufferUsage,
->(
-  buffer: TgpuBuffer<TData, TUsage>,
-  usage: TUsage,
-): TgpuBufferUsage<TData, TUsage> {
+>(buffer: TgpuBuffer<TData>, usage: TUsage): TgpuBufferUsage<TData, TUsage> {
   return new TgpuBufferUsageImpl(buffer, usage);
 }
 
@@ -34,7 +31,7 @@ class TgpuBufferUsageImpl<TData extends AnyTgpuData, TUsage extends BufferUsage>
   implements TgpuBufferUsage<TData, TUsage>
 {
   constructor(
-    public readonly buffer: TgpuBuffer<TData, TUsage>,
+    public readonly buffer: TgpuBuffer<TData>,
     public readonly usage: TUsage,
   ) {}
 
