@@ -54,6 +54,10 @@ export default defineConfig({
               slug: 'guides/getting-started',
             },
             {
+              label: 'Unamnaged API',
+              slug: 'guides/unmanaged-api',
+            },
+            {
               label: 'Basic Principles',
               slug: 'guides/basic-principles',
             },
