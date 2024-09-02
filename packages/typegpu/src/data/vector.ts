@@ -26,7 +26,7 @@ interface VecSchemaOptions<T> {
   length: number;
   label: string;
   make: (...args: number[]) => T;
-  makeFromScalar: (value: number | undefined) => T;
+  makeFromScalar: (value: number) => T;
 }
 
 class VecSchemaImpl<T extends vecBase>
@@ -44,7 +44,7 @@ class VecSchemaImpl<T extends vecBase>
     return this.label;
   }
   readonly make: (...args: number[]) => T;
-  readonly makeFromScalar: (value: number | undefined) => T;
+  readonly makeFromScalar: (value: number) => T;
 
   constructor({
     unitType,
@@ -68,7 +68,7 @@ class VecSchemaImpl<T extends vecBase>
     const values = args; // TODO: Allow users to pass in vectors that fill part of the values.
 
     if (values.length <= 1) {
-      return this.makeFromScalar(values[0]);
+      return this.makeFromScalar(values[0] ?? 0);
     }
 
     if (values.length === this.length) {
@@ -430,7 +430,7 @@ export const vec2f = new VecSchemaImpl({
   length: 2,
   label: 'vec2f',
   make: (x: number, y: number) => new vec2fImpl(x, y),
-  makeFromScalar: (x = 0) => new vec2fImpl(x, x),
+  makeFromScalar: (x) => new vec2fImpl(x, x),
 }) as unknown as Vec2f;
 
 export type Vec2i = WgslData<vec2i> &
@@ -444,7 +444,7 @@ export const vec2i = new VecSchemaImpl({
   length: 2,
   label: 'vec2i',
   make: (x: number, y: number) => new vec2iImpl(x, y),
-  makeFromScalar: (x = 0) => new vec2iImpl(x, x),
+  makeFromScalar: (x) => new vec2iImpl(x, x),
 }) as unknown as Vec2i;
 
 export type Vec2u = WgslData<vec2u> &
@@ -458,7 +458,7 @@ export const vec2u = new VecSchemaImpl({
   length: 2,
   label: 'vec2u',
   make: (x: number, y: number) => new vec2uImpl(x, y),
-  makeFromScalar: (x = 0) => new vec2uImpl(x, x),
+  makeFromScalar: (x) => new vec2uImpl(x, x),
 }) as unknown as Vec2u;
 
 export type Vec3f = WgslData<vec3f> &
@@ -472,7 +472,7 @@ export const vec3f = new VecSchemaImpl({
   length: 3,
   label: 'vec3f',
   make: (x, y, z) => new vec3fImpl(x, y, z),
-  makeFromScalar: (x = 0) => new vec3fImpl(x, x, x),
+  makeFromScalar: (x) => new vec3fImpl(x, x, x),
 }) as unknown as Vec3f;
 
 export type Vec3i = WgslData<vec3i> &
@@ -486,7 +486,7 @@ export const vec3i = new VecSchemaImpl({
   length: 3,
   label: 'vec3i',
   make: (x, y, z) => new vec3iImpl(x, y, z),
-  makeFromScalar: (x = 0) => new vec3iImpl(x, x, x),
+  makeFromScalar: (x) => new vec3iImpl(x, x, x),
 }) as unknown as Vec3i;
 
 export type Vec3u = WgslData<vec3u> &
@@ -500,7 +500,7 @@ export const vec3u = new VecSchemaImpl({
   length: 3,
   label: 'vec3u',
   make: (x, y, z) => new vec3uImpl(x, y, z),
-  makeFromScalar: (x = 0) => new vec3uImpl(x, x, x),
+  makeFromScalar: (x) => new vec3uImpl(x, x, x),
 }) as unknown as Vec3u;
 
 export type Vec4f = WgslData<vec4f> &
@@ -514,7 +514,7 @@ export const vec4f = new VecSchemaImpl({
   length: 4,
   label: 'vec4f',
   make: (x, y, z, w) => new vec4fImpl(x, y, z, w),
-  makeFromScalar: (x = 0) => new vec4fImpl(x, x, x, x),
+  makeFromScalar: (x) => new vec4fImpl(x, x, x, x),
 }) as unknown as Vec4f;
 
 export type Vec4i = WgslData<vec4i> &
@@ -528,7 +528,7 @@ export const vec4i = new VecSchemaImpl({
   length: 4,
   label: 'vec4i',
   make: (x, y, z, w) => new vec4iImpl(x, y, z, w),
-  makeFromScalar: (x = 0) => new vec4iImpl(x, x, x, x),
+  makeFromScalar: (x) => new vec4iImpl(x, x, x, x),
 }) as unknown as Vec4i;
 
 export type Vec4u = WgslData<vec4u> &
@@ -542,5 +542,5 @@ export const vec4u = new VecSchemaImpl({
   length: 4,
   label: 'vec4u',
   make: (x, y, z, w) => new vec4uImpl(x, y, z, w),
-  makeFromScalar: (x = 0) => new vec4uImpl(x, x, x, x),
+  makeFromScalar: (x) => new vec4uImpl(x, x, x, x),
 }) as unknown as Vec4u;
