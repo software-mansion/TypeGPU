@@ -1,6 +1,12 @@
-import type { Parsed } from 'typed-binary';
+import { BufferWriter, type Parsed } from 'typed-binary';
 import { SimpleWgslData, WgslArrayImpl } from './data';
-import type { AnyWgslData, BufferUsage, WgslAllocatable } from './types';
+import {
+  type AnyWgslData,
+  type BufferUsage,
+  type WgslAllocatable,
+  type WgslNamable,
+  isGPUBuffer,
+} from './types';
 import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
 import type { WgslPlum } from './wgslPlum';
 
@@ -8,75 +14,131 @@ import type { WgslPlum } from './wgslPlum';
 // Public API
 // ----------
 
-type UsageGuard<
-  TUsage extends BufferUsage,
-  TData extends AnyWgslData,
-  TAllows,
-> = TUsage extends TAllows ? WgslBufferUsage<TData, TUsage> : null;
-
-export interface WgslBuffer<
-  TData extends AnyWgslData,
-  TAllows extends BufferUsage = never,
-> extends WgslAllocatable<TData> {
-  $name(label: string): WgslBuffer<TData, TAllows>;
-  $allowUniform(): WgslBuffer<TData, TAllows | 'uniform'>;
-  $allowReadonly(): WgslBuffer<TData, TAllows | 'readonly'>;
-  $allowMutable(): WgslBuffer<TData, TAllows | 'mutable'>;
-  $allowVertex(
-    stepMode: 'vertex' | 'instance',
-  ): WgslBuffer<TData, TAllows | 'vertex'>;
-  $addFlags(flags: GPUBufferUsageFlags): WgslBuffer<TData, TAllows>;
-
-  asUniform(): UsageGuard<'uniform', TData, TAllows>;
-  asMutable(): UsageGuard<'mutable', TData, TAllows>;
-  asReadonly(): UsageGuard<'readonly', TData, TAllows>;
-  asVertex(): UsageGuard<'vertex', TData, TAllows>;
+export interface Unmanaged {
+  readonly device: GPUDevice;
+  readonly buffer: GPUBuffer;
 }
 
-export function buffer<
-  TData extends AnyWgslData,
-  TUsage extends BufferUsage = never,
->(
+export interface AllowUniform {
+  uniformAllowed: true;
+}
+export interface AllowReadonly {
+  readonlyAllowed: true;
+}
+export interface AllowMutable {
+  mutableAllowed: true;
+}
+export interface AllowVertex {
+  vertexAllowed: true;
+}
+
+type AllowedUsages<TData extends AnyWgslData> = {
+  uniform: WgslBufferUsage<TData, 'uniform'> | null;
+  mutable: WgslBufferUsage<TData, 'mutable'> | null;
+  readonly: WgslBufferUsage<TData, 'readonly'> | null;
+  vertex: WgslBufferUsage<TData, 'vertex'> | null;
+};
+
+export interface WgslBuffer<TData extends AnyWgslData>
+  extends WgslAllocatable<TData>,
+    WgslNamable {
+  $allowUniform(): this & AllowUniform;
+  $allowReadonly(): this & AllowReadonly;
+  $allowMutable(): this & AllowMutable;
+  $allowVertex(stepMode: 'vertex' | 'instance'): this & AllowVertex;
+  $addFlags(flags: GPUBufferUsageFlags): this;
+  $device(device: GPUDevice): this & Unmanaged;
+
+  _usages: AllowedUsages<TData>;
+  readonly label: string | undefined;
+}
+
+export function buffer<TData extends AnyWgslData>(
   typeSchema: TData,
   initial?: Parsed<TData> | WgslPlum<Parsed<TData>> | undefined,
-): WgslBuffer<TData, TUsage> {
-  return new WgslBufferImpl<TData, TUsage>(typeSchema, initial);
+): WgslBuffer<TData>;
+
+export function buffer<TData extends AnyWgslData>(
+  typeSchema: TData,
+  gpuBuffer: GPUBuffer,
+): WgslBuffer<TData>;
+
+export function buffer<TData extends AnyWgslData>(
+  typeSchema: TData,
+  initialOrBuffer?: Parsed<TData> | WgslPlum<Parsed<TData>> | GPUBuffer,
+): WgslBuffer<TData> {
+  return new WgslBufferImpl(typeSchema, initialOrBuffer);
 }
 
 // --------------
 // Implementation
 // --------------
 
-class WgslBufferImpl<
-  TData extends AnyWgslData,
-  TAllows extends BufferUsage = never,
-> implements WgslBuffer<TData, TAllows>
-{
+class WgslBufferImpl<TData extends AnyWgslData> implements WgslBuffer<TData> {
   public flags: GPUBufferUsageFlags =
     GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
+  private _device: GPUDevice | null = null;
+  private _buffer: GPUBuffer | null = null;
 
-  public vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null = null;
-  private _allowedUsages: {
-    uniform: WgslBufferUsage<TData, TAllows | 'uniform'> | null;
-    mutable: WgslBufferUsage<TData, TAllows | 'mutable'> | null;
-    readonly: WgslBufferUsage<TData, TAllows | 'readonly'> | null;
-    vertex: WgslBufferUsage<TData, TAllows | 'vertex'> | null;
-  } = {
+  _usages: AllowedUsages<TData> = {
     uniform: null,
     mutable: null,
     readonly: null,
     vertex: null,
   };
 
+  public vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null = null;
+
   private _label: string | undefined;
+  readonly initial: Parsed<TData> | WgslPlum<Parsed<TData>> | undefined;
 
   constructor(
     public readonly dataType: TData,
-    public readonly initial?: Parsed<TData> | WgslPlum<Parsed<TData>>,
-  ) {}
+    public readonly initialOrBuffer?:
+      | Parsed<TData>
+      | WgslPlum<Parsed<TData>>
+      | GPUBuffer
+      | undefined,
+  ) {
+    if (isGPUBuffer(initialOrBuffer)) {
+      this._buffer = initialOrBuffer;
+    } else {
+      this.initial = initialOrBuffer;
+    }
+  }
 
   get label() {
     return this._label;
+  }
+
+  get buffer() {
+    if (!this._device) {
+      throw new Error(
+        'To use this property, make the buffer unmanaged by passing a GPUDevice to $device',
+      );
+    }
+    if (!this._buffer) {
+      this._buffer = this._device.createBuffer({
+        size: this.dataType.size,
+        usage: this.flags,
+        mappedAtCreation: !!this.initial,
+      });
+      if (this.initial) {
+        const writer = new BufferWriter(this._buffer.getMappedRange());
+        this.dataType.write(writer, this.initial);
+        this._buffer.unmap();
+      }
+    }
+    return this._buffer;
+  }
+
+  get device() {
+    if (!this._device) {
+      throw new Error(
+        'This buffer is managed by TypeGPU and cannot be used directly',
+      );
+    }
+    return this._device;
   }
 
   $name(label: string) {
@@ -86,41 +148,36 @@ class WgslBufferImpl<
 
   $allowUniform() {
     this.$addFlags(GPUBufferUsage.UNIFORM);
-
-    const enrichedThis = this as WgslBuffer<TData, TAllows | 'uniform'>;
-    if (!this._allowedUsages.uniform) {
-      this._allowedUsages.uniform = bufferUsage(enrichedThis, 'uniform');
+    if (!this._usages.uniform) {
+      this._usages.uniform = bufferUsage(this, 'uniform');
     }
 
-    return enrichedThis;
+    return this as this & AllowUniform;
   }
 
   $allowReadonly() {
     this.$addFlags(GPUBufferUsage.STORAGE);
 
-    const enrichedThis = this as WgslBuffer<TData, TAllows | 'readonly'>;
-    if (!this._allowedUsages.readonly) {
-      this._allowedUsages.readonly = bufferUsage(enrichedThis, 'readonly');
+    if (!this._usages.readonly) {
+      this._usages.readonly = bufferUsage(this, 'readonly');
     }
 
-    return enrichedThis;
+    return this as this & AllowReadonly;
   }
 
   $allowMutable() {
     this.$addFlags(GPUBufferUsage.STORAGE);
 
-    const enrichedThis = this as WgslBuffer<TData, TAllows | 'mutable'>;
-    if (!this._allowedUsages.mutable) {
-      this._allowedUsages.mutable = bufferUsage(enrichedThis, 'mutable');
+    if (!this._usages.mutable) {
+      this._usages.mutable = bufferUsage(this, 'mutable');
     }
 
-    return enrichedThis;
+    return this as this & AllowMutable;
   }
 
   $allowVertex(stepMode: 'vertex' | 'instance' = 'vertex') {
     this.$addFlags(GPUBufferUsage.VERTEX);
 
-    const enrichedThis = this as WgslBuffer<TData, TAllows | 'vertex'>;
     if (!this.vertexLayout) {
       if (this.dataType instanceof SimpleWgslData) {
         this.vertexLayout = {
@@ -128,14 +185,14 @@ class WgslBufferImpl<
           stepMode,
         };
 
-        this._allowedUsages.vertex = bufferUsage(enrichedThis, 'vertex');
+        this._usages.vertex = bufferUsage(this, 'vertex');
       } else if (this.dataType instanceof WgslArrayImpl) {
         this.vertexLayout = {
           arrayStride: this.dataType.elementType.size,
           stepMode,
         };
 
-        this._allowedUsages.vertex = bufferUsage(enrichedThis, 'vertex');
+        this._usages.vertex = bufferUsage(this, 'vertex');
       } else {
         throw new Error('Only simple data types can be used as vertex buffers');
       }
@@ -145,7 +202,7 @@ class WgslBufferImpl<
       throw new Error('Cannot change step mode of a vertex buffer');
     }
 
-    return enrichedThis;
+    return this as this & AllowVertex;
   }
 
   // Temporary solution
@@ -154,27 +211,45 @@ class WgslBufferImpl<
     return this;
   }
 
-  asUniform() {
-    return this._allowedUsages.uniform as UsageGuard<'uniform', TData, TAllows>;
-  }
-
-  asMutable() {
-    return this._allowedUsages.mutable as UsageGuard<'mutable', TData, TAllows>;
-  }
-
-  asReadonly() {
-    return this._allowedUsages.readonly as UsageGuard<
-      'readonly',
-      TData,
-      TAllows
-    >;
-  }
-
-  asVertex() {
-    return this._allowedUsages.vertex as UsageGuard<'vertex', TData, TAllows>;
+  $device(device: GPUDevice) {
+    this._device = device;
+    return this;
   }
 
   toString(): string {
     return `buffer:${this._label ?? '<unnamed>'}`;
   }
 }
+
+function capitalizeFirstLetter(string: string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+function asUsage<
+  TUsage extends BufferUsage,
+  TType extends AllowVertex | AllowUniform | AllowReadonly | AllowMutable,
+>(usage: TUsage, _: TType) {
+  return <TData extends AnyWgslData>(
+    buffer: WgslBuffer<TData> & TType,
+  ): WgslBufferUsage<TData, TUsage> => {
+    if (buffer._usages[usage] === null) {
+      throw new Error(
+        `Cannot pass ${buffer} to as${capitalizeFirstLetter(usage)} function, as the buffer does not allow ${usage} usage. To allow it, use $allow${capitalizeFirstLetter(usage)} WgslBuffer method.`,
+      );
+    }
+    return buffer._usages[usage] as WgslBufferUsage<TData, TUsage>;
+  };
+}
+
+export const asUniform = asUsage('uniform', {
+  uniformAllowed: true,
+} as AllowUniform);
+export const asReadonly = asUsage('readonly', {
+  readonlyAllowed: true,
+} as AllowReadonly);
+export const asMutable = asUsage('mutable', {
+  mutableAllowed: true,
+} as AllowMutable);
+export const asVertex = asUsage('vertex', {
+  vertexAllowed: true,
+} as AllowVertex);

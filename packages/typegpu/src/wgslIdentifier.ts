@@ -1,9 +1,9 @@
-import type { ResolutionCtx, WgslResolvable } from './types';
+import type { ResolutionCtx, WgslNamable, WgslResolvable } from './types';
 
 /**
  * Helpful when creating new Resolvable types. For internal use.
  */
-export class WgslIdentifier implements WgslResolvable {
+export class WgslIdentifier implements WgslResolvable, WgslNamable {
   label?: string | undefined;
 
   $name(label: string | undefined) {

@@ -14,7 +14,7 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { builtin, createRuntime, wgsl } from 'typegpu';
+import { asUniform, builtin, createRuntime, wgsl } from 'typegpu';
 import { struct, u32, vec2f } from 'typegpu/data';
 
 const xSpanPlum = addSliderPlumParameter('x span', 16, {
@@ -73,7 +73,7 @@ const renderPipeline = runtime.makeRenderPipeline({
 
   fragment: {
     code: wgsl.code`
-      let span = ${spanBuffer.asUniform()};
+      let span = ${asUniform(spanBuffer)};
       let red = floor(uvOut.x * f32(span.x)) / f32(span.x);
       let green = floor(uvOut.y * f32(span.y)) / f32(span.y);
       return vec4(red, green, 0.5, 1.0);

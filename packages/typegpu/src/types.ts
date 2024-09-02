@@ -34,7 +34,6 @@ export interface ResolutionCtx {
 
 export interface WgslResolvable {
   readonly label?: string | undefined;
-
   resolve(ctx: ResolutionCtx): string;
 }
 
@@ -43,7 +42,7 @@ export interface WgslResolvable {
  * being able to HAVE a name.
  */
 export interface WgslNamable {
-  $name(label: string): this;
+  $name(label?: string | undefined): this;
 }
 
 export function isResolvable(value: unknown): value is WgslResolvable {
@@ -71,15 +70,12 @@ export function isWgsl(value: unknown): value is Wgsl {
   );
 }
 
-export interface WgslSlot<T> {
+export interface WgslSlot<T> extends WgslNamable {
   readonly __brand: 'WgslSlot';
 
   readonly defaultValue: T | undefined;
 
   readonly label?: string | undefined;
-
-  $name(label: string): WgslSlot<T>;
-
   /**
    * Used to determine if code generated using either value `a` or `b` in place
    * of the slot will be equivalent. Defaults to `Object.is`.
@@ -102,9 +98,7 @@ export type InlineResolve = (get: EventualGetter) => Wgsl;
 
 export interface WgslResolvableSlot<T extends Wgsl>
   extends WgslResolvable,
-    WgslSlot<T> {
-  $name(label: string): WgslResolvableSlot<T>;
-}
+    WgslSlot<T> {}
 
 export type SlotValuePair<T> = [WgslSlot<T>, T];
 
@@ -118,7 +112,6 @@ export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
   vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null;
   readonly initial?: Parsed<TData> | WgslPlum<Parsed<TData>> | undefined;
   readonly flags: GPUBufferUsageFlags;
-  get label(): string | undefined;
 }
 
 export function isAllocatable(value: unknown): value is WgslAllocatable {
@@ -267,4 +260,13 @@ export function isPointer(
   value: AnyWgslPointer | AnyWgslData,
 ): value is AnyWgslPointer {
   return 'pointsTo' in value;
+}
+
+export function isGPUBuffer(value: unknown): value is GPUBuffer {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    'getMappedRange' in value &&
+    'mapAsync' in value
+  );
 }

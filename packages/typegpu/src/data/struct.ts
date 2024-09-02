@@ -11,7 +11,12 @@ import {
   object,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { AnyWgslData, ResolutionCtx, WgslData } from '../types';
+import type {
+  AnyWgslData,
+  ResolutionCtx,
+  WgslData,
+  WgslNamable,
+} from '../types';
 import { code } from '../wgslCode';
 import { WgslIdentifier } from '../wgslIdentifier';
 import { WgslDataCustomAlignedImpl } from './align';
@@ -24,9 +29,8 @@ import { WgslDataCustomSizedImpl } from './size';
 
 export interface WgslStruct<TProps extends Record<string, AnyWgslData>>
   extends ISchema<UnwrapRecord<TProps>>,
-    WgslData<UnwrapRecord<TProps>> {
-  $name(label: string): this;
-}
+    WgslData<UnwrapRecord<TProps>>,
+    WgslNamable {}
 
 export const struct = <TProps extends Record<string, AnyWgslData>>(
   properties: TProps,

@@ -9,14 +9,14 @@
 import { addElement } from '@typegpu/example-toolkit';
 // --
 
-import { createRuntime, wgsl } from 'typegpu';
+import { asMutable, createRuntime, wgsl } from 'typegpu';
 import { u32 } from 'typegpu/data';
 
 const counterBuffer = wgsl.buffer(u32, 0).$name('counter').$allowMutable();
 
 const runtime = await createRuntime();
 const pipeline = runtime.makeComputePipeline({
-  code: wgsl`${counterBuffer.asMutable()} += 1;`,
+  code: wgsl`${asMutable(counterBuffer)} += 1;`,
 });
 
 async function increment() {

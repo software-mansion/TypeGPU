@@ -1,5 +1,5 @@
 import { type WgslSettable, WgslSettableTrait } from './settableTrait';
-import type { Wgsl, WgslResolvable } from './types';
+import type { Wgsl, WgslNamable, WgslResolvable } from './types';
 
 // ----------
 // Public API
@@ -11,10 +11,8 @@ export type ExtractPlumValue<T> = T extends WgslPlum<infer TValue>
   ? TValue
   : never;
 
-export interface WgslPlum<TValue = unknown> {
+export interface WgslPlum<TValue = unknown> extends WgslNamable {
   readonly __brand: 'WgslPlum';
-
-  $name(label: string): this;
 
   /**
    * Computes the value of this plum. Circumvents the store

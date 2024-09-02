@@ -15,7 +15,15 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { builtin, createRuntime, wgsl } from 'typegpu';
+import {
+  asMutable,
+  asReadonly,
+  asUniform,
+  asVertex,
+  builtin,
+  createRuntime,
+  wgsl,
+} from 'typegpu';
 import { arrayOf, atomic, f32, u32, vec2u } from 'typegpu/data';
 
 const runtime = await createRuntime();
@@ -75,11 +83,11 @@ const nextStateBuffer = wgsl
   .$name('next')
   .$allowMutable();
 
-const viscosityData = viscosityBuffer.asUniform();
-const currentStateData = currentStateBuffer.asReadonly();
-const currentStateVertex = currentStateBuffer.asVertex();
-const sizeData = sizeBuffer.asUniform();
-const nextStateData = nextStateBuffer.asMutable();
+const viscosityData = asUniform(viscosityBuffer);
+const currentStateData = asReadonly(currentStateBuffer);
+const currentStateVertex = asVertex(currentStateBuffer);
+const sizeData = asUniform(sizeBuffer);
+const nextStateData = asMutable(nextStateBuffer);
 
 const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
 const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
@@ -95,7 +103,7 @@ const squareBuffer = wgsl
   .$allowVertex('vertex')
   .$allowUniform()
   .$name('square');
-const squareBufferData = squareBuffer.asVertex();
+const squareBufferData = asVertex(squareBuffer);
 
 const getIndex = wgsl.fn`(x: u32, y: u32) -> u32 {
   let h = ${sizeData}.y;

@@ -7,6 +7,7 @@ import type {
   StorageTextureAccess,
   StorageTextureParams,
   TextureUsage,
+  WgslNamable,
   WgslRenderResource,
   WgslRenderResourceType,
 } from './types';
@@ -25,12 +26,12 @@ export interface WgslAnyTexture {
   get flags(): GPUTextureUsageFlags;
 }
 
-export interface WgslTexture<TAllows extends TextureUsage = never> {
+export interface WgslTexture<TAllows extends TextureUsage = never>
+  extends WgslNamable {
   readonly descriptor: Omit<GPUTextureDescriptor, 'usage'>;
   get label(): string | undefined;
   get flags(): GPUTextureUsageFlags;
 
-  $name(label: string): WgslTexture<TAllows>;
   $allowSampled(): WgslTexture<TAllows | 'sampled'>;
   $allowStorage(): WgslTexture<TAllows | 'storage'>;
 
@@ -49,14 +50,13 @@ export interface WgslTexture<TAllows extends TextureUsage = never> {
 export interface WgslTextureView<
   TData extends AnyWgslPrimitive | AnyWgslTexelFormat,
   TUsage extends TextureUsage,
-> extends WgslRenderResource {
+> extends WgslRenderResource,
+    WgslNamable {
   readonly texture: WgslTexture<TUsage>;
   readonly descriptor: Omit<GPUTextureViewDescriptor, 'usage'>;
   readonly type: WgslRenderResourceType;
   readonly dataType: TData;
   readonly access: StorageTextureAccess | undefined;
-
-  $name(label: string): WgslTextureView<TData, TUsage>;
 }
 
 export interface WgslTextureExternal extends WgslRenderResource {

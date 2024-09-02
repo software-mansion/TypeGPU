@@ -1,4 +1,10 @@
-import type { AnyWgslData, ResolutionCtx, Wgsl, WgslResolvable } from './types';
+import type {
+  AnyWgslData,
+  ResolutionCtx,
+  Wgsl,
+  WgslNamable,
+  WgslResolvable,
+} from './types';
 import { code } from './wgslCode';
 import { WgslIdentifier } from './wgslIdentifier';
 
@@ -8,9 +14,9 @@ import { WgslIdentifier } from './wgslIdentifier';
 
 export type VariableScope = 'private' | 'workgroup';
 
-export interface WgslVar<TDataType extends AnyWgslData> extends WgslResolvable {
-  $name(label: string): WgslVar<TDataType>;
-}
+export interface WgslVar<TDataType extends AnyWgslData>
+  extends WgslResolvable,
+    WgslNamable {}
 
 /**
  * Creates a variable, with an optional initial value.

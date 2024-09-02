@@ -17,6 +17,9 @@ import {
 import {
   type Wgsl,
   type WgslBufferUsage,
+  asMutable,
+  asReadonly,
+  asUniform,
   builtin,
   createRuntime,
   wgsl,
@@ -85,7 +88,7 @@ const BoxObstacle = struct({
 
 const gridSize = 256;
 const gridSizeBuffer = wgsl.buffer(i32).$allowUniform();
-const gridSizeUniform = gridSizeBuffer.asUniform();
+const gridSizeUniform = asUniform(gridSizeBuffer);
 
 const gridAlphaBuffer = wgsl.buffer(GridData).$allowMutable().$allowReadonly();
 const gridBetaBuffer = wgsl.buffer(GridData).$allowMutable().$allowReadonly();
@@ -103,14 +106,14 @@ const prevObstaclesBuffer = wgsl
   .buffer(arrayOf(BoxObstacle, MAX_OBSTACLES))
   .$allowReadonly();
 
-const prevObstacleReadonly = prevObstaclesBuffer.asReadonly();
+const prevObstacleReadonly = asReadonly(prevObstaclesBuffer);
 
 const obstaclesBuffer = wgsl
   .buffer(arrayOf(BoxObstacle, MAX_OBSTACLES))
   .$allowMutable()
   .$allowReadonly();
 
-const obstaclesReadonly = obstaclesBuffer.asReadonly();
+const obstaclesReadonly = asReadonly(obstaclesBuffer);
 
 const isValidCoord = wgsl.fn`(x: i32, y: i32) -> bool {
   return
@@ -421,7 +424,7 @@ const sourceParamsBuffer = wgsl
 
 const getMinimumInFlow = wgsl.fn`
   (x: i32, y: i32) -> f32 {
-    let source_params = ${sourceParamsBuffer.asUniform()};
+    let source_params = ${asUniform(sourceParamsBuffer)};
     let grid_size_f = f32(${gridSizeUniform});
     let source_radius = max(1., source_params.radius * grid_size_f);
     let source_pos = vec2f(source_params.center.x * grid_size_f, source_params.center.y * grid_size_f);
@@ -438,7 +441,7 @@ const mainCompute = wgsl.fn`
   (x: i32, y: i32) {
     let index = ${coordsToIndex('x', 'y')};
 
-    ${setupRandomSeed}(vec2f(f32(index), ${timeBuffer.asUniform()}));
+    ${setupRandomSeed}(vec2f(f32(index), ${asUniform(timeBuffer)}));
 
     var next = ${getCell}(x, y);
 
@@ -694,16 +697,16 @@ function makePipelines(
 
 const even = makePipelines(
   // in
-  gridAlphaBuffer.asReadonly(),
+  asReadonly(gridAlphaBuffer),
   // out
-  gridBetaBuffer.asMutable(),
+  asMutable(gridBetaBuffer),
 );
 
 const odd = makePipelines(
   // in
-  gridBetaBuffer.asReadonly(),
+  asReadonly(gridBetaBuffer),
   // out
-  gridAlphaBuffer.asMutable(),
+  asMutable(gridAlphaBuffer),
 );
 
 let primary = even;
