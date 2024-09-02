@@ -8,5 +8,6 @@ export {
   AnyWgslData,
   AnyWgslTexelFormat,
 } from './types';
+export { std } from './std';
 
 export type { WgslBuffer } from './wgslBuffer';
