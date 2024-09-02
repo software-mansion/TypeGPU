@@ -1,4 +1,4 @@
-import type { vecBase } from './data';
+import type { vec3f, vec3i, vec3u, vecBase } from './data';
 import { VectorOps } from './data/vectorOps';
 
 export const std = {
@@ -10,7 +10,8 @@ export const std = {
   dot: <T extends vecBase>(lhs: T, rhs: T): number =>
     VectorOps.dot[lhs.kind](lhs, rhs),
   normalize: <T extends vecBase>(v: T): T => VectorOps.normalize[v.kind](v),
-  cross: <T extends vecBase>(a: T, b: T): T => VectorOps.cross[a.kind](a, b),
+  cross: <T extends vec3f | vec3i | vec3u>(a: T, b: T): T =>
+    VectorOps.cross[a.kind](a, b),
   fract: (a: number): number => a - Math.floor(a),
   length: <T extends vecBase>(vector: T): number =>
     VectorOps.length[vector.kind](vector),

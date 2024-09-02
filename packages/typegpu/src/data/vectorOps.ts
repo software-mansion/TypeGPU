@@ -160,5 +160,8 @@ export const VectorOps = {
         a.x * b.y - a.y * b.x,
       );
     },
-  } as Record<VecKind, <T extends vecBase>(a: T, b: T) => T>,
+  } as Record<
+    'vec3f' | 'vec3i' | 'vec3u',
+    <T extends vec3f | vec3i | vec3u>(a: T, b: T) => T
+  >,
 };
