@@ -1,4 +1,4 @@
-import type { WgslResolvable, WgslSlot } from './types';
+import type { TgpuResolvable, TgpuSlot } from './types';
 
 /**
  * An error that happens during resolution of WGSL code.
@@ -10,7 +10,7 @@ import type { WgslResolvable, WgslSlot } from './types';
 export class ResolutionError extends Error {
   constructor(
     public readonly cause: unknown,
-    public readonly trace: WgslResolvable[],
+    public readonly trace: TgpuResolvable[],
   ) {
     let entries = trace.map((ancestor) => `- ${ancestor}`);
 
@@ -25,7 +25,7 @@ export class ResolutionError extends Error {
     Object.setPrototypeOf(this, ResolutionError.prototype);
   }
 
-  appendToTrace(ancestor: WgslResolvable): ResolutionError {
+  appendToTrace(ancestor: TgpuResolvable): ResolutionError {
     const newTrace = [ancestor, ...this.trace];
 
     return new ResolutionError(this.cause, newTrace);
@@ -36,7 +36,7 @@ export class ResolutionError extends Error {
  * @category Errors
  */
 export class MissingSlotValueError extends Error {
-  constructor(public readonly slot: WgslSlot<unknown>) {
+  constructor(public readonly slot: TgpuSlot<unknown>) {
     super(`Missing value for '${slot}'`);
 
     // Set the prototype explicitly.

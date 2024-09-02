@@ -1,12 +1,12 @@
 import type {
-  AnyWgslData,
+  AnyTgpuData,
   ResolutionCtx,
-  Wgsl,
-  WgslNamable,
-  WgslResolvable,
+  Tgpu,
+  TgpuNamable,
+  TgpuResolvable,
 } from './types';
 import { code } from './wgslCode';
-import { WgslIdentifier } from './wgslIdentifier';
+import { TgpuIdentifier } from './wgslIdentifier';
 
 // ----------
 // Public API
@@ -14,29 +14,29 @@ import { WgslIdentifier } from './wgslIdentifier';
 
 export type VariableScope = 'private' | 'workgroup';
 
-export interface WgslVar<TDataType extends AnyWgslData>
-  extends WgslResolvable,
-    WgslNamable {}
+export interface TgpuVar<TDataType extends AnyTgpuData>
+  extends TgpuResolvable,
+    TgpuNamable {}
 
 /**
  * Creates a variable, with an optional initial value.
  */
-export const variable = <TDataType extends AnyWgslData>(
+export const variable = <TDataType extends AnyTgpuData>(
   dataType: TDataType,
-  initialValue?: Wgsl,
+  initialValue?: Tgpu,
   scope: VariableScope = 'private',
-): WgslVar<TDataType> => new WgslVarImpl(dataType, initialValue, scope);
+): TgpuVar<TDataType> => new TgpuVarImpl(dataType, initialValue, scope);
 
 // --------------
 // Implementation
 // --------------
 
-class WgslVarImpl<TDataType extends AnyWgslData> implements WgslVar<TDataType> {
-  public identifier = new WgslIdentifier();
+class TgpuVarImpl<TDataType extends AnyTgpuData> implements TgpuVar<TDataType> {
+  public identifier = new TgpuIdentifier();
 
   constructor(
     private readonly _dataType: TDataType,
-    private readonly _initialValue: Wgsl | undefined,
+    private readonly _initialValue: Tgpu | undefined,
     public readonly scope: VariableScope,
   ) {}
 

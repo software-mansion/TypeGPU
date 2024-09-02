@@ -11,19 +11,19 @@ import {
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import type {
-  AnyWgslData,
+  AnyTgpuData,
   ResolutionCtx,
-  WgslData,
-  WgslNamable,
+  TgpuData,
+  TgpuNamable,
 } from '../types';
 import { code } from '../wgslCode';
-import { WgslIdentifier } from '../wgslIdentifier';
+import { TgpuIdentifier } from '../wgslIdentifier';
 import alignIO from './alignIO';
 import { u32 } from './numeric';
 
-class DynamicArrayDataType<TElement extends WgslData<unknown>>
+class DynamicArrayDataType<TElement extends TgpuData<unknown>>
   extends Schema<Unwrap<TElement>[]>
-  implements WgslData<Unwrap<TElement>[]>, WgslNamable
+  implements TgpuData<Unwrap<TElement>[]>, TgpuNamable
 {
   private _label: string | undefined;
 
@@ -104,7 +104,7 @@ class DynamicArrayDataType<TElement extends WgslData<unknown>>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this._label);
+    const identifier = new TgpuIdentifier().$name(this._label);
 
     ctx.addDeclaration(code`
       struct ${identifier} {
@@ -116,7 +116,7 @@ class DynamicArrayDataType<TElement extends WgslData<unknown>>
   }
 }
 
-export const dynamicArrayOf = <TSchema extends AnyWgslData>(
+export const dynamicArrayOf = <TSchema extends AnyTgpuData>(
   elementType: TSchema,
   capacity: number,
 ) => new DynamicArrayDataType(elementType, capacity);

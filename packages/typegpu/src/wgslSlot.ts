@@ -1,30 +1,30 @@
 import {
   type ResolutionCtx,
-  type Wgsl,
-  type WgslResolvable,
-  type WgslResolvableSlot,
-  type WgslSlot,
-  isWgsl,
+  type Tgpu,
+  type TgpuResolvable,
+  type TgpuResolvableSlot,
+  type TgpuSlot,
+  isTgpu,
 } from './types';
 
 // ----------
 // Public API
 // ----------
 
-export function slot<T extends Wgsl>(defaultValue?: T): WgslResolvableSlot<T>;
+export function slot<T extends Tgpu>(defaultValue?: T): TgpuResolvableSlot<T>;
 
-export function slot<T>(defaultValue?: T): WgslSlot<T>;
+export function slot<T>(defaultValue?: T): TgpuSlot<T>;
 
-export function slot<T>(defaultValue?: T): WgslSlot<T> {
-  return new WgslSlotImpl(defaultValue);
+export function slot<T>(defaultValue?: T): TgpuSlot<T> {
+  return new TgpuSlotImpl(defaultValue);
 }
 
 // --------------
 // Implementation
 // --------------
 
-class WgslSlotImpl<T> implements WgslResolvable, WgslSlot<T> {
-  readonly __brand = 'WgslSlot';
+class TgpuSlotImpl<T> implements TgpuResolvable, TgpuSlot<T> {
+  readonly __brand = 'TgpuSlot';
   public label?: string | undefined;
 
   constructor(public defaultValue: T | undefined = undefined) {}
@@ -41,7 +41,7 @@ class WgslSlotImpl<T> implements WgslResolvable, WgslSlot<T> {
   resolve(ctx: ResolutionCtx): string {
     const value = ctx.unwrap(this);
 
-    if (!isWgsl(value)) {
+    if (!isTgpu(value)) {
       throw new Error(
         `Cannot inject value of type ${typeof value} of slot '${this.label ?? '<unnamed>'}' in code.`,
       );

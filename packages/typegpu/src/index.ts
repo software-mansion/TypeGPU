@@ -4,9 +4,9 @@
 
 export { RecursiveDataTypeError } from './errors';
 export {
-  WgslData,
-  AnyWgslData,
-  AnyWgslTexelFormat,
+  TgpuData,
+  AnyTgpuData,
+  AnyTgpuTexelFormat,
 } from './types';
 
-export type { WgslBuffer } from './wgslBuffer';
+export type { TgpuBuffer } from './wgslBuffer';

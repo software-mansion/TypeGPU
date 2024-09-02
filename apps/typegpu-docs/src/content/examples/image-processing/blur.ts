@@ -18,8 +18,8 @@ import {
 import {
   type SampledTextureParams,
   type StorageTextureParams,
-  type WgslTexture,
-  type WgslTextureView,
+  type TgpuTexture,
+  type TgpuTextureView,
   asUniform,
   builtin,
   createRuntime,
@@ -121,8 +121,8 @@ const textures = [0, 1].map(() => {
 });
 
 const flipSlot = wgsl.slot<number>();
-const inTextureSlot = wgsl.slot<WgslTextureView<typeof f32, 'sampled'>>();
-const outTextureSlot = wgsl.slot<WgslTextureView<typeof vec4f, 'storage'>>();
+const inTextureSlot = wgsl.slot<TgpuTextureView<typeof f32, 'sampled'>>();
+const outTextureSlot = wgsl.slot<TgpuTextureView<typeof vec4f, 'storage'>>();
 
 const tileVar = wgsl.var(
   arrayOf(arrayOf(vec3f, 128), 4),
@@ -131,11 +131,11 @@ const tileVar = wgsl.var(
 );
 
 type inTextureType =
-  | WgslTexture<'sampled'>
-  | WgslTexture<'sampled' | 'storage'>;
+  | TgpuTexture<'sampled'>
+  | TgpuTexture<'sampled' | 'storage'>;
 type outTextureType =
-  | WgslTexture<'storage'>
-  | WgslTexture<'sampled' | 'storage'>;
+  | TgpuTexture<'storage'>
+  | TgpuTexture<'sampled' | 'storage'>;
 
 function makeComputePipeline(
   inTexture: inTextureType,

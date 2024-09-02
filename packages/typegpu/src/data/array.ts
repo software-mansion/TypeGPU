@@ -8,18 +8,18 @@ import {
   type Unwrap,
 } from 'typed-binary';
 import { roundUp } from '../mathUtils';
-import type { AnyWgslData, ResolutionCtx, WgslData } from '../types';
+import type { AnyTgpuData, ResolutionCtx, TgpuData } from '../types';
 import alignIO from './alignIO';
 
-export interface WgslArray<TElement extends AnyWgslData>
-  extends WgslData<Unwrap<TElement>[]> {
+export interface TgpuArray<TElement extends AnyTgpuData>
+  extends TgpuData<Unwrap<TElement>[]> {
   readonly elementType: TElement;
   readonly elementCount: number;
 }
 
-export class WgslArrayImpl<TElement extends AnyWgslData>
+export class TgpuArrayImpl<TElement extends AnyTgpuData>
   extends Schema<Unwrap<TElement>[]>
-  implements WgslArray<TElement>
+  implements TgpuArray<TElement>
 {
   readonly elementType: TElement;
   readonly elementCount: number;
@@ -71,7 +71,7 @@ export class WgslArrayImpl<TElement extends AnyWgslData>
   }
 }
 
-export const arrayOf = <TElement extends AnyWgslData>(
+export const arrayOf = <TElement extends AnyTgpuData>(
   elementType: TElement,
   count: number,
-): WgslArray<TElement> => new WgslArrayImpl(elementType, count);
+): TgpuArray<TElement> => new TgpuArrayImpl(elementType, count);

@@ -12,37 +12,37 @@ import {
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import type {
-  AnyWgslData,
+  AnyTgpuData,
   ResolutionCtx,
-  WgslData,
-  WgslNamable,
+  TgpuData,
+  TgpuNamable,
 } from '../types';
 import { code } from '../wgslCode';
-import { WgslIdentifier } from '../wgslIdentifier';
-import { WgslDataCustomAlignedImpl } from './align';
+import { TgpuIdentifier } from '../wgslIdentifier';
+import { TgpuAlignedImpl } from './align';
 import alignIO from './alignIO';
-import { WgslDataCustomSizedImpl } from './size';
+import { TgpuDataCustomSizedImpl } from './size';
 
 // ----------
 // Public API
 // ----------
 
-export interface WgslStruct<TProps extends Record<string, AnyWgslData>>
+export interface TgpuStruct<TProps extends Record<string, AnyTgpuData>>
   extends ISchema<UnwrapRecord<TProps>>,
-    WgslData<UnwrapRecord<TProps>>,
-    WgslNamable {}
+    TgpuData<UnwrapRecord<TProps>>,
+    TgpuNamable {}
 
-export const struct = <TProps extends Record<string, AnyWgslData>>(
+export const struct = <TProps extends Record<string, AnyTgpuData>>(
   properties: TProps,
-): WgslStruct<TProps> => new WgslStructImpl(properties);
+): TgpuStruct<TProps> => new TgpuStructImpl(properties);
 
 // --------------
 // Implementation
 // --------------
 
-class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
+class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
   extends Schema<UnwrapRecord<TProps>>
-  implements WgslData<UnwrapRecord<TProps>>
+  implements TgpuData<UnwrapRecord<TProps>>
 {
   private _label: string | undefined;
   private _innerSchema: ISchema<UnwrapRecord<TProps>>;
@@ -91,7 +91,7 @@ class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this._label);
+    const identifier = new TgpuIdentifier().$name(this._label);
 
     ctx.addDeclaration(code`
       struct ${identifier} {
@@ -103,11 +103,11 @@ class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
   }
 }
 
-function getAttribute(field: AnyWgslData): string | undefined {
-  if (field instanceof WgslDataCustomAlignedImpl) {
+function getAttribute(field: AnyTgpuData): string | undefined {
+  if (field instanceof TgpuAlignedImpl) {
     return `@align(${field.byteAlignment}) `;
   }
-  if (field instanceof WgslDataCustomSizedImpl) {
+  if (field instanceof TgpuDataCustomSizedImpl) {
     return `@size(${field.size}) `;
   }
 }

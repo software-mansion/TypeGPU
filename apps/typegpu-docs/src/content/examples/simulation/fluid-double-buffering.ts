@@ -15,8 +15,8 @@ import {
 // --
 
 import {
-  type Wgsl,
-  type WgslBufferUsage,
+  type Tgpu,
+  type TgpuBufferUsage,
   asMutable,
   asReadonly,
   asUniform,
@@ -94,10 +94,10 @@ const gridAlphaBuffer = wgsl.buffer(GridData).$allowMutable().$allowReadonly();
 const gridBetaBuffer = wgsl.buffer(GridData).$allowMutable().$allowReadonly();
 
 const inputGridSlot = wgsl
-  .slot<WgslBufferUsage<GridData>>()
+  .slot<TgpuBufferUsage<GridData>>()
   .$name('input_grid');
 const outputGridSlot = wgsl
-  .slot<WgslBufferUsage<GridData, 'mutable'>>()
+  .slot<TgpuBufferUsage<GridData, 'mutable'>>()
   .$name('output_grid');
 
 const MAX_OBSTACLES = 4;
@@ -123,7 +123,7 @@ const isValidCoord = wgsl.fn`(x: i32, y: i32) -> bool {
     y >= 0;
 }`;
 
-const coordsToIndex = (x: Wgsl, y: Wgsl) =>
+const coordsToIndex = (x: Tgpu, y: Tgpu) =>
   wgsl`${x} + ${y} * ${gridSizeUniform}`;
 
 const getCell = wgsl.fn`
@@ -571,8 +571,8 @@ runtime.onPlumChange(leftWallXPlum, (newVal) => {
 });
 
 function makePipelines(
-  inputGridReadonly: WgslBufferUsage<GridData, 'readonly'>,
-  outputGridMutable: WgslBufferUsage<GridData, 'mutable'>,
+  inputGridReadonly: TgpuBufferUsage<GridData, 'readonly'>,
+  outputGridMutable: TgpuBufferUsage<GridData, 'mutable'>,
 ) {
   const initWorldFn = mainInitWorld
     .with(inputGridSlot, outputGridMutable)

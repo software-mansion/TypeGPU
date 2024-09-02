@@ -1,15 +1,15 @@
 import * as TB from 'typed-binary';
 import type { F32, U32, Vec3u, Vec4f } from './data';
-import { SimpleWgslData, f32, u32, vec3u, vec4f } from './data';
-import type { WgslData } from './types';
-import { WgslIdentifier } from './wgslIdentifier';
+import { SimpleTgpuData, f32, u32, vec3u, vec4f } from './data';
+import type { TgpuData } from './types';
+import { TgpuIdentifier } from './wgslIdentifier';
 
 export type BuiltInPossibleTypes =
   | U32
   | F32
   | Vec3u
   | Vec4f
-  | WgslData<TB.Unwrap<U32>[]>;
+  | TgpuData<TB.Unwrap<U32>[]>;
 
 export const builtin = {
   vertexIndex: Symbol('builtin_vertexIndex'),
@@ -33,7 +33,7 @@ export interface Builtin {
   stage: 'vertex' | 'fragment' | 'compute';
   direction: 'input' | 'output';
   type: BuiltInPossibleTypes;
-  identifier: WgslIdentifier;
+  identifier: TgpuIdentifier;
 }
 
 const builtinSymbolToObj: Record<symbol, Builtin> = {
@@ -42,102 +42,102 @@ const builtinSymbolToObj: Record<symbol, Builtin> = {
     stage: 'vertex',
     direction: 'input',
     type: u32,
-    identifier: new WgslIdentifier().$name('vertex_index'),
+    identifier: new TgpuIdentifier().$name('vertex_index'),
   },
   [builtin.instanceIndex]: {
     name: 'instance_index',
     stage: 'vertex',
     direction: 'input',
     type: u32,
-    identifier: new WgslIdentifier().$name('instance_index'),
+    identifier: new TgpuIdentifier().$name('instance_index'),
   },
   [builtin.position]: {
     name: 'position',
     stage: 'vertex',
     direction: 'output',
     type: vec4f,
-    identifier: new WgslIdentifier().$name('position'),
+    identifier: new TgpuIdentifier().$name('position'),
   },
   [builtin.clipDistances]: {
     name: 'clip_distances',
     stage: 'vertex',
     direction: 'output',
-    type: new SimpleWgslData({
+    type: new SimpleTgpuData({
       schema: TB.arrayOf(u32, 8),
       byteAlignment: 16,
       code: 'array<u32, 8>',
     }),
-    identifier: new WgslIdentifier().$name('clip_distances'),
+    identifier: new TgpuIdentifier().$name('clip_distances'),
   },
   [builtin.frontFacing]: {
     name: 'front_facing',
     stage: 'fragment',
     direction: 'input',
     type: f32,
-    identifier: new WgslIdentifier().$name('front_facing'),
+    identifier: new TgpuIdentifier().$name('front_facing'),
   },
   [builtin.fragDepth]: {
     name: 'frag_depth',
     stage: 'fragment',
     direction: 'output',
     type: f32,
-    identifier: new WgslIdentifier().$name('frag_depth'),
+    identifier: new TgpuIdentifier().$name('frag_depth'),
   },
   [builtin.sampleIndex]: {
     name: 'sample_index',
     stage: 'fragment',
     direction: 'input',
     type: u32,
-    identifier: new WgslIdentifier().$name('sample_index'),
+    identifier: new TgpuIdentifier().$name('sample_index'),
   },
   [builtin.sampleMask]: {
     name: 'sample_mask',
     stage: 'fragment',
     direction: 'input',
     type: u32,
-    identifier: new WgslIdentifier().$name('sample_mask'),
+    identifier: new TgpuIdentifier().$name('sample_mask'),
   },
   [builtin.fragment]: {
     name: 'fragment',
     stage: 'fragment',
     direction: 'input',
     type: vec4f,
-    identifier: new WgslIdentifier().$name('fragment'),
+    identifier: new TgpuIdentifier().$name('fragment'),
   },
   [builtin.localInvocationId]: {
     name: 'local_invocation_id',
     stage: 'compute',
     direction: 'input',
     type: vec3u,
-    identifier: new WgslIdentifier().$name('local_invocation_id'),
+    identifier: new TgpuIdentifier().$name('local_invocation_id'),
   },
   [builtin.localInvocationIndex]: {
     name: 'local_invocation_index',
     stage: 'compute',
     direction: 'input',
     type: u32,
-    identifier: new WgslIdentifier().$name('local_invocation_index'),
+    identifier: new TgpuIdentifier().$name('local_invocation_index'),
   },
   [builtin.globalInvocationId]: {
     name: 'global_invocation_id',
     stage: 'compute',
     direction: 'input',
     type: vec3u,
-    identifier: new WgslIdentifier().$name('global_invocation_id'),
+    identifier: new TgpuIdentifier().$name('global_invocation_id'),
   },
   [builtin.workgroupId]: {
     name: 'workgroup_id',
     stage: 'compute',
     direction: 'input',
     type: vec3u,
-    identifier: new WgslIdentifier().$name('workgroup_id'),
+    identifier: new TgpuIdentifier().$name('workgroup_id'),
   },
   [builtin.numWorkgroups]: {
     name: 'num_workgroups',
     stage: 'compute',
     direction: 'input',
     type: vec3u,
-    identifier: new WgslIdentifier().$name('num_workgroups'),
+    identifier: new TgpuIdentifier().$name('num_workgroups'),
   },
 };
 

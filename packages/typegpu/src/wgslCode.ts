@@ -3,10 +3,10 @@ import {
   type InlineResolve,
   type ResolutionCtx,
   type SlotValuePair,
-  type Wgsl,
-  type WgslNamable,
-  type WgslResolvable,
-  type WgslSlot,
+  type Tgpu,
+  type TgpuNamable,
+  type TgpuResolvable,
+  type TgpuSlot,
   isResolvable,
 } from './types';
 import { getBuiltinInfo } from './wgslBuiltin';
@@ -15,17 +15,17 @@ import { getBuiltinInfo } from './wgslBuiltin';
 // Public API
 // ----------
 
-export interface WgslCode extends WgslResolvable, WgslNamable {
-  with<T>(slot: WgslSlot<T>, value: Eventual<T>): BoundWgslCode;
+export interface TgpuCode extends TgpuResolvable, TgpuNamable {
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): BoundTgpuCode;
 }
 
-export type BoundWgslCode = Omit<WgslCode, '$name'>;
+export type BoundTgpuCode = Omit<TgpuCode, '$name'>;
 
 export function code(
   strings: TemplateStringsArray,
-  ...params: (Wgsl | Wgsl[] | InlineResolve)[]
-): WgslCode {
-  const segments: (Wgsl | InlineResolve)[] = strings.flatMap((string, idx) => {
+  ...params: (Tgpu | Tgpu[] | InlineResolve)[]
+): TgpuCode {
+  const segments: (Tgpu | InlineResolve)[] = strings.flatMap((string, idx) => {
     const param = params[idx];
     if (param === undefined) {
       return [string];
@@ -34,17 +34,17 @@ export function code(
     return Array.isArray(param) ? [string, ...param] : [string, param];
   });
 
-  return new WgslCodeImpl(segments);
+  return new TgpuCodeImpl(segments);
 }
 
 // --------------
 // Implementation
 // --------------
 
-class WgslCodeImpl implements WgslCode {
+class TgpuCodeImpl implements TgpuCode {
   private _label: string | undefined;
 
-  constructor(public readonly segments: (Wgsl | InlineResolve)[]) {}
+  constructor(public readonly segments: (Tgpu | InlineResolve)[]) {}
 
   get label() {
     return this._label;
@@ -76,8 +76,8 @@ class WgslCodeImpl implements WgslCode {
     return code;
   }
 
-  with<TValue>(slot: WgslSlot<TValue>, value: Eventual<TValue>): BoundWgslCode {
-    return new BoundWgslCodeImpl(this, [slot, value]);
+  with<TValue>(slot: TgpuSlot<TValue>, value: Eventual<TValue>): BoundTgpuCode {
+    return new BoundTgpuCodeImpl(this, [slot, value]);
   }
 
   toString(): string {
@@ -85,9 +85,9 @@ class WgslCodeImpl implements WgslCode {
   }
 }
 
-class BoundWgslCodeImpl<T> implements BoundWgslCode {
+class BoundTgpuCodeImpl<T> implements BoundTgpuCode {
   constructor(
-    private readonly _innerFn: BoundWgslCode,
+    private readonly _innerFn: BoundTgpuCode,
     private readonly _slotValuePair: SlotValuePair<T>,
   ) {}
 
@@ -95,8 +95,8 @@ class BoundWgslCodeImpl<T> implements BoundWgslCode {
     return this._innerFn.label;
   }
 
-  with<TValue>(slot: WgslSlot<TValue>, value: Eventual<TValue>): BoundWgslCode {
-    return new BoundWgslCodeImpl(this, [slot, value]);
+  with<TValue>(slot: TgpuSlot<TValue>, value: Eventual<TValue>): BoundTgpuCode {
+    return new BoundTgpuCodeImpl(this, [slot, value]);
   }
 
   resolve(ctx: ResolutionCtx): string {

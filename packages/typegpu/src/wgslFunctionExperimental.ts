@@ -1,49 +1,49 @@
 import Callable, { type AsCallable } from './callable';
 import { isPointer } from './types';
 import type {
-  AnyWgslData,
+  AnyTgpuData,
   ResolutionCtx,
-  Wgsl,
-  WgslFnArgument,
-  WgslNamable,
-  WgslResolvable,
-  WgslValue,
+  Tgpu,
+  TgpuFnArgument,
+  TgpuNamable,
+  TgpuResolvable,
+  TgpuValue,
 } from './types';
 import { code } from './wgslCode';
-import { WgslIdentifier } from './wgslIdentifier';
+import { TgpuIdentifier } from './wgslIdentifier';
 
 // ----------
 // Public API
 // ----------
 
-export interface WgslFn<
-  TArgTypes extends [WgslFnArgument, ...WgslFnArgument[]] | [],
-  TReturn extends AnyWgslData | undefined = undefined,
-> extends WgslResolvable,
-    WgslNamable,
+export interface TgpuFn<
+  TArgTypes extends [TgpuFnArgument, ...TgpuFnArgument[]] | [],
+  TReturn extends AnyTgpuData | undefined = undefined,
+> extends TgpuResolvable,
+    TgpuNamable,
     Callable<
       SegmentsFromTypes<TArgTypes>,
-      WgslFunctionCall<TArgTypes, TReturn>
+      TgpuFunctionCall<TArgTypes, TReturn>
     > {}
 
 export function fn<
-  TArgTypes extends [WgslFnArgument, ...WgslFnArgument[]] | [],
-  TReturn extends AnyWgslData | undefined = undefined,
+  TArgTypes extends [TgpuFnArgument, ...TgpuFnArgument[]] | [],
+  TReturn extends AnyTgpuData | undefined = undefined,
 >(argTypes: TArgTypes, returnType?: TReturn) {
   const argPairs = argTypes.map(
-    (argType) => [new WgslIdentifier(), argType] as const,
+    (argType) => [new TgpuIdentifier(), argType] as const,
   ) as PairsFromTypes<TArgTypes>;
 
   const argValues = argPairs.map(
     ([argIdent, argType]) =>
-      argIdent as WgslValue<typeof argType> & WgslIdentifier,
+      argIdent as TgpuValue<typeof argType> & TgpuIdentifier,
   );
 
   type TArgValues = ValuesFromTypes<TArgTypes>;
-  return (bodyProducer: (...args: TArgValues) => Wgsl) => {
+  return (bodyProducer: (...args: TArgValues) => Tgpu) => {
     const body = bodyProducer(...(argValues as TArgValues));
 
-    const fnInstance = new WgslFnImpl<TArgTypes, TReturn>(
+    const fnInstance = new TgpuFnImpl<TArgTypes, TReturn>(
       argPairs,
       returnType,
       body,
@@ -52,7 +52,7 @@ export function fn<
     return fnInstance as AsCallable<
       typeof fnInstance,
       SegmentsFromTypes<TArgTypes>,
-      WgslFunctionCall<TArgTypes>
+      TgpuFunctionCall<TArgTypes>
     >;
   };
 }
@@ -61,25 +61,25 @@ export function fn<
 // Implementation
 // --------------
 
-type ValuesFromTypes<TArgTypes extends WgslFnArgument[]> = {
-  [K in keyof TArgTypes]: WgslValue<TArgTypes[K]> & WgslIdentifier;
+type ValuesFromTypes<TArgTypes extends TgpuFnArgument[]> = {
+  [K in keyof TArgTypes]: TgpuValue<TArgTypes[K]> & TgpuIdentifier;
 };
 
-type PairsFromTypes<TArgTypes extends WgslFnArgument[]> = {
-  [K in keyof TArgTypes]: readonly [WgslIdentifier, TArgTypes[K]];
+type PairsFromTypes<TArgTypes extends TgpuFnArgument[]> = {
+  [K in keyof TArgTypes]: readonly [TgpuIdentifier, TArgTypes[K]];
 };
 
-type SegmentsFromTypes<TArgTypes extends WgslFnArgument[]> = {
-  [K in keyof TArgTypes]: Wgsl;
+type SegmentsFromTypes<TArgTypes extends TgpuFnArgument[]> = {
+  [K in keyof TArgTypes]: Tgpu;
 };
 
-class WgslFunctionCall<
-  TArgTypes extends [WgslFnArgument, ...WgslFnArgument[]] | [],
-  TReturn extends AnyWgslData | undefined = undefined,
-> implements WgslResolvable
+class TgpuFunctionCall<
+  TArgTypes extends [TgpuFnArgument, ...TgpuFnArgument[]] | [],
+  TReturn extends AnyTgpuData | undefined = undefined,
+> implements TgpuResolvable
 {
   constructor(
-    private usedFn: WgslFn<TArgTypes, TReturn>,
+    private usedFn: TgpuFn<TArgTypes, TReturn>,
     private readonly args: SegmentsFromTypes<TArgTypes>,
   ) {}
 
@@ -97,23 +97,23 @@ class WgslFunctionCall<
   }
 }
 
-class WgslFnImpl<
-    TArgTypes extends [WgslFnArgument, ...WgslFnArgument[]] | [],
-    // TArgPairs extends (readonly [WgslIdentifier, WgslFnArgument])[],
-    TReturn extends AnyWgslData | undefined = undefined,
+class TgpuFnImpl<
+    TArgTypes extends [TgpuFnArgument, ...TgpuFnArgument[]] | [],
+    // TArgPairs extends (readonly [TgpuIdentifier, TgpuFnArgument])[],
+    TReturn extends AnyTgpuData | undefined = undefined,
   >
   extends Callable<
     SegmentsFromTypes<TArgTypes>,
-    WgslFunctionCall<TArgTypes, TReturn>
+    TgpuFunctionCall<TArgTypes, TReturn>
   >
-  implements WgslFn<TArgTypes, TReturn>
+  implements TgpuFn<TArgTypes, TReturn>
 {
   private _label: string | undefined;
 
   constructor(
     private argPairs: PairsFromTypes<TArgTypes>,
     private returnType: TReturn | undefined,
-    private readonly body: Wgsl,
+    private readonly body: Tgpu,
   ) {
     super();
   }
@@ -128,7 +128,7 @@ class WgslFnImpl<
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this._label);
+    const identifier = new TgpuIdentifier().$name(this._label);
 
     const argsCode = this.argPairs.map(([ident, argType], idx) => {
       const comma = idx < this.argPairs.length - 1 ? ', ' : '';
@@ -155,8 +155,8 @@ class WgslFnImpl<
 
   _call(
     ...args: SegmentsFromTypes<TArgTypes>
-  ): WgslFunctionCall<TArgTypes, TReturn> {
-    return new WgslFunctionCall(this, args);
+  ): TgpuFunctionCall<TArgTypes, TReturn> {
+    return new TgpuFunctionCall(this, args);
   }
 
   toString(): string {
