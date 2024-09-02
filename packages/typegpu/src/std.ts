@@ -1,35 +1,14 @@
 import type { vecBase } from './data';
-
-function dot<T extends vecBase>(lhs: T, rhs: T): number {
-  let result = 0;
-  for (let i = 0; i < lhs.length; ++i) {
-    result += lhs.at(i) * rhs.at(i);
-  }
-  return result;
-}
-
-function length<T extends vecBase>(vector: T): number {
-  let lengthSq = 0;
-  for (let i = 0; i < vector.length; ++i) {
-    lengthSq += vector.at(i) ** 2;
-  }
-  return Math.sqrt(lengthSq);
-}
-
-function normalize<T extends vecBase>(vector: T): T {
-  const len = length(vector);
-  return result;
-}
-
-function fract(a: number): number {
-  return a - Math.trunc(a);
-}
+import { VectorOps } from './data/vectorOps';
 
 export const std = {
-  dot,
-  fract,
-  length,
-  normalize,
+  dot: <T extends vecBase>(lhs: T, rhs: T): number => {
+    return VectorOps.dot[lhs.kind](lhs, rhs);
+  },
+  // TODO: Verify if `fract` behavior is the same in JS and WGSL
+  fract: (a: number) => a - Math.trunc(a),
+  length: <T extends vecBase>(vector: T): number =>
+    VectorOps.length[vector.kind](vector),
   sin: Math.sin,
   cos: Math.cos,
 };
