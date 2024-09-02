@@ -1,6 +1,5 @@
-import { builtin, wgsl } from 'typegpu';
 import { describe, expect, it } from 'vitest';
-import { StrictNameRegistry } from '../src';
+import { StrictNameRegistry, builtin, wgsl } from '../src/experimental';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
 
 describe('builtin', () => {

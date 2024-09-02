@@ -229,13 +229,15 @@ function asUsage<
   TUsage extends BufferUsage,
   TType extends AllowVertex | AllowUniform | AllowReadonly | AllowMutable,
 >(usage: TUsage, _: TType) {
-  return <TData extends AnyWgslData>(buffer: WgslBuffer<TData> & TType) => {
+  return <TData extends AnyWgslData>(
+    buffer: WgslBuffer<TData> & TType,
+  ): WgslBufferUsage<TData, TUsage> => {
     if (buffer._usages[usage] === null) {
       throw new Error(
         `Cannot pass ${buffer} to as${capitalizeFirstLetter(usage)} function, as the buffer does not allow ${usage} usage. To allow it, use $allow${capitalizeFirstLetter(usage)} WgslBuffer method.`,
       );
     }
-    return buffer._usages[usage];
+    return buffer._usages[usage] as WgslBufferUsage<TData, TUsage>;
   };
 }
 

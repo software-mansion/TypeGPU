@@ -1,6 +1,6 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
-import { mat4f, u32 } from 'typegpu/data';
 import { describe, expect, it } from 'vitest';
+import { mat4f, u32 } from '../src/data';
 
 describe('u32', () => {
   it('does not realign when writing offset is correct', () => {
