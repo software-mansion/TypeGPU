@@ -4,13 +4,14 @@
 
 export * from '../errors';
 export * from '../types';
-export { AsCallable, ICallable } from '../callable';
+export { AsCallable, Callable } from '../callable';
 export * from '../typegpuRuntime';
 export { default as ProgramBuilder, type Program } from '../programBuilder';
 export { StrictNameRegistry, RandomNameRegistry } from '../nameRegistry';
 export * from '../wgslBuiltin';
 
 export { default as wgsl } from '../wgsl';
+export { std } from '../std';
 export { createRuntime, CreateRuntimeOptions } from '../createRuntime';
 export { asReadonly, asUniform, asMutable, asVertex } from '../wgslBuffer';
 
