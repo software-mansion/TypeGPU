@@ -72,7 +72,7 @@ const mockDevice = vi.fn(() => ({
 }));
 
 describe('unmanagedIO', () => {
-  it('should accept exisisting buffer', () => {
+  it('should accept existing buffer', () => {
     const device = mockDevice() as unknown as GPUDevice;
     const buffer = mockBuffer() as unknown as GPUBuffer;
     const tgpuBuffer = tgpu.createBuffer(u32, buffer).$device(device);
