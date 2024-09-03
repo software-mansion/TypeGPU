@@ -27,31 +27,35 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
     // Creating a buffer, the type hint is GPUBuffer
     const buffer = device.createBuffer({
-      size: 16,
-      usage: GPUBufferUsage.COPY_SRC,
-      mappedAtCreation: true,
+        size: 16,
+        usage: GPUBufferUsage.COPY_SRC,
+        mappedAtCreation: true,
     });
 
     // Initializing the buffer
-    const data = new ArrayBuffer(16);
-    new Float32Array(data).set([0.0, 0.0, 0.0]);
-    new Uint32Array(data).set([100], 3);
+    const initData = buffer.getMappedRange();
+    new Float32Array(initData).set([1.1, 2.0, 0.0]);
+    new Uint32Array(initData).set([100], 3);
     buffer.unmap();
 
     // To read from the buffer we need to create a staging buffer
     const stagingBuffer = device.createBuffer({
-      size: 16,
-      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        size: 16,
+        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
     });
 
     // Manually copying the data
-    device.queue.copyBufferToBuffer(buffer, 0, stagingBuffer, 0, 16);
+    const commandEncoder = device.createCommandEncoder();
+    commandEncoder.copyBufferToBuffer(buffer, 0, stagingBuffer, 0, 16);
+    device.queue.submit([commandEncoder.finish()]);
 
-    // Reading the data
+    // Reading the data 
     await stagingBuffer.mapAsync(GPUMapMode.READ);
-    const data = new Float32Array(stagingBuffer.getMappedRange(), 0, 3);
-    const health = new Uint32Array(stagingBuffer.getMappedRange(), 12, 1)[0];
-    const value = { position: data, health };
+    const rawBytes = stagingBuffer.getMappedRange();
+    const value = {
+        position: [...new Float32Array(rawBytes, 0, 3).values()],
+        health: new Uint32Array(rawBytes, 12)[0]
+    }
 
     // Using the value
     console.log(value);
@@ -59,13 +63,22 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
     </TabItem>
     <TabItem label='TypeGPU'>
     ```ts
-    import { u32 } from 'typegpu/data';
+    import { u32, vec3f, struct } from 'typegpu/data';
     import tgpu from 'typegpu';
 
     const device: GPUDevice // WebGPU device
 
+    // Defining a struct type
+    const PlayerInfo = struct({
+        position: vec3f,
+        health: u32,
+    });
+
     // Creating and initializing a buffer. The type hint is WgslBuffer<U32>
-    const buffer = tgpu.createBuffer(u32, 100).$device(device);
+    const buffer = tgpu.createBuffer(PlayerInfo, {
+        position: [1.1, 2.0, 0.0],
+        health: 100,
+    }).$device(device);
 
     // Reading from the buffer (value will be properly typed according to the buffer type)
     const value = await tgpu.read(buffer);
@@ -76,24 +89,13 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
     </TabItem>
 </Tabs>
 
-```ts
-import { u32, vec2f, struct } from 'typegpu/data';
-import tgpu from 'typegpu';
+In the example above, we have a `PlayerInfo` struct that we want to store in a buffer. Using just the WebGPU API alone, we need to manually copy the data to the buffer,
+create a staging buffer to read the data, and then manually copy the data back to a JavaScript object.
+This process involves a lot of boilerplate code and introduces room for error.
+Moreover, the example given is relatively simple. If we were dealing with a more complex nested structure,
+manually calculating the offsets and sizes would be even more error-prone and time-consuming.
 
-const device: GPUDevice // WebGPU device
-
-const playerInfo = struct({
-  position: vec2f,
-  health: u32,
-});
-
-const buffer = tgpu.createBuffer(playerInfo).$device(device);
-
-tgpu.write(buffer, {
-  position: [0.0, 0.0],
-  health: 100,
-});
-```
+TypeGPU addresses this issue by providing a way to define the structure of the data we want to store in the buffer and then read and write the data using a type-safe API.
 
 # Using the unmanaged API
 
