@@ -61,7 +61,7 @@ export function buffer<TData extends AnyWgslData>(
 export function buffer<TData extends AnyWgslData>(
   typeSchema: TData,
   gpuBuffer: GPUBuffer,
-): WgslBuffer<TData>;
+): WgslBuffer<TData> & Unmanaged;
 
 export function buffer<TData extends AnyWgslData>(
   typeSchema: TData,
