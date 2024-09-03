@@ -7,7 +7,7 @@
 
 import { addElement } from '@typegpu/example-toolkit';
 import { vec2f } from 'typegpu/data';
-import { tgpu } from 'typegpu/experimental';
+import { asMutable, createRuntime, tgpu } from 'typegpu/experimental';
 
 // ---
 addElement('button', {
