@@ -9,6 +9,7 @@ export {
   AnyWgslTexelFormat,
 } from './types';
 export { std } from './std';
+export { tgpu } from './tgpu';
 
 export { ResolutionCtxImpl } from './resolutionCtx';
 export type { WgslBuffer } from './wgslBuffer';

@@ -6,8 +6,8 @@
 */
 
 import { addElement } from '@typegpu/example-toolkit';
-import { createRuntime, tgpu } from 'typegpu';
 import { vec2f } from 'typegpu/data';
+import { tgpu } from 'typegpu/experimental';
 
 // ---
 addElement('button', {
@@ -25,7 +25,7 @@ table.setMatrix([[0]]);
 // ---
 
 const counterBuffer = tgpu.buffer(vec2f, vec2f(0, 1)).$allowMutable();
-const counter = counterBuffer.asMutable();
+const counter = asMutable(counterBuffer);
 
 const increment = tgpu
   .procedure(() => {

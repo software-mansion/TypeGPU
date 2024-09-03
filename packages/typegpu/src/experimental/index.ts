@@ -11,6 +11,7 @@ export { StrictNameRegistry, RandomNameRegistry } from '../nameRegistry';
 export * from '../wgslBuiltin';
 
 export { default as wgsl } from '../wgsl';
+export { tgpu } from '../tgpu';
 export { std } from '../std';
 export { createRuntime, CreateRuntimeOptions } from '../createRuntime';
 export { asReadonly, asUniform, asMutable, asVertex } from '../wgslBuffer';
