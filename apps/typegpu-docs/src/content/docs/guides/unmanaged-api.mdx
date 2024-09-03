@@ -74,13 +74,18 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
         health: u32,
     });
 
-    // Creating and initializing a buffer. The type hint is WgslBuffer<U32>
+    // Creating and initializing a buffer. The type hint is:
+    // WgslBuffer<WgslStruct<{
+    //     position: Vec3f;
+    //     health: U32;
+    // }>> & Unmanaged
     const buffer = tgpu.createBuffer(PlayerInfo, {
         position: [1.1, 2.0, 0.0],
         health: 100,
     }).$device(device);
 
     // Reading from the buffer (value will be properly typed according to the buffer type)
+    // value: { position: [number, number, number], health: number }
     const value = await tgpu.read(buffer);
 
     // Using the value
