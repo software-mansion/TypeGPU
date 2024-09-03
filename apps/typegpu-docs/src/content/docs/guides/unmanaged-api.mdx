@@ -80,12 +80,13 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
     //     health: U32;
     // }>> & Unmanaged
     const buffer = tgpu.createBuffer(PlayerInfo, {
-        position: [1.1, 2.0, 0.0],
+        position: vec3f(1.1, 2.0, 0.0),
         health: 100,
     }).$device(device);
 
-    // Reading from the buffer (value will be properly typed according to the buffer type)
-    // value: { position: [number, number, number], health: number }
+    // Reading from the buffer
+    // (value will be properly typed according to the buffer type)
+    // value: { position: vec3f, health: number }
     const value = await tgpu.read(buffer);
 
     // Using the value
@@ -226,7 +227,7 @@ const buffer = tgpu.createBuffer(playerInfo).$device(device);
 
 // write(WgslBuffer<U32>, { position: vec2f, health: number })
 tgpu.write(buffer, {
-  position: [0.0, 0.0],
+  position: vec2f(1.0, 2.0),
   health: 100,
 });
 ```
@@ -293,9 +294,98 @@ This is something the user needs to know and calculate manually.
 
 Let's see how we can improve this code using the unmanaged API.
 
-## Using the unmanaged API
+## Soft migration
 
-```ts
+In this approach we will not remove the existing buffer, but wrap it with `tgpu.createBuffer()` to allow for type-safe read and write operations.
+This approach is fully backwards compatible and allows you to gradually migrate your code.
+
+import { Steps } from '@astrojs/starlight/components';
+
+<Steps>
+
+1. Add the necessary imports and wrap the existing buffer:
+
+   ```diff lang=ts
+   +import { vec3f, struct } from 'typegpu/data';
+   +import tgpu from 'typegpu';
+
+   const device: GPUDevice // WebGPU device
+
+   +const ColorPair = struct({
+   +    colorFrom: vec3f,
+   +    colorTo: vec3f,
+   +});
+
+   const colorBuffer = device.createBuffer({
+       size: 32,
+       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
+   });
+   +const typedBuffer = tgpu.createBuffer(ColorPair, colorBuffer).$device(device);
+   const colorFromInit = [0.0, 1.0, 0.8] as [number, number, number];
+   const colorToInit = [0.2, 0.5, 1.0] as [number, number, number];
+
+   const updateColors = (
+       colorFrom: [number, number, number],
+       colorTo: [number, number, number]
+   ) => {
+       const bytes = new ArrayBuffer(32);
+       new Float32Array(bytes, 0, 3).set(colorFrom);
+       new Float32Array(bytes, 16, 3).set(colorTo);
+       device.queue.writeBuffer(colorBuffer, 0, bytes);
+   }
+
+   updateColors(colorFromInit, colorToInit);
+   ```
+
+2. The exisitng logic still works the same way but we can now take advantage of TypeGPU to read and write data to the buffer.
+
+   ```diff lang=ts
+   import { vec3f, struct } from 'typegpu/data';
+   import tgpu from 'typegpu';
+
+   const device: GPUDevice // WebGPU device
+
+   const ColorPair = struct({
+       colorFrom: vec3f,
+       colorTo: vec3f,
+   });
+
+   const colorBuffer = device.createBuffer({
+       size: 32,
+       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
+   });
+   const typedBuffer = tgpu.createBuffer(ColorPair, colorBuffer).$device(device);
+   -const colorFromInit = [0.0, 1.0, 0.8] as [number, number, number];
+   -const colorToInit = [0.2, 0.5, 1.0] as [number, number, number];
+   +const colorFromInit = vec3f(0.0, 1.0, 0.8);
+   +const colorToInit = vec3f(0.2, 0.5, 1.0);
+
+   -const updateColors = (
+   -    colorFrom: [number, number, number],
+   -    colorTo: [number, number, number]
+   -) => {
+   -    const bytes = new ArrayBuffer(32);
+   -    new Float32Array(bytes, 0, 3).set(colorFrom);
+   -    new Float32Array(bytes, 16, 3).set(colorTo);
+   -    device.queue.writeBuffer(colorBuffer, 0, bytes);
+   -}
+
+   -updateColors(colorFromInit, colorToInit);
+   +tgpu.write(typedBuffer, {
+   +    colorFrom: colorFromInit,
+   +    colorTo: colorToInit,
+   +});
+   ```
+
+</Steps>
+
+
+## Full migration
+
+In this approach we will remove the existing buffer and replace it with a buffer created using the unmanaged API.
+Keep in mind that `tgpu.createBuffer()` will return a `WgslBuffer` object, when you need a `GPUBuffer` object you can access it using the `buffer` property.
+
+```diff lang=ts
 import { vec3f, struct } from 'typegpu/data';
 import tgpu from 'typegpu';
 
@@ -305,50 +395,25 @@ const ColorPair = struct({
     colorFrom: vec3f,
     colorTo: vec3f,
 });
+
+const colorFromInit = vec3f(0.0, 1.0, 0.8);
+const colorToInit = vec3f(0.2, 0.5, 1.0);
 
 // the size of the buffer is calculated automatically
-const colorBuffer = tgpu.createBuffer(ColorPair).$device(device);
+// we can also take advantage of the initial value
+const colorBuffer = tgpu.createBuffer(
+    ColorPair,
+    {
+        colorFrom: colorFromInit,
+        colorTo: colorToInit,
+    }
+).$device(device);
 
-const updateColors = (
-    colorFrom: [number, number, number],
-    colorTo: [number, number, number]
-) => {
-    // The write function will not allow us to write data that does not match the buffer type
-    tgpu.write(colorBuffer, {
-        colorFrom,
-        colorTo,
-    });
-}
-
-const colorFromInit = [0.0, 1.0, 0.8] as [number, number, number];
-const colorToInit = [0.2, 0.5, 1.0] as [number, number, number];
-
-updateColors(colorFromInit, colorToInit);
-```
-
-As we can see in the example above, the `updateColors` function is now much simpler to the point of becoming redundant, so let's remove it. 
-The write function will not allow us to write data that does not match the buffer type, so we can be sure that the data is written correctly.
-
-```ts
-import { vec3f, struct } from 'typegpu/data';
-import tgpu from 'typegpu';
-
-const device: GPUDevice // WebGPU device
-
-const ColorPair = struct({
-    colorFrom: vec3f,
-    colorTo: vec3f,
-});
-
-const colorBuffer = tgpu.createBuffer(ColorPair).$device(device);
-
-const colorFromInit = [0.0, 1.0, 0.8] as [number, number, number];
-const colorToInit = [0.2, 0.5, 1.0] as [number, number, number];
-
-tgpu.write(colorBuffer, {
-    colorFrom: colorFromInit,
-    colorTo: colorToInit,
-});
+// this is now redundant as the buffer will be initialized on creation
+-tgpu.write(colorBuffer, {
+-     colorFrom: colorFromInit,
+-     colorTo: colorToInit,
+- });
 ```
 
 If you want a more in-depth look at how to create your own data types, check out the [Data Types](/typegpu/guides/defining-data-types) guide.
