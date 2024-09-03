@@ -5,10 +5,103 @@ description: A guide on how to use the unmanaged API.
 
 # Introduction
 
-This guide will show you how to use the unmanaged API to allow for type-safe and convenient read and write operations on WebGPU resources.
-We will explore how to adapt existing WebGPU code to use the unmanaged API, and how to use the unmanaged API to create new WebGPU resources.
+This guide will show you how to use the unmanaged buffer API to allow for type-safe and convenient read and write operations on WebGPU resources.
+We will explore how to adapt existing WebGPU code to use the unmanaged API, and how to use the it to create new WebGPU resources.
 
 # What is the unmanaged API?
 
 The unmanaged API is a set of tools for WebGPU that allow you to create and manage typed buffers.
 It provides a way to read and write data to and from WebGPU buffers without having to manually translate the values to and from the raw byte arrays that WebGPU uses.
+
+```ts
+import { u32, vec2f, struct } from 'typegpu/data';
+import tgpu from 'typegpu';
+
+const device // WebGPU device
+
+const playerInfo = struct({
+  position: vec2f,
+  health: u32,
+});
+
+const buffer = tgpu.createBuffer(playerInfo).$device(device);
+
+tgpu.write(buffer, {
+  position: [0.0, 0.0],
+  health: 100,
+});
+```
+
+# Using the unmanaged API
+
+## Creating a buffer
+
+import { Aside } from '@astrojs/starlight/components';
+
+To create a buffer using the unmanaged API, you will need to define the buffer type using one of the data types provided by the `typegpu/data` module.
+You can then create a buffer using the `tgpu.createBuffer` function like in the example above but that is not the only way.
+
+### Using only the buffer type
+
+Like in the example above, you can create a buffer using only the buffer type.
+This will create a zero-initialized buffer (just like creating a WebGPU buffer would) when the buffer is first accessed.
+
+
+```ts
+import { u32 } from 'typegpu/data';
+import tgpu from 'typegpu';
+
+const device // WebGPU device
+
+const buffer = tgpu.createBuffer(u32).$device(device);
+
+// That's when the buffer is created
+const gpuBuffer = buffer.buffer;
+```
+
+<Aside>
+    To make the buffer 'Unmanaged' you need to call the `$device` method on the buffer object.
+    That marks the buffer as unmanaged and allows you to use the buffer in the unmanaged API.
+    ```ts
+    // WgslBuffer<U32>
+    const buffer = tgpu.createBuffer(u32);
+
+    // WgslBuffer<U32> & Unmanaged
+    const unmanagedBuffer = buffer.$device(device);
+    ```
+</Aside>
+
+### Using the buffer type and the initial value
+
+You can also pass an initial value to the `tgpu.createBuffer` function.
+When the buffer is created, it will be mapped at creation and the initial value will be written to the buffer.
+
+```ts
+import { u32 } from 'typegpu/data';
+import tgpu from 'typegpu';
+
+const device // WebGPU device
+
+const buffer = tgpu.createBuffer(u32, 100).$device(device);
+
+// That's when the buffer is created and the value is written
+const gpuBuffer = buffer.buffer;
+```
+
+### Using an existing buffer
+
+You can also create a buffer using an existing WebGPU buffer. This is useful when you have existing logic but want to introduce type safe data operations.
+<Aside type='tip'>
+    Since the buffer is already created you don't need to call the `$device` method on the buffer object to make it `Unmanaged`.
+    That also means you are the one responsible for the buffer's lifecycle and making sure the type matches the buffer's contents.
+</Aside>
+
+```ts
+import { u32 } from 'typegpu/data';
+import tgpu from 'typegpu';
+
+const device // WebGPU device
+const existingBuffer // WebGPU buffer
+
+const buffer = tgpu.createBuffer(u32, existingBuffer);
+```
