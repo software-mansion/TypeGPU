@@ -4,11 +4,12 @@ description: A guide on how to use the TypeGPU built-in and custom-defined data 
 
 ---
 
-## Basic idea
 
-Writing a GPU program usually involves manipulating data that resides on both sides of the computing world -- on GPU and CPU, on WGSL and JS. While data types defined in the WGSL shader code are strongly typed, we lose the type safety completely when writing and reading data in JavaScript/TypeScript. It would be very useful to have a way of ensuring that we read and write data of expected schema in our TypeScript programs. This is precisely what TypeGPU data types help to achieve. 
+Writing a GPU program usually involves sharing data between the host (CPU) and the device (GPU), in this case between JavaScript and WGSL. Any misalignments or misinterpretations of data can lead to bugs that are hard to debug (No `console.log` on the GPU, I am afraid). While data is strongly typed in WGSL shaders, we give up that type safety completely when writing and reading data in JavaScript/TypeScript. This is precisely what TypeGPU data types help with.
 
-Another aspect that is commonly problematic when writing a WebGPU program is dealing with memory layouts, taking into account data byte sizes, alignments and offsets. That's another thing that TypeGPU automates, so that there's no room for data marshalling related errors.
+:::note
+Complex data types such as structs require particular byte alignment and padding between fields. TypeGPU does this automatically when transforming JS values into binary.
+:::
 
 ## Examples
 
@@ -17,25 +18,25 @@ Let's look at some examples of defining custom data types using the `typegpu/dat
 ```ts
 import { struct, f32, vec3i, Parsed } from 'typegpu/data';
 
-const circleStruct = struct({
+const Circle = struct({
   centerPos: vec3i,
   radius: f32,
 });
 
-type Circle = Parsed<typeof circleStruct>;
+type CircleType = Parsed<typeof Circle>;
 
-const redCircle: Circle = {
+const redCircle: CircleType = {
   centerPos: [2, 4, 0],
   radius: 0.2,
 };
 ```
 
-By defining the `circleStruct` struct in TypeScript via TypeGPU, in a similar way to how we would in WGSL, we gain access to its TypeScript type definition, which we can use to validate our data values. When reading from or writing data to the GPU, the type of the JavaScript value is inferred automatically, and it's enforced by TypeScript. That's a big improvement to the development process.
+By defining the `Circle` struct in TypeScript via TypeGPU, in a similar way to how we would in WGSL, we gain access to its TypeScript type definition, which we can use to validate our data values. When reading from or writing data to the GPU, the type of the JavaScript value is inferred automatically, and it's enforced by TypeScript. That's a big improvement to the development process.
 
-Here the `Circle` type evaluates to: 
+Here the `CircleType` evaluates to: 
 
 ```ts
-type Circle = {
+type CircleType = {
   centerPos: [number, number, number];
   radius: number;
 }
@@ -44,13 +45,13 @@ type Circle = {
 Thanks to that, whenever we mistakenly set or assume a wrong value for an object, we get a type error, avoiding unnecessary debugging afterwards.
 
 ```ts
-const redCircle: Circle = {
+const redCircle: CircleType = {
   // Error: Type '[number, number]' is not assignable to type '[number, number, number]'.
   centerPos: [2, 4], 
   radius: 0.2,
 };
 
-const redCircle: Circle = {
+const redCircle: CircleType = {
   centerPos: [2, 4, 0], 
   // Error: Type 'string' is not assignable to type 'number'.
   radius: "0.2",
@@ -58,7 +59,7 @@ const redCircle: Circle = {
 
 // Error: Property 'radius' is missing in type '{ centerPos: [number, number, number]; }' 
 // but required in type '{ centerPos: [number, number, number]; radius: number; }'.
-const redCircle: Circle = {
+const redCircle: CircleType = {
   centerPos: [2, 4, 0], 
 };
 
@@ -72,8 +73,8 @@ const newPos = redCircle.centerPos + 1;
 Defined data structures automatically measure and hold information about their memory layout parameters, which is useful for writing to and reading data from the GPU.
 
 ```ts
-circleStruct.size // 16
-circleStruct.byteAlignment // 16
+Circle.size // 16
+Circle.byteAlignment // 16
 ```
 
 TypeGPU data types are essential for the library's automated data marshalling capabilities. You can read more about it in the chapter dedicated to `tgpu.writeBuffer`.
@@ -104,14 +105,14 @@ TypeGPU data types are essential for the library's automated data marshalling ca
 ```ts 
 import { struct, vec3u, vec3f, vec4f, bool, Parsed } from 'typegpu/data';
 
-const boid = struct({
+const Boid = struct({
   position: vec3u,
   velocity: vec3f,
   color: vec4f,
   isActive: bool,
 });
 
-const mainCircle: Parsed<typeof boid> = {
+const boid: Parsed<typeof Boid> = {
   position: [0, 0, 0],
   velocity: [1, 0.5, 0.5],
   color: [1.0, 0.2, 0.3, 1.0],
@@ -124,7 +125,7 @@ Each struct has its `byteAlignment` equal to the biggest byteAlignment of its pr
 ```ts 
 import { struct, vec3u, vec3f, vec4f, bool, align, size } from 'typegpu/data';
 
-const boid = struct({
+const Boid = struct({
   position: align(32, vec3u),
   velocity: vec3f,
   color: vec4f,
@@ -139,37 +140,16 @@ To define arrays of known constant length, use the `arrayOf` function. It accept
 ```ts
 import { arrayOf, f32, Parsed } from 'typegpu/data';
 
-const recentResultsArray = arrayOf(f32, 4);
+const RecentResultsArray = arrayOf(f32, 4);
 
 // evaluated to number[];
-type RecentResultsArray = Parsed<typeof recentResultsArray>;
+type RecentResultsArrayType = Parsed<typeof RecentResultsArray>;
 
-const recentResults: RecentResultsArray = [
+const recentResults: RecentResultsArrayType = [
     1, 0, 0.5, 20
 ];
 
 recentResults.shift();
 recentResults[3] = -1;
-```
-
-### dynamicArrayOf
-
-For arrays of dynamically changing lengths, use the `dynamicArrayOf` function. It accepts as arguments the array's elements data type constructor and the array's initial capacity. When it comes to inferred types, there is currently no difference between the usage of `arrayOf` and `dynamicArrayOf` for arrays, however the difference will eventually become apparent when one day using defined data types from within the GPU code.
-
-```ts
-
-import { dynamicArrayOf, f32, Parsed } from 'typegpu/data';
-
-const recentResultsArray = dynamicArrayOf(f32, 4);
-
-// evaluated to number[];
-type RecentResultsArray = Parsed<typeof recentResultsArray>;
-
-const recentResults: RecentResultsArray = [
-    1, 0, 0.5,
-];
-
-recentResults.push(2);
-
 ```
 
