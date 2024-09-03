@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { StrictNameRegistry, builtin, wgsl } from '../src';
+import { StrictNameRegistry, builtin, wgsl } from '../src/experimental';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
 
 describe('builtin', () => {

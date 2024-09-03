@@ -5,6 +5,7 @@ import type {
   ResolutionCtx,
   Wgsl,
   WgslFnArgument,
+  WgslNamable,
   WgslResolvable,
   WgslValue,
 } from './types';
@@ -18,7 +19,12 @@ import { WgslIdentifier } from './wgslIdentifier';
 export interface WgslFn<
   TArgTypes extends [WgslFnArgument, ...WgslFnArgument[]] | [],
   TReturn extends AnyWgslData | undefined = undefined,
-> extends WgslResolvable {}
+> extends WgslResolvable,
+    WgslNamable,
+    CallableImpl<
+      SegmentsFromTypes<TArgTypes>,
+      WgslFunctionCall<TArgTypes, TReturn>
+    > {}
 
 export function fn<
   TArgTypes extends [WgslFnArgument, ...WgslFnArgument[]] | [],

@@ -18,7 +18,7 @@ import type {
   SetPlumAction,
   TypeGpuRuntime,
 } from './typegpuRuntime';
-import type { AnyWgslData, WgslAllocatable } from './types';
+import { type AnyWgslData, type WgslAllocatable, isAllocatable } from './types';
 import {
   type ExtractPlumValue,
   type Unsubscribe,
@@ -215,7 +215,9 @@ class TypeGpuRuntimeImpl {
       );
 
       const res = allocatable.dataType.read(
-        new BufferReader(this._readBuffer.getMappedRange()),
+        new BufferReader(
+          this._readBuffer.getMappedRange(0, allocatable.dataType.size),
+        ),
       ) as Parsed<TData>;
 
       this._readBuffer.unmap();
@@ -226,7 +228,7 @@ class TypeGpuRuntimeImpl {
 
   writeBuffer<TValue extends AnyWgslData>(
     allocatable: WgslAllocatable<TValue>,
-    data: Parsed<TValue>,
+    data: Parsed<TValue> | WgslAllocatable<TValue>,
   ) {
     const gpuBuffer = this.bufferFor(allocatable);
 
@@ -235,9 +237,16 @@ class TypeGpuRuntimeImpl {
       allocatable.dataType.byteAlignment,
     );
 
-    const hostBuffer = new ArrayBuffer(size);
-    allocatable.dataType.write(new BufferWriter(hostBuffer), data);
-    this.device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
+    if (isAllocatable(data)) {
+      const sourceBuffer = this.bufferFor(data);
+      const commandEncoder = this.device.createCommandEncoder();
+      commandEncoder.copyBufferToBuffer(sourceBuffer, 0, gpuBuffer, 0, size);
+      this.device.queue.submit([commandEncoder.finish()]);
+    } else {
+      const hostBuffer = new ArrayBuffer(size);
+      allocatable.dataType.write(new BufferWriter(hostBuffer), data);
+      this.device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
+    }
   }
 
   readPlum<TPlum extends WgslPlum>(plum: TPlum): ExtractPlumValue<TPlum> {

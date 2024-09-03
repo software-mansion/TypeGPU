@@ -1,6 +1,6 @@
 import type { AnySchema } from 'typed-binary';
 import { builtinToType } from './builtinTypes';
-import type { SimpleWgslData } from './data';
+import type { SimpleWgslData, WgslArray } from './data';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
 import type { TypeGpuRuntime } from './typegpuRuntime';
@@ -121,15 +121,20 @@ export class RenderProgramBuilder {
         idx: idx,
         entry: {
           bindable: elem,
-          underlyingType: elem.allocatable
-            .dataType as SimpleWgslData<AnySchema>,
+          underlyingType: elem.allocatable.dataType as
+            | SimpleWgslData<AnySchema>
+            | WgslArray<AnyWgslData>,
         },
       };
     });
 
     const vertexUserArgs = entries.map(
       (entry) => code`
-        @location(${entry.idx}) ${entry.entry.bindable} : ${entry.entry.underlyingType.getUnderlyingTypeString()},
+        @location(${entry.idx}) ${entry.entry.bindable} : ${
+          'expressionCode' in entry.entry.underlyingType
+            ? entry.entry.underlyingType.expressionCode
+            : entry.entry.underlyingType.elementType
+        },
     `,
     );
     const vertexBuiltins = Array.from(vertexContext.usedBuiltins);

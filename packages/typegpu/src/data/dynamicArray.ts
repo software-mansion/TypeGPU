@@ -11,14 +11,19 @@ import {
   ValidationError,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { AnyWgslData, ResolutionCtx, WgslData } from '../types';
+import type {
+  AnyWgslData,
+  ResolutionCtx,
+  WgslData,
+  WgslNamable,
+} from '../types';
 import { code } from '../wgslCode';
 import { WgslIdentifier } from '../wgslIdentifier';
 import alignIO from './alignIO';
 import { u32 } from './numeric';
 
 class DynamicArrayDataType<TElement extends WgslData<unknown>>
-  implements WgslData<Unwrap<TElement>[]>
+  implements WgslData<Unwrap<TElement>[]>, WgslNamable
 {
   __unwrapped!: Unwrap<TElement>[]; // type-token, not available at runtime
 
@@ -37,6 +42,11 @@ class DynamicArrayDataType<TElement extends WgslData<unknown>>
     );
 
     this.size = this.measure(MaxValue).size;
+  }
+
+  $name(label: string): this {
+    this._label = label;
+    return this;
   }
 
   seekProperty(

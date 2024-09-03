@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { wgsl } from '../src';
+import { wgsl } from '../src/experimental';
 import { parseWGSL } from './utils/parseWGSL';
 
 describe('inline resolve', () => {

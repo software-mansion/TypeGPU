@@ -15,7 +15,15 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { builtin, createRuntime, wgsl } from 'typegpu';
+import {
+  asMutable,
+  asReadonly,
+  asUniform,
+  asVertex,
+  builtin,
+  createRuntime,
+  wgsl,
+} from 'typegpu';
 import { arrayOf, atomic, f32, u32, vec2u } from 'typegpu/data';
 
 const runtime = await createRuntime();
@@ -75,11 +83,11 @@ const nextStateBuffer = wgsl
   .$name('next')
   .$allowMutable();
 
-const viscosityData = viscosityBuffer.asUniform();
-const currentStateData = currentStateBuffer.asReadonly();
-const currentStateVertex = currentStateBuffer.asVertex();
-const sizeData = sizeBuffer.asUniform();
-const nextStateData = nextStateBuffer.asMutable();
+const viscosityData = asUniform(viscosityBuffer);
+const currentStateData = asReadonly(currentStateBuffer);
+const currentStateVertex = asVertex(currentStateBuffer);
+const sizeData = asUniform(sizeBuffer);
+const nextStateData = asMutable(nextStateBuffer);
 
 const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
 const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
@@ -87,15 +95,15 @@ const maxCompress = wgsl.constant(wgsl`12u`);
 
 const squareBuffer = wgsl
   .buffer(arrayOf(vec2u, 4), [
-    [0, 0],
-    [0, 1],
-    [1, 0],
-    [1, 1],
+    vec2u(0, 0),
+    vec2u(0, 1),
+    vec2u(1, 0),
+    vec2u(1, 1),
   ])
   .$allowVertex('vertex')
   .$allowUniform()
   .$name('square');
-const squareBufferData = squareBuffer.asVertex();
+const squareBufferData = asVertex(squareBuffer);
 
 const getIndex = wgsl.fn`(x: u32, y: u32) -> u32 {
   let h = ${sizeData}.y;
@@ -350,7 +358,7 @@ function resetGameData() {
     Array.from({ length: 1024 ** 2 }, () => 0),
   );
 
-  runtime.writeBuffer(sizeBuffer, [options.size, options.size]);
+  runtime.writeBuffer(sizeBuffer, vec2u(options.size, options.size));
 
   const length = options.size * options.size;
   const cells = new Uint32Array(length);
@@ -381,16 +389,7 @@ function resetGameData() {
 
     runtime.flush();
 
-    commandEncoder = device.createCommandEncoder();
-    commandEncoder.copyBufferToBuffer(
-      runtime.bufferFor(nextStateBuffer),
-      0,
-      runtime.bufferFor(currentStateBuffer),
-      0,
-      cells.byteLength,
-    );
-
-    device.queue.submit([commandEncoder.finish()]);
+    runtime.writeBuffer(currentStateBuffer, nextStateBuffer);
   };
 
   applyDrawCanvas = () => {

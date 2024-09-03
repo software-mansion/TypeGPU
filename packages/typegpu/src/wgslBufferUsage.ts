@@ -23,10 +23,7 @@ export interface WgslBufferUsage<
 export function bufferUsage<
   TData extends AnyWgslData,
   TUsage extends BufferUsage,
->(
-  buffer: WgslBuffer<TData, TUsage>,
-  usage: TUsage,
-): WgslBufferUsage<TData, TUsage> {
+>(buffer: WgslBuffer<TData>, usage: TUsage): WgslBufferUsage<TData, TUsage> {
   return new WgslBufferUsageImpl(buffer, usage);
 }
 
@@ -38,7 +35,7 @@ class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
   implements WgslBufferUsage<TData, TUsage>
 {
   constructor(
-    public readonly buffer: WgslBuffer<TData, TUsage>,
+    public readonly buffer: WgslBuffer<TData>,
     public readonly usage: TUsage,
   ) {}
 
