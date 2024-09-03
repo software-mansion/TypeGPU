@@ -26,7 +26,7 @@ const Circle = struct({
 type CircleType = Parsed<typeof Circle>;
 
 const redCircle: CircleType = {
-  centerPos: [2, 4, 0],
+  centerPos: vec3i(2, 4, 0),
   radius: 0.2,
 };
 ```
@@ -37,7 +37,7 @@ Here the `CircleType` evaluates to:
 
 ```ts
 type CircleType = {
-  centerPos: [number, number, number];
+  centerPos: vec3i;
   radius: number;
 }
 ```
@@ -46,28 +46,28 @@ Thanks to that, whenever we mistakenly set or assume a wrong value for an object
 
 ```ts
 const redCircle: CircleType = {
-  // Error: Type '[number, number]' is not assignable to type '[number, number, number]'.
-  centerPos: [2, 4], 
+  // Error: Property 'z' is missing in type 'vec2i' but required in type 'vec3i'.
+  centerPos: vec2i(2, 4), 
   radius: 0.2,
 };
 
 const redCircle: CircleType = {
-  centerPos: [2, 4, 0], 
+  centerPos: vec3i(2, 4, 0), 
   // Error: Type 'string' is not assignable to type 'number'.
   radius: "0.2",
 };
 
-// Error: Property 'radius' is missing in type '{ centerPos: [number, number, number]; }' 
-// but required in type '{ centerPos: [number, number, number]; radius: number; }'.
+// Error: Property 'radius' is missing in type '{ centerPos: vec3i; }' 
+// but required in type '{ centerPos: vec3i; radius: number; }'.
 const redCircle: CircleType = {
-  centerPos: [2, 4, 0], 
+  centerPos: vec3i(2, 4, 0), 
 };
 
-// Error: Property 'rad' does not exist on type '{ centerPos: [number, number, number]; radius: number; }'
+// Error: Property 'rad' does not exist on type '{ centerPos: vec3i; radius: number; }'.
 const diam = redCircle.rad * 2;
 
-// Error: Operator '+' cannot be applied to types '[number, number, number]' and 'number'.
-const newPos = redCircle.centerPos + 1;
+// Error: Operator '+' cannot be applied to types 'vec3i' and 'vec3u'.
+const newPos = redCircle.centerPos + vec3u(1, 2, 3);
 ```
 
 Defined data structures automatically measure and hold information about their memory layout parameters, which is useful for writing to and reading data from the GPU.
@@ -87,15 +87,15 @@ TypeGPU data types are essential for the library's automated data marshalling ca
 | f32 | F32 | number | 4 |
 | i32 | I32 | number | 4 |
 | bool | Bool | boolean | 4 |
-| vec2u | Vec2u | [number, number] | 8 |
-| vec2f | Vec2f | [number, number] | 8 |
-| vec2i | Vec2i | [number, number] | 8 |
-| vec3u | Vec3u | [number, number, number] | 8 |
-| vec3f | Vec3f | [number, number, number] | 8 |
-| vec3i | Vec3i | [number, number, number] | 8 |
-| vec4u | Vec4u | [number, number, number, number] | 16 |
-| vec4f | Vec4f | [number, number, number, number] | 16 |
-| vec4i | Vec4i | [number, number, number, number] | 16 |
+| vec2u | Vec2u | vec2u | 8 |
+| vec2f | Vec2f | vec2f | 8 |
+| vec2i | Vec2i | vec2i | 8 |
+| vec3u | Vec3u | vec3u | 8 |
+| vec3f | Vec3f | vec3f | 8 |
+| vec3i | Vec3i | vec3i | 8 |
+| vec4u | Vec4u | vec4u | 16 |
+| vec4f | Vec4f | vec4f | 16 |
+| vec4i | Vec4i | vec4i | 16 |
 | mat4d | Mat4f | number[] | 16 |
 
 ## Complex data structures
@@ -113,9 +113,9 @@ const Boid = struct({
 });
 
 const boid: Parsed<typeof Boid> = {
-  position: [0, 0, 0],
-  velocity: [1, 0.5, 0.5],
-  color: [1.0, 0.2, 0.3, 1.0],
+  position: vec3u(0, 0, 0),
+  velocity: vec3f(1, 0.5, 0.5),
+  color: vec4f(1.0, 0.2, 0.3, 1.0),
   isActive: true,
 };
 ```
