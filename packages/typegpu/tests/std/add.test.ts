@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec2u, vec2i, vec3f, vec3u, vec3i, vec4f, vec4u, vec4i } from '../../src/data';
+import {
+  vec2f,
+  vec2i,
+  vec2u,
+  vec3f,
+  vec3i,
+  vec3u,
+  vec4f,
+  vec4i,
+  vec4u,
+} from '../../src/data';
 import { std } from '../../src/std';
 
 describe('add', () => {
@@ -21,7 +31,9 @@ describe('add', () => {
   });
 
   it('computes sum of two vec3f', () => {
-    expect(std.add(vec3f(1.5, 2, 3), vec3f(-1.5, -2, -3))).toEqual(vec3f(0, 0, 0));
+    expect(std.add(vec3f(1.5, 2, 3), vec3f(-1.5, -2, -3))).toEqual(
+      vec3f(0, 0, 0),
+    );
     expect(std.add(vec3f(1, 1, 1), vec3f(2, 3, 4))).toEqual(vec3f(3, 4, 5));
     expect(std.add(vec3f(1.5), vec3f(2))).toEqual(vec3f(3.5));
   });
