@@ -257,6 +257,9 @@ export async function executeExample(
       if (moduleKey === 'typegpu') {
         return await import('typegpu/experimental');
       }
+      if (moduleKey === 'typegpu/experimental') {
+        return await import('typegpu/experimental');
+      }
       if (moduleKey === 'typegpu/data') {
         return await import('typegpu/data');
       }

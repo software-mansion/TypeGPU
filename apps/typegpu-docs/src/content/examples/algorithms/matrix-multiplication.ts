@@ -50,8 +50,9 @@ const secondColumnCountPlum = addSliderPlumParameter(
 const firstMatrixPlum = wgsl.plum((get) => {
   get(forceShufflePlum); // depending to force recomputation
 
-  return createMatrix([get(firstRowCountPlum), get(firstColumnCountPlum)], () =>
-    Math.floor(Math.random() * 10),
+  return createMatrix(
+    vec2f(get(firstRowCountPlum), get(firstColumnCountPlum)),
+    () => Math.floor(Math.random() * 10),
   );
 });
 
@@ -59,7 +60,7 @@ const secondMatrixPlum = wgsl.plum((get) => {
   get(forceShufflePlum); // depending to force recomputation
 
   return createMatrix(
-    [get(firstColumnCountPlum), get(secondColumnCountPlum)],
+    vec2f(get(firstColumnCountPlum), get(secondColumnCountPlum)),
     () => Math.floor(Math.random() * 10),
   );
 });
@@ -121,33 +122,33 @@ const resultTable = await addElement('table', {
 });
 
 function createMatrix(
-  size: [number, number],
+  size: vec2f,
   initValue: (row: number, col: number) => number,
 ) {
   return {
     size: size,
-    numbers: Array(size[0] * size[1])
+    numbers: Array(size.x * size.y)
       .fill(0)
-      .map((_, i) => initValue(Math.floor(i / size[1]), i % size[1])),
+      .map((_, i) => initValue(Math.floor(i / size.y), i % size.y)),
   };
 }
 
 async function run() {
   const firstMatrix = runtime.readPlum(firstMatrixPlum);
   const secondMatrix = runtime.readPlum(secondMatrixPlum);
-  const workgroupCountX = Math.ceil(firstMatrix.size[0] / workgroupSize[0]);
-  const workgroupCountY = Math.ceil(secondMatrix.size[1] / workgroupSize[1]);
+  const workgroupCountX = Math.ceil(firstMatrix.size.x / workgroupSize[0]);
+  const workgroupCountY = Math.ceil(secondMatrix.size.y / workgroupSize[1]);
 
   program.execute({ workgroups: [workgroupCountX, workgroupCountY] });
   const multiplicationResult = await runtime.readBuffer(resultMatrixBuffer);
 
   const unflatMatrix = (matrix: Parsed<typeof MatrixStruct>) =>
-    Array(matrix.size[0])
+    Array(matrix.size.x)
       .fill(0)
       .map((_, i) =>
-        Array(matrix.size[1])
+        Array(matrix.size.y)
           .fill(0)
-          .map((_, j) => matrix.numbers[i * matrix.size[1] + j]),
+          .map((_, j) => matrix.numbers[i * matrix.size.y + j]),
       );
 
   firstTable.setMatrix(unflatMatrix(firstMatrix));

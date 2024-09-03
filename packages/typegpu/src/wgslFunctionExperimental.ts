@@ -1,4 +1,4 @@
-import Callable, { type AsCallable } from './callable';
+import { type AsCallable, CallableImpl } from './callable';
 import { isPointer } from './types';
 import type {
   AnyWgslData,
@@ -21,7 +21,7 @@ export interface WgslFn<
   TReturn extends AnyWgslData | undefined = undefined,
 > extends WgslResolvable,
     WgslNamable,
-    Callable<
+    CallableImpl<
       SegmentsFromTypes<TArgTypes>,
       WgslFunctionCall<TArgTypes, TReturn>
     > {}
@@ -102,7 +102,7 @@ class WgslFnImpl<
     // TArgPairs extends (readonly [WgslIdentifier, WgslFnArgument])[],
     TReturn extends AnyWgslData | undefined = undefined,
   >
-  extends Callable<
+  extends CallableImpl<
     SegmentsFromTypes<TArgTypes>,
     WgslFunctionCall<TArgTypes, TReturn>
   >

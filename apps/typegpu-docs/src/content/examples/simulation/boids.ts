@@ -69,10 +69,10 @@ const triangleSizeBuffer = wgsl.buffer(f32, triangleSize).$allowUniform();
 const triangleSizePlum = wgsl.plum((get) => {
   const size = get(triangleSize);
   return [
-    [0.0, size],
-    [-size / 2, -size / 2],
-    [size / 2, -size / 2],
-  ] as [number, number][];
+    vec2f(0.0, size),
+    vec2f(-size / 2, -size / 2),
+    vec2f(size / 2, -size / 2),
+  ];
 });
 
 const triangleVertex = wgsl
@@ -110,14 +110,11 @@ const writeSlot = wgsl.slot<WgslBufferUsage<TrianglePosData, 'mutable'>>();
 function randomizeTriangles() {
   const positions = [];
   for (let i = 0; i < MAX_TRIANGLES; i++) {
-    const position = [Math.random() * 2 - 1, Math.random() * 2 - 1] as [
-      number,
-      number,
-    ];
-    const velocity = [
+    const position = vec2f(Math.random() * 2 - 1, Math.random() * 2 - 1);
+    const velocity = vec2f(
       Math.random() * 0.1 - 0.05,
       Math.random() * 0.1 - 0.05,
-    ] as [number, number];
+    );
     positions.push({ position, velocity });
   }
   runtime.writeBuffer(trianglePosBuffers[0], positions);
