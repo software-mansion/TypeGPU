@@ -65,9 +65,6 @@ const redCircle: CircleType = {
 
 // Error: Property 'rad' does not exist on type '{ centerPos: vec3i; radius: number; }'.
 const diam = redCircle.rad * 2;
-
-// Error: Operator '+' cannot be applied to types 'vec3i' and 'vec3u'.
-const newPos = redCircle.centerPos + vec3u(1, 2, 3);
 ```
 
 Defined data structures automatically measure and hold information about their memory layout parameters, which is useful for writing to and reading data from the GPU.
