@@ -1,16 +1,16 @@
 ---
-title: Unmanaged API
-description: A guide on how to use the unmanaged API.
+title: TypeGPU buffer API
+description: A guide on how to use the TypeGPU buffer API.
 ---
 
 # Introduction
 
-This guide will show you how to use the unmanaged buffer API to allow for type-safe and convenient read and write operations on WebGPU resources.
-We will explore how to adapt existing WebGPU code to use the unmanaged API, and how to use the it to create new WebGPU resources.
+This guide will show you how to use the TypeGPU buffer API to allow for type-safe and convenient read and write operations on WebGPU resources.
+We will explore how to adapt existing WebGPU code to use the buffer API, and how to use the it to create new WebGPU resources.
 
-# What is the unmanaged API?
+# What is the TypeGPU buffer API?
 
-The unmanaged API is a set of tools for WebGPU that allow you to create and manage typed buffers.
+TypeGPU buffer API is a set of tools for WebGPU that allow you to create and manage typed buffers.
 It provides a way to read and write data to and from WebGPU buffers without having to manually translate the values to and from the raw byte arrays that WebGPU uses.
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
@@ -103,13 +103,13 @@ manually calculating the offsets and sizes would be even more error-prone and ti
 
 TypeGPU addresses this issue by providing a way to define the structure of the data we want to store in the buffer and then read and write the data using a type-safe API.
 
-# Using the unmanaged API
+# Using the TypeGPU buffer API
 
 ## Creating a buffer
 
 import { Aside } from '@astrojs/starlight/components';
 
-To create a buffer using the unmanaged API, you will need to define the buffer type using one of the data types provided by the `typegpu/data` module.
+To create a buffer using the TypeGPU buffer API, you will need to define the buffer type using one of the data types provided by the `typegpu/data` module.
 You can then create a buffer using the `tgpu.createBuffer` function as demonstrated in the example above. However, that is not the only way to create a buffer.
 
 ### Using buffer type
@@ -133,7 +133,7 @@ const gpuBuffer = buffer.buffer;
 
 <Aside>
     To make the buffer 'Unmanaged', you need to call the `$device` method on the buffer object.
-    This marks the buffer as unmanaged and allows you to use it in the unmanaged API.
+    This marks the buffer as unmanaged and allows you to use it in read and write operations.
     ```ts
     // WgslBuffer<U32>
     const buffer = tgpu.createBuffer(u32);
@@ -179,7 +179,7 @@ const buffer = tgpu.createBuffer(u32, existingBuffer);
 
 ## Adding usage flags
 
-When creating a buffer using the unmanaged API, you can use one of the available builder methods to add usage flags to the buffer.
+When creating a buffer using the TypeGPU buffer API, you can use one of the available builder methods to add usage flags to the buffer.
 
 ```ts
 import { u32 } from 'typegpu/data';
@@ -256,7 +256,7 @@ const data = await tgpu.read(buffer);
 
 # Adapting existing code
 
-Let's take a look at how we can supercharge our existing WebGPU code with the unmanaged API.
+Let's take a look at how we can supercharge our existing WebGPU code with the TypeGPU buffer API.
 
 ## Staring point
 
@@ -292,7 +292,7 @@ The size of the data type `vec3f` is 12 bytes, so one might think that a structu
 However, the size of the buffer is 32 bytes because of the alignment requirements of the WebGPU API. 
 This is something the user needs to know and calculate manually.
 
-Let's see how we can improve this code using the unmanaged API.
+Let's see how we can improve this code using the buffer API.
 
 ## Soft migration
 
@@ -382,7 +382,7 @@ import { Steps } from '@astrojs/starlight/components';
 
 ## Full migration
 
-In this approach we will remove the existing buffer and replace it with a buffer created using the unmanaged API.
+In this approach we will remove the existing buffer and replace it with a buffer created using the TypeGPU buffer API.
 Keep in mind that `tgpu.createBuffer()` will return a `WgslBuffer` object, when you need a `GPUBuffer` object you can access it using the `buffer` property.
 
 ```diff lang=ts
