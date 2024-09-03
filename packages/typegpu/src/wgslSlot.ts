@@ -4,7 +4,7 @@ import {
   type TgpuResolvableSlot,
   type TgpuSlot,
   type Wgsl,
-  isTgpu,
+  isWgsl,
 } from './types';
 
 // ----------
@@ -41,7 +41,7 @@ class TgpuSlotImpl<T> implements TgpuResolvable, TgpuSlot<T> {
   resolve(ctx: ResolutionCtx): string {
     const value = ctx.unwrap(this);
 
-    if (!isTgpu(value)) {
+    if (!isWgsl(value)) {
       throw new Error(
         `Cannot inject value of type ${typeof value} of slot '${this.label ?? '<unnamed>'}' in code.`,
       );

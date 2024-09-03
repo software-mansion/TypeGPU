@@ -49,7 +49,7 @@ export function isResolvable(value: unknown): value is TgpuResolvable {
   );
 }
 
-export function isTgpu(value: unknown): value is Wgsl {
+export function isWgsl(value: unknown): value is Wgsl {
   return (
     typeof value === 'number' ||
     typeof value === 'boolean' ||
