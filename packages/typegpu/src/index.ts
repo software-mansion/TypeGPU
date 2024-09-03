@@ -2,6 +2,8 @@
  * @module typegpu
  */
 
+import { tgpu } from './tgpu';
+
 export { RecursiveDataTypeError } from './errors';
 export {
   WgslData,
@@ -11,3 +13,5 @@ export {
 export { std } from './std';
 
 export type { WgslBuffer } from './wgslBuffer';
+
+export default tgpu;
