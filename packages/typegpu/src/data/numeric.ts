@@ -26,13 +26,3 @@ export const f32: F32 = new SimpleWgslData({
   byteAlignment: 4,
   code: 'f32',
 });
-
-/**
- * Array of column vectors
- */
-export type Mat4f = WgslData<number[]>;
-export const mat4f: Mat4f = new SimpleWgslData({
-  schema: TB.arrayOf(TB.f32, 16),
-  byteAlignment: 16,
-  code: 'mat4x4f',
-});

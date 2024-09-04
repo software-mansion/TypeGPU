@@ -156,6 +156,11 @@ abstract class vec2Impl<T2> extends Swizzle2Impl<T2> implements vec2 {
   at(idx: 0 | 1): number {
     return idx === 0 ? this.x : this.y;
   }
+
+  *[Symbol.iterator]() {
+    yield this.x;
+    yield this.y;
+  }
 }
 
 class vec2fImpl extends vec2Impl<vec2f> implements vec2f {
@@ -201,6 +206,12 @@ abstract class vec3Impl<T2, T3> extends Swizzle3Impl<T2, T3> implements vec3 {
 
   at(idx: 0 | 1 | 2): number {
     return idx === 0 ? this.x : idx === 1 ? this.y : this.z;
+  }
+
+  *[Symbol.iterator]() {
+    yield this.x;
+    yield this.y;
+    yield this.z;
   }
 }
 
@@ -269,6 +280,13 @@ abstract class vec4Impl<T2, T3, T4>
         : idx === 2
           ? this.z
           : this.w;
+  }
+
+  *[Symbol.iterator]() {
+    yield this.x;
+    yield this.y;
+    yield this.z;
+    yield this.w;
   }
 }
 
@@ -340,6 +358,7 @@ interface vec2 {
   y: number;
   length: 2;
   at(idx: 0 | 1): number;
+  [Symbol.iterator](): Iterator<number>;
 }
 
 interface vec3 {
@@ -348,6 +367,7 @@ interface vec3 {
   z: number;
   length: 3;
   at(idx: 0 | 1 | 2): number;
+  [Symbol.iterator](): Iterator<number>;
 }
 
 interface vec4 {
@@ -357,6 +377,7 @@ interface vec4 {
   w: number;
   length: 4;
   at(idx: 0 | 1 | 2 | 3): number;
+  [Symbol.iterator](): Iterator<number>;
 }
 
 // ----------
@@ -378,6 +399,7 @@ export interface vecBase {
   kind: VecKind;
   length: number;
   at(idx: number): number;
+  [Symbol.iterator](): Iterator<number>;
 }
 
 export interface vec2f extends vec2, Swizzle2<vec2f> {
