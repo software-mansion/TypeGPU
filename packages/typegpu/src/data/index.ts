@@ -4,7 +4,6 @@
 
 export * from './std140';
 export * from './numeric';
-export * from './dynamicArray';
 export * from './struct';
 export * from './array';
 export * from './vector';
