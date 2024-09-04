@@ -6,5 +6,6 @@ describe('fract', () => {
     expect(std.fract(2)).toBeCloseTo(0);
     expect(std.fract(2.2)).toBeCloseTo(0.2);
     expect(std.fract(-0.5)).toBeCloseTo(0.5);
+    expect(std.fract(-0.2)).toBeCloseTo(0.8);
   });
 });

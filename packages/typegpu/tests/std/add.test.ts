@@ -15,8 +15,8 @@ import { std } from '../../src/std';
 describe('add', () => {
   it('computes sum of two vec2f', () => {
     expect(std.add(vec2f(0, 0), vec2f(0, 0))).toEqual(vec2f(0, 0));
-    expect(std.add(vec2f(1.2, 0), vec2f(1.0, 0))).toEqual(vec2f(2.2, 0));
-    expect(std.add(vec2f(-1.5, 1), vec2f(1, 0))).toEqual(vec2f(-0.5, 1));
+    expect(std.add(vec2f(1.2, 0.1), vec2f(1.0, 0.5))).toEqual(vec2f(2.2, 0.6));
+    expect(std.add(vec2f(-1.5, 1), vec2f(1, 0.1))).toEqual(vec2f(-0.5, 1.1));
   });
 
   it('computes sum of two vec2u', () => {
