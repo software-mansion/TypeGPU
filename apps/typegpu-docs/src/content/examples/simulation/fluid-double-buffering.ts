@@ -15,15 +15,15 @@ import {
 // --
 
 import {
-  type Tgpu,
   type TgpuBufferUsage,
+  type Wgsl,
   asMutable,
   asReadonly,
   asUniform,
   builtin,
   createRuntime,
   wgsl,
-} from 'typegpu';
+} from 'typegpu/experimental';
 import {
   type Parsed,
   arrayOf,
@@ -123,7 +123,7 @@ const isValidCoord = wgsl.fn`(x: i32, y: i32) -> bool {
     y >= 0;
 }`;
 
-const coordsToIndex = (x: Tgpu, y: Tgpu) =>
+const coordsToIndex = (x: Wgsl, y: Wgsl) =>
   wgsl`${x} + ${y} * ${gridSizeUniform}`;
 
 const getCell = wgsl.fn`
