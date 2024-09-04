@@ -1,10 +1,10 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import { roundUp } from './mathUtils';
-import type { AnyWgslData } from './types';
-import type { Unmanaged, WgslBuffer } from './wgslBuffer';
+import type { AnyTgpuData } from './types';
+import type { TgpuBuffer, Unmanaged } from './wgslBuffer';
 
-export function write<TData extends AnyWgslData>(
-  buffer: WgslBuffer<TData> & Unmanaged,
+export function write<TData extends AnyTgpuData>(
+  buffer: TgpuBuffer<TData> & Unmanaged,
   data: Parsed<TData>,
 ): void {
   const gpuBuffer = buffer.buffer;
@@ -22,8 +22,8 @@ export function write<TData extends AnyWgslData>(
   device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
 }
 
-export async function read<TData extends AnyWgslData>(
-  buffer: WgslBuffer<TData> & Unmanaged,
+export async function read<TData extends AnyTgpuData>(
+  buffer: TgpuBuffer<TData> & Unmanaged,
 ): Promise<Parsed<TData>> {
   const gpuBuffer = buffer.buffer;
   const device = buffer.device;

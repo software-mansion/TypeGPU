@@ -85,13 +85,13 @@ declare module '@typegpu/example-toolkit' {
     onChange: (newValue: number) => void,
   ): void;
 
-  import type { WgslPlum } from 'typegpu/experimental';
+  import type { TgpuPlum } from 'typegpu/experimental';
 
   export function addSliderPlumParameter(
     label: string,
     initial: number,
     options?: { min?: number; max?: number; step?: number },
-  ): WgslPlum<number>;
+  ): TgpuPlum<number>;
 
   export function onCleanup(callback: () => unknown): void;
 

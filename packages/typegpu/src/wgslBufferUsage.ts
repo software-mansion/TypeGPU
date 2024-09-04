@@ -1,37 +1,37 @@
 import type {
-  AnyWgslData,
+  AnyTgpuData,
   BufferUsage,
   ResolutionCtx,
-  WgslBindable,
+  TgpuBindable,
 } from './types';
-import type { WgslBuffer } from './wgslBuffer';
-import { WgslIdentifier } from './wgslIdentifier';
+import type { TgpuBuffer } from './wgslBuffer';
+import { TgpuIdentifier } from './wgslIdentifier';
 
 // ----------
 // Public API
 // ----------
 
-export interface WgslBufferUsage<
-  TData extends AnyWgslData,
+export interface TgpuBufferUsage<
+  TData extends AnyTgpuData,
   TUsage extends BufferUsage = BufferUsage,
-> extends WgslBindable<TData, TUsage> {}
+> extends TgpuBindable<TData, TUsage> {}
 
 export function bufferUsage<
-  TData extends AnyWgslData,
+  TData extends AnyTgpuData,
   TUsage extends BufferUsage,
->(buffer: WgslBuffer<TData>, usage: TUsage): WgslBufferUsage<TData, TUsage> {
-  return new WgslBufferUsageImpl(buffer, usage);
+>(buffer: TgpuBuffer<TData>, usage: TUsage): TgpuBufferUsage<TData, TUsage> {
+  return new TgpuBufferUsageImpl(buffer, usage);
 }
 
 // --------------
 // Implementation
 // --------------
 
-class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
-  implements WgslBufferUsage<TData, TUsage>
+class TgpuBufferUsageImpl<TData extends AnyTgpuData, TUsage extends BufferUsage>
+  implements TgpuBufferUsage<TData, TUsage>
 {
   constructor(
-    public readonly buffer: WgslBuffer<TData>,
+    public readonly buffer: TgpuBuffer<TData>,
     public readonly usage: TUsage,
   ) {}
 
@@ -44,7 +44,7 @@ class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this.label);
+    const identifier = new TgpuIdentifier().$name(this.label);
 
     ctx.addBinding(this, identifier);
 

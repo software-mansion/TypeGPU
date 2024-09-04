@@ -1,9 +1,9 @@
 import {
   type F32,
+  type TgpuArray,
   type U32,
   type Vec3u,
   type Vec4f,
-  type WgslArray,
   arrayOf,
   f32,
   u32,
@@ -12,7 +12,7 @@ import {
 } from './data';
 import { builtin } from './wgslBuiltin';
 
-export type BuiltInPossibleTypes = U32 | F32 | Vec3u | Vec4f | WgslArray<U32>;
+export type BuiltInPossibleTypes = U32 | F32 | Vec3u | Vec4f | TgpuArray<U32>;
 
 export const builtinToType: Record<symbol, BuiltInPossibleTypes> = {
   [builtin.vertexIndex]: u32,

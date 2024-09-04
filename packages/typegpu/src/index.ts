@@ -6,12 +6,12 @@ import { tgpu } from './tgpu';
 
 export { RecursiveDataTypeError } from './errors';
 export {
-  WgslData,
-  AnyWgslData,
-  AnyWgslTexelFormat,
+  TgpuData,
+  AnyTgpuData,
+  TexelFormat,
 } from './types';
 export { std } from './std';
 
-export type { WgslBuffer } from './wgslBuffer';
+export type { TgpuBuffer } from './wgslBuffer';
 
 export default tgpu;

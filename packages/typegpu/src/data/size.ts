@@ -8,31 +8,26 @@ import {
   Schema,
   type Unwrap,
 } from 'typed-binary';
-import type { AnyWgslData, ResolutionCtx, WgslData } from '../types';
+import type { AnyTgpuData, ResolutionCtx, TgpuData } from '../types';
 
-export function size<TSize extends number, TData extends AnyWgslData>(
+export function size<TSize extends number, TData extends AnyTgpuData>(
   size: TSize,
   data: TData,
-): WgslDataCustomSized<TSize, TData> {
-  return new WgslDataCustomSizedImpl(data, size);
+): TgpuSized<TSize, TData> {
+  return new TgpuSizedImpl(data, size);
 }
 
-export interface WgslDataCustomSized<
-  TSize extends number,
-  TData extends AnyWgslData,
-> extends WgslData<Unwrap<TData>> {}
+export interface TgpuSized<TSize extends number, TData extends AnyTgpuData>
+  extends TgpuData<Unwrap<TData>> {}
 
-export class WgslDataCustomSizedImpl<
-    TSize extends number,
-    TData extends AnyWgslData,
-  >
+export class TgpuSizedImpl<TSize extends number, TData extends AnyTgpuData>
   extends Schema<Unwrap<TData>>
-  implements WgslDataCustomSized<TSize, TData>
+  implements TgpuSized<TSize, TData>
 {
   public readonly byteAlignment: number;
 
   constructor(
-    private data: AnyWgslData,
+    private data: AnyTgpuData,
     public readonly size: number,
   ) {
     super();
