@@ -15,18 +15,7 @@ import { CallableImpl } from '../callable';
 import { roundUp } from '../mathUtils';
 import type { TgpuData } from '../types';
 import alignIO from './alignIO';
-import {
-  vec2f,
-  vec2i,
-  vec2u,
-  vec3f,
-  vec3i,
-  vec3u,
-  vec4f,
-  vec4i,
-  vec4u,
-  type vecBase,
-} from './vector';
+import { vec2f, vec3f, vec4f, type vecBase } from './vector';
 
 interface MatSchemaOptions<T, TVec extends vecBase> {
   label: string;
@@ -170,18 +159,6 @@ class mat2x2fImpl extends mat2x2Impl<vec2f> implements mat2x2f {
   }
 }
 
-class mat2x2iImpl extends mat2x2Impl<vec2i> implements mat2x2i {
-  makeColumn(e0: number, e1: number): vec2i {
-    return vec2i(e0, e1);
-  }
-}
-
-class mat2x2uImpl extends mat2x2Impl<vec2u> implements mat2x2u {
-  makeColumn(e0: number, e1: number): vec2u {
-    return vec2u(e0, e1);
-  }
-}
-
 abstract class mat3x3Impl<TColumn extends vecBase> implements mat3x3<TColumn> {
   private _columns = new Array(3) as [TColumn, TColumn, TColumn];
 
@@ -235,18 +212,6 @@ abstract class mat3x3Impl<TColumn extends vecBase> implements mat3x3<TColumn> {
 class mat3x3fImpl extends mat3x3Impl<vec3f> implements mat3x3f {
   makeColumn(x: number, y: number, z: number): vec3f {
     return vec3f(x, y, z);
-  }
-}
-
-class mat3x3iImpl extends mat3x3Impl<vec3i> implements mat3x3i {
-  makeColumn(x: number, y: number, z: number): vec3i {
-    return vec3i(x, y, z);
-  }
-}
-
-class mat3x3uImpl extends mat3x3Impl<vec3u> implements mat3x3u {
-  makeColumn(x: number, y: number, z: number): vec3u {
-    return vec3u(x, y, z);
   }
 }
 
@@ -326,18 +291,6 @@ class mat4x4fImpl extends mat4x4Impl<vec4f> implements mat4x4f {
   }
 }
 
-class mat4x4iImpl extends mat4x4Impl<vec4i> implements mat4x4i {
-  makeColumn(x: number, y: number, z: number, w: number): vec4i {
-    return vec4i(x, y, z, w);
-  }
-}
-
-class mat4x4uImpl extends mat4x4Impl<vec4u> implements mat4x4u {
-  makeColumn(x: number, y: number, z: number, w: number): vec4u {
-    return vec4u(x, y, z, w);
-  }
-}
-
 // ----------
 // Public API
 // ----------
@@ -349,8 +302,6 @@ export interface mat2x2<TColumn> extends matBase<TColumn> {
 }
 
 export interface mat2x2f extends mat2x2<vec2f> {}
-export interface mat2x2i extends mat2x2<vec2i> {}
-export interface mat2x2u extends mat2x2<vec2u> {}
 
 export type Mat2x2f = TgpuData<mat2x2f> &
   ((...elements: number[]) => mat2x2f) &
@@ -375,8 +326,6 @@ export interface mat3x3<TColumn> extends matBase<TColumn> {
 }
 
 export interface mat3x3f extends mat3x3<vec3f> {}
-export interface mat3x3i extends mat3x3<vec3i> {}
-export interface mat3x3u extends mat3x3<vec3u> {}
 
 export type Mat3x3f = TgpuData<mat3x3f> &
   ((...elements: number[]) => mat3x3f) &
@@ -403,8 +352,6 @@ export interface mat4x4<TColumn> extends matBase<TColumn> {
 }
 
 export interface mat4x4f extends mat4x4<vec4f> {}
-export interface mat4x4i extends mat4x4<vec4i> {}
-export interface mat4x4u extends mat4x4<vec4u> {}
 
 export type Mat4x4f = TgpuData<mat4x4f> &
   ((...elements: number[]) => mat4x4f) &

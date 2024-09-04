@@ -9,19 +9,19 @@ describe('vec2f', () => {
     expect(zero.y).toEqual(0);
   });
 
-  it('should create a 3d vector with the given elements', () => {
+  it('should create a 2d vector with the given elements', () => {
     const zero = vec2f(1, 2);
     expect(zero.x).toEqual(1);
     expect(zero.y).toEqual(2);
   });
 
-  it('should create a 3d vector from the given scalar element', () => {
+  it('should create a 2d vector from the given scalar element', () => {
     const zero = vec2f(5);
     expect(zero.x).toEqual(5);
     expect(zero.y).toEqual(5);
   });
 
-  it('should encode a 3d vector', () => {
+  it('should encode a 2d vector', () => {
     const vec = vec2f(1, 2);
 
     const buffer = new ArrayBuffer(vec2f.size);
