@@ -13,7 +13,7 @@ import {
 import { RecursiveDataTypeError } from '..';
 import { CallableImpl } from '../callable';
 import { roundUp } from '../mathUtils';
-import type { WgslData } from '../types';
+import type { TgpuData } from '../types';
 import alignIO from './alignIO';
 import {
   vec2f,
@@ -30,7 +30,7 @@ import {
 
 interface MatSchemaOptions<T, TVec extends vecBase> {
   label: string;
-  columnType: WgslData<TVec>;
+  columnType: TgpuData<TVec>;
   rows: number;
   columns: number;
   makeFromColumnVectors(...columns: TVec[]): T;
@@ -39,11 +39,11 @@ interface MatSchemaOptions<T, TVec extends vecBase> {
 
 class MatSchemaImpl<T extends matBase<TColumn>, TColumn extends vecBase>
   extends CallableImpl<(number | TColumn)[], T>
-  implements WgslData<T>
+  implements TgpuData<T>
 {
   public readonly __unwrapped!: T;
 
-  private readonly _columnType: WgslData<TColumn>;
+  private readonly _columnType: TgpuData<TColumn>;
   private readonly _rows: number;
   private readonly _columns: number;
   private readonly _makeFromColumnVectors: (...columns: TColumn[]) => T;
@@ -352,7 +352,7 @@ export interface mat2x2f extends mat2x2<vec2f> {}
 export interface mat2x2i extends mat2x2<vec2i> {}
 export interface mat2x2u extends mat2x2<vec2u> {}
 
-export type Mat2x2f = WgslData<mat2x2f> &
+export type Mat2x2f = TgpuData<mat2x2f> &
   ((...elements: number[]) => mat2x2f) &
   ((...columns: vec2f[]) => mat2x2f) &
   (() => mat2x2f);
@@ -367,7 +367,7 @@ export const mat2x2f = new MatSchemaImpl({
   makeFromElements: (...elements: number[]) => new mat2x2fImpl(...elements),
 }) as unknown as Mat2x2f;
 
-export type Mat2x2i = WgslData<mat2x2i> &
+export type Mat2x2i = TgpuData<mat2x2i> &
   ((...elements: number[]) => mat2x2i) &
   ((...columns: vec2i[]) => mat2x2i) &
   (() => mat2x2i);
@@ -382,7 +382,7 @@ export const mat2x2i = new MatSchemaImpl({
   makeFromElements: (...elements: number[]) => new mat2x2iImpl(...elements),
 }) as unknown as Mat2x2i;
 
-export type Mat2x2u = WgslData<mat2x2u> &
+export type Mat2x2u = TgpuData<mat2x2u> &
   ((...elements: number[]) => mat2x2u) &
   ((...columns: vec2u[]) => mat2x2u) &
   (() => mat2x2u);
@@ -408,7 +408,7 @@ export interface mat3x3f extends mat3x3<vec3f> {}
 export interface mat3x3i extends mat3x3<vec3i> {}
 export interface mat3x3u extends mat3x3<vec3u> {}
 
-export type Mat3x3f = WgslData<mat3x3f> &
+export type Mat3x3f = TgpuData<mat3x3f> &
   ((...elements: number[]) => mat3x3f) &
   ((...columns: vec3f[]) => mat3x3f) &
   (() => mat3x3f);
@@ -424,7 +424,7 @@ export const mat3x3f = new MatSchemaImpl({
   makeFromElements: (...elements: number[]) => new mat3x3fImpl(...elements),
 }) as unknown as Mat3x3f;
 
-export type Mat3x3i = WgslData<mat3x3i> &
+export type Mat3x3i = TgpuData<mat3x3i> &
   ((...elements: number[]) => mat3x3i) &
   ((...columns: vec3i[]) => mat3x3i) &
   (() => mat3x3i);
@@ -440,7 +440,7 @@ export const mat3x3i = new MatSchemaImpl({
   makeFromElements: (...elements: number[]) => new mat3x3iImpl(...elements),
 }) as unknown as Mat3x3i;
 
-export type Mat3x3u = WgslData<mat3x3u> &
+export type Mat3x3u = TgpuData<mat3x3u> &
   ((...elements: number[]) => mat3x3u) &
   ((...columns: vec3u[]) => mat3x3u) &
   (() => mat3x3u);
@@ -468,7 +468,7 @@ export interface mat4x4f extends mat4x4<vec4f> {}
 export interface mat4x4i extends mat4x4<vec4i> {}
 export interface mat4x4u extends mat4x4<vec4u> {}
 
-export type Mat4x4f = WgslData<mat4x4f> &
+export type Mat4x4f = TgpuData<mat4x4f> &
   ((...elements: number[]) => mat4x4f) &
   ((...columns: vec4f[]) => mat4x4f) &
   (() => mat4x4f);
@@ -484,7 +484,7 @@ export const mat4x4f = new MatSchemaImpl({
   makeFromElements: (...elements: number[]) => new mat4x4fImpl(...elements),
 }) as unknown as Mat4x4f;
 
-export type Mat4x4i = WgslData<mat4x4i> &
+export type Mat4x4i = TgpuData<mat4x4i> &
   ((...elements: number[]) => mat4x4i) &
   ((...columns: vec4i[]) => mat4x4i) &
   (() => mat4x4i);
@@ -500,7 +500,7 @@ export const mat4x4i = new MatSchemaImpl({
   makeFromElements: (...elements: number[]) => new mat4x4iImpl(...elements),
 }) as unknown as Mat4x4i;
 
-export type Mat4x4u = WgslData<mat4x4u> &
+export type Mat4x4u = TgpuData<mat4x4u> &
   ((...elements: number[]) => mat4x4u) &
   ((...columns: vec4u[]) => mat4x4u) &
   (() => mat4x4u);

@@ -13,7 +13,7 @@ import {
 } from 'typed-binary';
 import { CallableImpl } from '../callable';
 import { RecursiveDataTypeError } from '../errors';
-import type { WgslData } from '../types';
+import type { TgpuData } from '../types';
 import alignIO from './alignIO';
 
 // --------------
@@ -31,7 +31,7 @@ interface VecSchemaOptions<T> {
 
 class VecSchemaImpl<T extends vecBase>
   extends CallableImpl<number[], T>
-  implements WgslData<T>
+  implements TgpuData<T>
 {
   readonly __unwrapped!: T; // type-token, not available at runtime
 
@@ -441,7 +441,7 @@ export interface vec4u extends vec4, Swizzle4<vec2u, vec3u, vec4u> {
   kind: 'vec4u';
 }
 
-export type Vec2f = WgslData<vec2f> &
+export type Vec2f = TgpuData<vec2f> &
   ((x: number, y: number) => vec2f) &
   ((xy: number) => vec2f) &
   (() => vec2f);
@@ -455,7 +455,7 @@ export const vec2f = new VecSchemaImpl({
   makeFromScalar: (x) => new vec2fImpl(x, x),
 }) as unknown as Vec2f;
 
-export type Vec2i = WgslData<vec2i> &
+export type Vec2i = TgpuData<vec2i> &
   ((x: number, y: number) => vec2i) &
   ((xy: number) => vec2i) &
   (() => vec2i);
@@ -469,7 +469,7 @@ export const vec2i = new VecSchemaImpl({
   makeFromScalar: (x) => new vec2iImpl(x, x),
 }) as unknown as Vec2i;
 
-export type Vec2u = WgslData<vec2u> &
+export type Vec2u = TgpuData<vec2u> &
   ((x: number, y: number) => vec2u) &
   ((xy: number) => vec2u) &
   (() => vec2u);
@@ -483,7 +483,7 @@ export const vec2u = new VecSchemaImpl({
   makeFromScalar: (x) => new vec2uImpl(x, x),
 }) as unknown as Vec2u;
 
-export type Vec3f = WgslData<vec3f> &
+export type Vec3f = TgpuData<vec3f> &
   ((x: number, y: number, z: number) => vec3f) &
   ((xyz: number) => vec3f) &
   (() => vec3f);
@@ -497,7 +497,7 @@ export const vec3f = new VecSchemaImpl({
   makeFromScalar: (x) => new vec3fImpl(x, x, x),
 }) as unknown as Vec3f;
 
-export type Vec3i = WgslData<vec3i> &
+export type Vec3i = TgpuData<vec3i> &
   ((x: number, y: number, z: number) => vec3i) &
   ((xyz: number) => vec3i) &
   (() => vec3i);
@@ -511,7 +511,7 @@ export const vec3i = new VecSchemaImpl({
   makeFromScalar: (x) => new vec3iImpl(x, x, x),
 }) as unknown as Vec3i;
 
-export type Vec3u = WgslData<vec3u> &
+export type Vec3u = TgpuData<vec3u> &
   ((x: number, y: number, z: number) => vec3u) &
   ((xyz: number) => vec3u) &
   (() => vec3u);
@@ -525,7 +525,7 @@ export const vec3u = new VecSchemaImpl({
   makeFromScalar: (x) => new vec3uImpl(x, x, x),
 }) as unknown as Vec3u;
 
-export type Vec4f = WgslData<vec4f> &
+export type Vec4f = TgpuData<vec4f> &
   ((x: number, y: number, z: number, w: number) => vec4f) &
   ((xyzw: number) => vec4f) &
   (() => vec4f);
@@ -539,7 +539,7 @@ export const vec4f = new VecSchemaImpl({
   makeFromScalar: (x) => new vec4fImpl(x, x, x, x),
 }) as unknown as Vec4f;
 
-export type Vec4i = WgslData<vec4i> &
+export type Vec4i = TgpuData<vec4i> &
   ((x: number, y: number, z: number, w: number) => vec4i) &
   ((xyzw: number) => vec4i) &
   (() => vec4i);
@@ -553,7 +553,7 @@ export const vec4i = new VecSchemaImpl({
   makeFromScalar: (x) => new vec4iImpl(x, x, x, x),
 }) as unknown as Vec4i;
 
-export type Vec4u = WgslData<vec4u> &
+export type Vec4u = TgpuData<vec4u> &
   ((x: number, y: number, z: number, w: number) => vec4u) &
   ((xyzw: number) => vec4u) &
   (() => vec4u);
