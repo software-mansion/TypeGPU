@@ -1,7 +1,3 @@
-// --------------
-// Implementation
-// --------------
-
 import {
   type IMeasurer,
   type ISerialInput,
@@ -10,12 +6,16 @@ import {
   Measurer,
   type Parsed,
 } from 'typed-binary';
-import { RecursiveDataTypeError } from '..';
 import { CallableImpl } from '../callable';
+import { RecursiveDataTypeError } from '../errors';
 import { roundUp } from '../mathUtils';
 import type { TgpuData } from '../types';
 import alignIO from './alignIO';
 import { vec2f, vec3f, vec4f, type vecBase } from './vector';
+
+// --------------
+// Implementation
+// --------------
 
 interface MatSchemaOptions<T, TVec extends vecBase> {
   label: string;
