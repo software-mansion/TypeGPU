@@ -23,9 +23,9 @@ const Circle = struct({
   radius: f32,
 });
 
-type CircleType = Parsed<typeof Circle>;
+type Circle = Parsed<typeof Circle>;
 
-const redCircle: CircleType = {
+const redCircle: Circle = {
   centerPos: vec3i(2, 4, 0),
   radius: 0.2,
 };
@@ -33,10 +33,10 @@ const redCircle: CircleType = {
 
 By defining the `Circle` struct in TypeScript via TypeGPU, in a similar way to how we would in WGSL, we gain access to its TypeScript type definition, which we can use to validate our data values. When reading from or writing data to the GPU, the type of the JavaScript value is inferred automatically, and it's enforced by TypeScript. That's a big improvement to the development process.
 
-Here the `CircleType` evaluates to: 
+Here the `Circle` type evaluates to: 
 
 ```ts
-type CircleType = {
+type Circle = {
   centerPos: vec3i;
   radius: number;
 }
@@ -45,13 +45,13 @@ type CircleType = {
 Thanks to that, whenever we mistakenly set or assume a wrong value for an object, we get a type error, avoiding unnecessary debugging afterwards.
 
 ```ts
-const redCircle: CircleType = {
+const redCircle: Circle = {
   // Error: Property 'z' is missing in type 'vec2i' but required in type 'vec3i'.
   centerPos: vec2i(2, 4), 
   radius: 0.2,
 };
 
-const redCircle: CircleType = {
+const redCircle: Circle = {
   centerPos: vec3i(2, 4, 0), 
   // Error: Type 'string' is not assignable to type 'number'.
   radius: "0.2",
@@ -59,7 +59,7 @@ const redCircle: CircleType = {
 
 // Error: Property 'radius' is missing in type '{ centerPos: vec3i; }' 
 // but required in type '{ centerPos: vec3i; radius: number; }'.
-const redCircle: CircleType = {
+const redCircle: Circle = {
   centerPos: vec3i(2, 4, 0), 
 };
 
@@ -74,26 +74,30 @@ Circle.size // 16
 Circle.byteAlignment // 16
 ```
 
-TypeGPU data types are essential for the library's automated data marshalling capabilities. You can read more about it in the chapter dedicated to `tgpu.writeBuffer`.
+TypeGPU data types are essential for the library's automated data marshalling capabilities. You can read more about it in the chapter dedicated to `tgpu.write`.
 
 ## Built-in primitive data types
 
-| constructor | type |  TS type | byte alignment|
+| schema | type |  TS type | byte alignment|
 | --- | --- | --- | --- |
 | u32 | U32 | number | 4 |
 | f32 | F32 | number | 4 |
 | i32 | I32 | number | 4 |
 | bool | Bool | boolean | 4 |
-| vec2u | Vec2u | vec2u | 8 |
-| vec2f | Vec2f | vec2f | 8 |
-| vec2i | Vec2i | vec2i | 8 |
-| vec3u | Vec3u | vec3u | 8 |
-| vec3f | Vec3f | vec3f | 8 |
-| vec3i | Vec3i | vec3i | 8 |
-| vec4u | Vec4u | vec4u | 16 |
-| vec4f | Vec4f | vec4f | 16 |
-| vec4i | Vec4i | vec4i | 16 |
-| mat4d | Mat4f | number[] | 16 |
+
+## Vector types
+
+| schema | constructor | type |  WGSL equivalents | byte alignment|
+| --- | --- | --- | --- | --- |
+| vec2u | `vec2u(x: number, y: number)`, `vec2u(xy: number)`, `vec2u()` | Vec2u | vec2u, vec2\<u32\> | 8 |
+| vec2f | `vec2f(x: number, y: number)`, `vec2f(xy: number)`, `vec2f()` | Vec2f | vec2f, vec2\<f32\> | 8 |
+| vec2i | `vec2i(x: number, y: number)`, `vec2i(xy: number)`, `vec2i()` | Vec2i | vec2i, vec2\<i32\> | 8 |
+| vec3u | `vec3u(x: number, y: number, z:number)`, `vec3u(xyz: number)`, `vec3u()`  | Vec3u | vec3u, vec3\<u32\> | 16 |
+| vec3f | `vec3f(x: number, y: number, z:number)`, `vec3f(xyz: number)`, `vec3f()`  | Vec3f | vec3f, vec3\<f32\> | 16 |
+| vec3i | `vec3i(x: number, y: number, z:number)`, `vec3i(xyz: number)`, `vec3i()`  | Vec3i | vec3i, vec3\<i32\> | 16 |
+| vec4u | `vec4u(x: number, y: number, z:number, w:number)`, `vec4u(xyzw: number)`, `vec4u()`  | Vec4u | vec4u, vec4\<u32\> | 16 |
+| vec4f | `vec4f(x: number, y: number, z:number, w:number)`, `vec4f(xyzw: number)`, `vec4f()`  | Vec4f | vec4f, vec4\<f32\> | 16 |
+| vec4i | `vec4i(x: number, y: number, z:number, w:number)`, `vec4i(xyzw: number)`, `vec4i()`  | Vec4i | vec4i, vec4\<i32\> | 16 |
 
 ## Complex data structures
 
@@ -140,9 +144,9 @@ import { arrayOf, f32, Parsed } from 'typegpu/data';
 const RecentResultsArray = arrayOf(f32, 4);
 
 // evaluated to number[];
-type RecentResultsArrayType = Parsed<typeof RecentResultsArray>;
+type RecentResultsArray = Parsed<typeof RecentResultsArray>;
 
-const recentResults: RecentResultsArrayType = [
+const recentResults: RecentResultsArray = [
     1, 0, 0.5, 20
 ];
 
