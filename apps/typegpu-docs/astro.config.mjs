@@ -54,7 +54,7 @@ export default defineConfig({
               slug: 'guides/getting-started',
             },
             {
-              label: 'TypeGPU buffer API',
+              label: 'Typed Buffers',
               slug: 'guides/tgpu-buffer-api',
             },
             {
