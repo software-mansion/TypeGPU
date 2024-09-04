@@ -4,7 +4,7 @@ description: A guide on how to use the TypeGPU buffer API.
 ---
 
 This guide will show you how to use the TypeGPU buffer API to allow for type-safe and convenient read and write operations on WebGPU resources.
-We will explore how to adapt existing WebGPU code to use the buffer API, and how to use the it to create new WebGPU resources.
+We will explore how to adapt existing WebGPU code to use the buffer API, and how to use it to create new WebGPU resources.
 
 ## What is the TypeGPU buffer API?
 
@@ -16,7 +16,7 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 <Tabs>
     <TabItem label='WebGPU'>
     ```ts
-    const device: GPUDevice // WebGPU device
+    declare const device: GPUDevice; // WebGPU device
 
     // struct PlayerInfo {
     //   vec3f position;
@@ -121,11 +121,10 @@ when the buffer is first accessed or used in TypeGPU read or write operations.
 import { u32 } from 'typegpu/data';
 import tgpu from 'typegpu';
 
-const device: GPUDevice // WebGPU device
 
 const buffer = tgpu.createBuffer(u32).$device(device);
 
-// That's when the buffer is created
+// That's when the underlying WebGPU buffer is created
 const gpuBuffer = buffer.buffer;
 ```
 
@@ -171,7 +170,7 @@ import { u32 } from 'typegpu/data';
 import tgpu from 'typegpu';
 
 const device: GPUDevice // WebGPU device
-const existingBuffer: GPUBuffer // Existing WebGPU buffer
+declare const existingBuffer: GPUBuffer; // Existing WebGPU buffer
 
 const buffer = tgpu.createBuffer(u32, existingBuffer);
 ```
@@ -232,7 +231,7 @@ tgpu.write(buffer, {
 ```
 
 <Aside type='caution'>
-    If you passed your own buffer to the `tgpu.createBuffer` function, you need to ensure it has the `GPUBufferUsage.COPY_DST` usage flag if you want to write to it using the write function.
+    If you passed your own buffer to the `tgpu.createBuffer` function, you need to ensure it has the `GPUBufferUsage.COPY_DST` usage flag if you want to write to it using the `write` function.
 </Aside>
 
 ### Reading from a buffer
@@ -273,7 +272,7 @@ const colorToInit = [0.2, 0.5, 1.0] as [number, number, number];
 
 const updateColors = (
     colorFrom: [number, number, number],
-    colorTo: [number, number, number]
+    colorTo: [number, number, number],
 ) => {
     const bytes = new ArrayBuffer(32);
     new Float32Array(bytes, 0, 3).set(colorFrom);
