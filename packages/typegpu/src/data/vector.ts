@@ -86,8 +86,8 @@ class VecSchemaImpl<T extends vecBase>
 
   write(output: ISerialOutput, value: Parsed<T>): void {
     alignIO(output, this.byteAlignment);
-    for (let idx = 0; idx < value.length; ++idx) {
-      this.unitType.write(output, value.at(idx));
+    for (const element of value) {
+      this.unitType.write(output, element);
     }
   }
 
@@ -144,17 +144,11 @@ abstract class Swizzle2Impl<T2> {
 }
 
 abstract class vec2Impl<T2> extends Swizzle2Impl<T2> implements vec2 {
-  readonly length = 2;
-
   constructor(
     public x: number,
     public y: number,
   ) {
     super();
-  }
-
-  at(idx: 0 | 1): number {
-    return idx === 0 ? this.x : this.y;
   }
 
   *[Symbol.iterator]() {
@@ -194,18 +188,12 @@ abstract class Swizzle3Impl<T2, T3> extends Swizzle2Impl<T2> {
 }
 
 abstract class vec3Impl<T2, T3> extends Swizzle3Impl<T2, T3> implements vec3 {
-  readonly length = 3;
-
   constructor(
     public x: number,
     public y: number,
     public z: number,
   ) {
     super();
-  }
-
-  at(idx: 0 | 1 | 2): number {
-    return idx === 0 ? this.x : idx === 1 ? this.y : this.z;
   }
 
   *[Symbol.iterator]() {
@@ -261,8 +249,6 @@ abstract class vec4Impl<T2, T3, T4>
   extends Swizzle4Impl<T2, T3, T4>
   implements vec4
 {
-  readonly length = 4;
-
   constructor(
     public x: number,
     public y: number,
@@ -270,16 +256,6 @@ abstract class vec4Impl<T2, T3, T4>
     public w: number,
   ) {
     super();
-  }
-
-  at(idx: 0 | 1 | 2 | 3): number {
-    return idx === 0
-      ? this.x
-      : idx === 1
-        ? this.y
-        : idx === 2
-          ? this.z
-          : this.w;
   }
 
   *[Symbol.iterator]() {
@@ -356,8 +332,6 @@ interface Swizzle4<T2, T3, T4> extends Swizzle3<T2, T3> {
 interface vec2 {
   x: number;
   y: number;
-  length: 2;
-  at(idx: 0 | 1): number;
   [Symbol.iterator](): Iterator<number>;
 }
 
@@ -365,8 +339,6 @@ interface vec3 {
   x: number;
   y: number;
   z: number;
-  length: 3;
-  at(idx: 0 | 1 | 2): number;
   [Symbol.iterator](): Iterator<number>;
 }
 
@@ -375,8 +347,6 @@ interface vec4 {
   y: number;
   z: number;
   w: number;
-  length: 4;
-  at(idx: 0 | 1 | 2 | 3): number;
   [Symbol.iterator](): Iterator<number>;
 }
 
@@ -397,8 +367,6 @@ export type VecKind =
 
 export interface vecBase {
   kind: VecKind;
-  length: number;
-  at(idx: number): number;
   [Symbol.iterator](): Iterator<number>;
 }
 
