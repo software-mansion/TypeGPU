@@ -1,4 +1,4 @@
-import Callable, { type AsCallable } from './callable';
+import { type AsCallable, CallableImpl } from './callable';
 import { isPointer } from './types';
 import type {
   AnyTgpuData,
@@ -21,7 +21,7 @@ export interface TgpuFn<
   TReturn extends AnyTgpuData | undefined = undefined,
 > extends TgpuResolvable,
     TgpuNamable,
-    Callable<
+    CallableImpl<
       SegmentsFromTypes<TArgTypes>,
       TgpuFunctionCall<TArgTypes, TReturn>
     > {}
@@ -102,7 +102,7 @@ class TgpuFnImpl<
     // TArgPairs extends (readonly [TgpuIdentifier, TgpuFnArgument])[],
     TReturn extends AnyTgpuData | undefined = undefined,
   >
-  extends Callable<
+  extends CallableImpl<
     SegmentsFromTypes<TArgTypes>,
     TgpuFunctionCall<TArgTypes, TReturn>
   >

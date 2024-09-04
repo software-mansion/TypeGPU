@@ -99,7 +99,7 @@ describe('TgpuRuntime', () => {
 
   it('should create buffer with initialization', async () => {
     const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
-    const bufferData = wgsl.buffer(vec3i, [0, 0, 0]).$allowUniform();
+    const bufferData = wgsl.buffer(vec3i, vec3i(0, 0, 0)).$allowUniform();
     const buffer = asUniform(bufferData);
 
     const testPipeline = runtime.makeComputePipeline({
@@ -190,8 +190,8 @@ describe('TgpuRuntime', () => {
 
     runtime.writeBuffer(bufferData, {
       a: 3,
-      b: { a: 4, b: 5, c: [6, 7, 8] },
-      c: [9, 10, 11, 12],
+      b: { a: 4, b: 5, c: vec3i(6, 7, 8) },
+      c: vec4u(9, 10, 11, 12),
     });
 
     const mockBuffer = runtime.bufferFor(bufferData);

@@ -229,6 +229,7 @@ class TgpuRuntimeImpl {
     data: Parsed<TValue> | TgpuAllocatable<TValue>,
   ) {
     const gpuBuffer = this.bufferFor(allocatable);
+
     const size = roundUp(
       allocatable.dataType.size,
       allocatable.dataType.byteAlignment,

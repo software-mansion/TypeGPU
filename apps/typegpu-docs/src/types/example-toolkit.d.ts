@@ -85,7 +85,7 @@ declare module '@typegpu/example-toolkit' {
     onChange: (newValue: number) => void,
   ): void;
 
-  import type { TgpuPlum } from 'typegpu';
+  import type { TgpuPlum } from 'typegpu/experimental';
 
   export function addSliderPlumParameter(
     label: string,
