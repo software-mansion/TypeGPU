@@ -1,17 +1,6 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
-import {
-  mat2x2f,
-  mat2x2i,
-  mat2x2u,
-  mat3x3f,
-  mat4x4f,
-  vec2f,
-  vec2i,
-  vec2u,
-  vec3f,
-  vec4f,
-} from '../src/data';
+import { mat2x2f, mat3x3f, mat4x4f, vec2f, vec3f, vec4f } from '../src/data';
 
 describe('mat2x2f', () => {
   it('creates a 2x2 matrix with zeros', () => {
@@ -56,98 +45,6 @@ describe('mat2x2f', () => {
 
     mat2x2f.write(new BufferWriter(buffer), mat);
     expect(mat2x2f.read(new BufferReader(buffer))).toEqual(mat);
-  });
-});
-
-describe('mat2x2i', () => {
-  it('creates a 2x2 matrix with zeros', () => {
-    const zero2x2 = mat2x2i();
-    expect(zero2x2[0]).toEqual(vec2i());
-    expect(zero2x2[1]).toEqual(vec2i());
-  });
-
-  it('creates a 2x2 matrix with given elements', () => {
-    const mat = mat2x2i(0, 1, 2, 3);
-    expect(mat[0]).toEqual(vec2i(0, 1));
-    expect(mat[1]).toEqual(vec2i(2, 3));
-  });
-
-  it('creates a 2x2 matrix with given column vectors', () => {
-    const v0 = vec2i(0, 1);
-    const v1 = vec2i(1, 2);
-    const mat = mat2x2i(v0, v1);
-    expect(mat[0]).toEqual(v0);
-    expect(mat[1]).toEqual(v1);
-  });
-
-  it('encodes identity matrix properly', () => {
-    const identity = mat2x2i(
-      vec2i(1, 0), // column 0
-      vec2i(0, 1), // column 1
-    );
-
-    const buffer = new ArrayBuffer(mat2x2i.size);
-
-    mat2x2i.write(new BufferWriter(buffer), identity);
-    expect(mat2x2i.read(new BufferReader(buffer))).toEqual(identity);
-  });
-
-  it('encodes a matrix properly', () => {
-    const mat = mat2x2i(
-      vec2i(0, 1), // column 0
-      vec2i(2, 3), // column 1
-    );
-
-    const buffer = new ArrayBuffer(mat2x2i.size);
-
-    mat2x2i.write(new BufferWriter(buffer), mat);
-    expect(mat2x2i.read(new BufferReader(buffer))).toEqual(mat);
-  });
-});
-
-describe('mat2x2u', () => {
-  it('creates a 2x2 matrix with zeros', () => {
-    const zero2x2 = mat2x2u();
-    expect(zero2x2[0]).toEqual(vec2u());
-    expect(zero2x2[1]).toEqual(vec2u());
-  });
-
-  it('creates a 2x2 matrix with given elements', () => {
-    const mat = mat2x2u(0, 1, 2, 3);
-    expect(mat[0]).toEqual(vec2u(0, 1));
-    expect(mat[1]).toEqual(vec2u(2, 3));
-  });
-
-  it('creates a 2x2 matrix with given column vectors', () => {
-    const v0 = vec2u(0, 1);
-    const v1 = vec2u(1, 2);
-    const mat = mat2x2u(v0, v1);
-    expect(mat[0]).toEqual(v0);
-    expect(mat[1]).toEqual(v1);
-  });
-
-  it('encodes identity matrix properly', () => {
-    const identity = mat2x2u(
-      vec2u(1, 0), // column 0
-      vec2u(0, 1), // column 1
-    );
-
-    const buffer = new ArrayBuffer(mat2x2u.size);
-
-    mat2x2u.write(new BufferWriter(buffer), identity);
-    expect(mat2x2u.read(new BufferReader(buffer))).toEqual(identity);
-  });
-
-  it('encodes a matrix properly', () => {
-    const mat = mat2x2u(
-      vec2u(0, 1), // column 0
-      vec2u(2, 3), // column 1
-    );
-
-    const buffer = new ArrayBuffer(mat2x2u.size);
-
-    mat2x2u.write(new BufferWriter(buffer), mat);
-    expect(mat2x2u.read(new BufferReader(buffer))).toEqual(mat);
   });
 });
 

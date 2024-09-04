@@ -367,36 +367,6 @@ export const mat2x2f = new MatSchemaImpl({
   makeFromElements: (...elements: number[]) => new mat2x2fImpl(...elements),
 }) as unknown as Mat2x2f;
 
-export type Mat2x2i = TgpuData<mat2x2i> &
-  ((...elements: number[]) => mat2x2i) &
-  ((...columns: vec2i[]) => mat2x2i) &
-  (() => mat2x2i);
-
-export const mat2x2i = new MatSchemaImpl({
-  label: 'mat2x2i',
-  columnType: vec2i,
-  rows: 2,
-  columns: 2,
-  makeFromColumnVectors: (...columns: [vec2i, vec2i]) =>
-    new mat2x2iImpl(...columns[0], ...columns[1]),
-  makeFromElements: (...elements: number[]) => new mat2x2iImpl(...elements),
-}) as unknown as Mat2x2i;
-
-export type Mat2x2u = TgpuData<mat2x2u> &
-  ((...elements: number[]) => mat2x2u) &
-  ((...columns: vec2u[]) => mat2x2u) &
-  (() => mat2x2u);
-
-export const mat2x2u = new MatSchemaImpl({
-  label: 'mat2x2u',
-  columnType: vec2u,
-  rows: 2,
-  columns: 2,
-  makeFromColumnVectors: (...columns: [vec2u, vec2u]) =>
-    new mat2x2uImpl(...columns[0], ...columns[1]),
-  makeFromElements: (...elements: number[]) => new mat2x2uImpl(...elements),
-}) as unknown as Mat2x2u;
-
 export interface mat3x3<TColumn> extends matBase<TColumn> {
   [0]: TColumn;
   [1]: TColumn;
@@ -423,38 +393,6 @@ export const mat3x3f = new MatSchemaImpl({
   },
   makeFromElements: (...elements: number[]) => new mat3x3fImpl(...elements),
 }) as unknown as Mat3x3f;
-
-export type Mat3x3i = TgpuData<mat3x3i> &
-  ((...elements: number[]) => mat3x3i) &
-  ((...columns: vec3i[]) => mat3x3i) &
-  (() => mat3x3i);
-
-export const mat3x3i = new MatSchemaImpl({
-  label: 'mat3x3i',
-  columnType: vec3i,
-  rows: 3,
-  columns: 3,
-  makeFromColumnVectors(...[v0, v1, v2]: [vec3i, vec3i, vec3i]) {
-    return new mat3x3iImpl(...v0, ...v1, ...v2);
-  },
-  makeFromElements: (...elements: number[]) => new mat3x3iImpl(...elements),
-}) as unknown as Mat3x3i;
-
-export type Mat3x3u = TgpuData<mat3x3u> &
-  ((...elements: number[]) => mat3x3u) &
-  ((...columns: vec3u[]) => mat3x3u) &
-  (() => mat3x3u);
-
-export const mat3x3u = new MatSchemaImpl({
-  label: 'mat3x3u',
-  columnType: vec3u,
-  rows: 3,
-  columns: 3,
-  makeFromColumnVectors(...[v0, v1, v2]: [vec3u, vec3u, vec3u]) {
-    return new mat3x3uImpl(...v0, ...v1, ...v2);
-  },
-  makeFromElements: (...elements: number[]) => new mat3x3uImpl(...elements),
-}) as unknown as Mat3x3u;
 
 export interface mat4x4<TColumn> extends matBase<TColumn> {
   [0]: TColumn;
@@ -483,35 +421,3 @@ export const mat4x4f = new MatSchemaImpl({
   },
   makeFromElements: (...elements: number[]) => new mat4x4fImpl(...elements),
 }) as unknown as Mat4x4f;
-
-export type Mat4x4i = TgpuData<mat4x4i> &
-  ((...elements: number[]) => mat4x4i) &
-  ((...columns: vec4i[]) => mat4x4i) &
-  (() => mat4x4i);
-
-export const mat4x4i = new MatSchemaImpl({
-  label: 'mat4x4i',
-  columnType: vec4i,
-  rows: 4,
-  columns: 4,
-  makeFromColumnVectors(...[v0, v1, v2, v3]: [vec4i, vec4i, vec4i, vec4i]) {
-    return new mat4x4iImpl(...v0, ...v1, ...v2, ...v3);
-  },
-  makeFromElements: (...elements: number[]) => new mat4x4iImpl(...elements),
-}) as unknown as Mat4x4i;
-
-export type Mat4x4u = TgpuData<mat4x4u> &
-  ((...elements: number[]) => mat4x4u) &
-  ((...columns: vec4u[]) => mat4x4u) &
-  (() => mat4x4u);
-
-export const mat4x4u = new MatSchemaImpl({
-  label: 'mat4x4u',
-  columnType: vec4u,
-  rows: 4,
-  columns: 4,
-  makeFromColumnVectors(...[v0, v1, v2, v3]: [vec4u, vec4u, vec4u, vec4u]) {
-    return new mat4x4uImpl(...v0, ...v1, ...v2, ...v3);
-  },
-  makeFromElements: (...elements: number[]) => new mat4x4uImpl(...elements),
-}) as unknown as Mat4x4u;
