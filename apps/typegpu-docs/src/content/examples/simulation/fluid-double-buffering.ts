@@ -15,16 +15,6 @@ import {
 // --
 
 import {
-  type TgpuBufferUsage,
-  type Wgsl,
-  asMutable,
-  asReadonly,
-  asUniform,
-  builtin,
-  createRuntime,
-  wgsl,
-} from 'typegpu/experimental';
-import {
   type Parsed,
   arrayOf,
   f32,
@@ -35,6 +25,16 @@ import {
   vec2u,
   vec4f,
 } from 'typegpu/data';
+import {
+  type TgpuBufferUsage,
+  type Wgsl,
+  asMutable,
+  asReadonly,
+  asUniform,
+  builtin,
+  createRuntime,
+  wgsl,
+} from 'typegpu/experimental';
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
