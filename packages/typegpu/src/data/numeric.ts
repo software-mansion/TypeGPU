@@ -26,13 +26,3 @@ export const f32: F32 = new SimpleTgpuData({
   byteAlignment: 4,
   code: 'f32',
 });
-
-/**
- * Array of column vectors
- */
-export type Mat4f = TgpuData<number[]>;
-export const mat4f: Mat4f = new SimpleTgpuData({
-  schema: TB.arrayOf(TB.f32, 16),
-  byteAlignment: 16,
-  code: 'mat4x4f',
-});
