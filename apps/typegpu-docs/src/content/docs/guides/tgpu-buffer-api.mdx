@@ -235,10 +235,6 @@ tgpu.write(buffer, {
 
 To read data from a buffer, you can use the `tgpu.read` function. This function takes an unmanaged buffer
 and returns a promise that resolves to the data read from the buffer.
-If you pass a mapped buffer, the data will be read directly from the buffer (the buffer will not be unmapped).
-If you pass a mappable but unmapped buffer, the buffer will be mapped and then unmapped after the data is read. 
-In the case of a buffer that is not mappable, a staging buffer will be created, and the 
-data will be copied to the staging buffer before being read. After the data is read, the staging buffer will be destroyed.
 
 ```ts
 import { arrayOf, u32 } from 'typegpu/data';
@@ -248,6 +244,24 @@ const buffer = tgpu.createBuffer(arrayOf(u32, 10)).$device(device);
 // data: number[]
 const data = await tgpu.read(buffer);
 ```
+
+import { Icon } from '@astrojs/starlight/components';
+import ListItem from '../../../components/ListItem.astro';
+
+<Aside>
+  **How the reading operation is handled depends on the buffer passed to the `tgpu.read` function.**
+
+  <ListItem idx={1}>
+    If you pass a mapped buffer, the data will be read directly from the buffer (the buffer will not be unmapped).
+  </ListItem>
+  <ListItem idx={2}> 
+    If you pass a mappable but unmapped buffer, the buffer will be mapped and then unmapped after the data is read.
+  </ListItem>
+  <ListItem idx={3}>
+    In the case of a buffer that is not mappable, a staging buffer will be created, and the 
+    data will be copied to the staging buffer before being read. After the data is read, the staging buffer will be destroyed.
+  </ListItem>
+</Aside>
 
 ## Adapting existing code
 
