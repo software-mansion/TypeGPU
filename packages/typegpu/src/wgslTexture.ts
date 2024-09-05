@@ -61,7 +61,7 @@ export interface TgpuTextureView<
   readonly access: StorageTextureAccess | undefined;
 }
 
-export interface TgpuTextureExternal extends TgpuRenderResource {
+export interface TgpuTextureExternal extends TgpuRenderResource, TgpuNamable {
   readonly descriptor: Optional<GPUExternalTextureDescriptor>;
   get source(): HTMLVideoElement | VideoFrame | undefined;
 }
