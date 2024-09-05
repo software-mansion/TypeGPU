@@ -149,7 +149,7 @@ describe('TgpuRuntime', () => {
 
   it('should properly write to buffer', async () => {
     const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
-    const bufferData = wgsl.buffer(u32);
+    const bufferData = tgpu.createBuffer(u32);
 
     runtime.writeBuffer(bufferData, 3);
 

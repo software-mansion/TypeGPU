@@ -102,14 +102,14 @@ const outputGridSlot = wgsl
 
 const MAX_OBSTACLES = 4;
 
-const prevObstaclesBuffer = wgsl
-  .buffer(arrayOf(BoxObstacle, MAX_OBSTACLES))
+const prevObstaclesBuffer = tgpu
+  .createBuffer(arrayOf(BoxObstacle, MAX_OBSTACLES))
   .$usage(tgpu.Storage);
 
 const prevObstacleReadonly = asReadonly(prevObstaclesBuffer);
 
-const obstaclesBuffer = wgsl
-  .buffer(arrayOf(BoxObstacle, MAX_OBSTACLES))
+const obstaclesBuffer = tgpu
+  .createBuffer(arrayOf(BoxObstacle, MAX_OBSTACLES))
   .$usage(tgpu.Storage);
 
 const obstaclesReadonly = asReadonly(obstaclesBuffer);
@@ -406,8 +406,8 @@ const sourceRadiusPlum = addSliderPlumParameter('source radius', 0.01, {
   step: 0.01,
 });
 
-const sourceParamsBuffer = wgsl
-  .buffer(
+const sourceParamsBuffer = tgpu
+  .createBuffer(
     struct({
       center: vec2f,
       radius: f32,
