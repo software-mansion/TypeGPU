@@ -15,6 +15,7 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
+import { arrayOf, atomic, f32, u32, vec2u } from 'typegpu/data';
 import {
   asMutable,
   asReadonly,
@@ -22,9 +23,9 @@ import {
   asVertex,
   builtin,
   createRuntime,
+  tgpu,
   wgsl,
-} from 'typegpu';
-import { arrayOf, atomic, f32, u32, vec2u } from 'typegpu/data';
+} from 'typegpu/experimental';
 
 const runtime = await createRuntime();
 const device = runtime.device;
@@ -69,23 +70,25 @@ function encodeBrushType(brushType: (typeof BrushTypes)[number]) {
   }
 }
 
-const sizeBuffer = wgsl.buffer(vec2u).$name('size').$allowUniform();
-const viscosityBuffer = wgsl.buffer(u32).$name('viscosity').$allowUniform();
+const sizeBuffer = tgpu.createBuffer(vec2u).$name('size').$usage(tgpu.Uniform);
+const viscosityBuffer = tgpu
+  .createBuffer(u32)
+  .$name('viscosity')
+  .$usage(tgpu.Uniform);
 
 const currentStateBuffer = wgsl
   .buffer(arrayOf(u32, 1024 ** 2))
   .$name('current')
-  .$allowVertex('instance')
-  .$allowReadonly();
+  .$usage(tgpu.Storage, tgpu.Vertex);
 
 const nextStateBuffer = wgsl
   .buffer(arrayOf(atomic(u32), 1024 ** 2))
   .$name('next')
-  .$allowMutable();
+  .$usage(tgpu.Storage);
 
 const viscosityData = asUniform(viscosityBuffer);
 const currentStateData = asReadonly(currentStateBuffer);
-const currentStateVertex = asVertex(currentStateBuffer);
+const currentStateVertex = asVertex(currentStateBuffer, 'instance');
 const sizeData = asUniform(sizeBuffer);
 const nextStateData = asMutable(nextStateBuffer);
 
@@ -100,10 +103,10 @@ const squareBuffer = wgsl
     vec2u(1, 0),
     vec2u(1, 1),
   ])
-  .$allowVertex('vertex')
-  .$allowUniform()
+  .$usage(tgpu.Uniform, tgpu.Vertex)
   .$name('square');
-const squareBufferData = asVertex(squareBuffer);
+
+const squareBufferData = asVertex(squareBuffer, 'vertex');
 
 const getIndex = wgsl.fn`(x: u32, y: u32) -> u32 {
   let h = ${sizeData}.y;

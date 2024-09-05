@@ -25,7 +25,7 @@ import {
   vec2u,
   vec4f,
 } from 'typegpu/data';
-import {
+import tgpu, {
   type TgpuBufferUsage,
   type Wgsl,
   asMutable,
@@ -87,11 +87,11 @@ const BoxObstacle = struct({
 });
 
 const gridSize = 256;
-const gridSizeBuffer = wgsl.buffer(i32).$allowUniform();
+const gridSizeBuffer = wgsl.buffer(i32).$usage(tgpu.Uniform);
 const gridSizeUniform = asUniform(gridSizeBuffer);
 
-const gridAlphaBuffer = wgsl.buffer(GridData).$allowMutable().$allowReadonly();
-const gridBetaBuffer = wgsl.buffer(GridData).$allowMutable().$allowReadonly();
+const gridAlphaBuffer = wgsl.buffer(GridData).$usage(tgpu.Storage);
+const gridBetaBuffer = wgsl.buffer(GridData).$usage(tgpu.Storage);
 
 const inputGridSlot = wgsl
   .slot<TgpuBufferUsage<GridData>>()
@@ -104,14 +104,13 @@ const MAX_OBSTACLES = 4;
 
 const prevObstaclesBuffer = wgsl
   .buffer(arrayOf(BoxObstacle, MAX_OBSTACLES))
-  .$allowReadonly();
+  .$usage(tgpu.Storage);
 
 const prevObstacleReadonly = asReadonly(prevObstaclesBuffer);
 
 const obstaclesBuffer = wgsl
   .buffer(arrayOf(BoxObstacle, MAX_OBSTACLES))
-  .$allowMutable()
-  .$allowReadonly();
+  .$usage(tgpu.Storage);
 
 const obstaclesReadonly = asReadonly(obstaclesBuffer);
 
@@ -185,7 +184,7 @@ const flowFromCell = wgsl.fn`
   }
 `.$name('flow_from_cell');
 
-const timeBuffer = wgsl.buffer(f32).$allowUniform();
+const timeBuffer = wgsl.buffer(f32).$usage(tgpu.Uniform);
 
 const isInsideObstacle = wgsl.fn`
   (x: i32, y: i32) -> bool {
@@ -420,7 +419,7 @@ const sourceParamsBuffer = wgsl
       radius: get(sourceRadiusPlum),
     })),
   )
-  .$allowUniform();
+  .$usage(tgpu.Uniform);
 
 const getMinimumInFlow = wgsl.fn`
   (x: i32, y: i32) -> f32 {

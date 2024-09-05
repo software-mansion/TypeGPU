@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { afterEach } from 'vitest';
 import { createRuntime } from '../src/createRuntime';
 import { struct, u32, vec3i, vec4u } from '../src/data';
-import { asReadonly, asUniform, wgsl } from '../src/experimental';
+import tgpu, { asReadonly, asUniform, wgsl } from '../src/experimental';
 import { plum } from '../src/wgslPlum';
 
 global.GPUBufferUsage = {
@@ -75,7 +75,7 @@ describe('TgpuRuntime', () => {
 
   it('should create buffer with no initialization', async () => {
     const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
-    const bufferData = wgsl.buffer(u32).$allowUniform();
+    const bufferData = tgpu.createBuffer(u32).$usage(tgpu.Uniform);
     const buffer = asUniform(bufferData);
 
     const testPipeline = runtime.makeComputePipeline({
@@ -99,7 +99,9 @@ describe('TgpuRuntime', () => {
 
   it('should create buffer with initialization', async () => {
     const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
-    const bufferData = wgsl.buffer(vec3i, vec3i(0, 0, 0)).$allowUniform();
+    const bufferData = tgpu
+      .createBuffer(vec3i, vec3i(0, 0, 0))
+      .$usage(tgpu.Uniform);
     const buffer = asUniform(bufferData);
 
     const testPipeline = runtime.makeComputePipeline({
@@ -125,7 +127,7 @@ describe('TgpuRuntime', () => {
     const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
     const s1 = struct({ a: u32, b: u32 });
     const s2 = struct({ a: u32, b: s1 });
-    const bufferData = wgsl.buffer(s2).$allowUniform();
+    const bufferData = tgpu.createBuffer(s2).$usage(tgpu.Uniform);
     const buffer = asUniform(bufferData);
 
     const testPipeline = runtime.makeComputePipeline({
@@ -169,7 +171,7 @@ describe('TgpuRuntime', () => {
     const s1 = struct({ a: u32, b: u32, c: vec3i });
     const s2 = struct({ a: u32, b: s1, c: vec4u });
 
-    const bufferData = wgsl.buffer(s2).$allowUniform();
+    const bufferData = tgpu.createBuffer(s2).$usage(tgpu.Uniform);
     const buffer = asUniform(bufferData);
 
     const testPipeline = runtime.makeComputePipeline({
@@ -211,7 +213,7 @@ describe('TgpuRuntime', () => {
     const spy = vi.spyOn(runtime, 'writeBuffer');
     const intPlum = plum<number>(3);
 
-    const bufferData = wgsl.buffer(u32, intPlum).$allowReadonly();
+    const bufferData = tgpu.createBuffer(u32, intPlum).$usage(tgpu.Storage);
     const buffer = asReadonly(bufferData);
 
     const testPipeline = runtime.makeComputePipeline({

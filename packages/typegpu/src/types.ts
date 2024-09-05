@@ -109,7 +109,6 @@ export interface TgpuAllocatable<TData extends AnyTgpuData = AnyTgpuData> {
    * binary.
    */
   readonly dataType: TData;
-  vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null;
   readonly initial?: Parsed<TData> | TgpuPlum<Parsed<TData>> | undefined;
   readonly flags: GPUBufferUsageFlags;
 }

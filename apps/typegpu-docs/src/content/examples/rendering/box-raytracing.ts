@@ -14,7 +14,7 @@ import {
 // --
 
 import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'typegpu/data';
-import {
+import tgpu, {
   asReadonly,
   asUniform,
   builtin,
@@ -103,8 +103,8 @@ const intersectionStruct = struct({
   tMax: f32,
 });
 
-const boxMatrixBuffer = wgsl
-  .buffer(
+const boxMatrixBuffer = tgpu
+  .createBuffer(
     arrayOf(arrayOf(arrayOf(boxStruct, Z), Y), X),
     Array.from({ length: X }, (_, i) =>
       Array.from({ length: Y }, (_, j) =>
@@ -116,17 +116,17 @@ const boxMatrixBuffer = wgsl
     ),
   )
   .$name('box_array')
-  .$allowReadonly();
+  .$usage(tgpu.Storage);
 const boxMatrixData = asReadonly(boxMatrixBuffer);
 
-const cameraPositionBuffer = wgsl
-  .buffer(vec3f, cameraPositionPlum)
+const cameraPositionBuffer = tgpu
+  .createBuffer(vec3f, cameraPositionPlum)
   .$name('camera_position')
-  .$allowReadonly();
+  .$usage(tgpu.Storage);
 const cameraPositionData = asReadonly(cameraPositionBuffer);
 
-const cameraAxesBuffer = wgsl
-  .buffer(
+const cameraAxesBuffer = tgpu
+  .createBuffer(
     struct({
       right: vec3f,
       up: vec3f,
@@ -135,11 +135,11 @@ const cameraAxesBuffer = wgsl
     cameraAxesPlum,
   )
   .$name('camera_axes')
-  .$allowReadonly();
+  .$usage(tgpu.Storage);
 const cameraAxesData = asReadonly(cameraAxesBuffer);
 
-const canvasDimsBuffer = wgsl
-  .buffer(
+const canvasDimsBuffer = tgpu
+  .createBuffer(
     struct({ width: u32, height: u32 }),
     wgsl.plum((get) => ({
       width: get(canvasWidthPlum),
@@ -147,13 +147,13 @@ const canvasDimsBuffer = wgsl
     })),
   )
   .$name('canvas_dims')
-  .$allowUniform();
+  .$usage(tgpu.Uniform);
 const canvasDimsData = asUniform(canvasDimsBuffer);
 
-const boxSizeBuffer = wgsl
-  .buffer(u32, boxSizePlum)
+const boxSizeBuffer = tgpu
+  .createBuffer(u32, boxSizePlum)
   .$name('box_size')
-  .$allowUniform();
+  .$usage(tgpu.Uniform);
 const boxSizeData = asUniform(boxSizeBuffer);
 
 const getBoxIntersectionFn = wgsl.fn`(

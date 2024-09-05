@@ -16,16 +16,6 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 import {
-  type SampledTextureParams,
-  type StorageTextureParams,
-  type TgpuTexture,
-  type TgpuTextureView,
-  asUniform,
-  builtin,
-  createRuntime,
-  wgsl,
-} from 'typegpu';
-import {
   arrayOf,
   f32,
   i32,
@@ -35,6 +25,16 @@ import {
   vec3f,
   type vec4f,
 } from 'typegpu/data';
+import tgpu, {
+  type SampledTextureParams,
+  type StorageTextureParams,
+  type TgpuTexture,
+  type TgpuTextureView,
+  asUniform,
+  builtin,
+  createRuntime,
+  wgsl,
+} from 'typegpu/experimental';
 
 const tileDim = 128;
 const batch = [4, 4];
@@ -54,8 +54,8 @@ const settingsPlum = wgsl.plum((get) => ({
   filterDim: get(filterSize),
 }));
 
-const blurParamsBuffer = wgsl
-  .buffer(
+const blurParamsBuffer = tgpu
+  .createBuffer(
     struct({
       filterDim: i32,
       blockDim: u32,
@@ -63,7 +63,7 @@ const blurParamsBuffer = wgsl
     settingsPlum,
   )
   .$name('BlurParams')
-  .$allowUniform();
+  .$usage(tgpu.Uniform);
 const params = asUniform(blurParamsBuffer);
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });

@@ -2,8 +2,9 @@
  * @module typegpu
  */
 
-export { tgpu } from './tgpu';
-export { tgpu as default } from './tgpu';
+export * as tgpu from './tgpu';
+import * as tgpu from './tgpu';
+export default tgpu;
 
 export { RecursiveDataTypeError } from './errors';
 export {
@@ -12,12 +13,9 @@ export {
   TexelFormat,
 } from './types';
 export { std } from './std';
+export { usableAsStorage, usableAsUniform, usableAsVertex } from './wgslBuffer';
 
 export type {
   TgpuBuffer,
   Unmanaged,
-  AllowMutable,
-  AllowReadonly,
-  AllowUniform,
-  AllowVertex,
 } from './wgslBuffer';

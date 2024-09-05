@@ -12,7 +12,8 @@ import {
   addSliderPlumParameter,
   onFrame,
 } from '@typegpu/example-toolkit';
-import {
+import { arrayOf, f32, struct, u32, vec2f } from 'typegpu/data';
+import tgpu, {
   type TgpuBufferUsage,
   asMutable,
   asReadonly,
@@ -21,8 +22,7 @@ import {
   builtin,
   createRuntime,
   wgsl,
-} from 'typegpu';
-import { arrayOf, f32, struct, u32, vec2f } from 'typegpu/data';
+} from 'typegpu/experimental';
 
 const runtime = await createRuntime();
 const device = runtime.device;
@@ -39,8 +39,8 @@ context.configure({
 
 addButtonParameter('randomize', randomizeTriangles);
 
-const parametesBuffer = wgsl
-  .buffer(
+const parametesBuffer = tgpu
+  .createBuffer(
     struct({
       separationDistance: f32,
       separationStrength: f32,
@@ -58,14 +58,16 @@ const parametesBuffer = wgsl
       cohesionStrength: 0.001,
     },
   )
-  .$allowReadonly();
+  .$usage(tgpu.Storage);
 
 const triangleSize = addSliderPlumParameter('triangle size', 0.04, {
   min: 0.01,
   max: 0.1,
   step: 0.01,
 });
-const triangleSizeBuffer = wgsl.buffer(f32, triangleSize).$allowUniform();
+const triangleSizeBuffer = tgpu
+  .createBuffer(f32, triangleSize)
+  .$usage(tgpu.Uniform);
 const triangleSizePlum = wgsl.plum((get) => {
   const size = get(triangleSize);
   return [
@@ -75,9 +77,9 @@ const triangleSizePlum = wgsl.plum((get) => {
   ];
 });
 
-const triangleVertex = wgsl
-  .buffer(arrayOf(vec2f, 3), triangleSizePlum)
-  .$allowVertex('vertex');
+const triangleVertex = tgpu
+  .createBuffer(arrayOf(vec2f, 3), triangleSizePlum)
+  .$usage(tgpu.Vertex);
 
 const MAX_TRIANGLES = 10000;
 const triangleAmount = addSliderPlumParameter('triangle amount', 500, {
@@ -85,7 +87,9 @@ const triangleAmount = addSliderPlumParameter('triangle amount', 500, {
   max: 10000,
   step: 1,
 });
-const triangleAmountBuffer = wgsl.buffer(u32, triangleAmount).$allowUniform();
+const triangleAmountBuffer = tgpu
+  .createBuffer(u32, triangleAmount)
+  .$usage(tgpu.Uniform);
 const trianglePosData = arrayOf(
   struct({
     position: vec2f,
@@ -96,7 +100,7 @@ const trianglePosData = arrayOf(
 type TrianglePosData = typeof trianglePosData;
 
 const trianglePosBuffers = Array.from({ length: 2 }, () => {
-  return wgsl.buffer(trianglePosData).$allowReadonly().$allowMutable();
+  return tgpu.createBuffer(trianglePosData).$usage(tgpu.Storage);
 });
 
 const bufferPairs = [
@@ -140,7 +144,7 @@ const renderPipelines = [0, 1].map((idx) =>
         let triangleSize = ${asUniform(triangleSizeBuffer)};
         let instanceInfo = ${bufferPairs[idx][0]}[${builtin.instanceIndex}];
         let rotated = ${rotate}(
-          ${asVertex(triangleVertex)},
+          ${asVertex(triangleVertex, 'vertex')},
           ${getRotationFromVelocity}(instanceInfo.velocity),
         );
 
