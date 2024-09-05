@@ -54,6 +54,10 @@ export default defineConfig({
               slug: 'guides/getting-started',
             },
             {
+              label: 'Typed Buffers',
+              slug: 'guides/tgpu-buffer-api',
+            },
+            {
               label: 'Defining Data Types',
               slug: 'guides/defining-data-types',
             },
