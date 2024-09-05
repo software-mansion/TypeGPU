@@ -19,19 +19,19 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
         <a href="https://swmansion.com" target="_blank" rel="noreferrer">
           <img
             src={SwmLogoSvg.src}
-            class="opacity-75 lg:h-20 md:h-16 sm:h-12 h-10"
+            class="h-10 opacity-75 lg:h-20 md:h-16 sm:h-12"
             alt="github logo"
           />
         </a>
 
-        <div class="flex gap-4 items-center">
+        <div class="flex items-center gap-4">
           <a
             href="https://discord.swmansion.com"
             target="_blank"
             rel="noreferrer">
             <img
               src={DiscordIconSvg.src}
-              class="opacity-75 md:h-10 sm:h-8 h-6"
+              class="h-6 opacity-75 md:h-10 sm:h-8"
               alt="github logo"
             />
           </a>
@@ -41,7 +41,7 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
             rel="noreferrer">
             <img
               src={GithubIconSvg.src}
-              class="opacity-75 md:h-10 sm:h-8 h-6"
+              class="h-6 opacity-75 md:h-10 sm:h-8"
               alt="discord logo"
             />
           </a>
@@ -94,7 +94,7 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
     <section
       class="flex flex-col justify-center px-4 lg:gap-20 gap-10 md:gap-[3.75rem] lg:max-w-[85rem] md:max-w-[53.5rem] max-w-[34.5rem]">
       <div>
-        <h2 class="mb-4 md:mb-8 font-normal text-center lg:mb-8 center">
+        <h2 class="mb-4 font-normal text-center md:mb-8 lg:mb-8 center">
           Get to know TypeGPU
         </h2>
         <p class="text-center text-pretty">
@@ -104,7 +104,7 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
       </div>
 
       <div
-        class="grid grid-flow-row gap-4 md:gap-6 lg:gap-8 md:grid-cols-2 md:mb-20 max-w-6xl">
+        class="grid max-w-6xl grid-flow-row gap-4 md:gap-6 lg:gap-8 md:grid-cols-2 md:mb-20">
         <FeatureCard image="task-check" header="Easily encode and decode"
           >Leveraging "typed-binary" ensures you don't have to think about bytes
           when writing your GPU programs ever again.</FeatureCard
@@ -132,7 +132,7 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
     <section
       class="flex flex-col items-center px-4 py-5 lg:gap-20 md:gap-[3.75rem] gap-10 w-full max-w-[34.5rem] lg:max-w-[85rem]">
       <div>
-        <h1 class="lg:mb-8 md:mb-6 mb-4 font-normal text-center">
+        <h1 class="mb-4 font-normal text-center lg:mb-8 md:mb-6">
           Got hooked?
         </h1>
         <p class="text-center text-pretty">
@@ -161,10 +161,10 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
           <img
             src="/typegpu/typegpu-logomark-monolight.svg"
             alt="logo"
-            class="pb-6 w-8"
+            class="w-8 pb-6"
           />
           <div
-            class="flex flex-col md:flex-row justify-between gap-10 text-grayscale-80">
+            class="flex flex-col justify-between gap-10 md:flex-row text-grayscale-80">
             <div class="text-pretty md:max-w-[23.5rem] lg:max-w-[27rem]">
               <span class="font-medium">TypeGPU</span>
               <span class="text-grayscale-100">&mdash;</span> TypeScript library
@@ -194,7 +194,7 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
           </div>
         </div>
 
-        <div class="self-start flex gap-4 items-center text-grayscale-100">
+        <div class="flex items-center self-start gap-4 text-grayscale-100">
           <img src={SwmLogomarkSvg.src} alt="Software Mansion Logomark" />
           &copy; 2024 Software Mansion S.A.
         </div>
