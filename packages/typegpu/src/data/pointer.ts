@@ -1,8 +1,8 @@
-import type { AnyWgslData, WgslPointer } from '../types';
+import type { AnyTgpuData, TgpuPointer } from '../types';
 
-export function ptr<TDataType extends AnyWgslData>(
+export function ptr<TDataType extends AnyTgpuData>(
   pointsTo: TDataType,
-): WgslPointer<'function', TDataType> {
+): TgpuPointer<'function', TDataType> {
   return {
     scope: 'function',
     pointsTo,

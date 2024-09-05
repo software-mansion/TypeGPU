@@ -3,7 +3,7 @@ title: FAQ
 description: Frequently Asked Questions
 ---
 
-<details>
+{/* <details>
 <summary>🙋 Why does the API differ from WebGPU?</summary>
 
 The API differs from what can be seen in WebGPU due to a difference in behavior between the two.
@@ -12,19 +12,19 @@ The glue code necessary to link WGSL bindings with TypeScript values is not pres
 which does greatly reduce the boilerplate, but requires a different API.
 
 Furthermore, resource management in TypeGPU is, for the most part, automated. When defining a GPU buffer, we
-can do so using the `wgsl.buffer` API like so:
+can do so using the `tgpu.buffer` API like so:
 
 ```ts
-const fooBuffer = wgsl.buffer(f32).$name('foo');
+const fooBuffer = tgpu.buffer(f32).$name('foo');
 ```
 
 This however does not allocate any memory on the GPU, as opposed to the `device.createBuffer` WebGPU
 API. Buffers in TypeGPU get allocated eventually, when code using them is executed by a `runtime`.
 They then get destroyed when calling `runtime.dispose()`.
 
-</details>
+</details> */}
 
-<details>
+{/* <details>
 <summary>🙋 How does TypeGPU differ from Three.js or Babylon.js?</summary>
 
 TypeGPU is a set of primitives for building WebGPU solutions, as opposed to a framework created for a
@@ -32,7 +32,7 @@ specific use case like Three.js or Babylon.js. Our hope is that libraries built 
 each other with the common language of our primitives, even though they are built with different use
 cases in mind (Visualization, AI inference, etc.).
 
-</details>
+</details> */}
 
 <details>
 <summary>🙋 Which browsers support TypeGPU?</summary>

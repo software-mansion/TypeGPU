@@ -1,14 +1,14 @@
-import type { WgslResolvable } from './types';
+import type { TgpuResolvable } from './types';
 
 export interface NameRegistry {
-  nameFor(item: WgslResolvable): string;
+  nameFor(item: TgpuResolvable): string;
 }
 
 export class RandomNameRegistry implements NameRegistry {
   private lastUniqueId = 0;
-  private names = new WeakMap<WgslResolvable, string>();
+  private names = new WeakMap<TgpuResolvable, string>();
 
-  nameFor(item: WgslResolvable) {
+  nameFor(item: TgpuResolvable) {
     let name = this.names.get(item);
 
     if (name === undefined) {
@@ -35,9 +35,9 @@ export class StrictNameRegistry implements NameRegistry {
    */
   private readonly _usedNames = new Set<string>();
 
-  private readonly _assignedNames = new WeakMap<WgslResolvable, string>();
+  private readonly _assignedNames = new WeakMap<TgpuResolvable, string>();
 
-  nameFor(item: WgslResolvable): string {
+  nameFor(item: TgpuResolvable): string {
     const assignedName = this._assignedNames.get(item);
     if (assignedName !== undefined) {
       return assignedName;
