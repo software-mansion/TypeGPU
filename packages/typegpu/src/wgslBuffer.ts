@@ -49,6 +49,7 @@ export interface TgpuBuffer<TData extends AnyTgpuData>
   $addFlags(flags: GPUBufferUsageFlags): this;
   $device(device: GPUDevice): this & Unmanaged;
 
+  destroy(): void;
   _usages: AllowedUsages<TData>;
   readonly label: string | undefined;
 }
@@ -79,6 +80,7 @@ class TgpuBufferImpl<TData extends AnyTgpuData> implements TgpuBuffer<TData> {
     GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
   private _device: GPUDevice | null = null;
   private _buffer: GPUBuffer | null = null;
+  private _destroyed = false;
 
   _usages: AllowedUsages<TData> = {
     uniform: null,
@@ -117,6 +119,9 @@ class TgpuBufferImpl<TData extends AnyTgpuData> implements TgpuBuffer<TData> {
         'To use this property, make the buffer unmanaged by passing a GPUDevice to $device',
       );
     }
+    if (this._destroyed) {
+      throw new Error('This buffer has been destroyed');
+    }
     if (!this._buffer) {
       this._buffer = this._device.createBuffer({
         size: this.dataType.size,
@@ -135,7 +140,7 @@ class TgpuBufferImpl<TData extends AnyTgpuData> implements TgpuBuffer<TData> {
   get device() {
     if (!this._device) {
       throw new Error(
-        'This buffer is managed by TypeGPU and cannot be used directly',
+        'This buffer has not been assigned a device. Use $device to assign a device',
       );
     }
     return this._device;
@@ -214,6 +219,14 @@ class TgpuBufferImpl<TData extends AnyTgpuData> implements TgpuBuffer<TData> {
   $device(device: GPUDevice) {
     this._device = device;
     return this;
+  }
+
+  destroy() {
+    if (this._destroyed) {
+      return;
+    }
+    this._destroyed = true;
+    this._buffer?.destroy();
   }
 
   toString(): string {

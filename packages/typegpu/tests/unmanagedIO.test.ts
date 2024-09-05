@@ -244,4 +244,27 @@ describe('unmanagedIO', () => {
 
     expect(data).toBeDefined();
   });
+
+  it('should destroy a buffer', () => {
+    const device = mockDevice() as unknown as GPUDevice;
+    const buffer = tgpu.createBuffer(arrayOf(u32, 3)).$device(device);
+
+    buffer.destroy();
+
+    expect(() => buffer.buffer).toThrowError();
+  });
+
+  it('should destroy underlying buffer', () => {
+    const device = mockDevice();
+    const mockBuffer = device.createBuffer() as unknown as GPUBuffer;
+
+    const buffer = tgpu
+      .createBuffer(arrayOf(u32, 3), mockBuffer)
+      .$device(device as unknown as GPUDevice);
+    buffer.destroy();
+
+    expect(mockBuffer.destroy).toHaveBeenCalled();
+
+    expect(() => buffer.buffer).toThrowError();
+  });
 });
