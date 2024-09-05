@@ -1,12 +1,12 @@
 import * as acorn from 'acorn';
 import { valueList } from './resolutionUtils';
-import { type AnyWgslData, type Wgsl, isNamable, isResolvable } from './types';
+import { type AnyTgpuData, type Wgsl, isNamable, isResolvable } from './types';
 import { code } from './wgslCode';
 
 type Context = {
-  argTypes: AnyWgslData[];
+  argTypes: AnyTgpuData[];
   externalMap: Record<string, Wgsl>;
-  returnType: AnyWgslData | undefined;
+  returnType: AnyTgpuData | undefined;
 };
 
 const Generators: Partial<{

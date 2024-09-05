@@ -1,13 +1,13 @@
-export const WgslSettableTrait = Symbol(
+export const TgpuSettableTrait = Symbol(
   'This item can be set, owns its value (does not get value from an external source)',
 );
 
-export interface WgslSettable {
-  readonly [WgslSettableTrait]: true;
+export interface TgpuSettable {
+  readonly [TgpuSettableTrait]: true;
 }
 
 export function isSettable(
-  value: WgslSettable | unknown,
-): value is WgslSettable {
-  return (value as WgslSettable)[WgslSettableTrait] === true;
+  value: TgpuSettable | unknown,
+): value is TgpuSettable {
+  return (value as TgpuSettable)[TgpuSettableTrait] === true;
 }

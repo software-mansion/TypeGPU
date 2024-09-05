@@ -1,14 +1,14 @@
 import type { Unwrap } from 'typed-binary';
 import { inGPUMode } from './gpuMode';
 import type {
-  AnyWgslData,
+  AnyTgpuData,
   ResolutionCtx,
+  TgpuNamable,
+  TgpuResolvable,
   Wgsl,
-  WgslNamable,
-  WgslResolvable,
 } from './types';
 import { code } from './wgslCode';
-import { WgslIdentifier } from './wgslIdentifier';
+import { TgpuIdentifier } from './wgslIdentifier';
 
 // ----------
 // Public API
@@ -16,27 +16,27 @@ import { WgslIdentifier } from './wgslIdentifier';
 
 export type VariableScope = 'private' | 'workgroup';
 
-export interface WgslVar<TDataType extends AnyWgslData>
-  extends WgslResolvable,
-    WgslNamable {
+export interface TgpuVar<TDataType extends AnyTgpuData>
+  extends TgpuResolvable,
+    TgpuNamable {
   value: Unwrap<TDataType>;
 }
 
 /**
  * Creates a variable, with an optional initial value.
  */
-export const variable = <TDataType extends AnyWgslData>(
+export const variable = <TDataType extends AnyTgpuData>(
   dataType: TDataType,
   initialValue?: Wgsl,
   scope: VariableScope = 'private',
-): WgslVar<TDataType> => new WgslVarImpl(dataType, initialValue, scope);
+): TgpuVar<TDataType> => new TgpuVarImpl(dataType, initialValue, scope);
 
 // --------------
 // Implementation
 // --------------
 
-class WgslVarImpl<TDataType extends AnyWgslData> implements WgslVar<TDataType> {
-  public identifier = new WgslIdentifier();
+class TgpuVarImpl<TDataType extends AnyTgpuData> implements TgpuVar<TDataType> {
+  public identifier = new TgpuIdentifier();
 
   constructor(
     private readonly _dataType: TDataType,

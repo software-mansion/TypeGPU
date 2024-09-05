@@ -15,17 +15,6 @@ import {
 // --
 
 import {
-  type WgslBufferUsage,
-  asMutable,
-  asReadonly,
-  asUniform,
-  builtin,
-  createRuntime,
-  std,
-  tgpu,
-  wgsl,
-} from 'typegpu';
-import {
   type Parsed,
   arrayOf,
   bool,
@@ -37,6 +26,16 @@ import {
   vec2u,
   vec4f,
 } from 'typegpu/data';
+import tgpu, {
+  type TgpuBufferUsage,
+  asMutable,
+  asReadonly,
+  asUniform,
+  builtin,
+  createRuntime,
+  wgsl,
+  std,
+} from 'typegpu/experimental';
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -99,8 +98,8 @@ const gridSizeUniform = asUniform(gridSizeBuffer);
 const gridAlphaBuffer = wgsl.buffer(GridData).$allowMutable().$allowReadonly();
 const gridBetaBuffer = wgsl.buffer(GridData).$allowMutable().$allowReadonly();
 
-const inputGridSlot = wgsl.slot<WgslBufferUsage<GridData>>();
-const outputGridSlot = wgsl.slot<WgslBufferUsage<GridData, 'mutable'>>();
+const inputGridSlot = wgsl.slot<TgpuBufferUsage<GridData>>();
+const outputGridSlot = wgsl.slot<TgpuBufferUsage<GridData, 'mutable'>>();
 
 const MAX_OBSTACLES = 4;
 
@@ -576,8 +575,8 @@ runtime.onPlumChange(leftWallXPlum, (newVal) => {
 });
 
 function makePipelines(
-  inputGridReadonly: WgslBufferUsage<GridData, 'readonly'>,
-  outputGridMutable: WgslBufferUsage<GridData, 'mutable'>,
+  inputGridReadonly: TgpuBufferUsage<GridData, 'readonly'>,
+  outputGridMutable: TgpuBufferUsage<GridData, 'mutable'>,
 ) {
   const initWorldFn = mainInitWorld
     .with(inputGridSlot, outputGridMutable)

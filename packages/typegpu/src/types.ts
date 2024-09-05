@@ -1,11 +1,11 @@
 import type { ISchema, Parsed, Unwrap } from 'typed-binary';
 import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from './data';
-import type { WgslBufferUsage } from './wgslBufferUsage';
+import type { TgpuBufferUsage } from './wgslBufferUsage';
 import type { Builtin } from './wgslBuiltin';
-import type { WgslIdentifier } from './wgslIdentifier';
-import type { WgslPlum } from './wgslPlum';
+import type { TgpuIdentifier } from './wgslIdentifier';
+import type { TgpuPlum } from './wgslPlum';
 
-export type Wgsl = string | number | WgslResolvable | symbol | boolean;
+export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
 
 /**
  * Passed into each resolvable item. All sibling items share a resolution ctx,
@@ -15,16 +15,16 @@ export interface ResolutionCtx {
   /**
    * Slots that were used by items resolved by this context.
    */
-  readonly usedSlots: Iterable<WgslSlot<unknown>>;
+  readonly usedSlots: Iterable<TgpuSlot<unknown>>;
 
-  addDeclaration(item: WgslResolvable): void;
-  addBinding(bindable: WgslBindable, identifier: WgslIdentifier): void;
+  addDeclaration(item: TgpuResolvable): void;
+  addBinding(bindable: TgpuBindable, identifier: TgpuIdentifier): void;
   addRenderResource(
-    resource: WgslRenderResource,
-    identifier: WgslIdentifier,
+    resource: TgpuRenderResource,
+    identifier: TgpuIdentifier,
   ): void;
   addBuiltin(builtin: Builtin): void;
-  nameFor(token: WgslResolvable): string;
+  nameFor(token: TgpuResolvable): string;
   /**
    * Unwraps all layers of slot indirection and returns the concrete value if available.
    * @throws {MissingSlotValueError}
@@ -33,7 +33,7 @@ export interface ResolutionCtx {
   resolve(item: Wgsl, slotValueOverrides?: SlotValuePair<unknown>[]): string;
 }
 
-export interface WgslResolvable {
+export interface TgpuResolvable {
   readonly label?: string | undefined;
   resolve(ctx: ResolutionCtx): string;
 }
@@ -42,11 +42,11 @@ export interface WgslResolvable {
  * Can be assigned a name. Not to be confused with
  * being able to HAVE a name.
  */
-export interface WgslNamable {
+export interface TgpuNamable {
   $name(label?: string | undefined): this;
 }
 
-export function isResolvable(value: unknown): value is WgslResolvable {
+export function isResolvable(value: unknown): value is TgpuResolvable {
   return (
     !!value &&
     (typeof value === 'object' || typeof value === 'function') &&
@@ -54,7 +54,7 @@ export function isResolvable(value: unknown): value is WgslResolvable {
   );
 }
 
-export function isNamable(value: unknown): value is WgslNamable {
+export function isNamable(value: unknown): value is TgpuNamable {
   return (
     !!value &&
     (typeof value === 'object' || typeof value === 'function') &&
@@ -71,8 +71,8 @@ export function isWgsl(value: unknown): value is Wgsl {
   );
 }
 
-export interface WgslSlot<T> extends WgslNamable {
-  readonly __brand: 'WgslSlot';
+export interface TgpuSlot<T> extends TgpuNamable {
+  readonly __brand: 'TgpuSlot';
 
   readonly defaultValue: T | undefined;
 
@@ -86,26 +86,26 @@ export interface WgslSlot<T> extends WgslNamable {
   value: ValueOf<T>;
 }
 
-export function isSlot<T>(value: unknown | WgslSlot<T>): value is WgslSlot<T> {
-  return (value as WgslSlot<T>).__brand === 'WgslSlot';
+export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {
+  return (value as TgpuSlot<T>).__brand === 'TgpuSlot';
 }
 
 /**
  * Represents a value that is available at resolution time.
  */
-export type Eventual<T> = T | WgslSlot<T>;
+export type Eventual<T> = T | TgpuSlot<T>;
 
 export type EventualGetter = <T>(value: Eventual<T>) => T;
 
 export type InlineResolve = (get: EventualGetter) => Wgsl;
 
-export interface WgslResolvableSlot<T extends Wgsl>
-  extends WgslResolvable,
-    WgslSlot<T> {}
+export interface TgpuResolvableSlot<T extends Wgsl>
+  extends TgpuResolvable,
+    TgpuSlot<T> {}
 
-export type SlotValuePair<T> = [WgslSlot<T>, T];
+export type SlotValuePair<T> = [TgpuSlot<T>, T];
 
-export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
+export interface TgpuAllocatable<TData extends AnyTgpuData = AnyTgpuData> {
   /**
    * The data type this allocatable was constructed with.
    * It informs the size and format of data in both JS and
@@ -113,11 +113,11 @@ export interface WgslAllocatable<TData extends AnyWgslData = AnyWgslData> {
    */
   readonly dataType: TData;
   vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null;
-  readonly initial?: Parsed<TData> | WgslPlum<Parsed<TData>> | undefined;
+  readonly initial?: Parsed<TData> | TgpuPlum<Parsed<TData>> | undefined;
   readonly flags: GPUBufferUsageFlags;
 }
 
-export function isAllocatable(value: unknown): value is WgslAllocatable {
+export function isAllocatable(value: unknown): value is TgpuAllocatable {
   return (
     !!value &&
     typeof value === 'object' &&
@@ -126,16 +126,16 @@ export function isAllocatable(value: unknown): value is WgslAllocatable {
   );
 }
 
-export interface WgslBindable<
-  TData extends AnyWgslData = AnyWgslData,
+export interface TgpuBindable<
+  TData extends AnyTgpuData = AnyTgpuData,
   TUsage extends BufferUsage = BufferUsage,
-> extends WgslResolvable {
-  readonly allocatable: WgslAllocatable<TData>;
+> extends TgpuResolvable {
+  readonly allocatable: TgpuAllocatable<TData>;
   readonly usage: TUsage;
 }
 
-export type WgslSamplerType = 'sampler' | 'sampler_comparison';
-export type WgslTypedTextureType =
+export type TgpuSamplerType = 'sampler' | 'sampler_comparison';
+export type TgpuTypedTextureType =
   | 'texture_1d'
   | 'texture_2d'
   | 'texture_2d_array'
@@ -143,28 +143,28 @@ export type WgslTypedTextureType =
   | 'texture_cube'
   | 'texture_cube_array'
   | 'texture_multisampled_2d';
-export type WgslDepthTextureType =
+export type TgpuDepthTextureType =
   | 'texture_depth_2d'
   | 'texture_depth_2d_array'
   | 'texture_depth_cube'
   | 'texture_depth_cube_array'
   | 'texture_depth_multisampled_2d';
-export type WgslStorageTextureType =
+export type TgpuStorageTextureType =
   | 'texture_storage_1d'
   | 'texture_storage_2d'
   | 'texture_storage_2d_array'
   | 'texture_storage_3d';
-export type WgslExternalTextureType = 'texture_external';
+export type TgpuExternalTextureType = 'texture_external';
 
-export type WgslRenderResourceType =
-  | WgslSamplerType
-  | WgslTypedTextureType
-  | WgslDepthTextureType
-  | WgslStorageTextureType
-  | WgslExternalTextureType;
+export type TgpuRenderResourceType =
+  | TgpuSamplerType
+  | TgpuTypedTextureType
+  | TgpuDepthTextureType
+  | TgpuStorageTextureType
+  | TgpuExternalTextureType;
 
-export interface WgslRenderResource extends WgslResolvable {
-  readonly type: WgslRenderResourceType;
+export interface TgpuRenderResource extends TgpuResolvable {
+  readonly type: TgpuRenderResourceType;
 }
 
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
@@ -172,25 +172,25 @@ export type TextureUsage = 'sampled' | 'storage';
 export type StorageTextureAccess = 'read' | 'write' | 'read_write';
 
 export type StorageTextureParams = {
-  type: WgslStorageTextureType;
+  type: TgpuStorageTextureType;
   access: StorageTextureAccess;
   descriptor?: GPUTextureViewDescriptor;
 };
 export type SampledTextureParams = {
-  type: WgslTypedTextureType;
-  dataType: AnyWgslPrimitive;
+  type: TgpuTypedTextureType;
+  dataType: TextureScalarFormat;
   descriptor?: GPUTextureViewDescriptor;
 };
 
 export function isSamplerType(
-  type: WgslRenderResourceType,
-): type is WgslSamplerType {
+  type: TgpuRenderResourceType,
+): type is TgpuSamplerType {
   return type === 'sampler' || type === 'sampler_comparison';
 }
 
 export function isTypedTextureType(
-  type: WgslRenderResourceType,
-): type is WgslTypedTextureType {
+  type: TgpuRenderResourceType,
+): type is TgpuTypedTextureType {
   return [
     'texture_1d',
     'texture_2d',
@@ -203,8 +203,8 @@ export function isTypedTextureType(
 }
 
 export function isDepthTextureType(
-  type: WgslRenderResourceType,
-): type is WgslDepthTextureType {
+  type: TgpuRenderResourceType,
+): type is TgpuDepthTextureType {
   return [
     'texture_depth_2d',
     'texture_depth_2d_array',
@@ -215,8 +215,8 @@ export function isDepthTextureType(
 }
 
 export function isStorageTextureType(
-  type: WgslRenderResourceType,
-): type is WgslStorageTextureType {
+  type: TgpuRenderResourceType,
+): type is TgpuStorageTextureType {
   return [
     'texture_storage_1d',
     'texture_storage_2d',
@@ -226,31 +226,31 @@ export function isStorageTextureType(
 }
 
 export function isExternalTextureType(
-  type: WgslRenderResourceType,
-): type is WgslExternalTextureType {
+  type: TgpuRenderResourceType,
+): type is TgpuExternalTextureType {
   return type === 'texture_external';
 }
 
-export type ValueOf<T> = T extends WgslSlot<infer I>
+export type ValueOf<T> = T extends TgpuSlot<infer I>
   ? ValueOf<I>
-  : T extends WgslBufferUsage<infer D>
+  : T extends TgpuBufferUsage<infer D>
     ? ValueOf<D>
-    : T extends WgslData<unknown>
+    : T extends TgpuData<unknown>
       ? Unwrap<T>
       : T;
 
-export interface WgslData<TInner> extends ISchema<TInner>, WgslResolvable {
+export interface TgpuData<TInner> extends ISchema<TInner>, TgpuResolvable {
   readonly byteAlignment: number;
   readonly size: number;
 }
 
-export type AnyWgslData = WgslData<unknown>;
-export type AnyWgslPrimitive = U32 | I32 | F32;
-export type AnyWgslTexelFormat = Vec4u | Vec4i | Vec4f;
+export type AnyTgpuData = TgpuData<unknown>;
+export type TextureScalarFormat = U32 | I32 | F32;
+export type TexelFormat = Vec4u | Vec4i | Vec4f;
 
-export interface WgslPointer<
+export interface TgpuPointer<
   TScope extends 'function',
-  TInner extends AnyWgslData,
+  TInner extends AnyTgpuData,
 > {
   readonly scope: TScope;
   readonly pointsTo: TInner;
@@ -259,17 +259,17 @@ export interface WgslPointer<
 /**
  * A virtual representation of a WGSL value.
  */
-export type WgslValue<TDataType> = {
+export type TgpuValue<TDataType> = {
   readonly __dataType: TDataType;
 };
 
-export type AnyWgslPointer = WgslPointer<'function', AnyWgslData>;
+export type AnyTgpuPointer = TgpuPointer<'function', AnyTgpuData>;
 
-export type WgslFnArgument = AnyWgslPointer | AnyWgslData;
+export type TgpuFnArgument = AnyTgpuPointer | AnyTgpuData;
 
 export function isPointer(
-  value: AnyWgslPointer | AnyWgslData,
-): value is AnyWgslPointer {
+  value: AnyTgpuPointer | AnyTgpuData,
+): value is AnyTgpuPointer {
   return 'pointsTo' in value;
 }
 

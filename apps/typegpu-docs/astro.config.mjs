@@ -38,13 +38,13 @@ export default defineConfig({
         github: 'https://github.com/software-mansion/typegpu',
       },
       sidebar: [
-        {
-          label: '⭐️ Live Examples',
-          link: 'examples',
-          attrs: {
-            'data-astro-reload': true,
-          },
-        },
+        // {
+        //   label: '⭐️ Live Examples',
+        //   link: 'examples',
+        //   attrs: {
+        //     'data-astro-reload': true,
+        //   },
+        // },
         {
           label: 'Guides',
           items: [
@@ -54,36 +54,31 @@ export default defineConfig({
               slug: 'guides/getting-started',
             },
             {
-              label: 'Basic Principles',
-              slug: 'guides/basic-principles',
+              label: 'Typed Buffers',
+              slug: 'guides/tgpu-buffer-api',
             },
             {
-              label: 'State Management',
-              slug: 'guides/state-management',
+              label: 'Defining Data Types',
+              slug: 'guides/defining-data-types',
             },
-            {
-              label: 'Parametrized Functions',
-              slug: 'guides/parametrized-functions',
-            },
+            // {
+            //   label: 'Basic Principles',
+            //   slug: 'guides/basic-principles',
+            // },
+            // {
+            //   label: 'State Management',
+            //   slug: 'guides/state-management',
+            // },
+            // {
+            //   label: 'Parametrized Functions',
+            //   slug: 'guides/parametrized-functions',
+            // },
           ],
         },
-        // typeDocSidebarGroup,
         {
           label: '🙋 FAQ',
           slug: 'faq',
         },
-      ],
-      plugins: [
-        // Generate the documentation.
-        // starlightTypeDoc({
-        //   entryPoints: [
-        //     '../../packages/typegpu/src',
-        //     '../../packages/typegpu/src/data',
-        //     '../../packages/typegpu/src/macro',
-        //     '../../packages/typegpu/src/web',
-        //   ],
-        //   tsconfig: '../../packages/typegpu/tsconfig.json',
-        // }),
       ],
     }),
     tailwind(),

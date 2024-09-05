@@ -8,32 +8,27 @@ import {
   Schema,
   type Unwrap,
 } from 'typed-binary';
-import type { AnyWgslData, ResolutionCtx, WgslData } from '../types';
+import type { AnyTgpuData, ResolutionCtx, TgpuData } from '../types';
 import alignIO from './alignIO';
 
-export function align<TAlign extends number, TData extends AnyWgslData>(
+export function align<TAlign extends number, TData extends AnyTgpuData>(
   byteAlignment: TAlign,
   data: TData,
-): WgslDataCustomAligned<TAlign, TData> {
-  return new WgslDataCustomAlignedImpl(data, byteAlignment);
+): TgpuAligned<TAlign, TData> {
+  return new TgpuAlignedImpl(data, byteAlignment);
 }
 
-export interface WgslDataCustomAligned<
-  TAlign extends number,
-  TData extends AnyWgslData,
-> extends WgslData<Unwrap<TData>> {}
+export interface TgpuAligned<TAlign extends number, TData extends AnyTgpuData>
+  extends TgpuData<Unwrap<TData>> {}
 
-export class WgslDataCustomAlignedImpl<
-    TAlign extends number,
-    TData extends AnyWgslData,
-  >
+export class TgpuAlignedImpl<TAlign extends number, TData extends AnyTgpuData>
   extends Schema<Unwrap<TData>>
-  implements WgslDataCustomAligned<TAlign, TData>
+  implements TgpuAligned<TAlign, TData>
 {
   public readonly size: number;
 
   constructor(
-    private data: AnyWgslData,
+    private data: AnyTgpuData,
     public readonly byteAlignment: number,
   ) {
     super();

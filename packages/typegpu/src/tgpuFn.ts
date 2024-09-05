@@ -3,15 +3,14 @@ import { type Callable, CallableImpl } from './callable';
 import { inGPUMode } from './gpuMode';
 import { transpileJsToWgsl } from './js2wgsl';
 import { valueList } from './resolutionUtils';
-import type { AnyWgslData, ResolutionCtx, Wgsl, WgslResolvable } from './types';
+import type { AnyTgpuData, ResolutionCtx, TgpuResolvable, Wgsl } from './types';
 import { code } from './wgslCode';
-import { WgslIdentifier } from './wgslIdentifier';
+import { TgpuIdentifier } from './wgslIdentifier';
 
 // ----------
 // Public API
 // ----------
 
-type AnyTgpuData = AnyWgslData; // Temporary alias
 type AnyTgpuDataTuple = [AnyTgpuData, ...AnyTgpuData[]] | [];
 type UnwrapArgs<T extends AnyTgpuDataTuple> = {
   [Idx in keyof T]: Unwrap<T[Idx]>;
@@ -42,7 +41,7 @@ interface TgpuFnShell<
 interface TgpuFnBase<
   Args extends AnyTgpuDataTuple,
   Return extends AnyTgpuData | undefined = undefined,
-> extends WgslResolvable {
+> extends TgpuResolvable {
   $uses(dependencyMap: Record<string, unknown>): this;
   readonly wgslSegments: { signature: Wgsl; body: Wgsl };
 }
@@ -169,7 +168,7 @@ class TgpuFnImpl<
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this.label);
+    const identifier = new TgpuIdentifier().$name(this.label);
 
     const { signature, body } = this.wgslSegments;
     ctx.addDeclaration(code`fn ${identifier}${signature}${body}`);
@@ -178,9 +177,9 @@ class TgpuFnImpl<
   }
 }
 
-class FnCall implements WgslResolvable {
+class FnCall implements TgpuResolvable {
   constructor(
-    private readonly _fn: TgpuFnBase<AnyTgpuDataTuple, AnyWgslData | undefined>,
+    private readonly _fn: TgpuFnBase<AnyTgpuDataTuple, AnyTgpuData | undefined>,
     private readonly _params: Wgsl[],
   ) {}
 
