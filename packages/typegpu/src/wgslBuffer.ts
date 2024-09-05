@@ -48,9 +48,10 @@ export interface TgpuBuffer<TData extends AnyTgpuData>
   $allowVertex(stepMode: 'vertex' | 'instance'): this & AllowVertex;
   $addFlags(flags: GPUBufferUsageFlags): this;
   $device(device: GPUDevice): this & Unmanaged;
-
   destroy(): void;
+
   _usages: AllowedUsages<TData>;
+  readonly destroyed: boolean;
   readonly label: string | undefined;
 }
 
@@ -144,6 +145,10 @@ class TgpuBufferImpl<TData extends AnyTgpuData> implements TgpuBuffer<TData> {
       );
     }
     return this._device;
+  }
+
+  get destroyed() {
+    return this._destroyed;
   }
 
   $name(label: string) {
