@@ -4,9 +4,16 @@
 
 import { exec } from 'node:child_process';
 import * as fs from 'node:fs/promises';
+import process from 'node:process';
 import { omitBy } from 'remeda';
 
-function promiseExec(command: string) {
+const cwd = new URL(`file:${process.cwd()}/`);
+
+/**
+ * @param {string} command The command to run
+ * @returns {Promise<string>} The standard out of the process
+ */
+function promiseExec(command) {
   return new Promise((resolve, reject) => {
     const childProcess = exec(command, {}, (error, stdout) => {
       if (error) {
@@ -22,11 +29,14 @@ function promiseExec(command: string) {
   });
 }
 
-function deepMapStrings(
-  value: unknown,
-  transform: (path: string, value: string) => string,
-  path = '',
-) {
+/**
+ *
+ * @param {*} value
+ * @param {(path: string, value: string) => string} transform
+ * @param {string=} path
+ * @returns
+ */
+function deepMapStrings(value, transform, path = '') {
   if (value === undefined || value === null) {
     return value;
   }
@@ -52,8 +62,8 @@ function deepMapStrings(
 }
 
 async function main() {
-  const packageJsonUrl = new URL('../package.json', import.meta.url);
-  const distPackageJsonUrl = new URL('../dist/package.json', import.meta.url);
+  const packageJsonUrl = new URL('./package.json', cwd);
+  const distPackageJsonUrl = new URL('./dist/package.json', cwd);
 
   const packageJson = JSON.parse(await fs.readFile(packageJsonUrl, 'utf-8'));
 
@@ -74,7 +84,7 @@ async function main() {
   // Removing any links to other workspace packages.
   distPackageJson.devDependencies = omitBy(
     distPackageJson.devDependencies,
-    (value: string) => value.startsWith('workspace:'),
+    (/** @type {string} */ value) => value.startsWith('workspace:'),
   );
 
   await fs.writeFile(
@@ -84,8 +94,8 @@ async function main() {
   );
 
   // Copying over README.md
-  const readmeUrl = new URL('../README.md', import.meta.url);
-  const distReadmeUrl = new URL('../dist/README.md', import.meta.url);
+  const readmeUrl = new URL('./README.md', cwd);
+  const distReadmeUrl = new URL('./dist/README.md', cwd);
   await fs.copyFile(readmeUrl, distReadmeUrl);
 
   console.log(
