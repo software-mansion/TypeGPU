@@ -23,9 +23,7 @@ global.GPUBufferUsage = {
 describe('asUsage', () => {
   it('allows creating bufferUsages only for buffers allowing them', () => {
     asReadonly(tgpu.createBuffer(u32, 2).$usage(tgpu.Storage));
-    asReadonly(
-      tgpu.createBuffer(u32, 2).$usage(tgpu.Storage).$usage(tgpu.Uniform),
-    );
+    asReadonly(tgpu.createBuffer(u32, 2).$usage(tgpu.Storage, tgpu.Uniform));
     asReadonly(tgpu.createBuffer(u32, 2).$usage(tgpu.Storage, tgpu.Vertex));
     // @ts-expect-error
     expect(() => asReadonly(tgpu.createBuffer(u32, 2))).toThrow();
@@ -35,9 +33,7 @@ describe('asUsage', () => {
     ).toThrow();
 
     asUniform(tgpu.createBuffer(u32, 2).$usage(tgpu.Uniform));
-    asUniform(
-      tgpu.createBuffer(u32, 2).$usage(tgpu.Uniform).$usage(tgpu.Storage),
-    );
+    asUniform(tgpu.createBuffer(u32, 2).$usage(tgpu.Uniform, tgpu.Storage));
     asUniform(tgpu.createBuffer(u32, 2).$usage(tgpu.Uniform, tgpu.Vertex));
     // @ts-expect-error
     expect(() => asUniform(tgpu.createBuffer(u32, 2))).toThrow();
