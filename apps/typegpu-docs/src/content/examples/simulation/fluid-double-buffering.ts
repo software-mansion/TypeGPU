@@ -15,13 +15,6 @@ import {
 // --
 
 import {
-  type Wgsl,
-  type WgslBufferUsage,
-  builtin,
-  createRuntime,
-  wgsl,
-} from 'typegpu';
-import {
   type Parsed,
   arrayOf,
   f32,
@@ -32,6 +25,16 @@ import {
   vec2u,
   vec4f,
 } from 'typegpu/data';
+import {
+  type TgpuBufferUsage,
+  type Wgsl,
+  asMutable,
+  asReadonly,
+  asUniform,
+  builtin,
+  createRuntime,
+  wgsl,
+} from 'typegpu/experimental';
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -85,16 +88,16 @@ const BoxObstacle = struct({
 
 const gridSize = 256;
 const gridSizeBuffer = wgsl.buffer(i32).$allowUniform();
-const gridSizeUniform = gridSizeBuffer.asUniform();
+const gridSizeUniform = asUniform(gridSizeBuffer);
 
 const gridAlphaBuffer = wgsl.buffer(GridData).$allowMutable().$allowReadonly();
 const gridBetaBuffer = wgsl.buffer(GridData).$allowMutable().$allowReadonly();
 
 const inputGridSlot = wgsl
-  .slot<WgslBufferUsage<GridData>>()
+  .slot<TgpuBufferUsage<GridData>>()
   .$name('input_grid');
 const outputGridSlot = wgsl
-  .slot<WgslBufferUsage<GridData, 'mutable'>>()
+  .slot<TgpuBufferUsage<GridData, 'mutable'>>()
   .$name('output_grid');
 
 const MAX_OBSTACLES = 4;
@@ -103,14 +106,14 @@ const prevObstaclesBuffer = wgsl
   .buffer(arrayOf(BoxObstacle, MAX_OBSTACLES))
   .$allowReadonly();
 
-const prevObstacleReadonly = prevObstaclesBuffer.asReadonly();
+const prevObstacleReadonly = asReadonly(prevObstaclesBuffer);
 
 const obstaclesBuffer = wgsl
   .buffer(arrayOf(BoxObstacle, MAX_OBSTACLES))
   .$allowMutable()
   .$allowReadonly();
 
-const obstaclesReadonly = obstaclesBuffer.asReadonly();
+const obstaclesReadonly = asReadonly(obstaclesBuffer);
 
 const isValidCoord = wgsl.fn`(x: i32, y: i32) -> bool {
   return
@@ -412,7 +415,7 @@ const sourceParamsBuffer = wgsl
       intensity: f32,
     }),
     wgsl.plum((get) => ({
-      center: [0.5, 0.9] as [number, number],
+      center: vec2f(0.5, 0.9),
       intensity: get(sourceIntensityPlum),
       radius: get(sourceRadiusPlum),
     })),
@@ -421,7 +424,7 @@ const sourceParamsBuffer = wgsl
 
 const getMinimumInFlow = wgsl.fn`
   (x: i32, y: i32) -> f32 {
-    let source_params = ${sourceParamsBuffer.asUniform()};
+    let source_params = ${asUniform(sourceParamsBuffer)};
     let grid_size_f = f32(${gridSizeUniform});
     let source_radius = max(1., source_params.radius * grid_size_f);
     let source_pos = vec2f(source_params.center.x * grid_size_f, source_params.center.y * grid_size_f);
@@ -438,7 +441,7 @@ const mainCompute = wgsl.fn`
   (x: i32, y: i32) {
     let index = ${coordsToIndex('x', 'y')};
 
-    ${setupRandomSeed}(vec2f(f32(index), ${timeBuffer.asUniform()}));
+    ${setupRandomSeed}(vec2f(f32(index), ${asUniform(timeBuffer)}));
 
     var next = ${getCell}(x, y);
 
@@ -518,11 +521,8 @@ const obstacles: {
 
 function obstaclesToConcrete(): Parsed<BoxObstacle>[] {
   return obstacles.map(({ x, y, width, height, enabled }) => ({
-    center: [Math.round(x * gridSize), Math.round(y * gridSize)],
-    size: [Math.round(width * gridSize), Math.round(height * gridSize)] as [
-      number,
-      number,
-    ],
+    center: vec2u(Math.round(x * gridSize), Math.round(y * gridSize)),
+    size: vec2u(Math.round(width * gridSize), Math.round(height * gridSize)),
     enabled: enabled ? 1 : 0,
   }));
 }
@@ -568,8 +568,8 @@ runtime.onPlumChange(leftWallXPlum, (newVal) => {
 });
 
 function makePipelines(
-  inputGridReadonly: WgslBufferUsage<GridData, 'readonly'>,
-  outputGridMutable: WgslBufferUsage<GridData, 'mutable'>,
+  inputGridReadonly: TgpuBufferUsage<GridData, 'readonly'>,
+  outputGridMutable: TgpuBufferUsage<GridData, 'mutable'>,
 ) {
   const initWorldFn = mainInitWorld
     .with(inputGridSlot, outputGridMutable)
@@ -697,16 +697,16 @@ function makePipelines(
 
 const even = makePipelines(
   // in
-  gridAlphaBuffer.asReadonly(),
+  asReadonly(gridAlphaBuffer),
   // out
-  gridBetaBuffer.asMutable(),
+  asMutable(gridBetaBuffer),
 );
 
 const odd = makePipelines(
   // in
-  gridBetaBuffer.asReadonly(),
+  asReadonly(gridBetaBuffer),
   // out
-  gridAlphaBuffer.asMutable(),
+  asMutable(gridAlphaBuffer),
 );
 
 let primary = even;

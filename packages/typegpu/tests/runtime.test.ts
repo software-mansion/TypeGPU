@@ -1,8 +1,8 @@
-import { wgsl } from 'typegpu';
 import { describe, expect, it, vi } from 'vitest';
 import { afterEach } from 'vitest';
 import { createRuntime } from '../src/createRuntime';
 import { struct, u32, vec3i, vec4u } from '../src/data';
+import { asReadonly, asUniform, wgsl } from '../src/experimental';
 import { plum } from '../src/wgslPlum';
 
 global.GPUBufferUsage = {
@@ -68,7 +68,7 @@ const mockDevice = vi.fn(() => ({
   },
 }));
 
-describe('TypeGpuRuntime', () => {
+describe('TgpuRuntime', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -76,7 +76,7 @@ describe('TypeGpuRuntime', () => {
   it('should create buffer with no initialization', async () => {
     const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
     const bufferData = wgsl.buffer(u32).$allowUniform();
-    const buffer = bufferData.asUniform();
+    const buffer = asUniform(bufferData);
 
     const testPipeline = runtime.makeComputePipeline({
       code: wgsl`${buffer}`,
@@ -99,8 +99,8 @@ describe('TypeGpuRuntime', () => {
 
   it('should create buffer with initialization', async () => {
     const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
-    const bufferData = wgsl.buffer(vec3i, [0, 0, 0]).$allowUniform();
-    const buffer = bufferData.asUniform();
+    const bufferData = wgsl.buffer(vec3i, vec3i(0, 0, 0)).$allowUniform();
+    const buffer = asUniform(bufferData);
 
     const testPipeline = runtime.makeComputePipeline({
       code: wgsl`${buffer}`,
@@ -126,7 +126,7 @@ describe('TypeGpuRuntime', () => {
     const s1 = struct({ a: u32, b: u32 });
     const s2 = struct({ a: u32, b: s1 });
     const bufferData = wgsl.buffer(s2).$allowUniform();
-    const buffer = bufferData.asUniform();
+    const buffer = asUniform(bufferData);
 
     const testPipeline = runtime.makeComputePipeline({
       code: wgsl`${buffer}`,
@@ -170,7 +170,7 @@ describe('TypeGpuRuntime', () => {
     const s2 = struct({ a: u32, b: s1, c: vec4u });
 
     const bufferData = wgsl.buffer(s2).$allowUniform();
-    const buffer = bufferData.asUniform();
+    const buffer = asUniform(bufferData);
 
     const testPipeline = runtime.makeComputePipeline({
       code: wgsl`let x = ${buffer};`,
@@ -190,8 +190,8 @@ describe('TypeGpuRuntime', () => {
 
     runtime.writeBuffer(bufferData, {
       a: 3,
-      b: { a: 4, b: 5, c: [6, 7, 8] },
-      c: [9, 10, 11, 12],
+      b: { a: 4, b: 5, c: vec3i(6, 7, 8) },
+      c: vec4u(9, 10, 11, 12),
     });
 
     const mockBuffer = runtime.bufferFor(bufferData);
@@ -212,7 +212,7 @@ describe('TypeGpuRuntime', () => {
     const intPlum = plum<number>(3);
 
     const bufferData = wgsl.buffer(u32, intPlum).$allowReadonly();
-    const buffer = bufferData.asReadonly();
+    const buffer = asReadonly(bufferData);
 
     const testPipeline = runtime.makeComputePipeline({
       code: wgsl`${buffer}`,

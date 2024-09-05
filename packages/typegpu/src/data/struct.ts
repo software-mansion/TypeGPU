@@ -11,32 +11,38 @@ import {
   object,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { AnyWgslData, ResolutionCtx, WgslData } from '../types';
+import type {
+  AnyTgpuData,
+  ResolutionCtx,
+  TgpuData,
+  TgpuNamable,
+} from '../types';
 import { code } from '../wgslCode';
-import { WgslIdentifier } from '../wgslIdentifier';
+import { TgpuIdentifier } from '../wgslIdentifier';
+import { TgpuAlignedImpl } from './align';
 import alignIO from './alignIO';
+import { TgpuSizedImpl } from './size';
 
 // ----------
 // Public API
 // ----------
 
-export interface WgslStruct<TProps extends Record<string, AnyWgslData>>
+export interface TgpuStruct<TProps extends Record<string, AnyTgpuData>>
   extends ISchema<UnwrapRecord<TProps>>,
-    WgslData<UnwrapRecord<TProps>> {
-  $name(label: string): this;
-}
+    TgpuData<UnwrapRecord<TProps>>,
+    TgpuNamable {}
 
-export const struct = <TProps extends Record<string, AnyWgslData>>(
+export const struct = <TProps extends Record<string, AnyTgpuData>>(
   properties: TProps,
-): WgslStruct<TProps> => new WgslStructImpl(properties);
+): TgpuStruct<TProps> => new TgpuStructImpl(properties);
 
 // --------------
 // Implementation
 // --------------
 
-class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
+class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
   extends Schema<UnwrapRecord<TProps>>
-  implements WgslData<UnwrapRecord<TProps>>
+  implements TgpuData<UnwrapRecord<TProps>>
 {
   private _label: string | undefined;
   private _innerSchema: ISchema<UnwrapRecord<TProps>>;
@@ -66,10 +72,12 @@ class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
   }
 
   write(output: ISerialOutput, value: Parsed<UnwrapRecord<TProps>>): void {
+    alignIO(output, this.byteAlignment);
     this._innerSchema.write(output, value);
   }
 
   read(input: ISerialInput): Parsed<UnwrapRecord<TProps>> {
+    alignIO(input, this.byteAlignment);
     return this._innerSchema.read(input);
   }
 
@@ -83,14 +91,23 @@ class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this._label);
+    const identifier = new TgpuIdentifier().$name(this._label);
 
     ctx.addDeclaration(code`
       struct ${identifier} {
-        ${Object.entries(this._properties).map(([key, field]) => code`${key}: ${field},\n`)}
+        ${Object.entries(this._properties).map(([key, field]) => code`${getAttribute(field) ?? ''}${key}: ${field},\n`)}
       }
     `);
 
     return ctx.resolve(identifier);
+  }
+}
+
+function getAttribute(field: AnyTgpuData): string | undefined {
+  if (field instanceof TgpuAlignedImpl) {
+    return `@align(${field.byteAlignment}) `;
+  }
+  if (field instanceof TgpuSizedImpl) {
+    return `@size(${field.size}) `;
   }
 }

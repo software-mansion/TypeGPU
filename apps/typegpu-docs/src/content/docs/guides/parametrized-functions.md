@@ -48,11 +48,13 @@ To access the buffers in WGSL code, we need to do it through bindings. This allo
 we define how we want to use the buffer explicitly.
 
 ```ts
-const readonlyEvenGrid = wgsl.plum((get) => get(evenGridBuffer).asReadonly());
-const readonlyOddGrid = wgsl.plum((get) => get(oddGridBuffer).asReadonly());
+import { asReadonly, asMutable } from 'typegpu';
 
-const mutableEvenGrid = wgsl.plum((get) => get(evenGridBuffer).asMutable());
-const mutableOddGrid = wgsl.plum((get) => get(oddGridBuffer).asMutable());
+const readonlyEvenGrid = wgsl.plum((get) => asReadonly(get(evenGridBuffer)));
+const readonlyOddGrid = wgsl.plum((get) => asReadonly(get(oddGridBuffer)));
+
+const mutableEvenGrid = wgsl.plum((get) => asMutable(get(evenGridBuffer)));
+const mutableOddGrid = wgsl.plum((get) => asMutable(get(oddGridBuffer)));
 ```
 
 ```ts

@@ -1,22 +1,22 @@
 import type {
   ResolutionCtx,
-  WgslRenderResource,
-  WgslSamplerType,
+  TgpuNamable,
+  TgpuRenderResource,
+  TgpuSamplerType,
 } from './types';
-import { WgslIdentifier } from './wgslIdentifier';
+import { TgpuIdentifier } from './wgslIdentifier';
 
-export interface WgslSampler extends WgslRenderResource {
+export interface TgpuSampler extends TgpuRenderResource, TgpuNamable {
   readonly descriptor: GPUSamplerDescriptor;
-  $name(label: string): WgslSampler;
 }
 
-export function sampler(descriptor: GPUSamplerDescriptor): WgslSampler {
-  return new WgslSamplerImpl(descriptor);
+export function sampler(descriptor: GPUSamplerDescriptor): TgpuSampler {
+  return new TgpuSamplerImpl(descriptor);
 }
 
-class WgslSamplerImpl implements WgslSampler {
+class TgpuSamplerImpl implements TgpuSampler {
   private _label: string | undefined;
-  private _type: WgslSamplerType;
+  private _type: TgpuSamplerType;
 
   constructor(public readonly descriptor: GPUSamplerDescriptor) {
     if (descriptor.compare === undefined) this._type = 'sampler';
@@ -37,7 +37,7 @@ class WgslSamplerImpl implements WgslSampler {
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this._label);
+    const identifier = new TgpuIdentifier().$name(this._label);
 
     ctx.addRenderResource(this, identifier);
 
@@ -46,7 +46,7 @@ class WgslSamplerImpl implements WgslSampler {
 }
 
 export function isSampler(
-  resource: WgslRenderResource,
-): resource is WgslSampler {
+  resource: TgpuRenderResource,
+): resource is TgpuSampler {
   return resource.type === 'sampler' || resource.type === 'sampler_comparison';
 }

@@ -14,16 +14,16 @@ import {
   type Unwrap,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { ResolutionCtx, Wgsl, WgslData } from '../types';
+import type { ResolutionCtx, TgpuData } from '../types';
 import alignIO from './alignIO';
 
-export class SimpleWgslData<TSchema extends AnySchema>
+export class SimpleTgpuData<TSchema extends AnySchema>
   extends Schema<Unwrap<TSchema>>
-  implements WgslData<Unwrap<TSchema>>
+  implements TgpuData<Unwrap<TSchema>>
 {
   public readonly size: number;
   public readonly byteAlignment: number;
-  public readonly expressionCode: Wgsl;
+  public readonly expressionCode: string;
 
   private readonly _innerSchema: TSchema;
 
@@ -37,7 +37,7 @@ export class SimpleWgslData<TSchema extends AnySchema>
   }: {
     schema: TSchema;
     byteAlignment: number;
-    code: Wgsl;
+    code: string;
   }) {
     super();
 
@@ -78,22 +78,22 @@ export class SimpleWgslData<TSchema extends AnySchema>
     }
     if ('elementSchema' in this._innerSchema) {
       const underlyingType = this._innerSchema
-        .elementSchema as SimpleWgslData<AnySchema>;
+        .elementSchema as SimpleTgpuData<AnySchema>;
       return underlyingType.getUnderlyingTypeString();
     }
     throw new Error('Unexpected type used as vertex buffer element');
   }
 
-  getUnderlyingType(): SimpleWgslData<AnySchema> {
+  getUnderlyingType(): SimpleTgpuData<AnySchema> {
     if ('elementSchema' in this._innerSchema) {
       const underlyingType = this._innerSchema
-        .elementSchema as SimpleWgslData<AnySchema>;
+        .elementSchema as SimpleTgpuData<AnySchema>;
       return underlyingType.getUnderlyingType();
     }
     return this;
   }
 
   resolve(ctx: ResolutionCtx): string {
-    return ctx.resolve(this.expressionCode);
+    return this.expressionCode;
   }
 }

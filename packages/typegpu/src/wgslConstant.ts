@@ -1,28 +1,26 @@
-import type { ResolutionCtx, Wgsl, WgslResolvable } from './types';
+import type { ResolutionCtx, TgpuNamable, TgpuResolvable, Wgsl } from './types';
 import { code } from './wgslCode';
-import { WgslIdentifier } from './wgslIdentifier';
+import { TgpuIdentifier } from './wgslIdentifier';
 
 // ----------
 // Public API
 // ----------
 
-export interface WgslConst extends WgslResolvable {
-  $name(label: string): WgslConst;
-}
+export interface TgpuConst extends TgpuResolvable, TgpuNamable {}
 
 /**
  * Creates a constant is computed at shader initialization according
  * to the passed in expression.
  */
-export function constant(expr: Wgsl): WgslConst {
-  return new WgslConstImpl(expr);
+export function constant(expr: Wgsl): TgpuConst {
+  return new TgpuConstImpl(expr);
 }
 
 // --------------
 // Implementation
 // --------------
 
-class WgslConstImpl implements WgslConst {
+class TgpuConstImpl implements TgpuConst {
   private _label: string | undefined;
 
   constructor(private readonly expr: Wgsl) {}
@@ -37,7 +35,7 @@ class WgslConstImpl implements WgslConst {
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this._label);
+    const identifier = new TgpuIdentifier().$name(this._label);
 
     ctx.addDeclaration(code`const ${identifier} = ${this.expr};`);
 

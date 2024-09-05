@@ -3,37 +3,36 @@ import type {
   InlineResolve,
   ResolutionCtx,
   SlotValuePair,
+  TgpuNamable,
+  TgpuResolvable,
+  TgpuSlot,
   Wgsl,
-  WgslResolvable,
-  WgslSlot,
 } from './types';
 import { code } from './wgslCode';
-import { WgslIdentifier } from './wgslIdentifier';
+import { TgpuIdentifier } from './wgslIdentifier';
 
 // ----------
 // Public API
 // ----------
 
-export interface WgslFn extends WgslResolvable {
-  $name(label: string): WgslFn;
-
-  with<T>(slot: WgslSlot<T>, value: Eventual<T>): BoundWgslFn;
+export interface TgpuFn extends TgpuResolvable, TgpuNamable {
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): BoundTgpuFn;
 }
 
-export type BoundWgslFn = Omit<WgslFn, '$name'>;
+export type BoundTgpuFn = Omit<TgpuFn, '$name'>;
 
 export function fn(
   strings: TemplateStringsArray,
   ...params: (Wgsl | InlineResolve)[]
-): WgslFn {
-  return new WgslFnImpl(code(strings, ...params));
+): TgpuFn {
+  return new TgpuFnImpl(code(strings, ...params));
 }
 
 // --------------
 // Implementation
 // --------------
 
-class WgslFnImpl implements WgslFn {
+class TgpuFnImpl implements TgpuFn {
   private _label: string | undefined;
 
   constructor(private readonly body: Wgsl) {}
@@ -48,15 +47,15 @@ class WgslFnImpl implements WgslFn {
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this._label);
+    const identifier = new TgpuIdentifier().$name(this._label);
 
     ctx.addDeclaration(code`fn ${identifier}${this.body}`.$name(this._label));
 
     return ctx.resolve(identifier);
   }
 
-  with<T>(slot: WgslSlot<T>, value: T): BoundWgslFn {
-    return new BoundWgslFnImpl(this, [slot, value]);
+  with<T>(slot: TgpuSlot<T>, value: T): BoundTgpuFn {
+    return new BoundTgpuFnImpl(this, [slot, value]);
   }
 
   toString(): string {
@@ -64,9 +63,9 @@ class WgslFnImpl implements WgslFn {
   }
 }
 
-class BoundWgslFnImpl<T> implements BoundWgslFn {
+class BoundTgpuFnImpl<T> implements BoundTgpuFn {
   constructor(
-    private readonly _innerFn: BoundWgslFn,
+    private readonly _innerFn: BoundTgpuFn,
     private readonly _slotValuePair: SlotValuePair<T>,
   ) {}
 
@@ -74,8 +73,8 @@ class BoundWgslFnImpl<T> implements BoundWgslFn {
     return this._innerFn.label;
   }
 
-  with<TValue>(slot: WgslSlot<TValue>, value: Eventual<TValue>): BoundWgslFn {
-    return new BoundWgslFnImpl(this, [slot, value]);
+  with<TValue>(slot: TgpuSlot<TValue>, value: Eventual<TValue>): BoundTgpuFn {
+    return new BoundTgpuFnImpl(this, [slot, value]);
   }
 
   resolve(ctx: ResolutionCtx): string {

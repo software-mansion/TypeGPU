@@ -1,16 +1,16 @@
 import type { AnySchema } from 'typed-binary';
 import type { Parsed } from 'typed-binary';
-import type { SimpleWgslData } from './data';
+import type { SimpleTgpuData, TgpuArray } from './data';
 import type { PlumListener } from './plumStore';
-import type { WgslSettable } from './settableTrait';
-import type { AnyWgslData, WgslAllocatable } from './types';
-import type { BoundWgslCode, WgslCode } from './wgslCode';
-import type { ExtractPlumValue, Unsubscribe, WgslPlum } from './wgslPlum';
-import type { WgslSampler } from './wgslSampler';
+import type { TgpuSettable } from './settableTrait';
+import type { AnyTgpuData, TgpuAllocatable } from './types';
+import type { BoundTgpuCode, TgpuCode } from './wgslCode';
+import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './wgslPlum';
+import type { TgpuSampler } from './wgslSampler';
 import type {
-  WgslAnyTexture,
-  WgslAnyTextureView,
-  WgslTextureExternal,
+  TgpuAnyTexture,
+  TgpuAnyTextureView,
+  TgpuTextureExternal,
 } from './wgslTexture';
 
 // ----------
@@ -19,7 +19,7 @@ import type {
 
 export type SetPlumAction<T> = T | ((prev: T) => T);
 
-export interface TypeGpuRuntime {
+export interface TgpuRuntime {
   readonly device: GPUDevice;
   /**
    * The current command encoder. This property will
@@ -27,40 +27,40 @@ export interface TypeGpuRuntime {
    */
   readonly commandEncoder: GPUCommandEncoder;
 
-  readPlum<TPlum extends WgslPlum>(plum: TPlum): ExtractPlumValue<TPlum>;
+  readPlum<TPlum extends TgpuPlum>(plum: TPlum): ExtractPlumValue<TPlum>;
 
-  setPlum<TPlum extends WgslPlum & WgslSettable>(
+  setPlum<TPlum extends TgpuPlum & TgpuSettable>(
     plum: TPlum,
     value: SetPlumAction<ExtractPlumValue<TPlum>>,
   ): void;
 
   onPlumChange<TValue>(
-    plum: WgslPlum<TValue>,
+    plum: TgpuPlum<TValue>,
     listener: PlumListener<TValue>,
   ): Unsubscribe;
 
-  writeBuffer<TValue extends AnyWgslData>(
-    allocatable: WgslAllocatable<TValue>,
-    data: Parsed<TValue>,
+  writeBuffer<TValue extends AnyTgpuData>(
+    allocatable: TgpuAllocatable<TValue>,
+    data: Parsed<TValue> | TgpuAllocatable<TValue>,
   ): void;
 
-  readBuffer<TData extends AnyWgslData>(
-    allocatable: WgslAllocatable<TData>,
+  readBuffer<TData extends AnyTgpuData>(
+    allocatable: TgpuAllocatable<TData>,
   ): Promise<Parsed<TData>>;
 
   setSource(
-    texture: WgslTextureExternal,
+    texture: TgpuTextureExternal,
     source: HTMLVideoElement | VideoFrame,
   ): void;
 
-  isDirty(texture: WgslTextureExternal): boolean;
-  markClean(texture: WgslTextureExternal): void;
+  isDirty(texture: TgpuTextureExternal): boolean;
+  markClean(texture: TgpuTextureExternal): void;
 
-  bufferFor(allocatable: WgslAllocatable): GPUBuffer;
-  textureFor(view: WgslAnyTexture | WgslAnyTextureView): GPUTexture;
-  viewFor(view: WgslAnyTextureView): GPUTextureView;
-  externalTextureFor(texture: WgslTextureExternal): GPUExternalTexture;
-  samplerFor(sampler: WgslSampler): GPUSampler;
+  bufferFor(allocatable: TgpuAllocatable): GPUBuffer;
+  textureFor(view: TgpuAnyTexture | TgpuAnyTextureView): GPUTexture;
+  viewFor(view: TgpuAnyTextureView): GPUTextureView;
+  externalTextureFor(texture: TgpuTextureExternal): GPUExternalTexture;
+  samplerFor(sampler: TgpuSampler): GPUSampler;
   dispose(): void;
 
   /**
@@ -75,15 +75,15 @@ export interface TypeGpuRuntime {
 
 export interface RenderPipelineOptions {
   vertex: {
-    code: WgslCode | BoundWgslCode;
+    code: TgpuCode | BoundTgpuCode;
     output: {
       [K in symbol]: string;
     } & {
-      [K in string]: AnyWgslData;
+      [K in string]: AnyTgpuData;
     };
   };
   fragment: {
-    code: WgslCode | BoundWgslCode;
+    code: TgpuCode | BoundTgpuCode;
     target: Iterable<GPUColorTargetState | null>;
   };
   primitive: GPUPrimitiveState;
@@ -92,7 +92,7 @@ export interface RenderPipelineOptions {
 }
 
 export interface ComputePipelineOptions {
-  code: WgslCode | BoundWgslCode;
+  code: TgpuCode | BoundTgpuCode;
   workgroupSize?: readonly [number, number?, number?];
   externalLayouts?: GPUBindGroupLayout[];
   label?: string;
@@ -134,17 +134,21 @@ const typeToVertexFormatMap: Record<string, GPUVertexFormat> = {
   vec4i: 'sint32x4',
 };
 
-export function deriveVertexFormat<TData extends SimpleWgslData<AnySchema>>(
-  typeSchema: TData,
-): GPUVertexFormat {
-  if (!('expressionCode' in typeSchema)) {
-    throw new Error(`Type schema must contain a 'code' field`);
+export function deriveVertexFormat<
+  TData extends SimpleTgpuData<AnySchema> | TgpuArray<AnyTgpuData>,
+>(typeSchema: TData): GPUVertexFormat {
+  let code: string;
+  if ('expressionCode' in typeSchema) {
+    code = typeSchema.expressionCode;
+  } else {
+    if (!('expressionCode' in typeSchema.elementType)) {
+      throw new Error('Only simple types are supported');
+    }
+    code = typeSchema.elementType.expressionCode as string;
   }
-  const code = typeSchema.getUnderlyingTypeString();
-
-  const vertexFormat = typeToVertexFormatMap[code];
-  if (!vertexFormat) {
-    throw new Error(`Unknown vertex format for type code: ${code}`);
+  const format = typeToVertexFormatMap[code];
+  if (!format) {
+    throw new Error(`Unsupported vertex format: ${code}`);
   }
-  return vertexFormat;
+  return format;
 }

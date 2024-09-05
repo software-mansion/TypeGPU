@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   MissingSlotValueError,
   ResolutionError,
-  StrictNameRegistry,
   wgsl,
-} from '../src';
+} from '../src/experimental';
+import { StrictNameRegistry } from '../src/nameRegistry';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
 import { parseWGSL } from './utils/parseWGSL';
 

@@ -1,6 +1,6 @@
 /*
 {
-  "title": "Chrome Keying",
+  "title": "Chroma Keying",
   "category": "image-processing"
 }
 */
@@ -11,7 +11,7 @@ import {
   onCleanup,
   onFrame,
 } from '@typegpu/example-toolkit';
-import { builtin, createRuntime, wgsl } from 'typegpu';
+import { asUniform, builtin, createRuntime, wgsl } from 'typegpu';
 import { f32, vec2f, vec3f } from 'typegpu/data';
 
 const width = 500;
@@ -49,6 +49,13 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
+const samplingCanvas = document.createElement('canvas');
+const samplingContext = samplingCanvas.getContext('2d');
+
+if (!samplingContext) {
+  throw new Error('Could not get 2d context');
+}
+
 const mediaProcessor = new MediaStreamTrackProcessor({
   track: stream.getVideoTracks()[0],
 });
@@ -66,7 +73,7 @@ const thresholdBuffer = wgsl
   .$allowUniform();
 
 const colorBuffer = wgsl
-  .buffer(vec3f, [0, 1.0, 0])
+  .buffer(vec3f, vec3f(0, 1.0, 0))
   .$name('colorBuffer')
   .$allowUniform();
 
@@ -96,10 +103,10 @@ const computeProgram = runtime.makeComputePipeline({
     }
     let xyAsUv = vec2f(coords) / vec2f(${width}, ${height});
     var col = textureSampleBaseClampToEdge(${externalTexture}, ${sampler}, xyAsUv);
-    let toKey = ${colorBuffer.asUniform()};
+    let toKey = ${asUniform(colorBuffer)};
     let distance = distance(col.rgb, toKey);
 
-    if (distance < ${thresholdBuffer.asUniform()}) {
+    if (distance < ${asUniform(thresholdBuffer)}) {
       col = vec4f();
     }
 
@@ -168,17 +175,14 @@ const renderProgram = runtime.makeRenderPipeline({
 
 video.addEventListener('click', (event) => {
   const { offsetX: x, offsetY: y } = event;
-  const canvas = document.createElement('canvas');
-  const context2d = canvas.getContext('2d');
-  if (!context2d) throw new Error('2d context not supported');
 
-  canvas.width = width;
-  canvas.height = height;
-  context2d.drawImage(video, 0, 0, width, height);
+  samplingCanvas.width = width;
+  samplingCanvas.height = height;
+  samplingContext.drawImage(video, 0, 0, width, height);
 
-  const [r, g, b] = context2d.getImageData(x, y, 1, 1).data;
+  const [r, g, b] = samplingContext.getImageData(x, y, 1, 1).data;
   table.setMatrix([[r, g, b]]);
-  runtime.writeBuffer(colorBuffer, [r / 255, g / 255, b / 255]);
+  runtime.writeBuffer(colorBuffer, vec3f(r / 255, g / 255, b / 255));
 });
 
 async function getFrame() {

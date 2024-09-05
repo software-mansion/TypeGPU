@@ -146,6 +146,10 @@ importers:
         version: 1.8.2
 
   packages/typegpu:
+    dependencies:
+      typed-binary:
+        specifier: ^4.0.1
+        version: 4.0.1
     devDependencies:
       '@typegpu/wgsl-parser':
         specifier: workspace:*
@@ -162,9 +166,6 @@ importers:
       tsx:
         specifier: ^4.16.2
         version: 4.16.2
-      typed-binary:
-        specifier: ^4.0.0
-        version: 4.0.0
       typegpu:
         specifier: workspace:*
         version: 'link:'
@@ -2874,17 +2875,10 @@ packages:
     engines: {node: '>=0.4.0'}
     dev: true
 
-  /acorn@8.11.3:
-    resolution: {integrity: sha512-Y9rRfJG5jcKOE0CLisYbojUjIrIEE7AGMzA/Sm4BslANhbS+cDMpgBdcPT91oJ7OuJ9hYJBx59RjbhxVnrF8Xg==}
-    engines: {node: '>=0.4.0'}
-    hasBin: true
-    dev: true
-
   /acorn@8.12.1:
     resolution: {integrity: sha512-tcpGyI9zbizT9JbV6oYE477V6mTlXvvi0T0G3SNIYE2apm/G5huBa1+K89VGeovbg+jycCrfhl3ADxErOuO6Jg==}
     engines: {node: '>=0.4.0'}
     hasBin: true
-    dev: false
 
   /agent-base@7.1.0:
     resolution: {integrity: sha512-o/zjMZRhJxny7OyEF+Op8X+efiELC7k7yOjMzgfzVqOzXqkBkWI79YoTdOtsuWd5BWhAGAuOY/Xa6xpiaWXiNg==}
@@ -5500,7 +5494,7 @@ packages:
   /mlly@1.5.0:
     resolution: {integrity: sha512-NPVQvAY1xr1QoVeG0cy8yUYC7FQcOx6evl/RjT1wL5FvzPnzOysoqB/jmx/DhssT2dYa8nxECLAaFI/+gVLhDQ==}
     dependencies:
-      acorn: 8.11.3
+      acorn: 8.12.1
       pathe: 1.1.2
       pkg-types: 1.0.3
       ufo: 1.4.0
@@ -6728,7 +6722,7 @@ packages:
   /strip-literal@1.3.0:
     resolution: {integrity: sha512-PugKzOsyXpArk0yWmUwqOZecSO0GH0bPoctLcqNDH9J04pVW3lflYE0ujElBGTloevcxF5MofAOZ7C5l2b+wLg==}
     dependencies:
-      acorn: 8.11.3
+      acorn: 8.12.1
     dev: true
 
   /style-to-object@0.4.4:
@@ -7071,6 +7065,11 @@ packages:
 
   /typed-binary@4.0.0:
     resolution: {integrity: sha512-6ZXhbBePH4XZY57o23PV6O/HAYWcsAkCSwTKI6DrN5xMBwOV+I1G+MtytSY2v+QU3VPzB5Kz6268Q3qYD0XIYA==}
+    dev: false
+
+  /typed-binary@4.0.1:
+    resolution: {integrity: sha512-nne2iMvXX8Qi3KI7do55udYsPNIUr7zFhPJNdWpujkWUzr6sJK6gQjCUcZGMM6+lws75oiFtGk8if6S2KgWppg==}
+    dev: false
 
   /typedoc-plugin-markdown@4.2.3(typedoc@0.26.5):
     resolution: {integrity: sha512-esucQj79SFYOv0f5XVha7QWdLUH5C5HRlDf7Z8CXzHedmVPn7jox6Gt7FdoBXN8AFxyHpa3Lbuxu65Dobwt+4Q==}
@@ -7444,7 +7443,7 @@ packages:
       '@vitest/spy': 0.33.0
       '@vitest/ui': 0.33.0(vitest@0.33.0)
       '@vitest/utils': 0.33.0
-      acorn: 8.11.3
+      acorn: 8.12.1
       acorn-walk: 8.3.2
       cac: 6.7.14
       chai: 4.4.1

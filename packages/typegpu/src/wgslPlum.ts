@@ -1,20 +1,18 @@
-import { type WgslSettable, WgslSettableTrait } from './settableTrait';
-import type { Wgsl, WgslResolvable } from './types';
+import { type TgpuSettable, TgpuSettableTrait } from './settableTrait';
+import type { TgpuNamable, TgpuResolvable, Wgsl } from './types';
 
 // ----------
 // Public API
 // ----------
 
-export type Getter = <T>(plum: WgslPlum<T>) => T;
+export type Getter = <T>(plum: TgpuPlum<T>) => T;
 export type Unsubscribe = () => unknown;
-export type ExtractPlumValue<T> = T extends WgslPlum<infer TValue>
+export type ExtractPlumValue<T> = T extends TgpuPlum<infer TValue>
   ? TValue
   : never;
 
-export interface WgslPlum<TValue = unknown> {
-  readonly __brand: 'WgslPlum';
-
-  $name(label: string): this;
+export interface TgpuPlum<TValue = unknown> extends TgpuNamable {
+  readonly __brand: 'TgpuPlum';
 
   /**
    * Computes the value of this plum. Circumvents the store
@@ -23,20 +21,20 @@ export interface WgslPlum<TValue = unknown> {
   compute(get: Getter): TValue;
 }
 
-export const WgslExternalPlumTrait = Symbol(
+export const TgpuExternalPlumTrait = Symbol(
   `This plum's value is sourced from outside the runtime.`,
 );
-export interface WgslExternalPlum {
-  readonly [WgslExternalPlumTrait]: true;
+export interface TgpuExternalPlum {
+  readonly [TgpuExternalPlumTrait]: true;
 
   readonly version: number;
   subscribe(listener: () => unknown): Unsubscribe;
 }
 
 export function isExternalPlum(
-  value: unknown | WgslExternalPlum,
-): value is WgslExternalPlum {
-  return (value as WgslExternalPlum)[WgslExternalPlumTrait] === true;
+  value: unknown | TgpuExternalPlum,
+): value is TgpuExternalPlum {
+  return (value as TgpuExternalPlum)[TgpuExternalPlumTrait] === true;
 }
 
 /**
@@ -47,7 +45,7 @@ export function isExternalPlum(
  */
 export function plum<T extends Wgsl>(
   compute: (get: Getter) => T,
-): WgslPlum<T> & WgslResolvable;
+): TgpuPlum<T> & TgpuResolvable;
 
 /**
  * Creates a computed plum. Its value depends on the plums read using `get`
@@ -55,7 +53,7 @@ export function plum<T extends Wgsl>(
  *
  * @param compute A pure function that describes this plum's value.
  */
-export function plum<T>(compute: (get: Getter) => T): WgslPlum<T>;
+export function plum<T>(compute: (get: Getter) => T): TgpuPlum<T>;
 
 /**
  * Creates a plum with an initial value of `initial`.
@@ -65,7 +63,7 @@ export function plum<T>(compute: (get: Getter) => T): WgslPlum<T>;
  */
 export function plum<T extends Wgsl>(
   initial: T,
-): WgslPlum<T> & WgslSettable & WgslResolvable;
+): TgpuPlum<T> & TgpuSettable & TgpuResolvable;
 
 /**
  * Creates a plum with an initial value of `initial`.
@@ -73,36 +71,36 @@ export function plum<T extends Wgsl>(
  *
  * @param initial The initial value of this plum.
  */
-export function plum<T>(initial: T): WgslPlum<T> & WgslSettable;
+export function plum<T>(initial: T): TgpuPlum<T> & TgpuSettable;
 
 export function plum<T>(
   initialOrCompute: T | ((get: Getter) => T),
-): WgslPlum<T> | (WgslPlum<T> & WgslSettable) {
+): TgpuPlum<T> | (TgpuPlum<T> & TgpuSettable) {
   if (typeof initialOrCompute === 'function') {
-    return new WgslDerivedPlumImpl(initialOrCompute as (get: Getter) => T);
+    return new TgpuDerivedPlumImpl(initialOrCompute as (get: Getter) => T);
   }
 
-  return new WgslSourcePlumImpl(initialOrCompute);
+  return new TgpuSourcePlumImpl(initialOrCompute);
 }
 
 export function plumFromEvent<T>(
   subscribe: (listener: () => unknown) => Unsubscribe,
   getLatest: () => T,
-): WgslPlum<T> & WgslExternalPlum {
-  return new WgslExternalPlumImpl(subscribe, getLatest);
+): TgpuPlum<T> & TgpuExternalPlum {
+  return new TgpuExternalPlumImpl(subscribe, getLatest);
 }
 
-export function isPlum<T>(value: WgslPlum<T> | unknown): value is WgslPlum<T> {
-  return (value as WgslPlum).__brand === 'WgslPlum';
+export function isPlum<T>(value: TgpuPlum<T> | unknown): value is TgpuPlum<T> {
+  return (value as TgpuPlum).__brand === 'TgpuPlum';
 }
 
 // --------------
 // Implementation
 // --------------
 
-class WgslSourcePlumImpl<TValue> implements WgslPlum<TValue>, WgslSettable {
-  readonly __brand = 'WgslPlum';
-  readonly [WgslSettableTrait] = true;
+class TgpuSourcePlumImpl<TValue> implements TgpuPlum<TValue>, TgpuSettable {
+  readonly __brand = 'TgpuPlum';
+  readonly [TgpuSettableTrait] = true;
 
   private _label: string | undefined;
 
@@ -126,8 +124,8 @@ class WgslSourcePlumImpl<TValue> implements WgslPlum<TValue>, WgslSettable {
   }
 }
 
-class WgslDerivedPlumImpl<TValue> implements WgslPlum<TValue> {
-  readonly __brand = 'WgslPlum';
+class TgpuDerivedPlumImpl<TValue> implements TgpuPlum<TValue> {
+  readonly __brand = 'TgpuPlum';
   private _label: string | undefined;
 
   constructor(private readonly _compute: (get: Getter) => TValue) {}
@@ -150,11 +148,11 @@ class WgslDerivedPlumImpl<TValue> implements WgslPlum<TValue> {
   }
 }
 
-class WgslExternalPlumImpl<TValue>
-  implements WgslPlum<TValue>, WgslExternalPlum
+class TgpuExternalPlumImpl<TValue>
+  implements TgpuPlum<TValue>, TgpuExternalPlum
 {
-  readonly __brand = 'WgslPlum';
-  readonly [WgslExternalPlumTrait] = true;
+  readonly __brand = 'TgpuPlum';
+  readonly [TgpuExternalPlumTrait] = true;
 
   private _label: string | undefined;
   private _prev: TValue;

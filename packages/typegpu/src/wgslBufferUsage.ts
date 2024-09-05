@@ -1,62 +1,50 @@
 import type {
-  AnyWgslData,
+  AnyTgpuData,
   BufferUsage,
   ResolutionCtx,
-  WgslBindable,
+  TgpuBindable,
 } from './types';
-import type { WgslBuffer } from './wgslBuffer';
-import { WgslIdentifier } from './wgslIdentifier';
+import type { TgpuBuffer } from './wgslBuffer';
+import { TgpuIdentifier } from './wgslIdentifier';
 
 // ----------
 // Public API
 // ----------
 
-export interface WgslBufferUsage<
-  TData extends AnyWgslData,
+export interface TgpuBufferUsage<
+  TData extends AnyTgpuData,
   TUsage extends BufferUsage = BufferUsage,
-> extends WgslBindable<TData, TUsage> {
-  $name(label: string): WgslBufferUsage<TData, TUsage>;
-}
+> extends TgpuBindable<TData, TUsage> {}
 
 export function bufferUsage<
-  TData extends AnyWgslData,
+  TData extends AnyTgpuData,
   TUsage extends BufferUsage,
->(
-  buffer: WgslBuffer<TData, TUsage>,
-  usage: TUsage,
-): WgslBufferUsage<TData, TUsage> {
-  return new WgslBufferUsageImpl(buffer, usage);
+>(buffer: TgpuBuffer<TData>, usage: TUsage): TgpuBufferUsage<TData, TUsage> {
+  return new TgpuBufferUsageImpl(buffer, usage);
 }
 
 // --------------
 // Implementation
 // --------------
 
-class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
-  implements WgslBufferUsage<TData, TUsage>
+class TgpuBufferUsageImpl<TData extends AnyTgpuData, TUsage extends BufferUsage>
+  implements TgpuBufferUsage<TData, TUsage>
 {
-  private _label: string | undefined;
-
   constructor(
-    public readonly buffer: WgslBuffer<TData, TUsage>,
+    public readonly buffer: TgpuBuffer<TData>,
     public readonly usage: TUsage,
   ) {}
 
   get label() {
-    return this._label;
+    return this.buffer.label;
   }
 
   get allocatable() {
     return this.buffer;
   }
 
-  $name(label: string | undefined) {
-    this._label = label;
-    return this;
-  }
-
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier();
+    const identifier = new TgpuIdentifier().$name(this.label);
 
     ctx.addBinding(this, identifier);
 
@@ -64,6 +52,6 @@ class WgslBufferUsageImpl<TData extends AnyWgslData, TUsage extends BufferUsage>
   }
 
   toString(): string {
-    return `${this.usage}:${this._label ?? '<unnamed>'}`;
+    return `${this.usage}:${this.label ?? '<unnamed>'}`;
   }
 }

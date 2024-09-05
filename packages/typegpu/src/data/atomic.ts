@@ -9,7 +9,7 @@ import {
   type Unwrap,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { ResolutionCtx, WgslData } from '../types';
+import type { ResolutionCtx, TgpuData } from '../types';
 import type { I32, U32 } from './numeric';
 
 export function atomic<TSchema extends U32 | I32>(
@@ -19,7 +19,7 @@ export function atomic<TSchema extends U32 | I32>(
 }
 
 export interface Atomic<TSchema extends U32 | I32>
-  extends WgslData<Unwrap<TSchema>> {}
+  extends TgpuData<Unwrap<TSchema>> {}
 
 class AtomicImpl<TSchema extends U32 | I32>
   extends Schema<Unwrap<TSchema>>

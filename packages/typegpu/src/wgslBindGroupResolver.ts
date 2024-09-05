@@ -1,12 +1,12 @@
-import type { SimpleWgslData } from './data';
+import type { SimpleTgpuData } from './data';
 import type { ResolutionCtxImpl } from './resolutionCtx';
 import { deriveVertexFormat } from './typegpuRuntime';
-import type { TypeGpuRuntime } from './typegpuRuntime';
-import type { AnyWgslData, BufferUsage, WgslBindable } from './types';
-import { type WgslSampler, isSampler } from './wgslSampler';
+import type { TgpuRuntime } from './typegpuRuntime';
+import type { AnyTgpuData, BufferUsage, TgpuBindable } from './types';
+import { type TgpuSampler, isSampler } from './wgslSampler';
 import {
-  type WgslAnyTextureView,
-  type WgslTextureExternal,
+  type TgpuAnyTextureView,
+  type TgpuTextureExternal,
   isExternalTexture,
   isTextureView,
 } from './wgslTexture';
@@ -21,12 +21,12 @@ const usageToBindingTypeMap: Record<
 };
 
 export class BindGroupResolver {
-  private samplers: WgslSampler[] = [];
-  private textureViews: WgslAnyTextureView[] = [];
-  private externalTextures: WgslTextureExternal[] = [];
-  private buffers: WgslBindable<AnyWgslData, BufferUsage>[] = [];
+  private samplers: TgpuSampler[] = [];
+  private textureViews: TgpuAnyTextureView[] = [];
+  private externalTextures: TgpuTextureExternal[] = [];
+  private buffers: TgpuBindable<AnyTgpuData, BufferUsage>[] = [];
   private vertexBuffers: Map<
-    WgslBindable<AnyWgslData, 'vertex'>,
+    TgpuBindable<AnyTgpuData, 'vertex'>,
     number
   > | null = null;
 
@@ -35,7 +35,7 @@ export class BindGroupResolver {
   private vertexLayout: GPUVertexBufferLayout[] | null = null;
 
   constructor(
-    private runtime: TypeGpuRuntime,
+    private runtime: TgpuRuntime,
     private context: ResolutionCtxImpl,
     public readonly shaderStage: number,
   ) {
@@ -57,7 +57,7 @@ export class BindGroupResolver {
   setVertexBuffers(
     vertexBuffers: {
       index: number;
-      buffer: WgslBindable<AnyWgslData, 'vertex'>;
+      buffer: TgpuBindable<AnyTgpuData, 'vertex'>;
     }[],
   ) {
     if (this.shaderStage !== GPUShaderStage.VERTEX) {
@@ -194,7 +194,7 @@ export class BindGroupResolver {
             shaderLocation: idx,
             offset: 0,
             format: deriveVertexFormat(
-              buffer.allocatable.dataType as SimpleWgslData<AnyWgslData>,
+              buffer.allocatable.dataType as SimpleTgpuData<AnyTgpuData>,
             ),
           },
         ],
@@ -212,7 +212,7 @@ export class BindGroupResolver {
     return this.vertexBuffers.entries();
   }
 
-  getVertexBufferIndex(buffer: WgslBindable<AnyWgslData, 'vertex'>) {
+  getVertexBufferIndex(buffer: TgpuBindable<AnyTgpuData, 'vertex'>) {
     const index = this.vertexBuffers?.get(buffer);
     if (this.vertexBuffers === null || index === undefined) {
       throw new Error('Vertex buffers not set');
@@ -220,7 +220,7 @@ export class BindGroupResolver {
     return index;
   }
 
-  invlidateBindGroup() {
+  invalidateBindGroup() {
     this.bindGroup = null;
   }
 
@@ -228,14 +228,14 @@ export class BindGroupResolver {
     for (const texture of this.externalTextures) {
       // check if texture is dirty (changed source) -> if so, invalidate bind group and mark clean
       if (this.runtime.isDirty(texture)) {
-        this.invlidateBindGroup();
+        this.invalidateBindGroup();
         this.runtime.markClean(texture);
         continue;
       }
 
       // check if any external texture is of type HTMLVideoElement -> if so, invalidate bind group as it expires on bind
       if (texture.source instanceof HTMLVideoElement) {
-        this.invlidateBindGroup();
+        this.invalidateBindGroup();
       }
     }
   }

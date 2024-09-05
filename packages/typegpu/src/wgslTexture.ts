@@ -1,97 +1,97 @@
 import { vec4f, vec4i, vec4u } from './data';
 import type {
-  AnyWgslPrimitive,
-  AnyWgslTexelFormat,
   ResolutionCtx,
   SampledTextureParams,
   StorageTextureAccess,
   StorageTextureParams,
+  TexelFormat,
+  TextureScalarFormat,
   TextureUsage,
-  WgslRenderResource,
-  WgslRenderResourceType,
+  TgpuNamable,
+  TgpuRenderResource,
+  TgpuRenderResourceType,
 } from './types';
-import { WgslIdentifier } from './wgslIdentifier';
+import { TgpuIdentifier } from './wgslIdentifier';
 import { isSampler } from './wgslSampler';
 
 type Optional<T> = {
   [P in keyof T]?: T[P] | undefined;
 };
 
-export interface WgslAnyTextureView extends WgslRenderResource {
+export interface TgpuAnyTextureView extends TgpuRenderResource {
   readonly descriptor: GPUTextureViewDescriptor;
-  readonly texture: WgslAnyTexture;
-  readonly dataType: AnyWgslPrimitive | AnyWgslTexelFormat;
+  readonly texture: TgpuAnyTexture;
+  readonly dataType: TextureScalarFormat | TexelFormat;
   readonly access: StorageTextureAccess | undefined;
 }
 
-export interface WgslAnyTexture {
+export interface TgpuAnyTexture {
   readonly descriptor: Omit<GPUTextureDescriptor, 'usage'>;
   get flags(): GPUTextureUsageFlags;
 }
 
-export interface WgslTexture<TAllows extends TextureUsage = never> {
+export interface TgpuTexture<TAllows extends TextureUsage = never>
+  extends TgpuNamable {
   readonly descriptor: Omit<GPUTextureDescriptor, 'usage'>;
   get label(): string | undefined;
   get flags(): GPUTextureUsageFlags;
 
-  $name(label: string): WgslTexture<TAllows>;
-  $allowSampled(): WgslTexture<TAllows | 'sampled'>;
-  $allowStorage(): WgslTexture<TAllows | 'storage'>;
+  $allowSampled(): TgpuTexture<TAllows | 'sampled'>;
+  $allowStorage(): TgpuTexture<TAllows | 'storage'>;
 
   asStorage(
     params: StorageTextureParams,
-  ): 'storage' extends TAllows
-    ? WgslTextureView<AnyWgslTexelFormat, 'storage'>
-    : null;
+  ): 'storage' extends TAllows ? TgpuTextureView<TexelFormat, 'storage'> : null;
   asSampled(
     params: SampledTextureParams,
   ): 'sampled' extends TAllows
-    ? WgslTextureView<typeof params.dataType, 'sampled'>
+    ? TgpuTextureView<typeof params.dataType, 'sampled'>
     : null;
 }
 
-export interface WgslTextureView<
-  TData extends AnyWgslPrimitive | AnyWgslTexelFormat,
+export interface TgpuTextureView<
+  TData extends TextureScalarFormat | TexelFormat,
   TUsage extends TextureUsage,
-> extends WgslRenderResource {
-  readonly texture: WgslTexture<TUsage>;
+> extends TgpuRenderResource,
+    TgpuNamable {
+  readonly texture: TgpuTexture<TUsage>;
   readonly descriptor: Omit<GPUTextureViewDescriptor, 'usage'>;
-  readonly type: WgslRenderResourceType;
+  readonly type: TgpuRenderResourceType;
   readonly dataType: TData;
   readonly access: StorageTextureAccess | undefined;
-
-  $name(label: string): WgslTextureView<TData, TUsage>;
 }
 
-export interface WgslTextureExternal extends WgslRenderResource {
-  $name(label: string): WgslTextureExternal;
+export interface TgpuTextureExternal extends TgpuRenderResource {
   readonly descriptor: Optional<GPUExternalTextureDescriptor>;
   get source(): HTMLVideoElement | VideoFrame | undefined;
 }
 
 export function texture<TUsage extends TextureUsage = never>(
   descriptor: Omit<GPUTextureDescriptor, 'usage'>,
-): WgslTexture<TUsage> {
-  return new WgslTextureImpl(descriptor);
+): TgpuTexture<TUsage> {
+  return new TgpuTextureImpl(descriptor);
 }
 
 export function textureExternal(
   source?: HTMLVideoElement | VideoFrame,
   colorSpace?: PredefinedColorSpace,
-): WgslTextureExternal {
-  return new WgslTextureExternalImpl(source, colorSpace);
+): TgpuTextureExternal {
+  return new TgpuTextureExternalImpl(source, colorSpace);
 }
 
-class WgslTextureImpl<TAllows extends TextureUsage = never>
-  implements WgslTexture<TAllows>, WgslAnyTexture
+class TgpuTextureImpl<TAllows extends TextureUsage = never>
+  implements TgpuTexture<TAllows>, TgpuAnyTexture
 {
   private _flags: GPUTextureUsageFlags =
     GPUTextureUsage.COPY_DST |
     GPUTextureUsage.COPY_SRC |
     GPUTextureUsage.RENDER_ATTACHMENT;
   private _allowedUsages: {
-    sampled: Map<string, WgslTextureView<AnyWgslPrimitive, 'sampled'>> | null;
-    storage: Map<string, WgslTextureView<AnyWgslTexelFormat, 'storage'>> | null;
+    sampled: Map<
+      string,
+      TgpuTextureView<TextureScalarFormat, 'sampled'>
+    > | null;
+    storage: Map<string, TgpuTextureView<TexelFormat, 'storage'>> | null;
   } = {
     sampled: null,
     storage: null,
@@ -121,7 +121,7 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
   }
 
   $allowSampled() {
-    const enrichedThis = this as WgslTexture<TAllows | 'sampled'>;
+    const enrichedThis = this as TgpuTexture<TAllows | 'sampled'>;
     if (!this._allowedUsages.sampled) {
       this._allowedUsages.sampled = new Map();
     }
@@ -130,7 +130,7 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
   }
 
   $allowStorage() {
-    const enrichedThis = this as WgslTexture<TAllows | 'storage'>;
+    const enrichedThis = this as TgpuTexture<TAllows | 'storage'>;
     if (!this._allowedUsages.storage) {
       this._allowedUsages.storage = new Map();
     }
@@ -140,7 +140,7 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
 
   private getStorageIfAllowed(
     params: StorageTextureParams,
-  ): WgslTextureView<AnyWgslTexelFormat, 'storage'> | null {
+  ): TgpuTextureView<TexelFormat, 'storage'> | null {
     if (!this._allowedUsages.storage) {
       return null;
     }
@@ -149,24 +149,24 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
     if (existing) {
       return existing;
     }
-    const type = texelFormatToWgslType[this.descriptor.format];
+    const type = texelFormatToTgpuType[this.descriptor.format];
     if (!type) {
       throw new Error(`Unsupported texture format ${this.descriptor.format}`);
     }
-    const view = new WgslTextureViewImpl(
+    const view = new TgpuTextureViewImpl(
       params.type,
       this,
       type,
       params.descriptor,
       params.access,
-    ) as unknown as WgslTextureView<typeof type, 'storage'>;
+    ) as unknown as TgpuTextureView<typeof type, 'storage'>;
     this._allowedUsages.storage.set(stringified, view);
     return view;
   }
 
   private getSampledIfAllowed(
     params: SampledTextureParams,
-  ): WgslTextureView<AnyWgslPrimitive, 'sampled'> | null {
+  ): TgpuTextureView<TextureScalarFormat, 'sampled'> | null {
     if (!this._allowedUsages.sampled) {
       return null;
     }
@@ -175,44 +175,44 @@ class WgslTextureImpl<TAllows extends TextureUsage = never>
     if (existing) {
       return existing;
     }
-    const view = new WgslTextureViewImpl(
+    const view = new TgpuTextureViewImpl(
       params.type,
       this,
       params.dataType,
       params.descriptor,
-    ) as unknown as WgslTextureView<typeof params.dataType, 'sampled'>;
+    ) as unknown as TgpuTextureView<typeof params.dataType, 'sampled'>;
     this._allowedUsages.sampled.set(stringified, view);
     return view;
   }
 
   asStorage(params: StorageTextureParams) {
     const maybeView = this.getStorageIfAllowed(params);
-    const maybeType = texelFormatToWgslType[this.descriptor.format];
+    const maybeType = texelFormatToTgpuType[this.descriptor.format];
     if (!maybeType) {
       throw new Error(`Unsupported texture format ${this.descriptor.format}`);
     }
     return maybeView as 'storage' extends TAllows
-      ? WgslTextureView<typeof maybeType, 'storage'>
+      ? TgpuTextureView<typeof maybeType, 'storage'>
       : null;
   }
 
   asSampled(params: SampledTextureParams) {
     return this.getSampledIfAllowed(params) as 'sampled' extends TAllows
-      ? WgslTextureView<typeof params.dataType, 'sampled'>
+      ? TgpuTextureView<typeof params.dataType, 'sampled'>
       : null;
   }
 }
 
-class WgslTextureViewImpl<
-  TData extends AnyWgslPrimitive | AnyWgslTexelFormat,
+class TgpuTextureViewImpl<
+  TData extends TextureScalarFormat | TexelFormat,
   TUsage extends TextureUsage,
-> implements WgslTextureView<TData, TUsage>, WgslAnyTextureView
+> implements TgpuTextureView<TData, TUsage>, TgpuAnyTextureView
 {
   private _label: string | undefined;
 
   constructor(
-    public readonly type: WgslRenderResourceType,
-    public readonly texture: WgslTexture<TUsage>,
+    public readonly type: TgpuRenderResourceType,
+    public readonly texture: TgpuTexture<TUsage>,
     public readonly dataType: TData,
     public readonly descriptor: GPUTextureViewDescriptor = {},
     public readonly access: StorageTextureAccess | undefined = undefined,
@@ -228,7 +228,7 @@ class WgslTextureViewImpl<
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this._label);
+    const identifier = new TgpuIdentifier().$name(this._label);
 
     ctx.addRenderResource(this, identifier);
 
@@ -236,7 +236,7 @@ class WgslTextureViewImpl<
   }
 }
 
-class WgslTextureExternalImpl implements WgslTextureExternal {
+class TgpuTextureExternalImpl implements TgpuTextureExternal {
   private _label: string | undefined;
   public readonly type = 'texture_external';
   public readonly descriptor: Optional<GPUExternalTextureDescriptor>;
@@ -262,7 +262,7 @@ class WgslTextureExternalImpl implements WgslTextureExternal {
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this._label);
+    const identifier = new TgpuIdentifier().$name(this._label);
 
     ctx.addRenderResource(this, identifier);
 
@@ -271,18 +271,18 @@ class WgslTextureExternalImpl implements WgslTextureExternal {
 }
 
 export function isExternalTexture(
-  texture: WgslRenderResource,
-): texture is WgslTextureExternal {
+  texture: TgpuRenderResource,
+): texture is TgpuTextureExternal {
   return !('texture' in texture) && !isSampler(texture);
 }
 
 export function isTextureView(
-  texture: WgslRenderResource,
-): texture is WgslAnyTextureView {
+  texture: TgpuRenderResource,
+): texture is TgpuAnyTextureView {
   return 'texture' in texture;
 }
 
-const texelFormatToWgslType: Record<string, AnyWgslTexelFormat> = {
+const texelFormatToTgpuType: Record<string, TexelFormat> = {
   rgba8unorm: vec4f,
   rgba8snorm: vec4f,
   rgba8uint: vec4u,

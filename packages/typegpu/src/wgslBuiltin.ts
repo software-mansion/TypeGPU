@@ -1,15 +1,4 @@
-import * as TB from 'typed-binary';
-import type { F32, U32, Vec3u, Vec4f } from './data';
-import { SimpleWgslData, f32, u32, vec3u, vec4f } from './data';
-import type { WgslData } from './types';
-import { WgslIdentifier } from './wgslIdentifier';
-
-export type BuiltInPossibleTypes =
-  | U32
-  | F32
-  | Vec3u
-  | Vec4f
-  | WgslData<TB.Unwrap<U32>[]>;
+import { TgpuIdentifier } from './wgslIdentifier';
 
 export const builtin = {
   vertexIndex: Symbol('builtin_vertexIndex'),
@@ -29,115 +18,111 @@ export const builtin = {
 } as const;
 
 export interface Builtin {
+  symbol: symbol;
   name: string;
   stage: 'vertex' | 'fragment' | 'compute';
   direction: 'input' | 'output';
-  type: BuiltInPossibleTypes;
-  identifier: WgslIdentifier;
+  identifier: TgpuIdentifier;
 }
 
 const builtinSymbolToObj: Record<symbol, Builtin> = {
   [builtin.vertexIndex]: {
+    symbol: builtin.vertexIndex,
     name: 'vertex_index',
     stage: 'vertex',
     direction: 'input',
-    type: u32,
-    identifier: new WgslIdentifier().$name('vertex_index'),
+    identifier: new TgpuIdentifier().$name('vertex_index'),
   },
   [builtin.instanceIndex]: {
+    symbol: builtin.instanceIndex,
     name: 'instance_index',
     stage: 'vertex',
     direction: 'input',
-    type: u32,
-    identifier: new WgslIdentifier().$name('instance_index'),
+    identifier: new TgpuIdentifier().$name('instance_index'),
   },
   [builtin.position]: {
+    symbol: builtin.position,
     name: 'position',
     stage: 'vertex',
     direction: 'output',
-    type: vec4f,
-    identifier: new WgslIdentifier().$name('position'),
+    identifier: new TgpuIdentifier().$name('position'),
   },
   [builtin.clipDistances]: {
+    symbol: builtin.clipDistances,
     name: 'clip_distances',
     stage: 'vertex',
     direction: 'output',
-    type: new SimpleWgslData({
-      schema: TB.arrayOf(u32, 8),
-      byteAlignment: 16,
-      code: 'array<u32, 8>',
-    }),
-    identifier: new WgslIdentifier().$name('clip_distances'),
+    identifier: new TgpuIdentifier().$name('clip_distances'),
   },
   [builtin.frontFacing]: {
+    symbol: builtin.frontFacing,
     name: 'front_facing',
     stage: 'fragment',
     direction: 'input',
-    type: f32,
-    identifier: new WgslIdentifier().$name('front_facing'),
+    identifier: new TgpuIdentifier().$name('front_facing'),
   },
   [builtin.fragDepth]: {
+    symbol: builtin.fragDepth,
     name: 'frag_depth',
     stage: 'fragment',
     direction: 'output',
-    type: f32,
-    identifier: new WgslIdentifier().$name('frag_depth'),
+    identifier: new TgpuIdentifier().$name('frag_depth'),
   },
   [builtin.sampleIndex]: {
+    symbol: builtin.sampleIndex,
     name: 'sample_index',
     stage: 'fragment',
     direction: 'input',
-    type: u32,
-    identifier: new WgslIdentifier().$name('sample_index'),
+    identifier: new TgpuIdentifier().$name('sample_index'),
   },
   [builtin.sampleMask]: {
+    symbol: builtin.sampleMask,
     name: 'sample_mask',
     stage: 'fragment',
     direction: 'input',
-    type: u32,
-    identifier: new WgslIdentifier().$name('sample_mask'),
+    identifier: new TgpuIdentifier().$name('sample_mask'),
   },
   [builtin.fragment]: {
+    symbol: builtin.fragment,
     name: 'fragment',
     stage: 'fragment',
     direction: 'input',
-    type: vec4f,
-    identifier: new WgslIdentifier().$name('fragment'),
+    identifier: new TgpuIdentifier().$name('fragment'),
   },
   [builtin.localInvocationId]: {
+    symbol: builtin.localInvocationId,
     name: 'local_invocation_id',
     stage: 'compute',
     direction: 'input',
-    type: vec3u,
-    identifier: new WgslIdentifier().$name('local_invocation_id'),
+    identifier: new TgpuIdentifier().$name('local_invocation_id'),
   },
   [builtin.localInvocationIndex]: {
+    symbol: builtin.localInvocationIndex,
     name: 'local_invocation_index',
     stage: 'compute',
     direction: 'input',
-    type: u32,
-    identifier: new WgslIdentifier().$name('local_invocation_index'),
+    identifier: new TgpuIdentifier().$name('local_invocation_index'),
   },
   [builtin.globalInvocationId]: {
+    symbol: builtin.globalInvocationId,
     name: 'global_invocation_id',
     stage: 'compute',
     direction: 'input',
-    type: vec3u,
-    identifier: new WgslIdentifier().$name('global_invocation_id'),
+    identifier: new TgpuIdentifier().$name('global_invocation_id'),
   },
   [builtin.workgroupId]: {
+    symbol: builtin.workgroupId,
     name: 'workgroup_id',
     stage: 'compute',
     direction: 'input',
-    type: vec3u,
-    identifier: new WgslIdentifier().$name('workgroup_id'),
+    identifier: new TgpuIdentifier().$name('workgroup_id'),
   },
   [builtin.numWorkgroups]: {
+    symbol: builtin.numWorkgroups,
     name: 'num_workgroups',
     stage: 'compute',
     direction: 'input',
-    type: vec3u,
-    identifier: new WgslIdentifier().$name('num_workgroups'),
+    identifier: new TgpuIdentifier().$name('num_workgroups'),
   },
 };
 
@@ -163,5 +148,16 @@ export function getUsedBuiltinsNamed(
     }
     return { name: name, builtin: builtin };
   });
+  return res;
+}
+
+export function getUsedBuiltins(o: Record<symbol, string>): symbol[] {
+  const res = Object.getOwnPropertySymbols(o).map((s) => {
+    if (!builtinSymbolToObj[s]) {
+      throw new Error('Symbol is not a member of builtin');
+    }
+    return s;
+  });
+
   return res;
 }
