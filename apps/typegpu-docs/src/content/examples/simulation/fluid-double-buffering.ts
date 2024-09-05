@@ -87,11 +87,11 @@ const BoxObstacle = struct({
 });
 
 const gridSize = 256;
-const gridSizeBuffer = wgsl.buffer(i32).$usage(tgpu.Uniform);
+const gridSizeBuffer = tgpu.createBuffer(i32).$usage(tgpu.Uniform);
 const gridSizeUniform = asUniform(gridSizeBuffer);
 
-const gridAlphaBuffer = wgsl.buffer(GridData).$usage(tgpu.Storage);
-const gridBetaBuffer = wgsl.buffer(GridData).$usage(tgpu.Storage);
+const gridAlphaBuffer = tgpu.createBuffer(GridData).$usage(tgpu.Storage);
+const gridBetaBuffer = tgpu.createBuffer(GridData).$usage(tgpu.Storage);
 
 const inputGridSlot = wgsl
   .slot<TgpuBufferUsage<GridData>>()
@@ -184,7 +184,7 @@ const flowFromCell = wgsl.fn`
   }
 `.$name('flow_from_cell');
 
-const timeBuffer = wgsl.buffer(f32).$usage(tgpu.Uniform);
+const timeBuffer = tgpu.createBuffer(f32).$usage(tgpu.Uniform);
 
 const isInsideObstacle = wgsl.fn`
   (x: i32, y: i32) -> bool {

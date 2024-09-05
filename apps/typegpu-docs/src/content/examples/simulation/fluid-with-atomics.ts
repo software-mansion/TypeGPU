@@ -16,14 +16,13 @@ import {
 // --
 
 import { arrayOf, atomic, f32, u32, vec2u } from 'typegpu/data';
-import {
+import tgpu, {
   asMutable,
   asReadonly,
   asUniform,
   asVertex,
   builtin,
   createRuntime,
-  tgpu,
   wgsl,
 } from 'typegpu/experimental';
 
@@ -76,13 +75,13 @@ const viscosityBuffer = tgpu
   .$name('viscosity')
   .$usage(tgpu.Uniform);
 
-const currentStateBuffer = wgsl
-  .buffer(arrayOf(u32, 1024 ** 2))
+const currentStateBuffer = tgpu
+  .createBuffer(arrayOf(u32, 1024 ** 2))
   .$name('current')
   .$usage(tgpu.Storage, tgpu.Vertex);
 
-const nextStateBuffer = wgsl
-  .buffer(arrayOf(atomic(u32), 1024 ** 2))
+const nextStateBuffer = tgpu
+  .createBuffer(arrayOf(atomic(u32), 1024 ** 2))
   .$name('next')
   .$usage(tgpu.Storage);
 
@@ -96,8 +95,8 @@ const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
 const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
 const maxCompress = wgsl.constant(wgsl`12u`);
 
-const squareBuffer = wgsl
-  .buffer(arrayOf(vec2u, 4), [
+const squareBuffer = tgpu
+  .createBuffer(arrayOf(vec2u, 4), [
     vec2u(0, 0),
     vec2u(0, 1),
     vec2u(1, 0),
