@@ -14,9 +14,9 @@ const content = await Astro.slots.render('default');
   </div>
   <div>
     <h3
-      class="pb-3 text-xl font-normal md:pb-4 md:text-2xl lg:text-4xl text-grayscale-100">
+      class="pb-3 font-normal md:pb-4 text-grayscale-100">
       {header}
     </h3>
-    <p class="lg:text-xl md:text-xl text-grayscale-80">{content}</p>
+    <p class="text-grayscale-80">{content}</p>
   </div>
 </article>
