@@ -13,21 +13,29 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { asMutable, asReadonly, builtin, createRuntime, wgsl } from 'typegpu';
-import { type Parsed, dynamicArrayOf, f32, struct, vec2f } from 'typegpu/data';
+import { type Parsed, arrayOf, f32, struct, vec2f } from 'typegpu/data';
+import {
+  asMutable,
+  asReadonly,
+  builtin,
+  createRuntime,
+  wgsl,
+} from 'typegpu/experimental';
 
 const runtime = await createRuntime();
 
 const workgroupSize = [8, 8] as [number, number];
 
+const MAX_MATRIX_SIZE = 6;
+
 const MatrixStruct = struct({
   size: vec2f,
-  numbers: dynamicArrayOf(f32, 65),
+  numbers: arrayOf(f32, MAX_MATRIX_SIZE ** 2),
 });
 
 const paramSettings = {
   min: 1,
-  max: 6,
+  max: MAX_MATRIX_SIZE,
   step: 1,
 };
 
@@ -94,7 +102,6 @@ const program = runtime.makeComputePipeline({
 
     if (global_id.x + global_id.y == 0u) {
       ${resultMatrixData}.size = vec2(${firstMatrixData}.size.x, ${secondMatrixData}.size.y);
-      ${resultMatrixData}.numbers.count = u32(${firstMatrixData}.size.x) * u32(${secondMatrixData}.size.y);
     }
 
     let resultCell = vec2(global_id.x, global_id.y);
@@ -103,11 +110,11 @@ const program = runtime.makeComputePipeline({
     for (var i = 0u; i < u32(${firstMatrixData}.size.y); i = i + 1u) {
       let a = i + resultCell.x * u32(${firstMatrixData}.size.y);
       let b = resultCell.y + i * u32(${secondMatrixData}.size.y);
-      result = result + ${firstMatrixData}.numbers.values[a] * ${secondMatrixData}.numbers.values[b];
+      result = result + ${firstMatrixData}.numbers[a] * ${secondMatrixData}.numbers[b];
     }
 
     let index = resultCell.y + resultCell.x * u32(${secondMatrixData}.size.y);
-    ${resultMatrixData}.numbers.values[index] = result;
+    ${resultMatrixData}.numbers[index] = result;
 `,
 });
 

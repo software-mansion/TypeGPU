@@ -1,9 +1,9 @@
-import type { ResolutionCtx, WgslNamable, WgslResolvable } from './types';
+import type { ResolutionCtx, TgpuNamable, TgpuResolvable } from './types';
 
 /**
  * Helpful when creating new Resolvable types. For internal use.
  */
-export class WgslIdentifier implements WgslResolvable, WgslNamable {
+export class TgpuIdentifier implements TgpuResolvable, TgpuNamable {
   label?: string | undefined;
 
   $name(label: string | undefined) {

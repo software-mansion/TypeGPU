@@ -1,17 +1,17 @@
 import type { AnySchema } from 'typed-binary';
 import { builtinToType } from './builtinTypes';
-import type { SimpleWgslData, WgslArray } from './data';
+import type { SimpleTgpuData, TgpuArray } from './data';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
-import type { TypeGpuRuntime } from './typegpuRuntime';
-import type { AnyWgslData, WgslBindable, WgslResolvable } from './types';
+import type { TgpuRuntime } from './typegpuRuntime';
+import type { AnyTgpuData, TgpuBindable, TgpuResolvable } from './types';
 import { BindGroupResolver } from './wgslBindGroupResolver';
 import {
   getBuiltinInfo,
   getUsedBuiltins,
   getUsedBuiltinsNamed,
 } from './wgslBuiltin';
-import { type BoundWgslCode, type WgslCode, code } from './wgslCode';
+import { type BoundTgpuCode, type TgpuCode, code } from './wgslCode';
 
 export type Program = {
   readonly bindGroupResolver: BindGroupResolver;
@@ -26,8 +26,8 @@ type BuildOptions = {
 
 export default class ProgramBuilder {
   constructor(
-    private runtime: TypeGpuRuntime,
-    private root: WgslResolvable,
+    private runtime: TgpuRuntime,
+    private root: TgpuResolvable,
   ) {}
 
   build(options: BuildOptions): Program {
@@ -52,13 +52,13 @@ export default class ProgramBuilder {
 
 export class RenderProgramBuilder {
   constructor(
-    private runtime: TypeGpuRuntime,
-    private vertexRoot: WgslCode | BoundWgslCode,
-    private fragmentRoot: WgslCode | BoundWgslCode,
+    private runtime: TgpuRuntime,
+    private vertexRoot: TgpuCode | BoundTgpuCode,
+    private fragmentRoot: TgpuCode | BoundTgpuCode,
     private vertexOutputFormat: {
       [K in symbol]: string;
     } & {
-      [K in string]: AnyWgslData;
+      [K in string]: AnyTgpuData;
     },
   ) {}
 
@@ -115,15 +115,15 @@ export class RenderProgramBuilder {
     vertexContext.resolve(this.vertexRoot);
     const vertexBuffers = Array.from(vertexContext.usedBindables).filter(
       (bindable) => bindable.usage === 'vertex',
-    ) as WgslBindable<AnyWgslData, 'vertex'>[];
+    ) as TgpuBindable<AnyTgpuData, 'vertex'>[];
     const entries = vertexBuffers.map((elem, idx) => {
       return {
         idx: idx,
         entry: {
           bindable: elem,
           underlyingType: elem.allocatable.dataType as
-            | SimpleWgslData<AnySchema>
-            | WgslArray<AnyWgslData>,
+            | SimpleTgpuData<AnySchema>
+            | TgpuArray<AnyTgpuData>,
         },
       };
     });
@@ -226,8 +226,8 @@ export class RenderProgramBuilder {
 
 export class ComputeProgramBuilder {
   constructor(
-    private runtime: TypeGpuRuntime,
-    private computeRoot: WgslCode | BoundWgslCode,
+    private runtime: TgpuRuntime,
+    private computeRoot: TgpuCode | BoundTgpuCode,
     private workgroupSize: readonly [
       number,
       (number | null)?,

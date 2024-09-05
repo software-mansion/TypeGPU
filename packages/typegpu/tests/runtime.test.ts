@@ -68,7 +68,7 @@ const mockDevice = vi.fn(() => ({
   },
 }));
 
-describe('TypeGpuRuntime', () => {
+describe('TgpuRuntime', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });

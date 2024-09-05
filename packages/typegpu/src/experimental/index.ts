@@ -2,8 +2,8 @@
  * @module typegpu/experimental
  */
 
-import { tgpu } from '../tgpu';
-export default tgpu;
+export { tgpu } from '../tgpu';
+export { tgpu as default } from '../tgpu';
 
 export * from '../errors';
 export * from '../types';
@@ -18,17 +18,24 @@ export { std } from '../std';
 export { createRuntime, CreateRuntimeOptions } from '../createRuntime';
 export { asReadonly, asUniform, asMutable, asVertex } from '../wgslBuffer';
 
-export type { WgslBuffer } from '../wgslBuffer';
-export type { WgslBufferUsage } from '../wgslBufferUsage';
-export type { WgslCode } from '../wgslCode';
-export type { WgslConst } from '../wgslConstant';
-export type { WgslFn } from '../wgslFunction';
-export type { WgslPlum } from '../wgslPlum';
-export type { WgslSettable } from '../settableTrait';
-export type { WgslFn as WgslFnExperimental } from '../wgslFunctionExperimental';
-export type { WgslVar } from '../wgslVariable';
-export type { WgslSampler } from '../wgslSampler';
 export type {
-  WgslTexture,
-  WgslTextureView,
+  TgpuBuffer,
+  AllowMutable,
+  AllowReadonly,
+  AllowUniform,
+  AllowVertex,
+  Unmanaged,
+} from '../wgslBuffer';
+export type { TgpuBufferUsage } from '../wgslBufferUsage';
+export type { TgpuCode } from '../wgslCode';
+export type { TgpuConst } from '../wgslConstant';
+export type { TgpuFn } from '../wgslFunction';
+export type { TgpuPlum } from '../wgslPlum';
+export type { TgpuSettable } from '../settableTrait';
+export type { TgpuFn as TgpuFnExperimental } from '../wgslFunctionExperimental';
+export type { TgpuVar } from '../wgslVariable';
+export type { TgpuSampler } from '../wgslSampler';
+export type {
+  TgpuTexture,
+  TgpuTextureView,
 } from '../wgslTexture';

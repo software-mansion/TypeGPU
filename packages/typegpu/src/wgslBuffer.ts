@@ -1,14 +1,14 @@
 import { BufferWriter, type Parsed } from 'typed-binary';
-import { SimpleWgslData, WgslArrayImpl } from './data';
+import { SimpleTgpuData, TgpuArrayImpl } from './data';
 import {
-  type AnyWgslData,
+  type AnyTgpuData,
   type BufferUsage,
-  type WgslAllocatable,
-  type WgslNamable,
+  type TgpuAllocatable,
+  type TgpuNamable,
   isGPUBuffer,
 } from './types';
-import { type WgslBufferUsage, bufferUsage } from './wgslBufferUsage';
-import type { WgslPlum } from './wgslPlum';
+import { type TgpuBufferUsage, bufferUsage } from './wgslBufferUsage';
+import type { TgpuPlum } from './wgslPlum';
 
 // ----------
 // Public API
@@ -32,53 +32,56 @@ export interface AllowVertex {
   vertexAllowed: true;
 }
 
-type AllowedUsages<TData extends AnyWgslData> = {
-  uniform: WgslBufferUsage<TData, 'uniform'> | null;
-  mutable: WgslBufferUsage<TData, 'mutable'> | null;
-  readonly: WgslBufferUsage<TData, 'readonly'> | null;
-  vertex: WgslBufferUsage<TData, 'vertex'> | null;
+type AllowedUsages<TData extends AnyTgpuData> = {
+  uniform: TgpuBufferUsage<TData, 'uniform'> | null;
+  mutable: TgpuBufferUsage<TData, 'mutable'> | null;
+  readonly: TgpuBufferUsage<TData, 'readonly'> | null;
+  vertex: TgpuBufferUsage<TData, 'vertex'> | null;
 };
 
-export interface WgslBuffer<TData extends AnyWgslData>
-  extends WgslAllocatable<TData>,
-    WgslNamable {
+export interface TgpuBuffer<TData extends AnyTgpuData>
+  extends TgpuAllocatable<TData>,
+    TgpuNamable {
   $allowUniform(): this & AllowUniform;
   $allowReadonly(): this & AllowReadonly;
   $allowMutable(): this & AllowMutable;
   $allowVertex(stepMode: 'vertex' | 'instance'): this & AllowVertex;
   $addFlags(flags: GPUBufferUsageFlags): this;
   $device(device: GPUDevice): this & Unmanaged;
+  destroy(): void;
 
   _usages: AllowedUsages<TData>;
+  readonly destroyed: boolean;
   readonly label: string | undefined;
 }
 
-export function buffer<TData extends AnyWgslData>(
+export function buffer<TData extends AnyTgpuData>(
   typeSchema: TData,
-  initial?: Parsed<TData> | WgslPlum<Parsed<TData>> | undefined,
-): WgslBuffer<TData>;
+  initial?: Parsed<TData> | TgpuPlum<Parsed<TData>> | undefined,
+): TgpuBuffer<TData>;
 
-export function buffer<TData extends AnyWgslData>(
+export function buffer<TData extends AnyTgpuData>(
   typeSchema: TData,
   gpuBuffer: GPUBuffer,
-): WgslBuffer<TData>;
+): TgpuBuffer<TData>;
 
-export function buffer<TData extends AnyWgslData>(
+export function buffer<TData extends AnyTgpuData>(
   typeSchema: TData,
-  initialOrBuffer?: Parsed<TData> | WgslPlum<Parsed<TData>> | GPUBuffer,
-): WgslBuffer<TData> {
-  return new WgslBufferImpl(typeSchema, initialOrBuffer);
+  initialOrBuffer?: Parsed<TData> | TgpuPlum<Parsed<TData>> | GPUBuffer,
+): TgpuBuffer<TData> {
+  return new TgpuBufferImpl(typeSchema, initialOrBuffer);
 }
 
 // --------------
 // Implementation
 // --------------
 
-class WgslBufferImpl<TData extends AnyWgslData> implements WgslBuffer<TData> {
+class TgpuBufferImpl<TData extends AnyTgpuData> implements TgpuBuffer<TData> {
   public flags: GPUBufferUsageFlags =
     GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
   private _device: GPUDevice | null = null;
   private _buffer: GPUBuffer | null = null;
+  private _destroyed = false;
 
   _usages: AllowedUsages<TData> = {
     uniform: null,
@@ -90,13 +93,13 @@ class WgslBufferImpl<TData extends AnyWgslData> implements WgslBuffer<TData> {
   public vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null = null;
 
   private _label: string | undefined;
-  readonly initial: Parsed<TData> | WgslPlum<Parsed<TData>> | undefined;
+  readonly initial: Parsed<TData> | TgpuPlum<Parsed<TData>> | undefined;
 
   constructor(
     public readonly dataType: TData,
     public readonly initialOrBuffer?:
       | Parsed<TData>
-      | WgslPlum<Parsed<TData>>
+      | TgpuPlum<Parsed<TData>>
       | GPUBuffer
       | undefined,
   ) {
@@ -117,6 +120,9 @@ class WgslBufferImpl<TData extends AnyWgslData> implements WgslBuffer<TData> {
         'To use this property, make the buffer unmanaged by passing a GPUDevice to $device',
       );
     }
+    if (this._destroyed) {
+      throw new Error('This buffer has been destroyed');
+    }
     if (!this._buffer) {
       this._buffer = this._device.createBuffer({
         size: this.dataType.size,
@@ -135,10 +141,14 @@ class WgslBufferImpl<TData extends AnyWgslData> implements WgslBuffer<TData> {
   get device() {
     if (!this._device) {
       throw new Error(
-        'This buffer is managed by TypeGPU and cannot be used directly',
+        'This buffer has not been assigned a device. Use .$device(device) to assign a device',
       );
     }
     return this._device;
+  }
+
+  get destroyed() {
+    return this._destroyed;
   }
 
   $name(label: string) {
@@ -179,14 +189,14 @@ class WgslBufferImpl<TData extends AnyWgslData> implements WgslBuffer<TData> {
     this.$addFlags(GPUBufferUsage.VERTEX);
 
     if (!this.vertexLayout) {
-      if (this.dataType instanceof SimpleWgslData) {
+      if (this.dataType instanceof SimpleTgpuData) {
         this.vertexLayout = {
           arrayStride: this.dataType.size,
           stepMode,
         };
 
         this._usages.vertex = bufferUsage(this, 'vertex');
-      } else if (this.dataType instanceof WgslArrayImpl) {
+      } else if (this.dataType instanceof TgpuArrayImpl) {
         this.vertexLayout = {
           arrayStride: this.dataType.elementType.size,
           stepMode,
@@ -216,6 +226,14 @@ class WgslBufferImpl<TData extends AnyWgslData> implements WgslBuffer<TData> {
     return this;
   }
 
+  destroy() {
+    if (this._destroyed) {
+      return;
+    }
+    this._destroyed = true;
+    this._buffer?.destroy();
+  }
+
   toString(): string {
     return `buffer:${this._label ?? '<unnamed>'}`;
   }
@@ -229,15 +247,15 @@ function asUsage<
   TUsage extends BufferUsage,
   TType extends AllowVertex | AllowUniform | AllowReadonly | AllowMutable,
 >(usage: TUsage, _: TType) {
-  return <TData extends AnyWgslData>(
-    buffer: WgslBuffer<TData> & TType,
-  ): WgslBufferUsage<TData, TUsage> => {
+  return <TData extends AnyTgpuData>(
+    buffer: TgpuBuffer<TData> & TType,
+  ): TgpuBufferUsage<TData, TUsage> => {
     if (buffer._usages[usage] === null) {
       throw new Error(
-        `Cannot pass ${buffer} to as${capitalizeFirstLetter(usage)} function, as the buffer does not allow ${usage} usage. To allow it, use $allow${capitalizeFirstLetter(usage)} WgslBuffer method.`,
+        `Cannot pass ${buffer} to as${capitalizeFirstLetter(usage)} function, as the buffer does not allow ${usage} usage. To allow it, use $allow${capitalizeFirstLetter(usage)} TgpuBuffer method.`,
       );
     }
-    return buffer._usages[usage] as WgslBufferUsage<TData, TUsage>;
+    return buffer._usages[usage] as TgpuBufferUsage<TData, TUsage>;
   };
 }
 

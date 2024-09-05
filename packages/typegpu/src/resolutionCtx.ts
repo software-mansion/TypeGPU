@@ -5,11 +5,11 @@ import type {
   Eventual,
   ResolutionCtx,
   SlotValuePair,
+  TgpuBindable,
+  TgpuRenderResource,
+  TgpuResolvable,
+  TgpuSlot,
   Wgsl,
-  WgslBindable,
-  WgslRenderResource,
-  WgslResolvable,
-  WgslSlot,
 } from './types';
 import {
   isDepthTextureType,
@@ -20,7 +20,7 @@ import {
 } from './types';
 import type { Builtin } from './wgslBuiltin';
 import { code } from './wgslCode';
-import type { WgslIdentifier } from './wgslIdentifier';
+import type { TgpuIdentifier } from './wgslIdentifier';
 import { isTextureView } from './wgslTexture';
 
 export type ResolutionCtxImplOptions = {
@@ -28,7 +28,7 @@ export type ResolutionCtxImplOptions = {
   readonly bindingGroup?: number;
 };
 
-type SlotToValueMap = Map<WgslSlot<unknown>, unknown>;
+type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
 
 const usageToVarTemplateMap: Record<Exclude<BufferUsage, 'vertex'>, string> = {
   uniform: 'uniform',
@@ -40,20 +40,20 @@ class SharedResolutionState {
   private readonly _memoizedResolves = new WeakMap<
     // WeakMap because if the resolvable does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
-    WgslResolvable,
+    TgpuResolvable,
     { slotToValueMap: SlotToValueMap; result: string }[]
   >();
 
   private _nextFreeBindingIdx = 0;
   private _nextFreeVertexBindingIdx = 0;
-  private readonly _usedBindables = new Set<WgslBindable>();
-  private readonly _usedRenderResources = new Set<WgslRenderResource>();
+  private readonly _usedBindables = new Set<TgpuBindable>();
+  private readonly _usedRenderResources = new Set<TgpuRenderResource>();
   private readonly _resourceToIndexMap = new WeakMap<
-    WgslRenderResource | WgslBindable,
+    TgpuRenderResource | TgpuBindable,
     number
   >();
   private readonly _vertexBufferToIndexMap = new WeakMap<
-    WgslBindable,
+    TgpuBindable,
     number
   >();
   private readonly _usedBuiltins = new Set<Builtin>();
@@ -64,11 +64,11 @@ class SharedResolutionState {
     private readonly _bindingGroup: number,
   ) {}
 
-  get usedBindables(): Iterable<WgslBindable> {
+  get usedBindables(): Iterable<TgpuBindable> {
     return this._usedBindables;
   }
 
-  get usedRenderResources(): Iterable<WgslRenderResource> {
+  get usedRenderResources(): Iterable<TgpuRenderResource> {
     return this._usedRenderResources;
   }
 
@@ -85,7 +85,7 @@ class SharedResolutionState {
    * with the `compute` method.
    * @param compute Returns the resolved item and the corresponding bindingMap. This result will be discarded if a sufficient cache entry is found.
    */
-  getOrInstantiate(item: WgslResolvable, itemCtx: ScopedResolutionCtx): string {
+  getOrInstantiate(item: TgpuResolvable, itemCtx: ScopedResolutionCtx): string {
     // All memoized versions of `item`
     const instances = this._memoizedResolves.get(item) ?? [];
 
@@ -114,7 +114,7 @@ class SharedResolutionState {
     }
 
     // We know which bindables the item used while resolving
-    const slotToValueMap = new Map<WgslSlot<unknown>, unknown>();
+    const slotToValueMap = new Map<TgpuSlot<unknown>, unknown>();
     for (const usedSlot of itemCtx.usedSlots) {
       slotToValueMap.set(usedSlot, itemCtx.readSlot(usedSlot));
     }
@@ -125,7 +125,7 @@ class SharedResolutionState {
     return result;
   }
 
-  reserveBindingEntry(bindable: WgslBindable) {
+  reserveBindingEntry(bindable: TgpuBindable) {
     this._usedBindables.add(bindable);
     const nextIdx = this._nextFreeBindingIdx++;
     this._resourceToIndexMap.set(bindable, nextIdx);
@@ -133,13 +133,13 @@ class SharedResolutionState {
     return { group: this._bindingGroup, idx: nextIdx };
   }
 
-  registerVertexEntry(bindable: WgslBindable) {
+  registerVertexEntry(bindable: TgpuBindable) {
     this._usedBindables.add(bindable);
     const nextIdx = this._nextFreeVertexBindingIdx++;
     this._vertexBufferToIndexMap.set(bindable, nextIdx);
   }
 
-  reserveRenderResourceEntry(resource: WgslRenderResource) {
+  reserveRenderResourceEntry(resource: TgpuRenderResource) {
     this._usedRenderResources.add(resource);
     const nextIdx = this._nextFreeBindingIdx++;
     this._resourceToIndexMap.set(resource, nextIdx);
@@ -147,7 +147,7 @@ class SharedResolutionState {
     return { group: this._bindingGroup, idx: nextIdx };
   }
 
-  getBindingIndex(resource: WgslRenderResource | WgslBindable) {
+  getBindingIndex(resource: TgpuRenderResource | TgpuBindable) {
     return this._resourceToIndexMap.get(resource);
   }
 
@@ -163,7 +163,7 @@ class SharedResolutionState {
 export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _shared: SharedResolutionState;
 
-  usedSlots = new Set<WgslSlot<unknown>>();
+  usedSlots = new Set<TgpuSlot<unknown>>();
 
   constructor({ names, bindingGroup }: ResolutionCtxImplOptions) {
     this._shared = new SharedResolutionState(names, bindingGroup ?? 0);
@@ -181,17 +181,17 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._shared.usedBuiltins;
   }
 
-  addDeclaration(_declaration: WgslResolvable) {
+  addDeclaration(_declaration: TgpuResolvable) {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
-  addBinding(_bindable: WgslBindable, _identifier: WgslIdentifier): void {
+  addBinding(_bindable: TgpuBindable, _identifier: TgpuIdentifier): void {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
   addRenderResource(
-    resource: WgslRenderResource,
-    identifier: WgslIdentifier,
+    resource: TgpuRenderResource,
+    identifier: TgpuIdentifier,
   ): void {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
@@ -200,11 +200,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
-  nameFor(item: WgslResolvable): string {
+  nameFor(item: TgpuResolvable): string {
     return this._shared.names.nameFor(item);
   }
 
-  readSlot<T>(slot: WgslSlot<T>): T {
+  readSlot<T>(slot: TgpuSlot<T>): T {
     if (slot.defaultValue === undefined) {
       throw new MissingSlotValueError(slot);
     }
@@ -232,7 +232,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return `${[...this._shared.declarations].join('\n\n')}${result}`;
   }
 
-  getIndexFor(item: WgslBindable | WgslRenderResource) {
+  getIndexFor(item: TgpuBindable | TgpuRenderResource) {
     const index = this._shared.getBindingIndex(item);
     if (index === undefined) {
       throw new Error('No index found for item');
@@ -242,7 +242,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 }
 
 class ScopedResolutionCtx implements ResolutionCtx {
-  usedSlots = new Set<WgslSlot<unknown>>();
+  usedSlots = new Set<TgpuSlot<unknown>>();
 
   constructor(
     private readonly _parent: ResolutionCtxImpl | ScopedResolutionCtx,
@@ -250,11 +250,11 @@ class ScopedResolutionCtx implements ResolutionCtx {
     private readonly _slotValuePairs: SlotValuePair<unknown>[],
   ) {}
 
-  addDeclaration(declaration: WgslResolvable): void {
+  addDeclaration(declaration: TgpuResolvable): void {
     this._shared.addDeclaration(this.resolve(declaration));
   }
 
-  addBinding(bindable: WgslBindable, identifier: WgslIdentifier): void {
+  addBinding(bindable: TgpuBindable, identifier: TgpuIdentifier): void {
     if (bindable.usage === 'vertex') {
       this._shared.registerVertexEntry(bindable);
       return;
@@ -267,8 +267,8 @@ class ScopedResolutionCtx implements ResolutionCtx {
   }
 
   addRenderResource(
-    resource: WgslRenderResource,
-    identifier: WgslIdentifier,
+    resource: TgpuRenderResource,
+    identifier: TgpuIdentifier,
   ): void {
     const { group, idx } = this._shared.reserveRenderResourceEntry(resource);
 
@@ -303,11 +303,11 @@ class ScopedResolutionCtx implements ResolutionCtx {
     this._shared.addBuiltin(builtin);
   }
 
-  nameFor(token: WgslResolvable): string {
+  nameFor(token: TgpuResolvable): string {
     return this._shared.names.nameFor(token);
   }
 
-  readSlot<T>(slot: WgslSlot<T>): T {
+  readSlot<T>(slot: TgpuSlot<T>): T {
     const slotToValuePair = this._slotValuePairs.find(
       ([boundSlot]) => boundSlot === slot,
     ) as SlotValuePair<T> | undefined;
