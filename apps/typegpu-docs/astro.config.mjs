@@ -53,6 +53,10 @@ export default defineConfig({
               label: 'Getting Started',
               slug: 'guides/getting-started',
             },
+            {
+              label: 'Defining Data Types',
+              slug: 'guides/defining-data-types',
+            },
             // {
             //   label: 'Basic Principles',
             //   slug: 'guides/basic-principles',
