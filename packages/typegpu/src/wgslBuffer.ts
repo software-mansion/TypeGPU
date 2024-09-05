@@ -141,7 +141,7 @@ class TgpuBufferImpl<TData extends AnyTgpuData> implements TgpuBuffer<TData> {
   get device() {
     if (!this._device) {
       throw new Error(
-        'This buffer has not been assigned a device. Use $device to assign a device',
+        'This buffer has not been assigned a device. Use .$device(device) to assign a device',
       );
     }
     return this._device;
