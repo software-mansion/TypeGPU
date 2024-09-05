@@ -23,6 +23,10 @@ const Circle = struct({
   radius: f32,
 });
 
+// type Circle = {
+//   centerPos: vec3i;
+//   radius: number;
+// }
 type Circle = Parsed<typeof Circle>;
 
 const redCircle: Circle = {
@@ -31,18 +35,7 @@ const redCircle: Circle = {
 };
 ```
 
-By defining the `Circle` struct in TypeScript via TypeGPU, in a similar way to how we would in WGSL, we gain access to its TypeScript type definition, which we can use to validate our data values. When reading from or writing data to the GPU, the type of the JavaScript value is inferred automatically, and it's enforced by TypeScript. That's a big improvement to the development process.
-
-Here the `Circle` type evaluates to: 
-
-```ts
-type Circle = {
-  centerPos: vec3i;
-  radius: number;
-}
-```
-
-Thanks to that, whenever we mistakenly set or assume a wrong value for an object, we get a type error, avoiding unnecessary debugging afterwards.
+By defining the `Circle` struct in TypeScript via TypeGPU, in a similar way to how we would in WGSL, we gain access to its TypeScript type definition, which we can use to validate our data values. When reading from or writing data to the GPU, the type of the JavaScript value is inferred automatically, and it's enforced by TypeScript. Thanks to that, whenever we mistakenly set or assume a wrong value for an object, we get a type error, avoiding unnecessary debugging afterwards. That's a big improvement to the development process.
 
 ```ts
 const redCircle: Circle = {
@@ -78,26 +71,31 @@ TypeGPU data types are essential for the library's automated data marshalling ca
 
 ## Built-in primitive data types
 
-| schema | type |  TS type | byte alignment|
-| --- | --- | --- | --- |
-| u32 | U32 | number | 4 |
-| f32 | F32 | number | 4 |
-| i32 | I32 | number | 4 |
-| bool | Bool | boolean | 4 |
+import { Code } from '@astrojs/starlight/components';
 
-## Vector types
+| Schema | JavaScript | WGSL |
+| --- | --- | --- |
+| <Code code="import { f32 } from 'typegpu/data';" lang="js" />  | `number`  | `f32`  |
+| <Code code="import { i32 } from 'typegpu/data';" lang="js" />  | `number`  | `i32`  |
+| <Code code="import { u32 } from 'typegpu/data';" lang="js" />  | `number`  | `u32`  |
+| <Code code="import { bool } from 'typegpu/data';" lang="js" /> | `boolean` | `bool` |
 
-| schema | constructor | type |  WGSL equivalents | byte alignment|
-| --- | --- | --- | --- | --- |
-| vec2u | `vec2u(x: number, y: number)`, `vec2u(xy: number)`, `vec2u()` | Vec2u | vec2u, vec2\<u32\> | 8 |
-| vec2f | `vec2f(x: number, y: number)`, `vec2f(xy: number)`, `vec2f()` | Vec2f | vec2f, vec2\<f32\> | 8 |
-| vec2i | `vec2i(x: number, y: number)`, `vec2i(xy: number)`, `vec2i()` | Vec2i | vec2i, vec2\<i32\> | 8 |
-| vec3u | `vec3u(x: number, y: number, z:number)`, `vec3u(xyz: number)`, `vec3u()`  | Vec3u | vec3u, vec3\<u32\> | 16 |
-| vec3f | `vec3f(x: number, y: number, z:number)`, `vec3f(xyz: number)`, `vec3f()`  | Vec3f | vec3f, vec3\<f32\> | 16 |
-| vec3i | `vec3i(x: number, y: number, z:number)`, `vec3i(xyz: number)`, `vec3i()`  | Vec3i | vec3i, vec3\<i32\> | 16 |
-| vec4u | `vec4u(x: number, y: number, z:number, w:number)`, `vec4u(xyzw: number)`, `vec4u()`  | Vec4u | vec4u, vec4\<u32\> | 16 |
-| vec4f | `vec4f(x: number, y: number, z:number, w:number)`, `vec4f(xyzw: number)`, `vec4f()`  | Vec4f | vec4f, vec4\<f32\> | 16 |
-| vec4i | `vec4i(x: number, y: number, z:number, w:number)`, `vec4i(xyzw: number)`, `vec4i()`  | Vec4i | vec4i, vec4\<i32\> | 16 |
+## Vector and matrix types
+
+| Schema | Value constructors | WGSL equivalents |
+| --- | --- | --- |
+| `vec2u` | <ul><li>`vec2u(x: number, y: number)`</li> <li>`vec2u(xy: number)`</li> <li>`vec2u()`</li></ul> | vec2u, vec2\<u32\> |
+| `vec2f` | <ul><li>`vec2f(x: number, y: number)`</li> <li>`vec2f(xy: number)`</li> <li>`vec2f()`</li></ul> | vec2f, vec2\<f32\> |
+| `vec2i` | <ul><li>`vec2i(x: number, y: number)`</li> <li>`vec2i(xy: number)`</li> <li>`vec2i()`</li></ul> | vec2i, vec2\<i32\> |
+| `vec3u` | <ul><li>`vec3u(x: number, y: number, z: number)`</li> <li>`vec3u(xyz: number)`</li> <li>`vec3u()`</li></ul>  | vec3u, vec3\<u32\> |
+| `vec3f` | <ul><li>`vec3f(x: number, y: number, z: number)`</li> <li>`vec3f(xyz: number)`</li> <li>`vec3f()`</li></ul>  | vec3f, vec3\<f32\> |
+| `vec3i` | <ul><li>`vec3i(x: number, y: number, z: number)`</li> <li>`vec3i(xyz: number)`</li> <li>`vec3i()`</li></ul>  | vec3i, vec3\<i32\> |
+| `vec4u` | <ul><li>`vec4u(x: number, y: number, z: number, w: number)`</li> <li>`vec4u(xyzw: number)`</li> <li>`vec4u()`</li></ul>  | vec4u, vec4\<u32\> |
+| `vec4f` | <ul><li>`vec4f(x: number, y: number, z: number, w: number)`</li> <li>`vec4f(xyzw: number)`</li> <li>`vec4f()`</li></ul>  | vec4f, vec4\<f32\> |
+| `vec4i` | <ul><li>`vec4i(x: number, y: number, z: number, w: number)`</li> <li>`vec4i(xyzw: number)`</li> <li>`vec4i()`</li></ul>  | vec4i, vec4\<i32\> |
+| `mat2x2f` | <ul><li>`vec2x2f(...elements: number[])`</li> <li>`vec2x2f(...columns: vec2f[])`</li> <li>`vec2x2f()`</li></ul>  | mat2x2f, mat2x2\<f32\> |
+| `mat3x3f` | <ul><li>`vec3x3f(...elements: number[])`</li> <li>`vec3x3f(...columns: vec3f[])`</li> <li>`vec3x3f()`</li></ul>  | mat3x3f, mat3x3\<f32\> |
+| `mat4x4f` | <ul><li>`vec4x4f(...elements: number[])`</li> <li>`vec4x4f(...columns: vec4f[])`</li> <li>`vec4x4f()`</li></ul>  | mat4x4f, mat4x4\<f32\> |
 
 ## Complex data structures
 
