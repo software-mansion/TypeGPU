@@ -642,7 +642,11 @@ interface vec4 {
 }
 
 const vecProxyHandler: ProxyHandler<vecBase> = {
-  get: (target, prop: string) => {
+  get: (target, prop) => {
+    if (typeof prop === 'symbol') {
+      return Reflect.get(target, prop);
+    }
+
     const targetAsVec4 = target as unknown as vec4uImpl;
     const values = new Array(prop.length) as number[];
 
@@ -688,7 +692,7 @@ const vecProxyHandler: ProxyHandler<vecBase> = {
       return targetAsVec4.make2(values[0] as number, values[1] as number);
     }
 
-    return Reflect.get(targetAsVec4, prop);
+    return Reflect.get(target, prop);
   },
 };
 
@@ -761,8 +765,9 @@ export const vec2f = new VecSchemaImpl({
   byteAlignment: 8,
   length: 2,
   label: 'vec2f',
-  make: (x: number, y: number) => new vec2fImpl(x, y),
-  makeFromScalar: (x) => new vec2fImpl(x, x),
+  make: (x: number, y: number) =>
+    new Proxy(new vec2fImpl(x, y), vecProxyHandler),
+  makeFromScalar: (x) => new Proxy(new vec2fImpl(x, x), vecProxyHandler),
 }) as unknown as Vec2f;
 
 export type Vec2i = TgpuData<vec2i> &
@@ -775,8 +780,9 @@ export const vec2i = new VecSchemaImpl({
   byteAlignment: 8,
   length: 2,
   label: 'vec2i',
-  make: (x: number, y: number) => new vec2iImpl(x, y),
-  makeFromScalar: (x) => new vec2iImpl(x, x),
+  make: (x: number, y: number) =>
+    new Proxy(new vec2iImpl(x, y), vecProxyHandler),
+  makeFromScalar: (x) => new Proxy(new vec2iImpl(x, x), vecProxyHandler),
 }) as unknown as Vec2i;
 
 export type Vec2u = TgpuData<vec2u> &
@@ -789,8 +795,9 @@ export const vec2u = new VecSchemaImpl({
   byteAlignment: 8,
   length: 2,
   label: 'vec2u',
-  make: (x: number, y: number) => new vec2uImpl(x, y),
-  makeFromScalar: (x) => new vec2uImpl(x, x),
+  make: (x: number, y: number) =>
+    new Proxy(new vec2uImpl(x, y), vecProxyHandler),
+  makeFromScalar: (x) => new Proxy(new vec2uImpl(x, x), vecProxyHandler),
 }) as unknown as Vec2u;
 
 export type Vec3f = TgpuData<vec3f> &
@@ -803,8 +810,8 @@ export const vec3f = new VecSchemaImpl({
   byteAlignment: 16,
   length: 3,
   label: 'vec3f',
-  make: (x, y, z) => new vec3fImpl(x, y, z),
-  makeFromScalar: (x) => new vec3fImpl(x, x, x),
+  make: (x, y, z) => new Proxy(new vec3fImpl(x, y, z), vecProxyHandler),
+  makeFromScalar: (x) => new Proxy(new vec3fImpl(x, x, x), vecProxyHandler),
 }) as unknown as Vec3f;
 
 export type Vec3i = TgpuData<vec3i> &
@@ -817,8 +824,8 @@ export const vec3i = new VecSchemaImpl({
   byteAlignment: 16,
   length: 3,
   label: 'vec3i',
-  make: (x, y, z) => new vec3iImpl(x, y, z),
-  makeFromScalar: (x) => new vec3iImpl(x, x, x),
+  make: (x, y, z) => new Proxy(new vec3iImpl(x, y, z), vecProxyHandler),
+  makeFromScalar: (x) => new Proxy(new vec3iImpl(x, x, x), vecProxyHandler),
 }) as unknown as Vec3i;
 
 export type Vec3u = TgpuData<vec3u> &
@@ -827,15 +834,6 @@ export type Vec3u = TgpuData<vec3u> &
   (() => vec3u);
 
 export const vec3u = new VecSchemaImpl({
-  unitType: u32,
-  byteAlignment: 16,
-  length: 3,
-  label: 'vec3u',
-  make: (x, y, z) => new vec3uImpl(x, y, z),
-  makeFromScalar: (x) => new vec3uImpl(x, x, x),
-}) as unknown as Vec3u;
-
-export const vec3uWProxy = new VecSchemaImpl({
   unitType: u32,
   byteAlignment: 16,
   length: 3,
@@ -854,8 +852,8 @@ export const vec4f = new VecSchemaImpl({
   byteAlignment: 16,
   length: 4,
   label: 'vec4f',
-  make: (x, y, z, w) => new vec4fImpl(x, y, z, w),
-  makeFromScalar: (x) => new vec4fImpl(x, x, x, x),
+  make: (x, y, z, w) => new Proxy(new vec4fImpl(x, y, z, w), vecProxyHandler),
+  makeFromScalar: (x) => new Proxy(new vec4fImpl(x, x, x, x), vecProxyHandler),
 }) as unknown as Vec4f;
 
 export type Vec4i = TgpuData<vec4i> &
@@ -868,8 +866,8 @@ export const vec4i = new VecSchemaImpl({
   byteAlignment: 16,
   length: 4,
   label: 'vec4i',
-  make: (x, y, z, w) => new vec4iImpl(x, y, z, w),
-  makeFromScalar: (x) => new vec4iImpl(x, x, x, x),
+  make: (x, y, z, w) => new Proxy(new vec4iImpl(x, y, z, w), vecProxyHandler),
+  makeFromScalar: (x) => new Proxy(new vec4iImpl(x, x, x, x), vecProxyHandler),
 }) as unknown as Vec4i;
 
 export type Vec4u = TgpuData<vec4u> &
@@ -882,6 +880,6 @@ export const vec4u = new VecSchemaImpl({
   byteAlignment: 16,
   length: 4,
   label: 'vec4u',
-  make: (x, y, z, w) => new vec4uImpl(x, y, z, w),
-  makeFromScalar: (x) => new vec4uImpl(x, x, x, x),
+  make: (x, y, z, w) => new Proxy(new vec4uImpl(x, y, z, w), vecProxyHandler),
+  makeFromScalar: (x) => new Proxy(new vec4uImpl(x, x, x, x), vecProxyHandler),
 }) as unknown as Vec4u;
