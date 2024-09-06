@@ -14,8 +14,15 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { builtin, createRuntime, tgpu, wgsl } from 'typegpu';
-import { struct, u32, vec2f } from 'typegpu/data';
+import { JitWebTranspiler } from '@typegpu/jit-web';
+import { f32, struct, u32, vec2f, vec4f } from 'typegpu/data';
+import {
+  asUniform,
+  builtin,
+  createRuntime,
+  tgpu,
+  wgsl,
+} from 'typegpu/experimental';
 
 const xSpanPlum = addSliderPlumParameter('x span', 16, {
   min: 1,
@@ -31,11 +38,11 @@ const ySpanPlum = addSliderPlumParameter('y span', 16, {
 const spanPlum = wgsl.plum((get) => ({ x: get(xSpanPlum), y: get(ySpanPlum) }));
 const spanBuffer = wgsl
   .buffer(struct({ x: u32, y: u32 }), spanPlum)
-  .$name('span')
-  .$allowUniform();
-const spanUniform = spanBuffer.asUniform();
+  .$usage(tgpu.Uniform)
+  .$name('span');
+const spanUniform = asUniform(spanBuffer);
 
-const runtime = await createRuntime();
+const runtime = await createRuntime({ jitTranspiler: new JitWebTranspiler() });
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -50,7 +57,7 @@ const VertexOutput = struct({ uv: vec2f });
 
 const vertexStep = tgpu
   .fn([], VertexOutput)
-  .impl(() => {
+  .implement(() => {
     const pos = [
       vec2f(1, 1), // top-right
       vec2f(-1, 1), // top-left
@@ -66,18 +73,18 @@ const vertexStep = tgpu
     ];
 
     return {
-      [builtin.position]: vec4f(pos[builtin.vertexIndex.value], 0.0, 1.0),
-      uv: uv[builtin.vertexIndex.value],
+      [builtin.position]: vec4f(pos[builtin.vertexIndex], 0.0, 1.0),
+      uv: uv[builtin.vertexIndex],
     };
   })
   .$uses({});
 
 const fragmentStep = tgpu
   .fn([VertexOutput])
-  .impl((input) => {
+  .implement((input) => {
     const span = spanUniform.value;
-    const red = floor(input.uv.x * f32(span.x)) / f32(span.x);
-    const green = floor(input.uv.y * f32(span.y)) / f32(span.y);
+    const red = std.floor(input.uv.x * f32(span.x)) / f32(span.x);
+    const green = std.floor(input.uv.y * f32(span.y)) / f32(span.y);
     return vec4f(red, green, 0.5, 1.0);
   })
   .$uses({ spanUniform });
