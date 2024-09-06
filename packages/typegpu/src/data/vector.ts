@@ -641,30 +641,34 @@ interface vec4 {
   [Symbol.iterator](): Iterator<number>;
 }
 
-const vec3uProxyHandler: ProxyHandler<vec3uImpl> = {
+const vecProxyHandler: ProxyHandler<vecBase> = {
   get: (target, prop: string) => {
+    const targetAsVec4 = target as unknown as vec4uImpl;
     const values = new Array(prop.length) as number[];
 
     let idx = 0;
     for (const char of prop as string) {
       switch (char) {
         case 'x':
-          values[idx] = target.x;
+          values[idx] = targetAsVec4.x;
           break;
         case 'y':
-          values[idx] = target.y;
+          values[idx] = targetAsVec4.y;
           break;
         case 'z':
-          values[idx] = target.z;
+          values[idx] = targetAsVec4.z;
+          break;
+        case 'w':
+          values[idx] = targetAsVec4.w;
           break;
         default:
-          return Reflect.get(target, prop);
+          return Reflect.get(targetAsVec4, prop);
       }
       idx++;
     }
 
     if (prop.length === 4) {
-      return target.make4(
+      return targetAsVec4.make4(
         values[0] as number,
         values[1] as number,
         values[2] as number,
@@ -673,7 +677,7 @@ const vec3uProxyHandler: ProxyHandler<vec3uImpl> = {
     }
 
     if (prop.length === 3) {
-      return target.make3(
+      return targetAsVec4.make3(
         values[0] as number,
         values[1] as number,
         values[2] as number,
@@ -681,10 +685,10 @@ const vec3uProxyHandler: ProxyHandler<vec3uImpl> = {
     }
 
     if (prop.length === 2) {
-      return target.make2(values[0] as number, values[1] as number);
+      return targetAsVec4.make2(values[0] as number, values[1] as number);
     }
 
-    return Reflect.get(target, prop);
+    return Reflect.get(targetAsVec4, prop);
   },
 };
 
@@ -836,8 +840,8 @@ export const vec3uWProxy = new VecSchemaImpl({
   byteAlignment: 16,
   length: 3,
   label: 'vec3u',
-  make: (x, y, z) => new Proxy(new vec3uImpl(x, y, z), vec3uProxyHandler),
-  makeFromScalar: (x) => new Proxy(new vec3uImpl(x, x, x), vec3uProxyHandler),
+  make: (x, y, z) => new Proxy(new vec3uImpl(x, y, z), vecProxyHandler),
+  makeFromScalar: (x) => new Proxy(new vec3uImpl(x, x, x), vecProxyHandler),
 }) as unknown as Vec3u;
 
 export type Vec4f = TgpuData<vec4f> &
