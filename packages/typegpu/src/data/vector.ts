@@ -672,24 +672,33 @@ const vecProxyHandler: ProxyHandler<vecBase> = {
     }
 
     if (prop.length === 4) {
-      return targetAsVec4.make4(
-        values[0] as number,
-        values[1] as number,
-        values[2] as number,
-        values[3] as number,
+      return new Proxy(
+        targetAsVec4.make4(
+          values[0] as number,
+          values[1] as number,
+          values[2] as number,
+          values[3] as number,
+        ),
+        vecProxyHandler,
       );
     }
 
     if (prop.length === 3) {
-      return targetAsVec4.make3(
-        values[0] as number,
-        values[1] as number,
-        values[2] as number,
+      return new Proxy(
+        targetAsVec4.make3(
+          values[0] as number,
+          values[1] as number,
+          values[2] as number,
+        ),
+        vecProxyHandler,
       );
     }
 
     if (prop.length === 2) {
-      return targetAsVec4.make2(values[0] as number, values[1] as number);
+      return new Proxy(
+        targetAsVec4.make2(values[0] as number, values[1] as number),
+        vecProxyHandler,
+      );
     }
 
     return Reflect.get(target, prop);
