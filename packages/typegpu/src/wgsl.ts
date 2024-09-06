@@ -1,14 +1,14 @@
-import { buffer } from './wgslBuffer';
-import { code } from './wgslCode';
-import { constant } from './wgslConstant';
-import { declare } from './wgslDeclare';
-import { fn } from './wgslFunction';
-import { fn as fun } from './wgslFunctionExperimental';
-import { plum, plumFromEvent } from './wgslPlum';
-import { sampler } from './wgslSampler';
-import { slot } from './wgslSlot';
-import { texture, textureExternal } from './wgslTexture';
-import { variable } from './wgslVariable';
+import { buffer } from './tgpuBuffer';
+import { code } from './tgpuCode';
+import { constant } from './tgpuConstant';
+import { declare } from './tgpuDeclare';
+import { fn } from './tgpuFunction';
+import { fn as fun } from './tgpuFunctionExperimental';
+import { plum, plumFromEvent } from './tgpuPlum';
+import { sampler } from './tgpuSampler';
+import { slot } from './tgpuSlot';
+import { texture, textureExternal } from './tgpuTexture';
+import { variable } from './tgpuVariable';
 
 export default Object.assign(code, {
   code,

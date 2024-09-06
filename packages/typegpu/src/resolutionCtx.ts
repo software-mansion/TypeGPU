@@ -1,5 +1,9 @@
+import type { Builtin } from './builtin';
 import { MissingSlotValueError, ResolutionError } from './errors';
 import type { NameRegistry } from './nameRegistry';
+import { code } from './tgpuCode';
+import type { TgpuIdentifier } from './tgpuIdentifier';
+import { isTextureView } from './tgpuTexture';
 import type {
   BufferUsage,
   Eventual,
@@ -18,10 +22,6 @@ import {
   isSamplerType,
   isSlot,
 } from './types';
-import type { Builtin } from './wgslBuiltin';
-import { code } from './wgslCode';
-import type { TgpuIdentifier } from './wgslIdentifier';
-import { isTextureView } from './wgslTexture';
 
 export type ResolutionCtxImplOptions = {
   readonly names: NameRegistry;

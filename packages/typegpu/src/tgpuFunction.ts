@@ -1,3 +1,5 @@
+import { code } from './tgpuCode';
+import { TgpuIdentifier } from './tgpuIdentifier';
 import type {
   Eventual,
   InlineResolve,
@@ -8,8 +10,6 @@ import type {
   TgpuSlot,
   Wgsl,
 } from './types';
-import { code } from './wgslCode';
-import { TgpuIdentifier } from './wgslIdentifier';
 
 // ----------
 // Public API

@@ -1,3 +1,4 @@
+import { getBuiltinInfo } from './builtin';
 import {
   type Eventual,
   type InlineResolve,
@@ -9,7 +10,6 @@ import {
   type Wgsl,
   isResolvable,
 } from './types';
-import { getBuiltinInfo } from './wgslBuiltin';
 
 // ----------
 // Public API

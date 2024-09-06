@@ -17,9 +17,9 @@ export {
   isUsableAsStorage,
   isUsableAsUniform,
   isUsableAsVertex,
-} from './wgslBuffer';
+} from './tgpuBuffer';
 
 export type {
   TgpuBuffer,
   Unmanaged,
-} from './wgslBuffer';
+} from './tgpuBuffer';

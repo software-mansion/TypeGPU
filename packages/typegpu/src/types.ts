@@ -1,8 +1,8 @@
 import type { ISchema, Parsed } from 'typed-binary';
+import type { Builtin } from './builtin';
 import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from './data';
-import type { Builtin } from './wgslBuiltin';
-import type { TgpuIdentifier } from './wgslIdentifier';
-import type { TgpuPlum } from './wgslPlum';
+import type { TgpuIdentifier } from './tgpuIdentifier';
+import type { TgpuPlum } from './tgpuPlum';
 
 export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
 

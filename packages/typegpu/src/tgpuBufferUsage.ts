@@ -1,10 +1,4 @@
 import { SimpleTgpuData, TgpuArrayImpl } from './data';
-import type {
-  AnyTgpuData,
-  BufferUsage,
-  ResolutionCtx,
-  TgpuBindable,
-} from './types';
 import {
   type Storage,
   type TgpuBuffer,
@@ -13,8 +7,14 @@ import {
   isUsableAsStorage,
   isUsableAsUniform,
   isUsableAsVertex,
-} from './wgslBuffer';
-import { TgpuIdentifier } from './wgslIdentifier';
+} from './tgpuBuffer';
+import { TgpuIdentifier } from './tgpuIdentifier';
+import type {
+  AnyTgpuData,
+  BufferUsage,
+  ResolutionCtx,
+  TgpuBindable,
+} from './types';
 
 // ----------
 // Public API

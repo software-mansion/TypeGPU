@@ -1,6 +1,6 @@
+import { code } from './tgpuCode';
+import { TgpuIdentifier } from './tgpuIdentifier';
 import type { ResolutionCtx, TgpuNamable, TgpuResolvable, Wgsl } from './types';
-import { code } from './wgslCode';
-import { TgpuIdentifier } from './wgslIdentifier';
 
 // ----------
 // Public API

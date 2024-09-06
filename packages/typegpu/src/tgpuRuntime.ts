@@ -3,15 +3,15 @@ import type { Parsed } from 'typed-binary';
 import type { SimpleTgpuData, TgpuArray } from './data';
 import type { PlumListener } from './plumStore';
 import type { TgpuSettable } from './settableTrait';
-import type { AnyTgpuData, TgpuAllocatable } from './types';
-import type { BoundTgpuCode, TgpuCode } from './wgslCode';
-import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './wgslPlum';
-import type { TgpuSampler } from './wgslSampler';
+import type { BoundTgpuCode, TgpuCode } from './tgpuCode';
+import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlum';
+import type { TgpuSampler } from './tgpuSampler';
 import type {
   TgpuAnyTexture,
   TgpuAnyTextureView,
   TgpuTextureExternal,
-} from './wgslTexture';
+} from './tgpuTexture';
+import type { AnyTgpuData, TgpuAllocatable } from './types';
 
 // ----------
 // Public API

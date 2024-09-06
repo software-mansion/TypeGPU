@@ -1,3 +1,4 @@
+import { builtin } from './builtin';
 import {
   type F32,
   type TgpuArray,
@@ -10,7 +11,6 @@ import {
   vec3u,
   vec4f,
 } from './data';
-import { builtin } from './wgslBuiltin';
 
 export type BuiltInPossibleTypes = U32 | F32 | Vec3u | Vec4f | TgpuArray<U32>;
 

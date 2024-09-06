@@ -1,16 +1,16 @@
 import type { SimpleTgpuData } from './data';
 import type { ResolutionCtxImpl } from './resolutionCtx';
-import { deriveVertexFormat } from './typegpuRuntime';
-import type { TgpuRuntime } from './typegpuRuntime';
-import type { AnyTgpuData, BufferUsage, TgpuBindable } from './types';
-import type { TgpuBufferVertex } from './wgslBufferUsage';
-import { type TgpuSampler, isSampler } from './wgslSampler';
+import type { TgpuBufferVertex } from './tgpuBufferUsage';
+import { deriveVertexFormat } from './tgpuRuntime';
+import type { TgpuRuntime } from './tgpuRuntime';
+import { type TgpuSampler, isSampler } from './tgpuSampler';
 import {
   type TgpuAnyTextureView,
   type TgpuTextureExternal,
   isExternalTexture,
   isTextureView,
-} from './wgslTexture';
+} from './tgpuTexture';
+import type { AnyTgpuData, BufferUsage, TgpuBindable } from './types';
 
 const usageToBindingTypeMap: Record<
   Exclude<BufferUsage, 'vertex'>,

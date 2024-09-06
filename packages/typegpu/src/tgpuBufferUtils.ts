@@ -1,7 +1,7 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import { roundUp } from './mathUtils';
+import type { TgpuBuffer, Unmanaged } from './tgpuBuffer';
 import type { AnyTgpuData } from './types';
-import type { TgpuBuffer, Unmanaged } from './wgslBuffer';
 
 export function write<TData extends AnyTgpuData>(
   buffer: TgpuBuffer<TData> & Unmanaged,

@@ -3,7 +3,7 @@ import { afterEach } from 'vitest';
 import { createRuntime } from '../src/createRuntime';
 import { struct, u32, vec3i, vec4u } from '../src/data';
 import tgpu, { asReadonly, asUniform, wgsl } from '../src/experimental';
-import { plum } from '../src/wgslPlum';
+import { plum } from '../src/tgpuPlum';
 
 global.GPUBufferUsage = {
   MAP_READ: 1,
