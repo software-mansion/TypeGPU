@@ -2,8 +2,18 @@
  * @module typegpu
  */
 
-export * as tgpu from './tgpu';
-import * as tgpu from './tgpu';
+import { read, write } from './tgpuBufferUtils';
+import { Storage, Uniform, Vertex, createBuffer } from './wgslBuffer';
+
+export const tgpu = {
+  Uniform,
+  Storage,
+  Vertex,
+
+  createBuffer,
+  read,
+  write,
+};
 export default tgpu;
 
 export { RecursiveDataTypeError } from './errors';

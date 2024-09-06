@@ -2,8 +2,21 @@
  * @module typegpu/experimental
  */
 
-export * as tgpu from '../tgpu';
-import * as tgpu from '../tgpu';
+import { read, write } from '../tgpuBufferUtils';
+import { fn, procedure } from '../tgpuFn';
+import { Storage, Uniform, Vertex, createBuffer } from '../wgslBuffer';
+
+export const tgpu = {
+  Uniform,
+  Storage,
+  Vertex,
+
+  createBuffer,
+  read,
+  write,
+  fn,
+  procedure,
+};
 export default tgpu;
 
 export * from '../errors';

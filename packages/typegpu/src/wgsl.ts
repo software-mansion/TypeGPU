@@ -1,4 +1,3 @@
-import { buffer } from './wgslBuffer';
 import { code } from './wgslCode';
 import { constant } from './wgslConstant';
 import { declare } from './wgslDeclare';
@@ -14,7 +13,6 @@ export default Object.assign(code, {
   code,
   fn,
   fun,
-  buffer,
   plum,
   plumFromEvent,
   slot,
