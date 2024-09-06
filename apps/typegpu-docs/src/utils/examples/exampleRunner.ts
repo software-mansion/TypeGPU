@@ -266,6 +266,9 @@ export async function executeExample(
       if (moduleKey === 'typegpu/macro') {
         return await import('typegpu/macro');
       }
+      if (moduleKey === '@typegpu/jit-web') {
+        return await import('@typegpu/jit-web');
+      }
       if (moduleKey === '@typegpu/example-toolkit') {
         return {
           onCleanup(callback: () => unknown) {

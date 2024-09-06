@@ -1,6 +1,7 @@
 import type { AnySchema } from 'typed-binary';
 import type { Parsed } from 'typed-binary';
 import type { SimpleTgpuData, TgpuArray } from './data';
+import type { JitTranspiler } from './jitTranspiler';
 import type { PlumListener } from './plumStore';
 import type { TgpuSettable } from './settableTrait';
 import type { TgpuFn } from './tgpuFn';
@@ -22,6 +23,7 @@ export type SetPlumAction<T> = T | ((prev: T) => T);
 
 export interface TgpuRuntime {
   readonly device: GPUDevice;
+  readonly jitTranspiler?: JitTranspiler | undefined;
   /**
    * The current command encoder. This property will
    * hold the same value until `flush()` is called.

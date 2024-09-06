@@ -1,7 +1,6 @@
 import type { Unwrap } from 'typed-binary';
 import { type Callable, CallableImpl } from './callable';
 import { inGPUMode } from './gpuMode';
-import { transpileJsToWgsl } from './js2wgsl';
 import { valueList } from './resolutionUtils';
 import type { AnyTgpuData, ResolutionCtx, TgpuResolvable, Wgsl } from './types';
 import { code } from './wgslCode';
@@ -43,14 +42,17 @@ interface TgpuFnBase<
   Return extends AnyTgpuData | undefined = undefined,
 > extends TgpuResolvable {
   $uses(dependencyMap: Record<string, unknown>): this;
-  readonly wgslSegments: { signature: Wgsl; body: Wgsl };
 }
 
 export interface TgpuFn<
   Args extends AnyTgpuDataTuple,
   Return extends AnyTgpuData | undefined = undefined,
 > extends TgpuFnBase<Args, Return>,
-    Callable<UnwrapArgs<Args>, UnwrapReturn<Return>> {}
+    Callable<UnwrapArgs<Args>, UnwrapReturn<Return>> {
+  readonly shell: TgpuFnShell<Args, Return>;
+  readonly body: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>;
+  readonly bodyResolvable: TgpuResolvable;
+}
 
 export function fn<Args extends AnyTgpuDataTuple>(): TgpuFnShell<[], undefined>;
 
@@ -117,14 +119,27 @@ class TgpuFnImpl<
 {
   private _label?: string | undefined;
   private _externalMap: Record<string, Wgsl> = {};
-  private _signatureWgslMemo: Wgsl | null = null;
-  private _bodyWgslMemo: Wgsl | null = null;
+  public readonly bodyResolvable: TgpuResolvable;
 
   constructor(
     public readonly shell: TgpuFnShell<Args, Return>,
-    private readonly _body: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
+    /** The JS function body passed as an implementation of a TypeGPU function. */
+    public readonly body: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
   ) {
     super();
+
+    const self = this as unknown as TgpuFn<Args, Return>;
+
+    this.bodyResolvable = {
+      get label() {
+        return `${self.label}.body`;
+      },
+
+      resolve: (ctx) => {
+        const { body } = ctx.transpileFn(self, this._externalMap);
+        return ctx.resolve(body);
+      },
+    } satisfies TgpuResolvable;
   }
 
   get label() {
@@ -141,37 +156,22 @@ class TgpuFnImpl<
     return this;
   }
 
-  public get wgslSegments(): { signature: Wgsl; body: Wgsl } {
-    if (this._signatureWgslMemo === null || this._bodyWgslMemo === null) {
-      const { signature, body } = transpileJsToWgsl(
-        {
-          argTypes: this.shell.argTypes,
-          returnType: this.shell.returnType,
-          externalMap: this._externalMap,
-        },
-        String(this._body),
-      );
-
-      this._signatureWgslMemo = signature;
-      this._bodyWgslMemo = body;
-    }
-
-    return { signature: this._signatureWgslMemo, body: this._bodyWgslMemo };
-  }
-
   _call(...args: UnwrapArgs<Args>): UnwrapReturn<Return> {
     if (inGPUMode()) {
       // TODO: Filter out only those arguments which are valid to pass around
       return new FnCall(this, args as Wgsl[]) as UnwrapReturn<Return>;
     }
-    return this._body(...args);
+    return this.body(...args);
   }
 
   resolve(ctx: ResolutionCtx): string {
     const identifier = new TgpuIdentifier().$name(this.label);
 
-    const { signature, body } = this.wgslSegments;
-    ctx.addDeclaration(code`fn ${identifier}${signature}${body}`);
+    const { head, body } = ctx.transpileFn(
+      this as unknown as TgpuFn<Args, Return>,
+      this._externalMap,
+    );
+    ctx.addDeclaration(code`fn ${identifier}${head}${body}`);
 
     return ctx.resolve(identifier);
   }

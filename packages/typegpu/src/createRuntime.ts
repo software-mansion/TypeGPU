@@ -1,5 +1,6 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import { onGPU } from './gpuMode';
+import type { JitTranspiler } from './jitTranspiler';
 import { roundUp } from './mathUtils';
 import { type PlumListener, PlumStore } from './plumStore';
 import {
@@ -36,7 +37,7 @@ import type {
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a runtime can interact via GPU buffers.
  */
-class TgpuRuntimeImpl {
+class TgpuRuntimeImpl implements TgpuRuntime {
   private _entryToBufferMap = new Map<TgpuAllocatable, GPUBuffer>();
   private _samplers = new WeakMap<TgpuSampler, GPUSampler>();
   private _textures = new WeakMap<TgpuAnyTexture, GPUTexture>();
@@ -53,7 +54,10 @@ class TgpuRuntimeImpl {
     Unsubscribe
   >();
 
-  constructor(public readonly device: GPUDevice) {}
+  constructor(
+    public readonly device: GPUDevice,
+    public readonly jitTranspiler: JitTranspiler | undefined,
+  ) {}
 
   get commandEncoder() {
     if (!this._commandEncoder) {
@@ -373,11 +377,13 @@ class TgpuRuntimeImpl {
   compute(fn: TgpuFn<[]>): void {
     // TODO: Cache the pipeline
 
-    const program = onGPU(() =>
-      new ComputeProgramBuilder(this, fn.wgslSegments.body, [1]).build({
-        bindingGroup: 0,
-      }),
-    );
+    const program = new ComputeProgramBuilder(
+      this,
+      fn.bodyResolvable,
+      [1],
+    ).build({
+      bindingGroup: 0,
+    });
 
     const shaderModule = this.device.createShaderModule({
       code: program.code,
@@ -520,8 +526,9 @@ class ComputePipelineExecutor implements PipelineExecutor {
  * Options passed into {@link createRuntime}.
  */
 export type CreateRuntimeOptions = {
-  adapter: GPURequestAdapterOptions | undefined;
-  device: GPUDeviceDescriptor | undefined;
+  adapter?: GPURequestAdapterOptions | undefined;
+  device?: GPUDeviceDescriptor | undefined;
+  jitTranspiler?: JitTranspiler | undefined;
 };
 
 /**
@@ -550,10 +557,10 @@ export type CreateRuntimeOptions = {
  * ```
  */
 export async function createRuntime(
-  options?: CreateRuntimeOptions | GPUDevice,
+  options?: CreateRuntimeOptions,
 ): Promise<TgpuRuntime> {
-  if (doesResembleDevice(options)) {
-    return new TgpuRuntimeImpl(options);
+  if (doesResembleDevice(options?.device)) {
+    return new TgpuRuntimeImpl(options.device, options.jitTranspiler);
   }
 
   if (!navigator.gpu) {
@@ -566,7 +573,10 @@ export async function createRuntime(
     throw new Error('Could not find a compatible GPU');
   }
 
-  return new TgpuRuntimeImpl(await adapter.requestDevice(options?.device));
+  return new TgpuRuntimeImpl(
+    await adapter.requestDevice(options?.device),
+    options?.jitTranspiler,
+  );
 }
 
 function doesResembleDevice(value: unknown): value is GPUDevice {

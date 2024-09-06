@@ -1,8 +1,8 @@
 {
-  "name": "typegpu",
+  "name": "@typegpu/js2tgsl",
   "private": true,
-  "version": "0.0.0-alpha.6",
-  "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
+  "version": "0.0.0",
+  "description": "A set of utilities for transforming JavaScript code into TGSL (TypeGPU Shader Language). Used by TypeGPU to run JavaScript on the GPU.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,24 +20,6 @@
       "module": "./dist/*.js",
       "import": "./dist/*.js",
       "default": "./dist/*.cjs"
-    },
-    "./data": {
-      "types": "./dist/data/index.d.ts",
-      "module": "./dist/data/index.js",
-      "import": "./dist/data/index.js",
-      "default": "./dist/data/index.cjs"
-    },
-    "./macro": {
-      "types": "./dist/macro/index.d.ts",
-      "module": "./dist/macro/index.js",
-      "import": "./dist/macro/index.js",
-      "default": "./dist/macro/index.cjs"
-    },
-    "./experimental": {
-      "types": "./dist/experimental/index.d.ts",
-      "module": "./dist/experimental/index.js",
-      "import": "./dist/experimental/index.js",
-      "default": "./dist/experimental/index.cjs"
     }
   },
   "sideEffects": false,
@@ -70,15 +52,13 @@
   },
   "homepage": "https://docs.swmansion.com/typegpu",
   "devDependencies": {
-    "@webgpu/types": "^0.1.43",
-    "typescript": "^5.3.3",
     "tsup": "^8.0.2",
-    "@typegpu/wgsl-parser": "workspace:*",
-    "typegpu": "workspace:*",
+    "typescript": "^5.3.3",
     "@typegpu/prepack": "workspace:*"
   },
   "packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e",
   "dependencies": {
-    "typed-binary": "^4.0.1"
+    "acorn": "^8.12.1",
+    "typegpu": "workspace:0.0.0-alpha.6"
   }
 }

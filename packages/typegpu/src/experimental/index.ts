@@ -39,3 +39,4 @@ export type {
   TgpuTexture,
   TgpuTextureView,
 } from '../wgslTexture';
+export type { JitTranspiler } from '../jitTranspiler';

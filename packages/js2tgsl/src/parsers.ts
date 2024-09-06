@@ -1,7 +1,12 @@
 import * as acorn from 'acorn';
+import {
+  type AnyTgpuData,
+  type Wgsl,
+  isNamable,
+  isResolvable,
+  wgsl,
+} from 'typegpu/experimental';
 import { valueList } from './resolutionUtils';
-import { type AnyTgpuData, type Wgsl, isNamable, isResolvable } from './types';
-import { code } from './wgslCode';
 
 type Context = {
   argTypes: AnyTgpuData[];
@@ -24,7 +29,7 @@ const Generators: Partial<{
     return generate(ctx, body);
   },
 
-  ExpressionStatement: (ctx, node) => code`${generate(ctx, node.expression)};`,
+  ExpressionStatement: (ctx, node) => wgsl`${generate(ctx, node.expression)};`,
   ArrowFunctionExpression: (ctx, node) => {
     if (node.async) {
       throw new Error('tgpu.fn cannot be async.');
@@ -35,25 +40,25 @@ const Generators: Partial<{
     }
 
     const params = node.params as acorn.Identifier[];
-    const header = code`(${params.map((p, idx) => code`${p.name}: ${ctx.argTypes[idx] ?? ''}${idx < params.length - 1 ? ', ' : ''}`)}) ${() => (ctx.returnType ? code`-> ${ctx.returnType}` : '')}`;
+    const header = wgsl`(${params.map((p, idx) => wgsl`${p.name}: ${ctx.argTypes[idx] ?? ''}${idx < params.length - 1 ? ', ' : ''}`)}) ${() => (ctx.returnType ? wgsl`-> ${ctx.returnType}` : '')}`;
 
     if (node.body.type === 'BlockStatement') {
-      return code`${header} ${generate(ctx, node.body)}`;
+      return wgsl`${header} ${generate(ctx, node.body)}`;
     }
 
-    return code`${header} {
+    return wgsl`${header} {
   return ${generate(ctx, node.body)};
 }`;
   },
 
   BlockStatement(ctx, node) {
-    return code`{
+    return wgsl`{
   ${node.body.map((statement) => generate(ctx, statement))}
 }`;
   },
 
   ReturnStatement(ctx, node) {
-    return code`return ${node.argument ? generate(ctx, node.argument) : ''};`;
+    return wgsl`return ${node.argument ? generate(ctx, node.argument) : ''};`;
   },
 
   Identifier(ctx, node) {
@@ -71,18 +76,18 @@ const Generators: Partial<{
 
   BinaryExpression(ctx, node) {
     // TODO: Verify if all binary operators map 1-to-1 (they probably do not)
-    return code`${generate(ctx, node.left)} ${node.operator} ${generate(ctx, node.right)}`;
+    return wgsl`${generate(ctx, node.left)} ${node.operator} ${generate(ctx, node.right)}`;
   },
 
   LogicalExpression(ctx, node) {
     const left = generate(ctx, node.left);
     const right = generate(ctx, node.right);
-    return code`${left} ${node.operator} ${right}`;
+    return wgsl`${left} ${node.operator} ${right}`;
   },
 
   AssignmentExpression(ctx, node) {
     // TODO: Verify if all assignment operators map 1-to-1 (they probably do not)
-    return code`${generate(ctx, node.left)} ${node.operator} ${generate(ctx, node.right)}`;
+    return wgsl`${generate(ctx, node.left)} ${node.operator} ${generate(ctx, node.right)}`;
   },
 
   MemberExpression(ctx, node) {
@@ -104,10 +109,10 @@ const Generators: Partial<{
     }
 
     if (node.computed) {
-      return code`${object}[${property}]`;
+      return wgsl`${object}[${property}]`;
     }
 
-    return code`${object}.${property}`;
+    return wgsl`${object}.${property}`;
   },
 
   Literal(_ctx, node) {
@@ -124,7 +129,7 @@ const Generators: Partial<{
       return (callee as unknown as (...a: typeof args) => Wgsl)(...args);
     }
 
-    return code`${callee}(${valueList(args)})`;
+    return wgsl`${callee}(${valueList(args)})`;
   },
 
   VariableDeclaration(ctx, node) {
@@ -136,7 +141,7 @@ const Generators: Partial<{
 
     const decl = node.declarations[0];
 
-    return code`let ${generate(ctx, decl.id)} ${decl.init ? code`= ${generate(ctx, decl.init)}` : ''};`;
+    return wgsl`let ${generate(ctx, decl.id)} ${decl.init ? wgsl`= ${generate(ctx, decl.init)}` : ''};`;
   },
 
   IfStatement(ctx, node) {
@@ -144,7 +149,7 @@ const Generators: Partial<{
     const consequent = generate(ctx, node.consequent);
     const alternate = node.alternate ? generate(ctx, node.alternate) : null;
 
-    return code`if (${test}) ${consequent} ${alternate ? code`else ${alternate}` : ''}`;
+    return wgsl`if (${test}) ${consequent} ${alternate ? wgsl`else ${alternate}` : ''}`;
   },
 };
 
@@ -187,7 +192,7 @@ export function transpileJsToWgsl(
   }
 
   const params = mainExpression.params as acorn.Identifier[];
-  const signature = code`(${params.map((p, idx) => code`${p.name}: ${ctx.argTypes[idx] ?? ''}${idx < params.length - 1 ? ', ' : ''}`)}) ${() => (ctx.returnType ? code`-> ${ctx.returnType}` : '')}`;
+  const signature = wgsl`(${params.map((p, idx) => wgsl`${p.name}: ${ctx.argTypes[idx] ?? ''}${idx < params.length - 1 ? ', ' : ''}`)}) ${() => (ctx.returnType ? wgsl`-> ${ctx.returnType}` : '')}`;
 
   if (mainExpression.body.type === 'BlockStatement') {
     return {
@@ -198,7 +203,7 @@ export function transpileJsToWgsl(
 
   return {
     signature,
-    body: code`{
+    body: wgsl`{
   return ${generate(ctx, mainExpression.body)};
 }`,
   };

@@ -19,6 +19,8 @@ export default defineConfig({
           '../../packages/typegpu/dist/macro/index.d.ts',
         'typegpu/dist/experimental/index.d.ts?raw':
           '../../packages/typegpu/dist/experimental/index.d.ts',
+        '@typegpu/jit-web/dist/index.d.ts?raw':
+          '../../packages/jit-web/dist/index.d.ts',
       }),
     ],
   },

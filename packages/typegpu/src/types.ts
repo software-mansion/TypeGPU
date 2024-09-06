@@ -1,5 +1,6 @@
 import type { ISchema, Parsed, Unwrap } from 'typed-binary';
 import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from './data';
+import type { TgpuFn } from './tgpuFn';
 import type { TgpuBufferUsage } from './wgslBufferUsage';
 import type { Builtin } from './wgslBuiltin';
 import type { TgpuIdentifier } from './wgslIdentifier';
@@ -31,6 +32,14 @@ export interface ResolutionCtx {
    */
   unwrap<T>(eventual: Eventual<T>): T;
   resolve(item: Wgsl, slotValueOverrides?: SlotValuePair<unknown>[]): string;
+  transpileFn(
+    // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
+    fn: TgpuFn<any, any>,
+    externalMap: Record<string, Wgsl>,
+  ): {
+    head: Wgsl;
+    body: Wgsl;
+  };
 }
 
 export interface TgpuResolvable {
