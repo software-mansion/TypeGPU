@@ -151,9 +151,9 @@ importers:
         specifier: workspace:*
         version: link:../js2tgsl
     devDependencies:
-      '@typegpu/prepack':
+      '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
-        version: link:../prepack
+        version: link:../tgpu-dev-cli
       tsup:
         specifier: ^8.0.2
         version: 8.0.2(typescript@5.5.4)
@@ -173,9 +173,9 @@ importers:
         specifier: workspace:0.0.0-alpha.6
         version: link:../typegpu
     devDependencies:
-      '@typegpu/prepack':
+      '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
-        version: link:../prepack
+        version: link:../tgpu-dev-cli
       tsup:
         specifier: ^8.0.2
         version: 8.0.2(typescript@5.5.4)
@@ -183,8 +183,11 @@ importers:
         specifier: ^5.3.3
         version: 5.5.4
 
-  packages/prepack:
+  packages/tgpu-dev-cli:
     dependencies:
+      arg:
+        specifier: ^5.0.2
+        version: 5.0.2
       remeda:
         specifier: ^2.3.0
         version: 2.3.0
@@ -195,9 +198,9 @@ importers:
         specifier: ^4.0.1
         version: 4.0.1
     devDependencies:
-      '@typegpu/prepack':
+      '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
-        version: link:../prepack
+        version: link:../tgpu-dev-cli
       '@typegpu/wgsl-parser':
         specifier: workspace:*
         version: link:../typegpu-wgsl-parser

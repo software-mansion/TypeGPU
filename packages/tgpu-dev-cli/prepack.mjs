@@ -110,4 +110,4 @@ cd dist && pnpm publish
   );
 }
 
-await main();
+export default main;
