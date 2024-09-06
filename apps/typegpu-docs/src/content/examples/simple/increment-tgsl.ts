@@ -25,7 +25,9 @@ const table = await addElement('table', {
 table.setMatrix([[0]]);
 // ---
 
-const counterBuffer = tgpu.createBuffer(vec2f, vec2f(0, 1)).$allowMutable();
+const counterBuffer = tgpu
+  .createBuffer(vec2f, vec2f(0, 1))
+  .$usage(tgpu.Storage);
 const counter = asMutable(counterBuffer);
 
 const increment = tgpu

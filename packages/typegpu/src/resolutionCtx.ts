@@ -4,6 +4,7 @@ import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
 import type { TgpuFn } from './tgpuFn';
 import type {
+  AnyTgpuData,
   BufferUsage,
   Eventual,
   ResolutionCtx,
@@ -270,7 +271,7 @@ class ScopedResolutionCtx implements ResolutionCtx {
 
   transpileFn(
     // biome-ignore lint/suspicious/noExplicitAny: <no generic magic needed>
-    fn: TgpuFn<any, any>,
+    fn: TgpuFn<any, AnyTgpuData>,
     externalMap: Record<string, Wgsl>,
   ): { head: Wgsl; body: Wgsl } {
     if (!this._shared.jitTranspiler) {

@@ -7,7 +7,7 @@ export interface JitTranspiler {
   transpileFn(
     rawJs: string,
     argTypes: AnyTgpuData[],
-    returnType: AnyTgpuData,
+    returnType: AnyTgpuData | undefined,
     externalMap: Record<string, Wgsl>,
   ): { head: Wgsl; body: Wgsl };
 }

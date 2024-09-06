@@ -1,3 +1,4 @@
+import { transpileFn } from '@typegpu/js2tgsl';
 import type { AnyTgpuData, JitTranspiler, Wgsl } from 'typegpu/experimental';
 
 export class JitWebTranspiler implements JitTranspiler {
@@ -7,6 +8,6 @@ export class JitWebTranspiler implements JitTranspiler {
     returnType: AnyTgpuData,
     externalMap: Record<string, Wgsl>,
   ): { head: Wgsl; body: Wgsl } {
-    throw new Error('Method not implemented.');
+    return transpileFn({ argTypes, returnType, externalMap }, rawJs);
   }
 }

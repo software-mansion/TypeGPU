@@ -163,10 +163,10 @@ function generate(ctx: Context, node: acorn.AnyNode): Wgsl {
   return generator(ctx, node as never);
 }
 
-export function transpileJsToWgsl(
+export function transpileFn(
   ctx: Context,
   jsCode: string,
-): { signature: Wgsl; body: Wgsl } {
+): { head: Wgsl; body: Wgsl } {
   const program = acorn.parse(jsCode, { ecmaVersion: 'latest' });
 
   const programBody = program.body[0];
@@ -196,13 +196,13 @@ export function transpileJsToWgsl(
 
   if (mainExpression.body.type === 'BlockStatement') {
     return {
-      signature,
+      head: signature,
       body: generate(ctx, mainExpression.body),
     };
   }
 
   return {
-    signature,
+    head: signature,
     body: wgsl`{
   return ${generate(ctx, mainExpression.body)};
 }`,

@@ -1,3 +1,1 @@
-export function parseFunction(rawJs: string) {
-  // TODO: Implement
-}
+export { transpileFn } from './parsers';

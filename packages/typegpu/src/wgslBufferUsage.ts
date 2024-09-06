@@ -22,13 +22,19 @@ import { TgpuIdentifier } from './wgslIdentifier';
 // Public API
 // ----------
 export interface TgpuBufferUniform<TData extends AnyTgpuData>
-  extends TgpuBindable<TData, 'uniform'> {}
+  extends TgpuBindable<TData, 'uniform'> {
+  value: Unwrap<TData>;
+}
 
 export interface TgpuBufferReadonly<TData extends AnyTgpuData>
-  extends TgpuBindable<TData, 'readonly'> {}
+  extends TgpuBindable<TData, 'readonly'> {
+  value: Unwrap<TData>;
+}
 
 export interface TgpuBufferMutable<TData extends AnyTgpuData>
-  extends TgpuBindable<TData, 'mutable'> {}
+  extends TgpuBindable<TData, 'mutable'> {
+  value: Unwrap<TData>;
+}
 
 export interface TgpuBufferVertex<TData extends AnyTgpuData>
   extends TgpuBindable<TData, 'vertex'> {
