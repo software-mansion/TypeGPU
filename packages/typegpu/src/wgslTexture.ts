@@ -14,6 +14,10 @@ import type {
 import { TgpuIdentifier } from './wgslIdentifier';
 import { isSampler } from './wgslSampler';
 
+type Optional<T> = {
+  [P in keyof T]?: T[P] | undefined;
+};
+
 export interface TgpuAnyTextureView extends TgpuRenderResource {
   readonly descriptor: GPUTextureViewDescriptor;
   readonly texture: TgpuAnyTexture;
@@ -57,8 +61,9 @@ export interface TgpuTextureView<
   readonly access: StorageTextureAccess | undefined;
 }
 
-export interface TgpuTextureExternal extends TgpuRenderResource {
-  readonly descriptor: GPUExternalTextureDescriptor;
+export interface TgpuTextureExternal extends TgpuRenderResource, TgpuNamable {
+  readonly descriptor: Optional<GPUExternalTextureDescriptor>;
+  get source(): HTMLVideoElement | VideoFrame | undefined;
 }
 
 export function texture<TUsage extends TextureUsage = never>(
@@ -67,8 +72,11 @@ export function texture<TUsage extends TextureUsage = never>(
   return new TgpuTextureImpl(descriptor);
 }
 
-export function textureExternal(descriptor: GPUExternalTextureDescriptor) {
-  return new TgpuTextureExternalImpl(descriptor);
+export function textureExternal(
+  source?: HTMLVideoElement | VideoFrame,
+  colorSpace?: PredefinedColorSpace,
+): TgpuTextureExternal {
+  return new TgpuTextureExternalImpl(source, colorSpace);
 }
 
 class TgpuTextureImpl<TAllows extends TextureUsage = never>
@@ -231,11 +239,21 @@ class TgpuTextureViewImpl<
 class TgpuTextureExternalImpl implements TgpuTextureExternal {
   private _label: string | undefined;
   public readonly type = 'texture_external';
+  public readonly descriptor: Optional<GPUExternalTextureDescriptor>;
 
-  constructor(public readonly descriptor: GPUExternalTextureDescriptor) {}
+  constructor(
+    source: HTMLVideoElement | VideoFrame | undefined,
+    colorSpace: PredefinedColorSpace | undefined,
+  ) {
+    this.descriptor = { source, colorSpace };
+  }
 
   get label() {
     return this._label;
+  }
+
+  get source() {
+    return this.descriptor.source;
   }
 
   $name(label: string | undefined) {
