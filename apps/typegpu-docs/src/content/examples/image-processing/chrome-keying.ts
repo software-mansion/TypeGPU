@@ -11,8 +11,8 @@ import {
   onCleanup,
   onFrame,
 } from '@typegpu/example-toolkit';
-import { asUniform, builtin, createRuntime, wgsl } from 'typegpu';
 import { f32, vec2f, vec3f } from 'typegpu/data';
+import { asUniform, builtin, createRuntime, wgsl } from 'typegpu/experimental';
 
 const width = 500;
 const height = 375;
@@ -97,38 +97,14 @@ const resultTexture = wgsl
   .$allowSampled()
   .$allowStorage();
 
-const rgbToHSL = wgsl.fn`(rgba: vec3f) -> vec3f {
-  let cmax = max(rgba.r, max(rgba.g, rgba.b));
-  let cmin = min(rgba.r, min(rgba.g, rgba.b));
+const rgbToYcbcrMatrix = wgsl.constant(`mat3x3f(
+   0.299,     0.587,     0.114,
+  -0.168736, -0.331264,  0.5,
+   0.5,      -0.418688, -0.081312,
+)`);
 
-  var h = 0.0;
-  var s = 0.0;
-  var l = (cmax + cmin) / 2.0;
-
-  if (cmax != cmin) {
-    let delta = cmax - cmin;
-    if (l > 0.5) {
-      s = delta / (2.0 - cmax - cmin);
-    } else {
-      s = delta / (cmax + cmin);
-    }
-
-    if (cmax == rgba.r) {
-      if (rgba.g < rgba.b) {
-        h = (rgba.g - rgba.b) / delta + 6.0;
-      } else {
-        h = (rgba.g - rgba.b) / delta;
-      }
-    } else if (cmax == rgba.g) {
-      h = (rgba.b - rgba.r) / delta + 2.0;
-    } else {
-      h = (rgba.r - rgba.g) / delta + 4.0;
-    }
-
-    h /= 6.0;
-  }
-
-  return vec3f(h, s, l);
+const rgbToYcbcr = wgsl.fn`(rgb: vec3f) -> vec3f {
+  return rgb * ${rgbToYcbcrMatrix};
 }`;
 
 const computeProgram = runtime.makeComputePipeline({
@@ -140,15 +116,16 @@ const computeProgram = runtime.makeComputePipeline({
     let xyAsUv = vec2f(coords) / vec2f(${width}, ${height});
     var col = textureSampleBaseClampToEdge(${externalTexture}, ${sampler}, xyAsUv);
 
-    let hsl = ${rgbToHSL}(col.rgb);
-    let colorHSL = ${rgbToHSL}(${asUniform(colorBuffer)});
+    let ycbcr = ${rgbToYcbcr}(col.rgb);
+    let colycbcr = ${rgbToYcbcr}(${asUniform(colorBuffer)});
 
-    var diff = abs(hsl.r - colorHSL.r);
-    if (diff > 0.5) {
-      diff = 1.0 - diff;
-    }
+    let crDiff = abs(ycbcr.g - colycbcr.g);
+    let cbDiff = abs(ycbcr.b - colycbcr.b);
+    let distance = length(vec2f(crDiff, cbDiff));
 
-    if (diff < ${asUniform(thresholdBuffer)}) {
+    let threshold = ${asUniform(thresholdBuffer)};
+
+    if (distance < pow(threshold, 2)) {
       col = vec4f();
     }
 
