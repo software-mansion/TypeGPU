@@ -14,8 +14,13 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { asUniform, builtin, createRuntime, wgsl } from 'typegpu';
 import { struct, u32, vec2f } from 'typegpu/data';
+import tgpu, {
+  asUniform,
+  builtin,
+  createRuntime,
+  wgsl,
+} from 'typegpu/experimental';
 
 const xSpanPlum = addSliderPlumParameter('x span', 16, {
   min: 1,
@@ -29,10 +34,10 @@ const ySpanPlum = addSliderPlumParameter('y span', 16, {
 });
 
 const spanPlum = wgsl.plum((get) => ({ x: get(xSpanPlum), y: get(ySpanPlum) }));
-const spanBuffer = wgsl
-  .buffer(struct({ x: u32, y: u32 }), spanPlum)
+const spanBuffer = tgpu
+  .createBuffer(struct({ x: u32, y: u32 }), spanPlum)
   .$name('span')
-  .$allowUniform();
+  .$usage(tgpu.Uniform);
 
 const runtime = await createRuntime();
 const canvas = await addElement('canvas', { aspectRatio: 1 });

@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { u32 } from '../src/data';
-import {
+import tgpu, {
   asMutable,
   asReadonly,
   asUniform,
   asVertex,
-  wgsl,
 } from '../src/experimental';
 
 global.GPUBufferUsage = {
@@ -23,36 +22,50 @@ global.GPUBufferUsage = {
 
 describe('asUsage', () => {
   it('allows creating bufferUsages only for buffers allowing them', () => {
-    asReadonly(wgsl.buffer(u32, 2).$allowReadonly());
-    asReadonly(wgsl.buffer(u32, 2).$allowReadonly().$allowUniform());
-    asReadonly(wgsl.buffer(u32, 2).$allowVertex('vertex').$allowReadonly());
+    asReadonly(tgpu.createBuffer(u32, 2).$usage(tgpu.Storage));
+    asReadonly(tgpu.createBuffer(u32, 2).$usage(tgpu.Storage, tgpu.Uniform));
+    asReadonly(tgpu.createBuffer(u32, 2).$usage(tgpu.Storage, tgpu.Vertex));
     // @ts-expect-error
-    expect(() => asReadonly(wgsl.buffer(u32, 2))).toThrow();
-    // @ts-expect-error
-    expect(() => asReadonly(wgsl.buffer(u32, 2).$allowUniform())).toThrow();
+    expect(() => asReadonly(tgpu.createBuffer(u32, 2))).toThrow();
+    expect(() =>
+      // @ts-expect-error
+      asReadonly(tgpu.createBuffer(u32, 2).$usage(tgpu.Uniform)),
+    ).toThrow();
 
-    asUniform(wgsl.buffer(u32, 2).$allowUniform());
-    asUniform(wgsl.buffer(u32, 2).$allowUniform().$allowReadonly());
-    asUniform(wgsl.buffer(u32, 2).$allowVertex('vertex').$allowUniform());
+    asUniform(tgpu.createBuffer(u32, 2).$usage(tgpu.Uniform));
+    asUniform(tgpu.createBuffer(u32, 2).$usage(tgpu.Uniform, tgpu.Storage));
+    asUniform(tgpu.createBuffer(u32, 2).$usage(tgpu.Uniform, tgpu.Vertex));
     // @ts-expect-error
-    expect(() => asUniform(wgsl.buffer(u32, 2))).toThrow();
-    // @ts-expect-error
-    expect(() => asUniform(wgsl.buffer(u32, 2).$allowReadonly())).toThrow();
+    expect(() => asUniform(tgpu.createBuffer(u32, 2))).toThrow();
+    expect(() =>
+      // @ts-expect-error
+      asUniform(tgpu.createBuffer(u32, 2).$usage(tgpu.Storage)),
+    ).toThrow();
 
-    asMutable(wgsl.buffer(u32, 2).$allowMutable());
-    asMutable(wgsl.buffer(u32, 2).$allowMutable().$allowUniform());
-    asMutable(wgsl.buffer(u32, 2).$allowVertex('vertex').$allowMutable());
+    asMutable(tgpu.createBuffer(u32, 2).$usage(tgpu.Storage));
+    asMutable(tgpu.createBuffer(u32, 2).$usage(tgpu.Storage, tgpu.Uniform));
+    asMutable(tgpu.createBuffer(u32, 2).$usage(tgpu.Vertex, tgpu.Storage));
     // @ts-expect-error
-    expect(() => asMutable(wgsl.buffer(u32, 2))).toThrow();
-    // @ts-expect-error
-    expect(() => asMutable(wgsl.buffer(u32, 2).$allowUniform())).toThrow();
+    expect(() => asMutable(tgpu.createBuffer(u32, 2))).toThrow();
+    expect(() =>
+      // @ts-expect-error
+      asMutable(tgpu.createBuffer(u32, 2).$usage(tgpu.Uniform)),
+    ).toThrow();
 
-    asVertex(wgsl.buffer(u32, 2).$allowVertex('instance'));
-    asVertex(wgsl.buffer(u32, 2).$allowVertex('instance').$allowUniform());
-    asVertex(wgsl.buffer(u32, 2).$allowReadonly().$allowVertex('instance'));
+    asVertex(tgpu.createBuffer(u32, 2).$usage(tgpu.Vertex), 'vertex');
+    asVertex(
+      tgpu.createBuffer(u32, 2).$usage(tgpu.Vertex, tgpu.Uniform),
+      'instance',
+    );
+    asVertex(
+      tgpu.createBuffer(u32, 2).$usage(tgpu.Storage, tgpu.Vertex),
+      'instance',
+    );
     // @ts-expect-error
-    expect(() => asVertex(wgsl.buffer(u32, 2))).toThrow();
-    // @ts-expect-error
-    expect(() => asVertex(wgsl.buffer(u32, 2).$allowMutable())).toThrow();
+    expect(() => asVertex(tgpu.createBuffer(u32, 2))).toThrow();
+    expect(() =>
+      // @ts-expect-error
+      asVertex(tgpu.createBuffer(u32, 2).$usage(tgpu.Storage)),
+    ).toThrow();
   });
 });

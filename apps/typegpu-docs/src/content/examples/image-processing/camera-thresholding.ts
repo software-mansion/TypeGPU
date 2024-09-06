@@ -14,8 +14,13 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { asUniform, builtin, createRuntime, wgsl } from 'typegpu';
 import { f32, vec2f } from 'typegpu/data';
+import tgpu, {
+  asUniform,
+  builtin,
+  createRuntime,
+  wgsl,
+} from 'typegpu/experimental';
 
 // Layout
 const [video, canvas] = await Promise.all([
@@ -28,7 +33,10 @@ const sampler = wgsl.sampler({
   minFilter: 'linear',
 });
 
-const thresholdBuffer = wgsl.buffer(f32).$name('threshold').$allowUniform();
+const thresholdBuffer = tgpu
+  .createBuffer(f32)
+  .$name('threshold')
+  .$usage(tgpu.Uniform);
 
 const thresholdData = asUniform(thresholdBuffer);
 

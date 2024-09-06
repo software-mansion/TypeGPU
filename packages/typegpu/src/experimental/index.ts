@@ -2,8 +2,9 @@
  * @module typegpu/experimental
  */
 
-export { tgpu } from '../tgpu';
-export { tgpu as default } from '../tgpu';
+export * as tgpu from '../tgpu';
+import * as tgpu from '../tgpu';
+export default tgpu;
 
 export * from '../errors';
 export * from '../types';
@@ -16,17 +17,24 @@ export * from '../wgslBuiltin';
 export { default as wgsl } from '../wgsl';
 export { std } from '../std';
 export { createRuntime, CreateRuntimeOptions } from '../createRuntime';
-export { asReadonly, asUniform, asMutable, asVertex } from '../wgslBuffer';
+export {
+  isUsableAsStorage,
+  isUsableAsUniform,
+  isUsableAsVertex,
+} from '../wgslBuffer';
+export { asUniform, asReadonly, asMutable, asVertex } from '../wgslBufferUsage';
 
 export type {
   TgpuBuffer,
-  AllowMutable,
-  AllowReadonly,
-  AllowUniform,
-  AllowVertex,
   Unmanaged,
 } from '../wgslBuffer';
-export type { TgpuBufferUsage } from '../wgslBufferUsage';
+export type {
+  TgpuBufferUsage,
+  TgpuBufferUniform,
+  TgpuBufferReadonly,
+  TgpuBufferMutable,
+  TgpuBufferVertex,
+} from '../wgslBufferUsage';
 export type { TgpuCode } from '../wgslCode';
 export type { TgpuConst } from '../wgslConstant';
 export type { TgpuFn } from '../wgslFunction';

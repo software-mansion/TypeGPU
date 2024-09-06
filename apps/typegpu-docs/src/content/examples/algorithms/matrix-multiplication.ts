@@ -14,7 +14,7 @@ import {
 // --
 
 import { type Parsed, arrayOf, f32, struct, vec2f } from 'typegpu/data';
-import {
+import tgpu, {
   asMutable,
   asReadonly,
   builtin,
@@ -73,20 +73,20 @@ const secondMatrixPlum = wgsl.plum((get) => {
   );
 });
 
-const firstMatrixBuffer = wgsl
-  .buffer(MatrixStruct, firstMatrixPlum)
+const firstMatrixBuffer = tgpu
+  .createBuffer(MatrixStruct, firstMatrixPlum)
   .$name('first_matrix')
-  .$allowReadonly();
+  .$usage(tgpu.Storage);
 
-const secondMatrixBuffer = wgsl
-  .buffer(MatrixStruct, secondMatrixPlum)
+const secondMatrixBuffer = tgpu
+  .createBuffer(MatrixStruct, secondMatrixPlum)
   .$name('second_matrix')
-  .$allowReadonly();
+  .$usage(tgpu.Storage);
 
-const resultMatrixBuffer = wgsl
-  .buffer(MatrixStruct)
+const resultMatrixBuffer = tgpu
+  .createBuffer(MatrixStruct)
   .$name('result_matrix')
-  .$allowMutable();
+  .$usage(tgpu.Storage);
 
 const firstMatrixData = asReadonly(firstMatrixBuffer);
 const secondMatrixData = asReadonly(secondMatrixBuffer);
