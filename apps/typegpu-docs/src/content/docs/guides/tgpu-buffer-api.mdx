@@ -133,10 +133,10 @@ const gpuBuffer = buffer.buffer;
     To make the buffer 'Unmanaged', you need to call the `$device` method on the buffer object.
     This marks the buffer as unmanaged and allows you to use it in read and write operations.
     ```ts
-    // WgslBuffer<U32>
+    // TgpuBuffer<U32>
     const buffer = tgpu.createBuffer(u32);
 
-    // WgslBuffer<U32> & Unmanaged
+    // TgpuBuffer<U32> & Unmanaged
     const unmanagedBuffer = buffer.$device(device);
     ```
 </Aside>
@@ -200,7 +200,7 @@ const buffer = tgpu.createBuffer(u32)
 :::note
   Along with the flags, the methods will also provide type hints.
   ```ts
-  // WgslBuffer<U32> & Uniform & Storage & Unmanaged
+  // TgpuBuffer<U32> & Uniform & Storage & Unmanaged
   const buffer = tgpu.createBuffer(u32)
     .$usage(tpu.Uniform, tgpu.Storage);
     .$device(device)
@@ -228,7 +228,7 @@ const PlayerInfo = struct({
 
 const buffer = tgpu.createBuffer(PlayerInfo).$device(device);
 
-// write(WgslBuffer<U32>, { position: vec2f, health: number })
+// write(TgpuBuffer<U32>, { position: vec2f, health: number })
 tgpu.write(buffer, {
   position: vec2f(1.0, 2.0),
   health: 100,
@@ -397,7 +397,7 @@ import { Steps } from '@astrojs/starlight/components';
 ### Full migration
 
 In this approach we will remove the existing buffer and replace it with a typed buffer created using the TypeGPU API.
-Keep in mind that `tgpu.createBuffer()` will return a `WgslBuffer` object, when you need a `GPUBuffer` object you can access it using the `buffer` property.
+Keep in mind that `tgpu.createBuffer()` will return a `TgpuBuffer` object, when you need a `GPUBuffer` object you can access it using the `buffer` property.
 
 ```diff lang=ts
 import tgpu from 'typegpu';
