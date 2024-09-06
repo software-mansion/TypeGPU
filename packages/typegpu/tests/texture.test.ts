@@ -129,11 +129,7 @@ describe('texture', () => {
       height: 1,
     } as HTMLVideoElement;
 
-    const texture = wgsl
-      .textureExternal({
-        source: mockHTMLMediaElement,
-      })
-      .$name('texture');
+    const texture = wgsl.textureExternal(mockHTMLMediaElement).$name('texture');
 
     const resolutionCtx = new ResolutionCtxImpl({
       names: new StrictNameRegistry(),

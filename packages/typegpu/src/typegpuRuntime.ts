@@ -48,6 +48,14 @@ export interface TgpuRuntime {
     allocatable: TgpuAllocatable<TData>,
   ): Promise<Parsed<TData>>;
 
+  setSource(
+    texture: TgpuTextureExternal,
+    source: HTMLVideoElement | VideoFrame,
+  ): void;
+
+  isDirty(texture: TgpuTextureExternal): boolean;
+  markClean(texture: TgpuTextureExternal): void;
+
   bufferFor(allocatable: TgpuAllocatable): GPUBuffer;
   textureFor(view: TgpuAnyTexture | TgpuAnyTextureView): GPUTexture;
   viewFor(view: TgpuAnyTextureView): GPUTextureView;

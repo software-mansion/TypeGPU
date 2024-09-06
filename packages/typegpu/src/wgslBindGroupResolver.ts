@@ -220,19 +220,23 @@ export class BindGroupResolver {
     return index;
   }
 
-  invlidateBindGroup() {
+  invalidateBindGroup() {
     this.bindGroup = null;
   }
 
   checkBindGroupInvalidation() {
-    // check if any external texture is of type HTMLVideoElement -> if so, invalidate bind group as it expires on bind
-    if (
-      this.externalTextures.some(
-        (ext) => ext.descriptor.source instanceof HTMLVideoElement,
-      )
-    ) {
-      this.invlidateBindGroup();
+    for (const texture of this.externalTextures) {
+      // check if texture is dirty (changed source) -> if so, invalidate bind group and mark clean
+      if (this.runtime.isDirty(texture)) {
+        this.invalidateBindGroup();
+        this.runtime.markClean(texture);
+        continue;
+      }
+
+      // check if any external texture is of type HTMLVideoElement -> if so, invalidate bind group as it expires on bind
+      if (texture.source instanceof HTMLVideoElement) {
+        this.invalidateBindGroup();
+      }
     }
-    // future invalidation logic will go here
   }
 }
