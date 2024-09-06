@@ -63,7 +63,9 @@ describe('asUsage', () => {
     );
     // @ts-expect-error
     expect(() => asVertex(tgpu.createBuffer(u32, 2))).toThrow();
-    // @ts-expect-error
-    expect(() => asVertex(tgpu.createBuffer(u32, 2).$allowMutable())).toThrow();
+    expect(() =>
+      // @ts-expect-error
+      asVertex(tgpu.createBuffer(u32, 2).$usage(tgpu.Storage)),
+    ).toThrow();
   });
 });

@@ -12,7 +12,12 @@ import {
   onFrame,
 } from '@typegpu/example-toolkit';
 import { f32, vec2f, vec3f } from 'typegpu/data';
-import { asUniform, builtin, createRuntime, wgsl } from 'typegpu/experimental';
+import tgpu, {
+  asUniform,
+  builtin,
+  createRuntime,
+  wgsl,
+} from 'typegpu/experimental';
 
 const width = 500;
 const height = 375;
@@ -69,15 +74,15 @@ const thresholdPlum = addSliderPlumParameter('threshold', 0.5, {
   step: 0.01,
 });
 
-const thresholdBuffer = wgsl
-  .buffer(f32, thresholdPlum)
+const thresholdBuffer = tgpu
+  .createBuffer(f32, thresholdPlum)
   .$name('threshold')
-  .$allowUniform();
+  .$usage(tgpu.Uniform);
 
-const colorBuffer = wgsl
-  .buffer(vec3f, vec3f(0, 1.0, 0))
+const colorBuffer = tgpu
+  .createBuffer(vec3f, vec3f(0, 1.0, 0))
   .$name('colorBuffer')
-  .$allowUniform();
+  .$usage(tgpu.Uniform);
 
 const sampler = wgsl.sampler({
   magFilter: 'linear',
