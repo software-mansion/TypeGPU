@@ -9,10 +9,13 @@
 import { addElement } from '@typegpu/example-toolkit';
 // --
 
-import { asMutable, createRuntime, wgsl } from 'typegpu';
 import { u32 } from 'typegpu/data';
+import tgpu, { asMutable, createRuntime, wgsl } from 'typegpu/experimental';
 
-const counterBuffer = wgsl.buffer(u32, 0).$name('counter').$allowMutable();
+const counterBuffer = tgpu
+  .createBuffer(u32, 0)
+  .$name('counter')
+  .$usage(tgpu.Storage);
 
 const runtime = await createRuntime();
 const pipeline = runtime.makeComputePipeline({

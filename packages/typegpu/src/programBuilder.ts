@@ -4,8 +4,9 @@ import type { SimpleTgpuData, TgpuArray } from './data';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
 import type { TgpuRuntime } from './typegpuRuntime';
-import type { AnyTgpuData, TgpuBindable, TgpuResolvable, Wgsl } from './types';
+import type { AnyTgpuData, TgpuResolvable, Wgsl } from './types';
 import { BindGroupResolver } from './wgslBindGroupResolver';
+import type { TgpuBufferVertex } from './wgslBufferUsage';
 import {
   getBuiltinInfo,
   getUsedBuiltins,
@@ -116,8 +117,9 @@ export class RenderProgramBuilder {
     });
     vertexContext.resolve(this.vertexRoot);
     const vertexBuffers = Array.from(vertexContext.usedBindables).filter(
-      (bindable) => bindable.usage === 'vertex',
-    ) as TgpuBindable<AnyTgpuData, 'vertex'>[];
+      (bindable): bindable is TgpuBufferVertex<AnyTgpuData> =>
+        bindable.usage === 'vertex',
+    );
     const entries = vertexBuffers.map((elem, idx) => {
       return {
         idx: idx,

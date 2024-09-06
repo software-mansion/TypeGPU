@@ -59,6 +59,6 @@
   "packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e",
   "dependencies": {
     "acorn": "^8.12.1",
-    "typegpu": "workspace:0.0.0-alpha.6"
+    "typegpu": "workspace:0.0.0-alpha.7"
   }
 }

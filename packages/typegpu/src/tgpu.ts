@@ -1,11 +1,8 @@
-import { read, write } from './tgpuBufferUtils';
-import { fn, procedure } from './tgpuFn';
-import { buffer } from './wgslBuffer';
-
-export const tgpu = {
-  createBuffer: buffer,
-  read,
-  write,
-  fn,
-  procedure,
-};
+export {
+  buffer as createBuffer,
+  Uniform,
+  Storage,
+  Vertex,
+} from './wgslBuffer';
+export { read, write } from './tgpuBufferUtils';
+export { fn, procedure } from './tgpuFn';

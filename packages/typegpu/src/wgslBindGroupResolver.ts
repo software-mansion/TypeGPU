@@ -3,6 +3,7 @@ import type { ResolutionCtxImpl } from './resolutionCtx';
 import { deriveVertexFormat } from './typegpuRuntime';
 import type { TgpuRuntime } from './typegpuRuntime';
 import type { AnyTgpuData, BufferUsage, TgpuBindable } from './types';
+import type { TgpuBufferVertex } from './wgslBufferUsage';
 import { type TgpuSampler, isSampler } from './wgslSampler';
 import {
   type TgpuAnyTextureView,
@@ -25,10 +26,8 @@ export class BindGroupResolver {
   private textureViews: TgpuAnyTextureView[] = [];
   private externalTextures: TgpuTextureExternal[] = [];
   private buffers: TgpuBindable<AnyTgpuData, BufferUsage>[] = [];
-  private vertexBuffers: Map<
-    TgpuBindable<AnyTgpuData, 'vertex'>,
-    number
-  > | null = null;
+  private vertexBuffers: Map<TgpuBufferVertex<AnyTgpuData>, number> | null =
+    null;
 
   private layout: GPUBindGroupLayout | null = null;
   private bindGroup: GPUBindGroup | null = null;
@@ -57,7 +56,7 @@ export class BindGroupResolver {
   setVertexBuffers(
     vertexBuffers: {
       index: number;
-      buffer: TgpuBindable<AnyTgpuData, 'vertex'>;
+      buffer: TgpuBufferVertex<AnyTgpuData>;
     }[],
   ) {
     if (this.shaderStage !== GPUShaderStage.VERTEX) {
@@ -182,13 +181,8 @@ export class BindGroupResolver {
 
     const vertexBufferDescriptors: GPUVertexBufferLayout[] = [];
     for (const [buffer, idx] of this.vertexBuffers.entries()) {
-      if (!buffer.allocatable.vertexLayout) {
-        throw new Error(
-          `Buffer ${buffer.allocatable} does not have a vertex layout`,
-        );
-      }
       vertexBufferDescriptors.push({
-        ...buffer.allocatable.vertexLayout,
+        ...buffer.vertexLayout,
         attributes: [
           {
             shaderLocation: idx,
@@ -212,7 +206,7 @@ export class BindGroupResolver {
     return this.vertexBuffers.entries();
   }
 
-  getVertexBufferIndex(buffer: TgpuBindable<AnyTgpuData, 'vertex'>) {
+  getVertexBufferIndex(buffer: TgpuBufferVertex<AnyTgpuData>) {
     const index = this.vertexBuffers?.get(buffer);
     if (this.vertexBuffers === null || index === undefined) {
       throw new Error('Vertex buffers not set');
@@ -220,19 +214,23 @@ export class BindGroupResolver {
     return index;
   }
 
-  invlidateBindGroup() {
+  invalidateBindGroup() {
     this.bindGroup = null;
   }
 
   checkBindGroupInvalidation() {
-    // check if any external texture is of type HTMLVideoElement -> if so, invalidate bind group as it expires on bind
-    if (
-      this.externalTextures.some(
-        (ext) => ext.descriptor.source instanceof HTMLVideoElement,
-      )
-    ) {
-      this.invlidateBindGroup();
+    for (const texture of this.externalTextures) {
+      // check if texture is dirty (changed source) -> if so, invalidate bind group and mark clean
+      if (this.runtime.isDirty(texture)) {
+        this.invalidateBindGroup();
+        this.runtime.markClean(texture);
+        continue;
+      }
+
+      // check if any external texture is of type HTMLVideoElement -> if so, invalidate bind group as it expires on bind
+      if (texture.source instanceof HTMLVideoElement) {
+        this.invalidateBindGroup();
+      }
     }
-    // future invalidation logic will go here
   }
 }

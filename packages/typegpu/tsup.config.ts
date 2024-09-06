@@ -4,9 +4,9 @@ const DEV = process.env.DEV === 'true';
 
 console.log(`-= ${DEV ? 'DEV' : 'PRODUCTION'} MODE =-\n\n`);
 
-const entry = ['src/index.ts', 'src/data/index.ts', 'src/macro/index.ts'];
+const entry = ['src/index.ts', 'src/data/index.ts'];
 if (DEV) {
-  entry.push('src/experimental/index.ts');
+  entry.push('src/experimental/index.ts', 'src/macro/index.ts');
 }
 
 export default defineConfig({

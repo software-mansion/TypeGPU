@@ -24,11 +24,34 @@ const typegpuExtraLibs = pipe(
   })),
 );
 
+const mediacaptureDtsFiles: Record<string, string> = import.meta.glob(
+  '../../node_modules/@types/dom-mediacapture-transform/**/*.d.ts',
+  {
+    query: 'raw',
+    eager: true,
+    import: 'default',
+  },
+);
+
+const mediacaptureExtraLibs = pipe(
+  entries(mediacaptureDtsFiles),
+  map(([path, content]) => ({
+    filename: path.replace(
+      '../../node_modules/@types/dom-mediacapture-transform',
+      '@types/dom-mediacapture-transform',
+    ),
+    content,
+  })),
+);
+
 function handleEditorWillMount(monaco: Monaco) {
   const tsDefaults = monaco?.languages.typescript.typescriptDefaults;
 
   tsDefaults.addExtraLib(webgpuTypes);
   for (const lib of typegpuExtraLibs) {
+    tsDefaults.addExtraLib(lib.content, lib.filename);
+  }
+  for (const lib of mediacaptureExtraLibs) {
     tsDefaults.addExtraLib(lib.content, lib.filename);
   }
   tsDefaults.addExtraLib(toolkitTypes, 'example-toolkit.d.ts');
