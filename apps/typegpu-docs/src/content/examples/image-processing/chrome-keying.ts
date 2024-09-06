@@ -97,6 +97,40 @@ const resultTexture = wgsl
   .$allowSampled()
   .$allowStorage();
 
+const rgbToHSL = wgsl.fn`(rgba: vec3f) -> vec3f {
+  let cmax = max(rgba.r, max(rgba.g, rgba.b));
+  let cmin = min(rgba.r, min(rgba.g, rgba.b));
+
+  var h = 0.0;
+  var s = 0.0;
+  var l = (cmax + cmin) / 2.0;
+
+  if (cmax != cmin) {
+    let delta = cmax - cmin;
+    if (l > 0.5) {
+      s = delta / (2.0 - cmax - cmin);
+    } else {
+      s = delta / (cmax + cmin);
+    }
+
+    if (cmax == rgba.r) {
+      if (rgba.g < rgba.b) {
+        h = (rgba.g - rgba.b) / delta + 6.0;
+      } else {
+        h = (rgba.g - rgba.b) / delta;
+      }
+    } else if (cmax == rgba.g) {
+      h = (rgba.b - rgba.r) / delta + 2.0;
+    } else {
+      h = (rgba.r - rgba.g) / delta + 4.0;
+    }
+
+    h /= 6.0;
+  }
+
+  return vec3f(h, s, l);
+}`;
+
 const computeProgram = runtime.makeComputePipeline({
   code: wgsl`
     let coords = vec2u(${builtin.globalInvocationId}.xy);
@@ -105,9 +139,16 @@ const computeProgram = runtime.makeComputePipeline({
     }
     let xyAsUv = vec2f(coords) / vec2f(${width}, ${height});
     var col = textureSampleBaseClampToEdge(${externalTexture}, ${sampler}, xyAsUv);
-    let distance = distance(col.rgb, ${asUniform(colorBuffer)});
 
-    if (distance < ${asUniform(thresholdBuffer)}) {
+    let hsl = ${rgbToHSL}(col.rgb);
+    let colorHSL = ${rgbToHSL}(${asUniform(colorBuffer)});
+
+    var diff = abs(hsl.r - colorHSL.r);
+    if (diff > 0.5) {
+      diff = 1.0 - diff;
+    }
+
+    if (diff < ${asUniform(thresholdBuffer)}) {
       col = vec4f();
     }
 
