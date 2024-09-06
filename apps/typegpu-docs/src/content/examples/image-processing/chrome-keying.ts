@@ -51,6 +51,8 @@ context.configure({
 
 const samplingCanvas = document.createElement('canvas');
 const samplingContext = samplingCanvas.getContext('2d');
+samplingCanvas.width = width;
+samplingCanvas.height = height;
 
 if (!samplingContext) {
   throw new Error('Could not get 2d context');
@@ -103,8 +105,7 @@ const computeProgram = runtime.makeComputePipeline({
     }
     let xyAsUv = vec2f(coords) / vec2f(${width}, ${height});
     var col = textureSampleBaseClampToEdge(${externalTexture}, ${sampler}, xyAsUv);
-    let toKey = ${asUniform(colorBuffer)};
-    let distance = distance(col.rgb, toKey);
+    let distance = distance(col.rgb, ${asUniform(colorBuffer)});
 
     if (distance < ${asUniform(thresholdBuffer)}) {
       col = vec4f();
@@ -143,11 +144,11 @@ const renderProgram = runtime.makeRenderPipeline({
         vec2(0.0, 0.0),
       );
 
-      let Position = vec4(pos[${builtin.vertexIndex}], 0.0, 1.0);
+      let position = vec4(pos[${builtin.vertexIndex}], 0.0, 1.0);
       let fragUV = uv[${builtin.vertexIndex}];
     `,
     output: {
-      [builtin.position]: 'Position',
+      [builtin.position]: 'position',
       fragUV: vec2f,
     },
   },
@@ -175,9 +176,6 @@ const renderProgram = runtime.makeRenderPipeline({
 
 video.addEventListener('click', (event) => {
   const { offsetX: x, offsetY: y } = event;
-
-  samplingCanvas.width = width;
-  samplingCanvas.height = height;
   samplingContext.drawImage(video, 0, 0, width, height);
 
   const [r, g, b] = samplingContext.getImageData(x, y, 1, 1).data;

@@ -55,7 +55,6 @@ function handleEditorWillMount(monaco: Monaco) {
   }
   tsDefaults.addExtraLib(toolkitTypes, 'example-toolkit.d.ts');
   tsDefaults.addExtraLib(typedBinary, 'typed-binary.d.ts');
-  tsDefaults.addExtraLib(typedBinary, 'typed-binary.d.ts');
 
   tsDefaults.setCompilerOptions({
     ...tsCompilerOptions,
