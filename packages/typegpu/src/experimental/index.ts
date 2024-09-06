@@ -18,9 +18,9 @@ export { default as wgsl } from '../wgsl';
 export { std } from '../std';
 export { createRuntime, CreateRuntimeOptions } from '../createRuntime';
 export {
-  usableAsStorage,
-  usableAsUniform,
-  usableAsVertex,
+  isUsableAsStorage,
+  isUsableAsUniform,
+  isUsableAsVertex,
 } from '../wgslBuffer';
 export { asUniform, asReadonly, asMutable, asVertex } from '../wgslBufferUsage';
 

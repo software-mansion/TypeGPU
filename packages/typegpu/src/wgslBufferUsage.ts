@@ -10,9 +10,9 @@ import {
   type TgpuBuffer,
   type Uniform,
   type Vertex,
-  usableAsStorage,
-  usableAsUniform,
-  usableAsVertex,
+  isUsableAsStorage,
+  isUsableAsUniform,
+  isUsableAsVertex,
 } from './wgslBuffer';
 import { TgpuIdentifier } from './wgslIdentifier';
 
@@ -121,7 +121,7 @@ const mutableUsageMap = new WeakMap<
 export function asMutable<TData extends AnyTgpuData>(
   buffer: TgpuBuffer<TData> & Storage,
 ): TgpuBufferMutable<TData> {
-  if (!usableAsStorage(buffer)) {
+  if (!isUsableAsStorage(buffer)) {
     throw new Error(
       `Cannot pass ${buffer} to asMutable, as it is not allowed to be used as storage. To allow it, call .$usage(tgpu.Storage) when creating the buffer.`,
     );
@@ -143,7 +143,7 @@ const readonlyUsageMap = new WeakMap<
 export function asReadonly<TData extends AnyTgpuData>(
   buffer: TgpuBuffer<TData> & Storage,
 ): TgpuBufferReadonly<TData> {
-  if (!usableAsStorage(buffer)) {
+  if (!isUsableAsStorage(buffer)) {
     throw new Error(
       `Cannot pass ${buffer} to asReadonly, as it is not allowed to be used as storage. To allow it, call .$usage(tgpu.Storage) when creating the buffer.`,
     );
@@ -165,7 +165,7 @@ const uniformUsageMap = new WeakMap<
 export function asUniform<TData extends AnyTgpuData>(
   buffer: TgpuBuffer<TData> & Uniform,
 ): TgpuBufferUniform<TData> {
-  if (!usableAsUniform(buffer)) {
+  if (!isUsableAsUniform(buffer)) {
     throw new Error(
       `Cannot pass ${buffer} to asUniform, as it is not allowed to be used as a uniform. To allow it, call .$usage(tgpu.Uniform) when creating the buffer.`,
     );
@@ -191,7 +191,7 @@ export function asVertex<TData extends AnyTgpuData>(
   buffer: TgpuBuffer<TData> & Vertex,
   stepMode: 'vertex' | 'instance',
 ): TgpuBufferVertex<TData> {
-  if (!usableAsVertex(buffer)) {
+  if (!isUsableAsVertex(buffer)) {
     throw new Error(
       `Cannot pass ${buffer} to asVertex, as it is not allowed to be used as a vertex buffer. To allow it, call .$usage(tgpu.Vertex) when creating the buffer.`,
     );

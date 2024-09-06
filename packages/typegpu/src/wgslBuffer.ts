@@ -70,19 +70,19 @@ export function buffer<TData extends AnyTgpuData>(
   return new TgpuBufferImpl(typeSchema, initialOrBuffer);
 }
 
-export function usableAsUniform<T extends TgpuBuffer<AnyTgpuData>>(
+export function isUsableAsUniform<T extends TgpuBuffer<AnyTgpuData>>(
   buffer: T,
 ): buffer is T & Uniform {
   return !!(buffer as unknown as Uniform).usableAsUniform;
 }
 
-export function usableAsStorage<T extends TgpuBuffer<AnyTgpuData>>(
+export function isUsableAsStorage<T extends TgpuBuffer<AnyTgpuData>>(
   buffer: T,
 ): buffer is T & Storage {
   return !!(buffer as unknown as Storage).usableAsStorage;
 }
 
-export function usableAsVertex<T extends TgpuBuffer<AnyTgpuData>>(
+export function isUsableAsVertex<T extends TgpuBuffer<AnyTgpuData>>(
   buffer: T,
 ): buffer is T & Vertex {
   return !!(buffer as unknown as Vertex).usableAsVertex;

@@ -13,7 +13,11 @@ export {
   TexelFormat,
 } from './types';
 export { std } from './std';
-export { usableAsStorage, usableAsUniform, usableAsVertex } from './wgslBuffer';
+export {
+  isUsableAsStorage,
+  isUsableAsUniform,
+  isUsableAsVertex,
+} from './wgslBuffer';
 
 export type {
   TgpuBuffer,
