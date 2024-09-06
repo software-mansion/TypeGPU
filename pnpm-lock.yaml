@@ -150,9 +150,9 @@ importers:
 
   packages/jit-web:
     dependencies:
-      '@typegpu/js2tgsl':
+      '@typegpu/tgsl-tools':
         specifier: workspace:*
-        version: link:../js2tgsl
+        version: link:../tgsl-tools
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -167,7 +167,16 @@ importers:
         specifier: ^5.3.3
         version: 5.5.4
 
-  packages/js2tgsl:
+  packages/tgpu-dev-cli:
+    dependencies:
+      arg:
+        specifier: ^5.0.2
+        version: 5.0.2
+      remeda:
+        specifier: ^2.3.0
+        version: 2.3.0
+
+  packages/tgsl-tools:
     dependencies:
       acorn:
         specifier: ^8.12.1
@@ -185,15 +194,6 @@ importers:
       typescript:
         specifier: ^5.3.3
         version: 5.5.4
-
-  packages/tgpu-dev-cli:
-    dependencies:
-      arg:
-        specifier: ^5.0.2
-        version: 5.0.2
-      remeda:
-        specifier: ^2.3.0
-        version: 2.3.0
 
   packages/typegpu:
     dependencies:

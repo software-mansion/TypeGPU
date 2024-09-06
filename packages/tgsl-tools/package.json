@@ -1,8 +1,8 @@
 {
-  "name": "@typegpu/js2tgsl",
+  "name": "@typegpu/tgsl-tools",
   "private": true,
   "version": "0.0.0",
-  "description": "A set of utilities for transforming JavaScript code into TGSL (TypeGPU Shader Language). Used by TypeGPU to run JavaScript on the GPU.",
+  "description": "A set of utilities for working with TGSL (TypeGPU Shader Language), a subset of JavaScript that can be ran on the GPU through TypeGPU.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",

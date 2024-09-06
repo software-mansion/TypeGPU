@@ -1,4 +1,4 @@
-import { transpileFn } from '@typegpu/js2tgsl';
+import { transpileFn } from '@typegpu/tgsl-tools';
 import type { AnyTgpuData, JitTranspiler, Wgsl } from 'typegpu/experimental';
 
 export class JitWebTranspiler implements JitTranspiler {

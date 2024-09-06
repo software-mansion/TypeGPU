@@ -1,6 +1,6 @@
-# @typegpu/js2tgsl
+# @typegpu/tgsl-tools
 
-A set of utilities for transforming JavaScript code into TGSL (TypeGPU Shader Language). Used by [**TypeGPU**](https://docs.swmansion.com/typegpu) to run JavaScript on the GPU.
+A set of utilities for working with TGSL (TypeGPU Shader Language), a subset of JavaScript that can be ran on the GPU through [**TypeGPU**](https://docs.swmansion.com/typegpu).
 
 ## Basic principles
 
@@ -15,7 +15,7 @@ const foo = tgpu
 
 ```
 
-`@typegpu/js2tgsl` is responsible for transforming the function bodies of `tgpu.fn` declarations into an abstract syntax tree, gathering external dependencies and inferring types of expressions.
+`@typegpu/tgsl-tools` is responsible for transforming the function bodies of `tgpu.fn` declarations into an abstract syntax tree, gathering external dependencies and inferring types of expressions.
 
 ```ts
 `(a, b) => {
