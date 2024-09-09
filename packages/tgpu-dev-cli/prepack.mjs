@@ -94,7 +94,7 @@ async function transformPackageJSON() {
   // Removing any links to other workspace packages in dev dependencies.
   distPackageJson.devDependencies = omitBy(
     distPackageJson.devDependencies,
-    (/** @type {string} */ value) => value === 'workspace:*',
+    (/** @type {string} */ value) => value.startsWith('workspace:*'),
   );
   // Removing workspace specifiers in dependencies.
   distPackageJson.dependencies = mapValues(
