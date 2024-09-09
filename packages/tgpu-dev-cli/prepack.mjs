@@ -99,7 +99,7 @@ async function transformPackageJSON() {
   // Removing workspace specifiers in dependencies.
   distPackageJson.dependencies = mapValues(
     distPackageJson.dependencies,
-    (/** @type {string} */ value) => value.replace(/^workspace:*/, ''),
+    (/** @type {string} */ value) => value.replace(/^workspace:/, ''),
   );
 
   await fs.writeFile(
