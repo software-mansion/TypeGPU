@@ -30,7 +30,7 @@ interface TgpuFnShell<
   readonly returnType: Return | undefined;
 
   /**
-   * Creates an type-safe implementation of this signature
+   * Creates a type-safe implementation of this signature
    */
   implement(
     body: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
@@ -78,7 +78,7 @@ export function fn<
     return new TgpuFnShellImpl((first ?? []) as Args, second as Return);
   }
 
-  // If only one argument, at is is not an array, it is the return type.
+  // If only one argument and it is not an array, it is the return type.
   return new TgpuFnShellImpl([] as Args, first as Return);
 }
 
