@@ -9,9 +9,7 @@
 
 **TypeGPU** is a TypeScript library that enhances the WebGPU API, allowing resource management in a type-safe, declarative way.
 
-<div align="center">
-<video muted loop autoplay controls src="/apps/typegpu-docs/public/assets/migration.mp4">
-</div>
+<video autoplay muted loop src="https://github.com/user-attachments/assets/4dcbdcc6-5aa0-4adc-a40c-468c750d4d76">
 
 ## Documentation
 
