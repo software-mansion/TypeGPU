@@ -3,20 +3,19 @@
 ![TypeGPU (light mode)](/apps/typegpu-docs/public/typegpu-logo-light.svg#gh-light-mode-only)
 ![TypeGPU (dark mode)](/apps/typegpu-docs/public/typegpu-logo-dark.svg#gh-dark-mode-only)
 
-[Website](https://docs.swmansion.com/typegpu) — [Live Examples](https://docs.swmansion.com/typegpu/examples) — [Documentation](https://docs.swmansion.com/typegpu/guides/getting-started)
+[Website](https://docs.swmansion.com/typegpu) — [Documentation](https://docs.swmansion.com/typegpu/guides/getting-started)
 
 </div>
 
-TypeScript library simplifying the WebGPU API and WGSL with zero-cost abstractions, type-safe data transfer and dependency injection.
+**TypeGPU** is a TypeScript library that enhances the WebGPU API, allowing resource management in a type-safe, declarative way.
+
+<div align="center">
+<video muted loop autoplay controls src="../../apps/typegpu-docs/public/assets/migration.mp4">
+</div>
 
 ## Documentation
 
 We created a set of guides and tutorials to get you up and running fast. Check out our [Official Docs](https://docs.swmansion.com/typegpu/guides/getting-started)!
-
-## Live Examples
-
-To show the flexibility and simplicity of **TypeGPU**, we provide the [Live Examples](https://docs.swmansion.com/typegpu/examples) platform. It allows you to change the example
-code in real-time!
 
 ## What's next?
 
