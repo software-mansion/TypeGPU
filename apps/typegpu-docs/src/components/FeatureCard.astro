@@ -1,6 +1,5 @@
 ---
 const { image, header, class: className } = Astro.props;
-const content = await Astro.slots.render('default');
 ---
 
 <article
@@ -16,6 +15,6 @@ const content = await Astro.slots.render('default');
     <h3 class="pb-3 font-normal md:pb-4 text-grayscale-100">
       {header}
     </h3>
-    <p class="text-grayscale-80">{content}</p>
+    <p class="text-grayscale-80"><slot /></p>
   </div>
 </article>
