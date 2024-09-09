@@ -27,13 +27,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/software-mansion/typegpu.git"
+    "url": "git+https://github.com/software-mansion/TypeGPU.git"
   },
   "keywords": ["webgpu", "wgpu", "wgsl"],
   "bugs": {
-    "url": "https://github.com/software-mansion/typegpu/issues"
+    "url": "https://github.com/software-mansion/TypeGPU/issues"
   },
-  "homepage": "https://docs.swmansion.com/typegpu",
+  "homepage": "https://docs.swmansion.com/TypeGPU",
   "devDependencies": {
     "@biomejs/biome": "^1.8.3",
     "@types/node": "^20.11.13",
