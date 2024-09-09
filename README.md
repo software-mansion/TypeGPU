@@ -19,7 +19,7 @@ We created a set of guides and tutorials to get you up and running fast. Check o
 
 ## What's next?
 
-- [Join the Software Mansion Community Discord](https://discord.swmansion.com) to chat about TypeGPU or other Software Mansion libraries.
+- [Join the Software Mansion Community Discord](https://discord.gg/8jpfgDqPcM) to chat about TypeGPU or other Software Mansion libraries.
 
 ## TypeGPU is created by Software Mansion
 

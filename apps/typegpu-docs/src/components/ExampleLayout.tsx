@@ -55,7 +55,7 @@ function SideMenu() {
         <div>&copy; 2024 Software Mansion S.A.</div>
         <div className="flex gap-3 items-center">
           <a
-            href="https://discord.swmansion.com"
+            href="https://discord.gg/8jpfgDqPcM"
             target="_blank"
             rel="noreferrer"
           >
