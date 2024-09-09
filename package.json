@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "prepare": "husky",
-    "dev": "DEV=true pnpm --parallel -r dev",
+    "dev": "EXPERIMENTAL=true pnpm --parallel -r dev",
     "dev:test": "vitest",
     "check": "biome check --write .",
     "coverage": "vitest --coverage",
