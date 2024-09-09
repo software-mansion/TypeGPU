@@ -9,8 +9,8 @@ describe('builtin', () => {
     });
 
     const code = wgsl`
-      let x = ${builtin.position as unknown as symbol};
-      let y = ${builtin.frontFacing as unknown as symbol};
+      let x = ${builtin.position};
+      let y = ${builtin.frontFacing};
     `;
 
     expect(resolutionCtx.resolve(code)).toContain('position');
