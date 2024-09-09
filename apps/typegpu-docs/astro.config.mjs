@@ -9,7 +9,7 @@ import importRawRedirectPlugin from './vite-import-raw-redirect-plugin';
 // https://astro.build/config
 export default defineConfig({
   site: 'https://docs.swmansion.com',
-  base: 'typegpu',
+  base: 'TypeGPU',
   vite: {
     plugins: [
       importRawRedirectPlugin({
@@ -36,7 +36,7 @@ export default defineConfig({
         Head: './src/components/starlight/Head.astro',
       },
       social: {
-        github: 'https://github.com/software-mansion/typegpu',
+        github: 'https://github.com/software-mansion/TypeGPU',
       },
       sidebar: [
         // {
