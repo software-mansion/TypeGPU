@@ -5,14 +5,19 @@ import {
   getUsedBuiltins,
   getUsedBuiltinsNamed,
 } from './builtin';
-import { builtinToType } from './builtinTypes';
+import { builtinToType } from './builtinDataTypes';
 import type { SimpleTgpuData, TgpuArray } from './data';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
 import type { TgpuBufferVertex } from './tgpuBufferUsage';
-import { type BoundTgpuCode, type TgpuCode, code } from './tgpuCode';
+import { code } from './tgpuCode';
 import type { TgpuRuntime } from './tgpuRuntime';
-import type { AnyTgpuData, TgpuResolvable } from './types';
+import type {
+  AnyTgpuData,
+  BoundTgpuCode,
+  TgpuCode,
+  TgpuResolvable,
+} from './types';
 
 export type Program = {
   readonly bindGroupResolver: BindGroupResolver;

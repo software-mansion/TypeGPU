@@ -3,7 +3,6 @@ import type { Parsed } from 'typed-binary';
 import type { SimpleTgpuData, TgpuArray } from './data';
 import type { PlumListener } from './plumStore';
 import type { TgpuSettable } from './settableTrait';
-import type { BoundTgpuCode, TgpuCode } from './tgpuCode';
 import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
 import type { TgpuSampler } from './tgpuSampler';
 import type {
@@ -11,7 +10,12 @@ import type {
   TgpuAnyTextureView,
   TgpuTextureExternal,
 } from './tgpuTexture';
-import type { AnyTgpuData, TgpuAllocatable } from './types';
+import type {
+  AnyTgpuData,
+  BoundTgpuCode,
+  TgpuAllocatable,
+  TgpuCode,
+} from './types';
 
 // ----------
 // Public API
