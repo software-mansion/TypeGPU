@@ -11,7 +11,6 @@ import {
   i32,
   u32,
 } from 'typed-binary';
-import { CallableImpl } from '../callable';
 import { RecursiveDataTypeError } from '../errors';
 import type { TgpuData } from '../types';
 import alignIO from './alignIO';
@@ -29,95 +28,77 @@ interface VecSchemaOptions<T> {
   makeFromScalar: (value: number) => T;
 }
 
-class VecSchemaImpl<T extends vecBase>
-  extends CallableImpl<number[], T>
-  implements TgpuData<T>
-{
-  readonly __unwrapped!: T; // type-token, not available at runtime
+type VecSchemaBase<T> = TgpuData<T> & { expressionCode: string };
 
-  readonly unitType: ISchema<number>;
-  readonly byteAlignment;
-  readonly length;
-  readonly size;
-  readonly label;
-  public get expressionCode() {
-    return this.label;
-  }
-  readonly make: (...args: number[]) => T;
-  readonly makeFromScalar: (value: number) => T;
+function makeVecSchema<T extends vecBase>(
+  options: VecSchemaOptions<T>,
+): VecSchemaBase<T> & ((...args: number[]) => T) {
+  const VecSchema: VecSchemaBase<T> = {
+    // Type-token, not available at runtime
+    __unwrapped: undefined as unknown as T,
 
-  constructor({
-    unitType,
-    byteAlignment,
-    length,
-    label,
-    make,
-    makeFromScalar,
-  }: VecSchemaOptions<T>) {
-    super();
-    this.unitType = unitType;
-    this.byteAlignment = byteAlignment;
-    this.length = length;
-    this.size = length * 4;
-    this.label = label;
-    this.make = make;
-    this.makeFromScalar = makeFromScalar;
-  }
+    size: options.length * 4,
+    label: options.label,
+    byteAlignment: options.byteAlignment,
+    expressionCode: options.label,
 
-  _call(...args: number[]): T {
+    resolveReferences(ctx: IRefResolver): void {
+      throw new RecursiveDataTypeError();
+    },
+
+    write(output: ISerialOutput, value: Parsed<T>): void {
+      alignIO(output, this.byteAlignment);
+      for (const element of value) {
+        options.unitType.write(output, element);
+      }
+    },
+
+    read(input: ISerialInput): Parsed<T> {
+      alignIO(input, this.byteAlignment);
+      return options.make(
+        ...Array.from({ length: options.length }).map((_) =>
+          options.unitType.read(input),
+        ),
+      ) as Parsed<T>;
+    },
+
+    measure(
+      _value: Parsed<T> | MaxValue,
+      measurer: IMeasurer = new Measurer(),
+    ): IMeasurer {
+      alignIO(measurer, this.byteAlignment);
+      return measurer.add(this.size);
+    },
+
+    seekProperty(
+      reference: Parsed<T> | MaxValue,
+      prop: never,
+    ): { bufferOffset: number; schema: ISchema<unknown> } | null {
+      throw new Error('Method not implemented.');
+    },
+
+    resolve(): string {
+      return options.label;
+    },
+  };
+
+  const construct = (...args: number[]): T => {
     const values = args; // TODO: Allow users to pass in vectors that fill part of the values.
 
     if (values.length <= 1) {
-      return this.makeFromScalar(values[0] ?? 0);
+      return options.makeFromScalar(values[0] ?? 0);
     }
 
-    if (values.length === this.length) {
-      return this.make(...values);
+    if (values.length === options.length) {
+      return options.make(...values);
     }
 
     throw new Error(
-      `'${this.label}' constructor called with invalid number of arguments.`,
+      `'${options.label}' constructor called with invalid number of arguments.`,
     );
-  }
+  };
 
-  resolveReferences(ctx: IRefResolver): void {
-    throw new RecursiveDataTypeError();
-  }
-
-  write(output: ISerialOutput, value: Parsed<T>): void {
-    alignIO(output, this.byteAlignment);
-    for (const element of value) {
-      this.unitType.write(output, element);
-    }
-  }
-
-  read(input: ISerialInput): Parsed<T> {
-    alignIO(input, this.byteAlignment);
-    return this.make(
-      ...Array.from({ length: this.length }).map((_) =>
-        this.unitType.read(input),
-      ),
-    ) as Parsed<T>;
-  }
-
-  measure(
-    _value: Parsed<T> | MaxValue,
-    measurer: IMeasurer = new Measurer(),
-  ): IMeasurer {
-    alignIO(measurer, this.byteAlignment);
-    return measurer.add(this.size);
-  }
-
-  seekProperty(
-    reference: Parsed<T> | MaxValue,
-    prop: never,
-  ): { bufferOffset: number; schema: ISchema<unknown> } | null {
-    throw new Error('Method not implemented.');
-  }
-
-  resolve(): string {
-    return this.label;
-  }
+  return Object.assign(construct, VecSchema);
 }
 
 abstract class Swizzle2Impl<T2> {
@@ -414,7 +395,7 @@ export type Vec2f = TgpuData<vec2f> &
   ((xy: number) => vec2f) &
   (() => vec2f);
 
-export const vec2f = new VecSchemaImpl({
+export const vec2f = makeVecSchema({
   unitType: f32,
   byteAlignment: 8,
   length: 2,
@@ -428,7 +409,7 @@ export type Vec2i = TgpuData<vec2i> &
   ((xy: number) => vec2i) &
   (() => vec2i);
 
-export const vec2i = new VecSchemaImpl({
+export const vec2i = makeVecSchema({
   unitType: i32,
   byteAlignment: 8,
   length: 2,
@@ -442,7 +423,7 @@ export type Vec2u = TgpuData<vec2u> &
   ((xy: number) => vec2u) &
   (() => vec2u);
 
-export const vec2u = new VecSchemaImpl({
+export const vec2u = makeVecSchema({
   unitType: u32,
   byteAlignment: 8,
   length: 2,
@@ -456,7 +437,7 @@ export type Vec3f = TgpuData<vec3f> &
   ((xyz: number) => vec3f) &
   (() => vec3f);
 
-export const vec3f = new VecSchemaImpl({
+export const vec3f = makeVecSchema({
   unitType: f32,
   byteAlignment: 16,
   length: 3,
@@ -470,7 +451,7 @@ export type Vec3i = TgpuData<vec3i> &
   ((xyz: number) => vec3i) &
   (() => vec3i);
 
-export const vec3i = new VecSchemaImpl({
+export const vec3i = makeVecSchema({
   unitType: i32,
   byteAlignment: 16,
   length: 3,
@@ -484,7 +465,7 @@ export type Vec3u = TgpuData<vec3u> &
   ((xyz: number) => vec3u) &
   (() => vec3u);
 
-export const vec3u = new VecSchemaImpl({
+export const vec3u = makeVecSchema({
   unitType: u32,
   byteAlignment: 16,
   length: 3,
@@ -498,7 +479,7 @@ export type Vec4f = TgpuData<vec4f> &
   ((xyzw: number) => vec4f) &
   (() => vec4f);
 
-export const vec4f = new VecSchemaImpl({
+export const vec4f = makeVecSchema({
   unitType: f32,
   byteAlignment: 16,
   length: 4,
@@ -512,7 +493,7 @@ export type Vec4i = TgpuData<vec4i> &
   ((xyzw: number) => vec4i) &
   (() => vec4i);
 
-export const vec4i = new VecSchemaImpl({
+export const vec4i = makeVecSchema({
   unitType: i32,
   byteAlignment: 16,
   length: 4,
@@ -526,7 +507,7 @@ export type Vec4u = TgpuData<vec4u> &
   ((xyzw: number) => vec4u) &
   (() => vec4u);
 
-export const vec4u = new VecSchemaImpl({
+export const vec4u = makeVecSchema({
   unitType: u32,
   byteAlignment: 16,
   length: 4,

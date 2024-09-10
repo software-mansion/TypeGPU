@@ -22,7 +22,6 @@ export default tgpu;
 export * from '../errors';
 export * from '../types';
 export * from '../namable';
-export { AsCallable, Callable } from '../callable';
 export * from '../tgpuRuntime';
 export { default as ProgramBuilder, type Program } from '../programBuilder';
 export { StrictNameRegistry, RandomNameRegistry } from '../nameRegistry';
@@ -54,7 +53,6 @@ export type { TgpuFn } from '../tgpuFunction';
 export type { TgpuPlum } from '../tgpuPlumTypes';
 export type { TexelFormat } from '../textureTypes';
 export type { TgpuSettable } from '../settableTrait';
-export type { TgpuFn as TgpuFnExperimental } from '../tgpuFunctionExperimental';
 export type { TgpuVar } from '../tgpuVariable';
 export type { TgpuSampler } from '../tgpuSampler';
 export type {

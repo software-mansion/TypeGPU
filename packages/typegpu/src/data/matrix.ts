@@ -6,7 +6,6 @@ import {
   Measurer,
   type Parsed,
 } from 'typed-binary';
-import { CallableImpl } from '../callable';
 import { RecursiveDataTypeError } from '../errors';
 import { roundUp } from '../mathUtils';
 import type { TgpuData } from '../types';
@@ -26,39 +25,60 @@ interface MatSchemaOptions<T, TVec extends vecBase> {
   makeFromElements(...elements: number[]): T;
 }
 
-class MatSchemaImpl<T extends matBase<TColumn>, TColumn extends vecBase>
-  extends CallableImpl<(number | TColumn)[], T>
-  implements TgpuData<T>
-{
-  public readonly __unwrapped!: T;
+type MatSchema<
+  T extends matBase<TColumn>,
+  TColumn extends vecBase,
+> = TgpuData<T> & ((...args: (number | TColumn)[]) => T);
 
-  private readonly _columnType: TgpuData<TColumn>;
-  private readonly _rows: number;
-  private readonly _columns: number;
-  private readonly _makeFromColumnVectors: (...columns: TColumn[]) => T;
-  private readonly _makeFromElements: (...elements: number[]) => T;
+function createMatSchema<T extends matBase<TColumn>, TColumn extends vecBase>(
+  options: MatSchemaOptions<T, TColumn>,
+): MatSchema<T, TColumn> {
+  const MatSchema: TgpuData<T> = {
+    // Type-token, not available at runtime.
+    __unwrapped: undefined as unknown as T,
 
-  public readonly byteAlignment: number;
-  public readonly size: number;
-  public readonly label: string;
+    label: options.label,
+    byteAlignment: options.columnType.byteAlignment,
+    size: roundUp(
+      options.columnType.size * options.columns,
+      options.columnType.byteAlignment,
+    ),
 
-  constructor(options: MatSchemaOptions<T, TColumn>) {
-    super();
-    this._columnType = options.columnType;
-    this._rows = options.rows;
-    this._columns = options.columns;
-    this.label = options.label;
-    this._makeFromColumnVectors = options.makeFromColumnVectors;
-    this._makeFromElements = options.makeFromElements;
+    resolveReferences() {
+      throw new RecursiveDataTypeError();
+    },
 
-    this.byteAlignment = this._columnType.byteAlignment;
-    this.size = roundUp(
-      this._columnType.size * this._columns,
-      this.byteAlignment,
-    );
-  }
+    write(output: ISerialOutput, value: Parsed<T>): void {
+      for (const col of value.columns()) {
+        options.columnType.write(output, col as Parsed<TColumn>);
+      }
+    },
 
-  _call(...args: (number | TColumn)[]): T {
+    read(input: ISerialInput): Parsed<T> {
+      const columns = new Array(options.columns) as TColumn[];
+
+      for (let c = 0; c < options.columns; ++c) {
+        columns[c] = options.columnType.read(input) as TColumn;
+      }
+
+      return options.makeFromColumnVectors(...columns) as Parsed<T>;
+    },
+
+    measure(_value: MaxValue, measurer: IMeasurer = new Measurer()): IMeasurer {
+      alignIO(measurer, this.byteAlignment);
+      return measurer.add(this.size);
+    },
+
+    seekProperty() {
+      throw new Error('Method not implemented.');
+    },
+
+    resolve(): string {
+      return options.label;
+    },
+  };
+
+  const construct = (...args: (number | TColumn)[]): T => {
     const elements: number[] = [];
 
     for (const arg of args) {
@@ -70,45 +90,14 @@ class MatSchemaImpl<T extends matBase<TColumn>, TColumn extends vecBase>
     }
 
     // Fill the rest with zeros
-    for (let i = elements.length; i < this._columns * this._rows; ++i) {
+    for (let i = elements.length; i < options.columns * options.rows; ++i) {
       elements.push(0);
     }
 
-    return this._makeFromElements(...elements);
-  }
+    return options.makeFromElements(...elements);
+  };
 
-  resolveReferences(): void {
-    throw new RecursiveDataTypeError();
-  }
-
-  write(output: ISerialOutput, value: Parsed<T>): void {
-    for (const col of value.columns()) {
-      this._columnType.write(output, col as Parsed<TColumn>);
-    }
-  }
-
-  read(input: ISerialInput): Parsed<T> {
-    const columns = new Array(this._columns) as TColumn[];
-
-    for (let c = 0; c < this._columns; ++c) {
-      columns[c] = this._columnType.read(input) as TColumn;
-    }
-
-    return this._makeFromColumnVectors(...columns) as Parsed<T>;
-  }
-
-  measure(_value: MaxValue, measurer: IMeasurer = new Measurer()): IMeasurer {
-    alignIO(measurer, this.byteAlignment);
-    return measurer.add(this.size);
-  }
-
-  seekProperty(): null {
-    throw new Error('Method not implemented.');
-  }
-
-  resolve(): string {
-    return this.label;
-  }
+  return Object.assign(construct, MatSchema);
 }
 
 interface matBase<TColumn> {
@@ -308,7 +297,7 @@ export type Mat2x2f = TgpuData<mat2x2f> &
   ((...columns: vec2f[]) => mat2x2f) &
   (() => mat2x2f);
 
-export const mat2x2f = new MatSchemaImpl({
+export const mat2x2f = createMatSchema({
   label: 'mat2x2f',
   columnType: vec2f,
   rows: 2,
@@ -332,7 +321,7 @@ export type Mat3x3f = TgpuData<mat3x3f> &
   ((...columns: vec3f[]) => mat3x3f) &
   (() => mat3x3f);
 
-export const mat3x3f = new MatSchemaImpl({
+export const mat3x3f = createMatSchema({
   label: 'mat3x3f',
   columnType: vec3f,
   rows: 3,
@@ -358,7 +347,7 @@ export type Mat4x4f = TgpuData<mat4x4f> &
   ((...columns: vec4f[]) => mat4x4f) &
   (() => mat4x4f);
 
-export const mat4x4f = new MatSchemaImpl({
+export const mat4x4f = createMatSchema({
   label: 'mat4x4f',
   columnType: vec4f,
   rows: 4,
