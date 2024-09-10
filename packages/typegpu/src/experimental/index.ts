@@ -38,6 +38,7 @@ export type {
 export type { TgpuConst } from '../tgpuConstant';
 export type { TgpuFn } from '../tgpuFunction';
 export type { TgpuPlum } from '../tgpuPlumTypes';
+export type { TexelFormat } from '../textureTypes';
 export type { TgpuSettable } from '../settableTrait';
 export type { TgpuFn as TgpuFnExperimental } from '../tgpuFunctionExperimental';
 export type { TgpuVar } from '../tgpuVariable';
@@ -46,3 +47,4 @@ export type {
   TgpuTexture,
   TgpuTextureView,
 } from '../tgpuTexture';
+export type * from '../textureTypes';

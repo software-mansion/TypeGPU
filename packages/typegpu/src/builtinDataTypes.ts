@@ -14,7 +14,7 @@ import {
 
 export type BuiltInPossibleTypes = U32 | F32 | Vec3u | Vec4f | TgpuArray<U32>;
 
-export const builtinToType: Record<symbol, BuiltInPossibleTypes> = {
+const builtinToType: Record<symbol, BuiltInPossibleTypes> = {
   [builtin.vertexIndex]: u32,
   [builtin.instanceIndex]: u32,
   [builtin.position]: vec4f,
@@ -30,3 +30,12 @@ export const builtinToType: Record<symbol, BuiltInPossibleTypes> = {
   [builtin.workgroupId]: vec3u,
   [builtin.numWorkgroups]: vec3u,
 };
+
+export function typeForBuiltin(key: symbol): BuiltInPossibleTypes {
+  const dataType = builtinToType[key];
+  if (!dataType) {
+    throw new Error(`The symbol ${String(key)} in not a valid 'builtin'`);
+  }
+
+  return dataType;
+}

@@ -1,5 +1,4 @@
 import type { ISchema, Parsed } from 'typed-binary';
-import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from './data';
 import type { TgpuNamable } from './namable';
 import type { TgpuPlum } from './tgpuPlumTypes';
 
@@ -21,7 +20,7 @@ export interface ResolutionCtx {
     resource: TgpuRenderResource,
     identifier: TgpuIdentifier,
   ): void;
-  addBuiltin(builtin: Builtin): void;
+  addBuiltin(builtin: symbol): void;
   nameFor(token: TgpuResolvable): string;
   /**
    * Unwraps all layers of slot indirection and returns the concrete value if available.
@@ -141,18 +140,6 @@ export interface TgpuRenderResource extends TgpuResolvable {
 
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
 export type TextureUsage = 'sampled' | 'storage';
-export type StorageTextureAccess = 'read' | 'write' | 'read_write';
-
-export type StorageTextureParams = {
-  type: TgpuStorageTextureType;
-  access: StorageTextureAccess;
-  descriptor?: GPUTextureViewDescriptor;
-};
-export type SampledTextureParams = {
-  type: TgpuTypedTextureType;
-  dataType: TextureScalarFormat;
-  descriptor?: GPUTextureViewDescriptor;
-};
 
 export function isSamplerType(
   type: TgpuRenderResourceType,
@@ -209,8 +196,6 @@ export interface TgpuData<TInner> extends ISchema<TInner>, TgpuResolvable {
 }
 
 export type AnyTgpuData = TgpuData<unknown>;
-export type TextureScalarFormat = U32 | I32 | F32;
-export type TexelFormat = Vec4u | Vec4i | Vec4f;
 
 export interface TgpuPointer<
   TScope extends 'function',

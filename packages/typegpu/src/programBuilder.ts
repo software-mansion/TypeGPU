@@ -1,11 +1,8 @@
 import type { AnySchema } from 'typed-binary';
 import { BindGroupResolver } from './bindGroupResolver';
-import {
-  getBuiltinInfo,
-  getUsedBuiltins,
-  getUsedBuiltinsNamed,
-} from './builtin';
-import { builtinToType } from './builtinDataTypes';
+import { getUsedBuiltins, getUsedBuiltinsNamed } from './builtin';
+import { typeForBuiltin } from './builtinDataTypes';
+import { idForBuiltin, nameForBuiltin } from './builtinIdentifiers';
 import type { SimpleTgpuData, TgpuArray } from './data';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
@@ -99,11 +96,9 @@ export class RenderProgramBuilder {
     const structFields = [
       ...vertexOutputBuiltins.map((builtin) => {
         const outputName = this.vertexOutputFormat[builtin] ?? '';
-        const builtinName = getBuiltinInfo(builtin).name;
-        const builtinType = builtinToType[builtin] ?? '';
 
         return code`
-          @builtin(${builtinName}) ${outputName}: ${builtinType},
+          @builtin(${nameForBuiltin(builtin)}) ${outputName}: ${typeForBuiltin(builtin)},
         `;
       }),
       ...vertexOutput.map(
@@ -145,12 +140,12 @@ export class RenderProgramBuilder {
     `,
     );
     const vertexBuiltins = Array.from(vertexContext.usedBuiltins);
-    const vertexBuiltinsArgs = vertexBuiltins.map((builtin) => {
-      const type = builtinToType[builtin.symbol] ?? '';
-      return code`
-      @builtin(${builtin.name}) ${builtin.identifier}: ${type},
-    `;
-    });
+    const vertexBuiltinsArgs = vertexBuiltins.map(
+      (builtin) =>
+        code`
+      @builtin(${nameForBuiltin(builtin)}) ${idForBuiltin(builtin)}: ${typeForBuiltin(builtin)},
+    `,
+    );
     const vertexArgs = [...vertexBuiltinsArgs, ...vertexUserArgs];
 
     const vertexCode = code`
@@ -185,9 +180,8 @@ export class RenderProgramBuilder {
 
     const fragmentUsedBuiltins = Array.from(fragmentContext.usedBuiltins);
     const fragmentBuiltinArgs = fragmentUsedBuiltins.map((builtin) => {
-      const type = builtinToType[builtin.symbol] ?? '';
       return code`
-      @builtin(${builtin.name}) ${builtin.identifier}: ${type},
+      @builtin(${nameForBuiltin(builtin)}) ${idForBuiltin(builtin)}: ${typeForBuiltin(builtin)},
     `;
     });
 
@@ -250,12 +244,11 @@ export class ComputeProgramBuilder {
     context.resolve(this.computeRoot);
 
     const usedBuiltins = Array.from(context.usedBuiltins);
-    const builtinArgs = usedBuiltins.map((builtin) => {
-      const type = builtinToType[builtin.symbol] ?? '';
-      return code`
-      @builtin(${builtin.name}) ${builtin.identifier}: ${type},
-    `;
-    });
+    const builtinArgs = usedBuiltins.map(
+      (builtin) => code`
+      @builtin(${nameForBuiltin(builtin)}) ${idForBuiltin(builtin)}: ${typeForBuiltin(builtin)},
+    `,
+    );
 
     const workgroupSizeDeclaration = `@workgroup_size(${this.workgroupSize[0]}, ${this.workgroupSize[1] ?? 1}, ${this.workgroupSize[2] ?? 1})`;
 

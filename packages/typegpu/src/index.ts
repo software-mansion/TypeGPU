@@ -10,7 +10,6 @@ export { RecursiveDataTypeError } from './errors';
 export {
   TgpuData,
   AnyTgpuData,
-  TexelFormat,
 } from './types';
 export { std } from './std';
 export {
