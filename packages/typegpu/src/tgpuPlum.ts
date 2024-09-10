@@ -1,7 +1,3 @@
-// ----------
-// Public API
-// ----------
-
 import { type TgpuSettable, TgpuSettableTrait } from './settableTrait';
 import {
   type Getter,
@@ -11,6 +7,10 @@ import {
   type Unsubscribe,
 } from './tgpuPlumTypes';
 import type { TgpuResolvable, Wgsl } from './types';
+
+// ----------
+// Public API
+// ----------
 
 /**
  * Creates a computed plum. Its value depends on the plums read using `get`
