@@ -1,4 +1,5 @@
-import { TgpuIdentifier } from './tgpuIdentifier';
+import { identifier } from './tgpuIdentifier';
+import type { Builtin } from './types';
 
 export const builtin = {
   vertexIndex: Symbol('builtin_vertexIndex'),
@@ -17,112 +18,104 @@ export const builtin = {
   numWorkgroups: Symbol('builtin_numWorkgroups'),
 } as const;
 
-export interface Builtin {
-  symbol: symbol;
-  name: string;
-  stage: 'vertex' | 'fragment' | 'compute';
-  direction: 'input' | 'output';
-  identifier: TgpuIdentifier;
-}
-
 const builtinSymbolToObj: Record<symbol, Builtin> = {
   [builtin.vertexIndex]: {
     symbol: builtin.vertexIndex,
     name: 'vertex_index',
     stage: 'vertex',
     direction: 'input',
-    identifier: new TgpuIdentifier().$name('vertex_index'),
+    identifier: identifier().$name('vertex_index'),
   },
   [builtin.instanceIndex]: {
     symbol: builtin.instanceIndex,
     name: 'instance_index',
     stage: 'vertex',
     direction: 'input',
-    identifier: new TgpuIdentifier().$name('instance_index'),
+    identifier: identifier().$name('instance_index'),
   },
   [builtin.position]: {
     symbol: builtin.position,
     name: 'position',
     stage: 'vertex',
     direction: 'output',
-    identifier: new TgpuIdentifier().$name('position'),
+    identifier: identifier().$name('position'),
   },
   [builtin.clipDistances]: {
     symbol: builtin.clipDistances,
     name: 'clip_distances',
     stage: 'vertex',
     direction: 'output',
-    identifier: new TgpuIdentifier().$name('clip_distances'),
+    identifier: identifier().$name('clip_distances'),
   },
   [builtin.frontFacing]: {
     symbol: builtin.frontFacing,
     name: 'front_facing',
     stage: 'fragment',
     direction: 'input',
-    identifier: new TgpuIdentifier().$name('front_facing'),
+    identifier: identifier().$name('front_facing'),
   },
   [builtin.fragDepth]: {
     symbol: builtin.fragDepth,
     name: 'frag_depth',
     stage: 'fragment',
     direction: 'output',
-    identifier: new TgpuIdentifier().$name('frag_depth'),
+    identifier: identifier().$name('frag_depth'),
   },
   [builtin.sampleIndex]: {
     symbol: builtin.sampleIndex,
     name: 'sample_index',
     stage: 'fragment',
     direction: 'input',
-    identifier: new TgpuIdentifier().$name('sample_index'),
+    identifier: identifier().$name('sample_index'),
   },
   [builtin.sampleMask]: {
     symbol: builtin.sampleMask,
     name: 'sample_mask',
     stage: 'fragment',
     direction: 'input',
-    identifier: new TgpuIdentifier().$name('sample_mask'),
+    identifier: identifier().$name('sample_mask'),
   },
   [builtin.fragment]: {
     symbol: builtin.fragment,
     name: 'fragment',
     stage: 'fragment',
     direction: 'input',
-    identifier: new TgpuIdentifier().$name('fragment'),
+    identifier: identifier().$name('fragment'),
   },
   [builtin.localInvocationId]: {
     symbol: builtin.localInvocationId,
     name: 'local_invocation_id',
     stage: 'compute',
     direction: 'input',
-    identifier: new TgpuIdentifier().$name('local_invocation_id'),
+    identifier: identifier().$name('local_invocation_id'),
   },
   [builtin.localInvocationIndex]: {
     symbol: builtin.localInvocationIndex,
     name: 'local_invocation_index',
     stage: 'compute',
     direction: 'input',
-    identifier: new TgpuIdentifier().$name('local_invocation_index'),
+    identifier: identifier().$name('local_invocation_index'),
   },
   [builtin.globalInvocationId]: {
     symbol: builtin.globalInvocationId,
     name: 'global_invocation_id',
     stage: 'compute',
     direction: 'input',
-    identifier: new TgpuIdentifier().$name('global_invocation_id'),
+    identifier: identifier().$name('global_invocation_id'),
   },
   [builtin.workgroupId]: {
     symbol: builtin.workgroupId,
     name: 'workgroup_id',
     stage: 'compute',
     direction: 'input',
-    identifier: new TgpuIdentifier().$name('workgroup_id'),
+    identifier: identifier().$name('workgroup_id'),
   },
   [builtin.numWorkgroups]: {
     symbol: builtin.numWorkgroups,
     name: 'num_workgroups',
     stage: 'compute',
     direction: 'input',
-    identifier: new TgpuIdentifier().$name('num_workgroups'),
+    identifier: identifier().$name('num_workgroups'),
   },
 };
 

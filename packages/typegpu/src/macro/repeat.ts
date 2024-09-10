@@ -1,5 +1,5 @@
 import { code } from '../tgpuCode';
-import { TgpuIdentifier } from '../tgpuIdentifier';
+import { identifier } from '../tgpuIdentifier';
 import type { Eventual, Wgsl } from '../types';
 
 export function repeat(
@@ -21,7 +21,7 @@ export function repeat(
     const snippetValue = get(snippet);
 
     if (typeof countValue !== 'number') {
-      const index = new TgpuIdentifier().$name('i');
+      const index = identifier().$name('i');
 
       if (typeof snippetValue === 'function') {
         return code`

@@ -1,6 +1,6 @@
 import type { TgpuNamable } from './namable';
 import { code } from './tgpuCode';
-import { TgpuIdentifier } from './tgpuIdentifier';
+import { identifier } from './tgpuIdentifier';
 import type { AnyTgpuData, ResolutionCtx, TgpuResolvable, Wgsl } from './types';
 
 // ----------
@@ -27,7 +27,7 @@ export const variable = <TDataType extends AnyTgpuData>(
 // --------------
 
 class TgpuVarImpl<TDataType extends AnyTgpuData> implements TgpuVar<TDataType> {
-  public identifier = new TgpuIdentifier();
+  private _label: string | undefined;
 
   constructor(
     private readonly _dataType: TDataType,
@@ -36,21 +36,21 @@ class TgpuVarImpl<TDataType extends AnyTgpuData> implements TgpuVar<TDataType> {
   ) {}
 
   $name(label: string) {
-    this.identifier.$name(label);
+    this._label = label;
     return this;
   }
 
   resolve(ctx: ResolutionCtx): string {
+    const ident = identifier().$name(this._label);
+
     if (this._initialValue) {
       ctx.addDeclaration(
-        code`var<${this.scope}> ${this.identifier}: ${this._dataType} = ${this._initialValue};`,
+        code`var<${this.scope}> ${ident}: ${this._dataType} = ${this._initialValue};`,
       );
     } else {
-      ctx.addDeclaration(
-        code`var<${this.scope}> ${this.identifier}: ${this._dataType};`,
-      );
+      ctx.addDeclaration(code`var<${this.scope}> ${ident}: ${this._dataType};`);
     }
 
-    return ctx.resolve(this.identifier);
+    return ctx.resolve(ident);
   }
 }

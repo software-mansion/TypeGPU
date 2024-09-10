@@ -13,7 +13,7 @@ import {
 import { RecursiveDataTypeError } from '../errors';
 import type { TgpuNamable } from '../namable';
 import { code } from '../tgpuCode';
-import { TgpuIdentifier } from '../tgpuIdentifier';
+import { identifier } from '../tgpuIdentifier';
 import type { AnyTgpuData, ResolutionCtx, TgpuData } from '../types';
 import { TgpuAlignedImpl } from './align';
 import alignIO from './alignIO';
@@ -87,15 +87,15 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new TgpuIdentifier().$name(this._label);
+    const ident = identifier().$name(this._label);
 
     ctx.addDeclaration(code`
-      struct ${identifier} {
+      struct ${ident} {
         ${Object.entries(this._properties).map(([key, field]) => code`${getAttribute(field) ?? ''}${key}: ${field},\n`)}
       }
     `);
 
-    return ctx.resolve(identifier);
+    return ctx.resolve(ident);
   }
 }
 

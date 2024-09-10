@@ -1,9 +1,8 @@
-import type { Builtin } from './builtin';
 import { MissingSlotValueError, ResolutionError } from './errors';
 import type { NameRegistry } from './nameRegistry';
 import { code } from './tgpuCode';
-import type { TgpuIdentifier } from './tgpuIdentifier';
 import { isTextureView } from './tgpuTexture';
+import type { Builtin, TgpuIdentifier } from './types';
 import type {
   BufferUsage,
   Eventual,

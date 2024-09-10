@@ -1,12 +1,13 @@
 import { type AsCallable, CallableImpl } from './callable';
 import type { TgpuNamable } from './namable';
 import { code } from './tgpuCode';
-import { TgpuIdentifier } from './tgpuIdentifier';
+import { identifier } from './tgpuIdentifier';
 import { isPointer } from './types';
 import type {
   AnyTgpuData,
   ResolutionCtx,
   TgpuFnArgument,
+  TgpuIdentifier,
   TgpuResolvable,
   TgpuValue,
   Wgsl,
@@ -31,7 +32,7 @@ export function fn<
   TReturn extends AnyTgpuData | undefined = undefined,
 >(argTypes: TArgTypes, returnType?: TReturn) {
   const argPairs = argTypes.map(
-    (argType) => [new TgpuIdentifier(), argType] as const,
+    (argType) => [identifier(), argType] as const,
   ) as PairsFromTypes<TArgTypes>;
 
   const argValues = argPairs.map(
@@ -128,7 +129,7 @@ class TgpuFnImpl<
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new TgpuIdentifier().$name(this._label);
+    const fnIdent = identifier().$name(this._label);
 
     const argsCode = this.argPairs.map(([ident, argType], idx) => {
       const comma = idx < this.argPairs.length - 1 ? ', ' : '';
@@ -141,16 +142,16 @@ class TgpuFnImpl<
     });
 
     if (this.returnType !== undefined) {
-      ctx.addDeclaration(code`fn ${identifier}(${argsCode}) -> ${this.returnType} {
+      ctx.addDeclaration(code`fn ${fnIdent}(${argsCode}) -> ${this.returnType} {
         ${this.body}
       }`);
     } else {
-      ctx.addDeclaration(code`fn ${identifier}(${argsCode}) {
+      ctx.addDeclaration(code`fn ${fnIdent}(${argsCode}) {
         ${this.body}
       }`);
     }
 
-    return ctx.resolve(identifier);
+    return ctx.resolve(fnIdent);
   }
 
   _call(

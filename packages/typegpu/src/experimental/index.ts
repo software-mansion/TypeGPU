@@ -35,7 +35,6 @@ export type {
   TgpuBufferMutable,
   TgpuBufferVertex,
 } from '../tgpuBufferUsage';
-export type { TgpuCode } from '../tgpuCode';
 export type { TgpuConst } from '../tgpuConstant';
 export type { TgpuFn } from '../tgpuFunction';
 export type { TgpuPlum } from '../tgpuPlumTypes';
