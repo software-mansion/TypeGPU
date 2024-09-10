@@ -252,13 +252,11 @@ export function isGPUBuffer(value: unknown): value is GPUBuffer {
 
 // Code
 
-export interface TgpuCode extends TgpuResolvable, TgpuNamable {
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): BoundTgpuCode;
-}
-
 export interface BoundTgpuCode extends TgpuResolvable {
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): BoundTgpuCode;
 }
+
+export interface TgpuCode extends BoundTgpuCode, TgpuNamable {}
 
 // Slot
 
