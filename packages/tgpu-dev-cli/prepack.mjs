@@ -6,7 +6,7 @@
 import { exec } from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import process from 'node:process';
-import { entries, mapValues, omitBy } from 'remeda';
+import { entries, mapValues } from 'remeda';
 import { Frog } from './log.mjs';
 
 const cwd = new URL(`file:${process.cwd()}/`);
@@ -91,11 +91,8 @@ async function transformPackageJSON() {
 
   distPackageJson.private = false;
   distPackageJson.scripts = {};
-  // Removing any links to other workspace packages in dev dependencies.
-  distPackageJson.devDependencies = omitBy(
-    distPackageJson.devDependencies,
-    (/** @type {string} */ value) => value.startsWith('workspace:'),
-  );
+  // Removing dev dependencies.
+  distPackageJson.devDependencies = {};
   // Removing workspace specifiers in dependencies.
   distPackageJson.dependencies = mapValues(
     distPackageJson.dependencies,
