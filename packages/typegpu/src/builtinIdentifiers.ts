@@ -1,5 +1,6 @@
 import { builtin } from './builtin';
-import { TgpuIdentifier } from './tgpuIdentifier';
+import { identifier } from './tgpuIdentifier';
+import type { TgpuIdentifier } from './types';
 
 const builtinToName = {
   [builtin.vertexIndex]: 'vertex_index',
@@ -33,7 +34,7 @@ export function idForBuiltin(key: symbol) {
   let id = identifierMap.get(key);
 
   if (id === undefined) {
-    id = new TgpuIdentifier().$name(builtinToName[key]);
+    id = identifier().$name(builtinToName[key]);
     identifierMap.set(key, id);
   }
 

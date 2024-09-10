@@ -1,6 +1,5 @@
 import type { ISchema, Parsed } from 'typed-binary';
 import type { TgpuNamable } from './namable';
-import type { TgpuIdentifier } from './tgpuIdentifier';
 import type { TgpuPlum } from './tgpuPlumTypes';
 
 export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
@@ -36,6 +35,16 @@ export interface TgpuResolvable {
   resolve(ctx: ResolutionCtx): string;
 }
 
+export interface TgpuIdentifier extends TgpuNamable, TgpuResolvable {}
+
+export interface Builtin {
+  symbol: symbol;
+  name: string;
+  stage: 'vertex' | 'fragment' | 'compute';
+  direction: 'input' | 'output';
+  identifier: TgpuIdentifier;
+}
+
 export function isResolvable(value: unknown): value is TgpuResolvable {
   return (
     !!value &&
@@ -51,23 +60,6 @@ export function isWgsl(value: unknown): value is Wgsl {
     typeof value === 'string' ||
     isResolvable(value)
   );
-}
-
-export interface TgpuSlot<T> extends TgpuNamable {
-  readonly __brand: 'TgpuSlot';
-
-  readonly defaultValue: T | undefined;
-
-  readonly label?: string | undefined;
-  /**
-   * Used to determine if code generated using either value `a` or `b` in place
-   * of the slot will be equivalent. Defaults to `Object.is`.
-   */
-  areEqual(a: T, b: T): boolean;
-}
-
-export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {
-  return (value as TgpuSlot<T>).__brand === 'TgpuSlot';
 }
 
 /**
@@ -237,4 +229,35 @@ export function isGPUBuffer(value: unknown): value is GPUBuffer {
     'getMappedRange' in value &&
     'mapAsync' in value
   );
+}
+
+// -----------------
+// TypeGPU Resources
+// -----------------
+
+// Code
+
+export interface BoundTgpuCode extends TgpuResolvable {
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): BoundTgpuCode;
+}
+
+export interface TgpuCode extends BoundTgpuCode, TgpuNamable {}
+
+// Slot
+
+export interface TgpuSlot<T> extends TgpuNamable {
+  readonly __brand: 'TgpuSlot';
+
+  readonly defaultValue: T | undefined;
+
+  readonly label?: string | undefined;
+  /**
+   * Used to determine if code generated using either value `a` or `b` in place
+   * of the slot will be equivalent. Defaults to `Object.is`.
+   */
+  areEqual(a: T, b: T): boolean;
+}
+
+export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {
+  return (value as TgpuSlot<T>).__brand === 'TgpuSlot';
 }

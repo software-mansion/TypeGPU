@@ -7,7 +7,7 @@ import type {
   TexelFormat,
   TextureScalarFormat,
 } from './textureTypes';
-import { TgpuIdentifier } from './tgpuIdentifier';
+import { identifier } from './tgpuIdentifier';
 import { isSampler } from './tgpuSampler';
 import type {
   ResolutionCtx,
@@ -230,11 +230,9 @@ class TgpuTextureViewImpl<
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new TgpuIdentifier().$name(this._label);
-
-    ctx.addRenderResource(this, identifier);
-
-    return ctx.resolve(identifier);
+    const ident = identifier().$name(this._label);
+    ctx.addRenderResource(this, ident);
+    return ctx.resolve(ident);
   }
 }
 
@@ -264,11 +262,9 @@ class TgpuTextureExternalImpl implements TgpuTextureExternal {
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new TgpuIdentifier().$name(this._label);
-
-    ctx.addRenderResource(this, identifier);
-
-    return ctx.resolve(identifier);
+    const ident = identifier().$name(this._label);
+    ctx.addRenderResource(this, ident);
+    return ctx.resolve(ident);
   }
 }
 

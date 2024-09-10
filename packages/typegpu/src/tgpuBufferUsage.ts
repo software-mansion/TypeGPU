@@ -8,7 +8,7 @@ import {
   isUsableAsUniform,
   isUsableAsVertex,
 } from './tgpuBuffer';
-import { TgpuIdentifier } from './tgpuIdentifier';
+import { identifier } from './tgpuIdentifier';
 import type {
   AnyTgpuData,
   BufferUsage,
@@ -59,11 +59,9 @@ class TgpuBufferUsageImpl<TData extends AnyTgpuData, TUsage extends BufferUsage>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new TgpuIdentifier().$name(this.label);
-
-    ctx.addBinding(this, identifier);
-
-    return ctx.resolve(identifier);
+    const ident = identifier().$name(this.label);
+    ctx.addBinding(this, ident);
+    return ctx.resolve(ident);
   }
 
   toString(): string {
@@ -103,9 +101,9 @@ class TgpuBufferVertexImpl<TData extends AnyTgpuData>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new TgpuIdentifier().$name(this.label);
-    ctx.addBinding(this, identifier);
-    return ctx.resolve(identifier);
+    const ident = identifier().$name(this.label);
+    ctx.addBinding(this, ident);
+    return ctx.resolve(ident);
   }
 
   toString(): string {

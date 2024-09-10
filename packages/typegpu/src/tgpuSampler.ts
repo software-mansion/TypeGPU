@@ -1,5 +1,5 @@
 import type { TgpuNamable } from './namable';
-import { TgpuIdentifier } from './tgpuIdentifier';
+import { identifier } from './tgpuIdentifier';
 import type {
   ResolutionCtx,
   TgpuRenderResource,
@@ -37,11 +37,9 @@ class TgpuSamplerImpl implements TgpuSampler {
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new TgpuIdentifier().$name(this._label);
-
-    ctx.addRenderResource(this, identifier);
-
-    return ctx.resolve(identifier);
+    const ident = identifier().$name(this._label);
+    ctx.addRenderResource(this, ident);
+    return ctx.resolve(ident);
   }
 }
 

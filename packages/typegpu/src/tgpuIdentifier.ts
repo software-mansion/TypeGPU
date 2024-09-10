@@ -1,10 +1,22 @@
 import type { TgpuNamable } from './namable';
 import type { ResolutionCtx, TgpuResolvable } from './types';
 
+// ----------
+// Public API
+// ----------
+
 /**
  * Helpful when creating new Resolvable types. For internal use.
  */
-export class TgpuIdentifier implements TgpuResolvable, TgpuNamable {
+export function identifier() {
+  return new TgpuIdentifierImpl();
+}
+
+// --------------
+// Implementation
+// --------------
+
+class TgpuIdentifierImpl implements TgpuResolvable, TgpuNamable {
   label?: string | undefined;
 
   $name(label: string | undefined) {
