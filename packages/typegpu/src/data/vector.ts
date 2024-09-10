@@ -19,23 +19,25 @@ import alignIO from './alignIO';
 // Implementation
 // --------------
 
-interface VecSchemaOptions<T> {
+interface VecSchemaOptions<ValueType> {
   unitType: ISchema<number>;
   byteAlignment: number;
   length: number;
   label: string;
-  make: (...args: number[]) => T;
-  makeFromScalar: (value: number) => T;
+  make: (...args: number[]) => ValueType;
+  makeFromScalar: (value: number) => ValueType;
 }
 
-type VecSchemaBase<T> = TgpuData<T> & { expressionCode: string };
+type VecSchemaBase<ValueType> = TgpuData<ValueType> & {
+  expressionCode: string;
+};
 
-function makeVecSchema<T extends vecBase>(
-  options: VecSchemaOptions<T>,
-): VecSchemaBase<T> & ((...args: number[]) => T) {
-  const VecSchema: VecSchemaBase<T> = {
+function makeVecSchema<ValueType extends vecBase>(
+  options: VecSchemaOptions<ValueType>,
+): VecSchemaBase<ValueType> & ((...args: number[]) => ValueType) {
+  const VecSchema: VecSchemaBase<ValueType> = {
     // Type-token, not available at runtime
-    __unwrapped: undefined as unknown as T,
+    __unwrapped: undefined as unknown as ValueType,
 
     size: options.length * 4,
     label: options.label,
@@ -46,24 +48,24 @@ function makeVecSchema<T extends vecBase>(
       throw new RecursiveDataTypeError();
     },
 
-    write(output: ISerialOutput, value: Parsed<T>): void {
+    write(output: ISerialOutput, value: Parsed<ValueType>): void {
       alignIO(output, this.byteAlignment);
       for (const element of value) {
         options.unitType.write(output, element);
       }
     },
 
-    read(input: ISerialInput): Parsed<T> {
+    read(input: ISerialInput): Parsed<ValueType> {
       alignIO(input, this.byteAlignment);
       return options.make(
         ...Array.from({ length: options.length }).map((_) =>
           options.unitType.read(input),
         ),
-      ) as Parsed<T>;
+      ) as Parsed<ValueType>;
     },
 
     measure(
-      _value: Parsed<T> | MaxValue,
+      _value: Parsed<ValueType> | MaxValue,
       measurer: IMeasurer = new Measurer(),
     ): IMeasurer {
       alignIO(measurer, this.byteAlignment);
@@ -71,7 +73,7 @@ function makeVecSchema<T extends vecBase>(
     },
 
     seekProperty(
-      reference: Parsed<T> | MaxValue,
+      reference: Parsed<ValueType> | MaxValue,
       prop: never,
     ): { bufferOffset: number; schema: ISchema<unknown> } | null {
       throw new Error('Method not implemented.');
@@ -82,7 +84,7 @@ function makeVecSchema<T extends vecBase>(
     },
   };
 
-  const construct = (...args: number[]): T => {
+  const construct = (...args: number[]): ValueType => {
     const values = args; // TODO: Allow users to pass in vectors that fill part of the values.
 
     if (values.length <= 1) {

@@ -16,26 +16,29 @@ import { vec2f, vec3f, vec4f, type vecBase } from './vector';
 // Implementation
 // --------------
 
-interface MatSchemaOptions<T, TVec extends vecBase> {
+interface MatSchemaOptions<ValueType, ColumnType extends vecBase> {
   label: string;
-  columnType: TgpuData<TVec>;
+  columnType: TgpuData<ColumnType>;
   rows: number;
   columns: number;
-  makeFromColumnVectors(...columns: TVec[]): T;
-  makeFromElements(...elements: number[]): T;
+  makeFromColumnVectors(...columns: ColumnType[]): ValueType;
+  makeFromElements(...elements: number[]): ValueType;
 }
 
 type MatSchema<
-  T extends matBase<TColumn>,
-  TColumn extends vecBase,
-> = TgpuData<T> & ((...args: (number | TColumn)[]) => T);
+  ValueType extends matBase<ColumnType>,
+  ColumnType extends vecBase,
+> = TgpuData<ValueType> & ((...args: (number | ColumnType)[]) => ValueType);
 
-function createMatSchema<T extends matBase<TColumn>, TColumn extends vecBase>(
-  options: MatSchemaOptions<T, TColumn>,
-): MatSchema<T, TColumn> {
-  const MatSchema: TgpuData<T> = {
+function createMatSchema<
+  ValueType extends matBase<ColumnType>,
+  ColumnType extends vecBase,
+>(
+  options: MatSchemaOptions<ValueType, ColumnType>,
+): MatSchema<ValueType, ColumnType> {
+  const MatSchema: TgpuData<ValueType> = {
     // Type-token, not available at runtime.
-    __unwrapped: undefined as unknown as T,
+    __unwrapped: undefined as unknown as ValueType,
 
     label: options.label,
     byteAlignment: options.columnType.byteAlignment,
@@ -48,20 +51,20 @@ function createMatSchema<T extends matBase<TColumn>, TColumn extends vecBase>(
       throw new RecursiveDataTypeError();
     },
 
-    write(output: ISerialOutput, value: Parsed<T>): void {
+    write(output: ISerialOutput, value: Parsed<ValueType>): void {
       for (const col of value.columns()) {
-        options.columnType.write(output, col as Parsed<TColumn>);
+        options.columnType.write(output, col as Parsed<ColumnType>);
       }
     },
 
-    read(input: ISerialInput): Parsed<T> {
-      const columns = new Array(options.columns) as TColumn[];
+    read(input: ISerialInput): Parsed<ValueType> {
+      const columns = new Array(options.columns) as ColumnType[];
 
       for (let c = 0; c < options.columns; ++c) {
-        columns[c] = options.columnType.read(input) as TColumn;
+        columns[c] = options.columnType.read(input) as ColumnType;
       }
 
-      return options.makeFromColumnVectors(...columns) as Parsed<T>;
+      return options.makeFromColumnVectors(...columns) as Parsed<ValueType>;
     },
 
     measure(_value: MaxValue, measurer: IMeasurer = new Measurer()): IMeasurer {
@@ -78,7 +81,7 @@ function createMatSchema<T extends matBase<TColumn>, TColumn extends vecBase>(
     },
   };
 
-  const construct = (...args: (number | TColumn)[]): T => {
+  const construct = (...args: (number | ColumnType)[]): ValueType => {
     const elements: number[] = [];
 
     for (const arg of args) {
