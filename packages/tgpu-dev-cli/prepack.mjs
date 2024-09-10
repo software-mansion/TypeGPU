@@ -92,7 +92,7 @@ async function transformPackageJSON() {
   distPackageJson.private = false;
   distPackageJson.scripts = {};
   // Removing dev dependencies.
-  distPackageJson.devDependencies = {};
+  distPackageJson.devDependencies = undefined;
   // Removing workspace specifiers in dependencies.
   distPackageJson.dependencies = mapValues(
     distPackageJson.dependencies,
