@@ -1,14 +1,16 @@
 import { vec4f, vec4i, vec4u } from './data';
 import type { TgpuNamable } from './namable';
-import { TgpuIdentifier } from './tgpuIdentifier';
-import { isSampler } from './tgpuSampler';
 import type {
-  ResolutionCtx,
   SampledTextureParams,
   StorageTextureAccess,
   StorageTextureParams,
   TexelFormat,
   TextureScalarFormat,
+} from './textureTypes';
+import { TgpuIdentifier } from './tgpuIdentifier';
+import { isSampler } from './tgpuSampler';
+import type {
+  ResolutionCtx,
   TextureUsage,
   TgpuRenderResource,
   TgpuRenderResourceType,

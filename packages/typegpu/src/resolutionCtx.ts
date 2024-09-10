@@ -1,4 +1,3 @@
-import type { Builtin } from './builtin';
 import { MissingSlotValueError, ResolutionError } from './errors';
 import type { NameRegistry } from './nameRegistry';
 import { code } from './tgpuCode';
@@ -56,7 +55,7 @@ class SharedResolutionState {
     TgpuBindable,
     number
   >();
-  private readonly _usedBuiltins = new Set<Builtin>();
+  private readonly _usedBuiltins = new Set<symbol>();
   private readonly _declarations: string[] = [];
 
   constructor(
@@ -76,7 +75,7 @@ class SharedResolutionState {
     return this._declarations;
   }
 
-  get usedBuiltins(): Iterable<Builtin> {
+  get usedBuiltins(): Iterable<symbol> {
     return this._usedBuiltins;
   }
 
@@ -155,7 +154,7 @@ class SharedResolutionState {
     this._declarations.push(declaration);
   }
 
-  addBuiltin(builtin: Builtin) {
+  addBuiltin(builtin: symbol) {
     this._usedBuiltins.add(builtin);
   }
 }
@@ -196,7 +195,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
-  addBuiltin(builtin: Builtin): void {
+  addBuiltin(builtin: symbol): void {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
@@ -299,7 +298,7 @@ class ScopedResolutionCtx implements ResolutionCtx {
     throw new Error(`Unsupported resource type: ${resource.type}`);
   }
 
-  addBuiltin(builtin: Builtin): void {
+  addBuiltin(builtin: symbol): void {
     this._shared.addBuiltin(builtin);
   }
 
