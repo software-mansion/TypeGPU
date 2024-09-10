@@ -40,7 +40,7 @@ const Generators: Partial<{
     }
 
     const params = node.params as acorn.Identifier[];
-    const header = wgsl`(${params.map((p, idx) => wgsl`${p.name}: ${ctx.argTypes[idx] ?? ''}${idx < params.length - 1 ? ', ' : ''}`)}) ${() => (ctx.returnType ? wgsl`-> ${ctx.returnType}` : '')}`;
+    const header = wgsl`(${valueList(params.map((p, idx) => wgsl`${p.name}: ${ctx.argTypes[idx] ?? ''}`))}) ${ctx.returnType ? wgsl`-> ${ctx.returnType}` : ''}`;
 
     if (node.body.type === 'BlockStatement') {
       return wgsl`${header} ${generate(ctx, node.body)}`;
