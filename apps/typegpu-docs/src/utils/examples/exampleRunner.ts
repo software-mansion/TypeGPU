@@ -214,7 +214,6 @@ export async function executeExample(
     label: string,
     initial: number,
     options?: { min?: number; max?: number; step?: number },
-    onChange?: (newValue: number) => void,
   ) {
     let value: string | number | boolean = initial;
     const listeners = new Set<() => unknown>();
@@ -234,10 +233,6 @@ export async function executeExample(
         // be attached, so copying.
         for (const listener of [...listeners]) {
           listener();
-        }
-
-        if (onChange) {
-          onChange(newValue);
         }
       },
     });

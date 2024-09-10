@@ -91,7 +91,6 @@ declare module '@typegpu/example-toolkit' {
     label: string,
     initial: number,
     options?: { min?: number; max?: number; step?: number },
-    onChange?: (newValue: number) => void,
   ): TgpuPlum<number>;
 
   export function onCleanup(callback: () => unknown): void;

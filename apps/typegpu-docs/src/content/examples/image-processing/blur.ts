@@ -35,26 +35,16 @@ import tgpu, {
 const tileDim = 128;
 const batch = [4, 4];
 
-const filterSize = addSliderPlumParameter(
-  'filter size',
-  2,
-  {
-    min: 2,
-    max: 40,
-    step: 2,
-  },
-  () => render(),
-);
-const iterations = addSliderPlumParameter(
-  'iterations',
-  1,
-  {
-    min: 1,
-    max: 10,
-    step: 1,
-  },
-  () => render(),
-);
+const filterSize = addSliderPlumParameter('filter size', 2, {
+  min: 2,
+  max: 40,
+  step: 2,
+});
+const iterations = addSliderPlumParameter('iterations', 1, {
+  min: 1,
+  max: 10,
+  step: 1,
+});
 const settingsPlum = wgsl.plum((get) => ({
   blockDim: tileDim - (get(filterSize) - 1),
   filterDim: get(filterSize),
@@ -304,3 +294,6 @@ const render = () => {
 };
 
 render();
+
+runtime.onPlumChange(filterSize, () => render());
+runtime.onPlumChange(iterations, () => render());
