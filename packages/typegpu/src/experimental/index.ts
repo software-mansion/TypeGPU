@@ -47,3 +47,4 @@ export type {
   TgpuTexture,
   TgpuTextureView,
 } from '../tgpuTexture';
+export type * from '../textureTypes';
