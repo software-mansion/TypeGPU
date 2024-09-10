@@ -1,4 +1,6 @@
 import { type AsCallable, CallableImpl } from './callable';
+import { code } from './tgpuCode';
+import { TgpuIdentifier } from './tgpuIdentifier';
 import { isPointer } from './types';
 import type {
   AnyTgpuData,
@@ -9,8 +11,6 @@ import type {
   TgpuValue,
   Wgsl,
 } from './types';
-import { code } from './wgslCode';
-import { TgpuIdentifier } from './wgslIdentifier';
 
 // ----------
 // Public API

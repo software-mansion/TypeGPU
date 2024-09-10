@@ -1,18 +1,18 @@
 import type { AnySchema } from 'typed-binary';
-import { builtinToType } from './builtinTypes';
-import type { SimpleTgpuData, TgpuArray } from './data';
-import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
-import { ResolutionCtxImpl } from './resolutionCtx';
-import type { TgpuRuntime } from './typegpuRuntime';
-import type { AnyTgpuData, TgpuResolvable } from './types';
-import { BindGroupResolver } from './wgslBindGroupResolver';
-import type { TgpuBufferVertex } from './wgslBufferUsage';
+import { BindGroupResolver } from './bindGroupResolver';
 import {
   getBuiltinInfo,
   getUsedBuiltins,
   getUsedBuiltinsNamed,
-} from './wgslBuiltin';
-import { type BoundTgpuCode, type TgpuCode, code } from './wgslCode';
+} from './builtin';
+import { builtinToType } from './builtinTypes';
+import type { SimpleTgpuData, TgpuArray } from './data';
+import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
+import { ResolutionCtxImpl } from './resolutionCtx';
+import type { TgpuBufferVertex } from './tgpuBufferUsage';
+import { type BoundTgpuCode, type TgpuCode, code } from './tgpuCode';
+import type { TgpuRuntime } from './tgpuRuntime';
+import type { AnyTgpuData, TgpuResolvable } from './types';
 
 export type Program = {
   readonly bindGroupResolver: BindGroupResolver;

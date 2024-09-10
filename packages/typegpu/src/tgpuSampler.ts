@@ -1,10 +1,10 @@
+import { TgpuIdentifier } from './tgpuIdentifier';
 import type {
   ResolutionCtx,
   TgpuNamable,
   TgpuRenderResource,
   TgpuSamplerType,
 } from './types';
-import { TgpuIdentifier } from './wgslIdentifier';
 
 export interface TgpuSampler extends TgpuRenderResource, TgpuNamable {
   readonly descriptor: GPUSamplerDescriptor;

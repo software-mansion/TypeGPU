@@ -1,4 +1,6 @@
 import { vec4f, vec4i, vec4u } from './data';
+import { TgpuIdentifier } from './tgpuIdentifier';
+import { isSampler } from './tgpuSampler';
 import type {
   ResolutionCtx,
   SampledTextureParams,
@@ -11,8 +13,6 @@ import type {
   TgpuRenderResource,
   TgpuRenderResourceType,
 } from './types';
-import { TgpuIdentifier } from './wgslIdentifier';
-import { isSampler } from './wgslSampler';
 
 type Optional<T> = {
   [P in keyof T]?: T[P] | undefined;

@@ -1,6 +1,6 @@
+import { code } from '../tgpuCode';
+import { TgpuIdentifier } from '../tgpuIdentifier';
 import type { Eventual, Wgsl } from '../types';
-import { code } from '../wgslCode';
-import { TgpuIdentifier } from '../wgslIdentifier';
 
 export function repeat(
   count: Eventual<Wgsl>,

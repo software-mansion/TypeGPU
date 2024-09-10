@@ -1,4 +1,4 @@
-import { TgpuIdentifier } from './wgslIdentifier';
+import { TgpuIdentifier } from './tgpuIdentifier';
 
 export const builtin = {
   vertexIndex: Symbol('builtin_vertexIndex'),

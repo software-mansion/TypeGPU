@@ -3,5 +3,5 @@ export {
   Uniform,
   Storage,
   Vertex,
-} from './wgslBuffer';
+} from './tgpuBuffer';
 export { read, write } from './tgpuBufferUtils';

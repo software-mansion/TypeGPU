@@ -1,10 +1,10 @@
+import { code } from './tgpuCode';
 import type {
   InlineResolve,
   ResolutionCtx,
   TgpuResolvable,
   Wgsl,
 } from './types';
-import { code } from './wgslCode';
 
 // ----------
 // Public API

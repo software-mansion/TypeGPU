@@ -1,5 +1,5 @@
+import { code } from './tgpuCode';
 import type { Wgsl } from './types';
-import { code } from './wgslCode';
 
 /**
  * Represent expressions as a comma-separated list.
