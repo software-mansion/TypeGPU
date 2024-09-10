@@ -6,7 +6,7 @@
 */
 
 import { addElement } from '@typegpu/example-toolkit';
-import { JitWebTranspiler } from '@typegpu/jit-web';
+import { JitTranspiler } from '@typegpu/jit';
 import { vec2f } from 'typegpu/data';
 import { asMutable, createRuntime, tgpu } from 'typegpu/experimental';
 
@@ -39,7 +39,7 @@ const increment = tgpu
   .$uses({ counter });
 
 const runtime = await createRuntime({
-  jitTranspiler: new JitWebTranspiler(),
+  jitTranspiler: new JitTranspiler(),
 });
 
 async function doIncrement() {

@@ -71,9 +71,9 @@ importers:
       '@radix-ui/react-slider':
         specifier: ^1.2.0
         version: 1.2.0(@types/react-dom@18.3.0)(@types/react@18.3.3)(react-dom@18.3.1)(react@18.3.1)
-      '@typegpu/jit-web':
+      '@typegpu/jit':
         specifier: workspace:*
-        version: link:../../packages/jit-web
+        version: link:../../packages/jit
       '@types/dom-mediacapture-transform':
         specifier: ^0.1.9
         version: 0.1.9
@@ -154,7 +154,7 @@ importers:
         specifier: ^1.8.2
         version: 1.8.2
 
-  packages/jit-web:
+  packages/jit:
     dependencies:
       '@typegpu/tgsl-tools':
         specifier: workspace:~0.0.0

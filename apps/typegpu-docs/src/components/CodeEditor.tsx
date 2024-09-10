@@ -1,5 +1,5 @@
 import Editor, { type Monaco } from '@monaco-editor/react';
-import typegpuJitWebDts from '@typegpu/jit-web/dist/index.d.ts?raw';
+import typegpuJitDts from '@typegpu/jit/dist/index.d.ts?raw';
 import webgpuTypes from '@webgpu/types/dist/index.d.ts?raw';
 import { entries, map, pipe } from 'remeda';
 import typedBinary from 'typed-binary/dist/index.d.ts?raw';
@@ -56,7 +56,7 @@ function handleEditorWillMount(monaco: Monaco) {
   }
   tsDefaults.addExtraLib(toolkitTypes, 'example-toolkit.d.ts');
   tsDefaults.addExtraLib(typedBinary, 'typed-binary.d.ts');
-  tsDefaults.addExtraLib(typegpuJitWebDts, 'typegpu-jit-web.d.ts');
+  tsDefaults.addExtraLib(typegpuJitDts, 'typegpu-jit.d.ts');
 
   tsDefaults.setCompilerOptions({
     ...tsCompilerOptions,
@@ -65,7 +65,7 @@ function handleEditorWillMount(monaco: Monaco) {
       'typegpu/experimental': ['typegpu/dist/experimental/index.d.ts'],
       'typegpu/data': ['typegpu/dist/data/index.d.ts'],
       'typegpu/macro': ['typegpu/dist/macro/index.d.ts'],
-      '@typegpu/jit-web': ['typegpu-jit-web.d.ts'],
+      '@typegpu/jit': ['typegpu-jit.d.ts'],
     },
   });
 }

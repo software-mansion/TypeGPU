@@ -14,7 +14,7 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { JitWebTranspiler } from '@typegpu/jit-web';
+import { JitTranspiler } from '@typegpu/jit';
 import { f32, struct, u32, vec2f, vec4f } from 'typegpu/data';
 import tgpu, {
   asUniform,
@@ -41,7 +41,7 @@ const spanBuffer = tgpu
   .$name('span');
 const spanUniform = asUniform(spanBuffer);
 
-const runtime = await createRuntime({ jitTranspiler: new JitWebTranspiler() });
+const runtime = await createRuntime({ jitTranspiler: new JitTranspiler() });
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();

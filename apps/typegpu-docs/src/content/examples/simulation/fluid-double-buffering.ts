@@ -14,7 +14,7 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { JitWebTranspiler } from '@typegpu/jit-web';
+import { JitTranspiler } from '@typegpu/jit';
 import {
   type Parsed,
   arrayOf,
@@ -42,7 +42,7 @@ const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const runtime = await createRuntime({ jitTranspiler: new JitWebTranspiler() });
+const runtime = await createRuntime({ jitTranspiler: new JitTranspiler() });
 
 context.configure({
   device: runtime.device,

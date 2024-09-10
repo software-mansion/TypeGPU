@@ -1,7 +1,11 @@
 import { transpileFn } from '@typegpu/tgsl-tools';
-import type { AnyTgpuData, JitTranspiler, Wgsl } from 'typegpu/experimental';
+import type {
+  AnyTgpuData,
+  JitTranspiler as IJitTranspiler,
+  Wgsl,
+} from 'typegpu/experimental';
 
-export class JitWebTranspiler implements JitTranspiler {
+export class JitTranspiler implements IJitTranspiler {
   transpileFn(
     rawJs: string,
     argTypes: AnyTgpuData[],

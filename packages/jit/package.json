@@ -1,5 +1,5 @@
 {
-  "name": "@typegpu/jit-web",
+  "name": "@typegpu/jit",
   "private": true,
   "version": "0.0.0",
   "description": "A Just-In-Time (JIT) transpiler for TypeGPU. Allows users to test out TestGPU without a build-step at the cost of memory and efficiency.",
