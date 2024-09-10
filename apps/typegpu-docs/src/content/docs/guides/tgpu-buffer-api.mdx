@@ -58,7 +58,7 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
     // Using the value
     console.log(value);
     ```
-    <Aside type='caution'>
+    :::caution
      It would be easy to make a mistake like this:
      ```ts
      // Initializing the buffer
@@ -70,7 +70,7 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
      This is not immediately obvious and can lead to hard-to-find bugs.
      The value would be written to the padding bytes between the `vec3f` and `u32` fields.
      This would mean the value is lost without any indication of an error.
-    </Aside>
+    :::
     </TabItem>
     <TabItem label='TypeGPU'>
     ```ts
