@@ -4,7 +4,7 @@ import {
   type Getter,
   type TgpuPlum,
   isExternalPlum,
-} from './tgpuPlum';
+} from './tgpuPlumTypes';
 
 export type PlumListener<T> = (newValue: T) => unknown;
 type Unsubscribe = () => void;

@@ -38,7 +38,7 @@ export type {
 export type { TgpuCode } from '../tgpuCode';
 export type { TgpuConst } from '../tgpuConstant';
 export type { TgpuFn } from '../tgpuFunction';
-export type { TgpuPlum } from '../tgpuPlum';
+export type { TgpuPlum } from '../tgpuPlumTypes';
 export type { TgpuSettable } from '../settableTrait';
 export type { TgpuFn as TgpuFnExperimental } from '../tgpuFunctionExperimental';
 export type { TgpuVar } from '../tgpuVariable';

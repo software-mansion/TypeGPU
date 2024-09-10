@@ -1,4 +1,5 @@
-import type { ResolutionCtx, TgpuNamable, TgpuResolvable } from './types';
+import type { TgpuNamable } from './namable';
+import type { ResolutionCtx, TgpuResolvable } from './types';
 
 /**
  * Helpful when creating new Resolvable types. For internal use.

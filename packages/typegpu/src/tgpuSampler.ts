@@ -1,7 +1,7 @@
+import type { TgpuNamable } from './namable';
 import { TgpuIdentifier } from './tgpuIdentifier';
 import type {
   ResolutionCtx,
-  TgpuNamable,
   TgpuRenderResource,
   TgpuSamplerType,
 } from './types';

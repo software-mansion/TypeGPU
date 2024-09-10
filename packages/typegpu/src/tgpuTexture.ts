@@ -1,4 +1,5 @@
 import { vec4f, vec4i, vec4u } from './data';
+import type { TgpuNamable } from './namable';
 import { TgpuIdentifier } from './tgpuIdentifier';
 import { isSampler } from './tgpuSampler';
 import type {
@@ -9,7 +10,6 @@ import type {
   TexelFormat,
   TextureScalarFormat,
   TextureUsage,
-  TgpuNamable,
   TgpuRenderResource,
   TgpuRenderResourceType,
 } from './types';

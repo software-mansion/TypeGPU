@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { type PlumListener, PlumStore } from '../src/plumStore';
-import { type Getter, plum, plumFromEvent } from '../src/tgpuPlum';
+import { plum, plumFromEvent } from '../src/tgpuPlum';
+import type { Getter } from '../src/tgpuPlumTypes';
 
 function makeSubject<T>(initial: T) {
   let value = initial;

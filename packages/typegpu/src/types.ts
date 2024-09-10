@@ -1,8 +1,9 @@
 import type { ISchema, Parsed } from 'typed-binary';
 import type { Builtin } from './builtin';
 import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from './data';
+import type { TgpuNamable } from './namable';
 import type { TgpuIdentifier } from './tgpuIdentifier';
-import type { TgpuPlum } from './tgpuPlum';
+import type { TgpuPlum } from './tgpuPlumTypes';
 
 export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
 
@@ -37,27 +38,11 @@ export interface TgpuResolvable {
   resolve(ctx: ResolutionCtx): string;
 }
 
-/**
- * Can be assigned a name. Not to be confused with
- * being able to HAVE a name.
- */
-export interface TgpuNamable {
-  $name(label?: string | undefined): this;
-}
-
 export function isResolvable(value: unknown): value is TgpuResolvable {
   return (
     !!value &&
     (typeof value === 'object' || typeof value === 'function') &&
     'resolve' in value
-  );
-}
-
-export function isNamable(value: unknown): value is TgpuNamable {
-  return (
-    !!value &&
-    (typeof value === 'object' || typeof value === 'function') &&
-    '$name' in value
   );
 }
 
