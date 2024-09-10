@@ -9,11 +9,7 @@
 // https://webgpu.github.io/webgpu-samples/?sample=imageBlur
 
 // -- Hooks into the example environment
-import {
-  addElement,
-  addSliderPlumParameter,
-  onFrame,
-} from '@typegpu/example-toolkit';
+import { addElement, addSliderPlumParameter } from '@typegpu/example-toolkit';
 // --
 import {
   arrayOf,
@@ -39,16 +35,26 @@ import tgpu, {
 const tileDim = 128;
 const batch = [4, 4];
 
-const filterSize = addSliderPlumParameter('filter size', 2, {
-  min: 2,
-  max: 40,
-  step: 2,
-});
-const iterations = addSliderPlumParameter('iterations', 1, {
-  min: 1,
-  max: 10,
-  step: 1,
-});
+const filterSize = addSliderPlumParameter(
+  'filter size',
+  2,
+  {
+    min: 2,
+    max: 40,
+    step: 2,
+  },
+  () => render(),
+);
+const iterations = addSliderPlumParameter(
+  'iterations',
+  1,
+  {
+    min: 1,
+    max: 10,
+    step: 1,
+  },
+  () => render(),
+);
 const settingsPlum = wgsl.plum((get) => ({
   blockDim: tileDim - (get(filterSize) - 1),
   filterDim: get(filterSize),
@@ -254,7 +260,7 @@ const renderPipeline = runtime.makeRenderPipeline({
   },
 });
 
-onFrame(() => {
+const render = () => {
   computePipelines[0].execute({
     workgroups: [
       Math.ceil(srcWidth / runtime.readPlum(settingsPlum).blockDim),
@@ -295,4 +301,6 @@ onFrame(() => {
   });
 
   runtime.flush();
-});
+};
+
+render();
