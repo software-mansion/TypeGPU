@@ -2,8 +2,8 @@
  * @module typegpu
  */
 
+import { Storage, Uniform, Vertex, createBuffer } from './tgpuBuffer';
 import { read, write } from './tgpuBufferUtils';
-import { Storage, Uniform, Vertex, createBuffer } from './wgslBuffer';
 
 export const tgpu = {
   Uniform,
@@ -20,16 +20,15 @@ export { RecursiveDataTypeError } from './errors';
 export {
   TgpuData,
   AnyTgpuData,
-  TexelFormat,
 } from './types';
 export { std } from './std';
 export {
   isUsableAsStorage,
   isUsableAsUniform,
   isUsableAsVertex,
-} from './wgslBuffer';
+} from './tgpuBuffer';
 
 export type {
   TgpuBuffer,
   Unmanaged,
-} from './wgslBuffer';
+} from './tgpuBuffer';

@@ -1,3 +1,4 @@
+// @ts-check
 /*
  * Used as a pre-publishing step.
  */
@@ -5,7 +6,7 @@
 import { exec } from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import process from 'node:process';
-import { omitBy } from 'remeda';
+import { entries, mapValues, omitBy } from 'remeda';
 import { Frog } from './log.mjs';
 
 const cwd = new URL(`file:${process.cwd()}/`);
@@ -62,30 +63,43 @@ function deepMapStrings(value, transform, path = '') {
   return value;
 }
 
-async function main() {
+async function transformPackageJSON() {
   const packageJsonUrl = new URL('./package.json', cwd);
   const distPackageJsonUrl = new URL('./dist/package.json', cwd);
 
   const packageJson = JSON.parse(await fs.readFile(packageJsonUrl, 'utf-8'));
-
-  await promiseExec(
-    'pnpm build && pnpm -w test:spec && pnpm test:types && biome check .',
-  );
 
   // Altering paths in the package.json
   const distPackageJson = deepMapStrings(packageJson, (_path, value) => {
     if (value.startsWith('./dist/')) {
       return value.replace(/^\.\/dist/, '.');
     }
-
     return value;
   });
+
+  // Erroring out on any wildcard dependencies
+  for (const [moduleKey, versionSpec] of [
+    ...entries(distPackageJson.dependencies),
+    ...entries(distPackageJson.devDependencies),
+  ]) {
+    if (versionSpec === '*' || versionSpec === 'workspace:*') {
+      throw new Error(
+        `Cannot depend on a module with a wildcard version. (${moduleKey}: ${versionSpec})`,
+      );
+    }
+  }
+
   distPackageJson.private = false;
   distPackageJson.scripts = {};
-  // Removing any links to other workspace packages.
+  // Removing any links to other workspace packages in dev dependencies.
   distPackageJson.devDependencies = omitBy(
     distPackageJson.devDependencies,
     (/** @type {string} */ value) => value.startsWith('workspace:'),
+  );
+  // Removing workspace specifiers in dependencies.
+  distPackageJson.dependencies = mapValues(
+    distPackageJson.dependencies,
+    (/** @type {string} */ value) => value.replace(/^workspace:/, ''),
   );
 
   await fs.writeFile(
@@ -93,11 +107,26 @@ async function main() {
     JSON.stringify(distPackageJson, undefined, 2),
     'utf-8',
   );
+}
 
-  // Copying over README.md
+async function transformReadme() {
   const readmeUrl = new URL('./README.md', cwd);
   const distReadmeUrl = new URL('./dist/README.md', cwd);
-  await fs.copyFile(readmeUrl, distReadmeUrl);
+
+  let readme = await fs.readFile(readmeUrl, 'utf-8');
+
+  // npmjs.com does not handle multiple logos well, remove the dark mode only one.
+  readme = readme.replace(/!.*#gh-dark-mode-only\)/, '');
+
+  await fs.writeFile(distReadmeUrl, readme, 'utf-8');
+}
+
+async function main() {
+  await promiseExec(
+    'pnpm build && pnpm -w test:spec && pnpm test:types && biome check .',
+  );
+
+  await Promise.all([transformPackageJSON(), transformReadme()]);
 
   console.log(
     `

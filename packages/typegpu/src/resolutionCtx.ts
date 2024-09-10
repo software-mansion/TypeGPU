@@ -2,7 +2,10 @@ import { MissingSlotValueError, ResolutionError } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
+import { code } from './tgpuCode';
 import type { TgpuFn } from './tgpuFn';
+import { isTextureView } from './tgpuTexture';
+import type { TgpuIdentifier } from './types';
 import type {
   AnyTgpuData,
   BufferUsage,
@@ -22,10 +25,6 @@ import {
   isSamplerType,
   isSlot,
 } from './types';
-import type { Builtin } from './wgslBuiltin';
-import { code } from './wgslCode';
-import type { TgpuIdentifier } from './wgslIdentifier';
-import { isTextureView } from './wgslTexture';
 
 export type ResolutionCtxImplOptions = {
   readonly names: NameRegistry;
@@ -61,7 +60,7 @@ class SharedResolutionState {
     TgpuBindable,
     number
   >();
-  private readonly _usedBuiltins = new Set<Builtin>();
+  private readonly _usedBuiltins = new Set<symbol>();
   private readonly _declarations: string[] = [];
 
   constructor(
@@ -82,7 +81,7 @@ class SharedResolutionState {
     return this._declarations;
   }
 
-  get usedBuiltins(): Iterable<Builtin> {
+  get usedBuiltins(): Iterable<symbol> {
     return this._usedBuiltins;
   }
 
@@ -161,7 +160,7 @@ class SharedResolutionState {
     this._declarations.push(declaration);
   }
 
-  addBuiltin(builtin: Builtin) {
+  addBuiltin(builtin: symbol) {
     this._usedBuiltins.add(builtin);
   }
 }
@@ -210,7 +209,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
-  addBuiltin(builtin: Builtin): void {
+  addBuiltin(builtin: symbol): void {
     throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
@@ -337,7 +336,7 @@ class ScopedResolutionCtx implements ResolutionCtx {
     throw new Error(`Unsupported resource type: ${resource.type}`);
   }
 
-  addBuiltin(builtin: Builtin): void {
+  addBuiltin(builtin: symbol): void {
     this._shared.addBuiltin(builtin);
   }
 

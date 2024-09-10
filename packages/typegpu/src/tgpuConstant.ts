@@ -1,6 +1,7 @@
-import type { ResolutionCtx, TgpuNamable, TgpuResolvable, Wgsl } from './types';
-import { code } from './wgslCode';
-import { TgpuIdentifier } from './wgslIdentifier';
+import type { TgpuNamable } from './namable';
+import { code } from './tgpuCode';
+import { identifier } from './tgpuIdentifier';
+import type { ResolutionCtx, TgpuResolvable, Wgsl } from './types';
 
 // ----------
 // Public API
@@ -35,10 +36,8 @@ class TgpuConstImpl implements TgpuConst {
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new TgpuIdentifier().$name(this._label);
-
-    ctx.addDeclaration(code`const ${identifier} = ${this.expr};`);
-
-    return ctx.resolve(identifier);
+    const ident = identifier().$name(this._label);
+    ctx.addDeclaration(code`const ${ident} = ${this.expr};`);
+    return ctx.resolve(ident);
   }
 }

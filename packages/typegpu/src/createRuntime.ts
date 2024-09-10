@@ -11,6 +11,12 @@ import {
 import type { TgpuSettable } from './settableTrait';
 import { TaskQueue } from './taskQueue';
 import type { TgpuFn } from './tgpuFn';
+import {
+  type ExtractPlumValue,
+  type TgpuPlum,
+  type Unsubscribe,
+  isPlum,
+} from './tgpuPlumTypes';
 import type {
   ComputePipelineExecutorOptions,
   ComputePipelineOptions,
@@ -18,20 +24,14 @@ import type {
   RenderPipelineOptions,
   SetPlumAction,
   TgpuRuntime,
-} from './typegpuRuntime';
-import { type AnyTgpuData, type TgpuAllocatable, isAllocatable } from './types';
-import {
-  type ExtractPlumValue,
-  type TgpuPlum,
-  type Unsubscribe,
-  isPlum,
-} from './wgslPlum';
-import type { TgpuSampler } from './wgslSampler';
+} from './tgpuRuntime';
+import type { TgpuSampler } from './tgpuSampler';
 import type {
   TgpuAnyTexture,
   TgpuAnyTextureView,
   TgpuTextureExternal,
-} from './wgslTexture';
+} from './tgpuTexture';
+import { type AnyTgpuData, type TgpuAllocatable, isAllocatable } from './types';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.

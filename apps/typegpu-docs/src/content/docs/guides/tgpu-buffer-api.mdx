@@ -33,7 +33,7 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
     // Initializing the buffer
     const initData = buffer.getMappedRange();
     new Float32Array(initData).set([1.1, 2.0, 0.0]);
-    new Uint32Array(initData).set([100], 3);
+    new Uint32Array(initData).set([100], 4);
     buffer.unmap();
 
     // To read from the buffer we need to create a staging buffer
@@ -47,7 +47,7 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
     commandEncoder.copyBufferToBuffer(buffer, 0, stagingBuffer, 0, 16);
     device.queue.submit([commandEncoder.finish()]);
 
-    // Reading the data 
+    // Reading the data
     await stagingBuffer.mapAsync(GPUMapMode.READ);
     const rawBytes = stagingBuffer.getMappedRange();
     const value = {
@@ -58,6 +58,19 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
     // Using the value
     console.log(value);
     ```
+    :::caution
+     It would be easy to make a mistake like this:
+     ```ts
+     // Initializing the buffer
+     const initData = buffer.getMappedRange();
+     new Float32Array(initData).set([1.1, 2.0, 0.0]);
+     new Uint32Array(initData).set([100], 3); // <- Mistake
+     ```
+     Where is the mistake? The second `set` call should start at index 4, not 3, due to alignment rules.
+     This is not immediately obvious and can lead to hard-to-find bugs.
+     The value would be written to the padding bytes between the `vec3f` and `u32` fields.
+     This would mean the value is lost without any indication of an error.
+    :::
     </TabItem>
     <TabItem label='TypeGPU'>
     ```ts
@@ -215,7 +228,7 @@ If you want to add specific usage flags, you can use the `$addFlags(flags: GPUBu
 To write data to a buffer, you can use the `tgpu.write` function. This function takes an unmanaged buffer and the data to write to the buffer.
 Because the buffer is typed, the type hints will help you write the correct data to the buffer.
 
-If you pass a mapped buffer, the data will be written directly to the buffer (the buffer will not be unmapped). 
+If you pass a mapped buffer, the data will be written directly to the buffer (the buffer will not be unmapped).
 If you pass an unmapped buffer, the data will be written to the buffer using `GPUQueue.writeBuffer`.
 
 ```ts
@@ -262,11 +275,11 @@ import ListItem from '../../../components/ListItem.astro';
   <ListItem idx={1}>
     If you pass a mapped buffer, the data will be read directly from the buffer (the buffer will not be unmapped).
   </ListItem>
-  <ListItem idx={2}> 
+  <ListItem idx={2}>
     If you pass a mappable but unmapped buffer, the buffer will be mapped and then unmapped after the data is read.
   </ListItem>
   <ListItem idx={3}>
-    In the case of a buffer that is not mappable, a staging buffer will be created, and the 
+    In the case of a buffer that is not mappable, a staging buffer will be created, and the
     data will be copied to the staging buffer before being read. After the data is read, the staging buffer will be destroyed.
   </ListItem>
 </Aside>
@@ -302,9 +315,9 @@ const updateColors = (
 updateColors(colorFromInit, colorToInit);
 ```
 
-The above code is a simple example of how we might update a buffer holding two RGB colors. 
-The size of the data type `vec3f` is 12 bytes, so one might think that a structure containing two `vec3f` would be 24 bytes. 
-However, the size of the buffer is 32 bytes because of the alignment requirements of the WebGPU API. 
+The above code is a simple example of how we might update a buffer holding two RGB colors.
+The size of the data type `vec3f` is 12 bytes, so one might think that a structure containing two `vec3f` would be 24 bytes.
+However, the size of the buffer is 32 bytes because of the alignment requirements of the WebGPU API.
 This is something the user needs to know and calculate manually.
 
 Let's see how we can improve this code using typed buffers.
@@ -433,4 +446,4 @@ const colorToInit = vec3f(0.2, 0.5, 1.0);
 -});
 ```
 
-If you want a more in-depth look at how to create your own data types, check out the [Data Types](/typegpu/guides/defining-data-types) guide.
+If you want a more in-depth look at how to create your own data types, check out the [Data Types](/TypeGPU/guides/defining-data-types) guide.

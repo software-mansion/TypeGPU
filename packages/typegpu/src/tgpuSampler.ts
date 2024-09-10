@@ -1,10 +1,10 @@
+import type { TgpuNamable } from './namable';
+import { identifier } from './tgpuIdentifier';
 import type {
   ResolutionCtx,
-  TgpuNamable,
   TgpuRenderResource,
   TgpuSamplerType,
 } from './types';
-import { TgpuIdentifier } from './wgslIdentifier';
 
 export interface TgpuSampler extends TgpuRenderResource, TgpuNamable {
   readonly descriptor: GPUSamplerDescriptor;
@@ -37,11 +37,9 @@ class TgpuSamplerImpl implements TgpuSampler {
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new TgpuIdentifier().$name(this._label);
-
-    ctx.addRenderResource(this, identifier);
-
-    return ctx.resolve(identifier);
+    const ident = identifier().$name(this._label);
+    ctx.addRenderResource(this, ident);
+    return ctx.resolve(ident);
   }
 }
 

@@ -1,25 +1,19 @@
+import { idForBuiltin } from './builtinIdentifiers';
 import {
+  type BoundTgpuCode,
   type Eventual,
   type InlineResolve,
   type ResolutionCtx,
   type SlotValuePair,
-  type TgpuNamable,
-  type TgpuResolvable,
+  type TgpuCode,
   type TgpuSlot,
   type Wgsl,
   isResolvable,
 } from './types';
-import { getBuiltinInfo } from './wgslBuiltin';
 
 // ----------
 // Public API
 // ----------
-
-export interface TgpuCode extends TgpuResolvable, TgpuNamable {
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): BoundTgpuCode;
-}
-
-export type BoundTgpuCode = Omit<TgpuCode, '$name'>;
 
 export function code(
   strings: TemplateStringsArray,
@@ -65,9 +59,8 @@ class TgpuCodeImpl implements TgpuCode {
         const result = s((eventual) => ctx.unwrap(eventual));
         code += ctx.resolve(result);
       } else if (typeof s === 'symbol') {
-        const builtin = getBuiltinInfo(s);
-        ctx.addBuiltin(builtin);
-        code += ctx.resolve(builtin.identifier);
+        ctx.addBuiltin(s);
+        code += ctx.resolve(idForBuiltin(s));
       } else {
         code += String(s);
       }

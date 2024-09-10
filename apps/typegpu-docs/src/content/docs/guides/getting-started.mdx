@@ -7,7 +7,7 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 ## Installing locally
 
-You can install **TypeGPU** using the package manager of your choice.
+Install **TypeGPU** using the package manager of your choice.
 
 <Tabs syncKey="package-manager">
   <TabItem label="npm" icon="seti:npm">
@@ -44,3 +44,21 @@ You can play with **TypeGPU** right in the browser using our [StackBlitz example
 :::note
 Make sure your browser supports WebGPU. You can check browser compatiblity [here](https://caniuse.com/webgpu).
 :::
+
+## Troubleshooting
+
+<details>
+<summary>WebGPU types are not available</summary>
+
+If WebGPU types, such as `GPUDevice` or `GPUBuffer`, are not recognized in your project, make sure to install the [@webgpu/types](https://www.npmjs.com/package/@webgpu/types) npm package and include it as a type root in your `tsconfig.json` file.
+```json
+{
+  "compilerOptions": {
+    "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"]
+  }
+}
+```
+
+</details>
+
+If you encounter any other issues, make sure to look into the rest of our docs, as well as the [WebGPU](https://www.w3.org/TR/webgpu/) or the [react-native-wgpu](https://github.com/wcandillon/react-native-webgpu) documentations. For any further questions, you can contact us via the [Software Mansion Community Discord](https://discord.gg/8jpfgDqPcM) or on [GitHub](https://github.com/software-mansion/TypeGPU).

@@ -1,12 +1,6 @@
 import type { Unwrap } from 'typed-binary';
 import { SimpleTgpuData, TgpuArrayImpl } from './data';
 import { inGPUMode } from './gpuMode';
-import type {
-  AnyTgpuData,
-  BufferUsage,
-  ResolutionCtx,
-  TgpuBindable,
-} from './types';
 import {
   type Storage,
   type TgpuBuffer,
@@ -15,8 +9,14 @@ import {
   isUsableAsStorage,
   isUsableAsUniform,
   isUsableAsVertex,
-} from './wgslBuffer';
-import { TgpuIdentifier } from './wgslIdentifier';
+} from './tgpuBuffer';
+import { identifier } from './tgpuIdentifier';
+import type {
+  AnyTgpuData,
+  BufferUsage,
+  ResolutionCtx,
+  TgpuBindable,
+} from './types';
 
 // ----------
 // Public API
@@ -73,11 +73,9 @@ class TgpuBufferUsageImpl<TData extends AnyTgpuData, TUsage extends BufferUsage>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new TgpuIdentifier().$name(this.label);
-
-    ctx.addBinding(this, identifier);
-
-    return ctx.resolve(identifier);
+    const ident = identifier().$name(this.label);
+    ctx.addBinding(this, ident);
+    return ctx.resolve(ident);
   }
 
   toString(): string {
@@ -124,9 +122,9 @@ class TgpuBufferVertexImpl<TData extends AnyTgpuData>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new TgpuIdentifier().$name(this.label);
-    ctx.addBinding(this, identifier);
-    return ctx.resolve(identifier);
+    const ident = identifier().$name(this.label);
+    ctx.addBinding(this, ident);
+    return ctx.resolve(ident);
   }
 
   toString(): string {

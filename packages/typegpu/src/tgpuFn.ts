@@ -2,9 +2,9 @@ import type { Unwrap } from 'typed-binary';
 import { type Callable, CallableImpl } from './callable';
 import { inGPUMode } from './gpuMode';
 import { valueList } from './resolutionUtils';
+import { code } from './tgpuCode';
+import { identifier } from './tgpuIdentifier';
 import type { AnyTgpuData, ResolutionCtx, TgpuResolvable, Wgsl } from './types';
-import { code } from './wgslCode';
-import { TgpuIdentifier } from './wgslIdentifier';
 
 // ----------
 // Public API
@@ -165,15 +165,15 @@ class TgpuFnImpl<
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new TgpuIdentifier().$name(this.label);
+    const ident = identifier().$name(this.label);
 
     const { head, body } = ctx.transpileFn(
       this as unknown as TgpuFn<Args, Return>,
       this._externalMap,
     );
-    ctx.addDeclaration(code`fn ${identifier}${head}${body}`);
+    ctx.addDeclaration(code`fn ${ident}${head}${body}`);
 
-    return ctx.resolve(identifier);
+    return ctx.resolve(ident);
   }
 }
 

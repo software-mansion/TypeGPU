@@ -11,14 +11,10 @@ import {
   object,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type {
-  AnyTgpuData,
-  ResolutionCtx,
-  TgpuData,
-  TgpuNamable,
-} from '../types';
-import { code } from '../wgslCode';
-import { TgpuIdentifier } from '../wgslIdentifier';
+import type { TgpuNamable } from '../namable';
+import { code } from '../tgpuCode';
+import { identifier } from '../tgpuIdentifier';
+import type { AnyTgpuData, ResolutionCtx, TgpuData } from '../types';
 import { TgpuAlignedImpl } from './align';
 import alignIO from './alignIO';
 import { TgpuSizedImpl } from './size';
@@ -91,15 +87,15 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new TgpuIdentifier().$name(this._label);
+    const ident = identifier().$name(this._label);
 
     ctx.addDeclaration(code`
-      struct ${identifier} {
+      struct ${ident} {
         ${Object.entries(this._properties).map(([key, field]) => code`${getAttribute(field) ?? ''}${key}: ${field},\n`)}
       }
     `);
 
-    return ctx.resolve(identifier);
+    return ctx.resolve(ident);
   }
 }
 

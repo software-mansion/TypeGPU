@@ -1,11 +1,7 @@
 import { BufferWriter, type Parsed } from 'typed-binary';
-import {
-  type AnyTgpuData,
-  type TgpuAllocatable,
-  type TgpuNamable,
-  isGPUBuffer,
-} from './types';
-import type { TgpuPlum } from './wgslPlum';
+import type { TgpuNamable } from './namable';
+import type { TgpuPlum } from './tgpuPlumTypes';
+import { type AnyTgpuData, type TgpuAllocatable, isGPUBuffer } from './types';
 
 // ----------
 // Public API
