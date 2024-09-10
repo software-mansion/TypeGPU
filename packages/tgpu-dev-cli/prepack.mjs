@@ -80,7 +80,6 @@ async function transformPackageJSON() {
   // Erroring out on any wildcard dependencies
   for (const [moduleKey, versionSpec] of [
     ...entries(distPackageJson.dependencies),
-    ...entries(distPackageJson.devDependencies),
   ]) {
     if (versionSpec === '*' || versionSpec === 'workspace:*') {
       throw new Error(
