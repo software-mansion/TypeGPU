@@ -13,7 +13,7 @@ import {
   type TgpuPlum,
   type Unsubscribe,
   isPlum,
-} from './tgpuPlum';
+} from './tgpuPlumTypes';
 import type {
   ComputePipelineExecutorOptions,
   ComputePipelineOptions,

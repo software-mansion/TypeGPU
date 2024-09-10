@@ -1,10 +1,10 @@
 import { getBuiltinInfo } from './builtin';
+import type { TgpuNamable } from './namable';
 import {
   type Eventual,
   type InlineResolve,
   type ResolutionCtx,
   type SlotValuePair,
-  type TgpuNamable,
   type TgpuResolvable,
   type TgpuSlot,
   type Wgsl,

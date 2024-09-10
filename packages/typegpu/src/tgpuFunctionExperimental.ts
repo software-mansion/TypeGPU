@@ -1,4 +1,5 @@
 import { type AsCallable, CallableImpl } from './callable';
+import type { TgpuNamable } from './namable';
 import { code } from './tgpuCode';
 import { TgpuIdentifier } from './tgpuIdentifier';
 import { isPointer } from './types';
@@ -6,7 +7,6 @@ import type {
   AnyTgpuData,
   ResolutionCtx,
   TgpuFnArgument,
-  TgpuNamable,
   TgpuResolvable,
   TgpuValue,
   Wgsl,

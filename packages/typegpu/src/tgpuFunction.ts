@@ -1,3 +1,4 @@
+import type { TgpuNamable } from './namable';
 import { code } from './tgpuCode';
 import { TgpuIdentifier } from './tgpuIdentifier';
 import type {
@@ -5,7 +6,6 @@ import type {
   InlineResolve,
   ResolutionCtx,
   SlotValuePair,
-  TgpuNamable,
   TgpuResolvable,
   TgpuSlot,
   Wgsl,

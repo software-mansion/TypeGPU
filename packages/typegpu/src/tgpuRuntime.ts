@@ -4,7 +4,7 @@ import type { SimpleTgpuData, TgpuArray } from './data';
 import type { PlumListener } from './plumStore';
 import type { TgpuSettable } from './settableTrait';
 import type { BoundTgpuCode, TgpuCode } from './tgpuCode';
-import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlum';
+import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
 import type { TgpuSampler } from './tgpuSampler';
 import type {
   TgpuAnyTexture,

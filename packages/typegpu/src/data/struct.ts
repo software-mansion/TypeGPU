@@ -11,14 +11,10 @@ import {
   object,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
+import type { TgpuNamable } from '../namable';
 import { code } from '../tgpuCode';
 import { TgpuIdentifier } from '../tgpuIdentifier';
-import type {
-  AnyTgpuData,
-  ResolutionCtx,
-  TgpuData,
-  TgpuNamable,
-} from '../types';
+import type { AnyTgpuData, ResolutionCtx, TgpuData } from '../types';
 import { TgpuAlignedImpl } from './align';
 import alignIO from './alignIO';
 import { TgpuSizedImpl } from './size';
