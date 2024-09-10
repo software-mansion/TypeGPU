@@ -1,5 +1,7 @@
-import type { ISchema, Parsed } from 'typed-binary';
+import type { ISchema, Parsed, Unwrap } from 'typed-binary';
 import type { TgpuNamable } from './namable';
+import type { TgpuBufferUsage } from './tgpuBufferUsage';
+import type { TgpuFn } from './tgpuFn';
 import type { TgpuPlum } from './tgpuPlumTypes';
 
 export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
@@ -28,6 +30,14 @@ export interface ResolutionCtx {
    */
   unwrap<T>(eventual: Eventual<T>): T;
   resolve(item: Wgsl, slotValueOverrides?: SlotValuePair<unknown>[]): string;
+  transpileFn(
+    // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
+    fn: TgpuFn<any, any>,
+    externalMap: Record<string, Wgsl>,
+  ): {
+    head: Wgsl;
+    body: Wgsl;
+  };
 }
 
 export interface TgpuResolvable {
@@ -190,6 +200,14 @@ export function isExternalTextureType(
   return type === 'texture_external';
 }
 
+export type ValueOf<T> = T extends TgpuSlot<infer I>
+  ? ValueOf<I>
+  : T extends TgpuBufferUsage<infer D>
+    ? ValueOf<D>
+    : T extends TgpuData<unknown>
+      ? Unwrap<T>
+      : T;
+
 export interface TgpuData<TInner> extends ISchema<TInner>, TgpuResolvable {
   readonly byteAlignment: number;
   readonly size: number;
@@ -256,6 +274,8 @@ export interface TgpuSlot<T> extends TgpuNamable {
    * of the slot will be equivalent. Defaults to `Object.is`.
    */
   areEqual(a: T, b: T): boolean;
+
+  value: ValueOf<T>;
 }
 
 export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {

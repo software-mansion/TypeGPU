@@ -1,8 +1,10 @@
+import { inGPUMode } from './gpuMode';
 import {
   type ResolutionCtx,
   type TgpuResolvable,
   type TgpuResolvableSlot,
   type TgpuSlot,
+  type ValueOf,
   type Wgsl,
   isWgsl,
 } from './types';
@@ -52,5 +54,12 @@ class TgpuSlotImpl<T> implements TgpuResolvable, TgpuSlot<T> {
 
   toString(): string {
     return `slot:${this.label ?? '<unnamed>'}`;
+  }
+
+  get value(): ValueOf<T> {
+    if (!inGPUMode()) {
+      throw new Error(`Cannot access wgsl.slot's value directly in JS.`);
+    }
+    return this as unknown as ValueOf<T>;
   }
 }

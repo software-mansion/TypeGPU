@@ -1,3 +1,5 @@
+import type { Unwrap } from 'typed-binary';
+import { inGPUMode } from './gpuMode';
 import type { TgpuNamable } from './namable';
 import { code } from './tgpuCode';
 import { identifier } from './tgpuIdentifier';
@@ -11,7 +13,9 @@ export type VariableScope = 'private' | 'workgroup';
 
 export interface TgpuVar<TDataType extends AnyTgpuData>
   extends TgpuResolvable,
-    TgpuNamable {}
+    TgpuNamable {
+  value: Unwrap<TDataType>;
+}
 
 /**
  * Creates a variable, with an optional initial value.
@@ -52,5 +56,12 @@ class TgpuVarImpl<TDataType extends AnyTgpuData> implements TgpuVar<TDataType> {
     }
 
     return ctx.resolve(ident);
+  }
+
+  get value(): Unwrap<TDataType> {
+    if (!inGPUMode()) {
+      throw new Error(`Cannot access wgsl.var's value directly in JS.`);
+    }
+    return this as Unwrap<TDataType>;
   }
 }

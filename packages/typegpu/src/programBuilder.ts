@@ -14,6 +14,7 @@ import type {
   BoundTgpuCode,
   TgpuCode,
   TgpuResolvable,
+  Wgsl,
 } from './types';
 
 export type Program = {
@@ -37,6 +38,7 @@ export default class ProgramBuilder {
     const ctx = new ResolutionCtxImpl({
       names: options.nameRegistry ?? new RandomNameRegistry(),
       bindingGroup: options.bindingGroup,
+      jitTranspiler: this.runtime.jitTranspiler,
     });
 
     // Resolving code
@@ -112,6 +114,7 @@ export class RenderProgramBuilder {
     const vertexContext = new ResolutionCtxImpl({
       names: options.nameRegistry ?? new RandomNameRegistry(),
       bindingGroup: options.bindingGroup,
+      jitTranspiler: this.runtime.jitTranspiler,
     });
     vertexContext.resolve(this.vertexRoot);
     const vertexBuffers = Array.from(vertexContext.usedBindables).filter(
@@ -175,6 +178,7 @@ export class RenderProgramBuilder {
     const fragmentContext = new ResolutionCtxImpl({
       names: options.nameRegistry ?? new RandomNameRegistry(),
       bindingGroup: options.bindingGroup,
+      jitTranspiler: this.runtime.jitTranspiler,
     });
     fragmentContext.resolve(this.fragmentRoot);
 
@@ -228,7 +232,7 @@ export class RenderProgramBuilder {
 export class ComputeProgramBuilder {
   constructor(
     private runtime: TgpuRuntime,
-    private computeRoot: TgpuCode | BoundTgpuCode,
+    private computeRoot: Wgsl,
     private workgroupSize: readonly [
       number,
       (number | null)?,
@@ -240,6 +244,7 @@ export class ComputeProgramBuilder {
     const context = new ResolutionCtxImpl({
       names: options.nameRegistry ?? new RandomNameRegistry(),
       bindingGroup: options.bindingGroup,
+      jitTranspiler: this.runtime.jitTranspiler,
     });
     context.resolve(this.computeRoot);
 

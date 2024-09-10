@@ -2,12 +2,26 @@
  * @module typegpu/experimental
  */
 
-export * as tgpu from '../tgpu';
-import * as tgpu from '../tgpu';
+import { Storage, Uniform, Vertex, createBuffer } from '../tgpuBuffer';
+import { read, write } from '../tgpuBufferUtils';
+import { fn, procedure } from '../tgpuFn';
+
+export const tgpu = {
+  Uniform,
+  Storage,
+  Vertex,
+
+  createBuffer,
+  read,
+  write,
+  fn,
+  procedure,
+};
 export default tgpu;
 
 export * from '../errors';
 export * from '../types';
+export * from '../namable';
 export { AsCallable, Callable } from '../callable';
 export * from '../tgpuRuntime';
 export { default as ProgramBuilder, type Program } from '../programBuilder';
@@ -47,4 +61,5 @@ export type {
   TgpuTexture,
   TgpuTextureView,
 } from '../tgpuTexture';
+export type { JitTranspiler } from '../jitTranspiler';
 export type * from '../textureTypes';

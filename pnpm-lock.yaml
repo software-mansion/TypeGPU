@@ -71,6 +71,9 @@ importers:
       '@radix-ui/react-slider':
         specifier: ^1.2.0
         version: 1.2.0(@types/react-dom@18.3.0)(@types/react@18.3.3)(react-dom@18.3.1)(react@18.3.1)
+      '@typegpu/jit':
+        specifier: workspace:*
+        version: link:../../packages/jit
       '@types/dom-mediacapture-transform':
         specifier: ^0.1.9
         version: 0.1.9
@@ -151,6 +154,25 @@ importers:
         specifier: ^1.8.2
         version: 1.8.2
 
+  packages/jit:
+    dependencies:
+      '@typegpu/tgsl-tools':
+        specifier: workspace:~0.0.0
+        version: link:../tgsl-tools
+    devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
+      tsup:
+        specifier: ^8.0.2
+        version: 8.0.2(typescript@5.5.4)
+      typegpu:
+        specifier: workspace:*
+        version: link:../typegpu
+      typescript:
+        specifier: ^5.3.3
+        version: 5.5.4
+
   packages/tgpu-dev-cli:
     dependencies:
       arg:
@@ -159,6 +181,25 @@ importers:
       remeda:
         specifier: ^2.3.0
         version: 2.3.0
+
+  packages/tgsl-tools:
+    dependencies:
+      acorn:
+        specifier: ^8.12.1
+        version: 8.12.1
+      typegpu:
+        specifier: workspace:^0.1.1
+        version: link:../typegpu
+    devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
+      tsup:
+        specifier: ^8.0.2
+        version: 8.0.2(typescript@5.5.4)
+      typescript:
+        specifier: ^5.3.3
+        version: 5.5.4
 
   packages/typegpu:
     dependencies:

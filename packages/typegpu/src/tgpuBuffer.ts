@@ -49,17 +49,17 @@ export interface TgpuBuffer<TData extends AnyTgpuData>
   destroy(): void;
 }
 
-export function buffer<TData extends AnyTgpuData>(
+export function createBuffer<TData extends AnyTgpuData>(
   typeSchema: TData,
   initial?: Parsed<TData> | TgpuPlum<Parsed<TData>> | undefined,
 ): TgpuBuffer<TData>;
 
-export function buffer<TData extends AnyTgpuData>(
+export function createBuffer<TData extends AnyTgpuData>(
   typeSchema: TData,
   gpuBuffer: GPUBuffer,
 ): TgpuBuffer<TData>;
 
-export function buffer<TData extends AnyTgpuData>(
+export function createBuffer<TData extends AnyTgpuData>(
   typeSchema: TData,
   initialOrBuffer?: Parsed<TData> | TgpuPlum<Parsed<TData>> | GPUBuffer,
 ): TgpuBuffer<TData> {

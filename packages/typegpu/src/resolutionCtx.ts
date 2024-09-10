@@ -1,9 +1,13 @@
 import { MissingSlotValueError, ResolutionError } from './errors';
+import { onGPU } from './gpuMode';
+import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
 import { code } from './tgpuCode';
+import type { TgpuFn } from './tgpuFn';
 import { isTextureView } from './tgpuTexture';
 import type { TgpuIdentifier } from './types';
 import type {
+  AnyTgpuData,
   BufferUsage,
   Eventual,
   ResolutionCtx,
@@ -25,6 +29,7 @@ import {
 export type ResolutionCtxImplOptions = {
   readonly names: NameRegistry;
   readonly bindingGroup?: number;
+  readonly jitTranspiler?: JitTranspiler | undefined;
 };
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
@@ -61,6 +66,7 @@ class SharedResolutionState {
   constructor(
     public readonly names: NameRegistry,
     private readonly _bindingGroup: number,
+    public readonly jitTranspiler: JitTranspiler | undefined,
   ) {}
 
   get usedBindables(): Iterable<TgpuBindable> {
@@ -164,8 +170,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   usedSlots = new Set<TgpuSlot<unknown>>();
 
-  constructor({ names, bindingGroup }: ResolutionCtxImplOptions) {
-    this._shared = new SharedResolutionState(names, bindingGroup ?? 0);
+  constructor({
+    names,
+    bindingGroup,
+    jitTranspiler,
+  }: ResolutionCtxImplOptions) {
+    this._shared = new SharedResolutionState(
+      names,
+      bindingGroup ?? 0,
+      jitTranspiler,
+    );
   }
 
   get usedBindables() {
@@ -226,9 +240,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       slotValueOverrides,
     );
 
-    const result = this._shared.getOrInstantiate(item, itemCtx);
+    const result = onGPU(() => this._shared.getOrInstantiate(item, itemCtx));
 
     return `${[...this._shared.declarations].join('\n\n')}${result}`;
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: <no generic magic needed>
+  transpileFn(fn: TgpuFn<any, any>): { head: Wgsl; body: Wgsl } {
+    throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
   }
 
   getIndexFor(item: TgpuBindable | TgpuRenderResource) {
@@ -248,6 +267,25 @@ class ScopedResolutionCtx implements ResolutionCtx {
     private readonly _shared: SharedResolutionState,
     private readonly _slotValuePairs: SlotValuePair<unknown>[],
   ) {}
+
+  transpileFn(
+    // biome-ignore lint/suspicious/noExplicitAny: <no generic magic needed>
+    fn: TgpuFn<any, AnyTgpuData>,
+    externalMap: Record<string, Wgsl>,
+  ): { head: Wgsl; body: Wgsl } {
+    if (!this._shared.jitTranspiler) {
+      throw new Error(
+        'Tried to execute a tgpu.fn function without providing a JIT transpiler, or transpiling at build time.',
+      );
+    }
+
+    return this._shared.jitTranspiler.transpileFn(
+      String(fn.body),
+      fn.shell.argTypes,
+      fn.shell.returnType,
+      externalMap,
+    );
+  }
 
   addDeclaration(declaration: TgpuResolvable): void {
     this._shared.addDeclaration(this.resolve(declaration));

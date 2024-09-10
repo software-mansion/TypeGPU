@@ -1,4 +1,3 @@
-import { buffer } from './tgpuBuffer';
 import { code } from './tgpuCode';
 import { constant } from './tgpuConstant';
 import { declare } from './tgpuDeclare';
@@ -14,7 +13,6 @@ export default Object.assign(code, {
   code,
   fn,
   fun,
-  buffer,
   plum,
   plumFromEvent,
   slot,

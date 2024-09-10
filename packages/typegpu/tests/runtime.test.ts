@@ -74,7 +74,9 @@ describe('TgpuRuntime', () => {
   });
 
   it('should create buffer with no initialization', async () => {
-    const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
+    const runtime = await createRuntime({
+      device: mockDevice() as unknown as GPUDevice,
+    });
     const bufferData = tgpu.createBuffer(u32).$usage(tgpu.Uniform);
     const buffer = asUniform(bufferData);
 
@@ -98,7 +100,9 @@ describe('TgpuRuntime', () => {
   });
 
   it('should create buffer with initialization', async () => {
-    const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
+    const runtime = await createRuntime({
+      device: mockDevice() as unknown as GPUDevice,
+    });
     const bufferData = tgpu
       .createBuffer(vec3i, vec3i(0, 0, 0))
       .$usage(tgpu.Uniform);
@@ -124,7 +128,9 @@ describe('TgpuRuntime', () => {
   });
 
   it('should allocate buffer with proper size for nested structs', async () => {
-    const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
+    const runtime = await createRuntime({
+      device: mockDevice() as unknown as GPUDevice,
+    });
     const s1 = struct({ a: u32, b: u32 });
     const s2 = struct({ a: u32, b: s1 });
     const bufferData = tgpu.createBuffer(s2).$usage(tgpu.Uniform);
@@ -148,7 +154,9 @@ describe('TgpuRuntime', () => {
   });
 
   it('should properly write to buffer', async () => {
-    const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
+    const runtime = await createRuntime({
+      device: mockDevice() as unknown as GPUDevice,
+    });
     const bufferData = tgpu.createBuffer(u32);
 
     runtime.writeBuffer(bufferData, 3);
@@ -166,7 +174,9 @@ describe('TgpuRuntime', () => {
   });
 
   it('should properly write to complex buffer', async () => {
-    const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
+    const runtime = await createRuntime({
+      device: mockDevice() as unknown as GPUDevice,
+    });
 
     const s1 = struct({ a: u32, b: u32, c: vec3i });
     const s2 = struct({ a: u32, b: s1, c: vec4u });
@@ -209,7 +219,9 @@ describe('TgpuRuntime', () => {
   });
 
   it('should properly write to buffer with plum initialization', async () => {
-    const runtime = await createRuntime(mockDevice() as unknown as GPUDevice);
+    const runtime = await createRuntime({
+      device: mockDevice() as unknown as GPUDevice,
+    });
     const spy = vi.spyOn(runtime, 'writeBuffer');
     const intPlum = plum<number>(3);
 

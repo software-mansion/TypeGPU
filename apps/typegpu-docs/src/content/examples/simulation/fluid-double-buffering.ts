@@ -14,9 +14,11 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
+import { JitTranspiler } from '@typegpu/jit';
 import {
   type Parsed,
   arrayOf,
+  bool,
   f32,
   i32,
   struct,
@@ -27,20 +29,20 @@ import {
 } from 'typegpu/data';
 import tgpu, {
   type TgpuBufferUsage,
-  type Wgsl,
   asMutable,
   asReadonly,
   asUniform,
   builtin,
   createRuntime,
   wgsl,
+  std,
 } from 'typegpu/experimental';
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const runtime = await createRuntime();
+const runtime = await createRuntime({ jitTranspiler: new JitTranspiler() });
 
 context.configure({
   device: runtime.device,
@@ -50,25 +52,29 @@ context.configure({
 
 const MAX_GRID_SIZE = 1024;
 
-const randSeed = wgsl.var(vec2f).$name('rand_seed');
+const randSeed = wgsl.var(vec2f);
 
-const setupRandomSeed = wgsl.fn`
-  (coord: vec2f) {
-    ${randSeed} = coord;
-  }
-`.$name('setup_random_seed');
+const setupRandomSeed = tgpu
+  .fn([vec2f])
+  .implement((coord) => {
+    randSeed.value = coord;
+  })
+  .$uses({ randSeed });
 
 /**
  * Yoinked from https://www.cg.tuwien.ac.at/research/publications/2023/PETER-2023-PSW/PETER-2023-PSW-.pdf
  * "Particle System in WebGPU" by Benedikt Peter
  */
-const rand01 = wgsl.fn`
-  () -> f32 {
-    ${randSeed}.x = fract(cos(dot(${randSeed}, vec2<f32>(23.14077926, 232.61690225))) * 136.8168);
-    ${randSeed}.y = fract(cos(dot(${randSeed}, vec2<f32>(54.47856553, 345.84153136))) * 534.7645);
-    return ${randSeed}.y;
-  }
-`.$name('rand01');
+const rand01 = tgpu
+  .fn(f32)
+  .implement(() => {
+    const a = std.dot(randSeed.value, vec2f(23.14077926, 232.61690225));
+    const b = std.dot(randSeed.value, vec2f(54.47856553, 345.84153136));
+    randSeed.value.x = std.fract(std.cos(a) * 136.8168);
+    randSeed.value.y = std.fract(std.cos(b) * 534.7645);
+    return randSeed.value.y;
+  })
+  .$uses({ randSeed });
 
 type GridData = typeof GridData;
 /**
@@ -93,12 +99,8 @@ const gridSizeUniform = asUniform(gridSizeBuffer);
 const gridAlphaBuffer = tgpu.createBuffer(GridData).$usage(tgpu.Storage);
 const gridBetaBuffer = tgpu.createBuffer(GridData).$usage(tgpu.Storage);
 
-const inputGridSlot = wgsl
-  .slot<TgpuBufferUsage<GridData>>()
-  .$name('input_grid');
-const outputGridSlot = wgsl
-  .slot<TgpuBufferUsage<GridData, 'mutable'>>()
-  .$name('output_grid');
+const inputGridSlot = wgsl.slot<TgpuBufferUsage<GridData>>();
+const outputGridSlot = wgsl.slot<TgpuBufferUsage<GridData, 'mutable'>>();
 
 const MAX_OBSTACLES = 4;
 
@@ -114,45 +116,51 @@ const obstaclesBuffer = tgpu
 
 const obstaclesReadonly = asReadonly(obstaclesBuffer);
 
-const isValidCoord = wgsl.fn`(x: i32, y: i32) -> bool {
-  return
-    x < ${gridSizeUniform} &&
-    x >= 0 &&
-    y < ${gridSizeUniform} &&
-    y >= 0;
-}`;
+const isValidCoord = tgpu
+  .fn([i32, i32], bool)
+  .implement(
+    (x, y) =>
+      x < gridSizeUniform.value &&
+      x >= 0 &&
+      y < gridSizeUniform.value &&
+      y >= 0,
+  )
+  .$uses({ gridSizeUniform });
 
-const coordsToIndex = (x: Wgsl, y: Wgsl) =>
-  wgsl`${x} + ${y} * ${gridSizeUniform}`;
+const coordsToIndex = tgpu
+  .fn([i32, i32], i32)
+  .implement((x, y) => x + y * gridSizeUniform.value)
+  .$uses({ gridSizeUniform });
 
-const getCell = wgsl.fn`
-  (x: i32, y: i32) -> vec4f {
-    let index = ${coordsToIndex('x', 'y')};
-    return ${inputGridSlot}[index];
-  }
-`.$name('get_cell');
+const getCell = tgpu
+  .fn([i32, i32], vec4f)
+  .implement((x, y) => inputGridSlot.value[coordsToIndex(x, y)])
+  .$uses({ coordsToIndex, inputGridSlot });
 
-const setCell = wgsl.fn`
-  (x: i32, y: i32, value: vec4f) {
-    let index = ${coordsToIndex('x', 'y')};
-    ${outputGridSlot}[index] = value;
-  }
-`.$name('set_cell');
+const setCell = tgpu
+  .fn([i32, i32, vec4f])
+  .implement((x, y, value) => {
+    const index = coordsToIndex(x, y);
+    outputGridSlot.value[index] = value;
+  })
+  .$uses({ coordsToIndex, outputGridSlot });
 
-const setVelocity = wgsl.fn`
-  (x: i32, y: i32, velocity: vec2f) {
-    let index = ${coordsToIndex('x', 'y')};
-    ${outputGridSlot}[index].x = velocity.x;
-    ${outputGridSlot}[index].y = velocity.y;
-  }
-`.$name('set_velocity');
+const setVelocity = tgpu
+  .fn([i32, i32, vec2f])
+  .implement((x, y, velocity) => {
+    const index = coordsToIndex(x, y);
+    outputGridSlot.value[index].x = velocity.x;
+    outputGridSlot.value[index].y = velocity.y;
+  })
+  .$uses({ coordsToIndex, outputGridSlot });
 
-const addDensity = wgsl.fn`
-  (x: i32, y: i32, density: f32) {
-    let index = ${coordsToIndex('x', 'y')};
-    ${outputGridSlot}[index].z = ${inputGridSlot}[index].z + density;
-  }
-`.$name('add_density');
+const addDensity = tgpu
+  .fn([i32, i32, f32])
+  .implement((x, y, density) => {
+    const index = coordsToIndex(x, y);
+    outputGridSlot.value[index].z = inputGridSlot.value[index].z + density;
+  })
+  .$uses({ coordsToIndex, outputGridSlot, inputGridSlot });
 
 const flowFromCell = wgsl.fn`
   (my_x: i32, my_y: i32, x: i32, y: i32) -> f32 {
@@ -275,7 +283,7 @@ const computeVelocity = wgsl.fn`
 
 const mainInitWorld = wgsl.fn`
   (x: i32, y: i32) {
-    let index = ${coordsToIndex('x', 'y')};
+    let index = ${coordsToIndex}(x, y);
 
     var value = vec4f();
 
@@ -438,7 +446,7 @@ const getMinimumInFlow = wgsl.fn`
 
 const mainCompute = wgsl.fn`
   (x: i32, y: i32) {
-    let index = ${coordsToIndex('x', 'y')};
+    let index = ${coordsToIndex}(x, y);
 
     ${setupRandomSeed}(vec2f(f32(index), ${asUniform(timeBuffer)}));
 
@@ -465,7 +473,7 @@ const mainCompute = wgsl.fn`
 
 const mainFragment = wgsl.fn`
   (x: i32, y: i32) -> vec4f {
-    let index = ${coordsToIndex('x', 'y')};
+    let index = ${coordsToIndex}(x, y);
     let cell = ${inputGridSlot}[index];
     let velocity = cell.xy;
     let density = max(0., cell.z);
