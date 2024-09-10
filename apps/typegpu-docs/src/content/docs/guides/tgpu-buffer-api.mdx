@@ -67,7 +67,7 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
      new Uint32Array(initData).set([100], 3); // <- Mistake
      ```
      Where is the mistake? The second `set` call should start at index 4, not 3, due to alignment rules.
-     This is not immidiately obvious and can lead to hard-to-find bugs.
+     This is not immediately obvious and can lead to hard-to-find bugs.
      The value would be written to the padding bytes between the `vec3f` and `u32` fields.
      This would mean the value is lost without any indication of an error.
     </Aside>
