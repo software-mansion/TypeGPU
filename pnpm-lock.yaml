@@ -157,7 +157,7 @@ importers:
   packages/jit-web:
     dependencies:
       '@typegpu/tgsl-tools':
-        specifier: workspace:*
+        specifier: workspace:~0.0.0
         version: link:../tgsl-tools
     devDependencies:
       '@typegpu/tgpu-dev-cli':
@@ -188,7 +188,7 @@ importers:
         specifier: ^8.12.1
         version: 8.12.1
       typegpu:
-        specifier: workspace:0.0.0-alpha.7
+        specifier: workspace:^0.1.1
         version: link:../typegpu
     devDependencies:
       '@typegpu/tgpu-dev-cli':

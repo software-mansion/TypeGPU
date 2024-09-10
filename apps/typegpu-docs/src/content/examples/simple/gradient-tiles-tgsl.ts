@@ -16,11 +16,10 @@ import {
 
 import { JitWebTranspiler } from '@typegpu/jit-web';
 import { f32, struct, u32, vec2f, vec4f } from 'typegpu/data';
-import {
+import tgpu, {
   asUniform,
   builtin,
   createRuntime,
-  tgpu,
   wgsl,
 } from 'typegpu/experimental';
 
@@ -36,8 +35,8 @@ const ySpanPlum = addSliderPlumParameter('y span', 16, {
 });
 
 const spanPlum = wgsl.plum((get) => ({ x: get(xSpanPlum), y: get(ySpanPlum) }));
-const spanBuffer = wgsl
-  .buffer(struct({ x: u32, y: u32 }), spanPlum)
+const spanBuffer = tgpu
+  .createBuffer(struct({ x: u32, y: u32 }), spanPlum)
   .$usage(tgpu.Uniform)
   .$name('span');
 const spanUniform = asUniform(spanBuffer);

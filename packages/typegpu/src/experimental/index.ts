@@ -21,6 +21,7 @@ export default tgpu;
 
 export * from '../errors';
 export * from '../types';
+export * from '../namable';
 export { AsCallable, Callable } from '../callable';
 export * from '../tgpuRuntime';
 export { default as ProgramBuilder, type Program } from '../programBuilder';
