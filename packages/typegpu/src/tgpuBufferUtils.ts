@@ -1,4 +1,5 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
+import { roundUp } from './mathUtils';
 import type { TgpuBuffer, Unmanaged } from './tgpuBuffer';
 import type { AnyTgpuData } from './types';
 
@@ -15,10 +16,10 @@ export function write<TData extends AnyTgpuData>(
     return;
   }
 
-  const size = buffer.dataType.size;
+  const size = roundUp(buffer.dataType.size, buffer.dataType.byteAlignment);
   const hostBuffer = new ArrayBuffer(size);
   buffer.dataType.write(new BufferWriter(hostBuffer), data);
-  device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
+  device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, buffer.dataType.size);
 }
 
 export async function read<TData extends AnyTgpuData>(
