@@ -71,8 +71,8 @@ function importRawRedirectPlugin(
 
       return `
 const content = ${JSON.stringify(rawFileContents)
-          .replace(/\u2028/g, '\\u2028')
-          .replace(/\u2029/g, '\\u2029')};
+        .replace(/\u2028/g, '\\u2028')
+        .replace(/\u2029/g, '\\u2029')};
 
 export default content;
 `;
