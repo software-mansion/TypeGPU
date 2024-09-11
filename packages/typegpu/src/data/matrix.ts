@@ -308,7 +308,7 @@ export const mat2x2f = createMatSchema({
   makeFromColumnVectors: (...columns: [vec2f, vec2f]) =>
     new mat2x2fImpl(...columns[0], ...columns[1]),
   makeFromElements: (...elements: number[]) => new mat2x2fImpl(...elements),
-}) as unknown as Mat2x2f;
+}) as Mat2x2f;
 
 export interface mat3x3<TColumn> extends matBase<TColumn> {
   [0]: TColumn;
@@ -333,7 +333,7 @@ export const mat3x3f = createMatSchema({
     return new mat3x3fImpl(...v0, ...v1, ...v2);
   },
   makeFromElements: (...elements: number[]) => new mat3x3fImpl(...elements),
-}) as unknown as Mat3x3f;
+}) as Mat3x3f;
 
 export interface mat4x4<TColumn> extends matBase<TColumn> {
   [0]: TColumn;
@@ -359,4 +359,4 @@ export const mat4x4f = createMatSchema({
     return new mat4x4fImpl(...v0, ...v1, ...v2, ...v3);
   },
   makeFromElements: (...elements: number[]) => new mat4x4fImpl(...elements),
-}) as unknown as Mat4x4f;
+}) as Mat4x4f;
