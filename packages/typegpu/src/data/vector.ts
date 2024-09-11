@@ -404,7 +404,7 @@ export const vec2f = makeVecSchema({
   label: 'vec2f',
   make: (x: number, y: number) => new vec2fImpl(x, y),
   makeFromScalar: (x) => new vec2fImpl(x, x),
-}) as unknown as Vec2f;
+}) as Vec2f;
 
 export type Vec2i = TgpuData<vec2i> &
   ((x: number, y: number) => vec2i) &
@@ -418,7 +418,7 @@ export const vec2i = makeVecSchema({
   label: 'vec2i',
   make: (x: number, y: number) => new vec2iImpl(x, y),
   makeFromScalar: (x) => new vec2iImpl(x, x),
-}) as unknown as Vec2i;
+}) as Vec2i;
 
 export type Vec2u = TgpuData<vec2u> &
   ((x: number, y: number) => vec2u) &
@@ -432,7 +432,7 @@ export const vec2u = makeVecSchema({
   label: 'vec2u',
   make: (x: number, y: number) => new vec2uImpl(x, y),
   makeFromScalar: (x) => new vec2uImpl(x, x),
-}) as unknown as Vec2u;
+}) as Vec2u;
 
 export type Vec3f = TgpuData<vec3f> &
   ((x: number, y: number, z: number) => vec3f) &
@@ -446,7 +446,7 @@ export const vec3f = makeVecSchema({
   label: 'vec3f',
   make: (x, y, z) => new vec3fImpl(x, y, z),
   makeFromScalar: (x) => new vec3fImpl(x, x, x),
-}) as unknown as Vec3f;
+}) as Vec3f;
 
 export type Vec3i = TgpuData<vec3i> &
   ((x: number, y: number, z: number) => vec3i) &
@@ -460,7 +460,7 @@ export const vec3i = makeVecSchema({
   label: 'vec3i',
   make: (x, y, z) => new vec3iImpl(x, y, z),
   makeFromScalar: (x) => new vec3iImpl(x, x, x),
-}) as unknown as Vec3i;
+}) as Vec3i;
 
 export type Vec3u = TgpuData<vec3u> &
   ((x: number, y: number, z: number) => vec3u) &
@@ -474,7 +474,7 @@ export const vec3u = makeVecSchema({
   label: 'vec3u',
   make: (x, y, z) => new vec3uImpl(x, y, z),
   makeFromScalar: (x) => new vec3uImpl(x, x, x),
-}) as unknown as Vec3u;
+}) as Vec3u;
 
 export type Vec4f = TgpuData<vec4f> &
   ((x: number, y: number, z: number, w: number) => vec4f) &
@@ -488,7 +488,7 @@ export const vec4f = makeVecSchema({
   label: 'vec4f',
   make: (x, y, z, w) => new vec4fImpl(x, y, z, w),
   makeFromScalar: (x) => new vec4fImpl(x, x, x, x),
-}) as unknown as Vec4f;
+}) as Vec4f;
 
 export type Vec4i = TgpuData<vec4i> &
   ((x: number, y: number, z: number, w: number) => vec4i) &
@@ -502,7 +502,7 @@ export const vec4i = makeVecSchema({
   label: 'vec4i',
   make: (x, y, z, w) => new vec4iImpl(x, y, z, w),
   makeFromScalar: (x) => new vec4iImpl(x, x, x, x),
-}) as unknown as Vec4i;
+}) as Vec4i;
 
 export type Vec4u = TgpuData<vec4u> &
   ((x: number, y: number, z: number, w: number) => vec4u) &
@@ -516,4 +516,4 @@ export const vec4u = makeVecSchema({
   label: 'vec4u',
   make: (x, y, z, w) => new vec4uImpl(x, y, z, w),
   makeFromScalar: (x) => new vec4uImpl(x, x, x, x),
-}) as unknown as Vec4u;
+}) as Vec4u;
