@@ -25,7 +25,8 @@
   "files": ["dist"],
   "sideEffects": false,
   "scripts": {
-    "dev": "tsup --watch",
+    "dev:watch": "tsup --watch",
+    "dev:build": "tsup",
     "build": "tsup",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit"
   },
