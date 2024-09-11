@@ -246,10 +246,7 @@ class TgpuRuntimeImpl implements TgpuRuntime {
   ) {
     const gpuBuffer = this.bufferFor(allocatable);
 
-    const size = roundUp(
-      allocatable.dataType.size,
-      allocatable.dataType.byteAlignment,
-    );
+    const size = allocatable.dataType.size;
 
     if (isAllocatable(data)) {
       const sourceBuffer = this.bufferFor(data);
