@@ -9,11 +9,7 @@
 // https://webgpu.github.io/webgpu-samples/?sample=imageBlur
 
 // -- Hooks into the example environment
-import {
-  addElement,
-  addSliderPlumParameter,
-  onFrame,
-} from '@typegpu/example-toolkit';
+import { addElement, addSliderPlumParameter } from '@typegpu/example-toolkit';
 // --
 import {
   arrayOf,
@@ -254,7 +250,7 @@ const renderPipeline = runtime.makeRenderPipeline({
   },
 });
 
-onFrame(() => {
+const render = () => {
   computePipelines[0].execute({
     workgroups: [
       Math.ceil(srcWidth / runtime.readPlum(settingsPlum).blockDim),
@@ -295,4 +291,9 @@ onFrame(() => {
   });
 
   runtime.flush();
-});
+};
+
+render();
+
+runtime.onPlumChange(filterSize, () => render());
+runtime.onPlumChange(iterations, () => render());
