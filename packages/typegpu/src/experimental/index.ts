@@ -2,40 +2,62 @@
  * @module typegpu/experimental
  */
 
-export { tgpu } from '../tgpu';
-export { tgpu as default } from '../tgpu';
+import { Storage, Uniform, Vertex, createBuffer } from '../tgpuBuffer';
+import { read, write } from '../tgpuBufferUtils';
+import { fn, procedure } from '../tgpuFn';
+
+export const tgpu = {
+  Uniform,
+  Storage,
+  Vertex,
+
+  createBuffer,
+  read,
+  write,
+  fn,
+  procedure,
+};
+export default tgpu;
 
 export * from '../errors';
 export * from '../types';
-export { AsCallable, Callable } from '../callable';
-export * from '../typegpuRuntime';
+export * from '../namable';
+export * from '../tgpuRuntime';
 export { default as ProgramBuilder, type Program } from '../programBuilder';
 export { StrictNameRegistry, RandomNameRegistry } from '../nameRegistry';
-export * from '../wgslBuiltin';
+export * from '../builtin';
 
 export { default as wgsl } from '../wgsl';
 export { std } from '../std';
 export { createRuntime, CreateRuntimeOptions } from '../createRuntime';
-export { asReadonly, asUniform, asMutable, asVertex } from '../wgslBuffer';
+export {
+  isUsableAsStorage,
+  isUsableAsUniform,
+  isUsableAsVertex,
+} from '../tgpuBuffer';
+export { asUniform, asReadonly, asMutable, asVertex } from '../tgpuBufferUsage';
 
 export type {
   TgpuBuffer,
-  AllowMutable,
-  AllowReadonly,
-  AllowUniform,
-  AllowVertex,
   Unmanaged,
-} from '../wgslBuffer';
-export type { TgpuBufferUsage } from '../wgslBufferUsage';
-export type { TgpuCode } from '../wgslCode';
-export type { TgpuConst } from '../wgslConstant';
-export type { TgpuFn } from '../wgslFunction';
-export type { TgpuPlum } from '../wgslPlum';
+} from '../tgpuBuffer';
+export type {
+  TgpuBufferUsage,
+  TgpuBufferUniform,
+  TgpuBufferReadonly,
+  TgpuBufferMutable,
+  TgpuBufferVertex,
+} from '../tgpuBufferUsage';
+export type { TgpuConst } from '../tgpuConstant';
+export type { TgpuFn } from '../tgpuFunction';
+export type { TgpuPlum } from '../tgpuPlumTypes';
+export type { TexelFormat } from '../textureTypes';
 export type { TgpuSettable } from '../settableTrait';
-export type { TgpuFn as TgpuFnExperimental } from '../wgslFunctionExperimental';
-export type { TgpuVar } from '../wgslVariable';
-export type { TgpuSampler } from '../wgslSampler';
+export type { TgpuVar } from '../tgpuVariable';
+export type { TgpuSampler } from '../tgpuSampler';
 export type {
   TgpuTexture,
   TgpuTextureView,
-} from '../wgslTexture';
+} from '../tgpuTexture';
+export type { JitTranspiler } from '../jitTranspiler';
+export type * from '../textureTypes';

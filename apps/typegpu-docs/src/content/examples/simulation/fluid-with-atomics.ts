@@ -15,7 +15,8 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import {
+import { arrayOf, atomic, f32, u32, vec2u } from 'typegpu/data';
+import tgpu, {
   asMutable,
   asReadonly,
   asUniform,
@@ -23,8 +24,7 @@ import {
   builtin,
   createRuntime,
   wgsl,
-} from 'typegpu';
-import { arrayOf, atomic, f32, u32, vec2u } from 'typegpu/data';
+} from 'typegpu/experimental';
 
 const runtime = await createRuntime();
 const device = runtime.device;
@@ -69,23 +69,25 @@ function encodeBrushType(brushType: (typeof BrushTypes)[number]) {
   }
 }
 
-const sizeBuffer = wgsl.buffer(vec2u).$name('size').$allowUniform();
-const viscosityBuffer = wgsl.buffer(u32).$name('viscosity').$allowUniform();
+const sizeBuffer = tgpu.createBuffer(vec2u).$name('size').$usage(tgpu.Uniform);
+const viscosityBuffer = tgpu
+  .createBuffer(u32)
+  .$name('viscosity')
+  .$usage(tgpu.Uniform);
 
-const currentStateBuffer = wgsl
-  .buffer(arrayOf(u32, 1024 ** 2))
+const currentStateBuffer = tgpu
+  .createBuffer(arrayOf(u32, 1024 ** 2))
   .$name('current')
-  .$allowVertex('instance')
-  .$allowReadonly();
+  .$usage(tgpu.Storage, tgpu.Vertex);
 
-const nextStateBuffer = wgsl
-  .buffer(arrayOf(atomic(u32), 1024 ** 2))
+const nextStateBuffer = tgpu
+  .createBuffer(arrayOf(atomic(u32), 1024 ** 2))
   .$name('next')
-  .$allowMutable();
+  .$usage(tgpu.Storage);
 
 const viscosityData = asUniform(viscosityBuffer);
 const currentStateData = asReadonly(currentStateBuffer);
-const currentStateVertex = asVertex(currentStateBuffer);
+const currentStateVertex = asVertex(currentStateBuffer, 'instance');
 const sizeData = asUniform(sizeBuffer);
 const nextStateData = asMutable(nextStateBuffer);
 
@@ -93,17 +95,17 @@ const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
 const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
 const maxCompress = wgsl.constant(wgsl`12u`);
 
-const squareBuffer = wgsl
-  .buffer(arrayOf(vec2u, 4), [
+const squareBuffer = tgpu
+  .createBuffer(arrayOf(vec2u, 4), [
     vec2u(0, 0),
     vec2u(0, 1),
     vec2u(1, 0),
     vec2u(1, 1),
   ])
-  .$allowVertex('vertex')
-  .$allowUniform()
+  .$usage(tgpu.Uniform, tgpu.Vertex)
   .$name('square');
-const squareBufferData = asVertex(squareBuffer);
+
+const squareBufferData = asVertex(squareBuffer, 'vertex');
 
 const getIndex = wgsl.fn`(x: u32, y: u32) -> u32 {
   let h = ${sizeData}.y;
@@ -318,7 +320,6 @@ const fragWGSL = wgsl`
 `;
 
 let drawCanvasData = new Uint32Array(options.size * options.size);
-let commandEncoder: GPUCommandEncoder;
 
 let msSinceLastTick = 0;
 let render: () => void;
@@ -359,9 +360,6 @@ function resetGameData() {
   );
 
   runtime.writeBuffer(sizeBuffer, vec2u(options.size, options.size));
-
-  const length = options.size * options.size;
-  const cells = new Uint32Array(length);
 
   render = () => {
     const view = context.getCurrentTexture().createView();

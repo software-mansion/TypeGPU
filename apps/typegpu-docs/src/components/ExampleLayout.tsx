@@ -21,10 +21,10 @@ function SideMenu() {
     <aside className="flex flex-col bg-white rounded-2xl w-[18.75rem] p-5 gap-5">
       <header className="grid gap-5">
         <div className="grid place-items-center">
-          <a href="/typegpu" className="block cursor-pointer">
+          <a href="/TypeGPU" className="block cursor-pointer">
             <img
               className="my-4 w-40"
-              src="/typegpu/typegpu-logo-light.svg"
+              src="/TypeGPU/typegpu-logo-light.svg"
               alt="TypeGPU Logo"
             />
           </a>
@@ -39,7 +39,7 @@ function SideMenu() {
             TypeGPU.
           </p>
           <a
-            href="/typegpu/guides/getting-started"
+            href="/TypeGPU/guides/getting-started"
             className="underline text-sm bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-transparent"
           >
             Learn more about TypeGPU here
@@ -55,7 +55,7 @@ function SideMenu() {
         <div>&copy; 2024 Software Mansion S.A.</div>
         <div className="flex gap-3 items-center">
           <a
-            href="https://discord.swmansion.com"
+            href="https://discord.gg/8jpfgDqPcM"
             target="_blank"
             rel="noreferrer"
           >

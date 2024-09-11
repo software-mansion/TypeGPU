@@ -1,5 +1,6 @@
 // import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import react from '@astrojs/react';
+import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import tailwind from '@astrojs/tailwind';
 import { defineConfig } from 'astro/config';
@@ -8,7 +9,7 @@ import importRawRedirectPlugin from './vite-import-raw-redirect-plugin';
 // https://astro.build/config
 export default defineConfig({
   site: 'https://docs.swmansion.com',
-  base: 'typegpu',
+  base: 'TypeGPU',
   vite: {
     plugins: [
       importRawRedirectPlugin({
@@ -19,6 +20,8 @@ export default defineConfig({
           '../../packages/typegpu/dist/macro/index.d.ts',
         'typegpu/dist/experimental/index.d.ts?raw':
           '../../packages/typegpu/dist/experimental/index.d.ts',
+        '@typegpu/jit/dist/index.d.ts?raw':
+          '../../packages/jit/dist/index.d.ts',
       }),
     ],
   },
@@ -35,7 +38,7 @@ export default defineConfig({
         Head: './src/components/starlight/Head.astro',
       },
       social: {
-        github: 'https://github.com/software-mansion/typegpu',
+        github: 'https://github.com/software-mansion/TypeGPU',
       },
       sidebar: [
         // {
@@ -83,5 +86,6 @@ export default defineConfig({
     }),
     tailwind(),
     react(),
+    sitemap(),
   ],
 });

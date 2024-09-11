@@ -1,17 +1,21 @@
 import type { AnySchema } from 'typed-binary';
-import { builtinToType } from './builtinTypes';
+import { BindGroupResolver } from './bindGroupResolver';
+import { getUsedBuiltins, getUsedBuiltinsNamed } from './builtin';
+import { typeForBuiltin } from './builtinDataTypes';
+import { idForBuiltin, nameForBuiltin } from './builtinIdentifiers';
 import type { SimpleTgpuData, TgpuArray } from './data';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
-import type { TgpuRuntime } from './typegpuRuntime';
-import type { AnyTgpuData, TgpuBindable, TgpuResolvable } from './types';
-import { BindGroupResolver } from './wgslBindGroupResolver';
-import {
-  getBuiltinInfo,
-  getUsedBuiltins,
-  getUsedBuiltinsNamed,
-} from './wgslBuiltin';
-import { type BoundTgpuCode, type TgpuCode, code } from './wgslCode';
+import type { TgpuBufferVertex } from './tgpuBufferUsage';
+import { code } from './tgpuCode';
+import type { TgpuRuntime } from './tgpuRuntime';
+import type {
+  AnyTgpuData,
+  BoundTgpuCode,
+  TgpuCode,
+  TgpuResolvable,
+  Wgsl,
+} from './types';
 
 export type Program = {
   readonly bindGroupResolver: BindGroupResolver;
@@ -34,6 +38,7 @@ export default class ProgramBuilder {
     const ctx = new ResolutionCtxImpl({
       names: options.nameRegistry ?? new RandomNameRegistry(),
       bindingGroup: options.bindingGroup,
+      jitTranspiler: this.runtime.jitTranspiler,
     });
 
     // Resolving code
@@ -93,11 +98,9 @@ export class RenderProgramBuilder {
     const structFields = [
       ...vertexOutputBuiltins.map((builtin) => {
         const outputName = this.vertexOutputFormat[builtin] ?? '';
-        const builtinName = getBuiltinInfo(builtin).name;
-        const builtinType = builtinToType[builtin] ?? '';
 
         return code`
-          @builtin(${builtinName}) ${outputName}: ${builtinType},
+          @builtin(${nameForBuiltin(builtin)}) ${outputName}: ${typeForBuiltin(builtin)},
         `;
       }),
       ...vertexOutput.map(
@@ -111,11 +114,13 @@ export class RenderProgramBuilder {
     const vertexContext = new ResolutionCtxImpl({
       names: options.nameRegistry ?? new RandomNameRegistry(),
       bindingGroup: options.bindingGroup,
+      jitTranspiler: this.runtime.jitTranspiler,
     });
     vertexContext.resolve(this.vertexRoot);
     const vertexBuffers = Array.from(vertexContext.usedBindables).filter(
-      (bindable) => bindable.usage === 'vertex',
-    ) as TgpuBindable<AnyTgpuData, 'vertex'>[];
+      (bindable): bindable is TgpuBufferVertex<AnyTgpuData> =>
+        bindable.usage === 'vertex',
+    );
     const entries = vertexBuffers.map((elem, idx) => {
       return {
         idx: idx,
@@ -138,12 +143,12 @@ export class RenderProgramBuilder {
     `,
     );
     const vertexBuiltins = Array.from(vertexContext.usedBuiltins);
-    const vertexBuiltinsArgs = vertexBuiltins.map((builtin) => {
-      const type = builtinToType[builtin.symbol] ?? '';
-      return code`
-      @builtin(${builtin.name}) ${builtin.identifier}: ${type},
-    `;
-    });
+    const vertexBuiltinsArgs = vertexBuiltins.map(
+      (builtin) =>
+        code`
+      @builtin(${nameForBuiltin(builtin)}) ${idForBuiltin(builtin)}: ${typeForBuiltin(builtin)},
+    `,
+    );
     const vertexArgs = [...vertexBuiltinsArgs, ...vertexUserArgs];
 
     const vertexCode = code`
@@ -173,14 +178,14 @@ export class RenderProgramBuilder {
     const fragmentContext = new ResolutionCtxImpl({
       names: options.nameRegistry ?? new RandomNameRegistry(),
       bindingGroup: options.bindingGroup,
+      jitTranspiler: this.runtime.jitTranspiler,
     });
     fragmentContext.resolve(this.fragmentRoot);
 
     const fragmentUsedBuiltins = Array.from(fragmentContext.usedBuiltins);
     const fragmentBuiltinArgs = fragmentUsedBuiltins.map((builtin) => {
-      const type = builtinToType[builtin.symbol] ?? '';
       return code`
-      @builtin(${builtin.name}) ${builtin.identifier}: ${type},
+      @builtin(${nameForBuiltin(builtin)}) ${idForBuiltin(builtin)}: ${typeForBuiltin(builtin)},
     `;
     });
 
@@ -227,7 +232,7 @@ export class RenderProgramBuilder {
 export class ComputeProgramBuilder {
   constructor(
     private runtime: TgpuRuntime,
-    private computeRoot: TgpuCode | BoundTgpuCode,
+    private computeRoot: Wgsl,
     private workgroupSize: readonly [
       number,
       (number | null)?,
@@ -239,16 +244,16 @@ export class ComputeProgramBuilder {
     const context = new ResolutionCtxImpl({
       names: options.nameRegistry ?? new RandomNameRegistry(),
       bindingGroup: options.bindingGroup,
+      jitTranspiler: this.runtime.jitTranspiler,
     });
     context.resolve(this.computeRoot);
 
     const usedBuiltins = Array.from(context.usedBuiltins);
-    const builtinArgs = usedBuiltins.map((builtin) => {
-      const type = builtinToType[builtin.symbol] ?? '';
-      return code`
-      @builtin(${builtin.name}) ${builtin.identifier}: ${type},
-    `;
-    });
+    const builtinArgs = usedBuiltins.map(
+      (builtin) => code`
+      @builtin(${nameForBuiltin(builtin)}) ${idForBuiltin(builtin)}: ${typeForBuiltin(builtin)},
+    `,
+    );
 
     const workgroupSizeDeclaration = `@workgroup_size(${this.workgroupSize[0]}, ${this.workgroupSize[1] ?? 1}, ${this.workgroupSize[2] ?? 1})`;
 

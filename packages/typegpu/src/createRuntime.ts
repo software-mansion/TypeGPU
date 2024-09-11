@@ -1,4 +1,6 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
+import { onGPU } from './gpuMode';
+import type { JitTranspiler } from './jitTranspiler';
 import { roundUp } from './mathUtils';
 import { type PlumListener, PlumStore } from './plumStore';
 import {
@@ -8,6 +10,13 @@ import {
 } from './programBuilder';
 import type { TgpuSettable } from './settableTrait';
 import { TaskQueue } from './taskQueue';
+import type { TgpuFn } from './tgpuFn';
+import {
+  type ExtractPlumValue,
+  type TgpuPlum,
+  type Unsubscribe,
+  isPlum,
+} from './tgpuPlumTypes';
 import type {
   ComputePipelineExecutorOptions,
   ComputePipelineOptions,
@@ -15,30 +24,28 @@ import type {
   RenderPipelineOptions,
   SetPlumAction,
   TgpuRuntime,
-} from './typegpuRuntime';
-import { type AnyTgpuData, type TgpuAllocatable, isAllocatable } from './types';
-import {
-  type ExtractPlumValue,
-  type TgpuPlum,
-  type Unsubscribe,
-  isPlum,
-} from './wgslPlum';
-import type { TgpuSampler } from './wgslSampler';
+} from './tgpuRuntime';
+import type { TgpuSampler } from './tgpuSampler';
 import type {
   TgpuAnyTexture,
   TgpuAnyTextureView,
   TgpuTextureExternal,
-} from './wgslTexture';
+} from './tgpuTexture';
+import { type AnyTgpuData, type TgpuAllocatable, isAllocatable } from './types';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a runtime can interact via GPU buffers.
  */
-class TgpuRuntimeImpl {
+class TgpuRuntimeImpl implements TgpuRuntime {
   private _entryToBufferMap = new Map<TgpuAllocatable, GPUBuffer>();
   private _samplers = new WeakMap<TgpuSampler, GPUSampler>();
   private _textures = new WeakMap<TgpuAnyTexture, GPUTexture>();
   private _textureViews = new WeakMap<TgpuAnyTextureView, GPUTextureView>();
+  private _externalTexturesStatus = new WeakMap<
+    TgpuTextureExternal,
+    'dirty' | 'clean'
+  >();
   private _pipelineExecutors: PipelineExecutor[] = [];
   private _commandEncoder: GPUCommandEncoder | null = null;
 
@@ -51,7 +58,10 @@ class TgpuRuntimeImpl {
     Unsubscribe
   >();
 
-  constructor(public readonly device: GPUDevice) {}
+  constructor(
+    public readonly device: GPUDevice,
+    public readonly jitTranspiler: JitTranspiler | undefined,
+  ) {}
 
   get commandEncoder() {
     if (!this._commandEncoder) {
@@ -156,7 +166,13 @@ class TgpuRuntimeImpl {
   }
 
   externalTextureFor(texture: TgpuTextureExternal): GPUExternalTexture {
-    return this.device.importExternalTexture(texture.descriptor);
+    this._externalTexturesStatus.set(texture, 'clean');
+    if (texture.descriptor.source === undefined) {
+      throw new Error('External texture source needs to be defined before use');
+    }
+    return this.device.importExternalTexture(
+      texture.descriptor as GPUExternalTextureDescriptor,
+    );
   }
 
   samplerFor(sampler: TgpuSampler): GPUSampler {
@@ -247,6 +263,22 @@ class TgpuRuntimeImpl {
     }
   }
 
+  setSource(
+    texture: TgpuTextureExternal,
+    source: HTMLVideoElement | VideoFrame,
+  ) {
+    this._externalTexturesStatus.set(texture, 'dirty');
+    texture.descriptor.source = source;
+  }
+
+  isDirty(texture: TgpuTextureExternal): boolean {
+    return this._externalTexturesStatus.get(texture) === 'dirty';
+  }
+
+  markClean(texture: TgpuTextureExternal) {
+    this._externalTexturesStatus.set(texture, 'clean');
+  }
+
   readPlum<TPlum extends TgpuPlum>(plum: TPlum): ExtractPlumValue<TPlum> {
     return this._plumStore.get(plum);
   }
@@ -328,13 +360,15 @@ class TgpuRuntimeImpl {
   makeComputePipeline(
     options: ComputePipelineOptions,
   ): ComputePipelineExecutor {
-    const program = new ComputeProgramBuilder(
-      this,
-      options.code,
-      options.workgroupSize ?? [1],
-    ).build({
-      bindingGroup: (options.externalLayouts ?? []).length,
-    });
+    const program = onGPU(() =>
+      new ComputeProgramBuilder(
+        this,
+        options.code,
+        options.workgroupSize ?? [1],
+      ).build({
+        bindingGroup: (options.externalLayouts ?? []).length,
+      }),
+    );
 
     const shaderModule = this.device.createShaderModule({
       code: program.code,
@@ -364,6 +398,41 @@ class TgpuRuntimeImpl {
     );
     this._pipelineExecutors.push(executor);
     return executor;
+  }
+
+  compute(fn: TgpuFn<[]>): void {
+    // TODO: Cache the pipeline
+
+    const program = new ComputeProgramBuilder(
+      this,
+      fn.bodyResolvable,
+      [1],
+    ).build({
+      bindingGroup: 0,
+    });
+
+    const shaderModule = this.device.createShaderModule({
+      code: program.code,
+    });
+
+    const pipelineLayout = this.device.createPipelineLayout({
+      bindGroupLayouts: [program.bindGroupResolver.getBindGroupLayout()],
+    });
+
+    const computePipeline = this.device.createComputePipeline({
+      layout: pipelineLayout,
+      compute: {
+        module: shaderModule,
+      },
+    });
+
+    const executor = new ComputePipelineExecutor(
+      this,
+      computePipeline,
+      [program],
+      0,
+    );
+    executor.execute();
   }
 
   flush() {
@@ -483,8 +552,9 @@ class ComputePipelineExecutor implements PipelineExecutor {
  * Options passed into {@link createRuntime}.
  */
 export type CreateRuntimeOptions = {
-  adapter: GPURequestAdapterOptions | undefined;
-  device: GPUDeviceDescriptor | undefined;
+  adapter?: GPURequestAdapterOptions | undefined;
+  device?: GPUDeviceDescriptor | undefined;
+  jitTranspiler?: JitTranspiler | undefined;
 };
 
 /**
@@ -513,10 +583,10 @@ export type CreateRuntimeOptions = {
  * ```
  */
 export async function createRuntime(
-  options?: CreateRuntimeOptions | GPUDevice,
+  options?: CreateRuntimeOptions,
 ): Promise<TgpuRuntime> {
-  if (doesResembleDevice(options)) {
-    return new TgpuRuntimeImpl(options);
+  if (doesResembleDevice(options?.device)) {
+    return new TgpuRuntimeImpl(options.device, options.jitTranspiler);
   }
 
   if (!navigator.gpu) {
@@ -529,7 +599,10 @@ export async function createRuntime(
     throw new Error('Could not find a compatible GPU');
   }
 
-  return new TgpuRuntimeImpl(await adapter.requestDevice(options?.device));
+  return new TgpuRuntimeImpl(
+    await adapter.requestDevice(options?.device),
+    options?.jitTranspiler,
+  );
 }
 
 function doesResembleDevice(value: unknown): value is GPUDevice {

@@ -1,12 +1,12 @@
 import { defineConfig } from 'tsup';
 
-const DEV = process.env.DEV === 'true';
+const EXPERIMENTAL = process.env.EXPERIMENTAL === 'true';
 
-console.log(`-= ${DEV ? 'DEV' : 'PRODUCTION'} MODE =-\n\n`);
+console.log(`-= ${EXPERIMENTAL ? 'EXPERIMENTAL' : 'PRODUCTION'} MODE =-\n\n`);
 
-const entry = ['src/index.ts', 'src/data/index.ts', 'src/macro/index.ts'];
-if (DEV) {
-  entry.push('src/experimental/index.ts');
+const entry = ['src/index.ts', 'src/data/index.ts'];
+if (EXPERIMENTAL) {
+  entry.push('src/experimental/index.ts', 'src/macro/index.ts');
 }
 
 export default defineConfig({

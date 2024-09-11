@@ -1,8 +1,8 @@
-import type { ISchema, Parsed } from 'typed-binary';
-import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from './data';
-import type { Builtin } from './wgslBuiltin';
-import type { TgpuIdentifier } from './wgslIdentifier';
-import type { TgpuPlum } from './wgslPlum';
+import type { ISchema, Parsed, Unwrap } from 'typed-binary';
+import type { TgpuNamable } from './namable';
+import type { TgpuBufferUsage } from './tgpuBufferUsage';
+import type { TgpuFn } from './tgpuFn';
+import type { TgpuPlum } from './tgpuPlumTypes';
 
 export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
 
@@ -22,7 +22,7 @@ export interface ResolutionCtx {
     resource: TgpuRenderResource,
     identifier: TgpuIdentifier,
   ): void;
-  addBuiltin(builtin: Builtin): void;
+  addBuiltin(builtin: symbol): void;
   nameFor(token: TgpuResolvable): string;
   /**
    * Unwraps all layers of slot indirection and returns the concrete value if available.
@@ -30,6 +30,14 @@ export interface ResolutionCtx {
    */
   unwrap<T>(eventual: Eventual<T>): T;
   resolve(item: Wgsl, slotValueOverrides?: SlotValuePair<unknown>[]): string;
+  transpileFn(
+    // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
+    fn: TgpuFn<any, any>,
+    externalMap: Record<string, Wgsl>,
+  ): {
+    head: Wgsl;
+    body: Wgsl;
+  };
 }
 
 export interface TgpuResolvable {
@@ -37,12 +45,14 @@ export interface TgpuResolvable {
   resolve(ctx: ResolutionCtx): string;
 }
 
-/**
- * Can be assigned a name. Not to be confused with
- * being able to HAVE a name.
- */
-export interface TgpuNamable {
-  $name(label?: string | undefined): this;
+export interface TgpuIdentifier extends TgpuNamable, TgpuResolvable {}
+
+export interface Builtin {
+  symbol: symbol;
+  name: string;
+  stage: 'vertex' | 'fragment' | 'compute';
+  direction: 'input' | 'output';
+  identifier: TgpuIdentifier;
 }
 
 export function isResolvable(value: unknown): value is TgpuResolvable {
@@ -53,14 +63,6 @@ export function isResolvable(value: unknown): value is TgpuResolvable {
   );
 }
 
-export function isNamable(value: unknown): value is TgpuNamable {
-  return (
-    !!value &&
-    (typeof value === 'object' || typeof value === 'function') &&
-    '$name' in value
-  );
-}
-
 export function isWgsl(value: unknown): value is Wgsl {
   return (
     typeof value === 'number' ||
@@ -68,23 +70,6 @@ export function isWgsl(value: unknown): value is Wgsl {
     typeof value === 'string' ||
     isResolvable(value)
   );
-}
-
-export interface TgpuSlot<T> extends TgpuNamable {
-  readonly __brand: 'TgpuSlot';
-
-  readonly defaultValue: T | undefined;
-
-  readonly label?: string | undefined;
-  /**
-   * Used to determine if code generated using either value `a` or `b` in place
-   * of the slot will be equivalent. Defaults to `Object.is`.
-   */
-  areEqual(a: T, b: T): boolean;
-}
-
-export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {
-  return (value as TgpuSlot<T>).__brand === 'TgpuSlot';
 }
 
 /**
@@ -109,7 +94,6 @@ export interface TgpuAllocatable<TData extends AnyTgpuData = AnyTgpuData> {
    * binary.
    */
   readonly dataType: TData;
-  vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'> | null;
   readonly initial?: Parsed<TData> | TgpuPlum<Parsed<TData>> | undefined;
   readonly flags: GPUBufferUsageFlags;
 }
@@ -166,18 +150,6 @@ export interface TgpuRenderResource extends TgpuResolvable {
 
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
 export type TextureUsage = 'sampled' | 'storage';
-export type StorageTextureAccess = 'read' | 'write' | 'read_write';
-
-export type StorageTextureParams = {
-  type: TgpuStorageTextureType;
-  access: StorageTextureAccess;
-  descriptor?: GPUTextureViewDescriptor;
-};
-export type SampledTextureParams = {
-  type: TgpuTypedTextureType;
-  dataType: TextureScalarFormat;
-  descriptor?: GPUTextureViewDescriptor;
-};
 
 export function isSamplerType(
   type: TgpuRenderResourceType,
@@ -228,14 +200,20 @@ export function isExternalTextureType(
   return type === 'texture_external';
 }
 
+export type ValueOf<T> = T extends TgpuSlot<infer I>
+  ? ValueOf<I>
+  : T extends TgpuBufferUsage<infer D>
+    ? ValueOf<D>
+    : T extends TgpuData<unknown>
+      ? Unwrap<T>
+      : T;
+
 export interface TgpuData<TInner> extends ISchema<TInner>, TgpuResolvable {
   readonly byteAlignment: number;
   readonly size: number;
 }
 
 export type AnyTgpuData = TgpuData<unknown>;
-export type TextureScalarFormat = U32 | I32 | F32;
-export type TexelFormat = Vec4u | Vec4i | Vec4f;
 
 export interface TgpuPointer<
   TScope extends 'function',
@@ -269,4 +247,37 @@ export function isGPUBuffer(value: unknown): value is GPUBuffer {
     'getMappedRange' in value &&
     'mapAsync' in value
   );
+}
+
+// -----------------
+// TypeGPU Resources
+// -----------------
+
+// Code
+
+export interface BoundTgpuCode extends TgpuResolvable {
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): BoundTgpuCode;
+}
+
+export interface TgpuCode extends BoundTgpuCode, TgpuNamable {}
+
+// Slot
+
+export interface TgpuSlot<T> extends TgpuNamable {
+  readonly __brand: 'TgpuSlot';
+
+  readonly defaultValue: T | undefined;
+
+  readonly label?: string | undefined;
+  /**
+   * Used to determine if code generated using either value `a` or `b` in place
+   * of the slot will be equivalent. Defaults to `Object.is`.
+   */
+  areEqual(a: T, b: T): boolean;
+
+  value: ValueOf<T>;
+}
+
+export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {
+  return (value as TgpuSlot<T>).__brand === 'TgpuSlot';
 }

@@ -9,22 +9,8 @@
 // https://webgpu.github.io/webgpu-samples/?sample=imageBlur
 
 // -- Hooks into the example environment
-import {
-  addElement,
-  addSliderPlumParameter,
-  onFrame,
-} from '@typegpu/example-toolkit';
+import { addElement, addSliderPlumParameter } from '@typegpu/example-toolkit';
 // --
-import {
-  type SampledTextureParams,
-  type StorageTextureParams,
-  type TgpuTexture,
-  type TgpuTextureView,
-  asUniform,
-  builtin,
-  createRuntime,
-  wgsl,
-} from 'typegpu';
 import {
   arrayOf,
   f32,
@@ -35,6 +21,16 @@ import {
   vec3f,
   type vec4f,
 } from 'typegpu/data';
+import tgpu, {
+  type SampledTextureParams,
+  type StorageTextureParams,
+  type TgpuTexture,
+  type TgpuTextureView,
+  asUniform,
+  builtin,
+  createRuntime,
+  wgsl,
+} from 'typegpu/experimental';
 
 const tileDim = 128;
 const batch = [4, 4];
@@ -54,8 +50,8 @@ const settingsPlum = wgsl.plum((get) => ({
   filterDim: get(filterSize),
 }));
 
-const blurParamsBuffer = wgsl
-  .buffer(
+const blurParamsBuffer = tgpu
+  .createBuffer(
     struct({
       filterDim: i32,
       blockDim: u32,
@@ -63,7 +59,7 @@ const blurParamsBuffer = wgsl
     settingsPlum,
   )
   .$name('BlurParams')
-  .$allowUniform();
+  .$usage(tgpu.Uniform);
 const params = asUniform(blurParamsBuffer);
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
@@ -84,7 +80,7 @@ const sampler = wgsl.sampler({
   minFilter: 'linear',
 });
 
-const response = await fetch('/typegpu/plums.jpg');
+const response = await fetch('/TypeGPU/plums.jpg');
 const imageBitmap = await createImageBitmap(await response.blob());
 
 const inParams: SampledTextureParams = {
@@ -254,7 +250,7 @@ const renderPipeline = runtime.makeRenderPipeline({
   },
 });
 
-onFrame(() => {
+const render = () => {
   computePipelines[0].execute({
     workgroups: [
       Math.ceil(srcWidth / runtime.readPlum(settingsPlum).blockDim),
@@ -295,4 +291,9 @@ onFrame(() => {
   });
 
   runtime.flush();
-});
+};
+
+render();
+
+runtime.onPlumChange(filterSize, () => render());
+runtime.onPlumChange(iterations, () => render());

@@ -12,7 +12,7 @@ without mutating it in place.
 
 <!-- TODO: Link to an implementation of Conway's Game of Life in TypeGPU -->
 :::note
-Examples of cellular automata include [Conway's Game of Life](https://playgameoflife.com/), our [Fluid Simulation](/typegpu/examples#example=simulation--fluid-double-buffering)
+Examples of cellular automata include [Conway's Game of Life](https://playgameoflife.com/), our [Fluid Simulation](/TypeGPU/examples#example=simulation--fluid-double-buffering)
 example and many more.
 :::
 
