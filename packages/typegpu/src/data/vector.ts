@@ -758,9 +758,10 @@ export const vec2f = makeVecSchema({
   length: 2,
   label: 'vec2f',
   make: (x: number, y: number) =>
-    new Proxy(new vec2fImpl(x, y), vecProxyHandler),
-  makeFromScalar: (x) => new Proxy(new vec2fImpl(x, x), vecProxyHandler),
-}) as unknown as Vec2f;
+    new Proxy(new vec2fImpl(x, y), vecProxyHandler) as vec2f,
+  makeFromScalar: (x) =>
+    new Proxy(new vec2fImpl(x, x), vecProxyHandler) as vec2f,
+}) as Vec2f;
 
 export type Vec2i = TgpuData<vec2i> &
   ((x: number, y: number) => vec2i) &
@@ -773,9 +774,10 @@ export const vec2i = makeVecSchema({
   length: 2,
   label: 'vec2i',
   make: (x: number, y: number) =>
-    new Proxy(new vec2iImpl(x, y), vecProxyHandler),
-  makeFromScalar: (x) => new Proxy(new vec2iImpl(x, x), vecProxyHandler),
-}) as unknown as Vec2i;
+    new Proxy(new vec2iImpl(x, y), vecProxyHandler) as vec2i,
+  makeFromScalar: (x) =>
+    new Proxy(new vec2iImpl(x, x), vecProxyHandler) as vec2i,
+}) as Vec2i;
 
 export type Vec2u = TgpuData<vec2u> &
   ((x: number, y: number) => vec2u) &
@@ -788,9 +790,10 @@ export const vec2u = makeVecSchema({
   length: 2,
   label: 'vec2u',
   make: (x: number, y: number) =>
-    new Proxy(new vec2uImpl(x, y), vecProxyHandler),
-  makeFromScalar: (x) => new Proxy(new vec2uImpl(x, x), vecProxyHandler),
-}) as unknown as Vec2u;
+    new Proxy(new vec2uImpl(x, y), vecProxyHandler) as vec2u,
+  makeFromScalar: (x) =>
+    new Proxy(new vec2uImpl(x, x), vecProxyHandler) as vec2u,
+}) as Vec2u;
 
 export type Vec3f = TgpuData<vec3f> &
   ((x: number, y: number, z: number) => vec3f) &
@@ -802,9 +805,11 @@ export const vec3f = makeVecSchema({
   byteAlignment: 16,
   length: 3,
   label: 'vec3f',
-  make: (x, y, z) => new Proxy(new vec3fImpl(x, y, z), vecProxyHandler),
-  makeFromScalar: (x) => new Proxy(new vec3fImpl(x, x, x), vecProxyHandler),
-}) as unknown as Vec3f;
+  make: (x, y, z) =>
+    new Proxy(new vec3fImpl(x, y, z), vecProxyHandler) as vec3f,
+  makeFromScalar: (x) =>
+    new Proxy(new vec3fImpl(x, x, x), vecProxyHandler) as vec3f,
+}) as Vec3f;
 
 export type Vec3i = TgpuData<vec3i> &
   ((x: number, y: number, z: number) => vec3i) &
@@ -816,9 +821,11 @@ export const vec3i = makeVecSchema({
   byteAlignment: 16,
   length: 3,
   label: 'vec3i',
-  make: (x, y, z) => new Proxy(new vec3iImpl(x, y, z), vecProxyHandler),
-  makeFromScalar: (x) => new Proxy(new vec3iImpl(x, x, x), vecProxyHandler),
-}) as unknown as Vec3i;
+  make: (x, y, z) =>
+    new Proxy(new vec3iImpl(x, y, z), vecProxyHandler) as vec3i,
+  makeFromScalar: (x) =>
+    new Proxy(new vec3iImpl(x, x, x), vecProxyHandler) as vec3i,
+}) as Vec3i;
 
 export type Vec3u = TgpuData<vec3u> &
   ((x: number, y: number, z: number) => vec3u) &
@@ -830,9 +837,11 @@ export const vec3u = makeVecSchema({
   byteAlignment: 16,
   length: 3,
   label: 'vec3u',
-  make: (x, y, z) => new Proxy(new vec3uImpl(x, y, z), vecProxyHandler),
-  makeFromScalar: (x) => new Proxy(new vec3uImpl(x, x, x), vecProxyHandler),
-}) as unknown as Vec3u;
+  make: (x, y, z) =>
+    new Proxy(new vec3uImpl(x, y, z), vecProxyHandler) as vec3u,
+  makeFromScalar: (x) =>
+    new Proxy(new vec3uImpl(x, x, x), vecProxyHandler) as vec3u,
+}) as Vec3u;
 
 export type Vec4f = TgpuData<vec4f> &
   ((x: number, y: number, z: number, w: number) => vec4f) &
@@ -844,9 +853,11 @@ export const vec4f = makeVecSchema({
   byteAlignment: 16,
   length: 4,
   label: 'vec4f',
-  make: (x, y, z, w) => new Proxy(new vec4fImpl(x, y, z, w), vecProxyHandler),
-  makeFromScalar: (x) => new Proxy(new vec4fImpl(x, x, x, x), vecProxyHandler),
-}) as unknown as Vec4f;
+  make: (x, y, z, w) =>
+    new Proxy(new vec4fImpl(x, y, z, w), vecProxyHandler) as vec4f,
+  makeFromScalar: (x) =>
+    new Proxy(new vec4fImpl(x, x, x, x), vecProxyHandler) as vec4f,
+}) as Vec4f;
 
 export type Vec4i = TgpuData<vec4i> &
   ((x: number, y: number, z: number, w: number) => vec4i) &
@@ -858,9 +869,11 @@ export const vec4i = makeVecSchema({
   byteAlignment: 16,
   length: 4,
   label: 'vec4i',
-  make: (x, y, z, w) => new Proxy(new vec4iImpl(x, y, z, w), vecProxyHandler),
-  makeFromScalar: (x) => new Proxy(new vec4iImpl(x, x, x, x), vecProxyHandler),
-}) as unknown as Vec4i;
+  make: (x, y, z, w) =>
+    new Proxy(new vec4iImpl(x, y, z, w), vecProxyHandler) as vec4i,
+  makeFromScalar: (x) =>
+    new Proxy(new vec4iImpl(x, x, x, x), vecProxyHandler) as vec4i,
+}) as Vec4i;
 
 export type Vec4u = TgpuData<vec4u> &
   ((x: number, y: number, z: number, w: number) => vec4u) &
@@ -872,6 +885,8 @@ export const vec4u = makeVecSchema({
   byteAlignment: 16,
   length: 4,
   label: 'vec4u',
-  make: (x, y, z, w) => new Proxy(new vec4uImpl(x, y, z, w), vecProxyHandler),
-  makeFromScalar: (x) => new Proxy(new vec4uImpl(x, x, x, x), vecProxyHandler),
-}) as unknown as Vec4u;
+  make: (x, y, z, w) =>
+    new Proxy(new vec4uImpl(x, y, z, w), vecProxyHandler) as vec4u,
+  makeFromScalar: (x) =>
+    new Proxy(new vec4uImpl(x, x, x, x), vecProxyHandler) as vec4u,
+}) as Vec4u;
