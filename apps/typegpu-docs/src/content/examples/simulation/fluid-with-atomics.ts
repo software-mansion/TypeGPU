@@ -320,7 +320,6 @@ const fragWGSL = wgsl`
 `;
 
 let drawCanvasData = new Uint32Array(options.size * options.size);
-let commandEncoder: GPUCommandEncoder;
 
 let msSinceLastTick = 0;
 let render: () => void;
@@ -361,9 +360,6 @@ function resetGameData() {
   );
 
   runtime.writeBuffer(sizeBuffer, vec2u(options.size, options.size));
-
-  const length = options.size * options.size;
-  const cells = new Uint32Array(length);
 
   render = () => {
     const view = context.getCurrentTexture().createView();
