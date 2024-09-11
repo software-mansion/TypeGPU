@@ -246,32 +246,17 @@ class TgpuRuntimeImpl implements TgpuRuntime {
   ) {
     const gpuBuffer = this.bufferFor(allocatable);
 
-    const size = roundUp(
-      allocatable.dataType.size,
-      allocatable.dataType.byteAlignment,
-    );
+    const size = allocatable.dataType.size;
 
     if (isAllocatable(data)) {
       const sourceBuffer = this.bufferFor(data);
       const commandEncoder = this.device.createCommandEncoder();
-      commandEncoder.copyBufferToBuffer(
-        sourceBuffer,
-        0,
-        gpuBuffer,
-        0,
-        allocatable.dataType.size,
-      );
+      commandEncoder.copyBufferToBuffer(sourceBuffer, 0, gpuBuffer, 0, size);
       this.device.queue.submit([commandEncoder.finish()]);
     } else {
       const hostBuffer = new ArrayBuffer(size);
       allocatable.dataType.write(new BufferWriter(hostBuffer), data);
-      this.device.queue.writeBuffer(
-        gpuBuffer,
-        0,
-        hostBuffer,
-        0,
-        allocatable.dataType.size,
-      );
+      this.device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
     }
   }
 
