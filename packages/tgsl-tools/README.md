@@ -90,3 +90,22 @@ There are a couple things that a function can accept:
 - A readonly accessor (resources are accessors to themselves).
 - A mutable accessor (resources are accessors to themselves).
 - A function of a specific signature.
+
+
+```ts
+const foo = tgpu
+  .fn([f32, f32], f32)
+  .implement((a, b) => {
+    return a + b + double(a);
+  })
+  .$uses({ double });
+
+// Assigning the transpiled code
+foo.__ast(
+  ['a', 'b'], // argument names
+  // Can be injected with a simple JSON.stringify of a value that can be computed in the Vite plugin.
+  [
+    '  return ', { id: 'a' }, ' + ', { id: 'b' }, ' + ', { call: 'double', args: [{ id: 'a' }] }, ';\n',
+  ],
+);
+```
