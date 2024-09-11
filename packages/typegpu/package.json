@@ -1,7 +1,7 @@
 {
   "name": "typegpu",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "license": "MIT",
   "type": "module",
@@ -69,14 +69,14 @@
   "bugs": {
     "url": "https://github.com/software-mansion/TypeGPU/issues"
   },
-  "homepage": "https://docs.swmansion.com/TypeGPU",
+  "homepage": "https://typegpu.com",
   "devDependencies": {
     "@webgpu/types": "^0.1.43",
     "typescript": "^5.3.3",
     "tsup": "^8.0.2",
-    "@typegpu/wgsl-parser": "workspace:0.0.0",
-    "typegpu": "workspace:0.1.1",
-    "@typegpu/tgpu-dev-cli": "workspace:0.0.0"
+    "@typegpu/wgsl-parser": "workspace:*",
+    "typegpu": "workspace:*",
+    "@typegpu/tgpu-dev-cli": "workspace:*"
   },
   "packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e",
   "dependencies": {

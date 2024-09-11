@@ -188,7 +188,7 @@ importers:
         specifier: ^8.12.1
         version: 8.12.1
       typegpu:
-        specifier: workspace:^0.1.1
+        specifier: workspace:^0.1.2
         version: link:../typegpu
     devDependencies:
       '@typegpu/tgpu-dev-cli':
@@ -208,10 +208,10 @@ importers:
         version: 4.0.1
     devDependencies:
       '@typegpu/tgpu-dev-cli':
-        specifier: workspace:0.0.0
+        specifier: workspace:*
         version: link:../tgpu-dev-cli
       '@typegpu/wgsl-parser':
-        specifier: workspace:0.0.0
+        specifier: workspace:*
         version: link:../typegpu-wgsl-parser
       '@webgpu/types':
         specifier: ^0.1.43
@@ -220,7 +220,7 @@ importers:
         specifier: ^8.0.2
         version: 8.0.2(typescript@5.5.4)
       typegpu:
-        specifier: workspace:0.1.1
+        specifier: workspace:*
         version: 'link:'
       typescript:
         specifier: ^5.3.3
