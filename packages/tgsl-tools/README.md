@@ -105,7 +105,49 @@ foo.__ast(
   ['a', 'b'], // argument names
   // Can be injected with a simple JSON.stringify of a value that can be computed in the Vite plugin.
   [
-    '  return ', { id: 'a' }, ' + ', { id: 'b' }, ' + ', { call: 'double', args: [{ id: 'a' }] }, ';\n',
+    {
+      return: {
+        '+': [
+          { '+': ['a', 'b']},
+          { call: 'double', args: ['a']},
+        ],
+      },
+    },
+  ],
+);
+```
+
+
+```ts
+const countBuffer = tgpu.createBuffer(u32, 0).$usage(tgpu.Storage);
+const count = asMutable(countBuffer);
+
+const foo = tgpu
+  .fn([f32, f32], f32)
+  .implement((a, b) => {
+    count.value += 1;
+    return a + b + double(a);
+  })
+  .$uses({ double, count });
+
+const Foo = struct({ a: i32 });
+
+// Assigning the transpiled code
+foo.__ast(
+  ['a', 'b'], // argument names
+  // Can be injected with a simple JSON.stringify of a value that can be computed in the Vite plugin.
+  [
+    {
+      '+=': [{ '.': ['count', 'value'] }, {'num': '1'}],
+    },
+    {
+      return: {
+        '+': [
+          { '+': ['a', 'b']},
+          { call: 'double', args: ['a']},
+        ],
+      },
+    },
   ],
 );
 ```

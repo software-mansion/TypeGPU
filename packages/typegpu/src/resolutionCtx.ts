@@ -279,12 +279,15 @@ class ScopedResolutionCtx implements ResolutionCtx {
       );
     }
 
-    return this._shared.jitTranspiler.transpileFn(
+    const { argNames, body } = this._shared.jitTranspiler.transpileFn(
       String(fn.body),
-      fn.shell.argTypes,
-      fn.shell.returnType,
-      externalMap,
     );
+
+    // TODO: Actually generate WGSL from SMoL
+    return {
+      head: code`(a: f32, b: f32) -> f32`,
+      body: code`return a + b;`,
+    };
   }
 
   addDeclaration(declaration: TgpuResolvable): void {

@@ -1,138 +1,167 @@
 import * as acorn from 'acorn';
-import {
-  type AnyTgpuData,
-  type Wgsl,
-  isNamable,
-  isResolvable,
-  wgsl,
-} from 'typegpu/experimental';
-import { valueList } from './resolutionUtils';
+import type * as smol from 'typegpu/smol';
 
-type Context = {
-  argTypes: AnyTgpuData[];
-  externalMap: Record<string, Wgsl>;
-  returnType: AnyTgpuData | undefined;
-};
+const BINARY_OP_MAP = {
+  '==': '==',
+  '!=': '!=',
+  '===': '==',
+  '!==': '!=',
+  '<': '<',
+  '<=': '<=',
+  '>': '>',
+  '>=': '>=',
+  '<<': '<<',
+  '>>': '>>',
+  get '>>>'(): never {
+    throw new Error('The `>>>` operator is unsupported in TGSL.');
+  },
+  '+': '+',
+  '-': '-',
+  '*': '*',
+  '/': '/',
+  '%': '%',
+  '|': '|',
+  '^': '^',
+  '&': '&',
+  get in(): never {
+    throw new Error('The `in` operator is unsupported in TGSL.');
+  },
+  get instanceof(): never {
+    throw new Error('The `instanceof` operator is unsupported in TGSL.');
+  },
+  get '**'(): never {
+    // TODO: Translate 'a ** b' into 'pow(a, b)'.
+    throw new Error(
+      'The `**` operator is unsupported in TGSL. Use std.pow() instead.',
+    );
+  },
+} as const;
 
-const Generators: Partial<{
+const LOGICAL_OP_MAP = {
+  '||': '||',
+  '&&': '&&',
+  get '??'(): never {
+    throw new Error('The `??` operator is unsupported in TGSL.');
+  },
+} as const;
+
+const ASSIGNMENT_OP_MAP = {
+  '=': '=',
+  '+=': '+=',
+  '-=': '-=',
+  '*=': '*=',
+  '/=': '/=',
+  '%=': '%=',
+  '<<=': '<<=',
+  '>>=': '>>=',
+  get '>>>='(): never {
+    throw new Error('The `>>>=` operator is unsupported in TGSL.');
+  },
+  '|=': '|=',
+  '^=': '^=',
+  '&=': '&=',
+  '**=': '**=',
+  '||=': '||=',
+  '&&=': '&&=',
+  get '??='(): never {
+    throw new Error('The `??=` operator is unsupported in TGSL.');
+  },
+} as const;
+
+const Transpilers: Partial<{
   [Type in acorn.AnyNode['type']]: (
-    ctx: Context,
     node: Extract<acorn.AnyNode, { type: Type }>,
-  ) => Wgsl;
+  ) => smol.AnyNode;
 }> = {
-  Program(ctx, node) {
+  Program(node) {
     const body = node.body[0];
+
     if (!body) {
       throw new Error('tgpu.fn was not implemented correctly.');
     }
 
-    return generate(ctx, body);
+    return transpile(body);
   },
 
-  ExpressionStatement: (ctx, node) => wgsl`${generate(ctx, node.expression)};`,
-  ArrowFunctionExpression: (ctx, node) => {
-    if (node.async) {
-      throw new Error('tgpu.fn cannot be async.');
-    }
+  ExpressionStatement: (node) => transpile(node.expression),
 
-    if (node.params.some((p) => p.type !== 'Identifier')) {
-      throw new Error('tgpu.fn implementations require concrete parameters');
-    }
-
-    const params = node.params as acorn.Identifier[];
-    const header = wgsl`(${valueList(params.map((p, idx) => wgsl`${p.name}: ${ctx.argTypes[idx] ?? ''}`))}) ${ctx.returnType ? wgsl`-> ${ctx.returnType}` : ''}`;
-
-    if (node.body.type === 'BlockStatement') {
-      return wgsl`${header} ${generate(ctx, node.body)}`;
-    }
-
-    return wgsl`${header} {
-  return ${generate(ctx, node.body)};
-}`;
+  ArrowFunctionExpression: (node) => {
+    throw new Error('Arrow functions are not supported inside TGSL.');
   },
 
-  BlockStatement(ctx, node) {
-    return wgsl`{
-  ${node.body.map((statement) => generate(ctx, statement))}
-}`;
-  },
+  BlockStatement: (node) => ({
+    block: node.body.map((statement) => transpile(statement) as smol.Statement),
+  }),
 
-  ReturnStatement(ctx, node) {
-    return wgsl`return ${node.argument ? generate(ctx, node.argument) : ''};`;
-  },
+  ReturnStatement: (node) => ({
+    return: node.argument
+      ? (transpile(node.argument) as smol.Expression)
+      : null,
+  }),
 
-  Identifier(ctx, node) {
-    const external = ctx.externalMap[node.name];
-    if (external) {
-      // Since we pass in the external by name, we can then assign it a debug label (Hurray!).
-      if (isNamable(external)) {
-        external.$name(node.name);
-      }
-      return external;
-    }
-
+  Identifier(node) {
     return node.name;
   },
 
-  BinaryExpression(ctx, node) {
-    // TODO: Verify if all binary operators map 1-to-1 (they probably do not)
-    return wgsl`${generate(ctx, node.left)} ${node.operator} ${generate(ctx, node.right)}`;
+  BinaryExpression(node) {
+    const wgslOp = BINARY_OP_MAP[node.operator];
+    const left = transpile(node.left);
+    const right = transpile(node.right);
+    return { [wgslOp]: [left, right] } as smol.AnyNode;
   },
 
-  LogicalExpression(ctx, node) {
-    const left = generate(ctx, node.left);
-    const right = generate(ctx, node.right);
-    return wgsl`${left} ${node.operator} ${right}`;
+  LogicalExpression(node) {
+    const wgslOp = LOGICAL_OP_MAP[node.operator];
+    const left = transpile(node.left);
+    const right = transpile(node.right);
+    return { [wgslOp]: [left, right] } as smol.AnyNode;
   },
 
-  AssignmentExpression(ctx, node) {
-    // TODO: Verify if all assignment operators map 1-to-1 (they probably do not)
-    return wgsl`${generate(ctx, node.left)} ${node.operator} ${generate(ctx, node.right)}`;
+  AssignmentExpression(node) {
+    const wgslOp = ASSIGNMENT_OP_MAP[node.operator];
+    const left = transpile(node.left);
+    const right = transpile(node.right);
+    return { [wgslOp]: [left, right] } as smol.AnyNode;
   },
 
-  MemberExpression(ctx, node) {
-    const object = generate(ctx, node.object);
-    const property = generate(ctx, node.property);
-
-    if (object === 'std') {
-      // All values on `std.` should exist in the WGSL global scope, so fallback.
-      return property;
-    }
-
-    if (isResolvable(object)) {
-      // A resolvable, for now we can use that fact to assume it is external
-
-      if (property === 'value' && 'value' in object) {
-        // .value is a special property of external resources, giving access to the value within.
-        return object.value as Wgsl;
-      }
-    }
+  MemberExpression(node) {
+    const object = transpile(node.object) as smol.Expression;
+    const property = transpile(node.property) as smol.Expression;
 
     if (node.computed) {
-      return wgsl`${object}[${property}]`;
+      return { '[]': [object, property] };
     }
 
-    return wgsl`${object}.${property}`;
-  },
-
-  Literal(_ctx, node) {
-    return node.raw ?? '';
-  },
-
-  CallExpression(ctx, node) {
-    const callee = generate(ctx, node.callee);
-    const args = node.arguments.map((arg) => generate(ctx, arg));
-
-    if (isResolvable(callee)) {
-      // A resolvable, for now we can use that fact to assume it is external
-
-      return (callee as unknown as (...a: typeof args) => Wgsl)(...args);
+    if (typeof property !== 'string') {
+      throw new Error('Expected identifier as property access key.');
     }
 
-    return wgsl`${callee}(${valueList(args)})`;
+    return { '.': [object, property] };
   },
 
-  VariableDeclaration(ctx, node) {
+  Literal(node) {
+    if (typeof node.value === 'string') {
+      throw new Error('String literals are not supported in TGSL.');
+    }
+    return { num: node.raw ?? '' };
+  },
+
+  CallExpression(node) {
+    const callee = transpile(node.callee);
+    if (typeof callee !== 'string') {
+      throw new Error(
+        'Can only call functions that are referred to by their identifier.',
+      );
+    }
+
+    const args = node.arguments.map((arg) =>
+      transpile(arg),
+    ) as smol.Expression[];
+
+    return { call: callee, args };
+  },
+
+  VariableDeclaration(node) {
     if (node.declarations.length !== 1 || !node.declarations[0]) {
       throw new Error(
         'Currently only one declaration in a statement is supported.',
@@ -141,32 +170,43 @@ const Generators: Partial<{
 
     const decl = node.declarations[0];
 
-    return wgsl`let ${generate(ctx, decl.id)} ${decl.init ? wgsl`= ${generate(ctx, decl.init)}` : ''};`;
+    const id = transpile(decl.id);
+
+    if (typeof id !== 'string') {
+      throw new Error('Invalid variable declaration, expected identifier.');
+    }
+
+    const init = decl.init
+      ? (transpile(decl.init) as smol.Expression)
+      : undefined;
+    return { let: id, be: init };
   },
 
-  IfStatement(ctx, node) {
-    const test = generate(ctx, node.test);
-    const consequent = generate(ctx, node.consequent);
-    const alternate = node.alternate ? generate(ctx, node.alternate) : null;
+  IfStatement(node) {
+    const test = transpile(node.test) as smol.Expression;
+    const consequent = transpile(node.consequent) as smol.Statement;
+    const alternate = node.alternate
+      ? (transpile(node.alternate) as smol.Statement)
+      : undefined;
 
-    return wgsl`if (${test}) ${consequent} ${alternate ? wgsl`else ${alternate}` : ''}`;
+    return { if: test, do: consequent, else: alternate };
   },
 };
 
-function generate(ctx: Context, node: acorn.AnyNode): Wgsl {
-  const generator = Generators[node.type];
+function transpile(node: acorn.AnyNode): smol.AnyNode {
+  const transpiler = Transpilers[node.type];
 
-  if (!generator) {
+  if (!transpiler) {
     throw new Error(`Unsupported JS functionality: ${node.type}`);
   }
 
-  return generator(ctx, node as never);
+  return transpiler(node as never);
 }
 
-export function transpileFn(
-  ctx: Context,
-  jsCode: string,
-): { head: Wgsl; body: Wgsl } {
+export function transpileFn(jsCode: string): {
+  argNames: string[];
+  body: smol.Block;
+} {
   const program = acorn.parse(jsCode, { ecmaVersion: 'latest' });
 
   const programBody = program.body[0];
@@ -192,19 +232,18 @@ export function transpileFn(
   }
 
   const params = mainExpression.params as acorn.Identifier[];
-  const signature = wgsl`(${params.map((p, idx) => wgsl`${p.name}: ${ctx.argTypes[idx] ?? ''}${idx < params.length - 1 ? ', ' : ''}`)}) ${() => (ctx.returnType ? wgsl`-> ${ctx.returnType}` : '')}`;
 
   if (mainExpression.body.type === 'BlockStatement') {
     return {
-      head: signature,
-      body: generate(ctx, mainExpression.body),
+      argNames: params.map((p) => p.name),
+      body: transpile(mainExpression.body) as unknown as smol.Block,
     };
   }
 
   return {
-    head: signature,
-    body: wgsl`{
-  return ${generate(ctx, mainExpression.body)};
-}`,
+    argNames: params.map((p) => p.name),
+    body: {
+      block: [{ return: transpile(mainExpression.body) as smol.Expression }],
+    },
   };
 }
