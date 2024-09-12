@@ -59,6 +59,32 @@ const staticToDynamicImports = {
   } satisfies TraverseOptions,
 };
 
+let addButtonParameterImportAdded = false;
+
+const labeledFunctionToControlButtons = () => {
+  return {
+    visitor: {
+      ExportNamedDeclaration(path, state) {
+        // @ts-ignore
+        const code: string = state.file.code;
+        const declaration = path.node.declaration;
+        if (declaration?.type === 'FunctionDeclaration') {
+          for (const comment of path.node.leadingComments ?? []) {
+            const regExp = /.*@button.*\"(?<label>.*)\".*/;
+            const label = regExp.exec(comment.value)?.groups?.label ?? '';
+            path.replaceWith(
+              template.program.ast(
+                `${addButtonParameterImportAdded ? '' : "import { addButtonParameter } from '@typegpu/example-toolkit';"} addButtonParameter('${label}', ${code.slice(declaration.start ?? 0, declaration.end ?? 0)})`,
+              ),
+            );
+            addButtonParameterImportAdded = true;
+          }
+        }
+      },
+    } satisfies TraverseOptions,
+  };
+};
+
 const MAX_ITERATIONS = 10000;
 
 /**
@@ -303,11 +329,16 @@ export async function executeExample(
 
     const jsCode = tsToJs(exampleCode);
 
+    addButtonParameterImportAdded = false;
     const transformedCode =
       Babel.transform(jsCode, {
         compact: false,
         retainLines: true,
-        plugins: [staticToDynamicImports, preventInfiniteLoops],
+        plugins: [
+          labeledFunctionToControlButtons,
+          staticToDynamicImports,
+          preventInfiniteLoops,
+        ],
       }).code ?? jsCode;
 
     const mod = Function(`
