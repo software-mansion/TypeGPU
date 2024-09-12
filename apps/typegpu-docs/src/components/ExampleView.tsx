@@ -115,7 +115,8 @@ export function ExampleView({ example, isPlayground = false }: Props) {
 
       <div className="grid gap-4 grid-cols-[1fr_18.75rem] h-full">
         <div
-          className={cs('grid gap-4', codeEditorShowing ? 'grid-rows-2' : '')}>
+          className={cs('grid gap-4', codeEditorShowing ? 'grid-rows-2' : '')}
+        >
           <div
             style={{
               scrollbarGutter: 'stable both-edges',
@@ -123,7 +124,8 @@ export function ExampleView({ example, isPlayground = false }: Props) {
             className={cs(
               'flex justify-evenly items-center flex-wrap overflow-auto h-full',
               codeEditorShowing ? 'max-h-[calc(50vh-3rem)]' : '',
-            )}>
+            )}
+          >
             {def.elements.length === 0 ? <Canvas aspectRatio={1} /> : null}
 
             {def.elements.map((element) => {
