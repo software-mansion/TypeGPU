@@ -33,6 +33,7 @@ export const examples = pipe(
     return [key, parseExampleCode(key, value)] as const;
   }),
   filter((pair): pair is [string, Example] => isNonNull(pair[1])),
+  filter(([_, example]) => !example.metadata.tags?.includes('experimental')),
   fromEntries(),
 );
 
