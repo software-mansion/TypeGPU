@@ -2,6 +2,12 @@ import { MissingSlotValueError, ResolutionError } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
+import {
+  type GenerationCtx,
+  type Resource,
+  UnknownData,
+  generateFunction,
+} from './smol';
 import { code } from './tgpuCode';
 import type { TgpuFn } from './tgpuFn';
 import { isTextureView } from './tgpuTexture';
@@ -259,14 +265,60 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 }
 
-class ScopedResolutionCtx implements ResolutionCtx {
+const INDENT = [
+  '', // 0
+  '  ', // 1
+  '    ', // 2
+  '      ', // 3
+  '        ', // 4
+  '          ', // 5
+  '            ', // 6
+  '              ', // 7
+  '                ', // 8
+];
+
+class ScopedResolutionCtx implements ResolutionCtx, GenerationCtx {
   usedSlots = new Set<TgpuSlot<unknown>>();
+
+  private identLevel = 0;
 
   constructor(
     private readonly _parent: ResolutionCtxImpl | ScopedResolutionCtx,
     private readonly _shared: SharedResolutionState,
     private readonly _slotValuePairs: SlotValuePair<unknown>[],
   ) {}
+
+  get pre(): string {
+    if (INDENT[this.identLevel] !== undefined) {
+      return INDENT[this.identLevel] as string;
+    }
+
+    let str = '';
+    let i = this.identLevel;
+    while (i > 8) {
+      str += INDENT[8];
+      i >>= 3;
+    }
+
+    return str;
+  }
+
+  indent(): string {
+    const str = this.pre;
+    this.identLevel++;
+    return str;
+  }
+
+  dedent(): string {
+    this.identLevel--;
+    return this.pre;
+  }
+
+  getById(id: string): Resource {
+    // TODO: Provide access to external values
+    // TODO: Provide data type information
+    return { value: id, dataType: UnknownData };
+  }
 
   transpileFn(
     // biome-ignore lint/suspicious/noExplicitAny: <no generic magic needed>
@@ -282,6 +334,9 @@ class ScopedResolutionCtx implements ResolutionCtx {
     const { argNames, body } = this._shared.jitTranspiler.transpileFn(
       String(fn.body),
     );
+
+    const str = generateFunction(this, body);
+    console.log(str);
 
     // TODO: Actually generate WGSL from SMoL
     return {

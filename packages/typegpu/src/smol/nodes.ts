@@ -20,10 +20,17 @@ export type Block = {
 export type Let = {
   /** local constant's identifier */
   let: string;
-  be?: Expression | undefined;
+  be: Expression;
 };
 
-export type Statement = Return | If | Block | Let | Expression;
+export type Var = {
+  /** variable's identifier */
+  var: string;
+  type?: string | undefined;
+  init?: Expression | undefined;
+};
+
+export type Statement = Return | If | Block | Let | Var | Expression;
 
 //
 // Expression
@@ -48,7 +55,7 @@ export type BinaryOperator =
   | '&';
 
 export type BinaryExpression = {
-  [K in BinaryOperator]: [Expression, Expression];
+  x2: [Expression, BinaryOperator, Expression];
 };
 
 export type AssignmentOperator =
@@ -68,13 +75,13 @@ export type AssignmentOperator =
   | '&&=';
 
 export type AssignmentExpression = {
-  [K in AssignmentOperator]: [Expression, Expression];
+  x2: [Expression, AssignmentOperator, Expression];
 };
 
 export type LogicalOperator = '&&' | '||';
 
 export type LogicalExpression = {
-  [K in LogicalOperator]: [Expression, Expression];
+  x2: [Expression, LogicalOperator, Expression];
 };
 
 export type MemberAccess = {

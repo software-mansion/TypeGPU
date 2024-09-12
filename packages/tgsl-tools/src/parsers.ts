@@ -107,21 +107,21 @@ const Transpilers: Partial<{
     const wgslOp = BINARY_OP_MAP[node.operator];
     const left = transpile(node.left);
     const right = transpile(node.right);
-    return { [wgslOp]: [left, right] } as smol.AnyNode;
+    return { x2: [left, wgslOp, right] } as smol.AnyNode;
   },
 
   LogicalExpression(node) {
     const wgslOp = LOGICAL_OP_MAP[node.operator];
     const left = transpile(node.left);
     const right = transpile(node.right);
-    return { [wgslOp]: [left, right] } as smol.AnyNode;
+    return { x2: [left, wgslOp, right] } as smol.AnyNode;
   },
 
   AssignmentExpression(node) {
     const wgslOp = ASSIGNMENT_OP_MAP[node.operator];
     const left = transpile(node.left);
     const right = transpile(node.right);
-    return { [wgslOp]: [left, right] } as smol.AnyNode;
+    return { x2: [left, wgslOp, right] } as smol.AnyNode;
   },
 
   MemberExpression(node) {
@@ -169,7 +169,6 @@ const Transpilers: Partial<{
     }
 
     const decl = node.declarations[0];
-
     const id = transpile(decl.id);
 
     if (typeof id !== 'string') {
@@ -179,7 +178,21 @@ const Transpilers: Partial<{
     const init = decl.init
       ? (transpile(decl.init) as smol.Expression)
       : undefined;
-    return { let: id, be: init };
+
+    if (node.kind === 'var') {
+      throw new Error('`var` declarations are not supported.');
+    }
+
+    if (node.kind === 'const') {
+      if (init === undefined) {
+        throw new Error(
+          'Did not provide initial value in `const` declaration.',
+        );
+      }
+      return { let: id, be: init };
+    }
+
+    return { var: id, init };
   },
 
   IfStatement(node) {
