@@ -9,7 +9,7 @@
     "dev:test": "vitest",
     "check": "biome check --write .",
     "coverage": "vitest --coverage",
-    "test": "pnpm run '/^test:.*/'",
+    "test": "EXPERIMENTAL=true pnpm -r dev:build && pnpm run '/^test:.*/'",
     "test:types": "pnpm run -r test:types",
     "test:spec": "vitest run"
   },
