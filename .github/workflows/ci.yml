@@ -8,7 +8,34 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  check-circular-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Install dpdm
+        run: pnpm install -g dpdm
+
+      - name: Check circular dependencies
+        run: |
+          dpdm --no-warning --no-tree packages/**/index.ts -T > output.txt
+          if grep -q '• Circular Dependencies' output.txt; then
+            echo "Circular dependencies found"
+            cat output.txt
+            exit 1
+          fi
+
+  build-and-test:
     runs-on: ubuntu-latest
 
     strategy:
