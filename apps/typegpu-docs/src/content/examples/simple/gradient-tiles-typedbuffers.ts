@@ -146,25 +146,25 @@ setTimeout(() => {
   draw(spanX, spanY);
 }, 100);
 
-// @button "span x --"
+/** @button "↔️ -" */
 export function spanXMinus() {
   spanX = Math.max(1, spanX - 1);
   draw(spanX, spanY);
 }
 
-// @button "span x ++"
+/** @button "↔️ +" */
 export function spanXPlus() {
   spanX = Math.min(spanX + 1, 20);
   draw(spanX, spanY);
 }
 
-// @button "span y --"
+/** @button "↕️ -" */
 export function spanYMinus() {
   spanY = Math.max(1, spanY - 1);
   draw(spanX, spanY);
 }
 
-// @button "span y ++"
+/** @button "↕️ +" */
 export function spanYPlus() {
   spanY = Math.min(spanY + 1, 20);
   draw(spanX, spanY);

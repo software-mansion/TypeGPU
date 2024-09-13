@@ -64,6 +64,17 @@ let addButtonParameterImportAdded = false;
 const labeledFunctionToControlButtons = () => {
   return {
     visitor: {
+      ImportDeclaration(path) {
+        if (path.node.source.value === '@typegpu/example-toolkit') {
+          for (const imp of path.node.specifiers) {
+            if (imp.local.name === 'addButtonParameter') {
+              addButtonParameterImportAdded = true;
+              break;
+            }
+          }
+        }
+      },
+
       ExportNamedDeclaration(path, state) {
         // @ts-ignore
         const code: string = state.file.code;
@@ -71,13 +82,16 @@ const labeledFunctionToControlButtons = () => {
         if (declaration?.type === 'FunctionDeclaration') {
           for (const comment of path.node.leadingComments ?? []) {
             const regExp = /.*@button.*\"(?<label>.*)\".*/;
-            const label = regExp.exec(comment.value)?.groups?.label ?? '';
-            path.replaceWith(
-              template.program.ast(
-                `${addButtonParameterImportAdded ? '' : "import { addButtonParameter } from '@typegpu/example-toolkit';"} addButtonParameter('${label}', ${code.slice(declaration.start ?? 0, declaration.end ?? 0)})`,
-              ),
-            );
-            addButtonParameterImportAdded = true;
+            const label = regExp.exec(comment.value)?.groups?.label;
+
+            if (label) {
+              path.replaceWith(
+                template.program.ast(
+                  `${addButtonParameterImportAdded ? '' : "import { addButtonParameter } from '@typegpu/example-toolkit';"} addButtonParameter('${label}', ${code.slice(declaration.start ?? 0, declaration.end ?? 0)})`,
+                ),
+              );
+              addButtonParameterImportAdded = true;
+            }
           }
         }
       },
