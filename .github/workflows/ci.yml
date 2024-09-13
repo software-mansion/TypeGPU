@@ -6,26 +6,26 @@ on:
   pull_request:
     branches: ['main']
   workflow_dispatch:
+  merge_group:
+    types:
+      - checks_requested
 
 jobs:
   setup:
     runs-on: ubuntu-latest
-    outputs:
-      node-version: ${{ steps.set-node-version.outputs.node-version }}
     steps:
       - uses: actions/checkout@v3
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           run_install: false
-      - name: Set Node.js version
-        id: set-node-version
-        run: echo "node-version=${{ matrix.node-version }}" >> $GITHUB_ENV
-      - name: Use Node.js ${{ env.node-version }}
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.node-version }}
+          node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
   check-circular-deps:
     needs: setup
@@ -50,8 +50,5 @@ jobs:
       matrix:
         node-version: [20.x, 22.x]
     steps:
-      - uses: actions/checkout@v3
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
       - name: Run tests
         run: pnpm test
