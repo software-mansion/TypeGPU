@@ -126,6 +126,9 @@ export function ExampleView({ example, isPlayground = false }: Props) {
               codeEditorShowing ? 'max-h-[calc(50vh-3rem)]' : '',
             )}
           >
+            {/* Note: This is a temporary measure to allow for simple examples that do not require the @typegpu/example-toolkit package. */}
+            {def.elements.length === 0 ? <Canvas aspectRatio={1} /> : null}
+
             {def.elements.map((element) => {
               if (element.type === 'canvas') {
                 return (
