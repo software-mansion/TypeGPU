@@ -170,6 +170,7 @@ export function ExampleView({ example, isPlayground = false }: Props) {
                     ref={(button) => setRef(element.key, button)}
                     label={element.label}
                     onClick={element.onClick}
+                    accent
                   />
                 );
               }

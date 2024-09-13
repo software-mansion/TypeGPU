@@ -341,7 +341,19 @@ export async function executeExample(
       throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
     };
 
-    const jsCode = tsToJs(exampleCode);
+    const jsCode = tsToJs(`
+      ${exampleCode}
+
+      import { onCleanup } from '@typegpu/example-toolkit';
+      onCleanup(() => 
+        if (typeof device === 'object' 
+          && 'destroy' in device
+          && typeof device.destroy === 'function'
+        ) {
+          device.destroy();
+        }
+      );
+    `); // temporary solution to clean up device without using example-toolkit in the example
 
     addButtonParameterImportAdded = false;
     const transformedCode =
