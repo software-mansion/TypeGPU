@@ -13,10 +13,10 @@ export const Table = forwardRef<TableRef, Props>((props, ref) => {
   useImperativeHandle(ref, () => ({ setMatrix }));
 
   return (
-    <div className="grid place-items-center font-semibold gap-2">
-      <div className="text-slate-600">{label}</div>
+    <div className="grid place-items-center font-medium gap-2">
+      <div className="">{label}</div>
       <div
-        className="grid gap-2 bg-slate-300 p-4 rounded"
+        className="grid gap-2 bg-grayscale-0 p-4 rounded"
         style={{
           gridTemplateColumns: `repeat(${matrix[0]?.length ?? 0}, 1fr)`,
         }}

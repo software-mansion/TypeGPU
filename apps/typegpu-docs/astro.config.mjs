@@ -41,13 +41,13 @@ export default defineConfig({
         github: 'https://github.com/software-mansion/TypeGPU',
       },
       sidebar: [
-        // {
-        //   label: '⭐️ Live Examples',
-        //   link: 'examples',
-        //   attrs: {
-        //     'data-astro-reload': true,
-        //   },
-        // },
+        {
+          label: '⭐️ Live Examples',
+          link: 'examples',
+          // attrs: {
+          //   'data-astro-reload': true,
+          // },
+        },
         {
           label: 'Guides',
           items: [
