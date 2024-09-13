@@ -8,47 +8,50 @@ on:
   workflow_dispatch:
 
 jobs:
-  check-circular-deps:
+  setup:
     runs-on: ubuntu-latest
+    outputs:
+      node-version: ${{ steps.set-node-version.outputs.node-version }}
     steps:
       - uses: actions/checkout@v3
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           run_install: false
-
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Set Node.js version
+        id: set-node-version
+        run: echo "node-version=${{ matrix.node-version }}" >> $GITHUB_ENV
+      - name: Use Node.js ${{ env.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ env.node-version }}
           cache: 'pnpm'
 
+  check-circular-deps:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
       - name: Install dpdm
         run: pnpm install -g dpdm
-
       - name: Check circular dependencies
-        run: dpdm dpdm --exit-code circular:1 packages/**/index.ts -T
+        run: dpdm --exit-code circular:1 packages/**/index.ts -T
+
+  biome-check:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check biome
+        run: pnpm biome check
 
   build-and-test:
+    needs: setup
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
         node-version: [20.x, 22.x]
-
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
-
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm test
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run tests
+        run: pnpm test
