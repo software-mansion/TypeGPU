@@ -163,7 +163,7 @@ const presets = {
     cohesionDistance: 0.3,
     cohesionStrength: 0.001,
   },
-  mosquitos: {
+  mosquitoes: {
     separationDistance: 0.02,
     separationStrength: 0.01,
     alignmentDistance: 0.0,
@@ -255,7 +255,7 @@ const randomizePositions = () => {
 randomizePositions();
 
 const colorPaletteBuffer = tgpu
-  .createBuffer(vec3f, colorPresets.plumTree)
+  .createBuffer(vec3f, colorPresets.jeans)
   .$device(device)
   .$usage(tgpu.Uniform);
 
@@ -400,29 +400,29 @@ function frame() {
 
 frame();
 
-/** @button "🔀" */
+/** @button "Randomize" */
 export function randomize() {
   randomizePositions();
 }
 
-/** @button "🐦" */
+/** @button "🐦 Birds" */
 export function choosePresetDefault() {
   updateParams(presets.default);
 }
 
-/** @button "🦟" */
+/** @button "🦟 Mosquitoes" */
 export function choosePresetMosquitos() {
-  updateParams(presets.mosquitos);
+  updateParams(presets.mosquitoes);
 }
 
-/** @button "💧" */
+/** @button "💧 Blobs" */
 export function choosePresetBlobs() {
   updateParams(presets.blobs);
 }
 
-/** @button "⚛️" */
+/** @button "⚛️ Particles" */
 export function choosePresetParticles() {
-  updateParams(presets.blobs);
+  updateParams(presets.particles);
 }
 
 /** @button "🟪🟩" */
