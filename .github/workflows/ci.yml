@@ -30,4 +30,5 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm exec dpdm 'packages/**/index.ts' -T
       - run: pnpm test
