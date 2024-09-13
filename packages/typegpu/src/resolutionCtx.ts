@@ -240,11 +240,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return String(item);
     }
 
-    const itemCtx = new ScopedResolutionCtx(
-      this,
-      this._shared,
-      slotValueOverrides,
-    );
+    const itemCtx = new ScopedResolutionCtx(this, this._shared, {
+      slotBindings: slotValueOverrides,
+    });
 
     const result = onGPU(() => this._shared.getOrInstantiate(item, itemCtx));
 
@@ -277,16 +275,8 @@ const INDENT = [
   '                ', // 8
 ];
 
-class ScopedResolutionCtx implements ResolutionCtx, GenerationCtx {
-  usedSlots = new Set<TgpuSlot<unknown>>();
-
+class IndentController {
   private identLevel = 0;
-
-  constructor(
-    private readonly _parent: ResolutionCtxImpl | ScopedResolutionCtx,
-    private readonly _shared: SharedResolutionState,
-    private readonly _slotValuePairs: SlotValuePair<unknown>[],
-  ) {}
 
   get pre(): string {
     if (INDENT[this.identLevel] !== undefined) {
@@ -312,6 +302,40 @@ class ScopedResolutionCtx implements ResolutionCtx, GenerationCtx {
   dedent(): string {
     this.identLevel--;
     return this.pre;
+  }
+}
+
+type FnCtx = {
+  argTypes: AnyTgpuData[];
+  returnType: AnyTgpuData | undefined;
+};
+
+type ScopeOptions = {
+  fnCtx?: FnCtx | undefined;
+  slotBindings?: SlotValuePair<unknown>[] | undefined;
+};
+
+class ScopedResolutionCtx implements ResolutionCtx, GenerationCtx {
+  usedSlots = new Set<TgpuSlot<unknown>>();
+
+  private readonly _identController = new IndentController();
+
+  constructor(
+    private readonly _parent: ResolutionCtxImpl | ScopedResolutionCtx,
+    private readonly _shared: SharedResolutionState,
+    private readonly _scopeOptions: ScopeOptions,
+  ) {}
+
+  get pre(): string {
+    return this._identController.pre;
+  }
+
+  indent(): string {
+    return this._identController.indent();
+  }
+
+  dedent(): string {
+    return this._identController.dedent();
   }
 
   getById(id: string): Resource {
@@ -403,7 +427,7 @@ class ScopedResolutionCtx implements ResolutionCtx, GenerationCtx {
   }
 
   readSlot<T>(slot: TgpuSlot<T>): T {
-    const slotToValuePair = this._slotValuePairs.find(
+    const slotToValuePair = this._scopeOptions.slotBindings?.find(
       ([boundSlot]) => boundSlot === slot,
     ) as SlotValuePair<T> | undefined;
 
@@ -438,12 +462,19 @@ class ScopedResolutionCtx implements ResolutionCtx, GenerationCtx {
       return String(item);
     }
 
-    const itemCtx = new ScopedResolutionCtx(
-      this,
-      this._shared,
-      slotValueOverrides,
-    );
+    const itemCtx = new ScopedResolutionCtx(this, this._shared, {
+      slotBindings: slotValueOverrides,
+    });
 
     return this._shared.getOrInstantiate(item, itemCtx);
   }
+
+  // createScope(opts: { fnContext?: FnCtx; slots?: SlotValuePair<unknown>[] }) {
+  //   // ...
+  //   const itemCtx = new ScopedResolutionCtx(
+  //     this,
+  //     this._shared,
+  //     slotValueOverrides,
+  //   );
+  // }
 }
