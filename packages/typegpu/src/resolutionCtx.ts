@@ -161,7 +161,7 @@ class ItemStateStack {
     }
   }
 
-  readSlot<T>(slot: TgpuSlot<T>): T {
+  readSlot<T>(slot: TgpuSlot<T>): T | undefined {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
       if (layer?.type === 'item') {
@@ -176,10 +176,6 @@ class ItemStateStack {
       } else {
         throw new Error('Unknown layer type.');
       }
-    }
-
-    if (slot.defaultValue === undefined) {
-      throw new MissingSlotValueError(slot);
     }
 
     return slot.defaultValue;
@@ -276,7 +272,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   readSlot<T>(slot: TgpuSlot<T>): T {
-    return this._itemStateStack.readSlot(slot);
+    const value = this._itemStateStack.readSlot(slot);
+
+    if (value === undefined) {
+      throw new MissingSlotValueError(slot);
+    }
+
+    return value;
   }
 
   unwrap<T>(eventual: Eventual<T>): T {
@@ -299,38 +301,35 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     // All memoized versions of `item`
     const instances = this._memoizedResolves.get(item) ?? [];
 
-    this._itemStateStack.pushItem(); // -- slot reads during this test are treated as uses, but discarded anyway.
+    this._itemStateStack.pushItem();
+
     try {
       for (const instance of instances) {
         const slotValuePairs = [...instance.slotToValueMap.entries()];
 
         if (
           slotValuePairs.every(
-            ([slot, expectedValue]) => this.readSlot(slot) === expectedValue,
+            ([slot, expectedValue]) =>
+              this._itemStateStack.readSlot(slot) === expectedValue,
           )
         ) {
           return instance.result;
         }
       }
-    } finally {
-      this._itemStateStack.pop(); // -- discarded here.
-    }
 
-    // If we got here, no item with the given slot-to-value combo exists in cache yet
-    let result: string;
-
-    this._itemStateStack.pushItem();
-    try {
-      result = item.resolve(this);
+      // If we got here, no item with the given slot-to-value combo exists in cache yet
+      const result = item.resolve(this);
 
       // We know which slots the item used while resolving
       const slotToValueMap = new Map<TgpuSlot<unknown>, unknown>();
       for (const usedSlot of this._itemStateStack.topItem.usedSlots) {
-        slotToValueMap.set(usedSlot, this.readSlot(usedSlot));
+        slotToValueMap.set(usedSlot, this._itemStateStack.readSlot(usedSlot));
       }
 
       instances.push({ slotToValueMap, result });
       this._memoizedResolves.set(item, instances);
+
+      return result;
     } catch (err) {
       if (err instanceof ResolutionError) {
         throw err.appendToTrace(item);
@@ -340,8 +339,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     } finally {
       this._itemStateStack.pop();
     }
-
-    return result;
   }
 
   resolve(item: Wgsl, slotValueOverrides: SlotValuePair<unknown>[] = []) {
@@ -349,7 +346,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return String(item);
     }
 
-    this._itemStateStack.pushSlotBindings(slotValueOverrides);
+    let pushedLayer = false;
+    if (slotValueOverrides.length > 0) {
+      pushedLayer = true;
+      this._itemStateStack.pushSlotBindings(slotValueOverrides);
+    }
 
     try {
       if (this._itemStateStack.itemDepth === 0) {
@@ -359,7 +360,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       return this._getOrInstantiate(item);
     } finally {
-      this._itemStateStack.pop();
+      if (pushedLayer) {
+        this._itemStateStack.pop();
+      }
     }
   }
 
