@@ -1,8 +1,7 @@
 import { useAtom, useSetAtom } from 'jotai';
-import { decompressFromEncodedURIComponent } from 'lz-string';
 import { Suspense, useEffect, useRef } from 'react';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
-import { PLAYGROUND_KEY, examples } from '../utils/examples/exampleContent';
+import { examples } from '../utils/examples/exampleContent';
 import { ExampleNotFound } from './ExampleNotFound';
 import { ExampleView } from './ExampleView';
 
@@ -41,31 +40,31 @@ function ExamplePage() {
       return <RedirectToFlagship />;
     }
 
-    if (currentExample === PLAYGROUND_KEY) {
-      setCurrentExample(
-        `${PLAYGROUND_KEY}${localStorage.getItem(PLAYGROUND_KEY) ?? ''}`,
-      );
-    }
+    // if (currentExample === PLAYGROUND_KEY) {
+    //   setCurrentExample(
+    //     `${PLAYGROUND_KEY}${localStorage.getItem(PLAYGROUND_KEY) ?? ''}`,
+    //   );
+    // }
 
-    if (currentExample.startsWith(PLAYGROUND_KEY)) {
-      return (
-        <ExampleView
-          key={PLAYGROUND_KEY}
-          example={{
-            key: PLAYGROUND_KEY,
-            code:
-              decompressFromEncodedURIComponent(
-                currentExample.slice(PLAYGROUND_KEY.length),
-              ) ?? '',
-            metadata: {
-              title: 'Playground',
-              category: '',
-            },
-          }}
-          isPlayground={true}
-        />
-      );
-    }
+    // if (currentExample.startsWith(PLAYGROUND_KEY)) {
+    //   return (
+    //     <ExampleView
+    //       key={PLAYGROUND_KEY}
+    //       example={{
+    //         key: PLAYGROUND_KEY,
+    //         code:
+    //           decompressFromEncodedURIComponent(
+    //             currentExample.slice(PLAYGROUND_KEY.length),
+    //           ) ?? '',
+    //         metadata: {
+    //           title: 'Playground',
+    //           category: '',
+    //         },
+    //       }}
+    //       isPlayground={true}
+    //     />
+    //   );
+    // }
 
     if (currentExample in examples) {
       return (
