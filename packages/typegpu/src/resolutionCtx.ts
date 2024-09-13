@@ -26,21 +26,11 @@ import {
   isSlot,
 } from './types';
 
-export type ScopeOptions = {
-  slotValuePairs?: SlotValuePair<unknown>[];
+export type ResolutionCtxImplOptions = {
+  readonly names: NameRegistry;
+  readonly bindingGroup?: number;
+  readonly jitTranspiler?: JitTranspiler | undefined;
 };
-
-export type ResolutionCtxImplOptions =
-  | {
-      readonly parent: ResolutionCtxImpl;
-      readonly shared: SharedResolutionState;
-      readonly scopeOptions: ScopeOptions;
-    }
-  | {
-      readonly names: NameRegistry;
-      readonly bindingGroup?: number;
-      readonly jitTranspiler?: JitTranspiler | undefined;
-    };
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
 
@@ -51,13 +41,6 @@ const usageToVarTemplateMap: Record<Exclude<BufferUsage, 'vertex'>, string> = {
 };
 
 class SharedResolutionState {
-  private readonly _memoizedResolves = new WeakMap<
-    // WeakMap because if the resolvable does not exist anymore,
-    // apart from this map, there is no way to access the cached value anyway.
-    TgpuResolvable,
-    { slotToValueMap: SlotToValueMap; result: string }[]
-  >();
-
   private _nextFreeBindingIdx = 0;
   private _nextFreeVertexBindingIdx = 0;
   private readonly _usedBindables = new Set<TgpuBindable>();
@@ -95,51 +78,6 @@ class SharedResolutionState {
     return this._usedBuiltins;
   }
 
-  /**
-   * @param item The item whose resolution should be either retrieved from the cache (if there is a cache hit), or resolved
-   * with the `compute` method.
-   * @param compute Returns the resolved item and the corresponding bindingMap. This result will be discarded if a sufficient cache entry is found.
-   */
-  getOrInstantiate(item: TgpuResolvable, itemCtx: ResolutionCtxImpl): string {
-    // All memoized versions of `item`
-    const instances = this._memoizedResolves.get(item) ?? [];
-
-    for (const instance of instances) {
-      const slotValuePairs = [...instance.slotToValueMap.entries()];
-
-      if (
-        slotValuePairs.every(
-          ([slot, expectedValue]) => itemCtx.readSlot(slot) === expectedValue,
-        )
-      ) {
-        return instance.result;
-      }
-    }
-
-    // If we got here, no item with the given slot-to-value combo exists in cache yet
-    let result: string;
-    try {
-      result = item.resolve(itemCtx);
-    } catch (err) {
-      if (err instanceof ResolutionError) {
-        throw err.appendToTrace(item);
-      }
-
-      throw new ResolutionError(err, [item]);
-    }
-
-    // We know which bindables the item used while resolving
-    const slotToValueMap = new Map<TgpuSlot<unknown>, unknown>();
-    for (const usedSlot of itemCtx.usedSlots) {
-      slotToValueMap.set(usedSlot, itemCtx.readSlot(usedSlot));
-    }
-
-    instances.push({ slotToValueMap, result });
-    this._memoizedResolves.set(item, instances);
-
-    return result;
-  }
-
   reserveBindingEntry(bindable: TgpuBindable) {
     this._usedBindables.add(bindable);
     const nextIdx = this._nextFreeBindingIdx++;
@@ -175,27 +113,97 @@ class SharedResolutionState {
   }
 }
 
-export class ResolutionCtxImpl implements ResolutionCtx {
-  private readonly _shared: SharedResolutionState;
-  private readonly _parent: ResolutionCtxImpl | undefined;
-  private readonly _slotValuePairs: SlotValuePair<unknown>[] | undefined;
+type ItemLayer = {
+  type: 'item';
+  usedSlots: Set<TgpuSlot<unknown>>;
+};
 
-  usedSlots = new Set<TgpuSlot<unknown>>();
+type SlotBindingLayer = {
+  type: 'slotBinding';
+  bindingMap: WeakMap<TgpuSlot<unknown>, unknown>;
+};
+
+class ItemStateStack {
+  private _stack: (ItemLayer | SlotBindingLayer)[] = [];
+  private _itemDepth = 0;
+
+  get itemDepth(): number {
+    return this._itemDepth;
+  }
+
+  get topItem(): ItemLayer {
+    const state = this._stack[this._stack.length - 1];
+    if (!state || state.type !== 'item') {
+      throw new Error('Internal error, expected item layer to be on top.');
+    }
+    return state;
+  }
+
+  pushItem() {
+    this._itemDepth++;
+    this._stack.push({
+      type: 'item',
+      usedSlots: new Set(),
+    });
+  }
+
+  pushSlotBindings(pairs: SlotValuePair<unknown>[]) {
+    this._stack.push({
+      type: 'slotBinding',
+      bindingMap: new WeakMap(pairs),
+    });
+  }
+
+  pop() {
+    const layer = this._stack.pop();
+    if (layer?.type === 'item') {
+      this._itemDepth--;
+    }
+  }
+
+  readSlot<T>(slot: TgpuSlot<T>): T {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+      if (layer?.type === 'item') {
+        // Binding not available yet, so this layer is dependent on the slot's value.
+        layer.usedSlots.add(slot);
+      } else if (layer?.type === 'slotBinding') {
+        const boundValue = layer.bindingMap.get(slot);
+
+        if (boundValue !== undefined) {
+          return boundValue as T;
+        }
+      } else {
+        throw new Error('Unknown layer type.');
+      }
+    }
+
+    if (slot.defaultValue === undefined) {
+      throw new MissingSlotValueError(slot);
+    }
+
+    return slot.defaultValue;
+  }
+}
+
+export class ResolutionCtxImpl implements ResolutionCtx {
+  private readonly _memoizedResolves = new WeakMap<
+    // WeakMap because if the resolvable does not exist anymore,
+    // apart from this map, there is no way to access the cached value anyway.
+    TgpuResolvable,
+    { slotToValueMap: SlotToValueMap; result: string }[]
+  >();
+
+  private readonly _shared: SharedResolutionState;
+
+  private _itemStateStack = new ItemStateStack();
 
   constructor(opts: ResolutionCtxImplOptions) {
-    if ('parent' in opts) {
-      // Scoped ctx
-      this._shared = opts.shared;
-      this._parent = opts.parent;
-      this._slotValuePairs = opts.scopeOptions.slotValuePairs;
-    } else {
-      // Root ctx
-      this._shared = new SharedResolutionState(
-        opts.names,
-        opts.bindingGroup ?? 0,
-        opts.jitTranspiler,
-      );
-    }
+    this._shared = new SharedResolutionState(
+      opts.names,
+      opts.bindingGroup ?? 0,
+      opts.jitTranspiler,
+    );
   }
 
   get usedBindables() {
@@ -268,29 +276,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   readSlot<T>(slot: TgpuSlot<T>): T {
-    const slotToValuePair = this._slotValuePairs?.find(
-      ([boundSlot]) => boundSlot === slot,
-    ) as SlotValuePair<T> | undefined;
-
-    this.usedSlots.add(slot);
-
-    if (!slotToValuePair) {
-      // Not yet available locally, ctx's owner resolvable depends on `slot`.
-
-      if (this._parent) {
-        // Maybe the parent ctx has it.
-        return this._parent.readSlot(slot);
-      }
-
-      if (slot.defaultValue === undefined) {
-        throw new MissingSlotValueError(slot);
-      }
-
-      return slot.defaultValue;
-    }
-
-    // Available locally, ctx's owner resolvable depends on `slot`.
-    return slotToValuePair[1];
+    return this._itemStateStack.readSlot(slot);
   }
 
   unwrap<T>(eventual: Eventual<T>): T {
@@ -304,23 +290,77 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return maybeSlot;
   }
 
+  /**
+   * @param item The item whose resolution should be either retrieved from the cache (if there is a cache hit), or resolved
+   * with the `compute` method.
+   * @param compute Returns the resolved item and the corresponding bindingMap. This result will be discarded if a sufficient cache entry is found.
+   */
+  _getOrInstantiate(item: TgpuResolvable): string {
+    // All memoized versions of `item`
+    const instances = this._memoizedResolves.get(item) ?? [];
+
+    this._itemStateStack.pushItem(); // -- slot reads during this test are treated as uses, but discarded anyway.
+    try {
+      for (const instance of instances) {
+        const slotValuePairs = [...instance.slotToValueMap.entries()];
+
+        if (
+          slotValuePairs.every(
+            ([slot, expectedValue]) => this.readSlot(slot) === expectedValue,
+          )
+        ) {
+          return instance.result;
+        }
+      }
+    } finally {
+      this._itemStateStack.pop(); // -- discarded here.
+    }
+
+    // If we got here, no item with the given slot-to-value combo exists in cache yet
+    let result: string;
+
+    this._itemStateStack.pushItem();
+    try {
+      result = item.resolve(this);
+
+      // We know which slots the item used while resolving
+      const slotToValueMap = new Map<TgpuSlot<unknown>, unknown>();
+      for (const usedSlot of this._itemStateStack.topItem.usedSlots) {
+        slotToValueMap.set(usedSlot, this.readSlot(usedSlot));
+      }
+
+      instances.push({ slotToValueMap, result });
+      this._memoizedResolves.set(item, instances);
+    } catch (err) {
+      if (err instanceof ResolutionError) {
+        throw err.appendToTrace(item);
+      }
+
+      throw new ResolutionError(err, [item]);
+    } finally {
+      this._itemStateStack.pop();
+    }
+
+    return result;
+  }
+
   resolve(item: Wgsl, slotValueOverrides: SlotValuePair<unknown>[] = []) {
     if (!isResolvable(item)) {
       return String(item);
     }
 
-    const itemCtx = new ResolutionCtxImpl({
-      parent: this,
-      shared: this._shared,
-      scopeOptions: { slotValuePairs: slotValueOverrides },
-    });
+    this._itemStateStack.pushSlotBindings(slotValueOverrides);
 
-    if (!this._parent) {
-      const result = onGPU(() => this._shared.getOrInstantiate(item, itemCtx));
-      return `${[...this._shared.declarations].join('\n\n')}${result}`;
+    try {
+      if (this._itemStateStack.itemDepth === 0) {
+        const result = onGPU(() => this._getOrInstantiate(item));
+        return `${[...this._shared.declarations].join('\n\n')}${result}`;
+      }
+
+      return this._getOrInstantiate(item);
+    } finally {
+      this._itemStateStack.pop();
     }
-
-    return this._shared.getOrInstantiate(item, itemCtx);
   }
 
   transpileFn(

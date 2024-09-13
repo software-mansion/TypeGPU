@@ -11,11 +11,6 @@ export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
  * and a new resolution ctx is made when going down each level in the tree.
  */
 export interface ResolutionCtx {
-  /**
-   * Slots that were used by items resolved by this context.
-   */
-  readonly usedSlots: Iterable<TgpuSlot<unknown>>;
-
   addDeclaration(item: TgpuResolvable): void;
   addBinding(bindable: TgpuBindable, identifier: TgpuIdentifier): void;
   addRenderResource(
