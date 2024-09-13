@@ -27,13 +27,7 @@ jobs:
         run: pnpm install -g dpdm
 
       - name: Check circular dependencies
-        run: |
-          dpdm --no-warning --no-tree packages/**/index.ts -T > output.txt
-          if grep -q '• Circular Dependencies' output.txt; then
-            echo "Circular dependencies found"
-            cat output.txt
-            exit 1
-          fi
+        run: dpdm dpdm --exit-code circular:1 packages/**/index.ts -T
 
   build-and-test:
     runs-on: ubuntu-latest
@@ -57,5 +51,4 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec dpdm 'packages/**/index.ts' -T
       - run: pnpm test
