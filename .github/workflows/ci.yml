@@ -11,44 +11,46 @@ on:
       - checks_requested
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
   check-circular-deps:
-    needs: setup
     runs-on: ubuntu-latest
     steps:
+      - uses: ./setup.yml
+        with:
+          node-version: 20.x
+
       - name: Install dpdm
         run: pnpm install -g dpdm
+
       - name: Check circular dependencies
-        run: dpdm --exit-code circular:1 packages/**/index.ts -T
+        run: dpdm dpdm --exit-code circular:1 packages/**/index.ts -T
 
   biome-check:
-    needs: setup
     runs-on: ubuntu-latest
     steps:
-      - name: Check biome
-        run: pnpm biome check
+      - uses: actions/checkout@v4
+      - name: Setup Biome
+        uses: biomejs/setup-biome@v2
+        with:
+          version: latest
+      - name: Run Biome check
+        run: biome ci .
 
   build-and-test:
-    needs: setup
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         node-version: [20.x, 22.x]
+
     steps:
-      - name: Run tests
+      - uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./setup.yml
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Test
         run: pnpm test
