@@ -5,6 +5,8 @@ import { menuShownAtom } from '../utils/examples/menuShownAtom';
 import ExampleList from './ExampleList';
 import ExamplePage from './ExamplePage';
 
+const isDev = import.meta.env.DEV;
+
 export function ExampleLayout() {
   const menuShown = useAtomValue(menuShownAtom);
 
@@ -49,7 +51,7 @@ function SideMenu() {
 
       <hr />
 
-      <ExampleList excludeTags={['experimental']} />
+      <ExampleList excludeTags={isDev ? [] : ['experimental']} />
 
       <div className="flex justify-between text-tameplum-800 text-xs">
         <div>&copy; 2024 Software Mansion S.A.</div>
