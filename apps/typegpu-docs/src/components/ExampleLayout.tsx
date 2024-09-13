@@ -49,7 +49,7 @@ function SideMenu() {
 
       <hr />
 
-      <ExampleList />
+      <ExampleList excludeTags={['experimental']} />
 
       <div className="flex justify-between text-tameplum-800 text-xs">
         <div>&copy; 2024 Software Mansion S.A.</div>

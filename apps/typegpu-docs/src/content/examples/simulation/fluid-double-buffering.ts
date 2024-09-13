@@ -1,7 +1,8 @@
 /*
 {
   "title": "Fluid (double-buffering)",
-  "category": "simulation"
+  "category": "simulation",
+  "tags": ["experimental"]
 }
 */
 

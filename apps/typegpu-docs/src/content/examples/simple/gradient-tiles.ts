@@ -1,7 +1,8 @@
 /*
 {
   "title": "Gradient Tiles",
-  "category": "simple"
+  "category": "simple",
+  "tags": ["experimental"]
 }
 */
 

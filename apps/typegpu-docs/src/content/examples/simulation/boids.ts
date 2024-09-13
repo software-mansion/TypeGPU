@@ -1,7 +1,8 @@
 /*
 {
   "title": "Boids",
-  "category": "simulation"
+  "category": "simulation",
+  "tags": ["experimental"]
 }
 */
 

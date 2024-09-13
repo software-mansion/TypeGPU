@@ -1,7 +1,8 @@
 /*
 {
   "title": "Chroma Keying",
-  "category": "image-processing"
+  "category": "image-processing",
+  "tags": ["experimental"]
 }
 */
 

@@ -111,6 +111,7 @@ function tsToJs(code: string): string {
 export async function executeExample(
   exampleCode: string,
   createLayout: () => LayoutInstance,
+  tags?: string[],
 ): Promise<ExampleState> {
   const cleanupCallbacks: (() => unknown)[] = [];
 
@@ -258,6 +259,11 @@ export async function executeExample(
         return await import('typegpu/experimental');
       }
       if (moduleKey === 'typegpu/experimental') {
+        if (!tags?.includes('experimental')) {
+          throw new Error(
+            'Examples not labeled as experimental cannot import experimental modules.',
+          );
+        }
         return await import('typegpu/experimental');
       }
       if (moduleKey === 'typegpu/data') {

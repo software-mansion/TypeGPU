@@ -1,7 +1,8 @@
 /*
 {
   "title": "Camera Thresholding",
-  "category": "image-processing"
+  "category": "image-processing",
+  "tags": ["experimental"]
 }
 */
 
