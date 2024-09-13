@@ -26,11 +26,21 @@ import {
   isSlot,
 } from './types';
 
-export type ResolutionCtxImplOptions = {
-  readonly names: NameRegistry;
-  readonly bindingGroup?: number;
-  readonly jitTranspiler?: JitTranspiler | undefined;
+export type ScopeOptions = {
+  slotValuePairs?: SlotValuePair<unknown>[];
 };
+
+export type ResolutionCtxImplOptions =
+  | {
+      readonly parent: ResolutionCtxImpl;
+      readonly shared: SharedResolutionState;
+      readonly scopeOptions: ScopeOptions;
+    }
+  | {
+      readonly names: NameRegistry;
+      readonly bindingGroup?: number;
+      readonly jitTranspiler?: JitTranspiler | undefined;
+    };
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
 
@@ -90,7 +100,7 @@ class SharedResolutionState {
    * with the `compute` method.
    * @param compute Returns the resolved item and the corresponding bindingMap. This result will be discarded if a sufficient cache entry is found.
    */
-  getOrInstantiate(item: TgpuResolvable, itemCtx: ScopedResolutionCtx): string {
+  getOrInstantiate(item: TgpuResolvable, itemCtx: ResolutionCtxImpl): string {
     // All memoized versions of `item`
     const instances = this._memoizedResolves.get(item) ?? [];
 
@@ -167,19 +177,25 @@ class SharedResolutionState {
 
 export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _shared: SharedResolutionState;
+  private readonly _parent: ResolutionCtxImpl | undefined;
+  private readonly _slotValuePairs: SlotValuePair<unknown>[] | undefined;
 
   usedSlots = new Set<TgpuSlot<unknown>>();
 
-  constructor({
-    names,
-    bindingGroup,
-    jitTranspiler,
-  }: ResolutionCtxImplOptions) {
-    this._shared = new SharedResolutionState(
-      names,
-      bindingGroup ?? 0,
-      jitTranspiler,
-    );
+  constructor(opts: ResolutionCtxImplOptions) {
+    if ('parent' in opts) {
+      // Scoped ctx
+      this._shared = opts.shared;
+      this._parent = opts.parent;
+      this._slotValuePairs = opts.scopeOptions.slotValuePairs;
+    } else {
+      // Root ctx
+      this._shared = new SharedResolutionState(
+        opts.names,
+        opts.bindingGroup ?? 0,
+        opts.jitTranspiler,
+      );
+    }
   }
 
   get usedBindables() {
@@ -192,99 +208,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   get usedBuiltins() {
     return this._shared.usedBuiltins;
-  }
-
-  addDeclaration(_declaration: TgpuResolvable) {
-    throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
-  }
-
-  addBinding(_bindable: TgpuBindable, _identifier: TgpuIdentifier): void {
-    throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
-  }
-
-  addRenderResource(
-    resource: TgpuRenderResource,
-    identifier: TgpuIdentifier,
-  ): void {
-    throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
-  }
-
-  addBuiltin(builtin: symbol): void {
-    throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
-  }
-
-  nameFor(item: TgpuResolvable): string {
-    return this._shared.names.nameFor(item);
-  }
-
-  readSlot<T>(slot: TgpuSlot<T>): T {
-    if (slot.defaultValue === undefined) {
-      throw new MissingSlotValueError(slot);
-    }
-
-    return slot.defaultValue;
-  }
-
-  unwrap<T>(eventual: Eventual<T>): T {
-    throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
-  }
-
-  resolve(item: Wgsl, slotValueOverrides: SlotValuePair<unknown>[] = []) {
-    if (!isResolvable(item)) {
-      return String(item);
-    }
-
-    const itemCtx = new ScopedResolutionCtx(
-      this,
-      this._shared,
-      slotValueOverrides,
-    );
-
-    const result = onGPU(() => this._shared.getOrInstantiate(item, itemCtx));
-
-    return `${[...this._shared.declarations].join('\n\n')}${result}`;
-  }
-
-  // biome-ignore lint/suspicious/noExplicitAny: <no generic magic needed>
-  transpileFn(fn: TgpuFn<any, any>): { head: Wgsl; body: Wgsl } {
-    throw new Error('Call ctx.resolve(item) instead of item.resolve(ctx)');
-  }
-
-  getIndexFor(item: TgpuBindable | TgpuRenderResource) {
-    const index = this._shared.getBindingIndex(item);
-    if (index === undefined) {
-      throw new Error('No index found for item');
-    }
-    return index;
-  }
-}
-
-class ScopedResolutionCtx implements ResolutionCtx {
-  usedSlots = new Set<TgpuSlot<unknown>>();
-
-  constructor(
-    private readonly _parent: ResolutionCtxImpl | ScopedResolutionCtx,
-    private readonly _shared: SharedResolutionState,
-    private readonly _slotValuePairs: SlotValuePair<unknown>[],
-  ) {}
-
-  transpileFn(
-    // biome-ignore lint/suspicious/noExplicitAny: <no generic magic needed>
-    fn: TgpuFn<any, AnyTgpuData>,
-    externalMap: Record<string, Wgsl>,
-  ): { head: Wgsl; body: Wgsl } {
-    if (!this._shared.jitTranspiler) {
-      throw new Error(
-        'Tried to execute a tgpu.fn function without providing a JIT transpiler, or transpiling at build time.',
-      );
-    }
-
-    return this._shared.jitTranspiler.transpileFn(
-      String(fn.body),
-      fn.shell.argTypes,
-      fn.shell.returnType,
-      externalMap,
-    );
   }
 
   addDeclaration(declaration: TgpuResolvable): void {
@@ -340,24 +263,33 @@ class ScopedResolutionCtx implements ResolutionCtx {
     this._shared.addBuiltin(builtin);
   }
 
-  nameFor(token: TgpuResolvable): string {
-    return this._shared.names.nameFor(token);
+  nameFor(item: TgpuResolvable): string {
+    return this._shared.names.nameFor(item);
   }
 
   readSlot<T>(slot: TgpuSlot<T>): T {
-    const slotToValuePair = this._slotValuePairs.find(
+    const slotToValuePair = this._slotValuePairs?.find(
       ([boundSlot]) => boundSlot === slot,
     ) as SlotValuePair<T> | undefined;
 
+    this.usedSlots.add(slot);
+
     if (!slotToValuePair) {
       // Not yet available locally, ctx's owner resolvable depends on `slot`.
-      this.usedSlots.add(slot);
-      // Maybe the parent ctx has it.
-      return this._parent.readSlot(slot);
+
+      if (this._parent) {
+        // Maybe the parent ctx has it.
+        return this._parent.readSlot(slot);
+      }
+
+      if (slot.defaultValue === undefined) {
+        throw new MissingSlotValueError(slot);
+      }
+
+      return slot.defaultValue;
     }
 
     // Available locally, ctx's owner resolvable depends on `slot`.
-    this.usedSlots.add(slot);
     return slotToValuePair[1];
   }
 
@@ -372,20 +304,49 @@ class ScopedResolutionCtx implements ResolutionCtx {
     return maybeSlot;
   }
 
-  resolve(
-    item: Wgsl,
-    slotValueOverrides: SlotValuePair<unknown>[] = [],
-  ): string {
+  resolve(item: Wgsl, slotValueOverrides: SlotValuePair<unknown>[] = []) {
     if (!isResolvable(item)) {
       return String(item);
     }
 
-    const itemCtx = new ScopedResolutionCtx(
-      this,
-      this._shared,
-      slotValueOverrides,
-    );
+    const itemCtx = new ResolutionCtxImpl({
+      parent: this,
+      shared: this._shared,
+      scopeOptions: { slotValuePairs: slotValueOverrides },
+    });
+
+    if (!this._parent) {
+      const result = onGPU(() => this._shared.getOrInstantiate(item, itemCtx));
+      return `${[...this._shared.declarations].join('\n\n')}${result}`;
+    }
 
     return this._shared.getOrInstantiate(item, itemCtx);
+  }
+
+  transpileFn(
+    // biome-ignore lint/suspicious/noExplicitAny: <no generic magic needed>
+    fn: TgpuFn<any, AnyTgpuData>,
+    externalMap: Record<string, Wgsl>,
+  ): { head: Wgsl; body: Wgsl } {
+    if (!this._shared.jitTranspiler) {
+      throw new Error(
+        'Tried to execute a tgpu.fn function without providing a JIT transpiler, or transpiling at build time.',
+      );
+    }
+
+    return this._shared.jitTranspiler.transpileFn(
+      String(fn.body),
+      fn.shell.argTypes,
+      fn.shell.returnType,
+      externalMap,
+    );
+  }
+
+  getIndexFor(item: TgpuBindable | TgpuRenderResource) {
+    const index = this._shared.getBindingIndex(item);
+    if (index === undefined) {
+      throw new Error('No index found for item');
+    }
+    return index;
   }
 }
