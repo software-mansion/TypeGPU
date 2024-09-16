@@ -1,19 +1,12 @@
 import { bool } from '../data';
 import {
-  type AnyTgpuData,
   type ResolutionCtx,
-  type TgpuResolvable,
+  type Resource,
+  UnknownData,
+  type Wgsl,
   isResolvable,
 } from '../types';
 import type * as smol from './nodes';
-
-export const UnknownData = Symbol('Unknown data type');
-export type UnknownData = typeof UnknownData;
-
-export type Resource = {
-  value: string | TgpuResolvable;
-  dataType: AnyTgpuData | UnknownData;
-};
 
 export type GenerationCtx = ResolutionCtx & {
   readonly pre: string;
@@ -111,6 +104,40 @@ function generateExpression(
     return {
       value: `${targetStr}[${propertyStr}]`,
       // TODO: Infer data type
+      dataType: UnknownData,
+    };
+  }
+
+  if ('num' in expression) {
+    // Numeric Literal
+
+    // TODO: Infer numeric data type from literal
+    return { value: expression.num, dataType: UnknownData };
+  }
+
+  if ('call' in expression) {
+    // Function Call
+
+    const id = generateIdentifier(ctx, expression.call);
+    const idValue = id.value;
+
+    const argResources = expression.args.map((arg) =>
+      generateExpression(ctx, arg),
+    );
+    const argValues = argResources.map((res) => res.value);
+
+    if (isResolvable(idValue)) {
+      // Assuming that `id` is callable
+      // TODO: Pass in resources, not just values.
+      const result = (idValue as unknown as (...args: unknown[]) => unknown)(
+        argValues,
+      ) as Wgsl;
+      // TODO: Make function calls return resources instead of just values.
+      return { value: result, dataType: UnknownData };
+    }
+
+    return {
+      value: `${String(idValue)}(${argValues.join(', ')})`,
       dataType: UnknownData,
     };
   }

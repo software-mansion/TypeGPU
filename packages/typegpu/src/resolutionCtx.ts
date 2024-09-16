@@ -2,24 +2,26 @@ import { MissingSlotValueError, ResolutionError } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
-import { type Resource, UnknownData, generateFunction } from './smol';
+import { generateFunction } from './smol';
 import { code } from './tgpuCode';
 import type { TgpuFn } from './tgpuFn';
 import { isTextureView } from './tgpuTexture';
-import type { TgpuIdentifier } from './types';
 import type {
   AnyTgpuData,
   BufferUsage,
   Eventual,
   ResolutionCtx,
+  Resource,
   SlotValuePair,
   TgpuBindable,
+  TgpuIdentifier,
   TgpuRenderResource,
   TgpuResolvable,
   TgpuSlot,
   Wgsl,
 } from './types';
 import {
+  UnknownData,
   isDepthTextureType,
   isExternalTextureType,
   isResolvable,
@@ -124,8 +126,25 @@ type SlotBindingLayer = {
   bindingMap: WeakMap<TgpuSlot<unknown>, unknown>;
 };
 
+type FunctionScopeLayer = {
+  type: 'functionScope';
+  args: Resource[];
+  externalMap: Record<string, Wgsl>;
+  returnType: AnyTgpuData | undefined;
+};
+
+type BlockScopeLayer = {
+  type: 'blockScope';
+  declarations: Map<string, AnyTgpuData | UnknownData>;
+};
+
 class ItemStateStack {
-  private _stack: (ItemLayer | SlotBindingLayer)[] = [];
+  private _stack: (
+    | ItemLayer
+    | SlotBindingLayer
+    | FunctionScopeLayer
+    | BlockScopeLayer
+  )[] = [];
   private _itemDepth = 0;
 
   get itemDepth(): number {
@@ -155,6 +174,19 @@ class ItemStateStack {
     });
   }
 
+  pushFunctionScope(
+    args: Resource[],
+    returnType: AnyTgpuData | undefined,
+    externalMap: Record<string, Wgsl>,
+  ) {
+    this._stack.push({
+      type: 'functionScope',
+      args,
+      returnType,
+      externalMap,
+    });
+  }
+
   pop() {
     const layer = this._stack.pop();
     if (layer?.type === 'item') {
@@ -174,12 +206,45 @@ class ItemStateStack {
         if (boundValue !== undefined) {
           return boundValue as T;
         }
+      } else if (
+        layer?.type === 'functionScope' ||
+        layer?.type === 'blockScope'
+      ) {
+        // Skip
       } else {
         throw new Error('Unknown layer type.');
       }
     }
 
     return slot.defaultValue;
+  }
+
+  getResourceById(id: string): Resource | undefined {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+
+      if (layer?.type === 'functionScope') {
+        const arg = layer.args.find((a) => a.value === id);
+        if (arg !== undefined) {
+          return arg;
+        }
+
+        const external = layer.externalMap[id];
+        if (external !== undefined) {
+          // TODO: Extract the type of the external value.
+          return { value: external, dataType: UnknownData };
+        }
+      } else if (layer?.type === 'blockScope') {
+        const declarationType = layer.declarations.get(id);
+        if (declarationType !== undefined) {
+          return { value: id, dataType: declarationType };
+        }
+      } else {
+        // Skip
+      }
+    }
+
+    return undefined;
   }
 }
 
@@ -224,16 +289,6 @@ class IndentController {
     return this.pre;
   }
 }
-
-type FnCtx = {
-  argTypes: AnyTgpuData[];
-  returnType: AnyTgpuData | undefined;
-};
-
-type ScopeOptions = {
-  fnCtx?: FnCtx | undefined;
-  slotBindings?: SlotValuePair<unknown>[] | undefined;
-};
 
 export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _memoizedResolves = new WeakMap<
@@ -283,7 +338,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   getById(id: string): Resource {
     // TODO: Provide access to external values
     // TODO: Provide data type information
-    return { value: id, dataType: UnknownData };
+    return (
+      this._itemStateStack.getResourceById(id) ?? {
+        value: id,
+        dataType: UnknownData,
+      }
+    );
   }
 
   transpileFn(
@@ -301,13 +361,27 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       String(fn.body),
     );
 
+    const args = argNames.map((name, idx) => ({
+      value: name,
+      dataType: fn.shell.argTypes[idx],
+    }));
+
+    this._itemStateStack.pushFunctionScope(
+      args,
+      fn.shell.returnType,
+      externalMap,
+    );
     const str = generateFunction(this, body);
     console.log(str);
+    this._itemStateStack.pop();
 
     // TODO: Actually generate WGSL from SMoL
     return {
-      head: code`(a: f32, b: f32) -> f32`,
-      body: code`return a + b;`,
+      head:
+        fn.shell.returnType !== undefined
+          ? `(${args.map((arg) => `${arg.value}: ${this.resolve(arg.dataType)}`)}) -> ${this.resolve(fn.shell.returnType)}`
+          : `(${args.map((arg) => `${arg.value}: ${this.resolve(arg.dataType)}`)})`,
+      body: str,
     };
   }
 
@@ -468,13 +542,4 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
     return index;
   }
-
-  // createScope(opts: { fnContext?: FnCtx; slots?: SlotValuePair<unknown>[] }) {
-  //   // ...
-  //   const itemCtx = new ScopedResolutionCtx(
-  //     this,
-  //     this._shared,
-  //     slotValueOverrides,
-  //   );
-  // }
 }

@@ -150,7 +150,7 @@ const Transpilers: Partial<{
     const callee = transpile(node.callee);
     if (typeof callee !== 'string') {
       throw new Error(
-        'Can only call functions that are referred to by their identifier.',
+        `Can only call functions that are referred to by their identifier. Got: ${JSON.stringify(callee)}`,
       );
     }
 

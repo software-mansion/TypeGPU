@@ -3,5 +3,5 @@
 //
 
 export * from './nodes';
-export { generateFunction, UnknownData } from './wgslGenerator';
-export type { GenerationCtx, Resource } from './wgslGenerator';
+export { generateFunction } from './wgslGenerator';
+export type { GenerationCtx } from './wgslGenerator';

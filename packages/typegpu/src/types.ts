@@ -6,6 +6,14 @@ import type { TgpuPlum } from './tgpuPlumTypes';
 
 export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
 
+export const UnknownData = Symbol('Unknown data type');
+export type UnknownData = typeof UnknownData;
+
+export type Resource = {
+  value: Wgsl;
+  dataType: AnyTgpuData | UnknownData;
+};
+
 /**
  * Passed into each resolvable item. All sibling items share a resolution ctx,
  * and a new resolution ctx is made when going down each level in the tree.
