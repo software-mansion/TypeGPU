@@ -1,4 +1,4 @@
-import { promises as fs } from 'node:fs';
+import fs from 'node:fs/promises';
 
 const cwd = new URL(`file:${process.cwd()}/`);
 
@@ -11,9 +11,9 @@ async function placeholderGenerate(input, output) {
 // This file is a placeholder for the actual implementation
 
 export default function placeholder() {
-  const input = \`
-  ${inputContents}
-  \`;
+  const input = ${JSON.stringify(inputContents)
+        .replace(/\u2028/g, '\\u2028')
+        .replace(/\u2029/g, '\\u2029')};
   console.log('This is a placeholder function');
   console.log('Input:', input);
   return input;
