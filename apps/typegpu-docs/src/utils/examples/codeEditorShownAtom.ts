@@ -1,4 +1,3 @@
 import { atom } from 'jotai';
 
-export const codeEditorShownAtom = atom(true);
-export const codeEditorShownMobileAtom = atom(false);
+export const codeEditorShownAtom = atom(window.innerWidth > 1024);

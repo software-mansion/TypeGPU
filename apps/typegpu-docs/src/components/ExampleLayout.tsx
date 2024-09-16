@@ -3,7 +3,7 @@ import { useAtom, useAtomValue } from 'jotai';
 import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
 import HamburgerSvg from '../assets/hamburger.svg';
-import { codeEditorShownMobileAtom } from '../utils/examples/codeEditorShownAtom';
+import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
 import {
   menuShownAtom,
   menuShownMobileAtom,
@@ -16,9 +16,7 @@ const isDev = import.meta.env.DEV;
 export function ExampleLayout() {
   const menuShown = useAtomValue(menuShownAtom);
   const [menuShownMobile, setMenuShownMobile] = useAtom(menuShownMobileAtom);
-  const [codeShownMobile, setCodeShownMobile] = useAtom(
-    codeEditorShownMobileAtom,
-  );
+  const [codeShown, setCodeShown] = useAtom(codeEditorShownAtom);
 
   return (
     <>
@@ -36,14 +34,14 @@ export function ExampleLayout() {
         <button
           type="button"
           className="bg-white rounded-[6.25rem] text-sm px-5 py-2.5 hover:bg-grayscale-20 border-grayscale-20 border-2"
-          onClick={() => setCodeShownMobile(!codeShownMobile)}
+          onClick={() => setCodeShown(!codeShown)}
         >
-          {codeShownMobile ? 'Preview' : 'Code'}
+          {codeShown ? 'Preview' : 'Code'}
         </button>
       </div>
 
       <div className="flex h-screen p-4 gap-4 bg-tameplum-50">
-        {menuShown ? <SideMenu /> : null}
+        {menuShown || menuShownMobile ? <SideMenu /> : null}
         <ExamplePage />
       </div>
     </>
@@ -51,11 +49,13 @@ export function ExampleLayout() {
 }
 
 function SideMenu() {
+  const menuShown = useAtomValue(menuShownAtom);
   const menuShownMobile = useAtomValue(menuShownMobileAtom);
 
   return (
     <aside
       className={cs(
+        menuShown ? '' : 'md:hidden',
         menuShownMobile
           ? 'absolute inset-0 z-50 w-full md:static'
           : 'hidden md:flex',

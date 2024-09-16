@@ -3,10 +3,7 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { compressToEncodedURIComponent } from 'lz-string';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'remeda';
-import {
-  codeEditorShownAtom,
-  codeEditorShownMobileAtom,
-} from '../utils/examples/codeEditorShownAtom';
+import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
 import { ExecutionCancelledError } from '../utils/examples/errors';
 import { PLAYGROUND_KEY } from '../utils/examples/exampleContent';
@@ -91,7 +88,6 @@ export function ExampleView({ example, isPlayground = false }: Props) {
   const [snackbarText, setSnackbarText] = useState<string | undefined>();
   const setCurrentExample = useSetAtom(currentExampleAtom);
   const codeEditorShowing = useAtomValue(codeEditorShownAtom);
-  const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
 
   const setCodeWrapper = isPlayground
     ? useCallback(
@@ -189,12 +185,7 @@ export function ExampleView({ example, isPlayground = false }: Props) {
           </div>
 
           {codeEditorShowing ? (
-            <div
-              className={cs(
-                codeEditorMobileShowing ? 'absolute z-20' : 'hidden md:block',
-                'md:relative h-full w-full',
-              )}
-            >
+            <div className={'absolute z-20 md:relative h-full w-full'}>
               <div className="absolute inset-0">
                 <CodeEditor code={code} onCodeChange={handleCodeChange} />
               </div>
