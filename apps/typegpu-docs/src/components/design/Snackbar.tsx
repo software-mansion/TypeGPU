@@ -3,7 +3,7 @@ export function Snackbar(props: { text: string }) {
 
   return (
     <div
-      className="absolute bottom-4 right-4 z-10 flex items-center gap-4 w-full max-w-md p-4 text-gray-500 bg-red-100 rounded-lg"
+      className="absolute bottom-4 right-4 z-40 flex items-center gap-4 w-full max-w-[min(28rem,calc(100vw-2rem))] p-4 text-gray-500 bg-red-100 rounded-lg"
       role="alert"
     >
       <div className="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-red-500">

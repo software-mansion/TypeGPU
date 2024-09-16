@@ -184,7 +184,7 @@ export function ControlPanel() {
       </div>
 
       <h2 className="text-xl font-medium">Example controls</h2>
-      <div className="grid items-center grid-cols-2 gap-4 overflow-auto p-1">
+      <div className="grid items-center grid-cols-2 gap-4 overflow-auto p-1 pb-2">
         {exampleControlParams.map((param) => paramToControlRow(param))}
       </div>
     </div>
