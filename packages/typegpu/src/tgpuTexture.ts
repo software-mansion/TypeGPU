@@ -172,7 +172,10 @@ class TgpuTextureImpl<TAllows extends TextureUsage = never>
     if (!this._allowedUsages.sampled) {
       return null;
     }
-    const stringified = hashFromShallowObj(params);
+    const stringified = hashFromShallowObj({
+      type: params.type,
+      dataType: String(params.dataType),
+    });
     const existing = this._allowedUsages.sampled.get(stringified);
     if (existing) {
       return existing;
