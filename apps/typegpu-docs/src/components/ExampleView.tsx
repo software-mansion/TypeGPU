@@ -29,6 +29,7 @@ type Props = {
 function useExample(
   exampleCode: string,
   setSnackbarText: (text: string | undefined) => void,
+  tags?: string[],
 ) {
   const exampleRef = useRef<ExampleState | null>(null);
   const setExampleControlParams = useSetAtom(exampleControlsAtom);
@@ -38,7 +39,7 @@ function useExample(
     let cancelled = false;
     setSnackbarText(undefined);
 
-    executeExample(exampleCode, createLayout)
+    executeExample(exampleCode, createLayout, tags)
       .then((example) => {
         if (cancelled) {
           // Another instance was started in the meantime.
@@ -67,7 +68,13 @@ function useExample(
       exampleRef.current?.dispose();
       cancelled = true;
     };
-  }, [exampleCode, createLayout, setSnackbarText, setExampleControlParams]);
+  }, [
+    exampleCode,
+    createLayout,
+    setSnackbarText,
+    setExampleControlParams,
+    tags,
+  ]);
 
   return {
     def,
@@ -76,7 +83,7 @@ function useExample(
 }
 
 export function ExampleView({ example, isPlayground = false }: Props) {
-  const { code: initialCode } = example;
+  const { code: initialCode, metadata } = example;
   const [code, setCode] = useState(initialCode);
   const [snackbarText, setSnackbarText] = useState<string | undefined>();
   const setCurrentExample = useSetAtom(currentExampleAtom);
@@ -107,7 +114,7 @@ export function ExampleView({ example, isPlayground = false }: Props) {
     setCodeDebouncer.call(newCode);
   });
 
-  const { def, setRef } = useExample(code, setSnackbarText);
+  const { def, setRef } = useExample(code, setSnackbarText, metadata.tags);
 
   return (
     <>

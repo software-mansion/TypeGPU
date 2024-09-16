@@ -1,7 +1,8 @@
 /*
 {
   "title": "Box Raytracing",
-  "category": "rendering"
+  "category": "rendering",
+  "tags": ["experimental"]
 }
 */
 

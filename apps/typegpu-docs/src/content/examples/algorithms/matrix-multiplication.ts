@@ -1,7 +1,8 @@
 /*
 {
   "title": "Matrix Multiplication",
-  "category": "algorithms"
+  "category": "algorithms",
+  "tags": ["experimental"]
 }
 */
 

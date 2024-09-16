@@ -1,7 +1,8 @@
 /*
 {
   "title": "Image Blur",
-  "category": "image-processing"
+  "category": "image-processing",
+  "tags": ["experimental"]
 }
 */
 

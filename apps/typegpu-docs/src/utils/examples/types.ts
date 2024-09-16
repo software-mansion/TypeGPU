@@ -4,6 +4,7 @@ export type ExampleMetadata = z.infer<typeof ExampleMetadata>;
 export const ExampleMetadata = z.object({
   title: z.string(),
   category: z.string(),
+  tags: z.array(z.string()).optional(),
 });
 
 export const exampleCategories = [

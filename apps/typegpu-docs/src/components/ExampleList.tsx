@@ -2,7 +2,7 @@ import { examplesByCategory } from '../utils/examples/exampleContent';
 import { exampleCategories } from '../utils/examples/types';
 import { ExampleLink } from './ExampleLink';
 
-function ExampleList() {
+function ExampleList({ excludeTags = [] }: { excludeTags?: string[] }) {
   return (
     <>
       <nav className="flex flex-col flex-1 gap-7 py-4 overflow-y-auto min-w-64">
@@ -11,11 +11,19 @@ function ExampleList() {
         </ExampleLink>
         <hr /> */}
         {exampleCategories.map((category) =>
-          (examplesByCategory[category.key] ?? []).map((example) => (
-            <ExampleLink key={example.key} exampleKey={example.key}>
-              {example.metadata.title}
-            </ExampleLink>
-          )),
+          (examplesByCategory[category.key] ?? []).map((example) => {
+            if (
+              example.metadata.tags?.some((tag) => excludeTags.includes(tag))
+            ) {
+              return null;
+            }
+
+            return (
+              <ExampleLink key={example.key} exampleKey={example.key}>
+                {example.metadata.title}
+              </ExampleLink>
+            );
+          }),
         )}
       </nav>
     </>
