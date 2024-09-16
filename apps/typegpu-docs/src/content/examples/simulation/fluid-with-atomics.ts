@@ -1,7 +1,8 @@
 /*
 {
   "title": "Fluid (with atomics)",
-  "category": "simulation"
+  "category": "simulation",
+  "tags": ["experimental"]
 }
 */
 

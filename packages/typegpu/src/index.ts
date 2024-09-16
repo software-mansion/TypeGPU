@@ -9,7 +9,6 @@ export const tgpu = {
   Uniform,
   Storage,
   Vertex,
-
   createBuffer,
   read,
   write,
