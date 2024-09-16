@@ -185,7 +185,7 @@ export function ExampleView({ example, isPlayground = false }: Props) {
           </div>
 
           {codeEditorShowing ? (
-            <div className={'absolute z-20 md:relative h-full w-full'}>
+            <div className="absolute z-20 md:relative h-full w-full">
               <div className="absolute inset-0">
                 <CodeEditor code={code} onCodeChange={handleCodeChange} />
               </div>
