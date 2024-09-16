@@ -14,7 +14,7 @@ export const Table = forwardRef<TableRef, Props>((props, ref) => {
 
   return (
     <div className="grid place-items-center font-medium gap-2">
-      <div className="">{label}</div>
+      <div>{label}</div>
       <div
         className="grid gap-2 bg-grayscale-0 p-4 rounded"
         style={{
