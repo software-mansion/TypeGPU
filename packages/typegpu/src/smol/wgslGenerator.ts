@@ -118,7 +118,7 @@ function generateExpression(
   if ('call' in expression) {
     // Function Call
 
-    const id = generateIdentifier(ctx, expression.call);
+    const id = generateExpression(ctx, expression.call);
     const idValue = id.value;
 
     const argResources = expression.args.map((arg) =>
@@ -160,7 +160,7 @@ function generateStatement(
   if ('return' in statement) {
     return statement.return === null
       ? `${ctx.pre}return;`
-      : `${ctx.pre}return ${generateExpression(ctx, statement.return)};`;
+      : `${ctx.pre}return ${resolveRes(ctx, generateExpression(ctx, statement.return))};`;
   }
 
   if ('if' in statement) {

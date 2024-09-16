@@ -94,7 +94,7 @@ export type IndexAccess = {
 
 export type Call = {
   /** function identifier */
-  call: string;
+  call: Expression;
   /** expressions passed as function arguments */
   args: Expression[];
 };
