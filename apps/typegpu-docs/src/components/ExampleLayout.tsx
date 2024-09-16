@@ -23,7 +23,7 @@ export function ExampleLayout() {
       <div className="md:hidden flex absolute top-4 left-4 z-50 gap-4 text-sm">
         {menuShownMobile ? null : (
           <button
-            className="bg-white rounded-[6.25rem] px-5 py-2.5 hover:bg-grayscale-20 border-grayscale-20 border-2"
+            className="bg-white rounded-[6.25rem] px-5 py-2.5 hover:bg-tameplum-20 border-tameplum-100 border-2"
             type="button"
             onClick={() => setMenuShownMobile(true)}
           >
@@ -33,7 +33,7 @@ export function ExampleLayout() {
 
         <button
           type="button"
-          className="bg-white rounded-[6.25rem] text-sm px-5 py-2.5 hover:bg-grayscale-20 border-grayscale-20 border-2"
+          className="bg-white rounded-[6.25rem] text-sm px-5 py-2.5 hover:bg-tameplum-20 border-tameplum-100 border-2"
           onClick={() => setCodeShown(!codeShown)}
         >
           {codeShown ? 'Preview' : 'Code'}

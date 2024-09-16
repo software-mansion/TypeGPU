@@ -10,7 +10,9 @@ export default {
       },
       colors: {
         tameplum: {
+          20: '#F6F6FF',
           50: '#EFEFF9',
+          100: '#E2E2F0',
           600: '#757387',
           800: '#515061',
         },

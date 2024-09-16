@@ -185,7 +185,7 @@ export function ExampleView({ example, isPlayground = false }: Props) {
           </div>
 
           {codeEditorShowing ? (
-            <div className="absolute z-20 md:relative h-[calc(100%-2rem)] w-[calc(100%-2rem)] md:w-full md:h-full">
+            <div className="absolute bg-tameplum-50 z-20 md:relative h-[calc(100%-2rem)] w-[calc(100%-2rem)] md:w-full md:h-full">
               <div className="absolute inset-0">
                 <CodeEditor code={code} onCodeChange={handleCodeChange} />
               </div>
