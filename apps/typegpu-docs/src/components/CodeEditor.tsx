@@ -88,6 +88,12 @@ export function CodeEditor(props: Props) {
       value={code}
       onChange={handleChange}
       beforeMount={handleEditorWillMount}
+      options={{
+        minimap: {
+          enabled: false,
+        },
+      }}
+      className="py-16 md:py-0 bg-tameplum-50"
     />
   );
 }

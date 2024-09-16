@@ -3,7 +3,10 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { compressToEncodedURIComponent } from 'lz-string';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'remeda';
-import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
+import {
+  codeEditorShownAtom,
+  codeEditorShownMobileAtom,
+} from '../utils/examples/codeEditorShownAtom';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
 import { ExecutionCancelledError } from '../utils/examples/errors';
 import { PLAYGROUND_KEY } from '../utils/examples/exampleContent';
@@ -88,6 +91,7 @@ export function ExampleView({ example, isPlayground = false }: Props) {
   const [snackbarText, setSnackbarText] = useState<string | undefined>();
   const setCurrentExample = useSetAtom(currentExampleAtom);
   const codeEditorShowing = useAtomValue(codeEditorShownAtom);
+  const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
 
   const setCodeWrapper = isPlayground
     ? useCallback(
@@ -120,17 +124,15 @@ export function ExampleView({ example, isPlayground = false }: Props) {
     <>
       {snackbarText ? <Snackbar text={snackbarText} /> : null}
 
-      <div className="grid gap-4 grid-cols-[1fr_18.75rem] h-full">
-        <div
-          className={cs('grid gap-4', codeEditorShowing ? 'grid-rows-2' : '')}
-        >
+      <div className="flex flex-col md:grid gap-4 md:grid-cols-[1fr_18.75rem] h-full">
+        <div className="flex-1 grid gap-4">
           <div
             style={{
               scrollbarGutter: 'stable both-edges',
             }}
             className={cs(
               'flex justify-evenly items-center flex-wrap overflow-auto h-full',
-              codeEditorShowing ? 'max-h-[calc(50vh-3rem)]' : '',
+              codeEditorShowing ? 'md:max-h-[calc(50vh-3rem)]' : '',
             )}
           >
             {/* Note: This is a temporary measure to allow for simple examples that do not require the @typegpu/example-toolkit package. */}
@@ -187,7 +189,12 @@ export function ExampleView({ example, isPlayground = false }: Props) {
           </div>
 
           {codeEditorShowing ? (
-            <div className="relative h-full">
+            <div
+              className={cs(
+                codeEditorMobileShowing ? 'absolute z-20' : 'hidden md:block',
+                'md:relative h-full w-full',
+              )}
+            >
               <div className="absolute inset-0">
                 <CodeEditor code={code} onCodeChange={handleCodeChange} />
               </div>
