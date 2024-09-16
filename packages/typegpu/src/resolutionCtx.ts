@@ -293,9 +293,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   /**
-   * @param item The item whose resolution should be either retrieved from the cache (if there is a cache hit), or resolved
-   * with the `compute` method.
-   * @param compute Returns the resolved item and the corresponding bindingMap. This result will be discarded if a sufficient cache entry is found.
+   * @param item The item whose resolution should be either retrieved from the cache (if there is a cache hit), or resolved.
    */
   _getOrInstantiate(item: TgpuResolvable): string {
     // All memoized versions of `item`
