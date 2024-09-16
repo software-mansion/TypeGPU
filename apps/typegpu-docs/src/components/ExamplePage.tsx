@@ -1,12 +1,12 @@
 import { useAtom, useSetAtom } from 'jotai';
 import { Suspense, useEffect, useRef } from 'react';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
-import { examples } from '../utils/examples/exampleContent';
+import { examples, examplesStable } from '../utils/examples/exampleContent';
 import { ExampleNotFound } from './ExampleNotFound';
 import { ExampleView } from './ExampleView';
 
 const getRandomExampleKey = () => {
-  const keys = Object.keys(examples);
+  const keys = Object.keys(examplesStable);
   const randomIdx = Math.floor(Math.random() * keys.length);
   return keys[randomIdx];
 };
@@ -26,7 +26,9 @@ function RedirectToFlagship() {
     }
     redirectedRef.current = true;
 
-    setCurrentExample(FLAGSHIP in examples ? FLAGSHIP : getRandomExampleKey());
+    setCurrentExample(
+      FLAGSHIP in examplesStable ? FLAGSHIP : getRandomExampleKey(),
+    );
   }, [setCurrentExample]);
 
   return null;
