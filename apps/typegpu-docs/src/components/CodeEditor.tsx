@@ -93,7 +93,7 @@ export function CodeEditor(props: Props) {
           enabled: false,
         },
       }}
-      className="py-16 md:py-0 bg-tameplum-50"
+      className="py-16 md:py-0"
     />
   );
 }

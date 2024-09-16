@@ -40,7 +40,7 @@ export function ExampleLayout() {
         </button>
       </div>
 
-      <div className="flex h-screen p-4 gap-4 bg-tameplum-50">
+      <div className="flex h-[100dvh] p-4 gap-4 bg-tameplum-50">
         {menuShown || menuShownMobile ? <SideMenu /> : null}
         <ExamplePage />
       </div>
