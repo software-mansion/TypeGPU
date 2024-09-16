@@ -296,7 +296,7 @@ export async function executeExample(
      */
     const _import = async (moduleKey: string) => {
       if (moduleKey === 'typegpu') {
-        return await import('typegpu/experimental');
+        return await import('typegpu');
       }
       if (moduleKey === 'typegpu/experimental') {
         if (!tags?.includes('experimental')) {
@@ -351,8 +351,8 @@ export async function executeExample(
       ${exampleCode}
 
       import { onCleanup } from '@typegpu/example-toolkit';
-      onCleanup(() => 
-        if (typeof device === 'object' 
+      onCleanup(() =>
+        if (typeof device === 'object'
           && 'destroy' in device
           && typeof device.destroy === 'function'
         ) {
