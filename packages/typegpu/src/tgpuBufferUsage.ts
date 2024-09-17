@@ -1,5 +1,5 @@
 import type { Unwrap } from 'typed-binary';
-import { SimpleTgpuData, TgpuArrayImpl } from './data';
+import { TgpuArrayImpl } from './data';
 import { inGPUMode } from './gpuMode';
 import {
   type Storage,
@@ -100,9 +100,9 @@ class TgpuBufferVertexImpl<TData extends AnyTgpuData>
     public readonly allocatable: TgpuBuffer<TData>,
     stepMode: 'vertex' | 'instance',
   ) {
-    if (allocatable.dataType instanceof SimpleTgpuData) {
+    if (allocatable.dataType.size === 4) {
       this.vertexLayout = {
-        arrayStride: allocatable.dataType.size,
+        arrayStride: 4,
         stepMode,
       };
     } else if (allocatable.dataType instanceof TgpuArrayImpl) {
