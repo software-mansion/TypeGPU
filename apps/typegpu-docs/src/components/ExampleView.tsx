@@ -12,6 +12,7 @@ import { executeExample } from '../utils/examples/exampleRunner';
 import type { ExampleState } from '../utils/examples/exampleState';
 import { useLayout } from '../utils/examples/layout';
 import type { Example } from '../utils/examples/types';
+import { isGPUSupported } from '../utils/isGPUSupported';
 import useEvent from '../utils/useEvent';
 import { CodeEditor } from './CodeEditor';
 import { ControlPanel } from './ControlPanel';
@@ -118,71 +119,75 @@ export function ExampleView({ example, isPlayground = false }: Props) {
 
   return (
     <>
-      {snackbarText ? <Snackbar text={snackbarText} /> : null}
+      {snackbarText && isGPUSupported ? <Snackbar text={snackbarText} /> : null}
 
       <div className="flex flex-col md:grid gap-4 md:grid-cols-[1fr_18.75rem] h-full">
         <div className="flex-1 grid gap-4">
-          <div
-            style={{
-              scrollbarGutter: 'stable both-edges',
-            }}
-            className={cs(
-              'flex justify-evenly items-center flex-wrap overflow-auto h-full',
-              codeEditorShowing ? 'md:max-h-[calc(50vh-3rem)]' : '',
-            )}
-          >
-            {/* Note: This is a temporary measure to allow for simple examples that do not require the @typegpu/example-toolkit package. */}
-            {def.elements.length === 0 ? <Canvas aspectRatio={1} /> : null}
+          {isGPUSupported ? (
+            <div
+              style={{
+                scrollbarGutter: 'stable both-edges',
+              }}
+              className={cs(
+                'flex justify-evenly items-center flex-wrap overflow-auto h-full',
+                codeEditorShowing ? 'md:max-h-[calc(50vh-3rem)]' : '',
+              )}
+            >
+              {/* Note: This is a temporary measure to allow for simple examples that do not require the @typegpu/example-toolkit package. */}
+              {def.elements.length === 0 ? <Canvas aspectRatio={1} /> : null}
 
-            {def.elements.map((element) => {
-              if (element.type === 'canvas') {
-                return (
-                  <Canvas
-                    key={element.key}
-                    ref={(canvas) => setRef(element.key, canvas)}
-                    width={element.width}
-                    height={element.height}
-                    aspectRatio={element.aspectRatio}
-                  />
-                );
-              }
+              {def.elements.map((element) => {
+                if (element.type === 'canvas') {
+                  return (
+                    <Canvas
+                      key={element.key}
+                      ref={(canvas) => setRef(element.key, canvas)}
+                      width={element.width}
+                      height={element.height}
+                      aspectRatio={element.aspectRatio}
+                    />
+                  );
+                }
 
-              if (element.type === 'video') {
-                return (
-                  <Video
-                    key={element.key}
-                    ref={(video) => setRef(element.key, video)}
-                    width={element.width}
-                    height={element.height}
-                  />
-                );
-              }
+                if (element.type === 'video') {
+                  return (
+                    <Video
+                      key={element.key}
+                      ref={(video) => setRef(element.key, video)}
+                      width={element.width}
+                      height={element.height}
+                    />
+                  );
+                }
 
-              if (element.type === 'table') {
-                return (
-                  <Table
-                    key={element.key}
-                    ref={(table) => setRef(element.key, table)}
-                    label={element.label}
-                  />
-                );
-              }
+                if (element.type === 'table') {
+                  return (
+                    <Table
+                      key={element.key}
+                      ref={(table) => setRef(element.key, table)}
+                      label={element.label}
+                    />
+                  );
+                }
 
-              if (element.type === 'button') {
-                return (
-                  <Button
-                    key={element.key}
-                    ref={(button) => setRef(element.key, button)}
-                    label={element.label}
-                    onClick={element.onClick}
-                    accent
-                  />
-                );
-              }
+                if (element.type === 'button') {
+                  return (
+                    <Button
+                      key={element.key}
+                      ref={(button) => setRef(element.key, button)}
+                      label={element.label}
+                      onClick={element.onClick}
+                      accent
+                    />
+                  );
+                }
 
-              return <p key={element}>Unrecognized element</p>;
-            })}
-          </div>
+                return <p key={element}>Unrecognized element</p>;
+              })}
+            </div>
+          ) : (
+            <GPUUnsupportedPanel />
+          )}
 
           {codeEditorShowing ? (
             <div className="absolute bg-tameplum-50 z-20 md:relative h-[calc(100%-2rem)] w-[calc(100%-2rem)] md:w-full md:h-full">
@@ -196,5 +201,19 @@ export function ExampleView({ example, isPlayground = false }: Props) {
         <ControlPanel />
       </div>
     </>
+  );
+}
+
+function GPUUnsupportedPanel() {
+  return (
+    <div className="grid place-content-center text-xl leading-8 text-center">
+      <div className="text-3xl">
+        WebGPU is not enabled/supported in this browser 😔
+      </div>
+      <div>(Maybe it's hidden under an experimental flag? 🤔)</div>
+      <div className="underline bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-transparent">
+        <a href="/TypeGPU/faq">Read more about the availability</a>
+      </div>
+    </div>
   );
 }
