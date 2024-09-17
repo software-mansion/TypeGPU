@@ -1,7 +1,6 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
-import { roundUp } from './mathUtils';
 import { type PlumListener, PlumStore } from './plumStore';
 import {
   ComputeProgramBuilder,
@@ -92,10 +91,7 @@ class TgpuRuntimeImpl implements TgpuRuntime {
     if (!buffer) {
       buffer = this.device.createBuffer({
         usage: allocatable.flags,
-        size: roundUp(
-          allocatable.dataType.size,
-          allocatable.dataType.byteAlignment,
-        ),
+        size: allocatable.dataType.size,
         mappedAtCreation: allocatable.initial !== undefined,
       });
 

@@ -102,9 +102,7 @@ class TgpuBufferVertexImpl<TData extends AnyTgpuData>
   ) {
     const layout = getVertexLayoutIfValid(allocatable.dataType, stepMode);
     if (!layout) {
-      throw new Error(
-        `Cannot create vertex buffer with data type ${allocatable.dataType}.`,
-      );
+      throw new Error('Cannot create vertex buffer with complex data types.');
     }
     this.vertexLayout = layout;
   }

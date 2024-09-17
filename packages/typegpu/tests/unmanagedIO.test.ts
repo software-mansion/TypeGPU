@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { arrayOf, u32 } from '../src/data';
 import tgpu from '../src/index';
 
@@ -26,35 +26,46 @@ global.GPUShaderStage = {
   COMPUTE: 4,
 };
 
-const mockBuffer = vi.fn(() => ({
+const mockBuffer = {
+  mapState: 'unmapped',
+  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
   getMappedRange: vi.fn(() => new ArrayBuffer(8)),
   unmap: vi.fn(),
   mapAsync: vi.fn(),
   destroy: vi.fn(),
-}));
+};
 
-const mockCommandEncoder = vi.fn(() => ({
-  beginComputePass: vi.fn(() => mockComputePassEncoder()),
+const mockStagingBuffer = {
+  mapState: 'unmapped',
+  usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+  getMappedRange: vi.fn(() => new ArrayBuffer(8)),
+  unmap: vi.fn(),
+  mapAsync: vi.fn(),
+  destroy: vi.fn(),
+};
+
+const mockCommandEncoder = {
+  beginComputePass: vi.fn(() => mockComputePassEncoder),
   beginRenderPass: vi.fn(),
   copyBufferToBuffer: vi.fn(),
   copyBufferToTexture: vi.fn(),
   copyTextureToBuffer: vi.fn(),
   copyTextureToTexture: vi.fn(),
   finish: vi.fn(),
-}));
+};
 
-const mockComputePassEncoder = vi.fn(() => ({
+const mockComputePassEncoder = {
   dispatchWorkgroups: vi.fn(),
   end: vi.fn(),
   setBindGroup: vi.fn(),
   setPipeline: vi.fn(),
-}));
+};
 
-const mockDevice = vi.fn(() => ({
+const mockDevice = {
   createBindGroup: vi.fn(() => 'mockBindGroup'),
   createBindGroupLayout: vi.fn(() => 'mockBindGroupLayout'),
-  createBuffer: vi.fn(() => mockBuffer()),
-  createCommandEncoder: vi.fn(() => mockCommandEncoder()),
+  createBuffer: vi.fn(),
+  createCommandEncoder: vi.fn(() => mockCommandEncoder),
   createComputePipeline: vi.fn(() => 'mockComputePipeline'),
   createPipelineLayout: vi.fn(() => 'mockPipelineLayout'),
   createRenderPipeline: vi.fn(() => 'mockRenderPipeline'),
@@ -69,18 +80,39 @@ const mockDevice = vi.fn(() => ({
     writeBuffer: vi.fn(),
     writeTexture: vi.fn(),
   },
-}));
+};
+
+function setupMocks() {
+  mockBuffer.mapState = 'unmapped';
+  mockBuffer.usage = GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
+  mockStagingBuffer.mapState = 'unmapped';
+  mockStagingBuffer.usage = GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST;
+  mockDevice.createBuffer
+    .mockReturnValueOnce(mockBuffer)
+    .mockReturnValueOnce(mockStagingBuffer);
+}
+
+function setupMocksForWrapped() {
+  mockDevice.createBuffer.mockReset();
+  mockDevice.createBuffer.mockReturnValueOnce(mockStagingBuffer);
+}
 
 describe('unmanagedIO', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    setupMocks();
+  });
+
   it('should accept existing buffer', () => {
-    const device = mockDevice() as unknown as GPUDevice;
-    const buffer = mockBuffer() as unknown as GPUBuffer;
-    const tgpuBuffer = tgpu.createBuffer(u32, buffer).$device(device);
-    expect(tgpuBuffer.buffer).toBe(buffer);
+    const device = mockDevice as unknown as GPUDevice;
+    const tgpuBuffer = tgpu
+      .createBuffer(u32, mockBuffer as unknown as GPUBuffer)
+      .$device(device);
+    expect(tgpuBuffer.buffer).toBe(mockBuffer);
   });
 
   it('should create a buffer on demand', () => {
-    const device = mockDevice() as unknown as GPUDevice;
+    const device = mockDevice as unknown as GPUDevice;
     const tgpuBuffer = tgpu.createBuffer(u32).$device(device);
 
     expect(device.createBuffer).not.toHaveBeenCalled();
@@ -94,7 +126,7 @@ describe('unmanagedIO', () => {
   });
 
   it('should create a buffer with initial data', () => {
-    const device = mockDevice() as unknown as GPUDevice;
+    const device = mockDevice as unknown as GPUDevice;
     const tgpuBuffer = tgpu
       .createBuffer(arrayOf(u32, 3), [1, 2, 3])
       .$device(device);
@@ -112,16 +144,10 @@ describe('unmanagedIO', () => {
   });
 
   it('should write to a mapped buffer', () => {
-    const device = mockDevice() as unknown as GPUDevice;
-    const mockBuffer = {
-      mapState: 'mapped',
-      getMappedRange: vi.fn(() => new Uint32Array([0, 0, 0])),
-      unmap: vi.fn(),
-      mapAsync: vi.fn(),
-      usage: GPUBufferUsage.MAP_WRITE | GPUBufferUsage.COPY_SRC,
-    } as unknown as GPUBuffer;
+    const device = mockDevice as unknown as GPUDevice;
+    mockBuffer.mapState = 'mapped';
     const buffer = tgpu
-      .createBuffer(arrayOf(u32, 3), mockBuffer)
+      .createBuffer(arrayOf(u32, 3), mockBuffer as unknown as GPUBuffer)
       .$device(device);
     tgpu.write(buffer, [1, 2, 3]);
 
@@ -130,8 +156,7 @@ describe('unmanagedIO', () => {
   });
 
   it('should write to a buffer', () => {
-    const device = mockDevice() as unknown as GPUDevice;
-
+    const device = mockDevice as unknown as GPUDevice;
     const buffer = tgpu.createBuffer(arrayOf(u32, 3)).$device(device);
 
     tgpu.write(buffer, [1, 2, 3]);
@@ -146,37 +171,24 @@ describe('unmanagedIO', () => {
   });
 
   it('should map a mappable buffer before reading', async () => {
-    const device = mockDevice() as unknown as GPUDevice;
-    const mockBuffer = {
-      mapState: 'unmapped',
-      getMappedRange: vi.fn(() => new Uint32Array([1, 2, 3])),
-      unmap: vi.fn(),
-      mapAsync: vi.fn(),
-      usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-    } as unknown as GPUBuffer;
+    setupMocksForWrapped();
+    const device = mockDevice as unknown as GPUDevice;
+    mockBuffer.usage = GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST;
     const buffer = tgpu
-      .createBuffer(arrayOf(u32, 3), mockBuffer)
+      .createBuffer(arrayOf(u32, 3), mockBuffer as unknown as GPUBuffer)
       .$device(device);
     const data = await tgpu.read(buffer);
 
+    expect(mockStagingBuffer.mapAsync).not.toHaveBeenCalled();
     expect(mockBuffer.mapAsync).toHaveBeenCalled();
     expect(data).toBeDefined();
   });
 
   it('should read from a mapped buffer', async () => {
-    const device = mockDevice() as unknown as GPUDevice;
-    const mockBuffer = {
-      mapState: 'mapped',
-      dataType: {
-        read: vi.fn(() => [1, 2, 3]),
-      },
-      getMappedRange: vi.fn(() => new Uint32Array([1, 2, 3])),
-      unmap: vi.fn(),
-      mapAsync: vi.fn(),
-      usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-    } as unknown as GPUBuffer;
+    const device = mockDevice as unknown as GPUDevice;
+    mockBuffer.mapState = 'mapped';
     const buffer = tgpu
-      .createBuffer(arrayOf(u32, 3), mockBuffer)
+      .createBuffer(arrayOf(u32, 3), mockBuffer as unknown as GPUBuffer)
       .$device(device);
     const data = await tgpu.read(buffer);
 
@@ -187,19 +199,10 @@ describe('unmanagedIO', () => {
   });
 
   it('should read from a mappable buffer', async () => {
-    const device = mockDevice() as unknown as GPUDevice;
-    const mockBuffer = {
-      mapState: 'unmapped',
-      dataType: {
-        read: vi.fn(() => [1, 2, 3]),
-      },
-      getMappedRange: vi.fn(() => new Uint32Array([1, 2, 3])),
-      unmap: vi.fn(),
-      mapAsync: vi.fn(),
-      usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-    } as unknown as GPUBuffer;
+    const device = mockDevice as unknown as GPUDevice;
+    mockBuffer.usage = mockBuffer.usage | GPUBufferUsage.MAP_READ;
     const buffer = tgpu
-      .createBuffer(arrayOf(u32, 3), mockBuffer)
+      .createBuffer(arrayOf(u32, 3), mockBuffer as unknown as GPUBuffer)
       .$device(device);
     const data = await tgpu.read(buffer);
 
@@ -210,16 +213,7 @@ describe('unmanagedIO', () => {
   });
 
   it('should read from a buffer', async () => {
-    const device = mockDevice() as unknown as GPUDevice;
-    const mockEncoder = device.createCommandEncoder();
-    device.createCommandEncoder = vi.fn(() => mockEncoder);
-    const mockStagingBuffer = {
-      mapAsync: vi.fn(),
-      getMappedRange: vi.fn(() => new Uint32Array([1, 2, 3])),
-      unmap: vi.fn(),
-      destroy: vi.fn(),
-    } as unknown as GPUBuffer;
-    device.createBuffer = vi.fn(() => mockStagingBuffer);
+    const device = mockDevice as unknown as GPUDevice;
     const buffer = tgpu.createBuffer(arrayOf(u32, 3)).$device(device);
 
     const data = await tgpu.read(buffer);
@@ -228,8 +222,13 @@ describe('unmanagedIO', () => {
       size: 12,
       usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
     });
+    expect(device.createBuffer).toHaveBeenCalledWith({
+      size: 12,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+      mappedAtCreation: false,
+    });
 
-    expect(mockEncoder.copyBufferToBuffer).toHaveBeenCalledWith(
+    expect(mockCommandEncoder.copyBufferToBuffer).toHaveBeenCalledWith(
       buffer.buffer,
       0,
       mockStagingBuffer,
@@ -246,7 +245,7 @@ describe('unmanagedIO', () => {
   });
 
   it('should destroy a buffer', () => {
-    const device = mockDevice() as unknown as GPUDevice;
+    const device = mockDevice as unknown as GPUDevice;
     const buffer = tgpu.createBuffer(arrayOf(u32, 3)).$device(device);
 
     buffer.destroy();
@@ -255,12 +254,11 @@ describe('unmanagedIO', () => {
   });
 
   it('should destroy underlying buffer', () => {
-    const device = mockDevice();
-    const mockBuffer = device.createBuffer() as unknown as GPUBuffer;
+    const device = mockDevice as unknown as GPUDevice;
 
     const buffer = tgpu
-      .createBuffer(arrayOf(u32, 3), mockBuffer)
-      .$device(device as unknown as GPUDevice);
+      .createBuffer(arrayOf(u32, 3), mockBuffer as unknown as GPUBuffer)
+      .$device(device);
     buffer.destroy();
 
     expect(mockBuffer.destroy).toHaveBeenCalled();
