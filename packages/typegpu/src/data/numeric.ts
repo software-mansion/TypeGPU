@@ -9,7 +9,9 @@ const primitiveNumeric = (
   code: string,
 ) => {
   return {
+    // Type-token, not available at runtime
     __unwrapped: undefined as unknown as number,
+
     size: 4,
     byteAlignment: 4,
     expressionCode: code,
