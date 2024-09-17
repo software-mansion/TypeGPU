@@ -93,7 +93,7 @@ export function CodeEditor(props: Props) {
           enabled: false,
         },
       }}
-      className="py-16 md:py-0"
+      className="pt-16 md:pt-0"
     />
   );
 }

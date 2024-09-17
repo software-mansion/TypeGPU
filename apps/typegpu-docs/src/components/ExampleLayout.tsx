@@ -3,7 +3,7 @@ import { useAtom, useAtomValue } from 'jotai';
 import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
 import HamburgerSvg from '../assets/hamburger.svg';
-import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
+import { codeEditorShownMobileAtom } from '../utils/examples/codeEditorShownAtom';
 import {
   menuShownAtom,
   menuShownMobileAtom,
@@ -17,22 +17,24 @@ const isDev = import.meta.env.DEV;
 export function ExampleLayout() {
   const menuShown = useAtomValue(menuShownAtom);
   const [menuShownMobile, setMenuShownMobile] = useAtom(menuShownMobileAtom);
-  const [codeShown, setCodeShown] = useAtom(codeEditorShownAtom);
+  const [codeShownMobile, setCodeShownMobile] = useAtom(
+    codeEditorShownMobileAtom,
+  );
 
   return (
     <>
       <div className="md:hidden flex absolute top-4 left-4 z-50 gap-4 text-sm">
         {menuShownMobile ? null : (
-          <Button
-            onClick={() => setMenuShownMobile(true)}
-          >
+          <Button onClick={() => setMenuShownMobile(true)}>
             <img src={HamburgerSvg.src} alt="menu" className="h-6 w-6" />
           </Button>
         )}
 
         <Button
-          label={codeShown ? 'Preview' : 'Code'}
-          onClick={() => setCodeShown(!codeShown)}
+          label={codeShownMobile ? 'Preview' : 'Code'}
+          onClick={() =>
+            setCodeShownMobile((codeShownMobile) => !codeShownMobile)
+          }
         />
       </div>
 
