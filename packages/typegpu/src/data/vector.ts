@@ -28,7 +28,7 @@ interface VecSchemaOptions<ValueType> {
   makeFromScalar: (value: number) => ValueType;
 }
 
-export type VecSchemaBase<ValueType> = TgpuData<ValueType> & {
+type VecSchemaBase<ValueType> = TgpuData<ValueType> & {
   expressionCode: string;
 };
 

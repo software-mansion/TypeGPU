@@ -146,14 +146,12 @@ const typeToVertexFormatMap: Record<string, GPUVertexFormat> = {
 export function deriveVertexFormat<
   TData extends TgpuData<AnyTgpuData> | TgpuArray<AnyTgpuData>,
 >(typeSchema: TData): GPUVertexFormat {
-  console.log('deriveVertexFormat', typeSchema);
   if ('expressionCode' in typeSchema) {
     const code = typeSchema.expressionCode as string;
     const format = typeToVertexFormatMap[code];
     if (!format) {
       throw new Error(`Unsupported vertex format: ${code}`);
     }
-    console.log('format', format);
     return format;
   }
   if ('elementType' in typeSchema) {
