@@ -10,6 +10,7 @@ import {
 } from '../utils/examples/menuShownAtom';
 import ExampleList from './ExampleList';
 import ExamplePage from './ExamplePage';
+import { Button } from './design/Button';
 
 const isDev = import.meta.env.DEV;
 
@@ -22,22 +23,17 @@ export function ExampleLayout() {
     <>
       <div className="md:hidden flex absolute top-4 left-4 z-50 gap-4 text-sm">
         {menuShownMobile ? null : (
-          <button
-            className="bg-white rounded-[6.25rem] px-5 py-2.5 hover:bg-tameplum-20 border-tameplum-100 border-2"
-            type="button"
+          <Button
             onClick={() => setMenuShownMobile(true)}
           >
             <img src={HamburgerSvg.src} alt="menu" className="h-6 w-6" />
-          </button>
+          </Button>
         )}
 
-        <button
-          type="button"
-          className="bg-white rounded-[6.25rem] text-sm px-5 py-2.5 hover:bg-tameplum-20 border-tameplum-100 border-2"
+        <Button
+          label={codeShown ? 'Preview' : 'Code'}
           onClick={() => setCodeShown(!codeShown)}
-        >
-          {codeShown ? 'Preview' : 'Code'}
-        </button>
+        />
       </div>
 
       <div className="flex h-[100dvh] p-4 gap-4 bg-tameplum-50">
