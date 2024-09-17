@@ -120,17 +120,15 @@ export function ExampleView({ example, isPlayground = false }: Props) {
     <>
       {snackbarText ? <Snackbar text={snackbarText} /> : null}
 
-      <div className="grid gap-4 grid-cols-[1fr_18.75rem] h-full">
-        <div
-          className={cs('grid gap-4', codeEditorShowing ? 'grid-rows-2' : '')}
-        >
+      <div className="flex flex-col md:grid gap-4 md:grid-cols-[1fr_18.75rem] h-full">
+        <div className="flex-1 grid gap-4">
           <div
             style={{
               scrollbarGutter: 'stable both-edges',
             }}
             className={cs(
               'flex justify-evenly items-center flex-wrap overflow-auto h-full',
-              codeEditorShowing ? 'max-h-[calc(50vh-3rem)]' : '',
+              codeEditorShowing ? 'md:max-h-[calc(50vh-3rem)]' : '',
             )}
           >
             {/* Note: This is a temporary measure to allow for simple examples that do not require the @typegpu/example-toolkit package. */}
@@ -187,7 +185,7 @@ export function ExampleView({ example, isPlayground = false }: Props) {
           </div>
 
           {codeEditorShowing ? (
-            <div className="relative h-full">
+            <div className="absolute bg-tameplum-50 z-20 md:relative h-[calc(100%-2rem)] w-[calc(100%-2rem)] md:w-full md:h-full">
               <div className="absolute inset-0">
                 <CodeEditor code={code} onCodeChange={handleCodeChange} />
               </div>

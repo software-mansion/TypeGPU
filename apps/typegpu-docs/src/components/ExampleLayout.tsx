@@ -1,7 +1,13 @@
-import { useAtomValue } from 'jotai';
+import cs from 'classnames';
+import { useAtom, useAtomValue } from 'jotai';
 import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
-import { menuShownAtom } from '../utils/examples/menuShownAtom';
+import HamburgerSvg from '../assets/hamburger.svg';
+import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
+import {
+  menuShownAtom,
+  menuShownMobileAtom,
+} from '../utils/examples/menuShownAtom';
 import ExampleList from './ExampleList';
 import ExamplePage from './ExamplePage';
 
@@ -9,18 +15,53 @@ const isDev = import.meta.env.DEV;
 
 export function ExampleLayout() {
   const menuShown = useAtomValue(menuShownAtom);
+  const [menuShownMobile, setMenuShownMobile] = useAtom(menuShownMobileAtom);
+  const [codeShown, setCodeShown] = useAtom(codeEditorShownAtom);
 
   return (
-    <div className="flex h-screen p-4 gap-4 bg-tameplum-50">
-      {menuShown ? <SideMenu /> : null}
-      <ExamplePage />
-    </div>
+    <>
+      <div className="md:hidden flex absolute top-4 left-4 z-50 gap-4 text-sm">
+        {menuShownMobile ? null : (
+          <button
+            className="bg-white rounded-[6.25rem] px-5 py-2.5 hover:bg-tameplum-20 border-tameplum-100 border-2"
+            type="button"
+            onClick={() => setMenuShownMobile(true)}
+          >
+            <img src={HamburgerSvg.src} alt="menu" className="h-6 w-6" />
+          </button>
+        )}
+
+        <button
+          type="button"
+          className="bg-white rounded-[6.25rem] text-sm px-5 py-2.5 hover:bg-tameplum-20 border-tameplum-100 border-2"
+          onClick={() => setCodeShown(!codeShown)}
+        >
+          {codeShown ? 'Preview' : 'Code'}
+        </button>
+      </div>
+
+      <div className="flex h-[100dvh] p-4 gap-4 bg-tameplum-50">
+        {menuShown || menuShownMobile ? <SideMenu /> : null}
+        <ExamplePage />
+      </div>
+    </>
   );
 }
 
 function SideMenu() {
+  const menuShown = useAtomValue(menuShownAtom);
+  const menuShownMobile = useAtomValue(menuShownMobileAtom);
+
   return (
-    <aside className="flex flex-col bg-white rounded-2xl w-[18.75rem] p-5 gap-5">
+    <aside
+      className={cs(
+        menuShown ? '' : 'md:hidden',
+        menuShownMobile
+          ? 'absolute inset-0 z-50 w-full md:static'
+          : 'hidden md:flex',
+        'flex flex-col bg-white md:rounded-2xl md:w-[18.75rem] p-5 gap-5',
+      )}
+    >
       <header className="grid gap-5">
         <div className="grid place-items-center">
           <a href="/TypeGPU" className="block cursor-pointer">

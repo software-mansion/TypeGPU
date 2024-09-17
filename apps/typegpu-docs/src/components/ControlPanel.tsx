@@ -162,27 +162,29 @@ export function ControlPanel() {
   const exampleControlParams = useAtomValue(exampleControlsAtom);
 
   return (
-    <div className="flex flex-col gap-4 p-6 bg-grayscale-0 rounded-xl">
-      <h2 className="text-xl font-medium">Control panel</h2>
-      <label className="flex items-center justify-between gap-3 text-sm cursor-pointer">
-        <span>Show left menu</span>
-        <Toggle
-          checked={menuShowing}
-          onChange={(e) => setMenuShowing(e.target.checked)}
-        />
-      </label>
-      <label className="flex items-center justify-between gap-3 text-sm cursor-pointer">
-        <span>Show code editor</span>
-        <Toggle
-          checked={codeEditorShowing}
-          onChange={(e) => setCodeEditorShowing(e.target.checked)}
-        />
-      </label>
+    <div className="flex flex-col gap-4 p-6 bg-grayscale-0 rounded-xl max-h-[50%] md:max-h-full">
+      <div className="hidden md:flex flex-col gap-4">
+        <h2 className="text-xl font-medium">Control panel</h2>
+        <label className="flex items-center justify-between gap-3 text-sm cursor-pointer">
+          <span>Show left menu</span>
+          <Toggle
+            checked={menuShowing}
+            onChange={(e) => setMenuShowing(e.target.checked)}
+          />
+        </label>
+        <label className="flex items-center justify-between gap-3 text-sm cursor-pointer">
+          <span>Show code editor</span>
+          <Toggle
+            checked={codeEditorShowing}
+            onChange={(e) => setCodeEditorShowing(e.target.checked)}
+          />
+        </label>
 
-      <hr />
+        <hr />
+      </div>
 
       <h2 className="text-xl font-medium">Example controls</h2>
-      <div className="grid items-center grid-cols-2 gap-4">
+      <div className="grid items-center grid-cols-2 gap-4 overflow-auto p-1 pb-2">
         {exampleControlParams.map((param) => paramToControlRow(param))}
       </div>
     </div>

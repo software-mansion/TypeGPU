@@ -1,3 +1,3 @@
 import { atom } from 'jotai';
 
-export const codeEditorShownAtom = atom(true);
+export const codeEditorShownAtom = atom(window.innerWidth > 1024);
