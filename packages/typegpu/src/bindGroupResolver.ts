@@ -1,4 +1,3 @@
-import type { SimpleTgpuData } from './data';
 import type { ResolutionCtxImpl } from './resolutionCtx';
 import type { TgpuBufferVertex } from './tgpuBufferUsage';
 import { deriveVertexFormat } from './tgpuRuntime';
@@ -10,7 +9,7 @@ import {
   isExternalTexture,
   isTextureView,
 } from './tgpuTexture';
-import type { AnyTgpuData, BufferUsage, TgpuBindable } from './types';
+import type { AnyTgpuData, BufferUsage, TgpuBindable, TgpuData } from './types';
 
 const usageToBindingTypeMap: Record<
   Exclude<BufferUsage, 'vertex'>,
@@ -188,7 +187,7 @@ export class BindGroupResolver {
             shaderLocation: idx,
             offset: 0,
             format: deriveVertexFormat(
-              buffer.allocatable.dataType as SimpleTgpuData<AnyTgpuData>,
+              buffer.allocatable.dataType as TgpuData<AnyTgpuData>,
             ),
           },
         ],

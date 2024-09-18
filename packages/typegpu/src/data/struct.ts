@@ -11,6 +11,7 @@ import {
   object,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
+import { roundUp } from '../mathUtils';
 import type { TgpuNamable } from '../namable';
 import { code } from '../tgpuCode';
 import { identifier } from '../tgpuIdentifier';
@@ -55,7 +56,7 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
       .map((prop) => prop.byteAlignment)
       .reduce((a, b) => (a > b ? a : b));
 
-    this.size = this.measure(MaxValue).size;
+    this.size = roundUp(this.measure(MaxValue).size, this.byteAlignment);
   }
 
   $name(label: string) {
