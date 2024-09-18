@@ -36,7 +36,7 @@ export interface ResolutionCtx {
   transpileFn(
     // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
     fn: TgpuFn<any, any>,
-    externalMap: Record<string, Wgsl>,
+    externalMap: Record<string, unknown>,
   ): {
     head: Wgsl;
     body: Wgsl;

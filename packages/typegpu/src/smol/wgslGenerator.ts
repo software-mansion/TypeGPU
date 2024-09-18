@@ -75,17 +75,27 @@ function generateExpression(
 
     const [targetId, property] = expression['.'];
     const target = generateExpression(ctx, targetId);
-    const targetStr = resolveRes(ctx, target);
     const propertyStr = resolveRes(ctx, generateExpression(ctx, property));
 
-    if (isResolvable(target.value)) {
+    if (isResolvable(target.value) || typeof target.value === 'object') {
       // NOTE: Temporary solution, assuming that access to `.value` of resolvables should always resolve to just the target.
+      if (propertyStr === 'value') {
+        return {
+          value: resolveRes(ctx, target),
+          // TODO: Infer data type
+          dataType: UnknownData,
+        };
+      }
+
       return {
-        value: targetStr,
+        // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
+        value: (target.value as any)[propertyStr],
         // TODO: Infer data type
         dataType: UnknownData,
       };
     }
+
+    const targetStr = resolveRes(ctx, target);
 
     return {
       value: `${targetStr}.${propertyStr}`,
@@ -124,13 +134,13 @@ function generateExpression(
     const argResources = expression.args.map((arg) =>
       generateExpression(ctx, arg),
     );
-    const argValues = argResources.map((res) => res.value);
+    const argValues = argResources.map((res) => resolveRes(ctx, res));
 
-    if (isResolvable(idValue)) {
+    if (isResolvable(idValue) || typeof idValue === 'function') {
       // Assuming that `id` is callable
       // TODO: Pass in resources, not just values.
       const result = (idValue as unknown as (...args: unknown[]) => unknown)(
-        argValues,
+        ...argValues,
       ) as Wgsl;
       // TODO: Make function calls return resources instead of just values.
       return { value: result, dataType: UnknownData };

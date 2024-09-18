@@ -1,6 +1,6 @@
 import type { Unwrap } from 'typed-binary';
 import { inGPUMode } from './gpuMode';
-import type { TgpuNamable } from './namable';
+import { type TgpuNamable, isNamable } from './namable';
 import { valueList } from './resolutionUtils';
 import { code } from './tgpuCode';
 import { identifier } from './tgpuIdentifier';
@@ -47,7 +47,7 @@ interface TgpuFnBase<
   readonly body: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>;
   readonly bodyResolvable: TgpuResolvable;
 
-  $uses(dependencyMap: Record<string, Wgsl>): this;
+  $uses(dependencyMap: Record<string, unknown>): this;
 }
 
 export type TgpuFn<
@@ -117,7 +117,7 @@ function createFn<
   body: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
 ): TgpuFn<Args, Return> {
   let label: string | undefined;
-  const externalMap: Record<string, Wgsl> = {};
+  const externalMap: Record<string, unknown> = {};
 
   const fnBase: TgpuFnBase<Args, Return> = {
     shell,
@@ -140,6 +140,11 @@ function createFn<
     $uses(newExternals) {
       for (const [key, value] of Object.entries(newExternals)) {
         externalMap[key] = value;
+
+        // Giving name to external value
+        if (isNamable(value)) {
+          value.$name(key);
+        }
       }
       return this;
     },
