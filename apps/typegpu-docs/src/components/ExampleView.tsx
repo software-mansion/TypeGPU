@@ -125,7 +125,12 @@ export function ExampleView({ example, isPlayground = false }: Props) {
       {snackbarText ? <Snackbar text={snackbarText} /> : null}
 
       <div className="flex flex-col md:grid gap-4 md:grid-cols-[1fr_18.75rem] h-full">
-        <div className="flex-1 grid gap-4">
+        <div
+          className={cs(
+            'flex-1 grid gap-4',
+            codeEditorShowing ? 'grid-rows-2' : '',
+          )}
+        >
           <div
             style={{
               scrollbarGutter: 'stable both-edges',
