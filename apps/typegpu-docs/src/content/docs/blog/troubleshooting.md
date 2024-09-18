@@ -1,5 +1,5 @@
 ---
-title: Enabling WebGPU on your devices
+title: How to enable WebGPU on your device
 date: 2023-07-24
 tags:
   - Safari
@@ -7,6 +7,7 @@ tags:
   - Troubleshooting
   - MacOS
   - WebGPU support
+  - Deno
 authors:
   - name: Konrad
     title: TypeGPU developer
@@ -37,7 +38,7 @@ Settings > Safari > Advanced > Feature Flags
 ```
 And then enable WebGPU.
 That's it! After enabling the WebGPU flag you can go to [our examples page](https://docs.swmansion.com/TypeGPU/examples/)
-and you should be able to tinker with our examples on your phone.
+and you should be able to tinker with them on your phone.
 
 ## WebGPU in Safari on MacOS
 
