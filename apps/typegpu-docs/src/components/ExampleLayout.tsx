@@ -3,41 +3,39 @@ import { useAtom, useAtomValue } from 'jotai';
 import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
 import HamburgerSvg from '../assets/hamburger.svg';
-import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
+import { codeEditorShownMobileAtom } from '../utils/examples/codeEditorShownAtom';
 import {
   menuShownAtom,
   menuShownMobileAtom,
 } from '../utils/examples/menuShownAtom';
 import ExampleList from './ExampleList';
 import ExamplePage from './ExamplePage';
+import { Button } from './design/Button';
 
 const isDev = import.meta.env.DEV;
 
 export function ExampleLayout() {
   const menuShown = useAtomValue(menuShownAtom);
   const [menuShownMobile, setMenuShownMobile] = useAtom(menuShownMobileAtom);
-  const [codeShown, setCodeShown] = useAtom(codeEditorShownAtom);
+  const [codeShownMobile, setCodeShownMobile] = useAtom(
+    codeEditorShownMobileAtom,
+  );
 
   return (
     <>
       <div className="md:hidden flex absolute top-4 left-4 z-50 gap-4 text-sm">
         {menuShownMobile ? null : (
-          <button
-            className="bg-white rounded-[6.25rem] px-5 py-2.5 hover:bg-tameplum-20 border-tameplum-100 border-2"
-            type="button"
-            onClick={() => setMenuShownMobile(true)}
-          >
+          <Button onClick={() => setMenuShownMobile(true)}>
             <img src={HamburgerSvg.src} alt="menu" className="h-6 w-6" />
-          </button>
+          </Button>
         )}
 
-        <button
-          type="button"
-          className="bg-white rounded-[6.25rem] text-sm px-5 py-2.5 hover:bg-tameplum-20 border-tameplum-100 border-2"
-          onClick={() => setCodeShown(!codeShown)}
-        >
-          {codeShown ? 'Preview' : 'Code'}
-        </button>
+        <Button
+          label={codeShownMobile ? 'Preview' : 'Code'}
+          onClick={() =>
+            setCodeShownMobile((codeShownMobile) => !codeShownMobile)
+          }
+        />
       </div>
 
       <div className="flex h-[100dvh] p-4 gap-4 bg-tameplum-50">
@@ -73,7 +71,7 @@ function SideMenu() {
           </a>
         </div>
 
-        <hr />
+        <hr className="border-tameplum-100" />
 
         <div className="grid gap-6">
           <h1 className="font-medium text-xl">Welcome to examples page</h1>
@@ -90,7 +88,7 @@ function SideMenu() {
         </div>
       </header>
 
-      <hr />
+      <hr className="border-tameplum-100" />
 
       <ExampleList excludeTags={isDev ? [] : ['experimental']} />
 

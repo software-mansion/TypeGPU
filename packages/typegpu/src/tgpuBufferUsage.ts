@@ -1,5 +1,5 @@
 import type { Unwrap } from 'typed-binary';
-import { SimpleTgpuData, TgpuArrayImpl } from './data';
+import { TgpuArrayImpl } from './data';
 import { inGPUMode } from './gpuMode';
 import {
   type Storage,
@@ -100,21 +100,11 @@ class TgpuBufferVertexImpl<TData extends AnyTgpuData>
     public readonly allocatable: TgpuBuffer<TData>,
     stepMode: 'vertex' | 'instance',
   ) {
-    if (allocatable.dataType instanceof SimpleTgpuData) {
-      this.vertexLayout = {
-        arrayStride: allocatable.dataType.size,
-        stepMode,
-      };
-    } else if (allocatable.dataType instanceof TgpuArrayImpl) {
-      this.vertexLayout = {
-        arrayStride: allocatable.dataType.elementType.size,
-        stepMode,
-      };
-    } else {
-      throw new Error(
-        'Only simple or array data types can be used as vertex buffers',
-      );
+    const layout = getVertexLayoutIfValid(allocatable.dataType, stepMode);
+    if (!layout) {
+      throw new Error('Cannot create vertex buffer with complex data types.');
     }
+    this.vertexLayout = layout;
   }
 
   get label() {
@@ -225,4 +215,23 @@ export function asVertex<TData extends AnyTgpuData>(
     vertexUsageMap.set(buffer, usage);
   }
   return usage[stepMode] as unknown as TgpuBufferVertex<TData>;
+}
+
+function getVertexLayoutIfValid(
+  type: AnyTgpuData,
+  stepMode: 'vertex' | 'instance',
+): Omit<GPUVertexBufferLayout, 'attributes'> | null {
+  // check if the type is a primitive (f32, i32, u32, or a vector)
+  if ('expressionCode' in type) {
+    return {
+      arrayStride: type.size,
+      stepMode: stepMode,
+    };
+  }
+  // if the data type is an array, check if the element type is valid
+  // as arrayOf(arrayOf(f32, x), y) would still be valid - we do it recursively
+  if (type instanceof TgpuArrayImpl) {
+    return getVertexLayoutIfValid(type.elementType, stepMode);
+  }
+  return null;
 }

@@ -1,6 +1,5 @@
-import type { AnySchema } from 'typed-binary';
 import type { Parsed } from 'typed-binary';
-import type { SimpleTgpuData, TgpuArray } from './data';
+import type { TgpuArray } from './data';
 import type { JitTranspiler } from './jitTranspiler';
 import type { PlumListener } from './plumStore';
 import type { TgpuSettable } from './settableTrait';
@@ -17,6 +16,7 @@ import type {
   BoundTgpuCode,
   TgpuAllocatable,
   TgpuCode,
+  TgpuData,
 } from './types';
 
 // ----------
@@ -144,20 +144,18 @@ const typeToVertexFormatMap: Record<string, GPUVertexFormat> = {
 };
 
 export function deriveVertexFormat<
-  TData extends SimpleTgpuData<AnySchema> | TgpuArray<AnyTgpuData>,
+  TData extends TgpuData<AnyTgpuData> | TgpuArray<AnyTgpuData>,
 >(typeSchema: TData): GPUVertexFormat {
-  let code: string;
   if ('expressionCode' in typeSchema) {
-    code = typeSchema.expressionCode;
-  } else {
-    if (!('expressionCode' in typeSchema.elementType)) {
-      throw new Error('Only simple types are supported');
+    const code = typeSchema.expressionCode as string;
+    const format = typeToVertexFormatMap[code];
+    if (!format) {
+      throw new Error(`Unsupported vertex format: ${code}`);
     }
-    code = typeSchema.elementType.expressionCode as string;
+    return format;
   }
-  const format = typeToVertexFormatMap[code];
-  if (!format) {
-    throw new Error(`Unsupported vertex format: ${code}`);
+  if ('elementType' in typeSchema) {
+    return deriveVertexFormat(typeSchema.elementType as TData);
   }
-  return format;
+  throw new Error('Invalid vertex format schema');
 }

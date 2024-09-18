@@ -51,7 +51,7 @@ describe('align', () => {
         b: align(16, u32),
         c: u32,
       }).size,
-    ).toEqual(24);
+    ).toEqual(32);
 
     expect(
       struct({
@@ -59,7 +59,7 @@ describe('align', () => {
         b: align(16, u32),
         c: align(16, u32),
       }).size,
-    ).toEqual(36);
+    ).toEqual(48);
 
     // nested
     expect(
@@ -70,7 +70,7 @@ describe('align', () => {
           d: align(16, f32),
         }),
       }).size,
-    ).toEqual(36);
+    ).toEqual(48);
 
     expect(
       struct({
@@ -83,7 +83,7 @@ describe('align', () => {
           }),
         ),
       }).size,
-    ).toEqual(52);
+    ).toEqual(64);
   });
 
   it('throws for invalid align values', () => {

@@ -187,7 +187,7 @@ export function ControlPanel() {
           />
         </label>
 
-        <hr />
+        <hr className="border-tameplum-100" />
       </div>
 
       {isGPUSupported ? (

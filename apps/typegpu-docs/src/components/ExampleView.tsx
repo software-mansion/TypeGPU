@@ -3,7 +3,10 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { compressToEncodedURIComponent } from 'lz-string';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'remeda';
-import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
+import {
+  codeEditorShownAtom,
+  codeEditorShownMobileAtom,
+} from '../utils/examples/codeEditorShownAtom';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
 import { ExecutionCancelledError } from '../utils/examples/errors';
 import { PLAYGROUND_KEY } from '../utils/examples/exampleContent';
@@ -89,6 +92,7 @@ export function ExampleView({ example, isPlayground = false }: Props) {
   const [snackbarText, setSnackbarText] = useState<string | undefined>();
   const setCurrentExample = useSetAtom(currentExampleAtom);
   const codeEditorShowing = useAtomValue(codeEditorShownAtom);
+  const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
 
   const setCodeWrapper = isPlayground
     ? useCallback(
@@ -122,7 +126,12 @@ export function ExampleView({ example, isPlayground = false }: Props) {
       {snackbarText && isGPUSupported ? <Snackbar text={snackbarText} /> : null}
 
       <div className="flex flex-col md:grid gap-4 md:grid-cols-[1fr_18.75rem] h-full">
-        <div className="flex-1 grid gap-4">
+        <div
+          className={cs(
+            'flex-1 grid gap-4',
+            codeEditorShowing ? 'grid-rows-2' : '',
+          )}
+        >
           {isGPUSupported ? (
             <div
               style={{
@@ -189,8 +198,18 @@ export function ExampleView({ example, isPlayground = false }: Props) {
             <GPUUnsupportedPanel />
           )}
 
-          {codeEditorShowing ? (
-            <div className="absolute bg-tameplum-50 z-20 md:relative h-[calc(100%-2rem)] w-[calc(100%-2rem)] md:w-full md:h-full">
+          {codeEditorShowing || codeEditorMobileShowing ? (
+            <div
+              className={cs(
+                codeEditorShowing && !codeEditorMobileShowing
+                  ? 'hidden md:block'
+                  : '',
+                !codeEditorShowing && codeEditorMobileShowing
+                  ? 'md:hidden'
+                  : '',
+                'absolute bg-tameplum-50 z-20 md:relative h-[calc(100%-2rem)] w-[calc(100%-2rem)] md:w-full md:h-full',
+              )}
+            >
               <div className="absolute inset-0">
                 <CodeEditor code={code} onCodeChange={handleCodeChange} />
               </div>
