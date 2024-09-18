@@ -187,6 +187,14 @@ const presets = {
     cohesionDistance: 0.0,
     cohesionStrength: 0.0,
   },
+  nanites: {
+    separationDistance: 0.067,
+    separationStrength: 0.01,
+    alignmentDistance: 0.066,
+    alignmentStrength: 0.021,
+    cohesionDistance: 0.086,
+    cohesionStrength: 0.094,
+  },
 } as const;
 
 if (!navigator.gpu) {
@@ -420,9 +428,14 @@ export function choosePresetBlobs() {
   updateParams(presets.blobs);
 }
 
-/** @button "⚛️ Particles" */
+/** @button "⚛ Particles" */
 export function choosePresetParticles() {
   updateParams(presets.particles);
+}
+
+/** @button "🤖 Nanites" */
+export function choosePresetNanites() {
+  updateParams(presets.nanites);
 }
 
 /** @button "🟪🟩" */
@@ -435,7 +448,7 @@ export function setColorPresetJeans() {
   updateColorPreset('jeans');
 }
 
-/** @button "⬛️⬜️" */
+/** @button "⬛⬜" */
 export function setColorPresetGreyscale() {
   updateColorPreset('greyscale');
 }
