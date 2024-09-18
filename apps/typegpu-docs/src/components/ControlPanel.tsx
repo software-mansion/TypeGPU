@@ -180,7 +180,7 @@ export function ControlPanel() {
           />
         </label>
 
-        <hr />
+        <hr className="border-tameplum-100" />
       </div>
 
       <h2 className="text-xl font-medium">Example controls</h2>

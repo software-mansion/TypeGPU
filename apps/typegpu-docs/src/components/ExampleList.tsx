@@ -9,7 +9,7 @@ function ExampleList({ excludeTags = [] }: { excludeTags?: string[] }) {
         {/* <ExampleLink key={PLAYGROUND_KEY} exampleKey={PLAYGROUND_KEY}>
           Playground
         </ExampleLink>
-        <hr /> */}
+        <hr className="border-tameplum-100" /> */}
         {exampleCategories.map((category) =>
           (examplesByCategory[category.key] ?? []).map((example) => {
             if (
