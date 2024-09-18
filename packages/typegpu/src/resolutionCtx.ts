@@ -372,7 +372,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       externalMap,
     );
     const str = generateFunction(this, body);
-    console.log(str);
     this._itemStateStack.pop();
 
     // TODO: Actually generate WGSL from SMoL
