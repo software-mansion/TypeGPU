@@ -71,7 +71,7 @@ function SideMenu() {
           </a>
         </div>
 
-        <hr />
+        <hr className="border-tameplum-100" />
 
         <div className="grid gap-6">
           <h1 className="font-medium text-xl">Welcome to examples page</h1>
@@ -88,7 +88,7 @@ function SideMenu() {
         </div>
       </header>
 
-      <hr />
+      <hr className="border-tameplum-100" />
 
       <ExampleList excludeTags={isDev ? [] : ['experimental']} />
 
