@@ -301,13 +301,17 @@ export const frag_main = tgpu
 </TabItem>
 </Tabs>
 
+### Using typed buffers and layouts in existing WebGPU projects.
+
 ```diff lang=ts
 // main.ts
 
 import { GUI } from 'dat.gui';
 import blurWGSL from './blur.wgsl';
-import fullscreenTexturedQuadWGSL from '../../shaders/fullscreenTexturedQuad.wgsl';
+import fullscreenTexturedQuadWGSL from './fullscreenTexturedQuad.wgsl';
 import { quitIfWebGPUNotAvailable } from '../util';
++ import { Params, Flip, layout0 as computeConstantsLayout, layout1 as blurIoLayout } from './blur.js';
++ import { layout0 as quadLayout } from './fullscreenTexturedQuad.js';
 
 // Contants from the blur.wgsl shader.
 const tileDim = 128;
@@ -332,7 +336,11 @@ context.configure({
 });
 
 const blurPipeline = device.createComputePipeline({
-  layout: 'auto',
+- layout: 'auto',
++ layout: device.createPipelineLayout([
++   computeConstantsLayout.unwrap(device),
++   blurIoLayout.unwrap(device),
++ ]);
   compute: {
     module: device.createShaderModule({
       code: blurWGSL,
@@ -341,7 +349,10 @@ const blurPipeline = device.createComputePipeline({
 });
 
 const fullscreenQuadPipeline = device.createRenderPipeline({
-  layout: 'auto',
+- layout: 'auto',
++ layout: device.createPipelineLayout([
++   quadLayout.unwrap(device),
++ ]);
   vertex: {
     module: device.createShaderModule({
       code: fullscreenTexturedQuadWGSL,
@@ -400,123 +411,168 @@ const textures = [0, 1].map(() => {
 });
 
 // A buffer with 0 in it. Binding this buffer is used to set `flip` to 0
-const buffer0 = (() => {
-  const buffer = device.createBuffer({
-    size: 4,
-    mappedAtCreation: true,
-    usage: GPUBufferUsage.UNIFORM,
-  });
-  new Uint32Array(buffer.getMappedRange())[0] = 0;
-  buffer.unmap();
-  return buffer;
-})();
+- const buffer0 = (() => {
+-   const buffer = device.createBuffer({
+-     size: 4,
+-     mappedAtCreation: true,
+-     usage: GPUBufferUsage.UNIFORM,
+-   });
+-   new Uint32Array(buffer.getMappedRange())[0] = 0;
+-   buffer.unmap();
+-   return buffer;
+- })();
++ const buffer0 = tgpu
++   .createBuffer(u32, 0)
++   .$device(device);
++   .$usage(tgpu.Uniform);
 
 // A buffer with 1 in it. Binding this buffer is used to set `flip` to 1
-const buffer1 = (() => {
-  const buffer = device.createBuffer({
-    size: 4,
-    mappedAtCreation: true,
-    usage: GPUBufferUsage.UNIFORM,
-  });
-  new Uint32Array(buffer.getMappedRange())[0] = 1;
-  buffer.unmap();
-  return buffer;
-})();
+- const buffer1 = (() => {
+-   const buffer = device.createBuffer({
+-     size: 4,
+-     mappedAtCreation: true,
+-     usage: GPUBufferUsage.UNIFORM,
+-   });
+-   new Uint32Array(buffer.getMappedRange())[0] = 1;
+-   buffer.unmap();
+-   return buffer;
+- })();
++ const buffer1 = tgpu
++   .createBuffer(u32, 1)
++   .$device(device);
++   .$usage(tgpu.Uniform);
 
-const blurParamsBuffer = device.createBuffer({
-  size: 8,
-  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-});
+- const blurParamsBuffer = device.createBuffer({
+-   size: 8,
+-   usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
+- });
++ const blurParamsBuffer = tgpu
++   .createBuffer(Params)
++   .$device(device)
++   .$usage(tgpu.Uniform);
 
-const computeConstants = device.createBindGroup({
-  layout: blurPipeline.getBindGroupLayout(0),
-  entries: [
-    {
-      binding: 0,
-      resource: sampler,
-    },
-    {
-      binding: 1,
-      resource: {
-        buffer: blurParamsBuffer,
-      },
-    },
-  ],
-});
+- const computeConstants = device.createBindGroup({
+-   layout: blurPipeline.getBindGroupLayout(0),
+-   entries: [
+-     {
+-       binding: 0,
+-       resource: sampler,
+-     },
+-     {
+-       binding: 1,
+-       resource: {
+-         buffer: blurParamsBuffer,
+-       },
+-     },
+-   ],
+- });
++ const computeConstants = computeConstantsLayout
++   .populate({
++     samp: sampler,
++     params: blurParamsBuffer,
++   })
++   .$device(device);
 
-const computeBindGroup0 = device.createBindGroup({
-  layout: blurPipeline.getBindGroupLayout(1),
-  entries: [
-    {
-      binding: 1,
-      resource: imageTexture.createView(),
-    },
-    {
-      binding: 2,
-      resource: textures[0].createView(),
-    },
-    {
-      binding: 3,
-      resource: {
-        buffer: buffer0,
-      },
-    },
-  ],
-});
+- const computeBindGroup0 = device.createBindGroup({
+-   layout: blurPipeline.getBindGroupLayout(1),
+-   entries: [
+-     {
+-       binding: 1,
+-       resource: imageTexture.createView(),
+-     },
+-     {
+-       binding: 2,
+-       resource: textures[0].createView(),
+-     },
+-     {
+-       binding: 3,
+-       resource: {
+-         buffer: buffer0,
+-       },
+-     },
+-   ],
+- });
++ const computeBindGroup0 = blurIoLayout
++   .populate({
++     inputTex: imageTexture.createView(),
++     outputTex: textures[0].createView(),
++     flip: buffer0,
++   })
++   .$device(device);
 
-const computeBindGroup1 = device.createBindGroup({
-  layout: blurPipeline.getBindGroupLayout(1),
-  entries: [
-    {
-      binding: 1,
-      resource: textures[0].createView(),
-    },
-    {
-      binding: 2,
-      resource: textures[1].createView(),
-    },
-    {
-      binding: 3,
-      resource: {
-        buffer: buffer1,
-      },
-    },
-  ],
-});
+- const computeBindGroup1 = device.createBindGroup({
+-   layout: blurPipeline.getBindGroupLayout(1),
+-   entries: [
+-     {
+-       binding: 1,
+-       resource: textures[0].createView(),
+-     },
+-     {
+-       binding: 2,
+-       resource: textures[1].createView(),
+-     },
+-     {
+-       binding: 3,
+-       resource: {
+-         buffer: buffer1,
+-       },
+-     },
+-   ],
+- });
++ const computeBindGroup1 = blurIoLayout
++   .populate({
++     inputTex: textures[0].createView(),
++     outputTex: textures[1].createView(),
++     flip: buffer1,
++   })
++   .$device(device);
 
-const computeBindGroup2 = device.createBindGroup({
-  layout: blurPipeline.getBindGroupLayout(1),
-  entries: [
-    {
-      binding: 1,
-      resource: textures[1].createView(),
-    },
-    {
-      binding: 2,
-      resource: textures[0].createView(),
-    },
-    {
-      binding: 3,
-      resource: {
-        buffer: buffer0,
-      },
-    },
-  ],
-});
+- const computeBindGroup2 = device.createBindGroup({
+-   layout: blurPipeline.getBindGroupLayout(1),
+-   entries: [
+-     {
+-       binding: 1,
+-       resource: textures[1].createView(),
+-     },
+-     {
+-       binding: 2,
+-       resource: textures[0].createView(),
+-     },
+-     {
+-       binding: 3,
+-       resource: {
+-         buffer: buffer0,
+-       },
+-     },
+-   ],
+- });
++ const computeBindGroup2 = blurIoLayout
++   .populate({
++     inputTex: textures[1].createView(),
++     outputTex: textures[0].createView(),
++     flip: buffer0,
++   })
++   .$device(device);
 
-const showResultBindGroup = device.createBindGroup({
-  layout: fullscreenQuadPipeline.getBindGroupLayout(0),
-  entries: [
-    {
-      binding: 0,
-      resource: sampler,
-    },
-    {
-      binding: 1,
-      resource: textures[1].createView(),
-    },
-  ],
-});
+- const showResultBindGroup = device.createBindGroup({
+-   layout: fullscreenQuadPipeline.getBindGroupLayout(0),
+-   entries: [
+-     {
+-       binding: 0,
+-       resource: sampler,
+-     },
+-     {
+-       binding: 1,
+-       resource: textures[1].createView(),
+-     },
+-   ],
+- });
++ const showResultBindGroup = quadLayout
++   .populate({
++     mySampler: sampler,
++     myTexture: textures[1].createView(),
++   })
++   .$device(device);
 
 const settings = {
   filterSize: 15,
@@ -526,11 +582,12 @@ const settings = {
 let blockDim: number;
 const updateSettings = () => {
   blockDim = tileDim - (settings.filterSize - 1);
-  device.queue.writeBuffer(
-    blurParamsBuffer,
-    0,
-    new Uint32Array([settings.filterSize, blockDim])
-  );
+-  device.queue.writeBuffer(
+-    blurParamsBuffer,
+-    0,
+-    new Uint32Array([settings.filterSize, blockDim])
+-  );
++  tgpu.write(blurParamsBuffer, { filterDim: settings.filterSize, blockDim });
 };
 const gui = new GUI();
 gui.add(settings, 'filterSize', 1, 33).step(2).onChange(updateSettings);
@@ -543,28 +600,33 @@ function frame() {
 
   const computePass = commandEncoder.beginComputePass();
   computePass.setPipeline(blurPipeline);
-  computePass.setBindGroup(0, computeConstants);
+-  computePass.setBindGroup(0, computeConstants);
++  computePass.setBindGroup(0, computeConstants.unwrapped);
 
-  computePass.setBindGroup(1, computeBindGroup0);
+-  computePass.setBindGroup(1, computeBindGroup0);
++  computePass.setBindGroup(1, computeBindGroup0.unwrapped);
   computePass.dispatchWorkgroups(
     Math.ceil(srcWidth / blockDim),
     Math.ceil(srcHeight / batch[1])
   );
 
-  computePass.setBindGroup(1, computeBindGroup1);
+-  computePass.setBindGroup(1, computeBindGroup1);
++  computePass.setBindGroup(1, computeBindGroup1.unwrapped);
   computePass.dispatchWorkgroups(
     Math.ceil(srcHeight / blockDim),
     Math.ceil(srcWidth / batch[1])
   );
 
   for (let i = 0; i < settings.iterations - 1; ++i) {
-    computePass.setBindGroup(1, computeBindGroup2);
+-    computePass.setBindGroup(1, computeBindGroup2);
++    computePass.setBindGroup(1, computeBindGroup2.unwrapped);
     computePass.dispatchWorkgroups(
       Math.ceil(srcWidth / blockDim),
       Math.ceil(srcHeight / batch[1])
     );
 
-    computePass.setBindGroup(1, computeBindGroup1);
+-    computePass.setBindGroup(1, computeBindGroup1);
++    computePass.setBindGroup(1, computeBindGroup1.unwrapped);
     computePass.dispatchWorkgroups(
       Math.ceil(srcHeight / blockDim),
       Math.ceil(srcWidth / batch[1])
@@ -585,7 +647,8 @@ function frame() {
   });
 
   passEncoder.setPipeline(fullscreenQuadPipeline);
-  passEncoder.setBindGroup(0, showResultBindGroup);
+-  passEncoder.setBindGroup(0, showResultBindGroup);
++  passEncoder.setBindGroup(0, showResultBindGroup.unwrapped);
   passEncoder.draw(6);
   passEncoder.end();
   device.queue.submit([commandEncoder.finish()]);
