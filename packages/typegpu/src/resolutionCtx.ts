@@ -275,7 +275,7 @@ class IndentController {
       i >>= 3;
     }
 
-    return str;
+    return str + INDENT[i];
   }
 
   indent(): string {
@@ -299,7 +299,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   >();
 
   private readonly _shared: SharedResolutionState;
-  private readonly _identController = new IndentController();
+  private readonly _indentController = new IndentController();
 
   private _itemStateStack = new ItemStateStack();
 
@@ -324,15 +324,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   get pre(): string {
-    return this._identController.pre;
+    return this._indentController.pre;
   }
 
   indent(): string {
-    return this._identController.indent();
+    return this._indentController.indent();
   }
 
   dedent(): string {
-    return this._identController.dedent();
+    return this._indentController.dedent();
   }
 
   getById(id: string): Resource {
@@ -346,7 +346,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     );
   }
 
-  transpileFn(
+  fnToWgsl(
     // biome-ignore lint/suspicious/noExplicitAny: <no generic magic needed>
     fn: TgpuFn<any, AnyTgpuData>,
     externalMap: Record<string, Wgsl>,
@@ -374,12 +374,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     const str = generateFunction(this, body);
     this._itemStateStack.pop();
 
-    // TODO: Actually generate WGSL from SMoL
+    const argList = args
+      .map((arg) => `${arg.value}: ${this.resolve(arg.dataType)}`)
+      .join(', ');
+
     return {
       head:
         fn.shell.returnType !== undefined
-          ? `(${args.map((arg) => `${arg.value}: ${this.resolve(arg.dataType)}`)}) -> ${this.resolve(fn.shell.returnType)}`
-          : `(${args.map((arg) => `${arg.value}: ${this.resolve(arg.dataType)}`)})`,
+          ? `(${argList}) -> ${this.resolve(fn.shell.returnType)}`
+          : `(${argList})`,
       body: str,
     };
   }

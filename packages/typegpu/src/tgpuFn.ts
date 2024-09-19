@@ -129,7 +129,7 @@ function createFn<
       },
 
       resolve: (ctx) => {
-        const { body } = ctx.transpileFn(
+        const { body } = ctx.fnToWgsl(
           fnBase as TgpuFn<Args, Return>,
           externalMap,
         );
@@ -161,7 +161,7 @@ function createFn<
     resolve(ctx: ResolutionCtx): string {
       const ident = identifier().$name(this.label);
 
-      const { head, body } = ctx.transpileFn(
+      const { head, body } = ctx.fnToWgsl(
         this as TgpuFn<Args, Return>,
         externalMap,
       );

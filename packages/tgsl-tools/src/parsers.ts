@@ -107,21 +107,21 @@ const Transpilers: Partial<{
     const wgslOp = BINARY_OP_MAP[node.operator];
     const left = transpile(node.left);
     const right = transpile(node.right);
-    return { x2: [left, wgslOp, right] } as smol.AnyNode;
+    return { x2: [left, wgslOp, right] } as smol.BinaryExpression;
   },
 
   LogicalExpression(node) {
     const wgslOp = LOGICAL_OP_MAP[node.operator];
     const left = transpile(node.left);
     const right = transpile(node.right);
-    return { x2: [left, wgslOp, right] } as smol.AnyNode;
+    return { x2: [left, wgslOp, right] } as smol.LogicalExpression;
   },
 
   AssignmentExpression(node) {
     const wgslOp = ASSIGNMENT_OP_MAP[node.operator];
     const left = transpile(node.left);
     const right = transpile(node.right);
-    return { x2: [left, wgslOp, right] } as smol.AnyNode;
+    return { x2: [left, wgslOp, right] } as smol.AssignmentExpression;
   },
 
   MemberExpression(node) {

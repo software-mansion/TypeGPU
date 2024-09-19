@@ -222,6 +222,7 @@ ${alternate}`;
   }
 
   if ('block' in statement) {
+    // TODO: Push block scope layer onto the stack
     return generateBlock(ctx, statement);
   }
 

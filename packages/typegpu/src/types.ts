@@ -33,7 +33,7 @@ export interface ResolutionCtx {
    */
   unwrap<T>(eventual: Eventual<T>): T;
   resolve(item: Wgsl, slotValueOverrides?: SlotValuePair<unknown>[]): string;
-  transpileFn(
+  fnToWgsl(
     // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
     fn: TgpuFn<any, any>,
     externalMap: Record<string, unknown>,
