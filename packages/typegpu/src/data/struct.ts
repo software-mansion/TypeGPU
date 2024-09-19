@@ -8,7 +8,6 @@ import {
   type Parsed,
   Schema,
   type UnwrapRecord,
-  object,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import { roundUp } from '../mathUtils';
@@ -42,15 +41,12 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
   implements TgpuData<UnwrapRecord<TProps>>
 {
   private _label: string | undefined;
-  private _innerSchema: ISchema<UnwrapRecord<TProps>>;
 
   public readonly byteAlignment: number;
   public readonly size: number;
 
   constructor(private readonly _properties: TProps) {
     super();
-
-    this._innerSchema = object(_properties);
 
     this.byteAlignment = Object.values(_properties)
       .map((prop) => prop.byteAlignment)
@@ -70,12 +66,26 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
 
   write(output: ISerialOutput, value: Parsed<UnwrapRecord<TProps>>): void {
     alignIO(output, this.byteAlignment);
-    this._innerSchema.write(output, value);
+    type Property = keyof Parsed<UnwrapRecord<TProps>>;
+
+    for (const [key, property] of exactEntries(this._properties)) {
+      alignIO(output, property.byteAlignment);
+      property.write(output, value[key as Property]);
+    }
   }
 
   read(input: ISerialInput): Parsed<UnwrapRecord<TProps>> {
     alignIO(input, this.byteAlignment);
-    return this._innerSchema.read(input);
+    type Property = keyof Parsed<UnwrapRecord<TProps>>;
+    const result = {} as Parsed<UnwrapRecord<TProps>>;
+
+    for (const [key, property] of exactEntries(this._properties)) {
+      alignIO(input, property.byteAlignment);
+      result[key as Property] = property.read(input) as Parsed<
+        UnwrapRecord<TProps>
+      >[Property];
+    }
+    return result;
   }
 
   measure(
@@ -83,7 +93,15 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
     alignIO(measurer, this.byteAlignment);
-    this._innerSchema.measure(value, measurer);
+    type Property = keyof Parsed<UnwrapRecord<TProps>>;
+
+    for (const [key, property] of exactEntries(this._properties)) {
+      alignIO(measurer, property.byteAlignment);
+      property.measure(
+        value === MaxValue ? MaxValue : value[key as Property],
+        measurer,
+      );
+    }
     return measurer;
   }
 
@@ -107,4 +125,10 @@ function getAttribute(field: AnyTgpuData): string | undefined {
   if (field instanceof TgpuSizedImpl) {
     return `@size(${field.size}) `;
   }
+}
+
+export function exactEntries<T extends Record<keyof T, T[keyof T]>>(
+  record: T,
+): [keyof T, T[keyof T]][] {
+  return Object.entries(record) as [keyof T, T[keyof T]][];
 }

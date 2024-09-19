@@ -1,7 +1,6 @@
 import * as TB from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import type { TgpuData } from '../types';
-import alignIO from './alignIO';
 import { SimpleTgpuData } from './std140';
 
 const primitiveNumeric = (
@@ -17,12 +16,10 @@ const primitiveNumeric = (
     expressionCode: code,
 
     write(output: TB.ISerialOutput, value: number): void {
-      alignIO(output, 4);
       schema.write(output, value);
     },
 
     read(input: TB.ISerialInput): number {
-      alignIO(input, 4);
       return schema.read(input);
     },
 
@@ -30,7 +27,6 @@ const primitiveNumeric = (
       value: number | TB.MaxValue,
       measurer: TB.IMeasurer = new TB.Measurer(),
     ): TB.IMeasurer {
-      alignIO(measurer, 4);
       schema.measure(value, measurer);
       return measurer;
     },
