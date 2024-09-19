@@ -6,6 +6,14 @@ import type { TgpuPlum } from './tgpuPlumTypes';
 
 export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
 
+export const UnknownData = Symbol('Unknown data type');
+export type UnknownData = typeof UnknownData;
+
+export type Resource = {
+  value: Wgsl;
+  dataType: AnyTgpuData | UnknownData;
+};
+
 /**
  * Passed into each resolvable item. All sibling items share a resolution ctx,
  * and a new resolution ctx is made when going down each level in the tree.
@@ -25,10 +33,10 @@ export interface ResolutionCtx {
    */
   unwrap<T>(eventual: Eventual<T>): T;
   resolve(item: Wgsl, slotValueOverrides?: SlotValuePair<unknown>[]): string;
-  transpileFn(
+  fnToWgsl(
     // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
     fn: TgpuFn<any, any>,
-    externalMap: Record<string, Wgsl>,
+    externalMap: Record<string, unknown>,
   ): {
     head: Wgsl;
     body: Wgsl;

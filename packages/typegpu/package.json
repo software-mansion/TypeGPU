@@ -38,6 +38,12 @@
       "module": "./dist/experimental/index.js",
       "import": "./dist/experimental/index.js",
       "default": "./dist/experimental/index.cjs"
+    },
+    "./smol": {
+      "types": "./dist/smol/index.d.ts",
+      "module": "./dist/smol/index.js",
+      "import": "./dist/smol/index.js",
+      "default": "./dist/smol/index.cjs"
     }
   },
   "sideEffects": false,
