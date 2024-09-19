@@ -601,17 +601,17 @@ function frame() {
   const computePass = commandEncoder.beginComputePass();
   computePass.setPipeline(blurPipeline);
 -  computePass.setBindGroup(0, computeConstants);
-+  computePass.setBindGroup(0, computeConstants.unwrapped);
++  computePass.setBindGroup(0, computeConstants.unwrap());
 
 -  computePass.setBindGroup(1, computeBindGroup0);
-+  computePass.setBindGroup(1, computeBindGroup0.unwrapped);
++  computePass.setBindGroup(1, computeBindGroup0.unwrap());
   computePass.dispatchWorkgroups(
     Math.ceil(srcWidth / blockDim),
     Math.ceil(srcHeight / batch[1])
   );
 
 -  computePass.setBindGroup(1, computeBindGroup1);
-+  computePass.setBindGroup(1, computeBindGroup1.unwrapped);
++  computePass.setBindGroup(1, computeBindGroup1.unwrap());
   computePass.dispatchWorkgroups(
     Math.ceil(srcHeight / blockDim),
     Math.ceil(srcWidth / batch[1])
@@ -619,14 +619,14 @@ function frame() {
 
   for (let i = 0; i < settings.iterations - 1; ++i) {
 -    computePass.setBindGroup(1, computeBindGroup2);
-+    computePass.setBindGroup(1, computeBindGroup2.unwrapped);
++    computePass.setBindGroup(1, computeBindGroup2.unwrap());
     computePass.dispatchWorkgroups(
       Math.ceil(srcWidth / blockDim),
       Math.ceil(srcHeight / batch[1])
     );
 
 -    computePass.setBindGroup(1, computeBindGroup1);
-+    computePass.setBindGroup(1, computeBindGroup1.unwrapped);
++    computePass.setBindGroup(1, computeBindGroup1.unwrap());
     computePass.dispatchWorkgroups(
       Math.ceil(srcHeight / blockDim),
       Math.ceil(srcWidth / batch[1])
@@ -648,7 +648,7 @@ function frame() {
 
   passEncoder.setPipeline(fullscreenQuadPipeline);
 -  passEncoder.setBindGroup(0, showResultBindGroup);
-+  passEncoder.setBindGroup(0, showResultBindGroup.unwrapped);
++  passEncoder.setBindGroup(0, showResultBindGroup.unwrap());
   passEncoder.draw(6);
   passEncoder.end();
   device.queue.submit([commandEncoder.finish()]);
