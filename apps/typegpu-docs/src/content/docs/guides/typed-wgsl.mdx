@@ -113,6 +113,8 @@ export const layout0 = tgpu.bindGroupLayout({
   samp: { type: 'sampler' },
   params: { type: 'uniform', data: Params },
 });
+// Both `samp` and `params` can be used in code, as if they were already bound to
+// some buffer, but they act more like slots.
 const { samp, params } = layout0.bound;
 
 export const layout1 = tgpu.bindGroupLayout({
