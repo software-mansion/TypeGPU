@@ -9,7 +9,6 @@ import {
 import { RecursiveDataTypeError } from '../errors';
 import { roundUp } from '../mathUtils';
 import type { TgpuData } from '../types';
-import alignIO from './alignIO';
 import { vec2f, vec3f, vec4f, type vecBase } from './vector';
 
 // --------------
@@ -68,7 +67,6 @@ function createMatSchema<
     },
 
     measure(_value: MaxValue, measurer: IMeasurer = new Measurer()): IMeasurer {
-      alignIO(measurer, this.byteAlignment);
       return measurer.add(this.size);
     },
 
