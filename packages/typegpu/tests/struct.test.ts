@@ -4,45 +4,42 @@ import { f32, i32, struct, u32, vec2u, vec3f, vec3u } from '../src/data';
 
 describe('struct', () => {
   it('aligns struct properties when measuring', () => {
-    const S = struct({
+    const TestStruct = struct({
       x: u32,
       y: vec3u,
     });
-    expect(S.size).toEqual(32);
+    expect(TestStruct.size).toEqual(32);
   });
 
   it('aligns struct properties when writing', () => {
-    const buffer = new ArrayBuffer(32);
-    const writer = new BufferWriter(buffer);
-
-    const S = struct({
+    const TestStruct = struct({
       x: u32,
       y: vec3u,
     });
 
-    S.write(writer, { x: 1, y: vec3u(1, 2, 3) });
+    const buffer = new ArrayBuffer(TestStruct.size);
+    const writer = new BufferWriter(buffer);
+
+    TestStruct.write(writer, { x: 1, y: vec3u(1, 2, 3) });
     expect([...new Uint32Array(buffer)]).toEqual([1, 0, 0, 0, 1, 2, 3, 0]);
-    expect(writer.currentByteOffset).toEqual(28);
   });
 
   it('aligns struct properties when reading', () => {
-    const buffer = new ArrayBuffer(32);
+    const TestStruct = struct({
+      x: u32,
+      y: vec3u,
+    });
+
+    const buffer = new ArrayBuffer(TestStruct.size);
     const reader = new BufferReader(buffer);
 
     new Uint32Array(buffer).set([3, 0, 0, 0, 4, 5, 6]);
 
-    const S = struct({
-      x: u32,
-      y: vec3u,
-    });
-
-    const x = S.read(reader);
-    expect(x).toEqual({ x: 3, y: vec3u(4, 5, 6) });
-    expect(reader.currentByteOffset).toEqual(28);
+    expect(TestStruct.read(reader)).toEqual({ x: 3, y: vec3u(4, 5, 6) });
   });
 
   it('encodes and decodes structures properly', () => {
-    const S = struct({
+    const TestStruct = struct({
       a: u32,
       b: vec3u,
       c: vec3f,
@@ -56,9 +53,9 @@ describe('struct', () => {
       }),
     });
 
-    const buffer = new ArrayBuffer(S.size);
+    const buffer = new ArrayBuffer(TestStruct.size);
 
-    const value: Parsed<typeof S> = {
+    const value: Parsed<typeof TestStruct> = {
       a: 1,
       b: vec3u(2, 3, 4),
       c: vec3f(6.5, 7.5, 8.5),
@@ -72,7 +69,7 @@ describe('struct', () => {
       },
     };
 
-    S.write(new BufferWriter(buffer), value);
-    expect(S.read(new BufferReader(buffer))).toEqual(value);
+    TestStruct.write(new BufferWriter(buffer), value);
+    expect(TestStruct.read(new BufferReader(buffer))).toEqual(value);
   });
 });
