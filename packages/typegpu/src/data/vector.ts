@@ -13,7 +13,6 @@ import {
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import type { TgpuData } from '../types';
-import alignIO from './alignIO';
 
 // --------------
 // Implementation
@@ -49,14 +48,12 @@ function makeVecSchema<ValueType extends vecBase>(
     },
 
     write(output: ISerialOutput, value: Parsed<ValueType>): void {
-      alignIO(output, this.byteAlignment);
       for (const element of value) {
         options.unitType.write(output, element);
       }
     },
 
     read(input: ISerialInput): Parsed<ValueType> {
-      alignIO(input, this.byteAlignment);
       return options.make(
         ...Array.from({ length: options.length }).map((_) =>
           options.unitType.read(input),
@@ -68,7 +65,6 @@ function makeVecSchema<ValueType extends vecBase>(
       _value: Parsed<ValueType> | MaxValue,
       measurer: IMeasurer = new Measurer(),
     ): IMeasurer {
-      alignIO(measurer, this.byteAlignment);
       return measurer.add(this.size);
     },
 
