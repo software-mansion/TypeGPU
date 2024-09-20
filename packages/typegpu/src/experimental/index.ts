@@ -2,7 +2,9 @@
  * @module typegpu/experimental
  */
 
-import { Storage, Uniform, Vertex, createBuffer } from '../tgpuBuffer';
+import { createRuntime as init } from '../createRuntime';
+import { createBuffer } from '../legacy-buffer-api';
+import { Storage, Uniform, Vertex } from '../tgpuBuffer';
 import { read, write } from '../tgpuBufferUtils';
 import { fn, procedure } from '../tgpuFn';
 
@@ -11,11 +13,13 @@ export const tgpu = {
   Storage,
   Vertex,
 
+  init,
   createBuffer,
+  procedure,
+  fn,
+
   read,
   write,
-  fn,
-  procedure,
 };
 export default tgpu;
 
@@ -37,10 +41,7 @@ export {
 } from '../tgpuBuffer';
 export { asUniform, asReadonly, asMutable, asVertex } from '../tgpuBufferUsage';
 
-export type {
-  TgpuBuffer,
-  Unmanaged,
-} from '../tgpuBuffer';
+export type { TgpuBuffer } from '../tgpuBuffer';
 export type {
   TgpuBufferUsage,
   TgpuBufferUniform,

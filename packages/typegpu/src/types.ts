@@ -1,5 +1,6 @@
 import type { ISchema, Parsed, Unwrap } from 'typed-binary';
 import type { TgpuNamable } from './namable';
+import type { TgpuBuffer } from './tgpuBuffer';
 import type { TgpuBufferUsage } from './tgpuBufferUsage';
 import type { TgpuFn } from './tgpuFn';
 import type { TgpuPlum } from './tgpuPlumTypes';
@@ -114,7 +115,7 @@ export interface TgpuBindable<
   TData extends AnyTgpuData = AnyTgpuData,
   TUsage extends BufferUsage = BufferUsage,
 > extends TgpuResolvable {
-  readonly allocatable: TgpuAllocatable<TData>;
+  readonly allocatable: TgpuBuffer<TData>;
   readonly usage: TUsage;
 }
 

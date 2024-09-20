@@ -16,12 +16,7 @@ import {
 // --
 
 import { struct, u32, vec2f } from 'typegpu/data';
-import tgpu, {
-  asUniform,
-  builtin,
-  createRuntime,
-  wgsl,
-} from 'typegpu/experimental';
+import tgpu, { asUniform, builtin, wgsl } from 'typegpu/experimental';
 
 const xSpanPlum = addSliderPlumParameter('x span', 16, {
   min: 1,
@@ -34,24 +29,25 @@ const ySpanPlum = addSliderPlumParameter('y span', 16, {
   step: 1,
 });
 
+const root = await tgpu.init();
+
 const spanPlum = wgsl.plum((get) => ({ x: get(xSpanPlum), y: get(ySpanPlum) }));
-const spanBuffer = tgpu
+const spanBuffer = root
   .createBuffer(struct({ x: u32, y: u32 }), spanPlum)
   .$name('span')
   .$usage(tgpu.Uniform);
 
-const runtime = await createRuntime();
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 context.configure({
-  device: runtime.device,
+  device: root.device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
 
-const renderPipeline = runtime.makeRenderPipeline({
+const renderPipeline = root.makeRenderPipeline({
   vertex: {
     code: wgsl`
       var pos = array<vec2f, 4>(
@@ -112,9 +108,9 @@ onFrame(() => {
     vertexCount: 4,
   });
 
-  runtime.flush();
+  root.flush();
 });
 
 onCleanup(() => {
-  runtime.dispose();
+  root.destroy();
 });

@@ -34,7 +34,6 @@ import tgpu, {
   asReadonly,
   asUniform,
   builtin,
-  createRuntime,
   wgsl,
   std,
 } from 'typegpu/experimental';
@@ -43,10 +42,10 @@ const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const runtime = await createRuntime({ jitTranspiler: new JitTranspiler() });
+const root = await tgpu.init({ jitTranspiler: new JitTranspiler() });
 
 context.configure({
-  device: runtime.device,
+  device: root.device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
@@ -94,24 +93,24 @@ const BoxObstacle = struct({
 });
 
 const gridSize = 256;
-const gridSizeBuffer = tgpu.createBuffer(i32).$usage(tgpu.Uniform);
+const gridSizeBuffer = root.createBuffer(i32).$usage(tgpu.Uniform);
 const gridSizeUniform = asUniform(gridSizeBuffer);
 
-const gridAlphaBuffer = tgpu.createBuffer(GridData).$usage(tgpu.Storage);
-const gridBetaBuffer = tgpu.createBuffer(GridData).$usage(tgpu.Storage);
+const gridAlphaBuffer = root.createBuffer(GridData).$usage(tgpu.Storage);
+const gridBetaBuffer = root.createBuffer(GridData).$usage(tgpu.Storage);
 
 const inputGridSlot = wgsl.slot<TgpuBufferUsage<GridData>>();
 const outputGridSlot = wgsl.slot<TgpuBufferUsage<GridData, 'mutable'>>();
 
 const MAX_OBSTACLES = 4;
 
-const prevObstaclesBuffer = tgpu
+const prevObstaclesBuffer = root
   .createBuffer(arrayOf(BoxObstacle, MAX_OBSTACLES))
   .$usage(tgpu.Storage);
 
 const prevObstacleReadonly = asReadonly(prevObstaclesBuffer);
 
-const obstaclesBuffer = tgpu
+const obstaclesBuffer = root
   .createBuffer(arrayOf(BoxObstacle, MAX_OBSTACLES))
   .$usage(tgpu.Storage);
 
@@ -193,7 +192,7 @@ const flowFromCell = wgsl.fn`
   }
 `.$name('flow_from_cell');
 
-const timeBuffer = tgpu.createBuffer(f32).$usage(tgpu.Uniform);
+const timeBuffer = root.createBuffer(f32).$usage(tgpu.Uniform);
 
 const isInsideObstacle = wgsl.fn`
   (x: i32, y: i32) -> bool {
@@ -415,7 +414,7 @@ const sourceRadiusPlum = addSliderPlumParameter('source radius', 0.01, {
   step: 0.01,
 });
 
-const sourceParamsBuffer = tgpu
+const sourceParamsBuffer = root
   .createBuffer(
     struct({
       center: vec2f,
@@ -560,17 +559,17 @@ const leftWallXPlum = addSliderPlumParameter('left wall: x', 0, {
   step: 0.01,
 });
 
-runtime.onPlumChange(limitedBoxXPlum, (newVal) => {
+root.onPlumChange(limitedBoxXPlum, (newVal) => {
   obstacles[OBSTACLE_BOX].x = newVal;
   primary.applyMovedObstacles(obstaclesToConcrete());
 });
 
-runtime.onPlumChange(boxYPlum, (newVal) => {
+root.onPlumChange(boxYPlum, (newVal) => {
   obstacles[OBSTACLE_BOX].y = newVal;
   primary.applyMovedObstacles(obstaclesToConcrete());
 });
 
-runtime.onPlumChange(leftWallXPlum, (newVal) => {
+root.onPlumChange(leftWallXPlum, (newVal) => {
   obstacles[OBSTACLE_LEFT_WALL].x = newVal;
   primary.applyMovedObstacles(obstaclesToConcrete());
 });
@@ -583,7 +582,7 @@ function makePipelines(
     .with(inputGridSlot, outputGridMutable)
     .with(outputGridSlot, outputGridMutable);
 
-  const initWorldPipeline = runtime.makeComputePipeline({
+  const initWorldPipeline = root.makeComputePipeline({
     code: wgsl`
       ${initWorldFn}(i32(${builtin.globalInvocationId}.x), i32(${builtin.globalInvocationId}.y));
     `,
@@ -594,7 +593,7 @@ function makePipelines(
     .with(outputGridSlot, outputGridMutable);
 
   const computeWorkgroupSize = 8;
-  const computePipeline = runtime.makeComputePipeline({
+  const computePipeline = root.makeComputePipeline({
     workgroupSize: [computeWorkgroupSize, computeWorkgroupSize],
     code: wgsl`
       ${mainComputeWithIO}(i32(${builtin.globalInvocationId}.x), i32(${builtin.globalInvocationId}.y));
@@ -605,7 +604,7 @@ function makePipelines(
     .with(inputGridSlot, outputGridMutable)
     .with(outputGridSlot, outputGridMutable);
 
-  const moveObstaclesPipeline = runtime.makeComputePipeline({
+  const moveObstaclesPipeline = root.makeComputePipeline({
     code: wgsl`
       ${moveObstaclesFn}();
     `,
@@ -616,7 +615,7 @@ function makePipelines(
     inputGridReadonly,
   );
 
-  const renderPipeline = runtime.makeRenderPipeline({
+  const renderPipeline = root.makeRenderPipeline({
     vertex: {
       code: wgsl`
         var pos = array<vec2f, 4>(
@@ -663,16 +662,16 @@ function makePipelines(
   return {
     init() {
       initWorldPipeline.execute({ workgroups: [gridSize, gridSize] });
-      runtime.flush();
+      root.flush();
     },
 
     applyMovedObstacles(bufferData: Parsed<BoxObstacle>[]) {
-      runtime.writeBuffer(obstaclesBuffer, bufferData);
+      obstaclesBuffer.write(bufferData);
       moveObstaclesPipeline.execute();
-      runtime.flush();
+      root.flush();
 
-      runtime.writeBuffer(prevObstaclesBuffer, bufferData);
-      runtime.flush();
+      prevObstaclesBuffer.write(bufferData);
+      root.flush();
     },
 
     compute() {
@@ -719,9 +718,9 @@ const odd = makePipelines(
 
 let primary = even;
 
-runtime.writeBuffer(gridSizeBuffer, gridSize);
-runtime.writeBuffer(obstaclesBuffer, obstaclesToConcrete());
-runtime.writeBuffer(prevObstaclesBuffer, obstaclesToConcrete());
+gridSizeBuffer.write(gridSize);
+obstaclesBuffer.write(obstaclesToConcrete());
+prevObstaclesBuffer.write(obstaclesToConcrete());
 primary.init();
 
 let msSinceLastTick = 0;
@@ -729,11 +728,11 @@ const timestep = 15;
 const stepsPerTick = 64;
 
 function tick() {
-  runtime.writeBuffer(timeBuffer, Date.now() % 1000);
+  timeBuffer.write(Date.now() % 1000);
 
   primary = primary === even ? odd : even;
   primary.compute();
-  runtime.flush();
+  root.flush();
 }
 
 onFrame((deltaTime) => {
@@ -744,11 +743,11 @@ onFrame((deltaTime) => {
       tick();
     }
     primary.render();
-    runtime.flush();
+    root.flush();
     msSinceLastTick -= timestep;
   }
 });
 
 onCleanup(() => {
-  runtime.dispose();
+  root.destroy();
 });

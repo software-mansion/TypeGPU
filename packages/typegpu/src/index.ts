@@ -2,14 +2,17 @@
  * @module typegpu
  */
 
-import { Storage, Uniform, Vertex, createBuffer } from './tgpuBuffer';
+import { createBuffer } from './legacy-buffer-api';
+import { Storage, Uniform, Vertex } from './tgpuBuffer';
 import { read, write } from './tgpuBufferUtils';
 
 export const tgpu = {
   Uniform,
   Storage,
   Vertex,
+
   createBuffer,
+
   read,
   write,
 };
@@ -27,7 +30,4 @@ export {
   isUsableAsVertex,
 } from './tgpuBuffer';
 
-export type {
-  TgpuBuffer,
-  Unmanaged,
-} from './tgpuBuffer';
+export type { TgpuBuffer } from './tgpuBuffer';
