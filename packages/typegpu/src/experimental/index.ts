@@ -3,7 +3,7 @@
  */
 
 import { createRuntime as init } from '../createRuntime';
-import { createBuffer } from '../legacy-buffer-api';
+import { createBuffer } from '../legacyBufferApi';
 import { Storage, Uniform, Vertex } from '../tgpuBuffer';
 import { read, write } from '../tgpuBufferUtils';
 import { fn, procedure } from '../tgpuFn';

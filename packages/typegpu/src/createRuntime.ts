@@ -62,9 +62,13 @@ class TgpuRuntimeImpl implements TgpuRuntime {
     typeSchema: TData,
     initialOrBuffer?: Parsed<TData> | TgpuPlum<Parsed<TData>> | GPUBuffer,
   ): TgpuBuffer<TData> {
-    return createBufferImpl(this, typeSchema, initialOrBuffer).$device(
+    const buffer = createBufferImpl(this, typeSchema, initialOrBuffer).$device(
       this.device,
     );
+
+    this._buffers.push(buffer);
+
+    return buffer;
   }
 
   destroy() {
