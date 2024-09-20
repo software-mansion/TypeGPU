@@ -1,4 +1,9 @@
-import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
+import {
+  BufferReader,
+  BufferWriter,
+  MaxValue,
+  type Parsed,
+} from 'typed-binary';
 import { describe, expect, it } from 'vitest';
 import { f32, i32, struct, u32, vec2u, vec3f, vec3u } from '../src/data';
 
@@ -9,6 +14,7 @@ describe('struct', () => {
       y: vec3u,
     });
     expect(TestStruct.size).toEqual(32);
+    expect(TestStruct.measure(MaxValue).size).toEqual(32);
   });
 
   it('aligns struct properties when writing', () => {

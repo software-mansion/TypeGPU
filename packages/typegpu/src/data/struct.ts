@@ -10,7 +10,6 @@ import {
   type UnwrapRecord,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import { roundUp } from '../mathUtils';
 import type { TgpuNamable } from '../namable';
 import { code } from '../tgpuCode';
 import { identifier } from '../tgpuIdentifier';
@@ -52,7 +51,7 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
       .map((prop) => prop.byteAlignment)
       .reduce((a, b) => (a > b ? a : b));
 
-    this.size = roundUp(this.measure(MaxValue).size, this.byteAlignment);
+    this.size = this.measure(MaxValue).size;
   }
 
   $name(label: string) {
@@ -102,6 +101,8 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
         measurer,
       );
     }
+
+    alignIO(measurer, this.byteAlignment);
     return measurer;
   }
 
