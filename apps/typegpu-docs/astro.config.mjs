@@ -64,10 +64,6 @@ export default defineConfig({
               label: 'Defining Data Types',
               slug: 'guides/defining-data-types',
             },
-            {
-              label: 'Typed WGSL',
-              slug: 'guides/typed-wgsl',
-            },
             // {
             //   label: 'Basic Principles',
             //   slug: 'guides/basic-principles',
