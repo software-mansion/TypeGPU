@@ -2,6 +2,7 @@
  * @module typegpu/experimental
  */
 
+import { bindGroupLayout } from '../tgpuBindGroupLayout';
 import { Storage, Uniform, Vertex, createBuffer } from '../tgpuBuffer';
 import { read, write } from '../tgpuBufferUtils';
 import { fn, procedure } from '../tgpuFn';
@@ -11,11 +12,13 @@ export const tgpu = {
   Storage,
   Vertex,
 
+  fn,
+  procedure,
+  bindGroupLayout,
+
   createBuffer,
   read,
   write,
-  fn,
-  procedure,
 };
 export default tgpu;
 
