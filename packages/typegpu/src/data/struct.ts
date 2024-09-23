@@ -43,6 +43,7 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
 
   public readonly byteAlignment: number;
   public readonly size: number;
+  isLoose = false as const;
 
   constructor(private readonly _properties: TProps) {
     super();

@@ -45,6 +45,8 @@ export class SimpleTgpuData<TSchema extends AnySchema>
     this.expressionCode = code;
     this.size = this.measure(MaxValue).size;
   }
+  isLoose = false as const;
+  label?: string | undefined;
 
   resolveReferences(): void {
     throw new RecursiveDataTypeError();

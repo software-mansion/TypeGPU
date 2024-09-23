@@ -38,6 +38,7 @@ function createMatSchema<
   const MatSchema: TgpuData<ValueType> = {
     // Type-token, not available at runtime.
     __unwrapped: undefined as unknown as ValueType,
+    isLoose: false as const,
 
     label: options.label,
     byteAlignment: options.columnType.byteAlignment,

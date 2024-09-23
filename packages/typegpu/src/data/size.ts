@@ -25,6 +25,7 @@ export class TgpuSizedImpl<TSize extends number, TData extends AnyTgpuData>
   implements TgpuSized<TSize, TData>
 {
   public readonly byteAlignment: number;
+  isLoose = false as const;
 
   constructor(
     private data: AnyTgpuData,

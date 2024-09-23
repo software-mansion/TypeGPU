@@ -27,6 +27,7 @@ class AtomicImpl<TSchema extends U32 | I32>
 {
   public readonly size: number;
   public readonly byteAlignment: number;
+  isLoose = false as const;
 
   constructor(private readonly innerData: TSchema) {
     super();
