@@ -60,10 +60,7 @@ function generateStruct(struct, toTs) {
  */
 function hasVarLengthMember(struct) {
   const member = struct.members[struct.members.length - 1].type;
-  return (
-    (member instanceof StructInfo && hasVarLengthMember(member)) ||
-    (member instanceof ArrayInfo && member.size === 0)
-  );
+  return member instanceof ArrayInfo && member.size === 0;
 }
 
 /**
