@@ -82,12 +82,16 @@ function generateStructMember(member) {
  * @param { import('wgsl_reflect').TypeInfo } type
  */
 function generateType(type) {
-  if (!(type instanceof ArrayInfo) && type.size === 0) {
+  if (type instanceof ArrayInfo) {
+    return `d.arrayOf(${generateType(type.format)}, ${type.count > 0 ? type.count : LENGTH_VAR})`;
+  }
+
+  if (type.size === 0) {
     throw new Error(`Invalid data type with size 0: ${type.name}`);
   }
 
-  if (type instanceof ArrayInfo) {
-    return `d.arrayOf(${generateType(type.format)}, ${type.count > 0 ? type.count : LENGTH_VAR})`;
+  if (type instanceof TemplateInfo && type.name === 'atomic' && type.format) {
+    return `d.atomic(${generateType(type.format)})`;
   }
 
   const tgpuType = `${type instanceof StructInfo ? '' : 'd.'}${replaceWithAlias(type)}`;
