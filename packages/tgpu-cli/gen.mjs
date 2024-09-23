@@ -11,41 +11,46 @@ const LENGTH_VAR = 'arrayLength';
  * @param { string } input
  * @param { string } output
  */
-async function generate(input, output) {
+async function main(input, output) {
   const inputPath = new URL(input, cwd);
   const outputPath = new URL(output, cwd);
-  const isTs = output.endsWith('.ts');
-
+  const toTs = output.endsWith('.ts');
   const inputContents = await fs.readFile(inputPath, 'utf8');
-  const reflect = new WgslReflect(inputContents);
 
-  const resultTs = `/* generated via tgpu-cli by TypeGPU */
+  await fs.writeFile(outputPath, generate(inputContents, toTs));
+}
+
+/**
+ * @param { string } wgsl
+ * @param { boolean } toTs
+ */
+export function generate(wgsl, toTs = true) {
+  const reflect = new WgslReflect(wgsl);
+  return `/* generated via tgpu-cli by TypeGPU */
 
 import * as d from 'typegpu/data';
 
-${generateStructs(reflect.structs, isTs)}
+${generateStructs(reflect.structs, toTs)}
 ${generateAliases(reflect.aliases)}
 `;
-
-  await fs.writeFile(outputPath, resultTs);
 }
 
 /**
  * @param { import('wgsl_reflect').StructInfo[] } structs
- * @param { boolean } isTs
+ * @param { boolean } toTs
  */
-function generateStructs(structs, isTs) {
+function generateStructs(structs, toTs) {
   return `/* structs */
-${structs.map((struct) => generateStruct(struct, isTs)).join('\n\n')}  
+${structs.map((struct) => generateStruct(struct, toTs)).join('\n\n')}  
 `;
 }
 
 /**
  * @param { import('wgsl_reflect').StructInfo } struct
- * @param { boolean } isTs
+ * @param { boolean } toTs
  */
-function generateStruct(struct, isTs) {
-  return `const ${struct.name} =${hasVarLengthMember(struct) ? ` (${LENGTH_VAR}${isTs ? ': number' : ''}) =>` : ''} d.struct({
+function generateStruct(struct, toTs) {
+  return `const ${struct.name} =${hasVarLengthMember(struct) ? ` (${LENGTH_VAR}${toTs ? ': number' : ''}) =>` : ''} d.struct({
   ${struct.members.map((member) => generateStructMember(member)).join('\n  ')}
 });`;
 }
@@ -129,4 +134,4 @@ function replaceWithAlias(type) {
     : type.name;
 }
 
-export default generate;
+export default main;

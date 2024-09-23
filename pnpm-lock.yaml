@@ -181,6 +181,10 @@ importers:
       wgsl_reflect:
         specifier: ^1.0.12
         version: 1.0.12
+    devDependencies:
+      vitest:
+        specifier: 0.33.0
+        version: 0.33.0(@vitest/ui@0.33.0)(jsdom@24.0.0)
 
   packages/tgpu-dev-cli:
     dependencies:
