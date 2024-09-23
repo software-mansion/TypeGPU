@@ -2,7 +2,7 @@ import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import type { TgpuNamable } from './namable';
 import { type TgpuPlum, type Unsubscribe, isPlum } from './tgpuPlumTypes';
 import type { TgpuRuntime } from './tgpuRuntime';
-import { type AnyTgpuData, type TgpuAllocatable, isGPUBuffer } from './types';
+import { type AnyTgpuData, isGPUBuffer } from './types';
 
 // ----------
 // Public API
@@ -30,14 +30,15 @@ type UnionToIntersection<U> =
     ? I
     : never;
 
-export interface TgpuBuffer<TData extends AnyTgpuData>
-  extends TgpuAllocatable<TData>,
-    TgpuNamable {
+export interface TgpuBuffer<TData extends AnyTgpuData> extends TgpuNamable {
   readonly resourceType: 'buffer';
-  readonly destroyed: boolean;
+  readonly dataType: TData;
+  readonly initial?: Parsed<TData> | TgpuPlum<Parsed<TData>> | undefined;
   readonly label: string | undefined;
+
   readonly buffer: GPUBuffer;
   readonly device: GPUDevice;
+  readonly destroyed: boolean;
 
   $usage<T extends (Uniform | Storage | Vertex)[]>(
     ...usages: T

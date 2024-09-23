@@ -1,9 +1,8 @@
-import type { ISchema, Parsed, Unwrap } from 'typed-binary';
+import type { ISchema, Unwrap } from 'typed-binary';
 import type { TgpuNamable } from './namable';
 import type { TgpuBuffer } from './tgpuBuffer';
 import type { TgpuBufferUsage } from './tgpuBufferUsage';
 import type { TgpuFn } from './tgpuFn';
-import type { TgpuPlum } from './tgpuPlumTypes';
 
 export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
 
@@ -90,26 +89,6 @@ export interface TgpuResolvableSlot<T extends Wgsl>
     TgpuSlot<T> {}
 
 export type SlotValuePair<T> = [TgpuSlot<T>, T];
-
-export interface TgpuAllocatable<TData extends AnyTgpuData = AnyTgpuData> {
-  /**
-   * The data type this allocatable was constructed with.
-   * It informs the size and format of data in both JS and
-   * binary.
-   */
-  readonly dataType: TData;
-  readonly initial?: Parsed<TData> | TgpuPlum<Parsed<TData>> | undefined;
-  readonly flags: GPUBufferUsageFlags;
-}
-
-export function isAllocatable(value: unknown): value is TgpuAllocatable {
-  return (
-    !!value &&
-    typeof value === 'object' &&
-    'dataType' in value &&
-    'flags' in value
-  );
-}
 
 export interface TgpuBindable<
   TData extends AnyTgpuData = AnyTgpuData,
