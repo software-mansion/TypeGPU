@@ -6,7 +6,11 @@ console.log(`-= ${EXPERIMENTAL ? 'EXPERIMENTAL' : 'PRODUCTION'} MODE =-\n\n`);
 
 const entry = ['src/index.ts', 'src/data/index.ts'];
 if (EXPERIMENTAL) {
-  entry.push('src/experimental/index.ts', 'src/macro/index.ts');
+  entry.push(
+    'src/experimental/index.ts',
+    'src/macro/index.ts',
+    'src/smol/index.ts',
+  );
 }
 
 export default defineConfig({

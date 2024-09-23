@@ -15,7 +15,6 @@ import {
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import type { ResolutionCtx, TgpuData } from '../types';
-import alignIO from './alignIO';
 
 export class SimpleTgpuData<TSchema extends AnySchema>
   extends Schema<Unwrap<TSchema>>
@@ -52,12 +51,10 @@ export class SimpleTgpuData<TSchema extends AnySchema>
   }
 
   write(output: ISerialOutput, value: ParseUnwrapped<TSchema>): void {
-    alignIO(output, this.byteAlignment);
     this._innerSchema.write(output, value);
   }
 
   read(input: ISerialInput): ParseUnwrapped<TSchema> {
-    alignIO(input, this.byteAlignment);
     return this._innerSchema.read(input) as ParseUnwrapped<TSchema>;
   }
 
@@ -65,8 +62,6 @@ export class SimpleTgpuData<TSchema extends AnySchema>
     value: ParseUnwrapped<TSchema> | MaxValue,
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
-    alignIO(measurer, this.byteAlignment);
-
     this._innerSchema.measure(value, measurer);
 
     return measurer;

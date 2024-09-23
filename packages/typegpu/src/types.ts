@@ -1,10 +1,18 @@
-import type { ISchema, Parsed, Unwrap } from 'typed-binary';
+import type { ISchema, Unwrap } from 'typed-binary';
 import type { TgpuNamable } from './namable';
+import type { TgpuBuffer } from './tgpuBuffer';
 import type { TgpuBufferUsage } from './tgpuBufferUsage';
 import type { TgpuFn } from './tgpuFn';
-import type { TgpuPlum } from './tgpuPlumTypes';
 
 export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
+
+export const UnknownData = Symbol('Unknown data type');
+export type UnknownData = typeof UnknownData;
+
+export type Resource = {
+  value: Wgsl;
+  dataType: AnyTgpuData | UnknownData;
+};
 
 /**
  * Passed into each resolvable item. All sibling items share a resolution ctx,
@@ -25,10 +33,10 @@ export interface ResolutionCtx {
    */
   unwrap<T>(eventual: Eventual<T>): T;
   resolve(item: Wgsl, slotValueOverrides?: SlotValuePair<unknown>[]): string;
-  transpileFn(
+  fnToWgsl(
     // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
     fn: TgpuFn<any, any>,
-    externalMap: Record<string, Wgsl>,
+    externalMap: Record<string, unknown>,
   ): {
     head: Wgsl;
     body: Wgsl;
@@ -82,31 +90,11 @@ export interface TgpuResolvableSlot<T extends Wgsl>
 
 export type SlotValuePair<T> = [TgpuSlot<T>, T];
 
-export interface TgpuAllocatable<TData extends AnyTgpuData = AnyTgpuData> {
-  /**
-   * The data type this allocatable was constructed with.
-   * It informs the size and format of data in both JS and
-   * binary.
-   */
-  readonly dataType: TData;
-  readonly initial?: Parsed<TData> | TgpuPlum<Parsed<TData>> | undefined;
-  readonly flags: GPUBufferUsageFlags;
-}
-
-export function isAllocatable(value: unknown): value is TgpuAllocatable {
-  return (
-    !!value &&
-    typeof value === 'object' &&
-    'dataType' in value &&
-    'flags' in value
-  );
-}
-
 export interface TgpuBindable<
   TData extends AnyTgpuData = AnyTgpuData,
   TUsage extends BufferUsage = BufferUsage,
 > extends TgpuResolvable {
-  readonly allocatable: TgpuAllocatable<TData>;
+  readonly allocatable: TgpuBuffer<TData>;
   readonly usage: TUsage;
 }
 

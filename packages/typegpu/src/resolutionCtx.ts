@@ -2,23 +2,26 @@ import { MissingSlotValueError, ResolutionError } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
+import { generateFunction } from './smol';
 import { code } from './tgpuCode';
 import type { TgpuFn } from './tgpuFn';
 import { isTextureView } from './tgpuTexture';
-import type { TgpuIdentifier } from './types';
 import type {
   AnyTgpuData,
   BufferUsage,
   Eventual,
   ResolutionCtx,
+  Resource,
   SlotValuePair,
   TgpuBindable,
+  TgpuIdentifier,
   TgpuRenderResource,
   TgpuResolvable,
   TgpuSlot,
   Wgsl,
 } from './types';
 import {
+  UnknownData,
   isDepthTextureType,
   isExternalTextureType,
   isResolvable,
@@ -123,8 +126,25 @@ type SlotBindingLayer = {
   bindingMap: WeakMap<TgpuSlot<unknown>, unknown>;
 };
 
+type FunctionScopeLayer = {
+  type: 'functionScope';
+  args: Resource[];
+  externalMap: Record<string, Wgsl>;
+  returnType: AnyTgpuData | undefined;
+};
+
+type BlockScopeLayer = {
+  type: 'blockScope';
+  declarations: Map<string, AnyTgpuData | UnknownData>;
+};
+
 class ItemStateStack {
-  private _stack: (ItemLayer | SlotBindingLayer)[] = [];
+  private _stack: (
+    | ItemLayer
+    | SlotBindingLayer
+    | FunctionScopeLayer
+    | BlockScopeLayer
+  )[] = [];
   private _itemDepth = 0;
 
   get itemDepth(): number {
@@ -154,6 +174,19 @@ class ItemStateStack {
     });
   }
 
+  pushFunctionScope(
+    args: Resource[],
+    returnType: AnyTgpuData | undefined,
+    externalMap: Record<string, Wgsl>,
+  ) {
+    this._stack.push({
+      type: 'functionScope',
+      args,
+      returnType,
+      externalMap,
+    });
+  }
+
   pop() {
     const layer = this._stack.pop();
     if (layer?.type === 'item') {
@@ -173,12 +206,87 @@ class ItemStateStack {
         if (boundValue !== undefined) {
           return boundValue as T;
         }
+      } else if (
+        layer?.type === 'functionScope' ||
+        layer?.type === 'blockScope'
+      ) {
+        // Skip
       } else {
         throw new Error('Unknown layer type.');
       }
     }
 
     return slot.defaultValue;
+  }
+
+  getResourceById(id: string): Resource | undefined {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+
+      if (layer?.type === 'functionScope') {
+        const arg = layer.args.find((a) => a.value === id);
+        if (arg !== undefined) {
+          return arg;
+        }
+
+        const external = layer.externalMap[id];
+        if (external !== undefined) {
+          // TODO: Extract the type of the external value.
+          return { value: external, dataType: UnknownData };
+        }
+      } else if (layer?.type === 'blockScope') {
+        const declarationType = layer.declarations.get(id);
+        if (declarationType !== undefined) {
+          return { value: id, dataType: declarationType };
+        }
+      } else {
+        // Skip
+      }
+    }
+
+    return undefined;
+  }
+}
+
+const INDENT = [
+  '', // 0
+  '  ', // 1
+  '    ', // 2
+  '      ', // 3
+  '        ', // 4
+  '          ', // 5
+  '            ', // 6
+  '              ', // 7
+  '                ', // 8
+];
+
+class IndentController {
+  private identLevel = 0;
+
+  get pre(): string {
+    if (INDENT[this.identLevel] !== undefined) {
+      return INDENT[this.identLevel] as string;
+    }
+
+    let str = '';
+    let i = this.identLevel;
+    while (i > 8) {
+      str += INDENT[8];
+      i >>= 3;
+    }
+
+    return str + INDENT[i];
+  }
+
+  indent(): string {
+    const str = this.pre;
+    this.identLevel++;
+    return str;
+  }
+
+  dedent(): string {
+    this.identLevel--;
+    return this.pre;
   }
 }
 
@@ -191,6 +299,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   >();
 
   private readonly _shared: SharedResolutionState;
+  private readonly _indentController = new IndentController();
 
   private _itemStateStack = new ItemStateStack();
 
@@ -212,6 +321,70 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   get usedBuiltins() {
     return this._shared.usedBuiltins;
+  }
+
+  get pre(): string {
+    return this._indentController.pre;
+  }
+
+  indent(): string {
+    return this._indentController.indent();
+  }
+
+  dedent(): string {
+    return this._indentController.dedent();
+  }
+
+  getById(id: string): Resource {
+    // TODO: Provide access to external values
+    // TODO: Provide data type information
+    return (
+      this._itemStateStack.getResourceById(id) ?? {
+        value: id,
+        dataType: UnknownData,
+      }
+    );
+  }
+
+  fnToWgsl(
+    // biome-ignore lint/suspicious/noExplicitAny: <no generic magic needed>
+    fn: TgpuFn<any, AnyTgpuData>,
+    externalMap: Record<string, Wgsl>,
+  ): { head: Wgsl; body: Wgsl } {
+    if (!this._shared.jitTranspiler) {
+      throw new Error(
+        'Tried to execute a tgpu.fn function without providing a JIT transpiler, or transpiling at build time.',
+      );
+    }
+
+    const { argNames, body } = this._shared.jitTranspiler.transpileFn(
+      String(fn.body),
+    );
+
+    const args = argNames.map((name, idx) => ({
+      value: name,
+      dataType: fn.shell.argTypes[idx],
+    }));
+
+    this._itemStateStack.pushFunctionScope(
+      args,
+      fn.shell.returnType,
+      externalMap,
+    );
+    const str = generateFunction(this, body);
+    this._itemStateStack.pop();
+
+    const argList = args
+      .map((arg) => `${arg.value}: ${this.resolve(arg.dataType)}`)
+      .join(', ');
+
+    return {
+      head:
+        fn.shell.returnType !== undefined
+          ? `(${argList}) -> ${this.resolve(fn.shell.returnType)}`
+          : `(${argList})`,
+      body: str,
+    };
   }
 
   addDeclaration(declaration: TgpuResolvable): void {
@@ -362,25 +535,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         this._itemStateStack.pop();
       }
     }
-  }
-
-  transpileFn(
-    // biome-ignore lint/suspicious/noExplicitAny: <no generic magic needed>
-    fn: TgpuFn<any, AnyTgpuData>,
-    externalMap: Record<string, Wgsl>,
-  ): { head: Wgsl; body: Wgsl } {
-    if (!this._shared.jitTranspiler) {
-      throw new Error(
-        'Tried to execute a tgpu.fn function without providing a JIT transpiler, or transpiling at build time.',
-      );
-    }
-
-    return this._shared.jitTranspiler.transpileFn(
-      String(fn.body),
-      fn.shell.argTypes,
-      fn.shell.returnType,
-      externalMap,
-    );
   }
 
   getIndexFor(item: TgpuBindable | TgpuRenderResource) {
