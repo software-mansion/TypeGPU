@@ -19,7 +19,6 @@ import tgpu, {
   asReadonly,
   asUniform,
   builtin,
-  createRuntime,
   std,
   wgsl,
 } from 'typegpu/experimental';
@@ -79,11 +78,10 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvasWidthPlum = wgsl.plum(canvas.width).$name('canvas_width');
 const canvasHeightPlum = wgsl.plum(canvas.height).$name('canvas_height');
 
-const runtime = await createRuntime();
-const device = runtime.device;
+const root = await tgpu.init();
 
 context.configure({
-  device,
+  device: root.device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
@@ -104,7 +102,7 @@ const intersectionStruct = struct({
   tMax: f32,
 });
 
-const boxMatrixBuffer = tgpu
+const boxMatrixBuffer = root
   .createBuffer(
     arrayOf(arrayOf(arrayOf(boxStruct, Z), Y), X),
     Array.from({ length: X }, (_, i) =>
@@ -120,13 +118,13 @@ const boxMatrixBuffer = tgpu
   .$usage(tgpu.Storage);
 const boxMatrixData = asReadonly(boxMatrixBuffer);
 
-const cameraPositionBuffer = tgpu
+const cameraPositionBuffer = root
   .createBuffer(vec3f, cameraPositionPlum)
   .$name('camera_position')
   .$usage(tgpu.Storage);
 const cameraPositionData = asReadonly(cameraPositionBuffer);
 
-const cameraAxesBuffer = tgpu
+const cameraAxesBuffer = root
   .createBuffer(
     struct({
       right: vec3f,
@@ -139,7 +137,7 @@ const cameraAxesBuffer = tgpu
   .$usage(tgpu.Storage);
 const cameraAxesData = asReadonly(cameraAxesBuffer);
 
-const canvasDimsBuffer = tgpu
+const canvasDimsBuffer = root
   .createBuffer(
     struct({ width: u32, height: u32 }),
     wgsl.plum((get) => ({
@@ -151,7 +149,7 @@ const canvasDimsBuffer = tgpu
   .$usage(tgpu.Uniform);
 const canvasDimsData = asUniform(canvasDimsBuffer);
 
-const boxSizeBuffer = tgpu
+const boxSizeBuffer = root
   .createBuffer(u32, boxSizePlum)
   .$name('box_size')
   .$usage(tgpu.Uniform);
@@ -226,7 +224,7 @@ const getBoxIntersectionFn = wgsl.fn`(
 }
 `.$name('box_intersection');
 
-const renderPipeline = runtime.makeRenderPipeline({
+const renderPipeline = root.makeRenderPipeline({
   vertex: {
     code: wgsl`
       var pos = array<vec2f, 6>(
@@ -310,15 +308,12 @@ const renderPipeline = runtime.makeRenderPipeline({
 });
 
 onFrame((deltaTime) => {
-  runtime.setPlum(canvasWidthPlum, canvas.width);
-  runtime.setPlum(canvasHeightPlum, canvas.height);
+  root.setPlum(canvasWidthPlum, canvas.width);
+  root.setPlum(canvasHeightPlum, canvas.height);
 
-  const rotationSpeed = runtime.readPlum(rotationSpeedPlum);
+  const rotationSpeed = root.readPlum(rotationSpeedPlum);
 
-  runtime.setPlum(
-    framePlum,
-    (prev) => prev + (rotationSpeed * deltaTime) / 1000,
-  );
+  root.setPlum(framePlum, (prev) => prev + (rotationSpeed * deltaTime) / 1000);
 
   const textureView = context.getCurrentTexture().createView();
 
@@ -334,5 +329,5 @@ onFrame((deltaTime) => {
     vertexCount: 6,
   });
 
-  runtime.flush();
+  root.flush();
 });

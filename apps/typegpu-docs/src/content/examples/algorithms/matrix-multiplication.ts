@@ -19,11 +19,10 @@ import tgpu, {
   asMutable,
   asReadonly,
   builtin,
-  createRuntime,
   wgsl,
 } from 'typegpu/experimental';
 
-const runtime = await createRuntime();
+const root = await tgpu.init();
 
 const workgroupSize = [8, 8] as [number, number];
 
@@ -74,17 +73,17 @@ const secondMatrixPlum = wgsl.plum((get) => {
   );
 });
 
-const firstMatrixBuffer = tgpu
+const firstMatrixBuffer = root
   .createBuffer(MatrixStruct, firstMatrixPlum)
   .$name('first_matrix')
   .$usage(tgpu.Storage);
 
-const secondMatrixBuffer = tgpu
+const secondMatrixBuffer = root
   .createBuffer(MatrixStruct, secondMatrixPlum)
   .$name('second_matrix')
   .$usage(tgpu.Storage);
 
-const resultMatrixBuffer = tgpu
+const resultMatrixBuffer = root
   .createBuffer(MatrixStruct)
   .$name('result_matrix')
   .$usage(tgpu.Storage);
@@ -93,7 +92,7 @@ const firstMatrixData = asReadonly(firstMatrixBuffer);
 const secondMatrixData = asReadonly(secondMatrixBuffer);
 const resultMatrixData = asMutable(resultMatrixBuffer);
 
-const program = runtime.makeComputePipeline({
+const program = root.makeComputePipeline({
   workgroupSize: workgroupSize,
   code: wgsl`
     let global_id = ${builtin.globalInvocationId};
@@ -142,13 +141,13 @@ function createMatrix(
 }
 
 async function run() {
-  const firstMatrix = runtime.readPlum(firstMatrixPlum);
-  const secondMatrix = runtime.readPlum(secondMatrixPlum);
+  const firstMatrix = root.readPlum(firstMatrixPlum);
+  const secondMatrix = root.readPlum(secondMatrixPlum);
   const workgroupCountX = Math.ceil(firstMatrix.size.x / workgroupSize[0]);
   const workgroupCountY = Math.ceil(secondMatrix.size.y / workgroupSize[1]);
 
   program.execute({ workgroups: [workgroupCountX, workgroupCountY] });
-  const multiplicationResult = await runtime.readBuffer(resultMatrixBuffer);
+  const multiplicationResult = await resultMatrixBuffer.read();
 
   const unflatMatrix = (matrix: Parsed<typeof MatrixStruct>) =>
     Array(matrix.size.x)
@@ -166,12 +165,12 @@ async function run() {
 }
 
 addButtonParameter('Reshuffle', () => {
-  runtime.setPlum(forceShufflePlum, (prev) => 1 - prev);
+  root.setPlum(forceShufflePlum, (prev) => 1 - prev);
 });
 
 run();
 
-runtime.onPlumChange(firstRowCountPlum, run);
-runtime.onPlumChange(firstColumnCountPlum, run);
-runtime.onPlumChange(secondColumnCountPlum, run);
-runtime.onPlumChange(forceShufflePlum, run);
+root.onPlumChange(firstRowCountPlum, run);
+root.onPlumChange(firstColumnCountPlum, run);
+root.onPlumChange(secondColumnCountPlum, run);
+root.onPlumChange(forceShufflePlum, run);

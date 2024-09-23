@@ -13,12 +13,7 @@ import {
   onFrame,
 } from '@typegpu/example-toolkit';
 import { f32, vec2f, vec3f } from 'typegpu/data';
-import tgpu, {
-  asUniform,
-  builtin,
-  createRuntime,
-  wgsl,
-} from 'typegpu/experimental';
+import tgpu, { asUniform, builtin, wgsl } from 'typegpu/experimental';
 
 const width = 500;
 const height = 375;
@@ -43,14 +38,13 @@ if (navigator.mediaDevices.getUserMedia) {
   throw new Error('getUserMedia not supported');
 }
 
-const runtime = await createRuntime();
-const device = runtime.device;
+const root = await tgpu.init();
 
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 context.configure({
-  device,
+  device: root.device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
@@ -75,12 +69,12 @@ const thresholdPlum = addSliderPlumParameter('threshold', 0.5, {
   step: 0.01,
 });
 
-const thresholdBuffer = tgpu
+const thresholdBuffer = root
   .createBuffer(f32, thresholdPlum)
   .$name('threshold')
   .$usage(tgpu.Uniform);
 
-const colorBuffer = tgpu
+const colorBuffer = root
   .createBuffer(vec3f, vec3f(0, 1.0, 0))
   .$name('colorBuffer')
   .$usage(tgpu.Uniform);
@@ -113,7 +107,7 @@ const rgbToYcbcr = wgsl.fn`(rgb: vec3f) -> vec3f {
   return rgb * ${rgbToYcbcrMatrix};
 }`;
 
-const computeProgram = runtime.makeComputePipeline({
+const computeProgram = root.makeComputePipeline({
   code: wgsl`
     let coords = vec2u(${builtin.globalInvocationId}.xy);
     if (coords.x >= ${width} || coords.y >= ${height}) {
@@ -147,7 +141,7 @@ const computeProgram = runtime.makeComputePipeline({
   workgroupSize: [8, 8],
 });
 
-const renderProgram = runtime.makeRenderPipeline({
+const renderProgram = root.makeRenderPipeline({
   vertex: {
     code: wgsl`
       const pos = array(
@@ -204,7 +198,7 @@ video.addEventListener('click', (event) => {
 
   const [r, g, b] = samplingContext.getImageData(x, y, 1, 1).data;
   table.setMatrix([[r, g, b]]);
-  runtime.writeBuffer(colorBuffer, vec3f(r / 255, g / 255, b / 255));
+  colorBuffer.write(vec3f(r / 255, g / 255, b / 255));
 });
 
 async function getFrame() {
@@ -215,7 +209,7 @@ async function getFrame() {
 
 async function drawFrame() {
   const frame = await getFrame();
-  runtime.setSource(externalTexture, frame);
+  root.setSource(externalTexture, frame);
 
   computeProgram.execute({
     workgroups: [Math.ceil(width / 8), Math.ceil(height / 8), 1],
@@ -234,7 +228,7 @@ async function drawFrame() {
     vertexCount: 6,
   });
 
-  runtime.flush();
+  root.flush();
 
   frame.close();
 }

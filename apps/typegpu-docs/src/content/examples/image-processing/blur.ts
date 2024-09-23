@@ -29,7 +29,6 @@ import tgpu, {
   type TgpuTextureView,
   asUniform,
   builtin,
-  createRuntime,
   wgsl,
 } from 'typegpu/experimental';
 
@@ -51,7 +50,9 @@ const settingsPlum = wgsl.plum((get) => ({
   filterDim: get(filterSize),
 }));
 
-const blurParamsBuffer = tgpu
+const root = await tgpu.init();
+
+const blurParamsBuffer = root
   .createBuffer(
     struct({
       filterDim: i32,
@@ -66,12 +67,10 @@ const params = asUniform(blurParamsBuffer);
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
-const runtime = await createRuntime();
-const device = runtime.device;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 context.configure({
-  device,
+  device: root.device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
@@ -101,9 +100,9 @@ const imageTexture = wgsl
   })
   .$allowSampled();
 
-device.queue.copyExternalImageToTexture(
+root.device.queue.copyExternalImageToTexture(
   { source: imageBitmap },
-  { texture: runtime.textureFor(imageTexture) },
+  { texture: root.textureFor(imageTexture) },
   [imageBitmap.width, imageBitmap.height],
 );
 
@@ -139,7 +138,7 @@ function makeComputePipeline(
   outTexture: outTextureType,
   flip: number,
 ) {
-  return runtime.makeComputePipeline({
+  return root.makeComputePipeline({
     workgroupSize: [32],
     code: wgsl`
       let filterOffset = (${params}.filterDim - 1) / 2;
@@ -230,7 +229,7 @@ const blurFragmentWGSL = wgsl`
   return textureSample(${textures[1].asSampled(inParams)}, ${sampler}, fragUV);
 `;
 
-const renderPipeline = runtime.makeRenderPipeline({
+const renderPipeline = root.makeRenderPipeline({
   vertex: {
     code: blurVertexWGSL,
     output: {
@@ -254,26 +253,26 @@ const renderPipeline = runtime.makeRenderPipeline({
 const render = () => {
   computePipelines[0].execute({
     workgroups: [
-      Math.ceil(srcWidth / runtime.readPlum(settingsPlum).blockDim),
+      Math.ceil(srcWidth / root.readPlum(settingsPlum).blockDim),
       Math.ceil(srcHeight / batch[1]),
     ],
   });
   computePipelines[1].execute({
     workgroups: [
-      Math.ceil(srcWidth / runtime.readPlum(settingsPlum).blockDim),
+      Math.ceil(srcWidth / root.readPlum(settingsPlum).blockDim),
       Math.ceil(srcHeight / batch[1]),
     ],
   });
-  for (let i = 0; i < runtime.readPlum(iterations) - 1; i++) {
+  for (let i = 0; i < root.readPlum(iterations) - 1; i++) {
     computePipelines[2].execute({
       workgroups: [
-        Math.ceil(srcWidth / runtime.readPlum(settingsPlum).blockDim),
+        Math.ceil(srcWidth / root.readPlum(settingsPlum).blockDim),
         Math.ceil(srcHeight / batch[1]),
       ],
     });
     computePipelines[1].execute({
       workgroups: [
-        Math.ceil(srcWidth / runtime.readPlum(settingsPlum).blockDim),
+        Math.ceil(srcWidth / root.readPlum(settingsPlum).blockDim),
         Math.ceil(srcHeight / batch[1]),
       ],
     });
@@ -291,10 +290,10 @@ const render = () => {
     ],
   });
 
-  runtime.flush();
+  root.flush();
 };
 
 render();
 
-runtime.onPlumChange(filterSize, () => render());
-runtime.onPlumChange(iterations, () => render());
+root.onPlumChange(filterSize, () => render());
+root.onPlumChange(iterations, () => render());

@@ -9,7 +9,7 @@
 import { addElement } from '@typegpu/example-toolkit';
 import { JitTranspiler } from '@typegpu/jit';
 import { vec2f } from 'typegpu/data';
-import { asMutable, createRuntime, tgpu } from 'typegpu/experimental';
+import tgpu, { asMutable } from 'typegpu/experimental';
 
 // ---
 addElement('button', {
@@ -26,7 +26,11 @@ const table = await addElement('table', {
 table.setMatrix([[0]]);
 // ---
 
-const counterBuffer = tgpu
+const root = await tgpu.init({
+  jitTranspiler: new JitTranspiler(),
+});
+
+const counterBuffer = root
   .createBuffer(vec2f, vec2f(0, 1))
   .$usage(tgpu.Storage);
 const counter = asMutable(counterBuffer);
@@ -39,11 +43,7 @@ const increment = tgpu
   })
   .$uses({ counter });
 
-const runtime = await createRuntime({
-  jitTranspiler: new JitTranspiler(),
-});
-
 async function doIncrement() {
-  runtime.compute(increment);
-  return await runtime.readBuffer(counterBuffer);
+  root.compute(increment);
+  return await counterBuffer.read();
 }

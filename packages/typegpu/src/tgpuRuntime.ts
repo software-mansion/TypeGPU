@@ -3,6 +3,7 @@ import type { TgpuArray } from './data';
 import type { JitTranspiler } from './jitTranspiler';
 import type { PlumListener } from './plumStore';
 import type { TgpuSettable } from './settableTrait';
+import type { TgpuBuffer } from './tgpuBuffer';
 import type { TgpuFn } from './tgpuFn';
 import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
 import type { TgpuSampler } from './tgpuSampler';
@@ -11,13 +12,7 @@ import type {
   TgpuAnyTextureView,
   TgpuTextureExternal,
 } from './tgpuTexture';
-import type {
-  AnyTgpuData,
-  BoundTgpuCode,
-  TgpuAllocatable,
-  TgpuCode,
-  TgpuData,
-} from './types';
+import type { AnyTgpuData, BoundTgpuCode, TgpuCode, TgpuData } from './types';
 
 // ----------
 // Public API
@@ -34,6 +29,18 @@ export interface TgpuRuntime {
    */
   readonly commandEncoder: GPUCommandEncoder;
 
+  createBuffer<TData extends AnyTgpuData>(
+    typeSchema: TData,
+    initial?: Parsed<TData> | TgpuPlum<Parsed<TData>> | undefined,
+  ): TgpuBuffer<TData>;
+
+  createBuffer<TData extends AnyTgpuData>(
+    typeSchema: TData,
+    gpuBuffer: GPUBuffer,
+  ): TgpuBuffer<TData>;
+
+  unwrap<TData extends AnyTgpuData>(resource: TgpuBuffer<TData>): GPUBuffer;
+
   readPlum<TPlum extends TgpuPlum>(plum: TPlum): ExtractPlumValue<TPlum>;
 
   setPlum<TPlum extends TgpuPlum & TgpuSettable>(
@@ -46,15 +53,6 @@ export interface TgpuRuntime {
     listener: PlumListener<TValue>,
   ): Unsubscribe;
 
-  writeBuffer<TValue extends AnyTgpuData>(
-    allocatable: TgpuAllocatable<TValue>,
-    data: Parsed<TValue> | TgpuAllocatable<TValue>,
-  ): void;
-
-  readBuffer<TData extends AnyTgpuData>(
-    allocatable: TgpuAllocatable<TData>,
-  ): Promise<Parsed<TData>>;
-
   setSource(
     texture: TgpuTextureExternal,
     source: HTMLVideoElement | VideoFrame,
@@ -63,12 +61,11 @@ export interface TgpuRuntime {
   isDirty(texture: TgpuTextureExternal): boolean;
   markClean(texture: TgpuTextureExternal): void;
 
-  bufferFor(allocatable: TgpuAllocatable): GPUBuffer;
   textureFor(view: TgpuAnyTexture | TgpuAnyTextureView): GPUTexture;
   viewFor(view: TgpuAnyTextureView): GPUTextureView;
   externalTextureFor(texture: TgpuTextureExternal): GPUExternalTexture;
   samplerFor(sampler: TgpuSampler): GPUSampler;
-  dispose(): void;
+  destroy(): void;
 
   /**
    * Causes all commands enqueued by pipelines to be

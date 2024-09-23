@@ -21,26 +21,24 @@ import tgpu, {
   asUniform,
   asVertex,
   builtin,
-  createRuntime,
   wgsl,
 } from 'typegpu/experimental';
 
-const runtime = await createRuntime();
-const device = runtime.device;
+const root = await tgpu.init();
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 context.configure({
-  device,
+  device: root.device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
 
 addButtonParameter('randomize', randomizeTriangles);
 
-const parametesBuffer = tgpu
+const parametersBuffer = root
   .createBuffer(
     struct({
       separationDistance: f32,
@@ -66,7 +64,7 @@ const triangleSize = addSliderPlumParameter('triangle size', 0.04, {
   max: 0.1,
   step: 0.01,
 });
-const triangleSizeBuffer = tgpu
+const triangleSizeBuffer = root
   .createBuffer(f32, triangleSize)
   .$usage(tgpu.Uniform);
 const triangleSizePlum = wgsl.plum((get) => {
@@ -78,7 +76,7 @@ const triangleSizePlum = wgsl.plum((get) => {
   ];
 });
 
-const triangleVertex = tgpu
+const triangleVertex = root
   .createBuffer(arrayOf(vec2f, 3), triangleSizePlum)
   .$usage(tgpu.Vertex);
 
@@ -88,7 +86,7 @@ const triangleAmount = addSliderPlumParameter('triangle amount', 500, {
   max: 10000,
   step: 1,
 });
-const triangleAmountBuffer = tgpu
+const triangleAmountBuffer = root
   .createBuffer(u32, triangleAmount)
   .$usage(tgpu.Uniform);
 const trianglePosData = arrayOf(
@@ -101,7 +99,7 @@ const trianglePosData = arrayOf(
 type TrianglePosData = typeof trianglePosData;
 
 const trianglePosBuffers = Array.from({ length: 2 }, () => {
-  return tgpu.createBuffer(trianglePosData).$usage(tgpu.Storage);
+  return root.createBuffer(trianglePosData).$usage(tgpu.Storage);
 });
 
 const bufferPairs = [
@@ -122,8 +120,9 @@ function randomizeTriangles() {
     );
     positions.push({ position, velocity });
   }
-  runtime.writeBuffer(trianglePosBuffers[0], positions);
-  runtime.writeBuffer(trianglePosBuffers[1], positions);
+
+  trianglePosBuffers[0].write(positions);
+  trianglePosBuffers[1].write(positions);
 }
 
 const rotate = wgsl.fn`(v: vec2f, angle: f32) -> vec2f {
@@ -139,7 +138,7 @@ const getRotationFromVelocity = wgsl.fn`(velocity: vec2f) -> f32 {
 }`;
 
 const renderPipelines = [0, 1].map((idx) =>
-  runtime.makeRenderPipeline({
+  root.makeRenderPipeline({
     vertex: {
       code: wgsl`
         let triangleSize = ${asUniform(triangleSizeBuffer)};
@@ -183,12 +182,12 @@ const renderPipelines = [0, 1].map((idx) =>
 );
 
 const computePipelines = [0, 1].map((idx) =>
-  runtime.makeComputePipeline({
+  root.makeComputePipeline({
     code: wgsl`
       let triangleSize = ${asUniform(triangleSizeBuffer)};
       let index = ${builtin.globalInvocationId}.x;
       var instanceInfo = ${readSlot}[index];
-      let params = ${asReadonly(parametesBuffer)};
+      let params = ${asReadonly(parametersBuffer)};
 
       var separation = vec2(0.0, 0.0);
       var alignment = vec2(0.0, 0.0);
@@ -252,7 +251,7 @@ let even = false;
 onFrame(() => {
   even = !even;
   computePipelines[even ? 0 : 1].execute({
-    workgroups: [runtime.readPlum(triangleAmount)],
+    workgroups: [root.readPlum(triangleAmount)],
   });
   renderPipelines[even ? 1 : 0].execute({
     colorAttachments: [
@@ -264,10 +263,10 @@ onFrame(() => {
       },
     ],
     vertexCount: 3,
-    instanceCount: runtime.readPlum(triangleAmount),
+    instanceCount: root.readPlum(triangleAmount),
   });
 
-  runtime.flush();
+  root.flush();
 });
 
 const parameters = {
@@ -280,7 +279,7 @@ const parameters = {
 };
 
 function applyOptions() {
-  runtime.writeBuffer(parametesBuffer, parameters);
+  parametersBuffer.write(parameters);
 }
 
 addSliderParameter(
