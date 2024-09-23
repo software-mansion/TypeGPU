@@ -128,7 +128,7 @@ export function ExampleView({ example, isPlayground = false }: Props) {
         <div
           className={cs(
             'flex-1 grid gap-4',
-            codeEditorShowing ? 'grid-rows-2' : '',
+            codeEditorShowing ? 'md:grid-rows-2' : '',
           )}
         >
           <div
