@@ -14,7 +14,6 @@ import type {
   TgpuData,
   TgpuLooseData,
 } from '../types';
-import { TgpuAlignedImpl } from './align';
 import alignIO from './alignIO';
 
 export interface TgpuArray<TElement extends AnyTgpuData>
@@ -33,6 +32,7 @@ export class TgpuArrayImpl<TElement extends AnyTgpuData>
   readonly size: number;
   readonly stride: number;
   readonly isLoose = false;
+  isCustomAligned = false;
 
   constructor(elementType: TElement, count: number) {
     super();
@@ -101,16 +101,13 @@ class TgpuLooseArrayImpl<TElement extends AnyTgpuData>
   readonly size: number;
   readonly stride: number;
   readonly isLoose = true;
-  private isElementCustomAligned: boolean;
 
   constructor(elementType: TElement, count: number) {
     super();
     this.elementType = elementType;
     this.elementCount = count;
 
-    this.isElementCustomAligned = this.elementType instanceof TgpuAlignedImpl;
-
-    this.stride = this.isElementCustomAligned
+    this.stride = this.elementType.isCustomAligned
       ? roundUp(this.elementType.size, this.elementType.byteAlignment)
       : this.elementType.size;
 
@@ -120,7 +117,7 @@ class TgpuLooseArrayImpl<TElement extends AnyTgpuData>
   write(output: TB.ISerialOutput, value: Parsed<Unwrap<TElement>>[]) {
     const beginning = output.currentByteOffset;
     for (let i = 0; i < Math.min(this.elementCount, value.length); i++) {
-      if (this.isElementCustomAligned) {
+      if (this.elementType.isCustomAligned) {
         alignIO(output, this.elementType.byteAlignment);
       }
       this.elementType.write(output, value[i]);
@@ -131,7 +128,7 @@ class TgpuLooseArrayImpl<TElement extends AnyTgpuData>
   read(input: TB.ISerialInput): Parsed<Unwrap<TElement>>[] {
     const elements: Parsed<Unwrap<TElement>>[] = [];
     for (let i = 0; i < this.elementCount; i++) {
-      if (this.isElementCustomAligned) {
+      if (this.elementType.isCustomAligned) {
         alignIO(input, this.elementType.byteAlignment);
       }
       elements.push(this.elementType.read(input) as Parsed<Unwrap<TElement>>);

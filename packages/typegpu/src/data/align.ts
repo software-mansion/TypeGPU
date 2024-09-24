@@ -27,6 +27,7 @@ export class TgpuAlignedImpl<TAlign extends number, TData extends AnyTgpuData>
 {
   public readonly size: number;
   isLoose = false as const;
+  isCustomAligned = true;
 
   constructor(
     private data: AnyTgpuData,

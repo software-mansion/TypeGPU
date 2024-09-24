@@ -193,6 +193,7 @@ export type ValueOf<T> = T extends TgpuSlot<infer I>
 
 export interface TgpuData<TInner> extends ISchema<TInner>, TgpuResolvable {
   readonly isLoose: false;
+  readonly isCustomAligned: boolean;
   readonly byteAlignment: number;
   readonly size: number;
 }

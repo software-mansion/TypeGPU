@@ -23,6 +23,7 @@ export class SimpleTgpuData<TSchema extends AnySchema>
   public readonly size: number;
   public readonly byteAlignment: number;
   public readonly expressionCode: string;
+  isCustomAligned = false;
 
   private readonly _innerSchema: TSchema;
 

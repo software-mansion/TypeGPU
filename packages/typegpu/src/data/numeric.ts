@@ -11,6 +11,7 @@ const primitiveNumeric = (
     // Type-token, not available at runtime
     __unwrapped: undefined as unknown as number,
     isLoose: false as const,
+    isCustomAligned: false,
 
     size: 4,
     byteAlignment: 4,

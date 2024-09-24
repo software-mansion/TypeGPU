@@ -38,6 +38,7 @@ function makeVecSchema<ValueType extends vecBase>(
     // Type-token, not available at runtime
     __unwrapped: undefined as unknown as ValueType,
     isLoose: false as const,
+    isCustomAligned: false,
 
     size: options.length * 4,
     label: options.label,
