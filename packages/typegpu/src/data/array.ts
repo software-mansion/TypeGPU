@@ -14,6 +14,7 @@ import type {
   TgpuData,
   TgpuLooseData,
 } from '../types';
+import { TgpuAlignedImpl } from './align';
 import alignIO from './alignIO';
 
 export interface TgpuArray<TElement extends AnyTgpuData>
@@ -100,18 +101,28 @@ class TgpuLooseArrayImpl<TElement extends AnyTgpuData>
   readonly size: number;
   readonly stride: number;
   readonly isLoose = true;
+  private isElementCustomAligned: boolean;
 
   constructor(elementType: TElement, count: number) {
     super();
     this.elementType = elementType;
     this.elementCount = count;
-    this.stride = this.elementType.size;
+
+    this.isElementCustomAligned = this.elementType instanceof TgpuAlignedImpl;
+
+    this.stride = this.isElementCustomAligned
+      ? roundUp(this.elementType.size, this.elementType.byteAlignment)
+      : this.elementType.size;
+
     this.size = this.stride * this.elementCount;
   }
 
   write(output: TB.ISerialOutput, value: Parsed<Unwrap<TElement>>[]) {
     const beginning = output.currentByteOffset;
     for (let i = 0; i < Math.min(this.elementCount, value.length); i++) {
+      if (this.isElementCustomAligned) {
+        alignIO(output, this.elementType.byteAlignment);
+      }
       this.elementType.write(output, value[i]);
     }
     output.seekTo(beginning + this.stride * this.elementCount);
@@ -120,6 +131,9 @@ class TgpuLooseArrayImpl<TElement extends AnyTgpuData>
   read(input: TB.ISerialInput): Parsed<Unwrap<TElement>>[] {
     const elements: Parsed<Unwrap<TElement>>[] = [];
     for (let i = 0; i < this.elementCount; i++) {
+      if (this.isElementCustomAligned) {
+        alignIO(input, this.elementType.byteAlignment);
+      }
       elements.push(this.elementType.read(input) as Parsed<Unwrap<TElement>>);
     }
     return elements;
