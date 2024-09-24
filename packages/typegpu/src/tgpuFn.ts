@@ -4,7 +4,13 @@ import { type TgpuNamable, isNamable } from './namable';
 import { valueList } from './resolutionUtils';
 import { code } from './tgpuCode';
 import { identifier } from './tgpuIdentifier';
-import type { AnyTgpuData, ResolutionCtx, TgpuResolvable, Wgsl } from './types';
+import {
+  type AnyTgpuData,
+  type ResolutionCtx,
+  type TgpuResolvable,
+  type Wgsl,
+  isWgsl,
+} from './types';
 
 // ----------
 // Public API
@@ -50,10 +56,23 @@ interface TgpuFnBase<
   $uses(dependencyMap: Record<string, unknown>): this;
 }
 
+interface TgpuRawFnBase<
+  Args extends AnyTgpuDataTuple,
+  Return extends AnyTgpuData | undefined = undefined,
+> extends TgpuResolvable,
+    TgpuNamable {
+  readonly shell: TgpuFnShell<Args, Return>;
+  /** The JS function body passed as an implementation of a TypeGPU function. */
+  readonly body: Wgsl;
+  readonly bodyResolvable: TgpuResolvable;
+
+  $uses(dependencyMap: Record<string, unknown>): this;
+}
+
 export type TgpuFn<
   Args extends AnyTgpuDataTuple,
   Return extends AnyTgpuData | undefined = undefined,
-> = TgpuFnBase<Args, Return> &
+> = (TgpuFnBase<Args, Return> | TgpuRawFnBase<Args, Return>) &
   ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>);
 
 export function fn<Args extends AnyTgpuDataTuple>(): TgpuFnShell<[], undefined>;
@@ -103,9 +122,15 @@ class TgpuFnShellImpl<
   ) {}
 
   implement(
-    body: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
+    body: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return> | Wgsl,
   ): TgpuFn<Args, Return> {
-    return createFn<Args, Return>(this, body);
+    if (isWgsl(body)) {
+      return createRawFn<Args, Return>(this, body);
+    }
+    return createFn<Args, Return>(
+      this,
+      body as (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
+    );
   }
 }
 
@@ -183,13 +208,78 @@ function createFn<
   return Object.assign(call, fnBase);
 }
 
+function createRawFn<
+  Args extends AnyTgpuDataTuple,
+  Return extends AnyTgpuData | undefined,
+>(shell: TgpuFnShell<Args, Return>, body: Wgsl): TgpuFn<Args, Return> {
+  let label: string | undefined;
+  const externalMap: Record<string, unknown> = {};
+
+  const fnBase: TgpuRawFnBase<Args, Return> = {
+    shell,
+    body,
+
+    bodyResolvable: {
+      get label() {
+        return `${label}.body`;
+      },
+
+      resolve: (ctx) => {
+        return ctx.resolve(body);
+      },
+    } satisfies TgpuResolvable,
+
+    $uses(newExternals) {
+      for (const [key, value] of Object.entries(newExternals)) {
+        externalMap[key] = value;
+
+        // Giving name to external value
+        if (isNamable(value)) {
+          value.$name(key);
+        }
+      }
+      return this;
+    },
+
+    get label() {
+      return label;
+    },
+
+    $name(newLabel: string): TgpuRawFnBase<Args, Return> {
+      label = newLabel;
+      return this;
+    },
+
+    resolve(ctx: ResolutionCtx): string {
+      const ident = identifier().$name(this.label);
+
+      ctx.addDeclaration(this.bodyResolvable);
+
+      return ctx.resolve(ident);
+    },
+  };
+
+  const call = (...args: UnwrapArgs<Args>): UnwrapReturn<Return> => {
+    if (inGPUMode()) {
+      // TODO: Filter out only those arguments which are valid to pass around
+      return new FnCall(fnBase, args as Wgsl[]) as UnwrapReturn<Return>;
+    }
+
+    throw new Error('Cannot execute functions constructed with raw WGSL');
+  };
+
+  return Object.assign(call, fnBase);
+}
+
 class FnCall<
   Args extends AnyTgpuDataTuple,
   Return extends AnyTgpuData | undefined,
 > implements TgpuResolvable
 {
   constructor(
-    private readonly _fn: TgpuFnBase<Args, Return>,
+    private readonly _fn:
+      | TgpuFnBase<Args, Return>
+      | TgpuRawFnBase<Args, Return>,
     private readonly _params: Wgsl[],
   ) {}
 
