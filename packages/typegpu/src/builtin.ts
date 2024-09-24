@@ -1,45 +1,75 @@
+import type { Bool, F32, TgpuArray, U32, vec3u, vec4f } from './data';
+
+export type BuiltinVertexIndex = symbol & U32;
+export type BuiltinInstanceIndex = symbol & U32;
+export type BuiltinPosition = symbol & vec4f;
+export type BuiltinClipDistances = symbol & TgpuArray<F32>;
+export type BuiltinFrontFacing = symbol & Bool;
+export type BuiltinFragDepth = symbol & F32;
+export type BuiltinSampleIndex = symbol & U32;
+export type BuiltinSampleMask = symbol & vec4f;
+export type BuiltinFragment = symbol & vec4f;
+export type BuiltinLocalInvocationId = symbol & vec3u;
+export type BuiltinLocalInvocationIndex = symbol & U32;
+export type BuiltinGlobalInvocationId = symbol & vec3u;
+export type BuiltinWorkgroupId = symbol & vec3u;
+export type BuiltinNumWorkgroups = symbol & vec3u;
+
 export const builtin = {
-  vertexIndex: Symbol('builtin_vertexIndex'),
-  instanceIndex: Symbol('builtin_instanceIndex'),
-  position: Symbol('builtin_position'),
-  clipDistances: Symbol('builtin_clipDistances'),
-  frontFacing: Symbol('builtin_frontFacing'),
-  fragDepth: Symbol('builtin_fragDepth'),
-  sampleIndex: Symbol('builtin_sampleIndex'),
-  sampleMask: Symbol('builtin_sampleMask'),
-  fragment: Symbol('builtin_fragment'),
-  localInvocationId: Symbol('builtin_localInvocationId'),
-  localInvocationIndex: Symbol('builtin_localInvocationIndex'),
-  globalInvocationId: Symbol('builtin_globalInvocationId'),
-  workgroupId: Symbol('builtin_workgroupId'),
-  numWorkgroups: Symbol('builtin_numWorkgroups'),
+  vertexIndex: Symbol('builtin_vertexIndex') as BuiltinVertexIndex,
+  instanceIndex: Symbol('builtin_instanceIndex') as BuiltinInstanceIndex,
+  position: Symbol('builtin_position') as BuiltinPosition,
+  clipDistances: Symbol('builtin_clipDistances') as BuiltinClipDistances,
+  frontFacing: Symbol('builtin_frontFacing') as BuiltinFrontFacing,
+  fragDepth: Symbol('builtin_fragDepth') as BuiltinFragDepth,
+  sampleIndex: Symbol('builtin_sampleIndex') as BuiltinSampleIndex,
+  sampleMask: Symbol('builtin_sampleMask') as BuiltinSampleMask,
+  fragment: Symbol('builtin_fragment') as BuiltinFragment,
+  localInvocationId: Symbol(
+    'builtin_localInvocationId',
+  ) as BuiltinLocalInvocationId,
+  localInvocationIndex: Symbol(
+    'builtin_localInvocationIndex',
+  ) as BuiltinLocalInvocationIndex,
+  globalInvocationId: Symbol(
+    'builtin_globalInvocationId',
+  ) as BuiltinGlobalInvocationId,
+  workgroupId: Symbol('builtin_workgroupId') as BuiltinWorkgroupId,
+  numWorkgroups: Symbol('builtin_numWorkgroups') as BuiltinNumWorkgroups,
 } as const;
 
 const builtins = Object.values(builtin);
 
+type Builtin = (typeof builtin)[keyof typeof builtin];
+
 export function getUsedBuiltinsNamed(
-  o: Record<symbol, string>,
-): { name: string; builtin: symbol }[] {
+  o: Record<Builtin, string>,
+): { name: string; builtin: Builtin }[] {
   const res = Object.getOwnPropertySymbols(o).map((s) => {
-    if (!builtins.includes(s)) {
+    if (!builtins.includes(s as Builtin)) {
       throw new Error('Symbol is not a member of `builtin`');
     }
-    const name = o[s];
+    const name = o[s as Builtin];
     if (!name) {
       throw new Error('Name is not provided');
     }
-    return { name: name, builtin: s };
+    return { name: name, builtin: s as Builtin };
   });
+
   return res;
 }
 
-export function getUsedBuiltins(o: Record<symbol, string>): symbol[] {
+export function getUsedBuiltins(o: Record<Builtin, string>): Builtin[] {
   const res = Object.getOwnPropertySymbols(o).map((s) => {
-    if (!builtins.includes(s)) {
+    if (!builtins.includes(s as Builtin)) {
       throw new Error('Symbol is not a member of `builtin`');
     }
     return s;
   });
 
-  return res;
+  return res as Builtin[];
 }
+
+export type OmitSymbols<S extends object> = {
+  [Key in keyof S as S[Key] extends symbol ? never : Key]: S[Key];
+};
