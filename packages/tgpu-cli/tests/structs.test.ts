@@ -10,12 +10,12 @@ struct TriangleData {
   isRed: u32,
 };`;
 
-    const expected = `
+    const expected = `\
 const TriangleData = d.struct({
   position: d.vec4f,
   velocity: d.vec2f,
   isRed: d.u32,
-});`.trim();
+});`;
 
     expect(generate(wgsl)).toContain(expected);
   });
@@ -27,11 +27,25 @@ struct TriangleData {
   @size(64) velocity: vec2f,
 };`;
 
-    const expected = `
+    const expected = `\
 const TriangleData = d.struct({
   position: d.size(d.align(d.vec4f, 32), 32),
   velocity: d.size(d.vec2f, 64),
-});`.trim();
+});`;
+
+    expect(generate(wgsl)).toContain(expected);
+  });
+
+  it('respects align and size attributes for array members', () => {
+    const wgsl = `
+struct TriangleData {
+  @align(32) @size(32) position: array<vec3f, 2>,
+};`;
+
+    const expected = `\
+const TriangleData = d.struct({
+  position: d.size(d.align(d.arrayOf(d.vec3f, 2), 32), 32),
+});`;
 
     expect(generate(wgsl)).toContain(expected);
   });
@@ -50,7 +64,7 @@ struct Data {
   a9: vec3<f32>,
 };`;
 
-    const expected = `
+    const expected = `\
 const Data = d.struct({
   a1: d.vec2i,
   a2: d.vec3i,
@@ -61,7 +75,7 @@ const Data = d.struct({
   a7: d.vec2f,
   a8: d.vec3f,
   a9: d.vec3f,
-});`.trim();
+});`;
 
     expect(generate(wgsl)).toContain(expected);
   });
@@ -78,7 +92,7 @@ struct NewStruct {
   triangleData2: TriangleData,
 }`;
 
-    const expected = `
+    const expected = `\
 const TriangleData = d.struct({
   position: d.f32,
   velocity: d.size(d.vec2f, 64),
@@ -87,7 +101,7 @@ const TriangleData = d.struct({
 const NewStruct = d.struct({
   triangleData: TriangleData,
   triangleData2: TriangleData,
-});`.trim();
+});`;
 
     expect(generate(wgsl)).toContain(expected);
   });
@@ -104,7 +118,7 @@ struct Triangle {
   color: array<u32, 7>,
 };`;
 
-    const expected = `
+    const expected = `\
 const Vertex = d.struct({
   vals: d.vec3f,
   _pad: d.f32,
@@ -113,7 +127,7 @@ const Vertex = d.struct({
 const Triangle = d.struct({
   vertices: d.arrayOf(Vertex, 3),
   color: d.arrayOf(d.u32, 7),
-});`.trim();
+});`;
 
     expect(generate(wgsl)).toContain(expected);
   });
@@ -124,10 +138,10 @@ struct NewStruct {
   atomicX: atomic<u32>,
 }`;
 
-    const expected = `
+    const expected = `\
 const NewStruct = d.struct({
   atomicX: d.atomic(d.u32),
-});`.trim();
+});`;
 
     expect(generate(wgsl)).toContain(expected);
   });
@@ -160,10 +174,10 @@ struct Triangles {
     tris : array<Triangle>,
 };`;
 
-    const expected = `
+    const expected = `\
 const Triangles = (arrayLength: number) => d.struct({
   tris: d.arrayOf(Triangle, arrayLength),
-});`.trim();
+});`;
 
     expect(generate(wgsl)).toContain(expected);
   });
@@ -187,10 +201,10 @@ struct Triangles {
   tris: array<Triangle>,
 };`;
 
-    const expected = `
+    const expected = `\
 const Triangles = (arrayLength) => d.struct({
   tris: d.arrayOf(Triangle, arrayLength),
-});`.trim();
+});`;
 
     expect(generate(wgsl, false)).toContain(expected);
   });

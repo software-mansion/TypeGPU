@@ -4,10 +4,6 @@
   "version": "0.0.0",
   "description": "A companion CLI to aid in developing with TypeGPU.",
   "license": "MIT",
-  "scripts": {
-    "test": "vitest run",
-    "dev:test": "vitest"
-  },
   "bin": {
     "tgpu-cli": "./tgpu-cli.mjs"
   },

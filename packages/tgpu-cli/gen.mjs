@@ -31,8 +31,9 @@ export function generate(wgsl, toTs = true) {
 import * as d from 'typegpu/data';
 
 ${generateStructs(reflect.structs, toTs)}
+
 ${generateAliases(reflect.aliases)}
-`;
+`.trim();
 }
 
 /**
@@ -40,9 +41,10 @@ ${generateAliases(reflect.aliases)}
  * @param { boolean } toTs
  */
 function generateStructs(structs, toTs) {
-  return `/* structs */
-${structs.map((struct) => generateStruct(struct, toTs)).join('\n\n')}  
-`;
+  return structs.length > 0
+    ? `/* structs */
+${structs.map((struct) => generateStruct(struct, toTs)).join('\n\n')}`
+    : '';
 }
 
 /**
@@ -67,10 +69,12 @@ function hasVarLengthMember(struct) {
  * @param { import('wgsl_reflect').AliasInfo[] } aliases
  */
 function generateAliases(aliases) {
-  return `/* aliases */
+  return aliases.length > 0
+    ? `/* aliases */
 ${aliases
   .map((alias) => `const ${alias.name} = ${generateType(alias.type)};`)
-  .join('\n')}`;
+  .join('\n')}`
+    : '';
 }
 
 /**
@@ -81,25 +85,26 @@ function generateStructMember(member) {
 }
 
 /**
- * @param { import('wgsl_reflect').TypeInfo } type
+ * @param { import('wgsl_reflect').TypeInfo } type_
  */
-function generateType(type) {
-  if (type instanceof ArrayInfo) {
-    return `d.arrayOf(${generateType(type.format)}, ${type.count > 0 ? type.count : LENGTH_VAR})`;
+function generateType(type_) {
+  if (!(type_ instanceof ArrayInfo) && type_.size === 0) {
+    throw new Error(`Invalid data type with size 0: ${type_.name}`);
   }
 
-  if (type.size === 0) {
-    throw new Error(`Invalid data type with size 0: ${type.name}`);
-  }
-
-  if (type instanceof TemplateInfo && type.name === 'atomic' && type.format) {
-    return `d.atomic(${generateType(type.format)})`;
-  }
-
-  const tgpuType = `${type instanceof StructInfo ? '' : 'd.'}${replaceWithAlias(type)}`;
+  const tgpuType =
+    type_ instanceof StructInfo
+      ? type_.name
+      : type_ instanceof ArrayInfo
+        ? `d.arrayOf(${generateType(type_.format)}, ${type_.count > 0 ? type_.count : LENGTH_VAR})`
+        : type_ instanceof TemplateInfo &&
+            type_.name === 'atomic' &&
+            type_.format
+          ? `d.atomic(${generateType(type_.format)})`
+          : `d.${replaceWithAlias(type_)}`;
 
   return (
-    type.attributes?.reduce(
+    type_.attributes?.reduce(
       (acc, attribute) =>
         ['align', 'size'].includes(attribute.name)
           ? `d.${attribute.name}(${acc}, ${attribute.value})`
