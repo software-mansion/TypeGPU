@@ -29,8 +29,8 @@ struct TriangleData {
 
     const expected = `\
 const TriangleData = d.struct({
-  position: d.size(d.align(d.vec4f, 32), 32),
-  velocity: d.size(d.vec2f, 64),
+  position: d.size(32, d.align(32, d.vec4f)),
+  velocity: d.size(64, d.vec2f),
 });`;
 
     expect(generate(wgsl)).toContain(expected);
@@ -44,7 +44,7 @@ struct TriangleData {
 
     const expected = `\
 const TriangleData = d.struct({
-  position: d.size(d.align(d.arrayOf(d.vec3f, 2), 32), 32),
+  position: d.size(32, d.align(32, d.arrayOf(d.vec3f, 2))),
 });`;
 
     expect(generate(wgsl)).toContain(expected);
@@ -95,7 +95,7 @@ struct NewStruct {
     const expected = `\
 const TriangleData = d.struct({
   position: d.f32,
-  velocity: d.size(d.vec2f, 64),
+  velocity: d.size(64, d.vec2f),
 });
 
 const NewStruct = d.struct({

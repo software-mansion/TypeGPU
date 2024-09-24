@@ -107,7 +107,7 @@ function generateType(type_) {
     type_.attributes?.reduce(
       (acc, attribute) =>
         ['align', 'size'].includes(attribute.name)
-          ? `d.${attribute.name}(${acc}, ${attribute.value})`
+          ? `d.${attribute.name}(${attribute.value}, ${acc})`
           : acc,
       tgpuType,
     ) ?? tgpuType
