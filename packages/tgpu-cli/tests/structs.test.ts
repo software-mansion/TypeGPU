@@ -61,7 +61,7 @@ struct Data {
   a6: vec4<u32>,
   a7: vec2<f32>,
   a8: vec3<f32>,
-  a9: vec3<f32>,
+  a9: vec4<f32>,
 };`;
 
     const expected = `\
@@ -74,7 +74,7 @@ const Data = d.struct({
   a6: d.vec4u,
   a7: d.vec2f,
   a8: d.vec3f,
-  a9: d.vec3f,
+  a9: d.vec4f,
 });`;
 
     expect(generate(wgsl)).toContain(expected);
