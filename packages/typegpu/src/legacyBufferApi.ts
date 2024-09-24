@@ -3,9 +3,9 @@ import { type TgpuBuffer, createBufferImpl } from './tgpuBuffer';
 import type { TgpuPlum } from './tgpuPlumTypes';
 import type { AnyTgpuData } from './types';
 
+// * -deprecated Use the `root.createBuffer` API instead, accessible through `await tgpu.init()`.
+
 /**
- * @deprecated Use the `root.createBuffer` API instead, accessible through `await tgpu.init()`.
- *
  * @param typeSchema The type of data that this buffer will hold.
  * @param initial The initial value of the buffer. (optional)
  */
@@ -15,8 +15,6 @@ export function createBuffer<TData extends AnyTgpuData>(
 ): TgpuBuffer<TData>;
 
 /**
- * @deprecated Use the `root.createBuffer` API instead, accessible through `await tgpu.init()`.
- *
  * @param typeSchema The type of data that this buffer will hold.
  * @param gpuBuffer A vanilla WebGPU buffer.
  */
