@@ -5,13 +5,12 @@ const INDENT_SPACES_COUNT = 2;
 
 describe('IndentController', () => {
   it('indents properly', () => {
-    for (const maxLevel of [0, 1, 7, 8, 9, 16, 20, 39, 40]) {
-      const controller = new IndentController();
-      for (let i = 0; i < maxLevel; i++) {
-        controller.indent();
-      }
+    const controller = new IndentController();
+    expect(controller.pre.length).toEqual(0);
 
-      expect(controller.pre.length).toEqual(maxLevel * INDENT_SPACES_COUNT);
+    for (let i = 1; i < 100; i++) {
+      controller.indent();
+      expect(controller.pre.length).toEqual(i * INDENT_SPACES_COUNT);
     }
   });
 
