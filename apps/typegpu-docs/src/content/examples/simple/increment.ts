@@ -11,21 +11,22 @@ import { addElement } from '@typegpu/example-toolkit';
 // --
 
 import { u32 } from 'typegpu/data';
-import tgpu, { asMutable, createRuntime, wgsl } from 'typegpu/experimental';
+import tgpu, { asMutable, wgsl } from 'typegpu/experimental';
 
-const counterBuffer = tgpu
+const root = await tgpu.init();
+
+const counterBuffer = root
   .createBuffer(u32, 0)
   .$name('counter')
   .$usage(tgpu.Storage);
 
-const runtime = await createRuntime();
-const pipeline = runtime.makeComputePipeline({
+const pipeline = root.makeComputePipeline({
   code: wgsl`${asMutable(counterBuffer)} += 1;`,
 });
 
 async function increment() {
   pipeline.execute();
-  table.setMatrix([[await runtime.readBuffer(counterBuffer)]]);
+  table.setMatrix([[await counterBuffer.read()]]);
 }
 
 addElement('button', {

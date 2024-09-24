@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 import { afterEach } from 'vitest';
-import { createRuntime } from '../src/createRuntime';
 import { arrayOf, struct, u32, vec2f, vec3f, vec3i, vec4u } from '../src/data';
 import tgpu, {
   asReadonly,
@@ -81,28 +80,28 @@ const mockDevice = {
   },
 };
 
-describe('TgpuRuntime', () => {
+describe('TgpuRoot', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
   it('should create buffer with no initialization', async () => {
-    const runtime = await createRuntime({
+    const root = await tgpu.init({
       device: mockDevice as unknown as GPUDevice,
     });
-    const bufferData = tgpu.createBuffer(u32).$usage(tgpu.Uniform);
-    const buffer = asUniform(bufferData);
+    const dataBuffer = root.createBuffer(u32).$usage(tgpu.Uniform);
+    const data = asUniform(dataBuffer);
 
-    const testPipeline = runtime.makeComputePipeline({
-      code: wgsl`${buffer}`,
+    const testPipeline = root.makeComputePipeline({
+      code: wgsl`${data}`,
     });
 
-    const mockBuffer = runtime.bufferFor(bufferData);
+    const mockBuffer = root.unwrap(dataBuffer);
     expect(mockBuffer).toBeDefined();
     expect(mockBuffer.getMappedRange).not.toBeCalled();
 
     expect(testPipeline).toBeDefined();
-    expect(runtime.device.createBuffer).toBeCalledWith({
+    expect(root.device.createBuffer).toBeCalledWith({
       mappedAtCreation: false,
       size: 4,
       usage:
@@ -113,24 +112,24 @@ describe('TgpuRuntime', () => {
   });
 
   it('should create buffer with initialization', async () => {
-    const runtime = await createRuntime({
+    const root = await tgpu.init({
       device: mockDevice as unknown as GPUDevice,
     });
-    const bufferData = tgpu
+    const dataBuffer = root
       .createBuffer(vec3i, vec3i(0, 0, 0))
       .$usage(tgpu.Uniform);
-    const buffer = asUniform(bufferData);
+    const data = asUniform(dataBuffer);
 
-    const testPipeline = runtime.makeComputePipeline({
-      code: wgsl`${buffer}`,
+    const testPipeline = root.makeComputePipeline({
+      code: wgsl`${data}`,
     });
 
-    const mockBuffer = runtime.bufferFor(bufferData);
+    const mockBuffer = root.unwrap(dataBuffer);
     expect(mockBuffer).toBeDefined();
     expect(mockBuffer.getMappedRange).toBeCalled();
 
     expect(testPipeline).toBeDefined();
-    expect(runtime.device.createBuffer).toBeCalledWith({
+    expect(root.device.createBuffer).toBeCalledWith({
       mappedAtCreation: true,
       size: 12,
       usage:
@@ -141,22 +140,22 @@ describe('TgpuRuntime', () => {
   });
 
   it('should allocate buffer with proper size for nested structs', async () => {
-    const runtime = await createRuntime({
+    const root = await tgpu.init({
       device: mockDevice as unknown as GPUDevice,
     });
     const s1 = struct({ a: u32, b: u32 });
     const s2 = struct({ a: u32, b: s1 });
-    const bufferData = tgpu.createBuffer(s2).$usage(tgpu.Uniform);
-    const buffer = asUniform(bufferData);
+    const dataBuffer = root.createBuffer(s2).$usage(tgpu.Uniform);
+    const data = asUniform(dataBuffer);
 
-    const testPipeline = runtime.makeComputePipeline({
-      code: wgsl`${buffer}`,
+    const testPipeline = root.makeComputePipeline({
+      code: wgsl`${data}`,
     });
 
     testPipeline.execute();
 
     expect(testPipeline).toBeDefined();
-    expect(runtime.device.createBuffer).toBeCalledWith({
+    expect(root.device.createBuffer).toBeCalledWith({
       mappedAtCreation: false,
       size: 12,
       usage:
@@ -167,17 +166,17 @@ describe('TgpuRuntime', () => {
   });
 
   it('should properly write to buffer', async () => {
-    const runtime = await createRuntime({
+    const root = await tgpu.init({
       device: mockDevice as unknown as GPUDevice,
     });
-    const bufferData = tgpu.createBuffer(u32);
+    const dataBuffer = root.createBuffer(u32);
 
-    runtime.writeBuffer(bufferData, 3);
+    dataBuffer.write(3);
 
-    const mockBuffer = runtime.bufferFor(bufferData);
+    const mockBuffer = root.unwrap(dataBuffer);
     expect(mockBuffer).toBeDefined();
 
-    expect(runtime.device.queue.writeBuffer).toBeCalledWith(
+    expect(root.device.queue.writeBuffer).toBeCalledWith(
       mockBuffer,
       0,
       new ArrayBuffer(4),
@@ -187,24 +186,24 @@ describe('TgpuRuntime', () => {
   });
 
   it('should properly write to complex buffer', async () => {
-    const runtime = await createRuntime({
+    const root = await tgpu.init({
       device: mockDevice as unknown as GPUDevice,
     });
 
     const s1 = struct({ a: u32, b: u32, c: vec3i });
     const s2 = struct({ a: u32, b: s1, c: vec4u });
 
-    const bufferData = tgpu.createBuffer(s2).$usage(tgpu.Uniform);
-    const buffer = asUniform(bufferData);
+    const dataBuffer = root.createBuffer(s2).$usage(tgpu.Uniform);
+    const data = asUniform(dataBuffer);
 
-    const testPipeline = runtime.makeComputePipeline({
-      code: wgsl`let x = ${buffer};`,
+    const testPipeline = root.makeComputePipeline({
+      code: wgsl`let x = ${data};`,
     });
 
     testPipeline.execute();
 
     expect(testPipeline).toBeDefined();
-    expect(runtime.device.createBuffer).toBeCalledWith({
+    expect(root.device.createBuffer).toBeCalledWith({
       mappedAtCreation: false,
       size: 64,
       usage:
@@ -213,16 +212,16 @@ describe('TgpuRuntime', () => {
         global.GPUBufferUsage.COPY_SRC,
     });
 
-    runtime.writeBuffer(bufferData, {
+    dataBuffer.write({
       a: 3,
       b: { a: 4, b: 5, c: vec3i(6, 7, 8) },
       c: vec4u(9, 10, 11, 12),
     });
 
-    const mockBuffer = runtime.bufferFor(bufferData);
+    const mockBuffer = root.unwrap(dataBuffer);
     expect(mockBuffer).toBeDefined();
 
-    expect(runtime.device.queue.writeBuffer).toBeCalledWith(
+    expect(root.device.queue.writeBuffer).toBeCalledWith(
       mockBuffer,
       0,
       new ArrayBuffer(64),
@@ -232,16 +231,17 @@ describe('TgpuRuntime', () => {
   });
 
   it('should properly write to buffer with plum initialization', async () => {
-    const runtime = await createRuntime({
+    const root = await tgpu.init({
       device: mockDevice as unknown as GPUDevice,
     });
-    const spy = vi.spyOn(runtime, 'writeBuffer');
     const intPlum = plum<number>(3);
 
-    const bufferData = tgpu.createBuffer(u32, intPlum).$usage(tgpu.Storage);
-    const buffer = asReadonly(bufferData);
+    const dataBuffer = root.createBuffer(u32, intPlum).$usage(tgpu.Storage);
+    const spy = vi.spyOn(dataBuffer, 'write');
 
-    const testPipeline = runtime.makeComputePipeline({
+    const buffer = asReadonly(dataBuffer);
+
+    const testPipeline = root.makeComputePipeline({
       code: wgsl`${buffer}`,
     });
 
@@ -249,7 +249,7 @@ describe('TgpuRuntime', () => {
 
     expect(spy).toBeCalledTimes(0);
     expect(testPipeline).toBeDefined();
-    expect(runtime.device.createBuffer).toBeCalledWith({
+    expect(root.device.createBuffer).toBeCalledWith({
       mappedAtCreation: true,
       size: 4,
       usage:
@@ -258,11 +258,11 @@ describe('TgpuRuntime', () => {
         global.GPUBufferUsage.COPY_SRC,
     });
 
-    runtime.setPlum(intPlum, 5);
+    root.setPlum(intPlum, 5);
 
     expect(spy).toBeCalledTimes(1);
-    const mockBuffer = runtime.bufferFor(bufferData);
-    expect(runtime.device.queue.writeBuffer).toBeCalledWith(
+    const mockBuffer = root.unwrap(dataBuffer);
+    expect(root.device.queue.writeBuffer).toBeCalledWith(
       mockBuffer,
       0,
       new ArrayBuffer(4),
@@ -272,16 +272,16 @@ describe('TgpuRuntime', () => {
   });
 
   it('creates a pipeline descriptor with a valid vertex buffer', async () => {
-    const runtime = await createRuntime({
+    const root = await tgpu.init({
       device: mockDevice as unknown as GPUDevice,
     });
 
-    const bufferData = tgpu.createBuffer(vec3f).$usage(tgpu.Vertex);
-    const buffer = asVertex(bufferData, 'vertex');
+    const dataBuffer = root.createBuffer(vec3f).$usage(tgpu.Vertex);
+    const data = asVertex(dataBuffer, 'vertex');
 
-    const testPipeline = runtime.makeRenderPipeline({
+    const testPipeline = root.makeRenderPipeline({
       vertex: {
-        code: wgsl`${buffer}`,
+        code: wgsl`${data}`,
         output: {},
       },
       fragment: { code: wgsl``, target: [] },
@@ -296,7 +296,7 @@ describe('TgpuRuntime', () => {
     });
 
     expect(testPipeline).toBeDefined();
-    expect(runtime.device.createBuffer).toBeCalledWith({
+    expect(root.device.createBuffer).toBeCalledWith({
       mappedAtCreation: false,
       size: 12,
       usage:
@@ -335,18 +335,18 @@ describe('TgpuRuntime', () => {
   });
 
   it('creates a pipeline descriptor with a valid vertex buffer (array)', async () => {
-    const runtime = await createRuntime({
+    const root = await tgpu.init({
       device: mockDevice as unknown as GPUDevice,
     });
 
-    const bufferData = tgpu
+    const dataBuffer = root
       .createBuffer(arrayOf(vec2f, 10))
       .$usage(tgpu.Vertex);
-    const buffer = asVertex(bufferData, 'vertex');
+    const data = asVertex(dataBuffer, 'vertex');
 
-    const testPipeline = runtime.makeRenderPipeline({
+    const testPipeline = root.makeRenderPipeline({
       vertex: {
-        code: wgsl`${buffer}`,
+        code: wgsl`${data}`,
         output: {},
       },
       fragment: { code: wgsl``, target: [] },
@@ -361,7 +361,7 @@ describe('TgpuRuntime', () => {
     });
 
     expect(testPipeline).toBeDefined();
-    expect(runtime.device.createBuffer).toBeCalledWith({
+    expect(root.device.createBuffer).toBeCalledWith({
       mappedAtCreation: false,
       size: 80,
       usage:
@@ -402,7 +402,11 @@ describe('TgpuRuntime', () => {
   });
 
   it('should throw an error when trying to create an invalid vertex buffer', async () => {
-    const bufferData = tgpu
+    const root = await tgpu.init({
+      device: mockDevice as unknown as GPUDevice,
+    });
+
+    const bufferData = root
       .createBuffer(
         struct({
           i: vec2f,
@@ -418,7 +422,11 @@ describe('TgpuRuntime', () => {
   });
 
   it('should properly extract primitive type from nested arrays in vertex buffer', async () => {
-    const bufferData = tgpu
+    const root = await tgpu.init({
+      device: mockDevice as unknown as GPUDevice,
+    });
+
+    const bufferData = root
       .createBuffer(arrayOf(arrayOf(arrayOf(u32, 10), 3), 2))
       .$usage(tgpu.Vertex);
 

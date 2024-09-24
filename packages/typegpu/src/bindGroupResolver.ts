@@ -149,7 +149,7 @@ export class BindGroupResolver {
       entries.push({
         binding: this.context.getIndexFor(buffer),
         resource: {
-          buffer: this.runtime.bufferFor(buffer.allocatable),
+          buffer: buffer.allocatable.buffer,
         },
       });
     }

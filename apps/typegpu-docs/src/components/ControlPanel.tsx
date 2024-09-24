@@ -1,3 +1,4 @@
+import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
 import { useState } from 'react';
 import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
@@ -6,6 +7,7 @@ import {
   exampleControlsAtom,
 } from '../utils/examples/exampleControlAtom';
 import { menuShownAtom } from '../utils/examples/menuShownAtom';
+import { isGPUSupported } from '../utils/isGPUSupported';
 import { Button } from './design/Button';
 import { Select } from './design/Select';
 import { Slider } from './design/Slider';
@@ -162,7 +164,12 @@ export function ControlPanel() {
   const exampleControlParams = useAtomValue(exampleControlsAtom);
 
   return (
-    <div className="flex flex-col gap-4 p-6 bg-grayscale-0 rounded-xl max-h-[50%] md:max-h-full">
+    <div
+      className={cs(
+        isGPUSupported ? '' : 'hidden md:flex',
+        'flex flex-col gap-4 p-6 bg-grayscale-0 rounded-xl max-h-[50%] md:max-h-full',
+      )}
+    >
       <div className="hidden md:flex flex-col gap-4">
         <h2 className="text-xl font-medium">Control panel</h2>
         <label className="flex items-center justify-between gap-3 text-sm cursor-pointer">
@@ -183,10 +190,14 @@ export function ControlPanel() {
         <hr className="border-tameplum-100" />
       </div>
 
-      <h2 className="text-xl font-medium">Example controls</h2>
-      <div className="grid items-center grid-cols-2 gap-4 overflow-auto p-1 pb-2">
-        {exampleControlParams.map((param) => paramToControlRow(param))}
-      </div>
+      {isGPUSupported ? (
+        <>
+          <h2 className="text-xl font-medium">Example controls</h2>
+          <div className="grid items-center grid-cols-2 gap-4 overflow-auto p-1 pb-2">
+            {exampleControlParams.map((param) => paramToControlRow(param))}
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

@@ -2,8 +2,9 @@
  * @module typegpu
  */
 
+import { createBuffer } from './legacyBufferApi';
 import { bindGroupLayout } from './tgpuBindGroupLayout';
-import { Storage, Uniform, Vertex, createBuffer } from './tgpuBuffer';
+import { Storage, Uniform, Vertex } from './tgpuBuffer';
 import { read, write } from './tgpuBufferUtils';
 
 export const tgpu = {
@@ -40,7 +41,4 @@ export type {
   LayoutEntryToInput,
   TgpuBindGroup,
 } from './tgpuBindGroupLayout';
-export type {
-  TgpuBuffer,
-  Unmanaged,
-} from './tgpuBuffer';
+export type { TgpuBuffer } from './tgpuBuffer';

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { exit } from 'node:process';
 import arg from 'arg';
 import color from './colors.mjs';
-import placeholderGenerate from './gen.mjs';
+import generate from './gen.mjs';
 
 const args = arg({
   '--version': Boolean,
@@ -31,7 +31,7 @@ const COMMANDS = {
       }
 
       try {
-        await placeholderGenerate(input, output);
+        await generate(input, output);
       } catch (error) {
         console.error(`${color.Red}Error: ${error.message}${color.Reset}`);
         exit(1);

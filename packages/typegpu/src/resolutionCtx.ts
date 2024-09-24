@@ -260,22 +260,17 @@ const INDENT = [
   '                ', // 8
 ];
 
-class IndentController {
+const N = INDENT.length - 1;
+
+export class IndentController {
   private identLevel = 0;
 
   get pre(): string {
-    if (INDENT[this.identLevel] !== undefined) {
-      return INDENT[this.identLevel] as string;
-    }
-
-    let str = '';
-    let i = this.identLevel;
-    while (i > 8) {
-      str += INDENT[8];
-      i >>= 3;
-    }
-
-    return str + INDENT[i];
+    return (
+      INDENT[this.identLevel] ??
+      (INDENT[N] as string).repeat(this.identLevel / N) +
+        INDENT[this.identLevel % N]
+    );
   }
 
   indent(): string {

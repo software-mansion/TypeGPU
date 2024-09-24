@@ -1,4 +1,4 @@
-import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
+import type { Parsed } from 'typed-binary';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import { type PlumListener, PlumStore } from './plumStore';
@@ -8,14 +8,9 @@ import {
   RenderProgramBuilder,
 } from './programBuilder';
 import type { TgpuSettable } from './settableTrait';
-import { TaskQueue } from './taskQueue';
+import { type TgpuBuffer, createBufferImpl } from './tgpuBuffer';
 import type { TgpuFn } from './tgpuFn';
-import {
-  type ExtractPlumValue,
-  type TgpuPlum,
-  type Unsubscribe,
-  isPlum,
-} from './tgpuPlumTypes';
+import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
 import type {
   ComputePipelineExecutorOptions,
   ComputePipelineOptions,
@@ -30,14 +25,14 @@ import type {
   TgpuAnyTextureView,
   TgpuTextureExternal,
 } from './tgpuTexture';
-import { type AnyTgpuData, type TgpuAllocatable, isAllocatable } from './types';
+import type { AnyTgpuData } from './types';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a runtime can interact via GPU buffers.
  */
 class TgpuRuntimeImpl implements TgpuRuntime {
-  private _entryToBufferMap = new Map<TgpuAllocatable, GPUBuffer>();
+  private _buffers: TgpuBuffer<AnyTgpuData>[] = [];
   private _samplers = new WeakMap<TgpuSampler, GPUSampler>();
   private _textures = new WeakMap<TgpuAnyTexture, GPUTexture>();
   private _textureViews = new WeakMap<TgpuAnyTextureView, GPUTextureView>();
@@ -48,14 +43,7 @@ class TgpuRuntimeImpl implements TgpuRuntime {
   private _pipelineExecutors: PipelineExecutor[] = [];
   private _commandEncoder: GPUCommandEncoder | null = null;
 
-  // Used for reading GPU buffers ad hoc.
-  private _readBuffer: GPUBuffer | null = null;
-  private _taskQueue = new TaskQueue();
   private readonly _plumStore = new PlumStore();
-  private readonly _allocSubscriptions = new Map<
-    TgpuAllocatable,
-    Unsubscribe
-  >();
 
   constructor(
     public readonly device: GPUDevice,
@@ -70,60 +58,31 @@ class TgpuRuntimeImpl implements TgpuRuntime {
     return this._commandEncoder;
   }
 
-  dispose() {
-    for (const unsub of this._allocSubscriptions.values()) {
-      unsub();
-    }
-    this._allocSubscriptions.clear();
+  createBuffer<TData extends AnyTgpuData>(
+    typeSchema: TData,
+    initialOrBuffer?: Parsed<TData> | TgpuPlum<Parsed<TData>> | GPUBuffer,
+  ): TgpuBuffer<TData> {
+    const buffer = createBufferImpl(this, typeSchema, initialOrBuffer).$device(
+      this.device,
+    );
 
-    for (const buffer of this._entryToBufferMap.values()) {
-      buffer.destroy();
-    }
-
-    this._entryToBufferMap.clear();
-
-    this._readBuffer?.destroy();
-  }
-
-  bufferFor(allocatable: TgpuAllocatable) {
-    let buffer = this._entryToBufferMap.get(allocatable);
-
-    if (!buffer) {
-      buffer = this.device.createBuffer({
-        usage: allocatable.flags,
-        size: allocatable.dataType.size,
-        mappedAtCreation: allocatable.initial !== undefined,
-      });
-
-      if (!buffer) {
-        throw new Error(`Failed to create buffer for ${allocatable}`);
-      }
-
-      if (allocatable.initial !== undefined) {
-        const writer = new BufferWriter(buffer.getMappedRange());
-
-        if (isPlum(allocatable.initial)) {
-          const plum = allocatable.initial;
-
-          allocatable.dataType.write(writer, this._plumStore.get(plum));
-
-          this._allocSubscriptions.set(
-            allocatable,
-            this._plumStore.subscribe(plum, () => {
-              this.writeBuffer(allocatable, this._plumStore.get(plum));
-            }),
-          );
-        } else {
-          allocatable.dataType.write(writer, allocatable.initial);
-        }
-
-        buffer.unmap();
-      }
-
-      this._entryToBufferMap.set(allocatable, buffer);
-    }
+    this._buffers.push(buffer);
 
     return buffer;
+  }
+
+  destroy() {
+    for (const buffer of this._buffers) {
+      buffer.destroy();
+    }
+  }
+
+  unwrap(resource: TgpuBuffer<AnyTgpuData>) {
+    if (resource.resourceType === 'buffer') {
+      return resource.buffer;
+    }
+
+    throw new Error(`Unknown resource type: ${resource}`);
   }
 
   textureFor(view: TgpuAnyTexture | TgpuAnyTextureView): GPUTexture {
@@ -184,76 +143,6 @@ class TgpuRuntimeImpl implements TgpuRuntime {
     }
 
     return gpuSampler;
-  }
-
-  async readBuffer<TData extends AnyTgpuData>(
-    allocatable: TgpuAllocatable<TData>,
-  ): Promise<Parsed<TData>> {
-    return this._taskQueue.enqueue(async () => {
-      // Flushing any commands to be encoded.
-      this.flush();
-
-      if (
-        !this._readBuffer ||
-        this._readBuffer.size < allocatable.dataType.size
-      ) {
-        // destroying the previous buffer
-        this._readBuffer?.destroy();
-
-        this._readBuffer = this.device.createBuffer({
-          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-          size: allocatable.dataType.size,
-        });
-      }
-
-      const buffer = this.bufferFor(allocatable);
-      const commandEncoder = this.device.createCommandEncoder();
-      commandEncoder.copyBufferToBuffer(
-        buffer,
-        0,
-        this._readBuffer,
-        0,
-        allocatable.dataType.size,
-      );
-
-      this.device.queue.submit([commandEncoder.finish()]);
-      await this.device.queue.onSubmittedWorkDone();
-      await this._readBuffer.mapAsync(
-        GPUMapMode.READ,
-        0,
-        allocatable.dataType.size,
-      );
-
-      const res = allocatable.dataType.read(
-        new BufferReader(
-          this._readBuffer.getMappedRange(0, allocatable.dataType.size),
-        ),
-      ) as Parsed<TData>;
-
-      this._readBuffer.unmap();
-
-      return res;
-    });
-  }
-
-  writeBuffer<TValue extends AnyTgpuData>(
-    allocatable: TgpuAllocatable<TValue>,
-    data: Parsed<TValue> | TgpuAllocatable<TValue>,
-  ) {
-    const gpuBuffer = this.bufferFor(allocatable);
-
-    const size = allocatable.dataType.size;
-
-    if (isAllocatable(data)) {
-      const sourceBuffer = this.bufferFor(data);
-      const commandEncoder = this.device.createCommandEncoder();
-      commandEncoder.copyBufferToBuffer(sourceBuffer, 0, gpuBuffer, 0, size);
-      this.device.queue.submit([commandEncoder.finish()]);
-    } else {
-      const hostBuffer = new ArrayBuffer(size);
-      allocatable.dataType.write(new BufferWriter(hostBuffer), data);
-      this.device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
-    }
   }
 
   setSource(
@@ -453,6 +342,7 @@ class RenderPipelineExecutor implements PipelineExecutor {
     private externalLayoutCount: number,
     private label?: string,
   ) {}
+
   execute(options: RenderPipelineExecutorOptions) {
     const {
       vertexCount,
@@ -489,13 +379,10 @@ class RenderPipelineExecutor implements PipelineExecutor {
     );
 
     for (const [
-      buffer,
+      usage,
       index,
     ] of this.vertexProgram.bindGroupResolver.getVertexBuffers()) {
-      passEncoder.setVertexBuffer(
-        index,
-        this.runtime.bufferFor(buffer.allocatable),
-      );
+      passEncoder.setVertexBuffer(index, usage.allocatable.buffer);
     }
 
     passEncoder.draw(vertexCount, instanceCount, firstVertex, firstInstance);
