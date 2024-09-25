@@ -204,6 +204,19 @@ export interface TgpuLooseData<TInner> extends ISchema<TInner>, TgpuResolvable {
 }
 
 export type AnyTgpuData = TgpuData<unknown>;
+export type AnyTgpuLooseData = TgpuLooseData<unknown>;
+
+export function isDataLoose(
+  data: AnyTgpuData | AnyTgpuLooseData,
+): data is AnyTgpuLooseData {
+  return data.isLoose;
+}
+
+export function isDataNotLoose(
+  data: AnyTgpuData | AnyTgpuLooseData,
+): data is AnyTgpuData {
+  return !data.isLoose;
+}
 
 export interface TgpuPointer<
   TScope extends 'function',

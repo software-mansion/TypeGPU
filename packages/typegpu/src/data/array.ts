@@ -32,7 +32,7 @@ export class TgpuArrayImpl<TElement extends AnyTgpuData>
   readonly size: number;
   readonly stride: number;
   readonly isLoose = false;
-  isCustomAligned = false;
+  readonly isCustomAligned = false;
 
   constructor(elementType: TElement, count: number) {
     super();
