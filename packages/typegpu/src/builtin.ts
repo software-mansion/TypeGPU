@@ -1,16 +1,16 @@
-import type { Bool, F32, TgpuArray, U32, vec3u, vec4f } from './data';
+import type { vec3u, vec4f } from './data';
 
-export type BuiltinVertexIndex = symbol & U32;
-export type BuiltinInstanceIndex = symbol & U32;
+export type BuiltinVertexIndex = symbol & number;
+export type BuiltinInstanceIndex = symbol & number;
 export type BuiltinPosition = symbol & vec4f;
-export type BuiltinClipDistances = symbol & TgpuArray<F32>;
-export type BuiltinFrontFacing = symbol & Bool;
-export type BuiltinFragDepth = symbol & F32;
-export type BuiltinSampleIndex = symbol & U32;
+export type BuiltinClipDistances = symbol & number[];
+export type BuiltinFrontFacing = symbol & boolean;
+export type BuiltinFragDepth = symbol & number;
+export type BuiltinSampleIndex = symbol & number;
 export type BuiltinSampleMask = symbol & vec4f;
 export type BuiltinFragment = symbol & vec4f;
 export type BuiltinLocalInvocationId = symbol & vec3u;
-export type BuiltinLocalInvocationIndex = symbol & U32;
+export type BuiltinLocalInvocationIndex = symbol & number;
 export type BuiltinGlobalInvocationId = symbol & vec3u;
 export type BuiltinWorkgroupId = symbol & vec3u;
 export type BuiltinNumWorkgroups = symbol & vec3u;

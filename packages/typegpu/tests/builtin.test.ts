@@ -43,7 +43,7 @@ describe('builtin', () => {
     type X = typeof x;
     type Omitted = OmitSymbols<X>;
 
-    expectTypeOf(x as Omitted).toEqualTypeOf({
+    expectTypeOf<Omitted>().toEqualTypeOf({
       a: u32,
       c: f32,
     });
