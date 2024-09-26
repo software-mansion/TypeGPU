@@ -9,8 +9,9 @@ import {
   type ResolutionCtx,
   type TgpuResolvable,
   type Wgsl,
-  isWgsl,
+  isResolvable,
 } from './types';
+import wgsl from './wgsl';
 
 // ----------
 // Public API
@@ -39,8 +40,16 @@ interface TgpuFnShell<
    * Creates a type-safe implementation of this signature
    */
   implement(
-    body: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
+    implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
   ): TgpuFn<Args, Return>;
+
+  /**
+   * @param implementation
+   *   Raw WGSL function implementation with header and body
+   *   without `fn` keyword and function name
+   *   e.g. `"(x: f32) -> f32 { return x; }"`;
+   */
+  implement(implementation: string): TgpuRawFn<Args, Return>;
 }
 
 interface TgpuFnBase<
@@ -50,7 +59,7 @@ interface TgpuFnBase<
     TgpuNamable {
   readonly shell: TgpuFnShell<Args, Return>;
   /** The JS function body passed as an implementation of a TypeGPU function. */
-  readonly body: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>;
+  readonly implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>;
   readonly bodyResolvable: TgpuResolvable;
 
   $uses(dependencyMap: Record<string, unknown>): this;
@@ -62,9 +71,8 @@ interface TgpuRawFnBase<
 > extends TgpuResolvable,
     TgpuNamable {
   readonly shell: TgpuFnShell<Args, Return>;
-  /** The JS function body passed as an implementation of a TypeGPU function. */
-  readonly body: Wgsl;
-  readonly bodyResolvable: TgpuResolvable;
+  /** The WGSL function header and body passed as raw string. */
+  readonly implementation: string;
 
   $uses(dependencyMap: Record<string, unknown>): this;
 }
@@ -72,7 +80,13 @@ interface TgpuRawFnBase<
 export type TgpuFn<
   Args extends AnyTgpuDataTuple,
   Return extends AnyTgpuData | undefined = undefined,
-> = (TgpuFnBase<Args, Return> | TgpuRawFnBase<Args, Return>) &
+> = TgpuFnBase<Args, Return> &
+  ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>);
+
+export type TgpuRawFn<
+  Args extends AnyTgpuDataTuple,
+  Return extends AnyTgpuData | undefined = undefined,
+> = TgpuRawFnBase<Args, Return> &
   ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>);
 
 export function fn<Args extends AnyTgpuDataTuple>(): TgpuFnShell<[], undefined>;
@@ -103,8 +117,8 @@ export function fn<
   return new TgpuFnShellImpl([] as Args, first as Return);
 }
 
-export function procedure(body: () => void) {
-  return fn().implement(body);
+export function procedure(implementation: () => void) {
+  return fn().implement(implementation);
 }
 
 // --------------
@@ -122,14 +136,22 @@ class TgpuFnShellImpl<
   ) {}
 
   implement(
-    body: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return> | Wgsl,
-  ): TgpuFn<Args, Return> {
-    if (isWgsl(body)) {
-      return createRawFn<Args, Return>(this, body);
+    implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
+  ): TgpuFn<Args, Return>;
+
+  implement(implementation: string): TgpuRawFn<Args, Return>;
+
+  implement(
+    implementation:
+      | ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>)
+      | string,
+  ): TgpuFn<Args, Return> | TgpuRawFn<Args, Return> {
+    if (typeof implementation === 'string') {
+      return createRawFn<Args, Return>(this, implementation);
     }
     return createFn<Args, Return>(
       this,
-      body as (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
+      implementation as (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
     );
   }
 }
@@ -139,18 +161,18 @@ function createFn<
   Return extends AnyTgpuData | undefined,
 >(
   shell: TgpuFnShell<Args, Return>,
-  body: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
+  implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
 ): TgpuFn<Args, Return> {
   let label: string | undefined;
   const externalMap: Record<string, unknown> = {};
 
   const fnBase: TgpuFnBase<Args, Return> = {
     shell,
-    body,
+    implementation,
 
     bodyResolvable: {
       get label() {
-        return `${label}.body`;
+        return `${label}.implementation`;
       },
 
       resolve: (ctx) => {
@@ -202,7 +224,7 @@ function createFn<
       return new FnCall(fnBase, args as Wgsl[]) as UnwrapReturn<Return>;
     }
 
-    return fnBase.body(...args);
+    return fnBase.implementation(...args);
   };
 
   return Object.assign(call, fnBase);
@@ -211,23 +233,20 @@ function createFn<
 function createRawFn<
   Args extends AnyTgpuDataTuple,
   Return extends AnyTgpuData | undefined,
->(shell: TgpuFnShell<Args, Return>, body: Wgsl): TgpuFn<Args, Return> {
+>(
+  shell: TgpuFnShell<Args, Return>,
+  implementation: string,
+): TgpuRawFn<Args, Return> {
   let label: string | undefined;
   const externalMap: Record<string, unknown> = {};
 
   const fnBase: TgpuRawFnBase<Args, Return> = {
     shell,
-    body,
+    implementation,
 
-    bodyResolvable: {
-      get label() {
-        return `${label}.body`;
-      },
-
-      resolve: (ctx) => {
-        return ctx.resolve(body);
-      },
-    } satisfies TgpuResolvable,
+    get label() {
+      return label;
+    },
 
     $uses(newExternals) {
       for (const [key, value] of Object.entries(newExternals)) {
@@ -241,10 +260,6 @@ function createRawFn<
       return this;
     },
 
-    get label() {
-      return label;
-    },
-
     $name(newLabel: string): TgpuRawFnBase<Args, Return> {
       label = newLabel;
       return this;
@@ -253,8 +268,22 @@ function createRawFn<
     resolve(ctx: ResolutionCtx): string {
       const ident = identifier().$name(this.label);
 
-      ctx.addDeclaration(this.bodyResolvable);
+      const replacedImpl = Object.entries(externalMap).reduce(
+        (acc, [externalName, external]) => {
+          if (!isResolvable(external)) {
+            return acc;
+          }
 
+          const resolvedExternal = ctx.resolve(external);
+          return acc.replaceAll(
+            new RegExp(`(?<![\\w_])${externalName}(?![\\w_])`, 'g'),
+            resolvedExternal,
+          );
+        },
+        implementation,
+      );
+
+      ctx.addDeclaration(wgsl`fn ${ident}${replacedImpl}`);
       return ctx.resolve(ident);
     },
   };
