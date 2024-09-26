@@ -12,7 +12,10 @@ export type TgpuLayoutSampler = { type: 'sampler' };
 export type TgpuLayoutEntry = TgpuLayoutUniform | TgpuLayoutSampler;
 
 export interface TgpuBindGroupLayout<
-  Entries extends Record<string, TgpuLayoutEntry>,
+  Entries extends Record<string, TgpuLayoutEntry> = Record<
+    string,
+    TgpuLayoutEntry
+  >,
 > {
   readonly bound: { [K in keyof Entries]: BindLayoutEntry<Entries[K]> };
   populate(

@@ -3,6 +3,7 @@ import type { TgpuArray } from './data';
 import type { JitTranspiler } from './jitTranspiler';
 import type { PlumListener } from './plumStore';
 import type { TgpuSettable } from './settableTrait';
+import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout';
 import type { TgpuBuffer } from './tgpuBuffer';
 import type { TgpuFn } from './tgpuFn';
 import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
@@ -39,7 +40,8 @@ export interface TgpuRuntime {
     gpuBuffer: GPUBuffer,
   ): TgpuBuffer<TData>;
 
-  unwrap<TData extends AnyTgpuData>(resource: TgpuBuffer<TData>): GPUBuffer;
+  unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
+  unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
 
   readPlum<TPlum extends TgpuPlum>(plum: TPlum): ExtractPlumValue<TPlum>;
 
