@@ -25,6 +25,8 @@ export class TgpuSizedImpl<TSize extends number, TData extends AnyTgpuData>
   implements TgpuSized<TSize, TData>
 {
   public readonly byteAlignment: number;
+  public readonly isLoose = false as const;
+  public readonly isCustomAligned: boolean;
 
   constructor(
     private data: AnyTgpuData,
@@ -33,6 +35,7 @@ export class TgpuSizedImpl<TSize extends number, TData extends AnyTgpuData>
     super();
 
     this.byteAlignment = this.data.byteAlignment;
+    this.isCustomAligned = this.data.isCustomAligned;
 
     if (size < this.data.size) {
       throw new Error(

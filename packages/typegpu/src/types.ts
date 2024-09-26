@@ -192,11 +192,30 @@ export type ValueOf<T> = T extends TgpuSlot<infer I>
       : T;
 
 export interface TgpuData<TInner> extends ISchema<TInner>, TgpuResolvable {
+  readonly isLoose: false;
+  readonly isCustomAligned: boolean;
   readonly byteAlignment: number;
   readonly size: number;
 }
 
+export interface TgpuLooseData<TInner> extends ISchema<TInner>, TgpuResolvable {
+  readonly isLoose: true;
+  readonly size: number;
+}
+
 export type AnyTgpuData = TgpuData<unknown>;
+export type AnyTgpuLooseData = TgpuLooseData<unknown>;
+
+export function isDataLoose<T>(
+  data: TgpuData<T> | TgpuLooseData<T>,
+): data is TgpuLooseData<T> {
+  return data.isLoose;
+}
+export function isDataNotLoose<T>(
+  data: TgpuData<T> | TgpuLooseData<T>,
+): data is TgpuData<T> {
+  return !data.isLoose;
+}
 
 export interface TgpuPointer<
   TScope extends 'function',

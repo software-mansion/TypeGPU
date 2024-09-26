@@ -27,11 +27,14 @@ class AtomicImpl<TSchema extends U32 | I32>
 {
   public readonly size: number;
   public readonly byteAlignment: number;
+  public readonly isLoose = false as const;
+  public readonly isCustomAligned: boolean;
 
   constructor(private readonly innerData: TSchema) {
     super();
     this.size = this.innerData.size;
     this.byteAlignment = this.innerData.byteAlignment;
+    this.isCustomAligned = this.innerData.isCustomAligned;
   }
 
   resolveReferences(): void {
