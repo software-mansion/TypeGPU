@@ -47,7 +47,7 @@ export class SimpleTgpuData<TSchema extends AnySchema>
     this.byteAlignment = byteAlignment;
     this.expressionCode = code;
     this.size = this.measure(MaxValue).size;
-    this.label = `data: ${code}`;
+    this.label = code;
   }
 
   resolveReferences(): void {
