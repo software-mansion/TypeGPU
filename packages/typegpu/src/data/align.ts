@@ -64,7 +64,7 @@ class AbstractTgpuAlignedImpl<
   public readonly isCustomAligned = true;
 
   constructor(
-    private data: AnyTgpuData | AnyTgpuLooseData,
+    protected data: AnyTgpuData | AnyTgpuLooseData,
     public readonly byteAlignment: number,
   ) {
     super();
@@ -109,10 +109,6 @@ class AbstractTgpuAlignedImpl<
     alignIO(measurer, this.byteAlignment);
     return this.data.measure(value, measurer);
   }
-
-  resolve(ctx: ResolutionCtx): string {
-    return this.data.resolve(ctx);
-  }
 }
 
 export class TgpuAlignedImpl<TAlign extends number, TData extends AnyTgpuData>
@@ -120,6 +116,13 @@ export class TgpuAlignedImpl<TAlign extends number, TData extends AnyTgpuData>
   implements TgpuAligned<TAlign, TData>
 {
   public readonly isLoose = false as const;
+
+  resolve(ctx: ResolutionCtx): string {
+    if (isDataLoose(this.data)) {
+      throw new Error('Cannot resolve loose data in a non-loose aligned data.');
+    }
+    return this.data.resolve(ctx);
+  }
 }
 
 export class TgpuLooseAlignedImpl<

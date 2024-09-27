@@ -198,7 +198,7 @@ export interface TgpuData<TInner> extends ISchema<TInner>, TgpuResolvable {
   readonly size: number;
 }
 
-export interface TgpuLooseData<TInner> extends ISchema<TInner>, TgpuResolvable {
+export interface TgpuLooseData<TInner> extends ISchema<TInner> {
   readonly isLoose: true;
   readonly size: number;
 }

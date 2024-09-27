@@ -142,12 +142,6 @@ class TgpuLooseArrayImpl<TElement extends AnyTgpuData>
   ): IMeasurer {
     return measurer.add(this.stride * this.elementCount);
   }
-
-  resolve(ctx: ResolutionCtx): string {
-    return ctx.resolve(`
-      array<${ctx.resolve(this.elementType)}, ${this.elementCount}>
-    `);
-  }
 }
 
 export const looseArrayOf = <TElement extends AnyTgpuData>(
