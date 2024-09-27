@@ -9,7 +9,7 @@ import {
 } from './programBuilder';
 import type { TgpuSettable } from './settableTrait';
 import { type TgpuBuffer, createBufferImpl } from './tgpuBuffer';
-import type { TgpuFn } from './tgpuFn';
+import type { TgpuTgslFn } from './tgpuFn';
 import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
 import type {
   ComputePipelineExecutorOptions,
@@ -282,7 +282,7 @@ class TgpuRuntimeImpl implements TgpuRuntime {
     return executor;
   }
 
-  compute(fn: TgpuFn<[]>): void {
+  compute(fn: TgpuTgslFn<[]>): void {
     // TODO: Cache the pipeline
 
     const program = new ComputeProgramBuilder(

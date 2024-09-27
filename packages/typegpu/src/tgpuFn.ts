@@ -49,10 +49,10 @@ interface TgpuFnShell<
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  implement(implementation: string): TgpuRawFn<Args, Return>;
+  implement(implementation: string): TgpuFn<Args, Return>;
 }
 
-interface TgpuFnBase<
+interface TgpuTgslFnBase<
   Args extends AnyTgpuDataTuple,
   Return extends AnyTgpuData | undefined = undefined,
 > extends TgpuResolvable,
@@ -77,10 +77,15 @@ interface TgpuRawFnBase<
   $uses(dependencyMap: Record<string, unknown>): this;
 }
 
-export type TgpuFn<
+type TgpuFnBase<
   Args extends AnyTgpuDataTuple,
   Return extends AnyTgpuData | undefined = undefined,
-> = TgpuFnBase<Args, Return> &
+> = TgpuTgslFnBase<Args, Return> | TgpuRawFnBase<Args, Return>;
+
+export type TgpuTgslFn<
+  Args extends AnyTgpuDataTuple,
+  Return extends AnyTgpuData | undefined = undefined,
+> = TgpuTgslFnBase<Args, Return> &
   ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>);
 
 export type TgpuRawFn<
@@ -88,6 +93,11 @@ export type TgpuRawFn<
   Return extends AnyTgpuData | undefined = undefined,
 > = TgpuRawFnBase<Args, Return> &
   ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>);
+
+export type TgpuFn<
+  Args extends AnyTgpuDataTuple,
+  Return extends AnyTgpuData | undefined = undefined,
+> = TgpuTgslFn<Args, Return> | TgpuRawFn<Args, Return>;
 
 export function fn<Args extends AnyTgpuDataTuple>(): TgpuFnShell<[], undefined>;
 
@@ -136,23 +146,14 @@ class TgpuFnShellImpl<
   ) {}
 
   implement(
-    implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
-  ): TgpuFn<Args, Return>;
-
-  implement(implementation: string): TgpuRawFn<Args, Return>;
-
-  implement(
     implementation:
       | ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>)
       | string,
-  ): TgpuFn<Args, Return> | TgpuRawFn<Args, Return> {
+  ): TgpuFn<Args, Return> {
     if (typeof implementation === 'string') {
       return createRawFn<Args, Return>(this, implementation);
     }
-    return createFn<Args, Return>(
-      this,
-      implementation as (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
-    );
+    return createFn<Args, Return>(this, implementation);
   }
 }
 
@@ -165,7 +166,7 @@ function createFn<
 ): TgpuFn<Args, Return> {
   const externalMap: Record<string, unknown> = {};
 
-  const fnBase: TgpuFnBase<Args, Return> = {
+  const fnBase: TgpuTgslFnBase<Args, Return> = {
     shell,
     implementation,
     label: undefined,
@@ -199,7 +200,7 @@ function createFn<
       return this;
     },
 
-    $name(newLabel: string): TgpuFnBase<Args, Return> {
+    $name(newLabel: string): TgpuTgslFnBase<Args, Return> {
       // @ts-ignore
       this.label = newLabel;
       return this;
