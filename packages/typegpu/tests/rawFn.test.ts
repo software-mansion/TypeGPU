@@ -1,6 +1,6 @@
 import { parse } from '@typegpu/wgsl-parser';
 import { describe, expect, it } from 'vitest';
-import { f32 } from '../src/data';
+import { f32, vec3f } from '../src/data';
 import tgpu, { wgsl } from '../src/experimental';
 import { parseWGSL } from './utils/parseWGSL';
 
@@ -45,7 +45,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
 
   it('resolves externals and replaces their usages in code', () => {
     const getColor = tgpu
-      .fn([], f32)
+      .fn([], vec3f)
       .implement(`() {
         let color = vec3f();
         return color;
