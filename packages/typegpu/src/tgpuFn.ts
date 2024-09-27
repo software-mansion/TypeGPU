@@ -163,16 +163,16 @@ function createFn<
   shell: TgpuFnShell<Args, Return>,
   implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
 ): TgpuFn<Args, Return> {
-  let label: string | undefined;
   const externalMap: Record<string, unknown> = {};
 
   const fnBase: TgpuFnBase<Args, Return> = {
     shell,
     implementation,
+    label: undefined,
 
     bodyResolvable: {
       get label() {
-        return `${label}.implementation`;
+        return `${this.label}.implementation`;
       },
 
       resolve: (ctx) => {
@@ -189,19 +189,19 @@ function createFn<
         externalMap[key] = value;
 
         // Giving name to external value
-        if (isNamable(value)) {
+        if (
+          isNamable(value) &&
+          (!('label' in value) || value.label === undefined)
+        ) {
           value.$name(key);
         }
       }
       return this;
     },
 
-    get label() {
-      return label;
-    },
-
     $name(newLabel: string): TgpuFnBase<Args, Return> {
-      label = newLabel;
+      // @ts-ignore
+      this.label = newLabel;
       return this;
     },
 
@@ -237,23 +237,22 @@ function createRawFn<
   shell: TgpuFnShell<Args, Return>,
   implementation: string,
 ): TgpuRawFn<Args, Return> {
-  let label: string | undefined;
   const externalMap: Record<string, unknown> = {};
 
   const fnBase: TgpuRawFnBase<Args, Return> = {
     shell,
     implementation,
-
-    get label() {
-      return label;
-    },
+    label: undefined,
 
     $uses(newExternals) {
       for (const [key, value] of Object.entries(newExternals)) {
         externalMap[key] = value;
 
         // Giving name to external value
-        if (isNamable(value)) {
+        if (
+          isNamable(value) &&
+          (!('label' in value) || value.label === undefined)
+        ) {
           value.$name(key);
         }
       }
@@ -261,7 +260,8 @@ function createRawFn<
     },
 
     $name(newLabel: string): TgpuRawFnBase<Args, Return> {
-      label = newLabel;
+      // @ts-ignore
+      this.label = newLabel;
       return this;
     },
 
@@ -280,7 +280,7 @@ function createRawFn<
             resolvedExternal,
           );
         },
-        implementation,
+        implementation.trim(),
       );
 
       ctx.addDeclaration(wgsl`fn ${ident}${replacedImpl}`);
