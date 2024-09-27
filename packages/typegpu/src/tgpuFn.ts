@@ -99,6 +99,20 @@ export type TgpuFn<
   Return extends AnyTgpuData | undefined = undefined,
 > = TgpuTgslFn<Args, Return> | TgpuRawFn<Args, Return>;
 
+export function isTgslFn<
+  Args extends AnyTgpuDataTuple,
+  Return extends AnyTgpuData | undefined = undefined,
+>(fn: TgpuFn<Args, Return>): fn is TgpuTgslFn<Args, Return> {
+  return 'bodyResolvable' in fn;
+}
+
+export function isRawFn<
+  Args extends AnyTgpuDataTuple,
+  Return extends AnyTgpuData | undefined = undefined,
+>(fn: TgpuFn<Args, Return>): fn is TgpuRawFn<Args, Return> {
+  return !isTgslFn(fn);
+}
+
 export function fn<Args extends AnyTgpuDataTuple>(): TgpuFnShell<[], undefined>;
 
 export function fn<Return extends AnyTgpuData>(
