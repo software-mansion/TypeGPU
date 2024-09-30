@@ -310,7 +310,9 @@ function createRawFn<
       return new FnCall(fn, args as Wgsl[]) as UnwrapReturn<Return>;
     }
 
-    throw new Error('Cannot execute functions constructed with raw WGSL');
+    throw new Error(
+      'Cannot execute on the CPU functions constructed with raw WGSL',
+    );
   };
 
   const fn = Object.assign(call, fnBase);
@@ -323,9 +325,7 @@ class FnCall<
 > implements TgpuResolvable
 {
   constructor(
-    private readonly _fn:
-      | TgpuFnBase<Args, Return>
-      | TgpuRawFnBase<Args, Return>,
+    private readonly _fn: TgpuFnBase<Args, Return>,
     private readonly _params: Wgsl[],
   ) {}
 
