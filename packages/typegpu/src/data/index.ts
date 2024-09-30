@@ -4,13 +4,13 @@
 
 export * from './std140';
 export * from './numeric';
-export * from './struct';
-export * from './array';
+export { TgpuStruct, struct } from './struct';
+export { TgpuArray, arrayOf } from './array';
 export * from './vector';
 export * from './matrix';
 export { ptr } from './pointer';
 export { atomic } from './atomic';
-export { align, TgpuAligned, TgpuLooseAligned } from './align';
+export { align, TgpuAligned } from './align';
 export { size, TgpuSized } from './size';
 
 // Reexporting type-binary utility types
