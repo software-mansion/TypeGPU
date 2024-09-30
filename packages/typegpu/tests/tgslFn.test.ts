@@ -49,6 +49,7 @@ describe('TGSL tgpu.fn function', () => {
       .fn([], vec3f)
       .implement(() => {
         const color = v();
+        const color2 = v(1, 2, 3);
         return color;
       })
       .$uses({ v: vec3f })
@@ -81,6 +82,7 @@ describe('TGSL tgpu.fn function', () => {
     const expected = parse(`
       fn get_color() -> vec3f {
         let color = vec3f();
+        let color2 = vec3f(1, 2, 3);
         return color;
       }
 
@@ -98,8 +100,6 @@ describe('TGSL tgpu.fn function', () => {
         let x = get_y();
       }
     `);
-
-    
 
     expect(actual).toEqual(expected);
   });
