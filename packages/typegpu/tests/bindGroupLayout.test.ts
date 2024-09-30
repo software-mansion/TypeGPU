@@ -1,9 +1,22 @@
-import { afterEach, beforeEach, describe, expectTypeOf, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  it,
+  vi,
+} from 'vitest';
 import { type Vec3f, vec3f } from '../src/data';
 import tgpu, {
   type TgpuRuntime,
   type TgpuBufferUsage,
+  type TgpuBindGroupLayout,
 } from '../src/experimental';
+import './utils/webgpuGlobals';
+
+const DEFAULT_VISIBILITY_FLAGS =
+  GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
 
 const mockBuffer = {
   getMappedRange: vi.fn(() => new ArrayBuffer(8)),
@@ -38,7 +51,9 @@ const mockRenderPassEncoder = {
 
 const mockDevice = {
   createBindGroup: vi.fn(() => 'mockBindGroup'),
-  createBindGroupLayout: vi.fn(() => 'mockBindGroupLayout'),
+  createBindGroupLayout: vi.fn(
+    (_descriptor: GPUBindGroupLayoutDescriptor) => 'mockBindGroupLayout',
+  ),
   createBuffer: vi.fn(() => mockBuffer),
   createCommandEncoder: vi.fn(() => mockCommandEncoder),
   createComputePipeline: vi.fn(() => 'mockComputePipeline'),
@@ -70,13 +85,66 @@ describe('TgpuBindGroupLayout', () => {
     root.destroy();
   });
 
-  it('hello', async () => {
-    const layout0 = tgpu.bindGroupLayout({
-      position: { type: 'uniform', data: vec3f },
+  it('infers the bound type of a uniform entry', () => {
+    const layout = tgpu.bindGroupLayout({
+      position: { uniform: vec3f },
     });
 
-    const { position } = layout0.bound;
+    const { position } = layout.bound;
 
     expectTypeOf(position).toEqualTypeOf<TgpuBufferUsage<Vec3f, 'uniform'>>();
+  });
+
+  it('infers the bound type of a readonly storage entry', () => {
+    const layout = tgpu.bindGroupLayout({
+      a: { storage: vec3f },
+      b: { storage: vec3f, access: 'readonly' },
+    });
+
+    const { a, b } = layout.bound;
+
+    expectTypeOf(a).toEqualTypeOf<TgpuBufferUsage<Vec3f, 'readonly'>>();
+    expectTypeOf(b).toEqualTypeOf<TgpuBufferUsage<Vec3f, 'readonly'>>();
+  });
+
+  it('omits null properties', async () => {
+    const layout = tgpu
+      .bindGroupLayout({
+        a: { uniform: vec3f }, // binding 0
+        _0: null, // binding 1
+        c: { storage: vec3f }, // binding 2
+      })
+      .$name('example_layout');
+
+    // omits null property in type
+    expectTypeOf(layout).toEqualTypeOf<
+      TgpuBindGroupLayout<{ a: { uniform: Vec3f }; c: { storage: Vec3f } }>
+    >();
+
+    const root = await tgpu.init({
+      device: mockDevice as unknown as GPUDevice,
+    });
+
+    root.unwrap(layout); // Creating the WebGPU resource
+
+    expect(mockDevice.createBindGroupLayout).toBeCalledWith({
+      label: 'example_layout',
+      entries: [
+        {
+          binding: 0,
+          visibility: DEFAULT_VISIBILITY_FLAGS,
+          buffer: {
+            type: 'uniform',
+          },
+        },
+        {
+          binding: 2,
+          visibility: DEFAULT_VISIBILITY_FLAGS,
+          buffer: {
+            type: 'read-only-storage',
+          },
+        },
+      ],
+    });
   });
 });

@@ -8,7 +8,9 @@ import {
   RenderProgramBuilder,
 } from './programBuilder';
 import type { TgpuSettable } from './settableTrait';
-import { type TgpuBuffer, createBufferImpl } from './tgpuBuffer';
+import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout';
+import { isBindGroupLayout } from './tgpuBindGroupLayout';
+import { type TgpuBuffer, createBufferImpl, isBuffer } from './tgpuBuffer';
 import type { TgpuFn } from './tgpuFn';
 import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
 import type {
@@ -39,6 +41,10 @@ class TgpuRuntimeImpl implements TgpuRuntime {
   private _externalTexturesStatus = new WeakMap<
     TgpuTextureExternal,
     'dirty' | 'clean'
+  >();
+  private _unwrappedBindGroupLayouts = new WeakMap<
+    TgpuBindGroupLayout,
+    GPUBindGroupLayout
   >();
   private _pipelineExecutors: PipelineExecutor[] = [];
   private _commandEncoder: GPUCommandEncoder | null = null;
@@ -77,9 +83,24 @@ class TgpuRuntimeImpl implements TgpuRuntime {
     }
   }
 
-  unwrap(resource: TgpuBuffer<AnyTgpuData>) {
-    if (resource.resourceType === 'buffer') {
+  unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
+  unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
+  unwrap(
+    resource: TgpuBuffer<AnyTgpuData> | TgpuBindGroupLayout,
+  ): GPUBuffer | GPUBindGroupLayout {
+    if (isBuffer(resource)) {
       return resource.buffer;
+    }
+
+    if (isBindGroupLayout(resource)) {
+      let cachedLayout = this._unwrappedBindGroupLayouts.get(resource);
+
+      if (!cachedLayout) {
+        cachedLayout = resource.unwrap(this.device);
+        this._unwrappedBindGroupLayouts.set(resource, cachedLayout);
+      }
+
+      return cachedLayout;
     }
 
     throw new Error(`Unknown resource type: ${resource}`);

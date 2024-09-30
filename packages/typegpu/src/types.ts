@@ -14,6 +14,25 @@ export type Resource = {
   dataType: AnyTgpuData | UnknownData;
 };
 
+export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
+
+/**
+ * Removes properties from record type that extend `Prop`
+ */
+export type OmitProps<T extends Record<string, unknown>, Prop> = Pick<
+  T,
+  {
+    [Key in keyof T]: T[Key] extends Prop ? never : Key;
+  }[keyof T]
+>;
+
+/**
+ * Utility type that takes an object type and makes the hover overlay more readable.
+ */
+export type Prettify<T> = {
+  [K in keyof T]: T[K];
+} & {};
+
 /**
  * Passed into each resolvable item. All sibling items share a resolution ctx,
  * and a new resolution ctx is made when going down each level in the tree.
