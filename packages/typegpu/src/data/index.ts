@@ -4,8 +4,8 @@
 
 export * from './std140';
 export * from './numeric';
-export { TgpuStruct, struct } from './struct';
-export { TgpuArray, arrayOf } from './array';
+export { TgpuStruct, isStructSchema, struct } from './struct';
+export { TgpuArray, isArraySchema, arrayOf } from './array';
 export * from './vector';
 export * from './matrix';
 export { ptr } from './pointer';
