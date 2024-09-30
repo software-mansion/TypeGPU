@@ -1,6 +1,7 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import { describe, expect, it, vi } from 'vitest';
-import { align, looseArrayOf, size, vec3f, vec3u } from '../src/data';
+import { align, size, vec3f, vec3u } from '../src/data';
+import { looseArrayOf } from '../src/data/array';
 import { tgpu } from '../src/experimental';
 
 const mockDevice = {
