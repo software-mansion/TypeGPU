@@ -10,6 +10,10 @@ import {
 } from 'typed-binary';
 import type { AnyTgpuData, ResolutionCtx, TgpuData } from '../types';
 
+// ----------
+// Public API
+// ----------
+
 export function size<TSize extends number, TData extends AnyTgpuData>(
   size: TSize,
   data: TData,
@@ -18,21 +22,36 @@ export function size<TSize extends number, TData extends AnyTgpuData>(
 }
 
 export interface TgpuSized<TSize extends number, TData extends AnyTgpuData>
-  extends TgpuData<Unwrap<TData>> {}
+  extends TgpuData<Unwrap<TData>> {
+  readonly size: TSize;
+}
 
-export class TgpuSizedImpl<TSize extends number, TData extends AnyTgpuData>
+export function isSizedSchema<T extends TgpuSized<number, TgpuData<unknown>>>(
+  value: T | unknown,
+): value is T {
+  return value instanceof TgpuSizedImpl;
+}
+
+// --------------
+// Implementation
+// --------------
+
+class TgpuSizedImpl<TSize extends number, TData extends AnyTgpuData>
   extends Schema<Unwrap<TData>>
   implements TgpuSized<TSize, TData>
 {
   public readonly byteAlignment: number;
+  public readonly isLoose = false as const;
+  public readonly isCustomAligned: boolean;
 
   constructor(
     private data: AnyTgpuData,
-    public readonly size: number,
+    public readonly size: TSize,
   ) {
     super();
 
     this.byteAlignment = this.data.byteAlignment;
+    this.isCustomAligned = this.data.isCustomAligned;
 
     if (size < this.data.size) {
       throw new Error(

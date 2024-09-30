@@ -1,5 +1,5 @@
 import type { Unwrap } from 'typed-binary';
-import { TgpuArrayImpl } from './data';
+import { isArraySchema } from './data';
 import { inGPUMode } from './gpuMode';
 import {
   type Storage,
@@ -230,7 +230,7 @@ function getVertexLayoutIfValid(
   }
   // if the data type is an array, check if the element type is valid
   // as arrayOf(arrayOf(f32, x), y) would still be valid - we do it recursively
-  if (type instanceof TgpuArrayImpl) {
+  if (isArraySchema(type)) {
     return getVertexLayoutIfValid(type.elementType, stepMode);
   }
   return null;

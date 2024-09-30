@@ -14,9 +14,9 @@ import type { TgpuNamable } from '../namable';
 import { code } from '../tgpuCode';
 import { identifier } from '../tgpuIdentifier';
 import type { AnyTgpuData, ResolutionCtx, TgpuData } from '../types';
-import { TgpuAlignedImpl } from './align';
+import { isAlignedSchema } from './align';
 import alignIO from './alignIO';
-import { TgpuSizedImpl } from './size';
+import { isSizedSchema } from './size';
 
 // ----------
 // Public API
@@ -31,6 +31,12 @@ export const struct = <TProps extends Record<string, AnyTgpuData>>(
   properties: TProps,
 ): TgpuStruct<TProps> => new TgpuStructImpl(properties);
 
+export function isStructSchema<
+  T extends TgpuStruct<Record<string, AnyTgpuData>>,
+>(schema: T | unknown): schema is T {
+  return schema instanceof TgpuStructImpl;
+}
+
 // --------------
 // Implementation
 // --------------
@@ -43,6 +49,8 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
 
   public readonly byteAlignment: number;
   public readonly size: number;
+  public readonly isLoose = false as const;
+  public readonly isCustomAligned = false;
 
   constructor(private readonly _properties: TProps) {
     super();
@@ -119,13 +127,16 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
   }
 }
 
-function getAttribute(field: AnyTgpuData): string | undefined {
-  if (field instanceof TgpuAlignedImpl) {
+function getAttribute<T extends AnyTgpuData>(field: T): string | undefined {
+  if (isAlignedSchema(field as unknown)) {
     return `@align(${field.byteAlignment}) `;
   }
-  if (field instanceof TgpuSizedImpl) {
+
+  if (isSizedSchema(field as unknown)) {
     return `@size(${field.size}) `;
   }
+
+  return undefined;
 }
 
 export function exactEntries<T extends Record<keyof T, T[keyof T]>>(
