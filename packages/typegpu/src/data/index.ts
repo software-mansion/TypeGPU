@@ -4,8 +4,8 @@
 
 export * from './std140';
 export * from './numeric';
-export * from './struct';
-export * from './array';
+export { TgpuStruct, struct } from './struct';
+export { TgpuArray, arrayOf } from './array';
 export * from './vector';
 export * from './matrix';
 export { ptr } from './pointer';
@@ -13,9 +13,7 @@ export { atomic, isAtomicSchema, Atomic } from './atomic';
 export {
   align,
   isAlignedSchema,
-  isLooseAlignedSchema,
   TgpuAligned,
-  TgpuLooseAligned,
 } from './align';
 export { size, isSizedSchema, TgpuSized } from './size';
 
