@@ -26,13 +26,17 @@ async function main(input, output) {
  */
 export function generate(wgsl, toTs = true) {
   const reflect = new WgslReflect(wgsl);
+
   return `/* generated via tgpu-cli by TypeGPU */
 
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 ${generateStructs(reflect.structs, toTs)}
 
 ${generateAliases(reflect.aliases)}
+
+${generateBindGroupLayouts(reflect.getBindGroups())}
 `.trim();
 }
 
@@ -88,7 +92,15 @@ function generateStructMember(member) {
  * @param { import('wgsl_reflect').TypeInfo } type_
  */
 function generateType(type_) {
-  if (!(type_ instanceof ArrayInfo) && type_.size === 0) {
+  if (
+    !(
+      type_ instanceof ArrayInfo ||
+      (type_ instanceof StructInfo &&
+        type_.members.length === 1 &&
+        type_.members[0].type instanceof ArrayInfo)
+    ) &&
+    type_.size === 0
+  ) {
     throw new Error(`Invalid data type with size 0: ${type_.name}`);
   }
 
@@ -134,6 +146,48 @@ function replaceWithAlias(type) {
   return type instanceof TemplateInfo
     ? typeToAlias(type.name, type.format?.name ?? '')
     : type.name;
+}
+
+/**
+ * @param { import('wgsl_reflect').VariableInfo[][] } bindGroups
+ */
+function generateBindGroupLayouts(bindGroups) {
+  return `/* bindGroupLayouts */
+${bindGroups
+  .flatMap(
+    (group, index) => `\
+const layout${index} = tgpu.bindGroupLayout({
+  ${generateGroupLayout(group)}
+}).$forceIndex(${index});`,
+  )
+  .join('\n\n')}`;
+}
+
+const RESOURCE_TYPES = [
+  'uniform',
+  'storage',
+  'texture',
+  'sampler',
+  'storageTexture',
+];
+
+/**
+ * @param { import('wgsl_reflect').VariableInfo[] } group
+ */
+function generateGroupLayout(group) {
+  let emptyCount = 0;
+
+  return Array(group.length)
+    .fill(null)
+    .map((_, index) => group[index])
+    .map((variable) =>
+      variable
+        ? `${variable.name}: {
+    ${RESOURCE_TYPES[variable.resourceType]}: ${generateType(variable.type)},${RESOURCE_TYPES[variable.resourceType] === 'storage' || variable.access ? `\n    access: '${variable.access ? variable.access : 'read'}',` : ''}
+  }`
+        : `_${emptyCount++} : null`,
+    )
+    .join(',\n  ');
 }
 
 export default main;
