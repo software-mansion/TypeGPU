@@ -119,7 +119,7 @@ export class TgpuAlignedImpl<TAlign extends number, TData extends AnyTgpuData>
 
   resolve(ctx: ResolutionCtx): string {
     if (isDataLoose(this.data)) {
-      throw new Error('Cannot resolve loose data in a non-loose aligned data.');
+      throw new Error('Loose data cannot be resolved.');
     }
     return this.data.resolve(ctx);
   }
