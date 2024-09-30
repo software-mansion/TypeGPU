@@ -236,13 +236,14 @@ function createFn<
   const call = (...args: UnwrapArgs<Args>): UnwrapReturn<Return> => {
     if (inGPUMode()) {
       // TODO: Filter out only those arguments which are valid to pass around
-      return new FnCall(fnBase, args as Wgsl[]) as UnwrapReturn<Return>;
+      return new FnCall(fn, args as Wgsl[]) as UnwrapReturn<Return>;
     }
 
-    return fnBase.implementation(...args);
+    return fn.implementation(...args);
   };
 
-  return Object.assign(call, fnBase);
+  const fn = Object.assign(call, fnBase);
+  return fn;
 }
 
 function createRawFn<
@@ -306,13 +307,14 @@ function createRawFn<
   const call = (...args: UnwrapArgs<Args>): UnwrapReturn<Return> => {
     if (inGPUMode()) {
       // TODO: Filter out only those arguments which are valid to pass around
-      return new FnCall(fnBase, args as Wgsl[]) as UnwrapReturn<Return>;
+      return new FnCall(fn, args as Wgsl[]) as UnwrapReturn<Return>;
     }
 
     throw new Error('Cannot execute functions constructed with raw WGSL');
   };
 
-  return Object.assign(call, fnBase);
+  const fn = Object.assign(call, fnBase);
+  return fn;
 }
 
 class FnCall<

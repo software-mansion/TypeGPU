@@ -12,6 +12,7 @@ import {
   u32,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
+import { inGPUMode } from '../gpuMode';
 import type { TgpuData } from '../types';
 
 // --------------
@@ -82,6 +83,10 @@ function makeVecSchema<ValueType extends vecBase>(
 
   const construct = (...args: number[]): ValueType => {
     const values = args; // TODO: Allow users to pass in vectors that fill part of the values.
+
+    if (inGPUMode()) {
+      return `${VecSchema.expressionCode}(${values.join(', ')})` as unknown as ValueType;
+    }
 
     if (values.length <= 1) {
       return options.makeFromScalar(values[0] ?? 0);

@@ -18,6 +18,7 @@ describe('function_decl', () => {
           header: {
             type: 'function_header',
             identifier: 'example',
+            returnType: null,
           },
           body: [],
         },
@@ -43,6 +44,7 @@ describe('function_decl', () => {
           header: {
             type: 'function_header',
             identifier: 'example',
+            returnType: null,
           },
           body: [
             {
@@ -89,6 +91,45 @@ describe('function_decl', () => {
           header: {
             type: 'function_header',
             identifier: 'example',
+            returnType: null,
+          },
+          body: [
+            {
+              type: 'return_statement',
+              expression: null,
+            },
+          ],
+        },
+      ],
+    } satisfies TranslationUnit;
+
+    expect(parse(code)).toEqual(expected);
+  });
+
+  it('parses function with explicit return type', () => {
+    const code = `
+      fn example() -> u32 {
+        return;
+      }
+    `;
+
+    const expected = {
+      type: 'translation_unit',
+      declarations: [
+        {
+          type: 'function_decl',
+          attrs: [],
+          header: {
+            type: 'function_header',
+            identifier: 'example',
+            returnType: {
+              type: 'return_type',
+              specifier: {
+                type: 'template_elaborated_ident',
+                ident: 'u32',
+                template_list: null,
+              },
+            },
           },
           body: [
             {

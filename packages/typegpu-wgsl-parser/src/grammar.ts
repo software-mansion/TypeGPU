@@ -25,7 +25,7 @@ const lexer = moo.compile({
 
   // WGSL spec apparently accepts plenty of Unicode, but lets limit it to just ASCII for now.
   ident_pattern: {
-    match: /[a-z_][a-z_0-9]*/,
+    match: /[a-z_A-Z][a-z_0-9A-Z]*/,
     type: moo.keywords({
       if: 'if',
       else: 'else',
@@ -112,7 +112,8 @@ export type GlobalDecl =
  export type TemplateList = Expression[]; 
 
 export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement, attrs: Attribute[] };
-export type FunctionHeader = { type: 'function_header', identifier: string };
+export type FunctionHeader = { type: 'function_header', identifier: string, returnType: ReturnType | null };
+export type ReturnType = { type: 'return_type', specifier: TypeSpecifier };
 
 
  export type ReturnStatement = { type: 'return_statement', expression: Expression | null }; 
@@ -294,10 +295,13 @@ const grammar: Grammar = {
     {"name": "template_arg_comma_list$ebnf$2", "symbols": [{"literal":","}], "postprocess": id},
     {"name": "template_arg_comma_list$ebnf$2", "symbols": [], "postprocess": () => null},
     {"name": "template_arg_comma_list", "symbols": ["expression", "template_arg_comma_list$ebnf$1", "template_arg_comma_list$ebnf$2"], "postprocess": ([first, rest]) => [first, ...rest.map(tuple => tuple[1])]},
+    {"name": "return_type", "symbols": [{"literal":"-"}, {"literal":">"}, "type_specifier"], "postprocess": ([,, specifier]) => ({ type: 'return_type', specifier })},
     {"name": "function_decl$ebnf$1", "symbols": []},
     {"name": "function_decl$ebnf$1", "symbols": ["function_decl$ebnf$1", "attribute"], "postprocess": (d) => d[0].concat([d[1]])},
     {"name": "function_decl", "symbols": ["function_decl$ebnf$1", "function_header", "compound_statement"], "postprocess": ([attrs, header, body]) => ({ type: 'function_decl', header, body, attrs })},
-    {"name": "function_header", "symbols": [{"literal":"fn"}, "ident", {"literal":"("}, {"literal":")"}], "postprocess": ([ , identifier]) => ({ type: 'function_header', identifier: identifier.value })},
+    {"name": "function_header$ebnf$1", "symbols": ["return_type"], "postprocess": id},
+    {"name": "function_header$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "function_header", "symbols": [{"literal":"fn"}, "ident", {"literal":"("}, {"literal":")"}, "function_header$ebnf$1"], "postprocess": ([ , identifier,,, returnType]) => ({ type: 'function_header', identifier: identifier.value, returnType })},
     {"name": "return_statement$ebnf$1", "symbols": ["expression"], "postprocess": id},
     {"name": "return_statement$ebnf$1", "symbols": [], "postprocess": () => null},
     {"name": "return_statement", "symbols": [{"literal":"return"}, "return_statement$ebnf$1"], "postprocess": ([ , expression]) => ({ type: 'return_statement', expression })},

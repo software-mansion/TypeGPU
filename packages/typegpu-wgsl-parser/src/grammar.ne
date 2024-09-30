@@ -14,7 +14,7 @@ const lexer = moo.compile({
 
   // WGSL spec apparently accepts plenty of Unicode, but lets limit it to just ASCII for now.
   ident_pattern: {
-    match: /[a-z_][a-z_0-9]*/,
+    match: /[a-z_A-Z][a-z_0-9A-Z]*/,
     type: moo.keywords({
       if: 'if',
       else: 'else',
@@ -150,14 +150,17 @@ template_arg_comma_list ->
 
 @{%
 export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement, attrs: Attribute[] };
-export type FunctionHeader = { type: 'function_header', identifier: string };
+export type FunctionHeader = { type: 'function_header', identifier: string, returnType: ReturnType | null };
+export type ReturnType = { type: 'return_type', specifier: TypeSpecifier };
 
 %}
+return_type ->
+  "-" ">" type_specifier {% ([,, specifier]) => ({ type: 'return_type', specifier }) %}
 function_decl -> attribute:* function_header compound_statement {% ([attrs, header, body]) => ({ type: 'function_decl', header, body, attrs }) %}
 # TODO: Add param list
-# TODO: Add return type
 function_header ->
-  "fn" ident "(" ")" {% ([ , identifier]) => ({ type: 'function_header', identifier: identifier.value }) %}
+  "fn" ident "(" ")" return_type:? {% ([ , identifier,,, returnType]) => ({ type: 'function_header', identifier: identifier.value, returnType }) %}
+
 
 #
 # Statements
