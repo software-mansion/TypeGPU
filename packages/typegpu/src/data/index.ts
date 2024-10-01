@@ -8,6 +8,7 @@ export * from './struct';
 export * from './array';
 export * from './vector';
 export * from './matrix';
+export * from './vertexAttribute';
 export { ptr } from './pointer';
 export { atomic } from './atomic';
 export { align, TgpuAligned, TgpuLooseAligned } from './align';

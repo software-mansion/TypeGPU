@@ -137,7 +137,7 @@ class TgpuLooseArrayImpl<TElement extends AnyTgpuData>
   }
 
   measure(
-    value: MaxValue | Parsed<Unwrap<TElement>>[],
+    _: MaxValue | Parsed<Unwrap<TElement>>[],
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
     return measurer.add(this.stride * this.elementCount);
