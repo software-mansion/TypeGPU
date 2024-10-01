@@ -30,6 +30,10 @@ const mockBuffer = {
   destroy: vi.fn(),
 };
 
+const mockTexture = {
+  createView: vi.fn(() => 'view'),
+};
+
 const mockCommandEncoder = {
   beginComputePass: vi.fn(() => mockComputePassEncoder),
   beginRenderPass: vi.fn(() => mockRenderPassEncoder),
@@ -69,7 +73,7 @@ const mockDevice = {
   createRenderPipeline: vi.fn(() => 'mockRenderPipeline'),
   createSampler: vi.fn(() => 'mockSampler'),
   createShaderModule: vi.fn(() => 'mockShaderModule'),
-  createTexture: vi.fn(() => 'mockTexture'),
+  createTexture: vi.fn(() => mockTexture),
   importExternalTexture: vi.fn(() => 'mockExternalTexture'),
   queue: {
     copyExternalImageToTexture: vi.fn(),
