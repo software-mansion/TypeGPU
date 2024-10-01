@@ -90,17 +90,10 @@ function generateStructMember(member) {
 
 /**
  * @param { import('wgsl_reflect').TypeInfo } type_
+ * @param { boolean } checkNonZeroLength
  */
-function generateType(type_) {
-  if (
-    !(
-      type_ instanceof ArrayInfo ||
-      (type_ instanceof StructInfo &&
-        type_.members.length === 1 &&
-        type_.members[0].type instanceof ArrayInfo)
-    ) &&
-    type_.size === 0
-  ) {
+function generateType(type_, checkNonZeroLength = true) {
+  if (checkNonZeroLength && type_.size === 0 && !type_.isArray) {
     throw new Error(`Invalid data type with size 0: ${type_.name}`);
   }
 
@@ -152,7 +145,8 @@ function replaceWithAlias(type) {
  * @param { import('wgsl_reflect').VariableInfo[][] } bindGroups
  */
 function generateBindGroupLayouts(bindGroups) {
-  return `/* bindGroupLayouts */
+  return bindGroups.length > 0
+    ? `/* bindGroupLayouts */
 ${bindGroups
   .flatMap(
     (group, index) => `\
@@ -160,16 +154,29 @@ const layout${index} = tgpu.bindGroupLayout({
   ${generateGroupLayout(group)}
 }).$forceIndex(${index});`,
   )
-  .join('\n\n')}`;
+  .join('\n\n')}`
+    : '';
 }
 
-const RESOURCE_TYPES = [
-  'uniform',
-  'storage',
-  'texture',
-  'sampler',
-  'storageTexture',
+const RESOURCE_GENERATORS = [
+  generateUniformVariable,
+  generateStorageVariable,
+  generateTextureVariable,
+  generateSamplerVariable,
+  generateStorageTextureVariable,
 ];
+
+const ACCESS_TYPES = {
+  read: 'readonly',
+  write: 'writeonly',
+  read_write: 'mutable',
+};
+
+const SAMPLE_TYPES = {
+  u32: 'uint',
+  i32: 'sint',
+  f32: 'float',
+};
 
 /**
  * @param { import('wgsl_reflect').VariableInfo[] } group
@@ -182,12 +189,108 @@ function generateGroupLayout(group) {
     .map((_, index) => group[index])
     .map((variable) =>
       variable
-        ? `${variable.name}: {
-    ${RESOURCE_TYPES[variable.resourceType]}: ${generateType(variable.type)},${RESOURCE_TYPES[variable.resourceType] === 'storage' || variable.access ? `\n    access: '${variable.access ? variable.access : 'read'}',` : ''}
-  }`
+        ? `${variable.name}: ${generateVariable(variable)}`
         : `_${emptyCount++} : null`,
     )
     .join(',\n  ');
+}
+
+/**
+ * @param { import('wgsl_reflect').VariableInfo } variable
+ */
+function generateVariable(variable) {
+  return RESOURCE_GENERATORS[variable.resourceType](variable);
+}
+
+/**
+ * @param { import('wgsl_reflect').VariableInfo } variable
+ */
+function generateUniformVariable(variable) {
+  return `{
+    uniform: ${generateType(variable.type)},
+  }`;
+}
+
+/**
+ * @param { import('wgsl_reflect').VariableInfo } variable
+ */
+function generateStorageVariable(variable) {
+  return `{
+    storage: ${generateType(variable.type, false)},${
+      variable.access ? `\n    access: '${ACCESS_TYPES[variable.access]}',` : ''
+    }
+  }`;
+}
+
+/**
+ * @param { import('wgsl_reflect').VariableInfo } variable
+ */
+function getViewDimension(variable) {
+  return variable.type.name.includes('_3d')
+    ? '3d'
+    : variable.type.name.includes('_1d')
+      ? '1d'
+      : variable.type.name.includes('_cube')
+        ? 'Cube'
+        : null;
+}
+
+/**
+ * @param { import('wgsl_reflect').VariableInfo } variable
+ */
+function generateStorageTextureVariable(variable) {
+  const viewDimension = getViewDimension(variable);
+
+  return `{
+    storageTexture: '${variable.format?.name}',${
+      variable.access ? `\n    access: ${ACCESS_TYPES[variable.access]},` : ''
+    }${viewDimension ? `\n    viewDimension: ${viewDimension},` : ''}
+  }`;
+}
+
+const SAMPLER_TYPES = {
+  sampler: 'filtering',
+  sampler_comparison: 'compatison',
+};
+
+/**
+ * @param { import('wgsl_reflect').VariableInfo } variable
+ */
+function generateSamplerVariable(variable) {
+  console.log(variable);
+  return `{
+    sampler: '${SAMPLER_TYPES[variable.type.name]}',
+  }`;
+}
+
+/**
+ * @param { import('wgsl_reflect').VariableInfo } variable
+ */
+function generateTextureVariable(variable) {
+  const type_ = variable.type.name;
+
+  if (type_ === 'texture_external') {
+    return generateExternalTextureVariable(variable);
+  }
+
+  const format = variable.format?.name;
+  const viewDimension = getViewDimension(variable);
+  const multisampled = type_.includes('_multisampled');
+
+  return `{
+    texture: '${type_.includes('_depth') ? 'depth' : SAMPLE_TYPES[format]}',${
+      viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''
+    }${multisampled ? '\n    multisampled: true,' : ''}
+  }`;
+}
+
+/**
+ * @param { import('wgsl_reflect').VariableInfo } variable
+ */
+function generateExternalTextureVariable(variable) {
+  return `{
+    externalTexture: {},
+  }`;
 }
 
 export default main;

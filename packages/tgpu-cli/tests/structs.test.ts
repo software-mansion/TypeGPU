@@ -171,7 +171,7 @@ struct Triangle {
 var<storage, read> triangles: Triangles;
 
 struct Triangles {
-    tris : array<Triangle>,
+  tris: array<Triangle>,
 };`;
 
     const expected = `\
