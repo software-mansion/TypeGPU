@@ -20,7 +20,7 @@ import tgpu, {
 import './utils/webgpuGlobals';
 import { MissingBindingError } from '../src/tgpuBindGroupLayout';
 
-const DEFAULT_VISIBILITY_FLAGS =
+const DEFAULT_READONLY_VISIBILITY_FLAGS =
   GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
 
 const mockBuffer = {
@@ -154,14 +154,14 @@ describe('TgpuBindGroupLayout', () => {
       entries: [
         {
           binding: 0,
-          visibility: DEFAULT_VISIBILITY_FLAGS,
+          visibility: DEFAULT_READONLY_VISIBILITY_FLAGS,
           buffer: {
             type: 'uniform',
           },
         },
         {
           binding: 2,
-          visibility: DEFAULT_VISIBILITY_FLAGS,
+          visibility: DEFAULT_READONLY_VISIBILITY_FLAGS,
           buffer: {
             type: 'read-only-storage',
           },

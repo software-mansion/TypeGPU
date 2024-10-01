@@ -45,7 +45,7 @@ class TgpuRuntimeImpl implements TgpuRuntime {
   >();
 
   private _unwrappedBindGroupLayouts = new WeakMemo(
-    (key: TgpuBindGroupLayout) => key.unwrap(this.device),
+    (key: TgpuBindGroupLayout) => key.unwrap(this),
   );
   private _unwrappedBindGroups = new WeakMemo((key: TgpuBindGroup) =>
     key.unwrap(this),

@@ -110,9 +110,9 @@ export interface TgpuBindGroupLayout<
   /**
    * Creates a raw WebGPU resource based on the typed descriptor.
    * NOTE: This creates a new resource every time, better to use `root.unwrap(...)` instead.
-   * @param device The device for which the raw resource should be created
+   * @param unwrapper Used to unwrap any resources that this resource depends on.
    */
-  unwrap(device: GPUDevice): GPUBindGroupLayout;
+  unwrap(unwrapper: Unwrapper): GPUBindGroupLayout;
 }
 
 type StorageUsageForEntry<T extends TgpuLayoutStorage> = T extends {
@@ -235,8 +235,8 @@ class TgpuBindGroupLayoutImpl<
     return this;
   }
 
-  unwrap(device: GPUDevice) {
-    const unwrapped = device.createBindGroupLayout({
+  unwrap(unwrapper: Unwrapper) {
+    const unwrapped = unwrapper.device.createBindGroupLayout({
       label: this.label ?? '',
       entries: Object.values(this.entries)
         .map((entry, idx) => {
