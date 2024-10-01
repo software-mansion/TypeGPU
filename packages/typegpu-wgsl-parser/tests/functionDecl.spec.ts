@@ -17,7 +17,9 @@ describe('function_decl', () => {
           attrs: [],
           header: {
             type: 'function_header',
-            identifier: 'example',
+            ident: 'example',
+            returntype: null,
+            args: null,
           },
           body: [],
         },
@@ -42,7 +44,9 @@ describe('function_decl', () => {
           attrs: [],
           header: {
             type: 'function_header',
-            identifier: 'example',
+            ident: 'example',
+            returntype: null,
+            args: null,
           },
           body: [
             {
@@ -88,7 +92,99 @@ describe('function_decl', () => {
           ],
           header: {
             type: 'function_header',
-            identifier: 'example',
+            ident: 'example',
+            returntype: null,
+            args: null,
+          },
+          body: [
+            {
+              type: 'return_statement',
+              expression: null,
+            },
+          ],
+        },
+      ],
+    } satisfies TranslationUnit;
+
+    expect(parse(code)).toEqual(expected);
+  });
+
+  it('parses function with explicit return type', () => {
+    const code = `
+      fn example() -> u32 {
+        return;
+      }
+    `;
+
+    const expected = {
+      type: 'translation_unit',
+      declarations: [
+        {
+          type: 'function_decl',
+          attrs: [],
+          header: {
+            type: 'function_header',
+            ident: 'example',
+            returntype: {
+              type: 'return_type',
+              typespec: {
+                type: 'template_elaborated_ident',
+                ident: 'u32',
+                template_list: null,
+              },
+            },
+            args: null,
+          },
+          body: [
+            {
+              type: 'return_statement',
+              expression: null,
+            },
+          ],
+        },
+      ],
+    } satisfies TranslationUnit;
+
+    expect(parse(code)).toEqual(expected);
+  });
+
+  it('parses function with arguments', () => {
+    const code = `
+      fn example(x: u32, y: vec3f) {
+        return;
+      }
+    `;
+
+    const expected = {
+      type: 'translation_unit',
+      declarations: [
+        {
+          type: 'function_decl',
+          attrs: [],
+          header: {
+            type: 'function_header',
+            ident: 'example',
+            returntype: null,
+            args: [
+              {
+                type: 'func_argument',
+                ident: 'x',
+                typespec: {
+                  type: 'template_elaborated_ident',
+                  ident: 'u32',
+                  template_list: null,
+                },
+              },
+              {
+                type: 'func_argument',
+                ident: 'y',
+                typespec: {
+                  type: 'template_elaborated_ident',
+                  ident: 'vec3f',
+                  template_list: null,
+                },
+              },
+            ],
           },
           body: [
             {
