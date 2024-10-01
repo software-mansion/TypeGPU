@@ -282,8 +282,15 @@ const computeModule = root.device.createShaderModule({
   code: computeCode,
 });
 
+const renderBindGroupLayout = tgpu.bindGroupLayout({
+  trianglePos: { uniform: arrayOf(TriangleInfoStruct, triangleAmount) },
+  colorPalette: { uniform: vec3f },
+});
+
 const pipeline = root.device.createRenderPipeline({
-  layout: 'auto',
+  layout: root.device.createPipelineLayout({
+    bindGroupLayouts: [root.unwrap(renderBindGroupLayout)],
+  }),
   vertex: {
     module: renderModule,
     buffers: [
@@ -312,25 +319,6 @@ const pipeline = root.device.createRenderPipeline({
   },
 });
 
-const computePipeline = root.device.createComputePipeline({
-  layout: 'auto',
-  compute: {
-    module: computeModule,
-  },
-});
-
-const renderBindGroupLayout = tgpu.bindGroupLayout({
-  trianglePos: { uniform: arrayOf(TriangleInfoStruct, triangleAmount) },
-  colorPalette: { uniform: vec3f },
-});
-
-const renderBindGroups = [0, 1].map((idx) =>
-  renderBindGroupLayout.populate({
-    trianglePos: trianglePosBuffers[idx],
-    colorPalette: colorPaletteBuffer,
-  }),
-);
-
 const computeBindGroupLayout = tgpu.bindGroupLayout({
   currentTrianglePos: { uniform: arrayOf(TriangleInfoStruct, triangleAmount) },
   nextTrianglePos: {
@@ -339,6 +327,22 @@ const computeBindGroupLayout = tgpu.bindGroupLayout({
   },
   params: { storage: Params },
 });
+
+const computePipeline = root.device.createComputePipeline({
+  layout: root.device.createPipelineLayout({
+    bindGroupLayouts: [root.unwrap(computeBindGroupLayout)],
+  }),
+  compute: {
+    module: computeModule,
+  },
+});
+
+const renderBindGroups = [0, 1].map((idx) =>
+  renderBindGroupLayout.populate({
+    trianglePos: trianglePosBuffers[idx],
+    colorPalette: colorPaletteBuffer,
+  }),
+);
 
 const computeBindGroups = [0, 1].map((idx) =>
   computeBindGroupLayout.populate({

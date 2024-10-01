@@ -30,7 +30,8 @@ export type TgpuLayoutEntryBase = {
    * By default, each resource is visible to all shader stage types, but
    * depending on the underlying implementation, this may have performance implications.
    *
-   * @default['compute', 'vertex', 'fragment']
+   * @default ['compute'] for mutable resources
+   * @default ['compute','vertex','fragment'] for everything else
    */
   visibility?: TgpuShaderStage[];
 };
@@ -197,7 +198,12 @@ export class MissingBindingError extends Error {
 // Implementation
 // --------------
 
-const DEFAULT_VISIBILITY = ['compute', 'vertex', 'fragment'];
+const DEFAULT_MUTABLE_VISIBILITY: TgpuShaderStage[] = ['compute'];
+const DEFAULT_READONLY_VISIBILITY: TgpuShaderStage[] = [
+  'compute',
+  'vertex',
+  'fragment',
+];
 
 function createBindGroupLayout<
   Entries extends Record<string, TgpuLayoutEntry | null>,
@@ -238,93 +244,80 @@ class TgpuBindGroupLayoutImpl<
             return null;
           }
 
-          const visibility = entry.visibility ?? DEFAULT_VISIBILITY;
+          let visibility = entry.visibility;
 
-          let visibilityFlags = 0;
-          if (visibility.includes('compute')) {
-            visibilityFlags |= GPUShaderStage.COMPUTE;
-          }
-          if (visibility.includes('vertex')) {
-            visibilityFlags |= GPUShaderStage.VERTEX;
-          }
-          if (visibility.includes('fragment')) {
-            visibilityFlags |= GPUShaderStage.FRAGMENT;
-          }
+          const binding: GPUBindGroupLayoutEntry = {
+            binding: idx,
+            visibility: 0,
+          };
 
           if ('uniform' in entry) {
-            return {
-              binding: idx,
-              visibility: visibilityFlags,
-              buffer: {
-                type: 'uniform' as const,
-              },
-            };
-          }
+            visibility = visibility ?? DEFAULT_READONLY_VISIBILITY;
 
-          if ('storage' in entry) {
-            return {
-              binding: idx,
-              visibility: visibilityFlags,
-              buffer: {
-                type:
-                  entry.access === 'mutable'
-                    ? ('storage' as const)
-                    : ('read-only-storage' as const),
-              },
+            binding.buffer = {
+              type: 'uniform' as const,
             };
-          }
+          } else if ('storage' in entry) {
+            visibility =
+              visibility ??
+              (entry.access === 'mutable'
+                ? DEFAULT_MUTABLE_VISIBILITY
+                : DEFAULT_READONLY_VISIBILITY);
 
-          if ('sampler' in entry) {
-            return {
-              binding: idx,
-              visibility: visibilityFlags,
-              sampler: {
-                type: entry.sampler,
-              },
+            binding.buffer = {
+              type:
+                entry.access === 'mutable'
+                  ? ('storage' as const)
+                  : ('read-only-storage' as const),
             };
-          }
+          } else if ('sampler' in entry) {
+            visibility = visibility ?? DEFAULT_READONLY_VISIBILITY;
 
-          if ('texture' in entry) {
-            return {
-              binding: idx,
-              visibility: visibilityFlags,
-              texture: {
-                sampleType: entry.texture,
-                viewDimension: entry.viewDimension ?? '2d',
-                multisampled: entry.multisampled ?? false,
-              },
+            binding.sampler = {
+              type: entry.sampler,
             };
-          }
+          } else if ('texture' in entry) {
+            visibility = visibility ?? DEFAULT_READONLY_VISIBILITY;
 
-          if ('storageTexture' in entry) {
+            binding.texture = {
+              sampleType: entry.texture,
+              viewDimension: entry.viewDimension ?? '2d',
+              multisampled: entry.multisampled ?? false,
+            };
+          } else if ('storageTexture' in entry) {
             const access = entry.access ?? 'writeonly';
 
-            return {
-              binding: idx,
-              visibility: visibilityFlags,
-              storageTexture: {
-                format: entry.storageTexture,
-                access: {
-                  mutable: 'read-write' as const,
-                  readonly: 'read-only' as const,
-                  writeonly: 'write-only' as const,
-                }[access],
-                viewDimension: entry.viewDimension ?? '2d',
-              },
+            visibility =
+              visibility ??
+              (access === 'readonly'
+                ? DEFAULT_READONLY_VISIBILITY
+                : DEFAULT_MUTABLE_VISIBILITY);
+
+            binding.storageTexture = {
+              format: entry.storageTexture,
+              access: {
+                mutable: 'read-write' as const,
+                readonly: 'read-only' as const,
+                writeonly: 'write-only' as const,
+              }[access],
+              viewDimension: entry.viewDimension ?? '2d',
             };
+          } else if ('externalTexture' in entry) {
+            visibility = visibility ?? DEFAULT_READONLY_VISIBILITY;
+            binding.externalTexture = {};
           }
 
-          if ('externalTexture' in entry) {
-            return {
-              binding: idx,
-              visibility: visibilityFlags,
-              externalTexture: {},
-            };
+          if (visibility?.includes('compute')) {
+            binding.visibility |= GPUShaderStage.COMPUTE;
+          }
+          if (visibility?.includes('vertex')) {
+            binding.visibility |= GPUShaderStage.VERTEX;
+          }
+          if (visibility?.includes('fragment')) {
+            binding.visibility |= GPUShaderStage.FRAGMENT;
           }
 
-          throw new Error(
-            `Unknown bind group layout entry type: ${JSON.stringify(entry)}`,
-          );
+          return binding;
         })
         .filter((v): v is Exclude<typeof v, null> => v !== null),
     });
