@@ -11,6 +11,14 @@ global.GPUBufferUsage = {
   QUERY_RESOLVE: 512,
 };
 
+global.GPUTextureUsage = {
+  COPY_SRC: 1,
+  COPY_DST: 2,
+  TEXTURE_BINDING: 4,
+  STORAGE_BINDING: 8,
+  RENDER_ATTACHMENT: 16,
+};
+
 global.GPUShaderStage = {
   VERTEX: 1,
   FRAGMENT: 2,
