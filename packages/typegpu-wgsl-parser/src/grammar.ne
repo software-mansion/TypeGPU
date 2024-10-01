@@ -14,7 +14,7 @@ const lexer = moo.compile({
 
   // WGSL spec apparently accepts plenty of Unicode, but lets limit it to just ASCII for now.
   ident_pattern: {
-    match: /[a-z_][a-z_0-9]*/,
+    match: /[a-z_A-Z][a-z_0-9A-Z]*/,
     type: moo.keywords({
       if: 'if',
       else: 'else',
@@ -39,6 +39,7 @@ const lexer = moo.compile({
   rbrace: '}',
   lbracket: '[',
   rbracket: ']',
+  arrow: '->',
   plus_eq: '+=',
   minus_eq: '-=',
   star_eq: '*=',
@@ -149,15 +150,22 @@ template_arg_comma_list ->
   expression ("," expression):* ",":? {% ([first, rest]) => [first, ...rest.map(tuple => tuple[1])] %}
 
 @{%
+export type FunctionArgument = { type: 'func_argument', ident: string, typespec: TypeSpecifier };
 export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement, attrs: Attribute[] };
-export type FunctionHeader = { type: 'function_header', identifier: string };
+export type FunctionHeader = { type: 'function_header', ident: string, returntype: ReturnType | null, args: FunctionArgument[] | null };
+export type ReturnType = { type: 'return_type', typespec: TypeSpecifier };
 
 %}
+return_type ->
+  "->" type_specifier {% ([, typespec]) => ({ type: 'return_type', typespec }) %}
 function_decl -> attribute:* function_header compound_statement {% ([attrs, header, body]) => ({ type: 'function_decl', header, body, attrs }) %}
-# TODO: Add param list
-# TODO: Add return type
+func_argument -> ident ":" type_specifier {% ([ident,, typespec]) => ({ type: 'func_argument', ident: ident.value, typespec }) %}
+argument_list ->
+  func_argument ("," func_argument):* ",":? {% ([first, rest]) => [first, ...rest.map(tuple => tuple[1])] %}
+
 function_header ->
-  "fn" ident "(" ")" {% ([ , identifier]) => ({ type: 'function_header', identifier: identifier.value }) %}
+  "fn" ident "(" argument_list:? ")" return_type:? {% ([ , ident,, args,, returntype]) => ({ type: 'function_header', ident: ident.value, returntype, args }) %}
+
 
 #
 # Statements
