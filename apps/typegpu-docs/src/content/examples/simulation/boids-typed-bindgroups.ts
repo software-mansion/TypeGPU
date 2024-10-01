@@ -79,7 +79,7 @@ const computeCode = /* wgsl */ `
   };
 
   @binding(0) @group(0) var<uniform> currentTrianglePos : array<TriangleData, ${triangleAmount}>;
-  @binding(1) @group(0) var<storage, read_write> nextTrianglePos : array<TriangleData>;
+  @binding(1) @group(0) var<storage, read_write> nextTrianglePos : array<TriangleData, ${triangleAmount}>;
   @binding(2) @group(0) var<storage> params : Parameters;
 
   @compute @workgroup_size(1)
@@ -325,48 +325,26 @@ const renderBindGroupLayout = tgpu.bindGroupLayout({
 });
 
 const renderBindGroups = [0, 1].map((idx) =>
-  root.device.createBindGroup({
-    layout: root.unwrap(renderBindGroupLayout),
-    entries: [
-      {
-        binding: 0,
-        resource: {
-          buffer: trianglePosBuffers[idx].buffer,
-        },
-      },
-      {
-        binding: 1,
-        resource: {
-          buffer: colorPaletteBuffer.buffer,
-        },
-      },
-    ],
+  renderBindGroupLayout.populate({
+    trianglePos: trianglePosBuffers[idx],
+    colorPalette: colorPaletteBuffer,
   }),
 );
 
+const computeBindGroupLayout = tgpu.bindGroupLayout({
+  currentTrianglePos: { uniform: arrayOf(TriangleInfoStruct, triangleAmount) },
+  nextTrianglePos: {
+    storage: arrayOf(TriangleInfoStruct, triangleAmount),
+    access: 'mutable',
+  },
+  params: { storage: Params },
+});
+
 const computeBindGroups = [0, 1].map((idx) =>
-  root.device.createBindGroup({
-    layout: computePipeline.getBindGroupLayout(0),
-    entries: [
-      {
-        binding: 0,
-        resource: {
-          buffer: trianglePosBuffers[idx].buffer,
-        },
-      },
-      {
-        binding: 1,
-        resource: {
-          buffer: trianglePosBuffers[1 - idx].buffer,
-        },
-      },
-      {
-        binding: 2,
-        resource: {
-          buffer: paramsBuffer.buffer,
-        },
-      },
-    ],
+  computeBindGroupLayout.populate({
+    currentTrianglePos: trianglePosBuffers[idx],
+    nextTrianglePos: trianglePosBuffers[1 - idx],
+    params: paramsBuffer,
   }),
 );
 
@@ -393,7 +371,9 @@ function frame() {
   computePass.setPipeline(computePipeline);
   computePass.setBindGroup(
     0,
-    even ? computeBindGroups[0] : computeBindGroups[1],
+    even
+      ? root.unwrap(computeBindGroups[0])
+      : root.unwrap(computeBindGroups[1]),
   );
   computePass.dispatchWorkgroups(triangleAmount);
   computePass.end();
@@ -401,7 +381,10 @@ function frame() {
   const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
   passEncoder.setPipeline(pipeline);
   passEncoder.setVertexBuffer(0, triangleVertexBuffer.buffer);
-  passEncoder.setBindGroup(0, even ? renderBindGroups[1] : renderBindGroups[0]);
+  passEncoder.setBindGroup(
+    0,
+    even ? root.unwrap(renderBindGroups[1]) : root.unwrap(renderBindGroups[0]),
+  );
   passEncoder.draw(3, triangleAmount);
   passEncoder.end();
 
