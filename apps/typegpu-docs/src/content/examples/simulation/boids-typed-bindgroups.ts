@@ -1,6 +1,6 @@
 /*
 {
-  "title": "Boids",
+  "title": "Boids (next)",
   "category": "simulation",
   "tags": ["experimental"]
 }
