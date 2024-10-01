@@ -140,7 +140,13 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
           | GPUBuffer
       : T extends TgpuLayoutSampler
         ? GPUSampler
-        : never;
+        : T extends TgpuLayoutTexture
+          ? GPUTextureView
+          : T extends TgpuLayoutStorageTexture
+            ? GPUTextureView
+            : T extends TgpuLayoutExternalTexture
+              ? GPUExternalTexture
+              : never;
 
 export type BindLayoutEntry<T extends TgpuLayoutEntry | null> =
   T extends TgpuLayoutUniform

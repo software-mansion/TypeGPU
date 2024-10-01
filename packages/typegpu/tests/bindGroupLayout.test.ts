@@ -185,7 +185,7 @@ describe('TgpuBindGroup', () => {
     root.destroy();
   });
 
-  describe('one-entry layout', () => {
+  describe('buffer layout', () => {
     let layout: TgpuBindGroupLayout<{ foo: { uniform: Vec3f } }>;
     let buffer: TgpuBuffer<Vec3f> & typeof tgpu.Uniform;
 
@@ -257,6 +257,162 @@ describe('TgpuBindGroup', () => {
             resource: {
               buffer: root.unwrap(buffer),
             },
+          },
+        ],
+      });
+    });
+  });
+
+  describe('filtering sampler layout', () => {
+    let layout: TgpuBindGroupLayout<{ foo: { sampler: 'filtering' } }>;
+
+    beforeEach(() => {
+      layout = tgpu
+        .bindGroupLayout({
+          foo: { sampler: 'filtering' },
+        })
+        .$name('example');
+    });
+
+    it('populates a simple layout with a raw sampler', async () => {
+      const sampler = root.device.createSampler();
+
+      const bindGroup = layout.populate({
+        foo: sampler,
+      });
+
+      expect(mockDevice.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(mockDevice.createBindGroupLayout).toBeCalled();
+
+      expect(mockDevice.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout),
+        entries: [
+          {
+            binding: 0,
+            resource: sampler,
+          },
+        ],
+      });
+    });
+  });
+
+  describe('texture layout', () => {
+    let layout: TgpuBindGroupLayout<{ foo: { texture: 'float' } }>;
+
+    beforeEach(() => {
+      layout = tgpu
+        .bindGroupLayout({
+          foo: { texture: 'float' },
+        })
+        .$name('example');
+    });
+
+    it('populates a simple layout with a raw texture view', async () => {
+      const view = root.device
+        .createTexture({
+          format: 'rgba8unorm',
+          size: [32, 32],
+          usage: GPUTextureUsage.TEXTURE_BINDING,
+        })
+        .createView();
+
+      const bindGroup = layout.populate({
+        foo: view,
+      });
+
+      expect(mockDevice.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(mockDevice.createBindGroupLayout).toBeCalled();
+
+      expect(mockDevice.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout),
+        entries: [
+          {
+            binding: 0,
+            resource: view,
+          },
+        ],
+      });
+    });
+  });
+
+  describe('storage texture layout', () => {
+    let layout: TgpuBindGroupLayout<{ foo: { storageTexture: 'rgba8unorm' } }>;
+
+    beforeEach(() => {
+      layout = tgpu
+        .bindGroupLayout({
+          foo: { storageTexture: 'rgba8unorm' },
+        })
+        .$name('example');
+    });
+
+    it('populates a simple layout with a raw texture view', async () => {
+      const view = root.device
+        .createTexture({
+          format: 'rgba8unorm',
+          size: [32, 32],
+          usage: GPUTextureUsage.TEXTURE_BINDING,
+        })
+        .createView();
+
+      const bindGroup = layout.populate({
+        foo: view,
+      });
+
+      expect(mockDevice.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(mockDevice.createBindGroupLayout).toBeCalled();
+
+      expect(mockDevice.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout),
+        entries: [
+          {
+            binding: 0,
+            resource: view,
+          },
+        ],
+      });
+    });
+  });
+
+  describe('external texture layout', () => {
+    let layout: TgpuBindGroupLayout<{
+      foo: { externalTexture: Record<string, never> };
+    }>;
+
+    beforeEach(() => {
+      layout = tgpu
+        .bindGroupLayout({
+          foo: { externalTexture: {} },
+        })
+        .$name('example');
+    });
+
+    it('populates a simple layout with a raw texture view', async () => {
+      const externalTexture = root.device.importExternalTexture({
+        source: undefined as unknown as HTMLVideoElement,
+      });
+
+      const bindGroup = layout.populate({
+        foo: externalTexture,
+      });
+
+      expect(mockDevice.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(mockDevice.createBindGroupLayout).toBeCalled();
+
+      expect(mockDevice.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout),
+        entries: [
+          {
+            binding: 0,
+            resource: externalTexture,
           },
         ],
       });
