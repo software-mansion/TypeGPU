@@ -189,10 +189,10 @@ function generateGroupLayout(group) {
     .map((_, index) => group[index])
     .map((variable) =>
       variable
-        ? `${variable.name}: ${generateVariable(variable)}`
-        : `_${emptyCount++} : null`,
+        ? `${variable.name}: ${generateVariable(variable)},`
+        : `_${emptyCount++}: null,`,
     )
-    .join(',\n  ');
+    .join('\n  ');
 }
 
 /**
@@ -240,24 +240,25 @@ function getViewDimension(variable) {
  */
 function generateStorageTextureVariable(variable) {
   const viewDimension = getViewDimension(variable);
+  const access =
+    variable.type instanceof TemplateInfo ? variable.type.access : null;
 
   return `{
     storageTexture: '${variable.format?.name}',${
-      variable.access ? `\n    access: ${ACCESS_TYPES[variable.access]},` : ''
-    }${viewDimension ? `\n    viewDimension: ${viewDimension},` : ''}
+      access ? `\n    access: '${ACCESS_TYPES[access]}',` : ''
+    }${viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''}
   }`;
 }
 
 const SAMPLER_TYPES = {
   sampler: 'filtering',
-  sampler_comparison: 'compatison',
+  sampler_comparison: 'comparison',
 };
 
 /**
  * @param { import('wgsl_reflect').VariableInfo } variable
  */
 function generateSamplerVariable(variable) {
-  console.log(variable);
   return `{
     sampler: '${SAMPLER_TYPES[variable.type.name]}',
   }`;
