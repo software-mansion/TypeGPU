@@ -39,6 +39,7 @@ const lexer = moo.compile({
   rbrace: '}',
   lbracket: '[',
   rbracket: ']',
+  arrow: '->',
   plus_eq: '+=',
   minus_eq: '-=',
   star_eq: '*=',
@@ -156,7 +157,7 @@ export type ReturnType = { type: 'return_type', typespec: TypeSpecifier };
 
 %}
 return_type ->
-  "-" ">" type_specifier {% ([,, typespec]) => ({ type: 'return_type', typespec }) %}
+  "->" type_specifier {% ([, typespec]) => ({ type: 'return_type', typespec }) %}
 function_decl -> attribute:* function_header compound_statement {% ([attrs, header, body]) => ({ type: 'function_decl', header, body, attrs }) %}
 func_argument -> ident ":" type_specifier {% ([ident,, typespec]) => ({ type: 'func_argument', ident: ident.value, typespec }) %}
 argument_list ->
