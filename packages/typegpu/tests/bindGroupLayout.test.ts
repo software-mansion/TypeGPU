@@ -7,13 +7,18 @@ import {
   it,
   vi,
 } from 'vitest';
-import { type Vec3f, vec3f } from '../src/data';
+import { type F32, type U32, type Vec3f, f32, u32, vec3f } from '../src/data';
 import tgpu, {
   type TgpuRuntime,
-  type TgpuBufferUsage,
   type TgpuBindGroupLayout,
+  asUniform,
+  type TgpuBuffer,
+  type TgpuBufferUniform,
+  type TgpuBufferReadonly,
+  type TgpuBufferMutable,
 } from '../src/experimental';
 import './utils/webgpuGlobals';
+import { MissingBindingError } from '../src/tgpuBindGroupLayout';
 
 const DEFAULT_VISIBILITY_FLAGS =
   GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
@@ -22,6 +27,7 @@ const mockBuffer = {
   getMappedRange: vi.fn(() => new ArrayBuffer(8)),
   unmap: vi.fn(),
   mapAsync: vi.fn(),
+  destroy: vi.fn(),
 };
 
 const mockCommandEncoder = {
@@ -50,7 +56,9 @@ const mockRenderPassEncoder = {
 };
 
 const mockDevice = {
-  createBindGroup: vi.fn(() => 'mockBindGroup'),
+  createBindGroup: vi.fn(
+    (_descriptor: GPUBindGroupDescriptor) => 'mockBindGroup',
+  ),
   createBindGroupLayout: vi.fn(
     (_descriptor: GPUBindGroupLayoutDescriptor) => 'mockBindGroupLayout',
   ),
@@ -82,6 +90,7 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     root.destroy();
   });
 
@@ -92,7 +101,7 @@ describe('TgpuBindGroupLayout', () => {
 
     const { position } = layout.bound;
 
-    expectTypeOf(position).toEqualTypeOf<TgpuBufferUsage<Vec3f, 'uniform'>>();
+    expectTypeOf(position).toEqualTypeOf<TgpuBufferUniform<Vec3f>>();
   });
 
   it('infers the bound type of a readonly storage entry', () => {
@@ -103,8 +112,18 @@ describe('TgpuBindGroupLayout', () => {
 
     const { a, b } = layout.bound;
 
-    expectTypeOf(a).toEqualTypeOf<TgpuBufferUsage<Vec3f, 'readonly'>>();
-    expectTypeOf(b).toEqualTypeOf<TgpuBufferUsage<Vec3f, 'readonly'>>();
+    expectTypeOf(a).toEqualTypeOf<TgpuBufferReadonly<Vec3f>>();
+    expectTypeOf(b).toEqualTypeOf<TgpuBufferReadonly<Vec3f>>();
+  });
+
+  it('infers the bound type of a mutable storage entry', () => {
+    const layout = tgpu.bindGroupLayout({
+      a: { storage: vec3f, access: 'mutable' },
+    });
+
+    const { a } = layout.bound;
+
+    expectTypeOf(a).toEqualTypeOf<TgpuBufferMutable<Vec3f>>();
   });
 
   it('omits null properties', async () => {
@@ -116,9 +135,12 @@ describe('TgpuBindGroupLayout', () => {
       })
       .$name('example_layout');
 
-    // omits null property in type
     expectTypeOf(layout).toEqualTypeOf<
-      TgpuBindGroupLayout<{ a: { uniform: Vec3f }; c: { storage: Vec3f } }>
+      TgpuBindGroupLayout<{
+        a: { uniform: Vec3f };
+        _0: null;
+        c: { storage: Vec3f };
+      }>
     >();
 
     const root = await tgpu.init({
@@ -145,6 +167,173 @@ describe('TgpuBindGroupLayout', () => {
           },
         },
       ],
+    });
+  });
+});
+
+describe('TgpuBindGroup', () => {
+  let root: TgpuRuntime;
+
+  beforeEach(async () => {
+    root = await tgpu.init({
+      device: mockDevice as unknown as GPUDevice,
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    root.destroy();
+  });
+
+  describe('one-entry layout', () => {
+    let layout: TgpuBindGroupLayout<{ foo: { uniform: Vec3f } }>;
+    let buffer: TgpuBuffer<Vec3f> & typeof tgpu.Uniform;
+
+    beforeEach(() => {
+      layout = tgpu
+        .bindGroupLayout({
+          foo: { uniform: vec3f },
+        })
+        .$name('example');
+
+      buffer = root.createBuffer(vec3f).$usage(tgpu.Uniform);
+    });
+
+    it('populates a simple layout with a raw buffer', async () => {
+      const bindGroup = layout.populate({ foo: root.unwrap(buffer) });
+
+      expect(mockDevice.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(mockDevice.createBindGroupLayout).toBeCalled();
+
+      expect(mockDevice.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout),
+        entries: [
+          {
+            binding: 0,
+            resource: {
+              buffer: root.unwrap(buffer),
+            },
+          },
+        ],
+      });
+    });
+
+    it('populates a simple layout with a typed buffer', async () => {
+      const bindGroup = layout.populate({ foo: buffer });
+
+      expect(mockDevice.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(mockDevice.createBindGroupLayout).toBeCalled();
+
+      expect(mockDevice.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout),
+        entries: [
+          {
+            binding: 0,
+            resource: {
+              buffer: root.unwrap(buffer),
+            },
+          },
+        ],
+      });
+    });
+
+    it('populates a simple layout with a typed buffer usage', async () => {
+      const bindGroup = layout.populate({ foo: asUniform(buffer) });
+
+      expect(mockDevice.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(mockDevice.createBindGroupLayout).toBeCalled();
+
+      expect(mockDevice.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout),
+        entries: [
+          {
+            binding: 0,
+            resource: {
+              buffer: root.unwrap(buffer),
+            },
+          },
+        ],
+      });
+    });
+  });
+
+  describe('multiple-entry layout', () => {
+    let layout: TgpuBindGroupLayout<{
+      a: { uniform: Vec3f };
+      b: { storage: U32; access: 'mutable' };
+      _: null;
+      d: { storage: F32; access: 'readonly' };
+    }>;
+    let aBuffer: TgpuBuffer<Vec3f> & typeof tgpu.Uniform;
+    let bBuffer: TgpuBuffer<U32> & typeof tgpu.Storage;
+    let dBuffer: TgpuBuffer<F32> & typeof tgpu.Storage;
+
+    beforeEach(() => {
+      layout = tgpu
+        .bindGroupLayout({
+          a: { uniform: vec3f },
+          b: { storage: u32, access: 'mutable' },
+          _: null,
+          d: { storage: f32, access: 'readonly' },
+        })
+        .$name('example');
+
+      aBuffer = root.createBuffer(vec3f).$usage(tgpu.Uniform);
+      bBuffer = root.createBuffer(u32).$usage(tgpu.Storage);
+      dBuffer = root.createBuffer(f32).$usage(tgpu.Storage);
+    });
+
+    it('requires all non-null entries to be populated', () => {
+      expect(() => {
+        // @ts-expect-error
+        const bindGroup = layout.populate({
+          a: aBuffer,
+          b: bBuffer,
+        });
+      }).toThrow(new MissingBindingError('example', 'd'));
+    });
+
+    it('creates bind group in layout-defined order, not the insertion order of the populate parameter', () => {
+      const bindGroup = layout.populate({
+        // purposefully out of order
+        d: dBuffer,
+        b: bBuffer,
+        a: aBuffer,
+      });
+
+      root.unwrap(bindGroup);
+
+      expect(mockDevice.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout),
+        entries: [
+          {
+            binding: 0,
+            resource: {
+              buffer: root.unwrap(aBuffer),
+            },
+          },
+          {
+            binding: 1,
+            resource: {
+              buffer: root.unwrap(bBuffer),
+            },
+          },
+          // note that binding 2 is missing, as it gets skipped on purpose by using the null prop.
+          {
+            binding: 3,
+            resource: {
+              buffer: root.unwrap(dBuffer),
+            },
+          },
+        ],
+      });
     });
   });
 });

@@ -1,13 +1,23 @@
+import { NotUniformError } from './errors';
 import type { TgpuNamable } from './namable';
-import type { TgpuBuffer, Uniform } from './tgpuBuffer';
-import type { TgpuBufferUsage } from './tgpuBufferUsage';
+import {
+  type Storage,
+  type TgpuBuffer,
+  type Uniform,
+  isBuffer,
+  isUsableAsStorage,
+  isUsableAsUniform,
+} from './tgpuBuffer';
+import {
+  type TgpuBufferMutable,
+  type TgpuBufferReadonly,
+  type TgpuBufferUniform,
+  type TgpuBufferUsage,
+  isBufferUsage,
+} from './tgpuBufferUsage';
 import type { TgpuSampler } from './tgpuSampler';
-import type {
-  AnyTgpuData,
-  OmitProps,
-  Prettify,
-  TgpuShaderStage,
-} from './types';
+import type { AnyTgpuData, OmitProps, TgpuShaderStage } from './types';
+import type { Unwrapper } from './unwrapper';
 
 // ----------
 // Public API
@@ -85,13 +95,16 @@ export interface TgpuBindGroupLayout<
 > extends TgpuNamable {
   readonly resourceType: 'bind-group-layout';
   readonly label: string | undefined;
+  readonly entries: Entries;
   readonly bound: {
     [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
   };
 
   populate(
-    entries: { [K in keyof Entries]: LayoutEntryToInput<Entries[K]> },
-  ): TgpuBindGroup<this>;
+    entries: {
+      [K in keyof OmitProps<Entries, null>]: LayoutEntryToInput<Entries[K]>;
+    },
+  ): TgpuBindGroup<Entries>;
 
   /**
    * Creates a raw WebGPU resource based on the typed descriptor.
@@ -101,38 +114,56 @@ export interface TgpuBindGroupLayout<
   unwrap(device: GPUDevice): GPUBindGroupLayout;
 }
 
+type StorageUsageForEntry<T extends TgpuLayoutStorage> = T extends {
+  access?: infer Access;
+} // Is the access defined on the type?
+  ? 'mutable' | 'readonly' extends Access // Is the access ambiguous?
+    ? TgpuBufferReadonly<T['storage']> | TgpuBufferMutable<T['storage']>
+    : 'readonly' extends Access // Is the access strictly 'readonly'?
+      ? TgpuBufferReadonly<T['storage']>
+      : 'mutable' extends Access // Is the access strictly 'mutable'?
+        ? TgpuBufferMutable<T['storage']>
+        : TgpuBufferReadonly<T['storage']> | TgpuBufferMutable<T['storage']>
+  : TgpuBufferReadonly<T['storage']>; // <- access is undefined, so default to 'readonly';
+
 export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
   T extends TgpuLayoutUniform
     ?
         | TgpuBufferUsage<T['uniform'], 'uniform'>
         | (TgpuBuffer<T['uniform']> & Uniform)
         | GPUBuffer
-    : T extends TgpuLayoutSampler
-      ? GPUSampler
-      : never;
+    : T extends TgpuLayoutStorage
+      ?
+          | StorageUsageForEntry<T>
+          | (TgpuBuffer<T['storage']> & Storage)
+          | GPUBuffer
+      : T extends TgpuLayoutSampler
+        ? GPUSampler
+        : never;
 
 export type BindLayoutEntry<T extends TgpuLayoutEntry | null> =
   T extends TgpuLayoutUniform
-    ? TgpuBufferUsage<T['uniform'], 'uniform'>
+    ? TgpuBufferUniform<T['uniform']>
     : T extends TgpuLayoutStorage
-      ? TgpuBufferUsage<
-          T['storage'],
-          T['access'] extends 'mutable' ? 'mutable' : 'readonly'
-        >
+      ? StorageUsageForEntry<T>
       : T extends TgpuLayoutSampler
         ? TgpuSampler
         : never;
 
 export type TgpuBindGroup<
-  Layout extends TgpuBindGroupLayout<Record<string, TgpuLayoutEntry>>,
+  Entries extends Record<string, TgpuLayoutEntry | null> = Record<
+    string,
+    TgpuLayoutEntry | null
+  >,
 > = {
-  readonly layout: Layout;
-  unwrap: (device: GPUDevice) => GPUBindGroup;
+  readonly resourceType: 'bind-group';
+  readonly layout: TgpuBindGroupLayout<Entries>;
+  unwrap(unwrapper: Unwrapper): GPUBindGroup;
 };
 
 export function bindGroupLayout<
   Entries extends Record<string, TgpuLayoutEntry | null>,
->(entries: Entries): TgpuBindGroupLayout<Prettify<OmitProps<Entries, null>>> {
+>(entries: Entries): TgpuBindGroupLayout<Entries> {
   return createBindGroupLayout(entries);
 }
 
@@ -140,6 +171,26 @@ export function isBindGroupLayout<T extends TgpuBindGroupLayout>(
   value: T | unknown,
 ): value is T {
   return (value as T).resourceType === 'bind-group-layout';
+}
+
+export function isBindGroup<T extends TgpuBindGroup>(
+  value: T | unknown,
+): value is T {
+  return (value as T).resourceType === 'bind-group';
+}
+
+/**
+ * @category Errors
+ */
+export class MissingBindingError extends Error {
+  constructor(groupLabel: string | undefined, key: string) {
+    super(
+      `Bind group '${groupLabel ?? '<unnamed>'}' is missing a required binding '${key}'`,
+    );
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, MissingBindingError.prototype);
+  }
 }
 
 // --------------
@@ -162,20 +213,12 @@ class TgpuBindGroupLayoutImpl<
 
   public readonly resourceType = 'bind-group-layout' as const;
 
+  // TODO: Fill bound values.
   public readonly bound = {} as {
     [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
   };
 
-  constructor(private readonly _entries: Entries) {
-    for (const [key, value] of Object.entries(_entries)) {
-      if (value === null) {
-        // Skip
-      } else if ('uniform' in value) {
-        // const uniformUsage = new BufferUsage();
-        // this.bound[key as keyof Entries] = value;
-      }
-    }
-  }
+  constructor(public readonly entries: Entries) {}
 
   get label() {
     return this._label;
@@ -189,7 +232,7 @@ class TgpuBindGroupLayoutImpl<
   unwrap(device: GPUDevice) {
     const unwrapped = device.createBindGroupLayout({
       label: this.label ?? '',
-      entries: Object.values(this._entries)
+      entries: Object.values(this.entries)
         .map((entry, idx) => {
           if (entry === null) {
             return null;
@@ -291,7 +334,117 @@ class TgpuBindGroupLayoutImpl<
 
   populate(
     entries: { [K in keyof Entries]: LayoutEntryToInput<Entries[K]> },
-  ): TgpuBindGroup<this> {
-    throw new Error('Method not implemented.');
+  ): TgpuBindGroup<Entries> {
+    return new TgpuBindGroupImpl(this, entries);
+  }
+}
+
+class TgpuBindGroupImpl<
+  Entries extends Record<string, TgpuLayoutEntry | null> = Record<
+    string,
+    TgpuLayoutEntry | null
+  >,
+> implements TgpuBindGroup<Entries>
+{
+  public readonly resourceType = 'bind-group' as const;
+
+  constructor(
+    public readonly layout: TgpuBindGroupLayout<Entries>,
+    public readonly entries: {
+      [K in keyof Entries]: LayoutEntryToInput<Entries[K]>;
+    },
+  ) {
+    // Checking if all entries are present.
+    for (const key of Object.keys(layout.entries)) {
+      if (layout.entries[key] !== null && !(key in entries)) {
+        throw new MissingBindingError(layout.label, key);
+      }
+    }
+  }
+
+  public unwrap(unwrapper: Unwrapper): GPUBindGroup {
+    const unwrapped = unwrapper.device.createBindGroup({
+      label: this.layout.label ?? '',
+      layout: unwrapper.unwrap(this.layout),
+      entries: Object.entries(this.layout.entries)
+        .map(([key, entry], idx) => {
+          if (entry === null) {
+            return null;
+          }
+
+          const value = this.entries[key];
+
+          if (value === undefined) {
+            throw new Error(
+              `'${key}' is a resource required to populate bind group layout '${this.layout.label ?? '<unnamed>'}'.`,
+            );
+          }
+
+          if ('uniform' in entry) {
+            let resource: GPUBufferBinding;
+
+            if (isBuffer(value)) {
+              if (!isUsableAsUniform(value)) {
+                throw new NotUniformError(value);
+              }
+              resource = { buffer: unwrapper.unwrap(value) };
+            } else if (isBufferUsage(value)) {
+              if (!isUsableAsUniform(value.allocatable)) {
+                throw new NotUniformError(value.allocatable);
+              }
+              resource = { buffer: unwrapper.unwrap(value.allocatable) };
+            } else {
+              resource = { buffer: value as GPUBuffer };
+            }
+
+            return {
+              binding: idx,
+              resource,
+            };
+          }
+
+          if ('storage' in entry) {
+            let resource: GPUBufferBinding;
+
+            if (isBuffer(value)) {
+              if (!isUsableAsStorage(value)) {
+                throw new NotUniformError(value);
+              }
+              resource = { buffer: unwrapper.unwrap(value) };
+            } else if (isBufferUsage(value)) {
+              if (!isUsableAsStorage(value.allocatable)) {
+                throw new NotUniformError(value.allocatable);
+              }
+              resource = { buffer: unwrapper.unwrap(value.allocatable) };
+            } else {
+              resource = { buffer: value as GPUBuffer };
+            }
+
+            return {
+              binding: idx,
+              resource,
+            };
+          }
+
+          if (
+            'texture' in entry ||
+            'storageTexture' in entry ||
+            'sampler' in entry ||
+            'externalTexture' in entry
+          ) {
+            return {
+              binding: idx,
+              resource: value as GPUSampler,
+            };
+          }
+
+          throw new Error(
+            `Malformed bind group entry: ${value} (${JSON.stringify(value)})`,
+          );
+        })
+        .filter((v): v is Exclude<typeof v, null> => v !== null),
+    });
+
+    return unwrapped;
   }
 }
