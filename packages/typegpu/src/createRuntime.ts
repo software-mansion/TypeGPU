@@ -1,6 +1,7 @@
 import type { Parsed } from 'typed-binary';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
+import { WeakMemo } from './memo';
 import { type PlumListener, PlumStore } from './plumStore';
 import {
   ComputeProgramBuilder,
@@ -42,11 +43,14 @@ class TgpuRuntimeImpl implements TgpuRuntime {
     TgpuTextureExternal,
     'dirty' | 'clean'
   >();
-  private _unwrappedBindGroupLayouts = new WeakMap<
-    TgpuBindGroupLayout,
-    GPUBindGroupLayout
-  >();
-  private _unwrappedBindGroups = new WeakMap<TgpuBindGroup, GPUBindGroup>();
+
+  private _unwrappedBindGroupLayouts = new WeakMemo(
+    (key: TgpuBindGroupLayout) => key.unwrap(this.device),
+  );
+  private _unwrappedBindGroups = new WeakMemo((key: TgpuBindGroup) =>
+    key.unwrap(this),
+  );
+
   private _pipelineExecutors: PipelineExecutor[] = [];
   private _commandEncoder: GPUCommandEncoder | null = null;
 
@@ -95,25 +99,11 @@ class TgpuRuntimeImpl implements TgpuRuntime {
     }
 
     if (isBindGroupLayout(resource)) {
-      let cachedLayout = this._unwrappedBindGroupLayouts.get(resource);
-
-      if (!cachedLayout) {
-        cachedLayout = resource.unwrap(this.device);
-        this._unwrappedBindGroupLayouts.set(resource, cachedLayout);
-      }
-
-      return cachedLayout;
+      return this._unwrappedBindGroupLayouts.getOrMake(resource);
     }
 
     if (isBindGroup(resource)) {
-      let cached = this._unwrappedBindGroups.get(resource);
-
-      if (!cached) {
-        cached = resource.unwrap(this);
-        this._unwrappedBindGroups.set(resource, cached);
-      }
-
-      return cached;
+      return this._unwrappedBindGroups.getOrMake(resource);
     }
 
     throw new Error(`Unknown resource type: ${resource}`);
