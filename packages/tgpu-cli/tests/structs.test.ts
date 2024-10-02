@@ -11,7 +11,7 @@ struct TriangleData {
 };`;
 
     const expected = `\
-const TriangleData = d.struct({
+export const TriangleData = d.struct({
   position: d.vec4f,
   velocity: d.vec2f,
   isRed: d.u32,
@@ -28,7 +28,7 @@ struct TriangleData {
 };`;
 
     const expected = `\
-const TriangleData = d.struct({
+export const TriangleData = d.struct({
   position: d.size(32, d.align(32, d.vec4f)),
   velocity: d.size(64, d.vec2f),
 });`;
@@ -43,7 +43,7 @@ struct TriangleData {
 };`;
 
     const expected = `\
-const TriangleData = d.struct({
+export const TriangleData = d.struct({
   position: d.size(32, d.align(32, d.arrayOf(d.vec3f, 2))),
 });`;
 
@@ -65,7 +65,7 @@ struct Data {
 };`;
 
     const expected = `\
-const Data = d.struct({
+export const Data = d.struct({
   a1: d.vec2i,
   a2: d.vec3i,
   a3: d.vec4i,
@@ -93,12 +93,12 @@ struct NewStruct {
 }`;
 
     const expected = `\
-const TriangleData = d.struct({
+export const TriangleData = d.struct({
   position: d.f32,
   velocity: d.size(64, d.vec2f),
 });
 
-const NewStruct = d.struct({
+export const NewStruct = d.struct({
   triangleData: TriangleData,
   triangleData2: TriangleData,
 });`;
@@ -119,12 +119,12 @@ struct Triangle {
 };`;
 
     const expected = `\
-const Vertex = d.struct({
+export const Vertex = d.struct({
   vals: d.vec3f,
   _pad: d.f32,
 });
 
-const Triangle = d.struct({
+export const Triangle = d.struct({
   vertices: d.arrayOf(Vertex, 3),
   color: d.arrayOf(d.u32, 7),
 });`;
@@ -139,7 +139,7 @@ struct NewStruct {
 }`;
 
     const expected = `\
-const NewStruct = d.struct({
+export const NewStruct = d.struct({
   atomicX: d.atomic(d.u32),
 });`;
 
@@ -175,7 +175,7 @@ struct Triangles {
 };`;
 
     const expected = `\
-const Triangles = (arrayLength: number) => d.struct({
+export const Triangles = (arrayLength: number) => d.struct({
   tris: d.arrayOf(Triangle, arrayLength),
 });`;
 
@@ -202,7 +202,7 @@ struct Triangles {
 };`;
 
     const expected = `\
-const Triangles = (arrayLength) => d.struct({
+export const Triangles = (arrayLength) => d.struct({
   tris: d.arrayOf(Triangle, arrayLength),
 });`;
 

@@ -15,7 +15,7 @@ struct TriangleData {
 `;
 
     const expected = `\
-const layout0 = tgpu.bindGroupLayout({
+export const layout0 = tgpu.bindGroupLayout({
   trianglePos: {
     uniform: d.arrayOf(TriangleData, 1000),
   },
@@ -44,7 +44,7 @@ struct TriangleData {
 `;
 
     const expected = `\
-const layout0 = tgpu.bindGroupLayout({
+export const layout0 = tgpu.bindGroupLayout({
   trianglePos: {
     storage: d.arrayOf(TriangleData, 1000),
   },
@@ -76,7 +76,7 @@ const layout0 = tgpu.bindGroupLayout({
 `;
 
     const expected = `\
-const layout1 = tgpu.bindGroupLayout({
+export const layout1 = tgpu.bindGroupLayout({
   tex0: {
     texture: 'float',
     viewDimension: '3d',
@@ -107,7 +107,7 @@ const layout1 = tgpu.bindGroupLayout({
 `;
 
     const expected = `\
-const layout2 = tgpu.bindGroupLayout({
+export const layout2 = tgpu.bindGroupLayout({
   s1: {
     sampler: 'filtering',
   },
@@ -126,7 +126,7 @@ const layout2 = tgpu.bindGroupLayout({
 `;
 
     const expected = `\
-const layout1 = tgpu.bindGroupLayout({
+export const layout1 = tgpu.bindGroupLayout({
   tex0: {
     storageTexture: 'rgba8unorm',
     access: 'writeonly',
@@ -149,7 +149,7 @@ const layout1 = tgpu.bindGroupLayout({
 `;
 
     const expected = `\
-const layout0 = tgpu.bindGroupLayout({
+export const layout0 = tgpu.bindGroupLayout({
   _0: null,
   _1: null,
   u2: {
@@ -174,26 +174,26 @@ const layout0 = tgpu.bindGroupLayout({
   it('generates tgpu.bindGroupLayouts for each @group', () => {
     const wgsl = `
 @group(0) @binding(0) var<uniform> u0: u32;
-@group(2) @binding(0) var<uniform> u2: u32;
+@group(2) @binding(0) var<storage> u2: u32;
 @group(3) @binding(0) var<uniform> u3: u32;
 `;
 
     const expected0 = `\
-const layout0 = tgpu.bindGroupLayout({
+export const layout0 = tgpu.bindGroupLayout({
   u0: {
     uniform: d.u32,
   },
 }).$forceIndex(0);`;
 
     const expected2 = `\
-const layout2 = tgpu.bindGroupLayout({
+export const layout2 = tgpu.bindGroupLayout({
   u2: {
-    uniform: d.u32,
+    storage: d.u32,
   },
 }).$forceIndex(2);`;
 
     const expected3 = `\
-const layout3 = tgpu.bindGroupLayout({
+export const layout3 = tgpu.bindGroupLayout({
   u3: {
     uniform: d.u32,
   },

@@ -56,7 +56,7 @@ ${structs.map((struct) => generateStruct(struct, toTs)).join('\n\n')}`
  * @param { boolean } toTs
  */
 function generateStruct(struct, toTs) {
-  return `const ${struct.name} =${hasVarLengthMember(struct) ? ` (${LENGTH_VAR}${toTs ? ': number' : ''}) =>` : ''} d.struct({
+  return `export const ${struct.name} =${hasVarLengthMember(struct) ? ` (${LENGTH_VAR}${toTs ? ': number' : ''}) =>` : ''} d.struct({
   ${struct.members.map((member) => generateStructMember(member)).join('\n  ')}
 });`;
 }
@@ -76,7 +76,7 @@ function generateAliases(aliases) {
   return aliases.length > 0
     ? `/* aliases */
 ${aliases
-  .map((alias) => `const ${alias.name} = ${generateType(alias.type)};`)
+  .map((alias) => `export const ${alias.name} = ${generateType(alias.type)};`)
   .join('\n')}`
     : '';
 }
@@ -150,7 +150,7 @@ function generateBindGroupLayouts(bindGroups) {
 ${bindGroups
   .flatMap(
     (group, index) => `\
-const layout${index} = tgpu.bindGroupLayout({
+export const layout${index} = tgpu.bindGroupLayout({
   ${generateGroupLayout(group)}
 }).$forceIndex(${index});`,
   )
