@@ -1,0 +1,7 @@
+{
+  "name": "rollup-plugin",
+  "version": "0.0.0",
+  "description": "A Rollup plugin for TypeGPU, transpiling TGSL at build-time.",
+  "keywords": ["rollup-plugin", "vite-plugin"],
+  "license": "MIT"
+}
