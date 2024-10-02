@@ -239,7 +239,7 @@ function getViewDimension(variable) {
 
   return type_.includes('_array')
     ? `${dimension ?? '2d'}-array`
-    : dimension && dimension !== '2d'
+    : dimension !== '2d'
       ? dimension
       : null;
 }
