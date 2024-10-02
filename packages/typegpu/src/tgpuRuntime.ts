@@ -3,6 +3,7 @@ import type { TgpuArray } from './data';
 import type { JitTranspiler } from './jitTranspiler';
 import type { PlumListener } from './plumStore';
 import type { TgpuSettable } from './settableTrait';
+import type { TgpuBindGroup, TgpuBindGroupLayout } from './tgpuBindGroupLayout';
 import type { TgpuBuffer } from './tgpuBuffer';
 import type { TgpuFn } from './tgpuFn';
 import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
@@ -13,6 +14,7 @@ import type {
   TgpuTextureExternal,
 } from './tgpuTexture';
 import type { AnyTgpuData, BoundTgpuCode, TgpuCode, TgpuData } from './types';
+import type { Unwrapper } from './unwrapper';
 
 // ----------
 // Public API
@@ -20,7 +22,7 @@ import type { AnyTgpuData, BoundTgpuCode, TgpuCode, TgpuData } from './types';
 
 export type SetPlumAction<T> = T | ((prev: T) => T);
 
-export interface TgpuRuntime {
+export interface TgpuRuntime extends Unwrapper {
   readonly device: GPUDevice;
   readonly jitTranspiler?: JitTranspiler | undefined;
   /**
@@ -39,7 +41,9 @@ export interface TgpuRuntime {
     gpuBuffer: GPUBuffer,
   ): TgpuBuffer<TData>;
 
-  unwrap<TData extends AnyTgpuData>(resource: TgpuBuffer<TData>): GPUBuffer;
+  unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
+  unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
+  unwrap(resource: TgpuBindGroup): GPUBindGroup;
 
   readPlum<TPlum extends TgpuPlum>(plum: TPlum): ExtractPlumValue<TPlum>;
 

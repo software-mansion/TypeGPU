@@ -4,6 +4,7 @@
 
 import { createRuntime as init } from '../createRuntime';
 import { createBuffer } from '../legacyBufferApi';
+import { bindGroupLayout } from '../tgpuBindGroupLayout';
 import { Storage, Uniform, Vertex } from '../tgpuBuffer';
 import { read, write } from '../tgpuBufferUtils';
 import { fn, procedure } from '../tgpuFn';
@@ -13,11 +14,13 @@ export const tgpu = {
   Storage,
   Vertex,
 
-  init,
-  createBuffer,
-  procedure,
   fn,
+  procedure,
+  bindGroupLayout,
 
+  init,
+
+  createBuffer,
   read,
   write,
 };
@@ -62,3 +65,12 @@ export type {
 } from '../tgpuTexture';
 export type { JitTranspiler } from '../jitTranspiler';
 export type * from '../textureTypes';
+export type {
+  TgpuBindGroupLayout,
+  TgpuLayoutEntry,
+  TgpuLayoutSampler,
+  TgpuLayoutUniform,
+  BindLayoutEntry,
+  LayoutEntryToInput,
+  TgpuBindGroup,
+} from '../tgpuBindGroupLayout';

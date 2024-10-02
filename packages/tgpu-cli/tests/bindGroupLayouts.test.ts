@@ -69,6 +69,7 @@ export const layout0 = tgpu.bindGroupLayout({
 @group(1) @binding(4) var tex4: texture_multisampled_2d<u32>;
 @group(1) @binding(4) var tex4: texture_multisampled_2d<u32>;
 @group(1) @binding(5) var tex5: texture_depth_cube_array;
+@group(1) @binding(6) var tex6: texture_depth_2d_array;
 `;
 
     const expected = `\
@@ -94,6 +95,10 @@ export const layout1 = tgpu.bindGroupLayout({
   tex5: {
     texture: 'depth',
     viewDimension: 'cube-array',
+  },
+  tex6: {
+    texture: 'depth',
+    viewDimension: '2d-array',
   },
 }).$forceIndex(1);`;
 

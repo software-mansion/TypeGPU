@@ -2,9 +2,9 @@ import { MissingSlotValueError, ResolutionError } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
-import { generateFunction } from './smol';
+import { type Block, generateFunction } from './smol';
 import { code } from './tgpuCode';
-import type { TgpuFn } from './tgpuFn';
+import type { TgpuFn, TgpuFnShell } from './tgpuFn';
 import { isTextureView } from './tgpuTexture';
 import type {
   AnyTgpuData,
@@ -129,7 +129,7 @@ type SlotBindingLayer = {
 type FunctionScopeLayer = {
   type: 'functionScope';
   args: Resource[];
-  externalMap: Record<string, Wgsl>;
+  externalMap: Record<string, unknown>;
   returnType: AnyTgpuData | undefined;
 };
 
@@ -177,7 +177,7 @@ class ItemStateStack {
   pushFunctionScope(
     args: Resource[],
     returnType: AnyTgpuData | undefined,
-    externalMap: Record<string, Wgsl>,
+    externalMap: Record<string, unknown>,
   ) {
     this._stack.push({
       type: 'functionScope',
@@ -341,31 +341,35 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     );
   }
 
-  fnToWgsl(
-    // biome-ignore lint/suspicious/noExplicitAny: <no generic magic needed>
-    fn: TgpuFn<any, AnyTgpuData>,
-    externalMap: Record<string, Wgsl>,
-  ): { head: Wgsl; body: Wgsl } {
+  // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
+  transpileFn(fn: TgpuFn<any, AnyTgpuData>): {
+    argNames: string[];
+    body: Block;
+  } {
     if (!this._shared.jitTranspiler) {
       throw new Error(
         'Tried to execute a tgpu.fn function without providing a JIT transpiler, or transpiling at build time.',
       );
     }
 
-    const { argNames, body } = this._shared.jitTranspiler.transpileFn(
-      String(fn.implementation),
+    return this._shared.jitTranspiler.transpileFn(String(fn.implementation));
+  }
+
+  fnToWgsl(
+    // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
+    shell: TgpuFnShell<any, AnyTgpuData>,
+    argNames: string[],
+    body: Block,
+    externalMap: Record<string, unknown>,
+  ): { head: Wgsl; body: Wgsl } {
+    const args: { value: string; dataType: AnyTgpuData }[] = argNames.map(
+      (name, idx) => ({
+        value: name,
+        dataType: shell.argTypes[idx],
+      }),
     );
 
-    const args = argNames.map((name, idx) => ({
-      value: name,
-      dataType: fn.shell.argTypes[idx],
-    }));
-
-    this._itemStateStack.pushFunctionScope(
-      args,
-      fn.shell.returnType,
-      externalMap,
-    );
+    this._itemStateStack.pushFunctionScope(args, shell.returnType, externalMap);
     const str = generateFunction(this, body);
     this._itemStateStack.pop();
 
@@ -375,8 +379,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     return {
       head:
-        fn.shell.returnType !== undefined
-          ? `(${argList}) -> ${this.resolve(fn.shell.returnType)}`
+        shell.returnType !== undefined
+          ? `(${argList}) -> ${this.resolve(shell.returnType)}`
           : `(${argList})`,
       body: str,
     };
