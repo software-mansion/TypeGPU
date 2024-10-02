@@ -1,7 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { f32, u32, vec3f } from '../src/data';
+import { f32, u32 } from '../src/data';
 import {
-  BuiltinPosition,
   type OmitBuiltins,
   StrictNameRegistry,
   builtin,
