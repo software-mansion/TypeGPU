@@ -5,6 +5,7 @@ import {
   UnknownData,
   type Wgsl,
   isResolvable,
+  isWgsl,
 } from '../types';
 import type * as smol from './nodes';
 
@@ -17,10 +18,11 @@ export type GenerationCtx = ResolutionCtx & {
 };
 
 function resolveRes(ctx: GenerationCtx, res: Resource): string {
-  if (typeof res.value === 'string') {
-    return res.value;
+  if (isWgsl(res.value)) {
+    return ctx.resolve(res.value);
   }
-  return ctx.resolve(res.value);
+
+  return String(res.value);
 }
 
 function assertExhaustive(value: unknown): never {
