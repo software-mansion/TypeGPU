@@ -227,17 +227,21 @@ function generateStorageVariable(variable) {
  */
 function getViewDimension(variable) {
   const type_ = variable.type.name;
-  const dimension = type_.includes('_3d')
-    ? '3d'
-    : type_.includes('_1d')
-      ? '1d'
-      : type_.includes('_cube')
-        ? 'cube'
-        : null;
+  const dimension = type_.includes('_1d')
+    ? '1d'
+    : type_.includes('_2d')
+      ? '2d'
+      : type_.includes('_3d')
+        ? '3d'
+        : type_.includes('_cube')
+          ? 'cube'
+          : null;
 
-  return dimension
-    ? `${dimension}${type_.includes('_array') ? '-array' : ''}`
-    : null;
+  if (type_.includes('_array')) {
+    return `${dimension ?? '2d'}${type_.includes('_array') ? '-array' : ''}`;
+  }
+
+  return dimension && dimension !== '2d' ? dimension : null;
 }
 
 /**
