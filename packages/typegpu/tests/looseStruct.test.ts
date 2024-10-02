@@ -1,20 +1,17 @@
-import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   align,
+  float32x3,
   looseArrayOf,
-  size,
+  looseStruct,
+  sint16x2,
+  sint16x4,
+  unorm8x2,
+  unorm10_10_10_2,
+  vec2f,
   vec3f,
   vec3u,
-  unorm8x2,
-  sint16x2,
-  float32x3,
-  unorm10_10_10_2,
-  sint16x4,
-  looseStruct,
-  vec2f,
 } from '../src/data';
-import { tgpu } from '../src/experimental';
 
 describe('looseStruct', () => {
   it('properly calculates size with only loose members', () => {
@@ -83,5 +80,31 @@ describe('looseStruct', () => {
       // Total: 8 + 20 + 4 = 32
     });
     expect(s3.size).toEqual(32);
+  });
+
+  it('properly calculates size when nested and combined with looseArrayOf', () => {
+    const s = looseStruct({
+      a: unorm8x2, // 2 bytes
+      b: align(16, sint16x2), // 14 padding bytes + 4 bytes = 18
+      c: looseArrayOf(vec3f, 2), // 12 bytes * 2 = 24
+      // Total: 2 + 18 + 24 = 44
+    });
+    expect(s.size).toEqual(44);
+
+    const s2 = looseStruct({
+      a: align(16, unorm10_10_10_2), // 4 bytes
+      b: sint16x4, // 8 bytes
+      c: looseArrayOf(vec3f, 2), // 12 bytes * 2 = 24
+      // Total: 4 + 8 + 24 = 36
+    });
+    expect(s2.size).toEqual(36);
+
+    const s3 = looseStruct({
+      a: vec2f, // 8 bytes
+      b: align(16, vec3u), // 8 padding bytes + 12 bytes = 20
+      c: s2, // 4 padding bytes + 36 bytes = 40
+      // Total: 8 + 20 + 40 = 68
+    });
+    expect(s3.size).toEqual(68);
   });
 });
