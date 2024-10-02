@@ -1,12 +1,11 @@
 import type { AnySchema } from 'typed-binary';
 import { BindGroupResolver } from './bindGroupResolver';
+import { typeForBuiltin } from './builtinDataTypes';
 import {
-  getUsedBuiltins,
-  getUsedBuiltinsNamed,
+  builtinSymbolToName,
   idForBuiltin,
   nameForBuiltin,
-} from './builtin';
-import { typeForBuiltin } from './builtinDataTypes';
+} from './builtinIdentifiers';
 import type { SimpleTgpuData, TgpuArray } from './data';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
@@ -59,6 +58,21 @@ export default class ProgramBuilder {
   }
 }
 
+function getUsedBuiltinsNamed(
+  rec: Record<symbol, string>,
+): { name: string; builtinSymbol: symbol }[] {
+  const res = Object.getOwnPropertySymbols(rec).map((builtinSymbol) => {
+    const builtin = builtinSymbolToName.get(builtinSymbol);
+    if (builtin === undefined) {
+      throw new Error('Symbol is not a member of `builtin`');
+    }
+    const name = rec[builtinSymbol] as string;
+    return { name, builtinSymbol };
+  });
+
+  return res;
+}
+
 export class RenderProgramBuilder {
   constructor(
     private runtime: TgpuRuntime,
@@ -84,27 +98,29 @@ export class RenderProgramBuilder {
       }
       return { symbol, name };
     });
-    const symbolRecord: Record<symbol, string> = Object.fromEntries(
-      symbolOutputs.map(({ symbol, name }) => [symbol, name]),
+
+    const vertexOutputBuiltinObjects = getUsedBuiltinsNamed(
+      Object.fromEntries(
+        symbolOutputs.map(({ symbol, name }) => [symbol, name]),
+      ),
     );
 
-    const vertexOutputBuiltins = getUsedBuiltins(symbolRecord);
-    const vertexOutputBuiltinObjects = getUsedBuiltinsNamed(symbolRecord);
-    const outputVars = Object.keys(this.vertexOutputFormat);
-    const vertexOutput = outputVars.map((name, index) => {
-      const varInfo = this.vertexOutputFormat[name];
-      if (!varInfo) {
-        throw new Error('Output names must be strings.');
-      }
-      return { name, varInfo, index };
-    });
+    const vertexOutput = Object.keys(this.vertexOutputFormat).map(
+      (name, index) => {
+        const varInfo = this.vertexOutputFormat[name];
+        if (!varInfo) {
+          throw new Error('Output names must be strings.');
+        }
+        return { name, varInfo, index };
+      },
+    );
 
     const structFields = [
-      ...vertexOutputBuiltins.map((builtin) => {
-        const outputName = this.vertexOutputFormat[builtin] ?? '';
+      ...vertexOutputBuiltinObjects.map((builtin) => {
+        const outputName = this.vertexOutputFormat[builtin.builtinSymbol] ?? '';
 
         return code`
-          @builtin(${nameForBuiltin(builtin)}) ${outputName}: ${typeForBuiltin(builtin)},
+          @builtin(${nameForBuiltin(builtin.builtinSymbol)}) ${outputName}: ${typeForBuiltin(builtin.builtinSymbol)},
         `;
       }),
       ...vertexOutput.map(
