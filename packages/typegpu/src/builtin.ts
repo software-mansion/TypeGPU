@@ -1,9 +1,6 @@
 import type { vec3u, vec4f } from './data';
 
-import {
-  type BuiltinName,
-  builtinNameToSymbol,
-} from './builtinIdentifiers';
+import { type BuiltinName, builtinNameToSymbol } from './builtinIdentifiers';
 import { code } from './tgpuCode';
 import type { ResolutionCtx, TgpuResolvable } from './types';
 
