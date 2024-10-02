@@ -226,13 +226,18 @@ function generateStorageVariable(variable) {
  * @param { import('wgsl_reflect').VariableInfo } variable
  */
 function getViewDimension(variable) {
-  return variable.type.name.includes('_3d')
+  const type_ = variable.type.name;
+  const dimension = type_.includes('_3d')
     ? '3d'
-    : variable.type.name.includes('_1d')
+    : type_.includes('_1d')
       ? '1d'
-      : variable.type.name.includes('_cube')
-        ? 'Cube'
+      : type_.includes('_cube')
+        ? 'cube'
         : null;
+
+  return dimension
+    ? `${dimension}${type_.includes('_array') ? '-array' : ''}`
+    : null;
 }
 
 /**

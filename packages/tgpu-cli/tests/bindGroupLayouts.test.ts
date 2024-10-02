@@ -67,12 +67,13 @@ export const layout0 = tgpu.bindGroupLayout({
 
   it('generates texture tgpu.bindGroupLayout definitions', () => {
     const wgsl = `
-@group(1) @binding(0) var tex0: texture_3d < f32>;
+@group(1) @binding(0) var tex0: texture_3d<f32>;
 @group(1) @binding(1) var tex1: texture_external;
 @group(1) @binding(2) var tex2: texture_2d<f32>;
 @group(1) @binding(3) var tex3: texture_depth_multisampled_2d;
 @group(1) @binding(4) var tex4: texture_multisampled_2d<u32>;
 @group(1) @binding(4) var tex4: texture_multisampled_2d<u32>;
+@group(1) @binding(5) var tex5: texture_depth_cube_array;
 `;
 
     const expected = `\
@@ -94,6 +95,10 @@ export const layout1 = tgpu.bindGroupLayout({
   tex4: {
     texture: 'uint',
     multisampled: true,
+  },
+  tex5: {
+    texture: 'depth',
+    viewDimension: 'cube-array',
   },
 }).$forceIndex(1);`;
 
