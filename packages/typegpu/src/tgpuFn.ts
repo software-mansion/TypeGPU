@@ -209,8 +209,11 @@ function createFn<
       for (const [key, value] of Object.entries(newExternals)) {
         externalMap[key] = value;
 
-        // Giving name to external value
-        if (isNamable(value)) {
+        // Giving name to external value, if it does not already have one.
+        if (
+          isNamable(value) &&
+          (!('label' in value) || value.label === undefined)
+        ) {
           value.$name(key);
         }
       }
@@ -223,8 +226,7 @@ function createFn<
     },
 
     $name(newLabel: string): TgpuTgslFnBase<Args, Return> {
-      // Can only set the name once, other calls are ignored.
-      label = label ?? newLabel;
+      label = newLabel;
       return this;
     },
 
@@ -281,8 +283,11 @@ function createRawFn<
       for (const [key, value] of Object.entries(newExternals)) {
         externalMap[key] = value;
 
-        // Giving name to external value
-        if (isNamable(value)) {
+        // Giving name to external value, if it does not already have one.
+        if (
+          isNamable(value) &&
+          (!('label' in value) || value.label === undefined)
+        ) {
           value.$name(key);
         }
       }
@@ -290,8 +295,7 @@ function createRawFn<
     },
 
     $name(newLabel: string): TgpuRawFnBase<Args, Return> {
-      // Can only set the name once, other calls are ignored.
-      label = label ?? newLabel;
+      label = newLabel;
       return this;
     },
 
