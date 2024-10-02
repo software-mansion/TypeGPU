@@ -64,7 +64,7 @@ class AbstractTgpuAlignedImpl<
   public readonly isCustomAligned = true;
 
   constructor(
-    protected data: AnyTgpuData | AnyTgpuLooseData,
+    protected data: TData,
     public readonly byteAlignment: number,
   ) {
     super();
@@ -118,9 +118,6 @@ export class TgpuAlignedImpl<TAlign extends number, TData extends AnyTgpuData>
   public readonly isLoose = false as const;
 
   resolve(ctx: ResolutionCtx): string {
-    if (isDataLoose(this.data)) {
-      throw new Error('Loose data cannot be resolved.');
-    }
     return this.data.resolve(ctx);
   }
 }
