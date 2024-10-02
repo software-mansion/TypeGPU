@@ -40,17 +40,17 @@ export function align<
   byteAlignment: TAlign,
   data: TData,
 ):
-  | TgpuAligned<TAlign, Extract<TData, AnyTgpuData>>
-  | TgpuLooseAligned<TAlign, Extract<TData, AnyTgpuLooseData>> {
+  | TgpuAligned<TAlign, TData & AnyTgpuData>
+  | TgpuLooseAligned<TAlign, TData & AnyTgpuLooseData> {
   if (isDataLoose(data)) {
-    return new TgpuLooseAlignedImpl<TAlign, Extract<TData, AnyTgpuLooseData>>(
+    return new TgpuLooseAlignedImpl<TAlign, TData & AnyTgpuLooseData>(
       data,
       byteAlignment,
     );
   }
 
   if (isDataNotLoose(data)) {
-    return new TgpuAlignedImpl<TAlign, Extract<TData, AnyTgpuData>>(
+    return new TgpuAlignedImpl<TAlign, TData & AnyTgpuData>(
       data,
       byteAlignment,
     );
@@ -95,7 +95,7 @@ class AbstractTgpuAlignedImpl<
   public readonly isCustomAligned = true;
 
   constructor(
-    private data: AnyTgpuData | AnyTgpuLooseData,
+    protected data: TData,
     public readonly byteAlignment: TAlign,
   ) {
     super();
@@ -140,10 +140,6 @@ class AbstractTgpuAlignedImpl<
     alignIO(measurer, this.byteAlignment);
     return this.data.measure(value, measurer);
   }
-
-  resolve(ctx: ResolutionCtx): string {
-    return this.data.resolve(ctx);
-  }
 }
 
 class TgpuAlignedImpl<TAlign extends number, TData extends AnyTgpuData>
@@ -151,6 +147,10 @@ class TgpuAlignedImpl<TAlign extends number, TData extends AnyTgpuData>
   implements TgpuAligned<TAlign, TData>
 {
   public readonly isLoose = false as const;
+
+  resolve(ctx: ResolutionCtx): string {
+    return this.data.resolve(ctx);
+  }
 }
 
 class TgpuLooseAlignedImpl<
