@@ -25,7 +25,7 @@ const lexer = moo.compile({
 
   // WGSL spec apparently accepts plenty of Unicode, but lets limit it to just ASCII for now.
   ident_pattern: {
-    match: /[a-z_][a-z_0-9]*/,
+    match: /[a-z_A-Z][a-z_0-9A-Z]*/,
     type: moo.keywords({
       if: 'if',
       else: 'else',
@@ -50,6 +50,7 @@ const lexer = moo.compile({
   rbrace: '}',
   lbracket: '[',
   rbracket: ']',
+  arrow: '->',
   plus_eq: '+=',
   minus_eq: '-=',
   star_eq: '*=',
@@ -111,8 +112,10 @@ export type GlobalDecl =
  export type TemplateElaboratedIdent = { type: 'template_elaborated_ident', ident: string, template_list: TemplateList | null }; 
  export type TemplateList = Expression[]; 
 
+export type FunctionArgument = { type: 'func_argument', ident: string, typespec: TypeSpecifier };
 export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement, attrs: Attribute[] };
-export type FunctionHeader = { type: 'function_header', identifier: string };
+export type FunctionHeader = { type: 'function_header', ident: string, returntype: ReturnType | null, args: FunctionArgument[] | null };
+export type ReturnType = { type: 'return_type', typespec: TypeSpecifier };
 
 
  export type ReturnStatement = { type: 'return_statement', expression: Expression | null }; 
@@ -294,10 +297,22 @@ const grammar: Grammar = {
     {"name": "template_arg_comma_list$ebnf$2", "symbols": [{"literal":","}], "postprocess": id},
     {"name": "template_arg_comma_list$ebnf$2", "symbols": [], "postprocess": () => null},
     {"name": "template_arg_comma_list", "symbols": ["expression", "template_arg_comma_list$ebnf$1", "template_arg_comma_list$ebnf$2"], "postprocess": ([first, rest]) => [first, ...rest.map(tuple => tuple[1])]},
+    {"name": "return_type", "symbols": [{"literal":"->"}, "type_specifier"], "postprocess": ([, typespec]) => ({ type: 'return_type', typespec })},
     {"name": "function_decl$ebnf$1", "symbols": []},
     {"name": "function_decl$ebnf$1", "symbols": ["function_decl$ebnf$1", "attribute"], "postprocess": (d) => d[0].concat([d[1]])},
     {"name": "function_decl", "symbols": ["function_decl$ebnf$1", "function_header", "compound_statement"], "postprocess": ([attrs, header, body]) => ({ type: 'function_decl', header, body, attrs })},
-    {"name": "function_header", "symbols": [{"literal":"fn"}, "ident", {"literal":"("}, {"literal":")"}], "postprocess": ([ , identifier]) => ({ type: 'function_header', identifier: identifier.value })},
+    {"name": "func_argument", "symbols": ["ident", {"literal":":"}, "type_specifier"], "postprocess": ([ident,, typespec]) => ({ type: 'func_argument', ident: ident.value, typespec })},
+    {"name": "argument_list$ebnf$1", "symbols": []},
+    {"name": "argument_list$ebnf$1$subexpression$1", "symbols": [{"literal":","}, "func_argument"]},
+    {"name": "argument_list$ebnf$1", "symbols": ["argument_list$ebnf$1", "argument_list$ebnf$1$subexpression$1"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "argument_list$ebnf$2", "symbols": [{"literal":","}], "postprocess": id},
+    {"name": "argument_list$ebnf$2", "symbols": [], "postprocess": () => null},
+    {"name": "argument_list", "symbols": ["func_argument", "argument_list$ebnf$1", "argument_list$ebnf$2"], "postprocess": ([first, rest]) => [first, ...rest.map(tuple => tuple[1])]},
+    {"name": "function_header$ebnf$1", "symbols": ["argument_list"], "postprocess": id},
+    {"name": "function_header$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "function_header$ebnf$2", "symbols": ["return_type"], "postprocess": id},
+    {"name": "function_header$ebnf$2", "symbols": [], "postprocess": () => null},
+    {"name": "function_header", "symbols": [{"literal":"fn"}, "ident", {"literal":"("}, "function_header$ebnf$1", {"literal":")"}, "function_header$ebnf$2"], "postprocess": ([ , ident,, args,, returntype]) => ({ type: 'function_header', ident: ident.value, returntype, args })},
     {"name": "return_statement$ebnf$1", "symbols": ["expression"], "postprocess": id},
     {"name": "return_statement$ebnf$1", "symbols": [], "postprocess": () => null},
     {"name": "return_statement", "symbols": [{"literal":"return"}, "return_statement$ebnf$1"], "postprocess": ([ , expression]) => ({ type: 'return_statement', expression })},

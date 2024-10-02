@@ -2,17 +2,16 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   type TgpuAligned,
   type TgpuArray,
-  type TgpuLooseAligned,
-  type TgpuLooseArray,
   type Vec3f,
   align,
   arrayOf,
   f32,
-  looseArrayOf,
   struct,
   u32,
   vec3f,
 } from '../src/data';
+import type { TgpuLooseAligned } from '../src/data/align';
+import { type TgpuLooseArray, looseArrayOf } from '../src/data/array';
 import { StrictNameRegistry } from '../src/experimental';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
 

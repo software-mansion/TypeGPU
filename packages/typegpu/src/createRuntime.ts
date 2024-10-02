@@ -9,7 +9,7 @@ import {
 } from './programBuilder';
 import type { TgpuSettable } from './settableTrait';
 import { type TgpuBuffer, createBufferImpl } from './tgpuBuffer';
-import type { TgpuFn } from './tgpuFn';
+import { type TgpuFn, isRawFn } from './tgpuFn';
 import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
 import type {
   ComputePipelineExecutorOptions,
@@ -284,6 +284,12 @@ class TgpuRuntimeImpl implements TgpuRuntime {
 
   compute(fn: TgpuFn<[]>): void {
     // TODO: Cache the pipeline
+
+    if (isRawFn(fn)) {
+      throw new Error(
+        'Functions with raw string wgsl implementation are not yet supported by the `compute` function',
+      );
+    }
 
     const program = new ComputeProgramBuilder(
       this,

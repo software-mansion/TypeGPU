@@ -353,7 +353,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     const { argNames, body } = this._shared.jitTranspiler.transpileFn(
-      String(fn.body),
+      String(fn.implementation),
     );
 
     const args = argNames.map((name, idx) => ({

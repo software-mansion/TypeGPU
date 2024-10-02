@@ -12,6 +12,10 @@ import { RecursiveDataTypeError } from '../errors';
 import type { ResolutionCtx, TgpuData } from '../types';
 import type { I32, U32 } from './numeric';
 
+// ----------
+// Public API
+// ----------
+
 export function atomic<TSchema extends U32 | I32>(
   data: TSchema,
 ): Atomic<TSchema> {
@@ -20,6 +24,16 @@ export function atomic<TSchema extends U32 | I32>(
 
 export interface Atomic<TSchema extends U32 | I32>
   extends TgpuData<Unwrap<TSchema>> {}
+
+export function isAtomicSchema<T extends Atomic<U32 | I32>>(
+  schema: T | unknown,
+): schema is T {
+  return schema instanceof AtomicImpl;
+}
+
+// --------------
+// Implementation
+// --------------
 
 class AtomicImpl<TSchema extends U32 | I32>
   extends Schema<Unwrap<TSchema>>

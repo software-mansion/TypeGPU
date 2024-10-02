@@ -16,13 +16,49 @@ import type {
 } from '../types';
 import alignIO from './alignIO';
 
+// ----------
+// Public API
+// ----------
+
 export interface TgpuArray<TElement extends AnyTgpuData>
   extends TgpuData<Unwrap<TElement>[]> {
   readonly elementType: TElement;
   readonly elementCount: number;
 }
 
-export class TgpuArrayImpl<TElement extends AnyTgpuData>
+export const arrayOf = <TElement extends AnyTgpuData>(
+  elementType: TElement,
+  count: number,
+): TgpuArray<TElement> => new TgpuArrayImpl(elementType, count);
+
+export interface TgpuLooseArray<TElement extends AnyTgpuData>
+  extends TgpuLooseData<Unwrap<TElement>[]> {
+  readonly elementType: TElement;
+  readonly elementCount: number;
+}
+
+export const looseArrayOf = <TElement extends AnyTgpuData>(
+  elementType: TElement,
+  count: number,
+): TgpuLooseArray<TElement> => new TgpuLooseArrayImpl(elementType, count);
+
+export function isArraySchema<T extends TgpuArray<AnyTgpuData>>(
+  schema: T | unknown,
+): schema is T {
+  return schema instanceof TgpuArrayImpl;
+}
+
+export function isLooseArraySchema<T extends TgpuLooseArray<AnyTgpuData>>(
+  schema: T | unknown,
+): schema is T {
+  return schema instanceof TgpuLooseArrayImpl;
+}
+
+// --------------
+// Implementation
+// --------------
+
+class TgpuArrayImpl<TElement extends AnyTgpuData>
   extends Schema<Unwrap<TElement>[]>
   implements TgpuArray<TElement>
 {
@@ -81,17 +117,6 @@ export class TgpuArrayImpl<TElement extends AnyTgpuData>
   }
 }
 
-export const arrayOf = <TElement extends AnyTgpuData>(
-  elementType: TElement,
-  count: number,
-): TgpuArray<TElement> => new TgpuArrayImpl(elementType, count);
-
-export interface TgpuLooseArray<TElement extends AnyTgpuData>
-  extends TgpuLooseData<Unwrap<TElement>[]> {
-  readonly elementType: TElement;
-  readonly elementCount: number;
-}
-
 class TgpuLooseArrayImpl<TElement extends AnyTgpuData>
   extends Schema<Unwrap<TElement>[]>
   implements TgpuLooseArray<TElement>
@@ -143,8 +168,3 @@ class TgpuLooseArrayImpl<TElement extends AnyTgpuData>
     return measurer.add(this.stride * this.elementCount);
   }
 }
-
-export const looseArrayOf = <TElement extends AnyTgpuData>(
-  elementType: TElement,
-  count: number,
-): TgpuLooseArray<TElement> => new TgpuLooseArrayImpl(elementType, count);
