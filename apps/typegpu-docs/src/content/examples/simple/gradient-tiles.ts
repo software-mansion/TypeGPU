@@ -68,7 +68,7 @@ const renderPipeline = root.makeRenderPipeline({
       let uvOut = uv[${builtin.vertexIndex}];
     `,
     output: {
-      [builtin.position]: 'posOut',
+      [builtin.position.s]: 'posOut',
       uvOut: vec2f,
     },
   },

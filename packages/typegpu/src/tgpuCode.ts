@@ -1,4 +1,4 @@
-import { idForBuiltin } from './builtinIdentifiers';
+import { idForBuiltin } from './builtin';
 import {
   type BoundTgpuCode,
   type Eventual,

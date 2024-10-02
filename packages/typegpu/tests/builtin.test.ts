@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { f32, u32 } from '../src/data';
 import {
-  type OmitSymbols,
+  type OmitBuiltins,
   StrictNameRegistry,
   builtin,
   wgsl,
@@ -41,7 +41,7 @@ describe('builtin', () => {
     };
 
     type X = typeof x;
-    type Omitted = OmitSymbols<X>;
+    type Omitted = OmitBuiltins<X>;
 
     expectTypeOf<Omitted>().toEqualTypeOf({
       a: u32,

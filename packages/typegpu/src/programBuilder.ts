@@ -1,8 +1,12 @@
 import type { AnySchema } from 'typed-binary';
 import { BindGroupResolver } from './bindGroupResolver';
-import { getUsedBuiltins, getUsedBuiltinsNamed } from './builtin';
+import {
+  getUsedBuiltins,
+  getUsedBuiltinsNamed,
+  idForBuiltin,
+  nameForBuiltin,
+} from './builtin';
 import { typeForBuiltin } from './builtinDataTypes';
-import { idForBuiltin, nameForBuiltin } from './builtinIdentifiers';
 import type { SimpleTgpuData, TgpuArray } from './data';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
@@ -97,10 +101,10 @@ export class RenderProgramBuilder {
 
     const structFields = [
       ...vertexOutputBuiltins.map((builtin) => {
-        const outputName = this.vertexOutputFormat[builtin] ?? '';
+        const outputName = this.vertexOutputFormat[builtin.s] ?? '';
 
         return code`
-          @builtin(${nameForBuiltin(builtin)}) ${outputName}: ${typeForBuiltin(builtin)},
+          @builtin(${nameForBuiltin(builtin.s)}) ${outputName}: ${typeForBuiltin(builtin.s)},
         `;
       }),
       ...vertexOutput.map(

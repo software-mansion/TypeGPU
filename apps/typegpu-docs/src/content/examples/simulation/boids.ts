@@ -154,7 +154,7 @@ const renderPipelines = [0, 1].map((idx) =>
         let fragUV = (rotated + vec2f(triangleSize, triangleSize)) / vec2f(triangleSize * 2.0);
       `,
       output: {
-        [builtin.position]: 'pos',
+        [builtin.position.s]: 'pos',
         fragUV: vec2f,
       },
     },

@@ -1,75 +1,119 @@
 import type { vec3u, vec4f } from './data';
+import { code } from './tgpuCode';
+import { identifier } from './tgpuIdentifier';
+import type { ResolutionCtx, TgpuIdentifier, TgpuResolvable } from './types';
 
-export type BuiltinVertexIndex = symbol & number;
-export type BuiltinInstanceIndex = symbol & number;
-export type BuiltinPosition = symbol & vec4f;
-export type BuiltinClipDistances = symbol & number[];
-export type BuiltinFrontFacing = symbol & boolean;
-export type BuiltinFragDepth = symbol & number;
-export type BuiltinSampleIndex = symbol & number;
-export type BuiltinSampleMask = symbol & vec4f;
-export type BuiltinFragment = symbol & vec4f;
-export type BuiltinLocalInvocationId = symbol & vec3u;
-export type BuiltinLocalInvocationIndex = symbol & number;
-export type BuiltinGlobalInvocationId = symbol & vec3u;
-export type BuiltinWorkgroupId = symbol & vec3u;
-export type BuiltinNumWorkgroups = symbol & vec3u;
+export type BuiltinVertexIndex = TgpuBuiltin & number;
+export type BuiltinInstanceIndex = TgpuBuiltin & number;
+export type BuiltinPosition = TgpuBuiltin & vec4f;
+export type BuiltinClipDistances = TgpuBuiltin & number[];
+export type BuiltinFrontFacing = TgpuBuiltin & boolean;
+export type BuiltinFragDepth = TgpuBuiltin & number;
+export type BuiltinSampleIndex = TgpuBuiltin & number;
+export type BuiltinSampleMask = TgpuBuiltin & vec4f;
+export type BuiltinFragment = TgpuBuiltin & vec4f;
+export type BuiltinLocalInvocationId = TgpuBuiltin & vec3u;
+export type BuiltinLocalInvocationIndex = TgpuBuiltin & number;
+export type BuiltinGlobalInvocationId = TgpuBuiltin & vec3u;
+export type BuiltinWorkgroupId = TgpuBuiltin & vec3u;
+export type BuiltinNumWorkgroups = TgpuBuiltin & vec3u;
+
+class TgpuBuiltin implements TgpuResolvable {
+  public readonly s: symbol;
+
+  constructor(public name: string) {
+    this.s = Symbol(name);
+  }
+
+  get label() {
+    return this.name;
+  }
+
+  resolve(ctx: ResolutionCtx): string {
+    return ctx.resolve(code`${this.s}`);
+  }
+}
 
 export const builtin = {
-  vertexIndex: Symbol('builtin_vertexIndex') as BuiltinVertexIndex,
-  instanceIndex: Symbol('builtin_instanceIndex') as BuiltinInstanceIndex,
-  position: Symbol('builtin_position') as BuiltinPosition,
-  clipDistances: Symbol('builtin_clipDistances') as BuiltinClipDistances,
-  frontFacing: Symbol('builtin_frontFacing') as BuiltinFrontFacing,
-  fragDepth: Symbol('builtin_fragDepth') as BuiltinFragDepth,
-  sampleIndex: Symbol('builtin_sampleIndex') as BuiltinSampleIndex,
-  sampleMask: Symbol('builtin_sampleMask') as BuiltinSampleMask,
-  fragment: Symbol('builtin_fragment') as BuiltinFragment,
-  localInvocationId: Symbol(
-    'builtin_localInvocationId',
+  vertexIndex: new TgpuBuiltin('vertex_index') as BuiltinVertexIndex,
+  instanceIndex: new TgpuBuiltin('instance_index') as BuiltinInstanceIndex,
+  position: new TgpuBuiltin('position') as BuiltinPosition,
+  clipDistances: new TgpuBuiltin('clip_distances') as BuiltinClipDistances,
+  frontFacing: new TgpuBuiltin('front_facing') as BuiltinFrontFacing,
+  fragDepth: new TgpuBuiltin('frag_depth') as BuiltinFragDepth,
+  sampleIndex: new TgpuBuiltin('sample_index') as BuiltinSampleIndex,
+  sampleMask: new TgpuBuiltin('sample_mask') as BuiltinSampleMask,
+  fragment: new TgpuBuiltin('fragment') as BuiltinFragment,
+  localInvocationId: new TgpuBuiltin(
+    'local_invocation_id',
   ) as BuiltinLocalInvocationId,
-  localInvocationIndex: Symbol(
-    'builtin_localInvocationIndex',
+  localInvocationIndex: new TgpuBuiltin(
+    'local_invocation_index',
   ) as BuiltinLocalInvocationIndex,
-  globalInvocationId: Symbol(
-    'builtin_globalInvocationId',
+  globalInvocationId: new TgpuBuiltin(
+    'global_invocation_id',
   ) as BuiltinGlobalInvocationId,
-  workgroupId: Symbol('builtin_workgroupId') as BuiltinWorkgroupId,
-  numWorkgroups: Symbol('builtin_numWorkgroups') as BuiltinNumWorkgroups,
+  workgroupId: new TgpuBuiltin('workgroup_id') as BuiltinWorkgroupId,
+  numWorkgroups: new TgpuBuiltin('num_workgroups') as BuiltinNumWorkgroups,
 } as const;
 
 const builtins = Object.values(builtin);
 
 type Builtin = (typeof builtin)[keyof typeof builtin];
 
+const symbolToBuiltin = new Map(
+  builtins.map((builtin) => [builtin.s, builtin]),
+);
+
 export function getUsedBuiltinsNamed(
-  o: Record<Builtin, string>,
+  o: Record<symbol, string>,
 ): { name: string; builtin: Builtin }[] {
   const res = Object.getOwnPropertySymbols(o).map((s) => {
-    if (!builtins.includes(s as Builtin)) {
+    const builtin = symbolToBuiltin.get(s);
+    if (builtin === undefined) {
       throw new Error('Symbol is not a member of `builtin`');
     }
-    const name = o[s as Builtin];
-    if (!name) {
-      throw new Error('Name is not provided');
-    }
-    return { name: name, builtin: s as Builtin };
+    const name = o[s] as string;
+    return { name, builtin };
   });
 
   return res;
 }
 
-export function getUsedBuiltins(o: Record<Builtin, string>): Builtin[] {
+export function getUsedBuiltins(o: Record<symbol, string>): Builtin[] {
   const res = Object.getOwnPropertySymbols(o).map((s) => {
-    if (!builtins.includes(s as Builtin)) {
+    const builtin = symbolToBuiltin.get(s);
+    if (builtin === undefined) {
       throw new Error('Symbol is not a member of `builtin`');
     }
-    return s;
+    return builtin;
   });
 
   return res as Builtin[];
 }
 
-export type OmitSymbols<S extends object> = {
-  [Key in keyof S as S[Key] extends symbol ? never : Key]: S[Key];
+const identifierMap = new Map<symbol, TgpuIdentifier>();
+
+export function nameForBuiltin(key: symbol): string {
+  const name = symbolToBuiltin.get(key)?.name;
+  if (!name) {
+    throw new Error(`The symbol ${String(key)} in not a valid 'builtin'`);
+  }
+
+  return name;
+}
+
+export function idForBuiltin(key: symbol) {
+  let id = identifierMap.get(key);
+
+  if (id === undefined) {
+    id = identifier().$name(symbolToBuiltin.get(key)?.name);
+    identifierMap.set(key, id);
+  }
+
+  return id;
+}
+
+export type OmitBuiltins<S extends object> = {
+  [Key in keyof S as S[Key] extends Builtin ? never : Key]: S[Key];
 };
