@@ -27,13 +27,6 @@ export type OmitProps<T extends Record<string, unknown>, Prop> = Pick<
 >;
 
 /**
- * Utility type that takes an object type and makes the hover overlay more readable.
- */
-export type Prettify<T> = {
-  [K in keyof T]: T[K];
-} & {};
-
-/**
  * Passed into each resolvable item. All sibling items share a resolution ctx,
  * and a new resolution ctx is made when going down each level in the tree.
  */

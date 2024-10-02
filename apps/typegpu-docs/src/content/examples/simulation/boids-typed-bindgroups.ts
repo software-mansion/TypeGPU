@@ -373,22 +373,14 @@ function frame() {
   const commandEncoder = root.device.createCommandEncoder();
   const computePass = commandEncoder.beginComputePass();
   computePass.setPipeline(computePipeline);
-  computePass.setBindGroup(
-    0,
-    even
-      ? root.unwrap(computeBindGroups[0])
-      : root.unwrap(computeBindGroups[1]),
-  );
+  computePass.setBindGroup(0, root.unwrap(computeBindGroups[even ? 0 : 1]));
   computePass.dispatchWorkgroups(triangleAmount);
   computePass.end();
 
   const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
   passEncoder.setPipeline(pipeline);
   passEncoder.setVertexBuffer(0, triangleVertexBuffer.buffer);
-  passEncoder.setBindGroup(
-    0,
-    even ? root.unwrap(renderBindGroups[1]) : root.unwrap(renderBindGroups[0]),
-  );
+  passEncoder.setBindGroup(0, root.unwrap(renderBindGroups[even ? 1 : 0]));
   passEncoder.draw(3, triangleAmount);
   passEncoder.end();
 

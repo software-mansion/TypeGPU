@@ -60,7 +60,7 @@ export function isBufferUsage<
     | TgpuBufferMutable<AnyTgpuData>
     | TgpuBufferVertex<AnyTgpuData>,
 >(value: T | unknown): value is T {
-  return (value as T).resourceType === 'buffer-usage';
+  return !!value && (value as T).resourceType === 'buffer-usage';
 }
 
 // --------------

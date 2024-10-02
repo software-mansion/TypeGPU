@@ -11,6 +11,11 @@ global.GPUBufferUsage = {
   QUERY_RESOLVE: 512,
 };
 
+global.GPUMapMode = {
+  READ: 0,
+  WRITE: 1,
+};
+
 global.GPUTextureUsage = {
   COPY_SRC: 1,
   COPY_DST: 2,

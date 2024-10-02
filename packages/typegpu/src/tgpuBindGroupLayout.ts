@@ -177,13 +177,13 @@ export function bindGroupLayout<
 export function isBindGroupLayout<T extends TgpuBindGroupLayout>(
   value: T | unknown,
 ): value is T {
-  return (value as T).resourceType === 'bind-group-layout';
+  return !!value && (value as T).resourceType === 'bind-group-layout';
 }
 
 export function isBindGroup<T extends TgpuBindGroup>(
   value: T | unknown,
 ): value is T {
-  return (value as T).resourceType === 'bind-group';
+  return !!value && (value as T).resourceType === 'bind-group';
 }
 
 /**
@@ -428,12 +428,15 @@ class TgpuBindGroupImpl<
           if (
             'texture' in entry ||
             'storageTexture' in entry ||
-            'sampler' in entry ||
-            'externalTexture' in entry
+            'externalTexture' in entry ||
+            'sampler' in entry
           ) {
             return {
               binding: idx,
-              resource: value as GPUSampler,
+              resource: value as
+                | GPUTextureView
+                | GPUExternalTexture
+                | GPUSampler,
             };
           }
 

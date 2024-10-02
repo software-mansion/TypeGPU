@@ -1,30 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { arrayOf, u32 } from '../src/data';
 import tgpu from '../src/index';
-
-global.GPUBufferUsage = {
-  MAP_READ: 1,
-  MAP_WRITE: 2,
-  COPY_SRC: 4,
-  COPY_DST: 8,
-  INDEX: 16,
-  VERTEX: 32,
-  UNIFORM: 64,
-  STORAGE: 128,
-  INDIRECT: 256,
-  QUERY_RESOLVE: 512,
-};
-
-global.GPUMapMode = {
-  READ: 0,
-  WRITE: 1,
-};
-
-global.GPUShaderStage = {
-  VERTEX: 1,
-  FRAGMENT: 2,
-  COMPUTE: 4,
-};
+import './utils/webgpuGlobals';
 
 const mockBuffer = {
   mapState: 'unmapped',
