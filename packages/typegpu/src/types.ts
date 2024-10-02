@@ -1,8 +1,9 @@
 import type { ISchema, Unwrap } from 'typed-binary';
 import type { TgpuNamable } from './namable';
+import type { Block } from './smol';
 import type { TgpuBuffer } from './tgpuBuffer';
 import type { TgpuBufferUsage } from './tgpuBufferUsage';
-import type { TgpuFn } from './tgpuFn';
+import type { TgpuFn, TgpuFnShell } from './tgpuFn';
 
 export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
 
@@ -10,7 +11,7 @@ export const UnknownData = Symbol('Unknown data type');
 export type UnknownData = typeof UnknownData;
 
 export type Resource = {
-  value: Wgsl;
+  value: unknown;
   dataType: AnyTgpuData | UnknownData;
 };
 
@@ -45,9 +46,16 @@ export interface ResolutionCtx {
    */
   unwrap<T>(eventual: Eventual<T>): T;
   resolve(item: Wgsl, slotValueOverrides?: SlotValuePair<unknown>[]): string;
+  // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
+  transpileFn(fn: TgpuFn<any, AnyTgpuData>): {
+    argNames: string[];
+    body: Block;
+  };
   fnToWgsl(
     // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
-    fn: TgpuFn<any, any>,
+    shell: TgpuFnShell<any, AnyTgpuData>,
+    argNames: string[],
+    body: Block,
     externalMap: Record<string, unknown>,
   ): {
     head: Wgsl;

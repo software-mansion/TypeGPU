@@ -2,6 +2,7 @@ import type { Unwrap } from 'typed-binary';
 import { inGPUMode } from './gpuMode';
 import { type TgpuNamable, isNamable } from './namable';
 import { valueList } from './resolutionUtils';
+import type { Block } from './smol';
 import { code } from './tgpuCode';
 import { identifier } from './tgpuIdentifier';
 import {
@@ -29,7 +30,7 @@ type UnwrapReturn<T extends AnyTgpuData | undefined> = T extends undefined
 /**
  * Describes a function signature (its arguments and return type)
  */
-interface TgpuFnShell<
+export interface TgpuFnShell<
   Args extends AnyTgpuDataTuple,
   Return extends AnyTgpuData | undefined,
 > {
@@ -63,6 +64,7 @@ interface TgpuTgslFnBase<
   readonly bodyResolvable: TgpuResolvable;
 
   $uses(dependencyMap: Record<string, unknown>): this;
+  $__ast(argNames: string[], body: Block): this;
 }
 
 interface TgpuRawFnBase<
@@ -179,20 +181,24 @@ function createFn<
   implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
 ): TgpuFn<Args, Return> {
   const externalMap: Record<string, unknown> = {};
+  let prebuiltAst: { argNames: string[]; body: Block } | null = null;
+  let label: string | undefined;
 
   const fnBase: TgpuTgslFnBase<Args, Return> = {
     shell,
     implementation,
-    label: undefined,
 
     bodyResolvable: {
       get label() {
-        return `${this.label}.implementation`;
+        return `${label}.implementation`;
       },
 
       resolve: (ctx) => {
+        const ast = prebuiltAst ?? ctx.transpileFn(fn);
         const { body } = ctx.fnToWgsl(
-          fnBase as TgpuFn<Args, Return>,
+          fn.shell,
+          ast.argNames,
+          ast.body,
           externalMap,
         );
         return ctx.resolve(body);
@@ -203,7 +209,7 @@ function createFn<
       for (const [key, value] of Object.entries(newExternals)) {
         externalMap[key] = value;
 
-        // Giving name to external value
+        // Giving name to external value, if it does not already have one.
         if (
           isNamable(value) &&
           (!('label' in value) || value.label === undefined)
@@ -214,17 +220,24 @@ function createFn<
       return this;
     },
 
+    $__ast(argNames: string[], body: Block): TgpuTgslFnBase<Args, Return> {
+      prebuiltAst = { argNames, body };
+      return this;
+    },
+
     $name(newLabel: string): TgpuTgslFnBase<Args, Return> {
-      // @ts-ignore
-      this.label = newLabel;
+      label = newLabel;
       return this;
     },
 
     resolve(ctx: ResolutionCtx): string {
-      const ident = identifier().$name(this.label);
+      const ident = identifier().$name(label);
 
+      const ast = prebuiltAst ?? ctx.transpileFn(fn);
       const { head, body } = ctx.fnToWgsl(
-        this as TgpuFn<Args, Return>,
+        fn.shell,
+        ast.argNames,
+        ast.body,
         externalMap,
       );
       ctx.addDeclaration(code`fn ${ident}${head}${body}`);
@@ -243,6 +256,12 @@ function createFn<
   };
 
   const fn = Object.assign(call, fnBase);
+
+  // Making the label available as a readonly property.
+  Object.defineProperty(fn, 'label', {
+    get: () => label,
+  });
+
   return fn;
 }
 
@@ -254,17 +273,17 @@ function createRawFn<
   implementation: string,
 ): TgpuRawFn<Args, Return> {
   const externalMap: Record<string, unknown> = {};
+  let label: string | undefined;
 
   const fnBase: TgpuRawFnBase<Args, Return> = {
     shell,
     implementation,
-    label: undefined,
 
     $uses(newExternals) {
       for (const [key, value] of Object.entries(newExternals)) {
         externalMap[key] = value;
 
-        // Giving name to external value
+        // Giving name to external value, if it does not already have one.
         if (
           isNamable(value) &&
           (!('label' in value) || value.label === undefined)
@@ -276,13 +295,12 @@ function createRawFn<
     },
 
     $name(newLabel: string): TgpuRawFnBase<Args, Return> {
-      // @ts-ignore
-      this.label = newLabel;
+      label = newLabel;
       return this;
     },
 
     resolve(ctx: ResolutionCtx): string {
-      const ident = identifier().$name(this.label);
+      const ident = identifier().$name(label);
 
       const replacedImpl = Object.entries(externalMap).reduce(
         (acc, [externalName, external]) => {
@@ -316,6 +334,12 @@ function createRawFn<
   };
 
   const fn = Object.assign(call, fnBase);
+
+  // Making the label available as a readonly property.
+  Object.defineProperty(fn, 'label', {
+    get: () => label,
+  });
+
   return fn;
 }
 
