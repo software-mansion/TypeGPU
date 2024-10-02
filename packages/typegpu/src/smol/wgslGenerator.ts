@@ -199,26 +199,21 @@ ${ctx.pre}else
 ${alternate}`;
   }
 
-  if ('let' in statement) {
-    const id = resolveRes(ctx, generateIdentifier(ctx, statement.let));
-    const init = generateExpression(ctx, statement.be);
-    // TODO: Associate this declaration with the data-type.
+  if ('let' in statement || 'const' in statement) {
+    const id = resolveRes(
+      ctx,
+      generateIdentifier(
+        ctx,
+        'let' in statement ? statement.let : statement.const,
+      ),
+    );
+    const eq = statement.eq ? generateExpression(ctx, statement.eq) : undefined;
 
-    return `${ctx.pre}let ${id} = ${resolveRes(ctx, init)};`;
-  }
-
-  if ('var' in statement) {
-    const id = resolveRes(ctx, generateIdentifier(ctx, statement.var));
-    const init = statement.init
-      ? generateExpression(ctx, statement.init)
-      : undefined;
-    // TODO: Associate this declaration with the data-type.
-
-    if (!init) {
-      throw new Error(`Cannot create 'var' without an initial value.`);
+    if (!eq) {
+      throw new Error('Cannot create variable without an initial value.');
     }
 
-    return `${ctx.pre}var ${id} = ${resolveRes(ctx, init)};`;
+    return `${ctx.pre}var ${id} = ${resolveRes(ctx, eq)};`;
   }
 
   if ('block' in statement) {

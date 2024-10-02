@@ -1,4 +1,8 @@
-import { MissingSlotValueError, ResolutionError } from './errors';
+import {
+  MissingLinksError,
+  MissingSlotValueError,
+  ResolutionError,
+} from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
@@ -352,9 +356,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       );
     }
 
-    const { argNames, body } = this._shared.jitTranspiler.transpileFn(
-      String(fn.implementation),
+    const { argNames, body, externalNames } =
+      this._shared.jitTranspiler.transpileFn(String(fn.implementation));
+
+    const missingExternals = externalNames.filter(
+      (name) => !(name in externalMap),
     );
+    if (missingExternals.length > 0) {
+      throw new MissingLinksError(fn.label, missingExternals);
+    }
 
     const args = argNames.map((name, idx) => ({
       value: name,

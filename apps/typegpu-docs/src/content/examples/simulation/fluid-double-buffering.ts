@@ -74,7 +74,7 @@ const rand01 = tgpu
     randSeed.value.y = std.fract(std.cos(b) * 534.7645);
     return randSeed.value.y;
   })
-  .$uses({ std, randSeed });
+  .$uses({ std, vec2f, randSeed });
 
 type GridData = typeof GridData;
 /**
