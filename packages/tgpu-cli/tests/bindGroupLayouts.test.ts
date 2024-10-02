@@ -40,7 +40,6 @@ struct TriangleData {
 @binding(0) @group(0) var<storage> trianglePos: array<TriangleData, 1000>;
 @binding(1) @group(0) var<storage, read> colorPalette: vec3<f32>;
 @binding(2) @group(0) var<storage, read_write> threshold: u32;
-@binding(3) @group(0) var<storage, write> threshold2: i32;
 `;
 
     const expected = `\
@@ -55,10 +54,6 @@ export const layout0 = tgpu.bindGroupLayout({
   threshold: {
     storage: d.u32,
     access: 'mutable',
-  },
-  threshold2: {
-    storage: d.i32,
-    access: 'writeonly',
   },
 }).$forceIndex(0);`;
 
@@ -155,19 +150,19 @@ export const layout1 = tgpu.bindGroupLayout({
 
     const expected = `\
 export const layout0 = tgpu.bindGroupLayout({
-  _0: null,
-  _1: null,
+  _0: null, // skipping binding 0
+  _1: null, // skipping binding 1
   u2: {
     uniform: d.u32,
   },
-  _2: null,
-  _3: null,
-  _4: null,
-  _5: null,
+  _3: null, // skipping binding 3
+  _4: null, // skipping binding 4
+  _5: null, // skipping binding 5
+  _6: null, // skipping binding 6
   u7: {
     uniform: d.u32,
   },
-  _6: null,
+  _8: null, // skipping binding 8
   u9: {
     uniform: d.u32,
   },

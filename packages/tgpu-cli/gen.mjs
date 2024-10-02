@@ -56,7 +56,11 @@ ${structs.map((struct) => generateStruct(struct, toTs)).join('\n\n')}`
  * @param { boolean } toTs
  */
 function generateStruct(struct, toTs) {
-  return `export const ${struct.name} =${hasVarLengthMember(struct) ? ` (${LENGTH_VAR}${toTs ? ': number' : ''}) =>` : ''} d.struct({
+  return `export const ${struct.name} = ${
+    hasVarLengthMember(struct)
+      ? `(${LENGTH_VAR}${toTs ? ': number' : ''}) => `
+      : ''
+  }d.struct({
   ${struct.members.map((member) => generateStructMember(member)).join('\n  ')}
 });`;
 }
@@ -182,13 +186,11 @@ const SAMPLE_TYPES = {
  * @param { import('wgsl_reflect').VariableInfo[] } group
  */
 function generateGroupLayout(group) {
-  let emptyCount = 0;
-
   return Array.from(group)
-    .map((variable) =>
+    .map((variable, index) =>
       variable
         ? `${variable.name}: ${generateVariable(variable)},`
-        : `_${emptyCount++}: null,`,
+        : `_${index}: null, // skipping binding ${index}`,
     )
     .join('\n  ');
 }
