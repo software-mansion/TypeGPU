@@ -14,6 +14,18 @@ export type Resource = {
   dataType: AnyTgpuData | UnknownData;
 };
 
+export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
+
+/**
+ * Removes properties from record type that extend `Prop`
+ */
+export type OmitProps<T extends Record<string, unknown>, Prop> = Pick<
+  T,
+  {
+    [Key in keyof T]: T[Key] extends Prop ? never : Key;
+  }[keyof T]
+>;
+
 /**
  * Passed into each resolvable item. All sibling items share a resolution ctx,
  * and a new resolution ctx is made when going down each level in the tree.

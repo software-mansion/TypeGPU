@@ -23,21 +23,25 @@ import type {
 // ----------
 export interface TgpuBufferUniform<TData extends AnyTgpuData>
   extends TgpuBindable<TData, 'uniform'> {
-  value: Unwrap<TData>;
+  readonly resourceType: 'buffer-usage';
+  readonly value: Unwrap<TData>;
 }
 
 export interface TgpuBufferReadonly<TData extends AnyTgpuData>
   extends TgpuBindable<TData, 'readonly'> {
-  value: Unwrap<TData>;
+  readonly resourceType: 'buffer-usage';
+  readonly value: Unwrap<TData>;
 }
 
 export interface TgpuBufferMutable<TData extends AnyTgpuData>
   extends TgpuBindable<TData, 'mutable'> {
+  readonly resourceType: 'buffer-usage';
   value: Unwrap<TData>;
 }
 
 export interface TgpuBufferVertex<TData extends AnyTgpuData>
   extends TgpuBindable<TData, 'vertex'> {
+  readonly resourceType: 'buffer-usage';
   vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'>;
 }
 
@@ -45,7 +49,18 @@ export interface TgpuBufferUsage<
   TData extends AnyTgpuData,
   TUsage extends BufferUsage = BufferUsage,
 > extends TgpuBindable<TData, TUsage> {
+  readonly resourceType: 'buffer-usage';
   value: Unwrap<TData>;
+}
+
+export function isBufferUsage<
+  T extends
+    | TgpuBufferUniform<AnyTgpuData>
+    | TgpuBufferReadonly<AnyTgpuData>
+    | TgpuBufferMutable<AnyTgpuData>
+    | TgpuBufferVertex<AnyTgpuData>,
+>(value: T | unknown): value is T {
+  return !!value && (value as T).resourceType === 'buffer-usage';
 }
 
 // --------------
@@ -55,6 +70,8 @@ export interface TgpuBufferUsage<
 class TgpuBufferUsageImpl<TData extends AnyTgpuData, TUsage extends BufferUsage>
   implements TgpuBufferUsage<TData, TUsage>
 {
+  public readonly resourceType = 'buffer-usage' as const;
+
   constructor(
     public readonly buffer: TgpuBuffer<TData>,
     public readonly usage: TUsage,
@@ -93,7 +110,8 @@ class TgpuBufferUsageImpl<TData extends AnyTgpuData, TUsage extends BufferUsage>
 class TgpuBufferVertexImpl<TData extends AnyTgpuData>
   implements TgpuBufferVertex<TData>
 {
-  readonly usage = 'vertex';
+  public readonly resourceType = 'buffer-usage' as const;
+  public readonly usage = 'vertex';
   public readonly vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'>;
 
   constructor(

@@ -1,6 +1,7 @@
 import type { Parsed } from 'typed-binary';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
+import { WeakMemo } from './memo';
 import { type PlumListener, PlumStore } from './plumStore';
 import {
   ComputeProgramBuilder,
@@ -8,7 +9,9 @@ import {
   RenderProgramBuilder,
 } from './programBuilder';
 import type { TgpuSettable } from './settableTrait';
-import { type TgpuBuffer, createBufferImpl } from './tgpuBuffer';
+import type { TgpuBindGroup, TgpuBindGroupLayout } from './tgpuBindGroupLayout';
+import { isBindGroup, isBindGroupLayout } from './tgpuBindGroupLayout';
+import { type TgpuBuffer, createBufferImpl, isBuffer } from './tgpuBuffer';
 import { type TgpuFn, isRawFn } from './tgpuFn';
 import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
 import type {
@@ -40,6 +43,14 @@ class TgpuRuntimeImpl implements TgpuRuntime {
     TgpuTextureExternal,
     'dirty' | 'clean'
   >();
+
+  private _unwrappedBindGroupLayouts = new WeakMemo(
+    (key: TgpuBindGroupLayout) => key.unwrap(this),
+  );
+  private _unwrappedBindGroups = new WeakMemo((key: TgpuBindGroup) =>
+    key.unwrap(this),
+  );
+
   private _pipelineExecutors: PipelineExecutor[] = [];
   private _commandEncoder: GPUCommandEncoder | null = null;
 
@@ -77,9 +88,22 @@ class TgpuRuntimeImpl implements TgpuRuntime {
     }
   }
 
-  unwrap(resource: TgpuBuffer<AnyTgpuData>) {
-    if (resource.resourceType === 'buffer') {
+  unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
+  unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
+  unwrap(resource: TgpuBindGroup): GPUBindGroup;
+  unwrap(
+    resource: TgpuBuffer<AnyTgpuData> | TgpuBindGroupLayout | TgpuBindGroup,
+  ): GPUBuffer | GPUBindGroupLayout | GPUBindGroup {
+    if (isBuffer(resource)) {
       return resource.buffer;
+    }
+
+    if (isBindGroupLayout(resource)) {
+      return this._unwrappedBindGroupLayouts.getOrMake(resource);
+    }
+
+    if (isBindGroup(resource)) {
+      return this._unwrappedBindGroups.getOrMake(resource);
     }
 
     throw new Error(`Unknown resource type: ${resource}`);

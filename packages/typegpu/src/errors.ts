@@ -1,4 +1,5 @@
-import type { TgpuResolvable, TgpuSlot } from './types';
+import type { TgpuBuffer } from './tgpuBuffer';
+import type { AnyTgpuData, TgpuResolvable, TgpuSlot } from './types';
 
 /**
  * An error that happens during resolution of WGSL code.
@@ -53,5 +54,33 @@ export class RecursiveDataTypeError extends Error {
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, RecursiveDataTypeError.prototype);
+  }
+}
+
+/**
+ * @category Errors
+ */
+export class NotUniformError extends Error {
+  constructor(value: TgpuBuffer<AnyTgpuData>) {
+    super(
+      `Buffer '${value.label ?? '<unnamed>'}' is not bindable as a uniform. Use .$usage(tgu.Uniform) to allow it.`,
+    );
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, NotUniformError.prototype);
+  }
+}
+
+/**
+ * @category Errors
+ */
+export class NotStorageError extends Error {
+  constructor(value: TgpuBuffer<AnyTgpuData>) {
+    super(
+      `Buffer '${value.label ?? '<unnamed>'}' is not bindable as storage. Use .$usage(tgu.Storage) to allow it.`,
+    );
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, NotStorageError.prototype);
   }
 }
