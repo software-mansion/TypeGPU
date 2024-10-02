@@ -1,7 +1,7 @@
 import type { vec3u, vec4f } from './data';
-import { code } from './tgpuCode';
+import { TgpuBuiltin } from './tgpuBuiltin';
 import { identifier } from './tgpuIdentifier';
-import type { ResolutionCtx, TgpuIdentifier, TgpuResolvable } from './types';
+import type { TgpuIdentifier } from './types';
 
 export type BuiltinVertexIndex = TgpuBuiltin & number;
 export type BuiltinInstanceIndex = TgpuBuiltin & number;
@@ -17,22 +17,6 @@ export type BuiltinLocalInvocationIndex = TgpuBuiltin & number;
 export type BuiltinGlobalInvocationId = TgpuBuiltin & vec3u;
 export type BuiltinWorkgroupId = TgpuBuiltin & vec3u;
 export type BuiltinNumWorkgroups = TgpuBuiltin & vec3u;
-
-class TgpuBuiltin implements TgpuResolvable {
-  public readonly s: symbol;
-
-  constructor(public name: string) {
-    this.s = Symbol(name);
-  }
-
-  get label() {
-    return this.name;
-  }
-
-  resolve(ctx: ResolutionCtx): string {
-    return ctx.resolve(code`${this.s}`);
-  }
-}
 
 export const builtin = {
   vertexIndex: new TgpuBuiltin('vertex_index') as BuiltinVertexIndex,
@@ -67,29 +51,29 @@ const symbolToBuiltin = new Map(
 
 export function getUsedBuiltinsNamed(
   o: Record<symbol, string>,
-): { name: string; builtin: Builtin }[] {
+): { name: string; s: symbol }[] {
   const res = Object.getOwnPropertySymbols(o).map((s) => {
     const builtin = symbolToBuiltin.get(s);
     if (builtin === undefined) {
       throw new Error('Symbol is not a member of `builtin`');
     }
     const name = o[s] as string;
-    return { name, builtin };
+    return { name, s };
   });
 
   return res;
 }
 
-export function getUsedBuiltins(o: Record<symbol, string>): Builtin[] {
+export function getUsedBuiltins(o: Record<symbol, string>): symbol[] {
   const res = Object.getOwnPropertySymbols(o).map((s) => {
     const builtin = symbolToBuiltin.get(s);
     if (builtin === undefined) {
       throw new Error('Symbol is not a member of `builtin`');
     }
-    return builtin;
+    return s;
   });
 
-  return res as Builtin[];
+  return res;
 }
 
 const identifierMap = new Map<symbol, TgpuIdentifier>();

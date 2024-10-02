@@ -101,10 +101,10 @@ export class RenderProgramBuilder {
 
     const structFields = [
       ...vertexOutputBuiltins.map((builtin) => {
-        const outputName = this.vertexOutputFormat[builtin.s] ?? '';
+        const outputName = this.vertexOutputFormat[builtin] ?? '';
 
         return code`
-          @builtin(${nameForBuiltin(builtin.s)}) ${outputName}: ${typeForBuiltin(builtin.s)},
+          @builtin(${nameForBuiltin(builtin)}) ${outputName}: ${typeForBuiltin(builtin)},
         `;
       }),
       ...vertexOutput.map(
