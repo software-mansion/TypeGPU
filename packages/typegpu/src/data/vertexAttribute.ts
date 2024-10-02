@@ -44,6 +44,7 @@ class TgpuVertexAttributeImpl<T extends VertexFormat>
   private underlyingType: FormatToWGSLType<T>;
   private elementSize: 1 | 2 | 4;
   private elementCount: number;
+  private isSigned: boolean;
   readonly isCustomAligned = false;
   readonly byteAlignment = 1;
   readonly isLoose = true;
@@ -54,6 +55,7 @@ class TgpuVertexAttributeImpl<T extends VertexFormat>
   ) {
     super();
     this.underlyingType = formatToWGSLType[format];
+    this.isSigned = normalizedToIsSigned[format] ?? false;
     this.elementCount = this.underlyingType.size / 4;
     const elementSize = size / this.elementCount;
     if (elementSize !== 1 && elementSize !== 2 && elementSize !== 4) {
@@ -84,7 +86,7 @@ class TgpuVertexAttributeImpl<T extends VertexFormat>
       }
       return;
     }
-    writeSizedVector(output, value, this.elementSize);
+    writeSizedVector(output, value, this.elementSize, this.isSigned);
   }
 
   read(input: ISerialInput): Parsed<typeof this.underlyingType> {
@@ -120,11 +122,13 @@ class TgpuVertexAttributeImpl<T extends VertexFormat>
       vectorKindToPrimitive[vector.label as keyof typeof vectorKindToPrimitive];
 
     const values = new Array(this.elementCount);
+    const reader = new BufferReader(readBuffer);
     for (let i = 0; i < this.elementCount; i++) {
       values[i] = readSizedPrimitive(
         primitive,
         this.elementSize,
-        new BufferReader(readBuffer),
+        reader,
+        this.isSigned,
       );
     }
 
@@ -176,11 +180,12 @@ function writeSizedVector(
   output: ISerialOutput,
   value: vec2u | vec3u | vec4u | vec2f | vec3f | vec4f | vec2i | vec3i | vec4i,
   elementSize: 1 | 2 | 4,
+  isSigned: boolean,
 ): void {
   const primitive = vectorKindToPrimitive[value.kind];
   if (!primitive) throw new Error('Invalid vector kind');
   for (const entry of value) {
-    writeSizedPrimitive(primitive, entry, elementSize, output);
+    writeSizedPrimitive(primitive, entry, elementSize, output, isSigned);
   }
 }
 
@@ -189,15 +194,26 @@ function writeSizedPrimitive(
   value: number,
   size: 1 | 2 | 4,
   output: ISerialOutput,
+  floatSigned = true,
 ): void {
   const buffer = new ArrayBuffer(size);
   const view = new DataView(buffer);
+
+  const writef8 = (offset: number, value: number) => {
+    const asInt = floatSigned ? value * 127 + 128 : value * 255;
+    view.setUint8(offset, Math.floor(asInt));
+  };
+  const writef16 = (offset: number, value: number) => {
+    const asInt = floatSigned ? value * 32767 + 32768 : value * 65535;
+    view.setUint16(offset, Math.floor(asInt));
+  };
+
   const setters = {
     u32: [view.setUint8, view.setUint16, view.setUint32],
-    // TODO: Implement logic for normalized floats
-    f32: [null, null, view.setFloat32],
+    f32: [writef8, writef16, view.setFloat32],
     i32: [view.setInt8, view.setInt16, view.setInt32],
   };
+
   const setter = setters[primitive][Math.log2(size)];
   if (setter) setter.call(view, 0, value);
   for (let i = 0; i < size; i++) {
@@ -209,17 +225,29 @@ function readSizedPrimitive(
   primitive: 'u32' | 'f32' | 'i32',
   size: 1 | 2 | 4,
   input: ISerialInput,
+  floatSigned = true,
 ): number {
   const buffer = new ArrayBuffer(size);
   const view = new DataView(buffer);
   for (let i = 0; i < size; i++) {
     view.setUint8(i, input.readByte());
   }
+
+  const readf8 = (offset: number) => {
+    const asInt = view.getUint8(offset);
+    return floatSigned ? (asInt - 128) / 127 : asInt / 255;
+  };
+  const readf16 = (offset: number) => {
+    const asInt = view.getUint16(offset);
+    return floatSigned ? (asInt - 32768) / 32767 : asInt / 65535;
+  };
+
   const getters = {
     u32: [view.getUint8, view.getUint16, view.getUint32],
-    f32: [null, null, view.getFloat32],
+    f32: [readf8, readf16, view.getFloat32],
     i32: [view.getInt8, view.getInt16, view.getInt32],
   };
+
   const getter = getters[primitive][Math.log2(size)];
   if (getter) return getter.call(view, 0);
   throw new Error('Invalid primitive');
@@ -258,6 +286,20 @@ const formatToWGSLType = {
   sint32x4: vec4i,
   unorm10_10_10_2: vec4f,
 } as const;
+
+const normalizedToIsSigned = {
+  unorm8x2: false,
+  unorm8x4: false,
+  snorm8x2: true,
+  snorm8x4: true,
+  unorm16x2: false,
+  unorm16x4: false,
+  snorm16x2: true,
+  snorm16x4: true,
+  float16x2: true,
+  float16x4: true,
+  unorm10_10_10_2: false,
+} as Record<VertexFormat, boolean | undefined>;
 
 type VertexFormat =
   | 'uint8x2'

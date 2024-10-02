@@ -1,3 +1,4 @@
+import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
 import {
   align,
@@ -6,9 +7,11 @@ import {
   looseStruct,
   sint16x2,
   sint16x4,
+  snorm16x2,
   unorm8x2,
   unorm10_10_10_2,
   vec2f,
+  vec2i,
   vec3f,
   vec3u,
 } from '../src/data';
@@ -106,5 +109,69 @@ describe('looseStruct', () => {
       // Total: 8 + 20 + 40 = 68
     });
     expect(s3.size).toEqual(68);
+  });
+
+  it('properly writes and reads data', () => {
+    const s = looseStruct({
+      a: unorm8x2,
+      b: align(16, snorm16x2),
+      c: float32x3,
+    });
+
+    const buffer = new ArrayBuffer(s.size);
+    const writer = new BufferWriter(buffer);
+
+    s.write(writer, {
+      a: vec2f(0.5, 0.75),
+      b: vec2f(0.25, 0.5),
+      c: vec3f(1.0, 2.0, 3.0),
+    });
+
+    const reader = new BufferReader(buffer);
+    const data = s.read(reader);
+
+    expect(data.a.x).toBeCloseTo(0.5);
+    expect(data.a.y).toBeCloseTo(0.75);
+    expect(data.b.x).toBeCloseTo(0.25);
+    expect(data.b.y).toBeCloseTo(0.5);
+    expect(data.c.x).toBeCloseTo(1.0);
+    expect(data.c.y).toBeCloseTo(2.0);
+    expect(data.c.z).toBeCloseTo(3.0);
+  });
+
+  it('properly writes and reads data with nested structs', () => {
+    const s = looseStruct({
+      a: unorm8x2,
+      b: align(16, snorm16x2),
+      c: looseStruct({
+        a: float32x3,
+        b: vec2i,
+      }),
+    });
+
+    const buffer = new ArrayBuffer(s.size);
+    const writer = new BufferWriter(buffer);
+
+    s.write(writer, {
+      a: vec2f(0.5, 0.75),
+      b: vec2f(0.25, 0.5),
+      c: {
+        a: vec3f(1.0, 2.0, 3.0),
+        b: vec2i(4, 5),
+      },
+    });
+
+    const reader = new BufferReader(buffer);
+    const data = s.read(reader);
+
+    expect(data.a.x).toBeCloseTo(0.5);
+    expect(data.a.y).toBeCloseTo(0.75);
+    expect(data.b.x).toBeCloseTo(0.25);
+    expect(data.b.y).toBeCloseTo(0.5);
+    expect(data.c.a.x).toBeCloseTo(1.0);
+    expect(data.c.a.y).toBeCloseTo(2.0);
+    expect(data.c.a.z).toBeCloseTo(3.0);
+    expect(data.c.b.x).toEqual(4);
+    expect(data.c.b.y).toEqual(5);
   });
 });

@@ -216,13 +216,10 @@ class TgpuLooseStructImpl<
       if ('byteAlignment' in property) {
         alignIO(measurer, property.byteAlignment);
       }
-      console.log('measuring', key);
-      console.log('before', measurer.size);
       property.measure(
         value === MaxValue ? MaxValue : value[key as Property],
         measurer,
       );
-      console.log('after', measurer.size);
     }
 
     return measurer;
