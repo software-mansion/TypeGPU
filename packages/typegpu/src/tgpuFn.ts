@@ -64,7 +64,7 @@ interface TgpuTgslFnBase<
   readonly bodyResolvable: TgpuResolvable;
 
   $uses(dependencyMap: Record<string, unknown>): this;
-  $__ast(argNames: string[], implementation: Block): this;
+  $__ast(argNames: string[], body: Block): this;
 }
 
 interface TgpuRawFnBase<

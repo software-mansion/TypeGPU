@@ -362,10 +362,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     body: Block,
     externalMap: Record<string, unknown>,
   ): { head: Wgsl; body: Wgsl } {
-    const args = argNames.map((name, idx) => ({
-      value: name,
-      dataType: shell.argTypes[idx] as AnyTgpuData,
-    }));
+    const args: { value: string; dataType: AnyTgpuData }[] = argNames.map(
+      (name, idx) => ({
+        value: name,
+        dataType: shell.argTypes[idx],
+      }),
+    );
 
     this._itemStateStack.pushFunctionScope(args, shell.returnType, externalMap);
     const str = generateFunction(this, body);
