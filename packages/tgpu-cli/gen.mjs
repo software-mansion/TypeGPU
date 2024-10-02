@@ -184,9 +184,7 @@ const SAMPLE_TYPES = {
 function generateGroupLayout(group) {
   let emptyCount = 0;
 
-  return Array(group.length)
-    .fill(null)
-    .map((_, index) => group[index])
+  return Array.from(group)
     .map((variable) =>
       variable
         ? `${variable.name}: ${generateVariable(variable)},`
