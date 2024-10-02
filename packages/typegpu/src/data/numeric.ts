@@ -1,5 +1,6 @@
 import * as TB from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
+import { inGPUMode } from '../gpuMode';
 import type { TgpuData } from '../types';
 import { SimpleTgpuData } from './std140';
 
@@ -63,6 +64,10 @@ export const bool: Bool = new SimpleTgpuData({
 
 export type U32 = TgpuData<number> & ((v: number | boolean) => number);
 const u32Cast = (v: number | boolean) => {
+  if (inGPUMode()) {
+    return `u32(${v})` as unknown as number;
+  }
+
   if (typeof v === 'boolean') {
     return v ? 1 : 0;
   }
@@ -79,6 +84,10 @@ export const u32: U32 = Object.assign(u32Cast, primitiveNumeric(TB.u32, 'u32'));
 
 export type I32 = TgpuData<number> & ((v: number | boolean) => number);
 const i32Cast = (v: number | boolean) => {
+  if (inGPUMode()) {
+    return `i32(${v})` as unknown as number;
+  }
+
   if (typeof v === 'boolean') {
     return v ? 1 : 0;
   }
@@ -97,6 +106,9 @@ export const i32: I32 = Object.assign(i32Cast, primitiveNumeric(TB.i32, 'i32'));
 
 export type F32 = TgpuData<number> & ((v: number | boolean) => number);
 const f32Cast = (v: number | boolean) => {
+  if (inGPUMode()) {
+    return `f32(${v})` as unknown as number;
+  }
   if (typeof v === 'boolean') {
     return v ? 1 : 0;
   }

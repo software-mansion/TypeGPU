@@ -19,6 +19,10 @@ import {
 } from '../types';
 import alignIO from './alignIO';
 
+// ----------
+// Public API
+// ----------
+
 export function align<TAlign extends number, TData extends AnyTgpuData>(
   byteAlignment: TAlign,
   data: TData,
@@ -32,29 +36,56 @@ export function align<TAlign extends number, TData extends AnyTgpuLooseData>(
 export function align<
   TAlign extends number,
   TData extends AnyTgpuData | AnyTgpuLooseData,
->(byteAlignment: TAlign, data: TData) {
+>(
+  byteAlignment: TAlign,
+  data: TData,
+):
+  | TgpuAligned<TAlign, TData & AnyTgpuData>
+  | TgpuLooseAligned<TAlign, TData & AnyTgpuLooseData> {
   if (isDataLoose(data)) {
-    return new TgpuLooseAlignedImpl(data, byteAlignment) as TgpuLooseAligned<
-      TAlign,
-      typeof data
-    >;
+    return new TgpuLooseAlignedImpl<TAlign, TData & AnyTgpuLooseData>(
+      data,
+      byteAlignment,
+    );
   }
 
   if (isDataNotLoose(data)) {
-    return new TgpuAlignedImpl(data, byteAlignment) as TgpuAligned<
-      TAlign,
-      typeof data
-    >;
+    return new TgpuAlignedImpl<TAlign, TData & AnyTgpuData>(
+      data,
+      byteAlignment,
+    );
   }
+
+  throw new Error(`Could not align data: ${data}`);
 }
 
 export interface TgpuAligned<TAlign extends number, TData extends AnyTgpuData>
-  extends TgpuData<Unwrap<TData>> {}
+  extends TgpuData<Unwrap<TData>> {
+  readonly byteAlignment: TAlign;
+}
 
 export interface TgpuLooseAligned<
   TAlign extends number,
   TData extends AnyTgpuLooseData,
-> extends TgpuLooseData<Unwrap<TData>> {}
+> extends TgpuLooseData<Unwrap<TData>> {
+  readonly byteAlignment: TAlign;
+}
+
+export function isLooseAlignedSchema<
+  T extends TgpuLooseAligned<number, AnyTgpuLooseData>,
+>(value: T | unknown): value is T {
+  return value instanceof TgpuLooseAlignedImpl;
+}
+
+export function isAlignedSchema<T extends TgpuAligned<number, AnyTgpuData>>(
+  value: T | unknown,
+): value is T {
+  return value instanceof TgpuAlignedImpl;
+}
+
+// --------------
+// Implementation
+// --------------
 
 class AbstractTgpuAlignedImpl<
   TAlign extends number,
@@ -64,8 +95,8 @@ class AbstractTgpuAlignedImpl<
   public readonly isCustomAligned = true;
 
   constructor(
-    protected data: AnyTgpuData | AnyTgpuLooseData,
-    public readonly byteAlignment: number,
+    protected data: TData,
+    public readonly byteAlignment: TAlign,
   ) {
     super();
 
@@ -111,21 +142,18 @@ class AbstractTgpuAlignedImpl<
   }
 }
 
-export class TgpuAlignedImpl<TAlign extends number, TData extends AnyTgpuData>
+class TgpuAlignedImpl<TAlign extends number, TData extends AnyTgpuData>
   extends AbstractTgpuAlignedImpl<TAlign, TData>
   implements TgpuAligned<TAlign, TData>
 {
   public readonly isLoose = false as const;
 
   resolve(ctx: ResolutionCtx): string {
-    if (isDataLoose(this.data)) {
-      throw new Error('Loose data cannot be resolved.');
-    }
     return this.data.resolve(ctx);
   }
 }
 
-export class TgpuLooseAlignedImpl<
+class TgpuLooseAlignedImpl<
     TAlign extends number,
     TData extends AnyTgpuLooseData,
   >

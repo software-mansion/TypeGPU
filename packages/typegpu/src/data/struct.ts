@@ -15,14 +15,14 @@ import { code } from '../tgpuCode';
 import { identifier } from '../tgpuIdentifier';
 import type {
   AnyTgpuData,
-  AnyTgpuLooseData,
   ResolutionCtx,
   TgpuData,
   TgpuLooseData,
+  AnyTgpuLooseData,
 } from '../types';
-import { TgpuAlignedImpl } from './align';
+import { isAlignedSchema } from './align';
 import alignIO from './alignIO';
-import { TgpuSizedImpl } from './size';
+import { isSizedSchema } from './size';
 
 // ----------
 // Public API
@@ -47,6 +47,12 @@ export const looseStruct = <
 >(
   properties: TProps,
 ): TgpuLooseStruct<TProps> => new TgpuLooseStructImpl(properties);
+
+export function isStructSchema<
+  T extends TgpuStruct<Record<string, AnyTgpuData>>,
+>(schema: T | unknown): schema is T {
+  return schema instanceof TgpuStructImpl;
+}
 
 // --------------
 // Implementation
@@ -221,13 +227,16 @@ class TgpuLooseStructImpl<
   }
 }
 
-function getAttribute(field: AnyTgpuData): string | undefined {
-  if (field instanceof TgpuAlignedImpl) {
+function getAttribute<T extends AnyTgpuData>(field: T): string | undefined {
+  if (isAlignedSchema(field as unknown)) {
     return `@align(${field.byteAlignment}) `;
   }
-  if (field instanceof TgpuSizedImpl) {
+
+  if (isSizedSchema(field as unknown)) {
     return `@size(${field.size}) `;
   }
+
+  return undefined;
 }
 
 export function exactEntries<T extends Record<keyof T, T[keyof T]>>(
