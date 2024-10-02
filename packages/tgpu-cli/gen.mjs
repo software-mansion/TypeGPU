@@ -237,11 +237,11 @@ function getViewDimension(variable) {
           ? 'cube'
           : null;
 
-  if (type_.includes('_array')) {
-    return `${dimension ?? '2d'}${type_.includes('_array') ? '-array' : ''}`;
-  }
-
-  return dimension && dimension !== '2d' ? dimension : null;
+  return type_.includes('_array')
+    ? `${dimension ?? '2d'}-array`
+    : dimension && dimension !== '2d'
+      ? dimension
+      : null;
 }
 
 /**
