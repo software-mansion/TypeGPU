@@ -15,10 +15,10 @@ import { code } from '../tgpuCode';
 import { identifier } from '../tgpuIdentifier';
 import type {
   AnyTgpuData,
+  AnyTgpuLooseData,
   ResolutionCtx,
   TgpuData,
   TgpuLooseData,
-  AnyTgpuLooseData,
 } from '../types';
 import { isAlignedSchema } from './align';
 import alignIO from './alignIO';
@@ -152,13 +152,23 @@ class TgpuLooseStructImpl<
 {
   private _label: string | undefined;
 
+  public readonly byteAlignment = 1;
+  public readonly isCustomAligned = false;
   public readonly isLoose = true as const;
   public readonly size: number;
 
   constructor(private readonly _properties: TProps) {
     super();
 
-    this.size = this.measure(MaxValue).size;
+    const measurer = new Measurer();
+    for (const [key, property] of exactEntries(_properties)) {
+      if (property.isCustomAligned === true) {
+        alignIO(measurer, property.byteAlignment);
+      }
+      property.measure(MaxValue, measurer);
+    }
+
+    this.size = measurer.size;
   }
 
   $name(label: string) {

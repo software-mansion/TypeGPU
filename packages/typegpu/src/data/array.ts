@@ -10,6 +10,7 @@ import {
 import { roundUp } from '../mathUtils';
 import type {
   AnyTgpuData,
+  AnyTgpuLooseData,
   ResolutionCtx,
   TgpuData,
   TgpuLooseData,
@@ -31,13 +32,13 @@ export const arrayOf = <TElement extends AnyTgpuData>(
   count: number,
 ): TgpuArray<TElement> => new TgpuArrayImpl(elementType, count);
 
-export interface TgpuLooseArray<TElement extends AnyTgpuData>
+export interface TgpuLooseArray<TElement extends AnyTgpuData | AnyTgpuLooseData>
   extends TgpuLooseData<Unwrap<TElement>[]> {
   readonly elementType: TElement;
   readonly elementCount: number;
 }
 
-export const looseArrayOf = <TElement extends AnyTgpuData>(
+export const looseArrayOf = <TElement extends AnyTgpuData | AnyTgpuLooseData>(
   elementType: TElement,
   count: number,
 ): TgpuLooseArray<TElement> => new TgpuLooseArrayImpl(elementType, count);
@@ -117,10 +118,12 @@ class TgpuArrayImpl<TElement extends AnyTgpuData>
   }
 }
 
-class TgpuLooseArrayImpl<TElement extends AnyTgpuData>
+class TgpuLooseArrayImpl<TElement extends AnyTgpuData | AnyTgpuLooseData>
   extends Schema<Unwrap<TElement>[]>
   implements TgpuLooseArray<TElement>
 {
+  readonly isCustomAligned = false;
+  readonly byteAlignment: number = 1;
   readonly elementType: TElement;
   readonly elementCount: number;
   readonly size: number;

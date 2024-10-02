@@ -200,6 +200,8 @@ export interface TgpuData<TInner> extends ISchema<TInner>, TgpuResolvable {
 
 export interface TgpuLooseData<TInner> extends ISchema<TInner> {
   readonly isLoose: true;
+  readonly isCustomAligned: boolean;
+  readonly byteAlignment: number;
   readonly size: number;
 }
 

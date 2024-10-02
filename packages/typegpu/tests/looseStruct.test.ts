@@ -29,6 +29,13 @@ describe('looseStruct', () => {
       // Total: 4 + 8 = 12
     });
     expect(s2.size).toEqual(12);
+
+    const s3 = looseStruct({
+      a: vec2f, // 8 bytes
+      b: vec3u, // 12 bytes
+      // Total: 8 + 12 = 20
+    });
+    expect(s3.size).toEqual(20);
   });
 
   it('properly calculates size with only aligned members', () => {
@@ -43,17 +50,10 @@ describe('looseStruct', () => {
     const s2 = looseStruct({
       a: align(16, unorm10_10_10_2), // 4 bytes
       b: align(16, sint16x4), // 12 padding bytes + 8 bytes = 20
-      c: vec3f, // 8 padding bytes + 12 bytes = 20
+      c: align(16, vec3f), // 8 padding bytes + 12 bytes = 20
       // Total: 4 + 20 + 20 = 44
     });
     expect(s2.size).toEqual(44);
-
-    const s3 = looseStruct({
-      a: vec2f, // 8 bytes
-      b: vec3u, // 8 padding bytes + 12 bytes = 20
-      // Total: 8 + 20 = 28
-    });
-    expect(s3.size).toEqual(28);
   });
 
   it('properly calculates size with mixed members', () => {
@@ -68,10 +68,10 @@ describe('looseStruct', () => {
     const s2 = looseStruct({
       a: align(16, unorm10_10_10_2), // 4 bytes
       b: sint16x4, // 8 bytes
-      c: vec3f, // 4 padding bytes + 12 bytes = 16
-      // Total: 4 + 8 + 16 = 28
+      c: vec3f, // 12 bytes
+      // Total: 4 + 8 + 12 = 24
     });
-    expect(s2.size).toEqual(28);
+    expect(s2.size).toEqual(24);
 
     const s3 = looseStruct({
       a: vec2f, // 8 bytes

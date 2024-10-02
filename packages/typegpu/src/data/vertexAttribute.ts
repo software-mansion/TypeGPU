@@ -44,6 +44,8 @@ class TgpuVertexAttributeImpl<T extends VertexFormat>
   private underlyingType: FormatToWGSLType<T>;
   private elementSize: 1 | 2 | 4;
   private elementCount: number;
+  readonly isCustomAligned = false;
+  readonly byteAlignment = 1;
   readonly isLoose = true;
 
   constructor(
