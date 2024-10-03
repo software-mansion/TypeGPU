@@ -345,6 +345,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   transpileFn(fn: TgpuFn<any, AnyTgpuData>): {
     argNames: string[];
     body: Block;
+    externalNames: string[];
   } {
     if (!this._shared.jitTranspiler) {
       throw new Error(

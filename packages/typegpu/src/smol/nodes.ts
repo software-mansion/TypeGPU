@@ -18,19 +18,18 @@ export type Block = {
 };
 
 export type Let = {
-  /** local constant's identifier */
-  let: string;
-  be: Expression;
-};
-
-export type Var = {
   /** variable's identifier */
-  var: string;
-  type?: string | undefined;
-  init?: Expression | undefined;
+  let: string;
+  eq?: Expression | undefined;
 };
 
-export type Statement = Return | If | Block | Let | Var | Expression;
+export type Const = {
+  /** variable's identifier */
+  const: string;
+  eq?: Expression | undefined;
+};
+
+export type Statement = Return | If | Block | Let | Const | Expression;
 
 //
 // Expression

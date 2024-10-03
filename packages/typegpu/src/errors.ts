@@ -84,3 +84,14 @@ export class NotStorageError extends Error {
     Object.setPrototypeOf(this, NotStorageError.prototype);
   }
 }
+
+export class MissingLinksError extends Error {
+  constructor(fnLabel: string | undefined, externalNames: string[]) {
+    super(
+      `The function '${fnLabel ?? '<unnamed>'}' is missing links to the following external values: ${externalNames}.`,
+    );
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, MissingLinksError.prototype);
+  }
+}

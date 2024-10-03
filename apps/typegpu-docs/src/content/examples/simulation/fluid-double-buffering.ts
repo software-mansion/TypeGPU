@@ -74,7 +74,7 @@ const rand01 = tgpu
     randSeed.value.y = std.fract(std.cos(b) * 534.7645);
     return randSeed.value.y;
   })
-  .$uses({ std, randSeed });
+  .$uses({ std, vec2f, randSeed });
 
 type GridData = typeof GridData;
 /**
@@ -233,8 +233,9 @@ const isValidFlowOut = wgsl.fn`
   }
 `.$name('is_valid_flow_out');
 
-const computeVelocity = wgsl.fn`
-  (x: i32, y: i32) -> vec2f {
+const computeVelocity = tgpu
+  .fn([i32, i32], vec2f)
+  .implement(`(x: i32, y: i32) -> vec2f {
     let gravity_cost = 0.5;
 
     let neighbor_offsets = array<vec2i, 4>(
@@ -244,7 +245,7 @@ const computeVelocity = wgsl.fn`
       vec2i(-1,  0),
     );
 
-    let cell = ${getCell}(x, y);
+    let cell = getCell(x, y);
     var least_cost = cell.z;
 
     // Direction choices of the same cost, one is chosen
@@ -255,9 +256,9 @@ const computeVelocity = wgsl.fn`
 
     for (var i = 0; i < 4; i++) {
       let offset = neighbor_offsets[i];
-      let neighbor_density = ${getCell}(x + offset.x, y + offset.y).z;
+      let neighbor_density = getCell(x + offset.x, y + offset.y).z;
       let cost = neighbor_density + f32(offset.y) * gravity_cost;
-      let is_valid_flow_out = ${isValidFlowOut}(x + offset.x, y + offset.y);
+      let is_valid_flow_out = isValidFlowOut(x + offset.x, y + offset.y);
 
       if (!is_valid_flow_out) {
         continue;
@@ -276,10 +277,11 @@ const computeVelocity = wgsl.fn`
       }
     }
 
-    let least_cost_dir = dir_choices[u32(${rand01}() * f32(dir_choice_count))];
+    let least_cost_dir = dir_choices[u32(rand01() * f32(dir_choice_count))];
     return least_cost_dir;
   }
-`;
+`)
+  .$uses({ getCell, isValidFlowOut, isValidCoord, rand01 });
 
 const mainInitWorld = wgsl.fn`
   (x: i32, y: i32) {
