@@ -1,26 +1,17 @@
 /*
 {
   "title": "Image Blur",
-  "category": "image-processing"
+  "category": "image-processing",
+  "tags": ["experimental"]
 }
 */
 
+// Original implementation:
+// https://webgpu.github.io/webgpu-samples/?sample=imageBlur
+
 // -- Hooks into the example environment
-import {
-  addElement,
-  addSliderPlumParameter,
-  onFrame,
-} from '@typegpu/example-toolkit';
+import { addElement, addSliderPlumParameter } from '@typegpu/example-toolkit';
 // --
-import {
-  type SampledTextureParams,
-  type StorageTextureParams,
-  type WgslTexture,
-  type WgslTextureView,
-  builtin,
-  createRuntime,
-  wgsl,
-} from 'typegpu';
 import {
   arrayOf,
   f32,
@@ -31,13 +22,22 @@ import {
   vec3f,
   type vec4f,
 } from 'typegpu/data';
+import tgpu, {
+  type SampledTextureParams,
+  type StorageTextureParams,
+  type TgpuTexture,
+  type TgpuTextureView,
+  asUniform,
+  builtin,
+  wgsl,
+} from 'typegpu/experimental';
 
 const tileDim = 128;
 const batch = [4, 4];
 
 const filterSize = addSliderPlumParameter('filter size', 2, {
-  min: 1,
-  max: 15,
+  min: 2,
+  max: 40,
   step: 2,
 });
 const iterations = addSliderPlumParameter('iterations', 1, {
@@ -50,8 +50,10 @@ const settingsPlum = wgsl.plum((get) => ({
   filterDim: get(filterSize),
 }));
 
-const blurParamsBuffer = wgsl
-  .buffer(
+const root = await tgpu.init();
+
+const blurParamsBuffer = root
+  .createBuffer(
     struct({
       filterDim: i32,
       blockDim: u32,
@@ -59,18 +61,16 @@ const blurParamsBuffer = wgsl
     settingsPlum,
   )
   .$name('BlurParams')
-  .$allowUniform();
-const params = blurParamsBuffer.asUniform();
+  .$usage(tgpu.Uniform);
+const params = asUniform(blurParamsBuffer);
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
-const runtime = await createRuntime();
-const device = runtime.device;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 context.configure({
-  device,
+  device: root.device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
@@ -80,7 +80,7 @@ const sampler = wgsl.sampler({
   minFilter: 'linear',
 });
 
-const response = await fetch('/typegpu/plums.jpg');
+const response = await fetch('/TypeGPU/plums.jpg');
 const imageBitmap = await createImageBitmap(await response.blob());
 
 const inParams: SampledTextureParams = {
@@ -100,9 +100,9 @@ const imageTexture = wgsl
   })
   .$allowSampled();
 
-device.queue.copyExternalImageToTexture(
+root.device.queue.copyExternalImageToTexture(
   { source: imageBitmap },
-  { texture: runtime.textureFor(imageTexture) },
+  { texture: root.textureFor(imageTexture) },
   [imageBitmap.width, imageBitmap.height],
 );
 
@@ -117,8 +117,8 @@ const textures = [0, 1].map(() => {
 });
 
 const flipSlot = wgsl.slot<number>();
-const inTextureSlot = wgsl.slot<WgslTextureView<typeof f32, 'sampled'>>();
-const outTextureSlot = wgsl.slot<WgslTextureView<typeof vec4f, 'storage'>>();
+const inTextureSlot = wgsl.slot<TgpuTextureView<typeof f32, 'sampled'>>();
+const outTextureSlot = wgsl.slot<TgpuTextureView<typeof vec4f, 'storage'>>();
 
 const tileVar = wgsl.var(
   arrayOf(arrayOf(vec3f, 128), 4),
@@ -127,18 +127,18 @@ const tileVar = wgsl.var(
 );
 
 type inTextureType =
-  | WgslTexture<'sampled'>
-  | WgslTexture<'sampled' | 'storage'>;
+  | TgpuTexture<'sampled'>
+  | TgpuTexture<'sampled' | 'storage'>;
 type outTextureType =
-  | WgslTexture<'storage'>
-  | WgslTexture<'sampled' | 'storage'>;
+  | TgpuTexture<'storage'>
+  | TgpuTexture<'sampled' | 'storage'>;
 
 function makeComputePipeline(
   inTexture: inTextureType,
   outTexture: outTextureType,
   flip: number,
 ) {
-  return runtime.makeComputePipeline({
+  return root.makeComputePipeline({
     workgroupSize: [32],
     code: wgsl`
       let filterOffset = (${params}.filterDim - 1) / 2;
@@ -229,11 +229,11 @@ const blurFragmentWGSL = wgsl`
   return textureSample(${textures[1].asSampled(inParams)}, ${sampler}, fragUV);
 `;
 
-const renderPipeline = runtime.makeRenderPipeline({
+const renderPipeline = root.makeRenderPipeline({
   vertex: {
     code: blurVertexWGSL,
     output: {
-      [builtin.position]: 'Position',
+      [builtin.position.s]: 'Position',
       fragUV: vec2f,
     },
   },
@@ -250,29 +250,29 @@ const renderPipeline = runtime.makeRenderPipeline({
   },
 });
 
-onFrame(() => {
+const render = () => {
   computePipelines[0].execute({
     workgroups: [
-      Math.ceil(srcWidth / runtime.readPlum(settingsPlum).blockDim),
+      Math.ceil(srcWidth / root.readPlum(settingsPlum).blockDim),
       Math.ceil(srcHeight / batch[1]),
     ],
   });
   computePipelines[1].execute({
     workgroups: [
-      Math.ceil(srcWidth / runtime.readPlum(settingsPlum).blockDim),
+      Math.ceil(srcWidth / root.readPlum(settingsPlum).blockDim),
       Math.ceil(srcHeight / batch[1]),
     ],
   });
-  for (let i = 0; i < runtime.readPlum(iterations) - 1; i++) {
+  for (let i = 0; i < root.readPlum(iterations) - 1; i++) {
     computePipelines[2].execute({
       workgroups: [
-        Math.ceil(srcWidth / runtime.readPlum(settingsPlum).blockDim),
+        Math.ceil(srcWidth / root.readPlum(settingsPlum).blockDim),
         Math.ceil(srcHeight / batch[1]),
       ],
     });
     computePipelines[1].execute({
       workgroups: [
-        Math.ceil(srcWidth / runtime.readPlum(settingsPlum).blockDim),
+        Math.ceil(srcWidth / root.readPlum(settingsPlum).blockDim),
         Math.ceil(srcHeight / batch[1]),
       ],
     });
@@ -290,5 +290,10 @@ onFrame(() => {
     ],
   });
 
-  runtime.flush();
-});
+  root.flush();
+};
+
+render();
+
+root.onPlumChange(filterSize, () => render());
+root.onPlumChange(iterations, () => render());

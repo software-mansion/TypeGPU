@@ -1,7 +1,8 @@
 /*
 {
   "title": "Camera Thresholding",
-  "category": "image-processing"
+  "category": "image-processing",
+  "tags": ["experimental"]
 }
 */
 
@@ -9,12 +10,13 @@
 import {
   addElement,
   addSliderParameter,
+  onCleanup,
   onFrame,
 } from '@typegpu/example-toolkit';
 // --
 
-import { builtin, createRuntime, wgsl } from 'typegpu';
 import { f32, vec2f } from 'typegpu/data';
+import tgpu, { asUniform, builtin, wgsl } from 'typegpu/experimental';
 
 // Layout
 const [video, canvas] = await Promise.all([
@@ -27,9 +29,14 @@ const sampler = wgsl.sampler({
   minFilter: 'linear',
 });
 
-const thresholdBuffer = wgsl.buffer(f32).$name('threshold').$allowUniform();
+const root = await tgpu.init();
 
-const thresholdData = thresholdBuffer.asUniform();
+const thresholdBuffer = root
+  .createBuffer(f32)
+  .$name('threshold')
+  .$usage(tgpu.Uniform);
+
+const thresholdData = asUniform(thresholdBuffer);
 
 if (navigator.mediaDevices.getUserMedia) {
   video.srcObject = await navigator.mediaDevices.getUserMedia({
@@ -37,23 +44,18 @@ if (navigator.mediaDevices.getUserMedia) {
   });
 }
 
-const resultTexture = wgsl.textureExternal({
-  source: video,
-});
+const resultTexture = wgsl.textureExternal(video);
 
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const runtime = await createRuntime();
-const device = runtime.device;
-
 context.configure({
-  device,
+  device: root.device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
 
-const renderProgram = runtime.makeRenderPipeline({
+const renderProgram = root.makeRenderPipeline({
   vertex: {
     code: wgsl`
       const pos = array(
@@ -78,7 +80,7 @@ const renderProgram = runtime.makeRenderPipeline({
       let fragUV = uv[${builtin.vertexIndex}];
     `,
     output: {
-      [builtin.position]: 'Position',
+      [builtin.position.s]: 'Position',
       fragUV: vec2f,
     },
   },
@@ -110,7 +112,7 @@ addSliderParameter(
   'threshold',
   0.4,
   { min: 0, max: 1, step: 0.1 },
-  (threshold: number) => runtime.writeBuffer(thresholdBuffer, threshold),
+  (threshold: number) => thresholdBuffer.write(threshold),
 );
 
 onFrame(() => {
@@ -131,5 +133,15 @@ onFrame(() => {
     vertexCount: 6,
   });
 
-  runtime.flush();
+  root.flush();
+});
+
+onCleanup(() => {
+  if (video.srcObject) {
+    for (const track of (video.srcObject as MediaStream).getTracks()) {
+      track.stop();
+    }
+  }
+
+  root.destroy();
 });

@@ -14,18 +14,20 @@ import {
   type Unwrap,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { ResolutionCtx, Wgsl, WgslData } from '../types';
-import alignIO from './alignIO';
+import type { ResolutionCtx, TgpuData } from '../types';
 
-export class SimpleWgslData<TSchema extends AnySchema>
+export class SimpleTgpuData<TSchema extends AnySchema>
   extends Schema<Unwrap<TSchema>>
-  implements WgslData<Unwrap<TSchema>>
+  implements TgpuData<Unwrap<TSchema>>
 {
   public readonly size: number;
   public readonly byteAlignment: number;
-  public readonly expressionCode: Wgsl;
+  public readonly expressionCode: string;
+  public readonly isCustomAligned = false;
 
   private readonly _innerSchema: TSchema;
+  public readonly isLoose = false as const;
+  public readonly label?: string | undefined;
 
   /**
    * byteAlignment has to be a power of 2
@@ -37,7 +39,7 @@ export class SimpleWgslData<TSchema extends AnySchema>
   }: {
     schema: TSchema;
     byteAlignment: number;
-    code: Wgsl;
+    code: string;
   }) {
     super();
 
@@ -45,6 +47,7 @@ export class SimpleWgslData<TSchema extends AnySchema>
     this.byteAlignment = byteAlignment;
     this.expressionCode = code;
     this.size = this.measure(MaxValue).size;
+    this.label = code;
   }
 
   resolveReferences(): void {
@@ -52,12 +55,10 @@ export class SimpleWgslData<TSchema extends AnySchema>
   }
 
   write(output: ISerialOutput, value: ParseUnwrapped<TSchema>): void {
-    alignIO(output, this.byteAlignment);
     this._innerSchema.write(output, value);
   }
 
   read(input: ISerialInput): ParseUnwrapped<TSchema> {
-    alignIO(input, this.byteAlignment);
     return this._innerSchema.read(input) as ParseUnwrapped<TSchema>;
   }
 
@@ -65,8 +66,6 @@ export class SimpleWgslData<TSchema extends AnySchema>
     value: ParseUnwrapped<TSchema> | MaxValue,
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
-    alignIO(measurer, this.byteAlignment);
-
     this._innerSchema.measure(value, measurer);
 
     return measurer;
@@ -78,22 +77,22 @@ export class SimpleWgslData<TSchema extends AnySchema>
     }
     if ('elementSchema' in this._innerSchema) {
       const underlyingType = this._innerSchema
-        .elementSchema as SimpleWgslData<AnySchema>;
+        .elementSchema as SimpleTgpuData<AnySchema>;
       return underlyingType.getUnderlyingTypeString();
     }
     throw new Error('Unexpected type used as vertex buffer element');
   }
 
-  getUnderlyingType(): SimpleWgslData<AnySchema> {
+  getUnderlyingType(): SimpleTgpuData<AnySchema> {
     if ('elementSchema' in this._innerSchema) {
       const underlyingType = this._innerSchema
-        .elementSchema as SimpleWgslData<AnySchema>;
+        .elementSchema as SimpleTgpuData<AnySchema>;
       return underlyingType.getUnderlyingType();
     }
     return this;
   }
 
   resolve(ctx: ResolutionCtx): string {
-    return ctx.resolve(this.expressionCode);
+    return this.expressionCode;
   }
 }

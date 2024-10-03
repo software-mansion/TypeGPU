@@ -1,57 +1,65 @@
-import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
-import { roundUp } from './mathUtils';
+import type { Parsed } from 'typed-binary';
+import { onGPU } from './gpuMode';
+import type { JitTranspiler } from './jitTranspiler';
+import { WeakMemo } from './memo';
 import { type PlumListener, PlumStore } from './plumStore';
 import {
   ComputeProgramBuilder,
   type Program,
   RenderProgramBuilder,
 } from './programBuilder';
-import type { WgslSettable } from './settableTrait';
-import { TaskQueue } from './taskQueue';
+import type { TgpuSettable } from './settableTrait';
+import type { TgpuBindGroup, TgpuBindGroupLayout } from './tgpuBindGroupLayout';
+import { isBindGroup, isBindGroupLayout } from './tgpuBindGroupLayout';
+import { type TgpuBuffer, createBufferImpl, isBuffer } from './tgpuBuffer';
+import { type TgpuFn, isRawFn } from './tgpuFn';
+import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
 import type {
   ComputePipelineExecutorOptions,
   ComputePipelineOptions,
   RenderPipelineExecutorOptions,
   RenderPipelineOptions,
   SetPlumAction,
-  TypeGpuRuntime,
-} from './typegpuRuntime';
-import type { AnyWgslData, WgslAllocatable } from './types';
-import {
-  type ExtractPlumValue,
-  type Unsubscribe,
-  type WgslPlum,
-  isPlum,
-} from './wgslPlum';
-import type { WgslSampler } from './wgslSampler';
+  TgpuRuntime,
+} from './tgpuRuntime';
+import type { TgpuSampler } from './tgpuSampler';
 import type {
-  WgslAnyTexture,
-  WgslAnyTextureView,
-  WgslTextureExternal,
-} from './wgslTexture';
+  TgpuAnyTexture,
+  TgpuAnyTextureView,
+  TgpuTextureExternal,
+} from './tgpuTexture';
+import type { AnyTgpuData } from './types';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a runtime can interact via GPU buffers.
  */
-class TypeGpuRuntimeImpl {
-  private _entryToBufferMap = new Map<WgslAllocatable, GPUBuffer>();
-  private _samplers = new WeakMap<WgslSampler, GPUSampler>();
-  private _textures = new WeakMap<WgslAnyTexture, GPUTexture>();
-  private _textureViews = new WeakMap<WgslAnyTextureView, GPUTextureView>();
+class TgpuRuntimeImpl implements TgpuRuntime {
+  private _buffers: TgpuBuffer<AnyTgpuData>[] = [];
+  private _samplers = new WeakMap<TgpuSampler, GPUSampler>();
+  private _textures = new WeakMap<TgpuAnyTexture, GPUTexture>();
+  private _textureViews = new WeakMap<TgpuAnyTextureView, GPUTextureView>();
+  private _externalTexturesStatus = new WeakMap<
+    TgpuTextureExternal,
+    'dirty' | 'clean'
+  >();
+
+  private _unwrappedBindGroupLayouts = new WeakMemo(
+    (key: TgpuBindGroupLayout) => key.unwrap(this),
+  );
+  private _unwrappedBindGroups = new WeakMemo((key: TgpuBindGroup) =>
+    key.unwrap(this),
+  );
+
   private _pipelineExecutors: PipelineExecutor[] = [];
   private _commandEncoder: GPUCommandEncoder | null = null;
 
-  // Used for reading GPU buffers ad hoc.
-  private _readBuffer: GPUBuffer | null = null;
-  private _taskQueue = new TaskQueue();
   private readonly _plumStore = new PlumStore();
-  private readonly _allocSubscriptions = new Map<
-    WgslAllocatable,
-    Unsubscribe
-  >();
 
-  constructor(public readonly device: GPUDevice) {}
+  constructor(
+    public readonly device: GPUDevice,
+    public readonly jitTranspiler: JitTranspiler | undefined,
+  ) {}
 
   get commandEncoder() {
     if (!this._commandEncoder) {
@@ -61,67 +69,48 @@ class TypeGpuRuntimeImpl {
     return this._commandEncoder;
   }
 
-  dispose() {
-    for (const unsub of this._allocSubscriptions.values()) {
-      unsub();
-    }
-    this._allocSubscriptions.clear();
+  createBuffer<TData extends AnyTgpuData>(
+    typeSchema: TData,
+    initialOrBuffer?: Parsed<TData> | TgpuPlum<Parsed<TData>> | GPUBuffer,
+  ): TgpuBuffer<TData> {
+    const buffer = createBufferImpl(this, typeSchema, initialOrBuffer).$device(
+      this.device,
+    );
 
-    for (const buffer of this._entryToBufferMap.values()) {
-      buffer.destroy();
-    }
-
-    this._entryToBufferMap.clear();
-
-    this._readBuffer?.destroy();
-  }
-
-  bufferFor(allocatable: WgslAllocatable) {
-    let buffer = this._entryToBufferMap.get(allocatable);
-
-    if (!buffer) {
-      buffer = this.device.createBuffer({
-        usage: allocatable.flags,
-        size: roundUp(
-          allocatable.dataType.size,
-          allocatable.dataType.byteAlignment,
-        ),
-        mappedAtCreation: allocatable.initial !== undefined,
-      });
-
-      if (!buffer) {
-        throw new Error(`Failed to create buffer for ${allocatable}`);
-      }
-
-      if (allocatable.initial !== undefined) {
-        const writer = new BufferWriter(buffer.getMappedRange());
-
-        if (isPlum(allocatable.initial)) {
-          const plum = allocatable.initial;
-
-          allocatable.dataType.write(writer, this._plumStore.get(plum));
-
-          this._allocSubscriptions.set(
-            allocatable,
-            this._plumStore.subscribe(plum, () => {
-              this.writeBuffer(allocatable, this._plumStore.get(plum));
-            }),
-          );
-        } else {
-          allocatable.dataType.write(writer, allocatable.initial);
-        }
-
-        buffer.unmap();
-      }
-
-      this._entryToBufferMap.set(allocatable, buffer);
-    }
+    this._buffers.push(buffer);
 
     return buffer;
   }
 
-  textureFor(view: WgslAnyTexture | WgslAnyTextureView): GPUTexture {
-    let source: WgslAnyTexture;
+  destroy() {
+    for (const buffer of this._buffers) {
+      buffer.destroy();
+    }
+  }
+
+  unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
+  unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
+  unwrap(resource: TgpuBindGroup): GPUBindGroup;
+  unwrap(
+    resource: TgpuBuffer<AnyTgpuData> | TgpuBindGroupLayout | TgpuBindGroup,
+  ): GPUBuffer | GPUBindGroupLayout | GPUBindGroup {
+    if (isBuffer(resource)) {
+      return resource.buffer;
+    }
+
+    if (isBindGroupLayout(resource)) {
+      return this._unwrappedBindGroupLayouts.getOrMake(resource);
+    }
+
+    if (isBindGroup(resource)) {
+      return this._unwrappedBindGroups.getOrMake(resource);
+    }
+
+    throw new Error(`Unknown resource type: ${resource}`);
+  }
+
+  textureFor(view: TgpuAnyTexture | TgpuAnyTextureView): GPUTexture {
+    let source: TgpuAnyTexture;
     if ('texture' in view) {
       source = view.texture;
     } else {
@@ -146,7 +135,7 @@ class TypeGpuRuntimeImpl {
     return texture;
   }
 
-  viewFor(view: WgslAnyTextureView): GPUTextureView {
+  viewFor(view: TgpuAnyTextureView): GPUTextureView {
     let textureView = this._textureViews.get(view);
     if (!textureView) {
       textureView = this.textureFor(view.texture).createView(view.descriptor);
@@ -155,11 +144,17 @@ class TypeGpuRuntimeImpl {
     return textureView;
   }
 
-  externalTextureFor(texture: WgslTextureExternal): GPUExternalTexture {
-    return this.device.importExternalTexture(texture.descriptor);
+  externalTextureFor(texture: TgpuTextureExternal): GPUExternalTexture {
+    this._externalTexturesStatus.set(texture, 'clean');
+    if (texture.descriptor.source === undefined) {
+      throw new Error('External texture source needs to be defined before use');
+    }
+    return this.device.importExternalTexture(
+      texture.descriptor as GPUExternalTextureDescriptor,
+    );
   }
 
-  samplerFor(sampler: WgslSampler): GPUSampler {
+  samplerFor(sampler: TgpuSampler): GPUSampler {
     let gpuSampler = this._samplers.get(sampler);
 
     if (!gpuSampler) {
@@ -174,75 +169,27 @@ class TypeGpuRuntimeImpl {
     return gpuSampler;
   }
 
-  async readBuffer<TData extends AnyWgslData>(
-    allocatable: WgslAllocatable<TData>,
-  ): Promise<Parsed<TData>> {
-    return this._taskQueue.enqueue(async () => {
-      // Flushing any commands to be encoded.
-      this.flush();
-
-      if (
-        !this._readBuffer ||
-        this._readBuffer.size < allocatable.dataType.size
-      ) {
-        // destroying the previous buffer
-        this._readBuffer?.destroy();
-
-        this._readBuffer = this.device.createBuffer({
-          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-          size: allocatable.dataType.size,
-        });
-      }
-
-      const buffer = this.bufferFor(allocatable);
-      const commandEncoder = this.device.createCommandEncoder();
-      commandEncoder.copyBufferToBuffer(
-        buffer,
-        0,
-        this._readBuffer,
-        0,
-        allocatable.dataType.size,
-      );
-
-      this.device.queue.submit([commandEncoder.finish()]);
-      await this.device.queue.onSubmittedWorkDone();
-      await this._readBuffer.mapAsync(
-        GPUMapMode.READ,
-        0,
-        allocatable.dataType.size,
-      );
-
-      const res = allocatable.dataType.read(
-        new BufferReader(this._readBuffer.getMappedRange()),
-      ) as Parsed<TData>;
-
-      this._readBuffer.unmap();
-
-      return res;
-    });
-  }
-
-  writeBuffer<TValue extends AnyWgslData>(
-    allocatable: WgslAllocatable<TValue>,
-    data: Parsed<TValue>,
+  setSource(
+    texture: TgpuTextureExternal,
+    source: HTMLVideoElement | VideoFrame,
   ) {
-    const gpuBuffer = this.bufferFor(allocatable);
-
-    const size = roundUp(
-      allocatable.dataType.size,
-      allocatable.dataType.byteAlignment,
-    );
-
-    const hostBuffer = new ArrayBuffer(size);
-    allocatable.dataType.write(new BufferWriter(hostBuffer), data);
-    this.device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
+    this._externalTexturesStatus.set(texture, 'dirty');
+    texture.descriptor.source = source;
   }
 
-  readPlum<TPlum extends WgslPlum>(plum: TPlum): ExtractPlumValue<TPlum> {
+  isDirty(texture: TgpuTextureExternal): boolean {
+    return this._externalTexturesStatus.get(texture) === 'dirty';
+  }
+
+  markClean(texture: TgpuTextureExternal) {
+    this._externalTexturesStatus.set(texture, 'clean');
+  }
+
+  readPlum<TPlum extends TgpuPlum>(plum: TPlum): ExtractPlumValue<TPlum> {
     return this._plumStore.get(plum);
   }
 
-  setPlum<TPlum extends WgslPlum & WgslSettable>(
+  setPlum<TPlum extends TgpuPlum & TgpuSettable>(
     plum: TPlum,
     value: SetPlumAction<ExtractPlumValue<TPlum>>,
   ) {
@@ -257,7 +204,7 @@ class TypeGpuRuntimeImpl {
   }
 
   onPlumChange<TValue>(
-    plum: WgslPlum<TValue>,
+    plum: TgpuPlum<TValue>,
     listener: PlumListener<TValue>,
   ): Unsubscribe {
     return this._plumStore.subscribe(plum, listener);
@@ -319,13 +266,15 @@ class TypeGpuRuntimeImpl {
   makeComputePipeline(
     options: ComputePipelineOptions,
   ): ComputePipelineExecutor {
-    const program = new ComputeProgramBuilder(
-      this,
-      options.code,
-      options.workgroupSize ?? [1],
-    ).build({
-      bindingGroup: (options.externalLayouts ?? []).length,
-    });
+    const program = onGPU(() =>
+      new ComputeProgramBuilder(
+        this,
+        options.code,
+        options.workgroupSize ?? [1],
+      ).build({
+        bindingGroup: (options.externalLayouts ?? []).length,
+      }),
+    );
 
     const shaderModule = this.device.createShaderModule({
       code: program.code,
@@ -357,6 +306,47 @@ class TypeGpuRuntimeImpl {
     return executor;
   }
 
+  compute(fn: TgpuFn<[]>): void {
+    // TODO: Cache the pipeline
+
+    if (isRawFn(fn)) {
+      throw new Error(
+        'Functions with raw string wgsl implementation are not yet supported by the `compute` function',
+      );
+    }
+
+    const program = new ComputeProgramBuilder(
+      this,
+      fn.bodyResolvable,
+      [1],
+    ).build({
+      bindingGroup: 0,
+    });
+
+    const shaderModule = this.device.createShaderModule({
+      code: program.code,
+    });
+
+    const pipelineLayout = this.device.createPipelineLayout({
+      bindGroupLayouts: [program.bindGroupResolver.getBindGroupLayout()],
+    });
+
+    const computePipeline = this.device.createComputePipeline({
+      layout: pipelineLayout,
+      compute: {
+        module: shaderModule,
+      },
+    });
+
+    const executor = new ComputePipelineExecutor(
+      this,
+      computePipeline,
+      [program],
+      0,
+    );
+    executor.execute();
+  }
+
   flush() {
     if (!this._commandEncoder) {
       return;
@@ -375,13 +365,14 @@ interface PipelineExecutor {
 
 class RenderPipelineExecutor implements PipelineExecutor {
   constructor(
-    private runtime: TypeGpuRuntime,
+    private runtime: TgpuRuntime,
     private pipeline: GPURenderPipeline,
     private vertexProgram: Program,
     private fragmentProgram: Program,
     private externalLayoutCount: number,
     private label?: string,
   ) {}
+
   execute(options: RenderPipelineExecutorOptions) {
     const {
       vertexCount,
@@ -418,13 +409,10 @@ class RenderPipelineExecutor implements PipelineExecutor {
     );
 
     for (const [
-      buffer,
+      usage,
       index,
     ] of this.vertexProgram.bindGroupResolver.getVertexBuffers()) {
-      passEncoder.setVertexBuffer(
-        index,
-        this.runtime.bufferFor(buffer.allocatable),
-      );
+      passEncoder.setVertexBuffer(index, usage.allocatable.buffer);
     }
 
     passEncoder.draw(vertexCount, instanceCount, firstVertex, firstInstance);
@@ -434,7 +422,7 @@ class RenderPipelineExecutor implements PipelineExecutor {
 
 class ComputePipelineExecutor implements PipelineExecutor {
   constructor(
-    private runtime: TypeGpuRuntime,
+    private runtime: TgpuRuntime,
     private pipeline: GPUComputePipeline,
     private programs: Program[],
     private externalLayoutCount: number,
@@ -474,8 +462,9 @@ class ComputePipelineExecutor implements PipelineExecutor {
  * Options passed into {@link createRuntime}.
  */
 export type CreateRuntimeOptions = {
-  adapter: GPURequestAdapterOptions | undefined;
-  device: GPUDeviceDescriptor | undefined;
+  adapter?: GPURequestAdapterOptions | undefined;
+  device?: GPUDeviceDescriptor | undefined;
+  jitTranspiler?: JitTranspiler | undefined;
 };
 
 /**
@@ -504,10 +493,10 @@ export type CreateRuntimeOptions = {
  * ```
  */
 export async function createRuntime(
-  options?: CreateRuntimeOptions | GPUDevice,
-): Promise<TypeGpuRuntime> {
-  if (doesResembleDevice(options)) {
-    return new TypeGpuRuntimeImpl(options);
+  options?: CreateRuntimeOptions,
+): Promise<TgpuRuntime> {
+  if (doesResembleDevice(options?.device)) {
+    return new TgpuRuntimeImpl(options.device, options.jitTranspiler);
   }
 
   if (!navigator.gpu) {
@@ -520,7 +509,10 @@ export async function createRuntime(
     throw new Error('Could not find a compatible GPU');
   }
 
-  return new TypeGpuRuntimeImpl(await adapter.requestDevice(options?.device));
+  return new TgpuRuntimeImpl(
+    await adapter.requestDevice(options?.device),
+    options?.jitTranspiler,
+  );
 }
 
 function doesResembleDevice(value: unknown): value is GPUDevice {

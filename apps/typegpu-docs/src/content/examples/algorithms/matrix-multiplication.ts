@@ -1,7 +1,8 @@
 /*
 {
   "title": "Matrix Multiplication",
-  "category": "algorithms"
+  "category": "algorithms",
+  "tags": ["experimental"]
 }
 */
 
@@ -13,21 +14,28 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { builtin, createRuntime, wgsl } from 'typegpu';
-import { type Parsed, dynamicArrayOf, f32, struct, vec2f } from 'typegpu/data';
+import { type Parsed, arrayOf, f32, struct, vec2f } from 'typegpu/data';
+import tgpu, {
+  asMutable,
+  asReadonly,
+  builtin,
+  wgsl,
+} from 'typegpu/experimental';
 
-const runtime = await createRuntime();
+const root = await tgpu.init();
 
 const workgroupSize = [8, 8] as [number, number];
 
+const MAX_MATRIX_SIZE = 6;
+
 const MatrixStruct = struct({
   size: vec2f,
-  numbers: dynamicArrayOf(f32, 65),
+  numbers: arrayOf(f32, MAX_MATRIX_SIZE ** 2),
 });
 
 const paramSettings = {
   min: 1,
-  max: 6,
+  max: MAX_MATRIX_SIZE,
   step: 1,
 };
 
@@ -50,8 +58,9 @@ const secondColumnCountPlum = addSliderPlumParameter(
 const firstMatrixPlum = wgsl.plum((get) => {
   get(forceShufflePlum); // depending to force recomputation
 
-  return createMatrix([get(firstRowCountPlum), get(firstColumnCountPlum)], () =>
-    Math.floor(Math.random() * 10),
+  return createMatrix(
+    vec2f(get(firstRowCountPlum), get(firstColumnCountPlum)),
+    () => Math.floor(Math.random() * 10),
   );
 });
 
@@ -59,31 +68,31 @@ const secondMatrixPlum = wgsl.plum((get) => {
   get(forceShufflePlum); // depending to force recomputation
 
   return createMatrix(
-    [get(firstColumnCountPlum), get(secondColumnCountPlum)],
+    vec2f(get(firstColumnCountPlum), get(secondColumnCountPlum)),
     () => Math.floor(Math.random() * 10),
   );
 });
 
-const firstMatrixBuffer = wgsl
-  .buffer(MatrixStruct, firstMatrixPlum)
+const firstMatrixBuffer = root
+  .createBuffer(MatrixStruct, firstMatrixPlum)
   .$name('first_matrix')
-  .$allowReadonly();
+  .$usage(tgpu.Storage);
 
-const secondMatrixBuffer = wgsl
-  .buffer(MatrixStruct, secondMatrixPlum)
+const secondMatrixBuffer = root
+  .createBuffer(MatrixStruct, secondMatrixPlum)
   .$name('second_matrix')
-  .$allowReadonly();
+  .$usage(tgpu.Storage);
 
-const resultMatrixBuffer = wgsl
-  .buffer(MatrixStruct)
+const resultMatrixBuffer = root
+  .createBuffer(MatrixStruct)
   .$name('result_matrix')
-  .$allowMutable();
+  .$usage(tgpu.Storage);
 
-const firstMatrixData = firstMatrixBuffer.asReadonly();
-const secondMatrixData = secondMatrixBuffer.asReadonly();
-const resultMatrixData = resultMatrixBuffer.asMutable();
+const firstMatrixData = asReadonly(firstMatrixBuffer);
+const secondMatrixData = asReadonly(secondMatrixBuffer);
+const resultMatrixData = asMutable(resultMatrixBuffer);
 
-const program = runtime.makeComputePipeline({
+const program = root.makeComputePipeline({
   workgroupSize: workgroupSize,
   code: wgsl`
     let global_id = ${builtin.globalInvocationId};
@@ -93,7 +102,6 @@ const program = runtime.makeComputePipeline({
 
     if (global_id.x + global_id.y == 0u) {
       ${resultMatrixData}.size = vec2(${firstMatrixData}.size.x, ${secondMatrixData}.size.y);
-      ${resultMatrixData}.numbers.count = u32(${firstMatrixData}.size.x) * u32(${secondMatrixData}.size.y);
     }
 
     let resultCell = vec2(global_id.x, global_id.y);
@@ -102,11 +110,11 @@ const program = runtime.makeComputePipeline({
     for (var i = 0u; i < u32(${firstMatrixData}.size.y); i = i + 1u) {
       let a = i + resultCell.x * u32(${firstMatrixData}.size.y);
       let b = resultCell.y + i * u32(${secondMatrixData}.size.y);
-      result = result + ${firstMatrixData}.numbers.values[a] * ${secondMatrixData}.numbers.values[b];
+      result = result + ${firstMatrixData}.numbers[a] * ${secondMatrixData}.numbers[b];
     }
 
     let index = resultCell.y + resultCell.x * u32(${secondMatrixData}.size.y);
-    ${resultMatrixData}.numbers.values[index] = result;
+    ${resultMatrixData}.numbers[index] = result;
 `,
 });
 
@@ -121,33 +129,33 @@ const resultTable = await addElement('table', {
 });
 
 function createMatrix(
-  size: [number, number],
+  size: vec2f,
   initValue: (row: number, col: number) => number,
 ) {
   return {
     size: size,
-    numbers: Array(size[0] * size[1])
+    numbers: Array(size.x * size.y)
       .fill(0)
-      .map((_, i) => initValue(Math.floor(i / size[1]), i % size[1])),
+      .map((_, i) => initValue(Math.floor(i / size.y), i % size.y)),
   };
 }
 
 async function run() {
-  const firstMatrix = runtime.readPlum(firstMatrixPlum);
-  const secondMatrix = runtime.readPlum(secondMatrixPlum);
-  const workgroupCountX = Math.ceil(firstMatrix.size[0] / workgroupSize[0]);
-  const workgroupCountY = Math.ceil(secondMatrix.size[1] / workgroupSize[1]);
+  const firstMatrix = root.readPlum(firstMatrixPlum);
+  const secondMatrix = root.readPlum(secondMatrixPlum);
+  const workgroupCountX = Math.ceil(firstMatrix.size.x / workgroupSize[0]);
+  const workgroupCountY = Math.ceil(secondMatrix.size.y / workgroupSize[1]);
 
   program.execute({ workgroups: [workgroupCountX, workgroupCountY] });
-  const multiplicationResult = await runtime.readBuffer(resultMatrixBuffer);
+  const multiplicationResult = await resultMatrixBuffer.read();
 
   const unflatMatrix = (matrix: Parsed<typeof MatrixStruct>) =>
-    Array(matrix.size[0])
+    Array(matrix.size.x)
       .fill(0)
       .map((_, i) =>
-        Array(matrix.size[1])
+        Array(matrix.size.y)
           .fill(0)
-          .map((_, j) => matrix.numbers[i * matrix.size[1] + j]),
+          .map((_, j) => matrix.numbers[i * matrix.size.y + j]),
       );
 
   firstTable.setMatrix(unflatMatrix(firstMatrix));
@@ -157,12 +165,12 @@ async function run() {
 }
 
 addButtonParameter('Reshuffle', () => {
-  runtime.setPlum(forceShufflePlum, (prev) => 1 - prev);
+  root.setPlum(forceShufflePlum, (prev) => 1 - prev);
 });
 
 run();
 
-runtime.onPlumChange(firstRowCountPlum, run);
-runtime.onPlumChange(firstColumnCountPlum, run);
-runtime.onPlumChange(secondColumnCountPlum, run);
-runtime.onPlumChange(forceShufflePlum, run);
+root.onPlumChange(firstRowCountPlum, run);
+root.onPlumChange(firstColumnCountPlum, run);
+root.onPlumChange(secondColumnCountPlum, run);
+root.onPlumChange(forceShufflePlum, run);

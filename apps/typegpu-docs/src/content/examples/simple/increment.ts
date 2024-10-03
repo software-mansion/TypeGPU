@@ -1,7 +1,8 @@
 /*
 {
   "title": "Increment",
-  "category": "simple"
+  "category": "simple",
+  "tags": ["experimental"]
 }
 */
 
@@ -9,19 +10,23 @@
 import { addElement } from '@typegpu/example-toolkit';
 // --
 
-import { createRuntime, wgsl } from 'typegpu';
 import { u32 } from 'typegpu/data';
+import tgpu, { asMutable, wgsl } from 'typegpu/experimental';
 
-const counterBuffer = wgsl.buffer(u32, 0).$name('counter').$allowMutable();
+const root = await tgpu.init();
 
-const runtime = await createRuntime();
-const pipeline = runtime.makeComputePipeline({
-  code: wgsl`${counterBuffer.asMutable()} += 1;`,
+const counterBuffer = root
+  .createBuffer(u32, 0)
+  .$name('counter')
+  .$usage(tgpu.Storage);
+
+const pipeline = root.makeComputePipeline({
+  code: wgsl`${asMutable(counterBuffer)} += 1;`,
 });
 
 async function increment() {
   pipeline.execute();
-  table.setMatrix([[await runtime.readBuffer(counterBuffer)]]);
+  table.setMatrix([[await counterBuffer.read()]]);
 }
 
 addElement('button', {

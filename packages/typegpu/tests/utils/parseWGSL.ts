@@ -1,9 +1,13 @@
 import { parse } from '@typegpu/wgsl-parser';
-import { StrictNameRegistry, type Wgsl } from '../../src';
+import { JitTranspiler } from '../../../jit';
+import { StrictNameRegistry, type Wgsl } from '../../src/experimental';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx';
 
 export function parseWGSL(segment: Wgsl) {
-  const ctx = new ResolutionCtxImpl({ names: new StrictNameRegistry() });
+  const ctx = new ResolutionCtxImpl({
+    names: new StrictNameRegistry(),
+    jitTranspiler: new JitTranspiler(),
+  });
 
   const resolved = ctx.resolve(segment);
 

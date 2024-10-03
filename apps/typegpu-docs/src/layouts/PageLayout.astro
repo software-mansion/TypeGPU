@@ -1,30 +1,59 @@
 ---
 const { title } = Astro.props;
-
 ---
 
 <html>
   <head>
-    <title> { title ? `${title} |` : '' } TypeGPU</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="favicon.svg">
+    <title>{title ? `${title} |` : ''} TypeGPU</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/TypeGPU/favicon.svg" />
+    <link rel="sitemap" href="/TypeGPU/sitemap-index.xml" />
     <style is:global>
-        @font-face {
-            font-family: 'Aeonik';
-            src: url('/typegpu/fonts/Aeonik-Regular.woff') format('woff');
-            font-weight: 400;
-            font-style: normal;
-            font-display: swap;
-        }
+      @font-face {
+        font-family: 'Aeonik';
+        src: url('/TypeGPU/fonts/Aeonik-Regular.woff') format('woff');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
 
-        @font-face {
-            font-family: 'Aeonik';
-            src: url('/typegpu/fonts/Aeonik-Medium.otf') format('opentype');
-            font-weight: 500;
-            font-style: normal;
-            font-display: swap;
-        }
+      @font-face {
+        font-family: 'Aeonik';
+        src: url('/TypeGPU/fonts/Aeonik-Medium.otf') format('opentype');
+        font-weight: 500;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      .bg-blurred-radial-purple {
+        background: radial-gradient(closest-side, #f5f2fe, #5f25f100);
+      }
+
+      .monaco-editor,
+      .overflow-guard {
+        border-radius: 0.5rem;
+      }
+
+      h1 {
+        @apply lg:text-[3.25rem] md:text-[2.5rem] text-[1.4375rem] leading-[130%];
+      }
+
+      h2 {
+        @apply lg:text-[3rem] md:text-[2.125rem] text-[1.375rem] leading-[130%];
+      }
+
+      h3 {
+        @apply lg:text-[2.125rem] md:text-[1.5rem] text-[1.25rem] leading-[140%];
+      }
+
+      p {
+        @apply lg:text-[1.5rem] md:text-[1.25rem] text-[1rem] leading-[150%];
+      }
+
+      .text-micro {
+        @apply lg:text-[1rem] md:text-[0.875rem] text-[0.75rem] leading-[160%];
+      }
     </style>
   </head>
   <body>

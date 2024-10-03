@@ -5,12 +5,11 @@
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "license": "MIT",
   "scripts": {
-    "prepare": "husky",
-    "dev": "pnpm --parallel -r dev",
+    "dev": "EXPERIMENTAL=true pnpm -r dev:build && EXPERIMENTAL=true pnpm --parallel -r dev:watch",
     "dev:test": "vitest",
     "check": "biome check --write .",
     "coverage": "vitest --coverage",
-    "test": "pnpm run '/^test:.*/'",
+    "test": "EXPERIMENTAL=true pnpm -r dev:build && pnpm run '/^test:.*/'",
     "test:types": "pnpm run -r test:types",
     "test:spec": "vitest run"
   },
@@ -27,19 +26,19 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/software-mansion/typegpu.git"
+    "url": "git+https://github.com/software-mansion/TypeGPU.git"
   },
   "keywords": ["webgpu", "wgpu", "wgsl"],
   "bugs": {
-    "url": "https://github.com/software-mansion/typegpu/issues"
+    "url": "https://github.com/software-mansion/TypeGPU/issues"
   },
-  "homepage": "https://docs.swmansion.com/typegpu",
+  "homepage": "https://docs.swmansion.com/TypeGPU",
   "devDependencies": {
     "@biomejs/biome": "^1.8.3",
     "@types/node": "^20.11.13",
     "@vitest/coverage-v8": "0.33.0",
     "@vitest/ui": "0.33.0",
-    "husky": "^9.0.11",
+    "dpdm": "^3.14.0",
     "jsdom": "^24.0.0",
     "prettier": "^3.2.4",
     "tsup": "^8.0.2",

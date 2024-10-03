@@ -1,7 +1,8 @@
 /*
 {
   "title": "Gradient Tiles",
-  "category": "simple"
+  "category": "simple",
+  "tags": ["experimental"]
 }
 */
 
@@ -14,8 +15,8 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { builtin, createRuntime, wgsl } from 'typegpu';
 import { struct, u32, vec2f } from 'typegpu/data';
+import tgpu, { asUniform, builtin, wgsl } from 'typegpu/experimental';
 
 const xSpanPlum = addSliderPlumParameter('x span', 16, {
   min: 1,
@@ -28,24 +29,25 @@ const ySpanPlum = addSliderPlumParameter('y span', 16, {
   step: 1,
 });
 
-const spanPlum = wgsl.plum((get) => ({ x: get(xSpanPlum), y: get(ySpanPlum) }));
-const spanBuffer = wgsl
-  .buffer(struct({ x: u32, y: u32 }), spanPlum)
-  .$name('span')
-  .$allowUniform();
+const root = await tgpu.init();
 
-const runtime = await createRuntime();
+const spanPlum = wgsl.plum((get) => ({ x: get(xSpanPlum), y: get(ySpanPlum) }));
+const spanBuffer = root
+  .createBuffer(struct({ x: u32, y: u32 }), spanPlum)
+  .$name('span')
+  .$usage(tgpu.Uniform);
+
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 context.configure({
-  device: runtime.device,
+  device: root.device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
 
-const renderPipeline = runtime.makeRenderPipeline({
+const renderPipeline = root.makeRenderPipeline({
   vertex: {
     code: wgsl`
       var pos = array<vec2f, 4>(
@@ -66,14 +68,14 @@ const renderPipeline = runtime.makeRenderPipeline({
       let uvOut = uv[${builtin.vertexIndex}];
     `,
     output: {
-      [builtin.position]: 'posOut',
+      [builtin.position.s]: 'posOut',
       uvOut: vec2f,
     },
   },
 
   fragment: {
     code: wgsl.code`
-      let span = ${spanBuffer.asUniform()};
+      let span = ${asUniform(spanBuffer)};
       let red = floor(uvOut.x * f32(span.x)) / f32(span.x);
       let green = floor(uvOut.y * f32(span.y)) / f32(span.y);
       return vec4(red, green, 0.5, 1.0);
@@ -106,9 +108,9 @@ onFrame(() => {
     vertexCount: 4,
   });
 
-  runtime.flush();
+  root.flush();
 });
 
 onCleanup(() => {
-  runtime.dispose();
+  root.destroy();
 });

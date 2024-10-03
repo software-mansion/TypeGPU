@@ -36,6 +36,13 @@ export const examples = pipe(
   fromEntries(),
 );
 
+export const examplesStable = pipe(
+  examples,
+  entries(),
+  filter(([_, example]) => !example.metadata.tags?.includes('experimental')),
+  fromEntries(),
+);
+
 export const examplesByCategory = groupBy(
   Object.values(examples),
   (example) => example.metadata.category,

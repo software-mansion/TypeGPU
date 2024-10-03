@@ -1,16 +1,8 @@
-import { wgsl } from 'typegpu';
-import { f32, u32 } from 'typegpu/data';
 import { describe, expect, it } from 'vitest';
-import { StrictNameRegistry } from '../src';
+import { f32, u32 } from '../src/data';
+import { StrictNameRegistry, wgsl } from '../src/experimental';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
-
-global.GPUTextureUsage = {
-  COPY_SRC: 0x01,
-  COPY_DST: 0x02,
-  TEXTURE_BINDING: 0x04,
-  STORAGE_BINDING: 0x08,
-  RENDER_ATTACHMENT: 0x10,
-};
+import './utils/webgpuGlobals';
 
 describe('texture', () => {
   it('creates a sampled texture view with correct type', () => {
@@ -130,11 +122,7 @@ describe('texture', () => {
       height: 1,
     } as HTMLVideoElement;
 
-    const texture = wgsl
-      .textureExternal({
-        source: mockHTMLMediaElement,
-      })
-      .$name('texture');
+    const texture = wgsl.textureExternal(mockHTMLMediaElement).$name('texture');
 
     const resolutionCtx = new ResolutionCtxImpl({
       names: new StrictNameRegistry(),

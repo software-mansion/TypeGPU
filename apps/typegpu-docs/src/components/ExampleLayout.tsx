@@ -1,36 +1,77 @@
-import { useAtomValue } from 'jotai';
+import cs from 'classnames';
+import { useAtom, useAtomValue } from 'jotai';
 import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
-import { menuShownAtom } from '../utils/examples/menuShownAtom';
+import HamburgerSvg from '../assets/hamburger.svg';
+import { codeEditorShownMobileAtom } from '../utils/examples/codeEditorShownAtom';
+import {
+  menuShownAtom,
+  menuShownMobileAtom,
+} from '../utils/examples/menuShownAtom';
 import ExampleList from './ExampleList';
 import ExamplePage from './ExamplePage';
+import { Button } from './design/Button';
+
+const isDev = import.meta.env.DEV;
 
 export function ExampleLayout() {
   const menuShown = useAtomValue(menuShownAtom);
+  const [menuShownMobile, setMenuShownMobile] = useAtom(menuShownMobileAtom);
+  const [codeShownMobile, setCodeShownMobile] = useAtom(
+    codeEditorShownMobileAtom,
+  );
 
   return (
-    <div className="flex h-screen p-4 gap-4 bg-grayscale-20">
-      {menuShown ? <SideMenu /> : null}
-      <ExamplePage />
-    </div>
+    <>
+      <div className="md:hidden flex absolute top-4 left-4 z-50 gap-4 text-sm">
+        {menuShownMobile ? null : (
+          <Button onClick={() => setMenuShownMobile(true)}>
+            <img src={HamburgerSvg.src} alt="menu" className="h-6 w-6" />
+          </Button>
+        )}
+
+        <Button
+          label={codeShownMobile ? 'Preview' : 'Code'}
+          onClick={() =>
+            setCodeShownMobile((codeShownMobile) => !codeShownMobile)
+          }
+        />
+      </div>
+
+      <div className="flex h-[100dvh] p-4 gap-4 bg-tameplum-50">
+        {menuShown || menuShownMobile ? <SideMenu /> : null}
+        <ExamplePage />
+      </div>
+    </>
   );
 }
 
 function SideMenu() {
+  const menuShown = useAtomValue(menuShownAtom);
+  const menuShownMobile = useAtomValue(menuShownMobileAtom);
+
   return (
-    <aside className="flex flex-col bg-grayscale-0 rounded-2xl w-[18.75rem] p-5 gap-5">
+    <aside
+      className={cs(
+        menuShown ? '' : 'md:hidden',
+        menuShownMobile
+          ? 'absolute inset-0 z-50 w-full md:static'
+          : 'hidden md:flex',
+        'flex flex-col bg-white md:rounded-2xl md:w-[18.75rem] p-5 gap-5',
+      )}
+    >
       <header className="grid gap-5">
         <div className="grid place-items-center">
-          <a href="/typegpu" className="block cursor-pointer">
+          <a href="/TypeGPU" className="block cursor-pointer">
             <img
-              className="my-7 w-40"
-              src="/typegpu/typegpu-logo-light.svg"
+              className="my-4 w-40"
+              src="/TypeGPU/typegpu-logo-light.svg"
               alt="TypeGPU Logo"
             />
           </a>
         </div>
 
-        <hr />
+        <hr className="border-tameplum-100" />
 
         <div className="grid gap-6">
           <h1 className="font-medium text-xl">Welcome to examples page</h1>
@@ -39,7 +80,7 @@ function SideMenu() {
             TypeGPU.
           </p>
           <a
-            href="/typegpu/guides/getting-started"
+            href="/TypeGPU/guides/getting-started"
             className="underline text-sm bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-transparent"
           >
             Learn more about TypeGPU here
@@ -47,18 +88,34 @@ function SideMenu() {
         </div>
       </header>
 
-      <hr />
+      <hr className="border-tameplum-100" />
 
-      <ExampleList />
+      <ExampleList excludeTags={isDev ? [] : ['experimental']} />
 
-      <div className="flex justify-between text-grayscale-60 text-xs">
+      <div className="flex justify-between text-tameplum-800 text-xs">
         <div>&copy; 2024 Software Mansion S.A.</div>
         <div className="flex gap-3 items-center">
-          <a href="https://github.com/software-mansion/TypeGPU">
-            <img src={DiscordIconSvg.src} alt="github logo" />
+          <a
+            href="https://discord.gg/8jpfgDqPcM"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <img
+              src={DiscordIconSvg.src}
+              className="opacity-75"
+              alt="github logo"
+            />
           </a>
-          <a href="https://discord.swmansion.com">
-            <img src={GithubIconSvg.src} alt="discord logo" />
+          <a
+            href="https://github.com/software-mansion/TypeGPU"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <img
+              src={GithubIconSvg.src}
+              className="opacity-75"
+              alt="discord logo"
+            />
           </a>
         </div>
       </div>

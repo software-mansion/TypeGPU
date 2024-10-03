@@ -3,7 +3,7 @@ import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
 import type { OnFrameFn } from '@typegpu/example-toolkit';
 import { filter, isNonNull, map, pipe } from 'remeda';
-import { wgsl } from 'typegpu';
+import { wgsl } from 'typegpu/experimental';
 import { transpileModule } from 'typescript';
 import { tsCompilerOptions } from '../liveEditor/embeddedTypeScript';
 import type { ExampleControlParam } from './exampleControlAtom';
@@ -59,7 +59,47 @@ const staticToDynamicImports = {
   } satisfies TraverseOptions,
 };
 
-const MAX_ITERATIONS = 2000;
+let addButtonParameterImportAdded = false;
+
+const labeledFunctionToControlButtons = () => {
+  return {
+    visitor: {
+      ImportDeclaration(path) {
+        if (path.node.source.value === '@typegpu/example-toolkit') {
+          for (const imp of path.node.specifiers) {
+            if (imp.local.name === 'addButtonParameter') {
+              addButtonParameterImportAdded = true;
+              break;
+            }
+          }
+        }
+      },
+
+      ExportNamedDeclaration(path, state) {
+        // @ts-ignore
+        const code: string = state.file.code;
+        const declaration = path.node.declaration;
+        if (declaration?.type === 'FunctionDeclaration') {
+          for (const comment of path.node.leadingComments ?? []) {
+            const regExp = /.*@button.*\"(?<label>.*)\".*/;
+            const label = regExp.exec(comment.value)?.groups?.label;
+
+            if (label) {
+              path.replaceWith(
+                template.program.ast(
+                  `${addButtonParameterImportAdded ? '' : "import { addButtonParameter } from '@typegpu/example-toolkit';"} addButtonParameter('${label}', ${code.slice(declaration.start ?? 0, declaration.end ?? 0)})`,
+                ),
+              );
+              addButtonParameterImportAdded = true;
+            }
+          }
+        }
+      },
+    } satisfies TraverseOptions,
+  };
+};
+
+const MAX_ITERATIONS = 10000;
 
 /**
  * from https://github.com/facebook/react/blob/d906de7f602df810c38aa622c83023228b047db6/scripts/babel/transform-prevent-infinite-loops.js
@@ -111,6 +151,7 @@ function tsToJs(code: string): string {
 export async function executeExample(
   exampleCode: string,
   createLayout: () => LayoutInstance,
+  tags?: string[],
 ): Promise<ExampleState> {
   const cleanupCallbacks: (() => unknown)[] = [];
 
@@ -257,11 +298,22 @@ export async function executeExample(
       if (moduleKey === 'typegpu') {
         return await import('typegpu');
       }
+      if (moduleKey === 'typegpu/experimental') {
+        if (!tags?.includes('experimental')) {
+          throw new Error(
+            'Examples not labeled as experimental cannot import experimental modules.',
+          );
+        }
+        return await import('typegpu/experimental');
+      }
       if (moduleKey === 'typegpu/data') {
         return await import('typegpu/data');
       }
       if (moduleKey === 'typegpu/macro') {
         return await import('typegpu/macro');
+      }
+      if (moduleKey === '@typegpu/jit') {
+        return await import('@typegpu/jit');
       }
       if (moduleKey === '@typegpu/example-toolkit') {
         return {
@@ -295,13 +347,30 @@ export async function executeExample(
       throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
     };
 
-    const jsCode = tsToJs(exampleCode);
+    const jsCode = tsToJs(`
+      ${exampleCode}
 
+      import { onCleanup } from '@typegpu/example-toolkit';
+      onCleanup(() =>
+        if (typeof device === 'object'
+          && 'destroy' in device
+          && typeof device.destroy === 'function'
+        ) {
+          device.destroy();
+        }
+      );
+    `); // temporary solution to clean up device without using example-toolkit in the example
+
+    addButtonParameterImportAdded = false;
     const transformedCode =
       Babel.transform(jsCode, {
         compact: false,
         retainLines: true,
-        plugins: [staticToDynamicImports, preventInfiniteLoops],
+        plugins: [
+          labeledFunctionToControlButtons,
+          staticToDynamicImports,
+          preventInfiniteLoops,
+        ],
       }).code ?? jsCode;
 
     const mod = Function(`

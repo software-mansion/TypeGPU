@@ -1,9 +1,10 @@
+import { readFile } from 'node:fs/promises';
 import { mapValues, values } from 'remeda';
 
 /**
  *
  * @param {*} moduleMap
- * @returns {PluginOption}
+ * @returns {import('vite').PluginOption}
  */
 function importRawRedirectPlugin(
   /**
@@ -27,7 +28,9 @@ function importRawRedirectPlugin(
      * If there is any change in those type declarations, reload the whole page.
      */
     handleHotUpdate(ctx) {
-      if (!ctx.file.includes('/typegpu/dist')) {
+      if (
+        values(moduleMap).every((modulePath) => !ctx.file.includes(modulePath))
+      ) {
         return;
       }
 
@@ -64,7 +67,6 @@ function importRawRedirectPlugin(
         return;
       }
 
-      this.addWatchFile(resolved.redirectedPath);
       const rawFileContents = await readFile(resolved.redirectedPath, 'utf-8');
 
       return `

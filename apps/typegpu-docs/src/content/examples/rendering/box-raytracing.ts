@@ -1,7 +1,8 @@
 /*
 {
   "title": "Box Raytracing",
-  "category": "rendering"
+  "category": "rendering",
+  "tags": ["experimental"]
 }
 */
 
@@ -13,17 +14,23 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { builtin, createRuntime, wgsl } from 'typegpu';
 import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'typegpu/data';
+import tgpu, {
+  asReadonly,
+  asUniform,
+  builtin,
+  std,
+  wgsl,
+} from 'typegpu/experimental';
 
 const X = 7;
 const Y = 7;
 const Z = 7;
 
 const MAX_BOX_SIZE = 15;
-const cubeSize = [X * MAX_BOX_SIZE, Y * MAX_BOX_SIZE, Z * MAX_BOX_SIZE];
-const boxCenter = cubeSize.map((value) => value / 2);
-const upAxis = [0, 1, 0] as Vector;
+const cubeSize = vec3f(X * MAX_BOX_SIZE, Y * MAX_BOX_SIZE, Z * MAX_BOX_SIZE);
+const boxCenter = std.mul(0.5, cubeSize);
+const upAxis = vec3f(0, 1, 0);
 
 const rotationSpeedPlum = addSliderPlumParameter('rotation speed', 2, {
   min: 0,
@@ -42,40 +49,39 @@ const boxSizePlum = addSliderPlumParameter('box size', MAX_BOX_SIZE, {
 
 const framePlum = wgsl.plum<number>(0);
 
-const cameraPositionPlum = wgsl.plum<Vector>((get) => {
+const cameraPositionPlum = wgsl.plum((get) => {
   const frame = get(framePlum);
 
-  return [
-    Math.cos(frame) * get(cameraDistancePlum) + boxCenter[0],
-    boxCenter[1],
-    Math.sin(frame) * get(cameraDistancePlum) + boxCenter[2],
-  ];
+  return vec3f(
+    Math.cos(frame) * get(cameraDistancePlum) + boxCenter.x,
+    boxCenter.y,
+    Math.sin(frame) * get(cameraDistancePlum) + boxCenter.z,
+  );
 });
 
 const cameraAxesPlum = wgsl.plum((get) => {
-  const forwardAxis = normalize(
-    get(cameraPositionPlum).map((value, i) => boxCenter[i] - value) as Vector,
+  const forwardAxis = std.normalize(
+    std.sub(boxCenter, get(cameraPositionPlum)),
   );
 
   return {
     forward: forwardAxis,
     up: upAxis,
-    right: crossProduct(upAxis, forwardAxis) as Vector,
+    right: std.cross(upAxis, forwardAxis),
   };
 });
 
-const canvas = await addElement('canvas', { aspectRatio: 1 / 1 });
+const canvas = await addElement('canvas');
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const canvasWidthPlum = wgsl.plum(canvas.width).$name('canvas_width');
 const canvasHeightPlum = wgsl.plum(canvas.height).$name('canvas_height');
 
-const runtime = await createRuntime();
-const device = runtime.device;
+const root = await tgpu.init();
 
 context.configure({
-  device,
+  device: root.device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
@@ -96,30 +102,30 @@ const intersectionStruct = struct({
   tMax: f32,
 });
 
-const boxMatrixBuffer = wgsl
-  .buffer(
+const boxMatrixBuffer = root
+  .createBuffer(
     arrayOf(arrayOf(arrayOf(boxStruct, Z), Y), X),
     Array.from({ length: X }, (_, i) =>
       Array.from({ length: Y }, (_, j) =>
         Array.from({ length: Z }, (_, k) => ({
           isActive: X - i + j + (Z - k) > 6 ? 1 : 0,
-          albedo: [i / X, j / Y, k / Z, 1] as [number, number, number, number],
+          albedo: vec4f(i / X, j / Y, k / Z, 1),
         })),
       ),
     ),
   )
   .$name('box_array')
-  .$allowReadonly();
-const boxMatrixData = boxMatrixBuffer.asReadonly();
+  .$usage(tgpu.Storage);
+const boxMatrixData = asReadonly(boxMatrixBuffer);
 
-const cameraPositionBuffer = wgsl
-  .buffer(vec3f, cameraPositionPlum)
+const cameraPositionBuffer = root
+  .createBuffer(vec3f, cameraPositionPlum)
   .$name('camera_position')
-  .$allowReadonly();
-const cameraPositionData = cameraPositionBuffer.asReadonly();
+  .$usage(tgpu.Storage);
+const cameraPositionData = asReadonly(cameraPositionBuffer);
 
-const cameraAxesBuffer = wgsl
-  .buffer(
+const cameraAxesBuffer = root
+  .createBuffer(
     struct({
       right: vec3f,
       up: vec3f,
@@ -128,11 +134,11 @@ const cameraAxesBuffer = wgsl
     cameraAxesPlum,
   )
   .$name('camera_axes')
-  .$allowReadonly();
-const cameraAxesData = cameraAxesBuffer.asReadonly();
+  .$usage(tgpu.Storage);
+const cameraAxesData = asReadonly(cameraAxesBuffer);
 
-const canvasDimsBuffer = wgsl
-  .buffer(
+const canvasDimsBuffer = root
+  .createBuffer(
     struct({ width: u32, height: u32 }),
     wgsl.plum((get) => ({
       width: get(canvasWidthPlum),
@@ -140,14 +146,14 @@ const canvasDimsBuffer = wgsl
     })),
   )
   .$name('canvas_dims')
-  .$allowUniform();
-const canvasDimsData = canvasDimsBuffer.asUniform();
+  .$usage(tgpu.Uniform);
+const canvasDimsData = asUniform(canvasDimsBuffer);
 
-const boxSizeBuffer = wgsl
-  .buffer(u32, boxSizePlum)
+const boxSizeBuffer = root
+  .createBuffer(u32, boxSizePlum)
   .$name('box_size')
-  .$allowUniform();
-const boxSizeData = boxSizeBuffer.asUniform();
+  .$usage(tgpu.Uniform);
+const boxSizeData = asUniform(boxSizeBuffer);
 
 const getBoxIntersectionFn = wgsl.fn`(
   boundMin: vec3f,
@@ -218,7 +224,7 @@ const getBoxIntersectionFn = wgsl.fn`(
 }
 `.$name('box_intersection');
 
-const renderPipeline = runtime.makeRenderPipeline({
+const renderPipeline = root.makeRenderPipeline({
   vertex: {
     code: wgsl`
       var pos = array<vec2f, 6>(
@@ -233,7 +239,7 @@ const renderPipeline = runtime.makeRenderPipeline({
       let outPos = vec4f(pos[${builtin.vertexIndex}], 0, 1);
     `,
     output: {
-      [builtin.position]: 'outPos',
+      [builtin.position.s]: 'outPos',
     },
   },
 
@@ -251,9 +257,9 @@ const renderPipeline = runtime.makeRenderPipeline({
       let bigBoxIntersection = ${getBoxIntersectionFn}(
         -vec3f(f32(${boxSizeData}))/2,
         vec3f(
-          ${cubeSize[0]},
-          ${cubeSize[1]},
-          ${cubeSize[2]},
+          ${cubeSize.x},
+          ${cubeSize.y},
+          ${cubeSize.z},
         ) + vec3f(f32(${boxSizeData}))/2,
         ray,
       );
@@ -301,31 +307,13 @@ const renderPipeline = runtime.makeRenderPipeline({
   },
 });
 
-type Vector = [number, number, number];
-
-function normalize(vector: Vector): Vector {
-  const length = Math.sqrt(vector[0] ** 2 + vector[1] ** 2 + vector[2] ** 2);
-  return vector.map((value) => value / length) as Vector;
-}
-
-function crossProduct(vectorA: Vector, vectorB: Vector): Vector {
-  return [
-    vectorA[1] * vectorB[2] - vectorA[2] * vectorB[1],
-    vectorA[2] * vectorB[0] - vectorA[0] * vectorB[2],
-    vectorA[0] * vectorB[1] - vectorA[1] * vectorB[0],
-  ];
-}
-
 onFrame((deltaTime) => {
-  runtime.setPlum(canvasWidthPlum, canvas.width);
-  runtime.setPlum(canvasHeightPlum, canvas.height);
+  root.setPlum(canvasWidthPlum, canvas.width);
+  root.setPlum(canvasHeightPlum, canvas.height);
 
-  const rotationSpeed = runtime.readPlum(rotationSpeedPlum);
+  const rotationSpeed = root.readPlum(rotationSpeedPlum);
 
-  runtime.setPlum(
-    framePlum,
-    (prev) => prev + (rotationSpeed * deltaTime) / 1000,
-  );
+  root.setPlum(framePlum, (prev) => prev + (rotationSpeed * deltaTime) / 1000);
 
   const textureView = context.getCurrentTexture().createView();
 
@@ -341,5 +329,5 @@ onFrame((deltaTime) => {
     vertexCount: 6,
   });
 
-  runtime.flush();
+  root.flush();
 });

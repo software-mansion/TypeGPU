@@ -12,7 +12,7 @@ without mutating it in place.
 
 <!-- TODO: Link to an implementation of Conway's Game of Life in TypeGPU -->
 :::note
-Examples of cellular automata include [Conway's Game of Life](https://playgameoflife.com/), our [Fluid Simulation](/typegpu/examples#example=simulation--fluid-double-buffering)
+Examples of cellular automata include [Conway's Game of Life](https://playgameoflife.com/), our [Fluid Simulation](/TypeGPU/examples#example=simulation--fluid-double-buffering)
 example and many more.
 :::
 
@@ -48,11 +48,13 @@ To access the buffers in WGSL code, we need to do it through bindings. This allo
 we define how we want to use the buffer explicitly.
 
 ```ts
-const readonlyEvenGrid = wgsl.plum((get) => get(evenGridBuffer).asReadonly());
-const readonlyOddGrid = wgsl.plum((get) => get(oddGridBuffer).asReadonly());
+import { asReadonly, asMutable } from 'typegpu';
 
-const mutableEvenGrid = wgsl.plum((get) => get(evenGridBuffer).asMutable());
-const mutableOddGrid = wgsl.plum((get) => get(oddGridBuffer).asMutable());
+const readonlyEvenGrid = wgsl.plum((get) => asReadonly(get(evenGridBuffer)));
+const readonlyOddGrid = wgsl.plum((get) => asReadonly(get(oddGridBuffer)));
+
+const mutableEvenGrid = wgsl.plum((get) => asMutable(get(evenGridBuffer)));
+const mutableOddGrid = wgsl.plum((get) => asMutable(get(oddGridBuffer)));
 ```
 
 ```ts

@@ -1,5 +1,6 @@
 // import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import react from '@astrojs/react';
+import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import tailwind from '@astrojs/tailwind';
 import { defineConfig } from 'astro/config';
@@ -8,7 +9,7 @@ import importRawRedirectPlugin from './vite-import-raw-redirect-plugin';
 // https://astro.build/config
 export default defineConfig({
   site: 'https://docs.swmansion.com',
-  base: 'typegpu',
+  base: 'TypeGPU',
   vite: {
     plugins: [
       importRawRedirectPlugin({
@@ -17,8 +18,10 @@ export default defineConfig({
           '../../packages/typegpu/dist/data/index.d.ts',
         'typegpu/dist/macro/index.d.ts?raw':
           '../../packages/typegpu/dist/macro/index.d.ts',
-        'typegpu/dist/web/index.d.ts?raw':
-          '../../packages/typegpu/dist/web/index.d.ts',
+        'typegpu/dist/experimental/index.d.ts?raw':
+          '../../packages/typegpu/dist/experimental/index.d.ts',
+        '@typegpu/jit/dist/index.d.ts?raw':
+          '../../packages/jit/dist/index.d.ts',
       }),
     ],
   },
@@ -35,15 +38,15 @@ export default defineConfig({
         Head: './src/components/starlight/Head.astro',
       },
       social: {
-        github: 'https://github.com/software-mansion/typegpu',
+        github: 'https://github.com/software-mansion/TypeGPU',
       },
       sidebar: [
         {
           label: '⭐ Live Examples',
           link: 'examples',
-          attrs: {
-            'data-astro-reload': true,
-          },
+          // attrs: {
+          //   'data-astro-reload': true,
+          // },
         },
         {
           label: 'Guides',
@@ -54,48 +57,35 @@ export default defineConfig({
               slug: 'guides/getting-started',
             },
             {
-              label: 'Basic Principles',
-              slug: 'guides/basic-principles',
+              label: 'Typed Buffers',
+              slug: 'guides/tgpu-buffer-api',
             },
             {
-              label: 'State Management',
-              slug: 'guides/state-management',
+              label: 'Defining Data Types',
+              slug: 'guides/defining-data-types',
             },
-            {
-              label: 'Parametrized Functions',
-              slug: 'guides/parametrized-functions',
-            },
+            // {
+            //   label: 'Basic Principles',
+            //   slug: 'guides/basic-principles',
+            // },
+            // {
+            //   label: 'State Management',
+            //   slug: 'guides/state-management',
+            // },
+            // {
+            //   label: 'Parametrized Functions',
+            //   slug: 'guides/parametrized-functions',
+            // },
           ],
         },
-        {
-          label: 'Tutorials',
-          items: [
-            {
-              label: 'From Triangle to Boids Simulation',
-              slug: 'tutorials/triangle-to-boids/index',
-            },
-          ],
-        },
-        // typeDocSidebarGroup,
         {
           label: '🙋 FAQ',
           slug: 'faq',
         },
       ],
-      plugins: [
-        // Generate the documentation.
-        // starlightTypeDoc({
-        //   entryPoints: [
-        //     '../../packages/typegpu/src',
-        //     '../../packages/typegpu/src/data',
-        //     '../../packages/typegpu/src/macro',
-        //     '../../packages/typegpu/src/web',
-        //   ],
-        //   tsconfig: '../../packages/typegpu/tsconfig.json',
-        // }),
-      ],
     }),
     tailwind(),
     react(),
+    sitemap(),
   ],
 });

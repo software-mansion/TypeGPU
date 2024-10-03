@@ -1,7 +1,8 @@
 /*
 {
   "title": "Fluid (with atomics)",
-  "category": "simulation"
+  "category": "simulation",
+  "tags": ["experimental"]
 }
 */
 
@@ -15,11 +16,26 @@ import {
 } from '@typegpu/example-toolkit';
 // --
 
-import { builtin, createRuntime, wgsl } from 'typegpu';
-import { arrayOf, atomic, f32, u32, vec2u } from 'typegpu/data';
+import {
+  type TgpuArray,
+  type U32,
+  arrayOf,
+  atomic,
+  f32,
+  u32,
+  vec2u,
+} from 'typegpu/data';
+import tgpu, {
+  asMutable,
+  asReadonly,
+  asUniform,
+  asVertex,
+  builtin,
+  wgsl,
+  type TgpuBuffer,
+} from 'typegpu/experimental';
 
-const runtime = await createRuntime();
-const device = runtime.device;
+const root = await tgpu.init();
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 
@@ -27,7 +43,7 @@ const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 context.configure({
-  device,
+  device: root.device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
@@ -61,41 +77,43 @@ function encodeBrushType(brushType: (typeof BrushTypes)[number]) {
   }
 }
 
-const sizeBuffer = wgsl.buffer(vec2u).$name('size').$allowUniform();
-const viscosityBuffer = wgsl.buffer(u32).$name('viscosity').$allowUniform();
+const sizeBuffer = root.createBuffer(vec2u).$name('size').$usage(tgpu.Uniform);
+const viscosityBuffer = root
+  .createBuffer(u32)
+  .$name('viscosity')
+  .$usage(tgpu.Uniform);
 
-const currentStateBuffer = wgsl
-  .buffer(arrayOf(u32, 1024 ** 2))
+const currentStateBuffer = root
+  .createBuffer(arrayOf(u32, 1024 ** 2))
   .$name('current')
-  .$allowVertex('instance')
-  .$allowReadonly();
+  .$usage(tgpu.Storage, tgpu.Vertex);
 
-const nextStateBuffer = wgsl
-  .buffer(arrayOf(atomic(u32), 1024 ** 2))
+const nextStateBuffer = root
+  .createBuffer(arrayOf(atomic(u32), 1024 ** 2))
   .$name('next')
-  .$allowMutable();
+  .$usage(tgpu.Storage);
 
-const viscosityData = viscosityBuffer.asUniform();
-const currentStateData = currentStateBuffer.asReadonly();
-const currentStateVertex = currentStateBuffer.asVertex();
-const sizeData = sizeBuffer.asUniform();
-const nextStateData = nextStateBuffer.asMutable();
+const viscosityData = asUniform(viscosityBuffer);
+const currentStateData = asReadonly(currentStateBuffer);
+const currentStateVertex = asVertex(currentStateBuffer, 'instance');
+const sizeData = asUniform(sizeBuffer);
+const nextStateData = asMutable(nextStateBuffer);
 
 const maxWaterLevelUnpressurized = wgsl.constant(wgsl`510u`);
 const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
 const maxCompress = wgsl.constant(wgsl`12u`);
 
-const squareBuffer = wgsl
-  .buffer(arrayOf(vec2u, 4), [
-    [0, 0],
-    [0, 1],
-    [1, 0],
-    [1, 1],
+const squareBuffer = root
+  .createBuffer(arrayOf(vec2u, 4), [
+    vec2u(0, 0),
+    vec2u(0, 1),
+    vec2u(1, 0),
+    vec2u(1, 1),
   ])
-  .$allowVertex('vertex')
-  .$allowUniform()
+  .$usage(tgpu.Uniform, tgpu.Vertex)
   .$name('square');
-const squareBufferData = squareBuffer.asVertex();
+
+const squareBufferData = asVertex(squareBuffer, 'vertex');
 
 const getIndex = wgsl.fn`(x: u32, y: u32) -> u32 {
   let h = ${sizeData}.y;
@@ -310,7 +328,6 @@ const fragWGSL = wgsl`
 `;
 
 let drawCanvasData = new Uint32Array(options.size * options.size);
-let commandEncoder: GPUCommandEncoder;
 
 let msSinceLastTick = 0;
 let render: () => void;
@@ -320,16 +337,16 @@ let renderChanges: () => void;
 function resetGameData() {
   drawCanvasData = new Uint32Array(options.size * options.size);
 
-  const computePipeline = runtime.makeComputePipeline({
+  const computePipeline = root.makeComputePipeline({
     workgroupSize: [options.workgroupSize, options.workgroupSize],
     code: computeWGSL,
   });
 
-  const renderPipeline = runtime.makeRenderPipeline({
+  const renderPipeline = root.makeRenderPipeline({
     vertex: {
       code: vertWGSL,
       output: {
-        [builtin.position]: 'pos',
+        [builtin.position.s]: 'pos',
         cell: f32,
       },
     },
@@ -340,20 +357,9 @@ function resetGameData() {
     primitive: { topology: 'triangle-strip' },
   });
 
-  runtime.writeBuffer(
-    currentStateBuffer,
-    Array.from({ length: 1024 ** 2 }, () => 0),
-  );
-
-  runtime.writeBuffer(
-    nextStateBuffer,
-    Array.from({ length: 1024 ** 2 }, () => 0),
-  );
-
-  runtime.writeBuffer(sizeBuffer, [options.size, options.size]);
-
-  const length = options.size * options.size;
-  const cells = new Uint32Array(length);
+  currentStateBuffer.write(Array.from({ length: 1024 ** 2 }, () => 0));
+  nextStateBuffer.write(Array.from({ length: 1024 ** 2 }, () => 0));
+  sizeBuffer.write(vec2u(options.size, options.size));
 
   render = () => {
     const view = context.getCurrentTexture().createView();
@@ -379,23 +385,16 @@ function resetGameData() {
       instanceCount: options.size ** 2,
     });
 
-    runtime.flush();
+    root.flush();
 
-    commandEncoder = device.createCommandEncoder();
-    commandEncoder.copyBufferToBuffer(
-      runtime.bufferFor(nextStateBuffer),
-      0,
-      runtime.bufferFor(currentStateBuffer),
-      0,
-      cells.byteLength,
+    currentStateBuffer.write(
+      // The atomic<> prevents this from being a 1-to-1 match.
+      nextStateBuffer as unknown as TgpuBuffer<TgpuArray<U32>>,
     );
-
-    device.queue.submit([commandEncoder.finish()]);
   };
 
   applyDrawCanvas = () => {
-    const commandEncoder = device.createCommandEncoder();
-    const stateBuffer = runtime.bufferFor(currentStateBuffer);
+    const commandEncoder = root.device.createCommandEncoder();
 
     for (let i = 0; i < options.size; i++) {
       for (let j = 0; j < options.size; j++) {
@@ -404,8 +403,8 @@ function resetGameData() {
         }
 
         const index = j * options.size + i;
-        device.queue.writeBuffer(
-          stateBuffer,
+        root.device.queue.writeBuffer(
+          currentStateBuffer.buffer,
           index * Uint32Array.BYTES_PER_ELEMENT,
           drawCanvasData,
           index,
@@ -414,7 +413,7 @@ function resetGameData() {
       }
     }
 
-    device.queue.submit([commandEncoder.finish()]);
+    root.device.queue.submit([commandEncoder.finish()]);
     drawCanvasData.fill(0);
   };
 
@@ -431,7 +430,7 @@ function resetGameData() {
       vertexCount: 4,
       instanceCount: options.size ** 2,
     });
-    runtime.flush();
+    root.flush();
   };
 
   createSampleScene();
@@ -585,7 +584,7 @@ addSliderParameter(
   { min: 10, max: 1000, step: 1 },
   (value) => {
     options.viscosity = value;
-    runtime.writeBuffer(viscosityBuffer, value);
+    viscosityBuffer.write(value);
   },
 );
 

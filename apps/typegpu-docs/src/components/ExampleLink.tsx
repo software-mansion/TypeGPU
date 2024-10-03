@@ -1,10 +1,11 @@
 import cs from 'classnames';
-import { useAtom } from 'jotai';
+import { useAtom, useSetAtom } from 'jotai';
 import { RESET } from 'jotai/utils';
 import type { MouseEvent } from 'react';
 import SelectedDotSvg from '../assets/selected-dot.svg';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
 import { PLAYGROUND_KEY } from '../utils/examples/exampleContent';
+import { menuShownMobileAtom } from '../utils/examples/menuShownAtom';
 import useEvent from '../utils/useEvent';
 
 type Props = {
@@ -16,10 +17,12 @@ export function ExampleLink(props: Props) {
   const { exampleKey, children } = props;
 
   const [currentExample, setCurrentExample] = useAtom(currentExampleAtom);
+  const setMenuShownMobile = useSetAtom(menuShownMobileAtom);
 
   const handleClick = useEvent((e: MouseEvent) => {
     e.preventDefault();
     setCurrentExample(exampleKey ?? RESET);
+    setMenuShownMobile(false);
   });
 
   const active =

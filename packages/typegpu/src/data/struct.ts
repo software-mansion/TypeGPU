@@ -8,46 +8,52 @@ import {
   type Parsed,
   Schema,
   type UnwrapRecord,
-  object,
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
-import type { AnyWgslData, ResolutionCtx, WgslData } from '../types';
-import { code } from '../wgslCode';
-import { WgslIdentifier } from '../wgslIdentifier';
+import type { TgpuNamable } from '../namable';
+import { code } from '../tgpuCode';
+import { identifier } from '../tgpuIdentifier';
+import type { AnyTgpuData, ResolutionCtx, TgpuData } from '../types';
+import { isAlignedSchema } from './align';
 import alignIO from './alignIO';
+import { isSizedSchema } from './size';
 
 // ----------
 // Public API
 // ----------
 
-export interface WgslStruct<TProps extends Record<string, AnyWgslData>>
+export interface TgpuStruct<TProps extends Record<string, AnyTgpuData>>
   extends ISchema<UnwrapRecord<TProps>>,
-    WgslData<UnwrapRecord<TProps>> {
-  $name(label: string): this;
-}
+    TgpuData<UnwrapRecord<TProps>>,
+    TgpuNamable {}
 
-export const struct = <TProps extends Record<string, AnyWgslData>>(
+export const struct = <TProps extends Record<string, AnyTgpuData>>(
   properties: TProps,
-): WgslStruct<TProps> => new WgslStructImpl(properties);
+): TgpuStruct<TProps> => new TgpuStructImpl(properties);
+
+export function isStructSchema<
+  T extends TgpuStruct<Record<string, AnyTgpuData>>,
+>(schema: T | unknown): schema is T {
+  return schema instanceof TgpuStructImpl;
+}
 
 // --------------
 // Implementation
 // --------------
 
-class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
+class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
   extends Schema<UnwrapRecord<TProps>>
-  implements WgslData<UnwrapRecord<TProps>>
+  implements TgpuData<UnwrapRecord<TProps>>
 {
   private _label: string | undefined;
-  private _innerSchema: ISchema<UnwrapRecord<TProps>>;
 
   public readonly byteAlignment: number;
   public readonly size: number;
+  public readonly isLoose = false as const;
+  public readonly isCustomAligned = false;
 
   constructor(private readonly _properties: TProps) {
     super();
-
-    this._innerSchema = object(_properties);
 
     this.byteAlignment = Object.values(_properties)
       .map((prop) => prop.byteAlignment)
@@ -66,11 +72,27 @@ class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
   }
 
   write(output: ISerialOutput, value: Parsed<UnwrapRecord<TProps>>): void {
-    this._innerSchema.write(output, value);
+    alignIO(output, this.byteAlignment);
+    type Property = keyof Parsed<UnwrapRecord<TProps>>;
+
+    for (const [key, property] of exactEntries(this._properties)) {
+      alignIO(output, property.byteAlignment);
+      property.write(output, value[key as Property]);
+    }
   }
 
   read(input: ISerialInput): Parsed<UnwrapRecord<TProps>> {
-    return this._innerSchema.read(input);
+    alignIO(input, this.byteAlignment);
+    type Property = keyof Parsed<UnwrapRecord<TProps>>;
+    const result = {} as Parsed<UnwrapRecord<TProps>>;
+
+    for (const [key, property] of exactEntries(this._properties)) {
+      alignIO(input, property.byteAlignment);
+      result[key as Property] = property.read(input) as Parsed<
+        UnwrapRecord<TProps>
+      >[Property];
+    }
+    return result;
   }
 
   measure(
@@ -78,19 +100,47 @@ class WgslStructImpl<TProps extends Record<string, AnyWgslData>>
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
     alignIO(measurer, this.byteAlignment);
-    this._innerSchema.measure(value, measurer);
+    type Property = keyof Parsed<UnwrapRecord<TProps>>;
+
+    for (const [key, property] of exactEntries(this._properties)) {
+      alignIO(measurer, property.byteAlignment);
+      property.measure(
+        value === MaxValue ? MaxValue : value[key as Property],
+        measurer,
+      );
+    }
+
+    alignIO(measurer, this.byteAlignment);
     return measurer;
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const identifier = new WgslIdentifier().$name(this._label);
+    const ident = identifier().$name(this._label);
 
     ctx.addDeclaration(code`
-      struct ${identifier} {
-        ${Object.entries(this._properties).map(([key, field]) => code`${key}: ${field},\n`)}
+      struct ${ident} {
+        ${Object.entries(this._properties).map(([key, field]) => code`${getAttribute(field) ?? ''}${key}: ${field},\n`)}
       }
     `);
 
-    return ctx.resolve(identifier);
+    return ctx.resolve(ident);
   }
+}
+
+function getAttribute<T extends AnyTgpuData>(field: T): string | undefined {
+  if (isAlignedSchema(field as unknown)) {
+    return `@align(${field.byteAlignment}) `;
+  }
+
+  if (isSizedSchema(field as unknown)) {
+    return `@size(${field.size}) `;
+  }
+
+  return undefined;
+}
+
+export function exactEntries<T extends Record<keyof T, T[keyof T]>>(
+  record: T,
+): [keyof T, T[keyof T]][] {
+  return Object.entries(record) as [keyof T, T[keyof T]][];
 }

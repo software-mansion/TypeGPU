@@ -2,25 +2,43 @@
  * @module typegpu
  */
 
-export * from './errors';
-export * from './types';
-export { AsCallable, ICallable } from './callable';
-export * from './typegpuRuntime';
-export { default as ProgramBuilder, type Program } from './programBuilder';
-export { StrictNameRegistry, RandomNameRegistry } from './nameRegistry';
-export * from './wgslBuiltin';
+import { createBuffer } from './legacyBufferApi';
+import { bindGroupLayout } from './tgpuBindGroupLayout';
+import { Storage, Uniform, Vertex } from './tgpuBuffer';
+import { read, write } from './tgpuBufferUtils';
 
-export { default as wgsl } from './wgsl';
-export { createRuntime, CreateRuntimeOptions } from './createRuntime';
+export const tgpu = {
+  Uniform,
+  Storage,
+  Vertex,
 
-export type { WgslBuffer } from './wgslBuffer';
-export type { WgslBufferUsage } from './wgslBufferUsage';
-export type { WgslCode } from './wgslCode';
-export type { WgslConst } from './wgslConstant';
-export type { WgslFn } from './wgslFunction';
-export type { WgslPlum } from './wgslPlum';
-export type { WgslSettable } from './settableTrait';
-export type { WgslFn as WgslFnExperimental } from './wgslFunctionExperimental';
-export type { WgslVar } from './wgslVariable';
-export type { WgslSampler } from './wgslSampler';
-export type { WgslTexture, WgslTextureView } from './wgslTexture';
+  bindGroupLayout,
+
+  createBuffer,
+  read,
+  write,
+};
+export default tgpu;
+
+export { RecursiveDataTypeError } from './errors';
+export {
+  TgpuData,
+  AnyTgpuData,
+} from './types';
+export { std } from './std';
+export {
+  isUsableAsStorage,
+  isUsableAsUniform,
+  isUsableAsVertex,
+} from './tgpuBuffer';
+
+export type {
+  TgpuBindGroupLayout,
+  TgpuLayoutEntry,
+  TgpuLayoutSampler,
+  TgpuLayoutUniform,
+  BindLayoutEntry,
+  LayoutEntryToInput,
+  TgpuBindGroup,
+} from './tgpuBindGroupLayout';
+export type { TgpuBuffer } from './tgpuBuffer';

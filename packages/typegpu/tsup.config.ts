@@ -1,12 +1,20 @@
 import { defineConfig } from 'tsup';
 
-export default defineConfig({
-  entryPoints: [
-    'src/index.ts',
-    'src/data/index.ts',
+const EXPERIMENTAL = process.env.EXPERIMENTAL === 'true';
+
+console.log(`-= ${EXPERIMENTAL ? 'EXPERIMENTAL' : 'PRODUCTION'} MODE =-\n\n`);
+
+const entry = ['src/index.ts', 'src/data/index.ts'];
+if (EXPERIMENTAL) {
+  entry.push(
+    'src/experimental/index.ts',
     'src/macro/index.ts',
-    'src/web/index.ts',
-  ],
+    'src/smol/index.ts',
+  );
+}
+
+export default defineConfig({
+  entry,
   outDir: 'dist',
   format: ['cjs', 'esm'],
   tsconfig: './tsconfig.json',

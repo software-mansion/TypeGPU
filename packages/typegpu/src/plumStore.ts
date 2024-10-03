@@ -1,10 +1,10 @@
-import type { WgslSettable } from './settableTrait';
+import type { TgpuSettable } from './settableTrait';
 import {
   type ExtractPlumValue,
   type Getter,
-  type WgslPlum,
+  type TgpuPlum,
   isExternalPlum,
-} from './wgslPlum';
+} from './tgpuPlumTypes';
 
 export type PlumListener<T> = (newValue: T) => unknown;
 type Unsubscribe = () => void;
@@ -20,7 +20,7 @@ type PlumState<T = unknown> = {
    * Map of dependencies to the versions used to
    * compute the latest value.
    */
-  dependencies: Map<WgslPlum, number>;
+  dependencies: Map<TgpuPlum, number>;
   active?: PlumActiveState<T> | undefined;
 };
 
@@ -36,17 +36,17 @@ type PlumActiveState<T> = {
 };
 
 export class PlumStore {
-  private readonly _stateMap = new WeakMap<WgslPlum, PlumState>();
+  private readonly _stateMap = new WeakMap<TgpuPlum, PlumState>();
 
   /**
    * Used to inspect the current state of a plum.
    * To be used mostly in unit tests.
    */
-  inspect(plum: WgslPlum): PlumState | undefined {
+  inspect(plum: TgpuPlum): PlumState | undefined {
     return this._stateMap.get(plum);
   }
 
-  private _getState<T>(plum: WgslPlum<T>): PlumState<T> {
+  private _getState<T>(plum: TgpuPlum<T>): PlumState<T> {
     let state = this._stateMap.get(plum) as PlumState<T> | undefined;
 
     if (!state) {
@@ -64,7 +64,7 @@ export class PlumStore {
     return state;
   }
 
-  private _notifyListeners<T>(plum: WgslPlum<T>): void {
+  private _notifyListeners<T>(plum: TgpuPlum<T>): void {
     const state = this._getState(plum);
 
     if (!state.active) {
@@ -79,10 +79,10 @@ export class PlumStore {
     }
   }
 
-  private _computeAndGatherDependencies<T>(plum: WgslPlum<T>) {
-    const dependencies = new Map<WgslPlum, number>();
+  private _computeAndGatherDependencies<T>(plum: TgpuPlum<T>) {
+    const dependencies = new Map<TgpuPlum, number>();
 
-    const getter = (<T>(dep: WgslPlum<T>) => {
+    const getter = (<T>(dep: TgpuPlum<T>) => {
       // registering dependency.
       if (!dependencies.has(dep)) {
         const depState = this._getState(dep);
@@ -95,7 +95,7 @@ export class PlumStore {
     return { value: plum.compute(getter), dependencies };
   }
 
-  private _recompute<T>(plum: WgslPlum<T>): T {
+  private _recompute<T>(plum: TgpuPlum<T>): T {
     const state = this._getState(plum);
 
     if (state.active) {
@@ -131,7 +131,7 @@ export class PlumStore {
     return state.value;
   }
 
-  get<TPlum extends WgslPlum>(plum: TPlum): ExtractPlumValue<TPlum> {
+  get<TPlum extends TgpuPlum>(plum: TPlum): ExtractPlumValue<TPlum> {
     const state = this._getState(plum);
 
     if (state.active) {
@@ -161,7 +161,7 @@ export class PlumStore {
     return this._recompute(plum) as ExtractPlumValue<TPlum>;
   }
 
-  set<T>(plum: WgslPlum<T> & WgslSettable, value: T): void {
+  set<T>(plum: TgpuPlum<T> & TgpuSettable, value: T): void {
     const state = this._getState(plum);
 
     if (Object.is(state.value, value)) {
@@ -175,7 +175,7 @@ export class PlumStore {
     this._notifyListeners(plum);
   }
 
-  subscribe<T>(plum: WgslPlum<T>, listener: PlumListener<T>): Unsubscribe {
+  subscribe<T>(plum: TgpuPlum<T>, listener: PlumListener<T>): Unsubscribe {
     const state = this._getState(plum);
 
     let externalUnsub: (() => unknown) | undefined;

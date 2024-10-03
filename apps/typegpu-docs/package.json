@@ -3,8 +3,7 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
+    "dev:watch": "astro dev",
     "build": "astro check && astro build",
     "preview": "astro preview",
     "astro": "astro"
@@ -12,12 +11,14 @@
   "dependencies": {
     "@astrojs/check": "^0.8.2",
     "@astrojs/react": "^3.6.1",
+    "@astrojs/sitemap": "^3.1.6",
     "@astrojs/starlight": "^0.25.2",
     "@astrojs/tailwind": "^5.1.0",
     "@babel/standalone": "^7.24.7",
     "@monaco-editor/react": "^4.6.0",
     "@radix-ui/react-select": "^2.1.1",
     "@radix-ui/react-slider": "^1.2.0",
+    "@types/dom-mediacapture-transform": "^0.1.9",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "astro": "^4.10.2",
@@ -36,6 +37,7 @@
     "typedoc": "^0.26.5",
     "typedoc-plugin-markdown": "^4.2.3",
     "typegpu": "workspace:*",
+    "@typegpu/jit": "workspace:*",
     "typescript": "^5.5.4",
     "zod": "^3.23.8"
   },
