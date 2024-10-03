@@ -48,12 +48,10 @@ const COMMANDS = {
       }
 
       if (output && files.length > 1) {
-        if (!input.endsWith('.wgsl')) {
-          console.error(
-            `${color.Red}Error: More than one file found, while a single output name provided ${color.Reset}`,
-          );
-          exit(1);
-        }
+        console.error(
+          `${color.Red}Error: More than one file found, while a single output name provided ${color.Reset}`,
+        );
+        exit(1);
       }
 
       const results = await Promise.allSettled(
