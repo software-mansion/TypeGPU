@@ -14,9 +14,8 @@ import type { TgpuNamable } from '../namable';
 import { code } from '../tgpuCode';
 import { identifier } from '../tgpuIdentifier';
 import type { AnyTgpuData, ResolutionCtx, TgpuData } from '../types';
-import { isAlignedSchema } from './align';
 import alignIO from './alignIO';
-import { isSizedSchema } from './size';
+import { isDecorated, isLooseDecorated } from './attributes';
 
 // ----------
 // Public API
@@ -75,7 +74,7 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
     alignIO(output, this.byteAlignment);
     type Property = keyof Parsed<UnwrapRecord<TProps>>;
 
-    for (const [key, property] of exactEntries(this._properties)) {
+    for (const [key, property] of Object.entries(this._properties)) {
       alignIO(output, property.byteAlignment);
       property.write(output, value[key as Property]);
     }
@@ -86,7 +85,7 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
     type Property = keyof Parsed<UnwrapRecord<TProps>>;
     const result = {} as Parsed<UnwrapRecord<TProps>>;
 
-    for (const [key, property] of exactEntries(this._properties)) {
+    for (const [key, property] of Object.entries(this._properties)) {
       alignIO(input, property.byteAlignment);
       result[key as Property] = property.read(input) as Parsed<
         UnwrapRecord<TProps>
@@ -102,7 +101,7 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
     alignIO(measurer, this.byteAlignment);
     type Property = keyof Parsed<UnwrapRecord<TProps>>;
 
-    for (const [key, property] of exactEntries(this._properties)) {
+    for (const [key, property] of Object.entries(this._properties)) {
       alignIO(measurer, property.byteAlignment);
       property.measure(
         value === MaxValue ? MaxValue : value[key as Property],
@@ -119,7 +118,7 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
 
     ctx.addDeclaration(code`
       struct ${ident} {
-        ${Object.entries(this._properties).map(([key, field]) => code`${getAttribute(field) ?? ''}${key}: ${field},\n`)}
+        ${Object.entries(this._properties).map(([key, field]) => code`${getAttributes(field) ?? ''}${key}: ${field},\n`)}
       }
     `);
 
@@ -127,20 +126,22 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
   }
 }
 
-function getAttribute<T extends AnyTgpuData>(field: T): string | undefined {
-  if (isAlignedSchema(field as unknown)) {
-    return `@align(${field.byteAlignment}) `;
+function getAttributes<T extends AnyTgpuData>(field: T): string | undefined {
+  if (!isDecorated(field) && !isLooseDecorated(field)) {
+    return undefined;
   }
 
-  if (isSizedSchema(field as unknown)) {
-    return `@size(${field.size}) `;
-  }
+  return field.attributes
+    .map((attrib) => {
+      if ('align' in attrib) {
+        return `@align(${attrib.align}) `;
+      }
 
-  return undefined;
-}
+      if ('size' in attrib) {
+        return `@size(${attrib.size}) `;
+      }
 
-export function exactEntries<T extends Record<keyof T, T[keyof T]>>(
-  record: T,
-): [keyof T, T[keyof T]][] {
-  return Object.entries(record) as [keyof T, T[keyof T]][];
+      return '';
+    })
+    .join('');
 }
