@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { exit } from 'node:process';
 import arg from 'arg';
+import { glob } from 'glob';
 import color from './colors.mjs';
 import generate from './gen.mjs';
 
@@ -23,15 +24,22 @@ const COMMANDS = {
       const input = args['--input'];
       const output = args['--output'];
 
-      if (!input || !output) {
+      if (!input) {
         console.error(
-          `${color.Red}Error: Missing required arguments: ${color.Yellow}--input${color.Reset} and ${color.Yellow}--output${color.Reset}`,
+          `${color.Red}Error: Missing required argument: ${color.Yellow}--input${color.Reset}`,
         );
         exit(1);
       }
 
       try {
-        await generate(input, output);
+        const files = await glob(input);
+        await Promise.all(
+          files.map((file) => {
+            const out = output ?? file.replace('.wgsl', '.ts');
+            console.log(`${file} >>> ${out}`);
+            generate(file, out);
+          }),
+        );
       } catch (error) {
         console.error(`${color.Red}Error: ${error.message}${color.Reset}`);
         exit(1);
