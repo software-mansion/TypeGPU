@@ -9,6 +9,7 @@ import {
   Schema,
   type UnwrapRecord,
 } from 'typed-binary';
+import { isArraySchema } from '.';
 import { RecursiveDataTypeError } from '../errors';
 import type { TgpuNamable } from '../namable';
 import { code } from '../tgpuCode';
@@ -47,10 +48,11 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
 {
   private _label: string | undefined;
 
+  private _size: number;
   public readonly byteAlignment: number;
-  public readonly size: number;
   public readonly isLoose = false as const;
   public readonly isCustomAligned = false;
+  public readonly isRuntimeSized: boolean;
 
   constructor(private readonly _properties: TProps) {
     super();
@@ -59,7 +61,17 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
       .map((prop) => prop.byteAlignment)
       .reduce((a, b) => (a > b ? a : b));
 
-    this.size = this.measure(MaxValue).size;
+    this._size = this.measure(MaxValue).size;
+    this.isRuntimeSized = Number.isNaN(this._size);
+  }
+
+  get size(): number {
+    if (this.isRuntimeSized) {
+      throw new Error(
+        'Cannot get size of struct with runtime sized properties',
+      );
+    }
+    return this._size;
   }
 
   $name(label: string) {
@@ -72,6 +84,9 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
   }
 
   write(output: ISerialOutput, value: Parsed<UnwrapRecord<TProps>>): void {
+    if (this.isRuntimeSized) {
+      throw new Error('Cannot write struct with runtime sized properties');
+    }
     alignIO(output, this.byteAlignment);
     type Property = keyof Parsed<UnwrapRecord<TProps>>;
 
@@ -82,6 +97,9 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
   }
 
   read(input: ISerialInput): Parsed<UnwrapRecord<TProps>> {
+    if (this.isRuntimeSized) {
+      throw new Error('Cannot read struct with runtime sized properties');
+    }
     alignIO(input, this.byteAlignment);
     type Property = keyof Parsed<UnwrapRecord<TProps>>;
     const result = {} as Parsed<UnwrapRecord<TProps>>;
@@ -99,19 +117,27 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
     value: MaxValue | Parsed<UnwrapRecord<TProps>>,
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
-    alignIO(measurer, this.byteAlignment);
+    let structMeasurer = measurer;
+    alignIO(structMeasurer, this.byteAlignment);
     type Property = keyof Parsed<UnwrapRecord<TProps>>;
 
     for (const [key, property] of exactEntries(this._properties)) {
-      alignIO(measurer, property.byteAlignment);
-      property.measure(
+      if (structMeasurer.isUnbounded) {
+        throw new Error('Only the last property can be unbounded');
+      }
+      alignIO(structMeasurer, property.byteAlignment);
+      structMeasurer = property.measure(
         value === MaxValue ? MaxValue : value[key as Property],
-        measurer,
+        structMeasurer,
       );
+
+      if (structMeasurer.isUnbounded && !isArraySchema(property)) {
+        throw new Error('Cannot nest unbouded structs');
+      }
     }
 
-    alignIO(measurer, this.byteAlignment);
-    return measurer;
+    alignIO(structMeasurer, this.byteAlignment);
+    return structMeasurer;
   }
 
   resolve(ctx: ResolutionCtx): string {
