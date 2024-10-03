@@ -1,0 +1,16 @@
+---
+import { LinkCard } from '@astrojs/starlight/components';
+import pkg from 'lz-string';
+const { compressToEncodedURIComponent } = pkg;
+
+const { code } = Astro.props;
+const encodedCode = compressToEncodedURIComponent(code);
+const url = `/typegpu/examples#example=playground__${encodedCode}`;
+---
+
+
+<LinkCard
+    title="Run this in the playground"
+    href={url}
+    target="_blank"
+/>
