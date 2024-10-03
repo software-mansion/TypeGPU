@@ -6,6 +6,10 @@ import tailwind from '@astrojs/tailwind';
 import { defineConfig } from 'astro/config';
 import importRawRedirectPlugin from './vite-import-raw-redirect-plugin';
 
+const stripFalsy = (items) => items.filter((item) => !!item);
+
+const DEV = import.meta.env.DEV;
+
 // https://astro.build/config
 export default defineConfig({
   site: 'https://docs.swmansion.com',
@@ -40,7 +44,7 @@ export default defineConfig({
       social: {
         github: 'https://github.com/software-mansion/TypeGPU',
       },
-      sidebar: [
+      sidebar: stripFalsy([
         {
           label: '⭐ Live Examples',
           link: 'examples',
@@ -50,11 +54,15 @@ export default defineConfig({
         },
         {
           label: 'Guides',
-          items: [
+          items: stripFalsy([
             // Each item here is one entry in the navigation menu.
             {
               label: 'Getting Started',
               slug: 'guides/getting-started',
+            },
+            DEV && {
+              label: 'Roots',
+              slug: 'guides/roots',
             },
             {
               label: 'Typed Buffers',
@@ -76,13 +84,22 @@ export default defineConfig({
             //   label: 'Parametrized Functions',
             //   slug: 'guides/parametrized-functions',
             // },
+          ]),
+        },
+        DEV && {
+          label: 'Tutorials',
+          items: [
+            {
+              label: 'Making Triangles Fly',
+              slug: 'tutorials/triangle-to-boids',
+            },
           ],
         },
         {
           label: '🙋 FAQ',
           slug: 'faq',
         },
-      ],
+      ]),
     }),
     tailwind(),
     react(),

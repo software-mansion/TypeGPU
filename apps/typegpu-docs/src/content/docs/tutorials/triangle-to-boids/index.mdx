@@ -4,7 +4,7 @@ description: A tutorial that will guide you through the process of creating a si
 draft: true
 ---
 
-import { Icon } from '@astrojs/starlight/components';
+import { Icon, Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 import { Image } from 'astro:assets';
 import triangleImage from './images/ttbt-triangle.png';
 import boidsImage from './images/ttbt-boids.png';
@@ -19,19 +19,16 @@ In this tutorial, we will explore the capabilities of TypeGPU by transforming a 
 
 <ul class="list-disc pl-5">
   <li>
-    Creating and using a TypeGPU runtime
+    Managing resources with a [root](/TypeGPU/guides/roots).
   </li>
   <li>
-    Writing shader code in TypeGPU
+    Writing shader code in TGSL.
   </li>
   <li>
-    Creating vertex and storage buffers and using them in shaders
+    Creating vertex and storage buffers and using them in shaders.
   </li>
   <li>
-    Creating render and compute pipelines
-  </li>
-  <li>
-    Understanding and using slots
+    Creating render and compute pipelines.
   </li>
 </ul>
 
@@ -39,77 +36,96 @@ Along the way, there will be places where you might want to follow a different p
 Feel free to do so! There will be checkpoints where you can compare your code with the tutorial code and see if it works as expected.
 The checkpoints will also include comparisons with WebGPU code, showing how TypeGPU helps you write less boilerplate code.
 
-Let’s start with a simple program that draws a triangle on the screen.
+Let's start with a simple program that draws a triangle on the screen.
 First, we need to set up the canvas and our runtime.
 This setup will mostly look very similar in every project that draws something to the screen.
 
-```ts
-// triangle.ts
-import { createRuntime } from 'typegpu'
-import { addElement } from '@typegpu/example-toolkit';
+<Tabs>
+  <TabItem label="triangle.ts">
+  ```ts
+  import tgpu from 'typegpu';
 
-// create the runtime and get the GPUDevice
-const runtime = await createRuntime();
-const device = runtime.device;
+  // Create the root
+  const root = await tgpu.init();
 
-// add the canvas element and get the context
-const canvas = await addElement('canvas', {aspectRatio: 1});
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+  // Accessing the HTML canvas
+  const canvas = document.getElementById('canvas');
+  const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
-// configure the canvas context
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+  // configure the canvas context
+  const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+  context.configure({
+    device: root.device,
+    format: presentationFormat,
+    alphaMode: 'premultiplied',
+  });
+  ```
+  </TabItem>
+  <TabItem label="index.html">
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Making Triangles Fly</title>
+</head>
+<body>
+  <canvas id="canvas" width="512" height="512"></canvas>
+</body>
+</html>
 ```
+  </TabItem>
+</Tabs>
 
-import { Aside } from '@astrojs/starlight/components';
 import { LinkCard } from '@astrojs/starlight/components';
-
-<Aside type="tip">
-
-We're creating a canvas by running the `addElement` function from our example toolkit, but that is not the only way! You can use the standard `document.createElement('canvas')` and append it to the document.
-
-</Aside>
-
-import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 ## Drawing a Triangle
 
 Now that we have our canvas setup, we can start drawing on it. We will start by creating a simple shader that will draw a triangle.
 
 ```ts
-import { wgsl, builtin } from 'typegpu'
+import * as d from 'typegpu/data';
 
-const vertexCode = wgsl`
-  var verticies = array<vec2f, 3>(
-    vec2(0.0, 0.5),
-    vec2(-0.5, -0.5),
-    vec2(0.5, -0.5)
-  );
+const VertexOutput = d.ioStruct({
+  position: tgpu.builtin.position,
+});
 
-  // we can use builtin.vertexIndex to let TypeGPU
-  // know that we want to access the `vertexIndex` WGSL builtin
-  let pos = vec4f(verticies[${builtin.vertexIndex}], 0.0, 1.0);
-`;
+const vertexMain = tgpu
+  .vertexFn([tgpu.builtin.vertexIndex], VertexOutput)
+  .implement((idx) => {
+    const vertices = [
+      vec2f(0, 0.5),
+      vec2f(-0.5, -0.5),
+      vec2f(0.5, -0.5),
+    ];
+
+    return {
+      // we can use tgpu.builtin.vertexIndex to access the
+      // index of the vertex we are currently processing.
+      position: vec4f(verticies[idx], 0.0, 1.0),
+    };
+  });
+
+const fragmentMain = tgpu
+  .fragmentFn([], vec4f)
+  .implement(() => {
+    // let's go with a simple purple for now
+    return vec4f(0.7686, 0.3922, 1.0, 1.0);
+  });
+
 ```
 
-<Aside type="caution">
-  Pay attention to how the vertex shader code looks.
-  There is no function declaration and no return statement! That is by design - TypeGPU will take care of that.
-</Aside>
-
-Since there is no function declaration, there is no place for defining parameters - but don't worry,
-every used builtin and vertex shader will be properly added by TypeGPU.
+We can define what parameters the vertex function will take, and what it returns when calling `vertexFn(params, returns)`.
+This creates a **shell** that we can implement using either WGSL or TGSL. The TGSL function passed into `implement` can infer
+what arguments it accepts, and what it should return:
 
 ```ts
-const fragmentCode = wgsl`
-  // let's go with a simple purple for now
-  return vec4(0.7686, 0.3922, 1.0, 1.0);
-`;
+const vertexMain = tgpu
+  .vertexFn([tgpu.builtin.vertexIndex], VertexOutput)
+  .implement(/* accept parameter of type (p0: number) => { position: vec4f } */);
 ```
+
 
 ### Creating a render pipeline
 import { Card, CardGrid } from '@astrojs/starlight/components';
@@ -132,32 +148,19 @@ The API for creating a pipeline in TypeGPU is similar to the WebGPU API but with
 </CardGrid>
 
 ```ts
-const pipeline = runtime.makeRenderPipeline({
-  vertex: {
-    code: vertexCode,
-    output: {
-      [builtin.position] : 'pos'
-    }
-  },
-  fragment: {
-    code: fragmentCode,
-    target: [{
-      format: presentationFormat
-    }]
-  },
-  primitive: {
-    topology: 'triangle-list'
-  }
-})
+const renderPipeline = root
+  .withVertex(vertexMain)
+  .withFragment(fragmentMain)
+  .createPipeline({
+    format: presentationFormat,
+  });
 ```
 
 Now all we need to do is execute the pipeline. To do so, we need to pass `GPURenderPassDescriptor` along with the `vertexCount`.
 
 ```ts
-import { onFrame } from '@typegpu/example-toolkit';
-
-onFrame(() => {
-  pipeline.execute({
+function frame() {
+  renderPipeline.execute({
     colorAttachments: [
       {
         view: context.getCurrentTexture().createView(),
@@ -168,15 +171,19 @@ onFrame(() => {
     ],
     vertexCount: 3,
   });
-});
+
+  requestAnimationFrame(frame);
+}
+
+frame();
 ```
 <Aside type="danger" title="The code above draws nothing!">
-  The `pipeline.execute()` method encodes all the necessary commands, but they will not be queued until we either read from a buffer or call `runtime.flush()`.
+  The `renderPipeline.execute(...)` method encodes all the necessary commands, but they will not be queued until we either read from a buffer or call `root.flush()`.
 </Aside>
 
 ```diff lang=ts
-onFrame(() => {
-  pipeline.execute({
+function frame() {
+  renderPipeline.execute({
     colorAttachments: [
       {
         view: context.getCurrentTexture().createView(),
@@ -187,8 +194,13 @@ onFrame(() => {
     ],
     vertexCount: 3,
   });
-  runtime.flush();
-})
+
++  root.flush();
+
+  requestAnimationFrame(frame);
+}
+
+frame();
 ```
 
 ## TypeGPU and WebGPU comparison
