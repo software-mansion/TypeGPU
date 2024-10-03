@@ -1,9 +1,11 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { f32, u32 } from '../src/data';
 import {
+  type AnyBuiltin,
   type OmitBuiltins,
   StrictNameRegistry,
   builtin,
+  isBuiltin,
   wgsl,
 } from '../src/experimental';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
@@ -51,5 +53,33 @@ describe('builtin', () => {
       a: u32,
       c: f32,
     });
+  });
+});
+
+describe('isBuiltin', () => {
+  it('narrows an unknown type to any builtin', () => {
+    const value = builtin.position as unknown;
+    expectTypeOf(value).toEqualTypeOf<unknown>();
+
+    let passed = false;
+    if (isBuiltin(value)) {
+      passed = true;
+      expectTypeOf(value).toEqualTypeOf<AnyBuiltin>();
+    }
+
+    expect(passed).toBeTruthy();
+  });
+
+  it('narrows a union to the builtin element', () => {
+    const value = builtin.position as typeof builtin.position | string;
+    expectTypeOf(value).toEqualTypeOf<typeof builtin.position | string>();
+
+    let passed = false;
+    if (isBuiltin(value)) {
+      passed = true;
+      expectTypeOf(value).toEqualTypeOf<typeof builtin.position>();
+    }
+
+    expect(passed).toBeTruthy();
   });
 });
