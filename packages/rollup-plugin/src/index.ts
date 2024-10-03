@@ -34,15 +34,14 @@ function gatherTgpuAliases(ctx: Context, node: AnyNode) {
       node.source.value === 'typegpu/experimental'
     ) {
       for (const spec of node.specifiers) {
-        if (spec.type === 'ImportDefaultSpecifier') {
+        if (
           // The default export of both 'typegpu' and 'typegpu/experimental' is the `tgpu` object.
-          ctx.tgpuAliases.add(spec.local.name);
-        } else if (
-          spec.type === 'ImportSpecifier' &&
-          spec.imported.type === 'Identifier' &&
-          spec.imported.name === 'tgpu'
-        ) {
+          spec.type === 'ImportDefaultSpecifier' ||
           // Aliasing 'tgpu' while importing, e.g. import { tgpu as t } from 'typegpu';
+          (spec.type === 'ImportSpecifier' &&
+            spec.imported.type === 'Identifier' &&
+            spec.imported.name === 'tgpu')
+        ) {
           ctx.tgpuAliases.add(spec.local.name);
         } else if (spec.type === 'ImportNamespaceSpecifier') {
           // Importing everything, e.g. import * as t from 'typegpu';
@@ -62,14 +61,14 @@ function isTgpu(ctx: Context, node: AnyNode): boolean {
 
   let tail = node;
   while (true) {
-    if (node.type === 'MemberExpression') {
-      if (node.property.type !== 'Identifier') {
+    if (tail.type === 'MemberExpression') {
+      if (tail.property.type !== 'Identifier') {
         // Not handling computed expressions.
         break;
       }
 
-      path = path ? `${node.property.name}.${path}` : node.property.name;
-      tail = node.object;
+      path = path ? `${tail.property.name}.${path}` : tail.property.name;
+      tail = tail.object;
     } else if (tail.type === 'Identifier') {
       path = path ? `${tail.name}.${path}` : tail.name;
       break;
