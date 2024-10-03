@@ -117,9 +117,9 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
     const ident = identifier().$name(this._label);
 
     ctx.addDeclaration(code`
-      struct ${ident} {
-        ${Object.entries(this._properties).map(([key, field]) => code`${getAttributes(field) ?? ''}${key}: ${field},\n`)}
-      }
+struct ${ident} {\
+${Object.entries(this._properties).map(([key, field]) => code`\n  ${getAttributes(field) ?? ''}${key}: ${field},`)}
+}
     `);
 
     return ctx.resolve(ident);
@@ -133,11 +133,11 @@ function getAttributes<T extends AnyTgpuData>(field: T): string | undefined {
 
   return field.attributes
     .map((attrib) => {
-      if ('align' in attrib) {
-        return `@align(${attrib.align}) `;
+      if (attrib.type === 'align') {
+        return `@align(${attrib.alignment}) `;
       }
 
-      if ('size' in attrib) {
+      if (attrib.type) {
         return `@size(${attrib.size}) `;
       }
 
