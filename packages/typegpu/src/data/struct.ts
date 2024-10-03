@@ -159,13 +159,7 @@ class TgpuLooseStructImpl<
 
   constructor(private readonly _properties: TProps) {
     super();
-
-    const measurer = new Measurer();
-    for (const [key, property] of exactEntries(_properties)) {
-      property.measure(MaxValue, measurer);
-    }
-
-    this.size = measurer.size;
+    this.size = this.measure(MaxValue).size;
   }
 
   $name(label: string) {
