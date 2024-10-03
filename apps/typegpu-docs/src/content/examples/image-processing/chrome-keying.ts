@@ -166,7 +166,7 @@ const renderProgram = root.makeRenderPipeline({
       let fragUV = uv[${builtin.vertexIndex}];
     `,
     output: {
-      [builtin.position]: 'position',
+      [builtin.position.s]: 'position',
       fragUV: vec2f,
     },
   },

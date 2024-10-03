@@ -80,7 +80,7 @@ const renderProgram = root.makeRenderPipeline({
       let fragUV = uv[${builtin.vertexIndex}];
     `,
     output: {
-      [builtin.position]: 'Position',
+      [builtin.position.s]: 'Position',
       fragUV: vec2f,
     },
   },

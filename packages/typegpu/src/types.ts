@@ -50,6 +50,7 @@ export interface ResolutionCtx {
   transpileFn(fn: TgpuFn<any, AnyTgpuData>): {
     argNames: string[];
     body: Block;
+    externalNames: string[];
   };
   fnToWgsl(
     // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>

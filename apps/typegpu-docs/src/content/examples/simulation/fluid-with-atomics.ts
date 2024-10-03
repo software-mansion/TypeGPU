@@ -346,7 +346,7 @@ function resetGameData() {
     vertex: {
       code: vertWGSL,
       output: {
-        [builtin.position]: 'pos',
+        [builtin.position.s]: 'pos',
         cell: f32,
       },
     },

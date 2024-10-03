@@ -75,29 +75,29 @@ describe('TGSL tgpu.fn function', () => {
 
     const actual = parseWGSL(wgsl`
       fn main() {
-        let x = ${getY}();
+        var x = ${getY}();
       }
     `);
 
     const expected = parse(`
       fn get_color() -> vec3f {
-        let color = vec3f();
-        let color2 = vec3f(1, 2, 3);
+        var color = vec3f();
+        var color2 = vec3f(1, 2, 3);
         return color;
       }
 
       fn get_x() -> f32 {
-        let color = get_color();
+        var color = get_color();
         return 3;
       }
 
       fn get_y() -> f32 {
-        let c = get_color();
+        var c = get_color();
         return get_x();
       }
 
       fn main() {
-        let x = get_y();
+        var x = get_y();
       }
     `);
 

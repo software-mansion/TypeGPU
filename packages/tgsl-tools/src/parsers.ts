@@ -1,6 +1,23 @@
 import * as acorn from 'acorn';
 import type * as smol from 'typegpu/smol';
 
+type Scope = {
+  /** identifiers declared in this scope */
+  declaredNames: string[];
+};
+
+type Context = {
+  /** Holds a set of all identifiers that were used in code, but were not declared in code. */
+  externalNames: Set<string>;
+  /** Used to signal to identifiers that they should not treat their resolution as possible external uses. */
+  ignoreExternalDepth: number;
+  stack: Scope[];
+};
+
+function isDeclared(ctx: Context, name: string) {
+  return ctx.stack.some((scope) => scope.declaredNames.includes(name));
+}
+
 const BINARY_OP_MAP = {
   '==': '==',
   '!=': '!=',
@@ -70,63 +87,80 @@ const ASSIGNMENT_OP_MAP = {
 
 const Transpilers: Partial<{
   [Type in acorn.AnyNode['type']]: (
+    ctx: Context,
     node: Extract<acorn.AnyNode, { type: Type }>,
   ) => smol.AnyNode;
 }> = {
-  Program(node) {
+  Program(ctx, node) {
     const body = node.body[0];
 
     if (!body) {
       throw new Error('tgpu.fn was not implemented correctly.');
     }
 
-    return transpile(body);
+    return transpile(ctx, body);
   },
 
-  ExpressionStatement: (node) => transpile(node.expression),
+  ExpressionStatement: (ctx, node) => transpile(ctx, node.expression),
 
-  ArrowFunctionExpression: (node) => {
+  ArrowFunctionExpression: (ctx, node) => {
     throw new Error('Arrow functions are not supported inside TGSL.');
   },
 
-  BlockStatement: (node) => ({
-    block: node.body.map((statement) => transpile(statement) as smol.Statement),
-  }),
+  BlockStatement(ctx, node) {
+    ctx.stack.push({ declaredNames: [] });
 
-  ReturnStatement: (node) => ({
+    const result = {
+      block: node.body.map(
+        (statement) => transpile(ctx, statement) as smol.Statement,
+      ),
+    };
+
+    ctx.stack.pop();
+
+    return result;
+  },
+
+  ReturnStatement: (ctx, node) => ({
     return: node.argument
-      ? (transpile(node.argument) as smol.Expression)
+      ? (transpile(ctx, node.argument) as smol.Expression)
       : null,
   }),
 
-  Identifier(node) {
+  Identifier(ctx, node) {
+    if (ctx.ignoreExternalDepth === 0 && !isDeclared(ctx, node.name)) {
+      ctx.externalNames.add(node.name);
+    }
+
     return node.name;
   },
 
-  BinaryExpression(node) {
+  BinaryExpression(ctx, node) {
     const wgslOp = BINARY_OP_MAP[node.operator];
-    const left = transpile(node.left);
-    const right = transpile(node.right);
+    const left = transpile(ctx, node.left);
+    const right = transpile(ctx, node.right);
     return { x2: [left, wgslOp, right] } as smol.BinaryExpression;
   },
 
-  LogicalExpression(node) {
+  LogicalExpression(ctx, node) {
     const wgslOp = LOGICAL_OP_MAP[node.operator];
-    const left = transpile(node.left);
-    const right = transpile(node.right);
+    const left = transpile(ctx, node.left);
+    const right = transpile(ctx, node.right);
     return { x2: [left, wgslOp, right] } as smol.LogicalExpression;
   },
 
-  AssignmentExpression(node) {
+  AssignmentExpression(ctx, node) {
     const wgslOp = ASSIGNMENT_OP_MAP[node.operator];
-    const left = transpile(node.left);
-    const right = transpile(node.right);
+    const left = transpile(ctx, node.left);
+    const right = transpile(ctx, node.right);
     return { x2: [left, wgslOp, right] } as smol.AssignmentExpression;
   },
 
-  MemberExpression(node) {
-    const object = transpile(node.object) as smol.Expression;
-    const property = transpile(node.property) as smol.Expression;
+  MemberExpression(ctx, node) {
+    const object = transpile(ctx, node.object) as smol.Expression;
+    ctx.ignoreExternalDepth++;
+    const property = transpile(ctx, node.property) as smol.Expression;
+    ctx.ignoreExternalDepth--;
 
     if (node.computed) {
       return { '[]': [object, property] };
@@ -139,24 +173,24 @@ const Transpilers: Partial<{
     return { '.': [object, property] };
   },
 
-  Literal(node) {
+  Literal(ctx, node) {
     if (typeof node.value === 'string') {
       throw new Error('String literals are not supported in TGSL.');
     }
     return { num: node.raw ?? '' };
   },
 
-  CallExpression(node) {
-    const callee = transpile(node.callee) as smol.Expression;
+  CallExpression(ctx, node) {
+    const callee = transpile(ctx, node.callee) as smol.Expression;
 
     const args = node.arguments.map((arg) =>
-      transpile(arg),
+      transpile(ctx, arg),
     ) as smol.Expression[];
 
     return { call: callee, args };
   },
 
-  VariableDeclaration(node) {
+  VariableDeclaration(ctx, node) {
     if (node.declarations.length !== 1 || !node.declarations[0]) {
       throw new Error(
         'Currently only one declaration in a statement is supported.',
@@ -164,14 +198,18 @@ const Transpilers: Partial<{
     }
 
     const decl = node.declarations[0];
-    const id = transpile(decl.id);
+    ctx.ignoreExternalDepth++;
+    const id = transpile(ctx, decl.id);
+    ctx.ignoreExternalDepth--;
 
     if (typeof id !== 'string') {
       throw new Error('Invalid variable declaration, expected identifier.');
     }
 
+    ctx.stack[ctx.stack.length - 1]?.declaredNames.push(id);
+
     const init = decl.init
-      ? (transpile(decl.init) as smol.Expression)
+      ? (transpile(ctx, decl.init) as smol.Expression)
       : undefined;
 
     if (node.kind === 'var') {
@@ -184,74 +222,127 @@ const Transpilers: Partial<{
           'Did not provide initial value in `const` declaration.',
         );
       }
-      return { let: id, be: init };
+      return { const: id, eq: init };
     }
 
-    return { var: id, init };
+    return { let: id, eq: init };
   },
 
-  IfStatement(node) {
-    const test = transpile(node.test) as smol.Expression;
-    const consequent = transpile(node.consequent) as smol.Statement;
+  IfStatement(ctx, node) {
+    const test = transpile(ctx, node.test) as smol.Expression;
+    const consequent = transpile(ctx, node.consequent) as smol.Statement;
     const alternate = node.alternate
-      ? (transpile(node.alternate) as smol.Statement)
+      ? (transpile(ctx, node.alternate) as smol.Statement)
       : undefined;
 
     return { if: test, do: consequent, else: alternate };
   },
 };
 
-function transpile(node: acorn.AnyNode): smol.AnyNode {
+function transpile(ctx: Context, node: acorn.AnyNode): smol.AnyNode {
   const transpiler = Transpilers[node.type];
 
   if (!transpiler) {
     throw new Error(`Unsupported JS functionality: ${node.type}`);
   }
 
-  return transpiler(node as never);
+  return transpiler(ctx, node as never);
 }
 
-export function transpileFn(jsCode: string): {
+export type TranspilationResult = {
   argNames: string[];
   body: smol.Block;
+  /**
+   * All identifiers found in the function code that are not declared in the
+   * function itself, or in the block that is accessing that identifier.
+   */
+  externalNames: string[];
+};
+
+export function extractFunctionParts(program: acorn.Program): {
+  params: acorn.Identifier[];
+  body: acorn.BlockStatement | acorn.Expression;
 } {
+  const programBody = program.body[0];
+
+  if (
+    programBody?.type === 'ExpressionStatement' &&
+    programBody.expression.type === 'ArrowFunctionExpression'
+  ) {
+    const mainExpression = programBody.expression;
+
+    if (mainExpression.async) {
+      throw new Error('tgpu.fn cannot be async');
+    }
+
+    if (mainExpression.params.some((p) => p.type !== 'Identifier')) {
+      throw new Error('tgpu.fn implementations require concrete parameters');
+    }
+
+    return {
+      params: mainExpression.params as acorn.Identifier[],
+      body: mainExpression.body,
+    };
+  }
+
+  if (programBody?.type === 'FunctionDeclaration') {
+    const body = programBody.body;
+
+    if (programBody.async) {
+      throw new Error('tgpu.fn cannot be async');
+    }
+
+    if (programBody.generator) {
+      throw new Error('tgpu.fn cannot be a generator');
+    }
+
+    if (programBody.params.some((p) => p.type !== 'Identifier')) {
+      throw new Error('tgpu.fn implementations require concrete parameters');
+    }
+
+    return {
+      params: programBody.params as acorn.Identifier[],
+      body: body,
+    };
+  }
+
+  throw new Error(
+    `tgpu.fn expected a single function to be passed as implementation ${programBody?.type}`,
+  );
+}
+
+export function transpileFn(jsCode: string): TranspilationResult {
   const program = acorn.parse(jsCode, { ecmaVersion: 'latest' });
 
-  const programBody = program.body[0];
-  if (!programBody || programBody.type !== 'ExpressionStatement') {
-    throw new Error(
-      'tgpu.fn expected a single function to be passed as implementation',
-    );
-  }
+  const { params, body } = extractFunctionParts(program);
+  const argNames = params.map((p) => p.name);
 
-  const mainExpression = programBody.expression;
-  if (mainExpression.type !== 'ArrowFunctionExpression') {
-    throw new Error(
-      'tgpu.fn expected a single function to be passed as implementation',
-    );
-  }
+  const ctx: Context = {
+    externalNames: new Set(),
+    ignoreExternalDepth: 0,
+    stack: [
+      {
+        declaredNames: [...argNames],
+      },
+    ],
+  };
 
-  if (mainExpression.async) {
-    throw new Error('tgpu.fn cannot be async');
-  }
+  const smolBody = transpile(ctx, body);
+  const externalNames = [...ctx.externalNames];
 
-  if (mainExpression.params.some((p) => p.type !== 'Identifier')) {
-    throw new Error('tgpu.fn implementations require concrete parameters');
-  }
-
-  const params = mainExpression.params as acorn.Identifier[];
-
-  if (mainExpression.body.type === 'BlockStatement') {
+  if (body.type === 'BlockStatement') {
     return {
-      argNames: params.map((p) => p.name),
-      body: transpile(mainExpression.body) as unknown as smol.Block,
+      argNames,
+      body: smolBody as smol.Block,
+      externalNames,
     };
   }
 
   return {
-    argNames: params.map((p) => p.name),
+    argNames,
     body: {
-      block: [{ return: transpile(mainExpression.body) as smol.Expression }],
+      block: [{ return: smolBody as smol.Expression }],
     },
+    externalNames,
   };
 }

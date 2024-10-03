@@ -1,4 +1,5 @@
 import type { Unwrap } from 'typed-binary';
+import { MissingLinksError } from './errors';
 import { inGPUMode } from './gpuMode';
 import { type TgpuNamable, isNamable } from './namable';
 import { valueList } from './resolutionUtils';
@@ -181,7 +182,11 @@ function createFn<
   implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
 ): TgpuFn<Args, Return> {
   const externalMap: Record<string, unknown> = {};
-  let prebuiltAst: { argNames: string[]; body: Block } | null = null;
+  let prebuiltAst: {
+    argNames: string[];
+    body: Block;
+    externalNames: string[];
+  } | null = null;
   let label: string | undefined;
 
   const fnBase: TgpuTgslFnBase<Args, Return> = {
@@ -221,7 +226,9 @@ function createFn<
     },
 
     $__ast(argNames: string[], body: Block): TgpuTgslFnBase<Args, Return> {
-      prebuiltAst = { argNames, body };
+      // When receiving a pre-built $__ast, we are receiving $uses alongside it, so
+      // we do not need to verify external names.
+      prebuiltAst = { argNames, body, externalNames: [] };
       return this;
     },
 
@@ -234,6 +241,14 @@ function createFn<
       const ident = identifier().$name(label);
 
       const ast = prebuiltAst ?? ctx.transpileFn(fn);
+      const missingExternals = ast.externalNames.filter(
+        (name) => !(name in externalMap),
+      );
+
+      if (missingExternals.length > 0) {
+        throw new MissingLinksError(label, missingExternals);
+      }
+
       const { head, body } = ctx.fnToWgsl(
         fn.shell,
         ast.argNames,
