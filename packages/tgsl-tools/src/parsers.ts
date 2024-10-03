@@ -275,7 +275,8 @@ export function extractFunctionParts(rootNode: acorn.AnyNode): {
   while (true) {
     if (unwrappedNode.type === 'Program') {
       const statement = unwrappedNode.body.filter(
-        (n) => n.type === 'ExpressionStatement',
+        (n) =>
+          n.type === 'ExpressionStatement' || n.type === 'FunctionDeclaration',
       )[0]; // <- assuming only one function declaration
 
       if (!statement) {
@@ -302,7 +303,7 @@ export function extractFunctionParts(rootNode: acorn.AnyNode): {
 
   if (!functionNode) {
     throw new Error(
-      'tgpu.fn expected a single function to be passed as implementation',
+      `tgpu.fn expected a single function to be passed as implementation ${JSON.stringify(unwrappedNode)}`,
     );
   }
 
