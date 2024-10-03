@@ -162,9 +162,6 @@ class TgpuLooseStructImpl<
 
     const measurer = new Measurer();
     for (const [key, property] of exactEntries(_properties)) {
-      if (property.isCustomAligned === true) {
-        alignIO(measurer, property.byteAlignment);
-      }
       property.measure(MaxValue, measurer);
     }
 
@@ -184,9 +181,6 @@ class TgpuLooseStructImpl<
     type Property = keyof Parsed<UnwrapRecord<TProps>>;
 
     for (const [key, property] of exactEntries(this._properties)) {
-      if (property.isCustomAligned === true) {
-        alignIO(output, property.byteAlignment);
-      }
       property.write(output, value[key as Property]);
     }
   }
@@ -196,13 +190,11 @@ class TgpuLooseStructImpl<
     const result = {} as Parsed<UnwrapRecord<TProps>>;
 
     for (const [key, property] of exactEntries(this._properties)) {
-      if (property.isCustomAligned === true) {
-        alignIO(input, property.byteAlignment);
-      }
       result[key as Property] = property.read(input) as Parsed<
         UnwrapRecord<TProps>
       >[Property];
     }
+
     return result;
   }
 
