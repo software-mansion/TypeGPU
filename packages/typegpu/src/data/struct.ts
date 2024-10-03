@@ -9,7 +9,6 @@ import {
   Schema,
   type UnwrapRecord,
 } from 'typed-binary';
-import { isArraySchema } from '.';
 import { RecursiveDataTypeError } from '../errors';
 import type { TgpuNamable } from '../namable';
 import { code } from '../tgpuCode';
@@ -17,6 +16,7 @@ import { identifier } from '../tgpuIdentifier';
 import type { AnyTgpuData, ResolutionCtx, TgpuData } from '../types';
 import { isAlignedSchema } from './align';
 import alignIO from './alignIO';
+import { isArraySchema } from './array';
 import { isSizedSchema } from './size';
 
 // ----------
