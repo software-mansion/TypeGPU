@@ -207,14 +207,6 @@ class TgpuLooseStructImpl<
 
     return measurer;
   }
-
-  resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this._label);
-
-    // TODO: check if resolving is needed to add proper struct declaration ???
-
-    return ctx.resolve(ident);
-  }
 }
 
 function getAttribute<T extends AnyTgpuData>(field: T): string | undefined {
