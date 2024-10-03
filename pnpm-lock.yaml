@@ -156,6 +156,9 @@ importers:
       '@typegpu/tgsl-tools':
         specifier: workspace:~0.0.0
         version: link:../tgsl-tools
+      acorn:
+        specifier: ^8.12.1
+        version: 8.12.1
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -172,6 +175,9 @@ importers:
 
   packages/rollup-plugin:
     dependencies:
+      '@typegpu/tgsl-tools':
+        specifier: workspace:0.0.0
+        version: link:../tgsl-tools
       estree-walker:
         specifier: ^3.0.3
         version: 3.0.3
@@ -179,9 +185,18 @@ importers:
         specifier: ^0.30.11
         version: 0.30.11
     devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
       acorn:
         specifier: ^8.12.1
         version: 8.12.1
+      tsup:
+        specifier: ^8.0.2
+        version: 8.0.2(typescript@5.5.4)
+      typescript:
+        specifier: ^5.3.3
+        version: 5.5.4
 
   packages/tgpu-cli:
     dependencies:
@@ -209,20 +224,19 @@ importers:
         version: 2.3.0
 
   packages/tgsl-tools:
-    dependencies:
-      acorn:
-        specifier: ^8.12.1
-        version: 8.12.1
-      typegpu:
-        specifier: workspace:^0.1.3
-        version: link:../typegpu
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
         version: link:../tgpu-dev-cli
+      acorn:
+        specifier: ^8.12.1
+        version: 8.12.1
       tsup:
         specifier: ^8.0.2
         version: 8.0.2(typescript@5.5.4)
+      typegpu:
+        specifier: workspace:^0.1.3
+        version: link:../typegpu
       typescript:
         specifier: ^5.3.3
         version: 5.5.4

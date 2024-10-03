@@ -1,4 +1,4 @@
-import * as acorn from 'acorn';
+import type * as acorn from 'acorn';
 import type * as smol from 'typegpu/smol';
 
 type Scope = {
@@ -259,62 +259,73 @@ export type TranspilationResult = {
   externalNames: string[];
 };
 
-export function extractFunctionParts(program: acorn.Program): {
+export function extractFunctionParts(rootNode: acorn.AnyNode): {
   params: acorn.Identifier[];
   body: acorn.BlockStatement | acorn.Expression;
 } {
-  const programBody = program.body[0];
+  let functionNode:
+    | acorn.ArrowFunctionExpression
+    | acorn.FunctionExpression
+    | acorn.FunctionDeclaration
+    | acorn.AnonymousFunctionDeclaration
+    | null = null;
 
-  if (
-    programBody?.type === 'ExpressionStatement' &&
-    programBody.expression.type === 'ArrowFunctionExpression'
-  ) {
-    const mainExpression = programBody.expression;
+  // Unwrapping until we get to a function
+  let unwrappedNode = rootNode;
+  while (true) {
+    if (unwrappedNode.type === 'Program') {
+      const statement = unwrappedNode.body.filter(
+        (n) => n.type === 'ExpressionStatement',
+      )[0]; // <- assuming only one function declaration
 
-    if (mainExpression.async) {
-      throw new Error('tgpu.fn cannot be async');
+      if (!statement) {
+        break;
+      }
+
+      unwrappedNode = statement;
+    } else if (unwrappedNode.type === 'ExpressionStatement') {
+      unwrappedNode = unwrappedNode.expression;
+    } else if (unwrappedNode.type === 'ArrowFunctionExpression') {
+      functionNode = unwrappedNode;
+      break; // We got a function
+    } else if (unwrappedNode.type === 'FunctionExpression') {
+      functionNode = unwrappedNode;
+      break; // We got a function
+    } else if (unwrappedNode.type === 'FunctionDeclaration') {
+      functionNode = unwrappedNode;
+      break; // We got a function
+    } else {
+      // Unsupported node
+      break;
     }
-
-    if (mainExpression.params.some((p) => p.type !== 'Identifier')) {
-      throw new Error('tgpu.fn implementations require concrete parameters');
-    }
-
-    return {
-      params: mainExpression.params as acorn.Identifier[],
-      body: mainExpression.body,
-    };
   }
 
-  if (programBody?.type === 'FunctionDeclaration') {
-    const body = programBody.body;
-
-    if (programBody.async) {
-      throw new Error('tgpu.fn cannot be async');
-    }
-
-    if (programBody.generator) {
-      throw new Error('tgpu.fn cannot be a generator');
-    }
-
-    if (programBody.params.some((p) => p.type !== 'Identifier')) {
-      throw new Error('tgpu.fn implementations require concrete parameters');
-    }
-
-    return {
-      params: programBody.params as acorn.Identifier[],
-      body: body,
-    };
+  if (!functionNode) {
+    throw new Error(
+      'tgpu.fn expected a single function to be passed as implementation',
+    );
   }
 
-  throw new Error(
-    `tgpu.fn expected a single function to be passed as implementation ${programBody?.type}`,
-  );
+  if (functionNode.async) {
+    throw new Error('tgpu.fn cannot be async');
+  }
+
+  if (functionNode.generator) {
+    throw new Error('tgpu.fn cannot be a generator');
+  }
+
+  if (functionNode.params.some((p) => p.type !== 'Identifier')) {
+    throw new Error('tgpu.fn implementations require concrete parameters');
+  }
+
+  return {
+    params: functionNode.params as acorn.Identifier[],
+    body: functionNode.body,
+  };
 }
 
-export function transpileFn(jsCode: string): TranspilationResult {
-  const program = acorn.parse(jsCode, { ecmaVersion: 'latest' });
-
-  const { params, body } = extractFunctionParts(program);
+export function transpileFn(rootNode: acorn.AnyNode): TranspilationResult {
+  const { params, body } = extractFunctionParts(rootNode);
   const argNames = params.map((p) => p.name);
 
   const ctx: Context = {

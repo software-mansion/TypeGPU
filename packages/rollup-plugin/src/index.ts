@@ -1,8 +1,5 @@
-import type {
-  AnyNode,
-  ArrowFunctionExpression,
-  VariableDeclarator,
-} from 'acorn';
+import { transpileFn } from '@typegpu/tgsl-tools';
+import type { AnyNode, VariableDeclarator } from 'acorn';
 import { walk } from 'estree-walker';
 import MagicString from 'magic-string';
 import type { Plugin } from 'rollup';
@@ -21,8 +18,14 @@ type Context = {
 
 type TgslFunctionDef = {
   varDecl: VariableDeclarator;
-  implementation: ArrowFunctionExpression;
+  implementation: AnyNode;
 };
+
+function embedJSON(jsValue: unknown) {
+  return JSON.stringify(jsValue)
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
 
 function gatherTgpuAliases(ctx: Context, node: AnyNode) {
   if (node.type === 'ImportDeclaration') {
@@ -120,14 +123,20 @@ export default function typegpu(): Plugin {
 
             if (
               node.callee.type === 'MemberExpression' &&
+              node.arguments.length === 1 &&
               node.callee.property.type === 'Identifier' &&
-              node.callee.property.name === 'procedure' &&
-              isTgpu(ctx, node.callee.object) &&
-              node.arguments.length === 1
+              ((node.callee.property.name === 'procedure' &&
+                isTgpu(ctx, node.callee.object)) ||
+                // Assuming that every call to `.implement` is related to TypeGPU
+                // because shells can be created separately from calls to `tgpu`,
+                // making it hard to detect.
+                // TODO: We can improve this by first checking if $__ast exists on this object
+                // at runtime, before calling it.
+                node.callee.property.name === 'implement')
             ) {
               const implementation = node.arguments[0];
 
-              if (implementation?.type === 'ArrowFunctionExpression') {
+              if (implementation) {
                 tgslFunctionDefs.push({
                   varDecl: parent,
                   implementation,
@@ -141,7 +150,21 @@ export default function typegpu(): Plugin {
       const magicString = new MagicString(code);
 
       for (const expr of tgslFunctionDefs) {
-        magicString.appendRight(expr.varDecl.end, '.$__ast({  }).$uses({  })');
+        const { argNames, body, externalNames } = transpileFn(
+          expr.implementation,
+        );
+
+        magicString.appendRight(
+          expr.varDecl.end,
+          `.$__ast(${embedJSON(argNames)}, ${embedJSON(body)})`,
+        );
+
+        if (externalNames.length > 0) {
+          magicString.appendRight(
+            expr.varDecl.end,
+            `.$uses({ ${externalNames.join(', ')} })`,
+          );
+        }
       }
 
       return {
