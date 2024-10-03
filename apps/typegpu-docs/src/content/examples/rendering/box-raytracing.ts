@@ -239,7 +239,7 @@ const renderPipeline = root.makeRenderPipeline({
       let outPos = vec4f(pos[${builtin.vertexIndex}], 0, 1);
     `,
     output: {
-      [builtin.position]: 'outPos',
+      [builtin.position.s]: 'outPos',
     },
   },
 

@@ -636,7 +636,7 @@ function makePipelines(
         let outUv = uv[${builtin.vertexIndex}];
       `,
       output: {
-        [builtin.position]: 'outPos',
+        [builtin.position.s]: 'outPos',
         outUv: vec2f,
       },
     },

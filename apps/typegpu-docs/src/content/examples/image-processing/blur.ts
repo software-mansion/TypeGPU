@@ -233,7 +233,7 @@ const renderPipeline = root.makeRenderPipeline({
   vertex: {
     code: blurVertexWGSL,
     output: {
-      [builtin.position]: 'Position',
+      [builtin.position.s]: 'Position',
       fragUV: vec2f,
     },
   },

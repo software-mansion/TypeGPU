@@ -15,20 +15,20 @@ import {
 export type BuiltInPossibleTypes = U32 | F32 | Vec3u | Vec4f | TgpuArray<U32>;
 
 const builtinToType: Record<symbol, BuiltInPossibleTypes> = {
-  [builtin.vertexIndex]: u32,
-  [builtin.instanceIndex]: u32,
-  [builtin.position]: vec4f,
-  [builtin.clipDistances]: arrayOf(u32, 8),
-  [builtin.frontFacing]: f32,
-  [builtin.fragDepth]: f32,
-  [builtin.sampleIndex]: u32,
-  [builtin.sampleMask]: u32,
-  [builtin.fragment]: vec4f,
-  [builtin.localInvocationId]: vec3u,
-  [builtin.localInvocationIndex]: u32,
-  [builtin.globalInvocationId]: vec3u,
-  [builtin.workgroupId]: vec3u,
-  [builtin.numWorkgroups]: vec3u,
+  [builtin.vertexIndex.s]: u32,
+  [builtin.instanceIndex.s]: u32,
+  [builtin.position.s]: vec4f,
+  [builtin.clipDistances.s]: arrayOf(u32, 8),
+  [builtin.frontFacing.s]: f32,
+  [builtin.fragDepth.s]: f32,
+  [builtin.sampleIndex.s]: u32,
+  [builtin.sampleMask.s]: u32,
+  [builtin.fragment.s]: vec4f,
+  [builtin.localInvocationId.s]: vec3u,
+  [builtin.localInvocationIndex.s]: u32,
+  [builtin.globalInvocationId.s]: vec3u,
+  [builtin.workgroupId.s]: vec3u,
+  [builtin.numWorkgroups.s]: vec3u,
 };
 
 export function typeForBuiltin(key: symbol): BuiltInPossibleTypes {
