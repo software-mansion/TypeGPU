@@ -213,9 +213,6 @@ class TgpuLooseStructImpl<
     type Property = keyof Parsed<UnwrapRecord<TProps>>;
 
     for (const [key, property] of exactEntries(this._properties)) {
-      if ('byteAlignment' in property) {
-        alignIO(measurer, property.byteAlignment);
-      }
       property.measure(
         value === MaxValue ? MaxValue : value[key as Property],
         measurer,
