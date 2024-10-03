@@ -31,17 +31,47 @@ const COMMANDS = {
         exit(1);
       }
 
-      try {
-        const files = await glob(input);
-        await Promise.all(
-          files.map((file) => {
-            const out = output ?? file.replace('.wgsl', '.ts');
-            console.log(`${file} >>> ${out}`);
-            generate(file, out);
-          }),
+      const files = await glob(input);
+
+      if (files.length === 0) {
+        console.warn(
+          `${color.Yellow}Warning: No files found for pattern: "${input}"${color.Reset}`,
         );
-      } catch (error) {
-        console.error(`${color.Red}Error: ${error.message}${color.Reset}`);
+        exit(0);
+      }
+
+      if (!output && !input.endsWith('.wgsl')) {
+        console.error(
+          `${color.Red}Error: No output name provided and provided input doesn't end with .wgsl ${color.Reset}`,
+        );
+        exit(1);
+      }
+
+      if (output && files.length > 1) {
+        if (!input.endsWith('.wgsl')) {
+          console.error(
+            `${color.Red}Error: More than one file found, while a single output name provided ${color.Reset}`,
+          );
+          exit(1);
+        }
+      }
+
+      const results = await Promise.allSettled(
+        files.map((file) => {
+          const out = output ?? file.replace('.wgsl', '.ts');
+          console.log(`Generating ${file} >>> ${out}`);
+          return generate(file, out);
+        }),
+      );
+
+      const errors = results.flatMap((result) =>
+        result.status === 'rejected' ? [result.reason] : [],
+      );
+
+      if (errors.length > 0) {
+        for (const error of errors) {
+          console.error(`${color.Red}Error: ${error.message}${color.Reset}`);
+        }
         exit(1);
       }
     },
