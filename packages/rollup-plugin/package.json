@@ -2,7 +2,10 @@
   "name": "rollup-plugin-typegpu",
   "version": "0.0.0",
   "description": "A Rollup plugin for TypeGPU, transpiling TGSL at build-time.",
-  "keywords": ["rollup-plugin", "vite-plugin"],
+  "keywords": [
+    "rollup-plugin",
+    "vite-plugin"
+  ],
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -32,14 +35,15 @@
     "prepare-package": "tgpu-dev-cli prepack"
   },
   "dependencies": {
+    "@typegpu/tgsl-tools": "workspace:0.0.0",
     "estree-walker": "^3.0.3",
-    "magic-string": "^0.30.11",
-    "@typegpu/tgsl-tools": "workspace:0.0.0"
+    "magic-string": "^0.30.11"
   },
   "devDependencies": {
-    "tsup": "^8.0.2",
-    "typescript": "^5.3.3",
     "@typegpu/tgpu-dev-cli": "workspace:*",
-    "acorn": "^8.12.1"
+    "acorn": "^8.12.1",
+    "rollup": "^4.24.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.3.3"
   }
 }
