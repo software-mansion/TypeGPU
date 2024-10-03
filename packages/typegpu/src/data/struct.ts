@@ -184,7 +184,7 @@ class TgpuLooseStructImpl<
     type Property = keyof Parsed<UnwrapRecord<TProps>>;
 
     for (const [key, property] of exactEntries(this._properties)) {
-      if ('byteAlignment' in property) {
+      if (property.isCustomAligned === true) {
         alignIO(output, property.byteAlignment);
       }
       property.write(output, value[key as Property]);
@@ -196,7 +196,7 @@ class TgpuLooseStructImpl<
     const result = {} as Parsed<UnwrapRecord<TProps>>;
 
     for (const [key, property] of exactEntries(this._properties)) {
-      if ('byteAlignment' in property) {
+      if (property.isCustomAligned === true) {
         alignIO(input, property.byteAlignment);
       }
       result[key as Property] = property.read(input) as Parsed<
