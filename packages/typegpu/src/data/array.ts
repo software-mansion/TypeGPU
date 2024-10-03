@@ -104,11 +104,11 @@ class TgpuArrayImpl<TElement extends AnyTgpuData>
   }
 
   measure(
-    value: MaxValue | Parsed<Unwrap<TElement>>[],
+    _: MaxValue | Parsed<Unwrap<TElement>>[],
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
     alignIO(measurer, this.byteAlignment);
-    return measurer.add(this.stride * this.elementCount);
+    return measurer.add(this.size);
   }
 
   resolve(ctx: ResolutionCtx): string {
@@ -168,6 +168,6 @@ class TgpuLooseArrayImpl<TElement extends AnyTgpuData | AnyTgpuLooseData>
     _: MaxValue | Parsed<Unwrap<TElement>>[],
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
-    return measurer.add(this.stride * this.elementCount);
+    return measurer.add(this.size);
   }
 }
