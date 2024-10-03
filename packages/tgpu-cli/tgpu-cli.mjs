@@ -49,7 +49,7 @@ const COMMANDS = {
 
       if (output && files.length > 1) {
         console.error(
-          `${color.Red}Error: More than one file found, while a single output name provided ${color.Reset}`,
+          `${color.Red}Error: More than one file found, while a single output name was provided ${color.Reset}`,
         );
         exit(1);
       }
