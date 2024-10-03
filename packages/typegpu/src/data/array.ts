@@ -1,7 +1,7 @@
 import type * as TB from 'typed-binary';
 import {
   type IMeasurer,
-  type MaxValue,
+  MaxValue,
   Measurer,
   type Parsed,
   Schema,
@@ -62,13 +62,14 @@ class TgpuArrayImpl<TElement extends AnyTgpuData>
   extends Schema<Unwrap<TElement>[]>
   implements TgpuArray<TElement>
 {
+  private _size: number;
   readonly elementType: TElement;
   readonly elementCount: number;
   readonly byteAlignment: number;
-  readonly size: number;
   readonly stride: number;
   readonly isLoose = false;
   readonly isCustomAligned = false;
+  readonly isRuntimeSized: boolean;
 
   constructor(elementType: TElement, count: number) {
     super();
@@ -79,10 +80,21 @@ class TgpuArrayImpl<TElement extends AnyTgpuData>
       this.elementType.size,
       this.elementType.byteAlignment,
     );
-    this.size = this.stride * this.elementCount;
+    this._size = this.stride * this.elementCount;
+    this.isRuntimeSized = count === 0;
+  }
+
+  get size(): number {
+    if (this.isRuntimeSized) {
+      throw new Error('Cannot determine size of a runtime-sized array');
+    }
+    return this._size;
   }
 
   write(output: TB.ISerialOutput, value: Parsed<Unwrap<TElement>>[]) {
+    if (this.isRuntimeSized) {
+      throw new Error('Cannot write a runtime-sized array');
+    }
     alignIO(output, this.byteAlignment);
     const beginning = output.currentByteOffset;
     for (let i = 0; i < Math.min(this.elementCount, value.length); i++) {
@@ -93,6 +105,9 @@ class TgpuArrayImpl<TElement extends AnyTgpuData>
   }
 
   read(input: TB.ISerialInput): Parsed<Unwrap<TElement>>[] {
+    if (this.isRuntimeSized) {
+      throw new Error('Cannot read a runtime-sized array');
+    }
     alignIO(input, this.byteAlignment);
     const elements: Parsed<Unwrap<TElement>>[] = [];
     for (let i = 0; i < this.elementCount; i++) {
@@ -106,14 +121,19 @@ class TgpuArrayImpl<TElement extends AnyTgpuData>
     value: MaxValue | Parsed<Unwrap<TElement>>[],
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
+    if (this.isRuntimeSized && value === MaxValue) {
+      return measurer.unbounded;
+    }
     alignIO(measurer, this.byteAlignment);
     return measurer.add(this.stride * this.elementCount);
   }
 
   resolve(ctx: ResolutionCtx): string {
-    return ctx.resolve(`
-      array<${ctx.resolve(this.elementType)}, ${this.elementCount}>
-    `);
+    const elementTypeResolved = ctx.resolve(this.elementType);
+    const arrayType = this.isRuntimeSized
+      ? `array<${elementTypeResolved}>`
+      : `array<${elementTypeResolved}, ${this.elementCount}>`;
+    return ctx.resolve(arrayType);
   }
 }
 
