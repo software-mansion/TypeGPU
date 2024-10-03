@@ -26,10 +26,12 @@ import alignIO from './alignIO';
 // ----------
 
 export interface Align<T extends number> {
-  align: T;
+  type: 'align';
+  alignment: T;
 }
 
 export interface Size<T extends number> {
+  type: 'size';
   size: T;
 }
 
@@ -79,114 +81,105 @@ export type UnwrapDecorated<T> = T extends Decorated<
     ? Inner
     : T;
 
-export function attribute<
+/**
+ * Decorates a data-type `TData` with an attribute `TAttrib`.
+ *
+ * - if `TData` is loose
+ *   - if `TData` is already `LooseDecorated`
+ *     - Prepend `TAttrib` to the existing attribute tuple.
+ *   - else
+ *     - Wrap `TData` with `LooseDecorated` and a single attribute `[TAttrib]`
+ * - else
+ *   - if `TData` is already `Decorated`
+ *     - Prepend `TAttrib` to the existing attribute tuple.
+ *   - else
+ *     - Wrap `TData` with `Decorated` and a single attribute `[TAttrib]`
+ */
+export type Decorate<
   TData extends AnyTgpuData | AnyTgpuLooseData,
   TAttrib extends AnyAttribute,
->(
-  data: TData,
-  attrib: TAttrib,
-):
-  | Decorated<
-      UnwrapDecorated<TData> & AnyTgpuData,
-      [TAttrib, ...ExtractAttributes<TData>]
-    >
-  | LooseDecorated<
-      UnwrapDecorated<TData> & AnyTgpuLooseData,
-      [TAttrib, ...ExtractAttributes<TData>]
-    > {
-  type Return =
-    | Decorated<
-        UnwrapDecorated<TData> & AnyTgpuData,
+> = TData extends AnyTgpuData
+  ? Decorated<UnwrapDecorated<TData>, [TAttrib, ...ExtractAttributes<TData>]>
+  : TData extends AnyTgpuLooseData
+    ? LooseDecorated<
+        UnwrapDecorated<TData>,
         [TAttrib, ...ExtractAttributes<TData>]
       >
-    | LooseDecorated<
-        UnwrapDecorated<TData> & AnyTgpuLooseData,
-        [TAttrib, ...ExtractAttributes<TData>]
-      >;
+    : never;
 
+function attribute<
+  TData extends AnyTgpuData | AnyTgpuLooseData,
+  TAttrib extends AnyAttribute,
+>(data: TData, attrib: TAttrib) {
   if (isDecorated(data)) {
-    return new DecoratedImpl(data.inner, [
-      attrib,
-      ...data.attributes,
-    ]) as unknown as Return;
+    return new DecoratedImpl(data.inner, [attrib, ...data.attributes]);
   }
 
   if (isLooseDecorated(data)) {
-    return new LooseDecoratedImpl(data.inner, [
-      attrib,
-      ...data.attributes,
-    ]) as unknown as Return;
+    return new LooseDecoratedImpl(data.inner, [attrib, ...data.attributes]);
   }
 
   if (isDataLoose(data)) {
-    return new LooseDecoratedImpl(data, [attrib]) as unknown as Return;
+    return new LooseDecoratedImpl(data, [attrib]);
   }
 
-  return new DecoratedImpl(data, [attrib]) as unknown as Return;
+  return new DecoratedImpl(data, [attrib]);
 }
 
+/**
+ * Gives the wrapped data-type a custom byte alignment. Useful in order to
+ * fulfill uniform alignment requirements.
+ *
+ * @example
+ * const Data = d.struct({
+ *   a: u32, // takes up 4 bytes
+ *   // 12 bytes of padding, because `b` is custom aligned to multiples of 16 bytes
+ *   b: d.align(16, u32),
+ * });
+ *
+ * @param alignment The multiple of bytes this data should align itself to.
+ * @param data The data-type to align.
+ */
 export function align<TAlign extends number, TData extends AnyTgpuData>(
-  align: TAlign,
+  alignment: TAlign,
   data: TData,
-): Decorated<
-  UnwrapDecorated<TData>,
-  [Align<TAlign>, ...ExtractAttributes<TData>]
->;
+): Decorate<TData, Align<TAlign>>;
 export function align<TAlign extends number, TData extends AnyTgpuLooseData>(
-  align: TAlign,
+  alignment: TAlign,
   data: TData,
-): LooseDecorated<
-  UnwrapDecorated<TData>,
-  [Align<TAlign>, ...ExtractAttributes<TData>]
->;
+): Decorate<TData, Align<TAlign>>;
 export function align<
   TAlign extends number,
   TData extends AnyTgpuData | AnyTgpuLooseData,
->(
-  align: TAlign,
-  data: TData,
-):
-  | Decorated<
-      UnwrapDecorated<TData> & AnyTgpuData,
-      [Align<TAlign>, ...ExtractAttributes<TData>]
-    >
-  | LooseDecorated<
-      UnwrapDecorated<TData> & AnyTgpuLooseData,
-      [Align<TAlign>, ...ExtractAttributes<TData>]
-    > {
-  return attribute(data, { align });
+>(alignment: TAlign, data: TData) {
+  return attribute(data, { type: 'align', alignment });
 }
 
+/**
+ * Adds padding bytes after the wrapped data-type, until the whole value takes up `size` bytes.
+ *
+ * @example
+ * const Data = d.struct({
+ *   a: d.size(16, u32), // takes up 16 bytes, instead of 4
+ *   b: u32, // starts at byte 16, because `a` has a custom size
+ * });
+ *
+ * @param size The amount of bytes that should be reserved for this data-type.
+ * @param data The data-type to wrap.
+ */
 export function size<TSize extends number, TData extends AnyTgpuData>(
   size: TSize,
   data: TData,
-): Decorated<
-  UnwrapDecorated<TData>,
-  [Size<TSize>, ...ExtractAttributes<TData>]
->;
+): Decorate<TData, Size<TSize>>;
 export function size<TSize extends number, TData extends AnyTgpuLooseData>(
   size: TSize,
   data: TData,
-): LooseDecorated<
-  UnwrapDecorated<TData>,
-  [Size<TSize>, ...ExtractAttributes<TData>]
->;
+): Decorate<TData, Size<TSize>>;
 export function size<
   TSize extends number,
   TData extends AnyTgpuData | AnyTgpuLooseData,
->(
-  size: TSize,
-  data: TData,
-):
-  | Decorated<
-      UnwrapDecorated<TData> & AnyTgpuData,
-      [Size<TSize>, ...ExtractAttributes<TData>]
-    >
-  | LooseDecorated<
-      UnwrapDecorated<TData> & AnyTgpuLooseData,
-      [Size<TSize>, ...ExtractAttributes<TData>]
-    > {
-  return attribute(data, { size });
+>(size: TSize, data: TData) {
+  return attribute(data, { type: 'size', size });
 }
 
 export function isDecorated<
@@ -233,10 +226,10 @@ class BaseDecoratedImpl<
     public readonly attributes: TAttribs,
   ) {
     this.customAlignment = attributes.find(
-      (a): a is Align<number> => 'align' in a,
-    )?.align;
+      (a): a is Align<number> => a.type === 'align',
+    )?.alignment;
     this.customSize = attributes.find(
-      (a): a is Size<number> => 'size' in a,
+      (a): a is Size<number> => a.type === 'size',
     )?.size;
 
     this.byteAlignment = this.customAlignment ?? inner.byteAlignment;
