@@ -174,4 +174,40 @@ describe('looseStruct', () => {
     expect(data.c.b.x).toEqual(4);
     expect(data.c.b.y).toEqual(5);
   });
+
+  it('can be custom aligned and behaves properly', () => {
+    const s = align(
+      16,
+      looseStruct({
+        a: unorm8x2, // 2 bytes
+        b: align(8, snorm16x2), // 6 padding bytes + 4 bytes = 10
+      }),
+    );
+
+    const a = looseArrayOf(s, 8);
+
+    expect(s.size).toEqual(12);
+    // since the struct is aligned to 16 bytes, the array stride should be 16 not 12
+    expect(a.size).toEqual(16 * 8);
+
+    const buffer = new ArrayBuffer(a.size);
+    const writer = new BufferWriter(buffer);
+
+    a.write(writer, [
+      ...Array.from({ length: 8 }, () => ({
+        a: vec2f(0.5, 0.75),
+        b: vec2f(-0.25, 0.25),
+      })),
+    ]);
+
+    const reader = new BufferReader(buffer);
+    const data = a.read(reader);
+
+    data.forEach((item, _) => {
+      expect(item.a.x).toBeCloseTo(0.5);
+      expect(item.a.y).toBeCloseTo(0.75);
+      expect(item.b.x).toBeCloseTo(-0.25);
+      expect(item.b.y).toBeCloseTo(0.25);
+    });
+  });
 });
