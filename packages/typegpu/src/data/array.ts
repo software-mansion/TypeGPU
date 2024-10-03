@@ -63,24 +63,19 @@ class TgpuArrayImpl<TElement extends AnyTgpuData>
   extends Schema<Unwrap<TElement>[]>
   implements TgpuArray<TElement>
 {
-  readonly elementType: TElement;
-  readonly elementCount: number;
-  readonly byteAlignment: number;
-  readonly size: number;
-  readonly stride: number;
-  readonly isLoose = false;
-  readonly isCustomAligned = false;
+  public readonly byteAlignment: number;
+  public readonly size: number;
+  public readonly stride: number;
+  public readonly isLoose = false;
 
-  constructor(elementType: TElement, count: number) {
+  constructor(
+    public readonly elementType: TElement,
+    public readonly elementCount: number,
+  ) {
     super();
-    this.elementType = elementType;
-    this.elementCount = count;
     this.byteAlignment = elementType.byteAlignment;
-    this.stride = roundUp(
-      this.elementType.size,
-      this.elementType.byteAlignment,
-    );
-    this.size = this.stride * this.elementCount;
+    this.stride = roundUp(elementType.size, elementType.byteAlignment);
+    this.size = this.stride * elementCount;
   }
 
   write(output: TB.ISerialOutput, value: Parsed<Unwrap<TElement>>[]) {
@@ -123,26 +118,23 @@ class TgpuLooseArrayImpl<TElement extends AnyTgpuData>
   extends Schema<Unwrap<TElement>[]>
   implements TgpuLooseArray<TElement>
 {
-  readonly byteAlignment = 1;
-  readonly size: number;
-  readonly stride: number;
-  readonly isLoose = true;
+  public readonly byteAlignment: number;
+  public readonly size: number;
+  public readonly stride: number;
+  public readonly isLoose = true;
 
   constructor(
     public readonly elementType: TElement,
     public readonly elementCount: number,
   ) {
     super();
-
-    this.stride = roundUp(
-      elementType.size,
-      getCustomAlignment(elementType) ?? 1,
-    );
-
-    this.size = this.stride * this.elementCount;
+    this.byteAlignment = getCustomAlignment(elementType) ?? 1;
+    this.stride = roundUp(elementType.size, this.byteAlignment);
+    this.size = this.stride * elementCount;
   }
 
   write(output: TB.ISerialOutput, value: Parsed<Unwrap<TElement>>[]) {
+    alignIO(output, this.byteAlignment);
     const beginning = output.currentByteOffset;
     for (let i = 0; i < Math.min(this.elementCount, value.length); i++) {
       const customAlignment = getCustomAlignment(this.elementType);
@@ -155,6 +147,7 @@ class TgpuLooseArrayImpl<TElement extends AnyTgpuData>
   }
 
   read(input: TB.ISerialInput): Parsed<Unwrap<TElement>>[] {
+    alignIO(input, this.byteAlignment);
     const elements: Parsed<Unwrap<TElement>>[] = [];
     for (let i = 0; i < this.elementCount; i++) {
       const customAlignment = getCustomAlignment(this.elementType);
@@ -163,6 +156,7 @@ class TgpuLooseArrayImpl<TElement extends AnyTgpuData>
       }
       elements.push(this.elementType.read(input) as Parsed<Unwrap<TElement>>);
     }
+    alignIO(input, this.byteAlignment);
     return elements;
   }
 
@@ -170,6 +164,7 @@ class TgpuLooseArrayImpl<TElement extends AnyTgpuData>
     _: MaxValue | Parsed<Unwrap<TElement>>[],
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
+    alignIO(measurer, this.byteAlignment);
     return measurer.add(this.size);
   }
 }
