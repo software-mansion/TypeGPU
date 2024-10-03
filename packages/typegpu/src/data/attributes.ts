@@ -273,7 +273,7 @@ class BaseDecoratedImpl<
   }
 
   write(output: ISerialOutput, value: Parsed<Unwrap<TInner>>): void {
-    alignIO(output, this.byteAlignment);
+    alignIO(output, this.customAlignment ?? 1);
 
     const beginning = output.currentByteOffset;
     this.inner.write(output, value);
@@ -281,7 +281,7 @@ class BaseDecoratedImpl<
   }
 
   read(input: ISerialInput): Parsed<Unwrap<TInner>> {
-    alignIO(input, this.byteAlignment);
+    alignIO(input, this.customAlignment ?? 1);
 
     const beginning = input.currentByteOffset;
     const value = this.inner.read(input) as Parsed<Unwrap<TInner>>;
@@ -293,7 +293,7 @@ class BaseDecoratedImpl<
     value: MaxValue | Parsed<Unwrap<TInner>>,
     measurer: IMeasurer | undefined = new Measurer(),
   ): IMeasurer {
-    alignIO(measurer, this.byteAlignment);
+    alignIO(measurer, this.customAlignment ?? 1);
 
     if (this.customSize !== undefined) {
       return measurer.add(this.customSize);
