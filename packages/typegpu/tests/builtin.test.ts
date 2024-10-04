@@ -1,48 +1,38 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { f32, u32 } from '../src/data';
+import * as d from '../src/data';
 import {
-  type AnyBuiltin,
+  type AnyTgpuData,
+  type AnyTgpuLooseData,
+  type BuiltinPosition,
+  type BuiltinVertexIndex,
   type OmitBuiltins,
   StrictNameRegistry,
   builtin,
-  isBuiltin,
-  wgsl,
 } from '../src/experimental';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
 
 describe('builtin', () => {
-  it('creates a builtin variable', () => {
+  it('adds a @builtin attribute to a struct field', () => {
     const resolutionCtx = new ResolutionCtxImpl({
       names: new StrictNameRegistry(),
     });
 
-    const code = wgsl`
-      let x = ${builtin.position};
-      let y = ${builtin.frontFacing};
-    `;
+    const s1 = d
+      .struct({
+        position: builtin.position,
+      })
+      .$name('s1');
 
-    expect(resolutionCtx.resolve(code)).toContain('position');
-    expect(resolutionCtx.resolve(code)).toContain('front_facing');
-  });
-
-  it('is a hybrid type of symbol and a wgsl type', () => {
-    const x = builtin.position.x;
-    const y = builtin.position.y;
-    const z = builtin.position.z;
-
-    expectTypeOf(x).toBeNumber;
-    expectTypeOf(y).toBeNumber;
-    expectTypeOf(z).toBeNumber;
-
-    // @ts-expect-error
-    const p = builtin.position.p;
+    expect(resolutionCtx.resolve(s1)).toContain(
+      '@builtin(position) position: vec4f',
+    );
   });
 
   it('can be omitted from a record type', () => {
     const x = {
-      a: u32,
+      a: d.u32,
       b: builtin.localInvocationId,
-      c: f32,
+      c: d.f32,
       d: builtin.localInvocationIndex,
     };
 
@@ -50,21 +40,49 @@ describe('builtin', () => {
     type Omitted = OmitBuiltins<X>;
 
     expectTypeOf<Omitted>().toEqualTypeOf({
-      a: u32,
-      c: f32,
+      a: d.u32,
+      c: d.f32,
     });
   });
 });
 
+describe('IsBuiltin', () => {
+  it('treats primitives as non-builtin', () => {
+    expectTypeOf<d.IsBuiltin<'some'>>().toEqualTypeOf<false>();
+  });
+
+  it('treats decorated (other than builtin) as non-builtin', () => {
+    expectTypeOf<
+      d.IsBuiltin<d.Decorated<d.Vec3f, []>>
+    >().toEqualTypeOf<false>();
+
+    expectTypeOf<
+      d.IsBuiltin<d.Decorated<d.Vec3f, [d.Align<16>]>>
+    >().toEqualTypeOf<false>();
+
+    expectTypeOf<
+      d.IsBuiltin<d.Decorated<d.Vec3f, [d.Size<32>, d.Align<16>]>>
+    >().toEqualTypeOf<false>();
+  });
+
+  it('treats defined builtins as builtin', () => {
+    expectTypeOf<d.IsBuiltin<BuiltinPosition>>().toEqualTypeOf<true>();
+    expectTypeOf<d.IsBuiltin<BuiltinVertexIndex>>().toEqualTypeOf<true>();
+  });
+});
+
 describe('isBuiltin', () => {
-  it('narrows an unknown type to any builtin', () => {
+  it('narrows an unknown type to a decorated type', () => {
     const value = builtin.position as unknown;
     expectTypeOf(value).toEqualTypeOf<unknown>();
 
     let passed = false;
-    if (isBuiltin(value)) {
+    if (d.isBuiltin(value)) {
       passed = true;
-      expectTypeOf(value).toEqualTypeOf<AnyBuiltin>();
+      expectTypeOf(value).toEqualTypeOf<
+        | d.Decorated<AnyTgpuData, d.AnyAttribute[]>
+        | d.LooseDecorated<AnyTgpuLooseData, d.AnyAttribute[]>
+      >();
     }
 
     expect(passed).toBeTruthy();
@@ -75,9 +93,9 @@ describe('isBuiltin', () => {
     expectTypeOf(value).toEqualTypeOf<typeof builtin.position | string>();
 
     let passed = false;
-    if (isBuiltin(value)) {
+    if (d.isBuiltin(value)) {
       passed = true;
-      expectTypeOf(value).toEqualTypeOf<typeof builtin.position>();
+      expectTypeOf(value).toEqualTypeOf<BuiltinPosition>();
     }
 
     expect(passed).toBeTruthy();

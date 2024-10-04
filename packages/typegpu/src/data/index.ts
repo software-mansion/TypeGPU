@@ -28,10 +28,13 @@ export {
   size,
   isDecorated,
   isLooseDecorated,
+  isBuiltin,
   Align,
   Size,
   Decorated,
   LooseDecorated,
+  AnyAttribute,
+  IsBuiltin,
 } from './attributes';
 
 // Reexporting type-binary utility types

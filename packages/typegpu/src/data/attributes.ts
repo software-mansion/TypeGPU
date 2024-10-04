@@ -36,21 +36,12 @@ export interface Size<T extends number> {
   size: T;
 }
 
-export interface Location<T extends number> {
-  type: 'location';
-  index: T;
-}
-
 export interface Builtin<T extends BuiltinName> {
   type: 'builtin';
   name: T;
 }
 
-export type AnyAttribute =
-  | Align<number>
-  | Size<number>
-  | Location<number>
-  | Builtin<BuiltinName>;
+export type AnyAttribute = Align<number> | Size<number> | Builtin<BuiltinName>;
 
 export interface Decorated<
   TInner extends AnyTgpuData,
@@ -62,7 +53,6 @@ export interface Decorated<
   // Easy access to all attributes, if they exist
   readonly alignAttrib: number | undefined;
   readonly sizeAttrib: number | undefined;
-  readonly locationAttrib: number | undefined;
   readonly builtinAttrib: BuiltinName | undefined;
 }
 
@@ -76,7 +66,6 @@ export interface LooseDecorated<
   // Easy access to all attributes, if they exist
   readonly alignAttrib: number | undefined;
   readonly sizeAttrib: number | undefined;
-  readonly locationAttrib: number | undefined;
   readonly builtinAttrib: BuiltinName | undefined;
 }
 
@@ -124,7 +113,13 @@ export type Decorate<
       >
     : never;
 
-function attribute<
+export type IsBuiltin<T> = ExtractAttributes<T>[number] extends []
+  ? false
+  : ExtractAttributes<T>[number] extends Builtin<BuiltinName>
+    ? true
+    : false;
+
+export function attribute<
   TData extends AnyTgpuData | AnyTgpuLooseData,
   TAttrib extends AnyAttribute,
 >(data: TData, attrib: TAttrib) {
@@ -220,11 +215,20 @@ export function getCustomAlignment(
   return undefined;
 }
 
-export function getAttributesString<T extends AnyTgpuData>(
-  field: T,
-): string | undefined {
+export function isBuiltin<
+  T extends
+    | Decorated<AnyTgpuData, AnyAttribute[]>
+    | LooseDecorated<AnyTgpuLooseData, AnyAttribute[]>,
+>(value: T | unknown): value is T {
+  return (
+    (isDecorated(value) || isLooseDecorated(value)) &&
+    value.builtinAttrib !== undefined
+  );
+}
+
+export function getAttributesString<T extends AnyTgpuData>(field: T): string {
   if (!isDecorated(field) && !isLooseDecorated(field)) {
-    return undefined;
+    return '';
   }
 
   return field.attributes
@@ -235,6 +239,10 @@ export function getAttributesString<T extends AnyTgpuData>(
 
       if (attrib.type === 'size') {
         return `@size(${attrib.size}) `;
+      }
+
+      if (attrib.type === 'builtin') {
+        return `@builtin(${attrib.name}) `;
       }
 
       return '';
@@ -259,7 +267,6 @@ class BaseDecoratedImpl<
 
   public readonly alignAttrib: number | undefined;
   public readonly sizeAttrib: number | undefined;
-  public readonly locationAttrib: number | undefined;
   public readonly builtinAttrib: BuiltinName | undefined;
 
   constructor(
@@ -272,6 +279,9 @@ class BaseDecoratedImpl<
     this.sizeAttrib = attributes.find(
       (a): a is Size<number> => a.type === 'size',
     )?.size;
+    this.builtinAttrib = attributes.find(
+      (a): a is Builtin<BuiltinName> => a.type === 'builtin',
+    )?.name;
 
     this.byteAlignment = this.alignAttrib ?? inner.byteAlignment;
     this.size = this.measure(MaxValue).size;

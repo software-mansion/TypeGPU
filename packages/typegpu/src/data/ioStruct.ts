@@ -9,14 +9,13 @@ import {
   Schema,
   type UnwrapRecord,
 } from 'typed-binary';
-import type { AnyBuiltin } from '../builtin';
 import { RecursiveDataTypeError } from '../errors';
 import type { TgpuNamable } from '../namable';
 import { code } from '../tgpuCode';
 import { identifier } from '../tgpuIdentifier';
 import type { AnyTgpuData, ResolutionCtx, TgpuData } from '../types';
 import alignIO from './alignIO';
-import { getAttributesString } from './attributes';
+import { getAttributesString, isBuiltin } from './attributes';
 
 // ----------
 // Public API
@@ -44,11 +43,20 @@ export function isIoStructSchema<T extends TgpuIoStruct>(
 // Implementation
 // --------------
 
+function generateFields(entries: [string, AnyTgpuData][]) {
+  let locations = 0;
+
+  return entries.map(([key, field]) => {
+    if (isBuiltin(field)) {
+      return code`  ${getAttributesString(field)}${key}: ${field},\n`;
+    }
+
+    return code`  @location(${locations++}) ${getAttributesString(field)}${key}: ${field},\n`;
+  });
+}
+
 class TgpuIoStructImpl<
-    TProps extends Record<string, AnyTgpuData> = Record<
-      string,
-      AnyTgpuData | AnyBuiltin
-    >,
+    TProps extends Record<string, AnyTgpuData> = Record<string, AnyTgpuData>,
   >
   extends Schema<UnwrapRecord<TProps>>
   implements TgpuData<UnwrapRecord<TProps>>
@@ -126,10 +134,10 @@ class TgpuIoStructImpl<
     const ident = identifier().$name(this._label);
 
     ctx.addDeclaration(code`
-      struct ${ident} {
-        ${Object.entries(this._properties).map(([key, field]) => code`${getAttributesString(field) ?? ''}${key}: ${field},\n`)}
-      }
-    `);
+struct ${ident} {
+${generateFields(Object.entries(this._properties))}\
+}
+`);
 
     return ctx.resolve(ident);
   }

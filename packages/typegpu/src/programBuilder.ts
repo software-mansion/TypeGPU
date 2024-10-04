@@ -1,6 +1,5 @@
 import type { AnySchema } from 'typed-binary';
 import { BindGroupResolver } from './bindGroupResolver';
-import { typeForBuiltin } from './builtinDataTypes';
 import {
   builtinSymbolToName,
   idForBuiltin,

@@ -57,6 +57,10 @@ export function isStructSchema<
 // Implementation
 // --------------
 
+function generateField([key, field]: [string, AnyTgpuData]) {
+  return code`  ${getAttributesString(field)}${key}: ${field},\n`;
+}
+
 class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
   extends Schema<UnwrapRecord<TProps>>
   implements TgpuData<UnwrapRecord<TProps>>
@@ -134,10 +138,10 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
     const ident = identifier().$name(this._label);
 
     ctx.addDeclaration(code`
-struct ${ident} {\
-${Object.entries(this._properties).map(([key, field]) => code`\n  ${getAttributesString(field) ?? ''}${key}: ${field},`)}
+struct ${ident} {
+${Object.entries(this._properties).map(generateField)}\
 }
-    `);
+`);
 
     return ctx.resolve(ident);
   }
