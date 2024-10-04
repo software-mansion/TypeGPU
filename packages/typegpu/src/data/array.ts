@@ -1,7 +1,7 @@
 import type * as TB from 'typed-binary';
 import {
   type IMeasurer,
-  MaxValue,
+  type MaxValue,
   Measurer,
   type Parsed,
   Schema,
@@ -116,10 +116,10 @@ class TgpuArrayImpl<TElement extends AnyTgpuData>
   }
 
   measure(
-    value: MaxValue | Parsed<Unwrap<TElement>>[],
+    _: MaxValue | Parsed<Unwrap<TElement>>[],
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
-    if (this.isRuntimeSized && value === MaxValue) {
+    if (this.isRuntimeSized) {
       return measurer.unbounded;
     }
     alignIO(measurer, this.byteAlignment);

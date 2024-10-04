@@ -141,7 +141,7 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
 
     const maxing = value === MaxValue;
     for (const [key, property] of Object.entries(this._properties)) {
-      if (maxing && measurer.isUnbounded) {
+      if (structMeasurer.isUnbounded) {
         throw new Error('Only the last property of a struct can be unbounded');
       }
 
@@ -152,7 +152,7 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
       );
 
       if (structMeasurer.isUnbounded && !isArraySchema(property)) {
-        throw new Error('Cannot nest unbouded struct within another struct');
+        throw new Error('Cannot nest unbounded struct within another struct');
       }
     }
 

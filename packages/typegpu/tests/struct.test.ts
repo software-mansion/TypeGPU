@@ -109,6 +109,14 @@ describe('struct', () => {
     expect(() => {
       const Invalid = struct({
         a: u32,
+        b: arrayOf(u32, 0),
+        c: arrayOf(u32, 0),
+      });
+    }).toThrow();
+
+    expect(() => {
+      const Invalid = struct({
+        a: u32,
         b: Unbounded,
       });
     }).toThrow();
