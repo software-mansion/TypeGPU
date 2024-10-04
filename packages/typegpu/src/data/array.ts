@@ -22,34 +22,100 @@ import { getCustomAlignment } from './attributes';
 // Public API
 // ----------
 
+/**
+ * Array schema constructed via `d.arrayOf` function.
+ *
+ * Responsible for handling reading and writing array values
+ * between binary and JS representation. Takes into account
+ * the `byteAlignment` requirement of its elementType.
+ */
 export interface TgpuArray<TElement extends AnyTgpuData>
   extends TgpuData<Unwrap<TElement>[]> {
   readonly elementType: TElement;
   readonly elementCount: number;
 }
 
+/**
+ * Creates an array schema that can be used to construct gpu buffers.
+ * Describes arrays with fixed-size length, storing elements of the same type.
+ *
+ * @example
+ * const LENGTH = 3;
+ * const array = d.arrayOf(d.u32, LENGTH);
+ *
+ * @param elementType The type of elements in the array.
+ * @param count The number of elements in the array.
+ */
 export const arrayOf = <TElement extends AnyTgpuData>(
   elementType: TElement,
   count: number,
 ): TgpuArray<TElement> => new TgpuArrayImpl(elementType, count);
 
+/**
+ * Array schema constructed via `d.looseArrayOf` function.
+ *
+ * Useful for defining tgpu vertex buffers.
+ * Elements in the schema are not aligned in respect to their `byteAlignment`,
+ * unless they are explicitly decorated with the custom align attribute
+ * via `d.align` function.
+ */
 export interface TgpuLooseArray<TElement extends AnyTgpuData | AnyTgpuLooseData>
   extends TgpuLooseData<Unwrap<TElement>[]> {
   readonly elementType: TElement;
   readonly elementCount: number;
 }
 
+/**
+ * Creates an array schema that can be used to construct tgpu vertex buffers.
+ * Describes arrays with fixed-size length, storing elements of the same type.
+ *
+ * Elements in the schema are not aligned in respect to their `byteAlignment`,
+ * unless they are explicitly decorated with the custom align attribute
+ * via `d.align` function.
+ *
+ * @example
+ * const looseArray = d.looseArrayOf(d.u32, 3);
+ *
+ * @example
+ * const looseArray = d.looseArrayOf(d.align(16, d.u32), 3);
+ *
+ * @param elementType The type of elements in the array.
+ * @param count The number of elements in the array.
+ */
 export const looseArrayOf = <TElement extends AnyTgpuData | AnyTgpuLooseData>(
   elementType: TElement,
   count: number,
 ): TgpuLooseArray<TElement> => new TgpuLooseArrayImpl(elementType, count);
 
+/**
+ * Checkes whether passed in value is an array schema,
+ * as opposed to a looseArray schema.
+ *
+ * Array schemas can be used to describe uniform and storage buffers,
+ * whereas looseArray schemas cannot.
+ *
+ * @example
+ * isArraySchema(d.arrayOf(d.u32, 4)) // true
+ * isArraySchema(d.looseArrayOf(d.u32, 4)) // false
+ */
 export function isArraySchema<T extends TgpuArray<AnyTgpuData>>(
   schema: T | unknown,
 ): schema is T {
   return schema instanceof TgpuArrayImpl;
 }
 
+/**
+ * Checkes whether passed in value is a looseArray schema,
+ * as opposed to a regular array schema.
+ *
+ * Array schemas can be used to describe uniform and storage buffers,
+ * whereas looseArray schemas cannot. Loose arrays are useful for
+ * defining vertex buffers instead.
+ *
+ * @example
+ * isLooseArraySchema(d.arrayOf(d.u32, 4)) // false
+ * isLooseArraySchema(d.looseArrayOf(d.u32, 4)) // true
+ */
 export function isLooseArraySchema<T extends TgpuLooseArray<AnyTgpuData>>(
   schema: T | unknown,
 ): schema is T {
