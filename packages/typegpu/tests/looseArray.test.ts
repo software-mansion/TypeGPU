@@ -33,6 +33,11 @@ describe('loose', () => {
     expect(TestArray.size).toEqual(48);
   });
 
+  it('properly handles calculating nested loose array size', () => {
+    const TestArray = looseArrayOf(looseArrayOf(vec3u, 3), 3);
+    expect(TestArray.size).toEqual(108);
+  });
+
   it('does not align array elements when writing', () => {
     const TestArray = looseArrayOf(vec3u, 3);
     const buffer = new ArrayBuffer(TestArray.size);

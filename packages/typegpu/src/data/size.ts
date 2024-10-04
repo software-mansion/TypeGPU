@@ -9,6 +9,7 @@ import {
   type Unwrap,
 } from 'typed-binary';
 import type { AnyTgpuData, ResolutionCtx, TgpuData } from '../types';
+import alignIO from './alignIO';
 
 // ----------
 // Public API
@@ -67,10 +68,16 @@ class TgpuSizedImpl<TSize extends number, TData extends AnyTgpuData>
   }
 
   write(output: ISerialOutput, value: ParseUnwrapped<TData>): void {
+    if (this.isCustomAligned) {
+      alignIO(output, this.byteAlignment);
+    }
     this.data.write(output, value);
   }
 
   read(input: ISerialInput): ParseUnwrapped<TData> {
+    if (this.isCustomAligned) {
+      alignIO(input, this.byteAlignment);
+    }
     return this.data.read(input) as ParseUnwrapped<TData>;
   }
 
@@ -78,6 +85,9 @@ class TgpuSizedImpl<TSize extends number, TData extends AnyTgpuData>
     value: MaxValue | ParseUnwrapped<TData>,
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
+    if (this.isCustomAligned) {
+      alignIO(measurer, this.byteAlignment);
+    }
     return measurer.add(this.size);
   }
 
