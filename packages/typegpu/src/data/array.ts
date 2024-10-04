@@ -137,10 +137,7 @@ class TgpuLooseArrayImpl<TElement extends AnyTgpuData>
     alignIO(output, this.byteAlignment);
     const beginning = output.currentByteOffset;
     for (let i = 0; i < Math.min(this.elementCount, value.length); i++) {
-      const customAlignment = getCustomAlignment(this.elementType);
-      if (customAlignment !== undefined) {
-        alignIO(output, customAlignment);
-      }
+      alignIO(output, this.byteAlignment);
       this.elementType.write(output, value[i]);
     }
     output.seekTo(beginning + this.size);
@@ -150,10 +147,7 @@ class TgpuLooseArrayImpl<TElement extends AnyTgpuData>
     alignIO(input, this.byteAlignment);
     const elements: Parsed<Unwrap<TElement>>[] = [];
     for (let i = 0; i < this.elementCount; i++) {
-      const customAlignment = getCustomAlignment(this.elementType);
-      if (customAlignment !== undefined) {
-        alignIO(input, customAlignment);
-      }
+      alignIO(input, this.byteAlignment);
       elements.push(this.elementType.read(input) as Parsed<Unwrap<TElement>>);
     }
     alignIO(input, this.byteAlignment);

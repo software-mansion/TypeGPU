@@ -37,11 +37,9 @@ export interface Size<T extends number> {
 
 export type AnyAttribute = Align<number> | Size<number>;
 
-export type AnyAttributeTuple = [...AnyAttribute[]];
-
 export interface Decorated<
   TInner extends AnyTgpuData,
-  TAttribs extends AnyAttributeTuple,
+  TAttribs extends [...AnyAttribute[]],
 > extends TgpuData<Unwrap<TInner>> {
   readonly inner: TInner;
   readonly attributes: TAttribs;
@@ -53,7 +51,7 @@ export interface Decorated<
 
 export interface LooseDecorated<
   TInner extends AnyTgpuLooseData,
-  TAttribs extends AnyAttributeTuple,
+  TAttribs extends [...AnyAttribute[]],
 > extends TgpuLooseData<Unwrap<TInner>> {
   readonly inner: TInner;
   readonly attributes: TAttribs;
@@ -74,10 +72,10 @@ export type ExtractAttributes<T> = T extends Decorated<
 
 export type UnwrapDecorated<T> = T extends Decorated<
   infer Inner,
-  AnyAttributeTuple
+  [...AnyAttribute[]]
 >
   ? Inner
-  : T extends LooseDecorated<infer Inner, AnyAttributeTuple>
+  : T extends LooseDecorated<infer Inner, [...AnyAttribute[]]>
     ? Inner
     : T;
 
@@ -183,13 +181,13 @@ export function size<
 }
 
 export function isDecorated<
-  T extends Decorated<AnyTgpuData, AnyAttributeTuple>,
+  T extends Decorated<AnyTgpuData, [...AnyAttribute[]]>,
 >(value: T | unknown): value is T {
   return value instanceof DecoratedImpl;
 }
 
 export function isLooseDecorated<
-  T extends LooseDecorated<AnyTgpuLooseData, AnyAttributeTuple>,
+  T extends LooseDecorated<AnyTgpuLooseData, [...AnyAttribute[]]>,
 >(value: T | unknown): value is T {
   return value instanceof LooseDecoratedImpl;
 }
@@ -209,7 +207,7 @@ export function getCustomAlignment(
 
 class BaseDecoratedImpl<
   TInner extends AnyTgpuData | AnyTgpuLooseData,
-  TAttribs extends AnyAttributeTuple,
+  TAttribs extends [...AnyAttribute[]],
 > {
   // Type-token, not available at runtime
   public readonly __unwrapped!: Unwrap<TInner>;
@@ -312,7 +310,7 @@ class BaseDecoratedImpl<
 
 class DecoratedImpl<
     TInner extends AnyTgpuData,
-    TAttribs extends AnyAttributeTuple,
+    TAttribs extends [...AnyAttribute[]],
   >
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements Decorated<TInner, TAttribs>
@@ -326,7 +324,7 @@ class DecoratedImpl<
 
 class LooseDecoratedImpl<
     TInner extends AnyTgpuLooseData,
-    TAttribs extends AnyAttributeTuple,
+    TAttribs extends [...AnyAttribute[]],
   >
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements LooseDecorated<TInner, TAttribs>
