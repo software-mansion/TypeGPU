@@ -15,7 +15,7 @@ authors:
 excerpt: Since WebGPU is still considered experimental, despite being supported by many browsers, it is often hidden behind flags. This post will help you find out if your browser supports WebGPU and help you enable it if needed.
 cover:
   alt: A sausage dog
-  image: ../../../assets/long_big.jpg
+  image: ../../../assets/troubleshooting_thumbnail.png
 ---
 
 Since WebGPU is still considered experimental, despite being supported by
