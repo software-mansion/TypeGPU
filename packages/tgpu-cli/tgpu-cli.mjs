@@ -98,9 +98,9 @@ ${color.Bold}Commands:${color.Reset}
   ${color.Cyan}tgpu-cli gen ${color.Reset} Generate a js/ts file from a wgsl file.
     -c, --commonjs\t\t generate a CommonJS style file
     -h, --help\t\t\t list all commands and their options
-    -i, --input\t\t\t input name of file to generate js/ts from
+    -i, --input\t\t\t a single input name or a glob pattern to generate js/ts from all matching files
     -j, --js\t\t\t generate a JavaScript file, instead of TypeScript
-    -o, --output\t\t output name for generated file; can be used only if a single file is being generated
+    -o, --output\t\t an output name for generated file; can be used only if a single file is being generated
     -v, --version\t\t print tgpu-cli version
 `);
 }
