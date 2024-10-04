@@ -152,7 +152,7 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
       );
 
       if (structMeasurer.isUnbounded && !isArraySchema(property)) {
-        throw new Error('Cannot nest unbouded structs');
+        throw new Error('Cannot nest unbouded struct within another struct');
       }
     }
 
