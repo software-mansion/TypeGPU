@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+
+// @ts-check
+
 import { readFileSync } from 'node:fs';
 import { exit } from 'node:process';
 import arg from 'arg';
@@ -11,18 +14,24 @@ const args = arg({
   '--help': Boolean,
   '--input': String,
   '--output': String,
+  '--commonjs': Boolean,
+  '--js': Boolean,
 
   '-v': '--version',
   '-h': '--help',
   '-i': '--input',
   '-o': '--output',
+  '-c': '--commonjs',
+  '-j': '--js',
 });
 
 const COMMANDS = {
   gen: {
     execute: async () => {
-      const input = args['--input'];
+      const input = args['--input'] ?? args._[1];
       const output = args['--output'];
+      const toCjs = args['--commonjs'] ?? false;
+      const toTs = !(args['--js'] ?? false);
 
       if (!input) {
         console.error(
@@ -56,9 +65,9 @@ const COMMANDS = {
 
       const results = await Promise.allSettled(
         files.map((file) => {
-          const out = output ?? file.replace('.wgsl', '.ts');
+          const out = output ?? file.replace('.wgsl', toTs ? '.ts' : '.js');
           console.log(`Generating ${file} >>> ${out}`);
-          return generate(file, out);
+          return generate(file, out, toTs, toCjs);
         }),
       );
 
@@ -86,14 +95,20 @@ function printHelp() {
 ${color.Reset}
 
 ${color.Bold}Commands:${color.Reset}
-  tgpu-cli gen   Generate a ts file from a wgsl file.
+  ${color.Cyan}tgpu-cli gen ${color.Reset} Generate a js/ts file from a wgsl file.
+    -c, --commonjs\t\t generate a CommonJS style file
+    -h, --help\t\t\t list all commands and their options
+    -i, --input\t\t\t input name of file to generate js/ts from
+    -j, --js\t\t\t generate a JavaScript file, instead of TypeScript
+    -o, --output\t\t output name for generated file; can be used only if a single file is being generated
+    -v, --version\t\t print tgpu-cli version
 `);
 }
 
 function printVersion() {
   try {
     const packageJson = JSON.parse(
-      readFileSync(new URL('./package.json', import.meta.url)),
+      readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
     );
     console.log(
       `${color.Green}TypeGPU CLI version ${packageJson.version}${color.Reset}`,
@@ -116,7 +131,6 @@ if (args['--version']) {
   exit(0);
 }
 
-/** @type {keyof typeof COMMANDS} */
 const command = args._[0]; // first positional argument
 if (!command) {
   printHelp();

@@ -7,56 +7,73 @@ const cwd = new URL(`file:${process.cwd()}/`);
 
 const LENGTH_VAR = 'arrayLength';
 
+let exportsList = [];
+
 /**
  * @param { string } input
  * @param { string } output
+ * @param { boolean } toTs
+ * @param { boolean } toCjs
  */
-async function main(input, output) {
+async function main(input, output, toTs, toCjs) {
   const inputPath = new URL(input, cwd);
   const outputPath = new URL(output, cwd);
-  const toTs = output.endsWith('.ts');
   const inputContents = await fs.readFile(inputPath, 'utf8');
 
-  await fs.writeFile(outputPath, generate(inputContents, toTs));
+  await fs.writeFile(outputPath, generate(inputContents, toTs, toCjs));
 }
 
 /**
  * @param { string } wgsl
  * @param { boolean } toTs
+ * @param { boolean } toCjs
  */
-export function generate(wgsl, toTs = true) {
+export function generate(wgsl, toTs = true, toCjs = false) {
   const reflect = new WgslReflect(wgsl);
+
+  exportsList = [];
 
   return `/* generated via tgpu-cli by TypeGPU */
 
+${
+  toCjs
+    ? `\
+const tgpu = require('typegpu').default;
+const d = require('typegpu/data');`
+    : `\
 import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import * as d from 'typegpu/data';`
+}
 
-${generateStructs(reflect.structs, toTs)}
+${generateStructs(reflect.structs, toTs, toCjs)}
 
-${generateAliases(reflect.aliases)}
+${generateAliases(reflect.aliases, toCjs)}
 
-${generateBindGroupLayouts(reflect.getBindGroups())}
+${generateBindGroupLayouts(reflect.getBindGroups(), toCjs)}
+
+${generateExports(toCjs)}
 `.trim();
 }
 
 /**
  * @param { import('wgsl_reflect').StructInfo[] } structs
  * @param { boolean } toTs
+ * @param { boolean } toCjs
  */
-function generateStructs(structs, toTs) {
+function generateStructs(structs, toTs, toCjs) {
   return structs.length > 0
     ? `/* structs */
-${structs.map((struct) => generateStruct(struct, toTs)).join('\n\n')}`
+${structs.map((struct) => generateStruct(struct, toTs, toCjs)).join('\n\n')}`
     : '';
 }
 
 /**
  * @param { import('wgsl_reflect').StructInfo } struct
  * @param { boolean } toTs
+ * @param { boolean } toCjs
  */
-function generateStruct(struct, toTs) {
-  return `export const ${struct.name} = ${
+function generateStruct(struct, toTs, toCjs) {
+  return `${declareConst(struct.name, toCjs)} = ${
     hasVarLengthMember(struct)
       ? `(${LENGTH_VAR}${toTs ? ': number' : ''}) => `
       : ''
@@ -75,12 +92,16 @@ function hasVarLengthMember(struct) {
 
 /**
  * @param { import('wgsl_reflect').AliasInfo[] } aliases
+ * @param { boolean } toCjs
  */
-function generateAliases(aliases) {
+function generateAliases(aliases, toCjs) {
   return aliases.length > 0
     ? `/* aliases */
 ${aliases
-  .map((alias) => `export const ${alias.name} = ${generateType(alias.type)};`)
+  .map(
+    (alias) =>
+      `${declareConst(alias.name, toCjs)} = ${generateType(alias.type)};`,
+  )
   .join('\n')}`
     : '';
 }
@@ -147,14 +168,15 @@ function replaceWithAlias(type) {
 
 /**
  * @param { import('wgsl_reflect').VariableInfo[][] } bindGroups
+ * @param { boolean } toCjs
  */
-function generateBindGroupLayouts(bindGroups) {
+function generateBindGroupLayouts(bindGroups, toCjs) {
   return bindGroups.length > 0
     ? `/* bindGroupLayouts */
 ${bindGroups
   .flatMap(
     (group, index) => `\
-export const layout${index} = tgpu.bindGroupLayout({
+${declareConst(`layout${index}`, toCjs)} = tgpu.bindGroupLayout({
   ${generateGroupLayout(group)}
 }).$forceIndex(${index});`,
   )
@@ -301,6 +323,32 @@ function generateExternalTextureVariable(variable) {
   return `{
     externalTexture: {},
   }`;
+}
+
+/**
+ * @param { string } ident
+ * @param { boolean } toCjs
+ */
+function declareConst(ident, toCjs) {
+  if (toCjs) {
+    exportsList.push(ident);
+    return `const ${ident}`;
+  }
+  return `export const ${ident}`;
+}
+
+/**
+ * @param { boolean } toCjs
+ */
+function generateExports(toCjs) {
+  if (!toCjs) {
+    exportsList = [];
+    return '';
+  }
+
+  const exports = `module.exports = {${exportsList.join(', ')}};`;
+  exportsList = [];
+  return exports;
 }
 
 export default main;
