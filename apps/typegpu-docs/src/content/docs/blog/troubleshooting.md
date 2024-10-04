@@ -1,6 +1,6 @@
 ---
 title: How to enable WebGPU on your device
-date: 2023-07-24
+date: 2024-10-04
 tags:
   - Safari
   - iPhone
