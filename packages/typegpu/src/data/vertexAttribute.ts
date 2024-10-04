@@ -183,7 +183,6 @@ function writeSizedVector(
   isSigned: boolean,
 ): void {
   const primitive = vectorKindToPrimitive[value.kind];
-  if (!primitive) throw new Error('Invalid vector kind');
   for (const entry of value) {
     writeSizedPrimitive(primitive, entry, elementSize, output, isSigned);
   }
@@ -215,7 +214,9 @@ function writeSizedPrimitive(
   };
 
   const setter = setters[primitive][Math.log2(size)];
-  if (setter) setter.call(view, 0, value);
+  if (setter) {
+    setter.call(view, 0, value);
+  }
   for (let i = 0; i < size; i++) {
     output.writeByte(view.getUint8(i));
   }
@@ -249,7 +250,9 @@ function readSizedPrimitive(
   };
 
   const getter = getters[primitive][Math.log2(size)];
-  if (getter) return getter.call(view, 0);
+  if (getter) {
+    return getter.call(view, 0);
+  }
   throw new Error('Invalid primitive');
 }
 
