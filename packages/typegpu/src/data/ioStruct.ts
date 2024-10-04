@@ -15,9 +15,8 @@ import type { TgpuNamable } from '../namable';
 import { code } from '../tgpuCode';
 import { identifier } from '../tgpuIdentifier';
 import type { AnyTgpuData, ResolutionCtx, TgpuData } from '../types';
-import { isAlignedSchema } from './align';
 import alignIO from './alignIO';
-import { isSizedSchema } from './size';
+import { getAttributesString } from './attributes';
 
 // ----------
 // Public API
@@ -59,7 +58,6 @@ class TgpuIoStructImpl<
   public readonly byteAlignment: number;
   public readonly size: number;
   public readonly isLoose = false as const;
-  public readonly isCustomAligned = false;
 
   constructor(private readonly _properties: TProps) {
     super();
@@ -69,6 +67,10 @@ class TgpuIoStructImpl<
       .reduce((a, b) => (a > b ? a : b));
 
     this.size = this.measure(MaxValue).size;
+  }
+
+  get label() {
+    return this._label;
   }
 
   $name(label: string) {
@@ -101,7 +103,6 @@ class TgpuIoStructImpl<
     }
 
     alignIO(input, this.byteAlignment);
-
     return result as Parsed<UnwrapRecord<TProps>>;
   }
 
@@ -126,22 +127,10 @@ class TgpuIoStructImpl<
 
     ctx.addDeclaration(code`
       struct ${ident} {
-        ${Object.entries(this._properties).map(([key, field]) => code`${getAttribute(field) ?? ''}${key}: ${field},\n`)}
+        ${Object.entries(this._properties).map(([key, field]) => code`${getAttributesString(field) ?? ''}${key}: ${field},\n`)}
       }
     `);
 
     return ctx.resolve(ident);
   }
-}
-
-function getAttribute<T extends AnyTgpuData>(field: T): string | undefined {
-  if (isAlignedSchema(field as unknown)) {
-    return `@align(${field.byteAlignment}) `;
-  }
-
-  if (isSizedSchema(field as unknown)) {
-    return `@size(${field.size}) `;
-  }
-
-  return undefined;
 }

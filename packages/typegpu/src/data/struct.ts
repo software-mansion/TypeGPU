@@ -21,7 +21,7 @@ import type {
   TgpuLooseData,
 } from '../types';
 import alignIO from './alignIO';
-import { isDecorated, isLooseDecorated } from './attributes';
+import { getAttributesString } from './attributes';
 
 // ----------
 // Public API
@@ -135,32 +135,12 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
 
     ctx.addDeclaration(code`
 struct ${ident} {\
-${Object.entries(this._properties).map(([key, field]) => code`\n  ${getAttributes(field) ?? ''}${key}: ${field},`)}
+${Object.entries(this._properties).map(([key, field]) => code`\n  ${getAttributesString(field) ?? ''}${key}: ${field},`)}
 }
     `);
 
     return ctx.resolve(ident);
   }
-}
-
-function getAttributes<T extends AnyTgpuData>(field: T): string | undefined {
-  if (!isDecorated(field) && !isLooseDecorated(field)) {
-    return undefined;
-  }
-
-  return field.attributes
-    .map((attrib) => {
-      if (attrib.type === 'align') {
-        return `@align(${attrib.alignment}) `;
-      }
-
-      if (attrib.type) {
-        return `@size(${attrib.size}) `;
-      }
-
-      return '';
-    })
-    .join('');
 }
 
 class TgpuLooseStructImpl<

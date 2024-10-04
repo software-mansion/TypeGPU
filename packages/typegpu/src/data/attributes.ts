@@ -9,6 +9,7 @@ import {
   type Parsed,
   type Unwrap,
 } from 'typed-binary';
+import type { BuiltinName } from '../builtinIdentifiers';
 import { RecursiveDataTypeError } from '../errors';
 import {
   type AnyTgpuData,
@@ -35,7 +36,21 @@ export interface Size<T extends number> {
   size: T;
 }
 
-export type AnyAttribute = Align<number> | Size<number>;
+export interface Location<T extends number> {
+  type: 'location';
+  index: T;
+}
+
+export interface Builtin<T extends BuiltinName> {
+  type: 'builtin';
+  name: T;
+}
+
+export type AnyAttribute =
+  | Align<number>
+  | Size<number>
+  | Location<number>
+  | Builtin<BuiltinName>;
 
 export interface Decorated<
   TInner extends AnyTgpuData,
@@ -45,8 +60,10 @@ export interface Decorated<
   readonly attributes: TAttribs;
 
   // Easy access to all attributes, if they exist
-  readonly customAlignment: number | undefined;
-  readonly customSize: number | undefined;
+  readonly alignAttrib: number | undefined;
+  readonly sizeAttrib: number | undefined;
+  readonly locationAttrib: number | undefined;
+  readonly builtinAttrib: BuiltinName | undefined;
 }
 
 export interface LooseDecorated<
@@ -57,8 +74,10 @@ export interface LooseDecorated<
   readonly attributes: TAttribs;
 
   // Easy access to all attributes, if they exist
-  readonly customAlignment: number | undefined;
-  readonly customSize: number | undefined;
+  readonly alignAttrib: number | undefined;
+  readonly sizeAttrib: number | undefined;
+  readonly locationAttrib: number | undefined;
+  readonly builtinAttrib: BuiltinName | undefined;
 }
 
 export type ExtractAttributes<T> = T extends Decorated<
@@ -196,9 +215,31 @@ export function getCustomAlignment(
   data: AnyTgpuData | AnyTgpuLooseData,
 ): number | undefined {
   if (isDecorated(data) || isLooseDecorated(data)) {
-    return data.customAlignment;
+    return data.alignAttrib;
   }
   return undefined;
+}
+
+export function getAttributesString<T extends AnyTgpuData>(
+  field: T,
+): string | undefined {
+  if (!isDecorated(field) && !isLooseDecorated(field)) {
+    return undefined;
+  }
+
+  return field.attributes
+    .map((attrib) => {
+      if (attrib.type === 'align') {
+        return `@align(${attrib.alignment}) `;
+      }
+
+      if (attrib.type === 'size') {
+        return `@size(${attrib.size}) `;
+      }
+
+      return '';
+    })
+    .join('');
 }
 
 // --------------
@@ -216,21 +257,23 @@ class BaseDecoratedImpl<
   public readonly byteAlignment: number;
   public readonly size: number;
 
-  public readonly customAlignment: number | undefined;
-  public readonly customSize: number | undefined;
+  public readonly alignAttrib: number | undefined;
+  public readonly sizeAttrib: number | undefined;
+  public readonly locationAttrib: number | undefined;
+  public readonly builtinAttrib: BuiltinName | undefined;
 
   constructor(
     public readonly inner: TInner,
     public readonly attributes: TAttribs,
   ) {
-    this.customAlignment = attributes.find(
+    this.alignAttrib = attributes.find(
       (a): a is Align<number> => a.type === 'align',
     )?.alignment;
-    this.customSize = attributes.find(
+    this.sizeAttrib = attributes.find(
       (a): a is Size<number> => a.type === 'size',
     )?.size;
 
-    this.byteAlignment = this.customAlignment ?? inner.byteAlignment;
+    this.byteAlignment = this.alignAttrib ?? inner.byteAlignment;
     this.size = this.measure(MaxValue).size;
 
     if (this.byteAlignment <= 0) {
@@ -271,7 +314,7 @@ class BaseDecoratedImpl<
   }
 
   write(output: ISerialOutput, value: Parsed<Unwrap<TInner>>): void {
-    alignIO(output, this.customAlignment ?? 1);
+    alignIO(output, this.alignAttrib ?? 1);
 
     const beginning = output.currentByteOffset;
     this.inner.write(output, value);
@@ -279,7 +322,7 @@ class BaseDecoratedImpl<
   }
 
   read(input: ISerialInput): Parsed<Unwrap<TInner>> {
-    alignIO(input, this.customAlignment ?? 1);
+    alignIO(input, this.alignAttrib ?? 1);
 
     const beginning = input.currentByteOffset;
     const value = this.inner.read(input) as Parsed<Unwrap<TInner>>;
@@ -291,10 +334,10 @@ class BaseDecoratedImpl<
     value: MaxValue | Parsed<Unwrap<TInner>>,
     measurer: IMeasurer | undefined = new Measurer(),
   ): IMeasurer {
-    alignIO(measurer, this.customAlignment ?? 1);
+    alignIO(measurer, this.alignAttrib ?? 1);
 
-    if (this.customSize !== undefined) {
-      return measurer.add(this.customSize);
+    if (this.sizeAttrib !== undefined) {
+      return measurer.add(this.sizeAttrib);
     }
 
     return this.inner.measure(value, measurer);
