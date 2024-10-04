@@ -1,9 +1,5 @@
 import type { ISchema, Unwrap } from 'typed-binary';
-import type {
-  TgpuFn,
-  TgpuFnShell,
-  TgslImplemented,
-} from './core/function/tgpuFn';
+import type { TgpuFnShellBase } from './core/function/tgpuFn';
 import type { TgpuNamable } from './namable';
 import type { Block } from './smol';
 import type { TgpuBuffer } from './tgpuBuffer';
@@ -50,15 +46,14 @@ export interface ResolutionCtx {
    */
   unwrap<T>(eventual: Eventual<T>): T;
   resolve(item: Wgsl, slotValueOverrides?: SlotValuePair<unknown>[]): string;
-  // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
-  transpileFn(fn: TgpuFn<any, AnyTgpuData> & TgslImplemented): {
+  transpileFn(fn: string): {
     argNames: string[];
     body: Block;
     externalNames: string[];
   };
   fnToWgsl(
     // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
-    shell: TgpuFnShell<any, AnyTgpuData>,
+    shell: TgpuFnShellBase<any, AnyTgpuData>,
     argNames: string[],
     body: Block,
     externalMap: Record<string, unknown>,

@@ -1,8 +1,4 @@
-import type {
-  TgpuFn,
-  TgpuFnShell,
-  TgslImplemented,
-} from './core/function/tgpuFn';
+import type { TgpuFnShellBase } from './core/function/tgpuFn';
 import { MissingSlotValueError, ResolutionError } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
@@ -345,8 +341,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     );
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
-  transpileFn(fn: TgpuFn<any, AnyTgpuData> & TgslImplemented): {
+  transpileFn(fn: string): {
     argNames: string[];
     body: Block;
     externalNames: string[];
@@ -357,12 +352,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       );
     }
 
-    return this._shared.jitTranspiler.transpileFn(String(fn.implementation));
+    return this._shared.jitTranspiler.transpileFn(fn);
   }
 
   fnToWgsl(
     // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
-    shell: TgpuFnShell<any, AnyTgpuData>,
+    shell: TgpuFnShellBase<any, AnyTgpuData>,
     argNames: string[],
     body: Block,
     externalMap: Record<string, unknown>,
