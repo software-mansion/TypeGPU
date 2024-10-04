@@ -13,7 +13,13 @@ import { RecursiveDataTypeError } from '../errors';
 import type { TgpuNamable } from '../namable';
 import { code } from '../tgpuCode';
 import { identifier } from '../tgpuIdentifier';
-import type { AnyTgpuData, ResolutionCtx, TgpuData } from '../types';
+import type {
+  AnyTgpuData,
+  AnyTgpuLooseData,
+  ResolutionCtx,
+  TgpuData,
+  TgpuLooseData,
+} from '../types';
 import alignIO from './alignIO';
 import { isDecorated, isLooseDecorated } from './attributes';
 
@@ -29,6 +35,17 @@ export interface TgpuStruct<TProps extends Record<string, AnyTgpuData>>
 export const struct = <TProps extends Record<string, AnyTgpuData>>(
   properties: TProps,
 ): TgpuStruct<TProps> => new TgpuStructImpl(properties);
+
+export interface TgpuLooseStruct<
+  TProps extends Record<string, AnyTgpuData | AnyTgpuLooseData>,
+> extends ISchema<UnwrapRecord<TProps>>,
+    TgpuLooseData<UnwrapRecord<TProps>> {}
+
+export const looseStruct = <
+  TProps extends Record<string, AnyTgpuData | AnyTgpuLooseData>,
+>(
+  properties: TProps,
+): TgpuLooseStruct<TProps> => new TgpuLooseStructImpl(properties);
 
 export function isStructSchema<
   T extends TgpuStruct<Record<string, AnyTgpuData>>,
@@ -60,6 +77,10 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
     this.size = this.measure(MaxValue).size;
   }
 
+  get label() {
+    return this._label;
+  }
+
   $name(label: string) {
     this._label = label;
     return this;
@@ -71,26 +92,26 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
 
   write(output: ISerialOutput, value: Parsed<UnwrapRecord<TProps>>): void {
     alignIO(output, this.byteAlignment);
-    type Property = keyof Parsed<UnwrapRecord<TProps>>;
 
     for (const [key, property] of Object.entries(this._properties)) {
       alignIO(output, property.byteAlignment);
-      property.write(output, value[key as Property]);
+      property.write(output, value[key]);
     }
+
+    alignIO(output, this.byteAlignment);
   }
 
   read(input: ISerialInput): Parsed<UnwrapRecord<TProps>> {
     alignIO(input, this.byteAlignment);
-    type Property = keyof Parsed<UnwrapRecord<TProps>>;
-    const result = {} as Parsed<UnwrapRecord<TProps>>;
+    const result = {} as Record<string, unknown>;
 
     for (const [key, property] of Object.entries(this._properties)) {
       alignIO(input, property.byteAlignment);
-      result[key as Property] = property.read(input) as Parsed<
-        UnwrapRecord<TProps>
-      >[Property];
+      result[key] = property.read(input);
     }
-    return result;
+
+    alignIO(input, this.byteAlignment);
+    return result as Parsed<UnwrapRecord<TProps>>;
   }
 
   measure(
@@ -98,14 +119,11 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
     alignIO(measurer, this.byteAlignment);
-    type Property = keyof Parsed<UnwrapRecord<TProps>>;
 
+    const maxing = value === MaxValue;
     for (const [key, property] of Object.entries(this._properties)) {
       alignIO(measurer, property.byteAlignment);
-      property.measure(
-        value === MaxValue ? MaxValue : value[key as Property],
-        measurer,
-      );
+      property.measure(maxing ? MaxValue : value[key], measurer);
     }
 
     alignIO(measurer, this.byteAlignment);
@@ -143,4 +161,64 @@ function getAttributes<T extends AnyTgpuData>(field: T): string | undefined {
       return '';
     })
     .join('');
+}
+
+class TgpuLooseStructImpl<
+    TProps extends Record<string, AnyTgpuData | AnyTgpuLooseData>,
+  >
+  extends Schema<UnwrapRecord<TProps>>
+  implements TgpuLooseData<UnwrapRecord<TProps>>
+{
+  private _label: string | undefined;
+
+  public readonly byteAlignment = 1;
+  public readonly isCustomAligned = false;
+  public readonly isLoose = true as const;
+  public readonly size: number;
+
+  constructor(private readonly _properties: TProps) {
+    super();
+    this.size = this.measure(MaxValue).size;
+  }
+
+  get label() {
+    return this._label;
+  }
+
+  $name(label: string) {
+    this._label = label;
+    return this;
+  }
+
+  resolveReferences(): void {
+    throw new RecursiveDataTypeError();
+  }
+
+  write(output: ISerialOutput, value: Parsed<UnwrapRecord<TProps>>): void {
+    for (const [key, property] of Object.entries(this._properties)) {
+      property.write(output, value[key]);
+    }
+  }
+
+  read(input: ISerialInput): Parsed<UnwrapRecord<TProps>> {
+    const result = {} as Record<string, unknown>;
+
+    for (const [key, property] of Object.entries(this._properties)) {
+      result[key] = property.read(input);
+    }
+
+    return result as Parsed<UnwrapRecord<TProps>>;
+  }
+
+  measure(
+    value: MaxValue | Parsed<UnwrapRecord<TProps>>,
+    measurer: IMeasurer = new Measurer(),
+  ): IMeasurer {
+    const maxing = value === MaxValue;
+    for (const [key, property] of Object.entries(this._properties)) {
+      property.measure(maxing ? MaxValue : value[key], measurer);
+    }
+
+    return measurer;
+  }
 }
