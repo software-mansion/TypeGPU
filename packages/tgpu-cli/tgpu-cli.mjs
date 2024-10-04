@@ -3,6 +3,7 @@
 // @ts-check
 
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { exit } from 'node:process';
 import arg from 'arg';
 import { glob } from 'glob';
@@ -15,15 +16,14 @@ const args = arg({
   '--input': String,
   '--output': String,
   '--commonjs': Boolean,
-  '--js': Boolean,
 
   '-v': '--version',
   '-h': '--help',
   '-i': '--input',
   '-o': '--output',
-  '-c': '--commonjs',
-  '-j': '--js',
 });
+
+const ALLOWED_EXTENSIONS = ['.js', '.cjs', '.mjs', '.ts', '.cts', '.mts'];
 
 const COMMANDS = {
   gen: {
@@ -31,7 +31,6 @@ const COMMANDS = {
       const input = args['--input'] ?? args._[1];
       const output = args['--output'];
       const toCjs = args['--commonjs'] ?? false;
-      const toTs = !(args['--js'] ?? false);
 
       if (!input) {
         console.error(
@@ -40,6 +39,26 @@ const COMMANDS = {
         exit(1);
       }
 
+      if (!output) {
+        console.error(
+          `${color.Red}Error: Missing required argument: ${color.Yellow}--output${color.Reset}`,
+        );
+        exit(1);
+      }
+
+      const extension = path.extname(output);
+
+      if (
+        extension === '' ||
+        !ALLOWED_EXTENSIONS.includes(extension.toLowerCase())
+      ) {
+        console.error(
+          `${color.Red}Error: output pattern: ${output} has unsupported extension. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}`,
+        );
+        exit(1);
+      }
+
+      const toTs = extension.toLowerCase().endsWith('ts');
       const files = await glob(input);
 
       if (files.length === 0) {
@@ -49,23 +68,18 @@ const COMMANDS = {
         exit(0);
       }
 
-      if (!output && !input.endsWith('.wgsl')) {
+      if (files.length > 1 && !output.includes('*')) {
         console.error(
-          `${color.Red}Error: No output name provided and provided input doesn't end with .wgsl ${color.Reset}`,
-        );
-        exit(1);
-      }
-
-      if (output && files.length > 1) {
-        console.error(
-          `${color.Red}Error: More than one file found, while a single output name was provided ${color.Reset}`,
+          `${color.Red}Error: More than one file found: ${files.join(', ')}, while a non-pattern output name was provided ${color.Reset}`,
         );
         exit(1);
       }
 
       const results = await Promise.allSettled(
         files.map((file) => {
-          const out = output ?? file.replace('.wgsl', toTs ? '.ts' : '.js');
+          const parsed = path.parse(file);
+          const out = output.replace('*', parsed.name);
+
           console.log(`Generating ${file} >>> ${out}`);
           return generate(file, out, toTs, toCjs);
         }),
@@ -94,14 +108,14 @@ function printHelp() {
 ----------------------------
 ${color.Reset}
 
+--help, -h\t list all commands and their options
+--version, -v\t print tgpu-cli version
+
 ${color.Bold}Commands:${color.Reset}
   ${color.Cyan}tgpu-cli gen ${color.Reset} Generate a js/ts file from a wgsl file.
-    -c, --commonjs\t generate a CommonJS style file
-    -h, --help\t\t list all commands and their options
-    -i, --input\t\t a single input name or a glob pattern to generate js/ts from all matching files
-    -j, --js\t\t generate a JavaScript file, instead of TypeScript
-    -o, --output\t an output name for generated file; can be used only if a single file is being generated
-    -v, --version\t print tgpu-cli version
+    --commonjs\t\t generate a CommonJS style file
+    --input, -i\t\t a single input name or a glob pattern to generate js/ts from all matching files
+    --output, -o\t an output name or pattern for generated file(s)
 `);
 }
 
