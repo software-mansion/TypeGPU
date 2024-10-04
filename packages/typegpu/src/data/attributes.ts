@@ -266,7 +266,7 @@ class BaseDecoratedImpl<
     }
   }
 
-  resolveReferences(ctx: IRefResolver): void {
+  resolveReferences(_: IRefResolver): void {
     throw new RecursiveDataTypeError();
   }
 
