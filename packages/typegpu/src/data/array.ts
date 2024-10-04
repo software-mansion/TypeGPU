@@ -10,11 +10,13 @@ import {
 import { roundUp } from '../mathUtils';
 import type {
   AnyTgpuData,
+  AnyTgpuLooseData,
   ResolutionCtx,
   TgpuData,
   TgpuLooseData,
 } from '../types';
 import alignIO from './alignIO';
+import { getCustomAlignment } from './attributes';
 
 // ----------
 // Public API
@@ -31,13 +33,13 @@ export const arrayOf = <TElement extends AnyTgpuData>(
   count: number,
 ): TgpuArray<TElement> => new TgpuArrayImpl(elementType, count);
 
-export interface TgpuLooseArray<TElement extends AnyTgpuData>
+export interface TgpuLooseArray<TElement extends AnyTgpuData | AnyTgpuLooseData>
   extends TgpuLooseData<Unwrap<TElement>[]> {
   readonly elementType: TElement;
   readonly elementCount: number;
 }
 
-export const looseArrayOf = <TElement extends AnyTgpuData>(
+export const looseArrayOf = <TElement extends AnyTgpuData | AnyTgpuLooseData>(
   elementType: TElement,
   count: number,
 ): TgpuLooseArray<TElement> => new TgpuLooseArrayImpl(elementType, count);
@@ -62,24 +64,19 @@ class TgpuArrayImpl<TElement extends AnyTgpuData>
   extends Schema<Unwrap<TElement>[]>
   implements TgpuArray<TElement>
 {
-  readonly elementType: TElement;
-  readonly elementCount: number;
-  readonly byteAlignment: number;
-  readonly size: number;
-  readonly stride: number;
-  readonly isLoose = false;
-  readonly isCustomAligned = false;
+  public readonly byteAlignment: number;
+  public readonly size: number;
+  public readonly stride: number;
+  public readonly isLoose = false;
 
-  constructor(elementType: TElement, count: number) {
+  constructor(
+    public readonly elementType: TElement,
+    public readonly elementCount: number,
+  ) {
     super();
-    this.elementType = elementType;
-    this.elementCount = count;
     this.byteAlignment = elementType.byteAlignment;
-    this.stride = roundUp(
-      this.elementType.size,
-      this.elementType.byteAlignment,
-    );
-    this.size = this.stride * this.elementCount;
+    this.stride = roundUp(elementType.size, elementType.byteAlignment);
+    this.size = this.stride * elementCount;
   }
 
   write(output: TB.ISerialOutput, value: Parsed<Unwrap<TElement>>[]) {
@@ -89,7 +86,7 @@ class TgpuArrayImpl<TElement extends AnyTgpuData>
       alignIO(output, this.byteAlignment);
       this.elementType.write(output, value[i]);
     }
-    output.seekTo(beginning + this.stride * this.elementCount);
+    output.seekTo(beginning + this.size);
   }
 
   read(input: TB.ISerialInput): Parsed<Unwrap<TElement>>[] {
@@ -99,15 +96,16 @@ class TgpuArrayImpl<TElement extends AnyTgpuData>
       alignIO(input, this.byteAlignment);
       elements.push(this.elementType.read(input) as Parsed<Unwrap<TElement>>);
     }
+    alignIO(input, this.byteAlignment);
     return elements;
   }
 
   measure(
-    value: MaxValue | Parsed<Unwrap<TElement>>[],
+    _: MaxValue | Parsed<Unwrap<TElement>>[],
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
     alignIO(measurer, this.byteAlignment);
-    return measurer.add(this.stride * this.elementCount);
+    return measurer.add(this.size);
   }
 
   resolve(ctx: ResolutionCtx): string {
@@ -117,54 +115,51 @@ class TgpuArrayImpl<TElement extends AnyTgpuData>
   }
 }
 
-class TgpuLooseArrayImpl<TElement extends AnyTgpuData>
+class TgpuLooseArrayImpl<TElement extends AnyTgpuData | AnyTgpuLooseData>
   extends Schema<Unwrap<TElement>[]>
   implements TgpuLooseArray<TElement>
 {
-  readonly elementType: TElement;
-  readonly elementCount: number;
-  readonly size: number;
-  readonly stride: number;
-  readonly isLoose = true;
+  public readonly byteAlignment: number;
+  public readonly size: number;
+  public readonly stride: number;
+  public readonly isLoose = true;
 
-  constructor(elementType: TElement, count: number) {
+  constructor(
+    public readonly elementType: TElement,
+    public readonly elementCount: number,
+  ) {
     super();
-    this.elementType = elementType;
-    this.elementCount = count;
-
-    this.stride = this.elementType.isCustomAligned
-      ? roundUp(this.elementType.size, this.elementType.byteAlignment)
-      : this.elementType.size;
-
-    this.size = this.stride * this.elementCount;
+    this.byteAlignment = getCustomAlignment(elementType) ?? 1;
+    this.stride = roundUp(elementType.size, this.byteAlignment);
+    this.size = this.stride * elementCount;
   }
 
   write(output: TB.ISerialOutput, value: Parsed<Unwrap<TElement>>[]) {
+    alignIO(output, this.byteAlignment);
     const beginning = output.currentByteOffset;
     for (let i = 0; i < Math.min(this.elementCount, value.length); i++) {
-      if (this.elementType.isCustomAligned) {
-        alignIO(output, this.elementType.byteAlignment);
-      }
+      alignIO(output, this.byteAlignment);
       this.elementType.write(output, value[i]);
     }
-    output.seekTo(beginning + this.stride * this.elementCount);
+    output.seekTo(beginning + this.size);
   }
 
   read(input: TB.ISerialInput): Parsed<Unwrap<TElement>>[] {
+    alignIO(input, this.byteAlignment);
     const elements: Parsed<Unwrap<TElement>>[] = [];
     for (let i = 0; i < this.elementCount; i++) {
-      if (this.elementType.isCustomAligned) {
-        alignIO(input, this.elementType.byteAlignment);
-      }
+      alignIO(input, this.byteAlignment);
       elements.push(this.elementType.read(input) as Parsed<Unwrap<TElement>>);
     }
+    alignIO(input, this.byteAlignment);
     return elements;
   }
 
   measure(
-    value: MaxValue | Parsed<Unwrap<TElement>>[],
+    _: MaxValue | Parsed<Unwrap<TElement>>[],
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
-    return measurer.add(this.stride * this.elementCount);
+    alignIO(measurer, this.byteAlignment);
+    return measurer.add(this.size);
   }
 }

@@ -42,7 +42,7 @@ export default defineConfig({
       },
       sidebar: [
         {
-          label: '⭐️ Live Examples',
+          label: '⭐ Live Examples',
           link: 'examples',
           // attrs: {
           //   'data-astro-reload': true,

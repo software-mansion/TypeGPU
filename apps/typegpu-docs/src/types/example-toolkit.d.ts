@@ -17,7 +17,7 @@ declare module '@typegpu/example-toolkit' {
   export type ButtonOptions = {
     label?: string;
     onClick?: () => void;
-  }
+  };
 
   export type TableRef = {
     setMatrix: (data: number[][]) => void;

@@ -1,13 +1,16 @@
+import { parse } from 'acorn';
 import { describe, expect, it } from 'vitest';
 import { transpileFn } from '../src/parsers';
 
+const p = (code: string) => parse(code, { ecmaVersion: 'latest' });
+
 describe('transpileFn', () => {
   it('fails when the input is not a function', () => {
-    expect(() => transpileFn('1 + 2')).toThrow();
+    expect(() => transpileFn(p('1 + 2'))).toThrow();
   });
 
   it('parses an empty arrow function', () => {
-    const { argNames, body, externalNames } = transpileFn('() => {}');
+    const { argNames, body, externalNames } = transpileFn(p('() => {}'));
 
     expect(argNames).toEqual([]);
     expect(body).toEqual({ block: [] });
@@ -16,7 +19,7 @@ describe('transpileFn', () => {
 
   it('parses an empty named function', () => {
     const { argNames, body, externalNames } = transpileFn(
-      'function example() {}',
+      p('function example() {}'),
     );
 
     expect(argNames).toEqual([]);
@@ -26,7 +29,7 @@ describe('transpileFn', () => {
 
   it('gathers external names', () => {
     const { argNames, body, externalNames } = transpileFn(
-      '(a, b) => a + b - c',
+      p('(a, b) => a + b - c'),
     );
 
     expect(argNames).toEqual(['a', 'b']);
@@ -38,10 +41,10 @@ describe('transpileFn', () => {
 
   it('respects local declarations when gathering external names', () => {
     const { argNames, body, externalNames } = transpileFn(
-      `() => {
+      p(`() => {
         const a = 0;
         c = a + 2;
-      }`,
+      }`),
     );
 
     expect(argNames).toEqual([]);
@@ -57,12 +60,12 @@ describe('transpileFn', () => {
 
   it('respects outer scope when gathering external names', () => {
     const { argNames, body, externalNames } = transpileFn(
-      `() => {
+      p(`() => {
         const a = 0;
         {
           c = a + 2;
         }
-      }`,
+      }`),
     );
 
     expect(argNames).toEqual([]);
@@ -78,7 +81,7 @@ describe('transpileFn', () => {
 
   it('treats the object as a possible external value when accessing a member', () => {
     const { argNames, body, externalNames } = transpileFn(
-      '() => external.outside.prop',
+      p('() => external.outside.prop'),
     );
 
     expect(argNames).toEqual([]);
