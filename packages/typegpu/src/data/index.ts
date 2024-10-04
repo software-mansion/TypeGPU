@@ -25,10 +25,14 @@ export { ptr } from './pointer';
 export { atomic, isAtomicSchema, Atomic } from './atomic';
 export {
   align,
-  isAlignedSchema,
-  TgpuAligned,
-} from './align';
-export { size, isSizedSchema, TgpuSized } from './size';
+  size,
+  isDecorated,
+  isLooseDecorated,
+  Align,
+  Size,
+  Decorated,
+  LooseDecorated,
+} from './attributes';
 
 // Reexporting type-binary utility types
 export type { Parsed, Unwrap } from 'typed-binary';
