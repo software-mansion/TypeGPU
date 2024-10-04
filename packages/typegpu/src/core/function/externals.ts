@@ -1,4 +1,6 @@
+import { MissingLinksError } from '../../errors';
 import { isNamable } from '../../namable';
+import { type ResolutionCtx, isResolvable } from '../../types';
 
 export type ExternalMap = Record<string, unknown>;
 
@@ -17,4 +19,35 @@ export function applyExternals(
       value.$name(key);
     }
   }
+}
+
+export function throwIfMissingExternals(
+  externalMap: ExternalMap,
+  expectedNames: string[],
+) {
+  const missingExternals = expectedNames.filter(
+    (name) => !(name in externalMap),
+  );
+
+  if (missingExternals.length > 0) {
+    throw new MissingLinksError(missingExternals);
+  }
+}
+
+export function replaceExternalsInWgsl(
+  ctx: ResolutionCtx,
+  externalMap: ExternalMap,
+  wgsl: string,
+) {
+  return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
+    if (!isResolvable(external)) {
+      return acc;
+    }
+
+    const resolvedExternal = ctx.resolve(external);
+    return acc.replaceAll(
+      new RegExp(`(?<![\\w_])${externalName}(?![\\w_])`, 'g'),
+      resolvedExternal,
+    );
+  }, wgsl);
 }

@@ -1,20 +1,22 @@
 import type { Unwrap } from 'typed-binary';
-import { MissingLinksError } from '../../errors';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import { valueList } from '../../resolutionUtils';
 import type { Block } from '../../smol';
 import { code } from '../../tgpuCode';
 import { identifier } from '../../tgpuIdentifier';
-import {
-  type AnyTgpuData,
-  type ResolutionCtx,
-  type TgpuResolvable,
-  type Wgsl,
-  isResolvable,
+import type {
+  AnyTgpuData,
+  ResolutionCtx,
+  TgpuResolvable,
+  Wgsl,
 } from '../../types';
 import wgsl from '../../wgsl';
-import { type ExternalMap, applyExternals } from './externals';
+import {
+  applyExternals,
+  replaceExternalsInWgsl,
+  throwIfMissingExternals,
+} from './externals';
 
 // ----------
 // Public API
@@ -28,16 +30,6 @@ type UnwrapReturn<T extends AnyTgpuData | undefined> = T extends undefined
   ? // biome-ignore lint/suspicious/noConfusingVoidType: <void is used as a return type>
     void
   : Unwrap<T>;
-
-export interface AstConsuming {
-  $__ast(argNames: string[], body: Block): this;
-}
-
-export interface TgslImplemented {
-  /** The JS function body passed as an implementation of a TypeGPU function. */
-  // biome-ignore lint/suspicious/noExplicitAny: <its fiiiiine>
-  readonly implementation: (...args: any[]) => unknown;
-}
 
 /**
  * Describes a function signature (its arguments and return type)
@@ -71,8 +63,13 @@ interface TgpuFnBase<
 > extends TgpuResolvable,
     TgpuNamable {
   readonly shell: TgpuFnShell<Args, Return>;
+  /** The JS function body passed as an implementation of a TypeGPU function. */
+  readonly implementation:
+    | ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>)
+    | string;
 
   $uses(dependencyMap: Record<string, unknown>): this;
+  $__ast(argNames: string[], body: Block): this;
 }
 
 export type TgpuFn<
@@ -168,10 +165,7 @@ class TgpuFnShellImpl<
       | ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>)
       | string,
   ): TgpuFn<Args, Return> {
-    if (typeof implementation === 'string') {
-      return createRawFn<Args, Return>(this, implementation);
-    }
-    return createFn<Args, Return>(this, implementation);
+    return createFn(this, implementation);
   }
 }
 
@@ -180,9 +174,11 @@ function createFn<
   Return extends AnyTgpuData | undefined,
 >(
   shell: TgpuFnShell<Args, Return>,
-  implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
+  implementation:
+    | ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>)
+    | string,
 ): TgpuFn<Args, Return> {
-  type This = TgpuFnBase<Args, Return> & AstConsuming & TgslImplemented;
+  type This = TgpuFnBase<Args, Return>;
 
   const externalMap: Record<string, unknown> = {};
   let prebuiltAst: {
@@ -216,22 +212,26 @@ function createFn<
     resolve(ctx: ResolutionCtx): string {
       const ident = identifier().$name(label);
 
-      const ast = prebuiltAst ?? ctx.transpileFn(fn);
-      const missingExternals = ast.externalNames.filter(
-        (name) => !(name in externalMap),
-      );
+      if (typeof implementation === 'string') {
+        const replacedImpl = replaceExternalsInWgsl(
+          ctx,
+          externalMap,
+          implementation.trim(),
+        );
 
-      if (missingExternals.length > 0) {
-        throw new MissingLinksError(label, missingExternals);
+        ctx.addDeclaration(wgsl`fn ${ident}${replacedImpl}`);
+      } else {
+        const ast = prebuiltAst ?? ctx.transpileFn(fn);
+        throwIfMissingExternals(externalMap, ast.externalNames);
+
+        const { head, body } = ctx.fnToWgsl(
+          fn.shell,
+          ast.argNames,
+          ast.body,
+          externalMap,
+        );
+        ctx.addDeclaration(code`fn ${ident}${head}${body}`);
       }
-
-      const { head, body } = ctx.fnToWgsl(
-        fn.shell,
-        ast.argNames,
-        ast.body,
-        externalMap,
-      );
-      ctx.addDeclaration(code`fn ${ident}${head}${body}`);
 
       return ctx.resolve(ident);
     },
@@ -241,78 +241,15 @@ function createFn<
     if (inGPUMode()) {
       // TODO: Filter out only those arguments which are valid to pass around
       return new FnCall(fn, args as Wgsl[]) as UnwrapReturn<Return>;
+    }
+
+    if (typeof implementation === 'string') {
+      throw new Error(
+        'Cannot execute on the CPU functions constructed with raw WGSL',
+      );
     }
 
     return implementation(...args);
-  };
-
-  const fn = Object.assign(call, fnBase);
-
-  // Making the label available as a readonly property.
-  Object.defineProperty(fn, 'label', {
-    get: () => label,
-  });
-
-  return fn;
-}
-
-function createRawFn<
-  Args extends AnyTgpuDataTuple,
-  Return extends AnyTgpuData | undefined,
->(
-  shell: TgpuFnShell<Args, Return>,
-  implementation: string,
-): TgpuFn<Args, Return> {
-  type This = TgpuFnBase<Args, Return>;
-
-  const externalMap: ExternalMap = {};
-  let label: string | undefined;
-
-  const fnBase: This = {
-    shell,
-
-    $uses(newExternals) {
-      applyExternals(externalMap, newExternals);
-      return this;
-    },
-
-    $name(newLabel: string): This {
-      label = newLabel;
-      return this;
-    },
-
-    resolve(ctx: ResolutionCtx): string {
-      const ident = identifier().$name(label);
-
-      const replacedImpl = Object.entries(externalMap).reduce(
-        (acc, [externalName, external]) => {
-          if (!isResolvable(external)) {
-            return acc;
-          }
-
-          const resolvedExternal = ctx.resolve(external);
-          return acc.replaceAll(
-            new RegExp(`(?<![\\w_])${externalName}(?![\\w_])`, 'g'),
-            resolvedExternal,
-          );
-        },
-        implementation.trim(),
-      );
-
-      ctx.addDeclaration(wgsl`fn ${ident}${replacedImpl}`);
-      return ctx.resolve(ident);
-    },
-  };
-
-  const call = (...args: UnwrapArgs<Args>): UnwrapReturn<Return> => {
-    if (inGPUMode()) {
-      // TODO: Filter out only those arguments which are valid to pass around
-      return new FnCall(fn, args as Wgsl[]) as UnwrapReturn<Return>;
-    }
-
-    throw new Error(
-      'Cannot execute on the CPU functions constructed with raw WGSL',
-    );
   };
 
   const fn = Object.assign(call, fnBase);
