@@ -2,12 +2,12 @@
  * @module typegpu/experimental
  */
 
+import { fn, procedure } from '../core/function/tgpuFn';
 import { createRuntime as init } from '../createRuntime';
 import { createBuffer } from '../legacyBufferApi';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
 import { Storage, Uniform, Vertex } from '../tgpuBuffer';
 import { read, write } from '../tgpuBufferUtils';
-import { fn, procedure } from '../tgpuFn';
 
 export const tgpu = {
   Uniform,

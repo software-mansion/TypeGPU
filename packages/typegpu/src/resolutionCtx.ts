@@ -1,10 +1,14 @@
+import type {
+  TgpuFn,
+  TgpuFnShell,
+  TgslImplemented,
+} from './core/function/tgpuFn';
 import { MissingSlotValueError, ResolutionError } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
 import { type Block, generateFunction } from './smol';
 import { code } from './tgpuCode';
-import type { TgpuFn, TgpuFnShell } from './tgpuFn';
 import { isTextureView } from './tgpuTexture';
 import type {
   AnyTgpuData,
@@ -342,7 +346,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
-  transpileFn(fn: TgpuFn<any, AnyTgpuData>): {
+  transpileFn(fn: TgpuFn<any, AnyTgpuData> & TgslImplemented): {
     argNames: string[];
     body: Block;
     externalNames: string[];
