@@ -38,7 +38,7 @@ Options:
     execute: async () => {
       const input = args['--input'] ?? args._[1];
       const output = args['--output'];
-      const watch = args['--watch'];
+      const watch = args['--watch'] ?? false;
 
       if (!input) {
         console.error(
