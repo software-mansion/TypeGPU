@@ -63,7 +63,7 @@ interface TgpuFnBase<
 > extends TgpuResolvable,
     TgpuNamable {
   readonly shell: TgpuFnShell<Args, Return>;
-  /** The JS function body passed as an implementation of a TypeGPU function. */
+  /** Either the JS function body passed as an implementation of a TypeGPU function, or raw WGSL code. */
   readonly implementation:
     | ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>)
     | string;
@@ -115,17 +115,18 @@ export function procedure(implementation: () => void) {
  */
 export interface TgpuVertexFnShell<
   Args extends AnyTgpuDataTuple,
-  Return extends AnyTgpuData | undefined,
+  // TODO: Allow IO struct here
+  Return extends AnyTgpuData,
 > {
   readonly argTypes: Args;
-  readonly returnType: Return | undefined;
+  readonly returnType: Return;
 
   /**
    * Creates a type-safe implementation of this signature
    */
   implement(
     implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
-  ): TgpuFn<Args, Return>;
+  ): TgpuVertexFn<[], Return>;
 
   /**
    * @param implementation
@@ -133,17 +134,49 @@ export interface TgpuVertexFnShell<
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  implement(implementation: string): TgpuFn<Args, Return>;
+  implement(implementation: string): TgpuVertexFn<[], Return>;
 }
 
 interface TgpuVertexFn<
-  Args extends AnyTgpuDataTuple,
-  Return extends AnyTgpuData | undefined = undefined,
+  // TODO: Allow vertex attributes here
+  VertexAttribs extends [],
+  // TODO: Allow IO struct here
+  Output extends AnyTgpuData,
 > extends TgpuResolvable,
     TgpuNamable {
-  readonly shell: TgpuVertexFnShell<Args, Return>;
+  readonly shell: TgpuVertexFnShell<AnyTgpuDataTuple, AnyTgpuData>;
+  /** Either the JS function body passed as an implementation of a TypeGPU function, or raw WGSL code. */
+  readonly implementation:
+    | ((...args: UnwrapArgs<VertexAttribs>) => UnwrapReturn<Output>)
+    | string;
 
   $uses(dependencyMap: Record<string, unknown>): this;
+  $__ast(argNames: string[], body: Block): this;
+}
+
+/**
+ * Creates a shell of a typed entry function for the vertex shader stage. Any function
+ * that implements this shell can run for each vertex, allowing the inner code to process
+ * attributes and determine the final position of the vertex.
+ *
+ * @param argTypes
+ *   Builtins and vertex attributes to be made available to functions that implement this shell.
+ * @param returnType
+ *   A struct type containing the final position of the vertex, and any information
+ *   passed onto the fragment shader stage.
+ */
+export function vertexFn<
+  Args extends AnyTgpuDataTuple,
+  Return extends AnyTgpuData,
+>(argTypes: Args, returnType: Return): TgpuVertexFnShell<Args, Return> {
+  return {
+    argTypes,
+    returnType,
+
+    implement(implementation) {
+      return createVertexFn(this, implementation);
+    },
+  };
 }
 
 // --------------
@@ -279,4 +312,77 @@ class FnCall<
   resolve(ctx: ResolutionCtx): string {
     return ctx.resolve(code`${this._fn}(${valueList(this._params)})`);
   }
+}
+
+function createVertexFn<
+  Args extends AnyTgpuDataTuple,
+  Output extends AnyTgpuData,
+>(
+  shell: TgpuVertexFnShell<Args, Output>,
+  implementation:
+    | ((...args: UnwrapArgs<Args>) => UnwrapReturn<Output>)
+    | string,
+): TgpuVertexFn<[], Output> {
+  type This = TgpuVertexFn<[], Output>;
+
+  const externalMap: Record<string, unknown> = {};
+  let prebuiltAst: {
+    argNames: string[];
+    body: Block;
+    externalNames: string[];
+  } | null = null;
+  let label: string | undefined;
+
+  return {
+    shell,
+    implementation,
+
+    get label() {
+      return label;
+    },
+
+    $uses(newExternals) {
+      applyExternals(externalMap, newExternals);
+      return this;
+    },
+
+    $__ast(argNames: string[], body: Block): This {
+      // When receiving a pre-built $__ast, we are receiving $uses alongside it, so
+      // we do not need to verify external names.
+      prebuiltAst = { argNames, body, externalNames: [] };
+      return this;
+    },
+
+    $name(newLabel: string): This {
+      label = newLabel;
+      return this;
+    },
+
+    resolve(ctx: ResolutionCtx): string {
+      const ident = identifier().$name(label);
+
+      if (typeof implementation === 'string') {
+        const replacedImpl = replaceExternalsInWgsl(
+          ctx,
+          externalMap,
+          implementation.trim(),
+        );
+
+        ctx.addDeclaration(wgsl`fn ${ident}${replacedImpl}`);
+      } else {
+        const ast = prebuiltAst ?? ctx.transpileFn(fn);
+        throwIfMissingExternals(externalMap, ast.externalNames);
+
+        const { head, body } = ctx.fnToWgsl(
+          this.shell,
+          ast.argNames,
+          ast.body,
+          externalMap,
+        );
+        ctx.addDeclaration(code`fn ${ident}${head}${body}`);
+      }
+
+      return ctx.resolve(ident);
+    },
+  };
 }
