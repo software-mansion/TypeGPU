@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { exit } from 'node:process';
 import arg from 'arg';
+import { glob } from 'glob';
 import color from './colors.mjs';
 import generate from './gen.mjs';
 
@@ -23,17 +24,52 @@ const COMMANDS = {
       const input = args['--input'];
       const output = args['--output'];
 
-      if (!input || !output) {
+      if (!input) {
         console.error(
-          `${color.Red}Error: Missing required arguments: ${color.Yellow}--input${color.Reset} and ${color.Yellow}--output${color.Reset}`,
+          `${color.Red}Error: Missing required argument: ${color.Yellow}--input${color.Reset}`,
         );
         exit(1);
       }
 
-      try {
-        await generate(input, output);
-      } catch (error) {
-        console.error(`${color.Red}Error: ${error.message}${color.Reset}`);
+      const files = await glob(input);
+
+      if (files.length === 0) {
+        console.warn(
+          `${color.Yellow}Warning: No files found for pattern: "${input}"${color.Reset}`,
+        );
+        exit(0);
+      }
+
+      if (!output && !input.endsWith('.wgsl')) {
+        console.error(
+          `${color.Red}Error: No output name provided and provided input doesn't end with .wgsl ${color.Reset}`,
+        );
+        exit(1);
+      }
+
+      if (output && files.length > 1) {
+        console.error(
+          `${color.Red}Error: More than one file found, while a single output name was provided ${color.Reset}`,
+        );
+        exit(1);
+      }
+
+      const results = await Promise.allSettled(
+        files.map((file) => {
+          const out = output ?? file.replace('.wgsl', '.ts');
+          console.log(`Generating ${file} >>> ${out}`);
+          return generate(file, out);
+        }),
+      );
+
+      const errors = results.flatMap((result) =>
+        result.status === 'rejected' ? [result.reason] : [],
+      );
+
+      if (errors.length > 0) {
+        for (const error of errors) {
+          console.error(`${color.Red}Error: ${error.message}${color.Reset}`);
+        }
         exit(1);
       }
     },

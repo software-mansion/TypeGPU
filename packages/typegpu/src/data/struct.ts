@@ -13,11 +13,16 @@ import { RecursiveDataTypeError } from '../errors';
 import type { TgpuNamable } from '../namable';
 import { code } from '../tgpuCode';
 import { identifier } from '../tgpuIdentifier';
-import type { AnyTgpuData, ResolutionCtx, TgpuData } from '../types';
-import { isAlignedSchema } from './align';
+import type {
+  AnyTgpuData,
+  AnyTgpuLooseData,
+  ResolutionCtx,
+  TgpuData,
+  TgpuLooseData,
+} from '../types';
 import alignIO from './alignIO';
 import { isArraySchema } from './array';
-import { isSizedSchema } from './size';
+import { isDecorated, isLooseDecorated } from './attributes';
 
 // ----------
 // Public API
@@ -31,6 +36,17 @@ export interface TgpuStruct<TProps extends Record<string, AnyTgpuData>>
 export const struct = <TProps extends Record<string, AnyTgpuData>>(
   properties: TProps,
 ): TgpuStruct<TProps> => new TgpuStructImpl(properties);
+
+export interface TgpuLooseStruct<
+  TProps extends Record<string, AnyTgpuData | AnyTgpuLooseData>,
+> extends ISchema<UnwrapRecord<TProps>>,
+    TgpuLooseData<UnwrapRecord<TProps>> {}
+
+export const looseStruct = <
+  TProps extends Record<string, AnyTgpuData | AnyTgpuLooseData>,
+>(
+  properties: TProps,
+): TgpuLooseStruct<TProps> => new TgpuLooseStructImpl(properties);
 
 export function isStructSchema<
   T extends TgpuStruct<Record<string, AnyTgpuData>>,
@@ -51,7 +67,6 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
   private _size: number;
   public readonly byteAlignment: number;
   public readonly isLoose = false as const;
-  public readonly isCustomAligned = false;
   public readonly isRuntimeSized: boolean;
 
   constructor(private readonly _properties: TProps) {
@@ -74,6 +89,10 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
     return this._size;
   }
 
+  get label() {
+    return this._label;
+  }
+
   $name(label: string) {
     this._label = label;
     return this;
@@ -88,12 +107,13 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
       throw new Error('Cannot write struct with runtime sized properties');
     }
     alignIO(output, this.byteAlignment);
-    type Property = keyof Parsed<UnwrapRecord<TProps>>;
 
-    for (const [key, property] of exactEntries(this._properties)) {
+    for (const [key, property] of Object.entries(this._properties)) {
       alignIO(output, property.byteAlignment);
-      property.write(output, value[key as Property]);
+      property.write(output, value[key]);
     }
+
+    alignIO(output, this.byteAlignment);
   }
 
   read(input: ISerialInput): Parsed<UnwrapRecord<TProps>> {
@@ -101,16 +121,15 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
       throw new Error('Cannot read struct with runtime sized properties');
     }
     alignIO(input, this.byteAlignment);
-    type Property = keyof Parsed<UnwrapRecord<TProps>>;
-    const result = {} as Parsed<UnwrapRecord<TProps>>;
+    const result = {} as Record<string, unknown>;
 
-    for (const [key, property] of exactEntries(this._properties)) {
+    for (const [key, property] of Object.entries(this._properties)) {
       alignIO(input, property.byteAlignment);
-      result[key as Property] = property.read(input) as Parsed<
-        UnwrapRecord<TProps>
-      >[Property];
+      result[key] = property.read(input);
     }
-    return result;
+
+    alignIO(input, this.byteAlignment);
+    return result as Parsed<UnwrapRecord<TProps>>;
   }
 
   measure(
@@ -119,15 +138,16 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
   ): IMeasurer {
     let structMeasurer = measurer;
     alignIO(structMeasurer, this.byteAlignment);
-    type Property = keyof Parsed<UnwrapRecord<TProps>>;
 
-    for (const [key, property] of exactEntries(this._properties)) {
-      if (structMeasurer.isUnbounded) {
-        throw new Error('Only the last property can be unbounded');
+    const maxing = value === MaxValue;
+    for (const [key, property] of Object.entries(this._properties)) {
+      if (maxing && measurer.isUnbounded) {
+        throw new Error('Only the last property of a struct can be unbounded');
       }
+
       alignIO(structMeasurer, property.byteAlignment);
       structMeasurer = property.measure(
-        value === MaxValue ? MaxValue : value[key as Property],
+        maxing ? MaxValue : value[key],
         structMeasurer,
       );
 
@@ -144,29 +164,91 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
     const ident = identifier().$name(this._label);
 
     ctx.addDeclaration(code`
-      struct ${ident} {
-        ${Object.entries(this._properties).map(([key, field]) => code`${getAttribute(field) ?? ''}${key}: ${field},\n`)}
-      }
+struct ${ident} {\
+${Object.entries(this._properties).map(([key, field]) => code`\n  ${getAttributes(field) ?? ''}${key}: ${field},`)}
+}
     `);
 
     return ctx.resolve(ident);
   }
 }
 
-function getAttribute<T extends AnyTgpuData>(field: T): string | undefined {
-  if (isAlignedSchema(field as unknown)) {
-    return `@align(${field.byteAlignment}) `;
+function getAttributes<T extends AnyTgpuData>(field: T): string | undefined {
+  if (!isDecorated(field) && !isLooseDecorated(field)) {
+    return undefined;
   }
 
-  if (isSizedSchema(field as unknown)) {
-    return `@size(${field.size}) `;
-  }
+  return field.attributes
+    .map((attrib) => {
+      if (attrib.type === 'align') {
+        return `@align(${attrib.alignment}) `;
+      }
 
-  return undefined;
+      if (attrib.type) {
+        return `@size(${attrib.size}) `;
+      }
+
+      return '';
+    })
+    .join('');
 }
 
-export function exactEntries<T extends Record<keyof T, T[keyof T]>>(
-  record: T,
-): [keyof T, T[keyof T]][] {
-  return Object.entries(record) as [keyof T, T[keyof T]][];
+class TgpuLooseStructImpl<
+    TProps extends Record<string, AnyTgpuData | AnyTgpuLooseData>,
+  >
+  extends Schema<UnwrapRecord<TProps>>
+  implements TgpuLooseData<UnwrapRecord<TProps>>
+{
+  private _label: string | undefined;
+
+  public readonly byteAlignment = 1;
+  public readonly isCustomAligned = false;
+  public readonly isLoose = true as const;
+  public readonly size: number;
+
+  constructor(private readonly _properties: TProps) {
+    super();
+    this.size = this.measure(MaxValue).size;
+  }
+
+  get label() {
+    return this._label;
+  }
+
+  $name(label: string) {
+    this._label = label;
+    return this;
+  }
+
+  resolveReferences(): void {
+    throw new RecursiveDataTypeError();
+  }
+
+  write(output: ISerialOutput, value: Parsed<UnwrapRecord<TProps>>): void {
+    for (const [key, property] of Object.entries(this._properties)) {
+      property.write(output, value[key]);
+    }
+  }
+
+  read(input: ISerialInput): Parsed<UnwrapRecord<TProps>> {
+    const result = {} as Record<string, unknown>;
+
+    for (const [key, property] of Object.entries(this._properties)) {
+      result[key] = property.read(input);
+    }
+
+    return result as Parsed<UnwrapRecord<TProps>>;
+  }
+
+  measure(
+    value: MaxValue | Parsed<UnwrapRecord<TProps>>,
+    measurer: IMeasurer = new Measurer(),
+  ): IMeasurer {
+    const maxing = value === MaxValue;
+    for (const [key, property] of Object.entries(this._properties)) {
+      property.measure(maxing ? MaxValue : value[key], measurer);
+    }
+
+    return measurer;
+  }
 }

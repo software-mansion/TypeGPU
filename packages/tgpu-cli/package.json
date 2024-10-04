@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "arg": "^5.0.2",
+    "glob": "^11.0.0",
     "remeda": "^2.3.0",
     "wgsl_reflect": "^1.0.12"
   },
