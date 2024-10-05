@@ -81,12 +81,6 @@ export type TgpuFn<
 > = TgpuFnBase<Args, Return> &
   ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>);
 
-export function fn<Args extends AnyTgpuDataTuple>(): TgpuFnShell<[], undefined>;
-
-export function fn<Return extends AnyTgpuData>(
-  returnType: Return,
-): TgpuFnShell<[], Return>;
-
 export function fn<Args extends AnyTgpuDataTuple>(
   argTypes: Args,
   returnType?: undefined,
@@ -100,17 +94,21 @@ export function fn<Args extends AnyTgpuDataTuple, Return extends AnyTgpuData>(
 export function fn<
   Args extends AnyTgpuDataTuple,
   Return extends AnyTgpuData | undefined = undefined,
->(first?: Args | Return, second?: Return): TgpuFnShell<Args, Return> {
-  if (Array.isArray(first)) {
-    return new TgpuFnShellImpl((first ?? []) as Args, second as Return);
-  }
+>(argTypes: Args, returnType?: Return): TgpuFnShell<Args, Return> {
+  return {
+    argTypes,
+    returnType,
 
-  // If only one argument and it is not an array, it is the return type.
-  return new TgpuFnShellImpl([] as Args, first as Return);
+    implement(
+      implementation: Implementation<Args, Return>,
+    ): TgpuFn<Args, Return> {
+      return createFn(this, implementation);
+    },
+  };
 }
 
 export function procedure(implementation: () => void) {
-  return fn().implement(implementation);
+  return fn([]).implement(implementation);
 }
 
 /**
@@ -246,25 +244,6 @@ export function fragmentFn<
 // --------------
 // Implementation
 // --------------
-
-class TgpuFnShellImpl<
-  Args extends AnyTgpuDataTuple,
-  Return extends AnyTgpuData | undefined,
-> implements TgpuFnShell<Args, Return>
-{
-  constructor(
-    public readonly argTypes: Args,
-    public readonly returnType: Return,
-  ) {}
-
-  implement(
-    implementation:
-      | ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>)
-      | string,
-  ): TgpuFn<Args, Return> {
-    return createFn(this, implementation);
-  }
-}
 
 function createFnCore<
   Args extends AnyTgpuDataTuple,
