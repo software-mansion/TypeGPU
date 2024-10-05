@@ -1,4 +1,3 @@
-import type { Unwrap } from 'typed-binary';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import { valueList } from '../../resolutionUtils';
@@ -13,23 +12,23 @@ import type {
 } from '../../types';
 import wgsl from '../../wgsl';
 import {
+  type ExternalMap,
   applyExternals,
   replaceExternalsInWgsl,
   throwIfMissingExternals,
 } from './externals';
+import type {
+  Implementation,
+  TranspilationResult,
+  UnwrapArgs,
+  UnwrapReturn,
+} from './fnTypes';
 
 // ----------
 // Public API
 // ----------
 
 type AnyTgpuDataTuple = [AnyTgpuData, ...AnyTgpuData[]] | [];
-type UnwrapArgs<T extends AnyTgpuDataTuple> = {
-  [Idx in keyof T]: Unwrap<T[Idx]>;
-};
-type UnwrapReturn<T extends AnyTgpuData | undefined> = T extends undefined
-  ? // biome-ignore lint/suspicious/noConfusingVoidType: <void is used as a return type>
-    void
-  : Unwrap<T>;
 
 export interface TgpuFnShellBase<
   Args extends AnyTgpuDataTuple,
@@ -267,47 +266,29 @@ class TgpuFnShellImpl<
   }
 }
 
-function createFn<
+function createFnCore<
   Args extends AnyTgpuDataTuple,
   Return extends AnyTgpuData | undefined,
 >(
-  shell: TgpuFnShell<Args, Return>,
-  implementation:
-    | ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>)
-    | string,
-): TgpuFn<Args, Return> {
-  type This = TgpuFnBase<Args, Return>;
+  shell: TgpuFnShellBase<Args, Return>,
+  implementation: Implementation<Args, Return>,
+) {
+  const externalMap: ExternalMap = {};
+  let prebuiltAst: TranspilationResult | null = null;
 
-  const externalMap: Record<string, unknown> = {};
-  let prebuiltAst: {
-    argNames: string[];
-    body: Block;
-    externalNames: string[];
-  } | null = null;
-  let label: string | undefined;
+  return {
+    label: undefined as string | undefined,
 
-  const fnBase: This = {
-    shell,
-
-    $uses(newExternals) {
+    applyExternals(newExternals: ExternalMap) {
       applyExternals(externalMap, newExternals);
-      return this;
     },
 
-    $__ast(argNames: string[], body: Block): This {
-      // When receiving a pre-built $__ast, we are receiving $uses alongside it, so
-      // we do not need to verify external names.
-      prebuiltAst = { argNames, body, externalNames: [] };
-      return this;
+    setAst(ast: TranspilationResult) {
+      prebuiltAst = ast;
     },
 
-    $name(newLabel: string): This {
-      label = newLabel;
-      return this;
-    },
-
-    resolve(ctx: ResolutionCtx): string {
-      const ident = identifier().$name(label);
+    resolve(ctx: ResolutionCtx, fnAttribute = '') {
+      const ident = identifier().$name(this.label);
 
       if (typeof implementation === 'string') {
         const replacedImpl = replaceExternalsInWgsl(
@@ -316,21 +297,58 @@ function createFn<
           implementation.trim(),
         );
 
-        ctx.addDeclaration(wgsl`fn ${ident}${replacedImpl}`);
+        ctx.addDeclaration(wgsl`${fnAttribute}fn ${ident}${replacedImpl}`);
       } else {
         const ast = prebuiltAst ?? ctx.transpileFn(String(implementation));
         throwIfMissingExternals(externalMap, ast.externalNames);
 
         const { head, body } = ctx.fnToWgsl(
-          fn.shell,
+          shell,
           ast.argNames,
           ast.body,
           externalMap,
         );
-        ctx.addDeclaration(code`fn ${ident}${head}${body}`);
+        ctx.addDeclaration(code`${fnAttribute}fn ${ident}${head}${body}`);
       }
 
       return ctx.resolve(ident);
+    },
+  };
+}
+
+function createFn<
+  Args extends AnyTgpuDataTuple,
+  Return extends AnyTgpuData | undefined,
+>(
+  shell: TgpuFnShell<Args, Return>,
+  implementation: Implementation<Args, Return>,
+): TgpuFn<Args, Return> {
+  type This = TgpuFnBase<Args, Return>;
+
+  const core = createFnCore(shell, implementation);
+
+  const fnBase: This = {
+    shell,
+
+    $uses(newExternals) {
+      core.applyExternals(newExternals);
+      return this;
+    },
+
+    $__ast(argNames: string[], body: Block): This {
+      // When receiving a pre-built $__ast, we are receiving $uses alongside it, so
+      // we do not need to verify external names.
+      core.setAst({ argNames, body, externalNames: [] });
+      return this;
+    },
+
+    $name(newLabel: string): This {
+      core.label = newLabel;
+      return this;
+    },
+
+    resolve(ctx: ResolutionCtx): string {
+      return core.resolve(ctx);
     },
   };
 
@@ -353,7 +371,7 @@ function createFn<
 
   // Making the label available as a readonly property.
   Object.defineProperty(fn, 'label', {
-    get: () => label,
+    get: () => core.label,
   });
 
   return fn;
@@ -383,69 +401,38 @@ function createVertexFn<
   Output extends AnyTgpuData,
 >(
   shell: TgpuVertexFnShell<Args, Output>,
-  implementation:
-    | ((...args: UnwrapArgs<Args>) => UnwrapReturn<Output>)
-    | string,
+  implementation: Implementation<Args, Output>,
 ): TgpuVertexFn<[], Output> {
   type This = TgpuVertexFn<[], Output>;
 
-  const externalMap: Record<string, unknown> = {};
-  let prebuiltAst: {
-    argNames: string[];
-    body: Block;
-    externalNames: string[];
-  } | null = null;
-  let label: string | undefined;
+  const core = createFnCore(shell, implementation);
 
   return {
     shell,
 
     get label() {
-      return label;
+      return core.label;
     },
 
     $uses(newExternals) {
-      applyExternals(externalMap, newExternals);
+      core.applyExternals(newExternals);
       return this;
     },
 
     $__ast(argNames: string[], body: Block): This {
       // When receiving a pre-built $__ast, we are receiving $uses alongside it, so
       // we do not need to verify external names.
-      prebuiltAst = { argNames, body, externalNames: [] };
+      core.setAst({ argNames, body, externalNames: [] });
       return this;
     },
 
     $name(newLabel: string): This {
-      label = newLabel;
+      core.label = newLabel;
       return this;
     },
 
     resolve(ctx: ResolutionCtx): string {
-      const ident = identifier().$name(label);
-
-      if (typeof implementation === 'string') {
-        const replacedImpl = replaceExternalsInWgsl(
-          ctx,
-          externalMap,
-          implementation.trim(),
-        );
-
-        ctx.addDeclaration(wgsl`@vertex fn ${ident}${replacedImpl}`);
-      } else {
-        const ast = prebuiltAst ?? ctx.transpileFn(String(implementation));
-        throwIfMissingExternals(externalMap, ast.externalNames);
-
-        const { head, body } = ctx.fnToWgsl(
-          this.shell,
-          ast.argNames,
-          ast.body,
-          externalMap,
-        );
-        ctx.addDeclaration(code`@vertex fn ${ident}${head}${body}`);
-      }
-
-      return ctx.resolve(ident);
+      return core.resolve(ctx, '@vertex ');
     },
   };
 }
@@ -461,63 +448,34 @@ function createFragmentFn<
 ): TgpuFragmentFn<[], Output> {
   type This = TgpuFragmentFn<[], Output>;
 
-  const externalMap: Record<string, unknown> = {};
-  let prebuiltAst: {
-    argNames: string[];
-    body: Block;
-    externalNames: string[];
-  } | null = null;
-  let label: string | undefined;
+  const core = createFnCore(shell, implementation);
 
   return {
     shell,
 
     get label() {
-      return label;
+      return core.label;
     },
 
     $uses(newExternals) {
-      applyExternals(externalMap, newExternals);
+      core.applyExternals(newExternals);
       return this;
     },
 
     $__ast(argNames: string[], body: Block): This {
       // When receiving a pre-built $__ast, we are receiving $uses alongside it, so
       // we do not need to verify external names.
-      prebuiltAst = { argNames, body, externalNames: [] };
+      core.setAst({ argNames, body, externalNames: [] });
       return this;
     },
 
     $name(newLabel: string): This {
-      label = newLabel;
+      core.label = newLabel;
       return this;
     },
 
     resolve(ctx: ResolutionCtx): string {
-      const ident = identifier().$name(label);
-
-      if (typeof implementation === 'string') {
-        const replacedImpl = replaceExternalsInWgsl(
-          ctx,
-          externalMap,
-          implementation.trim(),
-        );
-
-        ctx.addDeclaration(wgsl`@fragment fn ${ident}${replacedImpl}`);
-      } else {
-        const ast = prebuiltAst ?? ctx.transpileFn(String(implementation));
-        throwIfMissingExternals(externalMap, ast.externalNames);
-
-        const { head, body } = ctx.fnToWgsl(
-          this.shell,
-          ast.argNames,
-          ast.body,
-          externalMap,
-        );
-        ctx.addDeclaration(code`@fragment fn ${ident}${head}${body}`);
-      }
-
-      return ctx.resolve(ident);
+      return core.resolve(ctx, '@fragment ');
     },
   };
 }
