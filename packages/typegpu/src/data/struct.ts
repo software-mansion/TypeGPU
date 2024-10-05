@@ -172,7 +172,6 @@ class TgpuLooseStructImpl<
   private _label: string | undefined;
 
   public readonly byteAlignment = 1;
-  public readonly isCustomAligned = false;
   public readonly isLoose = true as const;
   public readonly size: number;
 
