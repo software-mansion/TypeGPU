@@ -54,7 +54,7 @@ export const arrayOf = <TElement extends AnyTgpuData>(
 /**
  * Array schema constructed via `d.looseArrayOf` function.
  *
- * Useful for defining tgpu vertex buffers.
+ * Useful for defining vertex buffers.
  * Elements in the schema are not aligned in respect to their `byteAlignment`,
  * unless they are explicitly decorated with the custom align attribute
  * via `d.align` function.
@@ -66,7 +66,7 @@ export interface TgpuLooseArray<TElement extends AnyTgpuData | AnyTgpuLooseData>
 }
 
 /**
- * Creates an array schema that can be used to construct tgpu vertex buffers.
+ * Creates an array schema that can be used to construct vertex buffers.
  * Describes arrays with fixed-size length, storing elements of the same type.
  *
  * Elements in the schema are not aligned in respect to their `byteAlignment`,
