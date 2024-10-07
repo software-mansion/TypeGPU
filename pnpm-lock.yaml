@@ -206,6 +206,9 @@ importers:
       arg:
         specifier: ^5.0.2
         version: 5.0.2
+      chokidar:
+        specifier: ^4.0.1
+        version: 4.0.1
       glob:
         specifier: ^11.0.0
         version: 11.0.0
@@ -278,6 +281,9 @@ importers:
         specifier: ^2.20.1
         version: 2.20.1
     devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
       '@types/moo':
         specifier: ^0.5.9
         version: 0.5.9
@@ -3555,6 +3561,13 @@ packages:
     optionalDependencies:
       fsevents: 2.3.3
 
+  /chokidar@4.0.1:
+    resolution: {integrity: sha512-n8enUVCED/KVRQlab1hr3MVpcVMvxtZjmEa956u+4YijlmQED223XMSYj2tLuKvr4jcCTzNNMpQDUer72MMmzA==}
+    engines: {node: '>= 14.16.0'}
+    dependencies:
+      readdirp: 4.0.2
+    dev: false
+
   /chownr@1.1.4:
     resolution: {integrity: sha512-jJ0bqzaylmJtVnNgzTeSOs8DPavpbYgEr/b0YL8/2GO3xJEhInFmhKMUnEJQjZumK7KXGFhUy89PrsJWlakBVg==}
     dev: false
@@ -6445,6 +6458,11 @@ packages:
     engines: {node: '>=8.10.0'}
     dependencies:
       picomatch: 2.3.1
+
+  /readdirp@4.0.2:
+    resolution: {integrity: sha512-yDMz9g+VaZkqBYS/ozoBJwaBhTbZo3UNYQHNRw1D3UFQB8oHB4uS/tAODO+ZLjGWmUbKnIlOWO+aaIiAxrUWHA==}
+    engines: {node: '>= 14.16.0'}
+    dev: false
 
   /rehype-expressive-code@0.35.3:
     resolution: {integrity: sha512-kj43Rg+WzYUs8RRr6XyBr60pnrIZEgbmn9yJoV6qka1UDpcx7r8icn6Q2uSAgaLtlEUy+HCPgQJraOZrA53LOQ==}

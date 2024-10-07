@@ -25,8 +25,8 @@
   "files": ["dist"],
   "sideEffects": false,
   "scripts": {
-    "dev:watch": "tsup --watch",
-    "dev:build": "tsup",
+    "dev:watch": "DEV=true tsup --watch",
+    "dev:build": "DEV=true tsup",
     "build": "tsup",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit"
   },
@@ -46,6 +46,7 @@
     "tsup": "^8.0.2",
     "tsx": "^4.16.2",
     "typescript": "^5.3.3",
-    "vitest": "0.33.0"
+    "vitest": "0.33.0",
+    "@typegpu/tgpu-dev-cli": "workspace:*"
   }
 }

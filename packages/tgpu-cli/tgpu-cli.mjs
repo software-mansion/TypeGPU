@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { exit } from 'node:process';
 import arg from 'arg';
+import chokidar from 'chokidar';
 import { glob } from 'glob';
 import color from './colors.mjs';
 import generate from './gen.mjs';
@@ -17,22 +18,40 @@ const args = arg({
   '--output': String,
   '--commonjs': Boolean,
   '--overwrite': Boolean,
+  '--watch': Boolean,
 
   '-v': '--version',
   '-h': '--help',
   '-i': '--input',
   '-o': '--output',
+  '-w': '--watch',
 });
 
 const ALLOWED_EXTENSIONS = ['.js', '.cjs', '.mjs', '.ts', '.cts', '.mts'];
 
 const COMMANDS = {
   gen: {
+    help: () =>
+      console.log(`\
+Generate a ts/js file from a wgsl file.
+
+Usage:
+  tgpu-cli gen --input <input> --output <output> [--watch] [--commonjs]
+  tgpu-cli gen <input> --output <output> [--watch] [--commonjs]
+
+Options:
+  --input, -i\t The input file or glob pattern.
+  --output, -o\t The output name or pattern for generated file(s).
+  --watch, -w\t Watch for changes in the input file(s) and regenerate the output file(s).
+  --commonjs\t Generate a CommonJS style file.
+`),
+
     execute: async () => {
       const input = args['--input'] ?? args._[1];
       const output = args['--output'];
       const toCommonJs = args['--commonjs'] ?? false;
       const overwriteExisting = args['--overwrite'] ?? false;
+      const watch = args['--watch'] ?? false;
 
       if (!input || !output) {
         console.error(
@@ -70,28 +89,55 @@ const COMMANDS = {
         exit(1);
       }
 
-      const results = await Promise.allSettled(
-        files.map((file) => {
-          const parsed = path.parse(file);
+      const processFiles = async ({ exitOnError, files }) => {
+        const results = await Promise.allSettled(
+          files.map(async (file) => {
+            const parsed = path.parse(file);
 
-          const out = output.includes('**/*')
-            ? output.replace('**/*', path.join(parsed.dir, parsed.name))
-            : output.replace('*', parsed.name);
+            const out = output.includes('**/*')
+              ? output.replace('**/*', path.join(parsed.dir, parsed.name))
+              : output.replace('*', parsed.name);
 
-          console.log(`Generating ${file} >>> ${out}`);
-          return generate(file, out, toTs, toCommonJs, overwriteExisting);
-        }),
-      );
+            console.log(`Generating ${file} >>> ${out}`);
+            return generate(
+              file,
+              out,
+              toTs,
+              toCommonJs,
+              overwriteExisting,
+            ).catch((error) => {
+              error.file = file;
+              throw error;
+            });
+          }),
+        );
 
-      const errors = results.flatMap((result) =>
-        result.status === 'rejected' ? [result.reason] : [],
-      );
+        const errors = results.flatMap((result) =>
+          result.status === 'rejected' ? [result.reason] : [],
+        );
 
-      if (errors.length > 0) {
-        for (const error of errors) {
-          console.error(`${color.Red}Error: ${error.message}${color.Reset}`);
+        if (errors.length > 0) {
+          for (const error of errors) {
+            console.error(
+              error.token?.line
+                ? `${color.Red}Error in file ${error.file} at line ${error.token.line}: ${error.message}${color.Reset}`
+                : `${color.Red}Error in file ${error.file}: ${error.message}${color.Reset}`,
+            );
+          }
+          if (exitOnError) {
+            exit(1);
+          }
         }
-        exit(1);
+      };
+
+      processFiles({ exitOnError: !watch, files });
+
+      if (watch) {
+        console.log(`${color.Yellow}Watching for changes...${color.Reset}`);
+        const watcher = chokidar.watch(files);
+        watcher.on('change', async (file) => {
+          await processFiles({ exitOnError: false, files: [file] });
+        });
       }
     },
   },
@@ -106,14 +152,8 @@ function printHelp() {
 ----------------------------
 ${color.Reset}
 
---help, -h\t list all commands and their options
---version, -v\t print tgpu-cli version
-
 ${color.Bold}Commands:${color.Reset}
   ${color.Cyan}tgpu-cli gen ${color.Reset} Generate a js/ts file from a wgsl file.
-    --commonjs\t\t generate a CommonJS style file
-    --input, -i\t\t a single input name or a glob pattern to generate js/ts from all matching files
-    --output, -o\t an output name or pattern for generated file(s)
 `);
 }
 
@@ -134,6 +174,17 @@ function printVersion() {
 }
 
 if (args['--help']) {
+  const command = args._[0];
+  if (command) {
+    if (command in COMMANDS) {
+      COMMANDS[command].help();
+      exit(0);
+    } else {
+      console.error(
+        `${color.Red}Unknown command: ${color.Yellow}${command}${color.Reset}`,
+      );
+    }
+  }
   printHelp();
   exit(0);
 }

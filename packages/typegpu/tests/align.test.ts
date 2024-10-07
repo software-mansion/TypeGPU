@@ -1,6 +1,8 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
-  type TgpuAligned,
+  type Align,
+  type Decorated,
+  type LooseDecorated,
   type TgpuArray,
   type Vec3f,
   align,
@@ -10,7 +12,6 @@ import {
   u32,
   vec3f,
 } from '../src/data';
-import type { TgpuLooseAligned } from '../src/data/align';
 import { type TgpuLooseArray, looseArrayOf } from '../src/data/array';
 import { StrictNameRegistry } from '../src/experimental';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
@@ -112,12 +113,12 @@ describe('align', () => {
     const alignedLooseArray = align(16, looseArray);
 
     expectTypeOf(alignedArray).toEqualTypeOf<
-      TgpuAligned<16, TgpuArray<Vec3f>>
+      Decorated<TgpuArray<Vec3f>, [Align<16>]>
     >();
     expect(alignedArray.isLoose).toEqual(false);
 
     expectTypeOf(alignedLooseArray).toEqualTypeOf<
-      TgpuLooseAligned<16, TgpuLooseArray<Vec3f>>
+      LooseDecorated<TgpuLooseArray<Vec3f>, [Align<16>]>
     >();
     expect(alignedLooseArray.isLoose).toEqual(true);
   });
