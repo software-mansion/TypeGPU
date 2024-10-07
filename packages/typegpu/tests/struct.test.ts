@@ -5,7 +5,16 @@ import {
   type Parsed,
 } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
-import { f32, i32, struct, u32, vec2u, vec3f, vec3u } from '../src/data';
+import {
+  arrayOf,
+  f32,
+  i32,
+  struct,
+  u32,
+  vec2u,
+  vec3f,
+  vec3u,
+} from '../src/data';
 
 describe('struct', () => {
   it('aligns struct properties when measuring', () => {
@@ -77,5 +86,39 @@ describe('struct', () => {
 
     TestStruct.write(new BufferWriter(buffer), value);
     expect(TestStruct.read(new BufferReader(buffer))).toEqual(value);
+  });
+
+  it('allows for runtime sized arrays as last property', () => {
+    const Unbounded = struct({
+      a: u32,
+      b: vec3u,
+      c: arrayOf(u32, 0),
+    });
+
+    expect(Unbounded.measure(MaxValue).size).toBeNaN();
+    expect(() => Unbounded.size).toThrow();
+
+    expect(() => {
+      const Invalid = struct({
+        a: u32,
+        b: arrayOf(u32, 0),
+        c: vec3u,
+      });
+    }).toThrow();
+
+    expect(() => {
+      const Invalid = struct({
+        a: u32,
+        b: arrayOf(u32, 0),
+        c: arrayOf(u32, 0),
+      });
+    }).toThrow();
+
+    expect(() => {
+      const Invalid = struct({
+        a: u32,
+        b: Unbounded,
+      });
+    }).toThrow();
   });
 });

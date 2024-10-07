@@ -132,8 +132,9 @@ class TgpuArrayImpl<TElement extends AnyTgpuData>
   extends Schema<Unwrap<TElement>[]>
   implements TgpuArray<TElement>
 {
+  private _size: number;
+  public readonly isRuntimeSized: boolean;
   public readonly byteAlignment: number;
-  public readonly size: number;
   public readonly stride: number;
   public readonly isLoose = false;
 
@@ -144,10 +145,21 @@ class TgpuArrayImpl<TElement extends AnyTgpuData>
     super();
     this.byteAlignment = elementType.byteAlignment;
     this.stride = roundUp(elementType.size, elementType.byteAlignment);
-    this.size = this.stride * elementCount;
+    this._size = this.stride * elementCount;
+    this.isRuntimeSized = elementCount === 0;
+  }
+
+  get size() {
+    if (this.isRuntimeSized) {
+      throw new Error('Cannot get the size of a runtime-sized array');
+    }
+    return this._size;
   }
 
   write(output: TB.ISerialOutput, value: Parsed<Unwrap<TElement>>[]) {
+    if (this.isRuntimeSized) {
+      throw new Error('Cannot write a runtime-sized array');
+    }
     alignIO(output, this.byteAlignment);
     const beginning = output.currentByteOffset;
     for (let i = 0; i < Math.min(this.elementCount, value.length); i++) {
@@ -158,6 +170,9 @@ class TgpuArrayImpl<TElement extends AnyTgpuData>
   }
 
   read(input: TB.ISerialInput): Parsed<Unwrap<TElement>>[] {
+    if (this.isRuntimeSized) {
+      throw new Error('Cannot read a runtime-sized array');
+    }
     alignIO(input, this.byteAlignment);
     const elements: Parsed<Unwrap<TElement>>[] = [];
     for (let i = 0; i < this.elementCount; i++) {
@@ -172,14 +187,19 @@ class TgpuArrayImpl<TElement extends AnyTgpuData>
     _: MaxValue | Parsed<Unwrap<TElement>>[],
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
+    if (this.isRuntimeSized) {
+      return measurer.unbounded;
+    }
     alignIO(measurer, this.byteAlignment);
     return measurer.add(this.size);
   }
 
   resolve(ctx: ResolutionCtx): string {
-    return ctx.resolve(`
-      array<${ctx.resolve(this.elementType)}, ${this.elementCount}>
-    `);
+    const elementTypeResolved = ctx.resolve(this.elementType);
+    const arrayType = this.isRuntimeSized
+      ? `array<${elementTypeResolved}>`
+      : `array<${elementTypeResolved}, ${this.elementCount}>`;
+    return ctx.resolve(arrayType);
   }
 }
 

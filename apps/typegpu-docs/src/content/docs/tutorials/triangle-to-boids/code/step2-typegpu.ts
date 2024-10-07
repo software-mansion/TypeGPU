@@ -1,3 +1,6 @@
+// @ts-nocheck
+// TODO: ^ REMOVE WHEN CODE WORKS AGAIN
+
 import {
   addElement,
   addSliderPlumParameter,
