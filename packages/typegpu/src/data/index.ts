@@ -10,6 +10,7 @@ export {
   isStructSchema,
   struct,
   looseStruct,
+  isLooseStructSchema,
 } from './struct';
 export {
   TgpuArray,
@@ -17,6 +18,7 @@ export {
   isArraySchema,
   arrayOf,
   looseArrayOf,
+  isLooseArraySchema,
 } from './array';
 export * from './vector';
 export * from './matrix';

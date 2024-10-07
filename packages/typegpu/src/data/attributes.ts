@@ -138,19 +138,14 @@ function attribute<
  * @param alignment The multiple of bytes this data should align itself to.
  * @param data The data-type to align.
  */
-export function align<TAlign extends number, TData extends AnyTgpuData>(
-  alignment: TAlign,
-  data: TData,
-): Decorate<TData, Align<TAlign>>;
-export function align<TAlign extends number, TData extends AnyTgpuLooseData>(
-  alignment: TAlign,
-  data: TData,
-): Decorate<TData, Align<TAlign>>;
 export function align<
   TAlign extends number,
   TData extends AnyTgpuData | AnyTgpuLooseData,
->(alignment: TAlign, data: TData) {
-  return attribute(data, { type: 'align', alignment });
+>(alignment: TAlign, data: TData): Decorate<TData, Align<TAlign>> {
+  return attribute(data, { type: 'align', alignment }) as Decorate<
+    TData,
+    Align<TAlign>
+  >;
 }
 
 /**
@@ -165,19 +160,14 @@ export function align<
  * @param size The amount of bytes that should be reserved for this data-type.
  * @param data The data-type to wrap.
  */
-export function size<TSize extends number, TData extends AnyTgpuData>(
-  size: TSize,
-  data: TData,
-): Decorate<TData, Size<TSize>>;
-export function size<TSize extends number, TData extends AnyTgpuLooseData>(
-  size: TSize,
-  data: TData,
-): Decorate<TData, Size<TSize>>;
 export function size<
   TSize extends number,
   TData extends AnyTgpuData | AnyTgpuLooseData,
->(size: TSize, data: TData) {
-  return attribute(data, { type: 'size', size });
+>(size: TSize, data: TData): Decorate<TData, Size<TSize>> {
+  return attribute(data, { type: 'size', size }) as Decorate<
+    TData,
+    Size<TSize>
+  >;
 }
 
 export function isDecorated<T extends Decorated<AnyTgpuData, AnyAttribute[]>>(

@@ -278,6 +278,9 @@ importers:
         specifier: ^2.20.1
         version: 2.20.1
     devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
       '@types/moo':
         specifier: ^0.5.9
         version: 0.5.9
