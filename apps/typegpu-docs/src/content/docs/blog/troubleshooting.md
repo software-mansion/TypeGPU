@@ -14,17 +14,16 @@ authors:
     picture: https://avatars.githubusercontent.com/u/66403540?s=200
 excerpt: Since WebGPU is still considered experimental, despite being supported by many browsers, it is often hidden behind flags. This post will help you find out if your browser supports WebGPU and help you enable it if needed.
 cover:
-  alt: A sausage dog
+  alt: A laptop with the WebGPU logo on its screen, surrounded by logos of various platforms that can run WebGPU after applying certain tweaks.
   image: ../../../assets/troubleshooting_thumbnail.png
 ---
 
 Since WebGPU is still considered experimental, despite being supported by
 many browsers, it is often hidden behind flags.
-This post will help you find out if your browser supports WebGPU
-and help you enable it if needed.
+This post will help you find out if your browser secretly supports WebGPU and, if it does, how you can enable it.
 In general, you can check if your browser supports WebGPU by visiting [the WebGPU API doccumentation](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API#browser_compatibility)
 and looking for your browser in the list. If it is listed under `full support` it should generally work out of the box (on the listed operating systems).
-There are some cases when it is more complicated and requires some manual configuration.
+There are some cases where it is more complicated and requires some manual configuration.
 This post will guide you through the process of enabling WebGPU on your devices.
 
 ## Safari on iOS
