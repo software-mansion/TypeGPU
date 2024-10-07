@@ -21,6 +21,7 @@ import type {
 // ----------
 // Public API
 // ----------
+
 export interface TgpuBufferUniform<TData extends AnyTgpuData>
   extends TgpuBindable<TData, 'uniform'> {
   readonly resourceType: 'buffer-usage';
