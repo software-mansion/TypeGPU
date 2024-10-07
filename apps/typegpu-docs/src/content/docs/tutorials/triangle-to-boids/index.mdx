@@ -1,5 +1,5 @@
 ---
-title: From Triangle to Boids Simulation
+title: "From a Triangle to Simulating Boids: Step-by-step Tutorial"
 description: A tutorial that will guide you through the process of creating a simple triangle rendering program and incrementally adding features to create a boids simulation.
 draft: true
 ---
@@ -48,11 +48,11 @@ This setup will mostly look very similar in every project that draws something t
   // Create the root
   const root = await tgpu.init();
 
-  // Accessing the HTML canvas
+  // Access the HTML canvas
   const canvas = document.getElementById('canvas');
   const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
-  // configure the canvas context
+  // Configure the canvas context
   const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
   context.configure({
     device: root.device,

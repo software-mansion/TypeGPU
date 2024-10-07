@@ -72,6 +72,10 @@ export default defineConfig({
               label: 'Defining Data Types',
               slug: 'guides/defining-data-types',
             },
+            DEV && {
+              label: 'Generating JS from WGSL',
+              slug: 'guides/generating-js-from-wgsl',
+            },
             // {
             //   label: 'Basic Principles',
             //   slug: 'guides/basic-principles',
@@ -90,7 +94,8 @@ export default defineConfig({
           label: 'Tutorials',
           items: [
             {
-              label: 'Making Triangles Fly',
+              label:
+                'From a Triangle to Simulating Boids: Step-by-step Tutorial',
               slug: 'tutorials/triangle-to-boids',
             },
           ],
