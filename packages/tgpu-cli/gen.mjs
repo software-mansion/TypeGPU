@@ -1,42 +1,70 @@
 // @ts-check
 
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import { ArrayInfo, StructInfo, TemplateInfo, WgslReflect } from 'wgsl_reflect';
 
 const cwd = new URL(`file:${process.cwd()}/`);
 
 const LENGTH_VAR = 'arrayLength';
 
-let exportsList = [];
+export class Context {
+  /**
+   * @param { {toTs: boolean, toCommonJs: boolean} } options
+   */
+  constructor(options) {
+    this.toTs = options.toTs;
+    this.toCommonJs = options.toCommonJs;
+
+    /** @type { string[] } */
+    this.exportsList = [];
+  }
+}
 
 /**
  * @param { string } input
  * @param { string } output
  * @param { boolean } toTs
- * @param { boolean } toCjs
+ * @param { boolean } toCommonJs
+ * @param { boolean } overwriteExisting
  */
-async function main(input, output, toTs, toCjs) {
+async function main(input, output, toTs, toCommonJs, overwriteExisting) {
   const inputPath = new URL(input, cwd);
   const outputPath = new URL(output, cwd);
   const inputContents = await fs.readFile(inputPath, 'utf8');
 
-  await fs.writeFile(outputPath, generate(inputContents, toTs, toCjs));
+  const generated = generate(inputContents, new Context({ toTs, toCommonJs }));
+
+  const fileExists = await fs
+    .access(output)
+    .then(() => true)
+    .catch(() => false);
+
+  if (fileExists && !overwriteExisting) {
+    console.warn(
+      `File ${output} already exists. Use --overwrite option to replace existing files.`,
+    );
+    return;
+  }
+
+  await fs.mkdir(path.dirname(output), { recursive: true });
+  await fs.writeFile(outputPath, generated);
 }
 
 /**
  * @param { string } wgsl
- * @param { boolean } toTs
- * @param { boolean } toCjs
+ * @param { Context } ctx
  */
-export function generate(wgsl, toTs = true, toCjs = false) {
+export function generate(
+  wgsl,
+  ctx = new Context({ toTs: true, toCommonJs: false }),
+) {
   const reflect = new WgslReflect(wgsl);
-
-  exportsList = [];
 
   return `/* generated via tgpu-cli by TypeGPU */
 
 ${
-  toCjs
+  ctx.toCommonJs
     ? `\
 const tgpu = require('typegpu').default;
 const d = require('typegpu/data');`
@@ -45,37 +73,35 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';`
 }
 
-${generateStructs(reflect.structs, toTs, toCjs)}
+${generateStructs(reflect.structs, ctx)}
 
-${generateAliases(reflect.aliases, toCjs)}
+${generateAliases(reflect.aliases, ctx)}
 
-${generateBindGroupLayouts(reflect.getBindGroups(), toCjs)}
+${generateBindGroupLayouts(reflect.getBindGroups(), ctx)}
 
-${generateExports(toCjs)}
+${generateExports(ctx)}
 `.trim();
 }
 
 /**
  * @param { import('wgsl_reflect').StructInfo[] } structs
- * @param { boolean } toTs
- * @param { boolean } toCjs
+ * @param { Context } ctx
  */
-function generateStructs(structs, toTs, toCjs) {
+function generateStructs(structs, ctx) {
   return structs.length > 0
     ? `/* structs */
-${structs.map((struct) => generateStruct(struct, toTs, toCjs)).join('\n\n')}`
+${structs.map((struct) => generateStruct(struct, ctx)).join('\n\n')}`
     : '';
 }
 
 /**
  * @param { import('wgsl_reflect').StructInfo } struct
- * @param { boolean } toTs
- * @param { boolean } toCjs
+ * @param { Context } ctx
  */
-function generateStruct(struct, toTs, toCjs) {
-  return `${declareConst(struct.name, toCjs)} = ${
+function generateStruct(struct, ctx) {
+  return `${declareConst(struct.name, ctx)} = ${
     hasVarLengthMember(struct)
-      ? `(${LENGTH_VAR}${toTs ? ': number' : ''}) => `
+      ? `(${LENGTH_VAR}${ctx.toTs ? ': number' : ''}) => `
       : ''
   }d.struct({
   ${struct.members.map((member) => generateStructMember(member)).join('\n  ')}
@@ -92,15 +118,15 @@ function hasVarLengthMember(struct) {
 
 /**
  * @param { import('wgsl_reflect').AliasInfo[] } aliases
- * @param { boolean } toCjs
+ * @param { Context } ctx
  */
-function generateAliases(aliases, toCjs) {
+function generateAliases(aliases, ctx) {
   return aliases.length > 0
     ? `/* aliases */
 ${aliases
   .map(
     (alias) =>
-      `${declareConst(alias.name, toCjs)} = ${generateType(alias.type)};`,
+      `${declareConst(alias.name, ctx)} = ${generateType(alias.type)};`,
   )
   .join('\n')}`
     : '';
@@ -168,15 +194,15 @@ function replaceWithAlias(type) {
 
 /**
  * @param { import('wgsl_reflect').VariableInfo[][] } bindGroups
- * @param { boolean } toCjs
+ * @param { Context } ctx
  */
-function generateBindGroupLayouts(bindGroups, toCjs) {
+function generateBindGroupLayouts(bindGroups, ctx) {
   return bindGroups.length > 0
     ? `/* bindGroupLayouts */
 ${bindGroups
   .flatMap(
     (group, index) => `\
-${declareConst(`layout${index}`, toCjs)} = tgpu.bindGroupLayout({
+${declareConst(`layout${index}`, ctx)} = tgpu.bindGroupLayout({
   ${generateGroupLayout(group)}
 }).$forceIndex(${index});`,
   )
@@ -327,28 +353,23 @@ function generateExternalTextureVariable(variable) {
 
 /**
  * @param { string } ident
- * @param { boolean } toCjs
+ * @param { Context } ctx
  */
-function declareConst(ident, toCjs) {
-  if (toCjs) {
-    exportsList.push(ident);
+function declareConst(ident, ctx) {
+  if (ctx.toCommonJs) {
+    ctx.exportsList.push(ident);
     return `const ${ident}`;
   }
   return `export const ${ident}`;
 }
 
 /**
- * @param { boolean } toCjs
+ * @param { Context } ctx
  */
-function generateExports(toCjs) {
-  if (!toCjs) {
-    exportsList = [];
-    return '';
-  }
-
-  const exports = `module.exports = {${exportsList.join(', ')}};`;
-  exportsList = [];
-  return exports;
+function generateExports(ctx) {
+  return ctx.toCommonJs
+    ? `module.exports = {${ctx.exportsList.join(', ')}};`
+    : '';
 }
 
 export default main;

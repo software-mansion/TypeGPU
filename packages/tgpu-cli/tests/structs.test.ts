@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generate } from '../gen.mjs';
+import { Context, generate } from '../gen.mjs';
 
 describe('structs generator', () => {
   it('generates equivalent tgpu struct definitions from wgsl', () => {
@@ -206,6 +206,8 @@ export const Triangles = (arrayLength) => d.struct({
   tris: d.arrayOf(Triangle, arrayLength),
 });`;
 
-    expect(generate(wgsl, false)).toContain(expected);
+    expect(
+      generate(wgsl, new Context({ toTs: false, toCommonJs: false })),
+    ).toContain(expected);
   });
 });

@@ -16,6 +16,7 @@ const args = arg({
   '--input': String,
   '--output': String,
   '--commonjs': Boolean,
+  '--overwrite': Boolean,
 
   '-v': '--version',
   '-h': '--help',
@@ -30,18 +31,12 @@ const COMMANDS = {
     execute: async () => {
       const input = args['--input'] ?? args._[1];
       const output = args['--output'];
-      const toCjs = args['--commonjs'] ?? false;
+      const toCommonJs = args['--commonjs'] ?? false;
+      const overwriteExisting = args['--overwrite'] ?? false;
 
-      if (!input) {
+      if (!input || !output) {
         console.error(
-          `${color.Red}Error: Missing required argument: ${color.Yellow}--input${color.Reset}`,
-        );
-        exit(1);
-      }
-
-      if (!output) {
-        console.error(
-          `${color.Red}Error: Missing required argument: ${color.Yellow}--output${color.Reset}`,
+          `${color.Red}Error: Missing some of the required arguments: ${color.Yellow}--input, --output${color.Reset}`,
         );
         exit(1);
       }
@@ -70,7 +65,7 @@ const COMMANDS = {
 
       if (files.length > 1 && !output.includes('*')) {
         console.error(
-          `${color.Red}Error: More than one file found: ${files.join(', ')}, while a non-pattern output name was provided ${color.Reset}`,
+          `${color.Red}Error: More than one file found (${files.join(', ')}), while a non-pattern output name was provided ${color.Reset}`,
         );
         exit(1);
       }
@@ -78,10 +73,13 @@ const COMMANDS = {
       const results = await Promise.allSettled(
         files.map((file) => {
           const parsed = path.parse(file);
-          const out = output.replace('*', parsed.name);
+
+          const out = output.includes('**/*')
+            ? output.replace('**/*', path.join(parsed.dir, parsed.name))
+            : output.replace('*', parsed.name);
 
           console.log(`Generating ${file} >>> ${out}`);
-          return generate(file, out, toTs, toCjs);
+          return generate(file, out, toTs, toCommonJs, overwriteExisting);
         }),
       );
 
