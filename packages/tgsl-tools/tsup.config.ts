@@ -1,4 +1,7 @@
+import { initBuildScript } from '@typegpu/tgpu-dev-cli';
 import { defineConfig } from 'tsup';
+
+const { inDevMode } = initBuildScript();
 
 export default defineConfig({
   entry: ['src/index.ts'],
@@ -8,7 +11,7 @@ export default defineConfig({
   target: 'es2017',
   splitting: true,
   sourcemap: true,
-  minify: true,
-  clean: true,
+  minify: !inDevMode,
+  clean: !inDevMode,
   dts: true,
 });
