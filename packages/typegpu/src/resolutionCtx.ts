@@ -1,4 +1,4 @@
-import type { TgpuFnShellBase } from './core/function/tgpuFn';
+import type { TgpuFnShellBase } from './core/function/fnCore';
 import { MissingSlotValueError, ResolutionError } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';

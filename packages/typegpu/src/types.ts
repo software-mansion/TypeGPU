@@ -1,5 +1,5 @@
 import type { ISchema, Unwrap } from 'typed-binary';
-import type { TgpuFnShellBase } from './core/function/tgpuFn';
+import type { TgpuFnShellBase } from './core/function/fnCore';
 import type { TgpuNamable } from './namable';
 import type { Block } from './smol';
 import type { TgpuBuffer } from './tgpuBuffer';
