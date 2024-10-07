@@ -24,8 +24,8 @@
   },
   "sideEffects": false,
   "scripts": {
-    "dev:watch": "tsup --watch",
-    "dev:build": "tsup",
+    "dev:watch": "DEV=true tsup --watch",
+    "dev:build": "DEV=true tsup",
     "build": "tsup",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
     "publish": "echo \"Use pnpm prepare-package instead!\" && exit 1",

@@ -1,11 +1,10 @@
+import { initBuildScript } from '@typegpu/tgpu-dev-cli';
 import { defineConfig } from 'tsup';
 
-const EXPERIMENTAL = process.env.EXPERIMENTAL === 'true';
-
-console.log(`-= ${EXPERIMENTAL ? 'EXPERIMENTAL' : 'PRODUCTION'} MODE =-\n\n`);
+const { inDevMode, featureSet } = initBuildScript();
 
 const entry = ['src/index.ts', 'src/data/index.ts'];
-if (EXPERIMENTAL) {
+if (featureSet === 'experimental') {
   entry.push(
     'src/experimental/index.ts',
     'src/macro/index.ts',
@@ -21,7 +20,9 @@ export default defineConfig({
   target: 'es2017',
   splitting: true,
   sourcemap: true,
-  minify: true,
-  clean: true,
+  minify: !inDevMode,
+  // When in dev mode, we first build then watch, so we do not want the `watch` to
+  // clean the out directory.
+  clean: !inDevMode,
   dts: true,
 });

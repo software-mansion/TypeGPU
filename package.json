@@ -5,11 +5,11 @@
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "license": "MIT",
   "scripts": {
-    "dev": "EXPERIMENTAL=true pnpm -r dev:build && EXPERIMENTAL=true pnpm --parallel -r dev:watch",
+    "dev": "DEV=true EXPERIMENTAL=true pnpm -r dev:build && DEV=true EXPERIMENTAL=true pnpm --parallel -r dev:watch",
     "dev:test": "vitest",
     "check": "biome check --write .",
     "coverage": "vitest --coverage",
-    "test": "EXPERIMENTAL=true pnpm -r dev:build && pnpm run '/^test:.*/'",
+    "test": "DEV=true EXPERIMENTAL=true pnpm -r dev:build && pnpm run '/^test:.*/'",
     "test:types": "pnpm run -r test:types",
     "test:spec": "vitest run"
   },

@@ -1,6 +1,7 @@
 import { exec } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
+import { initBuildScript } from '@typegpu/tgpu-dev-cli';
 import { defineConfig } from 'tsup';
 
 function promiseExec(command: string) {
@@ -60,6 +61,8 @@ ${stdout}`;
   };
 }
 
+const { inDevMode } = initBuildScript();
+
 export default defineConfig({
   entryPoints: ['src/index.ts'],
   outDir: 'dist',
@@ -68,8 +71,8 @@ export default defineConfig({
   target: 'es2017',
   splitting: true,
   sourcemap: true,
-  minify: true,
-  clean: true,
+  minify: !inDevMode,
+  clean: !inDevMode,
   dts: true,
   esbuildPlugins: [nearleyPlugin()],
 });
