@@ -18,6 +18,7 @@ export type TranspilationResult = {
 export type UnwrapArgs<T extends AnyTgpuData[]> = {
   [Idx in keyof T]: Unwrap<T[Idx]>;
 };
+
 export type UnwrapReturn<T extends AnyTgpuData | undefined> =
   T extends undefined
     ? // biome-ignore lint/suspicious/noConfusingVoidType: <void is used as a return type>

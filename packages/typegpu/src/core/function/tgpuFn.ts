@@ -28,10 +28,8 @@ import type {
 // Public API
 // ----------
 
-type AnyTgpuDataTuple = [AnyTgpuData, ...AnyTgpuData[]] | [];
-
 export interface TgpuFnShellBase<
-  Args extends AnyTgpuDataTuple,
+  Args extends AnyTgpuData[],
   Return extends AnyTgpuData | undefined,
 > {
   readonly argTypes: Args;
@@ -42,7 +40,7 @@ export interface TgpuFnShellBase<
  * Describes a function signature (its arguments and return type)
  */
 export interface TgpuFnShell<
-  Args extends AnyTgpuDataTuple,
+  Args extends AnyTgpuData[],
   Return extends AnyTgpuData | undefined,
 > {
   readonly argTypes: Args;
@@ -65,7 +63,7 @@ export interface TgpuFnShell<
 }
 
 interface TgpuFnBase<
-  Args extends AnyTgpuDataTuple,
+  Args extends AnyTgpuData[],
   Return extends AnyTgpuData | undefined = undefined,
 > extends TgpuResolvable,
     TgpuNamable {
@@ -76,23 +74,23 @@ interface TgpuFnBase<
 }
 
 export type TgpuFn<
-  Args extends AnyTgpuDataTuple,
+  Args extends AnyTgpuData[],
   Return extends AnyTgpuData | undefined = undefined,
 > = TgpuFnBase<Args, Return> &
   ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>);
 
-export function fn<Args extends AnyTgpuDataTuple>(
+export function fn<Args extends [...AnyTgpuData[]] | []>(
   argTypes: Args,
   returnType?: undefined,
 ): TgpuFnShell<Args, undefined>;
 
-export function fn<Args extends AnyTgpuDataTuple, Return extends AnyTgpuData>(
-  argTypes: Args,
-  returnType: Return,
-): TgpuFnShell<Args, Return>;
+export function fn<
+  Args extends [...AnyTgpuData[]] | [],
+  Return extends AnyTgpuData,
+>(argTypes: Args, returnType: Return): TgpuFnShell<Args, Return>;
 
 export function fn<
-  Args extends AnyTgpuDataTuple,
+  Args extends [...AnyTgpuData[]] | [],
   Return extends AnyTgpuData | undefined = undefined,
 >(argTypes: Args, returnType?: Return): TgpuFnShell<Args, Return> {
   return {
@@ -115,7 +113,8 @@ export function procedure(implementation: () => void) {
  * Describes a vertex entry function signature (its arguments and return type)
  */
 export interface TgpuVertexFnShell<
-  Args extends AnyTgpuDataTuple,
+  // TODO: Allow vertex attributes and builtins here
+  Args extends AnyTgpuData[],
   // TODO: Allow IO struct here
   Return extends AnyTgpuData,
 > {
@@ -145,7 +144,7 @@ interface TgpuVertexFn<
   Output extends AnyTgpuData,
 > extends TgpuResolvable,
     TgpuNamable {
-  readonly shell: TgpuVertexFnShell<AnyTgpuDataTuple, AnyTgpuData>;
+  readonly shell: TgpuVertexFnShell<AnyTgpuData[], AnyTgpuData>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
   $__ast(argNames: string[], body: Block): this;
@@ -163,7 +162,7 @@ interface TgpuVertexFn<
  *   passed onto the fragment shader stage.
  */
 export function vertexFn<
-  Args extends AnyTgpuDataTuple,
+  Args extends AnyTgpuData[],
   Return extends AnyTgpuData,
 >(argTypes: Args, returnType: Return): TgpuVertexFnShell<Args, Return> {
   return {
@@ -180,7 +179,8 @@ export function vertexFn<
  * Describes a fragment entry function signature (its arguments and return type)
  */
 export interface TgpuFragmentFnShell<
-  Args extends AnyTgpuDataTuple,
+  // TODO: Allow IO struct or builtins here
+  Args extends AnyTgpuData[],
   // TODO: Allow IO struct here
   Return extends AnyTgpuData,
 > {
@@ -209,7 +209,7 @@ interface TgpuFragmentFn<
   Output extends AnyTgpuData,
 > extends TgpuResolvable,
     TgpuNamable {
-  readonly shell: TgpuFragmentFnShell<AnyTgpuDataTuple, AnyTgpuData>;
+  readonly shell: TgpuFragmentFnShell<AnyTgpuData[], AnyTgpuData>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
   $__ast(argNames: string[], body: Block): this;
@@ -228,7 +228,7 @@ interface TgpuFragmentFn<
  *   colors for multiple targets.
  */
 export function fragmentFn<
-  Args extends AnyTgpuDataTuple,
+  Args extends AnyTgpuData[],
   Return extends AnyTgpuData,
 >(argTypes: Args, returnType: Return): TgpuFragmentFnShell<Args, Return> {
   return {
@@ -246,7 +246,7 @@ export function fragmentFn<
 // --------------
 
 function createFnCore<
-  Args extends AnyTgpuDataTuple,
+  Args extends AnyTgpuData[],
   Return extends AnyTgpuData | undefined,
 >(
   shell: TgpuFnShellBase<Args, Return>,
@@ -296,7 +296,7 @@ function createFnCore<
 }
 
 function createFn<
-  Args extends AnyTgpuDataTuple,
+  Args extends AnyTgpuData[],
   Return extends AnyTgpuData | undefined,
 >(
   shell: TgpuFnShell<Args, Return>,
@@ -356,10 +356,8 @@ function createFn<
   return fn;
 }
 
-class FnCall<
-  Args extends AnyTgpuDataTuple,
-  Return extends AnyTgpuData | undefined,
-> implements TgpuResolvable
+class FnCall<Args extends AnyTgpuData[], Return extends AnyTgpuData | undefined>
+  implements TgpuResolvable
 {
   constructor(
     private readonly _fn: TgpuFnBase<Args, Return>,
@@ -375,10 +373,7 @@ class FnCall<
   }
 }
 
-function createVertexFn<
-  Args extends AnyTgpuDataTuple,
-  Output extends AnyTgpuData,
->(
+function createVertexFn<Args extends AnyTgpuData[], Output extends AnyTgpuData>(
   shell: TgpuVertexFnShell<Args, Output>,
   implementation: Implementation<Args, Output>,
 ): TgpuVertexFn<[], Output> {
@@ -417,7 +412,7 @@ function createVertexFn<
 }
 
 function createFragmentFn<
-  Args extends AnyTgpuDataTuple,
+  Args extends AnyTgpuData[],
   Output extends AnyTgpuData,
 >(
   shell: TgpuFragmentFnShell<Args, Output>,

@@ -53,7 +53,6 @@ export type {
   TgpuBufferVertex,
 } from '../tgpuBufferUsage';
 export type { TgpuConst } from '../tgpuConstant';
-export type { TgpuFn } from '../tgpuFunction';
 export type { TgpuPlum } from '../tgpuPlumTypes';
 export type { TexelFormat } from '../textureTypes';
 export type { TgpuSettable } from '../settableTrait';
@@ -74,3 +73,9 @@ export type {
   LayoutEntryToInput,
   TgpuBindGroup,
 } from '../tgpuBindGroupLayout';
+export type {
+  TgpuFn,
+  TgpuFnShell,
+  TgpuFragmentFnShell,
+  TgpuVertexFnShell,
+} from '../core/function/tgpuFn';
