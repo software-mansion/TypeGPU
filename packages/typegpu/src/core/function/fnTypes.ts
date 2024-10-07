@@ -1,6 +1,6 @@
 import type { Unwrap } from 'typed-binary';
-import type { AnyTgpuData } from '../..';
 import type * as smol from '../../smol';
+import type { AnyTgpuData, AnyTgpuLooseData } from '../../types';
 
 /**
  * Information extracted from transpiling a JS function.
@@ -15,7 +15,7 @@ export type TranspilationResult = {
   externalNames: string[];
 };
 
-export type UnwrapArgs<T extends AnyTgpuData[]> = {
+export type UnwrapArgs<T extends (AnyTgpuData | AnyTgpuLooseData)[]> = {
   [Idx in keyof T]: Unwrap<T[Idx]>;
 };
 

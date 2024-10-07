@@ -36,7 +36,7 @@ export interface TgpuFragmentFnShell<
   implement(implementation: string): TgpuFragmentFn<[], Return>;
 }
 
-interface TgpuFragmentFn<
+export interface TgpuFragmentFn<
   Args extends [],
   // TODO: Allow IO struct or `vec4f` here
   Output extends AnyTgpuData,

@@ -36,7 +36,7 @@ export interface TgpuVertexFnShell<
   implement(implementation: string): TgpuVertexFn<[], Return>;
 }
 
-interface TgpuVertexFn<
+export interface TgpuVertexFn<
   // TODO: Allow vertex attributes here
   VertexAttribs extends [],
   // TODO: Allow IO struct here

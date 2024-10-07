@@ -2,6 +2,7 @@
  * @module typegpu/experimental
  */
 
+import { computeFn } from '../core/function/tgpuComputeFn';
 import { fn, procedure } from '../core/function/tgpuFn';
 import { fragmentFn } from '../core/function/tgpuFragmentFn';
 import { vertexFn } from '../core/function/tgpuVertexFn';
@@ -20,6 +21,7 @@ export const tgpu = {
   procedure,
   fragmentFn,
   vertexFn,
+  computeFn,
   bindGroupLayout,
 
   init,
@@ -81,5 +83,15 @@ export type {
   TgpuFn,
   TgpuFnShell,
 } from '../core/function/tgpuFn';
-export type { TgpuVertexFnShell } from '../core/function/tgpuVertexFn';
-export type { TgpuFragmentFnShell } from '../core/function/tgpuFragmentFn';
+export type {
+  TgpuVertexFnShell,
+  TgpuVertexFn,
+} from '../core/function/tgpuVertexFn';
+export type {
+  TgpuFragmentFnShell,
+  TgpuFragmentFn,
+} from '../core/function/tgpuFragmentFn';
+export type {
+  TgpuComputeFnShell,
+  TgpuComputeFn,
+} from '../core/function/tgpuComputeFn';
