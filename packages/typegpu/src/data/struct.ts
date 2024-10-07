@@ -40,9 +40,9 @@ export interface TgpuStruct<TProps extends Record<string, AnyTgpuData>>
     TgpuNamable {}
 
 /**
- * Creates a struct schema that can be used to construct gpu buffers.
- * Describes structs with members of non-loose types.
- * The order of members is constant, based on the order in passed in properties object.
+ * Creates a struct schema that can be used to construct GPU buffers.
+ * Ensures proper alignment and padding of properties (as opposed to a `d.looseStruct` schema).
+ * The order of members matches the passed in properties object.
  *
  * @example
  * const CircleStruct = d.struct({ radius: d.f32, pos: d.vec3f });
@@ -57,7 +57,7 @@ export const struct = <TProps extends Record<string, AnyTgpuData>>(
 /**
  * Struct schema constructed via `d.looseStruct` function.
  *
- * Useful for defining tgpu vertex buffers.
+ * Useful for defining vertex buffers, as the standard layout restrictions do not apply.
  * Members are not aligned in respect to their `byteAlignment`,
  * unless they are explicitly decorated with the custom align attribute
  * via `d.align` function.
@@ -68,10 +68,10 @@ export interface TgpuLooseStruct<
     TgpuLooseData<UnwrapRecord<TProps>> {}
 
 /**
- * Creates a loose struct schema that can be used to construct tgpu vertex buffers.
+ * Creates a loose struct schema that can be used to construct vertex buffers.
  * Describes structs with members of both loose and non-loose types.
  *
- * The order of members is constant, based on the order in passed in properties object.
+ * The order of members matches the passed in properties object.
  * Members are not aligned in respect to their `byteAlignment`,
  * unless they are explicitly decorated with the custom align attribute
  * via `d.align` function.
@@ -79,7 +79,7 @@ export interface TgpuLooseStruct<
  * @example
  * const CircleStruct = d.looseStruct({ radius: d.f32, pos: d.vec3f }); // packed struct with no padding
  *
- *  * @example
+ * @example
  * const CircleStruct = d.looseStruct({ radius: d.f32, pos: d.align(16, d.vec3f) });
  *
  * @param properties Record with `string` keys and `TgpuData` or `TgpuLooseData` values,
