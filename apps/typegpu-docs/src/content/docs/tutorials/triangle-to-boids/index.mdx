@@ -241,33 +241,32 @@ But first, let's upgrade our program a little
 Currently, the vertices are hardcoded in the shader.
 
 ```ts
-const vertexCode = wgsl`
-  var verticies = array<vec2f, 3>(
-    vec2(0.0, 0.5),
-    vec2(-0.5, -0.5),
-    vec2(0.5, -0.5)
-  );
+const vertices = [
+  vec2f(0, 0.5),
+  vec2f(-0.5, -0.5),
+  vec2f(0.5, -0.5),
+];
 
-  let pos = vec4f(verticies[${builtin.vertexIndex}], 0.0, 1.0);
-`;
+return {
+  // we can use tgpu.builtin.vertexIndex to access the
+  // index of the vertex we are currently processing.
+  position: vec4f(verticies[idx], 0.0, 1.0),
+};
 ```
 
 That's certainly not the best approach. Instead, let's create a vertex buffer to store the coordinates and use that in the shader.
 
 ```ts
-import { vec2f, arrayOf } from 'typegpu/data';
-
-const triangleVertex = wgsl
-  .buffer(arrayOf(vec2f, 3), [
-    [0.0, 0.5],
-    [-0.5, -0.5],
-    [0.5, -0.5],
+const triangleVertexBuffer = root
+  .createBuffer(d.arrayOf(d.vec2f, 3), [
+    d.vec2f(0.0, 0.5),
+    d.vec2f(-0.5, -0.5),
+    d.vec2f(0.5, -0.5),
   ])
-  .$allowVertex('vertex');
+  .$usage(tgpu.Vertex);
+
+const positionAttrib = triangleVertexBuffer.vertex();
 ```
-<Aside type="tip">
-You can also pass `'instance'` into the `$allowVertex()` method, which will alter how the values are read.
-</Aside>
 
 Now we can use the buffer in the shader.
 
