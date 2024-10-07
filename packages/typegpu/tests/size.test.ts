@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import * as d from '../src/data';
 import { StrictNameRegistry } from '../src/experimental';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
@@ -80,5 +80,25 @@ describe('size', () => {
     const s1 = d.looseArrayOf(d.size(11, d.u32), 10);
 
     expect(s1.size).toEqual(110);
+    expectTypeOf(s1).toEqualTypeOf<
+      d.TgpuLooseArray<d.Decorated<d.U32, [d.Size<11>]>>
+    >();
+  });
+
+  it('changes size of loose struct member of type loose array', () => {
+    const s1 = d.looseStruct({
+      a: d.u32, // 4
+      b: d.size(20, d.looseArrayOf(d.u32, 4)), // 20
+      c: d.u32, // 4
+    });
+
+    expect(s1.size).toEqual(28);
+    expectTypeOf(s1).toEqualTypeOf<
+      d.TgpuLooseStruct<{
+        a: d.U32;
+        b: d.LooseDecorated<d.TgpuLooseArray<d.U32>, [d.Size<20>]>;
+        c: d.U32;
+      }>
+    >();
   });
 });
