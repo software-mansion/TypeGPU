@@ -3,6 +3,8 @@
  */
 
 import { fn, procedure } from '../core/function/tgpuFn';
+import { fragmentFn } from '../core/function/tgpuFragmentFn';
+import { vertexFn } from '../core/function/tgpuVertexFn';
 import { createRuntime as init } from '../createRuntime';
 import { createBuffer } from '../legacyBufferApi';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
@@ -16,6 +18,8 @@ export const tgpu = {
 
   fn,
   procedure,
+  fragmentFn,
+  vertexFn,
   bindGroupLayout,
 
   init,
@@ -76,6 +80,6 @@ export type {
 export type {
   TgpuFn,
   TgpuFnShell,
-  TgpuFragmentFnShell,
-  TgpuVertexFnShell,
 } from '../core/function/tgpuFn';
+export type { TgpuVertexFnShell } from '../core/function/tgpuVertexFn';
+export type { TgpuFragmentFnShell } from '../core/function/tgpuFragmentFn';
