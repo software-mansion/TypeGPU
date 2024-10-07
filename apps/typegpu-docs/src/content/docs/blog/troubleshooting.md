@@ -27,10 +27,9 @@ and looking for your browser in the list. If it is listed under `full support` i
 There are some cases when it is more complicated and requires some manual configuration.
 This post will guide you through the process of enabling WebGPU on your devices.
 
-## WebGPU in Safari on iOS
+## Safari on iOS
 Despite what the [docs](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API#browser_compatibility)
-tell us, there is a way to enable WebGPU in safari on iOS.
-This will serve as a quick guide on how to enable the feature on your iPhone.
+tell us, there is a way to enable WebGPU in Safari on iOS.
 
 To enable WebGPU go to:
 ```
@@ -40,7 +39,7 @@ And then enable WebGPU.
 That's it! After enabling the WebGPU flag you can go to [our examples page](https://docs.swmansion.com/TypeGPU/examples/)
 and you should be able to tinker with them on your phone.
 
-## WebGPU in Safari on MacOS
+## Safari on MacOS
 
 Go to:
 ```
@@ -54,7 +53,7 @@ Settings > Feature Flags
 And search for the WebGPU checkbox.
 Enable it and you should be good to go!
 
-## WebGPU in Deno
+## Deno
 
 If you are running Deno 1.39 or newer you can either:
 - Run your script with the `--unstable-webgpu` flag
