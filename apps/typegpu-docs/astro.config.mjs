@@ -4,6 +4,7 @@ import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import tailwind from '@astrojs/tailwind';
 import { defineConfig } from 'astro/config';
+import starlightBlog from 'starlight-blog';
 import importRawRedirectPlugin from './vite-import-raw-redirect-plugin';
 
 const stripFalsy = (items) => items.filter((item) => !!item);
@@ -32,6 +33,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'TypeGPU',
+      plugins: [starlightBlog()],
       logo: {
         light: '/public/typegpu-logo-light.svg',
         dark: '/public/typegpu-logo-dark.svg',
