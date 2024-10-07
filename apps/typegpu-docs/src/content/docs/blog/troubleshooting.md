@@ -5,7 +5,7 @@ tags:
   - Safari
   - iPhone
   - Troubleshooting
-  - MacOS
+  - macOS
   - WebGPU support
   - Deno
 authors:
@@ -39,7 +39,7 @@ And then enable WebGPU.
 That's it! After enabling the WebGPU flag you can go to [our examples page](https://docs.swmansion.com/TypeGPU/examples/)
 and you should be able to tinker with them on your phone.
 
-## Safari on MacOS
+## Safari on macOS
 
 Go to:
 ```
