@@ -36,14 +36,15 @@ const COMMANDS = {
 Generate a ts/js file from a wgsl file.
 
 Usage:
-  tgpu-cli gen --input <input> --output <output> [--watch] [--commonjs]
-  tgpu-cli gen <input> --output <output> [--watch] [--commonjs]
+  tgpu-cli gen --input <input> --output <output> [--watch] [--commonjs] [--overwrite]
+  tgpu-cli gen <input> --output <output> [--watch] [--commonjs] [--overwrite]
 
 Options:
   --input, -i\t The input file or glob pattern.
   --output, -o\t The output name or pattern for generated file(s).
   --watch, -w\t Watch for changes in the input file(s) and regenerate the output file(s).
   --commonjs\t Generate a CommonJS style file.
+  --overwrite\t Force overwriting existing files.
 `),
 
     execute: async () => {
@@ -85,6 +86,17 @@ Options:
       if (files.length > 1 && !output.includes('*')) {
         console.error(
           `${color.Red}Error: More than one file found (${files.join(', ')}), while a non-pattern output name was provided ${color.Reset}`,
+        );
+        exit(1);
+      }
+
+      const fileNames = files.map((file) => path.parse(file).name);
+      const duplicates = fileNames.filter(
+        (name, index) => fileNames.indexOf(name) !== index,
+      );
+      if (duplicates.length > 0 && !output.includes('**/*')) {
+        console.error(
+          `${color.Red}Error: Duplicates found with name(s): [${duplicates.join(', ')}], while a single directory output pattern was provided. Make sure your pattern contains "**/*" to keep the original directory structure. ${color.Reset}`,
         );
         exit(1);
       }
