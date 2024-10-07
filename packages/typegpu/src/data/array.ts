@@ -74,10 +74,10 @@ export interface TgpuLooseArray<TElement extends AnyTgpuData | AnyTgpuLooseData>
  * via `d.align` function.
  *
  * @example
- * const looseArray = d.looseArrayOf(d.u32, 3);
+ * const looseArray = d.looseArrayOf(d.vec3f, 3); // packed array of vec3f
  *
  * @example
- * const looseArray = d.looseArrayOf(d.align(16, d.u32), 3);
+ * const looseArray = d.looseArrayOf(d.align(16, d.vec3f), 3);
  *
  * @param elementType The type of elements in the array.
  * @param count The number of elements in the array.
@@ -88,8 +88,8 @@ export const looseArrayOf = <TElement extends AnyTgpuData | AnyTgpuLooseData>(
 ): TgpuLooseArray<TElement> => new TgpuLooseArrayImpl(elementType, count);
 
 /**
- * Checkes whether passed in value is an array schema,
- * as opposed to a looseArray schema.
+ * Checks whether passed in value is an array schema,
+ * as opposed to, e.g., a looseArray schema.
  *
  * Array schemas can be used to describe uniform and storage buffers,
  * whereas looseArray schemas cannot.
@@ -97,6 +97,7 @@ export const looseArrayOf = <TElement extends AnyTgpuData | AnyTgpuLooseData>(
  * @example
  * isArraySchema(d.arrayOf(d.u32, 4)) // true
  * isArraySchema(d.looseArrayOf(d.u32, 4)) // false
+ * isArraySchema(d.vec3f) // false
  */
 export function isArraySchema<T extends TgpuArray<AnyTgpuData>>(
   schema: T | unknown,
@@ -105,8 +106,8 @@ export function isArraySchema<T extends TgpuArray<AnyTgpuData>>(
 }
 
 /**
- * Checkes whether passed in value is a looseArray schema,
- * as opposed to a regular array schema.
+ * Checks whether the passed in value is a looseArray schema,
+ * as opposed to, e.g., a regular array schema.
  *
  * Array schemas can be used to describe uniform and storage buffers,
  * whereas looseArray schemas cannot. Loose arrays are useful for
@@ -115,6 +116,7 @@ export function isArraySchema<T extends TgpuArray<AnyTgpuData>>(
  * @example
  * isLooseArraySchema(d.arrayOf(d.u32, 4)) // false
  * isLooseArraySchema(d.looseArrayOf(d.u32, 4)) // true
+ * isLooseArraySchema(d.vec3f) // false
  */
 export function isLooseArraySchema<T extends TgpuLooseArray<AnyTgpuData>>(
   schema: T | unknown,
