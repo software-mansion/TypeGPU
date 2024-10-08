@@ -6,10 +6,10 @@ import {
   idForBuiltin,
   nameForBuiltin,
 } from './builtinIdentifiers';
+import type { TgpuBufferVertex } from './core/buffer/bufferUsage';
 import type { SimpleTgpuData, TgpuArray } from './data';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
-import type { TgpuBufferVertex } from './tgpuBufferUsage';
 import { code } from './tgpuCode';
 import type { TgpuRuntime } from './tgpuRuntime';
 import type {

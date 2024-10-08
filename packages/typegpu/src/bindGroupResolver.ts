@@ -1,5 +1,5 @@
+import type { TgpuBufferVertex } from './core/buffer/bufferUsage';
 import type { ResolutionCtxImpl } from './resolutionCtx';
-import type { TgpuBufferVertex } from './tgpuBufferUsage';
 import { deriveVertexFormat } from './tgpuRuntime';
 import type { TgpuRuntime } from './tgpuRuntime';
 import { type TgpuSampler, isSampler } from './tgpuSampler';

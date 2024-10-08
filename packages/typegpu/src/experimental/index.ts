@@ -2,10 +2,10 @@
  * @module typegpu/experimental
  */
 
+import { Storage, Uniform, Vertex } from '../core/buffer/buffer';
 import { createRuntime as init } from '../createRuntime';
 import { createBuffer } from '../legacyBufferApi';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
-import { Storage, Uniform, Vertex } from '../tgpuBuffer';
 import { read, write } from '../tgpuBufferUtils';
 import { fn, procedure } from '../tgpuFn';
 
@@ -41,17 +41,22 @@ export {
   isUsableAsStorage,
   isUsableAsUniform,
   isUsableAsVertex,
-} from '../tgpuBuffer';
-export { asUniform, asReadonly, asMutable, asVertex } from '../tgpuBufferUsage';
+} from '../core/buffer/buffer';
+export {
+  asUniform,
+  asReadonly,
+  asMutable,
+  asVertex,
+} from '../core/buffer/bufferUsage';
 
-export type { TgpuBuffer } from '../tgpuBuffer';
+export type { TgpuBuffer } from '../core/buffer/buffer';
 export type {
   TgpuBufferUsage,
   TgpuBufferUniform,
   TgpuBufferReadonly,
   TgpuBufferMutable,
   TgpuBufferVertex,
-} from '../tgpuBufferUsage';
+} from '../core/buffer/bufferUsage';
 export type { TgpuConst } from '../tgpuConstant';
 export type { TgpuFn } from '../tgpuFunction';
 export type { TgpuPlum } from '../tgpuPlumTypes';

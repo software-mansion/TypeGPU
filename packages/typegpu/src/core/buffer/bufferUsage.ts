@@ -1,6 +1,13 @@
 import type { Unwrap } from 'typed-binary';
-import { isArraySchema } from './data';
-import { inGPUMode } from './gpuMode';
+import { isArraySchema } from '../../data';
+import { inGPUMode } from '../../gpuMode';
+import { identifier } from '../../tgpuIdentifier';
+import type {
+  AnyTgpuData,
+  BufferUsage,
+  ResolutionCtx,
+  TgpuBindable,
+} from '../../types';
 import {
   type Storage,
   type TgpuBuffer,
@@ -9,14 +16,7 @@ import {
   isUsableAsStorage,
   isUsableAsUniform,
   isUsableAsVertex,
-} from './tgpuBuffer';
-import { identifier } from './tgpuIdentifier';
-import type {
-  AnyTgpuData,
-  BufferUsage,
-  ResolutionCtx,
-  TgpuBindable,
-} from './types';
+} from './buffer';
 
 // ----------
 // Public API
