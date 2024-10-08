@@ -4,15 +4,16 @@ import { inGPUMode } from '../gpuMode';
 import type { TgpuData } from '../types';
 import { SimpleTgpuData } from './std140';
 
-const primitiveNumeric = (
+const primitiveNumeric = <TKind extends string>(
   schema: TB.Uint32Schema | TB.Float32Schema | TB.Int32Schema,
-  code: string,
+  code: TKind,
 ) => {
   return {
     // Type-token, not available at runtime
     __unwrapped: undefined as unknown as number,
-    isLoose: false as const,
 
+    isLoose: false as const,
+    kind: code,
     size: 4,
     byteAlignment: 4,
     expressionCode: code,
@@ -51,7 +52,7 @@ const primitiveNumeric = (
     toString(): string {
       return code;
     },
-  } as TgpuData<number>;
+  };
 };
 
 export type Bool = TgpuData<boolean>;
@@ -61,7 +62,9 @@ export const bool: Bool = new SimpleTgpuData({
   code: 'bool',
 });
 
-export type U32 = TgpuData<number> & ((v: number | boolean) => number);
+export type U32 = TgpuData<number> & { kind: 'u32' } & ((
+    v: number | boolean,
+  ) => number);
 const u32Cast = (v: number | boolean) => {
   if (inGPUMode()) {
     return `u32(${v})` as unknown as number;
@@ -81,7 +84,9 @@ const u32Cast = (v: number | boolean) => {
 };
 export const u32: U32 = Object.assign(u32Cast, primitiveNumeric(TB.u32, 'u32'));
 
-export type I32 = TgpuData<number> & ((v: number | boolean) => number);
+export type I32 = TgpuData<number> & { kind: 'i32' } & ((
+    v: number | boolean,
+  ) => number);
 const i32Cast = (v: number | boolean) => {
   if (inGPUMode()) {
     return `i32(${v})` as unknown as number;
@@ -103,7 +108,9 @@ const i32Cast = (v: number | boolean) => {
 };
 export const i32: I32 = Object.assign(i32Cast, primitiveNumeric(TB.i32, 'i32'));
 
-export type F32 = TgpuData<number> & ((v: number | boolean) => number);
+export type F32 = TgpuData<number> & { kind: 'f32' } & ((
+    v: number | boolean,
+  ) => number);
 const f32Cast = (v: number | boolean) => {
   if (inGPUMode()) {
     return `f32(${v})` as unknown as number;
