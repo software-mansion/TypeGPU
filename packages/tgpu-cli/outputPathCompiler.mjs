@@ -5,7 +5,7 @@ import path from 'node:path';
 /**
  * @param { string } input
  * @param { string } output
- * @returns {(file: string) => string}
+ * @returns { (file: string) => string }
  */
 export const createOutputPathCompiler = (input, output) =>
   output.includes(path.sep)
@@ -15,7 +15,7 @@ export const createOutputPathCompiler = (input, output) =>
           return (
             parsed.dir.length === 0
               ? output.replace('**/', '')
-              : output.replace('**', parsed.dir)
+              : output.replace('**', parsed.dir.slice(input.indexOf('**')))
           ).replace('*', parsed.name);
         }
       : (file) => output.replace('*', path.parse(file).name)

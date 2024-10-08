@@ -101,5 +101,24 @@ describe('createOutputPathCompiler', () => {
       fileName: 'test/test2/hello.wgsl',
       expected: 'generated/test/test2/hello.ts',
     });
+
+    test({
+      output: 'generated/**/files/*.ts',
+      fileName: 'test/test2/hello.wgsl',
+      expected: 'generated/test/test2/files/hello.ts',
+    });
+
+    test({
+      output: 'generated/**/*_1.ts',
+      fileName: 'test/test2/hello.wgsl',
+      expected: 'generated/test/test2/hello_1.ts',
+    });
+
+    test({
+      input: 'test/**/*.wgsl',
+      output: 'generated/**/*.ts',
+      fileName: 'test/test2/hello.wgsl',
+      expected: 'generated/test2/hello.ts',
+    });
   });
 });
