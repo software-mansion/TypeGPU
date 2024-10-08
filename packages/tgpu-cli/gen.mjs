@@ -11,7 +11,7 @@ const LENGTH_VAR = 'arrayLength';
 
 export class Context {
   /**
-   * @param { {toTs: boolean, toCommonJs: boolean} } options
+   * @param { { toTs: boolean, toCommonJs: boolean } } options
    */
   constructor(options) {
     this.toTs = options.toTs;
