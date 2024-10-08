@@ -70,27 +70,6 @@ export class SimpleTgpuData<TSchema extends AnySchema>
     return measurer;
   }
 
-  getUnderlyingTypeString(): string {
-    if (typeof this.expressionCode === 'string') {
-      return this.expressionCode;
-    }
-    if ('elementSchema' in this._innerSchema) {
-      const underlyingType = this._innerSchema
-        .elementSchema as SimpleTgpuData<AnySchema>;
-      return underlyingType.getUnderlyingTypeString();
-    }
-    throw new Error('Unexpected type used as vertex buffer element');
-  }
-
-  getUnderlyingType(): SimpleTgpuData<AnySchema> {
-    if ('elementSchema' in this._innerSchema) {
-      const underlyingType = this._innerSchema
-        .elementSchema as SimpleTgpuData<AnySchema>;
-      return underlyingType.getUnderlyingType();
-    }
-    return this;
-  }
-
   resolve(ctx: ResolutionCtx): string {
     return this.expressionCode;
   }
