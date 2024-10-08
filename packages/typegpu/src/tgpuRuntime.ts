@@ -5,7 +5,6 @@ import type { JitTranspiler } from './jitTranspiler';
 import type { PlumListener } from './plumStore';
 import type { TgpuSettable } from './settableTrait';
 import type { TgpuBindGroup, TgpuBindGroupLayout } from './tgpuBindGroupLayout';
-import type { TgpuFn } from './tgpuFn';
 import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
 import type { TgpuSampler } from './tgpuSampler';
 import type {
@@ -79,8 +78,6 @@ export interface TgpuRuntime extends Unwrapper {
 
   makeRenderPipeline(options: RenderPipelineOptions): RenderPipelineExecutor;
   makeComputePipeline(options: ComputePipelineOptions): ComputePipelineExecutor;
-
-  compute(fn: TgpuFn<[]>): void;
 }
 
 export interface RenderPipelineOptions {

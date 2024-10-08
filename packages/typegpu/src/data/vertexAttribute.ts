@@ -46,7 +46,6 @@ class TgpuVertexAttributeImpl<T extends VertexFormat>
   private elementSize: 1 | 2 | 4;
   private elementCount: number;
   private isSigned: boolean;
-  readonly isCustomAligned = false;
   readonly byteAlignment = 1;
   readonly isLoose = true;
 
