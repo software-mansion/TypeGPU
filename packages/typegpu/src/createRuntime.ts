@@ -12,7 +12,6 @@ import type { TgpuSettable } from './settableTrait';
 import type { TgpuBindGroup, TgpuBindGroupLayout } from './tgpuBindGroupLayout';
 import { isBindGroup, isBindGroupLayout } from './tgpuBindGroupLayout';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from './tgpuBuffer';
-import { type TgpuFn, isRawFn } from './tgpuFn';
 import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
 import type {
   ComputePipelineExecutorOptions,
@@ -304,47 +303,6 @@ class TgpuRuntimeImpl implements TgpuRuntime {
     );
     this._pipelineExecutors.push(executor);
     return executor;
-  }
-
-  compute(fn: TgpuFn<[]>): void {
-    // TODO: Cache the pipeline
-
-    if (isRawFn(fn)) {
-      throw new Error(
-        'Functions with raw string wgsl implementation are not yet supported by the `compute` function',
-      );
-    }
-
-    const program = new ComputeProgramBuilder(
-      this,
-      fn.bodyResolvable,
-      [1],
-    ).build({
-      bindingGroup: 0,
-    });
-
-    const shaderModule = this.device.createShaderModule({
-      code: program.code,
-    });
-
-    const pipelineLayout = this.device.createPipelineLayout({
-      bindGroupLayouts: [program.bindGroupResolver.getBindGroupLayout()],
-    });
-
-    const computePipeline = this.device.createComputePipeline({
-      layout: pipelineLayout,
-      compute: {
-        module: shaderModule,
-      },
-    });
-
-    const executor = new ComputePipelineExecutor(
-      this,
-      computePipeline,
-      [program],
-      0,
-    );
-    executor.execute();
   }
 
   flush() {

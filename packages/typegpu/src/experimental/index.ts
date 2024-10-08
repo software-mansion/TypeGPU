@@ -2,12 +2,15 @@
  * @module typegpu/experimental
  */
 
+import { computeFn } from '../core/function/tgpuComputeFn';
+import { fn, procedure } from '../core/function/tgpuFn';
+import { fragmentFn } from '../core/function/tgpuFragmentFn';
+import { vertexFn } from '../core/function/tgpuVertexFn';
 import { createRuntime as init } from '../createRuntime';
 import { createBuffer } from '../legacyBufferApi';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
 import { Storage, Uniform, Vertex } from '../tgpuBuffer';
 import { read, write } from '../tgpuBufferUtils';
-import { fn, procedure } from '../tgpuFn';
 
 export const tgpu = {
   Uniform,
@@ -16,6 +19,9 @@ export const tgpu = {
 
   fn,
   procedure,
+  fragmentFn,
+  vertexFn,
+  computeFn,
   bindGroupLayout,
 
   init,
@@ -53,7 +59,6 @@ export type {
   TgpuBufferVertex,
 } from '../tgpuBufferUsage';
 export type { TgpuConst } from '../tgpuConstant';
-export type { TgpuFn } from '../tgpuFunction';
 export type { TgpuPlum } from '../tgpuPlumTypes';
 export type { TexelFormat } from '../textureTypes';
 export type { TgpuSettable } from '../settableTrait';
@@ -74,3 +79,19 @@ export type {
   LayoutEntryToInput,
   TgpuBindGroup,
 } from '../tgpuBindGroupLayout';
+export type {
+  TgpuFn,
+  TgpuFnShell,
+} from '../core/function/tgpuFn';
+export type {
+  TgpuVertexFnShell,
+  TgpuVertexFn,
+} from '../core/function/tgpuVertexFn';
+export type {
+  TgpuFragmentFnShell,
+  TgpuFragmentFn,
+} from '../core/function/tgpuFragmentFn';
+export type {
+  TgpuComputeFnShell,
+  TgpuComputeFn,
+} from '../core/function/tgpuComputeFn';
