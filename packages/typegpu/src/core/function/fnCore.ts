@@ -1,3 +1,4 @@
+import { MissingLinksError } from '../../errors';
 import { code } from '../../tgpuCode';
 import { identifier } from '../../tgpuIdentifier';
 import type { AnyTgpuData, ResolutionCtx } from '../../types';
@@ -5,7 +6,6 @@ import {
   type ExternalMap,
   applyExternals,
   replaceExternalsInWgsl,
-  throwIfMissingExternals,
 } from './externals';
 import type { Implementation, TranspilationResult } from './fnTypes';
 
@@ -51,7 +51,15 @@ export function createFnCore<
         ctx.addDeclaration(code`${fnAttribute}fn ${ident}${replacedImpl}`);
       } else {
         const ast = prebuiltAst ?? ctx.transpileFn(String(implementation));
-        throwIfMissingExternals(externalMap, ast.externalNames);
+
+        // Verifying all required externals are present.
+        const missingExternals = ast.externalNames.filter(
+          (name) => !(name in externalMap),
+        );
+
+        if (missingExternals.length > 0) {
+          throw new MissingLinksError(this.label, missingExternals);
+        }
 
         const { head, body } = ctx.fnToWgsl(
           shell,

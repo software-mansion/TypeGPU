@@ -86,9 +86,9 @@ export class NotStorageError extends Error {
 }
 
 export class MissingLinksError extends Error {
-  constructor(externalNames: string[]) {
+  constructor(fnLabel: string | undefined, externalNames: string[]) {
     super(
-      `A function is missing links to the following external values: ${externalNames}.`,
+      `the function '${fnLabel ?? '<unnamed>'}' is missing links to the following external values: ${externalNames}.`,
     );
 
     // Set the prototype explicitly.

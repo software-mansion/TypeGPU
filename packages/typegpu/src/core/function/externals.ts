@@ -1,4 +1,3 @@
-import { MissingLinksError } from '../../errors';
 import { isNamable } from '../../namable';
 import { type ResolutionCtx, isResolvable } from '../../types';
 
@@ -18,19 +17,6 @@ export function applyExternals(
     ) {
       value.$name(key);
     }
-  }
-}
-
-export function throwIfMissingExternals(
-  externalMap: ExternalMap,
-  expectedNames: string[],
-) {
-  const missingExternals = expectedNames.filter(
-    (name) => !(name in externalMap),
-  );
-
-  if (missingExternals.length > 0) {
-    throw new MissingLinksError(missingExternals);
   }
 }
 

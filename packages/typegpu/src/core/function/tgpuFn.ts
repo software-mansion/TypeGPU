@@ -59,18 +59,18 @@ export type TgpuFn<
 > = TgpuFnBase<Args, Return> &
   ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>);
 
-export function fn<Args extends [...AnyTgpuData[]] | []>(
+export function fn<Args extends AnyTgpuData[] | []>(
   argTypes: Args,
   returnType?: undefined,
 ): TgpuFnShell<Args, undefined>;
 
-export function fn<
-  Args extends [...AnyTgpuData[]] | [],
-  Return extends AnyTgpuData,
->(argTypes: Args, returnType: Return): TgpuFnShell<Args, Return>;
+export function fn<Args extends AnyTgpuData[] | [], Return extends AnyTgpuData>(
+  argTypes: Args,
+  returnType: Return,
+): TgpuFnShell<Args, Return>;
 
 export function fn<
-  Args extends [...AnyTgpuData[]] | [],
+  Args extends AnyTgpuData[] | [],
   Return extends AnyTgpuData | undefined = undefined,
 >(argTypes: Args, returnType?: Return): TgpuFnShell<Args, Return> {
   return {
