@@ -27,14 +27,14 @@ export class Context {
  * @param { string } output
  * @param { boolean } toTs
  * @param { boolean } toCommonJs
- * @param { "keep" |  "overwrite" | "nocheck" | undefined } overwriteMode
+ * @param { "keep" |  "overwrite" | undefined } overwriteMode
  */
 async function main(input, output, toTs, toCommonJs, overwriteMode) {
   const inputPath = new URL(input, cwd);
   const outputPath = new URL(output, cwd);
   const inputContents = await fs.readFile(inputPath, 'utf8');
 
-  if (overwriteMode !== 'nocheck') {
+  if (overwriteMode !== 'overwrite') {
     const fileExists = await fs
       .access(output)
       .then(() => true)

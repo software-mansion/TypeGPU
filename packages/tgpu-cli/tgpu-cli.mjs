@@ -10,6 +10,7 @@ import chokidar from 'chokidar';
 import { glob } from 'glob';
 import color from './colors.mjs';
 import generate from './gen.mjs';
+import { createOutputPathCompiler } from './outputPathCompiler.mjs';
 
 const args = arg({
   '--version': Boolean,
@@ -120,24 +121,7 @@ Options:
         exit(1);
       }
 
-      /**
-       * @type { (file: string) => string }
-       */
-      const compileOutputName = output.includes(path.sep)
-        ? /\*\*\/.*\*.*/.test(output)
-          ? (file) => {
-              const parsed = path.parse(file);
-              return (
-                parsed.dir.length === 0
-                  ? output.replace('**/', '')
-                  : output.replace('**', parsed.dir)
-              ).replace('*', parsed.name);
-            }
-          : (file) => output.replace('*', path.parse(file).name)
-        : (file) => {
-            const parsed = path.parse(file);
-            return path.join(parsed.dir, output.replace('*', parsed.name));
-          };
+      const outputPathCompiler = createOutputPathCompiler(input, output);
 
       /**
        * @param { { exitOnError: boolean, files: string[], checkExisting: boolean } } options
@@ -145,7 +129,7 @@ Options:
       const processFiles = async ({ exitOnError, files, checkExisting }) => {
         const results = await Promise.allSettled(
           files.map(async (file) => {
-            const out = compileOutputName(file);
+            const out = outputPathCompiler(file);
 
             console.log(`Generating ${file} >>> ${out}`);
             return generate(
@@ -153,7 +137,7 @@ Options:
               out,
               toTs,
               toCommonJs,
-              checkExisting ? overwriteMode : 'nocheck',
+              checkExisting ? overwriteMode : 'overwrite',
             ).catch((error) => {
               error.file = file;
               throw error;
