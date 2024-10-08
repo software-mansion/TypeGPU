@@ -18,6 +18,7 @@ const args = arg({
   '--output': String,
   '--commonjs': Boolean,
   '--overwrite': Boolean,
+  '--keep': Boolean,
   '--watch': Boolean,
 
   '-v': '--version',
@@ -36,30 +37,48 @@ const COMMANDS = {
 Generate a ts/js file from a wgsl file.
 
 Usage:
-  tgpu-cli gen --input <input> --output <output> [--watch] [--commonjs] [--overwrite]
-  tgpu-cli gen <input> --output <output> [--watch] [--commonjs] [--overwrite]
+  tgpu-cli gen --input <input> [--output <output>] [--watch] [--commonjs] [--overwrite | --keep]
+  tgpu-cli gen <input> [--output <output>] [--watch] [--commonjs] [--overwrite | --keep]
 
 Options:
   --input, -i\t The input file or glob pattern.
-  --output, -o\t The output name or pattern for generated file(s).
+  --output, -o\t The output name or pattern for generated file(s). 
+                 If pattern doesn't include a directory, generated files will be in the same directory as their respective inputs.
+                 Placeholder for file name (without extension): *, for directory: **
+                 Default: "*.ts"
   --watch, -w\t Watch for changes in the input file(s) and regenerate the output file(s).
   --commonjs\t Generate a CommonJS style file.
+
   --overwrite\t Force overwriting existing files.
+  --keep\t Keep existing files.
 `),
 
     execute: async () => {
       const input = args['--input'] ?? args._[1];
-      const output = args['--output'];
+      const output = args['--output'] ?? '*.ts';
       const toCommonJs = args['--commonjs'] ?? false;
-      const overwriteExisting = args['--overwrite'] ?? false;
+
       const watch = args['--watch'] ?? false;
 
-      if (!input || !output) {
+      if (!input) {
         console.error(
-          `${color.Red}Error: Missing some of the required arguments: ${color.Yellow}--input, --output${color.Reset}`,
+          `${color.Red}Error: Missing required argument: --input${color.Reset}`,
         );
         exit(1);
       }
+
+      if (args['--overwrite'] && args['--keep']) {
+        console.error(
+          `${color.Red}The options: --overwrite and --keep are mutually exclusive'${color.Reset}`,
+        );
+        exit(1);
+      }
+
+      const overwriteMode = args['--overwrite']
+        ? 'overwrite'
+        : args['--keep']
+          ? 'keep'
+          : undefined;
 
       const extension = path.extname(output);
 
@@ -94,21 +113,39 @@ Options:
       const duplicates = fileNames.filter(
         (name, index) => fileNames.indexOf(name) !== index,
       );
-      if (duplicates.length > 0 && !output.includes('**/*')) {
+      if (duplicates.length > 0 && !/\*\*\/.*\*.*/.test(output)) {
         console.error(
           `${color.Red}Error: Duplicates found with name(s): [${duplicates.join(', ')}], while a single directory output pattern was provided. Make sure your pattern contains "**/*" to keep the original directory structure. ${color.Reset}`,
         );
         exit(1);
       }
 
-      const processFiles = async ({ exitOnError, files }) => {
+      /**
+       * @type { (file: string) => string }
+       */
+      const compileOutputName = output.includes(path.sep)
+        ? /\*\*\/.*\*.*/.test(output)
+          ? (file) => {
+              const parsed = path.parse(file);
+              return (
+                parsed.dir.length === 0
+                  ? output.replace('**/', '')
+                  : output.replace('**', parsed.dir)
+              ).replace('*', parsed.name);
+            }
+          : (file) => output.replace('*', path.parse(file).name)
+        : (file) => {
+            const parsed = path.parse(file);
+            return path.join(parsed.dir, output.replace('*', parsed.name));
+          };
+
+      /**
+       * @param { { exitOnError: boolean, files: string[], checkExisting: boolean } } options
+       */
+      const processFiles = async ({ exitOnError, files, checkExisting }) => {
         const results = await Promise.allSettled(
           files.map(async (file) => {
-            const parsed = path.parse(file);
-
-            const out = output.includes('**/*')
-              ? output.replace('**/*', path.join(parsed.dir, parsed.name))
-              : output.replace('*', parsed.name);
+            const out = compileOutputName(file);
 
             console.log(`Generating ${file} >>> ${out}`);
             return generate(
@@ -116,7 +153,7 @@ Options:
               out,
               toTs,
               toCommonJs,
-              overwriteExisting,
+              checkExisting ? overwriteMode : 'nocheck',
             ).catch((error) => {
               error.file = file;
               throw error;
@@ -142,13 +179,17 @@ Options:
         }
       };
 
-      processFiles({ exitOnError: !watch, files });
+      processFiles({ exitOnError: !watch, files, checkExisting: true });
 
       if (watch) {
-        console.log(`${color.Yellow}Watching for changes...${color.Reset}`);
+        console.log(`${color.Cyan}Watching for changes...${color.Reset}`);
         const watcher = chokidar.watch(files);
         watcher.on('change', async (file) => {
-          await processFiles({ exitOnError: false, files: [file] });
+          await processFiles({
+            exitOnError: false,
+            files: [file],
+            checkExisting: false,
+          });
         });
       }
     },

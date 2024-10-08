@@ -2,6 +2,7 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { exit } from 'node:process';
 import { ArrayInfo, StructInfo, TemplateInfo, WgslReflect } from 'wgsl_reflect';
 
 const cwd = new URL(`file:${process.cwd()}/`);
@@ -26,27 +27,36 @@ export class Context {
  * @param { string } output
  * @param { boolean } toTs
  * @param { boolean } toCommonJs
- * @param { boolean } overwriteExisting
+ * @param { "keep" |  "overwrite" | "nocheck" | undefined } overwriteMode
  */
-async function main(input, output, toTs, toCommonJs, overwriteExisting) {
+async function main(input, output, toTs, toCommonJs, overwriteMode) {
   const inputPath = new URL(input, cwd);
   const outputPath = new URL(output, cwd);
   const inputContents = await fs.readFile(inputPath, 'utf8');
 
-  const generated = generate(inputContents, new Context({ toTs, toCommonJs }));
+  if (overwriteMode !== 'nocheck') {
+    const fileExists = await fs
+      .access(output)
+      .then(() => true)
+      .catch(() => false);
 
-  const fileExists = await fs
-    .access(output)
-    .then(() => true)
-    .catch(() => false);
+    if (fileExists) {
+      if (overwriteMode === undefined) {
+        console.error(
+          `Error: File ${output} already exists. Use --overwrite option to replace existing files or --keep to skip them.`,
+        );
 
-  if (fileExists && !overwriteExisting) {
-    console.warn(
-      `File ${output} already exists. Use --overwrite option to replace existing files.`,
-    );
-    return;
+        exit(1);
+      }
+
+      if (overwriteMode === 'keep') {
+        console.log(`Skipping ${input}, file ${output} already exists.`);
+        return;
+      }
+    }
   }
 
+  const generated = generate(inputContents, new Context({ toTs, toCommonJs }));
   await fs.mkdir(path.dirname(output), { recursive: true });
   await fs.writeFile(outputPath, generated);
 }
