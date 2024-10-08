@@ -22,6 +22,12 @@ import { getCustomAlignment } from './attributes';
 // Public API
 // ----------
 
+export interface TgpuBaseArray<TElement> {
+  readonly elementType: TElement;
+  readonly elementCount: number;
+  readonly stride: number;
+}
+
 /**
  * Array schema constructed via `d.arrayOf` function.
  *
@@ -30,10 +36,8 @@ import { getCustomAlignment } from './attributes';
  * the `byteAlignment` requirement of its elementType.
  */
 export interface TgpuArray<TElement extends AnyTgpuData>
-  extends TgpuData<Unwrap<TElement>[]> {
-  readonly elementType: TElement;
-  readonly elementCount: number;
-}
+  extends TgpuBaseArray<TElement>,
+    TgpuData<Unwrap<TElement>[]> {}
 
 /**
  * Creates an array schema that can be used to construct gpu buffers.
@@ -60,10 +64,8 @@ export const arrayOf = <TElement extends AnyTgpuData>(
  * via `d.align` function.
  */
 export interface TgpuLooseArray<TElement extends AnyTgpuData | AnyTgpuLooseData>
-  extends TgpuLooseData<Unwrap<TElement>[]> {
-  readonly elementType: TElement;
-  readonly elementCount: number;
-}
+  extends TgpuBaseArray<TElement>,
+    TgpuLooseData<Unwrap<TElement>[]> {}
 
 /**
  * Creates an array schema that can be used to construct vertex buffers.

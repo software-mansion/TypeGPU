@@ -33,14 +33,14 @@ import {
 export type FormatToWGSLType<T extends VertexFormat> =
   (typeof formatToWGSLType)[T];
 
-export interface TgpuVertexAttribute<T extends VertexFormat>
+export interface TgpuVertexFormatData<T extends VertexFormat>
   extends TgpuLooseData<FormatToWGSLType<T>> {
-  readonly format: T;
+  readonly kind: T;
 }
 
-class TgpuVertexAttributeImpl<T extends VertexFormat>
+class TgpuVertexFormatDataImpl<T extends VertexFormat>
   extends Schema<FormatToWGSLType<T>>
-  implements TgpuVertexAttribute<T>
+  implements TgpuVertexFormatData<T>
 {
   private underlyingType: FormatToWGSLType<T>;
   private elementSize: 1 | 2 | 4;
@@ -51,11 +51,11 @@ class TgpuVertexAttributeImpl<T extends VertexFormat>
 
   constructor(
     readonly size: number,
-    readonly format: T,
+    readonly kind: T,
   ) {
     super();
-    this.underlyingType = formatToWGSLType[format];
-    this.isSigned = normalizedToIsSigned[format] ?? false;
+    this.underlyingType = formatToWGSLType[kind];
+    this.isSigned = normalizedToIsSigned[kind] ?? false;
     this.elementCount = this.underlyingType.size / 4;
     const elementSize = size / this.elementCount;
     if (elementSize !== 1 && elementSize !== 2 && elementSize !== 4) {
@@ -304,125 +304,137 @@ const normalizedToIsSigned = {
   unorm10_10_10_2: false,
 } as Record<VertexFormat, boolean | undefined>;
 
-export type uint8x2 = TgpuVertexAttribute<'uint8x2'>;
-export const uint8x2 = new TgpuVertexAttributeImpl(2, 'uint8x2') as uint8x2;
+export type uint8x2 = TgpuVertexFormatData<'uint8x2'>;
+export const uint8x2 = new TgpuVertexFormatDataImpl(2, 'uint8x2') as uint8x2;
 
-export type uint8x4 = TgpuVertexAttribute<'uint8x4'>;
-export const uint8x4 = new TgpuVertexAttributeImpl(4, 'uint8x4') as uint8x4;
+export type uint8x4 = TgpuVertexFormatData<'uint8x4'>;
+export const uint8x4 = new TgpuVertexFormatDataImpl(4, 'uint8x4') as uint8x4;
 
-export type sint8x2 = TgpuVertexAttribute<'sint8x2'>;
-export const sint8x2 = new TgpuVertexAttributeImpl(2, 'sint8x2') as sint8x2;
+export type sint8x2 = TgpuVertexFormatData<'sint8x2'>;
+export const sint8x2 = new TgpuVertexFormatDataImpl(2, 'sint8x2') as sint8x2;
 
-export type sint8x4 = TgpuVertexAttribute<'sint8x4'>;
-export const sint8x4 = new TgpuVertexAttributeImpl(4, 'sint8x4') as sint8x4;
+export type sint8x4 = TgpuVertexFormatData<'sint8x4'>;
+export const sint8x4 = new TgpuVertexFormatDataImpl(4, 'sint8x4') as sint8x4;
 
-export type unorm8x2 = TgpuVertexAttribute<'unorm8x2'>;
-export const unorm8x2 = new TgpuVertexAttributeImpl(2, 'unorm8x2') as unorm8x2;
+export type unorm8x2 = TgpuVertexFormatData<'unorm8x2'>;
+export const unorm8x2 = new TgpuVertexFormatDataImpl(2, 'unorm8x2') as unorm8x2;
 
-export type unorm8x4 = TgpuVertexAttribute<'unorm8x4'>;
-export const unorm8x4 = new TgpuVertexAttributeImpl(4, 'unorm8x4') as unorm8x4;
+export type unorm8x4 = TgpuVertexFormatData<'unorm8x4'>;
+export const unorm8x4 = new TgpuVertexFormatDataImpl(4, 'unorm8x4') as unorm8x4;
 
-export type snorm8x2 = TgpuVertexAttribute<'snorm8x2'>;
-export const snorm8x2 = new TgpuVertexAttributeImpl(2, 'snorm8x2') as snorm8x2;
+export type snorm8x2 = TgpuVertexFormatData<'snorm8x2'>;
+export const snorm8x2 = new TgpuVertexFormatDataImpl(2, 'snorm8x2') as snorm8x2;
 
-export type snorm8x4 = TgpuVertexAttribute<'snorm8x4'>;
-export const snorm8x4 = new TgpuVertexAttributeImpl(4, 'snorm8x4') as snorm8x4;
+export type snorm8x4 = TgpuVertexFormatData<'snorm8x4'>;
+export const snorm8x4 = new TgpuVertexFormatDataImpl(4, 'snorm8x4') as snorm8x4;
 
-export type uint16x2 = TgpuVertexAttribute<'uint16x2'>;
-export const uint16x2 = new TgpuVertexAttributeImpl(4, 'uint16x2') as uint16x2;
+export type uint16x2 = TgpuVertexFormatData<'uint16x2'>;
+export const uint16x2 = new TgpuVertexFormatDataImpl(4, 'uint16x2') as uint16x2;
 
-export type uint16x4 = TgpuVertexAttribute<'uint16x4'>;
-export const uint16x4 = new TgpuVertexAttributeImpl(8, 'uint16x4') as uint16x4;
+export type uint16x4 = TgpuVertexFormatData<'uint16x4'>;
+export const uint16x4 = new TgpuVertexFormatDataImpl(8, 'uint16x4') as uint16x4;
 
-export type sint16x2 = TgpuVertexAttribute<'sint16x2'>;
-export const sint16x2 = new TgpuVertexAttributeImpl(4, 'sint16x2') as sint16x2;
+export type sint16x2 = TgpuVertexFormatData<'sint16x2'>;
+export const sint16x2 = new TgpuVertexFormatDataImpl(4, 'sint16x2') as sint16x2;
 
-export type sint16x4 = TgpuVertexAttribute<'sint16x4'>;
-export const sint16x4 = new TgpuVertexAttributeImpl(8, 'sint16x4') as sint16x4;
+export type sint16x4 = TgpuVertexFormatData<'sint16x4'>;
+export const sint16x4 = new TgpuVertexFormatDataImpl(8, 'sint16x4') as sint16x4;
 
-export type unorm16x2 = TgpuVertexAttribute<'unorm16x2'>;
-export const unorm16x2 = new TgpuVertexAttributeImpl(
+export type unorm16x2 = TgpuVertexFormatData<'unorm16x2'>;
+export const unorm16x2 = new TgpuVertexFormatDataImpl(
   4,
   'unorm16x2',
 ) as unorm16x2;
 
-export type unorm16x4 = TgpuVertexAttribute<'unorm16x4'>;
-export const unorm16x4 = new TgpuVertexAttributeImpl(
+export type unorm16x4 = TgpuVertexFormatData<'unorm16x4'>;
+export const unorm16x4 = new TgpuVertexFormatDataImpl(
   8,
   'unorm16x4',
 ) as unorm16x4;
 
-export type snorm16x2 = TgpuVertexAttribute<'snorm16x2'>;
-export const snorm16x2 = new TgpuVertexAttributeImpl(
+export type snorm16x2 = TgpuVertexFormatData<'snorm16x2'>;
+export const snorm16x2 = new TgpuVertexFormatDataImpl(
   4,
   'snorm16x2',
 ) as snorm16x2;
 
-export type snorm16x4 = TgpuVertexAttribute<'snorm16x4'>;
-export const snorm16x4 = new TgpuVertexAttributeImpl(
+export type snorm16x4 = TgpuVertexFormatData<'snorm16x4'>;
+export const snorm16x4 = new TgpuVertexFormatDataImpl(
   8,
   'snorm16x4',
 ) as snorm16x4;
 
-export type float16x2 = TgpuVertexAttribute<'float16x2'>;
-export const float16x2 = new TgpuVertexAttributeImpl(
+export type float16x2 = TgpuVertexFormatData<'float16x2'>;
+export const float16x2 = new TgpuVertexFormatDataImpl(
   4,
   'float16x2',
 ) as float16x2;
 
-export type float16x4 = TgpuVertexAttribute<'float16x4'>;
-export const float16x4 = new TgpuVertexAttributeImpl(
+export type float16x4 = TgpuVertexFormatData<'float16x4'>;
+export const float16x4 = new TgpuVertexFormatDataImpl(
   8,
   'float16x4',
 ) as float16x4;
 
-export type float32 = TgpuVertexAttribute<'float32'>;
-export const float32 = new TgpuVertexAttributeImpl(4, 'float32') as float32;
+export type float32 = TgpuVertexFormatData<'float32'>;
+export const float32 = new TgpuVertexFormatDataImpl(4, 'float32') as float32;
 
-export type float32x2 = TgpuVertexAttribute<'float32x2'>;
-export const float32x2 = new TgpuVertexAttributeImpl(
+export type float32x2 = TgpuVertexFormatData<'float32x2'>;
+export const float32x2 = new TgpuVertexFormatDataImpl(
   8,
   'float32x2',
 ) as float32x2;
 
-export type float32x3 = TgpuVertexAttribute<'float32x3'>;
-export const float32x3 = new TgpuVertexAttributeImpl(
+export type float32x3 = TgpuVertexFormatData<'float32x3'>;
+export const float32x3 = new TgpuVertexFormatDataImpl(
   12,
   'float32x3',
 ) as float32x3;
 
-export type float32x4 = TgpuVertexAttribute<'float32x4'>;
-export const float32x4 = new TgpuVertexAttributeImpl(
+export type float32x4 = TgpuVertexFormatData<'float32x4'>;
+export const float32x4 = new TgpuVertexFormatDataImpl(
   16,
   'float32x4',
 ) as float32x4;
 
-export type uint32 = TgpuVertexAttribute<'uint32'>;
-export const uint32 = new TgpuVertexAttributeImpl(4, 'uint32') as uint32;
+export type uint32 = TgpuVertexFormatData<'uint32'>;
+export const uint32 = new TgpuVertexFormatDataImpl(4, 'uint32') as uint32;
 
-export type uint32x2 = TgpuVertexAttribute<'uint32x2'>;
-export const uint32x2 = new TgpuVertexAttributeImpl(8, 'uint32x2') as uint32x2;
+export type uint32x2 = TgpuVertexFormatData<'uint32x2'>;
+export const uint32x2 = new TgpuVertexFormatDataImpl(8, 'uint32x2') as uint32x2;
 
-export type uint32x3 = TgpuVertexAttribute<'uint32x3'>;
-export const uint32x3 = new TgpuVertexAttributeImpl(12, 'uint32x3') as uint32x3;
+export type uint32x3 = TgpuVertexFormatData<'uint32x3'>;
+export const uint32x3 = new TgpuVertexFormatDataImpl(
+  12,
+  'uint32x3',
+) as uint32x3;
 
-export type uint32x4 = TgpuVertexAttribute<'uint32x4'>;
-export const uint32x4 = new TgpuVertexAttributeImpl(16, 'uint32x4') as uint32x4;
+export type uint32x4 = TgpuVertexFormatData<'uint32x4'>;
+export const uint32x4 = new TgpuVertexFormatDataImpl(
+  16,
+  'uint32x4',
+) as uint32x4;
 
-export type sint32 = TgpuVertexAttribute<'sint32'>;
-export const sint32 = new TgpuVertexAttributeImpl(4, 'sint32') as sint32;
+export type sint32 = TgpuVertexFormatData<'sint32'>;
+export const sint32 = new TgpuVertexFormatDataImpl(4, 'sint32') as sint32;
 
-export type sint32x2 = TgpuVertexAttribute<'sint32x2'>;
-export const sint32x2 = new TgpuVertexAttributeImpl(8, 'sint32x2') as sint32x2;
+export type sint32x2 = TgpuVertexFormatData<'sint32x2'>;
+export const sint32x2 = new TgpuVertexFormatDataImpl(8, 'sint32x2') as sint32x2;
 
-export type sint32x3 = TgpuVertexAttribute<'sint32x3'>;
-export const sint32x3 = new TgpuVertexAttributeImpl(12, 'sint32x3') as sint32x3;
+export type sint32x3 = TgpuVertexFormatData<'sint32x3'>;
+export const sint32x3 = new TgpuVertexFormatDataImpl(
+  12,
+  'sint32x3',
+) as sint32x3;
 
-export type sint32x4 = TgpuVertexAttribute<'sint32x4'>;
-export const sint32x4 = new TgpuVertexAttributeImpl(16, 'sint32x4') as sint32x4;
+export type sint32x4 = TgpuVertexFormatData<'sint32x4'>;
+export const sint32x4 = new TgpuVertexFormatDataImpl(
+  16,
+  'sint32x4',
+) as sint32x4;
 
-export type unorm10_10_10_2 = TgpuVertexAttribute<'unorm10_10_10_2'>;
-export const unorm10_10_10_2 = new TgpuVertexAttributeImpl(
+export type unorm10_10_10_2 = TgpuVertexFormatData<'unorm10_10_10_2'>;
+export const unorm10_10_10_2 = new TgpuVertexFormatDataImpl(
   4,
   'unorm10_10_10_2',
 ) as unorm10_10_10_2;

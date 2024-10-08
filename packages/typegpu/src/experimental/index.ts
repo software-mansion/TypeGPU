@@ -7,6 +7,7 @@ import { computeFn } from '../core/function/tgpuComputeFn';
 import { fn, procedure } from '../core/function/tgpuFn';
 import { fragmentFn } from '../core/function/tgpuFragmentFn';
 import { vertexFn } from '../core/function/tgpuVertexFn';
+import { vertexLayout } from '../core/vertexLayout/vertexLayout';
 import { createRuntime as init } from '../createRuntime';
 import { createBuffer } from '../legacyBufferApi';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
@@ -22,6 +23,7 @@ export const tgpu = {
   fragmentFn,
   vertexFn,
   computeFn,
+  vertexLayout,
   bindGroupLayout,
 
   init,
@@ -56,6 +58,7 @@ export {
 } from '../core/buffer/bufferUsage';
 
 export type { TgpuBuffer } from '../core/buffer/buffer';
+export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
 export type {
   TgpuBufferUsage,
   TgpuBufferUniform,
