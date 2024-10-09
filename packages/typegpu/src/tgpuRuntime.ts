@@ -1,10 +1,10 @@
 import type { Parsed } from 'typed-binary';
+import type { TgpuBuffer } from './core/buffer/buffer';
 import type { TgpuArray } from './data';
 import type { JitTranspiler } from './jitTranspiler';
 import type { PlumListener } from './plumStore';
 import type { TgpuSettable } from './settableTrait';
 import type { TgpuBindGroup, TgpuBindGroupLayout } from './tgpuBindGroupLayout';
-import type { TgpuBuffer } from './tgpuBuffer';
 import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
 import type { TgpuSampler } from './tgpuSampler';
 import type {

@@ -1,5 +1,5 @@
 import type { Parsed } from 'typed-binary';
-import type { TgpuBuffer } from './tgpuBuffer';
+import type { TgpuBuffer } from './core/buffer/buffer';
 import type { AnyTgpuData } from './types';
 
 export function write<TData extends AnyTgpuData>(

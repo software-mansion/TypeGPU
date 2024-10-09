@@ -1,4 +1,9 @@
 import type { Parsed } from 'typed-binary';
+import {
+  type TgpuBuffer,
+  createBufferImpl,
+  isBuffer,
+} from './core/buffer/buffer';
 import type { JitTranspiler } from './jitTranspiler';
 import { WeakMemo } from './memo';
 import { type PlumListener, PlumStore } from './plumStore';
@@ -6,7 +11,6 @@ import type { Program } from './programBuilder';
 import type { TgpuSettable } from './settableTrait';
 import type { TgpuBindGroup, TgpuBindGroupLayout } from './tgpuBindGroupLayout';
 import { isBindGroup, isBindGroupLayout } from './tgpuBindGroupLayout';
-import { type TgpuBuffer, createBufferImpl, isBuffer } from './tgpuBuffer';
 import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
 import type {
   ComputePipelineExecutorOptions,

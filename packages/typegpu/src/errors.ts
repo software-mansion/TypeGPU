@@ -1,4 +1,4 @@
-import type { TgpuBuffer } from './tgpuBuffer';
+import type { TgpuBuffer } from './core/buffer/buffer';
 import type { AnyTgpuData, TgpuResolvable, TgpuSlot } from './types';
 
 /**

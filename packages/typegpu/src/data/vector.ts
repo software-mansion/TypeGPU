@@ -29,7 +29,8 @@ interface VecSchemaOptions<ValueType> {
 }
 
 type VecSchemaBase<ValueType> = TgpuData<ValueType> & {
-  expressionCode: string;
+  kind: string;
+  toString(): string;
 };
 
 function makeVecSchema<ValueType extends vecBase>(
@@ -43,7 +44,7 @@ function makeVecSchema<ValueType extends vecBase>(
     size: options.length * 4,
     label: options.label,
     byteAlignment: options.byteAlignment,
-    expressionCode: options.label,
+    kind: options.label,
 
     resolveReferences(ctx: IRefResolver): void {
       throw new RecursiveDataTypeError();
@@ -71,13 +72,17 @@ function makeVecSchema<ValueType extends vecBase>(
     },
 
     seekProperty(
-      reference: Parsed<ValueType> | MaxValue,
-      prop: never,
+      _reference: Parsed<ValueType> | MaxValue,
+      _prop: never,
     ): { bufferOffset: number; schema: ISchema<unknown> } | null {
       throw new Error('Method not implemented.');
     },
 
     resolve(): string {
+      return options.label;
+    },
+
+    toString(): string {
       return options.label;
     },
   };
@@ -86,7 +91,7 @@ function makeVecSchema<ValueType extends vecBase>(
     const values = args; // TODO: Allow users to pass in vectors that fill part of the values.
 
     if (inGPUMode()) {
-      return `${VecSchema.expressionCode}(${values.join(', ')})` as unknown as ValueType;
+      return `${VecSchema.kind}(${values.join(', ')})` as unknown as ValueType;
     }
 
     if (values.length <= 1) {
@@ -749,8 +754,10 @@ export interface vec4u extends vec4, Swizzle4<vec2u, vec3u, vec4u> {
   kind: 'vec4u';
 }
 
-export type Vec2f = TgpuData<vec2f> &
-  ((x: number, y: number) => vec2f) &
+export type Vec2f = TgpuData<vec2f> & { kind: 'vec2f' } & ((
+    x: number,
+    y: number,
+  ) => vec2f) &
   ((xy: number) => vec2f) &
   (() => vec2f);
 
@@ -765,8 +772,10 @@ export const vec2f = makeVecSchema({
     new Proxy(new vec2fImpl(x, x), vecProxyHandler) as vec2f,
 }) as Vec2f;
 
-export type Vec2i = TgpuData<vec2i> &
-  ((x: number, y: number) => vec2i) &
+export type Vec2i = TgpuData<vec2i> & { kind: 'vec2i' } & ((
+    x: number,
+    y: number,
+  ) => vec2i) &
   ((xy: number) => vec2i) &
   (() => vec2i);
 
@@ -781,8 +790,10 @@ export const vec2i = makeVecSchema({
     new Proxy(new vec2iImpl(x, x), vecProxyHandler) as vec2i,
 }) as Vec2i;
 
-export type Vec2u = TgpuData<vec2u> &
-  ((x: number, y: number) => vec2u) &
+export type Vec2u = TgpuData<vec2u> & { kind: 'vec2u' } & ((
+    x: number,
+    y: number,
+  ) => vec2u) &
   ((xy: number) => vec2u) &
   (() => vec2u);
 
@@ -797,8 +808,11 @@ export const vec2u = makeVecSchema({
     new Proxy(new vec2uImpl(x, x), vecProxyHandler) as vec2u,
 }) as Vec2u;
 
-export type Vec3f = TgpuData<vec3f> &
-  ((x: number, y: number, z: number) => vec3f) &
+export type Vec3f = TgpuData<vec3f> & { kind: 'vec3f' } & ((
+    x: number,
+    y: number,
+    z: number,
+  ) => vec3f) &
   ((xyz: number) => vec3f) &
   (() => vec3f);
 
@@ -813,8 +827,11 @@ export const vec3f = makeVecSchema({
     new Proxy(new vec3fImpl(x, x, x), vecProxyHandler) as vec3f,
 }) as Vec3f;
 
-export type Vec3i = TgpuData<vec3i> &
-  ((x: number, y: number, z: number) => vec3i) &
+export type Vec3i = TgpuData<vec3i> & { kind: 'vec3i' } & ((
+    x: number,
+    y: number,
+    z: number,
+  ) => vec3i) &
   ((xyz: number) => vec3i) &
   (() => vec3i);
 
@@ -829,8 +846,11 @@ export const vec3i = makeVecSchema({
     new Proxy(new vec3iImpl(x, x, x), vecProxyHandler) as vec3i,
 }) as Vec3i;
 
-export type Vec3u = TgpuData<vec3u> &
-  ((x: number, y: number, z: number) => vec3u) &
+export type Vec3u = TgpuData<vec3u> & { kind: 'vec3u' } & ((
+    x: number,
+    y: number,
+    z: number,
+  ) => vec3u) &
   ((xyz: number) => vec3u) &
   (() => vec3u);
 
@@ -845,8 +865,12 @@ export const vec3u = makeVecSchema({
     new Proxy(new vec3uImpl(x, x, x), vecProxyHandler) as vec3u,
 }) as Vec3u;
 
-export type Vec4f = TgpuData<vec4f> &
-  ((x: number, y: number, z: number, w: number) => vec4f) &
+export type Vec4f = TgpuData<vec4f> & { kind: 'vec4f' } & ((
+    x: number,
+    y: number,
+    z: number,
+    w: number,
+  ) => vec4f) &
   ((xyzw: number) => vec4f) &
   (() => vec4f);
 
@@ -861,8 +885,12 @@ export const vec4f = makeVecSchema({
     new Proxy(new vec4fImpl(x, x, x, x), vecProxyHandler) as vec4f,
 }) as Vec4f;
 
-export type Vec4i = TgpuData<vec4i> &
-  ((x: number, y: number, z: number, w: number) => vec4i) &
+export type Vec4i = TgpuData<vec4i> & { kind: 'vec4i' } & ((
+    x: number,
+    y: number,
+    z: number,
+    w: number,
+  ) => vec4i) &
   ((xyzw: number) => vec4i) &
   (() => vec4i);
 
@@ -877,8 +905,12 @@ export const vec4i = makeVecSchema({
     new Proxy(new vec4iImpl(x, x, x, x), vecProxyHandler) as vec4i,
 }) as Vec4i;
 
-export type Vec4u = TgpuData<vec4u> &
-  ((x: number, y: number, z: number, w: number) => vec4u) &
+export type Vec4u = TgpuData<vec4u> & { kind: 'vec4u' } & ((
+    x: number,
+    y: number,
+    z: number,
+    w: number,
+  ) => vec4u) &
   ((xyzw: number) => vec4u) &
   (() => vec4u);
 
