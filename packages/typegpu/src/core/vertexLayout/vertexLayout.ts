@@ -1,7 +1,3 @@
-// ----------
-// Public API
-// ----------
-
 import {
   type TgpuBaseArray,
   isDecorated,
@@ -119,9 +115,8 @@ class TgpuVertexLayoutImpl<TData extends TgpuBaseArray>
   constructor(public readonly schemaForCount: (count: number) => TData) {
     // `0` signals that the data-type is runtime-sized, and should not be used to create buffers.
     const arraySchema = schemaForCount(0);
-    const data = arraySchema.elementType;
 
     this.stride = arraySchema.stride;
-    this.attrib = dataToContainedAttribs(this, data, 0);
+    this.attrib = dataToContainedAttribs(this, arraySchema.elementType, 0);
   }
 }
