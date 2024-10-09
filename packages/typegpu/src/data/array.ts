@@ -22,7 +22,11 @@ import { getCustomAlignment } from './attributes';
 // Public API
 // ----------
 
-export interface TgpuBaseArray<TElement> {
+export interface TgpuBaseArray<
+  TElement extends AnyTgpuData | AnyTgpuLooseData =
+    | AnyTgpuData
+    | AnyTgpuLooseData,
+> {
   readonly elementType: TElement;
   readonly elementCount: number;
   readonly stride: number;

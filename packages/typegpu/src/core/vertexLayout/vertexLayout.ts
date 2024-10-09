@@ -26,16 +26,14 @@ import type {
 // Public API
 // ----------
 
-export interface TgpuVertexLayout<
-  TData extends TgpuBaseArray<AnyTgpuData | AnyTgpuLooseData>,
-> {
+export interface TgpuVertexLayout<TData extends TgpuBaseArray> {
   readonly stride: number;
   readonly attrib: ArrayToContainedAttribs<TData>;
 }
 
-export function vertexLayout<
-  TData extends TgpuBaseArray<AnyTgpuData | AnyTgpuLooseData>,
->(schemaForCount: (count: number) => TData): TgpuVertexLayout<TData> {
+export function vertexLayout<TData extends TgpuBaseArray>(
+  schemaForCount: (count: number) => TData,
+): TgpuVertexLayout<TData> {
   return new TgpuVertexLayoutImpl(schemaForCount);
 }
 
@@ -43,8 +41,11 @@ export function vertexLayout<
 // Implementation
 // --------------
 
-function dataToContainedAttribs<TData extends AnyTgpuData | AnyTgpuLooseData>(
-  layout: TgpuVertexLayout<TgpuBaseArray<AnyTgpuData | AnyTgpuLooseData>>,
+function dataToContainedAttribs<
+  TLayoutData extends TgpuBaseArray,
+  TData extends AnyTgpuData | AnyTgpuLooseData,
+>(
+  layout: TgpuVertexLayout<TLayoutData>,
   data: TData,
   offset: number,
 ): DataToContainedAttribs<TData> {
@@ -109,9 +110,8 @@ function dataToContainedAttribs<TData extends AnyTgpuData | AnyTgpuLooseData>(
   throw new Error(`Unsupported data used in vertex layout: ${String(data)}`);
 }
 
-class TgpuVertexLayoutImpl<
-  TData extends TgpuBaseArray<AnyTgpuData | AnyTgpuLooseData>,
-> implements TgpuVertexLayout<TData>
+class TgpuVertexLayoutImpl<TData extends TgpuBaseArray>
+  implements TgpuVertexLayout<TData>
 {
   public readonly stride: number;
   public readonly attrib: ArrayToContainedAttribs<TData>;

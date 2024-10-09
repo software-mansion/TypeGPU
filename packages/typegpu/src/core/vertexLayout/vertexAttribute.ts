@@ -24,6 +24,5 @@ export type DataToContainedAttribs<T> = T extends TgpuBaseStruct<infer Props>
 /**
  * Interprets an array as a set of vertex attributes.
  */
-export type ArrayToContainedAttribs<T> = T extends TgpuBaseArray<infer Element>
-  ? DataToContainedAttribs<Element>
-  : never;
+export type ArrayToContainedAttribs<T extends TgpuBaseArray> =
+  DataToContainedAttribs<T['elementType']>;
