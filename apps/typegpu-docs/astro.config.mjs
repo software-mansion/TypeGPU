@@ -40,7 +40,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'TypeGPU',
-      customCss: ['./src/tailwind.css'],
+      customCss: ['./src/tailwind.css', './src/fonts/font-face.css'],
       plugins: [starlightBlog()],
       logo: {
         light: '/public/typegpu-logo-light.svg',
@@ -56,7 +56,7 @@ export default defineConfig({
       },
       sidebar: stripFalsy([
         {
-          label: '⭐ Live Examples',
+          label: 'Live Examples',
           link: 'examples',
           // attrs: {
           //   'data-astro-reload': true,
@@ -112,7 +112,7 @@ export default defineConfig({
           ],
         },
         {
-          label: '🙋 FAQ',
+          label: 'FAQ',
           slug: 'faq',
         },
       ]),
