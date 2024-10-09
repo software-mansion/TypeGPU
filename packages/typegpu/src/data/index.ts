@@ -28,12 +28,16 @@ export { atomic, isAtomicSchema, Atomic } from './atomic';
 export {
   align,
   size,
+  location,
   isDecorated,
   isLooseDecorated,
   Align,
   Size,
+  Location,
+  BaseDecorated,
   Decorated,
   LooseDecorated,
+  AnyAttribute,
 } from './attributes';
 
 // Reexporting type-binary utility types
