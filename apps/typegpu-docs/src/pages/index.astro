@@ -7,13 +7,14 @@ import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
 import SwmLogomarkSvg from '../assets/swm-logomark.svg';
 import SwmLogoSvg from '../assets/swm-logo.svg';
+import '../tailwind.css';
 ---
 
 <PageLayout>
   <main
-    class="flex flex-col items-center bg-tameplum-50 lg:gap-[7.5rem] gap-10 md:gap-20">
+    class="flex flex-col items-center bg-tameplum-50 lg:gap-[7.5rem] gap-10 md:gap-20 no-content">
     <section
-      class="relative self-stretch flex flex-col items-center justify-between bg-grayscale-0 md:rounded-b-[5rem] rounded-b-[2.5rem] md:gap-0 gap-10 md:pb-[22.5rem] lg:pb-[30rem] md:max-h-[125vh]">
+      class="box-border relative self-stretch flex flex-col items-center justify-between bg-grayscale-0 md:rounded-b-[5rem] rounded-b-[2.5rem] md:gap-0 gap-10 md:pb-[22.5rem] lg:pb-[30rem] md:max-h-[125vh]">
       <header
         class="self-stretch flex-shrink-0 h-20 sm:h-24 md:h-32 lg:h-44 flex justify-between items-center px-4 sm:px-[1.875rem] md:px-10 lg:px-[3.125rem]">
         <a href="https://swmansion.com" target="_blank" rel="noreferrer">
@@ -49,7 +50,7 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
       </header>
 
       <div
-        class="z-10 relative isolate flex flex-col justify-center px-4 gap-10 lg:max-h-[34.25rem] md:max-h-[28rem] items-center max-w-7xl lg:min-h-[40vh]">
+        class="box-border z-10 relative isolate flex flex-col justify-center px-4 gap-10 lg:max-h-[34.25rem] md:max-h-[28rem] items-center max-w-7xl lg:min-h-[40vh]">
         <div class="absolute inset-0 bg-blurred-radial-purple -z-10">
           {/* Blurred background */}
         </div>
@@ -58,7 +59,7 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
           alt="TypeGPU Logo"
           class="w-[14.5rem] md:w-[20rem] lg:w-[24rem]"
         />
-        <h1 class="text-center text-pretty mb-4">
+        <h1 class="text-center font-normal text-pretty mt-0 mb-4">
           TypeScript library that enhances the WebGPU <br
             class="hidden sm:block"
           /> API, allowing resource management in <br class="hidden sm:block" />
@@ -68,26 +69,23 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
         <div
           class="flex flex-col items-center justify-center w-full gap-4 lg:gap-10 sm:flex-row">
           <GetStartedButton />
-          
-          <a class="w-full sm:w-auto" href="/TypeGPU/examples"
-            ><button
-              class="py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] bg-gradient-to-br border-2 border-tameplum-100 hover:bg-tameplum-20 bg-white w-full"
-              ><p>Explore live examples</p></button
-            ></a
-          >
 
+          <a
+            class="box-border w-full sm:w-auto text-black py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] bg-gradient-to-br border-2 border-tameplum-100 hover:bg-tameplum-20 bg-white text-center text-base md:text-xl lg:text-2xl no-underline"
+            href="/TypeGPU/examples">Explore live examples</a
+          >
         </div>
       </div>
 
       <div
-        class="md:absolute overflow-hidden bg-grayscale-0 lg:max-w-[85rem] md:max-w-[58.5rem] lg:p-14 md:p-10 p-6 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-[2rem] relative md:top-[100%] md:-translate-y-[50%] max-w-[34.5rem] sm:mb-[2.5rem]">
+        class="box-border md:absolute overflow-hidden bg-grayscale-0 lg:max-w-[85rem] md:max-w-[58.5rem] lg:p-14 md:p-10 p-6 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-[2rem] relative md:top-[100%] md:-translate-y-[50%] max-w-[34.5rem] sm:mb-[2.5rem]">
         <video
           src="/TypeGPU/assets/migration.mp4"
           autoplay="true"
           loop="true"
           muted="true"
           controls="true"
-          class="lg:rounded-[2.5rem] md:rounded-[1.875rem] rounded-2xl shadow-tameplum-800/50 shadow-lg"
+          class="w-full lg:rounded-[2.5rem] md:rounded-[1.875rem] rounded-2xl shadow-tameplum-800/50 shadow-lg"
         ></video>
       </div>
     </section>
@@ -95,12 +93,12 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
     <div class="lg:h-[16rem] md:h-[13rem] md:block hidden"></div>
 
     <section
-      class="flex flex-col justify-center px-4 lg:gap-20 gap-10 md:gap-[3.75rem] lg:max-w-[85rem] md:max-w-[53.5rem] max-w-[34.5rem]">
+      class="box-border flex flex-col justify-center px-4 lg:gap-20 gap-10 md:gap-[3.75rem] lg:max-w-[85rem] md:max-w-[53.5rem] max-w-[34.5rem]">
       <div>
-        <h2 class="mb-4 font-normal text-center md:mb-8 lg:mb-8 center">
+        <h2 class="mt-0 mb-4 font-normal text-center md:mb-8 lg:mb-8 center">
           Get to know TypeGPU
         </h2>
-        <p class="text-center text-pretty">
+        <p class="m-0 text-center text-pretty">
           Discover how it can change the way you work with GPU rendering and
           computing.
         </p>
@@ -112,7 +110,7 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
           >Leveraging <a
             href="https://github.com/iwoplaza/typed-binary"
             target="_blank"
-            class="text-blue-600"
+            class="no-underline text-blue-600"
             rel="noreferrer noopener">typed-binary</a
           > ensures you don't have to think about bytes when writing your GPU programs
           ever again.</FeatureCard
@@ -129,21 +127,21 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
           <a
             href="https://github.com/wcandillon/react-native-webgpu"
             target="_blank"
-            class="text-blue-600"
+            class="no-underline text-blue-600"
             rel="noreferrer noopener">react-native-wgpu</a
           >
           library.</FeatureCard
         >
 
         <article
-          class="flex justify-center items-center lg:h-[28rem] md:h-[22rem] h-[12.5rem] md:p-10 lg:p-14 p-6 bg-grayscale-0 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-[2rem] opacity-50 md:translate-y-20">
-          <h3 class="text-grayscale-80">More coming soon...</h3>
+          class="box-border flex justify-center items-center lg:h-[28rem] md:h-[22rem] h-[12.5rem] md:p-10 lg:p-14 p-6 bg-grayscale-0 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-[2rem] opacity-50 md:translate-y-20">
+          <h3 class="m-0 font-normal text-grayscale-80">More coming soon...</h3>
         </article>
       </div>
     </section>
 
     <section
-      class="flex flex-col items-center px-4 py-5 lg:gap-20 md:gap-[3.75rem] gap-10 w-full max-w-[34.5rem] lg:max-w-[85rem]">
+      class="box-border flex flex-col items-center px-4 py-5 lg:gap-20 md:gap-[3.75rem] gap-10 w-full max-w-[34.5rem] lg:max-w-[85rem]">
       <div>
         <h1 class="mb-4 font-normal text-center lg:mb-8 md:mb-6">
           Got hooked?
@@ -156,7 +154,7 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
       <GetStartedButton />
 
       <img
-        class="hidden md:block lg:w-[56rem] w-[38.5rem]"
+        class="flex-grow-0 hidden md:block lg:w-[56rem] w-[38.5rem] max-w-full"
         src="/TypeGPU/assets/illustration.svg"
         alt=""
       />
@@ -217,7 +215,7 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
             class="col-start-1 row-start-1 z-10 bg-gradient-to-b from-[#FFF0] to-[#FFF]">
           </div>
           <img
-            class="col-start-1 row-start-1"
+            class="w-full col-start-1 row-start-1"
             src="/TypeGPU/assets/giant-typegpu.svg"
           />
         </div>

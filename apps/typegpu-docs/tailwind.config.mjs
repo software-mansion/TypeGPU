@@ -1,12 +1,11 @@
-/** @type {import('tailwindcss').Config} */
-import defaultTheme from 'tailwindcss/defaultTheme';
+import starlightPlugin from '@astrojs/starlight-tailwind';
 
 export default {
   content: ['./src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}'],
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Aeonik', ...defaultTheme.fontFamily.sans],
+        sans: ['Aeonik'],
       },
       colors: {
         tameplum: {
@@ -41,5 +40,5 @@ export default {
       lg: '1441px',
     },
   },
-  plugins: [],
+  plugins: [starlightPlugin()],
 };

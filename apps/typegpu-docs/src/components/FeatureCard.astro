@@ -4,7 +4,7 @@ const { image, header, class: className } = Astro.props;
 
 <article
   class:list={[
-    'flex flex-col gap-8 justify-between lg:h-[28rem] md:p-10 lg:p-14 p-6 bg-white md:rounded-[3.75rem] lg:rounded-[5rem] rounded-[2rem]',
+    'box-border flex flex-col gap-8 justify-between lg:h-[28rem] md:p-10 lg:p-14 p-6 bg-white md:rounded-[3.75rem] lg:rounded-[5rem] rounded-[2rem]',
     className,
   ]}>
   <div
@@ -12,9 +12,9 @@ const { image, header, class: className } = Astro.props;
     <img class="w-8 md:w-12" src={`/TypeGPU/assets/${image}.svg`} alt={image} />
   </div>
   <div>
-    <h3 class="pb-3 font-normal md:pb-4 text-grayscale-100">
+    <h3 class="m-0 pb-3 font-normal md:pb-4 text-grayscale-100">
       {header}
     </h3>
-    <p class="text-grayscale-80"><slot /></p>
+    <p class="m-0 text-grayscale-80"><slot /></p>
   </div>
 </article>
