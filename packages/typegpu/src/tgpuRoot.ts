@@ -21,7 +21,7 @@ import type { Unwrapper } from './unwrapper';
 
 export type SetPlumAction<T> = T | ((prev: T) => T);
 
-export interface TgpuRuntime extends Unwrapper {
+export interface TgpuRoot extends Unwrapper {
   readonly device: GPUDevice;
   readonly jitTranspiler?: JitTranspiler | undefined;
   /**

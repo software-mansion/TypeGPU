@@ -6,7 +6,7 @@ import { computeFn } from '../core/function/tgpuComputeFn';
 import { fn, procedure } from '../core/function/tgpuFn';
 import { fragmentFn } from '../core/function/tgpuFragmentFn';
 import { vertexFn } from '../core/function/tgpuVertexFn';
-import { createRuntime as init } from '../createRuntime';
+import { createRoot as init } from '../createRoot';
 import { createBuffer } from '../legacyBufferApi';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
 import { Storage, Uniform, Vertex } from '../tgpuBuffer';
@@ -35,14 +35,14 @@ export default tgpu;
 export * from '../errors';
 export * from '../types';
 export * from '../namable';
-export * from '../tgpuRuntime';
+export * from '../tgpuRoot';
 export { default as ProgramBuilder, type Program } from '../programBuilder';
 export { StrictNameRegistry, RandomNameRegistry } from '../nameRegistry';
 export * from '../builtin';
 
 export { default as wgsl } from '../wgsl';
 export { std } from '../std';
-export { createRuntime, CreateRuntimeOptions } from '../createRuntime';
+export { createRoot, CreateRootOptions } from '../createRoot';
 export {
   isUsableAsStorage,
   isUsableAsUniform,
