@@ -248,7 +248,7 @@ describe('TgpuRoot', () => {
     );
   });
 
-// TODO: Adapt the tests to the new API
+  // TODO: Adapt the tests to the new API
   // it('creates a pipeline descriptor with a valid vertex buffer', async () => {
   //   const root = await tgpu.init({
   //     device: mockDevice as unknown as GPUDevice,
