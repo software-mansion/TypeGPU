@@ -41,51 +41,55 @@ export interface Builtin<T extends BuiltinName> {
   name: T;
 }
 
-export type AnyAttribute = Align<number> | Size<number> | Builtin<BuiltinName>;
+export interface Location<T extends number> {
+  type: 'location';
+  location: T;
+}
+
+export type AnyAttribute =
+  | Align<number>
+  | Size<number>
+  | Builtin<BuiltinName>
+  | Location<number>;
+
+export interface BaseDecorated<
+  TInner extends AnyTgpuData | AnyTgpuLooseData =
+    | AnyTgpuData
+    | AnyTgpuLooseData,
+  TAttribs extends AnyAttribute[] = AnyAttribute[],
+> {
+  readonly inner: TInner;
+  readonly attributes: TAttribs;
+
+  // Easy access to all attributes, if they exist
+  readonly alignAttrib: number | undefined;
+  readonly sizeAttrib: number | undefined;
+  readonly builtinAttrib: BuiltinName | undefined;
+  readonly locationAttrib: number | undefined;
+}
 
 export interface Decorated<
   TInner extends AnyTgpuData,
   TAttribs extends AnyAttribute[],
-> extends TgpuData<Unwrap<TInner>> {
-  readonly inner: TInner;
-  readonly attributes: TAttribs;
-
-  // Easy access to all attributes, if they exist
-  readonly alignAttrib: number | undefined;
-  readonly sizeAttrib: number | undefined;
-  readonly builtinAttrib: BuiltinName | undefined;
-}
+> extends BaseDecorated<TInner, TAttribs>,
+    TgpuData<Unwrap<TInner>> {}
 
 export interface LooseDecorated<
   TInner extends AnyTgpuLooseData,
   TAttribs extends AnyAttribute[],
-> extends TgpuLooseData<Unwrap<TInner>> {
-  readonly inner: TInner;
-  readonly attributes: TAttribs;
+> extends BaseDecorated<TInner, TAttribs>,
+    TgpuLooseData<Unwrap<TInner>> {}
 
-  // Easy access to all attributes, if they exist
-  readonly alignAttrib: number | undefined;
-  readonly sizeAttrib: number | undefined;
-  readonly builtinAttrib: BuiltinName | undefined;
-}
-
-export type ExtractAttributes<T> = T extends Decorated<
+export type ExtractAttributes<T> = T extends BaseDecorated<
   AnyTgpuData,
   infer Attribs
 >
   ? Attribs
-  : T extends LooseDecorated<AnyTgpuLooseData, infer Attribs>
-    ? Attribs
-    : [];
+  : [];
 
-export type UnwrapDecorated<T> = T extends Decorated<
-  infer Inner,
-  AnyAttribute[]
->
+export type UnwrapDecorated<T> = T extends BaseDecorated<infer Inner>
   ? Inner
-  : T extends LooseDecorated<infer Inner, AnyAttribute[]>
-    ? Inner
-    : T;
+  : T;
 
 /**
  * Decorates a data-type `TData` with an attribute `TAttrib`.
@@ -184,6 +188,29 @@ export function size<
   >;
 }
 
+/**
+ * Assigns an explicit numeric location to a struct member or a parameter that has this type.
+ *
+ * @example
+ * const Data = d.ioStruct({
+ *   a: d.u32, // has implicit location 0
+ *   b: d.location(5, d.u32),
+ *   c: d.u32, // has implicit location 6
+ * });
+ *
+ * @param location The explicit numeric location.
+ * @param data The data-type to wrap.
+ */
+export function location<
+  TLocation extends number,
+  TData extends AnyTgpuData | AnyTgpuLooseData,
+>(location: TLocation, data: TData): Decorate<TData, Location<TLocation>> {
+  return attribute(data, { type: 'location', location }) as Decorate<
+    TData,
+    Location<TLocation>
+  >;
+}
+
 export function isDecorated<T extends Decorated<AnyTgpuData, AnyAttribute[]>>(
   value: T | unknown,
 ): value is T {
@@ -203,6 +230,18 @@ export function getCustomAlignment(
     return data.alignAttrib;
   }
   return undefined;
+}
+
+export function getCustomLocation(
+  data: AnyTgpuData | AnyTgpuLooseData,
+): number | undefined {
+  return data
+    ? (
+        data as
+          | Decorated<AnyTgpuData, AnyAttribute[]>
+          | LooseDecorated<AnyTgpuLooseData, AnyAttribute[]>
+      ).locationAttrib
+    : undefined;
 }
 
 export function isBuiltin<
@@ -235,6 +274,10 @@ export function getAttributesString<T extends AnyTgpuData>(field: T): string {
         return `@builtin(${attrib.name}) `;
       }
 
+      if (attrib.type === 'location') {
+        return `@location(${attrib.location}) `;
+      }
+
       return '';
     })
     .join('');
@@ -258,6 +301,7 @@ class BaseDecoratedImpl<
   public readonly alignAttrib: number | undefined;
   public readonly sizeAttrib: number | undefined;
   public readonly builtinAttrib: BuiltinName | undefined;
+  public readonly locationAttrib: number | undefined;
 
   constructor(
     public readonly inner: TInner,
@@ -272,6 +316,9 @@ class BaseDecoratedImpl<
     this.builtinAttrib = attributes.find(
       (a): a is Builtin<BuiltinName> => a.type === 'builtin',
     )?.name;
+    this.locationAttrib = attributes.find(
+      (a): a is Location<number> => a.type === 'location',
+    )?.location;
 
     this.byteAlignment = this.alignAttrib ?? inner.byteAlignment;
     this.size = this.measure(MaxValue).size;

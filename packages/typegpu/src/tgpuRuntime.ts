@@ -75,9 +75,6 @@ export interface TgpuRuntime extends Unwrapper {
    * submitted to the GPU.
    */
   flush(): void;
-
-  makeRenderPipeline(options: RenderPipelineOptions): RenderPipelineExecutor;
-  makeComputePipeline(options: ComputePipelineOptions): ComputePipelineExecutor;
 }
 
 export interface RenderPipelineOptions {
