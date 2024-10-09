@@ -56,7 +56,7 @@ const primitiveNumeric = <TKind extends string>(
 };
 
 /**
- * Boolean schema representing a single WGSL boolean value.
+ * Boolean schema representing a single WGSL bool value.
  * Cannot be used inside buffers as it is not host-shareable.
  */
 export type Bool = TgpuData<boolean>;
