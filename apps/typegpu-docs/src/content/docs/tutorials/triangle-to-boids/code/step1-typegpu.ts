@@ -1,20 +1,22 @@
-import { addElement, onFrame } from '@typegpu/example-toolkit';
-import { builtin, createRuntime, wgsl } from 'typegpu';
+// @ts-nocheck
+// TODO: ^ REMOVE WHEN CODE WORKS AGAIN
 
-const runtime = await createRuntime();
-const device = runtime.device;
+import { addElement, onFrame } from '@typegpu/example-toolkit';
+import tgpu, { builtin } from 'typegpu/experimental';
+
+const root = await tgpu.init();
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 context.configure({
-  device,
+  device: root.device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
 
-const pipeline = runtime.makeRenderPipeline({
+const renderPipeline = root.makeRenderPipeline({
   vertex: {
     code: wgsl`
       var verticies = array<vec2f, 3>(
@@ -45,7 +47,7 @@ const pipeline = runtime.makeRenderPipeline({
 });
 
 onFrame(() => {
-  pipeline.execute({
+  renderPipeline.execute({
     colorAttachments: [
       {
         view: context.getCurrentTexture().createView(),
@@ -57,5 +59,5 @@ onFrame(() => {
     vertexCount: 3,
   });
 
-  runtime.flush();
+  root.flush();
 });

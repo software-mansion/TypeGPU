@@ -44,6 +44,7 @@ const increment = tgpu
   .$uses({ counter });
 
 async function doIncrement() {
+  // @ts-expect-error
   root.compute(increment);
   return await counterBuffer.read();
 }

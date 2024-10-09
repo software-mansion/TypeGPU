@@ -66,7 +66,7 @@ const setupRandomSeed = tgpu
  * "Particle System in WebGPU" by Benedikt Peter
  */
 const rand01 = tgpu
-  .fn(f32)
+  .fn([], f32)
   .implement(() => {
     const a = std.dot(randSeed.value, vec2f(23.14077926, 232.61690225));
     const b = std.dot(randSeed.value, vec2f(54.47856553, 345.84153136));

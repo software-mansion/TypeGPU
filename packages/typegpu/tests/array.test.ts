@@ -1,6 +1,13 @@
-import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
+import {
+  BufferReader,
+  BufferWriter,
+  MaxValue,
+  type Parsed,
+} from 'typed-binary';
 import { describe, expect, it } from 'vitest';
 import { arrayOf, vec3f, vec3u } from '../src/data';
+import { StrictNameRegistry } from '../src/nameRegistry';
+import { ResolutionCtxImpl } from '../src/resolutionCtx';
 
 describe('array', () => {
   it('takes element alignment into account when measuring', () => {
@@ -48,5 +55,30 @@ describe('array', () => {
 
     TestArray.write(new BufferWriter(buffer), value);
     expect(TestArray.read(new BufferReader(buffer))).toEqual(value);
+  });
+
+  it('works when defined as runtime sized', () => {
+    const TestArray = arrayOf(vec3f, 0);
+
+    expect(TestArray.measure(MaxValue).size).toBeNaN();
+    expect(() => TestArray.size).toThrow();
+
+    expect(() =>
+      TestArray.write(new BufferWriter(new ArrayBuffer(0)), [vec3f(), vec3f()]),
+    ).toThrow();
+
+    expect(() =>
+      TestArray.read(new BufferReader(new ArrayBuffer(0))),
+    ).toThrow();
+
+    const resolutionCtx = new ResolutionCtxImpl({
+      names: new StrictNameRegistry(),
+    });
+
+    expect(TestArray.resolve(resolutionCtx)).toContain('array<vec3f>');
+  });
+
+  it('throws when trying to nest runtime sized arrays', () => {
+    expect(() => arrayOf(arrayOf(vec3f, 0), 0)).toThrow();
   });
 });
