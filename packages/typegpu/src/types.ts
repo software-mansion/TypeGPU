@@ -1,9 +1,9 @@
 import type { ISchema, Unwrap } from 'typed-binary';
+import type { TgpuBuffer } from './core/buffer/buffer';
+import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
 import type { TgpuFnShellBase } from './core/function/fnCore';
 import type { TgpuNamable } from './namable';
 import type { Block } from './smol';
-import type { TgpuBuffer } from './tgpuBuffer';
-import type { TgpuBufferUsage } from './tgpuBufferUsage';
 
 export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
 

@@ -28,6 +28,11 @@ import { isDecorated, isLooseDecorated } from './attributes';
 // Public API
 // ----------
 
+export interface TgpuBaseStruct<TProps extends Record<string, unknown>>
+  extends ISchema<UnwrapRecord<TProps>> {
+  readonly properties: TProps;
+}
+
 /**
  * Struct schema constructed via `d.struct` function.
  *
@@ -36,7 +41,7 @@ import { isDecorated, isLooseDecorated } from './attributes';
  * the `byteAlignment` requirement of its members.
  */
 export interface TgpuStruct<TProps extends Record<string, AnyTgpuData>>
-  extends ISchema<UnwrapRecord<TProps>>,
+  extends TgpuBaseStruct<TProps>,
     TgpuData<UnwrapRecord<TProps>>,
     TgpuNamable {}
 
@@ -65,7 +70,7 @@ export const struct = <TProps extends Record<string, AnyTgpuData>>(
  */
 export interface TgpuLooseStruct<
   TProps extends Record<string, AnyTgpuData | AnyTgpuLooseData>,
-> extends ISchema<UnwrapRecord<TProps>>,
+> extends TgpuBaseStruct<TProps>,
     TgpuLooseData<UnwrapRecord<TProps>> {}
 
 /**
@@ -144,10 +149,10 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
   public readonly isLoose = false as const;
   public readonly isRuntimeSized: boolean;
 
-  constructor(private readonly _properties: TProps) {
+  constructor(public readonly properties: TProps) {
     super();
 
-    this.byteAlignment = Object.values(_properties)
+    this.byteAlignment = Object.values(properties)
       .map((prop) => prop.byteAlignment)
       .reduce((a, b) => (a > b ? a : b));
 
@@ -183,7 +188,7 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
     }
     alignIO(output, this.byteAlignment);
 
-    for (const [key, property] of Object.entries(this._properties)) {
+    for (const [key, property] of Object.entries(this.properties)) {
       alignIO(output, property.byteAlignment);
       property.write(output, value[key]);
     }
@@ -198,7 +203,7 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
     alignIO(input, this.byteAlignment);
     const result = {} as Record<string, unknown>;
 
-    for (const [key, property] of Object.entries(this._properties)) {
+    for (const [key, property] of Object.entries(this.properties)) {
       alignIO(input, property.byteAlignment);
       result[key] = property.read(input);
     }
@@ -215,7 +220,7 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
     alignIO(structMeasurer, this.byteAlignment);
 
     const maxing = value === MaxValue;
-    for (const [key, property] of Object.entries(this._properties)) {
+    for (const [key, property] of Object.entries(this.properties)) {
       if (structMeasurer.isUnbounded) {
         throw new Error('Only the last property of a struct can be unbounded');
       }
@@ -240,7 +245,7 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
 
     ctx.addDeclaration(code`
 struct ${ident} {\
-${Object.entries(this._properties).map(([key, field]) => code`\n  ${getAttributes(field) ?? ''}${key}: ${field},`)}
+${Object.entries(this.properties).map(([key, field]) => code`\n  ${getAttributes(field) ?? ''}${key}: ${field},`)}
 }
     `);
 
@@ -280,7 +285,7 @@ class TgpuLooseStructImpl<
   public readonly isLoose = true as const;
   public readonly size: number;
 
-  constructor(private readonly _properties: TProps) {
+  constructor(public readonly properties: TProps) {
     super();
     this.size = this.measure(MaxValue).size;
   }
@@ -299,7 +304,7 @@ class TgpuLooseStructImpl<
   }
 
   write(output: ISerialOutput, value: Parsed<UnwrapRecord<TProps>>): void {
-    for (const [key, property] of Object.entries(this._properties)) {
+    for (const [key, property] of Object.entries(this.properties)) {
       property.write(output, value[key]);
     }
   }
@@ -307,7 +312,7 @@ class TgpuLooseStructImpl<
   read(input: ISerialInput): Parsed<UnwrapRecord<TProps>> {
     const result = {} as Record<string, unknown>;
 
-    for (const [key, property] of Object.entries(this._properties)) {
+    for (const [key, property] of Object.entries(this.properties)) {
       result[key] = property.read(input);
     }
 
@@ -319,7 +324,7 @@ class TgpuLooseStructImpl<
     measurer: IMeasurer = new Measurer(),
   ): IMeasurer {
     const maxing = value === MaxValue;
-    for (const [key, property] of Object.entries(this._properties)) {
+    for (const [key, property] of Object.entries(this.properties)) {
       property.measure(maxing ? MaxValue : value[key], measurer);
     }
 

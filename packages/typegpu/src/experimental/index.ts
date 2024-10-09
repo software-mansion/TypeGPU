@@ -2,14 +2,15 @@
  * @module typegpu/experimental
  */
 
+import { Storage, Uniform, Vertex } from '../core/buffer/buffer';
 import { computeFn } from '../core/function/tgpuComputeFn';
 import { fn, procedure } from '../core/function/tgpuFn';
 import { fragmentFn } from '../core/function/tgpuFragmentFn';
 import { vertexFn } from '../core/function/tgpuVertexFn';
+import { vertexLayout } from '../core/vertexLayout/vertexLayout';
 import { createRuntime as init } from '../createRuntime';
 import { createBuffer } from '../legacyBufferApi';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
-import { Storage, Uniform, Vertex } from '../tgpuBuffer';
 import { read, write } from '../tgpuBufferUtils';
 
 export const tgpu = {
@@ -22,6 +23,7 @@ export const tgpu = {
   fragmentFn,
   vertexFn,
   computeFn,
+  vertexLayout,
   bindGroupLayout,
 
   init,
@@ -47,17 +49,23 @@ export {
   isUsableAsStorage,
   isUsableAsUniform,
   isUsableAsVertex,
-} from '../tgpuBuffer';
-export { asUniform, asReadonly, asMutable, asVertex } from '../tgpuBufferUsage';
+} from '../core/buffer/buffer';
+export {
+  asUniform,
+  asReadonly,
+  asMutable,
+  asVertex,
+} from '../core/buffer/bufferUsage';
 
-export type { TgpuBuffer } from '../tgpuBuffer';
+export type { TgpuBuffer } from '../core/buffer/buffer';
+export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
 export type {
   TgpuBufferUsage,
   TgpuBufferUniform,
   TgpuBufferReadonly,
   TgpuBufferMutable,
   TgpuBufferVertex,
-} from '../tgpuBufferUsage';
+} from '../core/buffer/bufferUsage';
 export type { TgpuConst } from '../tgpuConstant';
 export type { TgpuPlum } from '../tgpuPlumTypes';
 export type { TexelFormat } from '../textureTypes';
