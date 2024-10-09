@@ -218,7 +218,7 @@ export function getCustomAlignment(
 export function getCustomLocation(
   data: AnyTgpuData | AnyTgpuLooseData,
 ): number | undefined {
-  return data ? (data as unknown as BaseDecorated).locationAttrib : undefined;
+  return (data as unknown as BaseDecorated).locationAttrib;
 }
 
 export function getAttributesString<T extends AnyTgpuData>(field: T): string {
