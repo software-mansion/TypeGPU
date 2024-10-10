@@ -1,0 +1,14 @@
+---
+const { status = true } = Astro.props;
+const content = await Astro.slots.render('default');
+const statusColor = status ? 'before:bg-green-900' : 'before:bg-red-900';
+const plusOrMinus = status ? 'before:content-["+"]' : 'before:content-["-"]';
+---
+
+<div class:list={[
+  "inline-block before:content-[''] before:block before:pl-1 before:absolute before:left-0 before:right-0 before:h-[22.75px] before:mix-blend-lighten",
+  statusColor,
+  plusOrMinus,
+]}>
+    <span set:html={content} />
+</div>
