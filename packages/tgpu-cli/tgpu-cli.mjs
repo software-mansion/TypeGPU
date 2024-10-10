@@ -129,12 +129,12 @@ Options:
       const processFiles = async ({ exitOnError, files, checkExisting }) => {
         const results = await Promise.allSettled(
           files.map(async (file) => {
-            const outputhPath = outputPathCompiler(file);
+            const outputPath = outputPathCompiler(file);
 
-            console.log(`Generating ${file} >>> ${outputhPath}`);
+            console.log(`Generating ${file} >>> ${outputPath}`);
             return generate({
               inputPath: file,
-              outputPath: outputhPath,
+              outputPath,
               toTs,
               moduleSyntax,
               existingFileStrategy: checkExisting
