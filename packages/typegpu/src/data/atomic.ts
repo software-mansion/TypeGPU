@@ -17,7 +17,7 @@ import type { I32, U32 } from './numeric';
 // ----------
 
 /**
- * Marks a concrete integer scalar type schema (u32 or i32) as WGSL atomic.
+ * Marks a concrete integer scalar type schema (u32 or i32) as a WGSL atomic.
  *
  * @example
  * const atomicU32 = d.atomic(d.u32);
