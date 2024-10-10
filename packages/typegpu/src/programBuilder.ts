@@ -11,7 +11,7 @@ import type { SimpleTgpuData, TgpuArray } from './data';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
 import { code } from './tgpuCode';
-import type { TgpuRuntime } from './tgpuRuntime';
+import type { TgpuRoot } from './tgpuRoot';
 import type {
   AnyTgpuData,
   BoundTgpuCode,
@@ -33,23 +33,23 @@ type BuildOptions = {
 
 export default class ProgramBuilder {
   constructor(
-    private runtime: TgpuRuntime,
-    private root: TgpuResolvable,
+    private root: TgpuRoot,
+    private rootNode: TgpuResolvable,
   ) {}
 
   build(options: BuildOptions): Program {
     const ctx = new ResolutionCtxImpl({
       names: options.nameRegistry ?? new RandomNameRegistry(),
       bindingGroup: options.bindingGroup,
-      jitTranspiler: this.runtime.jitTranspiler,
+      jitTranspiler: this.root.jitTranspiler,
     });
 
     // Resolving code
-    const codeString = ctx.resolve(this.root);
+    const codeString = ctx.resolve(this.rootNode);
 
     return {
       bindGroupResolver: new BindGroupResolver(
-        this.runtime,
+        this.root,
         ctx,
         options.shaderStage,
       ),
@@ -75,7 +75,7 @@ function getUsedBuiltinsNamed(
 
 export class RenderProgramBuilder {
   constructor(
-    private runtime: TgpuRuntime,
+    private root: TgpuRoot,
     private vertexRoot: TgpuCode | BoundTgpuCode,
     private fragmentRoot: TgpuCode | BoundTgpuCode,
     private vertexOutputFormat: {
@@ -134,7 +134,7 @@ export class RenderProgramBuilder {
     const vertexContext = new ResolutionCtxImpl({
       names: options.nameRegistry ?? new RandomNameRegistry(),
       bindingGroup: options.bindingGroup,
-      jitTranspiler: this.runtime.jitTranspiler,
+      jitTranspiler: this.root.jitTranspiler,
     });
     vertexContext.resolve(this.vertexRoot);
     const vertexBuffers = Array.from(vertexContext.usedBindables).filter(
@@ -198,7 +198,7 @@ export class RenderProgramBuilder {
     const fragmentContext = new ResolutionCtxImpl({
       names: options.nameRegistry ?? new RandomNameRegistry(),
       bindingGroup: options.bindingGroup,
-      jitTranspiler: this.runtime.jitTranspiler,
+      jitTranspiler: this.root.jitTranspiler,
     });
     fragmentContext.resolve(this.fragmentRoot);
 
@@ -222,15 +222,12 @@ export class RenderProgramBuilder {
       }
     `;
 
-    const vertexProgram = new ProgramBuilder(this.runtime, vertexCode).build({
+    const vertexProgram = new ProgramBuilder(this.root, vertexCode).build({
       bindingGroup: options.bindingGroup,
       shaderStage: GPUShaderStage.VERTEX,
       nameRegistry: options.nameRegistry ?? new RandomNameRegistry(),
     });
-    const fragmentProgram = new ProgramBuilder(
-      this.runtime,
-      fragmentCode,
-    ).build({
+    const fragmentProgram = new ProgramBuilder(this.root, fragmentCode).build({
       bindingGroup: options.bindingGroup + 1,
       shaderStage: GPUShaderStage.FRAGMENT,
       nameRegistry: options.nameRegistry ?? new RandomNameRegistry(),
@@ -251,7 +248,7 @@ export class RenderProgramBuilder {
 
 export class ComputeProgramBuilder {
   constructor(
-    private runtime: TgpuRuntime,
+    private root: TgpuRoot,
     private computeRoot: Wgsl,
     private workgroupSize: readonly [
       number,
@@ -264,7 +261,7 @@ export class ComputeProgramBuilder {
     const context = new ResolutionCtxImpl({
       names: options.nameRegistry ?? new RandomNameRegistry(),
       bindingGroup: options.bindingGroup,
-      jitTranspiler: this.runtime.jitTranspiler,
+      jitTranspiler: this.root.jitTranspiler,
     });
     context.resolve(this.computeRoot);
 
@@ -284,7 +281,7 @@ export class ComputeProgramBuilder {
       }
     `;
 
-    const program = new ProgramBuilder(this.runtime, shaderCode).build({
+    const program = new ProgramBuilder(this.root, shaderCode).build({
       bindingGroup: options.bindingGroup,
       shaderStage: GPUShaderStage.COMPUTE,
       nameRegistry: options.nameRegistry ?? new RandomNameRegistry(),

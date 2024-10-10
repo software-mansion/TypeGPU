@@ -17,7 +17,7 @@ export interface TgpuPlum<TValue = unknown> extends TgpuNamable {
 }
 
 export const TgpuExternalPlumTrait = Symbol(
-  `This plum's value is sourced from outside the runtime.`,
+  `This plum's value is sourced from outside the root.`,
 );
 
 export interface TgpuExternalPlum {
