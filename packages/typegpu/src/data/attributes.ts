@@ -209,10 +209,7 @@ export function isLooseDecorated<
 export function getCustomAlignment(
   data: AnyTgpuData | AnyTgpuLooseData,
 ): number | undefined {
-  if (isDecorated(data) || isLooseDecorated(data)) {
-    return data.alignAttrib;
-  }
-  return undefined;
+  return (data as unknown as BaseDecorated).alignAttrib;
 }
 
 export function getCustomLocation(
