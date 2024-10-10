@@ -1,5 +1,3 @@
-import { NotUniformError } from './errors';
-import type { TgpuNamable } from './namable';
 import {
   type Storage,
   type TgpuBuffer,
@@ -7,14 +5,16 @@ import {
   isBuffer,
   isUsableAsStorage,
   isUsableAsUniform,
-} from './tgpuBuffer';
+} from './core/buffer/buffer';
 import {
   type TgpuBufferMutable,
   type TgpuBufferReadonly,
   type TgpuBufferUniform,
   type TgpuBufferUsage,
   isBufferUsage,
-} from './tgpuBufferUsage';
+} from './core/buffer/bufferUsage';
+import { NotUniformError } from './errors';
+import type { TgpuNamable } from './namable';
 import type { TgpuSampler } from './tgpuSampler';
 import type { AnyTgpuData, OmitProps, TgpuShaderStage } from './types';
 import type { Unwrapper } from './unwrapper';

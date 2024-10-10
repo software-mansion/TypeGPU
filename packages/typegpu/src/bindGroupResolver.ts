@@ -1,7 +1,6 @@
+import type { TgpuBufferVertex } from './core/buffer/bufferUsage';
 import type { ResolutionCtxImpl } from './resolutionCtx';
-import type { TgpuBufferVertex } from './tgpuBufferUsage';
-import { deriveVertexFormat } from './tgpuRoot';
-import type { TgpuRoot } from './tgpuRoot';
+import { type TgpuRoot, deriveVertexFormat } from './tgpuRoot';
 import { type TgpuSampler, isSampler } from './tgpuSampler';
 import {
   type TgpuAnyTextureView,
