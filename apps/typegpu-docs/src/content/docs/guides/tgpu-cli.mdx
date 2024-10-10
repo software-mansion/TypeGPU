@@ -1,0 +1,133 @@
+---
+title: TypeGPU CLI
+description: A guide on how to use the TypeGPU CLI
+---
+
+TypeGPU CLI (tgpu-cli) is a command-line interface for the TypeGPU library.
+It allows you to generate TypeGPU definitions from WGSL shaders.
+
+## Installation
+
+Using npm:
+
+```bash
+npm install -g typegpu-cli
+```
+
+## Feature overview
+
+- Generate TypeGPU definitions from WGSL shaders
+- Continuously watch for changes in WGSL files and update the generated definitions
+- Specify input and output using glob patterns
+- Choose the output extension and CommonJS or ES module format
+
+## Usage
+
+This section will cover the most common use cases of the TypeGPU CLI and provide short examples.
+
+### Generate TypeGPU definitions for a single WGSL shader file
+
+To generate TypeGPU definitions from a single WGSL shader file, run:
+
+```bash
+tgpu-cli gen path/to/shader.wgsl
+```
+
+This will generate a TypeScript file with the TypeGPU definitions in the same directory as the shader.
+By default, the generated file will have the same name as the shader, with the `.ts` extension.
+
+### Generate TypeGPU definitions for multiple WGSL shader files
+
+TypeGPU CLI supports glob patterns for specifying input paths.
+The following command will generate TypeGPU definitions for all WGSL files inside a given directory:
+
+```bash
+tgpu-cli gen "path/to/*.wgsl"
+```
+
+The generated TypeScript files will have the same names as the shaders, with the `.ts` extension.
+To specify a recursive search, use the `**` pattern:
+
+```bash
+tgpu-cli gen "path/to/**/*.wgsl"
+```
+
+This will generate TypeGPU definitions for all WGSL files inside the `path/to` directory and its subdirectories.
+
+### Specify the output path with the `--output` option
+
+By default, the generated TypeScript files are placed in the same directory as the input shaders.
+You can specify a different output path using the `--output` option:
+
+```bash
+tgpu-cli gen "path/to/shader.wgsl" --output "different/path/output.ts"
+```
+
+This will generate the TypeGPU definitions in the `different/path` directory with the `output.ts` filename.
+It also supports glob patterns for specifying the output path:
+
+```bash
+tgpu-cli gen "path/to/*.wgsl" --output "output/*.ts"
+```
+
+This will generate the TypeGPU definitions in the `output` directory with the same names as the shaders, but with the `.ts` extension.
+
+:::caution
+If you use a glob pattern for the input path, specifically `**`, make sure to use the `**` pattern
+in the output path as well to preserve the directory structure (*or make sure no conflicts will happen*).
+If you don't, all generated files will be placed in the same directory which may lead to name conflicts.
+
+import { FileTree } from '@astrojs/starlight/components';
+
+<FileTree>
+
+- src
+  - example
+    - shader1.wgsl
+  - shader1.wgsl
+  - shader2.wgsl
+
+</FileTree>
+
+If you run:
+
+```bash
+tgpu-cli gen "src/**/*.wgsl" --output "output/*.ts"
+```
+
+The script will fail because all generated files will be placed in the `output` directory, and there will be a name conflict between `shader1.ts` and `example/shader1.ts`.
+:::
+
+
+To find out how to use the TypeGPU CLI in more detail, run:
+
+```bash
+tgpu-cli --help
+```
+or
+```bash
+tgpu-cli -h
+```
+
+## Example
+
+To generate TypeGPU definitions from a WGSL shader, run:
+
+```bash
+tgpu-cli gen path/to/shader.wgsl
+```
+
+This will generate a TypeScript file with the TypeGPU definitions in the same directory as the shader.
+By default, the generated file will have the same name as the shader, with the `.ts` extension.
+
+You can also specify the input and output using glob patterns:
+
+```bash
+tgpu-cli gen "path/to/**/*.wgsl" -o **/*.ts
+```
+
+To find out more about the `gen` command, run:
+
+```bash
+tgpu-cli gen --help
+```It allows you to generate TypeGPU definitions from WGSL shaders.
