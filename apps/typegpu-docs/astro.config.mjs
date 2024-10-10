@@ -1,3 +1,5 @@
+// @ts-check
+
 // import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
@@ -5,9 +7,14 @@ import starlight from '@astrojs/starlight';
 import tailwind from '@astrojs/tailwind';
 import { defineConfig } from 'astro/config';
 import starlightBlog from 'starlight-blog';
-import importRawRedirectPlugin from './vite-import-raw-redirect-plugin';
+import importRawRedirectPlugin from './vite-import-raw-redirect-plugin.mjs';
 
-const stripFalsy = (items) => items.filter((item) => !!item);
+/**
+ * @template T
+ * @param {T[]} items
+ */
+const stripFalsy = (items) =>
+  items.filter(/** @return {item is Exclude<T, false>} */ (item) => !!item);
 
 const DEV = import.meta.env.DEV;
 
@@ -33,6 +40,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'TypeGPU',
+      customCss: ['./src/tailwind.css', './src/fonts/font-face.css'],
       plugins: [starlightBlog()],
       logo: {
         light: '/public/typegpu-logo-light.svg',
@@ -48,7 +56,7 @@ export default defineConfig({
       },
       sidebar: stripFalsy([
         {
-          label: '⭐ Live Examples',
+          label: 'Live Examples',
           link: 'examples',
           // attrs: {
           //   'data-astro-reload': true,
@@ -65,6 +73,7 @@ export default defineConfig({
             DEV && {
               label: 'Roots',
               slug: 'guides/roots',
+              badge: { text: 'new', variant: 'default' },
             },
             {
               label: 'Typed Buffers',
@@ -107,12 +116,14 @@ export default defineConfig({
           ],
         },
         {
-          label: '🙋 FAQ',
+          label: 'FAQ',
           slug: 'faq',
         },
       ]),
     }),
-    tailwind(),
+    tailwind({
+      applyBaseStyles: false,
+    }),
     react(),
     sitemap(),
   ],

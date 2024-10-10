@@ -16,7 +16,7 @@ import { type TgpuLooseArray, looseArrayOf } from '../src/data/array';
 import { StrictNameRegistry } from '../src/experimental';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
 
-describe('align', () => {
+describe('d.align', () => {
   it('adds @align attribute for custom aligned struct members', () => {
     const s1 = struct({
       a: u32,

@@ -3,8 +3,12 @@ const { label, callToAction, href } = Astro.props;
 ---
 
 <div class="flex justify-between">
-  <p class="text-micro">{label}</p>
-  <a href={href} target="_blank" rel="noreferrer" class="underline">
+  <p class="m-0 text-micro">{label}</p>
+  <a
+    href={href}
+    target="_blank"
+    rel="noreferrer"
+    class="text-inherit underline">
     {callToAction}
   </a>
 </div>

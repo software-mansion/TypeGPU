@@ -1,0 +1,134 @@
+/* NOTE: Uncomment if needed */
+/* @font-face {
+  font-family: 'Aeonik';
+  src: url('./Aeonik-Air.otf') format('opentype');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Aeonik';
+  src: url('./Aeonik-AirItalic.otf') format('opentype');
+  font-weight: 100;
+  font-style: italic;
+  font-display: swap;
+}  */
+
+/* NOTE: Uncomment if needed */
+/* @font-face {
+  font-family: 'Aeonik';
+  src: url('./Aeonik-Thin.otf') format('opentype');
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Aeonik';
+  src: url('./Aeonik-ThinItalic.otf') format('opentype');
+  font-weight: 200;
+  font-style: italic;
+  font-display: swap;
+}  */
+
+/* NOTE: Uncomment if needed */
+/* @font-face {
+  font-family: 'Aeonik';
+  src: url('./Aeonik-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Aeonik';
+  src: url('./Aeonik-LightItalic.otf') format('opentype');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}  */
+
+@font-face {
+  font-family: 'Aeonik';
+  src: url('./Aeonik-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Aeonik';
+  src: url('./Aeonik-RegularItalic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Aeonik';
+  src: url('./Aeonik-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Aeonik';
+  src: url('./Aeonik-MediumItalic.otf') format('opentype');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Aeonik';
+  src: url('./Aeonik-Medium.otf') format('opentype'); /* no semi-bold unfortunately */
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+} 
+
+@font-face {
+  font-family: 'Aeonik';
+  src: url('./Aeonik-MediumItalic.otf') format('opentype'); /* no semi-bold unfortunately */
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+} 
+
+/* NOTE: Uncomment if needed */
+/* @font-face {
+  font-family: 'Aeonik';
+  src: url('./Aeonik-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Aeonik';
+  src: url('./Aeonik-BoldItalic.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}  */
+
+
+/* NOTE: Uncomment if needed */
+/* @font-face {
+  font-family: 'Aeonik';
+  src: url('./Aeonik-Black.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Aeonik';
+  src: url('./Aeonik-BlackItalic.otf') format('opentype');
+  font-weight: 900;
+  font-style: italic;
+  font-display: swap;
+}  */
+

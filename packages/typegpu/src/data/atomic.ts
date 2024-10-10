@@ -16,15 +16,34 @@ import type { I32, U32 } from './numeric';
 // Public API
 // ----------
 
+/**
+ * Marks a concrete integer scalar type schema (u32 or i32) as a WGSL atomic.
+ *
+ * @example
+ * const atomicU32 = d.atomic(d.u32);
+ * const atomicI32 = d.atomic(d.i32);
+ *
+ * @param data Underlying type schema.
+ */
 export function atomic<TSchema extends U32 | I32>(
   data: TSchema,
 ): Atomic<TSchema> {
   return new AtomicImpl(data);
 }
 
+/**
+ * Atomic schema constructed via `d.atomic` function.
+ */
 export interface Atomic<TSchema extends U32 | I32>
   extends TgpuData<Unwrap<TSchema>> {}
 
+/**
+ * Checks whether the passed in value is a d.atomic schema.
+ *
+ * @example
+ * isAtomicSchema(d.atomic(d.u32)) // true
+ * isAtomicSchema(d.u32) // false
+ */
 export function isAtomicSchema<T extends Atomic<U32 | I32>>(
   schema: T | unknown,
 ): schema is T {

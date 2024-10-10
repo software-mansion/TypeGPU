@@ -22,7 +22,7 @@ import type {
 } from '../types';
 import alignIO from './alignIO';
 import { isArraySchema } from './array';
-import { isDecorated, isLooseDecorated } from './attributes';
+import { getAttributesString } from './attributes';
 
 // ----------
 // Public API
@@ -138,6 +138,10 @@ export function isLooseStructSchema<
 // Implementation
 // --------------
 
+function generateField([key, field]: [string, AnyTgpuData]) {
+  return code`  ${getAttributesString(field)}${key}: ${field},\n`;
+}
+
 class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
   extends Schema<UnwrapRecord<TProps>>
   implements TgpuData<UnwrapRecord<TProps>>
@@ -244,33 +248,13 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
     const ident = identifier().$name(this._label);
 
     ctx.addDeclaration(code`
-struct ${ident} {\
-${Object.entries(this.properties).map(([key, field]) => code`\n  ${getAttributes(field) ?? ''}${key}: ${field},`)}
+struct ${ident} {
+${Object.entries(this.properties).map(generateField)}\
 }
-    `);
+`);
 
     return ctx.resolve(ident);
   }
-}
-
-function getAttributes<T extends AnyTgpuData>(field: T): string | undefined {
-  if (!isDecorated(field) && !isLooseDecorated(field)) {
-    return undefined;
-  }
-
-  return field.attributes
-    .map((attrib) => {
-      if (attrib.type === 'align') {
-        return `@align(${attrib.alignment}) `;
-      }
-
-      if (attrib.type) {
-        return `@size(${attrib.size}) `;
-      }
-
-      return '';
-    })
-    .join('');
 }
 
 class TgpuLooseStructImpl<
