@@ -1,7 +1,6 @@
+import type { TgpuBufferVertex } from './core/buffer/bufferUsage';
 import type { ResolutionCtxImpl } from './resolutionCtx';
-import type { TgpuBufferVertex } from './tgpuBufferUsage';
-import { deriveVertexFormat } from './tgpuRuntime';
-import type { TgpuRuntime } from './tgpuRuntime';
+import { type TgpuRoot, deriveVertexFormat } from './tgpuRoot';
 import { type TgpuSampler, isSampler } from './tgpuSampler';
 import {
   type TgpuAnyTextureView,
@@ -33,7 +32,7 @@ export class BindGroupResolver {
   private vertexLayout: GPUVertexBufferLayout[] | null = null;
 
   constructor(
-    private runtime: TgpuRuntime,
+    private root: TgpuRoot,
     private context: ResolutionCtxImpl,
     public readonly shaderStage: number,
   ) {
@@ -111,7 +110,7 @@ export class BindGroupResolver {
         },
       });
     }
-    const layout = this.runtime.device.createBindGroupLayout({
+    const layout = this.root.device.createBindGroupLayout({
       entries,
     });
     this.layout = layout;
@@ -129,19 +128,19 @@ export class BindGroupResolver {
     for (const textureView of this.textureViews) {
       entries.push({
         binding: this.context.getIndexFor(textureView),
-        resource: this.runtime.viewFor(textureView),
+        resource: this.root.viewFor(textureView),
       });
     }
     for (const external of this.externalTextures) {
       entries.push({
         binding: this.context.getIndexFor(external),
-        resource: this.runtime.externalTextureFor(external),
+        resource: this.root.externalTextureFor(external),
       });
     }
     for (const sampler of this.samplers) {
       entries.push({
         binding: this.context.getIndexFor(sampler),
-        resource: this.runtime.samplerFor(sampler),
+        resource: this.root.samplerFor(sampler),
       });
     }
     for (const buffer of this.buffers) {
@@ -153,7 +152,7 @@ export class BindGroupResolver {
         },
       });
     }
-    const bindGroup = this.runtime.device.createBindGroup({
+    const bindGroup = this.root.device.createBindGroup({
       layout: this.getBindGroupLayout(),
       entries,
     });
@@ -220,9 +219,9 @@ export class BindGroupResolver {
   checkBindGroupInvalidation() {
     for (const texture of this.externalTextures) {
       // check if texture is dirty (changed source) -> if so, invalidate bind group and mark clean
-      if (this.runtime.isDirty(texture)) {
+      if (this.root.isDirty(texture)) {
         this.invalidateBindGroup();
-        this.runtime.markClean(texture);
+        this.root.markClean(texture);
         continue;
       }
 

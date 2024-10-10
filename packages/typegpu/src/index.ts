@@ -2,9 +2,9 @@
  * @module typegpu
  */
 
+import { Storage, Uniform, Vertex } from './core/buffer/buffer';
 import { createBuffer } from './legacyBufferApi';
 import { bindGroupLayout } from './tgpuBindGroupLayout';
-import { Storage, Uniform, Vertex } from './tgpuBuffer';
 import { read, write } from './tgpuBufferUtils';
 
 export const tgpu = {
@@ -30,7 +30,7 @@ export {
   isUsableAsStorage,
   isUsableAsUniform,
   isUsableAsVertex,
-} from './tgpuBuffer';
+} from './core/buffer/buffer';
 
 export type {
   TgpuBindGroupLayout,
@@ -41,4 +41,4 @@ export type {
   LayoutEntryToInput,
   TgpuBindGroup,
 } from './tgpuBindGroupLayout';
-export type { TgpuBuffer } from './tgpuBuffer';
+export type { TgpuBuffer } from './core/buffer/buffer';

@@ -1,5 +1,5 @@
+import type { TgpuBuffer } from './core/buffer/buffer';
 import type { TgpuBindGroup, TgpuBindGroupLayout } from './tgpuBindGroupLayout';
-import type { TgpuBuffer } from './tgpuBuffer';
 import type { AnyTgpuData } from './types';
 
 export interface Unwrapper {

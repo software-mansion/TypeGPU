@@ -32,7 +32,7 @@ export function plum<T>(compute: (get: Getter) => T): TgpuPlum<T>;
 
 /**
  * Creates a plum with an initial value of `initial`.
- * Its value can be updated by calling `runtime.setPlum(thePlum, newValue)`.
+ * Its value can be updated by calling `root.setPlum(thePlum, newValue)`.
  *
  * @param initial The initial value of this plum.
  */
@@ -42,7 +42,7 @@ export function plum<T extends Wgsl>(
 
 /**
  * Creates a plum with an initial value of `initial`.
- * Its value can be updated by calling `runtime.setPlum(thePlum, newValue)`.
+ * Its value can be updated by calling `root.setPlum(thePlum, newValue)`.
  *
  * @param initial The initial value of this plum.
  */

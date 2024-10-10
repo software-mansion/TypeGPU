@@ -1,5 +1,5 @@
 import type { Parsed } from 'typed-binary';
-import { type TgpuBuffer, createBufferImpl } from './tgpuBuffer';
+import { type TgpuBuffer, createBufferImpl } from './core/buffer/buffer';
 import type { TgpuPlum } from './tgpuPlumTypes';
 import type { AnyTgpuData } from './types';
 
