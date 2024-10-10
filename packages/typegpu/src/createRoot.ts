@@ -20,10 +20,10 @@ import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
 import type {
   ComputePipelineExecutorOptions,
   ComputePipelineOptions,
+  ExperimentalTgpuRoot,
   RenderPipelineExecutorOptions,
   RenderPipelineOptions,
   SetPlumAction,
-  TgpuRoot,
 } from './tgpuRoot';
 import type { TgpuSampler } from './tgpuSampler';
 import type {
@@ -37,7 +37,7 @@ import type { AnyTgpuData } from './types';
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a root can interact via GPU buffers.
  */
-class TgpuRootImpl implements TgpuRoot {
+class TgpuRootImpl implements ExperimentalTgpuRoot {
   private _buffers: TgpuBuffer<AnyTgpuData>[] = [];
   private _samplers = new WeakMap<TgpuSampler, GPUSampler>();
   private _textures = new WeakMap<TgpuAnyTexture, GPUTexture>();
@@ -327,7 +327,7 @@ interface PipelineExecutor {
 
 class RenderPipelineExecutor implements PipelineExecutor {
   constructor(
-    private root: TgpuRoot,
+    private root: ExperimentalTgpuRoot,
     private pipeline: GPURenderPipeline,
     private vertexProgram: Program,
     private fragmentProgram: Program,
@@ -384,7 +384,7 @@ class RenderPipelineExecutor implements PipelineExecutor {
 
 class ComputePipelineExecutor implements PipelineExecutor {
   constructor(
-    private root: TgpuRoot,
+    private root: ExperimentalTgpuRoot,
     private pipeline: GPUComputePipeline,
     private programs: Program[],
     private externalLayoutCount: number,
@@ -456,7 +456,7 @@ export type CreateRootOptions = {
  */
 export async function createRoot(
   options?: CreateRootOptions,
-): Promise<TgpuRoot> {
+): Promise<ExperimentalTgpuRoot> {
   if (doesResembleDevice(options?.device)) {
     return new TgpuRootImpl(options.device, options.jitTranspiler);
   }
