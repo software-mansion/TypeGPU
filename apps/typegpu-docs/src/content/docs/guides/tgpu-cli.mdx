@@ -95,8 +95,87 @@ If you run:
 tgpu-cli gen "src/**/*.wgsl" --output "output/*.ts"
 ```
 
-The script will fail because all generated files will be placed in the `output` directory, and there will be a name conflict between `shader1.ts` and `example/shader1.ts`.
+The script will fail because all generated files will be placed in the `output` directory, and there will
+be a name conflict as both `shader1.wgsl` and `example/shader1.wgsl` will try to generate `output/shader1.ts`.
 :::
+
+You can also use the `-o` shorthand for the `--output` option:
+
+```bash
+tgpu-cli gen "path/to/shader.wgsl" -o "different/path/output.ts"
+```
+
+### Supported extensions and module formats
+
+By default, the generated TypeScript files use the `.ts` extension and the ES module format.
+You can specify a different extension by just providing the extension in the output path:
+
+```bash
+tgpu-cli gen "path/to/shader.wgsl" -o "different/path/output.js"
+```
+
+This will generate the TypeGPU definitions in the `different/path` directory with the `output.js` filename.
+The supported extensions are:
+
+import ListItem from '../../../components/ListItem.astro';
+
+<ListItem idx={'1'}>
+  .js
+</ListItem>
+<ListItem idx={2}>
+  .cjs
+</ListItem>
+<ListItem idx={3}>
+  .mjs
+</ListItem>
+<ListItem idx={4}>
+  .ts
+</ListItem>
+<ListItem idx={5}>
+  .cts
+</ListItem>
+<ListItem idx={6}>
+  .mts
+</ListItem>
+
+You can also specify the module format using the `--commonjs` option:
+
+```bash
+tgpu-cli gen "path/to/shader.wgsl" --output "different/path/output.js" --commonjs
+```
+
+### Using the `--keep` and `--overwrite` options
+
+When generating TypeGPU definitions, if the output file already exists, the script will fail and not overwrite the existing file.
+You can use the `--keep` option to skip the generation of the file if it already exists:
+
+```bash
+tgpu-cli gen "path/to/*.wgsl" --output "output/*.ts" --keep
+```
+
+This will skip the generation of the TypeGPU definitions for shaders that already have a corresponding TypeScript file in the output directory.
+
+If you want to overwrite the existing files, you can use the `--overwrite` option:
+
+```bash
+tgpu-cli gen "path/to/*.wgsl" --output "output/*.ts" --overwrite
+```
+
+This will overwrite the existing TypeScript files with the new TypeGPU definitions.
+
+### Watch mode
+
+TypeGPU CLI supports a watch mode that continuously monitors the input files for changes and updates the generated definitions.
+To enable the watch mode, use the `--watch` (or `-w`) option:
+
+```bash
+tgpu-cli gen "path/to/*.wgsl" --output "output/*.ts" --watch
+```
+
+This will generate the TypeGPU definitions for all WGSL files inside the `path/to` directory
+and its subdirectories and continuously monitor them for changes.
+By default, the watch mode will overwrite the existing files when changes are detected after the initial generation.
+You can also use the `--keep` and `--overwrite` options in the watch mode. They will only affect the initial generation.
 
 
 To find out how to use the TypeGPU CLI in more detail, run:
