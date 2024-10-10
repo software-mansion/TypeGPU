@@ -1,17 +1,25 @@
 #!/usr/bin/env node
+
+// @ts-check
+
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { exit } from 'node:process';
 import arg from 'arg';
 import chokidar from 'chokidar';
 import { glob } from 'glob';
 import color from './colors.mjs';
 import generate from './gen.mjs';
+import { createOutputPathCompiler } from './outputPathCompiler.mjs';
 
 const args = arg({
   '--version': Boolean,
   '--help': Boolean,
   '--input': String,
   '--output': String,
+  '--commonjs': Boolean,
+  '--overwrite': Boolean,
+  '--keep': Boolean,
   '--watch': Boolean,
 
   '-v': '--version',
@@ -21,32 +29,71 @@ const args = arg({
   '-w': '--watch',
 });
 
+const ALLOWED_EXTENSIONS = ['.js', '.cjs', '.mjs', '.ts', '.cts', '.mts'];
+
 const COMMANDS = {
   gen: {
     help: () =>
       console.log(`\
-Generate a ts file from a wgsl file.
+Generate a ts/js file from a wgsl file.
 
 Usage:
-  tgpu-cli gen --input <input> [--output <output>] [--watch]
-  tgpu-cli gen <input> [--output <output>] [--watch]
+  tgpu-cli gen --input <input> [--output <output>] [--watch] [--commonjs] [--overwrite | --keep]
+  tgpu-cli gen <input> [--output <output>] [--watch] [--commonjs] [--overwrite | --keep]
 
 Options:
   --input, -i   The input file or glob pattern.
-  --output, -o  The output file. If not provided, the input file will be used with a .ts extension. Cannot be used with glob patterns.
-  --watch, -w   Watch for changes in the input file(s) and regenerate the output file(s)`),
+  --output, -o  The output name or pattern for generated file(s). 
+                If pattern doesn't include a directory, generated files will be in the same directory as their respective inputs.
+                Placeholder for file name (without extension): *, for directory: **
+                Default: "*.ts"
+  --watch, -w   Watch for changes in the input file(s) and regenerate the output file(s).
+  --commonjs    Generate a CommonJS style file.
+
+  --overwrite   Overwrite existing files.
+  --keep        Keep existing files.
+`),
+
     execute: async () => {
       const input = args['--input'] ?? args._[1];
-      const output = args['--output'];
+      const output = args['--output'] ?? '*.ts';
+      const moduleSyntax = args['--commonjs'] ? 'commonjs' : 'esmodule';
+
       const watch = args['--watch'] ?? false;
 
       if (!input) {
         console.error(
-          `${color.Red}Error: Missing required argument: ${color.Yellow}--input${color.Reset}`,
+          `${color.Red}Error: Missing required argument: --input${color.Reset}`,
         );
         exit(1);
       }
 
+      if (args['--overwrite'] && args['--keep']) {
+        console.error(
+          `${color.Red}The options: --overwrite and --keep are mutually exclusive'${color.Reset}`,
+        );
+        exit(1);
+      }
+
+      const existingFileStrategy = args['--overwrite']
+        ? 'overwrite'
+        : args['--keep']
+          ? 'keep'
+          : undefined;
+
+      const extension = path.extname(output);
+
+      if (
+        extension === '' ||
+        !ALLOWED_EXTENSIONS.includes(extension.toLowerCase())
+      ) {
+        console.error(
+          `${color.Red}Error: output pattern: ${output} has unsupported extension. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}`,
+        );
+        exit(1);
+      }
+
+      const toTs = extension.toLowerCase().endsWith('ts');
       const files = await glob(input);
 
       if (files.length === 0) {
@@ -56,26 +103,44 @@ Options:
         exit(0);
       }
 
-      if (!output && !input.endsWith('.wgsl')) {
+      if (files.length > 1 && !output.includes('*')) {
         console.error(
-          `${color.Red}Error: No output name provided and provided input doesn't end with .wgsl ${color.Reset}`,
+          `${color.Red}Error: More than one file found (${files.join(', ')}), while a non-pattern output name was provided ${color.Reset}`,
         );
         exit(1);
       }
 
-      if (output && files.length > 1) {
+      const fileNames = files.map((file) => path.parse(file).name);
+      const duplicates = fileNames.filter(
+        (name, index) => fileNames.indexOf(name) !== index,
+      );
+      if (duplicates.length > 0 && !/\*\*\/.*\*.*/.test(output)) {
         console.error(
-          `${color.Red}Error: More than one file found, while a single output name was provided ${color.Reset}`,
+          `${color.Red}Error: Duplicates found with name(s): [${duplicates.join(', ')}], while a single directory output pattern was provided. Make sure your pattern contains "**/*" to keep the original directory structure. ${color.Reset}`,
         );
         exit(1);
       }
 
-      const processFiles = async ({ exitOnError, files }) => {
+      const outputPathCompiler = createOutputPathCompiler(input, output);
+
+      /**
+       * @param {{ exitOnError: boolean, files: string[], checkExisting: boolean }} options
+       */
+      const processFiles = async ({ exitOnError, files, checkExisting }) => {
         const results = await Promise.allSettled(
           files.map(async (file) => {
-            const out = output ?? file.replace('.wgsl', '.ts');
-            console.log(`Generating ${file} >>> ${out}`);
-            return generate(file, out).catch((error) => {
+            const outputPath = outputPathCompiler(file);
+
+            console.log(`Generating ${file} >>> ${outputPath}`);
+            return generate({
+              inputPath: file,
+              outputPath,
+              toTs,
+              moduleSyntax,
+              existingFileStrategy: checkExisting
+                ? existingFileStrategy
+                : 'overwrite',
+            }).catch((error) => {
               error.file = file;
               throw error;
             });
@@ -100,13 +165,17 @@ Options:
         }
       };
 
-      processFiles({ exitOnError: !watch, files });
+      processFiles({ exitOnError: !watch, files, checkExisting: true });
 
       if (watch) {
-        console.log(`${color.Yellow}Watching for changes...${color.Reset}`);
+        console.log(`${color.Cyan}Watching for changes...${color.Reset}`);
         const watcher = chokidar.watch(files);
         watcher.on('change', async (file) => {
-          await processFiles({ exitOnError: false, files: [file] });
+          await processFiles({
+            exitOnError: false,
+            files: [file],
+            checkExisting: false,
+          });
         });
       }
     },
@@ -123,14 +192,14 @@ function printHelp() {
 ${color.Reset}
 
 ${color.Bold}Commands:${color.Reset}
-  tgpu-cli gen   Generate a ts file from a wgsl file.
+  ${color.Cyan}tgpu-cli gen ${color.Reset} Generate a js/ts file from a wgsl file.
 `);
 }
 
 function printVersion() {
   try {
     const packageJson = JSON.parse(
-      readFileSync(new URL('./package.json', import.meta.url)),
+      readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
     );
     console.log(
       `${color.Green}TypeGPU CLI version ${packageJson.version}${color.Reset}`,
@@ -164,7 +233,6 @@ if (args['--version']) {
   exit(0);
 }
 
-/** @type {keyof typeof COMMANDS} */
 const command = args._[0]; // first positional argument
 if (!command) {
   printHelp();
