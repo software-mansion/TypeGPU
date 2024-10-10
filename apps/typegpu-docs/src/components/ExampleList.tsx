@@ -5,7 +5,7 @@ import { ExampleLink } from './ExampleLink';
 function ExampleList({ excludeTags = [] }: { excludeTags?: string[] }) {
   return (
     <>
-      <nav className="flex flex-col flex-1 gap-7 py-4 overflow-y-auto min-w-64">
+      <nav className="box-border flex flex-col flex-1 gap-7 py-4 overflow-y-auto min-w-64">
         {/* <ExampleLink key={PLAYGROUND_KEY} exampleKey={PLAYGROUND_KEY}>
           Playground
         </ExampleLink>

@@ -3,7 +3,7 @@ import * as d from '../src/data';
 import { StrictNameRegistry } from '../src/experimental';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
 
-describe('size', () => {
+describe('d.size', () => {
   it('adds @size attribute for the custom sized struct members', () => {
     const s1 = d
       .struct({

@@ -1,14 +1,34 @@
-/** @type {import('tailwindcss').Config} */
-import defaultTheme from 'tailwindcss/defaultTheme';
+import starlightPlugin from '@astrojs/starlight-tailwind';
+
+const accent = {
+  200: '#c3c4f1',
+  600: '#6453d2',
+  900: '#2e295f',
+  950: '#211f41',
+};
+const gray = {
+  100: '#f5f5fd',
+  200: '#ececfb',
+  300: '#bfc0d2',
+  400: '#8788aa',
+  500: '#545474',
+  700: '#353452',
+  800: '#24233f',
+  900: '#171724',
+};
 
 export default {
   content: ['./src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}'],
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Aeonik', ...defaultTheme.fontFamily.sans],
+        sans: ['Aeonik', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
+        // Starlight colors
+        accent,
+        gray,
+        // ---
         tameplum: {
           20: '#F6F6FF',
           50: '#EFEFF9',
@@ -41,5 +61,5 @@ export default {
       lg: '1441px',
     },
   },
-  plugins: [],
+  plugins: [starlightPlugin()],
 };

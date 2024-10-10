@@ -9,7 +9,7 @@ import {
 } from 'vitest';
 import { type F32, type U32, type Vec3f, f32, u32, vec3f } from '../src/data';
 import tgpu, {
-  type TgpuRuntime,
+  type TgpuRoot,
   type TgpuBindGroupLayout,
   asUniform,
   type TgpuBuffer,
@@ -85,7 +85,7 @@ const mockDevice = {
 };
 
 describe('TgpuBindGroupLayout', () => {
-  let root: TgpuRuntime;
+  let root: TgpuRoot;
 
   beforeEach(async () => {
     root = await tgpu.init({
@@ -176,7 +176,7 @@ describe('TgpuBindGroupLayout', () => {
 });
 
 describe('TgpuBindGroup', () => {
-  let root: TgpuRuntime;
+  let root: TgpuRoot;
 
   beforeEach(async () => {
     root = await tgpu.init({

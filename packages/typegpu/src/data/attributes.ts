@@ -36,21 +36,21 @@ export interface Size<T extends number> {
   size: T;
 }
 
-export interface Builtin<T extends BuiltinName> {
-  type: 'builtin';
-  name: T;
-}
-
 export interface Location<T extends number> {
   type: 'location';
   location: T;
 }
 
+export interface Builtin<T extends BuiltinName> {
+  type: 'builtin';
+  name: T;
+}
+
 export type AnyAttribute =
   | Align<number>
   | Size<number>
-  | Builtin<BuiltinName>
-  | Location<number>;
+  | Location<number>
+  | Builtin<BuiltinName>;
 
 export interface BaseDecorated<
   TInner extends AnyTgpuData | AnyTgpuLooseData =
@@ -64,8 +64,8 @@ export interface BaseDecorated<
   // Easy access to all attributes, if they exist
   readonly alignAttrib: number | undefined;
   readonly sizeAttrib: number | undefined;
-  readonly builtinAttrib: BuiltinName | undefined;
   readonly locationAttrib: number | undefined;
+  readonly builtinAttrib: BuiltinName | undefined;
 }
 
 export interface Decorated<
@@ -226,22 +226,13 @@ export function isLooseDecorated<
 export function getCustomAlignment(
   data: AnyTgpuData | AnyTgpuLooseData,
 ): number | undefined {
-  if (isDecorated(data) || isLooseDecorated(data)) {
-    return data.alignAttrib;
-  }
-  return undefined;
+  return (data as unknown as BaseDecorated).alignAttrib;
 }
 
 export function getCustomLocation(
   data: AnyTgpuData | AnyTgpuLooseData,
 ): number | undefined {
-  return data
-    ? (
-        data as
-          | Decorated<AnyTgpuData, AnyAttribute[]>
-          | LooseDecorated<AnyTgpuLooseData, AnyAttribute[]>
-      ).locationAttrib
-    : undefined;
+  return (data as unknown as BaseDecorated).locationAttrib;
 }
 
 export function isBuiltin<
@@ -270,12 +261,12 @@ export function getAttributesString<T extends AnyTgpuData>(field: T): string {
         return `@size(${attrib.size}) `;
       }
 
-      if (attrib.type === 'builtin') {
-        return `@builtin(${attrib.name}) `;
-      }
-
       if (attrib.type === 'location') {
         return `@location(${attrib.location}) `;
+      }
+
+      if (attrib.type === 'builtin') {
+        return `@builtin(${attrib.name}) `;
       }
 
       return '';
@@ -300,8 +291,8 @@ class BaseDecoratedImpl<
 
   public readonly alignAttrib: number | undefined;
   public readonly sizeAttrib: number | undefined;
-  public readonly builtinAttrib: BuiltinName | undefined;
   public readonly locationAttrib: number | undefined;
+  public readonly builtinAttrib: BuiltinName | undefined;
 
   constructor(
     public readonly inner: TInner,
@@ -313,12 +304,12 @@ class BaseDecoratedImpl<
     this.sizeAttrib = attributes.find(
       (a): a is Size<number> => a.type === 'size',
     )?.size;
-    this.builtinAttrib = attributes.find(
-      (a): a is Builtin<BuiltinName> => a.type === 'builtin',
-    )?.name;
     this.locationAttrib = attributes.find(
       (a): a is Location<number> => a.type === 'location',
     )?.location;
+    this.builtinAttrib = attributes.find(
+      (a): a is Builtin<BuiltinName> => a.type === 'builtin',
+    )?.name;
 
     this.byteAlignment = this.alignAttrib ?? inner.byteAlignment;
     this.size = this.measure(MaxValue).size;

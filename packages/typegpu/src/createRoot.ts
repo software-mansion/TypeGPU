@@ -16,8 +16,8 @@ import type {
   ComputePipelineExecutorOptions,
   RenderPipelineExecutorOptions,
   SetPlumAction,
-  TgpuRuntime,
-} from './tgpuRuntime';
+  TgpuRoot,
+} from './tgpuRoot';
 import type { TgpuSampler } from './tgpuSampler';
 import type {
   TgpuAnyTexture,
@@ -28,9 +28,9 @@ import type { AnyTgpuData } from './types';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
- * Programs that share a runtime can interact via GPU buffers.
+ * Programs that share a root can interact via GPU buffers.
  */
-class TgpuRuntimeImpl implements TgpuRuntime {
+class TgpuRootImpl implements TgpuRoot {
   private _buffers: TgpuBuffer<AnyTgpuData>[] = [];
   private _samplers = new WeakMap<TgpuSampler, GPUSampler>();
   private _textures = new WeakMap<TgpuAnyTexture, GPUTexture>();
@@ -224,7 +224,7 @@ interface PipelineExecutor {
 
 class RenderPipelineExecutor implements PipelineExecutor {
   constructor(
-    private runtime: TgpuRuntime,
+    private root: TgpuRoot,
     private pipeline: GPURenderPipeline,
     private vertexProgram: Program,
     private fragmentProgram: Program,
@@ -248,7 +248,7 @@ class RenderPipelineExecutor implements PipelineExecutor {
       );
     }
 
-    const passEncoder = this.runtime.commandEncoder.beginRenderPass({
+    const passEncoder = this.root.commandEncoder.beginRenderPass({
       ...descriptor,
       label: this.label ?? '',
     });
@@ -281,7 +281,7 @@ class RenderPipelineExecutor implements PipelineExecutor {
 
 class ComputePipelineExecutor implements PipelineExecutor {
   constructor(
-    private runtime: TgpuRuntime,
+    private root: TgpuRoot,
     private pipeline: GPUComputePipeline,
     private programs: Program[],
     private externalLayoutCount: number,
@@ -297,7 +297,7 @@ class ComputePipelineExecutor implements PipelineExecutor {
       );
     }
 
-    const passEncoder = this.runtime.commandEncoder.beginComputePass({
+    const passEncoder = this.root.commandEncoder.beginComputePass({
       label: this.label ?? '',
     });
     passEncoder.setPipeline(this.pipeline);
@@ -318,9 +318,9 @@ class ComputePipelineExecutor implements PipelineExecutor {
 }
 
 /**
- * Options passed into {@link createRuntime}.
+ * Options passed into {@link createRoot}.
  */
-export type CreateRuntimeOptions = {
+export type CreateRootOptions = {
   adapter?: GPURequestAdapterOptions | undefined;
   device?: GPUDeviceDescriptor | undefined;
   jitTranspiler?: JitTranspiler | undefined;
@@ -333,7 +333,7 @@ export type CreateRuntimeOptions = {
  * @example
  * When given no options, the function will ask the browser for a suitable GPU device.
  * ```ts
- * createRuntime();
+ * createRoot();
  * ```
  *
  * @example
@@ -341,21 +341,21 @@ export type CreateRuntimeOptions = {
  * ```ts
  * const adapterOptions: GPURequestAdapterOptions = ...;
  * const deviceDescriptor: GPUDeviceDescriptor = ...;
- * createRuntime({ adapter: adapterOptions, device: deviceDescriptor });
+ * createRoot({ adapter: adapterOptions, device: deviceDescriptor });
  * ```
  *
  * @example
  * If a specific device should be used instead, it can be passed in as a parameter.
  * ```ts
  * const device: GPUDevice = ...;
- * createRuntime(device);
+ * createRoot(device);
  * ```
  */
-export async function createRuntime(
-  options?: CreateRuntimeOptions,
-): Promise<TgpuRuntime> {
+export async function createRoot(
+  options?: CreateRootOptions,
+): Promise<TgpuRoot> {
   if (doesResembleDevice(options?.device)) {
-    return new TgpuRuntimeImpl(options.device, options.jitTranspiler);
+    return new TgpuRootImpl(options.device, options.jitTranspiler);
   }
 
   if (!navigator.gpu) {
@@ -368,7 +368,7 @@ export async function createRuntime(
     throw new Error('Could not find a compatible GPU');
   }
 
-  return new TgpuRuntimeImpl(
+  return new TgpuRootImpl(
     await adapter.requestDevice(options?.device),
     options?.jitTranspiler,
   );
