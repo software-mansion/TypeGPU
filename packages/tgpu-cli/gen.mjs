@@ -14,7 +14,7 @@ const LENGTH_VAR = 'arrayLength';
  * @prop {string} inputPath
  * @prop {string} outputPath
  * @prop {boolean} toTs
- * @prop {'commonjs'|'esmodule'} moduleSyntax
+ * @prop {'commonjs' | 'esmodule'} moduleSyntax
  * @prop {'keep'|'overwrite'} [existingFileStrategy]
  * @prop {string[]} [exportsList]
  */
