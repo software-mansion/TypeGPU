@@ -42,22 +42,22 @@ Usage:
   tgpu-cli gen <input> [--output <output>] [--watch] [--commonjs] [--overwrite | --keep]
 
 Options:
-  --input, -i\t The input file or glob pattern.
-  --output, -o\t The output name or pattern for generated file(s). 
-                 If pattern doesn't include a directory, generated files will be in the same directory as their respective inputs.
-                 Placeholder for file name (without extension): *, for directory: **
-                 Default: "*.ts"
-  --watch, -w\t Watch for changes in the input file(s) and regenerate the output file(s).
-  --commonjs\t Generate a CommonJS style file.
+  --input, -i   The input file or glob pattern.
+  --output, -o  The output name or pattern for generated file(s). 
+                If pattern doesn't include a directory, generated files will be in the same directory as their respective inputs.
+                Placeholder for file name (without extension): *, for directory: **
+                Default: "*.ts"
+  --watch, -w   Watch for changes in the input file(s) and regenerate the output file(s).
+  --commonjs    Generate a CommonJS style file.
 
-  --overwrite\t Force overwriting existing files.
-  --keep\t Keep existing files.
+  --overwrite   Overwrite existing files.
+  --keep        Keep existing files.
 `),
 
     execute: async () => {
       const input = args['--input'] ?? args._[1];
       const output = args['--output'] ?? '*.ts';
-      const toCommonJs = args['--commonjs'] ?? false;
+      const moduleSyntax = args['--commonjs'] ? 'commonjs' : 'esmodule';
 
       const watch = args['--watch'] ?? false;
 
@@ -75,7 +75,7 @@ Options:
         exit(1);
       }
 
-      const overwriteMode = args['--overwrite']
+      const existingFileStrategy = args['--overwrite']
         ? 'overwrite'
         : args['--keep']
           ? 'keep'
@@ -124,21 +124,23 @@ Options:
       const outputPathCompiler = createOutputPathCompiler(input, output);
 
       /**
-       * @param { { exitOnError: boolean, files: string[], checkExisting: boolean } } options
+       * @param {{ exitOnError: boolean, files: string[], checkExisting: boolean }} options
        */
       const processFiles = async ({ exitOnError, files, checkExisting }) => {
         const results = await Promise.allSettled(
           files.map(async (file) => {
-            const out = outputPathCompiler(file);
+            const outputhPath = outputPathCompiler(file);
 
-            console.log(`Generating ${file} >>> ${out}`);
-            return generate(
-              file,
-              out,
+            console.log(`Generating ${file} >>> ${outputhPath}`);
+            return generate({
+              input: file,
+              output: outputhPath,
               toTs,
-              toCommonJs,
-              checkExisting ? overwriteMode : 'overwrite',
-            ).catch((error) => {
+              moduleSyntax,
+              existingFileStrategy: checkExisting
+                ? existingFileStrategy
+                : 'overwrite',
+            }).catch((error) => {
               error.file = file;
               throw error;
             });
