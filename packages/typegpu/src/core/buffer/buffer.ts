@@ -1,7 +1,7 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import type { TgpuNamable } from '../../namable';
 import { type TgpuPlum, type Unsubscribe, isPlum } from '../../tgpuPlumTypes';
-import type { TgpuRoot } from '../../tgpuRoot';
+import type { ExperimentalTgpuRoot } from '../../tgpuRoot';
 import { type AnyTgpuData, isGPUBuffer } from '../../types';
 
 // ----------
@@ -52,7 +52,7 @@ export interface TgpuBuffer<TData extends AnyTgpuData> extends TgpuNamable {
 }
 
 export function createBufferImpl<TData extends AnyTgpuData>(
-  group: TgpuRoot | undefined,
+  group: ExperimentalTgpuRoot | undefined,
   typeSchema: TData,
   initialOrBuffer?: Parsed<TData> | TgpuPlum<Parsed<TData>> | GPUBuffer,
 ): TgpuBuffer<TData> {
@@ -104,7 +104,7 @@ class TgpuBufferImpl<TData extends AnyTgpuData> implements TgpuBuffer<TData> {
   public usableAsVertex = false;
 
   constructor(
-    private readonly _group: TgpuRoot | undefined,
+    private readonly _group: ExperimentalTgpuRoot | undefined,
     public readonly dataType: TData,
     public readonly initialOrBuffer?:
       | Parsed<TData>

@@ -11,7 +11,7 @@ import type { SimpleTgpuData, TgpuArray } from './data';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
 import { code } from './tgpuCode';
-import type { TgpuRoot } from './tgpuRoot';
+import type { ExperimentalTgpuRoot } from './tgpuRoot';
 import type {
   AnyTgpuData,
   BoundTgpuCode,
@@ -33,7 +33,7 @@ type BuildOptions = {
 
 export default class ProgramBuilder {
   constructor(
-    private root: TgpuRoot,
+    private root: ExperimentalTgpuRoot,
     private rootNode: TgpuResolvable,
   ) {}
 
@@ -75,7 +75,7 @@ function getUsedBuiltinsNamed(
 
 export class RenderProgramBuilder {
   constructor(
-    private root: TgpuRoot,
+    private root: ExperimentalTgpuRoot,
     private vertexRoot: TgpuCode | BoundTgpuCode,
     private fragmentRoot: TgpuCode | BoundTgpuCode,
     private vertexOutputFormat: {
@@ -248,7 +248,7 @@ export class RenderProgramBuilder {
 
 export class ComputeProgramBuilder {
   constructor(
-    private root: TgpuRoot,
+    private root: ExperimentalTgpuRoot,
     private computeRoot: Wgsl,
     private workgroupSize: readonly [
       number,
