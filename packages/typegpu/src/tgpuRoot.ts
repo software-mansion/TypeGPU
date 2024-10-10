@@ -1,5 +1,7 @@
 import type { Parsed } from 'typed-binary';
 import type { TgpuBuffer } from './core/buffer/buffer';
+import type { TgpuComputePipeline } from './core/pipeline/computePipeline';
+import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline';
 import type { JitTranspiler } from './jitTranspiler';
 import type { PlumListener } from './plumStore';
 import type { TgpuSettable } from './settableTrait';
@@ -19,6 +21,18 @@ import type { Unwrapper } from './unwrapper';
 // ----------
 
 export type SetPlumAction<T> = T | ((prev: T) => T);
+
+export interface WithCompute {
+  createPipeline(): TgpuComputePipeline;
+}
+
+export interface WithVertex {
+  withFragment(): this & WithFragment;
+}
+
+export interface WithFragment {
+  createPipeline(): TgpuRenderPipeline;
+}
 
 export interface TgpuRoot extends Unwrapper {
   readonly device: GPUDevice;
@@ -69,7 +83,8 @@ export interface TgpuRoot extends Unwrapper {
   samplerFor(sampler: TgpuSampler): GPUSampler;
   destroy(): void;
 
-  createPipeline(): void;
+  withCompute(): this & WithCompute;
+  withVertex(): this & WithVertex;
 
   /**
    * Causes all commands enqueued by pipelines to be

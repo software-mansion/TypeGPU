@@ -4,6 +4,7 @@ import {
   createBufferImpl,
   isBuffer,
 } from './core/buffer/buffer';
+import { INTERNAL_createComputePipeline } from './core/pipeline/computePipeline';
 import type { JitTranspiler } from './jitTranspiler';
 import { WeakMemo } from './memo';
 import { type PlumListener, PlumStore } from './plumStore';
@@ -105,6 +106,7 @@ class TgpuRootImpl implements TgpuRoot {
     throw new Error(`Unknown resource type: ${resource}`);
   }
 
+  /** @deprecated */
   textureFor(view: TgpuAnyTexture | TgpuAnyTextureView): GPUTexture {
     let source: TgpuAnyTexture;
     if ('texture' in view) {
@@ -131,6 +133,7 @@ class TgpuRootImpl implements TgpuRoot {
     return texture;
   }
 
+  /** @deprecated */
   viewFor(view: TgpuAnyTextureView): GPUTextureView {
     let textureView = this._textureViews.get(view);
     if (!textureView) {
@@ -140,6 +143,7 @@ class TgpuRootImpl implements TgpuRoot {
     return textureView;
   }
 
+  /** @deprecated */
   externalTextureFor(texture: TgpuTextureExternal): GPUExternalTexture {
     this._externalTexturesStatus.set(texture, 'clean');
     if (texture.descriptor.source === undefined) {
@@ -150,6 +154,7 @@ class TgpuRootImpl implements TgpuRoot {
     );
   }
 
+  /** @deprecated */
   samplerFor(sampler: TgpuSampler): GPUSampler {
     let gpuSampler = this._samplers.get(sampler);
 
@@ -163,6 +168,10 @@ class TgpuRootImpl implements TgpuRoot {
     }
 
     return gpuSampler;
+  }
+
+  createPipeline(): void {
+    return INTERNAL_createComputePipeline(this);
   }
 
   setSource(
