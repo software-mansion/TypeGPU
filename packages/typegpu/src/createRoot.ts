@@ -4,24 +4,17 @@ import {
   createBufferImpl,
   isBuffer,
 } from './core/buffer/buffer';
-import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import { WeakMemo } from './memo';
 import { type PlumListener, PlumStore } from './plumStore';
-import {
-  ComputeProgramBuilder,
-  type Program,
-  RenderProgramBuilder,
-} from './programBuilder';
+import type { Program } from './programBuilder';
 import type { TgpuSettable } from './settableTrait';
 import type { TgpuBindGroup, TgpuBindGroupLayout } from './tgpuBindGroupLayout';
 import { isBindGroup, isBindGroupLayout } from './tgpuBindGroupLayout';
 import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
 import type {
   ComputePipelineExecutorOptions,
-  ComputePipelineOptions,
   RenderPipelineExecutorOptions,
-  RenderPipelineOptions,
   SetPlumAction,
   TgpuRoot,
 } from './tgpuRoot';
@@ -211,102 +204,6 @@ class TgpuRootImpl implements TgpuRoot {
     listener: PlumListener<TValue>,
   ): Unsubscribe {
     return this._plumStore.subscribe(plum, listener);
-  }
-
-  makeRenderPipeline(options: RenderPipelineOptions): RenderPipelineExecutor {
-    const { vertexProgram, fragmentProgram } = new RenderProgramBuilder(
-      this,
-      options.vertex.code,
-      options.fragment.code,
-      options.vertex.output,
-    ).build({
-      bindingGroup: (options.externalLayouts ?? []).length,
-    });
-
-    const vertexShaderModule = this.device.createShaderModule({
-      code: vertexProgram.code,
-    });
-    const fragmentShaderModule = this.device.createShaderModule({
-      code: fragmentProgram.code,
-    });
-
-    const pipelineLayout = this.device.createPipelineLayout({
-      label: options.label ?? '',
-      bindGroupLayouts: [
-        ...(options.externalLayouts ?? []),
-        vertexProgram.bindGroupResolver.getBindGroupLayout(),
-        fragmentProgram.bindGroupResolver.getBindGroupLayout(),
-      ],
-    });
-
-    const renderPipeline = this.device.createRenderPipeline({
-      label: options.label ?? '',
-      layout: pipelineLayout,
-      vertex: {
-        module: vertexShaderModule,
-        buffers:
-          vertexProgram.bindGroupResolver.getVertexBufferDescriptors() ?? [],
-      },
-      fragment: {
-        module: fragmentShaderModule,
-        targets: options.fragment?.target ?? [],
-      },
-      primitive: options.primitive,
-    });
-
-    const executor = new RenderPipelineExecutor(
-      this,
-      renderPipeline,
-      vertexProgram,
-      fragmentProgram,
-      options.externalLayouts?.length ?? 0,
-    );
-
-    this._pipelineExecutors.push(executor);
-    return executor;
-  }
-
-  makeComputePipeline(
-    options: ComputePipelineOptions,
-  ): ComputePipelineExecutor {
-    const program = onGPU(() =>
-      new ComputeProgramBuilder(
-        this,
-        options.code,
-        options.workgroupSize ?? [1],
-      ).build({
-        bindingGroup: (options.externalLayouts ?? []).length,
-      }),
-    );
-
-    const shaderModule = this.device.createShaderModule({
-      code: program.code,
-    });
-
-    const pipelineLayout = this.device.createPipelineLayout({
-      label: options.label ?? '',
-      bindGroupLayouts: [
-        ...(options.externalLayouts ?? []),
-        program.bindGroupResolver.getBindGroupLayout(),
-      ],
-    });
-
-    const computePipeline = this.device.createComputePipeline({
-      label: options.label ?? '',
-      layout: pipelineLayout,
-      compute: {
-        module: shaderModule,
-      },
-    });
-
-    const executor = new ComputePipelineExecutor(
-      this,
-      computePipeline,
-      [program],
-      options.externalLayouts?.length ?? 0,
-    );
-    this._pipelineExecutors.push(executor);
-    return executor;
   }
 
   flush() {
