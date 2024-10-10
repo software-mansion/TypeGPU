@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Context, generate } from '../gen.mjs';
+import { generate } from '../gen.mjs';
 
 describe('structs generator', () => {
   it('generates equivalent tgpu struct definitions from wgsl', () => {
@@ -207,7 +207,56 @@ export const Triangles = (arrayLength) => d.struct({
 });`;
 
     expect(
-      generate(wgsl, new Context({ toTs: false, toCommonJs: false })),
+      generate(wgsl, {
+        input: '',
+        output: '',
+        toTs: false,
+        moduleSyntax: 'esmodule',
+      }),
     ).toContain(expected);
+  });
+
+  it('generates CommonJS style imports and exports with moduleSyntax set to "commonjs"', () => {
+    const wgsl = `
+struct Vertex {
+  vals: vec3<f32>,
+  _pad: f32,
+};
+
+struct Triangle {
+  vertices: array<Vertex, 3>,
+  color: array<u32, 3>,
+};
+
+struct Triangles {
+  tris: array<Triangle>,
+};`;
+
+    const generated = generate(wgsl, {
+      input: '',
+      output: '',
+      toTs: true,
+      moduleSyntax: 'commonjs',
+    });
+
+    expect(generated).not.toContain(`\
+export const Triangles = (arrayLength: number) => d.struct({
+  tris: d.arrayOf(Triangle, arrayLength),
+});`);
+
+    expect(generated).toContain(`\
+const Triangles = (arrayLength: number) => d.struct({
+  tris: d.arrayOf(Triangle, arrayLength),
+});`);
+
+    expect(generated).not.toContain('export const Vertex = d.struct({');
+    expect(generated).toContain('const Vertex = d.struct({');
+
+    expect(generated).toContain("const d = require('typegpu/data');");
+    expect(generated).not.toContain("import * as d from 'typegpu/data';");
+
+    expect(generated).toContain(
+      'module.exports = {Vertex, Triangle, Triangles};',
+    );
   });
 });
