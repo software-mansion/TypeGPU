@@ -1,6 +1,5 @@
 import type { Parsed } from 'typed-binary';
 import type { TgpuBuffer } from './core/buffer/buffer';
-import type { TgpuArray } from './data';
 import type { JitTranspiler } from './jitTranspiler';
 import type { PlumListener } from './plumStore';
 import type { TgpuSettable } from './settableTrait';
@@ -12,7 +11,7 @@ import type {
   TgpuAnyTextureView,
   TgpuTextureExternal,
 } from './tgpuTexture';
-import type { AnyTgpuData, BoundTgpuCode, TgpuCode, TgpuData } from './types';
+import type { AnyTgpuData, BoundTgpuCode, TgpuCode } from './types';
 import type { Unwrapper } from './unwrapper';
 
 // ----------
@@ -70,6 +69,8 @@ export interface TgpuRoot extends Unwrapper {
   samplerFor(sampler: TgpuSampler): GPUSampler;
   destroy(): void;
 
+  createPipeline(): void;
+
   /**
    * Causes all commands enqueued by pipelines to be
    * submitted to the GPU.
@@ -121,36 +122,4 @@ export type ComputePipelineExecutorOptions = {
 
 export interface ComputePipelineExecutor {
   execute(options?: ComputePipelineExecutorOptions): void;
-}
-
-const typeToVertexFormatMap: Record<string, GPUVertexFormat> = {
-  f32: 'float32',
-  vec2f: 'float32x2',
-  vec3f: 'float32x3',
-  vec4f: 'float32x4',
-  u32: 'uint32',
-  vec2u: 'uint32x2',
-  vec3u: 'uint32x3',
-  vec4u: 'uint32x4',
-  i32: 'sint32',
-  vec2i: 'sint32x2',
-  vec3i: 'sint32x3',
-  vec4i: 'sint32x4',
-};
-
-export function deriveVertexFormat<
-  TData extends TgpuData<AnyTgpuData> | TgpuArray<AnyTgpuData>,
->(typeSchema: TData): GPUVertexFormat {
-  if ('expressionCode' in typeSchema) {
-    const code = typeSchema.expressionCode as string;
-    const format = typeToVertexFormatMap[code];
-    if (!format) {
-      throw new Error(`Unsupported vertex format: ${code}`);
-    }
-    return format;
-  }
-  if ('elementType' in typeSchema) {
-    return deriveVertexFormat(typeSchema.elementType as TData);
-  }
-  throw new Error('Invalid vertex format schema');
 }
