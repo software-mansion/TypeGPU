@@ -208,8 +208,8 @@ export const Triangles = (arrayLength) => d.struct({
 
     expect(
       generate(wgsl, {
-        input: '',
-        output: '',
+        inputPath: '',
+        outputPath: '',
         toTs: false,
         moduleSyntax: 'esmodule',
       }),
@@ -233,8 +233,8 @@ struct Triangles {
 };`;
 
     const generated = generate(wgsl, {
-      input: '',
-      output: '',
+      inputPath: '',
+      outputPath: '',
       toTs: true,
       moduleSyntax: 'commonjs',
     });

@@ -11,8 +11,8 @@ const LENGTH_VAR = 'arrayLength';
 
 /**
  * @typedef {object} Options
- * @prop {string} input
- * @prop {string} output
+ * @prop {string} inputPath
+ * @prop {string} outputPath
  * @prop {boolean} toTs
  * @prop {'commonjs'|'esmodule'} moduleSyntax
  * @prop {'keep'|'overwrite'} [existingFileStrategy]
@@ -23,20 +23,20 @@ const LENGTH_VAR = 'arrayLength';
  * @param {Options} options
  */
 async function main(options) {
-  const inputPath = new URL(options.input, cwd);
-  const outputPath = new URL(options.output, cwd);
+  const inputPath = new URL(options.inputPath, cwd);
+  const outputPath = new URL(options.outputPath, cwd);
   const inputContents = await fs.readFile(inputPath, 'utf8');
 
   if (options.existingFileStrategy !== 'overwrite') {
     const fileExists = await fs
-      .access(options.output)
+      .access(options.outputPath)
       .then(() => true)
       .catch(() => false);
 
     if (fileExists) {
       if (options.existingFileStrategy === undefined) {
         console.error(
-          `Error: File ${options.output} already exists. Use --overwrite option to replace existing files or --keep to skip them.`,
+          `Error: File ${options.outputPath} already exists. Use --overwrite option to replace existing files or --keep to skip them.`,
         );
 
         exit(1);
@@ -44,7 +44,7 @@ async function main(options) {
 
       if (options.existingFileStrategy === 'keep') {
         console.log(
-          `Skipping ${options.input}, file ${options.output} already exists.`,
+          `Skipping ${options.inputPath}, file ${options.outputPath} already exists.`,
         );
         return;
       }
@@ -52,7 +52,7 @@ async function main(options) {
   }
 
   const generated = generate(inputContents, options);
-  await fs.mkdir(path.dirname(options.output), { recursive: true });
+  await fs.mkdir(path.dirname(options.outputPath), { recursive: true });
   await fs.writeFile(outputPath, generated);
 }
 
@@ -63,8 +63,8 @@ async function main(options) {
 export function generate(
   wgsl,
   options = {
-    input: '',
-    output: '',
+    inputPath: '',
+    outputPath: '',
     toTs: true,
     moduleSyntax: 'esmodule',
   },

@@ -133,8 +133,8 @@ Options:
 
             console.log(`Generating ${file} >>> ${outputhPath}`);
             return generate({
-              input: file,
-              output: outputhPath,
+              inputPath: file,
+              outputPath: outputhPath,
               toTs,
               moduleSyntax,
               existingFileStrategy: checkExisting
