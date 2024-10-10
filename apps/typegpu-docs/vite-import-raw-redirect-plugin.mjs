@@ -2,9 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { mapValues, values } from 'remeda';
 
 /**
- *
  * @param {*} moduleMap
- * @returns {import('vite').PluginOption}
  */
 function importRawRedirectPlugin(
   /**

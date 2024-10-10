@@ -184,10 +184,11 @@ export function ExampleView({ example, isPlayground = false }: Props) {
                     <Button
                       key={element.key}
                       ref={(button) => setRef(element.key, button)}
-                      label={element.label}
                       onClick={element.onClick}
                       accent
-                    />
+                    >
+                      {element.label}
+                    </Button>
                   );
                 }
 

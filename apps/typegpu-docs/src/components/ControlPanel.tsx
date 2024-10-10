@@ -108,7 +108,7 @@ function SelectRow({
 function ButtonRow({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <div className="grid h-10 col-span-2">
-      <Button label={label} onClick={onClick} />
+      <Button onClick={onClick}>{label}</Button>
     </div>
   );
 }
@@ -167,7 +167,7 @@ export function ControlPanel() {
     <div
       className={cs(
         isGPUSupported ? '' : 'hidden md:flex',
-        'flex flex-col gap-4 p-6 bg-grayscale-0 rounded-xl max-h-[50%] md:max-h-full',
+        'box-border flex flex-col gap-4 p-6 bg-grayscale-0 rounded-xl max-h-[50%] md:max-h-full',
       )}
     >
       <div className="hidden md:flex flex-col gap-4">
@@ -187,12 +187,12 @@ export function ControlPanel() {
           />
         </label>
 
-        <hr className="border-tameplum-100" />
+        <hr className="my-0 box-border w-full border-t border-tameplum-100" />
       </div>
 
       {isGPUSupported ? (
         <>
-          <h2 className="text-xl font-medium">Example controls</h2>
+          <h2 className="m-0 text-xl font-medium">Example controls</h2>
           <div className="grid items-center grid-cols-2 gap-4 overflow-auto p-1 pb-2">
             {exampleControlParams.map((param) => paramToControlRow(param))}
           </div>
