@@ -700,7 +700,7 @@ const vecProxyHandler: ProxyHandler<vecBase> = {
 // ----------
 
 /**
- * Type encompassing all available vector kinds.
+ * Type encompassing all available kinds of vector.
  */
 export type VecKind =
   | 'vec2f'
