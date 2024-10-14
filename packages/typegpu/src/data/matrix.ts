@@ -286,19 +286,52 @@ class mat4x4fImpl extends mat4x4Impl<vec4f> implements mat4x4f {
 // Public API
 // ----------
 
+/**
+ * Interface representing its WGSL matrix type counterpart: mat2x2
+ * A matrix with 2 rows and 2 columns, with elements of type `TColumn`
+ */
 export interface mat2x2<TColumn> extends matBase<TColumn> {
   [0]: TColumn;
   [1]: TColumn;
   [idx: number]: TColumn | undefined;
 }
 
+/**
+ * Interface representing its WGSL matrix type counterpart: mat2x2f or mat2x2<f32>
+ * A matrix with 2 rows and 2 columns, with elements of type d.f32
+ */
 export interface mat2x2f extends mat2x2<vec2f> {}
 
+/**
+ * Type of the `d.mat2x2f` object/function: matrix data type schema/constructor
+ */
 export type Mat2x2f = TgpuData<mat2x2f> &
   ((...elements: number[]) => mat2x2f) &
   ((...columns: vec2f[]) => mat2x2f) &
   (() => mat2x2f);
 
+/**
+ *
+ * Schema representing mat2x2f - a matrix with 2 rows and 2 columns, with elements of type f32.
+ * Also a constructor function for this matrix type.
+ *
+ * @example
+ * const zero2x2 = mat2x2f(); // filled with zeros
+ *
+ * @example
+ * const mat = mat2x2f(0, 1, 2, 3);
+ * mat[0] // vec2f(0, 1)
+ * mat[1] // vec2f(2, 3)
+ *
+ * @example
+ * const mat = mat2x2f(
+ *  vec2f(0, 1), // column 0
+ *  vec2f(1, 2), // column 1
+ * );
+ *
+ * @example
+ * const buffer = root.createBuffer(d.mat2x2f, d.mat2x2f(0, 1, 2, 3)); // buffer holding a d.mat2x2f value, with an initial value of ((0, 1), (2, 3))
+ */
 export const mat2x2f = createMatSchema({
   label: 'mat2x2f',
   columnType: vec2f,
@@ -309,6 +342,10 @@ export const mat2x2f = createMatSchema({
   makeFromElements: (...elements: number[]) => new mat2x2fImpl(...elements),
 }) as Mat2x2f;
 
+/**
+ * Interface representing its WGSL matrix type counterpart: mat3x3
+ * A matrix with 3 rows and 3 columns, with elements of type `TColumn`
+ */
 export interface mat3x3<TColumn> extends matBase<TColumn> {
   [0]: TColumn;
   [1]: TColumn;
@@ -316,13 +353,44 @@ export interface mat3x3<TColumn> extends matBase<TColumn> {
   [idx: number]: TColumn | undefined;
 }
 
+/**
+ * Interface representing its WGSL matrix type counterpart: mat3x3f or mat3x3<f32>
+ * A matrix with 3 rows and 3 columns, with elements of type d.f32
+ */
 export interface mat3x3f extends mat3x3<vec3f> {}
 
+/**
+ * Type of the `d.mat3x3f` object/function: matrix data type schema/constructor
+ */
 export type Mat3x3f = TgpuData<mat3x3f> &
   ((...elements: number[]) => mat3x3f) &
   ((...columns: vec3f[]) => mat3x3f) &
   (() => mat3x3f);
 
+/**
+ *
+ * Schema representing mat3x3f - a matrix with 3 rows and 3 columns, with elements of type f32.
+ * Also a constructor function for this matrix type.
+ *
+ * @example
+ * const zero3x3 = mat3x3f(); // filled with zeros
+ *
+ * @example
+ * const mat = mat3x3f(0, 1, 2, 3, 4, 5, 6, 7, 8);
+ * mat[0] // vec3f(0, 1, 2)
+ * mat[1] // vec3f(3, 4, 5)
+ * mat[2] // vec3f(6, 7, 8)
+ *
+ * @example
+ * const mat = mat3x3f(
+ *  vec3f(0, 1, 2), // column 0
+ *  vec3f(2, 3, 4), // column 1
+ *  vec3f(5, 6, 7), // column 2
+ * );
+ *
+ * @example
+ * const buffer = root.createBuffer(d.mat3x3f, d.mat3x3f()); // buffer holding a d.mat3x3f value, with an initial value of mat3x3f filled with zeros
+ */
 export const mat3x3f = createMatSchema({
   label: 'mat3x3f',
   columnType: vec3f,
@@ -334,6 +402,10 @@ export const mat3x3f = createMatSchema({
   makeFromElements: (...elements: number[]) => new mat3x3fImpl(...elements),
 }) as Mat3x3f;
 
+/**
+ * Interface representing its WGSL matrix type counterpart: mat4x4
+ * A matrix with 4 rows and 4 columns, with elements of type `TColumn`
+ */
 export interface mat4x4<TColumn> extends matBase<TColumn> {
   [0]: TColumn;
   [1]: TColumn;
@@ -342,13 +414,46 @@ export interface mat4x4<TColumn> extends matBase<TColumn> {
   [idx: number]: TColumn | undefined;
 }
 
+/**
+ * Interface representing its WGSL matrix type counterpart: mat4x4f or mat4x4<f32>
+ * A matrix with 4 rows and 4 columns, with elements of type d.f32
+ */
 export interface mat4x4f extends mat4x4<vec4f> {}
 
+/**
+ * Type of the `d.mat4x4f` object/function: matrix data type schema/constructor
+ */
 export type Mat4x4f = TgpuData<mat4x4f> &
   ((...elements: number[]) => mat4x4f) &
   ((...columns: vec4f[]) => mat4x4f) &
   (() => mat4x4f);
 
+/**
+ *
+ * Schema representing mat4x4f - a matrix with 4 rows and 4 columns, with elements of type f32.
+ * Also a constructor function for this matrix type.
+ *
+ * @example
+ * const zero4x4 = mat4x4f(); // filled with zeros
+ *
+ * @example
+ * const mat = mat3x3f(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+ * mat[0] // vec4f(0, 1, 2, 3)
+ * mat[1] // vec4f(4, 5, 6, 7)
+ * mat[2] // vec4f(8, 9, 10, 11)
+ * mat[3] // vec4f(12, 13, 14, 15)
+ *
+ * @example
+ * const mat = mat3x3f(
+ *  vec4f(0, 1, 2, 3),     // column 0
+ *  vec4f(4, 5, 6, 7),     // column 1
+ *  vec4f(8, 9, 10, 11),   // column 2
+ *  vec4f(12, 13, 14, 15), // column 3
+ * );
+ *
+ * @example
+ * const buffer = root.createBuffer(d.mat4x4f, d.mat4x4f()); // buffer holding a d.mat4x4f value, with an initial value of mat4x4f filled with zeros
+ */
 export const mat4x4f = createMatSchema({
   label: 'mat4x4f',
   columnType: vec4f,
