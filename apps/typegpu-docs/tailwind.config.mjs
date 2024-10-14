@@ -53,6 +53,15 @@ export default {
           'blue-dark': '#0058DD',
         },
       },
+      keyframes: {
+        'scroll-bg-y': {
+          '0%': { backgroundPosition: 'center 0rem' },
+          '100%': { backgroundPosition: 'center 2rem' },
+        },
+      },
+      animation: {
+        'scroll-bg-y-slow': 'scroll-bg-y 3s linear infinite',
+      },
     },
 
     screens: {
