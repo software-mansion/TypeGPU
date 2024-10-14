@@ -39,8 +39,16 @@ export type TgpuLayoutEntryBase = {
 export type TgpuLayoutUniform = TgpuLayoutEntryBase & {
   uniform: AnyTgpuData;
 };
+export type TgpuRuntimeSizedLayoutUniform = TgpuLayoutEntryBase & {
+  uniform: (arrayLength: number) => AnyTgpuData;
+};
 export type TgpuLayoutStorage = TgpuLayoutEntryBase & {
   storage: AnyTgpuData;
+  /** @default 'readonly' */
+  access?: 'mutable' | 'readonly';
+};
+export type TgpuRuntimeSizedLayoutStorage = TgpuLayoutEntryBase & {
+  storage: (arrayLength: number) => AnyTgpuData;
   /** @default 'readonly' */
   access?: 'mutable' | 'readonly';
 };
@@ -169,9 +177,26 @@ export type TgpuBindGroup<
 };
 
 export function bindGroupLayout<
-  Entries extends Record<string, TgpuLayoutEntry | null>,
->(entries: Entries): TgpuBindGroupLayout<Entries> {
-  return createBindGroupLayout(entries);
+  Entries extends Record<
+    string,
+    | TgpuLayoutEntry
+    | TgpuRuntimeSizedLayoutUniform
+    | TgpuRuntimeSizedLayoutStorage
+    | null
+  >,
+>(entries: Entries): TgpuBindGroupLayout<InvokedRuntimeSized<Entries>> {
+  for (const value of Object.values(entries)) {
+    if (value && 'uniform' in value && typeof value.uniform === 'function') {
+      value.uniform = value.uniform(0);
+    } else if (
+      value &&
+      'storage' in value &&
+      typeof value.storage === 'function'
+    ) {
+      value.storage = value.storage(0);
+    }
+  }
+  return new TgpuBindGroupLayoutImpl(entries as InvokedRuntimeSized<Entries>);
 }
 
 export function isBindGroupLayout<T extends TgpuBindGroupLayout>(
@@ -211,11 +236,23 @@ const DEFAULT_READONLY_VISIBILITY: TgpuShaderStage[] = [
   'fragment',
 ];
 
-function createBindGroupLayout<
-  Entries extends Record<string, TgpuLayoutEntry | null>,
->(entries: Entries): TgpuBindGroupLayout<Entries> {
-  return new TgpuBindGroupLayoutImpl(entries);
-}
+type InvokedRuntimeSized<
+  Entries extends Record<
+    string,
+    | TgpuLayoutEntry
+    | TgpuRuntimeSizedLayoutUniform
+    | TgpuRuntimeSizedLayoutStorage
+    | null
+  >,
+> = {
+  [K in keyof Entries]: Entries[K] extends TgpuRuntimeSizedLayoutUniform
+    ? TgpuLayoutUniform
+    : Entries[K] extends TgpuRuntimeSizedLayoutStorage
+      ? TgpuLayoutStorage
+      : Entries[K] extends TgpuLayoutEntry
+        ? Entries[K]
+        : null;
+};
 
 class TgpuBindGroupLayoutImpl<
   Entries extends Record<string, TgpuLayoutEntry | null>,
