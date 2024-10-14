@@ -1,14 +1,23 @@
 ---
 const { status = true } = Astro.props;
 const content = await Astro.slots.render('default');
-const statusColor = status ? 'before:bg-green-900' : 'before:bg-red-900';
-const plusOrMinus = status ? 'before:content-["+"]' : 'before:content-["-"]';
+
+const styles = {
+  statusColor: status ? 'before:bg-green-900' : 'before:bg-red-900',
+  borderColor: status ? 'before:border-green-600' : 'before:border-red-600',
+  contentColor: status ? 'before:text-green-600' : 'before:text-red-600',
+  plusOrMinus: status ? 'before:content-["+"]' : 'before:content-["-"]'
+};
 ---
 
 <div class:list={[
-  "inline-block before:content-[''] before:block before:pl-1 before:absolute before:left-0 before:right-0 before:h-[22.75px] before:mix-blend-lighten",
-  statusColor,
-  plusOrMinus,
+  "inline-block before:block before:border-l-2 before:pl-1 before:mix-blend-lighten",
+  "before:flex before:items-center",
+  "before:absolute before:left-0 before:right-0 before:h-[24.75px]",
+  styles.statusColor,
+  styles.contentColor,
+  styles.borderColor,
+  styles.plusOrMinus,
 ]}>
     <span set:html={content} />
 </div>
