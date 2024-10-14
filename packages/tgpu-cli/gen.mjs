@@ -177,11 +177,17 @@ function generateStruct(struct, options) {
 }
 
 /**
+ * @param {TypeInfo} type_
+ */
+function isVarLengthArray(type_) {
+  return type_ instanceof ArrayInfo && type_.size === 0;
+}
+
+/**
  * @param {StructInfo} struct
  */
 function hasVarLengthMember(struct) {
-  const member = struct.members[struct.members.length - 1].type;
-  return member instanceof ArrayInfo && member.size === 0;
+  return isVarLengthArray(struct.members[struct.members.length - 1].type);
 }
 
 /**
@@ -333,7 +339,11 @@ function generateVariable(variable, options) {
  */
 function generateUniformVariable(variable, options) {
   return `{
-    uniform: ${generateType(variable.type, options)},
+    uniform: ${
+      isVarLengthArray(variable.type)
+        ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => `
+        : ''
+    }${generateType(variable.type, options)},
   }`;
 }
 
@@ -343,7 +353,11 @@ function generateUniformVariable(variable, options) {
  */
 function generateStorageVariable(variable, options) {
   return `{
-    storage: ${generateType(variable.type, options)},${
+    storage: ${
+      isVarLengthArray(variable.type)
+        ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => `
+        : ''
+    }${generateType(variable.type, options)},${
       variable.access ? `\n    access: '${ACCESS_TYPES[variable.access]}',` : ''
     }
   }`;
