@@ -31,7 +31,7 @@ jobs:
         run: pnpm install -g dpdm
 
       - name: Check circular dependencies
-        run: dpdm --exit-code circular:1 packages/**/index.ts -T
+        run: dpdm --exit-code circular:1 packages/**/index.ts -T --no-progress
 
   biome-check:
     runs-on: ubuntu-latest

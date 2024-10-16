@@ -20,9 +20,9 @@ importers:
       '@vitest/ui':
         specifier: 0.33.0
         version: 0.33.0(vitest@0.33.0)
-      dpdm:
-        specifier: ^3.14.0
-        version: 3.14.0
+      dpdm-fast:
+        specifier: ^1.0.5
+        version: 1.0.5
       jsdom:
         specifier: ^24.0.0
         version: 24.0.0
@@ -950,7 +950,7 @@ packages:
     resolution: {integrity: sha512-bV21/9LQmcQeCPEg3BDFtvwL6cwiTMksYNWQQ4KOxCZikEGalWtenoZ0wCiukJINlGCIi2KXx01g4FoH/LxpzQ==}
     requiresBuild: true
     dependencies:
-      tslib: 2.6.3
+      tslib: 2.8.0
     dev: false
     optional: true
 
@@ -3896,16 +3896,17 @@ packages:
     resolution: {integrity: sha512-+HlytyjlPKnIG8XuRG8WvmBP8xs8P71y+SKKS6ZXWoEgLuePxtDoUEiH7WkdePWrQ5JBpE6aoVqfZfJUQkjXwA==}
     dev: false
 
-  /dpdm@3.14.0:
-    resolution: {integrity: sha512-YJzsFSyEtj88q5eTELg3UWU7TVZkG1dpbF4JDQ3t1b07xuzXmdoGeSz9TKOke1mUuOpWlk4q+pBh+aHzD6GBTg==}
+  /dpdm-fast@1.0.5:
+    resolution: {integrity: sha512-44XXnQT3wjIMN4p+krixuGMjB4DIi74veaQTYmfCDToe7v0N6nFGnuECBVAGjQqgeQJyB0YTIlq0DLPYkLfx3g==}
     hasBin: true
+    requiresBuild: true
     dependencies:
       chalk: 4.1.2
       fs-extra: 11.2.0
       glob: 10.3.10
       ora: 5.4.1
-      tslib: 2.6.3
-      typescript: 5.5.4
+      tslib: 2.8.0
+      typescript: 5.6.3
       yargs: 17.7.2
     dev: true
 
@@ -7438,6 +7439,10 @@ packages:
   /tslib@2.6.3:
     resolution: {integrity: sha512-xNvxJEOUiWPGhUuUdQgAJPKOOJfGnIyKySOc09XkKsgdUV/3E2zvwZYdejjmRgPCgcym1juLH3226yA7sEFJKQ==}
     requiresBuild: true
+    dev: false
+
+  /tslib@2.8.0:
+    resolution: {integrity: sha512-jWVzBLplnCmoaTr13V9dYbiQ99wvZRd0vNWaDRg+aVYRcjDF3nDksxFDE/+fkXnKhpnUUkmx5pK/v8mCtLVqZA==}
 
   /tsup@8.0.2(typescript@5.3.3):
     resolution: {integrity: sha512-NY8xtQXdH7hDUAZwcQdY/Vzlw9johQsaqf7iwZ6g1DOUlFYQ5/AtVAjTvihhEyeRlGo4dLRVHtrRaL35M1daqQ==}
@@ -7601,6 +7606,12 @@ packages:
     resolution: {integrity: sha512-Mtq29sKDAEYP7aljRgtPOpTvOfbwRWlS6dPRzwjdE+C0R4brX/GUyhHSecbHMFLNBLcJIPt9nl9yG5TZ1weH+Q==}
     engines: {node: '>=14.17'}
     hasBin: true
+
+  /typescript@5.6.3:
+    resolution: {integrity: sha512-hjcS1mhfuyi4WW8IWtjP7brDrG2cuDZukyrYrSauoXGNgx0S7zceP07adYkJycEr56BOUTNPzbInooiN3fn1qw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+    dev: true
 
   /uc.micro@2.1.0:
     resolution: {integrity: sha512-ARDJmphmdvUk6Glw7y9DQ2bFkKBHwQHLi2lsaH6PPmz/Ka9sFOBsBluozhDltWmnv9u/cF6Rt87znRTPV+yp/A==}
