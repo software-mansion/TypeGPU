@@ -72,12 +72,12 @@ const thresholdPlum = addSliderPlumParameter('threshold', 0.5, {
 const thresholdBuffer = root
   .createBuffer(f32, thresholdPlum)
   .$name('threshold')
-  .$usage(tgpu.Uniform);
+  .$usage('uniform');
 
 const colorBuffer = root
   .createBuffer(vec3f, vec3f(0, 1.0, 0))
   .$name('colorBuffer')
-  .$usage(tgpu.Uniform);
+  .$usage('uniform');
 
 const sampler = wgsl.sampler({
   magFilter: 'linear',

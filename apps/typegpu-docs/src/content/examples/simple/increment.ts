@@ -18,7 +18,7 @@ const root = await tgpu.init();
 const counterBuffer = root
   .createBuffer(u32, 0)
   .$name('counter')
-  .$usage(tgpu.Storage);
+  .$usage('storage');
 
 const pipeline = root.makeComputePipeline({
   code: wgsl`${asMutable(counterBuffer)} += 1;`,

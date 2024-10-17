@@ -195,8 +195,8 @@ When creating a buffer using the TypeGPU API, you can use the `.$usage()` builde
 
 ```ts
 const buffer = tgpu.createBuffer(u32)
-  .$usage(tgpu.Uniform)
-  .$usage(tgpu.Storage)
+  .$usage('uniform')
+  .$usage('storage')
   .$device(device);
 ```
 
@@ -205,7 +205,7 @@ You can also add all flags in a single `$usage()`.
 ```ts
 
 const buffer = tgpu.createBuffer(u32)
-  .$usage(tgpu.Uniform, tgpu.Storage)
+  .$usage('uniform', 'storage')
   .$device(device);
 
 ```
@@ -215,7 +215,7 @@ const buffer = tgpu.createBuffer(u32)
   ```ts
   // TgpuBuffer<U32> & Uniform & Storage & Unmanaged
   const buffer = tgpu.createBuffer(u32)
-    .$usage(tpu.Uniform, tgpu.Storage);
+    .$usage(tpu.Uniform, 'storage');
     .$device(device)
   ```
 :::
@@ -436,7 +436,7 @@ const colorToInit = vec3f(0.2, 0.5, 1.0);
 +    colorFrom: colorFromInit,
 +    colorTo: colorToInit,
 +  })
-+  .$usage(tgpu.Uniform)
++  .$usage('uniform')
 +  .$device(device);
 
 // this is now redundant as the buffer will be initialized on creation
