@@ -80,6 +80,10 @@ export default defineConfig({
               slug: 'guides/tgpu-buffer-api',
             },
             {
+              label: 'Bind Groups',
+              slug: 'guides/bind-groups',
+            },
+            {
               label: 'Defining Data Types',
               slug: 'guides/defining-data-types',
             },
