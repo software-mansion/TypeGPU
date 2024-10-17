@@ -15,7 +15,6 @@ import { createOutputPathCompiler } from './outputPathCompiler.mjs';
 const args = arg({
   '--version': Boolean,
   '--help': Boolean,
-  '--input': String,
   '--output': String,
   '--commonjs': Boolean,
   '--overwrite': Boolean,
@@ -24,7 +23,6 @@ const args = arg({
 
   '-v': '--version',
   '-h': '--help',
-  '-i': '--input',
   '-o': '--output',
   '-w': '--watch',
 });
@@ -38,11 +36,12 @@ const COMMANDS = {
 Generate a ts/js file from a wgsl file.
 
 Usage:
-  tgpu-cli gen --input <input> [--output <output>] [--watch] [--commonjs] [--overwrite | --keep]
   tgpu-cli gen <input> [--output <output>] [--watch] [--commonjs] [--overwrite | --keep]
 
+Arguments:
+  <input>       The input file or glob pattern.
+
 Options:
-  --input, -i   The input file or glob pattern.
   --output, -o  The output name or pattern for generated file(s). 
                 If pattern doesn't include a directory, generated files will be in the same directory as their respective inputs.
                 Placeholder for file name (without extension): *, for directory: **
@@ -55,7 +54,7 @@ Options:
 `),
 
     execute: async () => {
-      const input = args['--input'] ?? args._[1];
+      const input = args._[1];
       const output = args['--output'] ?? '*.ts';
       const moduleSyntax = args['--commonjs'] ? 'commonjs' : 'esmodule';
 
@@ -63,7 +62,7 @@ Options:
 
       if (!input) {
         console.error(
-          `${color.Red}Error: Missing required argument: --input${color.Reset}`,
+          `${color.Red}Error: Missing required positional argument (<input>)${color.Reset}`,
         );
         exit(1);
       }
