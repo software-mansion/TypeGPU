@@ -215,7 +215,7 @@ const buffer = tgpu.createBuffer(u32)
   ```ts
   // TgpuBuffer<U32> & Uniform & Storage & Unmanaged
   const buffer = tgpu.createBuffer(u32)
-    .$usage(tpu.Uniform, 'storage');
+    .$usage('uniform', 'storage');
     .$device(device)
   ```
 :::
