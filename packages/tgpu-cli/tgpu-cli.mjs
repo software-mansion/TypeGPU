@@ -3,6 +3,7 @@
 // @ts-check
 
 import { readFileSync } from 'node:fs';
+import { access } from 'node:fs/promises';
 import path from 'node:path';
 import { exit } from 'node:process';
 import arg from 'arg';
@@ -94,7 +95,7 @@ Options:
       }
 
       const toTs = extension.toLowerCase().endsWith('ts');
-      const files = await glob(input);
+      let files = await glob(input);
 
       if (files.length === 0) {
         console.warn(
@@ -123,10 +124,32 @@ Options:
 
       const outputPathCompiler = createOutputPathCompiler(input, output);
 
+      const existingFiles = files
+        .map((file) => outputPathCompiler(file))
+        .filter(
+          async (outputFile) =>
+            await access(outputFile)
+              .then(() => true)
+              .catch(() => false),
+        );
+
+      if (existingFiles.length > 0 && existingFileStrategy === undefined) {
+        console.error(
+          `Error: The following file(s) already exist: [${existingFiles.join(', ')}]. Use --overwrite option to replace existing files or --keep to skip them.`,
+        );
+
+        exit(1);
+      }
+
+      files =
+        existingFileStrategy === 'keep'
+          ? files.filter((file) => !existingFiles.includes(file))
+          : files;
+
       /**
-       * @param {{ exitOnError: boolean, files: string[], checkExisting: boolean }} options
+       * @param {{ exitOnError: boolean, files: string[] }} options
        */
-      const processFiles = async ({ exitOnError, files, checkExisting }) => {
+      const processFiles = async ({ exitOnError, files }) => {
         const results = await Promise.allSettled(
           files.map(async (file) => {
             const outputPath = outputPathCompiler(file);
@@ -137,9 +160,6 @@ Options:
               outputPath,
               toTs,
               moduleSyntax,
-              existingFileStrategy: checkExisting
-                ? existingFileStrategy
-                : 'overwrite',
             }).catch((error) => {
               error.file = file;
               throw error;
@@ -165,7 +185,7 @@ Options:
         }
       };
 
-      processFiles({ exitOnError: !watch, files, checkExisting: true });
+      processFiles({ exitOnError: !watch, files });
 
       if (watch) {
         console.log(`${color.Cyan}Watching for changes...${color.Reset}`);
@@ -174,7 +194,6 @@ Options:
           await processFiles({
             exitOnError: false,
             files: [file],
-            checkExisting: false,
           });
         });
       }
