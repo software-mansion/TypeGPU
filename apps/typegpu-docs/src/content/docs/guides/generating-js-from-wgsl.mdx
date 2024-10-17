@@ -427,7 +427,7 @@ const textures = [0, 1].map(() => {
 - })();
 + const buffer0 = root
 +   .createBuffer(u32, 0)
-+   .$usage(tgpu.Uniform);
++   .$usage('uniform');
 
 // A buffer with 1 in it. Binding this buffer is used to set `flip` to 1
 - const buffer1 = (() => {
@@ -442,7 +442,7 @@ const textures = [0, 1].map(() => {
 - })();
 + const buffer1 = root
 +   .createBuffer(u32, 1)
-+   .$usage(tgpu.Uniform);
++   .$usage('uniform');
 
 - const blurParamsBuffer = device.createBuffer({
 -   size: 8,
@@ -450,7 +450,7 @@ const textures = [0, 1].map(() => {
 - });
 + const blurParamsBuffer = root
 +   .createBuffer(Params)
-+   .$usage(tgpu.Uniform);
++   .$usage('uniform');
 
 - const computeConstants = device.createBindGroup({
 -   layout: blurPipeline.getBindGroupLayout(0),

@@ -227,7 +227,7 @@ const Params = struct({
 const paramsBuffer = tgpu
   .createBuffer(Params, presets.default)
   .$device(device)
-  .$usage(tgpu.Storage);
+  .$usage('storage');
 
 const triangleVertexBuffer = tgpu
   .createBuffer(arrayOf(f32, 6), [
@@ -239,7 +239,7 @@ const triangleVertexBuffer = tgpu
     -triangleSize / 2,
   ])
   .$device(device)
-  .$usage(tgpu.Vertex);
+  .$usage('vertex');
 
 const TriangleInfoStruct = struct({
   position: vec2f,
@@ -249,7 +249,7 @@ const trianglePosBuffers = Array.from({ length: 2 }, () =>
   tgpu
     .createBuffer(arrayOf(TriangleInfoStruct, triangleAmount))
     .$device(device)
-    .$usage(tgpu.Storage, tgpu.Uniform),
+    .$usage('storage', 'uniform'),
 );
 
 const randomizePositions = () => {
@@ -265,7 +265,7 @@ randomizePositions();
 const colorPaletteBuffer = tgpu
   .createBuffer(vec3f, colorPresets.jeans)
   .$device(device)
-  .$usage(tgpu.Uniform);
+  .$usage('uniform');
 
 const updateColorPreset = (newColorPreset: ColorPresets) => {
   tgpu.write(colorPaletteBuffer, colorPresets[newColorPreset]);
