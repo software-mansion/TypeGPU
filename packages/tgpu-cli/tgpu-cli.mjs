@@ -95,23 +95,23 @@ Options:
       }
 
       const toTs = extension.toLowerCase().endsWith('ts');
-      let files = await glob(input);
+      const allMatchedFiles = await glob(input);
 
-      if (files.length === 0) {
+      if (allMatchedFiles.length === 0) {
         console.warn(
           `${color.Yellow}Warning: No files found for pattern: "${input}"${color.Reset}`,
         );
         exit(0);
       }
 
-      if (files.length > 1 && !output.includes('*')) {
+      if (allMatchedFiles.length > 1 && !output.includes('*')) {
         console.error(
-          `${color.Red}Error: More than one file found (${files.join(', ')}), while a non-pattern output name was provided ${color.Reset}`,
+          `${color.Red}Error: More than one file found (${allMatchedFiles.join(', ')}), while a non-pattern output name was provided ${color.Reset}`,
         );
         exit(1);
       }
 
-      const fileNames = files.map((file) => path.parse(file).name);
+      const fileNames = allMatchedFiles.map((file) => path.parse(file).name);
       const duplicates = fileNames.filter(
         (name, index) => fileNames.indexOf(name) !== index,
       );
@@ -124,14 +124,18 @@ Options:
 
       const outputPathCompiler = createOutputPathCompiler(input, output);
 
-      const existingFiles = files
-        .map((file) => outputPathCompiler(file))
-        .filter(
+      const existingFiles = await Promise.all(
+        allMatchedFiles.map(outputPathCompiler).map(
           async (outputFile) =>
             await access(outputFile)
               .then(() => true)
               .catch(() => false),
-        );
+        ),
+      ).then((existsResults) =>
+        existsResults.flatMap((exists, index) =>
+          exists ? [allMatchedFiles[index]] : [],
+        ),
+      );
 
       if (existingFiles.length > 0 && existingFileStrategy === undefined) {
         console.error(
@@ -141,10 +145,17 @@ Options:
         exit(1);
       }
 
-      files =
+      const files =
         existingFileStrategy === 'keep'
-          ? files.filter((file) => !existingFiles.includes(file))
-          : files;
+          ? allMatchedFiles.filter((file) => !existingFiles.includes(file))
+          : allMatchedFiles;
+
+      if (files.length === 0) {
+        console.warn(
+          `${color.Yellow}Warning: All output files already exist, while the option was set to keep existing files. Exiting..."${color.Reset}`,
+        );
+        exit(0);
+      }
 
       /**
        * @param {{ exitOnError: boolean, files: string[] }} options
