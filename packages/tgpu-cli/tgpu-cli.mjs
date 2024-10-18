@@ -124,33 +124,49 @@ Options:
 
       const outputPathCompiler = createOutputPathCompiler(input, output);
 
-      const existingFiles = await Promise.all(
-        allMatchedFiles.map(outputPathCompiler).map(
-          async (outputFile) =>
-            await access(outputFile)
-              .then(() => true)
-              .catch(() => false),
-        ),
-      ).then((existsResults) =>
-        existsResults.flatMap((exists, index) =>
-          exists ? [allMatchedFiles[index]] : [],
-        ),
-      );
+      const existingFilesIO =
+        existingFileStrategy === 'overwrite'
+          ? []
+          : await Promise.all(
+              allMatchedFiles
+                .map((input) => ({ input, output: outputPathCompiler(input) }))
+                .map(
+                  async ({ input, output }) =>
+                    await access(output)
+                      .then(() => ({
+                        input,
+                        output,
+                        outputExists: true,
+                      }))
+                      .catch(() => ({
+                        input,
+                        output,
+                        outputExists: false,
+                      })),
+                ),
+            ).then((existsResultsIO) =>
+              existsResultsIO.flatMap(({ input, output, outputExists }) =>
+                outputExists ? [{ input, output }] : [],
+              ),
+            );
 
-      if (existingFiles.length > 0 && existingFileStrategy === undefined) {
+      if (existingFilesIO.length > 0 && existingFileStrategy === undefined) {
         console.error(
-          `Error: The following file(s) already exist: [${existingFiles.join(', ')}]. Use --overwrite option to replace existing files or --keep to skip them.`,
+          `Error: The following file(s) already exist: [${existingFilesIO.map(({ output }) => output).join(', ')}]. Use --overwrite option to replace existing files or --keep to skip them.`,
         );
 
         exit(1);
       }
 
-      const files =
+      const inputFiles =
         existingFileStrategy === 'keep'
-          ? allMatchedFiles.filter((file) => !existingFiles.includes(file))
+          ? allMatchedFiles.filter(
+              (file) =>
+                !existingFilesIO.map(({ input }) => input).includes(file),
+            )
           : allMatchedFiles;
 
-      if (files.length === 0) {
+      if (inputFiles.length === 0) {
         console.warn(
           `${color.Yellow}Warning: All output files already exist, while the option was set to keep existing files. Exiting..."${color.Reset}`,
         );
@@ -158,11 +174,11 @@ Options:
       }
 
       /**
-       * @param {{ exitOnError: boolean, files: string[] }} options
+       * @param {{ exitOnError: boolean, inputFiles: string[] }} options
        */
-      const processFiles = async ({ exitOnError, files }) => {
+      const processFiles = async ({ exitOnError, inputFiles }) => {
         const results = await Promise.allSettled(
-          files.map(async (file) => {
+          inputFiles.map(async (file) => {
             const outputPath = outputPathCompiler(file);
 
             console.log(`Generating ${file} >>> ${outputPath}`);
@@ -196,15 +212,15 @@ Options:
         }
       };
 
-      processFiles({ exitOnError: !watch, files });
+      processFiles({ exitOnError: !watch, inputFiles });
 
       if (watch) {
         console.log(`${color.Cyan}Watching for changes...${color.Reset}`);
-        const watcher = chokidar.watch(files);
+        const watcher = chokidar.watch(inputFiles);
         watcher.on('change', async (file) => {
           await processFiles({
             exitOnError: false,
-            files: [file],
+            inputFiles: [file],
           });
         });
       }
