@@ -133,16 +133,8 @@ Options:
                 .map(
                   async ({ input, output }) =>
                     await access(output)
-                      .then(() => ({
-                        input,
-                        output,
-                        outputExists: true,
-                      }))
-                      .catch(() => ({
-                        input,
-                        output,
-                        outputExists: false,
-                      })),
+                      .then(() => ({ input, output, outputExists: true }))
+                      .catch(() => ({ input, output, outputExists: false })),
                 ),
             ).then((existsResultsIO) =>
               existsResultsIO.flatMap(({ input, output, outputExists }) =>
