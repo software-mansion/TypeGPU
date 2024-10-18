@@ -149,7 +149,7 @@ export const NewStruct = d.struct({
   it('throws for structs with members of unrecognized types', () => {
     const wgsl = `
 struct NewStruct {
-    x: T,
+  x: T,
 }`;
 
     expect(() => generate(wgsl)).toThrow();
@@ -257,6 +257,30 @@ const Triangles = (arrayLength: number) => d.struct({
 
     expect(generated).toContain(
       'module.exports = {Vertex, Triangle, Triangles};',
+    );
+  });
+
+  it('sorts struct definitions topologically', () => {
+    const wgsl = `
+struct A {
+  d: D,
+};
+
+struct C {
+  a: A,
+  b: array<B, 1>,
+};
+
+struct B {
+  a: A,
+};
+
+struct D {
+  x: u32,
+};`;
+
+    expect(generate(wgsl)).toMatch(
+      /.*const D = .*const A = .*const B = .*const C = .*/s,
     );
   });
 });
