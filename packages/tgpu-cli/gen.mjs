@@ -85,6 +85,7 @@ import * as d from 'typegpu/data';`
 ${generateStructs(reflect.structs, options)}
 ${generateAliases(reflect.aliases, options)}
 ${generateBindGroupLayouts(reflect.getBindGroups(), options)}
+${generateFunctions(reflect.functions, wgsl, options)}
 ${generateExports(options)}
 `;
 }
@@ -163,7 +164,9 @@ function generateType(type_, checkNonZeroLength = true) {
             type_.name === 'atomic' &&
             type_.format
           ? `d.atomic(${generateType(type_.format)})`
-          : `d.${replaceWithAlias(type_)}`;
+          : type_.size === 0
+            ? `${type_.name}(0)`
+            : `d.${replaceWithAlias(type_)}`;
 
   return (
     type_.attributes?.reduce(
@@ -210,7 +213,7 @@ ${bindGroups
     (group, index) => `\
 ${declareConst(`layout${index}`, options)} = tgpu.bindGroupLayout({
   ${generateGroupLayout(group)}
-}).$forceIndex(${index});`,
+});`,
   )
   .join('\n\n')}`
     : '';
@@ -261,7 +264,7 @@ function generateVariable(variable) {
  */
 function generateUniformVariable(variable) {
   return `{
-    uniform: ${generateType(variable.type)},
+    uniform: ${generateType(variable.type, false)},
   }`;
 }
 
@@ -355,6 +358,50 @@ function generateExternalTextureVariable(variable) {
   return `{
     externalTexture: {},
   }`;
+}
+
+/**
+ * @param {import('wgsl_reflect').FunctionInfo[]} functions
+ * @param {string} wgsl
+ * @param {Options} options
+ */
+function generateFunctions(functions, wgsl, options) {
+  return functions.length > 0
+    ? `\n/* functions */
+${functions
+  .map(
+    (func) =>
+      `${declareConst(func.name, options)} = ${generateFunction(func, wgsl)};`,
+  )
+  .join('\n\n')}`
+    : '';
+}
+
+/**
+ * @param {import('wgsl_reflect').FunctionInfo} func
+ * @param {string} wgsl
+ */
+function generateFunction(func, wgsl) {
+  const implementation = wgsl
+    .split('\n')
+    .slice(func.startLine - 1, func.endLine)
+    .join('\n');
+
+  const funcType =
+    func.stage === 'fragment'
+      ? 'fragmentFn'
+      : func.stage === 'vertex'
+        ? 'vertexFn'
+        : 'fn';
+
+  const inputs = `[${func.inputs.flatMap((input) => (input.type ? [generateType(input.type)] : [])).join(', ')}]`;
+  const output = func.outputs[0]?.type
+    ? generateType(func.outputs[0]?.type)
+    : null;
+
+  return `tgpu
+  .${funcType}(${inputs}${output ? `, ${output}` : ''})
+  .implement(/* wgsl */ \`${implementation.slice(implementation.indexOf(func.name) + func.name.length)}\`)`;
 }
 
 /**
