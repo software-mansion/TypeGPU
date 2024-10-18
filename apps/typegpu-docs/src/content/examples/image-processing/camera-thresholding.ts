@@ -34,7 +34,7 @@ const root = await tgpu.init();
 const thresholdBuffer = root
   .createBuffer(f32)
   .$name('threshold')
-  .$usage(tgpu.Uniform);
+  .$usage('uniform');
 
 const thresholdData = asUniform(thresholdBuffer);
 
