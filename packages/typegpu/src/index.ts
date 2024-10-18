@@ -43,4 +43,9 @@ export type {
   LayoutEntryToInput,
   TgpuBindGroup,
 } from './tgpuBindGroupLayout';
-export type { TgpuBuffer } from './core/buffer/buffer';
+export type {
+  TgpuBuffer,
+  Uniform,
+  Storage,
+  Vertex,
+} from './core/buffer/buffer';

@@ -59,7 +59,12 @@ export {
   asVertex,
 } from '../core/buffer/bufferUsage';
 
-export type { TgpuBuffer } from '../core/buffer/buffer';
+export type {
+  TgpuBuffer,
+  Uniform,
+  Storage,
+  Vertex,
+} from '../core/buffer/buffer';
 export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
 export type {
   TgpuBufferUsage,
