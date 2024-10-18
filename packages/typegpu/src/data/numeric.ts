@@ -93,8 +93,9 @@ const u32Cast = (v: number | boolean) => {
   return Math.max(0, Math.min(0xffffffff, Math.floor(v)));
 };
 /**
- * Creates a new unsigned 32-bit integer schema representing a single WGSL u32 value.
- * Can also be used to cast a value to a u32 in accordance with WGSL casting rules.
+ * A schema that represents an unsigned 32-bit integer value. (equivalent to `u32` in WGSL)
+ *
+ * Can also be called to cast a value to an u32 in accordance with WGSL casting rules.
  *
  * @example
  * const value = u32(3.14); // 3
@@ -131,8 +132,9 @@ const i32Cast = (v: number | boolean) => {
   return Math.max(-0x80000000, Math.min(0x7fffffff, value));
 };
 /**
- * Creates a new signed 32-bit integer schema representing a single WGSL i32 value.
- * Can also be used to cast a value to an i32 in accordance with WGSL casting rules.
+ * A schema that represents a signed 32-bit integer value. (equivalent to `i32` in WGSL)
+ *
+ * Can also be called to cast a value to an i32 in accordance with WGSL casting rules.
  *
  * @example
  * const value = i32(3.14); // 3
@@ -159,8 +161,9 @@ const f32Cast = (v: number | boolean) => {
   return v;
 };
 /**
- * Creates a new 32-bit float schema representing a single WGSL f32 value.
- * Can also be used to cast a value to an f32.
+ * A schema that represents a 32-bit float value. (equivalent to `f32` in WGSL)
+ *
+ * Can also be called to cast a value to an f32.
  *
  * @example
  * const value = f32(true); // 1
