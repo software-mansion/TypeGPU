@@ -607,5 +607,9 @@ describe('UnwrapRuntimeConstructor', () => {
     expectTypeOf<
       UnwrapRuntimeConstructor<(_: number) => TgpuArray<Vec3f>>
     >().toEqualTypeOf<TgpuArray<Vec3f>>();
+
+    expectTypeOf<
+      UnwrapRuntimeConstructor<F32 | ((_: number) => U32)>
+    >().toEqualTypeOf<F32 | U32>();
   });
 });
