@@ -113,7 +113,11 @@ Options:
       const duplicates = fileNames.filter(
         (name, index) => fileNames.indexOf(name) !== index,
       );
-      if (duplicates.length > 0 && !/\*\*\/.*\*.*/.test(output)) {
+      if (
+        duplicates.length > 0 &&
+        output.includes(path.sep) &&
+        !/\*\*\/.*\*.*/.test(output)
+      ) {
         console.error(
           `${color.Red}Error: Duplicates found with name(s): [${duplicates.join(', ')}], while a single directory output pattern was provided. Make sure your pattern contains "**/*" to keep the original directory structure. ${color.Reset}`,
         );

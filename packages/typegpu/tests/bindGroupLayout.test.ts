@@ -7,7 +7,16 @@ import {
   it,
   vi,
 } from 'vitest';
-import { type F32, type U32, type Vec3f, f32, u32, vec3f } from '../src/data';
+import {
+  type F32,
+  type TgpuArray,
+  type U32,
+  type Vec3f,
+  arrayOf,
+  f32,
+  u32,
+  vec3f,
+} from '../src/data';
 import tgpu, {
   type ExperimentalTgpuRoot,
   type TgpuBindGroupLayout,
@@ -18,7 +27,11 @@ import tgpu, {
   type TgpuBufferMutable,
 } from '../src/experimental';
 import './utils/webgpuGlobals';
-import { MissingBindingError } from '../src/tgpuBindGroupLayout';
+import {
+  MissingBindingError,
+  type TgpuBindGroup,
+  type UnwrapRuntimeConstructor,
+} from '../src/tgpuBindGroupLayout';
 
 const DEFAULT_READONLY_VISIBILITY_FLAGS =
   GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
@@ -128,6 +141,89 @@ describe('TgpuBindGroupLayout', () => {
     const { a } = layout.bound;
 
     expectTypeOf(a).toEqualTypeOf<TgpuBufferMutable<Vec3f>>();
+  });
+
+  it('works for entries passed as functions returning TgpuData', () => {
+    const layout = tgpu.bindGroupLayout({
+      a: { uniform: (arrayLength: number) => arrayOf(u32, arrayLength) },
+      b: { storage: (arrayLength: number) => arrayOf(vec3f, arrayLength) },
+    });
+
+    expectTypeOf(layout).toEqualTypeOf<
+      TgpuBindGroupLayout<{
+        a: {
+          uniform: (_: number) => TgpuArray<U32>;
+        };
+        b: {
+          storage: (_: number) => TgpuArray<Vec3f>;
+        };
+      }>
+    >();
+
+    const { a, b } = layout.bound;
+
+    expectTypeOf(a).toEqualTypeOf<TgpuBufferUniform<TgpuArray<U32>>>();
+    expectTypeOf(b).toEqualTypeOf<TgpuBufferReadonly<TgpuArray<Vec3f>>>();
+
+    const aBuffer = root.createBuffer(arrayOf(u32, 4)).$usage(tgpu.Uniform);
+    const bBuffer = root.createBuffer(arrayOf(vec3f, 4)).$usage(tgpu.Storage);
+
+    const bindGroup = layout.populate({
+      a: aBuffer,
+      b: bBuffer,
+    });
+
+    expectTypeOf(bindGroup).toEqualTypeOf<
+      TgpuBindGroup<{
+        a: {
+          uniform: (_: number) => TgpuArray<U32>;
+        };
+        b: {
+          storage: (_: number) => TgpuArray<Vec3f>;
+        };
+      }>
+    >();
+
+    root.unwrap(bindGroup);
+
+    expect(mockDevice.createBindGroup).toBeCalledWith({
+      label: '',
+      layout: root.unwrap(layout),
+      entries: [
+        {
+          binding: 0,
+          resource: {
+            buffer: root.unwrap(aBuffer),
+          },
+        },
+        {
+          binding: 1,
+          resource: {
+            buffer: root.unwrap(bBuffer),
+          },
+        },
+      ],
+    });
+
+    expect(mockDevice.createBindGroupLayout).toBeCalledWith({
+      label: '',
+      entries: [
+        {
+          binding: 0,
+          visibility: DEFAULT_READONLY_VISIBILITY_FLAGS,
+          buffer: {
+            type: 'uniform',
+          },
+        },
+        {
+          binding: 1,
+          visibility: DEFAULT_READONLY_VISIBILITY_FLAGS,
+          buffer: {
+            type: 'read-only-storage',
+          },
+        },
+      ],
+    });
   });
 
   it('omits null properties', async () => {
@@ -495,5 +591,25 @@ describe('TgpuBindGroup', () => {
         ],
       });
     });
+  });
+});
+
+describe('UnwrapRuntimeConstructor', () => {
+  it('unwraps return types of functions returning TgpuData', () => {
+    expectTypeOf<UnwrapRuntimeConstructor<U32>>().toEqualTypeOf<U32>();
+    expectTypeOf<UnwrapRuntimeConstructor<TgpuArray<Vec3f>>>().toEqualTypeOf<
+      TgpuArray<Vec3f>
+    >();
+
+    expectTypeOf<
+      UnwrapRuntimeConstructor<(_: number) => U32>
+    >().toEqualTypeOf<U32>();
+    expectTypeOf<
+      UnwrapRuntimeConstructor<(_: number) => TgpuArray<Vec3f>>
+    >().toEqualTypeOf<TgpuArray<Vec3f>>();
+
+    expectTypeOf<
+      UnwrapRuntimeConstructor<F32 | ((_: number) => U32)>
+    >().toEqualTypeOf<F32 | U32>();
   });
 });
