@@ -283,4 +283,11 @@ struct D {
       /.*const D = .*const A = .*const B = .*const C = .*/s,
     );
   });
+
+  it('adds typegpu/data import to the generated code', () => {
+    const importStatement = "import * as d from 'typegpu/data';";
+
+    expect(generate('struct A { d: u32 };')).toContain(importStatement);
+    expect(generate('')).not.toContain(importStatement);
+  });
 });
