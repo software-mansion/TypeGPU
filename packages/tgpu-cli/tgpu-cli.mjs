@@ -3,6 +3,7 @@
 // @ts-check
 
 import { readFileSync } from 'node:fs';
+import { access } from 'node:fs/promises';
 import path from 'node:path';
 import { exit } from 'node:process';
 import arg from 'arg';
@@ -15,7 +16,6 @@ import { createOutputPathCompiler } from './outputPathCompiler.mjs';
 const args = arg({
   '--version': Boolean,
   '--help': Boolean,
-  '--input': String,
   '--output': String,
   '--commonjs': Boolean,
   '--overwrite': Boolean,
@@ -24,7 +24,6 @@ const args = arg({
 
   '-v': '--version',
   '-h': '--help',
-  '-i': '--input',
   '-o': '--output',
   '-w': '--watch',
 });
@@ -38,11 +37,12 @@ const COMMANDS = {
 Generate a ts/js file from a wgsl file.
 
 Usage:
-  tgpu-cli gen --input <input> [--output <output>] [--watch] [--commonjs] [--overwrite | --keep]
   tgpu-cli gen <input> [--output <output>] [--watch] [--commonjs] [--overwrite | --keep]
 
+Arguments:
+  <input>       The input file or glob pattern.
+
 Options:
-  --input, -i   The input file or glob pattern.
   --output, -o  The output name or pattern for generated file(s). 
                 If pattern doesn't include a directory, generated files will be in the same directory as their respective inputs.
                 Placeholder for file name (without extension): *, for directory: **
@@ -55,7 +55,7 @@ Options:
 `),
 
     execute: async () => {
-      const input = args['--input'] ?? args._[1];
+      const input = args._[1];
       const output = args['--output'] ?? '*.ts';
       const moduleSyntax = args['--commonjs'] ? 'commonjs' : 'esmodule';
 
@@ -63,7 +63,7 @@ Options:
 
       if (!input) {
         console.error(
-          `${color.Red}Error: Missing required argument: --input${color.Reset}`,
+          `${color.Red}Error: Missing required positional argument (<input>)${color.Reset}`,
         );
         exit(1);
       }
@@ -94,23 +94,23 @@ Options:
       }
 
       const toTs = extension.toLowerCase().endsWith('ts');
-      const files = await glob(input);
+      const allMatchedFiles = await glob(input);
 
-      if (files.length === 0) {
+      if (allMatchedFiles.length === 0) {
         console.warn(
           `${color.Yellow}Warning: No files found for pattern: "${input}"${color.Reset}`,
         );
         exit(0);
       }
 
-      if (files.length > 1 && !output.includes('*')) {
+      if (allMatchedFiles.length > 1 && !output.includes('*')) {
         console.error(
-          `${color.Red}Error: More than one file found (${files.join(', ')}), while a non-pattern output name was provided ${color.Reset}`,
+          `${color.Red}Error: More than one file found (${allMatchedFiles.join(', ')}), while a non-pattern output name was provided ${color.Reset}`,
         );
         exit(1);
       }
 
-      const fileNames = files.map((file) => path.parse(file).name);
+      const fileNames = allMatchedFiles.map((file) => path.parse(file).name);
       const duplicates = fileNames.filter(
         (name, index) => fileNames.indexOf(name) !== index,
       );
@@ -127,12 +127,54 @@ Options:
 
       const outputPathCompiler = createOutputPathCompiler(input, output);
 
+      const existingFilesIO =
+        existingFileStrategy === 'overwrite'
+          ? []
+          : await Promise.all(
+              allMatchedFiles
+                .map((input) => ({ input, output: outputPathCompiler(input) }))
+                .map(({ input, output }) =>
+                  access(output)
+                    .then(() => ({ input, output }))
+                    .catch(() => null),
+                ),
+            ).then((existsResultsIO) =>
+              existsResultsIO.filter(
+                /** @returns {file is {input: string, output: string}} */ (
+                  file,
+                ) => !!file,
+              ),
+            );
+
+      if (existingFilesIO.length > 0 && existingFileStrategy === undefined) {
+        console.error(
+          `Error: The following file(s) already exist: [${existingFilesIO.map(({ output }) => output).join(', ')}]. Use --overwrite option to replace existing files or --keep to skip them.`,
+        );
+
+        exit(1);
+      }
+
+      const inputFiles =
+        existingFileStrategy === 'keep'
+          ? allMatchedFiles.filter(
+              (file) =>
+                !existingFilesIO.map(({ input }) => input).includes(file),
+            )
+          : allMatchedFiles;
+
+      if (inputFiles.length === 0) {
+        console.warn(
+          `${color.Yellow}Warning: All output files already exist, while the option was set to keep existing files. Exiting..."${color.Reset}`,
+        );
+        exit(0);
+      }
+
       /**
-       * @param {{ exitOnError: boolean, files: string[], checkExisting: boolean }} options
+       * @param {{ exitOnError: boolean, inputFiles: string[] }} options
        */
-      const processFiles = async ({ exitOnError, files, checkExisting }) => {
+      const processFiles = async ({ exitOnError, inputFiles }) => {
         const results = await Promise.allSettled(
-          files.map(async (file) => {
+          inputFiles.map(async (file) => {
             const outputPath = outputPathCompiler(file);
 
             console.log(`Generating ${file} >>> ${outputPath}`);
@@ -141,9 +183,6 @@ Options:
               outputPath,
               toTs,
               moduleSyntax,
-              existingFileStrategy: checkExisting
-                ? existingFileStrategy
-                : 'overwrite',
             }).catch((error) => {
               error.file = file;
               throw error;
@@ -169,16 +208,15 @@ Options:
         }
       };
 
-      processFiles({ exitOnError: !watch, files, checkExisting: true });
+      processFiles({ exitOnError: !watch, inputFiles });
 
       if (watch) {
         console.log(`${color.Cyan}Watching for changes...${color.Reset}`);
-        const watcher = chokidar.watch(files);
+        const watcher = chokidar.watch(inputFiles);
         watcher.on('change', async (file) => {
           await processFiles({
             exitOnError: false,
-            files: [file],
-            checkExisting: false,
+            inputFiles: [file],
           });
         });
       }

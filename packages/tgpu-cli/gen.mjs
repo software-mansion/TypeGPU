@@ -2,7 +2,6 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { exit } from 'node:process';
 import { ArrayInfo, StructInfo, TemplateInfo, WgslReflect } from 'wgsl_reflect';
 
 /**
@@ -33,30 +32,6 @@ async function main(options) {
   const inputPath = new URL(options.inputPath, cwd);
   const outputPath = new URL(options.outputPath, cwd);
   const inputContents = await fs.readFile(inputPath, 'utf8');
-
-  if (options.existingFileStrategy !== 'overwrite') {
-    const fileExists = await fs
-      .access(options.outputPath)
-      .then(() => true)
-      .catch(() => false);
-
-    if (fileExists) {
-      if (options.existingFileStrategy === undefined) {
-        console.error(
-          `Error: File ${options.outputPath} already exists. Use --overwrite option to replace existing files or --keep to skip them.`,
-        );
-
-        exit(1);
-      }
-
-      if (options.existingFileStrategy === 'keep') {
-        console.log(
-          `Skipping ${options.inputPath}, file ${options.outputPath} already exists.`,
-        );
-        return;
-      }
-    }
-  }
 
   const generated = generate(inputContents, options);
   await fs.mkdir(path.dirname(options.outputPath), { recursive: true });
