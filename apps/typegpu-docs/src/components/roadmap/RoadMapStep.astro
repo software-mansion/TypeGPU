@@ -1,0 +1,19 @@
+---
+const { title } = Astro.props;
+---
+
+<li
+  class:list={[
+    'group relative sm:min-h-40 md:min-h-44 lg:min-h-52 sm:ml-40 md:ml-44 lg:ml-52 marker:content-[""]',
+  ]}>
+  <div
+    class="absolute -left-40 md:-left-44 lg:-left-52 top-0 pt-4 flex flex-col *:flex-shrink-0 justify-center">
+    <slot name="visual" />
+  </div>
+  <article>
+    <h3>{title}</h3>
+    <p>
+      <slot />
+    </p>
+  </article>
+</li>

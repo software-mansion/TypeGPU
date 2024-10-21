@@ -12,7 +12,12 @@ import TypeGPULogoLight from '../assets/typegpu-logo-light.svg';
 import TypeGPULogomarkMonolight from '../assets/typegpu-logomark-monolight.svg';
 import GiantTypeGPULogo from '../assets/giant-typegpu.svg';
 import Illustration from '../assets/illustration.svg';
-import RoadMapStep from '../components/RoadMapStep.astro';
+import RoadMapStep from '../components/roadmap/RoadMapStep.astro';
+import MilestoneBuffersBadge from '../components/roadmap/MilestoneBuffersBadge.astro';
+import MilestoneBindGroupsBadge from '../components/roadmap/MilestoneBindGroupsBadge.astro';
+import MilestoneFunctionsBadge from '../components/roadmap/MilestoneFunctionsBadge.astro';
+import MilestonePipelinesBadge from '../components/roadmap/MilestonePipelinesBadge.astro';
+import MilestoneCodeBadge from '../components/roadmap/MilestoneCodeBadge.astro';
 
 const showcaseVideoResolution = [2048, 1200];
 ---
@@ -152,7 +157,7 @@ const showcaseVideoResolution = [2048, 1200];
     </section>
 
     <section
-      class="box-border flex flex-col items-center justify-center px-4 lg:gap-20 gap-10 md:gap-[3.75rem] lg:max-w-[85rem] md:max-w-[53.5rem] max-w-[34.5rem]">
+      class="box-border flex flex-col items-center justify-center my-32 px-4 lg:gap-20 gap-10 md:gap-[3.75rem] lg:max-w-[85rem] md:max-w-[53.5rem] max-w-[34.5rem]">
       <div>
         <h2 class="mb-4 font-normal text-center md:mb-8 lg:mb-8 center">
           Roadmap
@@ -167,32 +172,36 @@ const showcaseVideoResolution = [2048, 1200];
       <div class="max-w-[50rem]">
         <ol class="flex flex-col md:gap-10 m-0 p-0">
           <RoadMapStep title="Data structures & buffers">
-            The WebGPU Shading Language (WGSL) gives developers a rich sense of
-            the structure of the data that it operates on. This is lost when
-            accessed through JavaScript, as the APIs accept raw byte buffers.
-            TypeGPU regains that information on the JavaScript side and handles
-            proper byte alignment and padding automatically.
+            <MilestoneBuffersBadge slot="visual" />
+            The WebGPU Shading Language (WGSL) gives developers a rich sense of the
+            structure of the data that it operates on. This is lost when accessed
+            through JavaScript, as the APIs accept raw byte buffers. TypeGPU regains
+            that information on the JavaScript side and handles proper byte alignment
+            and padding automatically.
           </RoadMapStep>
           <RoadMapStep title="Bind groups">
-            Connecting resources to shaders via numeric indices can lead to
-            problems that are hard to catch at build-time/CI. By using named
-            keys and typed data structures we can ensure that the provided
-            resources are what the shader expects.
+            <MilestoneBindGroupsBadge slot="visual" />
+            Connecting resources to shaders via numeric indices can lead to problems
+            that are hard to catch at build-time/CI. By using named keys and typed
+            data structures we can ensure that the provided resources are what the
+            shader expects.
           </RoadMapStep>
           <RoadMapStep title="Functions">
-            By wrapping each function with a "typed shell", they can be moved
-            across different files/modules. Any resources (variables, buffers,
-            etc.) in the external scope can be accessed inside the function.
+            <MilestoneFunctionsBadge slot="visual" />
+            By wrapping each function with a "typed shell", they can be moved across
+            different files/modules. Any resources (variables, buffers, etc.) in
+            the external scope can be accessed inside the function.
           </RoadMapStep>
           <RoadMapStep title="Pipelines">
-            To ensure that shader stages match each-other, and pipeline
-            constants are filled with proper values, TypeGPU plans to provide
-            typed pipelines.
+            <MilestonePipelinesBadge slot="visual" />
+            To ensure that shader stages match each-other, and pipeline constants
+            are filled with proper values, TypeGPU plans to provide typed pipelines.
           </RoadMapStep>
           <RoadMapStep title="Imperative code">
-            By giving developers the ability to write imperative shader code in
-            TypeScript, we can leverate the excellent TypeScript LSP to bring
-            end-to-end typesafety to shader code like never before.
+            <MilestoneCodeBadge slot="visual" />
+            By giving developers the ability to write imperative shader code in TypeScript,
+            we can leverate the excellent TypeScript LSP to bring end-to-end typesafety
+            to shader code like never before.
           </RoadMapStep>
         </ol>
       </div>
