@@ -4,6 +4,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { ArrayInfo, StructInfo, TemplateInfo, WgslReflect } from 'wgsl_reflect';
 
+/**
+ * @typedef {import('wgsl_reflect').AliasInfo} AliasInfo
+ * @typedef {import('wgsl_reflect').MemberInfo} MemberInfo
+ * @typedef {import('wgsl_reflect').TypeInfo} TypeInfo
+ * @typedef {import('wgsl_reflect').VariableInfo} VariableInfo
+ */
+
 const cwd = new URL(`file:${process.cwd()}/`);
 
 const LENGTH_VAR = 'arrayLength';
@@ -14,7 +21,8 @@ const LENGTH_VAR = 'arrayLength';
  * @prop {string} outputPath
  * @prop {boolean} toTs
  * @prop {'commonjs' | 'esmodule'} moduleSyntax
- * @prop {string[]} [exportsList]
+ * @prop {'keep' | 'overwrite'} [existingFileStrategy]
+ * @prop {Set<string>} [declaredIdentifiers]
  */
 
 /**
@@ -28,6 +36,61 @@ async function main(options) {
   const generated = generate(inputContents, options);
   await fs.mkdir(path.dirname(options.outputPath), { recursive: true });
   await fs.writeFile(outputPath, generated);
+}
+
+/**
+ * @param {StructInfo[]} structs
+ */
+function topologicalSort(structs) {
+  const allStructs = Object.fromEntries(
+    structs.map((struct) => [struct.name, struct]),
+  );
+  const allStructNames = Object.keys(allStructs);
+
+  /** @type {Record<string, Set<string>>} */
+  const neighbors = {};
+
+  for (const struct of structs) {
+    neighbors[struct.name] = new Set();
+    for (const neighbor of struct.members) {
+      if (allStructNames.includes(neighbor.type.name)) {
+        neighbors[struct.name].add(neighbor.type.name);
+      }
+      if (
+        neighbor.type instanceof ArrayInfo &&
+        allStructNames.includes(neighbor.type.format.name)
+      ) {
+        neighbors[struct.name].add(neighbor.type.format.name);
+      }
+    }
+  }
+
+  const visited = Object.fromEntries(
+    allStructNames.map((name) => [name, false]),
+  );
+  /** @type {StructInfo[]} */
+  const result = [];
+
+  /** @param {string} structName */
+  function dns(structName) {
+    visited[structName] = true;
+
+    for (const neighbor of neighbors[structName]) {
+      if (!visited[neighbor]) {
+        dns(neighbor);
+      }
+    }
+
+    result.push(allStructs[structName]);
+  }
+
+  for (const structName of Object.keys(allStructs)) {
+    if (!visited[structName]) {
+      dns(structName);
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -56,7 +119,7 @@ const d = require('typegpu/data');`
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';`
 }
-${generateStructs(reflect.structs, options)}
+${generateStructs(topologicalSort(reflect.structs), options)}
 ${generateAliases(reflect.aliases, options)}
 ${generateBindGroupLayouts(reflect.getBindGroups(), options)}
 ${generateExports(options)}
@@ -64,7 +127,7 @@ ${generateExports(options)}
 }
 
 /**
- * @param {import('wgsl_reflect').StructInfo[]} structs
+ * @param {StructInfo[]} structs
  * @param {Options} options
  */
 function generateStructs(structs, options) {
@@ -75,7 +138,7 @@ ${structs.map((struct) => generateStruct(struct, options)).join('\n\n')}`
 }
 
 /**
- * @param {import('wgsl_reflect').StructInfo} struct
+ * @param {StructInfo} struct
  * @param {Options} options
  */
 function generateStruct(struct, options) {
@@ -84,20 +147,26 @@ function generateStruct(struct, options) {
       ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => `
       : ''
   }d.struct({
-  ${struct.members.map((member) => generateStructMember(member)).join('\n  ')}
+  ${struct.members.map((member) => generateStructMember(member, options)).join('\n  ')}
 });`;
 }
 
 /**
- * @param {import('wgsl_reflect').StructInfo} struct
+ * @param {TypeInfo} type_
  */
-function hasVarLengthMember(struct) {
-  const member = struct.members[struct.members.length - 1].type;
-  return member instanceof ArrayInfo && member.size === 0;
+function isVarLengthArray(type_) {
+  return type_ instanceof ArrayInfo && type_.size === 0;
 }
 
 /**
- * @param {import('wgsl_reflect').AliasInfo[]} aliases
+ * @param {StructInfo} struct
+ */
+function hasVarLengthMember(struct) {
+  return isVarLengthArray(struct.members[struct.members.length - 1].type);
+}
+
+/**
+ * @param {AliasInfo[]} aliases
  * @param {Options} options
  */
 function generateAliases(aliases, options) {
@@ -106,38 +175,45 @@ function generateAliases(aliases, options) {
 ${aliases
   .map(
     (alias) =>
-      `${declareConst(alias.name, options)} = ${generateType(alias.type)};`,
+      `${declareConst(alias.name, options)} = ${generateType(alias.type, options)};`,
   )
   .join('\n')}`
     : '';
 }
 
 /**
- * @param {import('wgsl_reflect').MemberInfo} member
+ * @param {MemberInfo} member
+ * @param {Options} options
  */
-function generateStructMember(member) {
-  return `${member.name}: ${generateType(member.type)},`;
+function generateStructMember(member, options) {
+  return `${member.name}: ${generateType(member.type, options)},`;
 }
 
 /**
- * @param {import('wgsl_reflect').TypeInfo} type_
- * @param {boolean} checkNonZeroLength
+ * @param {TypeInfo} type_
+ * @param {Options} options
  */
-function generateType(type_, checkNonZeroLength = true) {
-  if (checkNonZeroLength && type_.size === 0 && !type_.isArray) {
-    throw new Error(`Invalid data type with size 0: ${type_.name}`);
+function generateType(type_, options) {
+  if (
+    type_.size === 0 &&
+    !type_.isArray &&
+    !options.declaredIdentifiers?.has(type_.name)
+  ) {
+    throw new Error(`Unknown data type: ${type_.name}`);
   }
 
   const tgpuType =
     type_ instanceof StructInfo
       ? type_.name
       : type_ instanceof ArrayInfo
-        ? `d.arrayOf(${generateType(type_.format)}, ${type_.count > 0 ? type_.count : LENGTH_VAR})`
+        ? `d.arrayOf(${generateType(type_.format, options)}, ${type_.count > 0 ? type_.count : LENGTH_VAR})`
         : type_ instanceof TemplateInfo &&
             type_.name === 'atomic' &&
             type_.format
-          ? `d.atomic(${generateType(type_.format)})`
-          : `d.${replaceWithAlias(type_)}`;
+          ? `d.atomic(${generateType(type_.format, options)})`
+          : type_.size === 0
+            ? type_.name
+            : `d.${replaceWithAlias(type_)}`;
 
   return (
     type_.attributes?.reduce(
@@ -164,7 +240,7 @@ function typeToAlias(type, format) {
 }
 
 /**
- * @param {import('wgsl_reflect').TypeInfo} type
+ * @param {TypeInfo} type
  */
 function replaceWithAlias(type) {
   return type instanceof TemplateInfo
@@ -173,7 +249,7 @@ function replaceWithAlias(type) {
 }
 
 /**
- * @param {import('wgsl_reflect').VariableInfo[][]} bindGroups
+ * @param {VariableInfo[][]} bindGroups
  * @param {Options} options
  */
 function generateBindGroupLayouts(bindGroups, options) {
@@ -183,8 +259,8 @@ ${bindGroups
   .flatMap(
     (group, index) => `\
 ${declareConst(`layout${index}`, options)} = tgpu.bindGroupLayout({
-  ${generateGroupLayout(group)}
-}).$forceIndex(${index});`,
+  ${generateGroupLayout(group, options)}
+});`,
   )
   .join('\n\n')}`
     : '';
@@ -211,47 +287,59 @@ const SAMPLE_TYPES = {
 };
 
 /**
- * @param {import('wgsl_reflect').VariableInfo[]} group
+ * @param {VariableInfo[]} group
+ * @param {Options} options
  */
-function generateGroupLayout(group) {
+function generateGroupLayout(group, options) {
   return Array.from(group)
     .map((variable, index) =>
       variable
-        ? `${variable.name}: ${generateVariable(variable)},`
+        ? `${variable.name}: ${generateVariable(variable, options)},`
         : `_${index}: null, // skipping binding ${index}`,
     )
     .join('\n  ');
 }
 
 /**
- * @param {import('wgsl_reflect').VariableInfo} variable
+ * @param {VariableInfo} variable
+ * @param {Options} options
  */
-function generateVariable(variable) {
-  return RESOURCE_GENERATORS[variable.resourceType](variable);
+function generateVariable(variable, options) {
+  return RESOURCE_GENERATORS[variable.resourceType](variable, options);
 }
 
 /**
- * @param {import('wgsl_reflect').VariableInfo} variable
+ * @param {VariableInfo} variable
+ * @param {Options} options
  */
-function generateUniformVariable(variable) {
+function generateUniformVariable(variable, options) {
   return `{
-    uniform: ${generateType(variable.type)},
+    uniform: ${
+      isVarLengthArray(variable.type)
+        ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => `
+        : ''
+    }${generateType(variable.type, options)},
   }`;
 }
 
 /**
- * @param {import('wgsl_reflect').VariableInfo} variable
+ * @param {VariableInfo} variable
+ * @param {Options} options
  */
-function generateStorageVariable(variable) {
+function generateStorageVariable(variable, options) {
   return `{
-    storage: ${generateType(variable.type, false)},${
+    storage: ${
+      isVarLengthArray(variable.type)
+        ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => `
+        : ''
+    }${generateType(variable.type, options)},${
       variable.access ? `\n    access: '${ACCESS_TYPES[variable.access]}',` : ''
     }
   }`;
 }
 
 /**
- * @param {import('wgsl_reflect').VariableInfo} variable
+ * @param {VariableInfo} variable
  */
 function getViewDimension(variable) {
   const type_ = variable.type.name;
@@ -273,7 +361,7 @@ function getViewDimension(variable) {
 }
 
 /**
- * @param {import('wgsl_reflect').VariableInfo} variable
+ * @param {VariableInfo} variable
  */
 function generateStorageTextureVariable(variable) {
   const viewDimension = getViewDimension(variable);
@@ -293,7 +381,7 @@ const SAMPLER_TYPES = {
 };
 
 /**
- * @param {import('wgsl_reflect').VariableInfo} variable
+ * @param {VariableInfo} variable
  */
 function generateSamplerVariable(variable) {
   return `{
@@ -302,7 +390,7 @@ function generateSamplerVariable(variable) {
 }
 
 /**
- * @param {import('wgsl_reflect').VariableInfo} variable
+ * @param {VariableInfo} variable
  */
 function generateTextureVariable(variable) {
   const type_ = variable.type.name;
@@ -323,7 +411,7 @@ function generateTextureVariable(variable) {
 }
 
 /**
- * @param {import('wgsl_reflect').VariableInfo} variable
+ * @param {VariableInfo} variable
  */
 function generateExternalTextureVariable(variable) {
   return `{
@@ -336,16 +424,13 @@ function generateExternalTextureVariable(variable) {
  * @param {Options} options
  */
 function declareConst(ident, options) {
-  if (options.moduleSyntax === 'commonjs') {
-    if (options.exportsList === undefined) {
-      options.exportsList = [ident];
-    } else {
-      options.exportsList.push(ident);
-    }
-
-    return `const ${ident}`;
+  if (options.declaredIdentifiers === undefined) {
+    options.declaredIdentifiers = new Set([ident]);
+  } else {
+    options.declaredIdentifiers.add(ident);
   }
-  return `export const ${ident}`;
+
+  return `${options.moduleSyntax === 'esmodule' ? 'export ' : ''}const ${ident}`;
 }
 
 /**
@@ -353,7 +438,7 @@ function declareConst(ident, options) {
  */
 function generateExports(options) {
   return options.moduleSyntax === 'commonjs'
-    ? `\nmodule.exports = {${(options.exportsList ?? []).join(', ')}};`
+    ? `\nmodule.exports = {${[...(options.declaredIdentifiers ?? [])].join(', ')}};`
     : '';
 }
 
