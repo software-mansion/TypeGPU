@@ -130,15 +130,16 @@ Options:
           : await Promise.all(
               allMatchedFiles
                 .map((input) => ({ input, output: outputPathCompiler(input) }))
-                .map(
-                  async ({ input, output }) =>
-                    await access(output)
-                      .then(() => ({ input, output, outputExists: true }))
-                      .catch(() => ({ input, output, outputExists: false })),
+                .map(({ input, output }) =>
+                  access(output)
+                    .then(() => ({ input, output }))
+                    .catch(() => null),
                 ),
             ).then((existsResultsIO) =>
-              existsResultsIO.flatMap(({ input, output, outputExists }) =>
-                outputExists ? [{ input, output }] : [],
+              existsResultsIO.filter(
+                /** @returns {file is {input: string, output: string}} */ (
+                  file,
+                ) => !!file,
               ),
             );
 
