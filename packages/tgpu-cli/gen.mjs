@@ -23,6 +23,7 @@ const LENGTH_VAR = 'arrayLength';
  * @prop {'commonjs' | 'esmodule'} moduleSyntax
  * @prop {'keep' | 'overwrite'} [existingFileStrategy]
  * @prop {Set<string>} [declaredIdentifiers]
+ * @prop {{tgpu?: boolean, data?: boolean }} [usedImports]
  */
 
 /**
@@ -108,21 +109,17 @@ export function generate(
 ) {
   const reflect = new WgslReflect(wgsl);
 
-  return `/* generated via tgpu-cli by TypeGPU */
+  const structs = generateStructs(topologicalSort(reflect.structs), options);
+  const aliases = generateAliases(reflect.aliases, options);
+  const bindGroupLayouts = generateBindGroupLayouts(
+    reflect.getBindGroups(),
+    options,
+  );
+  const imports = generateImports(options);
+  const exports_ = generateExports(options);
 
-${
-  options.moduleSyntax === 'commonjs'
-    ? `\
-const tgpu = require('typegpu').default;
-const d = require('typegpu/data');`
-    : `\
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';`
-}
-${generateStructs(topologicalSort(reflect.structs), options)}
-${generateAliases(reflect.aliases, options)}
-${generateBindGroupLayouts(reflect.getBindGroups(), options)}
-${generateExports(options)}
+  return `/* generated via tgpu-cli by TypeGPU */
+${[imports, structs, aliases, bindGroupLayouts, exports_].filter((generated) => generated.trim() !== '').join('\n')}
 `;
 }
 
@@ -142,6 +139,8 @@ ${structs.map((struct) => generateStruct(struct, options)).join('\n\n')}`
  * @param {Options} options
  */
 function generateStruct(struct, options) {
+  setUseImport('data', options);
+
   return `${declareConst(struct.name, options)} = ${
     hasVarLengthMember(struct)
       ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => `
@@ -202,6 +201,7 @@ function generateType(type_, options) {
     throw new Error(`Unknown data type: ${type_.name}`);
   }
 
+  /** @type {string} */
   const tgpuType =
     type_ instanceof StructInfo
       ? type_.name
@@ -215,15 +215,20 @@ function generateType(type_, options) {
             ? type_.name
             : `d.${replaceWithAlias(type_)}`;
 
-  return (
+  const result =
     type_.attributes?.reduce(
       (acc, attribute) =>
         ['align', 'size'].includes(attribute.name)
           ? `d.${attribute.name}(${attribute.value}, ${acc})`
           : acc,
       tgpuType,
-    ) ?? tgpuType
-  );
+    ) ?? tgpuType;
+
+  if (result.startsWith('d.')) {
+    setUseImport('data', options);
+  }
+
+  return result;
 }
 
 /**
@@ -291,6 +296,8 @@ const SAMPLE_TYPES = {
  * @param {Options} options
  */
 function generateGroupLayout(group, options) {
+  setUseImport('tgpu', options);
+
   return Array.from(group)
     .map((variable, index) =>
       variable
@@ -436,10 +443,43 @@ function declareConst(ident, options) {
 /**
  * @param {Options} options
  */
+function generateImports(options) {
+  return [
+    options.usedImports?.tgpu
+      ? options.moduleSyntax === 'commonjs'
+        ? "const tgpu = require('typegpu').default;"
+        : "import tgpu from 'typegpu';"
+      : null,
+
+    options.usedImports?.data
+      ? options.moduleSyntax === 'commonjs'
+        ? "const d = require('typegpu/data');"
+        : "import * as d from 'typegpu/data';"
+      : null,
+  ]
+    .filter((imp) => !!imp)
+    .join('\n');
+}
+
+/**
+ * @param {Options} options
+ */
 function generateExports(options) {
   return options.moduleSyntax === 'commonjs'
     ? `\nmodule.exports = {${[...(options.declaredIdentifiers ?? [])].join(', ')}};`
     : '';
+}
+
+/**
+ * @param {keyof Exclude<Options['usedImports'], undefined>} import_
+ * @param {Options} options
+ */
+function setUseImport(import_, options) {
+  if (options.usedImports === undefined) {
+    options.usedImports = {};
+  }
+
+  options.usedImports[import_] = true;
 }
 
 export default main;
