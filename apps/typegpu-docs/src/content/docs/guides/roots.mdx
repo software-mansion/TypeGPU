@@ -4,57 +4,55 @@ description: A guide on how to create and use the Root API
 draft: true
 ---
 
+:::note[Psst, WebGPU veterans...]
+You can think of roots as typed wrappers around WebGPU devices.
+:::
+
+
 Roots are responsible for resource allocation and management. Whether you'd like to wrap an existing WebGPU buffer
 with a typed shell or create a brand new buffer, roots are the place to start.
 
 You can create a root using the `tgpu.init` function.
 
 ```ts
-const root = await tgpu.init(); // <-- requests a device
-
-// or...
-
-const root = await tgpu.init({ device }); // <-- uses an existing device
+const root = await tgpu.init();
 ```
 
-:::note[Psst, WebGPU veterans...]
-You can think of roots as typed wrappers around WebGPU devices.
-:::
-
-## Managing resources
+It requests a GPU device with default requirements. An optional parameter
+can be passed in with special requirements for the GPU device. If you already have a device that you want to use,
+you can pass it into `tgpu.initFromDevice` instead.
 
 ```ts
-/* Creating buffers */
-
-const factorBuffer = root
-  .createBuffer(d.f32, 0.5)
-  .$usage('uniform');
-
-const valueBuffer = root
-  .createBuffer(d.f32, 20)
-  .$usage('uniform');
-
-/* Unwrapping to get raw WebGPU resources */
-
-root.unwrap(factorBuffer); // => GPUBuffer
-root.unwrap(valueBuffer); // => GPUBuffer
-
-/* Disposing all resources allocated with `root` */
-
-root.destroy();
-
-// `factorBuffer` and `valueBuffer` are no longer usable.
-
+const root = tgpu.initFromDevice(device);
 ```
 
-## Incorporating roots into existing code
+## Creating resources
+
+Every `root.create*` function creates a typed resource.
+
+| Function | Description |
+| --- | --- |
+| <div className="w-max">`root.createBuffer`</div> | Creates a typed buffer with a given data-type and, optionally, an initial value. More information in [the next guide](/TypeGPU/guides/tgpu-buffer-api). |
+
+## Unwrapping resources
+
+There are times where a typed resources needs to be used by a vanilla WebGPU API. To retrieve the raw
+untyped value of a typed resource, use the `root.unwrap` function.
+
+| Function | Description |
+| --- | --- |
+| `root.unwrap(aTypedBuffer)` | Returns a `GPUBuffer`. |
+| `root.unwrap(aTypedBindGroupLayout)` | Returns a `GPUBindGroupLayout`. |
+| `root.unwrap(aTypedBindGroup)` | Returns a `GPUBindGroup`. |
 
 
+## Destroying resources
+
+Calling `root.destroy()` will destroy all resources created with it.
 
 ```ts
-hello
+root.destroy(); // <- frees up all the resources
 ```
-
 
 ## Best practices
 
@@ -62,42 +60,49 @@ Treat roots as their own separate universes, meaning resources created from the 
 resources created by seperate roots can have a hard time interacting. This usually means creating just one root at the start
 of the program is the safest bet, but there are exceptions.
 
-### You do not own the GPU device
+### If you do not own the GPU device
 
 If you cannot control the lifetime of the GPU device you are to use for computing/rendering, but are instead given the device in a lifecycle hook (e.g., react-native-wgpu),
-**you can create a new root each time, as long as you recreate every resource.**
+**you can create a new root each time, as long as you recreate every resource as well.**
 
 ```ts
-const ref = useWebGPU(({ context, device, presentationFormat }) => {
-  (async () => {
-    const root = await tgpu.init(device);
+// example.tsx
+import React from 'react';
 
+function SceneView() {
+  const ref = useWebGPU(({ context, device, presentationFormat }) => {
+    const root = tgpu.initFromDevice(device);
+  
     // create all resources...
-  })();
-});
+  });
+
+  // ...
+}
 ```
 
-### You pass the device everywhere
+### If you pass the GPU device everywhere
 
 It is common practice to pass a `GPUDevice` to classes or functions for them to allocate their required resources. At first glance, this poses a problem when trying to
 incorporate TypeGPU, since we would need to pass a root around instead of a device for all functionality that wants to move towards a typed API. **We can create a global mapping
 between devices and roots to solve this.**
 
 :::note
-When designing an architecture from stratch with TypeGPU in mind, passing a `root` around instead of a `device` is a prefered pattern, since
+When designing an architecture from stratch with TypeGPU in mind, passing a `root` around instead of a `device` is the prefered pattern, since
 `root.device` can act as an escape-hatch for vanilla WebGPU functionality.
 :::
 
+You can copy and paste the utility below that implement a basic global cache for roots.
+
 ```ts
-// main.ts
+// roots.ts
 
 const deviceToRootMap = new WeakMap<GPUDevice, TgpuRoot>();
 
-async function getOrInitRoot(device: GPUDevice): TgpuRoot {
+function getOrInitRoot(device: GPUDevice): TgpuRoot {
   let root = deviceToRootMap.get(device);
 
   if (!root) {
-    root = await tgpu.init({ device });
+    root = tgpu.initFromDevice(device);
     deviceToRootMap.set(device, root);
   }
 
@@ -105,10 +110,15 @@ async function getOrInitRoot(device: GPUDevice): TgpuRoot {
 }
 ```
 
+If you reuse the same `getOrInitRoot` function across code that has to create resources, the root will be shared
+across them.
+
 ```ts
 class GameObject {
   constructor(device: GPUDevice) {
-    
+    const root = getOrInitRoot(device);
+
+    // create all resources...
   }
 }
 ```
