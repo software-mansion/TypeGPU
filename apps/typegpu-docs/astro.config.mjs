@@ -43,8 +43,8 @@ export default defineConfig({
       customCss: ['./src/tailwind.css', './src/fonts/font-face.css'],
       plugins: [starlightBlog()],
       logo: {
-        light: '/public/typegpu-logo-light.svg',
-        dark: '/public/typegpu-logo-dark.svg',
+        light: './src/assets/typegpu-logo-light.svg',
+        dark: './src/assets/typegpu-logo-dark.svg',
         alt: 'TypeGPU Logo',
         replacesTitle: true,
       },

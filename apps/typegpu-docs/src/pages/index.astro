@@ -1,4 +1,5 @@
 ---
+import { Image } from 'astro:assets';
 import FeatureCard from '../components/FeatureCard.astro';
 import GetStartedButton from '../components/GetStartedButton.astro';
 import FooterLink from '../components/FooterLink.astro';
@@ -7,6 +8,12 @@ import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
 import SwmLogomarkSvg from '../assets/swm-logomark.svg';
 import SwmLogoSvg from '../assets/swm-logo.svg';
+import TypeGPULogoLight from '../assets/typegpu-logo-light.svg';
+import TypeGPULogomarkMonolight from '../assets/typegpu-logomark-monolight.svg';
+import GiantTypeGPULogo from '../assets/giant-typegpu.svg';
+import Illustration from '../assets/illustration.svg';
+
+const showcaseVideoResolution = [2048, 1200];
 ---
 
 <PageLayout>
@@ -17,9 +24,9 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
       <header
         class="self-stretch flex-shrink-0 h-20 sm:h-24 md:h-32 lg:h-44 flex justify-between items-center px-4 sm:px-[1.875rem] md:px-10 lg:px-[3.125rem]">
         <a href="https://swmansion.com" target="_blank" rel="noreferrer">
-          <img
-            src={SwmLogoSvg.src}
-            class="h-10 opacity-75 lg:h-20 md:h-16 sm:h-12"
+          <Image
+            src={SwmLogoSvg}
+            class="w-auto h-10 sm:h-12 md:h-16 lg:h-20 opacity-75"
             alt="Software Mansion Logo"
           />
         </a>
@@ -29,9 +36,9 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
             href="https://discord.gg/8jpfgDqPcM"
             target="_blank"
             rel="noreferrer">
-            <img
-              src={DiscordIconSvg.src}
-              class="h-6 opacity-75 md:h-10 sm:h-8"
+            <Image
+              src={DiscordIconSvg}
+              class="w-auto h-6 sm:h-8 md:h-10 opacity-75"
               alt="Discord Logo"
             />
           </a>
@@ -39,9 +46,9 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
             href="https://github.com/software-mansion/TypeGPU"
             target="_blank"
             rel="noreferrer">
-            <img
-              src={GithubIconSvg.src}
-              class="h-6 opacity-75 md:h-10 sm:h-8"
+            <Image
+              src={GithubIconSvg}
+              class="w-6 h-6 opacity-75 sm:w-8 sm:h-8 md:w-10 md:h-10"
               alt="GitHub Logo"
             />
           </a>
@@ -53,8 +60,8 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
         <div class="absolute inset-0 bg-blurred-radial-purple -z-10">
           {/* Blurred background */}
         </div>
-        <img
-          src="/TypeGPU/typegpu-logo-light.svg"
+        <Image
+          src={TypeGPULogoLight}
           alt="TypeGPU Logo"
           class="w-[14.5rem] md:w-[20rem] lg:w-[24rem]"
         />
@@ -70,16 +77,20 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
           <GetStartedButton />
 
           <a
-            class="box-border w-full sm:w-auto text-black py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] bg-gradient-to-br border-2 border-tameplum-100 hover:bg-tameplum-20 bg-white text-center text-base md:text-xl lg:text-2xl no-underline"
+            class="box-border w-full sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
             href="/TypeGPU/examples">Explore live examples</a
           >
         </div>
       </div>
 
       <div
-        class="box-border md:absolute overflow-hidden bg-grayscale-0 lg:max-w-[85rem] md:max-w-[58.5rem] lg:p-14 md:p-10 p-6 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-[2rem] relative md:top-[100%] md:-translate-y-[50%] max-w-[34.5rem] sm:mb-[2.5rem]">
+        class="box-border md:absolute overflow-hidden bg-grayscale-0 max-w-full w-[34.5rem] md:w-[58.5rem] lg:w-[70rem] lg:p-14 md:p-10 p-6 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-[2rem] relative md:top-[100%] md:-translate-y-[50%] sm:mb-[2.5rem]">
         <video
           src="/TypeGPU/assets/migration.mp4"
+          style={{
+            aspectRatio:
+              showcaseVideoResolution[0] / showcaseVideoResolution[1],
+          }}
           autoplay="true"
           loop="true"
           muted="true"
@@ -152,10 +163,10 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
 
       <GetStartedButton />
 
-      <img
+      <Image
+        src={Illustration}
         class="hidden md:block lg:w-[56rem] w-[38.5rem] max-w-full"
-        src="/TypeGPU/assets/illustration.svg"
-        alt=""
+        alt="An illustration showing the TypeGPU plums in a bowl."
       />
     </section>
 
@@ -168,10 +179,10 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
       <div
         class="flex flex-col items-center lg:gap-20 gap-10 lg:max-w-[85rem] md:max-w-[58.5rem] w-full max-w-[34.5rem]">
         <div class="w-full">
-          <img
-            src="/TypeGPU/typegpu-logomark-monolight.svg"
-            alt="logo"
-            class="w-8 pb-6"
+          <Image
+            src={TypeGPULogomarkMonolight}
+            alt="TypeGPU logomark"
+            class="w-8 h-8 pb-6"
           />
           <div
             class="flex flex-col justify-between gap-10 md:flex-row text-grayscale-80">
@@ -205,7 +216,7 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
         </div>
 
         <div class="flex items-center self-start gap-4 text-grayscale-100">
-          <img src={SwmLogomarkSvg.src} alt="Software Mansion Logomark" />
+          <Image src={SwmLogomarkSvg} alt="Software Mansion Logomark" />
           &copy; 2024 Software Mansion S.A.
         </div>
 
@@ -213,9 +224,10 @@ import SwmLogoSvg from '../assets/swm-logo.svg';
           <div
             class="col-start-1 row-start-1 z-10 bg-gradient-to-b from-[#FFF0] to-[#FFF]">
           </div>
-          <img
-            class="w-full col-start-1 row-start-1"
-            src="/TypeGPU/assets/giant-typegpu.svg"
+          <Image
+            class="w-full h-auto col-start-1 row-start-1"
+            src={GiantTypeGPULogo}
+            alt="A giant TypeGPU logo."
           />
         </div>
       </div>

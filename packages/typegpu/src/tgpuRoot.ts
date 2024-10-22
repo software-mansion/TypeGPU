@@ -22,19 +22,24 @@ import type { Unwrapper } from './unwrapper';
 export type SetPlumAction<T> = T | ((prev: T) => T);
 
 export interface TgpuRoot extends Unwrapper {
-  readonly device: GPUDevice;
-  readonly jitTranspiler?: JitTranspiler | undefined;
   /**
-   * The current command encoder. This property will
-   * hold the same value until `flush()` is called.
+   * The GPU device associated with this root.
    */
-  readonly commandEncoder: GPUCommandEncoder;
+  readonly device: GPUDevice;
 
+  /**
+   * @param typeSchema The type of data that this buffer will hold.
+   * @param initial The initial value of the buffer. (optional)
+   */
   createBuffer<TData extends AnyTgpuData>(
     typeSchema: TData,
     initial?: Parsed<TData> | TgpuPlum<Parsed<TData>> | undefined,
   ): TgpuBuffer<TData>;
 
+  /**
+   * @param typeSchema The type of data that this buffer will hold.
+   * @param gpuBuffer A vanilla WebGPU buffer.
+   */
   createBuffer<TData extends AnyTgpuData>(
     typeSchema: TData,
     gpuBuffer: GPUBuffer,
@@ -43,6 +48,17 @@ export interface TgpuRoot extends Unwrapper {
   unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
+
+  destroy(): void;
+}
+
+export interface ExperimentalTgpuRoot extends TgpuRoot {
+  readonly jitTranspiler?: JitTranspiler | undefined;
+  /**
+   * The current command encoder. This property will
+   * hold the same value until `flush()` is called.
+   */
+  readonly commandEncoder: GPUCommandEncoder;
 
   readPlum<TPlum extends TgpuPlum>(plum: TPlum): ExtractPlumValue<TPlum>;
 
@@ -68,7 +84,6 @@ export interface TgpuRoot extends Unwrapper {
   viewFor(view: TgpuAnyTextureView): GPUTextureView;
   externalTextureFor(texture: TgpuTextureExternal): GPUExternalTexture;
   samplerFor(sampler: TgpuSampler): GPUSampler;
-  destroy(): void;
 
   /**
    * Causes all commands enqueued by pipelines to be
