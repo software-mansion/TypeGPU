@@ -26,6 +26,18 @@ you can pass it into `tgpu.initFromDevice` instead.
 const root = tgpu.initFromDevice(device);
 ```
 
+To retrieve the device that is associated with a root, you can use the `root.device` property.
+
+```ts
+const device = root.device; // => GPUDevice
+
+context.configure({
+  device,
+  format: presentationFormat,
+  alphaMode: 'premultiplied',
+});
+```
+
 ## Creating resources
 
 Every `root.create*` function creates a typed resource.
