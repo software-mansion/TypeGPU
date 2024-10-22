@@ -61,7 +61,7 @@ const primitiveNumeric = <TKind extends string>(
  */
 export type Bool = TgpuData<boolean>;
 /**
- * Creates a new boolean schema representing a single WGSL boolean value.
+ * A schema that represents a boolean value. (equivalent to `bool` in WGSL)
  */
 export const bool: Bool = new SimpleTgpuData({
   schema: TB.bool,
