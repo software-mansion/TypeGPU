@@ -206,9 +206,32 @@ const showcaseVideoResolution = [2048, 1200];
         </ol>
       </div>
 
-      <p class="text-center text-pretty">
-        Take active part in the development by joining our discussions.
-      </p>
+      <article class="flex flex-col items-center gap-5">
+        <p class="text-center text-pretty max-w-[50rem]">
+          Take active part in the development by joining our discussions.
+        </p>
+        <div class="flex gap-5">
+          <a
+            class="inline-flex items-center gap-3 box-border w-full sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
+            href="https://discord.gg/8jpfgDqPcM"
+            target="_blank"
+            rel="noreferrer"
+            ><Image
+              class="w-7 h-auto"
+              src={DiscordIconSvg}
+              alt="Discord Logo"
+            /> Discord Server</a
+          >
+          <a
+            class="inline-flex items-center gap-3 box-border w-full sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
+            href="https://github.com/software-mansion/TypeGPU/discussions"
+            target="_blank"
+            rel="noreferrer"
+            ><Image class="w-7 h-auto" src={GithubIconSvg} alt="GitHub Logo" /> GitHub
+            Discussions</a
+          >
+        </div>
+      </article>
     </section>
 
     <section
