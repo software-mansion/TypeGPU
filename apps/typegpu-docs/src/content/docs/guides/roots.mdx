@@ -4,14 +4,111 @@ description: A guide on how to create and use the Root API
 draft: true
 ---
 
-Roots are responsible for resource allocation and management.
+Roots are responsible for resource allocation and management. Whether you'd like to wrap an existing WebGPU buffer
+with a typed shell or create a brand new buffer, roots are the place to start.
+
+You can create a root using the `tgpu.init` function.
+
+```ts
+const root = await tgpu.init(); // <-- requests a device
+
+// or...
+
+const root = await tgpu.init({ device }); // <-- uses an existing device
+```
 
 :::note[Psst, WebGPU veterans...]
 You can think of roots as typed wrappers around WebGPU devices.
 :::
 
-```ts
-import tgpu from 'typegpu';
+## Managing resources
 
-const root = await tgpu.init();
+```ts
+/* Creating buffers */
+
+const factorBuffer = root
+  .createBuffer(d.f32, 0.5)
+  .$usage('uniform');
+
+const valueBuffer = root
+  .createBuffer(d.f32, 20)
+  .$usage('uniform');
+
+/* Unwrapping to get raw WebGPU resources */
+
+root.unwrap(factorBuffer); // => GPUBuffer
+root.unwrap(valueBuffer); // => GPUBuffer
+
+/* Disposing all resources allocated with `root` */
+
+root.destroy();
+
+// `factorBuffer` and `valueBuffer` are no longer usable.
+
+```
+
+## Incorporating roots into existing code
+
+
+
+```ts
+hello
+```
+
+
+## Best practices
+
+Treat roots as their own separate universes, meaning resources created from the same root can interact with each other, while
+resources created by seperate roots can have a hard time interacting. This usually means creating just one root at the start
+of the program is the safest bet, but there are exceptions.
+
+### You do not own the GPU device
+
+If you cannot control the lifetime of the GPU device you are to use for computing/rendering, but are instead given the device in a lifecycle hook (e.g., react-native-wgpu),
+**you can create a new root each time, as long as you recreate every resource.**
+
+```ts
+const ref = useWebGPU(({ context, device, presentationFormat }) => {
+  (async () => {
+    const root = await tgpu.init(device);
+
+    // create all resources...
+  })();
+});
+```
+
+### You pass the device everywhere
+
+It is common practice to pass a `GPUDevice` to classes or functions for them to allocate their required resources. At first glance, this poses a problem when trying to
+incorporate TypeGPU, since we would need to pass a root around instead of a device for all functionality that wants to move towards a typed API. **We can create a global mapping
+between devices and roots to solve this.**
+
+:::note
+When designing an architecture from stratch with TypeGPU in mind, passing a `root` around instead of a `device` is a prefered pattern, since
+`root.device` can act as an escape-hatch for vanilla WebGPU functionality.
+:::
+
+```ts
+// main.ts
+
+const deviceToRootMap = new WeakMap<GPUDevice, TgpuRoot>();
+
+async function getOrInitRoot(device: GPUDevice): TgpuRoot {
+  let root = deviceToRootMap.get(device);
+
+  if (!root) {
+    root = await tgpu.init({ device });
+    deviceToRootMap.set(device, root);
+  }
+
+  return root;
+}
+```
+
+```ts
+class GameObject {
+  constructor(device: GPUDevice) {
+    
+  }
+}
 ```
