@@ -18,8 +18,6 @@ import MilestoneBindGroupsBadge from '../components/roadmap/MilestoneBindGroupsB
 import MilestoneFunctionsBadge from '../components/roadmap/MilestoneFunctionsBadge.astro';
 import MilestonePipelinesBadge from '../components/roadmap/MilestonePipelinesBadge.astro';
 import MilestoneCodeBadge from '../components/roadmap/MilestoneCodeBadge.astro';
-import GitHubIcon from '../components/design/icons/GitHubIcon.astro';
-import DiscordIcon from '../components/design/icons/DiscordIcon.astro';
 
 const showcaseVideoResolution = [2048, 1200];
 ---
@@ -164,12 +162,10 @@ const showcaseVideoResolution = [2048, 1200];
       <section
         class="box-border flex flex-col items-center justify-center px-4 lg:gap-20 gap-10 md:gap-[3.75rem] lg:max-w-[85rem] md:max-w-[53.5rem] max-w-[34.5rem]">
         <div>
-          <h2 class="mb-4 font-normal text-center md:mb-8 lg:mb-8 center">
-            Roadmap
-          </h2>
+          <h2 class="mb-4 font-normal text-center md:mb-8 center">Roadmap</h2>
           <p class="text-center text-pretty max-w-[60rem]">
             The road to end-to-end type safety on the GPU involves implementing
-            many interoperating primitives. Below is our roadmap of features
+            several interoperating primitives. Below is our roadmap of features
             that aim to fulfill that goal.
           </p>
         </div>
@@ -199,14 +195,14 @@ const showcaseVideoResolution = [2048, 1200];
             </RoadMapStep>
             <RoadMapStep title="Pipelines">
               <MilestonePipelinesBadge slot="visual" />
-              To ensure that shader stages match each-other, and pipeline constants
+              To ensure that shader stages match each other, and pipeline constants
               are filled with proper values, TypeGPU plans to provide typed pipelines.
             </RoadMapStep>
             <RoadMapStep title="Imperative code">
               <MilestoneCodeBadge slot="visual" />
               By giving developers the ability to write imperative shader code in
               TypeScript, we can leverage the excellent TypeScript LSP to bring end-to-end
-              typesafety to shader code like never before.
+              type safety to shader code like never before.
             </RoadMapStep>
           </ol>
         </div>
@@ -224,15 +220,24 @@ const showcaseVideoResolution = [2048, 1200];
               class="inline-flex justify-between items-center rounded-[6.25rem] gap-3 box-border sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
               href="https://github.com/software-mansion/TypeGPU/discussions"
               target="_blank"
-              rel="noreferrer"
-              ><GitHubIcon class="w-7 h-auto" /> GitHub Discussions</a
+              rel="noreferrer">
+              <Image
+                src={GithubIconSvg}
+                class="w-auto h-7 opacity-75"
+                alt="GitHub Logo"
+              />
+              GitHub Discussions</a
             >
             <a
               class="inline-flex w-fit justify-between items-center rounded-[6.25rem] gap-3 box-border sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
               href="https://discord.gg/8jpfgDqPcM"
               target="_blank"
               rel="noreferrer">
-              <DiscordIcon class="w-7 h-auto" /> Discord Server</a
+              <Image
+                src={DiscordIconSvg}
+                class="w-auto h-7 opacity-75"
+                alt="Discord Logo"
+              /> Discord Server</a
             >
           </div>
         </article>
