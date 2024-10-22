@@ -18,6 +18,8 @@ import MilestoneBindGroupsBadge from '../components/roadmap/MilestoneBindGroupsB
 import MilestoneFunctionsBadge from '../components/roadmap/MilestoneFunctionsBadge.astro';
 import MilestonePipelinesBadge from '../components/roadmap/MilestonePipelinesBadge.astro';
 import MilestoneCodeBadge from '../components/roadmap/MilestoneCodeBadge.astro';
+import GitHubIcon from '../components/design/icons/GitHubIcon.astro';
+import DiscordIcon from '../components/design/icons/DiscordIcon.astro';
 
 const showcaseVideoResolution = [2048, 1200];
 ---
@@ -156,83 +158,86 @@ const showcaseVideoResolution = [2048, 1200];
       </div>
     </section>
 
-    <section
-      class="box-border flex flex-col items-center justify-center my-32 px-4 lg:gap-20 gap-10 md:gap-[3.75rem] lg:max-w-[85rem] md:max-w-[53.5rem] max-w-[34.5rem]">
-      <div>
-        <h2 class="mb-4 font-normal text-center md:mb-8 lg:mb-8 center">
-          Roadmap
-        </h2>
-        <p class="text-center text-pretty max-w-[60rem]">
-          The road to end-to-end type safety on the GPU involves implementing
-          many interoperating primitives. Below is our roadmap of features that
-          aim to fulfill that goal.
-        </p>
-      </div>
-
-      <div class="max-w-[50rem]">
-        <ol class="flex flex-col m-0 p-0">
-          <RoadMapStep title="Data structures & buffers" releasedIn="0.1">
-            <MilestoneBuffersBadge slot="visual" />
-            The WebGPU Shading Language (WGSL) gives developers a rich sense of the
-            structure of the data that it operates on. This is lost when accessed
-            through JavaScript, as the APIs accept raw byte buffers. TypeGPU regains
-            that information on the JavaScript side and handles proper byte alignment
-            and padding automatically.
-          </RoadMapStep>
-          <RoadMapStep title="Bind groups">
-            <MilestoneBindGroupsBadge slot="visual" />
-            Connecting resources to shaders via numeric indices can lead to problems
-            that are hard to catch at build-time/CI. By using named keys and typed
-            data structures we can ensure that the provided resources are what the
-            shader expects.
-          </RoadMapStep>
-          <RoadMapStep title="Functions">
-            <MilestoneFunctionsBadge slot="visual" />
-            By wrapping each function with a "typed shell", they can be moved across
-            different files/modules. Any resources (variables, buffers, etc.) in
-            the external scope can be accessed inside the function.
-          </RoadMapStep>
-          <RoadMapStep title="Pipelines">
-            <MilestonePipelinesBadge slot="visual" />
-            To ensure that shader stages match each-other, and pipeline constants
-            are filled with proper values, TypeGPU plans to provide typed pipelines.
-          </RoadMapStep>
-          <RoadMapStep title="Imperative code">
-            <MilestoneCodeBadge slot="visual" />
-            By giving developers the ability to write imperative shader code in TypeScript,
-            we can leverate the excellent TypeScript LSP to bring end-to-end typesafety
-            to shader code like never before.
-          </RoadMapStep>
-        </ol>
-      </div>
-
-      <article class="flex flex-col items-center gap-5">
-        <p class="text-center text-pretty max-w-[50rem]">
-          Take active part in the development by joining our discussions.
-        </p>
-        <div class="flex gap-5">
-          <a
-            class="inline-flex items-center gap-3 box-border w-full sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
-            href="https://discord.gg/8jpfgDqPcM"
-            target="_blank"
-            rel="noreferrer"
-            ><Image
-              class="w-7 h-auto"
-              src={DiscordIconSvg}
-              alt="Discord Logo"
-            /> Discord Server</a
-          >
-          <a
-            class="inline-flex items-center gap-3 box-border w-full sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
-            href="https://github.com/software-mansion/TypeGPU/discussions"
-            target="_blank"
-            rel="noreferrer"
-            ><Image class="w-7 h-auto" src={GithubIconSvg} alt="GitHub Logo" /> GitHub
-            Discussions</a
-          >
+    {/* Roadmap Section */}
+    <div
+      class="box-border flex flex-col items-center bg-white w-full my-32 py-8 md:p-16 lg:p-32 md:rounded-[5rem] rounded-[2.5rem]">
+      <section
+        class="box-border flex flex-col items-center justify-center px-4 lg:gap-20 gap-10 md:gap-[3.75rem] lg:max-w-[85rem] md:max-w-[53.5rem] max-w-[34.5rem]">
+        <div>
+          <h2 class="mb-4 font-normal text-center md:mb-8 lg:mb-8 center">
+            Roadmap
+          </h2>
+          <p class="text-center text-pretty max-w-[60rem]">
+            The road to end-to-end type safety on the GPU involves implementing
+            many interoperating primitives. Below is our roadmap of features
+            that aim to fulfill that goal.
+          </p>
         </div>
-      </article>
-    </section>
+
+        <div class="max-w-[50rem]">
+          <ol class="flex flex-col m-0 p-0">
+            <RoadMapStep title="Data structures & buffers" releasedIn="0.1">
+              <MilestoneBuffersBadge slot="visual" complete />
+              The WebGPU Shading Language (WGSL) gives developers a rich sense of
+              the structure of the data that it operates on. This is lost when accessed
+              through JavaScript, as the APIs accept raw byte buffers. TypeGPU regains
+              that information on the JavaScript side and handles proper byte alignment
+              and padding automatically.
+            </RoadMapStep>
+            <RoadMapStep title="Bind groups">
+              <MilestoneBindGroupsBadge slot="visual" />
+              Connecting resources to shaders via numeric indices can lead to problems
+              that are hard to catch at build-time/CI. By using named keys and typed
+              data structures we can ensure that the provided resources are what
+              the shader expects.
+            </RoadMapStep>
+            <RoadMapStep title="Functions">
+              <MilestoneFunctionsBadge slot="visual" />
+              By wrapping each function with a "typed shell", they can be moved across
+              different files/modules. Any resources (variables, buffers, etc.) in
+              the external scope can be accessed inside the function.
+            </RoadMapStep>
+            <RoadMapStep title="Pipelines">
+              <MilestonePipelinesBadge slot="visual" />
+              To ensure that shader stages match each-other, and pipeline constants
+              are filled with proper values, TypeGPU plans to provide typed pipelines.
+            </RoadMapStep>
+            <RoadMapStep title="Imperative code">
+              <MilestoneCodeBadge slot="visual" />
+              By giving developers the ability to write imperative shader code in
+              TypeScript, we can leverate the excellent TypeScript LSP to bring end-to-end
+              typesafety to shader code like never before.
+            </RoadMapStep>
+          </ol>
+        </div>
+
+        <article class="isolate relative flex flex-col items-center gap-5">
+          <div
+            class="absolute -inset-x-40 inset-y-0 -bottom-20 bg-blurred-radial-tameplum -z-10">
+            {/* Blurred background */}
+          </div>
+          <p class="text-center text-pretty max-w-[50rem]">
+            Take active part in the development by joining our discussions.
+          </p>
+          <div class="flex flex-col items-center sm:flex-row gap-3">
+            <a
+              class="inline-flex justify-between items-center rounded-[6.25rem] gap-3 box-border sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
+              href="https://github.com/software-mansion/TypeGPU/discussions"
+              target="_blank"
+              rel="noreferrer"
+              ><GitHubIcon class="w-7 h-auto" /> GitHub Discussions</a
+            >
+            <a
+              class="inline-flex w-fit justify-between items-center rounded-[6.25rem] gap-3 box-border sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
+              href="https://discord.gg/8jpfgDqPcM"
+              target="_blank"
+              rel="noreferrer">
+              <DiscordIcon class="w-7 h-auto" /> Discord Server</a
+            >
+          </div>
+        </article>
+      </section>
+    </div>
 
     <section
       class="box-border flex flex-col items-center px-4 py-5 lg:gap-20 md:gap-[3.75rem] gap-10 w-full max-w-[34.5rem] lg:max-w-[85rem]">

@@ -7,13 +7,13 @@ const { title, releasedIn } = Astro.props;
     'group isolate relative flex gap-3 lg:gap-5 marker:content-[""]',
   ]}>
   <div
-    class="pt-2 lg:pt-4 pb-4 flex-shrink-0 w-24 md:w-32 lg:w-40 *:w-full *:h-auto">
+    class="pt-2 lg:pt-4 pb-4 flex-shrink-0 w-24 md:w-32 lg:w-36 *:w-full *:h-auto">
     <slot name="visual" />
   </div>
 
   {/* Progress Bar Line */}
   <div
-    class="absolute -z-10 left-[2.8rem] md:left-[3.7rem] lg:left-[4.5rem] inset-y-0 group-first:top-20 lg:group-first:top-32 group-last:h-10 w-1.5 lg:w-2 bg-[#D6DDEF]">
+    class="absolute -z-10 left-[2.8rem] md:left-[3.7rem] lg:left-[4.2rem] inset-y-0 group-first:top-20 lg:group-first:top-32 group-last:h-10 w-1.5 lg:w-2 bg-[#D6DDEF]">
     <div
       class="hidden group-first:block absolute inset-0 bg-gradient-to-b from-[#5259EE] to-[#D6DDEF]">
     </div>
@@ -31,7 +31,7 @@ const { title, releasedIn } = Astro.props;
         )
       }
     </h3>
-    <p class="pb-6 md:pb-8 lg:pb-12 text-justify text-grayscale-80">
+    <p class="pr-2 pb-6 md:pb-8 lg:pb-12 text-justify text-grayscale-80">
       <slot />
     </p>
   </article>
