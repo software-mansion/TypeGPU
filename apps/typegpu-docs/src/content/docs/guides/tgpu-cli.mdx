@@ -208,7 +208,6 @@ The generated TypeScript definitions look like this:
   <summary>Click to see the content</summary>
   ```typescript
   /* generated via tgpu-cli by TypeGPU */
-
   import tgpu from 'typegpu';
   import * as d from 'typegpu/data';
 
@@ -232,7 +231,6 @@ The generated TypeScript definitions look like this:
     particles: d.arrayOf(Particle, arrayLength),
   });
 
-
   /* bindGroupLayouts */
   export const layout0 = tgpu.bindGroupLayout({
     params: {
@@ -246,7 +244,7 @@ The generated TypeScript definitions look like this:
       storage: Particles,
       access: 'mutable',
     },
-  }).$forceIndex(0);
+  });
   ```
   </details>
   </TabItem>
@@ -255,8 +253,6 @@ The generated TypeScript definitions look like this:
   <summary>Click to see the content</summary>
   ```typescript
   /* generated via tgpu-cli by TypeGPU */
-
-  import tgpu from 'typegpu';
   import * as d from 'typegpu/data';
 
   /* structs */
@@ -304,6 +300,7 @@ tgpu-cli gen "path/to/shader.wgsl"
 tgpu-cli gen 'path/to/shader.wgsl'
 ```
 The quotes are not necessary if the path does not contain spaces. However, using them is a good practice to avoid potential issues.
+If you are using glob patterns, quotes are required to prevent the shell from expanding them.
 :::
 
 TypeGPU CLI supports glob patterns for specifying input paths.
@@ -345,6 +342,10 @@ This will generate TypeGPU definitions for all WGSL files inside the `path/to` d
           - <FileDiff> shader2.ts </FileDiff>
 </FileTree>
 </div>
+
+:::note
+Remember to use quotes when using glob patterns to prevent the shell from expanding them.
+:::
 
 ### Specify the output path with the `--output` option
 
@@ -389,8 +390,13 @@ This will generate the TypeGPU definitions in the `output` directory with the sa
 
 :::caution
 If you use a glob pattern for the input path, specifically `**`, make sure to use the `**` pattern
-in the output path as well to preserve the directory structure (*or make sure no conflicts will happen*).
+in the output path as well to preserve the directory structure (*or make sure no conflicts happen*).
 If you don't, all generated files will be placed in the same directory which may lead to name conflicts.
+
+<details>
+<summary>Example</summary>
+
+Consider the following directory structure:
 
 <FileTree>
 
@@ -419,11 +425,36 @@ be a name conflict as both `shader1.wgsl` and `example/shader1.wgsl` will try to
       - shader1.wgsl
       - shader2.wgsl
   - <FileDiff> output </FileDiff>
-      - <FileDiff> shader1.ts </FileDiff> \<\-\- name conflict
-      - <FileDiff> shader1.ts </FileDiff> \<\-\- name conflict
+      - <FileDiff> shader1.ts \<\-\- name conflict </FileDiff>
+      - <FileDiff> shader1.ts \<\-\- name conflict </FileDiff>
       - <FileDiff> shader2.ts </FileDiff>
 </FileTree>
 </div>
+
+To avoid this issue, use the `**` pattern in the output path as well:
+
+```bash
+tgpu-cli gen "src/**/*.wgsl" --output "output/**/*.ts"
+```
+
+This will generate the TypeGPU definitions in the `output` directory with the same directory structure as the input files.
+
+<div class="relative">
+<FileTree>
+  - src
+      - example
+          - shader1.wgsl
+      - shader1.wgsl
+      - shader2.wgsl
+  - <FileDiff> output </FileDiff>
+      - <FileDiff> example </FileDiff>
+          - <FileDiff> shader1.ts </FileDiff>
+      - <FileDiff> src </FileDiff>
+          - <FileDiff> shader1.ts </FileDiff>
+          - <FileDiff> shader2.ts </FileDiff>
+</FileTree>
+</div>
+</details>
 :::
 
 You can also use the `-o` shorthand for the `--output` option:
@@ -465,11 +496,14 @@ import ListItem from '../../../components/ListItem.astro';
   .mts
 </ListItem>
 
-You can also specify the module format using the `--commonjs` option:
+:::caution
+Specifying an extension does not change the module format.
+To specify the commonjs module format, use the `--commonjs` option.
 
 ```bash
-tgpu-cli gen "path/to/shader.wgsl" --output "different/path/output.js" --commonjs
+tgpu-cli gen "path/to/shader.wgsl" -o "different/path/output.cjs" --commonjs
 ```
+:::
 
 ### Using the `--keep` and `--overwrite` options
 
