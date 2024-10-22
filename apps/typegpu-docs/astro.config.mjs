@@ -90,6 +90,7 @@ export default defineConfig({
             {
               label: 'TypeGPU CLI',
               slug: 'guides/tgpu-cli',
+              badge: { text: 'new', variant: 'default' },
             },
             // {
             //   label: 'Basic Principles',

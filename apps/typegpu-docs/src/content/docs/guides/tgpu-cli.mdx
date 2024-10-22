@@ -7,7 +7,8 @@ import { FileTree } from '@astrojs/starlight/components';
 import FileDiff from '../../../components/FileDiff.astro';
 
 TypeGPU CLI (tgpu-cli) is a command-line interface for the TypeGPU library.
-It allows you to generate TypeGPU definitions from WGSL shaders.
+It provides a way for a highly automated migration process and is a great tool
+for existing WebGPU projects that want to start taking advantage of type-safe TypeGPU features.
 
 ## Installation
 
@@ -174,9 +175,10 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
   </TabItem>
 </Tabs>
 
-If we wanted to make use of TypeGPU's type-safe features with these shaders, we could create the appropriate definitions by hand.
-This, however, can be a tedious and difficult to maintain process.
-Instead, we can use TypeGPU CLI to generate the necessary TypeScript definitions for us.
+If we wanted to leverage TypeGPU's type-safe features with these shaders, we could
+manually create the necessary definitions. However, maintaining these handcrafted
+definitions in sync with the shaders can be both tedious and prone to errors.
+Fortunately, we don't have to do that; we can use the TypeGPU CLI to automatically generate the required TypeScript definitions for us.
 
 Assuming that we are inside the project directory (computeBoids folder), we can run the following command to generate the TypeScript definitions for the shaders:
 
@@ -269,7 +271,7 @@ The generated TypeScript definitions look like this:
 
 These definitions can now be used in our TypeScript code to interact with the shaders in a type-safe manner.
 If we wanted to tinker with the shaders, but still have the updated definitions, we could use the `--watch` flag to keep the definitions up-to-date.
-For specific usage details, read the Usage .
+For specific usage details, check out the following Usage section.
 
 ## Usage
 
