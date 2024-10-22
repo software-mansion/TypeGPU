@@ -1,18 +1,37 @@
 ---
-const { title } = Astro.props;
+const { title, releasedIn } = Astro.props;
 ---
 
 <li
   class:list={[
-    'group relative sm:min-h-40 md:min-h-44 lg:min-h-52 sm:ml-40 md:ml-44 lg:ml-52 marker:content-[""]',
+    'group isolate relative flex gap-3 lg:gap-5 marker:content-[""]',
   ]}>
   <div
-    class="absolute -left-40 md:-left-44 lg:-left-52 top-0 pt-4 flex flex-col *:flex-shrink-0 justify-center">
+    class="pt-2 lg:pt-4 pb-4 flex-shrink-0 w-24 md:w-32 lg:w-40 *:w-full *:h-auto">
     <slot name="visual" />
   </div>
+
+  {/* Progress Bar Line */}
+  <div
+    class="absolute -z-10 left-[2.8rem] md:left-[3.7rem] lg:left-[4.5rem] inset-y-0 group-first:top-20 lg:group-first:top-32 group-last:h-10 w-1.5 lg:w-2 bg-[#D6DDEF]">
+    <div
+      class="hidden group-first:block absolute inset-0 bg-gradient-to-b from-[#5259EE] to-[#D6DDEF]">
+    </div>
+  </div>
+
   <article>
-    <h3>{title}</h3>
-    <p>
+    <h3 class="flex items-center font-normal pb-3 md:pb-4">
+      {title}
+      {
+        releasedIn && (
+          <span class="ml-4 leading-normal font-sans font-light rounded-lg px-2 md:px-3 py-0.5 md:py-1 text-sm md:text-base lg:text-lg bg-[#5259EE] text-white">
+            <span class="hidden sm:block">Released in {releasedIn}</span>
+            <span class="sm:hidden">v{releasedIn}</span>
+          </span>
+        )
+      }
+    </h3>
+    <p class="pb-6 md:pb-8 lg:pb-12 text-justify">
       <slot />
     </p>
   </article>
