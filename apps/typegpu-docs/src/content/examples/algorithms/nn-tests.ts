@@ -6,6 +6,8 @@
 }
 */
 
+// TODO: Remove this file before marking as ready for review
+
 import { arrayOf, f32 } from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
 
