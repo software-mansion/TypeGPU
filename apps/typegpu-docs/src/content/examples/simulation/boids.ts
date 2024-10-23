@@ -57,7 +57,7 @@ const parametersBuffer = root
       cohesionStrength: 0.001,
     },
   )
-  .$usage(tgpu.Storage);
+  .$usage('storage');
 
 const triangleSize = addSliderPlumParameter('triangle size', 0.04, {
   min: 0.01,
@@ -66,7 +66,7 @@ const triangleSize = addSliderPlumParameter('triangle size', 0.04, {
 });
 const triangleSizeBuffer = root
   .createBuffer(f32, triangleSize)
-  .$usage(tgpu.Uniform);
+  .$usage('uniform');
 const triangleSizePlum = wgsl.plum((get) => {
   const size = get(triangleSize);
   return [
@@ -78,7 +78,7 @@ const triangleSizePlum = wgsl.plum((get) => {
 
 const triangleVertex = root
   .createBuffer(arrayOf(vec2f, 3), triangleSizePlum)
-  .$usage(tgpu.Vertex);
+  .$usage('vertex');
 
 const MAX_TRIANGLES = 10000;
 const triangleAmount = addSliderPlumParameter('triangle amount', 500, {
@@ -88,7 +88,7 @@ const triangleAmount = addSliderPlumParameter('triangle amount', 500, {
 });
 const triangleAmountBuffer = root
   .createBuffer(u32, triangleAmount)
-  .$usage(tgpu.Uniform);
+  .$usage('uniform');
 const trianglePosData = arrayOf(
   struct({
     position: vec2f,
@@ -99,7 +99,7 @@ const trianglePosData = arrayOf(
 type TrianglePosData = typeof trianglePosData;
 
 const trianglePosBuffers = Array.from({ length: 2 }, () => {
-  return root.createBuffer(trianglePosData).$usage(tgpu.Storage);
+  return root.createBuffer(trianglePosData).$usage('storage');
 });
 
 const bufferPairs = [

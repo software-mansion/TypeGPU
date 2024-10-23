@@ -2,7 +2,6 @@
  * @module typegpu/experimental
  */
 
-import { Storage, Uniform, Vertex } from '../core/buffer/buffer';
 import { computeFn } from '../core/function/tgpuComputeFn';
 import { fn, procedure } from '../core/function/tgpuFn';
 import { fragmentFn } from '../core/function/tgpuFragmentFn';
@@ -14,9 +13,12 @@ import { bindGroupLayout } from '../tgpuBindGroupLayout';
 import { read, write } from '../tgpuBufferUtils';
 
 export const tgpu = {
-  Uniform,
-  Storage,
-  Vertex,
+  /** @deprecated Use `'uniform'` string literal instead. */
+  Uniform: 'uniform' as const,
+  /** @deprecated Use `'storage'` string literal instead. */
+  Storage: 'storage' as const,
+  /** @deprecated Use `'vertex'` string literal instead. */
+  Vertex: 'vertex' as const,
 
   fn,
   procedure,
@@ -57,7 +59,12 @@ export {
   asVertex,
 } from '../core/buffer/bufferUsage';
 
-export type { TgpuBuffer } from '../core/buffer/buffer';
+export type {
+  TgpuBuffer,
+  Uniform,
+  Storage,
+  Vertex,
+} from '../core/buffer/buffer';
 export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
 export type {
   TgpuBufferUsage,
