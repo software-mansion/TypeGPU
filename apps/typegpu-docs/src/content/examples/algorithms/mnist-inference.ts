@@ -30,118 +30,7 @@ const root = await tgpu.init({
   device,
 });
 
-interface LayerData {
-  header: string;
-  data: Float32Array;
-  shape: [number, number?];
-  buffer: TgpuBuffer<TgpuArray<F32>> & typeof tgpu.Storage;
-}
-
-function getLayerData(layer: ArrayBuffer, shape: [number, number?]): LayerData {
-  const headerLen = new Uint16Array(layer.slice(8, 10));
-
-  const header = new TextDecoder().decode(
-    new Uint8Array(layer.slice(10, 10 + headerLen[0])),
-  );
-
-  const data = new Float32Array(layer.slice(10 + headerLen[0]));
-  // verify the length of the data matches the shape
-  if (data.length !== shape[0] * (shape[1] || 1)) {
-    throw new Error(`Data length ${data.length} does not match shape ${shape}`);
-  }
-  const buffer = root
-    .createBuffer(arrayOf(f32, data.length), [...data])
-    .$usage(tgpu.Storage);
-
-  return {
-    header,
-    data,
-    shape,
-    buffer,
-  };
-}
-
-const layer0Biases = await fetch('/TypeGPU/mnistWeights/layer0.bias.npy').then(
-  (res) => res.arrayBuffer().then((buffer) => getLayerData(buffer, [256])),
-);
-const layer0Weights = await fetch(
-  '/TypeGPU/mnistWeights/layer0.weight.npy',
-).then((res) =>
-  res.arrayBuffer().then((buffer) => getLayerData(buffer, [784, 256])),
-);
-const layer1Biases = await fetch('/TypeGPU/mnistWeights/layer1.bias.npy').then(
-  (res) => res.arrayBuffer().then((buffer) => getLayerData(buffer, [128])),
-);
-const layer1Weights = await fetch(
-  '/TypeGPU/mnistWeights/layer1.weight.npy',
-).then((res) =>
-  res.arrayBuffer().then((buffer) => getLayerData(buffer, [256, 128])),
-);
-const layer2Biases = await fetch('/TypeGPU/mnistWeights/layer2.bias.npy').then(
-  (res) => res.arrayBuffer().then((buffer) => getLayerData(buffer, [10])),
-);
-const layer2Weights = await fetch(
-  '/TypeGPU/mnistWeights/layer2.weight.npy',
-).then((res) =>
-  res.arrayBuffer().then((buffer) => getLayerData(buffer, [128, 10])),
-);
-
-interface Layer {
-  weights: LayerData;
-  biases: LayerData;
-  buffers: {
-    weights: TgpuBuffer<TgpuArray<F32>> & typeof tgpu.Storage;
-    biases: TgpuBuffer<TgpuArray<F32>> & typeof tgpu.Storage;
-    state: TgpuBuffer<TgpuArray<F32>> & typeof tgpu.Storage;
-  };
-}
-
-interface Network {
-  layers: Layer[];
-  input: TgpuBuffer<TgpuArray<F32>> & typeof tgpu.Storage;
-  output: TgpuBuffer<TgpuArray<F32>> & typeof tgpu.Storage;
-  writeToInput(data: number[]): void;
-}
-
-function createNetwork(layers: [LayerData, LayerData][]): Network {
-  const buffers = layers.map(([weights, biases]) => {
-    if (weights.shape[1] !== biases.shape[0]) {
-      throw new Error('Shape mismatch');
-    }
-
-    return {
-      weights: weights,
-      biases: biases,
-      buffers: {
-        weights: weights.buffer,
-        biases: biases.buffer,
-        state: root
-          .createBuffer(arrayOf(f32, biases.shape[0]))
-          .$usage(tgpu.Storage),
-      },
-    };
-  });
-
-  const input = root
-    .createBuffer(arrayOf(f32, layers[0][0].shape[0]))
-    .$usage(tgpu.Storage);
-  const output = buffers[buffers.length - 1].buffers.state;
-
-  return {
-    layers: buffers,
-    input,
-    output,
-    writeToInput(data: number[]) {
-      input.write(data);
-    },
-  };
-}
-
-const network = createNetwork([
-  [layer0Weights, layer0Biases],
-  [layer1Weights, layer1Biases],
-  [layer2Weights, layer2Biases],
-]);
+// Shader code
 
 const layerShader = `
   @binding(0) @group(0) var<storage, read> input: array<f32>;
@@ -215,7 +104,9 @@ const pipeline = device.createComputePipeline({
   },
 });
 
-function inference(network: Network) {
+// Inference function
+
+async function inferNetwork(network: Network) {
   let encoder = device.createCommandEncoder();
 
   // First layer (input -> layer1)
@@ -271,34 +162,185 @@ function inference(network: Network) {
     device.queue.submit([encoder.finish()]);
   }
 
-  // Read the output
-  const outputData =
-    network.layers[network.layers.length - 1].buffers.state.read();
-  outputData.then(async (data) => {
-    const max = Math.max(...data);
-    const index = data.indexOf(max);
-    console.log('Predictions:');
-    // display the predictions as percentages
-    const sum = data.reduce((a, b) => a + b, 0);
-    data.forEach((value, i) => {
-      console.log(
-        `${i}: ${((value / sum) * 100).toFixed(2)}% ${i === index ? '<--' : ''}`,
-      );
-    });
-    result.textContent = `Prediction: ${index}`;
-  });
+  await device.queue.onSubmittedWorkDone();
 }
+
+// Definitions for the network
+
+interface LayerData {
+  header: string;
+  data: Float32Array;
+  shape: [number, number?];
+  buffer: TgpuBuffer<TgpuArray<F32>> & typeof tgpu.Storage;
+}
+
+interface Layer {
+  weights: LayerData;
+  biases: LayerData;
+  buffers: {
+    weights: TgpuBuffer<TgpuArray<F32>> & typeof tgpu.Storage;
+    biases: TgpuBuffer<TgpuArray<F32>> & typeof tgpu.Storage;
+    state: TgpuBuffer<TgpuArray<F32>> & typeof tgpu.Storage;
+  };
+}
+
+interface Network {
+  layers: Layer[];
+  input: TgpuBuffer<TgpuArray<F32>> & typeof tgpu.Storage;
+  output: TgpuBuffer<TgpuArray<F32>> & typeof tgpu.Storage;
+
+  inference(data: number[]): Promise<number[]>;
+}
+
+// Network loading functions
+
+/*
+ * Create a LayerData object from a layer ArrayBuffer
+ *
+ * The function extracts the header, shape and data from the layer
+ * If there are any issues with the layer, an error is thrown
+ *
+ * Automatically creates appropriate buffer initialized with the data
+ */
+function getLayerData(layer: ArrayBuffer): LayerData {
+  const headerLen = new Uint16Array(layer.slice(8, 10));
+
+  const header = new TextDecoder().decode(
+    new Uint8Array(layer.slice(10, 10 + headerLen[0])),
+  );
+
+  // shape can be found in the header in the format: 'shape': (x, y) or 'shape': (x,) for bias
+  const shapeMatch = header.match(/'shape': \((\d+), ?(\d+)?\)/);
+  console.log('Header: ', header);
+  console.log('Shape match: ', shapeMatch);
+  if (!shapeMatch) {
+    throw new Error('Shape not found in header');
+  }
+
+  // To accomodate .npy weirdness - if we have a 2d shape we need to switch the order
+  const shape = Number.isNaN(Number.parseInt(shapeMatch[2]))
+    ? ([Number.parseInt(shapeMatch[1]), undefined] as [number, undefined])
+    : ([Number.parseInt(shapeMatch[2]), Number.parseInt(shapeMatch[1])] as [
+        number,
+        number,
+      ]);
+  console.log('Shape: ', shape);
+
+  const data = new Float32Array(layer.slice(10 + headerLen[0]));
+  // verify the length of the data matches the shape
+  if (data.length !== shape[0] * (shape[1] || 1)) {
+    throw new Error(`Data length ${data.length} does not match shape ${shape}`);
+  }
+  const buffer = root
+    .createBuffer(arrayOf(f32, data.length), [...data])
+    .$usage(tgpu.Storage);
+
+  return {
+    header,
+    data,
+    shape,
+    buffer,
+  };
+}
+
+/*
+ * Creates a network from a list of pairs of weights and biases
+ *
+ * It automates the creation of state buffers that are used to store the intermediate results of the network
+ * as well as the input layer buffer
+ *
+ * It provides an inference function that takes an array of input data and returns an array of output data
+ */
+function createNetwork(layers: [LayerData, LayerData][]): Network {
+  const buffers = layers.map(([weights, biases]) => {
+    if (weights.shape[1] !== biases.shape[0]) {
+      throw new Error('Shape mismatch');
+    }
+
+    return {
+      weights: weights,
+      biases: biases,
+      buffers: {
+        weights: weights.buffer,
+        biases: biases.buffer,
+        state: root
+          .createBuffer(arrayOf(f32, biases.shape[0]))
+          .$usage(tgpu.Storage),
+      },
+    };
+  });
+
+  const input = root
+    .createBuffer(arrayOf(f32, layers[0][0].shape[0]))
+    .$usage(tgpu.Storage);
+  const output = buffers[buffers.length - 1].buffers.state;
+
+  return {
+    layers: buffers,
+    input,
+    output,
+
+    async inference(data: number[]) {
+      if (data.length !== layers[0][0].shape[0]) {
+        throw new Error(
+          `Data length ${data.length} does not match input shape ${layers[0][0].shape[0]}`,
+        );
+      }
+      input.write(data);
+      await inferNetwork(this);
+      return await output.read();
+    },
+  };
+}
+
+// Data fetching and network creation
+
+const layer0Biases = await fetch('/TypeGPU/mnistWeights/layer0.bias.npy').then(
+  (res) => res.arrayBuffer().then((buffer) => getLayerData(buffer)),
+);
+const layer0Weights = await fetch(
+  '/TypeGPU/mnistWeights/layer0.weight.npy',
+).then((res) => res.arrayBuffer().then((buffer) => getLayerData(buffer)));
+
+const layer1Biases = await fetch('/TypeGPU/mnistWeights/layer1.bias.npy').then(
+  (res) => res.arrayBuffer().then((buffer) => getLayerData(buffer)),
+);
+const layer1Weights = await fetch(
+  '/TypeGPU/mnistWeights/layer1.weight.npy',
+).then((res) => res.arrayBuffer().then((buffer) => getLayerData(buffer)));
+
+const layer2Biases = await fetch('/TypeGPU/mnistWeights/layer2.bias.npy').then(
+  (res) => res.arrayBuffer().then((buffer) => getLayerData(buffer)),
+);
+const layer2Weights = await fetch(
+  '/TypeGPU/mnistWeights/layer2.weight.npy',
+).then((res) => res.arrayBuffer().then((buffer) => getLayerData(buffer)));
+
+const network = createNetwork([
+  [layer0Weights, layer0Biases],
+  [layer1Weights, layer1Biases],
+  [layer2Weights, layer2Biases],
+]);
+
+// Canvas drawing
 
 const resetCanvas = () => {
   data.fill(0);
   context.clearRect(0, 0, canvas.width, canvas.height);
+  // draw grid
+  context.strokeStyle = '#ccc';
+  const scale = canvas.width / 28;
+  for (let i = 0; i < 28; i++) {
+    for (let j = 0; j < 28; j++) {
+      context.strokeRect(j * scale, i * scale, scale, scale);
+    }
+  }
 };
 resetCanvas();
 
 const draw = () => {
   const size = 28;
   const scale = canvas.width / size;
-  context.clearRect(0, 0, canvas.width, canvas.height);
   for (let i = 0; i < size; i++) {
     for (let j = 0; j < size; j++) {
       const value = data[i * size + j];
@@ -346,27 +388,19 @@ canvas.addEventListener('mousemove', (event) => {
     }
   }
   draw();
-  // Blur the image for better predictions
-  const blurred = new Uint8Array(data.length);
-  for (let i = 0; i < 28; i++) {
-    for (let j = 0; j < 28; j++) {
-      let sum = 0;
-      let count = 0;
-      for (let k = -1; k <= 1; k++) {
-        for (let l = -1; l <= 1; l++) {
-          const x = j + k;
-          const y = i + l;
-          if (x >= 0 && x < 28 && y >= 0 && y < 28) {
-            sum += data[y * 28 + x];
-            count++;
-          }
-        }
-      }
-      blurred[i * 28 + j] = sum / count;
-    }
-  }
-  network.writeToInput([...blurred].map((x) => x / 255));
-  inference(network);
+
+  network.inference([...data].map((x) => x / 255)).then((data) => {
+    const max = Math.max(...data);
+    const index = data.indexOf(max);
+    console.log('Predictions:');
+    const sum = data.reduce((a, b) => a + b, 0);
+    data.forEach((value, i) => {
+      console.log(
+        `${i}: ${((value / sum) * 100).toFixed(2)}% ${i === index ? '<--' : ''}`,
+      );
+    });
+    result.textContent = `Prediction: ${index}`;
+  });
 });
 
 /** @button "Reset" */
