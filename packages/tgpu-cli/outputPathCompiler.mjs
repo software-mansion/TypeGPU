@@ -19,12 +19,11 @@ export const createOutputPathCompiler = (input, output) => {
               .replace('\\*', '.*'),
           ).exec(file)?.groups?.dir;
 
-          const parsed = path.parse(file);
           return (
-            parsed.dir.length === 0
+            dir === undefined
               ? output.replace('**/', '')
-              : output.replace('**', dir ?? parsed.dir)
-          ).replace('*', parsed.name);
+              : output.replace('**', dir)
+          ).replace('*', path.parse(file).name);
         }
       : (file) => output.replace('*', path.parse(file).name) // no "**"" placeholder, flattening to the same directory
     : (file) => {
