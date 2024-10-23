@@ -141,7 +141,50 @@ const inference = () => {
   });
 };
 
-/** @button "Randomize" */
+// EXPERIMENTS
+// load 'layer0.bias.npy'
+const layer0Bias = await fetch('/TypeGPU/mnistWeights/layer0.bias.npy').then(
+  (res) => res.arrayBuffer(),
+);
+const layer0Weights = await fetch(
+  '/TypeGPU/mnistWeights/layer0.weight.npy',
+).then((res) => res.arrayBuffer());
+// The first 6 bytes are a magic string: exactly \x93NUMPY.
+// The next 1 byte is an unsigned byte: the major version number of the file format, e.g. \x01.
+// The next 1 byte is an unsigned byte: the minor version number of the file format, e.g. \x00. Note: the version of the file format is not tied to the version of the numpy package.
+// The next 2 bytes form a little-endian unsigned short int: the length of the header data HEADER_LEN.
+// The next HEADER_LEN bytes form the header data describing the array’s format. It is an ASCII string which contains a Python literal expression of a dictionary. It is terminated by a newline (\n) and padded with spaces (\x20) to make the total of len(magic string) + 2 + len(length) + HEADER_LEN be evenly divisible by 64 for alignment purposes.
+
+interface LayerData {
+  header: string;
+  data: Float32Array;
+  length: number;
+  shape: [number, number?];
+}
+
+function getLayerData(layer: ArrayBuffer, shape: [number, number?]): LayerData {
+  const headerLen = new Uint16Array(layer.slice(8, 10));
+
+  const header = new TextDecoder().decode(
+    new Uint8Array(layer.slice(10, 10 + headerLen[0])),
+  );
+
+  const data = new Float32Array(layer.slice(10 + headerLen[0]));
+  // verify the length of the data matches the shape
+  if (data.length !== shape[0] * (shape[1] || 1)) {
+    throw new Error('Data length does not match the shape');
+  }
+
+  return {
+    header,
+    data,
+    length: data.length,
+    shape,
+  };
+}
+console.log(getLayerData(layer0Weights, [784, 128]));
+
+/** @button "Infer" */
 export function infer() {
   inference();
 }
