@@ -87,7 +87,7 @@ export default defineConfig({
               label: 'Generating JS from WGSL',
               slug: 'guides/generating-js-from-wgsl',
             },
-            {
+            DEV && {
               label: 'TypeGPU CLI',
               slug: 'guides/tgpu-cli',
               badge: { text: 'new', variant: 'default' },
