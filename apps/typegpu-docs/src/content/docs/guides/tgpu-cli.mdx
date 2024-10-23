@@ -195,9 +195,9 @@ This command will generate the following files:
     - shaders
       - updateSprites.wgsl
       - sprite.wgsl
-    - <FileDiff> definitions </FileDiff>
-      - <FileDiff> updateSprites.ts </FileDiff>
-      - <FileDiff> sprite.ts </FileDiff>
+    - <FileDiff add> definitions </FileDiff>
+      - <FileDiff add> updateSprites.ts </FileDiff>
+      - <FileDiff add> sprite.ts </FileDiff>
 </FileTree>
 </div>
 
@@ -289,7 +289,7 @@ By default, the generated file will have the same name as the shader, with the `
 <FileTree>
   - path/to
       - shader.wgsl
-      - <FileDiff> shader.ts </FileDiff>
+      - <FileDiff add> shader.ts </FileDiff>
 </FileTree>
 </div>
 
@@ -317,9 +317,9 @@ The generated TypeScript files will have the same names as the shaders, with the
 <FileTree>
   - path/to
       - shader1.wgsl
-      - <FileDiff> shader1.ts </FileDiff>
+      - <FileDiff add> shader1.ts </FileDiff>
       - shader2.wgsl
-      - <FileDiff> shader2.ts </FileDiff>
+      - <FileDiff add> shader2.ts </FileDiff>
       - example
           - shader3.wgsl
 </FileTree>
@@ -337,10 +337,10 @@ This will generate TypeGPU definitions for all WGSL files inside the `path/to` d
 <FileTree>
   - path/to
       - shader1.wgsl
-      - <FileDiff> shader1.ts </FileDiff>
+      - <FileDiff add> shader1.ts </FileDiff>
       - example
           - shader2.wgsl
-          - <FileDiff> shader2.ts </FileDiff>
+          - <FileDiff add> shader2.ts </FileDiff>
 </FileTree>
 </div>
 
@@ -363,8 +363,8 @@ This will generate the TypeGPU definitions in the `different/path` directory wit
 <FileTree>
   - path/to
       - shader.wgsl
-  - <FileDiff> different/path </FileDiff>
-      - <FileDiff> output.ts </FileDiff>
+  - <FileDiff add> different/path </FileDiff>
+      - <FileDiff add> output.ts </FileDiff>
 </FileTree>
 </div>
 
@@ -383,9 +383,9 @@ This will generate the TypeGPU definitions in the `output` directory with the sa
       - shader2.wgsl
       - example
           - shader3.wgsl
-  - <FileDiff> output </FileDiff>
-      - <FileDiff> shader1.ts </FileDiff>
-      - <FileDiff> shader2.ts </FileDiff>
+  - <FileDiff add> output </FileDiff>
+      - <FileDiff add> shader1.ts </FileDiff>
+      - <FileDiff add> shader2.ts </FileDiff>
 </FileTree>
 </div>
 
@@ -425,10 +425,10 @@ be a name conflict as both `shader1.wgsl` and `example/shader1.wgsl` will try to
           - shader1.wgsl
       - shader1.wgsl
       - shader2.wgsl
-  - <FileDiff> output </FileDiff>
-      - <FileDiff> shader1.ts \<\-\- name conflict </FileDiff>
-      - <FileDiff> shader1.ts \<\-\- name conflict </FileDiff>
-      - <FileDiff> shader2.ts </FileDiff>
+  - <FileDiff add> output </FileDiff>
+      - <FileDiff add> shader1.ts \<\-\- name conflict </FileDiff>
+      - <FileDiff add> shader1.ts \<\-\- name conflict </FileDiff>
+      - <FileDiff add> shader2.ts </FileDiff>
 </FileTree>
 </div>
 
@@ -447,11 +447,11 @@ This will generate the TypeGPU definitions in the `output` directory with the sa
           - shader1.wgsl
       - shader1.wgsl
       - shader2.wgsl
-  - <FileDiff> output </FileDiff>
-      - <FileDiff> example </FileDiff>
-          - <FileDiff> shader1.ts </FileDiff>
-      - <FileDiff> shader1.ts </FileDiff>
-      - <FileDiff> shader2.ts </FileDiff>
+  - <FileDiff add> output </FileDiff>
+      - <FileDiff add> example </FileDiff>
+          - <FileDiff add> shader1.ts </FileDiff>
+      - <FileDiff add> shader1.ts </FileDiff>
+      - <FileDiff add> shader2.ts </FileDiff>
 </FileTree>
 </div>
 </details>

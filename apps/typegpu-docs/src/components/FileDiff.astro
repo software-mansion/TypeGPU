@@ -1,13 +1,26 @@
 ---
-const { status = true } = Astro.props;
+const { add, del } = Astro.props;
 const content = await Astro.slots.render('default');
 
-const styles = {
-  statusColor: status ? 'dark:before:bg-green-900 before:bg-green-300' : 'dark:before:bg-red-900 before:bg-red-300',
-  borderColor: status ? 'before:border-green-600' : 'before:border-red-600',
-  contentColor: status ? 'before:text-green-600' : 'before:text-red-600',
-  plusOrMinus: status ? 'before:content-["+"]' : 'before:content-["-"]'
-};
+const addStyles = {
+  statusColor: 'dark:before:bg-green-900 before:bg-green-300',
+  borderColor: 'before:border-green-600',
+  contentColor: 'before:text-green-600',
+  plusOrMinus: 'before:content-["+"]'
+}
+
+const delStyles = {
+  statusColor: 'dark:before:bg-red-900 before:bg-red-300',
+  borderColor: 'before:border-red-600',
+  contentColor: 'before:text-red-600',
+  plusOrMinus: 'before:content-["-"]'
+}
+
+if (!add && !del) {
+  throw new Error('You must provide either `add` or `del` prop');
+}
+
+const styles = add ? addStyles : delStyles;
 ---
 
 <div class:list={[
