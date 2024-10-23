@@ -48,7 +48,7 @@ Every `root.create*` function creates a typed resource.
 
 ## Unwrapping resources
 
-There are times where a typed resources needs to be used by a vanilla WebGPU API. To retrieve the raw
+There are times where a typed resource needs to be used by a vanilla WebGPU API. To retrieve the raw
 untyped value of a typed resource, use the `root.unwrap` function.
 
 | Function | Description |
@@ -103,7 +103,7 @@ When designing an architecture from stratch with TypeGPU in mind, passing a `roo
 `root.device` can act as an escape-hatch for vanilla WebGPU functionality.
 :::
 
-You can copy and paste the utility below that implement a basic global cache for roots.
+You can copy and paste the utility below that implements a basic global cache for roots.
 
 ```ts
 // roots.ts
