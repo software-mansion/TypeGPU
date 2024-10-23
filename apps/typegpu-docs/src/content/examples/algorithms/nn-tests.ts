@@ -143,11 +143,11 @@ const inference = () => {
 
 // EXPERIMENTS
 // load 'layer0.bias.npy'
-const layer0Bias = await fetch('/TypeGPU/mnistWeights/layer0.bias.npy').then(
+const layer0Bias = await fetch('/TypeGPU/mnistWeightsv2/layer0.bias.npy').then(
   (res) => res.arrayBuffer(),
 );
 const layer0Weights = await fetch(
-  '/TypeGPU/mnistWeights/layer0.weight.npy',
+  '/TypeGPU/mnistWeightsv2/layer0.weight.npy',
 ).then((res) => res.arrayBuffer());
 // The first 6 bytes are a magic string: exactly \x93NUMPY.
 // The next 1 byte is an unsigned byte: the major version number of the file format, e.g. \x01.
@@ -162,12 +162,22 @@ interface LayerData {
   shape: [number, number?];
 }
 
-function getLayerData(layer: ArrayBuffer, shape: [number, number?]): LayerData {
+function getLayerData(layer: ArrayBuffer): LayerData {
   const headerLen = new Uint16Array(layer.slice(8, 10));
 
   const header = new TextDecoder().decode(
     new Uint8Array(layer.slice(10, 10 + headerLen[0])),
   );
+
+  // get shape from the header
+  const shapeMatch = header.match(/'shape': \((\d+), (\d+)\)/);
+  if (!shapeMatch) {
+    throw new Error('Shape not found in header');
+  }
+  const shape = [
+    Number.parseInt(shapeMatch[1]),
+    Number.parseInt(shapeMatch[2]),
+  ] as [number, number?];
 
   const data = new Float32Array(layer.slice(10 + headerLen[0]));
   // verify the length of the data matches the shape
@@ -182,7 +192,7 @@ function getLayerData(layer: ArrayBuffer, shape: [number, number?]): LayerData {
     shape,
   };
 }
-console.log(getLayerData(layer0Weights, [784, 128]));
+console.log('Shape: ', getLayerData(layer0Weights).shape);
 
 /** @button "Infer" */
 export function infer() {
