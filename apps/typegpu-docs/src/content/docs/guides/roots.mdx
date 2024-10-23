@@ -99,8 +99,8 @@ incorporate TypeGPU, since we would need to pass a root around instead of a devi
 between devices and roots to solve this.**
 
 :::note
-When designing an architecture from stratch with TypeGPU in mind, passing a `root` around instead of a `device` is the prefered pattern, since
-`root.device` can act as an escape-hatch for vanilla WebGPU functionality.
+When designing an architecture from scratch with TypeGPU in mind, passing a `root` around instead of a `device` is the preferred pattern, since
+`root.device` can act as an escape hatch for vanilla WebGPU functionality.
 :::
 
 You can copy and paste the utility below that implements a basic global cache for roots.
