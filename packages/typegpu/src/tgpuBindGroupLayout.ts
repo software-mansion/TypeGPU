@@ -111,9 +111,10 @@ export interface TgpuBindGroupLayout<
   readonly resourceType: 'bind-group-layout';
   readonly label: string | undefined;
   readonly entries: Entries;
-  readonly bound: {
-    [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
-  };
+  // TODO: Expose when implemented
+  // readonly bound: {
+  //   [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
+  // };
 
   populate(
     entries: {
@@ -127,6 +128,17 @@ export interface TgpuBindGroupLayout<
    * @param unwrapper Used to unwrap any resources that this resource depends on.
    */
   unwrap(unwrapper: Unwrapper): GPUBindGroupLayout;
+}
+
+export interface TgpuBindGroupLayoutExperimental<
+  Entries extends Record<string, TgpuLayoutEntry | null> = Record<
+    string,
+    TgpuLayoutEntry | null
+  >,
+> extends TgpuBindGroupLayout<Entries> {
+  readonly bound: {
+    [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
+  };
 }
 
 type StorageUsageForEntry<T extends TgpuLayoutStorage> = T extends {
@@ -192,6 +204,12 @@ export function bindGroupLayout<
   return new TgpuBindGroupLayoutImpl(entries);
 }
 
+export function bindGroupLayoutExperimental<
+  Entries extends Record<string, TgpuLayoutEntry | null>,
+>(entries: Entries): TgpuBindGroupLayoutExperimental<Entries> {
+  return new TgpuBindGroupLayoutImpl(entries);
+}
+
 export function isBindGroupLayout<T extends TgpuBindGroupLayout>(
   value: T | unknown,
 ): value is T {
@@ -231,7 +249,7 @@ const DEFAULT_READONLY_VISIBILITY: TgpuShaderStage[] = [
 
 class TgpuBindGroupLayoutImpl<
   Entries extends Record<string, TgpuLayoutEntry | null>,
-> implements TgpuBindGroupLayout<Entries>
+> implements TgpuBindGroupLayoutExperimental<Entries>
 {
   private _label: string | undefined;
 
