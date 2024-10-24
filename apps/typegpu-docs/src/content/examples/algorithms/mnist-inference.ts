@@ -19,27 +19,10 @@ if (!adapter) {
 const device = await adapter.requestDevice();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
-const context = canvas.getContext('2d') as CanvasRenderingContext2D;
-const parent = canvas.parentElement as HTMLElement;
-const result = document.createElement('div');
-parent.appendChild(result);
-parent.classList.add('flex', 'flex-col', 'items-center');
-result.classList.add(
-  'font-bold',
-  'mt-4',
-  'z-10',
-  'select-none',
-  'pointer-events-none',
-  'animate-pulse',
-);
-result.style.fontSize = `${canvas.width / 28}px`;
-result.textContent = 'Waiting for input...';
-
-const data = new Uint8Array(28 * 28);
-
 const root = await tgpu.init({
   device,
 });
+const data = new Uint8Array(28 * 28);
 
 // Shader code
 
@@ -334,6 +317,22 @@ const network = createNetwork([
 ]);
 
 // Canvas drawing
+
+const context = canvas.getContext('2d') as CanvasRenderingContext2D;
+const parent = canvas.parentElement as HTMLElement;
+const result = document.createElement('div');
+parent.appendChild(result);
+parent.classList.add('flex', 'flex-col', 'items-center');
+result.classList.add(
+  'font-bold',
+  'mt-4',
+  'z-10',
+  'select-none',
+  'pointer-events-none',
+  'animate-pulse',
+);
+result.style.fontSize = `${canvas.width / 28}px`;
+result.textContent = 'Waiting for input...';
 
 const resetAll = () => {
   result.textContent = 'Waiting for input...';
