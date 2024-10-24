@@ -20,9 +20,20 @@ const device = await adapter.requestDevice();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
-const parent = canvas.parentElement?.parentElement as HTMLElement;
+const parent = canvas.parentElement as HTMLElement;
 const result = document.createElement('div');
 parent.appendChild(result);
+parent.classList.add('flex', 'flex-col', 'items-center');
+result.classList.add(
+  'font-bold',
+  'mt-4',
+  'z-10',
+  'select-none',
+  'pointer-events-none',
+  'animate-pulse',
+);
+result.style.fontSize = `${canvas.width / 28}px`;
+result.textContent = 'Waiting for input...';
 
 const data = new Uint8Array(28 * 28);
 
@@ -324,8 +335,14 @@ const network = createNetwork([
 
 // Canvas drawing
 
-const resetCanvas = () => {
+const resetAll = () => {
+  result.textContent = 'Waiting for input...';
+  result.classList.add('animate-pulse');
   data.fill(0);
+  resetCanvas();
+};
+
+const resetCanvas = () => {
   context.clearRect(0, 0, canvas.width, canvas.height);
   // draw grid
   context.strokeStyle = '#ccc';
@@ -352,6 +369,13 @@ const draw = () => {
   }
 };
 
+const observer = new ResizeObserver(() => {
+  result.style.fontSize = `${canvas.width / 28}px`;
+  resetCanvas();
+  draw();
+});
+observer.observe(canvas);
+
 let isDrawing = false;
 canvas.addEventListener('mousedown', () => {
   isDrawing = true;
@@ -362,14 +386,8 @@ canvas.addEventListener('mouseup', () => {
 });
 
 let lastPos = { x: 0, y: 0 };
-canvas.addEventListener('mousemove', (event) => {
-  if (!isDrawing) {
-    return;
-  }
-  const cellSize = canvas.width / 28;
-  const x = Math.floor((event.offsetX * window.devicePixelRatio) / cellSize);
-  const y = Math.floor((event.offsetY * window.devicePixelRatio) / cellSize);
 
+const handleDrawing = (x: number, y: number) => {
   if (x === lastPos.x && y === lastPos.y) {
     return;
   }
@@ -399,11 +417,36 @@ canvas.addEventListener('mousemove', (event) => {
         `${i}: ${((value / sum) * 100).toFixed(2)}% ${i === index ? '<--' : ''}`,
       );
     });
+    result.classList.remove('animate-pulse');
     result.textContent = `Prediction: ${index}`;
   });
+};
+
+canvas.addEventListener('mousemove', (event) => {
+  if (!isDrawing) {
+    return;
+  }
+  const cellSize = canvas.width / 28;
+  const x = Math.floor((event.offsetX * window.devicePixelRatio) / cellSize);
+  const y = Math.floor((event.offsetY * window.devicePixelRatio) / cellSize);
+  handleDrawing(x, y);
+});
+
+canvas.addEventListener('touchmove', (event) => {
+  event.preventDefault();
+  const canvasPos = canvas.getBoundingClientRect();
+  const touch = event.touches[0];
+  const cellSize = canvas.width / 28;
+  const x = Math.floor(
+    ((touch.clientX - canvasPos.left) * window.devicePixelRatio) / cellSize,
+  );
+  const y = Math.floor(
+    ((touch.clientY - canvasPos.top) * window.devicePixelRatio) / cellSize,
+  );
+  handleDrawing(x, y);
 });
 
 /** @button "Reset" */
 export function reset() {
-  resetCanvas();
+  resetAll();
 }
