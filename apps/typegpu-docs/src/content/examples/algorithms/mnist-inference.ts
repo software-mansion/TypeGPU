@@ -213,10 +213,10 @@ function getLayerData(layer: ArrayBuffer): LayerData {
 
   // To accomodate .npy weirdness - if we have a 2d shape we need to switch the order
   const shape = Number.isNaN(Number.parseInt(shapeMatch[2]))
-    ? ([Number.parseInt(shapeMatch[1]), undefined] as [number, undefined])
+    ? ([Number.parseInt(shapeMatch[1])] as [number, number?])
     : ([Number.parseInt(shapeMatch[2]), Number.parseInt(shapeMatch[1])] as [
         number,
-        number,
+        number?,
       ]);
   console.log('Shape: ', shape);
 
@@ -320,23 +320,88 @@ const network = createNetwork([
 
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 const parent = canvas.parentElement as HTMLElement;
-const result = document.createElement('div');
-parent.appendChild(result);
-parent.classList.add('flex', 'flex-col', 'items-center');
-result.classList.add(
-  'font-bold',
-  'mt-4',
-  'z-10',
-  'select-none',
-  'pointer-events-none',
-  'animate-pulse',
+
+interface BarDisplay {
+  set value(value: number);
+  readonly classList: DOMTokenList;
+}
+
+const predictionsContainer = document.createElement('div');
+parent.parentElement?.parentElement?.appendChild(predictionsContainer);
+predictionsContainer.classList.add(
+  'flex',
+  'flex-col',
+  'aspect-square',
+  'w-full',
+  'items-center',
+  'p-2',
 );
-result.style.fontSize = `${canvas.width / 28}px`;
-result.textContent = 'Waiting for input...';
+
+const predictionsLabel = document.createElement('div');
+predictionsLabel.textContent = 'Predictions:';
+predictionsLabel.classList.add('font-bold', 'mb-2', 'text-xl');
+predictionsContainer.appendChild(predictionsLabel);
+
+const barsContainer = document.createElement('div');
+predictionsContainer.appendChild(barsContainer);
+barsContainer.classList.add(
+  'flex',
+  'flex-col',
+  'w-full',
+  'justify-start',
+  'pr-10',
+);
+
+const createBar = (index: number): BarDisplay => {
+  const container = document.createElement('div');
+  container.classList.add('flex', 'items-baseline', 'mb-1', 'w-full');
+
+  const label = document.createElement('div');
+  label.textContent = `${index}`;
+  label.classList.add('w-1/6', 'text-center', 'font-bold');
+  container.appendChild(label);
+
+  const bar = document.createElement('div');
+  bar.classList.add('w-5/6', 'h-4', 'bg-gray-100', 'rounded-full');
+  container.appendChild(bar);
+
+  const fill = document.createElement('div');
+  fill.classList.add(
+    'h-full',
+    'bg-gray-300',
+    'rounded-full',
+    'overflow-hidden',
+    'transition-all',
+    'relative',
+  );
+  fill.classList.add(
+    'before:content-[""]',
+    'before:bg-gradient-to-r',
+    'before:from-gradient-purple-dark',
+    'before:to-gradient-blue-dark',
+    'before:absolute',
+    'before:inset-0',
+    'before:rounded-full',
+    'before:transition-all',
+    'before:opacity-0',
+  );
+  bar.appendChild(fill);
+
+  barsContainer.appendChild(container);
+
+  return {
+    set value(value: number) {
+      fill.style.width = `${value * 100}%`;
+    },
+    get classList() {
+      return fill.classList;
+    },
+  };
+};
+
+const bars: BarDisplay[] = Array.from({ length: 10 }, (_, i) => createBar(i));
 
 const resetAll = () => {
-  result.textContent = 'Waiting for input...';
-  result.classList.add('animate-pulse');
   data.fill(0);
   resetCanvas();
 };
@@ -369,7 +434,6 @@ const draw = () => {
 };
 
 const observer = new ResizeObserver(() => {
-  result.style.fontSize = `${canvas.width / 28}px`;
   resetCanvas();
   draw();
 });
@@ -409,15 +473,17 @@ const handleDrawing = (x: number, y: number) => {
   network.inference([...data].map((x) => x / 255)).then((data) => {
     const max = Math.max(...data);
     const index = data.indexOf(max);
-    console.log('Predictions:');
     const sum = data.reduce((a, b) => a + b, 0);
-    data.forEach((value, i) => {
-      console.log(
-        `${i}: ${((value / sum) * 100).toFixed(2)}% ${i === index ? '<--' : ''}`,
-      );
+    const normalized = data.map((x) => x / sum);
+
+    bars.forEach((bar, i) => {
+      bar.value = normalized[i];
+      if (i === index) {
+        bar.classList.add('before:opacity-100');
+      } else {
+        bar.classList.remove('before:opacity-100');
+      }
     });
-    result.classList.remove('animate-pulse');
-    result.textContent = `Prediction: ${index}`;
   });
 };
 
