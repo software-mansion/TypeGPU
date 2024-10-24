@@ -1,0 +1,557 @@
+---
+title: TypeGPU CLI
+description: A guide on how to use the TypeGPU CLI
+draft: true
+---
+
+import { FileTree } from '@astrojs/starlight/components';
+import FileDiff from '../../../components/FileDiff.astro';
+
+TypeGPU CLI (tgpu-cli) is a command-line interface for the TypeGPU library.
+It provides a way for a highly automated migration process and is a great tool
+for existing WebGPU projects that want to start taking advantage of type-safe TypeGPU features.
+
+## Installation
+
+Using npm:
+
+```bash
+npm install -g tgpu-cli
+```
+
+## Feature overview
+
+- Generate TypeGPU definitions from WGSL shaders
+- Continuously watch for changes in WGSL files and update the generated definitions
+- Specify input and output using glob patterns
+- Choose the output extension and CommonJS or ES module format
+
+## Example
+
+Let's assume the following directory structure:
+
+<FileTree>
+  - computeBoids
+    - shaders
+      - updateSprites.wgsl
+      - sprite.wgsl
+    - main.ts
+</FileTree>
+
+This is a simple project that contains two WGSL shaders (`updateSprites.wgsl` and `sprite.wgsl`) and a TypeScript file (`main.ts`).
+The example WGSL shaders can be found on the [WebGPU Samples repository](https://github.com/webgpu/webgpu-samples/tree/main/sample/computeBoids).
+
+Here are the contents of the shader files:
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+<Tabs>
+  <TabItem label="updateSprites.wgsl">
+  <details>
+  <summary>Click to see the content</summary>
+  ```wgsl
+  struct Particle {
+    pos : vec2f,
+    vel : vec2f,
+  }
+  struct SimParams {
+    deltaT : f32,
+    rule1Distance : f32,
+    rule2Distance : f32,
+    rule3Distance : f32,
+    rule1Scale : f32,
+    rule2Scale : f32,
+    rule3Scale : f32,
+  }
+  struct Particles {
+    particles : array<Particle>,
+  }
+  @binding(0) @group(0) var<uniform> params : SimParams;
+  @binding(1) @group(0) var<storage, read> particlesA : Particles;
+  @binding(2) @group(0) var<storage, read_write> particlesB : Particles;
+
+  // https://github.com/austinEng/Project6-Vulkan-Flocking/blob/master/data/shaders/computeparticles/particle.comp
+  @compute @workgroup_size(64)
+  fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3u) {
+    var index = GlobalInvocationID.x;
+
+    var vPos = particlesA.particles[index].pos;
+    var vVel = particlesA.particles[index].vel;
+    var cMass = vec2(0.0);
+    var cVel = vec2(0.0);
+    var colVel = vec2(0.0);
+    var cMassCount = 0u;
+    var cVelCount = 0u;
+    var pos : vec2f;
+    var vel : vec2f;
+
+    for (var i = 0u; i < arrayLength(&particlesA.particles); i++) {
+      if (i == index) {
+        continue;
+      }
+
+      pos = particlesA.particles[i].pos.xy;
+      vel = particlesA.particles[i].vel.xy;
+      if (distance(pos, vPos) < params.rule1Distance) {
+        cMass += pos;
+        cMassCount++;
+      }
+      if (distance(pos, vPos) < params.rule2Distance) {
+        colVel -= pos - vPos;
+      }
+      if (distance(pos, vPos) < params.rule3Distance) {
+        cVel += vel;
+        cVelCount++;
+      }
+    }
+    if (cMassCount > 0) {
+      cMass = (cMass / vec2(f32(cMassCount))) - vPos;
+    }
+    if (cVelCount > 0) {
+      cVel /= f32(cVelCount);
+    }
+    vVel += (cMass * params.rule1Scale) + (colVel * params.rule2Scale) + (cVel * params.rule3Scale);
+
+    // clamp velocity for a more pleasing simulation
+    vVel = normalize(vVel) * clamp(length(vVel), 0.0, 0.1);
+    // kinematic update
+    vPos = vPos + (vVel * params.deltaT);
+    // Wrap around boundary
+    if (vPos.x < -1.0) {
+      vPos.x = 1.0;
+    }
+    if (vPos.x > 1.0) {
+      vPos.x = -1.0;
+    }
+    if (vPos.y < -1.0) {
+      vPos.y = 1.0;
+    }
+    if (vPos.y > 1.0) {
+      vPos.y = -1.0;
+    }
+    // Write back
+    particlesB.particles[index].pos = vPos;
+    particlesB.particles[index].vel = vVel;
+  }
+  ```
+  </details>
+  </TabItem>
+  <TabItem label="sprite.wgsl">
+  <details>
+  <summary>Click to see the content</summary>
+  ```wgsl
+  struct VertexOutput {
+    @builtin(position) position : vec4f,
+    @location(4) color : vec4f,
+  }
+
+  @vertex
+  fn vert_main(
+    @location(0) a_particlePos : vec2f,
+    @location(1) a_particleVel : vec2f,
+    @location(2) a_pos : vec2f
+  ) -> VertexOutput {
+    let angle = -atan2(a_particleVel.x, a_particleVel.y);
+    let pos = vec2(
+      (a_pos.x * cos(angle)) - (a_pos.y * sin(angle)),
+      (a_pos.x * sin(angle)) + (a_pos.y * cos(angle))
+    );
+
+    var output : VertexOutput;
+    output.position = vec4(pos + a_particlePos, 0.0, 1.0);
+    output.color = vec4(
+      1.0 - sin(angle + 1.0) - a_particleVel.y,
+      pos.x * 100.0 - a_particleVel.y + 0.1,
+      a_particleVel.x + cos(angle + 0.5),
+      1.0);
+    return output;
+  }
+
+  @fragment
+  fn frag_main(@location(4) color : vec4f) -> @location(0) vec4f {
+    return color;
+  }
+  ```
+  </details>
+  </TabItem>
+</Tabs>
+
+If we wanted to leverage TypeGPU's type-safe features with these shaders, we could
+manually create the necessary definitions. However, maintaining these handcrafted
+definitions in sync with the shaders can be both tedious and prone to errors.
+Fortunately, we don't have to do that; we can use the TypeGPU CLI to automatically generate the required TypeScript definitions for us.
+
+Assuming that we are inside the project directory (computeBoids folder), we can run the following command to generate the TypeScript definitions for the shaders:
+
+```bash
+tgpu-cli gen "shaders/*.wgsl" -o "definitions/*.ts"
+```
+
+This command will generate the following files:
+
+<div class="relative">
+<FileTree>
+  - computeBoids
+    - shaders
+      - updateSprites.wgsl
+      - sprite.wgsl
+    - <FileDiff add> definitions </FileDiff>
+      - <FileDiff add> updateSprites.ts </FileDiff>
+      - <FileDiff add> sprite.ts </FileDiff>
+</FileTree>
+</div>
+
+The generated TypeScript definitions look like this:
+
+<Tabs>
+  <TabItem label="updateSprites.ts">
+  <details>
+  <summary>Click to see the content</summary>
+  ```typescript
+  /* generated via tgpu-cli by TypeGPU */
+  import tgpu from 'typegpu';
+  import * as d from 'typegpu/data';
+
+  /* structs */
+  export const Particle = d.struct({
+    pos: d.vec2f,
+    vel: d.vec2f,
+  });
+
+  export const SimParams = d.struct({
+    deltaT: d.f32,
+    rule1Distance: d.f32,
+    rule2Distance: d.f32,
+    rule3Distance: d.f32,
+    rule1Scale: d.f32,
+    rule2Scale: d.f32,
+    rule3Scale: d.f32,
+  });
+
+  export const Particles = (arrayLength: number) => d.struct({
+    particles: d.arrayOf(Particle, arrayLength),
+  });
+
+  /* bindGroupLayouts */
+  export const layout0 = tgpu.bindGroupLayout({
+    params: {
+      uniform: SimParams,
+    },
+    particlesA: {
+      storage: Particles,
+      access: 'readonly',
+    },
+    particlesB: {
+      storage: Particles,
+      access: 'mutable',
+    },
+  });
+  ```
+  </details>
+  </TabItem>
+  <TabItem label="sprite.ts">
+  <details>
+  <summary>Click to see the content</summary>
+  ```typescript
+  /* generated via tgpu-cli by TypeGPU */
+  import * as d from 'typegpu/data';
+
+  /* structs */
+  export const VertexOutput = d.struct({
+    position: d.vec4f,
+    color: d.vec4f,
+  });
+  ```
+  </details>
+  </TabItem>
+</Tabs>
+
+These definitions can now be used in our TypeScript code to interact with the shaders in a type-safe manner.
+If we wanted to tinker with the shaders, but still have the updated definitions, we could use the `--watch` flag to keep the definitions up-to-date.
+For specific usage details, check out the following Usage section.
+
+## Usage
+
+This section will cover the most common use cases of the TypeGPU CLI and provide short examples.
+
+### Generate TypeGPU definitions for WGSL shader files
+
+To generate TypeGPU definitions from a single WGSL shader file, run:
+
+```bash
+tgpu-cli gen path/to/shader.wgsl
+```
+
+This will generate a TypeScript file with the TypeGPU definitions in the same directory as the shader.
+By default, the generated file will have the same name as the shader, with the `.ts` extension.
+
+<div class="relative">
+<FileTree>
+  - path/to
+      - shader.wgsl
+      - <FileDiff add> shader.ts </FileDiff>
+</FileTree>
+</div>
+
+:::note
+Another valid way to run the command is by using quotes:
+```bash
+tgpu-cli gen "path/to/shader.wgsl"
+# or
+tgpu-cli gen 'path/to/shader.wgsl'
+```
+The quotes are not necessary if the path does not contain spaces. However, using them is a good practice to avoid potential issues.
+If you are using glob patterns, quotes are required to prevent the shell from expanding them.
+:::
+
+TypeGPU CLI supports glob patterns for specifying input paths.
+The following command will generate TypeGPU definitions for all WGSL files inside a given directory:
+
+```bash
+tgpu-cli gen "path/to/*.wgsl"
+```
+
+The generated TypeScript files will have the same names as the shaders, with the `.ts` extension.
+
+<div class="relative">
+<FileTree>
+  - path/to
+      - shader1.wgsl
+      - <FileDiff add> shader1.ts </FileDiff>
+      - shader2.wgsl
+      - <FileDiff add> shader2.ts </FileDiff>
+      - example
+          - shader3.wgsl
+</FileTree>
+</div>
+
+To specify a recursive search, use the `**` pattern:
+
+```bash
+tgpu-cli gen "path/to/**/*.wgsl"
+```
+
+This will generate TypeGPU definitions for all WGSL files inside the `path/to` directory and its subdirectories.
+
+<div class="relative">
+<FileTree>
+  - path/to
+      - shader1.wgsl
+      - <FileDiff add> shader1.ts </FileDiff>
+      - example
+          - shader2.wgsl
+          - <FileDiff add> shader2.ts </FileDiff>
+</FileTree>
+</div>
+
+:::caution
+Remember to use quotes when using glob patterns to prevent the shell from expanding them.
+:::
+
+### Specify the output path with the `--output` option
+
+By default, the generated TypeScript files are placed in the same directory as the input shaders.
+You can specify a different output path using the `--output` option:
+
+```bash
+tgpu-cli gen "path/to/shader.wgsl" --output "different/path/output.ts"
+```
+
+This will generate the TypeGPU definitions in the `different/path` directory with the `output.ts` filename.
+
+<div class="relative">
+<FileTree>
+  - path/to
+      - shader.wgsl
+  - <FileDiff add> different/path </FileDiff>
+      - <FileDiff add> output.ts </FileDiff>
+</FileTree>
+</div>
+
+It also supports glob patterns for specifying the output path:
+
+```bash
+tgpu-cli gen "path/to/*.wgsl" --output "output/*.ts"
+```
+
+This will generate the TypeGPU definitions in the `output` directory with the same names as the shaders, but with the `.ts` extension.
+
+<div class="relative">
+<FileTree>
+  - path/to
+      - shader1.wgsl
+      - shader2.wgsl
+      - example
+          - shader3.wgsl
+  - <FileDiff add> output </FileDiff>
+      - <FileDiff add> shader1.ts </FileDiff>
+      - <FileDiff add> shader2.ts </FileDiff>
+</FileTree>
+</div>
+
+:::caution
+If you use a glob pattern for the input path, specifically `**`, make sure to use the `**` pattern
+in the output path as well to preserve the directory structure (*or make sure no conflicts happen*).
+If you don't, all generated files will be placed in the same directory which may lead to name conflicts.
+
+<details>
+<summary>Example</summary>
+
+Consider the following directory structure:
+
+<FileTree>
+
+- src
+  - example
+    - shader1.wgsl
+  - shader1.wgsl
+  - shader2.wgsl
+
+</FileTree>
+
+If you run:
+
+```bash
+tgpu-cli gen "src/**/*.wgsl" --output "output/*.ts"
+```
+
+The script will fail because all generated files will be placed in the `output` directory, and there will
+be a name conflict as both `shader1.wgsl` and `example/shader1.wgsl` will try to generate `output/shader1.ts`.
+
+<div class="relative">
+<FileTree>
+  - src
+      - example
+          - shader1.wgsl
+      - shader1.wgsl
+      - shader2.wgsl
+  - <FileDiff add> output </FileDiff>
+      - <FileDiff add> shader1.ts \<\-\- name conflict </FileDiff>
+      - <FileDiff add> shader1.ts \<\-\- name conflict </FileDiff>
+      - <FileDiff add> shader2.ts </FileDiff>
+</FileTree>
+</div>
+
+To avoid this issue, use the `**` pattern in the output path as well:
+
+```bash
+tgpu-cli gen "src/**/*.wgsl" --output "output/**/*.ts"
+```
+
+This will generate the TypeGPU definitions in the `output` directory with the same directory structure as the input files.
+
+<div class="relative">
+<FileTree>
+  - src
+      - example
+          - shader1.wgsl
+      - shader1.wgsl
+      - shader2.wgsl
+  - <FileDiff add> output </FileDiff>
+      - <FileDiff add> example </FileDiff>
+          - <FileDiff add> shader1.ts </FileDiff>
+      - <FileDiff add> shader1.ts </FileDiff>
+      - <FileDiff add> shader2.ts </FileDiff>
+</FileTree>
+</div>
+</details>
+:::
+
+You can also use the `-o` shorthand for the `--output` option:
+
+```bash
+tgpu-cli gen "path/to/shader.wgsl" -o "different/path/output.ts"
+```
+
+### Supported extensions and module formats
+
+By default, the generated TypeScript files use the `.ts` extension and the ES module format.
+You can specify a different extension by just providing the extension in the output path:
+
+```bash
+tgpu-cli gen "path/to/shader.wgsl" -o "different/path/output.js"
+```
+
+This will generate the TypeGPU definitions in the `different/path` directory with the `output.js` filename.
+The supported extensions are:
+
+import ListItem from '../../../components/ListItem.astro';
+
+<ListItem idx={'1'}>
+  .js
+</ListItem>
+<ListItem idx={2}>
+  .cjs
+</ListItem>
+<ListItem idx={3}>
+  .mjs
+</ListItem>
+<ListItem idx={4}>
+  .ts
+</ListItem>
+<ListItem idx={5}>
+  .cts
+</ListItem>
+<ListItem idx={6}>
+  .mts
+</ListItem>
+
+:::caution
+Specifying an extension does not change the module format.
+To specify the commonjs module format, use the `--commonjs` option.
+
+```bash
+tgpu-cli gen "path/to/shader.wgsl" -o "different/path/output.cjs" --commonjs
+```
+:::
+
+### Using the `--keep` and `--overwrite` options
+
+When generating TypeGPU definitions, if the output file already exists, the script will fail and not overwrite the existing file.
+You can use the `--keep` option to skip the generation of the file if it already exists:
+
+```bash
+tgpu-cli gen "path/to/*.wgsl" --output "output/*.ts" --keep
+```
+
+This will skip the generation of the TypeGPU definitions for shaders that already have a corresponding TypeScript file in the output directory.
+
+If you want to overwrite the existing files, you can use the `--overwrite` option:
+
+```bash
+tgpu-cli gen "path/to/*.wgsl" --output "output/*.ts" --overwrite
+```
+
+This will overwrite the existing TypeScript files with the new TypeGPU definitions.
+
+### Watch mode
+
+TypeGPU CLI supports a watch mode that continuously monitors the input files for changes and updates the generated definitions.
+To enable the watch mode, use the `--watch` (or `-w`) option:
+
+```bash
+tgpu-cli gen "path/to/*.wgsl" --output "output/*.ts" --watch
+```
+
+This will generate the TypeGPU definitions for all WGSL files inside the `path/to` directory
+and its subdirectories and continuously monitor them for changes.
+By default, the watch mode will overwrite the existing files when changes are detected after the initial generation.
+You can also use the `--keep` and `--overwrite` options in the watch mode. They will only affect the initial generation.
+
+
+## Getting help with the CLI
+
+To get a quick overview of the available commands, run:
+
+```bash
+tgpu-cli --help
+```
+
+This will display a list of available commands and options.
+To get more detailed information about a specific command, run:
+
+```bash
+tgpu-cli <command> --help
+```
+
+You can also use the `-h` shorthand for the `--help` option.
