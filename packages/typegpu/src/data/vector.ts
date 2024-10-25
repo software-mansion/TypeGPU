@@ -13,7 +13,7 @@ import {
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import { inGPUMode } from '../gpuMode';
-import type { TgpuData } from '../types';
+import type { NumberArrayView, TgpuData } from '../types';
 
 // --------------
 // Implementation
@@ -113,6 +113,9 @@ function makeVecSchema<ValueType extends vecBase>(
 }
 
 abstract class vec2Impl implements vec2 {
+  public readonly length = 2;
+  [n: number]: number;
+
   constructor(
     public x: number,
     public y: number,
@@ -121,6 +124,22 @@ abstract class vec2Impl implements vec2 {
   *[Symbol.iterator]() {
     yield this.x;
     yield this.y;
+  }
+
+  get [0]() {
+    return this.x;
+  }
+
+  get [1]() {
+    return this.y;
+  }
+
+  set [0](value: number) {
+    this.x = value;
+  }
+
+  set [1](value: number) {
+    this.y = value;
   }
 }
 
@@ -173,6 +192,9 @@ class vec2uImpl extends vec2Impl {
 }
 
 abstract class vec3Impl implements vec3 {
+  public readonly length = 3;
+  [n: number]: number;
+
   constructor(
     public x: number,
     public y: number,
@@ -183,6 +205,30 @@ abstract class vec3Impl implements vec3 {
     yield this.x;
     yield this.y;
     yield this.z;
+  }
+
+  get [0]() {
+    return this.x;
+  }
+
+  get [1]() {
+    return this.y;
+  }
+
+  get [2]() {
+    return this.z;
+  }
+
+  set [0](value: number) {
+    this.x = value;
+  }
+
+  set [1](value: number) {
+    this.y = value;
+  }
+
+  set [2](value: number) {
+    this.z = value;
   }
 }
 
@@ -235,6 +281,9 @@ class vec3uImpl extends vec3Impl {
 }
 
 abstract class vec4Impl implements vec4 {
+  public readonly length = 4;
+  [n: number]: number;
+
   constructor(
     public x: number,
     public y: number,
@@ -247,6 +296,38 @@ abstract class vec4Impl implements vec4 {
     yield this.y;
     yield this.z;
     yield this.w;
+  }
+
+  get [0]() {
+    return this.x;
+  }
+
+  get [1]() {
+    return this.y;
+  }
+
+  get [2]() {
+    return this.z;
+  }
+
+  get [3]() {
+    return this.w;
+  }
+
+  set [0](value: number) {
+    this.x = value;
+  }
+
+  set [1](value: number) {
+    this.y = value;
+  }
+
+  set [2](value: number) {
+    this.z = value;
+  }
+
+  set [3](value: number) {
+    this.w = value;
   }
 }
 
@@ -612,20 +693,20 @@ interface Swizzle4<T2, T3, T4> extends Swizzle3<T2, T3, T4> {
   readonly wwww: T4;
 }
 
-interface vec2 {
+interface vec2 extends NumberArrayView {
   x: number;
   y: number;
   [Symbol.iterator](): Iterator<number>;
 }
 
-interface vec3 {
+interface vec3 extends NumberArrayView {
   x: number;
   y: number;
   z: number;
   [Symbol.iterator](): Iterator<number>;
 }
 
-interface vec4 {
+interface vec4 extends NumberArrayView {
   x: number;
   y: number;
   z: number;
@@ -635,7 +716,7 @@ interface vec4 {
 
 const vecProxyHandler: ProxyHandler<vecBase> = {
   get: (target, prop) => {
-    if (typeof prop === 'symbol') {
+    if (typeof prop === 'symbol' || !Number.isNaN(Number.parseInt(prop))) {
       return Reflect.get(target, prop);
     }
 

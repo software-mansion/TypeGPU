@@ -8,7 +8,7 @@ import {
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import { roundUp } from '../mathUtils';
-import type { TgpuData } from '../types';
+import type { NumberArrayView, TgpuData } from '../types';
 import { vec2f, vec3f, vec4f, type vecBase } from './vector';
 
 // --------------
@@ -109,15 +109,11 @@ interface matBase<TColumn> {
   elements(): Iterable<number>;
 }
 
-class ArrayView2x2 extends Array<number> {
-  constructor(private _mat: mat2x2<vec2f>) {
-    super(4);
+class ArrayView2x2 implements NumberArrayView {
+  public readonly length = 4;
+  [n: number]: number;
 
-    this[0] = this._mat[0].x;
-    this[1] = this._mat[0].y;
-    this[2] = this._mat[1].x;
-    this[3] = this._mat[1].y;
-  }
+  constructor(private _mat: mat2x2<vec2f>) {}
 
   *[Symbol.iterator]() {
     yield* this._mat.elements();
@@ -200,8 +196,10 @@ class mat2x2fImpl extends mat2x2Impl<vec2f> implements mat2x2f {
   }
 }
 
-class ArrayView3x3 {
+class ArrayView3x3 implements NumberArrayView {
   public readonly length = 9;
+  [n: number]: number;
+
   constructor(private _mat: mat3x3<vec3f>) {}
 
   *[Symbol.iterator]() {
@@ -340,8 +338,10 @@ class mat3x3fImpl extends mat3x3Impl<vec3f> implements mat3x3f {
   }
 }
 
-class ArrayView4x4 {
+class ArrayView4x4 implements NumberArrayView {
   public readonly length = 16;
+  [n: number]: number;
+
   constructor(private _mat: mat4x4<vec4f>) {}
 
   *[Symbol.iterator]() {

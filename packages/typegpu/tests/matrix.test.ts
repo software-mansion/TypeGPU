@@ -46,6 +46,37 @@ describe('mat2x2f', () => {
     mat2x2f.write(new BufferWriter(buffer), mat);
     expect(mat2x2f.read(new BufferReader(buffer))).toEqual(mat);
   });
+
+  it('provides an arrayView', () => {
+    const mat = mat2x2f(
+      vec2f(0, 1), // column 0
+      vec2f(2, 3), // column 1
+    );
+
+    expect([...mat.arrayView]).toEqual([0, 1, 2, 3]);
+    expect(mat.arrayView.length).toEqual(4);
+    expect(mat.arrayView[0]).toEqual(0);
+    expect(mat.arrayView[1]).toEqual(1);
+    expect(mat.arrayView[2]).toEqual(2);
+    expect(mat.arrayView[3]).toEqual(3);
+  });
+
+  it('is mutable through arrayView', () => {
+    const mat = mat2x2f(
+      vec2f(0, 1), // column 0
+      vec2f(2, 3), // column 1
+    );
+
+    const arrayView = mat.arrayView;
+    arrayView[0] = 4;
+    arrayView[1] = 5;
+    arrayView[2] = 6;
+    arrayView[3] = 7;
+
+    expect(mat[0]).toEqual(vec2f(4, 5));
+    expect(mat[1]).toEqual(vec2f(6, 7));
+    expect([...mat.arrayView]).toEqual([4, 5, 6, 7]);
+  });
 });
 
 describe('mat3x3f', () => {
@@ -97,6 +128,56 @@ describe('mat3x3f', () => {
 
     mat3x3f.write(new BufferWriter(buffer), mat);
     expect(mat3x3f.read(new BufferReader(buffer))).toEqual(mat);
+  });
+
+  it('provides an arrayView', () => {
+    const mat = mat3x3f(
+      vec3f(0, 1, 2), // column 0
+      vec3f(3, 4, 5), // column 1
+      vec3f(6, 7, 8), // column 2
+    );
+
+    expect([...mat.arrayView]).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(mat.arrayView.length).toEqual(9);
+    expect(mat.arrayView[0]).toEqual(0);
+    expect(mat.arrayView[1]).toEqual(1);
+    expect(mat.arrayView[2]).toEqual(2);
+    expect(mat.arrayView[3]).toEqual(3);
+    expect(mat.arrayView[4]).toEqual(4);
+    expect(mat.arrayView[5]).toEqual(5);
+    expect(mat.arrayView[6]).toEqual(6);
+    expect(mat.arrayView[7]).toEqual(7);
+    expect(mat.arrayView[8]).toEqual(8);
+  });
+
+  it('is mutable through arrayView', () => {
+    const mat = mat3x3f(
+      vec3f(0, 1, 2), // column 0
+      vec3f(3, 4, 5), // column 1
+      vec3f(6, 7, 8), // column 2
+    );
+
+    const arrayView = mat.arrayView;
+    arrayView[0] = 9;
+    arrayView[1] = 10;
+    arrayView[2] = 11;
+    arrayView[3] = 12;
+    arrayView[4] = 13;
+    arrayView[5] = 14;
+
+    expect(mat[0]).toEqual(vec3f(9, 10, 11));
+    expect(mat[1]).toEqual(vec3f(12, 13, 14));
+    expect(mat[2]).toEqual(vec3f(6, 7, 8));
+    expect([...mat.arrayView]).toEqual([9, 10, 11, 12, 13, 14, 6, 7, 8]);
+
+    arrayView[6] = 15;
+    arrayView[7] = 16;
+    arrayView[8] = 17;
+
+    expect(mat[0]).toEqual(vec3f(9, 10, 11));
+    expect(mat[1]).toEqual(vec3f(12, 13, 14));
+    expect(mat[2]).toEqual(vec3f(15, 16, 17));
+    expect([...mat.arrayView]).toEqual([9, 10, 11, 12, 13, 14, 15, 16, 17]);
   });
 });
 
@@ -155,5 +236,65 @@ describe('mat4x4f', () => {
 
     mat4x4f.write(new BufferWriter(buffer), mat);
     expect(mat4x4f.read(new BufferReader(buffer))).toEqual(mat);
+  });
+
+  it('provides an arrayView', () => {
+    const mat = mat4x4f(
+      vec4f(0, 1, 2, 3), // column 0
+      vec4f(4, 5, 6, 7), // column 1
+      vec4f(8, 9, 10, 11), // column 2
+      vec4f(12, 13, 14, 15), // column 3
+    );
+
+    expect([...mat.arrayView]).toEqual([
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+    ]);
+    expect(mat.arrayView.length).toEqual(16);
+    expect(mat.arrayView[0]).toEqual(0);
+    expect(mat.arrayView[1]).toEqual(1);
+    expect(mat.arrayView[2]).toEqual(2);
+    expect(mat.arrayView[3]).toEqual(3);
+    expect(mat.arrayView[4]).toEqual(4);
+    expect(mat.arrayView[5]).toEqual(5);
+    expect(mat.arrayView[6]).toEqual(6);
+    expect(mat.arrayView[7]).toEqual(7);
+    expect(mat.arrayView[8]).toEqual(8);
+    expect(mat.arrayView[9]).toEqual(9);
+    expect(mat.arrayView[10]).toEqual(10);
+    expect(mat.arrayView[11]).toEqual(11);
+    expect(mat.arrayView[12]).toEqual(12);
+    expect(mat.arrayView[13]).toEqual(13);
+    expect(mat.arrayView[14]).toEqual(14);
+    expect(mat.arrayView[15]).toEqual(15);
+  });
+
+  it('is mutable through arrayView', () => {
+    const mat = mat4x4f(
+      vec4f(0, 1, 2, 3), // column 0
+      vec4f(4, 5, 6, 7), // column 1
+      vec4f(8, 9, 10, 11), // column 2
+      vec4f(12, 13, 14, 15), // column 3
+    );
+
+    expect(mat[0]).toEqual(vec4f(0, 1, 2, 3));
+    expect(mat[1]).toEqual(vec4f(4, 5, 6, 7));
+    expect(mat[2]).toEqual(vec4f(8, 9, 10, 11));
+    expect(mat[3]).toEqual(vec4f(12, 13, 14, 15));
+    expect([...mat.arrayView]).toEqual([
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+    ]);
+
+    mat.arrayView[0] = 16;
+    mat.arrayView[1] = 17;
+    mat.arrayView[2] = 18;
+    mat.arrayView[3] = 19;
+
+    expect(mat[0]).toEqual(vec4f(16, 17, 18, 19));
+    expect(mat[1]).toEqual(vec4f(4, 5, 6, 7));
+    expect(mat[2]).toEqual(vec4f(8, 9, 10, 11));
+    expect(mat[3]).toEqual(vec4f(12, 13, 14, 15));
+    expect([...mat.arrayView]).toEqual([
+      16, 17, 18, 19, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+    ]);
   });
 });
