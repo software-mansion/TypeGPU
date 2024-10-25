@@ -103,12 +103,62 @@ function createMatSchema<
 }
 
 interface matBase<TColumn> {
+  readonly arrayView: number[];
+
   columns(): Iterable<TColumn>;
   elements(): Iterable<number>;
 }
 
-abstract class mat2x2Impl<TColumn extends vecBase> implements mat2x2<TColumn> {
+class ArrayView2x2 extends Array<number> {
+  constructor(private _mat: mat2x2<vec2f>) {
+    super(4);
+
+    this[0] = this._mat[0].x;
+    this[1] = this._mat[0].y;
+    this[2] = this._mat[1].x;
+    this[3] = this._mat[1].y;
+  }
+
+  *[Symbol.iterator]() {
+    yield* this._mat.elements();
+  }
+
+  get [0]() {
+    return this._mat[0].x;
+  }
+
+  get [1]() {
+    return this._mat[0].y;
+  }
+
+  get [2]() {
+    return this._mat[1].x;
+  }
+
+  get [3]() {
+    return this._mat[1].y;
+  }
+
+  set [0](value: number) {
+    this._mat[0].x = value;
+  }
+
+  set [1](value: number) {
+    this._mat[0].y = value;
+  }
+
+  set [2](value: number) {
+    this._mat[1].x = value;
+  }
+
+  set [3](value: number) {
+    this._mat[1].y = value;
+  }
+}
+
+abstract class mat2x2Impl<TColumn extends vec2f> implements mat2x2<TColumn> {
   private _columns = new Array(2) as [TColumn, TColumn];
+  readonly arrayView: number[] = new ArrayView2x2(this) as unknown as number[];
 
   constructor(...elements: number[]) {
     this._columns[0] = this.makeColumn(
@@ -150,8 +200,92 @@ class mat2x2fImpl extends mat2x2Impl<vec2f> implements mat2x2f {
   }
 }
 
-abstract class mat3x3Impl<TColumn extends vecBase> implements mat3x3<TColumn> {
+class ArrayView3x3 {
+  public readonly length = 9;
+  constructor(private _mat: mat3x3<vec3f>) {}
+
+  *[Symbol.iterator]() {
+    yield* this._mat.elements();
+  }
+
+  get [0]() {
+    return this._mat[0].x;
+  }
+
+  get [1]() {
+    return this._mat[0].y;
+  }
+
+  get [2]() {
+    return this._mat[0].z;
+  }
+
+  get [3]() {
+    return this._mat[1].x;
+  }
+
+  get [4]() {
+    return this._mat[1].y;
+  }
+
+  get [5]() {
+    return this._mat[1].z;
+  }
+
+  get [6]() {
+    return this._mat[2].x;
+  }
+
+  get [7]() {
+    return this._mat[2].y;
+  }
+
+  get [8]() {
+    return this._mat[2].z;
+  }
+
+  set [0](value: number) {
+    this._mat[0].x = value;
+  }
+
+  set [1](value: number) {
+    this._mat[0].y = value;
+  }
+
+  set [2](value: number) {
+    this._mat[0].z = value;
+  }
+
+  set [3](value: number) {
+    this._mat[1].x = value;
+  }
+
+  set [4](value: number) {
+    this._mat[1].y = value;
+  }
+
+  set [5](value: number) {
+    this._mat[1].z = value;
+  }
+
+  set [6](value: number) {
+    this._mat[2].x = value;
+  }
+
+  set [7](value: number) {
+    this._mat[2].y = value;
+  }
+
+  set [8](value: number) {
+    this._mat[2].z = value;
+  }
+}
+
+abstract class mat3x3Impl<TColumn extends vec3f> implements mat3x3<TColumn> {
   private _columns = new Array(3) as [TColumn, TColumn, TColumn];
+  public readonly arrayView: number[] = new ArrayView3x3(
+    this,
+  ) as unknown as number[];
 
   constructor(...elements: number[]) {
     this._columns[0] = this.makeColumn(
@@ -206,13 +340,153 @@ class mat3x3fImpl extends mat3x3Impl<vec3f> implements mat3x3f {
   }
 }
 
-abstract class mat4x4Impl<TColumn extends vecBase> implements mat4x4<TColumn> {
+class ArrayView4x4 {
+  public readonly length = 16;
+  constructor(private _mat: mat4x4<vec4f>) {}
+
+  *[Symbol.iterator]() {
+    yield* this._mat.elements();
+  }
+
+  get [0]() {
+    return this._mat[0].x;
+  }
+
+  get [1]() {
+    return this._mat[0].y;
+  }
+
+  get [2]() {
+    return this._mat[0].z;
+  }
+
+  get [3]() {
+    return this._mat[0].w;
+  }
+
+  get [4]() {
+    return this._mat[1].x;
+  }
+
+  get [5]() {
+    return this._mat[1].y;
+  }
+
+  get [6]() {
+    return this._mat[1].z;
+  }
+
+  get [7]() {
+    return this._mat[1].w;
+  }
+
+  get [8]() {
+    return this._mat[2].x;
+  }
+
+  get [9]() {
+    return this._mat[2].y;
+  }
+
+  get [10]() {
+    return this._mat[2].z;
+  }
+
+  get [11]() {
+    return this._mat[2].w;
+  }
+
+  get [12]() {
+    return this._mat[3].x;
+  }
+
+  get [13]() {
+    return this._mat[3].y;
+  }
+
+  get [14]() {
+    return this._mat[3].z;
+  }
+
+  get [15]() {
+    return this._mat[3].w;
+  }
+
+  set [0](value: number) {
+    this._mat[0].x = value;
+  }
+
+  set [1](value: number) {
+    this._mat[0].y = value;
+  }
+
+  set [2](value: number) {
+    this._mat[0].z = value;
+  }
+
+  set [3](value: number) {
+    this._mat[0].w = value;
+  }
+
+  set [4](value: number) {
+    this._mat[1].x = value;
+  }
+
+  set [5](value: number) {
+    this._mat[1].y = value;
+  }
+
+  set [6](value: number) {
+    this._mat[1].z = value;
+  }
+
+  set [7](value: number) {
+    this._mat[1].w = value;
+  }
+
+  set [8](value: number) {
+    this._mat[2].x = value;
+  }
+
+  set [9](value: number) {
+    this._mat[2].y = value;
+  }
+
+  set [10](value: number) {
+    this._mat[2].z = value;
+  }
+
+  set [11](value: number) {
+    this._mat[2].w = value;
+  }
+
+  set [12](value: number) {
+    this._mat[3].x = value;
+  }
+
+  set [13](value: number) {
+    this._mat[3].y = value;
+  }
+
+  set [14](value: number) {
+    this._mat[3].z = value;
+  }
+
+  set [15](value: number) {
+    this._mat[3].w = value;
+  }
+}
+
+abstract class mat4x4Impl<TColumn extends vec4f> implements mat4x4<TColumn> {
   private readonly _columns = new Array(4) as [
     TColumn,
     TColumn,
     TColumn,
     TColumn,
   ];
+  public readonly arrayView: number[] = new ArrayView4x4(
+    this,
+  ) as unknown as number[];
 
   constructor(...elements: number[]) {
     this._columns[0] = this.makeColumn(
@@ -290,7 +564,7 @@ class mat4x4fImpl extends mat4x4Impl<vec4f> implements mat4x4f {
  * Interface representing its WGSL matrix type counterpart: mat2x2
  * A matrix with 2 rows and 2 columns, with elements of type `TColumn`
  */
-export interface mat2x2<TColumn> extends matBase<TColumn> {
+interface mat2x2<TColumn> extends matBase<TColumn> {
   [0]: TColumn;
   [1]: TColumn;
   [idx: number]: TColumn | undefined;
@@ -346,7 +620,7 @@ export const mat2x2f = createMatSchema({
  * Interface representing its WGSL matrix type counterpart: mat3x3
  * A matrix with 3 rows and 3 columns, with elements of type `TColumn`
  */
-export interface mat3x3<TColumn> extends matBase<TColumn> {
+interface mat3x3<TColumn> extends matBase<TColumn> {
   [0]: TColumn;
   [1]: TColumn;
   [2]: TColumn;
@@ -406,7 +680,7 @@ export const mat3x3f = createMatSchema({
  * Interface representing its WGSL matrix type counterpart: mat4x4
  * A matrix with 4 rows and 4 columns, with elements of type `TColumn`
  */
-export interface mat4x4<TColumn> extends matBase<TColumn> {
+interface mat4x4<TColumn> extends matBase<TColumn> {
   [0]: TColumn;
   [1]: TColumn;
   [2]: TColumn;
