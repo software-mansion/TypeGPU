@@ -102,8 +102,8 @@ const mockDevice = {
 describe('TgpuBindGroupLayout', () => {
   let root: ExperimentalTgpuRoot;
 
-  beforeEach(async () => {
-    root = await tgpu.init({
+  beforeEach(() => {
+    root = tgpu.initFromDevice({
       device: mockDevice as unknown as GPUDevice,
     });
   });
@@ -228,7 +228,7 @@ describe('TgpuBindGroupLayout', () => {
     });
   });
 
-  it('omits null properties', async () => {
+  it('omits null properties', () => {
     const layout = tgpu
       .bindGroupLayout({
         a: { uniform: vec3f }, // binding 0
@@ -245,7 +245,7 @@ describe('TgpuBindGroupLayout', () => {
       }>
     >();
 
-    const root = await tgpu.init({
+    const root = tgpu.initFromDevice({
       device: mockDevice as unknown as GPUDevice,
     });
 
@@ -276,8 +276,8 @@ describe('TgpuBindGroupLayout', () => {
 describe('TgpuBindGroup', () => {
   let root: ExperimentalTgpuRoot;
 
-  beforeEach(async () => {
-    root = await tgpu.init({
+  beforeEach(() => {
+    root = tgpu.initFromDevice({
       device: mockDevice as unknown as GPUDevice,
     });
   });
@@ -301,7 +301,7 @@ describe('TgpuBindGroup', () => {
       buffer = root.createBuffer(vec3f).$usage(tgpu.Uniform);
     });
 
-    it('populates a simple layout with a raw buffer', async () => {
+    it('populates a simple layout with a raw buffer', () => {
       const bindGroup = layout.populate({ foo: root.unwrap(buffer) });
 
       expect(mockDevice.createBindGroupLayout).not.toBeCalled();
@@ -322,7 +322,7 @@ describe('TgpuBindGroup', () => {
       });
     });
 
-    it('populates a simple layout with a typed buffer', async () => {
+    it('populates a simple layout with a typed buffer', () => {
       const bindGroup = layout.populate({ foo: buffer });
 
       expect(mockDevice.createBindGroupLayout).not.toBeCalled();
@@ -343,7 +343,7 @@ describe('TgpuBindGroup', () => {
       });
     });
 
-    it('populates a simple layout with a typed buffer usage', async () => {
+    it('populates a simple layout with a typed buffer usage', () => {
       const bindGroup = layout.populate({ foo: asUniform(buffer) });
 
       expect(mockDevice.createBindGroupLayout).not.toBeCalled();
@@ -376,7 +376,7 @@ describe('TgpuBindGroup', () => {
         .$name('example');
     });
 
-    it('populates a simple layout with a raw sampler', async () => {
+    it('populates a simple layout with a raw sampler', () => {
       const sampler = root.device.createSampler();
 
       const bindGroup = layout.populate({
@@ -411,7 +411,7 @@ describe('TgpuBindGroup', () => {
         .$name('example');
     });
 
-    it('populates a simple layout with a raw texture view', async () => {
+    it('populates a simple layout with a raw texture view', () => {
       const view = root.device
         .createTexture({
           format: 'rgba8unorm',
@@ -452,7 +452,7 @@ describe('TgpuBindGroup', () => {
         .$name('example');
     });
 
-    it('populates a simple layout with a raw texture view', async () => {
+    it('populates a simple layout with a raw texture view', () => {
       const view = root.device
         .createTexture({
           format: 'rgba8unorm',
@@ -495,7 +495,7 @@ describe('TgpuBindGroup', () => {
         .$name('example');
     });
 
-    it('populates a simple layout with a raw texture view', async () => {
+    it('populates a simple layout with a raw texture view', () => {
       const externalTexture = root.device.importExternalTexture({
         source: undefined as unknown as HTMLVideoElement,
       });
