@@ -32,8 +32,8 @@ import {
   type TgpuBindGroup,
   type TgpuBindGroupLayoutExperimental,
   type UnwrapRuntimeConstructor,
+  bindGroupLayoutExperimental,
 } from '../src/tgpuBindGroupLayout';
-import { bindGroupLayoutExperimental } from '../src/tgpuBindGroupLayout';
 
 const DEFAULT_READONLY_VISIBILITY_FLAGS =
   GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
