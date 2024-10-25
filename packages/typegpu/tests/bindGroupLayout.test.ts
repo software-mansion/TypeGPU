@@ -31,7 +31,9 @@ import type { Storage, Uniform } from '../src/core/buffer/buffer';
 import {
   MissingBindingError,
   type TgpuBindGroup,
+  type TgpuBindGroupLayoutExperimental,
   type UnwrapRuntimeConstructor,
+  bindGroupLayoutExperimental,
 } from '../src/tgpuBindGroupLayout';
 
 const DEFAULT_READONLY_VISIBILITY_FLAGS =
@@ -113,7 +115,7 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('infers the bound type of a uniform entry', () => {
-    const layout = tgpu.bindGroupLayout({
+    const layout = bindGroupLayoutExperimental({
       position: { uniform: vec3f },
     });
 
@@ -123,7 +125,7 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('infers the bound type of a readonly storage entry', () => {
-    const layout = tgpu.bindGroupLayout({
+    const layout = bindGroupLayoutExperimental({
       a: { storage: vec3f },
       b: { storage: vec3f, access: 'readonly' },
     });
@@ -135,7 +137,7 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('infers the bound type of a mutable storage entry', () => {
-    const layout = tgpu.bindGroupLayout({
+    const layout = bindGroupLayoutExperimental({
       a: { storage: vec3f, access: 'mutable' },
     });
 
@@ -145,13 +147,13 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('works for entries passed as functions returning TgpuData', () => {
-    const layout = tgpu.bindGroupLayout({
+    const layout = bindGroupLayoutExperimental({
       a: { uniform: (arrayLength: number) => arrayOf(u32, arrayLength) },
       b: { storage: (arrayLength: number) => arrayOf(vec3f, arrayLength) },
     });
 
     expectTypeOf(layout).toEqualTypeOf<
-      TgpuBindGroupLayout<{
+      TgpuBindGroupLayoutExperimental<{
         a: {
           uniform: (_: number) => TgpuArray<U32>;
         };
