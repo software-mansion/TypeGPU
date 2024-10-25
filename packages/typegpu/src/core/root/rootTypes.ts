@@ -1,19 +1,32 @@
 import type { Parsed } from 'typed-binary';
-import type { TgpuBuffer } from './core/buffer/buffer';
-import type { TgpuArray } from './data/array';
-import type { JitTranspiler } from './jitTranspiler';
-import type { PlumListener } from './plumStore';
-import type { TgpuSettable } from './settableTrait';
-import type { TgpuBindGroup, TgpuBindGroupLayout } from './tgpuBindGroupLayout';
-import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
-import type { TgpuSampler } from './tgpuSampler';
+
+import type { TgpuArray } from '../../data';
+import type { JitTranspiler } from '../../jitTranspiler';
+import type { PlumListener } from '../../plumStore';
+import type { TgpuSettable } from '../../settableTrait';
+import type {
+  TgpuBindGroup,
+  TgpuBindGroupLayout,
+} from '../../tgpuBindGroupLayout';
+import type {
+  ExtractPlumValue,
+  TgpuPlum,
+  Unsubscribe,
+} from '../../tgpuPlumTypes';
+import type { TgpuSampler } from '../../tgpuSampler';
 import type {
   TgpuAnyTexture,
   TgpuAnyTextureView,
   TgpuTextureExternal,
-} from './tgpuTexture';
-import type { AnyTgpuData, BoundTgpuCode, TgpuCode, TgpuData } from './types';
-import type { Unwrapper } from './unwrapper';
+} from '../../tgpuTexture';
+import type {
+  AnyTgpuData,
+  BoundTgpuCode,
+  TgpuCode,
+  TgpuData,
+} from '../../types';
+import type { Unwrapper } from '../../unwrapper';
+import type { TgpuBuffer } from '../buffer/buffer';
 
 // ----------
 // Public API
