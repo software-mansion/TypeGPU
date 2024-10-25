@@ -103,7 +103,7 @@ function createMatSchema<
 }
 
 interface matBase<TColumn> {
-  readonly arrayView: number[];
+  readonly arrayView: NumberArrayView;
 
   columns(): Iterable<TColumn>;
   elements(): Iterable<number>;
@@ -154,7 +154,7 @@ class ArrayView2x2 implements NumberArrayView {
 
 abstract class mat2x2Impl<TColumn extends vec2f> implements mat2x2<TColumn> {
   private _columns = new Array(2) as [TColumn, TColumn];
-  readonly arrayView: number[] = new ArrayView2x2(this) as unknown as number[];
+  readonly arrayView: NumberArrayView = new ArrayView2x2(this);
 
   constructor(...elements: number[]) {
     this._columns[0] = this.makeColumn(
@@ -281,9 +281,7 @@ class ArrayView3x3 implements NumberArrayView {
 
 abstract class mat3x3Impl<TColumn extends vec3f> implements mat3x3<TColumn> {
   private _columns = new Array(3) as [TColumn, TColumn, TColumn];
-  public readonly arrayView: number[] = new ArrayView3x3(
-    this,
-  ) as unknown as number[];
+  public readonly arrayView: NumberArrayView = new ArrayView3x3(this);
 
   constructor(...elements: number[]) {
     this._columns[0] = this.makeColumn(
@@ -484,9 +482,7 @@ abstract class mat4x4Impl<TColumn extends vec4f> implements mat4x4<TColumn> {
     TColumn,
     TColumn,
   ];
-  public readonly arrayView: number[] = new ArrayView4x4(
-    this,
-  ) as unknown as number[];
+  public readonly arrayView: NumberArrayView = new ArrayView4x4(this);
 
   constructor(...elements: number[]) {
     this._columns[0] = this.makeColumn(
