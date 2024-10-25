@@ -37,13 +37,15 @@ export type TgpuLayoutEntryBase = {
 };
 
 export type TgpuLayoutUniform = TgpuLayoutEntryBase & {
-  uniform: AnyTgpuData;
+  uniform: AnyTgpuData | ((arrayLength: number) => AnyTgpuData);
 };
+
 export type TgpuLayoutStorage = TgpuLayoutEntryBase & {
-  storage: AnyTgpuData;
+  storage: AnyTgpuData | ((arrayLength: number) => AnyTgpuData);
   /** @default 'readonly' */
   access?: 'mutable' | 'readonly';
 };
+
 export type TgpuLayoutSampler = TgpuLayoutEntryBase & {
   sampler: GPUSamplerBindingType;
 };
@@ -88,6 +90,18 @@ export type TgpuLayoutEntry =
   | TgpuLayoutStorageTexture
   | TgpuLayoutExternalTexture;
 
+type UnwrapRuntimeConstructorInner<
+  T extends AnyTgpuData | ((_: number) => AnyTgpuData),
+> = T extends AnyTgpuData
+  ? T
+  : T extends (_: number) => infer Return
+    ? Return
+    : never;
+
+export type UnwrapRuntimeConstructor<
+  T extends AnyTgpuData | ((_: number) => AnyTgpuData),
+> = T extends unknown ? UnwrapRuntimeConstructorInner<T> : never;
+
 export interface TgpuBindGroupLayout<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<
     string,
@@ -97,9 +111,10 @@ export interface TgpuBindGroupLayout<
   readonly resourceType: 'bind-group-layout';
   readonly label: string | undefined;
   readonly entries: Entries;
-  readonly bound: {
-    [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
-  };
+  // TODO: Expose when implemented
+  // readonly bound: {
+  //   [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
+  // };
 
   populate(
     entries: {
@@ -115,28 +130,43 @@ export interface TgpuBindGroupLayout<
   unwrap(unwrapper: Unwrapper): GPUBindGroupLayout;
 }
 
+export interface TgpuBindGroupLayoutExperimental<
+  Entries extends Record<string, TgpuLayoutEntry | null> = Record<
+    string,
+    TgpuLayoutEntry | null
+  >,
+> extends TgpuBindGroupLayout<Entries> {
+  readonly bound: {
+    [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
+  };
+}
+
 type StorageUsageForEntry<T extends TgpuLayoutStorage> = T extends {
   access?: infer Access;
 } // Is the access defined on the type?
   ? 'mutable' | 'readonly' extends Access // Is the access ambiguous?
-    ? TgpuBufferReadonly<T['storage']> | TgpuBufferMutable<T['storage']>
+    ?
+        | TgpuBufferReadonly<UnwrapRuntimeConstructor<T['storage']>>
+        | TgpuBufferMutable<UnwrapRuntimeConstructor<T['storage']>>
     : 'readonly' extends Access // Is the access strictly 'readonly'?
-      ? TgpuBufferReadonly<T['storage']>
+      ? TgpuBufferReadonly<UnwrapRuntimeConstructor<T['storage']>>
       : 'mutable' extends Access // Is the access strictly 'mutable'?
-        ? TgpuBufferMutable<T['storage']>
-        : TgpuBufferReadonly<T['storage']> | TgpuBufferMutable<T['storage']>
-  : TgpuBufferReadonly<T['storage']>; // <- access is undefined, so default to 'readonly';
+        ? TgpuBufferMutable<UnwrapRuntimeConstructor<T['storage']>>
+        :
+            | TgpuBufferReadonly<UnwrapRuntimeConstructor<T['storage']>>
+            | TgpuBufferMutable<UnwrapRuntimeConstructor<T['storage']>>
+  : TgpuBufferReadonly<UnwrapRuntimeConstructor<T['storage']>>; // <- access is undefined, so default to 'readonly';
 
 export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
   T extends TgpuLayoutUniform
     ?
-        | TgpuBufferUsage<T['uniform'], 'uniform'>
-        | (TgpuBuffer<T['uniform']> & Uniform)
+        | TgpuBufferUsage<UnwrapRuntimeConstructor<T['uniform']>, 'uniform'>
+        | (TgpuBuffer<UnwrapRuntimeConstructor<T['uniform']>> & Uniform)
         | GPUBuffer
     : T extends TgpuLayoutStorage
       ?
           | StorageUsageForEntry<T>
-          | (TgpuBuffer<T['storage']> & Storage)
+          | (TgpuBuffer<UnwrapRuntimeConstructor<T['storage']>> & Storage)
           | GPUBuffer
       : T extends TgpuLayoutSampler
         ? GPUSampler
@@ -150,7 +180,7 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
 
 export type BindLayoutEntry<T extends TgpuLayoutEntry | null> =
   T extends TgpuLayoutUniform
-    ? TgpuBufferUniform<T['uniform']>
+    ? TgpuBufferUniform<UnwrapRuntimeConstructor<T['uniform']>>
     : T extends TgpuLayoutStorage
       ? StorageUsageForEntry<T>
       : T extends TgpuLayoutSampler
@@ -171,7 +201,13 @@ export type TgpuBindGroup<
 export function bindGroupLayout<
   Entries extends Record<string, TgpuLayoutEntry | null>,
 >(entries: Entries): TgpuBindGroupLayout<Entries> {
-  return createBindGroupLayout(entries);
+  return new TgpuBindGroupLayoutImpl(entries);
+}
+
+export function bindGroupLayoutExperimental<
+  Entries extends Record<string, TgpuLayoutEntry | null>,
+>(entries: Entries): TgpuBindGroupLayoutExperimental<Entries> {
+  return new TgpuBindGroupLayoutImpl(entries);
 }
 
 export function isBindGroupLayout<T extends TgpuBindGroupLayout>(
@@ -211,15 +247,9 @@ const DEFAULT_READONLY_VISIBILITY: TgpuShaderStage[] = [
   'fragment',
 ];
 
-function createBindGroupLayout<
-  Entries extends Record<string, TgpuLayoutEntry | null>,
->(entries: Entries): TgpuBindGroupLayout<Entries> {
-  return new TgpuBindGroupLayoutImpl(entries);
-}
-
 class TgpuBindGroupLayoutImpl<
   Entries extends Record<string, TgpuLayoutEntry | null>,
-> implements TgpuBindGroupLayout<Entries>
+> implements TgpuBindGroupLayoutExperimental<Entries>
 {
   private _label: string | undefined;
 

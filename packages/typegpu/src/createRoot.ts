@@ -425,7 +425,7 @@ class ComputePipelineExecutor implements PipelineExecutor {
  */
 export type CreateRootOptions = {
   adapter?: GPURequestAdapterOptions | undefined;
-  device?: GPUDeviceDescriptor | undefined;
+  device?: GPUDeviceDescriptor | GPUDevice | undefined;
   jitTranspiler?: JitTranspiler | undefined;
 };
 
@@ -451,7 +451,7 @@ export type CreateRootOptions = {
  * If a specific device should be used instead, it can be passed in as a parameter.
  * ```ts
  * const device: GPUDevice = ...;
- * createRoot(device);
+ * createRoot({ device });
  * ```
  */
 export async function createRoot(

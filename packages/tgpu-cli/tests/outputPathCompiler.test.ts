@@ -145,5 +145,19 @@ describe('createOutputPathCompiler', () => {
       fileName: 'test/test1/test2/test3/hello.wgsl',
       expected: 'test/test1/test2/gen/gen2/hello.ts',
     });
+
+    test({
+      inputPattern: 'src/**/*.wgsl',
+      outputPattern: 'output/**/*.ts',
+      fileName: 'src/shader1.wgsl',
+      expected: 'output/shader1.ts',
+    });
+
+    test({
+      inputPattern: 'src/**/*.wgsl',
+      outputPattern: 'output/**/*.ts',
+      fileName: 'src/examples/shader1.wgsl',
+      expected: 'output/examples/shader1.ts',
+    });
   });
 });

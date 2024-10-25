@@ -25,7 +25,7 @@ export const layout0 = tgpu.bindGroupLayout({
   threshold: {
     uniform: d.u32,
   },
-}).$forceIndex(0);`;
+});`;
 
     expect(generate(wgsl)).toContain(expected);
   });
@@ -55,7 +55,7 @@ export const layout0 = tgpu.bindGroupLayout({
     storage: d.u32,
     access: 'mutable',
   },
-}).$forceIndex(0);`;
+});`;
 
     expect(generate(wgsl)).toContain(expected);
   });
@@ -100,7 +100,7 @@ export const layout1 = tgpu.bindGroupLayout({
     texture: 'depth',
     viewDimension: '2d-array',
   },
-}).$forceIndex(1);`;
+});`;
 
     expect(generate(wgsl)).toContain(expected);
   });
@@ -119,7 +119,7 @@ export const layout2 = tgpu.bindGroupLayout({
   s2: {
     sampler: 'comparison',
   },
-}).$forceIndex(2);`;
+});`;
 
     expect(generate(wgsl)).toContain(expected);
   });
@@ -141,7 +141,7 @@ export const layout1 = tgpu.bindGroupLayout({
     access: 'mutable',
     viewDimension: '3d',
   },
-}).$forceIndex(1);`;
+});`;
 
     expect(generate(wgsl)).toContain(expected);
   });
@@ -171,7 +171,7 @@ export const layout0 = tgpu.bindGroupLayout({
   u9: {
     uniform: d.u32,
   },
-}).$forceIndex(0);`;
+});`;
 
     expect(generate(wgsl)).toContain(expected);
   });
@@ -188,26 +188,35 @@ export const layout0 = tgpu.bindGroupLayout({
   u0: {
     uniform: d.u32,
   },
-}).$forceIndex(0);`;
+});`;
 
     const expected2 = `\
 export const layout2 = tgpu.bindGroupLayout({
   u2: {
     storage: d.u32,
   },
-}).$forceIndex(2);`;
+});`;
 
     const expected3 = `\
 export const layout3 = tgpu.bindGroupLayout({
   u3: {
     uniform: d.u32,
   },
-}).$forceIndex(3);`;
+});`;
 
     const generated = generate(wgsl);
 
     expect(generated).toContain(expected0);
     expect(generated).toContain(expected2);
     expect(generated).toContain(expected3);
+  });
+
+  it('adds typegpu import to the generated code', () => {
+    const importStatement = "import tgpu from 'typegpu';";
+
+    expect(generate('@binding(0) @group(0) var<uniform> a : f32;')).toContain(
+      importStatement,
+    );
+    expect(generate('')).not.toContain(importStatement);
   });
 });

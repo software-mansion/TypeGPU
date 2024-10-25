@@ -30,6 +30,7 @@ interface VecSchemaOptions<ValueType> {
 
 type VecSchemaBase<ValueType> = TgpuData<ValueType> & {
   kind: string;
+  expressionCode: string; // TODO: to remove
   toString(): string;
 };
 
@@ -45,6 +46,7 @@ function makeVecSchema<ValueType extends vecBase>(
     label: options.label,
     byteAlignment: options.byteAlignment,
     kind: options.label,
+    expressionCode: options.label,
 
     resolveReferences(ctx: IRefResolver): void {
       throw new RecursiveDataTypeError();
