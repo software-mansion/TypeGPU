@@ -9,7 +9,7 @@ draft: true
 If you are already familiar with WebGPU, you might know what bind groups and bind group layouts are. In that case, you can skip this section.
 If not, we will briefly explain what they are and provide some useful links for further reading.
 
-### Bind Groups
+### A Quick Overview
 
 A bind group is a collection of resources that are bound to a shader. These resources can be buffers, textures, or samplers.
 It's a way to define what resources are available to a shader and how they are accessed. For example, you can create a bind group that contains a buffer and a texture, and then bind it to a shader to use these resources in the shader.
@@ -41,8 +41,6 @@ Now, during command encoding, we can assign this bind group to a shader to use t
 ```ts
 renderPass.setBindGroup(0, bindGroup);
 ```
-
-### Bind Group Layouts
 
 You probably noticed that in the previous example, we had to specify the layout when creating the bind group.
 A bind group layout is a description of the resources that are expected by a shader. It defines the layout of the bind group, including the type of resources and their binding numbers.
@@ -78,7 +76,7 @@ If you want to learn more about bind groups and bind group layouts in WebGPU, yo
 - [WebGPU Fundamentals article on Bind Groups (for a more detailed but beginner-friendly explanation)](https://webgpufundamentals.org/webgpu/lessons/webgpu-bind-group-layouts.html)
 - [WebGPU Specification - Resource Binding (for technical reference)](https://www.w3.org/TR/webgpu/#bindings)
 
-## Typed Bind Groups and Bind Group Layouts in TypeGPU
+## TypeGPU approach
 
 TypeGPU provides a more type-safe and ergonomic way to work with bind groups and bind group layouts. The standard WebGPU way of creating bind groups and bind group layouts involves a lot of manual work and is error-prone due to the lack of type checking.
 TypeGPU addresses these issues by referencing resources by named keys rather than indices and by providing static type checking when populating bind groups.
@@ -123,7 +121,7 @@ const bindGroup = bindGroupLayout.populate({
 This will create a typed bind group that contains a buffer and a texture, matching the resources expected by the shader.
 If we accidentally pass the wrong type of resource, the TypeScript compiler will catch the error at compile time.
 
-### Using Typed Bind Groups and Bind Group Layouts
+### WebGPU integration
 
 The bind group created in the previous example cannot be used directly in the WebGPU API. To use it, you need to **unwrap** it to get the underlying WebGPU bind group.
 You can do this by calling `root.unwrap(bindGroup)`. This will return the WebGPU bind group that you can use in the WebGPU API.
