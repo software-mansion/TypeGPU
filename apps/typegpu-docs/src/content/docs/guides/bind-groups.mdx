@@ -4,10 +4,6 @@ description: A guide on how to use the TypeGPU Bind Groups and Bind Group Layout
 draft: true
 ---
 
-This guide will cover all about typed bind groups and bind group layouts in TypeGPU.
-We will go over how to use them with a simple example, and compare them to the WebGPU API.
-This guide is aimed primarily at developers who are already familiar with WebGPU and want to learn how to use TypeGPU, but it should be accessible to anyone who is interested in learning about bind groups and bind group layouts.
-
 ## What are Bind Groups and Bind Group Layouts?
 
 If you are already familiar with WebGPU, you might know what bind groups and bind group layouts are. In that case, you can skip this section.
@@ -77,17 +73,16 @@ const bindGroupLayout = device.createBindGroupLayout({
 We can use this layout to create a bind group that matches the resources expected by the shader. It's also necessary to provide a layout when creating a pipeline, so the GPU knows what resources are expected by the shaders.
 This can sometimes be automated by passing `auto` to the `descriptor.layout` field when creating a pipeline. This will automatically infer the layout from the shader module.
 
-### Further Reading
-
 If you want to learn more about bind groups and bind group layouts in WebGPU, you can check the following links:
 
-- [WebGPU Specification - Resource Binding](https://www.w3.org/TR/webgpu/#bindings)
-- [WebGPU Fundamentals article on Bind Groups](https://webgpufundamentals.org/webgpu/lessons/webgpu-bind-group-layouts.html)
+- [WebGPU Fundamentals article on Bind Groups (for a more detailed but beginner-friendly explanation)](https://webgpufundamentals.org/webgpu/lessons/webgpu-bind-group-layouts.html)
+- [WebGPU Specification - Resource Binding (for technical reference)](https://www.w3.org/TR/webgpu/#bindings)
 
 ## Typed Bind Groups and Bind Group Layouts in TypeGPU
 
 TypeGPU provides a more type-safe and ergonomic way to work with bind groups and bind group layouts. The standard WebGPU way of creating bind groups and bind group layouts involves a lot of manual work and is error-prone due to the lack of type checking.
-TypeGPU introduces typed bind groups and bind group layouts, which can be generated from the shader code. This means that you don't have to manually specify the layout of the bind group or the resources it contains (although you can still do it if you want to).
+TypeGPU addresses these issues by referencing resources by named keys rather than indices and by providing static type checking when populating bind groups.
+We also provide utilities which can generate those definitions from existing `.wgsl` shaders. This means that you can benefit from the type safety and convenience of TypeGPU without having to worry about keeping the definitions in sync with the shader code.
 
 ### Typed Bind Group Layouts
 
