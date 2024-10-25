@@ -66,7 +66,7 @@ describe('TgpuRoot', () => {
     const root = await tgpu.init({
       device: mockDevice as unknown as GPUDevice,
     });
-    const dataBuffer = root.createBuffer(u32).$usage(tgpu.Uniform);
+    const dataBuffer = root.createBuffer(u32).$usage('uniform');
     const data = asUniform(dataBuffer);
 
     const testPipeline = root.makeComputePipeline({
@@ -94,7 +94,7 @@ describe('TgpuRoot', () => {
     });
     const dataBuffer = root
       .createBuffer(vec3i, vec3i(0, 0, 0))
-      .$usage(tgpu.Uniform);
+      .$usage('uniform');
     const data = asUniform(dataBuffer);
 
     const testPipeline = root.makeComputePipeline({
@@ -122,7 +122,7 @@ describe('TgpuRoot', () => {
     });
     const s1 = struct({ a: u32, b: u32 });
     const s2 = struct({ a: u32, b: s1 });
-    const dataBuffer = root.createBuffer(s2).$usage(tgpu.Uniform);
+    const dataBuffer = root.createBuffer(s2).$usage('uniform');
     const data = asUniform(dataBuffer);
 
     const testPipeline = root.makeComputePipeline({
@@ -170,7 +170,7 @@ describe('TgpuRoot', () => {
     const s1 = struct({ a: u32, b: u32, c: vec3i });
     const s2 = struct({ a: u32, b: s1, c: vec4u });
 
-    const dataBuffer = root.createBuffer(s2).$usage(tgpu.Uniform);
+    const dataBuffer = root.createBuffer(s2).$usage('uniform');
     const data = asUniform(dataBuffer);
 
     const testPipeline = root.makeComputePipeline({
@@ -213,7 +213,7 @@ describe('TgpuRoot', () => {
     });
     const intPlum = plum<number>(3);
 
-    const dataBuffer = root.createBuffer(u32, intPlum).$usage(tgpu.Storage);
+    const dataBuffer = root.createBuffer(u32, intPlum).$usage('storage');
     const spy = vi.spyOn(dataBuffer, 'write');
 
     const buffer = asReadonly(dataBuffer);
@@ -254,7 +254,7 @@ describe('TgpuRoot', () => {
   //     device: mockDevice as unknown as GPUDevice,
   //   });
 
-  //   const dataBuffer = root.createBuffer(vec3f).$usage(tgpu.Vertex);
+  //   const dataBuffer = root.createBuffer(vec3f).$usage('vertex');
   //   const data = asVertex(dataBuffer, 'vertex');
 
   //   const testPipeline = root.makeRenderPipeline({
@@ -319,7 +319,7 @@ describe('TgpuRoot', () => {
 
   //   const dataBuffer = root
   //     .createBuffer(arrayOf(vec2f, 10))
-  //     .$usage(tgpu.Vertex);
+  //     .$usage('vertex');
   //   const data = asVertex(dataBuffer, 'vertex');
 
   //   const testPipeline = root.makeRenderPipeline({
@@ -392,7 +392,7 @@ describe('TgpuRoot', () => {
   //         throw: u32,
   //       }),
   //     )
-  //     .$usage(tgpu.Vertex);
+  //     .$usage('vertex');
 
   //   expect(() => asVertex(bufferData, 'vertex')).toThrowError(
   //     'Cannot create vertex buffer with complex data types.',
@@ -406,7 +406,7 @@ describe('TgpuRoot', () => {
 
   //   const bufferData = root
   //     .createBuffer(arrayOf(arrayOf(arrayOf(u32, 10), 3), 2))
-  //     .$usage(tgpu.Vertex);
+  //     .$usage('vertex');
 
   //   const buffer = asVertex(bufferData, 'vertex');
 

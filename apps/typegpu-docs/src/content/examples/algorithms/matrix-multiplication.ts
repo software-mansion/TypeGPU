@@ -76,17 +76,17 @@ const secondMatrixPlum = wgsl.plum((get) => {
 const firstMatrixBuffer = root
   .createBuffer(MatrixStruct, firstMatrixPlum)
   .$name('first_matrix')
-  .$usage(tgpu.Storage);
+  .$usage('storage');
 
 const secondMatrixBuffer = root
   .createBuffer(MatrixStruct, secondMatrixPlum)
   .$name('second_matrix')
-  .$usage(tgpu.Storage);
+  .$usage('storage');
 
 const resultMatrixBuffer = root
   .createBuffer(MatrixStruct)
   .$name('result_matrix')
-  .$usage(tgpu.Storage);
+  .$usage('storage');
 
 const firstMatrixData = asReadonly(firstMatrixBuffer);
 const secondMatrixData = asReadonly(secondMatrixBuffer);

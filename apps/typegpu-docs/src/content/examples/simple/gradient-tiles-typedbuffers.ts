@@ -77,7 +77,7 @@ const Span = struct({
 const spanBuffer = tgpu
   .createBuffer(Span, { x: 10, y: 10 })
   .$device(device)
-  .$usage(tgpu.Uniform);
+  .$usage('uniform');
 
 const pipeline = device.createRenderPipeline({
   layout: 'auto',

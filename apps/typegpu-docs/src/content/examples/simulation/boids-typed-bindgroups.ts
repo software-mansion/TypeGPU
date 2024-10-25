@@ -228,7 +228,7 @@ const Params = struct({
 
 const paramsBuffer = root
   .createBuffer(Params, presets.default)
-  .$usage(tgpu.Storage);
+  .$usage('storage');
 
 const triangleVertexBuffer = root
   .createBuffer(arrayOf(f32, 6), [
@@ -239,7 +239,7 @@ const triangleVertexBuffer = root
     triangleSize / 2,
     -triangleSize / 2,
   ])
-  .$usage(tgpu.Vertex);
+  .$usage('vertex');
 
 const TriangleInfoStruct = struct({
   position: vec2f,
@@ -249,7 +249,7 @@ const TriangleInfoStruct = struct({
 const trianglePosBuffers = Array.from({ length: 2 }, () =>
   root
     .createBuffer(arrayOf(TriangleInfoStruct, triangleAmount))
-    .$usage(tgpu.Storage, tgpu.Uniform),
+    .$usage('storage', 'uniform'),
 );
 
 const randomizePositions = () => {
@@ -264,7 +264,7 @@ randomizePositions();
 
 const colorPaletteBuffer = root
   .createBuffer(vec3f, colorPresets.jeans)
-  .$usage(tgpu.Uniform);
+  .$usage('uniform');
 
 const updateColorPreset = (newColorPreset: ColorPresets) => {
   colorPaletteBuffer.write(colorPresets[newColorPreset]);

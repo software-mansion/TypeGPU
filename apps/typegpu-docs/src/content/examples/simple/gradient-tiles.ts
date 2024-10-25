@@ -35,7 +35,7 @@ const spanPlum = wgsl.plum((get) => ({ x: get(xSpanPlum), y: get(ySpanPlum) }));
 const spanBuffer = root
   .createBuffer(struct({ x: u32, y: u32 }), spanPlum)
   .$name('span')
-  .$usage(tgpu.Uniform);
+  .$usage('uniform');
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
