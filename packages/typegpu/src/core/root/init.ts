@@ -19,14 +19,6 @@ import type {
   TgpuPlum,
   Unsubscribe,
 } from '../../tgpuPlumTypes';
-import type {
-  ComputePipelineExecutorOptions,
-  ComputePipelineOptions,
-  ExperimentalTgpuRoot,
-  RenderPipelineExecutorOptions,
-  RenderPipelineOptions,
-  SetPlumAction,
-} from '../../tgpuRoot';
 import type { TgpuSampler } from '../../tgpuSampler';
 import type {
   TgpuAnyTexture,
@@ -35,6 +27,14 @@ import type {
 } from '../../tgpuTexture';
 import type { AnyTgpuData } from '../../types';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
+import type {
+  ComputePipelineExecutorOptions,
+  ComputePipelineOptions,
+  ExperimentalTgpuRoot,
+  RenderPipelineExecutorOptions,
+  RenderPipelineOptions,
+  SetPlumAction,
+} from './rootTypes';
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
@@ -461,10 +461,6 @@ export type InitFromDeviceOptions = {
 export async function init(
   options?: InitOptions,
 ): Promise<ExperimentalTgpuRoot> {
-  if (doesResembleDevice(options?.device)) {
-    return new TgpuRootImpl(options.device, options.unstable_jitTranspiler);
-  }
-
   if (!navigator.gpu) {
     throw new Error('WebGPU is not supported by this browser.');
   }
@@ -494,13 +490,4 @@ export function initFromDevice(
   options: InitFromDeviceOptions,
 ): ExperimentalTgpuRoot {
   return new TgpuRootImpl(options.device, options.unstable_jitTranspiler);
-}
-
-function doesResembleDevice(value: unknown): value is GPUDevice {
-  return (
-    !!value &&
-    typeof value === 'object' &&
-    'createBuffer' in value &&
-    'queue' in value
-  );
 }
