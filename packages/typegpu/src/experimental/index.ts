@@ -7,8 +7,8 @@ import { computeFn } from '../core/function/tgpuComputeFn';
 import { fn, procedure } from '../core/function/tgpuFn';
 import { fragmentFn } from '../core/function/tgpuFragmentFn';
 import { vertexFn } from '../core/function/tgpuVertexFn';
+import { init, initFromDevice } from '../core/root/root';
 import { vertexLayout } from '../core/vertexLayout/vertexLayout';
-import { createRoot as init } from '../createRoot';
 import { createBuffer } from '../legacyBufferApi';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
 import { read, write } from '../tgpuBufferUtils';
@@ -27,6 +27,7 @@ export const tgpu = {
   bindGroupLayout,
 
   init,
+  initFromDevice,
 
   createBuffer,
   read,
@@ -44,7 +45,6 @@ export * from '../builtin';
 
 export { default as wgsl } from '../wgsl';
 export { std } from '../std';
-export { createRoot, CreateRootOptions } from '../createRoot';
 export {
   isUsableAsStorage,
   isUsableAsUniform,
@@ -66,6 +66,7 @@ export type {
   TgpuBufferMutable,
   TgpuBufferVertex,
 } from '../core/buffer/bufferUsage';
+export type { InitOptions, InitFromDeviceOptions } from '../core/root/root';
 export type { TgpuConst } from '../tgpuConstant';
 export type { TgpuPlum } from '../tgpuPlumTypes';
 export type { TexelFormat } from '../textureTypes';
