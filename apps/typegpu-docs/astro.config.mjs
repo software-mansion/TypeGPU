@@ -92,6 +92,11 @@ export default defineConfig({
               slug: 'guides/tgpu-cli',
               badge: { text: 'new', variant: 'default' },
             },
+            DEV && {
+              label: 'wgpu-matrix Integration',
+              slug: 'guides/wgpu-matrix-integration',
+              badge: { text: 'new', variant: 'default' },
+            },
             // {
             //   label: 'Basic Principles',
             //   slug: 'guides/basic-principles',

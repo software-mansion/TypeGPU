@@ -8,3 +8,31 @@ The [wgpu-matrix](https://github.com/greggman/wgpu-matrix) library is a popular 
 It is designed from the ground up to be compatible with WebGPU, and it provides a lot of useful features.
 
 From `wgpu-matrix` version `3.3.0` and `typegpu` version `0.2.0`, it is possible to use TypeGPU primitives inside the `wgpu-matrix` library.
+
+## Using `wgpu-matrix` functions with TypeGPU primitives
+
+Most `wgpu-matrix` functions are designed to accept `BaseArgType` as input arguments. They are defined as follows:
+
+```ts
+type BaseArgType = Float32Array | Float64Array | MutableNumberArray
+```
+
+where `MutableNumberArray` is defined as:
+
+```ts
+interface MutableNumberArray {
+	readonly length: number;
+	[n: number]: number;
+}
+```
+
+And since `typegpu` vector and matrix implement this interface, you can use them directly with `wgpu-matrix` functions.
+For example, you can create a `typegpu` vector and normalize it using `wgpu-matrix` functions:
+
+```ts
+import { vec2f } from 'typegpu';
+import { vec2 } from 'wgpu-matrix';
+
+const v = vec2f(1, 2);
+vec2.normalize(v, v);
+```
