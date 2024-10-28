@@ -1,6 +1,6 @@
 ---
-title: Using TypeGPU with `wgpu-matrix`
-description: A guide on how to use TypeGPU with `wgpu-matrix`.
+title: Using TypeGPU with wgpu-matrix
+description: A guide on how to use TypeGPU with wgpu-matrix.
 draft: true
 ---
 
@@ -41,7 +41,7 @@ console.log(v.y); // 0.894..
 
 :::note
 Since we want to modify the vector in-place, we pass the same vector as both input and dst arguments.
-If we didn't we would get a `Float32Array` without modifying the original vector.
+If we didn't, we would get a `Float32Array` without modifying the original vector.
 :::
 
 If you wanted to initialize a matrix as an identity matrix, you could do it like this:
@@ -57,7 +57,7 @@ console.log(m[0]); // 1
 
 ## Migration tips
 
-Since you can use TypeGPU primitives directly with `wgpu-matrix` functions, the migration process is straightforward.
+Since you can use TypeGPU primitives directly with `wgpu-matrix` functions, the migration process is relatively simple.
 Let's look at some examples:
 
 ### Chained in-place operations on a matrix
