@@ -20,7 +20,6 @@ export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 export interface NumberArrayView {
   readonly length: number;
   [n: number]: number;
-  [Symbol.iterator](): Iterator<number>;
 }
 
 /**

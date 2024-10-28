@@ -197,13 +197,18 @@ class mat2x2fImpl extends mat2x2Impl<vec2f> implements mat2x2f {
 }
 
 class ArrayView3x3 implements NumberArrayView {
-  public readonly length = 9;
+  public readonly length = 12;
   [n: number]: number;
 
   constructor(private _mat: mat3x3<vec3f>) {}
 
   *[Symbol.iterator]() {
-    yield* this._mat.elements();
+    yield* this._mat[0];
+    yield 0;
+    yield* this._mat[1];
+    yield 0;
+    yield* this._mat[2];
+    yield 0;
   }
 
   get [0]() {
@@ -219,27 +224,39 @@ class ArrayView3x3 implements NumberArrayView {
   }
 
   get [3]() {
-    return this._mat[1].x;
+    return 0;
   }
 
   get [4]() {
-    return this._mat[1].y;
+    return this._mat[1].x;
   }
 
   get [5]() {
-    return this._mat[1].z;
+    return this._mat[1].y;
   }
 
   get [6]() {
-    return this._mat[2].x;
+    return this._mat[1].z;
   }
 
   get [7]() {
-    return this._mat[2].y;
+    return 0;
   }
 
   get [8]() {
+    return this._mat[2].x;
+  }
+
+  get [9]() {
+    return this._mat[2].y;
+  }
+
+  get [10]() {
     return this._mat[2].z;
+  }
+
+  get [11]() {
+    return 0;
   }
 
   set [0](value: number) {
@@ -254,29 +271,35 @@ class ArrayView3x3 implements NumberArrayView {
     this._mat[0].z = value;
   }
 
-  set [3](value: number) {
+  set [3](_: number) {}
+
+  set [4](value: number) {
     this._mat[1].x = value;
   }
 
-  set [4](value: number) {
+  set [5](value: number) {
     this._mat[1].y = value;
   }
 
-  set [5](value: number) {
+  set [6](value: number) {
     this._mat[1].z = value;
   }
 
-  set [6](value: number) {
+  set [7](_: number) {}
+
+  set [8](value: number) {
     this._mat[2].x = value;
   }
 
-  set [7](value: number) {
+  set [9](value: number) {
     this._mat[2].y = value;
   }
 
-  set [8](value: number) {
+  set [10](value: number) {
     this._mat[2].z = value;
   }
+
+  set [11](_: number) {}
 }
 
 abstract class mat3x3Impl<TColumn extends vec3f> implements mat3x3<TColumn> {

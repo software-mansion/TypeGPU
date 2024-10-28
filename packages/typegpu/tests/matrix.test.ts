@@ -53,7 +53,7 @@ describe('mat2x2f', () => {
       vec2f(2, 3), // column 1
     );
 
-    expect([...mat.arrayView]).toEqual([0, 1, 2, 3]);
+    expect([...mat.elements()]).toEqual([0, 1, 2, 3]);
     expect(mat.arrayView.length).toEqual(4);
     expect(mat.arrayView[0]).toEqual(0);
     expect(mat.arrayView[1]).toEqual(1);
@@ -75,7 +75,7 @@ describe('mat2x2f', () => {
 
     expect(mat[0]).toEqual(vec2f(4, 5));
     expect(mat[1]).toEqual(vec2f(6, 7));
-    expect([...mat.arrayView]).toEqual([4, 5, 6, 7]);
+    expect([...mat.elements()]).toEqual([4, 5, 6, 7]);
   });
 });
 
@@ -137,17 +137,19 @@ describe('mat3x3f', () => {
       vec3f(6, 7, 8), // column 2
     );
 
-    expect([...mat.arrayView]).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
-    expect(mat.arrayView.length).toEqual(9);
+    expect([...mat.elements()]).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(mat.arrayView.length).toEqual(12);
     expect(mat.arrayView[0]).toEqual(0);
     expect(mat.arrayView[1]).toEqual(1);
     expect(mat.arrayView[2]).toEqual(2);
-    expect(mat.arrayView[3]).toEqual(3);
-    expect(mat.arrayView[4]).toEqual(4);
-    expect(mat.arrayView[5]).toEqual(5);
-    expect(mat.arrayView[6]).toEqual(6);
-    expect(mat.arrayView[7]).toEqual(7);
-    expect(mat.arrayView[8]).toEqual(8);
+    expect(mat.arrayView[3]).toEqual(0);
+    expect(mat.arrayView[4]).toEqual(3);
+    expect(mat.arrayView[5]).toEqual(4);
+    expect(mat.arrayView[6]).toEqual(5);
+    expect(mat.arrayView[7]).toEqual(0);
+    expect(mat.arrayView[8]).toEqual(6);
+    expect(mat.arrayView[9]).toEqual(7);
+    expect(mat.arrayView[10]).toEqual(8);
   });
 
   it('is mutable through arrayView', () => {
@@ -161,23 +163,23 @@ describe('mat3x3f', () => {
     arrayView[0] = 9;
     arrayView[1] = 10;
     arrayView[2] = 11;
-    arrayView[3] = 12;
-    arrayView[4] = 13;
-    arrayView[5] = 14;
+    arrayView[4] = 12;
+    arrayView[5] = 13;
+    arrayView[6] = 14;
 
     expect(mat[0]).toEqual(vec3f(9, 10, 11));
     expect(mat[1]).toEqual(vec3f(12, 13, 14));
     expect(mat[2]).toEqual(vec3f(6, 7, 8));
-    expect([...mat.arrayView]).toEqual([9, 10, 11, 12, 13, 14, 6, 7, 8]);
+    expect([...mat.elements()]).toEqual([9, 10, 11, 12, 13, 14, 6, 7, 8]);
 
-    arrayView[6] = 15;
-    arrayView[7] = 16;
-    arrayView[8] = 17;
+    arrayView[8] = 15;
+    arrayView[9] = 16;
+    arrayView[10] = 17;
 
     expect(mat[0]).toEqual(vec3f(9, 10, 11));
     expect(mat[1]).toEqual(vec3f(12, 13, 14));
     expect(mat[2]).toEqual(vec3f(15, 16, 17));
-    expect([...mat.arrayView]).toEqual([9, 10, 11, 12, 13, 14, 15, 16, 17]);
+    expect([...mat.elements()]).toEqual([9, 10, 11, 12, 13, 14, 15, 16, 17]);
   });
 });
 
@@ -246,7 +248,7 @@ describe('mat4x4f', () => {
       vec4f(12, 13, 14, 15), // column 3
     );
 
-    expect([...mat.arrayView]).toEqual([
+    expect([...mat.elements()]).toEqual([
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ]);
     expect(mat.arrayView.length).toEqual(16);
@@ -280,7 +282,7 @@ describe('mat4x4f', () => {
     expect(mat[1]).toEqual(vec4f(4, 5, 6, 7));
     expect(mat[2]).toEqual(vec4f(8, 9, 10, 11));
     expect(mat[3]).toEqual(vec4f(12, 13, 14, 15));
-    expect([...mat.arrayView]).toEqual([
+    expect([...mat.elements()]).toEqual([
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ]);
 
@@ -293,7 +295,7 @@ describe('mat4x4f', () => {
     expect(mat[1]).toEqual(vec4f(4, 5, 6, 7));
     expect(mat[2]).toEqual(vec4f(8, 9, 10, 11));
     expect(mat[3]).toEqual(vec4f(12, 13, 14, 15));
-    expect([...mat.arrayView]).toEqual([
+    expect([...mat.elements()]).toEqual([
       16, 17, 18, 19, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ]);
   });
