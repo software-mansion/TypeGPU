@@ -485,11 +485,6 @@ class mat4x4fImpl extends mat4x4Impl<vec4f> implements mat4x4f {
 interface mat2x2<TColumn> extends matBase<TColumn> {
   readonly length: 4;
   [n: number]: number;
-
-  [0]: number;
-  [1]: number;
-  [2]: number;
-  [3]: number;
 }
 
 /**
@@ -545,19 +540,6 @@ export const mat2x2f = createMatSchema({
 interface mat3x3<TColumn> extends matBase<TColumn> {
   readonly length: 12;
   [n: number]: number;
-
-  [0]: number;
-  [1]: number;
-  [2]: number;
-  [3]: number;
-  [4]: number;
-  [5]: number;
-  [6]: number;
-  [7]: number;
-  [8]: number;
-  [9]: number;
-  [10]: number;
-  [11]: number;
 }
 
 /**
@@ -616,23 +598,6 @@ export const mat3x3f = createMatSchema({
 interface mat4x4<TColumn> extends matBase<TColumn> {
   readonly length: 16;
   [n: number]: number;
-
-  [0]: number;
-  [1]: number;
-  [2]: number;
-  [3]: number;
-  [4]: number;
-  [5]: number;
-  [6]: number;
-  [7]: number;
-  [8]: number;
-  [9]: number;
-  [10]: number;
-  [11]: number;
-  [12]: number;
-  [13]: number;
-  [14]: number;
-  [15]: number;
 }
 
 /**
