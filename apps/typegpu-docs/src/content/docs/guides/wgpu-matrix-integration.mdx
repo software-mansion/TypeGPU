@@ -26,13 +26,31 @@ interface MutableNumberArray {
 }
 ```
 
-And since `typegpu` vector and matrix implement this interface, you can use them directly with `wgpu-matrix` functions.
-For example, you can create a `typegpu` vector and normalize it using `wgpu-matrix` functions:
+And since TypeGPU's vector and matrix implement this interface, you can use them directly with `wgpu-matrix` functions.
+For example, you can create a vector and normalize it using like this:
 
 ```ts
-import { vec2f } from 'typegpu';
+import { vec2f } from 'typegpu/data';
 import { vec2 } from 'wgpu-matrix';
 
 const v = vec2f(1, 2);
 vec2.normalize(v, v);
+console.log(v.x); // 0.447..
+console.log(v.y); // 0.894..
+```
+
+:::note
+Since we want to modify the vector in-place, we pass the same vector as both input and dst arguments.
+If we didn't we would get a `Float32Array` without modifying the original vector.
+:::
+
+If you wanted to initialize a matrix as an identity matrix, you could do it like this:
+
+```ts
+import { mat4x4f } from 'typegpu/data';
+import { mat4 } from 'wgpu-matrix';
+
+const m = mat4.identity(mat4x4f()); // returns a mat4x4f
+
+console.log(m[0]); // 1
 ```
