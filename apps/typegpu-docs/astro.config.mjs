@@ -7,6 +7,7 @@ import starlight from '@astrojs/starlight';
 import tailwind from '@astrojs/tailwind';
 import { defineConfig } from 'astro/config';
 import starlightBlog from 'starlight-blog';
+import starlightLinksValidator from 'starlight-links-validator';
 import importRawRedirectPlugin from './vite-import-raw-redirect-plugin.mjs';
 
 /**
@@ -14,7 +15,7 @@ import importRawRedirectPlugin from './vite-import-raw-redirect-plugin.mjs';
  * @param {T[]} items
  */
 const stripFalsy = (items) =>
-  items.filter(/** @return {item is Exclude<T, false>} */ (item) => !!item);
+  items.filter(/** @return {item is Exclude<T, boolean>} */ (item) => !!item);
 
 const DEV = import.meta.env.DEV;
 
@@ -41,7 +42,12 @@ export default defineConfig({
     starlight({
       title: 'TypeGPU',
       customCss: ['./src/tailwind.css', './src/fonts/font-face.css'],
-      plugins: [starlightBlog()],
+      plugins: [
+        starlightBlog(),
+        starlightLinksValidator({
+          exclude: ['/TypeGPU/examples', '/TypeGPU/examples/**/*'],
+        }),
+      ],
       logo: {
         light: './src/assets/typegpu-logo-light.svg',
         dark: './src/assets/typegpu-logo-dark.svg',
@@ -50,48 +56,42 @@ export default defineConfig({
       },
       components: {
         Head: './src/components/starlight/Head.astro',
+        ThemeSelect: './src/components/starlight/ThemeSelect.astro',
+        Sidebar: './src/components/starlight/Sidebar.astro',
       },
       social: {
         github: 'https://github.com/software-mansion/TypeGPU',
       },
       sidebar: stripFalsy([
         {
-          label: 'Live Examples',
-          link: 'examples',
-          // attrs: {
-          //   'data-astro-reload': true,
-          // },
+          label: 'Why TypeGPU?',
+          slug: 'why-typegpu',
         },
         {
-          label: 'Guides',
+          label: 'Getting Started',
+          slug: 'getting-started',
+        },
+        {
+          label: 'Fundamentals',
           items: stripFalsy([
-            // Each item here is one entry in the navigation menu.
-            {
-              label: 'Getting Started',
-              slug: 'guides/getting-started',
-            },
             DEV && {
               label: 'Roots',
-              slug: 'guides/roots',
+              slug: 'fundamentals/roots',
               badge: { text: 'new', variant: 'default' },
             },
             {
-              label: 'Typed Buffers',
-              slug: 'guides/tgpu-buffer-api',
+              label: 'Buffers',
+              slug: 'fundamentals/buffers',
             },
             {
-              label: 'Defining Data Types',
-              slug: 'guides/defining-data-types',
+              label: 'Data Schemas',
+              slug: 'fundamentals/data-schemas',
             },
             DEV && {
               label: 'Generating JS from WGSL',
               slug: 'guides/generating-js-from-wgsl',
             },
-            DEV && {
-              label: 'TypeGPU CLI',
-              slug: 'guides/tgpu-cli',
-              badge: { text: 'new', variant: 'default' },
-            },
+
             // {
             //   label: 'Basic Principles',
             //   slug: 'guides/basic-principles',
@@ -105,6 +105,16 @@ export default defineConfig({
             //   slug: 'guides/parametrized-functions',
             // },
           ]),
+        },
+        DEV && {
+          label: 'Tooling',
+          items: [
+            DEV && {
+              label: 'TypeGPU CLI',
+              slug: 'guides/tgpu-cli',
+              badge: { text: 'new', variant: 'default' },
+            },
+          ],
         },
         DEV && {
           label: 'Tutorials',
