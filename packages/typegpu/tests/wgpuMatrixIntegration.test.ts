@@ -34,9 +34,7 @@ describe('mat3x3f', () => {
     expect(m.mat3.equals(mat, mat)).toBe(true);
 
     expect([...mat.elements()]).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
-    console.log(mat);
     m.mat3.identity(mat);
-    console.log(mat);
     expect([...mat.elements()]).toEqual([1, 0, 0, 0, 1, 0, 0, 0, 1]);
   });
 });
@@ -72,7 +70,7 @@ describe('vec2f', () => {
     expect(m.vec2.equals(vec, vec)).toBe(true);
 
     expect([...vec]).toEqual([1, 2]);
-    m.vec2.negate(vec, vec);
+    const xd = m.vec2.negate(vec);
     expect([...vec]).toEqual([-1, -2]);
   });
 });
