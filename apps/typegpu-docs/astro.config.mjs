@@ -79,6 +79,11 @@ export default defineConfig({
               label: 'Typed Buffers',
               slug: 'guides/tgpu-buffer-api',
             },
+            DEV && {
+              label: 'Bind Groups',
+              slug: 'guides/bind-groups',
+              badge: { text: 'new', variant: 'default' },
+            },
             {
               label: 'Defining Data Types',
               slug: 'guides/defining-data-types',
