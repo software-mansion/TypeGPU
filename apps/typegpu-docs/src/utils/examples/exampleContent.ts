@@ -1,38 +1,64 @@
-import {
-  entries,
-  filter,
-  fromEntries,
-  groupBy,
-  isNonNull,
-  map,
-  pipe,
-} from 'remeda';
-import { parseExampleCode } from './parseExampleCode';
-import type { Example } from './types';
+import { entries, filter, fromEntries, groupBy, map, pipe } from 'remeda';
+import type { Example, ExampleMetadata } from './types';
 
-const rawExamples: Record<string, string> = import.meta.glob(
-  '../../content/examples/**/*.ts',
-  {
+function pathToExampleKey<T>(record: Record<string, T>): Record<string, T> {
+  return pipe(
+    record,
+    entries(),
+    map(
+      ([path, value]) =>
+        [
+          pipe(
+            path,
+            (path) => path.replace(/^..\/..\/content\/examples\//, ''), // remove parent folder
+            (path) => path.replace(/\/[^\/]*$/, ''),
+            (path) => path.replace(/\//, '--'),
+          ),
+          value,
+        ] as const,
+    ),
+    fromEntries(),
+  );
+}
+
+const metaFiles: Record<string, ExampleMetadata> = pathToExampleKey(
+  import.meta.glob('../../content/examples/**/meta.json', {
+    eager: true,
+    import: 'default',
+  }),
+);
+
+const tsFiles: Record<string, string> = pathToExampleKey(
+  import.meta.glob('../../content/examples/**/index.ts', {
     query: 'raw',
     eager: true,
     import: 'default',
-  },
+  }),
+);
+
+const htmlFiles: Record<string, string> = pathToExampleKey(
+  import.meta.glob('../../content/examples/**/index.html', {
+    query: 'raw',
+    eager: true,
+    import: 'default',
+  }),
 );
 
 export const examples = pipe(
-  rawExamples,
+  metaFiles,
   entries(),
-  map(([path, value]) => {
-    const key = pipe(
-      path,
-      (path) => path.replace(/^..\/..\/content\/examples\//, ''), // remove parent folder
-      (path) => path.replace(/.ts$/, ''), // remove extension
-      (path) => path.replace(/\//, '--'), // / -> --
-    );
-
-    return [key, parseExampleCode(key, value)] as const;
-  }),
-  filter((pair): pair is [string, Example] => isNonNull(pair[1])),
+  map(
+    ([key, value]) =>
+      [
+        key,
+        {
+          key,
+          metadata: value,
+          tsCode: tsFiles[key] ?? '',
+          htmlCode: htmlFiles[key] ?? '',
+        },
+      ] satisfies [string, Example],
+  ),
   fromEntries(),
 );
 

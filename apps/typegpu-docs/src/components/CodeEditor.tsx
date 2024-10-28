@@ -97,3 +97,25 @@ export function CodeEditor(props: Props) {
     />
   );
 }
+
+export function HtmlCodeEditor(props: Props) {
+  const { code, onCodeChange } = props;
+
+  const handleChange = useEvent((value: string | undefined) => {
+    onCodeChange(value ?? '');
+  });
+
+  return (
+    <Editor
+      defaultLanguage="html"
+      value={code}
+      onChange={handleChange}
+      options={{
+        minimap: {
+          enabled: false,
+        },
+      }}
+      className="pt-16 md:pt-0"
+    />
+  );
+}

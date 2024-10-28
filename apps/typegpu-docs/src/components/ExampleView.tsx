@@ -13,17 +13,13 @@ import { PLAYGROUND_KEY } from '../utils/examples/exampleContent';
 import { exampleControlsAtom } from '../utils/examples/exampleControlAtom';
 import { executeExample } from '../utils/examples/exampleRunner';
 import type { ExampleState } from '../utils/examples/exampleState';
-import { useLayout } from '../utils/examples/layout';
 import type { Example } from '../utils/examples/types';
 import { isGPUSupported } from '../utils/isGPUSupported';
 import useEvent from '../utils/useEvent';
-import { CodeEditor } from './CodeEditor';
+import { CodeEditor, HtmlCodeEditor } from './CodeEditor';
 import { ControlPanel } from './ControlPanel';
 import { Button } from './design/Button';
-import { Canvas } from './design/Canvas';
 import { Snackbar } from './design/Snackbar';
-import { Table } from './design/Table';
-import { Video } from './design/Video';
 
 type Props = {
   example: Example;
@@ -32,18 +28,19 @@ type Props = {
 
 function useExample(
   exampleCode: string,
+  htmlCode: string,
   setSnackbarText: (text: string | undefined) => void,
   tags?: string[],
 ) {
   const exampleRef = useRef<ExampleState | null>(null);
   const setExampleControlParams = useSetAtom(exampleControlsAtom);
-  const { def, createLayout, setRef } = useLayout();
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reload example on html change
   useEffect(() => {
     let cancelled = false;
     setSnackbarText(undefined);
 
-    executeExample(exampleCode, createLayout, tags)
+    executeExample(exampleCode, tags)
       .then((example) => {
         if (cancelled) {
           // Another instance was started in the meantime.
@@ -72,27 +69,22 @@ function useExample(
       exampleRef.current?.dispose();
       cancelled = true;
     };
-  }, [
-    exampleCode,
-    createLayout,
-    setSnackbarText,
-    setExampleControlParams,
-    tags,
-  ]);
-
-  return {
-    def,
-    setRef,
-  };
+  }, [exampleCode, htmlCode, setSnackbarText, setExampleControlParams, tags]);
 }
 
 export function ExampleView({ example, isPlayground = false }: Props) {
-  const { code: initialCode, metadata } = example;
-  const [code, setCode] = useState(initialCode);
+  const {
+    tsCode: initialTsCode,
+    htmlCode: intitialHtmlCode,
+    metadata,
+  } = example;
+  const [code, setCode] = useState(initialTsCode);
+  const [htmlCode, setHtmlCode] = useState(intitialHtmlCode);
   const [snackbarText, setSnackbarText] = useState<string | undefined>();
   const setCurrentExample = useSetAtom(currentExampleAtom);
   const codeEditorShowing = useAtomValue(codeEditorShownAtom);
   const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
+  const [currentEditorTab, setCurrentEditorTab] = useState<'ts' | 'html'>('ts');
 
   const setCodeWrapper = isPlayground
     ? useCallback(
@@ -107,8 +99,9 @@ export function ExampleView({ example, isPlayground = false }: Props) {
     : setCode;
 
   useEffect(() => {
-    setCodeWrapper(initialCode);
-  }, [initialCode, setCodeWrapper]);
+    setCodeWrapper(initialTsCode);
+    setHtmlCode(intitialHtmlCode);
+  }, [initialTsCode, setCodeWrapper, intitialHtmlCode]);
 
   const setCodeDebouncer = useMemo(
     () => debounce(setCodeWrapper, { waitMs: 500 }),
@@ -119,7 +112,72 @@ export function ExampleView({ example, isPlayground = false }: Props) {
     setCodeDebouncer.call(newCode);
   });
 
-  const { def, setRef } = useExample(code, setSnackbarText, metadata.tags);
+  useExample(code, htmlCode, setSnackbarText, metadata.tags);
+
+  const exampleHtmlRef = useRef<HTMLDivElement>(null);
+  const listeners: (() => void)[] = [];
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  useEffect(() => {
+    const canvases = exampleHtmlRef.current?.querySelectorAll(
+      ':scope > canvas',
+    ) as HTMLCanvasElement[] | undefined;
+
+    for (const canvas of canvases ?? []) {
+      const newCanvas = document.createElement('canvas');
+
+      if (
+        canvas.width !== newCanvas.width ||
+        canvas.height !== newCanvas.height
+      ) {
+        continue;
+      }
+
+      const container = document.createElement('div');
+      const frame = document.createElement('div');
+      const parent = canvas.parentElement;
+
+      frame.appendChild(newCanvas);
+      container.appendChild(frame);
+
+      const aspectRatio = canvas.dataset.aspectRatio ?? '1';
+
+      container.style.containerType = 'size';
+      container.style.flex = '0 1 auto';
+      container.style.display = 'flex';
+      container.style.justifyContent = 'center';
+      container.style.flexDirection = 'column';
+      container.style.alignItems = 'center';
+      container.style.width = '100%';
+      container.style.height = '100%';
+
+      frame.style.position = 'relative';
+      frame.style.aspectRatio = aspectRatio;
+      frame.style.width = 'min(100cqw, 100cqh)';
+
+      newCanvas.style.position = 'absolute';
+      newCanvas.style.width = '100%';
+      newCanvas.style.height = '100%';
+
+      parent?.appendChild(container);
+      parent?.removeChild(canvas);
+
+      const onResize = () => {
+        newCanvas.width = frame.clientWidth * window.devicePixelRatio;
+        newCanvas.height = frame.clientHeight * window.devicePixelRatio;
+      };
+
+      window.addEventListener('resize', onResize);
+      listeners.push(onResize);
+      onResize();
+    }
+
+    return () => {
+      for (const listener of listeners) {
+        window.removeEventListener('resize', listener);
+      }
+    };
+  }, [htmlCode]);
 
   return (
     <>
@@ -142,58 +200,12 @@ export function ExampleView({ example, isPlayground = false }: Props) {
                 codeEditorShowing ? 'md:max-h-[calc(50vh-3rem)]' : '',
               )}
             >
-              {/* Note: This is a temporary measure to allow for simple examples that do not require the @typegpu/example-toolkit package. */}
-              {def.elements.length === 0 ? <Canvas aspectRatio={1} /> : null}
-
-              {def.elements.map((element) => {
-                if (element.type === 'canvas') {
-                  return (
-                    <Canvas
-                      key={element.key}
-                      ref={(canvas) => setRef(element.key, canvas)}
-                      width={element.width}
-                      height={element.height}
-                      aspectRatio={element.aspectRatio}
-                    />
-                  );
-                }
-
-                if (element.type === 'video') {
-                  return (
-                    <Video
-                      key={element.key}
-                      ref={(video) => setRef(element.key, video)}
-                      width={element.width}
-                      height={element.height}
-                    />
-                  );
-                }
-
-                if (element.type === 'table') {
-                  return (
-                    <Table
-                      key={element.key}
-                      ref={(table) => setRef(element.key, table)}
-                      label={element.label}
-                    />
-                  );
-                }
-
-                if (element.type === 'button') {
-                  return (
-                    <Button
-                      key={element.key}
-                      ref={(button) => setRef(element.key, button)}
-                      onClick={element.onClick}
-                      accent
-                    >
-                      {element.label}
-                    </Button>
-                  );
-                }
-
-                return <p key={element}>Unrecognized element</p>;
-              })}
+              <div
+                ref={exampleHtmlRef}
+                className="contents w-full h-full"
+                // biome-ignore lint/security/noDangerouslySetInnerHtml: must be done
+                dangerouslySetInnerHTML={{ __html: htmlCode }}
+              />
             </div>
           ) : (
             <GPUUnsupportedPanel />
@@ -212,7 +224,25 @@ export function ExampleView({ example, isPlayground = false }: Props) {
               )}
             >
               <div className="absolute inset-0">
-                <CodeEditor code={code} onCodeChange={handleCodeChange} />
+                <div className="absolute right-0 md:right-6 md:top-2 z-[200] flex gap-2">
+                  <Button
+                    onClick={() => setCurrentEditorTab('ts')}
+                    accent={currentEditorTab === 'ts'}
+                  >
+                    TS
+                  </Button>
+                  <Button
+                    onClick={() => setCurrentEditorTab('html')}
+                    accent={currentEditorTab === 'html'}
+                  >
+                    HTML
+                  </Button>
+                </div>
+                {currentEditorTab === 'ts' ? (
+                  <CodeEditor code={code} onCodeChange={handleCodeChange} />
+                ) : (
+                  <HtmlCodeEditor code={htmlCode} onCodeChange={setHtmlCode} />
+                )}
               </div>
             </div>
           ) : null}

@@ -8,7 +8,6 @@ import { transpileModule } from 'typescript';
 import { tsCompilerOptions } from '../liveEditor/embeddedTypeScript';
 import type { ExampleControlParam } from './exampleControlAtom';
 import type { ExampleState } from './exampleState';
-import type { LayoutInstance } from './layout';
 
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
@@ -150,14 +149,11 @@ function tsToJs(code: string): string {
 
 export async function executeExample(
   exampleCode: string,
-  createLayout: () => LayoutInstance,
   tags?: string[],
 ): Promise<ExampleState> {
   const cleanupCallbacks: (() => unknown)[] = [];
 
-  const layout = createLayout();
   let disposed = false;
-  cleanupCallbacks.push(() => layout.dispose());
 
   const controlParams: ExampleControlParam[] = [];
 
@@ -336,7 +332,6 @@ export async function executeExample(
 
             cleanupCallbacks.push(() => cancelAnimationFrame(handle));
           }) satisfies OnFrameFn,
-          addElement: layout.addElement,
           addSelectParameter,
           addSliderParameter,
           addButtonParameter,
