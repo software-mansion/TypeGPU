@@ -93,7 +93,7 @@ export default defineConfig({
               badge: { text: 'new', variant: 'default' },
             },
             DEV && {
-              label: 'wgpu-matrix Integration',
+              label: 'Using wgpu-matrix',
               slug: 'guides/wgpu-matrix-integration',
               badge: { text: 'new', variant: 'default' },
             },

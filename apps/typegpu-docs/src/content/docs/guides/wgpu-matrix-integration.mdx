@@ -26,8 +26,8 @@ interface MutableNumberArray {
 }
 ```
 
-And since TypeGPU's vector and matrix implement this interface, you can use them directly with `wgpu-matrix` functions.
-For example, you can create a vector and normalize it using like this:
+And since TypeGPU's vector and matrix implement this interface, you can use them directly with those functions.
+For example, you can create a vector and normalize it like this:
 
 ```ts
 import { vec2f } from 'typegpu/data';
@@ -54,3 +54,50 @@ const m = mat4.identity(mat4x4f()); // returns a mat4x4f
 
 console.log(m[0]); // 1
 ```
+
+## Migration tips
+
+Since you can use TypeGPU primitives directly with `wgpu-matrix` functions, the migration process is straightforward.
+Let's look at some examples:
+
+### Chained in-place operations on a matrix
+
+If your code creates a matrix and then applies some operations to it in-place, you can use TypeGPU primitives directly:
+
+```diff lang=ts
+-const m = mat4.create();
++const m = mat4x4f();
+mat4.identity(m);                   // m = identity
+mat4.translate(m, [1, 2, 3], m);    // m *= translation([1, 2, 3])
+mat4.rotateX(m, Math.PI * 0.5, m);  // m *= rotationX(Math.PI * 0.5)
+mat4.scale(m, [1, 2, 3], m);        // m *= scaling([1, 2, 3])
+```
+
+### Creating a matrix using a function
+
+If your code creates a matrix using a function, for example:
+
+```ts
+const fov = 60 * Math.PI / 180
+const aspect = width / height;
+const near = 0.1;
+const far = 1000;
+const perspective = mat4.perspective(fov, aspect, near, far);
+```
+
+You can pass a TypeGPU matrix as the destination argument:
+
+```diff lang=ts
++const m = mat4x4f();
+const fov = 60 * Math.PI / 180
+const aspect = width / height;
+const near = 0.1;
+const far = 1000;
+-const perspective = mat4.perspective(fov, aspect, near, far);
++mat4.perspective(fov, aspect, near, far, m);
+```
+
+:::tip
+If you didn't remove the `perspective` variable, it would just become an alias for `m`.
+This could be useful if you later use that variable and don't want to replace all occurrences.
+:::
