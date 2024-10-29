@@ -118,7 +118,7 @@ export function generate(
   const imports = generateImports(options);
   const exports_ = generateExports(options);
 
-  return `/* generated via tgpu-cli by TypeGPU */
+  return `/* generated via tgpu-gen by TypeGPU */
 ${[imports, structs, aliases, bindGroupLayouts, exports_].filter((generated) => generated.trim() !== '').join('\n')}
 `;
 }

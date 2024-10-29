@@ -1,8 +1,8 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import type { TgpuNamable } from '../../namable';
 import { type TgpuPlum, type Unsubscribe, isPlum } from '../../tgpuPlumTypes';
-import type { ExperimentalTgpuRoot } from '../../tgpuRoot';
 import { type AnyTgpuData, isGPUBuffer } from '../../types';
+import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 
 // ----------
 // Public API

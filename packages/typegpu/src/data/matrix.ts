@@ -8,7 +8,7 @@ import {
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import { roundUp } from '../mathUtils';
-import type { TgpuData } from '../types';
+import type { NumberArrayView, TgpuData } from '../types';
 import { vec2f, vec3f, vec4f, type vecBase } from './vector';
 
 // --------------
@@ -52,7 +52,7 @@ function createMatSchema<
     },
 
     write(output: ISerialOutput, value: Parsed<ValueType>): void {
-      for (const col of value.columns()) {
+      for (const col of value.columns) {
         options.columnType.write(output, col as Parsed<ColumnType>);
       }
     },
@@ -102,46 +102,61 @@ function createMatSchema<
   return Object.assign(construct, MatSchema);
 }
 
-interface matBase<TColumn> {
-  columns(): Iterable<TColumn>;
+interface matBase<TColumn> extends NumberArrayView {
+  readonly columns: readonly TColumn[];
   elements(): Iterable<number>;
 }
 
-abstract class mat2x2Impl<TColumn extends vecBase> implements mat2x2<TColumn> {
-  private _columns = new Array(2) as [TColumn, TColumn];
+abstract class mat2x2Impl<TColumn extends vec2f> implements mat2x2<TColumn> {
+  public readonly columns: readonly [TColumn, TColumn];
+  public readonly length = 4;
+  [n: number]: number;
 
   constructor(...elements: number[]) {
-    this._columns[0] = this.makeColumn(
-      elements[0] as number,
-      elements[1] as number,
-    );
-    this._columns[1] = this.makeColumn(
-      elements[2] as number,
-      elements[3] as number,
-    );
+    this.columns = [
+      this.makeColumn(elements[0] as number, elements[1] as number),
+      this.makeColumn(elements[2] as number, elements[3] as number),
+    ];
   }
 
   abstract makeColumn(e0: number, e1: number): TColumn;
 
-  *columns() {
-    yield this._columns[0];
-    yield this._columns[1];
-  }
-
   *elements() {
-    yield* this._columns[0];
-    yield* this._columns[1];
+    yield* this.columns[0];
+    yield* this.columns[1];
   }
 
   get [0]() {
-    return this._columns[0];
+    return this.columns[0].x;
   }
 
   get [1]() {
-    return this._columns[1];
+    return this.columns[0].y;
   }
 
-  [idx: number]: TColumn | undefined;
+  get [2]() {
+    return this.columns[1].x;
+  }
+
+  get [3]() {
+    return this.columns[1].y;
+  }
+
+  set [0](value: number) {
+    this.columns[0].x = value;
+  }
+
+  set [1](value: number) {
+    this.columns[0].y = value;
+  }
+
+  set [2](value: number) {
+    this.columns[1].x = value;
+  }
+
+  set [3](value: number) {
+    this.columns[1].y = value;
+  }
 }
 
 class mat2x2fImpl extends mat2x2Impl<vec2f> implements mat2x2f {
@@ -150,54 +165,128 @@ class mat2x2fImpl extends mat2x2Impl<vec2f> implements mat2x2f {
   }
 }
 
-abstract class mat3x3Impl<TColumn extends vecBase> implements mat3x3<TColumn> {
-  private _columns = new Array(3) as [TColumn, TColumn, TColumn];
+abstract class mat3x3Impl<TColumn extends vec3f> implements mat3x3<TColumn> {
+  public readonly columns: readonly [TColumn, TColumn, TColumn];
+  public readonly length = 12;
+  [n: number]: number;
 
   constructor(...elements: number[]) {
-    this._columns[0] = this.makeColumn(
-      elements[0] as number,
-      elements[1] as number,
-      elements[2] as number,
-    );
-    this._columns[1] = this.makeColumn(
-      elements[3] as number,
-      elements[4] as number,
-      elements[5] as number,
-    );
-    this._columns[2] = this.makeColumn(
-      elements[6] as number,
-      elements[7] as number,
-      elements[8] as number,
-    );
+    this.columns = [
+      this.makeColumn(
+        elements[0] as number,
+        elements[1] as number,
+        elements[2] as number,
+      ),
+      this.makeColumn(
+        elements[3] as number,
+        elements[4] as number,
+        elements[5] as number,
+      ),
+      this.makeColumn(
+        elements[6] as number,
+        elements[7] as number,
+        elements[8] as number,
+      ),
+    ];
   }
 
   abstract makeColumn(x: number, y: number, z: number): TColumn;
 
-  *columns() {
-    yield this._columns[0];
-    yield this._columns[1];
-    yield this._columns[2];
-  }
-
   *elements() {
-    yield* this._columns[0];
-    yield* this._columns[1];
-    yield* this._columns[2];
+    yield* this.columns[0];
+    yield* this.columns[1];
+    yield* this.columns[2];
   }
 
   get [0]() {
-    return this._columns[0];
+    return this.columns[0].x;
   }
 
   get [1]() {
-    return this._columns[1];
+    return this.columns[0].y;
   }
 
   get [2]() {
-    return this._columns[2];
+    return this.columns[0].z;
   }
 
-  [idx: number]: TColumn | undefined;
+  get [3]() {
+    return 0;
+  }
+
+  get [4]() {
+    return this.columns[1].x;
+  }
+
+  get [5]() {
+    return this.columns[1].y;
+  }
+
+  get [6]() {
+    return this.columns[1].z;
+  }
+
+  get [7]() {
+    return 0;
+  }
+
+  get [8]() {
+    return this.columns[2].x;
+  }
+
+  get [9]() {
+    return this.columns[2].y;
+  }
+
+  get [10]() {
+    return this.columns[2].z;
+  }
+
+  get [11]() {
+    return 0;
+  }
+
+  set [0](value: number) {
+    this.columns[0].x = value;
+  }
+
+  set [1](value: number) {
+    this.columns[0].y = value;
+  }
+
+  set [2](value: number) {
+    this.columns[0].z = value;
+  }
+
+  set [3](_: number) {}
+
+  set [4](value: number) {
+    this.columns[1].x = value;
+  }
+
+  set [5](value: number) {
+    this.columns[1].y = value;
+  }
+
+  set [6](value: number) {
+    this.columns[1].z = value;
+  }
+
+  set [7](_: number) {}
+
+  set [8](value: number) {
+    this.columns[2].x = value;
+  }
+
+  set [9](value: number) {
+    this.columns[2].y = value;
+  }
+
+  set [10](value: number) {
+    this.columns[2].z = value;
+  }
+
+  set [11](_: number) {}
 }
 
 class mat3x3fImpl extends mat3x3Impl<vec3f> implements mat3x3f {
@@ -206,74 +295,177 @@ class mat3x3fImpl extends mat3x3Impl<vec3f> implements mat3x3f {
   }
 }
 
-abstract class mat4x4Impl<TColumn extends vecBase> implements mat4x4<TColumn> {
-  private readonly _columns = new Array(4) as [
-    TColumn,
-    TColumn,
-    TColumn,
-    TColumn,
-  ];
+abstract class mat4x4Impl<TColumn extends vec4f> implements mat4x4<TColumn> {
+  public readonly columns: readonly [TColumn, TColumn, TColumn, TColumn];
 
   constructor(...elements: number[]) {
-    this._columns[0] = this.makeColumn(
-      elements[0] as number,
-      elements[1] as number,
-      elements[2] as number,
-      elements[3] as number,
-    );
-    this._columns[1] = this.makeColumn(
-      elements[4] as number,
-      elements[5] as number,
-      elements[6] as number,
-      elements[7] as number,
-    );
-    this._columns[2] = this.makeColumn(
-      elements[8] as number,
-      elements[9] as number,
-      elements[10] as number,
-      elements[11] as number,
-    );
-    this._columns[3] = this.makeColumn(
-      elements[12] as number,
-      elements[13] as number,
-      elements[14] as number,
-      elements[15] as number,
-    );
+    this.columns = [
+      this.makeColumn(
+        elements[0] as number,
+        elements[1] as number,
+        elements[2] as number,
+        elements[3] as number,
+      ),
+      this.makeColumn(
+        elements[4] as number,
+        elements[5] as number,
+        elements[6] as number,
+        elements[7] as number,
+      ),
+      this.makeColumn(
+        elements[8] as number,
+        elements[9] as number,
+        elements[10] as number,
+        elements[11] as number,
+      ),
+      this.makeColumn(
+        elements[12] as number,
+        elements[13] as number,
+        elements[14] as number,
+        elements[15] as number,
+      ),
+    ];
   }
 
   abstract makeColumn(x: number, y: number, z: number, w: number): TColumn;
 
-  *columns() {
-    yield this._columns[0];
-    yield this._columns[1];
-    yield this._columns[2];
-    yield this._columns[3];
+  *elements() {
+    yield* this.columns[0];
+    yield* this.columns[1];
+    yield* this.columns[2];
+    yield* this.columns[3];
   }
 
-  *elements() {
-    yield* this._columns[0];
-    yield* this._columns[1];
-    yield* this._columns[2];
-    yield* this._columns[3];
-  }
+  public readonly length = 16;
+  [n: number]: number;
 
   get [0]() {
-    return this._columns[0];
+    return this.columns[0].x;
   }
 
   get [1]() {
-    return this._columns[1];
+    return this.columns[0].y;
   }
 
   get [2]() {
-    return this._columns[2];
+    return this.columns[0].z;
   }
 
   get [3]() {
-    return this._columns[3];
+    return this.columns[0].w;
   }
 
-  [idx: number]: TColumn | undefined;
+  get [4]() {
+    return this.columns[1].x;
+  }
+
+  get [5]() {
+    return this.columns[1].y;
+  }
+
+  get [6]() {
+    return this.columns[1].z;
+  }
+
+  get [7]() {
+    return this.columns[1].w;
+  }
+
+  get [8]() {
+    return this.columns[2].x;
+  }
+
+  get [9]() {
+    return this.columns[2].y;
+  }
+
+  get [10]() {
+    return this.columns[2].z;
+  }
+
+  get [11]() {
+    return this.columns[2].w;
+  }
+
+  get [12]() {
+    return this.columns[3].x;
+  }
+
+  get [13]() {
+    return this.columns[3].y;
+  }
+
+  get [14]() {
+    return this.columns[3].z;
+  }
+
+  get [15]() {
+    return this.columns[3].w;
+  }
+
+  set [0](value: number) {
+    this.columns[0].x = value;
+  }
+
+  set [1](value: number) {
+    this.columns[0].y = value;
+  }
+
+  set [2](value: number) {
+    this.columns[0].z = value;
+  }
+
+  set [3](value: number) {
+    this.columns[0].w = value;
+  }
+
+  set [4](value: number) {
+    this.columns[1].x = value;
+  }
+
+  set [5](value: number) {
+    this.columns[1].y = value;
+  }
+
+  set [6](value: number) {
+    this.columns[1].z = value;
+  }
+
+  set [7](value: number) {
+    this.columns[1].w = value;
+  }
+
+  set [8](value: number) {
+    this.columns[2].x = value;
+  }
+
+  set [9](value: number) {
+    this.columns[2].y = value;
+  }
+
+  set [10](value: number) {
+    this.columns[2].z = value;
+  }
+
+  set [11](value: number) {
+    this.columns[2].w = value;
+  }
+
+  set [12](value: number) {
+    this.columns[3].x = value;
+  }
+
+  set [13](value: number) {
+    this.columns[3].y = value;
+  }
+
+  set [14](value: number) {
+    this.columns[3].z = value;
+  }
+
+  set [15](value: number) {
+    this.columns[3].w = value;
+  }
 }
 
 class mat4x4fImpl extends mat4x4Impl<vec4f> implements mat4x4f {
@@ -290,10 +482,9 @@ class mat4x4fImpl extends mat4x4Impl<vec4f> implements mat4x4f {
  * Interface representing its WGSL matrix type counterpart: mat2x2
  * A matrix with 2 rows and 2 columns, with elements of type `TColumn`
  */
-export interface mat2x2<TColumn> extends matBase<TColumn> {
-  [0]: TColumn;
-  [1]: TColumn;
-  [idx: number]: TColumn | undefined;
+interface mat2x2<TColumn> extends matBase<TColumn> {
+  readonly length: 4;
+  [n: number]: number;
 }
 
 /**
@@ -346,11 +537,9 @@ export const mat2x2f = createMatSchema({
  * Interface representing its WGSL matrix type counterpart: mat3x3
  * A matrix with 3 rows and 3 columns, with elements of type `TColumn`
  */
-export interface mat3x3<TColumn> extends matBase<TColumn> {
-  [0]: TColumn;
-  [1]: TColumn;
-  [2]: TColumn;
-  [idx: number]: TColumn | undefined;
+interface mat3x3<TColumn> extends matBase<TColumn> {
+  readonly length: 12;
+  [n: number]: number;
 }
 
 /**
@@ -406,12 +595,9 @@ export const mat3x3f = createMatSchema({
  * Interface representing its WGSL matrix type counterpart: mat4x4
  * A matrix with 4 rows and 4 columns, with elements of type `TColumn`
  */
-export interface mat4x4<TColumn> extends matBase<TColumn> {
-  [0]: TColumn;
-  [1]: TColumn;
-  [2]: TColumn;
-  [3]: TColumn;
-  [idx: number]: TColumn | undefined;
+interface mat4x4<TColumn> extends matBase<TColumn> {
+  readonly length: 16;
+  [n: number]: number;
 }
 
 /**
