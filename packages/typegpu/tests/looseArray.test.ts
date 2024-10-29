@@ -117,9 +117,9 @@ describe('loose', () => {
     expect(TestArray.read(new BufferReader(buffer))).toEqual(value);
   });
 
-  it('is not assignable to regular buffers', async () => {
+  it('is not assignable to regular buffers', () => {
     const TestArray = looseArrayOf(vec3f, 5);
-    const root = await tgpu.init({
+    const root = tgpu.initFromDevice({
       device: mockDevice,
     });
 

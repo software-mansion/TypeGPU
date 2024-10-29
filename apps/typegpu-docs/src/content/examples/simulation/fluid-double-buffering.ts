@@ -42,7 +42,7 @@ const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const root = await tgpu.init({ jitTranspiler: new JitTranspiler() });
+const root = await tgpu.init({ unstable_jitTranspiler: new JitTranspiler() });
 
 context.configure({
   device: root.device,

@@ -43,6 +43,25 @@ describe('vec2f', () => {
     // @ts-expect-error
     acceptsVec2fSchema(d.vec4f);
   });
+
+  it('can be indexed into', () => {
+    const vec = d.vec2f(1, 2);
+    expect(vec[0]).toEqual(1);
+    expect(vec[1]).toEqual(2);
+  });
+
+  it('can be iterated over', () => {
+    const vec = d.vec2f(1, 2);
+    const elements = [...vec];
+    expect(elements).toEqual([1, 2]);
+  });
+
+  it('can be modified via index', () => {
+    const vec = d.vec2f(1, 2);
+    vec[0] = 3;
+    vec[1] = 4;
+    expect(vec).toEqual(d.vec2f(3, 4));
+  });
 });
 
 describe('vec3f', () => {
@@ -88,6 +107,27 @@ describe('vec3f', () => {
     acceptsVec3fSchema(d.vec2f);
     // @ts-expect-error
     acceptsVec3fSchema(d.vec4f);
+  });
+
+  it('can be indexed into', () => {
+    const vec = d.vec3f(1, 2, 3);
+    expect(vec[0]).toEqual(1);
+    expect(vec[1]).toEqual(2);
+    expect(vec[2]).toEqual(3);
+  });
+
+  it('can be iterated over', () => {
+    const vec = d.vec3f(1, 2, 3);
+    const elements = [...vec];
+    expect(elements).toEqual([1, 2, 3]);
+  });
+
+  it('can be modified via index', () => {
+    const vec = d.vec3f(1, 2, 3);
+    vec[0] = 4;
+    vec[1] = 5;
+    vec[2] = 6;
+    expect(vec).toEqual(d.vec3f(4, 5, 6));
   });
 });
 
@@ -137,5 +177,28 @@ describe('vec4f', () => {
     acceptsVec4fSchema(d.vec2f);
     // @ts-expect-error
     acceptsVec4fSchema(d.vec3f);
+  });
+
+  it('can be indexed into', () => {
+    const vec = d.vec4f(1, 2, 3, 4);
+    expect(vec[0]).toEqual(1);
+    expect(vec[1]).toEqual(2);
+    expect(vec[2]).toEqual(3);
+    expect(vec[3]).toEqual(4);
+  });
+
+  it('can be iterated over', () => {
+    const vec = d.vec4f(1, 2, 3, 4);
+    const elements = [...vec];
+    expect(elements).toEqual([1, 2, 3, 4]);
+  });
+
+  it('can be modified via index', () => {
+    const vec = d.vec4f(1, 2, 3, 4);
+    vec[0] = 5;
+    vec[1] = 6;
+    vec[2] = 7;
+    vec[3] = 8;
+    expect(vec).toEqual(d.vec4f(5, 6, 7, 8));
   });
 });

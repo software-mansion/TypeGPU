@@ -62,8 +62,8 @@ describe('TgpuRoot', () => {
     vi.restoreAllMocks();
   });
 
-  it('should create buffer with no initialization', async () => {
-    const root = await tgpu.init({
+  it('should create buffer with no initialization', () => {
+    const root = tgpu.initFromDevice({
       device: mockDevice as unknown as GPUDevice,
     });
     const dataBuffer = root.createBuffer(u32).$usage(tgpu.Uniform);
@@ -88,8 +88,8 @@ describe('TgpuRoot', () => {
     });
   });
 
-  it('should create buffer with initialization', async () => {
-    const root = await tgpu.init({
+  it('should create buffer with initialization', () => {
+    const root = tgpu.initFromDevice({
       device: mockDevice as unknown as GPUDevice,
     });
     const dataBuffer = root
@@ -116,8 +116,8 @@ describe('TgpuRoot', () => {
     });
   });
 
-  it('should allocate buffer with proper size for nested structs', async () => {
-    const root = await tgpu.init({
+  it('should allocate buffer with proper size for nested structs', () => {
+    const root = tgpu.initFromDevice({
       device: mockDevice as unknown as GPUDevice,
     });
     const s1 = struct({ a: u32, b: u32 });
@@ -142,8 +142,8 @@ describe('TgpuRoot', () => {
     });
   });
 
-  it('should properly write to buffer', async () => {
-    const root = await tgpu.init({
+  it('should properly write to buffer', () => {
+    const root = tgpu.initFromDevice({
       device: mockDevice as unknown as GPUDevice,
     });
     const dataBuffer = root.createBuffer(u32);
@@ -162,8 +162,8 @@ describe('TgpuRoot', () => {
     );
   });
 
-  it('should properly write to complex buffer', async () => {
-    const root = await tgpu.init({
+  it('should properly write to complex buffer', () => {
+    const root = tgpu.initFromDevice({
       device: mockDevice as unknown as GPUDevice,
     });
 
@@ -207,8 +207,8 @@ describe('TgpuRoot', () => {
     );
   });
 
-  it('should properly write to buffer with plum initialization', async () => {
-    const root = await tgpu.init({
+  it('should properly write to buffer with plum initialization', () => {
+    const root = tgpu.initFromDevice({
       device: mockDevice as unknown as GPUDevice,
     });
     const intPlum = plum<number>(3);
@@ -249,8 +249,8 @@ describe('TgpuRoot', () => {
   });
 
   // TODO: Adapt the tests to the new API
-  // it('creates a pipeline descriptor with a valid vertex buffer', async () => {
-  //   const root = await tgpu.init({
+  // it('creates a pipeline descriptor with a valid vertex buffer', () => {
+  //   const root = tgpu.initFromDevice({
   //     device: mockDevice as unknown as GPUDevice,
   //   });
 
@@ -312,8 +312,8 @@ describe('TgpuRoot', () => {
   //   });
   // });
 
-  // it('creates a pipeline descriptor with a valid vertex buffer (array)', async () => {
-  //   const root = await tgpu.init({
+  // it('creates a pipeline descriptor with a valid vertex buffer (array)', () => {
+  //   const root = tgpu.initFromDevice({
   //     device: mockDevice as unknown as GPUDevice,
   //   });
 
@@ -379,8 +379,8 @@ describe('TgpuRoot', () => {
   //   });
   // });
 
-  // it('should throw an error when trying to create an invalid vertex buffer', async () => {
-  //   const root = await tgpu.init({
+  // it('should throw an error when trying to create an invalid vertex buffer', () => {
+  //   const root = tgpu.initFromDevice({
   //     device: mockDevice as unknown as GPUDevice,
   //   });
 
@@ -399,8 +399,8 @@ describe('TgpuRoot', () => {
   //   );
   // });
 
-  // it('should properly extract primitive type from nested arrays in vertex buffer', async () => {
-  //   const root = await tgpu.init({
+  // it('should properly extract primitive type from nested arrays in vertex buffer', () => {
+  //   const root = tgpu.initFromDevice({
   //     device: mockDevice as unknown as GPUDevice,
   //   });
 

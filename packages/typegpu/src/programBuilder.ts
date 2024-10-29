@@ -7,11 +7,11 @@ import {
   nameForBuiltin,
 } from './builtinIdentifiers';
 import type { TgpuBufferVertex } from './core/buffer/bufferUsage';
+import type { ExperimentalTgpuRoot } from './core/root/rootTypes';
 import type { SimpleTgpuData, TgpuArray } from './data';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
 import { code } from './tgpuCode';
-import type { ExperimentalTgpuRoot } from './tgpuRoot';
 import type {
   AnyTgpuData,
   BoundTgpuCode,
