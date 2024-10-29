@@ -1,11 +1,11 @@
 {
-  "name": "@typegpu/tgpu-cli",
+  "name": "tgpu-gen",
   "private": true,
   "version": "0.0.0",
-  "description": "A companion CLI to aid in developing with TypeGPU.",
+  "description": "An automatic CLI tool aiding migration from vanilla WebGPU to TypeGPU.",
   "license": "MIT",
   "bin": {
-    "tgpu-cli": "./tgpu-cli.mjs"
+    "tgpu-gen": "./tgpu-gen.mjs"
   },
   "sideEffects": false,
   "engines": {
