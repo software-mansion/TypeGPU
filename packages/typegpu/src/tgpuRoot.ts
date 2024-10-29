@@ -1,6 +1,6 @@
 import type { Parsed } from 'typed-binary';
 import type { TgpuBuffer } from './core/buffer/buffer';
-import type { TgpuArray } from './data';
+import type { TgpuArray } from './data/array';
 import type { JitTranspiler } from './jitTranspiler';
 import type { PlumListener } from './plumStore';
 import type { TgpuSettable } from './settableTrait';

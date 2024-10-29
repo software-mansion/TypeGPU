@@ -16,7 +16,9 @@ const adapter = await navigator.gpu.requestAdapter();
 if (!adapter) {
   throw new Error('Could not find a compatible GPU.');
 }
-const device = await adapter.requestDevice();
+
+const root = await tgpu.init();
+const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -74,10 +76,7 @@ const Span = struct({
   y: u32,
 });
 
-const spanBuffer = tgpu
-  .createBuffer(Span, { x: 10, y: 10 })
-  .$device(device)
-  .$usage('uniform');
+const spanBuffer = root.createBuffer(Span, { x: 10, y: 10 }).$usage('uniform');
 
 const pipeline = device.createRenderPipeline({
   layout: 'auto',
@@ -126,7 +125,7 @@ const draw = (spanXValue: number, spanYValue: number) => {
     ],
   };
 
-  tgpu.write(spanBuffer, { x: spanXValue, y: spanYValue });
+  spanBuffer.write({ x: spanXValue, y: spanYValue });
 
   const commandEncoder = device.createCommandEncoder();
   const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);

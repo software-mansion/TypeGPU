@@ -2,12 +2,11 @@
 {
   "title": "Boids (next)",
   "category": "simulation",
-  "tags": ["experimental"]
 }
 */
 
+import tgpu from 'typegpu';
 import { arrayOf, f32, struct, vec2f, vec3f } from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
 
 const triangleAmount = 1000;
 const triangleSize = 0.03;
