@@ -126,10 +126,6 @@ export default defineConfig({
             },
           ],
         },
-        {
-          label: 'FAQ',
-          slug: 'faq',
-        },
       ]),
     }),
     tailwind({
