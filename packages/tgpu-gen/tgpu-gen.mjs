@@ -237,6 +237,11 @@ if (args['--help']) {
   exit(0);
 }
 
+if (args['--version']) {
+  printVersion();
+  exit(0);
+}
+
 if (!args._[0]) {
   console.error(
     `${color.Red}Error: Missing required positional argument (<input>)${color.Reset}`,
@@ -244,11 +249,6 @@ if (!args._[0]) {
 
   printHelp();
   exit(1);
-}
-
-if (args['--version']) {
-  printVersion();
-  exit(0);
 }
 
 execute();
