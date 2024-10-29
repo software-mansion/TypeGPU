@@ -1,4 +1,5 @@
 import type { Parsed } from 'typed-binary';
+
 import type { TgpuArray } from '../../data';
 import type { JitTranspiler } from '../../jitTranspiler';
 import type { PlumListener } from '../../plumStore';

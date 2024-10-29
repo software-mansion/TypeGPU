@@ -2,6 +2,7 @@
  * @module typegpu
  */
 
+import { init, initFromDevice } from './core/root/init';
 import { createBuffer } from './legacyBufferApi';
 import { bindGroupLayout } from './tgpuBindGroupLayout';
 import { read, write } from './tgpuBufferUtils';
@@ -15,6 +16,9 @@ export const tgpu = {
   Vertex: 'vertex' as const,
 
   bindGroupLayout,
+
+  init,
+  initFromDevice,
 
   createBuffer,
   read,
