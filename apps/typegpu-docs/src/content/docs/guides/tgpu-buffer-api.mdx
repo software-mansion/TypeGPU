@@ -168,7 +168,7 @@ import { u32 } from 'typegpu/data';
 
 // Existing WebGPU buffer
 const existingBuffer = device.createBuffer(...);
-const root = tgpu.initFromDevice({device});
+const root = tgpu.initFromDevice({ device });
 
 const buffer = root.createBuffer(u32, existingBuffer);
 ```
@@ -227,7 +227,7 @@ const PlayerInfo = struct({
 
 const buffer = root.createBuffer(PlayerInfo);
 
-// write({ position: vec2f, health: number })
+// .write(data: { position: vec2f, health: number })
 buffer.write({
   position: vec2f(1.0, 2.0),
   health: 100,
@@ -324,7 +324,7 @@ import { Steps } from '@astrojs/starlight/components';
    +import tgpu from 'typegpu';
 
    const device: GPUDevice // WebGPU device
-   +const root = tgpu.initFromDevice({device});
+   +const root = tgpu.initFromDevice({ device });
 
    +const ColorPair = struct({
    +    colorFrom: vec3f,
@@ -358,7 +358,7 @@ import { Steps } from '@astrojs/starlight/components';
    import { vec3f, struct } from 'typegpu/data';
    import tgpu from 'typegpu';
 
-   const root = tgpu.initFromDevice({device});
+   const root = tgpu.initFromDevice({ device });
 
    const ColorPair = struct({
        colorFrom: vec3f,
@@ -405,7 +405,7 @@ Keep in mind that `root.createBuffer()` will return a `TgpuBuffer` object, when 
 import tgpu from 'typegpu';
 import { vec3f, struct } from 'typegpu/data';
 
-const root = tgpu.initFromDevice({device});
+const root = tgpu.initFromDevice({ device });
 
 const ColorPair = struct({
     colorFrom: vec3f,
