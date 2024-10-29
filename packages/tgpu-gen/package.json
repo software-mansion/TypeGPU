@@ -1,7 +1,6 @@
 {
   "name": "tgpu-gen",
-  "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "A CLI tool for automatic TypeGPU code generation.",
   "license": "MIT",
   "bin": {
@@ -18,6 +17,7 @@
     "remeda": "^2.3.0",
     "wgsl_reflect": "^1.0.12"
   },
+  "files": ["README.md", "LICENSE.md", "package.json", "**/*.mjs"],
   "devDependencies": {
     "vitest": "0.33.0"
   },
