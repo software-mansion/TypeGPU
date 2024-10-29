@@ -207,7 +207,16 @@ importers:
         specifier: ^5.3.3
         version: 5.5.4
 
-  packages/tgpu-cli:
+  packages/tgpu-dev-cli:
+    dependencies:
+      arg:
+        specifier: ^5.0.2
+        version: 5.0.2
+      remeda:
+        specifier: ^2.3.0
+        version: 2.3.0
+
+  packages/tgpu-gen:
     dependencies:
       arg:
         specifier: ^5.0.2
@@ -228,15 +237,6 @@ importers:
       vitest:
         specifier: 0.33.0
         version: 0.33.0(@vitest/ui@0.33.0)(jsdom@24.0.0)
-
-  packages/tgpu-dev-cli:
-    dependencies:
-      arg:
-        specifier: ^5.0.2
-        version: 5.0.2
-      remeda:
-        specifier: ^2.3.0
-        version: 2.3.0
 
   packages/tgsl-tools:
     devDependencies:
@@ -1851,7 +1851,6 @@ packages:
 
   /@jridgewell/sourcemap-codec@1.5.0:
     resolution: {integrity: sha512-gv3ZRaISU3fjPAgNsriBRqGWQL6quFx04YMPW/zD8XMLsU32mhCCbfbO6KZFLjvYpCZ8zyDEgqsgf+PwPaM7GQ==}
-    dev: false
 
   /@jridgewell/trace-mapping@0.3.22:
     resolution: {integrity: sha512-Wf963MzWtA2sjrNt+g18IAln9lKnlRp+K2eH4jjIoF1wYeq3aMREpG09xhlhdzS0EjwU7qmUJYangWa+151vZw==}
@@ -2868,7 +2867,7 @@ packages:
   /@vitest/snapshot@0.33.0:
     resolution: {integrity: sha512-tJjrl//qAHbyHajpFvr8Wsk8DIOODEebTu7pgBrP07iOepR5jYkLFiqLq2Ltxv+r0uptUb4izv1J8XBOwKkVYA==}
     dependencies:
-      magic-string: 0.30.10
+      magic-string: 0.30.11
       pathe: 1.1.2
       pretty-format: 29.7.0
     dev: true
@@ -5052,7 +5051,6 @@ packages:
     resolution: {integrity: sha512-+Wri9p0QHMy+545hKww7YAu5NyzF8iomPL/RQazugQ9+Ez4Ic3mERMd8ZTX5rfK944j+560ZJi8iAwgak1Ac7A==}
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.0
-    dev: false
 
   /make-dir@4.0.0:
     resolution: {integrity: sha512-hXdUTZYIVOt1Ex//jAQi+wTZZpUpwBj/0QsOzqegb3rGMMeJiSEu5xLHnYfBrRV4RH2+OCSOO95Is/7x1WJ4bw==}
@@ -7643,7 +7641,7 @@ packages:
     hasBin: true
     dependencies:
       cac: 6.7.14
-      debug: 4.3.4
+      debug: 4.3.5
       mlly: 1.5.0
       pathe: 1.1.2
       picocolors: 1.0.1
@@ -7786,10 +7784,10 @@ packages:
       acorn-walk: 8.3.2
       cac: 6.7.14
       chai: 4.4.1
-      debug: 4.3.4
+      debug: 4.3.5
       jsdom: 24.0.0
       local-pkg: 0.4.3
-      magic-string: 0.30.10
+      magic-string: 0.30.11
       pathe: 1.1.2
       picocolors: 1.0.1
       std-env: 3.7.0
