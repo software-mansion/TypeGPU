@@ -77,7 +77,7 @@ export default defineConfig({
             DEV && {
               label: 'Roots',
               slug: 'fundamentals/roots',
-              badge: { text: 'new', variant: 'default' },
+              badge: { text: '0.2', variant: 'default' },
             },
             {
               label: 'Buffers',
@@ -86,10 +86,6 @@ export default defineConfig({
             {
               label: 'Data Schemas',
               slug: 'fundamentals/data-schemas',
-            },
-            DEV && {
-              label: 'Generating JS from WGSL',
-              slug: 'guides/generating-js-from-wgsl',
             },
             // {
             //   label: 'Basic Principles',
