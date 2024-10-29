@@ -92,11 +92,6 @@ export default defineConfig({
               slug: 'guides/tgpu-cli',
               badge: { text: 'new', variant: 'default' },
             },
-            DEV && {
-              label: 'Using wgpu-matrix',
-              slug: 'guides/wgpu-matrix-integration',
-              badge: { text: 'new', variant: 'default' },
-            },
             // {
             //   label: 'Basic Principles',
             //   slug: 'guides/basic-principles',
@@ -109,6 +104,16 @@ export default defineConfig({
             //   label: 'Parametrized Functions',
             //   slug: 'guides/parametrized-functions',
             // },
+          ]),
+        },
+        {
+          label: 'Integration',
+          items: stripFalsy([
+            DEV && {
+              label: 'Working with wgpu-matrix',
+              slug: 'guides/wgpu-matrix-integration',
+              badge: { text: 'new', variant: 'default' },
+            },
           ]),
         },
         DEV && {
