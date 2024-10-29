@@ -1,0 +1,37 @@
+---
+title: Why TypeGPU?
+draft: true
+---
+
+TypeGPU is a project that aims to provide a type-safe abstraction over WebGPU, one that makes invalid states hard to represent but does not
+restrict the developer's intent where it counts.
+
+## Our philosophy
+
+Compared to use-case driven frameworks like [Three.js](https://threejs.org/) or [Babylon.js](https://www.babylonjs.com/), TypeGPU acts more like building blocks that can be put together into a framework, or used on their own to enhance existing solutions.
+This enables the core library to be minimal, leaving use-case specific functionality to official and third-party modules.
+
+The roadmap (as seen on the [landing page](/TypeGPU)) covers our plans for bringing end-to-end type safety to WebGPU, seamlessly connecting JS/TS APIs with shaders that are also
+written in JS/TS. If you find the need to eject out of an abstraction built on top of TypeGPU, you can still use our primitives, in contrast to having to use vanilla WebGPU or WebGL.
+
+import ModularityDark from './modularity-dark.svg';
+import ModularityLight from './modularity-light.svg';
+import { Image } from 'astro:assets';
+
+<div className='max-w-[30rem] mx-auto'>
+<Image className="!hidden dark:!block" src={ModularityDark} alt="Modularity" />
+<Image className="!block dark:!hidden" src={ModularityLight} alt="Modularity" />
+</div>
+
+## Leaving WebGL behind
+
+Even though WebGPU is a fairly new standard and is yet to be supported by all platforms, we are betting on it becoming the future of GPU computing on the web. Because of this, we can
+provide a minimal abstraction that is more approachable and maintainable, yet still familiar to existing WebGPU developers.
+
+## When to use TypeGPU?
+
+Our library makes it easier and more reliable to implement custom behavior on the GPU thanks to our low-level typed primitives.
+If you're working on a GPU-accelerated simulation, a custom 3D renderer or AI inference of a proprietary model, TypeGPU can
+help smooth out the development experience a lot.
+
+If you're looking to add an interactive 3d model to your website, then a rendering framework like [Three.js](https://threejs.org/) would be a safer bet.
