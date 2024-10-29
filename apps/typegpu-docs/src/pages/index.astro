@@ -173,14 +173,14 @@ const showcaseVideoResolution = [2048, 1200];
         <div class="max-w-[50rem]">
           <ol class="flex flex-col m-0 p-0">
             <RoadMapStep title="Data structures & buffers" releasedIn="0.1">
-              <MilestoneBuffersBadge slot="visual" complete />
+              <MilestoneBuffersBadge slot="visual" />
               The WebGPU Shading Language (WGSL) gives developers a rich sense of
               the structure of the data that it operates on. This is lost when accessed
               through JavaScript, as the APIs accept raw byte buffers. TypeGPU regains
               that information on the JavaScript side and handles proper byte alignment
               and padding automatically.
             </RoadMapStep>
-            <RoadMapStep title="Bind groups">
+            <RoadMapStep title="Bind groups" releasedIn="0.2">
               <MilestoneBindGroupsBadge slot="visual" />
               Connecting resources to shaders via numeric indices can lead to problems
               that are hard to catch at build-time/CI. By using named keys and typed
