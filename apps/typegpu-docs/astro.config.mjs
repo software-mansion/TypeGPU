@@ -14,7 +14,7 @@ import importRawRedirectPlugin from './vite-import-raw-redirect-plugin.mjs';
  * @param {T[]} items
  */
 const stripFalsy = (items) =>
-  items.filter(/** @return {item is Exclude<T, false>} */ (item) => !!item);
+  items.filter(/** @return {item is Exclude<T, boolean>} */ (item) => !!item);
 
 const DEV = import.meta.env.DEV;
 
@@ -50,34 +50,32 @@ export default defineConfig({
       },
       components: {
         Head: './src/components/starlight/Head.astro',
+        ThemeSelect: './src/components/starlight/ThemeSelect.astro',
+        Sidebar: './src/components/starlight/Sidebar.astro',
       },
       social: {
         github: 'https://github.com/software-mansion/TypeGPU',
       },
       sidebar: stripFalsy([
         {
-          label: 'Live Examples',
-          link: 'examples',
-          // attrs: {
-          //   'data-astro-reload': true,
-          // },
+          label: 'Why TypeGPU?',
+          slug: 'why-typegpu',
         },
         {
-          label: 'Guides',
+          label: 'Getting Started',
+          slug: 'getting-started',
+        },
+        {
+          label: 'Fundamentals',
           items: stripFalsy([
-            // Each item here is one entry in the navigation menu.
-            {
-              label: 'Getting Started',
-              slug: 'guides/getting-started',
-            },
             DEV && {
               label: 'Roots',
-              slug: 'guides/roots',
-              badge: { text: 'new', variant: 'default' },
+              slug: 'fundamentals/roots',
+              badge: { text: '0.2', variant: 'default' },
             },
             {
-              label: 'Typed Buffers',
-              slug: 'guides/tgpu-buffer-api',
+              label: 'Buffers',
+              slug: 'fundamentals/buffers',
             },
             DEV && {
               label: 'Bind Groups',
@@ -85,17 +83,8 @@ export default defineConfig({
               badge: { text: 'new', variant: 'default' },
             },
             {
-              label: 'Defining Data Types',
-              slug: 'guides/defining-data-types',
-            },
-            DEV && {
-              label: 'Generating JS from WGSL',
-              slug: 'guides/generating-js-from-wgsl',
-            },
-            DEV && {
-              label: 'TypeGPU Generator CLI',
-              slug: 'guides/tgpu-gen',
-              badge: { text: 'new', variant: 'default' },
+              label: 'Data Schemas',
+              slug: 'fundamentals/data-schemas',
             },
             // {
             //   label: 'Basic Principles',
@@ -112,6 +101,16 @@ export default defineConfig({
           ]),
         },
         DEV && {
+          label: 'Tooling',
+          items: [
+            DEV && {
+              label: 'TypeGPU Generator CLI',
+              slug: 'tooling/tgpu-gen',
+              badge: { text: 'new', variant: 'default' },
+            },
+          ],
+        },
+        DEV && {
           label: 'Tutorials',
           items: [
             {
@@ -120,10 +119,6 @@ export default defineConfig({
               slug: 'tutorials/triangle-to-boids',
             },
           ],
-        },
-        {
-          label: 'FAQ',
-          slug: 'faq',
         },
       ]),
     }),
