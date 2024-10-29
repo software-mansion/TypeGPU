@@ -26,7 +26,7 @@ export function createBuffer<TData extends AnyTgpuData>(
 ): TgpuBuffer<TData>;
 
 /**
- *  @deprecated Use the `root.createBuffer` API instead, accessible through `await tgpu.init()`
+ * @deprecated Use the `root.createBuffer` API instead, accessible through `await tgpu.init()`
  */
 export function createBuffer<TData extends AnyTgpuData>(
   typeSchema: TData,

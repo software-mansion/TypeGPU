@@ -2,7 +2,7 @@
  * @module typegpu
  */
 
-import { createRoot as init } from './createRoot';
+import { init, initFromDevice } from './core/root/init';
 import { createBuffer } from './legacyBufferApi';
 import { bindGroupLayout } from './tgpuBindGroupLayout';
 import { read, write } from './tgpuBufferUtils';
@@ -18,6 +18,7 @@ export const tgpu = {
   bindGroupLayout,
 
   init,
+  initFromDevice,
 
   createBuffer,
   read,
