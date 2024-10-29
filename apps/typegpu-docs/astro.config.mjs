@@ -106,7 +106,7 @@ export default defineConfig({
           items: [
             DEV && {
               label: 'TypeGPU Generator CLI',
-              slug: 'guides/tgpu-gen',
+              slug: 'tooling/tgpu-gen',
               badge: { text: 'new', variant: 'default' },
             },
           ],
