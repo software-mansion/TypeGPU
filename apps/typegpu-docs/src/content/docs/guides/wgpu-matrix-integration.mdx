@@ -4,30 +4,17 @@ description: A guide on how to use TypeGPU with wgpu-matrix.
 draft: true
 ---
 
-The [wgpu-matrix](https://github.com/greggman/wgpu-matrix) library is a popular tool for WebGPU developers to work with matrices.
-It is designed from the ground up to be compatible with WebGPU, and it provides a lot of useful features.
+The [wgpu-matrix](https://github.com/greggman/wgpu-matrix) library provides utilities for matrix and vector math, which is essential for graphics programming.
+It is designed from the ground up to be compatible with WebGPU, and TypeGPU works with it seamlessly.
 
-From `wgpu-matrix` version `3.3.0` and `typegpu` version `0.2.0`, it is possible to use TypeGPU primitives inside the `wgpu-matrix` library.
+:::note[Supported versions]
+`wgpu-matrix`: 3.3.0 and up
+`typegpu`: 0.2.0 and up
+:::
 
 ## Using `wgpu-matrix` functions with TypeGPU primitives
 
-Most `wgpu-matrix` functions are designed to accept `BaseArgType` as input arguments. They are defined as follows:
-
-```ts
-type BaseArgType = Float32Array | Float64Array | MutableNumberArray
-```
-
-where `MutableNumberArray` is defined as:
-
-```ts
-interface MutableNumberArray {
-	readonly length: number;
-	[n: number]: number;
-}
-```
-
-And since TypeGPU's vector and matrix implement this interface, you can use them directly with those functions.
-For example, you can create a vector and normalize it like this:
+You can create a vector and normalize it like this:
 
 ```ts
 import { vec2f } from 'typegpu/data';
