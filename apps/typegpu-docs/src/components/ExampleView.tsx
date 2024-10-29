@@ -117,11 +117,11 @@ export function ExampleView({ example, isPlayground = false }: Props) {
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
   const listeners: (() => void)[] = [];
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  // biome-ignore lint/correctness/useExhaustiveDependencies: must be run on html code change
   useEffect(() => {
-    const canvases = exampleHtmlRef.current?.querySelectorAll(
-      ':scope > canvas',
-    ) as HTMLCanvasElement[] | undefined;
+    const canvases = exampleHtmlRef.current?.querySelectorAll('canvas') as
+      | HTMLCanvasElement[]
+      | undefined;
 
     for (const canvas of canvases ?? []) {
       const newCanvas = document.createElement('canvas');
@@ -153,7 +153,7 @@ export function ExampleView({ example, isPlayground = false }: Props) {
 
       frame.style.position = 'relative';
       frame.style.aspectRatio = aspectRatio;
-      frame.style.width = 'min(100cqw, 100cqh)';
+      frame.style.height = 'min(100cqw, 100cqh)';
 
       newCanvas.style.position = 'absolute';
       newCanvas.style.width = '100%';
@@ -193,10 +193,10 @@ export function ExampleView({ example, isPlayground = false }: Props) {
           {isGPUSupported ? (
             <div
               style={{
-                scrollbarGutter: 'stable both-edges',
+                scrollbarGutter: 'stable',
               }}
               className={cs(
-                'flex justify-evenly items-center flex-wrap overflow-auto h-full',
+                'flex justify-evenly items-center flex-wrap overflow-auto h-full box-border',
                 codeEditorShowing ? 'md:max-h-[calc(50vh-3rem)]' : '',
               )}
             >
