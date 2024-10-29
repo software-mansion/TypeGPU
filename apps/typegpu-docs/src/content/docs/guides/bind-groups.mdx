@@ -1,0 +1,133 @@
+---
+title: Bind Groups
+description: A guide on how to use the TypeGPU Bind Groups and Bind Group Layouts.
+---
+
+## What are Bind Groups and Bind Group Layouts?
+
+If you are already familiar with WebGPU, you might know what bind groups and bind group layouts are. In that case, you can [skip to the next section](#typegpu-approach).
+If not, we will briefly explain what they are and provide some useful links for further reading.
+
+### A Quick Overview
+
+A bind group is a collection of resources that are bound to a shader. These resources can be buffers, textures, or samplers.
+It's a way to define what resources are available to a shader and how they are accessed. For example, you can create a bind group that contains a buffer and a texture, and then bind it to a shader to use these resources in the shader.
+Here is a quick example of how you can create a bind group in WebGPU:
+
+```ts
+const bindGroup = device.createBindGroup({
+  layout: bindGroupLayout, // We will cover what bind group layouts are later in this guide
+  entries: [
+    {
+      binding: 0, // This number corresponds to the binding number in the shader
+      resource: {
+        buffer: buffer, // The buffer that we want to bind
+      },
+    },
+    {
+      binding: 1,
+      resource: {
+        texture: textureView, // The view of the texture that we want to bind
+      },
+    },
+  ],
+});
+```
+
+In this example, we create a bind group that contains a buffer and a texture. We specify the binding number for each resource, which corresponds to the binding number in the shader.
+Now, during command encoding, we can assign this bind group to a shader to use these resources.
+
+```ts
+renderPass.setBindGroup(0, bindGroup);
+```
+
+You probably noticed that in the previous example, we had to specify the layout when creating the bind group.
+A bind group layout is a description of the resources that are expected by a shader. It defines the layout of the bind group, including the type of resources and their binding numbers.
+You can think of it as a blueprint for creating bind groups. It specifies how the bind group should be structured and what resources it needs to contain.
+Here is an example of how you can create a bind group layout that matches the previous example:
+
+```ts
+const bindGroupLayout = device.createBindGroupLayout({
+  entries: [
+    {
+      binding: 0,
+      visibility: GPUShaderStage.VERTEX, // In what entry point the resource is used
+      buffer: {
+        // if we don't specify the type, it will default to "uniform"
+      },
+    },
+    {
+      binding: 1,
+      visibility: GPUShaderStage.FRAGMENT,
+      texture: {
+        // it will default to sample type of "float" and view dimension of "2d"
+      },
+    },
+  ],
+});
+```
+
+We can use this layout to create a bind group that matches the resources expected by the shader. It's also necessary to provide a layout when creating a pipeline, so the GPU knows what resources are expected by the shaders.
+This can sometimes be automated by passing `auto` to the `descriptor.layout` field when creating a pipeline. This will automatically infer the layout from the shader module.
+
+If you want to learn more about bind groups and bind group layouts in WebGPU, you can check the following links:
+
+- [WebGPU Fundamentals article on Bind Groups (for a more detailed but beginner-friendly explanation)](https://webgpufundamentals.org/webgpu/lessons/webgpu-bind-group-layouts.html)
+- [WebGPU Specification - Resource Binding (for technical reference)](https://www.w3.org/TR/webgpu/#bindings)
+
+## TypeGPU approach
+
+TypeGPU provides a more type-safe and ergonomic way to work with bind groups and bind group layouts. The standard WebGPU way of creating bind groups and bind group layouts involves a lot of manual work and is error-prone due to the lack of type checking.
+TypeGPU addresses these issues by referencing resources by named keys rather than indices and by providing static type checking when populating bind groups.
+We also provide utilities which can generate those definitions from existing `.wgsl` shaders. This means that you can benefit from the type safety and convenience of TypeGPU without having to worry about keeping the definitions in sync with the shader code.
+
+### Typed Bind Group Layouts
+
+First, let's cover how to manually create a typed bind group layout in TypeGPU.
+To create a typed bind group layout, you need to call `tgpu.bindGroupLayout` and pass an object that describes the resources that the bind group should contain.
+Here is an example of how you can create a typed bind group layout that matches the previous example:
+
+```ts
+const bindGroupLayout = tgpu.bindGroupLayout({
+  buffer: { uniform: vec3f },
+  texture: { texture: 'float' },
+});
+```
+
+This will create a typed bind group layout that contains a buffer with a `vec3f` type and a texture with a `float` sample type.
+The bindings will be automatically assigned based on the order of the resources in the object.
+
+:::tip
+This step can be automated by using the *TypeGPU CLI* which can generate the typed bind group layout from the shader code.
+It also generates the TypeScript types for the resources, so you can use them in your code.
+To learn more about the TypeGPU CLI, check the [TypeGPU CLI guide](/TypeGPU/guides/tgpu-cli).
+:::
+
+### Typed Bind Groups
+
+Once you have a typed bind group layout, you can create a typed bind group by **populating** it with the resources.
+To do this, you can call the `populate` method on the bind group layout and pass the resources using an object that matches the layout.
+
+Here is an example of how you can create a typed bind group that matches the previous example:
+
+```ts
+const bindGroup = bindGroupLayout.populate({
+  buffer: buffer,
+  texture: textureView,
+});
+```
+
+This will create a typed bind group that contains a buffer and a texture, matching the resources expected by the shader.
+If we accidentally pass the wrong type of resource, the TypeScript compiler will catch the error at compile time.
+
+### WebGPU integration
+
+The bind group created in the previous example cannot be used directly in the WebGPU API. To use it, you need to **unwrap** it to get the underlying WebGPU bind group.
+You can do this by calling `root.unwrap(bindGroup)`. This will return the WebGPU bind group that you can use in the WebGPU API.
+
+```ts
+const webgpuBindGroup = root.unwrap(bindGroup);
+
+// Now you can use this bind group in the WebGPU API as you would a regular bind group.
+renderPass.setBindGroup(0, webgpuBindGroup);
+```

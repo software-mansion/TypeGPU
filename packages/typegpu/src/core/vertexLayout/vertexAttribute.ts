@@ -1,4 +1,5 @@
-import type { TgpuBaseArray, TgpuBaseStruct } from '../../data';
+import type { TgpuBaseArray } from '../../data/array';
+import type { TgpuBaseStruct } from '../../data/struct';
 import type {
   KindToDefaultFormatMap,
   TgpuVertexAttrib,

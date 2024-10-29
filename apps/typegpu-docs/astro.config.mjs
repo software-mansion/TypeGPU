@@ -68,14 +68,19 @@ export default defineConfig({
         {
           label: 'Fundamentals',
           items: stripFalsy([
-            DEV && {
+            {
               label: 'Roots',
               slug: 'fundamentals/roots',
-              badge: { text: '0.2', variant: 'default' },
+              badge: { text: '0.2' },
             },
             {
               label: 'Buffers',
               slug: 'fundamentals/buffers',
+            },
+            {
+              label: 'Bind Groups',
+              slug: 'guides/bind-groups',
+              badge: { text: '0.2' },
             },
             {
               label: 'Data Schemas',
@@ -95,11 +100,11 @@ export default defineConfig({
             // },
           ]),
         },
-        DEV && {
+        {
           label: 'Tooling',
           items: [
-            DEV && {
-              label: 'TypeGPU Generator CLI',
+            {
+              label: 'Generator CLI',
               slug: 'tooling/tgpu-gen',
               badge: { text: 'new', variant: 'default' },
             },

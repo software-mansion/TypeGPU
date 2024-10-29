@@ -27,6 +27,7 @@ import tgpu, {
   type TgpuBufferMutable,
 } from '../src/experimental';
 import './utils/webgpuGlobals';
+import type { Storage, Uniform } from '../src/core/buffer/buffer';
 import {
   MissingBindingError,
   type TgpuBindGroup,
@@ -289,7 +290,7 @@ describe('TgpuBindGroup', () => {
 
   describe('buffer layout', () => {
     let layout: TgpuBindGroupLayout<{ foo: { uniform: Vec3f } }>;
-    let buffer: TgpuBuffer<Vec3f> & typeof tgpu.Uniform;
+    let buffer: TgpuBuffer<Vec3f> & Uniform;
 
     beforeEach(() => {
       layout = tgpu
@@ -298,7 +299,7 @@ describe('TgpuBindGroup', () => {
         })
         .$name('example');
 
-      buffer = root.createBuffer(vec3f).$usage(tgpu.Uniform);
+      buffer = root.createBuffer(vec3f).$usage('uniform');
     });
 
     it('populates a simple layout with a raw buffer', () => {
@@ -528,9 +529,9 @@ describe('TgpuBindGroup', () => {
       _: null;
       d: { storage: F32; access: 'readonly' };
     }>;
-    let aBuffer: TgpuBuffer<Vec3f> & typeof tgpu.Uniform;
-    let bBuffer: TgpuBuffer<U32> & typeof tgpu.Storage;
-    let dBuffer: TgpuBuffer<F32> & typeof tgpu.Storage;
+    let aBuffer: TgpuBuffer<Vec3f> & Uniform;
+    let bBuffer: TgpuBuffer<U32> & Storage;
+    let dBuffer: TgpuBuffer<F32> & Storage;
 
     beforeEach(() => {
       layout = tgpu
@@ -542,9 +543,9 @@ describe('TgpuBindGroup', () => {
         })
         .$name('example');
 
-      aBuffer = root.createBuffer(vec3f).$usage(tgpu.Uniform);
-      bBuffer = root.createBuffer(u32).$usage(tgpu.Storage);
-      dBuffer = root.createBuffer(f32).$usage(tgpu.Storage);
+      aBuffer = root.createBuffer(vec3f).$usage('uniform');
+      bBuffer = root.createBuffer(u32).$usage('storage');
+      dBuffer = root.createBuffer(f32).$usage('storage');
     });
 
     it('requires all non-null entries to be populated', () => {

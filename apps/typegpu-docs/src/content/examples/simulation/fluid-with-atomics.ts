@@ -77,21 +77,21 @@ function encodeBrushType(brushType: (typeof BrushTypes)[number]) {
   }
 }
 
-const sizeBuffer = root.createBuffer(vec2u).$name('size').$usage(tgpu.Uniform);
+const sizeBuffer = root.createBuffer(vec2u).$name('size').$usage('uniform');
 const viscosityBuffer = root
   .createBuffer(u32)
   .$name('viscosity')
-  .$usage(tgpu.Uniform);
+  .$usage('uniform');
 
 const currentStateBuffer = root
   .createBuffer(arrayOf(u32, 1024 ** 2))
   .$name('current')
-  .$usage(tgpu.Storage, tgpu.Vertex);
+  .$usage('storage', 'vertex');
 
 const nextStateBuffer = root
   .createBuffer(arrayOf(atomic(u32), 1024 ** 2))
   .$name('next')
-  .$usage(tgpu.Storage);
+  .$usage('storage');
 
 const viscosityData = asUniform(viscosityBuffer);
 const currentStateData = asReadonly(currentStateBuffer);
@@ -110,7 +110,7 @@ const squareBuffer = root
     vec2u(1, 0),
     vec2u(1, 1),
   ])
-  .$usage(tgpu.Uniform, tgpu.Vertex)
+  .$usage('uniform', 'vertex')
   .$name('square');
 
 const squareBufferData = asVertex(squareBuffer, 'vertex');
