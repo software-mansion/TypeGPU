@@ -1,15 +1,12 @@
 import cs from 'classnames';
 import { useAtomValue, useSetAtom } from 'jotai';
-import { compressToEncodedURIComponent } from 'lz-string';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'remeda';
 import {
   codeEditorShownAtom,
   codeEditorShownMobileAtom,
 } from '../utils/examples/codeEditorShownAtom';
-import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
 import { ExecutionCancelledError } from '../utils/examples/errors';
-import { PLAYGROUND_KEY } from '../utils/examples/exampleContent';
 import { exampleControlsAtom } from '../utils/examples/exampleControlAtom';
 import { executeExample } from '../utils/examples/exampleRunner';
 import type { ExampleState } from '../utils/examples/exampleState';
@@ -72,112 +69,46 @@ function useExample(
   }, [exampleCode, htmlCode, setSnackbarText, setExampleControlParams, tags]);
 }
 
-export function ExampleView({ example, isPlayground = false }: Props) {
+export function ExampleView({ example }: Props) {
   const {
     tsCode: initialTsCode,
     htmlCode: intitialHtmlCode,
     metadata,
   } = example;
+
   const [code, setCode] = useState(initialTsCode);
   const [htmlCode, setHtmlCode] = useState(intitialHtmlCode);
   const [snackbarText, setSnackbarText] = useState<string | undefined>();
-  const setCurrentExample = useSetAtom(currentExampleAtom);
-  const codeEditorShowing = useAtomValue(codeEditorShownAtom);
-  const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
   const [currentEditorTab, setCurrentEditorTab] = useState<'ts' | 'html'>('ts');
 
-  const setCodeWrapper = isPlayground
-    ? useCallback(
-        (code: string) => {
-          const encoded = compressToEncodedURIComponent(code);
-          setCurrentExample(`${PLAYGROUND_KEY}${encoded}`);
-          localStorage.setItem(PLAYGROUND_KEY, encoded);
-          setCode(code);
-        },
-        [setCurrentExample],
-      )
-    : setCode;
+  const codeEditorShowing = useAtomValue(codeEditorShownAtom);
+  const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
 
-  useEffect(() => {
-    setCodeWrapper(initialTsCode);
-    setHtmlCode(intitialHtmlCode);
-  }, [initialTsCode, setCodeWrapper, intitialHtmlCode]);
+  const exampleHtmlRef = useRef<HTMLDivElement>(null);
 
-  const setCodeDebouncer = useMemo(
-    () => debounce(setCodeWrapper, { waitMs: 500 }),
-    [setCodeWrapper],
+  const setTsCodeDebouncer = useMemo(
+    () => debounce(setCode, { waitMs: 500 }),
+    [],
   );
+  const handleTsCodeChange = useEvent((newCode: string) => {
+    setTsCodeDebouncer.call(newCode);
+  });
 
-  const handleCodeChange = useEvent((newCode: string) => {
-    setCodeDebouncer.call(newCode);
+  const setHtmlCodeDebouncer = useMemo(
+    () => debounce(setHtmlCode, { waitMs: 500 }),
+    [],
+  );
+  const handleHtmlCodeChange = useEvent((newCode: string) => {
+    setHtmlCodeDebouncer.call(newCode);
   });
 
   useExample(code, htmlCode, setSnackbarText, metadata.tags);
+  useResizableCanvas(exampleHtmlRef, htmlCode);
 
-  const exampleHtmlRef = useRef<HTMLDivElement>(null);
-  const listeners: (() => void)[] = [];
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: must be run on html code change
   useEffect(() => {
-    const canvases = exampleHtmlRef.current?.querySelectorAll('canvas') as
-      | HTMLCanvasElement[]
-      | undefined;
-
-    for (const canvas of canvases ?? []) {
-      const newCanvas = document.createElement('canvas');
-
-      if (
-        canvas.width !== newCanvas.width ||
-        canvas.height !== newCanvas.height
-      ) {
-        continue;
-      }
-
-      const container = document.createElement('div');
-      const frame = document.createElement('div');
-      const parent = canvas.parentElement;
-
-      frame.appendChild(newCanvas);
-      container.appendChild(frame);
-
-      const aspectRatio = canvas.dataset.aspectRatio ?? '1';
-
-      container.style.containerType = 'size';
-      container.style.flex = '0 1 auto';
-      container.style.display = 'flex';
-      container.style.justifyContent = 'center';
-      container.style.flexDirection = 'column';
-      container.style.alignItems = 'center';
-      container.style.width = '100%';
-      container.style.height = '100%';
-
-      frame.style.position = 'relative';
-      frame.style.aspectRatio = aspectRatio;
-      frame.style.height = `min(calc(min(100cqw, 100cqh)/(${aspectRatio})), min(100cqw, 100cqh))`;
-
-      newCanvas.style.position = 'absolute';
-      newCanvas.style.width = '100%';
-      newCanvas.style.height = '100%';
-
-      parent?.appendChild(container);
-      parent?.removeChild(canvas);
-
-      const onResize = () => {
-        newCanvas.width = frame.clientWidth * window.devicePixelRatio;
-        newCanvas.height = frame.clientHeight * window.devicePixelRatio;
-      };
-
-      window.addEventListener('resize', onResize);
-      listeners.push(onResize);
-      onResize();
-    }
-
-    return () => {
-      for (const listener of listeners) {
-        window.removeEventListener('resize', listener);
-      }
-    };
-  }, [htmlCode]);
+    setCode(initialTsCode);
+    setHtmlCode(intitialHtmlCode);
+  }, [initialTsCode, intitialHtmlCode]);
 
   return (
     <>
@@ -203,7 +134,7 @@ export function ExampleView({ example, isPlayground = false }: Props) {
               <div
                 ref={exampleHtmlRef}
                 className="contents w-full h-full"
-                // biome-ignore lint/security/noDangerouslySetInnerHtml: must be done
+                // biome-ignore lint/security/noDangerouslySetInnerHtml: setting innerHtml from code editor input
                 dangerouslySetInnerHTML={{ __html: htmlCode }}
               />
             </div>
@@ -239,15 +170,17 @@ export function ExampleView({ example, isPlayground = false }: Props) {
                   </Button>
                 </div>
                 {currentEditorTab === 'ts' ? (
-                  <TsCodeEditor code={code} onCodeChange={handleCodeChange} />
+                  <TsCodeEditor code={code} onCodeChange={handleTsCodeChange} />
                 ) : (
-                  <HtmlCodeEditor code={htmlCode} onCodeChange={setHtmlCode} />
+                  <HtmlCodeEditor
+                    code={htmlCode}
+                    onCodeChange={handleHtmlCodeChange}
+                  />
                 )}
               </div>
             </div>
           ) : null}
         </div>
-
         <ControlPanel />
       </div>
     </>
@@ -270,4 +203,68 @@ function GPUUnsupportedPanel() {
       </a>
     </div>
   );
+}
+
+function useResizableCanvas(
+  exampleHtmlRef: RefObject<HTMLDivElement>,
+  htmlCode: string,
+) {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: should be run on every htmlCode change
+  useEffect(() => {
+    const canvases = exampleHtmlRef.current?.querySelectorAll('canvas') as
+      | HTMLCanvasElement[]
+      | undefined;
+    const listeners: (() => void)[] = [];
+
+    for (const canvas of canvases ?? []) {
+      if ('width' in canvas.attributes || 'height' in canvas.attributes) {
+        continue; // custom canvas, not replacing with resizable
+      }
+
+      const newCanvas = document.createElement('canvas');
+      const container = document.createElement('div');
+      const frame = document.createElement('div');
+
+      frame.appendChild(newCanvas);
+      container.appendChild(frame);
+
+      const aspectRatio = canvas.dataset.aspectRatio ?? '1';
+
+      container.style.containerType = 'size';
+      container.style.flex = '1';
+      container.style.display = 'flex';
+      container.style.justifyContent = 'center';
+      container.style.alignItems = 'center';
+      container.style.height = '100%';
+
+      frame.style.position = 'relative';
+      frame.style.aspectRatio = aspectRatio;
+      frame.style.height = `min(calc(min(100cqw, 100cqh)/(${aspectRatio})), min(100cqw, 100cqh))`;
+
+      for (const prop of canvas.style) {
+        // @ts-ignore
+        newCanvas.style[prop] = canvas.style[prop];
+      }
+      newCanvas.style.position = 'absolute';
+      newCanvas.style.width = '100%';
+      newCanvas.style.height = '100%';
+
+      canvas.parentElement?.replaceChild(container, canvas);
+
+      const onResize = () => {
+        newCanvas.width = frame.clientWidth * window.devicePixelRatio;
+        newCanvas.height = frame.clientHeight * window.devicePixelRatio;
+      };
+
+      window.addEventListener('resize', onResize);
+      listeners.push(onResize);
+      onResize();
+    }
+
+    return () => {
+      for (const listener of listeners) {
+        window.removeEventListener('resize', listener);
+      }
+    };
+  }, [exampleHtmlRef, htmlCode]);
 }
