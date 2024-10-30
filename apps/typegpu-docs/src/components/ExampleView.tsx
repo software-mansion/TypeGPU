@@ -194,7 +194,7 @@ function EditorTabButtonPanel({
     'bg-white border-tameplum-100 border-2 hover:bg-tameplum-20';
 
   return (
-    <div className="absolute right-0 md:right-6 top-2 z-[200] flex">
+    <div className="absolute right-0 md:right-6 top-2 z-10 flex">
       <button
         className={cs(
           commonStyle,
