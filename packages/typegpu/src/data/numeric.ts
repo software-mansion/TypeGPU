@@ -1,12 +1,19 @@
-import * as TB from 'typed-binary';
+import bin from 'typed-binary';
+import type * as TB from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import { inGPUMode } from '../gpuMode';
 import type { TgpuData } from '../types';
 import { SimpleTgpuData } from './std140';
 
 const primitiveNumeric = <TKind extends string>(
-  schema: TB.Uint32Schema | TB.Float32Schema | TB.Int32Schema,
+  schema:
+    | TB.Uint32Schema
+    | TB.Float32Schema
+    | TB.Int32Schema
+    | TB.Float16Schema,
   code: TKind,
+  size = 4,
+  byteAlignment = 4,
 ) => {
   return {
     // Type-token, not available at runtime
@@ -14,8 +21,8 @@ const primitiveNumeric = <TKind extends string>(
 
     isLoose: false as const,
     kind: code,
-    size: 4,
-    byteAlignment: 4,
+    size,
+    byteAlignment,
     expressionCode: code,
 
     write(output: TB.ISerialOutput, value: number): void {
@@ -28,7 +35,7 @@ const primitiveNumeric = <TKind extends string>(
 
     measure(
       value: number | TB.MaxValue,
-      measurer: TB.IMeasurer = new TB.Measurer(),
+      measurer: TB.IMeasurer = new bin.Measurer(),
     ): TB.IMeasurer {
       schema.measure(value, measurer);
       return measurer;
@@ -64,7 +71,7 @@ export type Bool = TgpuData<boolean>;
  * A schema that represents a boolean value. (equivalent to `bool` in WGSL)
  */
 export const bool: Bool = new SimpleTgpuData({
-  schema: TB.bool,
+  schema: bin.bool,
   byteAlignment: 4,
   code: 'bool',
 });
@@ -104,7 +111,10 @@ const u32Cast = (v: number | boolean) => {
  * @example
  * const value = u32(-3.1); // 0
  */
-export const u32: U32 = Object.assign(u32Cast, primitiveNumeric(TB.u32, 'u32'));
+export const u32: U32 = Object.assign(
+  u32Cast,
+  primitiveNumeric(bin.u32, 'u32'),
+);
 
 /**
  * Signed 32-bit integer schema representing a single WGSL i32 value.
@@ -143,7 +153,10 @@ const i32Cast = (v: number | boolean) => {
  * @example
  * const value = i32(10000000000) // 1410065408
  */
-export const i32: I32 = Object.assign(i32Cast, primitiveNumeric(TB.i32, 'i32'));
+export const i32: I32 = Object.assign(
+  i32Cast,
+  primitiveNumeric(bin.i32, 'i32'),
+);
 
 /**
  * 32-bit float schema representing a single WGSL f32 value.
@@ -158,7 +171,9 @@ const f32Cast = (v: number | boolean) => {
   if (typeof v === 'boolean') {
     return v ? 1 : 0;
   }
-  return v;
+  const arr = new Float32Array(1);
+  arr[0] = v;
+  return arr[0];
 };
 /**
  * A schema that represents a 32-bit float value. (equivalent to `f32` in WGSL)
@@ -168,4 +183,27 @@ const f32Cast = (v: number | boolean) => {
  * @example
  * const value = f32(true); // 1
  */
-export const f32: F32 = Object.assign(f32Cast, primitiveNumeric(TB.f32, 'f32'));
+export const f32: F32 = Object.assign(
+  f32Cast,
+  primitiveNumeric(bin.f32, 'f32'),
+);
+
+export type F16 = TgpuData<number> & { kind: 'f16' } & ((
+    v: number | boolean,
+  ) => number);
+const f16Cast = (v: number | boolean) => {
+  if (inGPUMode()) {
+    // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
+    return `f16(${v})` as unknown as number;
+  }
+  if (typeof v === 'boolean') {
+    return v ? 1 : 0;
+  }
+  const arr = new ArrayBuffer(2);
+  bin.f16.write(new bin.BufferWriter(arr), v);
+  return bin.f16.read(new bin.BufferReader(arr));
+};
+export const f16: F16 = Object.assign(
+  f16Cast,
+  primitiveNumeric(bin.f16, 'f16', 2, 2),
+);

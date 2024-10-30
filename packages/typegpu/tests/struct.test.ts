@@ -7,6 +7,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import {
   arrayOf,
+  f16,
   f32,
   i32,
   struct,
@@ -120,5 +121,51 @@ describe('struct', () => {
         b: Unbounded,
       });
     }).toThrow();
+  });
+
+  it('supports f16', () => {
+    const TestStruct = struct({
+      a: f16,
+      b: f16,
+      c: f16,
+      d: f16,
+    });
+
+    expect(TestStruct.size).toEqual(8);
+    expect(TestStruct.byteAlignment).toEqual(2);
+
+    const buffer = new ArrayBuffer(TestStruct.size);
+
+    const value: Parsed<typeof TestStruct> = {
+      a: 1.0,
+      b: 2.0,
+      c: 3.0,
+      d: 4.0,
+    };
+
+    TestStruct.write(new BufferWriter(buffer), value);
+    expect(TestStruct.read(new BufferReader(buffer))).toEqual(value);
+  });
+
+  it('properly aligns with f16', () => {
+    const TestStruct = struct({
+      a: u32,
+      b: f16,
+      c: u32,
+    });
+
+    expect(TestStruct.size).toEqual(12);
+    expect(TestStruct.byteAlignment).toEqual(4);
+
+    const buffer = new ArrayBuffer(TestStruct.size);
+
+    const value: Parsed<typeof TestStruct> = {
+      a: 1,
+      b: 2.0,
+      c: 3,
+    };
+
+    TestStruct.write(new BufferWriter(buffer), value);
+    expect(TestStruct.read(new BufferReader(buffer))).toEqual(value);
   });
 });

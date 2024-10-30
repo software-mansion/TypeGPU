@@ -5,7 +5,7 @@ import type {
   MaxValue,
   Parsed,
 } from 'typed-binary';
-import { BufferReader, Measurer, Schema } from 'typed-binary';
+import { BufferReader, BufferWriter, Measurer, Schema } from 'typed-binary';
 import type { VertexFormat } from '../shared/vertexFormat';
 import type { TgpuLooseData } from '../types';
 import { f32, i32, u32 } from './numeric';
@@ -203,8 +203,9 @@ function writeSizedPrimitive(
     view.setUint8(offset, Math.floor(asInt));
   };
   const writef16 = (offset: number, value: number) => {
-    const asInt = floatSigned ? value * 32767 + 32768 : value * 65535;
-    view.setUint16(offset, Math.floor(asInt));
+    const writer = new BufferWriter(buffer);
+    writer.seekTo(offset);
+    writer.writeFloat16(value);
   };
 
   const setters = {
@@ -239,8 +240,9 @@ function readSizedPrimitive(
     return floatSigned ? (asInt - 128) / 127 : asInt / 255;
   };
   const readf16 = (offset: number) => {
-    const asInt = view.getUint16(offset);
-    return floatSigned ? (asInt - 32768) / 32767 : asInt / 65535;
+    const reader = new BufferReader(buffer);
+    reader.seekTo(offset);
+    return reader.readFloat16();
   };
 
   const getters = {
