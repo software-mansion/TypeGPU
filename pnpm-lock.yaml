@@ -231,8 +231,8 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0
       wgsl_reflect:
-        specifier: git://github.com/brendan-duncan/wgsl_reflect.git#884637059174a8dcb2c984058fd254d453f7ce64
-        version: github.com/brendan-duncan/wgsl_reflect/884637059174a8dcb2c984058fd254d453f7ce64
+        specifier: git://github.com/mhawryluk/wgsl_reflect.git#85994fdc8d8a3abbb4f79baf3891e54eed0c1c63
+        version: github.com/mhawryluk/wgsl_reflect/85994fdc8d8a3abbb4f79baf3891e54eed0c1c63
     devDependencies:
       vitest:
         specifier: 0.33.0
@@ -8150,8 +8150,8 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: false
 
-  github.com/brendan-duncan/wgsl_reflect/884637059174a8dcb2c984058fd254d453f7ce64:
-    resolution: {tarball: https://codeload.github.com/brendan-duncan/wgsl_reflect/tar.gz/884637059174a8dcb2c984058fd254d453f7ce64}
+  github.com/mhawryluk/wgsl_reflect/85994fdc8d8a3abbb4f79baf3891e54eed0c1c63:
+    resolution: {tarball: https://codeload.github.com/mhawryluk/wgsl_reflect/tar.gz/85994fdc8d8a3abbb4f79baf3891e54eed0c1c63}
     name: wgsl_reflect
     version: 1.0.14
     dev: false

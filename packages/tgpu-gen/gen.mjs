@@ -465,16 +465,13 @@ function generateFunction(func, wgsl, options) {
         ? 'vertexFn'
         : 'fn';
 
-  const inputs = `[${[func.inputs, func.arguments]
-    .flat()
+  const inputs = `[${func.arguments
     .flatMap((input) => (input.type ? [generateType(input.type, options)] : []))
     .join(', ')}]`;
 
-  const output = func.outputs[0]?.type
-    ? generateType(func.outputs[0].type, options)
-    : func.returnType
-      ? generateType(func.returnType, options)
-      : null;
+  const output = func.returnType
+    ? generateType(func.returnType, options)
+    : null;
 
   return `tgpu
   .${funcType}(${inputs}${output ? `, ${output}` : ''})
