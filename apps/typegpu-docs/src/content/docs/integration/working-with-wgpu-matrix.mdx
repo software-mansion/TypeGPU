@@ -1,20 +1,20 @@
 ---
 title: Working with wgpu-matrix
 description: A guide on how to use TypeGPU with wgpu-matrix.
-draft: true
 ---
 
 The [wgpu-matrix](https://github.com/greggman/wgpu-matrix) library provides utilities for matrix and vector math, which is essential for graphics programming.
 It is designed from the ground up to be compatible with WebGPU, and TypeGPU works with it seamlessly.
 
 :::note[Supported versions]
-`wgpu-matrix`: 3.3.0 and up
-`typegpu`: 0.2.0 and up
+- `wgpu-matrix` — 3.3.0 and up
+- `typegpu` — 0.2.0 and up
 :::
 
-## Using `wgpu-matrix` functions with TypeGPU primitives
+## Using wgpu-matrix functions with TypeGPU primitives
 
-You can create a vector and normalize it like this:
+Because elements in TypeGPU vectors and matrices can be accessed with the `[]` operator, they can be processed by `wgpu-matrix` utilities.
+For example, you can create a vector and normalize it like this:
 
 ```ts
 import { vec2f } from 'typegpu/data';

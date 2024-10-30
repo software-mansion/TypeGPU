@@ -105,7 +105,7 @@ export default defineConfig({
           items: stripFalsy([
             {
               label: 'Working with wgpu-matrix',
-              slug: 'guides/wgpu-matrix-integration',
+              slug: 'integration/working-with-wgpu-matrix',
               badge: { text: 'new' },
             },
           ]),
