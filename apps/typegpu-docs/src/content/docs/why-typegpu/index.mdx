@@ -1,0 +1,85 @@
+---
+title: Why TypeGPU?
+---
+
+TypeGPU is a project that aims to provide a type-safe abstraction over WebGPU, one that makes invalid states hard to represent but does not
+restrict the developer's intent where it counts.
+
+## Our philosophy
+
+Compared to use-case driven frameworks like [Three.js](https://threejs.org/) or [Babylon.js](https://www.babylonjs.com/), TypeGPU acts more like building blocks that can be put together into a framework, or used on their own to enhance existing solutions.
+This enables the core library to be minimal, leaving use-case specific functionality to official and third-party modules.
+
+The roadmap (as seen on the [landing page](/TypeGPU)) covers our plans for bringing end-to-end type safety to WebGPU, seamlessly connecting JS/TS APIs with shaders that are also
+written in JS/TS. If you find the need to eject out of an abstraction built on top of TypeGPU, you can still use our primitives, in contrast to having to use vanilla WebGPU or WebGL.
+
+import ModularityDark from './modularity-dark.svg';
+import ModularityLight from './modularity-light.svg';
+import { Image } from 'astro:assets';
+
+<div className='max-w-[30rem] mx-auto'>
+<Image className="!hidden dark:!block" src={ModularityDark} alt="Modularity" />
+<Image className="!block dark:!hidden" src={ModularityLight} alt="Modularity" />
+</div>
+
+## Leaving WebGL behind
+
+Even though WebGPU is a fairly new standard and is yet to be supported by all platforms, we are betting on it becoming the future of GPU computing on the web. Because of this, we can
+provide a minimal abstraction that is more approachable and maintainable, yet still familiar to existing WebGPU developers.
+
+## When to use TypeGPU?
+
+Our library makes it easier and more reliable to implement custom behavior on the GPU thanks to our low-level typed primitives.
+If you're working on a GPU-accelerated simulation, a custom 3D renderer or AI inference of a proprietary model, TypeGPU can
+help smooth out the development experience a lot.
+
+If you're looking to add an interactive 3d model to your website, then a rendering framework like [Three.js](https://threejs.org/) would be a safer bet.
+
+## Frequently Asked Questions
+
+{/* <details>
+<summary>🙋 Why does the API differ from WebGPU?</summary>
+
+The API differs from what can be seen in WebGPU due to a difference in behavior between the two.
+
+The glue code necessary to link WGSL bindings with TypeScript values is not present in TypeGPU,
+which does greatly reduce the boilerplate, but requires a different API.
+
+Furthermore, resource management in TypeGPU is, for the most part, automated. When defining a GPU buffer, we
+can do so using the `tgpu.buffer` API like so:
+
+```ts
+const fooBuffer = tgpu.buffer(f32).$name('foo');
+```
+
+This however does not allocate any memory on the GPU, as opposed to the `device.createBuffer` WebGPU
+API. Buffers in TypeGPU get allocated eventually, when code using them is executed by a `runtime`.
+They then get destroyed when calling `runtime.dispose()`.
+
+</details> */}
+
+{/* <details>
+<summary>🙋 How does TypeGPU differ from Three.js or Babylon.js?</summary>
+
+TypeGPU is a set of primitives for building WebGPU solutions, as opposed to a framework created for a
+specific use case like Three.js or Babylon.js. Our hope is that libraries built on top of TypeGPU can interact with
+each other with the common language of our primitives, even though they are built with different use
+cases in mind (Visualization, AI inference, etc.).
+
+</details> */}
+
+<details>
+<summary>🙋 Which browsers/platforms support TypeGPU?</summary>
+
+TypeGPU can be used on any browser that supports WebGPU. The current coverage can be [checked here](https://caniuse.com/webgpu).
+Additionally, thanks to [react-native-wgpu](https://github.com/wcandillon/react-native-webgpu), TypeGPU also works in React Native!
+
+</details>
+
+
+<details>
+<summary>🙋 Can I use it in my React Native project?</summary>
+
+Yes! Thanks to [react-native-wgpu](https://github.com/wcandillon/react-native-webgpu), TypeGPU also works in React Native.
+
+</details>

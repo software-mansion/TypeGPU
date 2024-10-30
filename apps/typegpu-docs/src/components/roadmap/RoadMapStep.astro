@@ -5,7 +5,8 @@ const { title, releasedIn } = Astro.props;
 <li
   class:list={[
     'group isolate relative flex gap-3 lg:gap-5 marker:content-[""]',
-  ]}>
+  ]}
+  data-complete={releasedIn ? 'true' : 'false'}>
   <div
     class="pt-2 lg:pt-4 pb-4 flex-shrink-0 w-24 md:w-32 lg:w-36 *:w-full *:h-auto">
     <slot name="visual" />
@@ -14,13 +15,18 @@ const { title, releasedIn } = Astro.props;
   {/* Progress Bar Line */}
   <div
     class="absolute -z-10 left-[2.8rem] md:left-[3.7rem] lg:left-[4.2rem] inset-y-0 group-first:top-20 lg:group-first:top-32 group-last:h-10 w-1.5 lg:w-2 bg-[#D6DDEF]">
+    {/* Gradient */}
     <div
-      class="hidden group-first:block absolute inset-0 bg-gradient-to-b from-[#5259EE] to-[#D6DDEF]">
+      class="hidden group-data-[complete='true']:block absolute inset-0 bg-gradient-to-b from-[#5259EE] to-[#D6DDEF]">
+    </div>
+    {/* Solid color */}
+    <div
+      class="hidden group-has-[+*[data-complete='true']]:block absolute inset-0 bg-[#5259EE]">
     </div>
   </div>
 
   <article>
-    <h3 class="flex items-center font-normal pb-3 md:pb-4">
+    <h3 class="flex items-center justify-between font-normal pb-3 md:pb-4">
       {title}
       {
         releasedIn && (

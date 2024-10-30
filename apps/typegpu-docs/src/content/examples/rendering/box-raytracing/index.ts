@@ -103,13 +103,13 @@ const boxMatrixBuffer = root
     ),
   )
   .$name('box_array')
-  .$usage(tgpu.Storage);
+  .$usage('storage');
 const boxMatrixData = asReadonly(boxMatrixBuffer);
 
 const cameraPositionBuffer = root
   .createBuffer(vec3f, cameraPositionPlum)
   .$name('camera_position')
-  .$usage(tgpu.Storage);
+  .$usage('storage');
 const cameraPositionData = asReadonly(cameraPositionBuffer);
 
 const cameraAxesBuffer = root
@@ -122,7 +122,7 @@ const cameraAxesBuffer = root
     cameraAxesPlum,
   )
   .$name('camera_axes')
-  .$usage(tgpu.Storage);
+  .$usage('storage');
 const cameraAxesData = asReadonly(cameraAxesBuffer);
 
 const canvasDimsBuffer = root
@@ -134,13 +134,13 @@ const canvasDimsBuffer = root
     })),
   )
   .$name('canvas_dims')
-  .$usage(tgpu.Uniform);
+  .$usage('uniform');
 const canvasDimsData = asUniform(canvasDimsBuffer);
 
 const boxSizeBuffer = root
   .createBuffer(u32, boxSizePlum)
   .$name('box_size')
-  .$usage(tgpu.Uniform);
+  .$usage('uniform');
 const boxSizeData = asUniform(boxSizeBuffer);
 
 const getBoxIntersectionFn = wgsl.fn`(

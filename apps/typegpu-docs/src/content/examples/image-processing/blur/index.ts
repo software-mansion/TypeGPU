@@ -53,7 +53,7 @@ const blurParamsBuffer = root
     settingsPlum,
   )
   .$name('BlurParams')
-  .$usage(tgpu.Uniform);
+  .$usage('uniform');
 const params = asUniform(blurParamsBuffer);
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;

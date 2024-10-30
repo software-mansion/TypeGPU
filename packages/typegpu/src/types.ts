@@ -17,6 +17,11 @@ export type Resource = {
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
+export interface NumberArrayView {
+  readonly length: number;
+  [n: number]: number;
+}
+
 /**
  * Removes properties from record type that extend `Prop`
  */

@@ -27,10 +27,13 @@ import tgpu, {
   type TgpuBufferMutable,
 } from '../src/experimental';
 import './utils/webgpuGlobals';
+import type { Storage, Uniform } from '../src/core/buffer/buffer';
 import {
   MissingBindingError,
   type TgpuBindGroup,
+  type TgpuBindGroupLayoutExperimental,
   type UnwrapRuntimeConstructor,
+  bindGroupLayoutExperimental,
 } from '../src/tgpuBindGroupLayout';
 
 const DEFAULT_READONLY_VISIBILITY_FLAGS =
@@ -100,8 +103,8 @@ const mockDevice = {
 describe('TgpuBindGroupLayout', () => {
   let root: ExperimentalTgpuRoot;
 
-  beforeEach(async () => {
-    root = await tgpu.init({
+  beforeEach(() => {
+    root = tgpu.initFromDevice({
       device: mockDevice as unknown as GPUDevice,
     });
   });
@@ -112,7 +115,7 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('infers the bound type of a uniform entry', () => {
-    const layout = tgpu.bindGroupLayout({
+    const layout = bindGroupLayoutExperimental({
       position: { uniform: vec3f },
     });
 
@@ -122,7 +125,7 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('infers the bound type of a readonly storage entry', () => {
-    const layout = tgpu.bindGroupLayout({
+    const layout = bindGroupLayoutExperimental({
       a: { storage: vec3f },
       b: { storage: vec3f, access: 'readonly' },
     });
@@ -134,7 +137,7 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('infers the bound type of a mutable storage entry', () => {
-    const layout = tgpu.bindGroupLayout({
+    const layout = bindGroupLayoutExperimental({
       a: { storage: vec3f, access: 'mutable' },
     });
 
@@ -144,13 +147,13 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('works for entries passed as functions returning TgpuData', () => {
-    const layout = tgpu.bindGroupLayout({
+    const layout = bindGroupLayoutExperimental({
       a: { uniform: (arrayLength: number) => arrayOf(u32, arrayLength) },
       b: { storage: (arrayLength: number) => arrayOf(vec3f, arrayLength) },
     });
 
     expectTypeOf(layout).toEqualTypeOf<
-      TgpuBindGroupLayout<{
+      TgpuBindGroupLayoutExperimental<{
         a: {
           uniform: (_: number) => TgpuArray<U32>;
         };
@@ -226,7 +229,7 @@ describe('TgpuBindGroupLayout', () => {
     });
   });
 
-  it('omits null properties', async () => {
+  it('omits null properties', () => {
     const layout = tgpu
       .bindGroupLayout({
         a: { uniform: vec3f }, // binding 0
@@ -243,7 +246,7 @@ describe('TgpuBindGroupLayout', () => {
       }>
     >();
 
-    const root = await tgpu.init({
+    const root = tgpu.initFromDevice({
       device: mockDevice as unknown as GPUDevice,
     });
 
@@ -274,8 +277,8 @@ describe('TgpuBindGroupLayout', () => {
 describe('TgpuBindGroup', () => {
   let root: ExperimentalTgpuRoot;
 
-  beforeEach(async () => {
-    root = await tgpu.init({
+  beforeEach(() => {
+    root = tgpu.initFromDevice({
       device: mockDevice as unknown as GPUDevice,
     });
   });
@@ -287,7 +290,7 @@ describe('TgpuBindGroup', () => {
 
   describe('buffer layout', () => {
     let layout: TgpuBindGroupLayout<{ foo: { uniform: Vec3f } }>;
-    let buffer: TgpuBuffer<Vec3f> & typeof tgpu.Uniform;
+    let buffer: TgpuBuffer<Vec3f> & Uniform;
 
     beforeEach(() => {
       layout = tgpu
@@ -296,10 +299,10 @@ describe('TgpuBindGroup', () => {
         })
         .$name('example');
 
-      buffer = root.createBuffer(vec3f).$usage(tgpu.Uniform);
+      buffer = root.createBuffer(vec3f).$usage('uniform');
     });
 
-    it('populates a simple layout with a raw buffer', async () => {
+    it('populates a simple layout with a raw buffer', () => {
       const bindGroup = layout.populate({ foo: root.unwrap(buffer) });
 
       expect(mockDevice.createBindGroupLayout).not.toBeCalled();
@@ -320,7 +323,7 @@ describe('TgpuBindGroup', () => {
       });
     });
 
-    it('populates a simple layout with a typed buffer', async () => {
+    it('populates a simple layout with a typed buffer', () => {
       const bindGroup = layout.populate({ foo: buffer });
 
       expect(mockDevice.createBindGroupLayout).not.toBeCalled();
@@ -341,7 +344,7 @@ describe('TgpuBindGroup', () => {
       });
     });
 
-    it('populates a simple layout with a typed buffer usage', async () => {
+    it('populates a simple layout with a typed buffer usage', () => {
       const bindGroup = layout.populate({ foo: asUniform(buffer) });
 
       expect(mockDevice.createBindGroupLayout).not.toBeCalled();
@@ -374,7 +377,7 @@ describe('TgpuBindGroup', () => {
         .$name('example');
     });
 
-    it('populates a simple layout with a raw sampler', async () => {
+    it('populates a simple layout with a raw sampler', () => {
       const sampler = root.device.createSampler();
 
       const bindGroup = layout.populate({
@@ -409,7 +412,7 @@ describe('TgpuBindGroup', () => {
         .$name('example');
     });
 
-    it('populates a simple layout with a raw texture view', async () => {
+    it('populates a simple layout with a raw texture view', () => {
       const view = root.device
         .createTexture({
           format: 'rgba8unorm',
@@ -450,7 +453,7 @@ describe('TgpuBindGroup', () => {
         .$name('example');
     });
 
-    it('populates a simple layout with a raw texture view', async () => {
+    it('populates a simple layout with a raw texture view', () => {
       const view = root.device
         .createTexture({
           format: 'rgba8unorm',
@@ -493,7 +496,7 @@ describe('TgpuBindGroup', () => {
         .$name('example');
     });
 
-    it('populates a simple layout with a raw texture view', async () => {
+    it('populates a simple layout with a raw texture view', () => {
       const externalTexture = root.device.importExternalTexture({
         source: undefined as unknown as HTMLVideoElement,
       });
@@ -526,9 +529,9 @@ describe('TgpuBindGroup', () => {
       _: null;
       d: { storage: F32; access: 'readonly' };
     }>;
-    let aBuffer: TgpuBuffer<Vec3f> & typeof tgpu.Uniform;
-    let bBuffer: TgpuBuffer<U32> & typeof tgpu.Storage;
-    let dBuffer: TgpuBuffer<F32> & typeof tgpu.Storage;
+    let aBuffer: TgpuBuffer<Vec3f> & Uniform;
+    let bBuffer: TgpuBuffer<U32> & Storage;
+    let dBuffer: TgpuBuffer<F32> & Storage;
 
     beforeEach(() => {
       layout = tgpu
@@ -540,9 +543,9 @@ describe('TgpuBindGroup', () => {
         })
         .$name('example');
 
-      aBuffer = root.createBuffer(vec3f).$usage(tgpu.Uniform);
-      bBuffer = root.createBuffer(u32).$usage(tgpu.Storage);
-      dBuffer = root.createBuffer(f32).$usage(tgpu.Storage);
+      aBuffer = root.createBuffer(vec3f).$usage('uniform');
+      bBuffer = root.createBuffer(u32).$usage('storage');
+      dBuffer = root.createBuffer(f32).$usage('storage');
     });
 
     it('requires all non-null entries to be populated', () => {

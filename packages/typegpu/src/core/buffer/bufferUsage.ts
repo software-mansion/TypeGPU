@@ -151,7 +151,7 @@ export function asMutable<TData extends AnyTgpuData>(
 ): TgpuBufferMutable<TData> {
   if (!isUsableAsStorage(buffer)) {
     throw new Error(
-      `Cannot pass ${buffer} to asMutable, as it is not allowed to be used as storage. To allow it, call .$usage(tgpu.Storage) when creating the buffer.`,
+      `Cannot pass ${buffer} to asMutable, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.`,
     );
   }
 
@@ -173,7 +173,7 @@ export function asReadonly<TData extends AnyTgpuData>(
 ): TgpuBufferReadonly<TData> {
   if (!isUsableAsStorage(buffer)) {
     throw new Error(
-      `Cannot pass ${buffer} to asReadonly, as it is not allowed to be used as storage. To allow it, call .$usage(tgpu.Storage) when creating the buffer.`,
+      `Cannot pass ${buffer} to asReadonly, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.`,
     );
   }
 
@@ -195,7 +195,7 @@ export function asUniform<TData extends AnyTgpuData>(
 ): TgpuBufferUniform<TData> {
   if (!isUsableAsUniform(buffer)) {
     throw new Error(
-      `Cannot pass ${buffer} to asUniform, as it is not allowed to be used as a uniform. To allow it, call .$usage(tgpu.Uniform) when creating the buffer.`,
+      `Cannot pass ${buffer} to asUniform, as it is not allowed to be used as a uniform. To allow it, call .$usage('uniform') when creating the buffer.`,
     );
   }
 
@@ -221,7 +221,7 @@ export function asVertex<TData extends AnyTgpuData>(
 ): TgpuBufferVertex<TData> {
   if (!isUsableAsVertex(buffer)) {
     throw new Error(
-      `Cannot pass ${buffer} to asVertex, as it is not allowed to be used as a vertex buffer. To allow it, call .$usage(tgpu.Vertex) when creating the buffer.`,
+      `Cannot pass ${buffer} to asVertex, as it is not allowed to be used as a vertex buffer. To allow it, call .$usage('vertex') when creating the buffer.`,
     );
   }
 

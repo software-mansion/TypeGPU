@@ -1,11 +1,7 @@
-import {
-  type TgpuBaseArray,
-  isDecorated,
-  isLooseDecorated,
-  isLooseStructSchema,
-  isStructSchema,
-} from '../../data';
+import type { TgpuBaseArray } from '../../data/array';
+import { isDecorated, isLooseDecorated } from '../../data/attributes';
 import { getCustomAlignment } from '../../data/attributes';
+import { isLooseStructSchema, isStructSchema } from '../../data/struct';
 import { roundUp } from '../../mathUtils';
 import {
   type VertexFormat,

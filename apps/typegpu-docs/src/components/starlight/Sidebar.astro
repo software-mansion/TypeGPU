@@ -1,0 +1,19 @@
+---
+import BlogSidebar from 'starlight-blog/overrides/Sidebar.astro';
+import type { Props } from '@astrojs/starlight/props';
+---
+
+<div class="md:sl-hidden">
+  <a href="/TypeGPU/examples">Live Examples</a>
+</div>
+<BlogSidebar {...Astro.props} />
+
+<style>
+  div a {
+    color: var(--sl-color-white);
+    font-size: var(--sl-text-lg);
+    font-weight: 600;
+    text-decoration: none;
+    display: block;
+  }
+</style>

@@ -1,25 +1,207 @@
-import {
-  addButtonParameter,
-  addSliderParameter,
-  addSliderPlumParameter,
-  onFrame,
-} from '@typegpu/example-toolkit';
-import { arrayOf, f32, struct, u32, vec2f } from 'typegpu/data';
-import tgpu, {
-  type TgpuBufferUsage,
-  asMutable,
-  asReadonly,
-  asUniform,
-  asVertex,
-  builtin,
-  wgsl,
-} from 'typegpu/experimental';
+import tgpu from 'typegpu';
+import { arrayOf, f32, struct, vec2f, vec3f } from 'typegpu/data';
 
-const root = await tgpu.init();
+const triangleAmount = 1000;
+const triangleSize = 0.03;
 
+const renderCode = /* wgsl */ `
+  fn rotate(v: vec2f, angle: f32) -> vec2f {
+    let pos = vec2(
+      (v.x * cos(angle)) - (v.y * sin(angle)),
+      (v.x * sin(angle)) + (v.y * cos(angle))
+    );
+    return pos;
+  };
+
+  fn getRotationFromVelocity(velocity: vec2f) -> f32 {
+    return -atan2(velocity.x, velocity.y);
+  };
+
+  struct TriangleData {
+    position : vec2f,
+    velocity : vec2f,
+  };
+
+  struct VertexOutput {
+    @builtin(position) position : vec4f,
+    @location(1) color : vec4f,
+  };
+
+  @binding(0) @group(0) var<uniform> trianglePos : array<TriangleData, ${triangleAmount}>;
+  @binding(1) @group(0) var<uniform> colorPalette : vec3f;
+
+  @vertex
+  fn mainVert(@builtin(instance_index) ii: u32, @location(0) v: vec2f) -> VertexOutput {
+    let instanceInfo = trianglePos[ii];
+
+    let angle = getRotationFromVelocity(instanceInfo.velocity);
+    let rotated = rotate(v, angle);
+
+    let offset = instanceInfo.position;
+    let pos = vec4(rotated + offset, 0.0, 1.0);
+
+    let color = vec4(
+        sin(angle + colorPalette.r) * 0.45 + 0.45,
+        sin(angle + colorPalette.g) * 0.45 + 0.45,
+        sin(angle + colorPalette.b) * 0.45 + 0.45,
+        1.0);
+
+    return VertexOutput(pos, color);
+  }
+
+  @fragment
+  fn mainFrag(@location(1) color : vec4f) -> @location(0) vec4f {
+    return color;
+  }
+`;
+
+const computeCode = /* wgsl */ `
+  struct TriangleData {
+    position : vec2f,
+    velocity : vec2f,
+  };
+
+  struct Parameters {
+    separation_distance : f32,
+    separation_strength : f32,
+    alignment_distance : f32,
+    alignment_strength : f32,
+    cohesion_distance : f32,
+    cohesion_strength : f32,
+  };
+
+  @binding(0) @group(0) var<uniform> currentTrianglePos : array<TriangleData, ${triangleAmount}>;
+  @binding(1) @group(0) var<storage, read_write> nextTrianglePos : array<TriangleData, ${triangleAmount}>;
+  @binding(2) @group(0) var<storage> params : Parameters;
+
+  @compute @workgroup_size(1)
+  fn mainCompute(@builtin(global_invocation_id) gid: vec3u) {
+    let index = gid.x;
+    var instanceInfo = currentTrianglePos[index];
+    var separation = vec2(0.0, 0.0);
+    var alignment = vec2(0.0, 0.0);
+    var alignmentCount = 0u;
+    var cohesion = vec2(0.0, 0.0);
+    var cohesionCount = 0u;
+    for (var i = 0u; i < ${triangleAmount}; i = i + 1) {
+      if (i == index) {
+        continue;
+      }
+      var other = currentTrianglePos[i];
+      var dist = distance(instanceInfo.position, other.position);
+      if (dist < params.separation_distance) {
+        separation += instanceInfo.position - other.position;
+      }
+      if (dist < params.alignment_distance) {
+        alignment += other.velocity;
+        alignmentCount++;
+      }
+      if (dist < params.cohesion_distance) {
+        cohesion += other.position;
+        cohesionCount++;
+      }
+    };
+    if (alignmentCount > 0u) {
+      alignment = alignment / f32(alignmentCount);
+    }
+    if (cohesionCount > 0u) {
+      cohesion = (cohesion / f32(cohesionCount)) - instanceInfo.position;
+    }
+    instanceInfo.velocity +=
+      (separation * params.separation_strength)
+      + (alignment * params.alignment_strength)
+      + (cohesion * params.cohesion_strength);
+    instanceInfo.velocity = normalize(instanceInfo.velocity) * clamp(length(instanceInfo.velocity), 0.0, 0.01);
+    let triangleSize = ${triangleSize};
+    if (instanceInfo.position[0] > 1.0 + triangleSize) {
+      instanceInfo.position[0] = -1.0 - triangleSize;
+    }
+    if (instanceInfo.position[1] > 1.0 + triangleSize) {
+      instanceInfo.position[1] = -1.0 - triangleSize;
+    }
+    if (instanceInfo.position[0] < -1.0 - triangleSize) {
+      instanceInfo.position[0] = 1.0 + triangleSize;
+    }
+    if (instanceInfo.position[1] < -1.0 - triangleSize) {
+      instanceInfo.position[1] = 1.0 + triangleSize;
+    }
+    instanceInfo.position += instanceInfo.velocity;
+    nextTrianglePos[index] = instanceInfo;
+  }
+`;
+
+type BoidsOptions = {
+  separationDistance: number;
+  separationStrength: number;
+  alignmentDistance: number;
+  alignmentStrength: number;
+  cohesionDistance: number;
+  cohesionStrength: number;
+};
+
+const colorPresets = {
+  plumTree: vec3f(1.0, 2.0, 1.0),
+  jeans: vec3f(2.0, 1.5, 1.0),
+  greyscale: vec3f(0, 0, 0),
+  hotcold: vec3f(0, 3.14, 3.14),
+};
+type ColorPresets = keyof typeof colorPresets;
+
+const presets = {
+  default: {
+    separationDistance: 0.05,
+    separationStrength: 0.001,
+    alignmentDistance: 0.3,
+    alignmentStrength: 0.01,
+    cohesionDistance: 0.3,
+    cohesionStrength: 0.001,
+  },
+  mosquitoes: {
+    separationDistance: 0.02,
+    separationStrength: 0.01,
+    alignmentDistance: 0.0,
+    alignmentStrength: 0.0,
+    cohesionDistance: 0.177,
+    cohesionStrength: 0.011,
+  },
+  blobs: {
+    separationDistance: 0.033,
+    separationStrength: 0.051,
+    alignmentDistance: 0.047,
+    alignmentStrength: 0.1,
+    cohesionDistance: 0.3,
+    cohesionStrength: 0.013,
+  },
+  particles: {
+    separationDistance: 0.035,
+    separationStrength: 1,
+    alignmentDistance: 0.0,
+    alignmentStrength: 0.0,
+    cohesionDistance: 0.0,
+    cohesionStrength: 0.0,
+  },
+  nanites: {
+    separationDistance: 0.067,
+    separationStrength: 0.01,
+    alignmentDistance: 0.066,
+    alignmentStrength: 0.021,
+    cohesionDistance: 0.086,
+    cohesionStrength: 0.094,
+  },
+} as const;
+
+if (!navigator.gpu) {
+  throw new Error('WebGPU is not supported by this browser.');
+}
+const adapter = await navigator.gpu.requestAdapter();
+if (!adapter) {
+  throw new Error('Could not find a compatible GPU.');
+}
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+const root = await tgpu.init();
 
 context.configure({
   device: root.device,
@@ -27,332 +209,226 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-addButtonParameter('randomize', randomizeTriangles);
-
-const parametersBuffer = root
-  .createBuffer(
-    struct({
-      separationDistance: f32,
-      separationStrength: f32,
-      alignmentDistance: f32,
-      alignmentStrength: f32,
-      cohesionDistance: f32,
-      cohesionStrength: f32,
-    }),
-    {
-      separationDistance: 0.03,
-      separationStrength: 0.001,
-      alignmentDistance: 0.3,
-      alignmentStrength: 0.01,
-      cohesionDistance: 0.3,
-      cohesionStrength: 0.001,
-    },
-  )
-  .$usage(tgpu.Storage);
-
-const triangleSize = addSliderPlumParameter('triangle size', 0.04, {
-  min: 0.01,
-  max: 0.1,
-  step: 0.01,
-});
-const triangleSizeBuffer = root
-  .createBuffer(f32, triangleSize)
-  .$usage(tgpu.Uniform);
-const triangleSizePlum = wgsl.plum((get) => {
-  const size = get(triangleSize);
-  return [
-    vec2f(0.0, size),
-    vec2f(-size / 2, -size / 2),
-    vec2f(size / 2, -size / 2),
-  ];
+const Params = struct({
+  separationDistance: f32,
+  separationStrength: f32,
+  alignmentDistance: f32,
+  alignmentStrength: f32,
+  cohesionDistance: f32,
+  cohesionStrength: f32,
 });
 
-const triangleVertex = root
-  .createBuffer(arrayOf(vec2f, 3), triangleSizePlum)
-  .$usage(tgpu.Vertex);
+const paramsBuffer = root
+  .createBuffer(Params, presets.default)
+  .$usage('storage');
 
-const MAX_TRIANGLES = 10000;
-const triangleAmount = addSliderPlumParameter('triangle amount', 500, {
-  min: 1,
-  max: 10000,
-  step: 1,
+const triangleVertexBuffer = root
+  .createBuffer(arrayOf(f32, 6), [
+    0.0,
+    triangleSize,
+    -triangleSize / 2,
+    -triangleSize / 2,
+    triangleSize / 2,
+    -triangleSize / 2,
+  ])
+  .$usage('vertex');
+
+const TriangleInfoStruct = struct({
+  position: vec2f,
+  velocity: vec2f,
 });
-const triangleAmountBuffer = root
-  .createBuffer(u32, triangleAmount)
-  .$usage(tgpu.Uniform);
-const trianglePosData = arrayOf(
-  struct({
-    position: vec2f,
-    velocity: vec2f,
-  }),
-  MAX_TRIANGLES,
+
+const trianglePosBuffers = Array.from({ length: 2 }, () =>
+  root
+    .createBuffer(arrayOf(TriangleInfoStruct, triangleAmount))
+    .$usage('storage', 'uniform'),
 );
-type TrianglePosData = typeof trianglePosData;
 
-const trianglePosBuffers = Array.from({ length: 2 }, () => {
-  return root.createBuffer(trianglePosData).$usage(tgpu.Storage);
-});
-
-const bufferPairs = [
-  [asReadonly(trianglePosBuffers[0]), asMutable(trianglePosBuffers[1])],
-  [asReadonly(trianglePosBuffers[1]), asMutable(trianglePosBuffers[0])],
-];
-
-const readSlot = wgsl.slot<TgpuBufferUsage<TrianglePosData, 'readonly'>>();
-const writeSlot = wgsl.slot<TgpuBufferUsage<TrianglePosData, 'mutable'>>();
-
-function randomizeTriangles() {
-  const positions = [];
-  for (let i = 0; i < MAX_TRIANGLES; i++) {
-    const position = vec2f(Math.random() * 2 - 1, Math.random() * 2 - 1);
-    const velocity = vec2f(
-      Math.random() * 0.1 - 0.05,
-      Math.random() * 0.1 - 0.05,
-    );
-    positions.push({ position, velocity });
-  }
-
+const randomizePositions = () => {
+  const positions = Array.from({ length: triangleAmount }, () => ({
+    position: vec2f(Math.random() * 2 - 1, Math.random() * 2 - 1),
+    velocity: vec2f(Math.random() * 0.1 - 0.05, Math.random() * 0.1 - 0.05),
+  }));
   trianglePosBuffers[0].write(positions);
   trianglePosBuffers[1].write(positions);
-}
+};
+randomizePositions();
 
-const rotate = wgsl.fn`(v: vec2f, angle: f32) -> vec2f {
-  let pos = vec2(
-    (v.x * cos(angle)) - (v.y * sin(angle)),
-    (v.x * sin(angle)) + (v.y * cos(angle))
-  );
-  return pos;
-}`;
+const colorPaletteBuffer = root
+  .createBuffer(vec3f, colorPresets.jeans)
+  .$usage('uniform');
 
-const getRotationFromVelocity = wgsl.fn`(velocity: vec2f) -> f32 {
-  return -atan2(velocity.x, velocity.y);
-}`;
-
-const renderPipelines = [0, 1].map((idx) =>
-  root.makeRenderPipeline({
-    vertex: {
-      code: wgsl`
-        let triangleSize = ${asUniform(triangleSizeBuffer)};
-        let instanceInfo = ${bufferPairs[idx][0]}[${builtin.instanceIndex}];
-        let rotated = ${rotate}(
-          ${asVertex(triangleVertex, 'vertex')},
-          ${getRotationFromVelocity}(instanceInfo.velocity),
-        );
-
-        let offset = instanceInfo.position;
-
-        let pos = vec4f(rotated + offset, 0.0, 1.0);
-        let fragUV = (rotated + vec2f(triangleSize, triangleSize)) / vec2f(triangleSize * 2.0);
-      `,
-      output: {
-        [builtin.position.s]: 'pos',
-        fragUV: vec2f,
-      },
-    },
-    fragment: {
-      code: wgsl`
-        let color1 = vec3(196.0 / 255.0, 100.0 / 255.0, 255.0 / 255.0);
-        let color2 = vec3(29.0 / 255.0, 114.0 / 255.0, 240.0 / 255.0);
-
-        let dist = length(fragUV - vec2(0.5, 0.5));
-
-        let color = mix(color1, color2, dist);
-
-        return vec4(color, 1.0);
-      `,
-      target: [
-        {
-          format: presentationFormat,
-        },
-      ],
-    },
-    primitive: {
-      topology: 'triangle-list',
-    },
-  }),
-);
-
-const computePipelines = [0, 1].map((idx) =>
-  root.makeComputePipeline({
-    code: wgsl`
-      let triangleSize = ${asUniform(triangleSizeBuffer)};
-      let index = ${builtin.globalInvocationId}.x;
-      var instanceInfo = ${readSlot}[index];
-      let params = ${asReadonly(parametersBuffer)};
-
-      var separation = vec2(0.0, 0.0);
-      var alignment = vec2(0.0, 0.0);
-      var alignmentCount = 0u;
-      var cohesion = vec2(0.0, 0.0);
-      var cohesionCount = 0u;
-      for (var i = 0u; i < ${asUniform(triangleAmountBuffer)}; i = i + 1) {
-        if (i == index) {
-          continue;
-        }
-        var other = ${readSlot}[i];
-        var dist = distance(instanceInfo.position, other.position);
-        if (dist < params.separationDistance) {
-          separation += instanceInfo.position - other.position;
-        }
-        if (dist < params.alignmentDistance) {
-          alignment += other.velocity;
-          alignmentCount++;
-        }
-        if (dist < params.cohesionDistance) {
-          cohesion += other.position;
-          cohesionCount++;
-        }
-      };
-
-      if (alignmentCount > 0u) {
-        alignment = alignment / f32(alignmentCount);
-      }
-
-      if (cohesionCount > 0u) {
-        cohesion = (cohesion / f32(cohesionCount)) - instanceInfo.position;
-      }
-
-      instanceInfo.velocity += (separation * params.separationStrength) + (alignment * params.alignmentStrength) + (cohesion * params.cohesionStrength);
-      instanceInfo.velocity = normalize(instanceInfo.velocity) * clamp(length(instanceInfo.velocity), 0.0, 0.01);
-
-      if (instanceInfo.position[0] > 1.0 + triangleSize) {
-        instanceInfo.position[0] = -1.0 - triangleSize;
-      }
-      if (instanceInfo.position[1] > 1.0 + triangleSize) {
-        instanceInfo.position[1] = -1.0 - triangleSize;
-      }
-      if (instanceInfo.position[0] < -1.0 - triangleSize) {
-        instanceInfo.position[0] = 1.0 + triangleSize;
-      }
-      if (instanceInfo.position[1] < -1.0 - triangleSize) {
-        instanceInfo.position[1] = 1.0 + triangleSize;
-      }
-
-      instanceInfo.position += instanceInfo.velocity;
-
-      ${writeSlot}[index] = instanceInfo;
-    `
-      .with(readSlot, bufferPairs[idx][0])
-      .with(writeSlot, bufferPairs[idx][1]),
-  }),
-);
-
-randomizeTriangles();
-let even = false;
-onFrame(() => {
-  even = !even;
-  computePipelines[even ? 0 : 1].execute({
-    workgroups: [root.readPlum(triangleAmount)],
-  });
-  renderPipelines[even ? 1 : 0].execute({
-    colorAttachments: [
-      {
-        view: context.getCurrentTexture().createView(),
-        clearValue: [0, 0, 0, 0],
-        loadOp: 'clear',
-        storeOp: 'store',
-      },
-    ],
-    vertexCount: 3,
-    instanceCount: root.readPlum(triangleAmount),
-  });
-
-  root.flush();
-});
-
-const parameters = {
-  separationDistance: 0.05,
-  separationStrength: 0.001,
-  alignmentDistance: 0.3,
-  alignmentStrength: 0.01,
-  cohesionDistance: 0.3,
-  cohesionStrength: 0.001,
+const updateColorPreset = (newColorPreset: ColorPresets) => {
+  colorPaletteBuffer.write(colorPresets[newColorPreset]);
 };
 
-function applyOptions() {
-  parametersBuffer.write(parameters);
+const updateParams = (newOptions: BoidsOptions) => {
+  paramsBuffer.write(newOptions);
+};
+
+const renderModule = root.device.createShaderModule({
+  code: renderCode,
+});
+
+const computeModule = root.device.createShaderModule({
+  code: computeCode,
+});
+
+const renderBindGroupLayout = tgpu.bindGroupLayout({
+  trianglePos: { uniform: arrayOf(TriangleInfoStruct, triangleAmount) },
+  colorPalette: { uniform: vec3f },
+});
+
+const pipeline = root.device.createRenderPipeline({
+  layout: root.device.createPipelineLayout({
+    bindGroupLayouts: [root.unwrap(renderBindGroupLayout)],
+  }),
+  vertex: {
+    module: renderModule,
+    buffers: [
+      {
+        arrayStride: 2 * 4,
+        attributes: [
+          {
+            shaderLocation: 0,
+            offset: 0,
+            format: 'float32x2' as const,
+          },
+        ],
+      },
+    ],
+  },
+  fragment: {
+    module: renderModule,
+    targets: [
+      {
+        format: presentationFormat,
+      },
+    ],
+  },
+  primitive: {
+    topology: 'triangle-list',
+  },
+});
+
+const computeBindGroupLayout = tgpu.bindGroupLayout({
+  currentTrianglePos: { uniform: arrayOf(TriangleInfoStruct, triangleAmount) },
+  nextTrianglePos: {
+    storage: arrayOf(TriangleInfoStruct, triangleAmount),
+    access: 'mutable',
+  },
+  params: { storage: Params },
+});
+
+const computePipeline = root.device.createComputePipeline({
+  layout: root.device.createPipelineLayout({
+    bindGroupLayouts: [root.unwrap(computeBindGroupLayout)],
+  }),
+  compute: {
+    module: computeModule,
+  },
+});
+
+const renderBindGroups = [0, 1].map((idx) =>
+  renderBindGroupLayout.populate({
+    trianglePos: trianglePosBuffers[idx],
+    colorPalette: colorPaletteBuffer,
+  }),
+);
+
+const computeBindGroups = [0, 1].map((idx) =>
+  computeBindGroupLayout.populate({
+    currentTrianglePos: trianglePosBuffers[idx],
+    nextTrianglePos: trianglePosBuffers[1 - idx],
+    params: paramsBuffer,
+  }),
+);
+
+const renderPassDescriptor: GPURenderPassDescriptor = {
+  colorAttachments: [
+    {
+      view: undefined as unknown as GPUTextureView,
+      clearValue: [1, 1, 1, 1],
+      loadOp: 'clear' as const,
+      storeOp: 'store' as const,
+    },
+  ],
+};
+
+let even = false;
+function frame() {
+  even = !even;
+  (
+    renderPassDescriptor.colorAttachments as [GPURenderPassColorAttachment]
+  )[0].view = context.getCurrentTexture().createView();
+
+  const commandEncoder = root.device.createCommandEncoder();
+  const computePass = commandEncoder.beginComputePass();
+  computePass.setPipeline(computePipeline);
+  computePass.setBindGroup(0, root.unwrap(computeBindGroups[even ? 0 : 1]));
+  computePass.dispatchWorkgroups(triangleAmount);
+  computePass.end();
+
+  const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+  passEncoder.setPipeline(pipeline);
+  passEncoder.setVertexBuffer(0, triangleVertexBuffer.buffer);
+  passEncoder.setBindGroup(0, root.unwrap(renderBindGroups[even ? 1 : 0]));
+  passEncoder.draw(3, triangleAmount);
+  passEncoder.end();
+
+  root.device.queue.submit([commandEncoder.finish()]);
+
+  requestAnimationFrame(frame);
 }
 
-addSliderParameter(
-  'separation dist',
-  parameters.separationDistance,
-  {
-    min: 0.0,
-    max: 0.5,
-    step: 0.001,
-  },
-  (v) => {
-    parameters.separationDistance = v;
-    applyOptions();
-  },
-);
+frame();
 
-addSliderParameter(
-  'separation str',
-  parameters.separationStrength,
-  {
-    min: 0.0,
-    max: 0.1,
-    step: 0.001,
-  },
-  (v) => {
-    parameters.separationStrength = v;
-    applyOptions();
-  },
-);
+/** @button "Randomize" */
+export function randomize() {
+  randomizePositions();
+}
 
-addSliderParameter(
-  'align dist',
-  parameters.alignmentDistance,
-  {
-    min: 0.0,
-    max: 0.5,
-    step: 0.001,
-  },
-  (v) => {
-    parameters.alignmentDistance = v;
-    applyOptions();
-  },
-);
+/** @button "🐦 Birds" */
+export function choosePresetDefault() {
+  updateParams(presets.default);
+}
 
-addSliderParameter(
-  'align str',
-  parameters.alignmentStrength,
-  {
-    min: 0.0,
-    max: 0.1,
-    step: 0.001,
-  },
-  (v) => {
-    parameters.alignmentStrength = v;
-    applyOptions();
-  },
-);
+/** @button "🦟 Mosquitoes" */
+export function choosePresetMosquitos() {
+  updateParams(presets.mosquitoes);
+}
 
-addSliderParameter(
-  'cohesion dist',
-  parameters.cohesionDistance,
-  {
-    min: 0.0,
-    max: 0.5,
-    step: 0.001,
-  },
-  (v) => {
-    parameters.cohesionDistance = v;
-    applyOptions();
-  },
-);
+/** @button "💧 Blobs" */
+export function choosePresetBlobs() {
+  updateParams(presets.blobs);
+}
 
-addSliderParameter(
-  'cohesion str',
-  parameters.cohesionStrength,
-  {
-    min: 0.0,
-    max: 0.1,
-    step: 0.001,
-  },
-  (v) => {
-    parameters.cohesionStrength = v;
-    applyOptions();
-  },
-);
+/** @button "⚛ Particles" */
+export function choosePresetParticles() {
+  updateParams(presets.particles);
+}
+
+/** @button "🤖 Nanites" */
+export function choosePresetNanites() {
+  updateParams(presets.nanites);
+}
+
+/** @button "🟪🟩" */
+export function setColorPresetPlumTree() {
+  updateColorPreset('plumTree');
+}
+
+/** @button "🟦🟫" */
+export function setColorPresetJeans() {
+  updateColorPreset('jeans');
+}
+
+/** @button "⬛⬜" */
+export function setColorPresetGreyscale() {
+  updateColorPreset('greyscale');
+}
+
+/** @button "🟥🟦" */
+export function setColorPresetHotcold() {
+  updateColorPreset('hotcold');
+}
