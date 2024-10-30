@@ -79,7 +79,7 @@ export default defineConfig({
             },
             {
               label: 'Bind Groups',
-              slug: 'guides/bind-groups',
+              slug: 'fundamentals/bind-groups',
               badge: { text: '0.2' },
             },
             {
