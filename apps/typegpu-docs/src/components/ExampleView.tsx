@@ -16,7 +16,7 @@ import type { ExampleState } from '../utils/examples/exampleState';
 import type { Example } from '../utils/examples/types';
 import { isGPUSupported } from '../utils/isGPUSupported';
 import useEvent from '../utils/useEvent';
-import { CodeEditor, HtmlCodeEditor } from './CodeEditor';
+import { HtmlCodeEditor, TsCodeEditor } from './CodeEditor';
 import { ControlPanel } from './ControlPanel';
 import { Button } from './design/Button';
 import { Snackbar } from './design/Snackbar';
@@ -239,7 +239,7 @@ export function ExampleView({ example, isPlayground = false }: Props) {
                   </Button>
                 </div>
                 {currentEditorTab === 'ts' ? (
-                  <CodeEditor code={code} onCodeChange={handleCodeChange} />
+                  <TsCodeEditor code={code} onCodeChange={handleCodeChange} />
                 ) : (
                   <HtmlCodeEditor code={htmlCode} onCodeChange={setHtmlCode} />
                 )}
