@@ -15,7 +15,6 @@ import { isGPUSupported } from '../utils/isGPUSupported';
 import useEvent from '../utils/useEvent';
 import { HtmlCodeEditor, TsCodeEditor } from './CodeEditor';
 import { ControlPanel } from './ControlPanel';
-import { Button } from './design/Button';
 import { Snackbar } from './design/Snackbar';
 
 type Props = {
@@ -69,6 +68,8 @@ function useExample(
   }, [exampleCode, htmlCode, setSnackbarText, setExampleControlParams, tags]);
 }
 
+type EditorTab = 'ts' | 'html';
+
 export function ExampleView({ example }: Props) {
   const {
     tsCode: initialTsCode,
@@ -79,7 +80,7 @@ export function ExampleView({ example }: Props) {
   const [code, setCode] = useState(initialTsCode);
   const [htmlCode, setHtmlCode] = useState(intitialHtmlCode);
   const [snackbarText, setSnackbarText] = useState<string | undefined>();
-  const [currentEditorTab, setCurrentEditorTab] = useState<'ts' | 'html'>('ts');
+  const [currentEditorTab, setCurrentEditorTab] = useState<EditorTab>('ts');
 
   const codeEditorShowing = useAtomValue(codeEditorShownAtom);
   const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
@@ -155,20 +156,11 @@ export function ExampleView({ example }: Props) {
               )}
             >
               <div className="absolute inset-0">
-                <div className="absolute right-0 md:right-6 md:top-2 z-[200] flex gap-2">
-                  <Button
-                    onClick={() => setCurrentEditorTab('ts')}
-                    accent={currentEditorTab === 'ts'}
-                  >
-                    TS
-                  </Button>
-                  <Button
-                    onClick={() => setCurrentEditorTab('html')}
-                    accent={currentEditorTab === 'html'}
-                  >
-                    HTML
-                  </Button>
-                </div>
+                <EditorTabButtonPanel
+                  currentEditorTab={currentEditorTab}
+                  setCurrentEditorTab={setCurrentEditorTab}
+                />
+
                 {currentEditorTab === 'ts' ? (
                   <TsCodeEditor code={code} onCodeChange={handleTsCodeChange} />
                 ) : (
@@ -184,6 +176,48 @@ export function ExampleView({ example }: Props) {
         <ControlPanel />
       </div>
     </>
+  );
+}
+
+function EditorTabButtonPanel({
+  currentEditorTab,
+  setCurrentEditorTab,
+}: {
+  currentEditorTab: EditorTab;
+  setCurrentEditorTab: (tab: EditorTab) => void;
+}) {
+  const commonStyle =
+    'inline-flex justify-center items-center box-border text-sm px-5 py-1';
+  const activeStyle =
+    'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark';
+  const inactiveStyle =
+    'bg-white border-tameplum-100 border-2 hover:bg-tameplum-20';
+
+  return (
+    <div className="absolute right-0 md:right-6 top-2 z-[200] flex">
+      <button
+        className={cs(
+          commonStyle,
+          'rounded-l-lg',
+          currentEditorTab === 'ts' ? activeStyle : inactiveStyle,
+        )}
+        type="button"
+        onClick={() => setCurrentEditorTab('ts')}
+      >
+        TS
+      </button>
+      <button
+        className={cs(
+          commonStyle,
+          'rounded-r-lg',
+          currentEditorTab === 'html' ? activeStyle : inactiveStyle,
+        )}
+        type="button"
+        onClick={() => setCurrentEditorTab('html')}
+      >
+        HTML
+      </button>
+    </div>
   );
 }
 
