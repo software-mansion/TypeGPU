@@ -1,6 +1,14 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import { describe, expect, it, vi } from 'vitest';
-import { align, size, vec3f, vec3u } from '../src/data';
+import {
+  align,
+  float16x2,
+  size,
+  snorm8x2,
+  vec2f,
+  vec3f,
+  vec3u,
+} from '../src/data';
 import { looseArrayOf } from '../src/data/array';
 import { tgpu } from '../src/experimental';
 
@@ -115,6 +123,50 @@ describe('loose', () => {
 
     TestArray.write(new BufferWriter(buffer), value);
     expect(TestArray.read(new BufferReader(buffer))).toEqual(value);
+  });
+
+  it('encodes and decodes float16 arrays properly', () => {
+    const TestArray = looseArrayOf(float16x2, 5);
+
+    expect(TestArray.size).toEqual(20);
+    const buffer = new ArrayBuffer(TestArray.size);
+
+    const value: Parsed<typeof TestArray> = [
+      vec2f(1.5, 2),
+      vec2f(),
+      vec2f(-1.5, 2),
+      vec2f(1.5, -2),
+      vec2f(1.5, 15),
+    ];
+
+    TestArray.write(new BufferWriter(buffer), value);
+    expect(TestArray.read(new BufferReader(buffer))).toEqual(value);
+  });
+
+  it('encodes and decodes arrays of normalized floats properly', () => {
+    const TestArray = looseArrayOf(snorm8x2, 5);
+
+    expect(TestArray.size).toEqual(10);
+
+    const buffer = new ArrayBuffer(TestArray.size);
+
+    const value: Parsed<typeof TestArray> = [
+      vec2f(0.5, 0.25),
+      vec2f(),
+      vec2f(-0.5, 0.25),
+      vec2f(0.5, -0.25),
+      vec2f(0.5, 1),
+    ];
+
+    TestArray.write(new BufferWriter(buffer), value);
+    for (const val of TestArray.read(new BufferReader(buffer))) {
+      const expected = value.shift();
+      if (!expected) {
+        throw new Error('Expected value not found');
+      }
+      expect(expected.x).toBeCloseTo(val.x, 1);
+      expect(expected.y).toBeCloseTo(val.y, 1);
+    }
   });
 
   it('is not assignable to regular buffers', () => {
