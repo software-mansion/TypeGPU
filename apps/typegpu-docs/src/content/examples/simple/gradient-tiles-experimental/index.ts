@@ -1,14 +1,5 @@
-/*
-{
-  "title": "Gradient Tiles",
-  "category": "simple",
-  "tags": ["experimental"]
-}
-*/
-
 // -- Hooks into the example environment
 import {
-  addElement,
   addSliderPlumParameter,
   onCleanup,
   onFrame,
@@ -37,7 +28,7 @@ const spanBuffer = root
   .$name('span')
   .$usage('uniform');
 
-const canvas = await addElement('canvas', { aspectRatio: 1 });
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 

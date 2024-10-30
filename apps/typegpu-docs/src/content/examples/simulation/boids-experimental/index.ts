@@ -1,14 +1,5 @@
-/*
-{
-  "title": "Boids (experimental)",
-  "category": "simulation",
-  "tags": ["experimental"]
-}
-*/
-
 import {
   addButtonParameter,
-  addElement,
   addSliderParameter,
   addSliderPlumParameter,
   onFrame,
@@ -26,7 +17,7 @@ import tgpu, {
 
 const root = await tgpu.init();
 
-const canvas = await addElement('canvas', { aspectRatio: 1 });
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 

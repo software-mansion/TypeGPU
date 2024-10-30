@@ -403,7 +403,7 @@ export function choosePresetBlobs() {
   updateParams(presets.blobs);
 }
 
-/** @button "⚛ Particles" */
+/** @button "⚛️ Particles" */
 export function choosePresetParticles() {
   updateParams(presets.particles);
 }

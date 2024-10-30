@@ -1,5 +1,4 @@
 {
-  "title": "Boids (experimental)",
-  "category": "simulation",
-  "tags": ["experimental"]
+  "title": "Boids",
+  "category": "simulation"
 }
