@@ -9,6 +9,7 @@ import { ArrayInfo, StructInfo, TemplateInfo, WgslReflect } from 'wgsl_reflect';
  * @typedef {import('wgsl_reflect').MemberInfo} MemberInfo
  * @typedef {import('wgsl_reflect').TypeInfo} TypeInfo
  * @typedef {import('wgsl_reflect').VariableInfo} VariableInfo
+ * @typedef {import('wgsl_reflect').FunctionInfo} FunctionInfo
  */
 
 const cwd = new URL(`file:${process.cwd()}/`);
@@ -115,11 +116,12 @@ export function generate(
     reflect.getBindGroups(),
     options,
   );
+  const functions = generateFunctions(reflect.functions, wgsl, options);
   const imports = generateImports(options);
   const exports_ = generateExports(options);
 
   return `/* generated via tgpu-gen by TypeGPU */
-${[imports, structs, aliases, bindGroupLayouts, exports_].filter((generated) => generated.trim() !== '').join('\n')}
+${[imports, structs, aliases, bindGroupLayouts, functions, exports_].filter((generated) => generated.trim() !== '').join('\n')}
 `;
 }
 
@@ -424,6 +426,59 @@ function generateExternalTextureVariable(variable) {
   return `{
     externalTexture: {},
   }`;
+}
+
+/**
+ * @param {FunctionInfo[]} functions
+ * @param {string} wgsl
+ * @param {Options} options
+ */
+function generateFunctions(functions, wgsl, options) {
+  return functions.length > 0
+    ? `\n/* functions */
+${functions
+  .map(
+    (func) =>
+      `${declareConst(func.name, options)} = ${generateFunction(func, wgsl, options)};`,
+  )
+  .join('\n\n')}`
+    : '';
+}
+
+/**
+ * @param {FunctionInfo} func
+ * @param {string} wgsl
+ * @param {Options} options
+ */
+function generateFunction(func, wgsl, options) {
+  setUseImport('tgpu', options);
+
+  const implementation = wgsl
+    .split('\n')
+    .slice(func.startLine - 1, func.endLine)
+    .join('\n');
+
+  const funcType =
+    func.stage === 'fragment'
+      ? 'fragmentFn'
+      : func.stage === 'vertex'
+        ? 'vertexFn'
+        : 'fn';
+
+  const inputs = `[${[func.inputs, func.arguments]
+    .flat()
+    .flatMap((input) => (input.type ? [generateType(input.type, options)] : []))
+    .join(', ')}]`;
+
+  const output = func.outputs[0]?.type
+    ? generateType(func.outputs[0].type, options)
+    : func.returnType
+      ? generateType(func.returnType, options)
+      : null;
+
+  return `tgpu
+  .${funcType}(${inputs}${output ? `, ${output}` : ''})
+  .implement(/* wgsl */ \`${implementation.slice(implementation.indexOf(func.name) + func.name.length)}\`)`;
 }
 
 /**

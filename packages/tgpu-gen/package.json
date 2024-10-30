@@ -15,7 +15,7 @@
     "chokidar": "^4.0.1",
     "glob": "^11.0.0",
     "remeda": "^2.3.0",
-    "wgsl_reflect": "^1.0.12"
+    "wgsl_reflect": "git://github.com/brendan-duncan/wgsl_reflect.git#884637059174a8dcb2c984058fd254d453f7ce64"
   },
   "files": ["README.md", "LICENSE.md", "package.json", "**/*.mjs"],
   "devDependencies": {
