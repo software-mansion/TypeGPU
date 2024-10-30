@@ -153,7 +153,7 @@ export function ExampleView({ example, isPlayground = false }: Props) {
 
       frame.style.position = 'relative';
       frame.style.aspectRatio = aspectRatio;
-      frame.style.height = 'min(100cqw, 100cqh)';
+      frame.style.height = `min(calc(min(100cqw, 100cqh)/(${aspectRatio})), min(100cqw, 100cqh))`;
 
       newCanvas.style.position = 'absolute';
       newCanvas.style.width = '100%';

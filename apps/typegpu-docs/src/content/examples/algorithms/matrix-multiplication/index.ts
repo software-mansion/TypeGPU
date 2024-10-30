@@ -125,6 +125,17 @@ function createMatrix(
   };
 }
 
+function printMatrixToHtml(
+  element: HTMLDivElement,
+  matrix: Parsed<typeof MatrixStruct>,
+) {
+  element.style.gridTemplateColumns = `repeat(${matrix.size.y}, 1fr)`;
+  element.innerHTML = matrix.numbers
+    .slice(0, matrix.size.x * matrix.size.y)
+    .map((x) => `<div>${x}</div>`)
+    .join('');
+}
+
 async function run() {
   const firstMatrix = root.readPlum(firstMatrixPlum);
   const secondMatrix = root.readPlum(secondMatrixPlum);
@@ -134,16 +145,9 @@ async function run() {
   program.execute({ workgroups: [workgroupCountX, workgroupCountY] });
   const multiplicationResult = await resultMatrixBuffer.read();
 
-  const matrixToHtml = (matrix: Parsed<typeof MatrixStruct>) =>
-    `<div 
-        style="display: grid; gap: 0.5rem; background: white; padding: 1rem; border-radius: 0.25rem; grid-template-columns: repeat(${matrix.size.y}, 1fr)">${matrix.numbers
-          .slice(0, matrix.size.x * matrix.size.y)
-          .map((x) => `<div style="padding: 0.5rem;">${x}</div>`)
-          .join('')}</div>`;
-
-  firstTable.innerHTML = matrixToHtml(firstMatrix);
-  secondTable.innerHTML = matrixToHtml(secondMatrix);
-  resultTable.innerHTML = matrixToHtml(multiplicationResult);
+  printMatrixToHtml(firstTable, firstMatrix);
+  printMatrixToHtml(secondTable, secondMatrix);
+  printMatrixToHtml(resultTable, multiplicationResult);
 }
 
 addButtonParameter('Reshuffle', () => {
