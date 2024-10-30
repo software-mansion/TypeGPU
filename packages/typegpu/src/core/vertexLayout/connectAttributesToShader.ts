@@ -16,6 +16,10 @@ export interface ConnectAttributesToShaderResult {
   bufferDefinitions: GPUVertexBufferLayout[];
 }
 
+function stripF16AttributeFormat(format: string): GPUVertexFormat {
+  return format.replace(/h$/, '') as GPUVertexFormat;
+}
+
 function isAttribute<T extends TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib>(
   value: unknown | T,
 ): value is T {
@@ -46,7 +50,7 @@ export function connectAttributesToShader(
           stepMode: attributes._layout.stepMode,
           attributes: [
             {
-              format: attributes.format,
+              format: stripF16AttributeFormat(attributes.format),
               offset: attributes.offset,
               shaderLocation: getCustomLocation(shaderInputLayout) ?? 0,
             },
@@ -98,7 +102,7 @@ export function connectAttributesToShader(
     nextShaderLocation = getCustomLocation(member) ?? nextShaderLocation;
 
     attribList.push({
-      format: matchingAttribute.format,
+      format: stripF16AttributeFormat(matchingAttribute.format),
       offset: matchingAttribute.offset,
       shaderLocation: nextShaderLocation++,
     });
