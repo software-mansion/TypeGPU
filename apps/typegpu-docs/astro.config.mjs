@@ -101,14 +101,24 @@ export default defineConfig({
           ]),
         },
         {
+          label: 'Integration',
+          items: stripFalsy([
+            {
+              label: 'Working with wgpu-matrix',
+              slug: 'integration/working-with-wgpu-matrix',
+              badge: { text: 'new' },
+            },
+          ]),
+        },
+        {
           label: 'Tooling',
-          items: [
+          items: stripFalsy([
             {
               label: 'Generator CLI',
               slug: 'tooling/tgpu-gen',
-              badge: { text: 'new', variant: 'default' },
+              badge: { text: 'new' },
             },
-          ],
+          ]),
         },
         DEV && {
           label: 'Tutorials',
