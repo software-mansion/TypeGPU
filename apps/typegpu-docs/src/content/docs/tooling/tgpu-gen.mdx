@@ -1,13 +1,12 @@
 ---
-title: TypeGPU CLI
-description: A guide on how to use the TypeGPU CLI
-draft: true
+title: Generator CLI
+description: A guide on how to use the TypeGPU Generator CLI
 ---
 
 import { FileTree } from '@astrojs/starlight/components';
 import FileDiff from '../../../components/FileDiff.astro';
 
-TypeGPU CLI (tgpu-cli) is a command-line interface for the TypeGPU library.
+TypeGPU Generator (tgpu-gen) is a command-line interface for the TypeGPU code generator.
 It provides a way for a highly automated migration process and is a great tool
 for existing WebGPU projects that want to start taking advantage of type-safe TypeGPU features.
 
@@ -16,7 +15,7 @@ for existing WebGPU projects that want to start taking advantage of type-safe Ty
 Using npm:
 
 ```bash
-npm install -g tgpu-cli
+npm install -g tgpu-gen
 ```
 
 ## Feature overview
@@ -179,12 +178,12 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 If we wanted to leverage TypeGPU's type-safe features with these shaders, we could
 manually create the necessary definitions. However, maintaining these handcrafted
 definitions in sync with the shaders can be both tedious and prone to errors.
-Fortunately, we don't have to do that; we can use the TypeGPU CLI to automatically generate the required TypeScript definitions for us.
+Fortunately, we don't have to do that; we can use the TypeGPU Generator CLI to automatically generate the required TypeScript definitions for us.
 
 Assuming that we are inside the project directory (computeBoids folder), we can run the following command to generate the TypeScript definitions for the shaders:
 
 ```bash
-tgpu-cli gen "shaders/*.wgsl" -o "definitions/*.ts"
+tgpu-gen "shaders/*.wgsl" -o "definitions/*.ts"
 ```
 
 This command will generate the following files:
@@ -208,7 +207,7 @@ The generated TypeScript definitions look like this:
   <details>
   <summary>Click to see the content</summary>
   ```typescript
-  /* generated via tgpu-cli by TypeGPU */
+  /* generated via tgpu-gen by TypeGPU */
   import tgpu from 'typegpu';
   import * as d from 'typegpu/data';
 
@@ -253,7 +252,7 @@ The generated TypeScript definitions look like this:
   <details>
   <summary>Click to see the content</summary>
   ```typescript
-  /* generated via tgpu-cli by TypeGPU */
+  /* generated via tgpu-gen by TypeGPU */
   import * as d from 'typegpu/data';
 
   /* structs */
@@ -272,14 +271,14 @@ For specific usage details, check out the following Usage section.
 
 ## Usage
 
-This section will cover the most common use cases of the TypeGPU CLI and provide short examples.
+This section will cover the most common use cases of the TypeGPU Generator CLI and provide short examples.
 
 ### Generate TypeGPU definitions for WGSL shader files
 
 To generate TypeGPU definitions from a single WGSL shader file, run:
 
 ```bash
-tgpu-cli gen path/to/shader.wgsl
+tgpu-gen path/to/shader.wgsl
 ```
 
 This will generate a TypeScript file with the TypeGPU definitions in the same directory as the shader.
@@ -296,19 +295,19 @@ By default, the generated file will have the same name as the shader, with the `
 :::note
 Another valid way to run the command is by using quotes:
 ```bash
-tgpu-cli gen "path/to/shader.wgsl"
+tgpu-gen "path/to/shader.wgsl"
 # or
-tgpu-cli gen 'path/to/shader.wgsl'
+tgpu-gen 'path/to/shader.wgsl'
 ```
 The quotes are not necessary if the path does not contain spaces. However, using them is a good practice to avoid potential issues.
 If you are using glob patterns, quotes are required to prevent the shell from expanding them.
 :::
 
-TypeGPU CLI supports glob patterns for specifying input paths.
+TypeGPU Generator CLI supports glob patterns for specifying input paths.
 The following command will generate TypeGPU definitions for all WGSL files inside a given directory:
 
 ```bash
-tgpu-cli gen "path/to/*.wgsl"
+tgpu-gen "path/to/*.wgsl"
 ```
 
 The generated TypeScript files will have the same names as the shaders, with the `.ts` extension.
@@ -328,7 +327,7 @@ The generated TypeScript files will have the same names as the shaders, with the
 To specify a recursive search, use the `**` pattern:
 
 ```bash
-tgpu-cli gen "path/to/**/*.wgsl"
+tgpu-gen "path/to/**/*.wgsl"
 ```
 
 This will generate TypeGPU definitions for all WGSL files inside the `path/to` directory and its subdirectories.
@@ -354,7 +353,7 @@ By default, the generated TypeScript files are placed in the same directory as t
 You can specify a different output path using the `--output` option:
 
 ```bash
-tgpu-cli gen "path/to/shader.wgsl" --output "different/path/output.ts"
+tgpu-gen "path/to/shader.wgsl" --output "different/path/output.ts"
 ```
 
 This will generate the TypeGPU definitions in the `different/path` directory with the `output.ts` filename.
@@ -371,7 +370,7 @@ This will generate the TypeGPU definitions in the `different/path` directory wit
 It also supports glob patterns for specifying the output path:
 
 ```bash
-tgpu-cli gen "path/to/*.wgsl" --output "output/*.ts"
+tgpu-gen "path/to/*.wgsl" --output "output/*.ts"
 ```
 
 This will generate the TypeGPU definitions in the `output` directory with the same names as the shaders, but with the `.ts` extension.
@@ -412,7 +411,7 @@ Consider the following directory structure:
 If you run:
 
 ```bash
-tgpu-cli gen "src/**/*.wgsl" --output "output/*.ts"
+tgpu-gen "src/**/*.wgsl" --output "output/*.ts"
 ```
 
 The script will fail because all generated files will be placed in the `output` directory, and there will
@@ -435,7 +434,7 @@ be a name conflict as both `shader1.wgsl` and `example/shader1.wgsl` will try to
 To avoid this issue, use the `**` pattern in the output path as well:
 
 ```bash
-tgpu-cli gen "src/**/*.wgsl" --output "output/**/*.ts"
+tgpu-gen "src/**/*.wgsl" --output "output/**/*.ts"
 ```
 
 This will generate the TypeGPU definitions in the `output` directory with the same directory structure as the input files.
@@ -460,7 +459,7 @@ This will generate the TypeGPU definitions in the `output` directory with the sa
 You can also use the `-o` shorthand for the `--output` option:
 
 ```bash
-tgpu-cli gen "path/to/shader.wgsl" -o "different/path/output.ts"
+tgpu-gen "path/to/shader.wgsl" -o "different/path/output.ts"
 ```
 
 ### Supported extensions and module formats
@@ -469,7 +468,7 @@ By default, the generated TypeScript files use the `.ts` extension and the ES mo
 You can specify a different extension by just providing the extension in the output path:
 
 ```bash
-tgpu-cli gen "path/to/shader.wgsl" -o "different/path/output.js"
+tgpu-gen "path/to/shader.wgsl" -o "different/path/output.js"
 ```
 
 This will generate the TypeGPU definitions in the `different/path` directory with the `output.js` filename.
@@ -501,7 +500,7 @@ Specifying an extension does not change the module format.
 To specify the commonjs module format, use the `--commonjs` option.
 
 ```bash
-tgpu-cli gen "path/to/shader.wgsl" -o "different/path/output.cjs" --commonjs
+tgpu-gen "path/to/shader.wgsl" -o "different/path/output.cjs" --commonjs
 ```
 :::
 
@@ -511,7 +510,7 @@ When generating TypeGPU definitions, if the output file already exists, the scri
 You can use the `--keep` option to skip the generation of the file if it already exists:
 
 ```bash
-tgpu-cli gen "path/to/*.wgsl" --output "output/*.ts" --keep
+tgpu-gen "path/to/*.wgsl" --output "output/*.ts" --keep
 ```
 
 This will skip the generation of the TypeGPU definitions for shaders that already have a corresponding TypeScript file in the output directory.
@@ -519,18 +518,18 @@ This will skip the generation of the TypeGPU definitions for shaders that alread
 If you want to overwrite the existing files, you can use the `--overwrite` option:
 
 ```bash
-tgpu-cli gen "path/to/*.wgsl" --output "output/*.ts" --overwrite
+tgpu-gen "path/to/*.wgsl" --output "output/*.ts" --overwrite
 ```
 
 This will overwrite the existing TypeScript files with the new TypeGPU definitions.
 
 ### Watch mode
 
-TypeGPU CLI supports a watch mode that continuously monitors the input files for changes and updates the generated definitions.
+TypeGPU Generator CLI supports a watch mode that continuously monitors the input files for changes and updates the generated definitions.
 To enable the watch mode, use the `--watch` (or `-w`) option:
 
 ```bash
-tgpu-cli gen "path/to/*.wgsl" --output "output/*.ts" --watch
+tgpu-gen "path/to/*.wgsl" --output "output/*.ts" --watch
 ```
 
 This will generate the TypeGPU definitions for all WGSL files inside the `path/to` directory
@@ -539,19 +538,12 @@ By default, the watch mode will overwrite the existing files when changes are de
 You can also use the `--keep` and `--overwrite` options in the watch mode. They will only affect the initial generation.
 
 
-## Getting help with the CLI
+## Getting help with the Generator CLI
 
-To get a quick overview of the available commands, run:
-
-```bash
-tgpu-cli --help
-```
-
-This will display a list of available commands and options.
-To get more detailed information about a specific command, run:
+To get a quick overview of the generator, its arguments and options, run:
 
 ```bash
-tgpu-cli <command> --help
+tgpu-gen --help
 ```
 
 You can also use the `-h` shorthand for the `--help` option.

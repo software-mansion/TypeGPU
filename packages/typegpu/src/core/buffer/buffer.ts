@@ -30,6 +30,15 @@ type UnionToIntersection<U> =
     ? I
     : never;
 
+type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
+  T extends 'uniform'
+    ? Uniform
+    : T extends 'storage'
+      ? Storage
+      : T extends 'vertex'
+        ? Vertex
+        : never;
+
 export interface TgpuBuffer<TData extends AnyTgpuData> extends TgpuNamable {
   readonly resourceType: 'buffer';
   readonly dataType: TData;
@@ -40,9 +49,9 @@ export interface TgpuBuffer<TData extends AnyTgpuData> extends TgpuNamable {
   readonly device: GPUDevice;
   readonly destroyed: boolean;
 
-  $usage<T extends (Uniform | Storage | Vertex)[]>(
+  $usage<T extends ('uniform' | 'storage' | 'vertex')[]>(
     ...usages: T
-  ): this & UnionToIntersection<T[number]>;
+  ): this & UnionToIntersection<LiteralToUsageType<T[number]>>;
   $addFlags(flags: GPUBufferUsageFlags): this;
   $device(device: GPUDevice): this;
 
@@ -189,18 +198,18 @@ class TgpuBufferImpl<TData extends AnyTgpuData> implements TgpuBuffer<TData> {
     return this;
   }
 
-  $usage<T extends (Uniform | Storage | Vertex)[]>(
+  $usage<T extends ('uniform' | 'storage' | 'vertex')[]>(
     ...usages: T
-  ): this & UnionToIntersection<T[number]> {
+  ): this & UnionToIntersection<LiteralToUsageType<T[number]>> {
     for (const usage of usages) {
-      this.flags |= usage === Uniform ? GPUBufferUsage.UNIFORM : 0;
-      this.flags |= usage === Storage ? GPUBufferUsage.STORAGE : 0;
-      this.flags |= usage === Vertex ? GPUBufferUsage.VERTEX : 0;
-      this.usableAsUniform = this.usableAsUniform || usage === Uniform;
-      this.usableAsStorage = this.usableAsStorage || usage === Storage;
-      this.usableAsVertex = this.usableAsVertex || usage === Vertex;
+      this.flags |= usage === 'uniform' ? GPUBufferUsage.UNIFORM : 0;
+      this.flags |= usage === 'storage' ? GPUBufferUsage.STORAGE : 0;
+      this.flags |= usage === 'vertex' ? GPUBufferUsage.VERTEX : 0;
+      this.usableAsUniform = this.usableAsUniform || usage === 'uniform';
+      this.usableAsStorage = this.usableAsStorage || usage === 'storage';
+      this.usableAsVertex = this.usableAsVertex || usage === 'vertex';
     }
-    return this as this & UnionToIntersection<T[number]>;
+    return this as this & UnionToIntersection<LiteralToUsageType<T[number]>>;
   }
 
   // Temporary solution
