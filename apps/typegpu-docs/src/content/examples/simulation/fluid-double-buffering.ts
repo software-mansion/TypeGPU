@@ -42,7 +42,7 @@ const canvas = await addElement('canvas', { aspectRatio: 1 });
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const root = await tgpu.init({ jitTranspiler: new JitTranspiler() });
+const root = await tgpu.init({ unstable_jitTranspiler: new JitTranspiler() });
 
 context.configure({
   device: root.device,
@@ -93,11 +93,11 @@ const BoxObstacle = struct({
 });
 
 const gridSize = 256;
-const gridSizeBuffer = root.createBuffer(i32).$usage(tgpu.Uniform);
+const gridSizeBuffer = root.createBuffer(i32).$usage('uniform');
 const gridSizeUniform = asUniform(gridSizeBuffer);
 
-const gridAlphaBuffer = root.createBuffer(GridData).$usage(tgpu.Storage);
-const gridBetaBuffer = root.createBuffer(GridData).$usage(tgpu.Storage);
+const gridAlphaBuffer = root.createBuffer(GridData).$usage('storage');
+const gridBetaBuffer = root.createBuffer(GridData).$usage('storage');
 
 const inputGridSlot = wgsl.slot<TgpuBufferUsage<GridData>>();
 const outputGridSlot = wgsl.slot<TgpuBufferUsage<GridData, 'mutable'>>();
@@ -106,13 +106,13 @@ const MAX_OBSTACLES = 4;
 
 const prevObstaclesBuffer = root
   .createBuffer(arrayOf(BoxObstacle, MAX_OBSTACLES))
-  .$usage(tgpu.Storage);
+  .$usage('storage');
 
 const prevObstacleReadonly = asReadonly(prevObstaclesBuffer);
 
 const obstaclesBuffer = root
   .createBuffer(arrayOf(BoxObstacle, MAX_OBSTACLES))
-  .$usage(tgpu.Storage);
+  .$usage('storage');
 
 const obstaclesReadonly = asReadonly(obstaclesBuffer);
 
@@ -192,7 +192,7 @@ const flowFromCell = wgsl.fn`
   }
 `.$name('flow_from_cell');
 
-const timeBuffer = root.createBuffer(f32).$usage(tgpu.Uniform);
+const timeBuffer = root.createBuffer(f32).$usage('uniform');
 
 const isInsideObstacle = wgsl.fn`
   (x: i32, y: i32) -> bool {
@@ -429,7 +429,7 @@ const sourceParamsBuffer = root
       radius: get(sourceRadiusPlum),
     })),
   )
-  .$usage(tgpu.Uniform);
+  .$usage('uniform');
 
 const getMinimumInFlow = wgsl.fn`
   (x: i32, y: i32) -> f32 {

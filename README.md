@@ -3,19 +3,19 @@
 ![TypeGPU (light mode)](./apps/typegpu-docs/public/typegpu-logo-light.svg#gh-light-mode-only)
 ![TypeGPU (dark mode)](./apps/typegpu-docs/public/typegpu-logo-dark.svg#gh-dark-mode-only)
 
-[Website](https://docs.swmansion.com/TypeGPU) — [Documentation](https://docs.swmansion.com/TypeGPU/guides/getting-started)
+[Website](https://docs.swmansion.com/TypeGPU) — [Documentation](https://docs.swmansion.com/TypeGPU/getting-started)
 
 </div>
 
 **TypeGPU** is a TypeScript library that enhances the WebGPU API, allowing resource management in a type-safe, declarative way.
 
 <div align="center">
-<video width="512" autoplay muted loop src="https://github.com/user-attachments/assets/4dcbdcc6-5aa0-4adc-a40c-468c750d4d76"></video>
+<video width="512" autoplay muted loop src="https://github.com/user-attachments/assets/5bca716d-477d-44a1-a839-5df0c8d9044c"></video>
 </div>
 
 ## Documentation
 
-We created a set of guides and tutorials to get you up and running fast. Check out our [Official Docs](https://docs.swmansion.com/TypeGPU/guides/getting-started)!
+We created a set of guides and tutorials to get you up and running fast. Check out our [Official Docs](https://docs.swmansion.com/TypeGPU/getting-started)!
 
 ## What's next?
 

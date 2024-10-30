@@ -62,11 +62,11 @@ describe('TgpuRoot', () => {
     vi.restoreAllMocks();
   });
 
-  it('should create buffer with no initialization', async () => {
-    const root = await tgpu.init({
+  it('should create buffer with no initialization', () => {
+    const root = tgpu.initFromDevice({
       device: mockDevice as unknown as GPUDevice,
     });
-    const dataBuffer = root.createBuffer(u32).$usage(tgpu.Uniform);
+    const dataBuffer = root.createBuffer(u32).$usage('uniform');
     const data = asUniform(dataBuffer);
 
     const testPipeline = root.makeComputePipeline({
@@ -88,13 +88,13 @@ describe('TgpuRoot', () => {
     });
   });
 
-  it('should create buffer with initialization', async () => {
-    const root = await tgpu.init({
+  it('should create buffer with initialization', () => {
+    const root = tgpu.initFromDevice({
       device: mockDevice as unknown as GPUDevice,
     });
     const dataBuffer = root
       .createBuffer(vec3i, vec3i(0, 0, 0))
-      .$usage(tgpu.Uniform);
+      .$usage('uniform');
     const data = asUniform(dataBuffer);
 
     const testPipeline = root.makeComputePipeline({
@@ -116,13 +116,13 @@ describe('TgpuRoot', () => {
     });
   });
 
-  it('should allocate buffer with proper size for nested structs', async () => {
-    const root = await tgpu.init({
+  it('should allocate buffer with proper size for nested structs', () => {
+    const root = tgpu.initFromDevice({
       device: mockDevice as unknown as GPUDevice,
     });
     const s1 = struct({ a: u32, b: u32 });
     const s2 = struct({ a: u32, b: s1 });
-    const dataBuffer = root.createBuffer(s2).$usage(tgpu.Uniform);
+    const dataBuffer = root.createBuffer(s2).$usage('uniform');
     const data = asUniform(dataBuffer);
 
     const testPipeline = root.makeComputePipeline({
@@ -142,8 +142,8 @@ describe('TgpuRoot', () => {
     });
   });
 
-  it('should properly write to buffer', async () => {
-    const root = await tgpu.init({
+  it('should properly write to buffer', () => {
+    const root = tgpu.initFromDevice({
       device: mockDevice as unknown as GPUDevice,
     });
     const dataBuffer = root.createBuffer(u32);
@@ -162,15 +162,15 @@ describe('TgpuRoot', () => {
     );
   });
 
-  it('should properly write to complex buffer', async () => {
-    const root = await tgpu.init({
+  it('should properly write to complex buffer', () => {
+    const root = tgpu.initFromDevice({
       device: mockDevice as unknown as GPUDevice,
     });
 
     const s1 = struct({ a: u32, b: u32, c: vec3i });
     const s2 = struct({ a: u32, b: s1, c: vec4u });
 
-    const dataBuffer = root.createBuffer(s2).$usage(tgpu.Uniform);
+    const dataBuffer = root.createBuffer(s2).$usage('uniform');
     const data = asUniform(dataBuffer);
 
     const testPipeline = root.makeComputePipeline({
@@ -207,13 +207,13 @@ describe('TgpuRoot', () => {
     );
   });
 
-  it('should properly write to buffer with plum initialization', async () => {
-    const root = await tgpu.init({
+  it('should properly write to buffer with plum initialization', () => {
+    const root = tgpu.initFromDevice({
       device: mockDevice as unknown as GPUDevice,
     });
     const intPlum = plum<number>(3);
 
-    const dataBuffer = root.createBuffer(u32, intPlum).$usage(tgpu.Storage);
+    const dataBuffer = root.createBuffer(u32, intPlum).$usage('storage');
     const spy = vi.spyOn(dataBuffer, 'write');
 
     const buffer = asReadonly(dataBuffer);
@@ -249,12 +249,12 @@ describe('TgpuRoot', () => {
   });
 
   // TODO: Adapt the tests to the new API
-  // it('creates a pipeline descriptor with a valid vertex buffer', async () => {
-  //   const root = await tgpu.init({
+  // it('creates a pipeline descriptor with a valid vertex buffer', () => {
+  //   const root = tgpu.initFromDevice({
   //     device: mockDevice as unknown as GPUDevice,
   //   });
 
-  //   const dataBuffer = root.createBuffer(vec3f).$usage(tgpu.Vertex);
+  //   const dataBuffer = root.createBuffer(vec3f).$usage('vertex');
   //   const data = asVertex(dataBuffer, 'vertex');
 
   //   const testPipeline = root.makeRenderPipeline({
@@ -312,14 +312,14 @@ describe('TgpuRoot', () => {
   //   });
   // });
 
-  // it('creates a pipeline descriptor with a valid vertex buffer (array)', async () => {
-  //   const root = await tgpu.init({
+  // it('creates a pipeline descriptor with a valid vertex buffer (array)', () => {
+  //   const root = tgpu.initFromDevice({
   //     device: mockDevice as unknown as GPUDevice,
   //   });
 
   //   const dataBuffer = root
   //     .createBuffer(arrayOf(vec2f, 10))
-  //     .$usage(tgpu.Vertex);
+  //     .$usage('vertex');
   //   const data = asVertex(dataBuffer, 'vertex');
 
   //   const testPipeline = root.makeRenderPipeline({
@@ -379,8 +379,8 @@ describe('TgpuRoot', () => {
   //   });
   // });
 
-  // it('should throw an error when trying to create an invalid vertex buffer', async () => {
-  //   const root = await tgpu.init({
+  // it('should throw an error when trying to create an invalid vertex buffer', () => {
+  //   const root = tgpu.initFromDevice({
   //     device: mockDevice as unknown as GPUDevice,
   //   });
 
@@ -392,21 +392,21 @@ describe('TgpuRoot', () => {
   //         throw: u32,
   //       }),
   //     )
-  //     .$usage(tgpu.Vertex);
+  //     .$usage('vertex');
 
   //   expect(() => asVertex(bufferData, 'vertex')).toThrowError(
   //     'Cannot create vertex buffer with complex data types.',
   //   );
   // });
 
-  // it('should properly extract primitive type from nested arrays in vertex buffer', async () => {
-  //   const root = await tgpu.init({
+  // it('should properly extract primitive type from nested arrays in vertex buffer', () => {
+  //   const root = tgpu.initFromDevice({
   //     device: mockDevice as unknown as GPUDevice,
   //   });
 
   //   const bufferData = root
   //     .createBuffer(arrayOf(arrayOf(arrayOf(u32, 10), 3), 2))
-  //     .$usage(tgpu.Vertex);
+  //     .$usage('vertex');
 
   //   const buffer = asVertex(bufferData, 'vertex');
 

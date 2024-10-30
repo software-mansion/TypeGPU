@@ -27,12 +27,10 @@ table.setMatrix([[0]]);
 // ---
 
 const root = await tgpu.init({
-  jitTranspiler: new JitTranspiler(),
+  unstable_jitTranspiler: new JitTranspiler(),
 });
 
-const counterBuffer = root
-  .createBuffer(vec2f, vec2f(0, 1))
-  .$usage(tgpu.Storage);
+const counterBuffer = root.createBuffer(vec2f, vec2f(0, 1)).$usage('storage');
 const counter = asMutable(counterBuffer);
 
 const increment = tgpu

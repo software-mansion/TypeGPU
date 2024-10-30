@@ -1,37 +1,79 @@
 import type { Parsed } from 'typed-binary';
-import {
-  type TgpuBuffer,
-  createBufferImpl,
-  isBuffer,
-} from './core/buffer/buffer';
-import { INTERNAL_createComputePipeline } from './core/pipeline/computePipeline';
-import type { JitTranspiler } from './jitTranspiler';
-import { WeakMemo } from './memo';
-import { type PlumListener, PlumStore } from './plumStore';
-import type { Program } from './programBuilder';
-import type { TgpuSettable } from './settableTrait';
-import type { TgpuBindGroup, TgpuBindGroupLayout } from './tgpuBindGroupLayout';
-import { isBindGroup, isBindGroupLayout } from './tgpuBindGroupLayout';
-import type { ExtractPlumValue, TgpuPlum, Unsubscribe } from './tgpuPlumTypes';
+
+import type { JitTranspiler } from '../../jitTranspiler';
+import { WeakMemo } from '../../memo';
+import { type PlumListener, PlumStore } from '../../plumStore';
+import type { Program } from '../../programBuilder';
+import type { TgpuSettable } from '../../settableTrait';
 import type {
-  ComputePipelineExecutorOptions,
-  RenderPipelineExecutorOptions,
-  SetPlumAction,
-  TgpuRoot,
-} from './tgpuRoot';
-import type { TgpuSampler } from './tgpuSampler';
+  TgpuBindGroup,
+  TgpuBindGroupLayout,
+} from '../../tgpuBindGroupLayout';
+import { isBindGroup, isBindGroupLayout } from '../../tgpuBindGroupLayout';
+import type {
+  ExtractPlumValue,
+  TgpuPlum,
+  Unsubscribe,
+} from '../../tgpuPlumTypes';
+import type { TgpuSampler } from '../../tgpuSampler';
 import type {
   TgpuAnyTexture,
   TgpuAnyTextureView,
   TgpuTextureExternal,
-} from './tgpuTexture';
-import type { AnyTgpuData } from './types';
+} from '../../tgpuTexture';
+import type { AnyTgpuData } from '../../types';
+import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
+import {
+  INTERNAL_createComputePipeline,
+  type TgpuComputePipeline,
+} from '../pipeline/computePipeline';
+import {
+  INTERNAL_createRenderPipeline,
+  type TgpuRenderPipeline,
+} from '../pipeline/renderPipeline';
+import type {
+  ComputePipelineExecutorOptions,
+  ExperimentalTgpuRoot,
+  RenderPipelineExecutorOptions,
+  SetPlumAction,
+  WithCompute,
+  WithFragment,
+  WithVertex,
+} from './rootTypes';
+
+class WithComputeImpl implements WithCompute {
+  constructor(private readonly _root: ExperimentalTgpuRoot) {}
+
+  createPipeline(): TgpuComputePipeline {
+    return INTERNAL_createComputePipeline(this._root);
+  }
+}
+
+class WithVertexImpl implements WithVertex {
+  constructor(private readonly _root: ExperimentalTgpuRoot) {}
+
+  withFragment(): WithFragment {
+    return new WithFragmentImpl(this._root);
+  }
+
+  createPipeline(): TgpuRenderPipeline {
+    return INTERNAL_createRenderPipeline(this._root);
+  }
+}
+
+class WithFragmentImpl implements WithFragment {
+  constructor(private readonly _root: ExperimentalTgpuRoot) {}
+
+  createPipeline(): TgpuRenderPipeline {
+    return INTERNAL_createRenderPipeline(this._root);
+  }
+}
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a root can interact via GPU buffers.
  */
-class TgpuRootImpl implements TgpuRoot {
+class TgpuRootImpl implements ExperimentalTgpuRoot {
   private _buffers: TgpuBuffer<AnyTgpuData>[] = [];
   private _samplers = new WeakMap<TgpuSampler, GPUSampler>();
   private _textures = new WeakMap<TgpuAnyTexture, GPUTexture>();
@@ -170,10 +212,6 @@ class TgpuRootImpl implements TgpuRoot {
     return gpuSampler;
   }
 
-  createPipeline(): void {
-    return INTERNAL_createComputePipeline(this);
-  }
-
   setSource(
     texture: TgpuTextureExternal,
     source: HTMLVideoElement | VideoFrame,
@@ -215,6 +253,18 @@ class TgpuRootImpl implements TgpuRoot {
     return this._plumStore.subscribe(plum, listener);
   }
 
+  withCompute(): WithCompute {
+    return new WithComputeImpl(this);
+  }
+
+  withVertex(): WithVertex {
+    return new WithVertexImpl(this);
+  }
+
+  withFragment(): WithFragment {
+    return new WithFragmentImpl(this);
+  }
+
   flush() {
     if (!this._commandEncoder) {
       return;
@@ -233,7 +283,7 @@ interface PipelineExecutor {
 
 class RenderPipelineExecutor implements PipelineExecutor {
   constructor(
-    private root: TgpuRoot,
+    private root: ExperimentalTgpuRoot,
     private pipeline: GPURenderPipeline,
     private vertexProgram: Program,
     private fragmentProgram: Program,
@@ -290,7 +340,7 @@ class RenderPipelineExecutor implements PipelineExecutor {
 
 class ComputePipelineExecutor implements PipelineExecutor {
   constructor(
-    private root: TgpuRoot,
+    private root: ExperimentalTgpuRoot,
     private pipeline: GPUComputePipeline,
     private programs: Program[],
     private externalLayoutCount: number,
@@ -327,22 +377,30 @@ class ComputePipelineExecutor implements PipelineExecutor {
 }
 
 /**
- * Options passed into {@link createRoot}.
+ * Options passed into {@link init}.
  */
-export type CreateRootOptions = {
+export type InitOptions = {
   adapter?: GPURequestAdapterOptions | undefined;
   device?: GPUDeviceDescriptor | undefined;
-  jitTranspiler?: JitTranspiler | undefined;
+  unstable_jitTranspiler?: JitTranspiler | undefined;
 };
 
 /**
- * @param options
- * @returns
+ * Options passed into {@link initFromDevice}.
+ */
+export type InitFromDeviceOptions = {
+  device: GPUDevice;
+  unstable_jitTranspiler?: JitTranspiler | undefined;
+};
+
+/**
+ * Requests a new GPU device and creates a root around it.
+ * If a specific device should be used instead, use @see initFromDevice.
  *
  * @example
  * When given no options, the function will ask the browser for a suitable GPU device.
  * ```ts
- * createRoot();
+ * const root = await tgpu.init();
  * ```
  *
  * @example
@@ -350,23 +408,12 @@ export type CreateRootOptions = {
  * ```ts
  * const adapterOptions: GPURequestAdapterOptions = ...;
  * const deviceDescriptor: GPUDeviceDescriptor = ...;
- * createRoot({ adapter: adapterOptions, device: deviceDescriptor });
- * ```
- *
- * @example
- * If a specific device should be used instead, it can be passed in as a parameter.
- * ```ts
- * const device: GPUDevice = ...;
- * createRoot(device);
+ * const root = await tgpu.init({ adapter: adapterOptions, device: deviceDescriptor });
  * ```
  */
-export async function createRoot(
-  options?: CreateRootOptions,
-): Promise<TgpuRoot> {
-  if (doesResembleDevice(options?.device)) {
-    return new TgpuRootImpl(options.device, options.jitTranspiler);
-  }
-
+export async function init(
+  options?: InitOptions,
+): Promise<ExperimentalTgpuRoot> {
   if (!navigator.gpu) {
     throw new Error('WebGPU is not supported by this browser.');
   }
@@ -379,15 +426,21 @@ export async function createRoot(
 
   return new TgpuRootImpl(
     await adapter.requestDevice(options?.device),
-    options?.jitTranspiler,
+    options?.unstable_jitTranspiler,
   );
 }
 
-function doesResembleDevice(value: unknown): value is GPUDevice {
-  return (
-    !!value &&
-    typeof value === 'object' &&
-    'createBuffer' in value &&
-    'queue' in value
-  );
+/**
+ * Creates a root from the given device, instead of requesting it like @see init.
+ *
+ * @example
+ * ```ts
+ * const device: GPUDevice = ...;
+ * const root = tgpu.initFromDevice({ device });
+ * ```
+ */
+export function initFromDevice(
+  options: InitFromDeviceOptions,
+): ExperimentalTgpuRoot {
+  return new TgpuRootImpl(options.device, options.unstable_jitTranspiler);
 }

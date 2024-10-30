@@ -14,7 +14,7 @@ import importRawRedirectPlugin from './vite-import-raw-redirect-plugin.mjs';
  * @param {T[]} items
  */
 const stripFalsy = (items) =>
-  items.filter(/** @return {item is Exclude<T, false>} */ (item) => !!item);
+  items.filter(/** @return {item is Exclude<T, boolean>} */ (item) => !!item);
 
 const DEV = import.meta.env.DEV;
 
@@ -43,49 +43,48 @@ export default defineConfig({
       customCss: ['./src/tailwind.css', './src/fonts/font-face.css'],
       plugins: [starlightBlog()],
       logo: {
-        light: '/public/typegpu-logo-light.svg',
-        dark: '/public/typegpu-logo-dark.svg',
+        light: './src/assets/typegpu-logo-light.svg',
+        dark: './src/assets/typegpu-logo-dark.svg',
         alt: 'TypeGPU Logo',
         replacesTitle: true,
       },
       components: {
         Head: './src/components/starlight/Head.astro',
+        ThemeSelect: './src/components/starlight/ThemeSelect.astro',
+        Sidebar: './src/components/starlight/Sidebar.astro',
       },
       social: {
         github: 'https://github.com/software-mansion/TypeGPU',
       },
       sidebar: stripFalsy([
         {
-          label: 'Live Examples',
-          link: 'examples',
-          // attrs: {
-          //   'data-astro-reload': true,
-          // },
+          label: 'Why TypeGPU?',
+          slug: 'why-typegpu',
         },
         {
-          label: 'Guides',
+          label: 'Getting Started',
+          slug: 'getting-started',
+        },
+        {
+          label: 'Fundamentals',
           items: stripFalsy([
-            // Each item here is one entry in the navigation menu.
             {
-              label: 'Getting Started',
-              slug: 'guides/getting-started',
-            },
-            DEV && {
               label: 'Roots',
-              slug: 'guides/roots',
-              badge: { text: 'new', variant: 'default' },
+              slug: 'fundamentals/roots',
+              badge: { text: '0.2' },
             },
             {
-              label: 'Typed Buffers',
-              slug: 'guides/tgpu-buffer-api',
+              label: 'Buffers',
+              slug: 'fundamentals/buffers',
             },
             {
-              label: 'Defining Data Types',
-              slug: 'guides/defining-data-types',
+              label: 'Bind Groups',
+              slug: 'fundamentals/bind-groups',
+              badge: { text: '0.2' },
             },
-            DEV && {
-              label: 'Generating JS from WGSL',
-              slug: 'guides/generating-js-from-wgsl',
+            {
+              label: 'Data Schemas',
+              slug: 'fundamentals/data-schemas',
             },
             // {
             //   label: 'Basic Principles',
@@ -101,6 +100,26 @@ export default defineConfig({
             // },
           ]),
         },
+        {
+          label: 'Integration',
+          items: stripFalsy([
+            {
+              label: 'Working with wgpu-matrix',
+              slug: 'integration/working-with-wgpu-matrix',
+              badge: { text: 'new' },
+            },
+          ]),
+        },
+        {
+          label: 'Tooling',
+          items: stripFalsy([
+            {
+              label: 'Generator CLI',
+              slug: 'tooling/tgpu-gen',
+              badge: { text: 'new' },
+            },
+          ]),
+        },
         DEV && {
           label: 'Tutorials',
           items: [
@@ -110,10 +129,6 @@ export default defineConfig({
               slug: 'tutorials/triangle-to-boids',
             },
           ],
-        },
-        {
-          label: 'FAQ',
-          slug: 'faq',
         },
       ]),
     }),

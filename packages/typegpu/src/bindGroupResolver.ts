@@ -1,6 +1,9 @@
 import type { TgpuBufferVertex } from './core/buffer/bufferUsage';
+import {
+  type ExperimentalTgpuRoot,
+  deriveVertexFormat,
+} from './core/root/rootTypes';
 import type { ResolutionCtxImpl } from './resolutionCtx';
-import { type TgpuRoot, deriveVertexFormat } from './tgpuRoot';
 import { type TgpuSampler, isSampler } from './tgpuSampler';
 import {
   type TgpuAnyTextureView,
@@ -32,7 +35,7 @@ export class BindGroupResolver {
   private vertexLayout: GPUVertexBufferLayout[] | null = null;
 
   constructor(
-    private root: TgpuRoot,
+    private root: ExperimentalTgpuRoot,
     private context: ResolutionCtxImpl,
     public readonly shaderStage: number,
   ) {

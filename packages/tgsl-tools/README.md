@@ -1,6 +1,6 @@
 # @typegpu/tgsl-tools
 
-A set of utilities for working with TGSL (TypeGPU Shader Language), a subset of JavaScript that can be run on the GPU through [**TypeGPU**](https://docs.swmansion.com/typegpu).
+A set of utilities for working with TGSL (TypeGPU Shader Language), a subset of JavaScript that can be run on the GPU through [**TypeGPU**](https://docs.swmansion.com/TypeGPU).
 
 ## Basic principles
 

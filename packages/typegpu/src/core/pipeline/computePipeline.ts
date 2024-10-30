@@ -3,7 +3,7 @@ import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout';
-import type { TgpuRoot } from '../../tgpuRoot';
+import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 
 // ----------
 // Public API
@@ -24,7 +24,7 @@ export interface TgpuComputePipeline extends TgpuNamable {
   ): void;
 }
 
-export function INTERNAL_createComputePipeline(branch: TgpuRoot) {
+export function INTERNAL_createComputePipeline(branch: ExperimentalTgpuRoot) {
   return new TgpuComputePipelineImpl(branch, {});
 }
 
@@ -40,7 +40,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   private _label: string | undefined;
 
   constructor(
-    private readonly _branch: TgpuRoot,
+    private readonly _branch: ExperimentalTgpuRoot,
     private readonly _priors: TgpuComputePipelinePriors,
   ) {}
 

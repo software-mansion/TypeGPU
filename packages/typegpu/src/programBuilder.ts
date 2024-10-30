@@ -1,7 +1,7 @@
 import { BindGroupResolver } from './bindGroupResolver';
+import type { ExperimentalTgpuRoot } from './core/root/rootTypes';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
-import type { TgpuRoot } from './tgpuRoot';
 import type { TgpuResolvable } from './types';
 
 export type Program = {
@@ -17,7 +17,7 @@ type BuildOptions = {
 
 export default class ProgramBuilder {
   constructor(
-    private root: TgpuRoot,
+    private root: ExperimentalTgpuRoot,
     private rootNode: TgpuResolvable,
   ) {}
 

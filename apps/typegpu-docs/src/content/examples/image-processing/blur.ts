@@ -61,7 +61,7 @@ const blurParamsBuffer = root
     settingsPlum,
   )
   .$name('BlurParams')
-  .$usage(tgpu.Uniform);
+  .$usage('uniform');
 const params = asUniform(blurParamsBuffer);
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });

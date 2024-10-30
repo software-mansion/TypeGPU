@@ -226,14 +226,18 @@ export function ExampleView({ example, isPlayground = false }: Props) {
 
 function GPUUnsupportedPanel() {
   return (
-    <div className="grid place-content-center text-xl leading-8 text-center">
+    <div className="grid gap-6 text-xl leading-tight text-center place-content-center">
       <div className="text-3xl">
         WebGPU is not enabled/supported in this browser 😔
       </div>
-      <div>(Maybe it's hidden under an experimental flag? 🤔)</div>
-      <div className="underline bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text text-transparent">
-        <a href="/TypeGPU/faq">Read more about the availability</a>
-      </div>
+      <div>Maybe it's hidden under an experimental flag? 🤔</div>
+
+      <a
+        href="/TypeGPU/blog/troubleshooting"
+        className="text-transparent underline bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark bg-clip-text"
+      >
+        Read more about the availability
+      </a>
     </div>
   );
 }

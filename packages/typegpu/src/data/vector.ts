@@ -13,7 +13,7 @@ import {
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import { inGPUMode } from '../gpuMode';
-import type { TgpuData } from '../types';
+import type { NumberArrayView, TgpuData } from '../types';
 
 // --------------
 // Implementation
@@ -30,6 +30,7 @@ interface VecSchemaOptions<ValueType> {
 
 type VecSchemaBase<ValueType> = TgpuData<ValueType> & {
   kind: string;
+  expressionCode: string; // TODO: to remove
   toString(): string;
 };
 
@@ -45,6 +46,7 @@ function makeVecSchema<ValueType extends vecBase>(
     label: options.label,
     byteAlignment: options.byteAlignment,
     kind: options.label,
+    expressionCode: options.label,
 
     resolveReferences(ctx: IRefResolver): void {
       throw new RecursiveDataTypeError();
@@ -111,6 +113,9 @@ function makeVecSchema<ValueType extends vecBase>(
 }
 
 abstract class vec2Impl implements vec2 {
+  public readonly length = 2;
+  [n: number]: number;
+
   constructor(
     public x: number,
     public y: number,
@@ -119,6 +124,22 @@ abstract class vec2Impl implements vec2 {
   *[Symbol.iterator]() {
     yield this.x;
     yield this.y;
+  }
+
+  get [0]() {
+    return this.x;
+  }
+
+  get [1]() {
+    return this.y;
+  }
+
+  set [0](value: number) {
+    this.x = value;
+  }
+
+  set [1](value: number) {
+    this.y = value;
   }
 }
 
@@ -171,6 +192,9 @@ class vec2uImpl extends vec2Impl {
 }
 
 abstract class vec3Impl implements vec3 {
+  public readonly length = 3;
+  [n: number]: number;
+
   constructor(
     public x: number,
     public y: number,
@@ -181,6 +205,30 @@ abstract class vec3Impl implements vec3 {
     yield this.x;
     yield this.y;
     yield this.z;
+  }
+
+  get [0]() {
+    return this.x;
+  }
+
+  get [1]() {
+    return this.y;
+  }
+
+  get [2]() {
+    return this.z;
+  }
+
+  set [0](value: number) {
+    this.x = value;
+  }
+
+  set [1](value: number) {
+    this.y = value;
+  }
+
+  set [2](value: number) {
+    this.z = value;
   }
 }
 
@@ -233,6 +281,9 @@ class vec3uImpl extends vec3Impl {
 }
 
 abstract class vec4Impl implements vec4 {
+  public readonly length = 4;
+  [n: number]: number;
+
   constructor(
     public x: number,
     public y: number,
@@ -245,6 +296,38 @@ abstract class vec4Impl implements vec4 {
     yield this.y;
     yield this.z;
     yield this.w;
+  }
+
+  get [0]() {
+    return this.x;
+  }
+
+  get [1]() {
+    return this.y;
+  }
+
+  get [2]() {
+    return this.z;
+  }
+
+  get [3]() {
+    return this.w;
+  }
+
+  set [0](value: number) {
+    this.x = value;
+  }
+
+  set [1](value: number) {
+    this.y = value;
+  }
+
+  set [2](value: number) {
+    this.z = value;
+  }
+
+  set [3](value: number) {
+    this.w = value;
   }
 }
 
@@ -610,20 +693,20 @@ interface Swizzle4<T2, T3, T4> extends Swizzle3<T2, T3, T4> {
   readonly wwww: T4;
 }
 
-interface vec2 {
+interface vec2 extends NumberArrayView {
   x: number;
   y: number;
   [Symbol.iterator](): Iterator<number>;
 }
 
-interface vec3 {
+interface vec3 extends NumberArrayView {
   x: number;
   y: number;
   z: number;
   [Symbol.iterator](): Iterator<number>;
 }
 
-interface vec4 {
+interface vec4 extends NumberArrayView {
   x: number;
   y: number;
   z: number;
@@ -633,7 +716,7 @@ interface vec4 {
 
 const vecProxyHandler: ProxyHandler<vecBase> = {
   get: (target, prop) => {
-    if (typeof prop === 'symbol') {
+    if (typeof prop === 'symbol' || !Number.isNaN(Number.parseInt(prop))) {
       return Reflect.get(target, prop);
     }
 
@@ -699,6 +782,9 @@ const vecProxyHandler: ProxyHandler<vecBase> = {
 // Public API
 // ----------
 
+/**
+ * Type encompassing all available kinds of vector.
+ */
 export type VecKind =
   | 'vec2f'
   | 'vec2i'
@@ -710,50 +796,94 @@ export type VecKind =
   | 'vec4i'
   | 'vec4u';
 
+/**
+ * Common interface for all vector types, no matter their size and inner type.
+ */
 export interface vecBase {
   kind: VecKind;
   [Symbol.iterator](): Iterator<number>;
 }
 
+/**
+ * Interface representing its WGSL vector type counterpart: vec2f or vec2<f32>.
+ * A vector with 2 elements of type d.f32
+ */
 export interface vec2f extends vec2, Swizzle2<vec2f, vec3f, vec4f> {
   /** use to distinguish between vectors of the same size on the type level */
   kind: 'vec2f';
 }
+/**
+ * Interface representing its WGSL vector type counterpart: vec2i or vec2<i32>.
+ * A vector with 2 elements of type d.i32
+ */
 export interface vec2i extends vec2, Swizzle2<vec2i, vec3i, vec4i> {
   /** use to distinguish between vectors of the same size on the type level */
   kind: 'vec2i';
 }
+/**
+ * Interface representing its WGSL vector type counterpart: vec2u or vec2<u32>.
+ * A vector with 2 elements of type d.u32
+ */
 export interface vec2u extends vec2, Swizzle2<vec2u, vec3u, vec4u> {
   /** use to distinguish between vectors of the same size on the type level */
   kind: 'vec2u';
 }
 
+/**
+ * Interface representing its WGSL vector type counterpart: vec3f or vec3<f32>.
+ * A vector with 3 elements of type d.f32
+ */
 export interface vec3f extends vec3, Swizzle3<vec2f, vec3f, vec4f> {
   /** use to distinguish between vectors of the same size on the type level */
   kind: 'vec3f';
 }
+
+/**
+ * Interface representing its WGSL vector type counterpart: vec3i or vec3<i32>.
+ * A vector with 3 elements of type d.i32
+ */
 export interface vec3i extends vec3, Swizzle3<vec2i, vec3i, vec4i> {
   /** use to distinguish between vectors of the same size on the type level */
   kind: 'vec3i';
 }
+
+/**
+ * Interface representing its WGSL vector type counterpart: vec3u or vec3<u32>.
+ * A vector with 3 elements of type d.u32
+ */
 export interface vec3u extends vec3, Swizzle3<vec2u, vec3u, vec4u> {
   /** use to distinguish between vectors of the same size on the type level */
   kind: 'vec3u';
 }
 
+/**
+ * Interface representing its WGSL vector type counterpart: vec4f or vec4<f32>.
+ * A vector with 4 elements of type d.f32
+ */
 export interface vec4f extends vec4, Swizzle4<vec2f, vec3f, vec4f> {
   /** use to distinguish between vectors of the same size on the type level */
   kind: 'vec4f';
 }
+/**
+ * Interface representing its WGSL vector type counterpart: vec4i or vec4<i32>.
+ * A vector with 4 elements of type d.i32
+ */
 export interface vec4i extends vec4, Swizzle4<vec2i, vec3i, vec4i> {
   /** use to distinguish between vectors of the same size on the type level */
   kind: 'vec4i';
 }
+/**
+ * Interface representing its WGSL vector type counterpart: vec4u or vec4<u32>.
+ * A vector with 4 elements of type d.u32
+ */
 export interface vec4u extends vec4, Swizzle4<vec2u, vec3u, vec4u> {
   /** use to distinguish between vectors of the same size on the type level */
   kind: 'vec4u';
 }
 
+/**
+ * Type of the `d.vec2f` object/function: vector data type schema/constructor
+ */
 export type Vec2f = TgpuData<vec2f> & { kind: 'vec2f' } & ((
     x: number,
     y: number,
@@ -761,6 +891,19 @@ export type Vec2f = TgpuData<vec2f> & { kind: 'vec2f' } & ((
   ((xy: number) => vec2f) &
   (() => vec2f);
 
+/**
+ *
+ * Schema representing vec2f - a vector with 2 elements of type f32.
+ * Also a constructor function for this vector value.
+ *
+ * @example
+ * const vector = d.vec2f(); // (0.0, 0.0)
+ * const vector = d.vec2f(1); // (1.0, 1.0)
+ * const vector = d.vec2f(0.5, 0.1); // (0.5, 0.1)
+ *
+ * @example
+ * const buffer = root.createBuffer(d.vec2f, d.vec2f(0, 1)); // buffer holding a d.vec2f value, with an initial value of vec2f(0, 1);
+ */
 export const vec2f = makeVecSchema({
   unitType: f32,
   byteAlignment: 8,
@@ -772,6 +915,9 @@ export const vec2f = makeVecSchema({
     new Proxy(new vec2fImpl(x, x), vecProxyHandler) as vec2f,
 }) as Vec2f;
 
+/**
+ * Type of the `d.vec2i` object/function: vector data type schema/constructor
+ */
 export type Vec2i = TgpuData<vec2i> & { kind: 'vec2i' } & ((
     x: number,
     y: number,
@@ -779,6 +925,19 @@ export type Vec2i = TgpuData<vec2i> & { kind: 'vec2i' } & ((
   ((xy: number) => vec2i) &
   (() => vec2i);
 
+/**
+ *
+ * Schema representing vec2i - a vector with 2 elements of type i32.
+ * Also a constructor function for this vector value.
+ *
+ * @example
+ * const vector = d.vec2i(); // (0, 0)
+ * const vector = d.vec2i(1); // (1, 1)
+ * const vector = d.vec2i(-1, 1); // (-1, 1)
+ *
+ * @example
+ * const buffer = root.createBuffer(d.vec2i, d.vec2i(0, 1)); // buffer holding a d.vec2i value, with an initial value of vec2i(0, 1);
+ */
 export const vec2i = makeVecSchema({
   unitType: i32,
   byteAlignment: 8,
@@ -790,6 +949,9 @@ export const vec2i = makeVecSchema({
     new Proxy(new vec2iImpl(x, x), vecProxyHandler) as vec2i,
 }) as Vec2i;
 
+/**
+ * Type of the `d.vec2u` object/function: vector data type schema/constructor
+ */
 export type Vec2u = TgpuData<vec2u> & { kind: 'vec2u' } & ((
     x: number,
     y: number,
@@ -797,6 +959,19 @@ export type Vec2u = TgpuData<vec2u> & { kind: 'vec2u' } & ((
   ((xy: number) => vec2u) &
   (() => vec2u);
 
+/**
+ *
+ * Schema representing vec2u - a vector with 2 elements of type u32.
+ * Also a constructor function for this vector value.
+ *
+ * @example
+ * const vector = d.vec2u(); // (0, 0)
+ * const vector = d.vec2u(1); // (1, 1)
+ * const vector = d.vec2u(1, 2); // (1, 2)
+ *
+ * @example
+ * const buffer = root.createBuffer(d.vec2u, d.vec2u(0, 1)); // buffer holding a d.vec2u value, with an initial value of vec2u(0, 1);
+ */
 export const vec2u = makeVecSchema({
   unitType: u32,
   byteAlignment: 8,
@@ -808,6 +983,9 @@ export const vec2u = makeVecSchema({
     new Proxy(new vec2uImpl(x, x), vecProxyHandler) as vec2u,
 }) as Vec2u;
 
+/**
+ * Type of the `d.vec3f` object/function: vector data type schema/constructor
+ */
 export type Vec3f = TgpuData<vec3f> & { kind: 'vec3f' } & ((
     x: number,
     y: number,
@@ -816,6 +994,19 @@ export type Vec3f = TgpuData<vec3f> & { kind: 'vec3f' } & ((
   ((xyz: number) => vec3f) &
   (() => vec3f);
 
+/**
+ *
+ * Schema representing vec3f - a vector with 3 elements of type f32.
+ * Also a constructor function for this vector value.
+ *
+ * @example
+ * const vector = d.vec3f(); // (0.0, 0.0, 0.0)
+ * const vector = d.vec3f(1); // (1.0, 1.0, 1.0)
+ * const vector = d.vec3f(1, 2, 3.5); // (1.0, 2.0, 3.5)
+ *
+ * @example
+ * const buffer = root.createBuffer(d.vec3f, d.vec3f(0, 1, 2)); // buffer holding a d.vec3f value, with an initial value of vec3f(0, 1, 2);
+ */
 export const vec3f = makeVecSchema({
   unitType: f32,
   byteAlignment: 16,
@@ -827,6 +1018,9 @@ export const vec3f = makeVecSchema({
     new Proxy(new vec3fImpl(x, x, x), vecProxyHandler) as vec3f,
 }) as Vec3f;
 
+/**
+ * Type of the `d.vec3i` object/function: vector data type schema/constructor
+ */
 export type Vec3i = TgpuData<vec3i> & { kind: 'vec3i' } & ((
     x: number,
     y: number,
@@ -835,6 +1029,19 @@ export type Vec3i = TgpuData<vec3i> & { kind: 'vec3i' } & ((
   ((xyz: number) => vec3i) &
   (() => vec3i);
 
+/**
+ *
+ * Schema representing vec3i - a vector with 3 elements of type i32.
+ * Also a constructor function for this vector value.
+ *
+ * @example
+ * const vector = d.vec3i(); // (0, 0, 0)
+ * const vector = d.vec3i(1); // (1, 1, 1)
+ * const vector = d.vec3i(1, 2, -3); // (1, 2, -3)
+ *
+ * @example
+ * const buffer = root.createBuffer(d.vec3i, d.vec3i(0, 1, 2)); // buffer holding a d.vec3i value, with an initial value of vec3i(0, 1, 2);
+ */
 export const vec3i = makeVecSchema({
   unitType: i32,
   byteAlignment: 16,
@@ -846,6 +1053,9 @@ export const vec3i = makeVecSchema({
     new Proxy(new vec3iImpl(x, x, x), vecProxyHandler) as vec3i,
 }) as Vec3i;
 
+/**
+ * Type of the `d.vec3u` object/function: vector data type schema/constructor
+ */
 export type Vec3u = TgpuData<vec3u> & { kind: 'vec3u' } & ((
     x: number,
     y: number,
@@ -854,6 +1064,19 @@ export type Vec3u = TgpuData<vec3u> & { kind: 'vec3u' } & ((
   ((xyz: number) => vec3u) &
   (() => vec3u);
 
+/**
+ *
+ * Schema representing vec3u - a vector with 3 elements of type u32.
+ * Also a constructor function for this vector value.
+ *
+ * @example
+ * const vector = d.vec3u(); // (0, 0, 0)
+ * const vector = d.vec3u(1); // (1, 1, 1)
+ * const vector = d.vec3u(1, 2, 3); // (1, 2, 3)
+ *
+ * @example
+ * const buffer = root.createBuffer(d.vec3u, d.vec3u(0, 1, 2)); // buffer holding a d.vec3u value, with an initial value of vec3u(0, 1, 2);
+ */
 export const vec3u = makeVecSchema({
   unitType: u32,
   byteAlignment: 16,
@@ -865,6 +1088,9 @@ export const vec3u = makeVecSchema({
     new Proxy(new vec3uImpl(x, x, x), vecProxyHandler) as vec3u,
 }) as Vec3u;
 
+/**
+ * Type of the `d.vec4f` object/function: vector data type schema/constructor
+ */
 export type Vec4f = TgpuData<vec4f> & { kind: 'vec4f' } & ((
     x: number,
     y: number,
@@ -874,6 +1100,19 @@ export type Vec4f = TgpuData<vec4f> & { kind: 'vec4f' } & ((
   ((xyzw: number) => vec4f) &
   (() => vec4f);
 
+/**
+ *
+ * Schema representing vec4f - a vector with 4 elements of type f32.
+ * Also a constructor function for this vector value.
+ *
+ * @example
+ * const vector = d.vec4f(); // (0.0, 0.0, 0.0, 0.0)
+ * const vector = d.vec4f(1); // (1.0, 1.0, 1.0, 1.0)
+ * const vector = d.vec4f(1, 2, 3, 4.5); // (1.0, 2.0, 3.0, 4.5)
+ *
+ * @example
+ * const buffer = root.createBuffer(d.vec4f, d.vec4f(0, 1, 2, 3)); // buffer holding a d.vec4f value, with an initial value of vec4f(0, 1, 2, 3);
+ */
 export const vec4f = makeVecSchema({
   unitType: f32,
   byteAlignment: 16,
@@ -885,6 +1124,9 @@ export const vec4f = makeVecSchema({
     new Proxy(new vec4fImpl(x, x, x, x), vecProxyHandler) as vec4f,
 }) as Vec4f;
 
+/**
+ * Type of the `d.vec4i` object/function: vector data type schema/constructor
+ */
 export type Vec4i = TgpuData<vec4i> & { kind: 'vec4i' } & ((
     x: number,
     y: number,
@@ -894,6 +1136,19 @@ export type Vec4i = TgpuData<vec4i> & { kind: 'vec4i' } & ((
   ((xyzw: number) => vec4i) &
   (() => vec4i);
 
+/**
+ *
+ * Schema representing vec4i - a vector with 4 elements of type i32.
+ * Also a constructor function for this vector value.
+ *
+ * @example
+ * const vector = d.vec4i(); // (0, 0, 0, 0)
+ * const vector = d.vec4i(1); // (1, 1, 1, 1)
+ * const vector = d.vec4i(1, 2, 3, -4); // (1, 2, 3, -4)
+ *
+ * @example
+ * const buffer = root.createBuffer(d.vec4i, d.vec4i(0, 1, 2, 3)); // buffer holding a d.vec4i value, with an initial value of vec4i(0, 1, 2, 3);
+ */
 export const vec4i = makeVecSchema({
   unitType: i32,
   byteAlignment: 16,
@@ -905,6 +1160,9 @@ export const vec4i = makeVecSchema({
     new Proxy(new vec4iImpl(x, x, x, x), vecProxyHandler) as vec4i,
 }) as Vec4i;
 
+/**
+ * Type of the `d.vec4u` object/function: vector data type schema/constructor
+ */
 export type Vec4u = TgpuData<vec4u> & { kind: 'vec4u' } & ((
     x: number,
     y: number,
@@ -914,6 +1172,19 @@ export type Vec4u = TgpuData<vec4u> & { kind: 'vec4u' } & ((
   ((xyzw: number) => vec4u) &
   (() => vec4u);
 
+/**
+ *
+ * Schema representing vec4u - a vector with 4 elements of type u32.
+ * Also a constructor function for this vector value.
+ *
+ * @example
+ * const vector = d.vec4u(); // (0, 0, 0, 0)
+ * const vector = d.vec4u(1); // (1, 1, 1, 1)
+ * const vector = d.vec4u(1, 2, 3, 4); // (1, 2, 3, 4)
+ *
+ * @example
+ * const buffer = root.createBuffer(d.vec4u, d.vec4u(0, 1, 2, 3)); // buffer holding a d.vec4u value, with an initial value of vec4u(0, 1, 2, 3);
+ */
 export const vec4u = makeVecSchema({
   unitType: u32,
   byteAlignment: 16,
