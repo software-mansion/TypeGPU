@@ -1,27 +1,10 @@
-/*
-{
-  "title": "Mnist Inference",
-  "category": "algorithms",
-  "tags": ["experimental"]
-}
-*/
-
 import { type F32, type TgpuArray, arrayOf, f32 } from 'typegpu/data';
-import tgpu, { type TgpuBuffer } from 'typegpu/experimental';
+import tgpu, { type TgpuBuffer, type Storage } from 'typegpu/experimental';
 
-if (!navigator.gpu) {
-  throw new Error('WebGPU is not supported by this browser.');
-}
-const adapter = await navigator.gpu.requestAdapter();
-if (!adapter) {
-  throw new Error('Could not find a compatible GPU.');
-}
-const device = await adapter.requestDevice();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
-const root = await tgpu.init({
-  device,
-});
+const root = await tgpu.init();
+const device = root.device;
 const data = new Uint8Array(28 * 28);
 
 // Shader code
@@ -165,23 +148,23 @@ interface LayerData {
   header: string;
   data: Float32Array;
   shape: [number, number?];
-  buffer: TgpuBuffer<TgpuArray<F32>> & typeof tgpu.Storage;
+  buffer: TgpuBuffer<TgpuArray<F32>> & Storage;
 }
 
 interface Layer {
   weights: LayerData;
   biases: LayerData;
   buffers: {
-    weights: TgpuBuffer<TgpuArray<F32>> & typeof tgpu.Storage;
-    biases: TgpuBuffer<TgpuArray<F32>> & typeof tgpu.Storage;
-    state: TgpuBuffer<TgpuArray<F32>> & typeof tgpu.Storage;
+    weights: TgpuBuffer<TgpuArray<F32>> & Storage;
+    biases: TgpuBuffer<TgpuArray<F32>> & Storage;
+    state: TgpuBuffer<TgpuArray<F32>> & Storage;
   };
 }
 
 interface Network {
   layers: Layer[];
-  input: TgpuBuffer<TgpuArray<F32>> & typeof tgpu.Storage;
-  output: TgpuBuffer<TgpuArray<F32>> & typeof tgpu.Storage;
+  input: TgpuBuffer<TgpuArray<F32>> & Storage;
+  output: TgpuBuffer<TgpuArray<F32>> & Storage;
 
   inference(data: number[]): Promise<number[]>;
 }
@@ -227,7 +210,7 @@ function getLayerData(layer: ArrayBuffer): LayerData {
   }
   const buffer = root
     .createBuffer(arrayOf(f32, data.length), [...data])
-    .$usage(tgpu.Storage);
+    .$usage('storage');
 
   return {
     header,
@@ -259,14 +242,14 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
         biases: biases.buffer,
         state: root
           .createBuffer(arrayOf(f32, biases.shape[0]))
-          .$usage(tgpu.Storage),
+          .$usage('storage'),
       },
     };
   });
 
   const input = root
     .createBuffer(arrayOf(f32, layers[0][0].shape[0]))
-    .$usage(tgpu.Storage);
+    .$usage('storage');
   const output = buffers[buffers.length - 1].buffers.state;
 
   return {
@@ -321,85 +304,10 @@ const network = createNetwork([
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 const parent = canvas.parentElement as HTMLElement;
 
-interface BarDisplay {
-  set value(value: number);
-  readonly classList: DOMTokenList;
-}
-
-const predictionsContainer = document.createElement('div');
-parent.parentElement?.parentElement?.appendChild(predictionsContainer);
-predictionsContainer.classList.add(
-  'flex',
-  'flex-col',
-  'aspect-square',
-  'w-full',
-  'items-center',
-  'p-2',
+const bars = Array.from(
+  { length: 10 },
+  (_, i) => document.getElementById(`bar-fill-${i}`) as HTMLElement,
 );
-
-const predictionsLabel = document.createElement('div');
-predictionsLabel.textContent = 'Predictions:';
-predictionsLabel.classList.add('font-bold', 'mb-2', 'text-xl');
-predictionsContainer.appendChild(predictionsLabel);
-
-const barsContainer = document.createElement('div');
-predictionsContainer.appendChild(barsContainer);
-barsContainer.classList.add(
-  'flex',
-  'flex-col',
-  'w-full',
-  'justify-start',
-  'pr-10',
-);
-
-const createBar = (index: number): BarDisplay => {
-  const container = document.createElement('div');
-  container.classList.add('flex', 'items-baseline', 'mb-1', 'w-full');
-
-  const label = document.createElement('div');
-  label.textContent = `${index}`;
-  label.classList.add('w-1/6', 'text-center', 'font-bold');
-  container.appendChild(label);
-
-  const bar = document.createElement('div');
-  bar.classList.add('w-5/6', 'h-4', 'bg-gray-100', 'rounded-full');
-  container.appendChild(bar);
-
-  const fill = document.createElement('div');
-  fill.classList.add(
-    'h-full',
-    'bg-gray-300',
-    'rounded-full',
-    'overflow-hidden',
-    'transition-all',
-    'relative',
-  );
-  fill.classList.add(
-    'before:content-[""]',
-    'before:bg-gradient-to-r',
-    'before:from-gradient-purple-dark',
-    'before:to-gradient-blue-dark',
-    'before:absolute',
-    'before:inset-0',
-    'before:rounded-full',
-    'before:transition-all',
-    'before:opacity-0',
-  );
-  bar.appendChild(fill);
-
-  barsContainer.appendChild(container);
-
-  return {
-    set value(value: number) {
-      fill.style.width = `${value * 100}%`;
-    },
-    get classList() {
-      return fill.classList;
-    },
-  };
-};
-
-const bars: BarDisplay[] = Array.from({ length: 10 }, (_, i) => createBar(i));
 
 const resetAll = () => {
   data.fill(0);
@@ -477,12 +385,8 @@ const handleDrawing = (x: number, y: number) => {
     const normalized = data.map((x) => x / sum);
 
     bars.forEach((bar, i) => {
-      bar.value = normalized[i];
-      if (i === index) {
-        bar.classList.add('before:opacity-100');
-      } else {
-        bar.classList.remove('before:opacity-100');
-      }
+      bar.style.width = `${normalized[i] * 100}%`;
+      bar.classList.toggle('bar-fill-highlight', i === index);
     });
   });
 };
