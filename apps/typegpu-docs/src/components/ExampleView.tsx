@@ -248,7 +248,7 @@ function useResizableCanvas(
     const canvases = exampleHtmlRef.current?.querySelectorAll('canvas') as
       | HTMLCanvasElement[]
       | undefined;
-    const listeners: (() => void)[] = [];
+    const observers: ResizeObserver[] = [];
 
     for (const canvas of canvases ?? []) {
       if ('width' in canvas.attributes || 'height' in canvas.attributes) {
@@ -294,14 +294,16 @@ function useResizableCanvas(
         newCanvas.height = frame.clientHeight * window.devicePixelRatio;
       };
 
-      window.addEventListener('resize', onResize);
-      listeners.push(onResize);
       onResize();
+
+      const observer = new ResizeObserver(onResize);
+      observer.observe(container);
+      observers.push(observer);
     }
 
     return () => {
-      for (const listener of listeners) {
-        window.removeEventListener('resize', listener);
+      for (const observer of observers) {
+        observer.disconnect();
       }
     };
   }, [exampleHtmlRef, htmlCode]);
