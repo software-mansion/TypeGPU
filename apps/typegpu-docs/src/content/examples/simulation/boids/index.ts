@@ -1,10 +1,3 @@
-/*
-{
-  "title": "Boids",
-  "category": "simulation"
-}
-*/
-
 import tgpu from 'typegpu';
 import { arrayOf, f32, struct, vec2f, vec3f } from 'typegpu/data';
 
@@ -410,7 +403,7 @@ export function choosePresetBlobs() {
   updateParams(presets.blobs);
 }
 
-/** @button "⚛ Particles" */
+/** @button "⚛️ Particles" */
 export function choosePresetParticles() {
   updateParams(presets.particles);
 }

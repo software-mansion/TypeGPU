@@ -1,17 +1,5 @@
-/*
-{
-  "title": "Box Raytracing",
-  "category": "rendering",
-  "tags": ["experimental"]
-}
-*/
-
 // -- Hooks into the example environment
-import {
-  addElement,
-  addSliderPlumParameter,
-  onFrame,
-} from '@typegpu/example-toolkit';
+import { addSliderPlumParameter, onFrame } from '@typegpu/example-toolkit';
 // --
 
 import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'typegpu/data';
@@ -71,7 +59,7 @@ const cameraAxesPlum = wgsl.plum((get) => {
   };
 });
 
-const canvas = await addElement('canvas');
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 

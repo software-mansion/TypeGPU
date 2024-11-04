@@ -1,10 +1,3 @@
-/*
-{
-  "title": "Gradient Tiles",
-  "category": "simple"
-}
-*/
-
 import tgpu from 'typegpu';
 import { struct, u32 } from 'typegpu/data';
 

@@ -1,14 +1,5 @@
-/*
-{
-  "title": "Camera Thresholding",
-  "category": "image-processing",
-  "tags": ["experimental"]
-}
-*/
-
 // -- Hooks into the example environment
 import {
-  addElement,
   addSliderParameter,
   onCleanup,
   onFrame,
@@ -19,10 +10,8 @@ import { f32, vec2f } from 'typegpu/data';
 import tgpu, { asUniform, builtin, wgsl } from 'typegpu/experimental';
 
 // Layout
-const [video, canvas] = await Promise.all([
-  addElement('video', { width: 500, height: 375 }),
-  addElement('canvas', { width: 500, height: 375 }),
-]);
+const video = document.querySelector('video') as HTMLVideoElement;
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
 const sampler = wgsl.sampler({
   magFilter: 'linear',

@@ -1,14 +1,5 @@
-/*
-{
-  "title": "Fluid (with atomics)",
-  "category": "simulation",
-  "tags": ["experimental"]
-}
-*/
-
 // -- Hooks into the example environment
 import {
-  addElement,
   addSelectParameter,
   addSliderParameter,
   addToggleParameter,
@@ -37,7 +28,7 @@ import tgpu, {
 
 const root = await tgpu.init();
 
-const canvas = await addElement('canvas', { aspectRatio: 1 });
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();

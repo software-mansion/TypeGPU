@@ -1,15 +1,6 @@
-/*
-{
-  "title": "Matrix Multiplication",
-  "category": "algorithms",
-  "tags": ["experimental"]
-}
-*/
-
 // -- Hooks into the example environment
 import {
   addButtonParameter,
-  addElement,
   addSliderPlumParameter,
 } from '@typegpu/example-toolkit';
 // --
@@ -118,15 +109,9 @@ const program = root.makeComputePipeline({
 `,
 });
 
-const firstTable = await addElement('table', {
-  label: 'first matrix',
-});
-const secondTable = await addElement('table', {
-  label: 'second matrix',
-});
-const resultTable = await addElement('table', {
-  label: 'result matrix',
-});
+const firstTable = document.querySelector('.matrix-a') as HTMLDivElement;
+const secondTable = document.querySelector('.matrix-b') as HTMLDivElement;
+const resultTable = document.querySelector('.matrix-result') as HTMLDivElement;
 
 function createMatrix(
   size: vec2f,
@@ -140,6 +125,17 @@ function createMatrix(
   };
 }
 
+function printMatrixToHtml(
+  element: HTMLDivElement,
+  matrix: Parsed<typeof MatrixStruct>,
+) {
+  element.style.gridTemplateColumns = `repeat(${matrix.size.y}, 1fr)`;
+  element.innerHTML = matrix.numbers
+    .slice(0, matrix.size.x * matrix.size.y)
+    .map((x) => `<div>${x}</div>`)
+    .join('');
+}
+
 async function run() {
   const firstMatrix = root.readPlum(firstMatrixPlum);
   const secondMatrix = root.readPlum(secondMatrixPlum);
@@ -149,19 +145,9 @@ async function run() {
   program.execute({ workgroups: [workgroupCountX, workgroupCountY] });
   const multiplicationResult = await resultMatrixBuffer.read();
 
-  const unflatMatrix = (matrix: Parsed<typeof MatrixStruct>) =>
-    Array(matrix.size.x)
-      .fill(0)
-      .map((_, i) =>
-        Array(matrix.size.y)
-          .fill(0)
-          .map((_, j) => matrix.numbers[i * matrix.size.y + j]),
-      );
-
-  firstTable.setMatrix(unflatMatrix(firstMatrix));
-  secondTable.setMatrix(unflatMatrix(secondMatrix));
-
-  resultTable.setMatrix(unflatMatrix(multiplicationResult));
+  printMatrixToHtml(firstTable, firstMatrix);
+  printMatrixToHtml(secondTable, secondMatrix);
+  printMatrixToHtml(resultTable, multiplicationResult);
 }
 
 addButtonParameter('Reshuffle', () => {

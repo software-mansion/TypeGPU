@@ -1,16 +1,8 @@
-/*
-{
-  "title": "Image Blur",
-  "category": "image-processing",
-  "tags": ["experimental"]
-}
-*/
-
 // Original implementation:
 // https://webgpu.github.io/webgpu-samples/?sample=imageBlur
 
 // -- Hooks into the example environment
-import { addElement, addSliderPlumParameter } from '@typegpu/example-toolkit';
+import { addSliderPlumParameter } from '@typegpu/example-toolkit';
 // --
 import {
   arrayOf,
@@ -64,7 +56,7 @@ const blurParamsBuffer = root
   .$usage('uniform');
 const params = asUniform(blurParamsBuffer);
 
-const canvas = await addElement('canvas', { aspectRatio: 1 });
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();

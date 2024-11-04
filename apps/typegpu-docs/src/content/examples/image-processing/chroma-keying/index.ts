@@ -1,13 +1,4 @@
-/*
-{
-  "title": "Chroma Keying",
-  "category": "image-processing",
-  "tags": ["experimental"]
-}
-*/
-
 import {
-  addElement,
   addSliderPlumParameter,
   onCleanup,
   onFrame,
@@ -17,14 +8,10 @@ import tgpu, { asUniform, builtin, wgsl } from 'typegpu/experimental';
 
 const width = 500;
 const height = 375;
-const [table, video, canvas] = await Promise.all([
-  addElement('table', {
-    label: 'Press anywhere on the video to pick a color',
-  }),
-  addElement('video', { width, height }),
-  addElement('canvas', { width, height }),
-]);
-table.setMatrix([[0, 255, 0]]);
+
+const table = document.querySelector('.rgb') as HTMLDivElement;
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const video = document.querySelector('video') as HTMLVideoElement;
 
 let stream: MediaStream;
 
@@ -197,7 +184,7 @@ video.addEventListener('click', (event) => {
   samplingContext.drawImage(video, 0, 0, width, height);
 
   const [r, g, b] = samplingContext.getImageData(x, y, 1, 1).data;
-  table.setMatrix([[r, g, b]]);
+  table.innerText = `R: ${r} G: ${g} B: ${b}`;
   colorBuffer.write(vec3f(r / 255, g / 255, b / 255));
 });
 

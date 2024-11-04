@@ -1,29 +1,21 @@
 import cs from 'classnames';
 import { useAtomValue, useSetAtom } from 'jotai';
-import { compressToEncodedURIComponent } from 'lz-string';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'remeda';
 import {
   codeEditorShownAtom,
   codeEditorShownMobileAtom,
 } from '../utils/examples/codeEditorShownAtom';
-import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
 import { ExecutionCancelledError } from '../utils/examples/errors';
-import { PLAYGROUND_KEY } from '../utils/examples/exampleContent';
 import { exampleControlsAtom } from '../utils/examples/exampleControlAtom';
 import { executeExample } from '../utils/examples/exampleRunner';
 import type { ExampleState } from '../utils/examples/exampleState';
-import { useLayout } from '../utils/examples/layout';
 import type { Example } from '../utils/examples/types';
 import { isGPUSupported } from '../utils/isGPUSupported';
 import useEvent from '../utils/useEvent';
-import { CodeEditor } from './CodeEditor';
+import { HtmlCodeEditor, TsCodeEditor } from './CodeEditor';
 import { ControlPanel } from './ControlPanel';
-import { Button } from './design/Button';
-import { Canvas } from './design/Canvas';
 import { Snackbar } from './design/Snackbar';
-import { Table } from './design/Table';
-import { Video } from './design/Video';
 
 type Props = {
   example: Example;
@@ -32,18 +24,19 @@ type Props = {
 
 function useExample(
   exampleCode: string,
+  htmlCode: string,
   setSnackbarText: (text: string | undefined) => void,
   tags?: string[],
 ) {
   const exampleRef = useRef<ExampleState | null>(null);
   const setExampleControlParams = useSetAtom(exampleControlsAtom);
-  const { def, createLayout, setRef } = useLayout();
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reload example on html change
   useEffect(() => {
     let cancelled = false;
     setSnackbarText(undefined);
 
-    executeExample(exampleCode, createLayout, tags)
+    executeExample(exampleCode, tags)
       .then((example) => {
         if (cancelled) {
           // Another instance was started in the meantime.
@@ -72,54 +65,51 @@ function useExample(
       exampleRef.current?.dispose();
       cancelled = true;
     };
-  }, [
-    exampleCode,
-    createLayout,
-    setSnackbarText,
-    setExampleControlParams,
-    tags,
-  ]);
-
-  return {
-    def,
-    setRef,
-  };
+  }, [exampleCode, htmlCode, setSnackbarText, setExampleControlParams, tags]);
 }
 
-export function ExampleView({ example, isPlayground = false }: Props) {
-  const { code: initialCode, metadata } = example;
-  const [code, setCode] = useState(initialCode);
+type EditorTab = 'ts' | 'html';
+
+export function ExampleView({ example }: Props) {
+  const {
+    tsCode: initialTsCode,
+    htmlCode: intitialHtmlCode,
+    metadata,
+  } = example;
+
+  const [code, setCode] = useState(initialTsCode);
+  const [htmlCode, setHtmlCode] = useState(intitialHtmlCode);
   const [snackbarText, setSnackbarText] = useState<string | undefined>();
-  const setCurrentExample = useSetAtom(currentExampleAtom);
+  const [currentEditorTab, setCurrentEditorTab] = useState<EditorTab>('ts');
+
   const codeEditorShowing = useAtomValue(codeEditorShownAtom);
   const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
 
-  const setCodeWrapper = isPlayground
-    ? useCallback(
-        (code: string) => {
-          const encoded = compressToEncodedURIComponent(code);
-          setCurrentExample(`${PLAYGROUND_KEY}${encoded}`);
-          localStorage.setItem(PLAYGROUND_KEY, encoded);
-          setCode(code);
-        },
-        [setCurrentExample],
-      )
-    : setCode;
+  const exampleHtmlRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setCodeWrapper(initialCode);
-  }, [initialCode, setCodeWrapper]);
-
-  const setCodeDebouncer = useMemo(
-    () => debounce(setCodeWrapper, { waitMs: 500 }),
-    [setCodeWrapper],
+  const setTsCodeDebouncer = useMemo(
+    () => debounce(setCode, { waitMs: 500 }),
+    [],
   );
-
-  const handleCodeChange = useEvent((newCode: string) => {
-    setCodeDebouncer.call(newCode);
+  const handleTsCodeChange = useEvent((newCode: string) => {
+    setTsCodeDebouncer.call(newCode);
   });
 
-  const { def, setRef } = useExample(code, setSnackbarText, metadata.tags);
+  const setHtmlCodeDebouncer = useMemo(
+    () => debounce(setHtmlCode, { waitMs: 500 }),
+    [],
+  );
+  const handleHtmlCodeChange = useEvent((newCode: string) => {
+    setHtmlCodeDebouncer.call(newCode);
+  });
+
+  useExample(code, htmlCode, setSnackbarText, metadata.tags);
+  useResizableCanvas(exampleHtmlRef, htmlCode);
+
+  useEffect(() => {
+    setCode(initialTsCode);
+    setHtmlCode(intitialHtmlCode);
+  }, [initialTsCode, intitialHtmlCode]);
 
   return (
     <>
@@ -135,65 +125,19 @@ export function ExampleView({ example, isPlayground = false }: Props) {
           {isGPUSupported ? (
             <div
               style={{
-                scrollbarGutter: 'stable both-edges',
+                scrollbarGutter: 'stable',
               }}
               className={cs(
-                'flex justify-evenly items-center flex-wrap overflow-auto h-full',
+                'flex justify-evenly items-center flex-wrap overflow-auto h-full box-border',
                 codeEditorShowing ? 'md:max-h-[calc(50vh-3rem)]' : '',
               )}
             >
-              {/* Note: This is a temporary measure to allow for simple examples that do not require the @typegpu/example-toolkit package. */}
-              {def.elements.length === 0 ? <Canvas aspectRatio={1} /> : null}
-
-              {def.elements.map((element) => {
-                if (element.type === 'canvas') {
-                  return (
-                    <Canvas
-                      key={element.key}
-                      ref={(canvas) => setRef(element.key, canvas)}
-                      width={element.width}
-                      height={element.height}
-                      aspectRatio={element.aspectRatio}
-                    />
-                  );
-                }
-
-                if (element.type === 'video') {
-                  return (
-                    <Video
-                      key={element.key}
-                      ref={(video) => setRef(element.key, video)}
-                      width={element.width}
-                      height={element.height}
-                    />
-                  );
-                }
-
-                if (element.type === 'table') {
-                  return (
-                    <Table
-                      key={element.key}
-                      ref={(table) => setRef(element.key, table)}
-                      label={element.label}
-                    />
-                  );
-                }
-
-                if (element.type === 'button') {
-                  return (
-                    <Button
-                      key={element.key}
-                      ref={(button) => setRef(element.key, button)}
-                      onClick={element.onClick}
-                      accent
-                    >
-                      {element.label}
-                    </Button>
-                  );
-                }
-
-                return <p key={element}>Unrecognized element</p>;
-              })}
+              <div
+                ref={exampleHtmlRef}
+                className="contents w-full h-full"
+                // biome-ignore lint/security/noDangerouslySetInnerHtml: setting innerHtml from code editor input
+                dangerouslySetInnerHTML={{ __html: htmlCode }}
+              />
             </div>
           ) : (
             <GPUUnsupportedPanel />
@@ -212,15 +156,68 @@ export function ExampleView({ example, isPlayground = false }: Props) {
               )}
             >
               <div className="absolute inset-0">
-                <CodeEditor code={code} onCodeChange={handleCodeChange} />
+                <EditorTabButtonPanel
+                  currentEditorTab={currentEditorTab}
+                  setCurrentEditorTab={setCurrentEditorTab}
+                />
+
+                {currentEditorTab === 'ts' ? (
+                  <TsCodeEditor code={code} onCodeChange={handleTsCodeChange} />
+                ) : (
+                  <HtmlCodeEditor
+                    code={htmlCode}
+                    onCodeChange={handleHtmlCodeChange}
+                  />
+                )}
               </div>
             </div>
           ) : null}
         </div>
-
         <ControlPanel />
       </div>
     </>
+  );
+}
+
+function EditorTabButtonPanel({
+  currentEditorTab,
+  setCurrentEditorTab,
+}: {
+  currentEditorTab: EditorTab;
+  setCurrentEditorTab: (tab: EditorTab) => void;
+}) {
+  const commonStyle =
+    'inline-flex justify-center items-center box-border text-sm px-5 py-1';
+  const activeStyle =
+    'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark';
+  const inactiveStyle =
+    'bg-white border-tameplum-100 border-2 hover:bg-tameplum-20';
+
+  return (
+    <div className="absolute right-0 md:right-6 top-2 z-10 flex">
+      <button
+        className={cs(
+          commonStyle,
+          'rounded-l-lg',
+          currentEditorTab === 'ts' ? activeStyle : inactiveStyle,
+        )}
+        type="button"
+        onClick={() => setCurrentEditorTab('ts')}
+      >
+        TS
+      </button>
+      <button
+        className={cs(
+          commonStyle,
+          'rounded-r-lg',
+          currentEditorTab === 'html' ? activeStyle : inactiveStyle,
+        )}
+        type="button"
+        onClick={() => setCurrentEditorTab('html')}
+      >
+        HTML
+      </button>
+    </div>
   );
 }
 
@@ -240,4 +237,74 @@ function GPUUnsupportedPanel() {
       </a>
     </div>
   );
+}
+
+function useResizableCanvas(
+  exampleHtmlRef: RefObject<HTMLDivElement>,
+  htmlCode: string,
+) {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: should be run on every htmlCode change
+  useEffect(() => {
+    const canvases = exampleHtmlRef.current?.querySelectorAll('canvas') as
+      | HTMLCanvasElement[]
+      | undefined;
+    const observers: ResizeObserver[] = [];
+
+    for (const canvas of canvases ?? []) {
+      if ('width' in canvas.attributes || 'height' in canvas.attributes) {
+        continue; // custom canvas, not replacing with resizable
+      }
+
+      const newCanvas = document.createElement('canvas');
+      const container = document.createElement('div');
+      const frame = document.createElement('div');
+
+      frame.appendChild(newCanvas);
+      container.appendChild(frame);
+
+      const aspectRatio = canvas.dataset.aspectRatio ?? '1';
+
+      container.style.containerType = 'size';
+      container.style.flex = '1';
+      container.style.display = 'flex';
+      container.style.justifyContent = 'center';
+      container.style.alignItems = 'center';
+      container.style.height = '100%';
+
+      frame.style.position = 'relative';
+      frame.style.aspectRatio = aspectRatio;
+      frame.style.height = `min(calc(min(100cqw, 100cqh)/(${aspectRatio})), min(100cqw, 100cqh))`;
+
+      for (const prop of canvas.style) {
+        // @ts-ignore
+        newCanvas.style[prop] = canvas.style[prop];
+      }
+      for (const attribute of canvas.attributes) {
+        // @ts-ignore
+        newCanvas[attribute.name] = attribute.value;
+      }
+      newCanvas.style.position = 'absolute';
+      newCanvas.style.width = '100%';
+      newCanvas.style.height = '100%';
+
+      canvas.parentElement?.replaceChild(container, canvas);
+
+      const onResize = () => {
+        newCanvas.width = frame.clientWidth * window.devicePixelRatio;
+        newCanvas.height = frame.clientHeight * window.devicePixelRatio;
+      };
+
+      onResize();
+
+      const observer = new ResizeObserver(onResize);
+      observer.observe(container);
+      observers.push(observer);
+    }
+
+    return () => {
+      for (const observer of observers) {
+        observer.disconnect();
+      }
+    };
+  }, [exampleHtmlRef, htmlCode]);
 }

@@ -1,14 +1,5 @@
-/*
-{
-  "title": "Fluid (double-buffering)",
-  "category": "simulation",
-  "tags": ["experimental"]
-}
-*/
-
 // -- Hooks into the example environment
 import {
-  addElement,
   addSliderPlumParameter,
   onCleanup,
   onFrame,
@@ -38,7 +29,7 @@ import tgpu, {
   std,
 } from 'typegpu/experimental';
 
-const canvas = await addElement('canvas', { aspectRatio: 1 });
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 

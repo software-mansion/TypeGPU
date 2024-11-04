@@ -1,4 +1,4 @@
-import Editor, { type Monaco } from '@monaco-editor/react';
+import Editor, { type BeforeMount, type Monaco } from '@monaco-editor/react';
 import typegpuJitDts from '@typegpu/jit/dist/index.d.ts?raw';
 import webgpuTypes from '@webgpu/types/dist/index.d.ts?raw';
 import { entries, map, pipe } from 'remeda';
@@ -75,25 +75,34 @@ type Props = {
   onCodeChange: (value: string) => unknown;
 };
 
-export function CodeEditor(props: Props) {
-  const { code, onCodeChange } = props;
+const createCodeEditorComponent =
+  (language: 'typescript' | 'html', beforeMount?: BeforeMount) =>
+  (props: Props) => {
+    const { code, onCodeChange } = props;
 
-  const handleChange = useEvent((value: string | undefined) => {
-    onCodeChange(value ?? '');
-  });
+    const handleChange = useEvent((value: string | undefined) => {
+      onCodeChange(value ?? '');
+    });
 
-  return (
-    <Editor
-      defaultLanguage="typescript"
-      value={code}
-      onChange={handleChange}
-      beforeMount={handleEditorWillMount}
-      options={{
-        minimap: {
-          enabled: false,
-        },
-      }}
-      className="pt-16 md:pt-0"
-    />
-  );
-}
+    return (
+      <Editor
+        defaultLanguage={language}
+        value={code}
+        onChange={handleChange}
+        beforeMount={beforeMount}
+        options={{
+          minimap: {
+            enabled: false,
+          },
+        }}
+        className="pt-16 md:pt-0"
+      />
+    );
+  };
+
+export const TsCodeEditor = createCodeEditorComponent(
+  'typescript',
+  handleEditorWillMount,
+);
+
+export const HtmlCodeEditor = createCodeEditorComponent('html');
