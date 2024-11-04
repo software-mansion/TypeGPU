@@ -38,11 +38,36 @@ type TgpuComputePipelinePriors = {
 
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
   private _label: string | undefined;
+  private _rawPipelineMemo: GPUComputePipeline | undefined;
 
   constructor(
     private readonly _branch: ExperimentalTgpuRoot,
     private readonly _priors: TgpuComputePipelinePriors,
   ) {}
+
+  private get _rawPipeline(): GPUComputePipeline {
+    if (this._rawPipelineMemo) {
+      return this._rawPipelineMemo;
+    }
+
+    const device = this._branch.device;
+
+    this._rawPipelineMemo = device.createComputePipeline({
+      label: this._label ?? '<unnamed>',
+      layout: device.createPipelineLayout({
+        label: `${this._label ?? '<unnamed>'} - Pipeline Layout`,
+        bindGroupLayouts: [],
+      }),
+      compute: {
+        module: device.createShaderModule({
+          label: `${this._label ?? '<unnamed>'} - Shader`,
+          code: '', // TODO: Generate code
+        }),
+      },
+    });
+
+    return this._rawPipelineMemo;
+  }
 
   get label() {
     return this._label;
@@ -74,6 +99,11 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       label: this._label ?? '',
     });
 
+    pass.setPipeline(this._rawPipeline);
+    // TODO: Implement setting bind groups
+    // pass.setBindGroup
+
     pass.dispatchWorkgroups(x, y, z);
+    pass.end();
   }
 }
