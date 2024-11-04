@@ -75,7 +75,7 @@ type Props = {
   onCodeChange: (value: string) => unknown;
 };
 
-const abstractCodeEditor =
+const createCodeEditorComponent =
   (language: 'typescript' | 'html', beforeMount?: BeforeMount) =>
   (props: Props) => {
     const { code, onCodeChange } = props;
@@ -100,8 +100,9 @@ const abstractCodeEditor =
     );
   };
 
-export const TsCodeEditor = abstractCodeEditor(
+export const TsCodeEditor = createCodeEditorComponent(
   'typescript',
   handleEditorWillMount,
 );
-export const HtmlCodeEditor = abstractCodeEditor('html');
+
+export const HtmlCodeEditor = createCodeEditorComponent('html');

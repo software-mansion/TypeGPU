@@ -10,9 +10,9 @@ function pathToExampleKey<T>(record: Record<string, T>): Record<string, T> {
         [
           pipe(
             path,
-            (path) => path.replace(/^..\/..\/content\/examples\//, ''), // remove parent folder
-            (path) => path.replace(/\/[^\/]*$/, ''),
-            (path) => path.replace(/\//, '--'),
+            (path) => path.replace(/^..\/..\/content\/examples\//, ''), // removing parent folder
+            (path) => path.replace(/\/[^\/]*$/, ''), // removing leaf file names (e.g. meta.json, index.ts)
+            (path) => path.replace(/\//, '--'), // replacing path separators with '--'
           ),
           value,
         ] as const,

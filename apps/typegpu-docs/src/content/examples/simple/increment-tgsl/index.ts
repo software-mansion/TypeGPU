@@ -2,7 +2,7 @@ import { JitTranspiler } from '@typegpu/jit';
 import { vec2f } from 'typegpu/data';
 import tgpu, { asMutable } from 'typegpu/experimental';
 
-const table = document.querySelector('counter') as HTMLDivElement;
+const table = document.querySelector('.counter') as HTMLDivElement;
 
 const root = await tgpu.init({
   unstable_jitTranspiler: new JitTranspiler(),
@@ -26,9 +26,7 @@ async function doIncrement() {
 }
 
 /** @button "Increment" */
-export function click() {
-  (async () => {
-    const result = await doIncrement();
-    table.innerText = `${result.x} ${result.y}`;
-  })();
+export async function click() {
+  const result = await doIncrement();
+  table.innerText = `${result.x} ${result.y}`;
 }

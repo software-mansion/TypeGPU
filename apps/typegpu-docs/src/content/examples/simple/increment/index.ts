@@ -12,12 +12,11 @@ const pipeline = root.makeComputePipeline({
   code: wgsl`${asMutable(counterBuffer)} += 1;`,
 });
 
-/** @button "Increment" */
-export function increment() {
-  pipeline.execute();
-  counterBuffer.read().then((value) => {
-    table.innerText = `${value}`;
-  });
-}
-
 const table = document.querySelector('.counter') as HTMLDivElement;
+
+/** @button "Increment" */
+export async function increment() {
+  pipeline.execute();
+  const result = await counterBuffer.read();
+  table.innerText = `${result}`;
+}
