@@ -38,8 +38,11 @@ export type OmitProps<T extends Record<string, unknown>, Prop> = Pick<
  */
 export interface ResolutionCtx {
   addDeclaration(item: TgpuResolvable): void;
-  addBinding(bindable: TgpuBindable, identifier: TgpuIdentifier): void;
-  addRenderResource(
+  registerBufferUsage(
+    bufferUsage: TgpuBufferUsage<AnyTgpuData>,
+    identifier: TgpuIdentifier,
+  ): void;
+  registerRenderResource(
     resource: TgpuRenderResource,
     identifier: TgpuIdentifier,
   ): void;

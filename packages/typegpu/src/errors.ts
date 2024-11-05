@@ -1,6 +1,38 @@
 import type { TgpuBuffer } from './core/buffer/buffer';
 import type { AnyTgpuData, TgpuResolvable, TgpuSlot } from './types';
 
+const isProduction = import.meta.env?.MODE === 'production';
+const prefix = 'Invariant failed';
+
+/**
+ * Inspired by: https://github.com/alexreardon/tiny-invariant/blob/master/src/tiny-invariant.ts
+ */
+export function invariant(
+  condition: unknown,
+  message?: string | (() => string),
+): asserts condition {
+  if (condition) {
+    // Condition passed
+    return;
+  }
+
+  // In production we strip the message but still throw
+  if (isProduction) {
+    throw new Error(prefix);
+  }
+
+  // When not in production we allow the message to pass through
+  // *This block will be removed in production builds*
+
+  const provided = typeof message === 'function' ? message() : message;
+
+  // Options:
+  // 1. message provided: `${prefix}: ${provided}`
+  // 2. message not provided: prefix
+  const value = provided ? `${prefix}: ${provided}` : prefix;
+  throw new Error(value);
+}
+
 /**
  * An error that happens during resolution of WGSL code.
  * Contains a trace of all ancestor resolvables in

@@ -38,7 +38,7 @@ class TgpuSamplerImpl implements TgpuSampler {
 
   resolve(ctx: ResolutionCtx): string {
     const ident = identifier().$name(this._label);
-    ctx.addRenderResource(this, ident);
+    ctx.registerRenderResource(this, ident);
     return ctx.resolve(ident);
   }
 }

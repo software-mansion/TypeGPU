@@ -234,7 +234,7 @@ class TgpuTextureViewImpl<
 
   resolve(ctx: ResolutionCtx): string {
     const ident = identifier().$name(this._label);
-    ctx.addRenderResource(this, ident);
+    ctx.registerRenderResource(this, ident);
     return ctx.resolve(ident);
   }
 }
@@ -266,7 +266,7 @@ class TgpuTextureExternalImpl implements TgpuTextureExternal {
 
   resolve(ctx: ResolutionCtx): string {
     const ident = identifier().$name(this._label);
-    ctx.addRenderResource(this, ident);
+    ctx.registerRenderResource(this, ident);
     return ctx.resolve(ident);
   }
 }

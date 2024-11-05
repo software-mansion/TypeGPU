@@ -89,7 +89,7 @@ class TgpuBufferUsageImpl<TData extends AnyTgpuData, TUsage extends BufferUsage>
 
   resolve(ctx: ResolutionCtx): string {
     const ident = identifier().$name(this.label);
-    ctx.addBinding(this, ident);
+    ctx.registerBufferUsage(this, ident);
     return ctx.resolve(ident);
   }
 

@@ -1,9 +1,11 @@
+import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
 import type { TgpuFnShellBase } from './core/function/fnCore';
-import { MissingSlotValueError, ResolutionError } from './errors';
+import { MissingSlotValueError, ResolutionError, invariant } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
 import { type Block, generateFunction } from './smol';
+import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout';
 import { code } from './tgpuCode';
 import { isTextureView } from './tgpuTexture';
 import type {
@@ -29,9 +31,19 @@ import {
   isSlot,
 } from './types';
 
+/**
+ * Inserted into bind group entry definitions that belong
+ * to the automatically generated catchall bind group.
+ *
+ * A non-occupied group index can only be determined after
+ * every resource has been resolved, so this acts as a placeholder
+ * to be replaced with an actual numeric index at the very end
+ * of the resolution process.
+ */
+const CATCHALL_BIND_GROUP_IDX_MARKER = '#CATCHALL#';
+
 export type ResolutionCtxImplOptions = {
   readonly names: NameRegistry;
-  readonly bindingGroup?: number;
   readonly jitTranspiler?: JitTranspiler | undefined;
 };
 
@@ -44,34 +56,13 @@ const usageToVarTemplateMap: Record<Exclude<BufferUsage, 'vertex'>, string> = {
 };
 
 class SharedResolutionState {
-  private _nextFreeBindingIdx = 0;
-  private _nextFreeVertexBindingIdx = 0;
-  private readonly _usedBindables = new Set<TgpuBindable>();
-  private readonly _usedRenderResources = new Set<TgpuRenderResource>();
-  private readonly _resourceToIndexMap = new WeakMap<
-    TgpuRenderResource | TgpuBindable,
-    number
-  >();
-  private readonly _vertexBufferToIndexMap = new WeakMap<
-    TgpuBindable,
-    number
-  >();
   private readonly _usedBuiltins = new Set<symbol>();
   private readonly _declarations: string[] = [];
 
   constructor(
     public readonly names: NameRegistry,
-    private readonly _bindingGroup: number,
     public readonly jitTranspiler: JitTranspiler | undefined,
   ) {}
-
-  get usedBindables(): Iterable<TgpuBindable> {
-    return this._usedBindables;
-  }
-
-  get usedRenderResources(): Iterable<TgpuRenderResource> {
-    return this._usedRenderResources;
-  }
 
   get declarations(): Iterable<string> {
     return this._declarations;
@@ -79,32 +70,6 @@ class SharedResolutionState {
 
   get usedBuiltins(): Iterable<symbol> {
     return this._usedBuiltins;
-  }
-
-  reserveBindingEntry(bindable: TgpuBindable) {
-    this._usedBindables.add(bindable);
-    const nextIdx = this._nextFreeBindingIdx++;
-    this._resourceToIndexMap.set(bindable, nextIdx);
-
-    return { group: this._bindingGroup, idx: nextIdx };
-  }
-
-  registerVertexEntry(bindable: TgpuBindable) {
-    this._usedBindables.add(bindable);
-    const nextIdx = this._nextFreeVertexBindingIdx++;
-    this._vertexBufferToIndexMap.set(bindable, nextIdx);
-  }
-
-  reserveRenderResourceEntry(resource: TgpuRenderResource) {
-    this._usedRenderResources.add(resource);
-    const nextIdx = this._nextFreeBindingIdx++;
-    this._resourceToIndexMap.set(resource, nextIdx);
-
-    return { group: this._bindingGroup, idx: nextIdx };
-  }
-
-  getBindingIndex(resource: TgpuRenderResource | TgpuBindable) {
-    return this._resourceToIndexMap.get(resource);
   }
 
   addDeclaration(declaration: string) {
@@ -296,22 +261,30 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _shared: SharedResolutionState;
   private readonly _indentController = new IndentController();
 
+  // -- Catchall bindings
+  private readonly _usedBufferUsages = new Set<TgpuBufferUsage<AnyTgpuData>>();
+  private readonly _usedRenderResources = new Set<TgpuRenderResource>();
+  private readonly _usedBindGroupLayouts = new Map<
+    number,
+    TgpuBindGroupLayout
+  >();
+  private _nextFreeCatchallBindingIdx = 0;
+  /**
+   * Determined as part of the resolution process. The whole tree has to be
+   * traversed to collect every use of a typed bind group layout, since they
+   * can be explicitly imposed group indices, and they cannot collide.
+   */
+  private _catchallBindGroupIdx = 0;
+  private readonly _resourceToIndexMap = new WeakMap<
+    TgpuRenderResource | TgpuBindable,
+    number
+  >();
+  // --
+
   private _itemStateStack = new ItemStateStack();
 
   constructor(opts: ResolutionCtxImplOptions) {
-    this._shared = new SharedResolutionState(
-      opts.names,
-      opts.bindingGroup ?? 0,
-      opts.jitTranspiler,
-    );
-  }
-
-  get usedBindables() {
-    return this._shared.usedBindables;
-  }
-
-  get usedRenderResources() {
-    return this._shared.usedRenderResources;
+    this._shared = new SharedResolutionState(opts.names, opts.jitTranspiler);
   }
 
   get usedBuiltins() {
@@ -390,23 +363,40 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this._shared.addDeclaration(this.resolve(declaration));
   }
 
-  addBinding(bindable: TgpuBindable, identifier: TgpuIdentifier): void {
-    if (bindable.usage === 'vertex') {
-      this._shared.registerVertexEntry(bindable);
-      return;
-    }
-    const { group, idx } = this._shared.reserveBindingEntry(bindable);
+  private _reserveBindingEntry(bindable: TgpuBindable | TgpuRenderResource) {
+    const nextIdx = this._nextFreeCatchallBindingIdx++;
+    this._resourceToIndexMap.set(bindable, nextIdx);
+    return nextIdx;
+  }
 
+  registerBufferUsage(
+    bufferUsage: TgpuBufferUsage<AnyTgpuData>,
+    identifier: TgpuIdentifier,
+  ) {
+    invariant(
+      bufferUsage.usage !== 'vertex',
+      'Expected vertex buffer as part of a vertex layout',
+    );
+
+    this._usedBufferUsages.add(bufferUsage);
+    const idx = this._reserveBindingEntry(bufferUsage);
+    const usage = usageToVarTemplateMap[bufferUsage.usage];
+    const dataType = bufferUsage.allocatable.dataType;
+
+    // The bind group index is determined at the end of the resolution process, when the whole
+    // tree has been traversed and all typed bind group layouts have been processed.
     this.addDeclaration(
-      code`@group(${group}) @binding(${idx}) var<${usageToVarTemplateMap[bindable.usage]}> ${identifier}: ${bindable.allocatable.dataType};`,
+      code`@group(${CATCHALL_BIND_GROUP_IDX_MARKER}) @binding(${idx}) var<${usage}> ${identifier}: ${dataType};`,
     );
   }
 
-  addRenderResource(
+  registerRenderResource(
     resource: TgpuRenderResource,
     identifier: TgpuIdentifier,
   ): void {
-    const { group, idx } = this._shared.reserveRenderResourceEntry(resource);
+    this._usedRenderResources.add(resource);
+    const group = CATCHALL_BIND_GROUP_IDX_MARKER;
+    const idx = this._reserveBindingEntry(resource);
 
     if (
       isSamplerType(resource.type) ||
@@ -537,10 +527,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   getIndexFor(item: TgpuBindable | TgpuRenderResource) {
-    const index = this._shared.getBindingIndex(item);
-    if (index === undefined) {
-      throw new Error('No index found for item');
-    }
+    const index = this._resourceToIndexMap.get(item);
+    invariant(index !== undefined, 'No index found for item');
+
     return index;
   }
 }
