@@ -1,17 +1,13 @@
-import type { TgpuBufferVertex } from './core/buffer/bufferUsage';
-import {
-  type ExperimentalTgpuRoot,
-  deriveVertexFormat,
-} from './core/root/rootTypes';
-import type { ResolutionCtxImpl } from './resolutionCtx';
-import { type TgpuSampler, isSampler } from './tgpuSampler';
+import type { ResolutionCtxImpl } from '../../resolutionCtx';
+import { type TgpuSampler, isSampler } from '../../tgpuSampler';
 import {
   type TgpuAnyTextureView,
   type TgpuTextureExternal,
   isExternalTexture,
   isTextureView,
-} from './tgpuTexture';
-import type { AnyTgpuData, BufferUsage, TgpuBindable, TgpuData } from './types';
+} from '../../tgpuTexture';
+import type { AnyTgpuData, BufferUsage, TgpuBindable } from '../../types';
+import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 
 const usageToBindingTypeMap: Record<
   Exclude<BufferUsage, 'vertex'>,
@@ -22,17 +18,14 @@ const usageToBindingTypeMap: Record<
   readonly: 'read-only-storage',
 };
 
-export class BindGroupResolver {
+export class CatchallBindGroup {
   private samplers: TgpuSampler[] = [];
   private textureViews: TgpuAnyTextureView[] = [];
   private externalTextures: TgpuTextureExternal[] = [];
   private buffers: TgpuBindable<AnyTgpuData, BufferUsage>[] = [];
-  private vertexBuffers: Map<TgpuBufferVertex<AnyTgpuData>, number> | null =
-    null;
 
-  private layout: GPUBindGroupLayout | null = null;
-  private bindGroup: GPUBindGroup | null = null;
-  private vertexLayout: GPUVertexBufferLayout[] | null = null;
+  private _layoutMemo: GPUBindGroupLayout | null = null;
+  private _bindGroupMemo: GPUBindGroup | null = null;
 
   constructor(
     private root: ExperimentalTgpuRoot,
@@ -54,23 +47,9 @@ export class BindGroupResolver {
     this.buffers = Array.from(context.usedBindables);
   }
 
-  setVertexBuffers(
-    vertexBuffers: {
-      index: number;
-      buffer: TgpuBufferVertex<AnyTgpuData>;
-    }[],
-  ) {
-    if (this.shaderStage !== GPUShaderStage.VERTEX) {
-      throw new Error('Vertex buffers can only be set for vertex shader');
-    }
-    this.vertexBuffers = new Map(
-      vertexBuffers.map(({ index, buffer }) => [buffer, index]),
-    );
-  }
-
-  getBindGroupLayout() {
-    if (this.layout) {
-      return this.layout;
+  getBindGroupLayout(): GPUBindGroupLayout {
+    if (this._layoutMemo) {
+      return this._layoutMemo;
     }
 
     const entries: GPUBindGroupLayoutEntry[] = [];
@@ -116,15 +95,16 @@ export class BindGroupResolver {
     const layout = this.root.device.createBindGroupLayout({
       entries,
     });
-    this.layout = layout;
+    this._layoutMemo = layout;
+
     return layout;
   }
 
   getBindGroup() {
     this.checkBindGroupInvalidation();
 
-    if (this.bindGroup) {
-      return this.bindGroup;
+    if (this._bindGroupMemo) {
+      return this._bindGroupMemo;
     }
 
     const entries: GPUBindGroupEntry[] = [];
@@ -160,63 +140,12 @@ export class BindGroupResolver {
       entries,
     });
 
-    this.bindGroup = bindGroup;
+    this._bindGroupMemo = bindGroup;
     return bindGroup;
   }
 
-  getBindings() {
-    return {
-      bindGroupLayout: this.getBindGroupLayout(),
-      bindGroup: this.getBindGroup(),
-    };
-  }
-
-  getVertexBufferDescriptors() {
-    if (this.vertexBuffers === null) {
-      throw new Error('Vertex buffers not set');
-    }
-
-    if (this.vertexLayout) {
-      return this.vertexLayout;
-    }
-
-    const vertexBufferDescriptors: GPUVertexBufferLayout[] = [];
-    for (const [buffer, idx] of this.vertexBuffers.entries()) {
-      vertexBufferDescriptors.push({
-        ...buffer.vertexLayout,
-        attributes: [
-          {
-            shaderLocation: idx,
-            offset: 0,
-            format: deriveVertexFormat(
-              buffer.allocatable.dataType as TgpuData<AnyTgpuData>,
-            ),
-          },
-        ],
-      });
-    }
-
-    this.vertexLayout = vertexBufferDescriptors;
-    return vertexBufferDescriptors;
-  }
-
-  getVertexBuffers() {
-    if (this.vertexBuffers === null) {
-      throw new Error('Vertex buffers not set');
-    }
-    return this.vertexBuffers.entries();
-  }
-
-  getVertexBufferIndex(buffer: TgpuBufferVertex<AnyTgpuData>) {
-    const index = this.vertexBuffers?.get(buffer);
-    if (this.vertexBuffers === null || index === undefined) {
-      throw new Error('Vertex buffers not set');
-    }
-    return index;
-  }
-
   invalidateBindGroup() {
-    this.bindGroup = null;
+    this._bindGroupMemo = null;
   }
 
   checkBindGroupInvalidation() {

@@ -1,6 +1,7 @@
 import type { Parsed } from 'typed-binary';
 
 import type { JitTranspiler } from '../../jitTranspiler';
+import type { NameRegistry } from '../../nameRegistry';
 import type { PlumListener } from '../../plumStore';
 import type { TgpuSettable } from '../../settableTrait';
 import type {
@@ -73,12 +74,14 @@ export interface TgpuRoot extends Unwrapper {
   unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
+  unwrap(resource: TgpuComputePipeline): GPUComputePipeline;
 
   destroy(): void;
 }
 
 export interface ExperimentalTgpuRoot extends TgpuRoot {
   readonly jitTranspiler?: JitTranspiler | undefined;
+  readonly nameRegistry: NameRegistry;
   /**
    * The current command encoder. This property will
    * hold the same value until `flush()` is called.

@@ -2,8 +2,8 @@ import type { Parsed } from 'typed-binary';
 
 import type { JitTranspiler } from '../../jitTranspiler';
 import { WeakMemo } from '../../memo';
+import { type NameRegistry, RandomNameRegistry } from '../../nameRegistry';
 import { type PlumListener, PlumStore } from '../../plumStore';
-import type { Program } from '../../programBuilder';
 import type { TgpuSettable } from '../../settableTrait';
 import type {
   TgpuBindGroup,
@@ -23,9 +23,12 @@ import type {
 } from '../../tgpuTexture';
 import type { AnyTgpuData } from '../../types';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
+import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import {
   INTERNAL_createComputePipeline,
   type TgpuComputePipeline,
+  type TgpuComputePipeline_INTERNAL,
+  isComputePipeline,
 } from '../pipeline/computePipeline';
 import {
   INTERNAL_createRenderPipeline,
@@ -42,10 +45,13 @@ import type {
 } from './rootTypes';
 
 class WithComputeImpl implements WithCompute {
-  constructor(private readonly _root: ExperimentalTgpuRoot) {}
+  constructor(
+    private readonly _root: ExperimentalTgpuRoot,
+    private readonly _entryFn: TgpuComputeFn,
+  ) {}
 
   createPipeline(): TgpuComputePipeline {
-    return INTERNAL_createComputePipeline(this._root);
+    return INTERNAL_createComputePipeline(this._root, this._entryFn);
   }
 }
 
@@ -97,6 +103,7 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
 
   constructor(
     public readonly device: GPUDevice,
+    public readonly nameRegistry: NameRegistry,
     public readonly jitTranspiler: JitTranspiler | undefined,
   ) {}
 
@@ -130,9 +137,14 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
   unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
+  unwrap(resource: TgpuComputePipeline): GPUComputePipeline;
   unwrap(
-    resource: TgpuBuffer<AnyTgpuData> | TgpuBindGroupLayout | TgpuBindGroup,
-  ): GPUBuffer | GPUBindGroupLayout | GPUBindGroup {
+    resource:
+      | TgpuBuffer<AnyTgpuData>
+      | TgpuBindGroupLayout
+      | TgpuBindGroup
+      | TgpuComputePipeline,
+  ): GPUBuffer | GPUBindGroupLayout | GPUBindGroup | GPUComputePipeline {
     if (isBuffer(resource)) {
       return resource.buffer;
     }
@@ -143,6 +155,10 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
 
     if (isBindGroup(resource)) {
       return this._unwrappedBindGroups.getOrMake(resource);
+    }
+
+    if (isComputePipeline(resource)) {
+      return (resource as unknown as TgpuComputePipeline_INTERNAL).rawPipeline;
     }
 
     throw new Error(`Unknown resource type: ${resource}`);
@@ -253,8 +269,8 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     return this._plumStore.subscribe(plum, listener);
   }
 
-  withCompute(): WithCompute {
-    return new WithComputeImpl(this);
+  withCompute(entryFn: TgpuComputeFn): WithCompute {
+    return new WithComputeImpl(this, entryFn);
   }
 
   withVertex(): WithVertex {
@@ -281,107 +297,13 @@ interface PipelineExecutor {
   ): void;
 }
 
-class RenderPipelineExecutor implements PipelineExecutor {
-  constructor(
-    private root: ExperimentalTgpuRoot,
-    private pipeline: GPURenderPipeline,
-    private vertexProgram: Program,
-    private fragmentProgram: Program,
-    private externalLayoutCount: number,
-    private label?: string,
-  ) {}
-
-  execute(options: RenderPipelineExecutorOptions) {
-    const {
-      vertexCount,
-      instanceCount,
-      firstVertex,
-      firstInstance,
-      externalBindGroups,
-      ...descriptor
-    } = options;
-
-    if ((externalBindGroups?.length ?? 0) !== this.externalLayoutCount) {
-      throw new Error(
-        `External bind group count doesn't match the external bind group layout configuration. Expected ${this.externalLayoutCount}, got: ${externalBindGroups?.length ?? 0}`,
-      );
-    }
-
-    const passEncoder = this.root.commandEncoder.beginRenderPass({
-      ...descriptor,
-      label: this.label ?? '',
-    });
-    passEncoder.setPipeline(this.pipeline);
-
-    (externalBindGroups ?? []).forEach((group, index) =>
-      passEncoder.setBindGroup(index, group),
-    );
-
-    passEncoder.setBindGroup(
-      (externalBindGroups ?? []).length,
-      this.vertexProgram.bindGroupResolver.getBindGroup(),
-    );
-    passEncoder.setBindGroup(
-      (externalBindGroups ?? []).length + 1,
-      this.fragmentProgram.bindGroupResolver.getBindGroup(),
-    );
-
-    for (const [
-      usage,
-      index,
-    ] of this.vertexProgram.bindGroupResolver.getVertexBuffers()) {
-      passEncoder.setVertexBuffer(index, usage.allocatable.buffer);
-    }
-
-    passEncoder.draw(vertexCount, instanceCount, firstVertex, firstInstance);
-    passEncoder.end();
-  }
-}
-
-class ComputePipelineExecutor implements PipelineExecutor {
-  constructor(
-    private root: ExperimentalTgpuRoot,
-    private pipeline: GPUComputePipeline,
-    private programs: Program[],
-    private externalLayoutCount: number,
-    private label?: string,
-  ) {}
-
-  execute(options?: ComputePipelineExecutorOptions) {
-    const { workgroups = [1, 1], externalBindGroups } = options ?? {};
-
-    if ((externalBindGroups?.length ?? 0) !== this.externalLayoutCount) {
-      throw new Error(
-        `External bind group count doesn't match the external bind group layout configuration. Expected ${this.externalLayoutCount}, got: ${externalBindGroups?.length ?? 0}`,
-      );
-    }
-
-    const passEncoder = this.root.commandEncoder.beginComputePass({
-      label: this.label ?? '',
-    });
-    passEncoder.setPipeline(this.pipeline);
-
-    (externalBindGroups ?? []).forEach((group, index) =>
-      passEncoder.setBindGroup(index, group),
-    );
-
-    this.programs.forEach((program, i) =>
-      passEncoder.setBindGroup(
-        (externalBindGroups ?? []).length + i,
-        program.bindGroupResolver.getBindGroup(),
-      ),
-    );
-    passEncoder.dispatchWorkgroups(...workgroups);
-    passEncoder.end();
-  }
-}
-
 /**
  * Options passed into {@link init}.
  */
 export type InitOptions = {
   adapter?: GPURequestAdapterOptions | undefined;
   device?: GPUDeviceDescriptor | undefined;
+  unstable_nameRegistry?: NameRegistry | undefined;
   unstable_jitTranspiler?: JitTranspiler | undefined;
 };
 
@@ -390,6 +312,7 @@ export type InitOptions = {
  */
 export type InitFromDeviceOptions = {
   device: GPUDevice;
+  unstable_nameRegistry?: NameRegistry | undefined;
   unstable_jitTranspiler?: JitTranspiler | undefined;
 };
 
@@ -426,6 +349,7 @@ export async function init(
 
   return new TgpuRootImpl(
     await adapter.requestDevice(options?.device),
+    options?.unstable_nameRegistry ?? new RandomNameRegistry(),
     options?.unstable_jitTranspiler,
   );
 }
@@ -442,5 +366,9 @@ export async function init(
 export function initFromDevice(
   options: InitFromDeviceOptions,
 ): ExperimentalTgpuRoot {
-  return new TgpuRootImpl(options.device, options.unstable_jitTranspiler);
+  return new TgpuRootImpl(
+    options.device,
+    options.unstable_nameRegistry ?? new RandomNameRegistry(),
+    options.unstable_jitTranspiler,
+  );
 }

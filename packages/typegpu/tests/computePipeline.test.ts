@@ -57,6 +57,7 @@ const mockDevice = {
 
 describe('TgpuComputePipeline', () => {
   let root: ExperimentalTgpuRoot;
+
   beforeEach(() => {
     root = initFromDevice({ device: mockDevice as unknown as GPUDevice });
   });
@@ -70,6 +71,8 @@ describe('TgpuComputePipeline', () => {
     const entryFn = tgpu.computeFn([32]).implement(() => {
       // do something
     });
+
     const computePipeline = root.withCompute(entryFn).createPipeline();
+    const rawPipeline = root.unwrap(computePipeline);
   });
 });

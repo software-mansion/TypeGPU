@@ -17,7 +17,12 @@ export interface TgpuRenderPipeline extends TgpuNamable {
     bindGroup: TgpuBindGroup,
   ): TgpuRenderPipeline;
 
-  draw(): void;
+  draw(
+    vertexCount: number,
+    instanceCount?: number,
+    firstVertex?: number,
+    firstInstance?: number,
+  ): void;
 }
 
 export function INTERNAL_createRenderPipeline(branch: ExperimentalTgpuRoot) {
@@ -61,10 +66,21 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     });
   }
 
-  draw(): void {
+  draw(
+    vertexCount: number,
+    instanceCount?: number,
+    firstVertex?: number,
+    firstInstance?: number,
+  ): void {
     const pass = this._branch.commandEncoder.beginRenderPass({
       label: this._label ?? '',
-      colorAttachments: [],
+      colorAttachments: [], // TODO: Add color attachments
     });
+    // pass.setPipeline(); // TODO: Set pipeline
+    // pass.setBindGroup(); // TODO: Set bind groups
+    // pass.setVertexBuffer(); // TODO: Set vertex buffers
+
+    pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+    pass.end();
   }
 }
