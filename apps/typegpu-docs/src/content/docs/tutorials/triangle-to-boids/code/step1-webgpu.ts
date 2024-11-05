@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO: ^ REMOVE WHEN CODE WORKS AGAIN
 import { addElement, onFrame } from '@typegpu/example-toolkit';
 
 const adapter = await navigator.gpu?.requestAdapter();
