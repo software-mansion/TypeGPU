@@ -188,8 +188,6 @@ function getLayerData(layer: ArrayBuffer): LayerData {
 
   // shape can be found in the header in the format: 'shape': (x, y) or 'shape': (x,) for bias
   const shapeMatch = header.match(/'shape': \((\d+), ?(\d+)?\)/);
-  console.log('Header: ', header);
-  console.log('Shape match: ', shapeMatch);
   if (!shapeMatch) {
     throw new Error('Shape not found in header');
   }
@@ -201,7 +199,6 @@ function getLayerData(layer: ArrayBuffer): LayerData {
         number,
         number?,
       ]);
-  console.log('Shape: ', shape);
 
   const data = new Float32Array(layer.slice(10 + headerLen[0]));
   // verify the length of the data matches the shape
