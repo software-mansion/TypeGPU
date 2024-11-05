@@ -1,11 +1,12 @@
+import tgpu, { type TgpuBuffer, type Storage } from 'typegpu';
 import { type F32, type TgpuArray, arrayOf, f32 } from 'typegpu/data';
-import tgpu, { type TgpuBuffer, type Storage } from 'typegpu/experimental';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const SIZE = 28;
 
 const root = await tgpu.init();
 const device = root.device;
-const data = new Uint8Array(28 * 28);
+const canvasData = new Array<number>(SIZE ** 2);
 
 // Shader code
 
@@ -40,30 +41,22 @@ const layerShader = `
 
 const inputOutput = tgpu.bindGroupLayout({
   input: {
-    storage: (length: number) => {
-      return arrayOf(f32, length);
-    },
+    storage: (n) => arrayOf(f32, n),
     access: 'readonly',
   },
   output: {
-    storage: (length: number) => {
-      return arrayOf(f32, length);
-    },
+    storage: (n) => arrayOf(f32, n),
     access: 'mutable',
   },
 });
 
 const weightsBiases = tgpu.bindGroupLayout({
   weights: {
-    storage: (length: number) => {
-      return arrayOf(f32, length);
-    },
+    storage: (n) => arrayOf(f32, n),
     access: 'readonly',
   },
   biases: {
-    storage: (length: number) => {
-      return arrayOf(f32, length);
-    },
+    storage: (n) => arrayOf(f32, n),
     access: 'readonly',
   },
 });
@@ -110,7 +103,7 @@ interface Network {
 
 // Network loading functions
 
-/*
+/**
  * Create a LayerData object from a layer ArrayBuffer
  *
  * The function extracts the header, shape and data from the layer
@@ -156,7 +149,7 @@ function getLayerData(layer: ArrayBuffer): LayerData {
   };
 }
 
-/*
+/**
  * Creates a network from a list of pairs of weights and biases
  *
  * It automates the creation of state buffers that are used to store the intermediate results of the network
@@ -242,26 +235,33 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
 
 // Data fetching and network creation
 
-const layer0Biases = await fetch('/TypeGPU/mnistWeights/layer0.bias.npy').then(
-  (res) => res.arrayBuffer().then((buffer) => getLayerData(buffer)),
-);
-const layer0Weights = await fetch(
-  '/TypeGPU/mnistWeights/layer0.weight.npy',
-).then((res) => res.arrayBuffer().then((buffer) => getLayerData(buffer)));
-
-const layer1Biases = await fetch('/TypeGPU/mnistWeights/layer1.bias.npy').then(
-  (res) => res.arrayBuffer().then((buffer) => getLayerData(buffer)),
-);
-const layer1Weights = await fetch(
-  '/TypeGPU/mnistWeights/layer1.weight.npy',
-).then((res) => res.arrayBuffer().then((buffer) => getLayerData(buffer)));
-
-const layer2Biases = await fetch('/TypeGPU/mnistWeights/layer2.bias.npy').then(
-  (res) => res.arrayBuffer().then((buffer) => getLayerData(buffer)),
-);
-const layer2Weights = await fetch(
-  '/TypeGPU/mnistWeights/layer2.weight.npy',
-).then((res) => res.arrayBuffer().then((buffer) => getLayerData(buffer)));
+const [
+  layer0Biases,
+  layer0Weights,
+  layer1Biases,
+  layer1Weights,
+  layer2Biases,
+  layer2Weights,
+] = await Promise.all([
+  fetch('/TypeGPU/mnistWeights/layer0.bias.npy').then((res) =>
+    res.arrayBuffer().then((buffer) => getLayerData(buffer)),
+  ),
+  fetch('/TypeGPU/mnistWeights/layer0.weight.npy').then((res) =>
+    res.arrayBuffer().then((buffer) => getLayerData(buffer)),
+  ),
+  fetch('/TypeGPU/mnistWeights/layer1.bias.npy').then((res) =>
+    res.arrayBuffer().then((buffer) => getLayerData(buffer)),
+  ),
+  fetch('/TypeGPU/mnistWeights/layer1.weight.npy').then((res) =>
+    res.arrayBuffer().then((buffer) => getLayerData(buffer)),
+  ),
+  fetch('/TypeGPU/mnistWeights/layer2.bias.npy').then((res) =>
+    res.arrayBuffer().then((buffer) => getLayerData(buffer)),
+  ),
+  fetch('/TypeGPU/mnistWeights/layer2.weight.npy').then((res) =>
+    res.arrayBuffer().then((buffer) => getLayerData(buffer)),
+  ),
+]);
 
 const network = createNetwork([
   [layer0Weights, layer0Biases],
@@ -279,29 +279,30 @@ const bars = Array.from(
 );
 
 const resetAll = () => {
-  data.fill(0);
+  canvasData.fill(0);
   resetCanvas();
+  for (const bar of bars) {
+    bar.style.width = '0';
+  }
 };
 
 const resetCanvas = () => {
   context.clearRect(0, 0, canvas.width, canvas.height);
   // draw grid
   context.strokeStyle = '#ccc';
-  const scale = canvas.width / 28;
-  for (let i = 0; i < 28; i++) {
-    for (let j = 0; j < 28; j++) {
+  const scale = canvas.width / SIZE;
+  for (let i = 0; i < SIZE; i++) {
+    for (let j = 0; j < SIZE; j++) {
       context.strokeRect(j * scale, i * scale, scale, scale);
     }
   }
 };
-resetCanvas();
 
 const draw = () => {
-  const size = 28;
-  const scale = canvas.width / size;
-  for (let i = 0; i < size; i++) {
-    for (let j = 0; j < size; j++) {
-      const value = data[i * size + j];
+  const scale = canvas.width / SIZE;
+  for (let i = 0; i < SIZE; i++) {
+    for (let j = 0; j < SIZE; j++) {
+      const value = canvasData[i * SIZE + j];
       if (value > 0) {
         context.fillStyle = `rgb(${255 - value}, ${255 - value}, ${255 - value})`;
         context.fillRect(j * scale, i * scale, scale, scale);
@@ -337,17 +338,17 @@ const handleDrawing = (x: number, y: number) => {
     for (let j = -1; j <= 1; j++) {
       const newX = x + i;
       const newY = y + j;
-      if (newX >= 0 && newX < 28 && newY >= 0 && newY < 28) {
+      if (newX >= 0 && newX < SIZE && newY >= 0 && newY < SIZE) {
         const distance = Math.abs(i) + Math.abs(j);
         const add = distance === 0 ? 128 : distance === 1 ? 64 : 32;
-        const value = data[newY * 28 + newX];
-        data[newY * 28 + newX] = Math.min(value + add, 255);
+        const value = canvasData[newY * SIZE + newX];
+        canvasData[newY * SIZE + newX] = Math.min(value + add, 255);
       }
     }
   }
   draw();
 
-  network.inference([...data].map((x) => x / 255)).then((data) => {
+  network.inference(canvasData.map((x) => x / 255)).then((data) => {
     const max = Math.max(...data);
     const index = data.indexOf(max);
     const sum = data.reduce((a, b) => a + b, 0);
@@ -364,7 +365,7 @@ canvas.addEventListener('mousemove', (event) => {
   if (!isDrawing) {
     return;
   }
-  const cellSize = canvas.width / 28;
+  const cellSize = canvas.width / SIZE;
   const x = Math.floor((event.offsetX * window.devicePixelRatio) / cellSize);
   const y = Math.floor((event.offsetY * window.devicePixelRatio) / cellSize);
   handleDrawing(x, y);
@@ -374,7 +375,7 @@ canvas.addEventListener('touchmove', (event) => {
   event.preventDefault();
   const canvasPos = canvas.getBoundingClientRect();
   const touch = event.touches[0];
-  const cellSize = canvas.width / 28;
+  const cellSize = canvas.width / SIZE;
   const x = Math.floor(
     ((touch.clientX - canvasPos.left) * window.devicePixelRatio) / cellSize,
   );
@@ -383,6 +384,8 @@ canvas.addEventListener('touchmove', (event) => {
   );
   handleDrawing(x, y);
 });
+
+resetAll();
 
 /** @button "Reset" */
 export function reset() {
