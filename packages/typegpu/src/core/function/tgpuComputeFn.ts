@@ -21,7 +21,7 @@ export interface TgpuComputeFnShell<
   /**
    * Creates a type-safe implementation of this signature
    */
-  implement(
+  does(
     implementation: (...args: UnwrapArgs<Args>) => undefined,
   ): TgpuComputeFn;
 
@@ -31,7 +31,7 @@ export interface TgpuComputeFnShell<
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  implement(implementation: string): TgpuComputeFn;
+  does(implementation: string): TgpuComputeFn;
 }
 
 export interface TgpuComputeFn extends TgpuResolvable, TgpuNamable {
@@ -56,7 +56,7 @@ export function computeFn<Args extends AnyTgpuData[]>(
     argTypes,
     returnType: undefined,
 
-    implement(implementation) {
+    does(implementation) {
       return createComputeFn(this, workgroupSize, implementation);
     },
   };

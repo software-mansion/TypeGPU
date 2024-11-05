@@ -8,7 +8,7 @@ describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {
     const getX = tgpu
       .fn([], f32)
-      .implement(() => {
+      .does(() => {
         return 3;
       })
       .$name('get_x');
@@ -19,7 +19,7 @@ describe('TGSL tgpu.fn function', () => {
   it('resolves fn to WGSL', () => {
     const getY = tgpu
       .fn([], f32)
-      .implement(() => {
+      .does(() => {
         return 3;
       })
       .$name('get_y');
@@ -47,7 +47,7 @@ describe('TGSL tgpu.fn function', () => {
     const v = vec3f; // necessary workaround until we finish implementation of member access in the generator
     const getColor = tgpu
       .fn([], vec3f)
-      .implement(() => {
+      .does(() => {
         const color = v();
         const color2 = v(1, 2, 3);
         return color;
@@ -57,7 +57,7 @@ describe('TGSL tgpu.fn function', () => {
 
     const getX = tgpu
       .fn([], f32)
-      .implement(() => {
+      .does(() => {
         const color = getColor();
         return 3;
       })
@@ -66,7 +66,7 @@ describe('TGSL tgpu.fn function', () => {
 
     const getY = tgpu
       .fn([], f32)
-      .implement(() => {
+      .does(() => {
         const c = getColor();
         return getX();
       })

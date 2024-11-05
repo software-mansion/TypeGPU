@@ -5,11 +5,11 @@ A set of utilities for working with TGSL (TypeGPU Shader Language), a subset of 
 ## Basic principles
 
 ```ts
-const double = tgpu.fn([f32], f32).implement((v) => 2 * v);
+const double = tgpu.fn([f32], f32).does((v) => 2 * v);
 
 const foo = tgpu
   .fn([f32, f32], f32)
-  .implement((a, b) => {
+  .does((a, b) => {
     return a + b + double(a);
   });
 
@@ -28,7 +28,7 @@ This can then be used to generate JS code with a build plugin:
 ```ts
 const foo = tgpu
   .fn([f32, f32], f32)
-  .implement((a, b) => {
+  .does((a, b) => {
     return a + b + double(a);
   })
   .$uses({ double });
