@@ -105,6 +105,6 @@ export const mainFrag = tgpu
 
   it('adds tgpu import', () => {
     const wgsl = 'fn f() {}';
-    expect(generate(wgsl)).toMatch(/.*import tgpu from 'typegpu.*';.*/);
+    expect(generate(wgsl)).toContain("import tgpu from 'typegpu';");
   });
 });

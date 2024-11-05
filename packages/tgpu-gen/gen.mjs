@@ -505,8 +505,8 @@ function generateImports(options) {
   return [
     options.usedImports?.tgpu
       ? options.moduleSyntax === 'commonjs'
-        ? `const tgpu = require('typegpu${options.experimentalFunctions ? '/experimental' : ''}').default;`
-        : `import tgpu from 'typegpu${options.experimentalFunctions ? '/experimental' : ''}';`
+        ? "const tgpu = require('typegpu').default;"
+        : "import tgpu from 'typegpu';"
       : null,
 
     options.usedImports?.data
