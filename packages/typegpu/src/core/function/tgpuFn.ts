@@ -77,9 +77,7 @@ export function fn<
     argTypes,
     returnType,
 
-    does(
-      implementation: Implementation<Args, Return>,
-    ): TgpuFn<Args, Return> {
+    does(implementation: Implementation<Args, Return>): TgpuFn<Args, Return> {
       return createFn(this, implementation);
     },
   };

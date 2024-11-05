@@ -21,9 +21,7 @@ export interface TgpuComputeFnShell<
   /**
    * Creates a type-safe implementation of this signature
    */
-  does(
-    implementation: (...args: UnwrapArgs<Args>) => undefined,
-  ): TgpuComputeFn;
+  does(implementation: (...args: UnwrapArgs<Args>) => undefined): TgpuComputeFn;
 
   /**
    * @param implementation
