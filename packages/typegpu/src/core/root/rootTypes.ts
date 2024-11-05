@@ -21,6 +21,10 @@ import type {
 import type { AnyTgpuData, BoundTgpuCode, TgpuCode } from '../../types';
 import type { Unwrapper } from '../../unwrapper';
 import type { TgpuBuffer } from '../buffer/buffer';
+import type { IOLayout } from '../function/fnTypes';
+import type { TgpuComputeFn } from '../function/tgpuComputeFn';
+import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
+import type { TgpuVertexFn } from '../function/tgpuVertexFn';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline';
 import type { TgpuRenderPipeline } from '../pipeline/renderPipeline';
 
@@ -106,9 +110,13 @@ export interface ExperimentalTgpuRoot extends TgpuRoot {
   externalTextureFor(texture: TgpuTextureExternal): GPUExternalTexture;
   samplerFor(sampler: TgpuSampler): GPUSampler;
 
-  withCompute(): WithCompute;
-  withVertex(): WithVertex;
-  withFragment(): WithFragment;
+  withCompute(entryFn: TgpuComputeFn): WithCompute;
+  withVertex<VertexAttribs extends IOLayout, Output extends IOLayout>(
+    entryFn: TgpuVertexFn<VertexAttribs, Output>,
+  ): WithVertex;
+  withFragment<Varying extends IOLayout, Output extends IOLayout>(
+    entryFn: TgpuFragmentFn<Varying, Output>,
+  ): WithFragment;
 
   /**
    * Causes all commands enqueued by pipelines to be

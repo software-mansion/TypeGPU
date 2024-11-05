@@ -58,7 +58,7 @@ export interface ResolutionCtx {
   };
   fnToWgsl(
     // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
-    shell: TgpuFnShellBase<any, AnyTgpuData | undefined>,
+    shell: TgpuFnShellBase<any, any>,
     argNames: string[],
     body: Block,
     externalMap: Record<string, unknown>,

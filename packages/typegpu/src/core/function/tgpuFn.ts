@@ -10,7 +10,7 @@ import type {
   Wgsl,
 } from '../../types';
 import { createFnCore } from './fnCore';
-import type { Implementation, UnwrapArgs, UnwrapReturn } from './fnTypes';
+import type { Implementation, UnwrapIO, UnwrapReturn } from './fnTypes';
 
 // ----------
 // Public API
@@ -20,8 +20,8 @@ import type { Implementation, UnwrapArgs, UnwrapReturn } from './fnTypes';
  * Describes a function signature (its arguments and return type)
  */
 export interface TgpuFnShell<
-  Args extends AnyTgpuData[],
-  Return extends AnyTgpuData | undefined,
+  Args extends AnyTgpuData[] = AnyTgpuData[],
+  Return extends AnyTgpuData | undefined = AnyTgpuData | undefined,
 > {
   readonly argTypes: Args;
   readonly returnType: Return | undefined;
@@ -30,7 +30,7 @@ export interface TgpuFnShell<
    * Creates a type-safe implementation of this signature
    */
   implement(
-    implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
+    implementation: (...args: UnwrapIO<Args>) => UnwrapReturn<Return>,
   ): TgpuFn<Args, Return>;
 
   /**
@@ -57,7 +57,7 @@ export type TgpuFn<
   Args extends AnyTgpuData[],
   Return extends AnyTgpuData | undefined = undefined,
 > = TgpuFnBase<Args, Return> &
-  ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>);
+  ((...args: UnwrapIO<Args>) => UnwrapReturn<Return>);
 
 export function fn<Args extends AnyTgpuData[] | []>(
   argTypes: Args,
@@ -78,9 +78,9 @@ export function fn<
     returnType,
 
     implement(
-      implementation: Implementation<Args, Return>,
+      implementation: Implementation<UnwrapIO<Args>, UnwrapReturn<Return>>,
     ): TgpuFn<Args, Return> {
-      return createFn(this, implementation);
+      return createFn(this, implementation as Implementation);
     },
   };
 }
@@ -98,7 +98,7 @@ function createFn<
   Return extends AnyTgpuData | undefined,
 >(
   shell: TgpuFnShell<Args, Return>,
-  implementation: Implementation<Args, Return>,
+  implementation: Implementation,
 ): TgpuFn<Args, Return> {
   type This = TgpuFnBase<Args, Return>;
 
@@ -129,10 +129,10 @@ function createFn<
     },
   };
 
-  const call = (...args: UnwrapArgs<Args>): UnwrapReturn<Return> => {
+  const call = (...args: unknown[]): unknown => {
     if (inGPUMode()) {
       // TODO: Filter out only those arguments which are valid to pass around
-      return new FnCall(fn, args as Wgsl[]) as UnwrapReturn<Return>;
+      return new FnCall(fn, args as Wgsl[]);
     }
 
     if (typeof implementation === 'string') {
@@ -151,7 +151,7 @@ function createFn<
     get: () => core.label,
   });
 
-  return fn;
+  return fn as TgpuFn<Args, Return>;
 }
 
 class FnCall<Args extends AnyTgpuData[], Return extends AnyTgpuData | undefined>
