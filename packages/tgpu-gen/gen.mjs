@@ -23,6 +23,7 @@ const LENGTH_VAR = 'arrayLength';
  * @prop {boolean} toTs
  * @prop {'commonjs' | 'esmodule'} moduleSyntax
  * @prop {'keep' | 'overwrite'} [existingFileStrategy]
+ * @prop {boolean} experimentalFunctions
  * @prop {Set<string>} [declaredIdentifiers]
  * @prop {{tgpu?: boolean, data?: boolean }} [usedImports]
  */
@@ -106,6 +107,7 @@ export function generate(
     outputPath: '',
     toTs: true,
     moduleSyntax: 'esmodule',
+    experimentalFunctions: true,
   },
 ) {
   const reflect = new WgslReflect(wgsl);
@@ -116,12 +118,16 @@ export function generate(
     reflect.getBindGroups(),
     options,
   );
-  const functions = generateFunctions(reflect.functions, wgsl, options);
+
+  const functions = options.experimentalFunctions
+    ? generateFunctions(reflect.functions, wgsl, options)
+    : null;
+
   const imports = generateImports(options);
   const exports_ = generateExports(options);
 
   return `/* generated via tgpu-gen by TypeGPU */
-${[imports, structs, aliases, bindGroupLayouts, functions, exports_].filter((generated) => generated.trim() !== '').join('\n')}
+${[imports, structs, aliases, bindGroupLayouts, functions, exports_].filter((generated) => generated && generated.trim() !== '').join('\n')}
 `;
 }
 

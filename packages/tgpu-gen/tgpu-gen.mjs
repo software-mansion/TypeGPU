@@ -21,6 +21,7 @@ const args = arg({
   '--overwrite': Boolean,
   '--keep': Boolean,
   '--watch': Boolean,
+  '--experimental-functions': Boolean,
 
   '-v': '--version',
   '-h': '--help',
@@ -177,6 +178,7 @@ const execute = async () => {
           outputPath,
           toTs,
           moduleSyntax,
+          experimentalFunctions: args['--experimental-functions'] ?? false,
         }).catch((error) => {
           error.file = file;
           throw error;
