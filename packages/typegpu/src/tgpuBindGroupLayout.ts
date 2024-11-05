@@ -136,6 +136,11 @@ export interface TgpuBindGroupLayoutExperimental<
     TgpuLayoutEntry | null
   >,
 > extends TgpuBindGroupLayout<Entries> {
+  /**
+   * Marks a bind group layout to appear with a specific group index in the resulting WGSL code
+   */
+  $idx(index?: number): this;
+
   readonly bound: {
     [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
   };
@@ -252,6 +257,7 @@ class TgpuBindGroupLayoutImpl<
 > implements TgpuBindGroupLayoutExperimental<Entries>
 {
   private _label: string | undefined;
+  private _index: number | undefined;
 
   public readonly resourceType = 'bind-group-layout' as const;
 
@@ -268,6 +274,11 @@ class TgpuBindGroupLayoutImpl<
 
   $name(label?: string | undefined): this {
     this._label = label;
+    return this;
+  }
+
+  $idx(index?: number): this {
+    this._index = index;
     return this;
   }
 
