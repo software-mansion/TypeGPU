@@ -472,7 +472,12 @@ function generateFunction(func, wgsl, options) {
         : 'fn';
 
   const inputs = `[${func.arguments
-    .flatMap((arg) => (arg.type ? [generateType(arg.type, options)] : []))
+    .flatMap((arg) =>
+      arg.type &&
+      arg.type.attributes?.find((attr) => attr.name === 'builtin') === undefined
+        ? [generateType(arg.type, options)]
+        : [],
+    )
     .join(', ')}]`;
 
   const output = func.returnType
