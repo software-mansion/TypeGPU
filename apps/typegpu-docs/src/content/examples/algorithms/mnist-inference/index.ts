@@ -302,7 +302,6 @@ const network = createNetwork([
 // Canvas drawing
 
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
-const parent = canvas.parentElement as HTMLElement;
 
 const bars = Array.from(
   { length: 10 },
