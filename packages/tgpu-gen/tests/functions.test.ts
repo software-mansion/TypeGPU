@@ -67,7 +67,7 @@ fn mainVert(@builtin(instance_index) ii: u32, @location(0) v: vec2f) -> VertexOu
 
     expect(generate(wgsl)).toContain(`\
 export const mainVert = tgpu
-  .vertexFn([d.u32, d.vec2f], VertexOutput)
+  .vertexFn([d.u32, d.location(0, d.vec2f)], VertexOutput)
   .does(/* wgsl */ \`(@builtin(instance_index) ii: u32, @location(0) v: vec2f) -> VertexOutput {
     let instanceInfo = trianglePos[ii];
 
@@ -97,7 +97,7 @@ fn mainFrag(@location(1) color: vec4f) -> @location(0) vec4f {
 
     expect(generate(wgsl)).toContain(`\
 export const mainFrag = tgpu
-  .fragmentFn([d.vec4f], d.vec4f)
+  .fragmentFn([d.location(1, d.vec4f)], d.location(0, d.vec4f))
   .does(/* wgsl */ \`(@location(1) color: vec4f) -> @location(0) vec4f {
     return color;
 }\`);`);

@@ -220,7 +220,7 @@ function generateType(type_, options) {
   const result =
     type_.attributes?.reduce(
       (acc, attribute) =>
-        ['align', 'size'].includes(attribute.name)
+        ['align', 'size', 'location'].includes(attribute.name)
           ? `d.${attribute.name}(${attribute.value}, ${acc})`
           : acc,
       tgpuType,
@@ -466,7 +466,7 @@ function generateFunction(func, wgsl, options) {
         : 'fn';
 
   const inputs = `[${func.arguments
-    .flatMap((input) => (input.type ? [generateType(input.type, options)] : []))
+    .flatMap((arg) => (arg.type ? [generateType(arg.type, options)] : []))
     .join(', ')}]`;
 
   const output = func.returnType
