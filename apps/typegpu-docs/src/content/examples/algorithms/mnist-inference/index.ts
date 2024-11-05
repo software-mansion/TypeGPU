@@ -81,67 +81,6 @@ const pipeline = device.createComputePipeline({
   },
 });
 
-// Inference function
-
-async function inferNetwork(network: Network) {
-  let encoder = device.createCommandEncoder();
-
-  // First layer (input -> layer1)
-  const pass = encoder.beginComputePass();
-  pass.setPipeline(pipeline);
-  pass.setBindGroup(
-    0,
-    root.unwrap(
-      inputOutput.populate({
-        input: network.input,
-        output: network.layers[0].buffers.state,
-      }),
-    ),
-  );
-  pass.setBindGroup(
-    1,
-    root.unwrap(
-      weightsBiases.populate({
-        weights: network.layers[0].buffers.weights,
-        biases: network.layers[0].buffers.biases,
-      }),
-    ),
-  );
-  pass.dispatchWorkgroups(network.layers[0].biases.shape[0]);
-  pass.end();
-  device.queue.submit([encoder.finish()]);
-
-  // All other layers (layer1 -> layerN -> output)
-  for (let i = 1; i < network.layers.length; i++) {
-    encoder = device.createCommandEncoder();
-    const pass = encoder.beginComputePass();
-    pass.setPipeline(pipeline);
-    pass.setBindGroup(
-      0,
-      root.unwrap(
-        inputOutput.populate({
-          input: network.layers[i - 1].buffers.state,
-          output: network.layers[i].buffers.state,
-        }),
-      ),
-    );
-    pass.setBindGroup(
-      1,
-      root.unwrap(
-        weightsBiases.populate({
-          weights: network.layers[i].buffers.weights,
-          biases: network.layers[i].buffers.biases,
-        }),
-      ),
-    );
-    pass.dispatchWorkgroups(network.layers[i].biases.shape[0]);
-    pass.end();
-    device.queue.submit([encoder.finish()]);
-  }
-
-  await device.queue.onSubmittedWorkDone();
-}
-
 // Definitions for the network
 
 interface LayerData {
@@ -249,21 +188,55 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
     .$usage('storage');
   const output = buffers[buffers.length - 1].buffers.state;
 
+  const ioBindGroups = buffers.map((_, i) =>
+    root.unwrap(
+      inputOutput.populate({
+        input: i === 0 ? input : buffers[i - 1].buffers.state,
+        output: buffers[i].buffers.state,
+      }),
+    ),
+  );
+
+  const weightsBindGroups = buffers.map((layer) =>
+    root.unwrap(
+      weightsBiases.populate({
+        weights: layer.buffers.weights,
+        biases: layer.buffers.biases,
+      }),
+    ),
+  );
+
+  async function inference(data: number[]): Promise<number[]> {
+    // verify the length of the data matches the input layer
+    if (data.length !== layers[0][0].shape[0]) {
+      throw new Error(
+        `Data length ${data.length} does not match input shape ${layers[0][0].shape[0]}`,
+      );
+    }
+    input.write(data);
+
+    // Run the network
+    const encoder = device.createCommandEncoder();
+    for (let i = 0; i < buffers.length; i++) {
+      const pass = encoder.beginComputePass();
+      pass.setPipeline(pipeline);
+      pass.setBindGroup(0, ioBindGroups[i]);
+      pass.setBindGroup(1, weightsBindGroups[i]);
+      pass.dispatchWorkgroups(buffers[i].biases.shape[0]);
+      pass.end();
+    }
+    device.queue.submit([encoder.finish()]);
+    await device.queue.onSubmittedWorkDone();
+
+    // Read the output
+    return await output.read();
+  }
+
   return {
     layers: buffers,
     input,
     output,
-
-    async inference(data: number[]) {
-      if (data.length !== layers[0][0].shape[0]) {
-        throw new Error(
-          `Data length ${data.length} does not match input shape ${layers[0][0].shape[0]}`,
-        );
-      }
-      input.write(data);
-      await inferNetwork(this);
-      return await output.read();
-    },
+    inference,
   };
 }
 
