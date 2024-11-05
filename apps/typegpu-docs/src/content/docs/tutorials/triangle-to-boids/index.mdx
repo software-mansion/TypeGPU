@@ -93,7 +93,7 @@ const VertexOutput = d.ioStruct({
 
 const vertexMain = tgpu
   .vertexFn([tgpu.builtin.vertexIndex], VertexOutput)
-  .implement((idx) => {
+  .does((idx) => {
     const vertices = [
       vec2f(0, 0.5),
       vec2f(-0.5, -0.5),
@@ -109,7 +109,7 @@ const vertexMain = tgpu
 
 const fragmentMain = tgpu
   .fragmentFn([], vec4f)
-  .implement(() => {
+  .does(() => {
     // let's go with a simple purple for now
     return vec4f(0.7686, 0.3922, 1.0, 1.0);
   });
@@ -123,7 +123,7 @@ what arguments it accepts, and what it should return:
 ```ts
 const vertexMain = tgpu
   .vertexFn([tgpu.builtin.vertexIndex], VertexOutput)
-  .implement(/* accept parameter of type (p0: number) => { position: vec4f } */);
+  .does(/* accept parameter of type (p0: number) => { position: vec4f } */);
 ```
 
 

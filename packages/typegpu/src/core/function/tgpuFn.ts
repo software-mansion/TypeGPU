@@ -29,7 +29,7 @@ export interface TgpuFnShell<
   /**
    * Creates a type-safe implementation of this signature
    */
-  implement(
+  does(
     implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
   ): TgpuFn<Args, Return>;
 
@@ -39,7 +39,7 @@ export interface TgpuFnShell<
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  implement(implementation: string): TgpuFn<Args, Return>;
+  does(implementation: string): TgpuFn<Args, Return>;
 }
 
 interface TgpuFnBase<
@@ -77,16 +77,14 @@ export function fn<
     argTypes,
     returnType,
 
-    implement(
-      implementation: Implementation<Args, Return>,
-    ): TgpuFn<Args, Return> {
+    does(implementation: Implementation<Args, Return>): TgpuFn<Args, Return> {
       return createFn(this, implementation);
     },
   };
 }
 
 export function procedure(implementation: () => void) {
-  return fn([]).implement(implementation);
+  return fn([]).does(implementation);
 }
 
 // --------------

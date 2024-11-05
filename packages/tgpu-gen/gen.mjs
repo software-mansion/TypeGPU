@@ -475,7 +475,7 @@ function generateFunction(func, wgsl, options) {
 
   return `tgpu
   .${funcType}(${inputs}${output ? `, ${output}` : ''})
-  .implement(/* wgsl */ \`${implementation.slice(implementation.indexOf(func.name) + func.name.length)}\`)`;
+  .does(/* wgsl */ \`${implementation.slice(implementation.indexOf(func.name) + func.name.length)}\`)`;
 }
 
 /**

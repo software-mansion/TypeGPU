@@ -47,7 +47,7 @@ const randSeed = wgsl.var(vec2f);
 
 const setupRandomSeed = tgpu
   .fn([vec2f])
-  .implement((coord) => {
+  .does((coord) => {
     randSeed.value = coord;
   })
   .$uses({ randSeed });
@@ -58,7 +58,7 @@ const setupRandomSeed = tgpu
  */
 const rand01 = tgpu
   .fn([], f32)
-  .implement(() => {
+  .does(() => {
     const a = std.dot(randSeed.value, vec2f(23.14077926, 232.61690225));
     const b = std.dot(randSeed.value, vec2f(54.47856553, 345.84153136));
     randSeed.value.x = std.fract(std.cos(a) * 136.8168);
@@ -109,7 +109,7 @@ const obstaclesReadonly = asReadonly(obstaclesBuffer);
 
 const isValidCoord = tgpu
   .fn([i32, i32], bool)
-  .implement(
+  .does(
     (x, y) =>
       x < gridSizeUniform.value &&
       x >= 0 &&
@@ -120,17 +120,17 @@ const isValidCoord = tgpu
 
 const coordsToIndex = tgpu
   .fn([i32, i32], i32)
-  .implement((x, y) => x + y * gridSizeUniform.value)
+  .does((x, y) => x + y * gridSizeUniform.value)
   .$uses({ gridSizeUniform });
 
 const getCell = tgpu
   .fn([i32, i32], vec4f)
-  .implement((x, y) => inputGridSlot.value[coordsToIndex(x, y)])
+  .does((x, y) => inputGridSlot.value[coordsToIndex(x, y)])
   .$uses({ coordsToIndex, inputGridSlot });
 
 const setCell = tgpu
   .fn([i32, i32, vec4f])
-  .implement((x, y, value) => {
+  .does((x, y, value) => {
     const index = coordsToIndex(x, y);
     outputGridSlot.value[index] = value;
   })
@@ -138,7 +138,7 @@ const setCell = tgpu
 
 const setVelocity = tgpu
   .fn([i32, i32, vec2f])
-  .implement((x, y, velocity) => {
+  .does((x, y, velocity) => {
     const index = coordsToIndex(x, y);
     outputGridSlot.value[index].x = velocity.x;
     outputGridSlot.value[index].y = velocity.y;
@@ -147,7 +147,7 @@ const setVelocity = tgpu
 
 const addDensity = tgpu
   .fn([i32, i32, f32])
-  .implement((x, y, density) => {
+  .does((x, y, density) => {
     const index = coordsToIndex(x, y);
     outputGridSlot.value[index].z = inputGridSlot.value[index].z + density;
   })
@@ -226,7 +226,7 @@ const isValidFlowOut = wgsl.fn`
 
 const computeVelocity = tgpu
   .fn([i32, i32], vec2f)
-  .implement(`(x: i32, y: i32) -> vec2f {
+  .does(`(x: i32, y: i32) -> vec2f {
     let gravity_cost = 0.5;
 
     let neighbor_offsets = array<vec2i, 4>(

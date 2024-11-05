@@ -23,7 +23,7 @@ export interface TgpuVertexFnShell<
   /**
    * Creates a type-safe implementation of this signature
    */
-  implement(
+  does(
     implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
   ): TgpuVertexFn<[], Return>;
 
@@ -33,7 +33,7 @@ export interface TgpuVertexFnShell<
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  implement(implementation: string): TgpuVertexFn<[], Return>;
+  does(implementation: string): TgpuVertexFn<[], Return>;
 }
 
 export interface TgpuVertexFn<
@@ -68,7 +68,7 @@ export function vertexFn<
     argTypes,
     returnType,
 
-    implement(implementation) {
+    does(implementation) {
       return createVertexFn(this, implementation);
     },
   };

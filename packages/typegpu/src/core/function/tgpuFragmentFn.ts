@@ -23,7 +23,7 @@ export interface TgpuFragmentFnShell<
   /**
    * Creates a type-safe implementation of this signature
    */
-  implement(
+  does(
     implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
   ): TgpuFragmentFn<[], Return>;
 
@@ -33,7 +33,7 @@ export interface TgpuFragmentFnShell<
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  implement(implementation: string): TgpuFragmentFn<[], Return>;
+  does(implementation: string): TgpuFragmentFn<[], Return>;
 }
 
 export interface TgpuFragmentFn<
@@ -68,7 +68,7 @@ export function fragmentFn<
     argTypes,
     returnType,
 
-    implement(implementation) {
+    does(implementation) {
       return createFragmentFn(this, implementation);
     },
   };

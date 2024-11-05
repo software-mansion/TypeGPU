@@ -126,12 +126,12 @@ export default function typegpu(): Plugin {
               node.callee.property.type === 'Identifier' &&
               ((node.callee.property.name === 'procedure' &&
                 isTgpu(ctx, node.callee.object)) ||
-                // Assuming that every call to `.implement` is related to TypeGPU
+                // Assuming that every call to `.does` is related to TypeGPU
                 // because shells can be created separately from calls to `tgpu`,
                 // making it hard to detect.
                 // TODO: We can improve this by first checking if $__ast exists on this object
                 // at runtime, before calling it.
-                node.callee.property.name === 'implement')
+                node.callee.property.name === 'does')
             ) {
               const implementation = node.arguments[0];
 
