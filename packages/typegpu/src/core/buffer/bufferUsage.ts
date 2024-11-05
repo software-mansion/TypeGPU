@@ -1,5 +1,4 @@
 import type { Unwrap } from 'typed-binary';
-import { isArraySchema } from '../../data';
 import { inGPUMode } from '../../gpuMode';
 import { identifier } from '../../tgpuIdentifier';
 import type {
@@ -12,10 +11,8 @@ import {
   type Storage,
   type TgpuBuffer,
   type Uniform,
-  type Vertex,
   isUsableAsStorage,
   isUsableAsUniform,
-  isUsableAsVertex,
 } from './buffer';
 
 // ----------
@@ -108,39 +105,6 @@ class TgpuBufferUsageImpl<TData extends AnyTgpuData, TUsage extends BufferUsage>
   }
 }
 
-class TgpuBufferVertexImpl<TData extends AnyTgpuData>
-  implements TgpuBufferVertex<TData>
-{
-  public readonly resourceType = 'buffer-usage' as const;
-  public readonly usage = 'vertex';
-  public readonly vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'>;
-
-  constructor(
-    public readonly allocatable: TgpuBuffer<TData>,
-    stepMode: 'vertex' | 'instance',
-  ) {
-    const layout = getVertexLayoutIfValid(allocatable.dataType, stepMode);
-    if (!layout) {
-      throw new Error('Cannot create vertex buffer with complex data types.');
-    }
-    this.vertexLayout = layout;
-  }
-
-  get label() {
-    return this.allocatable.label;
-  }
-
-  resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this.label);
-    ctx.addBinding(this, ident);
-    return ctx.resolve(ident);
-  }
-
-  toString(): string {
-    return `vertex:${this.label ?? '<unnamed>'}`;
-  }
-}
-
 const mutableUsageMap = new WeakMap<
   TgpuBuffer<AnyTgpuData>,
   TgpuBufferUsageImpl<AnyTgpuData, 'mutable'>
@@ -205,52 +169,4 @@ export function asUniform<TData extends AnyTgpuData>(
     uniformUsageMap.set(buffer, usage);
   }
   return usage as unknown as TgpuBufferUniform<TData>;
-}
-
-const vertexUsageMap = new WeakMap<
-  TgpuBuffer<AnyTgpuData>,
-  {
-    vertex: TgpuBufferVertexImpl<AnyTgpuData>;
-    instance: TgpuBufferVertexImpl<AnyTgpuData>;
-  }
->();
-
-export function asVertex<TData extends AnyTgpuData>(
-  buffer: TgpuBuffer<TData> & Vertex,
-  stepMode: 'vertex' | 'instance',
-): TgpuBufferVertex<TData> {
-  if (!isUsableAsVertex(buffer)) {
-    throw new Error(
-      `Cannot pass ${buffer} to asVertex, as it is not allowed to be used as a vertex buffer. To allow it, call .$usage('vertex') when creating the buffer.`,
-    );
-  }
-
-  let usage = vertexUsageMap.get(buffer);
-  if (!usage) {
-    usage = {
-      vertex: new TgpuBufferVertexImpl(buffer, 'vertex'),
-      instance: new TgpuBufferVertexImpl(buffer, 'instance'),
-    };
-    vertexUsageMap.set(buffer, usage);
-  }
-  return usage[stepMode] as unknown as TgpuBufferVertex<TData>;
-}
-
-function getVertexLayoutIfValid(
-  type: AnyTgpuData,
-  stepMode: 'vertex' | 'instance',
-): Omit<GPUVertexBufferLayout, 'attributes'> | null {
-  // check if the type is a primitive (f32, i32, u32, or a vector)
-  if ('expressionCode' in type) {
-    return {
-      arrayStride: type.size,
-      stepMode: stepMode,
-    };
-  }
-  // if the data type is an array, check if the element type is valid
-  // as arrayOf(arrayOf(f32, x), y) would still be valid - we do it recursively
-  if (isArraySchema(type)) {
-    return getVertexLayoutIfValid(type.elementType, stepMode);
-  }
-  return null;
 }
