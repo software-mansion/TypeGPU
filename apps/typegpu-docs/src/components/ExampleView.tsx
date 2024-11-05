@@ -161,14 +161,17 @@ export function ExampleView({ example }: Props) {
                   setCurrentEditorTab={setCurrentEditorTab}
                 />
 
-                {currentEditorTab === 'ts' ? (
-                  <TsCodeEditor code={code} onCodeChange={handleTsCodeChange} />
-                ) : (
-                  <HtmlCodeEditor
-                    code={htmlCode}
-                    onCodeChange={handleHtmlCodeChange}
-                  />
-                )}
+                <TsCodeEditor
+                  shown={currentEditorTab === 'ts'}
+                  code={code}
+                  onCodeChange={handleTsCodeChange}
+                />
+
+                <HtmlCodeEditor
+                  shown={currentEditorTab === 'html'}
+                  code={htmlCode}
+                  onCodeChange={handleHtmlCodeChange}
+                />
               </div>
             </div>
           ) : null}

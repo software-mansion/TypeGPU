@@ -73,30 +73,33 @@ function handleEditorWillMount(monaco: Monaco) {
 type Props = {
   code: string;
   onCodeChange: (value: string) => unknown;
+  shown: boolean;
 };
 
 const createCodeEditorComponent =
   (language: 'typescript' | 'html', beforeMount?: BeforeMount) =>
   (props: Props) => {
-    const { code, onCodeChange } = props;
+    const { code, onCodeChange, shown } = props;
 
     const handleChange = useEvent((value: string | undefined) => {
       onCodeChange(value ?? '');
     });
 
     return (
-      <Editor
-        defaultLanguage={language}
-        value={code}
-        onChange={handleChange}
-        beforeMount={beforeMount}
-        options={{
-          minimap: {
-            enabled: false,
-          },
-        }}
-        className="pt-16 md:pt-0"
-      />
+      <div className={shown ? 'contents' : 'hidden'}>
+        <Editor
+          defaultLanguage={language}
+          value={code}
+          onChange={handleChange}
+          beforeMount={beforeMount}
+          options={{
+            minimap: {
+              enabled: false,
+            },
+          }}
+          className="pt-16 md:pt-0"
+        />
+      </div>
     );
   };
 
