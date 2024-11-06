@@ -242,26 +242,20 @@ const [
   layer1Weights,
   layer2Biases,
   layer2Weights,
-] = await Promise.all([
-  fetch('/TypeGPU/mnistWeights/layer0.bias.npy').then((res) =>
-    res.arrayBuffer().then((buffer) => getLayerData(buffer)),
+] = await Promise.all(
+  [
+    'layer0.bias.npy',
+    'layer0.weight.npy',
+    'layer1.bias.npy',
+    'layer1.weight.npy',
+    'layer2.bias.npy',
+    'layer2.weight.npy',
+  ].map((fileName) =>
+    fetch(`/TypeGPU/mnistWeights/${fileName}`).then((res) =>
+      res.arrayBuffer().then((buffer) => getLayerData(buffer)),
+    ),
   ),
-  fetch('/TypeGPU/mnistWeights/layer0.weight.npy').then((res) =>
-    res.arrayBuffer().then((buffer) => getLayerData(buffer)),
-  ),
-  fetch('/TypeGPU/mnistWeights/layer1.bias.npy').then((res) =>
-    res.arrayBuffer().then((buffer) => getLayerData(buffer)),
-  ),
-  fetch('/TypeGPU/mnistWeights/layer1.weight.npy').then((res) =>
-    res.arrayBuffer().then((buffer) => getLayerData(buffer)),
-  ),
-  fetch('/TypeGPU/mnistWeights/layer2.bias.npy').then((res) =>
-    res.arrayBuffer().then((buffer) => getLayerData(buffer)),
-  ),
-  fetch('/TypeGPU/mnistWeights/layer2.weight.npy').then((res) =>
-    res.arrayBuffer().then((buffer) => getLayerData(buffer)),
-  ),
-]);
+);
 
 const network = createNetwork([
   [layer0Weights, layer0Biases],
@@ -273,16 +267,13 @@ const network = createNetwork([
 
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
-const bars = Array.from(
-  { length: 10 },
-  (_, i) => document.getElementById(`bar-fill-${i}`) as HTMLElement,
-);
+const bars = document.querySelectorAll('.bar') as NodeListOf<HTMLDivElement>;
 
 const resetAll = () => {
   canvasData.fill(0);
   resetCanvas();
   for (const bar of bars) {
-    bar.style.width = '0';
+    bar.style.setProperty('--bar-width', '0');
   }
 };
 
@@ -312,10 +303,11 @@ const draw = () => {
 };
 
 const observer = new ResizeObserver(() => {
+  console.log('Example resize observer');
   resetCanvas();
   draw();
 });
-observer.observe(canvas);
+observer.observe(canvas.parentNode?.parentNode as HTMLElement);
 
 let isDrawing = false;
 canvas.addEventListener('mousedown', () => {
@@ -355,8 +347,8 @@ const handleDrawing = (x: number, y: number) => {
     const normalized = data.map((x) => x / sum);
 
     bars.forEach((bar, i) => {
-      bar.style.width = `${normalized[i] * 100}%`;
-      bar.classList.toggle('bar-fill-highlight', i === index);
+      bar.style.setProperty('--bar-width', `${normalized[i] * 100}%`);
+      bar.style.setProperty('--highlight-opacity', i === index ? '1' : '0');
     });
   });
 };
