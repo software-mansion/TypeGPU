@@ -137,7 +137,10 @@ export interface TgpuBindGroupLayoutExperimental<
   >,
 > extends TgpuBindGroupLayout<Entries> {
   /**
-   * Marks a bind group layout to appear with a specific group index in the resulting WGSL code
+   * Associates this bind group layout with an explicit numeric index. When a call to this
+   * method is omitted, a unique numeric index is assigned to it automatically.
+   *
+   * Used when generating WGSL code: `@group(${index}) @binding(...) ...;`
    */
   $idx(index?: number): this;
 
