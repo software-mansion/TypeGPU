@@ -280,9 +280,7 @@ function useResizableCanvas(
         // @ts-ignore
         newCanvas[attribute.name] = attribute.value;
       }
-      newCanvas.style.position = 'absolute';
-      newCanvas.style.width = '100%';
-      newCanvas.style.height = '100%';
+      newCanvas.className = 'absolute w-full h-full';
 
       canvas.parentElement?.replaceChild(container, canvas);
 
