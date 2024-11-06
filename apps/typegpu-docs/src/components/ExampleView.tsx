@@ -287,7 +287,6 @@ function useResizableCanvas(
       canvas.parentElement?.replaceChild(container, canvas);
 
       const onResize = () => {
-        console.log('Base resize observer');
         newCanvas.width = frame.clientWidth * window.devicePixelRatio;
         newCanvas.height = frame.clientHeight * window.devicePixelRatio;
       };

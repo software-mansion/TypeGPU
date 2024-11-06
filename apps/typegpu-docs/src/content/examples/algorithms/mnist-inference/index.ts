@@ -303,7 +303,6 @@ const draw = () => {
 };
 
 const observer = new ResizeObserver(() => {
-  console.log('Example resize observer');
   resetCanvas();
   draw();
 });
