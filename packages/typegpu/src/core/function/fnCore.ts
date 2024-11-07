@@ -1,7 +1,7 @@
 import { MissingLinksError } from '../../errors';
 import { code } from '../../tgpuCode';
 import { identifier } from '../../tgpuIdentifier';
-import type { AnyTgpuData, ResolutionCtx } from '../../types';
+import type { ResolutionCtx } from '../../types';
 import {
   type ExternalMap,
   applyExternals,
@@ -9,36 +9,37 @@ import {
 } from './externals';
 import type { Implementation, TranspilationResult } from './fnTypes';
 
-export interface TgpuFnShellBase<
-  Args extends AnyTgpuData[],
-  Return extends AnyTgpuData | undefined,
-> {
+export interface TgpuFnShellBase<Args extends unknown[], Return> {
   readonly argTypes: Args;
   readonly returnType: Return | undefined;
 }
 
-export function createFnCore<
-  Args extends AnyTgpuData[],
-  Return extends AnyTgpuData | undefined,
->(
-  shell: TgpuFnShellBase<Args, Return>,
-  implementation: Implementation<Args, Return>,
-) {
+interface FnCore {
+  label: string | undefined;
+  applyExternals(newExternals: ExternalMap): void;
+  setAst(ast: TranspilationResult): void;
+  resolve(ctx: ResolutionCtx, fnAttribute?: string): string;
+}
+
+export function createFnCore(
+  shell: TgpuFnShellBase<unknown[], unknown>,
+  implementation: Implementation<unknown[], unknown>,
+): FnCore {
   const externalMap: ExternalMap = {};
   let prebuiltAst: TranspilationResult | null = null;
 
   return {
     label: undefined as string | undefined,
 
-    applyExternals(newExternals: ExternalMap) {
+    applyExternals(newExternals: ExternalMap): void {
       applyExternals(externalMap, newExternals);
     },
 
-    setAst(ast: TranspilationResult) {
+    setAst(ast: TranspilationResult): void {
       prebuiltAst = ast;
     },
 
-    resolve(ctx: ResolutionCtx, fnAttribute = '') {
+    resolve(ctx: ResolutionCtx, fnAttribute = ''): string {
       const ident = identifier().$name(this.label);
 
       if (typeof implementation === 'string') {

@@ -2,12 +2,7 @@ import type { Unwrap } from 'typed-binary';
 import { isArraySchema } from '../../data';
 import { inGPUMode } from '../../gpuMode';
 import { identifier } from '../../tgpuIdentifier';
-import type {
-  AnyTgpuData,
-  BufferUsage,
-  ResolutionCtx,
-  TgpuBindable,
-} from '../../types';
+import type { AnyTgpuData, BufferUsage, ResolutionCtx } from '../../types';
 import {
   type Storage,
   type TgpuBuffer,
@@ -21,6 +16,11 @@ import {
 // ----------
 // Public API
 // ----------
+
+interface TgpuBindable<TData extends AnyTgpuData, TUsage extends BufferUsage> {
+  allocatable: TgpuBuffer<TData>;
+  usage: TUsage;
+}
 
 export interface TgpuBufferUniform<TData extends AnyTgpuData>
   extends TgpuBindable<TData, 'uniform'> {
@@ -44,6 +44,7 @@ export interface TgpuBufferVertex<TData extends AnyTgpuData>
   extends TgpuBindable<TData, 'vertex'> {
   readonly resourceType: 'buffer-usage';
   vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'>;
+  value: Unwrap<TData>;
 }
 
 export interface TgpuBufferUsage<
@@ -138,6 +139,13 @@ class TgpuBufferVertexImpl<TData extends AnyTgpuData>
 
   toString(): string {
     return `vertex:${this.label ?? '<unnamed>'}`;
+  }
+
+  get value(): Unwrap<TData> {
+    if (!inGPUMode()) {
+      throw new Error(`Cannot access buffer's value directly in JS.`);
+    }
+    return this as Unwrap<TData>;
   }
 }
 

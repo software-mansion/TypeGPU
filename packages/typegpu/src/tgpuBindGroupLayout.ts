@@ -6,12 +6,10 @@ import {
   isUsableAsStorage,
   isUsableAsUniform,
 } from './core/buffer/buffer';
-import {
-  type TgpuBufferMutable,
-  type TgpuBufferReadonly,
-  type TgpuBufferUniform,
-  type TgpuBufferUsage,
-  isBufferUsage,
+import type {
+  TgpuBufferMutable,
+  TgpuBufferReadonly,
+  TgpuBufferUniform,
 } from './core/buffer/bufferUsage';
 import { NotUniformError } from './errors';
 import type { TgpuNamable } from './namable';
@@ -22,6 +20,12 @@ import type { Unwrapper } from './unwrapper';
 // ----------
 // Public API
 // ----------
+
+export type LayoutMembership = {
+  layout: TgpuBindGroupLayout;
+  key: string;
+  idx: number;
+};
 
 export type TgpuLayoutEntryBase = {
   /**
@@ -167,13 +171,9 @@ type StorageUsageForEntry<T extends TgpuLayoutStorage> = T extends {
 
 export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
   T extends TgpuLayoutUniform
-    ?
-        | TgpuBufferUsage<UnwrapRuntimeConstructor<T['uniform']>, 'uniform'>
-        | (TgpuBuffer<UnwrapRuntimeConstructor<T['uniform']>> & Uniform)
-        | GPUBuffer
+    ? (TgpuBuffer<UnwrapRuntimeConstructor<T['uniform']>> & Uniform) | GPUBuffer
     : T extends TgpuLayoutStorage
       ?
-          | StorageUsageForEntry<T>
           | (TgpuBuffer<UnwrapRuntimeConstructor<T['storage']>> & Storage)
           | GPUBuffer
       : T extends TgpuLayoutSampler
@@ -431,11 +431,6 @@ class TgpuBindGroupImpl<
                 throw new NotUniformError(value);
               }
               resource = { buffer: unwrapper.unwrap(value) };
-            } else if (isBufferUsage(value)) {
-              if (!isUsableAsUniform(value.allocatable)) {
-                throw new NotUniformError(value.allocatable);
-              }
-              resource = { buffer: unwrapper.unwrap(value.allocatable) };
             } else {
               resource = { buffer: value as GPUBuffer };
             }
@@ -454,11 +449,6 @@ class TgpuBindGroupImpl<
                 throw new NotUniformError(value);
               }
               resource = { buffer: unwrapper.unwrap(value) };
-            } else if (isBufferUsage(value)) {
-              if (!isUsableAsStorage(value.allocatable)) {
-                throw new NotUniformError(value.allocatable);
-              }
-              resource = { buffer: unwrapper.unwrap(value.allocatable) };
             } else {
               resource = { buffer: value as GPUBuffer };
             }

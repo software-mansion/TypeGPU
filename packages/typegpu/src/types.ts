@@ -1,5 +1,4 @@
 import type { ISchema, Unwrap } from 'typed-binary';
-import type { TgpuBuffer } from './core/buffer/buffer';
 import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
 import type { TgpuFnShellBase } from './core/function/fnCore';
 import type { TgpuNamable } from './namable';
@@ -33,12 +32,16 @@ export type OmitProps<T extends Record<string, unknown>, Prop> = Pick<
 >;
 
 /**
- * Passed into each resolvable item. All sibling items share a resolution ctx,
- * and a new resolution ctx is made when going down each level in the tree.
+ * Passed into each resolvable item. All items in a tree share a resolution ctx,
+ * but there can be layers added and removed from the item stack when going down
+ * and up the tree.
  */
 export interface ResolutionCtx {
   addDeclaration(item: TgpuResolvable): void;
-  addBinding(bindable: TgpuBindable, identifier: TgpuIdentifier): void;
+  addBinding(
+    bindable: TgpuBufferUsage<AnyTgpuData>,
+    identifier: TgpuIdentifier,
+  ): void;
   addRenderResource(
     resource: TgpuRenderResource,
     identifier: TgpuIdentifier,
@@ -58,7 +61,7 @@ export interface ResolutionCtx {
   };
   fnToWgsl(
     // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
-    shell: TgpuFnShellBase<any, AnyTgpuData | undefined>,
+    shell: TgpuFnShellBase<any, any>,
     argNames: string[],
     body: Block,
     externalMap: Record<string, unknown>,
@@ -115,14 +118,6 @@ export interface TgpuResolvableSlot<T extends Wgsl>
 
 export type SlotValuePair<T> = [TgpuSlot<T>, T];
 
-export interface TgpuBindable<
-  TData extends AnyTgpuData = AnyTgpuData,
-  TUsage extends BufferUsage = BufferUsage,
-> extends TgpuResolvable {
-  readonly allocatable: TgpuBuffer<TData>;
-  readonly usage: TUsage;
-}
-
 export type TgpuSamplerType = 'sampler' | 'sampler_comparison';
 export type TgpuTypedTextureType =
   | 'texture_1d'
@@ -138,26 +133,20 @@ export type TgpuDepthTextureType =
   | 'texture_depth_cube'
   | 'texture_depth_cube_array'
   | 'texture_depth_multisampled_2d';
-export type TgpuStorageTextureType =
-  | 'texture_storage_1d'
-  | 'texture_storage_2d'
-  | 'texture_storage_2d_array'
-  | 'texture_storage_3d';
 export type TgpuExternalTextureType = 'texture_external';
 
 export type TgpuRenderResourceType =
   | TgpuSamplerType
   | TgpuTypedTextureType
   | TgpuDepthTextureType
-  | TgpuStorageTextureType
   | TgpuExternalTextureType;
 
 export interface TgpuRenderResource extends TgpuResolvable {
   readonly type: TgpuRenderResourceType;
 }
 
+export type BindableBufferUsage = 'uniform' | 'readonly' | 'mutable';
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
-export type TextureUsage = 'sampled' | 'storage';
 
 export function isSamplerType(
   type: TgpuRenderResourceType,
@@ -188,17 +177,6 @@ export function isDepthTextureType(
     'texture_depth_cube',
     'texture_depth_cube_array',
     'texture_depth_multisampled_2d',
-  ].includes(type);
-}
-
-export function isStorageTextureType(
-  type: TgpuRenderResourceType,
-): type is TgpuStorageTextureType {
-  return [
-    'texture_storage_1d',
-    'texture_storage_2d',
-    'texture_storage_2d_array',
-    'texture_storage_3d',
   ].includes(type);
 }
 

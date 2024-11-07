@@ -1,8 +1,8 @@
 import type { TgpuNamable } from '../../namable';
 import type { Block } from '../../smol';
-import type { AnyTgpuData, ResolutionCtx, TgpuResolvable } from '../../types';
+import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
-import type { Implementation, UnwrapArgs } from './fnTypes';
+import type { Implementation } from './fnTypes';
 
 // ----------
 // Public API
@@ -11,17 +11,14 @@ import type { Implementation, UnwrapArgs } from './fnTypes';
 /**
  * Describes a compute entry function signature (its arguments and return type)
  */
-export interface TgpuComputeFnShell<
-  // TODO: Allow only builtins
-  Args extends AnyTgpuData[],
-> {
-  readonly argTypes: Args;
+export interface TgpuComputeFnShell {
+  readonly argTypes: [];
   readonly returnType: undefined;
 
   /**
    * Creates a type-safe implementation of this signature
    */
-  does(implementation: (...args: UnwrapArgs<Args>) => undefined): TgpuComputeFn;
+  does(implementation: () => undefined): TgpuComputeFn;
 
   /**
    * @param implementation
@@ -33,7 +30,7 @@ export interface TgpuComputeFnShell<
 }
 
 export interface TgpuComputeFn extends TgpuResolvable, TgpuNamable {
-  readonly shell: TgpuComputeFnShell<AnyTgpuData[]>;
+  readonly shell: TgpuComputeFnShell;
 
   $uses(dependencyMap: Record<string, unknown>): this;
   $__ast(argNames: string[], body: Block): this;
@@ -43,15 +40,12 @@ export interface TgpuComputeFn extends TgpuResolvable, TgpuNamable {
  * Creates a shell of a typed entry function for the compute shader stage. Any function
  * that implements this shell can perform general-purpose computation.
  *
- * @param argTypes
- *   Builtins to be made available to functions that implement this shell.
+ * @param workgroupSize
+ *   Size of blocks that the thread grid will be divided into (up to 3 dimensions).
  */
-export function computeFn<Args extends AnyTgpuData[]>(
-  workgroupSize: number[],
-  argTypes: Args,
-): TgpuComputeFnShell<Args> {
+export function computeFn(workgroupSize: number[]): TgpuComputeFnShell {
   return {
-    argTypes,
+    argTypes: [],
     returnType: undefined,
 
     does(implementation) {
@@ -64,10 +58,10 @@ export function computeFn<Args extends AnyTgpuData[]>(
 // Implementation
 // --------------
 
-function createComputeFn<Args extends AnyTgpuData[]>(
-  shell: TgpuComputeFnShell<Args>,
+function createComputeFn(
+  shell: TgpuComputeFnShell,
   workgroupSize: number[],
-  implementation: Implementation<Args, undefined>,
+  implementation: Implementation<[], void>,
 ): TgpuComputeFn {
   type This = TgpuComputeFn;
 

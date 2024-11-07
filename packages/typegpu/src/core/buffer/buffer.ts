@@ -2,6 +2,7 @@ import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
 import type { TgpuNamable } from '../../namable';
 import { type TgpuPlum, type Unsubscribe, isPlum } from '../../tgpuPlumTypes';
 import { type AnyTgpuData, isGPUBuffer } from '../../types';
+import type { UnionToIntersection } from '../../utilityTypes';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 
 // ----------
@@ -23,12 +24,6 @@ export interface Vertex {
 export const Uniform = { usableAsUniform: true } as Uniform;
 export const Storage = { usableAsStorage: true } as Storage;
 export const Vertex = { usableAsVertex: true } as Vertex;
-
-type UnionToIntersection<U> =
-  // biome-ignore lint/suspicious/noExplicitAny: <had to be done>
-  (U extends any ? (x: U) => void : never) extends (x: infer I) => void
-    ? I
-    : never;
 
 type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
   T extends 'uniform'
