@@ -1,0 +1,94 @@
+<canvas></canvas>
+<div class="predictions-container">
+  <div class="predictions-label">Predictions</div>
+
+  <div class="bars-container">
+    <div class="bar">O</div>
+    <div class="bar">1</div>
+    <div class="bar">2</div>
+    <div class="bar">3</div>
+    <div class="bar">4</div>
+    <div class="bar">5</div>
+    <div class="bar">6</div>
+    <div class="bar">7</div>
+    <div class="bar">8</div>
+    <div class="bar">9</div>
+  </div>
+</div>
+
+<style>
+  .predictions-container {
+    display: flex;
+    flex-direction: column;
+    width: 30%;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+  }
+
+  .predictions-label {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+    @media (max-width: 1024px) {
+      font-size: 1rem;
+    }
+  }
+
+  .bars-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    justify-content: flex-start;
+    row-gap: 0.5rem;
+    @media (max-width: 1024px) {
+      width: calc(100% + 8rem);
+      row-gap: 0.1rem;
+    }
+  }
+
+  .bar {
+    position: relative;
+    height: 1.25rem;
+    width: 100%;
+    font-family: 'Monaco', monospace;
+    font-size: 1rem;
+    background: linear-gradient(to right, transparent, #e6e6f2);
+    @media (max-width: 1024px) {
+      height: 1rem;
+      font-size: 0.75rem;
+    }
+  }
+
+  .bar::before {
+    height: 80%;
+    width: var(--bar-width, 0%);
+    background-color: #dadaed;
+    position: absolute;
+    inset: 10% 0 0 2rem;
+    border-radius: 9999px;
+    content: '';
+    transition: all 0.5s;
+  }
+
+  .bar::after {
+    height: 80%;
+    width: var(--bar-width, 0%);
+    opacity: var(--highlight-opacity, 0);
+    background-image: linear-gradient(to right, #c464ff, #1d72f0);
+    position: absolute;
+    inset: 10% 0 0 2rem;
+    border-radius: 9999px;
+    transition: all 0.5s;
+    content: '';
+  }
+
+  .bar-fill {
+    height: 100%;
+    background-color: #d1d5db;
+    border-radius: 9999px;
+    overflow: hidden;
+    transition: all 0.5s;
+    position: relative;
+  }
+</style>
