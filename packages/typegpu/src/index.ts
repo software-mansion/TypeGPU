@@ -2,6 +2,7 @@
  * @module typegpu
  */
 
+import { resolve } from './core/resolve/tgpuResolve';
 import { init, initFromDevice } from './core/root/init';
 import { createBuffer } from './legacyBufferApi';
 import { bindGroupLayout } from './tgpuBindGroupLayout';
@@ -19,6 +20,8 @@ export const tgpu = {
 
   init,
   initFromDevice,
+
+  resolve,
 
   createBuffer,
   read,

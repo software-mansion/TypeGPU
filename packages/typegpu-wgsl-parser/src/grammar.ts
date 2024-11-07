@@ -104,10 +104,13 @@ export type GlobalDecl =
   | GlobalVariableDecl
   | ValueDecl
   | OverrideDecl
-  | FunctionDecl;
+  | FunctionDecl
+  | StructDecl
 
 
  export type Ident = { type: 'ident', value: string }; 
+ export type StructDecl = { type: 'struct_decl', ident: string, members: StructMember[] }; 
+ export type StructMember = { type: 'struct_member', attrs: Attribute[], ident: string, typespec: TypeSpecifier }; 
  export type TypeSpecifier = TemplateElaboratedIdent; 
  export type TemplateElaboratedIdent = { type: 'template_elaborated_ident', ident: string, template_list: TemplateList | null }; 
  export type TemplateList = Expression[]; 
@@ -284,8 +287,21 @@ const grammar: Grammar = {
     {"name": "global_decl", "symbols": ["global_variable_decl", {"literal":";"}], "postprocess": id},
     {"name": "global_decl", "symbols": ["value_decl", {"literal":";"}], "postprocess": id},
     {"name": "global_decl", "symbols": ["override_decl", {"literal":";"}], "postprocess": id},
+    {"name": "global_decl", "symbols": ["struct_decl"], "postprocess": id},
     {"name": "global_decl", "symbols": ["function_decl"], "postprocess": id},
     {"name": "ident", "symbols": [(lexer.has("ident_pattern") ? {type: "ident_pattern"} : ident_pattern)], "postprocess": ([token]) => ({ type: 'ident', value: token.value })},
+    {"name": "struct_decl", "symbols": [{"literal":"struct"}, "ident", "struct_body_decl"], "postprocess": ([ , ident, members]) => ({ type: 'struct_decl', ident: ident.value, members })},
+    {"name": "struct_body_decl$ebnf$1", "symbols": []},
+    {"name": "struct_body_decl$ebnf$1$subexpression$1", "symbols": [{"literal":","}, "struct_member"]},
+    {"name": "struct_body_decl$ebnf$1", "symbols": ["struct_body_decl$ebnf$1", "struct_body_decl$ebnf$1$subexpression$1"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "struct_body_decl$ebnf$2", "symbols": [{"literal":","}], "postprocess": id},
+    {"name": "struct_body_decl$ebnf$2", "symbols": [], "postprocess": () => null},
+    {"name": "struct_body_decl$ebnf$3", "symbols": [{"literal":";"}], "postprocess": id},
+    {"name": "struct_body_decl$ebnf$3", "symbols": [], "postprocess": () => null},
+    {"name": "struct_body_decl", "symbols": [{"literal":"{"}, "struct_member", "struct_body_decl$ebnf$1", "struct_body_decl$ebnf$2", {"literal":"}"}, "struct_body_decl$ebnf$3"], "postprocess": ([ , first, rest]) => [first, ...rest.map(tuple => tuple[1])]},
+    {"name": "struct_member$ebnf$1", "symbols": []},
+    {"name": "struct_member$ebnf$1", "symbols": ["struct_member$ebnf$1", "attribute"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "struct_member", "symbols": ["struct_member$ebnf$1", "ident", {"literal":":"}, "type_specifier"], "postprocess": ([attrs, ident,, typespec]) => ({ type: 'struct_member', attrs, ident: ident.value, typespec })},
     {"name": "type_specifier", "symbols": ["template_elaborated_ident"], "postprocess": id},
     {"name": "template_elaborated_ident$ebnf$1", "symbols": ["template_list"], "postprocess": id},
     {"name": "template_elaborated_ident$ebnf$1", "symbols": [], "postprocess": () => null},
