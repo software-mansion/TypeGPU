@@ -267,12 +267,14 @@ const network = createNetwork([
 
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
-const bars = document.querySelectorAll('.bar') as NodeListOf<HTMLDivElement>;
+const bars = Array.from(
+  document.querySelectorAll('.bar') as NodeListOf<HTMLDivElement>,
+);
 
 const resetAll = () => {
   canvasData.fill(0);
   resetCanvas();
-  for (const bar of Array.from(bars)) {
+  for (const bar of bars) {
     bar.style.setProperty('--bar-width', '0');
   }
 };
