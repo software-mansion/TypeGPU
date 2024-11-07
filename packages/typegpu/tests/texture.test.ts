@@ -383,6 +383,7 @@ describe('TgpuReadonlyTexture', () => {
         size: [512, 512],
         format: 'rgba8sint',
         dimension: '1d',
+        viewFormats: ['rgba8unorm'],
       })
       .$usage('storage');
 
@@ -400,7 +401,7 @@ describe('TgpuReadonlyTexture', () => {
       })
       .$usage('storage');
 
-    const view = texture.asReadonly({
+    texture.asReadonly({
       // @ts-expect-error
       format: 'rgba8snorm',
     });

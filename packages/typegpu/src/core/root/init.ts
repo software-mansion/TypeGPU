@@ -122,13 +122,7 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
       TDimension
     >
   > {
-    return INTERNAL_createTexture(
-      {
-        ...props,
-        size: props.size as unknown as number[],
-      },
-      this,
-    ) as TgpuTexture<
+    return INTERNAL_createTexture(props, this) as unknown as TgpuTexture<
       CreateTextureResult<
         TSize,
         TFormat,
