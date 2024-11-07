@@ -22,16 +22,6 @@ export interface NumberArrayView {
 }
 
 /**
- * Removes properties from record type that extend `Prop`
- */
-export type OmitProps<T extends Record<string, unknown>, Prop> = Pick<
-  T,
-  {
-    [Key in keyof T]: T[Key] extends Prop ? never : Key;
-  }[keyof T]
->;
-
-/**
  * Passed into each resolvable item. All items in a tree share a resolution ctx,
  * but there can be layers added and removed from the item stack when going down
  * and up the tree.

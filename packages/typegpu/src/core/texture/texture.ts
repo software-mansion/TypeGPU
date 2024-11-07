@@ -7,18 +7,14 @@ import {
   vec4i,
   vec4u,
 } from '../../data/vector';
+import { invariant } from '../../errors';
 import type { TgpuNamable } from '../../namable';
-import type { SampledTextureParams } from '../../textureTypes';
-import type {
-  LayoutMembership,
-  TgpuBindGroupLayout,
-} from '../../tgpuBindGroupLayout';
-import { code } from '../../tgpuCode';
 import { identifier } from '../../tgpuIdentifier';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import type { Default } from '../../utilityTypes';
 import type { UnionToIntersection } from '../../utilityTypes';
-import type { TgpuLaidOut } from '../bindGroup/laidOut';
+import type { ExperimentalTgpuRoot } from '../root/rootTypes';
+import type { SampledTextureParams } from './textureTypes';
 
 // ----------
 // Public API
@@ -34,9 +30,12 @@ export interface SampledTexture {
 }
 
 export type TextureProps = {
-  format: StorageTextureTexelFormat;
-  viewFormats: StorageTextureTexelFormat[];
-  dimension: StorageTextureDimension;
+  size: number[];
+  format: GPUTextureFormat;
+  viewFormats?: GPUTextureFormat[] | undefined;
+  dimension?: GPUTextureDimension | undefined;
+  mipLevelCount?: number | undefined;
+  sampleCount?: number | undefined;
 };
 
 export interface StorageTexture<TProps extends TextureProps> {
@@ -45,14 +44,14 @@ export interface StorageTexture<TProps extends TextureProps> {
   asReadonly<
     TFormat extends
       | TProps['format']
-      | TProps['viewFormats'][number]
+      | Default<TProps['viewFormats'], []>[number]
       | undefined,
     TDimension extends StorageTextureDimension | undefined,
   >(
     params: StorageTextureParams<TFormat, TDimension>,
   ): TgpuReadonlyTexture<
     TexelFormatToDataType[Default<TFormat, TProps['format']>],
-    Default<TDimension, TProps['dimension']>
+    Default<TDimension, Default<TProps['dimension'], '2d'>>
   >;
 }
 
@@ -81,11 +80,16 @@ type LiteralToUsageType<
  */
 export interface TgpuTexture<TProps extends TextureProps = TextureProps>
   extends TgpuNamable {
+  readonly props: TProps; // <- storing to be able to differentiate structurally between different textures.
   readonly label: string | undefined;
 
   $usage<T extends ('sampled' | 'storage' | 'render')[]>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToUsageType<T[number], TProps>>;
+}
+
+export interface TgpuTexture_INTERNAL {
+  unwrap(): GPUTexture;
 }
 
 export type StorageTextureAccess = 'readonly' | 'writeonly' | 'mutable';
@@ -154,7 +158,7 @@ export interface TgpuMutableTexture<
 }
 
 /**
- * A texture accessed as "sampled" on the GPU.
+ * A texture accessed as sampled on the GPU.
  */
 export interface TgpuSampledTexture extends TgpuResolvable {}
 
@@ -202,21 +206,32 @@ const texelFormatToTgpuType = {
 
 type TexelFormatToDataType = typeof texelFormatToTgpuType;
 
+export function INTERNAL_createTexture<TProps extends TextureProps>(
+  props: TProps,
+  branch: ExperimentalTgpuRoot,
+): TgpuTexture<TProps> {
+  return new TgpuTextureImpl(props, branch);
+}
+
 // --------------
 // Implementation
 // --------------
 
 class TgpuTextureImpl<TProps extends TextureProps>
-  implements TgpuTexture<TProps>
+  implements TgpuTexture<TProps>, TgpuTexture_INTERNAL
 {
-  private _label: string | undefined;
-  private _flags = 0;
   public usableAsSampledTexture = false;
   public usableAsStorageTexture = false;
   public usableAsRenderTexture = false;
 
+  private _destroyed = false;
+  private _label: string | undefined;
+  private _flags = GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC;
+  private _texture: GPUTexture | null = null;
+
   constructor(
-    public readonly descriptor: Omit<GPUTextureDescriptor, 'usage'>,
+    public readonly props: TProps,
+    private readonly _branch: ExperimentalTgpuRoot,
   ) {}
 
   get label() {
@@ -226,6 +241,30 @@ class TgpuTextureImpl<TProps extends TextureProps>
   $name(label: string) {
     this._label = label;
     return this;
+  }
+
+  /**
+   * NOTE: Internal use only, use this and you'll get fired. Use `root.unwrap` instead.
+   */
+  unwrap(): GPUTexture {
+    if (this._destroyed) {
+      throw new Error('This texture has been destroyed');
+    }
+
+    if (!this._texture) {
+      this._texture = this._branch.device.createTexture({
+        label: this._label ?? '',
+        format: this.props.format,
+        size: this.props.size,
+        usage: this._flags,
+        dimension: this.props.dimension ?? '2d',
+        viewFormats: this.props.viewFormats ?? [],
+        mipLevelCount: this.props.mipLevelCount ?? 1,
+        sampleCount: this.props.sampleCount ?? 1,
+      });
+    }
+
+    return this._texture;
   }
 
   $usage<T extends ('sampled' | 'storage' | 'render')[]>(
@@ -245,7 +284,16 @@ class TgpuTextureImpl<TProps extends TextureProps>
       UnionToIntersection<LiteralToUsageType<T[number], TProps>>;
   }
 
-  asReadonly() {}
+  asReadonly() {
+    invariant(
+      this.usableAsStorageTexture,
+      "asReadonly is only available when explicitly marked with `.$usage('storage')",
+    );
+
+    const view = ...;
+
+    return view;
+  }
 
   private getStorageIfAllowed(
     params: StorageTextureParams,
@@ -313,6 +361,14 @@ class TgpuTextureImpl<TProps extends TextureProps>
       ? TgpuTextureView<typeof params.dataType, 'sampled'>
       : null;
   }
+
+  destroy() {
+    if (this._destroyed) {
+      return;
+    }
+    this._destroyed = true;
+    this._texture?.destroy();
+  }
 }
 
 const accessToCodeMap = {
@@ -349,49 +405,8 @@ class TgpuBindableStorageTextureImpl<
 
   resolve(ctx: ResolutionCtx): string {
     const ident = identifier().$name(this.label);
-    const { group, binding } = ctx.registerBindable(this);
 
-    ctx.addDeclaration(
-      code`@group(${group}) @binding(${binding}) var ${ident}: texture_storage<${this._format}, ${accessToCodeMap[this.access]}>;`,
-    );
-
-    return ctx.resolve(ident);
-  }
-}
-
-export class TgpuLaidOutStorageTextureImpl<
-  TFormat extends StorageTextureTexelFormat = StorageTextureTexelFormat,
-  TDimension extends StorageTextureDimension = StorageTextureDimension,
-> implements
-    TgpuStorageTexture<TexelFormatToDataType[TFormat], TDimension>,
-    TgpuLaidOut
-{
-  public readonly layout: TgpuBindGroupLayout;
-  public readonly texelDataType: TexelFormatToDataType[TFormat];
-
-  constructor(
-    public readonly dimension: TDimension,
-    public readonly access: StorageTextureAccess,
-    private readonly _format: TFormat,
-    private readonly _membership: LayoutMembership,
-  ) {
-    this.layout = _membership.layout;
-    this.texelDataType = texelFormatToTgpuType[
-      _format
-    ] as TexelFormatToDataType[TFormat];
-  }
-
-  get label() {
-    return this._membership.key;
-  }
-
-  resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this._membership.key);
-    const group = ctx.registerLaidOut(this);
-
-    ctx.addDeclaration(
-      code`@group(${group}) @binding(${this._membership.idx}) var ${ident}: texture_storage<${this._format}, ${accessToCodeMap[this.access]}>;`,
-    );
+    ctx.addRenderResource(this, ident);
 
     return ctx.resolve(ident);
   }

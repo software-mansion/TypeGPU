@@ -20,13 +20,19 @@ import type {
   Unsubscribe,
 } from '../../tgpuPlumTypes';
 import type { TgpuSampler } from '../../tgpuSampler';
+import type { AnyTgpuData } from '../../types';
+import { Mutable, OmitProps } from '../../utilityTypes';
+import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
+import {
+  INTERNAL_createTexture,
+  type TextureProps,
+  type TgpuTexture,
+} from '../texture/texture';
 import type {
   TgpuAnyTexture,
   TgpuAnyTextureView,
   TgpuTextureExternal,
-} from '../../tgpuTexture';
-import type { AnyTgpuData } from '../../types';
-import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
+} from '../texture/tgpuTexture';
 import type {
   ComputePipelineExecutorOptions,
   ComputePipelineOptions,
@@ -42,8 +48,8 @@ import type {
  */
 class TgpuRootImpl implements ExperimentalTgpuRoot {
   private _buffers: TgpuBuffer<AnyTgpuData>[] = [];
+  private _textures: TgpuTexture[] = [];
   private _samplers = new WeakMap<TgpuSampler, GPUSampler>();
-  private _textures = new WeakMap<TgpuAnyTexture, GPUTexture>();
   private _textureViews = new WeakMap<TgpuAnyTextureView, GPUTextureView>();
   private _externalTexturesStatus = new WeakMap<
     TgpuTextureExternal,
@@ -91,6 +97,10 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
   destroy() {
     for (const buffer of this._buffers) {
       buffer.destroy();
+    }
+
+    for (const texture of this._textures) {
+      texture.destroy();
     }
   }
 

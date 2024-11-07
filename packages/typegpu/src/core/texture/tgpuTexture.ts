@@ -1,21 +1,21 @@
-import { vec4f, vec4i, vec4u } from './data';
-import { invariant } from './errors';
-import type { TgpuNamable } from './namable';
-import type {
-  StorageTextureAccess,
-  TexelFormat,
-  TextureScalarFormat,
-} from './textureTypes';
-import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout';
-import { code } from './tgpuCode';
-import { identifier } from './tgpuIdentifier';
-import { isSampler } from './tgpuSampler';
+import { vec4f, vec4i, vec4u } from '../../data';
+import { invariant } from '../../errors';
+import type { TgpuNamable } from '../../namable';
+import type { TgpuBindGroupLayout } from '../../tgpuBindGroupLayout';
+import { code } from '../../tgpuCode';
+import { identifier } from '../../tgpuIdentifier';
+import { isSampler } from '../../tgpuSampler';
 import type {
   ResolutionCtx,
   TextureUsage,
   TgpuRenderResource,
   TgpuRenderResourceType,
-} from './types';
+} from '../../types';
+import type {
+  StorageTextureAccess,
+  TexelFormat,
+  TextureScalarFormat,
+} from './textureTypes';
 
 type Optional<T> = {
   [P in keyof T]?: T[P] | undefined;

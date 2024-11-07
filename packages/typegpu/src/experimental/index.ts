@@ -76,16 +76,11 @@ export type {
 export type { InitOptions, InitFromDeviceOptions } from '../core/root/init';
 export type { TgpuConst } from '../tgpuConstant';
 export type { TgpuPlum } from '../tgpuPlumTypes';
-export type { TexelFormat } from '../textureTypes';
 export type { TgpuSettable } from '../settableTrait';
 export type { TgpuVar } from '../tgpuVariable';
 export type { TgpuSampler } from '../tgpuSampler';
-export type {
-  TgpuTexture,
-  TgpuTextureView,
-} from '../tgpuTexture';
 export type { JitTranspiler } from '../jitTranspiler';
-export type * from '../textureTypes';
+export type * from '../core/texture/textureTypes';
 export type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,

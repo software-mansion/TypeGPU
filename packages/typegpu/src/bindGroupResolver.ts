@@ -1,17 +1,20 @@
-import type { TgpuBufferVertex } from './core/buffer/bufferUsage';
+import type {
+  TgpuBufferUsage,
+  TgpuBufferVertex,
+} from './core/buffer/bufferUsage';
 import {
   type ExperimentalTgpuRoot,
   deriveVertexFormat,
 } from './core/root/rootTypes';
-import type { ResolutionCtxImpl } from './resolutionCtx';
-import { type TgpuSampler, isSampler } from './tgpuSampler';
 import {
   type TgpuAnyTextureView,
   type TgpuTextureExternal,
   isExternalTexture,
   isTextureView,
-} from './tgpuTexture';
-import type { AnyTgpuData, BufferUsage, TgpuBindable, TgpuData } from './types';
+} from './core/texture/tgpuTexture';
+import type { ResolutionCtxImpl } from './resolutionCtx';
+import { type TgpuSampler, isSampler } from './tgpuSampler';
+import type { AnyTgpuData, BufferUsage, TgpuData } from './types';
 
 const usageToBindingTypeMap: Record<
   Exclude<BufferUsage, 'vertex'>,
@@ -26,7 +29,7 @@ export class BindGroupResolver {
   private samplers: TgpuSampler[] = [];
   private textureViews: TgpuAnyTextureView[] = [];
   private externalTextures: TgpuTextureExternal[] = [];
-  private buffers: TgpuBindable<AnyTgpuData, BufferUsage>[] = [];
+  private buffers: TgpuBufferUsage<AnyTgpuData>[] = [];
   private vertexBuffers: Map<TgpuBufferVertex<AnyTgpuData>, number> | null =
     null;
 

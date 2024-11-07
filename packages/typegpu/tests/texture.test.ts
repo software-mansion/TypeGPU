@@ -1,31 +1,216 @@
-import { describe, expect, it } from 'vitest';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  it,
+  vi,
+} from 'vitest';
+import type {
+  RenderTexture,
+  SampledTexture,
+  TgpuTexture,
+} from '../src/core/texture/texture';
 import { f32, u32 } from '../src/data';
-import { StrictNameRegistry, wgsl } from '../src/experimental';
+import {
+  type ExperimentalTgpuRoot,
+  StrictNameRegistry,
+  tgpu,
+  wgsl,
+} from '../src/experimental';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
 import './utils/webgpuGlobals';
 
-describe('texture', () => {
+const mockDevice = {
+  createBindGroup: vi.fn(() => 'mockBindGroup'),
+  createBindGroupLayout: vi.fn(() => 'mockBindGroupLayout'),
+  createBuffer: vi.fn(() => 'mockBuffer'),
+  createCommandEncoder: vi.fn(() => 'mockCommandEncoder'),
+  createComputePipeline: vi.fn(() => 'mockComputePipeline'),
+  createPipelineLayout: vi.fn(() => 'mockPipelineLayout'),
+  createRenderPipeline: vi.fn(() => 'mockRenderPipeline'),
+  createSampler: vi.fn(() => 'mockSampler'),
+  createShaderModule: vi.fn(() => 'mockShaderModule'),
+  createTexture: vi.fn(() => 'mockTexture'),
+  importExternalTexture: vi.fn(() => 'mockExternalTexture'),
+  queue: {
+    copyExternalImageToTexture: vi.fn(),
+    onSubmittedWorkDone: vi.fn(),
+    submit: vi.fn(),
+    writeBuffer: vi.fn(),
+    writeTexture: vi.fn(),
+  },
+};
+
+describe('TgpuTexture', () => {
+  let root: ExperimentalTgpuRoot;
+
+  beforeEach(() => {
+    root = tgpu.initFromDevice({
+      device: mockDevice as unknown as GPUDevice,
+    });
+  });
+
+  afterEach(() => {
+    root.destroy();
+    vi.resetAllMocks();
+  });
+
+  it('makes passing the default, `undefined` or omitting an option prop result in the same type.', () => {
+    const commonProps = {
+      size: [512, 512],
+      format: 'rgba8unorm',
+    } as const;
+
+    const texture1 = root.createTexture({
+      ...commonProps,
+    });
+
+    const texture2 = root.createTexture({
+      ...commonProps,
+      dimension: undefined,
+      mipLevelCount: undefined,
+      sampleCount: undefined,
+    });
+
+    const texture3 = root.createTexture({
+      ...commonProps,
+      dimension: '2d',
+      mipLevelCount: 1,
+      sampleCount: 1,
+    });
+
+    expectTypeOf(texture1).toEqualTypeOf(texture2);
+    expectTypeOf(texture1).toEqualTypeOf(texture3);
+  });
+
+  it('embeds a non-default dimension in the type', () => {
+    const commonProps = {
+      size: [512, 512],
+      format: 'rgba8unorm',
+    } as const;
+
+    const texture1 = root.createTexture({
+      ...commonProps,
+      dimension: '3d',
+    });
+
+    const texture2 = root.createTexture({
+      ...commonProps,
+      dimension: '1d',
+    });
+
+    expectTypeOf(texture1).toEqualTypeOf<
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm'; dimension: '3d' }>
+    >();
+    expectTypeOf(texture2).toEqualTypeOf<
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm'; dimension: '1d' }>
+    >();
+  });
+
+  it('embeds a non-default mipLevelCount in the type', () => {
+    const texture = root.createTexture({
+      size: [512, 512],
+      format: 'rgba8unorm',
+      mipLevelCount: 2,
+    });
+
+    expectTypeOf(texture).toEqualTypeOf<
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm'; mipLevelCount: 2 }>
+    >();
+  });
+
+  it('embeds a non-default sampleCount in the type', () => {
+    const texture = root.createTexture({
+      size: [512, 512],
+      format: 'rgba8unorm',
+      sampleCount: 2,
+    });
+
+    expectTypeOf(texture).toEqualTypeOf<
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm'; sampleCount: 2 }>
+    >();
+  });
+
+  it('makes a readonly size tuple mutable in the resulting type', () => {
+    // This is because there should be no difference between a texture
+    // that was created with a readonly size tuple, and one created
+    // with a mutable size tuple.
+
+    const texture = root.createTexture({
+      size: [1, 2, 3] as const,
+      format: 'rgba8unorm',
+    });
+
+    expectTypeOf(texture).toEqualTypeOf<
+      TgpuTexture<{ size: [1, 2, 3]; format: 'rgba8unorm' }>
+    >();
+  });
+
+  it('rejects non-strict or invalid size tuples', () => {
+    root.createTexture({
+      // @ts-expect-error
+      size: [],
+      format: 'rgba8unorm',
+    });
+
+    root.createTexture({
+      // @ts-expect-error
+      size: [1, 2] as number[], // <- too loose
+      format: 'rgba8unorm',
+    });
+  });
+
+  it('infers `sampled` usage', () => {
+    const texture = root
+      .createTexture({
+        size: [512, 512],
+        format: 'rgba8unorm',
+      })
+      .$usage('sampled');
+
+    expectTypeOf(texture).toEqualTypeOf<
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> & SampledTexture
+    >();
+  });
+
+  it('infers combined usage', () => {
+    const texture = root
+      .createTexture({
+        size: [512, 512],
+        format: 'rgba8unorm',
+      })
+      .$usage('sampled', 'render');
+
+    expectTypeOf(texture).toEqualTypeOf<
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> &
+        SampledTexture &
+        RenderTexture
+    >();
+  });
+
   it('creates a sampled texture view with correct type', () => {
-    const texture = wgsl
-      .texture({
-        size: [1, 1],
+    const texture = root
+      .createTexture({
+        size: [512, 512, 12],
         format: 'rgba8unorm',
       })
       .$name('texture')
-      .$allowSampled();
+      .$usage('sampled');
 
     const resolutionCtx = new ResolutionCtxImpl({
       names: new StrictNameRegistry(),
     });
 
     let code = wgsl`
-      let x = ${texture.asSampled({ type: 'texture_2d', dataType: u32 }).$name('view')};
+      let x = ${texture.asSampled({ type: 'texture_2d', dataType: u32 })};
     `;
 
     expect(resolutionCtx.resolve(code)).toContain('texture_2d<u32>');
 
     code = wgsl`
-      let x = ${texture.asSampled({ type: 'texture_2d_array', dataType: f32 }).$name('view')};
+      let x = ${texture.asSampled({ type: 'texture_2d_array', dataType: f32 })};
     `;
 
     expect(resolutionCtx.resolve(code)).toContain('texture_2d_array<f32>');

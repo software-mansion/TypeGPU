@@ -5,3 +5,24 @@ export type UnionToIntersection<U> =
   (U extends any ? (x: U) => void : never) extends (x: infer I) => void
     ? I
     : never;
+
+export type Prettify<T> = {
+  [K in keyof T]: T[K];
+} & {};
+
+/**
+ * Removes properties from record type that extend `Prop`
+ */
+export type OmitProps<T extends Record<string, unknown>, Prop> = Pick<
+  T,
+  {
+    [Key in keyof T]: T[Key] extends Prop ? never : Key;
+  }[keyof T]
+>;
+
+/**
+ * The opposite of Readonly<T>
+ */
+export type Mutable<T> = {
+  -readonly [P in keyof T]: T[P];
+};
