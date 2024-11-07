@@ -136,7 +136,7 @@ ident -> %ident_pattern {% ([token]) => ({ type: 'ident', value: token.value }) 
 struct_decl ->
   "struct" ident struct_body_decl {% ([ , ident, members]) => ({ type: 'struct_decl', ident: ident.value, members }) %}
 struct_body_decl ->
-    "{" struct_member ("," struct_member):* ",":? "}" ";":? {% ([ , first, rest]) => [first, ...rest.map(tuple => tuple[1])] %}
+    "{" struct_member ("," struct_member):* ",":? "}" {% ([ , first, rest]) => [first, ...rest.map(tuple => tuple[1])] %}
 
 @{% export type StructMember = { type: 'struct_member', attrs: Attribute[], ident: string, typespec: TypeSpecifier }; %}
 struct_member ->

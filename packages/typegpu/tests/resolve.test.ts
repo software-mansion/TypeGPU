@@ -32,7 +32,7 @@ describe('tgpu resolve', () => {
     });
     expect(parse(resolved)).toEqual(
       parse(
-        'struct Gradient { from: vec3f, to: vec3f, }; fn foo() { var g: Gradient; }',
+        'struct Gradient { from: vec3f, to: vec3f, } fn foo() { var g: Gradient; }',
       ),
     );
   });

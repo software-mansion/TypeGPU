@@ -32,6 +32,7 @@ describe('struct_decl', () => {
             } satisfies StructMember,
           ],
         } satisfies StructDecl,
+        null,
       ],
       type: 'translation_unit',
     });
@@ -39,7 +40,7 @@ describe('struct_decl', () => {
 
   it('parses struct with members with attributes', () => {
     expect(
-      parse('struct Gradient { @size(32) from: vec3f, to: vec3f };'),
+      parse('struct Gradient { @size(32) from: vec3f, to: vec3f }'),
     ).toEqual({
       declarations: [
         {
@@ -130,6 +131,72 @@ describe('struct_decl', () => {
             } satisfies StructMember,
           ],
         } satisfies StructDecl,
+      ],
+      type: 'translation_unit',
+    });
+  });
+
+  it('parses nested struct', () => {
+    expect(
+      parse(
+        'struct Gradient { from: vec3f, to: vec3f, }; struct Material { color: vec3f, gradient: Gradient, };',
+      ),
+    ).toEqual({
+      declarations: [
+        {
+          type: 'struct_decl',
+          ident: 'Gradient',
+          members: [
+            {
+              type: 'struct_member',
+              ident: 'from',
+              attrs: [],
+              typespec: {
+                type: 'template_elaborated_ident',
+                ident: 'vec3f',
+                template_list: null,
+              },
+            } satisfies StructMember,
+            {
+              type: 'struct_member',
+              ident: 'to',
+              attrs: [],
+              typespec: {
+                type: 'template_elaborated_ident',
+                ident: 'vec3f',
+                template_list: null,
+              },
+            } satisfies StructMember,
+          ],
+        } satisfies StructDecl,
+        null,
+        {
+          type: 'struct_decl',
+          ident: 'Material',
+          members: [
+            {
+              type: 'struct_member',
+              ident: 'color',
+              attrs: [],
+              typespec: {
+                type: 'template_elaborated_ident',
+                ident: 'vec3f',
+                template_list: null,
+              },
+            } satisfies StructMember,
+            {
+              type: 'struct_member',
+              ident: 'gradient',
+              attrs: [],
+              typespec: {
+                type: 'template_elaborated_ident',
+                ident: 'Gradient',
+                template_list: null,
+              },
+            } satisfies StructMember,
+          ],
+        } satisfies StructDecl,
+        null,
       ],
       type: 'translation_unit',
     });
