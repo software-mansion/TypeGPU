@@ -21,21 +21,17 @@ import type {
 } from '../../tgpuPlumTypes';
 import type { TgpuSampler } from '../../tgpuSampler';
 import type { AnyTgpuData } from '../../types';
-import { Mutable, OmitProps } from '../../utilityTypes';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
-import {
-  INTERNAL_createTexture,
-  type TextureProps,
-  type TgpuTexture,
-} from '../texture/texture';
+import { INTERNAL_createTexture, type TgpuTexture } from '../texture/texture';
 import type {
-  TgpuAnyTexture,
   TgpuAnyTextureView,
   TgpuTextureExternal,
 } from '../texture/tgpuTexture';
 import type {
   ComputePipelineExecutorOptions,
   ComputePipelineOptions,
+  CreateTextureOptions,
+  CreateTextureResult,
   ExperimentalTgpuRoot,
   RenderPipelineExecutorOptions,
   RenderPipelineOptions,
@@ -94,6 +90,56 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     return buffer;
   }
 
+  createTexture<
+    TWidth extends number,
+    THeight extends number,
+    TDepth extends number,
+    TSize extends
+      | readonly [TWidth]
+      | readonly [TWidth, THeight]
+      | readonly [TWidth, THeight, TDepth],
+    TFormat extends GPUTextureFormat,
+    TMipLevelCount extends number,
+    TSampleCount extends number,
+    TViewFormat extends GPUTextureFormat,
+    TDimension extends GPUTextureDimension,
+  >(
+    props: CreateTextureOptions<
+      TSize,
+      TFormat,
+      TMipLevelCount,
+      TSampleCount,
+      TViewFormat,
+      TDimension
+    >,
+  ): TgpuTexture<
+    CreateTextureResult<
+      TSize,
+      TFormat,
+      TMipLevelCount,
+      TSampleCount,
+      TViewFormat,
+      TDimension
+    >
+  > {
+    return INTERNAL_createTexture(
+      {
+        ...props,
+        size: props.size as unknown as number[],
+      },
+      this,
+    ) as TgpuTexture<
+      CreateTextureResult<
+        TSize,
+        TFormat,
+        TMipLevelCount,
+        TSampleCount,
+        TViewFormat,
+        TDimension
+      >
+    >;
+  }
+
   destroy() {
     for (const buffer of this._buffers) {
       buffer.destroy();
@@ -123,41 +169,6 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     }
 
     throw new Error(`Unknown resource type: ${resource}`);
-  }
-
-  textureFor(view: TgpuAnyTexture | TgpuAnyTextureView): GPUTexture {
-    let source: TgpuAnyTexture;
-    if ('texture' in view) {
-      source = view.texture;
-    } else {
-      source = view;
-    }
-
-    let texture = this._textures.get(source);
-
-    if (!texture) {
-      const descriptor = {
-        ...source.descriptor,
-        usage: source.flags,
-      } as GPUTextureDescriptor;
-      texture = this.device.createTexture(descriptor);
-
-      if (!texture) {
-        throw new Error(`Failed to create texture for ${view}`);
-      }
-      this._textures.set(source, texture);
-    }
-
-    return texture;
-  }
-
-  viewFor(view: TgpuAnyTextureView): GPUTextureView {
-    let textureView = this._textureViews.get(view);
-    if (!textureView) {
-      textureView = this.textureFor(view.texture).createView(view.descriptor);
-      this._textureViews.set(view, textureView);
-    }
-    return textureView;
   }
 
   externalTextureFor(texture: TgpuTextureExternal): GPUExternalTexture {

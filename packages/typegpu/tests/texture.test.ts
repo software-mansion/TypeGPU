@@ -10,9 +10,10 @@ import {
 import type {
   RenderTexture,
   SampledTexture,
+  TgpuReadonlyTexture,
   TgpuTexture,
 } from '../src/core/texture/texture';
-import { f32, u32 } from '../src/data';
+import { type Vec4f, type Vec4i, type Vec4u, f32, u32 } from '../src/data';
 import {
   type ExperimentalTgpuRoot,
   StrictNameRegistry,
@@ -72,6 +73,7 @@ describe('TgpuTexture', () => {
       dimension: undefined,
       mipLevelCount: undefined,
       sampleCount: undefined,
+      viewFormats: undefined,
     });
 
     const texture3 = root.createTexture({
@@ -79,6 +81,7 @@ describe('TgpuTexture', () => {
       dimension: '2d',
       mipLevelCount: 1,
       sampleCount: 1,
+      viewFormats: [],
     });
 
     expectTypeOf(texture1).toEqualTypeOf(texture2);
@@ -130,6 +133,22 @@ describe('TgpuTexture', () => {
 
     expectTypeOf(texture).toEqualTypeOf<
       TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm'; sampleCount: 2 }>
+    >();
+  });
+
+  it('embeds non-default viewFormats in the type', () => {
+    const texture = root.createTexture({
+      size: [512, 512],
+      format: 'rgba8unorm',
+      viewFormats: ['rgba8unorm-srgb', 'rgba8unorm'],
+    });
+
+    expectTypeOf(texture).toEqualTypeOf<
+      TgpuTexture<{
+        size: [512, 512];
+        format: 'rgba8unorm';
+        viewFormats: ('rgba8unorm-srgb' | 'rgba8unorm')[];
+      }>
     >();
   });
 
@@ -318,6 +337,73 @@ describe('TgpuTexture', () => {
     `;
 
     expect(resolutionCtx.resolve(code)).toContain('texture_external');
+  });
+});
+
+describe('TgpuReadonlyTexture', () => {
+  let root: ExperimentalTgpuRoot;
+
+  beforeEach(() => {
+    root = tgpu.initFromDevice({
+      device: mockDevice as unknown as GPUDevice,
+    });
+  });
+
+  afterEach(() => {
+    root.destroy();
+    vi.resetAllMocks();
+  });
+
+  it('inherits the dimension and format from its owner texture', () => {
+    const texture1 = root
+      .createTexture({
+        size: [512, 512],
+        format: 'rgba8unorm',
+      })
+      .$usage('storage');
+
+    expectTypeOf(texture1.asReadonly()).toEqualTypeOf<
+      TgpuReadonlyTexture<'2d', Vec4f>
+    >();
+
+    const texture2 = root
+      .createTexture({
+        size: [512, 512],
+        format: 'rgba8uint',
+        dimension: '3d',
+      })
+      .$usage('storage');
+
+    expectTypeOf(texture2.asReadonly()).toEqualTypeOf<
+      TgpuReadonlyTexture<'3d', Vec4u>
+    >();
+
+    const texture3 = root
+      .createTexture({
+        size: [512, 512],
+        format: 'rgba8sint',
+        dimension: '1d',
+      })
+      .$usage('storage');
+
+    expectTypeOf(texture3.asReadonly()).toEqualTypeOf<
+      TgpuReadonlyTexture<'1d', Vec4i>
+    >();
+  });
+
+  it('rejects formats different than those specified when defining the texture', () => {
+    const texture = root
+      .createTexture({
+        size: [512, 512],
+        format: 'rgba8unorm',
+        dimension: '3d',
+      })
+      .$usage('storage');
+
+    const view = texture.asReadonly({
+      // @ts-expect-error
+      format: 'rgba8snorm',
+    });
   });
 });
 

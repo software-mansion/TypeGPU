@@ -42,21 +42,22 @@ export interface StorageTexture<TProps extends TextureProps> {
   usableAsStorageTexture: true;
 
   asReadonly<
-    TFormat extends
-      | TProps['format']
-      | Default<TProps['viewFormats'], []>[number]
-      | undefined,
-    TDimension extends StorageTextureDimension | undefined,
+    TDimension extends StorageTextureDimension,
+    // Limiting the possible choices to the default format
+    // of this texture, or to any of the additional view formats.
+    // (all limited to what is supported for storage textures)
+    TFormat extends Extract<
+      TProps['format'] | Default<TProps['viewFormats'], []>[number],
+      StorageTextureTexelFormat
+    >,
   >(
-    params: StorageTextureParams<TFormat, TDimension>,
+    params?: TextureViewParams<TDimension, TFormat>,
   ): TgpuReadonlyTexture<
-    TexelFormatToDataType[Default<TFormat, TProps['format']>],
-    Default<TDimension, Default<TProps['dimension'], '2d'>>
+    StorageTextureDimension extends TDimension
+      ? Default<TProps['dimension'], '2d'>
+      : TDimension,
+    TexelFormatToDataTypeOrNever<Default<TFormat, TProps['format']>>
   >;
-}
-
-export interface INVALID<TMsg extends string> {
-  invalid: TMsg;
 }
 
 export interface RenderTexture {
@@ -86,6 +87,8 @@ export interface TgpuTexture<TProps extends TextureProps = TextureProps>
   $usage<T extends ('sampled' | 'storage' | 'render')[]>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToUsageType<T[number], TProps>>;
+
+  destroy(): void;
 }
 
 export interface TgpuTexture_INTERNAL {
@@ -106,31 +109,39 @@ export type StorageTextureDimension =
   // | 'cube-array'<- not supported by storage textures
   | '3d';
 
-export type StorageTextureParams<
+export type TextureViewParams<
+  TDimension extends GPUTextureViewDimension | undefined,
   TFormat extends GPUTextureFormat | undefined,
-  TDimension extends StorageTextureDimension | undefined,
 > = {
   format?: TFormat;
   dimension?: TDimension;
-  extra?: GPUTextureViewDescriptor;
+  aspect?: GPUTextureAspect;
+  baseMipLevel?: number;
+  mipLevelCount?: number;
+  baseArrayLayout?: number;
+  arrayLayerCount?: number;
 };
 
 export interface TgpuStorageTexture<
-  TData extends TexelData = TexelData,
   TDimension extends StorageTextureDimension = StorageTextureDimension,
+  TData extends TexelData = TexelData,
 > {
   texelDataType: TData;
   dimension: TDimension;
   access: StorageTextureAccess;
 }
 
+export interface TgpuStorageTexture_INTERNAL {
+  unwrap(): GPUTextureView;
+}
+
 /**
  * A texture accessed as "readonly" storage on the GPU.
  */
 export interface TgpuReadonlyTexture<
-  TData extends TexelData = TexelData,
   TDimension extends StorageTextureDimension = StorageTextureDimension,
-> extends TgpuStorageTexture<TData, TDimension>,
+  TData extends TexelData = TexelData,
+> extends TgpuStorageTexture<TDimension, TData>,
     TgpuResolvable {
   access: 'readonly';
 }
@@ -139,9 +150,9 @@ export interface TgpuReadonlyTexture<
  * A texture accessed as "writeonly" storage on the GPU.
  */
 export interface TgpuWriteonlyTexture<
-  TData extends TexelData = TexelData,
   TDimension extends StorageTextureDimension = StorageTextureDimension,
-> extends TgpuStorageTexture<TData, TDimension>,
+  TData extends TexelData = TexelData,
+> extends TgpuStorageTexture<TDimension, TData>,
     TgpuResolvable {
   access: 'writeonly';
 }
@@ -150,9 +161,9 @@ export interface TgpuWriteonlyTexture<
  * A texture accessed as "mutable" (or read_write) storage on the GPU.
  */
 export interface TgpuMutableTexture<
-  TData extends TexelData = TexelData,
   TDimension extends StorageTextureDimension = StorageTextureDimension,
-> extends TgpuStorageTexture<TData, TDimension>,
+  TData extends TexelData = TexelData,
+> extends TgpuStorageTexture<TDimension, TData>,
     TgpuResolvable {
   access: 'mutable';
 }
@@ -205,6 +216,9 @@ const texelFormatToTgpuType = {
 } as const;
 
 type TexelFormatToDataType = typeof texelFormatToTgpuType;
+type TexelFormatToDataTypeOrNever<T> = T extends keyof TexelFormatToDataType
+  ? TexelFormatToDataType[T]
+  : never;
 
 export function INTERNAL_createTexture<TProps extends TextureProps>(
   props: TProps,
@@ -284,15 +298,38 @@ class TgpuTextureImpl<TProps extends TextureProps>
       UnionToIntersection<LiteralToUsageType<T[number], TProps>>;
   }
 
-  asReadonly() {
+  asReadonly<
+    TDimension extends StorageTextureDimension,
+    // Limiting the possible choices to the default format
+    // of this texture, or to any of the additional view formats.
+    // (all limited to what is supported for storage textures)
+    TFormat extends Extract<
+      TProps['format'] | Default<TProps['viewFormats'], []>[number],
+      StorageTextureTexelFormat
+    >,
+  >(
+    params: TextureViewParams<TDimension, TFormat>,
+  ): TgpuReadonlyTexture<
+    StorageTextureDimension extends TDimension
+      ? Default<TProps['dimension'], '2d'>
+      : TDimension,
+    TexelFormatToDataType[TFormat]
+  > {
     invariant(
       this.usableAsStorageTexture,
       "asReadonly is only available when explicitly marked with `.$usage('storage')",
     );
 
-    const view = ...;
+    const format = params.format ?? this.props.format;
 
-    return view;
+    const type = texelFormatToTgpuType[format as keyof TexelFormatToDataType];
+    invariant(
+      !!type,
+      `Cannot create a storage view for the given texture format: ${format}`,
+    );
+
+    // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
+    return new TgpuBindableStorageTextureImpl(params, 'readonly', this) as any;
   }
 
   private getStorageIfAllowed(
@@ -378,29 +415,51 @@ const accessToCodeMap = {
 };
 
 class TgpuBindableStorageTextureImpl<
-  TFormat extends StorageTextureTexelFormat = StorageTextureTexelFormat,
   TDimension extends StorageTextureDimension = StorageTextureDimension,
-> implements TgpuStorageTexture<TexelFormatToDataType[TFormat], TDimension>
+  TFormat extends StorageTextureTexelFormat = StorageTextureTexelFormat,
+> implements
+    TgpuStorageTexture<TDimension, TexelFormatToDataType[TFormat]>,
+    TgpuStorageTexture_INTERNAL
 {
   public readonly texelDataType: TexelFormatToDataType[TFormat];
+  public readonly dimension: TDimension;
+
+  private _format: TFormat;
+  private _view: GPUTextureView | undefined;
 
   constructor(
-    public readonly dimension: TDimension,
+    props: TextureViewParams<TDimension, TFormat>,
     public readonly access: StorageTextureAccess,
-    private readonly _format: TFormat,
-    private readonly _texture: TgpuTexture,
+    private readonly _texture: TgpuTextureImpl<TextureProps>,
   ) {
+    this.dimension = (props.dimension ??
+      _texture.props.dimension ??
+      '2d') as TDimension;
+    this._format = props.format ?? (_texture.props.format as TFormat);
     this.texelDataType = texelFormatToTgpuType[
-      _format
+      this._format
     ] as TexelFormatToDataType[TFormat];
   }
 
-  get label() {
+  get label(): string | undefined {
     return this._texture.label;
   }
 
-  $name(label: string) {
+  $name(label: string): this {
     this._texture.$name(label);
+    return this;
+  }
+
+  unwrap(): GPUTextureView {
+    if (!this._view) {
+      this._view = this._texture.unwrap().createView({
+        label: `${this.label ?? '<unnamed>'} - View`,
+        format: this._format,
+        dimension: this.dimension,
+      });
+    }
+
+    return this._view;
   }
 
   resolve(ctx: ResolutionCtx): string {

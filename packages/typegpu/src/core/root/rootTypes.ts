@@ -24,17 +24,98 @@ import type { Unwrapper } from '../../unwrapper';
 import type { Mutable, OmitProps, Prettify } from '../../utilityTypes';
 import type { TgpuBuffer } from '../buffer/buffer';
 import type { TgpuTexture } from '../texture/texture';
-import type {
-  TgpuAnyTexture,
-  TgpuAnyTextureView,
-  TgpuTextureExternal,
-} from '../texture/tgpuTexture';
+import type { TgpuTextureExternal } from '../texture/tgpuTexture';
 
 // ----------
 // Public API
 // ----------
 
 export type SetPlumAction<T> = T | ((prev: T) => T);
+
+export type CreateTextureOptions<
+  TSize,
+  TFormat extends GPUTextureFormat,
+  TMipLevelCount extends number,
+  TSampleCount extends number,
+  TViewFormat extends GPUTextureFormat,
+  TDimension extends GPUTextureDimension,
+> = {
+  /**
+   * The width, height, and depth or layer count of the texture.
+   */
+  size: TSize;
+  /**
+   * The format of the texture.
+   */
+  format: TFormat;
+  /**
+   * The number of mip levels the texture will contain.
+   * @default 1
+   */
+  mipLevelCount?: TMipLevelCount | undefined;
+  /**
+   * The sample count of the texture. A sampleCount > 1 indicates a multisampled texture.
+   * @default 1
+   */
+  sampleCount?: TSampleCount | undefined;
+  /**
+   * Specifies extra formats (in addition to the texture's actual format) that can be used
+   * when creating views of this texture.
+   * @default []
+   */
+  viewFormats?: TViewFormat[] | undefined;
+  /**
+   * Whether the texture is one-dimensional, an array of two-dimensional layers, or three-dimensional.
+   * @default '2d'
+   */
+  dimension?: TDimension | undefined;
+};
+
+export type CreateTextureResult<
+  TSize extends readonly number[],
+  TFormat extends GPUTextureFormat,
+  TMipLevelCount extends number,
+  TSampleCount extends number,
+  TViewFormat extends GPUTextureFormat,
+  TDimension extends GPUTextureDimension,
+> = Prettify<
+  {
+    size: Mutable<TSize>;
+    format: TFormat;
+  } & OmitProps<
+    {
+      dimension: GPUTextureDimension extends TDimension
+        ? // Omitted property means the default
+          undefined
+        : // '2d' is the default, omitting from type
+          TDimension extends '2d'
+          ? undefined
+          : TDimension;
+      mipLevelCount: number extends TMipLevelCount
+        ? // Omitted property means the default
+          undefined
+        : // '1' is the default, omitting from type
+          TMipLevelCount extends 1
+          ? undefined
+          : TMipLevelCount;
+      sampleCount: number extends TSampleCount
+        ? // Omitted property means the default
+          undefined
+        : // '1' is the default, omitting from type
+          TSampleCount extends 1
+          ? undefined
+          : TSampleCount;
+      viewFormats: GPUTextureFormat extends TViewFormat
+        ? // Omitted property means the default
+          undefined
+        : // 'never[]' is the default, omitting from type
+          TViewFormat[] extends never[]
+          ? undefined
+          : TViewFormat[];
+    },
+    undefined
+  >
+>;
 
 export interface TgpuRoot extends Unwrapper {
   /**
@@ -71,69 +152,25 @@ export interface TgpuRoot extends Unwrapper {
     TFormat extends GPUTextureFormat,
     TMipLevelCount extends number,
     TSampleCount extends number,
-    TViewFormats extends GPUTextureFormat[],
+    TViewFormat extends GPUTextureFormat,
     TDimension extends GPUTextureDimension,
-  >(props: {
-    /**
-     * The width, height, and depth or layer count of the texture.
-     */
-    size: TSize;
-    /**
-     * The format of the texture.
-     */
-    format: TFormat;
-    /**
-     * The number of mip levels the texture will contain.
-     * @default 1
-     */
-    mipLevelCount?: TMipLevelCount | undefined;
-    /**
-     * The sample count of the texture. A sampleCount > 1 indicates a multisampled texture.
-     * @default 1
-     */
-    sampleCount?: TSampleCount | undefined;
-    /**
-     * Specifies extra formats (in addition to the texture's actual format) that can be used
-     * when creating views of this texture.
-     * @default []
-     */
-    viewFormats?: TViewFormats | undefined;
-    /**
-     * Whether the texture is one-dimensional, an array of two-dimensional layers, or three-dimensional.
-     * @default '2d'
-     */
-    dimension?: TDimension | undefined;
-  }): TgpuTexture<
-    Prettify<
-      {
-        size: Mutable<TSize>;
-        format: TFormat;
-      } & OmitProps<
-        {
-          dimension: GPUTextureDimension extends TDimension
-            ? // Omitted property means the default
-              undefined
-            : // '2d' is the default, omitting from type
-              TDimension extends '2d'
-              ? undefined
-              : TDimension;
-          mipLevelCount: number extends TMipLevelCount
-            ? // Omitted property means the default
-              undefined
-            : // '1' is the default, omitting from type
-              TMipLevelCount extends 1
-              ? undefined
-              : TMipLevelCount;
-          sampleCount: number extends TSampleCount
-            ? // Omitted property means the default
-              undefined
-            : // '1' is the default, omitting from type
-              TSampleCount extends 1
-              ? undefined
-              : TSampleCount;
-        },
-        undefined
-      >
+  >(
+    props: CreateTextureOptions<
+      TSize,
+      TFormat,
+      TMipLevelCount,
+      TSampleCount,
+      TViewFormat,
+      TDimension
+    >,
+  ): TgpuTexture<
+    CreateTextureResult<
+      TSize,
+      TFormat,
+      TMipLevelCount,
+      TSampleCount,
+      TViewFormat,
+      TDimension
     >
   >;
 
@@ -172,8 +209,6 @@ export interface ExperimentalTgpuRoot extends TgpuRoot {
   isDirty(texture: TgpuTextureExternal): boolean;
   markClean(texture: TgpuTextureExternal): void;
 
-  textureFor(view: TgpuAnyTexture | TgpuAnyTextureView): GPUTexture;
-  viewFor(view: TgpuAnyTextureView): GPUTextureView;
   externalTextureFor(texture: TgpuTextureExternal): GPUExternalTexture;
   samplerFor(sampler: TgpuSampler): GPUSampler;
 

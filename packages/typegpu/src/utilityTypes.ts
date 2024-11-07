@@ -1,4 +1,8 @@
-export type Default<T, TDefault> = T extends undefined ? TDefault : T;
+export type Default<T, TDefault> = unknown extends T
+  ? TDefault
+  : T extends undefined
+    ? TDefault
+    : T;
 
 export type UnionToIntersection<U> =
   // biome-ignore lint/suspicious/noExplicitAny: <had to be done>
