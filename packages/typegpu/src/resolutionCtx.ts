@@ -1,4 +1,4 @@
-import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
+import type { TgpuLaidOut } from './core/bindGroup/laidOut';
 import type { TgpuFnShellBase } from './core/function/fnCore';
 import { MissingSlotValueError, ResolutionError, invariant } from './errors';
 import { onGPU } from './gpuMode';
@@ -15,7 +15,6 @@ import type {
   ResolutionCtx,
   Resource,
   SlotValuePair,
-  TgpuBindable,
   TgpuIdentifier,
   TgpuRenderResource,
   TgpuResolvable,
@@ -33,7 +32,7 @@ import {
 
 /**
  * Inserted into bind group entry definitions that belong
- * to the automatically generated catchall bind group.
+ * to the automatically generated catch-all bind group.
  *
  * A non-occupied group index can only be determined after
  * every resource has been resolved, so this acts as a placeholder
@@ -261,24 +260,20 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _shared: SharedResolutionState;
   private readonly _indentController = new IndentController();
 
-  // -- Catchall bindings
-  private readonly _usedBufferUsages = new Set<TgpuBufferUsage<AnyTgpuData>>();
-  private readonly _usedRenderResources = new Set<TgpuRenderResource>();
-  private readonly _usedBindGroupLayouts = new Map<
-    number,
-    TgpuBindGroupLayout
-  >();
-  private _nextFreeCatchallBindingIdx = 0;
+  // -- Bindings
   /**
-   * Determined as part of the resolution process. The whole tree has to be
-   * traversed to collect every use of a typed bind group layout, since they
-   * can be explicitly imposed group indices, and they cannot collide.
+   * A map from registered bind group layouts to random strings put in
+   * place of their group index. The whole tree has to be traversed to
+   * collect every use of a typed bind group layout, since they can be
+   * explicitly imposed group indices, and they cannot collide.
    */
-  private _catchallBindGroupIdx = 0;
-  private readonly _resourceToIndexMap = new WeakMap<
-    TgpuRenderResource | TgpuBindable,
-    number
+  private readonly _bindGroupLayoutsToPlaceholderMap = new WeakMap<
+    TgpuBindGroupLayout,
+    string
   >();
+  private _nextFreeLayoutPlaceholderIdx = 0;
+  private _nextFreeCatchallBindingIdx = 0;
+  private readonly _boundToIndexMap = new WeakMap<object, number>();
   // --
 
   private _itemStateStack = new ItemStateStack();
@@ -363,31 +358,32 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this._shared.addDeclaration(this.resolve(declaration));
   }
 
-  private _reserveBindingEntry(bindable: TgpuBindable | TgpuRenderResource) {
+  private _reserveBindingEntry(bound: object) {
     const nextIdx = this._nextFreeCatchallBindingIdx++;
-    this._resourceToIndexMap.set(bindable, nextIdx);
+    this._boundToIndexMap.set(bound, nextIdx);
     return nextIdx;
   }
 
-  registerBufferUsage(
-    bufferUsage: TgpuBufferUsage<AnyTgpuData>,
-    identifier: TgpuIdentifier,
-  ) {
-    invariant(
-      bufferUsage.usage !== 'vertex',
-      'Expected vertex buffer as part of a vertex layout',
-    );
+  registerLaidOut(laidOut: TgpuLaidOut): string {
+    const memoMap = this._bindGroupLayoutsToPlaceholderMap;
+    let placeholderKey = memoMap.get(laidOut.layout);
 
-    this._usedBufferUsages.add(bufferUsage);
-    const idx = this._reserveBindingEntry(bufferUsage);
-    const usage = usageToVarTemplateMap[bufferUsage.usage];
-    const dataType = bufferUsage.allocatable.dataType;
+    if (!placeholderKey) {
+      placeholderKey = `#BIND_GROUP_LAYOUT_${this._nextFreeLayoutPlaceholderIdx++}#`;
+      memoMap.set(laidOut.layout, placeholderKey);
+    }
 
-    // The bind group index is determined at the end of the resolution process, when the whole
-    // tree has been traversed and all typed bind group layouts have been processed.
-    this.addDeclaration(
-      code`@group(${CATCHALL_BIND_GROUP_IDX_MARKER}) @binding(${idx}) var<${usage}> ${identifier}: ${dataType};`,
-    );
+    return placeholderKey;
+  }
+
+  registerBindable(resource: object): { group: string; binding: number } {
+    const nextIdx = this._nextFreeCatchallBindingIdx++;
+    this._boundToIndexMap.set(resource, nextIdx);
+
+    return {
+      group: CATCHALL_BIND_GROUP_IDX_MARKER,
+      binding: nextIdx,
+    };
   }
 
   registerRenderResource(
@@ -526,8 +522,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  getIndexFor(item: TgpuBindable | TgpuRenderResource) {
-    const index = this._resourceToIndexMap.get(item);
+  getIndexFor(item: object) {
+    const index = this._boundToIndexMap.get(item);
     invariant(index !== undefined, 'No index found for item');
 
     return index;

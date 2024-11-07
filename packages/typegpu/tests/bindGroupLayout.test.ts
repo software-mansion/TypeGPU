@@ -20,7 +20,6 @@ import {
 import tgpu, {
   type ExperimentalTgpuRoot,
   type TgpuBindGroupLayout,
-  asUniform,
   type TgpuBuffer,
   type TgpuBufferUniform,
   type TgpuBufferReadonly,
@@ -325,27 +324,6 @@ describe('TgpuBindGroup', () => {
 
     it('populates a simple layout with a typed buffer', () => {
       const bindGroup = layout.populate({ foo: buffer });
-
-      expect(mockDevice.createBindGroupLayout).not.toBeCalled();
-      root.unwrap(bindGroup);
-      expect(mockDevice.createBindGroupLayout).toBeCalled();
-
-      expect(mockDevice.createBindGroup).toBeCalledWith({
-        label: 'example',
-        layout: root.unwrap(layout),
-        entries: [
-          {
-            binding: 0,
-            resource: {
-              buffer: root.unwrap(buffer),
-            },
-          },
-        ],
-      });
-    });
-
-    it('populates a simple layout with a typed buffer usage', () => {
-      const bindGroup = layout.populate({ foo: asUniform(buffer) });
 
       expect(mockDevice.createBindGroupLayout).not.toBeCalled();
       root.unwrap(bindGroup);

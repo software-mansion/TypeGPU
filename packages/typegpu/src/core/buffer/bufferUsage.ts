@@ -1,12 +1,14 @@
 import type { Unwrap } from 'typed-binary';
 import { inGPUMode } from '../../gpuMode';
+import type { TgpuBindGroupLayout } from '../../tgpuBindGroupLayout';
+import { code } from '../../tgpuCode';
 import { identifier } from '../../tgpuIdentifier';
 import type {
   AnyTgpuData,
-  BufferUsage,
+  BindableBufferUsage,
   ResolutionCtx,
-  TgpuBindable,
 } from '../../types';
+import type { TgpuLaidOut } from '../bindGroup/laidOut';
 import {
   type Storage,
   type TgpuBuffer,
@@ -19,35 +21,36 @@ import {
 // Public API
 // ----------
 
-export interface TgpuBufferUniform<TData extends AnyTgpuData>
-  extends TgpuBindable<TData, 'uniform'> {
+export interface TgpuBufferUniform<TData extends AnyTgpuData> {
   readonly resourceType: 'buffer-usage';
+  readonly usage: 'uniform';
+  readonly buffer: TgpuBuffer<TData> | undefined;
+  readonly layout: TgpuBindGroupLayout | undefined;
   readonly value: Unwrap<TData>;
 }
 
-export interface TgpuBufferReadonly<TData extends AnyTgpuData>
-  extends TgpuBindable<TData, 'readonly'> {
+export interface TgpuBufferReadonly<TData extends AnyTgpuData> {
   readonly resourceType: 'buffer-usage';
+  readonly usage: 'readonly';
+  readonly buffer: TgpuBuffer<TData> | undefined;
+  readonly layout: TgpuBindGroupLayout | undefined;
   readonly value: Unwrap<TData>;
 }
 
-export interface TgpuBufferMutable<TData extends AnyTgpuData>
-  extends TgpuBindable<TData, 'mutable'> {
+export interface TgpuBufferMutable<TData extends AnyTgpuData> {
   readonly resourceType: 'buffer-usage';
+  readonly usage: 'mutable';
+  readonly buffer: TgpuBuffer<TData> | undefined;
+  readonly layout: TgpuBindGroupLayout | undefined;
   value: Unwrap<TData>;
-}
-
-export interface TgpuBufferVertex<TData extends AnyTgpuData>
-  extends TgpuBindable<TData, 'vertex'> {
-  readonly resourceType: 'buffer-usage';
-  vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'>;
 }
 
 export interface TgpuBufferUsage<
   TData extends AnyTgpuData,
-  TUsage extends BufferUsage = BufferUsage,
-> extends TgpuBindable<TData, TUsage> {
+  TUsage extends BindableBufferUsage = BindableBufferUsage,
+> {
   readonly resourceType: 'buffer-usage';
+  readonly usage: TUsage;
   value: Unwrap<TData>;
 }
 
@@ -55,8 +58,7 @@ export function isBufferUsage<
   T extends
     | TgpuBufferUniform<AnyTgpuData>
     | TgpuBufferReadonly<AnyTgpuData>
-    | TgpuBufferMutable<AnyTgpuData>
-    | TgpuBufferVertex<AnyTgpuData>,
+    | TgpuBufferMutable<AnyTgpuData>,
 >(value: T | unknown): value is T {
   return !!value && (value as T).resourceType === 'buffer-usage';
 }
@@ -65,22 +67,26 @@ export function isBufferUsage<
 // Implementation
 // --------------
 
-class TgpuBufferUsageImpl<TData extends AnyTgpuData, TUsage extends BufferUsage>
-  implements TgpuBufferUsage<TData, TUsage>
+const usageToVarTemplateMap: Record<BindableBufferUsage, string> = {
+  uniform: 'uniform',
+  mutable: 'storage, read_write',
+  readonly: 'storage, read',
+};
+
+class TgpuBindableBufferImpl<
+  TData extends AnyTgpuData,
+  TUsage extends BindableBufferUsage,
+> implements TgpuBufferUsage<TData, TUsage>
 {
   public readonly resourceType = 'buffer-usage' as const;
 
   constructor(
-    public readonly buffer: TgpuBuffer<TData>,
     public readonly usage: TUsage,
+    public readonly buffer: TgpuBuffer<TData>,
   ) {}
 
   get label() {
     return this.buffer.label;
-  }
-
-  get allocatable() {
-    return this.buffer;
   }
 
   $name(label: string) {
@@ -89,7 +95,56 @@ class TgpuBufferUsageImpl<TData extends AnyTgpuData, TUsage extends BufferUsage>
 
   resolve(ctx: ResolutionCtx): string {
     const ident = identifier().$name(this.label);
-    ctx.registerBufferUsage(this, ident);
+    const { group, binding } = ctx.registerBindable(this);
+    const usage = usageToVarTemplateMap[this.usage];
+
+    ctx.addDeclaration(
+      code`@group(${group}) @binding(${binding}) var<${usage}> ${ident}: ${this.buffer.dataType};`,
+    );
+
+    return ctx.resolve(ident);
+  }
+
+  toString(): string {
+    return `${this.usage}:${this.label ?? '<unnamed>'}`;
+  }
+
+  get value(): Unwrap<TData> {
+    if (!inGPUMode()) {
+      throw new Error(`Cannot access buffer's value directly in JS.`);
+    }
+    return this as Unwrap<TData>;
+  }
+}
+
+export class TgpuLaidOutBufferImpl<
+  TData extends AnyTgpuData,
+  TUsage extends BindableBufferUsage,
+> implements TgpuBufferUsage<TData, TUsage>, TgpuLaidOut
+{
+  public readonly resourceType = 'buffer-usage' as const;
+
+  constructor(
+    public readonly usage: TUsage,
+    public readonly dataType: TData,
+    public readonly layout: TgpuBindGroupLayout,
+    public readonly layoutKey: string,
+    public readonly layoutIdx: number,
+  ) {}
+
+  get label() {
+    return this.layoutKey;
+  }
+
+  resolve(ctx: ResolutionCtx): string {
+    const ident = identifier().$name(this.label);
+    const group = ctx.registerLaidOut(this);
+    const usage = usageToVarTemplateMap[this.usage];
+
+    ctx.addDeclaration(
+      code`@group(${group}) @binding(${this.layoutIdx}) var<${usage}> ${ident}: ${this.dataType};`,
+    );
+
     return ctx.resolve(ident);
   }
 
@@ -107,7 +162,7 @@ class TgpuBufferUsageImpl<TData extends AnyTgpuData, TUsage extends BufferUsage>
 
 const mutableUsageMap = new WeakMap<
   TgpuBuffer<AnyTgpuData>,
-  TgpuBufferUsageImpl<AnyTgpuData, 'mutable'>
+  TgpuBindableBufferImpl<AnyTgpuData, 'mutable'>
 >();
 
 export function asMutable<TData extends AnyTgpuData>(
@@ -121,7 +176,7 @@ export function asMutable<TData extends AnyTgpuData>(
 
   let usage = mutableUsageMap.get(buffer);
   if (!usage) {
-    usage = new TgpuBufferUsageImpl(buffer, 'mutable');
+    usage = new TgpuBindableBufferImpl('mutable', buffer);
     mutableUsageMap.set(buffer, usage);
   }
   return usage as unknown as TgpuBufferMutable<TData>;
@@ -129,7 +184,7 @@ export function asMutable<TData extends AnyTgpuData>(
 
 const readonlyUsageMap = new WeakMap<
   TgpuBuffer<AnyTgpuData>,
-  TgpuBufferUsageImpl<AnyTgpuData, 'readonly'>
+  TgpuBindableBufferImpl<AnyTgpuData, 'readonly'>
 >();
 
 export function asReadonly<TData extends AnyTgpuData>(
@@ -143,7 +198,7 @@ export function asReadonly<TData extends AnyTgpuData>(
 
   let usage = readonlyUsageMap.get(buffer);
   if (!usage) {
-    usage = new TgpuBufferUsageImpl(buffer, 'readonly');
+    usage = new TgpuBindableBufferImpl('readonly', buffer);
     readonlyUsageMap.set(buffer, usage);
   }
   return usage as unknown as TgpuBufferReadonly<TData>;
@@ -151,7 +206,7 @@ export function asReadonly<TData extends AnyTgpuData>(
 
 const uniformUsageMap = new WeakMap<
   TgpuBuffer<AnyTgpuData>,
-  TgpuBufferUsageImpl<AnyTgpuData, 'uniform'>
+  TgpuBindableBufferImpl<AnyTgpuData, 'uniform'>
 >();
 
 export function asUniform<TData extends AnyTgpuData>(
@@ -165,7 +220,7 @@ export function asUniform<TData extends AnyTgpuData>(
 
   let usage = uniformUsageMap.get(buffer);
   if (!usage) {
-    usage = new TgpuBufferUsageImpl(buffer, 'uniform');
+    usage = new TgpuBindableBufferImpl('uniform', buffer);
     uniformUsageMap.set(buffer, usage);
   }
   return usage as unknown as TgpuBufferUniform<TData>;
