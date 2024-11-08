@@ -6,6 +6,7 @@ import SelectedDotSvg from '../assets/selected-dot.svg';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
 import { PLAYGROUND_KEY } from '../utils/examples/exampleContent';
 import { menuShownMobileAtom } from '../utils/examples/menuShownAtom';
+import { sandboxShownAtom } from '../utils/examples/sandboxShownAtom';
 import useEvent from '../utils/useEvent';
 
 type Props = {
@@ -18,11 +19,13 @@ export function ExampleLink(props: Props) {
 
   const [currentExample, setCurrentExample] = useAtom(currentExampleAtom);
   const setMenuShownMobile = useSetAtom(menuShownMobileAtom);
+  const setSandboxShow = useSetAtom(sandboxShownAtom);
 
   const handleClick = useEvent((e: MouseEvent) => {
     e.preventDefault();
     setCurrentExample(exampleKey ?? RESET);
     setMenuShownMobile(false);
+    setSandboxShow(false);
   });
 
   const active =

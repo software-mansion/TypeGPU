@@ -93,6 +93,7 @@ const createCodeEditorComponent =
           onChange={handleChange}
           beforeMount={beforeMount}
           options={{
+            readOnly: true,
             minimap: {
               enabled: false,
             },

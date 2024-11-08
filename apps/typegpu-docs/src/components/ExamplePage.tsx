@@ -1,7 +1,9 @@
+import cs from 'classnames';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { Suspense, useEffect, useRef } from 'react';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
 import { examples, examplesStable } from '../utils/examples/exampleContent';
+import { sandboxShownAtom } from '../utils/examples/sandboxShownAtom';
 import { ExampleNotFound } from './ExampleNotFound';
 import { ExampleView } from './ExampleView';
 
@@ -36,6 +38,7 @@ function RedirectToFlagship() {
 
 function ExamplePage() {
   const currentExample = useAtomValue(currentExampleAtom);
+  const sandboxShown = useAtomValue(sandboxShownAtom);
 
   const content = (() => {
     if (!currentExample) {
@@ -70,7 +73,17 @@ function ExamplePage() {
 
     if (currentExample in examples) {
       return (
-        <ExampleView key={currentExample} example={examples[currentExample]} />
+        <>
+          <div className={cs('h-full', sandboxShown ? 'block' : 'hidden')}>
+            <div id="sandbox" />
+          </div>
+          {sandboxShown ? null : (
+            <ExampleView
+              key={currentExample}
+              example={examples[currentExample]}
+            />
+          )}
+        </>
       );
     }
 

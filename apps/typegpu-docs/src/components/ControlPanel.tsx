@@ -1,12 +1,17 @@
+import StackBlitzSDK from '@stackblitz/sdk';
 import cs from 'classnames';
-import { useAtom, useAtomValue } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useState } from 'react';
 import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
+import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
+import { examples } from '../utils/examples/exampleContent';
 import {
   type ExampleControlParam,
   exampleControlsAtom,
 } from '../utils/examples/exampleControlAtom';
 import { menuShownAtom } from '../utils/examples/menuShownAtom';
+import { sandboxShownAtom } from '../utils/examples/sandboxShownAtom';
+import type { Example } from '../utils/examples/types';
 import { isGPUSupported } from '../utils/isGPUSupported';
 import { Button } from './design/Button';
 import { Select } from './design/Select';
@@ -161,7 +166,9 @@ export function ControlPanel() {
   const [menuShowing, setMenuShowing] = useAtom(menuShownAtom);
   const [codeEditorShowing, setCodeEditorShowing] =
     useAtom(codeEditorShownAtom);
+  const currentExample = useAtomValue(currentExampleAtom);
   const exampleControlParams = useAtomValue(exampleControlsAtom);
+  const setSandboxShow = useSetAtom(sandboxShownAtom);
 
   return (
     <div
@@ -187,6 +194,18 @@ export function ControlPanel() {
           />
         </label>
 
+        {currentExample && currentExample in examples ? (
+          <Button
+            onClick={() => {
+              setSandboxShow(true);
+              setMenuShowing(true);
+              openInStackBlitz(examples[currentExample]);
+            }}
+          >
+            Edit in Sandbox
+          </Button>
+        ) : null}
+
         <hr className="my-0 box-border w-full border-t border-tameplum-100" />
       </div>
 
@@ -199,5 +218,89 @@ export function ControlPanel() {
         </>
       ) : null}
     </div>
+  );
+}
+
+function openInStackBlitz(example: Example) {
+  StackBlitzSDK.embedProject(
+    'sandbox',
+    // Payload
+    {
+      template: 'node',
+      title: example.metadata.title,
+      files: {
+        'index.html': `
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + TS</title>
+  </head>
+  <body>
+    ${example.htmlCode}
+
+    <script type="module" src="/index.ts"></script>
+  </body>
+</html>        
+        `,
+        'index.ts': `
+import * as example from './src/example.ts';
+console.log(example);
+`,
+        'src/example.ts': example.tsCode,
+        'tsconfig.json': `{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+    "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"],
+
+    /* Bundler mode */
+    "moduleResolution": "node",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"]
+}`,
+        'package.json': `{
+  "name": "typegpu-example-sandbox",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.3",
+    "vite": "^5.4.2"
+  },
+  "dependencies": {
+    "@webgpu/types": "^0.1.44",
+    "typegpu": "^0.2.0"
+  }
+}`,
+      },
+    },
+
+    // Options
+    {
+      openFile: 'src/example.ts',
+      height: '100%',
+      theme: 'light',
+    },
   );
 }
