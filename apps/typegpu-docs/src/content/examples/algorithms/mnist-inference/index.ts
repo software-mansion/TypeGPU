@@ -268,8 +268,8 @@ const network = createNetwork([
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
 const bars = Array.from(
-  document.querySelectorAll('.bar') as NodeListOf<HTMLDivElement>,
-);
+  document.querySelectorAll('.bar'),
+) as HTMLDivElement[];
 
 const resetAll = () => {
   canvasData.fill(0);
