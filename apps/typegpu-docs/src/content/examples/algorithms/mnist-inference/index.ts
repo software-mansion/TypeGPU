@@ -160,7 +160,7 @@ function getLayerData(layer: ArrayBuffer): LayerData {
 function createNetwork(layers: [LayerData, LayerData][]): Network {
   const buffers = layers.map(([weights, biases]) => {
     if (weights.shape[1] !== biases.shape[0]) {
-      throw new Error('Shape mismatch');
+      throw new Error(`Shape mismatch: ${weights.shape} and ${biases.shape}`);
     }
 
     return {
@@ -235,33 +235,20 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
 
 // Data fetching and network creation
 
-const [
-  layer0Biases,
-  layer0Weights,
-  layer1Biases,
-  layer1Weights,
-  layer2Biases,
-  layer2Weights,
-] = await Promise.all(
-  [
-    'layer0.bias.npy',
-    'layer0.weight.npy',
-    'layer1.bias.npy',
-    'layer1.weight.npy',
-    'layer2.bias.npy',
-    'layer2.weight.npy',
-  ].map((fileName) =>
-    fetch(`/TypeGPU/mnistWeights/${fileName}`).then((res) =>
-      res.arrayBuffer().then((buffer) => getLayerData(buffer)),
-    ),
+const layerData: [LayerData, LayerData][] = await Promise.all(
+  [0, 1, 2, 3, 4, 5, 6, 7].map(
+    (layer) =>
+      Promise.all(
+        [`layer${layer}.weight.npy`, `layer${layer}.bias.npy`].map((fileName) =>
+          fetch(`/TypeGPU/mnistWeightsExperimental/${fileName}`).then((res) =>
+            res.arrayBuffer().then((buffer) => getLayerData(buffer)),
+          ),
+        ),
+      ) as Promise<[LayerData, LayerData]>,
   ),
 );
 
-const network = createNetwork([
-  [layer0Weights, layer0Biases],
-  [layer1Weights, layer1Biases],
-  [layer2Weights, layer2Biases],
-]);
+const network = createNetwork(layerData);
 
 // Canvas drawing
 
@@ -317,6 +304,31 @@ canvas.addEventListener('mouseup', () => {
   isDrawing = false;
 });
 
+function centerImage(data: number[]) {
+  const x =
+    data.reduce((acc, value, i) => acc + value * (i % SIZE), 0) /
+    data.reduce((acc, value) => acc + value, 0);
+  const y =
+    data.reduce((acc, value, i) => acc + value * Math.floor(i / SIZE), 0) /
+    data.reduce((acc, value) => acc + value, 0);
+
+  const offsetX = Math.round(SIZE / 2 - x);
+  const offsetY = Math.round(SIZE / 2 - y);
+
+  const newData = new Array(SIZE * SIZE).fill(0);
+  for (let i = 0; i < SIZE; i++) {
+    for (let j = 0; j < SIZE; j++) {
+      const index = i * SIZE + j;
+      const newIndex = (i + offsetY) * SIZE + j + offsetX;
+      if (newIndex >= 0 && newIndex < SIZE * SIZE) {
+        newData[newIndex] = data[index];
+      }
+    }
+  }
+
+  return newData;
+}
+
 let lastPos = { x: 0, y: 0 };
 
 const handleDrawing = (x: number, y: number) => {
@@ -339,17 +351,19 @@ const handleDrawing = (x: number, y: number) => {
   }
   draw();
 
-  network.inference(canvasData.map((x) => x / 255)).then((data) => {
-    const max = Math.max(...data);
-    const index = data.indexOf(max);
-    const sum = data.reduce((a, b) => a + b, 0);
-    const normalized = data.map((x) => x / sum);
+  network
+    .inference(centerImage(canvasData).map((x) => (x / 255) * 3.24 - 0.42)) // normalize the values from 0-255 to -0.42-2.82
+    .then((data) => {
+      const max = Math.max(...data);
+      const index = data.indexOf(max);
+      const sum = data.reduce((a, b) => a + b, 0);
+      const normalized = data.map((x) => x / sum);
 
-    bars.forEach((bar, i) => {
-      bar.style.setProperty('--bar-width', `${normalized[i] * 100}%`);
-      bar.style.setProperty('--highlight-opacity', i === index ? '1' : '0');
+      bars.forEach((bar, i) => {
+        bar.style.setProperty('--bar-width', `${normalized[i] * 100}%`);
+        bar.style.setProperty('--highlight-opacity', i === index ? '1' : '0');
+      });
     });
-  });
 };
 
 canvas.addEventListener('mousemove', (event) => {
