@@ -296,12 +296,15 @@ const observer = new ResizeObserver(() => {
 observer.observe(canvas.parentNode?.parentNode as HTMLElement);
 
 let isDrawing = false;
+let lastPos: { x: number; y: number } | null = null;
+
 canvas.addEventListener('mousedown', () => {
   isDrawing = true;
 });
 
 canvas.addEventListener('mouseup', () => {
   isDrawing = false;
+  lastPos = null;
 });
 
 function centerImage(data: number[]) {
@@ -329,26 +332,43 @@ function centerImage(data: number[]) {
   return newData;
 }
 
-let lastPos = { x: 0, y: 0 };
-
 const handleDrawing = (x: number, y: number) => {
+  if (!lastPos) {
+    lastPos = { x, y };
+  }
+
   if (x === lastPos.x && y === lastPos.y) {
     return;
   }
-  lastPos = { x, y };
 
-  for (let i = -1; i <= 1; i++) {
-    for (let j = -1; j <= 1; j++) {
-      const newX = x + i;
-      const newY = y + j;
-      if (newX >= 0 && newX < SIZE && newY >= 0 && newY < SIZE) {
-        const distance = Math.abs(i) + Math.abs(j);
-        const add = distance === 0 ? 128 : distance === 1 ? 64 : 32;
-        const value = canvasData[newY * SIZE + newX];
-        canvasData[newY * SIZE + newX] = Math.min(value + add, 255);
+  const interpolate = (start: number, end: number, steps: number) => {
+    const step = (end - start) / steps;
+    return Array.from({ length: steps + 1 }, (_, i) => start + step * i);
+  };
+
+  const steps = Math.max(Math.abs(x - lastPos.x), Math.abs(y - lastPos.y));
+  const xPoints = interpolate(lastPos.x, x, steps);
+  const yPoints = interpolate(lastPos.y, y, steps);
+
+  for (let k = 0; k < xPoints.length; k++) {
+    const newX = Math.round(xPoints[k]);
+    const newY = Math.round(yPoints[k]);
+
+    for (let i = -1; i <= 1; i++) {
+      for (let j = -1; j <= 1; j++) {
+        const adjX = newX + i;
+        const adjY = newY + j;
+        if (adjX >= 0 && adjX < SIZE && adjY >= 0 && adjY < SIZE) {
+          const distance = Math.abs(i) + Math.abs(j);
+          const add = distance === 0 ? 128 : distance === 1 ? 32 : 16;
+          const value = canvasData[adjY * SIZE + adjX];
+          canvasData[adjY * SIZE + adjX] = Math.min(value + add, 255);
+        }
       }
     }
   }
+
+  lastPos = { x, y };
   draw();
 
   network
@@ -394,5 +414,6 @@ resetAll();
 
 /** @button "Reset" */
 export function reset() {
+  lastPos = null;
   resetAll();
 }
