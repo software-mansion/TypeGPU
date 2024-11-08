@@ -239,7 +239,7 @@ const network = createNetwork([
   [layer2Weights, layer2Biases],
 ]);
 
-// Canvas drawing
+// #region User Interface
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -265,7 +265,7 @@ const resetCanvas = () => {
   }
 };
 
-const draw = () => {
+function run() {
   const scale = canvas.width / SIZE;
   for (let i = 0; i < SIZE; i++) {
     for (let j = 0; j < SIZE; j++) {
@@ -276,13 +276,11 @@ const draw = () => {
       }
     }
   }
-};
 
-const observer = new ResizeObserver(() => {
-  resetCanvas();
-  draw();
-});
-observer.observe(canvas.parentNode?.parentNode as HTMLElement);
+  requestAnimationFrame(run);
+}
+
+run();
 
 let isDrawing = false;
 canvas.addEventListener('mousedown', () => {
@@ -313,7 +311,6 @@ const handleDrawing = (x: number, y: number) => {
       }
     }
   }
-  draw();
 
   network.inference(canvasData.map((x) => x / 255)).then((data) => {
     const max = Math.max(...data);
@@ -351,6 +348,8 @@ canvas.addEventListener('touchmove', (event) => {
   );
   handleDrawing(x, y);
 });
+
+// #endregion
 
 resetAll();
 
