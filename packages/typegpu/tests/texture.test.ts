@@ -187,10 +187,11 @@ describe('TgpuTexture', () => {
         size: [512, 512],
         format: 'rgba8unorm',
       })
-      .$usage('sampled');
+      .$usage('storage');
 
     expectTypeOf(texture).toEqualTypeOf<
-      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> & SampledTexture
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> &
+        SampledTexture<{ size: [512, 512]; format: 'rgba8unorm' }>
     >();
   });
 
@@ -363,6 +364,74 @@ describe('TgpuReadonlyTexture', () => {
       .$usage('storage');
 
     expectTypeOf(texture1.asReadonly()).toEqualTypeOf<
+      TgpuReadonlyTexture<'2d', Vec4f>
+    >();
+
+    const texture2 = root
+      .createTexture({
+        size: [512, 512],
+        format: 'rgba8uint',
+        dimension: '3d',
+      })
+      .$usage('storage');
+
+    expectTypeOf(texture2.asReadonly()).toEqualTypeOf<
+      TgpuReadonlyTexture<'3d', Vec4u>
+    >();
+
+    const texture3 = root
+      .createTexture({
+        size: [512, 512],
+        format: 'rgba8sint',
+        dimension: '1d',
+        viewFormats: ['rgba8unorm'],
+      })
+      .$usage('storage');
+
+    expectTypeOf(texture3.asReadonly()).toEqualTypeOf<
+      TgpuReadonlyTexture<'1d', Vec4i>
+    >();
+  });
+
+  it('rejects formats different than those specified when defining the texture', () => {
+    const texture = root
+      .createTexture({
+        size: [512, 512],
+        format: 'rgba8unorm',
+        dimension: '3d',
+      })
+      .$usage('storage');
+
+    texture.asReadonly({
+      // @ts-expect-error
+      format: 'rgba8snorm',
+    });
+  });
+});
+
+describe('TgpuSampledTexture', () => {
+  let root: ExperimentalTgpuRoot;
+
+  beforeEach(() => {
+    root = tgpu.initFromDevice({
+      device: mockDevice as unknown as GPUDevice,
+    });
+  });
+
+  afterEach(() => {
+    root.destroy();
+    vi.resetAllMocks();
+  });
+
+  it('inherits the dimension and format from its owner texture', () => {
+    const texture1 = root
+      .createTexture({
+        size: [512, 512],
+        format: 'rgba8unorm',
+      })
+      .$usage('sampled');
+
+    expectTypeOf(texture1.asSampled()).toEqualTypeOf<
       TgpuReadonlyTexture<'2d', Vec4f>
     >();
 
