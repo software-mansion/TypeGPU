@@ -1,7 +1,6 @@
 import tgpu, { type TgpuBuffer, type Storage } from 'typegpu';
 import { type F32, type TgpuArray, arrayOf, f32 } from 'typegpu/data';
 
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const SIZE = 28;
 
 const root = await tgpu.init();
@@ -39,7 +38,7 @@ const layerShader = `
   }
 `;
 
-const inputOutput = tgpu.bindGroupLayout({
+const ioLayout = tgpu.bindGroupLayout({
   input: {
     storage: (n) => arrayOf(f32, n),
     access: 'readonly',
@@ -50,7 +49,7 @@ const inputOutput = tgpu.bindGroupLayout({
   },
 });
 
-const weightsBiases = tgpu.bindGroupLayout({
+const weightsBiasesLayout = tgpu.bindGroupLayout({
   weights: {
     storage: (n) => arrayOf(f32, n),
     access: 'readonly',
@@ -61,12 +60,10 @@ const weightsBiases = tgpu.bindGroupLayout({
   },
 });
 
-const pipelineLayout = device.createPipelineLayout({
-  bindGroupLayouts: [root.unwrap(inputOutput), root.unwrap(weightsBiases)],
-});
-
 const pipeline = device.createComputePipeline({
-  layout: pipelineLayout,
+  layout: device.createPipelineLayout({
+    bindGroupLayouts: [root.unwrap(ioLayout), root.unwrap(weightsBiasesLayout)],
+  }),
   compute: {
     module: device.createShaderModule({
       code: layerShader,
@@ -84,13 +81,9 @@ interface LayerData {
 }
 
 interface Layer {
-  weights: LayerData;
-  biases: LayerData;
-  buffers: {
-    weights: TgpuBuffer<TgpuArray<F32>> & Storage;
-    biases: TgpuBuffer<TgpuArray<F32>> & Storage;
-    state: TgpuBuffer<TgpuArray<F32>> & Storage;
-  };
+  weights: TgpuBuffer<TgpuArray<F32>> & Storage;
+  biases: TgpuBuffer<TgpuArray<F32>> & Storage;
+  state: TgpuBuffer<TgpuArray<F32>> & Storage;
 }
 
 interface Network {
@@ -124,7 +117,7 @@ function getLayerData(layer: ArrayBuffer): LayerData {
     throw new Error('Shape not found in header');
   }
 
-  // To accomodate .npy weirdness - if we have a 2d shape we need to switch the order
+  // To accommodate .npy weirdness - if we have a 2d shape we need to switch the order
   const shape = Number.isNaN(Number.parseInt(shapeMatch[2]))
     ? ([Number.parseInt(shapeMatch[1])] as [number, number?])
     : ([Number.parseInt(shapeMatch[2]), Number.parseInt(shapeMatch[1])] as [
@@ -164,37 +157,31 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
     }
 
     return {
-      weights: weights,
-      biases: biases,
-      buffers: {
-        weights: weights.buffer,
-        biases: biases.buffer,
-        state: root
-          .createBuffer(arrayOf(f32, biases.shape[0]))
-          .$usage('storage'),
-      },
+      weights: weights.buffer,
+      biases: biases.buffer,
+      state: root.createBuffer(arrayOf(f32, biases.shape[0])).$usage('storage'),
     };
   });
 
   const input = root
     .createBuffer(arrayOf(f32, layers[0][0].shape[0]))
     .$usage('storage');
-  const output = buffers[buffers.length - 1].buffers.state;
+  const output = buffers[buffers.length - 1].state;
 
   const ioBindGroups = buffers.map((_, i) =>
     root.unwrap(
-      inputOutput.populate({
-        input: i === 0 ? input : buffers[i - 1].buffers.state,
-        output: buffers[i].buffers.state,
+      ioLayout.populate({
+        input: i === 0 ? input : buffers[i - 1].state,
+        output: buffers[i].state,
       }),
     ),
   );
 
   const weightsBindGroups = buffers.map((layer) =>
     root.unwrap(
-      weightsBiases.populate({
-        weights: layer.buffers.weights,
-        biases: layer.buffers.biases,
+      weightsBiasesLayout.populate({
+        weights: layer.weights,
+        biases: layer.biases,
       }),
     ),
   );
@@ -215,7 +202,7 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
       pass.setPipeline(pipeline);
       pass.setBindGroup(0, ioBindGroups[i]);
       pass.setBindGroup(1, weightsBindGroups[i]);
-      pass.dispatchWorkgroups(buffers[i].biases.shape[0]);
+      pass.dispatchWorkgroups(buffers[i].biases.dataType.elementCount);
       pass.end();
     }
     device.queue.submit([encoder.finish()]);
@@ -265,8 +252,8 @@ const network = createNetwork([
 
 // Canvas drawing
 
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
-
 const bars = document.querySelectorAll('.bar') as NodeListOf<HTMLDivElement>;
 
 const resetAll = () => {
