@@ -16,7 +16,7 @@ export function Slider({ min, max, step, value, onChange }: Props) {
       max={max}
       step={step}
       onValueChange={(value) => {
-        onChange(value[0]);
+        onChange(value[0] ?? 0);
       }}
       className="bg-grayscale-20 h-10 rounded-[0.25rem] relative flex overflow-hidden"
     >
