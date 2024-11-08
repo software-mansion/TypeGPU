@@ -38,26 +38,24 @@ const layerShader = `
   }
 `;
 
+const ReadonlyFloats = {
+  storage: (n: number) => arrayOf(f32, n),
+  access: 'readonly',
+} as const;
+
+const MutableFloats = {
+  storage: (n: number) => arrayOf(f32, n),
+  access: 'mutable',
+} as const;
+
 const ioLayout = tgpu.bindGroupLayout({
-  input: {
-    storage: (n) => arrayOf(f32, n),
-    access: 'readonly',
-  },
-  output: {
-    storage: (n) => arrayOf(f32, n),
-    access: 'mutable',
-  },
+  input: ReadonlyFloats,
+  output: MutableFloats,
 });
 
 const weightsBiasesLayout = tgpu.bindGroupLayout({
-  weights: {
-    storage: (n) => arrayOf(f32, n),
-    access: 'readonly',
-  },
-  biases: {
-    storage: (n) => arrayOf(f32, n),
-    access: 'readonly',
-  },
+  weights: ReadonlyFloats,
+  biases: ReadonlyFloats,
 });
 
 const pipeline = device.createComputePipeline({
@@ -74,9 +72,7 @@ const pipeline = device.createComputePipeline({
 // Definitions for the network
 
 interface LayerData {
-  header: string;
-  data: Float32Array;
-  shape: [number, number?];
+  shape: readonly [number] | readonly [number, number];
   buffer: TgpuBuffer<TgpuArray<F32>> & Storage;
 }
 
@@ -118,25 +114,22 @@ function getLayerData(layer: ArrayBuffer): LayerData {
   }
 
   // To accommodate .npy weirdness - if we have a 2d shape we need to switch the order
-  const shape = Number.isNaN(Number.parseInt(shapeMatch[2]))
-    ? ([Number.parseInt(shapeMatch[1])] as [number, number?])
-    : ([Number.parseInt(shapeMatch[2]), Number.parseInt(shapeMatch[1])] as [
-        number,
-        number?,
-      ]);
+  const X = Number.parseInt(shapeMatch[1]);
+  const Y = Number.parseInt(shapeMatch[2]);
+  const shape = Number.isNaN(Y) ? ([X] as const) : ([Y, X] as const);
 
   const data = new Float32Array(layer.slice(10 + headerLen[0]));
-  // verify the length of the data matches the shape
+
+  // Verify the length of the data matches the shape
   if (data.length !== shape[0] * (shape[1] || 1)) {
     throw new Error(`Data length ${data.length} does not match shape ${shape}`);
   }
+
   const buffer = root
     .createBuffer(arrayOf(f32, data.length), [...data])
     .$usage('storage');
 
   return {
-    header,
-    data,
     shape,
     buffer,
   };
@@ -169,21 +162,17 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
   const output = buffers[buffers.length - 1].state;
 
   const ioBindGroups = buffers.map((_, i) =>
-    root.unwrap(
-      ioLayout.populate({
-        input: i === 0 ? input : buffers[i - 1].state,
-        output: buffers[i].state,
-      }),
-    ),
+    ioLayout.populate({
+      input: i === 0 ? input : buffers[i - 1].state,
+      output: buffers[i].state,
+    }),
   );
 
   const weightsBindGroups = buffers.map((layer) =>
-    root.unwrap(
-      weightsBiasesLayout.populate({
-        weights: layer.weights,
-        biases: layer.biases,
-      }),
-    ),
+    weightsBiasesLayout.populate({
+      weights: layer.weights,
+      biases: layer.biases,
+    }),
   );
 
   async function inference(data: number[]): Promise<number[]> {
@@ -200,8 +189,8 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
     for (let i = 0; i < buffers.length; i++) {
       const pass = encoder.beginComputePass();
       pass.setPipeline(pipeline);
-      pass.setBindGroup(0, ioBindGroups[i]);
-      pass.setBindGroup(1, weightsBindGroups[i]);
+      pass.setBindGroup(0, root.unwrap(ioBindGroups[i]));
+      pass.setBindGroup(1, root.unwrap(weightsBindGroups[i]));
       pass.dispatchWorkgroups(buffers[i].biases.dataType.elementCount);
       pass.end();
     }
