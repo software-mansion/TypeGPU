@@ -315,7 +315,7 @@ canvas.addEventListener('mousedown', () => {
   isDrawing = true;
 });
 
-canvas.addEventListener('mouseup', () => {
+window.addEventListener('mouseup', () => {
   isDrawing = false;
 });
 
