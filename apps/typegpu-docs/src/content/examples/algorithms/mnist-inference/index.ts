@@ -352,7 +352,7 @@ const handleDrawing = (x: number, y: number) => {
   draw();
 
   network
-    .inference(centerImage(canvasData).map((x) => (x / 255) * 3.24 - 0.42)) // normalize the values from 0-255 to -0.42-2.82
+    .inference(centerImage(canvasData).map((x) => (x / 255) * 3.24 - 0.42)) // scale the values from 0-255 to -0.42-2.82
     .then((data) => {
       const max = Math.max(...data);
       const index = data.indexOf(max);
