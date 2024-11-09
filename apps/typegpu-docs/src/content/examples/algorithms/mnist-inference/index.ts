@@ -90,7 +90,7 @@ interface Network {
   inference(data: number[]): Promise<number[]>;
 }
 
-// Network loading functions
+// #region Downloading weights & biases
 
 /**
  * Create a LayerData object from a layer ArrayBuffer
@@ -134,6 +134,8 @@ function getLayerData(layer: ArrayBuffer): LayerData {
     buffer,
   };
 }
+
+// #endregion
 
 /**
  * Creates a network from a list of pairs of weights and biases
