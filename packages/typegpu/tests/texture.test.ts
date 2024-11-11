@@ -8,12 +8,13 @@ import {
   vi,
 } from 'vitest';
 import type {
-  Render,
-  Sampled,
+  TgpuMutableTexture,
   TgpuReadonlyTexture,
   TgpuSampledTexture,
   TgpuTexture,
+  TgpuWriteonlyTexture,
 } from '../src/core/texture/texture';
+import type { Render, Sampled } from '../src/core/texture/usageExtension';
 import {
   type F32,
   type I32,
@@ -54,7 +55,7 @@ const mockDevice = {
   },
 };
 
-describe('TgpuTexture', () => {
+function useRoot() {
   let root: ExperimentalTgpuRoot;
 
   beforeEach(() => {
@@ -68,17 +69,23 @@ describe('TgpuTexture', () => {
     vi.resetAllMocks();
   });
 
+  return () => root;
+}
+
+describe('TgpuTexture', () => {
+  const getRoot = useRoot();
+
   it('makes passing the default, `undefined` or omitting an option prop result in the same type.', () => {
     const commonProps = {
       size: [512, 512],
       format: 'rgba8unorm',
     } as const;
 
-    const texture1 = root.createTexture({
+    const texture1 = getRoot().createTexture({
       ...commonProps,
     });
 
-    const texture2 = root.createTexture({
+    const texture2 = getRoot().createTexture({
       ...commonProps,
       dimension: undefined,
       mipLevelCount: undefined,
@@ -86,7 +93,7 @@ describe('TgpuTexture', () => {
       viewFormats: undefined,
     });
 
-    const texture3 = root.createTexture({
+    const texture3 = getRoot().createTexture({
       ...commonProps,
       dimension: '2d',
       mipLevelCount: 1,
@@ -104,12 +111,12 @@ describe('TgpuTexture', () => {
       format: 'rgba8unorm',
     } as const;
 
-    const texture1 = root.createTexture({
+    const texture1 = getRoot().createTexture({
       ...commonProps,
       dimension: '3d',
     });
 
-    const texture2 = root.createTexture({
+    const texture2 = getRoot().createTexture({
       ...commonProps,
       dimension: '1d',
     });
@@ -123,7 +130,7 @@ describe('TgpuTexture', () => {
   });
 
   it('embeds a non-default mipLevelCount in the type', () => {
-    const texture = root.createTexture({
+    const texture = getRoot().createTexture({
       size: [512, 512],
       format: 'rgba8unorm',
       mipLevelCount: 2,
@@ -135,7 +142,7 @@ describe('TgpuTexture', () => {
   });
 
   it('embeds a non-default sampleCount in the type', () => {
-    const texture = root.createTexture({
+    const texture = getRoot().createTexture({
       size: [512, 512],
       format: 'rgba8unorm',
       sampleCount: 2,
@@ -147,7 +154,7 @@ describe('TgpuTexture', () => {
   });
 
   it('embeds non-default viewFormats in the type', () => {
-    const texture = root.createTexture({
+    const texture = getRoot().createTexture({
       size: [512, 512],
       format: 'rgba8unorm',
       viewFormats: ['rgba8unorm-srgb', 'rgba8unorm'],
@@ -167,7 +174,7 @@ describe('TgpuTexture', () => {
     // that was created with a readonly size tuple, and one created
     // with a mutable size tuple.
 
-    const texture = root.createTexture({
+    const texture = getRoot().createTexture({
       size: [1, 2, 3] as const,
       format: 'rgba8unorm',
     });
@@ -178,13 +185,13 @@ describe('TgpuTexture', () => {
   });
 
   it('rejects non-strict or invalid size tuples', () => {
-    root.createTexture({
+    getRoot().createTexture({
       // @ts-expect-error
       size: [],
       format: 'rgba8unorm',
     });
 
-    root.createTexture({
+    getRoot().createTexture({
       // @ts-expect-error
       size: [1, 2] as number[], // <- too loose
       format: 'rgba8unorm',
@@ -192,7 +199,7 @@ describe('TgpuTexture', () => {
   });
 
   it('infers `sampled` usage', () => {
-    const texture = root
+    const texture = getRoot()
       .createTexture({
         size: [512, 512],
         format: 'rgba8unorm',
@@ -205,7 +212,7 @@ describe('TgpuTexture', () => {
   });
 
   it('infers combined usage', () => {
-    const texture = root
+    const texture = getRoot()
       .createTexture({
         size: [512, 512],
         format: 'rgba8unorm',
@@ -218,7 +225,7 @@ describe('TgpuTexture', () => {
   });
 
   it('creates a sampled texture view with correct type', () => {
-    const texture = root
+    const texture = getRoot()
       .createTexture({
         size: [512, 512, 12],
         format: 'rgba8unorm',
@@ -348,22 +355,11 @@ describe('TgpuTexture', () => {
   });
 });
 
-describe('TgpuReadonlyTexture', () => {
-  let root: ExperimentalTgpuRoot;
-
-  beforeEach(() => {
-    root = tgpu.initFromDevice({
-      device: mockDevice as unknown as GPUDevice,
-    });
-  });
-
-  afterEach(() => {
-    root.destroy();
-    vi.resetAllMocks();
-  });
+describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
+  const getRoot = useRoot();
 
   it('inherits the dimension and format from its owner texture', () => {
-    const texture1 = root
+    const texture1 = getRoot()
       .createTexture({
         size: [512, 512],
         format: 'rgba8unorm',
@@ -374,7 +370,15 @@ describe('TgpuReadonlyTexture', () => {
       TgpuReadonlyTexture<'2d', Vec4f>
     >();
 
-    const texture2 = root
+    expectTypeOf(texture1.asWriteonly()).toEqualTypeOf<
+      TgpuWriteonlyTexture<'2d', Vec4f>
+    >();
+
+    expectTypeOf(texture1.asMutable()).toEqualTypeOf<
+      TgpuMutableTexture<'2d', Vec4f>
+    >();
+
+    const texture2 = getRoot()
       .createTexture({
         size: [512, 512],
         format: 'rgba8uint',
@@ -386,7 +390,15 @@ describe('TgpuReadonlyTexture', () => {
       TgpuReadonlyTexture<'3d', Vec4u>
     >();
 
-    const texture3 = root
+    expectTypeOf(texture2.asWriteonly()).toEqualTypeOf<
+      TgpuWriteonlyTexture<'3d', Vec4u>
+    >();
+
+    expectTypeOf(texture2.asMutable()).toEqualTypeOf<
+      TgpuMutableTexture<'3d', Vec4u>
+    >();
+
+    const texture3 = getRoot()
       .createTexture({
         size: [512, 512],
         format: 'rgba8sint',
@@ -398,10 +410,18 @@ describe('TgpuReadonlyTexture', () => {
     expectTypeOf(texture3.asReadonly()).toEqualTypeOf<
       TgpuReadonlyTexture<'1d', Vec4i>
     >();
+
+    expectTypeOf(texture3.asWriteonly()).toEqualTypeOf<
+      TgpuWriteonlyTexture<'1d', Vec4i>
+    >();
+
+    expectTypeOf(texture3.asMutable()).toEqualTypeOf<
+      TgpuMutableTexture<'1d', Vec4i>
+    >();
   });
 
   it('rejects formats different than those specified when defining the texture', () => {
-    const texture = root
+    const texture = getRoot()
       .createTexture({
         size: [512, 512],
         format: 'rgba8unorm',
@@ -413,25 +433,24 @@ describe('TgpuReadonlyTexture', () => {
       // @ts-expect-error
       format: 'rgba8snorm',
     });
+
+    texture.asWriteonly({
+      // @ts-expect-error
+      format: 'r8unorm',
+    });
+
+    texture.asMutable({
+      // @ts-expect-error
+      format: 'rg8unorm',
+    });
   });
 });
 
 describe('TgpuSampledTexture', () => {
-  let root: ExperimentalTgpuRoot;
-
-  beforeEach(() => {
-    root = tgpu.initFromDevice({
-      device: mockDevice as unknown as GPUDevice,
-    });
-  });
-
-  afterEach(() => {
-    root.destroy();
-    vi.resetAllMocks();
-  });
+  const getRoot = useRoot();
 
   it('inherits the dimension and format from its owner texture', () => {
-    const texture1 = root
+    const texture1 = getRoot()
       .createTexture({
         size: [512, 512],
         format: 'rgba8unorm',
@@ -442,7 +461,7 @@ describe('TgpuSampledTexture', () => {
       TgpuSampledTexture<'2d', F32>
     >();
 
-    const texture2 = root
+    const texture2 = getRoot()
       .createTexture({
         size: [512, 512],
         format: 'rgba8uint',
@@ -454,7 +473,7 @@ describe('TgpuSampledTexture', () => {
       TgpuSampledTexture<'3d', U32>
     >();
 
-    const texture3 = root
+    const texture3 = getRoot()
       .createTexture({
         size: [512, 512],
         format: 'rgba8sint',
@@ -469,7 +488,7 @@ describe('TgpuSampledTexture', () => {
   });
 
   it('rejects formats different than those specified when defining the texture', () => {
-    const texture = root
+    const texture = getRoot()
       .createTexture({
         size: [512, 512],
         format: 'rgba8unorm',

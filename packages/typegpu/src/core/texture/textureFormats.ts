@@ -9,6 +9,8 @@ import {
   vec4i,
   vec4u,
 } from '../../data';
+import type { Default } from '../../utilityTypes';
+import type { TextureProps } from './textureProps';
 
 export const texelFormatToChannelType = {
   r8unorm: f32,
@@ -155,3 +157,18 @@ export const texelFormatToDataType = {
 export type TexelFormatToDataType = typeof texelFormatToDataType;
 export type TexelFormatToDataTypeOrNever<T> =
   T extends keyof TexelFormatToDataType ? TexelFormatToDataType[T] : never;
+
+/**
+ * Represents what formats a storage view can choose from based on its owner texture's props.
+ */
+export type StorageFormatOptions<TProps extends TextureProps> = Extract<
+  TProps['format'] | Default<TProps['viewFormats'], []>[number],
+  StorageTextureTexelFormat
+>;
+
+/**
+ * Represents what formats a sampled view can choose from based on its owner texture's props.
+ */
+export type SampledFormatOptions<TProps extends TextureProps> =
+  | TProps['format']
+  | Default<TProps['viewFormats'], []>[number];
