@@ -224,6 +224,16 @@ describe('TgpuTexture', () => {
     >();
   });
 
+  it('limits available extensions based on the chosen format', () => {
+    getRoot()
+      .createTexture({
+        format: 'astc-10x10-unorm',
+        size: [512, 512],
+      })
+      // @ts-expect-error
+      .$usage('storage');
+  });
+
   it('creates a sampled texture view with correct type', () => {
     const texture = getRoot()
       .createTexture({
@@ -238,13 +248,13 @@ describe('TgpuTexture', () => {
     });
 
     let code = wgsl`
-      let x = ${texture.asSampled({ type: 'texture_2d', dataType: u32 })};
+      let x = ${texture.asSampled()};
     `;
 
     expect(resolutionCtx.resolve(code)).toContain('texture_2d<u32>');
 
     code = wgsl`
-      let x = ${texture.asSampled({ type: 'texture_2d_array', dataType: f32 })};
+      let x = ${texture.asSampled({ dimension: '2d-array' })};
     `;
 
     expect(resolutionCtx.resolve(code)).toContain('texture_2d_array<f32>');

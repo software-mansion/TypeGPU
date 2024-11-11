@@ -4,7 +4,11 @@ import { invariant } from '../../errors';
 import type { ExtensionGuard } from '../../extension';
 import type { TgpuNamable } from '../../namable';
 import { identifier } from '../../tgpuIdentifier';
-import type { ResolutionCtx, TgpuResolvable } from '../../types';
+import type {
+  ResolutionCtx,
+  TgpuResolvable,
+  TgpuTypedTextureType,
+} from '../../types';
 import type { Default } from '../../utilityTypes';
 import type { UnionToIntersection } from '../../utilityTypes';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
@@ -342,7 +346,8 @@ class TgpuTextureImpl implements TgpuTexture, TgpuTexture_INTERNAL {
       StorageTextureTexelFormat
     >,
   ) {
-    return this._asStorage(params, 'writeonly');
+    // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
+    return this._asStorage(params, 'writeonly') as any;
   }
 
   asMutable(
@@ -351,12 +356,14 @@ class TgpuTextureImpl implements TgpuTexture, TgpuTexture_INTERNAL {
       StorageTextureTexelFormat
     >,
   ) {
-    return this._asStorage(params, 'mutable');
+    // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
+    return this._asStorage(params, 'mutable') as any;
   }
 
   asSampled(
     params?: TextureViewParams<GPUTextureViewDimension, GPUTextureFormat>,
-  ) {
+    // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
+  ): any {
     if (!this.usableAsSampled) {
       throw new Error('Unusable as sampled');
     }
@@ -365,12 +372,7 @@ class TgpuTextureImpl implements TgpuTexture, TgpuTexture_INTERNAL {
     const type = texelFormatToDataType[format as keyof TexelFormatToDataType];
     invariant(!!type, `Unsupported storage texture format: ${format}`);
 
-    return new TgpuBindableSampledTextureImpl(
-      params ?? {},
-      'readonly',
-      this as unknown as TgpuTexture & TgpuTexture_INTERNAL,
-      // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
-    ) as any;
+    return new TgpuBindableSampledTextureImpl(params, 'readonly', this);
   }
 
   destroy() {
@@ -381,6 +383,15 @@ class TgpuTextureImpl implements TgpuTexture, TgpuTexture_INTERNAL {
     this._texture?.destroy();
   }
 }
+
+const dimensionToCodeMap = {
+  '1d': '1d',
+  '2d': '2d',
+  '2d-array': '2d_array',
+  cube: 'cube',
+  'cube-array': 'cube_array',
+  '3d': '3d',
+} satisfies Record<GPUTextureViewDimension, string>;
 
 class TgpuBindableStorageTextureImpl
   implements TgpuStorageTexture, TgpuStorageTexture_INTERNAL
@@ -428,7 +439,8 @@ class TgpuBindableStorageTextureImpl
   resolve(ctx: ResolutionCtx): string {
     const ident = identifier().$name(this.label);
 
-    ctx.addRenderResource(this, ident);
+    // TODO: Actually add the resource in the resolution ctx refactor.
+    const type = `texture_storage_${dimensionToCodeMap[this.dimension]}`;
 
     return ctx.resolve(ident);
   }
@@ -439,6 +451,11 @@ class TgpuBindableSampledTextureImpl
 {
   public readonly channelDataType: ChannelData;
   public readonly dimension: GPUTextureViewDimension;
+  /**
+   * TODO: Remove in the resolution ctx refactor.
+   * @deprecated
+   */
+  public readonly type: TgpuTypedTextureType;
 
   private _format: GPUTextureFormat;
   private _view: GPUTextureView | undefined;
@@ -453,6 +470,13 @@ class TgpuBindableSampledTextureImpl
     this.dimension = props?.dimension ?? _texture.props.dimension ?? '2d';
     this._format = props?.format ?? (_texture.props.format as GPUTextureFormat);
     this.channelDataType = texelFormatToChannelType[this._format];
+
+    if ((_texture.props.sampleCount ?? 1) > 1) {
+      this.type = 'texture_multisampled_2d';
+    } else {
+      this.type =
+        `texture_${dimensionToCodeMap[this.dimension]}` as TgpuTypedTextureType;
+    }
   }
 
   get label(): string | undefined {
