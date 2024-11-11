@@ -48,10 +48,10 @@ export * from '../builtin';
 export { default as wgsl } from '../wgsl';
 export { std } from '../std';
 export {
-  isUsableAsStorage,
   isUsableAsUniform,
   isUsableAsVertex,
 } from '../core/buffer/buffer';
+export { isUsableAsStorage } from '../extension';
 export {
   asUniform,
   asReadonly,
@@ -62,9 +62,9 @@ export {
 export type {
   TgpuBuffer,
   Uniform,
-  Storage,
   Vertex,
 } from '../core/buffer/buffer';
+export type { Storage } from '../extension';
 export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
 export type {
   TgpuBufferUsage,

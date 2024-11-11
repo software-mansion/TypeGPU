@@ -1,14 +1,13 @@
 import type { Unwrap } from 'typed-binary';
 import { isArraySchema } from '../../data';
+import { type Storage, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
 import { identifier } from '../../tgpuIdentifier';
 import type { AnyTgpuData, BufferUsage, ResolutionCtx } from '../../types';
 import {
-  type Storage,
   type TgpuBuffer,
   type Uniform,
   type Vertex,
-  isUsableAsStorage,
   isUsableAsUniform,
   isUsableAsVertex,
 } from './buffer';
