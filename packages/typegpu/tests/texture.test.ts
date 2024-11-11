@@ -8,12 +8,22 @@ import {
   vi,
 } from 'vitest';
 import type {
-  RenderTexture,
-  SampledTexture,
+  Render,
+  Sampled,
   TgpuReadonlyTexture,
+  TgpuSampledTexture,
   TgpuTexture,
 } from '../src/core/texture/texture';
-import { type Vec4f, type Vec4i, type Vec4u, f32, u32 } from '../src/data';
+import {
+  type F32,
+  type I32,
+  type U32,
+  type Vec4f,
+  type Vec4i,
+  type Vec4u,
+  f32,
+  u32,
+} from '../src/data';
 import {
   type ExperimentalTgpuRoot,
   StrictNameRegistry,
@@ -187,11 +197,10 @@ describe('TgpuTexture', () => {
         size: [512, 512],
         format: 'rgba8unorm',
       })
-      .$usage('storage');
+      .$usage('sampled');
 
     expectTypeOf(texture).toEqualTypeOf<
-      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> &
-        SampledTexture<{ size: [512, 512]; format: 'rgba8unorm' }>
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> & Sampled
     >();
   });
 
@@ -204,9 +213,7 @@ describe('TgpuTexture', () => {
       .$usage('sampled', 'render');
 
     expectTypeOf(texture).toEqualTypeOf<
-      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> &
-        SampledTexture &
-        RenderTexture
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> & Sampled & Render
     >();
   });
 
@@ -432,7 +439,7 @@ describe('TgpuSampledTexture', () => {
       .$usage('sampled');
 
     expectTypeOf(texture1.asSampled()).toEqualTypeOf<
-      TgpuReadonlyTexture<'2d', Vec4f>
+      TgpuSampledTexture<'2d', F32>
     >();
 
     const texture2 = root
@@ -441,10 +448,10 @@ describe('TgpuSampledTexture', () => {
         format: 'rgba8uint',
         dimension: '3d',
       })
-      .$usage('storage');
+      .$usage('sampled');
 
-    expectTypeOf(texture2.asReadonly()).toEqualTypeOf<
-      TgpuReadonlyTexture<'3d', Vec4u>
+    expectTypeOf(texture2.asSampled()).toEqualTypeOf<
+      TgpuSampledTexture<'3d', U32>
     >();
 
     const texture3 = root
@@ -454,10 +461,10 @@ describe('TgpuSampledTexture', () => {
         dimension: '1d',
         viewFormats: ['rgba8unorm'],
       })
-      .$usage('storage');
+      .$usage('sampled');
 
-    expectTypeOf(texture3.asReadonly()).toEqualTypeOf<
-      TgpuReadonlyTexture<'1d', Vec4i>
+    expectTypeOf(texture3.asSampled()).toEqualTypeOf<
+      TgpuSampledTexture<'1d', I32>
     >();
   });
 
@@ -468,9 +475,9 @@ describe('TgpuSampledTexture', () => {
         format: 'rgba8unorm',
         dimension: '3d',
       })
-      .$usage('storage');
+      .$usage('sampled');
 
-    texture.asReadonly({
+    texture.asSampled({
       // @ts-expect-error
       format: 'rgba8snorm',
     });
