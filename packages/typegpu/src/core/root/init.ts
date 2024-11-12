@@ -53,18 +53,17 @@ import type {
   SetPlumAction,
 } from './rootTypes';
 
+interface Disposable {
+  destroy(): void;
+}
+
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a root can interact via GPU buffers.
  */
 class TgpuRootImpl implements ExperimentalTgpuRoot {
-  private _buffers: TgpuBuffer<AnyTgpuData>[] = [];
-  private _textures: TgpuTexture[] = [];
+  private _disposable: Disposable[] = [];
   private _samplers = new WeakMap<TgpuSampler, GPUSampler>();
-  private _externalTexturesStatus = new WeakMap<
-    TgpuExternalTexture,
-    'dirty' | 'clean'
-  >();
 
   private _unwrappedBindGroupLayouts = new WeakMemo(
     (key: TgpuBindGroupLayout) => key.unwrap(this),
@@ -99,7 +98,7 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
       this.device,
     );
 
-    this._buffers.push(buffer);
+    this._disposable.push(buffer);
 
     return buffer;
   }
@@ -137,18 +136,28 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     >
   > {
     const texture = INTERNAL_createTexture(props, this);
-    this._textures.push(texture);
+    this._disposable.push(texture);
     // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
     return texture as any;
   }
 
-  destroy() {
-    for (const buffer of this._buffers) {
-      buffer.destroy();
-    }
+  importExternalTexture<TColorSpace extends PredefinedColorSpace>(options: {
+    source: HTMLVideoElement | VideoFrame;
+    colorSpace?: TColorSpace;
+  }): TgpuExternalTexture<{
+    colorSpace: PredefinedColorSpace extends TColorSpace ? 'srgb' : TColorSpace;
+  }> {
+    return INTERNAL_createExternalTexture(
+      this,
+      options.source,
+      options.colorSpace,
+      // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
+    ) as any;
+  }
 
-    for (const texture of this._textures) {
-      texture.destroy();
+  destroy() {
+    for (const disposable of this._disposable) {
+      disposable.destroy();
     }
   }
 
@@ -211,20 +220,6 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     }
 
     throw new Error(`Unknown resource type: ${resource}`);
-  }
-
-  importExternalTexture<TColorSpace extends PredefinedColorSpace>(options: {
-    source: HTMLVideoElement | VideoFrame;
-    colorSpace?: TColorSpace;
-  }): TgpuExternalTexture<{
-    colorSpace: PredefinedColorSpace extends TColorSpace ? 'srgb' : TColorSpace;
-  }> {
-    return INTERNAL_createExternalTexture(
-      this,
-      options.source,
-      options.colorSpace,
-      // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
-    ) as any;
   }
 
   samplerFor(sampler: TgpuSampler): GPUSampler {

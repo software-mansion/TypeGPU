@@ -46,13 +46,13 @@ export function isExternalTexture<T extends TgpuExternalTexture>(
 class TgpuExternalTextureImpl
   implements TgpuExternalTexture, TgpuExternalTexture_INTERNAL
 {
-  private _label: string | undefined;
   public readonly resourceType = 'external-texture';
   /**
    * TODO: Remove when refactoring the resolution ctx
    */
   public readonly type = 'texture_external';
 
+  private _label: string | undefined;
   private _texture: GPUExternalTexture | undefined;
 
   constructor(
