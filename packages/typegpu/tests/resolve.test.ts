@@ -78,4 +78,50 @@ describe('tgpu resolve', () => {
       ),
     );
   });
+
+  it('properly resolves a combination of functions, structs and strings', () => {
+    const PlayerData = d.struct({
+      position: d.vec3f,
+      velocity: d.vec3f,
+      health: d.f32,
+    });
+
+    const killPlayer = tgpu
+      .fn([PlayerData])
+      .does((pInfo) => {
+        pInfo.health = d.f32(0);
+      })
+      .$name('killPlayer_test');
+
+    const shaderLogic = `
+      @compute @workgroup_size(1)
+      fn main() {
+        var player: PlayerData;
+        player.health = 100;
+        killPlayer(player);
+      }`;
+
+    const resolved = tgpu.resolve([shaderLogic], { PlayerData, killPlayer });
+
+    expect(parse(resolved)).toEqual(
+      parse(`
+        struct PlayerData {
+          position: vec3f,
+          velocity: vec3f,
+          health: f32,
+        }
+
+        fn killPlayer_test(pInfo: PlayerData) {
+          pInfo.health = f32(0);
+        }
+
+        @compute @workgroup_size(1)
+        fn main() {
+          var player: PlayerData;
+          player.health = 100;
+          killPlayer_test(player);
+        }
+      `),
+    );
+  });
 });
