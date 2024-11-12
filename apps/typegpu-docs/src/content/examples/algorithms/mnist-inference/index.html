@@ -69,7 +69,7 @@
     inset: 10% 0 0 2rem;
     border-radius: 9999px;
     content: '';
-    transition: all 0.5s;
+    transition: all 0.2s ease-in-out;
   }
 
   .bar::after {
@@ -80,16 +80,9 @@
     position: absolute;
     inset: 10% 0 0 2rem;
     border-radius: 9999px;
-    transition: all 0.5s;
+    transition:
+      width 0.2s ease-in-out,
+      opacity 0.5s ease-in-out;
     content: '';
-  }
-
-  .bar-fill {
-    height: 100%;
-    background-color: #d1d5db;
-    border-radius: 9999px;
-    overflow: hidden;
-    transition: all 0.5s;
-    position: relative;
   }
 </style>

@@ -90,53 +90,6 @@ interface Network {
   inference(data: number[]): Promise<number[]>;
 }
 
-// #region Downloading weights & biases
-
-/**
- * Create a LayerData object from a layer ArrayBuffer
- *
- * The function extracts the header, shape and data from the layer
- * If there are any issues with the layer, an error is thrown
- *
- * Automatically creates appropriate buffer initialized with the data
- */
-function getLayerData(layer: ArrayBuffer): LayerData {
-  const headerLen = new Uint16Array(layer.slice(8, 10));
-
-  const header = new TextDecoder().decode(
-    new Uint8Array(layer.slice(10, 10 + headerLen[0])),
-  );
-
-  // shape can be found in the header in the format: 'shape': (x, y) or 'shape': (x,) for bias
-  const shapeMatch = header.match(/'shape': \((\d+), ?(\d+)?\)/);
-  if (!shapeMatch) {
-    throw new Error('Shape not found in header');
-  }
-
-  // To accommodate .npy weirdness - if we have a 2d shape we need to switch the order
-  const X = Number.parseInt(shapeMatch[1]);
-  const Y = Number.parseInt(shapeMatch[2]);
-  const shape = Number.isNaN(Y) ? ([X] as const) : ([Y, X] as const);
-
-  const data = new Float32Array(layer.slice(10 + headerLen[0]));
-
-  // Verify the length of the data matches the shape
-  if (data.length !== shape[0] * (shape[1] || 1)) {
-    throw new Error(`Data length ${data.length} does not match shape ${shape}`);
-  }
-
-  const buffer = root
-    .createBuffer(arrayOf(f32, data.length), [...data])
-    .$usage('storage');
-
-  return {
-    shape,
-    buffer,
-  };
-}
-
-// #endregion
-
 /**
  * Creates a network from a list of pairs of weights and biases
  *
@@ -211,22 +164,73 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
   };
 }
 
-// Data fetching and network creation
+const network = createNetwork(await downloadLayers());
 
-const layerData: [LayerData, LayerData][] = await Promise.all(
-  [0, 1, 2, 3, 4, 5, 6, 7].map(
-    (layer) =>
-      Promise.all(
-        [`layer${layer}.weight.npy`, `layer${layer}.bias.npy`].map((fileName) =>
-          fetch(`/TypeGPU/mnistWeightsExperimental/${fileName}`).then((res) =>
-            res.arrayBuffer().then((buffer) => getLayerData(buffer)),
-          ),
-        ),
-      ) as Promise<[LayerData, LayerData]>,
-  ),
-);
+// #region Downloading weights & biases
 
-const network = createNetwork(layerData);
+/**
+ * Create a LayerData object from a layer ArrayBuffer
+ *
+ * The function extracts the header, shape and data from the layer
+ * If there are any issues with the layer, an error is thrown
+ *
+ * Automatically creates appropriate buffer initialized with the data
+ */
+function getLayerData(layer: ArrayBuffer): LayerData {
+  const headerLen = new Uint16Array(layer.slice(8, 10));
+
+  const header = new TextDecoder().decode(
+    new Uint8Array(layer.slice(10, 10 + headerLen[0])),
+  );
+
+  // shape can be found in the header in the format: 'shape': (x, y) or 'shape': (x,) for bias
+  const shapeMatch = header.match(/'shape': \((\d+), ?(\d+)?\)/);
+  if (!shapeMatch) {
+    throw new Error('Shape not found in header');
+  }
+
+  // To accommodate .npy weirdness - if we have a 2d shape we need to switch the order
+  const X = Number.parseInt(shapeMatch[1]);
+  const Y = Number.parseInt(shapeMatch[2]);
+  const shape = Number.isNaN(Y) ? ([X] as const) : ([Y, X] as const);
+
+  const data = new Float32Array(layer.slice(10 + headerLen[0]));
+
+  // Verify the length of the data matches the shape
+  if (data.length !== shape[0] * (shape[1] || 1)) {
+    throw new Error(`Data length ${data.length} does not match shape ${shape}`);
+  }
+
+  const buffer = root
+    .createBuffer(arrayOf(f32, data.length), [...data])
+    .$usage('storage');
+
+  return {
+    shape,
+    buffer,
+  };
+}
+
+function downloadLayers(): Promise<[LayerData, LayerData][]> {
+  const downloadLayer = async (fileName: string): Promise<LayerData> => {
+    const buffer = await fetch(
+      `/TypeGPU/assets/mnist-weights/${fileName}`,
+    ).then((res) => res.arrayBuffer());
+
+    return getLayerData(buffer);
+  };
+
+  return Promise.all(
+    [0, 1, 2, 3, 4, 5, 6, 7].map((layer) =>
+      Promise.all([
+        downloadLayer(`layer${layer}.weight.npy`),
+        downloadLayer(`layer${layer}.bias.npy`),
+      ]),
+    ),
+  );
+}
+
+// #endregion
 
 // #region User Interface
 
