@@ -23,8 +23,14 @@ import type {
 import type { Unwrapper } from '../../unwrapper';
 import type { Mutable, OmitProps, Prettify } from '../../utilityTypes';
 import type { TgpuBuffer } from '../buffer/buffer';
-import type { TgpuTexture } from '../texture/texture';
-import type { TgpuTextureExternal } from '../texture/tgpuTexture';
+import type { TgpuExternalTexture } from '../texture/externalTexture';
+import type {
+  TgpuMutableTexture,
+  TgpuReadonlyTexture,
+  TgpuSampledTexture,
+  TgpuTexture,
+  TgpuWriteonlyTexture,
+} from '../texture/texture';
 
 // ----------
 // Public API
@@ -174,9 +180,26 @@ export interface TgpuRoot extends Unwrapper {
     >
   >;
 
+  importExternalTexture<TColorSpace extends PredefinedColorSpace>(options: {
+    source: HTMLVideoElement | VideoFrame;
+    /** @default 'srgb' */
+    colorSpace?: TColorSpace;
+  }): TgpuExternalTexture<{
+    colorSpace: PredefinedColorSpace extends TColorSpace ? 'srgb' : TColorSpace;
+  }>;
+
   unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
+  unwrap(resource: TgpuTexture): GPUTexture;
+  unwrap(
+    resource:
+      | TgpuReadonlyTexture
+      | TgpuWriteonlyTexture
+      | TgpuMutableTexture
+      | TgpuSampledTexture,
+  ): GPUTextureView;
+  unwrap(resource: TgpuExternalTexture): GPUExternalTexture;
 
   destroy(): void;
 }
@@ -201,15 +224,6 @@ export interface ExperimentalTgpuRoot extends TgpuRoot {
     listener: PlumListener<TValue>,
   ): Unsubscribe;
 
-  setSource(
-    texture: TgpuTextureExternal,
-    source: HTMLVideoElement | VideoFrame,
-  ): void;
-
-  isDirty(texture: TgpuTextureExternal): boolean;
-  markClean(texture: TgpuTextureExternal): void;
-
-  externalTextureFor(texture: TgpuTextureExternal): GPUExternalTexture;
   samplerFor(sampler: TgpuSampler): GPUSampler;
 
   /**

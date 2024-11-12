@@ -267,6 +267,12 @@ export function isSampledTextureView<T extends TgpuSampledTexture>(
   return (value as T)?.resourceType === 'texture-sampled-view';
 }
 
+export type TgpuAnyTextureView =
+  | TgpuReadonlyTexture
+  | TgpuWriteonlyTexture
+  | TgpuMutableTexture
+  | TgpuSampledTexture;
+
 // --------------
 // Implementation
 // --------------

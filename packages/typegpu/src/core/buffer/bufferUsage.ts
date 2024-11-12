@@ -3,7 +3,12 @@ import { isArraySchema } from '../../data';
 import { type Storage, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
 import { identifier } from '../../tgpuIdentifier';
-import type { AnyTgpuData, BufferUsage, ResolutionCtx } from '../../types';
+import type {
+  AnyTgpuData,
+  BufferUsage,
+  ResolutionCtx,
+  TgpuBindable,
+} from '../../types';
 import {
   type TgpuBuffer,
   type Uniform,
@@ -15,11 +20,6 @@ import {
 // ----------
 // Public API
 // ----------
-
-interface TgpuBindable<TData extends AnyTgpuData, TUsage extends BufferUsage> {
-  allocatable: TgpuBuffer<TData>;
-  usage: TUsage;
-}
 
 export interface TgpuBufferUniform<TData extends AnyTgpuData>
   extends TgpuBindable<TData, 'uniform'> {

@@ -1,4 +1,5 @@
 import type { ISchema, Unwrap } from 'typed-binary';
+import type { TgpuBuffer } from './core/buffer/buffer';
 import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
 import type { TgpuFnShellBase } from './core/function/fnCore';
 import type { TgpuNamable } from './namable';
@@ -28,10 +29,7 @@ export interface NumberArrayView {
  */
 export interface ResolutionCtx {
   addDeclaration(item: TgpuResolvable): void;
-  addBinding(
-    bindable: TgpuBufferUsage<AnyTgpuData>,
-    identifier: TgpuIdentifier,
-  ): void;
+  addBinding(bindable: TgpuBindable, identifier: TgpuIdentifier): void;
   addRenderResource(
     resource: TgpuRenderResource,
     identifier: TgpuIdentifier,
@@ -107,6 +105,14 @@ export interface TgpuResolvableSlot<T extends Wgsl>
     TgpuSlot<T> {}
 
 export type SlotValuePair<T> = [TgpuSlot<T>, T];
+
+export interface TgpuBindable<
+  TData extends AnyTgpuData = AnyTgpuData,
+  TUsage extends BufferUsage = BufferUsage,
+> extends TgpuResolvable {
+  readonly allocatable: TgpuBuffer<TData>;
+  readonly usage: TUsage;
+}
 
 export type TgpuSamplerType = 'sampler' | 'sampler_comparison';
 export type TgpuTypedTextureType =

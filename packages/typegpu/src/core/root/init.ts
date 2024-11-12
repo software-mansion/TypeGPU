@@ -22,8 +22,26 @@ import type {
 import type { TgpuSampler } from '../../tgpuSampler';
 import type { AnyTgpuData } from '../../types';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
-import type { TgpuExternalTexture } from '../texture/externalTexture';
-import { INTERNAL_createTexture, type TgpuTexture } from '../texture/texture';
+import {
+  INTERNAL_createExternalTexture,
+  type TgpuExternalTexture,
+  type TgpuExternalTexture_INTERNAL,
+  isExternalTexture,
+} from '../texture/externalTexture';
+import {
+  INTERNAL_createTexture,
+  type TgpuMutableTexture,
+  type TgpuReadonlyTexture,
+  type TgpuSampledTexture,
+  type TgpuSampledTexture_INTERNAL,
+  type TgpuStorageTexture_INTERNAL,
+  type TgpuTexture,
+  type TgpuTexture_INTERNAL,
+  type TgpuWriteonlyTexture,
+  isSampledTextureView,
+  isStorageTextureView,
+  isTexture,
+} from '../texture/texture';
 import type {
   ComputePipelineExecutorOptions,
   ComputePipelineOptions,
@@ -143,9 +161,33 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
   unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
+  unwrap(resource: TgpuTexture): GPUTexture;
   unwrap(
-    resource: TgpuBuffer<AnyTgpuData> | TgpuBindGroupLayout | TgpuBindGroup,
-  ): GPUBuffer | GPUBindGroupLayout | GPUBindGroup {
+    resource:
+      | TgpuReadonlyTexture
+      | TgpuWriteonlyTexture
+      | TgpuMutableTexture
+      | TgpuSampledTexture,
+  ): GPUTextureView;
+  unwrap(resource: TgpuExternalTexture): GPUExternalTexture;
+  unwrap(
+    resource:
+      | TgpuBuffer<AnyTgpuData>
+      | TgpuBindGroupLayout
+      | TgpuBindGroup
+      | TgpuTexture
+      | TgpuReadonlyTexture
+      | TgpuWriteonlyTexture
+      | TgpuMutableTexture
+      | TgpuSampledTexture
+      | TgpuExternalTexture,
+  ):
+    | GPUBuffer
+    | GPUBindGroupLayout
+    | GPUBindGroup
+    | GPUTexture
+    | GPUTextureView
+    | GPUExternalTexture {
     if (isBuffer(resource)) {
       return resource.buffer;
     }
@@ -158,17 +200,37 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
       return this._unwrappedBindGroups.getOrMake(resource);
     }
 
+    if (isTexture(resource)) {
+      return (resource as unknown as TgpuTexture_INTERNAL).unwrap();
+    }
+
+    if (isStorageTextureView(resource)) {
+      return (resource as unknown as TgpuStorageTexture_INTERNAL).unwrap();
+    }
+
+    if (isSampledTextureView(resource)) {
+      return (resource as unknown as TgpuSampledTexture_INTERNAL).unwrap();
+    }
+
+    if (isExternalTexture(resource)) {
+      return (resource as unknown as TgpuExternalTexture_INTERNAL).unwrap();
+    }
+
     throw new Error(`Unknown resource type: ${resource}`);
   }
 
-  externalTextureFor(texture: TgpuExternalTexture): GPUExternalTexture {
-    this._externalTexturesStatus.set(texture, 'clean');
-    if (texture.descriptor.source === undefined) {
-      throw new Error('External texture source needs to be defined before use');
-    }
-    return this.device.importExternalTexture(
-      texture.descriptor as GPUExternalTextureDescriptor,
-    );
+  importExternalTexture<TColorSpace extends PredefinedColorSpace>(options: {
+    source: HTMLVideoElement | VideoFrame;
+    colorSpace?: TColorSpace;
+  }): TgpuExternalTexture<{
+    colorSpace: PredefinedColorSpace extends TColorSpace ? 'srgb' : TColorSpace;
+  }> {
+    return INTERNAL_createExternalTexture(
+      this,
+      options.source,
+      options.colorSpace,
+      // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
+    ) as any;
   }
 
   samplerFor(sampler: TgpuSampler): GPUSampler {
@@ -184,22 +246,6 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     }
 
     return gpuSampler;
-  }
-
-  setSource(
-    texture: TgpuTextureExternal,
-    source: HTMLVideoElement | VideoFrame,
-  ) {
-    this._externalTexturesStatus.set(texture, 'dirty');
-    texture.descriptor.source = source;
-  }
-
-  isDirty(texture: TgpuTextureExternal): boolean {
-    return this._externalTexturesStatus.get(texture) === 'dirty';
-  }
-
-  markClean(texture: TgpuTextureExternal) {
-    this._externalTexturesStatus.set(texture, 'clean');
   }
 
   readPlum<TPlum extends TgpuPlum>(plum: TPlum): ExtractPlumValue<TPlum> {
