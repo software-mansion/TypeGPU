@@ -15,7 +15,7 @@ import { Toggle } from './design/Toggle';
 
 function ToggleRow({
   label,
-  initial,
+  initial = false,
   onChange,
 }: {
   label: string;
@@ -30,7 +30,7 @@ function ToggleRow({
 
       <label className="grid items-center justify-end h-10 cursor-pointer">
         <Toggle
-          checked={value ?? false}
+          checked={value}
           onChange={(e) => {
             onChange(e.target.checked);
             setValue(e.target.checked);
@@ -44,9 +44,9 @@ function ToggleRow({
 function SliderRow({
   label,
   initial,
-  min,
-  max,
-  step,
+  min = 0,
+  max = 1,
+  step = 0.1,
   onChange,
 }: {
   label: string;
@@ -56,17 +56,17 @@ function SliderRow({
   step?: number;
   onChange: (value: number) => void;
 }) {
-  const [value, setValue] = useState(initial);
+  const [value, setValue] = useState(initial ?? min);
 
   return (
     <>
       <div className="text-sm">{label}</div>
 
       <Slider
-        min={min ?? 0}
-        max={max ?? 1}
-        step={step ?? 0.1}
-        value={value ?? min ?? 0}
+        min={min}
+        max={max}
+        step={step}
+        value={value}
         onChange={(newValue) => {
           setValue(newValue);
           onChange(newValue);
@@ -87,14 +87,14 @@ function SelectRow({
   options: string[];
   onChange: (value: string) => void;
 }) {
-  const [value, setValue] = useState(initial);
+  const [value, setValue] = useState(initial ?? options[0]);
 
   return (
     <>
       <div className="text-sm">{label}</div>
 
       <Select
-        value={value ?? options[0]}
+        value={value}
         options={options}
         onChange={(newValue) => {
           setValue(newValue);
