@@ -4,6 +4,7 @@ import * as d from '../src/data';
 import tgpu, { type TgpuBufferReadonly, wgsl } from '../src/experimental';
 import type { ResolutionCtx } from '../src/experimental';
 
+const forcePlugin = 'import tgpu from "typegpu";';
 describe('tgpu resolve', () => {
   it('should resolve a string (identity)', () => {
     const mockCode = 'fn foo() { var v: Gradient; }';
@@ -50,22 +51,18 @@ describe('tgpu resolve', () => {
       },
     } as TgpuBufferReadonly<d.F32>;
 
-    const vec4f_ = d.vec4f;
-
     const vertex = tgpu
       .vertexFn([], d.vec4f)
       .does(() => {
         const v = intensity.value;
-        return vec4f_(v, 0, 0, 1);
+        return d.vec4f(v, 0, 0, 1);
       })
-      .$name('vertex')
-      .$uses({ intensity, vec4f_ });
+      .$name('vertex');
 
     const fragment = tgpu
       .fragmentFn([], d.vec4f)
-      .does(() => vec4f_(intensity.value, 0, 0, 1))
-      .$name('fragment')
-      .$uses({ intensity, vec4f_ });
+      .does(() => d.vec4f(intensity.value, 0, 0, 1))
+      .$name('fragment');
 
     const resolved = tgpu.resolve([vertex, fragment]);
 

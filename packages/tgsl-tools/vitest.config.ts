@@ -1,17 +1,9 @@
-import typegpu from 'rollup-plugin-typegpu';
-import type { PluginOption } from 'vite';
 // eslint-disable-next-line import/extensions
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  build: {
-    rollupOptions: {
-      plugins: [typegpu() as PluginOption],
-    },
-  },
-  plugins: [typegpu() as PluginOption],
   test: {
-    name: 'typegpu',
+    name: 'tgsl-tools',
     environment: 'jsdom',
     exclude: ['./**/node_modules'],
     reporters: 'basic',

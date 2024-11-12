@@ -1,5 +1,5 @@
 import { transpileFn } from '@typegpu/tgsl-tools';
-import type { AnyNode, VariableDeclarator } from 'acorn';
+import type { AnyNode, CallExpression } from 'acorn';
 import { walk } from 'estree-walker';
 import MagicString from 'magic-string';
 import type { Plugin } from 'rollup';
@@ -17,7 +17,7 @@ type Context = {
 };
 
 type TgslFunctionDef = {
-  varDecl: VariableDeclarator;
+  varDecl: CallExpression;
   implementation: AnyNode;
 };
 
@@ -113,14 +113,6 @@ export default function typegpu(): Plugin {
 
           if (node.type === 'CallExpression') {
             if (
-              parent?.type !== 'VariableDeclarator' ||
-              parent.id.type !== 'Identifier'
-            ) {
-              // Skipping, as the resulting function needs to be stored in a variable.
-              return;
-            }
-
-            if (
               node.callee.type === 'MemberExpression' &&
               node.arguments.length === 1 &&
               node.callee.property.type === 'Identifier' &&
@@ -137,7 +129,7 @@ export default function typegpu(): Plugin {
 
               if (implementation) {
                 tgslFunctionDefs.push({
-                  varDecl: parent,
+                  varDecl: node,
                   implementation,
                 });
               }

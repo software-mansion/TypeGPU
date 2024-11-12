@@ -78,10 +78,10 @@
   },
   "homepage": "https://typegpu.com",
   "devDependencies": {
-    "rollup-plugin-typegpu": "workspace:*",
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@typegpu/wgsl-parser": "workspace:*",
     "@webgpu/types": "^0.1.43",
+    "rollup-plugin-typegpu": "workspace:*",
     "tsup": "^8.0.2",
     "typegpu": "workspace:*",
     "typescript": "^5.3.3",
