@@ -1,8 +1,5 @@
 // -- Hooks into the example environment
-import {
-  addButtonParameter,
-  addSliderPlumParameter,
-} from '@typegpu/example-toolkit';
+import { addSliderPlumParameter } from '@typegpu/example-toolkit';
 // --
 
 import { type Parsed, arrayOf, f32, struct, vec2f } from 'typegpu/data';
@@ -150,13 +147,17 @@ async function run() {
   printMatrixToHtml(resultTable, multiplicationResult);
 }
 
-addButtonParameter('Reshuffle', () => {
-  root.setPlum(forceShufflePlum, (prev) => 1 - prev);
-});
-
 run();
 
 root.onPlumChange(firstRowCountPlum, run);
 root.onPlumChange(firstColumnCountPlum, run);
 root.onPlumChange(secondColumnCountPlum, run);
 root.onPlumChange(forceShufflePlum, run);
+
+export const controls = {
+  Reshuffle: {
+    onButtonClick: () => {
+      root.setPlum(forceShufflePlum, (prev) => 1 - prev);
+    },
+  },
+};

@@ -395,9 +395,10 @@ canvas.addEventListener('touchmove', (event) => {
   handleDrawing(x, y);
 });
 
-// #endregion
+export const controls = {
+  Reset: {
+    onButtonClick: resetDrawing,
+  },
+};
 
-/** @button "Reset" */
-export function reset() {
-  resetDrawing();
-}
+// #endregion
