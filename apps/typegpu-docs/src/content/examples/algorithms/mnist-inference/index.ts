@@ -254,7 +254,7 @@ const network = createNetwork(layerData);
 
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
-const bars = document.querySelectorAll('.bar') as NodeListOf<HTMLDivElement>;
+const bars = Array.from(document.querySelectorAll('.bar')) as HTMLDivElement[];
 
 const resetAll = () => {
   canvasData.fill(0);
@@ -302,7 +302,7 @@ canvas.addEventListener('mousedown', () => {
   isDrawing = true;
 });
 
-canvas.addEventListener('mouseup', () => {
+window.addEventListener('mouseup', () => {
   isDrawing = false;
   lastPos = null;
 });
