@@ -5,7 +5,7 @@ const SIZE = 28;
 
 const root = await tgpu.init();
 const device = root.device;
-const canvasData = new Array<number>(SIZE ** 2);
+const canvasData = new Array<number>(SIZE ** 2).fill(0);
 
 // Shader code
 
