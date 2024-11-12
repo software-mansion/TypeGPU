@@ -235,28 +235,33 @@ const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
 const bars = Array.from(document.querySelectorAll('.bar')) as HTMLDivElement[];
 
-const resetAll = () => {
+const uiState = {
+  isDrawing: false,
+  lastPos: null as { x: number; y: number } | null,
+};
+
+function resetDrawing() {
+  uiState.lastPos = null;
   canvasData.fill(0);
-  resetCanvas();
+
   for (const bar of bars) {
     bar.style.setProperty('--bar-width', '0');
   }
-};
+}
 
-const resetCanvas = () => {
+function run() {
+  const scale = canvas.width / SIZE;
+
   context.clearRect(0, 0, canvas.width, canvas.height);
+
   // draw grid
   context.strokeStyle = '#ccc';
-  const scale = canvas.width / SIZE;
   for (let i = 0; i < SIZE; i++) {
     for (let j = 0; j < SIZE; j++) {
       context.strokeRect(j * scale, i * scale, scale, scale);
     }
   }
-};
 
-function run() {
-  const scale = canvas.width / SIZE;
   for (let i = 0; i < SIZE; i++) {
     for (let j = 0; j < SIZE; j++) {
       const value = canvasData[i * SIZE + j];
@@ -272,16 +277,13 @@ function run() {
 
 run();
 
-let isDrawing = false;
-let lastPos: { x: number; y: number } | null = null;
-
 canvas.addEventListener('mousedown', () => {
-  isDrawing = true;
+  uiState.isDrawing = true;
 });
 
 window.addEventListener('mouseup', () => {
-  isDrawing = false;
-  lastPos = null;
+  uiState.isDrawing = false;
+  uiState.lastPos = null;
 });
 
 function centerImage(data: number[]) {
@@ -308,12 +310,12 @@ function centerImage(data: number[]) {
   return newData;
 }
 
-const handleDrawing = (x: number, y: number) => {
-  if (!lastPos) {
-    lastPos = { x, y };
+async function handleDrawing(x: number, y: number): Promise<void> {
+  if (!uiState.lastPos) {
+    uiState.lastPos = { x, y };
   }
 
-  if (x === lastPos.x && y === lastPos.y) {
+  if (x === uiState.lastPos.x && y === uiState.lastPos.y) {
     return;
   }
 
@@ -322,9 +324,12 @@ const handleDrawing = (x: number, y: number) => {
     return Array.from({ length: steps + 1 }, (_, i) => start + step * i);
   };
 
-  const steps = Math.max(Math.abs(x - lastPos.x), Math.abs(y - lastPos.y));
-  const xPoints = interpolate(lastPos.x, x, steps);
-  const yPoints = interpolate(lastPos.y, y, steps);
+  const steps = Math.max(
+    Math.abs(x - uiState.lastPos.x),
+    Math.abs(y - uiState.lastPos.y),
+  );
+  const xPoints = interpolate(uiState.lastPos.x, x, steps);
+  const yPoints = interpolate(uiState.lastPos.y, y, steps);
 
   for (let k = 0; k < xPoints.length; k++) {
     const newX = Math.round(xPoints[k]);
@@ -344,26 +349,26 @@ const handleDrawing = (x: number, y: number) => {
     }
   }
 
-  lastPos = { x, y };
-  draw();
+  uiState.lastPos = { x, y };
 
-  network
-    .inference(centerImage(canvasData).map((x) => (x / 255) * 3.24 - 0.42)) // scale the values from 0-255 to -0.42-2.82
-    .then((data) => {
-      const max = Math.max(...data);
-      const index = data.indexOf(max);
-      const sum = data.reduce((a, b) => a + b, 0);
-      const normalized = data.map((x) => x / sum);
+  const certainties = await network.inference(
+    // scale the values from [0, 255] to [-0.42, 2.82]
+    centerImage(canvasData).map((x) => (x / 255) * 3.24 - 0.42),
+  );
 
-      bars.forEach((bar, i) => {
-        bar.style.setProperty('--bar-width', `${normalized[i] * 100}%`);
-        bar.style.setProperty('--highlight-opacity', i === index ? '1' : '0');
-      });
-    });
-};
+  const max = Math.max(...certainties);
+  const index = certainties.indexOf(max);
+  const sum = certainties.reduce((a, b) => a + b, 0);
+  const normalized = certainties.map((x) => x / sum);
+
+  bars.forEach((bar, i) => {
+    bar.style.setProperty('--bar-width', `${normalized[i] * 100}%`);
+    bar.style.setProperty('--highlight-opacity', i === index ? '1' : '0');
+  });
+}
 
 canvas.addEventListener('mousemove', (event) => {
-  if (!isDrawing) {
+  if (!uiState.isDrawing) {
     return;
   }
   const cellSize = canvas.width / SIZE;
@@ -388,10 +393,7 @@ canvas.addEventListener('touchmove', (event) => {
 
 // #endregion
 
-resetAll();
-
 /** @button "Reset" */
 export function reset() {
-  lastPos = null;
-  resetAll();
+  resetDrawing();
 }
