@@ -1,7 +1,9 @@
+/// <reference types="vite/client" />
+
 import type { TgpuBuffer } from './core/buffer/buffer';
 import type { AnyTgpuData, TgpuResolvable, TgpuSlot } from './types';
 
-const isProduction = import.meta.env?.MODE === 'production';
+const isProduction = import.meta.env.PROD;
 const prefix = 'Invariant failed';
 
 /**

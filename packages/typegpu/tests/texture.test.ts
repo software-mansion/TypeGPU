@@ -246,7 +246,7 @@ describe('TgpuTexture', () => {
       resolutionCtx.resolve(wgsl`
       let x = ${sampled1};
     `),
-    ).toContain('texture_2d<u32>');
+    ).toContain('texture_2d<f32>');
 
     expect(
       resolutionCtx.resolve(wgsl`
@@ -261,10 +261,10 @@ describe('TgpuTexture', () => {
       format: 'rgba8unorm',
     });
 
-    const getSampled = texture.asSampled();
-    const getReadonly = texture.asReadonly();
-    const getWriteonly = texture.asWriteonly();
-    const getMutable = texture.asMutable();
+    const getSampled = () => texture.asSampled();
+    const getReadonly = () => texture.asReadonly();
+    const getWriteonly = () => texture.asWriteonly();
+    const getMutable = () => texture.asMutable();
 
     expect(getSampled).toThrow();
     expect(getReadonly).toThrow();
@@ -272,19 +272,19 @@ describe('TgpuTexture', () => {
     expect(getMutable).toThrow();
 
     expectTypeOf(getSampled).toEqualTypeOf<
-      NotAllowed<"missing .$usage('sampled')">
+      () => NotAllowed<"missing .$usage('sampled')">
     >();
 
     expectTypeOf(getReadonly).toEqualTypeOf<
-      NotAllowed<"missing .$usage('storage')">
+      () => NotAllowed<"missing .$usage('storage')">
     >();
 
     expectTypeOf(getWriteonly).toEqualTypeOf<
-      NotAllowed<"missing .$usage('storage')">
+      () => NotAllowed<"missing .$usage('storage')">
     >();
 
     expectTypeOf(getMutable).toEqualTypeOf<
-      NotAllowed<"missing .$usage('storage')">
+      () => NotAllowed<"missing .$usage('storage')">
     >();
   });
 });
@@ -370,12 +370,12 @@ describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
 
     texture.asWriteonly({
       // @ts-expect-error
-      format: 'r8unorm',
+      format: 'rg32uint',
     });
 
     texture.asMutable({
       // @ts-expect-error
-      format: 'rg8unorm',
+      format: 'rgba32float',
     });
   });
 });
