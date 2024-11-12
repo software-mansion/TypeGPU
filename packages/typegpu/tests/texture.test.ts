@@ -15,16 +15,7 @@ import type {
   TgpuWriteonlyTexture,
 } from '../src/core/texture/texture';
 import type { Render, Sampled } from '../src/core/texture/usageExtension';
-import {
-  type F32,
-  type I32,
-  type U32,
-  type Vec4f,
-  type Vec4i,
-  type Vec4u,
-  f32,
-  u32,
-} from '../src/data';
+import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../src/data';
 import {
   type ExperimentalTgpuRoot,
   StrictNameRegistry,
@@ -33,6 +24,7 @@ import {
 } from '../src/experimental';
 import { ResolutionCtxImpl } from '../src/resolutionCtx';
 import './utils/webgpuGlobals';
+import type { NotAllowed } from '../src/extension';
 
 const mockDevice = {
   createBindGroup: vi.fn(() => 'mockBindGroup'),
@@ -247,121 +239,53 @@ describe('TgpuTexture', () => {
       names: new StrictNameRegistry(),
     });
 
-    let code = wgsl`
-      let x = ${texture.asSampled()};
-    `;
+    const sampled1 = texture.asSampled();
+    const sampled2 = texture.asSampled({ dimension: '2d-array' });
 
-    expect(resolutionCtx.resolve(code)).toContain('texture_2d<u32>');
+    expect(
+      resolutionCtx.resolve(wgsl`
+      let x = ${sampled1};
+    `),
+    ).toContain('texture_2d<u32>');
 
-    code = wgsl`
-      let x = ${texture.asSampled({ dimension: '2d-array' })};
-    `;
-
-    expect(resolutionCtx.resolve(code)).toContain('texture_2d_array<f32>');
+    expect(
+      resolutionCtx.resolve(wgsl`
+      let x = ${sampled2};
+    `),
+    ).toContain('texture_2d_array<f32>');
   });
 
-  it('creates a storage texture view with correct type', () => {
-    const texture = wgsl
-      .texture({
-        size: [1, 1],
-        format: 'rgba8uint',
-      })
-      .$name('texture')
-      .$allowStorage();
-
-    const resolutionCtx = new ResolutionCtxImpl({
-      names: new StrictNameRegistry(),
+  it('produces NotAllowed when getting view which is not allowed', () => {
+    const texture = getRoot().createTexture({
+      size: [1, 1],
+      format: 'rgba8unorm',
     });
 
-    let code = wgsl`
-      let x = ${texture.asStorage({ type: 'texture_storage_2d', access: 'read' }).$name('view')};
-    `;
+    const getSampled = texture.asSampled();
+    const getReadonly = texture.asReadonly();
+    const getWriteonly = texture.asWriteonly();
+    const getMutable = texture.asMutable();
 
-    expect(resolutionCtx.resolve(code)).toContain(
-      'texture_storage_2d<rgba8uint, read>',
-    );
+    expect(getSampled).toThrow();
+    expect(getReadonly).toThrow();
+    expect(getWriteonly).toThrow();
+    expect(getMutable).toThrow();
 
-    code = wgsl`
-      let x = ${texture.asStorage({ type: 'texture_storage_2d_array', access: 'write' }).$name('view')};
-    `;
+    expectTypeOf(getSampled).toEqualTypeOf<
+      NotAllowed<"missing .$usage('sampled')">
+    >();
 
-    expect(resolutionCtx.resolve(code)).toContain(
-      'texture_storage_2d_array<rgba8uint, write>',
-    );
-  });
+    expectTypeOf(getReadonly).toEqualTypeOf<
+      NotAllowed<"missing .$usage('storage')">
+    >();
 
-  it('reuses views if they have the same descriptor', () => {
-    const texture = wgsl
-      .texture({
-        size: [1, 1],
-        format: 'rgba8unorm',
-      })
-      .$allowSampled();
+    expectTypeOf(getWriteonly).toEqualTypeOf<
+      NotAllowed<"missing .$usage('storage')">
+    >();
 
-    const view1 = texture.asSampled({ type: 'texture_2d', dataType: u32 });
-    const view2 = texture.asSampled({ dataType: u32, type: 'texture_2d' });
-
-    expect(view1).toBe(view2);
-  });
-
-  it('does not resue view if the descriptor is not identical', () => {
-    const texture = wgsl
-      .texture({
-        size: [1, 1],
-        format: 'rgba8unorm',
-      })
-      .$allowSampled();
-
-    const view1 = texture.asSampled({ type: 'texture_2d', dataType: u32 });
-    const view2 = texture.asSampled({ dataType: f32, type: 'texture_2d' });
-
-    expect(view1).not.toBe(view2);
-  });
-
-  it('produces null when getting view which is not allowed', () => {
-    const texture = wgsl
-      .texture({
-        size: [1, 1],
-        format: 'rgba8unorm',
-      })
-      .$allowStorage();
-
-    const view = texture.asSampled({ type: 'texture_2d', dataType: u32 });
-
-    expect(view).toBeNull();
-
-    const texture2 = wgsl
-      .texture({
-        size: [1, 1],
-        format: 'rgba8unorm',
-      })
-      .$allowSampled();
-
-    const view2 = texture2.asStorage({
-      type: 'texture_storage_2d',
-      access: 'read',
-    });
-
-    expect(view2).toBeNull();
-  });
-
-  it('properly defines external texture', () => {
-    const mockHTMLMediaElement = {
-      width: 1,
-      height: 1,
-    } as HTMLVideoElement;
-
-    const texture = wgsl.textureExternal(mockHTMLMediaElement).$name('texture');
-
-    const resolutionCtx = new ResolutionCtxImpl({
-      names: new StrictNameRegistry(),
-    });
-
-    const code = wgsl`
-      let x = ${texture};
-    `;
-
-    expect(resolutionCtx.resolve(code)).toContain('texture_external');
+    expectTypeOf(getMutable).toEqualTypeOf<
+      NotAllowed<"missing .$usage('storage')">
+    >();
   });
 });
 
