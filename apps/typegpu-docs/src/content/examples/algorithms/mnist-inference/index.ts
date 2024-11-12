@@ -308,12 +308,13 @@ window.addEventListener('mouseup', () => {
 });
 
 function centerImage(data: number[]) {
+  const mass = data.reduce((acc, value) => acc + value, 0);
   const x =
     data.reduce((acc, value, i) => acc + value * (i % SIZE), 0) /
-    data.reduce((acc, value) => acc + value, 0);
+    mass;
   const y =
     data.reduce((acc, value, i) => acc + value * Math.floor(i / SIZE), 0) /
-    data.reduce((acc, value) => acc + value, 0);
+    mass;
 
   const offsetX = Math.round(SIZE / 2 - x);
   const offsetY = Math.round(SIZE / 2 - y);
