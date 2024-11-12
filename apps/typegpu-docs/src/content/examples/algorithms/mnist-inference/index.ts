@@ -290,6 +290,10 @@ window.addEventListener('mouseup', () => {
   uiState.lastPos = null;
 });
 
+canvas.addEventListener('touchend', () => {
+  uiState.lastPos = null;
+});
+
 function centerImage(data: number[]) {
   const mass = data.reduce((acc, value) => acc + value, 0);
   const x = data.reduce((acc, value, i) => acc + value * (i % SIZE), 0) / mass;
