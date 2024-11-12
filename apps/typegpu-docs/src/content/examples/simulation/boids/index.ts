@@ -383,52 +383,48 @@ function frame() {
 
 frame();
 
-/** @button "Randomize" */
-export function randomize() {
-  randomizePositions();
-}
+// #region Example Controls
 
-/** @button "🐦 Birds" */
-export function choosePresetDefault() {
-  updateParams(presets.default);
-}
+export const controls = {
+  Randomize: {
+    onButtonClick: () => randomizePositions(),
+  },
 
-/** @button "🦟 Mosquitoes" */
-export function choosePresetMosquitos() {
-  updateParams(presets.mosquitoes);
-}
+  '🐦 Birds': {
+    onButtonClick: () => updateParams(presets.default),
+  },
 
-/** @button "💧 Blobs" */
-export function choosePresetBlobs() {
-  updateParams(presets.blobs);
-}
+  '🦟 Mosquitoes': {
+    onButtonClick: () => updateParams(presets.mosquitoes),
+  },
 
-/** @button "⚛️ Particles" */
-export function choosePresetParticles() {
-  updateParams(presets.particles);
-}
+  '💧 Blobs': {
+    onButtonClick: () => updateParams(presets.blobs),
+  },
 
-/** @button "🤖 Nanites" */
-export function choosePresetNanites() {
-  updateParams(presets.nanites);
-}
+  '⚛️ Particles': {
+    onButtonClick: () => updateParams(presets.particles),
+  },
 
-/** @button "🟪🟩" */
-export function setColorPresetPlumTree() {
-  updateColorPreset('plumTree');
-}
+  '🤖 Nanites': {
+    onButtonClick: () => updateParams(presets.nanites),
+  },
 
-/** @button "🟦🟫" */
-export function setColorPresetJeans() {
-  updateColorPreset('jeans');
-}
+  '🟪🟩': {
+    onButtonClick: () => updateColorPreset('plumTree'),
+  },
 
-/** @button "⬛⬜" */
-export function setColorPresetGreyscale() {
-  updateColorPreset('greyscale');
-}
+  '🟦🟫': {
+    onButtonClick: () => updateColorPreset('jeans'),
+  },
 
-/** @button "🟥🟦" */
-export function setColorPresetHotcold() {
-  updateColorPreset('hotcold');
-}
+  '⬛⬜': {
+    onButtonClick: () => updateColorPreset('greyscale'),
+  },
+
+  '🟥🟦': {
+    onButtonClick: () => updateColorPreset('hotcold'),
+  },
+};
+
+// #endregion

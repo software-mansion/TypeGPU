@@ -378,7 +378,8 @@ canvas.addEventListener('touchmove', (event) => {
 
 resetAll();
 
-/** @button "Reset" */
-export function reset() {
-  resetAll();
-}
+export const controls = {
+  Reset: {
+    onButtonClick: resetAll,
+  },
+};

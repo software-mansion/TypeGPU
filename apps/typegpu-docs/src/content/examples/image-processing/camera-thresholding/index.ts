@@ -1,9 +1,5 @@
 // -- Hooks into the example environment
-import {
-  addSliderParameter,
-  onCleanup,
-  onFrame,
-} from '@typegpu/example-toolkit';
+import { onCleanup, onFrame } from '@typegpu/example-toolkit';
 // --
 
 import { f32, vec2f } from 'typegpu/data';
@@ -95,14 +91,17 @@ const renderProgram = root.makeRenderPipeline({
   },
 });
 
-// UI
+// #region UI
 
-addSliderParameter(
-  'threshold',
-  0.4,
-  { min: 0, max: 1, step: 0.1 },
-  (threshold: number) => thresholdBuffer.write(threshold),
-);
+export const controls = {
+  threshold: {
+    initial: 0.4,
+    min: 0,
+    max: 1,
+    step: 0.1,
+    onSliderChange: (threshold: number) => thresholdBuffer.write(threshold),
+  },
+};
 
 onFrame(() => {
   if (!(video.currentTime > 0)) {
@@ -134,3 +133,5 @@ onCleanup(() => {
 
   root.destroy();
 });
+
+// #endregion
