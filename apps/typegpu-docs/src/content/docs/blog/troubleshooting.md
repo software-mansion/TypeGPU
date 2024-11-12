@@ -39,8 +39,8 @@ or for iOS versions lower than 18:
 ```
 Settings > Safari > Advanced > Feature Flags
 ```
-
 Then enable WebGPU and restart Safari.
+
 That's it! After enabling the WebGPU flag you can go to [our examples page](https://docs.swmansion.com/TypeGPU/examples/)
 and you should be able to tinker with them on your phone.
 
