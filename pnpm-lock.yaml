@@ -271,6 +271,9 @@ importers:
       '@webgpu/types':
         specifier: ^0.1.43
         version: 0.1.43
+      rollup-plugin-typegpu:
+        specifier: workspace:*
+        version: link:../rollup-plugin
       tsup:
         specifier: ^8.0.2
         version: 8.0.2(typescript@5.5.4)

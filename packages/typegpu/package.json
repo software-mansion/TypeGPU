@@ -50,6 +50,7 @@
   "scripts": {
     "dev:watch": "DEV=true tsup --watch",
     "dev:build": "DEV=true tsup",
+    "dev:test": "vitest",
     "build": "tsup",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit && pnpm tsc --p ./tsconfig.test.json --noEmit",
     "publish": "echo \"Use pnpm prepare-package instead!\" && exit 1",
@@ -77,6 +78,7 @@
   },
   "homepage": "https://typegpu.com",
   "devDependencies": {
+    "rollup-plugin-typegpu": "workspace:*",
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@typegpu/wgsl-parser": "workspace:*",
     "@webgpu/types": "^0.1.43",

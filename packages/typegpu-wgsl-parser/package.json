@@ -27,6 +27,7 @@
   "scripts": {
     "dev:watch": "DEV=true tsup --watch",
     "dev:build": "DEV=true tsup",
+    "dev:test": "vitest",
     "build": "tsup",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit"
   },

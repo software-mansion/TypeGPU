@@ -29,7 +29,7 @@ function nearleyRedirectPlugin(): PluginOption {
 export default defineConfig({
   plugins: [nearleyRedirectPlugin()],
   test: {
-    name: 'typegpu',
+    name: 'typegpu-wgsl-parser',
     environment: 'jsdom',
     exclude: ['./**/node_modules'],
     reporters: 'basic',
