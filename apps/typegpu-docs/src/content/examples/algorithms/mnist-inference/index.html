@@ -62,34 +62,27 @@
   }
 
   .bar::before {
-    height: 80%;
-    width: var(--bar-width, 0%);
+    height: 100%;
+    width: calc((100% - 2rem) * var(--bar-width, 0%));
     background-color: #dadaed;
     position: absolute;
-    inset: 10% 0 0 2rem;
+    left: 2rem;
     border-radius: 9999px;
     content: '';
-    transition: all 0.5s;
+    transition: all 0.2s ease-in-out;
   }
 
   .bar::after {
-    height: 80%;
-    width: var(--bar-width, 0%);
+    height: 100%;
+    width: calc((100% - 2rem) * var(--bar-width, 0%));
     opacity: var(--highlight-opacity, 0);
     background-image: linear-gradient(to right, #c464ff, #1d72f0);
     position: absolute;
-    inset: 10% 0 0 2rem;
+    left: 2rem;
     border-radius: 9999px;
-    transition: all 0.5s;
+    transition:
+      width 0.2s ease-in-out,
+      opacity 0.5s ease-in-out;
     content: '';
-  }
-
-  .bar-fill {
-    height: 100%;
-    background-color: #d1d5db;
-    border-radius: 9999px;
-    overflow: hidden;
-    transition: all 0.5s;
-    position: relative;
   }
 </style>
