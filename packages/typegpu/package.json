@@ -79,6 +79,7 @@
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@typegpu/wgsl-parser": "workspace:*",
+    "@types/node": "^20.11.13",
     "@webgpu/types": "^0.1.43",
     "tsup": "^8.0.2",
     "typegpu": "workspace:*",

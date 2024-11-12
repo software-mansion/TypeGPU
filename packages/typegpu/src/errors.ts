@@ -1,9 +1,6 @@
-/// <reference types="vite/client" />
-
 import type { TgpuBuffer } from './core/buffer/buffer';
 import type { AnyTgpuData, TgpuResolvable, TgpuSlot } from './types';
 
-const isProduction = import.meta.env.PROD;
 const prefix = 'Invariant failed';
 
 /**
@@ -19,7 +16,7 @@ export function invariant(
   }
 
   // In production we strip the message but still throw
-  if (isProduction) {
+  if (process.env.NODE_ENV === 'production') {
     throw new Error(prefix);
   }
 

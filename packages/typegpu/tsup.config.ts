@@ -12,6 +12,7 @@ if (featureSet === 'experimental') {
   );
 }
 
+// TODO: Consider stripping `invariant()` calls of their messages for a smaller bundle size.
 export default defineConfig({
   entry,
   outDir: 'dist',
@@ -25,4 +26,9 @@ export default defineConfig({
   // clean the out directory.
   clean: !inDevMode,
   dts: true,
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(
+      inDevMode ? 'development' : 'production',
+    ),
+  },
 });
