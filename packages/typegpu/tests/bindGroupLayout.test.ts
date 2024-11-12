@@ -26,7 +26,8 @@ import tgpu, {
   type TgpuBufferMutable,
 } from '../src/experimental';
 import './utils/webgpuGlobals';
-import type { Storage, Uniform } from '../src/core/buffer/buffer';
+import type { Uniform } from '../src/core/buffer/buffer';
+import type { Storage } from '../src/extension';
 import {
   MissingBindingError,
   type TgpuBindGroup,
