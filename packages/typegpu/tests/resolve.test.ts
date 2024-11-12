@@ -31,7 +31,6 @@ describe('tgpu resolve', () => {
     const resolved = tgpu.resolve('fn foo() { var g: Gradient; }', {
       Gradient,
     });
-    console.log(resolved);
     expect(parse(resolved)).toEqual(
       parse(
         'struct Gradient { from: vec3f, to: vec3f, } fn foo() { var g: Gradient; }',
