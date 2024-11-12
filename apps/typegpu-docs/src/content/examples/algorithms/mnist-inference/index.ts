@@ -366,7 +366,7 @@ async function handleDrawing(x: number, y: number): Promise<void> {
   const normalized = certainties.map((x) => x / sum);
 
   bars.forEach((bar, i) => {
-    bar.style.setProperty('--bar-width', `${normalized[i] * 100}%`);
+    bar.style.setProperty('--bar-width', `${normalized[i]}`);
     bar.style.setProperty('--highlight-opacity', i === index ? '1' : '0');
   });
 }
