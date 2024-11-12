@@ -51,6 +51,15 @@ export {
   isUsableAsUniform,
   isUsableAsVertex,
 } from '../core/buffer/buffer';
+export {
+  isSampledTextureView,
+  isStorageTextureView,
+  isTexture,
+} from '../core/texture/texture';
+export {
+  isUsableAsRender,
+  isUsableAsSampled,
+} from '../core/texture/usageExtension';
 export { isUsableAsStorage } from '../extension';
 export {
   asUniform,
@@ -73,6 +82,16 @@ export type {
   TgpuBufferMutable,
   TgpuBufferVertex,
 } from '../core/buffer/bufferUsage';
+export type {
+  TgpuTexture,
+  TgpuReadonlyTexture,
+  TgpuWriteonlyTexture,
+  TgpuMutableTexture,
+  TgpuSampledTexture,
+  TgpuAnyTextureView,
+} from '../core/texture/texture';
+export type { TextureProps } from '../core/texture/textureProps';
+export type { Render, Sampled } from '../core/texture/usageExtension';
 export type { InitOptions, InitFromDeviceOptions } from '../core/root/init';
 export type { TgpuConst } from '../tgpuConstant';
 export type { TgpuPlum } from '../tgpuPlumTypes';

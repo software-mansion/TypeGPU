@@ -22,3 +22,11 @@ export type AllowedUsages<TProps extends TextureProps> =
   | 'sampled'
   | 'render'
   | (TProps['format'] extends StorageTextureTexelFormat ? 'storage' : never);
+
+export function isUsableAsSampled<T>(value: T): value is T & Sampled {
+  return !!(value as unknown as Sampled)?.usableAsSampled;
+}
+
+export function isUsableAsRender<T>(value: T): value is T & Render {
+  return !!(value as unknown as Render)?.usableAsRender;
+}

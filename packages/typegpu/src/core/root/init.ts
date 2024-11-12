@@ -136,16 +136,10 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
       TDimension
     >
   > {
-    return INTERNAL_createTexture(props, this) as unknown as TgpuTexture<
-      CreateTextureResult<
-        TSize,
-        TFormat,
-        TMipLevelCount,
-        TSampleCount,
-        TViewFormat,
-        TDimension
-      >
-    >;
+    const texture = INTERNAL_createTexture(props, this);
+    this._textures.push(texture);
+    // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
+    return texture as any;
   }
 
   destroy() {

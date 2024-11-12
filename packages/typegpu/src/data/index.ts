@@ -33,16 +33,13 @@ export {
   location,
   isDecorated,
   isLooseDecorated,
-  isBuiltin,
   Align,
   Size,
   Location,
-  Builtin,
   BaseDecorated,
   Decorated,
   LooseDecorated,
   AnyAttribute,
-  IsBuiltin,
 } from './attributes';
 
 // Reexporting type-binary utility types
