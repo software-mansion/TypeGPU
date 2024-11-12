@@ -38,13 +38,14 @@ export type TexelData = Vec4u | Vec4i | Vec4f;
  */
 export interface TgpuTexture<TProps extends TextureProps = TextureProps>
   extends TgpuNamable {
+  readonly resourceType: 'texture';
   readonly props: TProps; // <- storing to be able to differentiate structurally between different textures.
   readonly label: string | undefined;
 
   // Extensions
-  usableAsStorage: boolean;
-  usableAsSampled: boolean;
-  usableAsRender: boolean;
+  readonly usableAsStorage: boolean;
+  readonly usableAsSampled: boolean;
+  readonly usableAsRender: boolean;
 
   $usage<T extends AllowedUsages<TProps>[]>(
     ...usages: T
@@ -178,9 +179,11 @@ export interface TgpuStorageTexture<
   TDimension extends StorageTextureDimension = StorageTextureDimension,
   TData extends TexelData = TexelData,
 > {
-  dimension: TDimension;
-  texelDataType: TData;
-  access: StorageTextureAccess;
+  readonly resourceType: 'texture-storage-view';
+  readonly format: StorageTextureTexelFormat;
+  readonly dimension: TDimension;
+  readonly texelDataType: TData;
+  readonly access: StorageTextureAccess;
 }
 
 export interface TgpuStorageTexture_INTERNAL {
@@ -195,7 +198,7 @@ export interface TgpuReadonlyTexture<
   TData extends TexelData = TexelData,
 > extends TgpuStorageTexture<TDimension, TData>,
     TgpuResolvable {
-  access: 'readonly';
+  readonly access: 'readonly';
 }
 
 /**
@@ -206,7 +209,7 @@ export interface TgpuWriteonlyTexture<
   TData extends TexelData = TexelData,
 > extends TgpuStorageTexture<TDimension, TData>,
     TgpuResolvable {
-  access: 'writeonly';
+  readonly access: 'writeonly';
 }
 
 /**
@@ -217,7 +220,7 @@ export interface TgpuMutableTexture<
   TData extends TexelData = TexelData,
 > extends TgpuStorageTexture<TDimension, TData>,
     TgpuResolvable {
-  access: 'mutable';
+  readonly access: 'mutable';
 }
 
 /**
@@ -227,8 +230,9 @@ export interface TgpuSampledTexture<
   TDimension extends GPUTextureViewDimension = GPUTextureViewDimension,
   TData extends ChannelData = ChannelData,
 > extends TgpuResolvable {
-  dimension: TDimension;
-  channelDataType: TData;
+  readonly resourceType: 'texture-sampled-view';
+  readonly dimension: TDimension;
+  readonly channelDataType: TData;
 }
 
 export interface TgpuSampledTexture_INTERNAL {
@@ -245,11 +249,30 @@ export function INTERNAL_createTexture(
   ) as unknown as TgpuTexture<TextureProps>;
 }
 
+export function isTexture<T extends TgpuTexture>(
+  value: unknown | T,
+): value is T {
+  return (value as T)?.resourceType === 'texture';
+}
+
+export function isStorageTextureView<
+  T extends TgpuReadonlyTexture | TgpuWriteonlyTexture | TgpuMutableTexture,
+>(value: unknown | T): value is T {
+  return (value as T)?.resourceType === 'texture-storage-view';
+}
+
+export function isSampledTextureView<T extends TgpuSampledTexture>(
+  value: unknown | T,
+): value is T {
+  return (value as T)?.resourceType === 'texture-sampled-view';
+}
+
 // --------------
 // Implementation
 // --------------
 
 class TgpuTextureImpl implements TgpuTexture, TgpuTexture_INTERNAL {
+  public readonly resourceType = 'texture';
   public usableAsSampled = false;
   public usableAsStorage = false;
   public usableAsRender = false;
@@ -396,10 +419,14 @@ const dimensionToCodeMap = {
 class TgpuBindableStorageTextureImpl
   implements TgpuStorageTexture, TgpuStorageTexture_INTERNAL
 {
+  public readonly resourceType = 'texture-storage-view';
   public readonly texelDataType: TexelData;
   public readonly dimension: StorageTextureDimension;
+  /**
+   * TODO: Make private on resolution ctx refactor.
+   */
+  public readonly format: StorageTextureTexelFormat;
 
-  private _format: StorageTextureTexelFormat;
   private _view: GPUTextureView | undefined;
 
   constructor(
@@ -410,9 +437,9 @@ class TgpuBindableStorageTextureImpl
     private readonly _texture: TgpuTexture<TextureProps> & TgpuTexture_INTERNAL,
   ) {
     this.dimension = props?.dimension ?? _texture.props.dimension ?? '2d';
-    this._format =
+    this.format =
       props?.format ?? (_texture.props.format as StorageTextureTexelFormat);
-    this.texelDataType = texelFormatToDataType[this._format];
+    this.texelDataType = texelFormatToDataType[this.format];
   }
 
   get label(): string | undefined {
@@ -428,7 +455,7 @@ class TgpuBindableStorageTextureImpl
     if (!this._view) {
       this._view = this._texture.unwrap().createView({
         label: `${this.label ?? '<unnamed>'} - View`,
-        format: this._format,
+        format: this.format,
         dimension: this.dimension,
       });
     }
@@ -449,6 +476,7 @@ class TgpuBindableStorageTextureImpl
 class TgpuBindableSampledTextureImpl
   implements TgpuSampledTexture, TgpuSampledTexture_INTERNAL
 {
+  public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;
   public readonly dimension: GPUTextureViewDimension;
   /**

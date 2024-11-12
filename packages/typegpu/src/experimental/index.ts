@@ -80,7 +80,6 @@ export type { TgpuSettable } from '../settableTrait';
 export type { TgpuVar } from '../tgpuVariable';
 export type { TgpuSampler } from '../tgpuSampler';
 export type { JitTranspiler } from '../jitTranspiler';
-export type * from '../core/texture/textureTypes';
 export type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,

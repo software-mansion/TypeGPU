@@ -1,6 +1,9 @@
 import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
 import type { TgpuFnShellBase } from './core/function/fnCore';
-import { isTextureView } from './core/texture/tgpuTexture';
+import {
+  isSampledTextureView,
+  isStorageTextureView,
+} from './core/texture/texture';
 import { MissingSlotValueError, ResolutionError, invariant } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
@@ -419,15 +422,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return;
     }
 
-    if (isTextureView(resource)) {
-      if (resource.access !== undefined) {
-        this.addDeclaration(
-          code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.texture.descriptor.format}, ${resource.access}>;`,
-        );
-        return;
-      }
+    if (isStorageTextureView(resource)) {
       this.addDeclaration(
-        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.dataType}>;`,
+        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.format}, ${resource.access}>;`,
+      );
+      return;
+    }
+
+    if (isSampledTextureView(resource)) {
+      this.addDeclaration(
+        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.channelDataType}>;`,
       );
       return;
     }

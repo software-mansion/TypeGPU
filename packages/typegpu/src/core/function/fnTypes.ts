@@ -29,6 +29,9 @@ export type Implementation<
   Return = unknown,
 > = string | ((...args: Args) => Return);
 
+/**
+ * Used for I/O definitions of entry functions.
+ */
 // An IO layout can be...
 export type IOLayout =
   // a single data-type

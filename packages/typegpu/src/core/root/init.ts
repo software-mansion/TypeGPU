@@ -22,11 +22,8 @@ import type {
 import type { TgpuSampler } from '../../tgpuSampler';
 import type { AnyTgpuData } from '../../types';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
+import type { TgpuExternalTexture } from '../texture/externalTexture';
 import { INTERNAL_createTexture, type TgpuTexture } from '../texture/texture';
-import type {
-  TgpuAnyTextureView,
-  TgpuTextureExternal,
-} from '../texture/tgpuTexture';
 import type {
   ComputePipelineExecutorOptions,
   ComputePipelineOptions,
@@ -46,9 +43,8 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
   private _buffers: TgpuBuffer<AnyTgpuData>[] = [];
   private _textures: TgpuTexture[] = [];
   private _samplers = new WeakMap<TgpuSampler, GPUSampler>();
-  private _textureViews = new WeakMap<TgpuAnyTextureView, GPUTextureView>();
   private _externalTexturesStatus = new WeakMap<
-    TgpuTextureExternal,
+    TgpuExternalTexture,
     'dirty' | 'clean'
   >();
 
@@ -165,7 +161,7 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     throw new Error(`Unknown resource type: ${resource}`);
   }
 
-  externalTextureFor(texture: TgpuTextureExternal): GPUExternalTexture {
+  externalTextureFor(texture: TgpuExternalTexture): GPUExternalTexture {
     this._externalTexturesStatus.set(texture, 'clean');
     if (texture.descriptor.source === undefined) {
       throw new Error('External texture source needs to be defined before use');

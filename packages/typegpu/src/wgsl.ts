@@ -1,4 +1,3 @@
-import { texture, textureExternal } from './core/texture/tgpuTexture';
 import { code } from './tgpuCode';
 import { constant } from './tgpuConstant';
 import { declare } from './tgpuDeclare';
@@ -18,6 +17,4 @@ export default Object.assign(code, {
   declare,
   var: variable,
   sampler,
-  texture,
-  textureExternal,
 });
