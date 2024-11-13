@@ -1,7 +1,6 @@
 import * as Babel from '@babel/standalone';
 import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
-import type { OnFrameFn } from '@typegpu/example-toolkit';
 import { filter, isNonNull, map, pipe } from 'remeda';
 import { wgsl } from 'typegpu/experimental';
 import { transpileModule } from 'typescript';
@@ -260,22 +259,6 @@ export async function executeExample(
           onCleanup(callback: () => unknown) {
             cleanupCallbacks.push(callback);
           },
-          onFrame: ((loop: (deltaTime: number) => unknown) => {
-            let lastTime = Date.now();
-
-            let handle = 0;
-            const runner = () => {
-              const now = Date.now();
-              const dt = now - lastTime;
-              lastTime = now;
-              loop(dt);
-
-              handle = requestAnimationFrame(runner);
-            };
-            handle = requestAnimationFrame(runner);
-
-            cleanupCallbacks.push(() => cancelAnimationFrame(handle));
-          }) satisfies OnFrameFn,
           addParameters,
           addSliderPlumParameter,
         };

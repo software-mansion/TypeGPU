@@ -1,7 +1,3 @@
-// -- Hooks into the example environment
-import { onFrame } from '@typegpu/example-toolkit';
-// --
-
 import {
   type TgpuArray,
   type U32,
@@ -514,6 +510,22 @@ const createSampleScene = () => {
 // #region UI
 
 let paused = false;
+let disposed = false;
+
+const onFrame = (loop: (deltaTime: number) => unknown) => {
+  let lastTime = Date.now();
+  const runner = () => {
+    if (disposed) {
+      return;
+    }
+    const now = Date.now();
+    const dt = now - lastTime;
+    lastTime = now;
+    loop(dt);
+    requestAnimationFrame(runner);
+  };
+  requestAnimationFrame(runner);
+};
 
 onFrame((deltaTime: number) => {
   msSinceLastTick += deltaTime;
@@ -605,6 +617,7 @@ export const controls = {
 };
 
 export function onCleanup() {
+  disposed = true;
   root.destroy();
   root.device.destroy();
 }

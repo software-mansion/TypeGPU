@@ -6,11 +6,4 @@ declare module '@typegpu/example-toolkit' {
     initial: number,
     options?: { min?: number; max?: number; step?: number },
   ): TgpuPlum<number>;
-
-  export type OnFrameFn = (loop: (deltaTime: number) => unknown) => void;
-
-  /**
-   * `deltaTime` is time elapsed since last frame in milliseconds
-   */
-  export const onFrame: OnFrameFn;
 }

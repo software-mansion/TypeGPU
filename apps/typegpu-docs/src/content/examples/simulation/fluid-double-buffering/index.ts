@@ -1,5 +1,5 @@
 // -- Hooks into the example environment
-import { addSliderPlumParameter, onFrame } from '@typegpu/example-toolkit';
+import { addSliderPlumParameter } from '@typegpu/example-toolkit';
 // --
 
 import { JitTranspiler } from '@typegpu/jit';
@@ -724,6 +724,23 @@ function tick() {
   root.flush();
 }
 
+let disposed = false;
+
+const onFrame = (loop: (deltaTime: number) => unknown) => {
+  let lastTime = Date.now();
+  const runner = () => {
+    if (disposed) {
+      return;
+    }
+    const now = Date.now();
+    const dt = now - lastTime;
+    lastTime = now;
+    loop(dt);
+    requestAnimationFrame(runner);
+  };
+  requestAnimationFrame(runner);
+};
+
 onFrame((deltaTime) => {
   msSinceLastTick += deltaTime;
 
@@ -738,6 +755,7 @@ onFrame((deltaTime) => {
 });
 
 export function onCleanup() {
+  disposed = true;
   root.destroy();
   root.device.destroy();
 }

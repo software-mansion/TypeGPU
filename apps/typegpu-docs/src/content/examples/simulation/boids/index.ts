@@ -356,10 +356,10 @@ const renderPassDescriptor: GPURenderPassDescriptor = {
 };
 
 let even = false;
-let running = true;
+let disposed = false;
 
 function frame() {
-  if (!running) {
+  if (disposed) {
     return;
   }
 
@@ -434,7 +434,7 @@ export const controls = {
 };
 
 export function onCleanup() {
-  running = false;
+  disposed = true;
   root.destroy();
   root.device.destroy();
 }

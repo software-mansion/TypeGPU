@@ -1,4 +1,4 @@
-import { addSliderPlumParameter, onFrame } from '@typegpu/example-toolkit';
+import { addSliderPlumParameter } from '@typegpu/example-toolkit';
 import { arrayOf, f32, struct, u32, vec2f } from 'typegpu/data';
 import tgpu, {
   type TgpuBufferUsage,
@@ -232,7 +232,13 @@ const computePipelines = [0, 1].map((idx) =>
 
 randomizeTriangles();
 let even = false;
-onFrame(() => {
+let disposed = false;
+
+function run() {
+  if (disposed) {
+    return;
+  }
+
   even = !even;
   computePipelines[even ? 0 : 1].execute({
     workgroups: [root.readPlum(triangleAmount)],
@@ -251,7 +257,11 @@ onFrame(() => {
   });
 
   root.flush();
-});
+
+  requestAnimationFrame(run);
+}
+
+run();
 
 const parameters = {
   separationDistance: 0.05,
@@ -339,6 +349,7 @@ export const controls = {
 };
 
 export function onCleanup() {
+  disposed = true;
   root.destroy();
   root.device.destroy();
 }
