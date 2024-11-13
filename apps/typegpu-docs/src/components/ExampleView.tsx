@@ -128,7 +128,7 @@ export function ExampleView({ example }: Props) {
                 scrollbarGutter: 'stable',
               }}
               className={cs(
-                'flex justify-evenly items-center flex-wrap overflow-auto h-full box-border',
+                'flex justify-evenly items-center flex-wrap overflow-auto h-full box-border flex-col md:flex-row',
                 codeEditorShowing ? 'md:max-h-[calc(50vh-3rem)]' : '',
               )}
             >
@@ -267,14 +267,11 @@ function useResizableCanvas(
 
       const aspectRatio = canvas.dataset.aspectRatio ?? '1';
 
+      container.className =
+        'flex flex-1 justify-center items-center w-full md:h-full md:w-auto';
       container.style.containerType = 'size';
-      container.style.flex = '1';
-      container.style.display = 'flex';
-      container.style.justifyContent = 'center';
-      container.style.alignItems = 'center';
-      container.style.height = '100%';
 
-      frame.style.position = 'relative';
+      frame.className = 'relative';
       frame.style.aspectRatio = aspectRatio;
       frame.style.height = `min(calc(min(100cqw, 100cqh)/(${aspectRatio})), min(100cqw, 100cqh))`;
 
@@ -286,9 +283,7 @@ function useResizableCanvas(
         // @ts-ignore
         newCanvas[attribute.name] = attribute.value;
       }
-      newCanvas.style.position = 'absolute';
-      newCanvas.style.width = '100%';
-      newCanvas.style.height = '100%';
+      newCanvas.className = 'absolute w-full h-full';
 
       canvas.parentElement?.replaceChild(container, canvas);
 

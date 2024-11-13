@@ -130,26 +130,30 @@ setTimeout(() => {
   draw(spanX, spanY);
 }, 100);
 
-/** @button "↔️ -" */
-export function spanXMinus() {
-  spanX = Math.max(1, spanX - 1);
-  draw(spanX, spanY);
-}
+// #region Example Controls
 
-/** @button "↔️ +" */
-export function spanXPlus() {
-  spanX = Math.min(spanX + 1, 20);
-  draw(spanX, spanY);
-}
+export const controls = {
+  'x span ↔️': {
+    initial: spanY,
+    min: 0,
+    max: 20,
+    step: 1,
+    onSliderChange: (newValue: number) => {
+      spanX = newValue;
+      draw(spanX, spanY);
+    },
+  },
 
-/** @button "↕️ -" */
-export function spanYMinus() {
-  spanY = Math.max(1, spanY - 1);
-  draw(spanX, spanY);
-}
+  'y span ↕️': {
+    initial: spanY,
+    min: 0,
+    max: 20,
+    step: 1,
+    onSliderChange: (newValue: number) => {
+      spanY = newValue;
+      draw(spanX, spanY);
+    },
+  },
+};
 
-/** @button "↕️ +" */
-export function spanYPlus() {
-  spanY = Math.min(spanY + 1, 20);
-  draw(spanX, spanY);
-}
+// #endregion

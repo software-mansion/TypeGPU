@@ -25,8 +25,11 @@ async function doIncrement() {
   return await counterBuffer.read();
 }
 
-/** @button "Increment" */
-export async function click() {
-  const result = await doIncrement();
-  table.innerText = `${result.x} ${result.y}`;
-}
+export const controls = {
+  Increment: {
+    onButtonClick: async () => {
+      const result = await doIncrement();
+      table.innerText = `${result.x} ${result.y}`;
+    },
+  },
+};
