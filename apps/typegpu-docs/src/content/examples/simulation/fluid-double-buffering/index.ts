@@ -1,7 +1,3 @@
-// -- Hooks into the example environment
-import { addSliderPlumParameter } from '@typegpu/example-toolkit';
-// --
-
 import { JitTranspiler } from '@typegpu/jit';
 import {
   type Parsed,
@@ -391,17 +387,8 @@ const mainMoveObstacles = wgsl.fn`
   }
 `.$name('main_move_obstacles');
 
-const sourceIntensityPlum = addSliderPlumParameter('source intensity', 0.1, {
-  min: 0,
-  max: 1,
-  step: 0.01,
-});
-
-const sourceRadiusPlum = addSliderPlumParameter('source radius', 0.01, {
-  min: 0.01,
-  max: 0.1,
-  step: 0.01,
-});
+let sourceIntensity = 0.1;
+let sourceRadius = 0.01;
 
 const sourceParamsBuffer = root
   .createBuffer(
@@ -410,11 +397,6 @@ const sourceParamsBuffer = root
       radius: f32,
       intensity: f32,
     }),
-    wgsl.plum((get) => ({
-      center: vec2f(0.5, 0.9),
-      intensity: get(sourceIntensityPlum),
-      radius: get(sourceRadiusPlum),
-    })),
   )
   .$usage('uniform');
 
@@ -523,45 +505,14 @@ function obstaclesToConcrete(): Parsed<BoxObstacle>[] {
   }));
 }
 
-const boxXPlum = addSliderPlumParameter('box x', 0.5, {
-  min: 0.2,
-  max: 0.8,
-  step: 0.01,
-});
-
-const limitedBoxXPlum = wgsl.plum((get) => {
-  const boxX = get(boxXPlum);
-  const leftWallX = get(leftWallXPlum);
+let boxX = 0.5;
+const limitedBoxX = () => {
   const leftWallWidth = obstacles[OBSTACLE_LEFT_WALL].width;
   return Math.max(boxX, leftWallX + leftWallWidth / 2 + 0.15);
-});
+};
 
-const boxYPlum = addSliderPlumParameter('box y', 0.2, {
-  min: 0.2,
-  max: 0.85,
-  step: 0.01,
-});
-
-const leftWallXPlum = addSliderPlumParameter('left wall: x', 0, {
-  min: 0,
-  max: 0.6,
-  step: 0.01,
-});
-
-root.onPlumChange(limitedBoxXPlum, (newVal) => {
-  obstacles[OBSTACLE_BOX].x = newVal;
-  primary.applyMovedObstacles(obstaclesToConcrete());
-});
-
-root.onPlumChange(boxYPlum, (newVal) => {
-  obstacles[OBSTACLE_BOX].y = newVal;
-  primary.applyMovedObstacles(obstaclesToConcrete());
-});
-
-root.onPlumChange(leftWallXPlum, (newVal) => {
-  obstacles[OBSTACLE_LEFT_WALL].x = newVal;
-  primary.applyMovedObstacles(obstaclesToConcrete());
-});
+let boxY = 0.2;
+let leftWallX = 0;
 
 function makePipelines(
   inputGridReadonly: TgpuBufferUsage<GridData, 'readonly'>,
@@ -719,6 +670,12 @@ const stepsPerTick = 64;
 function tick() {
   timeBuffer.write(Date.now() % 1000);
 
+  sourceParamsBuffer.write({
+    center: vec2f(0.5, 0.9),
+    intensity: sourceIntensity,
+    radius: sourceRadius,
+  });
+
   primary = primary === even ? odd : even;
   primary.compute();
   root.flush();
@@ -753,6 +710,65 @@ onFrame((deltaTime) => {
     msSinceLastTick -= timestep;
   }
 });
+
+export const controls = {
+  'source intensity': {
+    initial: sourceIntensity,
+    min: 0,
+    max: 1,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      sourceIntensity = value;
+    },
+  },
+
+  'source radius': {
+    initial: sourceRadius,
+    min: 0.01,
+    max: 0.1,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      sourceRadius = value;
+    },
+  },
+
+  'box x': {
+    initial: boxX,
+    min: 0.2,
+    max: 0.8,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      boxX = value;
+      obstacles[OBSTACLE_BOX].x = limitedBoxX();
+      primary.applyMovedObstacles(obstaclesToConcrete());
+    },
+  },
+
+  'box y': {
+    initial: boxY,
+    min: 0.2,
+    max: 0.85,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      boxY = value;
+      obstacles[OBSTACLE_BOX].y = boxY;
+      primary.applyMovedObstacles(obstaclesToConcrete());
+    },
+  },
+
+  'left wall: x': {
+    initial: leftWallX,
+    min: 0,
+    max: 0.6,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      leftWallX = value;
+      obstacles[OBSTACLE_LEFT_WALL].x = leftWallX;
+      obstacles[OBSTACLE_BOX].x = limitedBoxX();
+      primary.applyMovedObstacles(obstaclesToConcrete());
+    },
+  },
+};
 
 export function onCleanup() {
   disposed = true;

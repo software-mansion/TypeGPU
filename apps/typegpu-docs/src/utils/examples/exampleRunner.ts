@@ -192,6 +192,7 @@ export async function executeExample(
     }
   }
 
+  // TODO: remove after merging textures
   function addSliderPlumParameter(
     label: string,
     initial: number,
@@ -260,6 +261,7 @@ export async function executeExample(
             cleanupCallbacks.push(callback);
           },
           addParameters,
+          // TODO: remove after merging textures
           addSliderPlumParameter,
         };
       }
