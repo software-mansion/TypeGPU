@@ -9,7 +9,10 @@ import type {
   TgpuBufferReadonly,
   TgpuBufferUniform,
 } from './core/buffer/bufferUsage';
-import type { TgpuExternalTexture } from './core/texture/externalTexture';
+import {
+  type TgpuExternalTexture,
+  isExternalTexture,
+} from './core/texture/externalTexture';
 import {
   type TgpuMutableTexture,
   type TgpuReadonlyTexture,
@@ -525,11 +528,22 @@ class TgpuBindGroupImpl<
             };
           }
 
-          if (
-            'storageTexture' in entry ||
-            'externalTexture' in entry ||
-            'sampler' in entry
-          ) {
+          if ('externalTexture' in entry) {
+            let resource: GPUExternalTexture;
+
+            if (isExternalTexture(value)) {
+              resource = unwrapper.unwrap(value);
+            } else {
+              resource = value as GPUExternalTexture;
+            }
+
+            return {
+              binding: idx,
+              resource,
+            };
+          }
+
+          if ('sampler' in entry) {
             return {
               binding: idx,
               resource: value as

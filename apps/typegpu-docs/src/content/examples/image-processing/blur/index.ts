@@ -156,7 +156,7 @@ const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 context.configure({
-  device: root.device,
+  device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
@@ -278,7 +278,7 @@ function render() {
     blockDim: settings.blockDim,
   });
 
-  const encoder = root.device.createCommandEncoder();
+  const encoder = device.createCommandEncoder();
 
   runCompute(encoder, 0);
   runCompute(encoder, 1);
@@ -299,7 +299,7 @@ function render() {
   passEncoder.draw(6);
   passEncoder.end();
 
-  root.device.queue.submit([encoder.finish()]);
+  device.queue.submit([encoder.finish()]);
 }
 
 render();
