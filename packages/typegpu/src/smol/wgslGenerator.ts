@@ -1,3 +1,4 @@
+import type * as smol from 'tinyest';
 import { bool } from '../data';
 import {
   type ResolutionCtx,
@@ -7,7 +8,6 @@ import {
   isResolvable,
   isWgsl,
 } from '../types';
-import type * as smol from './nodes';
 
 export type GenerationCtx = ResolutionCtx & {
   readonly pre: string;

@@ -1,7 +1,7 @@
+import type { Block } from 'tinyest';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import { valueList } from '../../resolutionUtils';
-import type { Block } from '../../smol';
 import { code } from '../../tgpuCode';
 import type {
   AnyTgpuData,
