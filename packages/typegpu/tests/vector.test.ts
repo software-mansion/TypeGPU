@@ -202,3 +202,76 @@ describe('vec4f', () => {
     expect(vec).toEqual(d.vec4f(5, 6, 7, 8));
   });
 });
+
+describe('vec2h', () => {
+  it('should create a zero 2d vector', () => {
+    const zero = d.vec2h();
+    expect(zero.x).toEqual(0);
+    expect(zero.y).toEqual(0);
+  });
+
+  it('should create a 2d vector with the given elements', () => {
+    const zero = d.vec2h(1, 2);
+    expect(zero.x).toEqual(1);
+    expect(zero.y).toEqual(2);
+  });
+
+  it('should create a 2d vector from the given scalar element', () => {
+    const zero = d.vec2h(5);
+    expect(zero.x).toEqual(5);
+    expect(zero.y).toEqual(5);
+  });
+
+  it('should encode a 2d vector', () => {
+    const vec = d.vec2h(1, 2050);
+
+    const buffer = new ArrayBuffer(d.vec2h.size);
+
+    d.vec2h.write(new BufferWriter(buffer), vec);
+    expect(d.vec2h.read(new BufferReader(buffer))).toEqual(vec);
+  });
+
+  it('should change unrepresenable values to the closest representable value', () => {
+    const vec = d.vec2h(1, 4097);
+
+    const buffer = new ArrayBuffer(d.vec2h.size);
+
+    d.vec2h.write(new BufferWriter(buffer), vec);
+    expect(d.vec2h.read(new BufferReader(buffer))).toEqual(d.vec2h(1, 4096));
+  });
+
+  it('differs in type from other vector schemas', () => {
+    const acceptsVec2hSchema = (_schema: d.Vec2h) => {};
+
+    acceptsVec2hSchema(d.vec2h);
+    // @ts-expect-error
+    acceptsVec2hSchema(d.vec2u);
+    // @ts-expect-error
+    acceptsVec2hSchema(d.vec2i);
+    // @ts-expect-error
+    acceptsVec2hSchema(d.vec2f);
+    // @ts-expect-error
+    acceptsVec2hSchema(d.vec3f);
+    // @ts-expect-error
+    acceptsVec2hSchema(d.vec4f);
+  });
+
+  it('can be indexed into', () => {
+    const vec = d.vec2h(1, 2);
+    expect(vec[0]).toEqual(1);
+    expect(vec[1]).toEqual(2);
+  });
+
+  it('can be iterated over', () => {
+    const vec = d.vec2h(1, 2);
+    const elements = [...vec];
+    expect(elements).toEqual([1, 2]);
+  });
+
+  it('can be modified via index', () => {
+    const vec = d.vec2h(1, 2);
+    vec[0] = 3;
+    vec[1] = 4;
+    expect(vec).toEqual(d.vec2h(3, 4));
+  });
+});

@@ -7,12 +7,15 @@ import {
 import { describe, expect, it } from 'vitest';
 import {
   arrayOf,
+  f16,
   f32,
   i32,
   struct,
   u32,
+  vec2h,
   vec2u,
   vec3f,
+  vec3h,
   vec3u,
 } from '../src/data';
 
@@ -120,5 +123,96 @@ describe('struct', () => {
         b: Unbounded,
       });
     }).toThrow();
+  });
+
+  it('supports f16', () => {
+    const TestStruct = struct({
+      a: f16,
+      b: f16,
+      c: f16,
+      d: f16,
+    });
+
+    expect(TestStruct.size).toEqual(8);
+    expect(TestStruct.byteAlignment).toEqual(2);
+
+    const buffer = new ArrayBuffer(TestStruct.size);
+
+    const value: Parsed<typeof TestStruct> = {
+      a: 1.0,
+      b: 2.0,
+      c: 3.0,
+      d: 4.0,
+    };
+
+    TestStruct.write(new BufferWriter(buffer), value);
+    expect(TestStruct.read(new BufferReader(buffer))).toEqual(value);
+  });
+
+  it('properly aligns with f16', () => {
+    const TestStruct = struct({
+      a: u32,
+      b: f16,
+      c: u32,
+    });
+
+    expect(TestStruct.size).toEqual(12);
+    expect(TestStruct.byteAlignment).toEqual(4);
+
+    const buffer = new ArrayBuffer(TestStruct.size);
+
+    const value: Parsed<typeof TestStruct> = {
+      a: 1,
+      b: 2.0,
+      c: 3,
+    };
+
+    TestStruct.write(new BufferWriter(buffer), value);
+    expect(TestStruct.read(new BufferReader(buffer))).toEqual(value);
+  });
+
+  it('supports and properly aligns with vectors of f16', () => {
+    const TestStruct = struct({
+      a: vec3h,
+      b: f16,
+    });
+
+    expect(TestStruct.size).toEqual(8);
+    expect(TestStruct.byteAlignment).toEqual(8);
+
+    const buffer = new ArrayBuffer(TestStruct.size);
+
+    const value: Parsed<typeof TestStruct> = {
+      a: vec3h(1.0, 2.0, 3.0),
+      b: 4.0,
+    };
+
+    TestStruct.write(new BufferWriter(buffer), value);
+    expect(TestStruct.read(new BufferReader(buffer))).toEqual(value);
+
+    const TestStruct2 = struct({
+      a: vec2h,
+      b: struct({
+        aa: arrayOf(vec3h, 2),
+        bb: f16,
+      }),
+      c: vec2h,
+    });
+
+    expect(TestStruct2.size).toEqual(40);
+
+    const buffer2 = new ArrayBuffer(TestStruct2.size);
+
+    const value2: Parsed<typeof TestStruct2> = {
+      a: vec2h(1.0, 2.0),
+      b: {
+        aa: [vec3h(1.0, 2.0, 3.0), vec3h(4.0, 5.0, 6.0)],
+        bb: 7.0,
+      },
+      c: vec2h(8.0, 9.0),
+    };
+
+    TestStruct2.write(new BufferWriter(buffer2), value2);
+    expect(TestStruct2.read(new BufferReader(buffer2))).toEqual(value2);
   });
 });

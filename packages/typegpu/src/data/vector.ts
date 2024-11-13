@@ -7,6 +7,7 @@ import {
   type MaxValue,
   Measurer,
   type Parsed,
+  f16,
   f32,
   i32,
   u32,
@@ -26,6 +27,7 @@ interface VecSchemaOptions<ValueType> {
   label: string;
   make: (...args: number[]) => ValueType;
   makeFromScalar: (value: number) => ValueType;
+  elementSizeOverwrite?: number;
 }
 
 type VecSchemaBase<ValueType> = TgpuData<ValueType> & {
@@ -42,7 +44,7 @@ function makeVecSchema<ValueType extends vecBase>(
     __unwrapped: undefined as unknown as ValueType,
     isLoose: false as const,
 
-    size: options.length * 4,
+    size: options.length * (options.elementSizeOverwrite ?? 4),
     label: options.label,
     byteAlignment: options.byteAlignment,
     kind: options.label,
@@ -191,6 +193,22 @@ class vec2uImpl extends vec2Impl {
   }
 }
 
+class vec2hImpl extends vec2Impl {
+  readonly kind = 'vec2h';
+
+  make2(x: number, y: number): vec2h {
+    return new vec2hImpl(x, y) as unknown as vec2h;
+  }
+
+  make3(x: number, y: number, z: number): vec3h {
+    return new vec3hImpl(x, y, z) as unknown as vec3h;
+  }
+
+  make4(x: number, y: number, z: number, w: number): vec4h {
+    return new vec4hImpl(x, y, z, w) as unknown as vec4h;
+  }
+}
+
 abstract class vec3Impl implements vec3 {
   public readonly length = 3;
   [n: number]: number;
@@ -277,6 +295,22 @@ class vec3uImpl extends vec3Impl {
 
   make4(x: number, y: number, z: number, w: number): vec4u {
     return new vec4uImpl(x, y, z, w) as unknown as vec4u;
+  }
+}
+
+class vec3hImpl extends vec3Impl {
+  readonly kind = 'vec3h';
+
+  make2(x: number, y: number): vec2h {
+    return new vec2hImpl(x, y) as unknown as vec2h;
+  }
+
+  make3(x: number, y: number, z: number): vec3h {
+    return new vec3hImpl(x, y, z) as unknown as vec3h;
+  }
+
+  make4(x: number, y: number, z: number, w: number): vec4h {
+    return new vec4hImpl(x, y, z, w) as unknown as vec4h;
   }
 }
 
@@ -376,6 +410,22 @@ class vec4uImpl extends vec4Impl {
 
   make4(x: number, y: number, z: number, w: number): vec4u {
     return new vec4uImpl(x, y, z, w) as unknown as vec4u;
+  }
+}
+
+class vec4hImpl extends vec4Impl {
+  readonly kind = 'vec4h';
+
+  make2(x: number, y: number): vec2h {
+    return new vec2hImpl(x, y) as unknown as vec2h;
+  }
+
+  make3(x: number, y: number, z: number): vec3h {
+    return new vec3hImpl(x, y, z) as unknown as vec3h;
+  }
+
+  make4(x: number, y: number, z: number, w: number): vec4h {
+    return new vec4hImpl(x, y, z, w) as unknown as vec4h;
   }
 }
 
@@ -789,12 +839,15 @@ export type VecKind =
   | 'vec2f'
   | 'vec2i'
   | 'vec2u'
+  | 'vec2h'
   | 'vec3f'
   | 'vec3i'
   | 'vec3u'
+  | 'vec3h'
   | 'vec4f'
   | 'vec4i'
-  | 'vec4u';
+  | 'vec4u'
+  | 'vec4h';
 
 /**
  * Common interface for all vector types, no matter their size and inner type.
@@ -830,6 +883,15 @@ export interface vec2u extends vec2, Swizzle2<vec2u, vec3u, vec4u> {
 }
 
 /**
+ * Interface representing its WGSL vector type counterpart: vec2h or vec2<f16>.
+ * A vector with 2 elements of type d.f16
+ */
+export interface vec2h extends vec2, Swizzle2<vec2h, vec3h, vec4h> {
+  /** use to distinguish between vectors of the same size on the type level */
+  kind: 'vec2h';
+}
+
+/**
  * Interface representing its WGSL vector type counterpart: vec3f or vec3<f32>.
  * A vector with 3 elements of type d.f32
  */
@@ -857,6 +919,15 @@ export interface vec3u extends vec3, Swizzle3<vec2u, vec3u, vec4u> {
 }
 
 /**
+ * Interface representing its WGSL vector type counterpart: vec3h or vec3<f16>.
+ * A vector with 3 elements of type d.f16
+ */
+export interface vec3h extends vec3, Swizzle3<vec2h, vec3h, vec4h> {
+  /** use to distinguish between vectors of the same size on the type level */
+  kind: 'vec3h';
+}
+
+/**
  * Interface representing its WGSL vector type counterpart: vec4f or vec4<f32>.
  * A vector with 4 elements of type d.f32
  */
@@ -879,6 +950,11 @@ export interface vec4i extends vec4, Swizzle4<vec2i, vec3i, vec4i> {
 export interface vec4u extends vec4, Swizzle4<vec2u, vec3u, vec4u> {
   /** use to distinguish between vectors of the same size on the type level */
   kind: 'vec4u';
+}
+
+export interface vec4h extends vec4, Swizzle4<vec2h, vec3h, vec4h> {
+  /** use to distinguish between vectors of the same size on the type level */
+  kind: 'vec4h';
 }
 
 /**
@@ -984,6 +1060,40 @@ export const vec2u = makeVecSchema({
 }) as Vec2u;
 
 /**
+ * Type of the `d.vec2h` object/function: vector data type schema/constructor
+ */
+export type Vec2h = TgpuData<vec2h> & { kind: 'vec2h' } & ((
+    x: number,
+    y: number,
+  ) => vec2h) &
+  ((xy: number) => vec2h) &
+  (() => vec2h);
+
+/**
+ * Schema representing vec2h - a vector with 2 elements of type f16.
+ * Also a constructor function for this vector value.
+ *
+ * @example
+ * const vector = d.vec2h(); // (0.0, 0.0)
+ * const vector = d.vec2h(1); // (1.0, 1.0)
+ * const vector = d.vec2h(0.5, 0.1); // (0.5, 0.1)
+ *
+ * @example
+ * const buffer = root.createBuffer(d.vec2h, d.vec2h(0, 1)); // buffer holding a d.vec2h value, with an initial value of vec2h(0, 1);
+ */
+export const vec2h = makeVecSchema({
+  unitType: f16,
+  byteAlignment: 4,
+  length: 2,
+  label: 'vec2h',
+  make: (x: number, y: number) =>
+    new Proxy(new vec2hImpl(x, y), vecProxyHandler) as vec2h,
+  makeFromScalar: (x) =>
+    new Proxy(new vec2hImpl(x, x), vecProxyHandler) as vec2h,
+  elementSizeOverwrite: 2,
+}) as Vec2h;
+
+/**
  * Type of the `d.vec3f` object/function: vector data type schema/constructor
  */
 export type Vec3f = TgpuData<vec3f> & { kind: 'vec3f' } & ((
@@ -1087,6 +1197,41 @@ export const vec3u = makeVecSchema({
   makeFromScalar: (x) =>
     new Proxy(new vec3uImpl(x, x, x), vecProxyHandler) as vec3u,
 }) as Vec3u;
+
+/**
+ * Type of the `d.vec3h` object/function: vector data type schema/constructor
+ */
+export type Vec3h = TgpuData<vec3h> & { kind: 'vec3h' } & ((
+    x: number,
+    y: number,
+    z: number,
+  ) => vec3h) &
+  ((xyz: number) => vec3h) &
+  (() => vec3h);
+
+/**
+ * Schema representing vec3h - a vector with 3 elements of type f16.
+ * Also a constructor function for this vector value.
+ *
+ * @example
+ * const vector = d.vec3h(); // (0.0, 0.0, 0.0)
+ * const vector = d.vec3h(1); // (1.0, 1.0, 1.0)
+ * const vector = d.vec3h(1, 2, 3.5); // (1.0, 2.0, 3.5)
+ *
+ * @example
+ * const buffer = root.createBuffer(arrayOf(vec3h, 2)); // buffer holding an array of 2 vec3h values with initial values of vec3h(0, 0, 0);
+ */
+export const vec3h = makeVecSchema({
+  unitType: f16,
+  byteAlignment: 8,
+  length: 3,
+  label: 'vec3h',
+  make: (x, y, z) =>
+    new Proxy(new vec3hImpl(x, y, z), vecProxyHandler) as vec3h,
+  makeFromScalar: (x) =>
+    new Proxy(new vec3hImpl(x, x, x), vecProxyHandler) as vec3h,
+  elementSizeOverwrite: 2,
+}) as Vec3h;
 
 /**
  * Type of the `d.vec4f` object/function: vector data type schema/constructor
@@ -1195,3 +1340,39 @@ export const vec4u = makeVecSchema({
   makeFromScalar: (x) =>
     new Proxy(new vec4uImpl(x, x, x, x), vecProxyHandler) as vec4u,
 }) as Vec4u;
+
+/**
+ * Type of the `d.vec4h` object/function: vector data type schema/constructor
+ */
+export type Vec4h = TgpuData<vec4h> & { kind: 'vec4h' } & ((
+    x: number,
+    y: number,
+    z: number,
+    w: number,
+  ) => vec4h) &
+  ((xyzw: number) => vec4h) &
+  (() => vec4h);
+
+/**
+ * Schema representing vec4h - a vector with 4 elements of type f16.
+ * Also a constructor function for this vector value.
+ *
+ * @example
+ * const vector = d.vec4h(); // (0.0, 0.0, 0.0, 0.0)
+ * const vector = d.vec4h(1); // (1.0, 1.0, 1.0, 1.0)
+ * const vector = d.vec4h(1, 2, 3, 4.5); // (1.0, 2.0, 3.0, 4.5)
+ *
+ * @example
+ * const buffer = root.createBuffer(d.vec4h, d.vec4h(0, 1, 2, 3)); // buffer holding a d.vec4h value, with an initial value of vec4h(0, 1, 2, 3);
+ */
+export const vec4h = makeVecSchema({
+  unitType: f16,
+  byteAlignment: 8,
+  length: 4,
+  label: 'vec4h',
+  make: (x, y, z, w) =>
+    new Proxy(new vec4hImpl(x, y, z, w), vecProxyHandler) as vec4h,
+  makeFromScalar: (x) =>
+    new Proxy(new vec4hImpl(x, x, x, x), vecProxyHandler) as vec4h,
+  elementSizeOverwrite: 2,
+}) as Vec4h;
