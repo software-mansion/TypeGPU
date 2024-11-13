@@ -1,26 +1,11 @@
 // Original implementation:
 // https://webgpu.github.io/webgpu-samples/?sample=imageBlur
 
-// -- Hooks into the example environment
-import { addSliderPlumParameter } from '@typegpu/example-toolkit';
-// --
 import { i32, struct, u32 } from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
 
 const tileDim = 128;
 const batch = [4, 4];
-
-const filterSize = addSliderPlumParameter('filter size', 2, {
-  min: 2,
-  max: 40,
-  step: 2,
-});
-
-const iterations = addSliderPlumParameter('iterations', 1, {
-  min: 1,
-  max: 10,
-  step: 1,
-});
 
 const Params = struct({
   filterDim: i32,
@@ -29,7 +14,7 @@ const Params = struct({
 
 const uniformLayout = tgpu.bindGroupLayout({
   params: { uniform: Params },
-  smplr: { sampler: 'filtering' },
+  u_sampler: { sampler: 'filtering' },
 });
 
 const ioLayout = tgpu.bindGroupLayout({
@@ -51,7 +36,7 @@ struct Params {
 }
 
 @group(0) @binding(0) var<uniform> params: Params;
-@group(0) @binding(1) var smplr: sampler;
+@group(0) @binding(1) var u_sampler: sampler;
 
 @group(1) @binding(0) var<uniform> flip: u32;
 @group(1) @binding(1) var in_texture: texture_2d<f32>;
@@ -76,7 +61,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: ve
 
       tile[r][4 * lid.x + u32(c)] = textureSampleLevel(
         in_texture,
-        smplr,
+        u_sampler,
         (vec2f(loadIndex) + vec2f(0.25, 0.25)) / vec2f(dims),
         0.0
       ).rgb;
@@ -155,14 +140,34 @@ fn main_frag(@location(0) frag_uv: vec2f) -> @location(0) vec4f {
 const root = await tgpu.init();
 const device = root.device;
 
-const state = {
-  get filterDim() {
-    return root.readPlum(filterSize);
-  },
-  get blockDim() {
-    return tileDim - (this.filterDim - 1);
-  },
-};
+const state = (() => {
+  let filterDim = 2;
+  let iterations = 1;
+
+  return {
+    get iterations() {
+      return iterations;
+    },
+    set iterations(newValue: number) {
+      iterations = newValue;
+      render();
+    },
+
+    get filterDim() {
+      return filterDim;
+    },
+    set filterDim(newValue: number) {
+      filterDim = newValue;
+      render();
+    },
+
+    // Derived state
+
+    get blockDim() {
+      return tileDim - (this.filterDim - 1);
+    },
+  };
+})();
 
 const blurParamsBuffer = root.createBuffer(Params).$usage('uniform');
 
@@ -228,7 +233,7 @@ const computePipeline = device.createComputePipeline({
 
 const uniformBindGroup = uniformLayout.populate({
   params: blurParamsBuffer,
-  smplr: sampler,
+  u_sampler: sampler,
 });
 
 const zeroBuffer = root.createBuffer(u32, 0).$usage('uniform');
@@ -305,7 +310,7 @@ function render() {
   runCompute(encoder, 0);
   runCompute(encoder, 1);
 
-  for (let i = 0; i < root.readPlum(iterations) - 1; i++) {
+  for (let i = 0; i < state.iterations - 1; i++) {
     runCompute(encoder, 2);
     runCompute(encoder, 1);
   }
@@ -326,5 +331,28 @@ function render() {
 
 render();
 
-root.onPlumChange(filterSize, () => render());
-root.onPlumChange(iterations, () => render());
+// #region Example Controls
+
+export const controls = {
+  'filter size': {
+    initial: 2,
+    min: 2,
+    max: 40,
+    step: 2,
+    onSliderChange(newValue: number) {
+      state.filterDim = newValue;
+    },
+  },
+
+  iterations: {
+    initial: 1,
+    min: 1,
+    max: 10,
+    step: 1,
+    onSliderChange(newValue: number) {
+      state.iterations = newValue;
+    },
+  },
+};
+
+// #endregion
