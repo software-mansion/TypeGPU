@@ -4,7 +4,6 @@ import * as d from '../src/data';
 import tgpu, { type TgpuBufferReadonly, wgsl } from '../src/experimental';
 import type { ResolutionCtx } from '../src/experimental';
 
-const forcePlugin = 'import tgpu from "typegpu";';
 describe('tgpu resolve', () => {
   it('should resolve a string (identity)', () => {
     const mockCode = 'fn foo() { var v: Gradient; }';
