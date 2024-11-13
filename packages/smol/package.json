@@ -37,16 +37,7 @@
     "type": "git",
     "url": "git+https://github.com/software-mansion/typegpu.git"
   },
-  "keywords": [
-    "webgpu",
-    "wgpu",
-    "wgsl",
-    "typescript",
-    "compute",
-    "shader",
-    "shaders",
-    "gpgpu"
-  ],
+  "keywords": ["ast", "javascript"],
   "bugs": {
     "url": "https://github.com/software-mansion/typegpu/issues"
   },
