@@ -1,6 +1,7 @@
 ---
 title: How to enable WebGPU on your device
 date: 2024-10-04
+lastUpdated: 2024-11-12
 tags:
   - Safari
   - iPhone
@@ -32,9 +33,14 @@ tell us, there is a way to enable WebGPU in Safari on iOS.
 
 To enable WebGPU go to:
 ```
+Settings > Apps > Safari > Advanced > Feature Flags
+```
+or for iOS versions lower than 18:
+```
 Settings > Safari > Advanced > Feature Flags
 ```
-And then enable WebGPU.
+Then enable WebGPU and restart Safari.
+
 That's it! After enabling the WebGPU flag you can go to [our examples page](https://docs.swmansion.com/TypeGPU/examples/)
 and you should be able to tinker with them on your phone.
 

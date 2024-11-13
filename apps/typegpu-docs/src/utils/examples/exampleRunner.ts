@@ -58,39 +58,22 @@ const staticToDynamicImports = {
   } satisfies TraverseOptions,
 };
 
-let addButtonParameterImportAdded = false;
-
-const labeledFunctionToControlButtons = () => {
+const exportedOptionsToExampleControls = () => {
   return {
     visitor: {
-      ImportDeclaration(path) {
-        if (path.node.source.value === '@typegpu/example-toolkit') {
-          for (const imp of path.node.specifiers) {
-            if (imp.local.name === 'addButtonParameter') {
-              addButtonParameterImportAdded = true;
-              break;
-            }
-          }
-        }
-      },
-
       ExportNamedDeclaration(path, state) {
         // @ts-ignore
         const code: string = state.file.code;
         const declaration = path.node.declaration;
-        if (declaration?.type === 'FunctionDeclaration') {
-          for (const comment of path.node.leadingComments ?? []) {
-            const regExp = /.*@button.*\"(?<label>.*)\".*/;
-            const label = regExp.exec(comment.value)?.groups?.label;
-
-            if (label) {
-              path.replaceWith(
-                template.program.ast(
-                  `${addButtonParameterImportAdded ? '' : "import { addButtonParameter } from '@typegpu/example-toolkit';"} addButtonParameter('${label}', ${code.slice(declaration.start ?? 0, declaration.end ?? 0)})`,
-                ),
-              );
-              addButtonParameterImportAdded = true;
-            }
+        if (declaration?.type === 'VariableDeclaration') {
+          const init = declaration.declarations[0].init;
+          if (init) {
+            path.replaceWith(
+              template.program.ast(
+                `import { addParameters } from '@typegpu/example-toolkit'; 
+                addParameters(${code.slice(init.start ?? 0, init.end ?? 0)});`,
+              ),
+            );
           }
         }
       },
@@ -147,6 +130,8 @@ function tsToJs(code: string): string {
   }).outputText;
 }
 
+type Labelless<T> = T extends unknown ? Omit<T, 'label'> : never;
+
 export async function executeExample(
   exampleCode: string,
   tags?: string[],
@@ -167,84 +152,34 @@ export async function executeExample(
     }
   };
 
-  function addSelectParameter(
-    label: string,
-    initial: string,
-    options: string[],
-    onChange: (newValue: string) => void,
-  ) {
-    if (disposed) {
-      return;
+  function initializeParam(param: ExampleControlParam) {
+    if ('onSelectChange' in param) {
+      return param.onSelectChange(param.initial ?? param.options[0]);
     }
 
-    controlParams.push({
-      type: 'select',
-      label,
-      initial,
-      options,
-      onChange,
-    });
+    if ('onToggleChange' in param) {
+      return param.onToggleChange(param.initial ?? false);
+    }
 
-    // Eager run to initialize the values.
-    onChange(initial);
+    if ('onSliderChange' in param) {
+      return param.onSliderChange(param.initial ?? param.min ?? 0);
+    }
   }
 
-  function addToggleParameter(
-    label: string,
-    initial: boolean,
-    onChange: (newValue: boolean) => void,
+  function addParameters(
+    options: Record<string, Labelless<ExampleControlParam>>,
   ) {
-    if (disposed) {
-      return;
+    for (const [label, value] of Object.entries(options)) {
+      const param = {
+        ...value,
+        label,
+      };
+
+      controlParams.push(param);
+
+      // Eager run to initialize the values.
+      initializeParam(param);
     }
-
-    controlParams.push({
-      type: 'toggle',
-      label,
-      initial,
-      onChange,
-    });
-
-    // Eager run to initialize the values.
-    onChange(initial);
-  }
-
-  function addSliderParameter(
-    label: string,
-    initial: number,
-    options: {
-      min?: number;
-      max?: number;
-      step?: number;
-    },
-    onChange: (newValue: number) => void,
-  ) {
-    if (disposed) {
-      return;
-    }
-
-    controlParams.push({
-      type: 'slider',
-      initial,
-      label,
-      options,
-      onChange,
-    });
-
-    // Eager run to initialize the values.
-    onChange(initial);
-  }
-
-  function addButtonParameter(label: string, onClick: () => void) {
-    if (disposed) {
-      return;
-    }
-
-    controlParams.push({
-      type: 'button',
-      label,
-      onClick,
-    });
   }
 
   function addSliderPlumParameter(
@@ -260,11 +195,12 @@ export async function executeExample(
     }
 
     controlParams.push({
-      type: 'slider',
       label,
       initial,
-      options: options ?? {},
-      onChange: (newValue) => {
+      min: options?.min,
+      max: options?.max,
+      step: options?.step,
+      onSliderChange: (newValue) => {
         value = newValue;
         // Calling `listener` may cause more listeners to
         // be attached, so copying.
@@ -332,10 +268,7 @@ export async function executeExample(
 
             cleanupCallbacks.push(() => cancelAnimationFrame(handle));
           }) satisfies OnFrameFn,
-          addSelectParameter,
-          addSliderParameter,
-          addButtonParameter,
-          addToggleParameter,
+          addParameters,
           addSliderPlumParameter,
         };
       }
@@ -356,13 +289,12 @@ export async function executeExample(
       );
     `); // temporary solution to clean up device without using example-toolkit in the example
 
-    addButtonParameterImportAdded = false;
     const transformedCode =
       Babel.transform(jsCode, {
         compact: false,
         retainLines: true,
         plugins: [
-          labeledFunctionToControlButtons,
+          exportedOptionsToExampleControls,
           staticToDynamicImports,
           preventInfiniteLoops,
         ],

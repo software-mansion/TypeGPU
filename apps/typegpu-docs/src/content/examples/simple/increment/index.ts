@@ -14,9 +14,12 @@ const pipeline = root.makeComputePipeline({
 
 const table = document.querySelector('.counter') as HTMLDivElement;
 
-/** @button "Increment" */
-export async function increment() {
-  pipeline.execute();
-  const result = await counterBuffer.read();
-  table.innerText = `${result}`;
-}
+export const controls = {
+  Increment: {
+    onButtonClick: async () => {
+      pipeline.execute();
+      const result = await counterBuffer.read();
+      table.innerText = `${result}`;
+    },
+  },
+};
