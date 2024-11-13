@@ -207,21 +207,6 @@ importers:
         specifier: ^5.3.3
         version: 5.5.4
 
-  packages/smol:
-    devDependencies:
-      '@typegpu/tgpu-dev-cli':
-        specifier: workspace:*
-        version: link:../tgpu-dev-cli
-      tsup:
-        specifier: ^8.0.2
-        version: 8.0.2(typescript@5.5.4)
-      typegpu:
-        specifier: workspace:*
-        version: link:../typegpu
-      typescript:
-        specifier: ^5.3.3
-        version: 5.5.4
-
   packages/tgpu-dev-cli:
     dependencies:
       arg:
@@ -261,9 +246,21 @@ importers:
       acorn:
         specifier: ^8.12.1
         version: 8.12.1
-      smol:
+      tinyest:
         specifier: workspace:*
-        version: link:../smol
+        version: link:../tinyest
+      tsup:
+        specifier: ^8.0.2
+        version: 8.0.2(typescript@5.5.4)
+      typescript:
+        specifier: ^5.3.3
+        version: 5.5.4
+
+  packages/tinyest:
+    devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
       tsup:
         specifier: ^8.0.2
         version: 8.0.2(typescript@5.5.4)
