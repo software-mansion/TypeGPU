@@ -7,13 +7,13 @@ import tgpu from 'typegpu/experimental';
 const tileDim = 128;
 const batch = [4, 4];
 
-const Params = struct({
+const Settings = struct({
   filterDim: i32,
   blockDim: u32,
 });
 
 const uniformLayout = tgpu.bindGroupLayout({
-  params: { uniform: Params },
+  settings: { uniform: Settings },
   u_sampler: { sampler: 'filtering' },
 });
 
@@ -30,12 +30,12 @@ const renderLayout = tgpu.bindGroupLayout({
 
 const computeShaderCode = /* wgsl */ `
 
-struct Params {
+struct Settings {
   filterDim: i32,
   blockDim: u32,
 }
 
-@group(0) @binding(0) var<uniform> params: Params;
+@group(0) @binding(0) var<uniform> settings: Settings;
 @group(0) @binding(1) var u_sampler: sampler;
 
 @group(1) @binding(0) var<uniform> flip: u32;
@@ -46,9 +46,9 @@ var<workgroup> tile: array<array<vec3f, 128>, 4>;
 
 @compute @workgroup_size(32, 1)
 fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: vec3u) {
-  let filterOffset = (params.filterDim - 1) / 2;
+  let filterOffset = (settings.filterDim - 1) / 2;
   let dims = vec2i(textureDimensions(in_texture, 0));
-  let baseIndex = vec2i(wid.xy * vec2(params.blockDim, 4) +
+  let baseIndex = vec2i(wid.xy * vec2(settings.blockDim, 4) +
                             lid.xy * vec2(4, 1))
                   - vec2(filterOffset, 0);
 
@@ -82,9 +82,9 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: ve
           center < 128 - filterOffset &&
           all(writeIndex < dims)) {
         var acc = vec3(0.0, 0.0, 0.0);
-        for (var f = 0; f < params.filterDim; f++) {
+        for (var f = 0; f < settings.filterDim; f++) {
           var i = center + f - filterOffset;
-          acc = acc + (1.0 / f32(params.filterDim)) * tile[r][i];
+          acc = acc + (1.0 / f32(settings.filterDim)) * tile[r][i];
         }
         textureStore(out_texture, writeIndex, vec4(acc, 1.0));
       }
@@ -140,45 +140,15 @@ fn main_frag(@location(0) frag_uv: vec2f) -> @location(0) vec4f {
 const root = await tgpu.init();
 const device = root.device;
 
-const state = (() => {
-  let filterDim = 2;
-  let iterations = 1;
+const settings = {
+  filterDim: 2,
+  iterations: 1,
+  get blockDim() {
+    return tileDim - (this.filterDim - 1);
+  },
+};
 
-  return {
-    get iterations() {
-      return iterations;
-    },
-    set iterations(newValue: number) {
-      iterations = newValue;
-      render();
-    },
-
-    get filterDim() {
-      return filterDim;
-    },
-    set filterDim(newValue: number) {
-      filterDim = newValue;
-      render();
-    },
-
-    // Derived state
-
-    get blockDim() {
-      return tileDim - (this.filterDim - 1);
-    },
-  };
-})();
-
-const blurParamsBuffer = root.createBuffer(Params).$usage('uniform');
-
-function updateParams() {
-  blurParamsBuffer.write({
-    filterDim: state.filterDim,
-    blockDim: state.blockDim,
-  });
-}
-
-updateParams();
+const settingsBuffer = root.createBuffer(Settings).$usage('uniform');
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -232,7 +202,7 @@ const computePipeline = device.createComputePipeline({
 });
 
 const uniformBindGroup = uniformLayout.populate({
-  params: blurParamsBuffer,
+  settings: settingsBuffer,
   u_sampler: sampler,
 });
 
@@ -296,21 +266,24 @@ function runCompute(encoder: GPUCommandEncoder, ioIndex: number) {
   computePass.setBindGroup(0, root.unwrap(uniformBindGroup));
   computePass.setBindGroup(1, root.unwrap(ioBindGroups[ioIndex]));
   computePass.dispatchWorkgroups(
-    Math.ceil(srcWidth / state.blockDim),
+    Math.ceil(srcWidth / settings.blockDim),
     Math.ceil(srcHeight / batch[1]),
   );
   computePass.end();
 }
 
 function render() {
-  updateParams();
+  settingsBuffer.write({
+    filterDim: settings.filterDim,
+    blockDim: settings.blockDim,
+  });
 
   const encoder = root.device.createCommandEncoder();
 
   runCompute(encoder, 0);
   runCompute(encoder, 1);
 
-  for (let i = 0; i < state.iterations - 1; i++) {
+  for (let i = 0; i < settings.iterations - 1; i++) {
     runCompute(encoder, 2);
     runCompute(encoder, 1);
   }
@@ -340,7 +313,8 @@ export const controls = {
     max: 40,
     step: 2,
     onSliderChange(newValue: number) {
-      state.filterDim = newValue;
+      settings.filterDim = newValue;
+      render();
     },
   },
 
@@ -350,7 +324,8 @@ export const controls = {
     max: 10,
     step: 1,
     onSliderChange(newValue: number) {
-      state.iterations = newValue;
+      settings.iterations = newValue;
+      render();
     },
   },
 };
