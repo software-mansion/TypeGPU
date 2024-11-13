@@ -29,7 +29,8 @@
     "dev:build": "DEV=true tsup",
     "dev:test": "vitest",
     "build": "tsup",
-    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit"
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
+    "test": "vitest run"
   },
   "engines": {
     "node": ">=12.20.0"
