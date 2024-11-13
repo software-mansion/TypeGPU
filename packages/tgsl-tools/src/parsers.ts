@@ -1,5 +1,5 @@
 import type * as acorn from 'acorn';
-import type * as smol from 'typegpu/smol';
+import type * as smol from 'smol';
 
 type Scope = {
   /** identifiers declared in this scope */
