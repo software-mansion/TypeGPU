@@ -33,7 +33,7 @@ tell us, there is a way to enable WebGPU in Safari on iOS.
 
 To enable WebGPU go to:
 ```
-Apps > Settings > Safari > Advanced > Feature Flags
+Settings > Apps > Safari > Advanced > Feature Flags
 ```
 or for iOS versions lower than 18:
 ```
