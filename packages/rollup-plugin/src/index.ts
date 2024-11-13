@@ -80,19 +80,29 @@ function isTgpu(ctx: Context, node: AnyNode): boolean {
   return ctx.tgpuAliases.has(path);
 }
 
-export default function typegpu(): Plugin {
+export interface TypegpuPluginOptions {
+  include?: 'all' | RegExp[];
+}
+
+export default function typegpu(options?: TypegpuPluginOptions): Plugin {
   return {
     name: 'rollup-plugin-typegpu',
     transform(code, id) {
-      if (
-        !typegpuImportRegex.test(code) &&
-        !typegpuRequireRegex.test(code) &&
-        !typegpuDynamicImportRegex.test(code)
+      if (!options?.include) {
+        if (
+          !typegpuImportRegex.test(code) &&
+          !typegpuRequireRegex.test(code) &&
+          !typegpuDynamicImportRegex.test(code)
+        ) {
+          // No imports to `typegpu` or its sub modules, exiting early.
+          return;
+        }
+      } else if (
+        options.include !== 'all' &&
+        !options.include.some((pattern) => pattern.test(id))
       ) {
-        // No imports to `typegpu` or its sub modules, exiting early.
         return;
       }
-
       const ctx: Context = {
         tgpuAliases: new Set(['tgpu']),
       };
@@ -106,8 +116,6 @@ export default function typegpu(): Plugin {
       walk(ast, {
         enter(_node, _parent, prop, index) {
           const node = _node as AnyNode;
-          const parent = _parent as AnyNode | null;
-          // ^ all this to make TypeScript happy (  ◦°^°◦)
 
           gatherTgpuAliases(ctx, node);
 
@@ -127,7 +135,10 @@ export default function typegpu(): Plugin {
             ) {
               const implementation = node.arguments[0];
 
-              if (implementation) {
+              if (
+                implementation &&
+                !(implementation.type === 'TemplateLiteral')
+              ) {
                 tgslFunctionDefs.push({
                   varDecl: node,
                   implementation,

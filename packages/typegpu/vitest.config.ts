@@ -3,20 +3,8 @@ import type { PluginOption } from 'vite';
 // eslint-disable-next-line import/extensions
 import { defineConfig } from 'vitest/config';
 
-function forceTgpuPlugin(): PluginOption {
-  return {
-    name: 'force-plugin',
-
-    transform(code, id) {
-      if (id.endsWith('.test.ts')) {
-        return `// import tgpu from 'typegpu';\n${code}`;
-      }
-    },
-  };
-}
-
 export default defineConfig({
-  plugins: [forceTgpuPlugin(), typegpu() as PluginOption],
+  plugins: [typegpu({ include: [/.*\.test\.ts/] }) as PluginOption],
   test: {
     name: 'typegpu',
     environment: 'jsdom',
