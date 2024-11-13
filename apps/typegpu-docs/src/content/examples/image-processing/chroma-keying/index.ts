@@ -1,15 +1,86 @@
-import {
-  addSliderPlumParameter,
-  onCleanup,
-  onFrame,
-} from '@typegpu/example-toolkit';
-import { f32, vec2f, vec3f } from 'typegpu/data';
-import tgpu, { asUniform, builtin, wgsl } from 'typegpu/experimental';
+import { onCleanup, onFrame } from '@typegpu/example-toolkit';
+import { f32, vec3f } from 'typegpu/data';
+import tgpu from 'typegpu/experimental';
+
+const layout = tgpu.bindGroupLayout({
+  inputTexture: { externalTexture: {} },
+  sampling: { sampler: 'filtering' },
+  color: { uniform: vec3f },
+  threshold: { uniform: f32 },
+});
+
+const shaderCode = /* wgsl */ `
+
+struct VertexOutput {
+  @builtin(position) position: vec4f,
+  @location(0) uv: vec2f,
+};
+
+@group(0) @binding(0) var inputTexture: texture_external;
+@group(0) @binding(1) var sampling: sampler;
+@group(0) @binding(2) var<uniform> color: vec3f;
+@group(0) @binding(3) var<uniform> threshold: f32;
+
+
+@vertex
+fn main_vert(@builtin(vertex_index) idx: u32) -> VertexOutput {
+  const pos = array(
+    vec2( 1.0,  1.0),
+    vec2( 1.0, -1.0),
+    vec2(-1.0, -1.0),
+    vec2( 1.0,  1.0),
+    vec2(-1.0, -1.0),
+    vec2(-1.0,  1.0),
+  );
+
+  const uv = array(
+    vec2(1.0, 0.0),
+    vec2(1.0, 1.0),
+    vec2(0.0, 1.0),
+    vec2(1.0, 0.0),
+    vec2(0.0, 1.0),
+    vec2(0.0, 0.0),
+  );
+
+  var output: VertexOutput;
+  output.position = vec4(pos[idx], 0.0, 1.0);
+  output.uv = uv[idx];
+  return output;
+}
+
+const rgb_to_ycbcr_matrix = mat3x3f(
+  0.299,     0.587,     0.114,
+ -0.168736, -0.331264,  0.5,
+  0.5,      -0.418688, -0.081312,
+);
+
+fn rgb_to_ycbcr(rgb: vec3f) -> vec3f {
+ return rgb * rgb_to_ycbcr_matrix;
+}
+
+@fragment
+fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
+  var col = textureSampleBaseClampToEdge(inputTexture, sampling, uv);
+
+  let ycbcr = col.rgb * rgb_to_ycbcr_matrix;
+  let colycbcr = color * rgb_to_ycbcr_matrix;
+
+  let crDiff = abs(ycbcr.g - colycbcr.g);
+  let cbDiff = abs(ycbcr.b - colycbcr.b);
+  let distance = length(vec2f(crDiff, cbDiff));
+
+  if (distance < pow(threshold, 2)) {
+    col = vec4f();
+  }
+
+  return col;
+}
+
+`;
 
 const width = 500;
 const height = 375;
 
-const table = document.querySelector('.rgb') as HTMLDivElement;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const video = document.querySelector('video') as HTMLVideoElement;
 
@@ -26,12 +97,13 @@ if (navigator.mediaDevices.getUserMedia) {
 }
 
 const root = await tgpu.init();
+const device = root.device;
 
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 context.configure({
-  device: root.device,
+  device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
@@ -50,142 +122,33 @@ const mediaProcessor = new MediaStreamTrackProcessor({
 });
 const reader = mediaProcessor.readable.getReader();
 
-const thresholdPlum = addSliderPlumParameter('threshold', 0.5, {
-  min: 0.0,
-  max: 1.0,
-  step: 0.01,
-});
-
 const thresholdBuffer = root
-  .createBuffer(f32, thresholdPlum)
+  .createBuffer(f32, 0.5)
   .$name('threshold')
   .$usage('uniform');
 
 const colorBuffer = root
   .createBuffer(vec3f, vec3f(0, 1.0, 0))
-  .$name('colorBuffer')
+  .$name('color')
   .$usage('uniform');
 
-const sampler = wgsl.sampler({
+const sampler = device.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
 
-const externalTexture = wgsl.textureExternal();
-
-const resultTexture = wgsl
-  .texture({
-    size: {
-      width,
-      height,
-    },
-    format: 'rgba8unorm',
-  })
-  .$allowSampled()
-  .$allowStorage();
-
-const rgbToYcbcrMatrix = wgsl.constant(`mat3x3f(
-   0.299,     0.587,     0.114,
-  -0.168736, -0.331264,  0.5,
-   0.5,      -0.418688, -0.081312,
-)`);
-
-const rgbToYcbcr = wgsl.fn`(rgb: vec3f) -> vec3f {
-  return rgb * ${rgbToYcbcrMatrix};
-}`;
-
-const computeProgram = root.makeComputePipeline({
-  code: wgsl`
-    let coords = vec2u(${builtin.globalInvocationId}.xy);
-    if (coords.x >= ${width} || coords.y >= ${height}) {
-      return;
-    }
-    let xyAsUv = vec2f(coords) / vec2f(${width}, ${height});
-    var col = textureSampleBaseClampToEdge(${externalTexture}, ${sampler}, xyAsUv);
-
-    let ycbcr = ${rgbToYcbcr}(col.rgb);
-    let colycbcr = ${rgbToYcbcr}(${asUniform(colorBuffer)});
-
-    let crDiff = abs(ycbcr.g - colycbcr.g);
-    let cbDiff = abs(ycbcr.b - colycbcr.b);
-    let distance = length(vec2f(crDiff, cbDiff));
-
-    let threshold = ${asUniform(thresholdBuffer)};
-
-    if (distance < pow(threshold, 2)) {
-      col = vec4f();
-    }
-
-    textureStore(
-      ${resultTexture.asStorage({
-        type: 'texture_storage_2d',
-        access: 'write',
-      })},
-      coords,
-      col,
-    );
-  `,
-  workgroupSize: [8, 8],
-});
-
-const renderProgram = root.makeRenderPipeline({
+const shaderModule = device.createShaderModule({ code: shaderCode });
+const renderPipeline = device.createRenderPipeline({
+  layout: device.createPipelineLayout({
+    bindGroupLayouts: [root.unwrap(layout)],
+  }),
   vertex: {
-    code: wgsl`
-      const pos = array(
-        vec2( 1.0,  1.0),
-        vec2( 1.0, -1.0),
-        vec2(-1.0, -1.0),
-        vec2( 1.0,  1.0),
-        vec2(-1.0, -1.0),
-        vec2(-1.0,  1.0),
-      );
-
-      const uv = array(
-        vec2(1.0, 0.0),
-        vec2(1.0, 1.0),
-        vec2(0.0, 1.0),
-        vec2(1.0, 0.0),
-        vec2(0.0, 1.0),
-        vec2(0.0, 0.0),
-      );
-
-      let position = vec4(pos[${builtin.vertexIndex}], 0.0, 1.0);
-      let fragUV = uv[${builtin.vertexIndex}];
-    `,
-    output: {
-      [builtin.position.s]: 'position',
-      fragUV: vec2f,
-    },
+    module: shaderModule,
   },
   fragment: {
-    code: wgsl`
-      return textureSampleBaseClampToEdge(
-        ${resultTexture.asSampled({
-          type: 'texture_2d',
-          dataType: f32,
-        })},
-        ${sampler},
-        fragUV
-      );
-    `,
-    target: [
-      {
-        format: presentationFormat,
-      },
-    ],
+    module: shaderModule,
+    targets: [{ format: presentationFormat }],
   },
-  primitive: {
-    topology: 'triangle-list',
-  },
-});
-
-video.addEventListener('click', (event) => {
-  const { offsetX: x, offsetY: y } = event;
-  samplingContext.drawImage(video, 0, 0, width, height);
-
-  const [r, g, b] = samplingContext.getImageData(x, y, 1, 1).data;
-  table.innerText = `R: ${r} G: ${g} B: ${b}`;
-  colorBuffer.write(vec3f(r / 255, g / 255, b / 255));
 });
 
 async function getFrame() {
@@ -194,29 +157,44 @@ async function getFrame() {
   return frame;
 }
 
+const renderPassDescriptor: GPURenderPassDescriptor = {
+  colorAttachments: [
+    {
+      view: undefined as unknown as GPUTextureView,
+      clearValue: [1, 1, 1, 1],
+      loadOp: 'clear' as const,
+      storeOp: 'store' as const,
+    },
+  ],
+};
+
 async function drawFrame() {
   const frame = await getFrame();
-  root.setSource(externalTexture, frame);
 
-  computeProgram.execute({
-    workgroups: [Math.ceil(width / 8), Math.ceil(height / 8), 1],
-  });
+  // Updating the target render texture
+  (
+    renderPassDescriptor.colorAttachments as [GPURenderPassColorAttachment]
+  )[0].view = context.getCurrentTexture().createView();
 
-  renderProgram.execute({
-    colorAttachments: [
-      {
-        view: context.getCurrentTexture().createView(),
-        clearValue: [0, 0, 0, 0],
-        loadOp: 'clear',
-        storeOp: 'store',
-      },
-    ],
+  const encoder = device.createCommandEncoder();
 
-    vertexCount: 6,
-  });
+  const pass = encoder.beginRenderPass(renderPassDescriptor);
+  pass.setPipeline(renderPipeline);
+  pass.setBindGroup(
+    0,
+    root.unwrap(
+      layout.populate({
+        color: colorBuffer,
+        threshold: thresholdBuffer,
+        inputTexture: device.importExternalTexture({ source: frame }),
+        sampling: sampler,
+      }),
+    ),
+  );
+  pass.draw(6);
+  pass.end();
 
-  root.flush();
-
+  device.queue.submit([encoder.finish()]);
   frame.close();
 }
 
@@ -234,3 +212,34 @@ onCleanup(() => {
   }
   reader.cancel();
 });
+
+// #region UI
+
+const table = document.querySelector('.rgb') as HTMLDivElement;
+
+video.addEventListener('click', (event) => {
+  const { offsetX: x, offsetY: y } = event;
+
+  // Sampling the video frame
+  samplingContext.drawImage(video, 0, 0, width, height);
+  const [r, g, b] = samplingContext.getImageData(x, y, 1, 1).data;
+
+  table.innerText = `R: ${r} G: ${g} B: ${b}`;
+  colorBuffer.write(vec3f(r / 255, g / 255, b / 255));
+});
+
+// #endregion
+
+// #region Example Controls
+
+export const controls = {
+  threshold: {
+    initial: 0.1,
+    min: 0,
+    max: 1,
+    step: 0.01,
+    onSliderChange: (value: number) => thresholdBuffer.write(value),
+  },
+};
+
+// #endregion

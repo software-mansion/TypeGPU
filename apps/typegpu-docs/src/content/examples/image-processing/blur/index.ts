@@ -98,7 +98,7 @@ const renderShaderCode = /* wgsl */ `
 
 struct VertexOutput {
   @builtin(position) position: vec4f,
-  @location(0) frag_uv: vec2f,
+  @location(0) uv: vec2f,
 };
 
 @group(0) @binding(0) var u_texture: texture_2d<f32>;
@@ -126,13 +126,13 @@ fn main_vert(@builtin(vertex_index) index: u32) -> VertexOutput {
 
   var output: VertexOutput;
   output.position = vec4(pos[index], 0.0, 1.0);
-  output.frag_uv = uv[index];
+  output.uv = uv[index];
   return output;
 }
 
 @fragment
-fn main_frag(@location(0) frag_uv: vec2f) -> @location(0) vec4f {
-  return textureSample(u_texture, u_sampler, frag_uv);
+fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
+  return textureSample(u_texture, u_sampler, uv);
 }
 
 `;
