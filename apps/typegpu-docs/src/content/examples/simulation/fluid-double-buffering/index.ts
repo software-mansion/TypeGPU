@@ -1,9 +1,5 @@
 // -- Hooks into the example environment
-import {
-  addSliderPlumParameter,
-  onCleanup,
-  onFrame,
-} from '@typegpu/example-toolkit';
+import { addSliderPlumParameter, onFrame } from '@typegpu/example-toolkit';
 // --
 
 import { JitTranspiler } from '@typegpu/jit';
@@ -741,6 +737,7 @@ onFrame((deltaTime) => {
   }
 });
 
-onCleanup(() => {
+export function onCleanup() {
   root.destroy();
-});
+  root.device.destroy();
+}

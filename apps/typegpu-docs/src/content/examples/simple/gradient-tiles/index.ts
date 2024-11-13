@@ -130,7 +130,7 @@ setTimeout(() => {
   draw(spanX, spanY);
 }, 100);
 
-// #region Example Controls
+// #region Example controls and cleanup
 
 export const controls = {
   'x span ↔️': {
@@ -155,5 +155,10 @@ export const controls = {
     },
   },
 };
+
+export function onCleanup() {
+  root.destroy();
+  device.destroy();
+}
 
 // #endregion

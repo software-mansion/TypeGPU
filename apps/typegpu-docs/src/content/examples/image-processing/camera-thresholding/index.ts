@@ -1,5 +1,5 @@
 // -- Hooks into the example environment
-import { onCleanup, onFrame } from '@typegpu/example-toolkit';
+import { onFrame } from '@typegpu/example-toolkit';
 // --
 
 import { f32, vec2f } from 'typegpu/data';
@@ -124,7 +124,7 @@ onFrame(() => {
   root.flush();
 });
 
-onCleanup(() => {
+export function onCleanup() {
   if (video.srcObject) {
     for (const track of (video.srcObject as MediaStream).getTracks()) {
       track.stop();
@@ -132,6 +132,7 @@ onCleanup(() => {
   }
 
   root.destroy();
-});
+  root.device.destroy();
+}
 
 // #endregion

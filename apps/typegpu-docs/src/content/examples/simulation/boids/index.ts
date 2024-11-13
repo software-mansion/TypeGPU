@@ -356,7 +356,13 @@ const renderPassDescriptor: GPURenderPassDescriptor = {
 };
 
 let even = false;
+let running = true;
+
 function frame() {
+  if (!running) {
+    return;
+  }
+
   even = !even;
   (
     renderPassDescriptor.colorAttachments as [GPURenderPassColorAttachment]
@@ -383,7 +389,7 @@ function frame() {
 
 frame();
 
-// #region Example Controls
+// #region Example controls and cleanup
 
 export const controls = {
   Randomize: {
@@ -426,5 +432,11 @@ export const controls = {
     onButtonClick: () => updateColorPreset('hotcold'),
   },
 };
+
+export function onCleanup() {
+  running = false;
+  root.destroy();
+  root.device.destroy();
+}
 
 // #endregion

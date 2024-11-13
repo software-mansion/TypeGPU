@@ -7,8 +7,6 @@ declare module '@typegpu/example-toolkit' {
     options?: { min?: number; max?: number; step?: number },
   ): TgpuPlum<number>;
 
-  export function onCleanup(callback: () => unknown): void;
-
   export type OnFrameFn = (loop: (deltaTime: number) => unknown) => void;
 
   /**

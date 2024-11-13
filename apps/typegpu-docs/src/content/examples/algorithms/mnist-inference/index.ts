@@ -406,3 +406,12 @@ export const controls = {
 };
 
 // #endregion
+
+// #region Resource cleanup
+
+export function onCleanup() {
+  root.destroy();
+  root.device.destroy();
+}
+
+// #endregion

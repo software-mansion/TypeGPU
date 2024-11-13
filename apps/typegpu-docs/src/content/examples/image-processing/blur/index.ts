@@ -289,3 +289,8 @@ render();
 
 root.onPlumChange(filterSize, () => render());
 root.onPlumChange(iterations, () => render());
+
+export function onCleanup() {
+  root.destroy();
+  root.device.destroy();
+}

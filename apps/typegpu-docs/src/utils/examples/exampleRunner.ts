@@ -65,6 +65,7 @@ const exportedOptionsToExampleControls = () => {
         // @ts-ignore
         const code: string = state.file.code;
         const declaration = path.node.declaration;
+
         if (declaration?.type === 'VariableDeclaration') {
           const init = declaration.declarations[0].init;
           if (init) {
@@ -75,6 +76,16 @@ const exportedOptionsToExampleControls = () => {
               ),
             );
           }
+        }
+
+        if (declaration?.type === 'FunctionDeclaration') {
+          const body = declaration.body;
+          path.replaceWith(
+            template.program.ast(
+              `import { onCleanup } from '@typegpu/example-toolkit';
+              onCleanup(() => ${code.slice(body.start ?? 0, body.end ?? 0)});`,
+            ),
+          );
         }
       },
     } satisfies TraverseOptions,
@@ -241,9 +252,6 @@ export async function executeExample(
       if (moduleKey === 'typegpu/data') {
         return await import('typegpu/data');
       }
-      if (moduleKey === 'typegpu/macro') {
-        return await import('typegpu/macro');
-      }
       if (moduleKey === '@typegpu/jit') {
         return await import('@typegpu/jit');
       }
@@ -275,19 +283,7 @@ export async function executeExample(
       throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
     };
 
-    const jsCode = tsToJs(`
-      ${exampleCode}
-
-      import { onCleanup } from '@typegpu/example-toolkit';
-      onCleanup(() =>
-        if (typeof device === 'object'
-          && 'destroy' in device
-          && typeof device.destroy === 'function'
-        ) {
-          device.destroy();
-        }
-      );
-    `); // temporary solution to clean up device without using example-toolkit in the example
+    const jsCode = tsToJs(exampleCode);
 
     const transformedCode =
       Babel.transform(jsCode, {

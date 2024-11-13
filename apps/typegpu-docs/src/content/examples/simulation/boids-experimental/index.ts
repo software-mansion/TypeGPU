@@ -337,3 +337,8 @@ export const controls = {
     },
   },
 };
+
+export function onCleanup() {
+  root.destroy();
+  root.device.destroy();
+}

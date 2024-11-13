@@ -319,3 +319,8 @@ onFrame((deltaTime) => {
 
   root.flush();
 });
+
+export function onCleanup() {
+  root.destroy();
+  root.device.destroy();
+}

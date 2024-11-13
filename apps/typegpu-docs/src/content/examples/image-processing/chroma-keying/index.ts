@@ -1,8 +1,4 @@
-import {
-  addSliderPlumParameter,
-  onCleanup,
-  onFrame,
-} from '@typegpu/example-toolkit';
+import { addSliderPlumParameter, onFrame } from '@typegpu/example-toolkit';
 import { f32, vec2f, vec3f } from 'typegpu/data';
 import tgpu, { asUniform, builtin, wgsl } from 'typegpu/experimental';
 
@@ -228,9 +224,9 @@ onFrame(() => {
   drawFrame();
 });
 
-onCleanup(() => {
+export function onCleanup() {
   for (const track of stream.getTracks()) {
     track.stop();
   }
   reader.cancel();
-});
+}
