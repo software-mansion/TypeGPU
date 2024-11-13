@@ -9,8 +9,20 @@ import type {
   TgpuBufferReadonly,
   TgpuBufferUniform,
 } from './core/buffer/bufferUsage';
+import type { TgpuExternalTexture } from './core/texture/externalTexture';
+import {
+  type TgpuMutableTexture,
+  type TgpuReadonlyTexture,
+  type TgpuSampledTexture,
+  type TgpuTexture,
+  isTexture,
+} from './core/texture/texture';
+import {
+  NotSampledError,
+  isUsableAsSampled,
+} from './core/texture/usageExtension';
 import { NotUniformError } from './errors';
-import { type Storage, isUsableAsStorage } from './extension';
+import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
 import type { TgpuNamable } from './namable';
 import type { TgpuSampler } from './tgpuSampler';
 import type { AnyTgpuData, TgpuShaderStage } from './types';
@@ -179,11 +191,13 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
       : T extends TgpuLayoutSampler
         ? GPUSampler
         : T extends TgpuLayoutTexture
-          ? GPUTextureView
+          ? // TODO: Allow sampled usages here
+            GPUTextureView | TgpuTexture
           : T extends TgpuLayoutStorageTexture
-            ? GPUTextureView
+            ? // TODO: Allow storage usages here
+              GPUTextureView | TgpuTexture
             : T extends TgpuLayoutExternalTexture
-              ? GPUExternalTexture
+              ? GPUExternalTexture | TgpuExternalTexture
               : never;
 
 export type BindLayoutEntry<T extends TgpuLayoutEntry | null> =
@@ -459,8 +473,59 @@ class TgpuBindGroupImpl<
             };
           }
 
+          if ('texture' in entry) {
+            let resource: GPUTextureView;
+
+            if (isTexture(value)) {
+              if (!isUsableAsSampled(value)) {
+                throw new NotSampledError(value);
+              }
+
+              resource = unwrapper.unwrap(
+                value.asSampled() as TgpuSampledTexture,
+              );
+            } else {
+              resource = value as GPUTextureView;
+            }
+
+            return {
+              binding: idx,
+              resource,
+            };
+          }
+
+          if ('storageTexture' in entry) {
+            let resource: GPUTextureView;
+
+            if (isTexture(value)) {
+              if (!isUsableAsStorage(value)) {
+                throw new NotStorageError(value);
+              }
+
+              if (entry.access === 'readonly') {
+                resource = unwrapper.unwrap(
+                  value.asReadonly() as TgpuReadonlyTexture,
+                );
+              } else if (entry.access === 'mutable') {
+                resource = unwrapper.unwrap(
+                  value.asMutable() as TgpuMutableTexture,
+                );
+              } else {
+                resource = unwrapper.unwrap(
+                  value.asReadonly() as TgpuReadonlyTexture,
+                );
+              }
+            } else {
+              resource = value as GPUTextureView;
+            }
+
+            return {
+              binding: idx,
+              resource,
+            };
+          }
+
           if (
-            'texture' in entry ||
             'storageTexture' in entry ||
             'externalTexture' in entry ||
             'sampler' in entry

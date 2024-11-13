@@ -5,10 +5,6 @@ import type { JitTranspiler } from '../../jitTranspiler';
 import type { PlumListener } from '../../plumStore';
 import type { TgpuSettable } from '../../settableTrait';
 import type {
-  TgpuBindGroup,
-  TgpuBindGroupLayout,
-} from '../../tgpuBindGroupLayout';
-import type {
   ExtractPlumValue,
   TgpuPlum,
   Unsubscribe,
@@ -24,13 +20,7 @@ import type { Unwrapper } from '../../unwrapper';
 import type { Mutable, OmitProps, Prettify } from '../../utilityTypes';
 import type { TgpuBuffer } from '../buffer/buffer';
 import type { TgpuExternalTexture } from '../texture/externalTexture';
-import type {
-  TgpuMutableTexture,
-  TgpuReadonlyTexture,
-  TgpuSampledTexture,
-  TgpuTexture,
-  TgpuWriteonlyTexture,
-} from '../texture/texture';
+import type { TgpuTexture } from '../texture/texture';
 
 // ----------
 // Public API
@@ -187,19 +177,6 @@ export interface TgpuRoot extends Unwrapper {
   }): TgpuExternalTexture<{
     colorSpace: PredefinedColorSpace extends TColorSpace ? 'srgb' : TColorSpace;
   }>;
-
-  unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
-  unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
-  unwrap(resource: TgpuBindGroup): GPUBindGroup;
-  unwrap(resource: TgpuTexture): GPUTexture;
-  unwrap(
-    resource:
-      | TgpuReadonlyTexture
-      | TgpuWriteonlyTexture
-      | TgpuMutableTexture
-      | TgpuSampledTexture,
-  ): GPUTextureView;
-  unwrap(resource: TgpuExternalTexture): GPUExternalTexture;
 
   destroy(): void;
 }

@@ -94,25 +94,11 @@ export class RecursiveDataTypeError extends Error {
 export class NotUniformError extends Error {
   constructor(value: TgpuBuffer<AnyTgpuData>) {
     super(
-      `Buffer '${value.label ?? '<unnamed>'}' is not bindable as a uniform. Use .$usage(tgu.Uniform) to allow it.`,
+      `Buffer '${value.label ?? '<unnamed>'}' is not bindable as a uniform. Use .$usage('uniform') to allow it.`,
     );
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, NotUniformError.prototype);
-  }
-}
-
-/**
- * @category Errors
- */
-export class NotStorageError extends Error {
-  constructor(value: TgpuBuffer<AnyTgpuData>) {
-    super(
-      `Buffer '${value.label ?? '<unnamed>'}' is not bindable as storage. Use .$usage(tgu.Storage) to allow it.`,
-    );
-
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, NotStorageError.prototype);
   }
 }
 
