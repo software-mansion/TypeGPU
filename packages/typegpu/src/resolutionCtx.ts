@@ -1,37 +1,22 @@
 import type { Block } from 'tinyest';
 import type { TgpuFnShellBase } from './core/function/fnCore';
-import {
-  isSampledTextureView,
-  isStorageTextureView,
-} from './core/texture/texture';
 import { MissingSlotValueError, ResolutionError, invariant } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
 import { generateFunction } from './smol';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout';
-import { code } from './tgpuCode';
 import type {
   AnyTgpuData,
-  BufferUsage,
   Eventual,
   ResolutionCtx,
   Resource,
   SlotValuePair,
-  TgpuIdentifier,
-  TgpuRenderResource,
   TgpuResolvable,
   TgpuSlot,
   Wgsl,
 } from './types';
-import {
-  UnknownData,
-  isDepthTextureType,
-  isExternalTextureType,
-  isResolvable,
-  isSamplerType,
-  isSlot,
-} from './types';
+import { UnknownData, isResolvable, isSlot } from './types';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -50,12 +35,6 @@ export type ResolutionCtxImplOptions = {
 };
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
-
-const usageToVarTemplateMap: Record<Exclude<BufferUsage, 'vertex'>, string> = {
-  uniform: 'uniform',
-  mutable: 'storage, read_write',
-  readonly: 'storage, read',
-};
 
 class SharedResolutionState {
   private readonly _usedBuiltins = new Set<symbol>();
@@ -361,12 +340,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this._shared.addDeclaration(this.resolve(declaration));
   }
 
-  private _reserveBindingEntry(bound: object) {
-    const nextIdx = this._nextFreeCatchallBindingIdx++;
-    this._boundToIndexMap.set(bound, nextIdx);
-    return nextIdx;
-  }
-
   allocateLayoutEntry(layout: TgpuBindGroupLayout): string {
     const memoMap = this._bindGroupLayoutsToPlaceholderMap;
     let placeholderKey = memoMap.get(layout);
@@ -387,41 +360,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       group: CATCHALL_BIND_GROUP_IDX_MARKER,
       binding: nextIdx,
     };
-  }
-
-  registerRenderResource(
-    resource: TgpuRenderResource,
-    identifier: TgpuIdentifier,
-  ): void {
-    const group = CATCHALL_BIND_GROUP_IDX_MARKER;
-    const idx = this._reserveBindingEntry(resource);
-
-    if (
-      isSamplerType(resource.type) ||
-      isExternalTextureType(resource.type) ||
-      isDepthTextureType(resource.type)
-    ) {
-      this.addDeclaration(
-        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type};`,
-      );
-      return;
-    }
-
-    if (isStorageTextureView(resource)) {
-      this.addDeclaration(
-        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.format}, ${resource.access}>;`,
-      );
-      return;
-    }
-
-    if (isSampledTextureView(resource)) {
-      this.addDeclaration(
-        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.channelDataType}>;`,
-      );
-      return;
-    }
-
-    throw new Error(`Unsupported resource type: ${resource.type}`);
   }
 
   addBuiltin(builtin: symbol): void {

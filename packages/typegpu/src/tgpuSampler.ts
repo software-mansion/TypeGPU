@@ -1,12 +1,10 @@
 import type { TgpuNamable } from './namable';
+import { code } from './tgpuCode';
 import { identifier } from './tgpuIdentifier';
-import type {
-  ResolutionCtx,
-  TgpuRenderResource,
-  TgpuSamplerType,
-} from './types';
+import type { ResolutionCtx } from './types';
 
-export interface TgpuSampler extends TgpuRenderResource, TgpuNamable {
+export interface TgpuSampler extends TgpuNamable {
+  readonly resourceType: 'sampler';
   readonly descriptor: GPUSamplerDescriptor;
 }
 
@@ -15,8 +13,10 @@ export function sampler(descriptor: GPUSamplerDescriptor): TgpuSampler {
 }
 
 class TgpuSamplerImpl implements TgpuSampler {
+  public readonly resourceType = 'sampler';
+
   private _label: string | undefined;
-  private _type: TgpuSamplerType;
+  private readonly _type: string;
 
   constructor(public readonly descriptor: GPUSamplerDescriptor) {
     if (descriptor.compare === undefined) this._type = 'sampler';
@@ -27,10 +27,6 @@ class TgpuSamplerImpl implements TgpuSampler {
     return this._label;
   }
 
-  get type() {
-    return this._type;
-  }
-
   $name(label: string) {
     this._label = label;
     return this;
@@ -38,13 +34,16 @@ class TgpuSamplerImpl implements TgpuSampler {
 
   resolve(ctx: ResolutionCtx): string {
     const ident = identifier().$name(this._label);
-    ctx.registerRenderResource(this, ident);
+    const { group, binding } = ctx.allocateFixedEntry(this);
+
+    ctx.addDeclaration(
+      code`@group(${group}) @binding(${binding}) var ${ident}: ${this._type};`,
+    );
+
     return ctx.resolve(ident);
   }
 }
 
-export function isSampler(
-  resource: TgpuRenderResource,
-): resource is TgpuSampler {
-  return resource.type === 'sampler' || resource.type === 'sampler_comparison';
+export function isSampler(resource: unknown): resource is TgpuSampler {
+  return (resource as TgpuSampler)?.resourceType === 'sampler';
 }

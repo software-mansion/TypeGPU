@@ -42,10 +42,6 @@ export interface ResolutionCtx {
     group: string;
     binding: number;
   };
-  registerRenderResource(
-    resource: TgpuRenderResource,
-    identifier: TgpuIdentifier,
-  ): void;
   addBuiltin(builtin: symbol): void;
   nameFor(token: TgpuResolvable): string;
   /**
@@ -118,73 +114,8 @@ export interface TgpuResolvableSlot<T extends Wgsl>
 
 export type SlotValuePair<T> = [TgpuSlot<T>, T];
 
-export type TgpuSamplerType = 'sampler' | 'sampler_comparison';
-export type TgpuTypedTextureType =
-  | 'texture_1d'
-  | 'texture_2d'
-  | 'texture_2d_array'
-  | 'texture_3d'
-  | 'texture_cube'
-  | 'texture_cube_array'
-  | 'texture_multisampled_2d';
-export type TgpuDepthTextureType =
-  | 'texture_depth_2d'
-  | 'texture_depth_2d_array'
-  | 'texture_depth_cube'
-  | 'texture_depth_cube_array'
-  | 'texture_depth_multisampled_2d';
-export type TgpuExternalTextureType = 'texture_external';
-
-export type TgpuRenderResourceType =
-  | TgpuSamplerType
-  | TgpuTypedTextureType
-  | TgpuDepthTextureType
-  | TgpuExternalTextureType;
-
-export interface TgpuRenderResource extends TgpuResolvable {
-  readonly type: TgpuRenderResourceType;
-}
-
 export type BindableBufferUsage = 'uniform' | 'readonly' | 'mutable';
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
-
-export function isSamplerType(
-  type: TgpuRenderResourceType,
-): type is TgpuSamplerType {
-  return type === 'sampler' || type === 'sampler_comparison';
-}
-
-export function isTypedTextureType(
-  type: TgpuRenderResourceType,
-): type is TgpuTypedTextureType {
-  return [
-    'texture_1d',
-    'texture_2d',
-    'texture_2d_array',
-    'texture_3d',
-    'texture_cube',
-    'texture_cube_array',
-    'texture_multisampled_2d',
-  ].includes(type);
-}
-
-export function isDepthTextureType(
-  type: TgpuRenderResourceType,
-): type is TgpuDepthTextureType {
-  return [
-    'texture_depth_2d',
-    'texture_depth_2d_array',
-    'texture_depth_cube',
-    'texture_depth_cube_array',
-    'texture_depth_multisampled_2d',
-  ].includes(type);
-}
-
-export function isExternalTextureType(
-  type: TgpuRenderResourceType,
-): type is TgpuExternalTextureType {
-  return type === 'texture_external';
-}
 
 export type ValueOf<T> = T extends TgpuSlot<infer I>
   ? ValueOf<I>
