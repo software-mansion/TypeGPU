@@ -278,8 +278,9 @@ function run() {
 
   if (!canvasData.some((value) => value)) {
     context.font = '40px Aeonik';
-    context.fillStyle = 'black';
-    context.fillText('draw here 👇', 100, 150);
+    context.textAlign = 'center';
+    context.fillStyle = '#000';
+    context.fillText('draw here 🖌️', canvas.width / 2, canvas.height / 2);
   }
   requestAnimationFrame(run);
 }
