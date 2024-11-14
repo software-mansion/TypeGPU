@@ -30,12 +30,5 @@ export default defineConfig({
   plugins: [nearleyRedirectPlugin()],
   test: {
     name: 'typegpu-wgsl-parser',
-    environment: 'jsdom',
-    exclude: ['./**/node_modules'],
-    reporters: 'basic',
-    coverage: {
-      reporter: ['text', 'json', 'html', 'text-summary'],
-      reportsDirectory: './coverage/',
-    },
   },
 });
