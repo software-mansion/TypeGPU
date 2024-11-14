@@ -33,8 +33,7 @@ export type ChannelData = U32 | I32 | F32;
 export type TexelData = Vec4u | Vec4i | Vec4f;
 
 /**
- * @param TFormat used to track the texture's default format. Will be inherited by any view created without an explicit format override.
- * @param TViewFormats additional formats that views can choose.
+ * @param TProps all properties that distinguish this texture apart from other textures on the type level.
  */
 export interface TgpuTexture<TProps extends TextureProps = TextureProps>
   extends TgpuNamable {
@@ -399,7 +398,10 @@ class TgpuTextureImpl implements TgpuTexture, TgpuTexture_INTERNAL {
 
     const format = params?.format ?? this.props.format;
     const type = texelFormatToDataType[format as keyof TexelFormatToDataType];
-    invariant(!!type, `Unsupported storage texture format: ${format}`);
+
+    if (!type) {
+      throw new Error(`Unsupported storage texture format: ${format}`);
+    }
 
     return new TgpuBindableSampledTextureImpl(params, 'readonly', this);
   }
