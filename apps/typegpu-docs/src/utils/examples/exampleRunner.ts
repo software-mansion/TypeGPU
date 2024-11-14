@@ -1,7 +1,6 @@
 import * as Babel from '@babel/standalone';
 import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
-import type { OnFrameFn } from '@typegpu/example-toolkit';
 import { filter, isNonNull, map, pipe } from 'remeda';
 import { wgsl } from 'typegpu/experimental';
 import { transpileModule } from 'typescript';
@@ -65,6 +64,7 @@ const exportedOptionsToExampleControls = () => {
         // @ts-ignore
         const code: string = state.file.code;
         const declaration = path.node.declaration;
+
         if (declaration?.type === 'VariableDeclaration') {
           const init = declaration.declarations[0].init;
           if (init) {
@@ -75,6 +75,16 @@ const exportedOptionsToExampleControls = () => {
               ),
             );
           }
+        }
+
+        if (declaration?.type === 'FunctionDeclaration') {
+          const body = declaration.body;
+          path.replaceWith(
+            template.program.ast(
+              `import { onCleanup } from '@typegpu/example-toolkit';
+              onCleanup(() => ${code.slice(body.start ?? 0, body.end ?? 0)});`,
+            ),
+          );
         }
       },
     } satisfies TraverseOptions,
@@ -182,6 +192,7 @@ export async function executeExample(
     }
   }
 
+  // TODO: remove after merging textures
   function addSliderPlumParameter(
     label: string,
     initial: number,
@@ -241,9 +252,6 @@ export async function executeExample(
       if (moduleKey === 'typegpu/data') {
         return await import('typegpu/data');
       }
-      if (moduleKey === 'typegpu/macro') {
-        return await import('typegpu/macro');
-      }
       if (moduleKey === '@typegpu/jit') {
         return await import('@typegpu/jit');
       }
@@ -252,42 +260,15 @@ export async function executeExample(
           onCleanup(callback: () => unknown) {
             cleanupCallbacks.push(callback);
           },
-          onFrame: ((loop: (deltaTime: number) => unknown) => {
-            let lastTime = Date.now();
-
-            let handle = 0;
-            const runner = () => {
-              const now = Date.now();
-              const dt = now - lastTime;
-              lastTime = now;
-              loop(dt);
-
-              handle = requestAnimationFrame(runner);
-            };
-            handle = requestAnimationFrame(runner);
-
-            cleanupCallbacks.push(() => cancelAnimationFrame(handle));
-          }) satisfies OnFrameFn,
           addParameters,
+          // TODO: remove after merging textures
           addSliderPlumParameter,
         };
       }
       throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
     };
 
-    const jsCode = tsToJs(`
-      ${exampleCode}
-
-      import { onCleanup } from '@typegpu/example-toolkit';
-      onCleanup(() =>
-        if (typeof device === 'object'
-          && 'destroy' in device
-          && typeof device.destroy === 'function'
-        ) {
-          device.destroy();
-        }
-      );
-    `); // temporary solution to clean up device without using example-toolkit in the example
+    const jsCode = tsToJs(exampleCode);
 
     const transformedCode =
       Babel.transform(jsCode, {

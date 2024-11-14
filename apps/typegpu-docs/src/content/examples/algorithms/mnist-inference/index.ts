@@ -253,7 +253,13 @@ function resetDrawing() {
   }
 }
 
+let disposed = false;
+
 function run() {
+  if (disposed) {
+    return;
+  }
+
   const scale = canvas.width / SIZE;
 
   context.clearRect(0, 0, canvas.width, canvas.height);
@@ -404,5 +410,15 @@ export const controls = {
     onButtonClick: resetDrawing,
   },
 };
+
+// #endregion
+
+// #region Resource cleanup
+
+export function onCleanup() {
+  disposed = true;
+  root.destroy();
+  root.device.destroy();
+}
 
 // #endregion

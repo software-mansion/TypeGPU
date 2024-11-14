@@ -1,8 +1,4 @@
-import {
-  addSliderPlumParameter,
-  onCleanup,
-  onFrame,
-} from '@typegpu/example-toolkit';
+import { addSliderPlumParameter } from '@typegpu/example-toolkit';
 import { f32, vec2f, vec3f } from 'typegpu/data';
 import tgpu, { asUniform, builtin, wgsl } from 'typegpu/experimental';
 
@@ -190,12 +186,17 @@ video.addEventListener('click', (event) => {
 
 async function getFrame() {
   const { value: frame } = await reader.read();
-  if (!frame) throw new Error('No frame');
+  if (!frame && !disposed) {
+    throw new Error('No frame');
+  }
   return frame;
 }
 
 async function drawFrame() {
   const frame = await getFrame();
+  if (!frame) {
+    return;
+  }
   root.setSource(externalTexture, frame);
 
   computeProgram.execute({
@@ -220,17 +221,28 @@ async function drawFrame() {
   frame.close();
 }
 
-onFrame(() => {
-  if (!(video.currentTime > 0)) {
+let disposed = false;
+
+function run() {
+  if (disposed) {
     return;
   }
 
-  drawFrame();
-});
+  if (video.currentTime > 0) {
+    drawFrame();
+  }
 
-onCleanup(() => {
+  requestAnimationFrame(run);
+}
+
+run();
+
+export function onCleanup() {
+  disposed = true;
+
   for (const track of stream.getTracks()) {
     track.stop();
   }
+
   reader.cancel();
-});
+}
