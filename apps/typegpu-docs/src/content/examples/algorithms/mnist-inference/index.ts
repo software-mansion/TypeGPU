@@ -242,11 +242,13 @@ const bars = Array.from(document.querySelectorAll('.bar')) as HTMLDivElement[];
 const uiState = {
   isDrawing: false,
   lastPos: null as { x: number; y: number } | null,
+  isBlank: true,
 };
 
 function resetDrawing() {
   uiState.lastPos = null;
   canvasData.fill(0);
+  uiState.isBlank = true;
 
   for (const bar of bars) {
     bar.style.setProperty('--bar-width', '0');
@@ -276,7 +278,7 @@ function run() {
     }
   }
 
-  if (!canvasData.some((value) => value)) {
+  if (uiState.isBlank) {
     context.font = '40px Aeonik';
     context.textAlign = 'center';
     context.fillStyle = '#000';
@@ -329,6 +331,8 @@ async function handleDrawing(x: number, y: number): Promise<void> {
   if (!uiState.lastPos) {
     uiState.lastPos = { x, y };
   }
+
+  uiState.isBlank = false;
 
   if (x === uiState.lastPos.x && y === uiState.lastPos.y) {
     return;
