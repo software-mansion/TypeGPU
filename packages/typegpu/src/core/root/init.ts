@@ -2,7 +2,11 @@ import type { Parsed } from 'typed-binary';
 
 import type { JitTranspiler } from '../../jitTranspiler';
 import { WeakMemo } from '../../memo';
-import { type NameRegistry, RandomNameRegistry } from '../../nameRegistry';
+import {
+  type NameRegistry,
+  RandomNameRegistry,
+  StrictNameRegistry,
+} from '../../nameRegistry';
 import { type PlumListener, PlumStore } from '../../plumStore';
 import type { TgpuSettable } from '../../settableTrait';
 import type {
@@ -342,7 +346,8 @@ interface PipelineExecutor {
 export type InitOptions = {
   adapter?: GPURequestAdapterOptions | undefined;
   device?: GPUDeviceDescriptor | undefined;
-  unstable_nameRegistry?: NameRegistry | undefined;
+  /** @default 'random' */
+  unstable_names?: 'random' | 'strict' | undefined;
   unstable_jitTranspiler?: JitTranspiler | undefined;
 };
 
@@ -351,7 +356,8 @@ export type InitOptions = {
  */
 export type InitFromDeviceOptions = {
   device: GPUDevice;
-  unstable_nameRegistry?: NameRegistry | undefined;
+  /** @default 'random' */
+  unstable_names?: 'random' | 'strict' | undefined;
   unstable_jitTranspiler?: JitTranspiler | undefined;
 };
 
@@ -376,20 +382,27 @@ export type InitFromDeviceOptions = {
 export async function init(
   options?: InitOptions,
 ): Promise<ExperimentalTgpuRoot> {
+  const {
+    adapter: adapterOpt,
+    device: deviceOpt,
+    unstable_names: names = 'random',
+    unstable_jitTranspiler: jitTranspiler,
+  } = options ?? {};
+
   if (!navigator.gpu) {
     throw new Error('WebGPU is not supported by this browser.');
   }
 
-  const adapter = await navigator.gpu.requestAdapter(options?.adapter);
+  const adapter = await navigator.gpu.requestAdapter(adapterOpt);
 
   if (!adapter) {
     throw new Error('Could not find a compatible GPU');
   }
 
   return new TgpuRootImpl(
-    await adapter.requestDevice(options?.device),
-    options?.unstable_nameRegistry ?? new RandomNameRegistry(),
-    options?.unstable_jitTranspiler,
+    await adapter.requestDevice(deviceOpt),
+    names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
+    jitTranspiler,
   );
 }
 
@@ -405,9 +418,15 @@ export async function init(
 export function initFromDevice(
   options: InitFromDeviceOptions,
 ): ExperimentalTgpuRoot {
+  const {
+    device,
+    unstable_names: names = 'random',
+    unstable_jitTranspiler: jitTranspiler,
+  } = options ?? {};
+
   return new TgpuRootImpl(
-    options.device,
-    options.unstable_nameRegistry ?? new RandomNameRegistry(),
-    options.unstable_jitTranspiler,
+    device,
+    names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
+    jitTranspiler,
   );
 }
