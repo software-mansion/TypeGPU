@@ -9,7 +9,6 @@ import webgpuTypes from '@webgpu/types/dist/index.d.ts?raw';
 import type { editor } from 'monaco-editor';
 import { entries, map, pipe } from 'remeda';
 import typedBinary from 'typed-binary/dist/index.d.ts?raw';
-import toolkitTypes from '../types/example-toolkit.d.ts?raw';
 import { tsCompilerOptions } from '../utils/liveEditor/embeddedTypeScript';
 import useEvent from '../utils/useEvent';
 
@@ -60,7 +59,6 @@ function handleEditorWillMount(monaco: Monaco) {
   for (const lib of mediacaptureExtraLibs) {
     tsDefaults.addExtraLib(lib.content, lib.filename);
   }
-  tsDefaults.addExtraLib(toolkitTypes, 'example-toolkit.d.ts');
   tsDefaults.addExtraLib(typedBinary, 'typed-binary.d.ts');
   tsDefaults.addExtraLib(typegpuJitDts, 'typegpu-jit.d.ts');
 

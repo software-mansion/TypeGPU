@@ -2,7 +2,6 @@ import * as Babel from '@babel/standalone';
 import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
 import { filter, isNonNull, map, pipe } from 'remeda';
-import { wgsl } from 'typegpu/experimental';
 import { transpileModule } from 'typescript';
 import { tsCompilerOptions } from '../liveEditor/embeddedTypeScript';
 import type { ExampleControlParam } from './exampleControlAtom';
@@ -192,46 +191,6 @@ export async function executeExample(
     }
   }
 
-  // TODO: remove after merging textures
-  function addSliderPlumParameter(
-    label: string,
-    initial: number,
-    options?: { min?: number; max?: number; step?: number },
-  ) {
-    let value: string | number | boolean = initial;
-    const listeners = new Set<() => unknown>();
-
-    if (disposed) {
-      return;
-    }
-
-    controlParams.push({
-      label,
-      initial,
-      min: options?.min,
-      max: options?.max,
-      step: options?.step,
-      onSliderChange: (newValue) => {
-        value = newValue;
-        // Calling `listener` may cause more listeners to
-        // be attached, so copying.
-        for (const listener of [...listeners]) {
-          listener();
-        }
-      },
-    });
-
-    return wgsl
-      .plumFromEvent(
-        (listener) => {
-          listeners.add(listener);
-          return () => listeners.delete(listener);
-        },
-        () => value,
-      )
-      .$name(label);
-  }
-
   try {
     /**
      * Simulated imports from within the sandbox, making only a subset of
@@ -261,8 +220,6 @@ export async function executeExample(
             cleanupCallbacks.push(callback);
           },
           addParameters,
-          // TODO: remove after merging textures
-          addSliderPlumParameter,
         };
       }
       throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
