@@ -137,7 +137,8 @@ export default function typegpu(options?: TypegpuPluginOptions): Plugin {
 
               if (
                 implementation &&
-                !(implementation.type === 'TemplateLiteral')
+                !(implementation.type === 'TemplateLiteral') &&
+                !(implementation.type === 'Literal')
               ) {
                 tgslFunctionDefs.push({
                   varDecl: node,
