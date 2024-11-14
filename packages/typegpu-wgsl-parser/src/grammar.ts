@@ -105,7 +105,7 @@ export type GlobalDecl =
   | ValueDecl
   | OverrideDecl
   | FunctionDecl
-  | StructDecl
+  | StructDecl;
 
 
  export type Ident = { type: 'ident', value: string }; 
