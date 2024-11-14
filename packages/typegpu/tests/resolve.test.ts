@@ -7,7 +7,7 @@ import type { ResolutionCtx } from '../src/experimental';
 describe('tgpu resolve', () => {
   it('should resolve a string (identity)', () => {
     const mockCode = 'fn foo() { var v: Gradient; }';
-    const resolved = tgpu.resolve(mockCode);
+    const resolved = tgpu.resolve({ input: mockCode });
     expect(parse(resolved)).toEqual(parse(mockCode));
   });
 
@@ -16,7 +16,7 @@ describe('tgpu resolve', () => {
       'fn foo() { var v: Gradient; }',
       'fn bar() { var v: Particle; }',
     ];
-    const resolved = tgpu.resolve(mockCode);
+    const resolved = tgpu.resolve({ input: mockCode });
     expect(parse(resolved)).toEqual(
       parse('fn foo() { var v: Gradient; } fn bar() { var v: Particle; }'),
     );
@@ -27,8 +27,12 @@ describe('tgpu resolve', () => {
       from: d.vec3f,
       to: d.vec3f,
     });
-    const resolved = tgpu.resolve('fn foo() { var g: Gradient; }', {
-      Gradient,
+    const resolved = tgpu.resolve({
+      input: 'fn foo() { var g: Gradient; }',
+      extraDependencies: {
+        Gradient,
+      },
+      names: 'strict',
     });
     expect(parse(resolved)).toEqual(
       parse(
@@ -62,7 +66,10 @@ describe('tgpu resolve', () => {
       .does(() => d.vec4f(intensity.value, 0, 0, 1))
       .$name('fragment');
 
-    const resolved = tgpu.resolve([vertex, fragment]);
+    const resolved = tgpu.resolve({
+      input: [vertex, fragment],
+      names: 'strict',
+    });
 
     expect(parse(resolved)).toEqual(
       parse(
@@ -100,9 +107,13 @@ describe('tgpu resolve', () => {
         let health = getPlayerHealth(player);
       }`;
 
-    const resolved = tgpu.resolve([shaderLogic], {
-      PlayerData,
-      getPlayerHealth,
+    const resolved = tgpu.resolve({
+      input: [shaderLogic],
+      extraDependencies: {
+        PlayerData,
+        getPlayerHealth,
+      },
+      names: 'strict',
     });
 
     expect(parse(resolved)).toEqual(
@@ -151,7 +162,11 @@ describe('tgpu resolve', () => {
         var value = randomTest();
       }`;
 
-    const resolved = tgpu.resolve([shaderLogic], { randomTest: random });
+    const resolved = tgpu.resolve({
+      input: [shaderLogic],
+      extraDependencies: { randomTest: random },
+      names: 'strict',
+    });
 
     expect(parse(resolved)).toEqual(
       parse(`

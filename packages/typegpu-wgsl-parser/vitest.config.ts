@@ -1,6 +1,5 @@
 import * as path from 'node:path';
 import type { PluginOption } from 'vite';
-// eslint-disable-next-line import/extensions
 import { defineConfig } from 'vitest/config';
 
 /**

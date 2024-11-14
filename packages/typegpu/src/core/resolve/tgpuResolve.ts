@@ -1,17 +1,22 @@
 import type { JitTranspiler } from '../../jitTranspiler';
-import { StrictNameRegistry } from '../../nameRegistry';
+import { RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry';
 import { ResolutionCtxImpl } from '../../resolutionCtx';
 import type { TgpuResolvable } from '../../types';
 import { applyExternals, replaceExternalsInWgsl } from '../function/externals';
 
-export function resolve(
-  input: string | TgpuResolvable | (string | TgpuResolvable)[],
-  extraDependencies?: Record<string, TgpuResolvable>,
-  jitTranspiler?: JitTranspiler,
-): string {
+export interface TgpuResolveOptions {
+  input: string | TgpuResolvable | (string | TgpuResolvable)[];
+  extraDependencies?: Record<string, TgpuResolvable> | undefined;
+  names?: 'strict' | 'random' | undefined;
+  jitTranspiler?: JitTranspiler | undefined;
+}
+
+export function resolve(options: TgpuResolveOptions): string {
+  const { input, extraDependencies, names, jitTranspiler } = options;
   const context = new ResolutionCtxImpl({
-    names: new StrictNameRegistry(),
-    jitTranspiler,
+    names:
+      names === 'strict' ? new StrictNameRegistry() : new RandomNameRegistry(),
+    jitTranspiler: jitTranspiler,
   });
 
   const dependencies = {} as Record<string, TgpuResolvable>;
