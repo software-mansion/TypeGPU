@@ -1,9 +1,10 @@
+import type { Block } from 'tinyest';
 import type { TgpuFnShellBase } from './core/function/fnCore';
 import { MissingSlotValueError, ResolutionError } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
-import { type Block, generateFunction } from './smol';
+import { generateFunction } from './smol';
 import { code } from './tgpuCode';
 import { isTextureView } from './tgpuTexture';
 import type {
