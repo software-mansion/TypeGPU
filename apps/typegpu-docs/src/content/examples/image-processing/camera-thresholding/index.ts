@@ -1,7 +1,3 @@
-// -- Hooks into the example environment
-import { onCleanup, onFrame } from '@typegpu/example-toolkit';
-// --
-
 import { f32 } from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
 
@@ -121,7 +117,11 @@ const renderPassDescriptor: GPURenderPassDescriptor = {
   ],
 };
 
-onFrame(() => {
+let frameRequest = requestAnimationFrame(run);
+
+function run() {
+  frameRequest = requestAnimationFrame(run);
+
   if (!(video.currentTime > 0)) {
     return;
   }
@@ -149,9 +149,11 @@ onFrame(() => {
   pass.end();
 
   device.queue.submit([encoder.finish()]);
-});
+}
 
-onCleanup(() => {
+export function onCleanup() {
+  cancelAnimationFrame(frameRequest);
+
   if (video.srcObject) {
     for (const track of (video.srcObject as MediaStream).getTracks()) {
       track.stop();
@@ -159,7 +161,8 @@ onCleanup(() => {
   }
 
   root.destroy();
-});
+  root.device.destroy();
+}
 
 // #region UI
 

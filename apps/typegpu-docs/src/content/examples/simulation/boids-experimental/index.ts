@@ -1,4 +1,3 @@
-import { addSliderPlumParameter, onFrame } from '@typegpu/example-toolkit';
 import { arrayOf, f32, struct, u32, vec2f } from 'typegpu/data';
 import tgpu, {
   type TgpuBufferUsage,
@@ -43,36 +42,29 @@ const parametersBuffer = root
   )
   .$usage('storage');
 
-const triangleSize = addSliderPlumParameter('triangle size', 0.04, {
-  min: 0.01,
-  max: 0.1,
-  step: 0.01,
-});
+let triangleSize = 0.04;
 const triangleSizeBuffer = root
   .createBuffer(f32, triangleSize)
   .$usage('uniform');
-const triangleSizePlum = wgsl.plum((get) => {
-  const size = get(triangleSize);
+
+const triangleVertex = () => {
+  const size = triangleSize;
   return [
     vec2f(0.0, size),
     vec2f(-size / 2, -size / 2),
     vec2f(size / 2, -size / 2),
   ];
-});
+};
 
-const triangleVertex = root
-  .createBuffer(arrayOf(vec2f, 3), triangleSizePlum)
+const triangleVertexBuffer = root
+  .createBuffer(arrayOf(vec2f, 3))
   .$usage('vertex');
 
 const MAX_TRIANGLES = 10000;
-const triangleAmount = addSliderPlumParameter('triangle amount', 500, {
-  min: 1,
-  max: 10000,
-  step: 1,
-});
-const triangleAmountBuffer = root
-  .createBuffer(u32, triangleAmount)
-  .$usage('uniform');
+let triangleAmount = 500;
+
+const triangleAmountBuffer = root.createBuffer(u32).$usage('uniform');
+
 const trianglePosData = arrayOf(
   struct({
     position: vec2f,
@@ -128,7 +120,7 @@ const renderPipelines = [0, 1].map((idx) =>
         let triangleSize = ${asUniform(triangleSizeBuffer)};
         let instanceInfo = ${bufferPairs[idx][0]}[${builtin.instanceIndex}];
         let rotated = ${rotate}(
-          ${asVertex(triangleVertex, 'vertex')},
+          ${asVertex(triangleVertexBuffer, 'vertex')},
           ${getRotationFromVelocity}(instanceInfo.velocity),
         );
 
@@ -232,10 +224,20 @@ const computePipelines = [0, 1].map((idx) =>
 
 randomizeTriangles();
 let even = false;
-onFrame(() => {
+let disposed = false;
+
+function run() {
+  if (disposed) {
+    return;
+  }
+
+  triangleSizeBuffer.write(triangleSize);
+  triangleVertexBuffer.write(triangleVertex());
+  triangleAmountBuffer.write(triangleAmount);
+
   even = !even;
   computePipelines[even ? 0 : 1].execute({
-    workgroups: [root.readPlum(triangleAmount)],
+    workgroups: [triangleAmount],
   });
   renderPipelines[even ? 1 : 0].execute({
     colorAttachments: [
@@ -247,11 +249,15 @@ onFrame(() => {
       },
     ],
     vertexCount: 3,
-    instanceCount: root.readPlum(triangleAmount),
+    instanceCount: triangleAmount,
   });
 
   root.flush();
-});
+
+  requestAnimationFrame(run);
+}
+
+run();
 
 const parameters = {
   separationDistance: 0.05,
@@ -269,6 +275,26 @@ function applyOptions() {
 export const controls = {
   randomize: {
     onButtonClick: randomizeTriangles,
+  },
+
+  'triangle size': {
+    initial: triangleSize,
+    min: 0.01,
+    max: 0.1,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      triangleSize = value;
+    },
+  },
+
+  'triangle amount': {
+    initial: triangleAmount,
+    min: 1,
+    max: 10000,
+    step: 1,
+    onSliderChange: (value: number) => {
+      triangleAmount = value;
+    },
   },
 
   'separation dist': {
@@ -337,3 +363,9 @@ export const controls = {
     },
   },
 };
+
+export function onCleanup() {
+  disposed = true;
+  root.destroy();
+  root.device.destroy();
+}

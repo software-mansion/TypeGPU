@@ -1,4 +1,3 @@
-import { onCleanup, onFrame } from '@typegpu/example-toolkit';
 import { f32, vec3f } from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
 
@@ -162,7 +161,6 @@ const renderPipeline = device.createRenderPipeline({
 
 async function getFrame() {
   const { value: frame } = await reader.read();
-  if (!frame) throw new Error('No frame');
   return frame;
 }
 
@@ -179,6 +177,9 @@ const renderPassDescriptor: GPURenderPassDescriptor = {
 
 async function drawFrame() {
   const frame = await getFrame();
+  if (!frame) {
+    return;
+  }
 
   // Updating the target render texture
   (
@@ -205,20 +206,15 @@ async function drawFrame() {
   frame.close();
 }
 
-onFrame(() => {
-  if (!(video.currentTime > 0)) {
-    return;
-  }
+let frameRequest = requestAnimationFrame(run);
 
-  drawFrame();
-});
+function run() {
+  frameRequest = requestAnimationFrame(run);
 
-onCleanup(() => {
-  for (const track of stream.getTracks()) {
-    track.stop();
+  if (video.currentTime > 0) {
+    drawFrame();
   }
-  reader.cancel();
-});
+}
 
 // #region UI
 
@@ -237,7 +233,7 @@ video.addEventListener('click', (event) => {
 
 // #endregion
 
-// #region Example Controls
+// #region Example Controls & Cleanup
 
 export const controls = {
   threshold: {
@@ -248,5 +244,15 @@ export const controls = {
     onSliderChange: (value: number) => thresholdBuffer.write(value),
   },
 };
+
+export function onCleanup() {
+  cancelAnimationFrame(frameRequest);
+
+  for (const track of stream.getTracks()) {
+    track.stop();
+  }
+
+  reader.cancel();
+}
 
 // #endregion

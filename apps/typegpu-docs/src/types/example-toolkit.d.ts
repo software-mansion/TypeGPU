@@ -1,3 +1,4 @@
+// TODO: delete this file after merging textures
 declare module '@typegpu/example-toolkit' {
   import type { TgpuPlum } from 'typegpu/experimental';
 
@@ -6,13 +7,4 @@ declare module '@typegpu/example-toolkit' {
     initial: number,
     options?: { min?: number; max?: number; step?: number },
   ): TgpuPlum<number>;
-
-  export function onCleanup(callback: () => unknown): void;
-
-  export type OnFrameFn = (loop: (deltaTime: number) => unknown) => void;
-
-  /**
-   * `deltaTime` is time elapsed since last frame in milliseconds
-   */
-  export const onFrame: OnFrameFn;
 }

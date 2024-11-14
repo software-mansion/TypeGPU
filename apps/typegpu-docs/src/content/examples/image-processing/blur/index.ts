@@ -304,7 +304,7 @@ function render() {
 
 render();
 
-// #region Example Controls
+// #region Example Controls & Cleanup
 
 export const controls = {
   'filter size': {
@@ -329,5 +329,10 @@ export const controls = {
     },
   },
 };
+
+export function onCleanup() {
+  root.destroy();
+  root.device.destroy();
+}
 
 // #endregion
