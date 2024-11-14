@@ -109,7 +109,7 @@ export type GlobalDecl =
   | ValueDecl
   | OverrideDecl
   | FunctionDecl
-  | StructDecl
+  | StructDecl;
 
 %}
 global_decl ->
