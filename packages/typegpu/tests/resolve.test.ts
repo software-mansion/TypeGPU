@@ -152,7 +152,6 @@ describe('tgpu resolve', () => {
       }`;
 
     const resolved = tgpu.resolve([shaderLogic], { randomTest: random });
-    console.log(resolved);
 
     expect(parse(resolved)).toEqual(
       parse(`
