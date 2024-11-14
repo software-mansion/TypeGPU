@@ -1,6 +1,4 @@
 import type { Block } from 'tinyest';
-import type { TgpuLaidOut } from './core/bindGroup/laidOut';
-import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
 import type { TgpuFnShellBase } from './core/function/fnCore';
 import {
   isSampledTextureView,
@@ -369,19 +367,19 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return nextIdx;
   }
 
-  registerLaidOut(laidOut: TgpuLaidOut): string {
+  allocateLayoutEntry(layout: TgpuBindGroupLayout): string {
     const memoMap = this._bindGroupLayoutsToPlaceholderMap;
-    let placeholderKey = memoMap.get(laidOut.layout);
+    let placeholderKey = memoMap.get(layout);
 
     if (!placeholderKey) {
       placeholderKey = `#BIND_GROUP_LAYOUT_${this._nextFreeLayoutPlaceholderIdx++}#`;
-      memoMap.set(laidOut.layout, placeholderKey);
+      memoMap.set(layout, placeholderKey);
     }
 
     return placeholderKey;
   }
 
-  registerBindable(resource: object): { group: string; binding: number } {
+  allocateFixedEntry(resource: object): { group: string; binding: number } {
     const nextIdx = this._nextFreeCatchallBindingIdx++;
     this._boundToIndexMap.set(resource, nextIdx);
 
@@ -395,7 +393,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     resource: TgpuRenderResource,
     identifier: TgpuIdentifier,
   ): void {
-    this._usedRenderResources.add(resource);
     const group = CATCHALL_BIND_GROUP_IDX_MARKER;
     const idx = this._reserveBindingEntry(resource);
 

@@ -17,35 +17,46 @@ import { type Builtin, type IsBuiltin, attribute } from './data/attributes';
 // Public API
 // ----------
 
-export type BuiltinVertexIndex = Decorated<U32, [Builtin<'vertex_index'>]>;
-export type BuiltinInstanceIndex = Decorated<U32, [Builtin<'instance_index'>]>;
-export type BuiltinPosition = Decorated<Vec4f, [Builtin<'position'>]>;
+export type BuiltinVertexIndex = Decorated<U32, [Builtin<'vertex_index'>]> &
+  number;
+export type BuiltinInstanceIndex = Decorated<U32, [Builtin<'instance_index'>]> &
+  number;
+export type BuiltinPosition = Decorated<Vec4f, [Builtin<'position'>]> & vec4f;
 export type BuiltinClipDistances = Decorated<
   TgpuArray<U32>,
   [Builtin<'clip_distances'>]
->;
-export type BuiltinFrontFacing = Decorated<F32, [Builtin<'front_facing'>]>;
-export type BuiltinFragDepth = Decorated<F32, [Builtin<'frag_depth'>]>;
-export type BuiltinSampleIndex = Decorated<U32, [Builtin<'sample_index'>]>;
-export type BuiltinSampleMask = Decorated<U32, [Builtin<'sample_mask'>]>;
-export type BuiltinFragment = Decorated<Vec4f, [Builtin<'fragment'>]>;
+> &
+  number[];
+export type BuiltinFrontFacing = Decorated<F32, [Builtin<'front_facing'>]> &
+  boolean;
+export type BuiltinFragDepth = Decorated<F32, [Builtin<'frag_depth'>]> & number;
+export type BuiltinSampleIndex = Decorated<U32, [Builtin<'sample_index'>]> &
+  number;
+export type BuiltinSampleMask = Decorated<U32, [Builtin<'sample_mask'>]> &
+  vec4f;
+export type BuiltinFragment = Decorated<Vec4f, [Builtin<'fragment'>]> & vec4f;
 export type BuiltinLocalInvocationId = Decorated<
   Vec3u,
   [Builtin<'local_invocation_id'>]
->;
+> &
+  vec3u;
 export type BuiltinLocalInvocationIndex = Decorated<
   U32,
   [Builtin<'local_invocation_index'>]
->;
+> &
+  number;
 export type BuiltinGlobalInvocationId = Decorated<
   Vec3u,
   [Builtin<'global_invocation_id'>]
->;
-export type BuiltinWorkgroupId = Decorated<Vec3u, [Builtin<'workgroup_id'>]>;
+> &
+  vec3u;
+export type BuiltinWorkgroupId = Decorated<Vec3u, [Builtin<'workgroup_id'>]> &
+  vec3u;
 export type BuiltinNumWorkgroups = Decorated<
   Vec3u,
   [Builtin<'num_workgroups'>]
->;
+> &
+  vec3u;
 
 export const builtin = {
   vertexIndex: attribute(u32, {

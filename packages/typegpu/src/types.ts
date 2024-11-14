@@ -1,9 +1,9 @@
 import type { Block } from 'tinyest';
 import type { ISchema, Unwrap } from 'typed-binary';
-import type { TgpuLaidOut } from './core/bindGroup/laidOut';
 import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
 import type { TgpuFnShellBase } from './core/function/fnCore';
 import type { TgpuNamable } from './namable';
+import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout';
 
 export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
 
@@ -30,21 +30,18 @@ export interface NumberArrayView {
 export interface ResolutionCtx {
   addDeclaration(item: TgpuResolvable): void;
   /**
-   * @param laidOut A resource as seen accessed from a bind group layout.
-   * @returns A group placeholder key, substituted at the end of the resolution process.
+   * Reserves a bind group number, and returns a placeholder that will be replaced
+   * with a concrete number at the end of the resolution process.
    */
-  registerLaidOut(laidOut: TgpuLaidOut): string;
+  allocateLayoutEntry(layout: TgpuBindGroupLayout): string;
   /**
-   * Reserves a spot in the catch-all bind group.
+   * Reserves a spot in the catch-all bind group, without the indirection of a bind-group.
+   * This means the resource is 'fixed', and cannot be swapped between code execution.
    */
-  registerBindable(resource: object): {
+  allocateFixedEntry(resource: object): {
     group: string;
     binding: number;
   };
-  registerBufferUsage(
-    bufferUsage: TgpuBufferUsage<AnyTgpuData>,
-    identifier: TgpuIdentifier,
-  ): void;
   registerRenderResource(
     resource: TgpuRenderResource,
     identifier: TgpuIdentifier,

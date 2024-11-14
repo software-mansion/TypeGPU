@@ -1,7 +1,7 @@
 import type { Unwrap } from 'typed-binary';
 import { type Storage, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
-import type { TgpuBindGroupLayout } from '../../tgpuBindGroupLayout';
+import type { LayoutMembership } from '../../tgpuBindGroupLayout';
 import { code } from '../../tgpuCode';
 import { identifier } from '../../tgpuIdentifier';
 import type {
@@ -9,36 +9,11 @@ import type {
   BindableBufferUsage,
   ResolutionCtx,
 } from '../../types';
-import type { TgpuLaidOut } from '../bindGroup/laidOut';
 import { type TgpuBuffer, type Uniform, isUsableAsUniform } from './buffer';
 
 // ----------
 // Public API
 // ----------
-
-export interface TgpuBufferUniform<TData extends AnyTgpuData> {
-  readonly resourceType: 'buffer-usage';
-  readonly usage: 'uniform';
-  readonly buffer: TgpuBuffer<TData> | undefined;
-  readonly layout: TgpuBindGroupLayout | undefined;
-  readonly value: Unwrap<TData>;
-}
-
-export interface TgpuBufferReadonly<TData extends AnyTgpuData> {
-  readonly resourceType: 'buffer-usage';
-  readonly usage: 'readonly';
-  readonly buffer: TgpuBuffer<TData> | undefined;
-  readonly layout: TgpuBindGroupLayout | undefined;
-  readonly value: Unwrap<TData>;
-}
-
-export interface TgpuBufferMutable<TData extends AnyTgpuData> {
-  readonly resourceType: 'buffer-usage';
-  readonly usage: 'mutable';
-  readonly buffer: TgpuBuffer<TData> | undefined;
-  readonly layout: TgpuBindGroupLayout | undefined;
-  value: Unwrap<TData>;
-}
 
 export interface TgpuBufferUsage<
   TData extends AnyTgpuData,
@@ -49,13 +24,26 @@ export interface TgpuBufferUsage<
   value: Unwrap<TData>;
 }
 
+export interface TgpuBufferUniform<TData extends AnyTgpuData>
+  extends TgpuBufferUsage<TData, 'uniform'> {
+  readonly value: Unwrap<TData>;
+}
+
+export interface TgpuBufferReadonly<TData extends AnyTgpuData>
+  extends TgpuBufferUsage<TData, 'readonly'> {
+  readonly value: Unwrap<TData>;
+}
+
+export interface TgpuBufferMutable<TData extends AnyTgpuData>
+  extends TgpuBufferUsage<TData, 'mutable'> {}
+
 export function isBufferUsage<
   T extends
     | TgpuBufferUniform<AnyTgpuData>
     | TgpuBufferReadonly<AnyTgpuData>
     | TgpuBufferMutable<AnyTgpuData>,
 >(value: T | unknown): value is T {
-  return !!value && (value as T).resourceType === 'buffer-usage';
+  return (value as T)?.resourceType === 'buffer-usage';
 }
 
 // --------------
@@ -68,7 +56,7 @@ const usageToVarTemplateMap: Record<BindableBufferUsage, string> = {
   readonly: 'storage, read',
 };
 
-class TgpuBindableBufferImpl<
+class TgpuFixedBufferImpl<
   TData extends AnyTgpuData,
   TUsage extends BindableBufferUsage,
 > implements TgpuBufferUsage<TData, TUsage>
@@ -90,7 +78,7 @@ class TgpuBindableBufferImpl<
 
   resolve(ctx: ResolutionCtx): string {
     const ident = identifier().$name(this.label);
-    const { group, binding } = ctx.registerBindable(this);
+    const { group, binding } = ctx.allocateFixedEntry(this);
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
@@ -115,29 +103,27 @@ class TgpuBindableBufferImpl<
 export class TgpuLaidOutBufferImpl<
   TData extends AnyTgpuData,
   TUsage extends BindableBufferUsage,
-> implements TgpuBufferUsage<TData, TUsage>, TgpuLaidOut
+> implements TgpuBufferUsage<TData, TUsage>
 {
   public readonly resourceType = 'buffer-usage' as const;
 
   constructor(
     public readonly usage: TUsage,
     public readonly dataType: TData,
-    public readonly layout: TgpuBindGroupLayout,
-    public readonly layoutKey: string,
-    public readonly layoutIdx: number,
+    private readonly _membership: LayoutMembership,
   ) {}
 
   get label() {
-    return this.layoutKey;
+    return this._membership.key;
   }
 
   resolve(ctx: ResolutionCtx): string {
     const ident = identifier().$name(this.label);
-    const group = ctx.registerLaidOut(this);
+    const group = ctx.allocateLayoutEntry(this._membership.layout);
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
-      code`@group(${group}) @binding(${this.layoutIdx}) var<${usage}> ${ident}: ${this.dataType};`,
+      code`@group(${group}) @binding(${this._membership.idx}) var<${usage}> ${ident}: ${this.dataType};`,
     );
 
     return ctx.resolve(ident);
@@ -157,7 +143,7 @@ export class TgpuLaidOutBufferImpl<
 
 const mutableUsageMap = new WeakMap<
   TgpuBuffer<AnyTgpuData>,
-  TgpuBindableBufferImpl<AnyTgpuData, 'mutable'>
+  TgpuFixedBufferImpl<AnyTgpuData, 'mutable'>
 >();
 
 export function asMutable<TData extends AnyTgpuData>(
@@ -171,7 +157,7 @@ export function asMutable<TData extends AnyTgpuData>(
 
   let usage = mutableUsageMap.get(buffer);
   if (!usage) {
-    usage = new TgpuBindableBufferImpl('mutable', buffer);
+    usage = new TgpuFixedBufferImpl('mutable', buffer);
     mutableUsageMap.set(buffer, usage);
   }
   return usage as unknown as TgpuBufferMutable<TData>;
@@ -179,7 +165,7 @@ export function asMutable<TData extends AnyTgpuData>(
 
 const readonlyUsageMap = new WeakMap<
   TgpuBuffer<AnyTgpuData>,
-  TgpuBindableBufferImpl<AnyTgpuData, 'readonly'>
+  TgpuFixedBufferImpl<AnyTgpuData, 'readonly'>
 >();
 
 export function asReadonly<TData extends AnyTgpuData>(
@@ -193,7 +179,7 @@ export function asReadonly<TData extends AnyTgpuData>(
 
   let usage = readonlyUsageMap.get(buffer);
   if (!usage) {
-    usage = new TgpuBindableBufferImpl('readonly', buffer);
+    usage = new TgpuFixedBufferImpl('readonly', buffer);
     readonlyUsageMap.set(buffer, usage);
   }
   return usage as unknown as TgpuBufferReadonly<TData>;
@@ -201,7 +187,7 @@ export function asReadonly<TData extends AnyTgpuData>(
 
 const uniformUsageMap = new WeakMap<
   TgpuBuffer<AnyTgpuData>,
-  TgpuBindableBufferImpl<AnyTgpuData, 'uniform'>
+  TgpuFixedBufferImpl<AnyTgpuData, 'uniform'>
 >();
 
 export function asUniform<TData extends AnyTgpuData>(
@@ -215,7 +201,7 @@ export function asUniform<TData extends AnyTgpuData>(
 
   let usage = uniformUsageMap.get(buffer);
   if (!usage) {
-    usage = new TgpuBindableBufferImpl('uniform', buffer);
+    usage = new TgpuFixedBufferImpl('uniform', buffer);
     uniformUsageMap.set(buffer, usage);
   }
   return usage as unknown as TgpuBufferUniform<TData>;
