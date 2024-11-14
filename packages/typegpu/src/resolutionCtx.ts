@@ -1,12 +1,16 @@
 import type { Block } from 'tinyest';
+import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
 import type { TgpuFnShellBase } from './core/function/fnCore';
-import { MissingSlotValueError, ResolutionError } from './errors';
+import {
+  isSampledTextureView,
+  isStorageTextureView,
+} from './core/texture/texture';
+import { MissingSlotValueError, ResolutionError, invariant } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
 import { generateFunction } from './smol';
 import { code } from './tgpuCode';
-import { isTextureView } from './tgpuTexture';
 import type {
   AnyTgpuData,
   BufferUsage,
@@ -14,7 +18,6 @@ import type {
   ResolutionCtx,
   Resource,
   SlotValuePair,
-  TgpuBindable,
   TgpuIdentifier,
   TgpuRenderResource,
   TgpuResolvable,
@@ -47,14 +50,11 @@ const usageToVarTemplateMap: Record<Exclude<BufferUsage, 'vertex'>, string> = {
 class SharedResolutionState {
   private _nextFreeBindingIdx = 0;
   private _nextFreeVertexBindingIdx = 0;
-  private readonly _usedBindables = new Set<TgpuBindable>();
+  private readonly _usedBindables = new Set<TgpuBufferUsage<AnyTgpuData>>();
   private readonly _usedRenderResources = new Set<TgpuRenderResource>();
-  private readonly _resourceToIndexMap = new WeakMap<
-    TgpuRenderResource | TgpuBindable,
-    number
-  >();
+  private readonly _resourceToIndexMap = new WeakMap<object, number>();
   private readonly _vertexBufferToIndexMap = new WeakMap<
-    TgpuBindable,
+    TgpuBufferUsage<AnyTgpuData>,
     number
   >();
   private readonly _usedBuiltins = new Set<symbol>();
@@ -66,7 +66,7 @@ class SharedResolutionState {
     public readonly jitTranspiler: JitTranspiler | undefined,
   ) {}
 
-  get usedBindables(): Iterable<TgpuBindable> {
+  get usedBindables(): Iterable<TgpuBufferUsage<AnyTgpuData>> {
     return this._usedBindables;
   }
 
@@ -82,7 +82,7 @@ class SharedResolutionState {
     return this._usedBuiltins;
   }
 
-  reserveBindingEntry(bindable: TgpuBindable) {
+  reserveBindingEntry(bindable: TgpuBufferUsage<AnyTgpuData>) {
     this._usedBindables.add(bindable);
     const nextIdx = this._nextFreeBindingIdx++;
     this._resourceToIndexMap.set(bindable, nextIdx);
@@ -90,7 +90,7 @@ class SharedResolutionState {
     return { group: this._bindingGroup, idx: nextIdx };
   }
 
-  registerVertexEntry(bindable: TgpuBindable) {
+  registerVertexEntry(bindable: TgpuBufferUsage<AnyTgpuData>) {
     this._usedBindables.add(bindable);
     const nextIdx = this._nextFreeVertexBindingIdx++;
     this._vertexBufferToIndexMap.set(bindable, nextIdx);
@@ -104,7 +104,7 @@ class SharedResolutionState {
     return { group: this._bindingGroup, idx: nextIdx };
   }
 
-  getBindingIndex(resource: TgpuRenderResource | TgpuBindable) {
+  getBindingIndex(resource: object) {
     return this._resourceToIndexMap.get(resource);
   }
 
@@ -391,7 +391,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this._shared.addDeclaration(this.resolve(declaration));
   }
 
-  addBinding(bindable: TgpuBindable, identifier: TgpuIdentifier): void {
+  addBinding(
+    bindable: TgpuBufferUsage<AnyTgpuData>,
+    identifier: TgpuIdentifier,
+  ): void {
     if (bindable.usage === 'vertex') {
       this._shared.registerVertexEntry(bindable);
       return;
@@ -420,15 +423,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return;
     }
 
-    if (isTextureView(resource)) {
-      if (resource.access !== undefined) {
-        this.addDeclaration(
-          code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.texture.descriptor.format}, ${resource.access}>;`,
-        );
-        return;
-      }
+    if (isStorageTextureView(resource)) {
       this.addDeclaration(
-        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.dataType}>;`,
+        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.format}, ${resource.access}>;`,
+      );
+      return;
+    }
+
+    if (isSampledTextureView(resource)) {
+      this.addDeclaration(
+        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.channelDataType}>;`,
       );
       return;
     }
@@ -537,11 +541,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  getIndexFor(item: TgpuBindable | TgpuRenderResource) {
+  getIndexFor(item: object) {
     const index = this._shared.getBindingIndex(item);
-    if (index === undefined) {
-      throw new Error('No index found for item');
-    }
+    invariant(index !== undefined, 'No index found for item');
+
     return index;
   }
 }

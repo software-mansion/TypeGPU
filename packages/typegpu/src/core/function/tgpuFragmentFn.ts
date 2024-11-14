@@ -1,8 +1,8 @@
 import type { Block } from 'tinyest';
 import type { TgpuNamable } from '../../namable';
-import type { AnyTgpuData, ResolutionCtx, TgpuResolvable } from '../../types';
+import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
-import type { UnwrapArgs, UnwrapReturn } from './fnTypes';
+import type { IOLayout, Implementation, UnwrapIO } from './fnTypes';
 
 // ----------
 // Public API
@@ -12,20 +12,19 @@ import type { UnwrapArgs, UnwrapReturn } from './fnTypes';
  * Describes a fragment entry function signature (its arguments and return type)
  */
 export interface TgpuFragmentFnShell<
-  // TODO: Allow IO struct or builtins here
-  Args extends AnyTgpuData[],
-  // TODO: Allow IO struct here
-  Return extends AnyTgpuData,
+  Varying extends IOLayout,
+  // TODO: Allow only vec4fs, or arrays/objects of vec4fs
+  Output extends IOLayout,
 > {
-  readonly argTypes: Args;
-  readonly returnType: Return;
+  readonly argTypes: [Varying];
+  readonly returnType: Output;
 
   /**
    * Creates a type-safe implementation of this signature
    */
   does(
-    implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
-  ): TgpuFragmentFn<[], Return>;
+    implementation: (varying: UnwrapIO<Varying>) => UnwrapIO<Output>,
+  ): TgpuFragmentFn<Varying, Output>;
 
   /**
    * @param implementation
@@ -33,16 +32,16 @@ export interface TgpuFragmentFnShell<
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  does(implementation: string): TgpuFragmentFn<[], Return>;
+  does(implementation: string): TgpuFragmentFn<Varying, Output>;
 }
 
 export interface TgpuFragmentFn<
-  Args extends [],
-  // TODO: Allow IO struct or `vec4f` here
-  Output extends AnyTgpuData,
+  Varying extends IOLayout,
+  // TODO: Allow only vec4fs, or arrays/objects of vec4fs
+  Output extends IOLayout,
 > extends TgpuResolvable,
     TgpuNamable {
-  readonly shell: TgpuFragmentFnShell<AnyTgpuData[], AnyTgpuData>;
+  readonly shell: TgpuFragmentFnShell<Varying, Output>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
   $__ast(argNames: string[], body: Block): this;
@@ -54,22 +53,22 @@ export interface TgpuFragmentFn<
  * to process information received from the vertex shader stage and builtins to determine
  * the final color of the pixel (many pixels in case of multiple targets).
  *
- * @param argTypes
- *   Builtins and vertex attributes to be made available to functions that implement this shell.
- * @param returnType
- *   A `vec4f`, signaling this function outputs a color for one target, or a struct containing
+ * @param varyingTypes
+ *   Values computed in the vertex stage to be made available to functions that implement this shell.
+ * @param outputType
+ *   A `vec4f`, signaling this function outputs a color for one target, or a struct/array containing
  *   colors for multiple targets.
  */
-export function fragmentFn<
-  Args extends AnyTgpuData[],
-  Return extends AnyTgpuData,
->(argTypes: Args, returnType: Return): TgpuFragmentFnShell<Args, Return> {
+export function fragmentFn<Varying extends IOLayout, Output extends IOLayout>(
+  varyingTypes: Varying,
+  outputType: Output,
+): TgpuFragmentFnShell<Varying, Output> {
   return {
-    argTypes,
-    returnType,
+    argTypes: [varyingTypes],
+    returnType: outputType,
 
-    does(implementation) {
-      return createFragmentFn(this, implementation);
+    does(implementation): TgpuFragmentFn<Varying, Output> {
+      return createFragmentFn(this, implementation as Implementation);
     },
   };
 }
@@ -78,16 +77,11 @@ export function fragmentFn<
 // Implementation
 // --------------
 
-function createFragmentFn<
-  Args extends AnyTgpuData[],
-  Output extends AnyTgpuData,
->(
-  shell: TgpuFragmentFnShell<Args, Output>,
-  implementation:
-    | ((...args: UnwrapArgs<Args>) => UnwrapReturn<Output>)
-    | string,
-): TgpuFragmentFn<[], Output> {
-  type This = TgpuFragmentFn<[], Output>;
+function createFragmentFn(
+  shell: TgpuFragmentFnShell<IOLayout, IOLayout>,
+  implementation: Implementation,
+): TgpuFragmentFn<IOLayout, IOLayout> {
+  type This = TgpuFragmentFn<IOLayout, IOLayout>;
 
   const core = createFnCore(shell, implementation);
 

@@ -5,20 +5,11 @@ import type { JitTranspiler } from '../../jitTranspiler';
 import type { PlumListener } from '../../plumStore';
 import type { TgpuSettable } from '../../settableTrait';
 import type {
-  TgpuBindGroup,
-  TgpuBindGroupLayout,
-} from '../../tgpuBindGroupLayout';
-import type {
   ExtractPlumValue,
   TgpuPlum,
   Unsubscribe,
 } from '../../tgpuPlumTypes';
 import type { TgpuSampler } from '../../tgpuSampler';
-import type {
-  TgpuAnyTexture,
-  TgpuAnyTextureView,
-  TgpuTextureExternal,
-} from '../../tgpuTexture';
 import type {
   AnyTgpuData,
   BoundTgpuCode,
@@ -26,13 +17,101 @@ import type {
   TgpuData,
 } from '../../types';
 import type { Unwrapper } from '../../unwrapper';
+import type { Mutable, OmitProps, Prettify } from '../../utilityTypes';
 import type { TgpuBuffer } from '../buffer/buffer';
+import type { TgpuExternalTexture } from '../texture/externalTexture';
+import type { TgpuTexture } from '../texture/texture';
 
 // ----------
 // Public API
 // ----------
 
 export type SetPlumAction<T> = T | ((prev: T) => T);
+
+export type CreateTextureOptions<
+  TSize,
+  TFormat extends GPUTextureFormat,
+  TMipLevelCount extends number,
+  TSampleCount extends number,
+  TViewFormat extends GPUTextureFormat,
+  TDimension extends GPUTextureDimension,
+> = {
+  /**
+   * The width, height, and depth or layer count of the texture.
+   */
+  size: TSize;
+  /**
+   * The format of the texture.
+   */
+  format: TFormat;
+  /**
+   * The number of mip levels the texture will contain.
+   * @default 1
+   */
+  mipLevelCount?: TMipLevelCount | undefined;
+  /**
+   * The sample count of the texture. A sampleCount > 1 indicates a multisampled texture.
+   * @default 1
+   */
+  sampleCount?: TSampleCount | undefined;
+  /**
+   * Specifies extra formats (in addition to the texture's actual format) that can be used
+   * when creating views of this texture.
+   * @default []
+   */
+  viewFormats?: TViewFormat[] | undefined;
+  /**
+   * Whether the texture is one-dimensional, an array of two-dimensional layers, or three-dimensional.
+   * @default '2d'
+   */
+  dimension?: TDimension | undefined;
+};
+
+export type CreateTextureResult<
+  TSize extends readonly number[],
+  TFormat extends GPUTextureFormat,
+  TMipLevelCount extends number,
+  TSampleCount extends number,
+  TViewFormat extends GPUTextureFormat,
+  TDimension extends GPUTextureDimension,
+> = Prettify<
+  {
+    size: Mutable<TSize>;
+    format: TFormat;
+  } & OmitProps<
+    {
+      dimension: GPUTextureDimension extends TDimension
+        ? // Omitted property means the default
+          undefined
+        : // '2d' is the default, omitting from type
+          TDimension extends '2d'
+          ? undefined
+          : TDimension;
+      mipLevelCount: number extends TMipLevelCount
+        ? // Omitted property means the default
+          undefined
+        : // '1' is the default, omitting from type
+          TMipLevelCount extends 1
+          ? undefined
+          : TMipLevelCount;
+      sampleCount: number extends TSampleCount
+        ? // Omitted property means the default
+          undefined
+        : // '1' is the default, omitting from type
+          TSampleCount extends 1
+          ? undefined
+          : TSampleCount;
+      viewFormats: GPUTextureFormat extends TViewFormat
+        ? // Omitted property means the default
+          undefined
+        : // 'never[]' is the default, omitting from type
+          TViewFormat[] extends never[]
+          ? undefined
+          : TViewFormat[];
+    },
+    undefined
+  >
+>;
 
 export interface TgpuRoot extends Unwrapper {
   /**
@@ -58,9 +137,46 @@ export interface TgpuRoot extends Unwrapper {
     gpuBuffer: GPUBuffer,
   ): TgpuBuffer<TData>;
 
-  unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
-  unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
-  unwrap(resource: TgpuBindGroup): GPUBindGroup;
+  createTexture<
+    TWidth extends number,
+    THeight extends number,
+    TDepth extends number,
+    TSize extends
+      | readonly [TWidth]
+      | readonly [TWidth, THeight]
+      | readonly [TWidth, THeight, TDepth],
+    TFormat extends GPUTextureFormat,
+    TMipLevelCount extends number,
+    TSampleCount extends number,
+    TViewFormat extends GPUTextureFormat,
+    TDimension extends GPUTextureDimension,
+  >(
+    props: CreateTextureOptions<
+      TSize,
+      TFormat,
+      TMipLevelCount,
+      TSampleCount,
+      TViewFormat,
+      TDimension
+    >,
+  ): TgpuTexture<
+    CreateTextureResult<
+      TSize,
+      TFormat,
+      TMipLevelCount,
+      TSampleCount,
+      TViewFormat,
+      TDimension
+    >
+  >;
+
+  importExternalTexture<TColorSpace extends PredefinedColorSpace>(options: {
+    source: HTMLVideoElement | VideoFrame;
+    /** @default 'srgb' */
+    colorSpace?: TColorSpace;
+  }): TgpuExternalTexture<{
+    colorSpace: PredefinedColorSpace extends TColorSpace ? 'srgb' : TColorSpace;
+  }>;
 
   destroy(): void;
 }
@@ -85,17 +201,6 @@ export interface ExperimentalTgpuRoot extends TgpuRoot {
     listener: PlumListener<TValue>,
   ): Unsubscribe;
 
-  setSource(
-    texture: TgpuTextureExternal,
-    source: HTMLVideoElement | VideoFrame,
-  ): void;
-
-  isDirty(texture: TgpuTextureExternal): boolean;
-  markClean(texture: TgpuTextureExternal): void;
-
-  textureFor(view: TgpuAnyTexture | TgpuAnyTextureView): GPUTexture;
-  viewFor(view: TgpuAnyTextureView): GPUTextureView;
-  externalTextureFor(texture: TgpuTextureExternal): GPUExternalTexture;
   samplerFor(sampler: TgpuSampler): GPUSampler;
 
   /**

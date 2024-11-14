@@ -1,7 +1,9 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
+import type { Storage } from '../../extension';
 import type { TgpuNamable } from '../../namable';
 import { type TgpuPlum, type Unsubscribe, isPlum } from '../../tgpuPlumTypes';
 import { type AnyTgpuData, isGPUBuffer } from '../../types';
+import type { UnionToIntersection } from '../../utilityTypes';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 
 // ----------
@@ -12,23 +14,12 @@ export interface Uniform {
   usableAsUniform: true;
 }
 
-export interface Storage {
-  usableAsStorage: true;
-}
-
 export interface Vertex {
   usableAsVertex: true;
 }
 
 export const Uniform = { usableAsUniform: true } as Uniform;
-export const Storage = { usableAsStorage: true } as Storage;
 export const Vertex = { usableAsVertex: true } as Vertex;
-
-type UnionToIntersection<U> =
-  // biome-ignore lint/suspicious/noExplicitAny: <had to be done>
-  (U extends any ? (x: U) => void : never) extends (x: infer I) => void
-    ? I
-    : never;
 
 type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
   T extends 'uniform'
@@ -78,12 +69,6 @@ export function isUsableAsUniform<T extends TgpuBuffer<AnyTgpuData>>(
   buffer: T,
 ): buffer is T & Uniform {
   return !!(buffer as unknown as Uniform).usableAsUniform;
-}
-
-export function isUsableAsStorage<T extends TgpuBuffer<AnyTgpuData>>(
-  buffer: T,
-): buffer is T & Storage {
-  return !!(buffer as unknown as Storage).usableAsStorage;
 }
 
 export function isUsableAsVertex<T extends TgpuBuffer<AnyTgpuData>>(

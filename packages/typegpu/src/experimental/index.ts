@@ -48,10 +48,19 @@ export * from '../builtin';
 export { default as wgsl } from '../wgsl';
 export { std } from '../std';
 export {
-  isUsableAsStorage,
   isUsableAsUniform,
   isUsableAsVertex,
 } from '../core/buffer/buffer';
+export {
+  isSampledTextureView,
+  isStorageTextureView,
+  isTexture,
+} from '../core/texture/texture';
+export {
+  isUsableAsRender,
+  isUsableAsSampled,
+} from '../core/texture/usageExtension';
+export { isUsableAsStorage } from '../extension';
 export {
   asUniform,
   asReadonly,
@@ -62,9 +71,9 @@ export {
 export type {
   TgpuBuffer,
   Uniform,
-  Storage,
   Vertex,
 } from '../core/buffer/buffer';
+export type { Storage } from '../extension';
 export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
 export type {
   TgpuBufferUsage,
@@ -73,19 +82,23 @@ export type {
   TgpuBufferMutable,
   TgpuBufferVertex,
 } from '../core/buffer/bufferUsage';
+export type {
+  TgpuTexture,
+  TgpuReadonlyTexture,
+  TgpuWriteonlyTexture,
+  TgpuMutableTexture,
+  TgpuSampledTexture,
+  TgpuAnyTextureView,
+} from '../core/texture/texture';
+export type { TextureProps } from '../core/texture/textureProps';
+export type { Render, Sampled } from '../core/texture/usageExtension';
 export type { InitOptions, InitFromDeviceOptions } from '../core/root/init';
 export type { TgpuConst } from '../tgpuConstant';
 export type { TgpuPlum } from '../tgpuPlumTypes';
-export type { TexelFormat } from '../textureTypes';
 export type { TgpuSettable } from '../settableTrait';
 export type { TgpuVar } from '../tgpuVariable';
 export type { TgpuSampler } from '../tgpuSampler';
-export type {
-  TgpuTexture,
-  TgpuTextureView,
-} from '../tgpuTexture';
 export type { JitTranspiler } from '../jitTranspiler';
-export type * from '../textureTypes';
 export type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,

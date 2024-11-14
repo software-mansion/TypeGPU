@@ -19,13 +19,32 @@ export type UnwrapArgs<T extends (AnyTgpuData | AnyTgpuLooseData)[]> = {
   [Idx in keyof T]: Unwrap<T[Idx]>;
 };
 
-export type UnwrapReturn<T extends AnyTgpuData | undefined> =
-  T extends undefined
-    ? // biome-ignore lint/suspicious/noConfusingVoidType: <void is used as a return type>
-      void
-    : Unwrap<T>;
+export type UnwrapReturn<T> = T extends undefined
+  ? // biome-ignore lint/suspicious/noConfusingVoidType: <void is used as a return type>
+    void
+  : Unwrap<T>;
 
 export type Implementation<
-  Args extends AnyTgpuData[],
-  Return extends AnyTgpuData | undefined,
-> = string | ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>);
+  Args extends unknown[] = unknown[],
+  Return = unknown,
+> = string | ((...args: Args) => Return);
+
+/**
+ * Used for I/O definitions of entry functions.
+ */
+// An IO layout can be...
+export type IOLayout =
+  // a single data-type
+  | AnyTgpuData
+  // an object of IO layouts
+  | { [key: string]: IOLayout }
+  // an array of IO layouts
+  | IOLayout[];
+
+export type UnwrapIO<T> = T extends AnyTgpuData
+  ? Unwrap<T>
+  : T extends IOLayout[]
+    ? { [K in keyof T]: UnwrapIO<T[K]> }
+    : T extends { [K: string]: IOLayout }
+      ? { [K in keyof T]: UnwrapIO<T[K]> }
+      : T;
