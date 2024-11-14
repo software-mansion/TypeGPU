@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "DEV=true EXPERIMENTAL=true pnpm -r dev:build && DEV=true EXPERIMENTAL=true pnpm --parallel -r dev:watch",
-    "dev:test": "pnpm --parallel -r dev:test",
+    "dev:test": "vitest",
     "check": "biome check --write .",
     "coverage": "vitest --coverage",
     "test": "DEV=true EXPERIMENTAL=true pnpm -r dev:build && pnpm run '/^test:.*/'",
