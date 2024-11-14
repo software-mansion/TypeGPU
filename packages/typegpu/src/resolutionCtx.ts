@@ -1,3 +1,4 @@
+import type { Block } from 'tinyest';
 import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
 import type { TgpuFnShellBase } from './core/function/fnCore';
 import {
@@ -8,7 +9,7 @@ import { MissingSlotValueError, ResolutionError, invariant } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
-import { type Block, generateFunction } from './smol';
+import { generateFunction } from './smol';
 import { code } from './tgpuCode';
 import type {
   AnyTgpuData,

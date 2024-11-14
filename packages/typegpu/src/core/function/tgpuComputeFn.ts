@@ -1,5 +1,5 @@
+import type { Block } from 'tinyest';
 import type { TgpuNamable } from '../../namable';
-import type { Block } from '../../smol';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
 import type { Implementation } from './fnTypes';

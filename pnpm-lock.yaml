@@ -246,18 +246,33 @@ importers:
       acorn:
         specifier: ^8.12.1
         version: 8.12.1
+      tinyest:
+        specifier: workspace:0.0.0
+        version: link:../tinyest
       tsup:
         specifier: ^8.0.2
         version: 8.0.2(typescript@5.5.4)
-      typegpu:
-        specifier: workspace:^0.2.0
-        version: link:../typegpu
+      typescript:
+        specifier: ^5.3.3
+        version: 5.5.4
+
+  packages/tinyest:
+    devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
+      tsup:
+        specifier: ^8.0.2
+        version: 8.0.2(typescript@5.5.4)
       typescript:
         specifier: ^5.3.3
         version: 5.5.4
 
   packages/typegpu:
     dependencies:
+      tinyest:
+        specifier: workspace:0.0.0
+        version: link:../tinyest
       typed-binary:
         specifier: ^4.0.1
         version: 4.0.1
@@ -7357,7 +7372,7 @@ packages:
       joycon: 3.1.1
       postcss-load-config: 4.0.2(postcss@8.4.39)
       resolve-from: 5.0.0
-      rollup: 4.24.0
+      rollup: 4.12.1
       source-map: 0.8.0-beta.0
       sucrase: 3.35.0
       tree-kill: 1.2.2

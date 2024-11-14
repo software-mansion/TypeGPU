@@ -1,5 +1,5 @@
+import type * as smol from 'tinyest';
 import type { Unwrap } from 'typed-binary';
-import type * as smol from '../../smol';
 import type { AnyTgpuData, AnyTgpuLooseData } from '../../types';
 
 /**
