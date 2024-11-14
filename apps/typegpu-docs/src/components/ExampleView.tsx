@@ -87,6 +87,14 @@ export function ExampleView({ example }: Props) {
 
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset embedded html on code change
+  useEffect(() => {
+    if (!exampleHtmlRef.current) {
+      return;
+    }
+    exampleHtmlRef.current.innerHTML = htmlCode;
+  }, [code, htmlCode]);
+
   const setTsCodeDebouncer = useMemo(
     () => debounce(setCode, { waitMs: 500 }),
     [],
@@ -104,7 +112,7 @@ export function ExampleView({ example }: Props) {
   });
 
   useExample(code, htmlCode, setSnackbarText, metadata.tags);
-  useResizableCanvas(exampleHtmlRef, htmlCode);
+  useResizableCanvas(exampleHtmlRef, code, htmlCode);
 
   useEffect(() => {
     setCode(initialTsCode);
@@ -128,16 +136,11 @@ export function ExampleView({ example }: Props) {
                 scrollbarGutter: 'stable',
               }}
               className={cs(
-                'flex justify-evenly items-center flex-wrap overflow-auto h-full box-border flex-col md:flex-row',
+                'flex justify-evenly items-center flex-wrap overflow-auto h-full box-border flex-col md:flex-row gap-4',
                 codeEditorShowing ? 'md:max-h-[calc(50vh-3rem)]' : '',
               )}
             >
-              <div
-                ref={exampleHtmlRef}
-                className="contents w-full h-full"
-                // biome-ignore lint/security/noDangerouslySetInnerHtml: setting innerHtml from code editor input
-                dangerouslySetInnerHTML={{ __html: htmlCode }}
-              />
+              <div ref={exampleHtmlRef} className="contents w-full h-full" />
             </div>
           ) : (
             <GPUUnsupportedPanel />
@@ -244,9 +247,10 @@ function GPUUnsupportedPanel() {
 
 function useResizableCanvas(
   exampleHtmlRef: RefObject<HTMLDivElement>,
+  tsCode: string,
   htmlCode: string,
 ) {
-  // biome-ignore lint/correctness/useExhaustiveDependencies: should be run on every htmlCode change
+  // biome-ignore lint/correctness/useExhaustiveDependencies: should be run on every htmlCode and tsCode change
   useEffect(() => {
     const canvases = exampleHtmlRef.current?.querySelectorAll('canvas') as
       | HTMLCanvasElement[]
@@ -304,5 +308,5 @@ function useResizableCanvas(
         observer.disconnect();
       }
     };
-  }, [exampleHtmlRef, htmlCode]);
+  }, [exampleHtmlRef, tsCode, htmlCode]);
 }

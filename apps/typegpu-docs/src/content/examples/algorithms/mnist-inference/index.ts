@@ -279,6 +279,7 @@ function run() {
   requestAnimationFrame(run);
 }
 
+document.querySelector('.loading')?.classList.add('loaded');
 run();
 
 canvas.addEventListener('mousedown', () => {

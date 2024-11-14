@@ -1,22 +1,56 @@
-<canvas></canvas>
-<div class="predictions-container">
-  <div class="predictions-label">Predictions</div>
+<div class="loading">🤖 Downloading the model...</div>
+<div class="example">
+  <canvas></canvas>
+  <div class="predictions-container">
+    <div class="draw-prompt">Draw here</div>
+    <div class="predictions-label">Predictions</div>
 
-  <div class="bars-container">
-    <div class="bar">O</div>
-    <div class="bar">1</div>
-    <div class="bar">2</div>
-    <div class="bar">3</div>
-    <div class="bar">4</div>
-    <div class="bar">5</div>
-    <div class="bar">6</div>
-    <div class="bar">7</div>
-    <div class="bar">8</div>
-    <div class="bar">9</div>
+    <div class="bars-container">
+      <div class="bar">O</div>
+      <div class="bar">1</div>
+      <div class="bar">2</div>
+      <div class="bar">3</div>
+      <div class="bar">4</div>
+      <div class="bar">5</div>
+      <div class="bar">6</div>
+      <div class="bar">7</div>
+      <div class="bar">8</div>
+      <div class="bar">9</div>
+    </div>
   </div>
 </div>
 
 <style>
+  .loading {
+    font-size: 1.75rem;
+  }
+  
+  .loading.loaded {
+    display: none;
+  }
+
+  .example {
+    display: none;
+  }
+
+  .loading.loaded ~ .example {
+    display: contents;
+  }
+
+  .draw-prompt {
+    margin-bottom: 2rem;
+    font-size: 1.75rem;
+  }
+
+
+  .draw-prompt::before {
+    content: '👆 ';
+
+    @media (min-width: 1025px) {
+      content: '👈 ';
+    }
+  }
+
   .predictions-container {
     display: flex;
     flex-direction: column;
@@ -24,10 +58,10 @@
     align-items: center;
     justify-content: center;
     padding: 0.5rem;
+    gap: 1rem;
   }
 
   .predictions-label {
-    font-weight: bold;
     margin-bottom: 0.5rem;
     font-size: 1.25rem;
     @media (max-width: 1024px) {
