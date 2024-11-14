@@ -1,4 +1,4 @@
-import { useAtom, useSetAtom } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
 import { Suspense, useEffect, useRef } from 'react';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
 import { examples, examplesStable } from '../utils/examples/exampleContent';
@@ -35,7 +35,7 @@ function RedirectToFlagship() {
 }
 
 function ExamplePage() {
-  const [currentExample, setCurrentExample] = useAtom(currentExampleAtom);
+  const currentExample = useAtomValue(currentExampleAtom);
 
   const content = (() => {
     if (!currentExample) {

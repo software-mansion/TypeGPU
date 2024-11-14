@@ -1,13 +1,18 @@
+import type { Block } from 'tinyest';
 import type { TgpuLaidOut } from './core/bindGroup/laidOut';
+import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
 import type { TgpuFnShellBase } from './core/function/fnCore';
+import {
+  isSampledTextureView,
+  isStorageTextureView,
+} from './core/texture/texture';
 import { MissingSlotValueError, ResolutionError, invariant } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
-import { type Block, generateFunction } from './smol';
+import { generateFunction } from './smol';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout';
 import { code } from './tgpuCode';
-import { isTextureView } from './tgpuTexture';
 import type {
   AnyTgpuData,
   BufferUsage,
@@ -405,15 +410,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return;
     }
 
-    if (isTextureView(resource)) {
-      if (resource.access !== undefined) {
-        this.addDeclaration(
-          code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.texture.descriptor.format}, ${resource.access}>;`,
-        );
-        return;
-      }
+    if (isStorageTextureView(resource)) {
       this.addDeclaration(
-        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.dataType}>;`,
+        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.format}, ${resource.access}>;`,
+      );
+      return;
+    }
+
+    if (isSampledTextureView(resource)) {
+      this.addDeclaration(
+        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.channelDataType}>;`,
       );
       return;
     }

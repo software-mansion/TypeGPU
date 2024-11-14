@@ -1,6 +1,12 @@
-import Editor, { type Monaco } from '@monaco-editor/react';
+import Editor, {
+  type BeforeMount,
+  type Monaco,
+  type OnMount,
+} from '@monaco-editor/react';
 import typegpuJitDts from '@typegpu/jit/dist/index.d.ts?raw';
 import webgpuTypes from '@webgpu/types/dist/index.d.ts?raw';
+// biome-ignore lint/correctness/noUnusedImports: <its a namespace, Biome>
+import type { editor } from 'monaco-editor';
 import { entries, map, pipe } from 'remeda';
 import typedBinary from 'typed-binary/dist/index.d.ts?raw';
 import toolkitTypes from '../types/example-toolkit.d.ts?raw';
@@ -70,30 +76,54 @@ function handleEditorWillMount(monaco: Monaco) {
   });
 }
 
+function handleEditorOnMount(editor: editor.IStandaloneCodeEditor) {
+  // Folding regions in code automatically. Useful for code not strictly
+  // related to TypeGPU, like UI code.
+  editor.trigger(null, 'editor.foldAllMarkerRegions', {});
+}
+
 type Props = {
   code: string;
   onCodeChange: (value: string) => unknown;
+  shown: boolean;
 };
 
-export function CodeEditor(props: Props) {
-  const { code, onCodeChange } = props;
+const createCodeEditorComponent =
+  (
+    language: 'typescript' | 'html',
+    beforeMount?: BeforeMount,
+    onMount?: OnMount,
+  ) =>
+  (props: Props) => {
+    const { code, onCodeChange, shown } = props;
 
-  const handleChange = useEvent((value: string | undefined) => {
-    onCodeChange(value ?? '');
-  });
+    const handleChange = useEvent((value: string | undefined) => {
+      onCodeChange(value ?? '');
+    });
 
-  return (
-    <Editor
-      defaultLanguage="typescript"
-      value={code}
-      onChange={handleChange}
-      beforeMount={handleEditorWillMount}
-      options={{
-        minimap: {
-          enabled: false,
-        },
-      }}
-      className="pt-16 md:pt-0"
-    />
-  );
-}
+    return (
+      <div className={shown ? 'contents' : 'hidden'}>
+        <Editor
+          defaultLanguage={language}
+          value={code}
+          onChange={handleChange}
+          beforeMount={beforeMount}
+          onMount={onMount}
+          options={{
+            minimap: {
+              enabled: false,
+            },
+          }}
+          className="pt-16 md:pt-0"
+        />
+      </div>
+    );
+  };
+
+export const TsCodeEditor = createCodeEditorComponent(
+  'typescript',
+  handleEditorWillMount,
+  handleEditorOnMount,
+);
+
+export const HtmlCodeEditor = createCodeEditorComponent('html');

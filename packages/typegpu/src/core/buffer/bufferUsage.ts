@@ -1,4 +1,5 @@
 import type { Unwrap } from 'typed-binary';
+import { type Storage, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuBindGroupLayout } from '../../tgpuBindGroupLayout';
 import { code } from '../../tgpuCode';
@@ -9,13 +10,7 @@ import type {
   ResolutionCtx,
 } from '../../types';
 import type { TgpuLaidOut } from '../bindGroup/laidOut';
-import {
-  type Storage,
-  type TgpuBuffer,
-  type Uniform,
-  isUsableAsStorage,
-  isUsableAsUniform,
-} from './buffer';
+import { type TgpuBuffer, type Uniform, isUsableAsUniform } from './buffer';
 
 // ----------
 // Public API

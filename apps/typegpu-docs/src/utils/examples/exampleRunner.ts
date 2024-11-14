@@ -1,14 +1,12 @@
 import * as Babel from '@babel/standalone';
 import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
-import type { OnFrameFn } from '@typegpu/example-toolkit';
 import { filter, isNonNull, map, pipe } from 'remeda';
 import { wgsl } from 'typegpu/experimental';
 import { transpileModule } from 'typescript';
 import { tsCompilerOptions } from '../liveEditor/embeddedTypeScript';
 import type { ExampleControlParam } from './exampleControlAtom';
 import type { ExampleState } from './exampleState';
-import type { LayoutInstance } from './layout';
 
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
@@ -59,40 +57,34 @@ const staticToDynamicImports = {
   } satisfies TraverseOptions,
 };
 
-let addButtonParameterImportAdded = false;
-
-const labeledFunctionToControlButtons = () => {
+const exportedOptionsToExampleControls = () => {
   return {
     visitor: {
-      ImportDeclaration(path) {
-        if (path.node.source.value === '@typegpu/example-toolkit') {
-          for (const imp of path.node.specifiers) {
-            if (imp.local.name === 'addButtonParameter') {
-              addButtonParameterImportAdded = true;
-              break;
-            }
-          }
-        }
-      },
-
       ExportNamedDeclaration(path, state) {
         // @ts-ignore
         const code: string = state.file.code;
         const declaration = path.node.declaration;
-        if (declaration?.type === 'FunctionDeclaration') {
-          for (const comment of path.node.leadingComments ?? []) {
-            const regExp = /.*@button.*\"(?<label>.*)\".*/;
-            const label = regExp.exec(comment.value)?.groups?.label;
 
-            if (label) {
-              path.replaceWith(
-                template.program.ast(
-                  `${addButtonParameterImportAdded ? '' : "import { addButtonParameter } from '@typegpu/example-toolkit';"} addButtonParameter('${label}', ${code.slice(declaration.start ?? 0, declaration.end ?? 0)})`,
-                ),
-              );
-              addButtonParameterImportAdded = true;
-            }
+        if (declaration?.type === 'VariableDeclaration') {
+          const init = declaration.declarations[0].init;
+          if (init) {
+            path.replaceWith(
+              template.program.ast(
+                `import { addParameters } from '@typegpu/example-toolkit'; 
+                addParameters(${code.slice(init.start ?? 0, init.end ?? 0)});`,
+              ),
+            );
           }
+        }
+
+        if (declaration?.type === 'FunctionDeclaration') {
+          const body = declaration.body;
+          path.replaceWith(
+            template.program.ast(
+              `import { onCleanup } from '@typegpu/example-toolkit';
+              onCleanup(() => ${code.slice(body.start ?? 0, body.end ?? 0)});`,
+            ),
+          );
         }
       },
     } satisfies TraverseOptions,
@@ -148,16 +140,15 @@ function tsToJs(code: string): string {
   }).outputText;
 }
 
+type Labelless<T> = T extends unknown ? Omit<T, 'label'> : never;
+
 export async function executeExample(
   exampleCode: string,
-  createLayout: () => LayoutInstance,
   tags?: string[],
 ): Promise<ExampleState> {
   const cleanupCallbacks: (() => unknown)[] = [];
 
-  const layout = createLayout();
   let disposed = false;
-  cleanupCallbacks.push(() => layout.dispose());
 
   const controlParams: ExampleControlParam[] = [];
 
@@ -171,86 +162,37 @@ export async function executeExample(
     }
   };
 
-  function addSelectParameter(
-    label: string,
-    initial: string,
-    options: string[],
-    onChange: (newValue: string) => void,
+  function initializeParam(param: ExampleControlParam) {
+    if ('onSelectChange' in param) {
+      return param.onSelectChange(param.initial ?? param.options[0]);
+    }
+
+    if ('onToggleChange' in param) {
+      return param.onToggleChange(param.initial ?? false);
+    }
+
+    if ('onSliderChange' in param) {
+      return param.onSliderChange(param.initial ?? param.min ?? 0);
+    }
+  }
+
+  function addParameters(
+    options: Record<string, Labelless<ExampleControlParam>>,
   ) {
-    if (disposed) {
-      return;
+    for (const [label, value] of Object.entries(options)) {
+      const param = {
+        ...value,
+        label,
+      };
+
+      controlParams.push(param);
+
+      // Eager run to initialize the values.
+      initializeParam(param);
     }
-
-    controlParams.push({
-      type: 'select',
-      label,
-      initial,
-      options,
-      onChange,
-    });
-
-    // Eager run to initialize the values.
-    onChange(initial);
   }
 
-  function addToggleParameter(
-    label: string,
-    initial: boolean,
-    onChange: (newValue: boolean) => void,
-  ) {
-    if (disposed) {
-      return;
-    }
-
-    controlParams.push({
-      type: 'toggle',
-      label,
-      initial,
-      onChange,
-    });
-
-    // Eager run to initialize the values.
-    onChange(initial);
-  }
-
-  function addSliderParameter(
-    label: string,
-    initial: number,
-    options: {
-      min?: number;
-      max?: number;
-      step?: number;
-    },
-    onChange: (newValue: number) => void,
-  ) {
-    if (disposed) {
-      return;
-    }
-
-    controlParams.push({
-      type: 'slider',
-      initial,
-      label,
-      options,
-      onChange,
-    });
-
-    // Eager run to initialize the values.
-    onChange(initial);
-  }
-
-  function addButtonParameter(label: string, onClick: () => void) {
-    if (disposed) {
-      return;
-    }
-
-    controlParams.push({
-      type: 'button',
-      label,
-      onClick,
-    });
-  }
-
+  // TODO: remove after merging textures
   function addSliderPlumParameter(
     label: string,
     initial: number,
@@ -264,11 +206,12 @@ export async function executeExample(
     }
 
     controlParams.push({
-      type: 'slider',
       label,
       initial,
-      options: options ?? {},
-      onChange: (newValue) => {
+      min: options?.min,
+      max: options?.max,
+      step: options?.step,
+      onSliderChange: (newValue) => {
         value = newValue;
         // Calling `listener` may cause more listeners to
         // be attached, so copying.
@@ -309,9 +252,6 @@ export async function executeExample(
       if (moduleKey === 'typegpu/data') {
         return await import('typegpu/data');
       }
-      if (moduleKey === 'typegpu/macro') {
-        return await import('typegpu/macro');
-      }
       if (moduleKey === '@typegpu/jit') {
         return await import('@typegpu/jit');
       }
@@ -320,54 +260,22 @@ export async function executeExample(
           onCleanup(callback: () => unknown) {
             cleanupCallbacks.push(callback);
           },
-          onFrame: ((loop: (deltaTime: number) => unknown) => {
-            let lastTime = Date.now();
-
-            let handle = 0;
-            const runner = () => {
-              const now = Date.now();
-              const dt = now - lastTime;
-              lastTime = now;
-              loop(dt);
-
-              handle = requestAnimationFrame(runner);
-            };
-            handle = requestAnimationFrame(runner);
-
-            cleanupCallbacks.push(() => cancelAnimationFrame(handle));
-          }) satisfies OnFrameFn,
-          addElement: layout.addElement,
-          addSelectParameter,
-          addSliderParameter,
-          addButtonParameter,
-          addToggleParameter,
+          addParameters,
+          // TODO: remove after merging textures
           addSliderPlumParameter,
         };
       }
       throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
     };
 
-    const jsCode = tsToJs(`
-      ${exampleCode}
+    const jsCode = tsToJs(exampleCode);
 
-      import { onCleanup } from '@typegpu/example-toolkit';
-      onCleanup(() =>
-        if (typeof device === 'object'
-          && 'destroy' in device
-          && typeof device.destroy === 'function'
-        ) {
-          device.destroy();
-        }
-      );
-    `); // temporary solution to clean up device without using example-toolkit in the example
-
-    addButtonParameterImportAdded = false;
     const transformedCode =
       Babel.transform(jsCode, {
         compact: false,
         retainLines: true,
         plugins: [
-          labeledFunctionToControlButtons,
+          exportedOptionsToExampleControls,
           staticToDynamicImports,
           preventInfiniteLoops,
         ],

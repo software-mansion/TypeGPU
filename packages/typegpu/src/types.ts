@@ -1,9 +1,9 @@
+import type { Block } from 'tinyest';
 import type { ISchema, Unwrap } from 'typed-binary';
 import type { TgpuLaidOut } from './core/bindGroup/laidOut';
 import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
 import type { TgpuFnShellBase } from './core/function/fnCore';
 import type { TgpuNamable } from './namable';
-import type { Block } from './smol';
 
 export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
 
@@ -21,16 +21,6 @@ export interface NumberArrayView {
   readonly length: number;
   [n: number]: number;
 }
-
-/**
- * Removes properties from record type that extend `Prop`
- */
-export type OmitProps<T extends Record<string, unknown>, Prop> = Pick<
-  T,
-  {
-    [Key in keyof T]: T[Key] extends Prop ? never : Key;
-  }[keyof T]
->;
 
 /**
  * Passed into each resolvable item. All items in a tree share a resolution ctx,
@@ -190,17 +180,6 @@ export function isDepthTextureType(
     'texture_depth_cube',
     'texture_depth_cube_array',
     'texture_depth_multisampled_2d',
-  ].includes(type);
-}
-
-export function isStorageTextureType(
-  type: TgpuRenderResourceType,
-): type is TgpuStorageTextureType {
-  return [
-    'texture_storage_1d',
-    'texture_storage_2d',
-    'texture_storage_2d_array',
-    'texture_storage_3d',
   ].includes(type);
 }
 

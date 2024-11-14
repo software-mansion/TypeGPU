@@ -1,4 +1,5 @@
 import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
+import type { Storage } from '../../extension';
 import type { TgpuNamable } from '../../namable';
 import { type TgpuPlum, type Unsubscribe, isPlum } from '../../tgpuPlumTypes';
 import { type AnyTgpuData, isGPUBuffer } from '../../types';
@@ -13,16 +14,11 @@ export interface Uniform {
   usableAsUniform: true;
 }
 
-export interface Storage {
-  usableAsStorage: true;
-}
-
 export interface Vertex {
   usableAsVertex: true;
 }
 
 export const Uniform = { usableAsUniform: true } as Uniform;
-export const Storage = { usableAsStorage: true } as Storage;
 export const Vertex = { usableAsVertex: true } as Vertex;
 
 type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
@@ -73,12 +69,6 @@ export function isUsableAsUniform<T extends TgpuBuffer<AnyTgpuData>>(
   buffer: T,
 ): buffer is T & Uniform {
   return !!(buffer as unknown as Uniform).usableAsUniform;
-}
-
-export function isUsableAsStorage<T extends TgpuBuffer<AnyTgpuData>>(
-  buffer: T,
-): buffer is T & Storage {
-  return !!(buffer as unknown as Storage).usableAsStorage;
 }
 
 export function isUsableAsVertex<T extends TgpuBuffer<AnyTgpuData>>(

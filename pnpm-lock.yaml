@@ -231,8 +231,8 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0
       wgsl_reflect:
-        specifier: ^1.0.12
-        version: 1.0.12
+        specifier: git://github.com/mhawryluk/wgsl_reflect.git#85994fdc8d8a3abbb4f79baf3891e54eed0c1c63
+        version: github.com/mhawryluk/wgsl_reflect/85994fdc8d8a3abbb4f79baf3891e54eed0c1c63
     devDependencies:
       vitest:
         specifier: 0.33.0
@@ -246,18 +246,33 @@ importers:
       acorn:
         specifier: ^8.12.1
         version: 8.12.1
+      tinyest:
+        specifier: workspace:0.0.0
+        version: link:../tinyest
       tsup:
         specifier: ^8.0.2
         version: 8.0.2(typescript@5.5.4)
-      typegpu:
-        specifier: workspace:^0.2.0
-        version: link:../typegpu
+      typescript:
+        specifier: ^5.3.3
+        version: 5.5.4
+
+  packages/tinyest:
+    devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
+      tsup:
+        specifier: ^8.0.2
+        version: 8.0.2(typescript@5.5.4)
       typescript:
         specifier: ^5.3.3
         version: 5.5.4
 
   packages/typegpu:
     dependencies:
+      tinyest:
+        specifier: workspace:0.0.0
+        version: link:../tinyest
       typed-binary:
         specifier: ^4.0.1
         version: 4.0.1
@@ -268,6 +283,9 @@ importers:
       '@typegpu/wgsl-parser':
         specifier: workspace:*
         version: link:../typegpu-wgsl-parser
+      '@types/node':
+        specifier: ^20.11.13
+        version: 20.11.19
       '@webgpu/types':
         specifier: ^0.1.43
         version: 0.1.43
@@ -7354,7 +7372,7 @@ packages:
       joycon: 3.1.1
       postcss-load-config: 4.0.2(postcss@8.4.39)
       resolve-from: 5.0.0
-      rollup: 4.24.0
+      rollup: 4.12.1
       source-map: 0.8.0-beta.0
       sucrase: 3.35.0
       tree-kill: 1.2.2
@@ -7982,10 +8000,6 @@ packages:
     resolution: {integrity: sha512-MRdywXdzTwX9pVbO5Z/oRX9l7464Wkfv28glG1c7t7s5v/0Dvts6yV8b4AOTOTl1UDGq9KUEAoSN6KW5P12ruQ==}
     dev: true
 
-  /wgsl_reflect@1.0.12:
-    resolution: {integrity: sha512-hqORu1l+ed+tylMmcP/G78+rulEpq7TMKIxX/ktEgQzyYXcZL3FMkL8/c7xLMziy6+MXfjlOFWXqIal4KHilzg==}
-    dev: false
-
   /whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
@@ -8152,4 +8166,10 @@ packages:
 
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
+    dev: false
+
+  github.com/mhawryluk/wgsl_reflect/85994fdc8d8a3abbb4f79baf3891e54eed0c1c63:
+    resolution: {tarball: https://codeload.github.com/mhawryluk/wgsl_reflect/tar.gz/85994fdc8d8a3abbb4f79baf3891e54eed0c1c63}
+    name: wgsl_reflect
+    version: 1.0.14
     dev: false

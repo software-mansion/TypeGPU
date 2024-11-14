@@ -1,5 +1,5 @@
+import type * as smol from 'tinyest';
 import type { Unwrap } from 'typed-binary';
-import type * as smol from '../../smol';
 import type { AnyTgpuData, AnyTgpuLooseData } from '../../types';
 
 /**
@@ -29,6 +29,9 @@ export type Implementation<
   Return = unknown,
 > = string | ((...args: Args) => Return);
 
+/**
+ * Used for I/O definitions of entry functions.
+ */
 // An IO layout can be...
 export type IOLayout =
   // a single data-type

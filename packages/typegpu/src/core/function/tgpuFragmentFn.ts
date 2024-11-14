@@ -1,5 +1,5 @@
+import type { Block } from 'tinyest';
 import type { TgpuNamable } from '../../namable';
-import type { Block } from '../../smol';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
 import type { IOLayout, Implementation, UnwrapIO } from './fnTypes';
@@ -22,7 +22,7 @@ export interface TgpuFragmentFnShell<
   /**
    * Creates a type-safe implementation of this signature
    */
-  implement(
+  does(
     implementation: (varying: UnwrapIO<Varying>) => UnwrapIO<Output>,
   ): TgpuFragmentFn<Varying, Output>;
 
@@ -32,7 +32,7 @@ export interface TgpuFragmentFnShell<
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  implement(implementation: string): TgpuFragmentFn<Varying, Output>;
+  does(implementation: string): TgpuFragmentFn<Varying, Output>;
 }
 
 export interface TgpuFragmentFn<
@@ -67,7 +67,7 @@ export function fragmentFn<Varying extends IOLayout, Output extends IOLayout>(
     argTypes: [varyingTypes],
     returnType: outputType,
 
-    implement(implementation): TgpuFragmentFn<Varying, Output> {
+    does(implementation): TgpuFragmentFn<Varying, Output> {
       return createFragmentFn(this, implementation as Implementation);
     },
   };

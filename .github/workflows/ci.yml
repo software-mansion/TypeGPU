@@ -67,3 +67,5 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Test
         run: pnpm test
+      - name: Build docs
+        run: cd apps/typegpu-docs && pnpm build

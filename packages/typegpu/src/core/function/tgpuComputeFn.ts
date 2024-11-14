@@ -1,5 +1,5 @@
+import type { Block } from 'tinyest';
 import type { TgpuNamable } from '../../namable';
-import type { Block } from '../../smol';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
 import type { Implementation } from './fnTypes';
@@ -18,7 +18,7 @@ export interface TgpuComputeFnShell {
   /**
    * Creates a type-safe implementation of this signature
    */
-  implement(implementation: () => undefined): TgpuComputeFn;
+  does(implementation: () => undefined): TgpuComputeFn;
 
   /**
    * @param implementation
@@ -26,7 +26,7 @@ export interface TgpuComputeFnShell {
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  implement(implementation: string): TgpuComputeFn;
+  does(implementation: string): TgpuComputeFn;
 }
 
 export interface TgpuComputeFn extends TgpuResolvable, TgpuNamable {
@@ -48,7 +48,7 @@ export function computeFn(workgroupSize: number[]): TgpuComputeFnShell {
     argTypes: [],
     returnType: undefined,
 
-    implement(implementation) {
+    does(implementation) {
       return createComputeFn(this, workgroupSize, implementation);
     },
   };

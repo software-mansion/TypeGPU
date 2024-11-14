@@ -1,5 +1,5 @@
 import { describe, expectTypeOf, it } from 'vitest';
-import type { Default } from '../src/utilityTypes';
+import type { Default, Mutable } from '../src/utilityTypes';
 
 describe('Default', () => {
   it('turns undefined into the default', () => {
@@ -16,5 +16,17 @@ describe('Default', () => {
     expectTypeOf<Default<number | string, 'example'>>().toEqualTypeOf<
       number | string
     >();
+  });
+});
+
+describe('Mutable', () => {
+  it('works on tuples', () => {
+    expectTypeOf<Mutable<readonly [1, 2, 3]>>().toEqualTypeOf<[1, 2, 3]>();
+  });
+
+  it('works on unions of tuples', () => {
+    expectTypeOf<
+      Mutable<readonly [1, 2, 3] | readonly [1, 2, 3, 4]>
+    >().toEqualTypeOf<[1, 2, 3] | [1, 2, 3, 4]>();
   });
 });

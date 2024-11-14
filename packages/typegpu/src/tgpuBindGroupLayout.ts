@@ -1,9 +1,7 @@
 import {
-  type Storage,
   type TgpuBuffer,
   type Uniform,
   isBuffer,
-  isUsableAsStorage,
   isUsableAsUniform,
 } from './core/buffer/buffer';
 import type {
@@ -11,11 +9,28 @@ import type {
   TgpuBufferReadonly,
   TgpuBufferUniform,
 } from './core/buffer/bufferUsage';
+import {
+  type TgpuExternalTexture,
+  isExternalTexture,
+} from './core/texture/externalTexture';
+import {
+  type TgpuMutableTexture,
+  type TgpuReadonlyTexture,
+  type TgpuSampledTexture,
+  type TgpuTexture,
+  isTexture,
+} from './core/texture/texture';
+import {
+  NotSampledError,
+  isUsableAsSampled,
+} from './core/texture/usageExtension';
 import { NotUniformError } from './errors';
+import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
 import type { TgpuNamable } from './namable';
 import type { TgpuSampler } from './tgpuSampler';
-import type { AnyTgpuData, OmitProps, TgpuShaderStage } from './types';
+import type { AnyTgpuData, TgpuShaderStage } from './types';
 import type { Unwrapper } from './unwrapper';
+import type { OmitProps } from './utilityTypes';
 
 // ----------
 // Public API
@@ -140,6 +155,14 @@ export interface TgpuBindGroupLayoutExperimental<
     TgpuLayoutEntry | null
   >,
 > extends TgpuBindGroupLayout<Entries> {
+  /**
+   * Associates this bind group layout with an explicit numeric index. When a call to this
+   * method is omitted, a unique numeric index is assigned to it automatically.
+   *
+   * Used when generating WGSL code: `@group(${index}) @binding(...) ...;`
+   */
+  $idx(index?: number): this;
+
   readonly bound: {
     [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
   };
@@ -171,11 +194,13 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
       : T extends TgpuLayoutSampler
         ? GPUSampler
         : T extends TgpuLayoutTexture
-          ? GPUTextureView
+          ? // TODO: Allow sampled usages here
+            GPUTextureView | TgpuTexture
           : T extends TgpuLayoutStorageTexture
-            ? GPUTextureView
+            ? // TODO: Allow storage usages here
+              GPUTextureView | TgpuTexture
             : T extends TgpuLayoutExternalTexture
-              ? GPUExternalTexture
+              ? GPUExternalTexture | TgpuExternalTexture
               : never;
 
 export type BindLayoutEntry<T extends TgpuLayoutEntry | null> =
@@ -252,6 +277,7 @@ class TgpuBindGroupLayoutImpl<
 > implements TgpuBindGroupLayoutExperimental<Entries>
 {
   private _label: string | undefined;
+  private _index: number | undefined;
 
   public readonly resourceType = 'bind-group-layout' as const;
 
@@ -268,6 +294,11 @@ class TgpuBindGroupLayoutImpl<
 
   $name(label?: string | undefined): this {
     this._label = label;
+    return this;
+  }
+
+  $idx(index?: number): this {
+    this._index = index;
     return this;
   }
 
@@ -445,12 +476,74 @@ class TgpuBindGroupImpl<
             };
           }
 
-          if (
-            'texture' in entry ||
-            'storageTexture' in entry ||
-            'externalTexture' in entry ||
-            'sampler' in entry
-          ) {
+          if ('texture' in entry) {
+            let resource: GPUTextureView;
+
+            if (isTexture(value)) {
+              if (!isUsableAsSampled(value)) {
+                throw new NotSampledError(value);
+              }
+
+              resource = unwrapper.unwrap(
+                value.asSampled() as TgpuSampledTexture,
+              );
+            } else {
+              resource = value as GPUTextureView;
+            }
+
+            return {
+              binding: idx,
+              resource,
+            };
+          }
+
+          if ('storageTexture' in entry) {
+            let resource: GPUTextureView;
+
+            if (isTexture(value)) {
+              if (!isUsableAsStorage(value)) {
+                throw new NotStorageError(value);
+              }
+
+              if (entry.access === 'readonly') {
+                resource = unwrapper.unwrap(
+                  value.asReadonly() as TgpuReadonlyTexture,
+                );
+              } else if (entry.access === 'mutable') {
+                resource = unwrapper.unwrap(
+                  value.asMutable() as TgpuMutableTexture,
+                );
+              } else {
+                resource = unwrapper.unwrap(
+                  value.asReadonly() as TgpuReadonlyTexture,
+                );
+              }
+            } else {
+              resource = value as GPUTextureView;
+            }
+
+            return {
+              binding: idx,
+              resource,
+            };
+          }
+
+          if ('externalTexture' in entry) {
+            let resource: GPUExternalTexture;
+
+            if (isExternalTexture(value)) {
+              resource = unwrapper.unwrap(value);
+            } else {
+              resource = value as GPUExternalTexture;
+            }
+
+            return {
+              binding: idx,
+              resource,
+            };
+          }
+
+          if ('sampler' in entry) {
             return {
               binding: idx,
               resource: value as

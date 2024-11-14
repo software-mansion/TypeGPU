@@ -8,7 +8,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   it('is namable', () => {
     const getX = tgpu
       .fn([], f32)
-      .implement(`() {
+      .does(`() {
         return 3.0f;
       }`)
       .$name('get_x');
@@ -19,7 +19,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   it('resolves rawFn to WGSL', () => {
     const getY = tgpu
       .fn([], f32)
-      .implement(`() {
+      .does(`() {
         return 3.0f;
       }`)
       .$name('get_y');
@@ -46,7 +46,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   it('resolves externals and replaces their usages in code', () => {
     const getColor = tgpu
       .fn([], vec3f)
-      .implement(`() {
+      .does(`() {
         let color = vec3f();
         return color;
       }`)
@@ -54,7 +54,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
 
     const getX = tgpu
       .fn([], f32)
-      .implement(`() {
+      .does(`() {
         let color = get_color();
         return 3.0f;
       }`)
@@ -63,7 +63,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
 
     const getY = tgpu
       .fn([], f32)
-      .implement(`() {
+      .does(`() {
         let c = color();
         return getX();
       }`)
@@ -103,14 +103,14 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   it('replaces external usage just for exact identifier matches', () => {
     const getx = tgpu
       .fn([], f32)
-      .implement(`() {
+      .does(`() {
         return 3.0f;
       }`)
       .$name('external');
 
     const getY = tgpu
       .fn([], f32)
-      .implement(`() {
+      .does(`() {
         let x = getx();
         let y = getx() + getx();
         let z = hellogetx();

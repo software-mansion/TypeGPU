@@ -26,7 +26,8 @@ import tgpu, {
   type TgpuBufferMutable,
 } from '../src/experimental';
 import './utils/webgpuGlobals';
-import type { Storage, Uniform } from '../src/core/buffer/buffer';
+import type { Uniform } from '../src/core/buffer/buffer';
+import type { Storage } from '../src/extension';
 import {
   MissingBindingError,
   type TgpuBindGroup,
@@ -167,8 +168,8 @@ describe('TgpuBindGroupLayout', () => {
     expectTypeOf(a).toEqualTypeOf<TgpuBufferUniform<TgpuArray<U32>>>();
     expectTypeOf(b).toEqualTypeOf<TgpuBufferReadonly<TgpuArray<Vec3f>>>();
 
-    const aBuffer = root.createBuffer(arrayOf(u32, 4)).$usage(tgpu.Uniform);
-    const bBuffer = root.createBuffer(arrayOf(vec3f, 4)).$usage(tgpu.Storage);
+    const aBuffer = root.createBuffer(arrayOf(u32, 4)).$usage('uniform');
+    const bBuffer = root.createBuffer(arrayOf(vec3f, 4)).$usage('storage');
 
     const bindGroup = layout.populate({
       a: aBuffer,

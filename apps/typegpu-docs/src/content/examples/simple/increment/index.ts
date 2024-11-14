@@ -1,0 +1,30 @@
+import { u32 } from 'typegpu/data';
+import tgpu, { asMutable, wgsl } from 'typegpu/experimental';
+
+const root = await tgpu.init();
+
+const counterBuffer = root
+  .createBuffer(u32, 0)
+  .$name('counter')
+  .$usage('storage');
+
+const pipeline = root.makeComputePipeline({
+  code: wgsl`${asMutable(counterBuffer)} += 1;`,
+});
+
+const table = document.querySelector('.counter') as HTMLDivElement;
+
+export const controls = {
+  Increment: {
+    onButtonClick: async () => {
+      pipeline.execute();
+      const result = await counterBuffer.read();
+      table.innerText = `${result}`;
+    },
+  },
+};
+
+export function onCleanup() {
+  root.destroy();
+  root.device.destroy();
+}

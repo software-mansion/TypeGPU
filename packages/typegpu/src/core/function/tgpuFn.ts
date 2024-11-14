@@ -1,7 +1,7 @@
+import type { Block } from 'tinyest';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import { valueList } from '../../resolutionUtils';
-import type { Block } from '../../smol';
 import { code } from '../../tgpuCode';
 import type {
   AnyTgpuData,
@@ -29,7 +29,7 @@ export interface TgpuFnShell<
   /**
    * Creates a type-safe implementation of this signature
    */
-  implement(
+  does(
     implementation: (...args: UnwrapIO<Args>) => UnwrapReturn<Return>,
   ): TgpuFn<Args, Return>;
 
@@ -39,7 +39,7 @@ export interface TgpuFnShell<
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  implement(implementation: string): TgpuFn<Args, Return>;
+  does(implementation: string): TgpuFn<Args, Return>;
 }
 
 interface TgpuFnBase<
@@ -77,7 +77,7 @@ export function fn<
     argTypes,
     returnType,
 
-    implement(
+    does(
       implementation: Implementation<UnwrapIO<Args>, UnwrapReturn<Return>>,
     ): TgpuFn<Args, Return> {
       return createFn(this, implementation as Implementation);
@@ -86,7 +86,7 @@ export function fn<
 }
 
 export function procedure(implementation: () => void) {
-  return fn([]).implement(implementation);
+  return fn([]).does(implementation);
 }
 
 // --------------

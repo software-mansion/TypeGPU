@@ -4,9 +4,9 @@ import {
   type TgpuAnyTextureView,
   type TgpuTextureExternal,
   isExternalTexture,
-  isTextureView,
 } from '../../tgpuTexture';
-import type { AnyTgpuData, BufferUsage, TgpuBindable } from '../../types';
+import type { AnyTgpuData, BufferUsage } from '../../types';
+import type { TgpuBufferUsage } from '../buffer/bufferUsage';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 
 const usageToBindingTypeMap: Record<
@@ -22,7 +22,7 @@ export class CatchallBindGroup {
   private samplers: TgpuSampler[] = [];
   private textureViews: TgpuAnyTextureView[] = [];
   private externalTextures: TgpuTextureExternal[] = [];
-  private buffers: TgpuBindable<AnyTgpuData, BufferUsage>[] = [];
+  private buffers: TgpuBufferUsage<AnyTgpuData>[] = [];
 
   private _layoutMemo: GPUBindGroupLayout | null = null;
   private _bindGroupMemo: GPUBindGroup | null = null;
@@ -36,7 +36,10 @@ export class CatchallBindGroup {
     for (const resource of renderResources) {
       if (isSampler(resource)) {
         this.samplers.push(resource);
-      } else if (isTextureView(resource)) {
+      } else if (
+        isStorageTextureView(resource) ||
+        isSampledTextureView(resource)
+      ) {
         this.textureViews.push(resource);
       } else if (isExternalTexture(resource)) {
         this.externalTextures.push(resource);
@@ -54,7 +57,7 @@ export class CatchallBindGroup {
 
     const entries: GPUBindGroupLayoutEntry[] = [];
     for (const textureView of this.textureViews) {
-      if (textureView.access === undefined) {
+      if (textureView.resourceType === 'texture-sampled-view') {
         entries.push({
           binding: this.context.getIndexFor(textureView),
           visibility: this.shaderStage,
@@ -64,7 +67,7 @@ export class CatchallBindGroup {
         entries.push({
           binding: this.context.getIndexFor(textureView),
           visibility: this.shaderStage,
-          storageTexture: { format: textureView.texture.descriptor.format },
+          storageTexture: { format: textureView.format },
         });
       }
     }
@@ -101,8 +104,6 @@ export class CatchallBindGroup {
   }
 
   getBindGroup() {
-    this.checkBindGroupInvalidation();
-
     if (this._bindGroupMemo) {
       return this._bindGroupMemo;
     }
@@ -111,13 +112,13 @@ export class CatchallBindGroup {
     for (const textureView of this.textureViews) {
       entries.push({
         binding: this.context.getIndexFor(textureView),
-        resource: this.root.viewFor(textureView),
+        resource: this.root.unwrap(textureView),
       });
     }
     for (const external of this.externalTextures) {
       entries.push({
         binding: this.context.getIndexFor(external),
-        resource: this.root.externalTextureFor(external),
+        resource: this.root.unwrap(external),
       });
     }
     for (const sampler of this.samplers) {
@@ -146,21 +147,5 @@ export class CatchallBindGroup {
 
   invalidateBindGroup() {
     this._bindGroupMemo = null;
-  }
-
-  checkBindGroupInvalidation() {
-    for (const texture of this.externalTextures) {
-      // check if texture is dirty (changed source) -> if so, invalidate bind group and mark clean
-      if (this.root.isDirty(texture)) {
-        this.invalidateBindGroup();
-        this.root.markClean(texture);
-        continue;
-      }
-
-      // check if any external texture is of type HTMLVideoElement -> if so, invalidate bind group as it expires on bind
-      if (texture.source instanceof HTMLVideoElement) {
-        this.invalidateBindGroup();
-      }
-    }
   }
 }

@@ -1,7 +1,6 @@
 import type { TgpuBuffer } from './core/buffer/buffer';
 import type { AnyTgpuData, TgpuResolvable, TgpuSlot } from './types';
 
-const isProduction = import.meta.env?.MODE === 'production';
 const prefix = 'Invariant failed';
 
 /**
@@ -17,7 +16,7 @@ export function invariant(
   }
 
   // In production we strip the message but still throw
-  if (isProduction) {
+  if (process.env.NODE_ENV === 'production') {
     throw new Error(prefix);
   }
 
@@ -95,25 +94,11 @@ export class RecursiveDataTypeError extends Error {
 export class NotUniformError extends Error {
   constructor(value: TgpuBuffer<AnyTgpuData>) {
     super(
-      `Buffer '${value.label ?? '<unnamed>'}' is not bindable as a uniform. Use .$usage(tgu.Uniform) to allow it.`,
+      `Buffer '${value.label ?? '<unnamed>'}' is not bindable as a uniform. Use .$usage('uniform') to allow it.`,
     );
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, NotUniformError.prototype);
-  }
-}
-
-/**
- * @category Errors
- */
-export class NotStorageError extends Error {
-  constructor(value: TgpuBuffer<AnyTgpuData>) {
-    super(
-      `Buffer '${value.label ?? '<unnamed>'}' is not bindable as storage. Use .$usage(tgu.Storage) to allow it.`,
-    );
-
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, NotStorageError.prototype);
   }
 }
 

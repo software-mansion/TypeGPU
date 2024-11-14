@@ -1,5 +1,5 @@
+import type { Block } from 'tinyest';
 import type { TgpuNamable } from '../../namable';
-import type { Block } from '../../smol';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
 import type { IOLayout, Implementation, UnwrapIO } from './fnTypes';
@@ -21,7 +21,7 @@ export interface TgpuVertexFnShell<
   /**
    * Creates a type-safe implementation of this signature
    */
-  implement(
+  does(
     implementation: (
       vertexAttribs: UnwrapIO<VertexAttribs>,
     ) => UnwrapIO<Output>,
@@ -33,7 +33,7 @@ export interface TgpuVertexFnShell<
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  implement(implementation: string): TgpuVertexFn<VertexAttribs, Output>;
+  does(implementation: string): TgpuVertexFn<VertexAttribs, Output>;
 }
 
 export interface TgpuVertexFn<
@@ -69,7 +69,7 @@ export function vertexFn<
     argTypes: [vertexAttribs],
     returnType: outputType,
 
-    implement(implementation): TgpuVertexFn<VertexAttribs, Output> {
+    does(implementation): TgpuVertexFn<VertexAttribs, Output> {
       return createVertexFn(this, implementation as Implementation);
     },
   };
