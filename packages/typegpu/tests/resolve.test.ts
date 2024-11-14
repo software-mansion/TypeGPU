@@ -85,22 +85,25 @@ describe('tgpu resolve', () => {
       health: d.f32,
     });
 
-    const killPlayer = tgpu
-      .fn([PlayerData])
+    const getPlayerHealth = tgpu
+      .fn([PlayerData], d.f32)
       .does((pInfo) => {
-        pInfo.health = d.f32(0);
+        return pInfo.health;
       })
-      .$name('killPlayer_test');
+      .$name('getPlayerHealthTest');
 
     const shaderLogic = `
       @compute @workgroup_size(1)
       fn main() {
         var player: PlayerData;
         player.health = 100;
-        killPlayer(player);
+        let health = getPlayerHealth(player);
       }`;
 
-    const resolved = tgpu.resolve([shaderLogic], { PlayerData, killPlayer });
+    const resolved = tgpu.resolve([shaderLogic], {
+      PlayerData,
+      getPlayerHealth,
+    });
 
     expect(parse(resolved)).toEqual(
       parse(`
@@ -110,15 +113,66 @@ describe('tgpu resolve', () => {
           health: f32,
         }
 
-        fn killPlayer_test(pInfo: PlayerData) {
-          pInfo.health = f32(0);
+        fn getPlayerHealthTest(pInfo: PlayerData) -> f32 {
+          return pInfo.health;
         }
 
         @compute @workgroup_size(1)
         fn main() {
           var player: PlayerData;
           player.health = 100;
-          killPlayer_test(player);
+          let health = getPlayerHealthTest(player);
+        }
+      `),
+    );
+  });
+
+  it('should resolve a function with its dependencies', () => {
+    const Random = d.struct({
+      seed: d.vec2f,
+      range: d.vec2f,
+    });
+
+    const random = tgpu
+      .fn([], d.f32)
+      .does(/* wgsl */ `() -> f32 {
+        var r: Random;
+        r.seed = vec2<f32>(3.14, 1.59);
+        r.range = vec2<f32>(0.0, 1.0);
+        r.seed.x = fract(cos(dot(r.seed, vec2f(23.14077926, 232.61690225))) * 136.8168);
+        r.seed.y = fract(cos(dot(r.seed, vec2f(54.47856553, 345.84153136))) * 534.7645);
+        return clamp(r.seed.y, r.range.x, r.range.y);
+      }`)
+      .$uses({ Random });
+
+    const shaderLogic = `
+      @compute @workgroup_size(1)
+      fn main() {
+        var value = randomTest();
+      }`;
+
+    const resolved = tgpu.resolve([shaderLogic], { randomTest: random });
+    console.log(resolved);
+
+    expect(parse(resolved)).toEqual(
+      parse(`
+        struct Random {
+          seed: vec2f,
+          range: vec2f,
+        }
+
+        fn randomTest() -> f32 {
+          var r: Random;
+          r.seed = vec2<f32>(3.14, 1.59);
+          r.range = vec2<f32>(0.0, 1.0);
+          r.seed.x = fract(cos(dot(r.seed, vec2f(23.14077926, 232.61690225))) * 136.8168);
+          r.seed.y = fract(cos(dot(r.seed, vec2f(54.47856553, 345.84153136))) * 534.7645);
+          return clamp(r.seed.y, r.range.x, r.range.y);
+        }
+
+        @compute @workgroup_size(1)
+        fn main() {
+          var value = randomTest();
         }
       `),
     );
