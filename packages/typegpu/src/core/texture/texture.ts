@@ -158,7 +158,7 @@ export type StorageTextureDimension =
   | '2d'
   | '2d-array'
   // | 'cube' <- not supported by storage textures
-  // | 'cube-array'<- not supported by storage textures
+  // | 'cube-array' <- not supported by storage textures
   | '3d';
 
 export type TextureViewParams<
@@ -425,7 +425,7 @@ const dimensionToCodeMap = {
 } satisfies Record<GPUTextureViewDimension, string>;
 
 class TgpuBindableStorageTextureImpl
-  implements TgpuStorageTexture, TgpuStorageTexture_INTERNAL
+  implements TgpuStorageTexture, TgpuStorageTexture_INTERNAL, TgpuNamable
 {
   public readonly resourceType = 'texture-storage-view';
   public readonly texelDataType: TexelData;
@@ -482,7 +482,7 @@ class TgpuBindableStorageTextureImpl
 }
 
 class TgpuBindableSampledTextureImpl
-  implements TgpuSampledTexture, TgpuSampledTexture_INTERNAL
+  implements TgpuSampledTexture, TgpuSampledTexture_INTERNAL, TgpuNamable
 {
   public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;

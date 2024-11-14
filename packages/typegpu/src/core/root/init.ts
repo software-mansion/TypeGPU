@@ -62,7 +62,7 @@ interface Disposable {
  * Programs that share a root can interact via GPU buffers.
  */
 class TgpuRootImpl implements ExperimentalTgpuRoot {
-  private _disposable: Disposable[] = [];
+  private _disposables: Disposable[] = [];
   private _samplers = new WeakMap<TgpuSampler, GPUSampler>();
 
   private _unwrappedBindGroupLayouts = new WeakMemo(
@@ -98,7 +98,7 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
       this.device,
     );
 
-    this._disposable.push(buffer);
+    this._disposables.push(buffer);
 
     return buffer;
   }
@@ -136,7 +136,7 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     >
   > {
     const texture = INTERNAL_createTexture(props, this);
-    this._disposable.push(texture);
+    this._disposables.push(texture);
     // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
     return texture as any;
   }
@@ -156,7 +156,7 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
   }
 
   destroy() {
-    for (const disposable of this._disposable) {
+    for (const disposable of this._disposables) {
       disposable.destroy();
     }
   }

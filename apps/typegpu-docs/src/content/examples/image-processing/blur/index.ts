@@ -14,18 +14,18 @@ const Settings = struct({
 
 const uniformLayout = tgpu.bindGroupLayout({
   settings: { uniform: Settings },
-  u_sampler: { sampler: 'filtering' },
+  sampling: { sampler: 'filtering' },
 });
 
 const ioLayout = tgpu.bindGroupLayout({
   flip: { uniform: u32 },
-  in_texture: { texture: 'float' },
-  out_texture: { storageTexture: 'rgba8unorm' },
+  inTexture: { texture: 'float' },
+  outTexture: { storageTexture: 'rgba8unorm' },
 });
 
 const renderLayout = tgpu.bindGroupLayout({
-  u_texture: { texture: 'float' },
-  u_sampler: { sampler: 'filtering' },
+  texture: { texture: 'float' },
+  sampling: { sampler: 'filtering' },
 });
 
 const computeShaderCode = /* wgsl */ `
@@ -36,18 +36,18 @@ struct Settings {
 }
 
 @group(0) @binding(0) var<uniform> settings: Settings;
-@group(0) @binding(1) var u_sampler: sampler;
+@group(0) @binding(1) var sampling: sampler;
 
 @group(1) @binding(0) var<uniform> flip: u32;
-@group(1) @binding(1) var in_texture: texture_2d<f32>;
-@group(1) @binding(2) var out_texture: texture_storage_2d<rgba8unorm, write>;
+@group(1) @binding(1) var inTexture: texture_2d<f32>;
+@group(1) @binding(2) var outTexture: texture_storage_2d<rgba8unorm, write>;
 
 var<workgroup> tile: array<array<vec3f, 128>, 4>;
 
 @compute @workgroup_size(32, 1)
 fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: vec3u) {
   let filterOffset = (settings.filterDim - 1) / 2;
-  let dims = vec2i(textureDimensions(in_texture, 0));
+  let dims = vec2i(textureDimensions(inTexture, 0));
   let baseIndex = vec2i(wid.xy * vec2(settings.blockDim, 4) +
                             lid.xy * vec2(4, 1))
                   - vec2(filterOffset, 0);
@@ -60,8 +60,8 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: ve
       }
 
       tile[r][4 * lid.x + u32(c)] = textureSampleLevel(
-        in_texture,
-        u_sampler,
+        inTexture,
+        sampling,
         (vec2f(loadIndex) + vec2f(0.25, 0.25)) / vec2f(dims),
         0.0
       ).rgb;
@@ -86,7 +86,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: ve
           var i = center + f - filterOffset;
           acc = acc + (1.0 / f32(settings.filterDim)) * tile[r][i];
         }
-        textureStore(out_texture, writeIndex, vec4(acc, 1.0));
+        textureStore(outTexture, writeIndex, vec4(acc, 1.0));
       }
     }
   }
@@ -101,8 +101,8 @@ struct VertexOutput {
   @location(0) uv: vec2f,
 };
 
-@group(0) @binding(0) var u_texture: texture_2d<f32>;
-@group(0) @binding(1) var u_sampler: sampler;
+@group(0) @binding(0) var texture: texture_2d<f32>;
+@group(0) @binding(1) var sampling: sampler;
 
 @vertex
 fn main_vert(@builtin(vertex_index) index: u32) -> VertexOutput {
@@ -132,7 +132,7 @@ fn main_vert(@builtin(vertex_index) index: u32) -> VertexOutput {
 
 @fragment
 fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
-  return textureSample(u_texture, u_sampler, uv);
+  return textureSample(texture, sampling, uv);
 }
 
 `;
@@ -203,7 +203,7 @@ const computePipeline = device.createComputePipeline({
 
 const uniformBindGroup = uniformLayout.populate({
   settings: settingsBuffer,
-  u_sampler: sampler,
+  sampling: sampler,
 });
 
 const zeroBuffer = root.createBuffer(u32, 0).$usage('uniform');
@@ -212,24 +212,24 @@ const oneBuffer = root.createBuffer(u32, 1).$usage('uniform');
 const ioBindGroups = [
   ioLayout.populate({
     flip: zeroBuffer,
-    in_texture: imageTexture,
-    out_texture: textures[0],
+    inTexture: imageTexture,
+    outTexture: textures[0],
   }),
   ioLayout.populate({
     flip: oneBuffer,
-    in_texture: textures[0],
-    out_texture: textures[1],
+    inTexture: textures[0],
+    outTexture: textures[1],
   }),
   ioLayout.populate({
     flip: zeroBuffer,
-    in_texture: textures[1],
-    out_texture: textures[0],
+    inTexture: textures[1],
+    outTexture: textures[0],
   }),
 ];
 
 const renderBindGroup = renderLayout.populate({
-  u_texture: textures[1],
-  u_sampler: sampler,
+  texture: textures[1],
+  sampling: sampler,
 });
 
 const renderPassDescriptor: GPURenderPassDescriptor = {
