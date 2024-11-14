@@ -276,6 +276,11 @@ function run() {
     }
   }
 
+  if (!canvasData.some((value) => value)) {
+    context.font = '40px Aeonik';
+    context.fillStyle = 'black';
+    context.fillText('draw here 👇', 100, 150);
+  }
   requestAnimationFrame(run);
 }
 

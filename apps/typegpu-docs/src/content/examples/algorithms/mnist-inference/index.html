@@ -2,7 +2,6 @@
 <div class="example">
   <canvas></canvas>
   <div class="predictions-container">
-    <div class="draw-prompt">Draw here</div>
     <div class="predictions-label">Predictions</div>
 
     <div class="bars-container">
@@ -35,20 +34,6 @@
 
   .loading.loaded ~ .example {
     display: contents;
-  }
-
-  .draw-prompt {
-    margin-bottom: 2rem;
-    font-size: 1.75rem;
-  }
-
-
-  .draw-prompt::before {
-    content: '👆 ';
-
-    @media (min-width: 1025px) {
-      content: '👈 ';
-    }
   }
 
   .predictions-container {

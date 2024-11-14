@@ -136,7 +136,7 @@ export function ExampleView({ example }: Props) {
                 scrollbarGutter: 'stable',
               }}
               className={cs(
-                'flex justify-evenly items-center flex-wrap overflow-auto h-full box-border flex-col md:flex-row gap-4',
+                'flex justify-evenly items-center flex-wrap overflow-auto h-full box-border flex-col md:flex-row md:gap-4',
                 codeEditorShowing ? 'md:max-h-[calc(50vh-3rem)]' : '',
               )}
             >
