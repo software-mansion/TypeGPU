@@ -143,7 +143,7 @@ export interface TgpuTexture<TProps extends TextureProps = TextureProps>
   destroy(): void;
 }
 
-export interface TgpuTexture_INTERNAL {
+export interface INTERNAL_TgpuTexture {
   unwrap(): GPUTexture;
 }
 
@@ -185,7 +185,7 @@ export interface TgpuStorageTexture<
   readonly access: StorageTextureAccess;
 }
 
-export interface TgpuStorageTexture_INTERNAL {
+export interface INTERNAL_TgpuStorageTexture {
   unwrap(): GPUTextureView;
 }
 
@@ -234,7 +234,7 @@ export interface TgpuSampledTexture<
   readonly channelDataType: TData;
 }
 
-export interface TgpuSampledTexture_INTERNAL {
+export interface INTERNAL_TgpuSampledTexture {
   unwrap(): GPUTextureView;
 }
 
@@ -276,7 +276,7 @@ export type TgpuAnyTextureView =
 // Implementation
 // --------------
 
-class TgpuTextureImpl implements TgpuTexture, TgpuTexture_INTERNAL {
+class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
   public readonly resourceType = 'texture';
   public usableAsSampled = false;
   public usableAsStorage = false;
@@ -425,7 +425,7 @@ const dimensionToCodeMap = {
 } satisfies Record<GPUTextureViewDimension, string>;
 
 class TgpuBindableStorageTextureImpl
-  implements TgpuStorageTexture, TgpuStorageTexture_INTERNAL, TgpuNamable
+  implements TgpuStorageTexture, INTERNAL_TgpuStorageTexture, TgpuNamable
 {
   public readonly resourceType = 'texture-storage-view';
   public readonly texelDataType: TexelData;
@@ -442,7 +442,7 @@ class TgpuBindableStorageTextureImpl
       | TextureViewParams<StorageTextureDimension, StorageTextureTexelFormat>
       | undefined,
     public readonly access: StorageTextureAccess,
-    private readonly _texture: TgpuTexture<TextureProps> & TgpuTexture_INTERNAL,
+    private readonly _texture: TgpuTexture<TextureProps> & INTERNAL_TgpuTexture,
   ) {
     this.dimension = props?.dimension ?? _texture.props.dimension ?? '2d';
     this.format =
@@ -482,7 +482,7 @@ class TgpuBindableStorageTextureImpl
 }
 
 class TgpuBindableSampledTextureImpl
-  implements TgpuSampledTexture, TgpuSampledTexture_INTERNAL, TgpuNamable
+  implements TgpuSampledTexture, INTERNAL_TgpuSampledTexture, TgpuNamable
 {
   public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;
@@ -501,7 +501,7 @@ class TgpuBindableSampledTextureImpl
       | TextureViewParams<GPUTextureViewDimension, GPUTextureFormat>
       | undefined,
     public readonly access: StorageTextureAccess,
-    private readonly _texture: TgpuTexture<TextureProps> & TgpuTexture_INTERNAL,
+    private readonly _texture: TgpuTexture<TextureProps> & INTERNAL_TgpuTexture,
   ) {
     this.dimension = props?.dimension ?? _texture.props.dimension ?? '2d';
     this._format = props?.format ?? (_texture.props.format as GPUTextureFormat);

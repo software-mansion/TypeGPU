@@ -23,20 +23,20 @@ import type { TgpuSampler } from '../../tgpuSampler';
 import type { AnyTgpuData } from '../../types';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
 import {
+  type INTERNAL_TgpuExternalTexture,
   INTERNAL_createExternalTexture,
   type TgpuExternalTexture,
-  type TgpuExternalTexture_INTERNAL,
   isExternalTexture,
 } from '../texture/externalTexture';
 import {
+  type INTERNAL_TgpuSampledTexture,
+  type INTERNAL_TgpuStorageTexture,
+  type INTERNAL_TgpuTexture,
   INTERNAL_createTexture,
   type TgpuMutableTexture,
   type TgpuReadonlyTexture,
   type TgpuSampledTexture,
-  type TgpuSampledTexture_INTERNAL,
-  type TgpuStorageTexture_INTERNAL,
   type TgpuTexture,
-  type TgpuTexture_INTERNAL,
   type TgpuWriteonlyTexture,
   isSampledTextureView,
   isStorageTextureView,
@@ -204,19 +204,19 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     }
 
     if (isTexture(resource)) {
-      return (resource as unknown as TgpuTexture_INTERNAL).unwrap();
+      return (resource as unknown as INTERNAL_TgpuTexture).unwrap();
     }
 
     if (isStorageTextureView(resource)) {
-      return (resource as unknown as TgpuStorageTexture_INTERNAL).unwrap();
+      return (resource as unknown as INTERNAL_TgpuStorageTexture).unwrap();
     }
 
     if (isSampledTextureView(resource)) {
-      return (resource as unknown as TgpuSampledTexture_INTERNAL).unwrap();
+      return (resource as unknown as INTERNAL_TgpuSampledTexture).unwrap();
     }
 
     if (isExternalTexture(resource)) {
-      return (resource as unknown as TgpuExternalTexture_INTERNAL).unwrap();
+      return (resource as unknown as INTERNAL_TgpuExternalTexture).unwrap();
     }
 
     throw new Error(`Unknown resource type: ${resource}`);

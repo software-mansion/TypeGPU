@@ -19,7 +19,7 @@ export interface TgpuExternalTexture<
   get source(): HTMLVideoElement | VideoFrame | undefined;
 }
 
-export interface TgpuExternalTexture_INTERNAL {
+export interface INTERNAL_TgpuExternalTexture {
   unwrap(): GPUExternalTexture;
 }
 
@@ -44,7 +44,7 @@ export function isExternalTexture<T extends TgpuExternalTexture>(
 // --------------
 
 class TgpuExternalTextureImpl
-  implements TgpuExternalTexture, TgpuExternalTexture_INTERNAL
+  implements TgpuExternalTexture, INTERNAL_TgpuExternalTexture
 {
   public readonly resourceType = 'external-texture';
   /**
