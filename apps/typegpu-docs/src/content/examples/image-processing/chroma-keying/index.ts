@@ -1,14 +1,14 @@
 import { f32, vec3f } from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
 
-const frequentLayout = tgpu.bindGroupLayout({
-  inputTexture: { externalTexture: {} },
-});
-
 const rareLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },
   color: { uniform: vec3f },
   threshold: { uniform: f32 },
+});
+
+const frequentLayout = tgpu.bindGroupLayout({
+  inputTexture: { externalTexture: {} },
 });
 
 const shaderCode = /* wgsl */ `
@@ -18,10 +18,10 @@ struct VertexOutput {
   @location(0) uv: vec2f,
 };
 
-@group(0) @binding(0) var inputTexture: texture_external;
-@group(1) @binding(0) var sampling: sampler;
-@group(1) @binding(1) var<uniform> color: vec3f;
-@group(1) @binding(2) var<uniform> threshold: f32;
+@group(0) @binding(0) var sampling: sampler;
+@group(0) @binding(1) var<uniform> color: vec3f;
+@group(0) @binding(2) var<uniform> threshold: f32;
+@group(1) @binding(0) var inputTexture: texture_external;
 
 
 @vertex
@@ -148,7 +148,7 @@ const rareBindGroup = rareLayout.populate({
 const shaderModule = device.createShaderModule({ code: shaderCode });
 const renderPipeline = device.createRenderPipeline({
   layout: device.createPipelineLayout({
-    bindGroupLayouts: [root.unwrap(frequentLayout), root.unwrap(rareLayout)],
+    bindGroupLayouts: [root.unwrap(rareLayout), root.unwrap(frequentLayout)],
   }),
   vertex: {
     module: shaderModule,
@@ -190,15 +190,15 @@ async function drawFrame() {
 
   const pass = encoder.beginRenderPass(renderPassDescriptor);
   pass.setPipeline(renderPipeline);
+  pass.setBindGroup(0, root.unwrap(rareBindGroup));
   pass.setBindGroup(
-    0,
+    1,
     root.unwrap(
       frequentLayout.populate({
         inputTexture: device.importExternalTexture({ source: frame }),
       }),
     ),
   );
-  pass.setBindGroup(1, root.unwrap(rareBindGroup));
   pass.draw(6);
   pass.end();
 

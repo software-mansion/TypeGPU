@@ -90,9 +90,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: ve
       }
     }
   }
-}
-
-`;
+}`;
 
 const renderShaderCode = /* wgsl */ `
 
@@ -133,9 +131,7 @@ fn main_vert(@builtin(vertex_index) index: u32) -> VertexOutput {
 @fragment
 fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
   return textureSample(texture, sampling, uv);
-}
-
-`;
+}`;
 
 const root = await tgpu.init();
 const device = root.device;

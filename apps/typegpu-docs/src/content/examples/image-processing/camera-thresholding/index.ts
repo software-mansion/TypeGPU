@@ -1,10 +1,13 @@
 import { f32 } from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
 
-const layout = tgpu.bindGroupLayout({
-  inputTexture: { externalTexture: {} },
+const rareLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },
   threshold: { uniform: f32 },
+});
+
+const frequentLayout = tgpu.bindGroupLayout({
+  inputTexture: { externalTexture: {} },
 });
 
 const renderShaderCode = /* wgsl */ `
@@ -14,9 +17,9 @@ struct VertexOutput {
   @location(0) uv: vec2f,
 }
 
-@group(0) @binding(0) var inputTexture: texture_external;
-@group(0) @binding(1) var sampling: sampler;
-@group(0) @binding(2) var<uniform> threshold: f32;
+@group(0) @binding(0) var sampling: sampler;
+@group(0) @binding(1) var<uniform> threshold: f32;
+@group(1) @binding(0) var inputTexture: texture_external;
 
 @vertex
 fn main_vert(@builtin(vertex_index) idx: u32) -> VertexOutput {
@@ -54,9 +57,7 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
   }
 
   return vec4f(1);
-}
-
-`;
+}`;
 
 const video = document.querySelector('video') as HTMLVideoElement;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -73,6 +74,11 @@ const thresholdBuffer = root
   .createBuffer(f32)
   .$name('threshold')
   .$usage('uniform');
+
+const rareBindGroup = rareLayout.populate({
+  sampling: sampler,
+  threshold: thresholdBuffer,
+});
 
 if (navigator.mediaDevices.getUserMedia) {
   video.srcObject = await navigator.mediaDevices.getUserMedia({
@@ -95,7 +101,7 @@ const renderShaderModule = device.createShaderModule({
 
 const renderPipeline = device.createRenderPipeline({
   layout: device.createPipelineLayout({
-    bindGroupLayouts: [root.unwrap(layout)],
+    bindGroupLayouts: [root.unwrap(rareLayout), root.unwrap(frequentLayout)],
   }),
   vertex: {
     module: renderShaderModule,
@@ -135,13 +141,12 @@ function run() {
 
   const pass = encoder.beginRenderPass(renderPassDescriptor);
   pass.setPipeline(renderPipeline);
+  pass.setBindGroup(0, root.unwrap(rareBindGroup));
   pass.setBindGroup(
-    0,
+    1,
     root.unwrap(
-      layout.populate({
+      frequentLayout.populate({
         inputTexture: device.importExternalTexture({ source: video }),
-        sampling: sampler,
-        threshold: thresholdBuffer,
       }),
     ),
   );
@@ -171,7 +176,7 @@ export const controls = {
     initial: 0.4,
     min: 0,
     max: 1,
-    step: 0.1,
+    step: 0.01,
     onSliderChange: (threshold: number) => thresholdBuffer.write(threshold),
   },
 };
