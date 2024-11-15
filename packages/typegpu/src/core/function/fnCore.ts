@@ -38,7 +38,7 @@ export function createFnCore(
     },
 
     resolve(ctx: ResolutionCtx, fnAttribute = ''): string {
-      const ident = ctx.names.makeUnique(this.label);
+      const id = ctx.names.makeUnique(this.label);
 
       if (typeof implementation === 'string') {
         const replacedImpl = replaceExternalsInWgsl(
@@ -47,7 +47,7 @@ export function createFnCore(
           implementation.trim(),
         );
 
-        ctx.addDeclaration(`${fnAttribute}fn ${ident}${replacedImpl}`);
+        ctx.addDeclaration(`${fnAttribute}fn ${id}${replacedImpl}`);
       } else {
         const ast = prebuiltAst ?? ctx.transpileFn(String(implementation));
 
@@ -67,11 +67,11 @@ export function createFnCore(
           externalMap,
         );
         ctx.addDeclaration(
-          `${fnAttribute}fn ${ident}${ctx.resolve(head)}${ctx.resolve(body)}`,
+          `${fnAttribute}fn ${id}${ctx.resolve(head)}${ctx.resolve(body)}`,
         );
       }
 
-      return ident;
+      return id;
     },
   };
 }
