@@ -1,6 +1,4 @@
 import { MissingLinksError } from '../../errors';
-import { code } from '../../tgpuCode';
-import { identifier } from '../../tgpuIdentifier';
 import type { ResolutionCtx } from '../../types';
 import {
   type ExternalMap,
@@ -40,7 +38,7 @@ export function createFnCore(
     },
 
     resolve(ctx: ResolutionCtx, fnAttribute = ''): string {
-      const ident = identifier().$name(this.label);
+      const ident = ctx.names.makeUnique(this.label);
 
       if (typeof implementation === 'string') {
         const replacedImpl = replaceExternalsInWgsl(
@@ -49,7 +47,7 @@ export function createFnCore(
           implementation.trim(),
         );
 
-        ctx.addDeclaration(code`${fnAttribute}fn ${ident}${replacedImpl}`);
+        ctx.addDeclaration(`${fnAttribute}fn ${ident}${replacedImpl}`);
       } else {
         const ast = prebuiltAst ?? ctx.transpileFn(String(implementation));
 
@@ -68,10 +66,12 @@ export function createFnCore(
           ast.body,
           externalMap,
         );
-        ctx.addDeclaration(code`${fnAttribute}fn ${ident}${head}${body}`);
+        ctx.addDeclaration(
+          `${fnAttribute}fn ${ident}${ctx.resolve(head)}${ctx.resolve(body)}`,
+        );
       }
 
-      return ctx.resolve(ident);
+      return ident;
     },
   };
 }

@@ -1,6 +1,4 @@
 import type { TgpuNamable } from './namable';
-import { code } from './tgpuCode';
-import { identifier } from './tgpuIdentifier';
 import type { ResolutionCtx, TgpuResolvable, Wgsl } from './types';
 
 // ----------
@@ -36,8 +34,11 @@ class TgpuConstImpl implements TgpuConst {
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this._label);
-    ctx.addDeclaration(code`const ${ident} = ${this.expr};`);
-    return ctx.resolve(ident);
+    const id = ctx.names.makeUnique(this._label);
+    const expr = ctx.resolve(this.expr);
+
+    ctx.addDeclaration(`const ${id} = ${expr};`);
+
+    return id;
   }
 }

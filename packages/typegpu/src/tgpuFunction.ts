@@ -1,6 +1,5 @@
 import type { TgpuNamable } from './namable';
 import { code } from './tgpuCode';
-import { identifier } from './tgpuIdentifier';
 import type {
   Eventual,
   InlineResolve,
@@ -47,9 +46,12 @@ class TgpuFnImpl implements TgpuFn {
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this._label);
-    ctx.addDeclaration(code`fn ${ident}${this.body}`.$name(this._label));
-    return ctx.resolve(ident);
+    const id = ctx.names.makeUnique(this._label);
+    const body = ctx.resolve(this.body);
+
+    ctx.addDeclaration(`fn ${id}${body}`);
+
+    return id;
   }
 
   with<T>(slot: TgpuSlot<T>, value: T): BoundTgpuFn {

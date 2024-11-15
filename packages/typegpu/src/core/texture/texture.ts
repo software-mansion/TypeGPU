@@ -537,10 +537,8 @@ class TgpuBindableSampledTextureImpl
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this.label);
-
-    ctx.addRenderResource(this, ident);
-
-    return ctx.resolve(ident);
+    const id = ctx.names.makeUnique(this.label);
+    ctx.addRenderResource(this, id);
+    return id;
   }
 }
