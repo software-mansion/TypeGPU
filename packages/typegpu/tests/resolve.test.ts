@@ -45,13 +45,17 @@ describe('tgpu resolve', () => {
     const intensity = {
       label: 'intensity',
 
+      get value() {
+        return this;
+      },
+
       resolve(ctx: ResolutionCtx) {
         ctx.addDeclaration(
           wgsl`@group(0) @binding(0) var<uniform> intensity_1: f32;`,
         );
         return 'intensity_1';
       },
-    } as TgpuBufferReadonly<d.F32>;
+    } as unknown as TgpuBufferReadonly<d.F32>;
 
     const vertex = tgpu
       .vertexFn([], d.vec4f)

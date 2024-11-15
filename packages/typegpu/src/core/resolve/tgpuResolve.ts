@@ -7,6 +7,9 @@ import { applyExternals, replaceExternalsInWgsl } from '../function/externals';
 export interface TgpuResolveOptions {
   input: string | TgpuResolvable | (string | TgpuResolvable)[];
   extraDependencies?: Record<string, TgpuResolvable> | undefined;
+  /**
+   * @default 'random'
+   */
   names?: 'strict' | 'random' | undefined;
   jitTranspiler?: JitTranspiler | undefined;
 }
