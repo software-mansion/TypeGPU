@@ -1,10 +1,11 @@
 ---
 title: How to enable WebGPU on your device
 date: 2024-10-04
-lastUpdated: 2024-11-12
+lastUpdated: 2024-11-15
 tags:
   - Safari
   - iPhone
+  - Chrome
   - Troubleshooting
   - macOS
   - WebGPU support
@@ -68,3 +69,7 @@ If you are running Deno 1.39 or newer you can either:
   "webgpu"
 ]
 ```
+
+## Chrome for Android and desktop
+
+WebGPU for Google Chrome should work by default on Android and desktop devices, just make sure you run the newest available version of the app. If however it does not work, you might need to try enabling some experimental flags listed in the official [Chrome developer documentation](https://developer.chrome.com/docs/web-platform/webgpu/troubleshooting-tips).
