@@ -1,4 +1,9 @@
 export interface NameRegistry {
+  /**
+   * Creates a valid WGSL identifier, each guaranteed to be unique
+   * in the lifetime of a single resolution process.
+   * @param primer Used in the generation process, makes the identifier more recognizable.
+   */
   makeUnique(primer?: string): string;
 }
 
