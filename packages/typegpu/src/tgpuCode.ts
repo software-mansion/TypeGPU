@@ -1,4 +1,3 @@
-import { idForBuiltin } from './builtinIdentifiers';
 import {
   type BoundTgpuCode,
   type Eventual,
@@ -58,9 +57,6 @@ class TgpuCodeImpl implements TgpuCode {
       } else if (typeof s === 'function') {
         const result = s((eventual) => ctx.unwrap(eventual));
         code += ctx.resolve(result);
-      } else if (typeof s === 'symbol') {
-        ctx.addBuiltin(s);
-        code += ctx.resolve(idForBuiltin(s));
       } else {
         code += String(s);
       }

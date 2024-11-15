@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { afterEach } from 'vitest';
 import { struct, u32, vec3i, vec4u } from '../src/data';
-import tgpu, { asReadonly, asUniform, wgsl } from '../src/experimental';
+import tgpu from '../src/experimental';
 import { plum } from '../src/tgpuPlum';
 import './utils/webgpuGlobals';
 
@@ -67,17 +67,11 @@ describe('TgpuRoot', () => {
       device: mockDevice as unknown as GPUDevice,
     });
     const dataBuffer = root.createBuffer(u32).$usage('uniform');
-    const data = asUniform(dataBuffer);
-
-    const testPipeline = root.makeComputePipeline({
-      code: wgsl`${data}`,
-    });
 
     const mockBuffer = root.unwrap(dataBuffer);
     expect(mockBuffer).toBeDefined();
     expect(mockBuffer.getMappedRange).not.toBeCalled();
 
-    expect(testPipeline).toBeDefined();
     expect(root.device.createBuffer).toBeCalledWith({
       mappedAtCreation: false,
       size: 4,
@@ -95,17 +89,11 @@ describe('TgpuRoot', () => {
     const dataBuffer = root
       .createBuffer(vec3i, vec3i(0, 0, 0))
       .$usage('uniform');
-    const data = asUniform(dataBuffer);
-
-    const testPipeline = root.makeComputePipeline({
-      code: wgsl`${data}`,
-    });
 
     const mockBuffer = root.unwrap(dataBuffer);
     expect(mockBuffer).toBeDefined();
     expect(mockBuffer.getMappedRange).toBeCalled();
 
-    expect(testPipeline).toBeDefined();
     expect(root.device.createBuffer).toBeCalledWith({
       mappedAtCreation: true,
       size: 12,
@@ -123,15 +111,8 @@ describe('TgpuRoot', () => {
     const s1 = struct({ a: u32, b: u32 });
     const s2 = struct({ a: u32, b: s1 });
     const dataBuffer = root.createBuffer(s2).$usage('uniform');
-    const data = asUniform(dataBuffer);
 
-    const testPipeline = root.makeComputePipeline({
-      code: wgsl`${data}`,
-    });
-
-    testPipeline.execute();
-
-    expect(testPipeline).toBeDefined();
+    root.unwrap(dataBuffer);
     expect(root.device.createBuffer).toBeCalledWith({
       mappedAtCreation: false,
       size: 12,
@@ -171,15 +152,8 @@ describe('TgpuRoot', () => {
     const s2 = struct({ a: u32, b: s1, c: vec4u });
 
     const dataBuffer = root.createBuffer(s2).$usage('uniform');
-    const data = asUniform(dataBuffer);
 
-    const testPipeline = root.makeComputePipeline({
-      code: wgsl`let x = ${data};`,
-    });
-
-    testPipeline.execute();
-
-    expect(testPipeline).toBeDefined();
+    root.unwrap(dataBuffer);
     expect(root.device.createBuffer).toBeCalledWith({
       mappedAtCreation: false,
       size: 64,
@@ -216,16 +190,9 @@ describe('TgpuRoot', () => {
     const dataBuffer = root.createBuffer(u32, intPlum).$usage('storage');
     const spy = vi.spyOn(dataBuffer, 'write');
 
-    const buffer = asReadonly(dataBuffer);
-
-    const testPipeline = root.makeComputePipeline({
-      code: wgsl`${buffer}`,
-    });
-
-    testPipeline.execute();
+    root.unwrap(dataBuffer);
 
     expect(spy).toBeCalledTimes(0);
-    expect(testPipeline).toBeDefined();
     expect(root.device.createBuffer).toBeCalledWith({
       mappedAtCreation: true,
       size: 4,

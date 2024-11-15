@@ -9,7 +9,6 @@ import {
   type Parsed,
   type Unwrap,
 } from 'typed-binary';
-import type { BuiltinName } from '../builtinIdentifiers';
 import { RecursiveDataTypeError } from '../errors';
 import {
   type AnyTgpuData,
@@ -25,6 +24,25 @@ import alignIO from './alignIO';
 // ----------
 // Public API
 // ----------
+
+export const builtinNames = [
+  'vertex_index',
+  'instance_index',
+  'position',
+  'clip_distances',
+  'front_facing',
+  'frag_depth',
+  'sample_index',
+  'sample_mask',
+  'fragment',
+  'local_invocation_id',
+  'local_invocation_index',
+  'global_invocation_id',
+  'workgroup_id',
+  'num_workgroups',
+] as const;
+
+export type BuiltinName = (typeof builtinNames)[number];
 
 export interface Align<T extends number> {
   type: 'align';
