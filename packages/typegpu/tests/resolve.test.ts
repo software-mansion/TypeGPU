@@ -1,7 +1,7 @@
 import { parse } from '@typegpu/wgsl-parser';
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data';
-import tgpu, { type TgpuBufferReadonly, wgsl } from '../src/experimental';
+import tgpu, { type TgpuBufferReadonly } from '../src/experimental';
 import type { ResolutionCtx } from '../src/experimental';
 
 describe('tgpu resolve', () => {
@@ -51,7 +51,7 @@ describe('tgpu resolve', () => {
 
       resolve(ctx: ResolutionCtx) {
         ctx.addDeclaration(
-          wgsl`@group(0) @binding(0) var<uniform> intensity_1: f32;`,
+          '@group(0) @binding(0) var<uniform> intensity_1: f32;',
         );
         return 'intensity_1';
       },
