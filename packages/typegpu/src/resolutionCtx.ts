@@ -40,10 +40,7 @@ class SharedResolutionState {
   private readonly _usedBuiltins = new Set<symbol>();
   private readonly _declarations: string[] = [];
 
-  constructor(
-    public readonly names: NameRegistry,
-    public readonly jitTranspiler: JitTranspiler | undefined,
-  ) {}
+  constructor(public readonly jitTranspiler: JitTranspiler | undefined) {}
 
   get declarations(): Iterable<string> {
     return this._declarations;
@@ -260,8 +257,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   private _itemStateStack = new ItemStateStack();
 
+  public readonly names: NameRegistry;
+
   constructor(opts: ResolutionCtxImplOptions) {
-    this._shared = new SharedResolutionState(opts.names, opts.jitTranspiler);
+    this.names = opts.names;
+    this._shared = new SharedResolutionState(opts.jitTranspiler);
   }
 
   get usedBuiltins() {
@@ -336,8 +336,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     };
   }
 
-  addDeclaration(declaration: TgpuResolvable): void {
-    this._shared.addDeclaration(this.resolve(declaration));
+  addDeclaration(declaration: string): void {
+    this._shared.addDeclaration(declaration);
   }
 
   allocateLayoutEntry(layout: TgpuBindGroupLayout): string {
@@ -364,10 +364,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   addBuiltin(builtin: symbol): void {
     this._shared.addBuiltin(builtin);
-  }
-
-  nameFor(item: TgpuResolvable): string {
-    return this._shared.names.nameFor(item);
   }
 
   readSlot<T>(slot: TgpuSlot<T>): T {

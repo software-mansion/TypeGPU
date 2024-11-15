@@ -16,6 +16,9 @@ export function identifier() {
 // Implementation
 // --------------
 
+/**
+ * TODO: Remove after the builtin refactor
+ */
 class TgpuIdentifierImpl implements TgpuResolvable, TgpuNamable {
   label?: string | undefined;
 
@@ -25,7 +28,7 @@ class TgpuIdentifierImpl implements TgpuResolvable, TgpuNamable {
   }
 
   resolve(ctx: ResolutionCtx): string {
-    return ctx.nameFor(this);
+    return ctx.names.makeUnique(this.label);
   }
 
   toString(): string {

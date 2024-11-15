@@ -3,8 +3,6 @@ import type { Vec4f, Vec4i, Vec4u } from '../../data/vector';
 import { invariant } from '../../errors';
 import type { ExtensionGuard } from '../../extension';
 import type { TgpuNamable } from '../../namable';
-import { code } from '../../tgpuCode';
-import { identifier } from '../../tgpuIdentifier';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import type { Default } from '../../utilityTypes';
 import type { UnionToIntersection } from '../../utilityTypes';
@@ -465,15 +463,15 @@ class TgpuFixedStorageTextureImpl
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this.label);
+    const id = ctx.names.makeUnique(this.label);
     const { group, binding } = ctx.allocateFixedEntry(this);
     const type = `texture_storage_${dimensionToCodeMap[this.dimension]}`;
 
     ctx.addDeclaration(
-      code`@group(${group}) @binding(${binding}) var ${ident}: ${type}<${this._format}, ${this.access}>;`,
+      `@group(${group}) @binding(${binding}) var ${id}: ${type}<${this._format}, ${this.access}>;`,
     );
 
-    return ctx.resolve(ident);
+    return id;
   }
 }
 
@@ -521,7 +519,7 @@ class TgpuFixedSampledTextureImpl
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this.label);
+    const id = ctx.names.makeUnique(this.label);
     const { group, binding } = ctx.allocateFixedEntry(this);
 
     let type: string;
@@ -532,9 +530,9 @@ class TgpuFixedSampledTextureImpl
     }
 
     ctx.addDeclaration(
-      code`@group(${group}) @binding(${binding}) var ${ident}: ${type}<${this.channelDataType}>;`,
+      `@group(${group}) @binding(${binding}) var ${id}: ${type}<${ctx.resolve(this.channelDataType)}>;`,
     );
 
-    return ctx.resolve(ident);
+    return id;
   }
 }

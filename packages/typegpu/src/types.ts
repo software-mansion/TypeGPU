@@ -3,6 +3,7 @@ import type { ISchema, Unwrap } from 'typed-binary';
 import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
 import type { TgpuFnShellBase } from './core/function/fnCore';
 import type { TgpuNamable } from './namable';
+import type { NameRegistry } from './nameRegistry';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout';
 
 export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
@@ -28,7 +29,9 @@ export interface NumberArrayView {
  * and up the tree.
  */
 export interface ResolutionCtx {
-  addDeclaration(item: string): void;
+  readonly names: NameRegistry;
+
+  addDeclaration(declaration: string): void;
   /**
    * Reserves a bind group number, and returns a placeholder that will be replaced
    * with a concrete number at the end of the resolution process.
@@ -43,7 +46,6 @@ export interface ResolutionCtx {
     binding: number;
   };
   addBuiltin(builtin: symbol): void;
-  nameFor(token: TgpuResolvable): string;
   /**
    * Unwraps all layers of slot indirection and returns the concrete value if available.
    * @throws {MissingSlotValueError}

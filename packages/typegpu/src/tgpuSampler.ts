@@ -1,6 +1,4 @@
 import type { TgpuNamable } from './namable';
-import { code } from './tgpuCode';
-import { identifier } from './tgpuIdentifier';
 import type { ResolutionCtx } from './types';
 
 export interface TgpuSampler extends TgpuNamable {
@@ -33,14 +31,14 @@ class TgpuSamplerImpl implements TgpuSampler {
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this._label);
+    const id = ctx.names.makeUnique(this._label);
     const { group, binding } = ctx.allocateFixedEntry(this);
 
     ctx.addDeclaration(
-      code`@group(${group}) @binding(${binding}) var ${ident}: ${this._type};`,
+      `@group(${group}) @binding(${binding}) var ${id}: ${this._type};`,
     );
 
-    return ctx.resolve(ident);
+    return id;
   }
 }
 

@@ -2,8 +2,6 @@ import type { Unwrap } from 'typed-binary';
 import { type Storage, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout';
-import { code } from '../../tgpuCode';
-import { identifier } from '../../tgpuIdentifier';
 import type {
   AnyTgpuData,
   BindableBufferUsage,
@@ -77,15 +75,15 @@ class TgpuFixedBufferImpl<
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this.label);
+    const id = ctx.names.makeUnique(this.label);
     const { group, binding } = ctx.allocateFixedEntry(this);
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
-      code`@group(${group}) @binding(${binding}) var<${usage}> ${ident}: ${this.buffer.dataType};`,
+      `@group(${group}) @binding(${binding}) var<${usage}> ${id}: ${ctx.resolve(this.buffer.dataType)};`,
     );
 
-    return ctx.resolve(ident);
+    return id;
   }
 
   toString(): string {
@@ -118,15 +116,15 @@ export class TgpuLaidOutBufferImpl<
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this.label);
+    const id = ctx.names.makeUnique(this.label);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
-      code`@group(${group}) @binding(${this._membership.idx}) var<${usage}> ${ident}: ${this.dataType};`,
+      `@group(${group}) @binding(${this._membership.idx}) var<${usage}> ${id}: ${ctx.resolve(this.dataType)};`,
     );
 
-    return ctx.resolve(ident);
+    return id;
   }
 
   toString(): string {
