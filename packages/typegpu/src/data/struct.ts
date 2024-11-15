@@ -11,8 +11,6 @@ import {
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import type { TgpuNamable } from '../namable';
-import { code } from '../tgpuCode';
-import { identifier } from '../tgpuIdentifier';
 import type {
   AnyTgpuData,
   AnyTgpuLooseData,
@@ -138,8 +136,11 @@ export function isLooseStructSchema<
 // Implementation
 // --------------
 
-function generateField([key, field]: [string, AnyTgpuData]) {
-  return code`  ${getAttributesString(field)}${key}: ${field},\n`;
+function generateField(
+  ctx: ResolutionCtx,
+  [key, field]: [string, AnyTgpuData],
+) {
+  return `  ${getAttributesString(field)}${key}: ${ctx.resolve(field)},\n`;
 }
 
 class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
@@ -245,15 +246,17 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this._label);
+    const id = ctx.names.makeUnique(this._label);
 
-    ctx.addDeclaration(code`
-struct ${ident} {
-${Object.entries(this.properties).map(generateField)}\
+    ctx.addDeclaration(`
+struct ${id} {
+${Object.entries(this.properties)
+  .map((prop) => generateField(ctx, prop))
+  .join('')}\
 }
 `);
 
-    return ctx.resolve(ident);
+    return id;
   }
 }
 

@@ -1,12 +1,11 @@
 import tgpu, { type TgpuBuffer, type Storage } from 'typegpu';
 import { type F32, type TgpuArray, arrayOf, f32 } from 'typegpu/data';
 
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const SIZE = 28;
 
 const root = await tgpu.init();
 const device = root.device;
-const canvasData = new Array<number>(SIZE ** 2);
+const canvasData = new Array<number>(SIZE ** 2).fill(0);
 
 // Shader code
 
@@ -39,34 +38,30 @@ const layerShader = `
   }
 `;
 
-const inputOutput = tgpu.bindGroupLayout({
-  input: {
-    storage: (n) => arrayOf(f32, n),
-    access: 'readonly',
-  },
-  output: {
-    storage: (n) => arrayOf(f32, n),
-    access: 'mutable',
-  },
+const ReadonlyFloats = {
+  storage: (n: number) => arrayOf(f32, n),
+  access: 'readonly',
+} as const;
+
+const MutableFloats = {
+  storage: (n: number) => arrayOf(f32, n),
+  access: 'mutable',
+} as const;
+
+const ioLayout = tgpu.bindGroupLayout({
+  input: ReadonlyFloats,
+  output: MutableFloats,
 });
 
-const weightsBiases = tgpu.bindGroupLayout({
-  weights: {
-    storage: (n) => arrayOf(f32, n),
-    access: 'readonly',
-  },
-  biases: {
-    storage: (n) => arrayOf(f32, n),
-    access: 'readonly',
-  },
-});
-
-const pipelineLayout = device.createPipelineLayout({
-  bindGroupLayouts: [root.unwrap(inputOutput), root.unwrap(weightsBiases)],
+const weightsBiasesLayout = tgpu.bindGroupLayout({
+  weights: ReadonlyFloats,
+  biases: ReadonlyFloats,
 });
 
 const pipeline = device.createComputePipeline({
-  layout: pipelineLayout,
+  layout: device.createPipelineLayout({
+    bindGroupLayouts: [root.unwrap(ioLayout), root.unwrap(weightsBiasesLayout)],
+  }),
   compute: {
     module: device.createShaderModule({
       code: layerShader,
@@ -77,20 +72,14 @@ const pipeline = device.createComputePipeline({
 // Definitions for the network
 
 interface LayerData {
-  header: string;
-  data: Float32Array;
-  shape: [number, number?];
+  shape: readonly [number] | readonly [number, number];
   buffer: TgpuBuffer<TgpuArray<F32>> & Storage;
 }
 
 interface Layer {
-  weights: LayerData;
-  biases: LayerData;
-  buffers: {
-    weights: TgpuBuffer<TgpuArray<F32>> & Storage;
-    biases: TgpuBuffer<TgpuArray<F32>> & Storage;
-    state: TgpuBuffer<TgpuArray<F32>> & Storage;
-  };
+  weights: TgpuBuffer<TgpuArray<F32>> & Storage;
+  biases: TgpuBuffer<TgpuArray<F32>> & Storage;
+  state: TgpuBuffer<TgpuArray<F32>> & Storage;
 }
 
 interface Network {
@@ -101,7 +90,83 @@ interface Network {
   inference(data: number[]): Promise<number[]>;
 }
 
-// Network loading functions
+/**
+ * Creates a network from a list of pairs of weights and biases
+ *
+ * It automates the creation of state buffers that are used to store the intermediate results of the network
+ * as well as the input layer buffer
+ *
+ * It provides an inference function that takes an array of input data and returns an array of output data
+ */
+function createNetwork(layers: [LayerData, LayerData][]): Network {
+  const buffers = layers.map(([weights, biases]) => {
+    if (weights.shape[1] !== biases.shape[0]) {
+      throw new Error(`Shape mismatch: ${weights.shape} and ${biases.shape}`);
+    }
+
+    return {
+      weights: weights.buffer,
+      biases: biases.buffer,
+      state: root.createBuffer(arrayOf(f32, biases.shape[0])).$usage('storage'),
+    };
+  });
+
+  const input = root
+    .createBuffer(arrayOf(f32, layers[0][0].shape[0]))
+    .$usage('storage');
+  const output = buffers[buffers.length - 1].state;
+
+  const ioBindGroups = buffers.map((_, i) =>
+    ioLayout.populate({
+      input: i === 0 ? input : buffers[i - 1].state,
+      output: buffers[i].state,
+    }),
+  );
+
+  const weightsBindGroups = buffers.map((layer) =>
+    weightsBiasesLayout.populate({
+      weights: layer.weights,
+      biases: layer.biases,
+    }),
+  );
+
+  async function inference(data: number[]): Promise<number[]> {
+    // verify the length of the data matches the input layer
+    if (data.length !== layers[0][0].shape[0]) {
+      throw new Error(
+        `Data length ${data.length} does not match input shape ${layers[0][0].shape[0]}`,
+      );
+    }
+    input.write(data);
+
+    // Run the network
+    const encoder = device.createCommandEncoder();
+    for (let i = 0; i < buffers.length; i++) {
+      const pass = encoder.beginComputePass();
+      pass.setPipeline(pipeline);
+      pass.setBindGroup(0, root.unwrap(ioBindGroups[i]));
+      pass.setBindGroup(1, root.unwrap(weightsBindGroups[i]));
+      pass.dispatchWorkgroups(buffers[i].biases.dataType.elementCount);
+      pass.end();
+    }
+    device.queue.submit([encoder.finish()]);
+    await device.queue.onSubmittedWorkDone();
+
+    // Read the output
+    return await output.read();
+  }
+
+  return {
+    layers: buffers,
+    input,
+    output,
+    inference,
+  };
+}
+
+const network = createNetwork(await downloadLayers());
+
+// #region Downloading weights & biases
 
 /**
  * Create a LayerData object from a layer ArrayBuffer
@@ -124,173 +189,91 @@ function getLayerData(layer: ArrayBuffer): LayerData {
     throw new Error('Shape not found in header');
   }
 
-  // To accomodate .npy weirdness - if we have a 2d shape we need to switch the order
-  const shape = Number.isNaN(Number.parseInt(shapeMatch[2]))
-    ? ([Number.parseInt(shapeMatch[1])] as [number, number?])
-    : ([Number.parseInt(shapeMatch[2]), Number.parseInt(shapeMatch[1])] as [
-        number,
-        number?,
-      ]);
+  // To accommodate .npy weirdness - if we have a 2d shape we need to switch the order
+  const X = Number.parseInt(shapeMatch[1]);
+  const Y = Number.parseInt(shapeMatch[2]);
+  const shape = Number.isNaN(Y) ? ([X] as const) : ([Y, X] as const);
 
   const data = new Float32Array(layer.slice(10 + headerLen[0]));
-  // verify the length of the data matches the shape
+
+  // Verify the length of the data matches the shape
   if (data.length !== shape[0] * (shape[1] || 1)) {
     throw new Error(`Data length ${data.length} does not match shape ${shape}`);
   }
+
   const buffer = root
     .createBuffer(arrayOf(f32, data.length), [...data])
     .$usage('storage');
 
   return {
-    header,
-    data,
     shape,
     buffer,
   };
 }
 
-/**
- * Creates a network from a list of pairs of weights and biases
- *
- * It automates the creation of state buffers that are used to store the intermediate results of the network
- * as well as the input layer buffer
- *
- * It provides an inference function that takes an array of input data and returns an array of output data
- */
-function createNetwork(layers: [LayerData, LayerData][]): Network {
-  const buffers = layers.map(([weights, biases]) => {
-    if (weights.shape[1] !== biases.shape[0]) {
-      throw new Error('Shape mismatch');
-    }
+function downloadLayers(): Promise<[LayerData, LayerData][]> {
+  const downloadLayer = async (fileName: string): Promise<LayerData> => {
+    const buffer = await fetch(
+      `/TypeGPU/assets/mnist-weights/${fileName}`,
+    ).then((res) => res.arrayBuffer());
 
-    return {
-      weights: weights,
-      biases: biases,
-      buffers: {
-        weights: weights.buffer,
-        biases: biases.buffer,
-        state: root
-          .createBuffer(arrayOf(f32, biases.shape[0]))
-          .$usage('storage'),
-      },
-    };
-  });
-
-  const input = root
-    .createBuffer(arrayOf(f32, layers[0][0].shape[0]))
-    .$usage('storage');
-  const output = buffers[buffers.length - 1].buffers.state;
-
-  const ioBindGroups = buffers.map((_, i) =>
-    root.unwrap(
-      inputOutput.populate({
-        input: i === 0 ? input : buffers[i - 1].buffers.state,
-        output: buffers[i].buffers.state,
-      }),
-    ),
-  );
-
-  const weightsBindGroups = buffers.map((layer) =>
-    root.unwrap(
-      weightsBiases.populate({
-        weights: layer.buffers.weights,
-        biases: layer.buffers.biases,
-      }),
-    ),
-  );
-
-  async function inference(data: number[]): Promise<number[]> {
-    // verify the length of the data matches the input layer
-    if (data.length !== layers[0][0].shape[0]) {
-      throw new Error(
-        `Data length ${data.length} does not match input shape ${layers[0][0].shape[0]}`,
-      );
-    }
-    input.write(data);
-
-    // Run the network
-    const encoder = device.createCommandEncoder();
-    for (let i = 0; i < buffers.length; i++) {
-      const pass = encoder.beginComputePass();
-      pass.setPipeline(pipeline);
-      pass.setBindGroup(0, ioBindGroups[i]);
-      pass.setBindGroup(1, weightsBindGroups[i]);
-      pass.dispatchWorkgroups(buffers[i].biases.shape[0]);
-      pass.end();
-    }
-    device.queue.submit([encoder.finish()]);
-    await device.queue.onSubmittedWorkDone();
-
-    // Read the output
-    return await output.read();
-  }
-
-  return {
-    layers: buffers,
-    input,
-    output,
-    inference,
+    return getLayerData(buffer);
   };
+
+  return Promise.all(
+    [0, 1, 2, 3, 4, 5, 6, 7].map((layer) =>
+      Promise.all([
+        downloadLayer(`layer${layer}.weight.npy`),
+        downloadLayer(`layer${layer}.bias.npy`),
+      ]),
+    ),
+  );
 }
 
-// Data fetching and network creation
+// #endregion
 
-const [
-  layer0Biases,
-  layer0Weights,
-  layer1Biases,
-  layer1Weights,
-  layer2Biases,
-  layer2Weights,
-] = await Promise.all(
-  [
-    'layer0.bias.npy',
-    'layer0.weight.npy',
-    'layer1.bias.npy',
-    'layer1.weight.npy',
-    'layer2.bias.npy',
-    'layer2.weight.npy',
-  ].map((fileName) =>
-    fetch(`/TypeGPU/mnistWeights/${fileName}`).then((res) =>
-      res.arrayBuffer().then((buffer) => getLayerData(buffer)),
-    ),
-  ),
-);
+// #region User Interface
 
-const network = createNetwork([
-  [layer0Weights, layer0Biases],
-  [layer1Weights, layer1Biases],
-  [layer2Weights, layer2Biases],
-]);
-
-// Canvas drawing
-
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
-const bars = document.querySelectorAll('.bar') as NodeListOf<HTMLDivElement>;
+const bars = Array.from(document.querySelectorAll('.bar')) as HTMLDivElement[];
 
-const resetAll = () => {
+const uiState = {
+  isDrawing: false,
+  lastPos: null as { x: number; y: number } | null,
+  isBlank: true,
+};
+
+function resetDrawing() {
+  uiState.lastPos = null;
   canvasData.fill(0);
-  resetCanvas();
+  uiState.isBlank = true;
+
   for (const bar of bars) {
     bar.style.setProperty('--bar-width', '0');
   }
-};
+}
 
-const resetCanvas = () => {
+let disposed = false;
+
+function run() {
+  if (disposed) {
+    return;
+  }
+
+  const scale = canvas.width / SIZE;
+
   context.clearRect(0, 0, canvas.width, canvas.height);
+
   // draw grid
   context.strokeStyle = '#ccc';
-  const scale = canvas.width / SIZE;
   for (let i = 0; i < SIZE; i++) {
     for (let j = 0; j < SIZE; j++) {
       context.strokeRect(j * scale, i * scale, scale, scale);
     }
   }
-};
 
-const draw = () => {
-  const scale = canvas.width / SIZE;
   for (let i = 0; i < SIZE; i++) {
     for (let j = 0; j < SIZE; j++) {
       const value = canvasData[i * SIZE + j];
@@ -300,60 +283,117 @@ const draw = () => {
       }
     }
   }
-};
 
-const observer = new ResizeObserver(() => {
-  resetCanvas();
-  draw();
-});
-observer.observe(canvas.parentNode?.parentNode as HTMLElement);
-
-let isDrawing = false;
-canvas.addEventListener('mousedown', () => {
-  isDrawing = true;
-});
-
-canvas.addEventListener('mouseup', () => {
-  isDrawing = false;
-});
-
-let lastPos = { x: 0, y: 0 };
-
-const handleDrawing = (x: number, y: number) => {
-  if (x === lastPos.x && y === lastPos.y) {
-    return;
+  if (uiState.isBlank) {
+    context.font = '40px Aeonik';
+    context.textAlign = 'center';
+    context.fillStyle = '#000';
+    context.fillText('draw here 🖌️', canvas.width / 2, canvas.height / 2);
   }
-  lastPos = { x, y };
+  requestAnimationFrame(run);
+}
 
-  for (let i = -1; i <= 1; i++) {
-    for (let j = -1; j <= 1; j++) {
-      const newX = x + i;
-      const newY = y + j;
-      if (newX >= 0 && newX < SIZE && newY >= 0 && newY < SIZE) {
-        const distance = Math.abs(i) + Math.abs(j);
-        const add = distance === 0 ? 128 : distance === 1 ? 64 : 32;
-        const value = canvasData[newY * SIZE + newX];
-        canvasData[newY * SIZE + newX] = Math.min(value + add, 255);
+document.querySelector('.loading')?.classList.add('loaded');
+run();
+
+canvas.addEventListener('mousedown', () => {
+  uiState.isDrawing = true;
+});
+
+window.addEventListener('mouseup', () => {
+  uiState.isDrawing = false;
+  uiState.lastPos = null;
+});
+
+canvas.addEventListener('touchend', () => {
+  uiState.lastPos = null;
+});
+
+function centerImage(data: number[]) {
+  const mass = data.reduce((acc, value) => acc + value, 0);
+  const x = data.reduce((acc, value, i) => acc + value * (i % SIZE), 0) / mass;
+  const y =
+    data.reduce((acc, value, i) => acc + value * Math.floor(i / SIZE), 0) /
+    mass;
+
+  const offsetX = Math.round(SIZE / 2 - x);
+  const offsetY = Math.round(SIZE / 2 - y);
+
+  const newData = new Array(SIZE * SIZE).fill(0);
+  for (let i = 0; i < SIZE; i++) {
+    for (let j = 0; j < SIZE; j++) {
+      const index = i * SIZE + j;
+      const newIndex = (i + offsetY) * SIZE + j + offsetX;
+      if (newIndex >= 0 && newIndex < SIZE * SIZE) {
+        newData[newIndex] = data[index];
       }
     }
   }
-  draw();
 
-  network.inference(canvasData.map((x) => x / 255)).then((data) => {
-    const max = Math.max(...data);
-    const index = data.indexOf(max);
-    const sum = data.reduce((a, b) => a + b, 0);
-    const normalized = data.map((x) => x / sum);
+  return newData;
+}
 
-    bars.forEach((bar, i) => {
-      bar.style.setProperty('--bar-width', `${normalized[i] * 100}%`);
-      bar.style.setProperty('--highlight-opacity', i === index ? '1' : '0');
-    });
+async function handleDrawing(x: number, y: number): Promise<void> {
+  if (!uiState.lastPos) {
+    uiState.lastPos = { x, y };
+  }
+
+  uiState.isBlank = false;
+
+  if (x === uiState.lastPos.x && y === uiState.lastPos.y) {
+    return;
+  }
+
+  const interpolate = (start: number, end: number, steps: number) => {
+    const step = (end - start) / steps;
+    return Array.from({ length: steps + 1 }, (_, i) => start + step * i);
+  };
+
+  const steps = Math.max(
+    Math.abs(x - uiState.lastPos.x),
+    Math.abs(y - uiState.lastPos.y),
+  );
+  const xPoints = interpolate(uiState.lastPos.x, x, steps);
+  const yPoints = interpolate(uiState.lastPos.y, y, steps);
+
+  for (let k = 0; k < xPoints.length; k++) {
+    const newX = Math.round(xPoints[k]);
+    const newY = Math.round(yPoints[k]);
+
+    for (let i = -1; i <= 1; i++) {
+      for (let j = -1; j <= 1; j++) {
+        const adjX = newX + i;
+        const adjY = newY + j;
+        if (adjX >= 0 && adjX < SIZE && adjY >= 0 && adjY < SIZE) {
+          const distance = Math.abs(i) + Math.abs(j);
+          const add = distance === 0 ? 128 : distance === 1 ? 32 : 16;
+          const value = canvasData[adjY * SIZE + adjX];
+          canvasData[adjY * SIZE + adjX] = Math.min(value + add, 255);
+        }
+      }
+    }
+  }
+
+  uiState.lastPos = { x, y };
+
+  const certainties = await network.inference(
+    // scale the values from [0, 255] to [-0.42, 2.82]
+    centerImage(canvasData).map((x) => (x / 255) * 3.24 - 0.42),
+  );
+
+  const max = Math.max(...certainties);
+  const index = certainties.indexOf(max);
+  const sum = certainties.reduce((a, b) => a + b, 0);
+  const normalized = certainties.map((x) => x / sum);
+
+  bars.forEach((bar, i) => {
+    bar.style.setProperty('--bar-width', `${normalized[i]}`);
+    bar.style.setProperty('--highlight-opacity', i === index ? '1' : '0');
   });
-};
+}
 
 canvas.addEventListener('mousemove', (event) => {
-  if (!isDrawing) {
+  if (!uiState.isDrawing) {
     return;
   }
   const cellSize = canvas.width / SIZE;
@@ -376,9 +416,20 @@ canvas.addEventListener('touchmove', (event) => {
   handleDrawing(x, y);
 });
 
-resetAll();
+export const controls = {
+  Reset: {
+    onButtonClick: resetDrawing,
+  },
+};
 
-/** @button "Reset" */
-export function reset() {
-  resetAll();
+// #endregion
+
+// #region Resource cleanup
+
+export function onCleanup() {
+  disposed = true;
+  root.destroy();
+  root.device.destroy();
 }
+
+// #endregion

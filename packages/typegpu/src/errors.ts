@@ -1,6 +1,37 @@
 import type { TgpuBuffer } from './core/buffer/buffer';
 import type { AnyTgpuData, TgpuResolvable, TgpuSlot } from './types';
 
+const prefix = 'Invariant failed';
+
+/**
+ * Inspired by: https://github.com/alexreardon/tiny-invariant/blob/master/src/tiny-invariant.ts
+ */
+export function invariant(
+  condition: unknown,
+  message?: string | (() => string),
+): asserts condition {
+  if (condition) {
+    // Condition passed
+    return;
+  }
+
+  // In production we strip the message but still throw
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(prefix);
+  }
+
+  // When not in production we allow the message to pass through
+  // *This block will be removed in production builds*
+
+  const provided = typeof message === 'function' ? message() : message;
+
+  // Options:
+  // 1. message provided: `${prefix}: ${provided}`
+  // 2. message not provided: prefix
+  const value = provided ? `${prefix}: ${provided}` : prefix;
+  throw new Error(value);
+}
+
 /**
  * An error that happens during resolution of WGSL code.
  * Contains a trace of all ancestor resolvables in
@@ -63,25 +94,11 @@ export class RecursiveDataTypeError extends Error {
 export class NotUniformError extends Error {
   constructor(value: TgpuBuffer<AnyTgpuData>) {
     super(
-      `Buffer '${value.label ?? '<unnamed>'}' is not bindable as a uniform. Use .$usage(tgu.Uniform) to allow it.`,
+      `Buffer '${value.label ?? '<unnamed>'}' is not bindable as a uniform. Use .$usage('uniform') to allow it.`,
     );
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, NotUniformError.prototype);
-  }
-}
-
-/**
- * @category Errors
- */
-export class NotStorageError extends Error {
-  constructor(value: TgpuBuffer<AnyTgpuData>) {
-    super(
-      `Buffer '${value.label ?? '<unnamed>'}' is not bindable as storage. Use .$usage(tgu.Storage) to allow it.`,
-    );
-
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, NotStorageError.prototype);
   }
 }
 

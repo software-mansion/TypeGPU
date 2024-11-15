@@ -1,8 +1,8 @@
 import { transpileFn } from '@typegpu/tgsl-tools';
-import type { AnyNode, VariableDeclarator } from 'acorn';
+import type { AnyNode, CallExpression } from 'acorn';
 import { walk } from 'estree-walker';
 import MagicString from 'magic-string';
-import type { Plugin } from 'rollup';
+import type { Plugin, SourceMap } from 'rollup';
 
 const typegpuImportRegex = /import.*from\s*['"]typegpu.*['"]/g;
 const typegpuDynamicImportRegex = /import\s*\(\s*['"]\s*typegpu.*['"]/g;
@@ -17,7 +17,7 @@ type Context = {
 };
 
 type TgslFunctionDef = {
-  varDecl: VariableDeclarator;
+  varDecl: CallExpression;
   implementation: AnyNode;
 };
 
@@ -80,19 +80,37 @@ function isTgpu(ctx: Context, node: AnyNode): boolean {
   return ctx.tgpuAliases.has(path);
 }
 
-export default function typegpu(): Plugin {
+export interface TypegpuPluginOptions {
+  include?: 'all' | RegExp[];
+}
+
+export interface TypegpuPlugin {
+  name: 'rollup-plugin-typegpu';
+  transform(
+    code: string,
+    id: string,
+  ): { code: string; map: SourceMap } | undefined;
+}
+
+export default function typegpu(options?: TypegpuPluginOptions): TypegpuPlugin {
   return {
-    name: 'rollup-plugin-typegpu',
+    name: 'rollup-plugin-typegpu' as const,
     transform(code, id) {
-      if (
-        !typegpuImportRegex.test(code) &&
-        !typegpuRequireRegex.test(code) &&
-        !typegpuDynamicImportRegex.test(code)
+      if (!options?.include) {
+        if (
+          !typegpuImportRegex.test(code) &&
+          !typegpuRequireRegex.test(code) &&
+          !typegpuDynamicImportRegex.test(code)
+        ) {
+          // No imports to `typegpu` or its sub modules, exiting early.
+          return;
+        }
+      } else if (
+        options.include !== 'all' &&
+        !options.include.some((pattern) => pattern.test(id))
       ) {
-        // No imports to `typegpu` or its sub modules, exiting early.
         return;
       }
-
       const ctx: Context = {
         tgpuAliases: new Set(['tgpu']),
       };
@@ -106,20 +124,10 @@ export default function typegpu(): Plugin {
       walk(ast, {
         enter(_node, _parent, prop, index) {
           const node = _node as AnyNode;
-          const parent = _parent as AnyNode | null;
-          // ^ all this to make TypeScript happy (  ◦°^°◦)
 
           gatherTgpuAliases(ctx, node);
 
           if (node.type === 'CallExpression') {
-            if (
-              parent?.type !== 'VariableDeclarator' ||
-              parent.id.type !== 'Identifier'
-            ) {
-              // Skipping, as the resulting function needs to be stored in a variable.
-              return;
-            }
-
             if (
               node.callee.type === 'MemberExpression' &&
               node.arguments.length === 1 &&
@@ -135,9 +143,13 @@ export default function typegpu(): Plugin {
             ) {
               const implementation = node.arguments[0];
 
-              if (implementation) {
+              if (
+                implementation &&
+                !(implementation.type === 'TemplateLiteral') &&
+                !(implementation.type === 'Literal')
+              ) {
                 tgslFunctionDefs.push({
-                  varDecl: parent,
+                  varDecl: node,
                   implementation,
                 });
               }
@@ -171,5 +183,5 @@ export default function typegpu(): Plugin {
         map: magicString.generateMap(),
       };
     },
-  };
+  } satisfies Plugin;
 }

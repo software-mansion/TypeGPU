@@ -1,12 +1,3 @@
-// -- Hooks into the example environment
-import {
-  addSelectParameter,
-  addSliderParameter,
-  addToggleParameter,
-  onFrame,
-} from '@typegpu/example-toolkit';
-// --
-
 import {
   type TgpuArray,
   type U32,
@@ -516,7 +507,25 @@ const createSampleScene = () => {
   }
 };
 
+// #region UI
+
 let paused = false;
+let disposed = false;
+
+const onFrame = (loop: (deltaTime: number) => unknown) => {
+  let lastTime = Date.now();
+  const runner = () => {
+    if (disposed) {
+      return;
+    }
+    const now = Date.now();
+    const dt = now - lastTime;
+    lastTime = now;
+    loop(dt);
+    requestAnimationFrame(runner);
+  };
+  requestAnimationFrame(runner);
+};
 
 onFrame((deltaTime: number) => {
   msSinceLastTick += deltaTime;
@@ -531,62 +540,86 @@ onFrame((deltaTime: number) => {
   }
 });
 
-addSelectParameter(
-  'size',
-  '64',
-  [16, 32, 64, 128, 256, 512, 1024].map((x) => x.toString()),
-  (value) => {
-    options.size = Number.parseInt(value);
-    resetGameData();
+export const controls = {
+  size: {
+    initial: '64',
+    options: [16, 32, 64, 128, 256, 512, 1024].map((x) => x.toString()),
+    onSelectChange: (value: string) => {
+      options.size = Number.parseInt(value);
+      resetGameData();
+    },
   },
-);
 
-addSliderParameter(
-  'timestep (ms)',
-  15,
-  { min: 15, max: 100, step: 1 },
-  (value) => {
-    options.timestep = value;
+  'timestep (ms)': {
+    initial: 15,
+    min: 15,
+    max: 100,
+    step: 1,
+    onSliderChange: (value: number) => {
+      options.timestep = value;
+    },
   },
-);
 
-addSliderParameter(
-  'stepsPerTimestep',
-  10,
-  { min: 1, max: 50, step: 1 },
-  (value) => {
-    options.stepsPerTimestep = value;
+  'steps per timestep': {
+    initial: 10,
+    min: 1,
+    max: 50,
+    step: 1,
+    onSliderChange: (value: number) => {
+      options.stepsPerTimestep = value;
+    },
   },
-);
 
-addSelectParameter(
-  'workgroupSize',
-  '16',
-  [1, 2, 4, 8, 16].map((x) => x.toString()),
-  (value) => {
-    options.workgroupSize = Number.parseInt(value);
-    resetGameData();
+  'workgroup size': {
+    initial: '16',
+    options: [1, 2, 4, 8, 16].map((x) => x.toString()),
+    onSelectChange: (value: string) => {
+      options.workgroupSize = Number.parseInt(value);
+      resetGameData();
+    },
   },
-);
 
-addSliderParameter(
-  'viscosity',
-  1000,
-  { min: 10, max: 1000, step: 1 },
-  (value) => {
-    options.viscosity = value;
-    viscosityBuffer.write(value);
+  viscosity: {
+    initial: 1000,
+    min: 10,
+    max: 1000,
+    step: 1,
+    onSliderChange: (value: number) => {
+      options.viscosity = value;
+      viscosityBuffer.write(value);
+    },
   },
-);
 
-addSliderParameter('brushSize', 0, { min: 0, max: 10, step: 1 }, (value) => {
-  options.brushSize = value;
-});
+  'brush size': {
+    initial: 0,
+    min: 0,
+    max: 10,
+    step: 1,
+    onSliderChange: (value: number) => {
+      options.brushSize = value;
+    },
+  },
 
-addSelectParameter('brushType', 'water', BrushTypes, (value) => {
-  options.brushType = value;
-});
+  'brush type': {
+    initial: 'water',
+    options: BrushTypes,
+    onSelectChange: (value: string) => {
+      options.brushType = value;
+    },
+  },
 
-addToggleParameter('pause', false, (value) => {
-  paused = value;
-});
+  pause: {
+    initial: false,
+    onToggleChange: (value: boolean) => {
+      paused = value;
+    },
+  },
+};
+
+export function onCleanup() {
+  disposed = true;
+  root.destroy();
+  root.device.destroy();
+}
+
+// #endregion

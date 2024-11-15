@@ -1,35 +1,29 @@
 import { atom } from 'jotai';
 
 export type SelectControlParam = {
-  type: 'select';
-  initial: string;
+  onSelectChange: (newValue: string) => void;
+  initial?: string;
   options: string[];
-  onChange: (newValue: string) => void;
   label: string;
 };
 
 export type ToggleControlParam = {
-  type: 'toggle';
-  initial: boolean;
-  onChange: (newValue: boolean) => void;
+  onToggleChange: (newValue: boolean) => void;
+  initial?: boolean;
   label: string;
 };
 
 export type SliderControlParam = {
-  type: 'slider';
-  initial: number;
-  options: {
-    min?: number;
-    max?: number;
-    step?: number;
-  };
-  onChange: (newValue: number) => void;
+  onSliderChange: (newValue: number) => void;
+  initial?: number;
+  min?: number;
+  max?: number;
+  step?: number;
   label: string;
 };
 
 export type ButtonControlParam = {
-  type: 'button';
-  onClick: () => void;
+  onButtonClick: (() => void) | (() => Promise<void>);
   label: string;
 };
 

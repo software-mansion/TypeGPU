@@ -20,35 +20,50 @@ import type {
   Unsubscribe,
 } from '../../tgpuPlumTypes';
 import type { TgpuSampler } from '../../tgpuSampler';
-import type {
-  TgpuAnyTexture,
-  TgpuAnyTextureView,
-  TgpuTextureExternal,
-} from '../../tgpuTexture';
 import type { AnyTgpuData } from '../../types';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
+import {
+  type INTERNAL_TgpuExternalTexture,
+  INTERNAL_createExternalTexture,
+  type TgpuExternalTexture,
+  isExternalTexture,
+} from '../texture/externalTexture';
+import {
+  type INTERNAL_TgpuSampledTexture,
+  type INTERNAL_TgpuStorageTexture,
+  type INTERNAL_TgpuTexture,
+  INTERNAL_createTexture,
+  type TgpuMutableTexture,
+  type TgpuReadonlyTexture,
+  type TgpuSampledTexture,
+  type TgpuTexture,
+  type TgpuWriteonlyTexture,
+  isSampledTextureView,
+  isStorageTextureView,
+  isTexture,
+} from '../texture/texture';
 import type {
   ComputePipelineExecutorOptions,
   ComputePipelineOptions,
+  CreateTextureOptions,
+  CreateTextureResult,
   ExperimentalTgpuRoot,
   RenderPipelineExecutorOptions,
   RenderPipelineOptions,
   SetPlumAction,
 } from './rootTypes';
 
+interface Disposable {
+  destroy(): void;
+}
+
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a root can interact via GPU buffers.
  */
 class TgpuRootImpl implements ExperimentalTgpuRoot {
-  private _buffers: TgpuBuffer<AnyTgpuData>[] = [];
+  private _disposables: Disposable[] = [];
   private _samplers = new WeakMap<TgpuSampler, GPUSampler>();
-  private _textures = new WeakMap<TgpuAnyTexture, GPUTexture>();
-  private _textureViews = new WeakMap<TgpuAnyTextureView, GPUTextureView>();
-  private _externalTexturesStatus = new WeakMap<
-    TgpuTextureExternal,
-    'dirty' | 'clean'
-  >();
 
   private _unwrappedBindGroupLayouts = new WeakMemo(
     (key: TgpuBindGroupLayout) => key.unwrap(this),
@@ -83,23 +98,99 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
       this.device,
     );
 
-    this._buffers.push(buffer);
+    this._disposables.push(buffer);
 
     return buffer;
   }
 
+  createTexture<
+    TWidth extends number,
+    THeight extends number,
+    TDepth extends number,
+    TSize extends
+      | readonly [TWidth]
+      | readonly [TWidth, THeight]
+      | readonly [TWidth, THeight, TDepth],
+    TFormat extends GPUTextureFormat,
+    TMipLevelCount extends number,
+    TSampleCount extends number,
+    TViewFormat extends GPUTextureFormat,
+    TDimension extends GPUTextureDimension,
+  >(
+    props: CreateTextureOptions<
+      TSize,
+      TFormat,
+      TMipLevelCount,
+      TSampleCount,
+      TViewFormat,
+      TDimension
+    >,
+  ): TgpuTexture<
+    CreateTextureResult<
+      TSize,
+      TFormat,
+      TMipLevelCount,
+      TSampleCount,
+      TViewFormat,
+      TDimension
+    >
+  > {
+    const texture = INTERNAL_createTexture(props, this);
+    this._disposables.push(texture);
+    // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
+    return texture as any;
+  }
+
+  importExternalTexture<TColorSpace extends PredefinedColorSpace>(options: {
+    source: HTMLVideoElement | VideoFrame;
+    colorSpace?: TColorSpace;
+  }): TgpuExternalTexture<{
+    colorSpace: PredefinedColorSpace extends TColorSpace ? 'srgb' : TColorSpace;
+  }> {
+    return INTERNAL_createExternalTexture(
+      this,
+      options.source,
+      options.colorSpace,
+      // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
+    ) as any;
+  }
+
   destroy() {
-    for (const buffer of this._buffers) {
-      buffer.destroy();
+    for (const disposable of this._disposables) {
+      disposable.destroy();
     }
   }
 
   unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
+  unwrap(resource: TgpuTexture): GPUTexture;
   unwrap(
-    resource: TgpuBuffer<AnyTgpuData> | TgpuBindGroupLayout | TgpuBindGroup,
-  ): GPUBuffer | GPUBindGroupLayout | GPUBindGroup {
+    resource:
+      | TgpuReadonlyTexture
+      | TgpuWriteonlyTexture
+      | TgpuMutableTexture
+      | TgpuSampledTexture,
+  ): GPUTextureView;
+  unwrap(resource: TgpuExternalTexture): GPUExternalTexture;
+  unwrap(
+    resource:
+      | TgpuBuffer<AnyTgpuData>
+      | TgpuBindGroupLayout
+      | TgpuBindGroup
+      | TgpuTexture
+      | TgpuReadonlyTexture
+      | TgpuWriteonlyTexture
+      | TgpuMutableTexture
+      | TgpuSampledTexture
+      | TgpuExternalTexture,
+  ):
+    | GPUBuffer
+    | GPUBindGroupLayout
+    | GPUBindGroup
+    | GPUTexture
+    | GPUTextureView
+    | GPUExternalTexture {
     if (isBuffer(resource)) {
       return resource.buffer;
     }
@@ -112,52 +203,23 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
       return this._unwrappedBindGroups.getOrMake(resource);
     }
 
+    if (isTexture(resource)) {
+      return (resource as unknown as INTERNAL_TgpuTexture).unwrap();
+    }
+
+    if (isStorageTextureView(resource)) {
+      return (resource as unknown as INTERNAL_TgpuStorageTexture).unwrap();
+    }
+
+    if (isSampledTextureView(resource)) {
+      return (resource as unknown as INTERNAL_TgpuSampledTexture).unwrap();
+    }
+
+    if (isExternalTexture(resource)) {
+      return (resource as unknown as INTERNAL_TgpuExternalTexture).unwrap();
+    }
+
     throw new Error(`Unknown resource type: ${resource}`);
-  }
-
-  textureFor(view: TgpuAnyTexture | TgpuAnyTextureView): GPUTexture {
-    let source: TgpuAnyTexture;
-    if ('texture' in view) {
-      source = view.texture;
-    } else {
-      source = view;
-    }
-
-    let texture = this._textures.get(source);
-
-    if (!texture) {
-      const descriptor = {
-        ...source.descriptor,
-        usage: source.flags,
-      } as GPUTextureDescriptor;
-      texture = this.device.createTexture(descriptor);
-
-      if (!texture) {
-        throw new Error(`Failed to create texture for ${view}`);
-      }
-      this._textures.set(source, texture);
-    }
-
-    return texture;
-  }
-
-  viewFor(view: TgpuAnyTextureView): GPUTextureView {
-    let textureView = this._textureViews.get(view);
-    if (!textureView) {
-      textureView = this.textureFor(view.texture).createView(view.descriptor);
-      this._textureViews.set(view, textureView);
-    }
-    return textureView;
-  }
-
-  externalTextureFor(texture: TgpuTextureExternal): GPUExternalTexture {
-    this._externalTexturesStatus.set(texture, 'clean');
-    if (texture.descriptor.source === undefined) {
-      throw new Error('External texture source needs to be defined before use');
-    }
-    return this.device.importExternalTexture(
-      texture.descriptor as GPUExternalTextureDescriptor,
-    );
   }
 
   samplerFor(sampler: TgpuSampler): GPUSampler {
@@ -173,22 +235,6 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     }
 
     return gpuSampler;
-  }
-
-  setSource(
-    texture: TgpuTextureExternal,
-    source: HTMLVideoElement | VideoFrame,
-  ) {
-    this._externalTexturesStatus.set(texture, 'dirty');
-    texture.descriptor.source = source;
-  }
-
-  isDirty(texture: TgpuTextureExternal): boolean {
-    return this._externalTexturesStatus.get(texture) === 'dirty';
-  }
-
-  markClean(texture: TgpuTextureExternal) {
-    this._externalTexturesStatus.set(texture, 'clean');
   }
 
   readPlum<TPlum extends TgpuPlum>(plum: TPlum): ExtractPlumValue<TPlum> {

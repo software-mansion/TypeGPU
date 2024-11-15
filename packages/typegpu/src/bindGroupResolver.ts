@@ -1,17 +1,23 @@
-import type { TgpuBufferVertex } from './core/buffer/bufferUsage';
+import type {
+  TgpuBufferUsage,
+  TgpuBufferVertex,
+} from './core/buffer/bufferUsage';
 import {
   type ExperimentalTgpuRoot,
   deriveVertexFormat,
 } from './core/root/rootTypes';
-import type { ResolutionCtxImpl } from './resolutionCtx';
-import { type TgpuSampler, isSampler } from './tgpuSampler';
+import {
+  type TgpuExternalTexture,
+  isExternalTexture,
+} from './core/texture/externalTexture';
 import {
   type TgpuAnyTextureView,
-  type TgpuTextureExternal,
-  isExternalTexture,
-  isTextureView,
-} from './tgpuTexture';
-import type { AnyTgpuData, BufferUsage, TgpuBindable, TgpuData } from './types';
+  isSampledTextureView,
+  isStorageTextureView,
+} from './core/texture/texture';
+import type { ResolutionCtxImpl } from './resolutionCtx';
+import { type TgpuSampler, isSampler } from './tgpuSampler';
+import type { AnyTgpuData, BufferUsage, TgpuData } from './types';
 
 const usageToBindingTypeMap: Record<
   Exclude<BufferUsage, 'vertex'>,
@@ -25,8 +31,8 @@ const usageToBindingTypeMap: Record<
 export class BindGroupResolver {
   private samplers: TgpuSampler[] = [];
   private textureViews: TgpuAnyTextureView[] = [];
-  private externalTextures: TgpuTextureExternal[] = [];
-  private buffers: TgpuBindable<AnyTgpuData, BufferUsage>[] = [];
+  private externalTextures: TgpuExternalTexture[] = [];
+  private buffers: TgpuBufferUsage<AnyTgpuData>[] = [];
   private vertexBuffers: Map<TgpuBufferVertex<AnyTgpuData>, number> | null =
     null;
 
@@ -43,7 +49,10 @@ export class BindGroupResolver {
     for (const resource of renderResources) {
       if (isSampler(resource)) {
         this.samplers.push(resource);
-      } else if (isTextureView(resource)) {
+      } else if (
+        isStorageTextureView(resource) ||
+        isSampledTextureView(resource)
+      ) {
         this.textureViews.push(resource);
       } else if (isExternalTexture(resource)) {
         this.externalTextures.push(resource);
@@ -75,7 +84,7 @@ export class BindGroupResolver {
 
     const entries: GPUBindGroupLayoutEntry[] = [];
     for (const textureView of this.textureViews) {
-      if (textureView.access === undefined) {
+      if (textureView.resourceType === 'texture-sampled-view') {
         entries.push({
           binding: this.context.getIndexFor(textureView),
           visibility: this.shaderStage,
@@ -85,7 +94,7 @@ export class BindGroupResolver {
         entries.push({
           binding: this.context.getIndexFor(textureView),
           visibility: this.shaderStage,
-          storageTexture: { format: textureView.texture.descriptor.format },
+          storageTexture: { format: textureView.format },
         });
       }
     }
@@ -121,8 +130,6 @@ export class BindGroupResolver {
   }
 
   getBindGroup() {
-    this.checkBindGroupInvalidation();
-
     if (this.bindGroup) {
       return this.bindGroup;
     }
@@ -131,13 +138,13 @@ export class BindGroupResolver {
     for (const textureView of this.textureViews) {
       entries.push({
         binding: this.context.getIndexFor(textureView),
-        resource: this.root.viewFor(textureView),
+        resource: this.root.unwrap(textureView),
       });
     }
     for (const external of this.externalTextures) {
       entries.push({
         binding: this.context.getIndexFor(external),
-        resource: this.root.externalTextureFor(external),
+        resource: this.root.unwrap(external),
       });
     }
     for (const sampler of this.samplers) {
@@ -217,21 +224,5 @@ export class BindGroupResolver {
 
   invalidateBindGroup() {
     this.bindGroup = null;
-  }
-
-  checkBindGroupInvalidation() {
-    for (const texture of this.externalTextures) {
-      // check if texture is dirty (changed source) -> if so, invalidate bind group and mark clean
-      if (this.root.isDirty(texture)) {
-        this.invalidateBindGroup();
-        this.root.markClean(texture);
-        continue;
-      }
-
-      // check if any external texture is of type HTMLVideoElement -> if so, invalidate bind group as it expires on bind
-      if (texture.source instanceof HTMLVideoElement) {
-        this.invalidateBindGroup();
-      }
-    }
   }
 }

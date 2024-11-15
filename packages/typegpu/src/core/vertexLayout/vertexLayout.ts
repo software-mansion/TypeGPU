@@ -20,13 +20,15 @@ import type {
 
 export interface TgpuVertexLayout<TData extends TgpuBaseArray> {
   readonly stride: number;
+  readonly stepMode: 'per-vertex' | 'per-instance';
   readonly attrib: ArrayToContainedAttribs<TData>;
 }
 
 export function vertexLayout<TData extends TgpuBaseArray>(
   schemaForCount: (count: number) => TData,
+  stepMode: 'per-vertex' | 'per-instance' = 'per-vertex',
 ): TgpuVertexLayout<TData> {
-  return new TgpuVertexLayoutImpl(schemaForCount);
+  return new TgpuVertexLayoutImpl(schemaForCount, stepMode);
 }
 
 // --------------
@@ -108,7 +110,10 @@ class TgpuVertexLayoutImpl<TData extends TgpuBaseArray>
   public readonly stride: number;
   public readonly attrib: ArrayToContainedAttribs<TData>;
 
-  constructor(public readonly schemaForCount: (count: number) => TData) {
+  constructor(
+    public readonly schemaForCount: (count: number) => TData,
+    public readonly stepMode: 'per-vertex' | 'per-instance',
+  ) {
     // `0` signals that the data-type is runtime-sized, and should not be used to create buffers.
     const arraySchema = schemaForCount(0);
 

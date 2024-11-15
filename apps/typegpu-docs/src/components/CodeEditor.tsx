@@ -1,9 +1,14 @@
-import Editor, { type BeforeMount, type Monaco } from '@monaco-editor/react';
+import Editor, {
+  type BeforeMount,
+  type Monaco,
+  type OnMount,
+} from '@monaco-editor/react';
 import typegpuJitDts from '@typegpu/jit/dist/index.d.ts?raw';
 import webgpuTypes from '@webgpu/types/dist/index.d.ts?raw';
+// biome-ignore lint/correctness/noUnusedImports: <its a namespace, Biome>
+import type { editor } from 'monaco-editor';
 import { entries, map, pipe } from 'remeda';
 import typedBinary from 'typed-binary/dist/index.d.ts?raw';
-import toolkitTypes from '../types/example-toolkit.d.ts?raw';
 import { tsCompilerOptions } from '../utils/liveEditor/embeddedTypeScript';
 import useEvent from '../utils/useEvent';
 
@@ -54,7 +59,6 @@ function handleEditorWillMount(monaco: Monaco) {
   for (const lib of mediacaptureExtraLibs) {
     tsDefaults.addExtraLib(lib.content, lib.filename);
   }
-  tsDefaults.addExtraLib(toolkitTypes, 'example-toolkit.d.ts');
   tsDefaults.addExtraLib(typedBinary, 'typed-binary.d.ts');
   tsDefaults.addExtraLib(typegpuJitDts, 'typegpu-jit.d.ts');
 
@@ -70,6 +74,12 @@ function handleEditorWillMount(monaco: Monaco) {
   });
 }
 
+function handleEditorOnMount(editor: editor.IStandaloneCodeEditor) {
+  // Folding regions in code automatically. Useful for code not strictly
+  // related to TypeGPU, like UI code.
+  editor.trigger(null, 'editor.foldAllMarkerRegions', {});
+}
+
 type Props = {
   code: string;
   onCodeChange: (value: string) => unknown;
@@ -77,7 +87,11 @@ type Props = {
 };
 
 const createCodeEditorComponent =
-  (language: 'typescript' | 'html', beforeMount?: BeforeMount) =>
+  (
+    language: 'typescript' | 'html',
+    beforeMount?: BeforeMount,
+    onMount?: OnMount,
+  ) =>
   (props: Props) => {
     const { code, onCodeChange, shown } = props;
 
@@ -92,6 +106,7 @@ const createCodeEditorComponent =
           value={code}
           onChange={handleChange}
           beforeMount={beforeMount}
+          onMount={onMount}
           options={{
             readOnly: true,
             minimap: {
@@ -107,6 +122,7 @@ const createCodeEditorComponent =
 export const TsCodeEditor = createCodeEditorComponent(
   'typescript',
   handleEditorWillMount,
+  handleEditorOnMount,
 );
 
 export const HtmlCodeEditor = createCodeEditorComponent('html');

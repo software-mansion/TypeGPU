@@ -1,7 +1,3 @@
-// -- Hooks into the example environment
-import { addSliderPlumParameter, onFrame } from '@typegpu/example-toolkit';
-// --
-
 import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'typegpu/data';
 import tgpu, {
   asReadonly,
@@ -20,51 +16,15 @@ const cubeSize = vec3f(X * MAX_BOX_SIZE, Y * MAX_BOX_SIZE, Z * MAX_BOX_SIZE);
 const boxCenter = std.mul(0.5, cubeSize);
 const upAxis = vec3f(0, 1, 0);
 
-const rotationSpeedPlum = addSliderPlumParameter('rotation speed', 2, {
-  min: 0,
-  max: 5,
-});
+let rotationSpeed = 2;
+let cameraDistance = 250;
+let boxSize = MAX_BOX_SIZE;
 
-const cameraDistancePlum = addSliderPlumParameter('camera distance', 250, {
-  min: 100,
-  max: 1200,
-});
-
-const boxSizePlum = addSliderPlumParameter('box size', MAX_BOX_SIZE, {
-  min: 1,
-  max: MAX_BOX_SIZE,
-});
-
-const framePlum = wgsl.plum<number>(0);
-
-const cameraPositionPlum = wgsl.plum((get) => {
-  const frame = get(framePlum);
-
-  return vec3f(
-    Math.cos(frame) * get(cameraDistancePlum) + boxCenter.x,
-    boxCenter.y,
-    Math.sin(frame) * get(cameraDistancePlum) + boxCenter.z,
-  );
-});
-
-const cameraAxesPlum = wgsl.plum((get) => {
-  const forwardAxis = std.normalize(
-    std.sub(boxCenter, get(cameraPositionPlum)),
-  );
-
-  return {
-    forward: forwardAxis,
-    up: upAxis,
-    right: std.cross(upAxis, forwardAxis),
-  };
-});
+let frame = 0;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-const canvasWidthPlum = wgsl.plum(canvas.width).$name('canvas_width');
-const canvasHeightPlum = wgsl.plum(canvas.height).$name('canvas_height');
 
 const root = await tgpu.init();
 
@@ -107,7 +67,7 @@ const boxMatrixBuffer = root
 const boxMatrixData = asReadonly(boxMatrixBuffer);
 
 const cameraPositionBuffer = root
-  .createBuffer(vec3f, cameraPositionPlum)
+  .createBuffer(vec3f)
   .$name('camera_position')
   .$usage('storage');
 const cameraPositionData = asReadonly(cameraPositionBuffer);
@@ -119,26 +79,19 @@ const cameraAxesBuffer = root
       up: vec3f,
       forward: vec3f,
     }),
-    cameraAxesPlum,
   )
   .$name('camera_axes')
   .$usage('storage');
 const cameraAxesData = asReadonly(cameraAxesBuffer);
 
 const canvasDimsBuffer = root
-  .createBuffer(
-    struct({ width: u32, height: u32 }),
-    wgsl.plum((get) => ({
-      width: get(canvasWidthPlum),
-      height: get(canvasHeightPlum),
-    })),
-  )
+  .createBuffer(struct({ width: u32, height: u32 }))
   .$name('canvas_dims')
   .$usage('uniform');
 const canvasDimsData = asUniform(canvasDimsBuffer);
 
 const boxSizeBuffer = root
-  .createBuffer(u32, boxSizePlum)
+  .createBuffer(u32, boxSize)
   .$name('box_size')
   .$usage('uniform');
 const boxSizeData = asUniform(boxSizeBuffer);
@@ -215,17 +168,17 @@ const getBoxIntersectionFn = wgsl.fn`(
 const renderPipeline = root.makeRenderPipeline({
   vertex: {
     code: wgsl`
-      var pos = array<vec2f, 6>(
-        vec2<f32>( 1,  1),
-        vec2<f32>( 1, -1),
-        vec2<f32>(-1, -1),
-        vec2<f32>( 1,  1),
-        vec2<f32>(-1, -1),
-        vec2<f32>(-1,  1)
-      );
+    var pos = array<vec2f, 6>(
+      vec2<f32>( 1,  1),
+      vec2<f32>( 1, -1),
+      vec2<f32>(-1, -1),
+      vec2<f32>( 1,  1),
+      vec2<f32>(-1, -1),
+      vec2<f32>(-1,  1)
+    );
 
-      let outPos = vec4f(pos[${builtin.vertexIndex}], 0, 1);
-    `,
+    let outPos = vec4f(pos[${builtin.vertexIndex}], 0, 1);
+  `,
     output: {
       [builtin.position.s]: 'outPos',
     },
@@ -233,56 +186,56 @@ const renderPipeline = root.makeRenderPipeline({
 
   fragment: {
     code: wgsl`
-      let minDim = f32(min(${canvasDimsData}.width, ${canvasDimsData}.height));
+    let minDim = f32(min(${canvasDimsData}.width, ${canvasDimsData}.height));
 
-      var ray: ${rayStruct};
-      ray.origin = ${cameraPositionData};
-      ray.direction += ${cameraAxesData}.right * (${builtin.position}.x - f32(${canvasDimsData}.width)/2)/minDim;
-      ray.direction += ${cameraAxesData}.up * (${builtin.position}.y - f32(${canvasDimsData}.height)/2)/minDim;
-      ray.direction += ${cameraAxesData}.forward;
-      ray.direction = normalize(ray.direction);
+    var ray: ${rayStruct};
+    ray.origin = ${cameraPositionData};
+    ray.direction += ${cameraAxesData}.right * (${builtin.position}.x - f32(${canvasDimsData}.width)/2)/minDim;
+    ray.direction += ${cameraAxesData}.up * (${builtin.position}.y - f32(${canvasDimsData}.height)/2)/minDim;
+    ray.direction += ${cameraAxesData}.forward;
+    ray.direction = normalize(ray.direction);
 
-      let bigBoxIntersection = ${getBoxIntersectionFn}(
-        -vec3f(f32(${boxSizeData}))/2,
-        vec3f(
-          ${cubeSize.x},
-          ${cubeSize.y},
-          ${cubeSize.z},
-        ) + vec3f(f32(${boxSizeData}))/2,
-        ray,
-      );
+    let bigBoxIntersection = ${getBoxIntersectionFn}(
+      -vec3f(f32(${boxSizeData}))/2,
+      vec3f(
+        ${cubeSize.x},
+        ${cubeSize.y},
+        ${cubeSize.z},
+      ) + vec3f(f32(${boxSizeData}))/2,
+      ray,
+    );
 
-      var color = vec4f(0);
+    var color = vec4f(0);
 
-      if bigBoxIntersection.intersects {
-        var tMin: f32;
-        var intersectionFound = false;
+    if bigBoxIntersection.intersects {
+      var tMin: f32;
+      var intersectionFound = false;
 
-        for (var i = 0; i < ${X}; i = i+1) {
-          for (var j = 0; j < ${Y}; j = j+1) {
-            for (var k = 0; k < ${Z}; k = k+1) {
-              if ${boxMatrixData}[i][j][k].isActive == 0 {
-                continue;
-              }
+      for (var i = 0; i < ${X}; i = i+1) {
+        for (var j = 0; j < ${Y}; j = j+1) {
+          for (var k = 0; k < ${Z}; k = k+1) {
+            if ${boxMatrixData}[i][j][k].isActive == 0 {
+              continue;
+            }
 
-              let intersection = ${getBoxIntersectionFn}(
-                vec3f(f32(i), f32(j), f32(k)) * ${MAX_BOX_SIZE} - vec3f(f32(${boxSizeData}))/2,
-                vec3f(f32(i), f32(j), f32(k)) * ${MAX_BOX_SIZE} + vec3f(f32(${boxSizeData}))/2,
-                ray,
-              );
+            let intersection = ${getBoxIntersectionFn}(
+              vec3f(f32(i), f32(j), f32(k)) * ${MAX_BOX_SIZE} - vec3f(f32(${boxSizeData}))/2,
+              vec3f(f32(i), f32(j), f32(k)) * ${MAX_BOX_SIZE} + vec3f(f32(${boxSizeData}))/2,
+              ray,
+            );
 
-              if intersection.intersects && (!intersectionFound || intersection.tMin < tMin) {
-                color = ${boxMatrixData}[i][j][k].albedo;
-                tMin = intersection.tMin;
-                intersectionFound = true;
-              }
+            if intersection.intersects && (!intersectionFound || intersection.tMin < tMin) {
+              color = ${boxMatrixData}[i][j][k].albedo;
+              tMin = intersection.tMin;
+              intersectionFound = true;
             }
           }
         }
       }
+    }
 
-      return color;
-    `,
+    return color;
+  `,
     target: [
       {
         format: presentationFormat,
@@ -295,13 +248,48 @@ const renderPipeline = root.makeRenderPipeline({
   },
 });
 
+let disposed = false;
+
+const onFrame = (loop: (deltaTime: number) => unknown) => {
+  let lastTime = Date.now();
+  const runner = () => {
+    if (disposed) {
+      return;
+    }
+    const now = Date.now();
+    const dt = now - lastTime;
+    lastTime = now;
+    loop(dt);
+    requestAnimationFrame(runner);
+  };
+  requestAnimationFrame(runner);
+};
+
 onFrame((deltaTime) => {
-  root.setPlum(canvasWidthPlum, canvas.width);
-  root.setPlum(canvasHeightPlum, canvas.height);
+  const width = canvas.width;
+  const height = canvas.height;
 
-  const rotationSpeed = root.readPlum(rotationSpeedPlum);
+  const cameraPosition = vec3f(
+    Math.cos(frame) * cameraDistance + boxCenter.x,
+    boxCenter.y,
+    Math.sin(frame) * cameraDistance + boxCenter.z,
+  );
 
-  root.setPlum(framePlum, (prev) => prev + (rotationSpeed * deltaTime) / 1000);
+  const cameraAxes = (() => {
+    const forwardAxis = std.normalize(std.sub(boxCenter, cameraPosition));
+
+    return {
+      forward: forwardAxis,
+      up: upAxis,
+      right: std.cross(upAxis, forwardAxis),
+    };
+  })();
+
+  cameraPositionBuffer.write(cameraPosition);
+  cameraAxesBuffer.write(cameraAxes);
+  canvasDimsBuffer.write({ width, height });
+
+  frame += (rotationSpeed * deltaTime) / 1000;
 
   const textureView = context.getCurrentTexture().createView();
 
@@ -319,3 +307,38 @@ onFrame((deltaTime) => {
 
   root.flush();
 });
+
+export function onCleanup() {
+  disposed = true;
+  root.destroy();
+  root.device.destroy();
+}
+
+export const controls = {
+  'rotation speed': {
+    initial: rotationSpeed,
+    min: 0,
+    max: 5,
+    onSliderChange: (value: number) => {
+      rotationSpeed = value;
+    },
+  },
+
+  'camera distance': {
+    initial: cameraDistance,
+    min: 100,
+    max: 1200,
+    onSliderChange: (value: number) => {
+      cameraDistance = value;
+    },
+  },
+
+  'box size': {
+    initial: boxSize,
+    min: 1,
+    max: MAX_BOX_SIZE,
+    onSliderChange: (value: number) => {
+      boxSize = value;
+    },
+  },
+};

@@ -356,7 +356,13 @@ const renderPassDescriptor: GPURenderPassDescriptor = {
 };
 
 let even = false;
+let disposed = false;
+
 function frame() {
+  if (disposed) {
+    return;
+  }
+
   even = !even;
   (
     renderPassDescriptor.colorAttachments as [GPURenderPassColorAttachment]
@@ -383,52 +389,54 @@ function frame() {
 
 frame();
 
-/** @button "Randomize" */
-export function randomize() {
-  randomizePositions();
+// #region Example controls and cleanup
+
+export const controls = {
+  Randomize: {
+    onButtonClick: () => randomizePositions(),
+  },
+
+  '🐦 Birds': {
+    onButtonClick: () => updateParams(presets.default),
+  },
+
+  '🦟 Mosquitoes': {
+    onButtonClick: () => updateParams(presets.mosquitoes),
+  },
+
+  '💧 Blobs': {
+    onButtonClick: () => updateParams(presets.blobs),
+  },
+
+  '⚛️ Particles': {
+    onButtonClick: () => updateParams(presets.particles),
+  },
+
+  '🤖 Nanites': {
+    onButtonClick: () => updateParams(presets.nanites),
+  },
+
+  '🟪🟩': {
+    onButtonClick: () => updateColorPreset('plumTree'),
+  },
+
+  '🟦🟫': {
+    onButtonClick: () => updateColorPreset('jeans'),
+  },
+
+  '⬛⬜': {
+    onButtonClick: () => updateColorPreset('greyscale'),
+  },
+
+  '🟥🟦': {
+    onButtonClick: () => updateColorPreset('hotcold'),
+  },
+};
+
+export function onCleanup() {
+  disposed = true;
+  root.destroy();
+  root.device.destroy();
 }
 
-/** @button "🐦 Birds" */
-export function choosePresetDefault() {
-  updateParams(presets.default);
-}
-
-/** @button "🦟 Mosquitoes" */
-export function choosePresetMosquitos() {
-  updateParams(presets.mosquitoes);
-}
-
-/** @button "💧 Blobs" */
-export function choosePresetBlobs() {
-  updateParams(presets.blobs);
-}
-
-/** @button "⚛️ Particles" */
-export function choosePresetParticles() {
-  updateParams(presets.particles);
-}
-
-/** @button "🤖 Nanites" */
-export function choosePresetNanites() {
-  updateParams(presets.nanites);
-}
-
-/** @button "🟪🟩" */
-export function setColorPresetPlumTree() {
-  updateColorPreset('plumTree');
-}
-
-/** @button "🟦🟫" */
-export function setColorPresetJeans() {
-  updateColorPreset('jeans');
-}
-
-/** @button "⬛⬜" */
-export function setColorPresetGreyscale() {
-  updateColorPreset('greyscale');
-}
-
-/** @button "🟥🟦" */
-export function setColorPresetHotcold() {
-  updateColorPreset('hotcold');
-}
+// #endregion

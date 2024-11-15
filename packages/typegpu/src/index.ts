@@ -1,7 +1,3 @@
-/**
- * @module typegpu
- */
-
 import { init, initFromDevice } from './core/root/init';
 import { createBuffer } from './legacyBufferApi';
 import { bindGroupLayout } from './tgpuBindGroupLayout';
@@ -33,10 +29,10 @@ export {
 } from './types';
 export { std } from './std';
 export {
-  isUsableAsStorage,
   isUsableAsUniform,
   isUsableAsVertex,
 } from './core/buffer/buffer';
+export { isUsableAsStorage } from './extension';
 
 export type {
   TgpuBindGroupLayout,
@@ -50,6 +46,6 @@ export type {
 export type {
   TgpuBuffer,
   Uniform,
-  Storage,
   Vertex,
 } from './core/buffer/buffer';
+export type { Storage } from './extension';
