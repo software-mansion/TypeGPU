@@ -28,7 +28,7 @@ export interface NumberArrayView {
  * and up the tree.
  */
 export interface ResolutionCtx {
-  addDeclaration(item: TgpuResolvable): void;
+  addDeclaration(item: string): void;
   /**
    * Reserves a bind group number, and returns a placeholder that will be replaced
    * with a concrete number at the end of the resolution process.
@@ -73,14 +73,6 @@ export interface TgpuResolvable {
 }
 
 export interface TgpuIdentifier extends TgpuNamable, TgpuResolvable {}
-
-export interface Builtin {
-  symbol: symbol;
-  name: string;
-  stage: 'vertex' | 'fragment' | 'compute';
-  direction: 'input' | 'output';
-  identifier: TgpuIdentifier;
-}
 
 export function isResolvable(value: unknown): value is TgpuResolvable {
   return (
