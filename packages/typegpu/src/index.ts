@@ -1,7 +1,3 @@
-/**
- * @module typegpu
- */
-
 import { init, initFromDevice } from './core/root/init';
 import { createBuffer } from './legacyBufferApi';
 import { bindGroupLayout } from './tgpuBindGroupLayout';
