@@ -10,7 +10,6 @@ import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
 import { generateFunction } from './smol';
-import { code } from './tgpuCode';
 import type {
   AnyTgpuData,
   BufferUsage,
@@ -18,7 +17,6 @@ import type {
   ResolutionCtx,
   Resource,
   SlotValuePair,
-  TgpuIdentifier,
   TgpuRenderResource,
   TgpuResolvable,
   TgpuSlot,
@@ -61,7 +59,6 @@ class SharedResolutionState {
   private readonly _declarations: string[] = [];
 
   constructor(
-    public readonly names: NameRegistry,
     private readonly _bindingGroup: number,
     public readonly jitTranspiler: JitTranspiler | undefined,
   ) {}
@@ -299,9 +296,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   private _itemStateStack = new ItemStateStack();
 
+  public readonly names: NameRegistry;
+
   constructor(opts: ResolutionCtxImplOptions) {
+    this.names = opts.names;
     this._shared = new SharedResolutionState(
-      opts.names,
       opts.bindingGroup ?? 0,
       opts.jitTranspiler,
     );
@@ -387,14 +386,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     };
   }
 
-  addDeclaration(declaration: TgpuResolvable): void {
-    this._shared.addDeclaration(this.resolve(declaration));
+  addDeclaration(declaration: string): void {
+    this._shared.addDeclaration(declaration);
   }
 
-  addBinding(
-    bindable: TgpuBufferUsage<AnyTgpuData>,
-    identifier: TgpuIdentifier,
-  ): void {
+  addBinding(bindable: TgpuBufferUsage<AnyTgpuData>, identifier: string): void {
     if (bindable.usage === 'vertex') {
       this._shared.registerVertexEntry(bindable);
       return;
@@ -402,14 +398,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     const { group, idx } = this._shared.reserveBindingEntry(bindable);
 
     this.addDeclaration(
-      code`@group(${group}) @binding(${idx}) var<${usageToVarTemplateMap[bindable.usage]}> ${identifier}: ${bindable.allocatable.dataType};`,
+      `@group(${group}) @binding(${idx}) var<${usageToVarTemplateMap[bindable.usage]}> ${identifier}: ${this.resolve(bindable.allocatable.dataType)};`,
     );
   }
 
-  addRenderResource(
-    resource: TgpuRenderResource,
-    identifier: TgpuIdentifier,
-  ): void {
+  addRenderResource(resource: TgpuRenderResource, identifier: string): void {
     const { group, idx } = this._shared.reserveRenderResourceEntry(resource);
 
     if (
@@ -418,21 +411,21 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       isDepthTextureType(resource.type)
     ) {
       this.addDeclaration(
-        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type};`,
+        `@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type};`,
       );
       return;
     }
 
     if (isStorageTextureView(resource)) {
       this.addDeclaration(
-        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.format}, ${resource.access}>;`,
+        `@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.format}, ${resource.access}>;`,
       );
       return;
     }
 
     if (isSampledTextureView(resource)) {
       this.addDeclaration(
-        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.channelDataType}>;`,
+        `@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${this.resolve(resource.channelDataType)}>;`,
       );
       return;
     }
@@ -442,10 +435,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   addBuiltin(builtin: symbol): void {
     this._shared.addBuiltin(builtin);
-  }
-
-  nameFor(item: TgpuResolvable): string {
-    return this._shared.names.nameFor(item);
   }
 
   readSlot<T>(slot: TgpuSlot<T>): T {

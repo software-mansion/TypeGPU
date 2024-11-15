@@ -27,7 +27,7 @@ class TgpuDeclareImpl implements TgpuDeclare {
   constructor(private readonly _declaration: Wgsl) {}
 
   resolve(ctx: ResolutionCtx): string {
-    ctx.addDeclaration(code`${this._declaration}`);
+    ctx.addDeclaration(ctx.resolve(this._declaration));
     return '';
   }
 }

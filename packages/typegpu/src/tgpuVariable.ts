@@ -1,8 +1,6 @@
 import type { Unwrap } from 'typed-binary';
 import { inGPUMode } from './gpuMode';
 import type { TgpuNamable } from './namable';
-import { code } from './tgpuCode';
-import { identifier } from './tgpuIdentifier';
 import type { AnyTgpuData, ResolutionCtx, TgpuResolvable, Wgsl } from './types';
 
 // ----------
@@ -45,17 +43,19 @@ class TgpuVarImpl<TDataType extends AnyTgpuData> implements TgpuVar<TDataType> {
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this._label);
+    const id = ctx.names.makeUnique(this._label);
 
     if (this._initialValue) {
       ctx.addDeclaration(
-        code`var<${this.scope}> ${ident}: ${this._dataType} = ${this._initialValue};`,
+        `var<${this.scope}> ${id}: ${ctx.resolve(this._dataType)} = ${ctx.resolve(this._initialValue)};`,
       );
     } else {
-      ctx.addDeclaration(code`var<${this.scope}> ${ident}: ${this._dataType};`);
+      ctx.addDeclaration(
+        `var<${this.scope}> ${id}: ${ctx.resolve(this._dataType)};`,
+      );
     }
 
-    return ctx.resolve(ident);
+    return id;
   }
 
   get value(): Unwrap<TDataType> {

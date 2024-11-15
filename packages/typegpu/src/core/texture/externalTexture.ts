@@ -1,5 +1,4 @@
 import type { TgpuNamable } from '../../namable';
-import { identifier } from '../../tgpuIdentifier';
 import type { ResolutionCtx } from '../../types';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 
@@ -82,10 +81,8 @@ class TgpuExternalTextureImpl
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this._label);
-
-    ctx.addRenderResource(this, ident);
-
-    return ctx.resolve(ident);
+    const id = ctx.names.makeUnique(this._label);
+    ctx.addRenderResource(this, id);
+    return id;
   }
 }

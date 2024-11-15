@@ -1,30 +1,26 @@
-import type { TgpuResolvable } from './types';
-
 export interface NameRegistry {
-  nameFor(item: TgpuResolvable): string;
+  /**
+   * Creates a valid WGSL identifier, each guaranteed to be unique
+   * in the lifetime of a single resolution process.
+   * @param primer Used in the generation process, makes the identifier more recognizable.
+   */
+  makeUnique(primer?: string): string;
 }
 
 export class RandomNameRegistry implements NameRegistry {
   private lastUniqueId = 0;
-  private names = new WeakMap<TgpuResolvable, string>();
 
-  nameFor(item: TgpuResolvable) {
-    let name = this.names.get(item);
-
-    if (name === undefined) {
-      // creating sanitized name
-      let label: string;
-      if (item.label) {
-        label = item.label.replaceAll(/\s/g, '_'); // whitespace -> _
-        label = label.replaceAll(/[^\w\d]/g, ''); // removing illegal characters
-      } else {
-        label = 'item';
-      }
-      name = `${label}_${this.lastUniqueId++}`;
-      this.names.set(item, name);
+  makeUnique(primer?: string | undefined): string {
+    let label: string;
+    if (primer) {
+      // sanitizing
+      label = primer.replaceAll(/\s/g, '_'); // whitespace -> _
+      label = label.replaceAll(/[^\w\d]/g, ''); // removing illegal characters
+    } else {
+      label = 'item';
     }
 
-    return name;
+    return `${label}_${this.lastUniqueId++}`;
   }
 }
 
@@ -35,27 +31,19 @@ export class StrictNameRegistry implements NameRegistry {
    */
   private readonly _usedNames = new Set<string>();
 
-  private readonly _assignedNames = new WeakMap<TgpuResolvable, string>();
-
-  nameFor(item: TgpuResolvable): string {
-    const assignedName = this._assignedNames.get(item);
-    if (assignedName !== undefined) {
-      return assignedName;
-    }
-
-    if (item.label === undefined) {
-      throw new Error('Unnamed item found when using a strict NameRegistry');
+  makeUnique(primer?: string | undefined): string {
+    if (primer === undefined) {
+      throw new Error('Unnamed item found when using a strict name registry');
     }
 
     let index = 0;
-    let unusedName = item.label;
+    let unusedName = primer;
     while (this._usedNames.has(unusedName)) {
       index++;
-      unusedName = `${item.label}_${index}`;
+      unusedName = `${primer}_${index}`;
     }
 
     this._usedNames.add(unusedName);
-    this._assignedNames.set(item, unusedName);
     return unusedName;
   }
 }

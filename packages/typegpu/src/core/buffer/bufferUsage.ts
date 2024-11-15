@@ -2,7 +2,6 @@ import type { Unwrap } from 'typed-binary';
 import { isArraySchema } from '../../data';
 import { type Storage, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
-import { identifier } from '../../tgpuIdentifier';
 import type {
   AnyTgpuData,
   BufferUsage,
@@ -91,9 +90,9 @@ class TgpuBufferUsageImpl<TData extends AnyTgpuData, TUsage extends BufferUsage>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this.label);
-    ctx.addBinding(this, ident);
-    return ctx.resolve(ident);
+    const id = ctx.names.makeUnique(this.label);
+    ctx.addBinding(this, id);
+    return id;
   }
 
   toString(): string {
@@ -131,9 +130,9 @@ class TgpuBufferVertexImpl<TData extends AnyTgpuData>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this.label);
-    ctx.addBinding(this, ident);
-    return ctx.resolve(ident);
+    const id = ctx.names.makeUnique(this.label);
+    ctx.addBinding(this, id);
+    return id;
   }
 
   toString(): string {

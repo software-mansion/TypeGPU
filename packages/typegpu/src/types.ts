@@ -4,6 +4,7 @@ import type { TgpuBuffer } from './core/buffer/buffer';
 import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
 import type { TgpuFnShellBase } from './core/function/fnCore';
 import type { TgpuNamable } from './namable';
+import type { NameRegistry } from './nameRegistry';
 
 export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
 
@@ -28,14 +29,12 @@ export interface NumberArrayView {
  * and up the tree.
  */
 export interface ResolutionCtx {
-  addDeclaration(item: TgpuResolvable): void;
-  addBinding(bindable: TgpuBindable, identifier: TgpuIdentifier): void;
-  addRenderResource(
-    resource: TgpuRenderResource,
-    identifier: TgpuIdentifier,
-  ): void;
+  readonly names: NameRegistry;
+
+  addDeclaration(declaration: string): void;
+  addBinding(bindable: TgpuBindable, identifier: string): void;
+  addRenderResource(resource: TgpuRenderResource, identifier: string): void;
   addBuiltin(builtin: symbol): void;
-  nameFor(token: TgpuResolvable): string;
   /**
    * Unwraps all layers of slot indirection and returns the concrete value if available.
    * @throws {MissingSlotValueError}
