@@ -189,8 +189,8 @@ importers:
         specifier: ^8.12.1
         version: 8.12.1
       rollup:
-        specifier: ~4.24.0
-        version: 4.24.0
+        specifier: ~4.12.0
+        version: 4.12.1
       tsup:
         specifier: ^8.0.2
         version: 8.0.2(typescript@5.5.4)
