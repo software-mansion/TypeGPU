@@ -36,29 +36,6 @@ export type ResolutionCtxImplOptions = {
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
 
-class SharedResolutionState {
-  private readonly _usedBuiltins = new Set<symbol>();
-  private readonly _declarations: string[] = [];
-
-  constructor(public readonly jitTranspiler: JitTranspiler | undefined) {}
-
-  get declarations(): Iterable<string> {
-    return this._declarations;
-  }
-
-  get usedBuiltins(): Iterable<symbol> {
-    return this._usedBuiltins;
-  }
-
-  addDeclaration(declaration: string) {
-    this._declarations.push(declaration);
-  }
-
-  addBuiltin(builtin: symbol) {
-    this._usedBuiltins.add(builtin);
-  }
-}
-
 type ItemLayer = {
   type: 'item';
   usedSlots: Set<TgpuSlot<unknown>>;
@@ -177,7 +154,13 @@ class ItemStateStack {
           // TODO: Extract the type of the external value.
           return { value: external, dataType: UnknownData };
         }
-      } else if (layer?.type === 'blockScope') {
+
+        // Since functions cannot access resources from the calling scope, we
+        // return early here.
+        return undefined;
+      }
+
+      if (layer?.type === 'blockScope') {
         const declarationType = layer.declarations.get(id);
         if (declarationType !== undefined) {
           return { value: id, dataType: declarationType };
@@ -236,8 +219,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     { slotToValueMap: SlotToValueMap; result: string }[]
   >();
 
-  private readonly _shared: SharedResolutionState;
   private readonly _indentController = new IndentController();
+  private readonly _jitTranspiler: JitTranspiler | undefined;
 
   // -- Bindings
   /**
@@ -255,13 +238,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _boundToIndexMap = new WeakMap<object, number>();
   // --
 
+  private _declarations: string[] = [];
   private _itemStateStack = new ItemStateStack();
 
   public readonly names: NameRegistry;
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.names = opts.names;
-    this._shared = new SharedResolutionState(opts.jitTranspiler);
+    this._jitTranspiler = opts.jitTranspiler;
   }
 
   get usedBuiltins() {
@@ -296,13 +280,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     body: Block;
     externalNames: string[];
   } {
-    if (!this._shared.jitTranspiler) {
+    if (!this._jitTranspiler) {
       throw new Error(
         'Tried to execute a tgpu.fn function without providing a JIT transpiler, or transpiling at build time.',
       );
     }
 
-    return this._shared.jitTranspiler.transpileFn(fn);
+    return this._jitTranspiler.transpileFn(fn);
   }
 
   fnToWgsl(
@@ -337,7 +321,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   addDeclaration(declaration: string): void {
-    this._shared.addDeclaration(declaration);
+    this._declarations.push(declaration);
   }
 
   allocateLayoutEntry(layout: TgpuBindGroupLayout): string {
@@ -448,7 +432,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     try {
       if (this._itemStateStack.itemDepth === 0) {
         const result = onGPU(() => this._getOrInstantiate(item));
-        return `${[...this._shared.declarations].join('\n\n')}${result}`;
+        return `${[...this._declarations].join('\n\n')}${result}`;
       }
 
       return this._getOrInstantiate(item);
