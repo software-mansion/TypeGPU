@@ -41,7 +41,6 @@ export * from '../errors';
 export * from '../types';
 export * from '../namable';
 export * from '../core/root/rootTypes';
-export { default as ProgramBuilder, type Program } from '../programBuilder';
 export { StrictNameRegistry, RandomNameRegistry } from '../nameRegistry';
 export * from '../builtin';
 
@@ -65,7 +64,6 @@ export {
   asUniform,
   asReadonly,
   asMutable,
-  asVertex,
 } from '../core/buffer/bufferUsage';
 
 export type {
@@ -80,7 +78,6 @@ export type {
   TgpuBufferUniform,
   TgpuBufferReadonly,
   TgpuBufferMutable,
-  TgpuBufferVertex,
 } from '../core/buffer/bufferUsage';
 export type {
   TgpuTexture,

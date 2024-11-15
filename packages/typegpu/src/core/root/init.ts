@@ -34,12 +34,6 @@ import {
   type TgpuRenderPipeline,
 } from '../pipeline/renderPipeline';
 import {
-  type INTERNAL_TgpuExternalTexture,
-  INTERNAL_createExternalTexture,
-  type TgpuExternalTexture,
-  isExternalTexture,
-} from '../texture/externalTexture';
-import {
   type INTERNAL_TgpuSampledTexture,
   type INTERNAL_TgpuStorageTexture,
   type INTERNAL_TgpuTexture,
@@ -185,20 +179,6 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     return texture as any;
   }
 
-  importExternalTexture<TColorSpace extends PredefinedColorSpace>(options: {
-    source: HTMLVideoElement | VideoFrame;
-    colorSpace?: TColorSpace;
-  }): TgpuExternalTexture<{
-    colorSpace: PredefinedColorSpace extends TColorSpace ? 'srgb' : TColorSpace;
-  }> {
-    return INTERNAL_createExternalTexture(
-      this,
-      options.source,
-      options.colorSpace,
-      // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
-    ) as any;
-  }
-
   destroy() {
     for (const disposable of this._disposables) {
       disposable.destroy();
@@ -216,7 +196,6 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
       | TgpuMutableTexture
       | TgpuSampledTexture,
   ): GPUTextureView;
-  unwrap(resource: TgpuExternalTexture): GPUExternalTexture;
   unwrap(
     resource:
       | TgpuBuffer<AnyTgpuData>
@@ -227,7 +206,6 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
       | TgpuWriteonlyTexture
       | TgpuMutableTexture
       | TgpuSampledTexture
-      | TgpuExternalTexture
       | TgpuComputePipeline,
   ):
     | GPUBuffer
@@ -235,7 +213,6 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     | GPUBindGroup
     | GPUTexture
     | GPUTextureView
-    | GPUExternalTexture
     | GPUComputePipeline {
     if (isBuffer(resource)) {
       return resource.buffer;
@@ -263,10 +240,6 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
 
     if (isSampledTextureView(resource)) {
       return (resource as unknown as INTERNAL_TgpuSampledTexture).unwrap();
-    }
-
-    if (isExternalTexture(resource)) {
-      return (resource as unknown as INTERNAL_TgpuExternalTexture).unwrap();
     }
 
     throw new Error(`Unknown resource type: ${resource}`);

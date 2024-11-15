@@ -20,7 +20,6 @@ import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline';
 import type { TgpuRenderPipeline } from '../pipeline/renderPipeline';
-import type { TgpuExternalTexture } from '../texture/externalTexture';
 import type { TgpuTexture } from '../texture/texture';
 
 // ----------
@@ -182,14 +181,6 @@ export interface TgpuRoot extends Unwrapper {
       TDimension
     >
   >;
-
-  importExternalTexture<TColorSpace extends PredefinedColorSpace>(options: {
-    source: HTMLVideoElement | VideoFrame;
-    /** @default 'srgb' */
-    colorSpace?: TColorSpace;
-  }): TgpuExternalTexture<{
-    colorSpace: PredefinedColorSpace extends TColorSpace ? 'srgb' : TColorSpace;
-  }>;
 
   destroy(): void;
 }

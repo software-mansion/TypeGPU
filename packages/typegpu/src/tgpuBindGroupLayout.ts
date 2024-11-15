@@ -10,10 +10,6 @@ import type {
   TgpuBufferUniform,
 } from './core/buffer/bufferUsage';
 import {
-  type TgpuExternalTexture,
-  isExternalTexture,
-} from './core/texture/externalTexture';
-import {
   type TgpuMutableTexture,
   type TgpuReadonlyTexture,
   type TgpuSampledTexture,
@@ -200,7 +196,7 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
             ? // TODO: Allow storage usages here
               GPUTextureView | TgpuTexture
             : T extends TgpuLayoutExternalTexture
-              ? GPUExternalTexture | TgpuExternalTexture
+              ? GPUExternalTexture
               : never;
 
 export type BindLayoutEntry<T extends TgpuLayoutEntry | null> =
@@ -528,28 +524,10 @@ class TgpuBindGroupImpl<
             };
           }
 
-          if ('externalTexture' in entry) {
-            let resource: GPUExternalTexture;
-
-            if (isExternalTexture(value)) {
-              resource = unwrapper.unwrap(value);
-            } else {
-              resource = value as GPUExternalTexture;
-            }
-
+          if ('externalTexture' in entry || 'sampler' in entry) {
             return {
               binding: idx,
-              resource,
-            };
-          }
-
-          if ('sampler' in entry) {
-            return {
-              binding: idx,
-              resource: value as
-                | GPUTextureView
-                | GPUExternalTexture
-                | GPUSampler,
+              resource: value as GPUExternalTexture | GPUSampler,
             };
           }
 

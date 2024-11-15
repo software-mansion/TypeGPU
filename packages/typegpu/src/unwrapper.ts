@@ -1,5 +1,4 @@
 import type { TgpuBuffer } from './core/buffer/buffer';
-import type { TgpuExternalTexture } from './core/texture/externalTexture';
 import type {
   TgpuMutableTexture,
   TgpuReadonlyTexture,
@@ -23,5 +22,4 @@ export interface Unwrapper {
       | TgpuMutableTexture
       | TgpuSampledTexture,
   ): GPUTextureView;
-  unwrap(resource: TgpuExternalTexture): GPUExternalTexture;
 }
