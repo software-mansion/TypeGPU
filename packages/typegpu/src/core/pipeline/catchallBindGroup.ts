@@ -1,13 +1,8 @@
 import type { ResolutionCtxImpl } from '../../resolutionCtx';
-import { type TgpuSampler, isSampler } from '../../tgpuSampler';
-import {
-  type TgpuAnyTextureView,
-  type TgpuTextureExternal,
-  isExternalTexture,
-} from '../../tgpuTexture';
 import type { AnyTgpuData, BufferUsage } from '../../types';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
+import type { TgpuAnyTextureView } from '../texture/texture';
 
 const usageToBindingTypeMap: Record<
   Exclude<BufferUsage, 'vertex'>,
@@ -19,9 +14,7 @@ const usageToBindingTypeMap: Record<
 };
 
 export class CatchallBindGroup {
-  private samplers: TgpuSampler[] = [];
   private textureViews: TgpuAnyTextureView[] = [];
-  private externalTextures: TgpuTextureExternal[] = [];
   private buffers: TgpuBufferUsage<AnyTgpuData>[] = [];
 
   private _layoutMemo: GPUBindGroupLayout | null = null;
@@ -143,9 +136,5 @@ export class CatchallBindGroup {
 
     this._bindGroupMemo = bindGroup;
     return bindGroup;
-  }
-
-  invalidateBindGroup() {
-    this._bindGroupMemo = null;
   }
 }

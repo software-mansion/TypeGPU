@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expectTypeOf, it, vi } from 'vitest';
+import type { TgpuComputePipeline } from '../src/core/pipeline/computePipeline';
 import { initFromDevice } from '../src/core/root/init';
 import type { ExperimentalTgpuRoot } from '../src/core/root/rootTypes';
 import tgpu from '../src/experimental';
@@ -68,11 +69,14 @@ describe('TgpuComputePipeline', () => {
   });
 
   it('can be created with a compute entry function', () => {
-    const entryFn = tgpu.computeFn([32]).implement(() => {
+    const entryFn = tgpu.computeFn([32]).does(() => {
       // do something
     });
 
     const computePipeline = root.withCompute(entryFn).createPipeline();
+
+    expectTypeOf(computePipeline).toEqualTypeOf<TgpuComputePipeline>();
+
     const rawPipeline = root.unwrap(computePipeline);
   });
 });

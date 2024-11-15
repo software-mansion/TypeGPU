@@ -185,9 +185,10 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     }
   }
 
-  unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
+  unwrap(resource: TgpuComputePipeline): GPUComputePipeline;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
+  unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
   unwrap(resource: TgpuTexture): GPUTexture;
   unwrap(
     resource:
@@ -198,24 +199,24 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
   ): GPUTextureView;
   unwrap(
     resource:
-      | TgpuBuffer<AnyTgpuData>
+      | TgpuComputePipeline
       | TgpuBindGroupLayout
       | TgpuBindGroup
+      | TgpuBuffer<AnyTgpuData>
       | TgpuTexture
       | TgpuReadonlyTexture
       | TgpuWriteonlyTexture
       | TgpuMutableTexture
-      | TgpuSampledTexture
-      | TgpuComputePipeline,
+      | TgpuSampledTexture,
   ):
-    | GPUBuffer
+    | GPUComputePipeline
     | GPUBindGroupLayout
     | GPUBindGroup
+    | GPUBuffer
     | GPUTexture
-    | GPUTextureView
-    | GPUComputePipeline {
-    if (isBuffer(resource)) {
-      return resource.buffer;
+    | GPUTextureView {
+    if (isComputePipeline(resource)) {
+      return (resource as unknown as TgpuComputePipeline_INTERNAL).rawPipeline;
     }
 
     if (isBindGroupLayout(resource)) {
@@ -226,8 +227,8 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
       return this._unwrappedBindGroups.getOrMake(resource);
     }
 
-    if (isComputePipeline(resource)) {
-      return (resource as unknown as TgpuComputePipeline_INTERNAL).rawPipeline;
+    if (isBuffer(resource)) {
+      return resource.buffer;
     }
 
     if (isTexture(resource)) {
