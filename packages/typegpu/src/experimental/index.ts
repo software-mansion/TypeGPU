@@ -6,6 +6,7 @@ import { computeFn } from '../core/function/tgpuComputeFn';
 import { fn, procedure } from '../core/function/tgpuFn';
 import { fragmentFn } from '../core/function/tgpuFragmentFn';
 import { vertexFn } from '../core/function/tgpuVertexFn';
+import { resolve } from '../core/resolve/tgpuResolve';
 import { init, initFromDevice } from '../core/root/init';
 import { vertexLayout } from '../core/vertexLayout/vertexLayout';
 import { createBuffer } from '../legacyBufferApi';
@@ -30,6 +31,8 @@ export const tgpu = {
 
   init,
   initFromDevice,
+
+  resolve,
 
   createBuffer,
   read,

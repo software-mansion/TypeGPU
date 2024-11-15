@@ -108,7 +108,8 @@ export type GlobalDecl =
   | GlobalVariableDecl
   | ValueDecl
   | OverrideDecl
-  | FunctionDecl;
+  | FunctionDecl
+  | StructDecl;
 
 %}
 global_decl ->
@@ -116,16 +117,31 @@ global_decl ->
   | global_variable_decl ";" {% id %}
   | value_decl ";" {% id %}
   | override_decl ";" {% id %}
+  | struct_decl {% id %}
+  | function_decl {% id %}
   # | type_alias_decl ";"
-  # | struct_decl
-    | function_decl {% id %}
   # | const_assert_statement ";"
 
 @{% export type Ident = { type: 'ident', value: string }; %}
 ident -> %ident_pattern {% ([token]) => ({ type: 'ident', value: token.value }) %}
 
 # type_alias_decl -> null # TODO
-# struct_decl -> null # TODO
+
+#
+# 6.2.10 Structure Types
+# https://www.w3.org/TR/WGSL/#struct-types
+#
+
+@{% export type StructDecl = { type: 'struct_decl', ident: string, members: StructMember[] }; %}
+struct_decl ->
+  "struct" ident struct_body_decl {% ([ , ident, members]) => ({ type: 'struct_decl', ident: ident.value, members }) %}
+struct_body_decl ->
+    "{" struct_member ("," struct_member):* ",":? "}" {% ([ , first, rest]) => [first, ...rest.map(tuple => tuple[1])] %}
+
+@{% export type StructMember = { type: 'struct_member', attrs: Attribute[], ident: string, typespec: TypeSpecifier }; %}
+struct_member ->
+  attribute:* ident ":" type_specifier {% ([attrs, ident,, typespec]) => ({ type: 'struct_member', attrs, ident: ident.value, typespec }) %}
+
 # const_assert_statement -> null # TODO
 
 #

@@ -178,6 +178,9 @@ importers:
       typescript:
         specifier: ^5.3.3
         version: 5.5.4
+      vitest:
+        specifier: 0.33.0
+        version: 0.33.0(@vitest/ui@0.33.0)(jsdom@24.0.0)
 
   packages/rollup-plugin:
     dependencies:
@@ -289,6 +292,9 @@ importers:
       '@webgpu/types':
         specifier: ^0.1.43
         version: 0.1.43
+      rollup-plugin-typegpu:
+        specifier: workspace:*
+        version: link:../rollup-plugin
       tsup:
         specifier: ^8.0.2
         version: 8.0.2(typescript@5.5.4)
