@@ -2,7 +2,7 @@ import { transpileFn } from '@typegpu/tgsl-tools';
 import type { AnyNode, CallExpression } from 'acorn';
 import { walk } from 'estree-walker';
 import MagicString from 'magic-string';
-import type { Plugin } from 'rollup';
+import type { Plugin, SourceMap } from 'rollup';
 
 const typegpuImportRegex = /import.*from\s*['"]typegpu.*['"]/g;
 const typegpuDynamicImportRegex = /import\s*\(\s*['"]\s*typegpu.*['"]/g;
@@ -84,9 +84,17 @@ export interface TypegpuPluginOptions {
   include?: 'all' | RegExp[];
 }
 
-export default function typegpu(options?: TypegpuPluginOptions): Plugin {
+export interface TypegpuPlugin {
+  name: 'rollup-plugin-typegpu';
+  transform(
+    code: string,
+    id: string,
+  ): { code: string; map: SourceMap } | undefined;
+}
+
+export default function typegpu(options?: TypegpuPluginOptions): TypegpuPlugin {
   return {
-    name: 'rollup-plugin-typegpu',
+    name: 'rollup-plugin-typegpu' as const,
     transform(code, id) {
       if (!options?.include) {
         if (
@@ -175,5 +183,5 @@ export default function typegpu(options?: TypegpuPluginOptions): Plugin {
         map: magicString.generateMap(),
       };
     },
-  };
+  } satisfies Plugin;
 }

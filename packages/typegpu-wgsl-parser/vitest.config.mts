@@ -1,17 +1,16 @@
 import * as path from 'node:path';
-import type { PluginOption } from 'vite';
 import { defineConfig } from 'vitest/config';
 
 /**
  * Redirects all imports of files that end in '.ne'
  * into imports of their corresponding '.ts' files.
  */
-function nearleyRedirectPlugin(): PluginOption {
+function nearleyRedirectPlugin() {
   return {
     name: 'nearley-redirect',
-    enforce: 'pre',
+    enforce: 'pre' as const,
 
-    resolveId(source, importer) {
+    resolveId(source: string, importer: string | undefined) {
       if (source.endsWith('.ne')) {
         const abs = importer
           ? path.join(path.dirname(importer), source)
@@ -27,7 +26,4 @@ function nearleyRedirectPlugin(): PluginOption {
 
 export default defineConfig({
   plugins: [nearleyRedirectPlugin()],
-  test: {
-    name: 'typegpu-wgsl-parser',
-  },
 });
