@@ -25,7 +25,6 @@ export {
 export * from './vector';
 export * from './matrix';
 export * from './vertexFormatData';
-export { ptr } from './pointer';
 export { atomic, isAtomicSchema, Atomic } from './atomic';
 export {
   align,
@@ -33,13 +32,16 @@ export {
   location,
   isDecorated,
   isLooseDecorated,
+  isBuiltin,
   Align,
   Size,
   Location,
+  Builtin,
   BaseDecorated,
   Decorated,
   LooseDecorated,
   AnyAttribute,
+  IsBuiltin,
 } from './attributes';
 
 // Reexporting type-binary utility types

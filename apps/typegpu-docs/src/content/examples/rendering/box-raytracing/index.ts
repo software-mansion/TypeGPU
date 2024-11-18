@@ -1,3 +1,6 @@
+// @ts-nocheck
+// TODO: Reenable type checking when new pipelines are implemented.
+
 import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'typegpu/data';
 import tgpu, {
   asReadonly,

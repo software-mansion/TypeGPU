@@ -25,6 +25,25 @@ import alignIO from './alignIO';
 // Public API
 // ----------
 
+export const builtinNames = [
+  'vertex_index',
+  'instance_index',
+  'position',
+  'clip_distances',
+  'front_facing',
+  'frag_depth',
+  'sample_index',
+  'sample_mask',
+  'fragment',
+  'local_invocation_id',
+  'local_invocation_index',
+  'global_invocation_id',
+  'workgroup_id',
+  'num_workgroups',
+] as const;
+
+export type BuiltinName = (typeof builtinNames)[number];
+
 export interface Align<T extends number> {
   type: 'align';
   alignment: T;
@@ -40,7 +59,16 @@ export interface Location<T extends number> {
   location: T;
 }
 
-export type AnyAttribute = Align<number> | Size<number> | Location<number>;
+export interface Builtin<T extends BuiltinName> {
+  type: 'builtin';
+  name: T;
+}
+
+export type AnyAttribute =
+  | Align<number>
+  | Size<number>
+  | Location<number>
+  | Builtin<BuiltinName>;
 
 export interface BaseDecorated<
   TInner extends AnyTgpuData | AnyTgpuLooseData =
@@ -55,6 +83,7 @@ export interface BaseDecorated<
   readonly alignAttrib: number | undefined;
   readonly sizeAttrib: number | undefined;
   readonly locationAttrib: number | undefined;
+  readonly builtinAttrib: BuiltinName | undefined;
 }
 
 export interface Decorated<
@@ -105,6 +134,12 @@ export type Decorate<
         [TAttrib, ...ExtractAttributes<TData>]
       >
     : never;
+
+export type IsBuiltin<T> = ExtractAttributes<T>[number] extends []
+  ? false
+  : ExtractAttributes<T>[number] extends Builtin<BuiltinName>
+    ? true
+    : false;
 
 export function attribute<
   TData extends AnyTgpuData | AnyTgpuLooseData,
@@ -218,6 +253,17 @@ export function getCustomLocation(
   return (data as unknown as BaseDecorated).locationAttrib;
 }
 
+export function isBuiltin<
+  T extends
+    | Decorated<AnyTgpuData, AnyAttribute[]>
+    | LooseDecorated<AnyTgpuLooseData, AnyAttribute[]>,
+>(value: T | unknown): value is T {
+  return (
+    (isDecorated(value) || isLooseDecorated(value)) &&
+    value.builtinAttrib !== undefined
+  );
+}
+
 export function getAttributesString<T extends AnyTgpuData>(field: T): string {
   if (!isDecorated(field) && !isLooseDecorated(field)) {
     return '';
@@ -235,6 +281,10 @@ export function getAttributesString<T extends AnyTgpuData>(field: T): string {
 
       if (attrib.type === 'location') {
         return `@location(${attrib.location}) `;
+      }
+
+      if (attrib.type === 'builtin') {
+        return `@builtin(${attrib.name}) `;
       }
 
       return '';
@@ -260,6 +310,7 @@ class BaseDecoratedImpl<
   public readonly alignAttrib: number | undefined;
   public readonly sizeAttrib: number | undefined;
   public readonly locationAttrib: number | undefined;
+  public readonly builtinAttrib: BuiltinName | undefined;
 
   constructor(
     public readonly inner: TInner,
@@ -274,6 +325,9 @@ class BaseDecoratedImpl<
     this.locationAttrib = attributes.find(
       (a): a is Location<number> => a.type === 'location',
     )?.location;
+    this.builtinAttrib = attributes.find(
+      (a): a is Builtin<BuiltinName> => a.type === 'builtin',
+    )?.name;
 
     this.byteAlignment = this.alignAttrib ?? inner.byteAlignment;
     this.size = this.measure(MaxValue).size;

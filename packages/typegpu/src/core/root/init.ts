@@ -423,7 +423,10 @@ class RenderPipelineExecutor implements PipelineExecutor {
       usage,
       index,
     ] of this.vertexProgram.bindGroupResolver.getVertexBuffers()) {
-      passEncoder.setVertexBuffer(index, usage.allocatable.buffer);
+      passEncoder.setVertexBuffer(
+        index,
+        (usage.allocatable as TgpuBuffer<AnyTgpuData>).buffer,
+      );
     }
 
     passEncoder.draw(vertexCount, instanceCount, firstVertex, firstInstance);

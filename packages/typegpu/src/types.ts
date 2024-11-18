@@ -1,8 +1,5 @@
 import type { Block } from 'tinyest';
-import type { ISchema, Unwrap } from 'typed-binary';
-import type { TgpuBuffer } from './core/buffer/buffer';
-import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
-import type { TgpuFnShellBase } from './core/function/fnCore';
+import type { ISchema } from 'typed-binary';
 import type { TgpuNamable } from './namable';
 import type { NameRegistry } from './nameRegistry';
 
@@ -23,6 +20,13 @@ export interface NumberArrayView {
   [n: number]: number;
 }
 
+export interface FnToWgslOptions {
+  args: Resource[];
+  returnType: AnyTgpuData;
+  body: Block;
+  externalMap: Record<string, unknown>;
+}
+
 /**
  * Passed into each resolvable item. All items in a tree share a resolution ctx,
  * but there can be layers added and removed from the item stack when going down
@@ -34,7 +38,6 @@ export interface ResolutionCtx {
   addDeclaration(declaration: string): void;
   addBinding(bindable: TgpuBindable, identifier: string): void;
   addRenderResource(resource: TgpuRenderResource, identifier: string): void;
-  addBuiltin(builtin: symbol): void;
   /**
    * Unwraps all layers of slot indirection and returns the concrete value if available.
    * @throws {MissingSlotValueError}
@@ -46,13 +49,7 @@ export interface ResolutionCtx {
     body: Block;
     externalNames: string[];
   };
-  fnToWgsl(
-    // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
-    shell: TgpuFnShellBase<any, any>,
-    argNames: string[],
-    body: Block,
-    externalMap: Record<string, unknown>,
-  ): {
+  fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;
     body: Wgsl;
   };
@@ -61,16 +58,6 @@ export interface ResolutionCtx {
 export interface TgpuResolvable {
   readonly label?: string | undefined;
   resolve(ctx: ResolutionCtx): string;
-}
-
-export interface TgpuIdentifier extends TgpuNamable, TgpuResolvable {}
-
-export interface Builtin {
-  symbol: symbol;
-  name: string;
-  stage: 'vertex' | 'fragment' | 'compute';
-  direction: 'input' | 'output';
-  identifier: TgpuIdentifier;
 }
 
 export function isResolvable(value: unknown): value is TgpuResolvable {
@@ -109,7 +96,7 @@ export interface TgpuBindable<
   TData extends AnyTgpuData = AnyTgpuData,
   TUsage extends BufferUsage = BufferUsage,
 > extends TgpuResolvable {
-  readonly allocatable: TgpuBuffer<TData>;
+  readonly allocatable: unknown;
   readonly usage: TUsage;
 }
 
@@ -149,20 +136,6 @@ export function isSamplerType(
   return type === 'sampler' || type === 'sampler_comparison';
 }
 
-export function isTypedTextureType(
-  type: TgpuRenderResourceType,
-): type is TgpuTypedTextureType {
-  return [
-    'texture_1d',
-    'texture_2d',
-    'texture_2d_array',
-    'texture_3d',
-    'texture_cube',
-    'texture_cube_array',
-    'texture_multisampled_2d',
-  ].includes(type);
-}
-
 export function isDepthTextureType(
   type: TgpuRenderResourceType,
 ): type is TgpuDepthTextureType {
@@ -180,14 +153,6 @@ export function isExternalTextureType(
 ): type is TgpuExternalTextureType {
   return type === 'texture_external';
 }
-
-export type ValueOf<T> = T extends TgpuSlot<infer I>
-  ? ValueOf<I>
-  : T extends TgpuBufferUsage<infer D>
-    ? ValueOf<D>
-    : T extends TgpuData<unknown>
-      ? Unwrap<T>
-      : T;
 
 export interface TgpuData<TInner> extends ISchema<TInner>, TgpuResolvable {
   readonly isLoose: false;
@@ -215,31 +180,6 @@ export function isDataNotLoose<T>(
   return !data.isLoose;
 }
 
-export interface TgpuPointer<
-  TScope extends 'function',
-  TInner extends AnyTgpuData,
-> {
-  readonly scope: TScope;
-  readonly pointsTo: TInner;
-}
-
-/**
- * A virtual representation of a WGSL value.
- */
-export type TgpuValue<TDataType> = {
-  readonly __dataType: TDataType;
-};
-
-export type AnyTgpuPointer = TgpuPointer<'function', AnyTgpuData>;
-
-export type TgpuFnArgument = AnyTgpuPointer | AnyTgpuData;
-
-export function isPointer(
-  value: AnyTgpuPointer | AnyTgpuData,
-): value is AnyTgpuPointer {
-  return 'pointsTo' in value;
-}
-
 export function isGPUBuffer(value: unknown): value is GPUBuffer {
   return (
     !!value &&
@@ -252,14 +192,6 @@ export function isGPUBuffer(value: unknown): value is GPUBuffer {
 // -----------------
 // TypeGPU Resources
 // -----------------
-
-// Code
-
-export interface BoundTgpuCode extends TgpuResolvable {
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): BoundTgpuCode;
-}
-
-export interface TgpuCode extends BoundTgpuCode, TgpuNamable {}
 
 // Slot
 
@@ -275,7 +207,7 @@ export interface TgpuSlot<T> extends TgpuNamable {
    */
   areEqual(a: T, b: T): boolean;
 
-  value: ValueOf<T>;
+  readonly value: T;
 }
 
 export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {

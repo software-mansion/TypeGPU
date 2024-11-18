@@ -1,3 +1,6 @@
+// @ts-nocheck
+// TODO: Reenable type checking when new pipelines are implemented.
+
 import { JitTranspiler } from '@typegpu/jit';
 import {
   type Parsed,

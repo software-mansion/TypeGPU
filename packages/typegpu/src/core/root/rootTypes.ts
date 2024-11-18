@@ -10,12 +10,7 @@ import type {
   Unsubscribe,
 } from '../../tgpuPlumTypes';
 import type { TgpuSampler } from '../../tgpuSampler';
-import type {
-  AnyTgpuData,
-  BoundTgpuCode,
-  TgpuCode,
-  TgpuData,
-} from '../../types';
+import type { AnyTgpuData, TgpuData, Wgsl } from '../../types';
 import type { Unwrapper } from '../../unwrapper';
 import type { Mutable, OmitProps, Prettify } from '../../utilityTypes';
 import type { TgpuBuffer } from '../buffer/buffer';
@@ -215,7 +210,7 @@ export interface ExperimentalTgpuRoot extends TgpuRoot {
 
 export interface RenderPipelineOptions {
   vertex: {
-    code: TgpuCode | BoundTgpuCode;
+    code: Wgsl;
     output: {
       [K in symbol]: string;
     } & {
@@ -223,7 +218,7 @@ export interface RenderPipelineOptions {
     };
   };
   fragment: {
-    code: TgpuCode | BoundTgpuCode;
+    code: Wgsl;
     target: Iterable<GPUColorTargetState | null>;
   };
   primitive: GPUPrimitiveState;
@@ -232,7 +227,7 @@ export interface RenderPipelineOptions {
 }
 
 export interface ComputePipelineOptions {
-  code: TgpuCode | BoundTgpuCode;
+  code: Wgsl;
   workgroupSize?: readonly [number, number?, number?];
   externalLayouts?: GPUBindGroupLayout[];
   label?: string;
