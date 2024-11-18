@@ -1,14 +1,22 @@
+import type { TgpuBuffer, Vertex } from '../../core/buffer/buffer';
+import type { TgpuArray } from '../../data';
 import { MissingBindGroupError } from '../../errors';
 import type { TgpuNamable } from '../../namable';
 import { resolve } from '../../resolutionCtx';
-import type {
-  TgpuBindGroup,
-  TgpuBindGroupLayout,
+import {
+  type TgpuBindGroup,
+  type TgpuBindGroupLayout,
+  isBindGroupLayout,
 } from '../../tgpuBindGroupLayout';
+import type { AnyTgpuData } from '../../types';
 import type { IOLayout } from '../function/fnTypes';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
+import {
+  type TgpuVertexLayout,
+  isVertexLayout,
+} from '../vertexLayout/vertexLayout';
 
 // ----------
 // Public API
@@ -19,6 +27,10 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
   readonly resourceType: 'render-pipeline';
   readonly label: string | undefined;
 
+  with<TData extends TgpuArray<AnyTgpuData>>(
+    vertexLayout: TgpuVertexLayout<TData>,
+    buffer: TgpuBuffer<TData> & Vertex,
+  ): TgpuRenderPipeline<Output>;
   with(
     bindGroupLayout: TgpuBindGroupLayout,
     bindGroup: TgpuBindGroup,
@@ -72,7 +84,12 @@ export function INTERNAL_createRenderPipeline(
 // --------------
 
 type TgpuRenderPipelinePriors = {
-  readonly bindGroupLayoutMap?: Map<TgpuBindGroupLayout, TgpuBindGroup>;
+  readonly vertexLayoutMap?:
+    | Map<TgpuVertexLayout, TgpuBuffer<AnyTgpuData> & Vertex>
+    | undefined;
+  readonly bindGroupLayoutMap?:
+    | Map<TgpuBindGroupLayout, TgpuBindGroup>
+    | undefined;
 };
 
 type Memo = {
@@ -98,16 +115,39 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     return this;
   }
 
+  with<TData extends TgpuArray<AnyTgpuData>>(
+    vertexLayout: TgpuVertexLayout<TData>,
+    buffer: TgpuBuffer<TData> & Vertex,
+  ): TgpuRenderPipeline;
   with(
     bindGroupLayout: TgpuBindGroupLayout,
     bindGroup: TgpuBindGroup,
+  ): TgpuRenderPipeline;
+  with(
+    definition: TgpuVertexLayout | TgpuBindGroupLayout,
+    resource: (TgpuBuffer<AnyTgpuData> & Vertex) | TgpuBindGroup,
   ): TgpuRenderPipeline {
-    return new TgpuRenderPipelineImpl(this._core, {
-      bindGroupLayoutMap: new Map([
-        ...(this._priors.bindGroupLayoutMap ?? []),
-        [bindGroupLayout, bindGroup],
-      ]),
-    });
+    if (isBindGroupLayout(definition)) {
+      return new TgpuRenderPipelineImpl(this._core, {
+        bindGroupLayoutMap: new Map([
+          ...(this._priors.bindGroupLayoutMap ?? []),
+          [definition, resource as TgpuBindGroup],
+        ]),
+        vertexLayoutMap: this._priors.vertexLayoutMap,
+      });
+    }
+
+    if (isVertexLayout(definition)) {
+      return new TgpuRenderPipelineImpl(this._core, {
+        bindGroupLayoutMap: this._priors.bindGroupLayoutMap,
+        vertexLayoutMap: new Map([
+          ...(this._priors.vertexLayoutMap ?? []),
+          [definition, resource as TgpuBuffer<AnyTgpuData> & Vertex],
+        ]),
+      });
+    }
+
+    throw new Error('Unsupported value passed into .with()');
   }
 
   draw(

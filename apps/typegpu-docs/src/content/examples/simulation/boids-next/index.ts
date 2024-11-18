@@ -4,18 +4,22 @@ import tgpu, { builtin } from 'typegpu/experimental';
 const triangleAmount = 1000;
 const triangleSize = 0.03;
 
-const rotate = tgpu.fn([vec2f, f32], vec2f).does(/* wgsl */ `(v: vec2f, angle: f32) -> vec2f {
-  let pos = vec2(
-    (v.x * cos(angle)) - (v.y * sin(angle)),
-    (v.x * sin(angle)) + (v.y * cos(angle))
-  );
+const rotate = tgpu.fn([vec2f, f32], vec2f).does(/* wgsl */ `
+  (v: vec2f, angle: f32) -> vec2f {
+    let pos = vec2(
+      (v.x * cos(angle)) - (v.y * sin(angle)),
+      (v.x * sin(angle)) + (v.y * cos(angle))
+    );
 
-  return pos;
-}`);
+    return pos;
+  }
+`);
 
-const getRotationFromVelocity = tgpu.fn([vec2f], f32).does(/* wgsl */ `(velocity: vec2f) -> f32 {
-  return -atan2(velocity.x, velocity.y);
-}`);
+const getRotationFromVelocity = tgpu.fn([vec2f], f32).does(/* wgsl */ `
+  (velocity: vec2f) -> f32 {
+    return -atan2(velocity.x, velocity.y);
+  }
+`);
 
 const TriangleData = struct({
   position: vec2f,

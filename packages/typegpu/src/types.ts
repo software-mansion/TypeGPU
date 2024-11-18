@@ -132,6 +132,13 @@ export function isDataLoose<T>(
 ): data is TgpuLooseData<T> {
   return data.isLoose;
 }
+
+export function isBaseData<T extends AnyTgpuData | AnyTgpuLooseData>(
+  data: unknown | T,
+): data is T {
+  return !!(data as T)?.size && (data as T)?.byteAlignment !== undefined;
+}
+
 export function isDataNotLoose<T>(
   data: TgpuData<T> | TgpuLooseData<T>,
 ): data is TgpuData<T> {

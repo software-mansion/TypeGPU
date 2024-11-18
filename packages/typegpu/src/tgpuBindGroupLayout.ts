@@ -25,7 +25,7 @@ import { NotUniformError } from './errors';
 import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
 import type { TgpuNamable } from './namable';
 import type { TgpuSampler } from './tgpuSampler';
-import type { AnyTgpuData, TgpuShaderStage } from './types';
+import { type AnyTgpuData, type TgpuShaderStage, isBaseData } from './types';
 import type { Unwrapper } from './unwrapper';
 import type { OmitProps } from './utilityTypes';
 
@@ -296,10 +296,9 @@ class TgpuBindGroupLayoutImpl<
       const membership = { idx, key, layout: this };
 
       if ('uniform' in entry) {
-        const dataType =
-          typeof entry.uniform === 'function'
-            ? entry.uniform(0)
-            : entry.uniform;
+        const dataType = isBaseData(entry.uniform)
+          ? entry.uniform
+          : entry.uniform(0);
 
         // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
         (this.bound[key] as any) = new TgpuLaidOutBufferImpl(
@@ -310,10 +309,9 @@ class TgpuBindGroupLayoutImpl<
       }
 
       if ('storage' in entry) {
-        const dataType =
-          typeof entry.storage === 'function'
-            ? entry.storage(0)
-            : entry.storage;
+        const dataType = isBaseData(entry.storage)
+          ? entry.storage
+          : entry.storage(0);
 
         // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
         (this.bound[key] as any) = new TgpuLaidOutBufferImpl(

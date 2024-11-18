@@ -33,9 +33,9 @@ export type Implementation<
  * Used for I/O definitions of entry functions.
  */
 // An IO layout can be...
-export type IOLayout =
+export type IOLayout<TElementType extends AnyTgpuData = AnyTgpuData> =
   // a single data-type
-  | AnyTgpuData
+  | TElementType
   // an object of IO layouts
   | { [key: string]: IOLayout }
   // an array of IO layouts

@@ -18,7 +18,8 @@ import type {
 // Public API
 // ----------
 
-export interface TgpuVertexLayout<TData extends TgpuBaseArray> {
+export interface TgpuVertexLayout<TData extends TgpuBaseArray = TgpuBaseArray> {
+  readonly resourceType: 'vertex-layout';
   readonly stride: number;
   readonly stepMode: 'per-vertex' | 'per-instance';
   readonly attrib: ArrayToContainedAttribs<TData>;
@@ -29,6 +30,12 @@ export function vertexLayout<TData extends TgpuBaseArray>(
   stepMode: 'per-vertex' | 'per-instance' = 'per-vertex',
 ): TgpuVertexLayout<TData> {
   return new TgpuVertexLayoutImpl(schemaForCount, stepMode);
+}
+
+export function isVertexLayout<T extends TgpuVertexLayout>(
+  value: unknown | T,
+): value is T {
+  return (value as T)?.resourceType === 'vertex-layout';
 }
 
 // --------------
@@ -107,6 +114,7 @@ function dataToContainedAttribs<
 class TgpuVertexLayoutImpl<TData extends TgpuBaseArray>
   implements TgpuVertexLayout<TData>
 {
+  public readonly resourceType = 'vertex-layout';
   public readonly stride: number;
   public readonly attrib: ArrayToContainedAttribs<TData>;
 

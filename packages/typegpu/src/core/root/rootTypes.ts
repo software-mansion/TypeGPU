@@ -1,6 +1,7 @@
 import type { Parsed } from 'typed-binary';
 
 import type { OmitBuiltins } from '../../builtin';
+import type { Vec4f } from '../../data/vector';
 import type { JitTranspiler } from '../../jitTranspiler';
 import type { NameRegistry } from '../../nameRegistry';
 import type { PlumListener } from '../../plumStore';
@@ -38,13 +39,15 @@ export interface WithCompute {
 }
 
 export interface WithVertex<Varying extends IOLayout = IOLayout> {
-  withFragment<FragmentIn extends Varying, Output extends IOLayout>(
+  withFragment<FragmentIn extends Varying, Output extends IOLayout<Vec4f>>(
     entryFn: TgpuFragmentFn<FragmentIn, Output>,
     targets: FragmentOutToTargets<Output>,
   ): WithFragment<Output>;
 }
 
-export interface WithFragment<Output extends IOLayout = IOLayout> {
+export interface WithFragment<
+  Output extends IOLayout<Vec4f> = IOLayout<Vec4f>,
+> {
   createPipeline(): TgpuRenderPipeline<Output>;
 }
 

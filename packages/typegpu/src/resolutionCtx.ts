@@ -461,13 +461,16 @@ export function resolve(
 
   const automaticIds = naturalsExcept(takenIndices);
 
+  // Retrieving the catch-all binding index first, because its inherently the least
+  // swapped bind group (fixed and cannot be swapped).
+  const catchallIdx = automaticIds.next().value;
+
   for (const [layout, placeholder] of memoMap.entries()) {
     const idx = layout.index ?? automaticIds.next().value;
     bindGroupLayouts[idx] = layout;
     code = code.replaceAll(placeholder, String(idx));
   }
 
-  const catchallIdx = automaticIds.next().value;
   const catchallLayout = bindGroupLayout({});
   bindGroupLayouts[catchallIdx] = catchallLayout;
   code = code.replaceAll(CATCHALL_BIND_GROUP_IDX_MARKER, String(catchallIdx));
