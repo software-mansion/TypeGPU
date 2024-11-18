@@ -1,5 +1,5 @@
 import { MissingLinksError } from '../../errors';
-import type { ResolutionCtx } from '../../types';
+import type { AnyTgpuData, ResolutionCtx, Resource } from '../../types';
 import {
   type ExternalMap,
   applyExternals,
@@ -60,12 +60,18 @@ export function createFnCore(
           throw new MissingLinksError(this.label, missingExternals);
         }
 
-        const { head, body } = ctx.fnToWgsl(
-          shell,
-          ast.argNames,
-          ast.body,
+        const args: Resource[] = ast.argNames.map((name, idx) => ({
+          value: name,
+          dataType: shell.argTypes[idx] as AnyTgpuData,
+        }));
+
+        const { head, body } = ctx.fnToWgsl({
+          args,
+          returnType: shell.returnType as AnyTgpuData,
+          body: ast.body,
           externalMap,
-        );
+        });
+
         ctx.addDeclaration(
           `${fnAttribute}fn ${id}${ctx.resolve(head)}${ctx.resolve(body)}`,
         );

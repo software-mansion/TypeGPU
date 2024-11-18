@@ -1,10 +1,10 @@
+import type { TgpuNamable } from './namable';
 import {
-  type BoundTgpuCode,
   type Eventual,
   type InlineResolve,
   type ResolutionCtx,
   type SlotValuePair,
-  type TgpuCode,
+  type TgpuResolvable,
   type TgpuSlot,
   type Wgsl,
   isResolvable,
@@ -13,6 +13,12 @@ import {
 // ----------
 // Public API
 // ----------
+
+export interface BoundTgpuCode extends TgpuResolvable {
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): BoundTgpuCode;
+}
+
+export interface TgpuCode extends BoundTgpuCode, TgpuNamable {}
 
 export function code(
   strings: TemplateStringsArray,

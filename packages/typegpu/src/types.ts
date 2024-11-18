@@ -1,7 +1,5 @@
 import type { Block } from 'tinyest';
-import type { ISchema, Unwrap } from 'typed-binary';
-import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
-import type { TgpuFnShellBase } from './core/function/fnCore';
+import type { ISchema } from 'typed-binary';
 import type { TgpuNamable } from './namable';
 import type { NameRegistry } from './nameRegistry';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout';
@@ -21,6 +19,13 @@ export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 export interface NumberArrayView {
   readonly length: number;
   [n: number]: number;
+}
+
+export interface FnToWgslOptions {
+  args: Resource[];
+  returnType: AnyTgpuData;
+  body: Block;
+  externalMap: Record<string, unknown>;
 }
 
 /**
@@ -61,14 +66,7 @@ export interface ResolutionCtx {
     body: Block;
     externalNames: string[];
   };
-
-  fnToWgsl(
-    // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
-    shell: TgpuFnShellBase<any, any>,
-    argNames: string[],
-    body: Block,
-    externalMap: Record<string, unknown>,
-  ): {
+  fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;
     body: Wgsl;
   };
@@ -78,8 +76,6 @@ export interface TgpuResolvable {
   readonly label?: string | undefined;
   resolve(ctx: ResolutionCtx): string;
 }
-
-export interface TgpuIdentifier extends TgpuNamable, TgpuResolvable {}
 
 export function isResolvable(value: unknown): value is TgpuResolvable {
   return (
@@ -116,14 +112,6 @@ export type SlotValuePair<T> = [TgpuSlot<T>, T];
 export type BindableBufferUsage = 'uniform' | 'readonly' | 'mutable';
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
 
-export type ValueOf<T> = T extends TgpuSlot<infer I>
-  ? ValueOf<I>
-  : T extends TgpuBufferUsage<infer D>
-    ? ValueOf<D>
-    : T extends TgpuData<unknown>
-      ? Unwrap<T>
-      : T;
-
 export interface TgpuData<TInner> extends ISchema<TInner>, TgpuResolvable {
   readonly isLoose: false;
   readonly byteAlignment: number;
@@ -150,31 +138,6 @@ export function isDataNotLoose<T>(
   return !data.isLoose;
 }
 
-export interface TgpuPointer<
-  TScope extends 'function',
-  TInner extends AnyTgpuData,
-> {
-  readonly scope: TScope;
-  readonly pointsTo: TInner;
-}
-
-/**
- * A virtual representation of a WGSL value.
- */
-export type TgpuValue<TDataType> = {
-  readonly __dataType: TDataType;
-};
-
-export type AnyTgpuPointer = TgpuPointer<'function', AnyTgpuData>;
-
-export type TgpuFnArgument = AnyTgpuPointer | AnyTgpuData;
-
-export function isPointer(
-  value: AnyTgpuPointer | AnyTgpuData,
-): value is AnyTgpuPointer {
-  return 'pointsTo' in value;
-}
-
 export function isGPUBuffer(value: unknown): value is GPUBuffer {
   return (
     !!value &&
@@ -187,14 +150,6 @@ export function isGPUBuffer(value: unknown): value is GPUBuffer {
 // -----------------
 // TypeGPU Resources
 // -----------------
-
-// Code
-
-export interface BoundTgpuCode extends TgpuResolvable {
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): BoundTgpuCode;
-}
-
-export interface TgpuCode extends BoundTgpuCode, TgpuNamable {}
 
 // Slot
 
@@ -210,7 +165,7 @@ export interface TgpuSlot<T> extends TgpuNamable {
    */
   areEqual(a: T, b: T): boolean;
 
-  value: ValueOf<T>;
+  readonly value: T;
 }
 
 export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {

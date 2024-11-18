@@ -25,7 +25,6 @@ export {
 export * from './vector';
 export * from './matrix';
 export * from './vertexFormatData';
-export { ptr } from './pointer';
 export { atomic, isAtomicSchema, Atomic } from './atomic';
 export {
   align,
