@@ -5,11 +5,7 @@ const { inDevMode, featureSet } = initBuildScript();
 
 const entry = ['src/index.ts', 'src/data/index.ts'];
 if (featureSet === 'experimental') {
-  entry.push(
-    'src/experimental/index.ts',
-    'src/macro/index.ts',
-    'src/smol/index.ts',
-  );
+  entry.push('src/experimental/index.ts');
 }
 
 // TODO: Consider stripping `invariant()` calls of their messages for a smaller bundle size.
