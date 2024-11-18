@@ -1,5 +1,6 @@
 import type { AnySchema } from 'typed-binary';
 import { BindGroupResolver } from './bindGroupResolver';
+import type { TgpuBuffer } from './core/buffer/buffer';
 import type { TgpuBufferVertex } from './core/buffer/bufferUsage';
 import type { ExperimentalTgpuRoot } from './core/root/rootTypes';
 import type { SimpleTgpuData, TgpuArray } from './data';
@@ -96,9 +97,8 @@ export class RenderProgramBuilder {
         idx: idx,
         entry: {
           bindable: elem,
-          underlyingType: elem.allocatable.dataType as
-            | SimpleTgpuData<AnySchema>
-            | TgpuArray<AnyTgpuData>,
+          underlyingType: (elem.allocatable as TgpuBuffer<AnyTgpuData>)
+            .dataType as SimpleTgpuData<AnySchema> | TgpuArray<AnyTgpuData>,
         },
       };
     });

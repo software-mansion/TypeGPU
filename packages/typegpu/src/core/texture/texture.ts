@@ -3,7 +3,6 @@ import type { Vec4f, Vec4i, Vec4u } from '../../data/vector';
 import { invariant } from '../../errors';
 import type { ExtensionGuard } from '../../extension';
 import type { TgpuNamable } from '../../namable';
-import { identifier } from '../../tgpuIdentifier';
 import type {
   ResolutionCtx,
   TgpuResolvable,
@@ -472,12 +471,12 @@ class TgpuBindableStorageTextureImpl
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this.label);
+    const id = ctx.names.makeUnique(this.label);
 
     // TODO: Actually add the resource in the resolution ctx refactor.
     const type = `texture_storage_${dimensionToCodeMap[this.dimension]}`;
 
-    return ctx.resolve(ident);
+    return id;
   }
 }
 

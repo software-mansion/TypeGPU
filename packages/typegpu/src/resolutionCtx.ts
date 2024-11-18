@@ -1,6 +1,6 @@
 import type { Block } from 'tinyest';
+import type { TgpuBuffer } from './core/buffer/buffer';
 import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
-import type { TgpuFnShellBase } from './core/function/fnCore';
 import {
   isSampledTextureView,
   isStorageTextureView,
@@ -14,6 +14,7 @@ import type {
   AnyTgpuData,
   BufferUsage,
   Eventual,
+  FnToWgslOptions,
   ResolutionCtx,
   Resource,
   SlotValuePair,
@@ -342,32 +343,23 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._shared.jitTranspiler.transpileFn(fn);
   }
 
-  fnToWgsl(
-    // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
-    shell: TgpuFnShellBase<any, AnyTgpuData>,
-    argNames: string[],
-    body: Block,
-    externalMap: Record<string, unknown>,
-  ): { head: Wgsl; body: Wgsl } {
-    const args: { value: string; dataType: AnyTgpuData }[] = argNames.map(
-      (name, idx) => ({
-        value: name,
-        dataType: shell.argTypes[idx],
-      }),
+  fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl } {
+    this._itemStateStack.pushFunctionScope(
+      options.args,
+      options.returnType,
+      options.externalMap,
     );
-
-    this._itemStateStack.pushFunctionScope(args, shell.returnType, externalMap);
-    const str = generateFunction(this, body);
+    const str = generateFunction(this, options.body);
     this._itemStateStack.pop();
 
-    const argList = args
+    const argList = options.args
       .map((arg) => `${arg.value}: ${this.resolve(arg.dataType)}`)
       .join(', ');
 
     return {
       head:
-        shell.returnType !== undefined
-          ? `(${argList}) -> ${this.resolve(shell.returnType)}`
+        options.returnType !== undefined
+          ? `(${argList}) -> ${this.resolve(options.returnType)}`
           : `(${argList})`,
       body: str,
     };
@@ -385,7 +377,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     const { group, idx } = this._shared.reserveBindingEntry(bindable);
 
     this.addDeclaration(
-      `@group(${group}) @binding(${idx}) var<${usageToVarTemplateMap[bindable.usage]}> ${identifier}: ${this.resolve(bindable.allocatable.dataType)};`,
+      `@group(${group}) @binding(${idx}) var<${usageToVarTemplateMap[bindable.usage]}> ${identifier}: ${this.resolve((bindable.allocatable as TgpuBuffer<AnyTgpuData>).dataType)};`,
     );
   }
 

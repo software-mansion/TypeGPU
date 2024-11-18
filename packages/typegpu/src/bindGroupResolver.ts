@@ -1,3 +1,4 @@
+import type { TgpuBuffer } from './core/buffer/buffer';
 import type {
   TgpuBufferUsage,
   TgpuBufferVertex,
@@ -158,7 +159,7 @@ export class BindGroupResolver {
       entries.push({
         binding: this.context.getIndexFor(buffer),
         resource: {
-          buffer: buffer.allocatable.buffer,
+          buffer: (buffer.allocatable as TgpuBuffer<AnyTgpuData>).buffer,
         },
       });
     }
@@ -196,7 +197,8 @@ export class BindGroupResolver {
             shaderLocation: idx,
             offset: 0,
             format: deriveVertexFormat(
-              buffer.allocatable.dataType as TgpuData<AnyTgpuData>,
+              (buffer.allocatable as TgpuBuffer<AnyTgpuData>)
+                .dataType as TgpuData<AnyTgpuData>,
             ),
           },
         ],

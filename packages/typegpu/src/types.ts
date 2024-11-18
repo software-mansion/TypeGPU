@@ -1,8 +1,5 @@
 import type { Block } from 'tinyest';
-import type { ISchema, Unwrap } from 'typed-binary';
-import type { TgpuBuffer } from './core/buffer/buffer';
-import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
-import type { TgpuFnShellBase } from './core/function/fnCore';
+import type { ISchema } from 'typed-binary';
 import type { TgpuNamable } from './namable';
 import type { NameRegistry } from './nameRegistry';
 
@@ -21,6 +18,13 @@ export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 export interface NumberArrayView {
   readonly length: number;
   [n: number]: number;
+}
+
+export interface FnToWgslOptions {
+  args: Resource[];
+  returnType: AnyTgpuData;
+  body: Block;
+  externalMap: Record<string, unknown>;
 }
 
 /**
@@ -45,13 +49,7 @@ export interface ResolutionCtx {
     body: Block;
     externalNames: string[];
   };
-  fnToWgsl(
-    // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
-    shell: TgpuFnShellBase<any, any>,
-    argNames: string[],
-    body: Block,
-    externalMap: Record<string, unknown>,
-  ): {
+  fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;
     body: Wgsl;
   };
@@ -98,7 +96,7 @@ export interface TgpuBindable<
   TData extends AnyTgpuData = AnyTgpuData,
   TUsage extends BufferUsage = BufferUsage,
 > extends TgpuResolvable {
-  readonly allocatable: TgpuBuffer<TData>;
+  readonly allocatable: unknown;
   readonly usage: TUsage;
 }
 
@@ -138,20 +136,6 @@ export function isSamplerType(
   return type === 'sampler' || type === 'sampler_comparison';
 }
 
-export function isTypedTextureType(
-  type: TgpuRenderResourceType,
-): type is TgpuTypedTextureType {
-  return [
-    'texture_1d',
-    'texture_2d',
-    'texture_2d_array',
-    'texture_3d',
-    'texture_cube',
-    'texture_cube_array',
-    'texture_multisampled_2d',
-  ].includes(type);
-}
-
 export function isDepthTextureType(
   type: TgpuRenderResourceType,
 ): type is TgpuDepthTextureType {
@@ -169,14 +153,6 @@ export function isExternalTextureType(
 ): type is TgpuExternalTextureType {
   return type === 'texture_external';
 }
-
-export type ValueOf<T> = T extends TgpuSlot<infer I>
-  ? ValueOf<I>
-  : T extends TgpuBufferUsage<infer D>
-    ? ValueOf<D>
-    : T extends TgpuData<unknown>
-      ? Unwrap<T>
-      : T;
 
 export interface TgpuData<TInner> extends ISchema<TInner>, TgpuResolvable {
   readonly isLoose: false;
@@ -231,7 +207,7 @@ export interface TgpuSlot<T> extends TgpuNamable {
    */
   areEqual(a: T, b: T): boolean;
 
-  value: ValueOf<T>;
+  readonly value: T;
 }
 
 export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {
