@@ -4,8 +4,13 @@ import { MissingSlotValueError, ResolutionError, invariant } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
+import { naturalsExcept } from './shared/generators';
 import { generateFunction } from './smol';
-import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout';
+import {
+  type TgpuBindGroup,
+  type TgpuBindGroupLayout,
+  bindGroupLayout,
+} from './tgpuBindGroupLayout';
 import type {
   AnyTgpuData,
   Eventual,
@@ -211,7 +216,7 @@ export class IndentController {
   }
 }
 
-export class ResolutionCtxImpl implements ResolutionCtx {
+class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _memoizedResolves = new WeakMap<
     // WeakMap because if the resolvable does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
@@ -221,6 +226,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   private readonly _indentController = new IndentController();
   private readonly _jitTranspiler: JitTranspiler | undefined;
+  private readonly _itemStateStack = new ItemStateStack();
+  private readonly _declarations: string[] = [];
 
   // -- Bindings
   /**
@@ -229,7 +236,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
    * collect every use of a typed bind group layout, since they can be
    * explicitly imposed group indices, and they cannot collide.
    */
-  private readonly _bindGroupLayoutsToPlaceholderMap = new WeakMap<
+  public readonly bindGroupLayoutsToPlaceholderMap = new Map<
     TgpuBindGroupLayout,
     string
   >();
@@ -238,18 +245,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _boundToIndexMap = new WeakMap<object, number>();
   // --
 
-  private _declarations: string[] = [];
-  private _itemStateStack = new ItemStateStack();
-
   public readonly names: NameRegistry;
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.names = opts.names;
     this._jitTranspiler = opts.jitTranspiler;
-  }
-
-  get usedBuiltins() {
-    return this._shared.usedBuiltins;
   }
 
   get pre(): string {
@@ -325,7 +325,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   allocateLayoutEntry(layout: TgpuBindGroupLayout): string {
-    const memoMap = this._bindGroupLayoutsToPlaceholderMap;
+    const memoMap = this.bindGroupLayoutsToPlaceholderMap;
     let placeholderKey = memoMap.get(layout);
 
     if (!placeholderKey) {
@@ -344,10 +344,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       group: CATCHALL_BIND_GROUP_IDX_MARKER,
       binding: nextIdx,
     };
-  }
-
-  addBuiltin(builtin: symbol): void {
-    this._shared.addBuiltin(builtin);
   }
 
   readSlot<T>(slot: TgpuSlot<T>): T {
@@ -449,4 +445,45 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     return index;
   }
+}
+
+export interface ResolutionResult {
+  code: string;
+  bindGroupLayouts: TgpuBindGroupLayout[];
+  catchall: [number, TgpuBindGroup];
+}
+
+export function resolve(
+  item: Wgsl,
+  options: ResolutionCtxImplOptions,
+): ResolutionResult {
+  const ctx = new ResolutionCtxImpl(options);
+  let code = ctx.resolve(item);
+
+  const memoMap = ctx.bindGroupLayoutsToPlaceholderMap;
+  const bindGroupLayouts: TgpuBindGroupLayout[] = [];
+  const takenIndices = new Set<number>(
+    [...memoMap.keys()]
+      .map((layout) => layout.index)
+      .filter((v): v is number => v !== undefined),
+  );
+
+  const automaticIds = naturalsExcept(takenIndices);
+
+  for (const [layout, placeholder] of memoMap.entries()) {
+    const idx = layout.index ?? automaticIds.next().value;
+    bindGroupLayouts[idx] = layout;
+    code = code.replace(placeholder, String(idx));
+  }
+
+  const catchallIdx = automaticIds.next().value;
+  const catchallLayout = bindGroupLayout({});
+  bindGroupLayouts[catchallIdx] = catchallLayout;
+  code = code.replace(CATCHALL_BIND_GROUP_IDX_MARKER, String(catchallIdx));
+
+  return {
+    code,
+    bindGroupLayouts,
+    catchall: [catchallIdx, catchallLayout.populate({})],
+  };
 }

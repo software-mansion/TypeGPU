@@ -1,5 +1,5 @@
 import type { TgpuNamable } from '../../namable';
-import { ResolutionCtxImpl } from '../../resolutionCtx';
+import { resolve } from '../../resolutionCtx';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
@@ -73,13 +73,11 @@ class TgpuComputePipelineImpl
 
     const device = this._branch.device;
 
-    const ctx = new ResolutionCtxImpl({
+    // Resolving code
+    const { code, bindGroupLayouts, catchall } = resolve(this._entryFn, {
       names: this._branch.nameRegistry,
       jitTranspiler: this._branch.jitTranspiler,
     });
-
-    // Resolving code
-    const code = ctx.resolve(this._entryFn);
 
     this._rawPipelineMemo = device.createComputePipeline({
       label: this._label ?? '<unnamed>',

@@ -32,11 +32,13 @@ export interface ResolutionCtx {
   readonly names: NameRegistry;
 
   addDeclaration(declaration: string): void;
+
   /**
    * Reserves a bind group number, and returns a placeholder that will be replaced
    * with a concrete number at the end of the resolution process.
    */
   allocateLayoutEntry(layout: TgpuBindGroupLayout): string;
+
   /**
    * Reserves a spot in the catch-all bind group, without the indirection of a bind-group.
    * This means the resource is 'fixed', and cannot be swapped between code execution.
@@ -45,18 +47,21 @@ export interface ResolutionCtx {
     group: string;
     binding: number;
   };
-  addBuiltin(builtin: symbol): void;
+
   /**
    * Unwraps all layers of slot indirection and returns the concrete value if available.
    * @throws {MissingSlotValueError}
    */
   unwrap<T>(eventual: Eventual<T>): T;
+
   resolve(item: Wgsl, slotValueOverrides?: SlotValuePair<unknown>[]): string;
+
   transpileFn(fn: string): {
     argNames: string[];
     body: Block;
     externalNames: string[];
   };
+
   fnToWgsl(
     // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
     shell: TgpuFnShellBase<any, any>,

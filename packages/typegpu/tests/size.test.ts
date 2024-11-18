@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import * as d from '../src/data';
 import { StrictNameRegistry } from '../src/experimental';
-import { ResolutionCtxImpl } from '../src/resolutionCtx';
+import { resolve } from '../src/resolutionCtx';
 
 describe('d.size', () => {
   it('adds @size attribute for the custom sized struct members', () => {
@@ -13,11 +13,11 @@ describe('d.size', () => {
       })
       .$name('s1');
 
-    const resolutionCtx = new ResolutionCtxImpl({
+    const opts = {
       names: new StrictNameRegistry(),
-    });
+    };
 
-    expect(resolutionCtx.resolve(s1)).toContain('@size(16) b: u32,');
+    expect(resolve(s1, opts).code).toContain('@size(16) b: u32,');
   });
 
   it('changes size of the struct containing aligned member', () => {

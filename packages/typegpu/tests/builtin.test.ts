@@ -9,21 +9,21 @@ import {
   StrictNameRegistry,
   builtin,
 } from '../src/experimental';
-import { ResolutionCtxImpl } from '../src/resolutionCtx';
+import { resolve } from '../src/resolutionCtx';
 
 describe('builtin', () => {
   it('adds a @builtin attribute to a struct field', () => {
-    const resolutionCtx = new ResolutionCtxImpl({
-      names: new StrictNameRegistry(),
-    });
-
     const s1 = d
       .struct({
         position: builtin.position,
       })
       .$name('s1');
 
-    expect(resolutionCtx.resolve(s1)).toContain(
+    const opts = {
+      names: new StrictNameRegistry(),
+    };
+
+    expect(resolve(s1, opts).code).toContain(
       '@builtin(position) position: vec4f',
     );
   });

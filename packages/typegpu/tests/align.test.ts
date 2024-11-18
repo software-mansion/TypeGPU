@@ -14,7 +14,7 @@ import {
 } from '../src/data';
 import { type TgpuLooseArray, looseArrayOf } from '../src/data/array';
 import { StrictNameRegistry } from '../src/experimental';
-import { ResolutionCtxImpl } from '../src/resolutionCtx';
+import { resolve } from '../src/resolutionCtx';
 
 describe('d.align', () => {
   it('adds @align attribute for custom aligned struct members', () => {
@@ -24,11 +24,9 @@ describe('d.align', () => {
       c: u32,
     }).$name('s1');
 
-    const resolutionCtx = new ResolutionCtxImpl({
-      names: new StrictNameRegistry(),
-    });
+    const opts = { names: new StrictNameRegistry() };
 
-    expect(resolutionCtx.resolve(s1)).toContain('@align(16) b: u32,');
+    expect(resolve(s1, opts).code).toContain('@align(16) b: u32,');
   });
 
   it('changes alignment of a struct containing aligned member', () => {

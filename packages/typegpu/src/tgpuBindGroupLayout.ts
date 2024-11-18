@@ -126,10 +126,13 @@ export interface TgpuBindGroupLayout<
   readonly resourceType: 'bind-group-layout';
   readonly label: string | undefined;
   readonly entries: Entries;
-  // TODO: Expose when implemented
-  // readonly bound: {
-  //   [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
-  // };
+
+  /**
+   * An explicit numeric index assigned to this bind group layout. If undefined, a unique
+   * index is assigned automatically during resolution. This can be changed with the
+   * `.$idx()` method.
+   */
+  readonly index: number | undefined;
 
   populate(
     entries: {
@@ -284,8 +287,12 @@ class TgpuBindGroupLayoutImpl<
 
   constructor(public readonly entries: Entries) {}
 
-  get label() {
+  get label(): string | undefined {
     return this._label;
+  }
+
+  get index(): number | undefined {
+    return this._index;
   }
 
   $name(label?: string | undefined): this {

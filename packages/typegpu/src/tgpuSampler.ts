@@ -1,7 +1,7 @@
 import type { TgpuNamable } from './namable';
-import type { ResolutionCtx } from './types';
+import type { ResolutionCtx, TgpuResolvable } from './types';
 
-export interface TgpuSampler extends TgpuNamable {
+export interface TgpuSampler extends TgpuNamable, TgpuResolvable {
   readonly resourceType: 'sampler';
   readonly descriptor: GPUSamplerDescriptor;
 }

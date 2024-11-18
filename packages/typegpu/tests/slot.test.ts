@@ -5,7 +5,7 @@ import {
   wgsl,
 } from '../src/experimental';
 import { StrictNameRegistry } from '../src/nameRegistry';
-import { ResolutionCtxImpl } from '../src/resolutionCtx';
+import { resolve } from '../src/resolutionCtx';
 import { parseWGSL } from './utils/parseWGSL';
 
 const RED = 'vec3f(1., 0., 0.)';
@@ -90,7 +90,7 @@ describe('wgsl.slot', () => {
 
   it('throws error when no default nor value provided', () => {
     const colorSlot = wgsl.slot().$name('color');
-    const ctx = new ResolutionCtxImpl({ names: new StrictNameRegistry() });
+    const opts = { names: new StrictNameRegistry() };
 
     const shader = wgsl`
     fn get_color() {
@@ -98,7 +98,7 @@ describe('wgsl.slot', () => {
     }
     `.$name('root');
 
-    expect(() => ctx.resolve(shader)).toThrowError(
+    expect(() => resolve(shader, opts).code).toThrowError(
       new ResolutionError(new MissingSlotValueError(colorSlot), [
         shader,
         colorSlot,
