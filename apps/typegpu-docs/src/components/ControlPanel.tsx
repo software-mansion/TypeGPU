@@ -1,4 +1,3 @@
-import StackBlitzSDK from '@stackblitz/sdk';
 import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
 import { useState } from 'react';
@@ -10,12 +9,12 @@ import {
   exampleControlsAtom,
 } from '../utils/examples/exampleControlAtom';
 import { menuShownAtom } from '../utils/examples/menuShownAtom';
-import type { Example } from '../utils/examples/types';
 import { isGPUSupported } from '../utils/isGPUSupported';
 import { Button } from './design/Button';
 import { Select } from './design/Select';
 import { Slider } from './design/Slider';
 import { Toggle } from './design/Toggle';
+import { openInStackBlitz } from './stackblitz/openInStackBlitz';
 
 function ToggleRow({
   label,
@@ -205,115 +204,5 @@ export function ControlPanel() {
         </>
       ) : null}
     </div>
-  );
-}
-
-function openInStackBlitz(example: Example) {
-  StackBlitzSDK.openProject(
-    {
-      template: 'node',
-      title: example.metadata.title,
-      files: {
-        'index.html': `
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + TS</title>
-  </head>
-  <body>
-    ${example.htmlCode}
-
-    <script type="module" src="/index.ts"></script>
-  </body>
-</html>        
-        `,
-        'index.ts': `
-import * as example from './src/example.ts';
-
-// Create example controls
-for (const controls of Object.values(example)) {
-  if (typeof controls === 'function') {
-    continue;
-  }
-
-  for (const [label, params] of Object.entries(controls)) {
-    if ('onSliderChange' in params) {
-      const controlRow = document.createElement('div');
-      controlRow.append(label);
-
-      const slider = document.createElement('input');
-      slider.type = 'range';
-      slider.min = \`\${params.min}\`;
-      slider.max = \`\${params.max}\`;
-      slider.value = \`\${params.initial}\`;
-      slider.addEventListener('input', () => {
-        params.onSliderChange(Number.parseFloat(slider.value));
-      });
-
-      controlRow.appendChild(slider);
-      document.querySelector('body')?.appendChild(controlRow);
-    }
-  }
-}
-
-// Resize canvases
-for (const canvas of document.querySelectorAll('canvas')) {
-  canvas.width = 512;
-  canvas.height = 512;
-}`,
-        'src/example.ts': example.tsCode,
-        'tsconfig.json': `{
-  "compilerOptions": {
-    "target": "ES2020",
-    "useDefineForClassFields": true,
-    "module": "ESNext",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "skipLibCheck": true,
-    "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"],
-
-    /* Bundler mode */
-    "moduleResolution": "node",
-    "allowImportingTsExtensions": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-
-    /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
-  },
-  "include": ["src"]
-}`,
-        'package.json': `{
-  "name": "typegpu-example-sandbox",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
-  },
-  "devDependencies": {
-    "typescript": "^5.5.3",
-    "vite": "^5.4.2"
-  },
-  "dependencies": {
-    "@webgpu/types": "^0.1.44",
-    "typegpu": "^0.2.0"
-  }
-}`,
-      },
-    },
-    {
-      openFile: 'src/example.ts',
-      newWindow: true,
-      theme: 'light',
-    },
   );
 }
