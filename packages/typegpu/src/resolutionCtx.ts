@@ -55,7 +55,6 @@ class SharedResolutionState {
     TgpuBufferUsage<AnyTgpuData>,
     number
   >();
-  private readonly _usedBuiltins = new Set<symbol>();
   private readonly _declarations: string[] = [];
 
   constructor(
@@ -73,10 +72,6 @@ class SharedResolutionState {
 
   get declarations(): Iterable<string> {
     return this._declarations;
-  }
-
-  get usedBuiltins(): Iterable<symbol> {
-    return this._usedBuiltins;
   }
 
   reserveBindingEntry(bindable: TgpuBufferUsage<AnyTgpuData>) {
@@ -107,10 +102,6 @@ class SharedResolutionState {
 
   addDeclaration(declaration: string) {
     this._declarations.push(declaration);
-  }
-
-  addBuiltin(builtin: symbol) {
-    this._usedBuiltins.add(builtin);
   }
 }
 
@@ -314,10 +305,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._shared.usedRenderResources;
   }
 
-  get usedBuiltins() {
-    return this._shared.usedBuiltins;
-  }
-
   get pre(): string {
     return this._indentController.pre;
   }
@@ -431,10 +418,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     throw new Error(`Unsupported resource type: ${resource.type}`);
-  }
-
-  addBuiltin(builtin: symbol): void {
-    this._shared.addBuiltin(builtin);
   }
 
   readSlot<T>(slot: TgpuSlot<T>): T {

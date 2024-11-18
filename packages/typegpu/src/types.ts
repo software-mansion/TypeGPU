@@ -34,7 +34,6 @@ export interface ResolutionCtx {
   addDeclaration(declaration: string): void;
   addBinding(bindable: TgpuBindable, identifier: string): void;
   addRenderResource(resource: TgpuRenderResource, identifier: string): void;
-  addBuiltin(builtin: symbol): void;
   /**
    * Unwraps all layers of slot indirection and returns the concrete value if available.
    * @throws {MissingSlotValueError}
@@ -61,16 +60,6 @@ export interface ResolutionCtx {
 export interface TgpuResolvable {
   readonly label?: string | undefined;
   resolve(ctx: ResolutionCtx): string;
-}
-
-export interface TgpuIdentifier extends TgpuNamable, TgpuResolvable {}
-
-export interface Builtin {
-  symbol: symbol;
-  name: string;
-  stage: 'vertex' | 'fragment' | 'compute';
-  direction: 'input' | 'output';
-  identifier: TgpuIdentifier;
 }
 
 export function isResolvable(value: unknown): value is TgpuResolvable {
@@ -215,31 +204,6 @@ export function isDataNotLoose<T>(
   return !data.isLoose;
 }
 
-export interface TgpuPointer<
-  TScope extends 'function',
-  TInner extends AnyTgpuData,
-> {
-  readonly scope: TScope;
-  readonly pointsTo: TInner;
-}
-
-/**
- * A virtual representation of a WGSL value.
- */
-export type TgpuValue<TDataType> = {
-  readonly __dataType: TDataType;
-};
-
-export type AnyTgpuPointer = TgpuPointer<'function', AnyTgpuData>;
-
-export type TgpuFnArgument = AnyTgpuPointer | AnyTgpuData;
-
-export function isPointer(
-  value: AnyTgpuPointer | AnyTgpuData,
-): value is AnyTgpuPointer {
-  return 'pointsTo' in value;
-}
-
 export function isGPUBuffer(value: unknown): value is GPUBuffer {
   return (
     !!value &&
@@ -252,14 +216,6 @@ export function isGPUBuffer(value: unknown): value is GPUBuffer {
 // -----------------
 // TypeGPU Resources
 // -----------------
-
-// Code
-
-export interface BoundTgpuCode extends TgpuResolvable {
-  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): BoundTgpuCode;
-}
-
-export interface TgpuCode extends BoundTgpuCode, TgpuNamable {}
 
 // Slot
 

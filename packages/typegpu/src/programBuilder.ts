@@ -6,13 +6,7 @@ import type { SimpleTgpuData, TgpuArray } from './data';
 import { type NameRegistry, RandomNameRegistry } from './nameRegistry';
 import { ResolutionCtxImpl } from './resolutionCtx';
 import { code } from './tgpuCode';
-import type {
-  AnyTgpuData,
-  BoundTgpuCode,
-  TgpuCode,
-  TgpuResolvable,
-  Wgsl,
-} from './types';
+import type { AnyTgpuData, TgpuResolvable, Wgsl } from './types';
 
 export type Program = {
   readonly bindGroupResolver: BindGroupResolver;
@@ -55,8 +49,8 @@ export default class ProgramBuilder {
 export class RenderProgramBuilder {
   constructor(
     private root: ExperimentalTgpuRoot,
-    private vertexRoot: TgpuCode | BoundTgpuCode,
-    private fragmentRoot: TgpuCode | BoundTgpuCode,
+    private vertexRoot: Wgsl,
+    private fragmentRoot: Wgsl,
     private vertexOutputFormat: {
       [K in symbol]: string;
     } & {
