@@ -3,7 +3,7 @@ export function Snackbar(props: { text: string }) {
 
   return (
     <div
-      className="absolute bottom-4 right-4 z-40 flex items-center gap-4 w-full max-w-[min(28rem,calc(100vw-2rem))] p-4 text-gray-500 bg-red-100 rounded-lg"
+      className="absolute bottom-8 right-8 z-40 flex items-center gap-4 max-w-[min(28rem,calc(100vw-4rem))] p-4 text-gray-500 bg-red-100 rounded-lg box-border"
       role="alert"
     >
       <div className="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-red-500">
@@ -19,7 +19,7 @@ export function Snackbar(props: { text: string }) {
         <span className="sr-only">Error icon</span>
       </div>
 
-      <div className="text-sm text-gray-600">{text}</div>
+      <div className="overflow-auto text-sm text-gray-600">{text}</div>
     </div>
   );
 }
