@@ -1,6 +1,6 @@
 import StackBlitzSDK from '@stackblitz/sdk';
 import type { Example } from '../../utils/examples/types';
-import index from './stackblitzIndex.ts?raw';
+import index from './stackBlitzIndex.ts?raw';
 
 export function openInStackBlitz(example: Example) {
   StackBlitzSDK.openProject(
