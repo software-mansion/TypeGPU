@@ -27,23 +27,11 @@
       "import": "./dist/data/index.js",
       "default": "./dist/data/index.cjs"
     },
-    "./macro": {
-      "types": "./dist/macro/index.d.ts",
-      "module": "./dist/macro/index.js",
-      "import": "./dist/macro/index.js",
-      "default": "./dist/macro/index.cjs"
-    },
     "./experimental": {
       "types": "./dist/experimental/index.d.ts",
       "module": "./dist/experimental/index.js",
       "import": "./dist/experimental/index.js",
       "default": "./dist/experimental/index.cjs"
-    },
-    "./smol": {
-      "types": "./dist/smol/index.d.ts",
-      "module": "./dist/smol/index.js",
-      "import": "./dist/smol/index.js",
-      "default": "./dist/smol/index.cjs"
     }
   },
   "sideEffects": false,
