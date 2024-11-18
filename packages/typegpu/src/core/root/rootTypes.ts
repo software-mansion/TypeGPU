@@ -1,5 +1,6 @@
 import type { Parsed } from 'typed-binary';
 
+import type { OmitBuiltins } from '../../builtin';
 import type { JitTranspiler } from '../../jitTranspiler';
 import type { NameRegistry } from '../../nameRegistry';
 import type { PlumListener } from '../../plumStore';
@@ -19,8 +20,12 @@ import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline';
-import type { TgpuRenderPipeline } from '../pipeline/renderPipeline';
+import type {
+  FragmentOutToTargets,
+  TgpuRenderPipeline,
+} from '../pipeline/renderPipeline';
 import type { TgpuTexture } from '../texture/texture';
+import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute';
 
 // ----------
 // Public API
@@ -32,12 +37,15 @@ export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
 }
 
-export interface WithVertex {
-  withFragment(): WithFragment;
+export interface WithVertex<Varying extends IOLayout = IOLayout> {
+  withFragment<FragmentIn extends Varying, Output extends IOLayout>(
+    entryFn: TgpuFragmentFn<FragmentIn, Output>,
+    targets: FragmentOutToTargets<Output>,
+  ): WithFragment<Output>;
 }
 
-export interface WithFragment {
-  createPipeline(): TgpuRenderPipeline;
+export interface WithFragment<Output extends IOLayout = IOLayout> {
+  createPipeline(): TgpuRenderPipeline<Output>;
 }
 
 export type CreateTextureOptions<
@@ -209,12 +217,11 @@ export interface ExperimentalTgpuRoot extends TgpuRoot {
   samplerFor(sampler: TgpuSampler): GPUSampler;
 
   withCompute(entryFn: TgpuComputeFn): WithCompute;
-  withVertex<VertexAttribs extends IOLayout, Output extends IOLayout>(
-    entryFn: TgpuVertexFn<VertexAttribs, Output>,
-  ): WithVertex;
-  withFragment<Varying extends IOLayout, Output extends IOLayout>(
-    entryFn: TgpuFragmentFn<Varying, Output>,
-  ): WithFragment;
+
+  withVertex<Attribs extends IOLayout, Varying extends IOLayout>(
+    entryFn: TgpuVertexFn<Attribs, Varying>,
+    attribs: LayoutToAllowedAttribs<OmitBuiltins<Attribs>>,
+  ): WithVertex<Varying>;
 
   /**
    * Causes all commands enqueued by pipelines to be

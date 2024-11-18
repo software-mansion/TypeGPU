@@ -23,6 +23,8 @@ import type { TgpuSampler } from '../../tgpuSampler';
 import type { AnyTgpuData } from '../../types';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
+import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
+import type { TgpuVertexFn } from '../function/tgpuVertexFn';
 import {
   INTERNAL_createComputePipeline,
   type TgpuComputePipeline,
@@ -71,22 +73,29 @@ class WithComputeImpl implements WithCompute {
 }
 
 class WithVertexImpl implements WithVertex {
-  constructor(private readonly _root: ExperimentalTgpuRoot) {}
+  constructor(
+    private readonly _root: ExperimentalTgpuRoot,
+    private readonly _vertexFn: TgpuVertexFn,
+  ) {}
 
-  withFragment(): WithFragment {
-    return new WithFragmentImpl(this._root);
-  }
-
-  createPipeline(): TgpuRenderPipeline {
-    return INTERNAL_createRenderPipeline(this._root);
+  withFragment(entryFn: TgpuFragmentFn): WithFragment {
+    return new WithFragmentImpl(this._root, this._vertexFn, entryFn);
   }
 }
 
 class WithFragmentImpl implements WithFragment {
-  constructor(private readonly _root: ExperimentalTgpuRoot) {}
+  constructor(
+    private readonly _root: ExperimentalTgpuRoot,
+    private readonly _vertexFn: TgpuVertexFn,
+    private readonly _fragmentFn: TgpuFragmentFn,
+  ) {}
 
   createPipeline(): TgpuRenderPipeline {
-    return INTERNAL_createRenderPipeline(this._root);
+    return INTERNAL_createRenderPipeline(
+      this._root,
+      this._vertexFn,
+      this._fragmentFn,
+    );
   }
 }
 
@@ -290,12 +299,8 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     return new WithComputeImpl(this, entryFn);
   }
 
-  withVertex(): WithVertex {
-    return new WithVertexImpl(this);
-  }
-
-  withFragment(): WithFragment {
-    return new WithFragmentImpl(this);
+  withVertex(entryFn: TgpuVertexFn): WithVertex {
+    return new WithVertexImpl(this, entryFn);
   }
 
   flush() {

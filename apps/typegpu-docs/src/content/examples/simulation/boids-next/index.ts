@@ -1,44 +1,49 @@
-import { arrayOf, f32, struct, vec2f, vec3f } from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
+import { arrayOf, f32, struct, vec2f, vec3f, vec4f } from 'typegpu/data';
+import tgpu, { builtin } from 'typegpu/experimental';
 
 const triangleAmount = 1000;
 const triangleSize = 0.03;
 
-const renderCode = /* wgsl */ `
-  fn rotate(v: vec2f, angle: f32) -> vec2f {
-    let pos = vec2(
-      (v.x * cos(angle)) - (v.y * sin(angle)),
-      (v.x * sin(angle)) + (v.y * cos(angle))
-    );
-    return pos;
-  };
+const rotate = tgpu.fn([vec2f, f32], vec2f).does(/* wgsl */ `(v: vec2f, angle: f32) -> vec2f {
+  let pos = vec2(
+    (v.x * cos(angle)) - (v.y * sin(angle)),
+    (v.x * sin(angle)) + (v.y * cos(angle))
+  );
 
-  fn getRotationFromVelocity(velocity: vec2f) -> f32 {
-    return -atan2(velocity.x, velocity.y);
-  };
+  return pos;
+}`);
 
-  struct TriangleData {
-    position : vec2f,
-    velocity : vec2f,
-  };
+const getRotationFromVelocity = tgpu.fn([vec2f], f32).does(/* wgsl */ `(velocity: vec2f) -> f32 {
+  return -atan2(velocity.x, velocity.y);
+}`);
 
-  struct VertexOutput {
-    @builtin(position) position : vec4f,
-    @location(1) color : vec4f,
-  };
+const TriangleData = struct({
+  position: vec2f,
+  velocity: vec2f,
+});
 
-  @binding(0) @group(0) var<uniform> trianglePos : array<TriangleData, ${triangleAmount}>;
-  @binding(1) @group(0) var<uniform> colorPalette : vec3f;
+const renderBindGroupLayout = tgpu.bindGroupLayout({
+  trianglePos: { uniform: arrayOf(TriangleData, triangleAmount) },
+  colorPalette: { uniform: vec3f },
+});
 
-  @vertex
-  fn mainVert(@builtin(instance_index) ii: u32, @location(0) v: vec2f) -> VertexOutput {
-    let instanceInfo = trianglePos[ii];
+const { trianglePos, colorPalette } = renderBindGroupLayout.bound;
 
-    let angle = getRotationFromVelocity(instanceInfo.velocity);
+const VertexOutput = {
+  position: builtin.position,
+  color: vec4f,
+};
+
+const mainVert = tgpu
+  .vertexFn(
+    { ii: builtin.instanceIndex, v: vec2f, center: vec2f, velocity: vec2f },
+    VertexOutput,
+  )
+  .does(/* wgsl */ `(@builtin(instance_index) ii: u32, @location(0) v: vec2f, @location(1) center: vec2f, @location(2) velocity: vec2f) -> VertexOutput {
+    let angle = getRotationFromVelocity(velocity);
     let rotated = rotate(v, angle);
 
-    let offset = instanceInfo.position;
-    let pos = vec4(rotated + offset, 0.0, 1.0);
+    let pos = vec4(rotated + center, 0.0, 1.0);
 
     let color = vec4(
         sin(angle + colorPalette.r) * 0.45 + 0.45,
@@ -47,13 +52,12 @@ const renderCode = /* wgsl */ `
         1.0);
 
     return VertexOutput(pos, color);
-  }
+  }`)
+  .$uses({ trianglePos, colorPalette, getRotationFromVelocity, rotate });
 
-  @fragment
-  fn mainFrag(@location(1) color : vec4f) -> @location(0) vec4f {
+const mainFrag = tgpu.fragmentFn(VertexOutput, vec4f).does(/* wgsl */ `(@location(0) color : vec4f) -> @location(0) vec4f {
     return color;
-  }
-`;
+  }`);
 
 type BoidsOptions = {
   separationDistance: number;
@@ -148,25 +152,17 @@ const paramsBuffer = root
   .$usage('storage');
 
 const triangleVertexBuffer = root
-  .createBuffer(arrayOf(f32, 6), [
-    0.0,
-    triangleSize,
-    -triangleSize / 2,
-    -triangleSize / 2,
-    triangleSize / 2,
-    -triangleSize / 2,
+  .createBuffer(arrayOf(vec2f, 3), [
+    vec2f(0.0, triangleSize),
+    vec2f(-triangleSize / 2, -triangleSize / 2),
+    vec2f(triangleSize / 2, -triangleSize / 2),
   ])
   .$usage('vertex');
 
-const TriangleInfoStruct = struct({
-  position: vec2f,
-  velocity: vec2f,
-}).$name('TriangleInfo');
-
 const trianglePosBuffers = Array.from({ length: 2 }, () =>
   root
-    .createBuffer(arrayOf(TriangleInfoStruct, triangleAmount))
-    .$usage('storage', 'uniform'),
+    .createBuffer(arrayOf(TriangleData, triangleAmount))
+    .$usage('storage', 'uniform', 'vertex'),
 );
 
 const randomizePositions = () => {
@@ -183,62 +179,35 @@ const colorPaletteBuffer = root
   .createBuffer(vec3f, colorPresets.jeans)
   .$usage('uniform');
 
-const updateColorPreset = (newColorPreset: ColorPresets) => {
+function updateColorPreset(newColorPreset: ColorPresets) {
   colorPaletteBuffer.write(colorPresets[newColorPreset]);
-};
+}
 
-const updateParams = (newOptions: BoidsOptions) => {
+function updateParams(newOptions: BoidsOptions) {
   paramsBuffer.write(newOptions);
-};
+}
 
-const renderModule = root.device.createShaderModule({
-  code: renderCode,
-});
+const TriangleDataArray = (n: number) => arrayOf(TriangleData, n);
 
-const renderBindGroupLayout = tgpu.bindGroupLayout({
-  trianglePos: { uniform: arrayOf(TriangleInfoStruct, triangleAmount) },
-  colorPalette: { uniform: vec3f },
-});
+const vertexLayout = tgpu.vertexLayout((n) => arrayOf(vec2f, n));
+const instanceLayout = tgpu.vertexLayout(TriangleDataArray, 'per-instance');
 
-const pipeline = root.device.createRenderPipeline({
-  layout: root.device.createPipelineLayout({
-    bindGroupLayouts: [root.unwrap(renderBindGroupLayout)],
-  }),
-  vertex: {
-    module: renderModule,
-    buffers: [
-      {
-        arrayStride: 2 * 4,
-        attributes: [
-          {
-            shaderLocation: 0,
-            offset: 0,
-            format: 'float32x2' as const,
-          },
-        ],
-      },
-    ],
-  },
-  fragment: {
-    module: renderModule,
-    targets: [
-      {
-        format: presentationFormat,
-      },
-    ],
-  },
-  primitive: {
-    topology: 'triangle-list',
-  },
-});
-
-const TriangleInfoArray = (n: number) => arrayOf(TriangleInfoStruct, n);
+const renderPipeline = root
+  .withVertex(mainVert, {
+    v: vertexLayout.attrib,
+    center: instanceLayout.attrib.position,
+    velocity: instanceLayout.attrib.velocity,
+  })
+  .withFragment(mainFrag, {
+    format: presentationFormat,
+  })
+  .createPipeline();
 
 const computeBindGroupLayout = tgpu
   .bindGroupLayout({
-    currentTrianglePos: { storage: TriangleInfoArray },
+    currentTrianglePos: { storage: TriangleDataArray },
     nextTrianglePos: {
-      storage: TriangleInfoArray,
+      storage: TriangleDataArray,
       access: 'mutable',
     },
     params: { storage: Params },
@@ -351,18 +320,24 @@ function frame() {
     .with(computeBindGroupLayout, computeBindGroups[even ? 0 : 1])
     .dispatchWorkgroups(triangleAmount);
 
+  renderPipeline
+    .with(vertexLayout, triangleVertexBuffer)
+    .with(instanceLayout, trianglePosBuffers[even ? 1 : 0])
+    .with(renderBindGroupLayout, renderBindGroups[even ? 1 : 0])
+    .draw(3, triangleAmount);
+
   root.flush();
 
-  const commandEncoder = root.device.createCommandEncoder();
+  // const commandEncoder = root.device.createCommandEncoder();
 
-  const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-  passEncoder.setPipeline(pipeline);
-  passEncoder.setVertexBuffer(0, triangleVertexBuffer.buffer);
-  passEncoder.setBindGroup(0, root.unwrap(renderBindGroups[even ? 1 : 0]));
-  passEncoder.draw(3, triangleAmount);
-  passEncoder.end();
+  // const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+  // passEncoder.setPipeline(pipeline);
+  // passEncoder.setVertexBuffer(0, triangleVertexBuffer.buffer);
+  // passEncoder.setBindGroup(0, root.unwrap(renderBindGroups[even ? 1 : 0]));
+  // passEncoder.draw(3, triangleAmount);
+  // passEncoder.end();
 
-  root.device.queue.submit([commandEncoder.finish()]);
+  // root.device.queue.submit([commandEncoder.finish()]);
 
   requestAnimationFrame(frame);
 }

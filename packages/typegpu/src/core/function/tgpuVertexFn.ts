@@ -37,8 +37,8 @@ export interface TgpuVertexFnShell<
 }
 
 export interface TgpuVertexFn<
-  VertexAttribs extends IOLayout,
-  Output extends IOLayout,
+  VertexAttribs extends IOLayout = IOLayout,
+  Output extends IOLayout = IOLayout,
 > extends TgpuResolvable,
     TgpuNamable {
   readonly shell: TgpuVertexFnShell<VertexAttribs, Output>;
@@ -70,7 +70,8 @@ export function vertexFn<
     returnType: outputType,
 
     does(implementation): TgpuVertexFn<VertexAttribs, Output> {
-      return createVertexFn(this, implementation as Implementation);
+      // biome-ignore lint/suspicious/noExplicitAny: <no need>
+      return createVertexFn(this, implementation as Implementation) as any;
     },
   };
 }
