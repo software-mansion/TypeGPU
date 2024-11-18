@@ -1,3 +1,4 @@
+import { MissingBindGroupError } from '../../errors';
 import type { TgpuNamable } from '../../namable';
 import { resolve } from '../../resolutionCtx';
 import type {
@@ -35,7 +36,10 @@ export function INTERNAL_createComputePipeline(
   branch: ExperimentalTgpuRoot,
   entryFn: TgpuComputeFn,
 ) {
-  return new TgpuComputePipelineImpl(branch, entryFn, {});
+  return new TgpuComputePipelineImpl(
+    new ComputePipelineCore(branch, entryFn),
+    {},
+  );
 }
 
 export function isComputePipeline(
@@ -52,64 +56,35 @@ type TgpuComputePipelinePriors = {
   readonly bindGroupLayoutMap?: Map<TgpuBindGroupLayout, TgpuBindGroup>;
 };
 
+type Memo = {
+  pipeline: GPUComputePipeline;
+  bindGroupLayouts: TgpuBindGroupLayout[];
+  catchall: [number, TgpuBindGroup];
+};
+
 class TgpuComputePipelineImpl
   implements TgpuComputePipeline, TgpuComputePipeline_INTERNAL
 {
   public readonly resourceType = 'compute-pipeline';
 
-  private _label: string | undefined;
-  private _rawPipelineMemo: GPUComputePipeline | undefined;
-
   constructor(
-    private readonly _branch: ExperimentalTgpuRoot,
-    private readonly _entryFn: TgpuComputeFn,
+    private readonly _core: ComputePipelineCore,
     private readonly _priors: TgpuComputePipelinePriors,
   ) {}
 
-  public get rawPipeline(): GPUComputePipeline {
-    if (this._rawPipelineMemo) {
-      return this._rawPipelineMemo;
-    }
-
-    const device = this._branch.device;
-
-    // Resolving code
-    const { code, bindGroupLayouts, catchall } = resolve(this._entryFn, {
-      names: this._branch.nameRegistry,
-      jitTranspiler: this._branch.jitTranspiler,
-    });
-
-    this._rawPipelineMemo = device.createComputePipeline({
-      label: this._label ?? '<unnamed>',
-      layout: device.createPipelineLayout({
-        label: `${this._label ?? '<unnamed>'} - Pipeline Layout`,
-        bindGroupLayouts: [],
-      }),
-      compute: {
-        module: device.createShaderModule({
-          label: `${this._label ?? '<unnamed>'} - Shader`,
-          code,
-        }),
-      },
-    });
-
-    return this._rawPipelineMemo;
+  get label(): string | undefined {
+    return this._core.label;
   }
 
-  get label() {
-    return this._label;
-  }
-
-  $name(label?: string | undefined): this {
-    this._label = label;
-    return this;
+  get rawPipeline(): GPUComputePipeline {
+    return this._core.unwrap().pipeline;
   }
 
   with(
     bindGroupLayout: TgpuBindGroupLayout,
     bindGroup: TgpuBindGroup,
   ): TgpuComputePipeline {
-    return new TgpuComputePipelineImpl(this._branch, this._entryFn, {
+    return new TgpuComputePipelineImpl(this._core, {
       bindGroupLayoutMap: new Map([
         ...(this._priors.bindGroupLayoutMap ?? []),
         [bindGroupLayout, bindGroup],
@@ -122,15 +97,88 @@ class TgpuComputePipelineImpl
     y?: number | undefined,
     z?: number | undefined,
   ): void {
-    const pass = this._branch.commandEncoder.beginComputePass({
-      label: this._label ?? '',
+    const memo = this._core.unwrap();
+
+    const pass = this._core.branch.commandEncoder.beginComputePass({
+      label: this._core.label ?? '',
     });
 
-    pass.setPipeline(this.rawPipeline);
-    // TODO: Implement setting bind groups
-    // pass.setBindGroup
+    pass.setPipeline(memo.pipeline);
+
+    let idx = 0;
+    for (const layout of memo.bindGroupLayouts) {
+      if (idx === memo.catchall[0]) {
+        // Catch-all
+        pass.setBindGroup(idx, this._core.branch.unwrap(memo.catchall[1]));
+      } else {
+        const bindGroup = this._priors.bindGroupLayoutMap?.get(layout);
+        if (bindGroup === undefined) {
+          throw new MissingBindGroupError(layout.label);
+        }
+        pass.setBindGroup(idx, this._core.branch.unwrap(bindGroup));
+      }
+
+      idx++;
+    }
 
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
+  }
+
+  $name(label?: string | undefined): this {
+    this._core.label = label;
+    return this;
+  }
+}
+
+class ComputePipelineCore {
+  public label: string | undefined;
+  private _memo: Memo | undefined;
+
+  constructor(
+    public readonly branch: ExperimentalTgpuRoot,
+    private readonly _entryFn: TgpuComputeFn,
+  ) {}
+
+  public unwrap(): Memo {
+    if (this._memo === undefined) {
+      const device = this.branch.device;
+
+      // Resolving code
+      const { code, bindGroupLayouts, catchall } = resolve(
+        {
+          resolve: (ctx) => {
+            ctx.resolve(this._entryFn);
+            return '';
+          },
+        },
+        {
+          names: this.branch.nameRegistry,
+          jitTranspiler: this.branch.jitTranspiler,
+        },
+      );
+
+      this._memo = {
+        pipeline: device.createComputePipeline({
+          label: this.label ?? '<unnamed>',
+          layout: device.createPipelineLayout({
+            label: `${this.label ?? '<unnamed>'} - Pipeline Layout`,
+            bindGroupLayouts: bindGroupLayouts.map((l) =>
+              this.branch.unwrap(l),
+            ),
+          }),
+          compute: {
+            module: device.createShaderModule({
+              label: `${this.label ?? '<unnamed>'} - Shader`,
+              code,
+            }),
+          },
+        }),
+        bindGroupLayouts,
+        catchall,
+      };
+    }
+
+    return this._memo;
   }
 }

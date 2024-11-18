@@ -464,13 +464,13 @@ export function resolve(
   for (const [layout, placeholder] of memoMap.entries()) {
     const idx = layout.index ?? automaticIds.next().value;
     bindGroupLayouts[idx] = layout;
-    code = code.replace(placeholder, String(idx));
+    code = code.replaceAll(placeholder, String(idx));
   }
 
   const catchallIdx = automaticIds.next().value;
   const catchallLayout = bindGroupLayout({});
   bindGroupLayouts[catchallIdx] = catchallLayout;
-  code = code.replace(CATCHALL_BIND_GROUP_IDX_MARKER, String(catchallIdx));
+  code = code.replaceAll(CATCHALL_BIND_GROUP_IDX_MARKER, String(catchallIdx));
 
   return {
     code,

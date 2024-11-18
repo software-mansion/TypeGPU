@@ -112,3 +112,14 @@ export class MissingLinksError extends Error {
     Object.setPrototypeOf(this, MissingLinksError.prototype);
   }
 }
+
+export class MissingBindGroupError extends Error {
+  constructor(layoutLabel: string | undefined) {
+    super(
+      `Bind group was not provided for '${layoutLabel ?? '<unnamed>'}' layout.`,
+    );
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, MissingBindGroupError.prototype);
+  }
+}

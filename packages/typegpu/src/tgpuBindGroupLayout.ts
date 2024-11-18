@@ -4,10 +4,11 @@ import {
   isBuffer,
   isUsableAsUniform,
 } from './core/buffer/buffer';
-import type {
-  TgpuBufferMutable,
-  TgpuBufferReadonly,
-  TgpuBufferUniform,
+import {
+  type TgpuBufferMutable,
+  type TgpuBufferReadonly,
+  type TgpuBufferUniform,
+  TgpuLaidOutBufferImpl,
 } from './core/buffer/bufferUsage';
 import {
   type TgpuMutableTexture,
@@ -126,6 +127,9 @@ export interface TgpuBindGroupLayout<
   readonly resourceType: 'bind-group-layout';
   readonly label: string | undefined;
   readonly entries: Entries;
+  readonly bound: {
+    [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
+  };
 
   /**
    * An explicit numeric index assigned to this bind group layout. If undefined, a unique
@@ -161,10 +165,6 @@ export interface TgpuBindGroupLayoutExperimental<
    * Used when generating WGSL code: `@group(${index}) @binding(...) ...;`
    */
   $idx(index?: number): this;
-
-  readonly bound: {
-    [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
-  };
 }
 
 type StorageUsageForEntry<T extends TgpuLayoutStorage> = T extends {
@@ -280,12 +280,52 @@ class TgpuBindGroupLayoutImpl<
 
   public readonly resourceType = 'bind-group-layout' as const;
 
-  // TODO: Fill bound values.
   public readonly bound = {} as {
     [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
   };
 
-  constructor(public readonly entries: Entries) {}
+  constructor(public readonly entries: Entries) {
+    let idx = 0;
+
+    for (const [key, entry] of Object.entries(entries)) {
+      if (entry === null) {
+        idx++;
+        continue;
+      }
+
+      const membership = { idx, key, layout: this };
+
+      if ('uniform' in entry) {
+        const dataType =
+          typeof entry.uniform === 'function'
+            ? entry.uniform(0)
+            : entry.uniform;
+
+        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+        (this.bound[key] as any) = new TgpuLaidOutBufferImpl(
+          'uniform',
+          dataType,
+          membership,
+        );
+      }
+
+      if ('storage' in entry) {
+        const dataType =
+          typeof entry.storage === 'function'
+            ? entry.storage(0)
+            : entry.storage;
+
+        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+        (this.bound[key] as any) = new TgpuLaidOutBufferImpl(
+          entry.access ?? 'readonly',
+          dataType,
+          membership,
+        );
+      }
+
+      idx++;
+    }
+  }
 
   get label(): string | undefined {
     return this._label;

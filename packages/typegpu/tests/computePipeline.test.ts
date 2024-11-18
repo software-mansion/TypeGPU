@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expectTypeOf, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  it,
+  vi,
+} from 'vitest';
 import type { TgpuComputePipeline } from '../src/core/pipeline/computePipeline';
 import { initFromDevice } from '../src/core/root/init';
 import type { ExperimentalTgpuRoot } from '../src/core/root/rootTypes';
@@ -69,14 +77,28 @@ describe('TgpuComputePipeline', () => {
   });
 
   it('can be created with a compute entry function', () => {
-    const entryFn = tgpu.computeFn([32]).does(() => {
-      // do something
-    });
+    const entryFn = tgpu
+      .computeFn([32])
+      .does(() => {
+        // do something
+      })
+      .$name('main');
 
-    const computePipeline = root.withCompute(entryFn).createPipeline();
+    const computePipeline = root
+      .withCompute(entryFn)
+      .createPipeline()
+      .$name('test_pipeline');
 
     expectTypeOf(computePipeline).toEqualTypeOf<TgpuComputePipeline>();
 
-    const rawPipeline = root.unwrap(computePipeline);
+    root.unwrap(computePipeline);
+
+    expect(mockDevice.createComputePipeline).toBeCalledWith({
+      compute: {
+        module: mockDevice.createShaderModule(),
+      },
+      label: 'test_pipeline',
+      layout: mockDevice.createPipelineLayout(),
+    });
   });
 });
