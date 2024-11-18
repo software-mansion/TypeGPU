@@ -1,6 +1,6 @@
 import StackBlitzSDK from '@stackblitz/sdk';
 import cs from 'classnames';
-import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { useAtom, useAtomValue } from 'jotai';
 import { useState } from 'react';
 import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
@@ -10,7 +10,6 @@ import {
   exampleControlsAtom,
 } from '../utils/examples/exampleControlAtom';
 import { menuShownAtom } from '../utils/examples/menuShownAtom';
-import { sandboxShownAtom } from '../utils/examples/sandboxShownAtom';
 import type { Example } from '../utils/examples/types';
 import { isGPUSupported } from '../utils/isGPUSupported';
 import { Button } from './design/Button';
@@ -163,7 +162,6 @@ export function ControlPanel() {
     useAtom(codeEditorShownAtom);
   const currentExample = useAtomValue(currentExampleAtom);
   const exampleControlParams = useAtomValue(exampleControlsAtom);
-  const setSandboxShow = useSetAtom(sandboxShownAtom);
 
   return (
     <div
@@ -190,14 +188,8 @@ export function ControlPanel() {
         </label>
 
         {currentExample && currentExample in examples ? (
-          <Button
-            onClick={() => {
-              setSandboxShow(true);
-              setMenuShowing(true);
-              openInStackBlitz(examples[currentExample]);
-            }}
-          >
-            Edit in Sandbox
+          <Button onClick={() => openInStackBlitz(examples[currentExample])}>
+            Open in StackBlitz
           </Button>
         ) : null}
 
@@ -217,9 +209,7 @@ export function ControlPanel() {
 }
 
 function openInStackBlitz(example: Example) {
-  StackBlitzSDK.embedProject(
-    'sandbox',
-    // Payload
+  StackBlitzSDK.openProject(
     {
       template: 'node',
       title: example.metadata.title,
@@ -242,8 +232,38 @@ function openInStackBlitz(example: Example) {
         `,
         'index.ts': `
 import * as example from './src/example.ts';
-console.log(example);
-`,
+
+// Create example controls
+for (const controls of Object.values(example)) {
+  if (typeof controls === 'function') {
+    continue;
+  }
+
+  for (const [label, params] of Object.entries(controls)) {
+    if ('onSliderChange' in params) {
+      const controlRow = document.createElement('div');
+      controlRow.append(label);
+
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.min = \`\${params.min}\`;
+      slider.max = \`\${params.max}\`;
+      slider.value = \`\${params.initial}\`;
+      slider.addEventListener('input', () => {
+        params.onSliderChange(Number.parseFloat(slider.value));
+      });
+
+      controlRow.appendChild(slider);
+      document.querySelector('body')?.appendChild(controlRow);
+    }
+  }
+}
+
+// Resize canvases
+for (const canvas of document.querySelectorAll('canvas')) {
+  canvas.width = 512;
+  canvas.height = 512;
+}`,
         'src/example.ts': example.tsCode,
         'tsconfig.json': `{
   "compilerOptions": {
@@ -290,11 +310,9 @@ console.log(example);
 }`,
       },
     },
-
-    // Options
     {
       openFile: 'src/example.ts',
-      height: '100%',
+      newWindow: true,
       theme: 'light',
     },
   );
