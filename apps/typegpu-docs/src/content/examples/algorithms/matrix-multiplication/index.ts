@@ -1,12 +1,5 @@
 import { type Parsed, arrayOf, f32, struct, vec2f } from 'typegpu/data';
-import tgpu, {
-  asMutable,
-  asReadonly,
-  builtin,
-  wgsl,
-} from 'typegpu/experimental';
-
-const root = await tgpu.init();
+import tgpu from 'typegpu/experimental';
 
 const workgroupSize = [8, 8] as [number, number];
 
@@ -33,49 +26,68 @@ function createMatrix(
   };
 }
 
-const firstMatrixBuffer = root
-  .createBuffer(MatrixStruct)
-  .$name('first_matrix')
-  .$usage('storage');
+const layout = tgpu.bindGroupLayout({
+  firstMatrix: { storage: MatrixStruct, access: 'readonly' },
+  secondMatrix: { storage: MatrixStruct, access: 'readonly' },
+  resultMatrix: { storage: MatrixStruct, access: 'mutable' },
+});
 
-const secondMatrixBuffer = root
-  .createBuffer(MatrixStruct)
-  .$name('second_matrix')
-  .$usage('storage');
+const shaderCode = /* wgsl */ `
 
-const resultMatrixBuffer = root
-  .createBuffer(MatrixStruct)
-  .$name('result_matrix')
-  .$usage('storage');
+@group(0) @binding(0) var<storage, read> firstMatrix: MatrixStruct;
+@group(0) @binding(1) var<storage, read> secondMatrix: MatrixStruct;
+@group(0) @binding(2) var<storage, read_write> resultMatrix: MatrixStruct;
 
-const firstMatrixData = asReadonly(firstMatrixBuffer);
-const secondMatrixData = asReadonly(secondMatrixBuffer);
-const resultMatrixData = asMutable(resultMatrixBuffer);
-
-const program = root.makeComputePipeline({
-  workgroupSize: workgroupSize,
-  code: wgsl`
-let global_id = ${builtin.globalInvocationId};
-if (global_id.x >= u32(${firstMatrixData}.size.x) || global_id.y >= u32(${secondMatrixData}.size.y)) {
-  return;
+@compute @workgroup_size(${workgroupSize.join(', ')})
+fn main(@builtin(global_invocation_id) global_id: vec3u) {
+  if (global_id.x >= u32(firstMatrix.size.x) || global_id.y >= u32(secondMatrix.size.y)) {
+    return;
+  }
+  
+  if (global_id.x + global_id.y == 0u) {
+    resultMatrix.size = vec2(firstMatrix.size.x, secondMatrix.size.y);
+  }
+  
+  let resultCell = vec2(global_id.x, global_id.y);
+  var result = 0.0;
+  
+  for (var i = 0u; i < u32(firstMatrix.size.y); i = i + 1u) {
+    let a = i + resultCell.x * u32(firstMatrix.size.y);
+    let b = resultCell.y + i * u32(secondMatrix.size.y);
+    result = result + firstMatrix.numbers[a] * secondMatrix.numbers[b];
+  }
+  
+  let index = resultCell.y + resultCell.x * u32(secondMatrix.size.y);
+  resultMatrix.numbers[index] = result;
 }
 
-if (global_id.x + global_id.y == 0u) {
-  ${resultMatrixData}.size = vec2(${firstMatrixData}.size.x, ${secondMatrixData}.size.y);
-}
+`;
 
-let resultCell = vec2(global_id.x, global_id.y);
-var result = 0.0;
+const root = await tgpu.init();
+const device = root.device;
 
-for (var i = 0u; i < u32(${firstMatrixData}.size.y); i = i + 1u) {
-  let a = i + resultCell.x * u32(${firstMatrixData}.size.y);
-  let b = resultCell.y + i * u32(${secondMatrixData}.size.y);
-  result = result + ${firstMatrixData}.numbers[a] * ${secondMatrixData}.numbers[b];
-}
+const firstMatrixBuffer = root.createBuffer(MatrixStruct).$usage('storage');
+const secondMatrixBuffer = root.createBuffer(MatrixStruct).$usage('storage');
+const resultMatrixBuffer = root.createBuffer(MatrixStruct).$usage('storage');
 
-let index = resultCell.y + resultCell.x * u32(${secondMatrixData}.size.y);
-${resultMatrixData}.numbers[index] = result;
-`,
+const pipeline = device.createComputePipeline({
+  layout: device.createPipelineLayout({
+    bindGroupLayouts: [root.unwrap(layout)],
+  }),
+  compute: {
+    module: device.createShaderModule({
+      code: tgpu.resolve({
+        input: shaderCode,
+        extraDependencies: { MatrixStruct },
+      }),
+    }),
+  },
+});
+
+const bindGroup = layout.populate({
+  firstMatrix: firstMatrixBuffer,
+  secondMatrix: secondMatrixBuffer,
+  resultMatrix: resultMatrixBuffer,
 });
 
 async function run() {
@@ -93,7 +105,16 @@ async function run() {
   const workgroupCountX = Math.ceil(firstMatrix.size.x / workgroupSize[0]);
   const workgroupCountY = Math.ceil(secondMatrix.size.y / workgroupSize[1]);
 
-  program.execute({ workgroups: [workgroupCountX, workgroupCountY] });
+  const encoder = device.createCommandEncoder();
+
+  const pass = encoder.beginComputePass();
+  pass.setPipeline(pipeline);
+  pass.setBindGroup(0, root.unwrap(bindGroup));
+  pass.dispatchWorkgroups(workgroupCountX, workgroupCountY);
+  pass.end();
+
+  device.queue.submit([encoder.finish()]);
+
   const multiplicationResult = await resultMatrixBuffer.read();
 
   printMatrixToHtml(firstTable, firstMatrix);
