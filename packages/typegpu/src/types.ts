@@ -2,6 +2,7 @@ import type { Block } from 'tinyest';
 import type { ISchema } from 'typed-binary';
 import type { TgpuNamable } from './namable';
 import type { NameRegistry } from './nameRegistry';
+import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout';
 
 export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
 
@@ -36,14 +37,30 @@ export interface ResolutionCtx {
   readonly names: NameRegistry;
 
   addDeclaration(declaration: string): void;
-  addBinding(bindable: TgpuBindable, identifier: string): void;
-  addRenderResource(resource: TgpuRenderResource, identifier: string): void;
+
+  /**
+   * Reserves a bind group number, and returns a placeholder that will be replaced
+   * with a concrete number at the end of the resolution process.
+   */
+  allocateLayoutEntry(layout: TgpuBindGroupLayout): string;
+
+  /**
+   * Reserves a spot in the catch-all bind group, without the indirection of a bind-group.
+   * This means the resource is 'fixed', and cannot be swapped between code execution.
+   */
+  allocateFixedEntry(resource: object): {
+    group: string;
+    binding: number;
+  };
+
   /**
    * Unwraps all layers of slot indirection and returns the concrete value if available.
    * @throws {MissingSlotValueError}
    */
   unwrap<T>(eventual: Eventual<T>): T;
+
   resolve(item: Wgsl, slotValueOverrides?: SlotValuePair<unknown>[]): string;
+
   transpileFn(fn: string): {
     argNames: string[];
     body: Block;
@@ -92,67 +109,8 @@ export interface TgpuResolvableSlot<T extends Wgsl>
 
 export type SlotValuePair<T> = [TgpuSlot<T>, T];
 
-export interface TgpuBindable<
-  TData extends AnyTgpuData = AnyTgpuData,
-  TUsage extends BufferUsage = BufferUsage,
-> extends TgpuResolvable {
-  readonly allocatable: unknown;
-  readonly usage: TUsage;
-}
-
-export type TgpuSamplerType = 'sampler' | 'sampler_comparison';
-export type TgpuTypedTextureType =
-  | 'texture_1d'
-  | 'texture_2d'
-  | 'texture_2d_array'
-  | 'texture_3d'
-  | 'texture_cube'
-  | 'texture_cube_array'
-  | 'texture_multisampled_2d';
-export type TgpuDepthTextureType =
-  | 'texture_depth_2d'
-  | 'texture_depth_2d_array'
-  | 'texture_depth_cube'
-  | 'texture_depth_cube_array'
-  | 'texture_depth_multisampled_2d';
-export type TgpuExternalTextureType = 'texture_external';
-
-export type TgpuRenderResourceType =
-  | TgpuSamplerType
-  | TgpuTypedTextureType
-  | TgpuDepthTextureType
-  | TgpuExternalTextureType;
-
-export interface TgpuRenderResource extends TgpuResolvable {
-  readonly type: TgpuRenderResourceType;
-}
-
 export type BindableBufferUsage = 'uniform' | 'readonly' | 'mutable';
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
-
-export function isSamplerType(
-  type: TgpuRenderResourceType,
-): type is TgpuSamplerType {
-  return type === 'sampler' || type === 'sampler_comparison';
-}
-
-export function isDepthTextureType(
-  type: TgpuRenderResourceType,
-): type is TgpuDepthTextureType {
-  return [
-    'texture_depth_2d',
-    'texture_depth_2d_array',
-    'texture_depth_cube',
-    'texture_depth_cube_array',
-    'texture_depth_multisampled_2d',
-  ].includes(type);
-}
-
-export function isExternalTextureType(
-  type: TgpuRenderResourceType,
-): type is TgpuExternalTextureType {
-  return type === 'texture_external';
-}
 
 export interface TgpuData<TInner> extends ISchema<TInner>, TgpuResolvable {
   readonly isLoose: false;
@@ -174,6 +132,13 @@ export function isDataLoose<T>(
 ): data is TgpuLooseData<T> {
   return data.isLoose;
 }
+
+export function isBaseData<T extends AnyTgpuData | AnyTgpuLooseData>(
+  data: unknown | T,
+): data is T {
+  return !!(data as T)?.size && (data as T)?.byteAlignment !== undefined;
+}
+
 export function isDataNotLoose<T>(
   data: TgpuData<T> | TgpuLooseData<T>,
 ): data is TgpuData<T> {

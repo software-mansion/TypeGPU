@@ -37,8 +37,8 @@ export interface TgpuVertexFnShell<
 }
 
 export interface TgpuVertexFn<
-  VertexAttribs extends IOLayout,
-  Output extends IOLayout,
+  VertexAttribs extends IOLayout = IOLayout,
+  Output extends IOLayout = IOLayout,
 > extends TgpuResolvable,
     TgpuNamable {
   readonly shell: TgpuVertexFnShell<VertexAttribs, Output>;

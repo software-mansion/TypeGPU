@@ -4,15 +4,12 @@ import {
   isBuffer,
   isUsableAsUniform,
 } from './core/buffer/buffer';
-import type {
-  TgpuBufferMutable,
-  TgpuBufferReadonly,
-  TgpuBufferUniform,
-} from './core/buffer/bufferUsage';
 import {
-  type TgpuExternalTexture,
-  isExternalTexture,
-} from './core/texture/externalTexture';
+  type TgpuBufferMutable,
+  type TgpuBufferReadonly,
+  type TgpuBufferUniform,
+  TgpuLaidOutBufferImpl,
+} from './core/buffer/bufferUsage';
 import {
   type TgpuMutableTexture,
   type TgpuReadonlyTexture,
@@ -28,7 +25,7 @@ import { NotUniformError } from './errors';
 import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
 import type { TgpuNamable } from './namable';
 import type { TgpuSampler } from './tgpuSampler';
-import type { AnyTgpuData, TgpuShaderStage } from './types';
+import { type AnyTgpuData, type TgpuShaderStage, isBaseData } from './types';
 import type { Unwrapper } from './unwrapper';
 import type { OmitProps } from './utilityTypes';
 
@@ -130,10 +127,16 @@ export interface TgpuBindGroupLayout<
   readonly resourceType: 'bind-group-layout';
   readonly label: string | undefined;
   readonly entries: Entries;
-  // TODO: Expose when implemented
-  // readonly bound: {
-  //   [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
-  // };
+  readonly bound: {
+    [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
+  };
+
+  /**
+   * An explicit numeric index assigned to this bind group layout. If undefined, a unique
+   * index is assigned automatically during resolution. This can be changed with the
+   * `.$idx()` method.
+   */
+  readonly index: number | undefined;
 
   populate(
     entries: {
@@ -162,10 +165,6 @@ export interface TgpuBindGroupLayoutExperimental<
    * Used when generating WGSL code: `@group(${index}) @binding(...) ...;`
    */
   $idx(index?: number): this;
-
-  readonly bound: {
-    [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
-  };
 }
 
 type StorageUsageForEntry<T extends TgpuLayoutStorage> = T extends {
@@ -200,7 +199,7 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
             ? // TODO: Allow storage usages here
               GPUTextureView | TgpuTexture
             : T extends TgpuLayoutExternalTexture
-              ? GPUExternalTexture | TgpuExternalTexture
+              ? GPUExternalTexture
               : never;
 
 export type BindLayoutEntry<T extends TgpuLayoutEntry | null> =
@@ -281,15 +280,57 @@ class TgpuBindGroupLayoutImpl<
 
   public readonly resourceType = 'bind-group-layout' as const;
 
-  // TODO: Fill bound values.
   public readonly bound = {} as {
     [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
   };
 
-  constructor(public readonly entries: Entries) {}
+  constructor(public readonly entries: Entries) {
+    let idx = 0;
 
-  get label() {
+    for (const [key, entry] of Object.entries(entries)) {
+      if (entry === null) {
+        idx++;
+        continue;
+      }
+
+      const membership = { idx, key, layout: this };
+
+      if ('uniform' in entry) {
+        const dataType = isBaseData(entry.uniform)
+          ? entry.uniform
+          : entry.uniform(0);
+
+        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+        (this.bound[key] as any) = new TgpuLaidOutBufferImpl(
+          'uniform',
+          dataType,
+          membership,
+        );
+      }
+
+      if ('storage' in entry) {
+        const dataType = isBaseData(entry.storage)
+          ? entry.storage
+          : entry.storage(0);
+
+        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+        (this.bound[key] as any) = new TgpuLaidOutBufferImpl(
+          entry.access ?? 'readonly',
+          dataType,
+          membership,
+        );
+      }
+
+      idx++;
+    }
+  }
+
+  get label(): string | undefined {
     return this._label;
+  }
+
+  get index(): number | undefined {
+    return this._index;
   }
 
   $name(label?: string | undefined): this {
@@ -528,28 +569,10 @@ class TgpuBindGroupImpl<
             };
           }
 
-          if ('externalTexture' in entry) {
-            let resource: GPUExternalTexture;
-
-            if (isExternalTexture(value)) {
-              resource = unwrapper.unwrap(value);
-            } else {
-              resource = value as GPUExternalTexture;
-            }
-
+          if ('externalTexture' in entry || 'sampler' in entry) {
             return {
               binding: idx,
-              resource,
-            };
-          }
-
-          if ('sampler' in entry) {
-            return {
-              binding: idx,
-              resource: value as
-                | GPUTextureView
-                | GPUExternalTexture
-                | GPUSampler,
+              resource: value as GPUExternalTexture | GPUSampler,
             };
           }
 

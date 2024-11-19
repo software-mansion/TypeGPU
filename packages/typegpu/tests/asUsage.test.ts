@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { u32 } from '../src/data';
-import tgpu, {
-  asMutable,
-  asReadonly,
-  asUniform,
-  asVertex,
-} from '../src/experimental';
+import tgpu, { asMutable, asReadonly, asUniform } from '../src/experimental';
 import './utils/webgpuGlobals';
 
 describe('asUsage', () => {
@@ -38,16 +33,6 @@ describe('asUsage', () => {
     expect(() =>
       // @ts-expect-error
       asMutable(tgpu.createBuffer(u32, 2).$usage('uniform')),
-    ).toThrow();
-
-    asVertex(tgpu.createBuffer(u32, 2).$usage('vertex'), 'vertex');
-    asVertex(tgpu.createBuffer(u32, 2).$usage('vertex', 'uniform'), 'instance');
-    asVertex(tgpu.createBuffer(u32, 2).$usage('storage', 'vertex'), 'instance');
-    // @ts-expect-error
-    expect(() => asVertex(tgpu.createBuffer(u32, 2))).toThrow();
-    expect(() =>
-      // @ts-expect-error
-      asVertex(tgpu.createBuffer(u32, 2).$usage('storage')),
     ).toThrow();
   });
 });

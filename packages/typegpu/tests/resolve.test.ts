@@ -58,7 +58,7 @@ describe('tgpu resolve', () => {
     } as unknown as TgpuBufferReadonly<d.F32>;
 
     const vertex = tgpu
-      .vertexFn([], d.vec4f)
+      .vertexFn({}, d.vec4f)
       .does(() => {
         const v = intensity.value;
         return d.vec4f(v, 0, 0, 1);
@@ -66,7 +66,7 @@ describe('tgpu resolve', () => {
       .$name('vertex');
 
     const fragment = tgpu
-      .fragmentFn([], d.vec4f)
+      .fragmentFn({}, d.vec4f)
       .does(() => d.vec4f(intensity.value, 0, 0, 1))
       .$name('fragment');
 

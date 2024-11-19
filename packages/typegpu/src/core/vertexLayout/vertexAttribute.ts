@@ -1,6 +1,7 @@
 import type { TgpuBaseArray } from '../../data/array';
 import type { TgpuBaseStruct } from '../../data/struct';
 import type {
+  KindToAcceptedAttribMap,
   KindToDefaultFormatMap,
   TgpuVertexAttrib,
   VertexFormat,
@@ -27,3 +28,11 @@ export type DataToContainedAttribs<T> = T extends TgpuBaseStruct<infer Props>
  */
 export type ArrayToContainedAttribs<T extends TgpuBaseArray> =
   DataToContainedAttribs<T['elementType']>;
+
+export type LayoutToAllowedAttribs<T> = T extends {
+  kind: keyof KindToAcceptedAttribMap;
+}
+  ? KindToAcceptedAttribMap[T['kind']]
+  : T extends Record<string, unknown>
+    ? { [Key in keyof T]: LayoutToAllowedAttribs<T[Key]> }
+    : never;

@@ -1,4 +1,5 @@
 import type { Block } from 'tinyest';
+import type { Vec4f } from '../../data';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
@@ -13,8 +14,7 @@ import type { IOLayout, Implementation, UnwrapIO } from './fnTypes';
  */
 export interface TgpuFragmentFnShell<
   Varying extends IOLayout,
-  // TODO: Allow only vec4fs, or arrays/objects of vec4fs
-  Output extends IOLayout,
+  Output extends IOLayout<Vec4f>,
 > {
   readonly argTypes: [Varying];
   readonly returnType: Output;
@@ -36,9 +36,8 @@ export interface TgpuFragmentFnShell<
 }
 
 export interface TgpuFragmentFn<
-  Varying extends IOLayout,
-  // TODO: Allow only vec4fs, or arrays/objects of vec4fs
-  Output extends IOLayout,
+  Varying extends IOLayout = IOLayout,
+  Output extends IOLayout<Vec4f> = IOLayout<Vec4f>,
 > extends TgpuResolvable,
     TgpuNamable {
   readonly shell: TgpuFragmentFnShell<Varying, Output>;
@@ -59,7 +58,10 @@ export interface TgpuFragmentFn<
  *   A `vec4f`, signaling this function outputs a color for one target, or a struct/array containing
  *   colors for multiple targets.
  */
-export function fragmentFn<Varying extends IOLayout, Output extends IOLayout>(
+export function fragmentFn<
+  Varying extends IOLayout,
+  Output extends IOLayout<Vec4f>,
+>(
   varyingTypes: Varying,
   outputType: Output,
 ): TgpuFragmentFnShell<Varying, Output> {
@@ -78,10 +80,10 @@ export function fragmentFn<Varying extends IOLayout, Output extends IOLayout>(
 // --------------
 
 function createFragmentFn(
-  shell: TgpuFragmentFnShell<IOLayout, IOLayout>,
+  shell: TgpuFragmentFnShell<IOLayout, IOLayout<Vec4f>>,
   implementation: Implementation,
-): TgpuFragmentFn<IOLayout, IOLayout> {
-  type This = TgpuFragmentFn<IOLayout, IOLayout>;
+): TgpuFragmentFn {
+  type This = TgpuFragmentFn;
 
   const core = createFnCore(shell, implementation);
 
