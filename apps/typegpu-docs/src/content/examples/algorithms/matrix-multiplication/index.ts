@@ -59,9 +59,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3u) {
   
   let index = resultCell.y + resultCell.x * u32(secondMatrix.size.y);
   resultMatrix.numbers[index] = result;
-}
-
-`;
+}`;
 
 const root = await tgpu.init();
 const device = root.device;
