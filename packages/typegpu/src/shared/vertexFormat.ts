@@ -56,6 +56,10 @@ export interface TgpuVertexAttrib<TFormat extends VertexFormat = VertexFormat> {
   readonly offset: number;
 }
 
+export type AnyVertexAttribs =
+  | Record<string, TgpuVertexAttrib>
+  | TgpuVertexAttrib;
+
 /**
  * All vertex attribute formats that can be interpreted as
  * an single or multi component u32 in a shader.

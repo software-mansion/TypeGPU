@@ -10,7 +10,7 @@ import {
 } from '../../nameRegistry';
 import { type PlumListener, PlumStore } from '../../plumStore';
 import type { TgpuSettable } from '../../settableTrait';
-import type { TgpuVertexAttrib } from '../../shared/vertexFormat';
+import type { AnyVertexAttribs } from '../../shared/vertexFormat';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
@@ -77,17 +77,24 @@ class WithComputeImpl implements WithCompute {
 class WithVertexImpl implements WithVertex {
   constructor(
     private readonly _root: ExperimentalTgpuRoot,
+    private readonly _vertexAttribs: AnyVertexAttribs,
     private readonly _vertexFn: TgpuVertexFn,
   ) {}
 
   withFragment(entryFn: TgpuFragmentFn): WithFragment {
-    return new WithFragmentImpl(this._root, this._vertexFn, entryFn);
+    return new WithFragmentImpl(
+      this._root,
+      this._vertexAttribs,
+      this._vertexFn,
+      entryFn,
+    );
   }
 }
 
 class WithFragmentImpl implements WithFragment {
   constructor(
     private readonly _root: ExperimentalTgpuRoot,
+    private readonly _vertexAttribs: AnyVertexAttribs,
     private readonly _vertexFn: TgpuVertexFn,
     private readonly _fragmentFn: TgpuFragmentFn,
   ) {}
@@ -95,6 +102,7 @@ class WithFragmentImpl implements WithFragment {
   createPipeline(): TgpuRenderPipeline {
     return INTERNAL_createRenderPipeline(
       this._root,
+      this._vertexAttribs,
       this._vertexFn,
       this._fragmentFn,
     );
@@ -304,15 +312,7 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     entryFn: TgpuVertexFn,
     attribs: LayoutToAllowedAttribs<OmitBuiltins<Attribs>>,
   ): WithVertex {
-    let attributes: TgpuVertexAttrib[];
-
-    if ('format' in attribs && typeof attribs.format === 'string') {
-      attributes = [attribs];
-    } else {
-      attributes = Object.values(attribs);
-    }
-
-    return new WithVertexImpl(this, entryFn);
+    return new WithVertexImpl(this, attribs as AnyVertexAttribs, entryFn);
   }
 
   flush() {

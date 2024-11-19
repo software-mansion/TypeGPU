@@ -3,6 +3,7 @@ import type { TgpuArray, Vec4f } from '../../data';
 import { MissingBindGroupError } from '../../errors';
 import type { TgpuNamable } from '../../namable';
 import { resolve } from '../../resolutionCtx';
+import type { AnyVertexAttribs } from '../../shared/vertexFormat';
 import {
   type TgpuBindGroup,
   type TgpuBindGroupLayout,
@@ -13,6 +14,7 @@ import type { IOLayout } from '../function/fnTypes';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
+import { connectAttributesToShader } from '../vertexLayout/connectAttributesToShader';
 import {
   type TgpuVertexLayout,
   isVertexLayout,
@@ -69,11 +71,12 @@ export type FragmentOutToTargets<T> = T extends {
 
 export function INTERNAL_createRenderPipeline(
   branch: ExperimentalTgpuRoot,
+  vertexAttribs: AnyVertexAttribs,
   vertexFn: TgpuVertexFn,
   fragmentFn: TgpuFragmentFn,
 ) {
   return new TgpuRenderPipelineImpl(
-    new RenderPipelineCore(branch, vertexFn, fragmentFn),
+    new RenderPipelineCore(branch, vertexAttribs, vertexFn, fragmentFn),
     {},
   );
 }
@@ -189,18 +192,28 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
 class RenderPipelineCore {
   public label: string | undefined;
+  public readonly vertexLayoutToIdxMap: Map<TgpuVertexLayout, number>;
+
   private _memo: Memo | undefined;
+  private readonly _vertexBufferLayouts: GPUVertexBufferLayout[];
 
   constructor(
     public readonly branch: ExperimentalTgpuRoot,
+    private readonly _vertexAttribs: AnyVertexAttribs,
     private readonly _vertexFn: TgpuVertexFn<IOLayout, IOLayout>,
     private readonly _fragmentFn: TgpuFragmentFn<IOLayout, IOLayout<Vec4f>>,
-  ) {}
+  ) {
+    const connectedAttribs = connectAttributesToShader(
+      this._vertexFn.shell.argTypes[0],
+      this._vertexAttribs,
+    );
+
+    this._vertexBufferLayouts = connectedAttribs.bufferDefinitions;
+    this.vertexLayoutToIdxMap = connectedAttribs.layoutToIdxMap;
+  }
 
   public unwrap(): Memo {
     if (this._memo === undefined) {
-      const device = this.branch.device;
-
       // Resolving code
       const { code, bindGroupLayouts, catchall } = resolve(
         {
@@ -215,6 +228,8 @@ class RenderPipelineCore {
           jitTranspiler: this.branch.jitTranspiler,
         },
       );
+
+      const device = this.branch.device;
 
       const module = device.createShaderModule({
         label: `${this.label ?? '<unnamed>'} - Shader`,
@@ -232,6 +247,7 @@ class RenderPipelineCore {
           }),
           vertex: {
             module,
+            buffers: this._vertexBufferLayouts,
           },
           fragment: {
             module,

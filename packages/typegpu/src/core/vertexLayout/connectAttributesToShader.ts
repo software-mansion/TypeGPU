@@ -1,5 +1,8 @@
 import { getCustomLocation } from '../../data/attributes';
-import type { TgpuVertexAttrib } from '../../shared/vertexFormat';
+import type {
+  AnyVertexAttribs,
+  TgpuVertexAttrib,
+} from '../../shared/vertexFormat';
 import { isBaseData } from '../../types';
 import type { IOData, IOLayout } from '../function/fnTypes';
 import type {
@@ -7,7 +10,7 @@ import type {
   TgpuVertexLayout,
 } from './vertexLayout';
 
-interface ConnectAttributesToShaderResult {
+export interface ConnectAttributesToShaderResult {
   layoutToIdxMap: Map<TgpuVertexLayout, number>;
   bufferDefinitions: GPUVertexBufferLayout[];
 }
@@ -20,7 +23,7 @@ function isAttribute<T extends TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib>(
 
 export function connectAttributesToShader(
   shaderInputLayout: IOLayout,
-  attributes: Record<string, TgpuVertexAttrib> | TgpuVertexAttrib,
+  attributes: AnyVertexAttribs,
 ): ConnectAttributesToShaderResult {
   const layoutToIdxMap = new Map<TgpuVertexLayout, number>();
 
