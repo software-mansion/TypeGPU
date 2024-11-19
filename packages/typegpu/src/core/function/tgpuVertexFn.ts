@@ -70,8 +70,7 @@ export function vertexFn<
     returnType: outputType,
 
     does(implementation): TgpuVertexFn<VertexAttribs, Output> {
-      // biome-ignore lint/suspicious/noExplicitAny: <no need>
-      return createVertexFn(this, implementation as Implementation) as any;
+      return createVertexFn(this, implementation as Implementation);
     },
   };
 }
