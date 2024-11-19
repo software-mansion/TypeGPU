@@ -4,6 +4,7 @@ import { getCustomAlignment } from '../../data/attributes';
 import { isLooseStructSchema, isStructSchema } from '../../data/struct';
 import { roundUp } from '../../mathUtils';
 import {
+  type TgpuVertexAttrib,
   type VertexFormat,
   kindToDefaultFormatMap,
   vertexFormats,
@@ -21,13 +22,18 @@ import type {
 export interface TgpuVertexLayout<TData extends TgpuBaseArray = TgpuBaseArray> {
   readonly resourceType: 'vertex-layout';
   readonly stride: number;
-  readonly stepMode: 'per-vertex' | 'per-instance';
+  readonly stepMode: 'vertex' | 'instance';
   readonly attrib: ArrayToContainedAttribs<TData>;
+  schemaForCount(n: number): TData;
+}
+
+export interface INTERNAL_TgpuVertexAttrib {
+  readonly _layout: TgpuVertexLayout;
 }
 
 export function vertexLayout<TData extends TgpuBaseArray>(
   schemaForCount: (count: number) => TData,
-  stepMode: 'per-vertex' | 'per-instance' = 'per-vertex',
+  stepMode: 'vertex' | 'instance' = 'vertex',
 ): TgpuVertexLayout<TData> {
   return new TgpuVertexLayoutImpl(schemaForCount, stepMode);
 }
@@ -92,7 +98,12 @@ function dataToContainedAttribs<
 
   if ('kind' in data && typeof data.kind === 'string') {
     if (vertexFormats.includes(data.kind as VertexFormat)) {
-      return { format: data.kind, offset } as DataToContainedAttribs<TData>;
+      return {
+        _layout: layout, // hidden property, used to determine which buffers to apply when executing the pipeline
+        format: data.kind as VertexFormat,
+        offset,
+        // biome-ignore lint/suspicious/noExplicitAny: <too many type shenanigans>
+      } satisfies TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib as any;
     }
 
     const format = (kindToDefaultFormatMap as Record<string, VertexFormat>)[
@@ -101,10 +112,11 @@ function dataToContainedAttribs<
 
     if (format) {
       return {
-        layout, // hidden property, used to determine which buffers to apply when executing the pipeline
+        _layout: layout, // hidden property, used to determine which buffers to apply when executing the pipeline
         format,
         offset,
-      } as unknown as DataToContainedAttribs<TData>;
+        // biome-ignore lint/suspicious/noExplicitAny: <too many type shenanigans>
+      } satisfies TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib as any;
     }
   }
 
@@ -120,7 +132,7 @@ class TgpuVertexLayoutImpl<TData extends TgpuBaseArray>
 
   constructor(
     public readonly schemaForCount: (count: number) => TData,
-    public readonly stepMode: 'per-vertex' | 'per-instance',
+    public readonly stepMode: 'vertex' | 'instance',
   ) {
     // `0` signals that the data-type is runtime-sized, and should not be used to create buffers.
     const arraySchema = schemaForCount(0);

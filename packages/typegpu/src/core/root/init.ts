@@ -1,5 +1,6 @@
 import type { Parsed } from 'typed-binary';
 
+import type { OmitBuiltins } from '../../builtin';
 import type { JitTranspiler } from '../../jitTranspiler';
 import { WeakMemo } from '../../memo';
 import {
@@ -9,6 +10,7 @@ import {
 } from '../../nameRegistry';
 import { type PlumListener, PlumStore } from '../../plumStore';
 import type { TgpuSettable } from '../../settableTrait';
+import type { TgpuVertexAttrib } from '../../shared/vertexFormat';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
@@ -22,6 +24,7 @@ import type {
 import type { TgpuSampler } from '../../tgpuSampler';
 import type { AnyTgpuData } from '../../types';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
+import type { IOLayout } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
@@ -49,6 +52,7 @@ import {
   isStorageTextureView,
   isTexture,
 } from '../texture/texture';
+import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute';
 import type {
   CreateTextureOptions,
   CreateTextureResult,
@@ -296,7 +300,18 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     return new WithComputeImpl(this, entryFn);
   }
 
-  withVertex(entryFn: TgpuVertexFn): WithVertex {
+  withVertex<Attribs extends IOLayout, Varying extends IOLayout>(
+    entryFn: TgpuVertexFn,
+    attribs: LayoutToAllowedAttribs<OmitBuiltins<Attribs>>,
+  ): WithVertex {
+    let attributes: TgpuVertexAttrib[];
+
+    if ('format' in attribs && typeof attribs.format === 'string') {
+      attributes = [attribs];
+    } else {
+      attributes = Object.values(attribs);
+    }
+
     return new WithVertexImpl(this, entryFn);
   }
 

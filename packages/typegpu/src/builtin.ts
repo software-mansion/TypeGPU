@@ -104,6 +104,8 @@ export const builtin = {
 
 export type AnyBuiltin = (typeof builtin)[keyof typeof builtin];
 
-export type OmitBuiltins<S extends object> = {
-  [Key in keyof S as IsBuiltin<S[Key]> extends true ? never : Key]: S[Key];
-};
+export type OmitBuiltins<S> = IsBuiltin<S> extends true
+  ? never
+  : {
+      [Key in keyof S as IsBuiltin<S[Key]> extends true ? never : Key]: S[Key];
+    };
