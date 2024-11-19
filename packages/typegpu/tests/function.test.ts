@@ -145,30 +145,6 @@ describe('UnwrapIO', () => {
     expectTypeOf<UnwrapIO<typeof layout>>().toEqualTypeOf<number>();
   });
 
-  it('unwraps TgpuStruct', () => {
-    const layout = d.struct({ a: d.f32, b: d.u32 }) satisfies IOLayout;
-
-    expectTypeOf(layout).toEqualTypeOf<d.TgpuStruct<{ a: d.F32; b: d.U32 }>>();
-    expectTypeOf<UnwrapIO<typeof layout>>().toEqualTypeOf<{
-      a: number;
-      b: number;
-    }>();
-  });
-
-  it('unwraps TgpuArray', () => {
-    const layout = d.arrayOf(d.f32, 32) satisfies IOLayout;
-
-    expectTypeOf(layout).toEqualTypeOf<d.TgpuArray<d.F32>>();
-    expectTypeOf<UnwrapIO<typeof layout>>().toEqualTypeOf<number[]>();
-  });
-
-  it('unwraps a tuple of numeric primitives', () => {
-    const layout = [d.f32, d.u32] as const satisfies IOLayout;
-
-    expectTypeOf(layout).toEqualTypeOf<[d.F32, d.U32]>();
-    expectTypeOf<UnwrapIO<typeof layout>>().toEqualTypeOf<[number, number]>();
-  });
-
   it('unwraps a record of numeric primitives', () => {
     const layout = { a: d.f32, b: d.location(2, d.u32) } satisfies IOLayout;
 
@@ -179,22 +155,6 @@ describe('UnwrapIO', () => {
     expectTypeOf<UnwrapIO<typeof layout>>().toEqualTypeOf<{
       a: number;
       b: number;
-    }>();
-  });
-
-  it('unwraps a record of arrays of numeric primitives', () => {
-    const layout = {
-      a: [d.f32, d.f32] as const,
-      b: [d.u32, d.u32] as const,
-    } satisfies IOLayout;
-
-    expectTypeOf(layout).toEqualTypeOf<{
-      a: [d.F32, d.F32];
-      b: [d.U32, d.U32];
-    }>();
-    expectTypeOf<UnwrapIO<typeof layout>>().toEqualTypeOf<{
-      a: [number, number];
-      b: [number, number];
     }>();
   });
 });

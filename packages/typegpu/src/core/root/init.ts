@@ -50,11 +50,9 @@ import {
   isTexture,
 } from '../texture/texture';
 import type {
-  ComputePipelineExecutorOptions,
   CreateTextureOptions,
   CreateTextureResult,
   ExperimentalTgpuRoot,
-  RenderPipelineExecutorOptions,
   SetPlumAction,
   WithCompute,
   WithFragment,
@@ -118,7 +116,6 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     key.unwrap(this),
   );
 
-  private _pipelineExecutors: PipelineExecutor[] = [];
   private _commandEncoder: GPUCommandEncoder | null = null;
 
   private readonly _plumStore = new PlumStore();
@@ -311,12 +308,6 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     this.device.queue.submit([this._commandEncoder.finish()]);
     this._commandEncoder = null;
   }
-}
-
-interface PipelineExecutor {
-  execute(
-    options: RenderPipelineExecutorOptions | ComputePipelineExecutorOptions,
-  ): void;
 }
 
 /**

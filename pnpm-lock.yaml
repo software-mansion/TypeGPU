@@ -59,6 +59,9 @@ importers:
       '@radix-ui/react-slider':
         specifier: ^1.2.0
         version: 1.2.0(@types/react-dom@18.3.0)(@types/react@18.3.3)(react-dom@18.3.1)(react@18.3.1)
+      '@stackblitz/sdk':
+        specifier: ^1.11.0
+        version: 1.11.0
       '@typegpu/jit':
         specifier: workspace:*
         version: link:../../packages/jit
@@ -2457,6 +2460,10 @@ packages:
     resolution: {integrity: sha512-Qsn8h15SWgv5TDRoDmiHNzdQO2BxDe86Yq6vIHf5T0cCvmfmccJKIzHtep8bQO9HMBZYCtCBzaXdd1MnxZBPSg==}
     dependencies:
       '@types/hast': 3.0.4
+    dev: false
+
+  /@stackblitz/sdk@1.11.0:
+    resolution: {integrity: sha512-DFQGANNkEZRzFk1/rDP6TcFdM82ycHE+zfl9C/M/jXlH68jiqHWHFMQURLELoD8koxvu/eW5uhg94NSAZlYrUQ==}
     dev: false
 
   /@types/acorn@4.0.6:

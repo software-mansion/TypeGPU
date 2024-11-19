@@ -12,7 +12,7 @@ import type {
   Unsubscribe,
 } from '../../tgpuPlumTypes';
 import type { TgpuSampler } from '../../tgpuSampler';
-import type { AnyTgpuData, Wgsl } from '../../types';
+import type { AnyTgpuData } from '../../types';
 import type { Unwrapper } from '../../unwrapper';
 import type { Mutable, OmitProps, Prettify } from '../../utilityTypes';
 import type { TgpuBuffer } from '../buffer/buffer';
@@ -231,50 +231,4 @@ export interface ExperimentalTgpuRoot extends TgpuRoot {
    * submitted to the GPU.
    */
   flush(): void;
-}
-
-export interface RenderPipelineOptions {
-  vertex: {
-    code: Wgsl;
-    output: {
-      [K in symbol]: string;
-    } & {
-      [K in string]: AnyTgpuData;
-    };
-  };
-  fragment: {
-    code: Wgsl;
-    target: Iterable<GPUColorTargetState | null>;
-  };
-  primitive: GPUPrimitiveState;
-  externalLayouts?: GPUBindGroupLayout[];
-  label?: string;
-}
-
-export interface ComputePipelineOptions {
-  code: Wgsl;
-  workgroupSize?: readonly [number, number?, number?];
-  externalLayouts?: GPUBindGroupLayout[];
-  label?: string;
-}
-
-export type RenderPipelineExecutorOptions = GPURenderPassDescriptor & {
-  vertexCount: number;
-  instanceCount?: number;
-  firstVertex?: number;
-  firstInstance?: number;
-  externalBindGroups?: GPUBindGroup[];
-};
-
-export interface RenderPipelineExecutor {
-  execute(options: RenderPipelineExecutorOptions): void;
-}
-
-export type ComputePipelineExecutorOptions = {
-  workgroups?: readonly [number, number?, number?];
-  externalBindGroups?: GPUBindGroup[];
-};
-
-export interface ComputePipelineExecutor {
-  execute(options?: ComputePipelineExecutorOptions): void;
 }

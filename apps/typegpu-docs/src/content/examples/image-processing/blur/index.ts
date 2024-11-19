@@ -30,11 +30,6 @@ const renderLayout = tgpu.bindGroupLayout({
 
 const computeShaderCode = /* wgsl */ `
 
-struct Settings {
-  filterDim: i32,
-  blockDim: u32,
-}
-
 @group(0) @binding(0) var<uniform> settings: Settings;
 @group(0) @binding(1) var sampling: sampler;
 
@@ -193,7 +188,12 @@ const computePipeline = device.createComputePipeline({
     bindGroupLayouts: [root.unwrap(uniformLayout), root.unwrap(ioLayout)],
   }),
   compute: {
-    module: device.createShaderModule({ code: computeShaderCode }),
+    module: device.createShaderModule({
+      code: tgpu.resolve({
+        input: computeShaderCode,
+        extraDependencies: { Settings },
+      }),
+    }),
   },
 });
 

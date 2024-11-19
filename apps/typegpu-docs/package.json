@@ -19,6 +19,7 @@
     "@monaco-editor/react": "^4.6.0",
     "@radix-ui/react-select": "^2.1.1",
     "@radix-ui/react-slider": "^1.2.0",
+    "@stackblitz/sdk": "^1.11.0",
     "@typegpu/jit": "workspace:*",
     "@types/dom-mediacapture-transform": "^0.1.9",
     "@types/react": "^18.3.3",

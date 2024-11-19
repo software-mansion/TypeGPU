@@ -522,12 +522,10 @@ class TgpuFixedSampledTextureImpl
     const id = ctx.names.makeUnique(this.label);
     const { group, binding } = ctx.allocateFixedEntry(this);
 
-    let type: string;
-    if ((this._texture.props.sampleCount ?? 1) > 1) {
-      type = 'texture_multisampled_2d';
-    } else {
-      type = `texture_${dimensionToCodeMap[this.dimension]}`;
-    }
+    const type =
+      (this._texture.props.sampleCount ?? 1) > 1
+        ? 'texture_multisampled_2d'
+        : `texture_${dimensionToCodeMap[this.dimension]}`;
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${binding}) var ${id}: ${type}<${ctx.resolve(this.channelDataType)}>;`,

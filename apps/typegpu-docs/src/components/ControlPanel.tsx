@@ -2,6 +2,8 @@ import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
 import { useState } from 'react';
 import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
+import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
+import { examples } from '../utils/examples/exampleContent';
 import {
   type ExampleControlParam,
   exampleControlsAtom,
@@ -12,6 +14,7 @@ import { Button } from './design/Button';
 import { Select } from './design/Select';
 import { Slider } from './design/Slider';
 import { Toggle } from './design/Toggle';
+import { openInStackBlitz } from './stackblitz/openInStackBlitz';
 
 function ToggleRow({
   label,
@@ -156,6 +159,7 @@ export function ControlPanel() {
   const [menuShowing, setMenuShowing] = useAtom(menuShownAtom);
   const [codeEditorShowing, setCodeEditorShowing] =
     useAtom(codeEditorShownAtom);
+  const currentExample = useAtomValue(currentExampleAtom);
   const exampleControlParams = useAtomValue(exampleControlsAtom);
 
   return (
@@ -181,6 +185,12 @@ export function ControlPanel() {
             onChange={(e) => setCodeEditorShowing(e.target.checked)}
           />
         </label>
+
+        {currentExample && currentExample in examples ? (
+          <Button onClick={() => openInStackBlitz(examples[currentExample])}>
+            Edit on StackBlitz
+          </Button>
+        ) : null}
 
         <hr className="my-0 box-border w-full border-t border-tameplum-100" />
       </div>

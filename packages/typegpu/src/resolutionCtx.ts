@@ -1,5 +1,5 @@
 import type { Block } from 'tinyest';
-import { MissingSlotValueError, ResolutionError, invariant } from './errors';
+import { MissingSlotValueError, ResolutionError } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
@@ -428,13 +428,6 @@ class ResolutionCtxImpl implements ResolutionCtx {
         this._itemStateStack.pop();
       }
     }
-  }
-
-  getIndexFor(item: object) {
-    const index = this._boundToIndexMap.get(item);
-    invariant(index !== undefined, 'No index found for item');
-
-    return index;
   }
 }
 

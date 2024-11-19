@@ -1,6 +1,22 @@
 import type * as smol from 'tinyest';
 import type { Unwrap } from 'typed-binary';
-import type { AnyTgpuData, AnyTgpuLooseData } from '../../types';
+import type {
+  AnyAttribute,
+  Decorated,
+  F32,
+  I32,
+  U32,
+  Vec2f,
+  Vec2i,
+  Vec2u,
+  Vec3f,
+  Vec3i,
+  Vec3u,
+  Vec4f,
+  Vec4i,
+  Vec4u,
+} from '../../data';
+import type { AnyTgpuData } from '../../types';
 
 /**
  * Information extracted from transpiling a JS function.
@@ -15,7 +31,7 @@ export type TranspilationResult = {
   externalNames: string[];
 };
 
-export type UnwrapArgs<T extends (AnyTgpuData | AnyTgpuLooseData)[]> = {
+export type UnwrapArgs<T extends unknown[]> = {
   [Idx in keyof T]: Unwrap<T[Idx]>;
 };
 
@@ -29,22 +45,34 @@ export type Implementation<
   Return = unknown,
 > = string | ((...args: Args) => Return);
 
+type BaseIOData =
+  | F32
+  | I32
+  | U32
+  | Vec2f
+  | Vec3f
+  | Vec4f
+  | Vec2i
+  | Vec3i
+  | Vec4i
+  | Vec2u
+  | Vec3u
+  | Vec4u;
+
+export type IOData = BaseIOData | Decorated<BaseIOData, AnyAttribute[]>;
+
 /**
  * Used for I/O definitions of entry functions.
  */
 // An IO layout can be...
-export type IOLayout<TElementType extends AnyTgpuData = AnyTgpuData> =
+export type IOLayout<TElementType extends IOData = IOData> =
   // a single data-type
   | TElementType
-  // an object of IO layouts
-  | { [key: string]: IOLayout }
-  // an array of IO layouts
-  | IOLayout[];
+  // a record of data-types
+  | { [key: string]: TElementType };
 
 export type UnwrapIO<T> = T extends AnyTgpuData
   ? Unwrap<T>
-  : T extends IOLayout[]
-    ? { [K in keyof T]: UnwrapIO<T[K]> }
-    : T extends { [K: string]: IOLayout }
-      ? { [K in keyof T]: UnwrapIO<T[K]> }
-      : T;
+  : T extends Record<string, unknown>
+    ? { [K in keyof T]: Unwrap<T[K]> }
+    : T;
