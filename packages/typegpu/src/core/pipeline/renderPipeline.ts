@@ -1,5 +1,5 @@
 import type { TgpuBuffer, Vertex } from '../../core/buffer/buffer';
-import type { TgpuArray } from '../../data';
+import type { TgpuArray, Vec4f } from '../../data';
 import { MissingBindGroupError } from '../../errors';
 import type { TgpuNamable } from '../../namable';
 import { resolve } from '../../resolutionCtx';
@@ -73,8 +73,7 @@ export function INTERNAL_createRenderPipeline(
   fragmentFn: TgpuFragmentFn,
 ) {
   return new TgpuRenderPipelineImpl(
-    // biome-ignore lint/suspicious/noExplicitAny: <infinite type instantiation ;-;>
-    new RenderPipelineCore(branch, vertexFn as any, fragmentFn as any),
+    new RenderPipelineCore(branch, vertexFn, fragmentFn),
     {},
   );
 }
@@ -195,7 +194,7 @@ class RenderPipelineCore {
   constructor(
     public readonly branch: ExperimentalTgpuRoot,
     private readonly _vertexFn: TgpuVertexFn<IOLayout, IOLayout>,
-    private readonly _fragmentFn: TgpuVertexFn<IOLayout, IOLayout>,
+    private readonly _fragmentFn: TgpuFragmentFn<IOLayout, IOLayout<Vec4f>>,
   ) {}
 
   public unwrap(): Memo {

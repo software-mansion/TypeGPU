@@ -57,7 +57,15 @@ const mainVert = tgpu
 
     return VertexOutput(pos, color);
   }`)
-  .$uses({ trianglePos, colorPalette, getRotationFromVelocity, rotate });
+  .$uses({
+    trianglePos,
+    colorPalette,
+    getRotationFromVelocity,
+    rotate,
+    get VertexOutput() {
+      return mainVert.Output;
+    },
+  });
 
 const mainFrag = tgpu.fragmentFn(VertexOutput, vec4f).does(/* wgsl */ `(@location(0) color : vec4f) -> @location(0) vec4f {
     return color;

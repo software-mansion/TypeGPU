@@ -1,8 +1,15 @@
 import type { Block } from 'tinyest';
+import { type TgpuStruct, location, struct } from '../../data';
+import { getCustomLocation, isBuiltin } from '../../data/attributes';
 import type { TgpuNamable } from '../../namable';
-import type { ResolutionCtx, TgpuResolvable } from '../../types';
+import {
+  type AnyTgpuData,
+  type ResolutionCtx,
+  type TgpuResolvable,
+  isBaseData,
+} from '../../types';
 import { createFnCore } from './fnCore';
-import type { IOLayout, Implementation, UnwrapIO } from './fnTypes';
+import type { IOData, IOLayout, Implementation, UnwrapIO } from './fnTypes';
 
 // ----------
 // Public API
@@ -42,6 +49,7 @@ export interface TgpuVertexFn<
 > extends TgpuResolvable,
     TgpuNamable {
   readonly shell: TgpuVertexFnShell<VertexAttribs, Output>;
+  readonly Output: IOLayoutToOutputStruct<Output>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
   $__ast(argNames: string[], body: Block): this;
@@ -80,6 +88,36 @@ export function vertexFn<
 // Implementation
 // --------------
 
+type IOLayoutToOutputStruct<T extends IOLayout> = T extends AnyTgpuData
+  ? TgpuStruct<{ out: T }>
+  : T extends Record<string, AnyTgpuData>
+    ? TgpuStruct<T>
+    : never;
+
+function withLocations(
+  members: Record<string, AnyTgpuData>,
+): Record<string, AnyTgpuData> {
+  let nextLocation = 0;
+
+  return Object.fromEntries(
+    Object.entries(members).map(([key, member]) => {
+      if (isBuiltin(member)) {
+        // Skipping builtins
+        return [key, member];
+      }
+
+      const customLocation = getCustomLocation(member);
+      if (customLocation !== undefined) {
+        // This member is already marked, start counting from the next location over.
+        nextLocation = customLocation + 1;
+        return [key, member];
+      }
+
+      return [key, location(nextLocation++, member)];
+    }),
+  );
+}
+
 function createVertexFn(
   shell: TgpuVertexFnShell<IOLayout, IOLayout>,
   implementation: Implementation,
@@ -88,8 +126,17 @@ function createVertexFn(
 
   const core = createFnCore(shell, implementation);
 
+  const Output = struct(
+    withLocations(
+      isBaseData(shell.returnType)
+        ? { out: location(0, shell.returnType) }
+        : shell.returnType,
+    ) as Record<string, IOData>,
+  );
+
   return {
     shell,
+    Output,
 
     get label() {
       return core.label;
@@ -109,6 +156,7 @@ function createVertexFn(
 
     $name(newLabel: string): This {
       core.label = newLabel;
+      Output.$name(`${newLabel}_Output`);
       return this;
     },
 
