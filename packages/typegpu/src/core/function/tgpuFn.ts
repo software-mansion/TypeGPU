@@ -10,7 +10,7 @@ import type {
   Wgsl,
 } from '../../types';
 import { createFnCore } from './fnCore';
-import type { Implementation, UnwrapIO, UnwrapReturn } from './fnTypes';
+import type { Implementation, UnwrapArgs, UnwrapReturn } from './fnTypes';
 
 // ----------
 // Public API
@@ -30,7 +30,7 @@ export interface TgpuFnShell<
    * Creates a type-safe implementation of this signature
    */
   does(
-    implementation: (...args: UnwrapIO<Args>) => UnwrapReturn<Return>,
+    implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
   ): TgpuFn<Args, Return>;
 
   /**
@@ -57,7 +57,7 @@ export type TgpuFn<
   Args extends AnyTgpuData[],
   Return extends AnyTgpuData | undefined = undefined,
 > = TgpuFnBase<Args, Return> &
-  ((...args: UnwrapIO<Args>) => UnwrapReturn<Return>);
+  ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>);
 
 export function fn<Args extends AnyTgpuData[] | []>(
   argTypes: Args,
@@ -70,7 +70,7 @@ export function fn<Args extends AnyTgpuData[] | [], Return extends AnyTgpuData>(
 ): TgpuFnShell<Args, Return>;
 
 export function fn<
-  Args extends AnyTgpuData[] | [],
+  Args extends AnyTgpuData[],
   Return extends AnyTgpuData | undefined = undefined,
 >(argTypes: Args, returnType?: Return): TgpuFnShell<Args, Return> {
   return {
@@ -78,7 +78,7 @@ export function fn<
     returnType,
 
     does(
-      implementation: Implementation<UnwrapIO<Args>, UnwrapReturn<Return>>,
+      implementation: Implementation<UnwrapArgs<Args>, UnwrapReturn<Return>>,
     ): TgpuFn<Args, Return> {
       return createFn(this, implementation as Implementation);
     },
