@@ -114,6 +114,8 @@ function makeVecSchema<ValueType extends vecBase>(
 
 abstract class vec2Impl implements vec2 {
   public readonly length = 2;
+  abstract readonly kind: `vec2${'f' | 'u' | 'i'}`;
+
   [n: number]: number;
 
   constructor(
@@ -142,7 +144,9 @@ abstract class vec2Impl implements vec2 {
     this.y = value;
   }
 
-  abstract resolve(): string;
+  resolve(): string {
+    return `${this.kind}(${this.x}, ${this.y})`;
+  }
 }
 
 class vec2fImpl extends vec2Impl {
@@ -158,10 +162,6 @@ class vec2fImpl extends vec2Impl {
 
   make4(x: number, y: number, z: number, w: number): vec4f {
     return new vec4fImpl(x, y, z, w) as unknown as vec4f;
-  }
-
-  resolve(): string {
-    return `${this.kind}(${this.x}, ${this.y})`;
   }
 }
 
@@ -179,10 +179,6 @@ class vec2iImpl extends vec2Impl {
   make4(x: number, y: number, z: number, w: number): vec4i {
     return new vec4iImpl(x, y, z, w) as unknown as vec4i;
   }
-
-  resolve(): string {
-    return `${this.kind}(${this.x}, ${this.y})`;
-  }
 }
 
 class vec2uImpl extends vec2Impl {
@@ -199,14 +195,11 @@ class vec2uImpl extends vec2Impl {
   make4(x: number, y: number, z: number, w: number): vec4u {
     return new vec4uImpl(x, y, z, w) as unknown as vec4u;
   }
-
-  resolve(): string {
-    return `${this.kind}(${this.x}, ${this.y})`;
-  }
 }
 
 abstract class vec3Impl implements vec3 {
   public readonly length = 3;
+  abstract readonly kind: `vec3${'f' | 'u' | 'i'}`;
   [n: number]: number;
 
   constructor(
@@ -245,7 +238,9 @@ abstract class vec3Impl implements vec3 {
     this.z = value;
   }
 
-  abstract resolve(): string;
+  resolve(): string {
+    return `${this.kind}(${this.x}, ${this.y}, ${this.z})`;
+  }
 }
 
 class vec3fImpl extends vec3Impl {
@@ -261,10 +256,6 @@ class vec3fImpl extends vec3Impl {
 
   make4(x: number, y: number, z: number, w: number): vec4f {
     return new vec4fImpl(x, y, z, w) as unknown as vec4f;
-  }
-
-  resolve(): string {
-    return `${this.kind}(${this.x}, ${this.y}, ${this.z})`;
   }
 }
 
@@ -282,10 +273,6 @@ class vec3iImpl extends vec3Impl {
   make4(x: number, y: number, z: number, w: number): vec4i {
     return new vec4iImpl(x, y, z, w) as unknown as vec4i;
   }
-
-  resolve(): string {
-    return `${this.kind}(${this.x}, ${this.y}, ${this.z})`;
-  }
 }
 
 class vec3uImpl extends vec3Impl {
@@ -302,14 +289,11 @@ class vec3uImpl extends vec3Impl {
   make4(x: number, y: number, z: number, w: number): vec4u {
     return new vec4uImpl(x, y, z, w) as unknown as vec4u;
   }
-
-  resolve(): string {
-    return `${this.kind}(${this.x}, ${this.y}, ${this.z})`;
-  }
 }
 
 abstract class vec4Impl implements vec4 {
   public readonly length = 4;
+  abstract readonly kind: `vec4${'f' | 'u' | 'i'}`;
   [n: number]: number;
 
   constructor(
@@ -358,7 +342,9 @@ abstract class vec4Impl implements vec4 {
     this.w = value;
   }
 
-  abstract resolve(): string;
+  resolve(): string {
+    return `${this.kind}(${this.x}, ${this.y}, ${this.z}, ${this.w})`;
+  }
 }
 
 class vec4fImpl extends vec4Impl {
@@ -374,10 +360,6 @@ class vec4fImpl extends vec4Impl {
 
   make4(x: number, y: number, z: number, w: number): vec4f {
     return new vec4fImpl(x, y, z, w) as unknown as vec4f;
-  }
-
-  resolve(): string {
-    return `${this.kind}(${this.x}, ${this.y}, ${this.z}, ${this.w})`;
   }
 }
 
@@ -395,10 +377,6 @@ class vec4iImpl extends vec4Impl {
   make4(x: number, y: number, z: number, w: number): vec4i {
     return new vec4iImpl(x, y, z, w) as unknown as vec4i;
   }
-
-  resolve(): string {
-    return `${this.kind}(${this.x}, ${this.y}, ${this.z}, ${this.w})`;
-  }
 }
 
 class vec4uImpl extends vec4Impl {
@@ -414,10 +392,6 @@ class vec4uImpl extends vec4Impl {
 
   make4(x: number, y: number, z: number, w: number): vec4u {
     return new vec4uImpl(x, y, z, w) as unknown as vec4u;
-  }
-
-  resolve(): string {
-    return `${this.kind}(${this.x}, ${this.y}, ${this.z}, ${this.w})`;
   }
 }
 
