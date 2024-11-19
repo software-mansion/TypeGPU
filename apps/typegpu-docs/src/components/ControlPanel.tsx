@@ -188,7 +188,7 @@ export function ControlPanel() {
 
         {currentExample && currentExample in examples ? (
           <Button onClick={() => openInStackBlitz(examples[currentExample])}>
-            Open in StackBlitz
+            Edit on StackBlitz
           </Button>
         ) : null}
 
