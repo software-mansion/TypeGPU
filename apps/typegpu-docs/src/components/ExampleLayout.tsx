@@ -58,7 +58,7 @@ function SideMenu() {
         menuShownMobile
           ? 'absolute inset-0 z-50 w-full md:static'
           : 'hidden md:flex',
-        'box-border flex flex-col bg-white md:rounded-2xl md:w-[18.75rem] p-5 gap-5',
+        'box-border flex flex-col bg-white md:rounded-2xl md:w-[18.75rem] p-5 gap-5 overflow-auto',
       )}
     >
       <header className="grid gap-5">

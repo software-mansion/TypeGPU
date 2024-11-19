@@ -26,11 +26,10 @@ export function replaceExternalsInWgsl(
   wgsl: string,
 ) {
   return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
-    if (!isResolvable(external)) {
-      return acc;
-    }
+    const resolvedExternal = !isResolvable(external)
+      ? String(external)
+      : ctx.resolve(external);
 
-    const resolvedExternal = ctx.resolve(external);
     return acc.replaceAll(
       new RegExp(`(?<![\\w_])${externalName}(?![\\w_])`, 'g'),
       resolvedExternal,

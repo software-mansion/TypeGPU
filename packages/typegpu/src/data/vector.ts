@@ -13,7 +13,7 @@ import {
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import { inGPUMode } from '../gpuMode';
-import type { NumberArrayView, TgpuData } from '../types';
+import type { NumberArrayView, TgpuData, TgpuResolvable } from '../types';
 
 // --------------
 // Implementation
@@ -141,6 +141,10 @@ abstract class vec2Impl implements vec2 {
   set [1](value: number) {
     this.y = value;
   }
+
+  resolve(): string {
+    return `vec2f(${this.x}, ${this.y})`;
+  }
 }
 
 class vec2fImpl extends vec2Impl {
@@ -229,6 +233,10 @@ abstract class vec3Impl implements vec3 {
 
   set [2](value: number) {
     this.z = value;
+  }
+
+  resolve(): string {
+    return `vec3f(${this.x}, ${this.y}, ${this.z})`;
   }
 }
 
@@ -328,6 +336,10 @@ abstract class vec4Impl implements vec4 {
 
   set [3](value: number) {
     this.w = value;
+  }
+
+  resolve(): string {
+    return `vec4f(${this.x}, ${this.y}, ${this.z}, ${this.w})`;
   }
 }
 
@@ -693,20 +705,20 @@ interface Swizzle4<T2, T3, T4> extends Swizzle3<T2, T3, T4> {
   readonly wwww: T4;
 }
 
-interface vec2 extends NumberArrayView {
+interface vec2 extends NumberArrayView, TgpuResolvable {
   x: number;
   y: number;
   [Symbol.iterator](): Iterator<number>;
 }
 
-interface vec3 extends NumberArrayView {
+interface vec3 extends NumberArrayView, TgpuResolvable {
   x: number;
   y: number;
   z: number;
   [Symbol.iterator](): Iterator<number>;
 }
 
-interface vec4 extends NumberArrayView {
+interface vec4 extends NumberArrayView, TgpuResolvable {
   x: number;
   y: number;
   z: number;
