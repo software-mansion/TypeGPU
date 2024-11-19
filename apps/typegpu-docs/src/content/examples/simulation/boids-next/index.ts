@@ -202,7 +202,7 @@ function updateParams(newOptions: BoidsOptions) {
 const TriangleDataArray = (n: number) => arrayOf(TriangleData, n);
 
 const vertexLayout = tgpu.vertexLayout((n) => arrayOf(vec2f, n));
-const instanceLayout = tgpu.vertexLayout(TriangleDataArray, 'per-instance');
+const instanceLayout = tgpu.vertexLayout(TriangleDataArray, 'instance');
 
 const renderPipeline = root
   .withVertex(mainVert, {
@@ -304,17 +304,6 @@ const computeBindGroups = [0, 1].map((idx) =>
   }),
 );
 
-const renderPassDescriptor: GPURenderPassDescriptor = {
-  colorAttachments: [
-    {
-      view: undefined as unknown as GPUTextureView,
-      clearValue: [1, 1, 1, 1],
-      loadOp: 'clear' as const,
-      storeOp: 'store' as const,
-    },
-  ],
-};
-
 let even = false;
 let disposed = false;
 
@@ -324,32 +313,24 @@ function frame() {
   }
 
   even = !even;
-  (
-    renderPassDescriptor.colorAttachments as [GPURenderPassColorAttachment]
-  )[0].view = context.getCurrentTexture().createView();
 
   computePipeline
     .with(computeBindGroupLayout, computeBindGroups[even ? 0 : 1])
     .dispatchWorkgroups(triangleAmount);
 
   renderPipeline
+    .withColorAttachment({
+      view: context.getCurrentTexture().createView(),
+      clearValue: [1, 1, 1, 1],
+      loadOp: 'clear' as const,
+      storeOp: 'store' as const,
+    })
     .with(vertexLayout, triangleVertexBuffer)
     .with(instanceLayout, trianglePosBuffers[even ? 1 : 0])
     .with(renderBindGroupLayout, renderBindGroups[even ? 1 : 0])
     .draw(3, triangleAmount);
 
   root.flush();
-
-  // const commandEncoder = root.device.createCommandEncoder();
-
-  // const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-  // passEncoder.setPipeline(pipeline);
-  // passEncoder.setVertexBuffer(0, triangleVertexBuffer.buffer);
-  // passEncoder.setBindGroup(0, root.unwrap(renderBindGroups[even ? 1 : 0]));
-  // passEncoder.draw(3, triangleAmount);
-  // passEncoder.end();
-
-  // root.device.queue.submit([commandEncoder.finish()]);
 
   requestAnimationFrame(frame);
 }

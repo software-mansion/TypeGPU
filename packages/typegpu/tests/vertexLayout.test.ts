@@ -1,9 +1,8 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { connectAttributesToShader } from '../src/core/vertexLayout/connectAttributesToShader';
 import type { ArrayToContainedAttribs } from '../src/core/vertexLayout/vertexAttribute';
-import type { TgpuVertexLayout } from '../src/core/vertexLayout/vertexLayout';
 import * as d from '../src/data';
-import tgpu from '../src/experimental';
+import tgpu, { builtin } from '../src/experimental';
 import type { TgpuVertexAttrib } from '../src/shared/vertexFormat';
 
 describe('ArrayToContainedAttribs', () => {
@@ -162,7 +161,7 @@ describe('connectAttributesToShader', () => {
           ],
         },
       ],
-      layoutToIdxMap: new Map([[layout, 0]]),
+      usedVertexLayouts: [layout],
     });
   });
 
@@ -185,7 +184,7 @@ describe('connectAttributesToShader', () => {
           ],
         },
       ],
-      layoutToIdxMap: new Map([[layout, 0]]),
+      usedVertexLayouts: [layout],
     });
   });
 
@@ -238,12 +237,13 @@ describe('connectAttributesToShader', () => {
           ],
         },
       ],
-      layoutToIdxMap: new Map([[layout, 0]]),
+      usedVertexLayouts: [layout],
     });
   });
 
   it('connects a record of attributes from multiple layouts', () => {
     const shaderInputLayout = {
+      vi: builtin.vertexIndex, // should be omitted
       a: d.f32,
       b: d.location(3, d.vec2f),
       c: d.u32 /* should get @location(4) automatically */,
@@ -298,10 +298,7 @@ describe('connectAttributesToShader', () => {
           ],
         },
       ],
-      layoutToIdxMap: new Map([
-        [alphaBetaLayout, 0],
-        [gammaLayout, 1],
-      ] as [TgpuVertexLayout, number][]),
+      usedVertexLayouts: [alphaBetaLayout, gammaLayout],
     });
   });
 });

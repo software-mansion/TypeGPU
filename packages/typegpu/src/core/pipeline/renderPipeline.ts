@@ -10,15 +10,19 @@ import {
   isBindGroupLayout,
 } from '../../tgpuBindGroupLayout';
 import type { AnyTgpuData } from '../../types';
-import type { IOLayout } from '../function/fnTypes';
+import type { IOData, IOLayout } from '../function/fnTypes';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
+import { type TgpuTexture, isTexture } from '../texture/texture';
+import type { Render } from '../texture/usageExtension';
 import { connectAttributesToShader } from '../vertexLayout/connectAttributesToShader';
 import {
   type TgpuVertexLayout,
   isVertexLayout,
 } from '../vertexLayout/vertexLayout';
+import { connectAttachmentToShader } from './connectAttachmentToShader';
+import { connectTargetsToShader } from './connectTargetsToShader';
 
 // ----------
 // Public API
@@ -32,11 +36,15 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
   with<TData extends TgpuArray<AnyTgpuData>>(
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: TgpuBuffer<TData> & Vertex,
-  ): TgpuRenderPipeline<Output>;
+  ): TgpuRenderPipeline;
   with(
     bindGroupLayout: TgpuBindGroupLayout,
     bindGroup: TgpuBindGroup,
-  ): TgpuRenderPipeline<Output>;
+  ): TgpuRenderPipeline;
+
+  withColorAttachment(
+    attachment: FragmentOutToColorAttachment<Output>,
+  ): TgpuRenderPipeline;
 
   draw(
     vertexCount: number,
@@ -46,37 +54,80 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
   ): void;
 }
 
-export type FragmentOutToTargets<T> = T extends {
-  kind: string;
-}
-  ? {
-      /**
-       * The GPUTextureFormat of this color target. The pipeline will only be compatible with GPURenderPassEncoders
-       * which use a GPUTextureView of this format in the corresponding color attachment.
-       */
-      format: GPUTextureFormat;
-      /**
-       * The blending behavior for this color target. If left undefined, disables blending for this color target.
-       */
-      blend?: GPUBlendState | undefined;
-      /**
-       * Bitmask controlling which channels are are written to when drawing to this color target.
-       * @default 0xF
-       */
-      writeMask?: GPUColorWriteFlags | undefined;
-    }
+export type FragmentOutToTargets<T extends IOLayout> = T extends IOData
+  ? GPUColorTargetState
   : T extends Record<string, unknown>
-    ? { [Key in keyof T]: FragmentOutToTargets<T[Key]> }
+    ? { [Key in keyof T]: GPUColorTargetState }
     : never;
+
+export type FragmentOutToColorAttachment<T extends IOLayout> = T extends IOData
+  ? ColorAttachment
+  : T extends Record<string, unknown>
+    ? { [Key in keyof T]: ColorAttachment }
+    : never;
+
+export type AnyFragmentTargets =
+  | GPUColorTargetState
+  | Record<string, GPUColorTargetState>;
+
+export interface ColorAttachment {
+  /**
+   * A {@link GPUTextureView} describing the texture subresource that will be output to for this
+   * color attachment.
+   */
+  view: (TgpuTexture & Render) | GPUTextureView;
+  /**
+   * Indicates the depth slice index of {@link GPUTextureViewDimension#"3d"} {@link GPURenderPassColorAttachment#view}
+   * that will be output to for this color attachment.
+   */
+  depthSlice?: GPUIntegerCoordinate;
+  /**
+   * A {@link GPUTextureView} describing the texture subresource that will receive the resolved
+   * output for this color attachment if {@link GPURenderPassColorAttachment#view} is
+   * multisampled.
+   */
+  resolveTarget?: GPUTextureView;
+  /**
+   * Indicates the value to clear {@link GPURenderPassColorAttachment#view} to prior to executing the
+   * render pass. If not map/exist|provided, defaults to `{r: 0, g: 0, b: 0, a: 0}`. Ignored
+   * if {@link GPURenderPassColorAttachment#loadOp} is not {@link GPULoadOp#"clear"}.
+   * The components of {@link GPURenderPassColorAttachment#clearValue} are all double values.
+   * They are converted [$to a texel value of texture format$] matching the render attachment.
+   * If conversion fails, a validation error is generated.
+   */
+  clearValue?: GPUColor;
+  /**
+   * Indicates the load operation to perform on {@link GPURenderPassColorAttachment#view} prior to
+   * executing the render pass.
+   * Note: It is recommended to prefer clearing; see {@link GPULoadOp#"clear"} for details.
+   */
+  loadOp: GPULoadOp;
+  /**
+   * The store operation to perform on {@link GPURenderPassColorAttachment#view}
+   * after executing the render pass.
+   */
+  storeOp: GPUStoreOp;
+}
+
+export type AnyFragmentColorAttachment =
+  | ColorAttachment
+  | Record<string, ColorAttachment>;
 
 export function INTERNAL_createRenderPipeline(
   branch: ExperimentalTgpuRoot,
   vertexAttribs: AnyVertexAttribs,
   vertexFn: TgpuVertexFn,
   fragmentFn: TgpuFragmentFn,
+  targets: AnyFragmentTargets,
 ) {
   return new TgpuRenderPipelineImpl(
-    new RenderPipelineCore(branch, vertexAttribs, vertexFn, fragmentFn),
+    new RenderPipelineCore(
+      branch,
+      vertexAttribs,
+      vertexFn,
+      fragmentFn,
+      targets,
+    ),
     {},
   );
 }
@@ -92,6 +143,7 @@ type TgpuRenderPipelinePriors = {
   readonly bindGroupLayoutMap?:
     | Map<TgpuBindGroupLayout, TgpuBindGroup>
     | undefined;
+  readonly colorAttachment?: AnyFragmentColorAttachment | undefined;
 };
 
 type Memo = {
@@ -131,17 +183,17 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   ): TgpuRenderPipeline {
     if (isBindGroupLayout(definition)) {
       return new TgpuRenderPipelineImpl(this._core, {
+        ...this._priors,
         bindGroupLayoutMap: new Map([
           ...(this._priors.bindGroupLayoutMap ?? []),
           [definition, resource as TgpuBindGroup],
         ]),
-        vertexLayoutMap: this._priors.vertexLayoutMap,
       });
     }
 
     if (isVertexLayout(definition)) {
       return new TgpuRenderPipelineImpl(this._core, {
-        bindGroupLayoutMap: this._priors.bindGroupLayoutMap,
+        ...this._priors,
         vertexLayoutMap: new Map([
           ...(this._priors.vertexLayoutMap ?? []),
           [definition, resource as TgpuBuffer<AnyTgpuData> & Vertex],
@@ -152,6 +204,15 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     throw new Error('Unsupported value passed into .with()');
   }
 
+  withColorAttachment(
+    attachment: AnyFragmentColorAttachment,
+  ): TgpuRenderPipeline {
+    return new TgpuRenderPipelineImpl(this._core, {
+      ...this._priors,
+      colorAttachment: attachment,
+    });
+  }
+
   draw(
     vertexCount: number,
     instanceCount?: number,
@@ -160,9 +221,23 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   ): void {
     const memo = this._core.unwrap();
 
+    const colorAttachments = connectAttachmentToShader(
+      this._core.fragmentFn.shell.returnType,
+      this._priors.colorAttachment ?? {},
+    ).map((attachment) => {
+      if (isTexture(attachment.view)) {
+        return {
+          ...attachment,
+          view: this._core.branch.unwrap(attachment.view).createView(),
+        };
+      }
+
+      return attachment;
+    }) as GPURenderPassColorAttachment[];
+
     const pass = this._core.branch.commandEncoder.beginRenderPass({
       label: this._core.label ?? '',
-      colorAttachments: [], // TODO: Add color attachments
+      colorAttachments,
     });
 
     pass.setPipeline(memo.pipeline);
@@ -183,7 +258,16 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       idx++;
     }
 
-    // pass.setVertexBuffer(); // TODO: Set vertex buffers
+    let vertexBufferIdx = 0;
+    for (const vertexLayout of this._core.usedVertexLayouts) {
+      const buffer = this._priors.vertexLayoutMap?.get(vertexLayout);
+      if (!buffer) {
+        throw new Error(
+          `Missing vertex buffer for layout '${vertexLayout.label ?? '<unnamed>'}'. Please provide it using pipeline.with(layout, buffer).(...)`,
+        );
+      }
+      pass.setVertexBuffer(vertexBufferIdx++, this._core.branch.unwrap(buffer));
+    }
 
     pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
     pass.end();
@@ -192,24 +276,31 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
 class RenderPipelineCore {
   public label: string | undefined;
-  public readonly vertexLayoutToIdxMap: Map<TgpuVertexLayout, number>;
+  public readonly usedVertexLayouts: TgpuVertexLayout[];
 
   private _memo: Memo | undefined;
   private readonly _vertexBufferLayouts: GPUVertexBufferLayout[];
+  private readonly _targets: GPUColorTargetState[];
 
   constructor(
     public readonly branch: ExperimentalTgpuRoot,
     private readonly _vertexAttribs: AnyVertexAttribs,
-    private readonly _vertexFn: TgpuVertexFn<IOLayout, IOLayout>,
-    private readonly _fragmentFn: TgpuFragmentFn<IOLayout, IOLayout<Vec4f>>,
+    public readonly vertexFn: TgpuVertexFn<IOLayout, IOLayout>,
+    public readonly fragmentFn: TgpuFragmentFn<IOLayout, IOLayout<Vec4f>>,
+    targets: AnyFragmentTargets,
   ) {
     const connectedAttribs = connectAttributesToShader(
-      this._vertexFn.shell.argTypes[0],
+      this.vertexFn.shell.argTypes[0],
       this._vertexAttribs,
     );
 
     this._vertexBufferLayouts = connectedAttribs.bufferDefinitions;
-    this.vertexLayoutToIdxMap = connectedAttribs.layoutToIdxMap;
+    this.usedVertexLayouts = connectedAttribs.usedVertexLayouts;
+
+    this._targets = connectTargetsToShader(
+      this.fragmentFn.shell.returnType,
+      targets,
+    );
   }
 
   public unwrap(): Memo {
@@ -218,8 +309,8 @@ class RenderPipelineCore {
       const { code, bindGroupLayouts, catchall } = resolve(
         {
           resolve: (ctx) => {
-            ctx.resolve(this._vertexFn);
-            ctx.resolve(this._fragmentFn);
+            ctx.resolve(this.vertexFn);
+            ctx.resolve(this.fragmentFn);
             return '';
           },
         },
@@ -251,7 +342,7 @@ class RenderPipelineCore {
           },
           fragment: {
             module,
-            targets: [], // TODO: Add targets
+            targets: this._targets,
           },
         }),
         bindGroupLayouts,

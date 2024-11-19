@@ -1,4 +1,4 @@
-import { getCustomLocation } from '../../data/attributes';
+import { getCustomLocation, isBuiltin } from '../../data/attributes';
 import type {
   AnyVertexAttribs,
   TgpuVertexAttrib,
@@ -11,7 +11,7 @@ import type {
 } from './vertexLayout';
 
 export interface ConnectAttributesToShaderResult {
-  layoutToIdxMap: Map<TgpuVertexLayout, number>;
+  usedVertexLayouts: TgpuVertexLayout[];
   bufferDefinitions: GPUVertexBufferLayout[];
 }
 
@@ -25,7 +25,7 @@ export function connectAttributesToShader(
   shaderInputLayout: IOLayout,
   attributes: AnyVertexAttribs,
 ): ConnectAttributesToShaderResult {
-  const layoutToIdxMap = new Map<TgpuVertexLayout, number>();
+  const usedVertexLayouts: TgpuVertexLayout[] = [];
 
   if (isBaseData(shaderInputLayout)) {
     // Expecting a single attribute, no record.
@@ -35,10 +35,10 @@ export function connectAttributesToShader(
       );
     }
 
-    layoutToIdxMap.set(attributes._layout, 0);
+    usedVertexLayouts.push(attributes._layout);
 
     return {
-      layoutToIdxMap,
+      usedVertexLayouts,
       bufferDefinitions: [
         {
           arrayStride: attributes._layout.stride,
@@ -61,24 +61,29 @@ export function connectAttributesToShader(
     GPUVertexAttribute[]
   >();
   let nextShaderLocation = 0;
-  let nextLayoutIdx = 0;
 
   for (const [key, member] of Object.entries(
     shaderInputLayout as Record<string, IOData>,
   )) {
+    if (isBuiltin(member)) {
+      continue;
+    }
+
     const matchingAttribute = (attributes as Record<string, TgpuVertexAttrib>)[
       key
     ] as (TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib) | undefined;
 
     if (!matchingAttribute) {
-      throw new Error(`An attribute by the name of '${key}' was not provided.`);
+      throw new Error(
+        `An attribute by the name of '${key}' was not provided to the shader.`,
+      );
     }
 
     const layout = matchingAttribute._layout;
     let attribList = layoutToAttribListMap.get(layout);
     if (!attribList) {
       // First time seeing this layout
-      layoutToIdxMap.set(layout, nextLayoutIdx++);
+      usedVertexLayouts.push(layout);
 
       attribList = [];
       bufferDefinitions.push({
@@ -98,5 +103,5 @@ export function connectAttributesToShader(
     });
   }
 
-  return { layoutToIdxMap, bufferDefinitions };
+  return { usedVertexLayouts, bufferDefinitions };
 }

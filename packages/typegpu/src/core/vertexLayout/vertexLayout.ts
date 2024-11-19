@@ -3,6 +3,7 @@ import { isDecorated, isLooseDecorated } from '../../data/attributes';
 import { getCustomAlignment } from '../../data/attributes';
 import { isLooseStructSchema, isStructSchema } from '../../data/struct';
 import { roundUp } from '../../mathUtils';
+import type { TgpuNamable } from '../../namable';
 import {
   type TgpuVertexAttrib,
   type VertexFormat,
@@ -19,8 +20,10 @@ import type {
 // Public API
 // ----------
 
-export interface TgpuVertexLayout<TData extends TgpuBaseArray = TgpuBaseArray> {
+export interface TgpuVertexLayout<TData extends TgpuBaseArray = TgpuBaseArray>
+  extends TgpuNamable {
   readonly resourceType: 'vertex-layout';
+  readonly label?: string | undefined;
   readonly stride: number;
   readonly stepMode: 'vertex' | 'instance';
   readonly attrib: ArrayToContainedAttribs<TData>;
@@ -130,6 +133,8 @@ class TgpuVertexLayoutImpl<TData extends TgpuBaseArray>
   public readonly stride: number;
   public readonly attrib: ArrayToContainedAttribs<TData>;
 
+  private _label: string | undefined;
+
   constructor(
     public readonly schemaForCount: (count: number) => TData,
     public readonly stepMode: 'vertex' | 'instance',
@@ -139,5 +144,14 @@ class TgpuVertexLayoutImpl<TData extends TgpuBaseArray>
 
     this.stride = arraySchema.stride;
     this.attrib = dataToContainedAttribs(this, arraySchema.elementType, 0);
+  }
+
+  get label(): string | undefined {
+    return this._label;
+  }
+
+  $name(label?: string | undefined): this {
+    this._label = label;
+    return this;
   }
 }

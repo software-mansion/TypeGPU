@@ -35,6 +35,7 @@ import {
   isComputePipeline,
 } from '../pipeline/computePipeline';
 import {
+  type AnyFragmentTargets,
   INTERNAL_createRenderPipeline,
   type TgpuRenderPipeline,
 } from '../pipeline/renderPipeline';
@@ -81,12 +82,16 @@ class WithVertexImpl implements WithVertex {
     private readonly _vertexFn: TgpuVertexFn,
   ) {}
 
-  withFragment(entryFn: TgpuFragmentFn): WithFragment {
+  withFragment(
+    entryFn: TgpuFragmentFn,
+    targets: AnyFragmentTargets,
+  ): WithFragment {
     return new WithFragmentImpl(
       this._root,
       this._vertexAttribs,
       this._vertexFn,
       entryFn,
+      targets,
     );
   }
 }
@@ -97,6 +102,7 @@ class WithFragmentImpl implements WithFragment {
     private readonly _vertexAttribs: AnyVertexAttribs,
     private readonly _vertexFn: TgpuVertexFn,
     private readonly _fragmentFn: TgpuFragmentFn,
+    private readonly _targets: AnyFragmentTargets,
   ) {}
 
   createPipeline(): TgpuRenderPipeline {
@@ -105,6 +111,7 @@ class WithFragmentImpl implements WithFragment {
       this._vertexAttribs,
       this._vertexFn,
       this._fragmentFn,
+      this._targets,
     );
   }
 }
