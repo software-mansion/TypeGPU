@@ -191,7 +191,7 @@ const vertexFunction = tgpu
   .$name('vertex_main');
 
 const fragmentFunction = tgpu
-  .fragmentFn([], vec4f)
+  .fragmentFn([builtin.position], vec4f)
   .does(/* wgsl */ `(@builtin(position) position: vec4f) -> @location(0) vec4f {
   let minDim = f32(min(canvasDims.width, canvasDims.height));
 
