@@ -36,9 +36,9 @@ export interface TgpuFragmentFnShell<
 }
 
 export interface TgpuFragmentFn<
-  Varying extends IOLayout,
+  Varying extends IOLayout = IOLayout,
   // TODO: Allow only vec4fs, or arrays/objects of vec4fs
-  Output extends IOLayout,
+  Output extends IOLayout = IOLayout,
 > extends TgpuResolvable,
     TgpuNamable {
   readonly shell: TgpuFragmentFnShell<Varying, Output>;
@@ -68,7 +68,8 @@ export function fragmentFn<Varying extends IOLayout, Output extends IOLayout>(
     returnType: outputType,
 
     does(implementation): TgpuFragmentFn<Varying, Output> {
-      return createFragmentFn(this, implementation as Implementation);
+      // biome-ignore lint/suspicious/noExplicitAny: <its all good>
+      return createFragmentFn(this, implementation as Implementation) as any;
     },
   };
 }

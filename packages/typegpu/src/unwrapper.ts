@@ -1,5 +1,4 @@
 import type { TgpuBuffer } from './core/buffer/buffer';
-import type { TgpuExternalTexture } from './core/texture/externalTexture';
 import type {
   TgpuMutableTexture,
   TgpuReadonlyTexture,
@@ -12,9 +11,9 @@ import type { AnyTgpuData } from './types';
 
 export interface Unwrapper {
   readonly device: GPUDevice;
-  unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
+  unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
   unwrap(resource: TgpuTexture): GPUTexture;
   unwrap(
     resource:
@@ -23,5 +22,4 @@ export interface Unwrapper {
       | TgpuMutableTexture
       | TgpuSampledTexture,
   ): GPUTextureView;
-  unwrap(resource: TgpuExternalTexture): GPUExternalTexture;
 }

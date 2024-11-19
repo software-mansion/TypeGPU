@@ -1,110 +1,40 @@
 import type { Block } from 'tinyest';
-import type { TgpuBuffer } from './core/buffer/buffer';
-import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
-import {
-  isSampledTextureView,
-  isStorageTextureView,
-} from './core/texture/texture';
-import { MissingSlotValueError, ResolutionError, invariant } from './errors';
+import { MissingSlotValueError, ResolutionError } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
 import { generateFunction } from './smol';
+import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout';
 import type {
   AnyTgpuData,
-  BufferUsage,
   Eventual,
   FnToWgslOptions,
   ResolutionCtx,
   Resource,
   SlotValuePair,
-  TgpuRenderResource,
   TgpuResolvable,
   TgpuSlot,
   Wgsl,
 } from './types';
-import {
-  UnknownData,
-  isDepthTextureType,
-  isExternalTextureType,
-  isResolvable,
-  isSamplerType,
-  isSlot,
-} from './types';
+import { UnknownData, isResolvable, isSlot } from './types';
+
+/**
+ * Inserted into bind group entry definitions that belong
+ * to the automatically generated catch-all bind group.
+ *
+ * A non-occupied group index can only be determined after
+ * every resource has been resolved, so this acts as a placeholder
+ * to be replaced with an actual numeric index at the very end
+ * of the resolution process.
+ */
+const CATCHALL_BIND_GROUP_IDX_MARKER = '#CATCHALL#';
 
 export type ResolutionCtxImplOptions = {
   readonly names: NameRegistry;
-  readonly bindingGroup?: number;
   readonly jitTranspiler?: JitTranspiler | undefined;
 };
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
-
-const usageToVarTemplateMap: Record<Exclude<BufferUsage, 'vertex'>, string> = {
-  uniform: 'uniform',
-  mutable: 'storage, read_write',
-  readonly: 'storage, read',
-};
-
-class SharedResolutionState {
-  private _nextFreeBindingIdx = 0;
-  private _nextFreeVertexBindingIdx = 0;
-  private readonly _usedBindables = new Set<TgpuBufferUsage<AnyTgpuData>>();
-  private readonly _usedRenderResources = new Set<TgpuRenderResource>();
-  private readonly _resourceToIndexMap = new WeakMap<object, number>();
-  private readonly _vertexBufferToIndexMap = new WeakMap<
-    TgpuBufferUsage<AnyTgpuData>,
-    number
-  >();
-  private readonly _declarations: string[] = [];
-
-  constructor(
-    private readonly _bindingGroup: number,
-    public readonly jitTranspiler: JitTranspiler | undefined,
-  ) {}
-
-  get usedBindables(): Iterable<TgpuBufferUsage<AnyTgpuData>> {
-    return this._usedBindables;
-  }
-
-  get usedRenderResources(): Iterable<TgpuRenderResource> {
-    return this._usedRenderResources;
-  }
-
-  get declarations(): Iterable<string> {
-    return this._declarations;
-  }
-
-  reserveBindingEntry(bindable: TgpuBufferUsage<AnyTgpuData>) {
-    this._usedBindables.add(bindable);
-    const nextIdx = this._nextFreeBindingIdx++;
-    this._resourceToIndexMap.set(bindable, nextIdx);
-
-    return { group: this._bindingGroup, idx: nextIdx };
-  }
-
-  registerVertexEntry(bindable: TgpuBufferUsage<AnyTgpuData>) {
-    this._usedBindables.add(bindable);
-    const nextIdx = this._nextFreeVertexBindingIdx++;
-    this._vertexBufferToIndexMap.set(bindable, nextIdx);
-  }
-
-  reserveRenderResourceEntry(resource: TgpuRenderResource) {
-    this._usedRenderResources.add(resource);
-    const nextIdx = this._nextFreeBindingIdx++;
-    this._resourceToIndexMap.set(resource, nextIdx);
-
-    return { group: this._bindingGroup, idx: nextIdx };
-  }
-
-  getBindingIndex(resource: object) {
-    return this._resourceToIndexMap.get(resource);
-  }
-
-  addDeclaration(declaration: string) {
-    this._declarations.push(declaration);
-  }
-}
 
 type ItemLayer = {
   type: 'item';
@@ -224,7 +154,13 @@ class ItemStateStack {
           // TODO: Extract the type of the external value.
           return { value: external, dataType: UnknownData };
         }
-      } else if (layer?.type === 'blockScope') {
+
+        // Since functions cannot access resources from the calling scope, we
+        // return early here.
+        return undefined;
+      }
+
+      if (layer?.type === 'blockScope') {
         const declarationType = layer.declarations.get(id);
         if (declarationType !== undefined) {
           return { value: id, dataType: declarationType };
@@ -283,27 +219,32 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     { slotToValueMap: SlotToValueMap; result: string }[]
   >();
 
-  private readonly _shared: SharedResolutionState;
   private readonly _indentController = new IndentController();
+  private readonly _jitTranspiler: JitTranspiler | undefined;
+  private readonly _itemStateStack = new ItemStateStack();
+  private readonly _declarations: string[] = [];
 
-  private _itemStateStack = new ItemStateStack();
+  // -- Bindings
+  /**
+   * A map from registered bind group layouts to random strings put in
+   * place of their group index. The whole tree has to be traversed to
+   * collect every use of a typed bind group layout, since they can be
+   * explicitly imposed group indices, and they cannot collide.
+   */
+  public readonly bindGroupLayoutsToPlaceholderMap = new Map<
+    TgpuBindGroupLayout,
+    string
+  >();
+  private _nextFreeLayoutPlaceholderIdx = 0;
+  private _nextFreeCatchallBindingIdx = 0;
+  private readonly _boundToIndexMap = new WeakMap<object, number>();
+  // --
 
   public readonly names: NameRegistry;
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.names = opts.names;
-    this._shared = new SharedResolutionState(
-      opts.bindingGroup ?? 0,
-      opts.jitTranspiler,
-    );
-  }
-
-  get usedBindables() {
-    return this._shared.usedBindables;
-  }
-
-  get usedRenderResources() {
-    return this._shared.usedRenderResources;
+    this._jitTranspiler = opts.jitTranspiler;
   }
 
   get pre(): string {
@@ -334,13 +275,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     body: Block;
     externalNames: string[];
   } {
-    if (!this._shared.jitTranspiler) {
+    if (!this._jitTranspiler) {
       throw new Error(
         'Tried to execute a tgpu.fn function without providing a JIT transpiler, or transpiling at build time.',
       );
     }
 
-    return this._shared.jitTranspiler.transpileFn(fn);
+    return this._jitTranspiler.transpileFn(fn);
   }
 
   fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl } {
@@ -366,50 +307,29 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   addDeclaration(declaration: string): void {
-    this._shared.addDeclaration(declaration);
+    this._declarations.push(declaration);
   }
 
-  addBinding(bindable: TgpuBufferUsage<AnyTgpuData>, identifier: string): void {
-    if (bindable.usage === 'vertex') {
-      this._shared.registerVertexEntry(bindable);
-      return;
-    }
-    const { group, idx } = this._shared.reserveBindingEntry(bindable);
+  allocateLayoutEntry(layout: TgpuBindGroupLayout): string {
+    const memoMap = this.bindGroupLayoutsToPlaceholderMap;
+    let placeholderKey = memoMap.get(layout);
 
-    this.addDeclaration(
-      `@group(${group}) @binding(${idx}) var<${usageToVarTemplateMap[bindable.usage]}> ${identifier}: ${this.resolve((bindable.allocatable as TgpuBuffer<AnyTgpuData>).dataType)};`,
-    );
+    if (!placeholderKey) {
+      placeholderKey = `#BIND_GROUP_LAYOUT_${this._nextFreeLayoutPlaceholderIdx++}#`;
+      memoMap.set(layout, placeholderKey);
+    }
+
+    return placeholderKey;
   }
 
-  addRenderResource(resource: TgpuRenderResource, identifier: string): void {
-    const { group, idx } = this._shared.reserveRenderResourceEntry(resource);
+  allocateFixedEntry(resource: object): { group: string; binding: number } {
+    const nextIdx = this._nextFreeCatchallBindingIdx++;
+    this._boundToIndexMap.set(resource, nextIdx);
 
-    if (
-      isSamplerType(resource.type) ||
-      isExternalTextureType(resource.type) ||
-      isDepthTextureType(resource.type)
-    ) {
-      this.addDeclaration(
-        `@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type};`,
-      );
-      return;
-    }
-
-    if (isStorageTextureView(resource)) {
-      this.addDeclaration(
-        `@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.format}, ${resource.access}>;`,
-      );
-      return;
-    }
-
-    if (isSampledTextureView(resource)) {
-      this.addDeclaration(
-        `@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${this.resolve(resource.channelDataType)}>;`,
-      );
-      return;
-    }
-
-    throw new Error(`Unsupported resource type: ${resource.type}`);
+    return {
+      group: CATCHALL_BIND_GROUP_IDX_MARKER,
+      binding: nextIdx,
+    };
   }
 
   readSlot<T>(slot: TgpuSlot<T>): T {
@@ -494,7 +414,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     try {
       if (this._itemStateStack.itemDepth === 0) {
         const result = onGPU(() => this._getOrInstantiate(item));
-        return `${[...this._shared.declarations].join('\n\n')}${result}`;
+        return `${[...this._declarations].join('\n\n')}${result}`;
       }
 
       return this._getOrInstantiate(item);
@@ -503,12 +423,5 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         this._itemStateStack.pop();
       }
     }
-  }
-
-  getIndexFor(item: object) {
-    const index = this._shared.getBindingIndex(item);
-    invariant(index !== undefined, 'No index found for item');
-
-    return index;
   }
 }
