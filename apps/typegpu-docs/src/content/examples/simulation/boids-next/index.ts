@@ -229,7 +229,7 @@ const mainCompute = tgpu
     var cohesion = vec2(0.0, 0.0);
     var cohesionCount = 0u;
     
-    for (var i = 0u; i < ${triangleAmount}; i = i + 1) {
+    for (var i = 0u; i < arrayLength(&currentTrianglePos); i = i + 1) {
       if (i == index) {
         continue;
       }
@@ -258,7 +258,7 @@ const mainCompute = tgpu
       + (alignment * params.alignmentStrength)
       + (cohesion * params.cohesionStrength);
     instanceInfo.velocity = normalize(instanceInfo.velocity) * clamp(length(instanceInfo.velocity), 0.0, 0.01);
-    let triangleSize = ${triangleSize};
+    
     if (instanceInfo.position[0] > 1.0 + triangleSize) {
       instanceInfo.position[0] = -1.0 - triangleSize;
     }
@@ -274,7 +274,7 @@ const mainCompute = tgpu
     instanceInfo.position += instanceInfo.velocity;
     nextTrianglePos[index] = instanceInfo;
   }`)
-  .$uses({ currentTrianglePos, nextTrianglePos, params });
+  .$uses({ currentTrianglePos, nextTrianglePos, params, triangleSize });
 
 const computePipeline = root.withCompute(mainCompute).createPipeline();
 
