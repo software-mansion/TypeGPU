@@ -1,5 +1,5 @@
 import { arrayOf, f32, struct, vec2f, vec3f, vec4f } from 'typegpu/data';
-import tgpu, { builtin } from 'typegpu/experimental';
+import tgpu, { asUniform, builtin } from 'typegpu/experimental';
 
 const triangleAmount = 1000;
 const triangleSize = 0.03;
@@ -39,11 +39,8 @@ const VertexOutput = {
 };
 
 const mainVert = tgpu
-  .vertexFn(
-    { ii: builtin.instanceIndex, v: vec2f, center: vec2f, velocity: vec2f },
-    VertexOutput,
-  )
-  .does(/* wgsl */ `(@builtin(instance_index) ii: u32, @location(0) v: vec2f, @location(1) center: vec2f, @location(2) velocity: vec2f) -> VertexOutput {
+  .vertexFn({ v: vec2f, center: vec2f, velocity: vec2f }, VertexOutput)
+  .does(/* wgsl */ `(@location(0) v: vec2f, @location(1) center: vec2f, @location(2) velocity: vec2f) -> VertexOutput {
     let angle = getRotationFromVelocity(velocity);
     let rotated = rotate(v, angle);
 
@@ -131,13 +128,6 @@ const presets = {
   },
 } as const;
 
-if (!navigator.gpu) {
-  throw new Error('WebGPU is not supported by this browser.');
-}
-const adapter = await navigator.gpu.requestAdapter();
-if (!adapter) {
-  throw new Error('Could not find a compatible GPU.');
-}
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -161,7 +151,8 @@ const Params = struct({
 
 const paramsBuffer = root
   .createBuffer(Params, presets.default)
-  .$usage('storage');
+  .$usage('uniform');
+const params = asUniform(paramsBuffer);
 
 const triangleVertexBuffer = root
   .createBuffer(arrayOf(vec2f, 3), [
@@ -222,12 +213,10 @@ const computeBindGroupLayout = tgpu
       storage: TriangleDataArray,
       access: 'mutable',
     },
-    params: { storage: Params },
   })
   .$name('compute');
 
-const { currentTrianglePos, nextTrianglePos, params } =
-  computeBindGroupLayout.bound;
+const { currentTrianglePos, nextTrianglePos } = computeBindGroupLayout.bound;
 
 const mainCompute = tgpu
   .computeFn([1])
@@ -300,7 +289,6 @@ const computeBindGroups = [0, 1].map((idx) =>
   computeBindGroupLayout.populate({
     currentTrianglePos: trianglePosBuffers[idx],
     nextTrianglePos: trianglePosBuffers[1 - idx],
-    params: paramsBuffer,
   }),
 );
 
