@@ -166,7 +166,7 @@ export function ControlPanel() {
     <div
       className={cs(
         isGPUSupported ? '' : 'hidden md:flex',
-        'box-border flex flex-col gap-4 p-6 bg-grayscale-0 rounded-xl max-h-[50%] md:max-h-full',
+        'box-border flex flex-col gap-4 p-6 bg-grayscale-0 rounded-xl max-h-[50%] md:max-h-full overflow-auto',
       )}
     >
       <div className="hidden md:flex flex-col gap-4">

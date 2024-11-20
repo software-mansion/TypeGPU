@@ -1,14 +1,7 @@
-// @ts-nocheck
-// TODO: Reenable type checking when new pipelines are implemented.
-
 import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'typegpu/data';
-import tgpu, {
-  asReadonly,
-  asUniform,
-  builtin,
-  std,
-  wgsl,
-} from 'typegpu/experimental';
+import tgpu, { std, builtin } from 'typegpu/experimental';
+
+// init canvas and values
 
 const X = 7;
 const Y = 7;
@@ -18,10 +11,8 @@ const MAX_BOX_SIZE = 15;
 const cubeSize = vec3f(X * MAX_BOX_SIZE, Y * MAX_BOX_SIZE, Z * MAX_BOX_SIZE);
 const boxCenter = std.mul(0.5, cubeSize);
 const upAxis = vec3f(0, 1, 0);
-
 let rotationSpeed = 2;
 let cameraDistance = 250;
-let boxSize = MAX_BOX_SIZE;
 
 let frame = 0;
 
@@ -37,25 +28,41 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const boxStruct = struct({
+// structs
+
+const BoxStruct = struct({
   isActive: u32,
   albedo: vec4f,
 });
 
-const rayStruct = struct({
+const RayStruct = struct({
   origin: vec3f,
   direction: vec3f,
 });
 
-const intersectionStruct = struct({
+const IntersectionStruct = struct({
   intersects: bool,
   tMin: f32,
   tMax: f32,
 });
 
+const CameraAxesStruct = struct({
+  right: vec3f,
+  up: vec3f,
+  forward: vec3f,
+});
+
+const VertexOutput = struct({
+  outPos: builtin.position,
+});
+
+const CanvasDimsStruct = struct({ width: u32, height: u32 });
+
+// buffers
+
 const boxMatrixBuffer = root
   .createBuffer(
-    arrayOf(arrayOf(arrayOf(boxStruct, Z), Y), X),
+    arrayOf(arrayOf(arrayOf(BoxStruct, Z), Y), X),
     Array.from({ length: X }, (_, i) =>
       Array.from({ length: Y }, (_, j) =>
         Array.from({ length: Z }, (_, k) => ({
@@ -67,44 +74,37 @@ const boxMatrixBuffer = root
   )
   .$name('box_array')
   .$usage('storage');
-const boxMatrixData = asReadonly(boxMatrixBuffer);
 
 const cameraPositionBuffer = root
   .createBuffer(vec3f)
   .$name('camera_position')
   .$usage('storage');
-const cameraPositionData = asReadonly(cameraPositionBuffer);
 
 const cameraAxesBuffer = root
-  .createBuffer(
-    struct({
-      right: vec3f,
-      up: vec3f,
-      forward: vec3f,
-    }),
-  )
+  .createBuffer(CameraAxesStruct)
   .$name('camera_axes')
   .$usage('storage');
-const cameraAxesData = asReadonly(cameraAxesBuffer);
 
 const canvasDimsBuffer = root
-  .createBuffer(struct({ width: u32, height: u32 }))
+  .createBuffer(CanvasDimsStruct)
   .$name('canvas_dims')
   .$usage('uniform');
-const canvasDimsData = asUniform(canvasDimsBuffer);
 
 const boxSizeBuffer = root
-  .createBuffer(u32, boxSize)
+  .createBuffer(u32, MAX_BOX_SIZE)
   .$name('box_size')
   .$usage('uniform');
-const boxSizeData = asUniform(boxSizeBuffer);
 
-const getBoxIntersectionFn = wgsl.fn`(
+// functions
+
+const getBoxIntersection = tgpu
+  .fn([vec3f, vec3f, RayStruct], IntersectionStruct)
+  .does(/* wgsl */ `(
   boundMin: vec3f,
   boundMax: vec3f,
-  ray: ${rayStruct}
-) -> ${intersectionStruct} {
-  var output: ${intersectionStruct};
+  ray: RayStruct
+) -> IntersectionStruct {
+  var output: IntersectionStruct;
 
   var tMin: f32;
   var tMax: f32;
@@ -166,90 +166,152 @@ const getBoxIntersectionFn = wgsl.fn`(
   output.tMax = tMax;
   return output;
 }
-`.$name('box_intersection');
+`)
+  .$uses({ RayStruct, IntersectionStruct })
+  .$name('box_intersection');
 
-const renderPipeline = root.makeRenderPipeline({
-  vertex: {
-    code: wgsl`
-    var pos = array<vec2f, 6>(
-      vec2<f32>( 1,  1),
-      vec2<f32>( 1, -1),
-      vec2<f32>(-1, -1),
-      vec2<f32>( 1,  1),
-      vec2<f32>(-1, -1),
-      vec2<f32>(-1,  1)
-    );
+const vertexFunction = tgpu
+  .vertexFn([builtin.vertexIndex], VertexOutput)
+  .does(/* wgsl */ `(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+  var pos = array<vec2f, 6>(
+    vec2<f32>( 1,  1),
+    vec2<f32>( 1, -1),
+    vec2<f32>(-1, -1),
+    vec2<f32>( 1,  1),
+    vec2<f32>(-1, -1),
+    vec2<f32>(-1,  1)
+  );
 
-    let outPos = vec4f(pos[${builtin.vertexIndex}], 0, 1);
-  `,
-    output: {
-      [builtin.position.s]: 'outPos',
-    },
-  },
+  let outPos = vec4f(pos[vertexIndex], 0, 1);
+  var output: VertexOutput;
+  output.outPos = outPos;  
+  return output;
+}`)
+  .$uses({ VertexOutput })
+  .$name('vertex_main');
 
-  fragment: {
-    code: wgsl`
-    let minDim = f32(min(${canvasDimsData}.width, ${canvasDimsData}.height));
+const fragmentFunction = tgpu
+  .fragmentFn([builtin.position], vec4f)
+  .does(/* wgsl */ `(@builtin(position) position: vec4f) -> @location(0) vec4f {
+  let minDim = f32(min(canvasDims.width, canvasDims.height));
 
-    var ray: ${rayStruct};
-    ray.origin = ${cameraPositionData};
-    ray.direction += ${cameraAxesData}.right * (${builtin.position}.x - f32(${canvasDimsData}.width)/2)/minDim;
-    ray.direction += ${cameraAxesData}.up * (${builtin.position}.y - f32(${canvasDimsData}.height)/2)/minDim;
-    ray.direction += ${cameraAxesData}.forward;
-    ray.direction = normalize(ray.direction);
+  var ray: RayStruct;
+  ray.origin = cameraPosition;
+  ray.direction += cameraAxes.right * (position.x - f32(canvasDims.width)/2)/minDim;
+  ray.direction += cameraAxes.up * (position.y - f32(canvasDims.height)/2)/minDim;
+  ray.direction += cameraAxes.forward;
+  ray.direction = normalize(ray.direction);
 
-    let bigBoxIntersection = ${getBoxIntersectionFn}(
-      -vec3f(f32(${boxSizeData}))/2,
-      vec3f(
-        ${cubeSize.x},
-        ${cubeSize.y},
-        ${cubeSize.z},
-      ) + vec3f(f32(${boxSizeData}))/2,
-      ray,
-    );
+  let bigBoxIntersection = getBoxIntersection(
+    -vec3f(f32(boxSize))/2,
+    vec3f(
+      cubeSize.x,
+      cubeSize.y,
+      cubeSize.z,
+    ) + vec3f(f32(boxSize))/2,
+    ray,
+  );
 
-    var color = vec4f(0);
+  var color = vec4f(0);
 
-    if bigBoxIntersection.intersects {
-      var tMin: f32;
-      var intersectionFound = false;
+  if bigBoxIntersection.intersects {
+    var tMin: f32;
+    var intersectionFound = false;
 
-      for (var i = 0; i < ${X}; i = i+1) {
-        for (var j = 0; j < ${Y}; j = j+1) {
-          for (var k = 0; k < ${Z}; k = k+1) {
-            if ${boxMatrixData}[i][j][k].isActive == 0 {
-              continue;
-            }
+    for (var i = 0; i < X; i = i+1) {
+      for (var j = 0; j < Y; j = j+1) {
+        for (var k = 0; k < Z; k = k+1) {
+          if boxMatrix[i][j][k].isActive == 0 {
+            continue;
+          }
 
-            let intersection = ${getBoxIntersectionFn}(
-              vec3f(f32(i), f32(j), f32(k)) * ${MAX_BOX_SIZE} - vec3f(f32(${boxSizeData}))/2,
-              vec3f(f32(i), f32(j), f32(k)) * ${MAX_BOX_SIZE} + vec3f(f32(${boxSizeData}))/2,
-              ray,
-            );
+          let intersection = getBoxIntersection(
+            vec3f(f32(i), f32(j), f32(k)) * MAX_BOX_SIZE - vec3f(f32(boxSize))/2,
+            vec3f(f32(i), f32(j), f32(k)) * MAX_BOX_SIZE + vec3f(f32(boxSize))/2,
+            ray,
+          );
 
-            if intersection.intersects && (!intersectionFound || intersection.tMin < tMin) {
-              color = ${boxMatrixData}[i][j][k].albedo;
-              tMin = intersection.tMin;
-              intersectionFound = true;
-            }
+          if intersection.intersects && (!intersectionFound || intersection.tMin < tMin) {
+            color = boxMatrix[i][j][k].albedo;
+            tMin = intersection.tMin;
+            intersectionFound = true;
           }
         }
       }
     }
+  }
 
-    return color;
-  `,
-    target: [
-      {
-        format: presentationFormat,
-      },
-    ],
-  },
+  return color;
+}`)
+  .$uses({
+    RayStruct,
+    getBoxIntersection,
+    X,
+    Y,
+    Z,
+    MAX_BOX_SIZE,
+    cubeSize,
+  })
+  .$name('fragment_main');
 
-  primitive: {
-    topology: 'triangle-strip',
+// bind groups and layouts
+
+const renderBindGroupLayout = tgpu.bindGroupLayout({
+  boxMatrix: { storage: boxMatrixBuffer.dataType },
+  cameraPosition: { storage: cameraPositionBuffer.dataType },
+  cameraAxes: { storage: cameraAxesBuffer.dataType },
+  canvasDims: { uniform: canvasDimsBuffer.dataType },
+  boxSize: { uniform: boxSizeBuffer.dataType },
+});
+
+const renderBindGroup = renderBindGroupLayout.populate({
+  boxMatrix: boxMatrixBuffer,
+  cameraPosition: cameraPositionBuffer,
+  cameraAxes: cameraAxesBuffer,
+  canvasDims: canvasDimsBuffer,
+  boxSize: boxSizeBuffer,
+});
+
+// pipeline
+
+const resolved = tgpu.resolve({
+  input: [
+    `\
+@group(0) @binding(0) var<storage, read> boxMatrix: array<array<array<BoxStruct, Z>, Y>, X>;
+@group(0) @binding(1) var<storage, read> cameraPosition: vec3f;
+@group(0) @binding(2) var<storage, read> cameraAxes: CameraAxesStruct;
+@group(0) @binding(3) var<uniform> canvasDims: CanvasDimsStruct;
+@group(0) @binding(4) var<uniform> boxSize: u32;`,
+    vertexFunction,
+    fragmentFunction,
+  ],
+  extraDependencies: {
+    CanvasDimsStruct,
+    BoxStruct,
+    CameraAxesStruct,
+    X,
+    Y,
+    Z,
   },
 });
+
+const resolvedModule = root.device.createShaderModule({
+  code: resolved,
+});
+
+const pipeline = root.device.createRenderPipeline({
+  layout: root.device.createPipelineLayout({
+    bindGroupLayouts: [root.unwrap(renderBindGroupLayout)],
+  }),
+  vertex: { module: resolvedModule },
+  fragment: {
+    module: resolvedModule,
+    targets: [{ format: presentationFormat }],
+  },
+  primitive: { topology: 'triangle-strip' },
+});
+
+// UI
 
 let disposed = false;
 
@@ -280,7 +342,6 @@ onFrame((deltaTime) => {
 
   const cameraAxes = (() => {
     const forwardAxis = std.normalize(std.sub(boxCenter, cameraPosition));
-
     return {
       forward: forwardAxis,
       up: upAxis,
@@ -296,7 +357,9 @@ onFrame((deltaTime) => {
 
   const textureView = context.getCurrentTexture().createView();
 
-  renderPipeline.execute({
+  const commandEncoder = root.device.createCommandEncoder();
+
+  const renderPassDescriptor: GPURenderPassDescriptor = {
     colorAttachments: [
       {
         view: textureView,
@@ -305,17 +368,19 @@ onFrame((deltaTime) => {
         storeOp: 'store',
       },
     ],
-    vertexCount: 6,
-  });
+  };
+  const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+  passEncoder.setPipeline(pipeline);
+  passEncoder.setBindGroup(0, root.unwrap(renderBindGroup));
+  passEncoder.draw(6);
+  passEncoder.end();
+
+  root.device.queue.submit([commandEncoder.finish()]);
 
   root.flush();
 });
 
-export function onCleanup() {
-  disposed = true;
-  root.destroy();
-  root.device.destroy();
-}
+// #region Example controls and cleanup
 
 export const controls = {
   'rotation speed': {
@@ -337,11 +402,19 @@ export const controls = {
   },
 
   'box size': {
-    initial: boxSize,
+    initial: MAX_BOX_SIZE,
     min: 1,
     max: MAX_BOX_SIZE,
     onSliderChange: (value: number) => {
-      boxSize = value;
+      boxSizeBuffer.write(value);
     },
   },
 };
+
+export function onCleanup() {
+  disposed = true;
+  root.destroy();
+  root.device.destroy();
+}
+
+// #endregion
