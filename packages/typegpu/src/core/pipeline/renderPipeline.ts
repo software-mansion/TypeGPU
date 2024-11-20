@@ -92,7 +92,7 @@ export interface ColorAttachment {
    * render pass. If not map/exist|provided, defaults to `{r: 0, g: 0, b: 0, a: 0}`. Ignored
    * if {@link GPURenderPassColorAttachment#loadOp} is not {@link GPULoadOp#"clear"}.
    * The components of {@link GPURenderPassColorAttachment#clearValue} are all double values.
-   * They are converted [$to a texel value of texture format$] matching the render attachment.
+   * They are converted to a texel value of texture format matching the render attachment.
    * If conversion fails, a validation error is generated.
    */
   clearValue?: GPUColor;
@@ -242,8 +242,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     pass.setPipeline(memo.pipeline);
 
-    let idx = 0;
-    for (const layout of memo.bindGroupLayouts) {
+    memo.bindGroupLayouts.forEach((layout, idx) => {
       if (idx === memo.catchall[0]) {
         // Catch-all
         pass.setBindGroup(idx, this._core.branch.unwrap(memo.catchall[1]));
@@ -254,20 +253,17 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
         }
         pass.setBindGroup(idx, this._core.branch.unwrap(bindGroup));
       }
+    });
 
-      idx++;
-    }
-
-    let vertexBufferIdx = 0;
-    for (const vertexLayout of this._core.usedVertexLayouts) {
+    this._core.usedVertexLayouts.forEach((vertexLayout, idx) => {
       const buffer = this._priors.vertexLayoutMap?.get(vertexLayout);
       if (!buffer) {
         throw new Error(
           `Missing vertex buffer for layout '${vertexLayout.label ?? '<unnamed>'}'. Please provide it using pipeline.with(layout, buffer).(...)`,
         );
       }
-      pass.setVertexBuffer(vertexBufferIdx++, this._core.branch.unwrap(buffer));
-    }
+      pass.setVertexBuffer(idx, this._core.branch.unwrap(buffer));
+    });
 
     pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
     pass.end();

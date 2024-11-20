@@ -462,8 +462,8 @@ export function resolve(
 
   const automaticIds = naturalsExcept(takenIndices);
 
-  // Retrieving the catch-all binding index first, because its inherently the least
-  // swapped bind group (fixed and cannot be swapped).
+  // Retrieving the catch-all binding index first, because it's inherently
+  // the least swapped bind group (fixed and cannot be swapped).
   const catchallIdx = automaticIds.next().value;
 
   for (const [layout, placeholder] of memoMap.entries()) {
@@ -489,7 +489,7 @@ export function resolve(
         Object.fromEntries(
           ctx.fixedBindings.map(
             (binding, idx) =>
-              // biome-ignore lint/suspicious/noExplicitAny: <its fine>
+              // biome-ignore lint/suspicious/noExplicitAny: <it's fine>
               [String(idx), binding.resource] as [string, any],
           ),
         ),

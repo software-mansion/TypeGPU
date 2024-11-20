@@ -198,7 +198,8 @@ const renderPipeline = root
   .withFragment(mainFrag, {
     format: presentationFormat,
   })
-  .createPipeline();
+  .createPipeline()
+  .with(vertexLayout, triangleVertexBuffer);
 
 const computeBindGroupLayout = tgpu
   .bindGroupLayout({
@@ -307,7 +308,6 @@ function frame() {
       loadOp: 'clear' as const,
       storeOp: 'store' as const,
     })
-    .with(vertexLayout, triangleVertexBuffer)
     .with(instanceLayout, trianglePosBuffers[even ? 1 : 0])
     .with(renderBindGroupLayout, renderBindGroups[even ? 1 : 0])
     .draw(3, triangleAmount);

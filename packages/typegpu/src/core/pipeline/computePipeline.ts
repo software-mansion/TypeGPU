@@ -105,8 +105,7 @@ class TgpuComputePipelineImpl
 
     pass.setPipeline(memo.pipeline);
 
-    let idx = 0;
-    for (const layout of memo.bindGroupLayouts) {
+    memo.bindGroupLayouts.forEach((layout, idx) => {
       if (idx === memo.catchall[0]) {
         // Catch-all
         pass.setBindGroup(idx, this._core.branch.unwrap(memo.catchall[1]));
@@ -117,9 +116,7 @@ class TgpuComputePipelineImpl
         }
         pass.setBindGroup(idx, this._core.branch.unwrap(bindGroup));
       }
-
-      idx++;
-    }
+    });
 
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
