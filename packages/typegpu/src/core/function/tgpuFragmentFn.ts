@@ -70,8 +70,7 @@ export function fragmentFn<
     returnType: outputType,
 
     does(implementation): TgpuFragmentFn<Varying, Output> {
-      // biome-ignore lint/suspicious/noExplicitAny: <its all good>
-      return createFragmentFn(this, implementation as Implementation) as any;
+      return createFragmentFn(this, implementation as Implementation);
     },
   };
 }

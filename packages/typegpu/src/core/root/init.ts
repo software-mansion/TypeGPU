@@ -29,9 +29,9 @@ import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
 import {
+  type INTERNAL_TgpuComputePipeline,
   INTERNAL_createComputePipeline,
   type TgpuComputePipeline,
-  type TgpuComputePipeline_INTERNAL,
   isComputePipeline,
 } from '../pipeline/computePipeline';
 import {
@@ -241,7 +241,7 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     | GPUTexture
     | GPUTextureView {
     if (isComputePipeline(resource)) {
-      return (resource as unknown as TgpuComputePipeline_INTERNAL).rawPipeline;
+      return (resource as unknown as INTERNAL_TgpuComputePipeline).rawPipeline;
     }
 
     if (isBindGroupLayout(resource)) {

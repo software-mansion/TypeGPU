@@ -28,7 +28,7 @@ export interface TgpuComputePipeline extends TgpuNamable {
   ): void;
 }
 
-export interface TgpuComputePipeline_INTERNAL {
+export interface INTERNAL_TgpuComputePipeline {
   readonly rawPipeline: GPUComputePipeline;
 }
 
@@ -63,7 +63,7 @@ type Memo = {
 };
 
 class TgpuComputePipelineImpl
-  implements TgpuComputePipeline, TgpuComputePipeline_INTERNAL
+  implements TgpuComputePipeline, INTERNAL_TgpuComputePipeline
 {
   public readonly resourceType = 'compute-pipeline';
 
