@@ -171,7 +171,7 @@ const getBoxIntersection = tgpu
   .$name('box_intersection');
 
 const vertexFunction = tgpu
-  .vertexFn([builtin.vertexIndex], VertexOutput)
+  .vertexFn(builtin.vertexIndex, VertexOutput.properties)
   .does(/* wgsl */ `(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
   var pos = array<vec2f, 6>(
     vec2<f32>( 1,  1),
@@ -182,16 +182,15 @@ const vertexFunction = tgpu
     vec2<f32>(-1,  1)
   );
 
-  let outPos = vec4f(pos[vertexIndex], 0, 1);
   var output: VertexOutput;
-  output.outPos = outPos;  
+  output.outPos = vec4f(pos[vertexIndex], 0, 1);
   return output;
 }`)
   .$uses({ VertexOutput })
   .$name('vertex_main');
 
 const fragmentFunction = tgpu
-  .fragmentFn([builtin.position], vec4f)
+  .fragmentFn(builtin.position, vec4f)
   .does(/* wgsl */ `(@builtin(position) position: vec4f) -> @location(0) vec4f {
   let minDim = f32(min(canvasDims.width, canvasDims.height));
 
