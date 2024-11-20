@@ -44,5 +44,7 @@ export function resolve(options: TgpuResolveOptions): string {
     },
   };
 
-  return context.resolve(resolutionObj);
+  return context
+    .resolve(resolutionObj)
+    .replaceAll('#BIND_GROUP_LAYOUT_0#', '0'); // TODO: replace with an actual implementation
 }

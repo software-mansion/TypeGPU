@@ -6,6 +6,7 @@ import type {
   AnyTgpuData,
   BindableBufferUsage,
   ResolutionCtx,
+  TgpuResolvable,
 } from '../../types';
 import { type TgpuBuffer, type Uniform, isUsableAsUniform } from './buffer';
 
@@ -16,7 +17,7 @@ import { type TgpuBuffer, type Uniform, isUsableAsUniform } from './buffer';
 export interface TgpuBufferUsage<
   TData extends AnyTgpuData,
   TUsage extends BindableBufferUsage = BindableBufferUsage,
-> {
+> extends TgpuResolvable {
   readonly resourceType: 'buffer-usage';
   readonly usage: TUsage;
   value: Unwrap<TData>;

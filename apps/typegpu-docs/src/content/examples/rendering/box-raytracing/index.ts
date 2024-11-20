@@ -95,6 +95,24 @@ const boxSizeBuffer = root
   .$name('box_size')
   .$usage('uniform');
 
+// bind groups and layouts
+
+const renderBindGroupLayout = tgpu.bindGroupLayout({
+  boxMatrix: { storage: boxMatrixBuffer.dataType },
+  cameraPosition: { storage: cameraPositionBuffer.dataType },
+  cameraAxes: { storage: cameraAxesBuffer.dataType },
+  canvasDims: { uniform: canvasDimsBuffer.dataType },
+  boxSize: { uniform: boxSizeBuffer.dataType },
+});
+
+const renderBindGroup = renderBindGroupLayout.populate({
+  boxMatrix: boxMatrixBuffer,
+  cameraPosition: cameraPositionBuffer,
+  cameraAxes: cameraAxesBuffer,
+  canvasDims: canvasDimsBuffer,
+  boxSize: boxSizeBuffer,
+});
+
 // functions
 
 const getBoxIntersection = tgpu
@@ -243,6 +261,7 @@ const fragmentFunction = tgpu
   return color;
 }`)
   .$uses({
+    ...renderBindGroupLayout.bound,
     RayStruct,
     getBoxIntersection,
     X,
@@ -253,46 +272,21 @@ const fragmentFunction = tgpu
   })
   .$name('fragment_main');
 
-// bind groups and layouts
-
-const renderBindGroupLayout = tgpu.bindGroupLayout({
-  boxMatrix: { storage: boxMatrixBuffer.dataType },
-  cameraPosition: { storage: cameraPositionBuffer.dataType },
-  cameraAxes: { storage: cameraAxesBuffer.dataType },
-  canvasDims: { uniform: canvasDimsBuffer.dataType },
-  boxSize: { uniform: boxSizeBuffer.dataType },
-});
-
-const renderBindGroup = renderBindGroupLayout.populate({
-  boxMatrix: boxMatrixBuffer,
-  cameraPosition: cameraPositionBuffer,
-  cameraAxes: cameraAxesBuffer,
-  canvasDims: canvasDimsBuffer,
-  boxSize: boxSizeBuffer,
-});
-
 // pipeline
 
-const resolved = tgpu.resolve({
-  input: [
-    `\
-@group(0) @binding(0) var<storage, read> boxMatrix: array<array<array<BoxStruct, Z>, Y>, X>;
-@group(0) @binding(1) var<storage, read> cameraPosition: vec3f;
-@group(0) @binding(2) var<storage, read> cameraAxes: CameraAxesStruct;
-@group(0) @binding(3) var<uniform> canvasDims: CanvasDimsStruct;
-@group(0) @binding(4) var<uniform> boxSize: u32;`,
-    vertexFunction,
-    fragmentFunction,
-  ],
-  extraDependencies: {
-    CanvasDimsStruct,
-    BoxStruct,
-    CameraAxesStruct,
-    X,
-    Y,
-    Z,
-  },
-});
+const resolved = tgpu
+  .resolve({
+    input: [vertexFunction, fragmentFunction],
+    extraDependencies: {
+      ...renderBindGroupLayout.bound,
+      CanvasDimsStruct,
+      BoxStruct,
+      CameraAxesStruct,
+      X,
+      Y,
+      Z,
+    },
+  })
 
 const resolvedModule = root.device.createShaderModule({
   code: resolved,
