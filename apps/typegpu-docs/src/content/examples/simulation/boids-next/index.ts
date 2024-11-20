@@ -1,4 +1,12 @@
-import { arrayOf, f32, struct, vec2f, vec3f, vec4f } from 'typegpu/data';
+import {
+  type Parsed,
+  arrayOf,
+  f32,
+  struct,
+  vec2f,
+  vec3f,
+  vec4f,
+} from 'typegpu/data';
 import tgpu, { asUniform, builtin } from 'typegpu/experimental';
 
 const triangleAmount = 1000;
@@ -64,18 +72,22 @@ const mainVert = tgpu
     },
   });
 
-const mainFrag = tgpu.fragmentFn(VertexOutput, vec4f).does(/* wgsl */ `(@location(0) color : vec4f) -> @location(0) vec4f {
+const mainFrag = tgpu.fragmentFn(VertexOutput, vec4f).does(/* wgsl */ `
+  (@location(0) color: vec4f) -> @location(0) vec4f {
     return color;
-  }`);
+  }
+`);
 
-type BoidsOptions = {
-  separationDistance: number;
-  separationStrength: number;
-  alignmentDistance: number;
-  alignmentStrength: number;
-  cohesionDistance: number;
-  cohesionStrength: number;
-};
+const Params = struct({
+  separationDistance: f32,
+  separationStrength: f32,
+  alignmentDistance: f32,
+  alignmentStrength: f32,
+  cohesionDistance: f32,
+  cohesionStrength: f32,
+}).$name('Params');
+
+type Params = Parsed<typeof Params>;
 
 const colorPresets = {
   plumTree: vec3f(1.0, 2.0, 1.0),
@@ -83,7 +95,6 @@ const colorPresets = {
   greyscale: vec3f(0, 0, 0),
   hotcold: vec3f(0, 3.14, 3.14),
 };
-type ColorPresets = keyof typeof colorPresets;
 
 const presets = {
   default: {
@@ -140,15 +151,6 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const Params = struct({
-  separationDistance: f32,
-  separationStrength: f32,
-  alignmentDistance: f32,
-  alignmentStrength: f32,
-  cohesionDistance: f32,
-  cohesionStrength: f32,
-}).$name('Params');
-
 const paramsBuffer = root
   .createBuffer(Params, presets.default)
   .$usage('uniform');
@@ -181,14 +183,6 @@ randomizePositions();
 const colorPaletteBuffer = root
   .createBuffer(vec3f, colorPresets.jeans)
   .$usage('uniform');
-
-function updateColorPreset(newColorPreset: ColorPresets) {
-  colorPaletteBuffer.write(colorPresets[newColorPreset]);
-}
-
-function updateParams(newOptions: BoidsOptions) {
-  paramsBuffer.write(newOptions);
-}
 
 const TriangleDataArray = (n: number) => arrayOf(TriangleData, n);
 
@@ -333,39 +327,39 @@ export const controls = {
   },
 
   '🐦 Birds': {
-    onButtonClick: () => updateParams(presets.default),
+    onButtonClick: () => paramsBuffer.write(presets.default),
   },
 
   '🦟 Mosquitoes': {
-    onButtonClick: () => updateParams(presets.mosquitoes),
+    onButtonClick: () => paramsBuffer.write(presets.mosquitoes),
   },
 
   '💧 Blobs': {
-    onButtonClick: () => updateParams(presets.blobs),
+    onButtonClick: () => paramsBuffer.write(presets.blobs),
   },
 
   '⚛️ Particles': {
-    onButtonClick: () => updateParams(presets.particles),
+    onButtonClick: () => paramsBuffer.write(presets.particles),
   },
 
   '🤖 Nanites': {
-    onButtonClick: () => updateParams(presets.nanites),
+    onButtonClick: () => paramsBuffer.write(presets.nanites),
   },
 
   '🟪🟩': {
-    onButtonClick: () => updateColorPreset('plumTree'),
+    onButtonClick: () => colorPaletteBuffer.write(colorPresets.plumTree),
   },
 
   '🟦🟫': {
-    onButtonClick: () => updateColorPreset('jeans'),
+    onButtonClick: () => colorPaletteBuffer.write(colorPresets.jeans),
   },
 
   '⬛⬜': {
-    onButtonClick: () => updateColorPreset('greyscale'),
+    onButtonClick: () => colorPaletteBuffer.write(colorPresets.greyscale),
   },
 
   '🟥🟦': {
-    onButtonClick: () => updateColorPreset('hotcold'),
+    onButtonClick: () => colorPaletteBuffer.write(colorPresets.hotcold),
   },
 };
 
