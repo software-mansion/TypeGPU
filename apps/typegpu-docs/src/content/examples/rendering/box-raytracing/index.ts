@@ -178,9 +178,8 @@ const vertexFunction = tgpu
     vec2<f32>(-1,  1)
   );
 
-  let outPos = vec4f(pos[vertexIndex], 0, 1);
   var output: VertexOutput;
-  output.outPos = outPos;  
+  output.outPos = vec4f(pos[vertexIndex], 0, 1);
   return output;
 }`)
   .$name('vertex_main')
