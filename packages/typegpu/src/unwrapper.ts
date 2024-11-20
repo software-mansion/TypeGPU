@@ -1,4 +1,5 @@
 import type { TgpuBuffer } from './core/buffer/buffer';
+import type { TgpuComputePipeline } from './core/pipeline/computePipeline';
 import type {
   TgpuMutableTexture,
   TgpuReadonlyTexture,
@@ -11,6 +12,7 @@ import type { AnyTgpuData } from './types';
 
 export interface Unwrapper {
   readonly device: GPUDevice;
+  unwrap(resource: TgpuComputePipeline): GPUComputePipeline;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
   unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;

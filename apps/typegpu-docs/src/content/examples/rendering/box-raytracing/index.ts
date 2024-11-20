@@ -52,10 +52,6 @@ const CameraAxesStruct = struct({
   forward: vec3f,
 });
 
-const VertexOutput = struct({
-  outPos: builtin.position,
-});
-
 const CanvasDimsStruct = struct({ width: u32, height: u32 });
 
 // buffers
@@ -171,7 +167,7 @@ const getBoxIntersection = tgpu
   .$name('box_intersection');
 
 const vertexFunction = tgpu
-  .vertexFn(builtin.vertexIndex, VertexOutput.properties)
+  .vertexFn({ vertexIndex: builtin.vertexIndex }, { outPos: builtin.position })
   .does(/* wgsl */ `(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
   var pos = array<vec2f, 6>(
     vec2<f32>( 1,  1),
@@ -186,11 +182,15 @@ const vertexFunction = tgpu
   output.outPos = vec4f(pos[vertexIndex], 0, 1);
   return output;
 }`)
-  .$uses({ VertexOutput })
-  .$name('vertex_main');
+  .$name('vertex_main')
+  .$uses({
+    get VertexOutput() {
+      return vertexFunction.Output;
+    },
+  });
 
 const fragmentFunction = tgpu
-  .fragmentFn(builtin.position, vec4f)
+  .fragmentFn({ position: builtin.position }, vec4f)
   .does(/* wgsl */ `(@builtin(position) position: vec4f) -> @location(0) vec4f {
   let minDim = f32(min(canvasDims.width, canvasDims.height));
 

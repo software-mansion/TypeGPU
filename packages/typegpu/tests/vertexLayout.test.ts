@@ -1,7 +1,8 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
+import { connectAttributesToShader } from '../src/core/vertexLayout/connectAttributesToShader';
 import type { ArrayToContainedAttribs } from '../src/core/vertexLayout/vertexAttribute';
 import * as d from '../src/data';
-import tgpu from '../src/experimental';
+import tgpu, { builtin } from '../src/experimental';
 import type { TgpuVertexAttrib } from '../src/shared/vertexFormat';
 
 describe('ArrayToContainedAttribs', () => {
@@ -11,10 +12,10 @@ describe('ArrayToContainedAttribs', () => {
     expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'uint8x2'>>();
   });
 
-  it('processes a loose array of unorm10_10_10_2', () => {
+  it('processes a loose array of unorm10-10-10-2', () => {
     type Result = ArrayToContainedAttribs<d.TgpuLooseArray<d.unorm10_10_10_2>>;
 
-    expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'unorm10_10_10_2'>>();
+    expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'unorm10-10-10-2'>>();
   });
 
   it('processes an array of u32s', () => {
@@ -71,7 +72,7 @@ describe('tgpu.vertexLayout', () => {
 
     expect(vertexLayout.stride).toEqual(12);
     expect(vertexLayout.attrib).toEqual({
-      layout: vertexLayout,
+      _layout: vertexLayout,
       format: 'float32x3',
       offset: 0,
     });
@@ -91,17 +92,17 @@ describe('tgpu.vertexLayout', () => {
     expect(vertexLayout.stride).toEqual(32);
     expect(vertexLayout.attrib).toEqual({
       a: {
-        layout: vertexLayout,
+        _layout: vertexLayout,
         format: 'uint32',
         offset: 0,
       },
       b: {
-        layout: vertexLayout,
+        _layout: vertexLayout,
         format: 'float32x3',
         offset: 16,
       },
       c: {
-        layout: vertexLayout,
+        _layout: vertexLayout,
         format: 'float32',
         offset: 28,
       },
@@ -122,20 +123,182 @@ describe('tgpu.vertexLayout', () => {
     expect(vertexLayout.stride).toEqual(20);
     expect(vertexLayout.attrib).toEqual({
       a: {
-        layout: vertexLayout,
+        _layout: vertexLayout,
         format: 'uint32',
         offset: 0,
       },
       b: {
-        layout: vertexLayout,
+        _layout: vertexLayout,
         format: 'float32x3',
         offset: 4,
       },
       c: {
-        layout: vertexLayout,
+        _layout: vertexLayout,
         format: 'float32',
         offset: 16,
       },
+    });
+  });
+});
+
+describe('connectAttributesToShader', () => {
+  it('connects a single f32 attribute', () => {
+    const shaderInputLayout = d.f32;
+    const layout = tgpu.vertexLayout((n) => d.arrayOf(d.f32, n));
+    const attrib = layout.attrib;
+
+    expect(connectAttributesToShader(shaderInputLayout, attrib)).toEqual({
+      bufferDefinitions: [
+        {
+          arrayStride: 4,
+          stepMode: 'vertex',
+          attributes: [
+            {
+              format: 'float32',
+              offset: 0,
+              shaderLocation: 0,
+            },
+          ],
+        },
+      ],
+      usedVertexLayouts: [layout],
+    });
+  });
+
+  it('connects a single vec4f attribute (with custom shader location)', () => {
+    const shaderInputLayout = d.location(3, d.vec4f);
+    const layout = tgpu.vertexLayout((n) => d.looseArrayOf(d.unorm16x4, n));
+    const attrib = layout.attrib;
+
+    expect(connectAttributesToShader(shaderInputLayout, attrib)).toEqual({
+      bufferDefinitions: [
+        {
+          arrayStride: 8,
+          stepMode: 'vertex',
+          attributes: [
+            {
+              format: 'unorm16x4',
+              offset: 0,
+              shaderLocation: 3,
+            },
+          ],
+        },
+      ],
+      usedVertexLayouts: [layout],
+    });
+  });
+
+  it('connects a record of attributes from a single layout', () => {
+    const shaderInputLayout = {
+      a: d.f32,
+      b: d.location(3, d.vec2f),
+      c: d.u32 /* should get @location(4) automatically */,
+    };
+
+    const layout = tgpu.vertexLayout((n) =>
+      d.looseArrayOf(
+        d.looseStruct({
+          alpha: d.f32, // 4 bytes
+          beta: d.unorm8x2, // 2 bytes
+          gamma: d.u32, // 4 bytes
+        }),
+        n,
+      ),
+    );
+
+    const result = connectAttributesToShader(shaderInputLayout, {
+      // purposefully out of order, which should be controlled by the shader input.
+      b: layout.attrib.beta,
+      c: layout.attrib.gamma,
+      a: layout.attrib.alpha,
+    });
+
+    expect(result).toEqual({
+      bufferDefinitions: [
+        {
+          arrayStride: 10,
+          stepMode: 'vertex',
+          attributes: [
+            {
+              format: 'float32',
+              offset: 0,
+              shaderLocation: 0,
+            },
+            {
+              format: 'unorm8x2',
+              offset: 4,
+              shaderLocation: 3,
+            },
+            {
+              format: 'uint32',
+              offset: 6,
+              shaderLocation: 4,
+            },
+          ],
+        },
+      ],
+      usedVertexLayouts: [layout],
+    });
+  });
+
+  it('connects a record of attributes from multiple layouts', () => {
+    const shaderInputLayout = {
+      vi: builtin.vertexIndex, // should be omitted
+      a: d.f32,
+      b: d.location(3, d.vec2f),
+      c: d.u32 /* should get @location(4) automatically */,
+    };
+
+    const alphaBetaLayout = tgpu.vertexLayout((n) =>
+      d.looseArrayOf(
+        d.looseStruct({
+          alpha: d.f32, // 4 bytes
+          beta: d.unorm8x2, // 2 bytes
+        }),
+        n,
+      ),
+    );
+
+    const gammaLayout = tgpu.vertexLayout((n) => d.arrayOf(d.u32, n));
+
+    const result = connectAttributesToShader(shaderInputLayout, {
+      // purposefully out of order, which should be controlled by the shader input.
+      b: alphaBetaLayout.attrib.beta,
+      c: gammaLayout.attrib,
+      a: alphaBetaLayout.attrib.alpha,
+    });
+
+    expect(result).toEqual({
+      bufferDefinitions: [
+        {
+          arrayStride: 6,
+          stepMode: 'vertex',
+          attributes: [
+            {
+              format: 'float32',
+              offset: 0,
+              shaderLocation: 0,
+            },
+            {
+              format: 'unorm8x2',
+              offset: 4,
+              shaderLocation: 3,
+            },
+          ],
+        },
+        {
+          arrayStride: 4,
+          stepMode: 'vertex',
+          attributes: [
+            {
+              format: 'uint32',
+              offset: 0,
+              shaderLocation: 4,
+            },
+          ],
+        },
+      ],
+      usedVertexLayouts: [alphaBetaLayout, gammaLayout],
     });
   });
 });

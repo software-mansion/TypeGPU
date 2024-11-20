@@ -1,5 +1,7 @@
 import type { Parsed } from 'typed-binary';
 
+import type { OmitBuiltins } from '../../builtin';
+import type { Vec4f } from '../../data/vector';
 import type { JitTranspiler } from '../../jitTranspiler';
 import type { NameRegistry } from '../../nameRegistry';
 import type { PlumListener } from '../../plumStore';
@@ -14,13 +16,40 @@ import type { AnyTgpuData } from '../../types';
 import type { Unwrapper } from '../../unwrapper';
 import type { Mutable, OmitProps, Prettify } from '../../utilityTypes';
 import type { TgpuBuffer } from '../buffer/buffer';
+import type { IOLayout } from '../function/fnTypes';
+import type { TgpuComputeFn } from '../function/tgpuComputeFn';
+import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
+import type { TgpuVertexFn } from '../function/tgpuVertexFn';
+import type { TgpuComputePipeline } from '../pipeline/computePipeline';
+import type {
+  FragmentOutToTargets,
+  TgpuRenderPipeline,
+} from '../pipeline/renderPipeline';
 import type { TgpuTexture } from '../texture/texture';
+import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute';
 
 // ----------
 // Public API
 // ----------
 
 export type SetPlumAction<T> = T | ((prev: T) => T);
+
+export interface WithCompute {
+  createPipeline(): TgpuComputePipeline;
+}
+
+export interface WithVertex<Varying extends IOLayout = IOLayout> {
+  withFragment<FragmentIn extends Varying, Output extends IOLayout<Vec4f>>(
+    entryFn: TgpuFragmentFn<FragmentIn, Output>,
+    targets: FragmentOutToTargets<Output>,
+  ): WithFragment<Output>;
+}
+
+export interface WithFragment<
+  Output extends IOLayout<Vec4f> = IOLayout<Vec4f>,
+> {
+  createPipeline(): TgpuRenderPipeline<Output>;
+}
 
 export type CreateTextureOptions<
   TSize,
@@ -189,6 +218,13 @@ export interface ExperimentalTgpuRoot extends TgpuRoot {
   ): Unsubscribe;
 
   samplerFor(sampler: TgpuSampler): GPUSampler;
+
+  withCompute(entryFn: TgpuComputeFn): WithCompute;
+
+  withVertex<Attribs extends IOLayout, Varying extends IOLayout>(
+    entryFn: TgpuVertexFn<Attribs, Varying>,
+    attribs: LayoutToAllowedAttribs<OmitBuiltins<Attribs>>,
+  ): WithVertex<Varying>;
 
   /**
    * Causes all commands enqueued by pipelines to be

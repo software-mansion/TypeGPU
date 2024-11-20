@@ -22,7 +22,7 @@ import {
   tgpu,
   wgsl,
 } from '../src/experimental';
-import { ResolutionCtxImpl } from '../src/resolutionCtx';
+import { resolve } from '../src/resolutionCtx';
 import './utils/webgpuGlobals';
 import type { NotAllowed } from '../src/extension';
 
@@ -235,24 +235,20 @@ describe('TgpuTexture', () => {
       .$name('texture')
       .$usage('sampled');
 
-    const resolutionCtx = new ResolutionCtxImpl({
+    const opts = {
       names: new StrictNameRegistry(),
-    });
+    };
 
     const sampled1 = texture.asSampled();
     const sampled2 = texture.asSampled({ dimension: '2d-array' });
 
-    expect(
-      resolutionCtx.resolve(wgsl`
-      let x = ${sampled1};
-    `),
-    ).toContain('texture_2d<f32>');
+    expect(resolve(wgsl`let x = ${sampled1};`, opts).code).toContain(
+      'texture_2d<f32>',
+    );
 
-    expect(
-      resolutionCtx.resolve(wgsl`
-      let x = ${sampled2};
-    `),
-    ).toContain('texture_2d_array<f32>');
+    expect(resolve(wgsl`let x = ${sampled2};`, opts).code).toContain(
+      'texture_2d_array<f32>',
+    );
   });
 
   it('produces NotAllowed when getting view which is not allowed', () => {
@@ -441,14 +437,14 @@ describe('sampler', () => {
   it('creates a sampler with correct type', () => {
     const sampler = wgsl.sampler({}).$name('sampler');
 
-    const resolutionCtx = new ResolutionCtxImpl({
+    const opts = {
       names: new StrictNameRegistry(),
-    });
+    };
 
     const code = wgsl`
       let x = ${sampler};
     `;
 
-    expect(resolutionCtx.resolve(code)).toContain('var sampler: sampler');
+    expect(resolve(code, opts).code).toContain('var sampler: sampler');
   });
 });

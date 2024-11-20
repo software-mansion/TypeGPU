@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import * as d from '../src/data';
 import { StrictNameRegistry } from '../src/nameRegistry';
-import { ResolutionCtxImpl } from '../src/resolutionCtx';
+import { resolve } from '../src/resolutionCtx';
 
 describe('attributes', () => {
   it('adds attributes in the correct order', () => {
@@ -13,11 +13,11 @@ describe('attributes', () => {
       })
       .$name('s1');
 
-    const resolutionCtx = new ResolutionCtxImpl({
+    const opts = {
       names: new StrictNameRegistry(),
-    });
+    };
 
-    expect(resolutionCtx.resolve(s1)).toContain('@size(8) @align(16) b: u32,');
+    expect(resolve(s1, opts).code).toContain('@size(8) @align(16) b: u32,');
 
     expectTypeOf(s1).toEqualTypeOf<
       d.TgpuStruct<{

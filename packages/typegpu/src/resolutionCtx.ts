@@ -3,8 +3,14 @@ import { MissingSlotValueError, ResolutionError } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
+import { naturalsExcept } from './shared/generators';
 import { generateFunction } from './smol';
-import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout';
+import {
+  type TgpuBindGroup,
+  type TgpuBindGroupLayout,
+  type TgpuLayoutEntry,
+  bindGroupLayout,
+} from './tgpuBindGroupLayout';
 import type {
   AnyTgpuData,
   Eventual,
@@ -211,7 +217,12 @@ export class IndentController {
   }
 }
 
-export class ResolutionCtxImpl implements ResolutionCtx {
+interface FixedBindingConfig {
+  layoutEntry: TgpuLayoutEntry;
+  resource: object;
+}
+
+class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _memoizedResolves = new WeakMap<
     // WeakMap because if the resolvable does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
@@ -236,8 +247,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     string
   >();
   private _nextFreeLayoutPlaceholderIdx = 0;
-  private _nextFreeCatchallBindingIdx = 0;
-  private readonly _boundToIndexMap = new WeakMap<object, number>();
+  public readonly fixedBindings: FixedBindingConfig[] = [];
   // --
 
   public readonly names: NameRegistry;
@@ -322,13 +332,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return placeholderKey;
   }
 
-  allocateFixedEntry(resource: object): { group: string; binding: number } {
-    const nextIdx = this._nextFreeCatchallBindingIdx++;
-    this._boundToIndexMap.set(resource, nextIdx);
+  allocateFixedEntry(
+    layoutEntry: TgpuLayoutEntry,
+    resource: object,
+  ): { group: string; binding: number } {
+    const binding = this.fixedBindings.length;
+    this.fixedBindings.push({ layoutEntry, resource });
 
     return {
       group: CATCHALL_BIND_GROUP_IDX_MARKER,
-      binding: nextIdx,
+      binding,
     };
   }
 
@@ -424,4 +437,63 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
     }
   }
+}
+
+export interface ResolutionResult {
+  code: string;
+  bindGroupLayouts: TgpuBindGroupLayout[];
+  catchall: [number, TgpuBindGroup];
+}
+
+export function resolve(
+  item: Wgsl,
+  options: ResolutionCtxImplOptions,
+): ResolutionResult {
+  const ctx = new ResolutionCtxImpl(options);
+  let code = ctx.resolve(item);
+
+  const memoMap = ctx.bindGroupLayoutsToPlaceholderMap;
+  const bindGroupLayouts: TgpuBindGroupLayout[] = [];
+  const takenIndices = new Set<number>(
+    [...memoMap.keys()]
+      .map((layout) => layout.index)
+      .filter((v): v is number => v !== undefined),
+  );
+
+  const automaticIds = naturalsExcept(takenIndices);
+
+  // Retrieving the catch-all binding index first, because it's inherently
+  // the least swapped bind group (fixed and cannot be swapped).
+  const catchallIdx = automaticIds.next().value;
+
+  for (const [layout, placeholder] of memoMap.entries()) {
+    const idx = layout.index ?? automaticIds.next().value;
+    bindGroupLayouts[idx] = layout;
+    code = code.replaceAll(placeholder, String(idx));
+  }
+
+  const layoutEntries = ctx.fixedBindings.map(
+    (binding, idx) =>
+      [String(idx), binding.layoutEntry] as [string, TgpuLayoutEntry],
+  );
+  const catchallLayout = bindGroupLayout(Object.fromEntries(layoutEntries));
+  bindGroupLayouts[catchallIdx] = catchallLayout;
+  code = code.replaceAll(CATCHALL_BIND_GROUP_IDX_MARKER, String(catchallIdx));
+
+  return {
+    code,
+    bindGroupLayouts,
+    catchall: [
+      catchallIdx,
+      catchallLayout.populate(
+        Object.fromEntries(
+          ctx.fixedBindings.map(
+            (binding, idx) =>
+              // biome-ignore lint/suspicious/noExplicitAny: <it's fine>
+              [String(idx), binding.resource] as [string, any],
+          ),
+        ),
+      ),
+    ],
+  };
 }

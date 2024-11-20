@@ -287,7 +287,7 @@ const formatToWGSLType = {
   sint32x2: vec2i,
   sint32x3: vec3i,
   sint32x4: vec4i,
-  unorm10_10_10_2: vec4f,
+  'unorm10-10-10-2': vec4f,
 } as const;
 
 const normalizedToIsSigned = {
@@ -301,7 +301,7 @@ const normalizedToIsSigned = {
   snorm16x4: true,
   float16x2: true,
   float16x4: true,
-  unorm10_10_10_2: false,
+  'unorm10-10-10-2': false,
 } as Record<VertexFormat, boolean | undefined>;
 
 export type uint8x2 = TgpuVertexFormatData<'uint8x2'>;
@@ -433,8 +433,8 @@ export const sint32x4 = new TgpuVertexFormatDataImpl(
   'sint32x4',
 ) as sint32x4;
 
-export type unorm10_10_10_2 = TgpuVertexFormatData<'unorm10_10_10_2'>;
+export type unorm10_10_10_2 = TgpuVertexFormatData<'unorm10-10-10-2'>;
 export const unorm10_10_10_2 = new TgpuVertexFormatDataImpl(
   4,
-  'unorm10_10_10_2',
+  'unorm10-10-10-2',
 ) as unorm10_10_10_2;
