@@ -32,7 +32,13 @@ class TgpuSamplerImpl implements TgpuSampler {
 
   resolve(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this._label);
-    const { group, binding } = ctx.allocateFixedEntry(this);
+    const { group, binding } = ctx.allocateFixedEntry(
+      {
+        sampler:
+          this._type === 'sampler_comparison' ? 'comparison' : 'filtering',
+      },
+      this,
+    );
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${binding}) var ${id}: ${this._type};`,
