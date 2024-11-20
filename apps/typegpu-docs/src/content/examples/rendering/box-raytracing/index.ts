@@ -274,19 +274,9 @@ const fragmentFunction = tgpu
 
 // pipeline
 
-const resolved = tgpu
-  .resolve({
-    input: [vertexFunction, fragmentFunction],
-    extraDependencies: {
-      ...renderBindGroupLayout.bound,
-      CanvasDimsStruct,
-      BoxStruct,
-      CameraAxesStruct,
-      X,
-      Y,
-      Z,
-    },
-  })
+const resolved = tgpu.resolve({
+  input: [vertexFunction, fragmentFunction],
+});
 
 const resolvedModule = root.device.createShaderModule({
   code: resolved,
