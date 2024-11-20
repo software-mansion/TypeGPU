@@ -8,6 +8,7 @@ import { generateFunction } from './smol';
 import {
   type TgpuBindGroup,
   type TgpuBindGroupLayout,
+  type TgpuLayoutEntry,
   bindGroupLayout,
 } from './tgpuBindGroupLayout';
 import type {
@@ -216,6 +217,11 @@ export class IndentController {
   }
 }
 
+interface FixedBindingConfig {
+  layoutEntry: TgpuLayoutEntry;
+  resource: object;
+}
+
 class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _memoizedResolves = new WeakMap<
     // WeakMap because if the resolvable does not exist anymore,
@@ -241,8 +247,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
     string
   >();
   private _nextFreeLayoutPlaceholderIdx = 0;
-  private _nextFreeCatchallBindingIdx = 0;
-  private readonly _boundToIndexMap = new WeakMap<object, number>();
+  public readonly fixedBindings: FixedBindingConfig[] = [];
   // --
 
   public readonly names: NameRegistry;
@@ -327,13 +332,16 @@ class ResolutionCtxImpl implements ResolutionCtx {
     return placeholderKey;
   }
 
-  allocateFixedEntry(resource: object): { group: string; binding: number } {
-    const nextIdx = this._nextFreeCatchallBindingIdx++;
-    this._boundToIndexMap.set(resource, nextIdx);
+  allocateFixedEntry(
+    layoutEntry: TgpuLayoutEntry,
+    resource: object,
+  ): { group: string; binding: number } {
+    const binding = this.fixedBindings.length;
+    this.fixedBindings.push({ layoutEntry, resource });
 
     return {
       group: CATCHALL_BIND_GROUP_IDX_MARKER,
-      binding: nextIdx,
+      binding,
     };
   }
 
@@ -464,13 +472,28 @@ export function resolve(
     code = code.replaceAll(placeholder, String(idx));
   }
 
-  const catchallLayout = bindGroupLayout({});
+  const layoutEntries = ctx.fixedBindings.map(
+    (binding, idx) =>
+      [String(idx), binding.layoutEntry] as [string, TgpuLayoutEntry],
+  );
+  const catchallLayout = bindGroupLayout(Object.fromEntries(layoutEntries));
   bindGroupLayouts[catchallIdx] = catchallLayout;
   code = code.replaceAll(CATCHALL_BIND_GROUP_IDX_MARKER, String(catchallIdx));
 
   return {
     code,
     bindGroupLayouts,
-    catchall: [catchallIdx, catchallLayout.populate({})],
+    catchall: [
+      catchallIdx,
+      catchallLayout.populate(
+        Object.fromEntries(
+          ctx.fixedBindings.map(
+            (binding, idx) =>
+              // biome-ignore lint/suspicious/noExplicitAny: <its fine>
+              [String(idx), binding.resource] as [string, any],
+          ),
+        ),
+      ),
+    ],
   };
 }

@@ -14,6 +14,7 @@ import {
   type TexelFormatToChannelType,
   type TexelFormatToDataType,
   type TexelFormatToDataTypeOrNever,
+  channelKindToFormat,
   texelFormatToChannelType,
   texelFormatToDataType,
 } from './textureFormats';
@@ -464,7 +465,14 @@ class TgpuFixedStorageTextureImpl
 
   resolve(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this.label);
-    const { group, binding } = ctx.allocateFixedEntry(this);
+    const { group, binding } = ctx.allocateFixedEntry(
+      {
+        storageTexture: this._format,
+        access: this.access,
+        viewDimension: this.dimension,
+      },
+      this,
+    );
     const type = `texture_storage_${dimensionToCodeMap[this.dimension]}`;
 
     ctx.addDeclaration(
@@ -520,12 +528,20 @@ class TgpuFixedSampledTextureImpl
 
   resolve(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this.label);
-    const { group, binding } = ctx.allocateFixedEntry(this);
 
-    const type =
-      (this._texture.props.sampleCount ?? 1) > 1
-        ? 'texture_multisampled_2d'
-        : `texture_${dimensionToCodeMap[this.dimension]}`;
+    const multisampled = (this._texture.props.sampleCount ?? 1) > 1;
+    const { group, binding } = ctx.allocateFixedEntry(
+      {
+        texture: channelKindToFormat[this.channelDataType.kind],
+        viewDimension: this.dimension,
+        multisampled,
+      },
+      this,
+    );
+
+    const type = multisampled
+      ? 'texture_multisampled_2d'
+      : `texture_${dimensionToCodeMap[this.dimension]}`;
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${binding}) var ${id}: ${type}<${ctx.resolve(this.channelDataType)}>;`,

@@ -154,6 +154,12 @@ export const texelFormatToDataType = {
   bgra8unorm: vec4f,
 } as const;
 
+export const channelKindToFormat = {
+  f32: 'float',
+  u32: 'uint',
+  i32: 'sint',
+} as const;
+
 export type TexelFormatToDataType = typeof texelFormatToDataType;
 export type TexelFormatToDataTypeOrNever<T> =
   T extends keyof TexelFormatToDataType ? TexelFormatToDataType[T] : never;

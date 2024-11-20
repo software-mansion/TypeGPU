@@ -2,7 +2,10 @@ import type { Block } from 'tinyest';
 import type { ISchema } from 'typed-binary';
 import type { TgpuNamable } from './namable';
 import type { NameRegistry } from './nameRegistry';
-import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout';
+import type {
+  TgpuBindGroupLayout,
+  TgpuLayoutEntry,
+} from './tgpuBindGroupLayout';
 
 export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
 
@@ -48,7 +51,10 @@ export interface ResolutionCtx {
    * Reserves a spot in the catch-all bind group, without the indirection of a bind-group.
    * This means the resource is 'fixed', and cannot be swapped between code execution.
    */
-  allocateFixedEntry(resource: object): {
+  allocateFixedEntry(
+    layoutEntry: TgpuLayoutEntry,
+    resource: object,
+  ): {
     group: string;
     binding: number;
   };
