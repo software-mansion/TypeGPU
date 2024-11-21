@@ -15,8 +15,6 @@ jobs:
         uses: actions/checkout@v4
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          run_install: false
       - name: Prepare package
         run: cd packages/typegpu && EXPERIMENTAL=true pnpm prepare-package
       - name: Upload artifact
