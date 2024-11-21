@@ -1,0 +1,26 @@
+name: Save Experimental Build as Artifact
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+      - name: Prepare package
+        run: cd packages/typegpu && EXPERIMENTAL=true pnpm prepare-package
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: typegpu
+          path: ./dist
