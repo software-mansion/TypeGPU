@@ -442,7 +442,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
 export interface ResolutionResult {
   code: string;
   bindGroupLayouts: TgpuBindGroupLayout[];
-  catchall: [number, TgpuBindGroup];
+  catchall: [number, TgpuBindGroup] | null;
 }
 
 export function resolve(
@@ -462,28 +462,12 @@ export function resolve(
 
   const automaticIds = naturalsExcept(takenIndices);
 
-  // Retrieving the catch-all binding index first, because it's inherently
-  // the least swapped bind group (fixed and cannot be swapped).
-  const catchallIdx = automaticIds.next().value;
-
-  for (const [layout, placeholder] of memoMap.entries()) {
-    const idx = layout.index ?? automaticIds.next().value;
-    bindGroupLayouts[idx] = layout;
-    code = code.replaceAll(placeholder, String(idx));
-  }
-
-  const layoutEntries = ctx.fixedBindings.map(
-    (binding, idx) =>
-      [String(idx), binding.layoutEntry] as [string, TgpuLayoutEntry],
-  );
-  const catchallLayout = bindGroupLayout(Object.fromEntries(layoutEntries));
-  bindGroupLayouts[catchallIdx] = catchallLayout;
-  code = code.replaceAll(CATCHALL_BIND_GROUP_IDX_MARKER, String(catchallIdx));
-
-  return {
-    code,
-    bindGroupLayouts,
-    catchall: [
+  const createCatchallGroup = () => {
+    const catchallIdx = automaticIds.next().value;
+    const catchallLayout = bindGroupLayout(Object.fromEntries(layoutEntries));
+    bindGroupLayouts[catchallIdx] = catchallLayout;
+    code = code.replaceAll(CATCHALL_BIND_GROUP_IDX_MARKER, String(catchallIdx));
+    return [
       catchallIdx,
       catchallLayout.populate(
         Object.fromEntries(
@@ -494,6 +478,27 @@ export function resolve(
           ),
         ),
       ),
-    ],
+    ] as [number, TgpuBindGroup];
+  };
+
+  const layoutEntries = ctx.fixedBindings.map(
+    (binding, idx) =>
+      [String(idx), binding.layoutEntry] as [string, TgpuLayoutEntry],
+  );
+
+  // Retrieving the catch-all binding index first, because it's inherently
+  // the least swapped bind group (fixed and cannot be swapped).
+  const catchall = layoutEntries.length > 0 ? createCatchallGroup() : null;
+
+  for (const [layout, placeholder] of memoMap.entries()) {
+    const idx = layout.index ?? automaticIds.next().value;
+    bindGroupLayouts[idx] = layout;
+    code = code.replaceAll(placeholder, String(idx));
+  }
+
+  return {
+    code,
+    bindGroupLayouts,
+    catchall,
   };
 }

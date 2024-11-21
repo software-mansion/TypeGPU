@@ -59,7 +59,7 @@ type TgpuComputePipelinePriors = {
 type Memo = {
   pipeline: GPUComputePipeline;
   bindGroupLayouts: TgpuBindGroupLayout[];
-  catchall: [number, TgpuBindGroup];
+  catchall: [number, TgpuBindGroup] | null;
 };
 
 class TgpuComputePipelineImpl
@@ -106,7 +106,7 @@ class TgpuComputePipelineImpl
     pass.setPipeline(memo.pipeline);
 
     memo.bindGroupLayouts.forEach((layout, idx) => {
-      if (idx === memo.catchall[0]) {
+      if (memo.catchall && idx === memo.catchall[0]) {
         // Catch-all
         pass.setBindGroup(idx, this._core.branch.unwrap(memo.catchall[1]));
       } else {
