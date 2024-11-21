@@ -16,7 +16,6 @@ const primitiveNumeric = <TKind extends string>(
     kind: code,
     size: 4,
     byteAlignment: 4,
-    expressionCode: code,
 
     write(output: TB.ISerialOutput, value: number): void {
       schema.write(output, value);

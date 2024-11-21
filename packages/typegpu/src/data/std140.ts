@@ -22,11 +22,10 @@ export class SimpleTgpuData<TSchema extends AnySchema>
 {
   public readonly size: number;
   public readonly byteAlignment: number;
-  public readonly expressionCode: string;
 
   private readonly _innerSchema: TSchema;
   public readonly isLoose = false as const;
-  public readonly label?: string | undefined;
+  public readonly label: string;
 
   /**
    * byteAlignment has to be a power of 2
@@ -44,7 +43,6 @@ export class SimpleTgpuData<TSchema extends AnySchema>
 
     this._innerSchema = schema;
     this.byteAlignment = byteAlignment;
-    this.expressionCode = code;
     this.size = this.measure(MaxValue).size;
     this.label = code;
   }
@@ -71,6 +69,6 @@ export class SimpleTgpuData<TSchema extends AnySchema>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    return this.expressionCode;
+    return this.label;
   }
 }
