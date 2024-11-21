@@ -13,10 +13,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Install pnpm
         uses: pnpm/action-setup@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --recursive --frozen-lockfile
+
       - name: Prepare package
         run: cd packages/typegpu && EXPERIMENTAL=true pnpm prepare-package
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
