@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-artifact:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -25,6 +25,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --recursive --frozen-lockfile
+
+      - name: Build
+        run: EXPERIMENTAL=true pnpm -r dev:build
 
       - name: Prepare package
         run: cd packages/typegpu && EXPERIMENTAL=true pnpm prepare-package
