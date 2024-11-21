@@ -7,7 +7,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { arrayOf, vec3f, vec3u } from '../src/data';
 import { StrictNameRegistry } from '../src/nameRegistry';
-import { ResolutionCtxImpl } from '../src/resolutionCtx';
+import { resolve } from '../src/resolutionCtx';
 
 describe('array', () => {
   it('takes element alignment into account when measuring', () => {
@@ -71,11 +71,9 @@ describe('array', () => {
       TestArray.read(new BufferReader(new ArrayBuffer(0))),
     ).toThrow();
 
-    const resolutionCtx = new ResolutionCtxImpl({
-      names: new StrictNameRegistry(),
-    });
+    const opts = { names: new StrictNameRegistry() };
 
-    expect(TestArray.resolve(resolutionCtx)).toContain('array<vec3f>');
+    expect(resolve(TestArray, opts).code).toContain('array<vec3f>');
   });
 
   it('throws when trying to nest runtime sized arrays', () => {

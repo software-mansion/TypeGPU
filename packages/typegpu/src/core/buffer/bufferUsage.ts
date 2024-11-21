@@ -77,7 +77,12 @@ class TgpuFixedBufferImpl<
 
   resolve(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this.label);
-    const { group, binding } = ctx.allocateFixedEntry(this);
+    const { group, binding } = ctx.allocateFixedEntry(
+      this.usage === 'uniform'
+        ? { uniform: this.buffer.dataType }
+        : { storage: this.buffer.dataType, access: this.usage },
+      this.buffer,
+    );
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(

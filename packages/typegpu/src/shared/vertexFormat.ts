@@ -29,7 +29,7 @@ export const vertexFormats = [
   'sint32x2',
   'sint32x3',
   'sint32x4',
-  'unorm10_10_10_2',
+  'unorm10-10-10-2',
 ] as const;
 
 export type VertexFormat = (typeof vertexFormats)[number];
@@ -51,10 +51,14 @@ export const kindToDefaultFormatMap = {
 
 export type KindToDefaultFormatMap = typeof kindToDefaultFormatMap;
 
-export interface TgpuVertexAttrib<TFormat extends VertexFormat> {
+export interface TgpuVertexAttrib<TFormat extends VertexFormat = VertexFormat> {
   readonly format: TFormat;
   readonly offset: number;
 }
+
+export type AnyVertexAttribs =
+  | Record<string, TgpuVertexAttrib>
+  | TgpuVertexAttrib;
 
 /**
  * All vertex attribute formats that can be interpreted as
@@ -106,7 +110,7 @@ type F32CompatibleFormats =
   | TgpuVertexAttrib<'float32x2'>
   | TgpuVertexAttrib<'float32x3'>
   | TgpuVertexAttrib<'float32x4'>
-  | TgpuVertexAttrib<'unorm10_10_10_2'>;
+  | TgpuVertexAttrib<'unorm10-10-10-2'>;
 
 /**
  * All vertex attribute formats that can be interpreted as

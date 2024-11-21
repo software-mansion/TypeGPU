@@ -12,16 +12,18 @@ const counterBuffer = root.createBuffer(vec2f, vec2f(0, 1)).$usage('storage');
 const counter = asMutable(counterBuffer);
 
 const increment = tgpu
-  .procedure(() => {
+  .computeFn([1])
+  .does(() => {
     const tmp = counter.value.x;
     counter.value.x = counter.value.y;
     counter.value.y += tmp;
   })
   .$uses({ counter });
 
+const pipeline = root.withCompute(increment).createPipeline();
+
 async function doIncrement() {
-  // @ts-expect-error
-  root.compute(increment);
+  pipeline.dispatchWorkgroups(1);
   return await counterBuffer.read();
 }
 

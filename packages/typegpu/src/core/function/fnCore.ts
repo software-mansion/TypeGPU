@@ -23,14 +23,20 @@ export function createFnCore(
   shell: TgpuFnShellBase<unknown[], unknown>,
   implementation: Implementation<unknown[], unknown>,
 ): FnCore {
-  const externalMap: ExternalMap = {};
+  /**
+   * External application has to be deferred until resolution because
+   * some externals can reference the owner function which has not been
+   * initialized yet (like when accessing the Output struct of a vertex
+   * entry fn).
+   */
+  const externalsToApply: ExternalMap[] = [];
   let prebuiltAst: TranspilationResult | null = null;
 
   return {
     label: undefined as string | undefined,
 
     applyExternals(newExternals: ExternalMap): void {
-      applyExternals(externalMap, newExternals);
+      externalsToApply.push(newExternals);
     },
 
     setAst(ast: TranspilationResult): void {
@@ -38,6 +44,11 @@ export function createFnCore(
     },
 
     resolve(ctx: ResolutionCtx, fnAttribute = ''): string {
+      const externalMap: ExternalMap = {};
+      for (const externals of externalsToApply) {
+        applyExternals(externalMap, externals);
+      }
+
       const id = ctx.names.makeUnique(this.label);
 
       if (typeof implementation === 'string') {

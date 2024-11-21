@@ -1,5 +1,6 @@
 import type { Parsed } from 'typed-binary';
 
+import type { OmitBuiltins } from '../../builtin';
 import type { JitTranspiler } from '../../jitTranspiler';
 import { WeakMemo } from '../../memo';
 import {
@@ -9,6 +10,7 @@ import {
 } from '../../nameRegistry';
 import { type PlumListener, PlumStore } from '../../plumStore';
 import type { TgpuSettable } from '../../settableTrait';
+import type { AnyVertexAttribs } from '../../shared/vertexFormat';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
@@ -22,6 +24,21 @@ import type {
 import type { TgpuSampler } from '../../tgpuSampler';
 import type { AnyTgpuData } from '../../types';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
+import type { IOLayout } from '../function/fnTypes';
+import type { TgpuComputeFn } from '../function/tgpuComputeFn';
+import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
+import type { TgpuVertexFn } from '../function/tgpuVertexFn';
+import {
+  type INTERNAL_TgpuComputePipeline,
+  INTERNAL_createComputePipeline,
+  type TgpuComputePipeline,
+  isComputePipeline,
+} from '../pipeline/computePipeline';
+import {
+  type AnyFragmentTargets,
+  INTERNAL_createRenderPipeline,
+  type TgpuRenderPipeline,
+} from '../pipeline/renderPipeline';
 import {
   type INTERNAL_TgpuSampledTexture,
   type INTERNAL_TgpuStorageTexture,
@@ -36,12 +53,68 @@ import {
   isStorageTextureView,
   isTexture,
 } from '../texture/texture';
+import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute';
 import type {
   CreateTextureOptions,
   CreateTextureResult,
   ExperimentalTgpuRoot,
   SetPlumAction,
+  WithCompute,
+  WithFragment,
+  WithVertex,
 } from './rootTypes';
+
+class WithComputeImpl implements WithCompute {
+  constructor(
+    private readonly _root: ExperimentalTgpuRoot,
+    private readonly _entryFn: TgpuComputeFn,
+  ) {}
+
+  createPipeline(): TgpuComputePipeline {
+    return INTERNAL_createComputePipeline(this._root, this._entryFn);
+  }
+}
+
+class WithVertexImpl implements WithVertex {
+  constructor(
+    private readonly _root: ExperimentalTgpuRoot,
+    private readonly _vertexAttribs: AnyVertexAttribs,
+    private readonly _vertexFn: TgpuVertexFn,
+  ) {}
+
+  withFragment(
+    entryFn: TgpuFragmentFn,
+    targets: AnyFragmentTargets,
+  ): WithFragment {
+    return new WithFragmentImpl(
+      this._root,
+      this._vertexAttribs,
+      this._vertexFn,
+      entryFn,
+      targets,
+    );
+  }
+}
+
+class WithFragmentImpl implements WithFragment {
+  constructor(
+    private readonly _root: ExperimentalTgpuRoot,
+    private readonly _vertexAttribs: AnyVertexAttribs,
+    private readonly _vertexFn: TgpuVertexFn,
+    private readonly _fragmentFn: TgpuFragmentFn,
+    private readonly _targets: AnyFragmentTargets,
+  ) {}
+
+  createPipeline(): TgpuRenderPipeline {
+    return INTERNAL_createRenderPipeline(
+      this._root,
+      this._vertexAttribs,
+      this._vertexFn,
+      this._fragmentFn,
+      this._targets,
+    );
+  }
+}
 
 interface Disposable {
   destroy(): void;
@@ -137,6 +210,7 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     }
   }
 
+  unwrap(resource: TgpuComputePipeline): GPUComputePipeline;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
   unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
@@ -150,6 +224,7 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
   ): GPUTextureView;
   unwrap(
     resource:
+      | TgpuComputePipeline
       | TgpuBindGroupLayout
       | TgpuBindGroup
       | TgpuBuffer<AnyTgpuData>
@@ -159,11 +234,16 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
       | TgpuMutableTexture
       | TgpuSampledTexture,
   ):
+    | GPUComputePipeline
     | GPUBindGroupLayout
     | GPUBindGroup
     | GPUBuffer
     | GPUTexture
     | GPUTextureView {
+    if (isComputePipeline(resource)) {
+      return (resource as unknown as INTERNAL_TgpuComputePipeline).rawPipeline;
+    }
+
     if (isBindGroupLayout(resource)) {
       return this._unwrappedBindGroupLayouts.getOrMake(resource);
     }
@@ -229,6 +309,17 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     listener: PlumListener<TValue>,
   ): Unsubscribe {
     return this._plumStore.subscribe(plum, listener);
+  }
+
+  withCompute(entryFn: TgpuComputeFn): WithCompute {
+    return new WithComputeImpl(this, entryFn);
+  }
+
+  withVertex<Attribs extends IOLayout, Varying extends IOLayout>(
+    entryFn: TgpuVertexFn,
+    attribs: LayoutToAllowedAttribs<OmitBuiltins<Attribs>>,
+  ): WithVertex {
+    return new WithVertexImpl(this, attribs as AnyVertexAttribs, entryFn);
   }
 
   flush() {

@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import * as d from '../src/data';
 import { StrictNameRegistry } from '../src/experimental';
-import { ResolutionCtxImpl } from '../src/resolutionCtx';
+import { resolve } from '../src/resolutionCtx';
 
 describe('d.location', () => {
   it('adds @location attribute for struct members', () => {
@@ -21,10 +21,10 @@ describe('d.location', () => {
       }>
     >();
 
-    const resolutionCtx = new ResolutionCtxImpl({
+    const opts = {
       names: new StrictNameRegistry(),
-    });
+    };
 
-    expect(resolutionCtx.resolve(s1)).toContain('@location(3) b: u32,');
+    expect(resolve(s1, opts).code).toContain('@location(3) b: u32,');
   });
 });
