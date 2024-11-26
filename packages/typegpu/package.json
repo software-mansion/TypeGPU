@@ -1,6 +1,6 @@
 {
   "name": "typegpu",
-  "private": false,
+  "private": true,
   "version": "0.2.0",
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "license": "MIT",
