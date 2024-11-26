@@ -1,6 +1,6 @@
 {
   "name": "typegpu-monorepo",
-  "private": true,
+  "private": false,
   "version": "0.0.0",
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "license": "MIT",
