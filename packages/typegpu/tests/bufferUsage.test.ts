@@ -3,6 +3,7 @@ import tgpu from '../src';
 import { f32 } from '../src/data';
 import { type ExperimentalTgpuRoot, asUniform } from '../src/experimental';
 import type { Infer } from '../src/repr';
+import './utils/webgpuGlobals';
 
 const mockBuffer = {
   getMappedRange: vi.fn(() => new ArrayBuffer(8)),

@@ -78,7 +78,7 @@ describe('TgpuComputePipeline', () => {
 
   it('can be created with a compute entry function', () => {
     const entryFn = tgpu
-      .computeFn([32])
+      .computeFn([], { workgroupSize: [32] })
       .does(() => {
         // do something
       })
