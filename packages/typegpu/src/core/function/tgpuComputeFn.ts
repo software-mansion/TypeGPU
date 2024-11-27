@@ -49,8 +49,8 @@ export interface ComputeFnOptions {
  * @param workgroupSize
  *   Size of blocks that the thread grid will be divided into (up to 3 dimensions).
  */
-export function computeFn<Args extends AnyBuiltin[] | []>(
-  argTypes: Args,
+export function computeFn(
+  argTypes: AnyBuiltin[],
   options: ComputeFnOptions,
 ): TgpuComputeFnShell {
   const { workgroupSize } = options;

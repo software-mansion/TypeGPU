@@ -42,10 +42,9 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat>
   extends Schema<FormatToWGSLType<T>>
   implements TgpuVertexFormatData<T>
 {
-  /** Type-token, not available at runtime */
-  public readonly __repr!: FormatToWGSLType<T>;
+  /** Used as a type-token for the `Infer<T>` functionality. */
+  public readonly __repr: FormatToWGSLType<T>;
 
-  private underlyingType: FormatToWGSLType<T>;
   private elementSize: 1 | 2 | 4;
   private elementCount: number;
   private isSigned: boolean;
@@ -57,9 +56,9 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat>
     readonly kind: T,
   ) {
     super();
-    this.underlyingType = formatToWGSLType[kind];
+    this.__repr = formatToWGSLType[kind];
     this.isSigned = normalizedToIsSigned[kind] ?? false;
-    this.elementCount = this.underlyingType.size / 4;
+    this.elementCount = this.__repr.size / 4;
     const elementSize = size / this.elementCount;
     if (elementSize !== 1 && elementSize !== 2 && elementSize !== 4) {
       throw new Error('Invalid element size');
@@ -67,14 +66,11 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat>
     this.elementSize = elementSize;
   }
 
-  write(
-    output: ISerialOutput,
-    value: Parsed<typeof this.underlyingType>,
-  ): void {
+  write(output: ISerialOutput, value: Parsed<typeof this.__repr>): void {
     if (typeof value === 'number') {
       // since the value is not a vector, we can just write it directly
       // (all single component attributes are 32-bit)
-      switch (this.underlyingType) {
+      switch (this.__repr) {
         case u32:
           output.writeUint32(value);
           break;
@@ -92,26 +88,26 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat>
     writeSizedVector(output, value, this.elementSize, this.isSigned);
   }
 
-  read(input: ISerialInput): Parsed<typeof this.underlyingType> {
+  read(input: ISerialInput): Parsed<typeof this.__repr> {
     const readBuffer = new ArrayBuffer(this.size);
     const readView = new DataView(readBuffer);
     for (let i = 0; i < this.size; i++) {
       readView.setUint8(i, input.readByte());
     }
     if (this.elementCount === 1) {
-      switch (this.underlyingType) {
+      switch (this.__repr) {
         case u32:
-          return readView.getUint32(0) as Parsed<typeof this.underlyingType>;
+          return readView.getUint32(0) as Parsed<typeof this.__repr>;
         case f32:
-          return readView.getFloat32(0) as Parsed<typeof this.underlyingType>;
+          return readView.getFloat32(0) as Parsed<typeof this.__repr>;
         case i32:
-          return readView.getInt32(0) as Parsed<typeof this.underlyingType>;
+          return readView.getInt32(0) as Parsed<typeof this.__repr>;
         default:
           throw new Error('Invalid underlying type');
       }
     }
 
-    const vector = this.underlyingType as
+    const vector = this.__repr as
       | Vec2u
       | Vec3u
       | Vec4u
@@ -139,20 +135,18 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat>
       case vec2u:
       case vec2f:
       case vec2i:
-        return vector(values[0], values[1]) as Parsed<
-          typeof this.underlyingType
-        >;
+        return vector(values[0], values[1]) as Parsed<typeof this.__repr>;
       case vec3u:
       case vec3f:
       case vec3i:
         return vector(values[0], values[1], values[2]) as Parsed<
-          typeof this.underlyingType
+          typeof this.__repr
         >;
       case vec4u:
       case vec4f:
       case vec4i:
         return vector(values[0], values[1], values[2], values[3]) as Parsed<
-          typeof this.underlyingType
+          typeof this.__repr
         >;
       default:
         throw new Error('Invalid underlying type');
