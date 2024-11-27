@@ -1,5 +1,5 @@
 import { arrayOf, f32, struct, vec2f, vec4f } from 'typegpu/data';
-import tgpu, { asUniform, builtin } from 'typegpu/experimental';
+import tgpu, { asMutable, asUniform, builtin } from 'typegpu/experimental';
 
 // constants
 
@@ -53,7 +53,7 @@ const canvasAspectRatioBuffer = root
 
 const canvasAspectRatioData = asUniform(canvasAspectRatioBuffer);
 
-const particleShapeBuffer = root
+const particleGeometryBuffer = root
   .createBuffer(
     arrayOf(ParticleGeometry, PARTICLE_AMOUNT),
     Array(PARTICLE_AMOUNT)
@@ -66,34 +66,28 @@ const particleShapeBuffer = root
   )
   .$usage('vertex');
 
-const trianglePosBuffer = root
+const particleDataBuffer = root
   .createBuffer(arrayOf(ParticleData, PARTICLE_AMOUNT))
   .$usage('storage', 'uniform', 'vertex');
 
-// layouts and groups
+const deltaTimeBuffer = root.createBuffer(f32).$usage('uniform');
+const timeBuffer = root.createBuffer(f32).$usage('storage');
+
+// layouts
 
 const geometryLayout = tgpu.vertexLayout(
   (n: number) => arrayOf(ParticleGeometry, n),
   'instance',
 );
 
-const positionLayout = tgpu.vertexLayout(
+const dataLayout = tgpu.vertexLayout(
   (n: number) => arrayOf(ParticleData, n),
   'instance',
 );
 
-const computeLayout = tgpu.bindGroupLayout({
-  data: {
-    storage: arrayOf(ParticleData, PARTICLE_AMOUNT),
-    access: 'mutable',
-  },
-});
-
-const { data } = computeLayout.bound;
-
-const computeBindGroup = computeLayout.populate({
-  data: trianglePosBuffer,
-});
+const dataUniform = asMutable(particleDataBuffer);
+const deltaTimeUniform = asUniform(deltaTimeBuffer);
+const timeStorage = asMutable(timeBuffer);
 
 // functions
 
@@ -110,15 +104,21 @@ const rotate = tgpu.fn([vec2f, f32], vec2f).does(/* wgsl */ `
 
 const mainVert = tgpu
   .vertexFn(
-    { tilt: f32, angle: f32, color: vec4f, center: vec2f },
+    {
+      tilt: f32,
+      angle: f32,
+      color: vec4f,
+      center: vec2f,
+      index: builtin.vertexIndex,
+    },
     VertexOutput,
   )
   .does(
     /* wgsl */ `(
-      @location(0) tilt: f32, 
-      @location(1) angle: f32, 
-      @location(2) color: vec4f, 
-      @location(3) center: vec2f, 
+      @location(0) tilt: f32,
+      @location(1) angle: f32,
+      @location(2) color: vec4f,
+      @location(3) center: vec2f,
       @builtin(vertex_index) index: u32
     ) -> VertexOutput {
     let width = tilt;
@@ -161,11 +161,14 @@ const mainCompute = tgpu
   .does(
     /* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
     let index = gid.x;
-    let phase = data[index].position.y * 10 + data[index].position.x * 10 + data[index].seed; 
-    data[index].position += data[index].velocity + vec2f(sin(phase), cos(phase))/1000;
+    if index == 0 {
+      time += deltaTime;
+    }
+    let phase = (time + data[index].seed) / 200; 
+    data[index].position += data[index].velocity * deltaTime / 20 + vec2f(sin(phase) / 600, cos(phase) / 500);
   }`,
   )
-  .$uses({ data });
+  .$uses({ data: dataUniform, deltaTime: deltaTimeUniform, time: timeStorage });
 
 // pipelines
 
@@ -174,21 +177,21 @@ const renderPipeline = root
     tilt: geometryLayout.attrib.tilt,
     angle: geometryLayout.attrib.angle,
     color: geometryLayout.attrib.color,
-    center: positionLayout.attrib.position,
+    center: dataLayout.attrib.position,
   })
   .withFragment(mainFrag, {
     format: presentationFormat,
   })
   .createPipeline()
-  .with(geometryLayout, particleShapeBuffer)
-  .with(positionLayout, trianglePosBuffer);
+  .with(geometryLayout, particleGeometryBuffer)
+  .with(dataLayout, particleDataBuffer);
 
 const computePipeline = root.withCompute(mainCompute).createPipeline();
 
 // compute and draw
 
 const randomizePositions = () =>
-  trianglePosBuffer.write(
+  particleDataBuffer.write(
     Array(PARTICLE_AMOUNT)
       .fill(0)
       .map(() => ({
@@ -205,16 +208,26 @@ randomizePositions();
 
 let disposed = false;
 
-function frame() {
-  if (disposed) {
-    return;
-  }
+const onFrame = (loop: (deltaTime: number) => unknown) => {
+  let lastTime = Date.now();
+  const runner = () => {
+    if (disposed) {
+      return;
+    }
+    const now = Date.now();
+    const dt = now - lastTime;
+    lastTime = now;
+    loop(dt);
+    requestAnimationFrame(runner);
+  };
+  requestAnimationFrame(runner);
+};
 
+onFrame((deltaTime) => {
+  deltaTimeBuffer.write(deltaTime);
   canvasAspectRatioBuffer.write(canvas.width / canvas.height);
 
-  computePipeline
-    .with(computeLayout, computeBindGroup)
-    .dispatchWorkgroups(PARTICLE_AMOUNT);
+  computePipeline.dispatchWorkgroups(PARTICLE_AMOUNT);
 
   renderPipeline
     .withColorAttachment({
@@ -226,11 +239,7 @@ function frame() {
     .draw(6, PARTICLE_AMOUNT);
 
   root.flush();
-
-  requestAnimationFrame(frame);
-}
-
-frame();
+});
 
 // example controls and cleanup
 
