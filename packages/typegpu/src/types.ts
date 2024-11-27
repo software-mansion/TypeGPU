@@ -2,6 +2,7 @@ import type { Block } from 'tinyest';
 import type { ISchema } from 'typed-binary';
 import type { TgpuNamable } from './namable';
 import type { NameRegistry } from './nameRegistry';
+import type { Infer } from './repr';
 import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
@@ -119,12 +120,16 @@ export type BindableBufferUsage = 'uniform' | 'readonly' | 'mutable';
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
 
 export interface TgpuData<TInner> extends ISchema<TInner>, TgpuResolvable {
+  /** Type-token, not available at runtime */
+  readonly __repr: TInner;
   readonly isLoose: false;
   readonly byteAlignment: number;
   readonly size: number;
 }
 
 export interface TgpuLooseData<TInner> extends ISchema<TInner> {
+  /** Type-token, not available at runtime */
+  readonly __repr: TInner;
   readonly isLoose: true;
   readonly byteAlignment: number;
   readonly size: number;
@@ -178,7 +183,7 @@ export interface TgpuSlot<T> extends TgpuNamable {
    */
   areEqual(a: T, b: T): boolean;
 
-  readonly value: T;
+  readonly value: Infer<T>;
 }
 
 export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {

@@ -138,6 +138,8 @@ class TgpuArrayImpl<TElement extends AnyTgpuData>
   extends Schema<Unwrap<TElement>[]>
   implements TgpuArray<TElement>
 {
+  /** Type-token, not available at runtime */
+  public readonly __repr!: Unwrap<TElement>[];
   private _size: number;
   public readonly isRuntimeSized: boolean;
   public readonly byteAlignment: number;
@@ -213,6 +215,8 @@ class TgpuLooseArrayImpl<TElement extends AnyTgpuData | AnyTgpuLooseData>
   extends Schema<Unwrap<TElement>[]>
   implements TgpuLooseArray<TElement>
 {
+  /** Type-token, not available at runtime */
+  public readonly __repr!: Unwrap<TElement>[];
   public readonly byteAlignment: number;
   public readonly size: number;
   public readonly stride: number;

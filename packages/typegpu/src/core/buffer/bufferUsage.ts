@@ -1,6 +1,7 @@
 import type { Unwrap } from 'typed-binary';
 import { type Storage, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
+import type { Infer } from '../../repr';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout';
 import type {
   AnyTgpuData,
@@ -20,6 +21,7 @@ export interface TgpuBufferUsage<
 > extends TgpuResolvable {
   readonly resourceType: 'buffer-usage';
   readonly usage: TUsage;
+  readonly __repr: Infer<TData>;
   value: Unwrap<TData>;
 }
 
@@ -60,6 +62,8 @@ class TgpuFixedBufferImpl<
   TUsage extends BindableBufferUsage,
 > implements TgpuBufferUsage<TData, TUsage>
 {
+  /** Type-token, not available at runtime */
+  public readonly __repr!: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
 
   constructor(
@@ -109,6 +113,8 @@ export class TgpuLaidOutBufferImpl<
   TUsage extends BindableBufferUsage,
 > implements TgpuBufferUsage<TData, TUsage>
 {
+  /** Type-token, not available at runtime */
+  public readonly __repr!: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
 
   constructor(

@@ -42,6 +42,9 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat>
   extends Schema<FormatToWGSLType<T>>
   implements TgpuVertexFormatData<T>
 {
+  /** Type-token, not available at runtime */
+  public readonly __repr!: FormatToWGSLType<T>;
+
   private underlyingType: FormatToWGSLType<T>;
   private elementSize: 1 | 2 | 4;
   private elementCount: number;
