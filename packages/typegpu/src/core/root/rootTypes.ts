@@ -12,7 +12,7 @@ import type {
   Unsubscribe,
 } from '../../tgpuPlumTypes';
 import type { TgpuSampler } from '../../tgpuSampler';
-import type { AnyTgpuData, TgpuSlot } from '../../types';
+import type { AnyTgpuData, Eventual, TgpuSlot } from '../../types';
 import type { Unwrapper } from '../../unwrapper';
 import type { Mutable, OmitProps, Prettify } from '../../utilityTypes';
 import type { TgpuBuffer } from '../buffer/buffer';
@@ -53,7 +53,7 @@ export interface WithFragment<
 }
 
 export interface WithBinding {
-  with<T>(slot: TgpuSlot<T>, value: T): WithBinding;
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
 
   withCompute(entryFn: TgpuComputeFn): WithCompute;
 
