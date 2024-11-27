@@ -12,7 +12,7 @@ import type {
   Unsubscribe,
 } from '../../tgpuPlumTypes';
 import type { TgpuSampler } from '../../tgpuSampler';
-import type { AnyTgpuData } from '../../types';
+import type { AnyTgpuData, TgpuSlot } from '../../types';
 import type { Unwrapper } from '../../unwrapper';
 import type { Mutable, OmitProps, Prettify } from '../../utilityTypes';
 import type { TgpuBuffer } from '../buffer/buffer';
@@ -48,7 +48,19 @@ export interface WithVertex<Varying extends IOLayout = IOLayout> {
 export interface WithFragment<
   Output extends IOLayout<Vec4f> = IOLayout<Vec4f>,
 > {
+  withPrimitive(primitiveState: GPUPrimitiveState): WithFragment<Output>;
   createPipeline(): TgpuRenderPipeline<Output>;
+}
+
+export interface WithBinding {
+  with<T>(slot: TgpuSlot<T>, value: T): WithBinding;
+
+  withCompute(entryFn: TgpuComputeFn): WithCompute;
+
+  withVertex<Attribs extends IOLayout, Varying extends IOLayout>(
+    entryFn: TgpuVertexFn<Attribs, Varying>,
+    attribs: LayoutToAllowedAttribs<OmitBuiltins<Attribs>>,
+  ): WithVertex<Varying>;
 }
 
 export type CreateTextureOptions<
@@ -196,7 +208,7 @@ export interface TgpuRoot extends Unwrapper {
   destroy(): void;
 }
 
-export interface ExperimentalTgpuRoot extends TgpuRoot {
+export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   readonly jitTranspiler?: JitTranspiler | undefined;
   readonly nameRegistry: NameRegistry;
   /**
@@ -218,13 +230,6 @@ export interface ExperimentalTgpuRoot extends TgpuRoot {
   ): Unsubscribe;
 
   samplerFor(sampler: TgpuSampler): GPUSampler;
-
-  withCompute(entryFn: TgpuComputeFn): WithCompute;
-
-  withVertex<Attribs extends IOLayout, Varying extends IOLayout>(
-    entryFn: TgpuVertexFn<Attribs, Varying>,
-    attribs: LayoutToAllowedAttribs<OmitBuiltins<Attribs>>,
-  ): WithVertex<Varying>;
 
   /**
    * Causes all commands enqueued by pipelines to be
