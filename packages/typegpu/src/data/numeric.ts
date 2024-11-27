@@ -9,6 +9,8 @@ const primitiveNumeric = <TKind extends string>(
   code: TKind,
 ) => {
   return {
+    /** Type-token, not available at runtime */
+    __repr: undefined as unknown as number,
     // Type-token, not available at runtime
     __unwrapped: undefined as unknown as number,
 

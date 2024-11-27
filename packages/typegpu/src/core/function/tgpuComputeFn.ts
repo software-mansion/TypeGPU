@@ -1,4 +1,5 @@
 import type { Block } from 'tinyest';
+import type { AnyBuiltin } from '../../builtin';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
@@ -14,6 +15,7 @@ import type { Implementation } from './fnTypes';
 export interface TgpuComputeFnShell {
   readonly argTypes: [];
   readonly returnType: undefined;
+  readonly workgroupSize: [number, number, number];
 
   /**
    * Creates a type-safe implementation of this signature
@@ -36,6 +38,10 @@ export interface TgpuComputeFn extends TgpuResolvable, TgpuNamable {
   $__ast(argNames: string[], body: Block): this;
 }
 
+export interface ComputeFnOptions {
+  workgroupSize: number[];
+}
+
 /**
  * Creates a shell of a typed entry function for the compute shader stage. Any function
  * that implements this shell can perform general-purpose computation.
@@ -43,10 +49,20 @@ export interface TgpuComputeFn extends TgpuResolvable, TgpuNamable {
  * @param workgroupSize
  *   Size of blocks that the thread grid will be divided into (up to 3 dimensions).
  */
-export function computeFn(workgroupSize: number[]): TgpuComputeFnShell {
+export function computeFn(
+  argTypes: AnyBuiltin[],
+  options: ComputeFnOptions,
+): TgpuComputeFnShell {
+  const { workgroupSize } = options;
+
   return {
     argTypes: [],
     returnType: undefined,
+    workgroupSize: [
+      workgroupSize[0] ?? 1,
+      workgroupSize[1] ?? 1,
+      workgroupSize[2] ?? 1,
+    ],
 
     does(implementation) {
       return createComputeFn(this, workgroupSize, implementation);

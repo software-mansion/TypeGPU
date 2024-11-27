@@ -5,6 +5,7 @@ import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout';
+import type { TgpuSlot } from '../../types';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 
@@ -34,10 +35,11 @@ export interface INTERNAL_TgpuComputePipeline {
 
 export function INTERNAL_createComputePipeline(
   branch: ExperimentalTgpuRoot,
+  slotBindings: [TgpuSlot<unknown>, unknown][],
   entryFn: TgpuComputeFn,
 ) {
   return new TgpuComputePipelineImpl(
-    new ComputePipelineCore(branch, entryFn),
+    new ComputePipelineCore(branch, slotBindings, entryFn),
     {},
   );
 }
@@ -134,6 +136,7 @@ class ComputePipelineCore {
 
   constructor(
     public readonly branch: ExperimentalTgpuRoot,
+    private readonly _slotBindings: [TgpuSlot<unknown>, unknown][],
     private readonly _entryFn: TgpuComputeFn,
   ) {}
 
@@ -145,7 +148,7 @@ class ComputePipelineCore {
       const { code, bindGroupLayouts, catchall } = resolve(
         {
           resolve: (ctx) => {
-            ctx.resolve(this._entryFn);
+            ctx.resolve(this._entryFn, this._slotBindings);
             return '';
           },
         },

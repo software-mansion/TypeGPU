@@ -1,5 +1,5 @@
 import type { TgpuBuffer, Vertex } from '../../core/buffer/buffer';
-import type { TgpuArray, Vec4f } from '../../data';
+import type { TgpuArray } from '../../data';
 import { MissingBindGroupError } from '../../errors';
 import type { TgpuNamable } from '../../namable';
 import { resolve } from '../../resolutionCtx';
@@ -9,7 +9,7 @@ import {
   type TgpuBindGroupLayout,
   isBindGroupLayout,
 } from '../../tgpuBindGroupLayout';
-import type { AnyTgpuData } from '../../types';
+import type { AnyTgpuData, TgpuSlot } from '../../types';
 import type { IOData, IOLayout } from '../function/fnTypes';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
@@ -113,23 +113,20 @@ export type AnyFragmentColorAttachment =
   | ColorAttachment
   | Record<string, ColorAttachment>;
 
+export type RenderPipelineCoreOptions = {
+  branch: ExperimentalTgpuRoot;
+  slotBindings: [TgpuSlot<unknown>, unknown][];
+  vertexAttribs: AnyVertexAttribs;
+  vertexFn: TgpuVertexFn;
+  fragmentFn: TgpuFragmentFn;
+  primitiveState: GPUPrimitiveState | undefined;
+  targets: AnyFragmentTargets;
+};
+
 export function INTERNAL_createRenderPipeline(
-  branch: ExperimentalTgpuRoot,
-  vertexAttribs: AnyVertexAttribs,
-  vertexFn: TgpuVertexFn,
-  fragmentFn: TgpuFragmentFn,
-  targets: AnyFragmentTargets,
+  options: RenderPipelineCoreOptions,
 ) {
-  return new TgpuRenderPipelineImpl(
-    new RenderPipelineCore(
-      branch,
-      vertexAttribs,
-      vertexFn,
-      fragmentFn,
-      targets,
-    ),
-    {},
-  );
+  return new TgpuRenderPipelineImpl(new RenderPipelineCore(options), {});
 }
 
 // --------------
@@ -220,22 +217,23 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     firstInstance?: number,
   ): void {
     const memo = this._core.unwrap();
+    const { branch, fragmentFn } = this._core.options;
 
     const colorAttachments = connectAttachmentToShader(
-      this._core.fragmentFn.shell.returnType,
+      fragmentFn.shell.returnType,
       this._priors.colorAttachment ?? {},
     ).map((attachment) => {
       if (isTexture(attachment.view)) {
         return {
           ...attachment,
-          view: this._core.branch.unwrap(attachment.view).createView(),
+          view: branch.unwrap(attachment.view).createView(),
         };
       }
 
       return attachment;
     }) as GPURenderPassColorAttachment[];
 
-    const pass = this._core.branch.commandEncoder.beginRenderPass({
+    const pass = branch.commandEncoder.beginRenderPass({
       label: this._core.label ?? '',
       colorAttachments,
     });
@@ -245,13 +243,13 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     memo.bindGroupLayouts.forEach((layout, idx) => {
       if (memo.catchall && idx === memo.catchall[0]) {
         // Catch-all
-        pass.setBindGroup(idx, this._core.branch.unwrap(memo.catchall[1]));
+        pass.setBindGroup(idx, branch.unwrap(memo.catchall[1]));
       } else {
         const bindGroup = this._priors.bindGroupLayoutMap?.get(layout);
         if (bindGroup === undefined) {
           throw new MissingBindGroupError(layout.label);
         }
-        pass.setBindGroup(idx, this._core.branch.unwrap(bindGroup));
+        pass.setBindGroup(idx, branch.unwrap(bindGroup));
       }
     });
 
@@ -262,7 +260,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
           `Missing vertex buffer for layout '${vertexLayout.label ?? '<unnamed>'}'. Please provide it using pipeline.with(layout, buffer).(...)`,
         );
       }
-      pass.setVertexBuffer(idx, this._core.branch.unwrap(buffer));
+      pass.setVertexBuffer(idx, branch.unwrap(buffer));
     });
 
     pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
@@ -278,45 +276,42 @@ class RenderPipelineCore {
   private readonly _vertexBufferLayouts: GPUVertexBufferLayout[];
   private readonly _targets: GPUColorTargetState[];
 
-  constructor(
-    public readonly branch: ExperimentalTgpuRoot,
-    private readonly _vertexAttribs: AnyVertexAttribs,
-    public readonly vertexFn: TgpuVertexFn<IOLayout, IOLayout>,
-    public readonly fragmentFn: TgpuFragmentFn<IOLayout, IOLayout<Vec4f>>,
-    targets: AnyFragmentTargets,
-  ) {
+  constructor(public readonly options: RenderPipelineCoreOptions) {
     const connectedAttribs = connectAttributesToShader(
-      this.vertexFn.shell.argTypes[0],
-      this._vertexAttribs,
+      options.vertexFn.shell.argTypes[0],
+      options.vertexAttribs,
     );
 
     this._vertexBufferLayouts = connectedAttribs.bufferDefinitions;
     this.usedVertexLayouts = connectedAttribs.usedVertexLayouts;
 
     this._targets = connectTargetsToShader(
-      this.fragmentFn.shell.returnType,
-      targets,
+      options.fragmentFn.shell.returnType,
+      options.targets,
     );
   }
 
   public unwrap(): Memo {
     if (this._memo === undefined) {
+      const { branch, vertexFn, fragmentFn, slotBindings, primitiveState } =
+        this.options;
+
       // Resolving code
       const { code, bindGroupLayouts, catchall } = resolve(
         {
           resolve: (ctx) => {
-            ctx.resolve(this.vertexFn);
-            ctx.resolve(this.fragmentFn);
+            ctx.resolve(vertexFn, slotBindings);
+            ctx.resolve(fragmentFn, slotBindings);
             return '';
           },
         },
         {
-          names: this.branch.nameRegistry,
-          jitTranspiler: this.branch.jitTranspiler,
+          names: branch.nameRegistry,
+          jitTranspiler: branch.jitTranspiler,
         },
       );
 
-      const device = this.branch.device;
+      const device = branch.device;
 
       const module = device.createShaderModule({
         label: `${this.label ?? '<unnamed>'} - Shader`,
@@ -328,9 +323,7 @@ class RenderPipelineCore {
           label: this.label ?? '<unnamed>',
           layout: device.createPipelineLayout({
             label: `${this.label ?? '<unnamed>'} - Pipeline Layout`,
-            bindGroupLayouts: bindGroupLayouts.map((l) =>
-              this.branch.unwrap(l),
-            ),
+            bindGroupLayouts: bindGroupLayouts.map((l) => branch.unwrap(l)),
           }),
           vertex: {
             module,
@@ -340,6 +333,7 @@ class RenderPipelineCore {
             module,
             targets: this._targets,
           },
+          primitive: primitiveState ?? {},
         }),
         bindGroupLayouts,
         catchall,

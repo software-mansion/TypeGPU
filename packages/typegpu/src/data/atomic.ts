@@ -58,6 +58,8 @@ class AtomicImpl<TSchema extends U32 | I32>
   extends Schema<Unwrap<TSchema>>
   implements Atomic<TSchema>
 {
+  /** Type-token, not available at runtime */
+  public readonly __repr!: Unwrap<TSchema>;
   public readonly size: number;
   public readonly byteAlignment: number;
   public readonly isLoose = false as const;
