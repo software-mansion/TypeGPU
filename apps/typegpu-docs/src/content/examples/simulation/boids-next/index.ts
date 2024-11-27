@@ -214,7 +214,7 @@ const computeBindGroupLayout = tgpu
 const { currentTrianglePos, nextTrianglePos } = computeBindGroupLayout.bound;
 
 const mainCompute = tgpu
-  .computeFn([1])
+  .computeFn([], { workgroupSize: [1] })
   .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
     let index = gid.x;
     var instanceInfo = currentTrianglePos[index];

@@ -473,45 +473,6 @@ const mainCompute = tgpu
     outputGridSlot,
   });
 
-const mainFragment = wgsl.fn`
-  (x: i32, y: i32) -> vec4f {
-    let index = ${coordsToIndex}(x, y);
-    let cell = ${inputGridSlot}[index];
-    let velocity = cell.xy;
-    let density = max(0., cell.z);
-
-    let obstacle_color = vec4f(0.1, 0.1, 0.1, 1.);
-
-    let background = vec4f(0.9, 0.9, 0.9, 1.);
-    let first_color = vec4f(0.2, 0.6, 1., 1.);
-    let second_color = vec4f(0.2, 0.3, 0.6, 1.);
-    let third_color = vec4f(0.1, 0.2, 0.4, 1.);
-
-    let first_threshold = 2.;
-    let second_threshold = 10.;
-    let third_threshold = 20.;
-
-    if (${isInsideObstacle}(x, y)) {
-      return obstacle_color;
-    }
-
-    if (density <= 0.) {
-      return background;
-    }
-
-    if (density <= first_threshold) {
-      let t = 1 - pow(1 - density / first_threshold, 2.);
-      return mix(background, first_color, t);
-    }
-
-    if (density <= second_threshold) {
-      return mix(first_color, second_color, (density - first_threshold) / (second_threshold - first_threshold));
-    }
-
-    return mix(second_color, third_color, min((density - second_threshold) / third_threshold, 1.));
-  }
-`.$name('main_fragment');
-
 const OBSTACLE_BOX = 0;
 const OBSTACLE_LEFT_WALL = 1;
 
