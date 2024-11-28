@@ -124,14 +124,11 @@ const mainVert = tgpu
     let width = tilt;
     let height = tilt / 2;
 
-    var pos = rotate(array<vec2f, 6>(
+    var pos = rotate(array<vec2f, 4>(
       vec2f(0, 0),
       vec2f(width, 0),
-      vec2f(width, height),
-
-      vec2f(width, height),
       vec2f(0, height),
-      vec2f(0, 0),
+      vec2f(width, height),
     )[index] / 350, angle) + center;
 
     if (canvasAspectRatio < 1) {
@@ -157,7 +154,7 @@ const mainFrag = tgpu.fragmentFn(VertexOutput, vec4f).does(/* wgsl */ `
   }`);
 
 const mainCompute = tgpu
-  .computeFn([1])
+  .computeFn([builtin.globalInvocationId], { workgroupSize: [1] })
   .does(
     /* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
     let index = gid.x;
@@ -185,6 +182,9 @@ const renderPipeline = root
   })
   .withFragment(mainFrag, {
     format: presentationFormat,
+  })
+  .withPrimitive({
+    topology: 'triangle-strip',
   })
   .createPipeline()
   .with(geometryLayout, particleGeometryBuffer)
@@ -241,7 +241,7 @@ onFrame((deltaTime) => {
       loadOp: 'clear' as const,
       storeOp: 'store' as const,
     })
-    .draw(6, PARTICLE_AMOUNT);
+    .draw(4, PARTICLE_AMOUNT);
 
   root.flush();
 });
