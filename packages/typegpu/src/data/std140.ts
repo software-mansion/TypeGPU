@@ -16,6 +16,9 @@ import {
 import { RecursiveDataTypeError } from '../errors';
 import type { ResolutionCtx, TgpuData } from '../types';
 
+/**
+ * @internal
+ */
 export class SimpleTgpuData<TSchema extends AnySchema>
   extends Schema<Unwrap<TSchema>>
   implements TgpuData<Unwrap<TSchema>>
