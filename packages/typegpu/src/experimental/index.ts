@@ -7,7 +7,13 @@ import { fn, procedure } from '../core/function/tgpuFn';
 import { fragmentFn } from '../core/function/tgpuFragmentFn';
 import { vertexFn } from '../core/function/tgpuVertexFn';
 import { resolve } from '../core/resolve/tgpuResolve';
-import { init, initFromDevice } from '../core/root/init';
+import {
+  type InitFromDeviceOptions,
+  type InitOptions,
+  init,
+  initFromDevice,
+} from '../core/root/init';
+import type { ExperimentalTgpuRoot } from '../core/root/rootTypes';
 import { vertexLayout } from '../core/vertexLayout/vertexLayout';
 import { createBuffer } from '../legacyBufferApi';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
@@ -29,8 +35,12 @@ export const tgpu = {
   vertexLayout,
   bindGroupLayout,
 
-  init,
-  initFromDevice,
+  init: init as (
+    options?: InitOptions | undefined,
+  ) => Promise<ExperimentalTgpuRoot>,
+  initFromDevice: initFromDevice as (
+    options: InitFromDeviceOptions,
+  ) => ExperimentalTgpuRoot,
 
   resolve,
 

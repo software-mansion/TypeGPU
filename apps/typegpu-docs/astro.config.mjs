@@ -1,12 +1,12 @@
 // @ts-check
 
-// import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import tailwind from '@astrojs/tailwind';
 import { defineConfig } from 'astro/config';
 import starlightBlog from 'starlight-blog';
+import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import importRawRedirectPlugin from './vite-import-raw-redirect-plugin.mjs';
 
 /**
@@ -39,7 +39,24 @@ export default defineConfig({
     starlight({
       title: 'TypeGPU',
       customCss: ['./src/tailwind.css', './src/fonts/font-face.css'],
-      plugins: [starlightBlog()],
+      plugins: stripFalsy([
+        starlightBlog(),
+        DEV &&
+          starlightTypeDoc({
+            entryPoints: [
+              '../../packages/typegpu/src/index.ts',
+              '../../packages/typegpu/src/data/index.ts',
+            ],
+            tsconfig: '../../packages/typegpu/tsconfig.json',
+            sidebar: {
+              label: 'Reference',
+            },
+            typeDoc: {
+              excludeInternal: true,
+              excludeReferences: true,
+            },
+          }),
+      ]),
       logo: {
         light: './src/assets/typegpu-logo-light.svg',
         dark: './src/assets/typegpu-logo-dark.svg',
@@ -132,6 +149,7 @@ export default defineConfig({
             },
           ],
         },
+        DEV && typeDocSidebarGroup,
       ]),
     }),
     tailwind({
