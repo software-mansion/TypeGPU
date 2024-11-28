@@ -1,20 +1,21 @@
 import type { Parsed } from 'typed-binary';
 
 import type { OmitBuiltins } from '../../builtin';
+import type { AnyTgpuData } from '../../data/nonWgslTypes';
 import type { Vec4f } from '../../data/vector';
 import type { JitTranspiler } from '../../jitTranspiler';
 import type { NameRegistry } from '../../nameRegistry';
 import type { PlumListener } from '../../plumStore';
 import type { TgpuSettable } from '../../settableTrait';
+import type { Mutable, OmitProps, Prettify } from '../../shared/utilityTypes';
 import type {
   ExtractPlumValue,
   TgpuPlum,
   Unsubscribe,
 } from '../../tgpuPlumTypes';
 import type { TgpuSampler } from '../../tgpuSampler';
-import type { AnyTgpuData, Eventual, TgpuSlot } from '../../types';
+import type { Eventual, TgpuSlot } from '../../types';
 import type { Unwrapper } from '../../unwrapper';
-import type { Mutable, OmitProps, Prettify } from '../../utilityTypes';
 import type { TgpuBuffer } from '../buffer/buffer';
 import type { IOLayout } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';

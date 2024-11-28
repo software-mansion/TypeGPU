@@ -7,8 +7,8 @@ import type {
   TgpuTexture,
   TgpuWriteonlyTexture,
 } from './core/texture/texture';
+import type { AnyTgpuData } from './data/nonWgslTypes';
 import type { TgpuBindGroup, TgpuBindGroupLayout } from './tgpuBindGroupLayout';
-import type { AnyTgpuData } from './types';
 
 export interface Unwrapper {
   readonly device: GPUDevice;

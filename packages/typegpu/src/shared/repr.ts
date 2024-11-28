@@ -7,3 +7,7 @@
 export type Infer<T> = T extends { readonly __repr: infer TRepr }
   ? TRepr
   : never;
+
+export type InferRecord<T extends Record<string | number | symbol, unknown>> = {
+  [Key in keyof T]: Infer<T[Key]>;
+};

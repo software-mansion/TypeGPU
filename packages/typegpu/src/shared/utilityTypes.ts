@@ -30,3 +30,7 @@ export type OmitProps<T extends Record<string, unknown>, Prop> = Pick<
 export type Mutable<T> = {
   -readonly [P in keyof T]: T[P];
 };
+
+export function assertExhaustive(x: never, location: string): never {
+  throw new Error(`Failed to handle ${x} at ${location}`);
+}

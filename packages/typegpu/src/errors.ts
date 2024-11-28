@@ -1,5 +1,6 @@
 import type { TgpuBuffer } from './core/buffer/buffer';
-import type { AnyTgpuData, TgpuResolvable, TgpuSlot } from './types';
+import type { AnyTgpuData } from './data/nonWgslTypes';
+import type { TgpuResolvable, TgpuSlot } from './types';
 
 const prefix = 'Invariant failed';
 

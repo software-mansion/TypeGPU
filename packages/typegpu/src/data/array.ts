@@ -1,36 +1,15 @@
-import type * as TB from 'typed-binary';
-import {
-  type IMeasurer,
-  type MaxValue,
-  Measurer,
-  type Parsed,
-  Schema,
-  type Unwrap,
-} from 'typed-binary';
 import { roundUp } from '../mathUtils';
-import type {
-  AnyTgpuData,
-  AnyTgpuLooseData,
-  ResolutionCtx,
-  TgpuData,
-  TgpuLooseData,
-} from '../types';
-import alignIO from './alignIO';
-import { getCustomAlignment } from './attributes';
+import type { Infer } from '../shared/repr';
+import {
+  type AnyWgslData,
+  type WgslArray,
+  alignmentOfData,
+  sizeOfData,
+} from './dataTypes';
 
 // ----------
 // Public API
 // ----------
-
-export interface TgpuBaseArray<
-  TElement extends AnyTgpuData | AnyTgpuLooseData =
-    | AnyTgpuData
-    | AnyTgpuLooseData,
-> {
-  readonly elementType: TElement;
-  readonly elementCount: number;
-  readonly stride: number;
-}
 
 /**
  * Array schema constructed via `d.arrayOf` function.
@@ -39,9 +18,8 @@ export interface TgpuBaseArray<
  * between binary and JS representation. Takes into account
  * the `byteAlignment` requirement of its elementType.
  */
-export interface TgpuArray<TElement extends AnyTgpuData>
-  extends TgpuBaseArray<TElement>,
-    TgpuData<Unwrap<TElement>[]> {}
+export interface TgpuArray<TElement extends AnyWgslData>
+  extends WgslArray<TElement> {}
 
 /**
  * Creates an array schema that can be used to construct gpu buffers.
@@ -52,212 +30,34 @@ export interface TgpuArray<TElement extends AnyTgpuData>
  * const array = d.arrayOf(d.u32, LENGTH);
  *
  * @param elementType The type of elements in the array.
- * @param count The number of elements in the array.
+ * @param length The number of elements in the array.
  */
-export const arrayOf = <TElement extends AnyTgpuData>(
+export const arrayOf = <TElement extends AnyWgslData>(
   elementType: TElement,
-  count: number,
-): TgpuArray<TElement> => new TgpuArrayImpl(elementType, count);
-
-/**
- * Array schema constructed via `d.looseArrayOf` function.
- *
- * Useful for defining vertex buffers.
- * Elements in the schema are not aligned in respect to their `byteAlignment`,
- * unless they are explicitly decorated with the custom align attribute
- * via `d.align` function.
- */
-export interface TgpuLooseArray<TElement extends AnyTgpuData | AnyTgpuLooseData>
-  extends TgpuBaseArray<TElement>,
-    TgpuLooseData<Unwrap<TElement>[]> {}
-
-/**
- * Creates an array schema that can be used to construct vertex buffers.
- * Describes arrays with fixed-size length, storing elements of the same type.
- *
- * Elements in the schema are not aligned in respect to their `byteAlignment`,
- * unless they are explicitly decorated with the custom align attribute
- * via `d.align` function.
- *
- * @example
- * const looseArray = d.looseArrayOf(d.vec3f, 3); // packed array of vec3f
- *
- * @example
- * const looseArray = d.looseArrayOf(d.align(16, d.vec3f), 3);
- *
- * @param elementType The type of elements in the array.
- * @param count The number of elements in the array.
- */
-export const looseArrayOf = <TElement extends AnyTgpuData | AnyTgpuLooseData>(
-  elementType: TElement,
-  count: number,
-): TgpuLooseArray<TElement> => new TgpuLooseArrayImpl(elementType, count);
-
-/**
- * Checks whether passed in value is an array schema,
- * as opposed to, e.g., a looseArray schema.
- *
- * Array schemas can be used to describe uniform and storage buffers,
- * whereas looseArray schemas cannot.
- *
- * @example
- * isArraySchema(d.arrayOf(d.u32, 4)) // true
- * isArraySchema(d.looseArrayOf(d.u32, 4)) // false
- * isArraySchema(d.vec3f) // false
- */
-export function isArraySchema<T extends TgpuArray<AnyTgpuData>>(
-  schema: T | unknown,
-): schema is T {
-  return schema instanceof TgpuArrayImpl;
-}
-
-/**
- * Checks whether the passed in value is a looseArray schema,
- * as opposed to, e.g., a regular array schema.
- *
- * Array schemas can be used to describe uniform and storage buffers,
- * whereas looseArray schemas cannot. Loose arrays are useful for
- * defining vertex buffers instead.
- *
- * @example
- * isLooseArraySchema(d.arrayOf(d.u32, 4)) // false
- * isLooseArraySchema(d.looseArrayOf(d.u32, 4)) // true
- * isLooseArraySchema(d.vec3f) // false
- */
-export function isLooseArraySchema<T extends TgpuLooseArray<AnyTgpuData>>(
-  schema: T | unknown,
-): schema is T {
-  return schema instanceof TgpuLooseArrayImpl;
-}
+  length: number,
+): TgpuArray<TElement> => new TgpuArrayImpl(elementType, length);
 
 // --------------
 // Implementation
 // --------------
 
-class TgpuArrayImpl<TElement extends AnyTgpuData>
-  extends Schema<Unwrap<TElement>[]>
+class TgpuArrayImpl<TElement extends AnyWgslData>
   implements TgpuArray<TElement>
 {
+  public readonly type = 'array';
   /** Type-token, not available at runtime */
-  public readonly __repr!: Unwrap<TElement>[];
-  private _size: number;
-  public readonly isRuntimeSized: boolean;
-  public readonly byteAlignment: number;
-  public readonly stride: number;
-  public readonly isLoose = false;
-
-  constructor(
-    public readonly elementType: TElement,
-    public readonly elementCount: number,
-  ) {
-    super();
-    this.byteAlignment = elementType.byteAlignment;
-    this.stride = roundUp(elementType.size, elementType.byteAlignment);
-    this._size = this.stride * elementCount;
-    this.isRuntimeSized = elementCount === 0;
-  }
-
-  get size() {
-    if (this.isRuntimeSized) {
-      throw new Error('Cannot get the size of a runtime-sized array');
-    }
-    return this._size;
-  }
-
-  write(output: TB.ISerialOutput, value: Parsed<Unwrap<TElement>>[]) {
-    if (this.isRuntimeSized) {
-      throw new Error('Cannot write a runtime-sized array');
-    }
-    alignIO(output, this.byteAlignment);
-    const beginning = output.currentByteOffset;
-    for (let i = 0; i < Math.min(this.elementCount, value.length); i++) {
-      alignIO(output, this.byteAlignment);
-      this.elementType.write(output, value[i]);
-    }
-    output.seekTo(beginning + this.size);
-  }
-
-  read(input: TB.ISerialInput): Parsed<Unwrap<TElement>>[] {
-    if (this.isRuntimeSized) {
-      throw new Error('Cannot read a runtime-sized array');
-    }
-    alignIO(input, this.byteAlignment);
-    const elements: Parsed<Unwrap<TElement>>[] = [];
-    for (let i = 0; i < this.elementCount; i++) {
-      alignIO(input, this.byteAlignment);
-      elements.push(this.elementType.read(input) as Parsed<Unwrap<TElement>>);
-    }
-    alignIO(input, this.byteAlignment);
-    return elements;
-  }
-
-  measure(
-    _: MaxValue | Parsed<Unwrap<TElement>>[],
-    measurer: IMeasurer = new Measurer(),
-  ): IMeasurer {
-    if (this.isRuntimeSized) {
-      return measurer.unbounded;
-    }
-    alignIO(measurer, this.byteAlignment);
-    return measurer.add(this.size);
-  }
-
-  resolve(ctx: ResolutionCtx): string {
-    const elementTypeResolved = ctx.resolve(this.elementType);
-    const arrayType = this.isRuntimeSized
-      ? `array<${elementTypeResolved}>`
-      : `array<${elementTypeResolved}, ${this.elementCount}>`;
-    return ctx.resolve(arrayType);
-  }
-}
-
-class TgpuLooseArrayImpl<TElement extends AnyTgpuData | AnyTgpuLooseData>
-  extends Schema<Unwrap<TElement>[]>
-  implements TgpuLooseArray<TElement>
-{
-  /** Type-token, not available at runtime */
-  public readonly __repr!: Unwrap<TElement>[];
-  public readonly byteAlignment: number;
+  public readonly __repr!: Infer<TElement>[];
   public readonly size: number;
+  public readonly alignment: number;
   public readonly stride: number;
-  public readonly isLoose = true;
+  public readonly isLoose = false; // TODO: Remove
 
   constructor(
     public readonly elementType: TElement,
-    public readonly elementCount: number,
+    public readonly length: number,
   ) {
-    super();
-    this.byteAlignment = getCustomAlignment(elementType) ?? 1;
-    this.stride = roundUp(elementType.size, this.byteAlignment);
-    this.size = this.stride * elementCount;
-  }
-
-  write(output: TB.ISerialOutput, value: Parsed<Unwrap<TElement>>[]) {
-    alignIO(output, this.byteAlignment);
-    const beginning = output.currentByteOffset;
-    for (let i = 0; i < Math.min(this.elementCount, value.length); i++) {
-      alignIO(output, this.byteAlignment);
-      this.elementType.write(output, value[i]);
-    }
-    output.seekTo(beginning + this.size);
-  }
-
-  read(input: TB.ISerialInput): Parsed<Unwrap<TElement>>[] {
-    alignIO(input, this.byteAlignment);
-    const elements: Parsed<Unwrap<TElement>>[] = [];
-    for (let i = 0; i < this.elementCount; i++) {
-      alignIO(input, this.byteAlignment);
-      elements.push(this.elementType.read(input) as Parsed<Unwrap<TElement>>);
-    }
-    alignIO(input, this.byteAlignment);
-    return elements;
-  }
-
-  measure(
-    _: MaxValue | Parsed<Unwrap<TElement>>[],
-    measurer: IMeasurer = new Measurer(),
-  ): IMeasurer {
-    alignIO(measurer, this.byteAlignment);
-    return measurer.add(this.size);
+    this.alignment = alignmentOfData(elementType);
+    this.stride = roundUp(sizeOfData(elementType), this.alignment);
+    this.size = this.stride * length;
   }
 }

@@ -5,22 +5,13 @@
 export * from './std140';
 export * from './numeric';
 export {
-  TgpuBaseStruct,
   TgpuStruct,
-  TgpuLooseStruct,
   isStructSchema,
   struct,
-  looseStruct,
-  isLooseStructSchema,
 } from './struct';
 export {
-  TgpuBaseArray,
   TgpuArray,
-  TgpuLooseArray,
-  isArraySchema,
   arrayOf,
-  looseArrayOf,
-  isLooseArraySchema,
 } from './array';
 export * from './vector';
 export * from './matrix';

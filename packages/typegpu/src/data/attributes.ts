@@ -11,15 +11,14 @@ import {
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import {
-  type AnyTgpuData,
   type AnyTgpuLooseData,
   type ResolutionCtx,
   type TgpuData,
   type TgpuLooseData,
   isDataLoose,
-  isDataNotLoose,
 } from '../types';
 import alignIO from './alignIO';
+import { type AnyWgslData, isWgslSchema } from './dataTypes';
 
 // ----------
 // Public API
@@ -71,8 +70,8 @@ export type AnyAttribute =
   | Builtin<BuiltinName>;
 
 export interface BaseDecorated<
-  TInner extends AnyTgpuData | AnyTgpuLooseData =
-    | AnyTgpuData
+  TInner extends AnyWgslData | AnyTgpuLooseData =
+    | AnyWgslData
     | AnyTgpuLooseData,
   TAttribs extends AnyAttribute[] = AnyAttribute[],
 > {
@@ -87,7 +86,7 @@ export interface BaseDecorated<
 }
 
 export interface Decorated<
-  TInner extends AnyTgpuData,
+  TInner extends AnyWgslData,
   TAttribs extends AnyAttribute[],
 > extends BaseDecorated<TInner, TAttribs>,
     TgpuData<Unwrap<TInner>> {}
@@ -99,7 +98,7 @@ export interface LooseDecorated<
     TgpuLooseData<Unwrap<TInner>> {}
 
 export type ExtractAttributes<T> = T extends BaseDecorated<
-  AnyTgpuData,
+  AnyWgslData,
   infer Attribs
 >
   ? Attribs
@@ -124,9 +123,9 @@ export type UnwrapDecorated<T> = T extends BaseDecorated<infer Inner>
  *     - Wrap `TData` with `Decorated` and a single attribute `[TAttrib]`
  */
 export type Decorate<
-  TData extends AnyTgpuData | AnyTgpuLooseData,
+  TData extends AnyWgslData | AnyTgpuLooseData,
   TAttrib extends AnyAttribute,
-> = TData extends AnyTgpuData
+> = TData extends AnyWgslData
   ? Decorated<UnwrapDecorated<TData>, [TAttrib, ...ExtractAttributes<TData>]>
   : TData extends AnyTgpuLooseData
     ? LooseDecorated<
@@ -142,7 +141,7 @@ export type IsBuiltin<T> = ExtractAttributes<T>[number] extends []
     : false;
 
 export function attribute<
-  TData extends AnyTgpuData | AnyTgpuLooseData,
+  TData extends AnyWgslData | AnyTgpuLooseData,
   TAttrib extends AnyAttribute,
 >(data: TData, attrib: TAttrib) {
   if (isDecorated(data)) {
@@ -176,7 +175,7 @@ export function attribute<
  */
 export function align<
   TAlign extends number,
-  TData extends AnyTgpuData | AnyTgpuLooseData,
+  TData extends AnyWgslData | AnyTgpuLooseData,
 >(alignment: TAlign, data: TData): Decorate<TData, Align<TAlign>> {
   return attribute(data, { type: 'align', alignment }) as Decorate<
     TData,
@@ -198,7 +197,7 @@ export function align<
  */
 export function size<
   TSize extends number,
-  TData extends AnyTgpuData | AnyTgpuLooseData,
+  TData extends AnyWgslData | AnyTgpuLooseData,
 >(size: TSize, data: TData): Decorate<TData, Size<TSize>> {
   return attribute(data, { type: 'size', size }) as Decorate<
     TData,
@@ -221,7 +220,7 @@ export function size<
  */
 export function location<
   TLocation extends number,
-  TData extends AnyTgpuData | AnyTgpuLooseData,
+  TData extends AnyWgslData | AnyTgpuLooseData,
 >(location: TLocation, data: TData): Decorate<TData, Location<TLocation>> {
   return attribute(data, { type: 'location', location }) as Decorate<
     TData,
@@ -229,7 +228,7 @@ export function location<
   >;
 }
 
-export function isDecorated<T extends Decorated<AnyTgpuData, AnyAttribute[]>>(
+export function isDecorated<T extends Decorated<AnyWgslData, AnyAttribute[]>>(
   value: T | unknown,
 ): value is T {
   return value instanceof DecoratedImpl;
@@ -242,20 +241,20 @@ export function isLooseDecorated<
 }
 
 export function getCustomAlignment(
-  data: AnyTgpuData | AnyTgpuLooseData,
+  data: AnyWgslData | AnyTgpuLooseData,
 ): number | undefined {
   return (data as unknown as BaseDecorated).alignAttrib;
 }
 
 export function getCustomLocation(
-  data: AnyTgpuData | AnyTgpuLooseData,
+  data: AnyWgslData | AnyTgpuLooseData,
 ): number | undefined {
   return (data as unknown as BaseDecorated).locationAttrib;
 }
 
 export function isBuiltin<
   T extends
-    | Decorated<AnyTgpuData, AnyAttribute[]>
+    | Decorated<AnyWgslData, AnyAttribute[]>
     | LooseDecorated<AnyTgpuLooseData, AnyAttribute[]>,
 >(value: T | unknown): value is T {
   return (
@@ -264,7 +263,7 @@ export function isBuiltin<
   );
 }
 
-export function getAttributesString<T extends AnyTgpuData>(field: T): string {
+export function getAttributesString<T extends AnyWgslData>(field: T): string {
   if (!isDecorated(field) && !isLooseDecorated(field)) {
     return '';
   }
@@ -297,7 +296,7 @@ export function getAttributesString<T extends AnyTgpuData>(field: T): string {
 // --------------
 
 class BaseDecoratedImpl<
-  TInner extends AnyTgpuData | AnyTgpuLooseData,
+  TInner extends AnyWgslData | AnyTgpuLooseData,
   TAttribs extends AnyAttribute[],
 > {
   // Type-token, not available at runtime
@@ -344,7 +343,7 @@ class BaseDecoratedImpl<
       );
     }
 
-    if (isDataNotLoose(this.inner)) {
+    if (isWgslSchema(this.inner)) {
       if (this.byteAlignment % this.inner.byteAlignment !== 0) {
         throw new Error(
           `Custom alignment has to be a multiple of the standard data byteAlignment. Got: ${this.byteAlignment}, expected multiple of: ${this.inner.byteAlignment}.`,
@@ -407,7 +406,7 @@ class BaseDecoratedImpl<
   }
 }
 
-class DecoratedImpl<TInner extends AnyTgpuData, TAttribs extends AnyAttribute[]>
+class DecoratedImpl<TInner extends AnyWgslData, TAttribs extends AnyAttribute[]>
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements Decorated<TInner, TAttribs>
 {

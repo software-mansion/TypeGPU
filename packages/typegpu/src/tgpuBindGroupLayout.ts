@@ -21,13 +21,14 @@ import {
   NotSampledError,
   isUsableAsSampled,
 } from './core/texture/usageExtension';
+import { type AnyWgslData, isWgslSchema } from './data/dataTypes';
 import { NotUniformError } from './errors';
 import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
 import type { TgpuNamable } from './namable';
+import type { OmitProps } from './shared/utilityTypes';
 import type { TgpuSampler } from './tgpuSampler';
-import { type AnyTgpuData, type TgpuShaderStage, isBaseData } from './types';
+import type { TgpuShaderStage } from './types';
 import type { Unwrapper } from './unwrapper';
-import type { OmitProps } from './utilityTypes';
 
 // ----------
 // Public API
@@ -53,11 +54,11 @@ export type TgpuLayoutEntryBase = {
 };
 
 export type TgpuLayoutUniform = TgpuLayoutEntryBase & {
-  uniform: AnyTgpuData | ((arrayLength: number) => AnyTgpuData);
+  uniform: AnyWgslData | ((arrayLength: number) => AnyWgslData);
 };
 
 export type TgpuLayoutStorage = TgpuLayoutEntryBase & {
-  storage: AnyTgpuData | ((arrayLength: number) => AnyTgpuData);
+  storage: AnyWgslData | ((arrayLength: number) => AnyWgslData);
   /** @default 'readonly' */
   access?: 'mutable' | 'readonly';
 };
@@ -107,15 +108,15 @@ export type TgpuLayoutEntry =
   | TgpuLayoutExternalTexture;
 
 type UnwrapRuntimeConstructorInner<
-  T extends AnyTgpuData | ((_: number) => AnyTgpuData),
-> = T extends AnyTgpuData
+  T extends AnyWgslData | ((_: number) => AnyWgslData),
+> = T extends AnyWgslData
   ? T
   : T extends (_: number) => infer Return
     ? Return
     : never;
 
 export type UnwrapRuntimeConstructor<
-  T extends AnyTgpuData | ((_: number) => AnyTgpuData),
+  T extends AnyWgslData | ((_: number) => AnyWgslData),
 > = T extends unknown ? UnwrapRuntimeConstructorInner<T> : never;
 
 export interface TgpuBindGroupLayout<
@@ -296,7 +297,7 @@ class TgpuBindGroupLayoutImpl<
       const membership = { idx, key, layout: this };
 
       if ('uniform' in entry) {
-        const dataType = isBaseData(entry.uniform)
+        const dataType = isWgslSchema(entry.uniform)
           ? entry.uniform
           : entry.uniform(0);
 
@@ -309,7 +310,7 @@ class TgpuBindGroupLayoutImpl<
       }
 
       if ('storage' in entry) {
-        const dataType = isBaseData(entry.storage)
+        const dataType = isWgslSchema(entry.storage)
           ? entry.storage
           : entry.storage(0);
 

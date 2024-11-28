@@ -9,7 +9,7 @@ import {
   vec4i,
   vec4u,
 } from '../../data';
-import type { Default } from '../../utilityTypes';
+import type { Default } from '../../shared/utilityTypes';
 import type { TextureProps } from './textureProps';
 
 export const texelFormatToChannelType = {

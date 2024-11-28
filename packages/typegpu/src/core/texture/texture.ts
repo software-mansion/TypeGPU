@@ -3,9 +3,9 @@ import type { Vec4f, Vec4i, Vec4u } from '../../data/vector';
 import { invariant } from '../../errors';
 import type { ExtensionGuard } from '../../extension';
 import type { TgpuNamable } from '../../namable';
+import type { Default } from '../../shared/utilityTypes';
+import type { UnionToIntersection } from '../../shared/utilityTypes';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
-import type { Default } from '../../utilityTypes';
-import type { UnionToIntersection } from '../../utilityTypes';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 import {
   type SampledFormatOptions,

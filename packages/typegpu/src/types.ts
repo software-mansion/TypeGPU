@@ -2,7 +2,7 @@ import type { Block } from 'tinyest';
 import type { ISchema } from 'typed-binary';
 import type { TgpuNamable } from './namable';
 import type { NameRegistry } from './nameRegistry';
-import type { Infer } from './repr';
+import type { Infer } from './shared/repr';
 import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,

@@ -1,5 +1,5 @@
 import { inGPUMode } from './gpuMode';
-import type { Infer } from './repr';
+import type { Infer } from './shared/repr';
 import {
   type ResolutionCtx,
   type TgpuResolvable,
