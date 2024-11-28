@@ -20,6 +20,8 @@ export class SimpleTgpuData<TSchema extends AnySchema>
   extends Schema<Unwrap<TSchema>>
   implements TgpuData<Unwrap<TSchema>>
 {
+  /** Type-token, not available at runtime */
+  public readonly __repr!: Unwrap<TSchema>;
   public readonly size: number;
   public readonly byteAlignment: number;
 

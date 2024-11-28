@@ -411,6 +411,8 @@ class DecoratedImpl<TInner extends AnyTgpuData, TAttribs extends AnyAttribute[]>
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements Decorated<TInner, TAttribs>
 {
+  /** Type-token, not available at runtime */
+  public readonly __repr!: Unwrap<TInner>;
   public readonly isLoose = false as const;
 
   resolve(ctx: ResolutionCtx): string {
@@ -425,5 +427,7 @@ class LooseDecoratedImpl<
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements LooseDecorated<TInner, TAttribs>
 {
+  /** Type-token, not available at runtime */
+  public readonly __repr!: Unwrap<TInner>;
   public readonly isLoose = true as const;
 }

@@ -36,6 +36,8 @@ function createMatSchema<
   options: MatSchemaOptions<ValueType, ColumnType>,
 ): MatSchema<ValueType, ColumnType> {
   const MatSchema: TgpuData<ValueType> = {
+    /** Type-token, not available at runtime */
+    __repr: undefined as unknown as ValueType,
     // Type-token, not available at runtime.
     __unwrapped: undefined as unknown as ValueType,
     isLoose: false as const,

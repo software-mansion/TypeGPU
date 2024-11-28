@@ -22,7 +22,7 @@ import type {
   Unsubscribe,
 } from '../../tgpuPlumTypes';
 import type { TgpuSampler } from '../../tgpuSampler';
-import type { AnyTgpuData } from '../../types';
+import type { AnyTgpuData, TgpuSlot } from '../../types';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
 import type { IOLayout } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
@@ -37,6 +37,7 @@ import {
 import {
   type AnyFragmentTargets,
   INTERNAL_createRenderPipeline,
+  type RenderPipelineCoreOptions,
   type TgpuRenderPipeline,
 } from '../pipeline/renderPipeline';
 import {
@@ -59,60 +60,88 @@ import type {
   CreateTextureResult,
   ExperimentalTgpuRoot,
   SetPlumAction,
+  WithBinding,
   WithCompute,
   WithFragment,
   WithVertex,
 } from './rootTypes';
 
+class WithBindingImpl implements WithBinding {
+  constructor(
+    private readonly _getRoot: () => ExperimentalTgpuRoot,
+    private readonly _slotBindings: [TgpuSlot<unknown>, unknown][],
+  ) {}
+
+  with<T>(slot: TgpuSlot<T>, value: T): WithBinding {
+    return new WithBindingImpl(this._getRoot, [
+      ...this._slotBindings,
+      [slot, value],
+    ]);
+  }
+
+  withCompute(entryFn: TgpuComputeFn): WithCompute {
+    return new WithComputeImpl(this._getRoot(), this._slotBindings, entryFn);
+  }
+
+  withVertex<Attribs extends IOLayout, Varying extends IOLayout>(
+    vertexFn: TgpuVertexFn,
+    attribs: LayoutToAllowedAttribs<OmitBuiltins<Attribs>>,
+  ): WithVertex {
+    return new WithVertexImpl({
+      branch: this._getRoot(),
+      primitiveState: undefined,
+      slotBindings: this._slotBindings,
+      vertexFn,
+      vertexAttribs: attribs as AnyVertexAttribs,
+    });
+  }
+}
+
 class WithComputeImpl implements WithCompute {
   constructor(
     private readonly _root: ExperimentalTgpuRoot,
+    private readonly _slotBindings: [TgpuSlot<unknown>, unknown][],
     private readonly _entryFn: TgpuComputeFn,
   ) {}
 
   createPipeline(): TgpuComputePipeline {
-    return INTERNAL_createComputePipeline(this._root, this._entryFn);
+    return INTERNAL_createComputePipeline(
+      this._root,
+      this._slotBindings,
+      this._entryFn,
+    );
   }
 }
 
 class WithVertexImpl implements WithVertex {
   constructor(
-    private readonly _root: ExperimentalTgpuRoot,
-    private readonly _vertexAttribs: AnyVertexAttribs,
-    private readonly _vertexFn: TgpuVertexFn,
+    private readonly _options: Omit<
+      RenderPipelineCoreOptions,
+      'fragmentFn' | 'targets'
+    >,
   ) {}
 
   withFragment(
-    entryFn: TgpuFragmentFn,
+    fragmentFn: TgpuFragmentFn,
     targets: AnyFragmentTargets,
   ): WithFragment {
-    return new WithFragmentImpl(
-      this._root,
-      this._vertexAttribs,
-      this._vertexFn,
-      entryFn,
+    return new WithFragmentImpl({
+      ...this._options,
+      fragmentFn,
       targets,
-    );
+    });
   }
 }
 
 class WithFragmentImpl implements WithFragment {
-  constructor(
-    private readonly _root: ExperimentalTgpuRoot,
-    private readonly _vertexAttribs: AnyVertexAttribs,
-    private readonly _vertexFn: TgpuVertexFn,
-    private readonly _fragmentFn: TgpuFragmentFn,
-    private readonly _targets: AnyFragmentTargets,
-  ) {}
+  constructor(private readonly _options: RenderPipelineCoreOptions) {}
+
+  withPrimitive(primitiveState: GPUPrimitiveState): WithFragment {
+    return new WithFragmentImpl({ ...this._options, primitiveState });
+  }
 
   createPipeline(): TgpuRenderPipeline {
-    return INTERNAL_createRenderPipeline(
-      this._root,
-      this._vertexAttribs,
-      this._vertexFn,
-      this._fragmentFn,
-      this._targets,
-    );
+    return INTERNAL_createRenderPipeline(this._options);
   }
 }
 
@@ -124,7 +153,7 @@ interface Disposable {
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a root can interact via GPU buffers.
  */
-class TgpuRootImpl implements ExperimentalTgpuRoot {
+class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
   private _disposables: Disposable[] = [];
   private _samplers = new WeakMap<TgpuSampler, GPUSampler>();
 
@@ -143,7 +172,9 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     public readonly device: GPUDevice,
     public readonly nameRegistry: NameRegistry,
     public readonly jitTranspiler: JitTranspiler | undefined,
-  ) {}
+  ) {
+    super(() => this, []);
+  }
 
   get commandEncoder() {
     if (!this._commandEncoder) {
@@ -309,17 +340,6 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     listener: PlumListener<TValue>,
   ): Unsubscribe {
     return this._plumStore.subscribe(plum, listener);
-  }
-
-  withCompute(entryFn: TgpuComputeFn): WithCompute {
-    return new WithComputeImpl(this, entryFn);
-  }
-
-  withVertex<Attribs extends IOLayout, Varying extends IOLayout>(
-    entryFn: TgpuVertexFn,
-    attribs: LayoutToAllowedAttribs<OmitBuiltins<Attribs>>,
-  ): WithVertex {
-    return new WithVertexImpl(this, attribs as AnyVertexAttribs, entryFn);
   }
 
   flush() {

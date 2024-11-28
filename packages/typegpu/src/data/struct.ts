@@ -149,6 +149,8 @@ class TgpuStructImpl<TProps extends Record<string, AnyTgpuData>>
 {
   private _label: string | undefined;
 
+  /** Type-token, not available at runtime */
+  public readonly __repr!: UnwrapRecord<TProps>;
   private _size: number;
   public readonly byteAlignment: number;
   public readonly isLoose = false as const;
@@ -268,6 +270,8 @@ class TgpuLooseStructImpl<
 {
   private _label: string | undefined;
 
+  /** Type-token, not available at runtime */
+  public readonly __repr!: UnwrapRecord<TProps>;
   public readonly byteAlignment = 1;
   public readonly isLoose = true as const;
   public readonly size: number;

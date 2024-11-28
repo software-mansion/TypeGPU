@@ -5,8 +5,10 @@ import { valueList } from '../../resolutionUtils';
 import { code } from '../../tgpuCode';
 import type {
   AnyTgpuData,
+  Eventual,
   ResolutionCtx,
   TgpuResolvable,
+  TgpuSlot,
   Wgsl,
 } from '../../types';
 import { createFnCore } from './fnCore';
@@ -51,6 +53,7 @@ interface TgpuFnBase<
 
   $uses(dependencyMap: Record<string, unknown>): this;
   $__ast(argNames: string[], body: Block): this;
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuFn<Args, Return>;
 }
 
 export type TgpuFn<
@@ -124,6 +127,10 @@ function createFn<
       return this;
     },
 
+    with(slot, value): TgpuFn<Args, Return> {
+      return createBoundFunction(fn, slot, value);
+    },
+
     resolve(ctx: ResolutionCtx): string {
       return core.resolve(ctx);
     },
@@ -144,14 +151,65 @@ function createFn<
     return implementation(...args);
   };
 
-  const fn = Object.assign(call, fnBase);
+  const fn = Object.assign(call, fnBase) as TgpuFn<Args, Return>;
 
   // Making the label available as a readonly property.
   Object.defineProperty(fn, 'label', {
     get: () => core.label,
   });
 
-  return fn as TgpuFn<Args, Return>;
+  return fn;
+}
+
+function createBoundFunction<
+  Args extends AnyTgpuData[],
+  Return extends AnyTgpuData | undefined,
+>(
+  innerFn: TgpuFn<Args, Return>,
+  slot: TgpuSlot<unknown>,
+  slotValue: unknown,
+): TgpuFn<Args, Return> {
+  type This = TgpuFnBase<Args, Return>;
+
+  const fnBase: This = {
+    shell: innerFn.shell,
+
+    $uses(newExternals) {
+      innerFn.$uses(newExternals);
+      return this;
+    },
+
+    $__ast(argNames: string[], body: Block): This {
+      innerFn.$__ast(argNames, body);
+      return this;
+    },
+
+    $name(newLabel: string): This {
+      innerFn.$name(newLabel);
+      return this;
+    },
+
+    with(slot, value): TgpuFn<Args, Return> {
+      return createBoundFunction(fn, slot, value);
+    },
+
+    resolve(ctx: ResolutionCtx): string {
+      return ctx.resolve(innerFn, [[slot, slotValue]]);
+    },
+  };
+
+  const call = (...args: UnwrapArgs<Args>): unknown => {
+    return innerFn(...args);
+  };
+
+  const fn = Object.assign(call, fnBase) as TgpuFn<Args, Return>;
+
+  // Making the label available as a readonly property.
+  Object.defineProperty(fn, 'label', {
+    get: () => innerFn.label,
+  });
+
+  return fn;
 }
 
 class FnCall<Args extends AnyTgpuData[], Return extends AnyTgpuData | undefined>

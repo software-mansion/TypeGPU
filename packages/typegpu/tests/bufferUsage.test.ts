@@ -1,16 +1,9 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  expectTypeOf,
-  it,
-  vi,
-} from 'vitest';
-import type { TgpuComputePipeline } from '../src/core/pipeline/computePipeline';
-import { initFromDevice } from '../src/core/root/init';
-import type { ExperimentalTgpuRoot } from '../src/core/root/rootTypes';
-import tgpu from '../src/experimental';
+import { afterEach, beforeEach, describe, expectTypeOf, it, vi } from 'vitest';
+import tgpu from '../src';
+import { f32 } from '../src/data';
+import { type ExperimentalTgpuRoot, asUniform } from '../src/experimental';
+import type { Infer } from '../src/repr';
+import './utils/webgpuGlobals';
 
 const mockBuffer = {
   getMappedRange: vi.fn(() => new ArrayBuffer(8)),
@@ -64,41 +57,31 @@ const mockDevice = {
   },
 };
 
-describe('TgpuComputePipeline', () => {
+function useRoot() {
   let root: ExperimentalTgpuRoot;
 
   beforeEach(() => {
-    root = initFromDevice({ device: mockDevice as unknown as GPUDevice });
+    root = tgpu.initFromDevice({
+      device: mockDevice as unknown as GPUDevice,
+    });
   });
 
   afterEach(() => {
     root.destroy();
-    vi.restoreAllMocks();
+    vi.resetAllMocks();
   });
 
-  it('can be created with a compute entry function', () => {
-    const entryFn = tgpu
-      .computeFn([], { workgroupSize: [32] })
-      .does(() => {
-        // do something
-      })
-      .$name('main');
+  return () => root;
+}
 
-    const computePipeline = root
-      .withCompute(entryFn)
-      .createPipeline()
-      .$name('test_pipeline');
+describe('TgpuBufferReadonly', () => {
+  const getRoot = useRoot();
 
-    expectTypeOf(computePipeline).toEqualTypeOf<TgpuComputePipeline>();
+  it('represents a `number` value', () => {
+    const root = getRoot();
+    const buffer = root.createBuffer(f32).$usage('uniform');
+    const uniform = asUniform(buffer);
 
-    root.unwrap(computePipeline);
-
-    expect(mockDevice.createComputePipeline).toBeCalledWith({
-      compute: {
-        module: mockDevice.createShaderModule(),
-      },
-      label: 'test_pipeline',
-      layout: mockDevice.createPipelineLayout(),
-    });
+    expectTypeOf<Infer<typeof uniform>>().toEqualTypeOf<number>();
   });
 });

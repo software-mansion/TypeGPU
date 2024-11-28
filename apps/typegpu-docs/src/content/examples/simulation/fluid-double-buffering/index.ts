@@ -1,6 +1,3 @@
-// @ts-nocheck
-// TODO: Reenable type checking when new pipelines are implemented.
-
 import { JitTranspiler } from '@typegpu/jit';
 import {
   type Parsed,
@@ -15,13 +12,14 @@ import {
   vec4f,
 } from 'typegpu/data';
 import tgpu, {
-  type TgpuBufferUsage,
   asMutable,
   asReadonly,
   asUniform,
   builtin,
   wgsl,
   std,
+  type TgpuBufferReadonly,
+  type TgpuBufferMutable,
 } from 'typegpu/experimental';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -85,8 +83,10 @@ const gridSizeUniform = asUniform(gridSizeBuffer);
 const gridAlphaBuffer = root.createBuffer(GridData).$usage('storage');
 const gridBetaBuffer = root.createBuffer(GridData).$usage('storage');
 
-const inputGridSlot = wgsl.slot<TgpuBufferUsage<GridData>>();
-const outputGridSlot = wgsl.slot<TgpuBufferUsage<GridData, 'mutable'>>();
+const inputGridSlot = wgsl.slot<
+  TgpuBufferReadonly<GridData> | TgpuBufferMutable<GridData>
+>();
+const outputGridSlot = wgsl.slot<TgpuBufferMutable<GridData>>();
 
 const MAX_OBSTACLES = 4;
 
@@ -179,6 +179,7 @@ const flowFromCell = wgsl.fn`
 `.$name('flow_from_cell');
 
 const timeBuffer = root.createBuffer(f32).$usage('uniform');
+const timeUniform = asUniform(timeBuffer);
 
 const isInsideObstacle = wgsl.fn`
   (x: i32, y: i32) -> bool {
@@ -217,7 +218,7 @@ const isValidFlowOut = wgsl.fn`
 
     return true;
   }
-`.$name('is_valid_flow_out');
+`;
 
 const computeVelocity = tgpu
   .fn([i32, i32], vec2f)
@@ -269,32 +270,36 @@ const computeVelocity = tgpu
 `)
   .$uses({ getCell, isValidFlowOut, isValidCoord, rand01 });
 
-const mainInitWorld = wgsl.fn`
-  (x: i32, y: i32) {
-    let index = ${coordsToIndex}(x, y);
+const mainInitWorld = tgpu
+  .computeFn([builtin.globalInvocationId], { workgroupSize: [1] })
+  .does(`(@builtin(global_invocation_id) gid: vec3u) {
+    let x = i32(gid.x);
+    let y = i32(gid.y);
+    let index = coordsToIndex(x, y);
 
     var value = vec4f();
 
-    if (!${isValidFlowOut}(x, y)) {
+    if (!isValidFlowOut(x, y)) {
       value = vec4f(0., 0., 0., 0.);
     }
     else {
       // Ocean
-      if (y < i32(${gridSizeUniform}) / 2) {
-        let depth = 1. - f32(y) / (f32(${gridSizeUniform}) / 2.);
+      if (y < i32(gridSizeUniform) / 2) {
+        let depth = 1. - f32(y) / (f32(gridSizeUniform) / 2.);
         value = vec4f(0., 0., 10. + depth * 10., 0.);
       }
     }
 
-    ${outputGridSlot}[index] = value;
-  }
-`;
+    outputGridSlot[index] = value;
+  }`)
+  .$uses({ coordsToIndex, isValidFlowOut, gridSizeUniform, outputGridSlot });
 
-const mainMoveObstacles = wgsl.fn`
-  () {
-    for (var obs_idx = 0; obs_idx < ${MAX_OBSTACLES}; obs_idx += 1) {
-      let obs = ${prevObstacleReadonly}[obs_idx];
-      let next_obs = ${obstaclesReadonly}[obs_idx];
+const mainMoveObstacles = tgpu
+  .computeFn([], { workgroupSize: [1] })
+  .does(`() {
+    for (var obs_idx = 0; obs_idx < MAX_OBSTACLES; obs_idx += 1) {
+      let obs = prevObstacleReadonly[obs_idx];
+      let next_obs = obstaclesReadonly[obs_idx];
 
       if (obs.enabled == 0) {
         continue;
@@ -317,13 +322,13 @@ const mainMoveObstacles = wgsl.fn`
         for (var y = min_y; y <= max_y; y += 1) {
           var row_density = 0.;
           for (var x = max_x; x <= next_max_x; x += 1) {
-            var cell = ${getCell}(x, y);
+            var cell = getCell(x, y);
             row_density += cell.z;
             cell.z = 0;
-            ${setCell}(x, y, cell);
+            setCell(x, y, cell);
           }
 
-          ${addDensity}(next_max_x + 1, y, row_density);
+          addDensity(next_max_x + 1, y, row_density);
         }
       }
 
@@ -332,13 +337,13 @@ const mainMoveObstacles = wgsl.fn`
         for (var y = min_y; y <= max_y; y += 1) {
           var row_density = 0.;
           for (var x = next_min_x; x < min_x; x += 1) {
-            var cell = ${getCell}(x, y);
+            var cell = getCell(x, y);
             row_density += cell.z;
             cell.z = 0;
-            ${setCell}(x, y, cell);
+            setCell(x, y, cell);
           }
 
-          ${addDensity}(next_min_x - 1, y, row_density);
+          addDensity(next_min_x - 1, y, row_density);
         }
       }
 
@@ -347,13 +352,13 @@ const mainMoveObstacles = wgsl.fn`
         for (var x = min_x; x <= max_x; x += 1) {
           var col_density = 0.;
           for (var y = max_y; y <= next_max_y; y += 1) {
-            var cell = ${getCell}(x, y);
+            var cell = getCell(x, y);
             col_density += cell.z;
             cell.z = 0;
-            ${setCell}(x, y, cell);
+            setCell(x, y, cell);
           }
 
-          ${addDensity}(x, next_max_y + 1, col_density);
+          addDensity(x, next_max_y + 1, col_density);
         }
       }
 
@@ -362,13 +367,13 @@ const mainMoveObstacles = wgsl.fn`
         for (var x = min_x; x <= max_x; x += 1) {
           var col_density = 0.;
           for (var y = next_min_y; y < min_y; y += 1) {
-            var cell = ${getCell}(x, y);
+            var cell = getCell(x, y);
             col_density += cell.z;
             cell.z = 0;
-            ${setCell}(x, y, cell);
+            setCell(x, y, cell);
           }
 
-          ${addDensity}(x, next_min_y - 1, col_density);
+          addDensity(x, next_min_y - 1, col_density);
         }
       }
 
@@ -377,18 +382,28 @@ const mainMoveObstacles = wgsl.fn`
 
       // left column
       for (var y = next_min_y; y <= next_max_y; y += 1) {
-        let new_vel = ${computeVelocity}(next_min_x - 1, y);
-        ${setVelocity}(next_min_x - 1, y, new_vel);
+        let new_vel = computeVelocity(next_min_x - 1, y);
+        setVelocity(next_min_x - 1, y, new_vel);
       }
 
       // right column
-      for (var y = max(1, next_min_y); y <= min(next_max_y, ${gridSizeUniform} - 2); y += 1) {
-        let new_vel = ${computeVelocity}(next_max_x + 2, y);
-        ${setVelocity}(next_max_x + 2, y, new_vel);
+      for (var y = max(1, next_min_y); y <= min(next_max_y, gridSizeUniform - 2); y += 1) {
+        let new_vel = computeVelocity(next_max_x + 2, y);
+        setVelocity(next_max_x + 2, y, new_vel);
       }
     }
-  }
-`.$name('main_move_obstacles');
+  }`)
+  .$uses({
+    MAX_OBSTACLES,
+    prevObstacleReadonly,
+    obstaclesReadonly,
+    getCell,
+    setCell,
+    addDensity,
+    computeVelocity,
+    setVelocity,
+    gridSizeUniform,
+  });
 
 let sourceIntensity = 0.1;
 let sourceRadius = 0.01;
@@ -418,71 +433,45 @@ const getMinimumInFlow = wgsl.fn`
   }
 `;
 
-const mainCompute = wgsl.fn`
-  (x: i32, y: i32) {
-    let index = ${coordsToIndex}(x, y);
+const mainCompute = tgpu
+  .computeFn([builtin.globalInvocationId], { workgroupSize: [8, 8] })
+  .does(`(@builtin(global_invocation_id) gid: vec3u) {
+    let x = i32(gid.x);
+    let y = i32(gid.y);
+    let index = coordsToIndex(x, y);
 
-    ${setupRandomSeed}(vec2f(f32(index), ${asUniform(timeBuffer)}));
+    setupRandomSeed(vec2f(f32(index), timeUniform));
 
-    var next = ${getCell}(x, y);
+    var next = getCell(x, y);
 
-    let next_velocity = ${computeVelocity}(x, y);
+    let next_velocity = computeVelocity(x, y);
     next.x = next_velocity.x;
     next.y = next_velocity.y;
 
     // Processing in-flow
 
-    next.z = ${flowFromCell}(x, y, x, y);
-    next.z += ${flowFromCell}(x, y, x, y + 1);
-    next.z += ${flowFromCell}(x, y, x, y - 1);
-    next.z += ${flowFromCell}(x, y, x + 1, y);
-    next.z += ${flowFromCell}(x, y, x - 1, y);
+    next.z = flowFromCell(x, y, x, y);
+    next.z += flowFromCell(x, y, x, y + 1);
+    next.z += flowFromCell(x, y, x, y - 1);
+    next.z += flowFromCell(x, y, x + 1, y);
+    next.z += flowFromCell(x, y, x - 1, y);
 
-    let min_inflow = ${getMinimumInFlow}(x, y);
+    let min_inflow = getMinimumInFlow(x, y);
     next.z = max(min_inflow, next.z);
 
-    ${outputGridSlot}[index] = next;
+    outputGridSlot[index] = next;
   }
-`.$name('main_compute');
-
-const mainFragment = wgsl.fn`
-  (x: i32, y: i32) -> vec4f {
-    let index = ${coordsToIndex}(x, y);
-    let cell = ${inputGridSlot}[index];
-    let velocity = cell.xy;
-    let density = max(0., cell.z);
-
-    let obstacle_color = vec4f(0.1, 0.1, 0.1, 1.);
-
-    let background = vec4f(0.9, 0.9, 0.9, 1.);
-    let first_color = vec4f(0.2, 0.6, 1., 1.);
-    let second_color = vec4f(0.2, 0.3, 0.6, 1.);
-    let third_color = vec4f(0.1, 0.2, 0.4, 1.);
-
-    let first_threshold = 2.;
-    let second_threshold = 10.;
-    let third_threshold = 20.;
-
-    if (${isInsideObstacle}(x, y)) {
-      return obstacle_color;
-    }
-
-    if (density <= 0.) {
-      return background;
-    }
-
-    if (density <= first_threshold) {
-      let t = 1 - pow(1 - density / first_threshold, 2.);
-      return mix(background, first_color, t);
-    }
-
-    if (density <= second_threshold) {
-      return mix(first_color, second_color, (density - first_threshold) / (second_threshold - first_threshold));
-    }
-
-    return mix(second_color, third_color, min((density - second_threshold) / third_threshold, 1.));
-  }
-`.$name('main_fragment');
+`)
+  .$uses({
+    coordsToIndex,
+    setupRandomSeed,
+    timeUniform,
+    getCell,
+    computeVelocity,
+    flowFromCell,
+    getMinimumInFlow,
+    outputGridSlot,
+  });
 
 const OBSTACLE_BOX = 0;
 const OBSTACLE_LEFT_WALL = 1;
@@ -517,100 +506,121 @@ const limitedBoxX = () => {
 let boxY = 0.2;
 let leftWallX = 0;
 
+const vertexMain = tgpu
+  .vertexFn({ idx: builtin.vertexIndex }, { pos: builtin.position, uv: vec2f })
+  .does(/* wgsl */ `(@builtin(vertex_index) idx: u32) -> VertexOut {
+    var pos = array<vec2f, 4>(
+      vec2(1, 1), // top-right
+      vec2(-1, 1), // top-left
+      vec2(1, -1), // bottom-right
+      vec2(-1, -1) // bottom-left
+    );
+
+    var uv = array<vec2f, 4>(
+      vec2(1., 1.), // top-right
+      vec2(0., 1.), // top-left
+      vec2(1., 0.), // bottom-right
+      vec2(0., 0.) // bottom-left
+    );
+
+    var output: VertexOut;
+    output.pos = vec4f(pos[idx].x, pos[idx].y, 0.0, 1.0);
+    output.uv = uv[idx];
+    return output;
+  }`)
+  .$uses({
+    get VertexOut() {
+      return vertexMain.Output;
+    },
+  });
+
+const fragmentMain = tgpu
+  .fragmentFn(
+    {
+      pos: builtin.position /* TODO: Remove once builtins are properly purged from the types */,
+      uv: vec2f,
+    },
+    vec4f,
+  )
+  .does(`(@location(0) uv: vec2f) -> @location(0) vec4f {
+    let x = i32(uv.x * f32(gridSizeUniform));
+    let y = i32(uv.y * f32(gridSizeUniform));
+
+    let index = coordsToIndex(x, y);
+    let cell = inputGridSlot[index];
+    let velocity = cell.xy;
+    let density = max(0., cell.z);
+
+    let obstacle_color = vec4f(0.1, 0.1, 0.1, 1.);
+
+    let background = vec4f(0.9, 0.9, 0.9, 1.);
+    let first_color = vec4f(0.2, 0.6, 1., 1.);
+    let second_color = vec4f(0.2, 0.3, 0.6, 1.);
+    let third_color = vec4f(0.1, 0.2, 0.4, 1.);
+
+    let first_threshold = 2.;
+    let second_threshold = 10.;
+    let third_threshold = 20.;
+
+    if (isInsideObstacle(x, y)) {
+      return obstacle_color;
+    }
+
+    if (density <= 0.) {
+      return background;
+    }
+
+    if (density <= first_threshold) {
+      let t = 1 - pow(1 - density / first_threshold, 2.);
+      return mix(background, first_color, t);
+    }
+
+    if (density <= second_threshold) {
+      return mix(first_color, second_color, (density - first_threshold) / (second_threshold - first_threshold));
+    }
+
+    return mix(second_color, third_color, min((density - second_threshold) / third_threshold, 1.));
+  }`)
+  .$uses({ gridSizeUniform, coordsToIndex, inputGridSlot, isInsideObstacle });
+
 function makePipelines(
-  inputGridReadonly: TgpuBufferUsage<GridData, 'readonly'>,
-  outputGridMutable: TgpuBufferUsage<GridData, 'mutable'>,
+  inputGridReadonly: TgpuBufferReadonly<GridData>,
+  outputGridMutable: TgpuBufferMutable<GridData>,
 ) {
-  const initWorldFn = mainInitWorld
+  const initWorldPipeline = root
     .with(inputGridSlot, outputGridMutable)
-    .with(outputGridSlot, outputGridMutable);
+    .with(outputGridSlot, outputGridMutable)
+    .withCompute(mainInitWorld)
+    .createPipeline();
 
-  const initWorldPipeline = root.makeComputePipeline({
-    code: wgsl`
-      ${initWorldFn}(i32(${builtin.globalInvocationId}.x), i32(${builtin.globalInvocationId}.y));
-    `,
-  });
-
-  const mainComputeWithIO = mainCompute
+  const computePipeline = root
     .with(inputGridSlot, inputGridReadonly)
-    .with(outputGridSlot, outputGridMutable);
+    .with(outputGridSlot, outputGridMutable)
+    .withCompute(mainCompute)
+    .createPipeline();
 
-  const computeWorkgroupSize = 8;
-  const computePipeline = root.makeComputePipeline({
-    workgroupSize: [computeWorkgroupSize, computeWorkgroupSize],
-    code: wgsl`
-      ${mainComputeWithIO}(i32(${builtin.globalInvocationId}.x), i32(${builtin.globalInvocationId}.y));
-    `,
-  });
-
-  const moveObstaclesFn = mainMoveObstacles
+  const moveObstaclesPipeline = root
     .with(inputGridSlot, outputGridMutable)
-    .with(outputGridSlot, outputGridMutable);
+    .with(outputGridSlot, outputGridMutable)
+    .withCompute(mainMoveObstacles)
+    .createPipeline();
 
-  const moveObstaclesPipeline = root.makeComputePipeline({
-    code: wgsl`
-      ${moveObstaclesFn}();
-    `,
-  });
-
-  const mainFragmentWithInput = mainFragment.with(
-    inputGridSlot,
-    inputGridReadonly,
-  );
-
-  const renderPipeline = root.makeRenderPipeline({
-    vertex: {
-      code: wgsl`
-        var pos = array<vec2f, 4>(
-          vec2(1, 1), // top-right
-          vec2(-1, 1), // top-left
-          vec2(1, -1), // bottom-right
-          vec2(-1, -1) // bottom-left
-        );
-
-        var uv = array<vec2f, 4>(
-          vec2(1., 1.), // top-right
-          vec2(0., 1.), // top-left
-          vec2(1., 0.), // bottom-right
-          vec2(0., 0.) // bottom-left
-        );
-
-        let outPos = vec4f(pos[${builtin.vertexIndex}].x, pos[${builtin.vertexIndex}].y, 0.0, 1.0);
-        let outUv = uv[${builtin.vertexIndex}];
-      `,
-      output: {
-        [builtin.position.s]: 'outPos',
-        outUv: vec2f,
-      },
-    },
-
-    fragment: {
-      code: wgsl.code`
-        let x = i32(outUv.x * f32(${gridSizeUniform}));
-        let y = i32(outUv.y * f32(${gridSizeUniform}));
-        return ${mainFragmentWithInput}(x, y);
-      `,
-      target: [
-        {
-          format: presentationFormat,
-        },
-      ],
-    },
-
-    primitive: {
-      topology: 'triangle-strip',
-    },
-  });
+  const renderPipeline = root
+    .with(inputGridSlot, inputGridReadonly)
+    .withVertex(vertexMain, {})
+    .withFragment(fragmentMain, { format: presentationFormat })
+    .withPrimitive({ topology: 'triangle-strip' })
+    .createPipeline();
 
   return {
     init() {
-      initWorldPipeline.execute({ workgroups: [gridSize, gridSize] });
+      initWorldPipeline.dispatchWorkgroups(gridSize, gridSize);
       root.flush();
     },
 
     applyMovedObstacles(bufferData: Parsed<BoxObstacle>[]) {
       obstaclesBuffer.write(bufferData);
-      moveObstaclesPipeline.execute();
+      moveObstaclesPipeline.dispatchWorkgroups(1);
       root.flush();
 
       prevObstaclesBuffer.write(bufferData);
@@ -618,29 +628,23 @@ function makePipelines(
     },
 
     compute() {
-      computePipeline.execute({
-        workgroups: [
-          gridSize / computeWorkgroupSize,
-          gridSize / computeWorkgroupSize,
-        ],
-      });
+      computePipeline.dispatchWorkgroups(
+        gridSize / mainCompute.shell.workgroupSize[0],
+        gridSize / mainCompute.shell.workgroupSize[1],
+      );
     },
 
     render() {
       const textureView = context.getCurrentTexture().createView();
 
-      renderPipeline.execute({
-        colorAttachments: [
-          {
-            view: textureView,
-            clearValue: [0, 0, 0, 1],
-            loadOp: 'clear',
-            storeOp: 'store',
-          },
-        ],
-
-        vertexCount: 4,
-      });
+      renderPipeline
+        .withColorAttachment({
+          view: textureView,
+          clearValue: [0, 0, 0, 1],
+          loadOp: 'clear',
+          storeOp: 'store',
+        })
+        .draw(4);
     },
   };
 }
