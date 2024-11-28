@@ -1,7 +1,7 @@
 import type { Parsed } from 'typed-binary';
 
 import type { OmitBuiltins } from '../../builtin';
-import type { AnyTgpuData } from '../../data/nonWgslTypes';
+import type { AnyTgpuData } from '../../data/dataTypes';
 import type { Vec4f } from '../../data/vector';
 import type { JitTranspiler } from '../../jitTranspiler';
 import type { NameRegistry } from '../../nameRegistry';

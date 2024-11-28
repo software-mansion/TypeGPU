@@ -7,7 +7,7 @@ import type {
   Vec3f,
   WgslArray,
   WgslStruct,
-} from '../../data/dataTypes';
+} from '../../data/wgslTypes';
 import { assertExhaustive } from '../../shared/utilityTypes';
 import type { ResolutionCtx } from '../../types';
 

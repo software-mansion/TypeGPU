@@ -2,10 +2,6 @@ import type * as smol from 'tinyest';
 import type { Unwrap } from 'typed-binary';
 import type {
   AnyAttribute,
-  Decorated,
-  F32,
-  I32,
-  U32,
   Vec2f,
   Vec2i,
   Vec2u,
@@ -16,7 +12,8 @@ import type {
   Vec4i,
   Vec4u,
 } from '../../data';
-import type { AnyTgpuData } from '../../types';
+import type { Decorated } from '../../data/wgslTypes';
+import type { Infer } from '../../shared/repr';
 
 /**
  * Information extracted from transpiling a JS function.
@@ -71,8 +68,8 @@ export type IOLayout<TElementType extends IOData = IOData> =
   // a record of data-types
   | { [key: string]: TElementType };
 
-export type UnwrapIO<T> = T extends AnyTgpuData
-  ? Unwrap<T>
+export type InferIO<T> = T extends { type: string }
+  ? Infer<T>
   : T extends Record<string, unknown>
-    ? { [K in keyof T]: Unwrap<T[K]> }
+    ? { [K in keyof T]: Infer<T[K]> }
     : T;

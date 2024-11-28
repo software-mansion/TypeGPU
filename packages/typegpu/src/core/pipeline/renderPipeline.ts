@@ -1,5 +1,5 @@
 import type { TgpuBuffer, Vertex } from '../../core/buffer/buffer';
-import type { AnyWgslData, WgslArray } from '../../data/dataTypes';
+import type { AnyWgslData, WgslArray } from '../../data/wgslTypes';
 import { MissingBindGroupError } from '../../errors';
 import type { TgpuNamable } from '../../namable';
 import { resolve } from '../../resolutionCtx';

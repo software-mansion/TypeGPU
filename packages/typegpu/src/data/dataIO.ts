@@ -1,9 +1,13 @@
 import type { ISerialInput, ISerialOutput } from 'typed-binary';
 import type { Infer, InferRecord } from '../shared/repr';
 import alignIO from './alignIO';
+import { getCustomAlignment } from './attributes';
+import type { AnyData } from './dataTypes';
+import { vec3f as createVec3f } from './vector';
 import {
   type AnyWgslData,
   type Bool,
+  type Decorated,
   type F32,
   type I32,
   type U32,
@@ -11,8 +15,7 @@ import {
   type WgslStruct,
   alignmentOfData,
   type vec3f,
-} from './dataTypes';
-import { vec3f as createVec3f } from './vector';
+} from './wgslTypes';
 
 type CompleteDataWriters = {
   [TType in AnyWgslData['type']]: (
@@ -77,6 +80,15 @@ export const dataWriters = {
     }
     output.seekTo(beginning + schema.size);
   },
+
+  decorated(output, schema: Decorated, value: unknown) {
+    const alignment = getCustomAlignment(schema) ?? 1;
+    alignIO(output, alignment);
+
+    const beginning = output.currentByteOffset;
+    dataWriters[(schema.inner as AnyData)?.type]?.(output, schema.inner, value);
+    output.seekTo(beginning + schema.size);
+  },
 } satisfies CompleteDataWriters as Record<
   string,
   (output: ISerialOutput, schema: unknown, value: unknown) => void
@@ -134,6 +146,17 @@ export const dataReaders = {
     }
     alignIO(input, schema.alignment);
     return elements as never[];
+  },
+
+  decorated(input, schema: Decorated) {
+    const alignment = getCustomAlignment(schema) ?? 1;
+    alignIO(input, alignment);
+
+    const beginning = input.currentByteOffset;
+    const reader = dataReaders[(schema.inner as AnyData)?.type];
+    const value = reader?.(input, schema.inner);
+    input.seekTo(beginning + schema.size);
+    return value as never;
   },
 } satisfies CompleteDataReaders as Record<
   string,

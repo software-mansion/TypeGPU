@@ -1,5 +1,5 @@
 import type { Block } from 'tinyest';
-import type { ISchema } from 'typed-binary';
+import type { AnyWgslData } from './data/wgslTypes';
 import type { TgpuNamable } from './namable';
 import type { NameRegistry } from './nameRegistry';
 import type { Infer } from './shared/repr';
@@ -15,7 +15,7 @@ export type UnknownData = typeof UnknownData;
 
 export type Resource = {
   value: unknown;
-  dataType: AnyTgpuData | UnknownData;
+  dataType: AnyWgslData | UnknownData;
 };
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
@@ -27,7 +27,7 @@ export interface NumberArrayView {
 
 export interface FnToWgslOptions {
   args: Resource[];
-  returnType: AnyTgpuData;
+  returnType: AnyWgslData;
   body: Block;
   externalMap: Record<string, unknown>;
 }
@@ -118,43 +118,6 @@ export type SlotValuePair<T> = [TgpuSlot<T>, T];
 
 export type BindableBufferUsage = 'uniform' | 'readonly' | 'mutable';
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
-
-export interface TgpuData<TInner> extends ISchema<TInner>, TgpuResolvable {
-  /** Type-token, not available at runtime */
-  readonly __repr: TInner;
-  readonly isLoose: false;
-  readonly byteAlignment: number;
-  readonly size: number;
-}
-
-export interface TgpuLooseData<TInner> extends ISchema<TInner> {
-  /** Type-token, not available at runtime */
-  readonly __repr: TInner;
-  readonly isLoose: true;
-  readonly byteAlignment: number;
-  readonly size: number;
-}
-
-export type AnyTgpuData = TgpuData<unknown>;
-export type AnyTgpuLooseData = TgpuLooseData<unknown>;
-
-export function isDataLoose<T>(
-  data: TgpuData<T> | TgpuLooseData<T>,
-): data is TgpuLooseData<T> {
-  return data.isLoose;
-}
-
-export function isBaseData<T extends AnyTgpuData | AnyTgpuLooseData>(
-  data: unknown | T,
-): data is T {
-  return !!(data as T)?.size && (data as T)?.byteAlignment !== undefined;
-}
-
-export function isDataNotLoose<T>(
-  data: TgpuData<T> | TgpuLooseData<T>,
-): data is TgpuData<T> {
-  return !data.isLoose;
-}
 
 export function isGPUBuffer(value: unknown): value is GPUBuffer {
   return (

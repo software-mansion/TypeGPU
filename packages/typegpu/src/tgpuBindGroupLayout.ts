@@ -21,7 +21,7 @@ import {
   NotSampledError,
   isUsableAsSampled,
 } from './core/texture/usageExtension';
-import { type AnyWgslData, isWgslSchema } from './data/dataTypes';
+import { type AnyWgslData, isWgslSchema } from './data/wgslTypes';
 import { NotUniformError } from './errors';
 import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
 import type { TgpuNamable } from './namable';

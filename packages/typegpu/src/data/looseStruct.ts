@@ -10,7 +10,7 @@ import {
 } from 'typed-binary';
 import { RecursiveDataTypeError } from '../errors';
 import type { AnyTgpuLooseData, TgpuLooseData } from '../types';
-import type { AnyWgslData } from './dataTypes';
+import type { AnyWgslData } from './wgslTypes';
 
 // ----------
 // Public API

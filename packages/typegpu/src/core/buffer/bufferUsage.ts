@@ -1,5 +1,5 @@
 import type { Unwrap } from 'typed-binary';
-import type { AnyWgslData } from '../../data/dataTypes';
+import type { AnyWgslData } from '../../data/wgslTypes';
 import { type Storage, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
 import type { Infer } from '../../shared/repr';

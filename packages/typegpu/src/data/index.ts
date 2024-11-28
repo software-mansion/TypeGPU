@@ -2,7 +2,6 @@
  * @module typegpu/data
  */
 
-export * from './std140';
 export * from './numeric';
 export {
   TgpuStruct,
@@ -24,16 +23,8 @@ export {
   isDecorated,
   isLooseDecorated,
   isBuiltin,
-  Align,
-  Size,
-  Location,
-  Builtin,
   BaseDecorated,
-  Decorated,
   LooseDecorated,
   AnyAttribute,
   IsBuiltin,
 } from './attributes';
-
-// Reexporting type-binary utility types
-export type { Parsed, Unwrap } from 'typed-binary';

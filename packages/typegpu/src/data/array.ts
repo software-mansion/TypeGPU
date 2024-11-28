@@ -5,7 +5,7 @@ import {
   type WgslArray,
   alignmentOfData,
   sizeOfData,
-} from './dataTypes';
+} from './wgslTypes';
 
 // ----------
 // Public API
