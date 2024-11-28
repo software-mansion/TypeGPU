@@ -84,6 +84,10 @@ export default defineConfig({
               label: 'Data Schemas',
               slug: 'fundamentals/data-schemas',
             },
+            DEV && {
+              label: 'Slots',
+              slug: 'fundamentals/slots',
+            },
             // {
             //   label: 'Basic Principles',
             //   slug: 'guides/basic-principles',

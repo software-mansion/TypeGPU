@@ -1,0 +1,84 @@
+---
+title: Slots
+description: Slots can be used to inject arbitrary values into shader code at a granular level.
+draft: true
+---
+
+You can think of slots as holes in the shader that can be filled in from the outside.
+
+```ts
+const filterColorSlot = tgpu.slot<vec3f>(); // => TgpuSlot<vec3f>
+
+const filter = tgpu.fn([vec3f]).does((color) => {
+  const filterColor = filterColorSlot.$; // => vec3f
+
+  return mul(color, filterColor);
+});
+
+// Bind the filter function with a red color.
+const filterWithRed = filter
+  .with(filterColorSlot, vec3f(1, 0, 0));
+
+// Bind the filter function with a green color.
+const filterWithGreen = filter
+  .with(filterColorSlot, vec3f(0, 1, 0));
+```
+
+### Conditional compilation
+
+```ts
+const safeLoopSlot = tgpu.slot(false);
+
+const processObjects = tgpu.fn([f32], f32).does(() => {
+  let len = objects.length;
+
+  if (safeLoopSlot.$) { // <- evaluated at compile time
+    // This will be included in the shader code only if
+    // `safeLoopSlot` is bound to true in the caller's scope.
+    len = max(len, 9999);
+  }
+
+  for (let i = 0; i < len; ++i) {
+    // ...
+  }
+});
+```
+
+### Inversion of control
+
+```ts
+// physics.ts
+
+const defaultGravity = tgpu.fn([vec2f], vec2f).does(() => vec2f(0, 9.8));
+
+export const getGravitySlot = tgpu.slot(defaultGravity);
+//           ^ TgpuSlot<TgpuFn<[Vec2f], Vec2f>>
+
+export const stepPhysics = tgpu.fn([]).does(() => {
+  for (const obj of objects.$) {
+    // Calling whatever implementation was provided.
+    const gravity = getGravitySlot.$(obj.position);
+
+    obj.velocity = add(obj.velocity, mul(gravity, deltaTime.$));
+  }
+});
+```
+
+```ts
+// main.ts
+
+import { stepPhysics, getGravitySlot } from './physics';
+
+const getGravityTowardsCenter = tgpu
+  .fn([vec2f], vec2f)
+  .does((position) => mul(normalize(position), -1));
+
+const stepPhysicsAltered = stepPhysics
+  .with(getGravitySlot, getGravityTowardsCenter);
+
+const main = tgpu
+  .computeFn()
+  .does(() => {
+    stepPhysicsAltered(); // <- Will use altered gravity.
+  });
+```
