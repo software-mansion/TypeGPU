@@ -51,7 +51,7 @@ const canvasAspectRatioBuffer = root
   .createBuffer(f32, canvas.width / canvas.height)
   .$usage('uniform');
 
-const canvasAspectRatioData = asUniform(canvasAspectRatioBuffer);
+const canvasAspectRatioUniform = asUniform(canvasAspectRatioBuffer);
 
 const particleGeometryBuffer = root
   .createBuffer(
@@ -85,7 +85,7 @@ const dataLayout = tgpu.vertexLayout(
   'instance',
 );
 
-const dataUniform = asMutable(particleDataBuffer);
+const particleDataStorage = asMutable(particleDataBuffer);
 const deltaTimeUniform = asUniform(deltaTimeBuffer);
 const timeStorage = asMutable(timeBuffer);
 
@@ -119,7 +119,7 @@ const mainVert = tgpu
       @location(1) angle: f32,
       @location(2) color: vec4f,
       @location(3) center: vec2f,
-      @builtin(vertex_index) index: u32
+      @builtin(vertex_index) index: u32,
     ) -> VertexOutput {
     let width = tilt;
     let height = tilt / 2;
@@ -145,7 +145,7 @@ const mainVert = tgpu
   )
   .$uses({
     rotate,
-    canvasAspectRatio: canvasAspectRatioData,
+    canvasAspectRatio: canvasAspectRatioUniform,
     get VertexOutput() {
       return mainVert.Output;
     },
@@ -164,11 +164,15 @@ const mainCompute = tgpu
     if index == 0 {
       time += deltaTime;
     }
-    let phase = (time + data[index].seed) / 200; 
-    data[index].position += data[index].velocity * deltaTime / 20 + vec2f(sin(phase) / 600, cos(phase) / 500);
+    let phase = (time + particleData[index].seed) / 200; 
+    particleData[index].position += particleData[index].velocity * deltaTime / 20 + vec2f(sin(phase) / 600, cos(phase) / 500);
   }`,
   )
-  .$uses({ data: dataUniform, deltaTime: deltaTimeUniform, time: timeStorage });
+  .$uses({
+    particleData: particleDataStorage,
+    deltaTime: deltaTimeUniform,
+    time: timeStorage,
+  });
 
 // pipelines
 
@@ -190,7 +194,7 @@ const computePipeline = root.withCompute(mainCompute).createPipeline();
 
 // compute and draw
 
-const randomizePositions = () =>
+function randomizePositions() {
   particleDataBuffer.write(
     Array(PARTICLE_AMOUNT)
       .fill(0)
@@ -203,12 +207,13 @@ const randomizePositions = () =>
         seed: Math.random(),
       })),
   );
+}
 
 randomizePositions();
 
 let disposed = false;
 
-const onFrame = (loop: (deltaTime: number) => unknown) => {
+function onFrame(loop: (deltaTime: number) => unknown) {
   let lastTime = Date.now();
   const runner = () => {
     if (disposed) {
@@ -221,7 +226,7 @@ const onFrame = (loop: (deltaTime: number) => unknown) => {
     requestAnimationFrame(runner);
   };
   requestAnimationFrame(runner);
-};
+}
 
 onFrame((deltaTime) => {
   deltaTimeBuffer.write(deltaTime);
