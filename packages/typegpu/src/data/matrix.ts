@@ -6,18 +6,20 @@ import {
   Measurer,
   type Parsed,
 } from 'typed-binary';
-import { RecursiveDataTypeError } from '../errors';
 import { roundUp } from '../mathUtils';
-import type { NumberArrayView, TgpuData } from '../types';
-import { vec2f, vec3f, vec4f, type vecBase } from './vector';
+import type { vecBase } from './vector';
+import type { NumberArrayView, vec2f, vec3f, vec4f } from './wgslTypes';
 
 // --------------
 // Implementation
 // --------------
 
-interface MatSchemaOptions<ValueType, ColumnType extends vecBase> {
-  label: string;
-  columnType: TgpuData<ColumnType>;
+interface MatSchemaOptions<
+  TType extends string,
+  ValueType,
+  ColumnType extends vecBase,
+> {
+  type: TType;
   rows: number;
   columns: number;
   makeFromColumnVectors(...columns: ColumnType[]): ValueType;

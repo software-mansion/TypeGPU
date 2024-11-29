@@ -1,5 +1,6 @@
-import type { vec3f, vec3i, vec3u, vecBase } from './data';
+import type { vecBase } from './data/vector';
 import { VectorOps } from './data/vectorOps';
+import type { vec3f, vec3i, vec3u } from './data/wgslTypes';
 import { inGPUMode } from './gpuMode';
 
 export const std = {

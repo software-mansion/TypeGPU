@@ -1,5 +1,5 @@
 import type { TgpuBuffer } from './core/buffer/buffer';
-import type { AnyTgpuData } from './data/dataTypes';
+import type { AnyData } from './data/dataTypes';
 import type { TgpuResolvable, TgpuSlot } from './types';
 
 const prefix = 'Invariant failed';
@@ -80,20 +80,8 @@ export class MissingSlotValueError extends Error {
 /**
  * @category Errors
  */
-export class RecursiveDataTypeError extends Error {
-  constructor() {
-    super('Recursive types are not supported in WGSL');
-
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, RecursiveDataTypeError.prototype);
-  }
-}
-
-/**
- * @category Errors
- */
 export class NotUniformError extends Error {
-  constructor(value: TgpuBuffer<AnyTgpuData>) {
+  constructor(value: TgpuBuffer<AnyData>) {
     super(
       `Buffer '${value.label ?? '<unnamed>'}' is not bindable as a uniform. Use .$usage('uniform') to allow it.`,
     );
