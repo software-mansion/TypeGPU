@@ -1,13 +1,9 @@
 import { roundUp } from '../mathUtils';
 import type { TgpuNamable } from '../namable';
 import type { InferRecord } from '../shared/repr';
-import {
-  type AnyWgslData,
-  type BaseWgslData,
-  type WgslStruct,
-  alignmentOfData,
-  sizeOfData,
-} from './wgslTypes';
+import { alignmentOf } from './alignmentOf';
+import { sizeOf } from './sizeOf';
+import type { AnyWgslData, BaseWgslData, WgslStruct } from './wgslTypes';
 
 // ----------
 // Public API
@@ -57,7 +53,7 @@ class TgpuStructImpl<TProps extends Record<string, AnyWgslData>>
 
   constructor(public readonly propTypes: TProps) {
     this.alignment = Object.values(propTypes)
-      .map((prop) => alignmentOfData(prop))
+      .map((prop) => alignmentOf(prop))
       .reduce((a, b) => (a > b ? a : b));
 
     let size = 0;
@@ -66,8 +62,8 @@ class TgpuStructImpl<TProps extends Record<string, AnyWgslData>>
         throw new Error('Only the last property of a struct can be unbounded');
       }
 
-      size = roundUp(size, alignmentOfData(property));
-      size += sizeOfData(property);
+      size = roundUp(size, alignmentOf(property));
+      size += sizeOf(property);
 
       if (Number.isNaN(size) && property.type !== 'array') {
         throw new Error('Cannot nest unbounded struct within another struct');

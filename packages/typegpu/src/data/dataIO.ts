@@ -1,8 +1,15 @@
 import type { ISerialInput, ISerialOutput } from 'typed-binary';
 import type { Infer, InferRecord } from '../shared/repr';
 import alignIO from './alignIO';
+import { alignmentOf } from './alignmentOf';
 import { type LooseDecorated, getCustomAlignment } from './attributes';
 import type { AnyData, LooseArray, TgpuLooseStruct } from './dataTypes';
+import {
+  mat2x2f as createMat2x2f,
+  mat3x3f as createMat3x3f,
+  mat4x4f as createMat4x4f,
+} from './matrix';
+import { sizeOf } from './sizeOf';
 import {
   vec2f as createVec2f,
   vec2i as createVec2i,
@@ -14,28 +21,29 @@ import {
   vec4i as createVec4i,
   vec4u as createVec4u,
 } from './vector';
-import {
-  type AnyWgslData,
-  type Atomic,
-  type BaseWgslData,
-  type Bool,
-  type Decorated,
-  type F32,
-  type I32,
-  type U32,
-  type WgslArray,
-  type WgslStruct,
-  alignmentOfData,
-  sizeOfData,
-  type vec2f,
-  type vec2i,
-  type vec2u,
-  type vec3f,
-  type vec3i,
-  type vec3u,
-  type vec4f,
-  type vec4i,
-  type vec4u,
+import type {
+  AnyWgslData,
+  Atomic,
+  BaseWgslData,
+  Bool,
+  Decorated,
+  F32,
+  I32,
+  U32,
+  WgslArray,
+  WgslStruct,
+  mat2x2f,
+  mat3x3f,
+  mat4x4f,
+  vec2f,
+  vec2i,
+  vec2u,
+  vec3f,
+  vec3i,
+  vec3u,
+  vec4f,
+  vec4i,
+  vec4u,
 } from './wgslTypes';
 
 type CompleteDataWriters = {
@@ -53,7 +61,7 @@ type CompleteDataReaders = {
   ) => Infer<Extract<AnyData, { readonly type: TType }>>;
 };
 
-export const dataWriters = {
+const dataWriters = {
   bool(output, _schema: Bool, value: boolean) {
     output.writeBool(value);
   },
@@ -124,28 +132,47 @@ export const dataWriters = {
     output.writeUint32(value.w);
   },
 
-  struct(output, schema: WgslStruct, value: Record<string, unknown>) {
+  mat2x2f(output, _, value: mat2x2f) {
+    for (let i = 0; i < value.length; ++i) {
+      output.writeFloat32(value[i] as number);
+    }
+  },
+
+  mat3x3f(output, _, value: mat3x3f) {
+    for (let i = 0; i < value.length; ++i) {
+      output.writeFloat32(value[i] as number);
+    }
+  },
+
+  mat4x4f(output, _, value: mat4x4f) {
+    for (let i = 0; i < value.length; ++i) {
+      output.writeFloat32(value[i] as number);
+    }
+  },
+
+  struct(
+    output,
+    schema: WgslStruct,
+    value: InferRecord<Record<string, BaseWgslData>>,
+  ) {
     alignIO(output, schema.alignment);
 
     for (const [key, property] of Object.entries(schema.propTypes)) {
-      alignIO(output, alignmentOfData(property));
-      dataWriters[(property as AnyWgslData)?.type]?.(
-        output,
-        property,
-        value[key],
-      );
+      alignIO(output, alignmentOf(property));
+      writeData(output, property, value[key] as BaseWgslData);
     }
 
     alignIO(output, schema.alignment);
   },
 
-  array(output, schema: WgslArray, value: unknown[]) {
+  array(output, schema: WgslArray, value: Infer<BaseWgslData>[]) {
     alignIO(output, schema.alignment);
     const beginning = output.currentByteOffset;
     for (let i = 0; i < Math.min(schema.length, value.length); i++) {
       alignIO(output, schema.alignment);
       const elementType = schema.elementType as AnyWgslData;
-      dataWriters[elementType?.type]?.(output, elementType, value[i]);
+      // dataWriters[elementType?.type]?.(output, elementType, value[i]);
+      writeData(output, elementType, value[i]);
     }
     output.seekTo(beginning + schema.size);
   },
@@ -351,7 +378,8 @@ export const dataWriters = {
   },
 
   'loose-array'(output, schema: LooseArray, value: unknown[]) {
-    const alignment = alignmentOfData(schema);
+    const alignment = alignmentOf(schema);
+
     alignIO(output, alignment);
     const beginning = output.currentByteOffset;
     for (let i = 0; i < Math.min(schema.length, value.length); i++) {
@@ -362,7 +390,8 @@ export const dataWriters = {
         value[i],
       );
     }
-    output.seekTo(beginning + sizeOfData(schema));
+
+    output.seekTo(beginning + sizeOf(schema));
   },
 
   'loose-struct'(output, schema: TgpuLooseStruct, value) {
@@ -378,7 +407,7 @@ export const dataWriters = {
     const beginning = output.currentByteOffset;
     const writer = dataWriters[(schema.inner as AnyData)?.type];
     writer?.(output, schema.inner, value);
-    output.seekTo(beginning + sizeOfData(schema));
+    output.seekTo(beginning + sizeOf(schema));
     return value;
   },
 } satisfies CompleteDataWriters as Record<
@@ -386,7 +415,20 @@ export const dataWriters = {
   (output: ISerialOutput, schema: unknown, value: unknown) => void
 >;
 
-export const dataReaders = {
+export function writeData<TData extends BaseWgslData>(
+  output: ISerialOutput,
+  schema: TData,
+  value: Infer<TData>,
+): void {
+  const writer = dataWriters[schema.type];
+  if (!writer) {
+    throw new Error(`Cannot write data of type '${schema.type}'.`);
+  }
+
+  writer(output, schema, value);
+}
+
+const dataReaders = {
   bool(input: ISerialInput) {
     return input.readBool();
   },
@@ -462,16 +504,62 @@ export const dataReaders = {
     );
   },
 
+  mat2x2f(input: ISerialInput) {
+    return createMat2x2f(
+      input.readFloat32(),
+      input.readFloat32(),
+      input.readFloat32(),
+      input.readFloat32(),
+    );
+  },
+
+  mat3x3f(input: ISerialInput) {
+    return createMat3x3f(
+      input.readFloat32(),
+      input.readFloat32(),
+      input.readFloat32(),
+      //
+      input.readFloat32(),
+      input.readFloat32(),
+      input.readFloat32(),
+      //
+      input.readFloat32(),
+      input.readFloat32(),
+      input.readFloat32(),
+    );
+  },
+
+  mat4x4f(input: ISerialInput) {
+    return createMat4x4f(
+      input.readFloat32(),
+      input.readFloat32(),
+      input.readFloat32(),
+      input.readFloat32(),
+      //
+      input.readFloat32(),
+      input.readFloat32(),
+      input.readFloat32(),
+      input.readFloat32(),
+      //
+      input.readFloat32(),
+      input.readFloat32(),
+      input.readFloat32(),
+      input.readFloat32(),
+      //
+      input.readFloat32(),
+      input.readFloat32(),
+      input.readFloat32(),
+      input.readFloat32(),
+    );
+  },
+
   struct(input: ISerialInput, schema: WgslStruct) {
     alignIO(input, schema.alignment);
     const result = {} as Record<string, unknown>;
 
     for (const [key, property] of Object.entries(schema.propTypes)) {
-      alignIO(input, alignmentOfData(property));
-      result[key] = dataReaders[(property as AnyWgslData)?.type]?.(
-        input,
-        property,
-      );
+      alignIO(input, alignmentOf(property));
+      result[key] = readData(input, property);
     }
 
     alignIO(input, schema.alignment);
@@ -481,21 +569,20 @@ export const dataReaders = {
   array(input, schema) {
     alignIO(input, schema.alignment);
     const elements: unknown[] = [];
+
     for (let i = 0; i < schema.length; i++) {
       alignIO(input, schema.alignment);
       const elementType = schema.elementType as AnyWgslData;
-      const value = dataReaders[elementType?.type]?.(input, elementType);
+      const value = readData(input, elementType);
       elements.push(value);
     }
+
     alignIO(input, schema.alignment);
     return elements as never[];
   },
 
   atomic(input, schema: Atomic): number {
-    return dataReaders[(schema.inner as AnyData)?.type]?.(
-      input,
-      schema.inner,
-    ) as number;
+    return readData(input, schema.inner);
   },
 
   decorated(input, schema: Decorated) {
@@ -503,8 +590,7 @@ export const dataReaders = {
     alignIO(input, alignment);
 
     const beginning = input.currentByteOffset;
-    const reader = dataReaders[(schema.inner as AnyData)?.type];
-    const value = reader?.(input, schema.inner);
+    const value = readData(input, schema.inner);
     input.seekTo(beginning + schema.size);
     return value as never;
   },
@@ -513,12 +599,46 @@ export const dataReaders = {
     const result = {} as Record<string, unknown>;
 
     for (const [key, property] of Object.entries(schema.propTypes)) {
-      result[key] = dataReaders[property.type]?.(input, property);
+      result[key] = readData(input, property);
     }
 
     return result as InferRecord<Record<string, BaseWgslData>>;
+  },
+
+  'loose-array'(input, schema: LooseArray) {
+    const alignment = alignmentOf(schema);
+    const elements: unknown[] = [];
+
+    for (let i = 0; i < schema.length; i++) {
+      alignIO(input, alignment);
+      elements.push(readData(input, schema.elementType));
+    }
+
+    alignIO(input, alignment);
+    return elements;
+  },
+
+  'loose-decorated'(input, schema: LooseDecorated) {
+    alignIO(input, getCustomAlignment(schema) ?? 1);
+
+    const beginning = input.currentByteOffset;
+    const value = readData(input, schema.inner);
+    input.seekTo(beginning + sizeOf(schema));
+    return value;
   },
 } satisfies CompleteDataReaders as Record<
   string,
   (input: ISerialInput, schema: unknown) => unknown
 >;
+
+export function readData<TData extends BaseWgslData>(
+  input: ISerialInput,
+  schema: TData,
+): Infer<TData> {
+  const reader = dataReaders[schema.type];
+  if (!reader) {
+    throw new Error(`Cannot read data of type '${schema.type}'.`);
+  }
+
+  return reader(input, schema) as Infer<TData>;
+}

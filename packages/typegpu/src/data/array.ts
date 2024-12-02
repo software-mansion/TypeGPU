@@ -1,11 +1,8 @@
 import { roundUp } from '../mathUtils';
 import type { Infer } from '../shared/repr';
-import {
-  type AnyWgslData,
-  type WgslArray,
-  alignmentOfData,
-  sizeOfData,
-} from './wgslTypes';
+import { alignmentOf } from './alignmentOf';
+import { sizeOf } from './sizeOf';
+import type { AnyWgslData, WgslArray } from './wgslTypes';
 
 // ----------
 // Public API
@@ -56,8 +53,8 @@ class TgpuArrayImpl<TElement extends AnyWgslData>
     public readonly elementType: TElement,
     public readonly length: number,
   ) {
-    this.alignment = alignmentOfData(elementType);
-    this.stride = roundUp(sizeOfData(elementType), this.alignment);
+    this.alignment = alignmentOf(elementType);
+    this.stride = roundUp(sizeOf(elementType), this.alignment);
     this.size = this.stride * length;
   }
 }

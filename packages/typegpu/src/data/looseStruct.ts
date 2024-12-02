@@ -2,7 +2,8 @@ import { roundUp } from '../mathUtils';
 import type { InferRecord } from '../shared/repr';
 import { getCustomAlignment } from './attributes';
 import type { TgpuLooseStruct } from './dataTypes';
-import { type BaseWgslData, sizeOfData } from './wgslTypes';
+import { sizeOf } from './sizeOf';
+import type { BaseWgslData } from './wgslTypes';
 
 // ----------
 // Public API
@@ -70,7 +71,7 @@ class TgpuLooseStructImpl<TProps extends Record<string, BaseWgslData>>
     for (const property of Object.values(propTypes)) {
       const alignment = getCustomAlignment(property) ?? 1;
       size = roundUp(size, alignment);
-      size += sizeOfData(property);
+      size += sizeOf(property);
     }
 
     this.size = size;

@@ -1,4 +1,6 @@
 import type { Block } from 'tinyest';
+import { resolveData } from './core/resolve/resolveData';
+import type { AnyWgslData } from './data/wgslTypes';
 import { MissingSlotValueError, ResolutionError } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
@@ -12,7 +14,6 @@ import {
   bindGroupLayout,
 } from './tgpuBindGroupLayout';
 import type {
-  AnyTgpuData,
   Eventual,
   FnToWgslOptions,
   ResolutionCtx,
@@ -56,12 +57,12 @@ type FunctionScopeLayer = {
   type: 'functionScope';
   args: Resource[];
   externalMap: Record<string, unknown>;
-  returnType: AnyTgpuData | undefined;
+  returnType: AnyWgslData | undefined;
 };
 
 type BlockScopeLayer = {
   type: 'blockScope';
-  declarations: Map<string, AnyTgpuData | UnknownData>;
+  declarations: Map<string, AnyWgslData | UnknownData>;
 };
 
 class ItemStateStack {
@@ -102,7 +103,7 @@ class ItemStateStack {
 
   pushFunctionScope(
     args: Resource[],
-    returnType: AnyTgpuData | undefined,
+    returnType: AnyWgslData | undefined,
     externalMap: Record<string, unknown>,
   ) {
     this._stack.push({
@@ -304,13 +305,16 @@ class ResolutionCtxImpl implements ResolutionCtx {
     this._itemStateStack.pop();
 
     const argList = options.args
-      .map((arg) => `${arg.value}: ${this.resolve(arg.dataType)}`)
+      .map(
+        (arg) =>
+          `${arg.value}: ${resolveData(this, arg.dataType as AnyWgslData)}`,
+      )
       .join(', ');
 
     return {
       head:
         options.returnType !== undefined
-          ? `(${argList}) -> ${this.resolve(options.returnType)}`
+          ? `(${argList}) -> ${resolveData(this, options.returnType)}`
           : `(${argList})`,
       body: str,
     };

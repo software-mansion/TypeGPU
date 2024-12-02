@@ -7,6 +7,7 @@ export interface NumberArrayView {
 
 export interface BaseWgslData {
   type: string;
+  __repr: unknown;
 }
 
 // #region Instance Types
@@ -433,6 +434,62 @@ export interface vec4u extends NumberArrayView, Swizzle4<vec2u, vec3u, vec4u> {
   w: number;
 }
 
+export interface matBase<TColumn> extends NumberArrayView {
+  readonly columns: readonly TColumn[];
+  elements(): Iterable<number>;
+}
+
+/**
+ * Interface representing its WGSL matrix type counterpart: mat2x2
+ * A matrix with 2 rows and 2 columns, with elements of type `TColumn`
+ */
+export interface mat2x2<TColumn> extends matBase<TColumn> {
+  readonly length: 4;
+  [n: number]: number;
+}
+
+/**
+ * Interface representing its WGSL matrix type counterpart: mat2x2f or mat2x2<f32>
+ * A matrix with 2 rows and 2 columns, with elements of type d.f32
+ */
+export interface mat2x2f extends mat2x2<vec2f> {
+  readonly kind: 'mat2x2f';
+}
+
+/**
+ * Interface representing its WGSL matrix type counterpart: mat3x3
+ * A matrix with 3 rows and 3 columns, with elements of type `TColumn`
+ */
+export interface mat3x3<TColumn> extends matBase<TColumn> {
+  readonly length: 12;
+  [n: number]: number;
+}
+
+/**
+ * Interface representing its WGSL matrix type counterpart: mat3x3f or mat3x3<f32>
+ * A matrix with 3 rows and 3 columns, with elements of type d.f32
+ */
+export interface mat3x3f extends mat3x3<vec3f> {
+  readonly kind: 'mat3x3f';
+}
+
+/**
+ * Interface representing its WGSL matrix type counterpart: mat4x4
+ * A matrix with 4 rows and 4 columns, with elements of type `TColumn`
+ */
+export interface mat4x4<TColumn> extends matBase<TColumn> {
+  readonly length: 16;
+  [n: number]: number;
+}
+
+/**
+ * Interface representing its WGSL matrix type counterpart: mat4x4f or mat4x4<f32>
+ * A matrix with 4 rows and 4 columns, with elements of type d.f32
+ */
+export interface mat4x4f extends mat4x4<vec4f> {
+  readonly kind: 'mat4x4f';
+}
+
 // #endregion
 
 // #region WGSL Schema Types
@@ -504,6 +561,21 @@ export interface Vec4i {
 export interface Vec4u {
   readonly type: 'vec4u';
   readonly __repr: vec4u;
+}
+
+export interface Mat2x2f {
+  readonly type: 'mat2x2f';
+  readonly __repr: mat2x2f;
+}
+
+export interface Mat3x3f {
+  readonly type: 'mat3x3f';
+  readonly __repr: mat3x3f;
+}
+
+export interface Mat4x4f {
+  readonly type: 'mat4x4f';
+  readonly __repr: mat4x4f;
 }
 
 export interface WgslStruct<
@@ -581,6 +653,9 @@ export const wgslTypeLiterals = [
   'vec4f',
   'vec4i',
   'vec4u',
+  'mat2x2f',
+  'mat3x3f',
+  'mat4x4f',
   'struct',
   'array',
   'atomic',
@@ -603,60 +678,15 @@ export type AnyWgslData =
   | Vec4f
   | Vec4i
   | Vec4u
+  | Mat2x2f
+  | Mat3x3f
+  | Mat4x4f
   | WgslStruct
   | WgslArray
   | Atomic
   | Decorated;
 
 // #endregion
-
-const knownSizesMap: Record<string, number> = {
-  bool: 4,
-  f32: 4,
-  i32: 4,
-  u32: 4,
-  vec2f: 8,
-  vec2i: 8,
-  vec2u: 8,
-  vec3f: 12,
-  vec3i: 12,
-  vec3u: 12,
-  vec4f: 16,
-  vec4i: 16,
-  vec4u: 16,
-};
-
-const knownAlignmentMap: Record<string, number> = {
-  bool: 4,
-  f32: 4,
-  i32: 4,
-  u32: 4,
-  vec2f: 8,
-  vec2i: 8,
-  vec2u: 8,
-  vec3f: 16,
-  vec3i: 16,
-  vec3u: 16,
-  vec4f: 16,
-  vec4i: 16,
-  vec4u: 16,
-};
-
-export function sizeOfData(data: unknown) {
-  return (
-    knownSizesMap[(data as AnyWgslData)?.type] ??
-    (data as { size: number }).size ??
-    Number.NaN
-  );
-}
-
-export function alignmentOfData(data: unknown) {
-  return (
-    knownAlignmentMap[(data as AnyWgslData)?.type] ??
-    (data as { alignment: number }).alignment ??
-    0
-  );
-}
 
 export function isWgslData(value: unknown): value is AnyWgslData {
   return wgslTypeLiterals.includes((value as AnyWgslData)?.type);

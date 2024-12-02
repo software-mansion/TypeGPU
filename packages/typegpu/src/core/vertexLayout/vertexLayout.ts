@@ -1,13 +1,11 @@
+import { alignmentOf } from '../../data/alignmentOf';
 import { isDecorated, isLooseDecorated } from '../../data/attributes';
 import { getCustomAlignment } from '../../data/attributes';
 import type { LooseArray } from '../../data/dataTypes';
 import { isLooseStructSchema } from '../../data/looseStruct';
+import { sizeOf } from '../../data/sizeOf';
 import type { BaseWgslData, WgslArray } from '../../data/wgslTypes';
-import {
-  alignmentOfData,
-  isStructSchema,
-  sizeOfData,
-} from '../../data/wgslTypes';
+import { isStructSchema } from '../../data/wgslTypes';
 import { roundUp } from '../../mathUtils';
 import type { TgpuNamable } from '../../namable';
 import {
@@ -78,12 +76,12 @@ function dataToContainedAttribs<
 
     return Object.fromEntries(
       Object.entries(data.propTypes).map(([key, value]) => {
-        memberOffset = roundUp(memberOffset, alignmentOfData(value));
+        memberOffset = roundUp(memberOffset, alignmentOf(value));
         const attrib = [
           key,
           dataToContainedAttribs(layout, value, memberOffset),
         ];
-        memberOffset += sizeOfData(value);
+        memberOffset += sizeOf(value);
         return attrib;
       }),
     ) as DataToContainedAttribs<TData>;
@@ -99,7 +97,7 @@ function dataToContainedAttribs<
           key,
           dataToContainedAttribs(layout, value, memberOffset),
         ];
-        memberOffset += sizeOfData(value);
+        memberOffset += sizeOf(value);
         return attrib;
       }),
     ) as DataToContainedAttribs<TData>;
@@ -149,8 +147,8 @@ class TgpuVertexLayoutImpl<TData extends WgslArray | LooseArray>
     const arraySchema = schemaForCount(0);
 
     this.stride = roundUp(
-      sizeOfData(arraySchema.elementType),
-      alignmentOfData(arraySchema.elementType),
+      sizeOf(arraySchema.elementType),
+      alignmentOf(arraySchema.elementType),
     );
     this.attrib = dataToContainedAttribs(this, arraySchema.elementType, 0);
   }

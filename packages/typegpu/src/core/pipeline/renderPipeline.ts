@@ -9,7 +9,7 @@ import {
   type TgpuBindGroupLayout,
   isBindGroupLayout,
 } from '../../tgpuBindGroupLayout';
-import type { AnyTgpuData, TgpuSlot } from '../../types';
+import type { TgpuSlot } from '../../types';
 import type { IOData, IOLayout } from '../function/fnTypes';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
@@ -33,7 +33,7 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
   readonly resourceType: 'render-pipeline';
   readonly label: string | undefined;
 
-  with<TData extends WgslArray<AnyTgpuData>>(
+  with<TData extends WgslArray>(
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: TgpuBuffer<TData> & Vertex,
   ): TgpuRenderPipeline;

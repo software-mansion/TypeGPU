@@ -1,5 +1,5 @@
-import type { Vec4f } from '../../data';
-import { isBaseData } from '../../types';
+import { isData } from '../../data/dataTypes';
+import type { Vec4f } from '../../data/wgslTypes';
 import type { IOLayout } from '../function/fnTypes';
 import type {
   AnyFragmentColorAttachment,
@@ -16,7 +16,7 @@ export function connectAttachmentToShader(
   shaderOutputLayout: IOLayout<Vec4f>,
   attachment: AnyFragmentColorAttachment,
 ): ColorAttachment[] {
-  if (isBaseData(shaderOutputLayout)) {
+  if (isData(shaderOutputLayout)) {
     if (!isAttachment(attachment)) {
       throw new Error('Expected a single color attachment, not a record.');
     }

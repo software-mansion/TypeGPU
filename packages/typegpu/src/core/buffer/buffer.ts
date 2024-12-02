@@ -1,9 +1,10 @@
-import { BufferReader, BufferWriter, type Parsed } from 'typed-binary';
-import { dataReaders, dataWriters } from '../../data/dataIO';
+import { BufferReader, BufferWriter } from 'typed-binary';
+import { readData, writeData } from '../../data/dataIO';
 import type { AnyData } from '../../data/dataTypes';
-import { sizeOfData } from '../../data/wgslTypes';
+import { sizeOf } from '../../data/sizeOf';
 import type { Storage } from '../../extension';
 import type { TgpuNamable } from '../../namable';
+import type { Infer } from '../../shared/repr';
 import type { UnionToIntersection } from '../../shared/utilityTypes';
 import { type TgpuPlum, type Unsubscribe, isPlum } from '../../tgpuPlumTypes';
 import { isGPUBuffer } from '../../types';
@@ -36,7 +37,7 @@ type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
 export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
   readonly resourceType: 'buffer';
   readonly dataType: TData;
-  readonly initial?: Parsed<TData> | TgpuPlum<Parsed<TData>> | undefined;
+  readonly initial?: Infer<TData> | TgpuPlum<Infer<TData>> | undefined;
   readonly label: string | undefined;
 
   readonly buffer: GPUBuffer;
@@ -49,15 +50,15 @@ export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
   $addFlags(flags: GPUBufferUsageFlags): this;
   $device(device: GPUDevice): this;
 
-  write(data: Parsed<TData> | TgpuBuffer<TData>): void;
-  read(): Promise<Parsed<TData>>;
+  write(data: Infer<TData> | TgpuBuffer<TData>): void;
+  read(): Promise<Infer<TData>>;
   destroy(): void;
 }
 
 export function createBufferImpl<TData extends AnyData>(
   group: ExperimentalTgpuRoot | undefined,
   typeSchema: TData,
-  initialOrBuffer?: Parsed<TData> | TgpuPlum<Parsed<TData>> | GPUBuffer,
+  initialOrBuffer?: Infer<TData> | TgpuPlum<Infer<TData>> | GPUBuffer,
 ): TgpuBuffer<TData> {
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
 }
@@ -94,7 +95,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   private _subscription: Unsubscribe | null = null;
 
   private _label: string | undefined;
-  readonly initial: Parsed<TData> | TgpuPlum<Parsed<TData>> | undefined;
+  readonly initial: Infer<TData> | TgpuPlum<Infer<TData>> | undefined;
 
   public usableAsUniform = false;
   public usableAsStorage = false;
@@ -104,8 +105,8 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     private readonly _group: ExperimentalTgpuRoot | undefined,
     public readonly dataType: TData,
     public readonly initialOrBuffer?:
-      | Parsed<TData>
-      | TgpuPlum<Parsed<TData>>
+      | Infer<TData>
+      | TgpuPlum<Infer<TData>>
       | GPUBuffer
       | undefined,
   ) {
@@ -133,7 +134,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
 
     if (!this._buffer) {
       this._buffer = this._device.createBuffer({
-        size: sizeOfData(this.dataType),
+        size: sizeOf(this.dataType),
         usage: this.flags,
         mappedAtCreation: !!this.initial,
       });
@@ -152,21 +153,13 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
 
           const plum = this.initial;
 
-          dataWriters[this.dataType.type]?.(
-            writer,
-            this.dataType,
-            group.readPlum(plum),
-          );
+          writeData(writer, this.dataType, group.readPlum(plum));
 
           this._subscription = group.onPlumChange(plum, () => {
             this.write(group.readPlum(plum));
           });
         } else {
-          dataWriters[this.dataType.type]?.(
-            writer,
-            this.dataType,
-            this.initial,
-          );
+          writeData(writer, this.dataType, this.initial);
         }
 
         this._buffer.unmap();
@@ -219,21 +212,20 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     return this;
   }
 
-  write(dataOrBuffer: Parsed<TData> | TgpuBuffer<TData>): void {
+  write(dataOrBuffer: Infer<TData> | TgpuBuffer<TData>): void {
     const gpuBuffer = this.buffer;
     const device = this.device;
-    const writer = dataWriters[this.dataType.type];
 
     if (gpuBuffer.mapState === 'mapped') {
       const mapped = gpuBuffer.getMappedRange();
       if (isBuffer(dataOrBuffer)) {
         throw new Error('Cannot copy to a mapped buffer.');
       }
-      writer?.(new BufferWriter(mapped), this.dataType, dataOrBuffer);
+      writeData(new BufferWriter(mapped), this.dataType, dataOrBuffer);
       return;
     }
 
-    const size = sizeOfData(this.dataType);
+    const size = sizeOf(this.dataType);
     if (isBuffer(dataOrBuffer)) {
       const sourceBuffer = dataOrBuffer.buffer;
 
@@ -252,12 +244,12 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
       }
 
       const hostBuffer = new ArrayBuffer(size);
-      writer?.(new BufferWriter(hostBuffer), this.dataType, dataOrBuffer);
+      writeData(new BufferWriter(hostBuffer), this.dataType, dataOrBuffer);
       device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
     }
   }
 
-  async read(): Promise<Parsed<TData>> {
+  async read(): Promise<Infer<TData>> {
     if (this._group) {
       // Flushing any commands yet to be encoded.
       this._group.flush();
@@ -265,30 +257,22 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
 
     const gpuBuffer = this.buffer;
     const device = this.device;
-    const reader = dataReaders[this.dataType.type];
 
     if (gpuBuffer.mapState === 'mapped') {
       const mapped = gpuBuffer.getMappedRange();
-      const res = reader?.(
-        new BufferReader(mapped),
-        this.dataType,
-      ) as Parsed<TData>;
-      return res;
+      return readData(new BufferReader(mapped), this.dataType);
     }
 
     if (gpuBuffer.usage & GPUBufferUsage.MAP_READ) {
       await gpuBuffer.mapAsync(GPUMapMode.READ);
       const mapped = gpuBuffer.getMappedRange();
-      const res = reader?.(
-        new BufferReader(mapped),
-        this.dataType,
-      ) as Parsed<TData>;
+      const res = readData(new BufferReader(mapped), this.dataType);
       gpuBuffer.unmap();
       return res;
     }
 
     const stagingBuffer = device.createBuffer({
-      size: sizeOfData(this.dataType),
+      size: sizeOf(this.dataType),
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
     });
 
@@ -298,17 +282,17 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
       0,
       stagingBuffer,
       0,
-      sizeOfData(this.dataType),
+      sizeOf(this.dataType),
     );
 
     device.queue.submit([commandEncoder.finish()]);
     await device.queue.onSubmittedWorkDone();
-    await stagingBuffer.mapAsync(GPUMapMode.READ, 0, sizeOfData(this.dataType));
+    await stagingBuffer.mapAsync(GPUMapMode.READ, 0, sizeOf(this.dataType));
 
-    const res = reader?.(
+    const res = readData(
       new BufferReader(stagingBuffer.getMappedRange()),
       this.dataType,
-    ) as Parsed<TData>;
+    );
 
     stagingBuffer.unmap();
     stagingBuffer.destroy();

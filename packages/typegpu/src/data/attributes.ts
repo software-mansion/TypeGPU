@@ -1,7 +1,5 @@
-import type { ISerialInput, Parsed, Unwrap } from 'typed-binary';
 import type { Infer } from '../shared/repr';
-import alignIO from './alignIO';
-import { dataReaders } from './dataIO';
+import { alignmentOf } from './alignmentOf';
 import {
   type AnyData,
   type AnyLooseData,
@@ -9,6 +7,7 @@ import {
   isData,
   isLooseData,
 } from './dataTypes';
+import { sizeOf } from './sizeOf';
 import {
   type Align,
   type AnyWgslData,
@@ -18,12 +17,10 @@ import {
   type Location,
   type Size,
   type WgslTypeLiteral,
-  alignmentOfData,
   isAlignAttrib,
   isBuiltinAttrib,
   isLocationAttrib,
   isSizeAttrib,
-  sizeOfData,
 } from './wgslTypes';
 
 // ----------
@@ -59,8 +56,6 @@ export interface BaseDecorated<
   TInner extends BaseWgslData = BaseWgslData,
   TAttribs extends unknown[] = unknown[],
 > {
-  readonly size: number;
-  readonly alignment: number;
   readonly inner: TInner;
   readonly attribs: TAttribs;
 }
@@ -70,6 +65,7 @@ export interface LooseDecorated<
   TAttribs extends unknown[] = unknown[],
 > extends BaseDecorated<TInner, TAttribs> {
   readonly type: 'loose-decorated';
+  readonly __repr: Infer<TInner>;
 }
 
 export type ExtractAttributes<T> = T extends {
@@ -287,8 +283,8 @@ class BaseDecoratedImpl<TInner, TAttribs extends unknown[]> {
     this._alignAttrib = attribs.find(isAlignAttrib)?.value;
     this._sizeAttrib = attribs.find(isSizeAttrib)?.value;
 
-    this.alignment = this._alignAttrib ?? alignmentOfData(inner);
-    this.size = this._sizeAttrib ?? sizeOfData(inner);
+    this.alignment = this._alignAttrib ?? alignmentOf(inner);
+    this.size = this._sizeAttrib ?? sizeOf(inner);
 
     if (this.alignment <= 0) {
       throw new Error(
@@ -303,16 +299,16 @@ class BaseDecoratedImpl<TInner, TAttribs extends unknown[]> {
     }
 
     if (isData(this.inner)) {
-      if (this.alignment % alignmentOfData(this.inner) !== 0) {
+      if (this.alignment % alignmentOf(this.inner) !== 0) {
         throw new Error(
-          `Custom alignment has to be a multiple of the standard data alignment. Got: ${this.alignment}, expected multiple of: ${alignmentOfData(this.inner)}.`,
+          `Custom alignment has to be a multiple of the standard data alignment. Got: ${this.alignment}, expected multiple of: ${alignmentOf(this.inner)}.`,
         );
       }
     }
 
-    if (this.size < sizeOfData(this.inner)) {
+    if (this.size < sizeOf(this.inner)) {
       throw new Error(
-        `Custom data size cannot be smaller then the standard data size. Got: ${this.size}, expected at least: ${sizeOfData(this.inner)}.`,
+        `Custom data size cannot be smaller then the standard data size. Got: ${this.size}, expected at least: ${sizeOf(this.inner)}.`,
       );
     }
 
@@ -321,16 +317,6 @@ class BaseDecoratedImpl<TInner, TAttribs extends unknown[]> {
         `Custom data size must be a positive number. Got: ${this.size}.`,
       );
     }
-  }
-
-  read(input: ISerialInput): Parsed<Unwrap<TInner>> {
-    alignIO(input, this._alignAttrib ?? 1);
-
-    const beginning = input.currentByteOffset;
-    const reader = dataReaders[(this.inner as AnyData)?.type];
-    const value = reader?.(input, this.inner) as Parsed<Unwrap<TInner>>;
-    input.seekTo(beginning + this.size);
-    return value;
   }
 }
 

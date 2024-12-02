@@ -1,9 +1,9 @@
 import type { Block } from 'tinyest';
-import type { Vec4f } from '../../data';
+import type { Vec4f } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
-import type { IOLayout, Implementation, UnwrapIO } from './fnTypes';
+import type { IOLayout, Implementation, InferIO } from './fnTypes';
 
 // ----------
 // Public API
@@ -23,7 +23,7 @@ export interface TgpuFragmentFnShell<
    * Creates a type-safe implementation of this signature
    */
   does(
-    implementation: (varying: UnwrapIO<Varying>) => UnwrapIO<Output>,
+    implementation: (varying: InferIO<Varying>) => InferIO<Output>,
   ): TgpuFragmentFn<Varying, Output>;
 
   /**

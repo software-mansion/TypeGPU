@@ -3,6 +3,9 @@ import type {
   Bool,
   F32,
   I32,
+  Mat2x2f,
+  Mat3x3f,
+  Mat4x4f,
   U32,
   Vec2f,
   Vec2i,
@@ -33,6 +36,9 @@ const identityTypes = [
   'vec2u',
   'vec3u',
   'vec4u',
+  'mat2x2f',
+  'mat3x3f',
+  'mat4x4f',
 ];
 type IdentityType =
   | Bool
@@ -47,7 +53,10 @@ type IdentityType =
   | Vec4i
   | Vec2u
   | Vec3u
-  | Vec4u;
+  | Vec4u
+  | Mat2x2f
+  | Mat3x3f
+  | Mat4x4f;
 
 function isIdentityType(data: AnyWgslData): data is IdentityType {
   return identityTypes.includes(data.type);

@@ -22,11 +22,6 @@ export const tgpu = {
 };
 export default tgpu;
 
-export { RecursiveDataTypeError } from './errors';
-export {
-  TgpuData,
-  AnyTgpuData,
-} from './types';
 export { std } from './std';
 export {
   isUsableAsUniform,

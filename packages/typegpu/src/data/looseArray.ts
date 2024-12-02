@@ -1,18 +1,8 @@
-import type * as TB from 'typed-binary';
-import {
-  type IMeasurer,
-  type MaxValue,
-  Measurer,
-  type Parsed,
-  type Unwrap,
-} from 'typed-binary';
 import { roundUp } from '../mathUtils';
 import type { Infer } from '../shared/repr';
-import alignIO from './alignIO';
 import { getCustomAlignment } from './attributes';
-import { dataReaders, dataWriters } from './dataIO';
 import type { AnyData, LooseArray } from './dataTypes';
-import { sizeOfData } from './wgslTypes';
+import { sizeOf } from './sizeOf';
 
 // ----------
 // Public API
@@ -76,43 +66,7 @@ class LooseArrayImpl<TElement extends AnyData> implements LooseArray<TElement> {
     public readonly length: number,
   ) {
     this.alignment = getCustomAlignment(elementType) ?? 1;
-    this.stride = roundUp(sizeOfData(elementType), this.alignment);
+    this.stride = roundUp(sizeOf(elementType), this.alignment);
     this.size = this.stride * length;
-  }
-
-  write(output: TB.ISerialOutput, value: Parsed<Unwrap<TElement>>[]) {
-    alignIO(output, this.alignment);
-    const beginning = output.currentByteOffset;
-    for (let i = 0; i < Math.min(this.length, value.length); i++) {
-      alignIO(output, this.alignment);
-      dataWriters[(this.elementType as AnyData)?.type]?.(
-        output,
-        this.elementType,
-        value[i],
-      );
-    }
-    output.seekTo(beginning + this.size);
-  }
-
-  read(input: TB.ISerialInput): Parsed<Unwrap<TElement>>[] {
-    alignIO(input, this.alignment);
-    const elements: Parsed<Unwrap<TElement>>[] = [];
-    for (let i = 0; i < this.length; i++) {
-      alignIO(input, this.alignment);
-      const reader = dataReaders[(this.elementType as AnyData)?.type];
-      elements.push(
-        reader?.(input, this.elementType) as Parsed<Unwrap<TElement>>,
-      );
-    }
-    alignIO(input, this.alignment);
-    return elements;
-  }
-
-  measure(
-    _: MaxValue | Parsed<Unwrap<TElement>>[],
-    measurer: IMeasurer = new Measurer(),
-  ): IMeasurer {
-    alignIO(measurer, this.alignment);
-    return measurer.add(this.size);
   }
 }

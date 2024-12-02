@@ -1,6 +1,5 @@
-import type { Parsed } from 'typed-binary';
-
 import type { OmitBuiltins } from '../../builtin';
+import type { AnyData } from '../../data/dataTypes';
 import type { JitTranspiler } from '../../jitTranspiler';
 import { WeakMemo } from '../../memo';
 import {
@@ -10,6 +9,7 @@ import {
 } from '../../nameRegistry';
 import { type PlumListener, PlumStore } from '../../plumStore';
 import type { TgpuSettable } from '../../settableTrait';
+import type { Infer } from '../../shared/repr';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat';
 import type {
   TgpuBindGroup,
@@ -22,7 +22,7 @@ import type {
   Unsubscribe,
 } from '../../tgpuPlumTypes';
 import type { TgpuSampler } from '../../tgpuSampler';
-import type { AnyTgpuData, TgpuSlot } from '../../types';
+import type { TgpuSlot } from '../../types';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
 import type { IOLayout } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
@@ -184,9 +184,9 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
     return this._commandEncoder;
   }
 
-  createBuffer<TData extends AnyTgpuData>(
+  createBuffer<TData extends AnyData>(
     typeSchema: TData,
-    initialOrBuffer?: Parsed<TData> | TgpuPlum<Parsed<TData>> | GPUBuffer,
+    initialOrBuffer?: Infer<TData> | TgpuPlum<Infer<TData>> | GPUBuffer,
   ): TgpuBuffer<TData> {
     const buffer = createBufferImpl(this, typeSchema, initialOrBuffer).$device(
       this.device,
@@ -244,7 +244,7 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
   unwrap(resource: TgpuComputePipeline): GPUComputePipeline;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
-  unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
+  unwrap(resource: TgpuBuffer<AnyData>): GPUBuffer;
   unwrap(resource: TgpuTexture): GPUTexture;
   unwrap(
     resource:
@@ -258,7 +258,7 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
       | TgpuComputePipeline
       | TgpuBindGroupLayout
       | TgpuBindGroup
-      | TgpuBuffer<AnyTgpuData>
+      | TgpuBuffer<AnyData>
       | TgpuTexture
       | TgpuReadonlyTexture
       | TgpuWriteonlyTexture
