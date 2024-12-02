@@ -264,6 +264,7 @@ abstract class mat3x3Impl<TColumn extends v3f> implements mat3x3<TColumn> {
 }
 
 class mat3x3fImpl extends mat3x3Impl<v3f> implements mat3x3fType {
+  public readonly kind = 'mat3x3f';
   makeColumn(x: number, y: number, z: number): v3f {
     return vec3f(x, y, z);
   }

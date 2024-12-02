@@ -1,7 +1,7 @@
 import { roundUp } from '../mathUtils';
 import type { InferRecord } from '../shared/repr';
 import { getCustomAlignment } from './attributes';
-import type { TgpuLooseStruct } from './dataTypes';
+import type { LooseStruct } from './dataTypes';
 import { sizeOf } from './sizeOf';
 import type { BaseWgslData } from './wgslTypes';
 
@@ -29,7 +29,7 @@ import type { BaseWgslData } from './wgslTypes';
  */
 export const looseStruct = <TProps extends Record<string, BaseWgslData>>(
   properties: TProps,
-): TgpuLooseStruct<TProps> => new TgpuLooseStructImpl(properties);
+): LooseStruct<TProps> => new TgpuLooseStructImpl(properties);
 
 /**
  * Checks whether passed in value is a looseStruct schema,
@@ -44,7 +44,7 @@ export const looseStruct = <TProps extends Record<string, BaseWgslData>>(
  * isLooseStructSchema(d.looseStruct({ a: d.u32 })) // true
  * isLooseStructSchema(d.vec3f) // false
  */
-export function isLooseStructSchema<T extends TgpuLooseStruct>(
+export function isLooseStructSchema<T extends LooseStruct>(
   schema: T | unknown,
 ): schema is T {
   return (schema as T)?.type === 'loose-struct';
@@ -55,7 +55,7 @@ export function isLooseStructSchema<T extends TgpuLooseStruct>(
 // --------------
 
 class TgpuLooseStructImpl<TProps extends Record<string, BaseWgslData>>
-  implements TgpuLooseStruct<TProps>
+  implements LooseStruct<TProps>
 {
   public readonly type = 'loose-struct';
 

@@ -1,4 +1,4 @@
-import type { LooseArray } from '../../data/dataTypes';
+import type { LooseArray, LooseStruct } from '../../data/dataTypes';
 import type { WgslArray, WgslStruct } from '../../data/wgslTypes';
 import type {
   KindToAcceptedAttribMap,
@@ -15,12 +15,16 @@ import type {
  * - TgpuStruct<{ a: Vec3f, b: unorm8x2 }>
  * - TgpuStruct<{ nested: TgpuStruct<{ a: Vec3f }> }>
  */
-export type DataToContainedAttribs<T> = T extends WgslStruct<infer Props>
-  ? { [Key in keyof Props]: DataToContainedAttribs<Props[Key]> }
-  : T extends { kind: VertexFormat }
-    ? TgpuVertexAttrib<T['kind']>
-    : T extends { kind: keyof KindToDefaultFormatMap }
-      ? TgpuVertexAttrib<KindToDefaultFormatMap[T['kind']]>
+export type DataToContainedAttribs<T> = T extends WgslStruct | LooseStruct
+  ? {
+      [Key in keyof T['propTypes']]: DataToContainedAttribs<
+        T['propTypes'][Key]
+      >;
+    }
+  : T extends { type: VertexFormat }
+    ? TgpuVertexAttrib<T['type']>
+    : T extends { type: keyof KindToDefaultFormatMap }
+      ? TgpuVertexAttrib<KindToDefaultFormatMap[T['type']]>
       : never;
 
 /**

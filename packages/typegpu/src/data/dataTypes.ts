@@ -29,7 +29,7 @@ export interface LooseArray<TElement extends BaseWgslData = BaseWgslData> {
  * unless they are explicitly decorated with the custom align attribute
  * via `d.align` function.
  */
-export interface TgpuLooseStruct<
+export interface LooseStruct<
   TProps extends Record<string, BaseWgslData> = Record<string, BaseWgslData>,
 > {
   readonly type: 'loose-struct';
@@ -48,7 +48,7 @@ export type LooseTypeLiteral = (typeof looseTypeLiterals)[number];
 
 export type AnyLooseData =
   | LooseArray
-  | TgpuLooseStruct
+  | LooseStruct
   | LooseDecorated
   | PackedData;
 

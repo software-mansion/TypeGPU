@@ -103,18 +103,18 @@ function dataToContainedAttribs<
     ) as DataToContainedAttribs<TData>;
   }
 
-  if ('kind' in data && typeof data.kind === 'string') {
-    if (vertexFormats.includes(data.kind as VertexFormat)) {
+  if ('type' in data && typeof data.type === 'string') {
+    if (vertexFormats.includes(data.type as VertexFormat)) {
       return {
         _layout: layout, // hidden property, used to determine which buffers to apply when executing the pipeline
-        format: data.kind as VertexFormat,
+        format: data.type as VertexFormat,
         offset,
         // biome-ignore lint/suspicious/noExplicitAny: <too many type shenanigans>
       } satisfies TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib as any;
     }
 
     const format = (kindToDefaultFormatMap as Record<string, VertexFormat>)[
-      data.kind
+      data.type
     ];
 
     if (format) {
