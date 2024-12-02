@@ -5,7 +5,6 @@
 export * from './numeric';
 export {
   TgpuStruct,
-  isStructSchema,
   struct,
 } from './struct';
 export {
@@ -15,7 +14,7 @@ export {
 export * from './vector';
 export * from './matrix';
 export * from './vertexFormatData';
-export { atomic, isAtomicSchema, Atomic } from './atomic';
+export { atomic, isAtomicSchema } from './atomic';
 export {
   align,
   size,

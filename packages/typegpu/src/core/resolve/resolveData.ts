@@ -4,15 +4,50 @@ import type {
   F32,
   I32,
   U32,
+  Vec2f,
+  Vec2i,
+  Vec2u,
   Vec3f,
+  Vec3i,
+  Vec3u,
+  Vec4f,
+  Vec4i,
+  Vec4u,
   WgslArray,
   WgslStruct,
 } from '../../data/wgslTypes';
 import { assertExhaustive } from '../../shared/utilityTypes';
 import type { ResolutionCtx } from '../../types';
 
-const identityTypes = ['bool', 'f32', 'i32', 'u32', 'vec3f'];
-type IdentityType = Bool | F32 | I32 | U32 | Vec3f;
+const identityTypes = [
+  'bool',
+  'f32',
+  'i32',
+  'u32',
+  'vec2f',
+  'vec3f',
+  'vec4f',
+  'vec2i',
+  'vec3i',
+  'vec4i',
+  'vec2u',
+  'vec3u',
+  'vec4u',
+];
+type IdentityType =
+  | Bool
+  | F32
+  | I32
+  | U32
+  | Vec2f
+  | Vec3f
+  | Vec4f
+  | Vec2i
+  | Vec3i
+  | Vec4i
+  | Vec2u
+  | Vec3u
+  | Vec4u;
 
 function isIdentityType(data: AnyWgslData): data is IdentityType {
   return identityTypes.includes(data.type);
@@ -54,6 +89,14 @@ export function resolveData(ctx: ResolutionCtx, data: AnyWgslData): string {
 
   if (data.type === 'array') {
     return resolveArray(ctx, data);
+  }
+
+  if (data.type === 'atomic') {
+    return `atomic<${resolveData(ctx, data.inner)}>`;
+  }
+
+  if (data.type === 'decorated') {
+    return resolveData(ctx, data.inner as AnyWgslData);
   }
 
   assertExhaustive(data, 'resolveData');

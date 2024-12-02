@@ -1,16 +1,11 @@
+import type { Infer } from '../shared/repr';
 import {
-  type IMeasurer,
-  type ISerialInput,
-  type ISerialOutput,
-  type MaxValue,
-  Measurer,
-  type ParseUnwrapped,
-  Schema,
-  type Unwrap,
-} from 'typed-binary';
-import { RecursiveDataTypeError } from '../errors';
-import type { ResolutionCtx, TgpuData } from '../types';
-import type { I32, U32 } from './numeric';
+  type Atomic,
+  type I32,
+  type U32,
+  alignmentOfData,
+  sizeOfData,
+} from './wgslTypes';
 
 // ----------
 // Public API
@@ -32,12 +27,6 @@ export function atomic<TSchema extends U32 | I32>(
 }
 
 /**
- * Atomic schema constructed via `d.atomic` function.
- */
-export interface Atomic<TSchema extends U32 | I32>
-  extends TgpuData<Unwrap<TSchema>> {}
-
-/**
  * Checks whether the passed in value is a d.atomic schema.
  *
  * @example
@@ -54,42 +43,15 @@ export function isAtomicSchema<T extends Atomic<U32 | I32>>(
 // Implementation
 // --------------
 
-class AtomicImpl<TSchema extends U32 | I32>
-  extends Schema<Unwrap<TSchema>>
-  implements Atomic<TSchema>
-{
+class AtomicImpl<TSchema extends U32 | I32> implements Atomic<TSchema> {
+  public readonly type = 'atomic';
   /** Type-token, not available at runtime */
-  public readonly __repr!: Unwrap<TSchema>;
+  public readonly __repr!: Infer<TSchema>;
   public readonly size: number;
-  public readonly byteAlignment: number;
-  public readonly isLoose = false as const;
+  public readonly alignment: number;
 
-  constructor(private readonly innerData: TSchema) {
-    super();
-    this.size = this.innerData.size;
-    this.byteAlignment = this.innerData.byteAlignment;
-  }
-
-  resolveReferences(): void {
-    throw new RecursiveDataTypeError();
-  }
-
-  write(output: ISerialOutput, value: ParseUnwrapped<TSchema>): void {
-    this.innerData.write(output, value);
-  }
-
-  read(input: ISerialInput): ParseUnwrapped<TSchema> {
-    return this.innerData.read(input) as ParseUnwrapped<TSchema>;
-  }
-
-  measure(
-    value: ParseUnwrapped<TSchema> | MaxValue,
-    measurer: IMeasurer = new Measurer(),
-  ): IMeasurer {
-    return this.innerData.measure(value, measurer);
-  }
-
-  resolve(ctx: ResolutionCtx): string {
-    return `atomic<${ctx.resolve(this.innerData)}>`;
+  constructor(public readonly inner: TSchema) {
+    this.size = sizeOfData(this.inner);
+    this.alignment = alignmentOfData(this.inner);
   }
 }

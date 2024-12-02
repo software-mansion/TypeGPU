@@ -1,32 +1,12 @@
-import {
-  type IMeasurer,
-  type ISerialInput,
-  type ISerialOutput,
-  MaxValue,
-  Measurer,
-  type Parsed,
-  Schema,
-  type UnwrapRecord,
-} from 'typed-binary';
-import { RecursiveDataTypeError } from '../errors';
-import type { AnyTgpuLooseData, TgpuLooseData } from '../types';
-import type { AnyWgslData } from './wgslTypes';
+import { roundUp } from '../mathUtils';
+import type { InferRecord } from '../shared/repr';
+import { getCustomAlignment } from './attributes';
+import type { TgpuLooseStruct } from './dataTypes';
+import { type BaseWgslData, sizeOfData } from './wgslTypes';
 
 // ----------
 // Public API
 // ----------
-
-/**
- * Struct schema constructed via `d.looseStruct` function.
- *
- * Useful for defining vertex buffers, as the standard layout restrictions do not apply.
- * Members are not aligned in respect to their `byteAlignment`,
- * unless they are explicitly decorated with the custom align attribute
- * via `d.align` function.
- */
-export interface TgpuLooseStruct<
-  TProps extends Record<string, AnyWgslData | AnyTgpuLooseData>,
-> extends TgpuLooseData<UnwrapRecord<TProps>> {}
 
 /**
  * Creates a loose struct schema that can be used to construct vertex buffers.
@@ -46,9 +26,7 @@ export interface TgpuLooseStruct<
  * @param properties Record with `string` keys and `TgpuData` or `TgpuLooseData` values,
  * each entry describing one struct member.
  */
-export const looseStruct = <
-  TProps extends Record<string, AnyWgslData | AnyTgpuLooseData>,
->(
+export const looseStruct = <TProps extends Record<string, BaseWgslData>>(
   properties: TProps,
 ): TgpuLooseStruct<TProps> => new TgpuLooseStructImpl(properties);
 
@@ -65,33 +43,37 @@ export const looseStruct = <
  * isLooseStructSchema(d.looseStruct({ a: d.u32 })) // true
  * isLooseStructSchema(d.vec3f) // false
  */
-export function isLooseStructSchema<
-  T extends TgpuLooseStruct<Record<string, AnyWgslData | AnyTgpuLooseData>>,
->(schema: T | unknown): schema is T {
-  return schema instanceof TgpuLooseStructImpl;
+export function isLooseStructSchema<T extends TgpuLooseStruct>(
+  schema: T | unknown,
+): schema is T {
+  return (schema as T)?.type === 'loose-struct';
 }
 
 // --------------
 // Implementation
 // --------------
 
-class TgpuLooseStructImpl<
-    TProps extends Record<string, AnyWgslData | AnyTgpuLooseData>,
-  >
-  extends Schema<UnwrapRecord<TProps>>
-  implements TgpuLooseData<UnwrapRecord<TProps>>
+class TgpuLooseStructImpl<TProps extends Record<string, BaseWgslData>>
+  implements TgpuLooseStruct<TProps>
 {
-  private _label: string | undefined;
+  public readonly type = 'loose-struct';
 
   /** Type-token, not available at runtime */
-  public readonly __repr!: UnwrapRecord<TProps>;
+  public readonly __repr!: InferRecord<TProps>;
   public readonly byteAlignment = 1;
-  public readonly isLoose = true as const;
   public readonly size: number;
 
-  constructor(public readonly properties: TProps) {
-    super();
-    this.size = this.measure(MaxValue).size;
+  private _label: string | undefined;
+
+  constructor(public readonly propTypes: TProps) {
+    let size = 0;
+    for (const property of Object.values(propTypes)) {
+      const alignment = getCustomAlignment(property) ?? 1;
+      size = roundUp(size, alignment);
+      size += sizeOfData(property);
+    }
+
+    this.size = size;
   }
 
   get label() {
@@ -101,37 +83,5 @@ class TgpuLooseStructImpl<
   $name(label: string) {
     this._label = label;
     return this;
-  }
-
-  resolveReferences(): void {
-    throw new RecursiveDataTypeError();
-  }
-
-  write(output: ISerialOutput, value: Parsed<UnwrapRecord<TProps>>): void {
-    for (const [key, property] of Object.entries(this.properties)) {
-      property.write(output, value[key]);
-    }
-  }
-
-  read(input: ISerialInput): Parsed<UnwrapRecord<TProps>> {
-    const result = {} as Record<string, unknown>;
-
-    for (const [key, property] of Object.entries(this.properties)) {
-      result[key] = property.read(input);
-    }
-
-    return result as Parsed<UnwrapRecord<TProps>>;
-  }
-
-  measure(
-    value: MaxValue | Parsed<UnwrapRecord<TProps>>,
-    measurer: IMeasurer = new Measurer(),
-  ): IMeasurer {
-    const maxing = value === MaxValue;
-    for (const [key, property] of Object.entries(this.properties)) {
-      property.measure(maxing ? MaxValue : value[key], measurer);
-    }
-
-    return measurer;
   }
 }

@@ -1,5 +1,16 @@
+import { arrayOf } from './data/array';
 import { type IsBuiltin, attribute } from './data/attributes';
-import type { Builtin, Decorated, U32 } from './data/wgslTypes';
+import { f32, u32 } from './data/numeric';
+import { vec3u, vec4f } from './data/vector';
+import type {
+  Builtin,
+  Decorated,
+  F32,
+  U32,
+  Vec3u,
+  Vec4f,
+  WgslArray,
+} from './data/wgslTypes';
 
 // ----------
 // Public API
@@ -9,7 +20,7 @@ export type BuiltinVertexIndex = Decorated<U32, [Builtin<'vertex_index'>]>;
 export type BuiltinInstanceIndex = Decorated<U32, [Builtin<'instance_index'>]>;
 export type BuiltinPosition = Decorated<Vec4f, [Builtin<'position'>]>;
 export type BuiltinClipDistances = Decorated<
-  TgpuArray<U32>,
+  WgslArray<U32>,
   [Builtin<'clip_distances'>]
 >;
 export type BuiltinFrontFacing = Decorated<F32, [Builtin<'front_facing'>]>;

@@ -1,14 +1,6 @@
-import {
-  type F32,
-  type I32,
-  type U32,
-  f32,
-  i32,
-  u32,
-  vec4f,
-  vec4i,
-  vec4u,
-} from '../../data';
+import { f32, i32, u32 } from '../../data/numeric';
+import { vec4f, vec4i, vec4u } from '../../data/vector';
+import type { F32, I32, U32 } from '../../data/wgslTypes';
 import type { Default } from '../../shared/utilityTypes';
 import type { TextureProps } from './textureProps';
 

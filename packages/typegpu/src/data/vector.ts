@@ -6,18 +6,19 @@ import type {
   Vec2u,
   Vec3f,
   Vec3i,
+  Vec3u,
   Vec4f,
   Vec4i,
   Vec4u,
-  vec2f,
-  vec2i,
-  vec2u,
-  vec3f,
-  vec3i,
-  vec3u,
-  vec4f,
-  vec4i,
-  vec4u,
+  vec2f as vec2fType,
+  vec2i as vec2iType,
+  vec2u as vec2uType,
+  vec3f as vec3fType,
+  vec3i as vec3iType,
+  vec3u as vec3uType,
+  vec4f as vec4fType,
+  vec4i as vec4iType,
+  vec4u as vec4uType,
 } from './wgslTypes';
 
 // --------------
@@ -108,48 +109,48 @@ abstract class vec2Impl implements vec2 {
 class vec2fImpl extends vec2Impl {
   readonly kind = 'vec2f';
 
-  make2(x: number, y: number): vec2f {
-    return new vec2fImpl(x, y) as unknown as vec2f;
+  make2(x: number, y: number): vec2fType {
+    return new vec2fImpl(x, y) as unknown as vec2fType;
   }
 
-  make3(x: number, y: number, z: number): vec3f {
-    return new vec3fImpl(x, y, z) as unknown as vec3f;
+  make3(x: number, y: number, z: number): vec3fType {
+    return new vec3fImpl(x, y, z) as unknown as vec3fType;
   }
 
-  make4(x: number, y: number, z: number, w: number): vec4f {
-    return new vec4fImpl(x, y, z, w) as unknown as vec4f;
+  make4(x: number, y: number, z: number, w: number): vec4fType {
+    return new vec4fImpl(x, y, z, w) as unknown as vec4fType;
   }
 }
 
 class vec2iImpl extends vec2Impl {
   readonly kind = 'vec2i';
 
-  make2(x: number, y: number): vec2i {
-    return new vec2iImpl(x, y) as unknown as vec2i;
+  make2(x: number, y: number): vec2iType {
+    return new vec2iImpl(x, y) as unknown as vec2iType;
   }
 
-  make3(x: number, y: number, z: number): vec3i {
-    return new vec3iImpl(x, y, z) as unknown as vec3i;
+  make3(x: number, y: number, z: number): vec3iType {
+    return new vec3iImpl(x, y, z) as unknown as vec3iType;
   }
 
-  make4(x: number, y: number, z: number, w: number): vec4i {
-    return new vec4iImpl(x, y, z, w) as unknown as vec4i;
+  make4(x: number, y: number, z: number, w: number): vec4iType {
+    return new vec4iImpl(x, y, z, w) as unknown as vec4iType;
   }
 }
 
 class vec2uImpl extends vec2Impl {
   readonly kind = 'vec2u';
 
-  make2(x: number, y: number): vec2u {
-    return new vec2uImpl(x, y) as unknown as vec2u;
+  make2(x: number, y: number): vec2uType {
+    return new vec2uImpl(x, y) as unknown as vec2uType;
   }
 
-  make3(x: number, y: number, z: number): vec3u {
-    return new vec3uImpl(x, y, z) as unknown as vec3u;
+  make3(x: number, y: number, z: number): vec3uType {
+    return new vec3uImpl(x, y, z) as unknown as vec3uType;
   }
 
-  make4(x: number, y: number, z: number, w: number): vec4u {
-    return new vec4uImpl(x, y, z, w) as unknown as vec4u;
+  make4(x: number, y: number, z: number, w: number): vec4uType {
+    return new vec4uImpl(x, y, z, w) as unknown as vec4uType;
   }
 }
 
@@ -202,48 +203,48 @@ abstract class vec3Impl implements vec3 {
 class vec3fImpl extends vec3Impl {
   readonly kind = 'vec3f';
 
-  make2(x: number, y: number): vec2f {
-    return new vec2fImpl(x, y) as unknown as vec2f;
+  make2(x: number, y: number): vec2fType {
+    return new vec2fImpl(x, y) as unknown as vec2fType;
   }
 
-  make3(x: number, y: number, z: number): vec3f {
-    return new vec3fImpl(x, y, z) as unknown as vec3f;
+  make3(x: number, y: number, z: number): vec3fType {
+    return new vec3fImpl(x, y, z) as unknown as vec3fType;
   }
 
-  make4(x: number, y: number, z: number, w: number): vec4f {
-    return new vec4fImpl(x, y, z, w) as unknown as vec4f;
+  make4(x: number, y: number, z: number, w: number): vec4fType {
+    return new vec4fImpl(x, y, z, w) as unknown as vec4fType;
   }
 }
 
 class vec3iImpl extends vec3Impl {
   readonly kind = 'vec3i';
 
-  make2(x: number, y: number): vec2i {
-    return new vec2iImpl(x, y) as unknown as vec2i;
+  make2(x: number, y: number): vec2iType {
+    return new vec2iImpl(x, y) as unknown as vec2iType;
   }
 
-  make3(x: number, y: number, z: number): vec3i {
-    return new vec3iImpl(x, y, z) as unknown as vec3i;
+  make3(x: number, y: number, z: number): vec3iType {
+    return new vec3iImpl(x, y, z) as unknown as vec3iType;
   }
 
-  make4(x: number, y: number, z: number, w: number): vec4i {
-    return new vec4iImpl(x, y, z, w) as unknown as vec4i;
+  make4(x: number, y: number, z: number, w: number): vec4iType {
+    return new vec4iImpl(x, y, z, w) as unknown as vec4iType;
   }
 }
 
 class vec3uImpl extends vec3Impl {
   readonly kind = 'vec3u';
 
-  make2(x: number, y: number): vec2u {
-    return new vec2uImpl(x, y) as unknown as vec2u;
+  make2(x: number, y: number): vec2uType {
+    return new vec2uImpl(x, y) as unknown as vec2uType;
   }
 
-  make3(x: number, y: number, z: number): vec3u {
-    return new vec3uImpl(x, y, z) as unknown as vec3u;
+  make3(x: number, y: number, z: number): vec3uType {
+    return new vec3uImpl(x, y, z) as unknown as vec3uType;
   }
 
-  make4(x: number, y: number, z: number, w: number): vec4u {
-    return new vec4uImpl(x, y, z, w) as unknown as vec4u;
+  make4(x: number, y: number, z: number, w: number): vec4uType {
+    return new vec4uImpl(x, y, z, w) as unknown as vec4uType;
   }
 }
 
@@ -306,48 +307,48 @@ abstract class vec4Impl implements vec4 {
 class vec4fImpl extends vec4Impl {
   readonly kind = 'vec4f';
 
-  make2(x: number, y: number): vec2f {
-    return new vec2fImpl(x, y) as unknown as vec2f;
+  make2(x: number, y: number): vec2fType {
+    return new vec2fImpl(x, y) as unknown as vec2fType;
   }
 
-  make3(x: number, y: number, z: number): vec3f {
-    return new vec3fImpl(x, y, z) as unknown as vec3f;
+  make3(x: number, y: number, z: number): vec3fType {
+    return new vec3fImpl(x, y, z) as unknown as vec3fType;
   }
 
-  make4(x: number, y: number, z: number, w: number): vec4f {
-    return new vec4fImpl(x, y, z, w) as unknown as vec4f;
+  make4(x: number, y: number, z: number, w: number): vec4fType {
+    return new vec4fImpl(x, y, z, w) as unknown as vec4fType;
   }
 }
 
 class vec4iImpl extends vec4Impl {
   readonly kind = 'vec4i';
 
-  make2(x: number, y: number): vec2i {
-    return new vec2iImpl(x, y) as unknown as vec2i;
+  make2(x: number, y: number): vec2iType {
+    return new vec2iImpl(x, y) as unknown as vec2iType;
   }
 
-  make3(x: number, y: number, z: number): vec3i {
-    return new vec3iImpl(x, y, z) as unknown as vec3i;
+  make3(x: number, y: number, z: number): vec3iType {
+    return new vec3iImpl(x, y, z) as unknown as vec3iType;
   }
 
-  make4(x: number, y: number, z: number, w: number): vec4i {
-    return new vec4iImpl(x, y, z, w) as unknown as vec4i;
+  make4(x: number, y: number, z: number, w: number): vec4iType {
+    return new vec4iImpl(x, y, z, w) as unknown as vec4iType;
   }
 }
 
 class vec4uImpl extends vec4Impl {
   readonly kind = 'vec4u';
 
-  make2(x: number, y: number): vec2u {
-    return new vec2uImpl(x, y) as unknown as vec2u;
+  make2(x: number, y: number): vec2uType {
+    return new vec2uImpl(x, y) as unknown as vec2uType;
   }
 
-  make3(x: number, y: number, z: number): vec3u {
-    return new vec3uImpl(x, y, z) as unknown as vec3u;
+  make3(x: number, y: number, z: number): vec3uType {
+    return new vec3uImpl(x, y, z) as unknown as vec3uType;
   }
 
-  make4(x: number, y: number, z: number, w: number): vec4u {
-    return new vec4uImpl(x, y, z, w) as unknown as vec4u;
+  make4(x: number, y: number, z: number, w: number): vec4uType {
+    return new vec4uImpl(x, y, z, w) as unknown as vec4uType;
   }
 }
 
@@ -464,9 +465,9 @@ export interface vecBase extends NumberArrayView {
 /**
  * Type of the `d.vec2f` object/function: vector data type schema/constructor
  */
-export type Vec2fConstructor = ((x: number, y: number) => vec2f) &
-  ((xy: number) => vec2f) &
-  (() => vec2f);
+export type Vec2fConstructor = ((x: number, y: number) => vec2fType) &
+  ((xy: number) => vec2fType) &
+  (() => vec2fType);
 
 /**
  *
@@ -481,21 +482,21 @@ export type Vec2fConstructor = ((x: number, y: number) => vec2f) &
  * @example
  * const buffer = root.createBuffer(d.vec2f, d.vec2f(0, 1)); // buffer holding a d.vec2f value, with an initial value of vec2f(0, 1);
  */
-export const vec2fSchema = makeVecSchema({
+export const vec2f = makeVecSchema({
   type: 'vec2f',
   length: 2,
   make: (x: number, y: number) =>
-    new Proxy(new vec2fImpl(x, y), vecProxyHandler) as vec2f,
+    new Proxy(new vec2fImpl(x, y), vecProxyHandler) as vec2fType,
   makeFromScalar: (x) =>
-    new Proxy(new vec2fImpl(x, x), vecProxyHandler) as vec2f,
+    new Proxy(new vec2fImpl(x, x), vecProxyHandler) as vec2fType,
 }) as Vec2f & Vec2fConstructor;
 
 /**
  * Type of the `d.vec2i` object/function: vector data type schema/constructor
  */
-export type Vec2iConstructor = ((x: number, y: number) => vec2i) &
-  ((xy: number) => vec2i) &
-  (() => vec2i);
+export type Vec2iConstructor = ((x: number, y: number) => vec2iType) &
+  ((xy: number) => vec2iType) &
+  (() => vec2iType);
 
 /**
  *
@@ -510,21 +511,21 @@ export type Vec2iConstructor = ((x: number, y: number) => vec2i) &
  * @example
  * const buffer = root.createBuffer(d.vec2i, d.vec2i(0, 1)); // buffer holding a d.vec2i value, with an initial value of vec2i(0, 1);
  */
-export const vec2iSchema = makeVecSchema({
+export const vec2i = makeVecSchema({
   type: 'vec2i',
   length: 2,
   make: (x: number, y: number) =>
-    new Proxy(new vec2iImpl(x, y), vecProxyHandler) as vec2i,
+    new Proxy(new vec2iImpl(x, y), vecProxyHandler) as vec2iType,
   makeFromScalar: (x) =>
-    new Proxy(new vec2iImpl(x, x), vecProxyHandler) as vec2i,
+    new Proxy(new vec2iImpl(x, x), vecProxyHandler) as vec2iType,
 }) as Vec2i & Vec2iConstructor;
 
 /**
  * Type of the `d.vec2u` object/function: vector data type schema/constructor
  */
-export type Vec2uConstructor = ((x: number, y: number) => vec2u) &
-  ((xy: number) => vec2u) &
-  (() => vec2u);
+export type Vec2uConstructor = ((x: number, y: number) => vec2uType) &
+  ((xy: number) => vec2uType) &
+  (() => vec2uType);
 
 /**
  *
@@ -539,21 +540,25 @@ export type Vec2uConstructor = ((x: number, y: number) => vec2u) &
  * @example
  * const buffer = root.createBuffer(d.vec2u, d.vec2u(0, 1)); // buffer holding a d.vec2u value, with an initial value of vec2u(0, 1);
  */
-export const vec2uSchema = makeVecSchema({
+export const vec2u = makeVecSchema({
   type: 'vec2u',
   length: 2,
   make: (x: number, y: number) =>
-    new Proxy(new vec2uImpl(x, y), vecProxyHandler) as vec2u,
+    new Proxy(new vec2uImpl(x, y), vecProxyHandler) as vec2uType,
   makeFromScalar: (x) =>
-    new Proxy(new vec2uImpl(x, x), vecProxyHandler) as vec2u,
+    new Proxy(new vec2uImpl(x, x), vecProxyHandler) as vec2uType,
 }) as Vec2u & Vec2uConstructor;
 
 /**
  * Type of the `d.vec3f` object/function: vector data type schema/constructor
  */
-export type Vec3fConstructor = ((x: number, y: number, z: number) => vec3f) &
-  ((xyz: number) => vec3f) &
-  (() => vec3f);
+export type Vec3fConstructor = ((
+  x: number,
+  y: number,
+  z: number,
+) => vec3fType) &
+  ((xyz: number) => vec3fType) &
+  (() => vec3fType);
 
 /**
  *
@@ -568,21 +573,25 @@ export type Vec3fConstructor = ((x: number, y: number, z: number) => vec3f) &
  * @example
  * const buffer = root.createBuffer(d.vec3f, d.vec3f(0, 1, 2)); // buffer holding a d.vec3f value, with an initial value of vec3f(0, 1, 2);
  */
-export const vec3fSchema = makeVecSchema({
+export const vec3f = makeVecSchema({
   type: 'vec3f',
   length: 3,
   make: (x, y, z) =>
-    new Proxy(new vec3fImpl(x, y, z), vecProxyHandler) as vec3f,
+    new Proxy(new vec3fImpl(x, y, z), vecProxyHandler) as vec3fType,
   makeFromScalar: (x) =>
-    new Proxy(new vec3fImpl(x, x, x), vecProxyHandler) as vec3f,
+    new Proxy(new vec3fImpl(x, x, x), vecProxyHandler) as vec3fType,
 }) as Vec3f & Vec3fConstructor;
 
 /**
  * Type of the `d.vec3i` object/function: vector data type schema/constructor
  */
-export type Vec3iConstructor = ((x: number, y: number, z: number) => vec3i) &
-  ((xyz: number) => vec3i) &
-  (() => vec3i);
+export type Vec3iConstructor = ((
+  x: number,
+  y: number,
+  z: number,
+) => vec3iType) &
+  ((xyz: number) => vec3iType) &
+  (() => vec3iType);
 
 /**
  *
@@ -597,21 +606,25 @@ export type Vec3iConstructor = ((x: number, y: number, z: number) => vec3i) &
  * @example
  * const buffer = root.createBuffer(d.vec3i, d.vec3i(0, 1, 2)); // buffer holding a d.vec3i value, with an initial value of vec3i(0, 1, 2);
  */
-export const vec3iSchema = makeVecSchema({
+export const vec3i = makeVecSchema({
   type: 'vec3i',
   length: 3,
   make: (x, y, z) =>
-    new Proxy(new vec3iImpl(x, y, z), vecProxyHandler) as vec3i,
+    new Proxy(new vec3iImpl(x, y, z), vecProxyHandler) as vec3iType,
   makeFromScalar: (x) =>
-    new Proxy(new vec3iImpl(x, x, x), vecProxyHandler) as vec3i,
+    new Proxy(new vec3iImpl(x, x, x), vecProxyHandler) as vec3iType,
 }) as Vec3i & Vec3iConstructor;
 
 /**
  * Type of the `d.vec3u` object/function: vector data type schema/constructor
  */
-export type Vec3uConstructor = ((x: number, y: number, z: number) => vec3u) &
-  ((xyz: number) => vec3u) &
-  (() => vec3u);
+export type Vec3uConstructor = ((
+  x: number,
+  y: number,
+  z: number,
+) => vec3uType) &
+  ((xyz: number) => vec3uType) &
+  (() => vec3uType);
 
 /**
  *
@@ -626,14 +639,14 @@ export type Vec3uConstructor = ((x: number, y: number, z: number) => vec3u) &
  * @example
  * const buffer = root.createBuffer(d.vec3u, d.vec3u(0, 1, 2)); // buffer holding a d.vec3u value, with an initial value of vec3u(0, 1, 2);
  */
-export const vec3uSchema = makeVecSchema({
+export const vec3u = makeVecSchema({
   type: 'vec3u',
   length: 3,
   make: (x, y, z) =>
-    new Proxy(new vec3uImpl(x, y, z), vecProxyHandler) as vec3u,
+    new Proxy(new vec3uImpl(x, y, z), vecProxyHandler) as vec3uType,
   makeFromScalar: (x) =>
-    new Proxy(new vec3uImpl(x, x, x), vecProxyHandler) as vec3u,
-}) as Vec3uConstructor;
+    new Proxy(new vec3uImpl(x, x, x), vecProxyHandler) as vec3uType,
+}) as Vec3u & Vec3uConstructor;
 
 /**
  * Type of the `d.vec4f` object/function: vector data type schema/constructor
@@ -643,9 +656,9 @@ export type Vec4fConstructor = ((
   y: number,
   z: number,
   w: number,
-) => vec4f) &
-  ((xyzw: number) => vec4f) &
-  (() => vec4f);
+) => vec4fType) &
+  ((xyzw: number) => vec4fType) &
+  (() => vec4fType);
 
 /**
  *
@@ -660,13 +673,13 @@ export type Vec4fConstructor = ((
  * @example
  * const buffer = root.createBuffer(d.vec4f, d.vec4f(0, 1, 2, 3)); // buffer holding a d.vec4f value, with an initial value of vec4f(0, 1, 2, 3);
  */
-export const vec4fSchema = makeVecSchema({
+export const vec4f = makeVecSchema({
   type: 'vec4f',
   length: 4,
   make: (x, y, z, w) =>
-    new Proxy(new vec4fImpl(x, y, z, w), vecProxyHandler) as vec4f,
+    new Proxy(new vec4fImpl(x, y, z, w), vecProxyHandler) as vec4fType,
   makeFromScalar: (x) =>
-    new Proxy(new vec4fImpl(x, x, x, x), vecProxyHandler) as vec4f,
+    new Proxy(new vec4fImpl(x, x, x, x), vecProxyHandler) as vec4fType,
 }) as Vec4f & Vec4fConstructor;
 
 /**
@@ -677,9 +690,9 @@ export type Vec4iConstructor = ((
   y: number,
   z: number,
   w: number,
-) => vec4i) &
-  ((xyzw: number) => vec4i) &
-  (() => vec4i);
+) => vec4iType) &
+  ((xyzw: number) => vec4iType) &
+  (() => vec4iType);
 
 /**
  *
@@ -694,13 +707,13 @@ export type Vec4iConstructor = ((
  * @example
  * const buffer = root.createBuffer(d.vec4i, d.vec4i(0, 1, 2, 3)); // buffer holding a d.vec4i value, with an initial value of vec4i(0, 1, 2, 3);
  */
-export const vec4iSchema = makeVecSchema({
+export const vec4i = makeVecSchema({
   type: 'vec4i',
   length: 4,
   make: (x, y, z, w) =>
-    new Proxy(new vec4iImpl(x, y, z, w), vecProxyHandler) as vec4i,
+    new Proxy(new vec4iImpl(x, y, z, w), vecProxyHandler) as vec4iType,
   makeFromScalar: (x) =>
-    new Proxy(new vec4iImpl(x, x, x, x), vecProxyHandler) as vec4i,
+    new Proxy(new vec4iImpl(x, x, x, x), vecProxyHandler) as vec4iType,
 }) as Vec4i & Vec4iConstructor;
 
 /**
@@ -711,9 +724,9 @@ export type Vec4uConstructor = ((
   y: number,
   z: number,
   w: number,
-) => vec4u) &
-  ((xyzw: number) => vec4u) &
-  (() => vec4u);
+) => vec4uType) &
+  ((xyzw: number) => vec4uType) &
+  (() => vec4uType);
 
 /**
  *
@@ -728,11 +741,11 @@ export type Vec4uConstructor = ((
  * @example
  * const buffer = root.createBuffer(d.vec4u, d.vec4u(0, 1, 2, 3)); // buffer holding a d.vec4u value, with an initial value of vec4u(0, 1, 2, 3);
  */
-export const vec4uSchema = makeVecSchema({
+export const vec4u = makeVecSchema({
   length: 4,
   type: 'vec4u',
   make: (x, y, z, w) =>
-    new Proxy(new vec4uImpl(x, y, z, w), vecProxyHandler) as vec4u,
+    new Proxy(new vec4uImpl(x, y, z, w), vecProxyHandler) as vec4uType,
   makeFromScalar: (x) =>
-    new Proxy(new vec4uImpl(x, x, x, x), vecProxyHandler) as vec4u,
+    new Proxy(new vec4uImpl(x, x, x, x), vecProxyHandler) as vec4uType,
 }) as Vec4u & Vec4uConstructor;

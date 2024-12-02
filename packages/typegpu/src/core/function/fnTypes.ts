@@ -1,7 +1,11 @@
 import type * as smol from 'tinyest';
 import type { Unwrap } from 'typed-binary';
+import type { AnyAttribute } from '../../data/attributes';
 import type {
-  AnyAttribute,
+  Decorated,
+  F32,
+  I32,
+  U32,
   Vec2f,
   Vec2i,
   Vec2u,
@@ -11,8 +15,7 @@ import type {
   Vec4f,
   Vec4i,
   Vec4u,
-} from '../../data';
-import type { Decorated } from '../../data/wgslTypes';
+} from '../../data/wgslTypes';
 import type { Infer } from '../../shared/repr';
 
 /**

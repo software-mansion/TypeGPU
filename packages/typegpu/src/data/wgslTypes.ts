@@ -5,6 +5,10 @@ export interface NumberArrayView {
   [n: number]: number;
 }
 
+export interface BaseWgslData {
+  type: string;
+}
+
 // #region Instance Types
 
 interface Swizzle2<T2, T3, T4> {
@@ -503,7 +507,7 @@ export interface Vec4u {
 }
 
 export interface WgslStruct<
-  TProps extends Record<string, unknown> = Record<string, unknown>,
+  TProps extends Record<string, BaseWgslData> = Record<string, BaseWgslData>,
 > {
   readonly type: 'struct';
   readonly size: number;
@@ -513,13 +517,22 @@ export interface WgslStruct<
   readonly __repr: InferRecord<TProps>;
 }
 
-export interface WgslArray<TElement = unknown> {
+export interface WgslArray<TElement = BaseWgslData> {
   readonly type: 'array';
   readonly size: number;
   readonly alignment: number;
   readonly length: number;
   readonly elementType: TElement;
   readonly __repr: Infer<TElement>[];
+}
+
+/**
+ * Schema representing the `atomic<...>` WGSL data type.
+ */
+export interface Atomic<TInner extends U32 | I32 = U32 | I32> {
+  readonly type: 'atomic';
+  readonly inner: TInner;
+  readonly __repr: Infer<TInner>;
 }
 
 export interface Align<T extends number> {
@@ -543,8 +556,8 @@ export interface Builtin<T extends string> {
 }
 
 export interface Decorated<
-  TInner = unknown,
-  TAttribs extends unknown[] | [] = unknown[] | [],
+  TInner extends BaseWgslData = BaseWgslData,
+  TAttribs extends unknown[] = unknown[],
 > {
   readonly type: 'decorated';
   readonly size: number;
@@ -570,6 +583,7 @@ export const wgslTypeLiterals = [
   'vec4u',
   'struct',
   'array',
+  'atomic',
   'decorated',
 ] as const;
 
@@ -591,6 +605,7 @@ export type AnyWgslData =
   | Vec4u
   | WgslStruct
   | WgslArray
+  | Atomic
   | Decorated;
 
 // #endregion
@@ -659,10 +674,28 @@ export function isWgslData(value: unknown): value is AnyWgslData {
  * isArraySchema(d.looseArrayOf(d.u32, 4)) // false
  * isArraySchema(d.vec3f) // false
  */
-export function isArraySchema<T extends WgslArray<AnyWgslData>>(
+export function isArraySchema<T extends WgslArray>(
   schema: T | unknown,
 ): schema is T {
-  return (schema as WgslArray)?.type === 'array';
+  return (schema as T)?.type === 'array';
+}
+
+/**
+ * Checks whether passed in value is a struct schema,
+ * as opposed to, e.g., a looseStruct schema.
+ *
+ * Struct schemas can be used to describe uniform and storage buffers,
+ * whereas looseStruct schemas cannot.
+ *
+ * @example
+ * isStructSchema(d.struct({ a: d.u32 })) // true
+ * isStructSchema(d.looseStruct({ a: d.u32 })) // false
+ * isStructSchema(d.vec3f) // false
+ */
+export function isStructSchema<T extends WgslStruct>(
+  schema: T | unknown,
+): schema is T {
+  return (schema as T)?.type === 'struct';
 }
 
 export function isAlignAttrib<T extends Align<number>>(

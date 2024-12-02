@@ -1,15 +1,12 @@
 import type { Block } from 'tinyest';
-import { type TgpuStruct, location, struct } from '../../data';
-import { getCustomLocation, isBuiltin } from '../../data/attributes';
+import { location, struct } from '../../data';
+import { attribute, getCustomLocation, isBuiltin } from '../../data/attributes';
+import { isData } from '../../data/dataTypes';
+import type { BaseWgslData, WgslStruct } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
-import {
-  type AnyTgpuData,
-  type ResolutionCtx,
-  type TgpuResolvable,
-  isBaseData,
-} from '../../types';
+import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
-import type { IOData, IOLayout, Implementation, UnwrapIO } from './fnTypes';
+import type { IOData, IOLayout, Implementation, InferIO } from './fnTypes';
 
 // ----------
 // Public API
@@ -29,9 +26,7 @@ export interface TgpuVertexFnShell<
    * Creates a type-safe implementation of this signature
    */
   does(
-    implementation: (
-      vertexAttribs: UnwrapIO<VertexAttribs>,
-    ) => UnwrapIO<Output>,
+    implementation: (vertexAttribs: InferIO<VertexAttribs>) => InferIO<Output>,
   ): TgpuVertexFn<VertexAttribs, Output>;
 
   /**
@@ -88,15 +83,15 @@ export function vertexFn<
 // Implementation
 // --------------
 
-type IOLayoutToOutputStruct<T extends IOLayout> = T extends AnyTgpuData
-  ? TgpuStruct<{ out: T }>
-  : T extends Record<string, AnyTgpuData>
-    ? TgpuStruct<T>
+type IOLayoutToOutputStruct<T extends IOLayout> = T extends BaseWgslData
+  ? WgslStruct<{ out: T }>
+  : T extends Record<string, BaseWgslData>
+    ? WgslStruct<T>
     : never;
 
 function withLocations(
-  members: Record<string, AnyTgpuData>,
-): Record<string, AnyTgpuData> {
+  members: Record<string, BaseWgslData>,
+): Record<string, BaseWgslData> {
   let nextLocation = 0;
 
   return Object.fromEntries(
@@ -113,7 +108,10 @@ function withLocations(
         return [key, member];
       }
 
-      return [key, location(nextLocation++, member)];
+      return [
+        key,
+        attribute(member, { type: '@location', value: nextLocation++ }),
+      ];
     }),
   );
 }
@@ -128,7 +126,7 @@ function createVertexFn(
 
   const Output = struct(
     withLocations(
-      isBaseData(shell.returnType)
+      isData(shell.returnType)
         ? { out: location(0, shell.returnType) }
         : shell.returnType,
     ) as Record<string, IOData>,

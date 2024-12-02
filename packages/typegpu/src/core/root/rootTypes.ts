@@ -1,8 +1,8 @@
 import type { Parsed } from 'typed-binary';
 
 import type { OmitBuiltins } from '../../builtin';
-import type { AnyTgpuData } from '../../data/dataTypes';
-import type { Vec4f } from '../../data/vector';
+import type { AnyData } from '../../data/dataTypes';
+import type { Vec4f } from '../../data/wgslTypes';
 import type { JitTranspiler } from '../../jitTranspiler';
 import type { NameRegistry } from '../../nameRegistry';
 import type { PlumListener } from '../../plumStore';
@@ -159,7 +159,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param typeSchema The type of data that this buffer will hold.
    * @param initial The initial value of the buffer. (optional)
    */
-  createBuffer<TData extends AnyTgpuData>(
+  createBuffer<TData extends AnyData>(
     typeSchema: TData,
     initial?: Parsed<TData> | TgpuPlum<Parsed<TData>> | undefined,
   ): TgpuBuffer<TData>;
@@ -168,7 +168,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param typeSchema The type of data that this buffer will hold.
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
-  createBuffer<TData extends AnyTgpuData>(
+  createBuffer<TData extends AnyData>(
     typeSchema: TData,
     gpuBuffer: GPUBuffer,
   ): TgpuBuffer<TData>;

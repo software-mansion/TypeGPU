@@ -21,7 +21,7 @@ import {
   NotSampledError,
   isUsableAsSampled,
 } from './core/texture/usageExtension';
-import { type AnyWgslData, isWgslSchema } from './data/wgslTypes';
+import { type AnyWgslData, isWgslData } from './data/wgslTypes';
 import { NotUniformError } from './errors';
 import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
 import type { TgpuNamable } from './namable';
@@ -297,7 +297,7 @@ class TgpuBindGroupLayoutImpl<
       const membership = { idx, key, layout: this };
 
       if ('uniform' in entry) {
-        const dataType = isWgslSchema(entry.uniform)
+        const dataType = isWgslData(entry.uniform)
           ? entry.uniform
           : entry.uniform(0);
 
@@ -310,7 +310,7 @@ class TgpuBindGroupLayoutImpl<
       }
 
       if ('storage' in entry) {
-        const dataType = isWgslSchema(entry.storage)
+        const dataType = isWgslData(entry.storage)
           ? entry.storage
           : entry.storage(0);
 

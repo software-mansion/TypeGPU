@@ -5,20 +5,20 @@ import type {
   MaxValue,
   Parsed,
 } from 'typed-binary';
-import { BufferReader, Measurer, Schema } from 'typed-binary';
+import { BufferReader, Measurer } from 'typed-binary';
+import type { Infer } from '../shared/repr';
 import type { VertexFormat } from '../shared/vertexFormat';
-import type { TgpuLooseData } from '../types';
 import { f32, i32, u32 } from './numeric';
 import {
-  type Vec2f,
-  type Vec2i,
-  type Vec2u,
-  type Vec3f,
-  type Vec3i,
-  type Vec3u,
-  type Vec4f,
-  type Vec4i,
-  type Vec4u,
+  type Vec2fConstructor,
+  type Vec2iConstructor,
+  type Vec2uConstructor,
+  type Vec3fConstructor,
+  type Vec3iConstructor,
+  type Vec3uConstructor,
+  type Vec4fConstructor,
+  type Vec4iConstructor,
+  type Vec4uConstructor,
   vec2f,
   vec2i,
   vec2u,
@@ -29,22 +29,43 @@ import {
   vec4i,
   vec4u,
 } from './vector';
+import {
+  type Vec2f,
+  type Vec2i,
+  type Vec2u,
+  type Vec3f,
+  type Vec3i,
+  type Vec3u,
+  type Vec4f,
+  type Vec4i,
+  type Vec4u,
+  sizeOfData,
+  type vec2f as vec2fType,
+  type vec2i as vec2iType,
+  type vec2u as vec2uType,
+  type vec3f as vec3fType,
+  type vec3i as vec3iType,
+  type vec3u as vec3uType,
+  type vec4f as vec4fType,
+  type vec4i as vec4iType,
+  type vec4u as vec4uType,
+} from './wgslTypes';
 
 export type FormatToWGSLType<T extends VertexFormat> =
   (typeof formatToWGSLType)[T];
 
-export interface TgpuVertexFormatData<T extends VertexFormat>
-  extends TgpuLooseData<FormatToWGSLType<T>> {
-  readonly kind: T;
+export interface TgpuVertexFormatData<T extends VertexFormat> {
+  readonly __repr: Infer<FormatToWGSLType<T>>;
+  readonly type: T;
 }
 
 class TgpuVertexFormatDataImpl<T extends VertexFormat>
-  extends Schema<FormatToWGSLType<T>>
   implements TgpuVertexFormatData<T>
 {
   /** Used as a type-token for the `Infer<T>` functionality. */
-  public readonly __repr: FormatToWGSLType<T>;
+  public readonly __repr!: Infer<FormatToWGSLType<T>>;
 
+  private readonly _wgslType: FormatToWGSLType<T>;
   private elementSize: 1 | 2 | 4;
   private elementCount: number;
   private isSigned: boolean;
@@ -52,13 +73,12 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat>
   readonly isLoose = true;
 
   constructor(
-    readonly size: number,
-    readonly kind: T,
+    public readonly size: number,
+    public readonly type: T,
   ) {
-    super();
-    this.__repr = formatToWGSLType[kind];
-    this.isSigned = normalizedToIsSigned[kind] ?? false;
-    this.elementCount = this.__repr.size / 4;
+    this._wgslType = formatToWGSLType[type];
+    this.isSigned = normalizedToIsSigned[type] ?? false;
+    this.elementCount = sizeOfData(this._wgslType) / 4;
     const elementSize = size / this.elementCount;
     if (elementSize !== 1 && elementSize !== 2 && elementSize !== 4) {
       throw new Error('Invalid element size');
@@ -107,18 +127,19 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat>
       }
     }
 
-    const vector = this.__repr as
-      | Vec2u
-      | Vec3u
-      | Vec4u
-      | Vec2f
-      | Vec3f
-      | Vec4f
-      | Vec2i
-      | Vec3i
-      | Vec4i;
+    const vector = this._wgslType as
+      | (Vec2u & Vec2uConstructor)
+      | (Vec3u & Vec3uConstructor)
+      | (Vec4u & Vec4uConstructor)
+      | (Vec2f & Vec2fConstructor)
+      | (Vec3f & Vec3fConstructor)
+      | (Vec4f & Vec4fConstructor)
+      | (Vec2i & Vec2iConstructor)
+      | (Vec3i & Vec3iConstructor)
+      | (Vec4i & Vec4iConstructor);
+
     const primitive =
-      vectorKindToPrimitive[vector.label as keyof typeof vectorKindToPrimitive];
+      vectorKindToPrimitive[vector.type as keyof typeof vectorKindToPrimitive];
 
     const values = new Array(this.elementCount);
     const reader = new BufferReader(readBuffer);
@@ -175,12 +196,22 @@ const vectorKindToPrimitive = {
 
 function writeSizedVector(
   output: ISerialOutput,
-  value: vec2u | vec3u | vec4u | vec2f | vec3f | vec4f | vec2i | vec3i | vec4i,
+  value:
+    | vec2uType
+    | vec3uType
+    | vec4uType
+    | vec2fType
+    | vec3fType
+    | vec4fType
+    | vec2iType
+    | vec3iType
+    | vec4iType,
   elementSize: 1 | 2 | 4,
   isSigned: boolean,
 ): void {
   const primitive = vectorKindToPrimitive[value.kind];
-  for (const entry of value) {
+  for (let i = 0; i < value.length; ++i) {
+    const entry = value[i] as number;
     writeSizedPrimitive(primitive, entry, elementSize, output, isSigned);
   }
 }
@@ -435,3 +466,36 @@ export const unorm10_10_10_2 = new TgpuVertexFormatDataImpl(
   4,
   'unorm10-10-10-2',
 ) as unorm10_10_10_2;
+
+export type PackedData =
+  | uint8x2
+  | uint8x4
+  | sint8x2
+  | sint8x4
+  | unorm8x2
+  | unorm8x4
+  | snorm8x2
+  | snorm8x4
+  | uint16x2
+  | uint16x4
+  | sint16x2
+  | sint16x4
+  | unorm16x2
+  | unorm16x4
+  | snorm16x2
+  | snorm16x4
+  | float16x2
+  | float16x4
+  | float32
+  | float32x2
+  | float32x3
+  | float32x4
+  | uint32
+  | uint32x2
+  | uint32x3
+  | uint32x4
+  | sint32
+  | sint32x2
+  | sint32x3
+  | sint32x4
+  | unorm10_10_10_2;

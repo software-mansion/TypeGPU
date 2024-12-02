@@ -3,6 +3,7 @@ import type { TgpuNamable } from '../namable';
 import type { InferRecord } from '../shared/repr';
 import {
   type AnyWgslData,
+  type BaseWgslData,
   type WgslStruct,
   alignmentOfData,
   sizeOfData,
@@ -19,7 +20,7 @@ import {
  * between binary and JS representation. Takes into account
  * the `byteAlignment` requirement of its members.
  */
-export interface TgpuStruct<TProps extends Record<string, unknown>>
+export interface TgpuStruct<TProps extends Record<string, BaseWgslData>>
   extends WgslStruct<TProps>,
     TgpuNamable {}
 
@@ -37,24 +38,6 @@ export interface TgpuStruct<TProps extends Record<string, unknown>>
 export const struct = <TProps extends Record<string, AnyWgslData>>(
   props: TProps,
 ): TgpuStruct<TProps> => new TgpuStructImpl(props);
-
-/**
- * Checks whether passed in value is a struct schema,
- * as opposed to, e.g., a looseStruct schema.
- *
- * Struct schemas can be used to describe uniform and storage buffers,
- * whereas looseStruct schemas cannot.
- *
- * @example
- * isStructSchema(d.struct({ a: d.u32 })) // true
- * isStructSchema(d.looseStruct({ a: d.u32 })) // false
- * isStructSchema(d.vec3f) // false
- */
-export function isStructSchema<
-  T extends TgpuStruct<Record<string, AnyWgslData>>,
->(schema: T | unknown): schema is T {
-  return schema instanceof TgpuStructImpl;
-}
 
 // --------------
 // Implementation

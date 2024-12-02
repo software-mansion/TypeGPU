@@ -12,6 +12,7 @@ import {
 import {
   type Align,
   type AnyWgslData,
+  type BaseWgslData,
   type Builtin,
   type Decorated,
   type Location,
@@ -55,7 +56,7 @@ export type AnyAttribute =
   | Builtin<BuiltinName>;
 
 export interface BaseDecorated<
-  TInner = unknown,
+  TInner extends BaseWgslData = BaseWgslData,
   TAttribs extends unknown[] = unknown[],
 > {
   readonly size: number;
@@ -65,7 +66,7 @@ export interface BaseDecorated<
 }
 
 export interface LooseDecorated<
-  TInner = unknown,
+  TInner extends BaseWgslData = BaseWgslData,
   TAttribs extends unknown[] = unknown[],
 > extends BaseDecorated<TInner, TAttribs> {
   readonly type: 'loose-decorated';
@@ -96,7 +97,7 @@ export type UnwrapDecorated<T> = T extends { readonly inner: infer TInner }
  *     - Wrap `TData` with `Decorated` and a single attribute `[TAttrib]`
  */
 export type Decorate<
-  TData extends AnyData,
+  TData extends BaseWgslData,
   TAttrib extends AnyAttribute,
 > = TData['type'] extends WgslTypeLiteral
   ? Decorated<UnwrapDecorated<TData>, [TAttrib, ...ExtractAttributes<TData>]>
@@ -113,10 +114,10 @@ export type IsBuiltin<T> = ExtractAttributes<T>[number] extends []
     ? true
     : false;
 
-export function attribute<TData extends AnyData, TAttrib extends AnyAttribute>(
-  data: TData,
-  attrib: TAttrib,
-): Decorated | LooseDecorated {
+export function attribute<
+  TData extends BaseWgslData,
+  TAttrib extends AnyAttribute,
+>(data: TData, attrib: TAttrib): Decorated | LooseDecorated {
   if (isDecorated(data)) {
     return new DecoratedImpl(data.inner, [
       attrib,
@@ -216,12 +217,13 @@ export function isLooseDecorated<T extends LooseDecorated>(
   return (value as LooseDecorated)?.type === 'loose-decorated';
 }
 
-export function getCustomAlignment(data: AnyData): number | undefined {
-  return (data as BaseDecorated).attribs?.find(isAlignAttrib)?.value;
+export function getCustomAlignment(data: BaseWgslData): number | undefined {
+  return (data as unknown as BaseDecorated).attribs?.find(isAlignAttrib)?.value;
 }
 
-export function getCustomLocation(data: AnyData): number | undefined {
-  return (data as BaseDecorated).attribs?.find(isLocationAttrib)?.value;
+export function getCustomLocation(data: BaseWgslData): number | undefined {
+  return (data as unknown as BaseDecorated).attribs?.find(isLocationAttrib)
+    ?.value;
 }
 
 export function isBuiltin<
@@ -332,14 +334,17 @@ class BaseDecoratedImpl<TInner, TAttribs extends unknown[]> {
   }
 }
 
-class DecoratedImpl<TInner, TAttribs extends unknown[]>
+class DecoratedImpl<TInner extends BaseWgslData, TAttribs extends unknown[]>
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements Decorated<TInner, TAttribs>
 {
   public readonly type = 'decorated';
 }
 
-class LooseDecoratedImpl<TInner, TAttribs extends unknown[]>
+class LooseDecoratedImpl<
+    TInner extends BaseWgslData,
+    TAttribs extends unknown[],
+  >
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements LooseDecorated<TInner, TAttribs>
 {
