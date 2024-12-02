@@ -582,8 +582,6 @@ export interface WgslStruct<
   TProps extends Record<string, BaseWgslData> = Record<string, BaseWgslData>,
 > {
   readonly type: 'struct';
-  readonly size: number;
-  readonly alignment: number;
   readonly label?: string | undefined;
   readonly propTypes: TProps;
   readonly __repr: InferRecord<TProps>;
@@ -591,8 +589,6 @@ export interface WgslStruct<
 
 export interface WgslArray<TElement = BaseWgslData> {
   readonly type: 'array';
-  readonly size: number;
-  readonly alignment: number;
   readonly length: number;
   readonly elementType: TElement;
   readonly __repr: Infer<TElement>[];
@@ -632,8 +628,6 @@ export interface Decorated<
   TAttribs extends unknown[] = unknown[],
 > {
   readonly type: 'decorated';
-  readonly size: number;
-  readonly alignment: number;
   readonly inner: TInner;
   readonly attribs: TAttribs;
   readonly __repr: Infer<TInner>;

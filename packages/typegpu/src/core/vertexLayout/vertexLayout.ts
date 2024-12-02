@@ -148,7 +148,7 @@ class TgpuVertexLayoutImpl<TData extends WgslArray | LooseArray>
 
     this.stride = roundUp(
       sizeOf(arraySchema.elementType),
-      alignmentOf(arraySchema.elementType),
+      alignmentOf(arraySchema),
     );
     this.attrib = dataToContainedAttribs(this, arraySchema.elementType, 0);
   }

@@ -1,6 +1,8 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data';
+import { readData, writeData } from '../src/data/dataIO';
+import { sizeOf } from '../src/data/sizeOf';
 
 describe('vec2f', () => {
   it('should create a zero 2d vector', () => {
@@ -24,10 +26,10 @@ describe('vec2f', () => {
   it('should encode a 2d vector', () => {
     const vec = d.vec2f(1, 2);
 
-    const buffer = new ArrayBuffer(d.vec2f.size);
+    const buffer = new ArrayBuffer(sizeOf(d.vec2f));
 
-    d.vec2f.write(new BufferWriter(buffer), vec);
-    expect(d.vec2f.read(new BufferReader(buffer))).toEqual(vec);
+    writeData(new BufferWriter(buffer), d.vec2f, vec);
+    expect(readData(new BufferReader(buffer), d.vec2f)).toEqual(vec);
   });
 
   it('differs in type from other vector schemas', () => {
@@ -48,12 +50,6 @@ describe('vec2f', () => {
     const vec = d.vec2f(1, 2);
     expect(vec[0]).toEqual(1);
     expect(vec[1]).toEqual(2);
-  });
-
-  it('can be iterated over', () => {
-    const vec = d.vec2f(1, 2);
-    const elements = [...vec];
-    expect(elements).toEqual([1, 2]);
   });
 
   it('can be modified via index', () => {
@@ -89,10 +85,10 @@ describe('vec3f', () => {
   it('should encode a 3d vector', () => {
     const vec = d.vec3f(1, 2, 3);
 
-    const buffer = new ArrayBuffer(d.vec3f.size);
+    const buffer = new ArrayBuffer(sizeOf(d.vec3f));
 
-    d.vec3f.write(new BufferWriter(buffer), vec);
-    expect(d.vec3f.read(new BufferReader(buffer))).toEqual(vec);
+    writeData(new BufferWriter(buffer), d.vec3f, vec);
+    expect(readData(new BufferReader(buffer), d.vec3f)).toEqual(vec);
   });
 
   it('differs in type from other vector schemas', () => {
@@ -114,12 +110,6 @@ describe('vec3f', () => {
     expect(vec[0]).toEqual(1);
     expect(vec[1]).toEqual(2);
     expect(vec[2]).toEqual(3);
-  });
-
-  it('can be iterated over', () => {
-    const vec = d.vec3f(1, 2, 3);
-    const elements = [...vec];
-    expect(elements).toEqual([1, 2, 3]);
   });
 
   it('can be modified via index', () => {
@@ -159,10 +149,10 @@ describe('vec4f', () => {
   it('should encode a 4d vector', () => {
     const vec = d.vec4f(1, 2, 3, 4);
 
-    const buffer = new ArrayBuffer(d.vec4f.size);
+    const buffer = new ArrayBuffer(sizeOf(d.vec4f));
 
-    d.vec4f.write(new BufferWriter(buffer), vec);
-    expect(d.vec4f.read(new BufferReader(buffer))).toEqual(vec);
+    writeData(new BufferWriter(buffer), d.vec4f, vec);
+    expect(readData(new BufferReader(buffer), d.vec4f)).toEqual(vec);
   });
 
   it('differs in type from other vector schemas', () => {
@@ -185,12 +175,6 @@ describe('vec4f', () => {
     expect(vec[1]).toEqual(2);
     expect(vec[2]).toEqual(3);
     expect(vec[3]).toEqual(4);
-  });
-
-  it('can be iterated over', () => {
-    const vec = d.vec4f(1, 2, 3, 4);
-    const elements = [...vec];
-    expect(elements).toEqual([1, 2, 3, 4]);
   });
 
   it('can be modified via index', () => {

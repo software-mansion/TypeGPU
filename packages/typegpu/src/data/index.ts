@@ -7,8 +7,22 @@ export type {
   F32,
   I32,
   U32,
+  Vec2f,
+  Vec2i,
+  Vec2u,
+  Vec3f,
+  Vec3i,
+  Vec3u,
+  Vec4f,
+  Vec4i,
+  Vec4u,
   WgslStruct,
   WgslArray,
+  Decorated,
+  Size,
+  Align,
+  Builtin,
+  Location,
 } from './wgslTypes';
 export {
   TgpuStruct,
@@ -24,7 +38,18 @@ export type {
   AnyData,
   AnyLooseData,
 } from './dataTypes';
-export * from './vector';
+export type { LooseDecorated } from './attributes';
+export {
+  vec2f,
+  vec2i,
+  vec2u,
+  vec3f,
+  vec3i,
+  vec3u,
+  vec4f,
+  vec4i,
+  vec4u,
+} from './vector';
 export { looseArrayOf, isLooseArray } from './looseArray';
 export { looseStruct, isLooseStructSchema } from './looseStruct';
 export { mat2x2f, mat3x3f, mat4x4f } from './matrix';
@@ -38,7 +63,6 @@ export {
   isLooseDecorated,
   isBuiltin,
   BaseDecorated,
-  LooseDecorated,
   AnyAttribute,
   IsBuiltin,
 } from './attributes';

@@ -1,3 +1,4 @@
+import { getAttributesString } from '../../data/attributes';
 import type {
   AnyWgslData,
   Bool,
@@ -69,9 +70,8 @@ function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
 struct ${id} {
 ${Object.entries(struct.propTypes)
   .map(
-    // TODO: Implement attributes
-    // ([key, field]) => `  ${getAttributesString(field)}${key}: ${resolveData(ctx, field)},\n`;
-    ([key, field]) => `  ${key}: ${resolveData(ctx, field as AnyWgslData)},\n`,
+    ([key, field]) =>
+      `  ${getAttributesString(field)}${key}: ${resolveData(ctx, field as AnyWgslData)},\n`,
   )
   .join('')}\
 }\n`);

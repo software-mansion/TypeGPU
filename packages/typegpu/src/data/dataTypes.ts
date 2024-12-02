@@ -14,8 +14,6 @@ import { type AnyWgslData, type BaseWgslData, isWgslData } from './wgslTypes';
  */
 export interface LooseArray<TElement extends BaseWgslData = BaseWgslData> {
   readonly type: 'loose-array';
-  readonly size: number;
-  readonly alignment: number;
   readonly length: number;
   readonly elementType: TElement;
   readonly __repr: Infer<TElement>[];

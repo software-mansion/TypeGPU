@@ -1,6 +1,6 @@
 import type { Block } from 'tinyest';
 import { resolveData } from './core/resolve/resolveData';
-import type { AnyWgslData } from './data/wgslTypes';
+import { type AnyWgslData, isWgslData } from './data/wgslTypes';
 import { MissingSlotValueError, ResolutionError } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
@@ -23,7 +23,7 @@ import type {
   TgpuSlot,
   Wgsl,
 } from './types';
-import { UnknownData, isResolvable, isSlot } from './types';
+import { UnknownData, isSlot } from './types';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -227,7 +227,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _memoizedResolves = new WeakMap<
     // WeakMap because if the resolvable does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
-    TgpuResolvable,
+    TgpuResolvable | AnyWgslData,
     { slotToValueMap: SlotToValueMap; result: string }[]
   >();
 
@@ -373,7 +373,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
   /**
    * @param item The item whose resolution should be either retrieved from the cache (if there is a cache hit), or resolved.
    */
-  _getOrInstantiate(item: TgpuResolvable): string {
+  _getOrInstantiate(item: TgpuResolvable | AnyWgslData): string {
     // All memoized versions of `item`
     const instances = this._memoizedResolves.get(item) ?? [];
 
@@ -394,7 +394,9 @@ class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       // If we got here, no item with the given slot-to-value combo exists in cache yet
-      const result = item.resolve(this);
+      const result = isWgslData(item)
+        ? resolveData(this, item)
+        : item.resolve(this);
 
       // We know which slots the item used while resolving
       const slotToValueMap = new Map<TgpuSlot<unknown>, unknown>();
@@ -418,7 +420,11 @@ class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   resolve(item: Wgsl, slotValueOverrides: SlotValuePair<unknown>[] = []) {
-    if (!isResolvable(item)) {
+    if (
+      typeof item === 'string' ||
+      typeof item === 'number' ||
+      typeof item === 'boolean'
+    ) {
       return String(item);
     }
 

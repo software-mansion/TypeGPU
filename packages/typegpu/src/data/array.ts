@@ -1,7 +1,4 @@
-import { roundUp } from '../mathUtils';
 import type { Infer } from '../shared/repr';
-import { alignmentOf } from './alignmentOf';
-import { sizeOf } from './sizeOf';
 import type { AnyWgslData, WgslArray } from './wgslTypes';
 
 // ----------
@@ -44,17 +41,9 @@ class TgpuArrayImpl<TElement extends AnyWgslData>
   public readonly type = 'array';
   /** Type-token, not available at runtime */
   public readonly __repr!: Infer<TElement>[];
-  public readonly size: number;
-  public readonly alignment: number;
-  public readonly stride: number;
-  public readonly isLoose = false; // TODO: Remove
 
   constructor(
     public readonly elementType: TElement,
     public readonly length: number,
-  ) {
-    this.alignment = alignmentOf(elementType);
-    this.stride = roundUp(sizeOf(elementType), this.alignment);
-    this.size = this.stride * length;
-  }
+  ) {}
 }

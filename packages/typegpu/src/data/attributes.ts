@@ -72,7 +72,7 @@ export type ExtractAttributes<T> = T extends {
   readonly attribs: unknown[];
 }
   ? T['attribs']
-  : never;
+  : [];
 
 export type UnwrapDecorated<T> = T extends { readonly inner: infer TInner }
   ? TInner
@@ -217,6 +217,10 @@ export function getCustomAlignment(data: BaseWgslData): number | undefined {
   return (data as unknown as BaseDecorated).attribs?.find(isAlignAttrib)?.value;
 }
 
+export function getCustomSize(data: BaseWgslData): number | undefined {
+  return (data as unknown as BaseDecorated).attribs?.find(isSizeAttrib)?.value;
+}
+
 export function getCustomLocation(data: BaseWgslData): number | undefined {
   return (data as unknown as BaseDecorated).attribs?.find(isLocationAttrib)
     ?.value;
@@ -233,7 +237,7 @@ export function isBuiltin<
   );
 }
 
-export function getAttributesString<T extends AnyWgslData>(field: T): string {
+export function getAttributesString<T extends BaseWgslData>(field: T): string {
   if (!isDecorated(field) && !isLooseDecorated(field)) {
     return '';
   }
@@ -265,7 +269,10 @@ export function getAttributesString<T extends AnyWgslData>(field: T): string {
 // Implementation
 // --------------
 
-class BaseDecoratedImpl<TInner, TAttribs extends unknown[]> {
+class BaseDecoratedImpl<
+  TInner extends BaseWgslData,
+  TAttribs extends unknown[],
+> {
   // Type-token, not available at runtime
   public readonly __repr!: Infer<TInner>;
 

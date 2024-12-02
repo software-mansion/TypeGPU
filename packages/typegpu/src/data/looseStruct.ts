@@ -1,8 +1,5 @@
-import { roundUp } from '../mathUtils';
 import type { InferRecord } from '../shared/repr';
-import { getCustomAlignment } from './attributes';
 import type { LooseStruct } from './dataTypes';
-import { sizeOf } from './sizeOf';
 import type { BaseWgslData } from './wgslTypes';
 
 // ----------
@@ -29,7 +26,7 @@ import type { BaseWgslData } from './wgslTypes';
  */
 export const looseStruct = <TProps extends Record<string, BaseWgslData>>(
   properties: TProps,
-): LooseStruct<TProps> => new TgpuLooseStructImpl(properties);
+): LooseStruct<TProps> => new LooseStructImpl(properties);
 
 /**
  * Checks whether passed in value is a looseStruct schema,
@@ -54,35 +51,12 @@ export function isLooseStructSchema<T extends LooseStruct>(
 // Implementation
 // --------------
 
-class TgpuLooseStructImpl<TProps extends Record<string, BaseWgslData>>
+class LooseStructImpl<TProps extends Record<string, BaseWgslData>>
   implements LooseStruct<TProps>
 {
   public readonly type = 'loose-struct';
-
   /** Type-token, not available at runtime */
   public readonly __repr!: InferRecord<TProps>;
-  public readonly byteAlignment = 1;
-  public readonly size: number;
 
-  private _label: string | undefined;
-
-  constructor(public readonly propTypes: TProps) {
-    let size = 0;
-    for (const property of Object.values(propTypes)) {
-      const alignment = getCustomAlignment(property) ?? 1;
-      size = roundUp(size, alignment);
-      size += sizeOf(property);
-    }
-
-    this.size = size;
-  }
-
-  get label() {
-    return this._label;
-  }
-
-  $name(label: string) {
-    this._label = label;
-    return this;
-  }
+  constructor(public readonly propTypes: TProps) {}
 }

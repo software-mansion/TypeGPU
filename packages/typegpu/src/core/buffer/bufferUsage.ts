@@ -1,4 +1,3 @@
-import type { Unwrap } from 'typed-binary';
 import type { AnyWgslData } from '../../data/wgslTypes';
 import { type Storage, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
@@ -23,17 +22,17 @@ export interface TgpuBufferUsage<
   readonly resourceType: 'buffer-usage';
   readonly usage: TUsage;
   readonly __repr: Infer<TData>;
-  value: Unwrap<TData>;
+  value: Infer<TData>;
 }
 
 export interface TgpuBufferUniform<TData extends AnyWgslData>
   extends TgpuBufferUsage<TData, 'uniform'> {
-  readonly value: Unwrap<TData>;
+  readonly value: Infer<TData>;
 }
 
 export interface TgpuBufferReadonly<TData extends AnyWgslData>
   extends TgpuBufferUsage<TData, 'readonly'> {
-  readonly value: Unwrap<TData>;
+  readonly value: Infer<TData>;
 }
 
 export interface TgpuBufferMutable<TData extends AnyWgslData>
@@ -101,11 +100,11 @@ class TgpuFixedBufferImpl<
     return `${this.usage}:${this.label ?? '<unnamed>'}`;
   }
 
-  get value(): Unwrap<TData> {
+  get value(): Infer<TData> {
     if (!inGPUMode()) {
       throw new Error(`Cannot access buffer's value directly in JS.`);
     }
-    return this as Unwrap<TData>;
+    return this as Infer<TData>;
   }
 }
 
@@ -144,11 +143,11 @@ export class TgpuLaidOutBufferImpl<
     return `${this.usage}:${this.label ?? '<unnamed>'}`;
   }
 
-  get value(): Unwrap<TData> {
+  get value(): Infer<TData> {
     if (!inGPUMode()) {
       throw new Error(`Cannot access buffer's value directly in JS.`);
     }
-    return this as Unwrap<TData>;
+    return this as Infer<TData>;
   }
 }
 

@@ -8,7 +8,7 @@ import type {
   TgpuLayoutEntry,
 } from './tgpuBindGroupLayout';
 
-export type Wgsl = string | number | TgpuResolvable | symbol | boolean;
+export type Wgsl = string | number | boolean | TgpuResolvable | AnyWgslData;
 
 export const UnknownData = Symbol('Unknown data type');
 export type UnknownData = typeof UnknownData;

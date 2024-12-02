@@ -1,4 +1,8 @@
-import type { BaseWgslData } from './wgslTypes';
+import { getCustomAlignment } from './attributes';
+import { isDecorated, isLooseDecorated } from './attributes';
+import { isLooseArray } from './looseArray';
+import { isLooseStructSchema } from './looseStruct';
+import { type BaseWgslData, isArraySchema, isStructSchema } from './wgslTypes';
 
 const knownAlignmentMap: Record<string, number> = {
   bool: 4,
@@ -19,10 +23,52 @@ const knownAlignmentMap: Record<string, number> = {
   mat4x4f: 16,
 };
 
-export function alignmentOf(data: unknown) {
-  return (
-    knownAlignmentMap[(data as BaseWgslData)?.type] ??
-    (data as { alignment: number }).alignment ??
-    0
+function computeAlignment(data: object): number {
+  const knownAlignment = knownAlignmentMap[(data as BaseWgslData)?.type];
+  if (knownAlignment !== undefined) {
+    return knownAlignment;
+  }
+
+  if (isStructSchema(data)) {
+    return Object.values(data.propTypes)
+      .map((prop) => alignmentOf(prop))
+      .reduce((a, b) => (a > b ? a : b));
+  }
+
+  if (isArraySchema(data)) {
+    return alignmentOf(data.elementType);
+  }
+
+  if (isLooseStructSchema(data)) {
+    return 1;
+  }
+
+  if (isLooseArray(data)) {
+    return getCustomAlignment(data.elementType) ?? 1;
+  }
+
+  if (isDecorated(data) || isLooseDecorated(data)) {
+    return getCustomAlignment(data) ?? alignmentOf(data.inner);
+  }
+
+  throw new Error(
+    `Cannot determine alignment of data: ${JSON.stringify(data)}`,
   );
+}
+
+/**
+ * Since alignments can be inferred from exotic/native data types, they are
+ * not stored on them. Instead, this weak map acts as an extended property
+ * of those data types.
+ */
+const cachedAlignments = new WeakMap<object, number>();
+
+export function alignmentOf(data: object): number {
+  let alignment = cachedAlignments.get(data);
+  if (alignment === undefined) {
+    alignment = computeAlignment(data);
+    cachedAlignments.set(data, alignment);
+  }
+
+  return alignment;
 }

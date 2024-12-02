@@ -1,8 +1,5 @@
-import { roundUp } from '../mathUtils';
 import type { Infer } from '../shared/repr';
-import { getCustomAlignment } from './attributes';
 import type { AnyData, LooseArray } from './dataTypes';
-import { sizeOf } from './sizeOf';
 
 // ----------
 // Public API
@@ -57,16 +54,9 @@ class LooseArrayImpl<TElement extends AnyData> implements LooseArray<TElement> {
   public readonly type = 'loose-array';
   /** Type-token, not available at runtime */
   public readonly __repr!: Infer<TElement>[];
-  public readonly alignment: number;
-  public readonly size: number;
-  public readonly stride: number;
 
   constructor(
     public readonly elementType: TElement,
     public readonly length: number,
-  ) {
-    this.alignment = getCustomAlignment(elementType) ?? 1;
-    this.stride = roundUp(sizeOf(elementType), this.alignment);
-    this.size = this.stride * length;
-  }
+  ) {}
 }

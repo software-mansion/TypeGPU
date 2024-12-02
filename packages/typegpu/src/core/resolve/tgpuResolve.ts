@@ -1,3 +1,4 @@
+import type { AnyWgslData } from '../../data/wgslTypes';
 import type { JitTranspiler } from '../../jitTranspiler';
 import { RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry';
 import { resolve as resolveImpl } from '../../resolutionCtx';
@@ -5,9 +6,13 @@ import type { TgpuResolvable } from '../../types';
 import { applyExternals, replaceExternalsInWgsl } from '../function/externals';
 
 export interface TgpuResolveOptions {
-  input: string | TgpuResolvable | (string | TgpuResolvable)[];
+  input:
+    | string
+    | TgpuResolvable
+    | AnyWgslData
+    | (string | TgpuResolvable | AnyWgslData)[];
   extraDependencies?:
-    | Record<string, TgpuResolvable | string | number>
+    | Record<string, TgpuResolvable | AnyWgslData | string | number>
     | undefined;
   /**
    * @default 'random'

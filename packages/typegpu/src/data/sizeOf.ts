@@ -1,5 +1,20 @@
-import type { LooseTypeLiteral } from './dataTypes';
-import type { BaseWgslData, WgslTypeLiteral } from './wgslTypes';
+import {
+  isDecorated,
+  isLooseArray,
+  isLooseDecorated,
+  isLooseStructSchema,
+} from '.';
+import { roundUp } from '../mathUtils';
+import { alignmentOf } from './alignmentOf';
+import { getCustomAlignment, getCustomSize } from './attributes';
+import type { LooseStruct, LooseTypeLiteral } from './dataTypes';
+import {
+  type BaseWgslData,
+  type WgslStruct,
+  type WgslTypeLiteral,
+  isArraySchema,
+  isStructSchema,
+} from './wgslTypes';
 
 const knownSizesMap: Record<string, number> = {
   bool: 4,
@@ -51,10 +66,88 @@ const knownSizesMap: Record<string, number> = {
   'unorm10-10-10-2': 4,
 } satisfies Partial<Record<WgslTypeLiteral | LooseTypeLiteral, number>>;
 
-export function sizeOf(data: unknown) {
-  return (
-    knownSizesMap[(data as BaseWgslData)?.type] ??
-    (data as { size: number }).size ??
-    Number.NaN
-  );
+function sizeOfStruct(struct: WgslStruct) {
+  let size = 0;
+  for (const property of Object.values(struct.propTypes)) {
+    if (Number.isNaN(size)) {
+      throw new Error('Only the last property of a struct can be unbounded');
+    }
+
+    size = roundUp(size, alignmentOf(property));
+    size += sizeOf(property);
+
+    if (Number.isNaN(size) && property.type !== 'array') {
+      throw new Error('Cannot nest unbounded struct within another struct');
+    }
+  }
+
+  return roundUp(size, alignmentOf(struct));
+}
+
+function sizeOfLooseStruct(data: LooseStruct) {
+  let size = 0;
+
+  for (const property of Object.values(data.propTypes)) {
+    const alignment = getCustomAlignment(property) ?? 1;
+    size = roundUp(size, alignment);
+    size += sizeOf(property);
+  }
+
+  return size;
+}
+
+function computeSize(data: object): number {
+  const knownSize = knownSizesMap[(data as BaseWgslData)?.type];
+
+  if (knownSize !== undefined) {
+    return knownSize;
+  }
+
+  if (isStructSchema(data)) {
+    return sizeOfStruct(data);
+  }
+
+  if (isLooseStructSchema(data)) {
+    return sizeOfLooseStruct(data);
+  }
+
+  if (isArraySchema(data)) {
+    if (data.length === 0) {
+      return Number.NaN;
+    }
+
+    const alignment = alignmentOf(data.elementType);
+    const stride = roundUp(sizeOf(data.elementType), alignment);
+    return stride * data.length;
+  }
+
+  if (isLooseArray(data)) {
+    const alignment = getCustomAlignment(data.elementType) ?? 1;
+    const stride = roundUp(sizeOf(data.elementType), alignment);
+    return stride * data.length;
+  }
+
+  if (isDecorated(data) || isLooseDecorated(data)) {
+    return getCustomSize(data) ?? sizeOf(data.inner);
+  }
+
+  throw new Error(`Cannot determine size of data: ${data}`);
+}
+
+/**
+ * Since sizes can be inferred from exotic/native data types, they are
+ * not stored on them. Instead, this weak map acts as an extended property
+ * of those data types.
+ */
+const cachedSizes = new WeakMap<object, number>();
+
+export function sizeOf(data: object): number {
+  let size = cachedSizes.get(data);
+
+  if (size === undefined) {
+    size = computeSize(data);
+    cachedSizes.set(data, size);
+  }
+
+  return size;
 }
