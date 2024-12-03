@@ -1,6 +1,6 @@
 import { parse } from '@typegpu/wgsl-parser';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import type { IOLayout, UnwrapIO } from '../src/core/function/fnTypes';
+import type { IOLayout, InferIO } from '../src/core/function/fnTypes';
 import * as d from '../src/data';
 import tgpu, { wgsl, type TgpuFnShell, type TgpuFn } from '../src/experimental';
 import { parseWGSL } from './utils/parseWGSL';
@@ -142,7 +142,7 @@ describe('UnwrapIO', () => {
     const layout = d.f32 satisfies IOLayout;
 
     expectTypeOf(layout).toEqualTypeOf<d.F32>();
-    expectTypeOf<UnwrapIO<typeof layout>>().toEqualTypeOf<number>();
+    expectTypeOf<InferIO<typeof layout>>().toEqualTypeOf<number>();
   });
 
   it('unwraps a record of numeric primitives', () => {
@@ -152,7 +152,7 @@ describe('UnwrapIO', () => {
       a: d.F32;
       b: d.Decorated<d.U32, [d.Location<2>]>;
     }>();
-    expectTypeOf<UnwrapIO<typeof layout>>().toEqualTypeOf<{
+    expectTypeOf<InferIO<typeof layout>>().toEqualTypeOf<{
       a: number;
       b: number;
     }>();

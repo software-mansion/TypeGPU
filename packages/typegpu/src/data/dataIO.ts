@@ -3,7 +3,7 @@ import type { Infer, InferRecord } from '../shared/repr';
 import alignIO from './alignIO';
 import { alignmentOf } from './alignmentOf';
 import { type LooseDecorated, getCustomAlignment } from './attributes';
-import type { AnyData, LooseArray, TgpuLooseStruct } from './dataTypes';
+import type { AnyData, LooseArray, LooseStruct } from './dataTypes';
 import {
   mat2x2f as createMat2x2f,
   mat3x3f as createMat3x3f,
@@ -173,26 +173,28 @@ const dataWriters = {
     schema: WgslStruct,
     value: InferRecord<Record<string, BaseWgslData>>,
   ) {
-    alignIO(output, schema.alignment);
+    const alignment = alignmentOf(schema);
+    alignIO(output, alignment);
 
     for (const [key, property] of Object.entries(schema.propTypes)) {
       alignIO(output, alignmentOf(property));
       writeData(output, property, value[key] as BaseWgslData);
     }
 
-    alignIO(output, schema.alignment);
+    alignIO(output, alignment);
   },
 
   array(output, schema: WgslArray, value: Infer<BaseWgslData>[]) {
-    alignIO(output, schema.alignment);
+    const alignment = alignmentOf(schema);
+    alignIO(output, alignment);
     const beginning = output.currentByteOffset;
     for (let i = 0; i < Math.min(schema.length, value.length); i++) {
-      alignIO(output, schema.alignment);
+      alignIO(output, alignment);
       const elementType = schema.elementType as AnyWgslData;
       // dataWriters[elementType?.type]?.(output, elementType, value[i]);
       writeData(output, elementType, value[i]);
     }
-    output.seekTo(beginning + schema.size);
+    output.seekTo(beginning + sizeOf(schema));
   },
 
   atomic(output, schema: Atomic, value: number) {
@@ -205,7 +207,7 @@ const dataWriters = {
 
     const beginning = output.currentByteOffset;
     dataWriters[(schema.inner as AnyData)?.type]?.(output, schema.inner, value);
-    output.seekTo(beginning + schema.size);
+    output.seekTo(beginning + sizeOf(schema));
   },
 
   // Loose Types
@@ -412,7 +414,7 @@ const dataWriters = {
     output.seekTo(beginning + sizeOf(schema));
   },
 
-  'loose-struct'(output, schema: TgpuLooseStruct, value) {
+  'loose-struct'(output, schema: LooseStruct, value) {
     for (const [key, property] of Object.entries(schema.propTypes)) {
       dataWriters[property.type]?.(output, property, value[key]);
     }
@@ -572,7 +574,8 @@ const dataReaders = {
   },
 
   struct(input: ISerialInput, schema: WgslStruct) {
-    alignIO(input, schema.alignment);
+    const alignment = alignmentOf(schema);
+    alignIO(input, alignment);
     const result = {} as Record<string, unknown>;
 
     for (const [key, property] of Object.entries(schema.propTypes)) {
@@ -580,22 +583,22 @@ const dataReaders = {
       result[key] = readData(input, property);
     }
 
-    alignIO(input, schema.alignment);
+    alignIO(input, alignment);
     return result as InferRecord<Record<string, BaseWgslData>>;
   },
 
   array(input, schema) {
-    alignIO(input, schema.alignment);
+    const alignment = alignmentOf(schema);
     const elements: unknown[] = [];
 
     for (let i = 0; i < schema.length; i++) {
-      alignIO(input, schema.alignment);
+      alignIO(input, alignment);
       const elementType = schema.elementType as AnyWgslData;
       const value = readData(input, elementType);
       elements.push(value);
     }
 
-    alignIO(input, schema.alignment);
+    alignIO(input, alignment);
     return elements as never[];
   },
 
@@ -609,7 +612,7 @@ const dataReaders = {
 
     const beginning = input.currentByteOffset;
     const value = readData(input, schema.inner);
-    input.seekTo(beginning + schema.size);
+    input.seekTo(beginning + sizeOf(schema));
     return value as never;
   },
 
@@ -774,7 +777,7 @@ const dataReaders = {
     return createVec4f(r, g, b, a);
   },
 
-  'loose-struct'(input, schema: TgpuLooseStruct) {
+  'loose-struct'(input, schema: LooseStruct) {
     const result = {} as Record<string, unknown>;
 
     for (const [key, property] of Object.entries(schema.propTypes)) {

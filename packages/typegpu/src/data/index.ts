@@ -2,8 +2,27 @@
  * @module typegpu/data
  */
 
-export * from './numeric';
+export { bool, f32, i32, u32 } from './numeric';
 export type {
+  WgslStruct,
+  WgslArray,
+  Decorated,
+  Size,
+  Align,
+  Builtin,
+  Location,
+  AnyWgslData,
+} from './wgslTypes';
+export {
+  TgpuStruct,
+  struct,
+} from './struct';
+export {
+  TgpuArray,
+  arrayOf,
+} from './array';
+export type {
+  Bool,
   F32,
   I32,
   U32,
@@ -16,23 +35,6 @@ export type {
   Vec4f,
   Vec4i,
   Vec4u,
-  WgslStruct,
-  WgslArray,
-  Decorated,
-  Size,
-  Align,
-  Builtin,
-  Location,
-} from './wgslTypes';
-export {
-  TgpuStruct,
-  struct,
-} from './struct';
-export {
-  TgpuArray,
-  arrayOf,
-} from './array';
-export type {
   LooseArray,
   LooseStruct,
   AnyData,

@@ -12,7 +12,7 @@ import type {
   Wgsl,
 } from '../../types';
 import { createFnCore } from './fnCore';
-import type { Implementation, UnwrapArgs, UnwrapReturn } from './fnTypes';
+import type { Implementation, InferArgs, InferReturn } from './fnTypes';
 
 // ----------
 // Public API
@@ -32,7 +32,7 @@ export interface TgpuFnShell<
    * Creates a type-safe implementation of this signature
    */
   does(
-    implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
+    implementation: (...args: InferArgs<Args>) => InferReturn<Return>,
   ): TgpuFn<Args, Return>;
 
   /**
@@ -60,7 +60,7 @@ export type TgpuFn<
   Args extends AnyWgslData[],
   Return extends AnyWgslData | undefined = undefined,
 > = TgpuFnBase<Args, Return> &
-  ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>);
+  ((...args: InferArgs<Args>) => InferReturn<Return>);
 
 export function fn<Args extends AnyWgslData[] | []>(
   argTypes: Args,
@@ -81,7 +81,7 @@ export function fn<
     returnType,
 
     does(
-      implementation: Implementation<UnwrapArgs<Args>, UnwrapReturn<Return>>,
+      implementation: Implementation<InferArgs<Args>, InferReturn<Return>>,
     ): TgpuFn<Args, Return> {
       return createFn(this, implementation as Implementation);
     },
@@ -198,7 +198,7 @@ function createBoundFunction<
     },
   };
 
-  const call = (...args: UnwrapArgs<Args>): unknown => {
+  const call = (...args: InferArgs<Args>): unknown => {
     return innerFn(...args);
   };
 

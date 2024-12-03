@@ -1,5 +1,3 @@
-import type { Parsed } from 'typed-binary';
-
 import type { OmitBuiltins } from '../../builtin';
 import type { AnyData } from '../../data/dataTypes';
 import type { Vec4f } from '../../data/wgslTypes';
@@ -7,6 +5,7 @@ import type { JitTranspiler } from '../../jitTranspiler';
 import type { NameRegistry } from '../../nameRegistry';
 import type { PlumListener } from '../../plumStore';
 import type { TgpuSettable } from '../../settableTrait';
+import type { Infer } from '../../shared/repr';
 import type { Mutable, OmitProps, Prettify } from '../../shared/utilityTypes';
 import type {
   ExtractPlumValue,
@@ -161,7 +160,7 @@ export interface TgpuRoot extends Unwrapper {
    */
   createBuffer<TData extends AnyData>(
     typeSchema: TData,
-    initial?: Parsed<TData> | TgpuPlum<Parsed<TData>> | undefined,
+    initial?: Infer<TData> | TgpuPlum<Infer<TData>> | undefined,
   ): TgpuBuffer<TData>;
 
   /**

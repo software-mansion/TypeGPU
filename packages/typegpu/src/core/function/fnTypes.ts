@@ -1,5 +1,4 @@
 import type * as smol from 'tinyest';
-import type { Unwrap } from 'typed-binary';
 import type { AnyAttribute } from '../../data/attributes';
 import type {
   Decorated,
@@ -31,14 +30,14 @@ export type TranspilationResult = {
   externalNames: string[];
 };
 
-export type UnwrapArgs<T extends unknown[]> = {
-  [Idx in keyof T]: Unwrap<T[Idx]>;
+export type InferArgs<T extends unknown[]> = {
+  [Idx in keyof T]: Infer<T[Idx]>;
 };
 
-export type UnwrapReturn<T> = T extends undefined
+export type InferReturn<T> = T extends undefined
   ? // biome-ignore lint/suspicious/noConfusingVoidType: <void is used as a return type>
     void
-  : Unwrap<T>;
+  : Infer<T>;
 
 export type Implementation<
   Args extends unknown[] = unknown[],

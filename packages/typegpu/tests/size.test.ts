@@ -92,7 +92,7 @@ describe('d.size', () => {
 
     expect(sizeOf(s1)).toEqual(110);
     expectTypeOf(s1).toEqualTypeOf<
-      d.LooseArray<d.Decorated<d.U32 & d.U32Cast, [d.Size<11>]>>
+      d.LooseArray<d.Decorated<d.U32, [d.Size<11>]>>
     >();
   });
 
@@ -106,9 +106,9 @@ describe('d.size', () => {
     expect(sizeOf(s1)).toEqual(28);
     expectTypeOf(s1).toEqualTypeOf<
       d.LooseStruct<{
-        a: d.U32 & d.U32Cast;
-        b: d.LooseDecorated<d.LooseArray<d.U32 & d.U32Cast>, [d.Size<20>]>;
-        c: d.U32 & d.U32Cast;
+        a: d.U32;
+        b: d.LooseDecorated<d.LooseArray<d.U32>, [d.Size<20>]>;
+        c: d.U32;
       }>
     >();
   });

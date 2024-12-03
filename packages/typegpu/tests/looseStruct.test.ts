@@ -15,6 +15,8 @@ import {
   vec3f,
   vec3u,
 } from '../src/data';
+import { readData, writeData } from '../src/data/dataIO';
+import { sizeOf } from '../src/data/sizeOf';
 
 describe('looseStruct', () => {
   it('properly calculates size with only loose members', () => {
@@ -24,21 +26,21 @@ describe('looseStruct', () => {
       c: float32x3, // 4 bytes * 3 = 12
       // Total: 2 + 4 + 12 = 18
     });
-    expect(s.size).toEqual(18);
+    expect(sizeOf(s)).toEqual(18);
 
     const s2 = looseStruct({
       a: unorm10_10_10_2, // 4 bytes
       b: sint16x4, // 2 bytes * 4 = 8
       // Total: 4 + 8 = 12
     });
-    expect(s2.size).toEqual(12);
+    expect(sizeOf(s2)).toEqual(12);
 
     const s3 = looseStruct({
       a: vec2f, // 8 bytes
       b: vec3u, // 12 bytes
       // Total: 8 + 12 = 20
     });
-    expect(s3.size).toEqual(20);
+    expect(sizeOf(s3)).toEqual(20);
   });
 
   it('properly calculates size with only aligned members', () => {
@@ -48,7 +50,7 @@ describe('looseStruct', () => {
       c: align(16, float32x3), // 12 padding bytes + 12 bytes = 24
       // Total: 2 + 18 + 24 = 44
     });
-    expect(s.size).toEqual(44);
+    expect(sizeOf(s)).toEqual(44);
 
     const s2 = looseStruct({
       a: align(16, unorm10_10_10_2), // 4 bytes
@@ -56,7 +58,7 @@ describe('looseStruct', () => {
       c: align(16, vec3f), // 8 padding bytes + 12 bytes = 20
       // Total: 4 + 20 + 20 = 44
     });
-    expect(s2.size).toEqual(44);
+    expect(sizeOf(s2)).toEqual(44);
   });
 
   it('properly calculates size with mixed members', () => {
@@ -66,7 +68,7 @@ describe('looseStruct', () => {
       c: float32x3, // 12 bytes
       // Total: 2 + 18 + 12 = 32
     });
-    expect(s.size).toEqual(32);
+    expect(sizeOf(s)).toEqual(32);
 
     const s2 = looseStruct({
       a: align(16, unorm10_10_10_2), // 4 bytes
@@ -74,7 +76,7 @@ describe('looseStruct', () => {
       c: vec3f, // 12 bytes
       // Total: 4 + 8 + 12 = 24
     });
-    expect(s2.size).toEqual(24);
+    expect(sizeOf(s2)).toEqual(24);
 
     const s3 = looseStruct({
       a: vec2f, // 8 bytes
@@ -82,7 +84,7 @@ describe('looseStruct', () => {
       c: unorm10_10_10_2, // 4 bytes
       // Total: 8 + 20 + 4 = 32
     });
-    expect(s3.size).toEqual(32);
+    expect(sizeOf(s3)).toEqual(32);
   });
 
   it('properly calculates size when nested and combined with looseArrayOf', () => {
@@ -92,7 +94,7 @@ describe('looseStruct', () => {
       c: looseArrayOf(vec3f, 2), // 12 bytes * 2 = 24
       // Total: 2 + 18 + 24 = 44
     });
-    expect(s.size).toEqual(44);
+    expect(sizeOf(s)).toEqual(44);
 
     const s2 = looseStruct({
       a: align(16, unorm10_10_10_2), // 4 bytes
@@ -100,7 +102,7 @@ describe('looseStruct', () => {
       c: looseArrayOf(vec3f, 2), // 12 bytes * 2 = 24
       // Total: 4 + 8 + 24 = 36
     });
-    expect(s2.size).toEqual(36);
+    expect(sizeOf(s2)).toEqual(36);
 
     const s3 = looseStruct({
       a: vec2f, // 8 bytes
@@ -108,7 +110,7 @@ describe('looseStruct', () => {
       c: s2, // 4 padding bytes + 36 bytes = 40
       // Total: 8 + 20 + 40 = 68
     });
-    expect(s3.size).toEqual(68);
+    expect(sizeOf(s3)).toEqual(68);
   });
 
   it('properly writes and reads data', () => {
@@ -118,17 +120,17 @@ describe('looseStruct', () => {
       c: float32x3,
     });
 
-    const buffer = new ArrayBuffer(s.size);
+    const buffer = new ArrayBuffer(sizeOf(s));
     const writer = new BufferWriter(buffer);
 
-    s.write(writer, {
+    writeData(writer, s, {
       a: vec2f(0.5, 0.75),
       b: vec2f(0.25, 0.5),
       c: vec3f(1.0, 2.0, 3.0),
     });
 
     const reader = new BufferReader(buffer);
-    const data = s.read(reader);
+    const data = readData(reader, s);
 
     expect(data.a.x).toBeCloseTo(0.5);
     expect(data.a.y).toBeCloseTo(0.75);
@@ -149,10 +151,10 @@ describe('looseStruct', () => {
       }),
     });
 
-    const buffer = new ArrayBuffer(s.size);
+    const buffer = new ArrayBuffer(sizeOf(s));
     const writer = new BufferWriter(buffer);
 
-    s.write(writer, {
+    writeData(writer, s, {
       a: vec2f(0.5, 0.75),
       b: vec2f(0.25, 0.5),
       c: {
@@ -162,7 +164,7 @@ describe('looseStruct', () => {
     });
 
     const reader = new BufferReader(buffer);
-    const data = s.read(reader);
+    const data = readData(reader, s);
 
     expect(data.a.x).toBeCloseTo(0.5);
     expect(data.a.y).toBeCloseTo(0.75);
@@ -186,14 +188,14 @@ describe('looseStruct', () => {
 
     const a = looseArrayOf(s, 8);
 
-    expect(s.size).toEqual(12);
+    expect(sizeOf(s)).toEqual(12);
     // since the struct is aligned to 16 bytes, the array stride should be 16 not 12
-    expect(a.size).toEqual(16 * 8);
+    expect(sizeOf(a)).toEqual(16 * 8);
 
-    const buffer = new ArrayBuffer(a.size);
+    const buffer = new ArrayBuffer(sizeOf(a));
     const writer = new BufferWriter(buffer);
 
-    a.write(writer, [
+    writeData(writer, a, [
       ...Array.from({ length: 8 }, () => ({
         a: vec2f(0.5, 0.75),
         b: vec2f(-0.25, 0.25),
@@ -201,7 +203,7 @@ describe('looseStruct', () => {
     ]);
 
     const reader = new BufferReader(buffer);
-    const data = a.read(reader);
+    const data = readData(reader, a);
 
     data.forEach((item, _) => {
       expect(item.a.x).toBeCloseTo(0.5);
