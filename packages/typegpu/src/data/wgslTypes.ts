@@ -454,7 +454,6 @@ export interface $Vec4u
 
 export interface matBase<TColumn> extends NumberArrayView {
   readonly columns: readonly TColumn[];
-  elements(): Iterable<number>;
 }
 
 /**

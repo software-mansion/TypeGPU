@@ -86,13 +86,6 @@ abstract class mat2x2Impl<TColumn extends $Vec2f> implements mat2x2<TColumn> {
 
   abstract makeColumn(e0: number, e1: number): TColumn;
 
-  *elements() {
-    yield this.columns[0].x;
-    yield this.columns[0].y;
-    yield this.columns[1].x;
-    yield this.columns[1].y;
-  }
-
   get [0]() {
     return this.columns[0].x;
   }
@@ -160,18 +153,6 @@ abstract class mat3x3Impl<TColumn extends $Vec3f> implements mat3x3<TColumn> {
   }
 
   abstract makeColumn(x: number, y: number, z: number): TColumn;
-
-  *elements() {
-    yield this.columns[0].x;
-    yield this.columns[0].y;
-    yield this.columns[0].z;
-    yield this.columns[1].x;
-    yield this.columns[1].y;
-    yield this.columns[1].z;
-    yield this.columns[2].x;
-    yield this.columns[2].y;
-    yield this.columns[2].z;
-  }
 
   get [0]() {
     return this.columns[0].x;
@@ -304,25 +285,6 @@ abstract class mat4x4Impl<TColumn extends $Vec4f> implements mat4x4<TColumn> {
   }
 
   abstract makeColumn(x: number, y: number, z: number, w: number): TColumn;
-
-  *elements() {
-    yield this.columns[0].x;
-    yield this.columns[0].y;
-    yield this.columns[0].z;
-    yield this.columns[0].w;
-    yield this.columns[1].x;
-    yield this.columns[1].y;
-    yield this.columns[1].z;
-    yield this.columns[1].w;
-    yield this.columns[2].x;
-    yield this.columns[2].y;
-    yield this.columns[2].z;
-    yield this.columns[2].w;
-    yield this.columns[3].x;
-    yield this.columns[3].y;
-    yield this.columns[3].z;
-    yield this.columns[3].w;
-  }
 
   public readonly length = 16;
   [n: number]: number;
@@ -581,6 +543,9 @@ export const mat4x4f = createMatSchema<'mat4x4f', $Mat4x4f, $Vec4f>({
   columns: 4,
   makeFromElements: (...elements: number[]) => new mat4x4fImpl(...elements),
 }) as Mat4x4f & Mat4x4fConstructor;
+
+export const mat2x2fToArray = (mat: $Mat2x2f): number[] =>
+  [mat[0], mat[1], mat[2], mat[3]] as number[];
 
 export const mat3x3fToArray = (mat: $Mat3x3f): number[] =>
   [

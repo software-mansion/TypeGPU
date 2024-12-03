@@ -55,7 +55,7 @@ describe('mat2x2f', () => {
       d.vec2f(2, 3), // column 1
     );
 
-    expect([...mat.elements()]).toEqual([0, 1, 2, 3]);
+    expect(d.mat2x2fToArray(mat)).toEqual([0, 1, 2, 3]);
     expect(mat.length).toEqual(4);
     expect(mat[0]).toEqual(0);
     expect(mat[1]).toEqual(1);
@@ -76,7 +76,7 @@ describe('mat2x2f', () => {
 
     expect(mat.columns[0]).toEqual(d.vec2f(4, 5));
     expect(mat.columns[1]).toEqual(d.vec2f(6, 7));
-    expect([...mat.elements()]).toEqual([4, 5, 6, 7]);
+    expect(d.mat2x2fToArray(mat)).toEqual([4, 5, 6, 7]);
   });
 });
 
@@ -138,7 +138,7 @@ describe('mat3x3f', () => {
       d.vec3f(6, 7, 8), // column 2
     );
 
-    expect([...mat.elements()]).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(d.mat3x3fToArray(mat)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
     expect(mat.length).toEqual(12);
     expect(mat[0]).toEqual(0);
     expect(mat[1]).toEqual(1);
@@ -170,7 +170,7 @@ describe('mat3x3f', () => {
     expect(mat.columns[0]).toEqual(d.vec3f(9, 10, 11));
     expect(mat.columns[1]).toEqual(d.vec3f(12, 13, 14));
     expect(mat.columns[2]).toEqual(d.vec3f(6, 7, 8));
-    expect([...mat.elements()]).toEqual([9, 10, 11, 12, 13, 14, 6, 7, 8]);
+    expect(d.mat3x3fToArray(mat)).toEqual([9, 10, 11, 12, 13, 14, 6, 7, 8]);
 
     mat[8] = 15;
     mat[9] = 16;
@@ -179,7 +179,7 @@ describe('mat3x3f', () => {
     expect(mat.columns[0]).toEqual(d.vec3f(9, 10, 11));
     expect(mat.columns[1]).toEqual(d.vec3f(12, 13, 14));
     expect(mat.columns[2]).toEqual(d.vec3f(15, 16, 17));
-    expect([...mat.elements()]).toEqual([9, 10, 11, 12, 13, 14, 15, 16, 17]);
+    expect(d.mat3x3fToArray(mat)).toEqual([9, 10, 11, 12, 13, 14, 15, 16, 17]);
   });
 });
 
@@ -248,7 +248,7 @@ describe('mat4x4f', () => {
       d.vec4f(12, 13, 14, 15), // column 3
     );
 
-    expect([...mat.elements()]).toEqual([
+    expect(d.mat4x4fToArray(mat)).toEqual([
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ]);
     expect(mat.length).toEqual(16);
@@ -295,7 +295,7 @@ describe('mat4x4f', () => {
     expect(mat.columns[1]).toEqual(d.vec4f(4, 5, 6, 7));
     expect(mat.columns[2]).toEqual(d.vec4f(8, 9, 10, 11));
     expect(mat.columns[3]).toEqual(d.vec4f(12, 13, 14, 15));
-    expect([...mat.elements()]).toEqual([
+    expect(d.mat4x4fToArray(mat)).toEqual([
       16, 17, 18, 19, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ]);
   });
