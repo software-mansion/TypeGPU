@@ -4,7 +4,6 @@ import {
   type AnyData,
   type AnyLooseData,
   type LooseTypeLiteral,
-  isData,
   isLooseData,
 } from './dataTypes';
 import { sizeOf } from './sizeOf';
@@ -21,6 +20,7 @@ import {
   isBuiltinAttrib,
   isLocationAttrib,
   isSizeAttrib,
+  isWgslData,
 } from './wgslTypes';
 
 // ----------
@@ -271,52 +271,40 @@ class BaseDecoratedImpl<
   // Type-token, not available at runtime
   public readonly __repr!: Infer<TInner>;
 
-  public readonly label?: string | undefined;
-  public readonly alignment: number;
-  public readonly size: number;
-
-  private readonly _alignAttrib: number | undefined;
-  private readonly _sizeAttrib: number | undefined;
-
   constructor(
     public readonly inner: TInner,
     public readonly attribs: TAttribs,
   ) {
-    this._alignAttrib = attribs.find(isAlignAttrib)?.value;
-    this._sizeAttrib = attribs.find(isSizeAttrib)?.value;
+    const alignAttrib = attribs.find(isAlignAttrib)?.value ?? 1;
+    const sizeAttrib = attribs.find(isSizeAttrib)?.value;
 
-    this.alignment = this._alignAttrib ?? alignmentOf(inner);
-    this.size = this._sizeAttrib ?? sizeOf(inner);
-
-    if (this.alignment <= 0) {
+    if (alignAttrib <= 0) {
       throw new Error(
-        `Custom data alignment must be a positive number, got: ${this.alignment}.`,
+        `Custom data alignment must be a positive number, got: ${alignAttrib}.`,
       );
     }
 
-    if (Math.log2(this.alignment) % 1 !== 0) {
-      throw new Error(
-        `Alignment has to be a power of 2, got: ${this.alignment}.`,
-      );
+    if (Math.log2(alignAttrib) % 1 !== 0) {
+      throw new Error(`Alignment has to be a power of 2, got: ${alignAttrib}.`);
     }
 
-    if (isData(this.inner)) {
-      if (this.alignment % alignmentOf(this.inner) !== 0) {
+    if (isWgslData(this.inner)) {
+      if (alignAttrib % alignmentOf(this.inner) !== 0) {
         throw new Error(
-          `Custom alignment has to be a multiple of the standard data alignment. Got: ${this.alignment}, expected multiple of: ${alignmentOf(this.inner)}.`,
+          `Custom alignment has to be a multiple of the standard data alignment. Got: ${alignAttrib}, expected multiple of: ${alignmentOf(this.inner)}.`,
         );
       }
     }
 
-    if (this.size < sizeOf(this.inner)) {
+    if (sizeAttrib !== undefined && sizeAttrib < sizeOf(this.inner)) {
       throw new Error(
-        `Custom data size cannot be smaller then the standard data size. Got: ${this.size}, expected at least: ${sizeOf(this.inner)}.`,
+        `Custom data size cannot be smaller then the standard data size. Got: ${sizeAttrib}, expected at least: ${sizeOf(this.inner)}.`,
       );
     }
 
-    if (this.size <= 0) {
+    if (sizeAttrib !== undefined && sizeAttrib <= 0) {
       throw new Error(
-        `Custom data size must be a positive number. Got: ${this.size}.`,
+        `Custom data size must be a positive number. Got: ${sizeAttrib}.`,
       );
     }
   }
