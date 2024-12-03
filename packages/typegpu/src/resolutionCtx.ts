@@ -497,6 +497,8 @@ export function resolve(
     code = code.replaceAll(placeholder, String(idx));
   }
 
+  console.log(code);
+
   return {
     code,
     bindGroupLayouts,
