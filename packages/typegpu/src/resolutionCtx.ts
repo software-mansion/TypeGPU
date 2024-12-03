@@ -306,15 +306,14 @@ class ResolutionCtxImpl implements ResolutionCtx {
 
     const argList = options.args
       .map(
-        (arg) =>
-          `${arg.value}: ${resolveData(this, arg.dataType as AnyWgslData)}`,
+        (arg) => `${arg.value}: ${this.resolve(arg.dataType as AnyWgslData)}`,
       )
       .join(', ');
 
     return {
       head:
         options.returnType !== undefined
-          ? `(${argList}) -> ${resolveData(this, options.returnType)}`
+          ? `(${argList}) -> ${this.resolve(options.returnType)}`
           : `(${argList})`,
       body: str,
     };

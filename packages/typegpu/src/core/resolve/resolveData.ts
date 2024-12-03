@@ -71,7 +71,7 @@ struct ${id} {
 ${Object.entries(struct.propTypes)
   .map(
     ([key, field]) =>
-      `  ${getAttributesString(field)}${key}: ${resolveData(ctx, field as AnyWgslData)},\n`,
+      `  ${getAttributesString(field)}${key}: ${ctx.resolve(field as AnyWgslData)},\n`,
   )
   .join('')}\
 }\n`);
@@ -80,7 +80,7 @@ ${Object.entries(struct.propTypes)
 }
 
 function resolveArray(ctx: ResolutionCtx, array: WgslArray) {
-  const element = resolveData(ctx, array.elementType as AnyWgslData);
+  const element = ctx.resolve(array.elementType as AnyWgslData);
 
   return array.length === 0
     ? `array<${element}>`
@@ -105,7 +105,7 @@ export function resolveData(ctx: ResolutionCtx, data: AnyWgslData): string {
   }
 
   if (data.type === 'decorated') {
-    return resolveData(ctx, data.inner as AnyWgslData);
+    return ctx.resolve(data.inner as AnyWgslData);
   }
 
   assertExhaustive(data, 'resolveData');

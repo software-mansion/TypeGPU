@@ -8,7 +8,6 @@ import type {
   ResolutionCtx,
   TgpuResolvable,
 } from '../../types';
-import { resolveData } from '../resolve/resolveData';
 import { type TgpuBuffer, type Uniform, isUsableAsUniform } from './buffer';
 
 // ----------
@@ -90,7 +89,7 @@ class TgpuFixedBufferImpl<
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var<${usage}> ${id}: ${resolveData(ctx, this.buffer.dataType)};`,
+      `@group(${group}) @binding(${binding}) var<${usage}> ${id}: ${ctx.resolve(this.buffer.dataType)};`,
     );
 
     return id;
@@ -133,7 +132,7 @@ export class TgpuLaidOutBufferImpl<
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${this._membership.idx}) var<${usage}> ${id}: ${resolveData(ctx, this.dataType)};`,
+      `@group(${group}) @binding(${this._membership.idx}) var<${usage}> ${id}: ${ctx.resolve(this.dataType)};`,
     );
 
     return id;

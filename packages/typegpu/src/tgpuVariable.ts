@@ -1,4 +1,3 @@
-import { resolveData } from './core/resolve/resolveData';
 import type { AnyWgslData } from './data/wgslTypes';
 import { inGPUMode } from './gpuMode';
 import type { TgpuNamable } from './namable';
@@ -49,11 +48,11 @@ class TgpuVarImpl<TDataType extends AnyWgslData> implements TgpuVar<TDataType> {
 
     if (this._initialValue) {
       ctx.addDeclaration(
-        `var<${this.scope}> ${id}: ${resolveData(ctx, this._dataType)} = ${ctx.resolve(this._initialValue)};`,
+        `var<${this.scope}> ${id}: ${ctx.resolve(this._dataType)} = ${ctx.resolve(this._initialValue)};`,
       );
     } else {
       ctx.addDeclaration(
-        `var<${this.scope}> ${id}: ${resolveData(ctx, this._dataType)};`,
+        `var<${this.scope}> ${id}: ${ctx.resolve(this._dataType)};`,
       );
     }
 

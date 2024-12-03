@@ -5,7 +5,6 @@ import type { TgpuNamable } from '../../namable';
 import type { Default } from '../../shared/utilityTypes';
 import type { UnionToIntersection } from '../../shared/utilityTypes';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
-import { resolveData } from '../resolve/resolveData';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 import {
   type SampledFormatOptions,
@@ -544,7 +543,7 @@ class TgpuFixedSampledTextureImpl
       : `texture_${dimensionToCodeMap[this.dimension]}`;
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var ${id}: ${type}<${resolveData(ctx, this.channelDataType)}>;`,
+      `@group(${group}) @binding(${binding}) var ${id}: ${type}<${ctx.resolve(this.channelDataType)}>;`,
     );
 
     return id;
