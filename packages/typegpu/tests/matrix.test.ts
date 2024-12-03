@@ -282,7 +282,7 @@ describe('mat4x4f', () => {
     expect(mat.columns[1]).toEqual(d.vec4f(4, 5, 6, 7));
     expect(mat.columns[2]).toEqual(d.vec4f(8, 9, 10, 11));
     expect(mat.columns[3]).toEqual(d.vec4f(12, 13, 14, 15));
-    expect([...mat.elements()]).toEqual([
+    expect(d.mat4x4fToArray(mat)).toEqual([
       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ]);
 

@@ -1,22 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import * as m from 'wgpu-matrix';
-import { mat3x3f, mat4x4f, vec2f, vec3f, vec4f } from '../src/data';
-
-const mat3x3fToArray = (mat: mat3x3f): number[] =>
-  [
-    mat[0],
-    mat[1],
-    mat[2],
-    mat[4],
-    mat[5],
-    mat[6],
-    mat[8],
-    mat[9],
-    mat[10],
-  ] as number[];
-
-const mat4x4fToArray = (mat: mat4x4f): number[] =>
-  Array.from({ length: mat.length }).map((_, idx) => mat[idx] as number);
+import {
+  mat3x3f,
+  mat3x3fToArray,
+  mat4x4f,
+  mat4x4fToArray,
+  vec2f,
+  vec3f,
+  vec4f,
+} from '../src/data';
 
 describe('mat4x4f', () => {
   it('can interact with wgpu-matrix library', () => {

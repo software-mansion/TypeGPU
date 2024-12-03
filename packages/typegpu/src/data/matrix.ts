@@ -41,6 +41,7 @@ function createMatSchema<
   const MatSchema = {
     /** Type-token, not available at runtime */
     __repr: undefined as unknown as ValueType,
+    type: options.type,
     label: options.type,
   };
 
@@ -308,15 +309,19 @@ abstract class mat4x4Impl<TColumn extends $Vec4f> implements mat4x4<TColumn> {
     yield this.columns[0].x;
     yield this.columns[0].y;
     yield this.columns[0].z;
+    yield this.columns[0].w;
     yield this.columns[1].x;
     yield this.columns[1].y;
     yield this.columns[1].z;
+    yield this.columns[1].w;
     yield this.columns[2].x;
     yield this.columns[2].y;
     yield this.columns[2].z;
+    yield this.columns[2].w;
     yield this.columns[3].x;
     yield this.columns[3].y;
     yield this.columns[3].z;
+    yield this.columns[3].w;
   }
 
   public readonly length = 16;
@@ -576,3 +581,19 @@ export const mat4x4f = createMatSchema<'mat4x4f', $Mat4x4f, $Vec4f>({
   columns: 4,
   makeFromElements: (...elements: number[]) => new mat4x4fImpl(...elements),
 }) as Mat4x4f & Mat4x4fConstructor;
+
+export const mat3x3fToArray = (mat: $Mat3x3f): number[] =>
+  [
+    mat[0],
+    mat[1],
+    mat[2],
+    mat[4],
+    mat[5],
+    mat[6],
+    mat[8],
+    mat[9],
+    mat[10],
+  ] as number[];
+
+export const mat4x4fToArray = (mat: $Mat4x4f): number[] =>
+  Array.from({ length: mat.length }).map((_, idx) => mat[idx] as number);

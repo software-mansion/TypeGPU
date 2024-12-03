@@ -66,7 +66,13 @@ export {
 } from './vector';
 export { looseArrayOf, isLooseArray } from './looseArray';
 export { looseStruct, isLooseStructSchema } from './looseStruct';
-export { mat2x2f, mat3x3f, mat4x4f } from './matrix';
+export {
+  mat2x2f,
+  mat3x3f,
+  mat4x4f,
+  mat3x3fToArray,
+  mat4x4fToArray,
+} from './matrix';
 export * from './vertexFormatData';
 export { atomic, isAtomicSchema } from './atomic';
 export {

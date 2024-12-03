@@ -537,18 +537,24 @@ const dataReaders = {
   },
 
   mat3x3f(input: ISerialInput) {
+    const skipOneAfter = () => {
+      const value = input.readFloat32();
+      input.readFloat32(); // skipping;
+      return value;
+    };
+
     return createMat3x3f(
       input.readFloat32(),
       input.readFloat32(),
-      input.readFloat32(),
+      skipOneAfter(),
       //
       input.readFloat32(),
       input.readFloat32(),
-      input.readFloat32(),
+      skipOneAfter(),
       //
       input.readFloat32(),
       input.readFloat32(),
-      input.readFloat32(),
+      skipOneAfter(),
     );
   },
 
