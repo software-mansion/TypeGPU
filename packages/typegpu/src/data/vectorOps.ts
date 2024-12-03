@@ -9,24 +9,16 @@ import {
   vec4f,
   vec4i,
   vec4u,
-  type vecBase,
 } from './vector';
-import type {
-  vec2f as v2f,
-  vec2i as v2i,
-  vec2u as v2u,
-  vec3f as v3f,
-  vec3i as v3i,
-  vec3u as v3u,
-  vec4f as v4f,
-  vec4i as v4i,
-  vec4u as v4u,
-} from './wgslTypes';
+import type * as wgsl from './wgslTypes';
 
-const lengthVec2 = (v: v2f | v2i | v2u) => Math.sqrt(v.x ** 2 + v.y ** 2);
-const lengthVec3 = (v: v3f | v3i | v3u) =>
+type $VecBase = { kind: VecKind };
+
+const lengthVec2 = (v: wgsl.$Vec2f | wgsl.$Vec2i | wgsl.$Vec2u) =>
+  Math.sqrt(v.x ** 2 + v.y ** 2);
+const lengthVec3 = (v: wgsl.$Vec3f | wgsl.$Vec3i | wgsl.$Vec3u) =>
   Math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2);
-const lengthVec4 = (v: v4f | v4i | v4u) =>
+const lengthVec4 = (v: wgsl.$Vec4f | wgsl.$Vec4i | wgsl.$Vec4u) =>
   Math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2 + v.w ** 2);
 
 export const VectorOps = {
@@ -40,131 +32,143 @@ export const VectorOps = {
     vec4f: lengthVec4,
     vec4i: lengthVec4,
     vec4u: lengthVec4,
-  } as Record<VecKind, (v: vecBase) => number>,
+  } as Record<VecKind, (v: $VecBase) => number>,
 
   add: {
-    vec2f: (a: v2f, b: v2f) => vec2f(a.x + b.x, a.y + b.y),
-    vec2i: (a: v2i, b: v2i) => vec2i(a.x + b.x, a.y + b.y),
-    vec2u: (a: v2u, b: v2u) => vec2u(a.x + b.x, a.y + b.y),
+    vec2f: (a: wgsl.$Vec2f, b: wgsl.$Vec2f) => vec2f(a.x + b.x, a.y + b.y),
+    vec2i: (a: wgsl.$Vec2i, b: wgsl.$Vec2i) => vec2i(a.x + b.x, a.y + b.y),
+    vec2u: (a: wgsl.$Vec2u, b: wgsl.$Vec2u) => vec2u(a.x + b.x, a.y + b.y),
 
-    vec3f: (a: v3f, b: v3f) => vec3f(a.x + b.x, a.y + b.y, a.z + b.z),
-    vec3i: (a: v3i, b: v3i) => vec3i(a.x + b.x, a.y + b.y, a.z + b.z),
-    vec3u: (a: v3u, b: v3u) => vec3u(a.x + b.x, a.y + b.y, a.z + b.z),
+    vec3f: (a: wgsl.$Vec3f, b: wgsl.$Vec3f) =>
+      vec3f(a.x + b.x, a.y + b.y, a.z + b.z),
+    vec3i: (a: wgsl.$Vec3i, b: wgsl.$Vec3i) =>
+      vec3i(a.x + b.x, a.y + b.y, a.z + b.z),
+    vec3u: (a: wgsl.$Vec3u, b: wgsl.$Vec3u) =>
+      vec3u(a.x + b.x, a.y + b.y, a.z + b.z),
 
-    vec4f: (a: v4f, b: v4f) =>
+    vec4f: (a: wgsl.$Vec4f, b: wgsl.$Vec4f) =>
       vec4f(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w),
-    vec4i: (a: v4i, b: v4i) =>
+    vec4i: (a: wgsl.$Vec4i, b: wgsl.$Vec4i) =>
       vec4i(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w),
-    vec4u: (a: v4u, b: v4u) =>
+    vec4u: (a: wgsl.$Vec4u, b: wgsl.$Vec4u) =>
       vec4u(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w),
-  } as Record<VecKind, <T extends vecBase>(lhs: T, rhs: T) => T>,
+  } as Record<VecKind, <T extends $VecBase>(lhs: T, rhs: T) => T>,
 
   sub: {
-    vec2f: (a: v2f, b: v2f) => vec2f(a.x - b.x, a.y - b.y),
-    vec2i: (a: v2i, b: v2i) => vec2i(a.x - b.x, a.y - b.y),
-    vec2u: (a: v2u, b: v2u) => vec2u(a.x - b.x, a.y - b.y),
+    vec2f: (a: wgsl.$Vec2f, b: wgsl.$Vec2f) => vec2f(a.x - b.x, a.y - b.y),
+    vec2i: (a: wgsl.$Vec2i, b: wgsl.$Vec2i) => vec2i(a.x - b.x, a.y - b.y),
+    vec2u: (a: wgsl.$Vec2u, b: wgsl.$Vec2u) => vec2u(a.x - b.x, a.y - b.y),
 
-    vec3f: (a: v3f, b: v3f) => vec3f(a.x - b.x, a.y - b.y, a.z - b.z),
-    vec3i: (a: v3i, b: v3i) => vec3i(a.x - b.x, a.y - b.y, a.z - b.z),
-    vec3u: (a: v3u, b: v3u) => vec3u(a.x - b.x, a.y - b.y, a.z - b.z),
+    vec3f: (a: wgsl.$Vec3f, b: wgsl.$Vec3f) =>
+      vec3f(a.x - b.x, a.y - b.y, a.z - b.z),
+    vec3i: (a: wgsl.$Vec3i, b: wgsl.$Vec3i) =>
+      vec3i(a.x - b.x, a.y - b.y, a.z - b.z),
+    vec3u: (a: wgsl.$Vec3u, b: wgsl.$Vec3u) =>
+      vec3u(a.x - b.x, a.y - b.y, a.z - b.z),
 
-    vec4f: (a: v4f, b: v4f) =>
+    vec4f: (a: wgsl.$Vec4f, b: wgsl.$Vec4f) =>
       vec4f(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w),
-    vec4i: (a: v4i, b: v4i) =>
+    vec4i: (a: wgsl.$Vec4i, b: wgsl.$Vec4i) =>
       vec4i(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w),
-    vec4u: (a: v4u, b: v4u) =>
+    vec4u: (a: wgsl.$Vec4u, b: wgsl.$Vec4u) =>
       vec4u(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w),
-  } as Record<VecKind, <T extends vecBase>(lhs: T, rhs: T) => T>,
+  } as Record<VecKind, <T extends $VecBase>(lhs: T, rhs: T) => T>,
 
   mul: {
-    vec2f: (s: number, v: v2f) => vec2f(s * v.x, s * v.y),
-    vec2i: (s: number, v: v2i) => vec2i(s * v.x, s * v.y),
-    vec2u: (s: number, v: v2u) => vec2u(s * v.x, s * v.y),
+    vec2f: (s: number, v: wgsl.$Vec2f) => vec2f(s * v.x, s * v.y),
+    vec2i: (s: number, v: wgsl.$Vec2i) => vec2i(s * v.x, s * v.y),
+    vec2u: (s: number, v: wgsl.$Vec2u) => vec2u(s * v.x, s * v.y),
 
-    vec3f: (s: number, v: v3f) => vec3f(s * v.x, s * v.y, s * v.z),
-    vec3i: (s: number, v: v3i) => vec3i(s * v.x, s * v.y, s * v.z),
-    vec3u: (s: number, v: v3u) => vec3u(s * v.x, s * v.y, s * v.z),
+    vec3f: (s: number, v: wgsl.$Vec3f) => vec3f(s * v.x, s * v.y, s * v.z),
+    vec3i: (s: number, v: wgsl.$Vec3i) => vec3i(s * v.x, s * v.y, s * v.z),
+    vec3u: (s: number, v: wgsl.$Vec3u) => vec3u(s * v.x, s * v.y, s * v.z),
 
-    vec4f: (s: number, v: v4f) => vec4f(s * v.x, s * v.y, s * v.z, s * v.w),
-    vec4i: (s: number, v: v4i) => vec4i(s * v.x, s * v.y, s * v.z, s * v.w),
-    vec4u: (s: number, v: v4u) => vec4u(s * v.x, s * v.y, s * v.z, s * v.w),
-  } as Record<VecKind, <T extends vecBase>(s: number, v: T) => T>,
+    vec4f: (s: number, v: wgsl.$Vec4f) =>
+      vec4f(s * v.x, s * v.y, s * v.z, s * v.w),
+    vec4i: (s: number, v: wgsl.$Vec4i) =>
+      vec4i(s * v.x, s * v.y, s * v.z, s * v.w),
+    vec4u: (s: number, v: wgsl.$Vec4u) =>
+      vec4u(s * v.x, s * v.y, s * v.z, s * v.w),
+  } as Record<VecKind, <T extends $VecBase>(s: number, v: T) => T>,
 
   dot: {
-    vec2f: (lhs: v2f, rhs: v2f) => lhs.x * rhs.x + lhs.y * rhs.y,
-    vec2i: (lhs: v2i, rhs: v2i) => lhs.x * rhs.x + lhs.y * rhs.y,
-    vec2u: (lhs: v2u, rhs: v2u) => lhs.x * rhs.x + lhs.y * rhs.y,
-    vec3f: (lhs: v3f, rhs: v3f) =>
+    vec2f: (lhs: wgsl.$Vec2f, rhs: wgsl.$Vec2f) =>
+      lhs.x * rhs.x + lhs.y * rhs.y,
+    vec2i: (lhs: wgsl.$Vec2i, rhs: wgsl.$Vec2i) =>
+      lhs.x * rhs.x + lhs.y * rhs.y,
+    vec2u: (lhs: wgsl.$Vec2u, rhs: wgsl.$Vec2u) =>
+      lhs.x * rhs.x + lhs.y * rhs.y,
+    vec3f: (lhs: wgsl.$Vec3f, rhs: wgsl.$Vec3f) =>
       lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z,
-    vec3i: (lhs: v3i, rhs: v3i) =>
+    vec3i: (lhs: wgsl.$Vec3i, rhs: wgsl.$Vec3i) =>
       lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z,
-    vec3u: (lhs: v3u, rhs: v3u) =>
+    vec3u: (lhs: wgsl.$Vec3u, rhs: wgsl.$Vec3u) =>
       lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z,
-    vec4f: (lhs: v4f, rhs: v4f) =>
+    vec4f: (lhs: wgsl.$Vec4f, rhs: wgsl.$Vec4f) =>
       lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w,
-    vec4i: (lhs: v4i, rhs: v4i) =>
+    vec4i: (lhs: wgsl.$Vec4i, rhs: wgsl.$Vec4i) =>
       lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w,
-    vec4u: (lhs: v4u, rhs: v4u) =>
+    vec4u: (lhs: wgsl.$Vec4u, rhs: wgsl.$Vec4u) =>
       lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w,
-  } as Record<VecKind, <T extends vecBase>(lhs: T, rhs: T) => number>,
+  } as Record<VecKind, <T extends $VecBase>(lhs: T, rhs: T) => number>,
 
   normalize: {
-    vec2f: (v: v2f) => {
+    vec2f: (v: wgsl.$Vec2f) => {
       const len = lengthVec2(v);
       return vec2f(v.x / len, v.y / len);
     },
-    vec2i: (v: v2i) => {
+    vec2i: (v: wgsl.$Vec2i) => {
       const len = lengthVec2(v);
       return vec2i(v.x / len, v.y / len);
     },
-    vec2u: (v: v2u) => {
+    vec2u: (v: wgsl.$Vec2u) => {
       const len = lengthVec2(v);
       return vec2u(v.x / len, v.y / len);
     },
 
-    vec3f: (v: v3f) => {
+    vec3f: (v: wgsl.$Vec3f) => {
       const len = lengthVec3(v);
       return vec3f(v.x / len, v.y / len, v.z / len);
     },
-    vec3i: (v: v3i) => {
+    vec3i: (v: wgsl.$Vec3i) => {
       const len = lengthVec3(v);
       return vec3i(v.x / len, v.y / len, v.z / len);
     },
-    vec3u: (v: v3u) => {
+    vec3u: (v: wgsl.$Vec3u) => {
       const len = lengthVec3(v);
       return vec3u(v.x / len, v.y / len, v.z / len);
     },
 
-    vec4f: (v: v4f) => {
+    vec4f: (v: wgsl.$Vec4f) => {
       const len = lengthVec4(v);
       return vec4f(v.x / len, v.y / len, v.z / len, v.w / len);
     },
-    vec4i: (v: v4i) => {
+    vec4i: (v: wgsl.$Vec4i) => {
       const len = lengthVec4(v);
       return vec4i(v.x / len, v.y / len, v.z / len, v.w / len);
     },
-    vec4u: (v: v4u) => {
+    vec4u: (v: wgsl.$Vec4u) => {
       const len = lengthVec4(v);
       return vec4u(v.x / len, v.y / len, v.z / len, v.w / len);
     },
-  } as Record<VecKind, <T extends vecBase>(v: T) => T>,
+  } as Record<VecKind, <T extends $VecBase>(v: T) => T>,
 
   cross: {
-    vec3f: (a: v3f, b: v3f) => {
+    vec3f: (a: wgsl.$Vec3f, b: wgsl.$Vec3f) => {
       return vec3f(
         a.y * b.z - a.z * b.y,
         a.z * b.x - a.x * b.z,
         a.x * b.y - a.y * b.x,
       );
     },
-    vec3i: (a: v3i, b: v3i) => {
+    vec3i: (a: wgsl.$Vec3i, b: wgsl.$Vec3i) => {
       return vec3i(
         a.y * b.z - a.z * b.y,
         a.z * b.x - a.x * b.z,
         a.x * b.y - a.y * b.x,
       );
     },
-    vec3u: (a: v3u, b: v3u) => {
+    vec3u: (a: wgsl.$Vec3u, b: wgsl.$Vec3u) => {
       return vec3u(
         a.y * b.z - a.z * b.y,
         a.z * b.x - a.x * b.z,
@@ -173,6 +177,6 @@ export const VectorOps = {
     },
   } as Record<
     'vec3f' | 'vec3i' | 'vec3u',
-    <T extends v3f | v3i | v3u>(a: T, b: T) => T
+    <T extends wgsl.$Vec3f | wgsl.$Vec3i | wgsl.$Vec3u>(a: T, b: T) => T
   >,
 };

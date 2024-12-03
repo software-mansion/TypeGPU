@@ -4,47 +4,20 @@ import alignIO from './alignIO';
 import { alignmentOf, customAlignmentOf } from './alignmentOf';
 import type { LooseDecorated } from './attributes';
 import type { AnyData, LooseArray, LooseStruct } from './dataTypes';
-import {
-  mat2x2f as createMat2x2f,
-  mat3x3f as createMat3x3f,
-  mat4x4f as createMat4x4f,
-} from './matrix';
+import { mat2x2f, mat3x3f, mat4x4f } from './matrix';
 import { sizeOf } from './sizeOf';
 import {
-  vec2f as createVec2f,
-  vec2i as createVec2i,
-  vec2u as createVec2u,
-  vec3f as createVec3f,
-  vec3i as createVec3i,
-  vec3u as createVec3u,
-  vec4f as createVec4f,
-  vec4i as createVec4i,
-  vec4u as createVec4u,
+  vec2f,
+  vec2i,
+  vec2u,
+  vec3f,
+  vec3i,
+  vec3u,
+  vec4f,
+  vec4i,
+  vec4u,
 } from './vector';
-import type {
-  $Mat2x2f,
-  $Mat3x3f,
-  $Mat4x4f,
-  $Vec2f,
-  $Vec2i,
-  $Vec2u,
-  $Vec3f,
-  $Vec3i,
-  $Vec3u,
-  $Vec4f,
-  $Vec4i,
-  $Vec4u,
-  AnyWgslData,
-  Atomic,
-  BaseWgslData,
-  Bool,
-  Decorated,
-  F32,
-  I32,
-  U32,
-  WgslArray,
-  WgslStruct,
-} from './wgslTypes';
+import type * as wgsl from './wgslTypes';
 
 type CompleteDataWriters = {
   [TType in AnyData['type']]: (
@@ -80,89 +53,89 @@ function sint8Read(input: ISerialInput): number {
 }
 
 const dataWriters = {
-  bool(output, _schema: Bool, value: boolean) {
+  bool(output, _schema: wgsl.Bool, value: boolean) {
     output.writeBool(value);
   },
 
-  f32(output, _schema: F32, value: number) {
+  f32(output, _schema: wgsl.F32, value: number) {
     output.writeFloat32(value);
   },
 
-  i32(output, _schema: I32, value: number) {
+  i32(output, _schema: wgsl.I32, value: number) {
     output.writeInt32(value);
   },
 
-  u32(output, _schema: U32, value: number) {
+  u32(output, _schema: wgsl.U32, value: number) {
     output.writeUint32(value);
   },
 
-  vec2f(output, _, value: $Vec2f) {
+  vec2f(output, _, value: wgsl.$Vec2f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
   },
 
-  vec2i(output, _, value: $Vec2i) {
+  vec2i(output, _, value: wgsl.$Vec2i) {
     output.writeInt32(value.x);
     output.writeInt32(value.y);
   },
 
-  vec2u(output, _, value: $Vec2u) {
+  vec2u(output, _, value: wgsl.$Vec2u) {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
   },
 
-  vec3f(output, _, value: $Vec3f) {
+  vec3f(output, _, value: wgsl.$Vec3f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
     output.writeFloat32(value.z);
   },
 
-  vec3i(output, _, value: $Vec3i) {
+  vec3i(output, _, value: wgsl.$Vec3i) {
     output.writeInt32(value.x);
     output.writeInt32(value.y);
     output.writeInt32(value.z);
   },
 
-  vec3u(output, _, value: $Vec3u) {
+  vec3u(output, _, value: wgsl.$Vec3u) {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
     output.writeUint32(value.z);
   },
 
-  vec4f(output, _, value: $Vec4f) {
+  vec4f(output, _, value: wgsl.$Vec4f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
     output.writeFloat32(value.z);
     output.writeFloat32(value.w);
   },
 
-  vec4i(output, _, value: $Vec4i) {
+  vec4i(output, _, value: wgsl.$Vec4i) {
     output.writeInt32(value.x);
     output.writeInt32(value.y);
     output.writeInt32(value.z);
     output.writeInt32(value.w);
   },
 
-  vec4u(output, _, value: $Vec4u) {
+  vec4u(output, _, value: wgsl.$Vec4u) {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
     output.writeUint32(value.z);
     output.writeUint32(value.w);
   },
 
-  mat2x2f(output, _, value: $Mat2x2f) {
+  mat2x2f(output, _, value: wgsl.$Mat2x2f) {
     for (let i = 0; i < value.length; ++i) {
       output.writeFloat32(value[i] as number);
     }
   },
 
-  mat3x3f(output, _, value: $Mat3x3f) {
+  mat3x3f(output, _, value: wgsl.$Mat3x3f) {
     for (let i = 0; i < value.length; ++i) {
       output.writeFloat32(value[i] as number);
     }
   },
 
-  mat4x4f(output, _, value: $Mat4x4f) {
+  mat4x4f(output, _, value: wgsl.$Mat4x4f) {
     for (let i = 0; i < value.length; ++i) {
       output.writeFloat32(value[i] as number);
     }
@@ -170,21 +143,21 @@ const dataWriters = {
 
   struct(
     output,
-    schema: WgslStruct,
-    value: InferRecord<Record<string, BaseWgslData>>,
+    schema: wgsl.WgslStruct,
+    value: InferRecord<Record<string, wgsl.BaseWgslData>>,
   ) {
     const alignment = alignmentOf(schema);
     alignIO(output, alignment);
 
     for (const [key, property] of Object.entries(schema.propTypes)) {
       alignIO(output, alignmentOf(property));
-      writeData(output, property, value[key] as BaseWgslData);
+      writeData(output, property, value[key] as wgsl.BaseWgslData);
     }
 
     alignIO(output, alignment);
   },
 
-  array(output, schema: WgslArray, value: Infer<BaseWgslData>[]) {
+  array(output, schema: wgsl.WgslArray, value: Infer<wgsl.BaseWgslData>[]) {
     if (schema.length === 0) {
       throw new Error('Cannot write using a runtime-sized schema.');
     }
@@ -194,17 +167,16 @@ const dataWriters = {
     const beginning = output.currentByteOffset;
     for (let i = 0; i < Math.min(schema.length, value.length); i++) {
       alignIO(output, alignment);
-      const elementType = schema.elementType as AnyWgslData;
-      writeData(output, elementType, value[i]);
+      writeData(output, schema.elementType, value[i]);
     }
     output.seekTo(beginning + sizeOf(schema));
   },
 
-  atomic(output, schema: Atomic, value: number) {
+  atomic(output, schema: wgsl.Atomic, value: number) {
     dataWriters[schema.inner.type]?.(output, schema, value);
   },
 
-  decorated(output, schema: Decorated, value: unknown) {
+  decorated(output, schema: wgsl.Decorated, value: unknown) {
     const alignment = customAlignmentOf(schema);
     alignIO(output, alignment);
 
@@ -215,47 +187,47 @@ const dataWriters = {
 
   // Loose Types
 
-  uint8x2(output, _, value: $Vec2u) {
+  uint8x2(output, _, value: wgsl.$Vec2u) {
     output.writeByte(value.x);
     output.writeByte(value.y);
   },
-  uint8x4(output, _, value: $Vec4u) {
+  uint8x4(output, _, value: wgsl.$Vec4u) {
     output.writeByte(value.x);
     output.writeByte(value.y);
     output.writeByte(value.z);
     output.writeByte(value.w);
   },
-  sint8x2(output, _, value: $Vec2i) {
+  sint8x2(output, _, value: wgsl.$Vec2i) {
     sint8Write(output, value.x);
     sint8Write(output, value.y);
   },
-  sint8x4(output, _, value: $Vec4i) {
+  sint8x4(output, _, value: wgsl.$Vec4i) {
     sint8Write(output, value.x);
     sint8Write(output, value.y);
     sint8Write(output, value.z);
     sint8Write(output, value.w);
   },
-  unorm8x2(output, _, value: $Vec2f) {
+  unorm8x2(output, _, value: wgsl.$Vec2f) {
     output.writeByte(Math.floor(value.x * 255));
     output.writeByte(Math.floor(value.y * 255));
   },
-  unorm8x4(output, _, value: $Vec4f) {
+  unorm8x4(output, _, value: wgsl.$Vec4f) {
     output.writeByte(Math.floor(value.x * 255));
     output.writeByte(Math.floor(value.y * 255));
     output.writeByte(Math.floor(value.z * 255));
     output.writeByte(Math.floor(value.w * 255));
   },
-  snorm8x2(output, _, value: $Vec2f) {
+  snorm8x2(output, _, value: wgsl.$Vec2f) {
     output.writeByte(Math.floor(value.x * 127 + 128));
     output.writeByte(Math.floor(value.y * 127 + 128));
   },
-  snorm8x4(output, _, value: $Vec4f) {
+  snorm8x4(output, _, value: wgsl.$Vec4f) {
     output.writeByte(Math.floor(value.x * 127 + 128));
     output.writeByte(Math.floor(value.y * 127 + 128));
     output.writeByte(Math.floor(value.z * 127 + 128));
     output.writeByte(Math.floor(value.w * 127 + 128));
   },
-  uint16x2(output, _, value: $Vec2u) {
+  uint16x2(output, _, value: wgsl.$Vec2u) {
     const buffer = new ArrayBuffer(4);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -263,7 +235,7 @@ const dataWriters = {
     view.setUint16(2, value.y, littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  uint16x4(output, _, value: $Vec4u) {
+  uint16x4(output, _, value: wgsl.$Vec4u) {
     const buffer = new ArrayBuffer(8);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -273,7 +245,7 @@ const dataWriters = {
     view.setUint16(6, value.w, littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  sint16x2(output, _, value: $Vec2i) {
+  sint16x2(output, _, value: wgsl.$Vec2i) {
     const buffer = new ArrayBuffer(4);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -281,7 +253,7 @@ const dataWriters = {
     view.setInt16(2, value.y, littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  sint16x4(output, _, value: $Vec4i) {
+  sint16x4(output, _, value: wgsl.$Vec4i) {
     const buffer = new ArrayBuffer(8);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -291,7 +263,7 @@ const dataWriters = {
     view.setInt16(6, value.w, littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  unorm16x2(output, _, value: $Vec2f) {
+  unorm16x2(output, _, value: wgsl.$Vec2f) {
     const buffer = new ArrayBuffer(4);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -299,7 +271,7 @@ const dataWriters = {
     view.setUint16(2, Math.floor(value.y * 65535), littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  unorm16x4(output, _, value: $Vec4f) {
+  unorm16x4(output, _, value: wgsl.$Vec4f) {
     const buffer = new ArrayBuffer(8);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -309,7 +281,7 @@ const dataWriters = {
     view.setUint16(6, Math.floor(value.w * 65535), littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  snorm16x2(output, _, value: $Vec2f) {
+  snorm16x2(output, _, value: wgsl.$Vec2f) {
     const buffer = new ArrayBuffer(4);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -317,7 +289,7 @@ const dataWriters = {
     view.setUint16(2, Math.floor(value.y * 32767 + 32768), littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  snorm16x4(output, _, value: $Vec4f) {
+  snorm16x4(output, _, value: wgsl.$Vec4f) {
     const buffer = new ArrayBuffer(8);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -327,11 +299,11 @@ const dataWriters = {
     view.setUint16(6, Math.floor(value.w * 32767 + 32768), littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  float16x2(output, _, value: $Vec2f) {
+  float16x2(output, _, value: wgsl.$Vec2f) {
     output.writeFloat16(value.x);
     output.writeFloat16(value.y);
   },
-  float16x4(output, _, value: $Vec4f) {
+  float16x4(output, _, value: wgsl.$Vec4f) {
     output.writeFloat16(value.x);
     output.writeFloat16(value.y);
     output.writeFloat16(value.z);
@@ -340,16 +312,16 @@ const dataWriters = {
   float32(output, _, value: number) {
     output.writeFloat32(value);
   },
-  float32x2(output, _, value: $Vec2f) {
+  float32x2(output, _, value: wgsl.$Vec2f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
   },
-  float32x3(output, _, value: $Vec3f) {
+  float32x3(output, _, value: wgsl.$Vec3f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
     output.writeFloat32(value.z);
   },
-  float32x4(output, _, value: $Vec4f) {
+  float32x4(output, _, value: wgsl.$Vec4f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
     output.writeFloat32(value.z);
@@ -358,16 +330,16 @@ const dataWriters = {
   uint32(output, _, value: number) {
     output.writeUint32(value);
   },
-  uint32x2(output, _, value: $Vec2u) {
+  uint32x2(output, _, value: wgsl.$Vec2u) {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
   },
-  uint32x3(output, _, value: $Vec3u) {
+  uint32x3(output, _, value: wgsl.$Vec3u) {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
     output.writeUint32(value.z);
   },
-  uint32x4(output, _, value: $Vec4u) {
+  uint32x4(output, _, value: wgsl.$Vec4u) {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
     output.writeUint32(value.z);
@@ -376,22 +348,22 @@ const dataWriters = {
   sint32(output, _, value: number) {
     output.writeInt32(value);
   },
-  sint32x2(output, _, value: $Vec2i) {
+  sint32x2(output, _, value: wgsl.$Vec2i) {
     output.writeInt32(value.x);
     output.writeInt32(value.y);
   },
-  sint32x3(output, _, value: $Vec3i) {
+  sint32x3(output, _, value: wgsl.$Vec3i) {
     output.writeInt32(value.x);
     output.writeInt32(value.y);
     output.writeInt32(value.z);
   },
-  sint32x4(output, _, value: $Vec4i) {
+  sint32x4(output, _, value: wgsl.$Vec4i) {
     output.writeInt32(value.x);
     output.writeInt32(value.y);
     output.writeInt32(value.z);
     output.writeInt32(value.w);
   },
-  'unorm10-10-10-2'(output, _, value: $Vec4f) {
+  'unorm10-10-10-2'(output, _, value: wgsl.$Vec4f) {
     let packed = 0;
     packed |= ((value.x * 1023) & 1023) << 22; // r (10 bits)
     packed |= ((value.x * 1023) & 1023) << 12; // g (10 bits)
@@ -438,7 +410,7 @@ const dataWriters = {
   (output: ISerialOutput, schema: unknown, value: unknown) => void
 >;
 
-export function writeData<TData extends BaseWgslData>(
+export function writeData<TData extends wgsl.BaseWgslData>(
   output: ISerialOutput,
   schema: TData,
   value: Infer<TData>,
@@ -469,19 +441,15 @@ const dataReaders = {
   },
 
   vec2f(input) {
-    return createVec2f(input.readFloat32(), input.readFloat32());
+    return vec2f(input.readFloat32(), input.readFloat32());
   },
 
   vec3f(input: ISerialInput) {
-    return createVec3f(
-      input.readFloat32(),
-      input.readFloat32(),
-      input.readFloat32(),
-    );
+    return vec3f(input.readFloat32(), input.readFloat32(), input.readFloat32());
   },
 
   vec4f(input: ISerialInput) {
-    return createVec4f(
+    return vec4f(
       input.readFloat32(),
       input.readFloat32(),
       input.readFloat32(),
@@ -490,15 +458,15 @@ const dataReaders = {
   },
 
   vec2i(input) {
-    return createVec2i(input.readInt32(), input.readInt32());
+    return vec2i(input.readInt32(), input.readInt32());
   },
 
   vec3i(input: ISerialInput) {
-    return createVec3i(input.readInt32(), input.readInt32(), input.readInt32());
+    return vec3i(input.readInt32(), input.readInt32(), input.readInt32());
   },
 
   vec4i(input: ISerialInput) {
-    return createVec4i(
+    return vec4i(
       input.readInt32(),
       input.readInt32(),
       input.readInt32(),
@@ -507,19 +475,15 @@ const dataReaders = {
   },
 
   vec2u(input) {
-    return createVec2u(input.readUint32(), input.readUint32());
+    return vec2u(input.readUint32(), input.readUint32());
   },
 
   vec3u(input: ISerialInput) {
-    return createVec3u(
-      input.readUint32(),
-      input.readUint32(),
-      input.readUint32(),
-    );
+    return vec3u(input.readUint32(), input.readUint32(), input.readUint32());
   },
 
   vec4u(input: ISerialInput) {
-    return createVec4u(
+    return vec4u(
       input.readUint32(),
       input.readUint32(),
       input.readUint32(),
@@ -528,7 +492,7 @@ const dataReaders = {
   },
 
   mat2x2f(input: ISerialInput) {
-    return createMat2x2f(
+    return mat2x2f(
       input.readFloat32(),
       input.readFloat32(),
       input.readFloat32(),
@@ -543,7 +507,7 @@ const dataReaders = {
       return value;
     };
 
-    return createMat3x3f(
+    return mat3x3f(
       input.readFloat32(),
       input.readFloat32(),
       skipOneAfter(),
@@ -559,7 +523,7 @@ const dataReaders = {
   },
 
   mat4x4f(input: ISerialInput) {
-    return createMat4x4f(
+    return mat4x4f(
       input.readFloat32(),
       input.readFloat32(),
       input.readFloat32(),
@@ -582,7 +546,7 @@ const dataReaders = {
     );
   },
 
-  struct(input: ISerialInput, schema: WgslStruct) {
+  struct(input: ISerialInput, schema: wgsl.WgslStruct) {
     const alignment = alignmentOf(schema);
     alignIO(input, alignment);
     const result = {} as Record<string, unknown>;
@@ -593,7 +557,7 @@ const dataReaders = {
     }
 
     alignIO(input, alignment);
-    return result as InferRecord<Record<string, BaseWgslData>>;
+    return result as InferRecord<Record<string, wgsl.BaseWgslData>>;
   },
 
   array(input, schema) {
@@ -606,7 +570,7 @@ const dataReaders = {
 
     for (let i = 0; i < schema.length; i++) {
       alignIO(input, alignment);
-      const elementType = schema.elementType as AnyWgslData;
+      const elementType = schema.elementType as wgsl.AnyWgslData;
       const value = readData(input, elementType);
       elements.push(value);
     }
@@ -615,11 +579,11 @@ const dataReaders = {
     return elements as never[];
   },
 
-  atomic(input, schema: Atomic): number {
+  atomic(input, schema: wgsl.Atomic): number {
     return readData(input, schema.inner);
   },
 
-  decorated(input, schema: Decorated) {
+  decorated(input, schema: wgsl.Decorated) {
     const alignment = customAlignmentOf(schema);
     alignIO(input, alignment);
 
@@ -631,26 +595,24 @@ const dataReaders = {
 
   // Loose Types
 
-  uint8x2: (i) => createVec2u(i.readByte(), i.readByte()),
-  uint8x4: (i) =>
-    createVec4u(i.readByte(), i.readByte(), i.readByte(), i.readByte()),
+  uint8x2: (i) => vec2u(i.readByte(), i.readByte()),
+  uint8x4: (i) => vec4u(i.readByte(), i.readByte(), i.readByte(), i.readByte()),
   sint8x2: (i) => {
-    return createVec2i(sint8Read(i), sint8Read(i));
+    return vec2i(sint8Read(i), sint8Read(i));
   },
-  sint8x4: (i) =>
-    createVec4i(sint8Read(i), sint8Read(i), sint8Read(i), sint8Read(i)),
-  unorm8x2: (i) => createVec2f(i.readByte() / 255, i.readByte() / 255),
+  sint8x4: (i) => vec4i(sint8Read(i), sint8Read(i), sint8Read(i), sint8Read(i)),
+  unorm8x2: (i) => vec2f(i.readByte() / 255, i.readByte() / 255),
   unorm8x4: (i) =>
-    createVec4f(
+    vec4f(
       i.readByte() / 255,
       i.readByte() / 255,
       i.readByte() / 255,
       i.readByte() / 255,
     ),
   snorm8x2: (i) =>
-    createVec2f((i.readByte() - 128) / 127, (i.readByte() - 128) / 127),
+    vec2f((i.readByte() - 128) / 127, (i.readByte() - 128) / 127),
   snorm8x4: (i) =>
-    createVec4f(
+    vec4f(
       (i.readByte() - 128) / 127,
       (i.readByte() - 128) / 127,
       (i.readByte() - 128) / 127,
@@ -662,7 +624,7 @@ const dataReaders = {
     const view = new DataView(buffer);
     const littleEndian = i.endianness === 'little';
 
-    return createVec2u(
+    return vec2u(
       view.getUint16(0, littleEndian),
       view.getUint16(2, littleEndian),
     );
@@ -673,7 +635,7 @@ const dataReaders = {
     const view = new DataView(buffer);
     const littleEndian = i.endianness === 'little';
 
-    return createVec4u(
+    return vec4u(
       view.getUint16(0, littleEndian),
       view.getUint16(2, littleEndian),
       view.getUint16(4, littleEndian),
@@ -686,7 +648,7 @@ const dataReaders = {
     const view = new DataView(buffer);
     const littleEndian = i.endianness === 'little';
 
-    return createVec2i(
+    return vec2i(
       view.getInt16(0, littleEndian),
       view.getInt16(2, littleEndian),
     );
@@ -697,7 +659,7 @@ const dataReaders = {
     const view = new DataView(buffer);
     const littleEndian = i.endianness === 'little';
 
-    return createVec4i(
+    return vec4i(
       view.getInt16(0, littleEndian),
       view.getInt16(2, littleEndian),
       view.getInt16(4, littleEndian),
@@ -710,7 +672,7 @@ const dataReaders = {
     const view = new DataView(buffer);
     const littleEndian = i.endianness === 'little';
 
-    return createVec2f(
+    return vec2f(
       view.getUint16(0, littleEndian) / 65535,
       view.getUint16(2, littleEndian) / 65535,
     );
@@ -721,7 +683,7 @@ const dataReaders = {
     const view = new DataView(buffer);
     const littleEndian = i.endianness === 'little';
 
-    return createVec4f(
+    return vec4f(
       view.getUint16(0, littleEndian) / 65535,
       view.getUint16(2, littleEndian) / 65535,
       view.getUint16(4, littleEndian) / 65535,
@@ -734,7 +696,7 @@ const dataReaders = {
     const view = new DataView(buffer);
     const littleEndian = i.endianness === 'little';
 
-    return createVec2f(
+    return vec2f(
       (view.getUint16(0, littleEndian) - 32768) / 32767,
       (view.getUint16(2, littleEndian) - 32768) / 32767,
     );
@@ -745,49 +707,38 @@ const dataReaders = {
     const view = new DataView(buffer);
     const littleEndian = i.endianness === 'little';
 
-    return createVec4f(
+    return vec4f(
       (view.getUint16(0, littleEndian) - 32768) / 32767,
       (view.getUint16(2, littleEndian) - 32768) / 32767,
       (view.getUint16(4, littleEndian) - 32768) / 32767,
       (view.getUint16(6, littleEndian) - 32768) / 32767,
     );
   },
-  float16x2: (i) => createVec2f(i.readFloat16(), i.readFloat16()),
+  float16x2: (i) => vec2f(i.readFloat16(), i.readFloat16()),
   float16x4: (i) =>
-    createVec4f(
-      i.readFloat16(),
-      i.readFloat16(),
-      i.readFloat16(),
-      i.readFloat16(),
-    ),
+    vec4f(i.readFloat16(), i.readFloat16(), i.readFloat16(), i.readFloat16()),
   float32: (i) => i.readFloat32(),
-  float32x2: (i) => createVec2f(i.readFloat32(), i.readFloat32()),
-  float32x3: (i) =>
-    createVec3f(i.readFloat32(), i.readFloat32(), i.readFloat32()),
+  float32x2: (i) => vec2f(i.readFloat32(), i.readFloat32()),
+  float32x3: (i) => vec3f(i.readFloat32(), i.readFloat32(), i.readFloat32()),
   float32x4: (i) =>
-    createVec4f(
-      i.readFloat32(),
-      i.readFloat32(),
-      i.readFloat32(),
-      i.readFloat32(),
-    ),
+    vec4f(i.readFloat32(), i.readFloat32(), i.readFloat32(), i.readFloat32()),
   uint32: (i) => i.readUint32(),
-  uint32x2: (i) => createVec2u(i.readUint32(), i.readUint32()),
-  uint32x3: (i) => createVec3u(i.readUint32(), i.readUint32(), i.readUint32()),
+  uint32x2: (i) => vec2u(i.readUint32(), i.readUint32()),
+  uint32x3: (i) => vec3u(i.readUint32(), i.readUint32(), i.readUint32()),
   uint32x4: (i) =>
-    createVec4u(i.readUint32(), i.readUint32(), i.readUint32(), i.readUint32()),
+    vec4u(i.readUint32(), i.readUint32(), i.readUint32(), i.readUint32()),
   sint32: (i) => i.readInt32(),
-  sint32x2: (i) => createVec2i(i.readInt32(), i.readInt32()),
-  sint32x3: (i) => createVec3i(i.readInt32(), i.readInt32(), i.readInt32()),
+  sint32x2: (i) => vec2i(i.readInt32(), i.readInt32()),
+  sint32x3: (i) => vec3i(i.readInt32(), i.readInt32(), i.readInt32()),
   sint32x4: (i) =>
-    createVec4i(i.readInt32(), i.readInt32(), i.readInt32(), i.readInt32()),
+    vec4i(i.readInt32(), i.readInt32(), i.readInt32(), i.readInt32()),
   'unorm10-10-10-2'(i) {
     const packed = i.readUint32();
     const r = (packed >> 22) / 1023;
     const g = ((packed >> 12) & 1023) / 1023;
     const b = ((packed >> 2) & 1023) / 1023;
     const a = (packed & 3) / 3;
-    return createVec4f(r, g, b, a);
+    return vec4f(r, g, b, a);
   },
 
   'loose-struct'(input, schema: LooseStruct) {
@@ -797,7 +748,7 @@ const dataReaders = {
       result[key] = readData(input, property);
     }
 
-    return result as InferRecord<Record<string, BaseWgslData>>;
+    return result as InferRecord<Record<string, wgsl.BaseWgslData>>;
   },
 
   'loose-array'(input, schema: LooseArray) {
@@ -826,7 +777,7 @@ const dataReaders = {
   (input: ISerialInput, schema: unknown) => unknown
 >;
 
-export function readData<TData extends BaseWgslData>(
+export function readData<TData extends wgsl.BaseWgslData>(
   input: ISerialInput,
   schema: TData,
 ): Infer<TData> {
