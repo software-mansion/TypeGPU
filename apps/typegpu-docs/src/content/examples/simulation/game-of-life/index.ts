@@ -1,7 +1,7 @@
-import tgpu, { type TgpuBuffer, Storage } from 'typegpu';
+import tgpu, { type TgpuBindGroup, type TgpuBuffer, Storage } from 'typegpu';
 import { arrayOf, type TgpuArray, type U32, u32, vec2u } from 'typegpu/data';
 
-const bindGroupLayoutCompute = tgpu.bindGroupLayout({
+const layoutCompute = {
   size: {
     storage: vec2u,
     access: 'readonly',
@@ -14,12 +14,15 @@ const bindGroupLayoutCompute = tgpu.bindGroupLayout({
     storage: (arrayLength: number) => arrayOf(u32, arrayLength),
     access: 'mutable',
   },
-});
-const bindGroupLayoutRender = tgpu.bindGroupLayout({
+} as const;
+const groupLayout = {
   size: {
     uniform: vec2u,
   },
-});
+} as const;
+
+const bindGroupLayoutCompute = tgpu.bindGroupLayout(layoutCompute);
+const bindGroupLayoutRender = tgpu.bindGroupLayout(groupLayout);
 
 const root = await tgpu.init();
 const device = root.device;
@@ -35,13 +38,10 @@ context.configure({
   format: presentationFormat,
 });
 
-const GameOptions = {
-  width: 128,
-  height: 128,
-  timestep: 4,
-  workgroupSize: 8,
-  maxIters: 1000,
-};
+let workgroupSize = 16;
+let gameWidth = 1024;
+let gameHeight = 1024;
+let timestep = 4;
 
 const computeShader = device.createShaderModule({
   code: `
@@ -142,9 +142,11 @@ const cellsStride: GPUVertexBufferLayout = {
   ],
 };
 
-let wholeTime = 0,
-  stepTime = 0,
-  buffer0: TgpuBuffer<TgpuArray<U32>> & Storage,
+let buffer0: TgpuBuffer<TgpuArray<U32>> & Storage,
+  sizeBuffer,
+  bindGroup0: TgpuBindGroup<typeof layoutCompute>,
+  bindGroup1: TgpuBindGroup<typeof layoutCompute>,
+  uniformBindGroup: TgpuBindGroup<typeof groupLayout>,
   buffer1: TgpuBuffer<TgpuArray<U32>> & Storage;
 
 // compute pipeline
@@ -155,39 +157,100 @@ const computePipeline = device.createComputePipeline({
   compute: {
     module: computeShader,
     constants: {
-      blockSize: GameOptions.workgroupSize,
+      blockSize: workgroupSize,
     },
   },
 });
-const sizeBuffer = root
-  .createBuffer(vec2u, vec2u(GameOptions.width, GameOptions.height))
-  .$usage('uniform')
-  .$usage('storage');
-const length = GameOptions.width * GameOptions.height;
-const cells = Array.from({ length }).fill(0) as number[];
-for (let i = 0; i < length; i++) {
-  cells[i] = Math.random() < 0.25 ? 1 : 0;
-}
-buffer0 = root
-  .createBuffer(arrayOf(u32, length), cells)
-  .$usage('storage')
-  .$usage('vertex');
-buffer1 = root
-  .createBuffer(arrayOf(u32, length))
-  .$usage('storage')
-  .$usage('vertex');
+let currentInterval: NodeJS.Timer | undefined;
+let render: (swap: boolean) => void;
+let loop: (swap: boolean) => void;
+const resetGameData = () => {
+  sizeBuffer = root
+    .createBuffer(vec2u, vec2u(gameWidth, gameHeight))
+    .$usage('uniform')
+    .$usage('storage');
+  const length = gameWidth * gameHeight;
+  const cells = Array.from({ length })
+    .fill(0)
+    .map((_, i) => (Math.random() < 0.25 ? 1 : 0));
+  buffer0 = root
+    .createBuffer(arrayOf(u32, length), cells)
+    .$usage('storage')
+    .$usage('vertex');
+  buffer1 = root
+    .createBuffer(arrayOf(u32, length))
+    .$usage('storage')
+    .$usage('vertex');
 
-const bindGroup0 = bindGroupLayoutCompute.populate({
-  size: sizeBuffer,
-  current: buffer0,
-  next: buffer1,
-});
+  bindGroup0 = bindGroupLayoutCompute.populate({
+    size: sizeBuffer,
+    current: buffer0,
+    next: buffer1,
+  });
 
-const bindGroup1 = bindGroupLayoutCompute.populate({
-  size: sizeBuffer,
-  current: buffer1,
-  next: buffer0,
-});
+  bindGroup1 = bindGroupLayoutCompute.populate({
+    size: sizeBuffer,
+    current: buffer1,
+    next: buffer0,
+  });
+  uniformBindGroup = bindGroupLayoutRender.populate({
+    size: sizeBuffer,
+  });
+
+  render = (swap: boolean) => {
+    const view = context.getCurrentTexture().createView();
+    const renderPass: GPURenderPassDescriptor = {
+      colorAttachments: [
+        {
+          view,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      ],
+    };
+    commandEncoder = device.createCommandEncoder();
+
+    // compute
+    const passEncoderCompute = commandEncoder.beginComputePass();
+    passEncoderCompute.setPipeline(computePipeline);
+    passEncoderCompute.setBindGroup(
+      0,
+      root.unwrap(swap ? bindGroup1 : bindGroup0),
+    );
+    passEncoderCompute.dispatchWorkgroups(
+      gameWidth / workgroupSize,
+      gameHeight / workgroupSize,
+    );
+    passEncoderCompute.end();
+    // render
+    const passEncoderRender = commandEncoder.beginRenderPass(renderPass);
+    passEncoderRender.setPipeline(renderPipeline);
+    passEncoderRender.setVertexBuffer(0, root.unwrap(swap ? buffer1 : buffer0));
+    passEncoderRender.setVertexBuffer(1, root.unwrap(squareBuffer));
+    passEncoderRender.setBindGroup(0, root.unwrap(uniformBindGroup));
+    passEncoderRender.draw(4, length);
+    passEncoderRender.end();
+    device.queue.submit([commandEncoder.finish()]);
+  };
+  loop = () => {
+    requestAnimationFrame(() => {
+      if (!paused) {
+        render(swap);
+        swap = !swap;
+      }
+    });
+  };
+  startGame();
+};
+
+const startGame = () => {
+  if (currentInterval) clearInterval(currentInterval as unknown as number);
+  currentInterval = setInterval(() => {
+    loop(swap);
+  }, timestep);
+};
+
+resetGameData();
 
 const renderPipeline = device.createRenderPipeline({
   layout: device.createPipelineLayout({
@@ -210,59 +273,49 @@ const renderPipeline = device.createRenderPipeline({
   },
 });
 
-const uniformBindGroup = bindGroupLayoutRender.populate({
-  size: sizeBuffer,
-});
+let swap = false;
+let paused = false;
 
-const render = (swap: boolean) => {
-  const view = context.getCurrentTexture().createView();
-  const renderPass: GPURenderPassDescriptor = {
-    colorAttachments: [
-      {
-        view,
-        loadOp: 'clear',
-        storeOp: 'store',
-      },
-    ],
-  };
-  commandEncoder = device.createCommandEncoder();
+export const controls = {
+  size: {
+    initial: '1024',
+    options: [16, 32, 64, 128, 256, 512, 1024].map((x) => x.toString()),
+    onSelectChange: (value: string) => {
+      gameWidth = Number.parseInt(value);
+      gameHeight = Number.parseInt(value);
+      resetGameData();
+    },
+  },
 
-  // compute
-  const passEncoderCompute = commandEncoder.beginComputePass();
-  passEncoderCompute.setPipeline(computePipeline);
-  passEncoderCompute.setBindGroup(
-    0,
-    root.unwrap(swap ? bindGroup1 : bindGroup0),
-  );
-  passEncoderCompute.dispatchWorkgroups(
-    GameOptions.width / GameOptions.workgroupSize,
-    GameOptions.height / GameOptions.workgroupSize,
-  );
-  passEncoderCompute.end();
-  // render
-  const passEncoderRender = commandEncoder.beginRenderPass(renderPass);
-  passEncoderRender.setPipeline(renderPipeline);
-  passEncoderRender.setVertexBuffer(0, root.unwrap(swap ? buffer1 : buffer0));
-  passEncoderRender.setVertexBuffer(1, root.unwrap(squareBuffer));
-  passEncoderRender.setBindGroup(0, root.unwrap(uniformBindGroup));
-  passEncoderRender.draw(4, length);
-  passEncoderRender.end();
-  device.queue.submit([commandEncoder.finish()]);
+  'timestep (ms)': {
+    initial: 15,
+    min: 15,
+    max: 100,
+    step: 1,
+    onSliderChange: (value: number) => {
+      timestep = value;
+      startGame();
+    },
+  },
+
+  'workgroup size': {
+    initial: '16',
+    options: [1, 2, 4, 8, 16].map((x) => x.toString()),
+    onSelectChange: (value: string) => {
+      workgroupSize = Number.parseInt(value);
+      resetGameData();
+    },
+  },
+
+  pause: {
+    initial: false,
+    onToggleChange: (value: boolean) => {
+      paused = value;
+    },
+  },
 };
 
-let swap = false;
-
-function loop() {
-  if (wholeTime >= GameOptions.maxIters) return;
-  if (GameOptions.timestep) {
-    wholeTime++;
-    stepTime++;
-    if (stepTime >= GameOptions.timestep) {
-      render(swap);
-      stepTime -= GameOptions.timestep;
-      swap = !swap;
-    }
-  }
-
-  requestAnimationFrame(loop);
+export function onCleanup() {
+  root.destroy();
+  root.device.destroy();
 }
