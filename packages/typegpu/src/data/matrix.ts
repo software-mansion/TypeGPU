@@ -1,4 +1,4 @@
-import { vec2f, vec3f, vec4f, type vecBase } from './vector';
+import { type VecKind, vec2f, vec3f, vec4f } from './vector';
 import type {
   $Mat2x2f,
   $Mat3x3f,
@@ -19,6 +19,12 @@ import type {
 // Implementation
 // --------------
 
+type $VecBase = {
+  kind: VecKind;
+  length: number;
+  [n: number]: number;
+};
+
 interface MatSchemaOptions<TType extends string, ValueType> {
   type: TType;
   rows: number;
@@ -28,13 +34,13 @@ interface MatSchemaOptions<TType extends string, ValueType> {
 
 type MatConstructor<
   ValueType extends matBase<ColumnType>,
-  ColumnType extends vecBase,
+  ColumnType extends $VecBase,
 > = (...args: (number | ColumnType)[]) => ValueType;
 
 function createMatSchema<
   TType extends string,
   ValueType extends matBase<ColumnType>,
-  ColumnType extends vecBase,
+  ColumnType extends $VecBase,
 >(
   options: MatSchemaOptions<TType, ValueType>,
 ): { type: TType; __repr: ValueType } & MatConstructor<ValueType, ColumnType> {

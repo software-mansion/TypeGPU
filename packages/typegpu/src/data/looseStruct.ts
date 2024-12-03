@@ -37,11 +37,11 @@ export const looseStruct = <TProps extends Record<string, BaseWgslData>>(
  * defining vertex buffers instead.
  *
  * @example
- * isLooseStructSchema(d.struct({ a: d.u32 })) // false
- * isLooseStructSchema(d.looseStruct({ a: d.u32 })) // true
- * isLooseStructSchema(d.vec3f) // false
+ * isLooseStruct(d.struct({ a: d.u32 })) // false
+ * isLooseStruct(d.looseStruct({ a: d.u32 })) // true
+ * isLooseStruct(d.vec3f) // false
  */
-export function isLooseStructSchema<T extends LooseStruct>(
+export function isLooseStruct<T extends LooseStruct>(
   schema: T | unknown,
 ): schema is T {
   return (schema as T)?.type === 'loose-struct';

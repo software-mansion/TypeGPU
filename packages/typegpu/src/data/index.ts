@@ -3,6 +3,15 @@
  */
 
 export { bool, f32, i32, u32 } from './numeric';
+export {
+  isWgslData,
+  isWgslArray,
+  isWgslStruct,
+  isAlignAttrib,
+  isBuiltinAttrib,
+  isLocationAttrib,
+  isSizeAttrib,
+} from './wgslTypes';
 export type {
   WgslStruct,
   WgslArray,
@@ -65,7 +74,7 @@ export {
   vec4u,
 } from './vector';
 export { looseArrayOf, isLooseArray } from './looseArray';
-export { looseStruct, isLooseStructSchema } from './looseStruct';
+export { looseStruct, isLooseStruct } from './looseStruct';
 export {
   mat2x2f,
   mat3x3f,

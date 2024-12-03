@@ -1,6 +1,7 @@
 import { getAttributesString } from '../../data/attributes';
 import type {
   AnyWgslData,
+  BaseWgslData,
   Bool,
   F32,
   I32,
@@ -23,6 +24,10 @@ import type {
 import { assertExhaustive } from '../../shared/utilityTypes';
 import type { ResolutionCtx } from '../../types';
 
+/**
+ * Schemas for which their `type` property directly
+ * translates to the resulting WGSL code.
+ */
 const identityTypes = [
   'bool',
   'f32',
@@ -41,6 +46,7 @@ const identityTypes = [
   'mat3x3f',
   'mat4x4f',
 ];
+
 type IdentityType =
   | Bool
   | F32
@@ -63,16 +69,21 @@ function isIdentityType(data: AnyWgslData): data is IdentityType {
   return identityTypes.includes(data.type);
 }
 
+function resolveStructProperty(
+  ctx: ResolutionCtx,
+  key: string,
+  property: BaseWgslData,
+) {
+  return `  ${getAttributesString(property)}${key}: ${ctx.resolve(property as AnyWgslData)},\n`;
+}
+
 function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
   const id = ctx.names.makeUnique(struct.label);
 
   ctx.addDeclaration(`
 struct ${id} {
 ${Object.entries(struct.propTypes)
-  .map(
-    ([key, field]) =>
-      `  ${getAttributesString(field)}${key}: ${ctx.resolve(field as AnyWgslData)},\n`,
-  )
+  .map(([key, property]) => resolveStructProperty(ctx, key, property))
   .join('')}\
 }\n`);
 

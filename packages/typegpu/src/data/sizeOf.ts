@@ -1,20 +1,11 @@
-import {
-  isDecorated,
-  isLooseArray,
-  isLooseDecorated,
-  isLooseStructSchema,
-} from '.';
 import { roundUp } from '../mathUtils';
 import { alignmentOf, customAlignmentOf } from './alignmentOf';
-import { getCustomSize } from './attributes';
+import { getCustomSize, isDecorated, isLooseDecorated } from './attributes';
 import type { LooseStruct, LooseTypeLiteral } from './dataTypes';
-import {
-  type BaseWgslData,
-  type WgslStruct,
-  type WgslTypeLiteral,
-  isArraySchema,
-  isStructSchema,
-} from './wgslTypes';
+import { isLooseArray } from './looseArray';
+import { isLooseStruct } from './looseStruct';
+import type { BaseWgslData, WgslStruct, WgslTypeLiteral } from './wgslTypes';
+import { isWgslArray, isWgslStruct } from './wgslTypes';
 
 const knownSizesMap: Record<string, number> = {
   bool: 4,
@@ -103,15 +94,15 @@ function computeSize(data: object): number {
     return knownSize;
   }
 
-  if (isStructSchema(data)) {
+  if (isWgslStruct(data)) {
     return sizeOfStruct(data);
   }
 
-  if (isLooseStructSchema(data)) {
+  if (isLooseStruct(data)) {
     return sizeOfLooseStruct(data);
   }
 
-  if (isArraySchema(data)) {
+  if (isWgslArray(data)) {
     if (data.length === 0) {
       return Number.NaN;
     }

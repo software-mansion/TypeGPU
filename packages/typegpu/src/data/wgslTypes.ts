@@ -711,11 +711,11 @@ export function isWgslData(value: unknown): value is AnyWgslData {
  * whereas looseArray schemas cannot.
  *
  * @example
- * isArraySchema(d.arrayOf(d.u32, 4)) // true
- * isArraySchema(d.looseArrayOf(d.u32, 4)) // false
- * isArraySchema(d.vec3f) // false
+ * isWgslArray(d.arrayOf(d.u32, 4)) // true
+ * isWgslArray(d.looseArrayOf(d.u32, 4)) // false
+ * isWgslArray(d.vec3f) // false
  */
-export function isArraySchema<T extends WgslArray>(
+export function isWgslArray<T extends WgslArray>(
   schema: T | unknown,
 ): schema is T {
   return (schema as T)?.type === 'array';
@@ -729,11 +729,11 @@ export function isArraySchema<T extends WgslArray>(
  * whereas looseStruct schemas cannot.
  *
  * @example
- * isStructSchema(d.struct({ a: d.u32 })) // true
- * isStructSchema(d.looseStruct({ a: d.u32 })) // false
- * isStructSchema(d.vec3f) // false
+ * isWgslStruct(d.struct({ a: d.u32 })) // true
+ * isWgslStruct(d.looseStruct({ a: d.u32 })) // false
+ * isWgslStruct(d.vec3f) // false
  */
-export function isStructSchema<T extends WgslStruct>(
+export function isWgslStruct<T extends WgslStruct>(
   schema: T | unknown,
 ): schema is T {
   return (schema as T)?.type === 'struct';

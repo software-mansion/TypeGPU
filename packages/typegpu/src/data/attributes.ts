@@ -74,9 +74,7 @@ export type ExtractAttributes<T> = T extends {
   ? T['attribs']
   : [];
 
-export type UnwrapDecorated<T> = T extends { readonly inner: infer TInner }
-  ? TInner
-  : T;
+type Undecorate<T> = T extends { readonly inner: infer TInner } ? TInner : T;
 
 /**
  * Decorates a data-type `TData` with an attribute `TAttrib`.
@@ -96,12 +94,9 @@ export type Decorate<
   TData extends BaseWgslData,
   TAttrib extends AnyAttribute,
 > = TData['type'] extends WgslTypeLiteral
-  ? Decorated<UnwrapDecorated<TData>, [TAttrib, ...ExtractAttributes<TData>]>
+  ? Decorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
   : TData['type'] extends LooseTypeLiteral
-    ? LooseDecorated<
-        UnwrapDecorated<TData>,
-        [TAttrib, ...ExtractAttributes<TData>]
-      >
+    ? LooseDecorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
     : never;
 
 export type IsBuiltin<T> = ExtractAttributes<T>[number] extends []

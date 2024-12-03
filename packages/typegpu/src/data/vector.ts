@@ -1,5 +1,4 @@
 import { inGPUMode } from '../gpuMode';
-import type { NumberArrayView, TgpuResolvable } from '../types';
 import type {
   $Vec2f,
   $Vec2i,
@@ -69,7 +68,7 @@ function makeVecSchema<TType extends string, TValue>(
   return Object.assign(construct, VecSchema);
 }
 
-abstract class vec2Impl implements vec2 {
+abstract class vec2Impl {
   public readonly length = 2;
   abstract readonly kind: `vec2${'f' | 'u' | 'i'}`;
 
@@ -154,7 +153,7 @@ class vec2uImpl extends vec2Impl {
   }
 }
 
-abstract class vec3Impl implements vec3 {
+abstract class vec3Impl {
   public readonly length = 3;
   abstract readonly kind: `vec3${'f' | 'u' | 'i'}`;
   [n: number]: number;
@@ -248,7 +247,7 @@ class vec3uImpl extends vec3Impl {
   }
 }
 
-abstract class vec4Impl implements vec4 {
+abstract class vec4Impl {
   public readonly length = 4;
   abstract readonly kind: `vec4${'f' | 'u' | 'i'}`;
   [n: number]: number;
@@ -352,28 +351,7 @@ class vec4uImpl extends vec4Impl {
   }
 }
 
-interface vec2 extends NumberArrayView, TgpuResolvable {
-  x: number;
-  y: number;
-  [Symbol.iterator](): Iterator<number>;
-}
-
-interface vec3 extends NumberArrayView, TgpuResolvable {
-  x: number;
-  y: number;
-  z: number;
-  [Symbol.iterator](): Iterator<number>;
-}
-
-interface vec4 extends NumberArrayView, TgpuResolvable {
-  x: number;
-  y: number;
-  z: number;
-  w: number;
-  [Symbol.iterator](): Iterator<number>;
-}
-
-const vecProxyHandler: ProxyHandler<vecBase> = {
+const vecProxyHandler: ProxyHandler<{ kind: VecKind }> = {
   get: (target, prop) => {
     if (typeof prop === 'symbol' || !Number.isNaN(Number.parseInt(prop))) {
       return Reflect.get(target, prop);
@@ -454,13 +432,6 @@ export type VecKind =
   | 'vec4f'
   | 'vec4i'
   | 'vec4u';
-
-/**
- * Common interface for all vector types, no matter their size and inner type.
- */
-export interface vecBase extends NumberArrayView {
-  kind: VecKind;
-}
 
 /**
  * Type of the `d.vec2f` object/function: vector data type schema/constructor

@@ -20,11 +20,6 @@ export type Resource = {
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
-export interface NumberArrayView {
-  readonly length: number;
-  [n: number]: number;
-}
-
 export interface FnToWgslOptions {
   args: Resource[];
   returnType: AnyWgslData;

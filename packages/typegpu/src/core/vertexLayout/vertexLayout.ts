@@ -1,10 +1,10 @@
 import { alignmentOf, customAlignmentOf } from '../../data/alignmentOf';
 import { isDecorated, isLooseDecorated } from '../../data/attributes';
 import type { LooseArray } from '../../data/dataTypes';
-import { isLooseStructSchema } from '../../data/looseStruct';
+import { isLooseStruct } from '../../data/looseStruct';
 import { sizeOf } from '../../data/sizeOf';
 import type { BaseWgslData, WgslArray } from '../../data/wgslTypes';
-import { isStructSchema } from '../../data/wgslTypes';
+import { isWgslStruct } from '../../data/wgslTypes';
 import { roundUp } from '../../mathUtils';
 import type { TgpuNamable } from '../../namable';
 import {
@@ -70,7 +70,7 @@ function dataToContainedAttribs<
     );
   }
 
-  if (isStructSchema(data)) {
+  if (isWgslStruct(data)) {
     let memberOffset = offset;
 
     return Object.fromEntries(
@@ -86,7 +86,7 @@ function dataToContainedAttribs<
     ) as DataToContainedAttribs<TData>;
   }
 
-  if (isLooseStructSchema(data)) {
+  if (isLooseStruct(data)) {
     let memberOffset = offset;
 
     return Object.fromEntries(

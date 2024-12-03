@@ -1,6 +1,4 @@
 import type { Infer } from '../shared/repr';
-import { alignmentOf } from './alignmentOf';
-import { sizeOf } from './sizeOf';
 import type { Atomic, I32, U32 } from './wgslTypes';
 
 // ----------
@@ -43,11 +41,6 @@ class AtomicImpl<TSchema extends U32 | I32> implements Atomic<TSchema> {
   public readonly type = 'atomic';
   /** Type-token, not available at runtime */
   public readonly __repr!: Infer<TSchema>;
-  public readonly size: number;
-  public readonly alignment: number;
 
-  constructor(public readonly inner: TSchema) {
-    this.size = sizeOf(this.inner);
-    this.alignment = alignmentOf(this.inner);
-  }
+  constructor(public readonly inner: TSchema) {}
 }

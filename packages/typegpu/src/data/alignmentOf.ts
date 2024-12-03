@@ -1,9 +1,9 @@
 import { getCustomAlignment } from './attributes';
 import { isDecorated, isLooseDecorated } from './attributes';
 import { isLooseArray } from './looseArray';
-import { isLooseStructSchema } from './looseStruct';
+import { isLooseStruct } from './looseStruct';
 import { packedFormats } from './vertexFormatData';
-import { type BaseWgslData, isArraySchema, isStructSchema } from './wgslTypes';
+import { type BaseWgslData, isWgslArray, isWgslStruct } from './wgslTypes';
 
 const knownAlignmentMap: Record<string, number> = {
   bool: 4,
@@ -31,17 +31,17 @@ function computeAlignment(data: object): number {
     return knownAlignment;
   }
 
-  if (isStructSchema(data)) {
+  if (isWgslStruct(data)) {
     return Object.values(data.propTypes)
       .map((prop) => alignmentOf(prop))
       .reduce((a, b) => (a > b ? a : b));
   }
 
-  if (isArraySchema(data)) {
+  if (isWgslArray(data)) {
     return alignmentOf(data.elementType);
   }
 
-  if (isLooseStructSchema(data)) {
+  if (isLooseStruct(data)) {
     // A loose struct is alignment to its first property.
     const firstProp = Object.values(data.propTypes)[0];
     return firstProp ? getCustomAlignment(firstProp) ?? 1 : 1;
@@ -65,7 +65,7 @@ function computeAlignment(data: object): number {
 }
 
 function computeCustomAlignment(data: BaseWgslData): number {
-  if (isLooseStructSchema(data)) {
+  if (isLooseStruct(data)) {
     // A loose struct is alignment to its first property.
     const firstProp = Object.values(data.propTypes)[0];
     return firstProp ? customAlignmentOf(firstProp) : 1;
