@@ -107,10 +107,17 @@ describe('looseStruct', () => {
     const s3 = looseStruct({
       a: vec2f, // 8 bytes
       b: align(16, vec3u), // 8 padding bytes + 12 bytes = 20
+      // Total: 8 + 20 = 28
+    });
+    expect(sizeOf(s3)).toEqual(28);
+
+    const s4 = looseStruct({
+      a: vec2f, // 8 bytes
+      b: align(16, vec3u), // 8 padding bytes + 12 bytes = 20
       c: s2, // 4 padding bytes + 36 bytes = 40
       // Total: 8 + 20 + 40 = 68
     });
-    expect(sizeOf(s3)).toEqual(68);
+    expect(sizeOf(s4)).toEqual(68);
   });
 
   it('properly writes and reads data', () => {

@@ -5,8 +5,8 @@ import {
   isLooseStructSchema,
 } from '.';
 import { roundUp } from '../mathUtils';
-import { alignmentOf } from './alignmentOf';
-import { getCustomAlignment, getCustomSize } from './attributes';
+import { alignmentOf, customAlignmentOf } from './alignmentOf';
+import { getCustomSize } from './attributes';
 import type { LooseStruct, LooseTypeLiteral } from './dataTypes';
 import {
   type BaseWgslData,
@@ -88,7 +88,7 @@ function sizeOfLooseStruct(data: LooseStruct) {
   let size = 0;
 
   for (const property of Object.values(data.propTypes)) {
-    const alignment = getCustomAlignment(property) ?? 1;
+    const alignment = customAlignmentOf(property);
     size = roundUp(size, alignment);
     size += sizeOf(property);
   }
@@ -122,7 +122,7 @@ function computeSize(data: object): number {
   }
 
   if (isLooseArray(data)) {
-    const alignment = getCustomAlignment(data.elementType) ?? 1;
+    const alignment = customAlignmentOf(data.elementType);
     const stride = roundUp(sizeOf(data.elementType), alignment);
     return stride * data.length;
   }

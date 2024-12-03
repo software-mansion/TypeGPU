@@ -1,6 +1,5 @@
-import { alignmentOf } from '../../data/alignmentOf';
+import { alignmentOf, customAlignmentOf } from '../../data/alignmentOf';
 import { isDecorated, isLooseDecorated } from '../../data/attributes';
-import { getCustomAlignment } from '../../data/attributes';
 import type { LooseArray } from '../../data/dataTypes';
 import { isLooseStructSchema } from '../../data/looseStruct';
 import { sizeOf } from '../../data/sizeOf';
@@ -67,7 +66,7 @@ function dataToContainedAttribs<
     return dataToContainedAttribs(
       layout,
       data.inner,
-      roundUp(offset, getCustomAlignment(data) ?? 1),
+      roundUp(offset, customAlignmentOf(data)),
     );
   }
 
@@ -92,7 +91,7 @@ function dataToContainedAttribs<
 
     return Object.fromEntries(
       Object.entries(data.propTypes).map(([key, value]) => {
-        memberOffset = roundUp(memberOffset, getCustomAlignment(value) ?? 1);
+        memberOffset = roundUp(memberOffset, customAlignmentOf(value));
         const attrib = [
           key,
           dataToContainedAttribs(layout, value, memberOffset),

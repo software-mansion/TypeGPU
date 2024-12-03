@@ -1,18 +1,18 @@
 import { vec2f, vec3f, vec4f, type vecBase } from './vector';
 import type {
+  $Mat2x2f,
+  $Mat3x3f,
+  $Mat4x4f,
+  $Vec2f,
+  $Vec3f,
+  $Vec4f,
   Mat2x2f,
   Mat3x3f,
   Mat4x4f,
   mat2x2,
-  mat2x2f as mat2x2fType,
   mat3x3,
-  mat3x3f as mat3x3fType,
   mat4x4,
-  mat4x4f as mat4x4fType,
   matBase,
-  vec2f as v2f,
-  vec3f as v3f,
-  vec4f as v4f,
 } from './wgslTypes';
 
 // --------------
@@ -71,7 +71,7 @@ function createMatSchema<
   } & MatConstructor<ValueType, ColumnType>;
 }
 
-abstract class mat2x2Impl<TColumn extends v2f> implements mat2x2<TColumn> {
+abstract class mat2x2Impl<TColumn extends $Vec2f> implements mat2x2<TColumn> {
   public readonly columns: readonly [TColumn, TColumn];
   public readonly length = 4;
   [n: number]: number;
@@ -125,15 +125,15 @@ abstract class mat2x2Impl<TColumn extends v2f> implements mat2x2<TColumn> {
   }
 }
 
-class mat2x2fImpl extends mat2x2Impl<v2f> implements mat2x2fType {
+class mat2x2fImpl extends mat2x2Impl<$Vec2f> implements $Mat2x2f {
   public readonly kind = 'mat2x2f';
 
-  makeColumn(e0: number, e1: number): v2f {
+  makeColumn(e0: number, e1: number): $Vec2f {
     return vec2f(e0, e1);
   }
 }
 
-abstract class mat3x3Impl<TColumn extends v3f> implements mat3x3<TColumn> {
+abstract class mat3x3Impl<TColumn extends $Vec3f> implements mat3x3<TColumn> {
   public readonly columns: readonly [TColumn, TColumn, TColumn];
   public readonly length = 12;
   [n: number]: number;
@@ -263,14 +263,14 @@ abstract class mat3x3Impl<TColumn extends v3f> implements mat3x3<TColumn> {
   set [11](_: number) {}
 }
 
-class mat3x3fImpl extends mat3x3Impl<v3f> implements mat3x3fType {
+class mat3x3fImpl extends mat3x3Impl<$Vec3f> implements $Mat3x3f {
   public readonly kind = 'mat3x3f';
-  makeColumn(x: number, y: number, z: number): v3f {
+  makeColumn(x: number, y: number, z: number): $Vec3f {
     return vec3f(x, y, z);
   }
 }
 
-abstract class mat4x4Impl<TColumn extends v4f> implements mat4x4<TColumn> {
+abstract class mat4x4Impl<TColumn extends $Vec4f> implements mat4x4<TColumn> {
   public readonly columns: readonly [TColumn, TColumn, TColumn, TColumn];
 
   constructor(...elements: number[]) {
@@ -451,10 +451,10 @@ abstract class mat4x4Impl<TColumn extends v4f> implements mat4x4<TColumn> {
   }
 }
 
-class mat4x4fImpl extends mat4x4Impl<v4f> implements mat4x4fType {
+class mat4x4fImpl extends mat4x4Impl<$Vec4f> implements $Mat4x4f {
   public readonly kind = 'mat4x4f';
 
-  makeColumn(x: number, y: number, z: number, w: number): v4f {
+  makeColumn(x: number, y: number, z: number, w: number): $Vec4f {
     return vec4f(x, y, z, w);
   }
 }
@@ -466,9 +466,9 @@ class mat4x4fImpl extends mat4x4Impl<v4f> implements mat4x4fType {
 /**
  * Type of the `d.mat2x2f` object/function: matrix data type schema/constructor
  */
-export type Mat2x2fConstructor = ((...elements: number[]) => mat2x2fType) &
-  ((...columns: v2f[]) => mat2x2fType) &
-  (() => mat2x2fType);
+export type Mat2x2fConstructor = ((...elements: number[]) => $Mat2x2f) &
+  ((...columns: $Vec2f[]) => $Mat2x2f) &
+  (() => $Mat2x2f);
 
 /**
  *
@@ -492,7 +492,7 @@ export type Mat2x2fConstructor = ((...elements: number[]) => mat2x2fType) &
  * @example
  * const buffer = root.createBuffer(d.mat2x2f, d.mat2x2f(0, 1, 2, 3)); // buffer holding a d.mat2x2f value, with an initial value of ((0, 1), (2, 3))
  */
-export const mat2x2f = createMatSchema<'mat2x2f', mat2x2fType, v2f>({
+export const mat2x2f = createMatSchema<'mat2x2f', $Mat2x2f, $Vec2f>({
   type: 'mat2x2f',
   rows: 2,
   columns: 2,
@@ -502,9 +502,9 @@ export const mat2x2f = createMatSchema<'mat2x2f', mat2x2fType, v2f>({
 /**
  * Type of the `d.mat3x3f` object/function: matrix data type schema/constructor
  */
-export type Mat3x3fConstructor = ((...elements: number[]) => mat3x3fType) &
-  ((...columns: v3f[]) => mat3x3fType) &
-  (() => mat3x3fType);
+export type Mat3x3fConstructor = ((...elements: number[]) => $Mat3x3f) &
+  ((...columns: $Vec3f[]) => $Mat3x3f) &
+  (() => $Mat3x3f);
 
 /**
  *
@@ -530,7 +530,7 @@ export type Mat3x3fConstructor = ((...elements: number[]) => mat3x3fType) &
  * @example
  * const buffer = root.createBuffer(d.mat3x3f, d.mat3x3f()); // buffer holding a d.mat3x3f value, with an initial value of mat3x3f filled with zeros
  */
-export const mat3x3f = createMatSchema<'mat3x3f', mat3x3fType, v3f>({
+export const mat3x3f = createMatSchema<'mat3x3f', $Mat3x3f, $Vec3f>({
   type: 'mat3x3f',
   rows: 3,
   columns: 3,
@@ -540,9 +540,9 @@ export const mat3x3f = createMatSchema<'mat3x3f', mat3x3fType, v3f>({
 /**
  * Type of the `d.mat4x4f` object/function: matrix data type schema/constructor
  */
-export type Mat4x4fConstructor = ((...elements: number[]) => mat4x4fType) &
-  ((...columns: v4f[]) => mat4x4fType) &
-  (() => mat4x4fType);
+export type Mat4x4fConstructor = ((...elements: number[]) => $Mat4x4f) &
+  ((...columns: $Vec4f[]) => $Mat4x4f) &
+  (() => $Mat4x4f);
 
 /**
  *
@@ -570,7 +570,7 @@ export type Mat4x4fConstructor = ((...elements: number[]) => mat4x4fType) &
  * @example
  * const buffer = root.createBuffer(d.mat4x4f, d.mat4x4f()); // buffer holding a d.mat4x4f value, with an initial value of mat4x4f filled with zeros
  */
-export const mat4x4f = createMatSchema<'mat4x4f', mat4x4fType, v4f>({
+export const mat4x4f = createMatSchema<'mat4x4f', $Mat4x4f, $Vec4f>({
   type: 'mat4x4f',
   rows: 4,
   columns: 4,

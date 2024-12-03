@@ -1,6 +1,15 @@
 import { inGPUMode } from '../gpuMode';
 import type { NumberArrayView, TgpuResolvable } from '../types';
 import type {
+  $Vec2f,
+  $Vec2i,
+  $Vec2u,
+  $Vec3f,
+  $Vec3i,
+  $Vec3u,
+  $Vec4f,
+  $Vec4i,
+  $Vec4u,
   Vec2f,
   Vec2i,
   Vec2u,
@@ -10,15 +19,6 @@ import type {
   Vec4f,
   Vec4i,
   Vec4u,
-  vec2f as vec2fType,
-  vec2i as vec2iType,
-  vec2u as vec2uType,
-  vec3f as vec3fType,
-  vec3i as vec3iType,
-  vec3u as vec3uType,
-  vec4f as vec4fType,
-  vec4i as vec4iType,
-  vec4u as vec4uType,
 } from './wgslTypes';
 
 // --------------
@@ -109,48 +109,48 @@ abstract class vec2Impl implements vec2 {
 class vec2fImpl extends vec2Impl {
   readonly kind = 'vec2f';
 
-  make2(x: number, y: number): vec2fType {
-    return new vec2fImpl(x, y) as unknown as vec2fType;
+  make2(x: number, y: number): $Vec2f {
+    return new vec2fImpl(x, y) as unknown as $Vec2f;
   }
 
-  make3(x: number, y: number, z: number): vec3fType {
-    return new vec3fImpl(x, y, z) as unknown as vec3fType;
+  make3(x: number, y: number, z: number): $Vec3f {
+    return new vec3fImpl(x, y, z) as unknown as $Vec3f;
   }
 
-  make4(x: number, y: number, z: number, w: number): vec4fType {
-    return new vec4fImpl(x, y, z, w) as unknown as vec4fType;
+  make4(x: number, y: number, z: number, w: number): $Vec4f {
+    return new vec4fImpl(x, y, z, w) as unknown as $Vec4f;
   }
 }
 
 class vec2iImpl extends vec2Impl {
   readonly kind = 'vec2i';
 
-  make2(x: number, y: number): vec2iType {
-    return new vec2iImpl(x, y) as unknown as vec2iType;
+  make2(x: number, y: number): $Vec2i {
+    return new vec2iImpl(x, y) as unknown as $Vec2i;
   }
 
-  make3(x: number, y: number, z: number): vec3iType {
-    return new vec3iImpl(x, y, z) as unknown as vec3iType;
+  make3(x: number, y: number, z: number): $Vec3i {
+    return new vec3iImpl(x, y, z) as unknown as $Vec3i;
   }
 
-  make4(x: number, y: number, z: number, w: number): vec4iType {
-    return new vec4iImpl(x, y, z, w) as unknown as vec4iType;
+  make4(x: number, y: number, z: number, w: number): $Vec4i {
+    return new vec4iImpl(x, y, z, w) as unknown as $Vec4i;
   }
 }
 
 class vec2uImpl extends vec2Impl {
   readonly kind = 'vec2u';
 
-  make2(x: number, y: number): vec2uType {
-    return new vec2uImpl(x, y) as unknown as vec2uType;
+  make2(x: number, y: number): $Vec2u {
+    return new vec2uImpl(x, y) as unknown as $Vec2u;
   }
 
-  make3(x: number, y: number, z: number): vec3uType {
-    return new vec3uImpl(x, y, z) as unknown as vec3uType;
+  make3(x: number, y: number, z: number): $Vec3u {
+    return new vec3uImpl(x, y, z) as unknown as $Vec3u;
   }
 
-  make4(x: number, y: number, z: number, w: number): vec4uType {
-    return new vec4uImpl(x, y, z, w) as unknown as vec4uType;
+  make4(x: number, y: number, z: number, w: number): $Vec4u {
+    return new vec4uImpl(x, y, z, w) as unknown as $Vec4u;
   }
 }
 
@@ -203,48 +203,48 @@ abstract class vec3Impl implements vec3 {
 class vec3fImpl extends vec3Impl {
   readonly kind = 'vec3f';
 
-  make2(x: number, y: number): vec2fType {
-    return new vec2fImpl(x, y) as unknown as vec2fType;
+  make2(x: number, y: number): $Vec2f {
+    return new vec2fImpl(x, y) as unknown as $Vec2f;
   }
 
-  make3(x: number, y: number, z: number): vec3fType {
-    return new vec3fImpl(x, y, z) as unknown as vec3fType;
+  make3(x: number, y: number, z: number): $Vec3f {
+    return new vec3fImpl(x, y, z) as unknown as $Vec3f;
   }
 
-  make4(x: number, y: number, z: number, w: number): vec4fType {
-    return new vec4fImpl(x, y, z, w) as unknown as vec4fType;
+  make4(x: number, y: number, z: number, w: number): $Vec4f {
+    return new vec4fImpl(x, y, z, w) as unknown as $Vec4f;
   }
 }
 
 class vec3iImpl extends vec3Impl {
   readonly kind = 'vec3i';
 
-  make2(x: number, y: number): vec2iType {
-    return new vec2iImpl(x, y) as unknown as vec2iType;
+  make2(x: number, y: number): $Vec2i {
+    return new vec2iImpl(x, y) as unknown as $Vec2i;
   }
 
-  make3(x: number, y: number, z: number): vec3iType {
-    return new vec3iImpl(x, y, z) as unknown as vec3iType;
+  make3(x: number, y: number, z: number): $Vec3i {
+    return new vec3iImpl(x, y, z) as unknown as $Vec3i;
   }
 
-  make4(x: number, y: number, z: number, w: number): vec4iType {
-    return new vec4iImpl(x, y, z, w) as unknown as vec4iType;
+  make4(x: number, y: number, z: number, w: number): $Vec4i {
+    return new vec4iImpl(x, y, z, w) as unknown as $Vec4i;
   }
 }
 
 class vec3uImpl extends vec3Impl {
   readonly kind = 'vec3u';
 
-  make2(x: number, y: number): vec2uType {
-    return new vec2uImpl(x, y) as unknown as vec2uType;
+  make2(x: number, y: number): $Vec2u {
+    return new vec2uImpl(x, y) as unknown as $Vec2u;
   }
 
-  make3(x: number, y: number, z: number): vec3uType {
-    return new vec3uImpl(x, y, z) as unknown as vec3uType;
+  make3(x: number, y: number, z: number): $Vec3u {
+    return new vec3uImpl(x, y, z) as unknown as $Vec3u;
   }
 
-  make4(x: number, y: number, z: number, w: number): vec4uType {
-    return new vec4uImpl(x, y, z, w) as unknown as vec4uType;
+  make4(x: number, y: number, z: number, w: number): $Vec4u {
+    return new vec4uImpl(x, y, z, w) as unknown as $Vec4u;
   }
 }
 
@@ -307,48 +307,48 @@ abstract class vec4Impl implements vec4 {
 class vec4fImpl extends vec4Impl {
   readonly kind = 'vec4f';
 
-  make2(x: number, y: number): vec2fType {
-    return new vec2fImpl(x, y) as unknown as vec2fType;
+  make2(x: number, y: number): $Vec2f {
+    return new vec2fImpl(x, y) as unknown as $Vec2f;
   }
 
-  make3(x: number, y: number, z: number): vec3fType {
-    return new vec3fImpl(x, y, z) as unknown as vec3fType;
+  make3(x: number, y: number, z: number): $Vec3f {
+    return new vec3fImpl(x, y, z) as unknown as $Vec3f;
   }
 
-  make4(x: number, y: number, z: number, w: number): vec4fType {
-    return new vec4fImpl(x, y, z, w) as unknown as vec4fType;
+  make4(x: number, y: number, z: number, w: number): $Vec4f {
+    return new vec4fImpl(x, y, z, w) as unknown as $Vec4f;
   }
 }
 
 class vec4iImpl extends vec4Impl {
   readonly kind = 'vec4i';
 
-  make2(x: number, y: number): vec2iType {
-    return new vec2iImpl(x, y) as unknown as vec2iType;
+  make2(x: number, y: number): $Vec2i {
+    return new vec2iImpl(x, y) as unknown as $Vec2i;
   }
 
-  make3(x: number, y: number, z: number): vec3iType {
-    return new vec3iImpl(x, y, z) as unknown as vec3iType;
+  make3(x: number, y: number, z: number): $Vec3i {
+    return new vec3iImpl(x, y, z) as unknown as $Vec3i;
   }
 
-  make4(x: number, y: number, z: number, w: number): vec4iType {
-    return new vec4iImpl(x, y, z, w) as unknown as vec4iType;
+  make4(x: number, y: number, z: number, w: number): $Vec4i {
+    return new vec4iImpl(x, y, z, w) as unknown as $Vec4i;
   }
 }
 
 class vec4uImpl extends vec4Impl {
   readonly kind = 'vec4u';
 
-  make2(x: number, y: number): vec2uType {
-    return new vec2uImpl(x, y) as unknown as vec2uType;
+  make2(x: number, y: number): $Vec2u {
+    return new vec2uImpl(x, y) as unknown as $Vec2u;
   }
 
-  make3(x: number, y: number, z: number): vec3uType {
-    return new vec3uImpl(x, y, z) as unknown as vec3uType;
+  make3(x: number, y: number, z: number): $Vec3u {
+    return new vec3uImpl(x, y, z) as unknown as $Vec3u;
   }
 
-  make4(x: number, y: number, z: number, w: number): vec4uType {
-    return new vec4uImpl(x, y, z, w) as unknown as vec4uType;
+  make4(x: number, y: number, z: number, w: number): $Vec4u {
+    return new vec4uImpl(x, y, z, w) as unknown as $Vec4u;
   }
 }
 
@@ -465,9 +465,9 @@ export interface vecBase extends NumberArrayView {
 /**
  * Type of the `d.vec2f` object/function: vector data type schema/constructor
  */
-export type Vec2fConstructor = ((x: number, y: number) => vec2fType) &
-  ((xy: number) => vec2fType) &
-  (() => vec2fType);
+export type Vec2fConstructor = ((x: number, y: number) => $Vec2f) &
+  ((xy: number) => $Vec2f) &
+  (() => $Vec2f);
 
 /**
  *
@@ -486,17 +486,17 @@ export const vec2f = makeVecSchema({
   type: 'vec2f',
   length: 2,
   make: (x: number, y: number) =>
-    new Proxy(new vec2fImpl(x, y), vecProxyHandler) as vec2fType,
+    new Proxy(new vec2fImpl(x, y), vecProxyHandler) as $Vec2f,
   makeFromScalar: (x) =>
-    new Proxy(new vec2fImpl(x, x), vecProxyHandler) as vec2fType,
+    new Proxy(new vec2fImpl(x, x), vecProxyHandler) as $Vec2f,
 }) as Vec2f & Vec2fConstructor;
 
 /**
  * Type of the `d.vec2i` object/function: vector data type schema/constructor
  */
-export type Vec2iConstructor = ((x: number, y: number) => vec2iType) &
-  ((xy: number) => vec2iType) &
-  (() => vec2iType);
+export type Vec2iConstructor = ((x: number, y: number) => $Vec2i) &
+  ((xy: number) => $Vec2i) &
+  (() => $Vec2i);
 
 /**
  *
@@ -515,17 +515,17 @@ export const vec2i = makeVecSchema({
   type: 'vec2i',
   length: 2,
   make: (x: number, y: number) =>
-    new Proxy(new vec2iImpl(x, y), vecProxyHandler) as vec2iType,
+    new Proxy(new vec2iImpl(x, y), vecProxyHandler) as $Vec2i,
   makeFromScalar: (x) =>
-    new Proxy(new vec2iImpl(x, x), vecProxyHandler) as vec2iType,
+    new Proxy(new vec2iImpl(x, x), vecProxyHandler) as $Vec2i,
 }) as Vec2i & Vec2iConstructor;
 
 /**
  * Type of the `d.vec2u` object/function: vector data type schema/constructor
  */
-export type Vec2uConstructor = ((x: number, y: number) => vec2uType) &
-  ((xy: number) => vec2uType) &
-  (() => vec2uType);
+export type Vec2uConstructor = ((x: number, y: number) => $Vec2u) &
+  ((xy: number) => $Vec2u) &
+  (() => $Vec2u);
 
 /**
  *
@@ -544,21 +544,17 @@ export const vec2u = makeVecSchema({
   type: 'vec2u',
   length: 2,
   make: (x: number, y: number) =>
-    new Proxy(new vec2uImpl(x, y), vecProxyHandler) as vec2uType,
+    new Proxy(new vec2uImpl(x, y), vecProxyHandler) as $Vec2u,
   makeFromScalar: (x) =>
-    new Proxy(new vec2uImpl(x, x), vecProxyHandler) as vec2uType,
+    new Proxy(new vec2uImpl(x, x), vecProxyHandler) as $Vec2u,
 }) as Vec2u & Vec2uConstructor;
 
 /**
  * Type of the `d.vec3f` object/function: vector data type schema/constructor
  */
-export type Vec3fConstructor = ((
-  x: number,
-  y: number,
-  z: number,
-) => vec3fType) &
-  ((xyz: number) => vec3fType) &
-  (() => vec3fType);
+export type Vec3fConstructor = ((x: number, y: number, z: number) => $Vec3f) &
+  ((xyz: number) => $Vec3f) &
+  (() => $Vec3f);
 
 /**
  *
@@ -577,21 +573,17 @@ export const vec3f = makeVecSchema({
   type: 'vec3f',
   length: 3,
   make: (x, y, z) =>
-    new Proxy(new vec3fImpl(x, y, z), vecProxyHandler) as vec3fType,
+    new Proxy(new vec3fImpl(x, y, z), vecProxyHandler) as $Vec3f,
   makeFromScalar: (x) =>
-    new Proxy(new vec3fImpl(x, x, x), vecProxyHandler) as vec3fType,
+    new Proxy(new vec3fImpl(x, x, x), vecProxyHandler) as $Vec3f,
 }) as Vec3f & Vec3fConstructor;
 
 /**
  * Type of the `d.vec3i` object/function: vector data type schema/constructor
  */
-export type Vec3iConstructor = ((
-  x: number,
-  y: number,
-  z: number,
-) => vec3iType) &
-  ((xyz: number) => vec3iType) &
-  (() => vec3iType);
+export type Vec3iConstructor = ((x: number, y: number, z: number) => $Vec3i) &
+  ((xyz: number) => $Vec3i) &
+  (() => $Vec3i);
 
 /**
  *
@@ -610,21 +602,17 @@ export const vec3i = makeVecSchema({
   type: 'vec3i',
   length: 3,
   make: (x, y, z) =>
-    new Proxy(new vec3iImpl(x, y, z), vecProxyHandler) as vec3iType,
+    new Proxy(new vec3iImpl(x, y, z), vecProxyHandler) as $Vec3i,
   makeFromScalar: (x) =>
-    new Proxy(new vec3iImpl(x, x, x), vecProxyHandler) as vec3iType,
+    new Proxy(new vec3iImpl(x, x, x), vecProxyHandler) as $Vec3i,
 }) as Vec3i & Vec3iConstructor;
 
 /**
  * Type of the `d.vec3u` object/function: vector data type schema/constructor
  */
-export type Vec3uConstructor = ((
-  x: number,
-  y: number,
-  z: number,
-) => vec3uType) &
-  ((xyz: number) => vec3uType) &
-  (() => vec3uType);
+export type Vec3uConstructor = ((x: number, y: number, z: number) => $Vec3u) &
+  ((xyz: number) => $Vec3u) &
+  (() => $Vec3u);
 
 /**
  *
@@ -643,9 +631,9 @@ export const vec3u = makeVecSchema({
   type: 'vec3u',
   length: 3,
   make: (x, y, z) =>
-    new Proxy(new vec3uImpl(x, y, z), vecProxyHandler) as vec3uType,
+    new Proxy(new vec3uImpl(x, y, z), vecProxyHandler) as $Vec3u,
   makeFromScalar: (x) =>
-    new Proxy(new vec3uImpl(x, x, x), vecProxyHandler) as vec3uType,
+    new Proxy(new vec3uImpl(x, x, x), vecProxyHandler) as $Vec3u,
 }) as Vec3u & Vec3uConstructor;
 
 /**
@@ -656,9 +644,9 @@ export type Vec4fConstructor = ((
   y: number,
   z: number,
   w: number,
-) => vec4fType) &
-  ((xyzw: number) => vec4fType) &
-  (() => vec4fType);
+) => $Vec4f) &
+  ((xyzw: number) => $Vec4f) &
+  (() => $Vec4f);
 
 /**
  *
@@ -677,9 +665,9 @@ export const vec4f = makeVecSchema({
   type: 'vec4f',
   length: 4,
   make: (x, y, z, w) =>
-    new Proxy(new vec4fImpl(x, y, z, w), vecProxyHandler) as vec4fType,
+    new Proxy(new vec4fImpl(x, y, z, w), vecProxyHandler) as $Vec4f,
   makeFromScalar: (x) =>
-    new Proxy(new vec4fImpl(x, x, x, x), vecProxyHandler) as vec4fType,
+    new Proxy(new vec4fImpl(x, x, x, x), vecProxyHandler) as $Vec4f,
 }) as Vec4f & Vec4fConstructor;
 
 /**
@@ -690,9 +678,9 @@ export type Vec4iConstructor = ((
   y: number,
   z: number,
   w: number,
-) => vec4iType) &
-  ((xyzw: number) => vec4iType) &
-  (() => vec4iType);
+) => $Vec4i) &
+  ((xyzw: number) => $Vec4i) &
+  (() => $Vec4i);
 
 /**
  *
@@ -711,9 +699,9 @@ export const vec4i = makeVecSchema({
   type: 'vec4i',
   length: 4,
   make: (x, y, z, w) =>
-    new Proxy(new vec4iImpl(x, y, z, w), vecProxyHandler) as vec4iType,
+    new Proxy(new vec4iImpl(x, y, z, w), vecProxyHandler) as $Vec4i,
   makeFromScalar: (x) =>
-    new Proxy(new vec4iImpl(x, x, x, x), vecProxyHandler) as vec4iType,
+    new Proxy(new vec4iImpl(x, x, x, x), vecProxyHandler) as $Vec4i,
 }) as Vec4i & Vec4iConstructor;
 
 /**
@@ -724,9 +712,9 @@ export type Vec4uConstructor = ((
   y: number,
   z: number,
   w: number,
-) => vec4uType) &
-  ((xyzw: number) => vec4uType) &
-  (() => vec4uType);
+) => $Vec4u) &
+  ((xyzw: number) => $Vec4u) &
+  (() => $Vec4u);
 
 /**
  *
@@ -745,7 +733,7 @@ export const vec4u = makeVecSchema({
   length: 4,
   type: 'vec4u',
   make: (x, y, z, w) =>
-    new Proxy(new vec4uImpl(x, y, z, w), vecProxyHandler) as vec4uType,
+    new Proxy(new vec4uImpl(x, y, z, w), vecProxyHandler) as $Vec4u,
   makeFromScalar: (x) =>
-    new Proxy(new vec4uImpl(x, x, x, x), vecProxyHandler) as vec4uType,
+    new Proxy(new vec4uImpl(x, x, x, x), vecProxyHandler) as $Vec4u,
 }) as Vec4u & Vec4uConstructor;

@@ -2,6 +2,7 @@ import { getCustomAlignment } from './attributes';
 import { isDecorated, isLooseDecorated } from './attributes';
 import { isLooseArray } from './looseArray';
 import { isLooseStructSchema } from './looseStruct';
+import { packedFormats } from './vertexFormatData';
 import { type BaseWgslData, isArraySchema, isStructSchema } from './wgslTypes';
 
 const knownAlignmentMap: Record<string, number> = {
@@ -24,7 +25,8 @@ const knownAlignmentMap: Record<string, number> = {
 };
 
 function computeAlignment(data: object): number {
-  const knownAlignment = knownAlignmentMap[(data as BaseWgslData)?.type];
+  const dataType = (data as BaseWgslData)?.type;
+  const knownAlignment = knownAlignmentMap[dataType];
   if (knownAlignment !== undefined) {
     return knownAlignment;
   }
@@ -40,7 +42,9 @@ function computeAlignment(data: object): number {
   }
 
   if (isLooseStructSchema(data)) {
-    return 1;
+    // A loose struct is alignment to its first property.
+    const firstProp = Object.values(data.propTypes)[0];
+    return firstProp ? getCustomAlignment(firstProp) ?? 1 : 1;
   }
 
   if (isLooseArray(data)) {
@@ -51,9 +55,31 @@ function computeAlignment(data: object): number {
     return getCustomAlignment(data) ?? alignmentOf(data.inner);
   }
 
+  if (packedFormats.includes(dataType)) {
+    return 1;
+  }
+
   throw new Error(
     `Cannot determine alignment of data: ${JSON.stringify(data)}`,
   );
+}
+
+function computeCustomAlignment(data: BaseWgslData): number {
+  if (isLooseStructSchema(data)) {
+    // A loose struct is alignment to its first property.
+    const firstProp = Object.values(data.propTypes)[0];
+    return firstProp ? customAlignmentOf(firstProp) : 1;
+  }
+
+  if (isLooseArray(data)) {
+    return customAlignmentOf(data.elementType);
+  }
+
+  if (isLooseDecorated(data)) {
+    return getCustomAlignment(data) ?? customAlignmentOf(data.inner);
+  }
+
+  return getCustomAlignment(data) ?? 1;
 }
 
 /**
@@ -63,11 +89,23 @@ function computeAlignment(data: object): number {
  */
 const cachedAlignments = new WeakMap<object, number>();
 
-export function alignmentOf(data: object): number {
+const cachedCustomAlignments = new WeakMap<object, number>();
+
+export function alignmentOf(data: BaseWgslData): number {
   let alignment = cachedAlignments.get(data);
   if (alignment === undefined) {
     alignment = computeAlignment(data);
     cachedAlignments.set(data, alignment);
+  }
+
+  return alignment;
+}
+
+export function customAlignmentOf(data: BaseWgslData): number {
+  let alignment = cachedCustomAlignments.get(data);
+  if (alignment === undefined) {
+    alignment = computeCustomAlignment(data);
+    cachedCustomAlignments.set(data, alignment);
   }
 
   return alignment;

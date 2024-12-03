@@ -1,8 +1,8 @@
 import type { ISerialInput, ISerialOutput } from 'typed-binary';
 import type { Infer, InferRecord } from '../shared/repr';
 import alignIO from './alignIO';
-import { alignmentOf } from './alignmentOf';
-import { type LooseDecorated, getCustomAlignment } from './attributes';
+import { alignmentOf, customAlignmentOf } from './alignmentOf';
+import type { LooseDecorated } from './attributes';
 import type { AnyData, LooseArray, LooseStruct } from './dataTypes';
 import {
   mat2x2f as createMat2x2f,
@@ -22,6 +22,18 @@ import {
   vec4u as createVec4u,
 } from './vector';
 import type {
+  $Mat2x2f,
+  $Mat3x3f,
+  $Mat4x4f,
+  $Vec2f,
+  $Vec2i,
+  $Vec2u,
+  $Vec3f,
+  $Vec3i,
+  $Vec3u,
+  $Vec4f,
+  $Vec4i,
+  $Vec4u,
   AnyWgslData,
   Atomic,
   BaseWgslData,
@@ -32,18 +44,6 @@ import type {
   U32,
   WgslArray,
   WgslStruct,
-  mat2x2f,
-  mat3x3f,
-  mat4x4f,
-  vec2f,
-  vec2i,
-  vec2u,
-  vec3f,
-  vec3i,
-  vec3u,
-  vec4f,
-  vec4i,
-  vec4u,
 } from './wgslTypes';
 
 type CompleteDataWriters = {
@@ -96,73 +96,73 @@ const dataWriters = {
     output.writeUint32(value);
   },
 
-  vec2f(output, _, value: vec2f) {
+  vec2f(output, _, value: $Vec2f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
   },
 
-  vec2i(output, _, value: vec2i) {
+  vec2i(output, _, value: $Vec2i) {
     output.writeInt32(value.x);
     output.writeInt32(value.y);
   },
 
-  vec2u(output, _, value: vec2u) {
+  vec2u(output, _, value: $Vec2u) {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
   },
 
-  vec3f(output, _, value: vec3f) {
+  vec3f(output, _, value: $Vec3f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
     output.writeFloat32(value.z);
   },
 
-  vec3i(output, _, value: vec3i) {
+  vec3i(output, _, value: $Vec3i) {
     output.writeInt32(value.x);
     output.writeInt32(value.y);
     output.writeInt32(value.z);
   },
 
-  vec3u(output, _, value: vec3u) {
+  vec3u(output, _, value: $Vec3u) {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
     output.writeUint32(value.z);
   },
 
-  vec4f(output, _, value: vec4f) {
+  vec4f(output, _, value: $Vec4f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
     output.writeFloat32(value.z);
     output.writeFloat32(value.w);
   },
 
-  vec4i(output, _, value: vec4i) {
+  vec4i(output, _, value: $Vec4i) {
     output.writeInt32(value.x);
     output.writeInt32(value.y);
     output.writeInt32(value.z);
     output.writeInt32(value.w);
   },
 
-  vec4u(output, _, value: vec4u) {
+  vec4u(output, _, value: $Vec4u) {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
     output.writeUint32(value.z);
     output.writeUint32(value.w);
   },
 
-  mat2x2f(output, _, value: mat2x2f) {
+  mat2x2f(output, _, value: $Mat2x2f) {
     for (let i = 0; i < value.length; ++i) {
       output.writeFloat32(value[i] as number);
     }
   },
 
-  mat3x3f(output, _, value: mat3x3f) {
+  mat3x3f(output, _, value: $Mat3x3f) {
     for (let i = 0; i < value.length; ++i) {
       output.writeFloat32(value[i] as number);
     }
   },
 
-  mat4x4f(output, _, value: mat4x4f) {
+  mat4x4f(output, _, value: $Mat4x4f) {
     for (let i = 0; i < value.length; ++i) {
       output.writeFloat32(value[i] as number);
     }
@@ -185,13 +185,16 @@ const dataWriters = {
   },
 
   array(output, schema: WgslArray, value: Infer<BaseWgslData>[]) {
+    if (schema.length === 0) {
+      throw new Error('Cannot write using a runtime-sized schema.');
+    }
+
     const alignment = alignmentOf(schema);
     alignIO(output, alignment);
     const beginning = output.currentByteOffset;
     for (let i = 0; i < Math.min(schema.length, value.length); i++) {
       alignIO(output, alignment);
       const elementType = schema.elementType as AnyWgslData;
-      // dataWriters[elementType?.type]?.(output, elementType, value[i]);
       writeData(output, elementType, value[i]);
     }
     output.seekTo(beginning + sizeOf(schema));
@@ -202,7 +205,7 @@ const dataWriters = {
   },
 
   decorated(output, schema: Decorated, value: unknown) {
-    const alignment = getCustomAlignment(schema) ?? 1;
+    const alignment = customAlignmentOf(schema);
     alignIO(output, alignment);
 
     const beginning = output.currentByteOffset;
@@ -212,47 +215,47 @@ const dataWriters = {
 
   // Loose Types
 
-  uint8x2(output, _, value: vec2u) {
+  uint8x2(output, _, value: $Vec2u) {
     output.writeByte(value.x);
     output.writeByte(value.y);
   },
-  uint8x4(output, _, value: vec4u) {
+  uint8x4(output, _, value: $Vec4u) {
     output.writeByte(value.x);
     output.writeByte(value.y);
     output.writeByte(value.z);
     output.writeByte(value.w);
   },
-  sint8x2(output, _, value: vec2i) {
+  sint8x2(output, _, value: $Vec2i) {
     sint8Write(output, value.x);
     sint8Write(output, value.y);
   },
-  sint8x4(output, _, value: vec4i) {
+  sint8x4(output, _, value: $Vec4i) {
     sint8Write(output, value.x);
     sint8Write(output, value.y);
     sint8Write(output, value.z);
     sint8Write(output, value.w);
   },
-  unorm8x2(output, _, value: vec2f) {
+  unorm8x2(output, _, value: $Vec2f) {
     output.writeByte(Math.floor(value.x * 255));
     output.writeByte(Math.floor(value.y * 255));
   },
-  unorm8x4(output, _, value: vec4f) {
+  unorm8x4(output, _, value: $Vec4f) {
     output.writeByte(Math.floor(value.x * 255));
     output.writeByte(Math.floor(value.y * 255));
     output.writeByte(Math.floor(value.z * 255));
     output.writeByte(Math.floor(value.w * 255));
   },
-  snorm8x2(output, _, value: vec2f) {
+  snorm8x2(output, _, value: $Vec2f) {
     output.writeByte(Math.floor(value.x * 127 + 128));
     output.writeByte(Math.floor(value.y * 127 + 128));
   },
-  snorm8x4(output, _, value: vec4f) {
+  snorm8x4(output, _, value: $Vec4f) {
     output.writeByte(Math.floor(value.x * 127 + 128));
     output.writeByte(Math.floor(value.y * 127 + 128));
     output.writeByte(Math.floor(value.z * 127 + 128));
     output.writeByte(Math.floor(value.w * 127 + 128));
   },
-  uint16x2(output, _, value: vec2u) {
+  uint16x2(output, _, value: $Vec2u) {
     const buffer = new ArrayBuffer(4);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -260,7 +263,7 @@ const dataWriters = {
     view.setUint16(2, value.y, littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  uint16x4(output, _, value: vec4u) {
+  uint16x4(output, _, value: $Vec4u) {
     const buffer = new ArrayBuffer(8);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -270,7 +273,7 @@ const dataWriters = {
     view.setUint16(6, value.w, littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  sint16x2(output, _, value: vec2i) {
+  sint16x2(output, _, value: $Vec2i) {
     const buffer = new ArrayBuffer(4);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -278,7 +281,7 @@ const dataWriters = {
     view.setInt16(2, value.y, littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  sint16x4(output, _, value: vec4i) {
+  sint16x4(output, _, value: $Vec4i) {
     const buffer = new ArrayBuffer(8);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -288,7 +291,7 @@ const dataWriters = {
     view.setInt16(6, value.w, littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  unorm16x2(output, _, value: vec2f) {
+  unorm16x2(output, _, value: $Vec2f) {
     const buffer = new ArrayBuffer(4);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -296,7 +299,7 @@ const dataWriters = {
     view.setUint16(2, Math.floor(value.y * 65535), littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  unorm16x4(output, _, value: vec4f) {
+  unorm16x4(output, _, value: $Vec4f) {
     const buffer = new ArrayBuffer(8);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -306,7 +309,7 @@ const dataWriters = {
     view.setUint16(6, Math.floor(value.w * 65535), littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  snorm16x2(output, _, value: vec2f) {
+  snorm16x2(output, _, value: $Vec2f) {
     const buffer = new ArrayBuffer(4);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -314,7 +317,7 @@ const dataWriters = {
     view.setUint16(2, Math.floor(value.y * 32767 + 32768), littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  snorm16x4(output, _, value: vec4f) {
+  snorm16x4(output, _, value: $Vec4f) {
     const buffer = new ArrayBuffer(8);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -324,11 +327,11 @@ const dataWriters = {
     view.setUint16(6, Math.floor(value.w * 32767 + 32768), littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  float16x2(output, _, value: vec2f) {
+  float16x2(output, _, value: $Vec2f) {
     output.writeFloat16(value.x);
     output.writeFloat16(value.y);
   },
-  float16x4(output, _, value: vec4f) {
+  float16x4(output, _, value: $Vec4f) {
     output.writeFloat16(value.x);
     output.writeFloat16(value.y);
     output.writeFloat16(value.z);
@@ -337,16 +340,16 @@ const dataWriters = {
   float32(output, _, value: number) {
     output.writeFloat32(value);
   },
-  float32x2(output, _, value: vec2f) {
+  float32x2(output, _, value: $Vec2f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
   },
-  float32x3(output, _, value: vec3f) {
+  float32x3(output, _, value: $Vec3f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
     output.writeFloat32(value.z);
   },
-  float32x4(output, _, value: vec4f) {
+  float32x4(output, _, value: $Vec4f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
     output.writeFloat32(value.z);
@@ -355,16 +358,16 @@ const dataWriters = {
   uint32(output, _, value: number) {
     output.writeUint32(value);
   },
-  uint32x2(output, _, value: vec2u) {
+  uint32x2(output, _, value: $Vec2u) {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
   },
-  uint32x3(output, _, value: vec3u) {
+  uint32x3(output, _, value: $Vec3u) {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
     output.writeUint32(value.z);
   },
-  uint32x4(output, _, value: vec4u) {
+  uint32x4(output, _, value: $Vec4u) {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
     output.writeUint32(value.z);
@@ -373,22 +376,22 @@ const dataWriters = {
   sint32(output, _, value: number) {
     output.writeInt32(value);
   },
-  sint32x2(output, _, value: vec2i) {
+  sint32x2(output, _, value: $Vec2i) {
     output.writeInt32(value.x);
     output.writeInt32(value.y);
   },
-  sint32x3(output, _, value: vec3i) {
+  sint32x3(output, _, value: $Vec3i) {
     output.writeInt32(value.x);
     output.writeInt32(value.y);
     output.writeInt32(value.z);
   },
-  sint32x4(output, _, value: vec4i) {
+  sint32x4(output, _, value: $Vec4i) {
     output.writeInt32(value.x);
     output.writeInt32(value.y);
     output.writeInt32(value.z);
     output.writeInt32(value.w);
   },
-  'unorm10-10-10-2'(output, _, value: vec4f) {
+  'unorm10-10-10-2'(output, _, value: $Vec4f) {
     let packed = 0;
     packed |= ((value.x * 1023) & 1023) << 22; // r (10 bits)
     packed |= ((value.x * 1023) & 1023) << 12; // g (10 bits)
@@ -421,7 +424,7 @@ const dataWriters = {
   },
 
   'loose-decorated'(output, schema: LooseDecorated, value: unknown) {
-    const alignment = getCustomAlignment(schema) ?? 1;
+    const alignment = customAlignmentOf(schema);
     alignIO(output, alignment);
 
     const beginning = output.currentByteOffset;
@@ -588,6 +591,10 @@ const dataReaders = {
   },
 
   array(input, schema) {
+    if (schema.length === 0) {
+      throw new Error('Cannot read using a runtime-sized schema.');
+    }
+
     const alignment = alignmentOf(schema);
     const elements: unknown[] = [];
 
@@ -607,7 +614,7 @@ const dataReaders = {
   },
 
   decorated(input, schema: Decorated) {
-    const alignment = getCustomAlignment(schema) ?? 1;
+    const alignment = customAlignmentOf(schema);
     alignIO(input, alignment);
 
     const beginning = input.currentByteOffset;
@@ -801,7 +808,7 @@ const dataReaders = {
   },
 
   'loose-decorated'(input, schema: LooseDecorated) {
-    alignIO(input, getCustomAlignment(schema) ?? 1);
+    alignIO(input, customAlignmentOf(schema));
 
     const beginning = input.currentByteOffset;
     const value = readData(input, schema.inner);

@@ -1,4 +1,5 @@
 import type { Infer } from '../shared/repr';
+import { sizeOf } from './sizeOf';
 import type { AnyWgslData, WgslArray } from './wgslTypes';
 
 // ----------
@@ -45,5 +46,9 @@ class TgpuArrayImpl<TElement extends AnyWgslData>
   constructor(
     public readonly elementType: TElement,
     public readonly length: number,
-  ) {}
+  ) {
+    if (Number.isNaN(sizeOf(elementType))) {
+      throw new Error('Cannot nest runtime sized arrays.');
+    }
+  }
 }

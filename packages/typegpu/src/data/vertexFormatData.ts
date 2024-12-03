@@ -27,23 +27,8 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat>
   /** Used as a type-token for the `Infer<T>` functionality. */
   public readonly __repr!: Infer<FormatToWGSLType<T>>;
 
-  readonly byteAlignment = 1;
-  readonly isLoose = true;
-
   constructor(public readonly type: T) {}
 }
-
-const vectorKindToPrimitive = {
-  vec2u: 'u32',
-  vec3u: 'u32',
-  vec4u: 'u32',
-  vec2f: 'f32',
-  vec3f: 'f32',
-  vec4f: 'f32',
-  vec2i: 'i32',
-  vec3i: 'i32',
-  vec4i: 'i32',
-} as const;
 
 const formatToWGSLType = {
   uint8x2: vec2u,
@@ -78,6 +63,8 @@ const formatToWGSLType = {
   sint32x4: vec4i,
   'unorm10-10-10-2': vec4f,
 } as const;
+
+export const packedFormats = Object.keys(formatToWGSLType);
 
 export type uint8x2 = TgpuVertexFormatData<'uint8x2'>;
 export const uint8x2 = new TgpuVertexFormatDataImpl('uint8x2') as uint8x2;

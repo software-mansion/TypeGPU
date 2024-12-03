@@ -1,6 +1,6 @@
 import type { vecBase } from './data/vector';
 import { VectorOps } from './data/vectorOps';
-import type { vec3f, vec3i, vec3u } from './data/wgslTypes';
+import type { $Vec3f, $Vec3i, $Vec3u } from './data/wgslTypes';
 import { inGPUMode } from './gpuMode';
 
 export const std = {
@@ -34,7 +34,7 @@ export const std = {
     }
     return VectorOps.normalize[v.kind](v);
   },
-  cross<T extends vec3f | vec3i | vec3u>(a: T, b: T): T {
+  cross<T extends $Vec3f | $Vec3i | $Vec3u>(a: T, b: T): T {
     if (inGPUMode()) {
       return `cross(${a}, ${b})` as unknown as T;
     }
