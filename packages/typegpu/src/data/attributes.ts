@@ -275,37 +275,43 @@ class BaseDecoratedImpl<
     public readonly inner: TInner,
     public readonly attribs: TAttribs,
   ) {
-    const alignAttrib = attribs.find(isAlignAttrib)?.value ?? 1;
+    const alignAttrib = attribs.find(isAlignAttrib)?.value;
     const sizeAttrib = attribs.find(isSizeAttrib)?.value;
 
-    if (alignAttrib <= 0) {
-      throw new Error(
-        `Custom data alignment must be a positive number, got: ${alignAttrib}.`,
-      );
-    }
-
-    if (Math.log2(alignAttrib) % 1 !== 0) {
-      throw new Error(`Alignment has to be a power of 2, got: ${alignAttrib}.`);
-    }
-
-    if (isWgslData(this.inner)) {
-      if (alignAttrib % alignmentOf(this.inner) !== 0) {
+    if (alignAttrib !== undefined) {
+      if (alignAttrib <= 0) {
         throw new Error(
-          `Custom alignment has to be a multiple of the standard data alignment. Got: ${alignAttrib}, expected multiple of: ${alignmentOf(this.inner)}.`,
+          `Custom data alignment must be a positive number, got: ${alignAttrib}.`,
         );
+      }
+
+      if (Math.log2(alignAttrib) % 1 !== 0) {
+        throw new Error(
+          `Alignment has to be a power of 2, got: ${alignAttrib}.`,
+        );
+      }
+
+      if (isWgslData(this.inner)) {
+        if (alignAttrib % alignmentOf(this.inner) !== 0) {
+          throw new Error(
+            `Custom alignment has to be a multiple of the standard data alignment. Got: ${alignAttrib}, expected multiple of: ${alignmentOf(this.inner)}.`,
+          );
+        }
       }
     }
 
-    if (sizeAttrib !== undefined && sizeAttrib < sizeOf(this.inner)) {
-      throw new Error(
-        `Custom data size cannot be smaller then the standard data size. Got: ${sizeAttrib}, expected at least: ${sizeOf(this.inner)}.`,
-      );
-    }
+    if (sizeAttrib !== undefined) {
+      if (sizeAttrib < sizeOf(this.inner)) {
+        throw new Error(
+          `Custom data size cannot be smaller then the standard data size. Got: ${sizeAttrib}, expected at least: ${sizeOf(this.inner)}.`,
+        );
+      }
 
-    if (sizeAttrib !== undefined && sizeAttrib <= 0) {
-      throw new Error(
-        `Custom data size must be a positive number. Got: ${sizeAttrib}.`,
-      );
+      if (sizeAttrib <= 0) {
+        throw new Error(
+          `Custom data size must be a positive number. Got: ${sizeAttrib}.`,
+        );
+      }
     }
   }
 }

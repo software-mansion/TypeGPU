@@ -71,8 +71,7 @@ function isIdentityType(data: AnyWgslData): data is IdentityType {
 
 function resolveStructProperty(
   ctx: ResolutionCtx,
-  key: string,
-  property: BaseWgslData,
+  [key, property]: [string, BaseWgslData],
 ) {
   return `  ${getAttributesString(property)}${key}: ${ctx.resolve(property as AnyWgslData)},\n`;
 }
@@ -83,7 +82,7 @@ function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
   ctx.addDeclaration(`
 struct ${id} {
 ${Object.entries(struct.propTypes)
-  .map(([key, property]) => resolveStructProperty(ctx, key, property))
+  .map((prop) => resolveStructProperty(ctx, prop))
   .join('')}\
 }\n`);
 
