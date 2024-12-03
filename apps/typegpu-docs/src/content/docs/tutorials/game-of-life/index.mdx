@@ -15,11 +15,11 @@ First, create a new project managed with a package manager. You can use whatever
 
 I’ll keep `wgsl` code in separate files - so to use them in my JS code, I’m going to use [`vite-plugin-string`](https://github.com/aweikalee/vite-plugin-string), that will allow me to import the code as a raw string.
 
-You can also use the `getting-started` branch from my repo.
+You can also use the [`getting-started`](https://github.com/5ZYSZ3K/typegpu-example-game-of-life/tree/getting-started) branch from my [repo](https://github.com/5ZYSZ3K).
 
 ### WGSL first steps
 
-First things first, let’s add some boilerplate required to use WebGPU:
+First things first, let’s take care of the setup required to use WebGPU:
 
 ```ts
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
@@ -29,14 +29,14 @@ canvas.height = canvas.clientHeight * devicePixelRatio;
 ```
 
 Canvas’ inner width and height need to be adjusted to its outer properties multiplied by the device’s pixel ratio - because canvas is pixel ratio independent.
-Then, start off with TypeGPU by creating its `root`:
+Then, start off with TypeGPU by creating its [`root`](/TypeGPU/fundamentals/roots/) object:
 
 ```ts
 import tgpu from "typegpu";
 const root = await tgpu.init();
 ```
 
-And configure the WebGPU context of our canvas by setting there our GPU device and WebGPU canvas format.
+And configure the WebGPU context of our canvas by setting GPU device and WebGPU canvas format.
 
 ```ts
 const device = root.device;
@@ -52,7 +52,7 @@ context.configure({
 ### Compute pipeline
 
 In WebGPU, there is a concept of compute pipeline. In short, this is a series of operations that is meant to run some computations (render-independent!) on the GPU. In this example I’m going to use this concept to calculate if a cell is going to be alive in the next generation.
-The API which I am going to use looks like:
+The API which I am going to use (standard WebGPU API) looks like:
 
 ```ts
 const computePipeline = device.createComputePipeline({
@@ -70,18 +70,18 @@ Now we just need to define the variables used there. Let’s quickly go through 
 
 <ul class="list-disc pl-5">
   <li>
-    `bindGroupLayoutCompute` - that is a bind group layout, that is going to be used here. 
+    `bindGroupLayoutCompute` - that is a bind group layout. 
     What is a bind group layout? 
-    Well, it serves like a blueprint for a bind group. 
+    Well, it serves as a blueprint for a bind group. 
     Sooo, what is a [bind group?](/TypeGPU/fundamentals/bind-groups/)
     A [bind group](/TypeGPU/fundamentals/bind-groups/) is a set of variables, that can be bound to shaders through a pipeline, and accessed both in JS and WGSL code. 
 
-    WebGPU API is really low-level - to create a bind group and its layout, you have to create buffers with adequate size, type and paddings, and keep in mind their order in the bind group. If you will set the paddings or size or whatever wrong, you may not get a proper error, but end up with your colors shifted bytewise. 
+    WebGPU API is really low-level - to create a bind group and its layout, you have to create buffers with adequate size, type and paddings, and keep in mind their order in the bind group. If you calculate the paddings incorrectly, you may not get a proper error, but end up with your colors shifted. 
 
-    Fortunately, we can leave the tricky stuff to the TypeGPU - just define, which variables of which type are you going to use. What more, we can infer the bind group layout from the shader’s code. 
+    Fortunately, we can leave the tricky stuff to the TypeGPU - just define the schema for your data using [`data schemas`](/TypeGPU/fundamentals/data-schemas/). Moreover, . What more, we can infer the bind group layout from the shader’s code. 
   </li>
   <li>
-    `computeShader` - That’s a shader code which is going to be executed in this pipeline
+    `computeShader` - That’s the shader code which is going to be executed in this pipeline
   </li>
   <li>
     `constants` - constant variables overriding those set in the shader (variable needs to be defined with a [`override`](https://www.w3.org/TR/WGSL/#override-decls) keyword in the shader)
@@ -97,11 +97,11 @@ Based on all of that, we can start creating our compute pipeline with a shader c
 ```
 
 First, we define our binding variables:
-- `size`: a vector of width and height values of our playground
+- `size`: a vector for width and height values of our playground
 - `current`: current state of our game, from which we are going to infer the next state
 - `next`: next state of our game, we are going to write to this buffer
 
-```ts
+```wgsl
 fn getIndex(x: u32, y: u32) -> u32 {
   let h = size.y;
   let w = size.x;
@@ -120,7 +120,7 @@ fn countNeighbors(x: u32, y: u32) -> u32 {
 }
 ```
 
-Bunch of util functions - getIndex flattens our 2D coordinates to a linear index, getCell returns value for our cell, and countNeighbours returns the number of alive neighbours, what is required for the game.
+A bunch of utility functions - `getIndex` flattens our 2D coordinates to a linear index, `getCell` returns value for our cell, and `countNeighbours` returns the number of alive neighbours, which is required to calculate the next state.
 
 Please keep in mind the `getIndex` function - it’s not important at the moment, but will be in the future, because we have to dispatch adequate workgroup grid in the JS code, to cover all cells.
 

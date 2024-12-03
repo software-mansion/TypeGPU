@@ -1,28 +1,5 @@
-import tgpu, { type TgpuBindGroup, type TgpuBuffer, Storage } from 'typegpu';
-import { arrayOf, type TgpuArray, type U32, u32, vec2u } from 'typegpu/data';
-
-const layoutCompute = {
-  size: {
-    storage: vec2u,
-    access: 'readonly',
-  },
-  current: {
-    storage: (arrayLength: number) => arrayOf(u32, arrayLength),
-    access: 'readonly',
-  },
-  next: {
-    storage: (arrayLength: number) => arrayOf(u32, arrayLength),
-    access: 'mutable',
-  },
-} as const;
-const groupLayout = {
-  size: {
-    uniform: vec2u,
-  },
-} as const;
-
-const bindGroupLayoutCompute = tgpu.bindGroupLayout(layoutCompute);
-const bindGroupLayoutRender = tgpu.bindGroupLayout(groupLayout);
+import tgpu from 'typegpu';
+import { arrayOf, u32, vec2u } from 'typegpu/data';
 
 const root = await tgpu.init();
 const device = root.device;
@@ -142,12 +119,28 @@ const cellsStride: GPUVertexBufferLayout = {
   ],
 };
 
-let buffer0: TgpuBuffer<TgpuArray<U32>> & Storage,
-  sizeBuffer,
-  bindGroup0: TgpuBindGroup<typeof layoutCompute>,
-  bindGroup1: TgpuBindGroup<typeof layoutCompute>,
-  uniformBindGroup: TgpuBindGroup<typeof groupLayout>,
-  buffer1: TgpuBuffer<TgpuArray<U32>> & Storage;
+const layoutCompute = {
+  size: {
+    storage: vec2u,
+    access: 'readonly',
+  },
+  current: {
+    storage: (arrayLength: number) => arrayOf(u32, arrayLength),
+    access: 'readonly',
+  },
+  next: {
+    storage: (arrayLength: number) => arrayOf(u32, arrayLength),
+    access: 'mutable',
+  },
+} as const;
+const groupLayout = {
+  size: {
+    uniform: vec2u,
+  },
+} as const;
+
+const bindGroupLayoutCompute = tgpu.bindGroupLayout(layoutCompute);
+const bindGroupLayoutRender = tgpu.bindGroupLayout(groupLayout);
 
 // compute pipeline
 const computePipeline = device.createComputePipeline({
@@ -164,36 +157,41 @@ const computePipeline = device.createComputePipeline({
 let currentInterval: NodeJS.Timer | undefined;
 let render: (swap: boolean) => void;
 let loop: (swap: boolean) => void;
+
 const resetGameData = () => {
-  sizeBuffer = root
+  const sizeBuffer = root
     .createBuffer(vec2u, vec2u(gameWidth, gameHeight))
     .$usage('uniform')
     .$usage('storage');
+
   const length = gameWidth * gameHeight;
   const cells = Array.from({ length })
     .fill(0)
     .map((_, i) => (Math.random() < 0.25 ? 1 : 0));
-  buffer0 = root
+
+  const buffer0 = root
     .createBuffer(arrayOf(u32, length), cells)
     .$usage('storage')
     .$usage('vertex');
-  buffer1 = root
+
+  const buffer1 = root
     .createBuffer(arrayOf(u32, length))
     .$usage('storage')
     .$usage('vertex');
 
-  bindGroup0 = bindGroupLayoutCompute.populate({
+  const bindGroup0 = bindGroupLayoutCompute.populate({
     size: sizeBuffer,
     current: buffer0,
     next: buffer1,
   });
 
-  bindGroup1 = bindGroupLayoutCompute.populate({
+  const bindGroup1 = bindGroupLayoutCompute.populate({
     size: sizeBuffer,
     current: buffer1,
     next: buffer0,
   });
-  uniformBindGroup = bindGroupLayoutRender.populate({
+
+  const uniformBindGroup = bindGroupLayoutRender.populate({
     size: sizeBuffer,
   });
 
@@ -208,30 +206,34 @@ const resetGameData = () => {
         },
       ],
     };
-    commandEncoder = device.createCommandEncoder();
 
-    // compute
+    commandEncoder = device.createCommandEncoder();
     const passEncoderCompute = commandEncoder.beginComputePass();
+
     passEncoderCompute.setPipeline(computePipeline);
     passEncoderCompute.setBindGroup(
       0,
       root.unwrap(swap ? bindGroup1 : bindGroup0),
     );
+
     passEncoderCompute.dispatchWorkgroups(
       gameWidth / workgroupSize,
       gameHeight / workgroupSize,
     );
     passEncoderCompute.end();
-    // render
+
     const passEncoderRender = commandEncoder.beginRenderPass(renderPass);
     passEncoderRender.setPipeline(renderPipeline);
+
     passEncoderRender.setVertexBuffer(0, root.unwrap(swap ? buffer1 : buffer0));
     passEncoderRender.setVertexBuffer(1, root.unwrap(squareBuffer));
     passEncoderRender.setBindGroup(0, root.unwrap(uniformBindGroup));
+
     passEncoderRender.draw(4, length);
     passEncoderRender.end();
     device.queue.submit([commandEncoder.finish()]);
   };
+
   loop = () => {
     requestAnimationFrame(() => {
       if (!paused) {
@@ -240,6 +242,7 @@ const resetGameData = () => {
       }
     });
   };
+
   startGame();
 };
 
