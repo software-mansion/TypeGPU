@@ -1,4 +1,5 @@
 import type { Infer } from '../shared/repr';
+import type { Exotic } from './exotic';
 import type { Atomic, I32, U32 } from './wgslTypes';
 
 // ----------
@@ -16,21 +17,8 @@ import type { Atomic, I32, U32 } from './wgslTypes';
  */
 export function atomic<TSchema extends U32 | I32>(
   data: TSchema,
-): Atomic<TSchema> {
-  return new AtomicImpl(data);
-}
-
-/**
- * Checks whether the passed in value is a d.atomic schema.
- *
- * @example
- * isAtomicSchema(d.atomic(d.u32)) // true
- * isAtomicSchema(d.u32) // false
- */
-export function isAtomicSchema<T extends Atomic<U32 | I32>>(
-  schema: T | unknown,
-): schema is T {
-  return schema instanceof AtomicImpl;
+): Atomic<Exotic<TSchema>> {
+  return new AtomicImpl(data as Exotic<TSchema>);
 }
 
 // --------------

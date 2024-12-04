@@ -1,11 +1,12 @@
 import type { OmitBuiltins } from '../../builtin';
 import type { AnyData } from '../../data/dataTypes';
+import type { Exotic } from '../../data/exotic';
 import type { Vec4f } from '../../data/wgslTypes';
 import type { JitTranspiler } from '../../jitTranspiler';
 import type { NameRegistry } from '../../nameRegistry';
 import type { PlumListener } from '../../plumStore';
 import type { TgpuSettable } from '../../settableTrait';
-import type { Exotic, Infer } from '../../shared/repr';
+import type { Infer } from '../../shared/repr';
 import type { Mutable, OmitProps, Prettify } from '../../shared/utilityTypes';
 import type {
   ExtractPlumValue,

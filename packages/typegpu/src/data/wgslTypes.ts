@@ -739,6 +739,19 @@ export function isWgslStruct<T extends WgslStruct>(
   return (schema as T)?.type === 'struct';
 }
 
+/**
+ * Checks whether the passed in value is an atomic schema.
+ *
+ * @example
+ * isAtomic(d.atomic(d.u32)) // true
+ * isAtomic(d.u32) // false
+ */
+export function isAtomic<T extends Atomic<U32 | I32>>(
+  schema: T | unknown,
+): schema is T {
+  return (schema as T)?.type === 'atomic';
+}
+
 export function isAlignAttrib<T extends Align<number>>(
   value: unknown | T,
 ): value is T {

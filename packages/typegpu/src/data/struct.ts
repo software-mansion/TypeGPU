@@ -1,6 +1,7 @@
 import type { TgpuNamable } from '../namable';
-import type { ExoticRecord, InferRecord } from '../shared/repr';
+import type { InferRecord } from '../shared/repr';
 import type { Prettify } from '../shared/utilityTypes';
+import type { ExoticRecord } from './exotic';
 import type { AnyWgslData, BaseWgslData, WgslStruct } from './wgslTypes';
 
 // ----------

@@ -21,11 +21,11 @@ import {
   NotSampledError,
   isUsableAsSampled,
 } from './core/texture/usageExtension';
+import type { Exotic } from './data/exotic';
 import { type AnyWgslData, isWgslData } from './data/wgslTypes';
 import { NotUniformError } from './errors';
 import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
 import type { TgpuNamable } from './namable';
-import type { Exotic } from './shared/repr';
 import type { OmitProps, Prettify } from './shared/utilityTypes';
 import type { TgpuSampler } from './tgpuSampler';
 import type { TgpuShaderStage } from './types';

@@ -7,6 +7,7 @@ export {
   isWgslData,
   isWgslArray,
   isWgslStruct,
+  isAtomic,
   isAlignAttrib,
   isBuiltinAttrib,
   isLocationAttrib,
@@ -28,6 +29,7 @@ export type {
   Vec4u,
   WgslStruct,
   WgslArray,
+  Atomic,
   Decorated,
   Size,
   Align,
@@ -84,7 +86,7 @@ export {
   mat4x4fToArray,
 } from './matrix';
 export * from './vertexFormatData';
-export { atomic, isAtomicSchema } from './atomic';
+export { atomic } from './atomic';
 export type { Infer } from '../shared/repr';
 export {
   align,

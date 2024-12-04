@@ -1,4 +1,5 @@
-import type { Exotic, Infer } from '../shared/repr';
+import type { Infer } from '../shared/repr';
+import type { Exotic } from './exotic';
 import { sizeOf } from './sizeOf';
 import type { AnyWgslData, WgslArray } from './wgslTypes';
 

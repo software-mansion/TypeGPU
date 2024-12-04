@@ -6,6 +6,7 @@ import {
   type LooseTypeLiteral,
   isLooseData,
 } from './dataTypes';
+import type { Exotic } from './exotic';
 import { sizeOf } from './sizeOf';
 import {
   type Align,
@@ -147,7 +148,7 @@ export function attribute<
 export function align<TAlign extends number, TData extends AnyData>(
   alignment: TAlign,
   data: TData,
-): Decorate<TData, Align<TAlign>> {
+): Decorate<Exotic<TData>, Align<TAlign>> {
   // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   return attribute(data, { type: '@align', value: alignment }) as any;
 }
@@ -167,7 +168,7 @@ export function align<TAlign extends number, TData extends AnyData>(
 export function size<TSize extends number, TData extends AnyData>(
   size: TSize,
   data: TData,
-): Decorate<TData, Size<TSize>> {
+): Decorate<Exotic<TData>, Size<TSize>> {
   // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   return attribute(data, { type: '@size', value: size }) as any;
 }
@@ -188,7 +189,7 @@ export function size<TSize extends number, TData extends AnyData>(
 export function location<TLocation extends number, TData extends AnyData>(
   location: TLocation,
   data: TData,
-): Decorate<TData, Location<TLocation>> {
+): Decorate<Exotic<TData>, Location<TLocation>> {
   // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   return attribute(data, { type: '@location', value: location }) as any;
 }
