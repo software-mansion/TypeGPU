@@ -1,4 +1,4 @@
-import type { Infer } from '../shared/repr';
+import type { Exotic, Infer } from '../shared/repr';
 import { sizeOf } from './sizeOf';
 import type { AnyWgslData, WgslArray } from './wgslTypes';
 
@@ -30,7 +30,8 @@ export interface TgpuArray<TElement extends AnyWgslData>
 export const arrayOf = <TElement extends AnyWgslData>(
   elementType: TElement,
   length: number,
-): TgpuArray<TElement> => new TgpuArrayImpl(elementType, length);
+): TgpuArray<Exotic<TElement>> =>
+  new TgpuArrayImpl(elementType as Exotic<TElement>, length);
 
 // --------------
 // Implementation

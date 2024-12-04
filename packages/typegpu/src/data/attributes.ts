@@ -148,11 +148,8 @@ export function align<TAlign extends number, TData extends AnyData>(
   alignment: TAlign,
   data: TData,
 ): Decorate<TData, Align<TAlign>> {
-  return attribute(data, {
-    type: '@align',
-    value: alignment,
-    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
-  }) as any;
+  // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+  return attribute(data, { type: '@align', value: alignment }) as any;
 }
 
 /**
@@ -238,25 +235,7 @@ export function getAttributesString<T extends BaseWgslData>(field: T): string {
   }
 
   return (field.attribs as AnyAttribute[])
-    .map((attrib) => {
-      if (attrib.type === '@align') {
-        return `@align(${attrib.value}) `;
-      }
-
-      if (attrib.type === '@size') {
-        return `@size(${attrib.value}) `;
-      }
-
-      if (attrib.type === '@location') {
-        return `@location(${attrib.value}) `;
-      }
-
-      if (attrib.type === '@builtin') {
-        return `@builtin(${attrib.value}) `;
-      }
-
-      return '';
-    })
+    .map((attrib) => `${attrib.type}(${attrib.value}) `)
     .join('');
 }
 

@@ -5,7 +5,7 @@ import type { JitTranspiler } from '../../jitTranspiler';
 import type { NameRegistry } from '../../nameRegistry';
 import type { PlumListener } from '../../plumStore';
 import type { TgpuSettable } from '../../settableTrait';
-import type { Infer } from '../../shared/repr';
+import type { Exotic, Infer } from '../../shared/repr';
 import type { Mutable, OmitProps, Prettify } from '../../shared/utilityTypes';
 import type {
   ExtractPlumValue,
@@ -161,7 +161,7 @@ export interface TgpuRoot extends Unwrapper {
   createBuffer<TData extends AnyData>(
     typeSchema: TData,
     initial?: Infer<TData> | TgpuPlum<Infer<TData>> | undefined,
-  ): TgpuBuffer<TData>;
+  ): TgpuBuffer<Exotic<TData>>;
 
   /**
    * @param typeSchema The type of data that this buffer will hold.
@@ -170,7 +170,7 @@ export interface TgpuRoot extends Unwrapper {
   createBuffer<TData extends AnyData>(
     typeSchema: TData,
     gpuBuffer: GPUBuffer,
-  ): TgpuBuffer<TData>;
+  ): TgpuBuffer<Exotic<TData>>;
 
   createTexture<
     TWidth extends number,

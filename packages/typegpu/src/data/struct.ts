@@ -1,5 +1,6 @@
 import type { TgpuNamable } from '../namable';
-import type { InferRecord } from '../shared/repr';
+import type { ExoticRecord, InferRecord } from '../shared/repr';
+import type { Prettify } from '../shared/utilityTypes';
 import type { AnyWgslData, BaseWgslData, WgslStruct } from './wgslTypes';
 
 // ----------
@@ -30,7 +31,8 @@ export interface TgpuStruct<TProps extends Record<string, BaseWgslData>>
  */
 export const struct = <TProps extends Record<string, AnyWgslData>>(
   props: TProps,
-): TgpuStruct<TProps> => new TgpuStructImpl(props);
+): TgpuStruct<Prettify<ExoticRecord<TProps>>> =>
+  new TgpuStructImpl(props as ExoticRecord<TProps>);
 
 // --------------
 // Implementation

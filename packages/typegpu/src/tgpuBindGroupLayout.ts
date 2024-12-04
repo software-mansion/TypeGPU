@@ -25,7 +25,8 @@ import { type AnyWgslData, isWgslData } from './data/wgslTypes';
 import { NotUniformError } from './errors';
 import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
 import type { TgpuNamable } from './namable';
-import type { OmitProps } from './shared/utilityTypes';
+import type { Exotic } from './shared/repr';
+import type { OmitProps, Prettify } from './shared/utilityTypes';
 import type { TgpuSampler } from './tgpuSampler';
 import type { TgpuShaderStage } from './types';
 import type { Unwrapper } from './unwrapper';
@@ -223,16 +224,30 @@ export type TgpuBindGroup<
   unwrap(unwrapper: Unwrapper): GPUBindGroup;
 };
 
+type ExoticEntry<T> = T extends Record<string | number | symbol, unknown>
+  ? {
+      [Key in keyof T]: T[Key] extends (...args: infer TArgs) => infer TReturn
+        ? (...args: TArgs) => Exotic<TReturn>
+        : Exotic<T[Key]>;
+    }
+  : T;
+
+type ExoticEntries<T extends Record<string, TgpuLayoutEntry | null>> = {
+  [BindingKey in keyof T]: ExoticEntry<T[BindingKey]>;
+};
+
 export function bindGroupLayout<
   Entries extends Record<string, TgpuLayoutEntry | null>,
->(entries: Entries): TgpuBindGroupLayout<Entries> {
-  return new TgpuBindGroupLayoutImpl(entries);
+>(entries: Entries): TgpuBindGroupLayout<Prettify<ExoticEntries<Entries>>> {
+  return new TgpuBindGroupLayoutImpl(entries as ExoticEntries<Entries>);
 }
 
 export function bindGroupLayoutExperimental<
   Entries extends Record<string, TgpuLayoutEntry | null>,
->(entries: Entries): TgpuBindGroupLayoutExperimental<Entries> {
-  return new TgpuBindGroupLayoutImpl(entries);
+>(
+  entries: Entries,
+): TgpuBindGroupLayoutExperimental<Prettify<ExoticEntries<Entries>>> {
+  return new TgpuBindGroupLayoutImpl(entries as ExoticEntries<Entries>);
 }
 
 export function isBindGroupLayout<T extends TgpuBindGroupLayout>(

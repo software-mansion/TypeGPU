@@ -1,4 +1,11 @@
-import { type Parsed, arrayOf, f32, struct, vec2f } from 'typegpu/data';
+import {
+  type $Vec2f,
+  type Infer,
+  arrayOf,
+  f32,
+  struct,
+  vec2f,
+} from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
 
 const workgroupSize = [8, 8] as [number, number];
@@ -15,7 +22,7 @@ let firstColumnCount = 4;
 let secondColumnCount = 2;
 
 function createMatrix(
-  size: vec2f,
+  size: $Vec2f,
   initValue: (row: number, col: number) => number,
 ) {
   return {
@@ -130,7 +137,7 @@ const resultTable = document.querySelector('.matrix-result') as HTMLDivElement;
 
 function printMatrixToHtml(
   element: HTMLDivElement,
-  matrix: Parsed<typeof MatrixStruct>,
+  matrix: Infer<typeof MatrixStruct>,
 ) {
   element.style.gridTemplateColumns = `repeat(${matrix.size.y}, 1fr)`;
   element.innerHTML = matrix.numbers

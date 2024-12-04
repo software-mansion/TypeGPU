@@ -13,6 +13,19 @@ export {
   isSizeAttrib,
 } from './wgslTypes';
 export type {
+  Bool,
+  F32,
+  I32,
+  U32,
+  Vec2f,
+  Vec2i,
+  Vec2u,
+  Vec3f,
+  Vec3i,
+  Vec3u,
+  Vec4f,
+  Vec4i,
+  Vec4u,
   WgslStruct,
   WgslArray,
   Decorated,
@@ -43,19 +56,6 @@ export {
   arrayOf,
 } from './array';
 export type {
-  Bool,
-  F32,
-  I32,
-  U32,
-  Vec2f,
-  Vec2i,
-  Vec2u,
-  Vec3f,
-  Vec3i,
-  Vec3u,
-  Vec4f,
-  Vec4i,
-  Vec4u,
   LooseArray,
   LooseStruct,
   AnyData,
@@ -85,6 +85,7 @@ export {
 } from './matrix';
 export * from './vertexFormatData';
 export { atomic, isAtomicSchema } from './atomic';
+export type { Infer } from '../shared/repr';
 export {
   align,
   size,
