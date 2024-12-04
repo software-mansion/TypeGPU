@@ -14,6 +14,13 @@ const template = (
 ).packages.template;
 
 /**
+ * A custom babel plugin based on rollup plugin that assigns ast to tgsl functions.
+ */
+const assignAst = {
+  // TODO: Add plugin
+};
+
+/**
  * A custom babel plugin for turning:
  *
  * `import Default, { one, two } from 'module'`
@@ -69,7 +76,7 @@ const exportedOptionsToExampleControls = () => {
           if (init) {
             path.replaceWith(
               template.program.ast(
-                `import { addParameters } from '@typegpu/example-toolkit'; 
+                `import { addParameters } from '@typegpu/example-toolkit';
                 addParameters(${code.slice(init.start ?? 0, init.end ?? 0)});`,
               ),
             );
