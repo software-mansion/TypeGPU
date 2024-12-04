@@ -274,9 +274,9 @@ export type TgpuAnyTextureView =
 // --------------
 
 const accessMap = {
-  mutable: 'read-write',
-  readonly: 'read-only',
-  writeonly: 'write-only',
+  mutable: 'read_write',
+  readonly: 'read',
+  writeonly: 'write',
 } as const;
 
 class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
