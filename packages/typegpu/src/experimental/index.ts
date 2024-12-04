@@ -50,7 +50,7 @@ export const tgpu = {
   write,
 };
 
-// Add a method that is not visible but can be used by the vite plugin.
+// this method is used by the vite plugin and should not be visible to the user
 Object.assign(tgpu, {
   __assignAst: assignAst,
 });
