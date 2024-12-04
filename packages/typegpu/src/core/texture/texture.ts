@@ -273,6 +273,12 @@ export type TgpuAnyTextureView =
 // Implementation
 // --------------
 
+const accessMap = {
+  mutable: 'read-write',
+  readonly: 'read-only',
+  writeonly: 'write-only',
+} as const;
+
 class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
   public readonly resourceType = 'texture';
   public usableAsSampled = false;
@@ -478,7 +484,9 @@ class TgpuFixedStorageTextureImpl
     const type = `texture_storage_${dimensionToCodeMap[this.dimension]}`;
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var ${id}: ${type}<${this._format}, ${this.access}>;`,
+      `@group(${group}) @binding(${binding}) var ${id}: ${type}<${this._format}, ${
+        accessMap[this.access]
+      }>;`,
     );
 
     return id;
@@ -508,7 +516,7 @@ export class TgpuLaidOutStorageTextureImpl implements TgpuStorageTexture {
     const type = `texture_storage_${dimensionToCodeMap[this.dimension]}`;
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${this._membership.idx}) var ${id}: ${type}<${this._format}, ${this.access}>;`,
+      `@group(${group}) @binding(${this._membership.idx}) var ${id}: ${type}<${this._format}, ${accessMap[this.access]}>;`,
     );
 
     return id;
