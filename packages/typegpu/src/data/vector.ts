@@ -33,7 +33,7 @@ interface VecSchemaOptions<TType extends string, TValue> {
 
 type VecSchemaBase<TValue> = {
   readonly type: string;
-  readonly __repr: TValue;
+  readonly '~repr': TValue;
 };
 
 function makeVecSchema<TType extends string, TValue>(
@@ -41,7 +41,7 @@ function makeVecSchema<TType extends string, TValue>(
 ): VecSchemaBase<TValue> & ((...args: number[]) => TValue) {
   const VecSchema: VecSchemaBase<TValue> = {
     /** Type-token, not available at runtime */
-    __repr: undefined as unknown as TValue,
+    '~repr': undefined as unknown as TValue,
     type: options.type,
   };
 

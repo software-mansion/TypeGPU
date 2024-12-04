@@ -53,7 +53,7 @@ export function isLooseArray<T extends LooseArray>(
 class LooseArrayImpl<TElement extends AnyData> implements LooseArray<TElement> {
   public readonly type = 'loose-array';
   /** Type-token, not available at runtime */
-  public readonly __repr!: Infer<TElement>[];
+  public readonly '~repr'!: Infer<TElement>[];
 
   constructor(
     public readonly elementType: TElement,

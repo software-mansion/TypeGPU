@@ -20,7 +20,7 @@ export interface TgpuBufferUsage<
 > extends TgpuResolvable {
   readonly resourceType: 'buffer-usage';
   readonly usage: TUsage;
-  readonly __repr: Infer<TData>;
+  readonly '~repr': Infer<TData>;
   value: Infer<TData>;
 }
 
@@ -62,7 +62,7 @@ class TgpuFixedBufferImpl<
 > implements TgpuBufferUsage<TData, TUsage>
 {
   /** Type-token, not available at runtime */
-  public readonly __repr!: Infer<TData>;
+  public readonly '~repr'!: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
 
   constructor(
@@ -113,7 +113,7 @@ export class TgpuLaidOutBufferImpl<
 > implements TgpuBufferUsage<TData, TUsage>
 {
   /** Type-token, not available at runtime */
-  public readonly __repr!: Infer<TData>;
+  public readonly '~repr'!: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
 
   constructor(

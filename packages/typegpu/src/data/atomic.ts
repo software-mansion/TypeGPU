@@ -28,7 +28,7 @@ export function atomic<TSchema extends U32 | I32>(
 class AtomicImpl<TSchema extends U32 | I32> implements Atomic<TSchema> {
   public readonly type = 'atomic';
   /** Type-token, not available at runtime */
-  public readonly __repr!: Infer<TSchema>;
+  public readonly '~repr'!: Infer<TSchema>;
 
   constructor(public readonly inner: TSchema) {}
 }

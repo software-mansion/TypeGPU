@@ -66,7 +66,7 @@ export interface LooseDecorated<
   TAttribs extends unknown[] = unknown[],
 > extends BaseDecorated<TInner, TAttribs> {
   readonly type: 'loose-decorated';
-  readonly __repr: Infer<TInner>;
+  readonly '~repr': Infer<TInner>;
 }
 
 export type ExtractAttributes<T> = T extends {
@@ -249,7 +249,7 @@ class BaseDecoratedImpl<
   TAttribs extends unknown[],
 > {
   // Type-token, not available at runtime
-  public readonly __repr!: Infer<TInner>;
+  public readonly '~repr'!: Infer<TInner>;
 
   constructor(
     public readonly inner: TInner,

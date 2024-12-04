@@ -17,7 +17,7 @@ export type FormatToWGSLType<T extends VertexFormat> =
   (typeof formatToWGSLType)[T];
 
 export interface TgpuVertexFormatData<T extends VertexFormat> {
-  readonly __repr: Infer<FormatToWGSLType<T>>;
+  readonly '~repr': Infer<FormatToWGSLType<T>>;
   readonly type: T;
 }
 
@@ -25,7 +25,7 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat>
   implements TgpuVertexFormatData<T>
 {
   /** Used as a type-token for the `Infer<T>` functionality. */
-  public readonly __repr!: Infer<FormatToWGSLType<T>>;
+  public readonly '~repr'!: Infer<FormatToWGSLType<T>>;
 
   constructor(public readonly type: T) {}
 }

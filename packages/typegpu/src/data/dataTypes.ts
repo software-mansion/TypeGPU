@@ -19,7 +19,7 @@ export interface LooseArray<
   readonly type: 'loose-array';
   readonly length: number;
   readonly elementType: TElement;
-  readonly __repr: Infer<TElement>[];
+  readonly '~repr': Infer<TElement>[];
 }
 
 /**
@@ -38,7 +38,7 @@ export interface LooseStruct<
 > {
   readonly type: 'loose-struct';
   readonly propTypes: TProps;
-  readonly __repr: InferRecord<TProps>;
+  readonly '~repr': InferRecord<TProps>;
 }
 
 const looseTypeLiterals = [

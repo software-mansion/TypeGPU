@@ -7,7 +7,7 @@ export interface NumberArrayView {
 
 export interface BaseWgslData {
   type: string;
-  __repr: unknown;
+  readonly '~repr': unknown;
 }
 
 // #region Instance Types
@@ -517,82 +517,82 @@ export interface $Mat4x4f extends mat4x4<$Vec4f> {
  */
 export interface Bool {
   readonly type: 'bool';
-  readonly __repr: boolean;
+  readonly '~repr': boolean;
 }
 
 export interface F32 {
   readonly type: 'f32';
-  readonly __repr: number;
+  readonly '~repr': number;
 }
 
 export interface I32 {
   readonly type: 'i32';
-  readonly __repr: number;
+  readonly '~repr': number;
 }
 
 export interface U32 {
   readonly type: 'u32';
-  readonly __repr: number;
+  readonly '~repr': number;
 }
 
 export interface Vec2f {
   readonly type: 'vec2f';
-  readonly __repr: $Vec2f;
+  readonly '~repr': $Vec2f;
 }
 
 export interface Vec2i {
   readonly type: 'vec2i';
-  readonly __repr: $Vec2i;
+  readonly '~repr': $Vec2i;
 }
 
 export interface Vec2u {
   readonly type: 'vec2u';
-  readonly __repr: $Vec2u;
+  readonly '~repr': $Vec2u;
 }
 
 export interface Vec3f {
   readonly type: 'vec3f';
-  readonly __repr: $Vec3f;
+  readonly '~repr': $Vec3f;
 }
 
 export interface Vec3i {
   readonly type: 'vec3i';
-  readonly __repr: $Vec3i;
+  readonly '~repr': $Vec3i;
 }
 
 export interface Vec3u {
   readonly type: 'vec3u';
-  readonly __repr: $Vec3u;
+  readonly '~repr': $Vec3u;
 }
 
 export interface Vec4f {
   readonly type: 'vec4f';
-  readonly __repr: $Vec4f;
+  readonly '~repr': $Vec4f;
 }
 
 export interface Vec4i {
   readonly type: 'vec4i';
-  readonly __repr: $Vec4i;
+  readonly '~repr': $Vec4i;
 }
 
 export interface Vec4u {
   readonly type: 'vec4u';
-  readonly __repr: $Vec4u;
+  readonly '~repr': $Vec4u;
 }
 
 export interface Mat2x2f {
   readonly type: 'mat2x2f';
-  readonly __repr: $Mat2x2f;
+  readonly '~repr': $Mat2x2f;
 }
 
 export interface Mat3x3f {
   readonly type: 'mat3x3f';
-  readonly __repr: $Mat3x3f;
+  readonly '~repr': $Mat3x3f;
 }
 
 export interface Mat4x4f {
   readonly type: 'mat4x4f';
-  readonly __repr: $Mat4x4f;
+  readonly '~repr': $Mat4x4f;
 }
 
 export interface WgslStruct<
@@ -601,14 +601,14 @@ export interface WgslStruct<
   readonly type: 'struct';
   readonly label?: string | undefined;
   readonly propTypes: TProps;
-  readonly __repr: InferRecord<TProps>;
+  readonly '~repr': InferRecord<TProps>;
 }
 
 export interface WgslArray<TElement = BaseWgslData> {
   readonly type: 'array';
   readonly length: number;
   readonly elementType: TElement;
-  readonly __repr: Infer<TElement>[];
+  readonly '~repr': Infer<TElement>[];
 }
 
 /**
@@ -617,7 +617,7 @@ export interface WgslArray<TElement = BaseWgslData> {
 export interface Atomic<TInner extends U32 | I32 = U32 | I32> {
   readonly type: 'atomic';
   readonly inner: TInner;
-  readonly __repr: Infer<TInner>;
+  readonly '~repr': Infer<TInner>;
 }
 
 export interface Align<T extends number> {
@@ -647,7 +647,7 @@ export interface Decorated<
   readonly type: 'decorated';
   readonly inner: TInner;
   readonly attribs: TAttribs;
-  readonly __repr: Infer<TInner>;
+  readonly '~repr': Infer<TInner>;
 }
 
 export const wgslTypeLiterals = [

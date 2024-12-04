@@ -19,7 +19,7 @@ describe('d.atomic', () => {
   it('accepts exotic u32 schemas, reduces type to common d.U32', () => {
     const exoticU32 = {
       type: 'u32' as const,
-      __repr: undefined as unknown as number,
+      '~repr': undefined as unknown as number,
     };
 
     const u32Atomic = d.atomic(exoticU32);
@@ -29,7 +29,7 @@ describe('d.atomic', () => {
   it('accepts exotic i32 schemas, reduces type to common d.I32', () => {
     const exoticI32 = {
       type: 'i32' as const,
-      __repr: undefined as unknown as number,
+      '~repr': undefined as unknown as number,
     };
 
     const i32Atomic = d.atomic(exoticI32);
@@ -46,12 +46,12 @@ describe('d.isAtomic', () => {
   it('accepts exotic atomic schemas', () => {
     const atomicU32 = d.atomic({
       type: 'u32',
-      __repr: undefined as unknown as number,
+      '~repr': undefined as unknown as number,
     });
 
     const atomicI32 = d.atomic({
       type: 'i32',
-      __repr: undefined as unknown as number,
+      '~repr': undefined as unknown as number,
     });
 
     expect(d.isAtomic(atomicU32)).toEqual(true);

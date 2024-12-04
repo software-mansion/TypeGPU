@@ -56,7 +56,7 @@ class LooseStructImpl<TProps extends Record<string, BaseWgslData>>
 {
   public readonly type = 'loose-struct';
   /** Type-token, not available at runtime */
-  public readonly __repr!: InferRecord<TProps>;
+  public readonly '~repr'!: InferRecord<TProps>;
 
   constructor(public readonly propTypes: TProps) {}
 }

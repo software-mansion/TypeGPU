@@ -5,10 +5,7 @@ const primitiveNumeric = <TType extends string>(type: TType) => {
   return {
     type,
     /** Type-token, not available at runtime */
-    __repr: undefined as unknown as number,
-
-    size: 4,
-    alignment: 4,
+    '~repr': undefined as unknown as number,
   };
 };
 
@@ -17,7 +14,8 @@ const primitiveNumeric = <TType extends string>(type: TType) => {
  */
 export const bool: Bool = {
   type: 'bool',
-  __repr: undefined as unknown as boolean,
+  /** Type-token, not available at runtime */
+  '~repr': undefined as unknown as boolean,
 };
 
 /**

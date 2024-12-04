@@ -43,7 +43,7 @@ class TgpuArrayImpl<TElement extends AnyWgslData>
 {
   public readonly type = 'array';
   /** Type-token, not available at runtime */
-  public readonly __repr!: Infer<TElement>[];
+  public readonly '~repr'!: Infer<TElement>[];
 
   constructor(
     public readonly elementType: TElement,

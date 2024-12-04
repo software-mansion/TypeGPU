@@ -46,7 +46,7 @@ class TgpuStructImpl<TProps extends Record<string, AnyWgslData>>
 
   public readonly type = 'struct';
   /** Type-token, not available at runtime */
-  public readonly __repr!: InferRecord<TProps>;
+  public readonly '~repr'!: InferRecord<TProps>;
 
   constructor(public readonly propTypes: TProps) {}
 
