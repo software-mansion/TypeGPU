@@ -796,7 +796,8 @@ export function isBuiltinAttrib<T extends Builtin<string>>(
   return (value as T)?.type === '@builtin';
 }
 
-// TODO: For functions that create schemas (e.g., struct(), arrayOf(), etc.), make sure that any passed in
-// inner schemas are stripped down to only the valid `AnyWgslData` type. This way, TypeGPU schemas that
-// consist of the standard object, as well as any additional props or constructor functions, get reduced
-// to standard types on the type level.
+export function isDecorated<T extends Decorated>(
+  value: unknown | T,
+): value is T {
+  return (value as T)?.type === 'decorated';
+}

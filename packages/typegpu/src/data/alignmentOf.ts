@@ -1,9 +1,13 @@
-import { getCustomAlignment } from './attributes';
-import { isDecorated, isLooseDecorated } from './attributes';
+import { getCustomAlignment, isLooseDecorated } from './dataTypes';
 import { isLooseArray } from './looseArray';
 import { isLooseStruct } from './looseStruct';
 import { packedFormats } from './vertexFormatData';
-import { type BaseWgslData, isWgslArray, isWgslStruct } from './wgslTypes';
+import {
+  type BaseWgslData,
+  isDecorated,
+  isWgslArray,
+  isWgslStruct,
+} from './wgslTypes';
 
 const knownAlignmentMap: Record<string, number> = {
   bool: 4,

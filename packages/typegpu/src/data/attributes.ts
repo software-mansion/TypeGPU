@@ -3,8 +3,10 @@ import { alignmentOf } from './alignmentOf';
 import {
   type AnyData,
   type AnyLooseData,
+  type LooseDecorated,
   type LooseTypeLiteral,
   isLooseData,
+  isLooseDecorated,
 } from './dataTypes';
 import type { Exotic } from './exotic';
 import { sizeOf } from './sizeOf';
@@ -19,7 +21,7 @@ import {
   type WgslTypeLiteral,
   isAlignAttrib,
   isBuiltinAttrib,
-  isLocationAttrib,
+  isDecorated,
   isSizeAttrib,
   isWgslData,
 } from './wgslTypes';
@@ -52,22 +54,6 @@ export type AnyAttribute =
   | Size<number>
   | Location<number>
   | Builtin<BuiltinName>;
-
-export interface BaseDecorated<
-  TInner extends BaseWgslData = BaseWgslData,
-  TAttribs extends unknown[] = unknown[],
-> {
-  readonly inner: TInner;
-  readonly attribs: TAttribs;
-}
-
-export interface LooseDecorated<
-  TInner extends BaseWgslData = BaseWgslData,
-  TAttribs extends unknown[] = unknown[],
-> extends BaseDecorated<TInner, TAttribs> {
-  readonly type: 'loose-decorated';
-  readonly '~repr': Infer<TInner>;
-}
 
 export type ExtractAttributes<T> = T extends {
   readonly attribs: unknown[];
@@ -192,31 +178,6 @@ export function location<TLocation extends number, TData extends AnyData>(
 ): Decorate<Exotic<TData>, Location<TLocation>> {
   // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   return attribute(data, { type: '@location', value: location }) as any;
-}
-
-export function isDecorated<T extends Decorated>(
-  value: T | unknown,
-): value is T {
-  return (value as Decorated)?.type === 'decorated';
-}
-
-export function isLooseDecorated<T extends LooseDecorated>(
-  value: T | unknown,
-): value is T {
-  return (value as LooseDecorated)?.type === 'loose-decorated';
-}
-
-export function getCustomAlignment(data: BaseWgslData): number | undefined {
-  return (data as unknown as BaseDecorated).attribs?.find(isAlignAttrib)?.value;
-}
-
-export function getCustomSize(data: BaseWgslData): number | undefined {
-  return (data as unknown as BaseDecorated).attribs?.find(isSizeAttrib)?.value;
-}
-
-export function getCustomLocation(data: BaseWgslData): number | undefined {
-  return (data as unknown as BaseDecorated).attribs?.find(isLocationAttrib)
-    ?.value;
 }
 
 export function isBuiltin<

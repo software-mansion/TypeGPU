@@ -1,4 +1,5 @@
-import { getCustomLocation, isBuiltin } from '../../data/attributes';
+import { isBuiltin } from '../../data/attributes';
+import { getCustomLocation } from '../../data/dataTypes';
 import { isData } from '../../data/dataTypes';
 import type {
   AnyVertexAttribs,

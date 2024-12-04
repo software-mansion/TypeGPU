@@ -2,8 +2,12 @@ import type { ISerialInput, ISerialOutput } from 'typed-binary';
 import type { Infer, InferRecord } from '../shared/repr';
 import alignIO from './alignIO';
 import { alignmentOf, customAlignmentOf } from './alignmentOf';
-import type { LooseDecorated } from './attributes';
-import type { AnyData, LooseArray, LooseStruct } from './dataTypes';
+import type {
+  AnyData,
+  LooseArray,
+  LooseDecorated,
+  LooseStruct,
+} from './dataTypes';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix';
 import { sizeOf } from './sizeOf';
 import {

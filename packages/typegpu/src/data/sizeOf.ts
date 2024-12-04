@@ -1,11 +1,11 @@
 import { roundUp } from '../mathUtils';
 import { alignmentOf, customAlignmentOf } from './alignmentOf';
-import { getCustomSize, isDecorated, isLooseDecorated } from './attributes';
 import type { LooseStruct, LooseTypeLiteral } from './dataTypes';
+import { getCustomSize, isLooseDecorated } from './dataTypes';
 import { isLooseArray } from './looseArray';
 import { isLooseStruct } from './looseStruct';
 import type { BaseWgslData, WgslStruct, WgslTypeLiteral } from './wgslTypes';
-import { isWgslArray, isWgslStruct } from './wgslTypes';
+import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes';
 
 const knownSizesMap: Record<string, number> = {
   bool: 4,

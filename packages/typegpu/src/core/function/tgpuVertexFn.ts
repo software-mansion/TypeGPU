@@ -1,6 +1,7 @@
 import type { Block } from 'tinyest';
 import { location, struct } from '../../data';
-import { attribute, getCustomLocation, isBuiltin } from '../../data/attributes';
+import { attribute, isBuiltin } from '../../data/attributes';
+import { getCustomLocation } from '../../data/dataTypes';
 import { isData } from '../../data/dataTypes';
 import type { BaseWgslData, WgslStruct } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';

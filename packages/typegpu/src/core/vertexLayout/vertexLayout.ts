@@ -1,10 +1,10 @@
 import { alignmentOf, customAlignmentOf } from '../../data/alignmentOf';
-import { isDecorated, isLooseDecorated } from '../../data/attributes';
+import { isLooseDecorated } from '../../data/dataTypes';
 import type { LooseArray } from '../../data/dataTypes';
 import { isLooseStruct } from '../../data/looseStruct';
 import { sizeOf } from '../../data/sizeOf';
+import { isDecorated, isWgslStruct } from '../../data/wgslTypes';
 import type { BaseWgslData, WgslArray } from '../../data/wgslTypes';
-import { isWgslStruct } from '../../data/wgslTypes';
 import { roundUp } from '../../mathUtils';
 import type { TgpuNamable } from '../../namable';
 import {

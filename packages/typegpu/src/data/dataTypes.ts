@@ -1,9 +1,7 @@
 import type { Infer, InferRecord } from '../shared/repr';
 import { vertexFormats } from '../shared/vertexFormat';
-import type { LooseDecorated } from './attributes';
 import type { PackedData } from './vertexFormatData';
-import type * as wgsl from './wgslTypes';
-import { isWgslData } from './wgslTypes';
+import * as wgsl from './wgslTypes';
 
 /**
  * Array schema constructed via `d.looseArrayOf` function.
@@ -41,6 +39,16 @@ export interface LooseStruct<
   readonly '~repr': InferRecord<TProps>;
 }
 
+export interface LooseDecorated<
+  TInner extends wgsl.BaseWgslData = wgsl.BaseWgslData,
+  TAttribs extends unknown[] = unknown[],
+> {
+  readonly type: 'loose-decorated';
+  readonly inner: TInner;
+  readonly attribs: TAttribs;
+  readonly '~repr': Infer<TInner>;
+}
+
 const looseTypeLiterals = [
   'loose-struct',
   'loose-array',
@@ -60,8 +68,34 @@ export function isLooseData(data: unknown): data is AnyLooseData {
   return looseTypeLiterals.includes((data as AnyLooseData)?.type);
 }
 
+export function isLooseDecorated<T extends LooseDecorated>(
+  value: T | unknown,
+): value is T {
+  return (value as T)?.type === 'loose-decorated';
+}
+
+export function getCustomAlignment(
+  data: wgsl.BaseWgslData,
+): number | undefined {
+  return (data as unknown as wgsl.Decorated | LooseDecorated).attribs?.find(
+    wgsl.isAlignAttrib,
+  )?.value;
+}
+
+export function getCustomSize(data: wgsl.BaseWgslData): number | undefined {
+  return (data as unknown as wgsl.Decorated | LooseDecorated).attribs?.find(
+    wgsl.isSizeAttrib,
+  )?.value;
+}
+
+export function getCustomLocation(data: wgsl.BaseWgslData): number | undefined {
+  return (data as unknown as wgsl.Decorated | LooseDecorated).attribs?.find(
+    wgsl.isLocationAttrib,
+  )?.value;
+}
+
 export function isData(value: unknown): value is AnyData {
-  return isWgslData(value) || isLooseData(value);
+  return wgsl.isWgslData(value) || isLooseData(value);
 }
 
 export type AnyData = wgsl.AnyWgslData | AnyLooseData;

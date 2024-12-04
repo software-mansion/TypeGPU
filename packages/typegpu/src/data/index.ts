@@ -8,6 +8,7 @@ export {
   isWgslArray,
   isWgslStruct,
   isAtomic,
+  isDecorated,
   isAlignAttrib,
   isBuiltinAttrib,
   isLocationAttrib,
@@ -60,10 +61,10 @@ export {
 export type {
   LooseArray,
   LooseStruct,
+  LooseDecorated,
   AnyData,
   AnyLooseData,
 } from './dataTypes';
-export type { LooseDecorated } from './attributes';
 export {
   vec2f,
   vec2i,
@@ -92,10 +93,8 @@ export {
   align,
   size,
   location,
-  isDecorated,
-  isLooseDecorated,
   isBuiltin,
-  BaseDecorated,
   AnyAttribute,
   IsBuiltin,
 } from './attributes';
+export { isLooseDecorated, isData, isLooseData } from './dataTypes';
