@@ -4,6 +4,7 @@ import * as d from '../../src/data';
 describe('d.atomic', () => {
   it('creates a u32 atomic schema', () => {
     const u32Atomic = d.atomic(d.u32);
+
     expect(u32Atomic.type).toEqual('atomic');
     expect(u32Atomic.inner).toEqual(d.u32);
     expectTypeOf(u32Atomic).toEqualTypeOf<d.Atomic<d.U32>>();
@@ -11,6 +12,7 @@ describe('d.atomic', () => {
 
   it('creates an i32 atomic schema', () => {
     const i32Atomic = d.atomic(d.i32);
+
     expect(i32Atomic.type).toEqual('atomic');
     expect(i32Atomic.inner).toEqual(d.i32);
     expectTypeOf(i32Atomic).toEqualTypeOf<d.Atomic<d.I32>>();

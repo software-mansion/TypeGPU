@@ -7,6 +7,7 @@ export interface NumberArrayView {
 
 export interface BaseWgslData {
   type: string;
+  /** Type-token, not available at runtime */
   readonly '~repr': unknown;
 }
 
@@ -522,76 +523,91 @@ export interface Bool {
 
 export interface F32 {
   readonly type: 'f32';
+  /** Type-token, not available at runtime */
   readonly '~repr': number;
 }
 
 export interface I32 {
   readonly type: 'i32';
+  /** Type-token, not available at runtime */
   readonly '~repr': number;
 }
 
 export interface U32 {
   readonly type: 'u32';
+  /** Type-token, not available at runtime */
   readonly '~repr': number;
 }
 
 export interface Vec2f {
   readonly type: 'vec2f';
+  /** Type-token, not available at runtime */
   readonly '~repr': $Vec2f;
 }
 
 export interface Vec2i {
   readonly type: 'vec2i';
+  /** Type-token, not available at runtime */
   readonly '~repr': $Vec2i;
 }
 
 export interface Vec2u {
   readonly type: 'vec2u';
+  /** Type-token, not available at runtime */
   readonly '~repr': $Vec2u;
 }
 
 export interface Vec3f {
   readonly type: 'vec3f';
+  /** Type-token, not available at runtime */
   readonly '~repr': $Vec3f;
 }
 
 export interface Vec3i {
   readonly type: 'vec3i';
+  /** Type-token, not available at runtime */
   readonly '~repr': $Vec3i;
 }
 
 export interface Vec3u {
   readonly type: 'vec3u';
+  /** Type-token, not available at runtime */
   readonly '~repr': $Vec3u;
 }
 
 export interface Vec4f {
   readonly type: 'vec4f';
+  /** Type-token, not available at runtime */
   readonly '~repr': $Vec4f;
 }
 
 export interface Vec4i {
   readonly type: 'vec4i';
+  /** Type-token, not available at runtime */
   readonly '~repr': $Vec4i;
 }
 
 export interface Vec4u {
   readonly type: 'vec4u';
+  /** Type-token, not available at runtime */
   readonly '~repr': $Vec4u;
 }
 
 export interface Mat2x2f {
   readonly type: 'mat2x2f';
+  /** Type-token, not available at runtime */
   readonly '~repr': $Mat2x2f;
 }
 
 export interface Mat3x3f {
   readonly type: 'mat3x3f';
+  /** Type-token, not available at runtime */
   readonly '~repr': $Mat3x3f;
 }
 
 export interface Mat4x4f {
   readonly type: 'mat4x4f';
+  /** Type-token, not available at runtime */
   readonly '~repr': $Mat4x4f;
 }
 
@@ -601,6 +617,7 @@ export interface WgslStruct<
   readonly type: 'struct';
   readonly label?: string | undefined;
   readonly propTypes: TProps;
+  /** Type-token, not available at runtime */
   readonly '~repr': InferRecord<TProps>;
 }
 
@@ -608,6 +625,7 @@ export interface WgslArray<TElement = BaseWgslData> {
   readonly type: 'array';
   readonly length: number;
   readonly elementType: TElement;
+  /** Type-token, not available at runtime */
   readonly '~repr': Infer<TElement>[];
 }
 
@@ -617,6 +635,7 @@ export interface WgslArray<TElement = BaseWgslData> {
 export interface Atomic<TInner extends U32 | I32 = U32 | I32> {
   readonly type: 'atomic';
   readonly inner: TInner;
+  /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
 }
 
@@ -647,6 +666,7 @@ export interface Decorated<
   readonly type: 'decorated';
   readonly inner: TInner;
   readonly attribs: TAttribs;
+  /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
 }
 
