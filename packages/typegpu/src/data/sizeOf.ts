@@ -1,9 +1,12 @@
 import { roundUp } from '../mathUtils';
 import { alignmentOf, customAlignmentOf } from './alignmentOf';
 import type { LooseStruct, LooseTypeLiteral } from './dataTypes';
-import { getCustomSize, isLooseDecorated } from './dataTypes';
-import { isLooseArray } from './looseArray';
-import { isLooseStruct } from './looseStruct';
+import {
+  getCustomSize,
+  isLooseArray,
+  isLooseDecorated,
+  isLooseStruct,
+} from './dataTypes';
 import type { BaseWgslData, WgslStruct, WgslTypeLiteral } from './wgslTypes';
 import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes';
 

@@ -30,25 +30,6 @@ export const looseStruct = <TProps extends Record<string, BaseWgslData>>(
 ): LooseStruct<ExoticRecord<TProps>> =>
   new LooseStructImpl(properties as ExoticRecord<TProps>);
 
-/**
- * Checks whether passed in value is a looseStruct schema,
- * as opposed to, e.g., a struct schema.
- *
- * Struct schemas can be used to describe uniform and storage buffers,
- * whereas looseStruct schemas cannot. Loose structs are useful for
- * defining vertex buffers instead.
- *
- * @example
- * isLooseStruct(d.struct({ a: d.u32 })) // false
- * isLooseStruct(d.looseStruct({ a: d.u32 })) // true
- * isLooseStruct(d.vec3f) // false
- */
-export function isLooseStruct<T extends LooseStruct>(
-  schema: T | unknown,
-): schema is T {
-  return (schema as T)?.type === 'loose-struct';
-}
-
 // --------------
 // Implementation
 // --------------

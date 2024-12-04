@@ -76,8 +76,8 @@ export {
   vec4i,
   vec4u,
 } from './vector';
-export { looseArrayOf, isLooseArray } from './looseArray';
-export { looseStruct, isLooseStruct } from './looseStruct';
+export { looseArrayOf } from './looseArray';
+export { looseStruct } from './looseStruct';
 export {
   mat2x2f,
   mat3x3f,
@@ -97,4 +97,10 @@ export {
   AnyAttribute,
   IsBuiltin,
 } from './attributes';
-export { isLooseDecorated, isData, isLooseData } from './dataTypes';
+export {
+  isLooseArray,
+  isLooseStruct,
+  isLooseDecorated,
+  isData,
+  isLooseData,
+} from './dataTypes';

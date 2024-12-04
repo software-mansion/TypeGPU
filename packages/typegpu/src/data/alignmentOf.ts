@@ -1,6 +1,9 @@
-import { getCustomAlignment, isLooseDecorated } from './dataTypes';
-import { isLooseArray } from './looseArray';
-import { isLooseStruct } from './looseStruct';
+import {
+  getCustomAlignment,
+  isLooseArray,
+  isLooseDecorated,
+  isLooseStruct,
+} from './dataTypes';
 import { packedFormats } from './vertexFormatData';
 import {
   type BaseWgslData,

@@ -29,25 +29,6 @@ export const looseArrayOf = <TElement extends AnyData>(
 ): LooseArray<Exotic<TElement>> =>
   new LooseArrayImpl(elementType as Exotic<TElement>, count);
 
-/**
- * Checks whether the passed in value is a loose-array schema,
- * as opposed to, e.g., a regular array schema.
- *
- * Array schemas can be used to describe uniform and storage buffers,
- * whereas looseArray schemas cannot. Loose arrays are useful for
- * defining vertex buffers instead.
- *
- * @example
- * isLooseArray(d.arrayOf(d.u32, 4)) // false
- * isLooseArray(d.looseArrayOf(d.u32, 4)) // true
- * isLooseArray(d.vec3f) // false
- */
-export function isLooseArray<T extends LooseArray>(
-  schema: T | unknown,
-): schema is T {
-  return (schema as LooseArray)?.type === 'loose-array';
-}
-
 // --------------
 // Implementation
 // --------------

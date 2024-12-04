@@ -68,6 +68,44 @@ export function isLooseData(data: unknown): data is AnyLooseData {
   return looseTypeLiterals.includes((data as AnyLooseData)?.type);
 }
 
+/**
+ * Checks whether the passed in value is a loose-array schema,
+ * as opposed to, e.g., a regular array schema.
+ *
+ * Array schemas can be used to describe uniform and storage buffers,
+ * whereas looseArray schemas cannot. Loose arrays are useful for
+ * defining vertex buffers instead.
+ *
+ * @example
+ * isLooseArray(d.arrayOf(d.u32, 4)) // false
+ * isLooseArray(d.looseArrayOf(d.u32, 4)) // true
+ * isLooseArray(d.vec3f) // false
+ */
+export function isLooseArray<T extends LooseArray>(
+  schema: T | unknown,
+): schema is T {
+  return (schema as LooseArray)?.type === 'loose-array';
+}
+
+/**
+ * Checks whether passed in value is a looseStruct schema,
+ * as opposed to, e.g., a struct schema.
+ *
+ * Struct schemas can be used to describe uniform and storage buffers,
+ * whereas looseStruct schemas cannot. Loose structs are useful for
+ * defining vertex buffers instead.
+ *
+ * @example
+ * isLooseStruct(d.struct({ a: d.u32 })) // false
+ * isLooseStruct(d.looseStruct({ a: d.u32 })) // true
+ * isLooseStruct(d.vec3f) // false
+ */
+export function isLooseStruct<T extends LooseStruct>(
+  schema: T | unknown,
+): schema is T {
+  return (schema as T)?.type === 'loose-struct';
+}
+
 export function isLooseDecorated<T extends LooseDecorated>(
   value: T | unknown,
 ): value is T {

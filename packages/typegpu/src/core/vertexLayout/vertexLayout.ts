@@ -1,7 +1,6 @@
 import { alignmentOf, customAlignmentOf } from '../../data/alignmentOf';
-import { isLooseDecorated } from '../../data/dataTypes';
+import { isLooseDecorated, isLooseStruct } from '../../data/dataTypes';
 import type { LooseArray } from '../../data/dataTypes';
-import { isLooseStruct } from '../../data/looseStruct';
 import { sizeOf } from '../../data/sizeOf';
 import { isDecorated, isWgslStruct } from '../../data/wgslTypes';
 import type { BaseWgslData, WgslArray } from '../../data/wgslTypes';
