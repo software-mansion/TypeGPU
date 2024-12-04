@@ -8,11 +8,12 @@ export type Ast = {
   externalNames: string[];
 };
 
-export const implementationToAst = new WeakMap<TgslImplementation, Ast>();
-export const implementationToExternals = new WeakMap<
-  TgslImplementation,
-  Record<string, unknown>
->();
+export type AstInfo = {
+  ast: Ast;
+  externals?: Record<string, unknown> | undefined;
+};
+
+export const pluginAstInfo = new WeakMap<TgslImplementation, AstInfo>();
 
 export function assignAst<
   Args extends AnyTgpuData[] = AnyTgpuData[],
@@ -22,12 +23,6 @@ export function assignAst<
   ast: Ast,
   externals?: Record<string, unknown> | undefined,
 ): TgslImplementation<Args, Return> {
-  if (externals) {
-    implementationToExternals.set(
-      implementation as TgslImplementation,
-      externals,
-    );
-  }
-  implementationToAst.set(implementation as TgslImplementation, ast);
+  pluginAstInfo.set(implementation as TgslImplementation, { ast, externals });
   return implementation;
 }
