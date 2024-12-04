@@ -1,6 +1,4 @@
 import type { Block } from 'tinyest';
-import type { AnyTgpuData } from '../../types';
-import type { TgslImplementation } from './fnTypes';
 
 export type Ast = {
   argNames: string[];
@@ -13,9 +11,14 @@ export type AstInfo = {
   externals?: Record<string, unknown> | undefined;
 };
 
-const functionToAstMap = new WeakMap<(...args: unknown[]) => unknown, AstInfo>();
+const functionToAstMap = new WeakMap<
+  (...args: unknown[]) => unknown,
+  AstInfo
+>();
 
-export function getPrebuiltAstFor(fn: (...args: unknown[]) => unknown): AstInfo | undefined {
+export function getPrebuiltAstFor(
+  fn: (...args: unknown[]) => unknown,
+): AstInfo | undefined {
   return functionToAstMap.get(fn);
 }
 

@@ -40,7 +40,6 @@ export type UnwrapReturn<T> = T extends undefined
     void
   : Unwrap<T>;
 
-
 export type Implementation<
   Args extends unknown[] = unknown[],
   Return = unknown,
