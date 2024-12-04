@@ -40,15 +40,11 @@ export type UnwrapReturn<T> = T extends undefined
     void
   : Unwrap<T>;
 
-export type TgslImplementation<
-  Args extends unknown[] = unknown[],
-  Return = unknown,
-> = (...args: Args) => Return;
 
 export type Implementation<
   Args extends unknown[] = unknown[],
   Return = unknown,
-> = string | TgslImplementation<Args, Return>;
+> = string | ((...args: Args) => Return);
 
 type BaseIOData =
   | F32

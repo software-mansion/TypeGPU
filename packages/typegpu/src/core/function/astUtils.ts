@@ -1,5 +1,5 @@
-import type { Block } from 'packages/tinyest/dist';
-import type { AnyTgpuData } from '../..';
+import type { Block } from 'tinyest';
+import type { AnyTgpuData } from '../../types';
 import type { TgslImplementation } from './fnTypes';
 
 export type Ast = {
@@ -13,16 +13,17 @@ export type AstInfo = {
   externals?: Record<string, unknown> | undefined;
 };
 
-export const pluginAstInfo = new WeakMap<TgslImplementation, AstInfo>();
+const functionToAstMap = new WeakMap<(...args: unknown[]) => unknown, AstInfo>();
 
-export function assignAst<
-  Args extends AnyTgpuData[] = AnyTgpuData[],
-  Return extends AnyTgpuData | undefined = AnyTgpuData | undefined,
->(
-  implementation: TgslImplementation<Args, Return>,
+export function getPrebuiltAstFor(fn: (...args: unknown[]) => unknown): AstInfo | undefined {
+  return functionToAstMap.get(fn);
+}
+
+export function assignAst<T extends (...args: unknown[]) => unknown>(
+  fn: T,
   ast: Ast,
   externals?: Record<string, unknown> | undefined,
-): TgslImplementation<Args, Return> {
-  pluginAstInfo.set(implementation as TgslImplementation, { ast, externals });
-  return implementation;
+): T {
+  functionToAstMap.set(fn, { ast, externals });
+  return fn;
 }

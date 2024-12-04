@@ -50,7 +50,7 @@ export const tgpu = {
   write,
 };
 
-// this method is used by the vite plugin and should not be visible to the user
+// Hidden API, used only by tooling (e.g., rollup plugin).
 Object.assign(tgpu, {
   __assignAst: assignAst,
 });
