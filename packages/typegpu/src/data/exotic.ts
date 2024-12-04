@@ -19,6 +19,11 @@ type TypeToPrimitiveMap = {
   mat4x4f: wgsl.Mat4x4f;
 };
 
+/**
+ * Strips schema types down to their most basic forms. (native -> exotic)
+ * This is used by schema constructors to be able to ingest native schemas (created by TypeGPU), and
+ * spit out a type that matches non-native schemas as well.
+ */
 export type Exotic<T> =
   // primitives
   T extends { type: keyof TypeToPrimitiveMap }
