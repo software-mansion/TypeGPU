@@ -28,7 +28,6 @@ export const tgpu = {
   /** @deprecated Use `'vertex'` string literal instead. */
   Vertex: 'vertex' as const,
 
-  __assignAst: assignAst,
   fn,
   procedure,
   fragmentFn,
@@ -50,6 +49,12 @@ export const tgpu = {
   read,
   write,
 };
+
+// Add a method that is not visible but can be used by the vite plugin.
+Object.assign(tgpu, {
+  __assignAst: assignAst,
+});
+
 export default tgpu;
 
 export * from '../errors';
