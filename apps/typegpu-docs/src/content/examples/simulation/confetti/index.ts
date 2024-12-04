@@ -1,10 +1,10 @@
-import { arrayOf, f32, struct, vec2f, vec4f } from 'typegpu/data';
+import { type $Vec4f, arrayOf, f32, struct, vec2f, vec4f } from 'typegpu/data';
 import tgpu, { asMutable, asUniform, builtin } from 'typegpu/experimental';
 
 // constants
 
 const PARTICLE_AMOUNT = 200;
-const COLOR_PALETTE: vec4f[] = [
+const COLOR_PALETTE: $Vec4f[] = [
   [255, 190, 11],
   [251, 86, 7],
   [255, 0, 110],

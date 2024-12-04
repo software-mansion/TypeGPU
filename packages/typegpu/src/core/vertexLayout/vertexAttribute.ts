@@ -34,9 +34,9 @@ export type ArrayToContainedAttribs<T extends WgslArray | LooseArray> =
   DataToContainedAttribs<T['elementType']>;
 
 export type LayoutToAllowedAttribs<T> = T extends {
-  kind: keyof KindToAcceptedAttribMap;
+  type: keyof KindToAcceptedAttribMap;
 }
-  ? KindToAcceptedAttribMap[T['kind']]
+  ? KindToAcceptedAttribMap[T['type']]
   : T extends Record<string, unknown>
     ? { [Key in keyof T]: LayoutToAllowedAttribs<T[Key]> }
     : never;

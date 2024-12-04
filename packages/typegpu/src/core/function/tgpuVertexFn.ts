@@ -6,7 +6,13 @@ import type { BaseWgslData, WgslStruct } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
-import type { IOData, IOLayout, Implementation, InferIO } from './fnTypes';
+import type {
+  ExoticIO,
+  IOData,
+  IOLayout,
+  Implementation,
+  InferIO,
+} from './fnTypes';
 
 // ----------
 // Public API
@@ -67,12 +73,14 @@ export function vertexFn<
 >(
   vertexAttribs: VertexAttribs,
   outputType: Output,
-): TgpuVertexFnShell<VertexAttribs, Output> {
+): TgpuVertexFnShell<ExoticIO<VertexAttribs>, ExoticIO<Output>> {
   return {
-    argTypes: [vertexAttribs],
-    returnType: outputType,
+    argTypes: [vertexAttribs as ExoticIO<VertexAttribs>],
+    returnType: outputType as ExoticIO<Output>,
 
-    does(implementation): TgpuVertexFn<VertexAttribs, Output> {
+    does(
+      implementation,
+    ): TgpuVertexFn<ExoticIO<VertexAttribs>, ExoticIO<Output>> {
       // biome-ignore lint/suspicious/noExplicitAny: <no need>
       return createVertexFn(this, implementation as Implementation) as any;
     },

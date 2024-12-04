@@ -13,6 +13,7 @@ import {
   kindToDefaultFormatMap,
   vertexFormats,
 } from '../../shared/vertexFormat';
+import type { ExoticIO } from '../function/fnTypes';
 import type {
   ArrayToContainedAttribs,
   DataToContainedAttribs,
@@ -40,8 +41,11 @@ export interface INTERNAL_TgpuVertexAttrib {
 export function vertexLayout<TData extends WgslArray | LooseArray>(
   schemaForCount: (count: number) => TData,
   stepMode: 'vertex' | 'instance' = 'vertex',
-): TgpuVertexLayout<TData> {
-  return new TgpuVertexLayoutImpl(schemaForCount, stepMode);
+): TgpuVertexLayout<ExoticIO<TData>> {
+  return new TgpuVertexLayoutImpl(
+    schemaForCount as (count: number) => ExoticIO<TData>,
+    stepMode,
+  );
 }
 
 export function isVertexLayout<T extends TgpuVertexLayout>(

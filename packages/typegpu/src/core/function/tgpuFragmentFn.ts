@@ -3,7 +3,7 @@ import type { Vec4f } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
-import type { IOLayout, Implementation, InferIO } from './fnTypes';
+import type { ExoticIO, IOLayout, Implementation, InferIO } from './fnTypes';
 
 // ----------
 // Public API
@@ -64,12 +64,12 @@ export function fragmentFn<
 >(
   varyingTypes: Varying,
   outputType: Output,
-): TgpuFragmentFnShell<Varying, Output> {
+): TgpuFragmentFnShell<ExoticIO<Varying>, ExoticIO<Output>> {
   return {
-    argTypes: [varyingTypes],
-    returnType: outputType,
+    argTypes: [varyingTypes as ExoticIO<Varying>],
+    returnType: outputType as ExoticIO<Output>,
 
-    does(implementation): TgpuFragmentFn<Varying, Output> {
+    does(implementation): TgpuFragmentFn<ExoticIO<Varying>, ExoticIO<Output>> {
       return createFragmentFn(this, implementation as Implementation);
     },
   };
