@@ -1,4 +1,3 @@
-import type { Block } from 'tinyest';
 import type { Vec4f } from '../../data';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
@@ -43,7 +42,6 @@ export interface TgpuFragmentFn<
   readonly shell: TgpuFragmentFnShell<Varying, Output>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
-  $__ast(argNames: string[], body: Block): this;
 }
 
 /**
@@ -96,13 +94,6 @@ function createFragmentFn(
 
     $uses(newExternals) {
       core.applyExternals(newExternals);
-      return this;
-    },
-
-    $__ast(argNames: string[], body: Block): This {
-      // When receiving a pre-built $__ast, we are receiving $uses alongside it, so
-      // we do not need to verify external names.
-      core.setAst({ argNames, body, externalNames: [] });
       return this;
     },
 
