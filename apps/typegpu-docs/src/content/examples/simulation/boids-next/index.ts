@@ -1,5 +1,5 @@
 import {
-  type Parsed,
+  type Infer,
   arrayOf,
   f32,
   struct,
@@ -87,7 +87,7 @@ const Params = struct({
   cohesionStrength: f32,
 }).$name('Params');
 
-type Params = Parsed<typeof Params>;
+type Params = Infer<typeof Params>;
 
 const colorPresets = {
   plumTree: vec3f(1.0, 2.0, 1.0),
