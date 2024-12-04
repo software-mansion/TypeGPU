@@ -28,6 +28,7 @@ export const tgpu = {
   /** @deprecated Use `'vertex'` string literal instead. */
   Vertex: 'vertex' as const,
 
+  __assignAst: assignAst,
   fn,
   procedure,
   fragmentFn,
