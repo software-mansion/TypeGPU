@@ -1,12 +1,4 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  expectTypeOf,
-  it,
-  vi,
-} from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import type {
   TgpuMutableTexture,
   TgpuReadonlyTexture,
@@ -16,56 +8,14 @@ import type {
 } from '../src/core/texture/texture';
 import type { Render, Sampled } from '../src/core/texture/usageExtension';
 import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../src/data';
-import {
-  type ExperimentalTgpuRoot,
-  StrictNameRegistry,
-  tgpu,
-  wgsl,
-} from '../src/experimental';
+import { StrictNameRegistry, wgsl } from '../src/experimental';
 import { resolve } from '../src/resolutionCtx';
 import './utils/webgpuGlobals';
 import type { NotAllowed } from '../src/extension';
-
-const mockDevice = {
-  createBindGroup: vi.fn(() => 'mockBindGroup'),
-  createBindGroupLayout: vi.fn(() => 'mockBindGroupLayout'),
-  createBuffer: vi.fn(() => 'mockBuffer'),
-  createCommandEncoder: vi.fn(() => 'mockCommandEncoder'),
-  createComputePipeline: vi.fn(() => 'mockComputePipeline'),
-  createPipelineLayout: vi.fn(() => 'mockPipelineLayout'),
-  createRenderPipeline: vi.fn(() => 'mockRenderPipeline'),
-  createSampler: vi.fn(() => 'mockSampler'),
-  createShaderModule: vi.fn(() => 'mockShaderModule'),
-  createTexture: vi.fn(() => 'mockTexture'),
-  importExternalTexture: vi.fn(() => 'mockExternalTexture'),
-  queue: {
-    copyExternalImageToTexture: vi.fn(),
-    onSubmittedWorkDone: vi.fn(),
-    submit: vi.fn(),
-    writeBuffer: vi.fn(),
-    writeTexture: vi.fn(),
-  },
-};
-
-function useRoot() {
-  let root: ExperimentalTgpuRoot;
-
-  beforeEach(() => {
-    root = tgpu.initFromDevice({
-      device: mockDevice as unknown as GPUDevice,
-    });
-  });
-
-  afterEach(() => {
-    root.destroy();
-    vi.resetAllMocks();
-  });
-
-  return () => root;
-}
+import { mockRoot } from './utils/mockRoot';
 
 describe('TgpuTexture', () => {
-  const getRoot = useRoot();
+  const { getRoot } = mockRoot();
 
   it('makes passing the default, `undefined` or omitting an option prop result in the same type.', () => {
     const commonProps = {
@@ -286,7 +236,7 @@ describe('TgpuTexture', () => {
 });
 
 describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
-  const getRoot = useRoot();
+  const { getRoot } = mockRoot();
 
   it('inherits the dimension and format from its owner texture', () => {
     const texture1 = getRoot()
@@ -377,7 +327,7 @@ describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
 });
 
 describe('TgpuSampledTexture', () => {
-  const getRoot = useRoot();
+  const { getRoot } = mockRoot();
 
   it('inherits the dimension and format from its owner texture', () => {
     const texture1 = getRoot()
@@ -430,21 +380,5 @@ describe('TgpuSampledTexture', () => {
       // @ts-expect-error
       format: 'rgba8snorm',
     });
-  });
-});
-
-describe('sampler', () => {
-  it('creates a sampler with correct type', () => {
-    const sampler = wgsl.sampler({}).$name('sampler');
-
-    const opts = {
-      names: new StrictNameRegistry(),
-    };
-
-    const code = wgsl`
-      let x = ${sampler};
-    `;
-
-    expect(resolve(code, opts).code).toContain('var sampler: sampler');
   });
 });

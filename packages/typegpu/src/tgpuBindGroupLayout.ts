@@ -11,8 +11,9 @@ import {
   TgpuLaidOutBufferImpl,
 } from './core/buffer/bufferUsage';
 import {
-  TgpuComparisonSamplerImpl,
-  TgpuSamplerImpl,
+  TgpuLaidOutComparisonSamplerImpl,
+  TgpuLaidOutSamplerImpl,
+  type TgpuSampler,
 } from './core/sampler/sampler';
 import { TgpuExternalTextureImpl } from './core/texture/externalTexture';
 import {
@@ -33,7 +34,6 @@ import {
 import { NotUniformError } from './errors';
 import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
 import type { TgpuNamable } from './namable';
-import type { TgpuSampler } from './tgpuSampler';
 import { type AnyTgpuData, type TgpuShaderStage, isBaseData } from './types';
 import type { Unwrapper } from './unwrapper';
 import type { OmitProps } from './utilityTypes';
@@ -358,10 +358,12 @@ class TgpuBindGroupLayoutImpl<
       if ('sampler' in entry) {
         if (entry.sampler === 'comparison') {
           // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-          (this.bound[key] as any) = new TgpuComparisonSamplerImpl(membership);
+          (this.bound[key] as any) = new TgpuLaidOutComparisonSamplerImpl(
+            membership,
+          );
         } else {
           // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
-          (this.bound[key] as any) = new TgpuSamplerImpl(membership);
+          (this.bound[key] as any) = new TgpuLaidOutSamplerImpl(membership);
         }
       }
 

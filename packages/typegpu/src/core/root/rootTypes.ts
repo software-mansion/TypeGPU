@@ -11,7 +11,6 @@ import type {
   TgpuPlum,
   Unsubscribe,
 } from '../../tgpuPlumTypes';
-import type { TgpuSampler } from '../../tgpuSampler';
 import type { AnyTgpuData, Eventual, TgpuSlot } from '../../types';
 import type { Unwrapper } from '../../unwrapper';
 import type { Mutable, OmitProps, Prettify } from '../../utilityTypes';
@@ -228,8 +227,6 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
     plum: TgpuPlum<TValue>,
     listener: PlumListener<TValue>,
   ): Unsubscribe;
-
-  samplerFor(sampler: TgpuSampler): GPUSampler;
 
   /**
    * Causes all commands enqueued by pipelines to be
