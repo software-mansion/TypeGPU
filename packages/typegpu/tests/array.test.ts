@@ -1,8 +1,7 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
-import { arrayOf, vec3f, vec3u } from '../src/data';
+import { arrayOf, sizeOf, vec3f, vec3u } from '../src/data';
 import { readData, writeData } from '../src/data/dataIO';
-import { sizeOf } from '../src/data/sizeOf';
 import { StrictNameRegistry } from '../src/nameRegistry';
 import { resolve } from '../src/resolutionCtx';
 import type { Infer } from '../src/shared/repr';

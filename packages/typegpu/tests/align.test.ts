@@ -2,22 +2,22 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   type Align,
   type Decorated,
+  type LooseArray,
   type LooseDecorated,
   type TgpuArray,
   type Vec3f,
   align,
   arrayOf,
   f32,
+  isLooseData,
+  looseArrayOf,
+  sizeOf,
   struct,
   u32,
   vec3f,
 } from '../src/data';
 import { alignmentOf } from '../src/data/alignmentOf';
-import { type LooseArray, isLooseData } from '../src/data/dataTypes';
-import { looseArrayOf } from '../src/data/looseArray';
-import { sizeOf } from '../src/data/sizeOf';
-import { StrictNameRegistry } from '../src/experimental';
-import { resolve } from '../src/resolutionCtx';
+import tgpu from '../src/experimental';
 
 describe('d.align', () => {
   it('adds @align attribute for custom aligned struct members', () => {
@@ -27,9 +27,9 @@ describe('d.align', () => {
       c: u32,
     }).$name('s1');
 
-    const opts = { names: new StrictNameRegistry() };
-
-    expect(resolve(s1, opts).code).toContain('@align(16) b: u32,');
+    expect(tgpu.resolve({ input: s1, names: 'strict' })).toContain(
+      '@align(16) b: u32,',
+    );
   });
 
   it('changes alignment of a struct containing aligned member', () => {

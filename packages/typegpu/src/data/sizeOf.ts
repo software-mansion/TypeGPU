@@ -1,6 +1,6 @@
 import { roundUp } from '../mathUtils';
 import { alignmentOf, customAlignmentOf } from './alignmentOf';
-import type { LooseStruct, LooseTypeLiteral } from './dataTypes';
+import type { AnyData, LooseStruct, LooseTypeLiteral } from './dataTypes';
 import {
   getCustomSize,
   isLooseArray,
@@ -133,15 +133,22 @@ function computeSize(data: object): number {
  * not stored on them. Instead, this weak map acts as an extended property
  * of those data types.
  */
-const cachedSizes = new WeakMap<object, number>();
+const cachedSizes = new WeakMap<BaseWgslData, number>();
 
-export function sizeOf(data: object): number {
-  let size = cachedSizes.get(data);
+export function sizeOf(schema: BaseWgslData): number {
+  let size = cachedSizes.get(schema);
 
   if (size === undefined) {
-    size = computeSize(data);
-    cachedSizes.set(data, size);
+    size = computeSize(schema);
+    cachedSizes.set(schema, size);
   }
 
   return size;
+}
+
+/**
+ * Returns the size (in bytes) of data represented by the `schema`.
+ */
+export function PUBLIC_sizeOf(schema: AnyData): number {
+  return sizeOf(schema);
 }

@@ -2,7 +2,6 @@ import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data';
 import { readData, writeData } from '../src/data/dataIO';
-import { sizeOf } from '../src/data/sizeOf';
 
 describe('vec2f', () => {
   it('should create a zero 2d vector', () => {
@@ -26,7 +25,7 @@ describe('vec2f', () => {
   it('should encode a 2d vector', () => {
     const vec = d.vec2f(1, 2);
 
-    const buffer = new ArrayBuffer(sizeOf(d.vec2f));
+    const buffer = new ArrayBuffer(d.sizeOf(d.vec2f));
 
     writeData(new BufferWriter(buffer), d.vec2f, vec);
     expect(readData(new BufferReader(buffer), d.vec2f)).toEqual(vec);
@@ -85,7 +84,7 @@ describe('vec3f', () => {
   it('should encode a 3d vector', () => {
     const vec = d.vec3f(1, 2, 3);
 
-    const buffer = new ArrayBuffer(sizeOf(d.vec3f));
+    const buffer = new ArrayBuffer(d.sizeOf(d.vec3f));
 
     writeData(new BufferWriter(buffer), d.vec3f, vec);
     expect(readData(new BufferReader(buffer), d.vec3f)).toEqual(vec);
@@ -149,7 +148,7 @@ describe('vec4f', () => {
   it('should encode a 4d vector', () => {
     const vec = d.vec4f(1, 2, 3, 4);
 
-    const buffer = new ArrayBuffer(sizeOf(d.vec4f));
+    const buffer = new ArrayBuffer(d.sizeOf(d.vec4f));
 
     writeData(new BufferWriter(buffer), d.vec4f, vec);
     expect(readData(new BufferReader(buffer), d.vec4f)).toEqual(vec);

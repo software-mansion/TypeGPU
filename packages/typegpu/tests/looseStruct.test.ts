@@ -7,6 +7,7 @@ import {
   looseStruct,
   sint16x2,
   sint16x4,
+  sizeOf,
   snorm16x2,
   unorm8x2,
   unorm10_10_10_2,
@@ -16,7 +17,6 @@ import {
   vec3u,
 } from '../src/data';
 import { readData, writeData } from '../src/data/dataIO';
-import { sizeOf } from '../src/data/sizeOf';
 
 describe('looseStruct', () => {
   it('properly calculates size with only loose members', () => {

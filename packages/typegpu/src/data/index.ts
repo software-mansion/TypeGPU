@@ -104,3 +104,4 @@ export {
   isData,
   isLooseData,
 } from './dataTypes';
+export { PUBLIC_sizeOf as sizeOf } from './sizeOf';

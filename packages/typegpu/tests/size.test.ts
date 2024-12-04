@@ -1,6 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import * as d from '../src/data';
-import { sizeOf } from '../src/data/sizeOf';
 import { StrictNameRegistry } from '../src/experimental';
 import { resolve } from '../src/resolutionCtx';
 
@@ -23,7 +22,7 @@ describe('d.size', () => {
 
   it('changes size of the struct containing aligned member', () => {
     expect(
-      sizeOf(
+      d.sizeOf(
         d.struct({
           a: d.u32,
           b: d.u32,
@@ -33,7 +32,7 @@ describe('d.size', () => {
     ).toEqual(12);
 
     expect(
-      sizeOf(
+      d.sizeOf(
         d.struct({
           a: d.u32,
           b: d.size(8, d.u32),
@@ -43,7 +42,7 @@ describe('d.size', () => {
     ).toEqual(16);
 
     expect(
-      sizeOf(
+      d.sizeOf(
         d.struct({
           a: d.u32,
           b: d.size(8, d.u32),
@@ -54,7 +53,7 @@ describe('d.size', () => {
 
     // nested
     expect(
-      sizeOf(
+      d.sizeOf(
         d.struct({
           a: d.u32,
           b: d.struct({
@@ -66,7 +65,7 @@ describe('d.size', () => {
 
     // taking alignment into account
     expect(
-      sizeOf(
+      d.sizeOf(
         d.struct({
           a: d.struct({
             c: d.size(17, d.f32),
@@ -90,7 +89,7 @@ describe('d.size', () => {
   it('changes size of loose array element', () => {
     const s1 = d.looseArrayOf(d.size(11, d.u32), 10);
 
-    expect(sizeOf(s1)).toEqual(110);
+    expect(d.sizeOf(s1)).toEqual(110);
     expectTypeOf(s1).toEqualTypeOf<
       d.LooseArray<d.Decorated<d.U32, [d.Size<11>]>>
     >();
@@ -103,7 +102,7 @@ describe('d.size', () => {
       c: d.u32, // 4
     });
 
-    expect(sizeOf(s1)).toEqual(28);
+    expect(d.sizeOf(s1)).toEqual(28);
     expectTypeOf(s1).toEqualTypeOf<
       d.LooseStruct<{
         a: d.U32;

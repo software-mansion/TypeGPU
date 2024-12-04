@@ -2,7 +2,6 @@ import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data';
 import { readData, writeData } from '../src/data/dataIO';
-import { sizeOf } from '../src/data/sizeOf';
 
 describe('mat2x2f', () => {
   it('creates a 2x2 matrix with zeros', () => {
@@ -31,7 +30,7 @@ describe('mat2x2f', () => {
       d.vec2f(0, 1), // column 1
     );
 
-    const buffer = new ArrayBuffer(sizeOf(d.mat2x2f));
+    const buffer = new ArrayBuffer(d.sizeOf(d.mat2x2f));
 
     writeData(new BufferWriter(buffer), d.mat2x2f, identity);
     expect(readData(new BufferReader(buffer), d.mat2x2f)).toEqual(identity);
@@ -43,7 +42,7 @@ describe('mat2x2f', () => {
       d.vec2f(2, 3), // column 1
     );
 
-    const buffer = new ArrayBuffer(sizeOf(d.mat2x2f));
+    const buffer = new ArrayBuffer(d.sizeOf(d.mat2x2f));
 
     writeData(new BufferWriter(buffer), d.mat2x2f, mat);
     expect(readData(new BufferReader(buffer), d.mat2x2f)).toEqual(mat);
@@ -112,7 +111,7 @@ describe('mat3x3f', () => {
       d.vec3f(0, 0, 1), // column 2
     );
 
-    const buffer = new ArrayBuffer(sizeOf(d.mat3x3f));
+    const buffer = new ArrayBuffer(d.sizeOf(d.mat3x3f));
 
     writeData(new BufferWriter(buffer), d.mat3x3f, identity);
     expect(readData(new BufferReader(buffer), d.mat3x3f)).toEqual(identity);
@@ -125,7 +124,7 @@ describe('mat3x3f', () => {
       d.vec3f(6, 7, 8), // column 2
     );
 
-    const buffer = new ArrayBuffer(sizeOf(d.mat3x3f));
+    const buffer = new ArrayBuffer(d.sizeOf(d.mat3x3f));
 
     writeData(new BufferWriter(buffer), d.mat3x3f, mat);
     expect(readData(new BufferReader(buffer), d.mat3x3f)).toEqual(mat);
@@ -220,7 +219,7 @@ describe('mat4x4f', () => {
       d.vec4f(0, 0, 0, 1), // column 3
     );
 
-    const buffer = new ArrayBuffer(sizeOf(d.mat4x4f));
+    const buffer = new ArrayBuffer(d.sizeOf(d.mat4x4f));
 
     writeData(new BufferWriter(buffer), d.mat4x4f, identity);
     expect(readData(new BufferReader(buffer), d.mat4x4f)).toEqual(identity);
@@ -234,7 +233,7 @@ describe('mat4x4f', () => {
       d.vec4f(12, 13, 14, 15), // column 3
     );
 
-    const buffer = new ArrayBuffer(sizeOf(d.mat4x4f));
+    const buffer = new ArrayBuffer(d.sizeOf(d.mat4x4f));
 
     writeData(new BufferWriter(buffer), d.mat4x4f, mat);
     expect(readData(new BufferReader(buffer), d.mat4x4f)).toEqual(mat);

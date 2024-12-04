@@ -4,6 +4,7 @@ import {
   arrayOf,
   f32,
   i32,
+  sizeOf,
   struct,
   u32,
   vec2u,
@@ -11,7 +12,6 @@ import {
   vec3u,
 } from '../src/data';
 import { readData, writeData } from '../src/data/dataIO';
-import { sizeOf } from '../src/data/sizeOf';
 import type { Infer } from '../src/shared/repr';
 
 describe('struct', () => {

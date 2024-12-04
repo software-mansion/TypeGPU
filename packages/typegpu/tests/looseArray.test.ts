@@ -1,10 +1,15 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it, vi } from 'vitest';
-import { align, size, vec3f, vec3u } from '../src/data';
+import {
+  type Infer,
+  align,
+  looseArrayOf,
+  size,
+  sizeOf,
+  vec3f,
+  vec3u,
+} from '../src/data';
 import { readData, writeData } from '../src/data/dataIO';
-import { looseArrayOf } from '../src/data/looseArray';
-import { sizeOf } from '../src/data/sizeOf';
-import type { Infer } from '../src/shared/repr';
 
 const mockDevice = {
   createBuffer: vi.fn(() => 'mockBuffer'),
