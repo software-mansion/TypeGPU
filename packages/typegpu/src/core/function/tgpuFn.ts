@@ -1,4 +1,3 @@
-import type { Block } from 'tinyest';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import { valueList } from '../../resolutionUtils';
@@ -52,7 +51,6 @@ interface TgpuFnBase<
   readonly shell: TgpuFnShell<Args, Return>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
-  $__ast(argNames: string[], body: Block): this;
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuFn<Args, Return>;
 }
 
@@ -115,13 +113,6 @@ function createFn<
       return this;
     },
 
-    $__ast(argNames: string[], body: Block): This {
-      // When receiving a pre-built $__ast, we are receiving $uses alongside it, so
-      // we do not need to verify external names.
-      core.setAst({ argNames, body, externalNames: [] });
-      return this;
-    },
-
     $name(newLabel: string): This {
       core.label = newLabel;
       return this;
@@ -176,11 +167,6 @@ function createBoundFunction<
 
     $uses(newExternals) {
       innerFn.$uses(newExternals);
-      return this;
-    },
-
-    $__ast(argNames: string[], body: Block): This {
-      innerFn.$__ast(argNames, body);
       return this;
     },
 

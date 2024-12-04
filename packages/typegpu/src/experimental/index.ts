@@ -2,6 +2,7 @@
  * @module typegpu/experimental
  */
 
+import { assignAst } from '../core/function/astUtils';
 import { computeFn } from '../core/function/tgpuComputeFn';
 import { fn, procedure } from '../core/function/tgpuFn';
 import { fragmentFn } from '../core/function/tgpuFragmentFn';
@@ -27,6 +28,7 @@ export const tgpu = {
   /** @deprecated Use `'vertex'` string literal instead. */
   Vertex: 'vertex' as const,
 
+  __assignAst: assignAst,
   fn,
   procedure,
   fragmentFn,

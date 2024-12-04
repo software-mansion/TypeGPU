@@ -137,8 +137,6 @@ export default function typegpu(options?: TypegpuPluginOptions): TypegpuPlugin {
                 // Assuming that every call to `.does` is related to TypeGPU
                 // because shells can be created separately from calls to `tgpu`,
                 // making it hard to detect.
-                // TODO: We can improve this by first checking if $__ast exists on this object
-                // at runtime, before calling it.
                 node.callee.property.name === 'does')
             ) {
               const implementation = node.arguments[0];
@@ -165,16 +163,20 @@ export default function typegpu(options?: TypegpuPluginOptions): TypegpuPlugin {
           expr.implementation,
         );
 
+        // Wrap the implementation in a call to `tgpu.__assignAst` to associate the AST with the implementation.
+        magicString.appendLeft(expr.implementation.start, 'tgpu.__assignAst(');
         magicString.appendRight(
-          expr.varDecl.end,
-          `.$__ast(${embedJSON(argNames)}, ${embedJSON(body)})`,
+          expr.implementation.end,
+          `, ${embedJSON({ argNames, body, externalNames })}`,
         );
 
         if (externalNames.length > 0) {
           magicString.appendRight(
-            expr.varDecl.end,
-            `.$uses({ ${externalNames.join(', ')} })`,
+            expr.implementation.end,
+            `, {${externalNames.join(', ')}})`,
           );
+        } else {
+          magicString.appendRight(expr.implementation.end, ', undefined)');
         }
       }
 

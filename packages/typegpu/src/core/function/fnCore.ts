@@ -1,11 +1,12 @@
 import { MissingLinksError } from '../../errors';
 import type { AnyTgpuData, ResolutionCtx, Resource } from '../../types';
+import { implementationToAst, implementationToExternals } from './astUtils';
 import {
   type ExternalMap,
   applyExternals,
   replaceExternalsInWgsl,
 } from './externals';
-import type { Implementation, TranspilationResult } from './fnTypes';
+import type { Implementation } from './fnTypes';
 
 export interface TgpuFnShellBase<Args extends unknown[], Return> {
   readonly argTypes: Args;
@@ -15,7 +16,6 @@ export interface TgpuFnShellBase<Args extends unknown[], Return> {
 interface FnCore {
   label: string | undefined;
   applyExternals(newExternals: ExternalMap): void;
-  setAst(ast: TranspilationResult): void;
   resolve(ctx: ResolutionCtx, fnAttribute?: string): string;
 }
 
@@ -30,7 +30,6 @@ export function createFnCore(
    * entry fn).
    */
   const externalsToApply: ExternalMap[] = [];
-  let prebuiltAst: TranspilationResult | null = null;
 
   return {
     label: undefined as string | undefined,
@@ -39,12 +38,9 @@ export function createFnCore(
       externalsToApply.push(newExternals);
     },
 
-    setAst(ast: TranspilationResult): void {
-      prebuiltAst = ast;
-    },
-
     resolve(ctx: ResolutionCtx, fnAttribute = ''): string {
       const externalMap: ExternalMap = {};
+
       for (const externals of externalsToApply) {
         applyExternals(externalMap, externals);
       }
@@ -60,7 +56,15 @@ export function createFnCore(
 
         ctx.addDeclaration(`${fnAttribute}fn ${id}${replacedImpl}`);
       } else {
-        const ast = prebuiltAst ?? ctx.transpileFn(String(implementation));
+        // get and apply externals applied by the plugin
+        const externals = implementationToExternals.get(implementation);
+        if (externals) {
+          applyExternals(externalMap, externals);
+        }
+
+        const ast =
+          implementationToAst.get(implementation) ??
+          ctx.transpileFn(String(implementation));
 
         // Verifying all required externals are present.
         const missingExternals = ast.externalNames.filter(
