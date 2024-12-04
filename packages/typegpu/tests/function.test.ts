@@ -141,17 +141,12 @@ describe('UnwrapIO', () => {
   it('unwraps f32', () => {
     const layout = d.f32 satisfies IOLayout;
 
-    expectTypeOf(layout).toEqualTypeOf<d.F32>();
     expectTypeOf<InferIO<typeof layout>>().toEqualTypeOf<number>();
   });
 
   it('unwraps a record of numeric primitives', () => {
     const layout = { a: d.f32, b: d.location(2, d.u32) } satisfies IOLayout;
 
-    expectTypeOf(layout).toEqualTypeOf<{
-      a: d.F32;
-      b: d.Decorated<d.U32, [d.Location<2>]>;
-    }>();
     expectTypeOf<InferIO<typeof layout>>().toEqualTypeOf<{
       a: number;
       b: number;

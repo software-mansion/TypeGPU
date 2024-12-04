@@ -1,5 +1,6 @@
 import type { Infer } from '../shared/repr';
 import type { AnyData, LooseArray } from './dataTypes';
+import type { Exotic } from './exotic';
 
 // ----------
 // Public API
@@ -25,7 +26,8 @@ import type { AnyData, LooseArray } from './dataTypes';
 export const looseArrayOf = <TElement extends AnyData>(
   elementType: TElement,
   count: number,
-): LooseArray<TElement> => new LooseArrayImpl(elementType, count);
+): LooseArray<Exotic<TElement>> =>
+  new LooseArrayImpl(elementType as Exotic<TElement>, count);
 
 /**
  * Checks whether the passed in value is a loose-array schema,

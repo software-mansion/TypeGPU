@@ -1,4 +1,4 @@
-import type { AnyWgslData } from '../../data/wgslTypes';
+import type { AnyWgslData, BaseWgslData } from '../../data/wgslTypes';
 import { type Storage, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
 import type { Infer } from '../../shared/repr';
@@ -15,7 +15,7 @@ import { type TgpuBuffer, type Uniform, isUsableAsUniform } from './buffer';
 // ----------
 
 export interface TgpuBufferUsage<
-  TData extends AnyWgslData,
+  TData extends BaseWgslData,
   TUsage extends BindableBufferUsage = BindableBufferUsage,
 > extends TgpuResolvable {
   readonly resourceType: 'buffer-usage';
@@ -24,24 +24,24 @@ export interface TgpuBufferUsage<
   value: Infer<TData>;
 }
 
-export interface TgpuBufferUniform<TData extends AnyWgslData>
+export interface TgpuBufferUniform<TData extends BaseWgslData>
   extends TgpuBufferUsage<TData, 'uniform'> {
   readonly value: Infer<TData>;
 }
 
-export interface TgpuBufferReadonly<TData extends AnyWgslData>
+export interface TgpuBufferReadonly<TData extends BaseWgslData>
   extends TgpuBufferUsage<TData, 'readonly'> {
   readonly value: Infer<TData>;
 }
 
-export interface TgpuBufferMutable<TData extends AnyWgslData>
+export interface TgpuBufferMutable<TData extends BaseWgslData>
   extends TgpuBufferUsage<TData, 'mutable'> {}
 
 export function isBufferUsage<
   T extends
-    | TgpuBufferUniform<AnyWgslData>
-    | TgpuBufferReadonly<AnyWgslData>
-    | TgpuBufferMutable<AnyWgslData>,
+    | TgpuBufferUniform<BaseWgslData>
+    | TgpuBufferReadonly<BaseWgslData>
+    | TgpuBufferMutable<BaseWgslData>,
 >(value: T | unknown): value is T {
   return (value as T)?.resourceType === 'buffer-usage';
 }
@@ -108,7 +108,7 @@ class TgpuFixedBufferImpl<
 }
 
 export class TgpuLaidOutBufferImpl<
-  TData extends AnyWgslData,
+  TData extends BaseWgslData,
   TUsage extends BindableBufferUsage,
 > implements TgpuBufferUsage<TData, TUsage>
 {
@@ -132,7 +132,7 @@ export class TgpuLaidOutBufferImpl<
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${this._membership.idx}) var<${usage}> ${id}: ${ctx.resolve(this.dataType)};`,
+      `@group(${group}) @binding(${this._membership.idx}) var<${usage}> ${id}: ${ctx.resolve(this.dataType as AnyWgslData)};`,
     );
 
     return id;

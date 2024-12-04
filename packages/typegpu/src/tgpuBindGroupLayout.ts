@@ -22,7 +22,7 @@ import {
   isUsableAsSampled,
 } from './core/texture/usageExtension';
 import type { Exotic } from './data/exotic';
-import { type AnyWgslData, isWgslData } from './data/wgslTypes';
+import type { BaseWgslData } from './data/wgslTypes';
 import { NotUniformError } from './errors';
 import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
 import type { TgpuNamable } from './namable';
@@ -55,11 +55,11 @@ export type TgpuLayoutEntryBase = {
 };
 
 export type TgpuLayoutUniform = TgpuLayoutEntryBase & {
-  uniform: AnyWgslData | ((arrayLength: number) => AnyWgslData);
+  uniform: BaseWgslData | ((arrayLength: number) => BaseWgslData);
 };
 
 export type TgpuLayoutStorage = TgpuLayoutEntryBase & {
-  storage: AnyWgslData | ((arrayLength: number) => AnyWgslData);
+  storage: BaseWgslData | ((arrayLength: number) => BaseWgslData);
   /** @default 'readonly' */
   access?: 'mutable' | 'readonly';
 };
@@ -109,15 +109,15 @@ export type TgpuLayoutEntry =
   | TgpuLayoutExternalTexture;
 
 type UnwrapRuntimeConstructorInner<
-  T extends AnyWgslData | ((_: number) => AnyWgslData),
-> = T extends AnyWgslData
+  T extends BaseWgslData | ((_: number) => BaseWgslData),
+> = T extends BaseWgslData
   ? T
   : T extends (_: number) => infer Return
     ? Return
     : never;
 
 export type UnwrapRuntimeConstructor<
-  T extends AnyWgslData | ((_: number) => AnyWgslData),
+  T extends BaseWgslData | ((_: number) => BaseWgslData),
 > = T extends unknown ? UnwrapRuntimeConstructorInner<T> : never;
 
 export interface TgpuBindGroupLayout<
@@ -226,9 +226,11 @@ export type TgpuBindGroup<
 
 type ExoticEntry<T> = T extends Record<string | number | symbol, unknown>
   ? {
-      [Key in keyof T]: T[Key] extends (...args: infer TArgs) => infer TReturn
-        ? (...args: TArgs) => Exotic<TReturn>
-        : Exotic<T[Key]>;
+      [Key in keyof T]: T[Key] extends BaseWgslData
+        ? Exotic<T[Key]>
+        : T[Key] extends (...args: infer TArgs) => infer TReturn
+          ? (...args: TArgs) => Exotic<TReturn>
+          : T[Key];
     }
   : T;
 
@@ -312,9 +314,8 @@ class TgpuBindGroupLayoutImpl<
       const membership = { idx, key, layout: this };
 
       if ('uniform' in entry) {
-        const dataType = isWgslData(entry.uniform)
-          ? entry.uniform
-          : entry.uniform(0);
+        const dataType =
+          'type' in entry.uniform ? entry.uniform : entry.uniform(0);
 
         // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
         (this.bound[key] as any) = new TgpuLaidOutBufferImpl(
@@ -325,9 +326,8 @@ class TgpuBindGroupLayoutImpl<
       }
 
       if ('storage' in entry) {
-        const dataType = isWgslData(entry.storage)
-          ? entry.storage
-          : entry.storage(0);
+        const dataType =
+          'type' in entry.storage ? entry.storage : entry.storage(0);
 
         // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
         (this.bound[key] as any) = new TgpuLaidOutBufferImpl(

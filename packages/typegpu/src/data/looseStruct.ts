@@ -1,5 +1,6 @@
 import type { InferRecord } from '../shared/repr';
 import type { LooseStruct } from './dataTypes';
+import type { ExoticRecord } from './exotic';
 import type { BaseWgslData } from './wgslTypes';
 
 // ----------
@@ -26,7 +27,8 @@ import type { BaseWgslData } from './wgslTypes';
  */
 export const looseStruct = <TProps extends Record<string, BaseWgslData>>(
   properties: TProps,
-): LooseStruct<TProps> => new LooseStructImpl(properties);
+): LooseStruct<ExoticRecord<TProps>> =>
+  new LooseStructImpl(properties as ExoticRecord<TProps>);
 
 /**
  * Checks whether passed in value is a looseStruct schema,

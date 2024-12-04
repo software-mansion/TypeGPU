@@ -37,6 +37,12 @@ export type Exotic<T> =
             ? wgsl.Decorated<TInner, TAttribs>
             : T;
 
+export type ExoticArray<T> = T extends unknown[] | []
+  ? {
+      [Key in keyof T]: Exotic<T[Key]>;
+    }
+  : T;
+
 export type ExoticRecord<T> = T extends Record<
   string | number | symbol,
   unknown
