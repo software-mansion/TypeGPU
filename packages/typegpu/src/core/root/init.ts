@@ -60,6 +60,7 @@ import type {
   CreateTextureResult,
   ExperimentalTgpuRoot,
   SetPlumAction,
+  TgpuRoot,
   WithBinding,
   WithCompute,
   WithFragment,
@@ -391,9 +392,7 @@ export type InitFromDeviceOptions = {
  * const root = await tgpu.init({ adapter: adapterOptions, device: deviceDescriptor });
  * ```
  */
-export async function init(
-  options?: InitOptions,
-): Promise<ExperimentalTgpuRoot> {
+export async function init(options?: InitOptions): Promise<TgpuRoot> {
   const {
     adapter: adapterOpt,
     device: deviceOpt,
@@ -427,9 +426,7 @@ export async function init(
  * const root = tgpu.initFromDevice({ device });
  * ```
  */
-export function initFromDevice(
-  options: InitFromDeviceOptions,
-): ExperimentalTgpuRoot {
+export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
   const {
     device,
     unstable_names: names = 'random',

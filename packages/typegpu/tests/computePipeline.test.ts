@@ -8,7 +8,6 @@ import {
   vi,
 } from 'vitest';
 import type { TgpuComputePipeline } from '../src/core/pipeline/computePipeline';
-import { initFromDevice } from '../src/core/root/init';
 import type { ExperimentalTgpuRoot } from '../src/core/root/rootTypes';
 import tgpu from '../src/experimental';
 
@@ -68,7 +67,7 @@ describe('TgpuComputePipeline', () => {
   let root: ExperimentalTgpuRoot;
 
   beforeEach(() => {
-    root = initFromDevice({ device: mockDevice as unknown as GPUDevice });
+    root = tgpu.initFromDevice({ device: mockDevice as unknown as GPUDevice });
   });
 
   afterEach(() => {

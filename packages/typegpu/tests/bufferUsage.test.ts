@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expectTypeOf, it, vi } from 'vitest';
-import tgpu from '../src';
 import { f32 } from '../src/data';
-import { type ExperimentalTgpuRoot, asUniform } from '../src/experimental';
+import tgpu, {
+  type ExperimentalTgpuRoot,
+  asUniform,
+} from '../src/experimental';
 import type { Infer } from '../src/shared/repr';
 import './utils/webgpuGlobals';
 
