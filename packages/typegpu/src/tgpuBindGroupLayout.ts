@@ -10,6 +10,10 @@ import {
   type TgpuBufferUniform,
   TgpuLaidOutBufferImpl,
 } from './core/buffer/bufferUsage';
+import {
+  TgpuComparisonSamplerImpl,
+  TgpuSamplerImpl,
+} from './core/sampler/sampler';
 import { TgpuExternalTextureImpl } from './core/texture/externalTexture';
 import {
   type StorageTextureDimension,
@@ -349,6 +353,16 @@ class TgpuBindGroupLayoutImpl<
       if ('externalTexture' in entry) {
         // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
         (this.bound[key] as any) = new TgpuExternalTextureImpl(membership);
+      }
+
+      if ('sampler' in entry) {
+        if (entry.sampler === 'comparison') {
+          // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+          (this.bound[key] as any) = new TgpuComparisonSamplerImpl(membership);
+        } else {
+          // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+          (this.bound[key] as any) = new TgpuSamplerImpl(membership);
+        }
       }
 
       idx++;

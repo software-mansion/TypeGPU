@@ -1,6 +1,10 @@
 import type { LayoutMembership } from '../../tgpuBindGroupLayout';
 import type { ResolutionCtx } from '../../types';
 
+// ----------
+// Public API
+// ----------
+
 export interface TgpuExternalTexture {
   readonly resourceType: 'external-texture';
 }
