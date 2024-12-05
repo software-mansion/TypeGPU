@@ -21,8 +21,9 @@ import {
   NotSampledError,
   isUsableAsSampled,
 } from './core/texture/usageExtension';
+import type { AnyData } from './data';
 import type { Exotic } from './data/exotic';
-import type { BaseWgslData } from './data/wgslTypes';
+import type { AnyWgslData, BaseWgslData } from './data/wgslTypes';
 import { NotUniformError } from './errors';
 import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
 import type { TgpuNamable } from './namable';
@@ -55,11 +56,11 @@ export type TgpuLayoutEntryBase = {
 };
 
 export type TgpuLayoutUniform = TgpuLayoutEntryBase & {
-  uniform: BaseWgslData | ((arrayLength: number) => BaseWgslData);
+  uniform: AnyWgslData | ((arrayLength: number) => AnyWgslData);
 };
 
 export type TgpuLayoutStorage = TgpuLayoutEntryBase & {
-  storage: BaseWgslData | ((arrayLength: number) => BaseWgslData);
+  storage: AnyWgslData | ((arrayLength: number) => AnyWgslData);
   /** @default 'readonly' */
   access?: 'mutable' | 'readonly';
 };
@@ -117,7 +118,7 @@ type UnwrapRuntimeConstructorInner<
     : never;
 
 export type UnwrapRuntimeConstructor<
-  T extends BaseWgslData | ((_: number) => BaseWgslData),
+  T extends AnyData | ((_: number) => AnyData),
 > = T extends unknown ? UnwrapRuntimeConstructorInner<T> : never;
 
 export interface TgpuBindGroupLayout<

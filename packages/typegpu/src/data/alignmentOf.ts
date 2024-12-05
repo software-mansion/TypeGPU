@@ -49,7 +49,7 @@ function computeAlignment(data: object): number {
   }
 
   if (isLooseStruct(data)) {
-    // A loose struct is alignment to its first property.
+    // A loose struct is aligned to its first property.
     const firstProp = Object.values(data.propTypes)[0];
     return firstProp ? getCustomAlignment(firstProp) ?? 1 : 1;
   }
@@ -73,7 +73,7 @@ function computeAlignment(data: object): number {
 
 function computeCustomAlignment(data: BaseWgslData): number {
   if (isLooseStruct(data)) {
-    // A loose struct is alignment to its first property.
+    // A loose struct is aligned to its first property.
     const firstProp = Object.values(data.propTypes)[0];
     return firstProp ? customAlignmentOf(firstProp) : 1;
   }

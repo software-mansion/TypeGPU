@@ -42,10 +42,10 @@ export const texelFormatToChannelType = {
   rgba32uint: u32 as U32,
   rgba32sint: i32 as I32,
   rgba32float: f32 as F32,
-  stencil8: f32 as F32, // NOTE: Honestly as Honestly have no idea if this is right
+  stencil8: f32 as F32, // NOTE: Honestly have no idea if this is right
   depth16unorm: f32 as F32,
-  depth24plus: f32 as F32, // NOTE: Honestly as Honestly have no idea if this is right
-  'depth24plus-stencil8': f32 as F32, // NOTE: Honestly as Honestly have no idea if this is right
+  depth24plus: f32 as F32, // NOTE: Honestly have no idea if this is right
+  'depth24plus-stencil8': f32 as F32, // NOTE: Honestly have no idea if this is right
   depth32float: f32 as F32,
   'depth32float-stencil8': f32 as F32,
   'bc1-rgba-unorm': f32 as F32,

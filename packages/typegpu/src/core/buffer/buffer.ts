@@ -2,7 +2,6 @@ import { BufferReader, BufferWriter } from 'typed-binary';
 import { readData, writeData } from '../../data/dataIO';
 import type { AnyData } from '../../data/dataTypes';
 import { sizeOf } from '../../data/sizeOf';
-import type { BaseWgslData } from '../../data/wgslTypes';
 import type { Storage } from '../../extension';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
@@ -35,7 +34,7 @@ type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
         ? Vertex
         : never;
 
-export interface TgpuBuffer<TData extends BaseWgslData> extends TgpuNamable {
+export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
   readonly resourceType: 'buffer';
   readonly dataType: TData;
   readonly initial?: Infer<TData> | TgpuPlum<Infer<TData>> | undefined;
