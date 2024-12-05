@@ -21,7 +21,6 @@ import type {
   TgpuPlum,
   Unsubscribe,
 } from '../../tgpuPlumTypes';
-import type { TgpuSampler } from '../../tgpuSampler';
 import type { TgpuSlot } from '../../types';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
 import type { IOLayout } from '../function/fnTypes';
@@ -156,7 +155,6 @@ interface Disposable {
  */
 class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
   private _disposables: Disposable[] = [];
-  private _samplers = new WeakMap<TgpuSampler, GPUSampler>();
 
   private _unwrappedBindGroupLayouts = new WeakMemo(
     (key: TgpuBindGroupLayout) => key.unwrap(this),
@@ -301,21 +299,6 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
     }
 
     throw new Error(`Unknown resource type: ${resource}`);
-  }
-
-  samplerFor(sampler: TgpuSampler): GPUSampler {
-    let gpuSampler = this._samplers.get(sampler);
-
-    if (!gpuSampler) {
-      gpuSampler = this.device.createSampler(sampler.descriptor);
-
-      if (!gpuSampler) {
-        throw new Error(`Failed to create sampler for ${sampler}`);
-      }
-      this._samplers.set(sampler, gpuSampler);
-    }
-
-    return gpuSampler;
   }
 
   readPlum<TPlum extends TgpuPlum>(plum: TPlum): ExtractPlumValue<TPlum> {
