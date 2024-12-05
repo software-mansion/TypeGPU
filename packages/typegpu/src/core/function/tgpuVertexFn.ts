@@ -1,4 +1,3 @@
-import type { Block } from 'tinyest';
 import { attribute, isBuiltin, location } from '../../data/attributes';
 import { getCustomLocation, isData } from '../../data/dataTypes';
 import { struct } from '../../data/struct';
@@ -53,7 +52,6 @@ export interface TgpuVertexFn<
   readonly Output: IOLayoutToOutputStruct<Output>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
-  $__ast(argNames: string[], body: Block): this;
 }
 
 /**
@@ -150,13 +148,6 @@ function createVertexFn(
 
     $uses(newExternals) {
       core.applyExternals(newExternals);
-      return this;
-    },
-
-    $__ast(argNames: string[], body: Block): This {
-      // When receiving a pre-built $__ast, we are receiving $uses alongside it, so
-      // we do not need to verify external names.
-      core.setAst({ argNames, body, externalNames: [] });
       return this;
     },
 

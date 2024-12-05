@@ -2,6 +2,7 @@
  * @module typegpu/experimental
  */
 
+import { assignAst } from '../core/function/astUtils';
 import { computeFn } from '../core/function/tgpuComputeFn';
 import { fn, procedure } from '../core/function/tgpuFn';
 import { fragmentFn } from '../core/function/tgpuFragmentFn';
@@ -48,6 +49,12 @@ export const tgpu = {
   read,
   write,
 };
+
+// Hidden API, used only by tooling (e.g., rollup plugin).
+Object.assign(tgpu, {
+  __assignAst: assignAst,
+});
+
 export default tgpu;
 
 export * from '../errors';

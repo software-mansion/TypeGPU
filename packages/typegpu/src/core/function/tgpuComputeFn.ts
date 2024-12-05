@@ -1,4 +1,3 @@
-import type { Block } from 'tinyest';
 import type { AnyBuiltin } from '../../builtin';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
@@ -35,7 +34,6 @@ export interface TgpuComputeFn extends TgpuResolvable, TgpuNamable {
   readonly shell: TgpuComputeFnShell;
 
   $uses(dependencyMap: Record<string, unknown>): this;
-  $__ast(argNames: string[], body: Block): this;
 }
 
 export interface ComputeFnOptions {
@@ -92,13 +90,6 @@ function createComputeFn(
 
     $uses(newExternals) {
       core.applyExternals(newExternals);
-      return this;
-    },
-
-    $__ast(argNames: string[], body: Block): This {
-      // When receiving a pre-built $__ast, we are receiving $uses alongside it, so
-      // we do not need to verify external names.
-      core.setAst({ argNames, body, externalNames: [] });
       return this;
     },
 
