@@ -73,73 +73,73 @@ const dataWriters = {
     output.writeUint32(value);
   },
 
-  vec2f(output, _, value: wgsl.$Vec2f) {
+  vec2f(output, _, value: wgsl.v2f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
   },
 
-  vec2i(output, _, value: wgsl.$Vec2i) {
+  vec2i(output, _, value: wgsl.v2i) {
     output.writeInt32(value.x);
     output.writeInt32(value.y);
   },
 
-  vec2u(output, _, value: wgsl.$Vec2u) {
+  vec2u(output, _, value: wgsl.v2u) {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
   },
 
-  vec3f(output, _, value: wgsl.$Vec3f) {
+  vec3f(output, _, value: wgsl.v3f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
     output.writeFloat32(value.z);
   },
 
-  vec3i(output, _, value: wgsl.$Vec3i) {
+  vec3i(output, _, value: wgsl.v3i) {
     output.writeInt32(value.x);
     output.writeInt32(value.y);
     output.writeInt32(value.z);
   },
 
-  vec3u(output, _, value: wgsl.$Vec3u) {
+  vec3u(output, _, value: wgsl.v3u) {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
     output.writeUint32(value.z);
   },
 
-  vec4f(output, _, value: wgsl.$Vec4f) {
+  vec4f(output, _, value: wgsl.v4f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
     output.writeFloat32(value.z);
     output.writeFloat32(value.w);
   },
 
-  vec4i(output, _, value: wgsl.$Vec4i) {
+  vec4i(output, _, value: wgsl.v4i) {
     output.writeInt32(value.x);
     output.writeInt32(value.y);
     output.writeInt32(value.z);
     output.writeInt32(value.w);
   },
 
-  vec4u(output, _, value: wgsl.$Vec4u) {
+  vec4u(output, _, value: wgsl.v4u) {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
     output.writeUint32(value.z);
     output.writeUint32(value.w);
   },
 
-  mat2x2f(output, _, value: wgsl.$Mat2x2f) {
+  mat2x2f(output, _, value: wgsl.m2x2f) {
     for (let i = 0; i < value.length; ++i) {
       output.writeFloat32(value[i] as number);
     }
   },
 
-  mat3x3f(output, _, value: wgsl.$Mat3x3f) {
+  mat3x3f(output, _, value: wgsl.m3x3f) {
     for (let i = 0; i < value.length; ++i) {
       output.writeFloat32(value[i] as number);
     }
   },
 
-  mat4x4f(output, _, value: wgsl.$Mat4x4f) {
+  mat4x4f(output, _, value: wgsl.m4x4f) {
     for (let i = 0; i < value.length; ++i) {
       output.writeFloat32(value[i] as number);
     }
@@ -191,47 +191,47 @@ const dataWriters = {
 
   // Loose Types
 
-  uint8x2(output, _, value: wgsl.$Vec2u) {
+  uint8x2(output, _, value: wgsl.v2u) {
     output.writeByte(value.x);
     output.writeByte(value.y);
   },
-  uint8x4(output, _, value: wgsl.$Vec4u) {
+  uint8x4(output, _, value: wgsl.v4u) {
     output.writeByte(value.x);
     output.writeByte(value.y);
     output.writeByte(value.z);
     output.writeByte(value.w);
   },
-  sint8x2(output, _, value: wgsl.$Vec2i) {
+  sint8x2(output, _, value: wgsl.v2i) {
     sint8Write(output, value.x);
     sint8Write(output, value.y);
   },
-  sint8x4(output, _, value: wgsl.$Vec4i) {
+  sint8x4(output, _, value: wgsl.v4i) {
     sint8Write(output, value.x);
     sint8Write(output, value.y);
     sint8Write(output, value.z);
     sint8Write(output, value.w);
   },
-  unorm8x2(output, _, value: wgsl.$Vec2f) {
+  unorm8x2(output, _, value: wgsl.v2f) {
     output.writeByte(Math.floor(value.x * 255));
     output.writeByte(Math.floor(value.y * 255));
   },
-  unorm8x4(output, _, value: wgsl.$Vec4f) {
+  unorm8x4(output, _, value: wgsl.v4f) {
     output.writeByte(Math.floor(value.x * 255));
     output.writeByte(Math.floor(value.y * 255));
     output.writeByte(Math.floor(value.z * 255));
     output.writeByte(Math.floor(value.w * 255));
   },
-  snorm8x2(output, _, value: wgsl.$Vec2f) {
+  snorm8x2(output, _, value: wgsl.v2f) {
     output.writeByte(Math.floor(value.x * 127 + 128));
     output.writeByte(Math.floor(value.y * 127 + 128));
   },
-  snorm8x4(output, _, value: wgsl.$Vec4f) {
+  snorm8x4(output, _, value: wgsl.v4f) {
     output.writeByte(Math.floor(value.x * 127 + 128));
     output.writeByte(Math.floor(value.y * 127 + 128));
     output.writeByte(Math.floor(value.z * 127 + 128));
     output.writeByte(Math.floor(value.w * 127 + 128));
   },
-  uint16x2(output, _, value: wgsl.$Vec2u) {
+  uint16x2(output, _, value: wgsl.v2u) {
     const buffer = new ArrayBuffer(4);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -239,7 +239,7 @@ const dataWriters = {
     view.setUint16(2, value.y, littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  uint16x4(output, _, value: wgsl.$Vec4u) {
+  uint16x4(output, _, value: wgsl.v4u) {
     const buffer = new ArrayBuffer(8);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -249,7 +249,7 @@ const dataWriters = {
     view.setUint16(6, value.w, littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  sint16x2(output, _, value: wgsl.$Vec2i) {
+  sint16x2(output, _, value: wgsl.v2i) {
     const buffer = new ArrayBuffer(4);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -257,7 +257,7 @@ const dataWriters = {
     view.setInt16(2, value.y, littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  sint16x4(output, _, value: wgsl.$Vec4i) {
+  sint16x4(output, _, value: wgsl.v4i) {
     const buffer = new ArrayBuffer(8);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -267,7 +267,7 @@ const dataWriters = {
     view.setInt16(6, value.w, littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  unorm16x2(output, _, value: wgsl.$Vec2f) {
+  unorm16x2(output, _, value: wgsl.v2f) {
     const buffer = new ArrayBuffer(4);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -275,7 +275,7 @@ const dataWriters = {
     view.setUint16(2, Math.floor(value.y * 65535), littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  unorm16x4(output, _, value: wgsl.$Vec4f) {
+  unorm16x4(output, _, value: wgsl.v4f) {
     const buffer = new ArrayBuffer(8);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -285,7 +285,7 @@ const dataWriters = {
     view.setUint16(6, Math.floor(value.w * 65535), littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  snorm16x2(output, _, value: wgsl.$Vec2f) {
+  snorm16x2(output, _, value: wgsl.v2f) {
     const buffer = new ArrayBuffer(4);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -293,7 +293,7 @@ const dataWriters = {
     view.setUint16(2, Math.floor(value.y * 32767 + 32768), littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  snorm16x4(output, _, value: wgsl.$Vec4f) {
+  snorm16x4(output, _, value: wgsl.v4f) {
     const buffer = new ArrayBuffer(8);
     const view = new DataView(buffer);
     const littleEndian = output.endianness === 'little';
@@ -303,11 +303,11 @@ const dataWriters = {
     view.setUint16(6, Math.floor(value.w * 32767 + 32768), littleEndian);
     output.writeSlice(new Uint8Array(buffer));
   },
-  float16x2(output, _, value: wgsl.$Vec2f) {
+  float16x2(output, _, value: wgsl.v2f) {
     output.writeFloat16(value.x);
     output.writeFloat16(value.y);
   },
-  float16x4(output, _, value: wgsl.$Vec4f) {
+  float16x4(output, _, value: wgsl.v4f) {
     output.writeFloat16(value.x);
     output.writeFloat16(value.y);
     output.writeFloat16(value.z);
@@ -316,16 +316,16 @@ const dataWriters = {
   float32(output, _, value: number) {
     output.writeFloat32(value);
   },
-  float32x2(output, _, value: wgsl.$Vec2f) {
+  float32x2(output, _, value: wgsl.v2f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
   },
-  float32x3(output, _, value: wgsl.$Vec3f) {
+  float32x3(output, _, value: wgsl.v3f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
     output.writeFloat32(value.z);
   },
-  float32x4(output, _, value: wgsl.$Vec4f) {
+  float32x4(output, _, value: wgsl.v4f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
     output.writeFloat32(value.z);
@@ -334,16 +334,16 @@ const dataWriters = {
   uint32(output, _, value: number) {
     output.writeUint32(value);
   },
-  uint32x2(output, _, value: wgsl.$Vec2u) {
+  uint32x2(output, _, value: wgsl.v2u) {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
   },
-  uint32x3(output, _, value: wgsl.$Vec3u) {
+  uint32x3(output, _, value: wgsl.v3u) {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
     output.writeUint32(value.z);
   },
-  uint32x4(output, _, value: wgsl.$Vec4u) {
+  uint32x4(output, _, value: wgsl.v4u) {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
     output.writeUint32(value.z);
@@ -352,22 +352,22 @@ const dataWriters = {
   sint32(output, _, value: number) {
     output.writeInt32(value);
   },
-  sint32x2(output, _, value: wgsl.$Vec2i) {
+  sint32x2(output, _, value: wgsl.v2i) {
     output.writeInt32(value.x);
     output.writeInt32(value.y);
   },
-  sint32x3(output, _, value: wgsl.$Vec3i) {
+  sint32x3(output, _, value: wgsl.v3i) {
     output.writeInt32(value.x);
     output.writeInt32(value.y);
     output.writeInt32(value.z);
   },
-  sint32x4(output, _, value: wgsl.$Vec4i) {
+  sint32x4(output, _, value: wgsl.v4i) {
     output.writeInt32(value.x);
     output.writeInt32(value.y);
     output.writeInt32(value.z);
     output.writeInt32(value.w);
   },
-  'unorm10-10-10-2'(output, _, value: wgsl.$Vec4f) {
+  'unorm10-10-10-2'(output, _, value: wgsl.v4f) {
     let packed = 0;
     packed |= ((value.x * 1023) & 1023) << 22; // r (10 bits)
     packed |= ((value.x * 1023) & 1023) << 12; // g (10 bits)

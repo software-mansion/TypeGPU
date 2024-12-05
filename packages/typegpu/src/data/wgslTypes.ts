@@ -331,9 +331,7 @@ interface Swizzle4<T2, T3, T4> extends Swizzle3<T2, T3, T4> {
  * Interface representing its WGSL vector type counterpart: vec2f or vec2<f32>.
  * A vector with 2 elements of type f32
  */
-export interface $Vec2f
-  extends NumberArrayView,
-    Swizzle2<$Vec2f, $Vec3f, $Vec4f> {
+export interface v2f extends NumberArrayView, Swizzle2<v2f, v3f, v4f> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2f';
   x: number;
@@ -344,9 +342,7 @@ export interface $Vec2f
  * Interface representing its WGSL vector type counterpart: vec2i or vec2<i32>.
  * A vector with 2 elements of type i32
  */
-export interface $Vec2i
-  extends NumberArrayView,
-    Swizzle2<$Vec2i, $Vec3i, $Vec4i> {
+export interface v2i extends NumberArrayView, Swizzle2<v2i, v3i, v4i> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2i';
   x: number;
@@ -357,9 +353,7 @@ export interface $Vec2i
  * Interface representing its WGSL vector type counterpart: vec2u or vec2<u32>.
  * A vector with 2 elements of type u32
  */
-export interface $Vec2u
-  extends NumberArrayView,
-    Swizzle2<$Vec2u, $Vec3u, $Vec4u> {
+export interface v2u extends NumberArrayView, Swizzle2<v2u, v3u, v4u> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2u';
   x: number;
@@ -370,9 +364,7 @@ export interface $Vec2u
  * Interface representing its WGSL vector type counterpart: vec3f or vec3<f32>.
  * A vector with 3 elements of type f32
  */
-export interface $Vec3f
-  extends NumberArrayView,
-    Swizzle3<$Vec2f, $Vec3f, $Vec4f> {
+export interface v3f extends NumberArrayView, Swizzle3<v2f, v3f, v4f> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3f';
   x: number;
@@ -384,9 +376,7 @@ export interface $Vec3f
  * Interface representing its WGSL vector type counterpart: vec3i or vec3<i32>.
  * A vector with 3 elements of type i32
  */
-export interface $Vec3i
-  extends NumberArrayView,
-    Swizzle3<$Vec2i, $Vec3i, $Vec4i> {
+export interface v3i extends NumberArrayView, Swizzle3<v2i, v3i, v4i> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3i';
   x: number;
@@ -398,9 +388,7 @@ export interface $Vec3i
  * Interface representing its WGSL vector type counterpart: vec3u or vec3<u32>.
  * A vector with 3 elements of type u32
  */
-export interface $Vec3u
-  extends NumberArrayView,
-    Swizzle3<$Vec2u, $Vec3u, $Vec4u> {
+export interface v3u extends NumberArrayView, Swizzle3<v2u, v3u, v4u> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3u';
   x: number;
@@ -412,9 +400,7 @@ export interface $Vec3u
  * Interface representing its WGSL vector type counterpart: vec4f or vec4<f32>.
  * A vector with 4 elements of type f32
  */
-export interface $Vec4f
-  extends NumberArrayView,
-    Swizzle4<$Vec2f, $Vec3f, $Vec4f> {
+export interface v4f extends NumberArrayView, Swizzle4<v2f, v3f, v4f> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4f';
   x: number;
@@ -427,9 +413,7 @@ export interface $Vec4f
  * Interface representing its WGSL vector type counterpart: vec4i or vec4<i32>.
  * A vector with 4 elements of type i32
  */
-export interface $Vec4i
-  extends NumberArrayView,
-    Swizzle4<$Vec2i, $Vec3i, $Vec4i> {
+export interface v4i extends NumberArrayView, Swizzle4<v2i, v3i, v4i> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4i';
   x: number;
@@ -442,9 +426,7 @@ export interface $Vec4i
  * Interface representing its WGSL vector type counterpart: vec4u or vec4<u32>.
  * A vector with 4 elements of type u32
  */
-export interface $Vec4u
-  extends NumberArrayView,
-    Swizzle4<$Vec2u, $Vec3u, $Vec4u> {
+export interface v4u extends NumberArrayView, Swizzle4<v2u, v3u, v4u> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4u';
   x: number;
@@ -470,7 +452,7 @@ export interface mat2x2<TColumn> extends matBase<TColumn> {
  * Interface representing its WGSL matrix type counterpart: mat2x2f or mat2x2<f32>
  * A matrix with 2 rows and 2 columns, with elements of type d.f32
  */
-export interface $Mat2x2f extends mat2x2<$Vec2f> {
+export interface m2x2f extends mat2x2<v2f> {
   readonly kind: 'mat2x2f';
 }
 
@@ -487,7 +469,7 @@ export interface mat3x3<TColumn> extends matBase<TColumn> {
  * Interface representing its WGSL matrix type counterpart: mat3x3f or mat3x3<f32>
  * A matrix with 3 rows and 3 columns, with elements of type d.f32
  */
-export interface $Mat3x3f extends mat3x3<$Vec3f> {
+export interface m3x3f extends mat3x3<v3f> {
   readonly kind: 'mat3x3f';
 }
 
@@ -504,7 +486,7 @@ export interface mat4x4<TColumn> extends matBase<TColumn> {
  * Interface representing its WGSL matrix type counterpart: mat4x4f or mat4x4<f32>
  * A matrix with 4 rows and 4 columns, with elements of type d.f32
  */
-export interface $Mat4x4f extends mat4x4<$Vec4f> {
+export interface m4x4f extends mat4x4<v4f> {
   readonly kind: 'mat4x4f';
 }
 
@@ -542,73 +524,73 @@ export interface U32 {
 export interface Vec2f {
   readonly type: 'vec2f';
   /** Type-token, not available at runtime */
-  readonly '~repr': $Vec2f;
+  readonly '~repr': v2f;
 }
 
 export interface Vec2i {
   readonly type: 'vec2i';
   /** Type-token, not available at runtime */
-  readonly '~repr': $Vec2i;
+  readonly '~repr': v2i;
 }
 
 export interface Vec2u {
   readonly type: 'vec2u';
   /** Type-token, not available at runtime */
-  readonly '~repr': $Vec2u;
+  readonly '~repr': v2u;
 }
 
 export interface Vec3f {
   readonly type: 'vec3f';
   /** Type-token, not available at runtime */
-  readonly '~repr': $Vec3f;
+  readonly '~repr': v3f;
 }
 
 export interface Vec3i {
   readonly type: 'vec3i';
   /** Type-token, not available at runtime */
-  readonly '~repr': $Vec3i;
+  readonly '~repr': v3i;
 }
 
 export interface Vec3u {
   readonly type: 'vec3u';
   /** Type-token, not available at runtime */
-  readonly '~repr': $Vec3u;
+  readonly '~repr': v3u;
 }
 
 export interface Vec4f {
   readonly type: 'vec4f';
   /** Type-token, not available at runtime */
-  readonly '~repr': $Vec4f;
+  readonly '~repr': v4f;
 }
 
 export interface Vec4i {
   readonly type: 'vec4i';
   /** Type-token, not available at runtime */
-  readonly '~repr': $Vec4i;
+  readonly '~repr': v4i;
 }
 
 export interface Vec4u {
   readonly type: 'vec4u';
   /** Type-token, not available at runtime */
-  readonly '~repr': $Vec4u;
+  readonly '~repr': v4u;
 }
 
 export interface Mat2x2f {
   readonly type: 'mat2x2f';
   /** Type-token, not available at runtime */
-  readonly '~repr': $Mat2x2f;
+  readonly '~repr': m2x2f;
 }
 
 export interface Mat3x3f {
   readonly type: 'mat3x3f';
   /** Type-token, not available at runtime */
-  readonly '~repr': $Mat3x3f;
+  readonly '~repr': m3x3f;
 }
 
 export interface Mat4x4f {
   readonly type: 'mat4x4f';
   /** Type-token, not available at runtime */
-  readonly '~repr': $Mat4x4f;
+  readonly '~repr': m4x4f;
 }
 
 export interface WgslStruct<

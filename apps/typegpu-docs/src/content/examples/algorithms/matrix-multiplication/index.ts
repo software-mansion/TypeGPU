@@ -1,9 +1,9 @@
 import {
-  type $Vec2f,
   type Infer,
   arrayOf,
   f32,
   struct,
+  type v2f,
   vec2f,
 } from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
@@ -22,7 +22,7 @@ let firstColumnCount = 4;
 let secondColumnCount = 2;
 
 function createMatrix(
-  size: $Vec2f,
+  size: v2f,
   initValue: (row: number, col: number) => number,
 ) {
   return {
