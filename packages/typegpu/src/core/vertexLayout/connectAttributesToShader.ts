@@ -1,9 +1,10 @@
-import { getCustomLocation, isBuiltin } from '../../data/attributes';
+import { isBuiltin } from '../../data/attributes';
+import { getCustomLocation } from '../../data/dataTypes';
+import { isData } from '../../data/dataTypes';
 import type {
   AnyVertexAttribs,
   TgpuVertexAttrib,
 } from '../../shared/vertexFormat';
-import { isBaseData } from '../../types';
 import type { IOData, IOLayout } from '../function/fnTypes';
 import type {
   INTERNAL_TgpuVertexAttrib,
@@ -27,7 +28,7 @@ export function connectAttributesToShader(
 ): ConnectAttributesToShaderResult {
   const usedVertexLayouts: TgpuVertexLayout[] = [];
 
-  if (isBaseData(shaderInputLayout)) {
+  if (isData(shaderInputLayout)) {
     // Expecting a single attribute, no record.
     if (!isAttribute(attributes)) {
       throw new Error(

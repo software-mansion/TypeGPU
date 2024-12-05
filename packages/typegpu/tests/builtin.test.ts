@@ -1,8 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import * as d from '../src/data';
 import {
-  type AnyTgpuData,
-  type AnyTgpuLooseData,
   type BuiltinPosition,
   type BuiltinVertexIndex,
   type OmitBuiltins,
@@ -80,8 +78,8 @@ describe('isBuiltin', () => {
     if (d.isBuiltin(value)) {
       passed = true;
       expectTypeOf(value).toEqualTypeOf<
-        | d.Decorated<AnyTgpuData, d.AnyAttribute[]>
-        | d.LooseDecorated<AnyTgpuLooseData, d.AnyAttribute[]>
+        | d.Decorated<d.AnyWgslData, d.AnyAttribute[]>
+        | d.LooseDecorated<d.AnyLooseData, d.AnyAttribute[]>
       >();
     }
 

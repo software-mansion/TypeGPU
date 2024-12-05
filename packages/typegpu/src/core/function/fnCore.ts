@@ -1,5 +1,6 @@
+import type { AnyWgslData } from '../../data/wgslTypes';
 import { MissingLinksError } from '../../errors';
-import type { AnyTgpuData, ResolutionCtx, Resource } from '../../types';
+import type { ResolutionCtx, Resource } from '../../types';
 import { getPrebuiltAstFor } from './astUtils';
 import {
   type ExternalMap,
@@ -75,12 +76,12 @@ export function createFnCore(
 
         const args: Resource[] = ast.argNames.map((name, idx) => ({
           value: name,
-          dataType: shell.argTypes[idx] as AnyTgpuData,
+          dataType: shell.argTypes[idx] as AnyWgslData,
         }));
 
         const { head, body } = ctx.fnToWgsl({
           args,
-          returnType: shell.returnType as AnyTgpuData,
+          returnType: shell.returnType as AnyWgslData,
           body: ast.body,
           externalMap,
         });

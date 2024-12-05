@@ -1,25 +1,30 @@
+import type { Infer } from '../shared/repr';
+import { alignmentOf } from './alignmentOf';
 import {
-  type IMeasurer,
-  type IRefResolver,
-  type ISchema,
-  type ISerialInput,
-  type ISerialOutput,
-  MaxValue,
-  Measurer,
-  type Parsed,
-  type Unwrap,
-} from 'typed-binary';
-import { RecursiveDataTypeError } from '../errors';
+  type AnyData,
+  type AnyLooseData,
+  type LooseDecorated,
+  type LooseTypeLiteral,
+  isLooseData,
+  isLooseDecorated,
+} from './dataTypes';
+import type { Exotic } from './exotic';
+import { sizeOf } from './sizeOf';
 import {
-  type AnyTgpuData,
-  type AnyTgpuLooseData,
-  type ResolutionCtx,
-  type TgpuData,
-  type TgpuLooseData,
-  isDataLoose,
-  isDataNotLoose,
-} from '../types';
-import alignIO from './alignIO';
+  type Align,
+  type AnyWgslData,
+  type BaseWgslData,
+  type Builtin,
+  type Decorated,
+  type Location,
+  type Size,
+  type WgslTypeLiteral,
+  isAlignAttrib,
+  isBuiltinAttrib,
+  isDecorated,
+  isSizeAttrib,
+  isWgslData,
+} from './wgslTypes';
 
 // ----------
 // Public API
@@ -44,70 +49,19 @@ export const builtinNames = [
 
 export type BuiltinName = (typeof builtinNames)[number];
 
-export interface Align<T extends number> {
-  type: 'align';
-  alignment: T;
-}
-
-export interface Size<T extends number> {
-  type: 'size';
-  size: T;
-}
-
-export interface Location<T extends number> {
-  type: 'location';
-  location: T;
-}
-
-export interface Builtin<T extends BuiltinName> {
-  type: 'builtin';
-  name: T;
-}
-
 export type AnyAttribute =
   | Align<number>
   | Size<number>
   | Location<number>
   | Builtin<BuiltinName>;
 
-export interface BaseDecorated<
-  TInner extends AnyTgpuData | AnyTgpuLooseData =
-    | AnyTgpuData
-    | AnyTgpuLooseData,
-  TAttribs extends AnyAttribute[] = AnyAttribute[],
-> {
-  readonly inner: TInner;
-  readonly attributes: TAttribs;
-
-  // Easy access to all attributes, if they exist
-  readonly alignAttrib: number | undefined;
-  readonly sizeAttrib: number | undefined;
-  readonly locationAttrib: number | undefined;
-  readonly builtinAttrib: BuiltinName | undefined;
+export type ExtractAttributes<T> = T extends {
+  readonly attribs: unknown[];
 }
-
-export interface Decorated<
-  TInner extends AnyTgpuData,
-  TAttribs extends AnyAttribute[],
-> extends BaseDecorated<TInner, TAttribs>,
-    TgpuData<Unwrap<TInner>> {}
-
-export interface LooseDecorated<
-  TInner extends AnyTgpuLooseData,
-  TAttribs extends AnyAttribute[],
-> extends BaseDecorated<TInner, TAttribs>,
-    TgpuLooseData<Unwrap<TInner>> {}
-
-export type ExtractAttributes<T> = T extends BaseDecorated<
-  AnyTgpuData,
-  infer Attribs
->
-  ? Attribs
+  ? T['attribs']
   : [];
 
-export type UnwrapDecorated<T> = T extends BaseDecorated<infer Inner>
-  ? Inner
-  : T;
+type Undecorate<T> = T extends { readonly inner: infer TInner } ? TInner : T;
 
 /**
  * Decorates a data-type `TData` with an attribute `TAttrib`.
@@ -124,15 +78,12 @@ export type UnwrapDecorated<T> = T extends BaseDecorated<infer Inner>
  *     - Wrap `TData` with `Decorated` and a single attribute `[TAttrib]`
  */
 export type Decorate<
-  TData extends AnyTgpuData | AnyTgpuLooseData,
+  TData extends BaseWgslData,
   TAttrib extends AnyAttribute,
-> = TData extends AnyTgpuData
-  ? Decorated<UnwrapDecorated<TData>, [TAttrib, ...ExtractAttributes<TData>]>
-  : TData extends AnyTgpuLooseData
-    ? LooseDecorated<
-        UnwrapDecorated<TData>,
-        [TAttrib, ...ExtractAttributes<TData>]
-      >
+> = TData['type'] extends WgslTypeLiteral
+  ? Decorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
+  : TData['type'] extends LooseTypeLiteral
+    ? LooseDecorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
     : never;
 
 export type IsBuiltin<T> = ExtractAttributes<T>[number] extends []
@@ -142,22 +93,28 @@ export type IsBuiltin<T> = ExtractAttributes<T>[number] extends []
     : false;
 
 export function attribute<
-  TData extends AnyTgpuData | AnyTgpuLooseData,
+  TData extends BaseWgslData,
   TAttrib extends AnyAttribute,
->(data: TData, attrib: TAttrib) {
+>(data: TData, attrib: TAttrib): Decorated | LooseDecorated {
   if (isDecorated(data)) {
-    return new DecoratedImpl(data.inner, [attrib, ...data.attributes]);
+    return new DecoratedImpl(data.inner, [
+      attrib,
+      ...data.attribs,
+    ]) as Decorated;
   }
 
   if (isLooseDecorated(data)) {
-    return new LooseDecoratedImpl(data.inner, [attrib, ...data.attributes]);
+    return new LooseDecoratedImpl(data.inner, [
+      attrib,
+      ...data.attribs,
+    ]) as LooseDecorated;
   }
 
-  if (isDataLoose(data)) {
-    return new LooseDecoratedImpl(data, [attrib]);
+  if (isLooseData(data)) {
+    return new LooseDecoratedImpl(data, [attrib]) as unknown as LooseDecorated;
   }
 
-  return new DecoratedImpl(data, [attrib]);
+  return new DecoratedImpl(data, [attrib]) as unknown as Decorated;
 }
 
 /**
@@ -174,14 +131,12 @@ export function attribute<
  * @param alignment The multiple of bytes this data should align itself to.
  * @param data The data-type to align.
  */
-export function align<
-  TAlign extends number,
-  TData extends AnyTgpuData | AnyTgpuLooseData,
->(alignment: TAlign, data: TData): Decorate<TData, Align<TAlign>> {
-  return attribute(data, { type: 'align', alignment }) as Decorate<
-    TData,
-    Align<TAlign>
-  >;
+export function align<TAlign extends number, TData extends AnyData>(
+  alignment: TAlign,
+  data: TData,
+): Decorate<Exotic<TData>, Align<TAlign>> {
+  // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+  return attribute(data, { type: '@align', value: alignment }) as any;
 }
 
 /**
@@ -196,14 +151,12 @@ export function align<
  * @param size The amount of bytes that should be reserved for this data-type.
  * @param data The data-type to wrap.
  */
-export function size<
-  TSize extends number,
-  TData extends AnyTgpuData | AnyTgpuLooseData,
->(size: TSize, data: TData): Decorate<TData, Size<TSize>> {
-  return attribute(data, { type: 'size', size }) as Decorate<
-    TData,
-    Size<TSize>
-  >;
+export function size<TSize extends number, TData extends AnyData>(
+  size: TSize,
+  data: TData,
+): Decorate<Exotic<TData>, Size<TSize>> {
+  // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+  return attribute(data, { type: '@size', value: size }) as any;
 }
 
 /**
@@ -219,76 +172,32 @@ export function size<
  * @param location The explicit numeric location.
  * @param data The data-type to wrap.
  */
-export function location<
-  TLocation extends number,
-  TData extends AnyTgpuData | AnyTgpuLooseData,
->(location: TLocation, data: TData): Decorate<TData, Location<TLocation>> {
-  return attribute(data, { type: 'location', location }) as Decorate<
-    TData,
-    Location<TLocation>
-  >;
-}
-
-export function isDecorated<T extends Decorated<AnyTgpuData, AnyAttribute[]>>(
-  value: T | unknown,
-): value is T {
-  return value instanceof DecoratedImpl;
-}
-
-export function isLooseDecorated<
-  T extends LooseDecorated<AnyTgpuLooseData, AnyAttribute[]>,
->(value: T | unknown): value is T {
-  return value instanceof LooseDecoratedImpl;
-}
-
-export function getCustomAlignment(
-  data: AnyTgpuData | AnyTgpuLooseData,
-): number | undefined {
-  return (data as unknown as BaseDecorated).alignAttrib;
-}
-
-export function getCustomLocation(
-  data: AnyTgpuData | AnyTgpuLooseData,
-): number | undefined {
-  return (data as unknown as BaseDecorated).locationAttrib;
+export function location<TLocation extends number, TData extends AnyData>(
+  location: TLocation,
+  data: TData,
+): Decorate<Exotic<TData>, Location<TLocation>> {
+  // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+  return attribute(data, { type: '@location', value: location }) as any;
 }
 
 export function isBuiltin<
   T extends
-    | Decorated<AnyTgpuData, AnyAttribute[]>
-    | LooseDecorated<AnyTgpuLooseData, AnyAttribute[]>,
+    | Decorated<AnyWgslData, AnyAttribute[]>
+    | LooseDecorated<AnyLooseData, AnyAttribute[]>,
 >(value: T | unknown): value is T {
   return (
     (isDecorated(value) || isLooseDecorated(value)) &&
-    value.builtinAttrib !== undefined
+    value.attribs.find(isBuiltinAttrib) !== undefined
   );
 }
 
-export function getAttributesString<T extends AnyTgpuData>(field: T): string {
+export function getAttributesString<T extends BaseWgslData>(field: T): string {
   if (!isDecorated(field) && !isLooseDecorated(field)) {
     return '';
   }
 
-  return field.attributes
-    .map((attrib) => {
-      if (attrib.type === 'align') {
-        return `@align(${attrib.alignment}) `;
-      }
-
-      if (attrib.type === 'size') {
-        return `@size(${attrib.size}) `;
-      }
-
-      if (attrib.type === 'location') {
-        return `@location(${attrib.location}) `;
-      }
-
-      if (attrib.type === 'builtin') {
-        return `@builtin(${attrib.name}) `;
-      }
-
-      return '';
-    })
+  return (field.attribs as AnyAttribute[])
+    .map((attrib) => `${attrib.type}(${attrib.value}) `)
     .join('');
 }
 
@@ -297,137 +206,70 @@ export function getAttributesString<T extends AnyTgpuData>(field: T): string {
 // --------------
 
 class BaseDecoratedImpl<
-  TInner extends AnyTgpuData | AnyTgpuLooseData,
-  TAttribs extends AnyAttribute[],
+  TInner extends BaseWgslData,
+  TAttribs extends unknown[],
 > {
   // Type-token, not available at runtime
-  public readonly __unwrapped!: Unwrap<TInner>;
-
-  public readonly label?: string | undefined;
-  public readonly byteAlignment: number;
-  public readonly size: number;
-
-  public readonly alignAttrib: number | undefined;
-  public readonly sizeAttrib: number | undefined;
-  public readonly locationAttrib: number | undefined;
-  public readonly builtinAttrib: BuiltinName | undefined;
+  public readonly '~repr'!: Infer<TInner>;
 
   constructor(
     public readonly inner: TInner,
-    public readonly attributes: TAttribs,
+    public readonly attribs: TAttribs,
   ) {
-    this.alignAttrib = attributes.find(
-      (a): a is Align<number> => a.type === 'align',
-    )?.alignment;
-    this.sizeAttrib = attributes.find(
-      (a): a is Size<number> => a.type === 'size',
-    )?.size;
-    this.locationAttrib = attributes.find(
-      (a): a is Location<number> => a.type === 'location',
-    )?.location;
-    this.builtinAttrib = attributes.find(
-      (a): a is Builtin<BuiltinName> => a.type === 'builtin',
-    )?.name;
+    const alignAttrib = attribs.find(isAlignAttrib)?.value;
+    const sizeAttrib = attribs.find(isSizeAttrib)?.value;
 
-    this.byteAlignment = this.alignAttrib ?? inner.byteAlignment;
-    this.size = this.measure(MaxValue).size;
-
-    if (this.byteAlignment <= 0) {
-      throw new Error(
-        `Custom data alignment must be a positive number, got: ${this.byteAlignment}.`,
-      );
-    }
-
-    if (Math.log2(this.byteAlignment) % 1 !== 0) {
-      throw new Error(
-        `Alignment has to be a power of 2, got: ${this.byteAlignment}.`,
-      );
-    }
-
-    if (isDataNotLoose(this.inner)) {
-      if (this.byteAlignment % this.inner.byteAlignment !== 0) {
+    if (alignAttrib !== undefined) {
+      if (alignAttrib <= 0) {
         throw new Error(
-          `Custom alignment has to be a multiple of the standard data byteAlignment. Got: ${this.byteAlignment}, expected multiple of: ${this.inner.byteAlignment}.`,
+          `Custom data alignment must be a positive number, got: ${alignAttrib}.`,
         );
+      }
+
+      if (Math.log2(alignAttrib) % 1 !== 0) {
+        throw new Error(
+          `Alignment has to be a power of 2, got: ${alignAttrib}.`,
+        );
+      }
+
+      if (isWgslData(this.inner)) {
+        if (alignAttrib % alignmentOf(this.inner) !== 0) {
+          throw new Error(
+            `Custom alignment has to be a multiple of the standard data alignment. Got: ${alignAttrib}, expected multiple of: ${alignmentOf(this.inner)}.`,
+          );
+        }
       }
     }
 
-    if (this.size < this.inner.size) {
-      throw new Error(
-        `Custom data size cannot be smaller then the standard data size. Got: ${this.size}, expected at least: ${this.inner.size}.`,
-      );
+    if (sizeAttrib !== undefined) {
+      if (sizeAttrib < sizeOf(this.inner)) {
+        throw new Error(
+          `Custom data size cannot be smaller then the standard data size. Got: ${sizeAttrib}, expected at least: ${sizeOf(this.inner)}.`,
+        );
+      }
+
+      if (sizeAttrib <= 0) {
+        throw new Error(
+          `Custom data size must be a positive number. Got: ${sizeAttrib}.`,
+        );
+      }
     }
-
-    if (this.size <= 0) {
-      throw new Error(
-        `Custom data size must be a positive number. Got: ${this.size}.`,
-      );
-    }
-  }
-
-  resolveReferences(_: IRefResolver): void {
-    throw new RecursiveDataTypeError();
-  }
-
-  write(output: ISerialOutput, value: Parsed<Unwrap<TInner>>): void {
-    alignIO(output, this.alignAttrib ?? 1);
-
-    const beginning = output.currentByteOffset;
-    this.inner.write(output, value);
-    output.seekTo(beginning + this.size);
-  }
-
-  read(input: ISerialInput): Parsed<Unwrap<TInner>> {
-    alignIO(input, this.alignAttrib ?? 1);
-
-    const beginning = input.currentByteOffset;
-    const value = this.inner.read(input) as Parsed<Unwrap<TInner>>;
-    input.seekTo(beginning + this.size);
-    return value;
-  }
-
-  measure(
-    value: MaxValue | Parsed<Unwrap<TInner>>,
-    measurer: IMeasurer | undefined = new Measurer(),
-  ): IMeasurer {
-    alignIO(measurer, this.alignAttrib ?? 1);
-
-    if (this.sizeAttrib !== undefined) {
-      return measurer.add(this.sizeAttrib);
-    }
-
-    return this.inner.measure(value, measurer);
-  }
-
-  seekProperty(
-    reference: MaxValue | Parsed<Unwrap<TInner>>,
-    prop: keyof Unwrap<TInner>,
-  ): { bufferOffset: number; schema: ISchema<unknown> } | null {
-    return this.inner.seekProperty(reference, prop as never);
   }
 }
 
-class DecoratedImpl<TInner extends AnyTgpuData, TAttribs extends AnyAttribute[]>
+class DecoratedImpl<TInner extends BaseWgslData, TAttribs extends unknown[]>
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements Decorated<TInner, TAttribs>
 {
-  /** Type-token, not available at runtime */
-  public readonly __repr!: Unwrap<TInner>;
-  public readonly isLoose = false as const;
-
-  resolve(ctx: ResolutionCtx): string {
-    return ctx.resolve(this.inner);
-  }
+  public readonly type = 'decorated';
 }
 
 class LooseDecoratedImpl<
-    TInner extends AnyTgpuLooseData,
-    TAttribs extends AnyAttribute[],
+    TInner extends BaseWgslData,
+    TAttribs extends unknown[],
   >
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements LooseDecorated<TInner, TAttribs>
 {
-  /** Type-token, not available at runtime */
-  public readonly __repr!: Unwrap<TInner>;
-  public readonly isLoose = true as const;
+  public readonly type = 'loose-decorated';
 }

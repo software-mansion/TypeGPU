@@ -31,12 +31,15 @@ import {
   NotSampledError,
   isUsableAsSampled,
 } from './core/texture/usageExtension';
+import type { AnyData } from './data';
+import type { Exotic } from './data/exotic';
+import type { AnyWgslData, BaseWgslData } from './data/wgslTypes';
 import { NotUniformError } from './errors';
 import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
 import type { TgpuNamable } from './namable';
-import { type AnyTgpuData, type TgpuShaderStage, isBaseData } from './types';
+import type { OmitProps, Prettify } from './shared/utilityTypes';
+import type { TgpuShaderStage } from './types';
 import type { Unwrapper } from './unwrapper';
-import type { OmitProps } from './utilityTypes';
 
 // ----------
 // Public API
@@ -62,11 +65,11 @@ export type TgpuLayoutEntryBase = {
 };
 
 export type TgpuLayoutUniform = TgpuLayoutEntryBase & {
-  uniform: AnyTgpuData | ((arrayLength: number) => AnyTgpuData);
+  uniform: AnyWgslData | ((arrayLength: number) => AnyWgslData);
 };
 
 export type TgpuLayoutStorage = TgpuLayoutEntryBase & {
-  storage: AnyTgpuData | ((arrayLength: number) => AnyTgpuData);
+  storage: AnyWgslData | ((arrayLength: number) => AnyWgslData);
   /** @default 'readonly' */
   access?: 'mutable' | 'readonly';
 };
@@ -116,15 +119,15 @@ export type TgpuLayoutEntry =
   | TgpuLayoutExternalTexture;
 
 type UnwrapRuntimeConstructorInner<
-  T extends AnyTgpuData | ((_: number) => AnyTgpuData),
-> = T extends AnyTgpuData
+  T extends BaseWgslData | ((_: number) => BaseWgslData),
+> = T extends BaseWgslData
   ? T
   : T extends (_: number) => infer Return
     ? Return
     : never;
 
 export type UnwrapRuntimeConstructor<
-  T extends AnyTgpuData | ((_: number) => AnyTgpuData),
+  T extends AnyData | ((_: number) => AnyData),
 > = T extends unknown ? UnwrapRuntimeConstructorInner<T> : never;
 
 export interface TgpuBindGroupLayout<
@@ -231,16 +234,32 @@ export type TgpuBindGroup<
   unwrap(unwrapper: Unwrapper): GPUBindGroup;
 };
 
+type ExoticEntry<T> = T extends Record<string | number | symbol, unknown>
+  ? {
+      [Key in keyof T]: T[Key] extends BaseWgslData
+        ? Exotic<T[Key]>
+        : T[Key] extends (...args: infer TArgs) => infer TReturn
+          ? (...args: TArgs) => Exotic<TReturn>
+          : T[Key];
+    }
+  : T;
+
+type ExoticEntries<T extends Record<string, TgpuLayoutEntry | null>> = {
+  [BindingKey in keyof T]: ExoticEntry<T[BindingKey]>;
+};
+
 export function bindGroupLayout<
   Entries extends Record<string, TgpuLayoutEntry | null>,
->(entries: Entries): TgpuBindGroupLayout<Entries> {
-  return new TgpuBindGroupLayoutImpl(entries);
+>(entries: Entries): TgpuBindGroupLayout<Prettify<ExoticEntries<Entries>>> {
+  return new TgpuBindGroupLayoutImpl(entries as ExoticEntries<Entries>);
 }
 
 export function bindGroupLayoutExperimental<
   Entries extends Record<string, TgpuLayoutEntry | null>,
->(entries: Entries): TgpuBindGroupLayoutExperimental<Entries> {
-  return new TgpuBindGroupLayoutImpl(entries);
+>(
+  entries: Entries,
+): TgpuBindGroupLayoutExperimental<Prettify<ExoticEntries<Entries>>> {
+  return new TgpuBindGroupLayoutImpl(entries as ExoticEntries<Entries>);
 }
 
 export function isBindGroupLayout<T extends TgpuBindGroupLayout>(
@@ -305,9 +324,8 @@ class TgpuBindGroupLayoutImpl<
       const membership = { idx, key, layout: this };
 
       if ('uniform' in entry) {
-        const dataType = isBaseData(entry.uniform)
-          ? entry.uniform
-          : entry.uniform(0);
+        const dataType =
+          'type' in entry.uniform ? entry.uniform : entry.uniform(0);
 
         // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
         (this.bound[key] as any) = new TgpuLaidOutBufferImpl(
@@ -318,9 +336,8 @@ class TgpuBindGroupLayoutImpl<
       }
 
       if ('storage' in entry) {
-        const dataType = isBaseData(entry.storage)
-          ? entry.storage
-          : entry.storage(0);
+        const dataType =
+          'type' in entry.storage ? entry.storage : entry.storage(0);
 
         // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
         (this.bound[key] as any) = new TgpuLaidOutBufferImpl(

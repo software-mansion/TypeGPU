@@ -1,5 +1,5 @@
-import type { Vec4f } from '../../data';
-import { isBaseData } from '../../types';
+import { isData } from '../../data/dataTypes';
+import type { Vec4f } from '../../data/wgslTypes';
 import type { IOLayout } from '../function/fnTypes';
 import type { AnyFragmentTargets } from './renderPipeline';
 
@@ -13,7 +13,7 @@ export function connectTargetsToShader(
   shaderOutputLayout: IOLayout<Vec4f>,
   targets: AnyFragmentTargets,
 ): GPUColorTargetState[] {
-  if (isBaseData(shaderOutputLayout)) {
+  if (isData(shaderOutputLayout)) {
     if (!isColorTargetState(targets)) {
       throw new Error(
         'Expected a single color target configuration, not a record.',

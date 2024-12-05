@@ -1,12 +1,11 @@
-import type { F32, I32, U32 } from '../../data';
-import type { Vec4f, Vec4i, Vec4u } from '../../data/vector';
+import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes';
 import { invariant } from '../../errors';
 import type { ExtensionGuard } from '../../extension';
 import type { TgpuNamable } from '../../namable';
+import type { Default } from '../../shared/utilityTypes';
+import type { UnionToIntersection } from '../../shared/utilityTypes';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
-import type { Default } from '../../utilityTypes';
-import type { UnionToIntersection } from '../../utilityTypes';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 import {
   type SampledFormatOptions,
@@ -571,7 +570,7 @@ class TgpuFixedSampledTextureImpl
     const multisampled = (this._texture.props.sampleCount ?? 1) > 1;
     const { group, binding } = ctx.allocateFixedEntry(
       {
-        texture: channelKindToFormat[this.channelDataType.kind],
+        texture: channelKindToFormat[this.channelDataType.type],
         viewDimension: this.dimension,
         multisampled,
       },

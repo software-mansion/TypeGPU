@@ -2,7 +2,7 @@ import { describe, expectTypeOf, it } from 'vitest';
 
 import * as d from '../src/data';
 import { asUniform } from '../src/experimental';
-import type { Infer } from '../src/repr';
+import type { Infer } from '../src/shared/repr';
 import { mockRoot } from './utils/mockRoot';
 
 describe('TgpuBufferReadonly', () => {
