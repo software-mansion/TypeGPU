@@ -160,6 +160,14 @@ export const channelKindToFormat = {
   i32: 'sint',
 } as const;
 
+export const channelFormatToSchema = {
+  float: f32,
+  'unfilterable-float': f32,
+  uint: u32,
+  sint: i32,
+  depth: f32, // I guess?
+};
+
 export type TexelFormatToDataType = typeof texelFormatToDataType;
 export type TexelFormatToDataTypeOrNever<T> =
   T extends keyof TexelFormatToDataType ? TexelFormatToDataType[T] : never;

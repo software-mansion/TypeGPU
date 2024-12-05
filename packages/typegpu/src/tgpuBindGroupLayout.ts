@@ -11,12 +11,22 @@ import {
   TgpuLaidOutBufferImpl,
 } from './core/buffer/bufferUsage';
 import {
+  TgpuLaidOutComparisonSamplerImpl,
+  TgpuLaidOutSamplerImpl,
+  type TgpuSampler,
+} from './core/sampler/sampler';
+import { TgpuExternalTextureImpl } from './core/texture/externalTexture';
+import {
+  type StorageTextureDimension,
+  TgpuLaidOutSampledTextureImpl,
+  TgpuLaidOutStorageTextureImpl,
   type TgpuMutableTexture,
   type TgpuReadonlyTexture,
   type TgpuSampledTexture,
   type TgpuTexture,
   isTexture,
 } from './core/texture/texture';
+import type { StorageTextureTexelFormat } from './core/texture/textureFormats';
 import {
   NotSampledError,
   isUsableAsSampled,
@@ -24,7 +34,6 @@ import {
 import { NotUniformError } from './errors';
 import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
 import type { TgpuNamable } from './namable';
-import type { TgpuSampler } from './tgpuSampler';
 import { type AnyTgpuData, type TgpuShaderStage, isBaseData } from './types';
 import type { Unwrapper } from './unwrapper';
 import type { OmitProps } from './utilityTypes';
@@ -86,13 +95,13 @@ export type TgpuLayoutTexture<
   multisampled?: boolean;
 };
 export type TgpuLayoutStorageTexture<
-  TFormat extends GPUTextureFormat = GPUTextureFormat,
+  TFormat extends StorageTextureTexelFormat = StorageTextureTexelFormat,
 > = TgpuLayoutEntryBase & {
   storageTexture: TFormat;
   /** @default 'writeonly' */
   access?: 'readonly' | 'writeonly' | 'mutable';
   /** @default '2d' */
-  viewDimension?: GPUTextureViewDimension;
+  viewDimension?: StorageTextureDimension;
 };
 export type TgpuLayoutExternalTexture = TgpuLayoutEntryBase & {
   externalTexture: Record<string, never>;
@@ -319,6 +328,43 @@ class TgpuBindGroupLayoutImpl<
           dataType,
           membership,
         );
+      }
+
+      if ('texture' in entry) {
+        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+        (this.bound[key] as any) = new TgpuLaidOutSampledTextureImpl(
+          entry.texture,
+          entry.viewDimension ?? '2d',
+          entry.multisampled ?? false,
+          membership,
+        );
+      }
+
+      if ('storageTexture' in entry) {
+        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+        (this.bound[key] as any) = new TgpuLaidOutStorageTextureImpl(
+          entry.storageTexture,
+          entry.viewDimension ?? '2d',
+          entry.access ?? 'writeonly',
+          membership,
+        );
+      }
+
+      if ('externalTexture' in entry) {
+        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+        (this.bound[key] as any) = new TgpuExternalTextureImpl(membership);
+      }
+
+      if ('sampler' in entry) {
+        if (entry.sampler === 'comparison') {
+          // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+          (this.bound[key] as any) = new TgpuLaidOutComparisonSamplerImpl(
+            membership,
+          );
+        } else {
+          // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+          (this.bound[key] as any) = new TgpuLaidOutSamplerImpl(membership);
+        }
       }
 
       idx++;
