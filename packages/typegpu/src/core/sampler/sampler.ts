@@ -103,9 +103,7 @@ export interface TgpuFixedSampler extends TgpuSampler, TgpuNamable {}
 
 export interface TgpuFixedComparisonSampler
   extends TgpuComparisonSampler,
-    TgpuNamable {
-  readonly resourceType: 'sampler-comparison';
-}
+    TgpuNamable {}
 
 export function sampler(props: SamplerProps): TgpuSampler {
   return new TgpuFixedSamplerImpl(props);
