@@ -28,6 +28,9 @@ export type {
   Vec4f,
   Vec4i,
   Vec4u,
+  Mat2x2f,
+  Mat3x3f,
+  Mat4x4f,
   WgslStruct,
   WgslArray,
   Atomic,
@@ -82,9 +85,7 @@ export {
   mat2x2f,
   mat3x3f,
   mat4x4f,
-  mat2x2fToArray,
-  mat3x3fToArray,
-  mat4x4fToArray,
+  matToArray,
 } from './matrix';
 export * from './vertexFormatData';
 export { atomic } from './atomic';

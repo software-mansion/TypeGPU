@@ -550,21 +550,20 @@ export const mat4x4f = createMatSchema<'mat4x4f', m4x4f, v4f>({
   makeFromElements: (...elements: number[]) => new mat4x4fImpl(...elements),
 }) as Mat4x4f & Mat4x4fConstructor;
 
-export const mat2x2fToArray = (mat: m2x2f): number[] =>
-  [mat[0], mat[1], mat[2], mat[3]] as number[];
+export function matToArray(mat: m2x2f | m3x3f | m4x4f): number[] {
+  if (mat.kind === 'mat3x3f') {
+    return [
+      mat[0],
+      mat[1],
+      mat[2],
+      mat[4],
+      mat[5],
+      mat[6],
+      mat[8],
+      mat[9],
+      mat[10],
+    ] as number[];
+  }
 
-export const mat3x3fToArray = (mat: m3x3f): number[] =>
-  [
-    mat[0],
-    mat[1],
-    mat[2],
-    mat[4],
-    mat[5],
-    mat[6],
-    mat[8],
-    mat[9],
-    mat[10],
-  ] as number[];
-
-export const mat4x4fToArray = (mat: m4x4f): number[] =>
-  Array.from({ length: mat.length }).map((_, idx) => mat[idx] as number);
+  return Array.from({ length: mat.length }).map((_, idx) => mat[idx] as number);
+}
