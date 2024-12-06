@@ -30,11 +30,42 @@ Since TypeGPU is a very thin abstraction over WebGPU, there is a 1-to-1 mapping 
 and the raw WebGPU resource used underneath.
 
 ```ts
+const layout = tgpu.bindGroupLayout(...);
+//    ^? TgpuBindGroupLayout<...>
+
+const rawLayout = root.unwrap(layout); // => GPUBindGroupLayout
+```
+
+```ts
 const numbersBuffer = root.createBuffer(d.f32).$usage('uniform');
 //    ^? TgpuBuffer<d.F32> & Uniform
 
 const rawNumbersBuffer = root.unwrap(numbersBuffer); // => GPUBuffer
+
+// Operations on `rawNumbersBuffer` and `numbersBuffer` are shared, because
+// they are essentially the same resource.
 ```
+
+```ts
+const fooTexture = root.createTexture({ ... }).$usage('sampled');
+//    ^? TgpuTexture<...> & Sampled
+
+const rawFooTexture = root.unwrap(fooTexture); // => GPUTexture
+```
+
+```ts
+const bindGroup = root.createBindGroup(layout, { ... });
+//    ^? TgpuBindGroup<...>
+
+const rawBindGroup = root.unwrap(bindGroup); // => GPUBindGroup
+```
+
+:::tip
+Each call to `root.unwrap(...)` with the same argument produces the exact same result, so there is no need to
+store the raw equivalents anywhere. Just call `root.unwrap(...)` in multiple places for the same resource if
+it makes the code easier to work with.
+:::
+
 
 ### Plugging WebGPU resources into typed APIs.
 
@@ -63,6 +94,8 @@ const values = await aBuffer.read(); // => d.v3f[]
 ```
 
 #### Bind Group Layouts
+
+When creating typed bind groups from a layout, entries can be populated with equivalent raw WebGPU resources.
 
 ```ts
 const layout = tgpu.bindGroupLayout({
@@ -273,12 +306,15 @@ const module = device.createShaderModule({
 -  code: rawShader,
 +  code: tgpu.resolve({
 +    input: rawShader,
-+    // matching up shader variables with layout entries
++    // Matching up shader variables with layout entries:
++    //   'nameInShader': layout.bound.nameInLayout,
++    //
 +    extraDependencies: {
 +      ambientColor: layout.bound.ambientColor,
 +      intensity: layout.bound.intensity,
 +    },
-+    // or extraDependencies: { ...layout.bound },
++    // or just:
++    // extraDependencies: { ...layout.bound },
 +  }),
 });
 ```
