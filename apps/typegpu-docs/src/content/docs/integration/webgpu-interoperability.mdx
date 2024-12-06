@@ -1,0 +1,291 @@
+---
+title: WebGPU Interoperability
+draft: true
+---
+
+TypeGPU is built in a way that allows you to pick and choose the primitives you need, incrementally adopt them into your project and have a working app at each step
+of the process. We go to extremes to ensure that turning even a single buffer into our typed variant improves the developer experience, and does not require changes
+to the rest of the codebase.
+
+The **non-contagious** nature of TypeGPU means that ejecting out in case raw WebGPU access is required can be done on a very granular level.
+
+:::note
+Some of the following code snippets assume that TypeGPU is already initialized.
+
+```ts
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const root = await tgpu.init();
+// ...or pass in an existing WebGPU device
+const root = await tgpu.init({ device });
+```
+:::
+
+## Points of integration
+
+### Accessing underlying WebGPU resources
+
+Since TypeGPU is a very thin abstraction over WebGPU, there is a 1-to-1 mapping between most typed resources
+and the raw WebGPU resource used underneath.
+
+```ts
+const numbersBuffer = root.createBuffer(d.f32).$usage('uniform');
+//    ^? TgpuBuffer<d.F32> & Uniform
+
+const rawNumbersBuffer = root.unwrap(numbersBuffer); // => GPUBuffer
+```
+
+### Plugging WebGPU resources into typed APIs.
+
+Many TypeGPU APIs accept either typed resources, or their untyped equivalent.
+
+#### Buffers
+
+Instead of passing an initial value to `root.createBuffer`, we can pass it a raw WebGPU buffer and interact with it through
+TypeGPU's APIs.
+
+```ts
+const rawBuffer = device.createBuffer({
+  size: (Float32Array.BYTES_PER_ELEMENT * 4) * 2, // (xyz + padding) * 2
+  usage: GPUBufferUsage.COPT_DST | GPUBufferUsage.UNIFORM,
+});
+
+const Schema = d.arrayOf(d.vec3f, 2);
+const aBuffer = root.createBuffer(Schema, rawBuffer);
+
+// Updates `rawBuffer` underneath.
+aBuffer.write([d.vec3f(1, 2, 3), d.vec3f(4, 5, 6)]);
+
+// Interpreting the raw bytes in `rawBuffer` as easier
+// to work with JS values.
+const values = await aBuffer.read(); // => d.v3f[]
+```
+
+#### Bind Group Layouts
+
+```ts
+const layout = tgpu.bindGroupLayout({
+  a: { uniform: d.f32 },
+  b: { uniform: d.u32 },
+});
+
+const aBuffer = root.createBuffer(d.f32, 0.5).$usage('uniform');
+//    ^? TgpuBuffer<d.F32> & Uniform
+
+const bBuffer = root.device.createBuffer({
+  size: Uint32Array.BYTES_PER_ELEMENT,
+  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
+});
+// ^? GPUBuffer
+
+const bindGroup = root.createBindGroup(layout, {
+  a: aBuffer, // validates if the buffers holds the right data and usage on the type level.
+  b: bBuffer, // allows the raw buffer to pass through.
+});
+```
+
+## Incremental adoption recipes
+
+Let us deliver on our promise and show you the small code changes necessary to adopt TypeGPU, and the benefits you can gain at each step.
+
+Since adoption can start growing from many points in a WebGPU codebase, feel free to choose whichever path suits your use-case the most:
+- [Starting at buffers](#starting-at-buffers)
+- [Starting at bind group layouts](#starting-at-bind-group-layouts)
+
+### Starting at buffers
+
+##### #1: Define a schema for a buffer's contents
+
+```diff lang="ts"
++const Schema = d.arrayOf(d.vec3f, 2);
++
+const rawBuffer = device.createBuffer({
+-  size: (Float32Array.BYTES_PER_ELEMENT * 4) * 2, // (xyz + padding) * 2
++  size: d.sizeOf(Schema),
+  usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX,
+  mappedAtCreation: true,
+});
+
+new Float32Array(rawBuffer.getMappedRange()).set([
+  0, 1, 2, /* padding */ 0,
+  3, 4, 5, /* padding */ 0,
+]);
+rawBuffer.unmap();
+```
+
+Benefits gained:
+- **Increased context** - a data-type schema allows developers to quickly determine what a buffer is supposed to
+  contain, without the need to jump around the codebase.
+- **Automatic sizing** - schemas understand WebGPU memory layout rules, therefore can estimate the required size
+  of a buffer.
+
+##### #2: Wrap the buffer in a typed shell
+
+```diff lang="ts"
+const Schema = d.arrayOf(d.vec3f, 2);
+
+const rawBuffer = device.createBuffer({
+  size: d.sizeOf(Schema),
+  usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX,
+  mappedAtCreation: true,
+});
+
++const buffer = root
++  .createBuffer(Schema, rawBuffer)
++  .$usage('storage', 'vertex');
++
++buffer.write([d.vec3f(0, 1, 2), d.vec3f(3, 4, 5)]);
+-new Float32Array(rawBuffer.getMappedRange()).set([
+-  0, 1, 2, /* padding */ 0,
+-  3, 4, 5, /* padding */ 0,
+-]);
+rawBuffer.unmap();
+```
+
+Benefits gained:
+- **Typed I/O** - typed buffers have  `.write` and `.read` methods that accept/return properly typed
+  JavaScript values that match that buffer's schema. Trying to write anything other than an array
+  of `vec3f` will result in a type error, surfaced immediately by the IDE and at build time.
+- **Automatic padding** - TypeGPU understands how to translate JS values into binary and back,
+  adhering to memory layout rules. This reduces the room for error, and no longer requires knowledge
+  about `vec3f`s having to be aligned to multiples of 16 bytes.
+
+
+##### #3: Let TypeGPU create the buffer
+
+```diff lang="ts"
+const Schema = d.arrayOf(d.vec3f, 2);
+
+-const rawBuffer = device.createBuffer({
+-  size: d.sizeOf(Schema),
+-  usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX,
+-  mappedAtCreation: true,
+-});
+
+const buffer = root
+-  .createBuffer(Schema, rawBuffer)
++  .createBuffer(Schema, [d.vec3f(0, 1, 2), d.vec3f(3, 4, 5)])
+  .$usage('storage', 'vertex');
+
++const rawBuffer = root.unwrap(buffer);
+
+-wrappedBuffer.write([d.vec3f(0, 1, 2), d.vec3f(3, 4, 5)]);
+-rawBuffer.unmap();
+```
+
+Benefits gained:
+- **Automatic flags** - buffer flags can be inferred based on the usages passed into `.$usage`. That way they can be consistent both on the type-level, as well as at runtime.
+- **Initial value** - an optional initial value can be passed in, which takes care of mapping the buffer at creation, and unmapping it.
+
+### Starting at bind group layouts
+
+##### #1: Replace the WebGPU API call with a typed variant
+
+```diff lang="ts"
+- const rawLayout = device.createBindGroupLayout({
+-   entries: [
+-     // ambientColor
+-     {
+-       binding: 0,
+-       visibility: GPUShaderStage.COMPUTE,
+-       buffer: {
+-         type: 'uniform',
+-       },
+-     },
+-     // intensity
+-     {
+-       binding: 2,
+-       visibility: GPUShaderStage.COMPUTE,
+-       buffer: {
+-         type: 'uniform',
+-       },
+-     },
+-   ],
+- });
++ const layout = tgpu.bindGroupLayout({
++   ambientColor: { uniform: d.vec3f }, // #0 binding
++   _: null, // #1 skipped!
++   intensity: { uniform: d.f32 }, // #2 binding
++ });
++ 
++ const rawLayout = root.unwrap(layout);
+```
+
+Benefits gained:
+- **Increased context** - replacing indices with named keys (`'ambientColor'`, `'intensity'`, ...) and providing data types reduces the need to jump around the codebase to
+  find a layout's semantic meaning.
+- **Good defaults** - binding indices are inferred automatically based on the order of properties in the descriptor, starting from `0`. Properties with the
+  value `null` are skipped. The visibility is assumed based on the type of resource. Can be explicitly limited using the optional `visibility` property.
+
+##### #2: Create bind groups from typed layouts
+```diff lang="ts"
+- const rawBindGroup = device.createBindGroup({
+-   layout: rawLayout,
+-   entries: [
+-     // ambientColor
+-     {
+-       binding: 0,
+-       resource: { buffer: rawFooBuffer },
+-     },
+-     // intensity
+-     {
+-       binding: 2,
+-       resource: { buffer: rawBarBuffer },
+-     },
+-   ],
+- });
++ const bindGroup = root.createBindGroup(layout, {
++   ambientColor: ambientColorBuffer,
++   intensity: intensityBuffer,
++ });
++
++ const rawBindGroup = root.unwrap(bindGroup);
+```
+
+Benefits gained:
+- **Reduced fragility** - no longer susceptible to shifts in binding indices, as the resources are associated with a named key instead.
+- **Autocomplete** - the IDE can suggest what resources need to be passed in, and what their data type should be.
+- **Static validation** - when the layout gains a new entry, or the kind of resource it holds changes, the IDE and build system will catch
+  it before the error surfaces at runtime. When using typed buffers, the validity of the data-type and usage is also validated on the type level.
+
+##### #3: Inject shader code
+
+```diff lang="ts"
+const layout = tgpu.bindGroupLayout({
+  ambientColor: { uniform: d.vec3f }, // #0 binding
+  _: null, // #1 skipped!
+  intensity: { uniform: d.f32 }, // #2 binding
+-});
++}).$idx(0); // <- forces code-gen to assign `0` as the group index.
+
+const rawShader = /* wgsl*/ `
+-  @group(0) @binding(0) var<uniform> ambientColor: vec3f;
+-  @group(0) @binding(1) var<uniform> intensity: f32;
+-
+  @fragment
+  fn main() -> @location(0) vec4f {
+    return vec4f(ambientColor * intensity), 1.);
+  }
+`;
+
+const module = device.createShaderModule({
+-  code: rawShader,
++  code: tgpu.resolve({
++    input: rawShader,
++    // matching up shader variables with layout entries
++    extraDependencies: {
++      ambientColor: layout.bound.ambientColor,
++      intensity: layout.bound.intensity,
++    },
++    // or extraDependencies: { ...layout.bound },
++  }),
+});
+```
+
+Benefits gained:
+- **Reduced fragility** - binding indices are now being handled end-to-end by TypeGPU, leaving human-readable keys
+  as the way to connect the shader with JavaScript.
+- **Single source of truth** - typed bind group layouts not only describe JS behavior, but WGSL behavior as well. This
+  allows `tgpu.resolve` to generate the appropriate WGSL code. Definitions of structs used as part of the layout will
+  also be included in the returned shader code.
