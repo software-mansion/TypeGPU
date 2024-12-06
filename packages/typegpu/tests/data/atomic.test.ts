@@ -22,6 +22,7 @@ describe('d.atomic', () => {
     const exoticU32 = {
       type: 'u32' as const,
       '~repr': undefined as unknown as number,
+      '~exotic': undefined as unknown as d.U32,
     };
 
     const u32Atomic = d.atomic(exoticU32);
@@ -32,6 +33,7 @@ describe('d.atomic', () => {
     const exoticI32 = {
       type: 'i32' as const,
       '~repr': undefined as unknown as number,
+      '~exotic': undefined as unknown as d.I32,
     };
 
     const i32Atomic = d.atomic(exoticI32);
