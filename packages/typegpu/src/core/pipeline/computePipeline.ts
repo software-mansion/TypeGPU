@@ -101,7 +101,8 @@ class TgpuComputePipelineImpl
   ): void {
     const memo = this._core.unwrap();
 
-    const pass = this._core.branch.commandEncoder.beginComputePass({
+    const commandEncoder = this._core.branch.device.createCommandEncoder();
+    const pass = commandEncoder.beginComputePass({
       label: this._core.label ?? '',
     });
 
@@ -122,6 +123,8 @@ class TgpuComputePipelineImpl
 
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
+
+    this._core.branch.device.queue.submit([commandEncoder.finish()]);
   }
 
   $name(label?: string | undefined): this {

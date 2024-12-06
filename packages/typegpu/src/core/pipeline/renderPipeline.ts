@@ -233,7 +233,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       return attachment;
     }) as GPURenderPassColorAttachment[];
 
-    const pass = branch.commandEncoder.beginRenderPass({
+    const commandEncoder = branch.device.createCommandEncoder();
+    const pass = commandEncoder.beginRenderPass({
       label: this._core.label ?? '',
       colorAttachments,
     });
@@ -265,6 +266,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
     pass.end();
+
+    branch.device.queue.submit([commandEncoder.finish()]);
   }
 }
 
