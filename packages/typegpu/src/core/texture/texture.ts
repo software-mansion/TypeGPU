@@ -1,11 +1,11 @@
-import type { F32, I32, U32 } from '../../data';
-import type { Vec4f, Vec4i, Vec4u } from '../../data/vector';
+import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes';
 import { invariant } from '../../errors';
 import type { ExtensionGuard } from '../../extension';
 import type { TgpuNamable } from '../../namable';
+import type { Default } from '../../shared/utilityTypes';
+import type { UnionToIntersection } from '../../shared/utilityTypes';
+import type { LayoutMembership } from '../../tgpuBindGroupLayout';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
-import type { Default } from '../../utilityTypes';
-import type { UnionToIntersection } from '../../utilityTypes';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 import {
   type SampledFormatOptions,
@@ -14,6 +14,7 @@ import {
   type TexelFormatToChannelType,
   type TexelFormatToDataType,
   type TexelFormatToDataTypeOrNever,
+  channelFormatToSchema,
   channelKindToFormat,
   texelFormatToChannelType,
   texelFormatToDataType,
@@ -271,6 +272,12 @@ export type TgpuAnyTextureView =
 // Implementation
 // --------------
 
+const accessMap = {
+  mutable: 'read_write',
+  readonly: 'read',
+  writeonly: 'write',
+} as const;
+
 class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
   public readonly resourceType = 'texture';
   public usableAsSampled = false;
@@ -398,7 +405,7 @@ class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
       throw new Error(`Unsupported storage texture format: ${format}`);
     }
 
-    return new TgpuFixedSampledTextureImpl(params, 'readonly', this);
+    return new TgpuFixedSampledTextureImpl(params, this);
   }
 
   destroy() {
@@ -476,7 +483,39 @@ class TgpuFixedStorageTextureImpl
     const type = `texture_storage_${dimensionToCodeMap[this.dimension]}`;
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var ${id}: ${type}<${this._format}, ${this.access}>;`,
+      `@group(${group}) @binding(${binding}) var ${id}: ${type}<${this._format}, ${
+        accessMap[this.access]
+      }>;`,
+    );
+
+    return id;
+  }
+}
+
+export class TgpuLaidOutStorageTextureImpl implements TgpuStorageTexture {
+  public readonly resourceType = 'texture-storage-view';
+  public readonly texelDataType: TexelData;
+
+  constructor(
+    private readonly _format: StorageTextureTexelFormat,
+    public readonly dimension: StorageTextureDimension,
+    public readonly access: StorageTextureAccess,
+    private readonly _membership: LayoutMembership,
+  ) {
+    this.texelDataType = texelFormatToDataType[this._format];
+  }
+
+  get label(): string | undefined {
+    return this._membership.key;
+  }
+
+  resolve(ctx: ResolutionCtx): string {
+    const id = ctx.names.makeUnique(this.label);
+    const group = ctx.allocateLayoutEntry(this._membership.layout);
+    const type = `texture_storage_${dimensionToCodeMap[this.dimension]}`;
+
+    ctx.addDeclaration(
+      `@group(${group}) @binding(${this._membership.idx}) var ${id}: ${type}<${this._format}, ${accessMap[this.access]}>;`,
     );
 
     return id;
@@ -497,7 +536,6 @@ class TgpuFixedSampledTextureImpl
     private readonly _props:
       | TextureViewParams<GPUTextureViewDimension, GPUTextureFormat>
       | undefined,
-    public readonly access: StorageTextureAccess,
     private readonly _texture: TgpuTexture<TextureProps> & INTERNAL_TgpuTexture,
   ) {
     this.dimension = _props?.dimension ?? _texture.props.dimension ?? '2d';
@@ -532,7 +570,7 @@ class TgpuFixedSampledTextureImpl
     const multisampled = (this._texture.props.sampleCount ?? 1) > 1;
     const { group, binding } = ctx.allocateFixedEntry(
       {
-        texture: channelKindToFormat[this.channelDataType.kind],
+        texture: channelKindToFormat[this.channelDataType.type],
         viewDimension: this.dimension,
         multisampled,
       },
@@ -545,6 +583,39 @@ class TgpuFixedSampledTextureImpl
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${binding}) var ${id}: ${type}<${ctx.resolve(this.channelDataType)}>;`,
+    );
+
+    return id;
+  }
+}
+
+export class TgpuLaidOutSampledTextureImpl implements TgpuSampledTexture {
+  public readonly resourceType = 'texture-sampled-view';
+  public readonly channelDataType: ChannelData;
+
+  constructor(
+    sampleType: GPUTextureSampleType,
+    public readonly dimension: GPUTextureViewDimension,
+    private readonly _multisampled: boolean,
+    private readonly _membership: LayoutMembership,
+  ) {
+    this.channelDataType = channelFormatToSchema[sampleType];
+  }
+
+  get label(): string | undefined {
+    return this._membership.key;
+  }
+
+  resolve(ctx: ResolutionCtx): string {
+    const id = ctx.names.makeUnique(this.label);
+    const group = ctx.allocateLayoutEntry(this._membership.layout);
+
+    const type = this._multisampled
+      ? 'texture_multisampled_2d'
+      : `texture_${dimensionToCodeMap[this.dimension]}`;
+
+    ctx.addDeclaration(
+      `@group(${group}) @binding(${this._membership.idx}) var ${id}: ${type}<${ctx.resolve(this.channelDataType)}>;`,
     );
 
     return id;

@@ -1,6 +1,6 @@
 import { JitTranspiler } from '@typegpu/jit';
 import {
-  type Parsed,
+  type Infer,
   arrayOf,
   bool,
   f32,
@@ -489,7 +489,7 @@ const obstacles: {
   { x: 0.5, y: 0, width: 1, height: 0.1, enabled: true }, // floor
 ];
 
-function obstaclesToConcrete(): Parsed<BoxObstacle>[] {
+function obstaclesToConcrete(): Infer<BoxObstacle>[] {
   return obstacles.map(({ x, y, width, height, enabled }) => ({
     center: vec2u(Math.round(x * gridSize), Math.round(y * gridSize)),
     size: vec2u(Math.round(width * gridSize), Math.round(height * gridSize)),
@@ -618,7 +618,7 @@ function makePipelines(
       root.flush();
     },
 
-    applyMovedObstacles(bufferData: Parsed<BoxObstacle>[]) {
+    applyMovedObstacles(bufferData: Infer<BoxObstacle>[]) {
       obstaclesBuffer.write(bufferData);
       moveObstaclesPipeline.dispatchWorkgroups(1);
       root.flush();

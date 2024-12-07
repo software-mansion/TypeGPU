@@ -1,16 +1,16 @@
-import type { Parsed } from 'typed-binary';
 import type { TgpuBuffer } from './core/buffer/buffer';
-import type { AnyTgpuData } from './types';
+import type { AnyData } from './data/dataTypes';
+import type { Infer } from './shared/repr';
 
-export function write<TData extends AnyTgpuData>(
+export function write<TData extends AnyData>(
   buffer: TgpuBuffer<TData>,
-  data: Parsed<TData>,
+  data: Infer<TData>,
 ): void {
   buffer.write(data);
 }
 
-export async function read<TData extends AnyTgpuData>(
+export async function read<TData extends AnyData>(
   buffer: TgpuBuffer<TData>,
-): Promise<Parsed<TData>> {
+): Promise<Infer<TData>> {
   return buffer.read();
 }

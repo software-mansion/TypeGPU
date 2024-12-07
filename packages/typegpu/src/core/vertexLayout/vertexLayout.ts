@@ -1,7 +1,9 @@
-import type { TgpuBaseArray } from '../../data/array';
-import { isDecorated, isLooseDecorated } from '../../data/attributes';
-import { getCustomAlignment } from '../../data/attributes';
-import { isLooseStructSchema, isStructSchema } from '../../data/struct';
+import { alignmentOf, customAlignmentOf } from '../../data/alignmentOf';
+import { isLooseDecorated, isLooseStruct } from '../../data/dataTypes';
+import type { LooseArray } from '../../data/dataTypes';
+import { sizeOf } from '../../data/sizeOf';
+import { isDecorated, isWgslStruct } from '../../data/wgslTypes';
+import type { BaseWgslData, WgslArray } from '../../data/wgslTypes';
 import { roundUp } from '../../mathUtils';
 import type { TgpuNamable } from '../../namable';
 import {
@@ -10,7 +12,7 @@ import {
   kindToDefaultFormatMap,
   vertexFormats,
 } from '../../shared/vertexFormat';
-import type { AnyTgpuData, AnyTgpuLooseData } from '../../types';
+import type { ExoticIO } from '../function/fnTypes';
 import type {
   ArrayToContainedAttribs,
   DataToContainedAttribs,
@@ -20,8 +22,9 @@ import type {
 // Public API
 // ----------
 
-export interface TgpuVertexLayout<TData extends TgpuBaseArray = TgpuBaseArray>
-  extends TgpuNamable {
+export interface TgpuVertexLayout<
+  TData extends WgslArray | LooseArray = WgslArray | LooseArray,
+> extends TgpuNamable {
   readonly resourceType: 'vertex-layout';
   readonly label?: string | undefined;
   readonly stride: number;
@@ -34,11 +37,14 @@ export interface INTERNAL_TgpuVertexAttrib {
   readonly _layout: TgpuVertexLayout;
 }
 
-export function vertexLayout<TData extends TgpuBaseArray>(
+export function vertexLayout<TData extends WgslArray | LooseArray>(
   schemaForCount: (count: number) => TData,
   stepMode: 'vertex' | 'instance' = 'vertex',
-): TgpuVertexLayout<TData> {
-  return new TgpuVertexLayoutImpl(schemaForCount, stepMode);
+): TgpuVertexLayout<ExoticIO<TData>> {
+  return new TgpuVertexLayoutImpl(
+    schemaForCount as (count: number) => ExoticIO<TData>,
+    stepMode,
+  );
 }
 
 export function isVertexLayout<T extends TgpuVertexLayout>(
@@ -52,8 +58,8 @@ export function isVertexLayout<T extends TgpuVertexLayout>(
 // --------------
 
 function dataToContainedAttribs<
-  TLayoutData extends TgpuBaseArray,
-  TData extends AnyTgpuData | AnyTgpuLooseData,
+  TLayoutData extends WgslArray | LooseArray,
+  TData extends BaseWgslData,
 >(
   layout: TgpuVertexLayout<TLayoutData>,
   data: TData,
@@ -63,54 +69,54 @@ function dataToContainedAttribs<
     return dataToContainedAttribs(
       layout,
       data.inner,
-      roundUp(offset, getCustomAlignment(data) ?? 1),
+      roundUp(offset, customAlignmentOf(data)),
     );
   }
 
-  if (isStructSchema(data)) {
+  if (isWgslStruct(data)) {
     let memberOffset = offset;
 
     return Object.fromEntries(
-      Object.entries(data.properties).map(([key, value]) => {
-        memberOffset = roundUp(memberOffset, value.byteAlignment);
+      Object.entries(data.propTypes).map(([key, value]) => {
+        memberOffset = roundUp(memberOffset, alignmentOf(value));
         const attrib = [
           key,
           dataToContainedAttribs(layout, value, memberOffset),
         ];
-        memberOffset += value.size;
+        memberOffset += sizeOf(value);
         return attrib;
       }),
     ) as DataToContainedAttribs<TData>;
   }
 
-  if (isLooseStructSchema(data)) {
+  if (isLooseStruct(data)) {
     let memberOffset = offset;
 
     return Object.fromEntries(
-      Object.entries(data.properties).map(([key, value]) => {
-        memberOffset = roundUp(memberOffset, getCustomAlignment(value) ?? 1);
+      Object.entries(data.propTypes).map(([key, value]) => {
+        memberOffset = roundUp(memberOffset, customAlignmentOf(value));
         const attrib = [
           key,
           dataToContainedAttribs(layout, value, memberOffset),
         ];
-        memberOffset += value.size;
+        memberOffset += sizeOf(value);
         return attrib;
       }),
     ) as DataToContainedAttribs<TData>;
   }
 
-  if ('kind' in data && typeof data.kind === 'string') {
-    if (vertexFormats.includes(data.kind as VertexFormat)) {
+  if ('type' in data && typeof data.type === 'string') {
+    if (vertexFormats.includes(data.type as VertexFormat)) {
       return {
         _layout: layout, // hidden property, used to determine which buffers to apply when executing the pipeline
-        format: data.kind as VertexFormat,
+        format: data.type as VertexFormat,
         offset,
         // biome-ignore lint/suspicious/noExplicitAny: <too many type shenanigans>
       } satisfies TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib as any;
     }
 
     const format = (kindToDefaultFormatMap as Record<string, VertexFormat>)[
-      data.kind
+      data.type
     ];
 
     if (format) {
@@ -126,7 +132,7 @@ function dataToContainedAttribs<
   throw new Error(`Unsupported data used in vertex layout: ${String(data)}`);
 }
 
-class TgpuVertexLayoutImpl<TData extends TgpuBaseArray>
+class TgpuVertexLayoutImpl<TData extends WgslArray | LooseArray>
   implements TgpuVertexLayout<TData>
 {
   public readonly resourceType = 'vertex-layout';
@@ -142,7 +148,10 @@ class TgpuVertexLayoutImpl<TData extends TgpuBaseArray>
     // `0` signals that the data-type is runtime-sized, and should not be used to create buffers.
     const arraySchema = schemaForCount(0);
 
-    this.stride = arraySchema.stride;
+    this.stride = roundUp(
+      sizeOf(arraySchema.elementType),
+      alignmentOf(arraySchema),
+    );
     this.attrib = dataToContainedAttribs(this, arraySchema.elementType, 0);
   }
 

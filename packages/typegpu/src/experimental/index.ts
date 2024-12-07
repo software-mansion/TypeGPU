@@ -71,6 +71,12 @@ export {
   isUsableAsVertex,
 } from '../core/buffer/buffer';
 export {
+  sampler,
+  comparisonSampler,
+  isSampler,
+  isComparisonSampler,
+} from '../core/sampler/sampler';
+export {
   isSampledTextureView,
   isStorageTextureView,
   isTexture,
@@ -114,7 +120,7 @@ export type { TgpuConst } from '../tgpuConstant';
 export type { TgpuPlum } from '../tgpuPlumTypes';
 export type { TgpuSettable } from '../settableTrait';
 export type { TgpuVar } from '../tgpuVariable';
-export type { TgpuSampler } from '../tgpuSampler';
+export type { TgpuSampler } from '../core/sampler/sampler';
 export type { JitTranspiler } from '../jitTranspiler';
 export type {
   TgpuBindGroupLayout,

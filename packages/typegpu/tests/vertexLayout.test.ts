@@ -7,13 +7,13 @@ import type { TgpuVertexAttrib } from '../src/shared/vertexFormat';
 
 describe('ArrayToContainedAttribs', () => {
   it('processes a loose array of uint8x2', () => {
-    type Result = ArrayToContainedAttribs<d.TgpuLooseArray<d.uint8x2>>;
+    type Result = ArrayToContainedAttribs<d.LooseArray<d.uint8x2>>;
 
     expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'uint8x2'>>();
   });
 
   it('processes a loose array of unorm10-10-10-2', () => {
-    type Result = ArrayToContainedAttribs<d.TgpuLooseArray<d.unorm10_10_10_2>>;
+    type Result = ArrayToContainedAttribs<d.LooseArray<d.unorm10_10_10_2>>;
 
     expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'unorm10-10-10-2'>>();
   });
@@ -25,14 +25,14 @@ describe('ArrayToContainedAttribs', () => {
   });
 
   it('processes a loose array of f32s', () => {
-    type Result = ArrayToContainedAttribs<d.TgpuLooseArray<d.F32>>;
+    type Result = ArrayToContainedAttribs<d.LooseArray<d.F32>>;
 
     expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'float32'>>();
   });
 
   it('processes a loose array of structs', () => {
     type Result = ArrayToContainedAttribs<
-      d.TgpuLooseArray<d.TgpuStruct<{ a: d.F32; b: d.F32 }>>
+      d.LooseArray<d.WgslStruct<{ a: d.F32; b: d.F32 }>>
     >;
 
     expectTypeOf<Result>().toEqualTypeOf<{
@@ -43,7 +43,7 @@ describe('ArrayToContainedAttribs', () => {
 
   it('processes a loose array of loose struct', () => {
     type Result = ArrayToContainedAttribs<
-      d.TgpuLooseArray<d.TgpuLooseStruct<{ a: d.F32; b: d.F32 }>>
+      d.LooseArray<d.LooseStruct<{ a: d.F32; b: d.F32 }>>
     >;
 
     expectTypeOf<Result>().toEqualTypeOf<{
@@ -54,7 +54,7 @@ describe('ArrayToContainedAttribs', () => {
 
   it('processes an array of structs', () => {
     type Result = ArrayToContainedAttribs<
-      d.TgpuLooseArray<d.TgpuLooseStruct<{ a: d.F32; b: d.F32 }>>
+      d.LooseArray<d.LooseStruct<{ a: d.F32; b: d.F32 }>>
     >;
 
     expectTypeOf<Result>().toEqualTypeOf<{

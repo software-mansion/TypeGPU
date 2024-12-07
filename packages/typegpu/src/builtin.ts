@@ -1,17 +1,16 @@
-import {
-  type Decorated,
-  type F32,
-  type TgpuArray,
-  type U32,
-  type Vec3u,
-  type Vec4f,
-  arrayOf,
-  f32,
-  u32,
-  vec3u,
-  vec4f,
-} from './data';
-import { type Builtin, type IsBuiltin, attribute } from './data/attributes';
+import { arrayOf } from './data/array';
+import { type IsBuiltin, attribute } from './data/attributes';
+import { f32, u32 } from './data/numeric';
+import { vec3u, vec4f } from './data/vector';
+import type {
+  Builtin,
+  Decorated,
+  F32,
+  U32,
+  Vec3u,
+  Vec4f,
+  WgslArray,
+} from './data/wgslTypes';
 
 // ----------
 // Public API
@@ -21,7 +20,7 @@ export type BuiltinVertexIndex = Decorated<U32, [Builtin<'vertex_index'>]>;
 export type BuiltinInstanceIndex = Decorated<U32, [Builtin<'instance_index'>]>;
 export type BuiltinPosition = Decorated<Vec4f, [Builtin<'position'>]>;
 export type BuiltinClipDistances = Decorated<
-  TgpuArray<U32>,
+  WgslArray<U32>,
   [Builtin<'clip_distances'>]
 >;
 export type BuiltinFrontFacing = Decorated<F32, [Builtin<'front_facing'>]>;
@@ -49,56 +48,56 @@ export type BuiltinNumWorkgroups = Decorated<
 
 export const builtin = {
   vertexIndex: attribute(u32, {
-    type: 'builtin',
-    name: 'vertex_index',
+    type: '@builtin',
+    value: 'vertex_index',
   }) as BuiltinVertexIndex,
   instanceIndex: attribute(u32, {
-    type: 'builtin',
-    name: 'instance_index',
+    type: '@builtin',
+    value: 'instance_index',
   }) as BuiltinInstanceIndex,
   position: attribute(vec4f, {
-    type: 'builtin',
-    name: 'position',
+    type: '@builtin',
+    value: 'position',
   }) as BuiltinPosition,
   clipDistances: attribute(arrayOf(u32, 8), {
-    type: 'builtin',
-    name: 'clip_distances',
+    type: '@builtin',
+    value: 'clip_distances',
   }) as BuiltinClipDistances,
   frontFacing: attribute(f32, {
-    type: 'builtin',
-    name: 'front_facing',
+    type: '@builtin',
+    value: 'front_facing',
   }) as BuiltinFrontFacing,
   fragDepth: attribute(f32, {
-    type: 'builtin',
-    name: 'frag_depth',
+    type: '@builtin',
+    value: 'frag_depth',
   }) as BuiltinFragDepth,
   sampleIndex: attribute(u32, {
-    type: 'builtin',
-    name: 'sample_index',
+    type: '@builtin',
+    value: 'sample_index',
   }) as BuiltinSampleIndex,
   sampleMask: attribute(u32, {
-    type: 'builtin',
-    name: 'sample_mask',
+    type: '@builtin',
+    value: 'sample_mask',
   }) as BuiltinSampleMask,
   localInvocationId: attribute(vec3u, {
-    type: 'builtin',
-    name: 'local_invocation_id',
+    type: '@builtin',
+    value: 'local_invocation_id',
   }) as BuiltinLocalInvocationId,
   localInvocationIndex: attribute(u32, {
-    type: 'builtin',
-    name: 'local_invocation_index',
+    type: '@builtin',
+    value: 'local_invocation_index',
   }) as BuiltinLocalInvocationIndex,
   globalInvocationId: attribute(vec3u, {
-    type: 'builtin',
-    name: 'global_invocation_id',
+    type: '@builtin',
+    value: 'global_invocation_id',
   }) as BuiltinGlobalInvocationId,
   workgroupId: attribute(vec3u, {
-    type: 'builtin',
-    name: 'workgroup_id',
+    type: '@builtin',
+    value: 'workgroup_id',
   }) as BuiltinWorkgroupId,
   numWorkgroups: attribute(vec3u, {
-    type: 'builtin',
-    name: 'num_workgroups',
+    type: '@builtin',
+    value: 'num_workgroups',
   }) as BuiltinNumWorkgroups,
 } as const;
 

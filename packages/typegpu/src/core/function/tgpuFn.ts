@@ -1,9 +1,10 @@
+import type { Exotic, ExoticArray } from '../../data/exotic';
+import type { AnyWgslData } from '../../data/wgslTypes';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import { valueList } from '../../resolutionUtils';
 import { code } from '../../tgpuCode';
 import type {
-  AnyTgpuData,
   Eventual,
   ResolutionCtx,
   TgpuResolvable,
@@ -11,7 +12,7 @@ import type {
   Wgsl,
 } from '../../types';
 import { createFnCore } from './fnCore';
-import type { Implementation, UnwrapArgs, UnwrapReturn } from './fnTypes';
+import type { Implementation, InferArgs, InferReturn } from './fnTypes';
 
 // ----------
 // Public API
@@ -21,8 +22,8 @@ import type { Implementation, UnwrapArgs, UnwrapReturn } from './fnTypes';
  * Describes a function signature (its arguments and return type)
  */
 export interface TgpuFnShell<
-  Args extends AnyTgpuData[] = AnyTgpuData[],
-  Return extends AnyTgpuData | undefined = AnyTgpuData | undefined,
+  Args extends AnyWgslData[] = AnyWgslData[],
+  Return extends AnyWgslData | undefined = AnyWgslData | undefined,
 > {
   readonly argTypes: Args;
   readonly returnType: Return | undefined;
@@ -31,7 +32,7 @@ export interface TgpuFnShell<
    * Creates a type-safe implementation of this signature
    */
   does(
-    implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
+    implementation: (...args: InferArgs<Args>) => InferReturn<Return>,
   ): TgpuFn<Args, Return>;
 
   /**
@@ -44,8 +45,8 @@ export interface TgpuFnShell<
 }
 
 interface TgpuFnBase<
-  Args extends AnyTgpuData[],
-  Return extends AnyTgpuData | undefined = undefined,
+  Args extends AnyWgslData[],
+  Return extends AnyWgslData | undefined = undefined,
 > extends TgpuResolvable,
     TgpuNamable {
   readonly shell: TgpuFnShell<Args, Return>;
@@ -55,31 +56,31 @@ interface TgpuFnBase<
 }
 
 export type TgpuFn<
-  Args extends AnyTgpuData[],
-  Return extends AnyTgpuData | undefined = undefined,
+  Args extends AnyWgslData[],
+  Return extends AnyWgslData | undefined = undefined,
 > = TgpuFnBase<Args, Return> &
-  ((...args: UnwrapArgs<Args>) => UnwrapReturn<Return>);
+  ((...args: InferArgs<Args>) => InferReturn<Return>);
 
-export function fn<Args extends AnyTgpuData[] | []>(
+export function fn<Args extends AnyWgslData[] | []>(
   argTypes: Args,
   returnType?: undefined,
-): TgpuFnShell<Args, undefined>;
+): TgpuFnShell<ExoticArray<Args>, undefined>;
 
-export function fn<Args extends AnyTgpuData[] | [], Return extends AnyTgpuData>(
+export function fn<Args extends AnyWgslData[] | [], Return extends AnyWgslData>(
   argTypes: Args,
   returnType: Return,
-): TgpuFnShell<Args, Return>;
+): TgpuFnShell<ExoticArray<Args>, Exotic<Return>>;
 
 export function fn<
-  Args extends AnyTgpuData[],
-  Return extends AnyTgpuData | undefined = undefined,
+  Args extends AnyWgslData[],
+  Return extends AnyWgslData | undefined = undefined,
 >(argTypes: Args, returnType?: Return): TgpuFnShell<Args, Return> {
   return {
     argTypes,
     returnType,
 
     does(
-      implementation: Implementation<UnwrapArgs<Args>, UnwrapReturn<Return>>,
+      implementation: Implementation<InferArgs<Args>, InferReturn<Return>>,
     ): TgpuFn<Args, Return> {
       return createFn(this, implementation as Implementation);
     },
@@ -95,8 +96,8 @@ export function procedure(implementation: () => void) {
 // --------------
 
 function createFn<
-  Args extends AnyTgpuData[],
-  Return extends AnyTgpuData | undefined,
+  Args extends AnyWgslData[],
+  Return extends AnyWgslData | undefined,
 >(
   shell: TgpuFnShell<Args, Return>,
   implementation: Implementation,
@@ -153,8 +154,8 @@ function createFn<
 }
 
 function createBoundFunction<
-  Args extends AnyTgpuData[],
-  Return extends AnyTgpuData | undefined,
+  Args extends AnyWgslData[],
+  Return extends AnyWgslData | undefined,
 >(
   innerFn: TgpuFn<Args, Return>,
   slot: TgpuSlot<unknown>,
@@ -184,7 +185,7 @@ function createBoundFunction<
     },
   };
 
-  const call = (...args: UnwrapArgs<Args>): unknown => {
+  const call = (...args: InferArgs<Args>): unknown => {
     return innerFn(...args);
   };
 
@@ -198,7 +199,7 @@ function createBoundFunction<
   return fn;
 }
 
-class FnCall<Args extends AnyTgpuData[], Return extends AnyTgpuData | undefined>
+class FnCall<Args extends AnyWgslData[], Return extends AnyWgslData | undefined>
   implements TgpuResolvable
 {
   constructor(

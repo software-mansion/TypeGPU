@@ -1,20 +1,20 @@
-import type { Parsed } from 'typed-binary';
-
 import type { OmitBuiltins } from '../../builtin';
-import type { Vec4f } from '../../data/vector';
+import type { AnyData } from '../../data/dataTypes';
+import type { Exotic } from '../../data/exotic';
+import type { Vec4f } from '../../data/wgslTypes';
 import type { JitTranspiler } from '../../jitTranspiler';
 import type { NameRegistry } from '../../nameRegistry';
 import type { PlumListener } from '../../plumStore';
 import type { TgpuSettable } from '../../settableTrait';
+import type { Infer } from '../../shared/repr';
+import type { Mutable, OmitProps, Prettify } from '../../shared/utilityTypes';
 import type {
   ExtractPlumValue,
   TgpuPlum,
   Unsubscribe,
 } from '../../tgpuPlumTypes';
-import type { TgpuSampler } from '../../tgpuSampler';
-import type { AnyTgpuData, Eventual, TgpuSlot } from '../../types';
+import type { Eventual, TgpuSlot } from '../../types';
 import type { Unwrapper } from '../../unwrapper';
-import type { Mutable, OmitProps, Prettify } from '../../utilityTypes';
 import type { TgpuBuffer } from '../buffer/buffer';
 import type { IOLayout } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
@@ -158,19 +158,19 @@ export interface TgpuRoot extends Unwrapper {
    * @param typeSchema The type of data that this buffer will hold.
    * @param initial The initial value of the buffer. (optional)
    */
-  createBuffer<TData extends AnyTgpuData>(
+  createBuffer<TData extends AnyData>(
     typeSchema: TData,
-    initial?: Parsed<TData> | TgpuPlum<Parsed<TData>> | undefined,
-  ): TgpuBuffer<TData>;
+    initial?: Infer<TData> | TgpuPlum<Infer<TData>> | undefined,
+  ): TgpuBuffer<Exotic<TData>>;
 
   /**
    * @param typeSchema The type of data that this buffer will hold.
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
-  createBuffer<TData extends AnyTgpuData>(
+  createBuffer<TData extends AnyData>(
     typeSchema: TData,
     gpuBuffer: GPUBuffer,
-  ): TgpuBuffer<TData>;
+  ): TgpuBuffer<Exotic<TData>>;
 
   createTexture<
     TWidth extends number,
@@ -228,8 +228,6 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
     plum: TgpuPlum<TValue>,
     listener: PlumListener<TValue>,
   ): Unsubscribe;
-
-  samplerFor(sampler: TgpuSampler): GPUSampler;
 
   /**
    * Causes all commands enqueued by pipelines to be

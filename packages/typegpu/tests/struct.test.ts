@@ -1,20 +1,18 @@
-import {
-  BufferReader,
-  BufferWriter,
-  MaxValue,
-  type Parsed,
-} from 'typed-binary';
+import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
 import {
   arrayOf,
   f32,
   i32,
+  sizeOf,
   struct,
   u32,
   vec2u,
   vec3f,
   vec3u,
 } from '../src/data';
+import { readData, writeData } from '../src/data/dataIO';
+import type { Infer } from '../src/shared/repr';
 
 describe('struct', () => {
   it('aligns struct properties when measuring', () => {
@@ -22,8 +20,7 @@ describe('struct', () => {
       x: u32,
       y: vec3u,
     });
-    expect(TestStruct.size).toEqual(32);
-    expect(TestStruct.measure(MaxValue).size).toEqual(32);
+    expect(sizeOf(TestStruct)).toEqual(32);
   });
 
   it('aligns struct properties when writing', () => {
@@ -32,10 +29,10 @@ describe('struct', () => {
       y: vec3u,
     });
 
-    const buffer = new ArrayBuffer(TestStruct.size);
+    const buffer = new ArrayBuffer(sizeOf(TestStruct));
     const writer = new BufferWriter(buffer);
 
-    TestStruct.write(writer, { x: 1, y: vec3u(1, 2, 3) });
+    writeData(writer, TestStruct, { x: 1, y: vec3u(1, 2, 3) });
     expect([...new Uint32Array(buffer)]).toEqual([1, 0, 0, 0, 1, 2, 3, 0]);
   });
 
@@ -45,12 +42,12 @@ describe('struct', () => {
       y: vec3u,
     });
 
-    const buffer = new ArrayBuffer(TestStruct.size);
+    const buffer = new ArrayBuffer(sizeOf(TestStruct));
     const reader = new BufferReader(buffer);
 
     new Uint32Array(buffer).set([3, 0, 0, 0, 4, 5, 6]);
 
-    expect(TestStruct.read(reader)).toEqual({ x: 3, y: vec3u(4, 5, 6) });
+    expect(readData(reader, TestStruct)).toEqual({ x: 3, y: vec3u(4, 5, 6) });
   });
 
   it('encodes and decodes structures properly', () => {
@@ -68,9 +65,9 @@ describe('struct', () => {
       }),
     });
 
-    const buffer = new ArrayBuffer(TestStruct.size);
+    const buffer = new ArrayBuffer(sizeOf(TestStruct));
 
-    const value: Parsed<typeof TestStruct> = {
+    const value: Infer<typeof TestStruct> = {
       a: 1,
       b: vec3u(2, 3, 4),
       c: vec3f(6.5, 7.5, 8.5),
@@ -84,8 +81,8 @@ describe('struct', () => {
       },
     };
 
-    TestStruct.write(new BufferWriter(buffer), value);
-    expect(TestStruct.read(new BufferReader(buffer))).toEqual(value);
+    writeData(new BufferWriter(buffer), TestStruct, value);
+    expect(readData(new BufferReader(buffer), TestStruct)).toEqual(value);
   });
 
   it('allows for runtime sized arrays as last property', () => {
@@ -95,30 +92,41 @@ describe('struct', () => {
       c: arrayOf(u32, 0),
     });
 
-    expect(Unbounded.measure(MaxValue).size).toBeNaN();
-    expect(() => Unbounded.size).toThrow();
+    expect(sizeOf(Unbounded)).toBeNaN();
 
-    expect(() => {
+    {
       const Invalid = struct({
         a: u32,
         b: arrayOf(u32, 0),
         c: vec3u,
       });
-    }).toThrow();
 
-    expect(() => {
+      expect(() => {
+        sizeOf(Invalid);
+      }).toThrow();
+    }
+
+    {
       const Invalid = struct({
         a: u32,
         b: arrayOf(u32, 0),
         c: arrayOf(u32, 0),
       });
-    }).toThrow();
 
-    expect(() => {
+      expect(() => {
+        sizeOf(Invalid);
+      }).toThrow();
+    }
+
+    {
       const Invalid = struct({
         a: u32,
         b: Unbounded,
       });
-    }).toThrow();
+
+      expect(() => {
+        sizeOf(Invalid);
+      }).toThrow();
+    }
   });
 });
