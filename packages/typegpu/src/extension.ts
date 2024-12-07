@@ -22,7 +22,7 @@ export function isUsableAsStorage<T>(value: T): value is T & Storage {
  * @category Errors
  */
 export class NotStorageError extends Error {
-  constructor(value: { readonly label: string | undefined }) {
+  constructor(value: { readonly label?: string | undefined }) {
     super(
       `Resource '${value.label ?? '<unnamed>'}' cannot be bound as 'storage'. Use .$usage('storage') to allow it.`,
     );

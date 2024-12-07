@@ -4,6 +4,7 @@ import {
   type TgpuArray,
   type U32,
   type Vec3f,
+  type WgslArray,
   arrayOf,
   f32,
   u32,
@@ -76,18 +77,18 @@ describe('TgpuBindGroupLayout', () => {
     expectTypeOf(layout).toEqualTypeOf<
       TgpuBindGroupLayoutExperimental<{
         a: {
-          uniform: (_: number) => TgpuArray<U32>;
+          uniform: (_: number) => WgslArray<U32>;
         };
         b: {
-          storage: (_: number) => TgpuArray<Vec3f>;
+          storage: (_: number) => WgslArray<Vec3f>;
         };
       }>
     >();
 
     const { a, b } = layout.bound;
 
-    expectTypeOf(a).toEqualTypeOf<TgpuBufferUniform<TgpuArray<U32>>>();
-    expectTypeOf(b).toEqualTypeOf<TgpuBufferReadonly<TgpuArray<Vec3f>>>();
+    expectTypeOf(a).toEqualTypeOf<TgpuBufferUniform<WgslArray<U32>>>();
+    expectTypeOf(b).toEqualTypeOf<TgpuBufferReadonly<WgslArray<Vec3f>>>();
 
     const aBuffer = getRoot().createBuffer(arrayOf(u32, 4)).$usage('uniform');
     const bBuffer = getRoot().createBuffer(arrayOf(vec3f, 4)).$usage('storage');
@@ -100,10 +101,10 @@ describe('TgpuBindGroupLayout', () => {
     expectTypeOf(bindGroup).toEqualTypeOf<
       TgpuBindGroup<{
         a: {
-          uniform: (_: number) => TgpuArray<U32>;
+          uniform: (_: number) => WgslArray<U32>;
         };
         b: {
-          storage: (_: number) => TgpuArray<Vec3f>;
+          storage: (_: number) => WgslArray<Vec3f>;
         };
       }>
     >();

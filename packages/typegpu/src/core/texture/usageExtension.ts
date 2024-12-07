@@ -35,7 +35,7 @@ export function isUsableAsRender<T>(value: T): value is T & Render {
  * @category Errors
  */
 export class NotSampledError extends Error {
-  constructor(value: { readonly label: string | undefined }) {
+  constructor(value: { readonly label?: string | undefined }) {
     super(
       `Resource '${value.label ?? '<unnamed>'}' cannot be bound as 'sampled'. Use .$usage('sampled') to allow it.`,
     );
@@ -49,7 +49,7 @@ export class NotSampledError extends Error {
  * @category Errors
  */
 export class NotRenderError extends Error {
-  constructor(value: { readonly label: string | undefined }) {
+  constructor(value: { readonly label?: string | undefined }) {
     super(
       `Resource '${value.label ?? '<unnamed>'}' cannot be bound as 'render'. Use .$usage('render') to allow it.`,
     );
