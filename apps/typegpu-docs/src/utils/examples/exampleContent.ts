@@ -28,7 +28,7 @@ const metaFiles: Record<string, ExampleMetadata> = pathToExampleKey(
   }),
 );
 
-const tsFiles: Record<string, string> = pathToExampleKey(
+const readonlyTsFiles: Record<string, string> = pathToExampleKey(
   import.meta.glob('../../content/examples/**/index.ts', {
     query: 'raw',
     eager: true,
@@ -44,6 +44,27 @@ const htmlFiles: Record<string, string> = pathToExampleKey(
   }),
 );
 
+const execTsFiles: Record<string, Module> = pathToExampleKey(
+  import.meta.glob('../../content/examples/**/index.ts', {
+    query: { tgpu: true },
+    eager: true,
+  }),
+);
+
+interface Module {
+  default: string;
+}
+
+function moduleToString(module: Module | undefined) {
+  if (!module) {
+    return '';
+  }
+  if ('default' in module) {
+    return `${module.default}`;
+  }
+  return `${module}`;
+}
+
 export const examples = pipe(
   metaFiles,
   entries(),
@@ -54,13 +75,16 @@ export const examples = pipe(
         {
           key,
           metadata: value,
-          tsCode: tsFiles[key] ?? '',
+          tsCode: readonlyTsFiles[key] ?? '',
           htmlCode: htmlFiles[key] ?? '',
+          execTsCode: moduleToString(execTsFiles[key]),
         },
       ] satisfies [string, Example],
   ),
   fromEntries(),
 );
+
+console.log(examples);
 
 export const examplesStable = pipe(
   examples,

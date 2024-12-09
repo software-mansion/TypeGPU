@@ -111,6 +111,7 @@ export default function typegpu(options?: TypegpuPluginOptions): TypegpuPlugin {
       ) {
         return;
       }
+
       const ctx: Context = {
         tgpuAliases: new Set(['tgpu']),
       };

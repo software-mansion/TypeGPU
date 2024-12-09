@@ -14,13 +14,6 @@ const template = (
 ).packages.template;
 
 /**
- * A custom babel plugin based on rollup plugin that assigns ast to tgsl functions.
- */
-const assignAst = {
-  // TODO: Add plugin
-};
-
-/**
  * A custom babel plugin for turning:
  *
  * `import Default, { one, two } from 'module'`
@@ -94,49 +87,6 @@ const exportedOptionsToExampleControls = () => {
         }
       },
     } satisfies TraverseOptions,
-  };
-};
-
-const MAX_ITERATIONS = 10000;
-
-/**
- * from https://github.com/facebook/react/blob/d906de7f602df810c38aa622c83023228b047db6/scripts/babel/transform-prevent-infinite-loops.js
- */
-// biome-ignore lint/suspicious/noExplicitAny:
-const preventInfiniteLoops = ({ types: t, template }: any) => {
-  const buildGuard = template(`
-    if (ITERATOR++ > MAX_ITERATIONS) {
-      throw new RangeError(
-        'Potential infinite loop: exceeded ' +
-        MAX_ITERATIONS +
-        ' iterations.'
-      );
-    }
-  `);
-
-  return {
-    visitor: {
-      // biome-ignore lint/suspicious/noExplicitAny:
-      'WhileStatement|ForStatement|DoWhileStatement': (path: any) => {
-        const iterator = path.scope.parent.generateUidIdentifier('loopIt');
-        const iteratorInit = t.numericLiteral(0);
-        path.scope.parent.push({
-          id: iterator,
-          init: iteratorInit,
-        });
-        const guard = buildGuard({
-          ITERATOR: iterator,
-          MAX_ITERATIONS: t.numericLiteral(MAX_ITERATIONS),
-        });
-
-        if (!path.get('body').isBlockStatement()) {
-          const statement = path.get('body').node;
-          path.get('body').replaceWith(t.blockStatement([guard, statement]));
-        } else {
-          path.get('body').unshiftContainer('body', guard);
-        }
-      },
-    },
   };
 };
 
@@ -238,11 +188,7 @@ export async function executeExample(
       Babel.transform(jsCode, {
         compact: false,
         retainLines: true,
-        plugins: [
-          exportedOptionsToExampleControls,
-          staticToDynamicImports,
-          preventInfiniteLoops,
-        ],
+        plugins: [exportedOptionsToExampleControls, staticToDynamicImports],
       }).code ?? jsCode;
 
     const mod = Function(`

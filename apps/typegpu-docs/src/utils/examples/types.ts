@@ -20,4 +20,5 @@ export type Example = {
   tsCode: string;
   htmlCode: string;
   metadata: ExampleMetadata;
+  execTsCode: string;
 };
