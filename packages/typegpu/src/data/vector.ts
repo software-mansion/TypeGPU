@@ -436,7 +436,10 @@ export type VecKind =
 /**
  * Type of the `d.vec2f` object/function: vector data type schema/constructor
  */
-export type Vec2fConstructor = ((x: number, y: number) => v2f) &
+export type NativeVec2f = Vec2f & { '~exotic': Vec2f } & ((
+    x: number,
+    y: number,
+  ) => v2f) &
   ((xy: number) => v2f) &
   (() => v2f);
 
@@ -459,12 +462,15 @@ export const vec2f = makeVecSchema({
   make: (x: number, y: number) =>
     new Proxy(new vec2fImpl(x, y), vecProxyHandler) as v2f,
   makeFromScalar: (x) => new Proxy(new vec2fImpl(x, x), vecProxyHandler) as v2f,
-}) as Vec2f & Vec2fConstructor;
+}) as NativeVec2f;
 
 /**
  * Type of the `d.vec2i` object/function: vector data type schema/constructor
  */
-export type Vec2iConstructor = ((x: number, y: number) => v2i) &
+export type NativeVec2i = Vec2i & { '~exotic': Vec2i } & ((
+    x: number,
+    y: number,
+  ) => v2i) &
   ((xy: number) => v2i) &
   (() => v2i);
 
@@ -487,12 +493,15 @@ export const vec2i = makeVecSchema({
   make: (x: number, y: number) =>
     new Proxy(new vec2iImpl(x, y), vecProxyHandler) as v2i,
   makeFromScalar: (x) => new Proxy(new vec2iImpl(x, x), vecProxyHandler) as v2i,
-}) as Vec2i & Vec2iConstructor;
+}) as NativeVec2i;
 
 /**
  * Type of the `d.vec2u` object/function: vector data type schema/constructor
  */
-export type Vec2uConstructor = ((x: number, y: number) => v2u) &
+export type NativeVec2u = Vec2u & { '~exotic': Vec2u } & ((
+    x: number,
+    y: number,
+  ) => v2u) &
   ((xy: number) => v2u) &
   (() => v2u);
 
@@ -515,12 +524,16 @@ export const vec2u = makeVecSchema({
   make: (x: number, y: number) =>
     new Proxy(new vec2uImpl(x, y), vecProxyHandler) as v2u,
   makeFromScalar: (x) => new Proxy(new vec2uImpl(x, x), vecProxyHandler) as v2u,
-}) as Vec2u & Vec2uConstructor;
+}) as NativeVec2u;
 
 /**
  * Type of the `d.vec3f` object/function: vector data type schema/constructor
  */
-export type Vec3fConstructor = ((x: number, y: number, z: number) => v3f) &
+export type NativeVec3f = Vec3f & { '~exotic': Vec3f } & ((
+    x: number,
+    y: number,
+    z: number,
+  ) => v3f) &
   ((xyz: number) => v3f) &
   (() => v3f);
 
@@ -543,12 +556,16 @@ export const vec3f = makeVecSchema({
   make: (x, y, z) => new Proxy(new vec3fImpl(x, y, z), vecProxyHandler) as v3f,
   makeFromScalar: (x) =>
     new Proxy(new vec3fImpl(x, x, x), vecProxyHandler) as v3f,
-}) as Vec3f & Vec3fConstructor;
+}) as NativeVec3f;
 
 /**
  * Type of the `d.vec3i` object/function: vector data type schema/constructor
  */
-export type Vec3iConstructor = ((x: number, y: number, z: number) => v3i) &
+export type NativeVec3i = Vec3i & { '~exotic': Vec3i } & ((
+    x: number,
+    y: number,
+    z: number,
+  ) => v3i) &
   ((xyz: number) => v3i) &
   (() => v3i);
 
@@ -571,12 +588,16 @@ export const vec3i = makeVecSchema({
   make: (x, y, z) => new Proxy(new vec3iImpl(x, y, z), vecProxyHandler) as v3i,
   makeFromScalar: (x) =>
     new Proxy(new vec3iImpl(x, x, x), vecProxyHandler) as v3i,
-}) as Vec3i & Vec3iConstructor;
+}) as NativeVec3i;
 
 /**
  * Type of the `d.vec3u` object/function: vector data type schema/constructor
  */
-export type Vec3uConstructor = ((x: number, y: number, z: number) => v3u) &
+export type NativeVec3u = Vec3u & { '~exotic': Vec3u } & ((
+    x: number,
+    y: number,
+    z: number,
+  ) => v3u) &
   ((xyz: number) => v3u) &
   (() => v3u);
 
@@ -599,17 +620,17 @@ export const vec3u = makeVecSchema({
   make: (x, y, z) => new Proxy(new vec3uImpl(x, y, z), vecProxyHandler) as v3u,
   makeFromScalar: (x) =>
     new Proxy(new vec3uImpl(x, x, x), vecProxyHandler) as v3u,
-}) as Vec3u & Vec3uConstructor;
+}) as NativeVec3u;
 
 /**
  * Type of the `d.vec4f` object/function: vector data type schema/constructor
  */
-export type Vec4fConstructor = ((
-  x: number,
-  y: number,
-  z: number,
-  w: number,
-) => v4f) &
+export type NativeVec4f = Vec4f & { '~exotic': Vec4f } & ((
+    x: number,
+    y: number,
+    z: number,
+    w: number,
+  ) => v4f) &
   ((xyzw: number) => v4f) &
   (() => v4f);
 
@@ -633,17 +654,17 @@ export const vec4f = makeVecSchema({
     new Proxy(new vec4fImpl(x, y, z, w), vecProxyHandler) as v4f,
   makeFromScalar: (x) =>
     new Proxy(new vec4fImpl(x, x, x, x), vecProxyHandler) as v4f,
-}) as Vec4f & Vec4fConstructor;
+}) as NativeVec4f;
 
 /**
  * Type of the `d.vec4i` object/function: vector data type schema/constructor
  */
-export type Vec4iConstructor = ((
-  x: number,
-  y: number,
-  z: number,
-  w: number,
-) => v4i) &
+export type NativeVec4i = Vec4i & { '~exotic': Vec4i } & ((
+    x: number,
+    y: number,
+    z: number,
+    w: number,
+  ) => v4i) &
   ((xyzw: number) => v4i) &
   (() => v4i);
 
@@ -667,17 +688,17 @@ export const vec4i = makeVecSchema({
     new Proxy(new vec4iImpl(x, y, z, w), vecProxyHandler) as v4i,
   makeFromScalar: (x) =>
     new Proxy(new vec4iImpl(x, x, x, x), vecProxyHandler) as v4i,
-}) as Vec4i & Vec4iConstructor;
+}) as NativeVec4i;
 
 /**
  * Type of the `d.vec4u` object/function: vector data type schema/constructor
  */
-export type Vec4uConstructor = ((
-  x: number,
-  y: number,
-  z: number,
-  w: number,
-) => v4u) &
+export type NativeVec4u = Vec4u & { '~exotic': Vec4u } & ((
+    x: number,
+    y: number,
+    z: number,
+    w: number,
+  ) => v4u) &
   ((xyzw: number) => v4u) &
   (() => v4u);
 
@@ -701,4 +722,4 @@ export const vec4u = makeVecSchema({
     new Proxy(new vec4uImpl(x, y, z, w), vecProxyHandler) as v4u,
   makeFromScalar: (x) =>
     new Proxy(new vec4uImpl(x, x, x, x), vecProxyHandler) as v4u,
-}) as Vec4u & Vec4uConstructor;
+}) as NativeVec4u;

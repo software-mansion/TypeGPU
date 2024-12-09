@@ -12,7 +12,10 @@ export const bool: Bool = {
 /**
  * Unsigned 32-bit integer schema representing a single WGSL u32 value.
  */
-export type U32Cast = (v: number | boolean) => number;
+export type NativeU32 = U32 & { '~exotic': U32 } & ((
+    v: number | boolean,
+  ) => number);
+
 const u32Cast = (v: number | boolean) => {
   if (inGPUMode()) {
     return `u32(${v})` as unknown as number;
@@ -43,14 +46,17 @@ const u32Cast = (v: number | boolean) => {
  * @example
  * const value = u32(-3.1); // 0
  */
-export const u32: U32 & U32Cast = Object.assign(u32Cast, {
+export const u32: NativeU32 = Object.assign(u32Cast, {
   type: 'u32',
-} as U32);
+}) as NativeU32;
 
 /**
  * Signed 32-bit integer schema representing a single WGSL i32 value.
  */
-export type I32Cast = (v: number | boolean) => number;
+export type NativeI32 = I32 & { '~exotic': I32 } & ((
+    v: number | boolean,
+  ) => number);
+
 const i32Cast = (v: number | boolean) => {
   if (inGPUMode()) {
     return `i32(${v})` as unknown as number;
@@ -83,14 +89,17 @@ const i32Cast = (v: number | boolean) => {
  * @example
  * const value = i32(10000000000) // 1410065408
  */
-export const i32: I32 & I32Cast = Object.assign(i32Cast, {
+export const i32: NativeI32 = Object.assign(i32Cast, {
   type: 'i32',
-} as I32);
+}) as NativeI32;
 
 /**
  * 32-bit float schema representing a single WGSL f32 value.
  */
-export type F32Cast = (v: number | boolean) => number;
+export type NativeF32 = F32 & { '~exotic': F32 } & ((
+    v: number | boolean,
+  ) => number);
+
 const f32Cast = (v: number | boolean) => {
   if (inGPUMode()) {
     return `f32(${v})` as unknown as number;
@@ -111,14 +120,17 @@ const f32Cast = (v: number | boolean) => {
  * @example
  * const value = f32(true); // 1
  */
-export const f32: F32 & F32Cast = Object.assign(f32Cast, {
+export const f32: NativeF32 = Object.assign(f32Cast, {
   type: 'f32',
-} as F32);
+}) as NativeF32;
 
 /**
  * 16-bit float schema representing a single WGSL f16 value.
  */
-export type F16Cast = (v: number | boolean) => number;
+export type NativeF16 = F16 & { '~exotic': F16 } & ((
+    v: number | boolean,
+  ) => number);
+
 const f16Cast = (v: number | boolean) => {
   if (inGPUMode()) {
     // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
@@ -142,6 +154,6 @@ const f16Cast = (v: number | boolean) => {
  * @example
  * const value = f16(21877.5); // 21872
  */
-export const f16: F16 & F16Cast = Object.assign(f16Cast, {
+export const f16: NativeF16 = Object.assign(f16Cast, {
   type: 'f16',
-} as F16);
+}) as NativeF16;
