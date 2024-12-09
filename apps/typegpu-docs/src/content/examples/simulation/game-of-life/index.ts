@@ -20,6 +20,9 @@ let gameWidth = 1024;
 let gameHeight = 1024;
 let timestep = 4;
 
+let swap = false;
+let paused = false;
+
 const computeShader = device.createShaderModule({
   code: `
 @binding(0) @group(0) var<storage, read> size: vec2u;
@@ -97,6 +100,10 @@ const fragmentShader = device.createShaderModule({
   code: `
 @fragment
 fn main(@location(0) cell: f32, @builtin(position) pos: vec4f) -> @location(0) vec4f {
+  if (cell == 0.) {
+    discard;
+  }
+  
   return vec4f(
     max(f32(cell) * pos.x / 1024, 0), 
     max(f32(cell) * pos.y / 1024, 0), 
@@ -154,15 +161,15 @@ const computePipeline = device.createComputePipeline({
     },
   },
 });
-let currentInterval: NodeJS.Timer | undefined;
+
 let render: (swap: boolean) => void;
 let loop: (swap: boolean) => void;
 
 const resetGameData = () => {
+  swap = false;
   const sizeBuffer = root
     .createBuffer(vec2u, vec2u(gameWidth, gameHeight))
-    .$usage('uniform')
-    .$usage('storage');
+    .$usage('uniform', 'storage');
 
   const length = gameWidth * gameHeight;
   const cells = Array.from({ length })
@@ -171,13 +178,11 @@ const resetGameData = () => {
 
   const buffer0 = root
     .createBuffer(arrayOf(u32, length), cells)
-    .$usage('storage')
-    .$usage('vertex');
+    .$usage('storage', 'vertex');
 
   const buffer1 = root
     .createBuffer(arrayOf(u32, length))
-    .$usage('storage')
-    .$usage('vertex');
+    .$usage('storage', 'vertex');
 
   const bindGroup0 = bindGroupLayoutCompute.populate({
     size: sizeBuffer,
@@ -201,6 +206,7 @@ const resetGameData = () => {
       colorAttachments: [
         {
           view,
+          clearValue: { r: 239 / 255, g: 239 / 255, b: 249 / 255, a: 1 },
           loadOp: 'clear',
           storeOp: 'store',
         },
@@ -233,24 +239,26 @@ const resetGameData = () => {
     passEncoderRender.end();
     device.queue.submit([commandEncoder.finish()]);
   };
-
   loop = () => {
     requestAnimationFrame(() => {
-      if (!paused) {
+      const now = performance.now();
+      if (!paused && now - lastRenderTime >= timestep) {
         render(swap);
         swap = !swap;
+        lastRenderTime = now;
       }
+      loop(swap);
     });
   };
 
   startGame();
 };
 
+let lastRenderTime: number;
+
 const startGame = () => {
-  if (currentInterval) clearInterval(currentInterval as unknown as number);
-  currentInterval = setInterval(() => {
-    loop(swap);
-  }, timestep);
+  lastRenderTime = performance.now();
+  loop(swap);
 };
 
 resetGameData();
@@ -275,9 +283,6 @@ const renderPipeline = device.createRenderPipeline({
     ],
   },
 });
-
-let swap = false;
-let paused = false;
 
 export const controls = {
   size: {

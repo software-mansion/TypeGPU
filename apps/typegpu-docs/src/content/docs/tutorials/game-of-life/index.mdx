@@ -316,19 +316,16 @@ const squareBuffer = root
 
 const sizeBuffer = root
   .createBuffer(vec2u, vec2u(gameWidth, gameHeight))
-  .$usage("uniform")
-  .$usage("storage");
+  .$usage("uniform", "storage");
 const length = gameWidth * gameHeight;
 const cells = Array.from({ length }).fill(0).map(() =>  Math.random() < 0.25 ? 1 : 0) as number[];
 
 buffer0 = root
   .createBuffer(arrayOf(u32, length), cells)
-  .$usage("storage")
-  .$usage("vertex");
+  .$usage("storage", "vertex");
 buffer1 = root
   .createBuffer(arrayOf(u32, length))
-  .$usage("storage")
-  .$usage("vertex");
+  .$usage("storage", "vertex");
 
 const bindGroup0 = bindGroupLayoutCompute.populate({
   size: sizeBuffer,
