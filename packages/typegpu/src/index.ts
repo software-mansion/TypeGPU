@@ -48,5 +48,5 @@ export type {
   TgpuBuffer,
   Uniform,
   Vertex,
-} from './core/buffer/buffer';
+} from './core/buffer/public';
 export type { Storage } from './extension';

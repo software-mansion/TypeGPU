@@ -15,7 +15,9 @@ import type { AnyWgslData, WgslArray } from './wgslTypes';
  * the `byteAlignment` requirement of its elementType.
  */
 export interface TgpuArray<TElement extends AnyWgslData>
-  extends WgslArray<TElement> {}
+  extends WgslArray<TElement> {
+  readonly '~exotic': WgslArray<Exotic<TElement>>;
+}
 
 /**
  * Creates an array schema that can be used to construct gpu buffers.
@@ -44,6 +46,8 @@ class TgpuArrayImpl<TElement extends AnyWgslData>
   public readonly type = 'array';
   /** Type-token, not available at runtime */
   public readonly '~repr'!: Infer<TElement>[];
+  /** Type-token, not available at runtime */
+  public readonly '~exotic'!: WgslArray<Exotic<TElement>>;
 
   constructor(
     public readonly elementType: TElement,
