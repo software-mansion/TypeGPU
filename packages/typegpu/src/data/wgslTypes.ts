@@ -719,12 +719,15 @@ export const wgslTypeLiterals = [
   'i32',
   'u32',
   'vec2f',
+  'vec2h',
   'vec2i',
   'vec2u',
   'vec3f',
+  'vec3h',
   'vec3i',
   'vec3u',
   'vec4f',
+  'vec4h',
   'vec4i',
   'vec4u',
   'mat2x2f',
@@ -745,12 +748,15 @@ export type AnyWgslData =
   | I32
   | U32
   | Vec2f
+  | Vec2h
   | Vec2i
   | Vec2u
   | Vec3f
+  | Vec3h
   | Vec3i
   | Vec3u
   | Vec4f
+  | Vec4h
   | Vec4i
   | Vec4u
   | Mat2x2f

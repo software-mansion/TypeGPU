@@ -186,18 +186,18 @@ describe('struct', () => {
       b: f16,
     });
 
-    expect(TestStruct.size).toEqual(8);
-    expect(TestStruct.byteAlignment).toEqual(8);
+    expect(sizeOf(TestStruct)).toEqual(8);
+    expect(alignmentOf(TestStruct)).toEqual(8);
 
-    const buffer = new ArrayBuffer(TestStruct.size);
+    const buffer = new ArrayBuffer(sizeOf(TestStruct));
 
-    const value: Parsed<typeof TestStruct> = {
+    const value: Infer<typeof TestStruct> = {
       a: vec3h(1.0, 2.0, 3.0),
       b: 4.0,
     };
 
-    TestStruct.write(new BufferWriter(buffer), value);
-    expect(TestStruct.read(new BufferReader(buffer))).toEqual(value);
+    writeData(new BufferWriter(buffer), TestStruct, value);
+    expect(readData(new BufferReader(buffer), TestStruct)).toEqual(value);
 
     const TestStruct2 = struct({
       a: vec2h,
@@ -208,11 +208,11 @@ describe('struct', () => {
       c: vec2h,
     });
 
-    expect(TestStruct2.size).toEqual(40);
+    expect(sizeOf(TestStruct2)).toEqual(40);
 
-    const buffer2 = new ArrayBuffer(TestStruct2.size);
+    const buffer2 = new ArrayBuffer(sizeOf(TestStruct2));
 
-    const value2: Parsed<typeof TestStruct2> = {
+    const value2: Infer<typeof TestStruct2> = {
       a: vec2h(1.0, 2.0),
       b: {
         aa: [vec3h(1.0, 2.0, 3.0), vec3h(4.0, 5.0, 6.0)],
@@ -221,7 +221,7 @@ describe('struct', () => {
       c: vec2h(8.0, 9.0),
     };
 
-    TestStruct2.write(new BufferWriter(buffer2), value2);
-    expect(TestStruct2.read(new BufferReader(buffer2))).toEqual(value2);
+    writeData(new BufferWriter(buffer2), TestStruct2, value2);
+    expect(readData(new BufferReader(buffer2), TestStruct2)).toEqual(value2);
   });
 });
