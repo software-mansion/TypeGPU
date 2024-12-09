@@ -4,10 +4,10 @@ draft: true
 ---
 
 TypeGPU is built in a way that allows you to pick and choose the primitives you need, incrementally adopt them into your project and have a working app at each step
-of the process. We go to extremes to ensure that turning even a single buffer into our typed variant improves the developer experience, and does not require changes
+of the process. We go to great lengths to ensure that turning even a single buffer into our typed variant improves the developer experience, and does not require changes
 to the rest of the codebase.
 
-The **non-contagious** nature of TypeGPU means that ejecting out in case raw WebGPU access is required can be done on a very granular level.
+The **non-contagious** nature of TypeGPU means that ejecting out, in case raw WebGPU access is required, can be done on a very granular level.
 
 :::note
 Some of the following code snippets assume that TypeGPU is already initialized.
@@ -18,7 +18,7 @@ import * as d from 'typegpu/data';
 
 const root = await tgpu.init();
 // ...or pass in an existing WebGPU device
-const root = await tgpu.init({ device });
+const root = tgpu.initFromDevice({ device });
 ```
 :::
 
@@ -27,7 +27,7 @@ const root = await tgpu.init({ device });
 ### Accessing underlying WebGPU resources
 
 Since TypeGPU is a very thin abstraction over WebGPU, there is a 1-to-1 mapping between most typed resources
-and the raw WebGPU resource used underneath.
+and the raw WebGPU resources used underneath.
 
 ```ts
 const layout = tgpu.bindGroupLayout(...);
@@ -83,14 +83,13 @@ const rawBuffer = device.createBuffer({
 });
 
 const Schema = d.arrayOf(d.vec3f, 2);
-const aBuffer = root.createBuffer(Schema, rawBuffer);
+const typedBuffer = root.createBuffer(Schema, rawBuffer);
 
 // Updates `rawBuffer` underneath.
-aBuffer.write([d.vec3f(1, 2, 3), d.vec3f(4, 5, 6)]);
+typedBuffer.write([d.vec3f(1, 2, 3), d.vec3f(4, 5, 6)]);
 
-// Interpreting the raw bytes in `rawBuffer` as easier
-// to work with JS values.
-const values = await aBuffer.read(); // => d.v3f[]
+// Interpreting the raw bytes in `rawBuffer` as JS values
+const values = await typedBuffer.read(); // => d.v3f[]
 ```
 
 #### Bind Group Layouts
@@ -113,14 +112,14 @@ const bBuffer = root.device.createBuffer({
 // ^? GPUBuffer
 
 const bindGroup = root.createBindGroup(layout, {
-  a: aBuffer, // validates if the buffers holds the right data and usage on the type level.
-  b: bBuffer, // allows the raw buffer to pass through.
+  a: aBuffer, // Validates if the buffers holds the right data and usage on the type level.
+  b: bBuffer, // Allows the raw buffer to pass through.
 });
 ```
 
 ## Incremental adoption recipes
 
-Let us deliver on our promise and show you the small code changes necessary to adopt TypeGPU, and the benefits you can gain at each step.
+To deliver on the promise of interoperability, below are the small code changes necessary to adopt TypeGPU, and the benefits gained at each step.
 
 Since adoption can start growing from many points in a WebGPU codebase, feel free to choose whichever path suits your use-case the most:
 - [Starting at buffers](#starting-at-buffers)
@@ -128,7 +127,7 @@ Since adoption can start growing from many points in a WebGPU codebase, feel fre
 
 ### Starting at buffers
 
-##### #1: Define a schema for a buffer's contents
+#### Define a schema for a buffer's contents
 
 ```diff lang="ts"
 +const Schema = d.arrayOf(d.vec3f, 2);
@@ -150,10 +149,10 @@ rawBuffer.unmap();
 Benefits gained:
 - **Increased context** - a data-type schema allows developers to quickly determine what a buffer is supposed to
   contain, without the need to jump around the codebase.
-- **Automatic sizing** - schemas understand WebGPU memory layout rules, therefore can estimate the required size
+- **Automatic sizing** - schemas understand WebGPU memory layout rules, therefore can calculate the required size
   of a buffer.
 
-##### #2: Wrap the buffer in a typed shell
+#### Wrap the buffer in a typed shell
 
 ```diff lang="ts"
 const Schema = d.arrayOf(d.vec3f, 2);
@@ -185,7 +184,7 @@ Benefits gained:
   about `vec3f`s having to be aligned to multiples of 16 bytes.
 
 
-##### #3: Let TypeGPU create the buffer
+#### Let TypeGPU create the buffer
 
 ```diff lang="ts"
 const Schema = d.arrayOf(d.vec3f, 2);
@@ -213,7 +212,7 @@ Benefits gained:
 
 ### Starting at bind group layouts
 
-##### #1: Replace the WebGPU API call with a typed variant
+#### Replace the WebGPU API call with a typed variant
 
 ```diff lang="ts"
 - const rawLayout = device.createBindGroupLayout({
@@ -251,7 +250,7 @@ Benefits gained:
 - **Good defaults** - binding indices are inferred automatically based on the order of properties in the descriptor, starting from `0`. Properties with the
   value `null` are skipped. The visibility is assumed based on the type of resource. Can be explicitly limited using the optional `visibility` property.
 
-##### #2: Create bind groups from typed layouts
+#### Create bind groups from typed layouts
 ```diff lang="ts"
 - const rawBindGroup = device.createBindGroup({
 -   layout: rawLayout,
@@ -278,11 +277,11 @@ Benefits gained:
 
 Benefits gained:
 - **Reduced fragility** - no longer susceptible to shifts in binding indices, as the resources are associated with a named key instead.
-- **Autocomplete** - the IDE can suggest what resources need to be passed in, and what their data type should be.
+- **Autocomplete** - the IDE can suggest what resources need to be passed in, and what their data types should be.
 - **Static validation** - when the layout gains a new entry, or the kind of resource it holds changes, the IDE and build system will catch
   it before the error surfaces at runtime. When using typed buffers, the validity of the data-type and usage is also validated on the type level.
 
-##### #3: Inject shader code
+#### Inject shader code
 
 ```diff lang="ts"
 const layout = tgpu.bindGroupLayout({
@@ -322,6 +321,6 @@ const module = device.createShaderModule({
 Benefits gained:
 - **Reduced fragility** - binding indices are now being handled end-to-end by TypeGPU, leaving human-readable keys
   as the way to connect the shader with JavaScript.
-- **Single source of truth** - typed bind group layouts not only describe JS behavior, but WGSL behavior as well. This
+- **Single source of truth** - typed bind group layouts not only describe JS behavior, but also WGSL behavior. This
   allows `tgpu.resolve` to generate the appropriate WGSL code. Definitions of structs used as part of the layout will
   also be included in the returned shader code.
