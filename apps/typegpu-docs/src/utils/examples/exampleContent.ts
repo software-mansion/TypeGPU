@@ -1,5 +1,5 @@
 import { entries, filter, fromEntries, groupBy, map, pipe } from 'remeda';
-import type { Example, ExampleMetadata } from './types';
+import type { Example, ExampleMetadata, Module } from './types';
 
 function pathToExampleKey<T>(record: Record<string, T>): Record<string, T> {
   return pipe(
@@ -51,18 +51,8 @@ const execTsFiles: Record<string, Module> = pathToExampleKey(
   }),
 );
 
-interface Module {
-  default: string;
-}
-
-function moduleToString(module: Module | undefined) {
-  if (!module) {
-    return '';
-  }
-  if ('default' in module) {
-    return `${module.default}`;
-  }
-  return `${module}`;
+function moduleToString(module?: Module) {
+  return module ? `${module.default}` : '';
 }
 
 export const examples = pipe(

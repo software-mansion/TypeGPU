@@ -22,3 +22,7 @@ export type Example = {
   metadata: ExampleMetadata;
   execTsCode: string;
 };
+
+export type Module = {
+  default: string;
+};
