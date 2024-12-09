@@ -17,7 +17,9 @@ import type { AnyWgslData, BaseWgslData, WgslStruct } from './wgslTypes';
  */
 export interface TgpuStruct<TProps extends Record<string, BaseWgslData>>
   extends WgslStruct<TProps>,
-    TgpuNamable {}
+    TgpuNamable {
+  readonly '~exotic': WgslStruct<ExoticRecord<TProps>>;
+}
 
 /**
  * Creates a struct schema that can be used to construct GPU buffers.
@@ -47,6 +49,8 @@ class TgpuStructImpl<TProps extends Record<string, AnyWgslData>>
   public readonly type = 'struct';
   /** Type-token, not available at runtime */
   public readonly '~repr'!: InferRecord<TProps>;
+  /** Type-token, not available at runtime */
+  public readonly '~exotic'!: WgslStruct<ExoticRecord<TProps>>;
 
   constructor(public readonly propTypes: TProps) {}
 
