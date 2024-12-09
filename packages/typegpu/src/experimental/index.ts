@@ -92,18 +92,16 @@ export {
   asMutable,
 } from '../core/buffer/bufferUsage';
 
+export type { Storage } from '../extension';
+export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
 export type {
   TgpuBuffer,
   Uniform,
   Vertex,
-} from '../core/buffer/buffer';
-export type { Storage } from '../extension';
-export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
-export type {
   TgpuBufferUniform,
   TgpuBufferReadonly,
   TgpuBufferMutable,
-} from '../core/buffer/bufferUsagePublic';
+} from '../core/buffer/public';
 export type {
   TgpuTexture,
   TgpuReadonlyTexture,
