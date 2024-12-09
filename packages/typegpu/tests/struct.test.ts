@@ -1,7 +1,9 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
 import {
+  alignmentOf,
   arrayOf,
+  f16,
   f32,
   i32,
   sizeOf,
@@ -128,5 +130,51 @@ describe('struct', () => {
         sizeOf(Invalid);
       }).toThrow();
     }
+  });
+
+  it('supports f16', () => {
+    const TestStruct = struct({
+      a: f16,
+      b: f16,
+      c: f16,
+      d: f16,
+    });
+
+    expect(sizeOf(TestStruct)).toEqual(8);
+    expect(alignmentOf(TestStruct)).toEqual(2);
+
+    const buffer = new ArrayBuffer(sizeOf(TestStruct));
+
+    const value: Infer<typeof TestStruct> = {
+      a: 1.0,
+      b: 2.0,
+      c: 3.0,
+      d: 4.0,
+    };
+
+    writeData(new BufferWriter(buffer), TestStruct, value);
+    expect(readData(new BufferReader(buffer), TestStruct)).toEqual(value);
+  });
+
+  it('properly aligns with f16', () => {
+    const TestStruct = struct({
+      a: u32,
+      b: f16,
+      c: u32,
+    });
+
+    expect(sizeOf(TestStruct)).toEqual(12);
+    expect(alignmentOf(TestStruct)).toEqual(4);
+
+    const buffer = new ArrayBuffer(sizeOf(TestStruct));
+
+    const value: Infer<typeof TestStruct> = {
+      a: 1,
+      b: 2.0,
+      c: 3,
+    };
+
+    writeData(new BufferWriter(buffer), TestStruct, value);
+    expect(readData(new BufferReader(buffer), TestStruct)).toEqual(value);
   });
 });

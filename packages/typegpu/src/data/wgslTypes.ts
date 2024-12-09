@@ -509,6 +509,12 @@ export interface F32 {
   readonly '~repr': number;
 }
 
+export interface F16 {
+  readonly type: 'f16';
+  /** Type-token, not available at runtime */
+  readonly '~repr': number;
+}
+
 export interface I32 {
   readonly type: 'i32';
   /** Type-token, not available at runtime */
@@ -655,6 +661,7 @@ export interface Decorated<
 export const wgslTypeLiterals = [
   'bool',
   'f32',
+  'f16',
   'i32',
   'u32',
   'vec2f',
@@ -680,6 +687,7 @@ export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
 export type AnyWgslData =
   | Bool
   | F32
+  | F16
   | I32
   | U32
   | Vec2f

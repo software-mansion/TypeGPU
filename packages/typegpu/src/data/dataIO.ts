@@ -65,6 +65,10 @@ const dataWriters = {
     output.writeFloat32(value);
   },
 
+  f16(output, _schema: wgsl.F16, value: number) {
+    output.writeFloat16(value);
+  },
+
   i32(output, _schema: wgsl.I32, value: number) {
     output.writeInt32(value);
   },
@@ -434,6 +438,10 @@ const dataReaders = {
 
   f32(input: ISerialInput) {
     return input.readFloat32();
+  },
+
+  f16(input: ISerialInput) {
+    return input.readFloat16();
   },
 
   i32(input: ISerialInput) {

@@ -13,6 +13,7 @@ import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes';
 const knownSizesMap: Record<string, number> = {
   bool: 4,
   f32: 4,
+  f16: 2,
   i32: 4,
   u32: 4,
   vec2f: 8,
