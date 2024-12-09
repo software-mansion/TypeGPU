@@ -68,7 +68,7 @@ This buffer can then be used and/or updated by a WGSL shader.
 ## Creating a buffer
 
 To create a buffer, you will need to define its schema by composing data types imported from `typegpu/data`. Every WGSL data-type can be represented as JS schemas, including
-structs and arrays. For a comprehensive list of all available schemas, see the [Data Schemas](/TypeGPU/reference/data-schemas) reference.
+structs and arrays. They will be explored in more detail in [a following chapter](/TypeGPU/fundamentals/data-schemas).
 
 ```ts
 const countBuffer = root.createBuffer(d.u32);

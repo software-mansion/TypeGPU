@@ -149,7 +149,10 @@ export default defineConfig({
         {
           label: 'Reference',
           items: stripFalsy([
-            { label: 'Data Schemas', slug: 'reference/data-schemas' },
+            {
+              label: 'Data Schema Cheatsheet',
+              slug: 'reference/data-schema-cheatsheet',
+            },
             DEV && typeDocSidebarGroup,
           ]),
         },
