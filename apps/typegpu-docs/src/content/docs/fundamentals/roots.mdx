@@ -22,7 +22,7 @@ can be passed in with special requirements for the GPU device. If you already ha
 you can pass it into `tgpu.initFromDevice` instead.
 
 ```ts
-const root = tgpu.initFromDevice(device);
+const root = tgpu.initFromDevice({ device });
 ```
 
 To retrieve the device that is associated with a root, you can use the `root.device` property.
@@ -82,7 +82,7 @@ import React from 'react';
 
 function SceneView() {
   const ref = useWebGPU(({ context, device, presentationFormat }) => {
-    const root = tgpu.initFromDevice(device);
+    const root = tgpu.initFromDevice({ device });
   
     // create all resources...
   });
@@ -113,7 +113,7 @@ function getOrInitRoot(device: GPUDevice): TgpuRoot {
   let root = deviceToRootMap.get(device);
 
   if (!root) {
-    root = tgpu.initFromDevice(device);
+    root = tgpu.initFromDevice({ device });
     deviceToRootMap.set(device, root);
   }
 
