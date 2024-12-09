@@ -84,8 +84,6 @@ export const examples = pipe(
   fromEntries(),
 );
 
-console.log(examples);
-
 export const examplesStable = pipe(
   examples,
   entries(),
