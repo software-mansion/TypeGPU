@@ -1,11 +1,11 @@
 ---
 title: Data Schemas
-description: A guide on how to use the TypeGPU built-in and custom-defined data types.
-
 ---
 
-
-Writing a GPU program usually involves sharing data between the host (CPU) and the device (GPU), in this case between JavaScript and WGSL. Any misalignments or misinterpretations of data can lead to bugs that are hard to debug (No `console.log` on the GPU, I am afraid). While data is strongly typed in WGSL shaders, we give up that type safety completely when writing and reading data in JavaScript/TypeScript. This is precisely what TypeGPU data types help with.
+Writing a GPU program usually involves sharing data between the host (CPU) and the device (GPU), in this case between JavaScript and WGSL.
+Any misalignments or misinterpretations of data can lead to bugs that are hard to debug (No `console.log` on the GPU, I am afraid).
+While data is strongly typed in WGSL shaders, we give up that type safety completely when writing and reading data in JavaScript/TypeScript.
+This is precisely what TypeGPU data types help with.
 
 :::note
 Complex data types such as structs require particular byte alignment and padding between fields. TypeGPU does this automatically when transforming JS values into binary.

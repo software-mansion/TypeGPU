@@ -3,187 +3,91 @@ title: Buffers
 description: A guide on how to use TypeGPU typed buffers.
 ---
 
-This guide will show you how to use the TypeGPU typed buffers to allow for type-safe and convenient read and write operations on WebGPU resources.
-We will explore how to adapt existing WebGPU code to use the buffer API, and how to use it to create new WebGPU resources.
-
-## What are typed buffers?
-
-TypeGPU provides a set of tools for WebGPU that allow you to create and manage typed buffers.
-It enables reading and writing data to and from WebGPU buffers without having to manually translate the values to and from the raw byte arrays that WebGPU uses.
-
-import { Tabs, TabItem } from '@astrojs/starlight/components';
-
-<Tabs>
-    <TabItem label='WebGPU'>
-    ```ts
-    declare const device: GPUDevice; // WebGPU device
-
-    // struct PlayerInfo {
-    //   vec3f position;
-    //   u32 health;
-    // }
-
-    // Creating a buffer, the type hint is GPUBuffer
-    const buffer = device.createBuffer({
-      size: 16,
-      usage: GPUBufferUsage.COPY_SRC,
-      mappedAtCreation: true,
-    });
-
-    // Initializing the buffer
-    const initData = buffer.getMappedRange();
-    new Float32Array(initData).set([1.1, 2.0, 0.0]);
-    new Uint32Array(initData).set([100], 4);
-    buffer.unmap();
-
-    // To read from the buffer we need to create a staging buffer
-    const stagingBuffer = device.createBuffer({
-      size: 16,
-      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-    });
-
-    // Manually copying the data
-    const commandEncoder = device.createCommandEncoder();
-    commandEncoder.copyBufferToBuffer(buffer, 0, stagingBuffer, 0, 16);
-    device.queue.submit([commandEncoder.finish()]);
-
-    // Reading the data
-    await stagingBuffer.mapAsync(GPUMapMode.READ);
-    const rawBytes = stagingBuffer.getMappedRange();
-    const value = {
-      position: [...new Float32Array(rawBytes, 0, 3).values()],
-      health: new Uint32Array(rawBytes, 12)[0]
-    }
-
-    // Using the value
-    console.log(value);
-    ```
-    :::caution
-     It would be easy to make a mistake like this:
-     ```ts
-     // Initializing the buffer
-     const initData = buffer.getMappedRange();
-     new Float32Array(initData).set([1.1, 2.0, 0.0]);
-     new Uint32Array(initData).set([100], 3); // <- Mistake
-     ```
-     Where is the mistake? The second `set` call should start at index 4, not 3, due to alignment rules.
-     This is not immediately obvious and can lead to hard-to-find bugs.
-     The value would be written to the padding bytes between the `vec3f` and `u32` fields.
-     This would mean the value is lost without any indication of an error.
-    :::
-    </TabItem>
-    <TabItem label='TypeGPU'>
-    ```ts
-    import { u32, vec3f, struct } from 'typegpu/data';
-    import tgpu from 'typegpu';
-
-    const root = await tgpu.init();
-
-    // Defining a struct type
-    const PlayerInfo = struct({
-      position: vec3f,
-      health: u32,
-    });
-
-    // Creating and initializing a buffer. The type hint is:
-    // TgpuBuffer<TgpuStruct<{
-    //   position: Vec3f,
-    //   health: U32,
-    // }>>
-    const buffer = root
-      .createBuffer(PlayerInfo, {
-        position: vec3f(1.1, 2.0, 0.0),
-        health: 100,
-      });
-
-    // Reading from the buffer
-    // (value will be properly typed according to the buffer type)
-    // value: { position: vec3f, health: number }
-    const value = await buffer.read();
-
-    // Using the value
-    console.log(value);
-    ```
-    </TabItem>
-</Tabs>
-
-In the example above, we have a `PlayerInfo` struct that we want to store in a buffer. Using just the WebGPU API alone, we need to manually copy the data to the buffer,
-create a staging buffer to read the data, and then manually copy the data back to a JavaScript object.
-This process involves a lot of boilerplate code and introduces room for error.
-Moreover, the example given is relatively simple. If we were dealing with a more complex nested structure,
-manually calculating the offsets and sizes would be even more error-prone and time-consuming.
-
-TypeGPU addresses this issue by providing a way to define the structure of the data we want to store in the buffer and then read and write the data using a type-safe API.
-
-## Using typed buffers
-
-### Creating a buffer
-
-import { Aside } from '@astrojs/starlight/components';
-
-To create a typed buffer, you will need to define the buffer type using one of the data types provided by the `typegpu/data` module.
-You can then create a buffer using the `root.createBuffer` function as demonstrated in the example above. However, that is not the only way to create a buffer.
-
-#### Using buffer type
-
-As in the example above, you can create a buffer using only the buffer type.
-This will create a zero-initialized buffer (similar to creating a WebGPU buffer)
-when the buffer is first accessed or used in TypeGPU read or write operations.
-
-
-```ts
-import { u32 } from 'typegpu/data';
-import tgpu from 'typegpu';
-
-const root = await tgpu.init();
-const buffer = root.createBuffer(u32);
-
-// That's when the underlying WebGPU buffer is created
-const gpuBuffer = root.unwrap(buffer);
-```
-
-#### Using buffer type and initial value
-
-You can also pass an initial value to the `root.createBuffer` function.
-When the buffer is created, it will be mapped at creation, and the initial value will be written to the buffer.
-
-```ts
-import { u32 } from 'typegpu/data';
-import tgpu from 'typegpu';
-
-const root = await tgpu.init();
-const buffer = root.createBuffer(u32, 100);
-
-// That's when the buffer is created and the value is written
-const gpuBuffer = root.unwrap(buffer);
-```
-
-#### Using an existing buffer
-
-You can also create a buffer using an existing WebGPU buffer. This is useful when you have existing logic but want to introduce type-safe data operations.
-
-```ts
-import tgpu from 'typegpu';
-import { u32 } from 'typegpu/data';
-
-// Existing WebGPU buffer
-const existingBuffer = device.createBuffer(...);
-const root = tgpu.initFromDevice({ device });
-
-const buffer = root.createBuffer(u32, existingBuffer);
-```
-
-:::tip
-  Since the buffer is already created, you are responsible for the buffer's lifecycle and ensuring the type matches the buffer's contents.
+:::note[Recommended reading]
+We assume that you are familiar with the following concepts:
+- <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html" target="_blank" rel="noopener noreferrer">WebGPU Fundamentals</a>
+- <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-uniforms.html" target="_blank" rel="noopener noreferrer">Uniforms</a>
+- <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-storage-buffers.html" target="_blank" rel="noopener noreferrer">Storage Buffers</a>
 :::
 
+Memory on the GPU can be allocated and managed through buffers. That way, we can provide WGSL shaders with an additional context, or retrieve the results of parallel computation back to JS. When creating a buffer, a schema for the contained values has to be provided, which allows for:
+- Calculating the required size of the buffer,
+- Automatic conversion to-and-from a binary representation,
+- Type-safe APIs for writing and reading.
 
-### Adding usage flags
-
-When creating a buffer using the TypeGPU API, you can use the `.$usage()` builder method to add usage flags to the buffer.
+As an example, lets create a buffer for storing particles.
 
 ```ts
-const buffer = root.createBuffer(u32)
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+// Defining a struct type
+const Particle = d.struct({
+  position: d.vec3f,
+  velocity: d.vec3f,
+  health: d.f32,
+});
+
+const root = await tgpu.init();
+
+// Creating and initializing a buffer.
+const buffer = root
+  .createBuffer(
+    // Can hold an array of 100 particles
+    d.arrayOf(Particle, 100),
+    // Initial value
+    Array.from({ length: 100 }).map(() => ({
+      position: vec3f(Math.random(), 2, Math.random()),
+      velocity: vec3f(0, 9.8, 0),
+      health: 100,
+    })),
+  );
+// ^? TgpuBuffer<TgpuArray<TgpuStruct<{
+//      position: Vec3f,
+//      velocity: Vec3f,
+//      health: F32,
+//    }>>>
+
+// -
+// --
+// --- Using in shader...
+// --
+// -
+
+// Reading from the buffer
+const value = await buffer.read();
+//    ^? { position: vec3f, velocity: vec3f, health: number }[]
+
+// Using the value
+console.log(value);
+```
+
+This buffer can then be used and/or updated by a WGSL shader.
+
+## Creating a buffer
+
+To create a buffer, you will need to define its schema by composing data types imported from `typegpu/data`. Every WGSL data-type can be represented as JS schemas, including
+structs and arrays. For a comprehensive list of all available schemas, see the [Data Schemas](/TypeGPU/reference/data-schemas) reference.
+
+```ts
+const countBuffer = root.createBuffer(d.u32);
+//    ^? TgpuBuffer<d.U32>
+
+const listBuffer = root
+  .createBuffer(d.arrayOf(d.f32));
+// ^? TgpuBuffer<d.TgpuArray<d.F32>>
+
+const uniformsBuffer = root
+  .createBuffer(d.struct({ a: d.f32, b: d.f32 }));
+// ^? TgpuBuffer<d.TgpuStruct<{ a: d.F32, b: d.F32 }>>
+```
+
+### Usage flags
+
+To be able to use these buffers in WGSL shaders, we have to declare their usage upfront with `.$usage(...)`.
+
+```ts
+const buffer = root.createBuffer(d.u32)
   .$usage('uniform')
   .$usage('storage');
 ```
@@ -192,13 +96,15 @@ You can also add all flags in a single `$usage()`.
 
 ```ts
 
-const buffer = root.createBuffer(u32)
+const buffer = root.createBuffer(d.u32)
   .$usage('uniform', 'storage');
 
 ```
 
+import { Code } from '@astrojs/starlight/components';
+
 :::note
-  Along with the flags, the methods will also provide type hints.
+  Along with passing the appropriate flags to WebGPU, the methods will also embed type information into the buffer.
   ```ts
   // TgpuBuffer<U32> & Uniform & Storage
   const buffer = root.createBuffer(u32)
@@ -206,234 +112,90 @@ const buffer = root.createBuffer(u32)
   ```
 :::
 
-If you want to add specific usage flags, you can use the `$addFlags(flags: GPUBufferUsageFlags)` method.
+### Initial value
 
-
-### Writing to a buffer
-
-To write data to a buffer, you can use the `write` method on the typed buffer object. It takes as an argument the data that is to be written to the buffer.
-Because the buffer is typed, the type hints will help you write the correct data.
-
-If you pass a mapped buffer, the data will be written directly to the buffer (the buffer will not be unmapped).
-If you pass an unmapped buffer, the data will be written to the buffer using `GPUQueue.writeBuffer`.
+You can also pass an initial value to the `root.createBuffer` function.
+When the buffer is created, it will be mapped at creation, and the initial value will be written to the buffer.
 
 ```ts
-import { struct, vec2f, u32 } from 'typegpu/data';
+// Will be initialized to `100`
+const buffer = root.createBuffer(d.u32, 100);
 
-const PlayerInfo = struct({
-  position: vec2f,
-  health: u32,
+// Will be initialized to an array of two vec3fs with the specified values.
+const buffer = root
+  .createBuffer(
+    d.arrayOf(d.vec3f, 2),
+    [d.vec3f(0, 1, 2), d.vec3f(3, 4, 5)],
+  );
+```
+
+### Using an existing buffer
+
+You can also create a buffer using an existing WebGPU buffer. This is useful when you have existing logic but want to introduce type-safe data operations.
+
+```ts
+const existingBuffer = device.createBuffer(...);
+
+const buffer = root.createBuffer(d.u32, existingBuffer);
+
+buffer.write(12); // Writing to `existingBuffer` through a type-safe API
+```
+
+:::caution[WebGPU Interoperability]
+  Since the buffer is already created, you are responsible for the buffer's lifecycle and ensuring the type matches the buffer's contents.
+:::
+
+## Writing to a buffer
+
+To write data to a buffer, you can use the `.write(value)` method. The typed schema enables auto-complete as well as static validation of this
+method's arguments.
+
+```ts
+const Particle = d.struct({
+  position: d.vec2f,
+  health: d.u32,
 });
 
-const buffer = root.createBuffer(PlayerInfo);
+const particleBuffer = root.createBuffer(Particle);
 
 // .write(data: { position: vec2f, health: number })
-buffer.write({
+particleBuffer.write({
   position: vec2f(1.0, 2.0),
   health: 100,
 });
 ```
 
-<Aside type='caution'>
-    If you passed your own buffer to the `root.createBuffer` function, you need to ensure it has the `GPUBufferUsage.COPY_DST` usage flag if you want to write to it using the `write` method.
-</Aside>
+:::caution[WebGPU Interoperability]
+If you create a buffer from an existing WebGPU buffer than happens to be mapped, the data will be written directly to the buffer (the buffer will not be unmapped).
+If you pass an unmapped buffer, the data will be written to the buffer using `GPUQueue.writeBuffer`.
 
-### Reading from a buffer
+If you passed your own buffer to the `root.createBuffer` function, you need to ensure it has the `GPUBufferUsage.COPY_DST` usage flag if you want to write to it using the `write` method.
+:::
 
-To read data from a buffer, you can use the `read` method on the typed buffer.
+## Reading from a buffer
+
+To read data from a buffer, you can use the `.read()` method.
 It returns a promise that resolves to the data read from the buffer.
 
 ```ts
-import { arrayOf, u32 } from 'typegpu/data';
+const buffer = root.createBuffer(d.arrayOf(d.u32, 10));
 
-const buffer = root.createBuffer(arrayOf(u32, 10));
-
-// data: number[]
-const data = await buffer.read();
+const data = await buffer.read(); // => number[]
 ```
 
-import { Icon } from '@astrojs/starlight/components';
 import ListItem from '../../../components/ListItem.astro';
 
-<Aside>
-  **How the reading operation is handled differs based on the different types of existing buffers that are passed to the `createBuffer` function.**
+:::note[Inner Workings]
+**How the reading operation is handled differs based on the different types of existing buffers that are passed to the `createBuffer` function.**
 
-  <ListItem idx={1}>
-    If you pass a mapped buffer, the data will be read directly from the buffer (the buffer will not be unmapped).
-  </ListItem>
-  <ListItem idx={2}>
-    If you pass a mappable but unmapped buffer, the buffer will be mapped and then unmapped after the data is read.
-  </ListItem>
-  <ListItem idx={3}>
-    In the case of a buffer that is not mappable, a staging buffer will be created, and the
-    data will be copied to the staging buffer before being read. After the data is read, the staging buffer will be destroyed.
-  </ListItem>
-</Aside>
-
-## Adapting existing code
-
-Let's take a look at how we can supercharge our existing WebGPU code with typed buffers.
-
-### Starting point
-
-```ts
-
-const colorBuffer = device.createBuffer({
-    // we have to manually calculate the size of the buffer
-    size: 32,
-    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-});
-const colorFromInit = [0.0, 1.0, 0.8] as [number, number, number];
-const colorToInit = [0.2, 0.5, 1.0] as [number, number, number];
-
-const updateColors = (
-    colorFrom: [number, number, number],
-    colorTo: [number, number, number],
-) => {
-    const bytes = new ArrayBuffer(32);
-    new Float32Array(bytes, 0, 3).set(colorFrom);
-    // manually calculating the offset and size
-    // making the offset as 12 bytes would be an easy mistake to make
-    new Float32Array(bytes, 16, 3).set(colorTo);
-    device.queue.writeBuffer(colorBuffer, 0, bytes);
-}
-
-updateColors(colorFromInit, colorToInit);
-```
-
-The above code is a simple example of how we might update a buffer holding two RGB colors.
-The size of the data type `vec3f` is 12 bytes, so one might think that a structure containing two `vec3f` would be 24 bytes.
-However, the size of the buffer is 32 bytes because of the alignment requirements of the WebGPU API.
-This is something the user needs to know and calculate manually.
-
-Let's see how we can improve this code using typed buffers.
-
-### Soft migration
-
-In this approach we will not remove the existing buffer, but wrap it with `root.createBuffer()` to allow for type-safe read and write operations.
-This approach is fully backwards compatible and allows you to gradually migrate your code.
-
-import { Steps } from '@astrojs/starlight/components';
-
-<Steps>
-
-1. Add the necessary imports and wrap the existing buffer:
-
-   ```diff lang=ts
-   +import { vec3f, struct } from 'typegpu/data';
-   +import tgpu from 'typegpu';
-
-   const device: GPUDevice // WebGPU device
-   +const root = tgpu.initFromDevice({ device });
-
-   +const ColorPair = struct({
-   +    colorFrom: vec3f,
-   +    colorTo: vec3f,
-   +});
-
-   const colorBuffer = device.createBuffer({
-       size: 32,
-       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-   });
-   +const typedBuffer = root.createBuffer(ColorPair, colorBuffer);
-   const colorFromInit = [0.0, 1.0, 0.8] as [number, number, number];
-   const colorToInit = [0.2, 0.5, 1.0] as [number, number, number];
-
-   const updateColors = (
-       colorFrom: [number, number, number],
-       colorTo: [number, number, number]
-   ) => {
-       const bytes = new ArrayBuffer(32);
-       new Float32Array(bytes, 0, 3).set(colorFrom);
-       new Float32Array(bytes, 16, 3).set(colorTo);
-       device.queue.writeBuffer(colorBuffer, 0, bytes);
-   }
-
-   updateColors(colorFromInit, colorToInit);
-   ```
-
-2. The exisitng logic still works the same way but we can now take advantage of TypeGPU to read and write data to the buffer.
-
-   ```diff lang=ts
-   import { vec3f, struct } from 'typegpu/data';
-   import tgpu from 'typegpu';
-
-   const root = tgpu.initFromDevice({ device });
-
-   const ColorPair = struct({
-       colorFrom: vec3f,
-       colorTo: vec3f,
-   });
-
-   const colorBuffer = device.createBuffer({
-   -    size: 32,
-   +    size: ColorPair.size,
-       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
-   });
-   const typedBuffer = root.createBuffer(ColorPair, colorBuffer);
-   -const colorFromInit = [0.0, 1.0, 0.8] as [number, number, number];
-   -const colorToInit = [0.2, 0.5, 1.0] as [number, number, number];
-   +const colorFromInit = vec3f(0.0, 1.0, 0.8);
-   +const colorToInit = vec3f(0.2, 0.5, 1.0);
-
-   -const updateColors = (
-   -    colorFrom: [number, number, number],
-   -    colorTo: [number, number, number]
-   -) => {
-   -    const bytes = new ArrayBuffer(32);
-   -    new Float32Array(bytes, 0, 3).set(colorFrom);
-   -    new Float32Array(bytes, 16, 3).set(colorTo);
-   -    device.queue.writeBuffer(colorBuffer, 0, bytes);
-   -}
-
-   -updateColors(colorFromInit, colorToInit);
-   +typedBuffer.write({
-   +    colorFrom: colorFromInit,
-   +    colorTo: colorToInit,
-   +});
-   ```
-
-</Steps>
-
-
-### Full migration
-
-In this approach we will remove the existing buffer and replace it with a typed buffer created using the TypeGPU API.
-Keep in mind that `root.createBuffer()` will return a `TgpuBuffer` object, when you need a `GPUBuffer` object you can access it using the `root.unwrap` method.
-
-```diff lang=ts
-import tgpu from 'typegpu';
-import { vec3f, struct } from 'typegpu/data';
-
-const root = tgpu.initFromDevice({ device });
-
-const ColorPair = struct({
-    colorFrom: vec3f,
-    colorTo: vec3f,
-});
-
-const colorFromInit = vec3f(0.0, 1.0, 0.8);
-const colorToInit = vec3f(0.2, 0.5, 1.0);
-
--const colorBuffer = device.createBuffer({
--    size: ColorPair.size,
--    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
--});
-
-// the size of the buffer is calculated automatically
-// we can also take advantage of the initial value
-+const colorBuffer = root
-+  .createBuffer(ColorPair, {
-+    colorFrom: colorFromInit,
-+    colorTo: colorToInit,
-+  })
-+  .$usage('uniform');
-
-// this is now redundant as the buffer will be initialized on creation
--colorBuffer.write({
--  colorFrom: colorFromInit,
--  colorTo: colorToInit,
--});
-```
-
-If you want a more in-depth look at how to create your own data types, check out the chapter on [Data Schemas](/TypeGPU/fundamentals/data-schemas).
+<ListItem idx={1}>
+  If you pass a mapped buffer, the data will be read directly from the buffer (the buffer will not be unmapped).
+</ListItem>
+<ListItem idx={2}>
+  If you pass a mappable but unmapped buffer, the buffer will be mapped and then unmapped after the data is read.
+</ListItem>
+<ListItem idx={3}>
+  In the case of a buffer that is not mappable, a staging buffer will be created, and the
+  data will be copied to the staging buffer before being read. After the data is read, the staging buffer will be destroyed.
+</ListItem>
+:::
