@@ -75,6 +75,7 @@ export function ExampleView({ example }: Props) {
     tsCode: initialTsCode,
     htmlCode: intitialHtmlCode,
     metadata,
+    execTsCode,
   } = example;
 
   const [code, setCode] = useState(initialTsCode);
@@ -111,8 +112,8 @@ export function ExampleView({ example }: Props) {
     setHtmlCodeDebouncer.call(newCode);
   });
 
-  useExample(code, htmlCode, setSnackbarText, metadata.tags);
-  useResizableCanvas(exampleHtmlRef, code, htmlCode);
+  useExample(execTsCode, htmlCode, setSnackbarText, metadata.tags);
+  useResizableCanvas(exampleHtmlRef, execTsCode, htmlCode);
 
   useEffect(() => {
     setCode(initialTsCode);

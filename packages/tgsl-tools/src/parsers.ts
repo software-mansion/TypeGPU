@@ -158,13 +158,17 @@ const Transpilers: Partial<{
 
   MemberExpression(ctx, node) {
     const object = transpile(ctx, node.object) as smol.Expression;
+
+    // If the property is computed, it could potentially be an external identifier.
+    if (node.computed) {
+      const property = transpile(ctx, node.property) as smol.Expression;
+      return { '[]': [object, property] };
+    }
+
+    // If the property is not computed, we don't want to register identifiers as external.
     ctx.ignoreExternalDepth++;
     const property = transpile(ctx, node.property) as smol.Expression;
     ctx.ignoreExternalDepth--;
-
-    if (node.computed) {
-      return { '[]': [object, property] };
-    }
 
     if (typeof property !== 'string') {
       throw new Error('Expected identifier as property access key.');
