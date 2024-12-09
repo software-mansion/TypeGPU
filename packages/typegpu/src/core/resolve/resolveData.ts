@@ -3,6 +3,7 @@ import type {
   AnyWgslData,
   BaseWgslData,
   Bool,
+  F16,
   F32,
   I32,
   Mat2x2f,
@@ -31,6 +32,7 @@ import type { ResolutionCtx } from '../../types';
 const identityTypes = [
   'bool',
   'f32',
+  'f16',
   'i32',
   'u32',
   'vec2f',
@@ -50,6 +52,7 @@ const identityTypes = [
 type IdentityType =
   | Bool
   | F32
+  | F16
   | I32
   | U32
   | Vec2f

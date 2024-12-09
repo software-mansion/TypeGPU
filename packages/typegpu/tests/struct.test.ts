@@ -1,6 +1,7 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
 import {
+  alignmentOf,
   arrayOf,
   f16,
   f32,
@@ -139,20 +140,20 @@ describe('struct', () => {
       d: f16,
     });
 
-    expect(TestStruct.size).toEqual(8);
-    expect(TestStruct.byteAlignment).toEqual(2);
+    expect(sizeOf(TestStruct)).toEqual(8);
+    expect(alignmentOf(TestStruct)).toEqual(2);
 
-    const buffer = new ArrayBuffer(TestStruct.size);
+    const buffer = new ArrayBuffer(sizeOf(TestStruct));
 
-    const value: Parsed<typeof TestStruct> = {
+    const value: Infer<typeof TestStruct> = {
       a: 1.0,
       b: 2.0,
       c: 3.0,
       d: 4.0,
     };
 
-    TestStruct.write(new BufferWriter(buffer), value);
-    expect(TestStruct.read(new BufferReader(buffer))).toEqual(value);
+    writeData(new BufferWriter(buffer), TestStruct, value);
+    expect(readData(new BufferReader(buffer), TestStruct)).toEqual(value);
   });
 
   it('properly aligns with f16', () => {
@@ -162,18 +163,18 @@ describe('struct', () => {
       c: u32,
     });
 
-    expect(TestStruct.size).toEqual(12);
-    expect(TestStruct.byteAlignment).toEqual(4);
+    expect(sizeOf(TestStruct)).toEqual(12);
+    expect(alignmentOf(TestStruct)).toEqual(4);
 
-    const buffer = new ArrayBuffer(TestStruct.size);
+    const buffer = new ArrayBuffer(sizeOf(TestStruct));
 
-    const value: Parsed<typeof TestStruct> = {
+    const value: Infer<typeof TestStruct> = {
       a: 1,
       b: 2.0,
       c: 3,
     };
 
-    TestStruct.write(new BufferWriter(buffer), value);
-    expect(TestStruct.read(new BufferReader(buffer))).toEqual(value);
+    writeData(new BufferWriter(buffer), TestStruct, value);
+    expect(readData(new BufferReader(buffer), TestStruct)).toEqual(value);
   });
 });
