@@ -122,6 +122,11 @@ export default defineConfig({
         {
           label: 'Integration',
           items: stripFalsy([
+            DEV && {
+              label: 'WebGPU Interoperability',
+              slug: 'integration/webgpu-interoperability',
+              badge: { text: 'new' },
+            },
             {
               label: 'Working with wgpu-matrix',
               slug: 'integration/working-with-wgpu-matrix',
