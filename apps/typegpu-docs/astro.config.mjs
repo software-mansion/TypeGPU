@@ -90,6 +90,10 @@ export default defineConfig({
               slug: 'fundamentals/buffers',
             },
             {
+              label: 'Data Schemas',
+              slug: 'fundamentals/data-schemas',
+            },
+            {
               label: 'Bind Groups',
               slug: 'fundamentals/bind-groups',
               badge: { text: '0.2' },

@@ -10,12 +10,13 @@ We assume that you are familiar with the following concepts:
 - <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-storage-buffers.html" target="_blank" rel="noopener noreferrer">Storage Buffers</a>
 :::
 
-Memory on the GPU can be allocated and managed through buffers. That way, we can provide WGSL shaders with an additional context, or retrieve the results of parallel computation back to JS. When creating a buffer, a schema for the contained values has to be provided, which allows for:
+Memory on the GPU can be allocated and managed through buffers. That way, WGSL shaders can be provided with an additional context, or retrieve the
+results of parallel computation back to JS. When creating a buffer, a schema for the contained values has to be provided, which allows for:
 - Calculating the required size of the buffer,
 - Automatic conversion to-and-from a binary representation,
 - Type-safe APIs for writing and reading.
 
-As an example, lets create a buffer for storing particles.
+As an example, let's create a buffer for storing particles.
 
 ```ts
 import tgpu from 'typegpu';
@@ -104,12 +105,12 @@ const buffer = root.createBuffer(d.u32)
 import { Code } from '@astrojs/starlight/components';
 
 :::note
-  Along with passing the appropriate flags to WebGPU, the methods will also embed type information into the buffer.
-  ```ts
-  // TgpuBuffer<U32> & Uniform & Storage
-  const buffer = root.createBuffer(u32)
-    .$usage('uniform', 'storage');
-  ```
+Along with passing the appropriate flags to WebGPU, the methods will also embed type information into the buffer.
+```ts
+// TgpuBuffer<U32> & Uniform & Storage
+const buffer = root.createBuffer(u32)
+  .$usage('uniform', 'storage');
+```
 :::
 
 ### Initial value
@@ -142,7 +143,7 @@ buffer.write(12); // Writing to `existingBuffer` through a type-safe API
 ```
 
 :::caution[WebGPU Interoperability]
-  Since the buffer is already created, you are responsible for the buffer's lifecycle and ensuring the type matches the buffer's contents.
+Since the buffer is already created, you are responsible for the buffer's lifecycle and ensuring the type matches the buffer's contents.
 :::
 
 ## Writing to a buffer
