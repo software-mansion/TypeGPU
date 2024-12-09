@@ -79,7 +79,7 @@ async function transformPackageJSON() {
 
   // Erroring out on any wildcard dependencies
   for (const [moduleKey, versionSpec] of [
-    ...entries(distPackageJson.dependencies),
+    ...entries(distPackageJson.dependencies ?? {}),
   ]) {
     if (versionSpec === '*' || versionSpec === 'workspace:*') {
       throw new Error(
@@ -94,7 +94,7 @@ async function transformPackageJSON() {
   distPackageJson.devDependencies = undefined;
   // Removing workspace specifiers in dependencies.
   distPackageJson.dependencies = mapValues(
-    distPackageJson.dependencies,
+    distPackageJson.dependencies ?? {},
     (/** @type {string} */ value) => value.replace(/^workspace:/, ''),
   );
 
@@ -119,7 +119,7 @@ async function transformReadme() {
 
 async function main() {
   await promiseExec(
-    'pnpm build && pnpm -w test:spec && pnpm test:types && biome check .',
+    'pnpm build && pnpm -w test:spec && pnpm -w test:types && biome check .',
   );
 
   await Promise.all([transformPackageJSON(), transformReadme()]);

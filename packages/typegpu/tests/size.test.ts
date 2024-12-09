@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import * as d from '../src/data';
 import { StrictNameRegistry } from '../src/experimental';
-import { ResolutionCtxImpl } from '../src/resolutionCtx';
+import { resolve } from '../src/resolutionCtx';
 
 describe('d.size', () => {
   it('adds @size attribute for the custom sized struct members', () => {
@@ -13,56 +13,66 @@ describe('d.size', () => {
       })
       .$name('s1');
 
-    const resolutionCtx = new ResolutionCtxImpl({
+    const opts = {
       names: new StrictNameRegistry(),
-    });
+    };
 
-    expect(resolutionCtx.resolve(s1)).toContain('@size(16) b: u32,');
+    expect(resolve(s1, opts).code).toContain('@size(16) b: u32,');
   });
 
   it('changes size of the struct containing aligned member', () => {
     expect(
-      d.struct({
-        a: d.u32,
-        b: d.u32,
-        c: d.u32,
-      }).size,
+      d.sizeOf(
+        d.struct({
+          a: d.u32,
+          b: d.u32,
+          c: d.u32,
+        }),
+      ),
     ).toEqual(12);
 
     expect(
-      d.struct({
-        a: d.u32,
-        b: d.size(8, d.u32),
-        c: d.u32,
-      }).size,
+      d.sizeOf(
+        d.struct({
+          a: d.u32,
+          b: d.size(8, d.u32),
+          c: d.u32,
+        }),
+      ),
     ).toEqual(16);
 
     expect(
-      d.struct({
-        a: d.u32,
-        b: d.size(8, d.u32),
-        c: d.size(16, d.u32),
-      }).size,
+      d.sizeOf(
+        d.struct({
+          a: d.u32,
+          b: d.size(8, d.u32),
+          c: d.size(16, d.u32),
+        }),
+      ),
     ).toEqual(28);
 
     // nested
     expect(
-      d.struct({
-        a: d.u32,
-        b: d.struct({
-          c: d.size(20, d.f32),
+      d.sizeOf(
+        d.struct({
+          a: d.u32,
+          b: d.struct({
+            c: d.size(20, d.f32),
+          }),
         }),
-      }).size,
+      ),
     ).toEqual(24);
 
     // taking alignment into account
     expect(
-      d.struct({
-        a: d.struct({
-          c: d.size(17, d.f32),
+      d.sizeOf(
+        d.struct({
+          a: d.struct({
+            c: d.size(17, d.f32),
+          }),
+          b: d.u32,
         }),
-        b: d.u32,
-      }).size,
+      ),
     ).toEqual(24);
   });
 
@@ -79,9 +89,9 @@ describe('d.size', () => {
   it('changes size of loose array element', () => {
     const s1 = d.looseArrayOf(d.size(11, d.u32), 10);
 
-    expect(s1.size).toEqual(110);
+    expect(d.sizeOf(s1)).toEqual(110);
     expectTypeOf(s1).toEqualTypeOf<
-      d.TgpuLooseArray<d.Decorated<d.U32, [d.Size<11>]>>
+      d.LooseArray<d.Decorated<d.U32, [d.Size<11>]>>
     >();
   });
 
@@ -92,11 +102,11 @@ describe('d.size', () => {
       c: d.u32, // 4
     });
 
-    expect(s1.size).toEqual(28);
+    expect(d.sizeOf(s1)).toEqual(28);
     expectTypeOf(s1).toEqualTypeOf<
-      d.TgpuLooseStruct<{
+      d.LooseStruct<{
         a: d.U32;
-        b: d.LooseDecorated<d.TgpuLooseArray<d.U32>, [d.Size<20>]>;
+        b: d.LooseDecorated<d.LooseArray<d.U32>, [d.Size<20>]>;
         c: d.U32;
       }>
     >();

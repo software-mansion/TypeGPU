@@ -3,9 +3,7 @@ import { constant } from './tgpuConstant';
 import { declare } from './tgpuDeclare';
 import { fn } from './tgpuFunction';
 import { plum, plumFromEvent } from './tgpuPlum';
-import { sampler } from './tgpuSampler';
 import { slot } from './tgpuSlot';
-import { texture, textureExternal } from './tgpuTexture';
 import { variable } from './tgpuVariable';
 
 export default Object.assign(code, {
@@ -17,7 +15,4 @@ export default Object.assign(code, {
   constant,
   declare,
   var: variable,
-  sampler,
-  texture,
-  textureExternal,
 });

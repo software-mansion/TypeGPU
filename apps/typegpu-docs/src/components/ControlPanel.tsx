@@ -2,6 +2,8 @@ import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
 import { useState } from 'react';
 import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
+import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
+import { examples } from '../utils/examples/exampleContent';
 import {
   type ExampleControlParam,
   exampleControlsAtom,
@@ -12,14 +14,15 @@ import { Button } from './design/Button';
 import { Select } from './design/Select';
 import { Slider } from './design/Slider';
 import { Toggle } from './design/Toggle';
+import { openInStackBlitz } from './stackblitz/openInStackBlitz';
 
 function ToggleRow({
   label,
-  initial,
+  initial = false,
   onChange,
 }: {
   label: string;
-  initial: boolean;
+  initial?: boolean;
   onChange: (value: boolean) => void;
 }) {
   const [value, setValue] = useState(initial);
@@ -44,28 +47,28 @@ function ToggleRow({
 function SliderRow({
   label,
   initial,
-  min,
-  max,
-  step,
+  min = 0,
+  max = 1,
+  step = 0.1,
   onChange,
 }: {
   label: string;
-  initial: number;
+  initial?: number;
   min?: number;
   max?: number;
   step?: number;
   onChange: (value: number) => void;
 }) {
-  const [value, setValue] = useState(initial);
+  const [value, setValue] = useState(initial ?? min);
 
   return (
     <>
       <div className="text-sm">{label}</div>
 
       <Slider
-        min={min ?? 0}
-        max={max ?? 1}
-        step={step ?? 0.1}
+        min={min}
+        max={max}
+        step={step}
         value={value}
         onChange={(newValue) => {
           setValue(newValue);
@@ -83,11 +86,11 @@ function SelectRow({
   onChange,
 }: {
   label: string;
-  initial: string;
+  initial?: string;
   options: string[];
   onChange: (value: string) => void;
 }) {
-  const [value, setValue] = useState(initial);
+  const [value, setValue] = useState(initial ?? options[0]);
 
   return (
     <>
@@ -114,60 +117,56 @@ function ButtonRow({ label, onClick }: { label: string; onClick: () => void }) {
 }
 
 function paramToControlRow(param: ExampleControlParam) {
-  switch (param.type) {
-    case 'select':
-      return (
-        <SelectRow
-          label={param.label}
-          key={param.label}
-          options={param.options}
-          initial={param.initial ?? 0}
-          onChange={param.onChange}
-        />
-      );
-    case 'toggle':
-      return (
-        <ToggleRow
-          key={param.label}
-          label={param.label}
-          onChange={param.onChange}
-          initial={param.initial}
-        />
-      );
-    case 'slider':
-      return (
-        <SliderRow
-          key={param.label}
-          label={param.label}
-          onChange={param.onChange}
-          min={param.options.min}
-          max={param.options.max}
-          step={param.options.step}
-          initial={param.initial}
-        />
-      );
-    case 'button':
-      return (
-        <ButtonRow
-          key={param.label}
-          label={param.label}
-          onClick={param.onClick}
-        />
-      );
-  }
+  return 'onSelectChange' in param ? (
+    <SelectRow
+      label={param.label}
+      key={param.label}
+      options={param.options}
+      initial={param.initial}
+      onChange={param.onSelectChange}
+    />
+  ) : 'onToggleChange' in param ? (
+    <ToggleRow
+      key={param.label}
+      label={param.label}
+      onChange={param.onToggleChange}
+      initial={param.initial}
+    />
+  ) : 'onSliderChange' in param ? (
+    <SliderRow
+      key={param.label}
+      label={param.label}
+      onChange={param.onSliderChange}
+      min={param.min}
+      max={param.max}
+      step={param.step}
+      initial={param.initial}
+    />
+  ) : 'onButtonClick' in param ? (
+    <ButtonRow
+      key={param.label}
+      label={param.label}
+      onClick={param.onButtonClick}
+    />
+  ) : (
+    unreachable(param)
+  );
 }
+
+const unreachable = (_: never) => null;
 
 export function ControlPanel() {
   const [menuShowing, setMenuShowing] = useAtom(menuShownAtom);
   const [codeEditorShowing, setCodeEditorShowing] =
     useAtom(codeEditorShownAtom);
+  const currentExample = useAtomValue(currentExampleAtom);
   const exampleControlParams = useAtomValue(exampleControlsAtom);
 
   return (
     <div
       className={cs(
         isGPUSupported ? '' : 'hidden md:flex',
-        'box-border flex flex-col gap-4 p-6 bg-grayscale-0 rounded-xl max-h-[50%] md:max-h-full',
+        'box-border flex flex-col gap-4 p-6 bg-grayscale-0 rounded-xl max-h-[50%] md:max-h-full overflow-auto',
       )}
     >
       <div className="hidden md:flex flex-col gap-4">
@@ -186,6 +185,12 @@ export function ControlPanel() {
             onChange={(e) => setCodeEditorShowing(e.target.checked)}
           />
         </label>
+
+        {currentExample && currentExample in examples ? (
+          <Button onClick={() => openInStackBlitz(examples[currentExample])}>
+            Edit on StackBlitz
+          </Button>
+        ) : null}
 
         <hr className="my-0 box-border w-full border-t border-tameplum-100" />
       </div>

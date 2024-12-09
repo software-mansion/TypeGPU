@@ -50,7 +50,40 @@ You can play with TypeGPU right in the browser using our [StackBlitz example](ht
 <details>
 <summary>WebGPU types are not available</summary>
 
-If WebGPU types, such as `GPUDevice` or `GPUBuffer`, are not recognized in your project, make sure to install the [@webgpu/types](https://www.npmjs.com/package/@webgpu/types) npm package and include it as a type root in your `tsconfig.json` file.
+If WebGPU types, such as `GPUDevice` or `GPUBuffer`, are not recognized in your project, make sure to install the
+officially maintained [@webgpu/types](https://www.npmjs.com/package/@webgpu/types) npm package.
+
+<Tabs syncKey="package-manager">
+  <TabItem label="npm" icon="seti:npm">
+    ```sh frame=none
+    npm install --save-dev @webgpu/types
+    ```
+  </TabItem>
+  <TabItem label="pnpm" icon="pnpm">
+    ```sh frame=none
+    pnpm add -D @webgpu/types
+    ```
+  </TabItem>
+  <TabItem label="yarn" icon="seti:yarn">
+    ```sh frame=none
+    yarn add -D @webgpu/types
+    ```
+  </TabItem>
+</Tabs>
+
+
+Then in `tsconfig.json`:
+```jsonc
+{
+  // ...
+  "compilerOptions": {
+    // ...
+    "types": ["@webgpu/types"]
+  }
+}
+```
+
+Or you can use `typeRoots`:
 ```json
 {
   "compilerOptions": {

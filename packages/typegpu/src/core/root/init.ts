@@ -1,14 +1,16 @@
-import type { Parsed } from 'typed-binary';
-import { onGPU } from '../../gpuMode';
+import type { OmitBuiltins } from '../../builtin';
+import type { AnyData } from '../../data/dataTypes';
 import type { JitTranspiler } from '../../jitTranspiler';
 import { WeakMemo } from '../../memo';
-import { type PlumListener, PlumStore } from '../../plumStore';
 import {
-  ComputeProgramBuilder,
-  type Program,
-  RenderProgramBuilder,
-} from '../../programBuilder';
+  type NameRegistry,
+  RandomNameRegistry,
+  StrictNameRegistry,
+} from '../../nameRegistry';
+import { type PlumListener, PlumStore } from '../../plumStore';
 import type { TgpuSettable } from '../../settableTrait';
+import type { Infer } from '../../shared/repr';
+import type { AnyVertexAttribs } from '../../shared/vertexFormat';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
@@ -19,36 +21,140 @@ import type {
   TgpuPlum,
   Unsubscribe,
 } from '../../tgpuPlumTypes';
-import type { TgpuSampler } from '../../tgpuSampler';
-import type {
-  TgpuAnyTexture,
-  TgpuAnyTextureView,
-  TgpuTextureExternal,
-} from '../../tgpuTexture';
-import type { AnyTgpuData } from '../../types';
+import type { TgpuSlot } from '../../types';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
+import type { IOLayout } from '../function/fnTypes';
+import type { TgpuComputeFn } from '../function/tgpuComputeFn';
+import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
+import type { TgpuVertexFn } from '../function/tgpuVertexFn';
+import {
+  type INTERNAL_TgpuComputePipeline,
+  INTERNAL_createComputePipeline,
+  type TgpuComputePipeline,
+  isComputePipeline,
+} from '../pipeline/computePipeline';
+import {
+  type AnyFragmentTargets,
+  INTERNAL_createRenderPipeline,
+  type RenderPipelineCoreOptions,
+  type TgpuRenderPipeline,
+} from '../pipeline/renderPipeline';
+import {
+  type INTERNAL_TgpuSampledTexture,
+  type INTERNAL_TgpuStorageTexture,
+  type INTERNAL_TgpuTexture,
+  INTERNAL_createTexture,
+  type TgpuMutableTexture,
+  type TgpuReadonlyTexture,
+  type TgpuSampledTexture,
+  type TgpuTexture,
+  type TgpuWriteonlyTexture,
+  isSampledTextureView,
+  isStorageTextureView,
+  isTexture,
+} from '../texture/texture';
+import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute';
 import type {
-  ComputePipelineExecutorOptions,
-  ComputePipelineOptions,
+  CreateTextureOptions,
+  CreateTextureResult,
   ExperimentalTgpuRoot,
-  RenderPipelineExecutorOptions,
-  RenderPipelineOptions,
   SetPlumAction,
+  TgpuRoot,
+  WithBinding,
+  WithCompute,
+  WithFragment,
+  WithVertex,
 } from './rootTypes';
+
+class WithBindingImpl implements WithBinding {
+  constructor(
+    private readonly _getRoot: () => ExperimentalTgpuRoot,
+    private readonly _slotBindings: [TgpuSlot<unknown>, unknown][],
+  ) {}
+
+  with<T>(slot: TgpuSlot<T>, value: T): WithBinding {
+    return new WithBindingImpl(this._getRoot, [
+      ...this._slotBindings,
+      [slot, value],
+    ]);
+  }
+
+  withCompute(entryFn: TgpuComputeFn): WithCompute {
+    return new WithComputeImpl(this._getRoot(), this._slotBindings, entryFn);
+  }
+
+  withVertex<Attribs extends IOLayout, Varying extends IOLayout>(
+    vertexFn: TgpuVertexFn,
+    attribs: LayoutToAllowedAttribs<OmitBuiltins<Attribs>>,
+  ): WithVertex {
+    return new WithVertexImpl({
+      branch: this._getRoot(),
+      primitiveState: undefined,
+      slotBindings: this._slotBindings,
+      vertexFn,
+      vertexAttribs: attribs as AnyVertexAttribs,
+    });
+  }
+}
+
+class WithComputeImpl implements WithCompute {
+  constructor(
+    private readonly _root: ExperimentalTgpuRoot,
+    private readonly _slotBindings: [TgpuSlot<unknown>, unknown][],
+    private readonly _entryFn: TgpuComputeFn,
+  ) {}
+
+  createPipeline(): TgpuComputePipeline {
+    return INTERNAL_createComputePipeline(
+      this._root,
+      this._slotBindings,
+      this._entryFn,
+    );
+  }
+}
+
+class WithVertexImpl implements WithVertex {
+  constructor(
+    private readonly _options: Omit<
+      RenderPipelineCoreOptions,
+      'fragmentFn' | 'targets'
+    >,
+  ) {}
+
+  withFragment(
+    fragmentFn: TgpuFragmentFn,
+    targets: AnyFragmentTargets,
+  ): WithFragment {
+    return new WithFragmentImpl({
+      ...this._options,
+      fragmentFn,
+      targets,
+    });
+  }
+}
+
+class WithFragmentImpl implements WithFragment {
+  constructor(private readonly _options: RenderPipelineCoreOptions) {}
+
+  withPrimitive(primitiveState: GPUPrimitiveState): WithFragment {
+    return new WithFragmentImpl({ ...this._options, primitiveState });
+  }
+
+  createPipeline(): TgpuRenderPipeline {
+    return INTERNAL_createRenderPipeline(this._options);
+  }
+}
+
+interface Disposable {
+  destroy(): void;
+}
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a root can interact via GPU buffers.
  */
-class TgpuRootImpl implements ExperimentalTgpuRoot {
-  private _buffers: TgpuBuffer<AnyTgpuData>[] = [];
-  private _samplers = new WeakMap<TgpuSampler, GPUSampler>();
-  private _textures = new WeakMap<TgpuAnyTexture, GPUTexture>();
-  private _textureViews = new WeakMap<TgpuAnyTextureView, GPUTextureView>();
-  private _externalTexturesStatus = new WeakMap<
-    TgpuTextureExternal,
-    'dirty' | 'clean'
-  >();
+class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
+  private _disposables: Disposable[] = [];
 
   private _unwrappedBindGroupLayouts = new WeakMemo(
     (key: TgpuBindGroupLayout) => key.unwrap(this),
@@ -57,15 +163,17 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     key.unwrap(this),
   );
 
-  private _pipelineExecutors: PipelineExecutor[] = [];
   private _commandEncoder: GPUCommandEncoder | null = null;
 
   private readonly _plumStore = new PlumStore();
 
   constructor(
     public readonly device: GPUDevice,
+    public readonly nameRegistry: NameRegistry,
     public readonly jitTranspiler: JitTranspiler | undefined,
-  ) {}
+  ) {
+    super(() => this, []);
+  }
 
   get commandEncoder() {
     if (!this._commandEncoder) {
@@ -75,33 +183,95 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     return this._commandEncoder;
   }
 
-  createBuffer<TData extends AnyTgpuData>(
+  createBuffer<TData extends AnyData>(
     typeSchema: TData,
-    initialOrBuffer?: Parsed<TData> | TgpuPlum<Parsed<TData>> | GPUBuffer,
+    initialOrBuffer?: Infer<TData> | TgpuPlum<Infer<TData>> | GPUBuffer,
   ): TgpuBuffer<TData> {
     const buffer = createBufferImpl(this, typeSchema, initialOrBuffer).$device(
       this.device,
     );
 
-    this._buffers.push(buffer);
+    this._disposables.push(buffer);
 
     return buffer;
   }
 
+  createTexture<
+    TWidth extends number,
+    THeight extends number,
+    TDepth extends number,
+    TSize extends
+      | readonly [TWidth]
+      | readonly [TWidth, THeight]
+      | readonly [TWidth, THeight, TDepth],
+    TFormat extends GPUTextureFormat,
+    TMipLevelCount extends number,
+    TSampleCount extends number,
+    TViewFormat extends GPUTextureFormat,
+    TDimension extends GPUTextureDimension,
+  >(
+    props: CreateTextureOptions<
+      TSize,
+      TFormat,
+      TMipLevelCount,
+      TSampleCount,
+      TViewFormat,
+      TDimension
+    >,
+  ): TgpuTexture<
+    CreateTextureResult<
+      TSize,
+      TFormat,
+      TMipLevelCount,
+      TSampleCount,
+      TViewFormat,
+      TDimension
+    >
+  > {
+    const texture = INTERNAL_createTexture(props, this);
+    this._disposables.push(texture);
+    // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
+    return texture as any;
+  }
+
   destroy() {
-    for (const buffer of this._buffers) {
-      buffer.destroy();
+    for (const disposable of this._disposables) {
+      disposable.destroy();
     }
   }
 
-  unwrap(resource: TgpuBuffer<AnyTgpuData>): GPUBuffer;
+  unwrap(resource: TgpuComputePipeline): GPUComputePipeline;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
+  unwrap(resource: TgpuBuffer<AnyData>): GPUBuffer;
+  unwrap(resource: TgpuTexture): GPUTexture;
   unwrap(
-    resource: TgpuBuffer<AnyTgpuData> | TgpuBindGroupLayout | TgpuBindGroup,
-  ): GPUBuffer | GPUBindGroupLayout | GPUBindGroup {
-    if (isBuffer(resource)) {
-      return resource.buffer;
+    resource:
+      | TgpuReadonlyTexture
+      | TgpuWriteonlyTexture
+      | TgpuMutableTexture
+      | TgpuSampledTexture,
+  ): GPUTextureView;
+  unwrap(
+    resource:
+      | TgpuComputePipeline
+      | TgpuBindGroupLayout
+      | TgpuBindGroup
+      | TgpuBuffer<AnyData>
+      | TgpuTexture
+      | TgpuReadonlyTexture
+      | TgpuWriteonlyTexture
+      | TgpuMutableTexture
+      | TgpuSampledTexture,
+  ):
+    | GPUComputePipeline
+    | GPUBindGroupLayout
+    | GPUBindGroup
+    | GPUBuffer
+    | GPUTexture
+    | GPUTextureView {
+    if (isComputePipeline(resource)) {
+      return (resource as unknown as INTERNAL_TgpuComputePipeline).rawPipeline;
     }
 
     if (isBindGroupLayout(resource)) {
@@ -112,83 +282,23 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
       return this._unwrappedBindGroups.getOrMake(resource);
     }
 
+    if (isBuffer(resource)) {
+      return resource.buffer;
+    }
+
+    if (isTexture(resource)) {
+      return (resource as unknown as INTERNAL_TgpuTexture).unwrap();
+    }
+
+    if (isStorageTextureView(resource)) {
+      return (resource as unknown as INTERNAL_TgpuStorageTexture).unwrap();
+    }
+
+    if (isSampledTextureView(resource)) {
+      return (resource as unknown as INTERNAL_TgpuSampledTexture).unwrap();
+    }
+
     throw new Error(`Unknown resource type: ${resource}`);
-  }
-
-  textureFor(view: TgpuAnyTexture | TgpuAnyTextureView): GPUTexture {
-    let source: TgpuAnyTexture;
-    if ('texture' in view) {
-      source = view.texture;
-    } else {
-      source = view;
-    }
-
-    let texture = this._textures.get(source);
-
-    if (!texture) {
-      const descriptor = {
-        ...source.descriptor,
-        usage: source.flags,
-      } as GPUTextureDescriptor;
-      texture = this.device.createTexture(descriptor);
-
-      if (!texture) {
-        throw new Error(`Failed to create texture for ${view}`);
-      }
-      this._textures.set(source, texture);
-    }
-
-    return texture;
-  }
-
-  viewFor(view: TgpuAnyTextureView): GPUTextureView {
-    let textureView = this._textureViews.get(view);
-    if (!textureView) {
-      textureView = this.textureFor(view.texture).createView(view.descriptor);
-      this._textureViews.set(view, textureView);
-    }
-    return textureView;
-  }
-
-  externalTextureFor(texture: TgpuTextureExternal): GPUExternalTexture {
-    this._externalTexturesStatus.set(texture, 'clean');
-    if (texture.descriptor.source === undefined) {
-      throw new Error('External texture source needs to be defined before use');
-    }
-    return this.device.importExternalTexture(
-      texture.descriptor as GPUExternalTextureDescriptor,
-    );
-  }
-
-  samplerFor(sampler: TgpuSampler): GPUSampler {
-    let gpuSampler = this._samplers.get(sampler);
-
-    if (!gpuSampler) {
-      gpuSampler = this.device.createSampler(sampler.descriptor);
-
-      if (!gpuSampler) {
-        throw new Error(`Failed to create sampler for ${sampler}`);
-      }
-      this._samplers.set(sampler, gpuSampler);
-    }
-
-    return gpuSampler;
-  }
-
-  setSource(
-    texture: TgpuTextureExternal,
-    source: HTMLVideoElement | VideoFrame,
-  ) {
-    this._externalTexturesStatus.set(texture, 'dirty');
-    texture.descriptor.source = source;
-  }
-
-  isDirty(texture: TgpuTextureExternal): boolean {
-    return this._externalTexturesStatus.get(texture) === 'dirty';
-  }
-
-  markClean(texture: TgpuTextureExternal) {
-    this._externalTexturesStatus.set(texture, 'clean');
   }
 
   readPlum<TPlum extends TgpuPlum>(plum: TPlum): ExtractPlumValue<TPlum> {
@@ -216,102 +326,6 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
     return this._plumStore.subscribe(plum, listener);
   }
 
-  makeRenderPipeline(options: RenderPipelineOptions): RenderPipelineExecutor {
-    const { vertexProgram, fragmentProgram } = new RenderProgramBuilder(
-      this,
-      options.vertex.code,
-      options.fragment.code,
-      options.vertex.output,
-    ).build({
-      bindingGroup: (options.externalLayouts ?? []).length,
-    });
-
-    const vertexShaderModule = this.device.createShaderModule({
-      code: vertexProgram.code,
-    });
-    const fragmentShaderModule = this.device.createShaderModule({
-      code: fragmentProgram.code,
-    });
-
-    const pipelineLayout = this.device.createPipelineLayout({
-      label: options.label ?? '',
-      bindGroupLayouts: [
-        ...(options.externalLayouts ?? []),
-        vertexProgram.bindGroupResolver.getBindGroupLayout(),
-        fragmentProgram.bindGroupResolver.getBindGroupLayout(),
-      ],
-    });
-
-    const renderPipeline = this.device.createRenderPipeline({
-      label: options.label ?? '',
-      layout: pipelineLayout,
-      vertex: {
-        module: vertexShaderModule,
-        buffers:
-          vertexProgram.bindGroupResolver.getVertexBufferDescriptors() ?? [],
-      },
-      fragment: {
-        module: fragmentShaderModule,
-        targets: options.fragment?.target ?? [],
-      },
-      primitive: options.primitive,
-    });
-
-    const executor = new RenderPipelineExecutor(
-      this,
-      renderPipeline,
-      vertexProgram,
-      fragmentProgram,
-      options.externalLayouts?.length ?? 0,
-    );
-
-    this._pipelineExecutors.push(executor);
-    return executor;
-  }
-
-  makeComputePipeline(
-    options: ComputePipelineOptions,
-  ): ComputePipelineExecutor {
-    const program = onGPU(() =>
-      new ComputeProgramBuilder(
-        this,
-        options.code,
-        options.workgroupSize ?? [1],
-      ).build({
-        bindingGroup: (options.externalLayouts ?? []).length,
-      }),
-    );
-
-    const shaderModule = this.device.createShaderModule({
-      code: program.code,
-    });
-
-    const pipelineLayout = this.device.createPipelineLayout({
-      label: options.label ?? '',
-      bindGroupLayouts: [
-        ...(options.externalLayouts ?? []),
-        program.bindGroupResolver.getBindGroupLayout(),
-      ],
-    });
-
-    const computePipeline = this.device.createComputePipeline({
-      label: options.label ?? '',
-      layout: pipelineLayout,
-      compute: {
-        module: shaderModule,
-      },
-    });
-
-    const executor = new ComputePipelineExecutor(
-      this,
-      computePipeline,
-      [program],
-      options.externalLayouts?.length ?? 0,
-    );
-    this._pipelineExecutors.push(executor);
-    return executor;
-  }
-
   flush() {
     if (!this._commandEncoder) {
       return;
@@ -322,113 +336,14 @@ class TgpuRootImpl implements ExperimentalTgpuRoot {
   }
 }
 
-interface PipelineExecutor {
-  execute(
-    options: RenderPipelineExecutorOptions | ComputePipelineExecutorOptions,
-  ): void;
-}
-
-class RenderPipelineExecutor implements PipelineExecutor {
-  constructor(
-    private root: ExperimentalTgpuRoot,
-    private pipeline: GPURenderPipeline,
-    private vertexProgram: Program,
-    private fragmentProgram: Program,
-    private externalLayoutCount: number,
-    private label?: string,
-  ) {}
-
-  execute(options: RenderPipelineExecutorOptions) {
-    const {
-      vertexCount,
-      instanceCount,
-      firstVertex,
-      firstInstance,
-      externalBindGroups,
-      ...descriptor
-    } = options;
-
-    if ((externalBindGroups?.length ?? 0) !== this.externalLayoutCount) {
-      throw new Error(
-        `External bind group count doesn't match the external bind group layout configuration. Expected ${this.externalLayoutCount}, got: ${externalBindGroups?.length ?? 0}`,
-      );
-    }
-
-    const passEncoder = this.root.commandEncoder.beginRenderPass({
-      ...descriptor,
-      label: this.label ?? '',
-    });
-    passEncoder.setPipeline(this.pipeline);
-
-    (externalBindGroups ?? []).forEach((group, index) =>
-      passEncoder.setBindGroup(index, group),
-    );
-
-    passEncoder.setBindGroup(
-      (externalBindGroups ?? []).length,
-      this.vertexProgram.bindGroupResolver.getBindGroup(),
-    );
-    passEncoder.setBindGroup(
-      (externalBindGroups ?? []).length + 1,
-      this.fragmentProgram.bindGroupResolver.getBindGroup(),
-    );
-
-    for (const [
-      usage,
-      index,
-    ] of this.vertexProgram.bindGroupResolver.getVertexBuffers()) {
-      passEncoder.setVertexBuffer(index, usage.allocatable.buffer);
-    }
-
-    passEncoder.draw(vertexCount, instanceCount, firstVertex, firstInstance);
-    passEncoder.end();
-  }
-}
-
-class ComputePipelineExecutor implements PipelineExecutor {
-  constructor(
-    private root: ExperimentalTgpuRoot,
-    private pipeline: GPUComputePipeline,
-    private programs: Program[],
-    private externalLayoutCount: number,
-    private label?: string,
-  ) {}
-
-  execute(options?: ComputePipelineExecutorOptions) {
-    const { workgroups = [1, 1], externalBindGroups } = options ?? {};
-
-    if ((externalBindGroups?.length ?? 0) !== this.externalLayoutCount) {
-      throw new Error(
-        `External bind group count doesn't match the external bind group layout configuration. Expected ${this.externalLayoutCount}, got: ${externalBindGroups?.length ?? 0}`,
-      );
-    }
-
-    const passEncoder = this.root.commandEncoder.beginComputePass({
-      label: this.label ?? '',
-    });
-    passEncoder.setPipeline(this.pipeline);
-
-    (externalBindGroups ?? []).forEach((group, index) =>
-      passEncoder.setBindGroup(index, group),
-    );
-
-    this.programs.forEach((program, i) =>
-      passEncoder.setBindGroup(
-        (externalBindGroups ?? []).length + i,
-        program.bindGroupResolver.getBindGroup(),
-      ),
-    );
-    passEncoder.dispatchWorkgroups(...workgroups);
-    passEncoder.end();
-  }
-}
-
 /**
  * Options passed into {@link init}.
  */
 export type InitOptions = {
   adapter?: GPURequestAdapterOptions | undefined;
   device?: GPUDeviceDescriptor | undefined;
+  /** @default 'random' */
+  unstable_names?: 'random' | 'strict' | undefined;
   unstable_jitTranspiler?: JitTranspiler | undefined;
 };
 
@@ -437,6 +352,8 @@ export type InitOptions = {
  */
 export type InitFromDeviceOptions = {
   device: GPUDevice;
+  /** @default 'random' */
+  unstable_names?: 'random' | 'strict' | undefined;
   unstable_jitTranspiler?: JitTranspiler | undefined;
 };
 
@@ -458,22 +375,28 @@ export type InitFromDeviceOptions = {
  * const root = await tgpu.init({ adapter: adapterOptions, device: deviceDescriptor });
  * ```
  */
-export async function init(
-  options?: InitOptions,
-): Promise<ExperimentalTgpuRoot> {
+export async function init(options?: InitOptions): Promise<TgpuRoot> {
+  const {
+    adapter: adapterOpt,
+    device: deviceOpt,
+    unstable_names: names = 'random',
+    unstable_jitTranspiler: jitTranspiler,
+  } = options ?? {};
+
   if (!navigator.gpu) {
     throw new Error('WebGPU is not supported by this browser.');
   }
 
-  const adapter = await navigator.gpu.requestAdapter(options?.adapter);
+  const adapter = await navigator.gpu.requestAdapter(adapterOpt);
 
   if (!adapter) {
     throw new Error('Could not find a compatible GPU');
   }
 
   return new TgpuRootImpl(
-    await adapter.requestDevice(options?.device),
-    options?.unstable_jitTranspiler,
+    await adapter.requestDevice(deviceOpt),
+    names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
+    jitTranspiler,
   );
 }
 
@@ -486,8 +409,16 @@ export async function init(
  * const root = tgpu.initFromDevice({ device });
  * ```
  */
-export function initFromDevice(
-  options: InitFromDeviceOptions,
-): ExperimentalTgpuRoot {
-  return new TgpuRootImpl(options.device, options.unstable_jitTranspiler);
+export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
+  const {
+    device,
+    unstable_names: names = 'random',
+    unstable_jitTranspiler: jitTranspiler,
+  } = options ?? {};
+
+  return new TgpuRootImpl(
+    device,
+    names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
+    jitTranspiler,
+  );
 }

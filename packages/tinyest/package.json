@@ -1,0 +1,51 @@
+{
+  "name": "tinyest",
+  "private": true,
+  "version": "0.0.0",
+  "description": "A compact, fast, and embeddable JavaScript AST for transpilation.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "module": "./dist/index.js",
+      "import": "./dist/index.js",
+      "default": "./dist/index.cjs"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "module": "./dist/*.js",
+      "import": "./dist/*.js",
+      "default": "./dist/*.cjs"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "dev:watch": "DEV=true tsup --watch",
+    "dev:build": "DEV=true tsup",
+    "build": "tsup",
+    "publish": "echo \"Use pnpm prepare-package instead!\" && exit 1",
+    "prepare-package": "tgpu-dev-cli prepack"
+  },
+  "engines": {
+    "node": ">=12.20.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/software-mansion/typegpu.git"
+  },
+  "keywords": ["ast", "javascript"],
+  "bugs": {
+    "url": "https://github.com/software-mansion/typegpu/issues"
+  },
+  "homepage": "https://docs.swmansion.com/typegpu",
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "tsup": "^8.0.2",
+    "@typegpu/tgpu-dev-cli": "workspace:*"
+  },
+  "packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e"
+}

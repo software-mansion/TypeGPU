@@ -1,27 +1,55 @@
 import {
-  type Storage,
   type TgpuBuffer,
   type Uniform,
   isBuffer,
-  isUsableAsStorage,
   isUsableAsUniform,
 } from './core/buffer/buffer';
 import {
   type TgpuBufferMutable,
   type TgpuBufferReadonly,
   type TgpuBufferUniform,
-  type TgpuBufferUsage,
-  isBufferUsage,
+  TgpuLaidOutBufferImpl,
 } from './core/buffer/bufferUsage';
+import {
+  TgpuLaidOutComparisonSamplerImpl,
+  TgpuLaidOutSamplerImpl,
+  type TgpuSampler,
+} from './core/sampler/sampler';
+import { TgpuExternalTextureImpl } from './core/texture/externalTexture';
+import {
+  type StorageTextureDimension,
+  TgpuLaidOutSampledTextureImpl,
+  TgpuLaidOutStorageTextureImpl,
+  type TgpuMutableTexture,
+  type TgpuReadonlyTexture,
+  type TgpuSampledTexture,
+  type TgpuTexture,
+  isTexture,
+} from './core/texture/texture';
+import type { StorageTextureTexelFormat } from './core/texture/textureFormats';
+import {
+  NotSampledError,
+  isUsableAsSampled,
+} from './core/texture/usageExtension';
+import type { AnyData } from './data';
+import type { Exotic } from './data/exotic';
+import type { AnyWgslData, BaseWgslData } from './data/wgslTypes';
 import { NotUniformError } from './errors';
+import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
 import type { TgpuNamable } from './namable';
-import type { TgpuSampler } from './tgpuSampler';
-import type { AnyTgpuData, OmitProps, TgpuShaderStage } from './types';
+import type { OmitProps, Prettify } from './shared/utilityTypes';
+import type { TgpuShaderStage } from './types';
 import type { Unwrapper } from './unwrapper';
 
 // ----------
 // Public API
 // ----------
+
+export type LayoutMembership = {
+  layout: TgpuBindGroupLayout;
+  key: string;
+  idx: number;
+};
 
 export type TgpuLayoutEntryBase = {
   /**
@@ -37,11 +65,11 @@ export type TgpuLayoutEntryBase = {
 };
 
 export type TgpuLayoutUniform = TgpuLayoutEntryBase & {
-  uniform: AnyTgpuData | ((arrayLength: number) => AnyTgpuData);
+  uniform: AnyWgslData | ((arrayLength: number) => AnyWgslData);
 };
 
 export type TgpuLayoutStorage = TgpuLayoutEntryBase & {
-  storage: AnyTgpuData | ((arrayLength: number) => AnyTgpuData);
+  storage: AnyWgslData | ((arrayLength: number) => AnyWgslData);
   /** @default 'readonly' */
   access?: 'mutable' | 'readonly';
 };
@@ -70,13 +98,13 @@ export type TgpuLayoutTexture<
   multisampled?: boolean;
 };
 export type TgpuLayoutStorageTexture<
-  TFormat extends GPUTextureFormat = GPUTextureFormat,
+  TFormat extends StorageTextureTexelFormat = StorageTextureTexelFormat,
 > = TgpuLayoutEntryBase & {
   storageTexture: TFormat;
   /** @default 'writeonly' */
   access?: 'readonly' | 'writeonly' | 'mutable';
   /** @default '2d' */
-  viewDimension?: GPUTextureViewDimension;
+  viewDimension?: StorageTextureDimension;
 };
 export type TgpuLayoutExternalTexture = TgpuLayoutEntryBase & {
   externalTexture: Record<string, never>;
@@ -91,15 +119,15 @@ export type TgpuLayoutEntry =
   | TgpuLayoutExternalTexture;
 
 type UnwrapRuntimeConstructorInner<
-  T extends AnyTgpuData | ((_: number) => AnyTgpuData),
-> = T extends AnyTgpuData
+  T extends BaseWgslData | ((_: number) => BaseWgslData),
+> = T extends BaseWgslData
   ? T
   : T extends (_: number) => infer Return
     ? Return
     : never;
 
 export type UnwrapRuntimeConstructor<
-  T extends AnyTgpuData | ((_: number) => AnyTgpuData),
+  T extends AnyData | ((_: number) => AnyData),
 > = T extends unknown ? UnwrapRuntimeConstructorInner<T> : never;
 
 export interface TgpuBindGroupLayout<
@@ -111,10 +139,16 @@ export interface TgpuBindGroupLayout<
   readonly resourceType: 'bind-group-layout';
   readonly label: string | undefined;
   readonly entries: Entries;
-  // TODO: Expose when implemented
-  // readonly bound: {
-  //   [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
-  // };
+  readonly bound: {
+    [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
+  };
+
+  /**
+   * An explicit numeric index assigned to this bind group layout. If undefined, a unique
+   * index is assigned automatically during resolution. This can be changed with the
+   * `.$idx()` method.
+   */
+  readonly index: number | undefined;
 
   populate(
     entries: {
@@ -136,9 +170,13 @@ export interface TgpuBindGroupLayoutExperimental<
     TgpuLayoutEntry | null
   >,
 > extends TgpuBindGroupLayout<Entries> {
-  readonly bound: {
-    [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
-  };
+  /**
+   * Associates this bind group layout with an explicit numeric index. When a call to this
+   * method is omitted, a unique numeric index is assigned to it automatically.
+   *
+   * Used when generating WGSL code: `@group(${index}) @binding(...) ...;`
+   */
+  $idx(index?: number): this;
 }
 
 type StorageUsageForEntry<T extends TgpuLayoutStorage> = T extends {
@@ -159,21 +197,19 @@ type StorageUsageForEntry<T extends TgpuLayoutStorage> = T extends {
 
 export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
   T extends TgpuLayoutUniform
-    ?
-        | TgpuBufferUsage<UnwrapRuntimeConstructor<T['uniform']>, 'uniform'>
-        | (TgpuBuffer<UnwrapRuntimeConstructor<T['uniform']>> & Uniform)
-        | GPUBuffer
+    ? (TgpuBuffer<UnwrapRuntimeConstructor<T['uniform']>> & Uniform) | GPUBuffer
     : T extends TgpuLayoutStorage
       ?
-          | StorageUsageForEntry<T>
           | (TgpuBuffer<UnwrapRuntimeConstructor<T['storage']>> & Storage)
           | GPUBuffer
       : T extends TgpuLayoutSampler
         ? GPUSampler
         : T extends TgpuLayoutTexture
-          ? GPUTextureView
+          ? // TODO: Allow sampled usages here
+            GPUTextureView | TgpuTexture
           : T extends TgpuLayoutStorageTexture
-            ? GPUTextureView
+            ? // TODO: Allow storage usages here
+              GPUTextureView | TgpuTexture
             : T extends TgpuLayoutExternalTexture
               ? GPUExternalTexture
               : never;
@@ -198,16 +234,32 @@ export type TgpuBindGroup<
   unwrap(unwrapper: Unwrapper): GPUBindGroup;
 };
 
+type ExoticEntry<T> = T extends Record<string | number | symbol, unknown>
+  ? {
+      [Key in keyof T]: T[Key] extends BaseWgslData
+        ? Exotic<T[Key]>
+        : T[Key] extends (...args: infer TArgs) => infer TReturn
+          ? (...args: TArgs) => Exotic<TReturn>
+          : T[Key];
+    }
+  : T;
+
+type ExoticEntries<T extends Record<string, TgpuLayoutEntry | null>> = {
+  [BindingKey in keyof T]: ExoticEntry<T[BindingKey]>;
+};
+
 export function bindGroupLayout<
   Entries extends Record<string, TgpuLayoutEntry | null>,
->(entries: Entries): TgpuBindGroupLayout<Entries> {
-  return new TgpuBindGroupLayoutImpl(entries);
+>(entries: Entries): TgpuBindGroupLayout<Prettify<ExoticEntries<Entries>>> {
+  return new TgpuBindGroupLayoutImpl(entries as ExoticEntries<Entries>);
 }
 
 export function bindGroupLayoutExperimental<
   Entries extends Record<string, TgpuLayoutEntry | null>,
->(entries: Entries): TgpuBindGroupLayoutExperimental<Entries> {
-  return new TgpuBindGroupLayoutImpl(entries);
+>(
+  entries: Entries,
+): TgpuBindGroupLayoutExperimental<Prettify<ExoticEntries<Entries>>> {
+  return new TgpuBindGroupLayoutImpl(entries as ExoticEntries<Entries>);
 }
 
 export function isBindGroupLayout<T extends TgpuBindGroupLayout>(
@@ -252,22 +304,105 @@ class TgpuBindGroupLayoutImpl<
 > implements TgpuBindGroupLayoutExperimental<Entries>
 {
   private _label: string | undefined;
+  private _index: number | undefined;
 
   public readonly resourceType = 'bind-group-layout' as const;
 
-  // TODO: Fill bound values.
   public readonly bound = {} as {
     [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
   };
 
-  constructor(public readonly entries: Entries) {}
+  constructor(public readonly entries: Entries) {
+    let idx = 0;
 
-  get label() {
+    for (const [key, entry] of Object.entries(entries)) {
+      if (entry === null) {
+        idx++;
+        continue;
+      }
+
+      const membership = { idx, key, layout: this };
+
+      if ('uniform' in entry) {
+        const dataType =
+          'type' in entry.uniform ? entry.uniform : entry.uniform(0);
+
+        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+        (this.bound[key] as any) = new TgpuLaidOutBufferImpl(
+          'uniform',
+          dataType,
+          membership,
+        );
+      }
+
+      if ('storage' in entry) {
+        const dataType =
+          'type' in entry.storage ? entry.storage : entry.storage(0);
+
+        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+        (this.bound[key] as any) = new TgpuLaidOutBufferImpl(
+          entry.access ?? 'readonly',
+          dataType,
+          membership,
+        );
+      }
+
+      if ('texture' in entry) {
+        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+        (this.bound[key] as any) = new TgpuLaidOutSampledTextureImpl(
+          entry.texture,
+          entry.viewDimension ?? '2d',
+          entry.multisampled ?? false,
+          membership,
+        );
+      }
+
+      if ('storageTexture' in entry) {
+        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+        (this.bound[key] as any) = new TgpuLaidOutStorageTextureImpl(
+          entry.storageTexture,
+          entry.viewDimension ?? '2d',
+          entry.access ?? 'writeonly',
+          membership,
+        );
+      }
+
+      if ('externalTexture' in entry) {
+        // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+        (this.bound[key] as any) = new TgpuExternalTextureImpl(membership);
+      }
+
+      if ('sampler' in entry) {
+        if (entry.sampler === 'comparison') {
+          // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+          (this.bound[key] as any) = new TgpuLaidOutComparisonSamplerImpl(
+            membership,
+          );
+        } else {
+          // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
+          (this.bound[key] as any) = new TgpuLaidOutSamplerImpl(membership);
+        }
+      }
+
+      idx++;
+    }
+  }
+
+  get label(): string | undefined {
     return this._label;
+  }
+
+  get index(): number | undefined {
+    return this._index;
   }
 
   $name(label?: string | undefined): this {
     this._label = label;
+    return this;
+  }
+
+  $idx(index?: number): this {
+    this._index = index;
     return this;
   }
 
@@ -417,11 +552,6 @@ class TgpuBindGroupImpl<
                 throw new NotUniformError(value);
               }
               resource = { buffer: unwrapper.unwrap(value) };
-            } else if (isBufferUsage(value)) {
-              if (!isUsableAsUniform(value.allocatable)) {
-                throw new NotUniformError(value.allocatable);
-              }
-              resource = { buffer: unwrapper.unwrap(value.allocatable) };
             } else {
               resource = { buffer: value as GPUBuffer };
             }
@@ -440,11 +570,6 @@ class TgpuBindGroupImpl<
                 throw new NotUniformError(value);
               }
               resource = { buffer: unwrapper.unwrap(value) };
-            } else if (isBufferUsage(value)) {
-              if (!isUsableAsStorage(value.allocatable)) {
-                throw new NotUniformError(value.allocatable);
-              }
-              resource = { buffer: unwrapper.unwrap(value.allocatable) };
             } else {
               resource = { buffer: value as GPUBuffer };
             }
@@ -455,18 +580,62 @@ class TgpuBindGroupImpl<
             };
           }
 
-          if (
-            'texture' in entry ||
-            'storageTexture' in entry ||
-            'externalTexture' in entry ||
-            'sampler' in entry
-          ) {
+          if ('texture' in entry) {
+            let resource: GPUTextureView;
+
+            if (isTexture(value)) {
+              if (!isUsableAsSampled(value)) {
+                throw new NotSampledError(value);
+              }
+
+              resource = unwrapper.unwrap(
+                value.asSampled() as TgpuSampledTexture,
+              );
+            } else {
+              resource = value as GPUTextureView;
+            }
+
             return {
               binding: idx,
-              resource: value as
-                | GPUTextureView
-                | GPUExternalTexture
-                | GPUSampler,
+              resource,
+            };
+          }
+
+          if ('storageTexture' in entry) {
+            let resource: GPUTextureView;
+
+            if (isTexture(value)) {
+              if (!isUsableAsStorage(value)) {
+                throw new NotStorageError(value);
+              }
+
+              if (entry.access === 'readonly') {
+                resource = unwrapper.unwrap(
+                  value.asReadonly() as TgpuReadonlyTexture,
+                );
+              } else if (entry.access === 'mutable') {
+                resource = unwrapper.unwrap(
+                  value.asMutable() as TgpuMutableTexture,
+                );
+              } else {
+                resource = unwrapper.unwrap(
+                  value.asReadonly() as TgpuReadonlyTexture,
+                );
+              }
+            } else {
+              resource = value as GPUTextureView;
+            }
+
+            return {
+              binding: idx,
+              resource,
+            };
+          }
+
+          if ('externalTexture' in entry || 'sampler' in entry) {
+            return {
+              binding: idx,
+              resource: value as GPUExternalTexture | GPUSampler,
             };
           }
 

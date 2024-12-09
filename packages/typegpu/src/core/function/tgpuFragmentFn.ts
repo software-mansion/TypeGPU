@@ -1,8 +1,8 @@
+import type { Vec4f } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
-import type { Block } from '../../smol';
-import type { AnyTgpuData, ResolutionCtx, TgpuResolvable } from '../../types';
+import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
-import type { UnwrapArgs, UnwrapReturn } from './fnTypes';
+import type { ExoticIO, IOLayout, Implementation, InferIO } from './fnTypes';
 
 // ----------
 // Public API
@@ -12,20 +12,18 @@ import type { UnwrapArgs, UnwrapReturn } from './fnTypes';
  * Describes a fragment entry function signature (its arguments and return type)
  */
 export interface TgpuFragmentFnShell<
-  // TODO: Allow IO struct or builtins here
-  Args extends AnyTgpuData[],
-  // TODO: Allow IO struct here
-  Return extends AnyTgpuData,
+  Varying extends IOLayout,
+  Output extends IOLayout<Vec4f>,
 > {
-  readonly argTypes: Args;
-  readonly returnType: Return;
+  readonly argTypes: [Varying];
+  readonly returnType: Output;
 
   /**
    * Creates a type-safe implementation of this signature
    */
-  implement(
-    implementation: (...args: UnwrapArgs<Args>) => UnwrapReturn<Return>,
-  ): TgpuFragmentFn<[], Return>;
+  does(
+    implementation: (varying: InferIO<Varying>) => InferIO<Output>,
+  ): TgpuFragmentFn<Varying, Output>;
 
   /**
    * @param implementation
@@ -33,19 +31,17 @@ export interface TgpuFragmentFnShell<
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  implement(implementation: string): TgpuFragmentFn<[], Return>;
+  does(implementation: string): TgpuFragmentFn<Varying, Output>;
 }
 
 export interface TgpuFragmentFn<
-  Args extends [],
-  // TODO: Allow IO struct or `vec4f` here
-  Output extends AnyTgpuData,
+  Varying extends IOLayout = IOLayout,
+  Output extends IOLayout<Vec4f> = IOLayout<Vec4f>,
 > extends TgpuResolvable,
     TgpuNamable {
-  readonly shell: TgpuFragmentFnShell<AnyTgpuData[], AnyTgpuData>;
+  readonly shell: TgpuFragmentFnShell<Varying, Output>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
-  $__ast(argNames: string[], body: Block): this;
 }
 
 /**
@@ -54,22 +50,25 @@ export interface TgpuFragmentFn<
  * to process information received from the vertex shader stage and builtins to determine
  * the final color of the pixel (many pixels in case of multiple targets).
  *
- * @param argTypes
- *   Builtins and vertex attributes to be made available to functions that implement this shell.
- * @param returnType
- *   A `vec4f`, signaling this function outputs a color for one target, or a struct containing
+ * @param varyingTypes
+ *   Values computed in the vertex stage to be made available to functions that implement this shell.
+ * @param outputType
+ *   A `vec4f`, signaling this function outputs a color for one target, or a struct/array containing
  *   colors for multiple targets.
  */
 export function fragmentFn<
-  Args extends AnyTgpuData[],
-  Return extends AnyTgpuData,
->(argTypes: Args, returnType: Return): TgpuFragmentFnShell<Args, Return> {
+  Varying extends IOLayout,
+  Output extends IOLayout<Vec4f>,
+>(
+  varyingTypes: Varying,
+  outputType: Output,
+): TgpuFragmentFnShell<ExoticIO<Varying>, ExoticIO<Output>> {
   return {
-    argTypes,
-    returnType,
+    argTypes: [varyingTypes as ExoticIO<Varying>],
+    returnType: outputType as ExoticIO<Output>,
 
-    implement(implementation) {
-      return createFragmentFn(this, implementation);
+    does(implementation): TgpuFragmentFn<ExoticIO<Varying>, ExoticIO<Output>> {
+      return createFragmentFn(this, implementation as Implementation);
     },
   };
 }
@@ -78,16 +77,11 @@ export function fragmentFn<
 // Implementation
 // --------------
 
-function createFragmentFn<
-  Args extends AnyTgpuData[],
-  Output extends AnyTgpuData,
->(
-  shell: TgpuFragmentFnShell<Args, Output>,
-  implementation:
-    | ((...args: UnwrapArgs<Args>) => UnwrapReturn<Output>)
-    | string,
-): TgpuFragmentFn<[], Output> {
-  type This = TgpuFragmentFn<[], Output>;
+function createFragmentFn(
+  shell: TgpuFragmentFnShell<IOLayout, IOLayout<Vec4f>>,
+  implementation: Implementation,
+): TgpuFragmentFn {
+  type This = TgpuFragmentFn;
 
   const core = createFnCore(shell, implementation);
 
@@ -100,13 +94,6 @@ function createFragmentFn<
 
     $uses(newExternals) {
       core.applyExternals(newExternals);
-      return this;
-    },
-
-    $__ast(argNames: string[], body: Block): This {
-      // When receiving a pre-built $__ast, we are receiving $uses alongside it, so
-      // we do not need to verify external names.
-      core.setAst({ argNames, body, externalNames: [] });
       return this;
     },
 

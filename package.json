@@ -11,7 +11,8 @@
     "coverage": "vitest --coverage",
     "test": "DEV=true EXPERIMENTAL=true pnpm -r dev:build && pnpm run '/^test:.*/'",
     "test:types": "pnpm run -r test:types",
-    "test:spec": "vitest run"
+    "test:spec": "vitest run",
+    "nightly-build": "EXPERIMENTAL=true pnpm -r dev:build && EXPERIMENTAL=true pnpm --filter typegpu prepare-package"
   },
   "engines": {
     "node": ">=12.20.0"
@@ -36,14 +37,10 @@
   "devDependencies": {
     "@biomejs/biome": "^1.8.3",
     "@types/node": "^20.11.13",
-    "@vitest/coverage-v8": "0.33.0",
-    "@vitest/ui": "0.33.0",
     "dpdm": "^3.14.0",
-    "jsdom": "^24.0.0",
-    "prettier": "^3.2.4",
     "tsup": "^8.0.2",
     "typescript": "^5.3.3",
-    "vitest": "0.33.0"
+    "vitest": "^2.1.5"
   },
   "packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e"
 }

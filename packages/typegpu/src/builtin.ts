@@ -1,70 +1,110 @@
-import type { vec3u, vec4f } from './data';
+import { arrayOf } from './data/array';
+import { type IsBuiltin, attribute } from './data/attributes';
+import { f32, u32 } from './data/numeric';
+import { vec3u, vec4f } from './data/vector';
+import type {
+  Builtin,
+  Decorated,
+  F32,
+  U32,
+  Vec3u,
+  Vec4f,
+  WgslArray,
+} from './data/wgslTypes';
 
-import { type BuiltinName, builtinNameToSymbol } from './builtinIdentifiers';
-import { code } from './tgpuCode';
-import type { ResolutionCtx, TgpuResolvable } from './types';
+// ----------
+// Public API
+// ----------
 
-export interface TgpuBuiltin extends TgpuResolvable {
-  readonly name: BuiltinName;
-  readonly s: symbol;
-}
-
-class TgpuBuiltinImpl implements TgpuBuiltin {
-  public readonly s: symbol;
-
-  constructor(public readonly name: BuiltinName) {
-    this.s = builtinNameToSymbol.get(name) as symbol;
-  }
-
-  get label() {
-    return this.name;
-  }
-
-  resolve(ctx: ResolutionCtx): string {
-    return ctx.resolve(code`${this.s}`);
-  }
-}
-
-export type BuiltinVertexIndex = TgpuBuiltin & number;
-export type BuiltinInstanceIndex = TgpuBuiltin & number;
-export type BuiltinPosition = TgpuBuiltin & vec4f;
-export type BuiltinClipDistances = TgpuBuiltin & number[];
-export type BuiltinFrontFacing = TgpuBuiltin & boolean;
-export type BuiltinFragDepth = TgpuBuiltin & number;
-export type BuiltinSampleIndex = TgpuBuiltin & number;
-export type BuiltinSampleMask = TgpuBuiltin & vec4f;
-export type BuiltinFragment = TgpuBuiltin & vec4f;
-export type BuiltinLocalInvocationId = TgpuBuiltin & vec3u;
-export type BuiltinLocalInvocationIndex = TgpuBuiltin & number;
-export type BuiltinGlobalInvocationId = TgpuBuiltin & vec3u;
-export type BuiltinWorkgroupId = TgpuBuiltin & vec3u;
-export type BuiltinNumWorkgroups = TgpuBuiltin & vec3u;
+export type BuiltinVertexIndex = Decorated<U32, [Builtin<'vertex_index'>]>;
+export type BuiltinInstanceIndex = Decorated<U32, [Builtin<'instance_index'>]>;
+export type BuiltinPosition = Decorated<Vec4f, [Builtin<'position'>]>;
+export type BuiltinClipDistances = Decorated<
+  WgslArray<U32>,
+  [Builtin<'clip_distances'>]
+>;
+export type BuiltinFrontFacing = Decorated<F32, [Builtin<'front_facing'>]>;
+export type BuiltinFragDepth = Decorated<F32, [Builtin<'frag_depth'>]>;
+export type BuiltinSampleIndex = Decorated<U32, [Builtin<'sample_index'>]>;
+export type BuiltinSampleMask = Decorated<U32, [Builtin<'sample_mask'>]>;
+export type BuiltinFragment = Decorated<Vec4f, [Builtin<'fragment'>]>;
+export type BuiltinLocalInvocationId = Decorated<
+  Vec3u,
+  [Builtin<'local_invocation_id'>]
+>;
+export type BuiltinLocalInvocationIndex = Decorated<
+  U32,
+  [Builtin<'local_invocation_index'>]
+>;
+export type BuiltinGlobalInvocationId = Decorated<
+  Vec3u,
+  [Builtin<'global_invocation_id'>]
+>;
+export type BuiltinWorkgroupId = Decorated<Vec3u, [Builtin<'workgroup_id'>]>;
+export type BuiltinNumWorkgroups = Decorated<
+  Vec3u,
+  [Builtin<'num_workgroups'>]
+>;
 
 export const builtin = {
-  vertexIndex: new TgpuBuiltinImpl('vertex_index') as BuiltinVertexIndex,
-  instanceIndex: new TgpuBuiltinImpl('instance_index') as BuiltinInstanceIndex,
-  position: new TgpuBuiltinImpl('position') as BuiltinPosition,
-  clipDistances: new TgpuBuiltinImpl('clip_distances') as BuiltinClipDistances,
-  frontFacing: new TgpuBuiltinImpl('front_facing') as BuiltinFrontFacing,
-  fragDepth: new TgpuBuiltinImpl('frag_depth') as BuiltinFragDepth,
-  sampleIndex: new TgpuBuiltinImpl('sample_index') as BuiltinSampleIndex,
-  sampleMask: new TgpuBuiltinImpl('sample_mask') as BuiltinSampleMask,
-  fragment: new TgpuBuiltinImpl('fragment') as BuiltinFragment,
-  localInvocationId: new TgpuBuiltinImpl(
-    'local_invocation_id',
-  ) as BuiltinLocalInvocationId,
-  localInvocationIndex: new TgpuBuiltinImpl(
-    'local_invocation_index',
-  ) as BuiltinLocalInvocationIndex,
-  globalInvocationId: new TgpuBuiltinImpl(
-    'global_invocation_id',
-  ) as BuiltinGlobalInvocationId,
-  workgroupId: new TgpuBuiltinImpl('workgroup_id') as BuiltinWorkgroupId,
-  numWorkgroups: new TgpuBuiltinImpl('num_workgroups') as BuiltinNumWorkgroups,
+  vertexIndex: attribute(u32, {
+    type: '@builtin',
+    value: 'vertex_index',
+  }) as BuiltinVertexIndex,
+  instanceIndex: attribute(u32, {
+    type: '@builtin',
+    value: 'instance_index',
+  }) as BuiltinInstanceIndex,
+  position: attribute(vec4f, {
+    type: '@builtin',
+    value: 'position',
+  }) as BuiltinPosition,
+  clipDistances: attribute(arrayOf(u32, 8), {
+    type: '@builtin',
+    value: 'clip_distances',
+  }) as BuiltinClipDistances,
+  frontFacing: attribute(f32, {
+    type: '@builtin',
+    value: 'front_facing',
+  }) as BuiltinFrontFacing,
+  fragDepth: attribute(f32, {
+    type: '@builtin',
+    value: 'frag_depth',
+  }) as BuiltinFragDepth,
+  sampleIndex: attribute(u32, {
+    type: '@builtin',
+    value: 'sample_index',
+  }) as BuiltinSampleIndex,
+  sampleMask: attribute(u32, {
+    type: '@builtin',
+    value: 'sample_mask',
+  }) as BuiltinSampleMask,
+  localInvocationId: attribute(vec3u, {
+    type: '@builtin',
+    value: 'local_invocation_id',
+  }) as BuiltinLocalInvocationId,
+  localInvocationIndex: attribute(u32, {
+    type: '@builtin',
+    value: 'local_invocation_index',
+  }) as BuiltinLocalInvocationIndex,
+  globalInvocationId: attribute(vec3u, {
+    type: '@builtin',
+    value: 'global_invocation_id',
+  }) as BuiltinGlobalInvocationId,
+  workgroupId: attribute(vec3u, {
+    type: '@builtin',
+    value: 'workgroup_id',
+  }) as BuiltinWorkgroupId,
+  numWorkgroups: attribute(vec3u, {
+    type: '@builtin',
+    value: 'num_workgroups',
+  }) as BuiltinNumWorkgroups,
 } as const;
 
-type Builtin = (typeof builtin)[keyof typeof builtin];
+export type AnyBuiltin = (typeof builtin)[keyof typeof builtin];
 
-export type OmitBuiltins<S extends object> = {
-  [Key in keyof S as S[Key] extends Builtin ? never : Key]: S[Key];
-};
+export type OmitBuiltins<S> = IsBuiltin<S> extends true
+  ? never
+  : {
+      [Key in keyof S as IsBuiltin<S[Key]> extends true ? never : Key]: S[Key];
+    };

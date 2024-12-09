@@ -9,6 +9,7 @@ import { ArrayInfo, StructInfo, TemplateInfo, WgslReflect } from 'wgsl_reflect';
  * @typedef {import('wgsl_reflect').MemberInfo} MemberInfo
  * @typedef {import('wgsl_reflect').TypeInfo} TypeInfo
  * @typedef {import('wgsl_reflect').VariableInfo} VariableInfo
+ * @typedef {import('wgsl_reflect').FunctionInfo} FunctionInfo
  */
 
 const cwd = new URL(`file:${process.cwd()}/`);
@@ -22,6 +23,7 @@ const LENGTH_VAR = 'arrayLength';
  * @prop {boolean} toTs
  * @prop {'commonjs' | 'esmodule'} moduleSyntax
  * @prop {'keep' | 'overwrite'} [existingFileStrategy]
+ * @prop {boolean} experimentalFunctions
  * @prop {Set<string>} [declaredIdentifiers]
  * @prop {{tgpu?: boolean, data?: boolean }} [usedImports]
  */
@@ -105,6 +107,7 @@ export function generate(
     outputPath: '',
     toTs: true,
     moduleSyntax: 'esmodule',
+    experimentalFunctions: true,
   },
 ) {
   const reflect = new WgslReflect(wgsl);
@@ -115,11 +118,16 @@ export function generate(
     reflect.getBindGroups(),
     options,
   );
+
+  const functions = options.experimentalFunctions
+    ? generateFunctions(reflect.functions, wgsl, options)
+    : null;
+
   const imports = generateImports(options);
   const exports_ = generateExports(options);
 
   return `/* generated via tgpu-gen by TypeGPU */
-${[imports, structs, aliases, bindGroupLayouts, exports_].filter((generated) => generated.trim() !== '').join('\n')}
+${[imports, structs, aliases, bindGroupLayouts, functions, exports_].filter((generated) => generated && generated.trim() !== '').join('\n')}
 `;
 }
 
@@ -218,7 +226,7 @@ function generateType(type_, options) {
   const result =
     type_.attributes?.reduce(
       (acc, attribute) =>
-        ['align', 'size'].includes(attribute.name)
+        ['align', 'size', 'location'].includes(attribute.name)
           ? `d.${attribute.name}(${attribute.value}, ${acc})`
           : acc,
       tgpuType,
@@ -424,6 +432,61 @@ function generateExternalTextureVariable(variable) {
   return `{
     externalTexture: {},
   }`;
+}
+
+/**
+ * @param {FunctionInfo[]} functions
+ * @param {string} wgsl
+ * @param {Options} options
+ */
+function generateFunctions(functions, wgsl, options) {
+  return functions.length > 0
+    ? `\n/* functions */
+${functions
+  .map(
+    (func) =>
+      `${declareConst(func.name, options)} = ${generateFunction(func, wgsl, options)};`,
+  )
+  .join('\n\n')}`
+    : '';
+}
+
+/**
+ * @param {FunctionInfo} func
+ * @param {string} wgsl
+ * @param {Options} options
+ */
+function generateFunction(func, wgsl, options) {
+  setUseImport('tgpu', options);
+
+  const implementation = wgsl
+    .split('\n')
+    .slice(func.startLine - 1, func.endLine)
+    .join('\n');
+
+  const funcType =
+    func.stage === 'fragment'
+      ? 'fragmentFn'
+      : func.stage === 'vertex'
+        ? 'vertexFn'
+        : 'fn';
+
+  const inputs = `[${func.arguments
+    .flatMap((arg) =>
+      arg.type &&
+      arg.type.attributes?.find((attr) => attr.name === 'builtin') === undefined
+        ? [generateType(arg.type, options)]
+        : [],
+    )
+    .join(', ')}]`;
+
+  const output = func.returnType
+    ? generateType(func.returnType, options)
+    : null;
+
+  return `tgpu
+  .${funcType}(${inputs}${output ? `, ${output}` : ''})
+  .does(/* wgsl */ \`${implementation.slice(implementation.indexOf(func.name) + func.name.length)}\`)`;
 }
 
 /**

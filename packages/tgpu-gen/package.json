@@ -15,11 +15,11 @@
     "chokidar": "^4.0.1",
     "glob": "^11.0.0",
     "remeda": "^2.3.0",
-    "wgsl_reflect": "^1.0.12"
+    "wgsl_reflect": "git://github.com/mhawryluk/wgsl_reflect.git#85994fdc8d8a3abbb4f79baf3891e54eed0c1c63"
   },
   "files": ["README.md", "LICENSE.md", "package.json", "**/*.mjs"],
   "devDependencies": {
-    "vitest": "0.33.0"
+    "vitest": "^2.1.5"
   },
   "packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e"
 }

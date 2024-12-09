@@ -1,120 +1,47 @@
-import type { TgpuFnShellBase } from './core/function/fnCore';
+import type { Block } from 'tinyest';
+import { resolveData } from './core/resolve/resolveData';
+import { type AnyWgslData, isWgslData } from './data/wgslTypes';
 import { MissingSlotValueError, ResolutionError } from './errors';
 import { onGPU } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
-import { type Block, generateFunction } from './smol';
-import { code } from './tgpuCode';
-import { isTextureView } from './tgpuTexture';
+import { naturalsExcept } from './shared/generators';
+import { generateFunction } from './smol';
+import {
+  type TgpuBindGroup,
+  type TgpuBindGroupLayout,
+  type TgpuLayoutEntry,
+  bindGroupLayout,
+} from './tgpuBindGroupLayout';
 import type {
-  AnyTgpuData,
-  BufferUsage,
   Eventual,
+  FnToWgslOptions,
   ResolutionCtx,
   Resource,
   SlotValuePair,
-  TgpuBindable,
-  TgpuIdentifier,
-  TgpuRenderResource,
   TgpuResolvable,
   TgpuSlot,
   Wgsl,
 } from './types';
-import {
-  UnknownData,
-  isDepthTextureType,
-  isExternalTextureType,
-  isResolvable,
-  isSamplerType,
-  isSlot,
-} from './types';
+import { UnknownData, isSlot } from './types';
+
+/**
+ * Inserted into bind group entry definitions that belong
+ * to the automatically generated catch-all bind group.
+ *
+ * A non-occupied group index can only be determined after
+ * every resource has been resolved, so this acts as a placeholder
+ * to be replaced with an actual numeric index at the very end
+ * of the resolution process.
+ */
+const CATCHALL_BIND_GROUP_IDX_MARKER = '#CATCHALL#';
 
 export type ResolutionCtxImplOptions = {
   readonly names: NameRegistry;
-  readonly bindingGroup?: number;
   readonly jitTranspiler?: JitTranspiler | undefined;
 };
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
-
-const usageToVarTemplateMap: Record<Exclude<BufferUsage, 'vertex'>, string> = {
-  uniform: 'uniform',
-  mutable: 'storage, read_write',
-  readonly: 'storage, read',
-};
-
-class SharedResolutionState {
-  private _nextFreeBindingIdx = 0;
-  private _nextFreeVertexBindingIdx = 0;
-  private readonly _usedBindables = new Set<TgpuBindable>();
-  private readonly _usedRenderResources = new Set<TgpuRenderResource>();
-  private readonly _resourceToIndexMap = new WeakMap<
-    TgpuRenderResource | TgpuBindable,
-    number
-  >();
-  private readonly _vertexBufferToIndexMap = new WeakMap<
-    TgpuBindable,
-    number
-  >();
-  private readonly _usedBuiltins = new Set<symbol>();
-  private readonly _declarations: string[] = [];
-
-  constructor(
-    public readonly names: NameRegistry,
-    private readonly _bindingGroup: number,
-    public readonly jitTranspiler: JitTranspiler | undefined,
-  ) {}
-
-  get usedBindables(): Iterable<TgpuBindable> {
-    return this._usedBindables;
-  }
-
-  get usedRenderResources(): Iterable<TgpuRenderResource> {
-    return this._usedRenderResources;
-  }
-
-  get declarations(): Iterable<string> {
-    return this._declarations;
-  }
-
-  get usedBuiltins(): Iterable<symbol> {
-    return this._usedBuiltins;
-  }
-
-  reserveBindingEntry(bindable: TgpuBindable) {
-    this._usedBindables.add(bindable);
-    const nextIdx = this._nextFreeBindingIdx++;
-    this._resourceToIndexMap.set(bindable, nextIdx);
-
-    return { group: this._bindingGroup, idx: nextIdx };
-  }
-
-  registerVertexEntry(bindable: TgpuBindable) {
-    this._usedBindables.add(bindable);
-    const nextIdx = this._nextFreeVertexBindingIdx++;
-    this._vertexBufferToIndexMap.set(bindable, nextIdx);
-  }
-
-  reserveRenderResourceEntry(resource: TgpuRenderResource) {
-    this._usedRenderResources.add(resource);
-    const nextIdx = this._nextFreeBindingIdx++;
-    this._resourceToIndexMap.set(resource, nextIdx);
-
-    return { group: this._bindingGroup, idx: nextIdx };
-  }
-
-  getBindingIndex(resource: TgpuRenderResource | TgpuBindable) {
-    return this._resourceToIndexMap.get(resource);
-  }
-
-  addDeclaration(declaration: string) {
-    this._declarations.push(declaration);
-  }
-
-  addBuiltin(builtin: symbol) {
-    this._usedBuiltins.add(builtin);
-  }
-}
 
 type ItemLayer = {
   type: 'item';
@@ -130,12 +57,12 @@ type FunctionScopeLayer = {
   type: 'functionScope';
   args: Resource[];
   externalMap: Record<string, unknown>;
-  returnType: AnyTgpuData | undefined;
+  returnType: AnyWgslData | undefined;
 };
 
 type BlockScopeLayer = {
   type: 'blockScope';
-  declarations: Map<string, AnyTgpuData | UnknownData>;
+  declarations: Map<string, AnyWgslData | UnknownData>;
 };
 
 class ItemStateStack {
@@ -176,7 +103,7 @@ class ItemStateStack {
 
   pushFunctionScope(
     args: Resource[],
-    returnType: AnyTgpuData | undefined,
+    returnType: AnyWgslData | undefined,
     externalMap: Record<string, unknown>,
   ) {
     this._stack.push({
@@ -234,7 +161,13 @@ class ItemStateStack {
           // TODO: Extract the type of the external value.
           return { value: external, dataType: UnknownData };
         }
-      } else if (layer?.type === 'blockScope') {
+
+        // Since functions cannot access resources from the calling scope, we
+        // return early here.
+        return undefined;
+      }
+
+      if (layer?.type === 'blockScope') {
         const declarationType = layer.declarations.get(id);
         if (declarationType !== undefined) {
           return { value: id, dataType: declarationType };
@@ -285,37 +218,44 @@ export class IndentController {
   }
 }
 
-export class ResolutionCtxImpl implements ResolutionCtx {
+interface FixedBindingConfig {
+  layoutEntry: TgpuLayoutEntry;
+  resource: object;
+}
+
+class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _memoizedResolves = new WeakMap<
     // WeakMap because if the resolvable does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
-    TgpuResolvable,
+    TgpuResolvable | AnyWgslData,
     { slotToValueMap: SlotToValueMap; result: string }[]
   >();
 
-  private readonly _shared: SharedResolutionState;
   private readonly _indentController = new IndentController();
+  private readonly _jitTranspiler: JitTranspiler | undefined;
+  private readonly _itemStateStack = new ItemStateStack();
+  private readonly _declarations: string[] = [];
 
-  private _itemStateStack = new ItemStateStack();
+  // -- Bindings
+  /**
+   * A map from registered bind group layouts to random strings put in
+   * place of their group index. The whole tree has to be traversed to
+   * collect every use of a typed bind group layout, since they can be
+   * explicitly imposed group indices, and they cannot collide.
+   */
+  public readonly bindGroupLayoutsToPlaceholderMap = new Map<
+    TgpuBindGroupLayout,
+    string
+  >();
+  private _nextFreeLayoutPlaceholderIdx = 0;
+  public readonly fixedBindings: FixedBindingConfig[] = [];
+  // --
+
+  public readonly names: NameRegistry;
 
   constructor(opts: ResolutionCtxImplOptions) {
-    this._shared = new SharedResolutionState(
-      opts.names,
-      opts.bindingGroup ?? 0,
-      opts.jitTranspiler,
-    );
-  }
-
-  get usedBindables() {
-    return this._shared.usedBindables;
-  }
-
-  get usedRenderResources() {
-    return this._shared.usedRenderResources;
-  }
-
-  get usedBuiltins() {
-    return this._shared.usedBuiltins;
+    this.names = opts.names;
+    this._jitTranspiler = opts.jitTranspiler;
   }
 
   get pre(): string {
@@ -346,101 +286,66 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     body: Block;
     externalNames: string[];
   } {
-    if (!this._shared.jitTranspiler) {
+    if (!this._jitTranspiler) {
       throw new Error(
         'Tried to execute a tgpu.fn function without providing a JIT transpiler, or transpiling at build time.',
       );
     }
 
-    return this._shared.jitTranspiler.transpileFn(fn);
+    return this._jitTranspiler.transpileFn(fn);
   }
 
-  fnToWgsl(
-    // biome-ignore lint/suspicious/noExplicitAny: <no need for generic magic>
-    shell: TgpuFnShellBase<any, AnyTgpuData>,
-    argNames: string[],
-    body: Block,
-    externalMap: Record<string, unknown>,
-  ): { head: Wgsl; body: Wgsl } {
-    const args: { value: string; dataType: AnyTgpuData }[] = argNames.map(
-      (name, idx) => ({
-        value: name,
-        dataType: shell.argTypes[idx],
-      }),
+  fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl } {
+    this._itemStateStack.pushFunctionScope(
+      options.args,
+      options.returnType,
+      options.externalMap,
     );
-
-    this._itemStateStack.pushFunctionScope(args, shell.returnType, externalMap);
-    const str = generateFunction(this, body);
+    const str = generateFunction(this, options.body);
     this._itemStateStack.pop();
 
-    const argList = args
-      .map((arg) => `${arg.value}: ${this.resolve(arg.dataType)}`)
+    const argList = options.args
+      .map(
+        (arg) => `${arg.value}: ${this.resolve(arg.dataType as AnyWgslData)}`,
+      )
       .join(', ');
 
     return {
       head:
-        shell.returnType !== undefined
-          ? `(${argList}) -> ${this.resolve(shell.returnType)}`
+        options.returnType !== undefined
+          ? `(${argList}) -> ${this.resolve(options.returnType)}`
           : `(${argList})`,
       body: str,
     };
   }
 
-  addDeclaration(declaration: TgpuResolvable): void {
-    this._shared.addDeclaration(this.resolve(declaration));
+  addDeclaration(declaration: string): void {
+    this._declarations.push(declaration);
   }
 
-  addBinding(bindable: TgpuBindable, identifier: TgpuIdentifier): void {
-    if (bindable.usage === 'vertex') {
-      this._shared.registerVertexEntry(bindable);
-      return;
-    }
-    const { group, idx } = this._shared.reserveBindingEntry(bindable);
+  allocateLayoutEntry(layout: TgpuBindGroupLayout): string {
+    const memoMap = this.bindGroupLayoutsToPlaceholderMap;
+    let placeholderKey = memoMap.get(layout);
 
-    this.addDeclaration(
-      code`@group(${group}) @binding(${idx}) var<${usageToVarTemplateMap[bindable.usage]}> ${identifier}: ${bindable.allocatable.dataType};`,
-    );
-  }
-
-  addRenderResource(
-    resource: TgpuRenderResource,
-    identifier: TgpuIdentifier,
-  ): void {
-    const { group, idx } = this._shared.reserveRenderResourceEntry(resource);
-
-    if (
-      isSamplerType(resource.type) ||
-      isExternalTextureType(resource.type) ||
-      isDepthTextureType(resource.type)
-    ) {
-      this.addDeclaration(
-        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type};`,
-      );
-      return;
+    if (!placeholderKey) {
+      placeholderKey = `#BIND_GROUP_LAYOUT_${this._nextFreeLayoutPlaceholderIdx++}#`;
+      memoMap.set(layout, placeholderKey);
     }
 
-    if (isTextureView(resource)) {
-      if (resource.access !== undefined) {
-        this.addDeclaration(
-          code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.texture.descriptor.format}, ${resource.access}>;`,
-        );
-        return;
-      }
-      this.addDeclaration(
-        code`@group(${group}) @binding(${idx}) var ${identifier}: ${resource.type}<${resource.dataType}>;`,
-      );
-      return;
-    }
-
-    throw new Error(`Unsupported resource type: ${resource.type}`);
+    return placeholderKey;
   }
 
-  addBuiltin(builtin: symbol): void {
-    this._shared.addBuiltin(builtin);
-  }
+  allocateFixedEntry(
+    layoutEntry: TgpuLayoutEntry,
+    resource: object,
+  ): { group: string; binding: number } {
+    const binding = this.fixedBindings.length;
+    this.fixedBindings.push({ layoutEntry, resource });
 
-  nameFor(item: TgpuResolvable): string {
-    return this._shared.names.nameFor(item);
+    return {
+      group: CATCHALL_BIND_GROUP_IDX_MARKER,
+      binding,
+    };
   }
 
   readSlot<T>(slot: TgpuSlot<T>): T {
@@ -467,7 +372,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   /**
    * @param item The item whose resolution should be either retrieved from the cache (if there is a cache hit), or resolved.
    */
-  _getOrInstantiate(item: TgpuResolvable): string {
+  _getOrInstantiate(item: TgpuResolvable | AnyWgslData): string {
     // All memoized versions of `item`
     const instances = this._memoizedResolves.get(item) ?? [];
 
@@ -488,7 +393,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       // If we got here, no item with the given slot-to-value combo exists in cache yet
-      const result = item.resolve(this);
+      const result = isWgslData(item)
+        ? resolveData(this, item)
+        : item.resolve(this);
 
       // We know which slots the item used while resolving
       const slotToValueMap = new Map<TgpuSlot<unknown>, unknown>();
@@ -512,7 +419,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   resolve(item: Wgsl, slotValueOverrides: SlotValuePair<unknown>[] = []) {
-    if (!isResolvable(item)) {
+    if (
+      typeof item === 'string' ||
+      typeof item === 'number' ||
+      typeof item === 'boolean'
+    ) {
       return String(item);
     }
 
@@ -525,7 +436,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     try {
       if (this._itemStateStack.itemDepth === 0) {
         const result = onGPU(() => this._getOrInstantiate(item));
-        return `${[...this._shared.declarations].join('\n\n')}${result}`;
+        return `${[...this._declarations].join('\n\n')}${result}`;
       }
 
       return this._getOrInstantiate(item);
@@ -535,12 +446,69 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
     }
   }
+}
 
-  getIndexFor(item: TgpuBindable | TgpuRenderResource) {
-    const index = this._shared.getBindingIndex(item);
-    if (index === undefined) {
-      throw new Error('No index found for item');
-    }
-    return index;
+export interface ResolutionResult {
+  code: string;
+  bindGroupLayouts: TgpuBindGroupLayout[];
+  catchall: [number, TgpuBindGroup] | null;
+}
+
+export function resolve(
+  item: Wgsl,
+  options: ResolutionCtxImplOptions,
+): ResolutionResult {
+  const ctx = new ResolutionCtxImpl(options);
+  let code = ctx.resolve(item);
+
+  const memoMap = ctx.bindGroupLayoutsToPlaceholderMap;
+  const bindGroupLayouts: TgpuBindGroupLayout[] = [];
+  const takenIndices = new Set<number>(
+    [...memoMap.keys()]
+      .map((layout) => layout.index)
+      .filter((v): v is number => v !== undefined),
+  );
+
+  const automaticIds = naturalsExcept(takenIndices);
+
+  const layoutEntries = ctx.fixedBindings.map(
+    (binding, idx) =>
+      [String(idx), binding.layoutEntry] as [string, TgpuLayoutEntry],
+  );
+
+  const createCatchallGroup = () => {
+    const catchallIdx = automaticIds.next().value;
+    const catchallLayout = bindGroupLayout(Object.fromEntries(layoutEntries));
+    bindGroupLayouts[catchallIdx] = catchallLayout;
+    code = code.replaceAll(CATCHALL_BIND_GROUP_IDX_MARKER, String(catchallIdx));
+
+    return [
+      catchallIdx,
+      catchallLayout.populate(
+        Object.fromEntries(
+          ctx.fixedBindings.map(
+            (binding, idx) =>
+              // biome-ignore lint/suspicious/noExplicitAny: <it's fine>
+              [String(idx), binding.resource] as [string, any],
+          ),
+        ),
+      ),
+    ] as [number, TgpuBindGroup];
+  };
+
+  // Retrieving the catch-all binding index first, because it's inherently
+  // the least swapped bind group (fixed and cannot be swapped).
+  const catchall = layoutEntries.length > 0 ? createCatchallGroup() : null;
+
+  for (const [layout, placeholder] of memoMap.entries()) {
+    const idx = layout.index ?? automaticIds.next().value;
+    bindGroupLayouts[idx] = layout;
+    code = code.replaceAll(placeholder, String(idx));
   }
+
+  return {
+    code,
+    bindGroupLayouts,
+    catchall,
+  };
 }

@@ -1,5 +1,38 @@
 import type { TgpuBuffer } from './core/buffer/buffer';
-import type { AnyTgpuData, TgpuResolvable, TgpuSlot } from './types';
+import type { AnyData } from './data/dataTypes';
+import type { AnyWgslData } from './data/wgslTypes';
+import type { TgpuResolvable, TgpuSlot } from './types';
+
+const prefix = 'Invariant failed';
+
+/**
+ * Inspired by: https://github.com/alexreardon/tiny-invariant/blob/master/src/tiny-invariant.ts
+ */
+export function invariant(
+  condition: unknown,
+  message?: string | (() => string),
+): asserts condition {
+  if (condition) {
+    // Condition passed
+    return;
+  }
+
+  // In production we strip the message but still throw
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(prefix);
+  }
+
+  // When not in production we allow the message to pass through
+  // *This block will be removed in production builds*
+
+  const provided = typeof message === 'function' ? message() : message;
+
+  // Options:
+  // 1. message provided: `${prefix}: ${provided}`
+  // 2. message not provided: prefix
+  const value = provided ? `${prefix}: ${provided}` : prefix;
+  throw new Error(value);
+}
 
 /**
  * An error that happens during resolution of WGSL code.
@@ -11,7 +44,7 @@ import type { AnyTgpuData, TgpuResolvable, TgpuSlot } from './types';
 export class ResolutionError extends Error {
   constructor(
     public readonly cause: unknown,
-    public readonly trace: TgpuResolvable[],
+    public readonly trace: (TgpuResolvable | AnyWgslData)[],
   ) {
     let entries = trace.map((ancestor) => `- ${ancestor}`);
 
@@ -26,7 +59,7 @@ export class ResolutionError extends Error {
     Object.setPrototypeOf(this, ResolutionError.prototype);
   }
 
-  appendToTrace(ancestor: TgpuResolvable): ResolutionError {
+  appendToTrace(ancestor: TgpuResolvable | AnyWgslData): ResolutionError {
     const newTrace = [ancestor, ...this.trace];
 
     return new ResolutionError(this.cause, newTrace);
@@ -48,40 +81,14 @@ export class MissingSlotValueError extends Error {
 /**
  * @category Errors
  */
-export class RecursiveDataTypeError extends Error {
-  constructor() {
-    super('Recursive types are not supported in WGSL');
-
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, RecursiveDataTypeError.prototype);
-  }
-}
-
-/**
- * @category Errors
- */
 export class NotUniformError extends Error {
-  constructor(value: TgpuBuffer<AnyTgpuData>) {
+  constructor(value: TgpuBuffer<AnyData>) {
     super(
-      `Buffer '${value.label ?? '<unnamed>'}' is not bindable as a uniform. Use .$usage(tgu.Uniform) to allow it.`,
+      `Buffer '${value.label ?? '<unnamed>'}' is not bindable as a uniform. Use .$usage('uniform') to allow it.`,
     );
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, NotUniformError.prototype);
-  }
-}
-
-/**
- * @category Errors
- */
-export class NotStorageError extends Error {
-  constructor(value: TgpuBuffer<AnyTgpuData>) {
-    super(
-      `Buffer '${value.label ?? '<unnamed>'}' is not bindable as storage. Use .$usage(tgu.Storage) to allow it.`,
-    );
-
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, NotStorageError.prototype);
   }
 }
 
@@ -93,5 +100,16 @@ export class MissingLinksError extends Error {
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, MissingLinksError.prototype);
+  }
+}
+
+export class MissingBindGroupError extends Error {
+  constructor(layoutLabel: string | undefined) {
+    super(
+      `Bind group was not provided for '${layoutLabel ?? '<unnamed>'}' layout.`,
+    );
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, MissingBindGroupError.prototype);
   }
 }

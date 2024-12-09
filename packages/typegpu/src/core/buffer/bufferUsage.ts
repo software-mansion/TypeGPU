@@ -1,89 +1,77 @@
-import type { Unwrap } from 'typed-binary';
-import { isArraySchema } from '../../data';
+import type { AnyWgslData, BaseWgslData } from '../../data/wgslTypes';
+import { type Storage, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
-import { identifier } from '../../tgpuIdentifier';
+import type { Infer } from '../../shared/repr';
+import type { LayoutMembership } from '../../tgpuBindGroupLayout';
 import type {
-  AnyTgpuData,
-  BufferUsage,
+  BindableBufferUsage,
   ResolutionCtx,
-  TgpuBindable,
+  TgpuResolvable,
 } from '../../types';
-import {
-  type Storage,
-  type TgpuBuffer,
-  type Uniform,
-  type Vertex,
-  isUsableAsStorage,
-  isUsableAsUniform,
-  isUsableAsVertex,
-} from './buffer';
+import { type TgpuBuffer, type Uniform, isUsableAsUniform } from './buffer';
 
 // ----------
 // Public API
 // ----------
 
-export interface TgpuBufferUniform<TData extends AnyTgpuData>
-  extends TgpuBindable<TData, 'uniform'> {
-  readonly resourceType: 'buffer-usage';
-  readonly value: Unwrap<TData>;
-}
-
-export interface TgpuBufferReadonly<TData extends AnyTgpuData>
-  extends TgpuBindable<TData, 'readonly'> {
-  readonly resourceType: 'buffer-usage';
-  readonly value: Unwrap<TData>;
-}
-
-export interface TgpuBufferMutable<TData extends AnyTgpuData>
-  extends TgpuBindable<TData, 'mutable'> {
-  readonly resourceType: 'buffer-usage';
-  value: Unwrap<TData>;
-}
-
-export interface TgpuBufferVertex<TData extends AnyTgpuData>
-  extends TgpuBindable<TData, 'vertex'> {
-  readonly resourceType: 'buffer-usage';
-  vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'>;
-}
-
 export interface TgpuBufferUsage<
-  TData extends AnyTgpuData,
-  TUsage extends BufferUsage = BufferUsage,
-> extends TgpuBindable<TData, TUsage> {
+  TData extends BaseWgslData,
+  TUsage extends BindableBufferUsage = BindableBufferUsage,
+> extends TgpuResolvable {
   readonly resourceType: 'buffer-usage';
-  value: Unwrap<TData>;
+  readonly usage: TUsage;
+  readonly '~repr': Infer<TData>;
+  value: Infer<TData>;
 }
+
+export interface TgpuBufferUniform<TData extends BaseWgslData>
+  extends TgpuBufferUsage<TData, 'uniform'> {
+  readonly value: Infer<TData>;
+}
+
+export interface TgpuBufferReadonly<TData extends BaseWgslData>
+  extends TgpuBufferUsage<TData, 'readonly'> {
+  readonly value: Infer<TData>;
+}
+
+export interface TgpuBufferMutable<TData extends BaseWgslData>
+  extends TgpuBufferUsage<TData, 'mutable'> {}
 
 export function isBufferUsage<
   T extends
-    | TgpuBufferUniform<AnyTgpuData>
-    | TgpuBufferReadonly<AnyTgpuData>
-    | TgpuBufferMutable<AnyTgpuData>
-    | TgpuBufferVertex<AnyTgpuData>,
+    | TgpuBufferUniform<BaseWgslData>
+    | TgpuBufferReadonly<BaseWgslData>
+    | TgpuBufferMutable<BaseWgslData>,
 >(value: T | unknown): value is T {
-  return !!value && (value as T).resourceType === 'buffer-usage';
+  return (value as T)?.resourceType === 'buffer-usage';
 }
 
 // --------------
 // Implementation
 // --------------
 
-class TgpuBufferUsageImpl<TData extends AnyTgpuData, TUsage extends BufferUsage>
-  implements TgpuBufferUsage<TData, TUsage>
+const usageToVarTemplateMap: Record<BindableBufferUsage, string> = {
+  uniform: 'uniform',
+  mutable: 'storage, read_write',
+  readonly: 'storage, read',
+};
+
+class TgpuFixedBufferImpl<
+  TData extends AnyWgslData,
+  TUsage extends BindableBufferUsage,
+> implements TgpuBufferUsage<TData, TUsage>
 {
+  /** Type-token, not available at runtime */
+  public readonly '~repr'!: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
 
   constructor(
-    public readonly buffer: TgpuBuffer<TData>,
     public readonly usage: TUsage,
+    public readonly buffer: TgpuBuffer<TData>,
   ) {}
 
   get label() {
     return this.buffer.label;
-  }
-
-  get allocatable() {
-    return this.buffer;
   }
 
   $name(label: string) {
@@ -91,62 +79,83 @@ class TgpuBufferUsageImpl<TData extends AnyTgpuData, TUsage extends BufferUsage>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this.label);
-    ctx.addBinding(this, ident);
-    return ctx.resolve(ident);
+    const id = ctx.names.makeUnique(this.label);
+    const { group, binding } = ctx.allocateFixedEntry(
+      this.usage === 'uniform'
+        ? { uniform: this.buffer.dataType }
+        : { storage: this.buffer.dataType, access: this.usage },
+      this.buffer,
+    );
+    const usage = usageToVarTemplateMap[this.usage];
+
+    ctx.addDeclaration(
+      `@group(${group}) @binding(${binding}) var<${usage}> ${id}: ${ctx.resolve(this.buffer.dataType)};`,
+    );
+
+    return id;
   }
 
   toString(): string {
     return `${this.usage}:${this.label ?? '<unnamed>'}`;
   }
 
-  get value(): Unwrap<TData> {
+  get value(): Infer<TData> {
     if (!inGPUMode()) {
       throw new Error(`Cannot access buffer's value directly in JS.`);
     }
-    return this as Unwrap<TData>;
+    return this as Infer<TData>;
   }
 }
 
-class TgpuBufferVertexImpl<TData extends AnyTgpuData>
-  implements TgpuBufferVertex<TData>
+export class TgpuLaidOutBufferImpl<
+  TData extends BaseWgslData,
+  TUsage extends BindableBufferUsage,
+> implements TgpuBufferUsage<TData, TUsage>
 {
+  /** Type-token, not available at runtime */
+  public readonly '~repr'!: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
-  public readonly usage = 'vertex';
-  public readonly vertexLayout: Omit<GPUVertexBufferLayout, 'attributes'>;
 
   constructor(
-    public readonly allocatable: TgpuBuffer<TData>,
-    stepMode: 'vertex' | 'instance',
-  ) {
-    const layout = getVertexLayoutIfValid(allocatable.dataType, stepMode);
-    if (!layout) {
-      throw new Error('Cannot create vertex buffer with complex data types.');
-    }
-    this.vertexLayout = layout;
-  }
+    public readonly usage: TUsage,
+    public readonly dataType: TData,
+    private readonly _membership: LayoutMembership,
+  ) {}
 
   get label() {
-    return this.allocatable.label;
+    return this._membership.key;
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this.label);
-    ctx.addBinding(this, ident);
-    return ctx.resolve(ident);
+    const id = ctx.names.makeUnique(this.label);
+    const group = ctx.allocateLayoutEntry(this._membership.layout);
+    const usage = usageToVarTemplateMap[this.usage];
+
+    ctx.addDeclaration(
+      `@group(${group}) @binding(${this._membership.idx}) var<${usage}> ${id}: ${ctx.resolve(this.dataType as AnyWgslData)};`,
+    );
+
+    return id;
   }
 
   toString(): string {
-    return `vertex:${this.label ?? '<unnamed>'}`;
+    return `${this.usage}:${this.label ?? '<unnamed>'}`;
+  }
+
+  get value(): Infer<TData> {
+    if (!inGPUMode()) {
+      throw new Error(`Cannot access buffer's value directly in JS.`);
+    }
+    return this as Infer<TData>;
   }
 }
 
 const mutableUsageMap = new WeakMap<
-  TgpuBuffer<AnyTgpuData>,
-  TgpuBufferUsageImpl<AnyTgpuData, 'mutable'>
+  TgpuBuffer<AnyWgslData>,
+  TgpuFixedBufferImpl<AnyWgslData, 'mutable'>
 >();
 
-export function asMutable<TData extends AnyTgpuData>(
+export function asMutable<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & Storage,
 ): TgpuBufferMutable<TData> {
   if (!isUsableAsStorage(buffer)) {
@@ -157,18 +166,18 @@ export function asMutable<TData extends AnyTgpuData>(
 
   let usage = mutableUsageMap.get(buffer);
   if (!usage) {
-    usage = new TgpuBufferUsageImpl(buffer, 'mutable');
+    usage = new TgpuFixedBufferImpl('mutable', buffer);
     mutableUsageMap.set(buffer, usage);
   }
   return usage as unknown as TgpuBufferMutable<TData>;
 }
 
 const readonlyUsageMap = new WeakMap<
-  TgpuBuffer<AnyTgpuData>,
-  TgpuBufferUsageImpl<AnyTgpuData, 'readonly'>
+  TgpuBuffer<AnyWgslData>,
+  TgpuFixedBufferImpl<AnyWgslData, 'readonly'>
 >();
 
-export function asReadonly<TData extends AnyTgpuData>(
+export function asReadonly<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & Storage,
 ): TgpuBufferReadonly<TData> {
   if (!isUsableAsStorage(buffer)) {
@@ -179,18 +188,18 @@ export function asReadonly<TData extends AnyTgpuData>(
 
   let usage = readonlyUsageMap.get(buffer);
   if (!usage) {
-    usage = new TgpuBufferUsageImpl(buffer, 'readonly');
+    usage = new TgpuFixedBufferImpl('readonly', buffer);
     readonlyUsageMap.set(buffer, usage);
   }
   return usage as unknown as TgpuBufferReadonly<TData>;
 }
 
 const uniformUsageMap = new WeakMap<
-  TgpuBuffer<AnyTgpuData>,
-  TgpuBufferUsageImpl<AnyTgpuData, 'uniform'>
+  TgpuBuffer<AnyWgslData>,
+  TgpuFixedBufferImpl<AnyWgslData, 'uniform'>
 >();
 
-export function asUniform<TData extends AnyTgpuData>(
+export function asUniform<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & Uniform,
 ): TgpuBufferUniform<TData> {
   if (!isUsableAsUniform(buffer)) {
@@ -201,56 +210,8 @@ export function asUniform<TData extends AnyTgpuData>(
 
   let usage = uniformUsageMap.get(buffer);
   if (!usage) {
-    usage = new TgpuBufferUsageImpl(buffer, 'uniform');
+    usage = new TgpuFixedBufferImpl('uniform', buffer);
     uniformUsageMap.set(buffer, usage);
   }
   return usage as unknown as TgpuBufferUniform<TData>;
-}
-
-const vertexUsageMap = new WeakMap<
-  TgpuBuffer<AnyTgpuData>,
-  {
-    vertex: TgpuBufferVertexImpl<AnyTgpuData>;
-    instance: TgpuBufferVertexImpl<AnyTgpuData>;
-  }
->();
-
-export function asVertex<TData extends AnyTgpuData>(
-  buffer: TgpuBuffer<TData> & Vertex,
-  stepMode: 'vertex' | 'instance',
-): TgpuBufferVertex<TData> {
-  if (!isUsableAsVertex(buffer)) {
-    throw new Error(
-      `Cannot pass ${buffer} to asVertex, as it is not allowed to be used as a vertex buffer. To allow it, call .$usage('vertex') when creating the buffer.`,
-    );
-  }
-
-  let usage = vertexUsageMap.get(buffer);
-  if (!usage) {
-    usage = {
-      vertex: new TgpuBufferVertexImpl(buffer, 'vertex'),
-      instance: new TgpuBufferVertexImpl(buffer, 'instance'),
-    };
-    vertexUsageMap.set(buffer, usage);
-  }
-  return usage[stepMode] as unknown as TgpuBufferVertex<TData>;
-}
-
-function getVertexLayoutIfValid(
-  type: AnyTgpuData,
-  stepMode: 'vertex' | 'instance',
-): Omit<GPUVertexBufferLayout, 'attributes'> | null {
-  // check if the type is a primitive (f32, i32, u32, or a vector)
-  if ('expressionCode' in type) {
-    return {
-      arrayStride: type.size,
-      stepMode: stepMode,
-    };
-  }
-  // if the data type is an array, check if the element type is valid
-  // as arrayOf(arrayOf(f32, x), y) would still be valid - we do it recursively
-  if (isArraySchema(type)) {
-    return getVertexLayoutIfValid(type.elementType, stepMode);
-  }
-  return null;
 }

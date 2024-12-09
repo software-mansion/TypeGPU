@@ -1,5 +1,6 @@
 import { parse } from '@typegpu/wgsl-parser';
 import { describe, expect, expectTypeOf, it } from 'vitest';
+import type { IOLayout, InferIO } from '../src/core/function/fnTypes';
 import * as d from '../src/data';
 import tgpu, { wgsl, type TgpuFnShell, type TgpuFn } from '../src/experimental';
 import { parseWGSL } from './utils/parseWGSL';
@@ -99,17 +100,17 @@ describe('tgpu.fn', () => {
     const two = tgpu.fn([d.f32, d.u32]);
 
     expectTypeOf(proc).toEqualTypeOf<TgpuFnShell<[], undefined>>();
-    expectTypeOf<ReturnType<typeof proc.implement>>().toEqualTypeOf<
+    expectTypeOf<ReturnType<typeof proc.does>>().toEqualTypeOf<
       TgpuFn<[], undefined>
     >();
 
     expectTypeOf(one).toEqualTypeOf<TgpuFnShell<[d.F32], undefined>>();
-    expectTypeOf<ReturnType<typeof one.implement>>().toEqualTypeOf<
+    expectTypeOf<ReturnType<typeof one.does>>().toEqualTypeOf<
       TgpuFn<[d.F32], undefined>
     >();
 
     expectTypeOf(two).toEqualTypeOf<TgpuFnShell<[d.F32, d.U32], undefined>>();
-    expectTypeOf<ReturnType<typeof two.implement>>().toEqualTypeOf<
+    expectTypeOf<ReturnType<typeof two.does>>().toEqualTypeOf<
       TgpuFn<[d.F32, d.U32], undefined>
     >();
   });
@@ -120,18 +121,35 @@ describe('tgpu.fn', () => {
     const two = tgpu.fn([d.f32, d.u32], d.bool);
 
     expectTypeOf(proc).toEqualTypeOf<TgpuFnShell<[], d.Bool>>();
-    expectTypeOf<ReturnType<typeof proc.implement>>().toEqualTypeOf<
+    expectTypeOf<ReturnType<typeof proc.does>>().toEqualTypeOf<
       TgpuFn<[], d.Bool>
     >();
 
     expectTypeOf(one).toEqualTypeOf<TgpuFnShell<[d.F32], d.Bool>>();
-    expectTypeOf<ReturnType<typeof one.implement>>().toEqualTypeOf<
+    expectTypeOf<ReturnType<typeof one.does>>().toEqualTypeOf<
       TgpuFn<[d.F32], d.Bool>
     >();
 
     expectTypeOf(two).toEqualTypeOf<TgpuFnShell<[d.F32, d.U32], d.Bool>>();
-    expectTypeOf<ReturnType<typeof two.implement>>().toEqualTypeOf<
+    expectTypeOf<ReturnType<typeof two.does>>().toEqualTypeOf<
       TgpuFn<[d.F32, d.U32], d.Bool>
     >();
+  });
+});
+
+describe('UnwrapIO', () => {
+  it('unwraps f32', () => {
+    const layout = d.f32 satisfies IOLayout;
+
+    expectTypeOf<InferIO<typeof layout>>().toEqualTypeOf<number>();
+  });
+
+  it('unwraps a record of numeric primitives', () => {
+    const layout = { a: d.f32, b: d.location(2, d.u32) } satisfies IOLayout;
+
+    expectTypeOf<InferIO<typeof layout>>().toEqualTypeOf<{
+      a: number;
+      b: number;
+    }>();
   });
 });

@@ -2,45 +2,107 @@
  * @module typegpu/data
  */
 
-export * from './std140';
-export * from './numeric';
+export { bool, f32, i32, u32 } from './numeric';
 export {
-  TgpuBaseStruct,
+  isWgslData,
+  isWgslArray,
+  isWgslStruct,
+  isAtomic,
+  isDecorated,
+  isAlignAttrib,
+  isBuiltinAttrib,
+  isLocationAttrib,
+  isSizeAttrib,
+} from './wgslTypes';
+export type {
+  Bool,
+  F32,
+  I32,
+  U32,
+  Vec2f,
+  Vec2i,
+  Vec2u,
+  Vec3f,
+  Vec3i,
+  Vec3u,
+  Vec4f,
+  Vec4i,
+  Vec4u,
+  Mat2x2f,
+  Mat3x3f,
+  Mat4x4f,
+  WgslStruct,
+  WgslArray,
+  Atomic,
+  Decorated,
+  Size,
+  Align,
+  Builtin,
+  Location,
+  AnyWgslData,
+  v2f,
+  v2i,
+  v2u,
+  v3f,
+  v3i,
+  v3u,
+  v4f,
+  v4i,
+  v4u,
+  m2x2f,
+  m3x3f,
+  m4x4f,
+} from './wgslTypes';
+export {
   TgpuStruct,
-  TgpuLooseStruct,
-  isStructSchema,
   struct,
-  looseStruct,
-  isLooseStructSchema,
 } from './struct';
 export {
-  TgpuBaseArray,
   TgpuArray,
-  TgpuLooseArray,
-  isArraySchema,
   arrayOf,
-  looseArrayOf,
-  isLooseArraySchema,
 } from './array';
-export * from './vector';
-export * from './matrix';
+export type {
+  LooseArray,
+  LooseStruct,
+  LooseDecorated,
+  AnyData,
+  AnyLooseData,
+} from './dataTypes';
+export {
+  vec2f,
+  vec2i,
+  vec2u,
+  vec3f,
+  vec3i,
+  vec3u,
+  vec4f,
+  vec4i,
+  vec4u,
+} from './vector';
+export { looseArrayOf } from './looseArray';
+export { looseStruct } from './looseStruct';
+export {
+  mat2x2f,
+  mat3x3f,
+  mat4x4f,
+  matToArray,
+} from './matrix';
 export * from './vertexFormatData';
-export { ptr } from './pointer';
-export { atomic, isAtomicSchema, Atomic } from './atomic';
+export { atomic } from './atomic';
+export type { Infer } from '../shared/repr';
 export {
   align,
   size,
   location,
-  isDecorated,
-  isLooseDecorated,
-  Align,
-  Size,
-  Location,
-  BaseDecorated,
-  Decorated,
-  LooseDecorated,
+  isBuiltin,
   AnyAttribute,
+  IsBuiltin,
 } from './attributes';
-
-// Reexporting type-binary utility types
-export type { Parsed, Unwrap } from 'typed-binary';
+export {
+  isLooseArray,
+  isLooseStruct,
+  isLooseDecorated,
+  isData,
+  isLooseData,
+} from './dataTypes';
+export { PUBLIC_sizeOf as sizeOf } from './sizeOf';

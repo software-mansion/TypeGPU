@@ -1,4 +1,6 @@
+import type * as smol from 'tinyest';
 import { bool } from '../data';
+import { isWgslData } from '../data/wgslTypes';
 import {
   type ResolutionCtx,
   type Resource,
@@ -7,7 +9,6 @@ import {
   isResolvable,
   isWgsl,
 } from '../types';
-import type * as smol from './nodes';
 
 export type GenerationCtx = ResolutionCtx & {
   readonly pre: string;
@@ -18,7 +19,7 @@ export type GenerationCtx = ResolutionCtx & {
 };
 
 function resolveRes(ctx: GenerationCtx, res: Resource): string {
-  if (isWgsl(res.value)) {
+  if (isWgsl(res.value) || isWgslData(res.value)) {
     return ctx.resolve(res.value);
   }
 

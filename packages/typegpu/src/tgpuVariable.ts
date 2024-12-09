@@ -1,9 +1,8 @@
-import type { Unwrap } from 'typed-binary';
+import type { AnyWgslData } from './data/wgslTypes';
 import { inGPUMode } from './gpuMode';
 import type { TgpuNamable } from './namable';
-import { code } from './tgpuCode';
-import { identifier } from './tgpuIdentifier';
-import type { AnyTgpuData, ResolutionCtx, TgpuResolvable, Wgsl } from './types';
+import type { Infer } from './shared/repr';
+import type { ResolutionCtx, TgpuResolvable, Wgsl } from './types';
 
 // ----------
 // Public API
@@ -11,16 +10,16 @@ import type { AnyTgpuData, ResolutionCtx, TgpuResolvable, Wgsl } from './types';
 
 export type VariableScope = 'private' | 'workgroup';
 
-export interface TgpuVar<TDataType extends AnyTgpuData>
+export interface TgpuVar<TDataType extends AnyWgslData>
   extends TgpuResolvable,
     TgpuNamable {
-  value: Unwrap<TDataType>;
+  value: Infer<TDataType>;
 }
 
 /**
  * Creates a variable, with an optional initial value.
  */
-export const variable = <TDataType extends AnyTgpuData>(
+export const variable = <TDataType extends AnyWgslData>(
   dataType: TDataType,
   initialValue?: Wgsl,
   scope: VariableScope = 'private',
@@ -30,7 +29,7 @@ export const variable = <TDataType extends AnyTgpuData>(
 // Implementation
 // --------------
 
-class TgpuVarImpl<TDataType extends AnyTgpuData> implements TgpuVar<TDataType> {
+class TgpuVarImpl<TDataType extends AnyWgslData> implements TgpuVar<TDataType> {
   private _label: string | undefined;
 
   constructor(
@@ -45,23 +44,25 @@ class TgpuVarImpl<TDataType extends AnyTgpuData> implements TgpuVar<TDataType> {
   }
 
   resolve(ctx: ResolutionCtx): string {
-    const ident = identifier().$name(this._label);
+    const id = ctx.names.makeUnique(this._label);
 
     if (this._initialValue) {
       ctx.addDeclaration(
-        code`var<${this.scope}> ${ident}: ${this._dataType} = ${this._initialValue};`,
+        `var<${this.scope}> ${id}: ${ctx.resolve(this._dataType)} = ${ctx.resolve(this._initialValue)};`,
       );
     } else {
-      ctx.addDeclaration(code`var<${this.scope}> ${ident}: ${this._dataType};`);
+      ctx.addDeclaration(
+        `var<${this.scope}> ${id}: ${ctx.resolve(this._dataType)};`,
+      );
     }
 
-    return ctx.resolve(ident);
+    return id;
   }
 
-  get value(): Unwrap<TDataType> {
+  get value(): Infer<TDataType> {
     if (!inGPUMode()) {
       throw new Error(`Cannot access wgsl.var's value directly in JS.`);
     }
-    return this as Unwrap<TDataType>;
+    return this as Infer<TDataType>;
   }
 }

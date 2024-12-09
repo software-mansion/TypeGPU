@@ -1,12 +1,12 @@
 // @ts-check
 
-// import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import tailwind from '@astrojs/tailwind';
 import { defineConfig } from 'astro/config';
 import starlightBlog from 'starlight-blog';
+import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import importRawRedirectPlugin from './vite-import-raw-redirect-plugin.mjs';
 
 /**
@@ -28,8 +28,6 @@ export default defineConfig({
         'typegpu/dist/index.d.ts?raw': '../../packages/typegpu/dist/index.d.ts',
         'typegpu/dist/data/index.d.ts?raw':
           '../../packages/typegpu/dist/data/index.d.ts',
-        'typegpu/dist/macro/index.d.ts?raw':
-          '../../packages/typegpu/dist/macro/index.d.ts',
         'typegpu/dist/experimental/index.d.ts?raw':
           '../../packages/typegpu/dist/experimental/index.d.ts',
         '@typegpu/jit/dist/index.d.ts?raw':
@@ -41,7 +39,24 @@ export default defineConfig({
     starlight({
       title: 'TypeGPU',
       customCss: ['./src/tailwind.css', './src/fonts/font-face.css'],
-      plugins: [starlightBlog()],
+      plugins: stripFalsy([
+        starlightBlog(),
+        DEV &&
+          starlightTypeDoc({
+            entryPoints: [
+              '../../packages/typegpu/src/index.ts',
+              '../../packages/typegpu/src/data/index.ts',
+            ],
+            tsconfig: '../../packages/typegpu/tsconfig.json',
+            sidebar: {
+              label: 'Reference',
+            },
+            typeDoc: {
+              excludeInternal: true,
+              excludeReferences: true,
+            },
+          }),
+      ]),
       logo: {
         light: './src/assets/typegpu-logo-light.svg',
         dark: './src/assets/typegpu-logo-dark.svg',
@@ -85,6 +100,10 @@ export default defineConfig({
             {
               label: 'Data Schemas',
               slug: 'fundamentals/data-schemas',
+            },
+            DEV && {
+              label: 'Slots',
+              slug: 'fundamentals/slots',
             },
             // {
             //   label: 'Basic Principles',
@@ -130,6 +149,7 @@ export default defineConfig({
             },
           ],
         },
+        DEV && typeDocSidebarGroup,
       ]),
     }),
     tailwind({
