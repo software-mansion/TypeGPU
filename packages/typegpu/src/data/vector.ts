@@ -1,21 +1,27 @@
 import { inGPUMode } from '../gpuMode';
 import type {
   Vec2f,
+  Vec2h,
   Vec2i,
   Vec2u,
   Vec3f,
+  Vec3h,
   Vec3i,
   Vec3u,
   Vec4f,
+  Vec4h,
   Vec4i,
   Vec4u,
   v2f,
+  v2h,
   v2i,
   v2u,
   v3f,
+  v3h,
   v3i,
   v3u,
   v4f,
+  v4h,
   v4i,
   v4u,
 } from './wgslTypes';
@@ -70,7 +76,7 @@ function makeVecSchema<TType extends string, TValue>(
 
 abstract class vec2Impl {
   public readonly length = 2;
-  abstract readonly kind: `vec2${'f' | 'u' | 'i'}`;
+  abstract readonly kind: `vec2${'f' | 'u' | 'i' | 'h'}`;
 
   [n: number]: number;
 
@@ -121,6 +127,22 @@ class vec2fImpl extends vec2Impl {
   }
 }
 
+class vec2hImpl extends vec2Impl {
+  readonly kind = 'vec2h';
+
+  make2(x: number, y: number): v2h {
+    return new vec2hImpl(x, y) as unknown as v2h;
+  }
+
+  make3(x: number, y: number, z: number): v3h {
+    return new vec3hImpl(x, y, z) as unknown as v3h;
+  }
+
+  make4(x: number, y: number, z: number, w: number): v4h {
+    return new vec4hImpl(x, y, z, w) as unknown as v4h;
+  }
+}
+
 class vec2iImpl extends vec2Impl {
   readonly kind = 'vec2i';
 
@@ -155,7 +177,7 @@ class vec2uImpl extends vec2Impl {
 
 abstract class vec3Impl {
   public readonly length = 3;
-  abstract readonly kind: `vec3${'f' | 'u' | 'i'}`;
+  abstract readonly kind: `vec3${'f' | 'u' | 'i' | 'h'}`;
   [n: number]: number;
 
   constructor(
@@ -215,6 +237,22 @@ class vec3fImpl extends vec3Impl {
   }
 }
 
+class vec3hImpl extends vec3Impl {
+  readonly kind = 'vec3h';
+
+  make2(x: number, y: number): v2h {
+    return new vec2hImpl(x, y) as unknown as v2h;
+  }
+
+  make3(x: number, y: number, z: number): v3h {
+    return new vec3hImpl(x, y, z) as unknown as v3h;
+  }
+
+  make4(x: number, y: number, z: number, w: number): v4h {
+    return new vec4hImpl(x, y, z, w) as unknown as v4h;
+  }
+}
+
 class vec3iImpl extends vec3Impl {
   readonly kind = 'vec3i';
 
@@ -249,7 +287,7 @@ class vec3uImpl extends vec3Impl {
 
 abstract class vec4Impl {
   public readonly length = 4;
-  abstract readonly kind: `vec4${'f' | 'u' | 'i'}`;
+  abstract readonly kind: `vec4${'f' | 'u' | 'i' | 'h'}`;
   [n: number]: number;
 
   constructor(
@@ -316,6 +354,22 @@ class vec4fImpl extends vec4Impl {
 
   make4(x: number, y: number, z: number, w: number): v4f {
     return new vec4fImpl(x, y, z, w) as unknown as v4f;
+  }
+}
+
+class vec4hImpl extends vec4Impl {
+  readonly kind = 'vec4h';
+
+  make2(x: number, y: number): v2h {
+    return new vec2hImpl(x, y) as unknown as v2h;
+  }
+
+  make3(x: number, y: number, z: number): v3h {
+    return new vec3hImpl(x, y, z) as unknown as v3h;
+  }
+
+  make4(x: number, y: number, z: number, w: number): v4h {
+    return new vec4hImpl(x, y, z, w) as unknown as v4h;
   }
 }
 
@@ -426,12 +480,15 @@ export type VecKind =
   | 'vec2f'
   | 'vec2i'
   | 'vec2u'
+  | 'vec2h'
   | 'vec3f'
   | 'vec3i'
   | 'vec3u'
+  | 'vec3h'
   | 'vec4f'
   | 'vec4i'
-  | 'vec4u';
+  | 'vec4u'
+  | 'vec4h';
 
 /**
  * Type of the `d.vec2f` object/function: vector data type schema/constructor
@@ -463,6 +520,37 @@ export const vec2f = makeVecSchema({
     new Proxy(new vec2fImpl(x, y), vecProxyHandler) as v2f,
   makeFromScalar: (x) => new Proxy(new vec2fImpl(x, x), vecProxyHandler) as v2f,
 }) as NativeVec2f;
+
+/**
+ * Type of the `d.vec2h` object/function: vector data type schema/constructor
+ */
+export type NativeVec2h = Vec2h & { '~exotic': Vec2h } & ((
+    x: number,
+    y: number,
+  ) => v2h) &
+  ((xy: number) => v2h) &
+  (() => v2h);
+
+/**
+ *
+ * Schema representing vec2h - a vector with 2 elements of type f16.
+ * Also a constructor function for this vector value.
+ *
+ * @example
+ * const vector = d.vec2h(); // (0.0, 0.0)
+ * const vector = d.vec2h(1); // (1.0, 1.0)
+ * const vector = d.vec2h(0.5, 0.1); // (0.5, 0.1)
+ *
+ * @example
+ * const buffer = root.createBuffer(d.vec2h, d.vec2h(0, 1)); // buffer holding a d.vec2h value, with an initial value of vec2h(0, 1);
+ */
+export const vec2h = makeVecSchema({
+  type: 'vec2h',
+  length: 2,
+  make: (x: number, y: number) =>
+    new Proxy(new vec2hImpl(x, y), vecProxyHandler) as v2h,
+  makeFromScalar: (x) => new Proxy(new vec2hImpl(x, x), vecProxyHandler) as v2h,
+}) as NativeVec2h;
 
 /**
  * Type of the `d.vec2i` object/function: vector data type schema/constructor
@@ -557,6 +645,38 @@ export const vec3f = makeVecSchema({
   makeFromScalar: (x) =>
     new Proxy(new vec3fImpl(x, x, x), vecProxyHandler) as v3f,
 }) as NativeVec3f;
+
+/**
+ * Type of the `d.vec3h` object/function: vector data type schema/constructor
+ */
+export type NativeVec3h = Vec3h & { '~exotic': Vec3h } & ((
+    x: number,
+    y: number,
+    z: number,
+  ) => v3h) &
+  ((xyz: number) => v3h) &
+  (() => v3h);
+
+/**
+ *
+ * Schema representing vec3h - a vector with 3 elements of type f16.
+ * Also a constructor function for this vector value.
+ *
+ * @example
+ * const vector = d.vec3h(); // (0.0, 0.0, 0.0)
+ * const vector = d.vec3h(1); // (1.0, 1.0, 1.0)
+ * const vector = d.vec3h(1, 2, 3.5); // (1.0, 2.0, 3.5)
+ *
+ * @example
+ * const buffer = root.createBuffer(d.vec3h, d.vec3h(0, 1, 2)); // buffer holding a d.vec3h value, with an initial value of vec3h(0, 1, 2);
+ */
+export const vec3h = makeVecSchema({
+  type: 'vec3h',
+  length: 3,
+  make: (x, y, z) => new Proxy(new vec3hImpl(x, y, z), vecProxyHandler) as v3h,
+  makeFromScalar: (x) =>
+    new Proxy(new vec3hImpl(x, x, x), vecProxyHandler) as v3h,
+}) as NativeVec3h;
 
 /**
  * Type of the `d.vec3i` object/function: vector data type schema/constructor
@@ -655,6 +775,40 @@ export const vec4f = makeVecSchema({
   makeFromScalar: (x) =>
     new Proxy(new vec4fImpl(x, x, x, x), vecProxyHandler) as v4f,
 }) as NativeVec4f;
+
+/**
+ * Type of the `d.vec4h` object/function: vector data type schema/constructor
+ */
+export type NativeVec4h = Vec4h & { '~exotic': Vec4h } & ((
+    x: number,
+    y: number,
+    z: number,
+    w: number,
+  ) => v4h) &
+  ((xyzw: number) => v4h) &
+  (() => v4h);
+
+/**
+ *
+ * Schema representing vec4h - a vector with 4 elements of type f16.
+ * Also a constructor function for this vector value.
+ *
+ * @example
+ * const vector = d.vec4h(); // (0.0, 0.0, 0.0, 0.0)
+ * const vector = d.vec4h(1); // (1.0, 1.0, 1.0, 1.0)
+ * const vector = d.vec4h(1, 2, 3, 4.5); // (1.0, 2.0, 3.0, 4.5)
+ *
+ * @example
+ * const buffer = root.createBuffer(d.vec4h, d.vec4h(0, 1, 2, 3)); // buffer holding a d.vec4h value, with an initial value of vec4h(0, 1, 2, 3);
+ */
+export const vec4h = makeVecSchema({
+  type: 'vec4h',
+  length: 4,
+  make: (x, y, z, w) =>
+    new Proxy(new vec4hImpl(x, y, z, w), vecProxyHandler) as v4h,
+  makeFromScalar: (x) =>
+    new Proxy(new vec4hImpl(x, x, x, x), vecProxyHandler) as v4h,
+}) as NativeVec4h;
 
 /**
  * Type of the `d.vec4i` object/function: vector data type schema/constructor

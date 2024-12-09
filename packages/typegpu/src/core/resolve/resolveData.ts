@@ -3,6 +3,7 @@ import type {
   AnyWgslData,
   BaseWgslData,
   Bool,
+  F16,
   F32,
   I32,
   Mat2x2f,
@@ -10,12 +11,15 @@ import type {
   Mat4x4f,
   U32,
   Vec2f,
+  Vec2h,
   Vec2i,
   Vec2u,
   Vec3f,
+  Vec3h,
   Vec3i,
   Vec3u,
   Vec4f,
+  Vec4h,
   Vec4i,
   Vec4u,
   WgslArray,
@@ -31,11 +35,15 @@ import type { ResolutionCtx } from '../../types';
 const identityTypes = [
   'bool',
   'f32',
+  'f16',
   'i32',
   'u32',
   'vec2f',
   'vec3f',
   'vec4f',
+  'vec2h',
+  'vec3h',
+  'vec4h',
   'vec2i',
   'vec3i',
   'vec4i',
@@ -50,11 +58,15 @@ const identityTypes = [
 type IdentityType =
   | Bool
   | F32
+  | F16
   | I32
   | U32
   | Vec2f
   | Vec3f
   | Vec4f
+  | Vec2h
+  | Vec3h
+  | Vec4h
   | Vec2i
   | Vec3i
   | Vec4i

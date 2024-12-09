@@ -12,12 +12,15 @@ import { mat2x2f, mat3x3f, mat4x4f } from './matrix';
 import { sizeOf } from './sizeOf';
 import {
   vec2f,
+  vec2h,
   vec2i,
   vec2u,
   vec3f,
+  vec3h,
   vec3i,
   vec3u,
   vec4f,
+  vec4h,
   vec4i,
   vec4u,
 } from './vector';
@@ -65,6 +68,10 @@ const dataWriters = {
     output.writeFloat32(value);
   },
 
+  f16(output, _schema: wgsl.F16, value: number) {
+    output.writeFloat16(value);
+  },
+
   i32(output, _schema: wgsl.I32, value: number) {
     output.writeInt32(value);
   },
@@ -76,6 +83,11 @@ const dataWriters = {
   vec2f(output, _, value: wgsl.v2f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
+  },
+
+  vec2h(output, _, value: wgsl.v2h) {
+    output.writeFloat16(value.x);
+    output.writeFloat16(value.y);
   },
 
   vec2i(output, _, value: wgsl.v2i) {
@@ -92,6 +104,12 @@ const dataWriters = {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
     output.writeFloat32(value.z);
+  },
+
+  vec3h(output, _, value: wgsl.v3h) {
+    output.writeFloat16(value.x);
+    output.writeFloat16(value.y);
+    output.writeFloat16(value.z);
   },
 
   vec3i(output, _, value: wgsl.v3i) {
@@ -111,6 +129,13 @@ const dataWriters = {
     output.writeFloat32(value.y);
     output.writeFloat32(value.z);
     output.writeFloat32(value.w);
+  },
+
+  vec4h(output, _, value: wgsl.v4h) {
+    output.writeFloat16(value.x);
+    output.writeFloat16(value.y);
+    output.writeFloat16(value.z);
+    output.writeFloat16(value.w);
   },
 
   vec4i(output, _, value: wgsl.v4i) {
@@ -376,6 +401,99 @@ const dataWriters = {
     output.writeUint32(packed);
   },
 
+  unorm8x2h(output, _, value: wgsl.v2h) {
+    output.writeByte(Math.floor(value.x * 255));
+    output.writeByte(Math.floor(value.y * 255));
+  },
+  unorm8x4h(output, _, value: wgsl.v4h) {
+    output.writeByte(Math.floor(value.x * 255));
+    output.writeByte(Math.floor(value.y * 255));
+    output.writeByte(Math.floor(value.z * 255));
+    output.writeByte(Math.floor(value.w * 255));
+  },
+  snorm8x2h(output, _, value: wgsl.v2h) {
+    output.writeByte(Math.floor(value.x * 127 + 128));
+    output.writeByte(Math.floor(value.y * 127 + 128));
+  },
+  snorm8x4h(output, _, value: wgsl.v4h) {
+    output.writeByte(Math.floor(value.x * 127 + 128));
+    output.writeByte(Math.floor(value.y * 127 + 128));
+    output.writeByte(Math.floor(value.z * 127 + 128));
+    output.writeByte(Math.floor(value.w * 127 + 128));
+  },
+  unorm16x2h(output, _, value: wgsl.v2h) {
+    const buffer = new ArrayBuffer(4);
+    const view = new DataView(buffer);
+    const littleEndian = output.endianness === 'little';
+    view.setUint16(0, Math.floor(value.x * 65535), littleEndian);
+    view.setUint16(2, Math.floor(value.y * 65535), littleEndian);
+    output.writeSlice(new Uint8Array(buffer));
+  },
+  unorm16x4h(output, _, value: wgsl.v4h) {
+    const buffer = new ArrayBuffer(8);
+    const view = new DataView(buffer);
+    const littleEndian = output.endianness === 'little';
+    view.setUint16(0, Math.floor(value.x * 65535), littleEndian);
+    view.setUint16(2, Math.floor(value.y * 65535), littleEndian);
+    view.setUint16(4, Math.floor(value.z * 65535), littleEndian);
+    view.setUint16(6, Math.floor(value.w * 65535), littleEndian);
+    output.writeSlice(new Uint8Array(buffer));
+  },
+  snorm16x2h(output, _, value: wgsl.v2h) {
+    const buffer = new ArrayBuffer(4);
+    const view = new DataView(buffer);
+    const littleEndian = output.endianness === 'little';
+    view.setUint16(0, Math.floor(value.x * 32767 + 32768), littleEndian);
+    view.setUint16(2, Math.floor(value.y * 32767 + 32768), littleEndian);
+    output.writeSlice(new Uint8Array(buffer));
+  },
+  snorm16x4h(output, _, value: wgsl.v4h) {
+    const buffer = new ArrayBuffer(8);
+    const view = new DataView(buffer);
+    const littleEndian = output.endianness === 'little';
+    view.setUint16(0, Math.floor(value.x * 32767 + 32768), littleEndian);
+    view.setUint16(2, Math.floor(value.y * 32767 + 32768), littleEndian);
+    view.setUint16(4, Math.floor(value.z * 32767 + 32768), littleEndian);
+    view.setUint16(6, Math.floor(value.w * 32767 + 32768), littleEndian);
+    output.writeSlice(new Uint8Array(buffer));
+  },
+  float16x2h(output, _, value: wgsl.v2h) {
+    output.writeFloat16(value.x);
+    output.writeFloat16(value.y);
+  },
+  float16x4h(output, _, value: wgsl.v4h) {
+    output.writeFloat16(value.x);
+    output.writeFloat16(value.y);
+    output.writeFloat16(value.z);
+    output.writeFloat16(value.w);
+  },
+  float32h(output, _, value: number) {
+    output.writeFloat32(value);
+  },
+  float32x2h(output, _, value: wgsl.v2h) {
+    output.writeFloat32(value.x);
+    output.writeFloat32(value.y);
+  },
+  float32x3h(output, _, value: wgsl.v3h) {
+    output.writeFloat32(value.x);
+    output.writeFloat32(value.y);
+    output.writeFloat32(value.z);
+  },
+  float32x4h(output, _, value: wgsl.v4h) {
+    output.writeFloat32(value.x);
+    output.writeFloat32(value.y);
+    output.writeFloat32(value.z);
+    output.writeFloat32(value.w);
+  },
+  'unorm10-10-10-2h'(output, _, value: wgsl.v4h) {
+    let packed = 0;
+    packed |= ((value.x * 1023) & 1023) << 22; // r (10 bits)
+    packed |= ((value.x * 1023) & 1023) << 12; // g (10 bits)
+    packed |= ((value.y * 1023) & 1023) << 2; // b (10 bits)
+    packed |= (value.z * 3) & 3; // a (2 bits)
+    output.writeUint32(packed);
+  },
+
   'loose-array'(output, schema: LooseArray, value: unknown[]) {
     const alignment = alignmentOf(schema);
 
@@ -436,6 +554,10 @@ const dataReaders = {
     return input.readFloat32();
   },
 
+  f16(input: ISerialInput) {
+    return input.readFloat16();
+  },
+
   i32(input: ISerialInput) {
     return input.readInt32();
   },
@@ -458,6 +580,23 @@ const dataReaders = {
       input.readFloat32(),
       input.readFloat32(),
       input.readFloat32(),
+    );
+  },
+
+  vec2h(input) {
+    return vec2h(input.readFloat16(), input.readFloat16());
+  },
+
+  vec3h(input: ISerialInput) {
+    return vec3h(input.readFloat16(), input.readFloat16(), input.readFloat16());
+  },
+
+  vec4h(input: ISerialInput) {
+    return vec4h(
+      input.readFloat16(),
+      input.readFloat16(),
+      input.readFloat16(),
+      input.readFloat16(),
     );
   },
 
@@ -743,6 +882,88 @@ const dataReaders = {
     const b = ((packed >> 2) & 1023) / 1023;
     const a = (packed & 3) / 3;
     return vec4f(r, g, b, a);
+  },
+
+  unorm8x2h: (i) => vec2h(i.readByte() / 255, i.readByte() / 255),
+  unorm8x4h: (i) =>
+    vec4h(
+      i.readByte() / 255,
+      i.readByte() / 255,
+      i.readByte() / 255,
+      i.readByte() / 255,
+    ),
+  snorm8x2h: (i) =>
+    vec2h((i.readByte() - 128) / 127, (i.readByte() - 128) / 127),
+  snorm8x4h: (i) =>
+    vec4h(
+      (i.readByte() - 128) / 127,
+      (i.readByte() - 128) / 127,
+      (i.readByte() - 128) / 127,
+      (i.readByte() - 128) / 127,
+    ),
+  unorm16x2h(i) {
+    const buffer = new ArrayBuffer(4);
+    i.readSlice(new Uint8Array(buffer), 0, 4);
+    const view = new DataView(buffer);
+    const littleEndian = i.endianness === 'little';
+
+    return vec2h(
+      view.getUint16(0, littleEndian) / 65535,
+      view.getUint16(2, littleEndian) / 65535,
+    );
+  },
+  unorm16x4h(i) {
+    const buffer = new ArrayBuffer(8);
+    i.readSlice(new Uint8Array(buffer), 0, 8);
+    const view = new DataView(buffer);
+    const littleEndian = i.endianness === 'little';
+
+    return vec4h(
+      view.getUint16(0, littleEndian) / 65535,
+      view.getUint16(2, littleEndian) / 65535,
+      view.getUint16(4, littleEndian) / 65535,
+      view.getUint16(6, littleEndian) / 65535,
+    );
+  },
+  snorm16x2h(i) {
+    const buffer = new ArrayBuffer(4);
+    i.readSlice(new Uint8Array(buffer), 0, 4);
+    const view = new DataView(buffer);
+    const littleEndian = i.endianness === 'little';
+
+    return vec2h(
+      (view.getUint16(0, littleEndian) - 32768) / 32767,
+      (view.getUint16(2, littleEndian) - 32768) / 32767,
+    );
+  },
+  snorm16x4h(i) {
+    const buffer = new ArrayBuffer(8);
+    i.readSlice(new Uint8Array(buffer), 0, 8);
+    const view = new DataView(buffer);
+    const littleEndian = i.endianness === 'little';
+
+    return vec4h(
+      (view.getUint16(0, littleEndian) - 32768) / 32767,
+      (view.getUint16(2, littleEndian) - 32768) / 32767,
+      (view.getUint16(4, littleEndian) - 32768) / 32767,
+      (view.getUint16(6, littleEndian) - 32768) / 32767,
+    );
+  },
+  float16x2h: (i) => vec2h(i.readFloat16(), i.readFloat16()),
+  float16x4h: (i) =>
+    vec4h(i.readFloat16(), i.readFloat16(), i.readFloat16(), i.readFloat16()),
+  float32h: (i) => i.readFloat32(),
+  float32x2h: (i) => vec2h(i.readFloat32(), i.readFloat32()),
+  float32x3h: (i) => vec3h(i.readFloat32(), i.readFloat32(), i.readFloat32()),
+  float32x4h: (i) =>
+    vec4h(i.readFloat32(), i.readFloat32(), i.readFloat32(), i.readFloat32()),
+  'unorm10-10-10-2h'(i) {
+    const packed = i.readUint32();
+    const r = (packed >> 22) / 1023;
+    const g = ((packed >> 12) & 1023) / 1023;
+    const b = ((packed >> 2) & 1023) / 1023;
+    const a = (packed & 3) / 3;
+    return vec4h(r, g, b, a);
   },
 
   'loose-struct'(input, schema: LooseStruct) {

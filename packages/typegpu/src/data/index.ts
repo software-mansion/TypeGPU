@@ -2,7 +2,7 @@
  * @module typegpu/data
  */
 
-export { bool, f32, i32, u32 } from './numeric';
+export { bool, f32, f16, i32, u32 } from './numeric';
 export {
   isWgslData,
   isWgslArray,
@@ -17,15 +17,19 @@ export {
 export type {
   Bool,
   F32,
+  F16,
   I32,
   U32,
   Vec2f,
+  Vec2h,
   Vec2i,
   Vec2u,
   Vec3f,
+  Vec3h,
   Vec3i,
   Vec3u,
   Vec4f,
+  Vec4h,
   Vec4i,
   Vec4u,
   Mat2x2f,
@@ -70,12 +74,15 @@ export type {
 } from './dataTypes';
 export {
   vec2f,
+  vec2h,
   vec2i,
   vec2u,
   vec3f,
+  vec3h,
   vec3i,
   vec3u,
   vec4f,
+  vec4h,
   vec4i,
   vec4u,
 } from './vector';
@@ -106,3 +113,4 @@ export {
   isLooseData,
 } from './dataTypes';
 export { PUBLIC_sizeOf as sizeOf } from './sizeOf';
+export { PUBLIC_alignmentOf as alignmentOf } from './alignmentOf';

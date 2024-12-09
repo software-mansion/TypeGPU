@@ -1,4 +1,5 @@
 import {
+  type AnyData,
   getCustomAlignment,
   isLooseArray,
   isLooseDecorated,
@@ -15,15 +16,19 @@ import {
 const knownAlignmentMap: Record<string, number> = {
   bool: 4,
   f32: 4,
+  f16: 2,
   i32: 4,
   u32: 4,
   vec2f: 8,
+  vec2h: 4,
   vec2i: 8,
   vec2u: 8,
   vec3f: 16,
+  vec3h: 8,
   vec3i: 16,
   vec3u: 16,
   vec4f: 16,
+  vec4h: 8,
   vec4i: 16,
   vec4u: 16,
   mat2x2f: 8,
@@ -116,4 +121,11 @@ export function customAlignmentOf(data: BaseWgslData): number {
   }
 
   return alignment;
+}
+
+/**
+ * Returns the alignment (in bytes) of data represented by the `schema`.
+ */
+export function PUBLIC_alignmentOf(schema: AnyData): number {
+  return alignmentOf(schema);
 }
