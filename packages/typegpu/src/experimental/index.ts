@@ -100,11 +100,10 @@ export type {
 export type { Storage } from '../extension';
 export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
 export type {
-  TgpuBufferUsage,
   TgpuBufferUniform,
   TgpuBufferReadonly,
   TgpuBufferMutable,
-} from '../core/buffer/bufferUsage';
+} from '../core/buffer/bufferUsagePublic';
 export type {
   TgpuTexture,
   TgpuReadonlyTexture,

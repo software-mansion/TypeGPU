@@ -90,7 +90,6 @@ export {
 export * from './vertexFormatData';
 export { atomic } from './atomic';
 export type { Infer } from '../shared/repr';
-export type { Exotic } from './exotic';
 export {
   align,
   size,

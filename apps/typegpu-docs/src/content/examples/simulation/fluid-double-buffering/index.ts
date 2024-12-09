@@ -1,6 +1,5 @@
 import { JitTranspiler } from '@typegpu/jit';
 import {
-  type Exotic,
   type Infer,
   arrayOf,
   bool,
@@ -61,7 +60,7 @@ const rand01 = tgpu
   })
   .$uses({ std, vec2f, randSeed });
 
-type GridData = Exotic<typeof GridData>;
+type GridData = typeof GridData;
 /**
  * x - velocity.x
  * y - velocity.y
