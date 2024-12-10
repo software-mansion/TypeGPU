@@ -1,133 +1,240 @@
 ---
 title: Bind Groups
-description: A guide on how to use the TypeGPU Bind Groups and Bind Group Layouts.
 ---
 
-## What are Bind Groups and Bind Group Layouts?
-
-If you are already familiar with WebGPU, you might know what bind groups and bind group layouts are. In that case, you can [skip to the next section](#typegpu-approach).
-If not, we will briefly explain what they are and provide some useful links for further reading.
-
-### A Quick Overview
+:::note[Recommended reading]
+We assume that you are familiar with the following concepts:
+- <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html" target="_blank" rel="noopener noreferrer">WebGPU Fundamentals</a>
+- <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-bind-group-layouts.html" target="_blank" rel="noopener noreferrer">Bind Group Layouts</a>
+:::
 
 A bind group is a collection of resources that are bound to a shader. These resources can be buffers, textures, or samplers.
-It's a way to define what resources are available to a shader and how they are accessed. For example, you can create a bind group that contains a buffer and a texture, and then bind it to a shader to use these resources in the shader.
-Here is a quick example of how you can create a bind group in WebGPU:
+It's a way to define what resources are available to a shader and how they are accessed.
 
 ```ts
-const bindGroup = device.createBindGroup({
-  layout: bindGroupLayout, // We will cover what bind group layouts are later in this guide
-  entries: [
-    {
-      binding: 0, // This number corresponds to the binding number in the shader
-      resource: {
-        buffer: buffer, // The buffer that we want to bind
-      },
-    },
-    {
-      binding: 1,
-      resource: {
-        texture: textureView, // The view of the texture that we want to bind
-      },
-    },
-  ],
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+// Defining the layout of resources we want the shader to
+// have access to.
+const fooLayout = tgpu.bindGroupLayout({
+  foo: { uniform: d.vec3f },
+  bar: { texture: 'float' },
+});
+
+const fooBuffer = ...;
+const barTexture = ...;
+
+// Create a bind group that can fulfill the required layout.
+const fooBindGroup = fooLayout.populate({
+  foo: fooBuffer,
+  bar: barTexture,
 });
 ```
 
-In this example, we create a bind group that contains a buffer and a texture. We specify the binding number for each resource, which corresponds to the binding number in the shader.
-Now, during command encoding, we can assign this bind group to a shader to use these resources.
-
-```ts
-renderPass.setBindGroup(0, bindGroup);
-```
-
-You probably noticed that in the previous example, we had to specify the layout when creating the bind group.
-A bind group layout is a description of the resources that are expected by a shader. It defines the layout of the bind group, including the type of resources and their binding numbers.
-You can think of it as a blueprint for creating bind groups. It specifies how the bind group should be structured and what resources it needs to contain.
-Here is an example of how you can create a bind group layout that matches the previous example:
-
-```ts
-const bindGroupLayout = device.createBindGroupLayout({
-  entries: [
-    {
-      binding: 0,
-      visibility: GPUShaderStage.VERTEX, // In what entry point the resource is used
-      buffer: {
-        // if we don't specify the type, it will default to "uniform"
-      },
-    },
-    {
-      binding: 1,
-      visibility: GPUShaderStage.FRAGMENT,
-      texture: {
-        // it will default to sample type of "float" and view dimension of "2d"
-      },
-    },
-  ],
-});
-```
-
-We can use this layout to create a bind group that matches the resources expected by the shader. It's also necessary to provide a layout when creating a pipeline, so the GPU knows what resources are expected by the shaders.
-This can sometimes be automated by passing `auto` to the `descriptor.layout` field when creating a pipeline. This will automatically infer the layout from the shader module.
-
-If you want to learn more about bind groups and bind group layouts in WebGPU, you can check the following links:
-
-- [WebGPU Fundamentals article on Bind Groups (for a more detailed but beginner-friendly explanation)](https://webgpufundamentals.org/webgpu/lessons/webgpu-bind-group-layouts.html)
-- [WebGPU Specification - Resource Binding (for technical reference)](https://www.w3.org/TR/webgpu/#bindings)
-
-## TypeGPU approach
-
-TypeGPU provides a more type-safe and ergonomic way to work with bind groups and bind group layouts. The standard WebGPU way of creating bind groups and bind group layouts involves a lot of manual work and is error-prone due to the lack of type checking.
-TypeGPU addresses these issues by referencing resources by named keys rather than indices and by providing static type checking when populating bind groups.
-We also provide utilities which can generate those definitions from existing `.wgsl` shaders. This means that you can benefit from the type safety and convenience of TypeGPU without having to worry about keeping the definitions in sync with the shader code.
-
-### Typed Bind Group Layouts
-
-First, let's cover how to manually create a typed bind group layout in TypeGPU.
-To create a typed bind group layout, you need to call `tgpu.bindGroupLayout` and pass an object that describes the resources that the bind group should contain.
-Here is an example of how you can create a typed bind group layout that matches the previous example:
-
-```ts
-const bindGroupLayout = tgpu.bindGroupLayout({
-  buffer: { uniform: vec3f },
-  texture: { texture: 'float' },
-});
-```
-
-This will create a typed bind group layout that contains a buffer with a `vec3f` type and a texture with a `float` sample type.
-The bindings will be automatically assigned based on the order of the resources in the object.
+In this example, we create a bind group that contains a buffer and a texture. Binding indices are determined based on the order of properties
+in the layout.
 
 :::tip
-This step can be automated by using the *tgpu-gen* cli package which can generate the typed bind group layout from the shader code.
-It also generates the TypeScript types for the resources, so you can use them in your code.
+To access the entries in `fooLayout` from a shader, the corresponding WGSL code would look like this:
+```wgsl
+@group(...) @binding(0) var<uniform> foo: vec3f;
+@group(...) @binding(1) var bar: texture_2d;
+```
+
+Where `@group(...)` would contain the group index given when creating the pipeline layout.
+:::
+
+Now, during command encoding, we can assign this bind group to a shader.
+
+```ts
+// Assuming group index is 0...
+pass.setBindGroup(0, root.unwrap(fooBindGroup));
+```
+
+## Available resource types
+
+:::tip
+If you already have a file with WGSL shader code, you can use the *tgpu-gen* CLI package to generate the equivalent TypeGPU code.
 To learn more about the TypeGPU Generator CLI, check the [Generator CLI guide](/TypeGPU/tooling/tgpu-gen).
 :::
 
-### Typed Bind Groups
 
-Once you have a typed bind group layout, you can create a typed bind group by **populating** it with the resources.
-To do this, you can call the `populate` method on the bind group layout and pass the resources using an object that matches the layout.
-
-Here is an example of how you can create a typed bind group that matches the previous example:
+Each property in the layout object represents a resource as seen by a shader. We recommend keeping the names of
+these properties the same as the corresponding `@group(...) @binding(...) ...;` statements in WGSL.
 
 ```ts
-const bindGroup = bindGroupLayout.populate({
-  buffer: buffer,
-  texture: textureView,
+const fooLayout = tgpu.bindGroupLayout({
+  key0: { ... },
+  key1: { ... },
+  // ...
 });
 ```
 
-This will create a typed bind group that contains a buffer and a texture, matching the resources expected by the shader.
-If we accidentally pass the wrong type of resource, the TypeScript compiler will catch the error at compile time.
+### Uniforms
 
-### WebGPU integration
+To interpret a buffer as a uniform, create a property with the value matching:
+```ts
+{
+  uniform: d.AnyData;
+}
+```
 
-The bind group created in the previous example cannot be used directly in the WebGPU API. To use it, you need to **unwrap** it to get the underlying WebGPU bind group.
-You can do this by calling `root.unwrap(bindGroup)`. This will return the WebGPU bind group that you can use in the WebGPU API.
+#### Simple example
+```js
+// main.js
+const fooLayout = tgpu.bindGroupLayout({
+  luckyNumber: { uniform: d.f32 },
+  // ...
+});
+```
+Matching WGSL statement:
+```wgsl
+// shader.wgsl
+@group(...) @binding(0) var<uniform> luckyNumber: f32;
+// ...
+```
+
+### Storage
+
+To get readonly/mutable access to a buffer, create a property with the value matching:
+```ts
+{
+  storage: d.AnyData | ((n: number) => d.AnyData);
+
+  /** @default 'readonly' */
+  access?: 'readonly' | 'mutable';
+}
+```
+
+#### Simple example
+```ts
+const fooLayout = tgpu.bindGroupLayout({
+  counter: { storage: d.f32, access: 'mutable' },
+  // ...
+});
+```
+Matching WGSL statement:
+```wgsl
+@group(...) @binding(0) var<storage, read_write> counter: f32;
+// ...
+```
+
+#### Runtime-sized example
+Apart from being able to specify any data type, we can signal that the shader is generalized to work on
+arbitrarily sized data by passing a function.
 
 ```ts
-const webgpuBindGroup = root.unwrap(bindGroup);
+// main.ts
+const Filter = (n: number) =>
+  d.struct({
+    clamp: d.f32,
+    values: d.arrayOf(d.f32, n),
+  });
 
-// Now you can use this bind group in the WebGPU API as you would a regular bind group.
-renderPass.setBindGroup(0, webgpuBindGroup);
+const fooLayout = tgpu.bindGroupLayout({
+  factors: { storage: (n) => d.arrayOf(d.f32, n) },
+  filter: { storage: Filter },
+  // ...
+});
 ```
+Matching WGSL code:
+```wgsl
+// shader.wgsl
+struct Filter {
+  clamp: f32,
+  values: array<f32>;
+}
+
+@group(...) @binding(0) var<storage, read> factors: array<f32>;
+@group(...) @binding(1) var<storage, read> filter: Filter;
+// ...
+```
+
+### Samplers
+
+Samplers can be made accessible to shaders with a property that matches the following:
+
+```ts
+{
+  sampler: 'filtering' | 'non-filtering' | 'comparison';
+}
+```
+
+### Textures
+
+To be able to sample a texture in a shader, create a property with the value matching:
+```ts
+{
+  texture: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
+  
+  /** @default '2d' */
+  viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
+  
+  /** @default false */
+  multisampled?: boolean;
+}
+```
+
+### Storage Textures
+
+To be able to operate on textures more directly in a shader, create a property with the value matching:
+```ts
+{
+  storageTexture: StorageTextureTexelFormat;
+
+  /** @default 'writeonly' */
+  access?: 'readonly' | 'writeonly' | 'mutable';
+
+  /** @default '2d' */
+  viewDimension?: '1d' | '2d' | '2d-array' | '3d';
+}
+```
+You can see the list of supported storage texture formats [here](https://www.w3.org/TR/WGSL/#storage-texel-formats).
+
+## Bind Groups
+
+Before execution of a pipeline, any bind group that matches a given layout can be put in its place and used by the shader.
+To create a bind group, you can call the `populate` method on the bind group layout and associate each named key with
+a proper resource.
+
+```ts
+const fooLayout = tgpu.bindGroupLayout({
+  key0: { ... },
+  key1: { ... },
+  // ...
+});
+
+const fooBindGroup0 = fooLayout.populate({
+  key1: ...,
+  key0: ...,
+  // ...
+});
+
+const fooBindGroup1 = fooLayout.populate({
+  key0: ...,
+  key1: ...,
+  // ...
+});
+
+// ...
+```
+
+If you accidentally pass the wrong type of resource, the TypeScript compiler will catch the error at compile time.
+
+- **Uniform** bindings with schema `TData` accept:
+  - `TgpuBuffer<TData> & Uniform` - buffers of type `TData` with `'uniform'` usage,
+  - `GPUBuffer` - raw WebGPU buffers.
+- **Storage** bindings with schema `TData` accept:
+  - `TgpuBuffer<TData> & Storage` - buffers of type `TData` with `'storage'` usage,
+  - `GPUBuffer` - raw WebGPU buffers.
+- **Texture** bindings:
+  - `GPUTextureView` - views of raw WebGPU textures.
+- **Storage Texture** bindings:
+  - `GPUTextureView` - views of raw WebGPU textures.
+- **Sampler** bindings:
+  - `sampler === 'comparison'`
+    - `GPUSampler` - raw WebGPU samplers created *with* a `compare` function.
+  - `sampler === 'filtering'` or `sampler === 'non-filtering'`
+    - `GPUSampler` - raw WebGPU samplers created *without* a `compare` function.
+
