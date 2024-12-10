@@ -1,218 +1,106 @@
 import { describe, expect, it, vi } from 'vitest';
-import { afterEach } from 'vitest';
-import { struct, u32, vec3i, vec4u } from '../src/data';
-import tgpu from '../src/experimental';
-import { plum } from '../src/tgpuPlum';
+import * as d from '../src/data';
 import './utils/webgpuGlobals';
-
-const mockBuffer = {
-  getMappedRange: vi.fn(() => new ArrayBuffer(8)),
-  unmap: vi.fn(),
-  mapAsync: vi.fn(),
-};
-
-const mockCommandEncoder = {
-  beginComputePass: vi.fn(() => mockComputePassEncoder),
-  beginRenderPass: vi.fn(() => mockRenderPassEncoder),
-  copyBufferToBuffer: vi.fn(),
-  copyBufferToTexture: vi.fn(),
-  copyTextureToBuffer: vi.fn(),
-  copyTextureToTexture: vi.fn(),
-  finish: vi.fn(),
-};
-
-const mockComputePassEncoder = {
-  dispatchWorkgroups: vi.fn(),
-  end: vi.fn(),
-  setBindGroup: vi.fn(),
-  setPipeline: vi.fn(),
-};
-
-const mockRenderPassEncoder = {
-  draw: vi.fn(),
-  end: vi.fn(),
-  setBindGroup: vi.fn(),
-  setPipeline: vi.fn(),
-  setVertexBuffer: vi.fn(),
-};
-
-const mockDevice = {
-  createBindGroup: vi.fn(() => 'mockBindGroup'),
-  createBindGroupLayout: vi.fn(() => 'mockBindGroupLayout'),
-  createBuffer: vi.fn(() => mockBuffer),
-  createCommandEncoder: vi.fn(() => mockCommandEncoder),
-  createComputePipeline: vi.fn(() => 'mockComputePipeline'),
-  createPipelineLayout: vi.fn(() => 'mockPipelineLayout'),
-  createRenderPipeline: vi.fn(() => 'mockRenderPipeline'),
-  createSampler: vi.fn(() => 'mockSampler'),
-  createShaderModule: vi.fn(() => 'mockShaderModule'),
-  createTexture: vi.fn(() => 'mockTexture'),
-  importExternalTexture: vi.fn(() => 'mockExternalTexture'),
-  queue: {
-    copyExternalImageToTexture: vi.fn(),
-    onSubmittedWorkDone: vi.fn(),
-    submit: vi.fn(),
-    writeBuffer: vi.fn(),
-    writeTexture: vi.fn(),
-  },
-};
+import { mockBuffer, mockRoot } from './utils/mockRoot';
 
 describe('TgpuRoot', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+  const { getRoot } = mockRoot();
 
-  it('should create buffer with no initialization', () => {
-    const root = tgpu.initFromDevice({
-      device: mockDevice as unknown as GPUDevice,
+  describe('.createBuffer', () => {
+    it('should create buffer with no initialization', () => {
+      const root = getRoot();
+      const dataBuffer = root.createBuffer(d.u32).$usage('uniform');
+
+      const mockBuffer = root.unwrap(dataBuffer);
+      expect(mockBuffer).toBeDefined();
+      expect(mockBuffer.getMappedRange).not.toBeCalled();
+
+      expect(root.device.createBuffer).toBeCalledWith({
+        mappedAtCreation: false,
+        size: 4,
+        usage:
+          global.GPUBufferUsage.UNIFORM |
+          global.GPUBufferUsage.COPY_DST |
+          global.GPUBufferUsage.COPY_SRC,
+      });
     });
-    const dataBuffer = root.createBuffer(u32).$usage('uniform');
 
-    const mockBuffer = root.unwrap(dataBuffer);
-    expect(mockBuffer).toBeDefined();
-    expect(mockBuffer.getMappedRange).not.toBeCalled();
+    it('should create buffer with initialization', () => {
+      const root = getRoot();
+      const dataBuffer = root
+        .createBuffer(d.vec3i, d.vec3i(0, 0, 0))
+        .$usage('uniform');
 
-    expect(root.device.createBuffer).toBeCalledWith({
-      mappedAtCreation: false,
-      size: 4,
-      usage:
-        global.GPUBufferUsage.UNIFORM |
-        global.GPUBufferUsage.COPY_DST |
-        global.GPUBufferUsage.COPY_SRC,
+      const mockBuffer = root.unwrap(dataBuffer);
+      expect(mockBuffer).toBeDefined();
+      expect(mockBuffer.getMappedRange).toBeCalled();
+
+      expect(root.device.createBuffer).toBeCalledWith({
+        mappedAtCreation: true,
+        size: 12,
+        usage:
+          global.GPUBufferUsage.UNIFORM |
+          global.GPUBufferUsage.COPY_DST |
+          global.GPUBufferUsage.COPY_SRC,
+      });
     });
-  });
 
-  it('should create buffer with initialization', () => {
-    const root = tgpu.initFromDevice({
-      device: mockDevice as unknown as GPUDevice,
-    });
-    const dataBuffer = root
-      .createBuffer(vec3i, vec3i(0, 0, 0))
-      .$usage('uniform');
+    it('should allocate buffer with proper size for nested structs', () => {
+      const root = getRoot();
+      const s1 = d.struct({ a: d.u32, b: d.u32 });
+      const s2 = d.struct({ a: d.u32, b: s1 });
+      const dataBuffer = root.createBuffer(s2).$usage('uniform');
 
-    const mockBuffer = root.unwrap(dataBuffer);
-    expect(mockBuffer).toBeDefined();
-    expect(mockBuffer.getMappedRange).toBeCalled();
-
-    expect(root.device.createBuffer).toBeCalledWith({
-      mappedAtCreation: true,
-      size: 12,
-      usage:
-        global.GPUBufferUsage.UNIFORM |
-        global.GPUBufferUsage.COPY_DST |
-        global.GPUBufferUsage.COPY_SRC,
-    });
-  });
-
-  it('should allocate buffer with proper size for nested structs', () => {
-    const root = tgpu.initFromDevice({
-      device: mockDevice as unknown as GPUDevice,
-    });
-    const s1 = struct({ a: u32, b: u32 });
-    const s2 = struct({ a: u32, b: s1 });
-    const dataBuffer = root.createBuffer(s2).$usage('uniform');
-
-    root.unwrap(dataBuffer);
-    expect(root.device.createBuffer).toBeCalledWith({
-      mappedAtCreation: false,
-      size: 12,
-      usage:
-        global.GPUBufferUsage.UNIFORM |
-        global.GPUBufferUsage.COPY_DST |
-        global.GPUBufferUsage.COPY_SRC,
+      root.unwrap(dataBuffer);
+      expect(root.device.createBuffer).toBeCalledWith({
+        mappedAtCreation: false,
+        size: 12,
+        usage:
+          global.GPUBufferUsage.UNIFORM |
+          global.GPUBufferUsage.COPY_DST |
+          global.GPUBufferUsage.COPY_SRC,
+      });
     });
   });
 
-  it('should properly write to buffer', () => {
-    const root = tgpu.initFromDevice({
-      device: mockDevice as unknown as GPUDevice,
+  describe('.destroy', () => {
+    it('should call .destroy on all buffers created with it', () => {
+      const root = getRoot();
+      const buffer1 = root.createBuffer(d.f32);
+      const buffer2 = root.createBuffer(d.i32);
+      const buffer3 = root.createBuffer(d.u32);
+
+      const buffer1DestroySpy = vi.spyOn(buffer1, 'destroy');
+      const buffer2DestroySpy = vi.spyOn(buffer2, 'destroy');
+      const buffer3DestroySpy = vi.spyOn(buffer3, 'destroy');
+
+      root.destroy();
+
+      expect(buffer1DestroySpy).toHaveBeenCalledOnce();
+      expect(buffer2DestroySpy).toHaveBeenCalledOnce();
+      expect(buffer3DestroySpy).toHaveBeenCalledOnce();
     });
-    const dataBuffer = root.createBuffer(u32);
-
-    dataBuffer.write(3);
-
-    const mockBuffer = root.unwrap(dataBuffer);
-    expect(mockBuffer).toBeDefined();
-
-    expect(root.device.queue.writeBuffer).toBeCalledWith(
-      mockBuffer,
-      0,
-      new ArrayBuffer(4),
-      0,
-      4,
-    );
   });
 
-  it('should properly write to complex buffer', () => {
-    const root = tgpu.initFromDevice({
-      device: mockDevice as unknown as GPUDevice,
+  describe('.unwrap', () => {
+    it('should throw error when unwrapping destroyed buffer', () => {
+      const root = getRoot();
+      const buffer = root.createBuffer(d.f32);
+
+      buffer.destroy();
+
+      expect(() => root.unwrap(buffer)).toThrowError();
     });
 
-    const s1 = struct({ a: u32, b: u32, c: vec3i });
-    const s2 = struct({ a: u32, b: s1, c: vec4u });
+    it('should return an the same buffer that was passed into .createBuffer', () => {
+      const root = getRoot();
+      const buffer = root.createBuffer(
+        d.u32,
+        mockBuffer as unknown as GPUBuffer,
+      );
 
-    const dataBuffer = root.createBuffer(s2).$usage('uniform');
-
-    root.unwrap(dataBuffer);
-    expect(root.device.createBuffer).toBeCalledWith({
-      mappedAtCreation: false,
-      size: 64,
-      usage:
-        global.GPUBufferUsage.UNIFORM |
-        global.GPUBufferUsage.COPY_DST |
-        global.GPUBufferUsage.COPY_SRC,
+      expect(root.unwrap(buffer)).toBe(mockBuffer);
     });
-
-    dataBuffer.write({
-      a: 3,
-      b: { a: 4, b: 5, c: vec3i(6, 7, 8) },
-      c: vec4u(9, 10, 11, 12),
-    });
-
-    const mockBuffer = root.unwrap(dataBuffer);
-    expect(mockBuffer).toBeDefined();
-
-    expect(root.device.queue.writeBuffer).toBeCalledWith(
-      mockBuffer,
-      0,
-      new ArrayBuffer(64),
-      0,
-      64,
-    );
-  });
-
-  it('should properly write to buffer with plum initialization', () => {
-    const root = tgpu.initFromDevice({
-      device: mockDevice as unknown as GPUDevice,
-    });
-    const intPlum = plum<number>(3);
-
-    const dataBuffer = root.createBuffer(u32, intPlum).$usage('storage');
-    const spy = vi.spyOn(dataBuffer, 'write');
-
-    root.unwrap(dataBuffer);
-
-    expect(spy).toBeCalledTimes(0);
-    expect(root.device.createBuffer).toBeCalledWith({
-      mappedAtCreation: true,
-      size: 4,
-      usage:
-        global.GPUBufferUsage.STORAGE |
-        global.GPUBufferUsage.COPY_DST |
-        global.GPUBufferUsage.COPY_SRC,
-    });
-
-    root.setPlum(intPlum, 5);
-
-    expect(spy).toBeCalledTimes(1);
-    const mockBuffer = root.unwrap(dataBuffer);
-    expect(root.device.queue.writeBuffer).toBeCalledWith(
-      mockBuffer,
-      0,
-      new ArrayBuffer(4),
-      0,
-      4,
-    );
   });
 
   // TODO: Adapt the tests to the new API

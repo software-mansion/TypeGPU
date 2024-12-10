@@ -3,9 +3,10 @@ import { afterEach, beforeEach, vi } from 'vitest';
 import tgpu, { type ExperimentalTgpuRoot } from '../../src/experimental';
 import './webgpuGlobals';
 
-const mockBuffer = {
+export const mockBuffer = {
   getMappedRange: vi.fn(() => new ArrayBuffer(8)),
   unmap: vi.fn(),
+  mapState: 'unmapped',
   mapAsync: vi.fn(),
   destroy: vi.fn(),
 };

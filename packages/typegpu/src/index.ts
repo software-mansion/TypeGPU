@@ -3,9 +3,7 @@
  */
 
 import { init, initFromDevice } from './core/root/init';
-import { createBuffer } from './legacyBufferApi';
 import { bindGroupLayout } from './tgpuBindGroupLayout';
-import { read, write } from './tgpuBufferUtils';
 
 export const tgpu = {
   /** @hidden @deprecated Use `'uniform'` string literal instead. */
@@ -19,13 +17,6 @@ export const tgpu = {
 
   init,
   initFromDevice,
-
-  /** @hidden */
-  createBuffer,
-  /** @hidden */
-  read,
-  /** @hidden */
-  write,
 };
 export default tgpu;
 
