@@ -6,7 +6,6 @@ import type { Storage } from '../../extension';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
 import type { UnionToIntersection } from '../../shared/utilityTypes';
-import { type TgpuPlum, type Unsubscribe, isPlum } from '../../tgpuPlumTypes';
 import { isGPUBuffer } from '../../types';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 
@@ -37,7 +36,7 @@ type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
 export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
   readonly resourceType: 'buffer';
   readonly dataType: TData;
-  readonly initial?: Infer<TData> | TgpuPlum<Infer<TData>> | undefined;
+  readonly initial?: Infer<TData> | undefined;
   readonly label: string | undefined;
 
   readonly buffer: GPUBuffer;
@@ -58,7 +57,7 @@ export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
 export function createBufferImpl<TData extends AnyData>(
   group: ExperimentalTgpuRoot | undefined,
   typeSchema: TData,
-  initialOrBuffer?: Infer<TData> | TgpuPlum<Infer<TData>> | GPUBuffer,
+  initialOrBuffer?: Infer<TData> | GPUBuffer,
 ): TgpuBuffer<TData> {
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
 }
@@ -92,10 +91,9 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   private _device: GPUDevice | null = null;
   private _buffer: GPUBuffer | null = null;
   private _destroyed = false;
-  private _subscription: Unsubscribe | null = null;
 
   private _label: string | undefined;
-  readonly initial: Infer<TData> | TgpuPlum<Infer<TData>> | undefined;
+  readonly initial: Infer<TData> | undefined;
 
   public usableAsUniform = false;
   public usableAsStorage = false;
@@ -104,11 +102,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   constructor(
     private readonly _group: ExperimentalTgpuRoot | undefined,
     public readonly dataType: TData,
-    public readonly initialOrBuffer?:
-      | Infer<TData>
-      | TgpuPlum<Infer<TData>>
-      | GPUBuffer
-      | undefined,
+    public readonly initialOrBuffer?: Infer<TData> | GPUBuffer | undefined,
   ) {
     if (isGPUBuffer(initialOrBuffer)) {
       this._buffer = initialOrBuffer;
@@ -141,27 +135,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
 
       if (this.initial) {
         const writer = new BufferWriter(this._buffer.getMappedRange());
-
-        if (isPlum(this.initial)) {
-          const group = this._group;
-
-          if (!group) {
-            throw new Error(
-              'Create this buffer using `root.createBuffer` instead of `tgpu.createBuffer`.',
-            );
-          }
-
-          const plum = this.initial;
-
-          writeData(writer, this.dataType, group.readPlum(plum));
-
-          this._subscription = group.onPlumChange(plum, () => {
-            this.write(group.readPlum(plum));
-          });
-        } else {
-          writeData(writer, this.dataType, this.initial);
-        }
-
+        writeData(writer, this.dataType, this.initial);
         this._buffer.unmap();
       }
     }
@@ -305,9 +279,6 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
       return;
     }
     this._destroyed = true;
-    if (this._subscription) {
-      this._subscription();
-    }
     this._buffer?.destroy();
   }
 

@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { afterEach } from 'vitest';
 import { struct, u32, vec3i, vec4u } from '../src/data';
 import tgpu from '../src/experimental';
-import { plum } from '../src/tgpuPlum';
 import './utils/webgpuGlobals';
 
 const mockBuffer = {
@@ -178,40 +177,6 @@ describe('TgpuRoot', () => {
       new ArrayBuffer(64),
       0,
       64,
-    );
-  });
-
-  it('should properly write to buffer with plum initialization', () => {
-    const root = tgpu.initFromDevice({
-      device: mockDevice as unknown as GPUDevice,
-    });
-    const intPlum = plum<number>(3);
-
-    const dataBuffer = root.createBuffer(u32, intPlum).$usage('storage');
-    const spy = vi.spyOn(dataBuffer, 'write');
-
-    root.unwrap(dataBuffer);
-
-    expect(spy).toBeCalledTimes(0);
-    expect(root.device.createBuffer).toBeCalledWith({
-      mappedAtCreation: true,
-      size: 4,
-      usage:
-        global.GPUBufferUsage.STORAGE |
-        global.GPUBufferUsage.COPY_DST |
-        global.GPUBufferUsage.COPY_SRC,
-    });
-
-    root.setPlum(intPlum, 5);
-
-    expect(spy).toBeCalledTimes(1);
-    const mockBuffer = root.unwrap(dataBuffer);
-    expect(root.device.queue.writeBuffer).toBeCalledWith(
-      mockBuffer,
-      0,
-      new ArrayBuffer(4),
-      0,
-      4,
     );
   });
 
