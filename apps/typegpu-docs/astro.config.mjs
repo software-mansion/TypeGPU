@@ -48,9 +48,6 @@ export default defineConfig({
               '../../packages/typegpu/src/data/index.ts',
             ],
             tsconfig: '../../packages/typegpu/tsconfig.json',
-            sidebar: {
-              label: 'Reference',
-            },
             typeDoc: {
               excludeInternal: true,
               excludeReferences: true,
@@ -93,13 +90,13 @@ export default defineConfig({
               slug: 'fundamentals/buffers',
             },
             {
+              label: 'Data Schemas',
+              slug: 'fundamentals/data-schemas',
+            },
+            {
               label: 'Bind Groups',
               slug: 'fundamentals/bind-groups',
               badge: { text: '0.2' },
-            },
-            {
-              label: 'Data Schemas',
-              slug: 'fundamentals/data-schemas',
             },
             DEV && {
               label: 'Slots',
@@ -154,7 +151,16 @@ export default defineConfig({
             },
           ],
         },
-        DEV && typeDocSidebarGroup,
+        {
+          label: 'Reference',
+          items: stripFalsy([
+            {
+              label: 'Data Schema Cheatsheet',
+              slug: 'reference/data-schema-cheatsheet',
+            },
+            DEV && typeDocSidebarGroup,
+          ]),
+        },
       ]),
     }),
     tailwind({
