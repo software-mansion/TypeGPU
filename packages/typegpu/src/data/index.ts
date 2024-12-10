@@ -89,7 +89,6 @@ export {
 } from './matrix';
 export * from './vertexFormatData';
 export { atomic } from './atomic';
-export type { Infer } from '../shared/repr';
 export {
   align,
   size,
@@ -106,3 +105,14 @@ export {
   isLooseData,
 } from './dataTypes';
 export { PUBLIC_sizeOf as sizeOf } from './sizeOf';
+
+import type { Infer as INTERNAL_Infer } from '../shared/repr';
+import type { Exotic } from './exotic';
+
+/**
+ * Extracts the inferred representation of a resource.
+ * @example
+ * type A = Infer<F32> // => number
+ * type B = Infer<TgpuArray<F32>> // => number[]
+ */
+export type Infer<T> = INTERNAL_Infer<Exotic<T>>;
