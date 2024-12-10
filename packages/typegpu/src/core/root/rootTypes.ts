@@ -160,7 +160,7 @@ export interface TgpuRoot extends Unwrapper {
    */
   createBuffer<TData extends AnyData>(
     typeSchema: TData,
-    initial?: Infer<TData> | TgpuPlum<Infer<TData>> | undefined,
+    initial?: Infer<Exotic<TData>> | TgpuPlum<Infer<TData>> | undefined,
   ): TgpuBuffer<Exotic<TData>>;
 
   /**
