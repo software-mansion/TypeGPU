@@ -167,7 +167,7 @@ particleBuffer.write({
 ```
 
 :::caution[WebGPU Interoperability]
-If you create a buffer from an existing WebGPU buffer than happens to be mapped, the data will be written directly to the buffer (the buffer will not be unmapped).
+If you create a buffer from an existing WebGPU buffer that happens to be mapped, the data will be written directly to the buffer (the buffer will not be unmapped).
 If you pass an unmapped buffer, the data will be written to the buffer using `GPUQueue.writeBuffer`.
 
 If you passed your own buffer to the `root.createBuffer` function, you need to ensure it has the `GPUBufferUsage.COPY_DST` usage flag if you want to write to it using the `write` method.

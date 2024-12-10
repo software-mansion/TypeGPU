@@ -95,12 +95,9 @@ Matching WGSL statement:
 // ...
 ```
 
-#### Resources that fit this layout entry
-
-
 ### Storage
 
-To get readonly/mutable access to a buffer, create a property of with the value matching:
+To get readonly/mutable access to a buffer, create a property with the value matching:
 ```ts
 {
   storage: d.AnyData | ((n: number) => d.AnyData);
@@ -156,6 +153,8 @@ struct Filter {
 
 ### Samplers
 
+Samplers can be made accessible to shaders with a property that matches the following:
+
 ```ts
 {
   sampler: 'filtering' | 'non-filtering' | 'comparison';
@@ -164,7 +163,7 @@ struct Filter {
 
 ### Textures
 
-To be able to sample a texture in a shader, create a property of with the value matching:
+To be able to sample a texture in a shader, create a property with the value matching:
 ```ts
 {
   texture: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
@@ -179,7 +178,7 @@ To be able to sample a texture in a shader, create a property of with the value 
 
 ### Storage Textures
 
-To be able to operate on textures more directly in a shader, create a property of with the value matching:
+To be able to operate on textures more directly in a shader, create a property with the value matching:
 ```ts
 {
   storageTexture: StorageTextureTexelFormat;
