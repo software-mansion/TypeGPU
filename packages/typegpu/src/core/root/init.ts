@@ -7,8 +7,6 @@ import {
   RandomNameRegistry,
   StrictNameRegistry,
 } from '../../nameRegistry';
-import { type PlumListener, PlumStore } from '../../plumStore';
-import type { TgpuSettable } from '../../settableTrait';
 import type { Infer } from '../../shared/repr';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat';
 import type {
@@ -16,11 +14,6 @@ import type {
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout';
 import { isBindGroup, isBindGroupLayout } from '../../tgpuBindGroupLayout';
-import type {
-  ExtractPlumValue,
-  TgpuPlum,
-  Unsubscribe,
-} from '../../tgpuPlumTypes';
 import type { TgpuSlot } from '../../types';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
 import type { IOLayout } from '../function/fnTypes';
@@ -58,7 +51,6 @@ import type {
   CreateTextureOptions,
   CreateTextureResult,
   ExperimentalTgpuRoot,
-  SetPlumAction,
   TgpuRoot,
   WithBinding,
   WithCompute,
@@ -165,8 +157,6 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
 
   private _commandEncoder: GPUCommandEncoder | null = null;
 
-  private readonly _plumStore = new PlumStore();
-
   constructor(
     public readonly device: GPUDevice,
     public readonly nameRegistry: NameRegistry,
@@ -185,7 +175,7 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
 
   createBuffer<TData extends AnyData>(
     typeSchema: TData,
-    initialOrBuffer?: Infer<TData> | TgpuPlum<Infer<TData>> | GPUBuffer,
+    initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuBuffer<TData> {
     const buffer = createBufferImpl(this, typeSchema, initialOrBuffer).$device(
       this.device,
@@ -299,31 +289,6 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
     }
 
     throw new Error(`Unknown resource type: ${resource}`);
-  }
-
-  readPlum<TPlum extends TgpuPlum>(plum: TPlum): ExtractPlumValue<TPlum> {
-    return this._plumStore.get(plum);
-  }
-
-  setPlum<TPlum extends TgpuPlum & TgpuSettable>(
-    plum: TPlum,
-    value: SetPlumAction<ExtractPlumValue<TPlum>>,
-  ) {
-    type Value = ExtractPlumValue<TPlum>;
-
-    if (typeof value === 'function') {
-      const compute = value as (prev: Value) => Value;
-      this._plumStore.set(plum, compute(this._plumStore.get(plum)));
-    } else {
-      this._plumStore.set(plum, value);
-    }
-  }
-
-  onPlumChange<TValue>(
-    plum: TgpuPlum<TValue>,
-    listener: PlumListener<TValue>,
-  ): Unsubscribe {
-    return this._plumStore.subscribe(plum, listener);
   }
 
   flush() {

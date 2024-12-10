@@ -1,7 +1,6 @@
 import { type TgpuBuffer, createBufferImpl } from './core/buffer/buffer';
 import type { AnyData } from './data/dataTypes';
 import type { Infer } from './shared/repr';
-import type { TgpuPlum } from './tgpuPlumTypes';
 
 /**
  * @deprecated Use the `root.createBuffer` API instead, accessible through `await tgpu.init()`
@@ -11,7 +10,7 @@ import type { TgpuPlum } from './tgpuPlumTypes';
  */
 export function createBuffer<TData extends AnyData>(
   typeSchema: TData,
-  initial?: Infer<TData> | TgpuPlum<Infer<TData>> | undefined,
+  initial?: Infer<TData> | undefined,
 ): TgpuBuffer<TData>;
 
 /**
@@ -30,7 +29,7 @@ export function createBuffer<TData extends AnyData>(
  */
 export function createBuffer<TData extends AnyData>(
   typeSchema: TData,
-  initialOrBuffer?: Infer<TData> | TgpuPlum<Infer<TData>> | GPUBuffer,
+  initialOrBuffer?: Infer<TData> | GPUBuffer,
 ): TgpuBuffer<TData> {
   return createBufferImpl(undefined, typeSchema, initialOrBuffer);
 }

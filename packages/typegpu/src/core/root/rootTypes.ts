@@ -4,15 +4,8 @@ import type { Exotic } from '../../data/exotic';
 import type { Vec4f } from '../../data/wgslTypes';
 import type { JitTranspiler } from '../../jitTranspiler';
 import type { NameRegistry } from '../../nameRegistry';
-import type { PlumListener } from '../../plumStore';
-import type { TgpuSettable } from '../../settableTrait';
 import type { Infer } from '../../shared/repr';
 import type { Mutable, OmitProps, Prettify } from '../../shared/utilityTypes';
-import type {
-  ExtractPlumValue,
-  TgpuPlum,
-  Unsubscribe,
-} from '../../tgpuPlumTypes';
 import type { Eventual, TgpuSlot } from '../../types';
 import type { Unwrapper } from '../../unwrapper';
 import type { TgpuBuffer } from '../buffer/buffer';
@@ -31,8 +24,6 @@ import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute';
 // ----------
 // Public API
 // ----------
-
-export type SetPlumAction<T> = T | ((prev: T) => T);
 
 export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
@@ -160,7 +151,7 @@ export interface TgpuRoot extends Unwrapper {
    */
   createBuffer<TData extends AnyData>(
     typeSchema: TData,
-    initial?: Infer<Exotic<TData>> | TgpuPlum<Infer<TData>> | undefined,
+    initial?: Infer<Exotic<TData>> | undefined,
   ): TgpuBuffer<Exotic<TData>>;
 
   /**
@@ -216,18 +207,6 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
    * hold the same value until `flush()` is called.
    */
   readonly commandEncoder: GPUCommandEncoder;
-
-  readPlum<TPlum extends TgpuPlum>(plum: TPlum): ExtractPlumValue<TPlum>;
-
-  setPlum<TPlum extends TgpuPlum & TgpuSettable>(
-    plum: TPlum,
-    value: SetPlumAction<ExtractPlumValue<TPlum>>,
-  ): void;
-
-  onPlumChange<TValue>(
-    plum: TgpuPlum<TValue>,
-    listener: PlumListener<TValue>,
-  ): Unsubscribe;
 
   /**
    * Causes all commands enqueued by pipelines to be
