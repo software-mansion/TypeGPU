@@ -186,9 +186,9 @@ const renderPipeline = root
     topology: 'triangle-strip',
   })
   .createPipeline()
+  .$name('draw confetti')
   .with(geometryLayout, particleGeometryBuffer)
-  .with(dataLayout, particleDataBuffer)
-  .$name('draw confetti');
+  .with(dataLayout, particleDataBuffer);
 
 const computePipeline = root
   .withCompute(mainCompute)
