@@ -1,5 +1,5 @@
-import tgpu from 'typegpu';
-import { f32, vec3f } from 'typegpu/data';
+import { f32, location, struct, vec2f, vec3f } from 'typegpu/data';
+import tgpu, { builtin } from 'typegpu/experimental';
 
 const rareLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },
@@ -11,18 +11,12 @@ const frequentLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: {} },
 });
 
+const VertexOutput = struct({
+  position: builtin.position,
+  uv: location(0, vec2f),
+});
+
 const shaderCode = /* wgsl */ `
-
-struct VertexOutput {
-  @builtin(position) position: vec4f,
-  @location(0) uv: vec2f,
-};
-
-@group(0) @binding(0) var sampling: sampler;
-@group(0) @binding(1) var<uniform> color: vec3f;
-@group(0) @binding(2) var<uniform> threshold: f32;
-@group(1) @binding(0) var inputTexture: texture_external;
-
 
 @vertex
 fn main_vert(@builtin(vertex_index) idx: u32) -> VertexOutput {
@@ -76,9 +70,7 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
   }
 
   return col;
-}
-
-`;
+}`;
 
 const width = 500;
 const height = 375;
@@ -145,7 +137,17 @@ const rareBindGroup = rareLayout.populate({
   threshold: thresholdBuffer,
 });
 
-const shaderModule = device.createShaderModule({ code: shaderCode });
+const shaderModule = device.createShaderModule({
+  code: tgpu.resolve({
+    input: shaderCode,
+    extraDependencies: {
+      ...rareLayout.bound,
+      ...frequentLayout.bound,
+      VertexOutput,
+    },
+  }),
+});
+
 const renderPipeline = device.createRenderPipeline({
   layout: device.createPipelineLayout({
     bindGroupLayouts: [root.unwrap(rareLayout), root.unwrap(frequentLayout)],
