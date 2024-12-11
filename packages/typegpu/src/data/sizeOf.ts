@@ -1,4 +1,3 @@
-import { invariant } from '../errors';
 import { roundUp } from '../mathUtils';
 import { alignmentOf, customAlignmentOf } from './alignmentOf';
 import type { AnyData, LooseStruct, LooseTypeLiteral } from './dataTypes';
@@ -64,11 +63,6 @@ const knownSizesMap: Record<string, number> = {
 function sizeOfStruct(struct: WgslStruct) {
   let size = 0;
   for (const property of Object.values(struct.propTypes)) {
-    invariant(
-      property !== undefined,
-      'Only types allow for undefined props, values should not.',
-    );
-
     if (Number.isNaN(size)) {
       throw new Error('Only the last property of a struct can be unbounded');
     }

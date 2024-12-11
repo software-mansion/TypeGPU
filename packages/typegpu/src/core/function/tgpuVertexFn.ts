@@ -7,7 +7,6 @@ import {
   type WgslStruct,
   isWgslStruct,
 } from '../../data/wgslTypes';
-import { invariant } from '../../errors';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
@@ -18,7 +17,6 @@ import type {
   IORecord,
   Implementation,
   InferIO,
-  StrictIOLayout,
 } from './fnTypes';
 
 // ----------
@@ -76,7 +74,7 @@ export interface TgpuVertexFn<
  *   passed onto the fragment shader stage.
  */
 export function vertexFn<
-  VertexIn extends StrictIOLayout,
+  VertexIn extends IOLayout,
   // Not allowing single-value output, as it is better practice
   // to properly label what the vertex shader is outputting.
   VertexOut extends IORecord,
@@ -101,22 +99,17 @@ export function vertexFn<
 
 type IOLayoutToOutputSchema<T extends IOLayout> = T extends BaseWgslData
   ? T
-  : T extends Record<string, BaseWgslData | undefined>
+  : T extends Record<string, BaseWgslData>
     ? WgslStruct<T>
     : never;
 
 function withLocations(
-  members: Partial<Record<string, BaseWgslData>>,
+  members: Record<string, BaseWgslData>,
 ): Record<string, BaseWgslData> {
   let nextLocation = 0;
 
   return Object.fromEntries(
     Object.entries(members).map(([key, member]) => {
-      invariant(
-        member !== undefined,
-        'Only types allow for undefined props, values should not.',
-      );
-
       if (isBuiltin(member)) {
         // Skipping builtins
         return [key, member];

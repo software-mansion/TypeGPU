@@ -69,21 +69,9 @@ export type IORecord<TElementType extends IOData = IOData> = Record<
 /**
  * Used for I/O definitions of entry functions.
  */
-export type StrictIOLayout<TElementType extends IOData = IOData> =
-  | TElementType
-  | IORecord<TElementType>;
-
-/**
- * Used for I/O definitions of entry functions.
- *
- * @privateRemarks
- * More permissive than `StrictIOLayout` due to having
- * to handle potentially (not really) undefined properties
- * from the vertex output.
- */
 export type IOLayout<TElementType extends IOData = IOData> =
   | TElementType
-  | Partial<IORecord<TElementType>>;
+  | IORecord<TElementType>;
 
 export type InferIO<T> = T extends { type: string }
   ? Infer<T>

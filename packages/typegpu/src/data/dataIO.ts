@@ -1,5 +1,4 @@
 import type { ISerialInput, ISerialOutput } from 'typed-binary';
-import { invariant } from '../errors';
 import type { Infer, InferRecord } from '../shared/repr';
 import alignIO from './alignIO';
 import { alignmentOf, customAlignmentOf } from './alignmentOf';
@@ -155,11 +154,6 @@ const dataWriters = {
     alignIO(output, alignment);
 
     for (const [key, property] of Object.entries(schema.propTypes)) {
-      invariant(
-        property !== undefined,
-        'Only types allow for undefined props, values should not.',
-      );
-
       alignIO(output, alignmentOf(property));
       writeData(output, property, value[key] as wgsl.BaseWgslData);
     }
@@ -562,11 +556,6 @@ const dataReaders = {
     const result = {} as Record<string, unknown>;
 
     for (const [key, property] of Object.entries(schema.propTypes)) {
-      invariant(
-        property !== undefined,
-        'Only types allow for undefined props, values should not.',
-      );
-
       alignIO(input, alignmentOf(property));
       result[key] = readData(input, property);
     }

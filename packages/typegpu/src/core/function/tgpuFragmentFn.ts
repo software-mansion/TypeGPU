@@ -9,7 +9,6 @@ import type {
   IORecord,
   Implementation,
   InferIO,
-  StrictIOLayout,
 } from './fnTypes';
 
 // ----------
@@ -70,7 +69,7 @@ export function fragmentFn<
   // Not allowing single-value input, as using objects here is more
   // readable, and refactoring to use a builtin argument is too much hassle.
   FragmentIn extends IORecord,
-  FragmentOut extends StrictIOLayout<Vec4f>,
+  FragmentOut extends IOLayout<Vec4f>,
 >(
   inputType: FragmentIn,
   outputType: FragmentOut,
