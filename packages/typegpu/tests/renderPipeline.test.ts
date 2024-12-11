@@ -75,6 +75,9 @@ describe('Inter-Stage Variables', () => {
       const emptyFragmentWithBuiltin = tgpu
         .fragmentFn({ pos: builtin.frontFacing }, {})
         .does('');
+      const fullFragment = tgpu
+        .fragmentFn({ a: d.vec3f, b: d.vec2f }, d.vec4f)
+        .does('');
 
       // Using none
       const pipeline = root
@@ -101,10 +104,17 @@ describe('Inter-Stage Variables', () => {
         .withFragment(emptyFragmentWithBuiltin, {})
         .createPipeline();
 
+      // Using all
+      const pipeline5 = root
+        .withVertex(vert, {})
+        .withFragment(fullFragment, { format: 'rgba8unorm' })
+        .createPipeline();
+
       expect(pipeline).toBeDefined();
       expect(pipeline2).toBeDefined();
       expect(pipeline3).toBeDefined();
       expect(pipeline4).toBeDefined();
+      expect(pipeline5).toBeDefined();
     });
 
     it('rejects fragment functions that use non-existent vertex output', ({

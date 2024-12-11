@@ -34,7 +34,7 @@ export type ValidateFragmentIn<
   FragmentIn extends IORecord,
   FragmentOut extends IOLayout<Vec4f>,
 > = FragmentIn extends Partial<VertexOut>
-  ? Partial<VertexOut> extends FragmentIn
+  ? VertexOut extends FragmentIn
     ? [
         entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>,
         targets: FragmentOutToTargets<FragmentOut>,
