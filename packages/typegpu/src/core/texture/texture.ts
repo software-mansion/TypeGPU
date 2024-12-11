@@ -313,7 +313,7 @@ class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
 
     if (!this._texture) {
       this._texture = this._branch.device.createTexture({
-        label: this._label ?? '',
+        label: this._label ?? '<unnamed>',
         format: this.props.format,
         size: this.props.size,
         usage: this._flags,
