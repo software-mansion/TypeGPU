@@ -594,7 +594,10 @@ export interface Mat4x4f {
 }
 
 export interface WgslStruct<
-  TProps extends Record<string, BaseWgslData> = Record<string, BaseWgslData>,
+  TProps extends Record<string, BaseWgslData | undefined> = Record<
+    string,
+    BaseWgslData | undefined
+  >,
 > {
   readonly type: 'struct';
   readonly label?: string | undefined;

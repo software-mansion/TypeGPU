@@ -535,13 +535,7 @@ const vertexMain = tgpu
   });
 
 const fragmentMain = tgpu
-  .fragmentFn(
-    {
-      pos: builtin.position /* TODO: Remove once builtins are properly purged from the types */,
-      uv: vec2f,
-    },
-    vec4f,
-  )
+  .fragmentFn({ uv: vec2f }, vec4f)
   .does(`(@location(0) uv: vec2f) -> @location(0) vec4f {
     let x = i32(uv.x * f32(gridSizeUniform));
     let y = i32(uv.y * f32(gridSizeUniform));

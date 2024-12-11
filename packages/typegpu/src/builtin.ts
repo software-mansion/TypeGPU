@@ -1,5 +1,5 @@
 import { arrayOf } from './data/array';
-import { type IsBuiltin, attribute } from './data/attributes';
+import { attribute } from './data/attributes';
 import { f32, u32 } from './data/numeric';
 import { vec3u, vec4f } from './data/vector';
 import type {
@@ -103,8 +103,8 @@ export const builtin = {
 
 export type AnyBuiltin = (typeof builtin)[keyof typeof builtin];
 
-export type OmitBuiltins<S> = IsBuiltin<S> extends true
+export type OmitBuiltins<S> = S extends AnyBuiltin
   ? never
   : {
-      [Key in keyof S as IsBuiltin<S[Key]> extends true ? never : Key]: S[Key];
+      [Key in keyof S as S[Key] extends AnyBuiltin ? never : Key]: S[Key];
     };

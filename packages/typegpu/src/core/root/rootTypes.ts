@@ -9,7 +9,11 @@ import type { Mutable, OmitProps, Prettify } from '../../shared/utilityTypes';
 import type { Eventual, TgpuSlot } from '../../types';
 import type { Unwrapper } from '../../unwrapper';
 import type { TgpuBuffer } from '../buffer/buffer';
-import type { IOLayout } from '../function/fnTypes';
+import type {
+  IOLayout,
+  MatchingIOLayout,
+  SubsetOfLayout,
+} from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
@@ -29,9 +33,12 @@ export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
 }
 
-export interface WithVertex<Varying extends IOLayout = IOLayout> {
-  withFragment<FragmentIn extends Varying, Output extends IOLayout<Vec4f>>(
-    entryFn: TgpuFragmentFn<FragmentIn, Output>,
+export interface WithVertex<VertexOut extends IOLayout = IOLayout> {
+  withFragment<
+    FragmentIn extends SubsetOfLayout<VertexOut>,
+    Output extends IOLayout<Vec4f>,
+  >(
+    entryFn: TgpuFragmentFn<MatchingIOLayout<VertexOut, FragmentIn>, Output>,
     targets: FragmentOutToTargets<Output>,
   ): WithFragment<Output>;
 }
@@ -51,7 +58,7 @@ export interface WithBinding {
   withVertex<Attribs extends IOLayout, Varying extends IOLayout>(
     entryFn: TgpuVertexFn<Attribs, Varying>,
     attribs: LayoutToAllowedAttribs<OmitBuiltins<Attribs>>,
-  ): WithVertex<Varying>;
+  ): WithVertex<OmitBuiltins<Varying>>;
 }
 
 export type CreateTextureOptions<

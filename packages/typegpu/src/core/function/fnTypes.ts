@@ -2,6 +2,7 @@ import type * as smol from 'tinyest';
 import type { AnyAttribute } from '../../data/attributes';
 import type { Exotic } from '../../data/exotic';
 import type {
+  BaseWgslData,
   Decorated,
   F32,
   I32,
@@ -69,7 +70,7 @@ export type IOLayout<TElementType extends IOData = IOData> =
   // a single data-type
   | TElementType
   // a record of data-types
-  | { [key: string]: TElementType };
+  | Partial<{ [key: string]: TElementType }>;
 
 export type InferIO<T> = T extends { type: string }
   ? Infer<T>
@@ -82,3 +83,23 @@ export type ExoticIO<T> = T extends { type: string }
   : T extends Record<string, unknown>
     ? { [K in keyof T]: Exotic<T[K]> }
     : T;
+
+export type SubsetOfLayout<T extends IOLayout> = T extends BaseWgslData
+  ? T
+  : Partial<T>;
+
+type NoExtraProperties<T, U extends T> = U & {
+  [P in Exclude<keyof U, keyof T>]: never;
+};
+
+/**
+ * @param TAvailable The output of a shader stage
+ * @param TUsing What a subsequent stage is using from what's available
+ */
+export type MatchingIOLayout<
+  TAvailable extends IOLayout,
+  TUsing extends SubsetOfLayout<TAvailable>,
+> = TUsing extends BaseWgslData
+  ? TAvailable
+  : // Cannot use more than is available
+    NoExtraProperties<SubsetOfLayout<TAvailable>, TUsing>;

@@ -1,5 +1,6 @@
 import type { OmitBuiltins } from '../../builtin';
 import type { AnyData } from '../../data/dataTypes';
+import type { Vec4f } from '../../data/wgslTypes';
 import type { JitTranspiler } from '../../jitTranspiler';
 import { WeakMemo } from '../../memo';
 import {
@@ -78,7 +79,7 @@ class WithBindingImpl implements WithBinding {
   withVertex<Attribs extends IOLayout, Varying extends IOLayout>(
     vertexFn: TgpuVertexFn,
     attribs: LayoutToAllowedAttribs<OmitBuiltins<Attribs>>,
-  ): WithVertex {
+  ): WithVertex<Varying> {
     return new WithVertexImpl({
       branch: this._getRoot(),
       primitiveState: undefined,
@@ -105,7 +106,9 @@ class WithComputeImpl implements WithCompute {
   }
 }
 
-class WithVertexImpl implements WithVertex {
+class WithVertexImpl<VertexOut extends IOLayout>
+  implements WithVertex<VertexOut>
+{
   constructor(
     private readonly _options: Omit<
       RenderPipelineCoreOptions,
@@ -113,15 +116,19 @@ class WithVertexImpl implements WithVertex {
     >,
   ) {}
 
-  withFragment(
-    fragmentFn: TgpuFragmentFn,
+  withFragment<
+    FragmentIn extends IOLayout,
+    FragmentOut extends IOLayout<Vec4f>,
+  >(
+    fragmentFn: TgpuFragmentFn<FragmentIn>,
     targets: AnyFragmentTargets,
-  ): WithFragment {
+  ): VertexOut extends FragmentIn ? WithFragment<FragmentOut> : never {
     return new WithFragmentImpl({
       ...this._options,
       fragmentFn,
       targets,
-    });
+      // biome-ignore lint/suspicious/noExplicitAny: <stop it>
+    }) as any;
   }
 }
 

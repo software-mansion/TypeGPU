@@ -1,7 +1,11 @@
 import { attribute, isBuiltin, location } from '../../data/attributes';
 import { getCustomLocation, isData } from '../../data/dataTypes';
 import { struct } from '../../data/struct';
-import type { BaseWgslData, WgslStruct } from '../../data/wgslTypes';
+import {
+  type BaseWgslData,
+  type WgslStruct,
+  isWgslStruct,
+} from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
@@ -49,7 +53,7 @@ export interface TgpuVertexFn<
 > extends TgpuResolvable,
     TgpuNamable {
   readonly shell: TgpuVertexFnShell<VertexAttribs, Output>;
-  readonly Output: IOLayoutToOutputStruct<Output>;
+  readonly Output: IOLayoutToOutputSchema<Output>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
 }
@@ -89,36 +93,46 @@ export function vertexFn<
 // Implementation
 // --------------
 
-type IOLayoutToOutputStruct<T extends IOLayout> = T extends BaseWgslData
-  ? WgslStruct<{ out: T }>
-  : T extends Record<string, BaseWgslData>
+type Bruh<T> = T extends BaseWgslData
+  ? T
+  : T extends Record<string, BaseWgslData | undefined>
     ? WgslStruct<T>
     : never;
 
+type IOLayoutToOutputSchema<T extends IOLayout> = T extends unknown
+  ? Bruh<T>
+  : never;
+
 function withLocations(
-  members: Record<string, BaseWgslData>,
+  members: Record<string, BaseWgslData | undefined>,
 ): Record<string, BaseWgslData> {
   let nextLocation = 0;
 
   return Object.fromEntries(
-    Object.entries(members).map(([key, member]) => {
-      if (isBuiltin(member)) {
-        // Skipping builtins
-        return [key, member];
-      }
+    Object.entries(members)
+      .map(([key, member]) => {
+        if (member === undefined) {
+          return null;
+        }
 
-      const customLocation = getCustomLocation(member);
-      if (customLocation !== undefined) {
-        // This member is already marked, start counting from the next location over.
-        nextLocation = customLocation + 1;
-        return [key, member];
-      }
+        if (isBuiltin(member)) {
+          // Skipping builtins
+          return [key, member];
+        }
 
-      return [
-        key,
-        attribute(member, { type: '@location', value: nextLocation++ }),
-      ];
-    }),
+        const customLocation = getCustomLocation(member);
+        if (customLocation !== undefined) {
+          // This member is already marked, start counting from the next location over.
+          nextLocation = customLocation + 1;
+          return [key, member];
+        }
+
+        return [
+          key,
+          attribute(member, { type: '@location', value: nextLocation++ }),
+        ];
+      })
+      .filter((x): x is Exclude<typeof x, null> => x !== null),
   );
 }
 
@@ -130,13 +144,9 @@ function createVertexFn(
 
   const core = createFnCore(shell, implementation);
 
-  const Output = struct(
-    withLocations(
-      isData(shell.returnType)
-        ? { out: location(0, shell.returnType) }
-        : shell.returnType,
-    ) as Record<string, IOData>,
-  );
+  const Output = isData(shell.returnType)
+    ? (location(0, shell.returnType) as IOData)
+    : struct(withLocations(shell.returnType) as Record<string, IOData>);
 
   return {
     shell,
@@ -153,7 +163,9 @@ function createVertexFn(
 
     $name(newLabel: string): This {
       core.label = newLabel;
-      Output.$name(`${newLabel}_Output`);
+      if (isWgslStruct(Output)) {
+        Output.$name(`${newLabel}_Output`);
+      }
       return this;
     },
 

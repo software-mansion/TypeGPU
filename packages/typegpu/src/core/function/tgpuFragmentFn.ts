@@ -68,7 +68,8 @@ export function fragmentFn<
     returnType: outputType as ExoticIO<Output>,
 
     does(implementation): TgpuFragmentFn<ExoticIO<Varying>, ExoticIO<Output>> {
-      return createFragmentFn(this, implementation as Implementation);
+      // biome-ignore lint/suspicious/noExplicitAny: <that's enough>
+      return createFragmentFn(this, implementation as Implementation) as any;
     },
   };
 }
