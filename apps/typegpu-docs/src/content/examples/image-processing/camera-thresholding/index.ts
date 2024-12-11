@@ -166,7 +166,6 @@ export function onCleanup() {
   }
 
   root.destroy();
-  root.device.destroy();
 }
 
 // #region UI
