@@ -92,7 +92,7 @@ describe('TgpuRoot', () => {
       expect(() => root.unwrap(buffer)).toThrowError();
     });
 
-    it('should return an the same buffer that was passed into .createBuffer', () => {
+    it('should return the same buffer that was passed into .createBuffer', () => {
       const root = getRoot();
       const buffer = root.createBuffer(
         d.u32,
