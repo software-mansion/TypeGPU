@@ -1,5 +1,5 @@
-import tgpu from 'typegpu';
-import { f32 } from 'typegpu/data';
+import { f32, location, struct, vec2f } from 'typegpu/data';
+import tgpu, { builtin } from 'typegpu/experimental';
 
 const rareLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },
@@ -10,16 +10,12 @@ const frequentLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: {} },
 });
 
+const VertexOutput = struct({
+  position: builtin.position,
+  uv: location(0, vec2f),
+});
+
 const renderShaderCode = /* wgsl */ `
-
-struct VertexOutput {
-  @builtin(position) position: vec4f,
-  @location(0) uv: vec2f,
-}
-
-@group(0) @binding(0) var sampling: sampler;
-@group(0) @binding(1) var<uniform> threshold: f32;
-@group(1) @binding(0) var inputTexture: texture_external;
 
 @vertex
 fn main_vert(@builtin(vertex_index) idx: u32) -> VertexOutput {
@@ -96,7 +92,14 @@ context.configure({
 });
 
 const renderShaderModule = device.createShaderModule({
-  code: renderShaderCode,
+  code: tgpu.resolve({
+    input: renderShaderCode,
+    extraDependencies: {
+      ...rareLayout.bound,
+      ...frequentLayout.bound,
+      VertexOutput,
+    },
+  }),
 });
 
 const renderPipeline = device.createRenderPipeline({
