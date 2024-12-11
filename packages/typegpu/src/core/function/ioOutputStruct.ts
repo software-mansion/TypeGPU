@@ -55,9 +55,9 @@ export function createOutputStruct<T extends IOData>(
       ?.groups?.output?.trim();
 
     if (outputName) {
-      const external: Record<string, unknown> = {};
-      external[outputName] = Output;
-      core.applyExternals(external);
+      const externals: Record<string, unknown> = {};
+      externals[outputName] = Output;
+      core.applyExternals(externals);
     }
   }
 
