@@ -54,7 +54,7 @@ describe('Inter-Stage Variables', () => {
     }) => {
       const fragment = tgpu.fragmentFn({ a: d.vec3f, c: d.f32 }, {}).does('');
 
-      const pipeline = root
+      root
         .withVertex(emptyVert, {})
         // @ts-expect-error
         .withFragment(fragment, {})
@@ -112,7 +112,7 @@ describe('Inter-Stage Variables', () => {
     }) => {
       const fragment = tgpu.fragmentFn({ a: d.vec3f, c: d.f32 }, {}).does('');
 
-      const pipeline = root
+      root
         .withVertex(vert, {})
         // @ts-expect-error
         .withFragment(fragment, {})
@@ -124,7 +124,7 @@ describe('Inter-Stage Variables', () => {
     }) => {
       const fragment = tgpu.fragmentFn({ a: d.f32, b: d.f32 }, {}).does('');
 
-      const pipeline = root
+      root
         .withVertex(vert, {})
         // @ts-expect-error
         .withFragment(fragment, {})
