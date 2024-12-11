@@ -1,3 +1,4 @@
+import type { OmitBuiltins } from '../../builtin';
 import { attribute, isBuiltin, location } from '../../data/attributes';
 import { getCustomLocation, isData } from '../../data/dataTypes';
 import { struct } from '../../data/struct';
@@ -14,6 +15,7 @@ import type {
   ExoticIO,
   IOData,
   IOLayout,
+  IORecord,
   Implementation,
   InferIO,
   StrictIOLayout,
@@ -27,18 +29,18 @@ import type {
  * Describes a vertex entry function signature (its arguments and return type)
  */
 export interface TgpuVertexFnShell<
-  VertexAttribs extends IOLayout,
-  Output extends IOLayout,
+  VertexIn extends IOLayout,
+  VertexOut extends IOLayout,
 > {
-  readonly argTypes: [VertexAttribs];
-  readonly returnType: Output;
+  readonly argTypes: [VertexIn];
+  readonly returnType: VertexOut;
 
   /**
    * Creates a type-safe implementation of this signature
    */
   does(
-    implementation: (vertexAttribs: InferIO<VertexAttribs>) => InferIO<Output>,
-  ): TgpuVertexFn<VertexAttribs, Output>;
+    implementation: (input: InferIO<VertexIn>) => InferIO<VertexOut>,
+  ): TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>;
 
   /**
    * @param implementation
@@ -46,7 +48,9 @@ export interface TgpuVertexFnShell<
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  does(implementation: string): TgpuVertexFn<VertexAttribs, Output>;
+  does(
+    implementation: string,
+  ): TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>;
 }
 
 export interface TgpuVertexFn<
@@ -73,7 +77,9 @@ export interface TgpuVertexFn<
  */
 export function vertexFn<
   VertexAttribs extends StrictIOLayout,
-  Output extends StrictIOLayout,
+  // Not allowing single-value output, as it is better practice
+  // to properly label what the vertex shader is outputting.
+  Output extends IORecord,
 >(
   vertexAttribs: VertexAttribs,
   outputType: Output,
@@ -82,10 +88,8 @@ export function vertexFn<
     argTypes: [vertexAttribs as ExoticIO<VertexAttribs>],
     returnType: outputType as ExoticIO<Output>,
 
-    does(
-      implementation,
-    ): TgpuVertexFn<ExoticIO<VertexAttribs>, ExoticIO<Output>> {
-      // biome-ignore lint/suspicious/noExplicitAny: <no need>
+    does(implementation) {
+      // biome-ignore lint/suspicious/noExplicitAny: <no thanks>
       return createVertexFn(this, implementation as Implementation) as any;
     },
   };

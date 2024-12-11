@@ -3,6 +3,7 @@ import { attribute } from './data/attributes';
 import { f32, u32 } from './data/numeric';
 import { vec3u, vec4f } from './data/vector';
 import type {
+  BaseWgslData,
   Builtin,
   Decorated,
   F32,
@@ -105,6 +106,8 @@ export type AnyBuiltin = (typeof builtin)[keyof typeof builtin];
 
 export type OmitBuiltins<S> = S extends AnyBuiltin
   ? never
-  : {
-      [Key in keyof S as S[Key] extends AnyBuiltin ? never : Key]: S[Key];
-    };
+  : S extends BaseWgslData
+    ? S
+    : {
+        [Key in keyof S as S[Key] extends AnyBuiltin ? never : Key]: S[Key];
+      };

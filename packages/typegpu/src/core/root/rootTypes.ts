@@ -55,10 +55,10 @@ export interface WithBinding {
 
   withCompute(entryFn: TgpuComputeFn): WithCompute;
 
-  withVertex<Attribs extends IOLayout, Varying extends IOLayout>(
-    entryFn: TgpuVertexFn<Attribs, Varying>,
-    attribs: LayoutToAllowedAttribs<OmitBuiltins<Attribs>>,
-  ): WithVertex<OmitBuiltins<Varying>>;
+  withVertex<VertexIn extends IOLayout, VertexOut extends IOLayout>(
+    entryFn: TgpuVertexFn<VertexIn, VertexOut>,
+    attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
+  ): WithVertex<VertexOut>;
 }
 
 export type CreateTextureOptions<

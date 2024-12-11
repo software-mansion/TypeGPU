@@ -62,12 +62,17 @@ type BaseIOData =
 
 export type IOData = BaseIOData | Decorated<BaseIOData, AnyAttribute[]>;
 
+export type IORecord<TElementType extends IOData = IOData> = Record<
+  string,
+  TElementType
+>;
+
 /**
  * Used for I/O definitions of entry functions.
  */
 export type StrictIOLayout<TElementType extends IOData = IOData> =
   | TElementType
-  | Record<string, TElementType>;
+  | IORecord<TElementType>;
 
 /**
  * Used for I/O definitions of entry functions.
@@ -79,7 +84,7 @@ export type StrictIOLayout<TElementType extends IOData = IOData> =
  */
 export type IOLayout<TElementType extends IOData = IOData> =
   | TElementType
-  | Partial<Record<string, TElementType>>;
+  | Partial<IORecord<TElementType>>;
 
 export type InferIO<T> = T extends { type: string }
   ? Infer<T>

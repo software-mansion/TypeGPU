@@ -1,3 +1,4 @@
+import type { OmitBuiltins } from '../../builtin';
 import type { Vec4f } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
@@ -5,6 +6,7 @@ import { createFnCore } from './fnCore';
 import type {
   ExoticIO,
   IOLayout,
+  IORecord,
   Implementation,
   InferIO,
   StrictIOLayout,
@@ -18,18 +20,18 @@ import type {
  * Describes a fragment entry function signature (its arguments and return type)
  */
 export interface TgpuFragmentFnShell<
-  Varying extends IOLayout,
-  Output extends IOLayout<Vec4f>,
+  FragmentIn extends IOLayout,
+  FragmentOut extends IOLayout<Vec4f>,
 > {
-  readonly argTypes: [Varying];
-  readonly returnType: Output;
+  readonly argTypes: [FragmentIn];
+  readonly returnType: FragmentOut;
 
   /**
    * Creates a type-safe implementation of this signature
    */
   does(
-    implementation: (varying: InferIO<Varying>) => InferIO<Output>,
-  ): TgpuFragmentFn<Varying, Output>;
+    implementation: (input: InferIO<FragmentIn>) => InferIO<FragmentOut>,
+  ): TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>;
 
   /**
    * @param implementation
@@ -37,7 +39,9 @@ export interface TgpuFragmentFnShell<
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  does(implementation: string): TgpuFragmentFn<Varying, Output>;
+  does(
+    implementation: string,
+  ): TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>;
 }
 
 export interface TgpuFragmentFn<
@@ -63,17 +67,19 @@ export interface TgpuFragmentFn<
  *   colors for multiple targets.
  */
 export function fragmentFn<
-  Varying extends StrictIOLayout,
-  Output extends StrictIOLayout<Vec4f>,
+  // Not allowing single-value input, as using objects here is more
+  // readable, and refactoring to use a builtin argument is too much hassle.
+  FragmentIn extends IORecord,
+  FragmentOut extends StrictIOLayout<Vec4f>,
 >(
-  varyingTypes: Varying,
-  outputType: Output,
-): TgpuFragmentFnShell<ExoticIO<Varying>, ExoticIO<Output>> {
+  inputType: FragmentIn,
+  outputType: FragmentOut,
+): TgpuFragmentFnShell<ExoticIO<FragmentIn>, ExoticIO<FragmentOut>> {
   return {
-    argTypes: [varyingTypes as ExoticIO<Varying>],
-    returnType: outputType as ExoticIO<Output>,
+    argTypes: [inputType as ExoticIO<FragmentIn>],
+    returnType: outputType as ExoticIO<FragmentOut>,
 
-    does(implementation): TgpuFragmentFn<ExoticIO<Varying>, ExoticIO<Output>> {
+    does(implementation) {
       return createFragmentFn(this, implementation as Implementation);
     },
   };
