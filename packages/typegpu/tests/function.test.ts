@@ -1,11 +1,6 @@
 import { parse } from '@typegpu/wgsl-parser';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import {
-  ExoticIO,
-  type IOLayout,
-  type IOLayoutDiff,
-  type InferIO,
-} from '../src/core/function/fnTypes';
+import type { IOLayout, InferIO } from '../src/core/function/fnTypes';
 import * as d from '../src/data';
 import tgpu, { wgsl, type TgpuFnShell, type TgpuFn } from '../src/experimental';
 import { parseWGSL } from './utils/parseWGSL';
@@ -156,16 +151,5 @@ describe('InferIO', () => {
       a: number;
       b: number;
     }>();
-  });
-});
-
-describe('IOLayoutDiff', () => {
-  it('is `never` if the layouts are exact', () => {
-    type A = d.Vec3f;
-    // biome-ignore lint/complexity/noBannedTypes: <makes sense in this case>
-    type B = {};
-
-    expectTypeOf<IOLayoutDiff<A, A>>().toEqualTypeOf<never>();
-    expectTypeOf<IOLayoutDiff<B, B>>().toEqualTypeOf<never>();
   });
 });

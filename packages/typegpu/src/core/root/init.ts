@@ -1,6 +1,5 @@
 import type { OmitBuiltins } from '../../builtin';
 import type { AnyData } from '../../data/dataTypes';
-import type { Vec4f } from '../../data/wgslTypes';
 import type { JitTranspiler } from '../../jitTranspiler';
 import { WeakMemo } from '../../memo';
 import {
@@ -76,10 +75,10 @@ class WithBindingImpl implements WithBinding {
     return new WithComputeImpl(this._getRoot(), this._slotBindings, entryFn);
   }
 
-  withVertex<Attribs extends IOLayout, Varying extends IOLayout>(
+  withVertex<Attribs extends IOLayout>(
     vertexFn: TgpuVertexFn,
     attribs: LayoutToAllowedAttribs<OmitBuiltins<Attribs>>,
-  ): WithVertex<Varying> {
+  ): WithVertex {
     return new WithVertexImpl({
       branch: this._getRoot(),
       primitiveState: undefined,
@@ -106,9 +105,7 @@ class WithComputeImpl implements WithCompute {
   }
 }
 
-class WithVertexImpl<VertexOut extends IOLayout>
-  implements WithVertex<VertexOut>
-{
+class WithVertexImpl implements WithVertex {
   constructor(
     private readonly _options: Omit<
       RenderPipelineCoreOptions,
@@ -116,19 +113,15 @@ class WithVertexImpl<VertexOut extends IOLayout>
     >,
   ) {}
 
-  withFragment<
-    FragmentIn extends IOLayout,
-    FragmentOut extends IOLayout<Vec4f>,
-  >(
-    fragmentFn: TgpuFragmentFn<FragmentIn>,
+  withFragment(
+    fragmentFn: TgpuFragmentFn,
     targets: AnyFragmentTargets,
-  ): VertexOut extends FragmentIn ? WithFragment<FragmentOut> : never {
+  ): WithFragment {
     return new WithFragmentImpl({
       ...this._options,
       fragmentFn,
       targets,
-      // biome-ignore lint/suspicious/noExplicitAny: <stop it>
-    }) as any;
+    });
   }
 }
 
