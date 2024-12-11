@@ -257,5 +257,4 @@ export const controls = {
 export function onCleanup() {
   disposed = true;
   root.destroy();
-  root.device.destroy();
 }

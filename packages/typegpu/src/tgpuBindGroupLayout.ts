@@ -65,7 +65,7 @@ export type TgpuLayoutEntryBase = {
 };
 
 export type TgpuLayoutUniform = TgpuLayoutEntryBase & {
-  uniform: AnyWgslData | ((arrayLength: number) => AnyWgslData);
+  uniform: AnyWgslData;
 };
 
 export type TgpuLayoutStorage = TgpuLayoutEntryBase & {
@@ -324,13 +324,10 @@ class TgpuBindGroupLayoutImpl<
       const membership = { idx, key, layout: this };
 
       if ('uniform' in entry) {
-        const dataType =
-          'type' in entry.uniform ? entry.uniform : entry.uniform(0);
-
         // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
         (this.bound[key] as any) = new TgpuLaidOutBufferImpl(
           'uniform',
-          dataType,
+          entry.uniform,
           membership,
         );
       }

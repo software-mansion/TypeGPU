@@ -65,14 +65,23 @@ describe('TgpuBindGroupLayout', () => {
 
   it('works for entries passed as functions returning TgpuData', ({ root }) => {
     const layout = bindGroupLayoutExperimental({
-      a: { uniform: (arrayLength: number) => arrayOf(u32, arrayLength) },
+      a: {
+        storage: (arrayLength: number) => arrayOf(u32, arrayLength),
+        access: 'mutable',
+      },
       b: { storage: (arrayLength: number) => arrayOf(vec3f, arrayLength) },
+    });
+
+    bindGroupLayoutExperimental({
+      // @ts-expect-error
+      c: { uniform: (arrayLength: number) => arrayOf(vec3f, arrayLength) },
     });
 
     expectTypeOf(layout).toEqualTypeOf<
       TgpuBindGroupLayoutExperimental<{
         a: {
-          uniform: (_: number) => WgslArray<U32>;
+          storage: (_: number) => WgslArray<U32>;
+          access: 'mutable';
         };
         b: {
           storage: (_: number) => WgslArray<Vec3f>;
@@ -82,7 +91,7 @@ describe('TgpuBindGroupLayout', () => {
 
     const { a, b } = layout.bound;
 
-    expectTypeOf(a).toEqualTypeOf<TgpuBufferUniform<WgslArray<U32>>>();
+    expectTypeOf(a).toEqualTypeOf<TgpuBufferMutable<WgslArray<U32>>>();
     expectTypeOf(b).toEqualTypeOf<TgpuBufferReadonly<WgslArray<Vec3f>>>();
 
     const aBuffer = root.createBuffer(arrayOf(u32, 4)).$usage('uniform');
@@ -96,7 +105,8 @@ describe('TgpuBindGroupLayout', () => {
     expectTypeOf(bindGroup).toEqualTypeOf<
       TgpuBindGroup<{
         a: {
-          uniform: (_: number) => WgslArray<U32>;
+          storage: (_: number) => WgslArray<U32>;
+          access: 'mutable';
         };
         b: {
           storage: (_: number) => WgslArray<Vec3f>;
@@ -130,9 +140,9 @@ describe('TgpuBindGroupLayout', () => {
       entries: [
         {
           binding: 0,
-          visibility: DEFAULT_READONLY_VISIBILITY_FLAGS,
+          visibility: GPUShaderStage.COMPUTE,
           buffer: {
-            type: 'uniform',
+            type: 'storage',
           },
         },
         {
