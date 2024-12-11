@@ -66,8 +66,7 @@ describe('ArrayToContainedAttribs', () => {
   it('processes an array of f16s', () => {
     type Result = ArrayToContainedAttribs<d.TgpuArray<d.F16>>;
 
-    // cursed
-    expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'float16'>>();
+    expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'float16h'>>();
   });
 
   it('processes a loose array of snorm16x2h', () => {
