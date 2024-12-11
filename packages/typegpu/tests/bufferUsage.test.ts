@@ -1,15 +1,12 @@
-import { describe, expectTypeOf, it } from 'vitest';
+import { describe, expectTypeOf } from 'vitest';
 
 import * as d from '../src/data';
 import { asUniform } from '../src/experimental';
 import type { Infer } from '../src/shared/repr';
-import { mockRoot } from './utils/mockRoot';
+import { it } from './utils/extendedIt';
 
 describe('TgpuBufferReadonly', () => {
-  const { getRoot } = mockRoot();
-
-  it('represents a `number` value', () => {
-    const root = getRoot();
+  it('represents a `number` value', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('uniform');
     const uniform = asUniform(buffer);
 
