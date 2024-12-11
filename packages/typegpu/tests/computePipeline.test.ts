@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import type { TgpuComputePipeline } from '../src/core/pipeline/computePipeline';
 import tgpu from '../src/experimental';
-import { it } from './utils/myIt';
+import { it } from './utils/extendedIt';
 
 describe('TgpuComputePipeline', () => {
   it('can be created with a compute entry function', ({ root }) => {

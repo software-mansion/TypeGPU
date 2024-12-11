@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest';
 import { struct, u32, vec3i, vec4u } from '../src/data';
 import './utils/webgpuGlobals';
-import { it } from './utils/myIt';
+import { it } from './utils/extendedIt';
 
 describe('TgpuRoot', () => {
   it('should create buffer with no initialization', ({ root }) => {

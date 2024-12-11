@@ -12,7 +12,7 @@ import { StrictNameRegistry, wgsl } from '../src/experimental';
 import { resolve } from '../src/resolutionCtx';
 import './utils/webgpuGlobals';
 import type { NotAllowed } from '../src/extension';
-import { it } from './utils/myIt';
+import { it } from './utils/extendedIt';
 
 describe('TgpuTexture', () => {
   it('makes passing the default, `undefined` or omitting an option prop result in the same type.', ({

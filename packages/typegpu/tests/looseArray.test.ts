@@ -10,7 +10,7 @@ import {
   vec3u,
 } from '../src/data';
 import { readData, writeData } from '../src/data/dataIO';
-import { it } from './utils/myIt';
+import { it } from './utils/extendedIt';
 
 describe('loose', () => {
   it('does not take element alignment into account when measuring', () => {

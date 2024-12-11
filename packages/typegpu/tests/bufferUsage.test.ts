@@ -3,7 +3,7 @@ import { describe, expectTypeOf } from 'vitest';
 import * as d from '../src/data';
 import { asUniform } from '../src/experimental';
 import type { Infer } from '../src/shared/repr';
-import { it } from './utils/myIt';
+import { it } from './utils/extendedIt';
 
 describe('TgpuBufferReadonly', () => {
   it('represents a `number` value', ({ root }) => {

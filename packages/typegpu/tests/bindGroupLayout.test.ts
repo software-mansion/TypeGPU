@@ -24,7 +24,7 @@ import {
   type UnwrapRuntimeConstructor,
   bindGroupLayoutExperimental,
 } from '../src/tgpuBindGroupLayout';
-import { it } from './utils/myIt';
+import { it } from './utils/extendedIt';
 import { parseWGSL } from './utils/parseWGSL';
 
 const DEFAULT_READONLY_VISIBILITY_FLAGS =
