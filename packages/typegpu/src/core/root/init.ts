@@ -15,7 +15,11 @@ import type {
 } from '../../tgpuBindGroupLayout';
 import { isBindGroup, isBindGroupLayout } from '../../tgpuBindGroupLayout';
 import type { TgpuSlot } from '../../types';
-import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
+import {
+  INTERNAL_createBuffer,
+  type TgpuBuffer,
+  isBuffer,
+} from '../buffer/buffer';
 import type { IOLayout } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
@@ -178,12 +182,8 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuBuffer<TData> {
-    const buffer = createBufferImpl(this, typeSchema, initialOrBuffer).$device(
-      this.device,
-    );
-
+    const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer);
     this._disposables.push(buffer);
-
     return buffer;
   }
 

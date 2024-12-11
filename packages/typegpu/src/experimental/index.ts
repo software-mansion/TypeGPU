@@ -16,9 +16,7 @@ import {
 } from '../core/root/init';
 import type { ExperimentalTgpuRoot } from '../core/root/rootTypes';
 import { vertexLayout } from '../core/vertexLayout/vertexLayout';
-import { createBuffer } from '../legacyBufferApi';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
-import { read, write } from '../tgpuBufferUtils';
 
 export const tgpu = {
   /** @deprecated Use `'uniform'` string literal instead. */
@@ -44,10 +42,6 @@ export const tgpu = {
   ) => ExperimentalTgpuRoot,
 
   resolve,
-
-  createBuffer,
-  read,
-  write,
 };
 
 // Hidden API, used only by tooling (e.g., rollup plugin).
