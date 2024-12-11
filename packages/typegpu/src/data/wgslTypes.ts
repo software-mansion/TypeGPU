@@ -339,6 +339,17 @@ export interface v2f extends NumberArrayView, Swizzle2<v2f, v3f, v4f> {
 }
 
 /**
+ * Interface representing its WGSL vector type counterpart: vec2h or vec2<f16>.
+ * A vector with 2 elements of type f16
+ */
+export interface v2h extends NumberArrayView, Swizzle2<v2h, v3h, v4h> {
+  /** use to distinguish between vectors of the same size on the type level */
+  readonly kind: 'vec2h';
+  x: number;
+  y: number;
+}
+
+/**
  * Interface representing its WGSL vector type counterpart: vec2i or vec2<i32>.
  * A vector with 2 elements of type i32
  */
@@ -367,6 +378,18 @@ export interface v2u extends NumberArrayView, Swizzle2<v2u, v3u, v4u> {
 export interface v3f extends NumberArrayView, Swizzle3<v2f, v3f, v4f> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3f';
+  x: number;
+  y: number;
+  z: number;
+}
+
+/**
+ * Interface representing its WGSL vector type counterpart: vec3h or vec3<f16>.
+ * A vector with 3 elements of type f16
+ */
+export interface v3h extends NumberArrayView, Swizzle3<v2h, v3h, v4h> {
+  /** use to distinguish between vectors of the same size on the type level */
+  readonly kind: 'vec3h';
   x: number;
   y: number;
   z: number;
@@ -403,6 +426,19 @@ export interface v3u extends NumberArrayView, Swizzle3<v2u, v3u, v4u> {
 export interface v4f extends NumberArrayView, Swizzle4<v2f, v3f, v4f> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4f';
+  x: number;
+  y: number;
+  z: number;
+  w: number;
+}
+
+/**
+ * Interface representing its WGSL vector type counterpart: vec4h or vec4<f16>.
+ * A vector with 4 elements of type f16
+ */
+export interface v4h extends NumberArrayView, Swizzle4<v2h, v3h, v4h> {
+  /** use to distinguish between vectors of the same size on the type level */
+  readonly kind: 'vec4h';
   x: number;
   y: number;
   z: number;
@@ -533,6 +569,12 @@ export interface Vec2f {
   readonly '~repr': v2f;
 }
 
+export interface Vec2h {
+  readonly type: 'vec2h';
+  /** Type-token, not available at runtime */
+  readonly '~repr': v2h;
+}
+
 export interface Vec2i {
   readonly type: 'vec2i';
   /** Type-token, not available at runtime */
@@ -551,6 +593,12 @@ export interface Vec3f {
   readonly '~repr': v3f;
 }
 
+export interface Vec3h {
+  readonly type: 'vec3h';
+  /** Type-token, not available at runtime */
+  readonly '~repr': v3h;
+}
+
 export interface Vec3i {
   readonly type: 'vec3i';
   /** Type-token, not available at runtime */
@@ -567,6 +615,12 @@ export interface Vec4f {
   readonly type: 'vec4f';
   /** Type-token, not available at runtime */
   readonly '~repr': v4f;
+}
+
+export interface Vec4h {
+  readonly type: 'vec4h';
+  /** Type-token, not available at runtime */
+  readonly '~repr': v4h;
 }
 
 export interface Vec4i {
@@ -665,12 +719,15 @@ export const wgslTypeLiterals = [
   'i32',
   'u32',
   'vec2f',
+  'vec2h',
   'vec2i',
   'vec2u',
   'vec3f',
+  'vec3h',
   'vec3i',
   'vec3u',
   'vec4f',
+  'vec4h',
   'vec4i',
   'vec4u',
   'mat2x2f',
@@ -691,12 +748,15 @@ export type AnyWgslData =
   | I32
   | U32
   | Vec2f
+  | Vec2h
   | Vec2i
   | Vec2u
   | Vec3f
+  | Vec3h
   | Vec3i
   | Vec3u
   | Vec4f
+  | Vec4h
   | Vec4i
   | Vec4u
   | Mat2x2f

@@ -3,16 +3,20 @@ import type { AnyAttribute } from '../../data/attributes';
 import type { Exotic } from '../../data/exotic';
 import type {
   Decorated,
+  F16,
   F32,
   I32,
   U32,
   Vec2f,
+  Vec2h,
   Vec2i,
   Vec2u,
   Vec3f,
+  Vec3h,
   Vec3i,
   Vec3u,
   Vec4f,
+  Vec4h,
   Vec4i,
   Vec4u,
 } from '../../data/wgslTypes';
@@ -47,11 +51,15 @@ export type Implementation<
 
 type BaseIOData =
   | F32
+  | F16
   | I32
   | U32
   | Vec2f
   | Vec3f
   | Vec4f
+  | Vec2h
+  | Vec3h
+  | Vec4h
   | Vec2i
   | Vec3i
   | Vec4i
