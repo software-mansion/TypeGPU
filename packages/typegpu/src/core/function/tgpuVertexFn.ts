@@ -54,12 +54,12 @@ export interface TgpuVertexFnShell<
 }
 
 export interface TgpuVertexFn<
-  VertexAttribs extends IOLayout = IOLayout,
-  Output extends IOLayout = IOLayout,
+  VertexIn extends IOLayout = IOLayout,
+  VertexOut extends IOLayout = IOLayout,
 > extends TgpuResolvable,
     TgpuNamable {
-  readonly shell: TgpuVertexFnShell<VertexAttribs, Output>;
-  readonly Output: IOLayoutToOutputSchema<Output>;
+  readonly shell: TgpuVertexFnShell<VertexIn, VertexOut>;
+  readonly Output: IOLayoutToOutputSchema<VertexOut>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
 }
@@ -79,14 +79,14 @@ export function vertexFn<
   VertexIn extends StrictIOLayout,
   // Not allowing single-value output, as it is better practice
   // to properly label what the vertex shader is outputting.
-  Output extends IORecord,
+  VertexOut extends IORecord,
 >(
   inputType: VertexIn,
-  outputType: Output,
-): TgpuVertexFnShell<ExoticIO<VertexIn>, ExoticIO<Output>> {
+  outputType: VertexOut,
+): TgpuVertexFnShell<ExoticIO<VertexIn>, ExoticIO<VertexOut>> {
   return {
     argTypes: [inputType as ExoticIO<VertexIn>],
-    returnType: outputType as ExoticIO<Output>,
+    returnType: outputType as ExoticIO<VertexOut>,
 
     does(implementation) {
       // biome-ignore lint/suspicious/noExplicitAny: <no thanks>
