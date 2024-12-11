@@ -1,5 +1,6 @@
 import type { OmitBuiltins } from '../../builtin';
 import type { AnyData } from '../../data/dataTypes';
+import { invariant } from '../../errors';
 import type { JitTranspiler } from '../../jitTranspiler';
 import { WeakMemo } from '../../memo';
 import {
@@ -114,9 +115,13 @@ class WithVertexImpl implements WithVertex {
   ) {}
 
   withFragment(
-    fragmentFn: TgpuFragmentFn,
-    targets: AnyFragmentTargets,
+    fragmentFn: TgpuFragmentFn | 'n/a',
+    targets: AnyFragmentTargets | 'n/a',
+    _mismatch?: unknown,
   ): WithFragment {
+    invariant(typeof fragmentFn !== 'string', 'Just type mismatch validation');
+    invariant(typeof targets !== 'string', 'Just type mismatch validation');
+
     return new WithFragmentImpl({
       ...this._options,
       fragmentFn,

@@ -56,7 +56,7 @@ describe('Inter-Stage Variables', () => {
 
       root
         .withVertex(emptyVert, {})
-        // @ts-expect-error
+        // @ts-expect-error: Missing from vertex output
         .withFragment(fragment, {})
         .createPipeline();
     });
@@ -112,23 +112,17 @@ describe('Inter-Stage Variables', () => {
     }) => {
       const fragment = tgpu.fragmentFn({ a: d.vec3f, c: d.f32 }, {}).does('');
 
-      root
-        .withVertex(vert, {})
-        // @ts-expect-error
-        .withFragment(fragment, {})
-        .createPipeline();
+      // @ts-expect-error: Missing from vertex output
+      root.withVertex(vert, {}).withFragment(fragment, {}).createPipeline();
     });
 
     it('rejects fragment functions that use mismatched vertex output data types', ({
       root,
     }) => {
-      const fragment = tgpu.fragmentFn({ a: d.f32, b: d.f32 }, {}).does('');
+      const fragment = tgpu.fragmentFn({ a: d.vec3f, b: d.f32 }, {}).does('');
 
-      root
-        .withVertex(vert, {})
-        // @ts-expect-error
-        .withFragment(fragment, {})
-        .createPipeline();
+      // @ts-expect-error: Mismatched vertex output
+      root.withVertex(vert, {}).withFragment(fragment, {}).createPipeline();
     });
   });
 });

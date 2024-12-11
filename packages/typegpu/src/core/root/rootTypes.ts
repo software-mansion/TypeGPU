@@ -9,11 +9,7 @@ import type { Mutable, OmitProps, Prettify } from '../../shared/utilityTypes';
 import type { Eventual, TgpuSlot } from '../../types';
 import type { Unwrapper } from '../../unwrapper';
 import type { TgpuBuffer } from '../buffer/buffer';
-import type {
-  IOLayout,
-  MatchingIOLayout,
-  SubsetOfLayout,
-} from '../function/fnTypes';
+import type { IOLayout, IORecord } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
@@ -33,14 +29,41 @@ export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
 }
 
-export interface WithVertex<VertexOut extends IOLayout = IOLayout> {
+export type ValidateFragmentIn<
+  VertexOut extends IORecord,
+  FragmentIn extends IORecord,
+  FragmentOut extends IOLayout<Vec4f>,
+> = FragmentIn extends Partial<VertexOut>
+  ? Partial<VertexOut> extends FragmentIn
+    ? [
+        entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>,
+        targets: FragmentOutToTargets<FragmentOut>,
+      ]
+    : [
+        entryFn: 'n/a',
+        targets: 'n/a',
+        MissingFromVertexOutput: {
+          [Key in Exclude<keyof FragmentIn, keyof VertexOut>]: FragmentIn[Key];
+        },
+      ]
+  : [
+      entryFn: 'n/a',
+      targets: 'n/a',
+      MismatchedVertexOutput: {
+        [Key in keyof FragmentIn &
+          keyof VertexOut as FragmentIn[Key] extends VertexOut[Key]
+          ? never
+          : Key]: [got: VertexOut[Key], expecting: FragmentIn[Key]];
+      },
+    ];
+
+export interface WithVertex<VertexOut extends IORecord = IORecord> {
   withFragment<
-    FragmentIn extends SubsetOfLayout<VertexOut>,
-    Output extends IOLayout<Vec4f>,
+    FragmentIn extends IORecord,
+    FragmentOut extends IOLayout<Vec4f>,
   >(
-    entryFn: TgpuFragmentFn<MatchingIOLayout<VertexOut, FragmentIn>, Output>,
-    targets: FragmentOutToTargets<Output>,
-  ): WithFragment<Output>;
+    ...args: ValidateFragmentIn<VertexOut, FragmentIn, FragmentOut>
+  ): WithFragment<FragmentOut>;
 }
 
 export interface WithFragment<
@@ -55,7 +78,7 @@ export interface WithBinding {
 
   withCompute(entryFn: TgpuComputeFn): WithCompute;
 
-  withVertex<VertexIn extends IOLayout, VertexOut extends IOLayout>(
+  withVertex<VertexIn extends IOLayout, VertexOut extends IORecord>(
     entryFn: TgpuVertexFn<VertexIn, VertexOut>,
     attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
   ): WithVertex<VertexOut>;
