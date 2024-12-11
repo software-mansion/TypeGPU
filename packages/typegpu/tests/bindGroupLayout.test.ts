@@ -117,7 +117,7 @@ describe('TgpuBindGroupLayout', () => {
     root.unwrap(bindGroup);
 
     expect(root.device.createBindGroup).toBeCalledWith({
-      label: '',
+      label: '<unnamed>',
       layout: root.unwrap(layout),
       entries: [
         {
@@ -136,7 +136,7 @@ describe('TgpuBindGroupLayout', () => {
     });
 
     expect(root.device.createBindGroupLayout).toBeCalledWith({
-      label: '',
+      label: '<unnamed>',
       entries: [
         {
           binding: 0,

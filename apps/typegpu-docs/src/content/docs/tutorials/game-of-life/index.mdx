@@ -1,0 +1,472 @@
+---
+title: Game of life - tutorial
+description: TypeGPU tutorial for beginners on how to create Conway's game of life
+draft: true
+---
+import effect from './images/effect.png';
+import { Image } from 'astro:assets';
+
+### Prerequisites 
+
+You are going to need [`node`](https://nodejs.org/) installed along with a package manager like [`npm`](https://docs.npmjs.com/cli/v10/commands/npm) or [`yarn`](https://yarnpkg.com/). And that’s about it. Also I would assume that you have some basic JS knowledge
+
+### Starting off
+
+First, create a new project managed with a package manager. You can use whatever tool or framework you’d like, I’m going to create a bare [`vite`](https://vite.dev/) project with yarn using their CLI. 
+
+I’ll keep `wgsl` code in separate files - so to use them in my JS code, I’m going to use [`vite-plugin-string`](https://github.com/aweikalee/vite-plugin-string), that will allow me to import the code as a raw string.
+
+You can also use the [`getting-started`](https://github.com/5ZYSZ3K/typegpu-example-game-of-life/tree/getting-started) branch from my [repo](https://github.com/5ZYSZ3K).
+
+### WGSL first steps
+
+First things first, let’s take care of the setup required to use WebGPU:
+
+```ts
+const canvas = document.querySelector("canvas") as HTMLCanvasElement;
+const devicePixelRatio = window.devicePixelRatio;
+canvas.width = canvas.clientWidth * devicePixelRatio;
+canvas.height = canvas.clientHeight * devicePixelRatio;
+```
+
+Canvas’ inner width and height need to be adjusted to its outer properties multiplied by the device’s pixel ratio - because canvas is pixel ratio independent.
+Then, start off with TypeGPU by creating its [`root`](/TypeGPU/fundamentals/roots/) object:
+
+```ts
+import tgpu from "typegpu";
+const root = await tgpu.init();
+```
+
+And configure the WebGPU context of our canvas by setting GPU device and WebGPU canvas format.
+
+```ts
+const device = root.device;
+
+const context = canvas.getContext("webgpu") as GPUCanvasContext;
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+context.configure({
+  device,
+  format: presentationFormat,
+});
+```
+
+### Compute pipeline
+
+In WebGPU, there is a concept of compute pipeline. In short, this is a series of operations that is meant to run some computations (render-independent!) on the GPU. In this example I’m going to use this concept to calculate if a cell is going to be alive in the next generation.
+The API which I am going to use (standard WebGPU API) looks like:
+
+```ts
+const computePipeline = device.createComputePipeline({
+    layout: device.createPipelineLayout({
+      bindGroupLayouts: [bindGroupLayoutCompute],
+    }),
+    compute: {
+      module: computeShader,
+      constants,
+    },
+  });
+```
+
+Now we just need to define the variables used there. Let’s quickly go through them:
+
+<ul class="list-disc pl-5">
+  <li>
+    `bindGroupLayoutCompute` - that is a bind group layout. 
+    What is a bind group layout? 
+    Well, it serves as a blueprint for a bind group. 
+    Sooo, what is a [bind group?](/TypeGPU/fundamentals/bind-groups/)
+    A [bind group](/TypeGPU/fundamentals/bind-groups/) is a set of variables, that can be bound to shaders through a pipeline, and accessed both in JS and WGSL code. 
+
+    WebGPU API is really low-level - to create a bind group and its layout, you have to create buffers with adequate size, type and paddings, and keep in mind their order in the bind group. If you calculate the paddings incorrectly, you may not get a proper error, but end up with your colors shifted. 
+
+    Fortunately, we can leave the tricky stuff to the TypeGPU - just define the schema for your data using [`data schemas`](/TypeGPU/fundamentals/data-schemas/). Moreover, . What more, we can infer the bind group layout from the shader’s code. 
+  </li>
+  <li>
+    `computeShader` - That’s the shader code which is going to be executed in this pipeline
+  </li>
+  <li>
+    `constants` - constant variables overriding those set in the shader (variable needs to be defined with a [`override`](https://www.w3.org/TR/WGSL/#override-decls) keyword in the shader)
+  </li>
+</ul>
+
+Based on all of that, we can start creating our compute pipeline with a shader code:
+
+```wgsl
+@binding(0) @group(0) var<storage, read> size: vec2u;
+@binding(1) @group(0) var<storage, read> current: array<u32>;
+@binding(2) @group(0) var<storage, read_write> next: array<u32>;
+```
+
+First, we define our binding variables:
+- `size`: a vector for width and height values of our playground
+- `current`: current state of our game, from which we are going to infer the next state
+- `next`: next state of our game, we are going to write to this buffer
+
+```wgsl
+fn getIndex(x: u32, y: u32) -> u32 {
+  let h = size.y;
+  let w = size.x;
+
+  return (y % h) * w + (x % w);
+}
+
+fn getCell(x: u32, y: u32) -> u32 {
+  return current[getIndex(x, y)];
+}
+
+fn countNeighbors(x: u32, y: u32) -> u32 {
+  return getCell(x - 1, y - 1) + getCell(x, y - 1) + getCell(x + 1, y - 1) + 
+         getCell(x - 1, y) + getCell(x + 1, y) + 
+         getCell(x - 1, y + 1) + getCell(x, y + 1) + getCell(x + 1, y + 1);
+}
+```
+
+A bunch of utility functions - `getIndex` flattens our 2D coordinates to a linear index, `getCell` returns value for our cell, and `countNeighbours` returns the number of alive neighbours, which is required to calculate the next state.
+
+Please keep in mind the `getIndex` function - it’s not important at the moment, but will be in the future, because we have to dispatch adequate workgroup grid in the JS code, to cover all cells.
+
+```wgsl
+override blockSize = 8;
+
+@compute @workgroup_size(blockSize, blockSize)
+fn main(@builtin(global_invocation_id) grid: vec3u) {
+  let x = grid.x;
+  let y = grid.y;
+  let n = countNeighbors(x, y);
+  next[getIndex(x, y)] = select(u32(n == 3u), u32(n == 2u || n == 3u), getCell(x, y) == 1u); 
+} 
+```
+
+Here is our entry point. We define it by using the [`@compute`](https://www.w3.org/TR/WGSL/#syntax-compute_attr) attribute. 
+
+We also define our [`workgroup_size`](https://www.w3.org/TR/WGSL/#attribute-workgroup_size) layout - GPU is using multiple workgroups at once, it power lies in massive parallelising our computations. The layout of workgroups is not important to the GPU, because under the hood it’s all going to be flattened. This layout should be useful for us, it should reflect the shape of our data.
+
+In the entry function, we are using [`@builtin(global_invocation_id)`](https://www.w3.org/TR/WGSL/#built-in-values-global_invocation_id) variable (an unique identifier of our invocation - a vector from our grid), and with that we calculate if the cell should be dead or alive in the next generation.
+
+We can infer the binding group layout of our shader using the CLI provided by [`tgpu-gen`](/TypeGPU/tooling/tgpu-gen/) library:
+
+```bash
+tgpu-gen "./src/*.wgsl" -o "./src/definitions/*.ts" --overwrite
+```
+
+Then, we can create our `computePipeline`:
+
+```ts
+import { layout0 as bindGroupLayoutCompute } from "./definitions/compute";
+import computeWGSL from "./compute.wgsl?raw";
+
+const gameWidth = 128;
+const gameHeight = 128;
+const workgroupSize = 16;
+const computeShader = device.createShaderModule({ code: computeWGSL });
+
+  const computePipeline = device.createComputePipeline({
+    layout: device.createPipelineLayout({
+      bindGroupLayouts: [root.unwrap(bindGroupLayoutCompute)],
+    }),
+    compute: {
+      module: computeShader,
+      constants: {
+        blockSize: workgroupSize, 
+      },
+    },
+  });
+```
+
+### Render pipeline
+
+Next, we will create a pipeline for rendering. It is similar to compute pipeline, but here we actually want to render something, so our shaders are going to be more restricted.
+
+This pipeline typically uses two shaders: vertex and fragment. Vertex is responsible for calculating rendered triangle positions on a screen, and fragment is going to determine their colour. 
+
+Let’s take a look at [`device.createRenderPipeline`](https://developer.mozilla.org/en-US/docs/Web/API/GPUDevice/createRenderPipeline) API, which we are going to use:
+
+```ts
+const renderPipeline = device.createRenderPipeline({
+  layout: device.createPipelineLayout({
+    bindGroupLayouts: [root.unwrap(bindGroupLayoutRender)],
+  }),
+  primitive: {
+    topology: "triangle-strip",
+  },
+  vertex: {
+    module: vertexShader,
+    buffers: [cellsStride, squareStride],
+  },
+  fragment: {
+    module: fragmentShader,
+    targets: [
+      {
+        format: presentationFormat,
+      },
+    ],
+  },
+});
+
+```
+We will need another bind group layout for that pipeline. Again, we will infer that from our shader:
+- [`topology`](https://developer.mozilla.org/en-US/docs/Web/API/GPUDevice/createRenderPipeline#topology) - value “triangle-strip” means that each vertex after the first two defines a triangle primitive between it and the previous two vertices.
+- [`vertex`](https://developer.mozilla.org/en-US/docs/Web/API/GPUDevice/createRenderPipeline#vertex_object_structure) - here we define the vertex shader. Keep in mind that this is just a definition - buffers are not actual buffers, but their layouts - we’re going to cover that
+- [`fragment`](https://developer.mozilla.org/en-US/docs/Web/API/GPUDevice/createRenderPipeline#fragment_object_structure) - that’s the definition of a fragment shader. Here we only define the code, and the target, which is the format of our canvas.
+
+Okay, so let’s go and create our vertex shader:
+
+```wgsl
+struct Out {
+  @builtin(position) pos: vec4f,
+  @location(0) cell: f32,
+}
+
+@binding(0) @group(0) var<uniform> size: vec2u;
+
+@vertex
+fn main(@builtin(instance_index) i: u32, @location(0) cell: u32, @location(1) pos: vec2u) -> Out {
+  let w = size.x;
+  let h = size.y;
+  let x = (f32(i % w + pos.x) / f32(w) - 0.5) * 2. * f32(w) / f32(max(w, h));
+  let y = (f32((i - (i % w)) / w + pos.y) / f32(h) - 0.5) * 2. * f32(h) / f32(max(w, h));
+
+  return Out(
+    vec4f(x, y, 0., 1.),
+    f32(cell),
+  );
+}
+```
+
+Here we have a couple of weird things:
+- A [`struct`](https://www.w3.org/TR/WGSL/#structure) definition - a struct is a named group of variables - but here it serves a purpose of overriding variables bound with [`@location`](https://www.w3.org/TR/WGSL/#input-output-locations) and [@builtin](https://www.w3.org/TR/WGSL/#built-in-values), which allows us to manipulate with the render.
+- [`@builtin(position)`](https://www.w3.org/TR/WGSL/#built-in-values-position) - a builtin variable that indicates, where our vertex should be located
+- [`@builtin(instance_index)`](https://www.w3.org/TR/WGSL/#built-in-values-instance_index) - an index of a vertex draw call - it will become more clear later
+- [`@location`](https://www.w3.org/TR/WGSL/#input-output-locations) - variables bound as a vertex buffers - their layouts are defined in the `buffers` property above, in `device.createRenderPipeline` call.
+
+The `pos` vector here is <b>NOT</b> a position of a cell - but rather of each vertex from each cell. We are calculating the position and setting it to `@builtin(position)` variable based on an instance index, the size of our playground and the `pos` vector. Notice that both `x` and `y` variables are between -1 and 1. Vector `pos` represents each corner of a square - it should take up one of following values: `{x: 0, y: 0}, {x:0, y: 1}, {x: 1, y: 0}, {x: 1, y: 1}`. The order here is important - we need them to render to squares and not some weird triangles.
+
+We can also create our fragment shader:
+
+```wgsl
+@fragment
+fn main(@location(0) cell: f32, @builtin(position) pos: vec4f) -> @location(0) vec4f {
+  return vec4f(
+    max(f32(cell) * pos.x / 1024, 0), 
+    max(f32(cell) * pos.y / 1024, 0), 
+    max(f32(cell) * (1 - pos.x / 1024), 0),
+    1.
+  );
+}
+```
+
+Here you can simply return a vector multiplied by `cell` value, but I want to play around with colours a bit - hope that you like it :D.
+
+Let’s create missing variables (`bindGroupLayoutRender` is a bind group layout created by the CLI from the vertex shader):
+
+```ts
+import { layout0 as bindGroupLayoutRender } from "./definitions/vert";
+import vertWGSL from "./vert.wgsl?raw";
+
+const vertexShader = device.createShaderModule({ code: vertWGSL });
+
+const cellsStride: GPUVertexBufferLayout = {
+  arrayStride: Uint32Array.BYTES_PER_ELEMENT,
+  stepMode: 'instance',
+  attributes: [
+    {
+      shaderLocation: 0,
+      offset: 0,
+      format: 'uint32',
+    },
+  ],
+};
+
+const squareStride: GPUVertexBufferLayout = {
+  arrayStride: 2 * Uint32Array.BYTES_PER_ELEMENT,
+  stepMode: 'vertex',
+  attributes: [
+    {
+      shaderLocation: 1,
+      offset: 0,
+      format: 'uint32x2',
+    },
+  ],
+};
+```
+
+Here we define our vertex buffer layouts. Their location is important - it should correspond with the `@location` attribute from the shader. 
+
+The format is self explanatory. The stride is important - it defines how many variables is going to be included in the shader per each step. 
+
+It may not be obvious at first, but with this type of buffer we are <b>NOT</b> going to have access to the whole buffer in the shader - we will have access to only a part of it at a time - the size of that part defined by `arrayStride` property. 
+
+And finally, stepMode - it’s probably the most tricky thing here. It defines when we will have access to different part of our buffer:
+- step mode “vertex” means that we are going to have a different set of data on each `draw` vertex call
+- step mode “instance” means that the set of data is going to change on each vertex instance.
+
+The `cellsStride` layout is responsible for mapping through each cell, so in this place we are going to pass current cells.
+
+`squareStride` is a bit more complicated thing - as mentioned above, vector `pos` should take up one of following values: `{x: 0, y: 0}, {x:0, y: 1}, {x: 1, y: 0}, {x: 1, y: 1}`. We need to create a buffer for that, but for that let’s move to another chapter.
+
+### Buffers and bind groups
+
+Okay, now we have both our pipelines set. So now let’s create actual buffers:
+
+```ts
+import { arrayOf, u32, vec2u } from "typegpu/data";
+
+const squareBuffer = root
+  .createBuffer(arrayOf(u32, 8), [0, 0, 1, 0, 0, 1, 1, 1])
+  .$usage("vertex");
+
+const sizeBuffer = root
+  .createBuffer(vec2u, vec2u(gameWidth, gameHeight))
+  .$usage("uniform", "storage");
+const length = gameWidth * gameHeight;
+const cells = Array.from({ length }).fill(0).map(() =>  Math.random() < 0.25 ? 1 : 0) as number[];
+
+buffer0 = root
+  .createBuffer(arrayOf(u32, length), cells)
+  .$usage("storage", "vertex");
+buffer1 = root
+  .createBuffer(arrayOf(u32, length))
+  .$usage("storage", "vertex");
+
+const bindGroup0 = bindGroupLayoutCompute.populate({
+  size: sizeBuffer,
+  current: buffer0,
+  next: buffer1,
+});
+
+const bindGroup1 = bindGroupLayoutCompute.populate({
+  size: sizeBuffer,
+  current: buffer1,
+  next: buffer0,
+});
+```
+
+As you can see, thanks to the TypeGPU the creation of buffers and bind groups is really straightforward and safe - we only need to care about array lengths and variable usages
+- Buffer `squareBuffer` was mentioned in the chapter above - it is responsible for creating vectors pointing to each corner of a square.
+- `buffer0` and `buffer1` are `current` and `next` states of our playground. The order is not important, they will be swapped around all the time.
+- `sizeBuffer` is a buffer with playground sizes - it should be readonly.
+
+Then we create bindGroups for our computations.
+
+### Rendering
+
+Then, we have to create the function responsible for rendering. First of all, let’s create a command encoder, which will take our pipelines and buffers, and pass them to the GPU:
+
+```ts
+const render = (swap: boolean) => {
+  commandEncoder = device.createCommandEncoder();
+  …
+};
+```
+
+In this example, our render function takes a `swap` parameter - but don’t worry about it too much, it’s just a parameter needed for this case
+
+Then, we can use this API to pass our compute pipeline (which should be executed before the render pipeline - we need to have our data calculated).
+
+Along with that, let’s pass:
+
+```ts
+const render = (swap: boolean) => {
+  …
+  const passEncoderCompute = commandEncoder.beginComputePass();
+  passEncoderCompute.setPipeline(computePipeline);
+  passEncoderCompute.setBindGroup(
+    0,
+    root.unwrap(swap ? bindGroup1 : bindGroup0)
+  );
+  …
+}
+```
+
+Here we use the `swap` parameter - it decides which bindGroup is going to be the current binding group, and which will be the next one. It should be swapped on each render call.
+
+Then, remind yourself of the `getIndex` function from the compute shader - we have to dispatch adequate workgroups grid:
+
+```ts
+const render = (swap: boolean) => {
+  …
+  passEncoderCompute.dispatchWorkgroups(
+    gameWidth / workgroupSize,
+    gameHeight / workgroupSize
+  );
+  passEncoderCompute.end();
+  …
+}
+```
+
+And that would be about it for the compute pipeline.
+After that, we can pass our render pipeline. It would require a bit more boilerplate, because we have to indicate the view, to which the render pipeline should draw:
+
+```ts
+const render = (swap: boolean) => {
+  …
+  const view = context.getCurrentTexture().createView();
+  const renderPass: GPURenderPassDescriptor = {
+    colorAttachments: [
+      {
+        view,
+        loadOp: "clear",
+        storeOp: "store",
+      },
+    ],
+  };
+  const passEncoderRender = commandEncoder.beginRenderPass(renderPass);
+  …
+}
+```
+
+The view needs to be created on each render call, because the previous texture will be destroyed by the next render.
+
+Then we can set our pipelines and bind groups again:
+
+```ts
+const render = (swap: boolean) => {
+  …
+  passEncoderRender.setPipeline(renderPipeline);
+  passEncoderRender.setBindGroup(0, root.unwrap(uniformBindGroup));
+  …
+}
+```
+
+And we have to pass our vertex buffers:
+
+```ts
+const render = (swap: boolean) => {
+  …
+  passEncoderRender.setVertexBuffer(
+    0,
+    root.unwrap(loopTimes ? buffer1 : buffer0)
+  );
+  passEncoderRender.setVertexBuffer(1, root.unwrap(squareBuffer));
+  …
+}
+```
+
+Again, vertex buffers are those buffers, only part of which is going to be available in a shader at a time.
+
+To finalise our `render` function, we just need to draw our vertexes, and submit our commands to the GPU:
+
+```ts
+const render = (swap: boolean) => {
+  …
+  passEncoderRender.draw(4, length);
+  passEncoderRender.end();
+  device.queue.submit([commandEncoder.finish()]);
+}
+```
+
+### Finalising
+
+Now let’s finally call that and see the results:
+```ts
+let swap = false;
+(function loop() {
+  render(swap);
+  swap = !swap;
+  requestAnimationFrame(loop);
+})();
+```
+
+As mentioned, `swap` variable is going to be changed on each call. And on the next animation frame, we can render again.
+
+<Image src={effect} alt="Final effect"/>

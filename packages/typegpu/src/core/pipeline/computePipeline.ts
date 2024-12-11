@@ -102,7 +102,7 @@ class TgpuComputePipelineImpl
     const memo = this._core.unwrap();
 
     const pass = this._core.branch.commandEncoder.beginComputePass({
-      label: this._core.label ?? '',
+      label: this._core.label ?? '<unnamed>',
     });
 
     pass.setPipeline(memo.pipeline);
@@ -157,6 +157,12 @@ class ComputePipelineCore {
           jitTranspiler: this.branch.jitTranspiler,
         },
       );
+
+      if (catchall !== null) {
+        bindGroupLayouts[catchall[0]]?.$name(
+          `${this.label ?? '<unnamed>'} - Automatic Bind Group & Layout`,
+        );
+      }
 
       this._memo = {
         pipeline: device.createComputePipeline({
