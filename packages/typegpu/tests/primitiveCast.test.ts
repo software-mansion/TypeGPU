@@ -63,7 +63,7 @@ describe('f16', () => {
     expect(f16(-65536)).toBe(Number.NEGATIVE_INFINITY); // -65536 is too small to represent as an f16
     expect(f16(-65505)).toBe(-65504); // -65504 is the smallest representable number
 
-    expect(f16(5475)).to.closeTo(5475, 4); // at this range, the precision is 4
+    expect(f16(5475)).closeTo(5475, 4); // at this range, the precision is 4
     expect(f16(5475)).not.toBe(5475); // the number is not exactly representable
   });
 
