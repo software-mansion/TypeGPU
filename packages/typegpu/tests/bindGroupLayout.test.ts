@@ -94,7 +94,7 @@ describe('TgpuBindGroupLayout', () => {
     expectTypeOf(a).toEqualTypeOf<TgpuBufferMutable<WgslArray<U32>>>();
     expectTypeOf(b).toEqualTypeOf<TgpuBufferReadonly<WgslArray<Vec3f>>>();
 
-    const aBuffer = root.createBuffer(arrayOf(u32, 4)).$usage('uniform');
+    const aBuffer = root.createBuffer(arrayOf(u32, 4)).$usage('storage');
     const bBuffer = root.createBuffer(arrayOf(vec3f, 4)).$usage('storage');
 
     const bindGroup = layout.populate({
