@@ -52,14 +52,17 @@ untyped value of a typed resource, use the `root.unwrap` function.
 
 | Function | Description |
 | --- | --- |
-| `root.unwrap(resource: TgpuBuffer<AnyTgpuData>)` | Returns a `GPUBuffer`. |
+| `root.unwrap(resource: TgpuBuffer<AnyData>)` | Returns a `GPUBuffer`. |
 | `root.unwrap(resource: TgpuBindGroupLayout)` | Returns a `GPUBindGroupLayout`. |
 | `root.unwrap(resource: TgpuBindGroup)` | Returns a `GPUBindGroup`. |
+| `root.unwrap(resource: TgpuTexture)` | Returns a `GPUTexture`. |
+| `root.unwrap(resource: TgpuReadonlyTexture \| TgpuWriteonlyTexture \| TgpuMutableTexture \| TgpuSampledTexture)` | Returns a `GPUTexture`. |
 
 
 ## Destroying resources
 
 Calling `root.destroy()` will destroy all resources created with it.
+It will also destroy the underlying WebGPU device, if it wasn't originally passed in via the `initFromDevice` function.
 
 ```ts
 root.destroy(); // <- frees up all the resources
