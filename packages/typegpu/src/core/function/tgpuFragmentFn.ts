@@ -60,8 +60,8 @@ export interface TgpuFragmentFn<
  * to process information received from the vertex shader stage and builtins to determine
  * the final color of the pixel (many pixels in case of multiple targets).
  *
- * @param varyingTypes
- *   Values computed in the vertex stage to be made available to functions that implement this shell.
+ * @param inputType
+ *   Values computed in the vertex stage and builtins to be made available to functions that implement this shell.
  * @param outputType
  *   A `vec4f`, signaling this function outputs a color for one target, or a struct/array containing
  *   colors for multiple targets.

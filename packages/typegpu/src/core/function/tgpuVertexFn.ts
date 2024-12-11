@@ -69,23 +69,23 @@ export interface TgpuVertexFn<
  * that implements this shell can run for each vertex, allowing the inner code to process
  * attributes and determine the final position of the vertex.
  *
- * @param vertexAttribs
- *   Vertex attributes to be made available to functions that implement this shell.
+ * @param inputType
+ *   Vertex attributes and builtins to be made available to functions that implement this shell.
  * @param outputType
  *   A struct type containing the final position of the vertex, and any information
  *   passed onto the fragment shader stage.
  */
 export function vertexFn<
-  VertexAttribs extends StrictIOLayout,
+  VertexIn extends StrictIOLayout,
   // Not allowing single-value output, as it is better practice
   // to properly label what the vertex shader is outputting.
   Output extends IORecord,
 >(
-  vertexAttribs: VertexAttribs,
+  inputType: VertexIn,
   outputType: Output,
-): TgpuVertexFnShell<ExoticIO<VertexAttribs>, ExoticIO<Output>> {
+): TgpuVertexFnShell<ExoticIO<VertexIn>, ExoticIO<Output>> {
   return {
-    argTypes: [vertexAttribs as ExoticIO<VertexAttribs>],
+    argTypes: [inputType as ExoticIO<VertexIn>],
     returnType: outputType as ExoticIO<Output>,
 
     does(implementation) {
