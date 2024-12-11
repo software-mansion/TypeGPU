@@ -65,12 +65,21 @@ export type IOData = BaseIOData | Decorated<BaseIOData, AnyAttribute[]>;
 /**
  * Used for I/O definitions of entry functions.
  */
-// An IO layout can be...
-export type IOLayout<TElementType extends IOData = IOData> =
-  // a single data-type
+export type StrictIOLayout<TElementType extends IOData = IOData> =
   | TElementType
-  // a record of data-types
-  | Partial<{ [key: string]: TElementType }>;
+  | Record<string, TElementType>;
+
+/**
+ * Used for I/O definitions of entry functions.
+ *
+ * @privateRemarks
+ * More permissive than `StrictIOLayout` due to having
+ * to handle potentially (not really) undefined properties
+ * from the vertex output.
+ */
+export type IOLayout<TElementType extends IOData = IOData> =
+  | TElementType
+  | Partial<Record<string, TElementType>>;
 
 export type InferIO<T> = T extends { type: string }
   ? Infer<T>

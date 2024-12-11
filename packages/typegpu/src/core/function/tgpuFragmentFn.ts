@@ -2,7 +2,13 @@ import type { Vec4f } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
-import type { ExoticIO, IOLayout, Implementation, InferIO } from './fnTypes';
+import type {
+  ExoticIO,
+  IOLayout,
+  Implementation,
+  InferIO,
+  StrictIOLayout,
+} from './fnTypes';
 
 // ----------
 // Public API
@@ -57,8 +63,8 @@ export interface TgpuFragmentFn<
  *   colors for multiple targets.
  */
 export function fragmentFn<
-  Varying extends IOLayout,
-  Output extends IOLayout<Vec4f>,
+  Varying extends StrictIOLayout,
+  Output extends StrictIOLayout<Vec4f>,
 >(
   varyingTypes: Varying,
   outputType: Output,
@@ -68,8 +74,7 @@ export function fragmentFn<
     returnType: outputType as ExoticIO<Output>,
 
     does(implementation): TgpuFragmentFn<ExoticIO<Varying>, ExoticIO<Output>> {
-      // biome-ignore lint/suspicious/noExplicitAny: <that's enough>
-      return createFragmentFn(this, implementation as Implementation) as any;
+      return createFragmentFn(this, implementation as Implementation);
     },
   };
 }

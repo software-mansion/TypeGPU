@@ -6,6 +6,7 @@ import {
   type WgslStruct,
   isWgslStruct,
 } from '../../data/wgslTypes';
+import { invariant } from '../../errors';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
@@ -15,6 +16,7 @@ import type {
   IOLayout,
   Implementation,
   InferIO,
+  StrictIOLayout,
 } from './fnTypes';
 
 // ----------
@@ -70,8 +72,8 @@ export interface TgpuVertexFn<
  *   passed onto the fragment shader stage.
  */
 export function vertexFn<
-  VertexAttribs extends IOLayout,
-  Output extends IOLayout,
+  VertexAttribs extends StrictIOLayout,
+  Output extends StrictIOLayout,
 >(
   vertexAttribs: VertexAttribs,
   outputType: Output,
@@ -93,46 +95,41 @@ export function vertexFn<
 // Implementation
 // --------------
 
-type Bruh<T> = T extends BaseWgslData
+type IOLayoutToOutputSchema<T extends IOLayout> = T extends BaseWgslData
   ? T
   : T extends Record<string, BaseWgslData | undefined>
     ? WgslStruct<T>
     : never;
 
-type IOLayoutToOutputSchema<T extends IOLayout> = T extends unknown
-  ? Bruh<T>
-  : never;
-
 function withLocations(
-  members: Record<string, BaseWgslData | undefined>,
+  members: Partial<Record<string, BaseWgslData>>,
 ): Record<string, BaseWgslData> {
   let nextLocation = 0;
 
   return Object.fromEntries(
-    Object.entries(members)
-      .map(([key, member]) => {
-        if (member === undefined) {
-          return null;
-        }
+    Object.entries(members).map(([key, member]) => {
+      invariant(
+        member !== undefined,
+        'Only types allow for undefined props, values should not.',
+      );
 
-        if (isBuiltin(member)) {
-          // Skipping builtins
-          return [key, member];
-        }
+      if (isBuiltin(member)) {
+        // Skipping builtins
+        return [key, member];
+      }
 
-        const customLocation = getCustomLocation(member);
-        if (customLocation !== undefined) {
-          // This member is already marked, start counting from the next location over.
-          nextLocation = customLocation + 1;
-          return [key, member];
-        }
+      const customLocation = getCustomLocation(member);
+      if (customLocation !== undefined) {
+        // This member is already marked, start counting from the next location over.
+        nextLocation = customLocation + 1;
+        return [key, member];
+      }
 
-        return [
-          key,
-          attribute(member, { type: '@location', value: nextLocation++ }),
-        ];
-      })
-      .filter((x): x is Exclude<typeof x, null> => x !== null),
+      return [
+        key,
+        attribute(member, { type: '@location', value: nextLocation++ }),
+      ];
+    }),
   );
 }
 

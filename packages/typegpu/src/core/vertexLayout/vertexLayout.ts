@@ -4,6 +4,7 @@ import type { LooseArray } from '../../data/dataTypes';
 import { sizeOf } from '../../data/sizeOf';
 import { isDecorated, isWgslStruct } from '../../data/wgslTypes';
 import type { BaseWgslData, WgslArray } from '../../data/wgslTypes';
+import { invariant } from '../../errors';
 import { roundUp } from '../../mathUtils';
 import type { TgpuNamable } from '../../namable';
 import {
@@ -78,6 +79,11 @@ function dataToContainedAttribs<
 
     return Object.fromEntries(
       Object.entries(data.propTypes).map(([key, value]) => {
+        invariant(
+          value !== undefined,
+          'Only types allow for undefined props, values should not.',
+        );
+
         memberOffset = roundUp(memberOffset, alignmentOf(value));
         const attrib = [
           key,
