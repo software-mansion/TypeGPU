@@ -137,7 +137,7 @@ describe('tgpu.fn', () => {
   });
 });
 
-describe('UnwrapIO', () => {
+describe('InferIO', () => {
   it('unwraps f32', () => {
     const layout = d.f32 satisfies IOLayout;
 
