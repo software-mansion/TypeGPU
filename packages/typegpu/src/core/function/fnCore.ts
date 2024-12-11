@@ -14,7 +14,7 @@ export interface TgpuFnShellBase<Args extends unknown[], Return> {
   readonly returnType: Return | undefined;
 }
 
-interface FnCore {
+export interface FnCore {
   label: string | undefined;
   applyExternals(newExternals: ExternalMap): void;
   resolve(ctx: ResolutionCtx, fnAttribute?: string): string;

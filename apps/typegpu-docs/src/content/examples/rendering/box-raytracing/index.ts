@@ -200,12 +200,7 @@ const vertexFunction = tgpu
   output.outPos = vec4f(pos[vertexIndex], 0, 1);
   return output;
 }`)
-  .$name('vertex_main')
-  .$uses({
-    get VertexOutput() {
-      return vertexFunction.Output;
-    },
-  });
+  .$name('vertex_main');
 
 const fragmentFunction = tgpu
   .fragmentFn({ position: builtin.position }, vec4f)

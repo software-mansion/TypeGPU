@@ -67,9 +67,6 @@ const mainVert = tgpu
     colorPalette,
     getRotationFromVelocity,
     rotate,
-    get VertexOutput() {
-      return mainVert.Output;
-    },
   });
 
 const mainFrag = tgpu.fragmentFn(VertexOutput, vec4f).does(/* wgsl */ `
