@@ -59,7 +59,8 @@ untyped value of a typed resource, use the `root.unwrap` function.
 
 ## Destroying resources
 
-Calling `root.destroy()` will destroy all resources created with it.
+Calling `root.destroy()` will destroy all resources created with it. 
+It will also destroy the underlying WebGPU device, if it wasn't originally passed in via the `initFromDevice` function.
 
 ```ts
 root.destroy(); // <- frees up all the resources
