@@ -1,8 +1,8 @@
 // Original implementation:
 // https://webgpu.github.io/webgpu-samples/?sample=imageBlur
 
-import { i32, struct, u32 } from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
+import { i32, location, struct, u32, vec2f } from 'typegpu/data';
+import tgpu, { builtin } from 'typegpu/experimental';
 
 const tileDim = 128;
 const batch = [4, 4];
@@ -29,13 +29,6 @@ const renderLayout = tgpu.bindGroupLayout({
 });
 
 const computeShaderCode = /* wgsl */ `
-
-@group(0) @binding(0) var<uniform> settings: Settings;
-@group(0) @binding(1) var sampling: sampler;
-
-@group(1) @binding(0) var<uniform> flip: u32;
-@group(1) @binding(1) var inTexture: texture_2d<f32>;
-@group(1) @binding(2) var outTexture: texture_storage_2d<rgba8unorm, write>;
 
 var<workgroup> tile: array<array<vec3f, 128>, 4>;
 
@@ -87,15 +80,12 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: ve
   }
 }`;
 
+const VertexOutput = struct({
+  position: builtin.position,
+  uv: location(0, vec2f),
+});
+
 const renderShaderCode = /* wgsl */ `
-
-struct VertexOutput {
-  @builtin(position) position: vec4f,
-  @location(0) uv: vec2f,
-};
-
-@group(0) @binding(0) var texture: texture_2d<f32>;
-@group(0) @binding(1) var sampling: sampler;
 
 @vertex
 fn main_vert(@builtin(vertex_index) index: u32) -> VertexOutput {
@@ -191,7 +181,11 @@ const computePipeline = device.createComputePipeline({
     module: device.createShaderModule({
       code: tgpu.resolve({
         input: computeShaderCode,
-        extraDependencies: { Settings },
+        extraDependencies: {
+          Settings,
+          ...uniformLayout.bound,
+          ...ioLayout.bound,
+        },
       }),
     }),
   },
@@ -240,7 +234,10 @@ const renderPassDescriptor: GPURenderPassDescriptor = {
 };
 
 const renderShaderModule = device.createShaderModule({
-  code: renderShaderCode,
+  code: tgpu.resolve({
+    input: renderShaderCode,
+    extraDependencies: { VertexOutput, ...renderLayout.bound },
+  }),
 });
 
 const renderPipeline = device.createRenderPipeline({
