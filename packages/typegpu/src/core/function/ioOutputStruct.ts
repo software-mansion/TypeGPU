@@ -54,7 +54,7 @@ export function createOutputStruct<T extends IOData>(
       .match(/->(?<output>.*?){/s)
       ?.groups?.output?.trim();
 
-    if (outputName) {
+    if (outputName && !/\s/g.test(outputName)) {
       const externals: Record<string, unknown> = {};
       externals[outputName] = Output;
       core.applyExternals(externals);

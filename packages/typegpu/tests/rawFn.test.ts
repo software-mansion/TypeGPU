@@ -183,9 +183,12 @@ struct vertex_fn_Output {
 
   it('adds output struct definition when resolving fragment functions', () => {
     const fragmentFunction = tgpu
-      .fragmentFn({ position: builtin.position }, vec4f)
-      .does(/* wgsl */ `(@builtin(position) position: vec4f) -> @location(0) vec4f {
-    return vec4f();
+      .fragmentFn({ position: builtin.position }, { a: vec4f, b: vec4f })
+      .does(/* wgsl */ `(@builtin(position) position: vec4f) -> Output {
+    var out: Output;
+    out.a = vec4f(1.0);
+    out.b = vec4f(0.5);
+    return out;
   }`)
       .$name('fragment');
 
@@ -193,7 +196,8 @@ struct vertex_fn_Output {
       tgpu.resolve({ input: [fragmentFunction], names: 'strict' }),
     ).toContain(`\
 struct fragment_Output {
-  @location(0) out: vec4f,
+  @location(0) a: vec4f,
+  @location(1) b: vec4f,
 }`);
   });
 });
