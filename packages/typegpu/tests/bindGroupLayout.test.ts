@@ -122,7 +122,7 @@ describe('TgpuBindGroupLayout', () => {
     getRoot().unwrap(bindGroup);
 
     expect(mockDevice.createBindGroup).toBeCalledWith({
-      label: '',
+      label: '<unnamed>',
       layout: getRoot().unwrap(layout),
       entries: [
         {
@@ -141,7 +141,7 @@ describe('TgpuBindGroupLayout', () => {
     });
 
     expect(mockDevice.createBindGroupLayout).toBeCalledWith({
-      label: '',
+      label: '<unnamed>',
       entries: [
         {
           binding: 0,

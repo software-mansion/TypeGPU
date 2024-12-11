@@ -405,7 +405,7 @@ class TgpuBindGroupLayoutImpl<
 
   unwrap(unwrapper: Unwrapper) {
     const unwrapped = unwrapper.device.createBindGroupLayout({
-      label: this.label ?? '',
+      label: this.label ?? '<unnamed>',
       entries: Object.values(this.entries)
         .map((entry, idx) => {
           if (entry === null) {
@@ -525,7 +525,7 @@ class TgpuBindGroupImpl<
 
   public unwrap(unwrapper: Unwrapper): GPUBindGroup {
     const unwrapped = unwrapper.device.createBindGroup({
-      label: this.layout.label ?? '',
+      label: this.layout.label ?? '<unnamed>',
       layout: unwrapper.unwrap(this.layout),
       entries: Object.entries(this.layout.entries)
         .map(([key, entry], idx) => {

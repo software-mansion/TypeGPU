@@ -78,6 +78,7 @@ describe('TgpuRoot', () => {
         global.GPUBufferUsage.UNIFORM |
         global.GPUBufferUsage.COPY_DST |
         global.GPUBufferUsage.COPY_SRC,
+      label: '<unnamed>',
     });
   });
 
@@ -100,6 +101,7 @@ describe('TgpuRoot', () => {
         global.GPUBufferUsage.UNIFORM |
         global.GPUBufferUsage.COPY_DST |
         global.GPUBufferUsage.COPY_SRC,
+      label: '<unnamed>',
     });
   });
 
@@ -119,6 +121,7 @@ describe('TgpuRoot', () => {
         global.GPUBufferUsage.UNIFORM |
         global.GPUBufferUsage.COPY_DST |
         global.GPUBufferUsage.COPY_SRC,
+      label: '<unnamed>',
     });
   });
 
@@ -160,6 +163,7 @@ describe('TgpuRoot', () => {
         global.GPUBufferUsage.UNIFORM |
         global.GPUBufferUsage.COPY_DST |
         global.GPUBufferUsage.COPY_SRC,
+      label: '<unnamed>',
     });
 
     dataBuffer.write({
