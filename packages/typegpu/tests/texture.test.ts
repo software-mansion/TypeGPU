@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, it } from 'vitest';
+import { describe, expect, expectTypeOf } from 'vitest';
 import type {
   TgpuMutableTexture,
   TgpuReadonlyTexture,
@@ -12,22 +12,22 @@ import { StrictNameRegistry, wgsl } from '../src/experimental';
 import { resolve } from '../src/resolutionCtx';
 import './utils/webgpuGlobals';
 import type { NotAllowed } from '../src/extension';
-import { mockRoot } from './utils/mockRoot';
+import { it } from './utils/myIt';
 
 describe('TgpuTexture', () => {
-  const { getRoot } = mockRoot();
-
-  it('makes passing the default, `undefined` or omitting an option prop result in the same type.', () => {
+  it('makes passing the default, `undefined` or omitting an option prop result in the same type.', ({
+    root,
+  }) => {
     const commonProps = {
       size: [512, 512],
       format: 'rgba8unorm',
     } as const;
 
-    const texture1 = getRoot().createTexture({
+    const texture1 = root.createTexture({
       ...commonProps,
     });
 
-    const texture2 = getRoot().createTexture({
+    const texture2 = root.createTexture({
       ...commonProps,
       dimension: undefined,
       mipLevelCount: undefined,
@@ -35,7 +35,7 @@ describe('TgpuTexture', () => {
       viewFormats: undefined,
     });
 
-    const texture3 = getRoot().createTexture({
+    const texture3 = root.createTexture({
       ...commonProps,
       dimension: '2d',
       mipLevelCount: 1,
@@ -47,18 +47,18 @@ describe('TgpuTexture', () => {
     expectTypeOf(texture1).toEqualTypeOf(texture3);
   });
 
-  it('embeds a non-default dimension in the type', () => {
+  it('embeds a non-default dimension in the type', ({ root }) => {
     const commonProps = {
       size: [512, 512],
       format: 'rgba8unorm',
     } as const;
 
-    const texture1 = getRoot().createTexture({
+    const texture1 = root.createTexture({
       ...commonProps,
       dimension: '3d',
     });
 
-    const texture2 = getRoot().createTexture({
+    const texture2 = root.createTexture({
       ...commonProps,
       dimension: '1d',
     });
@@ -71,8 +71,8 @@ describe('TgpuTexture', () => {
     >();
   });
 
-  it('embeds a non-default mipLevelCount in the type', () => {
-    const texture = getRoot().createTexture({
+  it('embeds a non-default mipLevelCount in the type', ({ root }) => {
+    const texture = root.createTexture({
       size: [512, 512],
       format: 'rgba8unorm',
       mipLevelCount: 2,
@@ -83,8 +83,8 @@ describe('TgpuTexture', () => {
     >();
   });
 
-  it('embeds a non-default sampleCount in the type', () => {
-    const texture = getRoot().createTexture({
+  it('embeds a non-default sampleCount in the type', ({ root }) => {
+    const texture = root.createTexture({
       size: [512, 512],
       format: 'rgba8unorm',
       sampleCount: 2,
@@ -95,8 +95,8 @@ describe('TgpuTexture', () => {
     >();
   });
 
-  it('embeds non-default viewFormats in the type', () => {
-    const texture = getRoot().createTexture({
+  it('embeds non-default viewFormats in the type', ({ root }) => {
+    const texture = root.createTexture({
       size: [512, 512],
       format: 'rgba8unorm',
       viewFormats: ['rgba8unorm-srgb', 'rgba8unorm'],
@@ -111,12 +111,14 @@ describe('TgpuTexture', () => {
     >();
   });
 
-  it('makes a readonly size tuple mutable in the resulting type', () => {
+  it('makes a readonly size tuple mutable in the resulting type', ({
+    root,
+  }) => {
     // This is because there should be no difference between a texture
     // that was created with a readonly size tuple, and one created
     // with a mutable size tuple.
 
-    const texture = getRoot().createTexture({
+    const texture = root.createTexture({
       size: [1, 2, 3] as const,
       format: 'rgba8unorm',
     });
@@ -126,22 +128,22 @@ describe('TgpuTexture', () => {
     >();
   });
 
-  it('rejects non-strict or invalid size tuples', () => {
-    getRoot().createTexture({
+  it('rejects non-strict or invalid size tuples', ({ root }) => {
+    root.createTexture({
       // @ts-expect-error
       size: [],
       format: 'rgba8unorm',
     });
 
-    getRoot().createTexture({
+    root.createTexture({
       // @ts-expect-error
       size: [1, 2] as number[], // <- too loose
       format: 'rgba8unorm',
     });
   });
 
-  it('infers `sampled` usage', () => {
-    const texture = getRoot()
+  it('infers `sampled` usage', ({ root }) => {
+    const texture = root
       .createTexture({
         size: [512, 512],
         format: 'rgba8unorm',
@@ -153,8 +155,8 @@ describe('TgpuTexture', () => {
     >();
   });
 
-  it('infers combined usage', () => {
-    const texture = getRoot()
+  it('infers combined usage', ({ root }) => {
+    const texture = root
       .createTexture({
         size: [512, 512],
         format: 'rgba8unorm',
@@ -166,8 +168,8 @@ describe('TgpuTexture', () => {
     >();
   });
 
-  it('limits available extensions based on the chosen format', () => {
-    getRoot()
+  it('limits available extensions based on the chosen format', ({ root }) => {
+    root
       .createTexture({
         format: 'astc-10x10-unorm',
         size: [512, 512],
@@ -176,8 +178,8 @@ describe('TgpuTexture', () => {
       .$usage('storage');
   });
 
-  it('creates a sampled texture view with correct type', () => {
-    const texture = getRoot()
+  it('creates a sampled texture view with correct type', ({ root }) => {
+    const texture = root
       .createTexture({
         size: [512, 512, 12],
         format: 'rgba8unorm',
@@ -201,8 +203,10 @@ describe('TgpuTexture', () => {
     );
   });
 
-  it('produces NotAllowed when getting view which is not allowed', () => {
-    const texture = getRoot().createTexture({
+  it('produces NotAllowed when getting view which is not allowed', ({
+    root,
+  }) => {
+    const texture = root.createTexture({
       size: [1, 1],
       format: 'rgba8unorm',
     });
@@ -236,10 +240,8 @@ describe('TgpuTexture', () => {
 });
 
 describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
-  const { getRoot } = mockRoot();
-
-  it('inherits the dimension and format from its owner texture', () => {
-    const texture1 = getRoot()
+  it('inherits the dimension and format from its owner texture', ({ root }) => {
+    const texture1 = root
       .createTexture({
         size: [512, 512],
         format: 'rgba8unorm',
@@ -258,7 +260,7 @@ describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
       TgpuMutableTexture<'2d', Vec4f>
     >();
 
-    const texture2 = getRoot()
+    const texture2 = root
       .createTexture({
         size: [512, 512],
         format: 'rgba8uint',
@@ -278,7 +280,7 @@ describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
       TgpuMutableTexture<'3d', Vec4u>
     >();
 
-    const texture3 = getRoot()
+    const texture3 = root
       .createTexture({
         size: [512, 512],
         format: 'rgba8sint',
@@ -300,8 +302,10 @@ describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
     >();
   });
 
-  it('rejects formats different than those specified when defining the texture', () => {
-    const texture = getRoot()
+  it('rejects formats different than those specified when defining the texture', ({
+    root,
+  }) => {
+    const texture = root
       .createTexture({
         size: [512, 512],
         format: 'rgba8unorm',
@@ -327,10 +331,8 @@ describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
 });
 
 describe('TgpuSampledTexture', () => {
-  const { getRoot } = mockRoot();
-
-  it('inherits the dimension and format from its owner texture', () => {
-    const texture1 = getRoot()
+  it('inherits the dimension and format from its owner texture', ({ root }) => {
+    const texture1 = root
       .createTexture({
         size: [512, 512],
         format: 'rgba8unorm',
@@ -341,7 +343,7 @@ describe('TgpuSampledTexture', () => {
       TgpuSampledTexture<'2d', F32>
     >();
 
-    const texture2 = getRoot()
+    const texture2 = root
       .createTexture({
         size: [512, 512],
         format: 'rgba8uint',
@@ -353,7 +355,7 @@ describe('TgpuSampledTexture', () => {
       TgpuSampledTexture<'3d', U32>
     >();
 
-    const texture3 = getRoot()
+    const texture3 = root
       .createTexture({
         size: [512, 512],
         format: 'rgba8sint',
@@ -367,8 +369,10 @@ describe('TgpuSampledTexture', () => {
     >();
   });
 
-  it('rejects formats different than those specified when defining the texture', () => {
-    const texture = getRoot()
+  it('rejects formats different than those specified when defining the texture', ({
+    root,
+  }) => {
+    const texture = root
       .createTexture({
         size: [512, 512],
         format: 'rgba8unorm',

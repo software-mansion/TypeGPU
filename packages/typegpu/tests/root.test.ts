@@ -1,70 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
-import { afterEach } from 'vitest';
+import { describe, expect } from 'vitest';
 import { struct, u32, vec3i, vec4u } from '../src/data';
-import tgpu from '../src/experimental';
 import './utils/webgpuGlobals';
-
-const mockBuffer = {
-  getMappedRange: vi.fn(() => new ArrayBuffer(8)),
-  unmap: vi.fn(),
-  mapAsync: vi.fn(),
-};
-
-const mockCommandEncoder = {
-  beginComputePass: vi.fn(() => mockComputePassEncoder),
-  beginRenderPass: vi.fn(() => mockRenderPassEncoder),
-  copyBufferToBuffer: vi.fn(),
-  copyBufferToTexture: vi.fn(),
-  copyTextureToBuffer: vi.fn(),
-  copyTextureToTexture: vi.fn(),
-  finish: vi.fn(),
-};
-
-const mockComputePassEncoder = {
-  dispatchWorkgroups: vi.fn(),
-  end: vi.fn(),
-  setBindGroup: vi.fn(),
-  setPipeline: vi.fn(),
-};
-
-const mockRenderPassEncoder = {
-  draw: vi.fn(),
-  end: vi.fn(),
-  setBindGroup: vi.fn(),
-  setPipeline: vi.fn(),
-  setVertexBuffer: vi.fn(),
-};
-
-const mockDevice = {
-  createBindGroup: vi.fn(() => 'mockBindGroup'),
-  createBindGroupLayout: vi.fn(() => 'mockBindGroupLayout'),
-  createBuffer: vi.fn(() => mockBuffer),
-  createCommandEncoder: vi.fn(() => mockCommandEncoder),
-  createComputePipeline: vi.fn(() => 'mockComputePipeline'),
-  createPipelineLayout: vi.fn(() => 'mockPipelineLayout'),
-  createRenderPipeline: vi.fn(() => 'mockRenderPipeline'),
-  createSampler: vi.fn(() => 'mockSampler'),
-  createShaderModule: vi.fn(() => 'mockShaderModule'),
-  createTexture: vi.fn(() => 'mockTexture'),
-  importExternalTexture: vi.fn(() => 'mockExternalTexture'),
-  queue: {
-    copyExternalImageToTexture: vi.fn(),
-    onSubmittedWorkDone: vi.fn(),
-    submit: vi.fn(),
-    writeBuffer: vi.fn(),
-    writeTexture: vi.fn(),
-  },
-};
+import { it } from './utils/myIt';
 
 describe('TgpuRoot', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('should create buffer with no initialization', () => {
-    const root = tgpu.initFromDevice({
-      device: mockDevice as unknown as GPUDevice,
-    });
+  it('should create buffer with no initialization', ({ root }) => {
     const dataBuffer = root.createBuffer(u32).$usage('uniform');
 
     const mockBuffer = root.unwrap(dataBuffer);
@@ -81,10 +21,7 @@ describe('TgpuRoot', () => {
     });
   });
 
-  it('should create buffer with initialization', () => {
-    const root = tgpu.initFromDevice({
-      device: mockDevice as unknown as GPUDevice,
-    });
+  it('should create buffer with initialization', ({ root }) => {
     const dataBuffer = root
       .createBuffer(vec3i, vec3i(0, 0, 0))
       .$usage('uniform');
@@ -103,10 +40,9 @@ describe('TgpuRoot', () => {
     });
   });
 
-  it('should allocate buffer with proper size for nested structs', () => {
-    const root = tgpu.initFromDevice({
-      device: mockDevice as unknown as GPUDevice,
-    });
+  it('should allocate buffer with proper size for nested structs', ({
+    root,
+  }) => {
     const s1 = struct({ a: u32, b: u32 });
     const s2 = struct({ a: u32, b: s1 });
     const dataBuffer = root.createBuffer(s2).$usage('uniform');
@@ -122,10 +58,7 @@ describe('TgpuRoot', () => {
     });
   });
 
-  it('should properly write to buffer', () => {
-    const root = tgpu.initFromDevice({
-      device: mockDevice as unknown as GPUDevice,
-    });
+  it('should properly write to buffer', ({ root }) => {
     const dataBuffer = root.createBuffer(u32);
 
     dataBuffer.write(3);
@@ -142,11 +75,7 @@ describe('TgpuRoot', () => {
     );
   });
 
-  it('should properly write to complex buffer', () => {
-    const root = tgpu.initFromDevice({
-      device: mockDevice as unknown as GPUDevice,
-    });
-
+  it('should properly write to complex buffer', ({ root }) => {
     const s1 = struct({ a: u32, b: u32, c: vec3i });
     const s2 = struct({ a: u32, b: s1, c: vec4u });
 

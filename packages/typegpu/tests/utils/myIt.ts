@@ -1,6 +1,5 @@
-import { afterEach, beforeEach, vi } from 'vitest';
-
-import tgpu, { type ExperimentalTgpuRoot } from '../../src/experimental';
+import { it as base, vi } from 'vitest';
+import { type ExperimentalTgpuRoot, tgpu } from '../../src/experimental';
 import './webgpuGlobals';
 
 const mockBuffer = {
@@ -39,7 +38,7 @@ const mockRenderPassEncoder = {
   setVertexBuffer: vi.fn(),
 };
 
-export const mockDevice = {
+const mockDevice = {
   createBindGroup: vi.fn(
     (_descriptor: GPUBindGroupDescriptor) => 'mockBindGroup',
   ),
@@ -64,24 +63,22 @@ export const mockDevice = {
   },
 };
 
-export function mockRoot() {
-  let root: ExperimentalTgpuRoot;
-
-  beforeEach(() => {
-    root = tgpu.initFromDevice({
-      device: mockDevice as unknown as GPUDevice,
-    });
+export const it = base.extend<{
+  root: ExperimentalTgpuRoot & { mockDevice: typeof mockDevice };
+}>({
+  root: async ({ task }, use) => {
     vi.restoreAllMocks();
-  });
 
-  afterEach(() => {
+    // setup
+    const root = tgpu.initFromDevice({
+      device: mockDevice as unknown as GPUDevice,
+    }) as ExperimentalTgpuRoot & { mockDevice: typeof mockDevice };
+
+    root.mockDevice = mockDevice;
+
+    await use(root);
+
+    // teardown
     root.destroy();
-    vi.resetAllMocks();
-  });
-
-  return {
-    getRoot() {
-      return root;
-    },
-  };
-}
+  },
+});
