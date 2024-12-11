@@ -110,6 +110,7 @@ const createCodeEditorComponent =
             minimap: {
               enabled: false,
             },
+            readOnly: true,
           }}
           className="pt-16 md:pt-0"
         />
