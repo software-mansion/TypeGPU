@@ -3,6 +3,10 @@ import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
 import type { ExoticIO, IOLayout, Implementation, InferIO } from './fnTypes';
+import {
+  type IOLayoutToOutputStruct,
+  createOutputStruct,
+} from './ioOutputStruct';
 
 // ----------
 // Public API
@@ -40,6 +44,7 @@ export interface TgpuFragmentFn<
 > extends TgpuResolvable,
     TgpuNamable {
   readonly shell: TgpuFragmentFnShell<Varying, Output>;
+  readonly Output: IOLayoutToOutputStruct<Output>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
 }
@@ -68,7 +73,8 @@ export function fragmentFn<
     returnType: outputType as ExoticIO<Output>,
 
     does(implementation): TgpuFragmentFn<ExoticIO<Varying>, ExoticIO<Output>> {
-      return createFragmentFn(this, implementation as Implementation);
+      // biome-ignore lint/suspicious/noExplicitAny: <no need>
+      return createFragmentFn(this, implementation as Implementation) as any;
     },
   };
 }
@@ -84,9 +90,11 @@ function createFragmentFn(
   type This = TgpuFragmentFn;
 
   const core = createFnCore(shell, implementation);
+  const Output = createOutputStruct(core, implementation, shell.returnType);
 
   return {
     shell,
+    Output,
 
     get label() {
       return core.label;
@@ -99,6 +107,7 @@ function createFragmentFn(
 
     $name(newLabel: string): This {
       core.label = newLabel;
+      Output.$name(`${newLabel}_Output`);
       return this;
     },
 

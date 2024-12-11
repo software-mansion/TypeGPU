@@ -1,7 +1,7 @@
 import { parse } from '@typegpu/wgsl-parser';
 import { describe, expect, it } from 'vitest';
-import { f32, vec3f } from '../src/data';
-import tgpu, { wgsl } from '../src/experimental';
+import { f32, vec3f, vec4f } from '../src/data';
+import tgpu, { builtin, wgsl } from '../src/experimental';
 import { parseWGSL } from './utils/parseWGSL';
 
 describe('tgpu.fn with raw string WGSL implementation', () => {
@@ -149,5 +149,51 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
     `);
 
     expect(actual).toEqual(expected);
+  });
+
+  it('adds output struct definition when resolving vertex functions', () => {
+    const vertexFunction = tgpu
+      .vertexFn(
+        { vertexIndex: builtin.vertexIndex },
+        { outPos: builtin.position },
+      )
+      .does(/* wgsl */ `(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+    var pos = array<vec2f, 6>(
+      vec2<f32>( 1,  1),
+      vec2<f32>( 1, -1),
+      vec2<f32>(-1, -1),
+      vec2<f32>( 1,  1),
+      vec2<f32>(-1, -1),
+      vec2<f32>(-1,  1)
+    );
+  
+    var output: VertexOutput;
+    output.outPos = vec4f(pos[vertexIndex], 0, 1);
+    return output;
+  }`)
+      .$name('vertex_fn');
+
+    expect(
+      tgpu.resolve({ input: [vertexFunction], names: 'strict' }),
+    ).toContain(`\
+struct vertex_fn_Output {
+  @builtin(position) outPos: vec4f,
+}`);
+  });
+
+  it('adds output struct definition when resolving fragment functions', () => {
+    const fragmentFunction = tgpu
+      .fragmentFn({ position: builtin.position }, vec4f)
+      .does(/* wgsl */ `(@builtin(position) position: vec4f) -> @location(0) vec4f {
+    return vec4f();
+  }`)
+      .$name('fragment');
+
+    expect(
+      tgpu.resolve({ input: [fragmentFunction], names: 'strict' }),
+    ).toContain(`\
+struct fragment_Output {
+  @location(0) out: vec4f,
+}`);
   });
 });

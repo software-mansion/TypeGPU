@@ -1,17 +1,11 @@
-import { attribute, isBuiltin, location } from '../../data/attributes';
-import { getCustomLocation, isData } from '../../data/dataTypes';
-import { struct } from '../../data/struct';
-import type { BaseWgslData, WgslStruct } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
-import type {
-  ExoticIO,
-  IOData,
-  IOLayout,
-  Implementation,
-  InferIO,
-} from './fnTypes';
+import type { ExoticIO, IOLayout, Implementation, InferIO } from './fnTypes';
+import {
+  type IOLayoutToOutputStruct,
+  createOutputStruct,
+} from './ioOutputStruct';
 
 // ----------
 // Public API
@@ -89,39 +83,6 @@ export function vertexFn<
 // Implementation
 // --------------
 
-type IOLayoutToOutputStruct<T extends IOLayout> = T extends BaseWgslData
-  ? WgslStruct<{ out: T }>
-  : T extends Record<string, BaseWgslData>
-    ? WgslStruct<T>
-    : never;
-
-function withLocations(
-  members: Record<string, BaseWgslData>,
-): Record<string, BaseWgslData> {
-  let nextLocation = 0;
-
-  return Object.fromEntries(
-    Object.entries(members).map(([key, member]) => {
-      if (isBuiltin(member)) {
-        // Skipping builtins
-        return [key, member];
-      }
-
-      const customLocation = getCustomLocation(member);
-      if (customLocation !== undefined) {
-        // This member is already marked, start counting from the next location over.
-        nextLocation = customLocation + 1;
-        return [key, member];
-      }
-
-      return [
-        key,
-        attribute(member, { type: '@location', value: nextLocation++ }),
-      ];
-    }),
-  );
-}
-
 function createVertexFn(
   shell: TgpuVertexFnShell<IOLayout, IOLayout>,
   implementation: Implementation,
@@ -130,13 +91,7 @@ function createVertexFn(
 
   const core = createFnCore(shell, implementation);
 
-  const Output = struct(
-    withLocations(
-      isData(shell.returnType)
-        ? { out: location(0, shell.returnType) }
-        : shell.returnType,
-    ) as Record<string, IOData>,
-  );
+  const Output = createOutputStruct(core, implementation, shell.returnType);
 
   return {
     shell,
