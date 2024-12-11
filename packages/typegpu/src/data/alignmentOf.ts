@@ -1,3 +1,4 @@
+import { invariant } from '../errors';
 import {
   getCustomAlignment,
   isLooseArray,
@@ -40,7 +41,14 @@ function computeAlignment(data: object): number {
 
   if (isWgslStruct(data)) {
     return Object.values(data.propTypes)
-      .map((prop) => alignmentOf(prop))
+      .map((prop) => {
+        invariant(
+          prop !== undefined,
+          'Only types allow for undefined props, values should not.',
+        );
+
+        return alignmentOf(prop);
+      })
       .reduce((a, b) => (a > b ? a : b));
   }
 

@@ -21,6 +21,7 @@ import type {
   WgslArray,
   WgslStruct,
 } from '../../data/wgslTypes';
+import { invariant } from '../../errors';
 import { assertExhaustive } from '../../shared/utilityTypes';
 import type { ResolutionCtx } from '../../types';
 
@@ -71,8 +72,13 @@ function isIdentityType(data: AnyWgslData): data is IdentityType {
 
 function resolveStructProperty(
   ctx: ResolutionCtx,
-  [key, property]: [string, BaseWgslData],
+  [key, property]: [string, BaseWgslData | undefined],
 ) {
+  invariant(
+    property !== undefined,
+    'Only types allow for undefined props, values should not.',
+  );
+
   return `  ${getAttributesString(property)}${key}: ${ctx.resolve(property as AnyWgslData)},\n`;
 }
 
