@@ -173,12 +173,14 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   }`)
       .$name('vertex_fn');
 
-    expect(
-      tgpu.resolve({ input: [vertexFunction], names: 'strict' }),
-    ).toContain(`\
+    const resolved = tgpu.resolve({ input: [vertexFunction], names: 'strict' });
+
+    expect(resolved).toContain(`\
 struct vertex_fn_Output {
   @builtin(position) outPos: vec4f,
 }`);
+    expect(resolved).toContain('-> vertex_fn_Output {');
+    expect(resolved).not.toContain('VertexOutput');
   });
 
   it('adds output struct definition when resolving fragment functions', () => {
@@ -192,12 +194,38 @@ struct vertex_fn_Output {
   }`)
       .$name('fragment');
 
-    expect(
-      tgpu.resolve({ input: [fragmentFunction], names: 'strict' }),
-    ).toContain(`\
+    const resolved = tgpu.resolve({
+      input: [fragmentFunction],
+      names: 'strict',
+    });
+
+    expect(resolved).toContain(`\
 struct fragment_Output {
   @location(0) a: vec4f,
   @location(1) b: vec4f,
 }`);
+    expect(resolved).toContain('-> fragment_Output {');
+    expect(resolved).not.toContain(' Output');
+  });
+
+  it("does not add redundant struct definition when there's no struct output", () => {
+    const vertexFunction = tgpu
+      .vertexFn({ vertexIndex: builtin.vertexIndex }, builtin.position)
+      .does(/* wgsl */ `(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4f {
+    let pos = array<vec2f, 6>(
+      vec2<f32>( 1,  1),
+      vec2<f32>( 1, -1),
+      vec2<f32>(-1, -1),
+      vec2<f32>( 1,  1),
+      vec2<f32>(-1, -1),
+      vec2<f32>(-1,  1)
+    );
+    return vec4f(pos[vertexIndex], 0, 1);
+  }`)
+      .$name('vertex_fn');
+
+    expect(
+      tgpu.resolve({ input: [vertexFunction], names: 'strict' }),
+    ).not.toContain('struct');
   });
 });

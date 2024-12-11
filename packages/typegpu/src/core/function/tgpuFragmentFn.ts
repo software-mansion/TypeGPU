@@ -44,7 +44,7 @@ export interface TgpuFragmentFn<
 > extends TgpuResolvable,
     TgpuNamable {
   readonly shell: TgpuFragmentFnShell<Varying, Output>;
-  readonly Output: IOLayoutToOutputStruct<Output>;
+  readonly outputType: IOLayoutToOutputStruct<Output>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
 }
@@ -72,9 +72,11 @@ export function fragmentFn<
     argTypes: [varyingTypes as ExoticIO<Varying>],
     returnType: outputType as ExoticIO<Output>,
 
-    does(implementation): TgpuFragmentFn<ExoticIO<Varying>, ExoticIO<Output>> {
-      // biome-ignore lint/suspicious/noExplicitAny: <no need>
-      return createFragmentFn(this, implementation as Implementation) as any;
+    does(implementation) {
+      return createFragmentFn(
+        this,
+        implementation as Implementation,
+      ) as TgpuFragmentFn<ExoticIO<Varying>, ExoticIO<Output>>;
     },
   };
 }
@@ -90,11 +92,11 @@ function createFragmentFn(
   type This = TgpuFragmentFn;
 
   const core = createFnCore(shell, implementation);
-  const Output = createOutputStruct(core, implementation, shell.returnType);
+  const outputType = createOutputStruct(core, implementation, shell.returnType);
 
   return {
     shell,
-    Output,
+    outputType,
 
     get label() {
       return core.label;
@@ -107,7 +109,7 @@ function createFragmentFn(
 
     $name(newLabel: string): This {
       core.label = newLabel;
-      Output.$name(`${newLabel}_Output`);
+      outputType.$name(`${newLabel}_Output`);
       return this;
     },
 

@@ -43,7 +43,7 @@ export interface TgpuVertexFn<
 > extends TgpuResolvable,
     TgpuNamable {
   readonly shell: TgpuVertexFnShell<VertexAttribs, Output>;
-  readonly Output: IOLayoutToOutputStruct<Output>;
+  readonly outputType: IOLayoutToOutputStruct<Output>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
 }
@@ -73,8 +73,10 @@ export function vertexFn<
     does(
       implementation,
     ): TgpuVertexFn<ExoticIO<VertexAttribs>, ExoticIO<Output>> {
-      // biome-ignore lint/suspicious/noExplicitAny: <no need>
-      return createVertexFn(this, implementation as Implementation) as any;
+      return createVertexFn(
+        this,
+        implementation as Implementation,
+      ) as TgpuVertexFn<ExoticIO<VertexAttribs>, ExoticIO<Output>>;
     },
   };
 }
@@ -90,12 +92,11 @@ function createVertexFn(
   type This = TgpuVertexFn<IOLayout, IOLayout>;
 
   const core = createFnCore(shell, implementation);
-
-  const Output = createOutputStruct(core, implementation, shell.returnType);
+  const outputType = createOutputStruct(core, implementation, shell.returnType);
 
   return {
     shell,
-    Output,
+    outputType,
 
     get label() {
       return core.label;
@@ -108,7 +109,7 @@ function createVertexFn(
 
     $name(newLabel: string): This {
       core.label = newLabel;
-      Output.$name(`${newLabel}_Output`);
+      outputType.$name(`${newLabel}_Output`);
       return this;
     },
 
