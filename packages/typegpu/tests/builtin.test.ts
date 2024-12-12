@@ -1,4 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
+import type { OmitBuiltins } from '../src/builtin';
 import * as d from '../src/data';
 import { StrictNameRegistry } from '../src/experimental';
 import { resolve } from '../src/resolutionCtx';
@@ -29,7 +30,7 @@ describe('builtin', () => {
     };
 
     type X = typeof x;
-    type Omitted = d.OmitBuiltins<X>;
+    type Omitted = OmitBuiltins<X>;
 
     expectTypeOf<Omitted>().toEqualTypeOf({
       a: d.u32,
