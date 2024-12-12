@@ -48,11 +48,7 @@ class TgpuArrayImpl<TElement extends AnyWgslData>
   public readonly '~repr'!: Infer<TElement>[];
   /** Type-token, not available at runtime */
   public readonly '~exotic'!: WgslArray<Exotic<TElement>>;
-
-  // TODO: deprecate/remove
-  get elementCount() {
-    return this.length;
-  }
+  public readonly elementCount: number;
 
   constructor(
     public readonly elementType: TElement,
@@ -61,5 +57,7 @@ class TgpuArrayImpl<TElement extends AnyWgslData>
     if (Number.isNaN(sizeOf(elementType))) {
       throw new Error('Cannot nest runtime sized arrays.');
     }
+
+    this.elementCount = this.length;
   }
 }
