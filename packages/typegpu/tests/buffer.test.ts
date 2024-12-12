@@ -28,6 +28,7 @@ describe('TgpuBuffer', () => {
 
     root.unwrap(dataBuffer);
     expect(root.device.createBuffer).toBeCalledWith({
+      label: '<unnamed>',
       mappedAtCreation: false,
       size: 64,
       usage:
@@ -93,7 +94,7 @@ describe('TgpuBuffer', () => {
     const buffer = root.createBuffer(d.arrayOf(d.u32, 3), rawBuffer);
     const data = await buffer.read();
 
-    expect(root.device.createBuffer).not.toHaveBeenCalled();
+    expect(root.device.createBuffer).toHaveBeenCalledOnce(); // No staging buffer was created
     expect(data).toBeDefined();
     expect(rawBuffer.getMappedRange).toHaveBeenCalled();
     expect(rawBuffer.unmap).toHaveBeenCalled();
@@ -122,9 +123,8 @@ describe('TgpuBuffer', () => {
       ],
     ]);
 
-    const stagingBuffer =
-      // biome-ignore lint/suspicious/noExplicitAny: <mocks on mocks>
-      (device.mock.createBuffer.mock.calls as any)[1][0] as GPUBuffer;
+    const stagingBuffer = device.mock.createBuffer.mock.results[1]
+      ?.value as GPUBuffer;
 
     expect(commandEncoder.copyBufferToBuffer).toHaveBeenCalledWith(
       buffer.buffer,

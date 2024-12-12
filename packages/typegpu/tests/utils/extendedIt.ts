@@ -13,30 +13,12 @@ const navigatorMock = {
   },
 };
 
-const mockBuffer = {
-  mapState: 'unmapped',
-  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-  getMappedRange: vi.fn(() => new ArrayBuffer(8)),
-  unmap: vi.fn(),
-  mapAsync: vi.fn(),
-  destroy: vi.fn(),
-};
-
 const mappedBufferMock = {
   get mock() {
     return mappedBufferMock;
   },
   mapState: 'mapped',
   usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-  getMappedRange: vi.fn(() => new ArrayBuffer(8)),
-  unmap: vi.fn(),
-  mapAsync: vi.fn(),
-  destroy: vi.fn(),
-};
-
-const mockStagingBuffer = {
-  mapState: 'unmapped',
-  usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
   getMappedRange: vi.fn(() => new ArrayBuffer(8)),
   unmap: vi.fn(),
   mapAsync: vi.fn(),
@@ -82,7 +64,22 @@ const mockDevice = {
   createBindGroupLayout: vi.fn(
     (_descriptor: GPUBindGroupLayoutDescriptor) => 'mockBindGroupLayout',
   ),
-  createBuffer: vi.fn(() => mockBuffer),
+  createBuffer: vi.fn(({ size, usage }: GPUBufferDescriptor) => {
+    const mockBuffer = {
+      mapState: 'unmapped',
+      usage,
+      getMappedRange: vi.fn(() => new ArrayBuffer(8)),
+      unmap: vi.fn(() => {
+        mockBuffer.mapState = 'unmapped';
+      }),
+      mapAsync: vi.fn(() => {
+        mockBuffer.mapState = 'mapped';
+      }),
+      destroy: vi.fn(),
+    };
+
+    return mockBuffer;
+  }),
   createCommandEncoder: vi.fn(() => mockCommandEncoder),
   createComputePipeline: vi.fn(() => 'mockComputePipeline'),
   createPipelineLayout: vi.fn(() => 'mockPipelineLayout'),

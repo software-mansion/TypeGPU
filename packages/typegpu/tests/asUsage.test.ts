@@ -1,15 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect } from 'vitest';
 import { u32 } from '../src/data';
 import { asMutable, asReadonly, asUniform } from '../src/experimental';
 import './utils/webgpuGlobals';
-import { mockRoot } from './utils/mockRoot';
+import { it } from './utils/extendedIt';
 
 describe('asUsage', () => {
-  const { getRoot } = mockRoot();
-
-  it('allows creating bufferUsages only for buffers allowing them', () => {
-    const root = getRoot();
-
+  it('allows creating bufferUsages only for buffers allowing them', ({
+    root,
+  }) => {
     asReadonly(root.createBuffer(u32, 2).$usage('storage'));
     asReadonly(root.createBuffer(u32, 2).$usage('storage', 'uniform'));
     asReadonly(root.createBuffer(u32, 2).$usage('storage', 'vertex'));
