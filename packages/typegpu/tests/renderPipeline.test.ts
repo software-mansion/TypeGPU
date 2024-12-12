@@ -1,13 +1,13 @@
 import { describe, expect } from 'vitest';
 import * as d from '../src/data';
-import tgpu, { builtin } from '../src/experimental';
+import tgpu from '../src/experimental';
 import { it } from './utils/extendedIt';
 
 describe('Inter-Stage Variables', () => {
   describe('Empty vertex output', () => {
     const emptyVert = tgpu.vertexFn({}, {}).does('');
     const emptyVertWithBuiltin = tgpu
-      .vertexFn({}, { pos: builtin.vertexIndex })
+      .vertexFn({}, { pos: d.builtin.vertexIndex })
       .does('');
 
     it('allows fragment functions to use a subset of the vertex output', ({
@@ -15,7 +15,7 @@ describe('Inter-Stage Variables', () => {
     }) => {
       const emptyFragment = tgpu.fragmentFn({}, {}).does('');
       const emptyFragmentWithBuiltin = tgpu
-        .fragmentFn({ pos: builtin.position }, {})
+        .fragmentFn({ pos: d.builtin.position }, {})
         .does('');
 
       // Using none of none
@@ -65,7 +65,7 @@ describe('Inter-Stage Variables', () => {
   describe('Non-empty vertex output', () => {
     const vert = tgpu.vertexFn({}, { a: d.vec3f, b: d.vec2f }).does('');
     const vertWithBuiltin = tgpu
-      .vertexFn({}, { a: d.vec3f, b: d.vec2f, pos: builtin.position })
+      .vertexFn({}, { a: d.vec3f, b: d.vec2f, pos: d.builtin.position })
       .does('');
 
     it('allows fragment functions to use a subset of the vertex output', ({
@@ -73,7 +73,7 @@ describe('Inter-Stage Variables', () => {
     }) => {
       const emptyFragment = tgpu.fragmentFn({}, {}).does('');
       const emptyFragmentWithBuiltin = tgpu
-        .fragmentFn({ pos: builtin.frontFacing }, {})
+        .fragmentFn({ pos: d.builtin.frontFacing }, {})
         .does('');
       const fullFragment = tgpu
         .fragmentFn({ a: d.vec3f, b: d.vec2f }, d.vec4f)
