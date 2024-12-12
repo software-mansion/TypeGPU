@@ -57,12 +57,14 @@ export type ValidateFragmentIn<
       },
     ];
 
+type DisallowExtra<TMax, TTested> = {
+  [TKey in keyof TTested]: TKey extends keyof TMax ? TMax[TKey] : never;
+};
+
 export interface WithVertex<VertexOut extends IORecord = IORecord> {
-  withFragment<
-    FragmentIn extends IORecord,
-    FragmentOut extends IOLayout<Vec4f>,
-  >(
-    ...args: ValidateFragmentIn<VertexOut, FragmentIn, FragmentOut>
+  withFragment<FragmentIn, FragmentOut extends IOLayout<Vec4f>>(
+    entryFn: TgpuFragmentFn<DisallowExtra<VertexOut, FragmentIn>, FragmentOut>,
+    targets: FragmentOutToTargets<FragmentOut>,
   ): WithFragment<FragmentOut>;
 }
 
