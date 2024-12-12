@@ -1,81 +1,10 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  expectTypeOf,
-  it,
-  vi,
-} from 'vitest';
+import { describe, expect, expectTypeOf } from 'vitest';
 import type { TgpuComputePipeline } from '../src/core/pipeline/computePipeline';
-import type { ExperimentalTgpuRoot } from '../src/core/root/rootTypes';
 import tgpu from '../src/experimental';
-
-const mockBuffer = {
-  getMappedRange: vi.fn(() => new ArrayBuffer(8)),
-  unmap: vi.fn(),
-  mapAsync: vi.fn(),
-};
-
-const mockCommandEncoder = {
-  beginComputePass: vi.fn(() => mockComputePassEncoder),
-  beginRenderPass: vi.fn(() => mockRenderPassEncoder),
-  copyBufferToBuffer: vi.fn(),
-  copyBufferToTexture: vi.fn(),
-  copyTextureToBuffer: vi.fn(),
-  copyTextureToTexture: vi.fn(),
-  finish: vi.fn(),
-};
-
-const mockComputePassEncoder = {
-  dispatchWorkgroups: vi.fn(),
-  end: vi.fn(),
-  setBindGroup: vi.fn(),
-  setPipeline: vi.fn(),
-};
-
-const mockRenderPassEncoder = {
-  draw: vi.fn(),
-  end: vi.fn(),
-  setBindGroup: vi.fn(),
-  setPipeline: vi.fn(),
-  setVertexBuffer: vi.fn(),
-};
-
-const mockDevice = {
-  createBindGroup: vi.fn(() => 'mockBindGroup'),
-  createBindGroupLayout: vi.fn(() => 'mockBindGroupLayout'),
-  createBuffer: vi.fn(() => mockBuffer),
-  createCommandEncoder: vi.fn(() => mockCommandEncoder),
-  createComputePipeline: vi.fn(() => 'mockComputePipeline'),
-  createPipelineLayout: vi.fn(() => 'mockPipelineLayout'),
-  createRenderPipeline: vi.fn(() => 'mockRenderPipeline'),
-  createSampler: vi.fn(() => 'mockSampler'),
-  createShaderModule: vi.fn(() => 'mockShaderModule'),
-  createTexture: vi.fn(() => 'mockTexture'),
-  importExternalTexture: vi.fn(() => 'mockExternalTexture'),
-  queue: {
-    copyExternalImageToTexture: vi.fn(),
-    onSubmittedWorkDone: vi.fn(),
-    submit: vi.fn(),
-    writeBuffer: vi.fn(),
-    writeTexture: vi.fn(),
-  },
-};
+import { it } from './utils/extendedIt';
 
 describe('TgpuComputePipeline', () => {
-  let root: ExperimentalTgpuRoot;
-
-  beforeEach(() => {
-    root = tgpu.initFromDevice({ device: mockDevice as unknown as GPUDevice });
-  });
-
-  afterEach(() => {
-    root.destroy();
-    vi.restoreAllMocks();
-  });
-
-  it('can be created with a compute entry function', () => {
+  it('can be created with a compute entry function', ({ root }) => {
     const entryFn = tgpu
       .computeFn([], { workgroupSize: [32] })
       .does(() => {
@@ -92,12 +21,12 @@ describe('TgpuComputePipeline', () => {
 
     root.unwrap(computePipeline);
 
-    expect(mockDevice.createComputePipeline).toBeCalledWith({
+    expect(root.device.createComputePipeline).toBeCalledWith({
       compute: {
-        module: mockDevice.createShaderModule(),
+        module: root.mockDevice.createShaderModule(),
       },
       label: 'test_pipeline',
-      layout: mockDevice.createPipelineLayout(),
+      layout: root.mockDevice.createPipelineLayout(),
     });
   });
 });

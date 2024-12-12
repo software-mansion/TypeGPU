@@ -99,6 +99,7 @@ describe('unmanagedIO', () => {
       size: 4,
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
       mappedAtCreation: false,
+      label: '<unnamed>',
     });
   });
 
@@ -115,6 +116,7 @@ describe('unmanagedIO', () => {
       size: 12,
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
       mappedAtCreation: true,
+      label: '<unnamed>',
     });
     expect(tgpuBuffer.buffer.getMappedRange).toHaveBeenCalled();
     expect(tgpuBuffer.buffer.unmap).toHaveBeenCalled();
@@ -203,6 +205,7 @@ describe('unmanagedIO', () => {
       size: 12,
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
       mappedAtCreation: false,
+      label: '<unnamed>',
     });
 
     expect(mockCommandEncoder.copyBufferToBuffer).toHaveBeenCalledWith(

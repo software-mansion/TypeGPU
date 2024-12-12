@@ -131,6 +131,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
         size: sizeOf(this.dataType),
         usage: this.flags,
         mappedAtCreation: !!this.initial,
+        label: this.label ?? '<unnamed>',
       });
 
       if (this.initial) {
@@ -158,6 +159,9 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
 
   $name(label: string) {
     this._label = label;
+    if (this._buffer) {
+      this._buffer.label = label;
+    }
     return this;
   }
 

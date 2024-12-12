@@ -234,7 +234,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }) as GPURenderPassColorAttachment[];
 
     const pass = branch.commandEncoder.beginRenderPass({
-      label: this._core.label ?? '',
+      label: this._core.label ?? '<unnamed>',
       colorAttachments,
     });
 
@@ -310,6 +310,12 @@ class RenderPipelineCore {
           jitTranspiler: branch.jitTranspiler,
         },
       );
+
+      if (catchall !== null) {
+        bindGroupLayouts[catchall[0]]?.$name(
+          `${this.label ?? '<unnamed>'} - Automatic Bind Group & Layout`,
+        );
+      }
 
       const device = branch.device;
 

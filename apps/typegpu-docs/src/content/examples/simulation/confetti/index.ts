@@ -64,6 +64,7 @@ const particleGeometryBuffer = root
         color: COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)],
       })),
   )
+  .$name('geometry')
   .$usage('vertex');
 
 const particleDataBuffer = root
@@ -75,15 +76,13 @@ const timeBuffer = root.createBuffer(f32).$usage('storage');
 
 // layouts
 
-const geometryLayout = tgpu.vertexLayout(
-  (n: number) => arrayOf(ParticleGeometry, n),
-  'instance',
-);
+const geometryLayout = tgpu
+  .vertexLayout((n: number) => arrayOf(ParticleGeometry, n), 'instance')
+  .$name('geometry');
 
-const dataLayout = tgpu.vertexLayout(
-  (n: number) => arrayOf(ParticleData, n),
-  'instance',
-);
+const dataLayout = tgpu
+  .vertexLayout((n: number) => arrayOf(ParticleData, n), 'instance')
+  .$name('data');
 
 const particleDataStorage = asMutable(particleDataBuffer);
 const deltaTimeUniform = asUniform(deltaTimeBuffer);
@@ -187,10 +186,14 @@ const renderPipeline = root
     topology: 'triangle-strip',
   })
   .createPipeline()
+  .$name('draw confetti')
   .with(geometryLayout, particleGeometryBuffer)
   .with(dataLayout, particleDataBuffer);
 
-const computePipeline = root.withCompute(mainCompute).createPipeline();
+const computePipeline = root
+  .withCompute(mainCompute)
+  .createPipeline()
+  .$name('move particles');
 
 // compute and draw
 
@@ -257,5 +260,4 @@ export const controls = {
 export function onCleanup() {
   disposed = true;
   root.destroy();
-  root.device.destroy();
 }
