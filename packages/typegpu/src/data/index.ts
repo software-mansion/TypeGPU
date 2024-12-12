@@ -124,7 +124,6 @@ export {
   BuiltinWorkgroupId,
   BuiltinNumWorkgroups,
   AnyBuiltin,
-  OmitBuiltins,
 } from '../builtin';
 
 import type { Infer as INTERNAL_Infer } from '../shared/repr';
