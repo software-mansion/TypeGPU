@@ -1,10 +1,4 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import {
-  type BuiltinPosition,
-  type BuiltinVertexIndex,
-  type OmitBuiltins,
-  builtin,
-} from '../src/builtin';
 import * as d from '../src/data';
 import { StrictNameRegistry } from '../src/experimental';
 import { resolve } from '../src/resolutionCtx';
@@ -13,7 +7,7 @@ describe('builtin', () => {
   it('adds a @builtin attribute to a struct field', () => {
     const s1 = d
       .struct({
-        position: builtin.position,
+        position: d.builtin.position,
       })
       .$name('s1');
 
@@ -29,13 +23,13 @@ describe('builtin', () => {
   it('can be omitted from a record type', () => {
     const x = {
       a: d.u32,
-      b: builtin.localInvocationId,
+      b: d.builtin.localInvocationId,
       c: d.f32,
-      d: builtin.localInvocationIndex,
+      d: d.builtin.localInvocationIndex,
     };
 
     type X = typeof x;
-    type Omitted = OmitBuiltins<X>;
+    type Omitted = d.OmitBuiltins<X>;
 
     expectTypeOf<Omitted>().toEqualTypeOf({
       a: d.u32,
@@ -64,14 +58,14 @@ describe('IsBuiltin', () => {
   });
 
   it('treats defined builtins as builtin', () => {
-    expectTypeOf<d.IsBuiltin<BuiltinPosition>>().toEqualTypeOf<true>();
-    expectTypeOf<d.IsBuiltin<BuiltinVertexIndex>>().toEqualTypeOf<true>();
+    expectTypeOf<d.IsBuiltin<d.BuiltinPosition>>().toEqualTypeOf<true>();
+    expectTypeOf<d.IsBuiltin<d.BuiltinVertexIndex>>().toEqualTypeOf<true>();
   });
 });
 
 describe('isBuiltin', () => {
   it('narrows an unknown type to a decorated type', () => {
-    const value = builtin.position as unknown;
+    const value = d.builtin.position as unknown;
     expectTypeOf(value).toEqualTypeOf<unknown>();
 
     let passed = false;
@@ -87,13 +81,13 @@ describe('isBuiltin', () => {
   });
 
   it('narrows a union to the builtin element', () => {
-    const value = builtin.position as typeof builtin.position | string;
-    expectTypeOf(value).toEqualTypeOf<typeof builtin.position | string>();
+    const value = d.builtin.position as typeof d.builtin.position | string;
+    expectTypeOf(value).toEqualTypeOf<typeof d.builtin.position | string>();
 
     let passed = false;
     if (d.isBuiltin(value)) {
       passed = true;
-      expectTypeOf(value).toEqualTypeOf<BuiltinPosition>();
+      expectTypeOf(value).toEqualTypeOf<d.BuiltinPosition>();
     }
 
     expect(passed).toBeTruthy();
