@@ -184,19 +184,19 @@ const resetGameData = () => {
     .createBuffer(arrayOf(u32, length))
     .$usage('storage', 'vertex');
 
-  const bindGroup0 = bindGroupLayoutCompute.populate({
+  const bindGroup0 = root.createBindGroup(bindGroupLayoutCompute, {
     size: sizeBuffer,
     current: buffer0,
     next: buffer1,
   });
 
-  const bindGroup1 = bindGroupLayoutCompute.populate({
+  const bindGroup1 = root.createBindGroup(bindGroupLayoutCompute, {
     size: sizeBuffer,
     current: buffer1,
     next: buffer0,
   });
 
-  const uniformBindGroup = bindGroupLayoutRender.populate({
+  const uniformBindGroup = root.createBindGroup(bindGroupLayoutRender, {
     size: sizeBuffer,
   });
 

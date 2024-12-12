@@ -500,7 +500,7 @@ class TgpuBindGroupLayoutImpl<
   }
 }
 
-class TgpuBindGroupImpl<
+export class TgpuBindGroupImpl<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<
     string,
     TgpuLayoutEntry | null
