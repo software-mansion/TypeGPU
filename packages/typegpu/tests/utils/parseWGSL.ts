@@ -1,7 +1,8 @@
+import { JitTranspiler } from '@typegpu/jit';
 import { parse } from '@typegpu/wgsl-parser';
-import { JitTranspiler } from '../../../jit';
-import { StrictNameRegistry, type Wgsl } from '../../src/experimental';
+import { StrictNameRegistry } from '../../src/experimental';
 import { resolve } from '../../src/resolutionCtx';
+import type { Wgsl } from '../../src/types';
 
 export function parseWGSL(segment: Wgsl) {
   const opts = {
