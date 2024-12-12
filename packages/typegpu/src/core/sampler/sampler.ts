@@ -4,7 +4,7 @@
 
 import type { TgpuNamable } from '../../namable';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout';
-import type { ResolutionCtx } from '../../types';
+import type { ResolutionCtx, TgpuResolvable } from '../../types';
 
 export interface SamplerProps {
   addressModeU?: GPUAddressMode;
@@ -91,7 +91,7 @@ export interface ComparisonSamplerProps {
   maxAnisotropy?: number;
 }
 
-export interface TgpuSampler {
+export interface TgpuSampler extends TgpuResolvable {
   readonly resourceType: 'sampler';
 }
 
