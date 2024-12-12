@@ -101,7 +101,7 @@ const renderBindGroupLayout = tgpu.bindGroupLayout({
   boxSize: { uniform: boxSizeBuffer.dataType },
 });
 
-const renderBindGroup = renderBindGroupLayout.populate({
+const renderBindGroup = root.createBindGroup(renderBindGroupLayout, {
   boxMatrix: boxMatrixBuffer,
   cameraPosition: cameraPositionBuffer,
   cameraAxes: cameraAxesBuffer,

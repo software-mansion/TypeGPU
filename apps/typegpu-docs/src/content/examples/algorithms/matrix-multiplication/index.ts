@@ -89,7 +89,7 @@ const pipeline = device.createComputePipeline({
   },
 });
 
-const bindGroup = layout.populate({
+const bindGroup = root.createBindGroup(layout, {
   firstMatrix: firstMatrixBuffer,
   secondMatrix: secondMatrixBuffer,
   resultMatrix: resultMatrixBuffer,

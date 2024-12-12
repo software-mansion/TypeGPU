@@ -10,10 +10,16 @@ import {
 import type { Infer } from '../../shared/repr';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat';
 import type {
+  LayoutEntryToInput,
   TgpuBindGroup,
   TgpuBindGroupLayout,
+  TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout';
-import { isBindGroup, isBindGroupLayout } from '../../tgpuBindGroupLayout';
+import {
+  TgpuBindGroupImpl,
+  isBindGroup,
+  isBindGroupLayout,
+} from '../../tgpuBindGroupLayout';
 import type { TgpuSlot } from '../../types';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
 import type { IOLayout } from '../function/fnTypes';
@@ -223,6 +229,20 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
     this._disposables.push(texture);
     // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
     return texture as any;
+  }
+
+  createBindGroup<
+    Entries extends Record<string, TgpuLayoutEntry | null> = Record<
+      string,
+      TgpuLayoutEntry | null
+    >,
+  >(
+    layout: TgpuBindGroupLayout<Entries>,
+    entries: {
+      [K in keyof Entries]: LayoutEntryToInput<Entries[K]>;
+    },
+  ) {
+    return new TgpuBindGroupImpl(layout, entries);
   }
 
   destroy() {

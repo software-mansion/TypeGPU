@@ -6,6 +6,12 @@ import type { JitTranspiler } from '../../jitTranspiler';
 import type { NameRegistry } from '../../nameRegistry';
 import type { Infer } from '../../shared/repr';
 import type { Mutable, OmitProps, Prettify } from '../../shared/utilityTypes';
+import type {
+  LayoutEntryToInput,
+  TgpuBindGroup,
+  TgpuBindGroupLayout,
+  TgpuLayoutEntry,
+} from '../../tgpuBindGroupLayout';
 import type { Eventual, TgpuSlot } from '../../types';
 import type { Unwrapper } from '../../unwrapper';
 import type { TgpuBuffer } from '../buffer/buffer';
@@ -195,6 +201,18 @@ export interface TgpuRoot extends Unwrapper {
       TDimension
     >
   >;
+
+  createBindGroup<
+    Entries extends Record<string, TgpuLayoutEntry | null> = Record<
+      string,
+      TgpuLayoutEntry | null
+    >,
+  >(
+    layout: TgpuBindGroupLayout<Entries>,
+    entries: {
+      [K in keyof OmitProps<Entries, null>]: LayoutEntryToInput<Entries[K]>;
+    },
+  ): TgpuBindGroup<Entries>;
 
   destroy(): void;
 }
