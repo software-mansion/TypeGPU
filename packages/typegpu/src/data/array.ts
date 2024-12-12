@@ -49,6 +49,11 @@ class TgpuArrayImpl<TElement extends AnyWgslData>
   /** Type-token, not available at runtime */
   public readonly '~exotic'!: WgslArray<Exotic<TElement>>;
 
+  // TODO: deprecate/remove
+  get elementCount() {
+    return this.length;
+  }
+
   constructor(
     public readonly elementType: TElement,
     public readonly length: number,
