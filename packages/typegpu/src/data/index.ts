@@ -107,6 +107,24 @@ export {
 } from './dataTypes';
 export { PUBLIC_sizeOf as sizeOf } from './sizeOf';
 export { PUBLIC_alignmentOf as alignmentOf } from './alignmentOf';
+export {
+  builtin,
+  BuiltinVertexIndex,
+  BuiltinInstanceIndex,
+  BuiltinPosition,
+  BuiltinClipDistances,
+  BuiltinFrontFacing,
+  BuiltinFragDepth,
+  BuiltinSampleIndex,
+  BuiltinSampleMask,
+  BuiltinFragment,
+  BuiltinLocalInvocationId,
+  BuiltinLocalInvocationIndex,
+  BuiltinGlobalInvocationId,
+  BuiltinWorkgroupId,
+  BuiltinNumWorkgroups,
+  AnyBuiltin,
+} from '../builtin';
 
 import type { Infer as INTERNAL_Infer } from '../shared/repr';
 import type { Exotic } from './exotic';
