@@ -3,7 +3,7 @@ import * as d from '../src/data';
 import { it } from './utils/extendedIt';
 
 describe('TgpuBuffer', () => {
-  it('should properly write to buffer', ({ root }) => {
+  it('should properly write to buffer', ({ root, device }) => {
     const buffer = root.createBuffer(d.u32);
 
     buffer.write(3);
@@ -11,13 +11,9 @@ describe('TgpuBuffer', () => {
     const rawBuffer = root.unwrap(buffer);
     expect(rawBuffer).toBeDefined();
 
-    expect(root.device.queue.writeBuffer).toBeCalledWith(
-      rawBuffer,
-      0,
-      new ArrayBuffer(4),
-      0,
-      4,
-    );
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 0, new Uint32Array([3]).buffer, 0, 4],
+    ]);
   });
 
   it('should properly write to complex buffer', ({ root }) => {
