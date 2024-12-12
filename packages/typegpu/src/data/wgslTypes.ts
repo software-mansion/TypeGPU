@@ -611,8 +611,7 @@ export interface WgslStruct<
 
 export interface WgslArray<TElement = BaseWgslData> {
   readonly type: 'array';
-  readonly length: number;
-  readonly elementCount: number; // TODO: remove/deprecate
+  readonly elementCount: number;
   readonly elementType: TElement;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TElement>[];
