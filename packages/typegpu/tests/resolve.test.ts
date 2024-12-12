@@ -57,32 +57,28 @@ describe('tgpu resolve', () => {
       },
     } as unknown as TgpuBufferReadonly<d.F32>;
 
-    const vertex = tgpu
-      .vertexFn({}, d.vec4f)
-      .does(() => {
-        const v = intensity.value;
-        return d.vec4f(v, 0, 0, 1);
-      })
-      .$name('vertex');
+    const fragment1 = tgpu
+      .fragmentFn({}, d.vec4f)
+      .does(() => d.vec4f(0, intensity.value, 0, 1))
+      .$name('fragment1');
 
-    const fragment = tgpu
+    const fragment2 = tgpu
       .fragmentFn({}, d.vec4f)
       .does(() => d.vec4f(intensity.value, 0, 0, 1))
-      .$name('fragment');
+      .$name('fragment2');
 
     const resolved = tgpu.resolve({
-      input: [vertex, fragment],
+      input: [fragment1, fragment2],
       names: 'strict',
     });
 
     expect(parse(resolved)).toEqual(
       parse(
         `@group(0) @binding(0) var<uniform> intensity_1: f32;
-        @vertex fn vertex() -> vec4f {
-          var v = intensity_1;
-          return vec4f(v, 0, 0, 1);
+        @fragment fn fragment1() -> vec4f {
+          return vec4f(0, intensity_1, 0, 1);
         }
-        @fragment fn fragment() -> vec4f {
+        @fragment fn fragment2() -> vec4f {
           return vec4f(intensity_1, 0, 0, 1);
         }`,
       ),

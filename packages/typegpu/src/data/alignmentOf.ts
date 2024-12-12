@@ -42,7 +42,7 @@ function computeAlignment(data: object): number {
 
   if (isWgslStruct(data)) {
     return Object.values(data.propTypes)
-      .map((prop) => alignmentOf(prop))
+      .map(alignmentOf)
       .reduce((a, b) => (a > b ? a : b));
   }
 
