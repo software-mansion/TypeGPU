@@ -67,7 +67,6 @@ export {
   WithVertex,
 } from '../core/root/rootTypes';
 export { StrictNameRegistry, RandomNameRegistry } from '../nameRegistry';
-export * from '../builtin';
 
 export { default as wgsl } from '../wgsl';
 export { std } from '../std';

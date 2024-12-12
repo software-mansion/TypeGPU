@@ -1,13 +1,14 @@
 import {
   type Infer,
   arrayOf,
+  builtin,
   f32,
   struct,
   vec2f,
   vec3f,
   vec4f,
 } from 'typegpu/data';
-import tgpu, { asUniform, builtin } from 'typegpu/experimental';
+import tgpu, { asUniform } from 'typegpu/experimental';
 
 const triangleAmount = 1000;
 const triangleSize = 0.03;
