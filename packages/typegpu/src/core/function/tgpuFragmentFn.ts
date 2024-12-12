@@ -79,7 +79,8 @@ export function fragmentFn<
     returnType: outputType as ExoticIO<FragmentOut>,
 
     does(implementation) {
-      return createFragmentFn(this, implementation as Implementation);
+      // biome-ignore lint/suspicious/noExplicitAny: <the usual>
+      return createFragmentFn(this, implementation as Implementation) as any;
     },
   };
 }
