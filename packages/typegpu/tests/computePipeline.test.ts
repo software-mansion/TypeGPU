@@ -4,7 +4,7 @@ import tgpu from '../src/experimental';
 import { it } from './utils/extendedIt';
 
 describe('TgpuComputePipeline', () => {
-  it('can be created with a compute entry function', ({ root }) => {
+  it('can be created with a compute entry function', ({ root, device }) => {
     const entryFn = tgpu
       .computeFn([], { workgroupSize: [32] })
       .does(() => {
@@ -23,10 +23,10 @@ describe('TgpuComputePipeline', () => {
 
     expect(root.device.createComputePipeline).toBeCalledWith({
       compute: {
-        module: root.mockDevice.createShaderModule(),
+        module: device.mock.createShaderModule(),
       },
       label: 'test_pipeline',
-      layout: root.mockDevice.createPipelineLayout(),
+      layout: device.mock.createPipelineLayout(),
     });
   });
 });

@@ -1,14 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, vi } from 'vitest';
 import * as d from '../src/data';
-import './utils/webgpuGlobals';
-import { mockBuffer, mockRoot } from './utils/mockRoot';
+import { it } from './utils/extendedIt';
 
 describe('TgpuRoot', () => {
-  const { getRoot } = mockRoot();
-
   describe('.createBuffer', () => {
-    it('should create buffer with no initialization', () => {
-      const root = getRoot();
+    it('should create buffer with no initialization', ({ root }) => {
       const dataBuffer = root.createBuffer(d.u32).$usage('uniform');
 
       const mockBuffer = root.unwrap(dataBuffer);
@@ -16,6 +12,7 @@ describe('TgpuRoot', () => {
       expect(mockBuffer.getMappedRange).not.toBeCalled();
 
       expect(root.device.createBuffer).toBeCalledWith({
+        label: '<unnamed>',
         mappedAtCreation: false,
         size: 4,
         usage:
@@ -25,8 +22,7 @@ describe('TgpuRoot', () => {
       });
     });
 
-    it('should create buffer with initialization', () => {
-      const root = getRoot();
+    it('should create buffer with initialization', ({ root }) => {
       const dataBuffer = root
         .createBuffer(d.vec3i, d.vec3i(0, 0, 0))
         .$usage('uniform');
@@ -36,6 +32,7 @@ describe('TgpuRoot', () => {
       expect(mockBuffer.getMappedRange).toBeCalled();
 
       expect(root.device.createBuffer).toBeCalledWith({
+        label: '<unnamed>',
         mappedAtCreation: true,
         size: 12,
         usage:
@@ -45,14 +42,16 @@ describe('TgpuRoot', () => {
       });
     });
 
-    it('should allocate buffer with proper size for nested structs', () => {
-      const root = getRoot();
+    it('should allocate buffer with proper size for nested structs', ({
+      root,
+    }) => {
       const s1 = d.struct({ a: d.u32, b: d.u32 });
       const s2 = d.struct({ a: d.u32, b: s1 });
       const dataBuffer = root.createBuffer(s2).$usage('uniform');
 
       root.unwrap(dataBuffer);
       expect(root.device.createBuffer).toBeCalledWith({
+        label: '<unnamed>',
         mappedAtCreation: false,
         size: 12,
         usage:
@@ -64,8 +63,7 @@ describe('TgpuRoot', () => {
   });
 
   describe('.destroy', () => {
-    it('should call .destroy on all buffers created with it', () => {
-      const root = getRoot();
+    it('should call .destroy on all buffers created with it', ({ root }) => {
       const buffer1 = root.createBuffer(d.f32);
       const buffer2 = root.createBuffer(d.i32);
       const buffer3 = root.createBuffer(d.u32);
@@ -83,8 +81,7 @@ describe('TgpuRoot', () => {
   });
 
   describe('.unwrap', () => {
-    it('should throw error when unwrapping destroyed buffer', () => {
-      const root = getRoot();
+    it('should throw error when unwrapping destroyed buffer', ({ root }) => {
       const buffer = root.createBuffer(d.f32);
 
       buffer.destroy();
@@ -92,14 +89,16 @@ describe('TgpuRoot', () => {
       expect(() => root.unwrap(buffer)).toThrowError();
     });
 
-    it('should return the same buffer that was passed into .createBuffer', () => {
-      const root = getRoot();
-      const buffer = root.createBuffer(
-        d.u32,
-        mockBuffer as unknown as GPUBuffer,
-      );
+    it('should return the same buffer that was passed into .createBuffer', ({
+      root,
+    }) => {
+      const rawBuffer = root.device.createBuffer({
+        size: 4,
+        usage: GPUBufferUsage.UNIFORM,
+      });
 
-      expect(root.unwrap(buffer)).toBe(mockBuffer);
+      const buffer = root.createBuffer(d.u32, rawBuffer);
+      expect(root.unwrap(buffer)).toBe(rawBuffer);
     });
   });
 

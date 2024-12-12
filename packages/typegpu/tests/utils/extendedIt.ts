@@ -2,10 +2,30 @@ import { it as base, vi } from 'vitest';
 import { type ExperimentalTgpuRoot, tgpu } from '../../src/experimental';
 import './webgpuGlobals';
 
-export const mockBuffer = {
+const adapterMock = {
+  requestDevice: vi.fn((descriptor) => Promise.resolve(mockDevice)),
+};
+
+const navigatorMock = {
+  gpu: {
+    __brand: 'GPU',
+    requestAdapter: vi.fn(() => Promise.resolve(adapterMock)),
+  },
+};
+
+const mockBuffer = {
+  mapState: 'unmapped',
   getMappedRange: vi.fn(() => new ArrayBuffer(8)),
   unmap: vi.fn(),
+  mapAsync: vi.fn(),
+  destroy: vi.fn(),
+};
+
+const mockStagingBuffer = {
   mapState: 'unmapped',
+  usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+  getMappedRange: vi.fn(() => new ArrayBuffer(8)),
+  unmap: vi.fn(),
   mapAsync: vi.fn(),
   destroy: vi.fn(),
 };
@@ -40,6 +60,9 @@ const mockRenderPassEncoder = {
 };
 
 const mockDevice = {
+  get mock() {
+    return mockDevice;
+  },
   createBindGroup: vi.fn(
     (_descriptor: GPUBindGroupDescriptor) => 'mockBindGroup',
   ),
@@ -62,24 +85,35 @@ const mockDevice = {
     writeBuffer: vi.fn(),
     writeTexture: vi.fn(),
   },
+  destroy: vi.fn(),
 };
 
 export const it = base.extend<{
-  root: ExperimentalTgpuRoot & { mockDevice: typeof mockDevice };
+  _global: undefined;
+  device: GPUDevice & { mock: typeof mockDevice };
+  root: ExperimentalTgpuRoot;
 }>({
+  _global: [
+    async ({ task }, use) => {
+      vi.stubGlobal('navigator', navigatorMock);
+
+      await use(undefined);
+
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    },
+    { auto: true }, // Always runs
+  ],
+
+  device: async ({ task }, use) => {
+    await use(mockDevice as unknown as GPUDevice & { mock: typeof mockDevice });
+  },
+
   root: async ({ task }, use) => {
-    vi.restoreAllMocks();
-
-    // setup
-    const root = tgpu.initFromDevice({
-      device: mockDevice as unknown as GPUDevice,
-    }) as ExperimentalTgpuRoot & { mockDevice: typeof mockDevice };
-
-    root.mockDevice = mockDevice;
+    const root = await tgpu.init();
 
     await use(root);
 
-    // teardown
     root.destroy();
   },
 });
