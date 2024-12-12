@@ -1,5 +1,14 @@
-import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'typegpu/data';
-import tgpu, { std, builtin } from 'typegpu/experimental';
+import {
+  arrayOf,
+  bool,
+  builtin,
+  f32,
+  struct,
+  u32,
+  vec3f,
+  vec4f,
+} from 'typegpu/data';
+import tgpu, { std } from 'typegpu/experimental';
 
 // init canvas and values
 
