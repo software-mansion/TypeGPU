@@ -36,3 +36,15 @@ describe('u32', () => {
     acceptsU32Schema(d.f32);
   });
 });
+
+describe('f16', () => {
+  it('differs in type from other numeric schemas', () => {
+    const acceptsF16Schema = (_schema: d.F16) => {};
+
+    acceptsF16Schema(d.f16);
+    // @ts-expect-error
+    acceptsF16Schema(d.i32);
+    // @ts-expect-error
+    acceptsF16Schema(d.u32);
+  });
+});

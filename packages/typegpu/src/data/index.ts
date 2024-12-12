@@ -2,7 +2,7 @@
  * @module typegpu/data
  */
 
-export { bool, f32, i32, u32 } from './numeric';
+export { bool, f32, f16, i32, u32 } from './numeric';
 export {
   isWgslData,
   isWgslArray,
@@ -17,6 +17,7 @@ export {
 export type {
   Bool,
   F32,
+  F16,
   I32,
   U32,
   Vec2f,
@@ -105,6 +106,7 @@ export {
   isLooseData,
 } from './dataTypes';
 export { PUBLIC_sizeOf as sizeOf } from './sizeOf';
+export { PUBLIC_alignmentOf as alignmentOf } from './alignmentOf';
 
 import type { Infer as INTERNAL_Infer } from '../shared/repr';
 import type { Exotic } from './exotic';

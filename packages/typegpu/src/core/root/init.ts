@@ -165,6 +165,7 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
     public readonly device: GPUDevice,
     public readonly nameRegistry: NameRegistry,
     public readonly jitTranspiler: JitTranspiler | undefined,
+    private readonly _ownDevice: boolean,
   ) {
     super(() => this, []);
   }
@@ -227,6 +228,10 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
   destroy() {
     for (const disposable of this._disposables) {
       disposable.destroy();
+    }
+
+    if (this._ownDevice) {
+      this.device.destroy();
     }
   }
 
@@ -362,6 +367,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     await adapter.requestDevice(deviceOpt),
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     jitTranspiler,
+    true,
   );
 }
 
@@ -385,5 +391,6 @@ export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
     device,
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     jitTranspiler,
+    false,
   );
 }
