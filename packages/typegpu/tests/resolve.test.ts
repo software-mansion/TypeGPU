@@ -2,7 +2,7 @@ import { parse } from '@typegpu/wgsl-parser';
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data';
 import tgpu, { type TgpuBufferReadonly } from '../src/experimental';
-import type { ResolutionCtx } from '../src/experimental';
+import type { ResolutionCtx } from '../src/types';
 
 describe('tgpu resolve', () => {
   it('should resolve a string (identity)', () => {
