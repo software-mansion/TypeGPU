@@ -1,5 +1,6 @@
 import type { OmitBuiltins } from '../../builtin';
 import type { AnyData } from '../../data/dataTypes';
+import { invariant } from '../../errors';
 import type { JitTranspiler } from '../../jitTranspiler';
 import { WeakMemo } from '../../memo';
 import {
@@ -79,9 +80,9 @@ class WithBindingImpl implements WithBinding {
     return new WithComputeImpl(this._getRoot(), this._slotBindings, entryFn);
   }
 
-  withVertex<Attribs extends IOLayout, Varying extends IOLayout>(
+  withVertex<VertexIn extends IOLayout>(
     vertexFn: TgpuVertexFn,
-    attribs: LayoutToAllowedAttribs<OmitBuiltins<Attribs>>,
+    attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
   ): WithVertex {
     return new WithVertexImpl({
       branch: this._getRoot(),
@@ -118,9 +119,13 @@ class WithVertexImpl implements WithVertex {
   ) {}
 
   withFragment(
-    fragmentFn: TgpuFragmentFn,
-    targets: AnyFragmentTargets,
+    fragmentFn: TgpuFragmentFn | 'n/a',
+    targets: AnyFragmentTargets | 'n/a',
+    _mismatch?: unknown,
   ): WithFragment {
+    invariant(typeof fragmentFn !== 'string', 'Just type mismatch validation');
+    invariant(typeof targets !== 'string', 'Just type mismatch validation');
+
     return new WithFragmentImpl({
       ...this._options,
       fragmentFn,

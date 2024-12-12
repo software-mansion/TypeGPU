@@ -15,7 +15,7 @@ export interface LooseArray<
   TElement extends wgsl.BaseWgslData = wgsl.BaseWgslData,
 > {
   readonly type: 'loose-array';
-  readonly length: number;
+  readonly elementCount: number;
   readonly elementType: TElement;
   readonly '~repr': Infer<TElement>[];
 }

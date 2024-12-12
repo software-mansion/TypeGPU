@@ -1,5 +1,5 @@
 import { it as base, vi } from 'vitest';
-import { type ExperimentalTgpuRoot, tgpu } from '../../src/experimental';
+import tgpu, { type ExperimentalTgpuRoot } from '../../src/experimental';
 import './webgpuGlobals';
 
 const adapterMock = {
