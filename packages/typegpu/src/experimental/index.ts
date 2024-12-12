@@ -16,9 +16,7 @@ import {
 } from '../core/root/init';
 import type { ExperimentalTgpuRoot } from '../core/root/rootTypes';
 import { vertexLayout } from '../core/vertexLayout/vertexLayout';
-import { createBuffer } from '../legacyBufferApi';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
-import { read, write } from '../tgpuBufferUtils';
 
 export const tgpu = {
   /** @deprecated Use `'uniform'` string literal instead. */
@@ -44,10 +42,6 @@ export const tgpu = {
   ) => ExperimentalTgpuRoot,
 
   resolve,
-
-  createBuffer,
-  read,
-  write,
 };
 
 // Hidden API, used only by tooling (e.g., rollup plugin).
@@ -57,10 +51,21 @@ Object.assign(tgpu, {
 
 export default tgpu;
 
-export * from '../errors';
-export * from '../types';
-export * from '../namable';
-export * from '../core/root/rootTypes';
+export {
+  MissingBindGroupError,
+  MissingLinksError,
+  MissingSlotValueError,
+  NotUniformError,
+  ResolutionError,
+} from '../errors';
+export {
+  TgpuRoot,
+  ExperimentalTgpuRoot,
+  WithBinding,
+  WithCompute,
+  WithFragment,
+  WithVertex,
+} from '../core/root/rootTypes';
 export { StrictNameRegistry, RandomNameRegistry } from '../nameRegistry';
 export * from '../builtin';
 
@@ -121,6 +126,10 @@ export type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
   TgpuLayoutSampler,
+  TgpuLayoutTexture,
+  TgpuLayoutStorage,
+  TgpuLayoutStorageTexture,
+  TgpuLayoutExternalTexture,
   TgpuLayoutUniform,
   BindLayoutEntry,
   LayoutEntryToInput,
