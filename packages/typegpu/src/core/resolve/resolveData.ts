@@ -95,9 +95,9 @@ ${Object.entries(struct.propTypes)
 function resolveArray(ctx: ResolutionCtx, array: WgslArray) {
   const element = ctx.resolve(array.elementType as AnyWgslData);
 
-  return array.length === 0
+  return array.elementCount === 0
     ? `array<${element}>`
-    : `array<${element}, ${array.length}>`;
+    : `array<${element}, ${array.elementCount}>`;
 }
 
 export function resolveData(ctx: ResolutionCtx, data: AnyWgslData): string {
