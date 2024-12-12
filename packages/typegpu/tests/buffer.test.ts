@@ -1,16 +1,9 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect } from 'vitest';
 import * as d from '../src/data';
-import { mockBuffer, mockRoot } from './utils/mockRoot';
+import { it } from './utils/extendedIt';
 
 describe('TgpuBuffer', () => {
-  const { getRoot } = mockRoot();
-
-  beforeEach(() => {
-    mockBuffer.mapState = 'unmapped';
-  });
-
-  it('should properly write to buffer', () => {
-    const root = getRoot();
+  it('should properly write to buffer', ({ root }) => {
     const buffer = root.createBuffer(d.u32);
 
     buffer.write(3);
@@ -27,9 +20,7 @@ describe('TgpuBuffer', () => {
     );
   });
 
-  it('should properly write to complex buffer', () => {
-    const root = getRoot();
-
+  it('should properly write to complex buffer', ({ root }) => {
     const s1 = d.struct({ a: d.u32, b: d.u32, c: d.vec3i });
     const s2 = d.struct({ a: d.u32, b: s1, c: d.vec4u });
 
@@ -63,34 +54,114 @@ describe('TgpuBuffer', () => {
     );
   });
 
-  it('should write to a mapped buffer', () => {
-    const root = getRoot();
-    mockBuffer.mapState = 'mapped';
-    const buffer = root.createBuffer(
-      d.arrayOf(d.u32, 3),
-      mockBuffer as unknown as GPUBuffer,
-    );
+  it('should write to a mapped buffer', ({ root, mappedBuffer }) => {
+    const buffer = root.createBuffer(d.arrayOf(d.u32, 3), mappedBuffer);
     buffer.write([1, 2, 3]);
 
-    expect(mockBuffer.getMappedRange).toHaveBeenCalled();
-    expect(mockBuffer.unmap).not.toHaveBeenCalled();
+    expect(mappedBuffer.getMappedRange).toHaveBeenCalled();
+    expect(mappedBuffer.unmap).not.toHaveBeenCalled();
   });
 
-  it('should not destroy passed in external buffer', () => {
-    const root = getRoot();
-    const buffer = root.createBuffer(d.f32, mockBuffer as unknown as GPUBuffer);
+  it('should map a mappable buffer before reading', async ({ root }) => {
+    const rawBuffer = root.device.createBuffer({
+      size: 12,
+      usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+    });
+    const buffer = root.createBuffer(d.arrayOf(d.u32, 3), rawBuffer);
+    const data = await buffer.read();
+
+    expect(root.device.createBuffer).toHaveBeenCalledOnce(); // No staging buffer was created
+    expect(rawBuffer.mapAsync).toHaveBeenCalled();
+    expect(data).toBeDefined();
+  });
+
+  it('should read from a mapped buffer', async ({ root, mappedBuffer }) => {
+    const buffer = root.createBuffer(d.arrayOf(d.u32, 3), mappedBuffer);
+    const data = await buffer.read();
+
+    expect(root.device.createBuffer).not.toHaveBeenCalled();
+    expect(data).toBeDefined();
+    expect(mappedBuffer.getMappedRange).toHaveBeenCalled();
+    expect(mappedBuffer.unmap).not.toHaveBeenCalled();
+  });
+
+  it('should read from a mappable buffer', async ({ root }) => {
+    const rawBuffer = root.device.createBuffer({
+      size: 12,
+      usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+    });
+    const buffer = root.createBuffer(d.arrayOf(d.u32, 3), rawBuffer);
+    const data = await buffer.read();
+
+    expect(root.device.createBuffer).not.toHaveBeenCalled();
+    expect(data).toBeDefined();
+    expect(rawBuffer.getMappedRange).toHaveBeenCalled();
+    expect(rawBuffer.unmap).toHaveBeenCalled();
+  });
+
+  it('should read from a buffer', async ({ root, device, commandEncoder }) => {
+    const buffer = root.createBuffer(d.arrayOf(d.u32, 3));
+    const data = await buffer.read();
+
+    expect(device.mock.createBuffer.mock.calls).toEqual([
+      // First call (raw buffer)
+      [
+        {
+          label: '<unnamed>',
+          mappedAtCreation: false,
+          size: 12,
+          usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+        },
+      ],
+      // Second call (staging buffer)
+      [
+        {
+          size: 12,
+          usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+        },
+      ],
+    ]);
+
+    const stagingBuffer =
+      // biome-ignore lint/suspicious/noExplicitAny: <mocks on mocks>
+      (device.mock.createBuffer.mock.calls as any)[1][0] as GPUBuffer;
+
+    expect(commandEncoder.copyBufferToBuffer).toHaveBeenCalledWith(
+      buffer.buffer,
+      0,
+      stagingBuffer,
+      0,
+      12,
+    );
+    expect(device.queue.submit).toHaveBeenCalled();
+    expect(stagingBuffer.mapAsync).toHaveBeenCalled();
+    expect(stagingBuffer.getMappedRange).toHaveBeenCalled();
+    expect(stagingBuffer.unmap).toHaveBeenCalled();
+    expect(stagingBuffer.destroy).toHaveBeenCalled();
+
+    expect(data).toBeDefined();
+  });
+
+  it('should not destroy passed in external buffer', ({ root }) => {
+    const rawBuffer = root.device.createBuffer({
+      size: 16,
+      usage: GPUBufferUsage.COPY_DST,
+    });
+
+    const buffer = root.createBuffer(d.f32, rawBuffer);
     buffer.destroy();
 
-    expect(mockBuffer.destroy).not.toHaveBeenCalled();
+    expect(rawBuffer.destroy).not.toHaveBeenCalled();
   });
 
-  it('should destroy inner buffer if it was responsible for creating it', () => {
-    const root = getRoot();
+  it('should destroy inner buffer if it was responsible for creating it', ({
+    root,
+  }) => {
     const buffer = root.createBuffer(d.f32);
-    root.unwrap(buffer); // Triggering the creation of a buffer
+    const rawBuffer = root.unwrap(buffer); // Triggering the creation of a buffer
     buffer.destroy();
 
-    expect(mockBuffer.destroy).toHaveBeenCalled();
+    expect(rawBuffer.destroy).toHaveBeenCalled();
     expect(() => root.unwrap(buffer)).toThrow();
   });
 });

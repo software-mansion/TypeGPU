@@ -15,6 +15,19 @@ const navigatorMock = {
 
 const mockBuffer = {
   mapState: 'unmapped',
+  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+  getMappedRange: vi.fn(() => new ArrayBuffer(8)),
+  unmap: vi.fn(),
+  mapAsync: vi.fn(),
+  destroy: vi.fn(),
+};
+
+const mappedBufferMock = {
+  get mock() {
+    return mappedBufferMock;
+  },
+  mapState: 'mapped',
+  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
   getMappedRange: vi.fn(() => new ArrayBuffer(8)),
   unmap: vi.fn(),
   mapAsync: vi.fn(),
@@ -90,6 +103,8 @@ const mockDevice = {
 
 export const it = base.extend<{
   _global: undefined;
+  commandEncoder: GPUCommandEncoder & { mock: typeof mockCommandEncoder };
+  mappedBuffer: GPUBuffer & { mock: typeof mappedBufferMock };
   device: GPUDevice & { mock: typeof mockDevice };
   root: ExperimentalTgpuRoot;
 }>({
@@ -104,6 +119,22 @@ export const it = base.extend<{
     },
     { auto: true }, // Always runs
   ],
+
+  commandEncoder: async ({ task }, use) => {
+    await use(
+      mockCommandEncoder as unknown as GPUCommandEncoder & {
+        mock: typeof mockCommandEncoder;
+      },
+    );
+  },
+
+  mappedBuffer: async ({ task }, use) => {
+    await use(
+      mappedBufferMock as unknown as GPUBuffer & {
+        mock: typeof mappedBufferMock;
+      },
+    );
+  },
 
   device: async ({ task }, use) => {
     await use(mockDevice as unknown as GPUDevice & { mock: typeof mockDevice });
