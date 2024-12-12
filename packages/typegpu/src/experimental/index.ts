@@ -72,6 +72,7 @@ export * from '../builtin';
 export { default as wgsl } from '../wgsl';
 export { std } from '../std';
 export {
+  isBuffer,
   isUsableAsUniform,
   isUsableAsVertex,
 } from '../core/buffer/buffer';

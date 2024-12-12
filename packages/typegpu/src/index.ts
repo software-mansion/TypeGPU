@@ -29,6 +29,7 @@ export {
 } from './errors';
 export { TgpuRoot } from './core/root/rootTypes';
 export {
+  isBuffer,
   isUsableAsUniform,
   isUsableAsVertex,
 } from './core/buffer/buffer';
