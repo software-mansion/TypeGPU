@@ -40,15 +40,10 @@ export type InferReturn<T> = T extends undefined
     void
   : Infer<T>;
 
-export type TgslImplementation<
-  Args extends unknown[] = unknown[],
-  Return = unknown,
-> = (...args: Args) => Return;
-
 export type Implementation<
   Args extends unknown[] = unknown[],
   Return = unknown,
-> = string | TgslImplementation<Args, Return>;
+> = string | ((...args: Args) => Return);
 
 type BaseIOData =
   | F32
