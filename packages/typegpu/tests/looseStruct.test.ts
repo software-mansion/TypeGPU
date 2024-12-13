@@ -207,9 +207,9 @@ describe('d.looseStruct', () => {
 
   it('works properly in conjunction with f16 based attributes', () => {
     const s = d.looseStruct({
-      a: d.float16x2h,
-      b: d.unorm8x4_bgrah,
-      c: d.align(16, d.snorm16x2h),
+      a: d.float16x2,
+      b: d.unorm8x4_bgra,
+      c: d.align(16, d.snorm16x2),
     });
 
     const buffer = new ArrayBuffer(d.sizeOf(s));

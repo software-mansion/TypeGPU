@@ -66,13 +66,13 @@ describe('ArrayToContainedAttribs', () => {
   it('processes an array of f16s', () => {
     type Result = ArrayToContainedAttribs<d.TgpuArray<d.F16>>;
 
-    expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'float16h'>>();
+    expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'float16'>>();
   });
 
-  it('processes a loose array of snorm16x2h', () => {
-    type Result = ArrayToContainedAttribs<d.LooseArray<d.snorm16x2h>>;
+  it('processes a loose array of snorm16x2', () => {
+    type Result = ArrayToContainedAttribs<d.LooseArray<d.snorm16x2>>;
 
-    expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'snorm16x2h'>>();
+    expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'snorm16x2'>>();
   });
 });
 
@@ -154,13 +154,13 @@ describe('tgpu.vertexLayout', () => {
 
   it('creates attributes from loose array with f16 variants', () => {
     const vertexLayout = tgpu.vertexLayout((count: number) =>
-      d.looseArrayOf(d.float16x4h, count),
+      d.looseArrayOf(d.float16x4, count),
     );
 
     expect(vertexLayout.stride).toEqual(8);
     expect(vertexLayout.attrib).toEqual({
       _layout: vertexLayout,
-      format: 'float16x4h',
+      format: 'float16x4',
       offset: 0,
     });
   });
@@ -329,7 +329,7 @@ describe('connectAttributesToShader', () => {
 
   it('connects a single vec4h attribute', () => {
     const shaderInputLayout = d.vec4h;
-    const layout = tgpu.vertexLayout((n) => d.looseArrayOf(d.float16x4h, n));
+    const layout = tgpu.vertexLayout((n) => d.looseArrayOf(d.float16x4, n));
     const attrib = layout.attrib;
 
     expect(connectAttributesToShader(shaderInputLayout, attrib)).toEqual({
@@ -363,10 +363,10 @@ describe('connectAttributesToShader', () => {
       d.looseArrayOf(
         d.looseStruct({
           alpha: d.f16, // 2 bytes
-          beta: d.float16x2h, // 4 bytes
+          beta: d.float16x2, // 4 bytes
           gamma: d.u32, // 4 bytes
           delta: d.float16, // 2 bytes - ironically, this is interpreted as an f32
-          epsilon: d.float16h, // 2bytes this is an f16
+          epsilon: d.float16, // 2bytes this is an f16
         }),
         n,
       ),

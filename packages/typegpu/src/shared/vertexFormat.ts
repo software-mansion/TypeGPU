@@ -40,39 +40,6 @@ export const vertexFormats = [
   'sint32x4',
   'unorm10-10-10-2',
   'unorm8x4-bgra',
-  'unorm8h',
-  'unorm8x2h',
-  'unorm8x4h',
-  'snorm8h',
-  'snorm8x2h',
-  'snorm8x4h',
-  'unorm16h',
-  'unorm16x2h',
-  'unorm16x4h',
-  'snorm16h',
-  'snorm16x2h',
-  'snorm16x4h',
-  'float16h',
-  'unorm8x2h',
-  'unorm8x4h',
-  'snorm8h',
-  'snorm8x2h',
-  'snorm8x4h',
-  'unorm16h',
-  'unorm16x2h',
-  'unorm16x4h',
-  'snorm16h',
-  'snorm16x2h',
-  'snorm16x4h',
-  'float16h',
-  'float16x2h',
-  'float16x4h',
-  'float32h',
-  'float32x2h',
-  'float32x3h',
-  'float32x4h',
-  'unorm10-10-10-2h',
-  'unorm8x4-bgrah',
 ] as const;
 
 export type VertexFormat = (typeof vertexFormats)[number];
@@ -82,11 +49,10 @@ export const kindToDefaultFormatMap = {
   vec2f: 'float32x2',
   vec3f: 'float32x3',
   vec4f: 'float32x4',
-  f16: 'float16h',
-  vec2h: 'float16x2h',
+  f16: 'float16',
+  vec2h: 'float16x2',
   // vec3h has no direct equivalent in the spec
-  vec3h: 'float32x3h',
-  vec4h: 'float16x4h',
+  vec4h: 'float16x4',
   u32: 'uint32',
   vec2u: 'uint32x2',
   vec3u: 'uint32x3',
@@ -175,27 +141,7 @@ type F32CompatibleFormats =
  * an single or multi component f16 in a shader. (same as f32 on the shader side)
  * https://www.w3.org/TR/webgpu/#vertex-formats
  */
-type F16CompatibleFormats =
-  | TgpuVertexAttrib<'unorm8h'>
-  | TgpuVertexAttrib<'unorm8x2h'>
-  | TgpuVertexAttrib<'unorm8x4h'>
-  | TgpuVertexAttrib<'snorm8h'>
-  | TgpuVertexAttrib<'snorm8x2h'>
-  | TgpuVertexAttrib<'snorm8x4h'>
-  | TgpuVertexAttrib<'unorm16h'>
-  | TgpuVertexAttrib<'unorm16x2h'>
-  | TgpuVertexAttrib<'unorm16x4h'>
-  | TgpuVertexAttrib<'snorm16h'>
-  | TgpuVertexAttrib<'snorm16x2h'>
-  | TgpuVertexAttrib<'snorm16x4h'>
-  | TgpuVertexAttrib<'float16x2h'>
-  | TgpuVertexAttrib<'float16x4h'>
-  | TgpuVertexAttrib<'float32h'>
-  | TgpuVertexAttrib<'float32x2h'>
-  | TgpuVertexAttrib<'float32x3h'>
-  | TgpuVertexAttrib<'float32x4h'>
-  | TgpuVertexAttrib<'unorm10-10-10-2h'>
-  | TgpuVertexAttrib<'unorm8x4-bgrah'>;
+type F16CompatibleFormats = F32CompatibleFormats;
 
 export type KindToAcceptedAttribMap = {
   u32: U32CompatibleFormats;
