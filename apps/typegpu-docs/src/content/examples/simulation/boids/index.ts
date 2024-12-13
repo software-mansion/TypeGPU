@@ -312,7 +312,9 @@ const pipeline = root.device.createRenderPipeline({
 });
 
 const computeBindGroupLayout = tgpu.bindGroupLayout({
-  currentTrianglePos: { uniform: d.arrayOf(TriangleInfoStruct, triangleAmount) },
+  currentTrianglePos: {
+    uniform: d.arrayOf(TriangleInfoStruct, triangleAmount),
+  },
   nextTrianglePos: {
     storage: d.arrayOf(TriangleInfoStruct, triangleAmount),
     access: 'mutable',
