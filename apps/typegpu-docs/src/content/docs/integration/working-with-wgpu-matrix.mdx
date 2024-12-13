@@ -17,10 +17,10 @@ Because elements in TypeGPU vectors and matrices can be accessed with the `[]` o
 For example, you can create a vector and normalize it like this:
 
 ```ts
-import { vec2f } from 'typegpu/data';
+import * as d from 'typegpu/data';
 import { vec2 } from 'wgpu-matrix';
 
-const v = vec2f(1, 2);
+const v = d.vec2f(1, 2);
 vec2.normalize(v, v);
 console.log(v.x); // 0.447..
 console.log(v.y); // 0.894..
@@ -34,10 +34,10 @@ If we didn't, we would get a `Float32Array` without modifying the original vecto
 If you wanted to initialize a matrix as an identity matrix, you could do it like this:
 
 ```ts
-import { mat4x4f } from 'typegpu/data';
+import * as d from 'typegpu/data';
 import { mat4 } from 'wgpu-matrix';
 
-const m = mat4.identity(mat4x4f()); // returns a mat4x4f
+const m = mat4.identity(d.mat4x4f()); // returns a d.m4x4f
 
 console.log(m[0]); // 1
 ```
