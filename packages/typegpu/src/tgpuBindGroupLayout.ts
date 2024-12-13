@@ -65,7 +65,7 @@ export type TgpuLayoutEntryBase = {
 };
 
 export type TgpuLayoutUniform = TgpuLayoutEntryBase & {
-  uniform: AnyWgslData | ((arrayLength: number) => AnyWgslData);
+  uniform: AnyWgslData;
 };
 
 export type TgpuLayoutStorage = TgpuLayoutEntryBase & {
@@ -324,13 +324,10 @@ class TgpuBindGroupLayoutImpl<
       const membership = { idx, key, layout: this };
 
       if ('uniform' in entry) {
-        const dataType =
-          'type' in entry.uniform ? entry.uniform : entry.uniform(0);
-
         // biome-ignore lint/suspicious/noExplicitAny: <no need for type magic>
         (this.bound[key] as any) = new TgpuLaidOutBufferImpl(
           'uniform',
-          dataType,
+          entry.uniform,
           membership,
         );
       }
@@ -408,7 +405,7 @@ class TgpuBindGroupLayoutImpl<
 
   unwrap(unwrapper: Unwrapper) {
     const unwrapped = unwrapper.device.createBindGroupLayout({
-      label: this.label ?? '',
+      label: this.label ?? '<unnamed>',
       entries: Object.values(this.entries)
         .map((entry, idx) => {
           if (entry === null) {
@@ -503,7 +500,7 @@ class TgpuBindGroupLayoutImpl<
   }
 }
 
-class TgpuBindGroupImpl<
+export class TgpuBindGroupImpl<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<
     string,
     TgpuLayoutEntry | null
@@ -528,7 +525,7 @@ class TgpuBindGroupImpl<
 
   public unwrap(unwrapper: Unwrapper): GPUBindGroup {
     const unwrapped = unwrapper.device.createBindGroup({
-      label: this.layout.label ?? '',
+      label: this.layout.label ?? '<unnamed>',
       layout: unwrapper.unwrap(this.layout),
       entries: Object.entries(this.layout.entries)
         .map(([key, entry], idx) => {

@@ -1,4 +1,5 @@
 import {
+  type AnyData,
   getCustomAlignment,
   isLooseArray,
   isLooseDecorated,
@@ -15,6 +16,7 @@ import {
 const knownAlignmentMap: Record<string, number> = {
   bool: 4,
   f32: 4,
+  f16: 2,
   i32: 4,
   u32: 4,
   vec2f: 8,
@@ -40,7 +42,7 @@ function computeAlignment(data: object): number {
 
   if (isWgslStruct(data)) {
     return Object.values(data.propTypes)
-      .map((prop) => alignmentOf(prop))
+      .map(alignmentOf)
       .reduce((a, b) => (a > b ? a : b));
   }
 
@@ -116,4 +118,11 @@ export function customAlignmentOf(data: BaseWgslData): number {
   }
 
   return alignment;
+}
+
+/**
+ * Returns the alignment (in bytes) of data represented by the `schema`.
+ */
+export function PUBLIC_alignmentOf(schema: AnyData): number {
+  return alignmentOf(schema);
 }

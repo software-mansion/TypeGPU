@@ -1,5 +1,5 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect } from 'vitest';
 import {
   type Infer,
   align,
@@ -10,24 +10,7 @@ import {
   vec3u,
 } from '../src/data';
 import { readData, writeData } from '../src/data/dataIO';
-
-const mockDevice = {
-  createBuffer: vi.fn(() => 'mockBuffer'),
-  queue: {},
-} as unknown as GPUDevice;
-
-global.GPUBufferUsage = {
-  MAP_READ: 1,
-  MAP_WRITE: 2,
-  COPY_SRC: 4,
-  COPY_DST: 8,
-  INDEX: 16,
-  VERTEX: 32,
-  UNIFORM: 64,
-  STORAGE: 128,
-  INDIRECT: 256,
-  QUERY_RESOLVE: 512,
-};
+import { it } from './utils/extendedIt';
 
 describe('loose', () => {
   it('does not take element alignment into account when measuring', () => {

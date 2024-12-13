@@ -1,13 +1,14 @@
 import {
   type Infer,
   arrayOf,
+  builtin,
   f32,
   struct,
   vec2f,
   vec3f,
   vec4f,
 } from 'typegpu/data';
-import tgpu, { asUniform, builtin } from 'typegpu/experimental';
+import tgpu, { asUniform } from 'typegpu/experimental';
 
 const triangleAmount = 1000;
 const triangleSize = 0.03;
@@ -271,14 +272,14 @@ const mainCompute = tgpu
 const computePipeline = root.withCompute(mainCompute).createPipeline();
 
 const renderBindGroups = [0, 1].map((idx) =>
-  renderBindGroupLayout.populate({
+  root.createBindGroup(renderBindGroupLayout, {
     trianglePos: trianglePosBuffers[idx],
     colorPalette: colorPaletteBuffer,
   }),
 );
 
 const computeBindGroups = [0, 1].map((idx) =>
-  computeBindGroupLayout.populate({
+  root.createBindGroup(computeBindGroupLayout, {
     currentTrianglePos: trianglePosBuffers[idx],
     nextTrianglePos: trianglePosBuffers[1 - idx],
   }),
@@ -363,7 +364,6 @@ export const controls = {
 export function onCleanup() {
   disposed = true;
   root.destroy();
-  root.device.destroy();
 }
 
 // #endregion

@@ -1,5 +1,14 @@
-import { arrayOf, bool, f32, struct, u32, vec3f, vec4f } from 'typegpu/data';
-import tgpu, { std, builtin } from 'typegpu/experimental';
+import {
+  arrayOf,
+  bool,
+  builtin,
+  f32,
+  struct,
+  u32,
+  vec3f,
+  vec4f,
+} from 'typegpu/data';
+import tgpu, { std } from 'typegpu/experimental';
 
 // init canvas and values
 
@@ -101,7 +110,7 @@ const renderBindGroupLayout = tgpu.bindGroupLayout({
   boxSize: { uniform: boxSizeBuffer.dataType },
 });
 
-const renderBindGroup = renderBindGroupLayout.populate({
+const renderBindGroup = root.createBindGroup(renderBindGroupLayout, {
   boxMatrix: boxMatrixBuffer,
   cameraPosition: cameraPositionBuffer,
   cameraAxes: cameraAxesBuffer,
@@ -392,7 +401,6 @@ export const controls = {
 export function onCleanup() {
   disposed = true;
   root.destroy();
-  root.device.destroy();
 }
 
 // #endregion

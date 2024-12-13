@@ -149,6 +149,10 @@ export default defineConfig({
                 'From a Triangle to Simulating Boids: Step-by-step Tutorial',
               slug: 'tutorials/triangle-to-boids',
             },
+            {
+              label: 'Game of life tutorial',
+              slug: 'tutorials/game-of-life',
+            },
           ],
         },
         {

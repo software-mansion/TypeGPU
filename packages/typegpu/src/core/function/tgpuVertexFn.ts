@@ -1,11 +1,20 @@
+import type { OmitBuiltins } from '../../builtin';
+import { location } from '../../data/attributes';
+import { isData } from '../../data/dataTypes';
+import { struct } from '../../data/struct';
+import { isWgslStruct } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
-import type { ExoticIO, IOLayout, Implementation, InferIO } from './fnTypes';
-import {
-  type IOLayoutToOutputStruct,
-  createOutputStruct,
-} from './ioOutputStruct';
+import type {
+  ExoticIO,
+  IOData,
+  IOLayout,
+  IORecord,
+  Implementation,
+  InferIO,
+} from './fnTypes';
+import { type IOLayoutToOutputSchema, withLocations } from './ioOutputStruct';
 
 // ----------
 // Public API
@@ -15,18 +24,18 @@ import {
  * Describes a vertex entry function signature (its arguments and return type)
  */
 export interface TgpuVertexFnShell<
-  VertexAttribs extends IOLayout,
-  Output extends IOLayout,
+  VertexIn extends IOLayout,
+  VertexOut extends IOLayout,
 > {
-  readonly argTypes: [VertexAttribs];
-  readonly returnType: Output;
+  readonly argTypes: [VertexIn];
+  readonly returnType: VertexOut;
 
   /**
    * Creates a type-safe implementation of this signature
    */
   does(
-    implementation: (vertexAttribs: InferIO<VertexAttribs>) => InferIO<Output>,
-  ): TgpuVertexFn<VertexAttribs, Output>;
+    implementation: (input: InferIO<VertexIn>) => InferIO<VertexOut>,
+  ): TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>;
 
   /**
    * @param implementation
@@ -34,16 +43,18 @@ export interface TgpuVertexFnShell<
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  does(implementation: string): TgpuVertexFn<VertexAttribs, Output>;
+  does(
+    implementation: string,
+  ): TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>;
 }
 
 export interface TgpuVertexFn<
-  VertexAttribs extends IOLayout = IOLayout,
-  Output extends IOLayout = IOLayout,
+  VertexIn extends IOLayout = IOLayout,
+  VertexOut extends IOLayout = IOLayout,
 > extends TgpuResolvable,
     TgpuNamable {
-  readonly shell: TgpuVertexFnShell<VertexAttribs, Output>;
-  readonly outputType: IOLayoutToOutputStruct<Output>;
+  readonly shell: TgpuVertexFnShell<VertexIn, VertexOut>;
+  readonly outputType: IOLayoutToOutputSchema<VertexOut>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
 }
@@ -53,30 +64,28 @@ export interface TgpuVertexFn<
  * that implements this shell can run for each vertex, allowing the inner code to process
  * attributes and determine the final position of the vertex.
  *
- * @param vertexAttribs
- *   Vertex attributes to be made available to functions that implement this shell.
+ * @param inputType
+ *   Vertex attributes and builtins to be made available to functions that implement this shell.
  * @param outputType
  *   A struct type containing the final position of the vertex, and any information
  *   passed onto the fragment shader stage.
  */
 export function vertexFn<
-  VertexAttribs extends IOLayout,
-  Output extends IOLayout,
+  VertexIn extends IOLayout,
+  // Not allowing single-value output, as it is better practice
+  // to properly label what the vertex shader is outputting.
+  VertexOut extends IORecord,
 >(
-  vertexAttribs: VertexAttribs,
-  outputType: Output,
-): TgpuVertexFnShell<ExoticIO<VertexAttribs>, ExoticIO<Output>> {
+  inputType: VertexIn,
+  outputType: VertexOut,
+): TgpuVertexFnShell<ExoticIO<VertexIn>, ExoticIO<VertexOut>> {
   return {
-    argTypes: [vertexAttribs as ExoticIO<VertexAttribs>],
-    returnType: outputType as ExoticIO<Output>,
+    argTypes: [inputType as ExoticIO<VertexIn>],
+    returnType: outputType as ExoticIO<VertexOut>,
 
-    does(
-      implementation,
-    ): TgpuVertexFn<ExoticIO<VertexAttribs>, ExoticIO<Output>> {
-      return createVertexFn(
-        this,
-        implementation as Implementation,
-      ) as TgpuVertexFn<ExoticIO<VertexAttribs>, ExoticIO<Output>>;
+    does(implementation) {
+      // biome-ignore lint/suspicious/noExplicitAny: <no thanks>
+      return createVertexFn(this, implementation as Implementation) as any;
     },
   };
 }
@@ -92,7 +101,9 @@ function createVertexFn(
   type This = TgpuVertexFn<IOLayout, IOLayout>;
 
   const core = createFnCore(shell, implementation);
-  const outputType = createOutputStruct(core, implementation, shell.returnType);
+  const outputType = isData(shell.returnType)
+    ? (location(0, shell.returnType) as IOData)
+    : struct(withLocations(shell.returnType) as Record<string, IOData>);
 
   return {
     shell,
@@ -109,7 +120,9 @@ function createVertexFn(
 
     $name(newLabel: string): This {
       core.label = newLabel;
-      outputType.$name(`${newLabel}_Output`);
+      if (isWgslStruct(outputType)) {
+        outputType.$name(`${newLabel}_Output`);
+      }
       return this;
     },
 

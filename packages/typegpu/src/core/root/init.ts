@@ -1,5 +1,6 @@
 import type { OmitBuiltins } from '../../builtin';
 import type { AnyData } from '../../data/dataTypes';
+import { invariant } from '../../errors';
 import type { JitTranspiler } from '../../jitTranspiler';
 import { WeakMemo } from '../../memo';
 import {
@@ -10,10 +11,16 @@ import {
 import type { Infer } from '../../shared/repr';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat';
 import type {
+  LayoutEntryToInput,
   TgpuBindGroup,
   TgpuBindGroupLayout,
+  TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout';
-import { isBindGroup, isBindGroupLayout } from '../../tgpuBindGroupLayout';
+import {
+  TgpuBindGroupImpl,
+  isBindGroup,
+  isBindGroupLayout,
+} from '../../tgpuBindGroupLayout';
 import type { TgpuSlot } from '../../types';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
 import type { IOLayout } from '../function/fnTypes';
@@ -75,9 +82,9 @@ class WithBindingImpl implements WithBinding {
     return new WithComputeImpl(this._getRoot(), this._slotBindings, entryFn);
   }
 
-  withVertex<Attribs extends IOLayout, Varying extends IOLayout>(
+  withVertex<VertexIn extends IOLayout>(
     vertexFn: TgpuVertexFn,
-    attribs: LayoutToAllowedAttribs<OmitBuiltins<Attribs>>,
+    attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
   ): WithVertex {
     return new WithVertexImpl({
       branch: this._getRoot(),
@@ -114,9 +121,13 @@ class WithVertexImpl implements WithVertex {
   ) {}
 
   withFragment(
-    fragmentFn: TgpuFragmentFn,
-    targets: AnyFragmentTargets,
+    fragmentFn: TgpuFragmentFn | 'n/a',
+    targets: AnyFragmentTargets | 'n/a',
+    _mismatch?: unknown,
   ): WithFragment {
+    invariant(typeof fragmentFn !== 'string', 'Just type mismatch validation');
+    invariant(typeof targets !== 'string', 'Just type mismatch validation');
+
     return new WithFragmentImpl({
       ...this._options,
       fragmentFn,
@@ -161,6 +172,7 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
     public readonly device: GPUDevice,
     public readonly nameRegistry: NameRegistry,
     public readonly jitTranspiler: JitTranspiler | undefined,
+    private readonly _ownDevice: boolean,
   ) {
     super(() => this, []);
   }
@@ -224,9 +236,27 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
     return texture as any;
   }
 
+  createBindGroup<
+    Entries extends Record<string, TgpuLayoutEntry | null> = Record<
+      string,
+      TgpuLayoutEntry | null
+    >,
+  >(
+    layout: TgpuBindGroupLayout<Entries>,
+    entries: {
+      [K in keyof Entries]: LayoutEntryToInput<Entries[K]>;
+    },
+  ) {
+    return new TgpuBindGroupImpl(layout, entries);
+  }
+
   destroy() {
     for (const disposable of this._disposables) {
       disposable.destroy();
+    }
+
+    if (this._ownDevice) {
+      this.device.destroy();
     }
   }
 
@@ -362,6 +392,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     await adapter.requestDevice(deviceOpt),
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     jitTranspiler,
+    true,
   );
 }
 
@@ -385,5 +416,6 @@ export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
     device,
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     jitTranspiler,
+    false,
   );
 }

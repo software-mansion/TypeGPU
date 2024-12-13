@@ -28,13 +28,13 @@ export interface TgpuArray<TElement extends AnyWgslData>
  * const array = d.arrayOf(d.u32, LENGTH);
  *
  * @param elementType The type of elements in the array.
- * @param length The number of elements in the array.
+ * @param elementCount The number of elements in the array.
  */
 export const arrayOf = <TElement extends AnyWgslData>(
   elementType: TElement,
-  length: number,
+  elementCount: number,
 ): TgpuArray<Exotic<TElement>> =>
-  new TgpuArrayImpl(elementType as Exotic<TElement>, length);
+  new TgpuArrayImpl(elementType as Exotic<TElement>, elementCount);
 
 // --------------
 // Implementation
@@ -51,7 +51,7 @@ class TgpuArrayImpl<TElement extends AnyWgslData>
 
   constructor(
     public readonly elementType: TElement,
-    public readonly length: number,
+    public readonly elementCount: number,
   ) {
     if (Number.isNaN(sizeOf(elementType))) {
       throw new Error('Cannot nest runtime sized arrays.');
