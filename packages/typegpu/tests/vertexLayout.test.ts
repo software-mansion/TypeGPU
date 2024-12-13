@@ -418,4 +418,10 @@ describe('connectAttributesToShader', () => {
       usedVertexLayouts: [layout],
     });
   });
+
+  it('throws when trying to use type that has no attribute representation', () => {
+    expect(() =>
+      tgpu.vertexLayout((n) => d.looseArrayOf(d.vec3h, n)),
+    ).toThrow();
+  });
 });
