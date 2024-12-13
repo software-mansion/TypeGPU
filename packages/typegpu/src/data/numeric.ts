@@ -1,5 +1,6 @@
+import bin from 'typed-binary';
 import { inGPUMode } from '../gpuMode';
-import type { Bool, F32, I32, U32 } from './wgslTypes';
+import type { Bool, F16, F32, I32, U32 } from './wgslTypes';
 
 /**
  * A schema that represents a boolean value. (equivalent to `bool` in WGSL)
@@ -11,7 +12,10 @@ export const bool: Bool = {
 /**
  * Unsigned 32-bit integer schema representing a single WGSL u32 value.
  */
-export type U32Cast = (v: number | boolean) => number;
+export type NativeU32 = U32 & { '~exotic': U32 } & ((
+    v: number | boolean,
+  ) => number);
+
 const u32Cast = (v: number | boolean) => {
   if (inGPUMode()) {
     return `u32(${v})` as unknown as number;
@@ -42,14 +46,17 @@ const u32Cast = (v: number | boolean) => {
  * @example
  * const value = u32(-3.1); // 0
  */
-export const u32: U32 & U32Cast = Object.assign(u32Cast, {
+export const u32: NativeU32 = Object.assign(u32Cast, {
   type: 'u32',
-} as U32);
+}) as NativeU32;
 
 /**
  * Signed 32-bit integer schema representing a single WGSL i32 value.
  */
-export type I32Cast = (v: number | boolean) => number;
+export type NativeI32 = I32 & { '~exotic': I32 } & ((
+    v: number | boolean,
+  ) => number);
+
 const i32Cast = (v: number | boolean) => {
   if (inGPUMode()) {
     return `i32(${v})` as unknown as number;
@@ -82,14 +89,17 @@ const i32Cast = (v: number | boolean) => {
  * @example
  * const value = i32(10000000000) // 1410065408
  */
-export const i32: I32 & I32Cast = Object.assign(i32Cast, {
+export const i32: NativeI32 = Object.assign(i32Cast, {
   type: 'i32',
-} as I32);
+}) as NativeI32;
 
 /**
  * 32-bit float schema representing a single WGSL f32 value.
  */
-export type F32Cast = (v: number | boolean) => number;
+export type NativeF32 = F32 & { '~exotic': F32 } & ((
+    v: number | boolean,
+  ) => number);
+
 const f32Cast = (v: number | boolean) => {
   if (inGPUMode()) {
     return `f32(${v})` as unknown as number;
@@ -97,7 +107,9 @@ const f32Cast = (v: number | boolean) => {
   if (typeof v === 'boolean') {
     return v ? 1 : 0;
   }
-  return v;
+  const arr = new Float32Array(1);
+  arr[0] = v;
+  return arr[0];
 };
 
 /**
@@ -108,6 +120,40 @@ const f32Cast = (v: number | boolean) => {
  * @example
  * const value = f32(true); // 1
  */
-export const f32: F32 & F32Cast = Object.assign(f32Cast, {
+export const f32: NativeF32 = Object.assign(f32Cast, {
   type: 'f32',
-} as F32);
+}) as NativeF32;
+
+/**
+ * 16-bit float schema representing a single WGSL f16 value.
+ */
+export type NativeF16 = F16 & { '~exotic': F16 } & ((
+    v: number | boolean,
+  ) => number);
+
+const f16Cast = (v: number | boolean) => {
+  if (inGPUMode()) {
+    // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
+    return `f16(${v})` as unknown as number;
+  }
+  if (typeof v === 'boolean') {
+    return v ? 1 : 0;
+  }
+  const arr = new ArrayBuffer(2);
+  bin.f16.write(new bin.BufferWriter(arr), v);
+  return bin.f16.read(new bin.BufferReader(arr));
+};
+
+/**
+ * A schema that represents a 16-bit float value. (equivalent to `f16` in WGSL)
+ *
+ * Can also be called to cast a value to an f16.
+ *
+ * @example
+ * const value = f16(true); // 1
+ * @example
+ * const value = f16(21877.5); // 21872
+ */
+export const f16: NativeF16 = Object.assign(f16Cast, {
+  type: 'f16',
+}) as NativeF16;

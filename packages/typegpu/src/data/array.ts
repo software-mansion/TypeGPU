@@ -15,7 +15,9 @@ import type { AnyWgslData, WgslArray } from './wgslTypes';
  * the `byteAlignment` requirement of its elementType.
  */
 export interface TgpuArray<TElement extends AnyWgslData>
-  extends WgslArray<TElement> {}
+  extends WgslArray<TElement> {
+  readonly '~exotic': WgslArray<Exotic<TElement>>;
+}
 
 /**
  * Creates an array schema that can be used to construct gpu buffers.
@@ -26,13 +28,13 @@ export interface TgpuArray<TElement extends AnyWgslData>
  * const array = d.arrayOf(d.u32, LENGTH);
  *
  * @param elementType The type of elements in the array.
- * @param length The number of elements in the array.
+ * @param elementCount The number of elements in the array.
  */
 export const arrayOf = <TElement extends AnyWgslData>(
   elementType: TElement,
-  length: number,
+  elementCount: number,
 ): TgpuArray<Exotic<TElement>> =>
-  new TgpuArrayImpl(elementType as Exotic<TElement>, length);
+  new TgpuArrayImpl(elementType as Exotic<TElement>, elementCount);
 
 // --------------
 // Implementation
@@ -44,10 +46,12 @@ class TgpuArrayImpl<TElement extends AnyWgslData>
   public readonly type = 'array';
   /** Type-token, not available at runtime */
   public readonly '~repr'!: Infer<TElement>[];
+  /** Type-token, not available at runtime */
+  public readonly '~exotic'!: WgslArray<Exotic<TElement>>;
 
   constructor(
     public readonly elementType: TElement,
-    public readonly length: number,
+    public readonly elementCount: number,
   ) {
     if (Number.isNaN(sizeOf(elementType))) {
       throw new Error('Cannot nest runtime sized arrays.');

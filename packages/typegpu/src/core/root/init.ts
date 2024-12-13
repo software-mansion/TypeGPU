@@ -1,5 +1,6 @@
 import type { OmitBuiltins } from '../../builtin';
 import type { AnyData } from '../../data/dataTypes';
+import { invariant } from '../../errors';
 import type { JitTranspiler } from '../../jitTranspiler';
 import { WeakMemo } from '../../memo';
 import {
@@ -7,20 +8,19 @@ import {
   RandomNameRegistry,
   StrictNameRegistry,
 } from '../../nameRegistry';
-import { type PlumListener, PlumStore } from '../../plumStore';
-import type { TgpuSettable } from '../../settableTrait';
 import type { Infer } from '../../shared/repr';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat';
 import type {
+  LayoutEntryToInput,
   TgpuBindGroup,
   TgpuBindGroupLayout,
+  TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout';
-import { isBindGroup, isBindGroupLayout } from '../../tgpuBindGroupLayout';
-import type {
-  ExtractPlumValue,
-  TgpuPlum,
-  Unsubscribe,
-} from '../../tgpuPlumTypes';
+import {
+  TgpuBindGroupImpl,
+  isBindGroup,
+  isBindGroupLayout,
+} from '../../tgpuBindGroupLayout';
 import type { TgpuSlot } from '../../types';
 import { type TgpuBuffer, createBufferImpl, isBuffer } from '../buffer/buffer';
 import type { IOLayout } from '../function/fnTypes';
@@ -58,7 +58,6 @@ import type {
   CreateTextureOptions,
   CreateTextureResult,
   ExperimentalTgpuRoot,
-  SetPlumAction,
   TgpuRoot,
   WithBinding,
   WithCompute,
@@ -83,9 +82,9 @@ class WithBindingImpl implements WithBinding {
     return new WithComputeImpl(this._getRoot(), this._slotBindings, entryFn);
   }
 
-  withVertex<Attribs extends IOLayout, Varying extends IOLayout>(
+  withVertex<VertexIn extends IOLayout>(
     vertexFn: TgpuVertexFn,
-    attribs: LayoutToAllowedAttribs<OmitBuiltins<Attribs>>,
+    attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
   ): WithVertex {
     return new WithVertexImpl({
       branch: this._getRoot(),
@@ -122,9 +121,13 @@ class WithVertexImpl implements WithVertex {
   ) {}
 
   withFragment(
-    fragmentFn: TgpuFragmentFn,
-    targets: AnyFragmentTargets,
+    fragmentFn: TgpuFragmentFn | 'n/a',
+    targets: AnyFragmentTargets | 'n/a',
+    _mismatch?: unknown,
   ): WithFragment {
+    invariant(typeof fragmentFn !== 'string', 'Just type mismatch validation');
+    invariant(typeof targets !== 'string', 'Just type mismatch validation');
+
     return new WithFragmentImpl({
       ...this._options,
       fragmentFn,
@@ -165,12 +168,11 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
 
   private _commandEncoder: GPUCommandEncoder | null = null;
 
-  private readonly _plumStore = new PlumStore();
-
   constructor(
     public readonly device: GPUDevice,
     public readonly nameRegistry: NameRegistry,
     public readonly jitTranspiler: JitTranspiler | undefined,
+    private readonly _ownDevice: boolean,
   ) {
     super(() => this, []);
   }
@@ -185,7 +187,7 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
 
   createBuffer<TData extends AnyData>(
     typeSchema: TData,
-    initialOrBuffer?: Infer<TData> | TgpuPlum<Infer<TData>> | GPUBuffer,
+    initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuBuffer<TData> {
     const buffer = createBufferImpl(this, typeSchema, initialOrBuffer).$device(
       this.device,
@@ -234,9 +236,27 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
     return texture as any;
   }
 
+  createBindGroup<
+    Entries extends Record<string, TgpuLayoutEntry | null> = Record<
+      string,
+      TgpuLayoutEntry | null
+    >,
+  >(
+    layout: TgpuBindGroupLayout<Entries>,
+    entries: {
+      [K in keyof Entries]: LayoutEntryToInput<Entries[K]>;
+    },
+  ) {
+    return new TgpuBindGroupImpl(layout, entries);
+  }
+
   destroy() {
     for (const disposable of this._disposables) {
       disposable.destroy();
+    }
+
+    if (this._ownDevice) {
+      this.device.destroy();
     }
   }
 
@@ -299,31 +319,6 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
     }
 
     throw new Error(`Unknown resource type: ${resource}`);
-  }
-
-  readPlum<TPlum extends TgpuPlum>(plum: TPlum): ExtractPlumValue<TPlum> {
-    return this._plumStore.get(plum);
-  }
-
-  setPlum<TPlum extends TgpuPlum & TgpuSettable>(
-    plum: TPlum,
-    value: SetPlumAction<ExtractPlumValue<TPlum>>,
-  ) {
-    type Value = ExtractPlumValue<TPlum>;
-
-    if (typeof value === 'function') {
-      const compute = value as (prev: Value) => Value;
-      this._plumStore.set(plum, compute(this._plumStore.get(plum)));
-    } else {
-      this._plumStore.set(plum, value);
-    }
-  }
-
-  onPlumChange<TValue>(
-    plum: TgpuPlum<TValue>,
-    listener: PlumListener<TValue>,
-  ): Unsubscribe {
-    return this._plumStore.subscribe(plum, listener);
   }
 
   flush() {
@@ -397,6 +392,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     await adapter.requestDevice(deviceOpt),
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     jitTranspiler,
+    true,
   );
 }
 
@@ -420,5 +416,6 @@ export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
     device,
     names === 'random' ? new RandomNameRegistry() : new StrictNameRegistry(),
     jitTranspiler,
+    false,
   );
 }

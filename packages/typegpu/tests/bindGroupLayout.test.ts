@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, expectTypeOf, it } from 'vitest';
+import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
 import {
   type F32,
   type TgpuArray,
   type U32,
   type Vec3f,
+  type WgslArray,
   arrayOf,
   f32,
   u32,
@@ -11,14 +12,11 @@ import {
 } from '../src/data';
 import tgpu, {
   type TgpuBindGroupLayout,
-  type TgpuBuffer,
   type TgpuBufferUniform,
   type TgpuBufferReadonly,
   type TgpuBufferMutable,
 } from '../src/experimental';
 import './utils/webgpuGlobals';
-import type { Uniform } from '../src/core/buffer/buffer';
-import type { Storage } from '../src/extension';
 import {
   MissingBindingError,
   type TgpuBindGroup,
@@ -26,15 +24,13 @@ import {
   type UnwrapRuntimeConstructor,
   bindGroupLayoutExperimental,
 } from '../src/tgpuBindGroupLayout';
-import { mockDevice, mockRoot } from './utils/mockRoot';
+import { it } from './utils/extendedIt';
 import { parseWGSL } from './utils/parseWGSL';
 
 const DEFAULT_READONLY_VISIBILITY_FLAGS =
   GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
 
 describe('TgpuBindGroupLayout', () => {
-  const { getRoot } = mockRoot();
-
   it('infers the bound type of a uniform entry', () => {
     const layout = bindGroupLayoutExperimental({
       position: { uniform: vec3f },
@@ -67,32 +63,41 @@ describe('TgpuBindGroupLayout', () => {
     expectTypeOf(a).toEqualTypeOf<TgpuBufferMutable<Vec3f>>();
   });
 
-  it('works for entries passed as functions returning TgpuData', () => {
+  it('works for entries passed as functions returning TgpuData', ({ root }) => {
     const layout = bindGroupLayoutExperimental({
-      a: { uniform: (arrayLength: number) => arrayOf(u32, arrayLength) },
+      a: {
+        storage: (arrayLength: number) => arrayOf(u32, arrayLength),
+        access: 'mutable',
+      },
       b: { storage: (arrayLength: number) => arrayOf(vec3f, arrayLength) },
+    });
+
+    bindGroupLayoutExperimental({
+      // @ts-expect-error
+      c: { uniform: (arrayLength: number) => arrayOf(vec3f, arrayLength) },
     });
 
     expectTypeOf(layout).toEqualTypeOf<
       TgpuBindGroupLayoutExperimental<{
         a: {
-          uniform: (_: number) => TgpuArray<U32>;
+          storage: (_: number) => WgslArray<U32>;
+          access: 'mutable';
         };
         b: {
-          storage: (_: number) => TgpuArray<Vec3f>;
+          storage: (_: number) => WgslArray<Vec3f>;
         };
       }>
     >();
 
     const { a, b } = layout.bound;
 
-    expectTypeOf(a).toEqualTypeOf<TgpuBufferUniform<TgpuArray<U32>>>();
-    expectTypeOf(b).toEqualTypeOf<TgpuBufferReadonly<TgpuArray<Vec3f>>>();
+    expectTypeOf(a).toEqualTypeOf<TgpuBufferMutable<WgslArray<U32>>>();
+    expectTypeOf(b).toEqualTypeOf<TgpuBufferReadonly<WgslArray<Vec3f>>>();
 
-    const aBuffer = getRoot().createBuffer(arrayOf(u32, 4)).$usage('uniform');
-    const bBuffer = getRoot().createBuffer(arrayOf(vec3f, 4)).$usage('storage');
+    const aBuffer = root.createBuffer(arrayOf(u32, 4)).$usage('storage');
+    const bBuffer = root.createBuffer(arrayOf(vec3f, 4)).$usage('storage');
 
-    const bindGroup = layout.populate({
+    const bindGroup = root.createBindGroup(layout, {
       a: aBuffer,
       b: bBuffer,
     });
@@ -100,43 +105,44 @@ describe('TgpuBindGroupLayout', () => {
     expectTypeOf(bindGroup).toEqualTypeOf<
       TgpuBindGroup<{
         a: {
-          uniform: (_: number) => TgpuArray<U32>;
+          storage: (_: number) => WgslArray<U32>;
+          access: 'mutable';
         };
         b: {
-          storage: (_: number) => TgpuArray<Vec3f>;
+          storage: (_: number) => WgslArray<Vec3f>;
         };
       }>
     >();
 
-    getRoot().unwrap(bindGroup);
+    root.unwrap(bindGroup);
 
-    expect(mockDevice.createBindGroup).toBeCalledWith({
-      label: '',
-      layout: getRoot().unwrap(layout),
+    expect(root.device.createBindGroup).toBeCalledWith({
+      label: '<unnamed>',
+      layout: root.unwrap(layout),
       entries: [
         {
           binding: 0,
           resource: {
-            buffer: getRoot().unwrap(aBuffer),
+            buffer: root.unwrap(aBuffer),
           },
         },
         {
           binding: 1,
           resource: {
-            buffer: getRoot().unwrap(bBuffer),
+            buffer: root.unwrap(bBuffer),
           },
         },
       ],
     });
 
-    expect(mockDevice.createBindGroupLayout).toBeCalledWith({
-      label: '',
+    expect(root.device.createBindGroupLayout).toBeCalledWith({
+      label: '<unnamed>',
       entries: [
         {
           binding: 0,
-          visibility: DEFAULT_READONLY_VISIBILITY_FLAGS,
+          visibility: GPUShaderStage.COMPUTE,
           buffer: {
-            type: 'uniform',
+            type: 'storage',
           },
         },
         {
@@ -150,7 +156,7 @@ describe('TgpuBindGroupLayout', () => {
     });
   });
 
-  it('omits null properties', () => {
+  it('omits null properties', ({ root }) => {
     const layout = tgpu
       .bindGroupLayout({
         a: { uniform: vec3f }, // binding 0
@@ -167,9 +173,9 @@ describe('TgpuBindGroupLayout', () => {
       }>
     >();
 
-    getRoot().unwrap(layout); // Creating the WebGPU resource
+    root.unwrap(layout); // Creating the WebGPU resource
 
-    expect(mockDevice.createBindGroupLayout).toBeCalledWith({
+    expect(root.device.createBindGroupLayout).toBeCalledWith({
       label: 'example_layout',
       entries: [
         {
@@ -214,11 +220,8 @@ describe('TgpuBindGroupLayout', () => {
 });
 
 describe('TgpuBindGroup', () => {
-  const { getRoot } = mockRoot();
-
   describe('buffer layout', () => {
     let layout: TgpuBindGroupLayout<{ foo: { uniform: Vec3f } }>;
-    let buffer: TgpuBuffer<Vec3f> & Uniform;
 
     beforeEach(() => {
       layout = tgpu
@@ -226,46 +229,48 @@ describe('TgpuBindGroup', () => {
           foo: { uniform: vec3f },
         })
         .$name('example');
-
-      buffer = getRoot().createBuffer(vec3f).$usage('uniform');
     });
 
-    it('populates a simple layout with a raw buffer', () => {
-      const bindGroup = layout.populate({ foo: getRoot().unwrap(buffer) });
+    it('populates a simple layout with a raw buffer', ({ root }) => {
+      const buffer = root.createBuffer(vec3f).$usage('uniform');
+      const bindGroup = root.createBindGroup(layout, {
+        foo: root.unwrap(buffer),
+      });
 
-      expect(mockDevice.createBindGroupLayout).not.toBeCalled();
-      getRoot().unwrap(bindGroup);
-      expect(mockDevice.createBindGroupLayout).toBeCalled();
+      expect(root.device.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(root.device.createBindGroupLayout).toBeCalled();
 
-      expect(mockDevice.createBindGroup).toBeCalledWith({
+      expect(root.device.createBindGroup).toBeCalledWith({
         label: 'example',
-        layout: getRoot().unwrap(layout),
+        layout: root.unwrap(layout),
         entries: [
           {
             binding: 0,
             resource: {
-              buffer: getRoot().unwrap(buffer),
+              buffer: root.unwrap(buffer),
             },
           },
         ],
       });
     });
 
-    it('populates a simple layout with a typed buffer', () => {
-      const bindGroup = layout.populate({ foo: buffer });
+    it('populates a simple layout with a typed buffer', ({ root }) => {
+      const buffer = root.createBuffer(vec3f).$usage('uniform');
+      const bindGroup = root.createBindGroup(layout, { foo: buffer });
 
-      expect(mockDevice.createBindGroupLayout).not.toBeCalled();
-      getRoot().unwrap(bindGroup);
-      expect(mockDevice.createBindGroupLayout).toBeCalled();
+      expect(root.device.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(root.device.createBindGroupLayout).toBeCalled();
 
-      expect(mockDevice.createBindGroup).toBeCalledWith({
+      expect(root.device.createBindGroup).toBeCalledWith({
         label: 'example',
-        layout: getRoot().unwrap(layout),
+        layout: root.unwrap(layout),
         entries: [
           {
             binding: 0,
             resource: {
-              buffer: getRoot().unwrap(buffer),
+              buffer: root.unwrap(buffer),
             },
           },
         ],
@@ -284,20 +289,20 @@ describe('TgpuBindGroup', () => {
         .$name('example');
     });
 
-    it('populates a simple layout with a raw sampler', () => {
-      const sampler = getRoot().device.createSampler();
+    it('populates a simple layout with a raw sampler', ({ root }) => {
+      const sampler = root.device.createSampler();
 
-      const bindGroup = layout.populate({
+      const bindGroup = root.createBindGroup(layout, {
         foo: sampler,
       });
 
-      expect(mockDevice.createBindGroupLayout).not.toBeCalled();
-      getRoot().unwrap(bindGroup);
-      expect(mockDevice.createBindGroupLayout).toBeCalled();
+      expect(root.device.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(root.device.createBindGroupLayout).toBeCalled();
 
-      expect(mockDevice.createBindGroup).toBeCalledWith({
+      expect(root.device.createBindGroup).toBeCalledWith({
         label: 'example',
-        layout: getRoot().unwrap(layout),
+        layout: root.unwrap(layout),
         entries: [
           {
             binding: 0,
@@ -319,26 +324,26 @@ describe('TgpuBindGroup', () => {
         .$name('example');
     });
 
-    it('populates a simple layout with a raw texture view', () => {
-      const view = getRoot()
-        .device.createTexture({
+    it('populates a simple layout with a raw texture view', ({ root }) => {
+      const view = root.device
+        .createTexture({
           format: 'rgba8unorm',
           size: [32, 32],
           usage: GPUTextureUsage.TEXTURE_BINDING,
         })
         .createView();
 
-      const bindGroup = layout.populate({
+      const bindGroup = root.createBindGroup(layout, {
         foo: view,
       });
 
-      expect(mockDevice.createBindGroupLayout).not.toBeCalled();
-      getRoot().unwrap(bindGroup);
-      expect(mockDevice.createBindGroupLayout).toBeCalled();
+      expect(root.device.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(root.device.createBindGroupLayout).toBeCalled();
 
-      expect(mockDevice.createBindGroup).toBeCalledWith({
+      expect(root.device.createBindGroup).toBeCalledWith({
         label: 'example',
-        layout: getRoot().unwrap(layout),
+        layout: root.unwrap(layout),
         entries: [
           {
             binding: 0,
@@ -360,26 +365,26 @@ describe('TgpuBindGroup', () => {
         .$name('example');
     });
 
-    it('populates a simple layout with a raw texture view', () => {
-      const view = getRoot()
-        .device.createTexture({
+    it('populates a simple layout with a raw texture view', ({ root }) => {
+      const view = root.device
+        .createTexture({
           format: 'rgba8unorm',
           size: [32, 32],
           usage: GPUTextureUsage.TEXTURE_BINDING,
         })
         .createView();
 
-      const bindGroup = layout.populate({
+      const bindGroup = root.createBindGroup(layout, {
         foo: view,
       });
 
-      expect(mockDevice.createBindGroupLayout).not.toBeCalled();
-      getRoot().unwrap(bindGroup);
-      expect(mockDevice.createBindGroupLayout).toBeCalled();
+      expect(root.device.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(root.device.createBindGroupLayout).toBeCalled();
 
-      expect(mockDevice.createBindGroup).toBeCalledWith({
+      expect(root.device.createBindGroup).toBeCalledWith({
         label: 'example',
-        layout: getRoot().unwrap(layout),
+        layout: root.unwrap(layout),
         entries: [
           {
             binding: 0,
@@ -403,22 +408,22 @@ describe('TgpuBindGroup', () => {
         .$name('example');
     });
 
-    it('populates a simple layout with a raw texture view', () => {
-      const externalTexture = getRoot().device.importExternalTexture({
+    it('populates a simple layout with a raw texture view', ({ root }) => {
+      const externalTexture = root.device.importExternalTexture({
         source: undefined as unknown as HTMLVideoElement,
       });
 
-      const bindGroup = layout.populate({
+      const bindGroup = root.createBindGroup(layout, {
         foo: externalTexture,
       });
 
-      expect(mockDevice.createBindGroupLayout).not.toBeCalled();
-      getRoot().unwrap(bindGroup);
-      expect(mockDevice.createBindGroupLayout).toBeCalled();
+      expect(root.device.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(root.device.createBindGroupLayout).toBeCalled();
 
-      expect(mockDevice.createBindGroup).toBeCalledWith({
+      expect(root.device.createBindGroup).toBeCalledWith({
         label: 'example',
-        layout: getRoot().unwrap(layout),
+        layout: root.unwrap(layout),
         entries: [
           {
             binding: 0,
@@ -436,9 +441,6 @@ describe('TgpuBindGroup', () => {
       _: null;
       d: { storage: F32; access: 'readonly' };
     }>;
-    let aBuffer: TgpuBuffer<Vec3f> & Uniform;
-    let bBuffer: TgpuBuffer<U32> & Storage;
-    let dBuffer: TgpuBuffer<F32> & Storage;
 
     beforeEach(() => {
       layout = tgpu
@@ -449,53 +451,58 @@ describe('TgpuBindGroup', () => {
           d: { storage: f32, access: 'readonly' },
         })
         .$name('example');
-
-      aBuffer = getRoot().createBuffer(vec3f).$usage('uniform');
-      bBuffer = getRoot().createBuffer(u32).$usage('storage');
-      dBuffer = getRoot().createBuffer(f32).$usage('storage');
     });
 
-    it('requires all non-null entries to be populated', () => {
+    it('requires all non-null entries to be populated', ({ root }) => {
+      const aBuffer = root.createBuffer(vec3f).$usage('uniform');
+      const bBuffer = root.createBuffer(u32).$usage('storage');
+
       expect(() => {
         // @ts-expect-error
-        const bindGroup = layout.populate({
+        const bindGroup = root.createBindGroup(layout, {
           a: aBuffer,
           b: bBuffer,
         });
       }).toThrow(new MissingBindingError('example', 'd'));
     });
 
-    it('creates bind group in layout-defined order, not the insertion order of the populate parameter', () => {
-      const bindGroup = layout.populate({
+    it('creates bind group in layout-defined order, not the insertion order of the populate parameter', ({
+      root,
+    }) => {
+      const aBuffer = root.createBuffer(vec3f).$usage('uniform');
+      const bBuffer = root.createBuffer(u32).$usage('storage');
+      const dBuffer = root.createBuffer(f32).$usage('storage');
+
+      const bindGroup = root.createBindGroup(layout, {
         // purposefully out of order
         d: dBuffer,
         b: bBuffer,
         a: aBuffer,
       });
 
-      getRoot().unwrap(bindGroup);
+      root.unwrap(bindGroup);
 
-      expect(mockDevice.createBindGroup).toBeCalledWith({
+      expect(root.device.createBindGroup).toBeCalledWith({
         label: 'example',
-        layout: getRoot().unwrap(layout),
+        layout: root.unwrap(layout),
         entries: [
           {
             binding: 0,
             resource: {
-              buffer: getRoot().unwrap(aBuffer),
+              buffer: root.unwrap(aBuffer),
             },
           },
           {
             binding: 1,
             resource: {
-              buffer: getRoot().unwrap(bBuffer),
+              buffer: root.unwrap(bBuffer),
             },
           },
           // note that binding 2 is missing, as it gets skipped on purpose by using the null prop.
           {
             binding: 3,
             resource: {
-              buffer: getRoot().unwrap(dBuffer),
+              buffer: root.unwrap(dBuffer),
             },
           },
         ],

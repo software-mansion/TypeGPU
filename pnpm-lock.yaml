@@ -159,6 +159,9 @@ importers:
       acorn:
         specifier: ^8.12.1
         version: 8.12.1
+      tinyest:
+        specifier: workspace:~0.0.0
+        version: link:../tinyest
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -166,9 +169,6 @@ importers:
       tsup:
         specifier: ^8.0.2
         version: 8.0.2(typescript@5.5.4)
-      typegpu:
-        specifier: workspace:*
-        version: link:../typegpu
       typescript:
         specifier: ^5.3.3
         version: 5.5.4
@@ -274,6 +274,9 @@ importers:
         specifier: ^4.2.0
         version: 4.2.0
     devDependencies:
+      '@typegpu/jit':
+        specifier: workspace:*
+        version: link:../jit
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
         version: link:../tgpu-dev-cli

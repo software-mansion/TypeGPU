@@ -76,9 +76,6 @@ export default defineConfig({
               '../../packages/typegpu/src/data/index.ts',
             ],
             tsconfig: '../../packages/typegpu/tsconfig.json',
-            sidebar: {
-              label: 'Reference',
-            },
             typeDoc: {
               excludeInternal: true,
               excludeReferences: true,
@@ -121,13 +118,13 @@ export default defineConfig({
               slug: 'fundamentals/buffers',
             },
             {
+              label: 'Data Schemas',
+              slug: 'fundamentals/data-schemas',
+            },
+            {
               label: 'Bind Groups',
               slug: 'fundamentals/bind-groups',
               badge: { text: '0.2' },
-            },
-            {
-              label: 'Data Schemas',
-              slug: 'fundamentals/data-schemas',
             },
             DEV && {
               label: 'Slots',
@@ -150,6 +147,11 @@ export default defineConfig({
         {
           label: 'Integration',
           items: stripFalsy([
+            DEV && {
+              label: 'WebGPU Interoperability',
+              slug: 'integration/webgpu-interoperability',
+              badge: { text: 'new' },
+            },
             {
               label: 'Working with wgpu-matrix',
               slug: 'integration/working-with-wgpu-matrix',
@@ -175,9 +177,22 @@ export default defineConfig({
                 'From a Triangle to Simulating Boids: Step-by-step Tutorial',
               slug: 'tutorials/triangle-to-boids',
             },
+            {
+              label: 'Game of life tutorial',
+              slug: 'tutorials/game-of-life',
+            },
           ],
         },
-        DEV && typeDocSidebarGroup,
+        {
+          label: 'Reference',
+          items: stripFalsy([
+            {
+              label: 'Data Schema Cheatsheet',
+              slug: 'reference/data-schema-cheatsheet',
+            },
+            DEV && typeDocSidebarGroup,
+          ]),
+        },
       ]),
     }),
     tailwind({

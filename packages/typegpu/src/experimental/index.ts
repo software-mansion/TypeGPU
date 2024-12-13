@@ -16,9 +16,7 @@ import {
 } from '../core/root/init';
 import type { ExperimentalTgpuRoot } from '../core/root/rootTypes';
 import { vertexLayout } from '../core/vertexLayout/vertexLayout';
-import { createBuffer } from '../legacyBufferApi';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
-import { read, write } from '../tgpuBufferUtils';
 
 export const tgpu = {
   /** @deprecated Use `'uniform'` string literal instead. */
@@ -44,10 +42,6 @@ export const tgpu = {
   ) => ExperimentalTgpuRoot,
 
   resolve,
-
-  createBuffer,
-  read,
-  write,
 };
 
 // Hidden API, used only by tooling (e.g., rollup plugin).
@@ -57,16 +51,27 @@ Object.assign(tgpu, {
 
 export default tgpu;
 
-export * from '../errors';
-export * from '../types';
-export * from '../namable';
-export * from '../core/root/rootTypes';
+export {
+  MissingBindGroupError,
+  MissingLinksError,
+  MissingSlotValueError,
+  NotUniformError,
+  ResolutionError,
+} from '../errors';
+export {
+  TgpuRoot,
+  ExperimentalTgpuRoot,
+  WithBinding,
+  WithCompute,
+  WithFragment,
+  WithVertex,
+} from '../core/root/rootTypes';
 export { StrictNameRegistry, RandomNameRegistry } from '../nameRegistry';
-export * from '../builtin';
 
 export { default as wgsl } from '../wgsl';
 export { std } from '../std';
 export {
+  isBuffer,
   isUsableAsUniform,
   isUsableAsVertex,
 } from '../core/buffer/buffer';
@@ -92,19 +97,16 @@ export {
   asMutable,
 } from '../core/buffer/bufferUsage';
 
+export type { Storage } from '../extension';
+export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
 export type {
   TgpuBuffer,
   Uniform,
   Vertex,
-} from '../core/buffer/buffer';
-export type { Storage } from '../extension';
-export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
-export type {
-  TgpuBufferUsage,
   TgpuBufferUniform,
   TgpuBufferReadonly,
   TgpuBufferMutable,
-} from '../core/buffer/bufferUsage';
+} from '../core/buffer/public';
 export type {
   TgpuTexture,
   TgpuReadonlyTexture,
@@ -117,8 +119,6 @@ export type { TextureProps } from '../core/texture/textureProps';
 export type { Render, Sampled } from '../core/texture/usageExtension';
 export type { InitOptions, InitFromDeviceOptions } from '../core/root/init';
 export type { TgpuConst } from '../tgpuConstant';
-export type { TgpuPlum } from '../tgpuPlumTypes';
-export type { TgpuSettable } from '../settableTrait';
 export type { TgpuVar } from '../tgpuVariable';
 export type { TgpuSampler } from '../core/sampler/sampler';
 export type { JitTranspiler } from '../jitTranspiler';
@@ -126,6 +126,10 @@ export type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
   TgpuLayoutSampler,
+  TgpuLayoutTexture,
+  TgpuLayoutStorage,
+  TgpuLayoutStorageTexture,
+  TgpuLayoutExternalTexture,
   TgpuLayoutUniform,
   BindLayoutEntry,
   LayoutEntryToInput,

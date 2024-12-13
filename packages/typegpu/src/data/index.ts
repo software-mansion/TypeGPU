@@ -2,7 +2,7 @@
  * @module typegpu/data
  */
 
-export { bool, f32, i32, u32 } from './numeric';
+export { bool, f32, f16, i32, u32 } from './numeric';
 export {
   isWgslData,
   isWgslArray,
@@ -17,6 +17,7 @@ export {
 export type {
   Bool,
   F32,
+  F16,
   I32,
   U32,
   Vec2f,
@@ -89,7 +90,6 @@ export {
 } from './matrix';
 export * from './vertexFormatData';
 export { atomic } from './atomic';
-export type { Infer } from '../shared/repr';
 export {
   align,
   size,
@@ -106,3 +106,33 @@ export {
   isLooseData,
 } from './dataTypes';
 export { PUBLIC_sizeOf as sizeOf } from './sizeOf';
+export { PUBLIC_alignmentOf as alignmentOf } from './alignmentOf';
+export {
+  builtin,
+  BuiltinVertexIndex,
+  BuiltinInstanceIndex,
+  BuiltinPosition,
+  BuiltinClipDistances,
+  BuiltinFrontFacing,
+  BuiltinFragDepth,
+  BuiltinSampleIndex,
+  BuiltinSampleMask,
+  BuiltinFragment,
+  BuiltinLocalInvocationId,
+  BuiltinLocalInvocationIndex,
+  BuiltinGlobalInvocationId,
+  BuiltinWorkgroupId,
+  BuiltinNumWorkgroups,
+  AnyBuiltin,
+} from '../builtin';
+
+import type { Infer as INTERNAL_Infer } from '../shared/repr';
+import type { Exotic } from './exotic';
+
+/**
+ * Extracts the inferred representation of a resource.
+ * @example
+ * type A = Infer<F32> // => number
+ * type B = Infer<TgpuArray<F32>> // => number[]
+ */
+export type Infer<T> = INTERNAL_Infer<Exotic<T>>;

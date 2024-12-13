@@ -212,6 +212,7 @@ export const Triangles = (arrayLength) => d.struct({
         outputPath: '',
         toTs: false,
         moduleSyntax: 'esmodule',
+        experimentalFunctions: false,
       }),
     ).toContain(expected);
   });
@@ -237,6 +238,7 @@ struct Triangles {
       outputPath: '',
       toTs: true,
       moduleSyntax: 'commonjs',
+      experimentalFunctions: false,
     });
 
     expect(generated).not.toContain(`\

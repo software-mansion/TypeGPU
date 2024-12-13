@@ -4,8 +4,8 @@ import {
   type Decorated,
   type LooseArray,
   type LooseDecorated,
-  type TgpuArray,
   type Vec3f,
+  type WgslArray,
   align,
   arrayOf,
   f32,
@@ -128,7 +128,7 @@ describe('d.align', () => {
     const alignedLooseArray = align(16, looseArray);
 
     expectTypeOf(alignedArray).toEqualTypeOf<
-      Decorated<TgpuArray<Vec3f>, [Align<16>]>
+      Decorated<WgslArray<Vec3f>, [Align<16>]>
     >();
     expect(isLooseData(alignedArray)).toEqual(false);
 
