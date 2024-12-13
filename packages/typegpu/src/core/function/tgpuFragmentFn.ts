@@ -1,5 +1,5 @@
 import type { OmitBuiltins } from '../../builtin';
-import type { Vec4f } from '../../data/wgslTypes';
+import { type Vec4f, isWgslStruct } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
@@ -11,7 +11,7 @@ import type {
   InferIO,
 } from './fnTypes';
 import {
-  type IOLayoutToOutputStruct,
+  type IOLayoutToOutputSchema,
   createOutputStruct,
 } from './ioOutputStruct';
 
@@ -53,7 +53,7 @@ export interface TgpuFragmentFn<
 > extends TgpuResolvable,
     TgpuNamable {
   readonly shell: TgpuFragmentFnShell<Varying, Output>;
-  readonly outputType: IOLayoutToOutputStruct<Output>;
+  readonly outputType: IOLayoutToOutputSchema<Output>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
 }
@@ -118,7 +118,9 @@ function createFragmentFn(
 
     $name(newLabel: string): This {
       core.label = newLabel;
-      outputType.$name(`${newLabel}_Output`);
+      if (isWgslStruct(outputType)) {
+        outputType.$name(`${newLabel}_Output`);
+      }
       return this;
     },
 

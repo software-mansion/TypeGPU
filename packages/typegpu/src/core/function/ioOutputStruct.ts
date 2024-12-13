@@ -1,12 +1,12 @@
 import { isBuiltin, struct } from '../../data';
-import { attribute, location } from '../../data/attributes';
+import { type Decorate, attribute, location } from '../../data/attributes';
 import { getCustomLocation, isData } from '../../data/dataTypes';
-import type { BaseWgslData, WgslStruct } from '../../data/wgslTypes';
+import type { BaseWgslData, Location, WgslStruct } from '../../data/wgslTypes';
 import type { FnCore } from './fnCore';
 import type { IOData, IOLayout, Implementation } from './fnTypes';
 
-export type IOLayoutToOutputStruct<T extends IOLayout> = T extends BaseWgslData
-  ? WgslStruct<{ out: T }>
+export type IOLayoutToOutputSchema<T extends IOLayout> = T extends BaseWgslData
+  ? Decorate<T, Location<0>>
   : T extends Record<string, BaseWgslData>
     ? WgslStruct<T>
     : never;
@@ -43,11 +43,9 @@ export function createOutputStruct<T extends IOData>(
   implementation: Implementation,
   returnType: IOLayout<T>,
 ) {
-  const Output = struct(
-    withLocations(
-      isData(returnType) ? { out: location(0, returnType) } : returnType,
-    ) as Record<string, T>,
-  );
+  const Output = isData(returnType)
+    ? location(0, returnType)
+    : struct(withLocations(returnType) as Record<string, T>);
 
   if (typeof implementation === 'string') {
     const outputName = implementation

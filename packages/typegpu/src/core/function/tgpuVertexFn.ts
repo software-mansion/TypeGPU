@@ -1,20 +1,19 @@
 import type { OmitBuiltins } from '../../builtin';
-import { location } from '../../data/attributes';
-import { isData } from '../../data/dataTypes';
-import { struct } from '../../data/struct';
 import { isWgslStruct } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
 import type {
   ExoticIO,
-  IOData,
   IOLayout,
   IORecord,
   Implementation,
   InferIO,
 } from './fnTypes';
-import { type IOLayoutToOutputSchema, withLocations } from './ioOutputStruct';
+import {
+  type IOLayoutToOutputSchema,
+  createOutputStruct,
+} from './ioOutputStruct';
 
 // ----------
 // Public API
@@ -101,9 +100,7 @@ function createVertexFn(
   type This = TgpuVertexFn<IOLayout, IOLayout>;
 
   const core = createFnCore(shell, implementation);
-  const outputType = isData(shell.returnType)
-    ? (location(0, shell.returnType) as IOData)
-    : struct(withLocations(shell.returnType) as Record<string, IOData>);
+  const outputType = createOutputStruct(core, implementation, shell.returnType);
 
   return {
     shell,

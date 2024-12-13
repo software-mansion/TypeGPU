@@ -1,7 +1,7 @@
 import { parse } from '@typegpu/wgsl-parser';
 import { describe, expect, it } from 'vitest';
-import { f32, vec3f, vec4f } from '../src/data';
-import tgpu, { builtin, wgsl } from '../src/experimental';
+import { builtin, f32, vec3f, vec4f } from '../src/data';
+import tgpu, { wgsl } from '../src/experimental';
 import { parseWGSL } from './utils/parseWGSL';
 
 describe('tgpu.fn with raw string WGSL implementation', () => {
@@ -210,7 +210,7 @@ struct fragment_Output {
 
   it("does not add redundant struct definition when there's no struct output", () => {
     const vertexFunction = tgpu
-      .vertexFn({ vertexIndex: builtin.vertexIndex }, builtin.position)
+      .vertexFn({ vertexIndex: builtin.vertexIndex }, { out: builtin.position })
       .does(/* wgsl */ `(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4f {
     let pos = array<vec2f, 6>(
       vec2<f32>( 1,  1),
