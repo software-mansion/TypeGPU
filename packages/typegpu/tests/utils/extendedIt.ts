@@ -2,7 +2,23 @@ import { it as base, vi } from 'vitest';
 import tgpu, { type ExperimentalTgpuRoot } from '../../src/experimental';
 import './webgpuGlobals';
 
-const mockBuffer = {
+const adapterMock = {
+  requestDevice: vi.fn((descriptor) => Promise.resolve(mockDevice)),
+};
+
+const navigatorMock = {
+  gpu: {
+    __brand: 'GPU',
+    requestAdapter: vi.fn(() => Promise.resolve(adapterMock)),
+  },
+};
+
+const mappedBufferMock = {
+  get mock() {
+    return mappedBufferMock;
+  },
+  mapState: 'mapped',
+  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
   getMappedRange: vi.fn(() => new ArrayBuffer(8)),
   unmap: vi.fn(),
   mapAsync: vi.fn(),
@@ -39,13 +55,31 @@ const mockRenderPassEncoder = {
 };
 
 const mockDevice = {
+  get mock() {
+    return mockDevice;
+  },
   createBindGroup: vi.fn(
     (_descriptor: GPUBindGroupDescriptor) => 'mockBindGroup',
   ),
   createBindGroupLayout: vi.fn(
     (_descriptor: GPUBindGroupLayoutDescriptor) => 'mockBindGroupLayout',
   ),
-  createBuffer: vi.fn(() => mockBuffer),
+  createBuffer: vi.fn(({ size, usage }: GPUBufferDescriptor) => {
+    const mockBuffer = {
+      mapState: 'unmapped',
+      usage,
+      getMappedRange: vi.fn(() => new ArrayBuffer(8)),
+      unmap: vi.fn(() => {
+        mockBuffer.mapState = 'unmapped';
+      }),
+      mapAsync: vi.fn(() => {
+        mockBuffer.mapState = 'mapped';
+      }),
+      destroy: vi.fn(),
+    };
+
+    return mockBuffer;
+  }),
   createCommandEncoder: vi.fn(() => mockCommandEncoder),
   createComputePipeline: vi.fn(() => 'mockComputePipeline'),
   createPipelineLayout: vi.fn(() => 'mockPipelineLayout'),
@@ -61,24 +95,53 @@ const mockDevice = {
     writeBuffer: vi.fn(),
     writeTexture: vi.fn(),
   },
+  destroy: vi.fn(),
 };
 
 export const it = base.extend<{
-  root: ExperimentalTgpuRoot & { mockDevice: typeof mockDevice };
+  _global: undefined;
+  commandEncoder: GPUCommandEncoder & { mock: typeof mockCommandEncoder };
+  mappedBuffer: GPUBuffer & { mock: typeof mappedBufferMock };
+  device: GPUDevice & { mock: typeof mockDevice };
+  root: ExperimentalTgpuRoot;
 }>({
+  _global: [
+    async ({ task }, use) => {
+      vi.stubGlobal('navigator', navigatorMock);
+
+      await use(undefined);
+
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    },
+    { auto: true }, // Always runs
+  ],
+
+  commandEncoder: async ({ task }, use) => {
+    await use(
+      mockCommandEncoder as unknown as GPUCommandEncoder & {
+        mock: typeof mockCommandEncoder;
+      },
+    );
+  },
+
+  mappedBuffer: async ({ task }, use) => {
+    await use(
+      mappedBufferMock as unknown as GPUBuffer & {
+        mock: typeof mappedBufferMock;
+      },
+    );
+  },
+
+  device: async ({ task }, use) => {
+    await use(mockDevice as unknown as GPUDevice & { mock: typeof mockDevice });
+  },
+
   root: async ({ task }, use) => {
-    vi.restoreAllMocks();
-
-    // setup
-    const root = tgpu.initFromDevice({
-      device: mockDevice as unknown as GPUDevice,
-    }) as ExperimentalTgpuRoot & { mockDevice: typeof mockDevice };
-
-    root.mockDevice = mockDevice;
+    const root = await tgpu.init();
 
     await use(root);
 
-    // teardown
     root.destroy();
   },
 });
