@@ -1,7 +1,7 @@
 // @ts-nocheck
 // TODO: Reenable type checking when new pipelines are implemented.
 
-import { arrayOf, f32, struct, u32, vec2f } from 'typegpu/data';
+import * as d from 'typegpu/data';
 import tgpu, {
   type TgpuBufferUsage,
   asMutable,
@@ -26,13 +26,13 @@ context.configure({
 
 const parametersBuffer = root
   .createBuffer(
-    struct({
-      separationDistance: f32,
-      separationStrength: f32,
-      alignmentDistance: f32,
-      alignmentStrength: f32,
-      cohesionDistance: f32,
-      cohesionStrength: f32,
+    d.struct({
+      separationDistance: d.f32,
+      separationStrength: d.f32,
+      alignmentDistance: d.f32,
+      alignmentStrength: d.f32,
+      cohesionDistance: d.f32,
+      cohesionStrength: d.f32,
     }),
     {
       separationDistance: 0.03,
@@ -47,31 +47,31 @@ const parametersBuffer = root
 
 let triangleSize = 0.04;
 const triangleSizeBuffer = root
-  .createBuffer(f32, triangleSize)
+  .createBuffer(d.f32, triangleSize)
   .$usage('uniform');
 
 const triangleVertex = () => {
   const size = triangleSize;
   return [
-    vec2f(0.0, size),
-    vec2f(-size / 2, -size / 2),
-    vec2f(size / 2, -size / 2),
+    d.vec2f(0.0, size),
+    d.vec2f(-size / 2, -size / 2),
+    d.vec2f(size / 2, -size / 2),
   ];
 };
 
 const triangleVertexBuffer = root
-  .createBuffer(arrayOf(vec2f, 3))
+  .createBuffer(d.arrayOf(d.vec2f, 3))
   .$usage('vertex');
 
 const MAX_TRIANGLES = 10000;
 let triangleAmount = 500;
 
-const triangleAmountBuffer = root.createBuffer(u32).$usage('uniform');
+const triangleAmountBuffer = root.createBuffer(d.u32).$usage('uniform');
 
-const trianglePosData = arrayOf(
-  struct({
-    position: vec2f,
-    velocity: vec2f,
+const trianglePosData = d.arrayOf(
+  d.struct({
+    position: d.vec2f,
+    velocity: d.vec2f,
   }),
   MAX_TRIANGLES,
 );
@@ -92,8 +92,8 @@ const writeSlot = wgsl.slot<TgpuBufferUsage<TrianglePosData, 'mutable'>>();
 function randomizeTriangles() {
   const positions = [];
   for (let i = 0; i < MAX_TRIANGLES; i++) {
-    const position = vec2f(Math.random() * 2 - 1, Math.random() * 2 - 1);
-    const velocity = vec2f(
+    const position = d.vec2f(Math.random() * 2 - 1, Math.random() * 2 - 1);
+    const velocity = d.vec2f(
       Math.random() * 0.1 - 0.05,
       Math.random() * 0.1 - 0.05,
     );
@@ -134,7 +134,7 @@ const renderPipelines = [0, 1].map((idx) =>
       `,
       output: {
         [builtin.position.s]: 'pos',
-        fragUV: vec2f,
+        fragUV: d.vec2f,
       },
     },
     fragment: {

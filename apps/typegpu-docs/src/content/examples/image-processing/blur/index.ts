@@ -1,15 +1,15 @@
 // Original implementation:
 // https://webgpu.github.io/webgpu-samples/?sample=imageBlur
 
-import { builtin, i32, location, struct, u32, vec2f } from 'typegpu/data';
+import * as d from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
 
 const tileDim = 128;
 const batch = [4, 4];
 
-const Settings = struct({
-  filterDim: i32,
-  blockDim: u32,
+const Settings = d.struct({
+  filterDim: d.i32,
+  blockDim: d.u32,
 });
 
 const uniformLayout = tgpu.bindGroupLayout({
@@ -18,7 +18,7 @@ const uniformLayout = tgpu.bindGroupLayout({
 });
 
 const ioLayout = tgpu.bindGroupLayout({
-  flip: { uniform: u32 },
+  flip: { uniform: d.u32 },
   inTexture: { texture: 'float' },
   outTexture: { storageTexture: 'rgba8unorm' },
 });
@@ -80,9 +80,9 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: ve
   }
 }`;
 
-const VertexOutput = struct({
-  position: builtin.position,
-  uv: location(0, vec2f),
+const VertexOutput = d.struct({
+  position: d.builtin.position,
+  uv: d.location(0, d.vec2f),
 });
 
 const renderShaderCode = /* wgsl */ `
@@ -196,8 +196,8 @@ const uniformBindGroup = root.createBindGroup(uniformLayout, {
   sampling: sampler,
 });
 
-const zeroBuffer = root.createBuffer(u32, 0).$usage('uniform');
-const oneBuffer = root.createBuffer(u32, 1).$usage('uniform');
+const zeroBuffer = root.createBuffer(d.u32, 0).$usage('uniform');
+const oneBuffer = root.createBuffer(d.u32, 1).$usage('uniform');
 
 const ioBindGroups = [
   root.createBindGroup(ioLayout, {

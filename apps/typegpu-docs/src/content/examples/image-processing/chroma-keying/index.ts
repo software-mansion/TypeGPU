@@ -1,19 +1,19 @@
-import { builtin, f32, location, struct, vec2f, vec3f } from 'typegpu/data';
+import * as d from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
 
 const rareLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },
-  color: { uniform: vec3f },
-  threshold: { uniform: f32 },
+  color: { uniform: d.vec3f },
+  threshold: { uniform: d.f32 },
 });
 
 const frequentLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: {} },
 });
 
-const VertexOutput = struct({
-  position: builtin.position,
-  uv: location(0, vec2f),
+const VertexOutput = d.struct({
+  position: d.builtin.position,
+  uv: d.location(0, d.vec2f),
 });
 
 const shaderCode = /* wgsl */ `
@@ -117,12 +117,12 @@ const mediaProcessor = new MediaStreamTrackProcessor({
 const reader = mediaProcessor.readable.getReader();
 
 const thresholdBuffer = root
-  .createBuffer(f32, 0.5)
+  .createBuffer(d.f32, 0.5)
   .$name('threshold')
   .$usage('uniform');
 
 const colorBuffer = root
-  .createBuffer(vec3f, vec3f(0, 1.0, 0))
+  .createBuffer(d.vec3f, d.vec3f(0, 1.0, 0))
   .$name('color')
   .$usage('uniform');
 
@@ -230,7 +230,7 @@ video.addEventListener('click', (event) => {
   const [r, g, b] = samplingContext.getImageData(x, y, 1, 1).data;
 
   table.innerText = `R: ${r} G: ${g} B: ${b}`;
-  colorBuffer.write(vec3f(r / 255, g / 255, b / 255));
+  colorBuffer.write(d.vec3f(r / 255, g / 255, b / 255));
 });
 
 // #endregion

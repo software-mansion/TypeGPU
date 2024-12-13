@@ -1,18 +1,18 @@
-import { builtin, f32, location, struct, vec2f } from 'typegpu/data';
+import * as d from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
 
 const rareLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },
-  threshold: { uniform: f32 },
+  threshold: { uniform: d.f32 },
 });
 
 const frequentLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: {} },
 });
 
-const VertexOutput = struct({
-  position: builtin.position,
-  uv: location(0, vec2f),
+const VertexOutput = d.struct({
+  position: d.builtin.position,
+  uv: d.location(0, d.vec2f),
 });
 
 const renderShaderCode = /* wgsl */ `
@@ -67,7 +67,7 @@ const sampler = root.device.createSampler({
 });
 
 const thresholdBuffer = root
-  .createBuffer(f32)
+  .createBuffer(d.f32)
   .$name('threshold')
   .$usage('uniform');
 
