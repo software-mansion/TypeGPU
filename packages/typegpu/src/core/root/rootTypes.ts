@@ -6,10 +6,16 @@ import type { JitTranspiler } from '../../jitTranspiler';
 import type { NameRegistry } from '../../nameRegistry';
 import type { Infer } from '../../shared/repr';
 import type { Mutable, OmitProps, Prettify } from '../../shared/utilityTypes';
+import type {
+  LayoutEntryToInput,
+  TgpuBindGroup,
+  TgpuBindGroupLayout,
+  TgpuLayoutEntry,
+} from '../../tgpuBindGroupLayout';
 import type { Eventual, TgpuSlot } from '../../types';
 import type { Unwrapper } from '../../unwrapper';
 import type { TgpuBuffer } from '../buffer/buffer';
-import type { IOLayout } from '../function/fnTypes';
+import type { IOLayout, IORecord } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
@@ -29,11 +35,41 @@ export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
 }
 
-export interface WithVertex<Varying extends IOLayout = IOLayout> {
-  withFragment<FragmentIn extends Varying, Output extends IOLayout<Vec4f>>(
-    entryFn: TgpuFragmentFn<FragmentIn, Output>,
-    targets: FragmentOutToTargets<Output>,
-  ): WithFragment<Output>;
+export type ValidateFragmentIn<
+  VertexOut extends IORecord,
+  FragmentIn extends IORecord,
+  FragmentOut extends IOLayout<Vec4f>,
+> = FragmentIn extends Partial<VertexOut>
+  ? VertexOut extends FragmentIn
+    ? [
+        entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>,
+        targets: FragmentOutToTargets<FragmentOut>,
+      ]
+    : [
+        entryFn: 'n/a',
+        targets: 'n/a',
+        MissingFromVertexOutput: {
+          [Key in Exclude<keyof FragmentIn, keyof VertexOut>]: FragmentIn[Key];
+        },
+      ]
+  : [
+      entryFn: 'n/a',
+      targets: 'n/a',
+      MismatchedVertexOutput: {
+        [Key in keyof FragmentIn &
+          keyof VertexOut as FragmentIn[Key] extends VertexOut[Key]
+          ? never
+          : Key]: [got: VertexOut[Key], expecting: FragmentIn[Key]];
+      },
+    ];
+
+export interface WithVertex<VertexOut extends IORecord = IORecord> {
+  withFragment<
+    FragmentIn extends IORecord,
+    FragmentOut extends IOLayout<Vec4f>,
+  >(
+    ...args: ValidateFragmentIn<VertexOut, FragmentIn, FragmentOut>
+  ): WithFragment<FragmentOut>;
 }
 
 export interface WithFragment<
@@ -48,10 +84,10 @@ export interface WithBinding {
 
   withCompute(entryFn: TgpuComputeFn): WithCompute;
 
-  withVertex<Attribs extends IOLayout, Varying extends IOLayout>(
-    entryFn: TgpuVertexFn<Attribs, Varying>,
-    attribs: LayoutToAllowedAttribs<OmitBuiltins<Attribs>>,
-  ): WithVertex<Varying>;
+  withVertex<VertexIn extends IOLayout, VertexOut extends IORecord>(
+    entryFn: TgpuVertexFn<VertexIn, VertexOut>,
+    attribs: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
+  ): WithVertex<VertexOut>;
 }
 
 export type CreateTextureOptions<
@@ -195,6 +231,18 @@ export interface TgpuRoot extends Unwrapper {
       TDimension
     >
   >;
+
+  createBindGroup<
+    Entries extends Record<string, TgpuLayoutEntry | null> = Record<
+      string,
+      TgpuLayoutEntry | null
+    >,
+  >(
+    layout: TgpuBindGroupLayout<Entries>,
+    entries: {
+      [K in keyof OmitProps<Entries, null>]: LayoutEntryToInput<Entries[K]>;
+    },
+  ): TgpuBindGroup<Entries>;
 
   destroy(): void;
 }

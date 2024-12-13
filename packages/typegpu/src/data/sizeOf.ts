@@ -13,6 +13,7 @@ import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes';
 const knownSizesMap: Record<string, number> = {
   bool: 4,
   f32: 4,
+  f16: 2,
   i32: 4,
   u32: 4,
   vec2f: 8,
@@ -106,19 +107,19 @@ function computeSize(data: object): number {
   }
 
   if (isWgslArray(data)) {
-    if (data.length === 0) {
+    if (data.elementCount === 0) {
       return Number.NaN;
     }
 
     const alignment = alignmentOf(data.elementType);
     const stride = roundUp(sizeOf(data.elementType), alignment);
-    return stride * data.length;
+    return stride * data.elementCount;
   }
 
   if (isLooseArray(data)) {
     const alignment = customAlignmentOf(data.elementType);
     const stride = roundUp(sizeOf(data.elementType), alignment);
-    return stride * data.length;
+    return stride * data.elementCount;
   }
 
   if (isDecorated(data) || isLooseDecorated(data)) {

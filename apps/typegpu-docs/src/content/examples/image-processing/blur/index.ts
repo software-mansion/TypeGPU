@@ -191,7 +191,7 @@ const computePipeline = device.createComputePipeline({
   },
 });
 
-const uniformBindGroup = uniformLayout.populate({
+const uniformBindGroup = root.createBindGroup(uniformLayout, {
   settings: settingsBuffer,
   sampling: sampler,
 });
@@ -200,24 +200,24 @@ const zeroBuffer = root.createBuffer(u32, 0).$usage('uniform');
 const oneBuffer = root.createBuffer(u32, 1).$usage('uniform');
 
 const ioBindGroups = [
-  ioLayout.populate({
+  root.createBindGroup(ioLayout, {
     flip: zeroBuffer,
     inTexture: imageTexture,
     outTexture: textures[0],
   }),
-  ioLayout.populate({
+  root.createBindGroup(ioLayout, {
     flip: oneBuffer,
     inTexture: textures[0],
     outTexture: textures[1],
   }),
-  ioLayout.populate({
+  root.createBindGroup(ioLayout, {
     flip: zeroBuffer,
     inTexture: textures[1],
     outTexture: textures[0],
   }),
 ];
 
-const renderBindGroup = renderLayout.populate({
+const renderBindGroup = root.createBindGroup(renderLayout, {
   texture: textures[1],
   sampling: sampler,
 });

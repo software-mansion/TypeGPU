@@ -146,7 +146,7 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
       pass.setPipeline(pipeline);
       pass.setBindGroup(0, root.unwrap(ioBindGroups[i]));
       pass.setBindGroup(1, root.unwrap(weightsBindGroups[i]));
-      pass.dispatchWorkgroups(buffers[i].biases.dataType.length);
+      pass.dispatchWorkgroups(buffers[i].biases.dataType.elementCount);
       pass.end();
     }
     device.queue.submit([encoder.finish()]);

@@ -97,7 +97,7 @@ describe('TgpuBindGroupLayout', () => {
     const aBuffer = root.createBuffer(arrayOf(u32, 4)).$usage('storage');
     const bBuffer = root.createBuffer(arrayOf(vec3f, 4)).$usage('storage');
 
-    const bindGroup = layout.populate({
+    const bindGroup = root.createBindGroup(layout, {
       a: aBuffer,
       b: bBuffer,
     });
@@ -233,7 +233,9 @@ describe('TgpuBindGroup', () => {
 
     it('populates a simple layout with a raw buffer', ({ root }) => {
       const buffer = root.createBuffer(vec3f).$usage('uniform');
-      const bindGroup = layout.populate({ foo: root.unwrap(buffer) });
+      const bindGroup = root.createBindGroup(layout, {
+        foo: root.unwrap(buffer),
+      });
 
       expect(root.device.createBindGroupLayout).not.toBeCalled();
       root.unwrap(bindGroup);
@@ -255,7 +257,7 @@ describe('TgpuBindGroup', () => {
 
     it('populates a simple layout with a typed buffer', ({ root }) => {
       const buffer = root.createBuffer(vec3f).$usage('uniform');
-      const bindGroup = layout.populate({ foo: buffer });
+      const bindGroup = root.createBindGroup(layout, { foo: buffer });
 
       expect(root.device.createBindGroupLayout).not.toBeCalled();
       root.unwrap(bindGroup);
@@ -290,7 +292,7 @@ describe('TgpuBindGroup', () => {
     it('populates a simple layout with a raw sampler', ({ root }) => {
       const sampler = root.device.createSampler();
 
-      const bindGroup = layout.populate({
+      const bindGroup = root.createBindGroup(layout, {
         foo: sampler,
       });
 
@@ -331,7 +333,7 @@ describe('TgpuBindGroup', () => {
         })
         .createView();
 
-      const bindGroup = layout.populate({
+      const bindGroup = root.createBindGroup(layout, {
         foo: view,
       });
 
@@ -372,7 +374,7 @@ describe('TgpuBindGroup', () => {
         })
         .createView();
 
-      const bindGroup = layout.populate({
+      const bindGroup = root.createBindGroup(layout, {
         foo: view,
       });
 
@@ -411,7 +413,7 @@ describe('TgpuBindGroup', () => {
         source: undefined as unknown as HTMLVideoElement,
       });
 
-      const bindGroup = layout.populate({
+      const bindGroup = root.createBindGroup(layout, {
         foo: externalTexture,
       });
 
@@ -457,7 +459,7 @@ describe('TgpuBindGroup', () => {
 
       expect(() => {
         // @ts-expect-error
-        const bindGroup = layout.populate({
+        const bindGroup = root.createBindGroup(layout, {
           a: aBuffer,
           b: bBuffer,
         });
@@ -471,7 +473,7 @@ describe('TgpuBindGroup', () => {
       const bBuffer = root.createBuffer(u32).$usage('storage');
       const dBuffer = root.createBuffer(f32).$usage('storage');
 
-      const bindGroup = layout.populate({
+      const bindGroup = root.createBindGroup(layout, {
         // purposefully out of order
         d: dBuffer,
         b: bBuffer,
