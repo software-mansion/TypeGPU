@@ -1,11 +1,13 @@
-import { vec2f } from 'typegpu/data';
+import * as d from 'typegpu/data';
 import tgpu, { asMutable } from 'typegpu/experimental';
 
 const table = document.querySelector('.counter') as HTMLDivElement;
 
 const root = await tgpu.init();
 
-const counterBuffer = root.createBuffer(vec2f, vec2f(0, 1)).$usage('storage');
+const counterBuffer = root
+  .createBuffer(d.vec2f, d.vec2f(0, 1))
+  .$usage('storage');
 const counter = asMutable(counterBuffer);
 
 const increment = tgpu.computeFn([], { workgroupSize: [1] }).does(() => {

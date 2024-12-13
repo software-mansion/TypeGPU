@@ -1,9 +1,9 @@
 import tgpu from 'typegpu';
-import { f32 } from 'typegpu/data';
+import * as d from 'typegpu/data';
 
 const rareLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },
-  threshold: { uniform: f32 },
+  threshold: { uniform: d.f32 },
 });
 
 const frequentLayout = tgpu.bindGroupLayout({
@@ -71,7 +71,7 @@ const sampler = root.device.createSampler({
 });
 
 const thresholdBuffer = root
-  .createBuffer(f32)
+  .createBuffer(d.f32)
   .$name('threshold')
   .$usage('uniform');
 

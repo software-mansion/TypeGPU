@@ -1,24 +1,16 @@
-import {
-  arrayOf,
-  builtin,
-  f32,
-  struct,
-  type v4f,
-  vec2f,
-  vec4f,
-} from 'typegpu/data';
+import * as d from 'typegpu/data';
 import tgpu, { asMutable, asUniform } from 'typegpu/experimental';
 
 // constants
 
 const PARTICLE_AMOUNT = 200;
-const COLOR_PALETTE: v4f[] = [
+const COLOR_PALETTE: d.v4f[] = [
   [255, 190, 11],
   [251, 86, 7],
   [255, 0, 110],
   [131, 56, 236],
   [58, 134, 255],
-].map(([r, g, b]) => vec4f(r / 255, g / 255, b / 255, 1));
+].map(([r, g, b]) => d.vec4f(r / 255, g / 255, b / 255, 1));
 
 // setup
 
@@ -37,33 +29,33 @@ context.configure({
 // data types
 
 const VertexOutput = {
-  position: builtin.position,
-  color: vec4f,
+  position: d.builtin.position,
+  color: d.vec4f,
 };
 
-const ParticleGeometry = struct({
-  tilt: f32,
-  angle: f32,
-  color: vec4f,
+const ParticleGeometry = d.struct({
+  tilt: d.f32,
+  angle: d.f32,
+  color: d.vec4f,
 });
 
-const ParticleData = struct({
-  position: vec2f,
-  velocity: vec2f,
-  seed: f32,
+const ParticleData = d.struct({
+  position: d.vec2f,
+  velocity: d.vec2f,
+  seed: d.f32,
 });
 
 // buffers
 
 const canvasAspectRatioBuffer = root
-  .createBuffer(f32, canvas.width / canvas.height)
+  .createBuffer(d.f32, canvas.width / canvas.height)
   .$usage('uniform');
 
 const canvasAspectRatioUniform = asUniform(canvasAspectRatioBuffer);
 
 const particleGeometryBuffer = root
   .createBuffer(
-    arrayOf(ParticleGeometry, PARTICLE_AMOUNT),
+    d.arrayOf(ParticleGeometry, PARTICLE_AMOUNT),
     Array(PARTICLE_AMOUNT)
       .fill(0)
       .map(() => ({
@@ -76,20 +68,20 @@ const particleGeometryBuffer = root
   .$usage('vertex');
 
 const particleDataBuffer = root
-  .createBuffer(arrayOf(ParticleData, PARTICLE_AMOUNT))
+  .createBuffer(d.arrayOf(ParticleData, PARTICLE_AMOUNT))
   .$usage('storage', 'uniform', 'vertex');
 
-const deltaTimeBuffer = root.createBuffer(f32).$usage('uniform');
-const timeBuffer = root.createBuffer(f32).$usage('storage');
+const deltaTimeBuffer = root.createBuffer(d.f32).$usage('uniform');
+const timeBuffer = root.createBuffer(d.f32).$usage('storage');
 
 // layouts
 
 const geometryLayout = tgpu
-  .vertexLayout((n: number) => arrayOf(ParticleGeometry, n), 'instance')
+  .vertexLayout((n: number) => d.arrayOf(ParticleGeometry, n), 'instance')
   .$name('geometry');
 
 const dataLayout = tgpu
-  .vertexLayout((n: number) => arrayOf(ParticleData, n), 'instance')
+  .vertexLayout((n: number) => d.arrayOf(ParticleData, n), 'instance')
   .$name('data');
 
 const particleDataStorage = asMutable(particleDataBuffer);
@@ -98,7 +90,7 @@ const timeStorage = asMutable(timeBuffer);
 
 // functions
 
-const rotate = tgpu.fn([vec2f, f32], vec2f).does(/* wgsl */ `
+const rotate = tgpu.fn([d.vec2f, d.f32], d.vec2f).does(/* wgsl */ `
   (v: vec2f, angle: f32) -> vec2f {
     let pos = vec2(
       (v.x * cos(angle)) - (v.y * sin(angle)),
@@ -112,11 +104,11 @@ const rotate = tgpu.fn([vec2f, f32], vec2f).does(/* wgsl */ `
 const mainVert = tgpu
   .vertexFn(
     {
-      tilt: f32,
-      angle: f32,
-      color: vec4f,
-      center: vec2f,
-      index: builtin.vertexIndex,
+      tilt: d.f32,
+      angle: d.f32,
+      color: d.vec4f,
+      center: d.vec2f,
+      index: d.builtin.vertexIndex,
     },
     VertexOutput,
   )
@@ -155,13 +147,13 @@ const mainVert = tgpu
     },
   });
 
-const mainFrag = tgpu.fragmentFn(VertexOutput, vec4f).does(/* wgsl */ `
+const mainFrag = tgpu.fragmentFn(VertexOutput, d.vec4f).does(/* wgsl */ `
   (@location(0) color: vec4f) -> @location(0) vec4f {
     return color;
   }`);
 
 const mainCompute = tgpu
-  .computeFn([builtin.globalInvocationId], { workgroupSize: [1] })
+  .computeFn([d.builtin.globalInvocationId], { workgroupSize: [1] })
   .does(
     /* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
     let index = gid.x;
@@ -210,8 +202,8 @@ function randomizePositions() {
     Array(PARTICLE_AMOUNT)
       .fill(0)
       .map(() => ({
-        position: vec2f(Math.random() * 2 - 1, Math.random() * 2 + 1),
-        velocity: vec2f(
+        position: d.vec2f(Math.random() * 2 - 1, Math.random() * 2 + 1),
+        velocity: d.vec2f(
           (Math.random() * 2 - 1) / 50,
           -(Math.random() / 25 + 0.01),
         ),

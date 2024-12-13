@@ -1,17 +1,5 @@
 import { JitTranspiler } from '@typegpu/jit';
-import {
-  type Infer,
-  arrayOf,
-  bool,
-  builtin,
-  f32,
-  i32,
-  struct,
-  u32,
-  vec2f,
-  vec2u,
-  vec4f,
-} from 'typegpu/data';
+import * as d from 'typegpu/data';
 import tgpu, {
   asMutable,
   asReadonly,
@@ -36,9 +24,9 @@ context.configure({
 
 const MAX_GRID_SIZE = 1024;
 
-const randSeed = wgsl.var(vec2f);
+const randSeed = wgsl.var(d.vec2f);
 
-const setupRandomSeed = tgpu.fn([vec2f]).does((coord) => {
+const setupRandomSeed = tgpu.fn([d.vec2f]).does((coord) => {
   randSeed.value = coord;
 });
 
@@ -46,9 +34,9 @@ const setupRandomSeed = tgpu.fn([vec2f]).does((coord) => {
  * Yoinked from https://www.cg.tuwien.ac.at/research/publications/2023/PETER-2023-PSW/PETER-2023-PSW-.pdf
  * "Particle System in WebGPU" by Benedikt Peter
  */
-const rand01 = tgpu.fn([], f32).does(() => {
-  const a = std.dot(randSeed.value, vec2f(23.14077926, 232.61690225));
-  const b = std.dot(randSeed.value, vec2f(54.47856553, 345.84153136));
+const rand01 = tgpu.fn([], d.f32).does(() => {
+  const a = std.dot(randSeed.value, d.vec2f(23.14077926, 232.61690225));
+  const b = std.dot(randSeed.value, d.vec2f(54.47856553, 345.84153136));
   randSeed.value.x = std.fract(std.cos(a) * 136.8168);
   randSeed.value.y = std.fract(std.cos(b) * 534.7645);
   return randSeed.value.y;
@@ -61,17 +49,17 @@ type GridData = typeof GridData;
  * z - density
  * w - <unused>
  */
-const GridData = arrayOf(vec4f, MAX_GRID_SIZE ** 2);
+const GridData = d.arrayOf(d.vec4f, MAX_GRID_SIZE ** 2);
 
 type BoxObstacle = typeof BoxObstacle;
-const BoxObstacle = struct({
-  center: vec2u,
-  size: vec2u,
-  enabled: u32,
+const BoxObstacle = d.struct({
+  center: d.vec2u,
+  size: d.vec2u,
+  enabled: d.u32,
 });
 
 const gridSize = 256;
-const gridSizeBuffer = root.createBuffer(i32).$usage('uniform');
+const gridSizeBuffer = root.createBuffer(d.i32).$usage('uniform');
 const gridSizeUniform = asUniform(gridSizeBuffer);
 
 const gridAlphaBuffer = root.createBuffer(GridData).$usage('storage');
@@ -85,19 +73,19 @@ const outputGridSlot = wgsl.slot<TgpuBufferMutable<GridData>>();
 const MAX_OBSTACLES = 4;
 
 const prevObstaclesBuffer = root
-  .createBuffer(arrayOf(BoxObstacle, MAX_OBSTACLES))
+  .createBuffer(d.arrayOf(BoxObstacle, MAX_OBSTACLES))
   .$usage('storage');
 
 const prevObstacleReadonly = asReadonly(prevObstaclesBuffer);
 
 const obstaclesBuffer = root
-  .createBuffer(arrayOf(BoxObstacle, MAX_OBSTACLES))
+  .createBuffer(d.arrayOf(BoxObstacle, MAX_OBSTACLES))
   .$usage('storage');
 
 const obstaclesReadonly = asReadonly(obstaclesBuffer);
 
 const isValidCoord = tgpu
-  .fn([i32, i32], bool)
+  .fn([d.i32, d.i32], d.bool)
   .does(
     (x, y) =>
       x < gridSizeUniform.value &&
@@ -107,25 +95,25 @@ const isValidCoord = tgpu
   );
 
 const coordsToIndex = tgpu
-  .fn([i32, i32], i32)
+  .fn([d.i32, d.i32], d.i32)
   .does((x, y) => x + y * gridSizeUniform.value);
 
-const getCell = tgpu.fn([i32, i32], vec4f).does((x, y) => {
-  return inputGridSlot.value[coordsToIndex(x, y)];
-});
+const getCell = tgpu
+  .fn([d.i32, d.i32], d.vec4f)
+  .does((x, y) => inputGridSlot.value[coordsToIndex(x, y)]);
 
-const setCell = tgpu.fn([i32, i32, vec4f]).does((x, y, value) => {
+const setCell = tgpu.fn([d.i32, d.i32, d.vec4f]).does((x, y, value) => {
   const index = coordsToIndex(x, y);
   outputGridSlot.value[index] = value;
 });
 
-const setVelocity = tgpu.fn([i32, i32, vec2f]).does((x, y, velocity) => {
+const setVelocity = tgpu.fn([d.i32, d.i32, d.vec2f]).does((x, y, velocity) => {
   const index = coordsToIndex(x, y);
   outputGridSlot.value[index].x = velocity.x;
   outputGridSlot.value[index].y = velocity.y;
 });
 
-const addDensity = tgpu.fn([i32, i32, f32]).does((x, y, density) => {
+const addDensity = tgpu.fn([d.i32, d.i32, d.f32]).does((x, y, density) => {
   const index = coordsToIndex(x, y);
   outputGridSlot.value[index].z = inputGridSlot.value[index].z + density;
 });
@@ -160,7 +148,7 @@ const flowFromCell = wgsl.fn`
   }
 `.$name('flow_from_cell');
 
-const timeBuffer = root.createBuffer(f32).$usage('uniform');
+const timeBuffer = root.createBuffer(d.f32).$usage('uniform');
 const timeUniform = asUniform(timeBuffer);
 
 const isInsideObstacle = wgsl.fn`
@@ -203,7 +191,7 @@ const isValidFlowOut = wgsl.fn`
 `;
 
 const computeVelocity = tgpu
-  .fn([i32, i32], vec2f)
+  .fn([d.i32, d.i32], d.vec2f)
   .does(`(x: i32, y: i32) -> vec2f {
     let gravity_cost = 0.5;
 
@@ -253,7 +241,7 @@ const computeVelocity = tgpu
   .$uses({ getCell, isValidFlowOut, isValidCoord, rand01 });
 
 const mainInitWorld = tgpu
-  .computeFn([builtin.globalInvocationId], { workgroupSize: [1] })
+  .computeFn([d.builtin.globalInvocationId], { workgroupSize: [1] })
   .does(`(@builtin(global_invocation_id) gid: vec3u) {
     let x = i32(gid.x);
     let y = i32(gid.y);
@@ -392,10 +380,10 @@ let sourceRadius = 0.01;
 
 const sourceParamsBuffer = root
   .createBuffer(
-    struct({
-      center: vec2f,
-      radius: f32,
-      intensity: f32,
+    d.struct({
+      center: d.vec2f,
+      radius: d.f32,
+      intensity: d.f32,
     }),
   )
   .$usage('uniform');
@@ -416,7 +404,7 @@ const getMinimumInFlow = wgsl.fn`
 `;
 
 const mainCompute = tgpu
-  .computeFn([builtin.globalInvocationId], { workgroupSize: [8, 8] })
+  .computeFn([d.builtin.globalInvocationId], { workgroupSize: [8, 8] })
   .does(`(@builtin(global_invocation_id) gid: vec3u) {
     let x = i32(gid.x);
     let y = i32(gid.y);
@@ -471,10 +459,10 @@ const obstacles: {
   { x: 0.5, y: 0, width: 1, height: 0.1, enabled: true }, // floor
 ];
 
-function obstaclesToConcrete(): Infer<BoxObstacle>[] {
+function obstaclesToConcrete(): d.Infer<BoxObstacle>[] {
   return obstacles.map(({ x, y, width, height, enabled }) => ({
-    center: vec2u(Math.round(x * gridSize), Math.round(y * gridSize)),
-    size: vec2u(Math.round(width * gridSize), Math.round(height * gridSize)),
+    center: d.vec2u(Math.round(x * gridSize), Math.round(y * gridSize)),
+    size: d.vec2u(Math.round(width * gridSize), Math.round(height * gridSize)),
     enabled: enabled ? 1 : 0,
   }));
 }
@@ -489,7 +477,10 @@ let boxY = 0.2;
 let leftWallX = 0;
 
 const vertexMain = tgpu
-  .vertexFn({ idx: builtin.vertexIndex }, { pos: builtin.position, uv: vec2f })
+  .vertexFn(
+    { idx: d.builtin.vertexIndex },
+    { pos: d.builtin.position, uv: d.vec2f },
+  )
   .does(/* wgsl */ `(@builtin(vertex_index) idx: u32) -> VertexOut {
     var pos = array<vec2f, 4>(
       vec2(1, 1), // top-right
@@ -517,7 +508,7 @@ const vertexMain = tgpu
   });
 
 const fragmentMain = tgpu
-  .fragmentFn({ uv: vec2f }, vec4f)
+  .fragmentFn({ uv: d.vec2f }, d.vec4f)
   .does(`(@location(0) uv: vec2f) -> @location(0) vec4f {
     let x = i32(uv.x * f32(gridSizeUniform));
     let y = i32(uv.y * f32(gridSizeUniform));
@@ -594,7 +585,7 @@ function makePipelines(
       root.flush();
     },
 
-    applyMovedObstacles(bufferData: Infer<BoxObstacle>[]) {
+    applyMovedObstacles(bufferData: d.Infer<BoxObstacle>[]) {
       obstaclesBuffer.write(bufferData);
       moveObstaclesPipeline.dispatchWorkgroups(1);
       root.flush();
@@ -654,7 +645,7 @@ function tick() {
   timeBuffer.write(Date.now() % 1000);
 
   sourceParamsBuffer.write({
-    center: vec2f(0.5, 0.9),
+    center: d.vec2f(0.5, 0.9),
     intensity: sourceIntensity,
     radius: sourceRadius,
   });
