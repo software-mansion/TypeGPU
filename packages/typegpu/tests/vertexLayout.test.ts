@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import { connectAttributesToShader } from '../src/core/vertexLayout/connectAttributesToShader';
 import type { ArrayToContainedAttribs } from '../src/core/vertexLayout/vertexAttribute';
 import * as d from '../src/data';
-import tgpu, { builtin } from '../src/experimental';
+import tgpu from '../src/experimental';
 import type { TgpuVertexAttrib } from '../src/shared/vertexFormat';
 
 describe('ArrayToContainedAttribs', () => {
@@ -268,7 +268,7 @@ describe('connectAttributesToShader', () => {
 
   it('connects a record of attributes from multiple layouts', () => {
     const shaderInputLayout = {
-      vi: builtin.vertexIndex, // should be omitted
+      vi: d.builtin.vertexIndex, // should be omitted
       a: d.f32,
       b: d.location(3, d.vec2f),
       c: d.u32 /* should get @location(4) automatically */,

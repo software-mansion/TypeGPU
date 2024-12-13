@@ -69,15 +69,17 @@ type BaseIOData =
 
 export type IOData = BaseIOData | Decorated<BaseIOData, AnyAttribute[]>;
 
+export type IORecord<TElementType extends IOData = IOData> = Record<
+  string,
+  TElementType
+>;
+
 /**
  * Used for I/O definitions of entry functions.
  */
-// An IO layout can be...
 export type IOLayout<TElementType extends IOData = IOData> =
-  // a single data-type
   | TElementType
-  // a record of data-types
-  | { [key: string]: TElementType };
+  | IORecord<TElementType>;
 
 export type InferIO<T> = T extends { type: string }
   ? Infer<T>

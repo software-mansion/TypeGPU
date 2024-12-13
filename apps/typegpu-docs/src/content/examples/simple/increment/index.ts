@@ -27,7 +27,7 @@ const pipeline = device.createComputePipeline({
 });
 
 const counterBuffer = root.createBuffer(u32, 0).$usage('storage');
-const bindGroup = layout.populate({
+const bindGroup = root.createBindGroup(layout, {
   counter: counterBuffer,
 });
 

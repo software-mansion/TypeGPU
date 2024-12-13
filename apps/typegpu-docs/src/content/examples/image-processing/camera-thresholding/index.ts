@@ -75,7 +75,7 @@ const thresholdBuffer = root
   .$name('threshold')
   .$usage('uniform');
 
-const rareBindGroup = rareLayout.populate({
+const rareBindGroup = root.createBindGroup(rareLayout, {
   sampling: sampler,
   threshold: thresholdBuffer,
 });
@@ -145,7 +145,7 @@ function run() {
   pass.setBindGroup(
     1,
     root.unwrap(
-      frequentLayout.populate({
+      root.createBindGroup(frequentLayout, {
         inputTexture: device.importExternalTexture({ source: video }),
       }),
     ),

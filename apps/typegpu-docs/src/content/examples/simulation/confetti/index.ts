@@ -1,5 +1,13 @@
-import { arrayOf, f32, struct, type v4f, vec2f, vec4f } from 'typegpu/data';
-import tgpu, { asMutable, asUniform, builtin } from 'typegpu/experimental';
+import {
+  arrayOf,
+  builtin,
+  f32,
+  struct,
+  type v4f,
+  vec2f,
+  vec4f,
+} from 'typegpu/data';
+import tgpu, { asMutable, asUniform } from 'typegpu/experimental';
 
 // constants
 

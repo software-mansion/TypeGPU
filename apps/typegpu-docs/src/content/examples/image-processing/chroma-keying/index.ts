@@ -139,7 +139,7 @@ const sampler = device.createSampler({
   minFilter: 'linear',
 });
 
-const rareBindGroup = rareLayout.populate({
+const rareBindGroup = root.createBindGroup(rareLayout, {
   color: colorBuffer,
   sampling: sampler,
   threshold: thresholdBuffer,
@@ -194,7 +194,7 @@ async function drawFrame() {
   pass.setBindGroup(
     1,
     root.unwrap(
-      frequentLayout.populate({
+      root.createBindGroup(frequentLayout, {
         inputTexture: device.importExternalTexture({ source: frame }),
       }),
     ),

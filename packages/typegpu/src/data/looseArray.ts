@@ -40,6 +40,6 @@ class LooseArrayImpl<TElement extends AnyData> implements LooseArray<TElement> {
 
   constructor(
     public readonly elementType: TElement,
-    public readonly length: number,
+    public readonly elementCount: number,
   ) {}
 }

@@ -187,14 +187,14 @@ const dataWriters = {
   },
 
   array(output, schema: wgsl.WgslArray, value: Infer<wgsl.BaseWgslData>[]) {
-    if (schema.length === 0) {
+    if (schema.elementCount === 0) {
       throw new Error('Cannot write using a runtime-sized schema.');
     }
 
     const alignment = alignmentOf(schema);
     alignIO(output, alignment);
     const beginning = output.currentByteOffset;
-    for (let i = 0; i < Math.min(schema.length, value.length); i++) {
+    for (let i = 0; i < Math.min(schema.elementCount, value.length); i++) {
       alignIO(output, alignment);
       writeData(output, schema.elementType, value[i]);
     }
@@ -577,7 +577,7 @@ const dataWriters = {
 
     alignIO(output, alignment);
     const beginning = output.currentByteOffset;
-    for (let i = 0; i < Math.min(schema.length, value.length); i++) {
+    for (let i = 0; i < Math.min(schema.elementCount, value.length); i++) {
       alignIO(output, alignment);
       dataWriters[(schema.elementType as AnyData)?.type]?.(
         output,
@@ -782,14 +782,14 @@ const dataReaders = {
   },
 
   array(input, schema) {
-    if (schema.length === 0) {
+    if (schema.elementCount === 0) {
       throw new Error('Cannot read using a runtime-sized schema.');
     }
 
     const alignment = alignmentOf(schema);
     const elements: unknown[] = [];
 
-    for (let i = 0; i < schema.length; i++) {
+    for (let i = 0; i < schema.elementCount; i++) {
       alignIO(input, alignment);
       const elementType = schema.elementType as wgsl.AnyWgslData;
       const value = readData(input, elementType);
@@ -1130,7 +1130,7 @@ const dataReaders = {
     const alignment = alignmentOf(schema);
     const elements: unknown[] = [];
 
-    for (let i = 0; i < schema.length; i++) {
+    for (let i = 0; i < schema.elementCount; i++) {
       alignIO(input, alignment);
       elements.push(readData(input, schema.elementType));
     }
