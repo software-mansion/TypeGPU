@@ -216,9 +216,9 @@ describe('d.looseStruct', () => {
     const writer = new BufferWriter(buffer);
 
     writeData(writer, s, {
-      a: d.vec2h(0.5, 0.75),
-      b: d.vec4h(0.25, 0.5, 0.75, 1.0),
-      c: d.vec2h(-0.25, 0.25),
+      a: d.vec2f(0.5, 0.75),
+      b: d.vec4f(0.25, 0.5, 0.75, 1.0),
+      c: d.vec2f(-0.25, 0.25),
     });
 
     const reader = new BufferReader(buffer);
