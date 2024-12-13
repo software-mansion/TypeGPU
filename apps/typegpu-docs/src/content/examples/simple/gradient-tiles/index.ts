@@ -1,5 +1,5 @@
 import tgpu from 'typegpu';
-import { struct, u32 } from 'typegpu/data';
+import * as d from 'typegpu/data';
 
 const root = await tgpu.init();
 const device = root.device;
@@ -8,11 +8,13 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const vertWGSL = `
+const vertWGSL = /* wgsl */ `
+
 struct Output {
   @builtin(position) pos: vec4f,
   @location(0) uv: vec2f,
 }
+
 @vertex
 fn main(
   @builtin(vertex_index) vertexIndex: u32,
@@ -35,12 +37,15 @@ fn main(
   return out;
 }`;
 
-const fragWGSL = `
+const fragWGSL = /* wgsl */ `
+
 struct Span {
   x: u32,
   y: u32,
 }
+
 @group(0) @binding(0) var<uniform> span: Span;
+
 @fragment
 fn main(
   @location(0) uv: vec2f,
@@ -56,9 +61,9 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const Span = struct({
-  x: u32,
-  y: u32,
+const Span = d.struct({
+  x: d.u32,
+  y: d.u32,
 });
 
 const spanBuffer = root.createBuffer(Span, { x: 10, y: 10 }).$usage('uniform');

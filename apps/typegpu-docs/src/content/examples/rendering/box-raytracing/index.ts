@@ -1,13 +1,4 @@
-import {
-  arrayOf,
-  bool,
-  builtin,
-  f32,
-  struct,
-  u32,
-  vec3f,
-  vec4f,
-} from 'typegpu/data';
+import * as d from 'typegpu/data';
 import tgpu, { std } from 'typegpu/experimental';
 
 // init canvas and values
@@ -17,9 +8,9 @@ const Y = 7;
 const Z = 7;
 
 const MAX_BOX_SIZE = 15;
-const cubeSize = vec3f(X * MAX_BOX_SIZE, Y * MAX_BOX_SIZE, Z * MAX_BOX_SIZE);
+const cubeSize = d.vec3f(X * MAX_BOX_SIZE, Y * MAX_BOX_SIZE, Z * MAX_BOX_SIZE);
 const boxCenter = std.mul(0.5, cubeSize);
-const upAxis = vec3f(0, 1, 0);
+const upAxis = d.vec3f(0, 1, 0);
 let rotationSpeed = 2;
 let cameraDistance = 250;
 
@@ -39,40 +30,40 @@ context.configure({
 
 // structs
 
-const BoxStruct = struct({
-  isActive: u32,
-  albedo: vec4f,
+const BoxStruct = d.struct({
+  isActive: d.u32,
+  albedo: d.vec4f,
 });
 
-const RayStruct = struct({
-  origin: vec3f,
-  direction: vec3f,
+const RayStruct = d.struct({
+  origin: d.vec3f,
+  direction: d.vec3f,
 });
 
-const IntersectionStruct = struct({
-  intersects: bool,
-  tMin: f32,
-  tMax: f32,
+const IntersectionStruct = d.struct({
+  intersects: d.bool,
+  tMin: d.f32,
+  tMax: d.f32,
 });
 
-const CameraAxesStruct = struct({
-  right: vec3f,
-  up: vec3f,
-  forward: vec3f,
+const CameraAxesStruct = d.struct({
+  right: d.vec3f,
+  up: d.vec3f,
+  forward: d.vec3f,
 });
 
-const CanvasDimsStruct = struct({ width: u32, height: u32 });
+const CanvasDimsStruct = d.struct({ width: d.u32, height: d.u32 });
 
 // buffers
 
 const boxMatrixBuffer = root
   .createBuffer(
-    arrayOf(arrayOf(arrayOf(BoxStruct, Z), Y), X),
+    d.arrayOf(d.arrayOf(d.arrayOf(BoxStruct, Z), Y), X),
     Array.from({ length: X }, (_, i) =>
       Array.from({ length: Y }, (_, j) =>
         Array.from({ length: Z }, (_, k) => ({
           isActive: X - i + j + (Z - k) > 6 ? 1 : 0,
-          albedo: vec4f(i / X, j / Y, k / Z, 1),
+          albedo: d.vec4f(i / X, j / Y, k / Z, 1),
         })),
       ),
     ),
@@ -81,7 +72,7 @@ const boxMatrixBuffer = root
   .$usage('storage');
 
 const cameraPositionBuffer = root
-  .createBuffer(vec3f)
+  .createBuffer(d.vec3f)
   .$name('camera_position')
   .$usage('storage');
 
@@ -96,7 +87,7 @@ const canvasDimsBuffer = root
   .$usage('uniform');
 
 const boxSizeBuffer = root
-  .createBuffer(u32, MAX_BOX_SIZE)
+  .createBuffer(d.u32, MAX_BOX_SIZE)
   .$name('box_size')
   .$usage('uniform');
 
@@ -121,7 +112,7 @@ const renderBindGroup = root.createBindGroup(renderBindGroupLayout, {
 // functions
 
 const getBoxIntersection = tgpu
-  .fn([vec3f, vec3f, RayStruct], IntersectionStruct)
+  .fn([d.vec3f, d.vec3f, RayStruct], IntersectionStruct)
   .does(/* wgsl */ `(
   boundMin: vec3f,
   boundMax: vec3f,
@@ -194,7 +185,10 @@ const getBoxIntersection = tgpu
   .$name('box_intersection');
 
 const vertexFunction = tgpu
-  .vertexFn({ vertexIndex: builtin.vertexIndex }, { outPos: builtin.position })
+  .vertexFn(
+    { vertexIndex: d.builtin.vertexIndex },
+    { outPos: d.builtin.position },
+  )
   .does(/* wgsl */ `(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
   var pos = array<vec2f, 6>(
     vec2<f32>( 1,  1),
@@ -217,7 +211,7 @@ const vertexFunction = tgpu
   });
 
 const fragmentFunction = tgpu
-  .fragmentFn({ position: builtin.position }, vec4f)
+  .fragmentFn({ position: d.builtin.position }, d.vec4f)
   .does(/* wgsl */ `(@builtin(position) position: vec4f) -> @location(0) vec4f {
   let minDim = f32(min(canvasDims.width, canvasDims.height));
 
@@ -326,7 +320,7 @@ onFrame((deltaTime) => {
   const width = canvas.width;
   const height = canvas.height;
 
-  const cameraPosition = vec3f(
+  const cameraPosition = d.vec3f(
     Math.cos(frame) * cameraDistance + boxCenter.x,
     boxCenter.y,
     Math.sin(frame) * cameraDistance + boxCenter.z,

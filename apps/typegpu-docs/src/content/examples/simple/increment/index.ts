@@ -1,8 +1,8 @@
-import { u32 } from 'typegpu/data';
+import * as d from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
 
 const layout = tgpu.bindGroupLayout({
-  counter: { storage: u32, access: 'mutable' },
+  counter: { storage: d.u32, access: 'mutable' },
 });
 
 const shaderCode = /* wgsl */ `
@@ -26,7 +26,7 @@ const pipeline = device.createComputePipeline({
   },
 });
 
-const counterBuffer = root.createBuffer(u32, 0).$usage('storage');
+const counterBuffer = root.createBuffer(d.u32, 0).$usage('storage');
 const bindGroup = root.createBindGroup(layout, {
   counter: counterBuffer,
 });
