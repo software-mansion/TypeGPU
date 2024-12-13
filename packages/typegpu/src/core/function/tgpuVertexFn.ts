@@ -10,10 +10,7 @@ import type {
   Implementation,
   InferIO,
 } from './fnTypes';
-import {
-  type IOLayoutToOutputSchema,
-  createOutputStruct,
-} from './ioOutputStruct';
+import { type IOLayoutToOutputSchema, createOutputType } from './ioOutputType';
 
 // ----------
 // Public API
@@ -100,7 +97,7 @@ function createVertexFn(
   type This = TgpuVertexFn<IOLayout, IOLayout>;
 
   const core = createFnCore(shell, implementation);
-  const outputType = createOutputStruct(core, implementation, shell.returnType);
+  const outputType = createOutputType(core, implementation, shell.returnType);
 
   return {
     shell,

@@ -38,7 +38,7 @@ export function withLocations(
   );
 }
 
-export function createOutputStruct<T extends IOData>(
+export function createOutputType<T extends IOData>(
   core: FnCore,
   implementation: Implementation,
   returnType: IOLayout<T>,
