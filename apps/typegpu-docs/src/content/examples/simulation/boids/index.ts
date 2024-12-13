@@ -330,14 +330,14 @@ const computePipeline = root.device.createComputePipeline({
 });
 
 const renderBindGroups = [0, 1].map((idx) =>
-  renderBindGroupLayout.populate({
+  root.createBindGroup(renderBindGroupLayout, {
     trianglePos: trianglePosBuffers[idx],
     colorPalette: colorPaletteBuffer,
   }),
 );
 
 const computeBindGroups = [0, 1].map((idx) =>
-  computeBindGroupLayout.populate({
+  root.createBindGroup(computeBindGroupLayout, {
     currentTrianglePos: trianglePosBuffers[idx],
     nextTrianglePos: trianglePosBuffers[1 - idx],
     params: paramsBuffer,

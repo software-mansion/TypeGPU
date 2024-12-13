@@ -117,14 +117,14 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
   const output = buffers[buffers.length - 1].state;
 
   const ioBindGroups = buffers.map((_, i) =>
-    ioLayout.populate({
+    root.createBindGroup(ioLayout, {
       input: i === 0 ? input : buffers[i - 1].state,
       output: buffers[i].state,
     }),
   );
 
   const weightsBindGroups = buffers.map((layer) =>
-    weightsBiasesLayout.populate({
+    root.createBindGroup(weightsBiasesLayout, {
       weights: layer.weights,
       biases: layer.biases,
     }),
