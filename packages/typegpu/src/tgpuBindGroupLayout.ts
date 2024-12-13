@@ -150,6 +150,9 @@ export interface TgpuBindGroupLayout<
    */
   readonly index: number | undefined;
 
+  /**
+   * @deprecated Use the `root.createBindGroup` API instead, accessible through `await tgpu.init()`
+   */
   populate(
     entries: {
       [K in keyof OmitProps<Entries, null>]: LayoutEntryToInput<Entries[K]>;

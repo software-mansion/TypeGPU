@@ -9,6 +9,7 @@ import { naturalsExcept } from './shared/generators';
 import { generateFunction } from './smol';
 import {
   type TgpuBindGroup,
+  TgpuBindGroupImpl,
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
   bindGroupLayout,
@@ -484,7 +485,8 @@ export function resolve(
 
     return [
       catchallIdx,
-      catchallLayout.populate(
+      new TgpuBindGroupImpl(
+        catchallLayout,
         Object.fromEntries(
           ctx.fixedBindings.map(
             (binding, idx) =>

@@ -17,6 +17,7 @@ import {
 import type { ExperimentalTgpuRoot } from '../core/root/rootTypes';
 import { vertexLayout } from '../core/vertexLayout/vertexLayout';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
+import { slot } from '../tgpuSlot';
 
 export const tgpu = {
   /** @deprecated Use `'uniform'` string literal instead. */
@@ -33,6 +34,7 @@ export const tgpu = {
   computeFn,
   vertexLayout,
   bindGroupLayout,
+  slot,
 
   init: init as (
     options?: InitOptions | undefined,
