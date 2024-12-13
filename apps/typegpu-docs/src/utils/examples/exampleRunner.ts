@@ -1,7 +1,7 @@
 import * as Babel from '@babel/standalone';
 import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
-import { filter, isNonNull, map, pipe } from 'remeda';
+import { filter, groupBy, isNonNull, map, pipe } from 'remeda';
 import { transpileModule } from 'typescript';
 import { tsCompilerOptions } from '../liveEditor/embeddedTypeScript';
 import type { ExampleControlParam } from './exampleControlAtom';
@@ -32,6 +32,10 @@ const staticToDynamicImports = {
             return ['default', imp.local.name] as const;
           }
 
+          if (imp.type === 'ImportNamespaceSpecifier') {
+            return ['*', imp.local.name] as const;
+          }
+
           if (imp.type === 'ImportSpecifier') {
             return [
               imp.imported.type === 'Identifier'
@@ -41,15 +45,21 @@ const staticToDynamicImports = {
             ] as const;
           }
 
-          // Ignoring namespace imports
           return null;
         }),
         filter(isNonNull),
+        groupBy((imp) => (imp[0] === '*' ? 'wildCard' : 'nonWildCard')),
       );
 
+      const wildCard = imports.wildCard;
+      const nonWildCard = imports.nonWildCard;
+
       path.replaceWith(
-        template.statement.ast(
-          `const { ${imports.map((imp) => (imp[0] === imp[1] ? imp[0] : `${imp[0]}: ${imp[1]}`)).join(',')} } = await _import('${moduleName}');`,
+        template.program.ast(
+          `
+            ${wildCard?.length ? `const ${wildCard[0][1]} = await _import('${moduleName}');` : ''}
+            ${nonWildCard?.length ? `const { ${nonWildCard.map((imp) => (imp[0] === imp[1] ? imp[0] : `${imp[0]}: ${imp[1]}`)).join(',')} } = await _import('${moduleName}');` : ''}
+          `,
         ),
       );
     },

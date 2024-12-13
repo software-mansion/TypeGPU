@@ -1,20 +1,13 @@
-import {
-  type Infer,
-  arrayOf,
-  f32,
-  struct,
-  type v2f,
-  vec2f,
-} from 'typegpu/data';
+import * as d from 'typegpu/data';
 import tgpu from 'typegpu/experimental';
 
 const workgroupSize = [8, 8] as [number, number];
 
 const MAX_MATRIX_SIZE = 6;
 
-const MatrixStruct = struct({
-  size: vec2f,
-  numbers: arrayOf(f32, MAX_MATRIX_SIZE ** 2),
+const MatrixStruct = d.struct({
+  size: d.vec2f,
+  numbers: d.arrayOf(d.f32, MAX_MATRIX_SIZE ** 2),
 });
 
 let firstRowCount = 3;
@@ -22,7 +15,7 @@ let firstColumnCount = 4;
 let secondColumnCount = 2;
 
 function createMatrix(
-  size: v2f,
+  size: d.v2f,
   initValue: (row: number, col: number) => number,
 ) {
   return {
@@ -96,11 +89,12 @@ const bindGroup = root.createBindGroup(layout, {
 });
 
 async function run() {
-  const firstMatrix = createMatrix(vec2f(firstRowCount, firstColumnCount), () =>
-    Math.floor(Math.random() * 10),
+  const firstMatrix = createMatrix(
+    d.vec2f(firstRowCount, firstColumnCount),
+    () => Math.floor(Math.random() * 10),
   );
   const secondMatrix = createMatrix(
-    vec2f(firstColumnCount, secondColumnCount),
+    d.vec2f(firstColumnCount, secondColumnCount),
     () => Math.floor(Math.random() * 10),
   );
 
@@ -137,7 +131,7 @@ const resultTable = document.querySelector('.matrix-result') as HTMLDivElement;
 
 function printMatrixToHtml(
   element: HTMLDivElement,
-  matrix: Infer<typeof MatrixStruct>,
+  matrix: d.Infer<typeof MatrixStruct>,
 ) {
   element.style.gridTemplateColumns = `repeat(${matrix.size.y}, 1fr)`;
   element.innerHTML = matrix.numbers

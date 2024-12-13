@@ -1,5 +1,5 @@
 import tgpu from 'typegpu';
-import { arrayOf, u32, vec2u } from 'typegpu/data';
+import * as d from 'typegpu/data';
 
 const root = await tgpu.init();
 const device = root.device;
@@ -59,7 +59,7 @@ fn main(@builtin(global_invocation_id) grid: vec3u) {
 });
 
 const squareBuffer = root
-  .createBuffer(arrayOf(u32, 8), [0, 0, 1, 0, 0, 1, 1, 1])
+  .createBuffer(d.arrayOf(d.u32, 8), [0, 0, 1, 0, 0, 1, 1, 1])
   .$usage('vertex');
 
 const squareStride: GPUVertexBufferLayout = {
@@ -128,21 +128,21 @@ const cellsStride: GPUVertexBufferLayout = {
 
 const layoutCompute = {
   size: {
-    storage: vec2u,
+    storage: d.vec2u,
     access: 'readonly',
   },
   current: {
-    storage: (arrayLength: number) => arrayOf(u32, arrayLength),
+    storage: (arrayLength: number) => d.arrayOf(d.u32, arrayLength),
     access: 'readonly',
   },
   next: {
-    storage: (arrayLength: number) => arrayOf(u32, arrayLength),
+    storage: (arrayLength: number) => d.arrayOf(d.u32, arrayLength),
     access: 'mutable',
   },
 } as const;
 const groupLayout = {
   size: {
-    uniform: vec2u,
+    uniform: d.vec2u,
   },
 } as const;
 
@@ -168,7 +168,7 @@ let loop: (swap: boolean) => void;
 const resetGameData = () => {
   swap = false;
   const sizeBuffer = root
-    .createBuffer(vec2u, vec2u(gameWidth, gameHeight))
+    .createBuffer(d.vec2u, d.vec2u(gameWidth, gameHeight))
     .$usage('uniform', 'storage');
 
   const length = gameWidth * gameHeight;
@@ -177,11 +177,11 @@ const resetGameData = () => {
     .map((_, i) => (Math.random() < 0.25 ? 1 : 0));
 
   const buffer0 = root
-    .createBuffer(arrayOf(u32, length), cells)
+    .createBuffer(d.arrayOf(d.u32, length), cells)
     .$usage('storage', 'vertex');
 
   const buffer1 = root
-    .createBuffer(arrayOf(u32, length))
+    .createBuffer(d.arrayOf(d.u32, length))
     .$usage('storage', 'vertex');
 
   const bindGroup0 = root.createBindGroup(bindGroupLayoutCompute, {
