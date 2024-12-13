@@ -1,8 +1,8 @@
 // Original implementation:
 // https://webgpu.github.io/webgpu-samples/?sample=imageBlur
 
-import { i32, location, struct, u32, vec2f } from 'typegpu/data';
-import tgpu, { builtin } from 'typegpu/experimental';
+import { builtin, i32, location, struct, u32, vec2f } from 'typegpu/data';
+import tgpu from 'typegpu/experimental';
 
 const tileDim = 128;
 const batch = [4, 4];

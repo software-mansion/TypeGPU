@@ -1,5 +1,5 @@
-import { f32, location, struct, vec2f, vec3f } from 'typegpu/data';
-import tgpu, { builtin } from 'typegpu/experimental';
+import { builtin, f32, location, struct, vec2f, vec3f } from 'typegpu/data';
+import tgpu from 'typegpu/experimental';
 
 const rareLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },
