@@ -30,7 +30,7 @@ describe('d.location', () => {
 });
 
 describe('d.HasCustomLocation', () => {
-  it('determines if a type has any location attribute', () => {
+  it('determines if a type has any location attributes', () => {
     const schemaWithLocation = d.location(5, d.u32);
     expectTypeOf<
       d.HasCustomLocation<typeof schemaWithLocation>
