@@ -500,12 +500,7 @@ const vertexMain = tgpu
     output.pos = vec4f(pos[idx].x, pos[idx].y, 0.0, 1.0);
     output.uv = uv[idx];
     return output;
-  }`)
-  .$uses({
-    get VertexOut() {
-      return vertexMain.Output;
-    },
-  });
+  }`);
 
 const fragmentMain = tgpu
   .fragmentFn({ uv: d.vec2f }, d.vec4f)

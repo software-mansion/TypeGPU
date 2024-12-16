@@ -151,3 +151,8 @@ export type {
   TgpuComputeFnShell,
   TgpuComputeFn,
 } from '../core/function/tgpuComputeFn';
+export {
+  IOLayoutToOutputSchema,
+  WithLocations,
+  withLocations,
+} from '../core/function/ioOutputType';

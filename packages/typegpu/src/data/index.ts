@@ -103,6 +103,7 @@ export {
   isBuiltin,
   AnyAttribute,
   IsBuiltin,
+  HasCustomLocation,
 } from './attributes';
 export {
   isLooseArray,

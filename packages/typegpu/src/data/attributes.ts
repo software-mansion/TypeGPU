@@ -92,6 +92,12 @@ export type IsBuiltin<T> = ExtractAttributes<T>[number] extends []
     ? true
     : false;
 
+export type HasCustomLocation<T> = ExtractAttributes<T>[number] extends []
+  ? false
+  : ExtractAttributes<T>[number] extends Location<number>
+    ? true
+    : false;
+
 export function attribute<
   TData extends BaseWgslData,
   TAttrib extends AnyAttribute,

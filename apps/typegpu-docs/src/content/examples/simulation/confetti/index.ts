@@ -142,9 +142,6 @@ const mainVert = tgpu
   .$uses({
     rotate,
     canvasAspectRatio: canvasAspectRatioUniform,
-    get VertexOutput() {
-      return mainVert.Output;
-    },
   });
 
 const mainFrag = tgpu.fragmentFn(VertexOutput, d.vec4f).does(/* wgsl */ `
@@ -160,7 +157,7 @@ const mainCompute = tgpu
     if index == 0 {
       time += deltaTime;
     }
-    let phase = (time + particleData[index].seed) / 200; 
+    let phase = (time / 300) + particleData[index].seed;
     particleData[index].position += particleData[index].velocity * deltaTime / 20 + vec2f(sin(phase) / 600, cos(phase) / 500);
   }`,
   )

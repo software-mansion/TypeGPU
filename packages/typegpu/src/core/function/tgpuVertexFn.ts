@@ -1,23 +1,16 @@
 import type { OmitBuiltins } from '../../builtin';
-import { attribute, isBuiltin, location } from '../../data/attributes';
-import { getCustomLocation, isData } from '../../data/dataTypes';
-import { struct } from '../../data/struct';
-import {
-  type BaseWgslData,
-  type WgslStruct,
-  isWgslStruct,
-} from '../../data/wgslTypes';
+import { isWgslStruct } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import { createFnCore } from './fnCore';
 import type {
   ExoticIO,
-  IOData,
   IOLayout,
   IORecord,
   Implementation,
   InferIO,
 } from './fnTypes';
+import { type IOLayoutToOutputSchema, createOutputType } from './ioOutputType';
 
 // ----------
 // Public API
@@ -57,7 +50,7 @@ export interface TgpuVertexFn<
 > extends TgpuResolvable,
     TgpuNamable {
   readonly shell: TgpuVertexFnShell<VertexIn, VertexOut>;
-  readonly Output: IOLayoutToOutputSchema<VertexOut>;
+  readonly outputType: IOLayoutToOutputSchema<VertexOut>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
 }
@@ -97,39 +90,6 @@ export function vertexFn<
 // Implementation
 // --------------
 
-type IOLayoutToOutputSchema<T extends IOLayout> = T extends BaseWgslData
-  ? T
-  : T extends Record<string, BaseWgslData>
-    ? WgslStruct<T>
-    : never;
-
-function withLocations(
-  members: Record<string, BaseWgslData>,
-): Record<string, BaseWgslData> {
-  let nextLocation = 0;
-
-  return Object.fromEntries(
-    Object.entries(members).map(([key, member]) => {
-      if (isBuiltin(member)) {
-        // Skipping builtins
-        return [key, member];
-      }
-
-      const customLocation = getCustomLocation(member);
-      if (customLocation !== undefined) {
-        // This member is already marked, start counting from the next location over.
-        nextLocation = customLocation + 1;
-        return [key, member];
-      }
-
-      return [
-        key,
-        attribute(member, { type: '@location', value: nextLocation++ }),
-      ];
-    }),
-  );
-}
-
 function createVertexFn(
   shell: TgpuVertexFnShell<IOLayout, IOLayout>,
   implementation: Implementation,
@@ -137,14 +97,11 @@ function createVertexFn(
   type This = TgpuVertexFn<IOLayout, IOLayout>;
 
   const core = createFnCore(shell, implementation);
-
-  const Output = isData(shell.returnType)
-    ? (location(0, shell.returnType) as IOData)
-    : struct(withLocations(shell.returnType) as Record<string, IOData>);
+  const outputType = createOutputType(core, implementation, shell.returnType);
 
   return {
     shell,
-    Output,
+    outputType,
 
     get label() {
       return core.label;
@@ -157,8 +114,8 @@ function createVertexFn(
 
     $name(newLabel: string): This {
       core.label = newLabel;
-      if (isWgslStruct(Output)) {
-        Output.$name(`${newLabel}_Output`);
+      if (isWgslStruct(outputType)) {
+        outputType.$name(`${newLabel}_Output`);
       }
       return this;
     },
