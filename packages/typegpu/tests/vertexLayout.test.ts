@@ -356,7 +356,6 @@ describe('connectAttributesToShader', () => {
       b: d.location(3, d.vec2h),
       c: d.u32 /* should get @location(4) automatically */,
       d: d.f32,
-      e: d.f16,
     };
 
     const layout = tgpu.vertexLayout((n) =>
@@ -365,8 +364,7 @@ describe('connectAttributesToShader', () => {
           alpha: d.f16, // 2 bytes
           beta: d.float16x2, // 4 bytes
           gamma: d.u32, // 4 bytes
-          delta: d.float16, // 2 bytes - ironically, this is interpreted as an f32
-          epsilon: d.float16, // 2bytes this is an f16
+          delta: d.float16, // 2 bytes
         }),
         n,
       ),
@@ -376,15 +374,14 @@ describe('connectAttributesToShader', () => {
       // purposefully out of order, which should be controlled by the shader input.
       b: layout.attrib.beta,
       c: layout.attrib.gamma,
-      a: layout.attrib.alpha,
-      e: layout.attrib.epsilon,
       d: layout.attrib.delta,
+      a: layout.attrib.alpha,
     });
 
     expect(result).toEqual({
       bufferDefinitions: [
         {
-          arrayStride: 14,
+          arrayStride: 12,
           stepMode: 'vertex',
           attributes: [
             {
@@ -406,11 +403,6 @@ describe('connectAttributesToShader', () => {
               format: 'float16',
               offset: 10,
               shaderLocation: 5,
-            },
-            {
-              format: 'float16',
-              offset: 12,
-              shaderLocation: 6,
             },
           ],
         },

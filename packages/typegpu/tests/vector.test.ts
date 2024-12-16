@@ -239,6 +239,10 @@ describe('vec2h', () => {
     acceptsVec2hSchema(d.vec3f);
     // @ts-expect-error
     acceptsVec2hSchema(d.vec4f);
+    // @ts-expect-error
+    acceptsVec2hSchema(d.vec3h);
+    // @ts-expect-error
+    acceptsVec2hSchema(d.vec4h);
   });
 
   it('can be indexed into', () => {
