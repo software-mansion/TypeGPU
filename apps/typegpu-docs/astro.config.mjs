@@ -33,7 +33,7 @@ function toRawPlugin() {
     enforce: 'post',
 
     transform(code, id) {
-      if (id.includes('tgpu=true')) {
+      if (id.endsWith('?tgpu=true')) {
         return {
           code: `export default ${JSON.stringify(code)
             .replace(/\u2028/g, '\\u2028')
