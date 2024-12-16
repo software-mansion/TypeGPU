@@ -1,25 +1,21 @@
-import tgpu from 'typegpu';
-import { f32 } from 'typegpu/data';
+import * as d from 'typegpu/data';
+import tgpu from 'typegpu/experimental';
 
 const rareLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },
-  threshold: { uniform: f32 },
+  threshold: { uniform: d.f32 },
 });
 
 const frequentLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: {} },
 });
 
+const VertexOutput = d.struct({
+  position: d.builtin.position,
+  uv: d.location(0, d.vec2f),
+});
+
 const renderShaderCode = /* wgsl */ `
-
-struct VertexOutput {
-  @builtin(position) position: vec4f,
-  @location(0) uv: vec2f,
-}
-
-@group(0) @binding(0) var sampling: sampler;
-@group(0) @binding(1) var<uniform> threshold: f32;
-@group(1) @binding(0) var inputTexture: texture_external;
 
 @vertex
 fn main_vert(@builtin(vertex_index) idx: u32) -> VertexOutput {
@@ -71,7 +67,7 @@ const sampler = root.device.createSampler({
 });
 
 const thresholdBuffer = root
-  .createBuffer(f32)
+  .createBuffer(d.f32)
   .$name('threshold')
   .$usage('uniform');
 
@@ -96,7 +92,14 @@ context.configure({
 });
 
 const renderShaderModule = device.createShaderModule({
-  code: renderShaderCode,
+  code: tgpu.resolve({
+    input: renderShaderCode,
+    extraDependencies: {
+      ...rareLayout.bound,
+      ...frequentLayout.bound,
+      VertexOutput,
+    },
+  }),
 });
 
 const renderPipeline = device.createRenderPipeline({

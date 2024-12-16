@@ -1,20 +1,29 @@
 export const vertexFormats = [
+  'uint8',
   'uint8x2',
   'uint8x4',
+  'sint8',
   'sint8x2',
   'sint8x4',
+  'unorm8',
   'unorm8x2',
   'unorm8x4',
+  'snorm8',
   'snorm8x2',
   'snorm8x4',
+  'uint16',
   'uint16x2',
   'uint16x4',
+  'sint16',
   'sint16x2',
   'sint16x4',
+  'unorm16',
   'unorm16x2',
   'unorm16x4',
+  'snorm16',
   'snorm16x2',
   'snorm16x4',
+  'float16',
   'float16x2',
   'float16x4',
   'float32',
@@ -30,6 +39,7 @@ export const vertexFormats = [
   'sint32x3',
   'sint32x4',
   'unorm10-10-10-2',
+  'unorm8x4-bgra',
 ] as const;
 
 export type VertexFormat = (typeof vertexFormats)[number];
@@ -39,6 +49,10 @@ export const kindToDefaultFormatMap = {
   vec2f: 'float32x2',
   vec3f: 'float32x3',
   vec4f: 'float32x4',
+  f16: 'float16',
+  vec2h: 'float16x2',
+  // vec3h has no direct equivalent in the spec
+  vec4h: 'float16x4',
   u32: 'uint32',
   vec2u: 'uint32x2',
   vec3u: 'uint32x3',
@@ -66,8 +80,10 @@ export type AnyVertexAttribs =
  * https://www.w3.org/TR/webgpu/#vertex-formats
  */
 type U32CompatibleFormats =
+  | TgpuVertexAttrib<'uint8'>
   | TgpuVertexAttrib<'uint8x2'>
   | TgpuVertexAttrib<'uint8x4'>
+  | TgpuVertexAttrib<'uint16'>
   | TgpuVertexAttrib<'uint16x2'>
   | TgpuVertexAttrib<'uint16x4'>
   | TgpuVertexAttrib<'uint32'>
@@ -81,8 +97,10 @@ type U32CompatibleFormats =
  * https://www.w3.org/TR/webgpu/#vertex-formats
  */
 type I32CompatibleFormats =
+  | TgpuVertexAttrib<'sint8'>
   | TgpuVertexAttrib<'sint8x2'>
   | TgpuVertexAttrib<'sint8x4'>
+  | TgpuVertexAttrib<'sint16'>
   | TgpuVertexAttrib<'sint16x2'>
   | TgpuVertexAttrib<'sint16x4'>
   | TgpuVertexAttrib<'sint32'>
@@ -96,25 +114,31 @@ type I32CompatibleFormats =
  * https://www.w3.org/TR/webgpu/#vertex-formats
  */
 type F32CompatibleFormats =
+  | TgpuVertexAttrib<'unorm8'>
   | TgpuVertexAttrib<'unorm8x2'>
   | TgpuVertexAttrib<'unorm8x4'>
+  | TgpuVertexAttrib<'snorm8'>
   | TgpuVertexAttrib<'snorm8x2'>
   | TgpuVertexAttrib<'snorm8x4'>
+  | TgpuVertexAttrib<'unorm16'>
   | TgpuVertexAttrib<'unorm16x2'>
   | TgpuVertexAttrib<'unorm16x4'>
+  | TgpuVertexAttrib<'snorm16'>
   | TgpuVertexAttrib<'snorm16x2'>
   | TgpuVertexAttrib<'snorm16x4'>
+  | TgpuVertexAttrib<'float16'>
   | TgpuVertexAttrib<'float16x2'>
   | TgpuVertexAttrib<'float16x4'>
   | TgpuVertexAttrib<'float32'>
   | TgpuVertexAttrib<'float32x2'>
   | TgpuVertexAttrib<'float32x3'>
   | TgpuVertexAttrib<'float32x4'>
-  | TgpuVertexAttrib<'unorm10-10-10-2'>;
+  | TgpuVertexAttrib<'unorm10-10-10-2'>
+  | TgpuVertexAttrib<'unorm8x4-bgra'>;
 
 /**
  * All vertex attribute formats that can be interpreted as
- * an single or multi component f16 in a shader. (same as f32)
+ * a single or multi component f16 in a shader. (same as f32 on the shader side)
  * https://www.w3.org/TR/webgpu/#vertex-formats
  */
 type F16CompatibleFormats = F32CompatibleFormats;
