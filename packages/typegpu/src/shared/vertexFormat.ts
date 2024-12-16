@@ -138,7 +138,7 @@ type F32CompatibleFormats =
 
 /**
  * All vertex attribute formats that can be interpreted as
- * an single or multi component f16 in a shader. (same as f32 on the shader side)
+ * a single or multi component f16 in a shader. (same as f32 on the shader side)
  * https://www.w3.org/TR/webgpu/#vertex-formats
  */
 type F16CompatibleFormats = F32CompatibleFormats;

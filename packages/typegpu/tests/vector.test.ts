@@ -214,7 +214,7 @@ describe('vec2h', () => {
     expect(readData(new BufferReader(buffer), d.vec2h)).toEqual(vec);
   });
 
-  it('should change unrepresenable values to the closest representable value', () => {
+  it('should change unrepresentable values to the closest representable', () => {
     const vec = d.vec2h(1, 4097);
 
     const buffer = new ArrayBuffer(sizeOf(d.vec2h));
