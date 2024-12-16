@@ -284,8 +284,8 @@ importers:
         specifier: ^20.11.13
         version: 20.11.19
       '@webgpu/types':
-        specifier: ^0.1.43
-        version: 0.1.43
+        specifier: ^0.1.51
+        version: 0.1.51
       rollup-plugin-typegpu:
         specifier: workspace:*
         version: link:../rollup-plugin
@@ -318,8 +318,8 @@ importers:
         specifier: ^2.11.5
         version: 2.11.5
       '@webgpu/types':
-        specifier: ^0.1.43
-        version: 0.1.43
+        specifier: ^0.1.51
+        version: 0.1.51
       moo:
         specifier: ^0.5.2
         version: 0.5.2
@@ -2785,6 +2785,10 @@ packages:
 
   /@webgpu/types@0.1.43:
     resolution: {integrity: sha512-HoP+d+m+Kuq8CsE63BZ3+BYBKAemrqbHUNrCalxrUju5XW+q/094Q3oeIa+2pTraEbO8ckJmGpibzyGT4OV4YQ==}
+    dev: true
+
+  /@webgpu/types@0.1.51:
+    resolution: {integrity: sha512-ktR3u64NPjwIViNCck+z9QeyN0iPkQCUOQ07ZCV1RzlkfP+olLTeEZ95O1QHS+v4w9vJeY9xj/uJuSphsHy5rQ==}
     dev: true
 
   /acorn-jsx@5.3.2(acorn@8.12.1):
