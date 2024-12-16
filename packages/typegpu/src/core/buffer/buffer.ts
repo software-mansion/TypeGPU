@@ -62,7 +62,7 @@ export function INTERNAL_createBuffer<TData extends AnyData>(
   typeSchema: TData,
   initialOrBuffer?: Infer<TData> | GPUBuffer,
 ): TgpuBuffer<TData> {
-  if (isLooseArray(typeSchema) || isLooseStruct(typeSchema)) {
+  if (!isWgslData(typeSchema)) {
     return new TgpuBufferImpl(group, typeSchema, initialOrBuffer, [
       'storage',
       'uniform',
@@ -94,10 +94,9 @@ export function isUsableAsVertex<T extends TgpuBuffer<AnyData>>(
 // --------------
 
 type RestrictVertexUsages<TData extends AnyData> = TData extends
-  | { readonly type: 'loose-array' }
-  | { readonly type: 'loose-struct' }
-  ? 'vertex'[]
-  : ('uniform' | 'storage' | 'vertex')[];
+  | { readonly type: WgslTypeLiteral }
+  ? ('uniform' | 'storage' | 'vertex')[]
+  : 'vertex'[];
 
 class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   public readonly resourceType = 'buffer';
