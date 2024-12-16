@@ -26,27 +26,21 @@ const MAX_GRID_SIZE = 1024;
 
 const randSeed = wgsl.var(d.vec2f);
 
-const setupRandomSeed = tgpu
-  .fn([d.vec2f])
-  .does((coord) => {
-    randSeed.value = coord;
-  })
-  .$uses({ randSeed });
+const setupRandomSeed = tgpu.fn([d.vec2f]).does((coord) => {
+  randSeed.value = coord;
+});
 
 /**
  * Yoinked from https://www.cg.tuwien.ac.at/research/publications/2023/PETER-2023-PSW/PETER-2023-PSW-.pdf
  * "Particle System in WebGPU" by Benedikt Peter
  */
-const rand01 = tgpu
-  .fn([], d.f32)
-  .does(() => {
-    const a = std.dot(randSeed.value, d.vec2f(23.14077926, 232.61690225));
-    const b = std.dot(randSeed.value, d.vec2f(54.47856553, 345.84153136));
-    randSeed.value.x = std.fract(std.cos(a) * 136.8168);
-    randSeed.value.y = std.fract(std.cos(b) * 534.7645);
-    return randSeed.value.y;
-  })
-  .$uses({ std, d, randSeed });
+const rand01 = tgpu.fn([], d.f32).does(() => {
+  const a = std.dot(randSeed.value, d.vec2f(23.14077926, 232.61690225));
+  const b = std.dot(randSeed.value, d.vec2f(54.47856553, 345.84153136));
+  randSeed.value.x = std.fract(std.cos(a) * 136.8168);
+  randSeed.value.y = std.fract(std.cos(b) * 534.7645);
+  return randSeed.value.y;
+});
 
 type GridData = typeof GridData;
 /**
@@ -98,43 +92,31 @@ const isValidCoord = tgpu
       x >= 0 &&
       y < gridSizeUniform.value &&
       y >= 0,
-  )
-  .$uses({ gridSizeUniform });
+  );
 
 const coordsToIndex = tgpu
   .fn([d.i32, d.i32], d.i32)
-  .does((x, y) => x + y * gridSizeUniform.value)
-  .$uses({ gridSizeUniform });
+  .does((x, y) => x + y * gridSizeUniform.value);
 
 const getCell = tgpu
   .fn([d.i32, d.i32], d.vec4f)
-  .does((x, y) => inputGridSlot.value[coordsToIndex(x, y)])
-  .$uses({ coordsToIndex, inputGridSlot });
+  .does((x, y) => inputGridSlot.value[coordsToIndex(x, y)]);
 
-const setCell = tgpu
-  .fn([d.i32, d.i32, d.vec4f])
-  .does((x, y, value) => {
-    const index = coordsToIndex(x, y);
-    outputGridSlot.value[index] = value;
-  })
-  .$uses({ coordsToIndex, outputGridSlot });
+const setCell = tgpu.fn([d.i32, d.i32, d.vec4f]).does((x, y, value) => {
+  const index = coordsToIndex(x, y);
+  outputGridSlot.value[index] = value;
+});
 
-const setVelocity = tgpu
-  .fn([d.i32, d.i32, d.vec2f])
-  .does((x, y, velocity) => {
-    const index = coordsToIndex(x, y);
-    outputGridSlot.value[index].x = velocity.x;
-    outputGridSlot.value[index].y = velocity.y;
-  })
-  .$uses({ coordsToIndex, outputGridSlot });
+const setVelocity = tgpu.fn([d.i32, d.i32, d.vec2f]).does((x, y, velocity) => {
+  const index = coordsToIndex(x, y);
+  outputGridSlot.value[index].x = velocity.x;
+  outputGridSlot.value[index].y = velocity.y;
+});
 
-const addDensity = tgpu
-  .fn([d.i32, d.i32, d.f32])
-  .does((x, y, density) => {
-    const index = coordsToIndex(x, y);
-    outputGridSlot.value[index].z = inputGridSlot.value[index].z + density;
-  })
-  .$uses({ coordsToIndex, outputGridSlot, inputGridSlot });
+const addDensity = tgpu.fn([d.i32, d.i32, d.f32]).does((x, y, density) => {
+  const index = coordsToIndex(x, y);
+  outputGridSlot.value[index].z = inputGridSlot.value[index].z + density;
+});
 
 const flowFromCell = wgsl.fn`
   (my_x: i32, my_y: i32, x: i32, y: i32) -> f32 {
