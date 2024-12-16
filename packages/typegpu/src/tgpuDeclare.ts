@@ -1,10 +1,5 @@
 import { code } from './tgpuCode';
-import type {
-  InlineResolve,
-  ResolutionCtx,
-  TgpuResolvable,
-  Wgsl,
-} from './types';
+import type { ResolutionCtx, TgpuResolvable, Wgsl } from './types';
 
 // ----------
 // Public API
@@ -14,7 +9,7 @@ export interface TgpuDeclare extends TgpuResolvable {}
 
 export function declare(
   strings: TemplateStringsArray,
-  ...params: (Wgsl | Wgsl[] | InlineResolve)[]
+  ...params: (Wgsl | Wgsl[])[]
 ): TgpuDeclare {
   return new TgpuDeclareImpl(code(strings, ...params));
 }

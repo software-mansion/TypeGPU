@@ -1,6 +1,7 @@
 import { isWgslData } from '../../data/wgslTypes';
 import { isNamable } from '../../namable';
-import { type ResolutionCtx, isResolvable } from '../../types';
+import { type ResolutionCtx, type Wgsl, isResolvable } from '../../types';
+import { isSlot } from '../slot/slotTypes';
 
 export type ExternalMap = Record<string, unknown>;
 
@@ -28,8 +29,8 @@ export function replaceExternalsInWgsl(
 ) {
   return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
     const resolvedExternal =
-      isResolvable(external) || isWgslData(external)
-        ? ctx.resolve(external)
+      isResolvable(external) || isWgslData(external) || isSlot(external)
+        ? ctx.resolve(external as Wgsl)
         : String(external);
 
     return acc.replaceAll(

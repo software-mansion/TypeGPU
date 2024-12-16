@@ -1,11 +1,8 @@
+import type { Eventual, SlotValuePair, TgpuSlot } from './core/slot/slotTypes';
 import type { TgpuNamable } from './namable';
 import {
-  type Eventual,
-  type InlineResolve,
   type ResolutionCtx,
-  type SlotValuePair,
   type TgpuResolvable,
-  type TgpuSlot,
   type Wgsl,
   isResolvable,
 } from './types';
@@ -22,9 +19,9 @@ export interface TgpuCode extends BoundTgpuCode, TgpuNamable {}
 
 export function code(
   strings: TemplateStringsArray,
-  ...params: (Wgsl | Wgsl[] | InlineResolve)[]
+  ...params: (Wgsl | Wgsl[])[]
 ): TgpuCode {
-  const segments: (Wgsl | InlineResolve)[] = strings.flatMap((string, idx) => {
+  const segments: Wgsl[] = strings.flatMap((string, idx) => {
     const param = params[idx];
     if (param === undefined) {
       return [string];
@@ -43,7 +40,7 @@ export function code(
 class TgpuCodeImpl implements TgpuCode {
   private _label: string | undefined;
 
-  constructor(public readonly segments: (Wgsl | InlineResolve)[]) {}
+  constructor(public readonly segments: Wgsl[]) {}
 
   get label() {
     return this._label;
@@ -60,9 +57,6 @@ class TgpuCodeImpl implements TgpuCode {
     for (const s of this.segments) {
       if (isResolvable(s)) {
         code += ctx.resolve(s);
-      } else if (typeof s === 'function') {
-        const result = s((eventual) => ctx.unwrap(eventual));
-        code += ctx.resolve(result);
       } else {
         code += String(s);
       }

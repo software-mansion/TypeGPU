@@ -1,5 +1,11 @@
 import type { Block } from 'tinyest';
 import { resolveData } from './core/resolve/resolveData';
+import {
+  type Eventual,
+  type SlotValuePair,
+  type TgpuSlot,
+  isSlot,
+} from './core/slot/slotTypes';
 import { type AnyWgslData, isWgslData } from './data/wgslTypes';
 import { MissingSlotValueError, ResolutionError } from './errors';
 import { onGPU } from './gpuMode';
@@ -14,16 +20,13 @@ import {
   bindGroupLayout,
 } from './tgpuBindGroupLayout';
 import type {
-  Eventual,
   FnToWgslOptions,
   ResolutionCtx,
   Resource,
-  SlotValuePair,
   TgpuResolvable,
-  TgpuSlot,
   Wgsl,
 } from './types';
-import { UnknownData, isSlot } from './types';
+import { UnknownData } from './types';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -383,9 +386,8 @@ class ResolutionCtxImpl implements ResolutionCtx {
         const slotValuePairs = [...instance.slotToValueMap.entries()];
 
         if (
-          slotValuePairs.every(
-            ([slot, expectedValue]) =>
-              this._itemStateStack.readSlot(slot) === expectedValue,
+          slotValuePairs.every(([slot, expectedValue]) =>
+            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue),
           )
         ) {
           return instance.result;
@@ -418,7 +420,12 @@ class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  resolve(item: Wgsl, slotValueOverrides: SlotValuePair<unknown>[] = []) {
+  resolve(
+    eventualItem: Wgsl,
+    slotValueOverrides: SlotValuePair<unknown>[] = [],
+  ) {
+    const item = this.unwrap(eventualItem);
+
     if (
       typeof item === 'string' ||
       typeof item === 'number' ||

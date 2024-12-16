@@ -44,6 +44,12 @@ export function resolve(options: TgpuResolveOptions): string {
     },
   };
 
+  Object.defineProperty(resolutionObj, 'toString', {
+    value() {
+      return '<root>';
+    },
+  });
+
   const { code } = resolveImpl(resolutionObj, {
     names:
       names === 'strict' ? new StrictNameRegistry() : new RandomNameRegistry(),

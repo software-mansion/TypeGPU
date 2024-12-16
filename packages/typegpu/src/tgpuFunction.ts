@@ -1,12 +1,9 @@
+import type { Eventual, SlotValuePair, TgpuSlot } from './core/slot/slotTypes';
 import type { TgpuNamable } from './namable';
 import { code } from './tgpuCode';
 import type {
-  Eventual,
-  InlineResolve,
   ResolutionCtx,
-  SlotValuePair,
   TgpuResolvable,
-  TgpuSlot,
   Wgsl,
 } from './types';
 
@@ -22,7 +19,7 @@ export type BoundTgpuFn = Omit<TgpuFn, '$name'>;
 
 export function fn(
   strings: TemplateStringsArray,
-  ...params: (Wgsl | InlineResolve)[]
+  ...params: Wgsl[]
 ): TgpuFn {
   return new TgpuFnImpl(code(strings, ...params));
 }
