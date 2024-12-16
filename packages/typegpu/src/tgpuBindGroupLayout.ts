@@ -24,11 +24,17 @@ import {
   type TgpuReadonlyTexture,
   type TgpuSampledTexture,
   type TgpuTexture,
+  type TgpuWriteonlyTexture,
   isTexture,
 } from './core/texture/texture';
-import type { StorageTextureTexelFormat } from './core/texture/textureFormats';
+import type {
+  ChannelTypeToLegalFormats,
+  StorageTextureTexelFormat,
+} from './core/texture/textureFormats';
+import type { TextureProps } from './core/texture/textureProps';
 import {
   NotSampledError,
+  type Sampled,
   isUsableAsSampled,
 } from './core/texture/usageExtension';
 import type { AnyData } from './data';
@@ -120,11 +126,7 @@ export type TgpuLayoutEntry =
 
 type UnwrapRuntimeConstructorInner<
   T extends BaseWgslData | ((_: number) => BaseWgslData),
-> = T extends BaseWgslData
-  ? T
-  : T extends (_: number) => infer Return
-    ? Return
-    : never;
+> = T extends (_: number) => BaseWgslData ? ReturnType<T> : T;
 
 export type UnwrapRuntimeConstructor<
   T extends AnyData | ((_: number) => AnyData),
@@ -195,6 +197,66 @@ type StorageUsageForEntry<T extends TgpuLayoutStorage> = T extends {
             | TgpuBufferMutable<UnwrapRuntimeConstructor<T['storage']>>
   : TgpuBufferReadonly<UnwrapRuntimeConstructor<T['storage']>>; // <- access is undefined, so default to 'readonly';
 
+type StorageTextureUsageForEntry<T extends TgpuLayoutStorageTexture> =
+  T extends {
+    access?: infer Access;
+  }
+    ? 'mutable' extends Access
+      ? 'readonly' extends Access
+        ? 'writeonly' extends Access
+          ? TgpuMutableTexture | TgpuReadonlyTexture | TgpuWriteonlyTexture
+          : TgpuMutableTexture | TgpuReadonlyTexture
+        : 'writeonly' extends Access
+          ? TgpuMutableTexture | TgpuWriteonlyTexture
+          : TgpuMutableTexture
+      : 'readonly' extends Access
+        ? 'writeonly' extends Access
+          ? TgpuReadonlyTexture | TgpuWriteonlyTexture
+          : TgpuReadonlyTexture
+        : 'writeonly' extends Access
+          ? TgpuWriteonlyTexture
+          : TgpuReadonlyTexture
+    : TgpuReadonlyTexture;
+
+type SampleTypeToChannelType = {
+  float: 'f32';
+  'unfilterable-float': 'f32';
+  depth: 'f32';
+  sint: 'i32';
+  uint: 'u32';
+};
+
+type ViewDimensionToDimension = {
+  '1d': '1d';
+  '2d': '2d';
+  '2d-array': '2d';
+  '3d': '3d';
+  cube: '2d';
+  'cube-array': '2d';
+};
+
+type GetDimension<T extends GPUTextureViewDimension | undefined> =
+  T extends keyof ViewDimensionToDimension
+    ? ViewDimensionToDimension[T]
+    : undefined;
+
+type GetTextureLayoutToEntry<T extends TgpuLayoutTexture> = TgpuTexture<
+  TextureProps & {
+    format: ChannelTypeToLegalFormats[SampleTypeToChannelType[T['texture']]];
+    dimension?: GetDimension<T['viewDimension']>;
+  }
+> &
+  Sampled;
+
+type GetStorageTextureLayoutToEntry<T extends TgpuLayoutStorageTexture> =
+  TgpuTexture<
+    TextureProps & {
+      format: T['storageTexture'];
+      dimension?: GetDimension<T['viewDimension']>;
+    }
+  > &
+    Storage;
+
 export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
   T extends TgpuLayoutUniform
     ? (TgpuBuffer<UnwrapRuntimeConstructor<T['uniform']>> & Uniform) | GPUBuffer
@@ -205,11 +267,9 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
       : T extends TgpuLayoutSampler
         ? GPUSampler
         : T extends TgpuLayoutTexture
-          ? // TODO: Allow sampled usages here
-            GPUTextureView | TgpuTexture
+          ? GPUTextureView | GetTextureLayoutToEntry<T>
           : T extends TgpuLayoutStorageTexture
-            ? // TODO: Allow storage usages here
-              GPUTextureView | TgpuTexture
+            ? GPUTextureView | GetStorageTextureLayoutToEntry<T>
             : T extends TgpuLayoutExternalTexture
               ? GPUExternalTexture
               : never;
@@ -221,7 +281,11 @@ export type BindLayoutEntry<T extends TgpuLayoutEntry | null> =
       ? StorageUsageForEntry<T>
       : T extends TgpuLayoutSampler
         ? TgpuSampler
-        : never;
+        : T extends TgpuLayoutTexture
+          ? TgpuSampledTexture
+          : T extends TgpuLayoutStorageTexture
+            ? StorageTextureUsageForEntry<T>
+            : never;
 
 export type TgpuBindGroup<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<

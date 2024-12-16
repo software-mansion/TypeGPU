@@ -104,6 +104,19 @@ export const texelFormatToChannelType = {
 
 export type TexelFormatToChannelType = typeof texelFormatToChannelType;
 
+type TexelFormatToStringChannels = {
+  [Key in keyof TexelFormatToChannelType]: TexelFormatToChannelType[Key]['type'];
+};
+type KeysWithValue<T extends Record<string, unknown>, TValue> = keyof {
+  [Key in keyof T as T[Key] extends TValue ? Key : never]: Key;
+};
+export type ChannelTypeToLegalFormats = {
+  [Key in TexelFormatToChannelType[keyof TexelFormatToChannelType]['type']]: KeysWithValue<
+    TexelFormatToStringChannels,
+    Key
+  >;
+};
+
 /**
  * https://www.w3.org/TR/WGSL/#storage-texel-formats
  */
