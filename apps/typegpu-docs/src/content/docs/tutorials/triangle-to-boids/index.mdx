@@ -859,7 +859,7 @@ A slot in TypeGPU is similar to a template. We can define typed slots and use th
 As an exercise, let's use a slot to make our triangle rotations invertible.
 
 ```ts
-const rotationDirection = wgsl.slot<number>();
+const rotationDirection = tgpu.slot<number>();
 ```
 
 Now that we have our slot, we can use it in our WGSL code.
@@ -965,7 +965,7 @@ We will replace the rotation direction slot with two slots: one for reading from
 
 ```ts
 const readSlot =
-  wgsl.slot<
+  tgpu.slot<
     WgslBufferUsage<
       WgslData<
         {
@@ -978,7 +978,7 @@ const readSlot =
     >
   >();
 const writeSlot =
-  wgsl.slot<
+  tgpu.slot<
     WgslBufferUsage<
       WgslData<
         {
@@ -1007,8 +1007,8 @@ const writeSlot =
   ```
   Now we can simplify the slot definitions.
   ```ts
-  const readSlot = wgsl.slot<WgslBufferUsage<TrianglePosData, 'readonly'>>();
-  const writeSlot = wgsl.slot<WgslBufferUsage<TrianglePosData, 'mutable'>>();
+  const readSlot = tgpu.slot<TgpuBufferReadonly<TrianglePosData>>();
+  const writeSlot = tgpu.slot<TgpuBufferMutable<TrianglePosData>>();
   ```
 </Aside>
 

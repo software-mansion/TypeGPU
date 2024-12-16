@@ -22,7 +22,7 @@ const resolutionRootMock = {
   },
 } as TgpuResolvable;
 
-describe('wgsl.slot', () => {
+describe('tgpu.slot', () => {
   it('resolves to default value if no value provided', () => {
     const colorSlot = tgpu.slot(RED).$name('color'); // red by default
 

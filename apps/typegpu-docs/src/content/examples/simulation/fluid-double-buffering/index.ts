@@ -65,10 +65,10 @@ const gridSizeUniform = asUniform(gridSizeBuffer);
 const gridAlphaBuffer = root.createBuffer(GridData).$usage('storage');
 const gridBetaBuffer = root.createBuffer(GridData).$usage('storage');
 
-const inputGridSlot = wgsl.slot<
+const inputGridSlot = tgpu.slot<
   TgpuBufferReadonly<GridData> | TgpuBufferMutable<GridData>
 >();
-const outputGridSlot = wgsl.slot<TgpuBufferMutable<GridData>>();
+const outputGridSlot = tgpu.slot<TgpuBufferMutable<GridData>>();
 
 const MAX_OBSTACLES = 4;
 
