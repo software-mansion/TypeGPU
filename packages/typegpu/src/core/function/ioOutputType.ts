@@ -1,19 +1,33 @@
-import { isBuiltin, struct } from '../../data';
-import { type Decorate, attribute, location } from '../../data/attributes';
+import { type TgpuStruct, isBuiltin, struct } from '../../data';
+import {
+  type Decorate,
+  type HasCustomLocation,
+  type IsBuiltin,
+  attribute,
+  location,
+} from '../../data/attributes';
 import { getCustomLocation, isData } from '../../data/dataTypes';
-import type { BaseWgslData, Location, WgslStruct } from '../../data/wgslTypes';
+import type { BaseWgslData, Location } from '../../data/wgslTypes';
 import type { FnCore } from './fnCore';
-import type { IOData, IOLayout, Implementation } from './fnTypes';
+import type { IOData, IOLayout, IORecord, Implementation } from './fnTypes';
+
+export type WithLocations<T extends IORecord> = {
+  [Key in keyof T]: IsBuiltin<T[Key]> extends true
+    ? T[Key]
+    : HasCustomLocation<T[Key]> extends true
+      ? T[Key]
+      : Decorate<T[Key], Location<number>>;
+};
 
 export type IOLayoutToOutputSchema<T extends IOLayout> = T extends BaseWgslData
   ? Decorate<T, Location<0>>
-  : T extends Record<string, BaseWgslData>
-    ? WgslStruct<T>
+  : T extends IORecord
+    ? TgpuStruct<WithLocations<T>>
     : never;
 
-export function withLocations(
-  members: Record<string, BaseWgslData>,
-): Record<string, BaseWgslData> {
+export function withLocations<T extends IOData>(
+  members: IORecord<T>,
+): WithLocations<IORecord<T>> {
   let nextLocation = 0;
 
   return Object.fromEntries(
@@ -43,9 +57,11 @@ export function createOutputType<T extends IOData>(
   implementation: Implementation,
   returnType: IOLayout<T>,
 ) {
-  const Output = isData(returnType)
-    ? location(0, returnType)
-    : struct(withLocations(returnType) as Record<string, T>);
+  const Output: IOLayoutToOutputSchema<IOLayout<T>> = (
+    isData(returnType)
+      ? location(0, returnType)
+      : struct(withLocations(returnType) as Record<string, T>)
+  ) as IOLayoutToOutputSchema<IOLayout<T>>;
 
   if (typeof implementation === 'string') {
     const outputName = implementation

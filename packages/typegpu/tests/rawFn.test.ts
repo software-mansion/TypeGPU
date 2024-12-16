@@ -209,23 +209,15 @@ struct fragment_Output {
   });
 
   it("does not add redundant struct definition when there's no struct output", () => {
-    const vertexFunction = tgpu
-      .vertexFn({ vertexIndex: builtin.vertexIndex }, { out: builtin.position })
-      .does(/* wgsl */ `(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4f {
-    let pos = array<vec2f, 6>(
-      vec2<f32>( 1,  1),
-      vec2<f32>( 1, -1),
-      vec2<f32>(-1, -1),
-      vec2<f32>( 1,  1),
-      vec2<f32>(-1, -1),
-      vec2<f32>(-1,  1)
-    );
-    return vec4f(pos[vertexIndex], 0, 1);
-  }`)
-      .$name('vertex_fn');
+    const fragmentFunction = tgpu
+      .fragmentFn({ position: builtin.position }, vec4f)
+      .does(/* wgsl */ `(@builtin(position) position: vec4f) -> @location(0) vec4f {
+        return vec4f(1.0f);
+      }`)
+      .$name('fragment');
 
     expect(
-      tgpu.resolve({ input: [vertexFunction], names: 'strict' }),
+      tgpu.resolve({ input: [fragmentFunction], names: 'strict' }),
     ).not.toContain('struct');
   });
 });
