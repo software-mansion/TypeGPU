@@ -1,7 +1,9 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
+import { isWgslData } from '../../data';
 import { readData, writeData } from '../../data/dataIO';
 import type { AnyData } from '../../data/dataTypes';
 import { sizeOf } from '../../data/sizeOf';
+import type { WgslTypeLiteral } from '../../data/wgslTypes';
 import type { Storage } from '../../extension';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
@@ -42,7 +44,7 @@ export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
   readonly buffer: GPUBuffer;
   readonly destroyed: boolean;
 
-  $usage<T extends ('uniform' | 'storage' | 'vertex')[]>(
+  $usage<T extends RestrictVertexUsages<TData>>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>>;
   $addFlags(flags: GPUBufferUsageFlags): this;
@@ -58,6 +60,12 @@ export function INTERNAL_createBuffer<TData extends AnyData>(
   typeSchema: TData,
   initialOrBuffer?: Infer<TData> | GPUBuffer,
 ): TgpuBuffer<TData> {
+  if (!isWgslData(typeSchema)) {
+    return new TgpuBufferImpl(group, typeSchema, initialOrBuffer, [
+      'storage',
+      'uniform',
+    ]);
+  }
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
 }
 
@@ -83,6 +91,12 @@ export function isUsableAsVertex<T extends TgpuBuffer<AnyData>>(
 // Implementation
 // --------------
 
+type RestrictVertexUsages<TData extends AnyData> = TData extends {
+  readonly type: WgslTypeLiteral;
+}
+  ? ('uniform' | 'storage' | 'vertex')[]
+  : 'vertex'[];
+
 class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   public readonly resourceType = 'buffer';
   public flags: GPUBufferUsageFlags =
@@ -102,6 +116,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     private readonly _group: ExperimentalTgpuRoot,
     public readonly dataType: TData,
     public readonly initialOrBuffer?: Infer<TData> | GPUBuffer | undefined,
+    private readonly _disallowedUsages?: ('uniform' | 'storage' | 'vertex')[],
   ) {
     if (isGPUBuffer(initialOrBuffer)) {
       this._ownBuffer = false;
@@ -153,10 +168,15 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     return this;
   }
 
-  $usage<T extends ('uniform' | 'storage' | 'vertex')[]>(
+  $usage<T extends RestrictVertexUsages<TData>>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>> {
     for (const usage of usages) {
+      if (this._disallowedUsages?.includes(usage)) {
+        throw new Error(
+          `Buffer of type ${this.dataType} cannot be used as ${usage}`,
+        );
+      }
       this.flags |= usage === 'uniform' ? GPUBufferUsage.UNIFORM : 0;
       this.flags |= usage === 'storage' ? GPUBufferUsage.STORAGE : 0;
       this.flags |= usage === 'vertex' ? GPUBufferUsage.VERTEX : 0;

@@ -5,7 +5,7 @@ import { asUniform } from '../src/experimental';
 import type { Infer } from '../src/shared/repr';
 import { it } from './utils/extendedIt';
 
-describe('TgpuBufferReadonly', () => {
+describe('TgpuBufferUniform', () => {
   it('represents a `number` value', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('uniform');
     const uniform = asUniform(buffer);
