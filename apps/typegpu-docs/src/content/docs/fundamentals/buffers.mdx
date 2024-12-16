@@ -174,7 +174,7 @@ If you passed your own buffer to the `root.createBuffer` function, you need to e
 :::
 
 There's also an option to copy value from another typed buffer using the `.copyFrom(buffer)` method, 
-if the other buffer has a matching data schema.
+as long as both buffers have a matching data schema.
 
 ```ts
 const backupParticleBuffer = root.createBuffer(Particle);
