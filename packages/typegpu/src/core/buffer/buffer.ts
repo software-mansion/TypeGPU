@@ -1,11 +1,9 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
+import { isWgslData } from '../../data';
 import { readData, writeData } from '../../data/dataIO';
-import {
-  type AnyData,
-  isLooseArray,
-  isLooseStruct,
-} from '../../data/dataTypes';
+import type { AnyData } from '../../data/dataTypes';
 import { sizeOf } from '../../data/sizeOf';
+import type { WgslTypeLiteral } from '../../data/wgslTypes';
 import type { Storage } from '../../extension';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
@@ -93,8 +91,9 @@ export function isUsableAsVertex<T extends TgpuBuffer<AnyData>>(
 // Implementation
 // --------------
 
-type RestrictVertexUsages<TData extends AnyData> = TData extends
-  | { readonly type: WgslTypeLiteral }
+type RestrictVertexUsages<TData extends AnyData> = TData extends {
+  readonly type: WgslTypeLiteral;
+}
   ? ('uniform' | 'storage' | 'vertex')[]
   : 'vertex'[];
 
