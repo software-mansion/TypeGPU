@@ -232,6 +232,40 @@ importers:
         specifier: ^2.1.5
         version: 2.1.5(@types/node@20.11.19)
 
+  packages/tgpu-wgsl-parser:
+    dependencies:
+      nearley:
+        specifier: ^2.20.1
+        version: 2.20.1
+    devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
+      '@types/moo':
+        specifier: ^0.5.9
+        version: 0.5.9
+      '@types/nearley':
+        specifier: ^2.11.5
+        version: 2.11.5
+      '@webgpu/types':
+        specifier: ^0.1.51
+        version: 0.1.51
+      moo:
+        specifier: ^0.5.2
+        version: 0.5.2
+      tsup:
+        specifier: ^8.0.2
+        version: 8.0.2(typescript@5.5.4)
+      tsx:
+        specifier: ^4.16.2
+        version: 4.16.2
+      typescript:
+        specifier: ^5.3.3
+        version: 5.5.4
+      vitest:
+        specifier: ^2.1.5
+        version: 2.1.5(@types/node@20.11.19)
+
   packages/tinyest:
     devDependencies:
       '@typegpu/tgpu-dev-cli':
@@ -274,9 +308,6 @@ importers:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
         version: link:../tgpu-dev-cli
-      '@typegpu/wgsl-parser':
-        specifier: workspace:*
-        version: link:../typegpu-wgsl-parser
       '@types/node':
         specifier: ^20.11.13
         version: 20.11.19
@@ -286,52 +317,18 @@ importers:
       rollup-plugin-typegpu:
         specifier: workspace:*
         version: link:../rollup-plugin
+      tgpu-wgsl-parser:
+        specifier: workspace:*
+        version: link:../tgpu-wgsl-parser
       tsup:
         specifier: ^8.0.2
         version: 8.0.2(typescript@5.5.4)
-      typegpu:
-        specifier: workspace:*
-        version: 'link:'
       typescript:
         specifier: ^5.3.3
         version: 5.5.4
       wgpu-matrix:
         specifier: ^3.3.0
         version: 3.3.0
-
-  packages/typegpu-wgsl-parser:
-    dependencies:
-      nearley:
-        specifier: ^2.20.1
-        version: 2.20.1
-    devDependencies:
-      '@typegpu/tgpu-dev-cli':
-        specifier: workspace:*
-        version: link:../tgpu-dev-cli
-      '@types/moo':
-        specifier: ^0.5.9
-        version: 0.5.9
-      '@types/nearley':
-        specifier: ^2.11.5
-        version: 2.11.5
-      '@webgpu/types':
-        specifier: ^0.1.51
-        version: 0.1.51
-      moo:
-        specifier: ^0.5.2
-        version: 0.5.2
-      tsup:
-        specifier: ^8.0.2
-        version: 8.0.2(typescript@5.5.4)
-      tsx:
-        specifier: ^4.16.2
-        version: 4.16.2
-      typescript:
-        specifier: ^5.3.3
-        version: 5.5.4
-      vitest:
-        specifier: ^2.1.5
-        version: 2.1.5(@types/node@20.11.19)
 
 packages:
 
