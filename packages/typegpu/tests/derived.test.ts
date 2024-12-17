@@ -1,8 +1,9 @@
+import { parse } from '@typegpu/wgsl-parser';
 import { describe, expect, vi } from 'vitest';
 import * as d from '../src/data';
 import tgpu from '../src/experimental';
 import { it } from './utils/extendedIt';
-import { parseWGSL } from './utils/parseWGSL';
+import { parseResolved } from './utils/parseResolved';
 
 describe('TgpuDerived', () => {
   it('memoizes results of transitive "derived"', () => {
@@ -21,10 +22,8 @@ describe('TgpuDerived', () => {
       })
       .$name('main');
 
-    const actual = tgpu.resolve({ input: main, names: 'strict' });
-
-    expect(parseWGSL(actual)).toEqual(
-      parseWGSL(`
+    expect(parseResolved(main)).toEqual(
+      parse(`
       fn main() -> f32 {
         return 3 + 4;
       }
@@ -58,10 +57,8 @@ describe('TgpuDerived', () => {
       })
       .$name('main');
 
-    const actual = tgpu.resolve({ input: main, names: 'strict' });
-
-    expect(parseWGSL(actual)).toEqual(
-      parseWGSL(`
+    expect(parseResolved(main)).toEqual(
+      parse(`
       fn getDouble() -> f32 {
         return 4;
       }
@@ -108,10 +105,8 @@ describe('TgpuDerived', () => {
       .with(gridSizeSlot, 1)
       .$name('main');
 
-    const actual = tgpu.resolve({ input: main, names: 'strict' });
-
-    expect(parseWGSL(actual)).toEqual(
-      parseWGSL(/* wgsl */ `
+    expect(parseResolved(main)).toEqual(
+      parse(/* wgsl */ `
       fn fill(arr: array<f32, 1>) {}
       fn fill_1(arr: array<f32, 2>) {}
       fn fill_2(arr: array<f32, 3>) {}
