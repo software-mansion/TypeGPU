@@ -6,7 +6,13 @@ import {
   addElement,
   onFrame,
 } from '@typegpu/example-toolkit';
-import { type WgslBufferUsage, builtin, createRuntime, wgsl } from 'typegpu';
+import {
+  type TgpuBufferMutable,
+  type TgpuBufferReadonly,
+  builtin,
+  createRuntime,
+  wgsl,
+} from 'typegpu';
 import { arrayOf, f32, struct, vec2f } from 'typegpu/data';
 
 const runtime = await createRuntime();
@@ -53,8 +59,8 @@ const pairs = [
   [trianglePosBuffers[1].asReadonly(), trianglePosBuffers[0].asMutable()],
 ];
 
-const readSlot = wgsl.slot<WgslBufferUsage<TrianglePosData, 'readonly'>>();
-const writeSlot = wgsl.slot<WgslBufferUsage<TrianglePosData, 'mutable'>>();
+const readSlot = tgpu.slot<TgpuBufferReadonly<TrianglePosData>>();
+const writeSlot = tgpu.slot<TgpuBufferMutable<TrianglePosData>>();
 
 function randomizeTriangles() {
   const positions = [];

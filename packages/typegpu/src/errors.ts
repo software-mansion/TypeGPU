@@ -1,7 +1,8 @@
 import type { TgpuBuffer } from './core/buffer/buffer';
+import type { TgpuSlot } from './core/slot/slotTypes';
 import type { AnyData } from './data/dataTypes';
 import type { AnyWgslData } from './data/wgslTypes';
-import type { TgpuResolvable, TgpuSlot } from './types';
+import type { TgpuResolvable } from './types';
 
 const prefix = 'Invariant failed';
 
@@ -44,7 +45,7 @@ export function invariant(
 export class ResolutionError extends Error {
   constructor(
     public readonly cause: unknown,
-    public readonly trace: (TgpuResolvable | AnyWgslData)[],
+    public readonly trace: (TgpuResolvable | TgpuSlot<unknown> | AnyWgslData)[],
   ) {
     let entries = trace.map((ancestor) => `- ${ancestor}`);
 

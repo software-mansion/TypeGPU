@@ -65,10 +65,10 @@ const gridSizeUniform = asUniform(gridSizeBuffer);
 const gridAlphaBuffer = root.createBuffer(GridData).$usage('storage');
 const gridBetaBuffer = root.createBuffer(GridData).$usage('storage');
 
-const inputGridSlot = wgsl.slot<
+const inputGridSlot = tgpu.slot<
   TgpuBufferReadonly<GridData> | TgpuBufferMutable<GridData>
 >();
-const outputGridSlot = wgsl.slot<TgpuBufferMutable<GridData>>();
+const outputGridSlot = tgpu.slot<TgpuBufferMutable<GridData>>();
 
 const MAX_OBSTACLES = 4;
 
@@ -118,16 +118,17 @@ const addDensity = tgpu.fn([d.i32, d.i32, d.f32]).does((x, y, density) => {
   outputGridSlot.value[index].z = inputGridSlot.value[index].z + density;
 });
 
-const flowFromCell = wgsl.fn`
-  (my_x: i32, my_y: i32, x: i32, y: i32) -> f32 {
-    if (!${isValidCoord}(x, y)) {
+const flowFromCell = tgpu
+  .fn([d.i32, d.i32, d.i32, d.i32], d.f32)
+  .does(/* wgsl */ `(my_x: i32, my_y: i32, x: i32, y: i32) -> f32 {
+    if (!isValidCoord(x, y)) {
       return 0.;
     }
 
-    let src = ${getCell}(x, y);
+    let src = getCell(x, y);
 
     let dest_pos = vec2i(vec2f(f32(x), f32(y)) + src.xy);
-    let dest = ${getCell}(dest_pos.x, dest_pos.y);
+    let dest = getCell(dest_pos.x, dest_pos.y);
     let diff = src.z - dest.z;
     var out_flow = min(max(0.01, 0.3 + diff * 0.1), src.z);
 
@@ -145,16 +146,17 @@ const flowFromCell = wgsl.fn`
     }
 
     return 0.;
-  }
-`.$name('flow_from_cell');
+  }`)
+  .$uses({ isValidCoord, getCell });
 
 const timeBuffer = root.createBuffer(d.f32).$usage('uniform');
 const timeUniform = asUniform(timeBuffer);
 
-const isInsideObstacle = wgsl.fn`
-  (x: i32, y: i32) -> bool {
-    for (var obs_idx = 0; obs_idx < ${MAX_OBSTACLES}; obs_idx += 1) {
-      let obs = ${obstaclesReadonly}[obs_idx];
+const isInsideObstacle = tgpu
+  .fn([d.i32, d.i32], d.bool)
+  .does(/* wgsl */ `(x: i32, y: i32) -> bool {
+    for (var obs_idx = 0; obs_idx < MAX_OBSTACLES; obs_idx += 1) {
+      let obs = obstaclesReadonly[obs_idx];
 
       if (obs.enabled == 0) {
         continue;
@@ -171,28 +173,29 @@ const isInsideObstacle = wgsl.fn`
     }
 
     return false;
-  }
-`.$name('is_inside_obstacle');
+  }`)
+  .$uses({ MAX_OBSTACLES, obstaclesReadonly });
 
-const isValidFlowOut = wgsl.fn`
-  (x: i32, y: i32) -> bool {
-    if (!${isValidCoord}(x, y)) {
+const isValidFlowOut = tgpu
+  .fn([d.i32, d.i32], d.bool)
+  .does(/* wgsl */ `(x: i32, y: i32) -> bool {
+    if (!isValidCoord(x, y)) {
       return false;
     }
 
-    if (${isInsideObstacle}(x, y)) {
+    if (isInsideObstacle(x, y)) {
       return false;
     }
 
-    let cell = ${getCell}(x, y);
+    let cell = getCell(x, y);
 
     return true;
-  }
-`;
+  }`)
+  .$uses({ isValidCoord, isInsideObstacle, getCell });
 
 const computeVelocity = tgpu
   .fn([d.i32, d.i32], d.vec2f)
-  .does(`(x: i32, y: i32) -> vec2f {
+  .does(/* wgsl */ `(x: i32, y: i32) -> vec2f {
     let gravity_cost = 0.5;
 
     let neighbor_offsets = array<vec2i, 4>(
@@ -236,13 +239,12 @@ const computeVelocity = tgpu
 
     let least_cost_dir = dir_choices[u32(rand01() * f32(dir_choice_count))];
     return least_cost_dir;
-  }
-`)
+  }`)
   .$uses({ getCell, isValidFlowOut, isValidCoord, rand01 });
 
 const mainInitWorld = tgpu
   .computeFn([d.builtin.globalInvocationId], { workgroupSize: [1] })
-  .does(`(@builtin(global_invocation_id) gid: vec3u) {
+  .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
     let x = i32(gid.x);
     let y = i32(gid.y);
     let index = coordsToIndex(x, y);
@@ -266,7 +268,7 @@ const mainInitWorld = tgpu
 
 const mainMoveObstacles = tgpu
   .computeFn([], { workgroupSize: [1] })
-  .does(`() {
+  .does(/* wgsl */ `() {
     for (var obs_idx = 0; obs_idx < MAX_OBSTACLES; obs_idx += 1) {
       let obs = prevObstacleReadonly[obs_idx];
       let next_obs = obstaclesReadonly[obs_idx];
@@ -388,24 +390,27 @@ const sourceParamsBuffer = root
   )
   .$usage('uniform');
 
-const getMinimumInFlow = wgsl.fn`
-  (x: i32, y: i32) -> f32 {
-    let source_params = ${asUniform(sourceParamsBuffer)};
-    let grid_size_f = f32(${gridSizeUniform});
-    let source_radius = max(1., source_params.radius * grid_size_f);
-    let source_pos = vec2f(source_params.center.x * grid_size_f, source_params.center.y * grid_size_f);
+const getMinimumInFlow = tgpu
+  .fn([d.i32, d.i32], d.f32)
+  .does(/* wgsl */ `(x: i32, y: i32) -> f32 {
+    let grid_size_f = f32(gridSize);
+    let source_radius = max(1., sourceParams.radius * grid_size_f);
+    let source_pos = vec2f(sourceParams.center.x * grid_size_f, sourceParams.center.y * grid_size_f);
 
     if (length(vec2f(f32(x), f32(y)) - source_pos) < source_radius) {
-      return source_params.intensity;
+      return sourceParams.intensity;
     }
 
     return 0.;
-  }
-`;
+  }`)
+  .$uses({
+    sourceParams: asUniform(sourceParamsBuffer),
+    gridSize: gridSizeUniform,
+  });
 
 const mainCompute = tgpu
   .computeFn([d.builtin.globalInvocationId], { workgroupSize: [8, 8] })
-  .does(`(@builtin(global_invocation_id) gid: vec3u) {
+  .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
     let x = i32(gid.x);
     let y = i32(gid.y);
     let index = coordsToIndex(x, y);
@@ -504,7 +509,7 @@ const vertexMain = tgpu
 
 const fragmentMain = tgpu
   .fragmentFn({ uv: d.vec2f }, d.vec4f)
-  .does(`(@location(0) uv: vec2f) -> @location(0) vec4f {
+  .does(/* wgsl */ `(@location(0) uv: vec2f) -> @location(0) vec4f {
     let x = i32(uv.x * f32(gridSizeUniform));
     let y = i32(uv.y * f32(gridSizeUniform));
 

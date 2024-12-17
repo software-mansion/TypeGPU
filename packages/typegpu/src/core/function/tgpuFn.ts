@@ -4,13 +4,8 @@ import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import { valueList } from '../../resolutionUtils';
 import { code } from '../../tgpuCode';
-import type {
-  Eventual,
-  ResolutionCtx,
-  TgpuResolvable,
-  TgpuSlot,
-  Wgsl,
-} from '../../types';
+import type { ResolutionCtx, TgpuResolvable, Wgsl } from '../../types';
+import type { Eventual, TgpuSlot } from '../slot/slotTypes';
 import { createFnCore } from './fnCore';
 import type { Implementation, InferArgs, InferReturn } from './fnTypes';
 
@@ -150,6 +145,10 @@ function createFn<
     get: () => core.label,
   });
 
+  Object.defineProperty(fn, 'toString', {
+    value: () => `fn:${core.label ?? '<unnamed>'}`,
+  });
+
   return fn;
 }
 
@@ -194,6 +193,12 @@ function createBoundFunction<
   // Making the label available as a readonly property.
   Object.defineProperty(fn, 'label', {
     get: () => innerFn.label,
+  });
+
+  Object.defineProperty(fn, 'toString', {
+    value() {
+      return `fn:${innerFn.label ?? '<unnamed>'}[${slot.label ?? '<unnamed>'}=${slotValue}]`;
+    },
   });
 
   return fn;

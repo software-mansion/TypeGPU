@@ -15,6 +15,7 @@ import {
   initFromDevice,
 } from '../core/root/init';
 import type { ExperimentalTgpuRoot } from '../core/root/rootTypes';
+import { slot } from '../core/slot/slot';
 import { vertexLayout } from '../core/vertexLayout/vertexLayout';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
 
@@ -33,6 +34,7 @@ export const tgpu = {
   computeFn,
   vertexLayout,
   bindGroupLayout,
+  slot,
 
   init: init as (
     options?: InitOptions | undefined,
@@ -75,6 +77,7 @@ export {
   isUsableAsUniform,
   isUsableAsVertex,
 } from '../core/buffer/buffer';
+export { isSlot } from '../core/slot/slotTypes';
 export {
   sampler,
   comparisonSampler,
@@ -107,6 +110,7 @@ export type {
   TgpuBufferReadonly,
   TgpuBufferMutable,
 } from '../core/buffer/public';
+export type { Eventual, TgpuSlot } from '../core/slot/slotTypes';
 export type {
   TgpuTexture,
   TgpuReadonlyTexture,

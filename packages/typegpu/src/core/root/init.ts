@@ -21,7 +21,6 @@ import {
   isBindGroup,
   isBindGroupLayout,
 } from '../../tgpuBindGroupLayout';
-import type { TgpuSlot } from '../../types';
 import {
   INTERNAL_createBuffer,
   type TgpuBuffer,
@@ -43,6 +42,7 @@ import {
   type RenderPipelineCoreOptions,
   type TgpuRenderPipeline,
 } from '../pipeline/renderPipeline';
+import type { TgpuSlot } from '../slot/slotTypes';
 import {
   type INTERNAL_TgpuSampledTexture,
   type INTERNAL_TgpuStorageTexture,
