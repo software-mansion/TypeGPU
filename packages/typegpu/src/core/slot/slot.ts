@@ -1,4 +1,4 @@
-import { inGPUMode } from '../../gpuMode';
+import { getResolutionCtx } from '../../gpuMode';
 import type { Infer } from '../../shared/repr';
 import type { TgpuSlot } from './slotTypes';
 
@@ -34,9 +34,11 @@ class TgpuSlotImpl<T> implements TgpuSlot<T> {
   }
 
   get value(): Infer<T> {
-    if (!inGPUMode()) {
-      throw new Error(`Cannot access tgpu.slot's value directly in JS.`);
+    const ctx = getResolutionCtx();
+    if (!ctx) {
+      throw new Error(`Cannot access tgpu.slot's value outside of resolution.`);
     }
-    return this as unknown as Infer<T>;
+
+    return ctx.unwrap(this) as Infer<T>;
   }
 }

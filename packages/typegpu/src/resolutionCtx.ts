@@ -8,7 +8,7 @@ import {
 } from './core/slot/slotTypes';
 import { type AnyWgslData, isWgslData } from './data/wgslTypes';
 import { MissingSlotValueError, ResolutionError } from './errors';
-import { onGPU } from './gpuMode';
+import { provideCtx } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
 import { naturalsExcept } from './shared/generators';
@@ -430,7 +430,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
   resolve(
     eventualItem: Wgsl,
     slotValueOverrides: SlotValuePair<unknown>[] = [],
-  ) {
+  ): string {
     const item = this.unwrap(eventualItem);
 
     if (
@@ -449,7 +449,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
 
     try {
       if (this._itemStateStack.itemDepth === 0) {
-        const result = onGPU(() => this._getOrInstantiate(item));
+        const result = provideCtx(this, () => this._getOrInstantiate(item));
         return `${[...this._declarations].join('\n\n')}${result}`;
       }
 

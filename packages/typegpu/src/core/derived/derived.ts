@@ -15,5 +15,10 @@ export function derived<T>(compute: () => T) {
 class TgpuDerivedImpl<T> implements TgpuDerived<T> {
   readonly resourceType = 'derived';
 
-  constructor(public readonly compute: () => T) {}
+  constructor(private readonly _compute: () => T) {}
+
+  compute(): T {
+    // TODO: Cache
+    return this._compute();
+  }
 }
