@@ -4,6 +4,8 @@ import {
   type TgpuArray,
   type U32,
   type Vec3f,
+  type Vec4f,
+  type Vec4i,
   type WgslArray,
   arrayOf,
   f32,
@@ -15,6 +17,9 @@ import tgpu, {
   type TgpuBufferUniform,
   type TgpuBufferReadonly,
   type TgpuBufferMutable,
+  type TgpuReadonlyTexture,
+  type TgpuSampledTexture,
+  type TgpuMutableTexture,
 } from '../src/experimental';
 import './utils/webgpuGlobals';
 import {
@@ -375,9 +380,7 @@ describe('TgpuBindGroup', () => {
         entries: [
           {
             binding: 0,
-            resource: {
-              view: root.unwrap(texture),
-            },
+            resource: 'view',
           },
         ],
       });
@@ -392,24 +395,42 @@ describe('TgpuBindGroup', () => {
         })
         .$usage('sampled');
 
-      expect(() => {
-        root.createBindGroup(layout, {
-          // @ts-expect-error
-          foo: texture,
-        });
-      }).toThrow();
+      root.createBindGroup(layout, {
+        // @ts-expect-error
+        foo: texture,
+      });
+    });
+
+    it('properly fill the bound property', () => {
+      const layout = tgpu.bindGroupLayout({
+        foo: { texture: 'float', viewDimension: '2d', mipLevelCount: 1 },
+        bar: { texture: 'unfilterable-float', viewDimension: 'cube-array' },
+      });
+
+      const { foo, bar } = layout.bound;
+
+      expectTypeOf(foo).toEqualTypeOf<TgpuSampledTexture<'2d', F32>>();
+      expectTypeOf(bar).toEqualTypeOf<TgpuSampledTexture<'2d', F32>>();
     });
   });
 
   describe('storage texture layout', () => {
     let layout: TgpuBindGroupLayout<{
-      foo: { storageTexture: 'rgba8unorm'; viewDimension: '3d' };
+      foo: {
+        storageTexture: 'rgba8unorm';
+        viewDimension: '3d';
+        access: 'readonly' | 'writeonly';
+      };
     }>;
 
     beforeEach(() => {
       layout = tgpu
         .bindGroupLayout({
-          foo: { storageTexture: 'rgba8unorm', viewDimension: '3d' },
+          foo: {
+            storageTexture: 'rgba8unorm',
+            viewDimension: '3d',
+            access: 'readonly',
+          },
         })
         .$name('example');
     });
@@ -466,9 +487,7 @@ describe('TgpuBindGroup', () => {
         entries: [
           {
             binding: 0,
-            resource: {
-              view: root.unwrap(texture),
-            },
+            resource: 'view',
           },
         ],
       });
@@ -483,12 +502,29 @@ describe('TgpuBindGroup', () => {
         })
         .$usage('sampled');
 
-      expect(() => {
-        root.createBindGroup(layout, {
-          // @ts-expect-error
-          foo: texture,
-        });
-      }).toThrow();
+      root.createBindGroup(layout, {
+        // @ts-expect-error
+        foo: texture,
+      });
+    });
+
+    it('properly fill the bound property', () => {
+      const layout = tgpu.bindGroupLayout({
+        foo: {
+          storageTexture: 'rgba8unorm',
+          viewDimension: '3d',
+          access: 'mutable',
+        },
+        bar: {
+          storageTexture: 'rg32sint',
+          viewDimension: '2d-array',
+        },
+      });
+
+      const { foo, bar } = layout.bound;
+
+      expectTypeOf(foo).toEqualTypeOf<TgpuMutableTexture<'3d', Vec4f>>();
+      expectTypeOf(bar).toEqualTypeOf<TgpuReadonlyTexture<'2d', Vec4i>>();
     });
   });
 

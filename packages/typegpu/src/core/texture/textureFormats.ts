@@ -117,6 +117,23 @@ export type ChannelTypeToLegalFormats = {
   >;
 };
 
+export type SampleTypeToStringChannelType = {
+  float: 'f32';
+  'unfilterable-float': 'f32';
+  depth: 'f32';
+  sint: 'i32';
+  uint: 'u32';
+};
+
+export type ViewDimensionToDimension = {
+  '1d': '1d';
+  '2d': '2d';
+  '2d-array': '2d';
+  '3d': '3d';
+  cube: '2d';
+  'cube-array': '2d';
+};
+
 /**
  * https://www.w3.org/TR/WGSL/#storage-texel-formats
  */
@@ -166,12 +183,13 @@ export const channelKindToFormat = {
 } as const;
 
 export const channelFormatToSchema = {
-  float: f32,
-  'unfilterable-float': f32,
-  uint: u32,
-  sint: i32,
-  depth: f32, // I guess?
+  float: f32 as F32,
+  'unfilterable-float': f32 as F32,
+  uint: u32 as U32,
+  sint: i32 as I32,
+  depth: f32 as F32, // I guess?
 };
+export type ChannelFormatToSchema = typeof channelFormatToSchema;
 
 export type TexelFormatToDataType = typeof texelFormatToDataType;
 export type TexelFormatToDataTypeOrNever<T> =

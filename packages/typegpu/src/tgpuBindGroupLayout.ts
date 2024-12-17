@@ -28,8 +28,14 @@ import {
   isTexture,
 } from './core/texture/texture';
 import type {
+  SampleTypeToStringChannelType,
+  ViewDimensionToDimension,
+} from './core/texture/textureFormats';
+import type {
+  ChannelFormatToSchema,
   ChannelTypeToLegalFormats,
   StorageTextureTexelFormat,
+  TexelFormatToDataType,
 } from './core/texture/textureFormats';
 import type { TextureProps } from './core/texture/textureProps';
 import {
@@ -197,6 +203,26 @@ type StorageUsageForEntry<T extends TgpuLayoutStorage> = T extends {
             | TgpuBufferMutable<UnwrapRuntimeConstructor<T['storage']>>
   : TgpuBufferReadonly<UnwrapRuntimeConstructor<T['storage']>>; // <- access is undefined, so default to 'readonly';
 
+type GetUsageForStorageTexture<
+  T extends TgpuLayoutStorageTexture,
+  TAccess extends 'readonly' | 'writeonly' | 'mutable',
+> = TAccess extends 'mutable'
+  ? TgpuMutableTexture<
+      GetDimensionWithDefault<T['viewDimension']>,
+      TexelFormatToDataType[T['storageTexture']]
+    >
+  : TAccess extends 'readonly'
+    ? TgpuReadonlyTexture<
+        GetDimensionWithDefault<T['viewDimension']>,
+        TexelFormatToDataType[T['storageTexture']]
+      >
+    : TAccess extends 'writeonly'
+      ? TgpuWriteonlyTexture<
+          GetDimensionWithDefault<T['viewDimension']>,
+          TexelFormatToDataType[T['storageTexture']]
+        >
+      : never;
+
 type StorageTextureUsageForEntry<T extends TgpuLayoutStorageTexture> =
   T extends {
     access?: infer Access;
@@ -204,45 +230,40 @@ type StorageTextureUsageForEntry<T extends TgpuLayoutStorageTexture> =
     ? 'mutable' extends Access
       ? 'readonly' extends Access
         ? 'writeonly' extends Access
-          ? TgpuMutableTexture | TgpuReadonlyTexture | TgpuWriteonlyTexture
-          : TgpuMutableTexture | TgpuReadonlyTexture
+          ?
+              | GetUsageForStorageTexture<T, 'mutable'>
+              | GetUsageForStorageTexture<T, 'readonly'>
+              | GetUsageForStorageTexture<T, 'writeonly'>
+          :
+              | GetUsageForStorageTexture<T, 'mutable'>
+              | GetUsageForStorageTexture<T, 'readonly'>
         : 'writeonly' extends Access
-          ? TgpuMutableTexture | TgpuWriteonlyTexture
-          : TgpuMutableTexture
+          ?
+              | GetUsageForStorageTexture<T, 'mutable'>
+              | GetUsageForStorageTexture<T, 'writeonly'>
+          : GetUsageForStorageTexture<T, 'mutable'>
       : 'readonly' extends Access
         ? 'writeonly' extends Access
-          ? TgpuReadonlyTexture | TgpuWriteonlyTexture
-          : TgpuReadonlyTexture
+          ?
+              | GetUsageForStorageTexture<T, 'readonly'>
+              | GetUsageForStorageTexture<T, 'writeonly'>
+          : GetUsageForStorageTexture<T, 'readonly'>
         : 'writeonly' extends Access
-          ? TgpuWriteonlyTexture
-          : TgpuReadonlyTexture
-    : TgpuReadonlyTexture;
-
-type SampleTypeToChannelType = {
-  float: 'f32';
-  'unfilterable-float': 'f32';
-  depth: 'f32';
-  sint: 'i32';
-  uint: 'u32';
-};
-
-type ViewDimensionToDimension = {
-  '1d': '1d';
-  '2d': '2d';
-  '2d-array': '2d';
-  '3d': '3d';
-  cube: '2d';
-  'cube-array': '2d';
-};
+          ? GetUsageForStorageTexture<T, 'writeonly'>
+          : GetUsageForStorageTexture<T, 'readonly'>
+    : GetUsageForStorageTexture<T, 'readonly'>;
 
 type GetDimension<T extends GPUTextureViewDimension | undefined> =
   T extends keyof ViewDimensionToDimension
     ? ViewDimensionToDimension[T]
     : undefined;
 
+type GetDimensionWithDefault<T extends GPUTextureViewDimension | undefined> =
+  T extends keyof ViewDimensionToDimension ? ViewDimensionToDimension[T] : '2d';
+
 type GetTextureLayoutToEntry<T extends TgpuLayoutTexture> = TgpuTexture<
   TextureProps & {
-    format: ChannelTypeToLegalFormats[SampleTypeToChannelType[T['texture']]];
+    format: ChannelTypeToLegalFormats[SampleTypeToStringChannelType[T['texture']]];
     dimension?: GetDimension<T['viewDimension']>;
   }
 > &
@@ -282,7 +303,10 @@ export type BindLayoutEntry<T extends TgpuLayoutEntry | null> =
       : T extends TgpuLayoutSampler
         ? TgpuSampler
         : T extends TgpuLayoutTexture
-          ? TgpuSampledTexture
+          ? TgpuSampledTexture<
+              GetDimensionWithDefault<T['viewDimension']>,
+              ChannelFormatToSchema[T['texture']]
+            >
           : T extends TgpuLayoutStorageTexture
             ? StorageTextureUsageForEntry<T>
             : never;
