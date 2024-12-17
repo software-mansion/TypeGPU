@@ -1,116 +1,105 @@
-import { describe, expect } from 'vitest';
-import { struct, u32, vec3i, vec4u } from '../src/data';
-import './utils/webgpuGlobals';
+import { describe, expect, vi } from 'vitest';
+import * as d from '../src/data';
 import { it } from './utils/extendedIt';
 
 describe('TgpuRoot', () => {
-  it('should create buffer with no initialization', ({ root }) => {
-    const dataBuffer = root.createBuffer(u32).$usage('uniform');
+  describe('.createBuffer', () => {
+    it('should create buffer with no initialization', ({ root }) => {
+      const dataBuffer = root.createBuffer(d.u32).$usage('uniform');
 
-    const mockBuffer = root.unwrap(dataBuffer);
-    expect(mockBuffer).toBeDefined();
-    expect(mockBuffer.getMappedRange).not.toBeCalled();
+      const mockBuffer = root.unwrap(dataBuffer);
+      expect(mockBuffer).toBeDefined();
+      expect(mockBuffer.getMappedRange).not.toBeCalled();
 
-    expect(root.device.createBuffer).toBeCalledWith({
-      mappedAtCreation: false,
-      size: 4,
-      usage:
-        global.GPUBufferUsage.UNIFORM |
-        global.GPUBufferUsage.COPY_DST |
-        global.GPUBufferUsage.COPY_SRC,
-      label: '<unnamed>',
+      expect(root.device.createBuffer).toBeCalledWith({
+        label: '<unnamed>',
+        mappedAtCreation: false,
+        size: 4,
+        usage:
+          global.GPUBufferUsage.UNIFORM |
+          global.GPUBufferUsage.COPY_DST |
+          global.GPUBufferUsage.COPY_SRC,
+      });
+    });
+
+    it('should create buffer with initialization', ({ root }) => {
+      const dataBuffer = root
+        .createBuffer(d.vec3i, d.vec3i(0, 0, 0))
+        .$usage('uniform');
+
+      const mockBuffer = root.unwrap(dataBuffer);
+      expect(mockBuffer).toBeDefined();
+      expect(mockBuffer.getMappedRange).toBeCalled();
+
+      expect(root.device.createBuffer).toBeCalledWith({
+        label: '<unnamed>',
+        mappedAtCreation: true,
+        size: 12,
+        usage:
+          global.GPUBufferUsage.UNIFORM |
+          global.GPUBufferUsage.COPY_DST |
+          global.GPUBufferUsage.COPY_SRC,
+      });
+    });
+
+    it('should allocate buffer with proper size for nested structs', ({
+      root,
+    }) => {
+      const s1 = d.struct({ a: d.u32, b: d.u32 });
+      const s2 = d.struct({ a: d.u32, b: s1 });
+      const dataBuffer = root.createBuffer(s2).$usage('uniform');
+
+      root.unwrap(dataBuffer);
+      expect(root.device.createBuffer).toBeCalledWith({
+        label: '<unnamed>',
+        mappedAtCreation: false,
+        size: 12,
+        usage:
+          global.GPUBufferUsage.UNIFORM |
+          global.GPUBufferUsage.COPY_DST |
+          global.GPUBufferUsage.COPY_SRC,
+      });
     });
   });
 
-  it('should create buffer with initialization', ({ root }) => {
-    const dataBuffer = root
-      .createBuffer(vec3i, vec3i(0, 0, 0))
-      .$usage('uniform');
+  describe('.destroy', () => {
+    it('should call .destroy on all buffers created with it', ({ root }) => {
+      const buffer1 = root.createBuffer(d.f32);
+      const buffer2 = root.createBuffer(d.i32);
+      const buffer3 = root.createBuffer(d.u32);
 
-    const mockBuffer = root.unwrap(dataBuffer);
-    expect(mockBuffer).toBeDefined();
-    expect(mockBuffer.getMappedRange).toBeCalled();
+      const buffer1DestroySpy = vi.spyOn(buffer1, 'destroy');
+      const buffer2DestroySpy = vi.spyOn(buffer2, 'destroy');
+      const buffer3DestroySpy = vi.spyOn(buffer3, 'destroy');
 
-    expect(root.device.createBuffer).toBeCalledWith({
-      mappedAtCreation: true,
-      size: 12,
-      usage:
-        global.GPUBufferUsage.UNIFORM |
-        global.GPUBufferUsage.COPY_DST |
-        global.GPUBufferUsage.COPY_SRC,
-      label: '<unnamed>',
+      root.destroy();
+
+      expect(buffer1DestroySpy).toHaveBeenCalledOnce();
+      expect(buffer2DestroySpy).toHaveBeenCalledOnce();
+      expect(buffer3DestroySpy).toHaveBeenCalledOnce();
     });
   });
 
-  it('should allocate buffer with proper size for nested structs', ({
-    root,
-  }) => {
-    const s1 = struct({ a: u32, b: u32 });
-    const s2 = struct({ a: u32, b: s1 });
-    const dataBuffer = root.createBuffer(s2).$usage('uniform');
+  describe('.unwrap', () => {
+    it('should throw error when unwrapping destroyed buffer', ({ root }) => {
+      const buffer = root.createBuffer(d.f32);
 
-    root.unwrap(dataBuffer);
-    expect(root.device.createBuffer).toBeCalledWith({
-      mappedAtCreation: false,
-      size: 12,
-      usage:
-        global.GPUBufferUsage.UNIFORM |
-        global.GPUBufferUsage.COPY_DST |
-        global.GPUBufferUsage.COPY_SRC,
-      label: '<unnamed>',
-    });
-  });
+      buffer.destroy();
 
-  it('should properly write to buffer', ({ root }) => {
-    const dataBuffer = root.createBuffer(u32);
-
-    dataBuffer.write(3);
-
-    const mockBuffer = root.unwrap(dataBuffer);
-    expect(mockBuffer).toBeDefined();
-
-    expect(root.device.queue.writeBuffer).toBeCalledWith(
-      mockBuffer,
-      0,
-      new ArrayBuffer(4),
-      0,
-      4,
-    );
-  });
-
-  it('should properly write to complex buffer', ({ root }) => {
-    const s1 = struct({ a: u32, b: u32, c: vec3i });
-    const s2 = struct({ a: u32, b: s1, c: vec4u });
-
-    const dataBuffer = root.createBuffer(s2).$usage('uniform');
-
-    root.unwrap(dataBuffer);
-    expect(root.device.createBuffer).toBeCalledWith({
-      mappedAtCreation: false,
-      size: 64,
-      usage:
-        global.GPUBufferUsage.UNIFORM |
-        global.GPUBufferUsage.COPY_DST |
-        global.GPUBufferUsage.COPY_SRC,
-      label: '<unnamed>',
+      expect(() => root.unwrap(buffer)).toThrowError();
     });
 
-    dataBuffer.write({
-      a: 3,
-      b: { a: 4, b: 5, c: vec3i(6, 7, 8) },
-      c: vec4u(9, 10, 11, 12),
+    it('should return the same buffer that was passed into .createBuffer', ({
+      root,
+    }) => {
+      const rawBuffer = root.device.createBuffer({
+        size: 4,
+        usage: GPUBufferUsage.UNIFORM,
+      });
+
+      const buffer = root.createBuffer(d.u32, rawBuffer);
+      expect(root.unwrap(buffer)).toBe(rawBuffer);
     });
-
-    const mockBuffer = root.unwrap(dataBuffer);
-    expect(mockBuffer).toBeDefined();
-
-    expect(root.device.queue.writeBuffer).toBeCalledWith(
-      mockBuffer,
-      0,
-      new ArrayBuffer(64),
-      0,
-      64,
-    );
   });
 
   // TODO: Adapt the tests to the new API

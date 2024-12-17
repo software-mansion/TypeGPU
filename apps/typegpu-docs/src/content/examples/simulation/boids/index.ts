@@ -1,5 +1,5 @@
 import tgpu from 'typegpu';
-import { arrayOf, f32, struct, vec2f, vec3f } from 'typegpu/data';
+import * as d from 'typegpu/data';
 
 const triangleAmount = 1000;
 const triangleSize = 0.03;
@@ -140,10 +140,10 @@ type BoidsOptions = {
 };
 
 const colorPresets = {
-  plumTree: vec3f(1.0, 2.0, 1.0),
-  jeans: vec3f(2.0, 1.5, 1.0),
-  greyscale: vec3f(0, 0, 0),
-  hotcold: vec3f(0, 3.14, 3.14),
+  plumTree: d.vec3f(1.0, 2.0, 1.0),
+  jeans: d.vec3f(2.0, 1.5, 1.0),
+  greyscale: d.vec3f(0, 0, 0),
+  hotcold: d.vec3f(0, 3.14, 3.14),
 };
 type ColorPresets = keyof typeof colorPresets;
 
@@ -209,13 +209,13 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const Params = struct({
-  separationDistance: f32,
-  separationStrength: f32,
-  alignmentDistance: f32,
-  alignmentStrength: f32,
-  cohesionDistance: f32,
-  cohesionStrength: f32,
+const Params = d.struct({
+  separationDistance: d.f32,
+  separationStrength: d.f32,
+  alignmentDistance: d.f32,
+  alignmentStrength: d.f32,
+  cohesionDistance: d.f32,
+  cohesionStrength: d.f32,
 });
 
 const paramsBuffer = root
@@ -223,7 +223,7 @@ const paramsBuffer = root
   .$usage('storage');
 
 const triangleVertexBuffer = root
-  .createBuffer(arrayOf(f32, 6), [
+  .createBuffer(d.arrayOf(d.f32, 6), [
     0.0,
     triangleSize,
     -triangleSize / 2,
@@ -233,21 +233,21 @@ const triangleVertexBuffer = root
   ])
   .$usage('vertex');
 
-const TriangleInfoStruct = struct({
-  position: vec2f,
-  velocity: vec2f,
+const TriangleInfoStruct = d.struct({
+  position: d.vec2f,
+  velocity: d.vec2f,
 });
 
 const trianglePosBuffers = Array.from({ length: 2 }, () =>
   root
-    .createBuffer(arrayOf(TriangleInfoStruct, triangleAmount))
+    .createBuffer(d.arrayOf(TriangleInfoStruct, triangleAmount))
     .$usage('storage', 'uniform'),
 );
 
 const randomizePositions = () => {
   const positions = Array.from({ length: triangleAmount }, () => ({
-    position: vec2f(Math.random() * 2 - 1, Math.random() * 2 - 1),
-    velocity: vec2f(Math.random() * 0.1 - 0.05, Math.random() * 0.1 - 0.05),
+    position: d.vec2f(Math.random() * 2 - 1, Math.random() * 2 - 1),
+    velocity: d.vec2f(Math.random() * 0.1 - 0.05, Math.random() * 0.1 - 0.05),
   }));
   trianglePosBuffers[0].write(positions);
   trianglePosBuffers[1].write(positions);
@@ -255,7 +255,7 @@ const randomizePositions = () => {
 randomizePositions();
 
 const colorPaletteBuffer = root
-  .createBuffer(vec3f, colorPresets.jeans)
+  .createBuffer(d.vec3f, colorPresets.jeans)
   .$usage('uniform');
 
 const updateColorPreset = (newColorPreset: ColorPresets) => {
@@ -275,8 +275,8 @@ const computeModule = root.device.createShaderModule({
 });
 
 const renderBindGroupLayout = tgpu.bindGroupLayout({
-  trianglePos: { uniform: arrayOf(TriangleInfoStruct, triangleAmount) },
-  colorPalette: { uniform: vec3f },
+  trianglePos: { uniform: d.arrayOf(TriangleInfoStruct, triangleAmount) },
+  colorPalette: { uniform: d.vec3f },
 });
 
 const pipeline = root.device.createRenderPipeline({
@@ -312,9 +312,11 @@ const pipeline = root.device.createRenderPipeline({
 });
 
 const computeBindGroupLayout = tgpu.bindGroupLayout({
-  currentTrianglePos: { uniform: arrayOf(TriangleInfoStruct, triangleAmount) },
+  currentTrianglePos: {
+    uniform: d.arrayOf(TriangleInfoStruct, triangleAmount),
+  },
   nextTrianglePos: {
-    storage: arrayOf(TriangleInfoStruct, triangleAmount),
+    storage: d.arrayOf(TriangleInfoStruct, triangleAmount),
     access: 'mutable',
   },
   params: { storage: Params },

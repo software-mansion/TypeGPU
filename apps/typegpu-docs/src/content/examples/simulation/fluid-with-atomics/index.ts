@@ -1,15 +1,7 @@
 // @ts-nocheck
 // TODO: Reenable type checking when new pipelines are implemented.
 
-import {
-  type TgpuArray,
-  type U32,
-  arrayOf,
-  atomic,
-  f32,
-  u32,
-  vec2u,
-} from 'typegpu/data';
+import * as d from 'typegpu/data';
 import tgpu, {
   asMutable,
   asReadonly,
@@ -62,19 +54,19 @@ function encodeBrushType(brushType: (typeof BrushTypes)[number]) {
   }
 }
 
-const sizeBuffer = root.createBuffer(vec2u).$name('size').$usage('uniform');
+const sizeBuffer = root.createBuffer(d.vec2u).$name('size').$usage('uniform');
 const viscosityBuffer = root
-  .createBuffer(u32)
+  .createBuffer(d.u32)
   .$name('viscosity')
   .$usage('uniform');
 
 const currentStateBuffer = root
-  .createBuffer(arrayOf(u32, 1024 ** 2))
+  .createBuffer(d.arrayOf(d.u32, 1024 ** 2))
   .$name('current')
   .$usage('storage', 'vertex');
 
 const nextStateBuffer = root
-  .createBuffer(arrayOf(atomic(u32), 1024 ** 2))
+  .createBuffer(d.arrayOf(d.atomic(d.u32), 1024 ** 2))
   .$name('next')
   .$usage('storage');
 
@@ -89,11 +81,11 @@ const maxWaterLevel = wgsl.constant(wgsl`(1u << 24) - 1u`);
 const maxCompress = wgsl.constant(wgsl`12u`);
 
 const squareBuffer = root
-  .createBuffer(arrayOf(vec2u, 4), [
-    vec2u(0, 0),
-    vec2u(0, 1),
-    vec2u(1, 0),
-    vec2u(1, 1),
+  .createBuffer(d.arrayOf(d.vec2u, 4), [
+    d.vec2u(0, 0),
+    d.vec2u(0, 1),
+    d.vec2u(1, 0),
+    d.vec2u(1, 1),
   ])
   .$usage('uniform', 'vertex')
   .$name('square');
@@ -332,7 +324,7 @@ function resetGameData() {
       code: vertWGSL,
       output: {
         [builtin.position.s]: 'pos',
-        cell: f32,
+        cell: d.f32,
       },
     },
     fragment: {
@@ -344,7 +336,7 @@ function resetGameData() {
 
   currentStateBuffer.write(Array.from({ length: 1024 ** 2 }, () => 0));
   nextStateBuffer.write(Array.from({ length: 1024 ** 2 }, () => 0));
-  sizeBuffer.write(vec2u(options.size, options.size));
+  sizeBuffer.write(d.vec2u(options.size, options.size));
 
   render = () => {
     const view = context.getCurrentTexture().createView();
@@ -374,7 +366,7 @@ function resetGameData() {
 
     currentStateBuffer.write(
       // The atomic<> prevents this from being a 1-to-1 match.
-      nextStateBuffer as unknown as TgpuBuffer<TgpuArray<U32>>,
+      nextStateBuffer as unknown as TgpuBuffer<d.TgpuArray<d.U32>>,
     );
   };
 

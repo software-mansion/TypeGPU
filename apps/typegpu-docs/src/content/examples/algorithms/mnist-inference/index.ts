@@ -1,5 +1,5 @@
 import tgpu, { type TgpuBuffer, type Storage } from 'typegpu';
-import { type F32, type TgpuArray, arrayOf, f32 } from 'typegpu/data';
+import * as d from 'typegpu/data';
 
 const SIZE = 28;
 
@@ -39,12 +39,12 @@ const layerShader = `
 `;
 
 const ReadonlyFloats = {
-  storage: (n: number) => arrayOf(f32, n),
+  storage: (n: number) => d.arrayOf(d.f32, n),
   access: 'readonly',
 } as const;
 
 const MutableFloats = {
-  storage: (n: number) => arrayOf(f32, n),
+  storage: (n: number) => d.arrayOf(d.f32, n),
   access: 'mutable',
 } as const;
 
@@ -73,19 +73,19 @@ const pipeline = device.createComputePipeline({
 
 interface LayerData {
   shape: readonly [number] | readonly [number, number];
-  buffer: TgpuBuffer<TgpuArray<F32>> & Storage;
+  buffer: TgpuBuffer<d.TgpuArray<d.F32>> & Storage;
 }
 
 interface Layer {
-  weights: TgpuBuffer<TgpuArray<F32>> & Storage;
-  biases: TgpuBuffer<TgpuArray<F32>> & Storage;
-  state: TgpuBuffer<TgpuArray<F32>> & Storage;
+  weights: TgpuBuffer<d.TgpuArray<d.F32>> & Storage;
+  biases: TgpuBuffer<d.TgpuArray<d.F32>> & Storage;
+  state: TgpuBuffer<d.TgpuArray<d.F32>> & Storage;
 }
 
 interface Network {
   layers: Layer[];
-  input: TgpuBuffer<TgpuArray<F32>> & Storage;
-  output: TgpuBuffer<TgpuArray<F32>> & Storage;
+  input: TgpuBuffer<d.TgpuArray<d.F32>> & Storage;
+  output: TgpuBuffer<d.TgpuArray<d.F32>> & Storage;
 
   inference(data: number[]): Promise<number[]>;
 }
@@ -107,12 +107,14 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
     return {
       weights: weights.buffer,
       biases: biases.buffer,
-      state: root.createBuffer(arrayOf(f32, biases.shape[0])).$usage('storage'),
+      state: root
+        .createBuffer(d.arrayOf(d.f32, biases.shape[0]))
+        .$usage('storage'),
     };
   });
 
   const input = root
-    .createBuffer(arrayOf(f32, layers[0][0].shape[0]))
+    .createBuffer(d.arrayOf(d.f32, layers[0][0].shape[0]))
     .$usage('storage');
   const output = buffers[buffers.length - 1].state;
 
@@ -202,7 +204,7 @@ function getLayerData(layer: ArrayBuffer): LayerData {
   }
 
   const buffer = root
-    .createBuffer(arrayOf(f32, data.length), [...data])
+    .createBuffer(d.arrayOf(d.f32, data.length), [...data])
     .$usage('storage');
 
   return {

@@ -1,7 +1,7 @@
 import * as Babel from '@babel/standalone';
 import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
-import { filter, isNonNull, map, pipe } from 'remeda';
+import { filter, groupBy, isNonNull, map, pipe } from 'remeda';
 import { transpileModule } from 'typescript';
 import { tsCompilerOptions } from '../liveEditor/embeddedTypeScript';
 import type { ExampleControlParam } from './exampleControlAtom';
@@ -32,6 +32,10 @@ const staticToDynamicImports = {
             return ['default', imp.local.name] as const;
           }
 
+          if (imp.type === 'ImportNamespaceSpecifier') {
+            return ['*', imp.local.name] as const;
+          }
+
           if (imp.type === 'ImportSpecifier') {
             return [
               imp.imported.type === 'Identifier'
@@ -41,15 +45,21 @@ const staticToDynamicImports = {
             ] as const;
           }
 
-          // Ignoring namespace imports
           return null;
         }),
         filter(isNonNull),
+        groupBy((imp) => (imp[0] === '*' ? 'wildCard' : 'nonWildCard')),
       );
 
+      const wildCard = imports.wildCard;
+      const nonWildCard = imports.nonWildCard;
+
       path.replaceWith(
-        template.statement.ast(
-          `const { ${imports.map((imp) => (imp[0] === imp[1] ? imp[0] : `${imp[0]}: ${imp[1]}`)).join(',')} } = await _import('${moduleName}');`,
+        template.program.ast(
+          `
+            ${wildCard?.length ? `const ${wildCard[0][1]} = await _import('${moduleName}');` : ''}
+            ${nonWildCard?.length ? `const { ${nonWildCard.map((imp) => (imp[0] === imp[1] ? imp[0] : `${imp[0]}: ${imp[1]}`)).join(',')} } = await _import('${moduleName}');` : ''}
+          `,
         ),
       );
     },
@@ -69,7 +79,7 @@ const exportedOptionsToExampleControls = () => {
           if (init) {
             path.replaceWith(
               template.program.ast(
-                `import { addParameters } from '@typegpu/example-toolkit'; 
+                `import { addParameters } from '@typegpu/example-toolkit';
                 addParameters(${code.slice(init.start ?? 0, init.end ?? 0)});`,
               ),
             );
@@ -87,49 +97,6 @@ const exportedOptionsToExampleControls = () => {
         }
       },
     } satisfies TraverseOptions,
-  };
-};
-
-const MAX_ITERATIONS = 10000;
-
-/**
- * from https://github.com/facebook/react/blob/d906de7f602df810c38aa622c83023228b047db6/scripts/babel/transform-prevent-infinite-loops.js
- */
-// biome-ignore lint/suspicious/noExplicitAny:
-const preventInfiniteLoops = ({ types: t, template }: any) => {
-  const buildGuard = template(`
-    if (ITERATOR++ > MAX_ITERATIONS) {
-      throw new RangeError(
-        'Potential infinite loop: exceeded ' +
-        MAX_ITERATIONS +
-        ' iterations.'
-      );
-    }
-  `);
-
-  return {
-    visitor: {
-      // biome-ignore lint/suspicious/noExplicitAny:
-      'WhileStatement|ForStatement|DoWhileStatement': (path: any) => {
-        const iterator = path.scope.parent.generateUidIdentifier('loopIt');
-        const iteratorInit = t.numericLiteral(0);
-        path.scope.parent.push({
-          id: iterator,
-          init: iteratorInit,
-        });
-        const guard = buildGuard({
-          ITERATOR: iterator,
-          MAX_ITERATIONS: t.numericLiteral(MAX_ITERATIONS),
-        });
-
-        if (!path.get('body').isBlockStatement()) {
-          const statement = path.get('body').node;
-          path.get('body').replaceWith(t.blockStatement([guard, statement]));
-        } else {
-          path.get('body').unshiftContainer('body', guard);
-        }
-      },
-    },
   };
 };
 
@@ -231,11 +198,7 @@ export async function executeExample(
       Babel.transform(jsCode, {
         compact: false,
         retainLines: true,
-        plugins: [
-          exportedOptionsToExampleControls,
-          staticToDynamicImports,
-          preventInfiniteLoops,
-        ],
+        plugins: [exportedOptionsToExampleControls, staticToDynamicImports],
       }).code ?? jsCode;
 
     const mod = Function(`

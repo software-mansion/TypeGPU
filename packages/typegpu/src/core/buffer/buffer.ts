@@ -1,7 +1,9 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
+import { isWgslData } from '../../data';
 import { readData, writeData } from '../../data/dataIO';
 import type { AnyData } from '../../data/dataTypes';
 import { sizeOf } from '../../data/sizeOf';
+import type { WgslTypeLiteral } from '../../data/wgslTypes';
 import type { Storage } from '../../extension';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
@@ -40,25 +42,30 @@ export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
   readonly label: string | undefined;
 
   readonly buffer: GPUBuffer;
-  readonly device: GPUDevice;
   readonly destroyed: boolean;
 
-  $usage<T extends ('uniform' | 'storage' | 'vertex')[]>(
+  $usage<T extends RestrictVertexUsages<TData>>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>>;
   $addFlags(flags: GPUBufferUsageFlags): this;
-  $device(device: GPUDevice): this;
 
-  write(data: Infer<TData> | TgpuBuffer<TData>): void;
+  write(data: Infer<TData>): void;
+  copyFrom(srcBuffer: TgpuBuffer<TData>): void;
   read(): Promise<Infer<TData>>;
   destroy(): void;
 }
 
-export function createBufferImpl<TData extends AnyData>(
-  group: ExperimentalTgpuRoot | undefined,
+export function INTERNAL_createBuffer<TData extends AnyData>(
+  group: ExperimentalTgpuRoot,
   typeSchema: TData,
   initialOrBuffer?: Infer<TData> | GPUBuffer,
 ): TgpuBuffer<TData> {
+  if (!isWgslData(typeSchema)) {
+    return new TgpuBufferImpl(group, typeSchema, initialOrBuffer, [
+      'storage',
+      'uniform',
+    ]);
+  }
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
 }
 
@@ -84,12 +91,18 @@ export function isUsableAsVertex<T extends TgpuBuffer<AnyData>>(
 // Implementation
 // --------------
 
+type RestrictVertexUsages<TData extends AnyData> = TData extends {
+  readonly type: WgslTypeLiteral;
+}
+  ? ('uniform' | 'storage' | 'vertex')[]
+  : 'vertex'[];
+
 class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   public readonly resourceType = 'buffer';
   public flags: GPUBufferUsageFlags =
     GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
-  private _device: GPUDevice | null = null;
   private _buffer: GPUBuffer | null = null;
+  private _ownBuffer: boolean;
   private _destroyed = false;
 
   private _label: string | undefined;
@@ -100,13 +113,16 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   public usableAsVertex = false;
 
   constructor(
-    private readonly _group: ExperimentalTgpuRoot | undefined,
+    private readonly _group: ExperimentalTgpuRoot,
     public readonly dataType: TData,
     public readonly initialOrBuffer?: Infer<TData> | GPUBuffer | undefined,
+    private readonly _disallowedUsages?: ('uniform' | 'storage' | 'vertex')[],
   ) {
     if (isGPUBuffer(initialOrBuffer)) {
+      this._ownBuffer = false;
       this._buffer = initialOrBuffer;
     } else {
+      this._ownBuffer = true;
       this.initial = initialOrBuffer;
     }
   }
@@ -116,18 +132,14 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   }
 
   get buffer() {
-    if (!this._device) {
-      throw new Error(
-        'Create this buffer using `root.createBuffer` instead of `tgpu.createBuffer`.',
-      );
-    }
+    const device = this._group.device;
 
     if (this._destroyed) {
       throw new Error('This buffer has been destroyed');
     }
 
     if (!this._buffer) {
-      this._buffer = this._device.createBuffer({
+      this._buffer = device.createBuffer({
         size: sizeOf(this.dataType),
         usage: this.flags,
         mappedAtCreation: !!this.initial,
@@ -144,15 +156,6 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     return this._buffer;
   }
 
-  get device() {
-    if (!this._device) {
-      throw new Error(
-        'This buffer has not been assigned a device. Use .$device(device) to assign a device',
-      );
-    }
-    return this._device;
-  }
-
   get destroyed() {
     return this._destroyed;
   }
@@ -165,10 +168,15 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     return this;
   }
 
-  $usage<T extends ('uniform' | 'storage' | 'vertex')[]>(
+  $usage<T extends RestrictVertexUsages<TData>>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>> {
     for (const usage of usages) {
+      if (this._disallowedUsages?.includes(usage)) {
+        throw new Error(
+          `Buffer of type ${this.dataType} cannot be used as ${usage}`,
+        );
+      }
       this.flags |= usage === 'uniform' ? GPUBufferUsage.UNIFORM : 0;
       this.flags |= usage === 'storage' ? GPUBufferUsage.STORAGE : 0;
       this.flags |= usage === 'vertex' ? GPUBufferUsage.VERTEX : 0;
@@ -185,56 +193,42 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     return this;
   }
 
-  $device(device: GPUDevice) {
-    this._device = device;
-    return this;
-  }
-
-  write(dataOrBuffer: Infer<TData> | TgpuBuffer<TData>): void {
+  write(data: Infer<TData>): void {
     const gpuBuffer = this.buffer;
-    const device = this.device;
+    const device = this._group.device;
 
     if (gpuBuffer.mapState === 'mapped') {
       const mapped = gpuBuffer.getMappedRange();
-      if (isBuffer(dataOrBuffer)) {
-        throw new Error('Cannot copy to a mapped buffer.');
-      }
-      writeData(new BufferWriter(mapped), this.dataType, dataOrBuffer);
+      writeData(new BufferWriter(mapped), this.dataType, data);
       return;
     }
 
     const size = sizeOf(this.dataType);
-    if (isBuffer(dataOrBuffer)) {
-      const sourceBuffer = dataOrBuffer.buffer;
 
-      if (this._group) {
-        const encoder = this._group.commandEncoder;
-        encoder.copyBufferToBuffer(sourceBuffer, 0, gpuBuffer, 0, size);
-      } else {
-        const commandEncoder = device.createCommandEncoder();
-        commandEncoder.copyBufferToBuffer(sourceBuffer, 0, gpuBuffer, 0, size);
-        device.queue.submit([commandEncoder.finish()]);
-      }
-    } else {
-      if (this._group) {
-        // Flushing any commands yet to be encoded.
-        this._group.flush();
-      }
+    // Flushing any commands yet to be encoded.
+    this._group.flush();
 
-      const hostBuffer = new ArrayBuffer(size);
-      writeData(new BufferWriter(hostBuffer), this.dataType, dataOrBuffer);
-      device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
+    const hostBuffer = new ArrayBuffer(size);
+    writeData(new BufferWriter(hostBuffer), this.dataType, data);
+    device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
+  }
+
+  copyFrom(srcBuffer: TgpuBuffer<TData>): void {
+    if (this.buffer.mapState === 'mapped') {
+      throw new Error('Cannot copy to a mapped buffer.');
     }
+
+    const size = sizeOf(this.dataType);
+    const encoder = this._group.commandEncoder;
+    encoder.copyBufferToBuffer(srcBuffer.buffer, 0, this.buffer, 0, size);
   }
 
   async read(): Promise<Infer<TData>> {
-    if (this._group) {
-      // Flushing any commands yet to be encoded.
-      this._group.flush();
-    }
+    // Flushing any commands yet to be encoded.
+    this._group.flush();
 
     const gpuBuffer = this.buffer;
-    const device = this.device;
+    const device = this._group.device;
 
     if (gpuBuffer.mapState === 'mapped') {
       const mapped = gpuBuffer.getMappedRange();
@@ -283,7 +277,9 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
       return;
     }
     this._destroyed = true;
-    this._buffer?.destroy();
+    if (this._ownBuffer) {
+      this._buffer?.destroy();
+    }
   }
 
   toString(): string {

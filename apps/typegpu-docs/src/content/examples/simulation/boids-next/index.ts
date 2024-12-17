@@ -1,19 +1,10 @@
-import {
-  type Infer,
-  arrayOf,
-  builtin,
-  f32,
-  struct,
-  vec2f,
-  vec3f,
-  vec4f,
-} from 'typegpu/data';
+import * as d from 'typegpu/data';
 import tgpu, { asUniform } from 'typegpu/experimental';
 
 const triangleAmount = 1000;
 const triangleSize = 0.03;
 
-const rotate = tgpu.fn([vec2f, f32], vec2f).does(/* wgsl */ `
+const rotate = tgpu.fn([d.vec2f, d.f32], d.vec2f).does(/* wgsl */ `
   (v: vec2f, angle: f32) -> vec2f {
     let pos = vec2(
       (v.x * cos(angle)) - (v.y * sin(angle)),
@@ -24,31 +15,31 @@ const rotate = tgpu.fn([vec2f, f32], vec2f).does(/* wgsl */ `
   }
 `);
 
-const getRotationFromVelocity = tgpu.fn([vec2f], f32).does(/* wgsl */ `
+const getRotationFromVelocity = tgpu.fn([d.vec2f], d.f32).does(/* wgsl */ `
   (velocity: vec2f) -> f32 {
     return -atan2(velocity.x, velocity.y);
   }
 `);
 
-const TriangleData = struct({
-  position: vec2f,
-  velocity: vec2f,
+const TriangleData = d.struct({
+  position: d.vec2f,
+  velocity: d.vec2f,
 });
 
 const renderBindGroupLayout = tgpu.bindGroupLayout({
-  trianglePos: { uniform: arrayOf(TriangleData, triangleAmount) },
-  colorPalette: { uniform: vec3f },
+  trianglePos: { uniform: d.arrayOf(TriangleData, triangleAmount) },
+  colorPalette: { uniform: d.vec3f },
 });
 
 const { trianglePos, colorPalette } = renderBindGroupLayout.bound;
 
 const VertexOutput = {
-  position: builtin.position,
-  color: vec4f,
+  position: d.builtin.position,
+  color: d.vec4f,
 };
 
 const mainVert = tgpu
-  .vertexFn({ v: vec2f, center: vec2f, velocity: vec2f }, VertexOutput)
+  .vertexFn({ v: d.vec2f, center: d.vec2f, velocity: d.vec2f }, VertexOutput)
   .does(/* wgsl */ `(@location(0) v: vec2f, @location(1) center: vec2f, @location(2) velocity: vec2f) -> VertexOutput {
     let angle = getRotationFromVelocity(velocity);
     let rotated = rotate(v, angle);
@@ -68,33 +59,32 @@ const mainVert = tgpu
     colorPalette,
     getRotationFromVelocity,
     rotate,
-    get VertexOutput() {
-      return mainVert.Output;
-    },
   });
 
-const mainFrag = tgpu.fragmentFn(VertexOutput, vec4f).does(/* wgsl */ `
+const mainFrag = tgpu.fragmentFn(VertexOutput, d.vec4f).does(/* wgsl */ `
   (@location(0) color: vec4f) -> @location(0) vec4f {
     return color;
   }
 `);
 
-const Params = struct({
-  separationDistance: f32,
-  separationStrength: f32,
-  alignmentDistance: f32,
-  alignmentStrength: f32,
-  cohesionDistance: f32,
-  cohesionStrength: f32,
-}).$name('Params');
+const Params = d
+  .struct({
+    separationDistance: d.f32,
+    separationStrength: d.f32,
+    alignmentDistance: d.f32,
+    alignmentStrength: d.f32,
+    cohesionDistance: d.f32,
+    cohesionStrength: d.f32,
+  })
+  .$name('Params');
 
-type Params = Infer<typeof Params>;
+type Params = d.Infer<typeof Params>;
 
 const colorPresets = {
-  plumTree: vec3f(1.0, 2.0, 1.0),
-  jeans: vec3f(2.0, 1.5, 1.0),
-  greyscale: vec3f(0, 0, 0),
-  hotcold: vec3f(0, 3.14, 3.14),
+  plumTree: d.vec3f(1.0, 2.0, 1.0),
+  jeans: d.vec3f(2.0, 1.5, 1.0),
+  greyscale: d.vec3f(0, 0, 0),
+  hotcold: d.vec3f(0, 3.14, 3.14),
 };
 
 const presets = {
@@ -158,23 +148,23 @@ const paramsBuffer = root
 const params = asUniform(paramsBuffer);
 
 const triangleVertexBuffer = root
-  .createBuffer(arrayOf(vec2f, 3), [
-    vec2f(0.0, triangleSize),
-    vec2f(-triangleSize / 2, -triangleSize / 2),
-    vec2f(triangleSize / 2, -triangleSize / 2),
+  .createBuffer(d.arrayOf(d.vec2f, 3), [
+    d.vec2f(0.0, triangleSize),
+    d.vec2f(-triangleSize / 2, -triangleSize / 2),
+    d.vec2f(triangleSize / 2, -triangleSize / 2),
   ])
   .$usage('vertex');
 
 const trianglePosBuffers = Array.from({ length: 2 }, () =>
   root
-    .createBuffer(arrayOf(TriangleData, triangleAmount))
+    .createBuffer(d.arrayOf(TriangleData, triangleAmount))
     .$usage('storage', 'uniform', 'vertex'),
 );
 
 const randomizePositions = () => {
   const positions = Array.from({ length: triangleAmount }, () => ({
-    position: vec2f(Math.random() * 2 - 1, Math.random() * 2 - 1),
-    velocity: vec2f(Math.random() * 0.1 - 0.05, Math.random() * 0.1 - 0.05),
+    position: d.vec2f(Math.random() * 2 - 1, Math.random() * 2 - 1),
+    velocity: d.vec2f(Math.random() * 0.1 - 0.05, Math.random() * 0.1 - 0.05),
   }));
   trianglePosBuffers[0].write(positions);
   trianglePosBuffers[1].write(positions);
@@ -182,12 +172,12 @@ const randomizePositions = () => {
 randomizePositions();
 
 const colorPaletteBuffer = root
-  .createBuffer(vec3f, colorPresets.jeans)
+  .createBuffer(d.vec3f, colorPresets.jeans)
   .$usage('uniform');
 
-const TriangleDataArray = (n: number) => arrayOf(TriangleData, n);
+const TriangleDataArray = (n: number) => d.arrayOf(TriangleData, n);
 
-const vertexLayout = tgpu.vertexLayout((n) => arrayOf(vec2f, n));
+const vertexLayout = tgpu.vertexLayout((n) => d.arrayOf(d.vec2f, n));
 const instanceLayout = tgpu.vertexLayout(TriangleDataArray, 'instance');
 
 const renderPipeline = root

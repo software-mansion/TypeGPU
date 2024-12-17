@@ -1,5 +1,5 @@
 import { entries, filter, fromEntries, groupBy, map, pipe } from 'remeda';
-import type { Example, ExampleMetadata } from './types';
+import type { Example, ExampleMetadata, Module } from './types';
 
 function pathToExampleKey<T>(record: Record<string, T>): Record<string, T> {
   return pipe(
@@ -28,7 +28,7 @@ const metaFiles: Record<string, ExampleMetadata> = pathToExampleKey(
   }),
 );
 
-const tsFiles: Record<string, string> = pathToExampleKey(
+const readonlyTsFiles: Record<string, string> = pathToExampleKey(
   import.meta.glob('../../content/examples/**/index.ts', {
     query: 'raw',
     eager: true,
@@ -44,6 +44,17 @@ const htmlFiles: Record<string, string> = pathToExampleKey(
   }),
 );
 
+const execTsFiles: Record<string, Module> = pathToExampleKey(
+  import.meta.glob('../../content/examples/**/index.ts', {
+    query: { tgpu: true },
+    eager: true,
+  }),
+);
+
+function moduleToString(module?: Module) {
+  return module ? `${module.default}` : '';
+}
+
 export const examples = pipe(
   metaFiles,
   entries(),
@@ -54,8 +65,9 @@ export const examples = pipe(
         {
           key,
           metadata: value,
-          tsCode: tsFiles[key] ?? '',
+          tsCode: readonlyTsFiles[key] ?? '',
           htmlCode: htmlFiles[key] ?? '',
+          execTsCode: moduleToString(execTsFiles[key]),
         },
       ] satisfies [string, Example],
   ),

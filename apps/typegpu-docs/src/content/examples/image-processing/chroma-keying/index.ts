@@ -1,28 +1,22 @@
-import tgpu from 'typegpu';
-import { f32, vec3f } from 'typegpu/data';
+import * as d from 'typegpu/data';
+import tgpu from 'typegpu/experimental';
 
 const rareLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },
-  color: { uniform: vec3f },
-  threshold: { uniform: f32 },
+  color: { uniform: d.vec3f },
+  threshold: { uniform: d.f32 },
 });
 
 const frequentLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: {} },
 });
 
+const VertexOutput = d.struct({
+  position: d.builtin.position,
+  uv: d.location(0, d.vec2f),
+});
+
 const shaderCode = /* wgsl */ `
-
-struct VertexOutput {
-  @builtin(position) position: vec4f,
-  @location(0) uv: vec2f,
-};
-
-@group(0) @binding(0) var sampling: sampler;
-@group(0) @binding(1) var<uniform> color: vec3f;
-@group(0) @binding(2) var<uniform> threshold: f32;
-@group(1) @binding(0) var inputTexture: texture_external;
-
 
 @vertex
 fn main_vert(@builtin(vertex_index) idx: u32) -> VertexOutput {
@@ -76,9 +70,7 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
   }
 
   return col;
-}
-
-`;
+}`;
 
 const width = 500;
 const height = 375;
@@ -125,12 +117,12 @@ const mediaProcessor = new MediaStreamTrackProcessor({
 const reader = mediaProcessor.readable.getReader();
 
 const thresholdBuffer = root
-  .createBuffer(f32, 0.5)
+  .createBuffer(d.f32, 0.5)
   .$name('threshold')
   .$usage('uniform');
 
 const colorBuffer = root
-  .createBuffer(vec3f, vec3f(0, 1.0, 0))
+  .createBuffer(d.vec3f, d.vec3f(0, 1.0, 0))
   .$name('color')
   .$usage('uniform');
 
@@ -145,7 +137,17 @@ const rareBindGroup = root.createBindGroup(rareLayout, {
   threshold: thresholdBuffer,
 });
 
-const shaderModule = device.createShaderModule({ code: shaderCode });
+const shaderModule = device.createShaderModule({
+  code: tgpu.resolve({
+    input: shaderCode,
+    extraDependencies: {
+      ...rareLayout.bound,
+      ...frequentLayout.bound,
+      VertexOutput,
+    },
+  }),
+});
+
 const renderPipeline = device.createRenderPipeline({
   layout: device.createPipelineLayout({
     bindGroupLayouts: [root.unwrap(rareLayout), root.unwrap(frequentLayout)],
@@ -228,7 +230,7 @@ video.addEventListener('click', (event) => {
   const [r, g, b] = samplingContext.getImageData(x, y, 1, 1).data;
 
   table.innerText = `R: ${r} G: ${g} B: ${b}`;
-  colorBuffer.write(vec3f(r / 255, g / 255, b / 255));
+  colorBuffer.write(d.vec3f(r / 255, g / 255, b / 255));
 });
 
 // #endregion

@@ -62,6 +62,18 @@ describe('ArrayToContainedAttribs', () => {
       b: TgpuVertexAttrib<'float32'>;
     }>();
   });
+
+  it('processes an array of f16s', () => {
+    type Result = ArrayToContainedAttribs<d.TgpuArray<d.F16>>;
+
+    expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'float16'>>();
+  });
+
+  it('processes a loose array of snorm16x2', () => {
+    type Result = ArrayToContainedAttribs<d.LooseArray<d.snorm16x2>>;
+
+    expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'snorm16x2'>>();
+  });
 });
 
 describe('tgpu.vertexLayout', () => {
@@ -137,6 +149,19 @@ describe('tgpu.vertexLayout', () => {
         format: 'float32',
         offset: 16,
       },
+    });
+  });
+
+  it('creates attributes from loose array with f16 variants', () => {
+    const vertexLayout = tgpu.vertexLayout((count: number) =>
+      d.looseArrayOf(d.float16x4, count),
+    );
+
+    expect(vertexLayout.stride).toEqual(8);
+    expect(vertexLayout.attrib).toEqual({
+      _layout: vertexLayout,
+      format: 'float16x4',
+      offset: 0,
     });
   });
 });
@@ -300,5 +325,95 @@ describe('connectAttributesToShader', () => {
       ],
       usedVertexLayouts: [alphaBetaLayout, gammaLayout],
     });
+  });
+
+  it('connects a single vec4h attribute', () => {
+    const shaderInputLayout = d.vec4h;
+    const layout = tgpu.vertexLayout((n) => d.looseArrayOf(d.float16x4, n));
+    const attrib = layout.attrib;
+
+    expect(connectAttributesToShader(shaderInputLayout, attrib)).toEqual({
+      bufferDefinitions: [
+        {
+          arrayStride: 8,
+          stepMode: 'vertex',
+          attributes: [
+            {
+              format: 'float16x4',
+              offset: 0,
+              shaderLocation: 0,
+            },
+          ],
+        },
+      ],
+      usedVertexLayouts: [layout],
+    });
+  });
+
+  it('connects a record of attributes from a single layout (with f16 variants)', () => {
+    const shaderInputLayout = {
+      a: d.f16,
+      b: d.location(3, d.vec2h),
+      c: d.u32 /* should get @location(4) automatically */,
+      d: d.f32,
+    };
+
+    const layout = tgpu.vertexLayout((n) =>
+      d.looseArrayOf(
+        d.looseStruct({
+          alpha: d.f16, // 2 bytes
+          beta: d.float16x2, // 4 bytes
+          gamma: d.u32, // 4 bytes
+          delta: d.float16, // 2 bytes
+        }),
+        n,
+      ),
+    );
+
+    const result = connectAttributesToShader(shaderInputLayout, {
+      // purposefully out of order, which should be controlled by the shader input.
+      b: layout.attrib.beta,
+      c: layout.attrib.gamma,
+      d: layout.attrib.delta,
+      a: layout.attrib.alpha,
+    });
+
+    expect(result).toEqual({
+      bufferDefinitions: [
+        {
+          arrayStride: 12,
+          stepMode: 'vertex',
+          attributes: [
+            {
+              format: 'float16',
+              offset: 0,
+              shaderLocation: 0,
+            },
+            {
+              format: 'float16x2',
+              offset: 2,
+              shaderLocation: 3,
+            },
+            {
+              format: 'uint32',
+              offset: 6,
+              shaderLocation: 4,
+            },
+            {
+              format: 'float16',
+              offset: 10,
+              shaderLocation: 5,
+            },
+          ],
+        },
+      ],
+      usedVertexLayouts: [layout],
+    });
+  });
+
+  it('throws when trying to use type that has no attribute representation', () => {
+    expect(() =>
+      tgpu.vertexLayout((n) => d.looseArrayOf(d.vec3h, n)),
+    ).toThrow();
   });
 });
