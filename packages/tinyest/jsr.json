@@ -2,5 +2,8 @@
   "name": "@typegpu/tinyest",
   "version": "0.0.0",
   "license": "MIT",
-  "exports": "./src/index.ts"
+  "exports": "./src/index.ts",
+  "publish": {
+    "include": ["README.md", "src/**/*.ts"]
+  }
 }
