@@ -49,7 +49,7 @@ import type { AnyWgslData, BaseWgslData } from './data/wgslTypes';
 import { NotUniformError } from './errors';
 import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
 import type { TgpuNamable } from './namable';
-import type { OmitProps, Prettify } from './shared/utilityTypes';
+import type { Default, OmitProps, Prettify } from './shared/utilityTypes';
 import type { TgpuShaderStage } from './types';
 import type { Unwrapper } from './unwrapper';
 
@@ -224,34 +224,9 @@ type GetUsageForStorageTexture<
       : never;
 
 type StorageTextureUsageForEntry<T extends TgpuLayoutStorageTexture> =
-  T extends {
-    access?: infer Access;
-  }
-    ? 'mutable' extends Access
-      ? 'readonly' extends Access
-        ? 'writeonly' extends Access
-          ?
-              | GetUsageForStorageTexture<T, 'mutable'>
-              | GetUsageForStorageTexture<T, 'readonly'>
-              | GetUsageForStorageTexture<T, 'writeonly'>
-          :
-              | GetUsageForStorageTexture<T, 'mutable'>
-              | GetUsageForStorageTexture<T, 'readonly'>
-        : 'writeonly' extends Access
-          ?
-              | GetUsageForStorageTexture<T, 'mutable'>
-              | GetUsageForStorageTexture<T, 'writeonly'>
-          : GetUsageForStorageTexture<T, 'mutable'>
-      : 'readonly' extends Access
-        ? 'writeonly' extends Access
-          ?
-              | GetUsageForStorageTexture<T, 'readonly'>
-              | GetUsageForStorageTexture<T, 'writeonly'>
-          : GetUsageForStorageTexture<T, 'readonly'>
-        : 'writeonly' extends Access
-          ? GetUsageForStorageTexture<T, 'writeonly'>
-          : GetUsageForStorageTexture<T, 'readonly'>
-    : GetUsageForStorageTexture<T, 'readonly'>;
+  T extends unknown
+    ? GetUsageForStorageTexture<T, Default<T['access'], 'writeonly'>>
+    : never;
 
 type GetDimension<T extends GPUTextureViewDimension | undefined> =
   T extends keyof ViewDimensionToDimension
