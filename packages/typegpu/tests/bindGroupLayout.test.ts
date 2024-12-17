@@ -17,6 +17,7 @@ import tgpu, {
   type TgpuBufferMutable,
 } from '../src/experimental';
 import './utils/webgpuGlobals';
+import { parse } from '@typegpu/wgsl-parser';
 import {
   MissingBindingError,
   type TgpuBindGroup,
@@ -25,7 +26,6 @@ import {
   bindGroupLayoutExperimental,
 } from '../src/tgpuBindGroupLayout';
 import { it } from './utils/extendedIt';
-import { parseWGSL } from './utils/parseWGSL';
 
 const DEFAULT_READONLY_VISIBILITY_FLAGS =
   GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
@@ -209,8 +209,8 @@ describe('TgpuBindGroupLayout', () => {
       names: 'strict',
     });
 
-    expect(parseWGSL(resolved)).toEqual(
-      parseWGSL(`
+    expect(parse(resolved)).toEqual(
+      parse(`
       @group(0) @binding(0) var fooTexture: texture_1d<f32>;
 
       fn main() { textureLoad(fooTexture); }

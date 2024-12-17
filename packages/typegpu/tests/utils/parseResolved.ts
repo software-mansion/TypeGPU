@@ -1,16 +1,14 @@
 import { JitTranspiler } from '@typegpu/jit';
 import { parse } from '@typegpu/wgsl-parser';
-import { StrictNameRegistry } from '../../src/experimental';
-import { resolve } from '../../src/resolutionCtx';
-import type { Wgsl } from '../../src/types';
+import type { TgpuResolveOptions } from '../../src/core/resolve/tgpuResolve';
+import tgpu from '../../src/experimental';
 
-export function parseWGSL(segment: Wgsl) {
-  const opts = {
-    names: new StrictNameRegistry(),
+export function parseResolved(resolvable: TgpuResolveOptions['input']) {
+  const resolved = tgpu.resolve({
+    input: resolvable,
+    names: 'strict',
     jitTranspiler: new JitTranspiler(),
-  };
-
-  const { code: resolved } = resolve(segment, opts);
+  });
 
   try {
     return parse(resolved);
