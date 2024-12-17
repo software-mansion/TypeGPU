@@ -1,5 +1,9 @@
 import type { Block } from 'tinyest';
-import type { Eventual, SlotValuePair } from './core/slot/slotTypes';
+import {
+  type Eventual,
+  type SlotValuePair,
+  isSlot,
+} from './core/slot/slotTypes';
 import type { AnyWgslData } from './data/wgslTypes';
 import type { NameRegistry } from './nameRegistry';
 import type {
@@ -93,7 +97,8 @@ export function isWgsl(value: unknown): value is Wgsl {
     typeof value === 'number' ||
     typeof value === 'boolean' ||
     typeof value === 'string' ||
-    isResolvable(value)
+    isResolvable(value) ||
+    isSlot(value)
   );
 }
 

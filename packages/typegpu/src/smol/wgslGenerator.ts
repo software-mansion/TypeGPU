@@ -1,4 +1,5 @@
 import type * as smol from 'tinyest';
+import { isSlot } from '../core/slot/slotTypes';
 import { bool } from '../data';
 import { isWgslData } from '../data/wgslTypes';
 import {
@@ -80,7 +81,11 @@ function generateExpression(
     const target = generateExpression(ctx, targetId);
     const propertyStr = resolveRes(ctx, generateExpression(ctx, property));
 
-    if (isResolvable(target.value) || typeof target.value === 'object') {
+    if (
+      isResolvable(target.value) ||
+      isSlot(target.value) ||
+      typeof target.value === 'object'
+    ) {
       // NOTE: Temporary solution, assuming that access to `.value` of resolvables should always resolve to just the target.
       if (propertyStr === 'value') {
         return {
@@ -139,7 +144,11 @@ function generateExpression(
     );
     const argValues = argResources.map((res) => resolveRes(ctx, res));
 
-    if (isResolvable(idValue) || typeof idValue === 'function') {
+    if (
+      isResolvable(idValue) ||
+      isSlot(idValue) ||
+      typeof idValue === 'function'
+    ) {
       // Assuming that `id` is callable
       // TODO: Pass in resources, not just values.
       const result = (idValue as unknown as (...args: unknown[]) => unknown)(
