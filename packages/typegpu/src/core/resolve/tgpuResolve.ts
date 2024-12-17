@@ -45,9 +45,7 @@ export function resolve(options: TgpuResolveOptions): string {
   };
 
   Object.defineProperty(resolutionObj, 'toString', {
-    value() {
-      return '<root>';
-    },
+    value: () => '<root>',
   });
 
   const { code } = resolveImpl(resolutionObj, {

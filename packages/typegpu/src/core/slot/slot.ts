@@ -20,7 +20,7 @@ class TgpuSlotImpl<T> implements TgpuSlot<T> {
 
   constructor(public defaultValue: T | undefined = undefined) {}
 
-  public $name(label: string) {
+  $name(label: string) {
     this.label = label;
     return this;
   }

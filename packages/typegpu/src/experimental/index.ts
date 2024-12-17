@@ -77,6 +77,7 @@ export {
   isUsableAsUniform,
   isUsableAsVertex,
 } from '../core/buffer/buffer';
+export { isSlot } from '../core/slot/slotTypes';
 export {
   sampler,
   comparisonSampler,
@@ -109,6 +110,7 @@ export type {
   TgpuBufferReadonly,
   TgpuBufferMutable,
 } from '../core/buffer/public';
+export type { Eventual, TgpuSlot } from '../core/slot/slotTypes';
 export type {
   TgpuTexture,
   TgpuReadonlyTexture,
