@@ -5,9 +5,9 @@ import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout';
-import type { TgpuSlot } from '../../types';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
+import type { TgpuSlot } from '../slot/slotTypes';
 
 // ----------
 // Public API

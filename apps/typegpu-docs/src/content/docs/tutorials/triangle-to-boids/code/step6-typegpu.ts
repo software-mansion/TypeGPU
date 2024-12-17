@@ -25,7 +25,7 @@ context.configure({
 
 addButtonParameter('Randomize', randomizeTriangles);
 
-const rotationDirection = wgsl.slot<number>();
+const rotationDirection = tgpu.slot<number>();
 
 const triangleSize = 0.2;
 const triangleVertex = wgsl

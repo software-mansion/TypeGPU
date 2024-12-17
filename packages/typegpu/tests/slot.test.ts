@@ -1,149 +1,193 @@
 import { describe, expect, it } from 'vitest';
-import {
+import * as d from '../src/data';
+import tgpu, {
   MissingSlotValueError,
   ResolutionError,
   wgsl,
 } from '../src/experimental';
-import { StrictNameRegistry } from '../src/nameRegistry';
-import { resolve } from '../src/resolutionCtx';
+import type { TgpuResolvable } from '../src/types';
 import { parseWGSL } from './utils/parseWGSL';
 
 const RED = 'vec3f(1., 0., 0.)';
 const GREEN = 'vec3f(0., 1., 0.)';
 
-describe('wgsl.slot', () => {
+/**
+ * Using `tgpu.resolve()` wraps all inputs into a root object.
+ * This mock allows us to verify that proper resolution errors are
+ * getting thrown, with the root on top.
+ */
+const resolutionRootMock = {
+  toString() {
+    return '<root>';
+  },
+} as TgpuResolvable;
+
+describe('tgpu.slot', () => {
   it('resolves to default value if no value provided', () => {
-    const colorSlot = wgsl.slot(RED).$name('color'); // red by default
+    const colorSlot = tgpu.slot(RED).$name('color'); // red by default
 
-    const actual = wgsl`
-      fn get_color() {
-        return ${colorSlot};
-      }
-    `;
+    const getColor = tgpu
+      .fn([], d.vec3f)
+      .does(/* wgsl */ `() -> vec3f {
+        return colorSlot;
+      }`)
+      .$name('getColor')
+      .$uses({ colorSlot });
 
-    const expected = wgsl`
-      fn get_color() {
+    const actual = tgpu.resolve({ input: getColor, names: 'strict' });
+
+    expect(parseWGSL(actual)).toEqual(
+      parseWGSL(/* wgsl */ `
+      fn getColor() -> vec3f {
         return ${RED};
       }
-    `;
-
-    expect(parseWGSL(actual)).toEqual(parseWGSL(expected));
+    `),
+    );
   });
 
   it('resolves to provided value rather than default value', () => {
-    const colorSlot = wgsl.slot(RED).$name('color'); // red by default
+    const colorSlot = tgpu.slot(RED).$name('color'); // red by default
 
-    const getColor = wgsl.fn`() {
-      return ${colorSlot};
-    }`.$name('get_color');
+    const getColor = tgpu
+      .fn([], d.vec3f)
+      .does(/* wgsl */ `() -> vec3f {
+        return colorSlot;
+      }`)
+      .$name('getColor')
+      .$uses({ colorSlot });
 
     // overriding to green
     const getColorWithGreen = getColor.with(colorSlot, GREEN);
 
-    const actual = wgsl`
-      fn main() {
-        return ${getColorWithGreen}();
-      }
-    `;
+    const main = tgpu
+      .fn([])
+      .does(`() {
+        return getColorWithGreen();
+      }`)
+      .$name('main')
+      .$uses({ getColorWithGreen });
 
-    const expected = wgsl`
-      fn get_color() {
+    const actual = tgpu.resolve({ input: main, names: 'strict' });
+
+    expect(parseWGSL(actual)).toEqual(
+      parseWGSL(/* wgsl */ `
+      fn getColor() -> vec3f {
         return ${GREEN};
       }
 
       fn main() {
-        return get_color();
+        return getColor();
       }
-    `;
-
-    expect(parseWGSL(actual)).toEqual(parseWGSL(expected));
+    `),
+    );
   });
 
   it('resolves to provided value', () => {
-    const colorSlot = wgsl.slot<string>().$name('color'); // no default
+    const colorSlot = tgpu.slot<string>().$name('color'); // no default
 
-    const getColor = wgsl.fn`() {
-      return ${colorSlot};
-    }`.$name('get_color');
+    const getColor = tgpu
+      .fn([], d.vec3f)
+      .does(/* wgsl */ `() {
+        return colorSlot;
+      }`)
+      .$name('getColor')
+      .$uses({ colorSlot });
 
     // overriding to green
     const getColorWithGreen = getColor.with(colorSlot, 'vec3f(0., 1., 0.)');
 
-    const program = wgsl`
-      fn main() {
-        return ${getColorWithGreen}();
-      }`;
+    const main = tgpu
+      .fn([])
+      .does(/* wgsl */ `() {
+        getColorWithGreen();
+      }`)
+      .$name('main')
+      .$uses({ getColorWithGreen });
+
+    const actual = tgpu.resolve({ input: main, names: 'strict' });
 
     // should be green
-    expect(parseWGSL(program)).toEqual(
+    expect(parseWGSL(actual)).toEqual(
       parseWGSL(wgsl`
-        fn get_color() {
+        fn getColor() {
           return vec3f(0., 1., 0.);
         }
 
         fn main() {
-          return get_color();
+          getColor();
         }
     `),
     );
   });
 
   it('throws error when no default nor value provided', () => {
-    const colorSlot = wgsl.slot().$name('color');
-    const opts = { names: new StrictNameRegistry() };
+    const colorSlot = tgpu.slot<string>().$name('color');
 
-    const shader = wgsl`
-    fn get_color() {
-      return ${colorSlot};
-    }
-    `.$name('root');
+    const getColor = tgpu
+      .fn([], d.vec3f)
+      .does(`() {
+        return colorSlot;
+      })`)
+      .$name('getColor')
+      .$uses({ colorSlot });
 
-    expect(() => resolve(shader, opts).code).toThrowError(
+    expect(() => tgpu.resolve({ input: getColor, names: 'strict' })).toThrow(
       new ResolutionError(new MissingSlotValueError(colorSlot), [
-        shader,
-        colorSlot,
+        resolutionRootMock,
+        getColor,
       ]),
     );
   });
 
   it('prefers closer scope', () => {
-    const colorSlot = wgsl.slot().$name('color'); // no default
+    const colorSlot = tgpu.slot<string>().$name('color'); // no default
 
-    const getColor = wgsl.fn`() {
-      return ${colorSlot};
-    }`.$name('get_color');
+    const getColor = tgpu
+      .fn([], d.vec3f)
+      .does(/* wgsl */ `() -> vec3f {
+        return colorSlot;
+      }`)
+      .$name('getColor')
+      .$uses({ colorSlot });
 
     const getColorWithRed = getColor.with(colorSlot, RED);
     const getColorWithGreen = getColor.with(colorSlot, GREEN);
 
-    const wrapperFn = wgsl.fn`() {
-      return ${getColorWithGreen}();
-    }`
+    const wrapperFn = tgpu
+      .fn([])
+      .does(/* wgsl */ `() {
+      return getColorWithGreen();
+    }`)
+      .$uses({ getColorWithGreen })
       .$name('wrapper')
       .with(colorSlot, RED);
 
-    const actual = wgsl`
-      fn main() {
-        ${getColorWithRed}();
-        ${wrapperFn}();
-      }
-    `;
+    const main = tgpu
+      .fn([])
+      .does(/* wgsl */ `() {
+        getColorWithRed();
+        wrapperFn();
+      }`)
+      .$uses({ getColorWithRed, wrapperFn })
+      .$name('main');
 
-    const expected = wgsl`
-      fn get_color() {
+    const actual = tgpu.resolve({ input: main, names: 'strict' });
+
+    const expected = /* wgsl */ `
+      fn getColor() -> vec3f {
         return ${RED};
       }
 
-      fn get_color_1() {
+      fn getColor_1() -> vec3f {
         return ${GREEN};
       }
 
       fn wrapper() {
-        return get_color_1();
+        return getColor_1();
       }
 
       fn main() {
-        get_color();
+        getColor();
         wrapper();
       }
     `;
@@ -152,25 +196,41 @@ describe('wgsl.slot', () => {
   });
 
   it('reuses common nested functions', () => {
-    const sizeSlot = wgsl.slot<1 | 100>().$name('size');
-    const colorSlot = wgsl.slot<typeof RED | typeof GREEN>().$name('color');
+    const sizeSlot = tgpu.slot<1 | 100>().$name('size');
+    const colorSlot = tgpu.slot<typeof RED | typeof GREEN>().$name('color');
 
-    const sizeFn = wgsl.fn`() {
-      return ${sizeSlot};
-    }`.$name('get_size');
+    const getSize = tgpu
+      .fn([], d.f32)
+      .does(/* wgsl */ `() -> f32 {
+        return sizeSlot;
+      }`)
+      .$uses({ sizeSlot })
+      .$name('getSize');
 
-    const colorFn = wgsl.fn`() {
-      return ${colorSlot};
-    }`.$name('get_color');
+    const getColor = tgpu
+      .fn([], d.vec3f)
+      .does(/* wgsl */ `() -> vec3f {
+        return colorSlot;
+      }`)
+      .$uses({ colorSlot })
+      .$name('getColor');
 
-    const sizeAndColorFn = wgsl.fn`() {
-      ${sizeFn}();
-      ${colorFn}();
-    }`.$name('size_and_color');
+    const sizeAndColor = tgpu
+      .fn([])
+      .does(`() {
+        getSize();
+        getColor();
+      }`)
+      .$uses({ getSize, getColor })
+      .$name('sizeAndColor');
 
-    const wrapperFn = wgsl.fn`() {
-      ${sizeAndColorFn}();
-    }`.$name('wrapper');
+    const wrapperFn = tgpu
+      .fn([])
+      .does(`() {
+        sizeAndColor();
+      }`)
+      .$uses({ sizeAndColor })
+      .$name('wrapper');
 
     const wrapperWithSmallRed = wrapperFn
       .with(sizeSlot, 1)
@@ -185,66 +245,75 @@ describe('wgsl.slot', () => {
       .with(sizeSlot, 100)
       .with(colorSlot, GREEN);
 
-    const actual = wgsl`
-      fn main() {
-        ${wrapperWithSmallRed}();
-        ${wrapperWithBigRed}();
-        ${wrapperWithSmallGreen}();
-        ${wrapperWithBigGreen}();
-      }
-    `;
+    const main = tgpu
+      .fn([])
+      .does(`() {
+        wrapperWithSmallRed();
+        wrapperWithBigRed();
+        wrapperWithSmallGreen();
+        wrapperWithBigGreen();
+      }`)
+      .$uses({
+        wrapperWithSmallRed,
+        wrapperWithBigRed,
+        wrapperWithSmallGreen,
+        wrapperWithBigGreen,
+      })
+      .$name('main');
+
+    const actual = tgpu.resolve({ input: main, names: 'strict' });
 
     const expected = wgsl`
-      fn get_size() {
+      fn getSize() -> f32 {
         return 1;
       }
       
-      fn get_color() {
+      fn getColor() -> vec3f {
         return ${RED};
       }
 
-      fn size_and_color() {
-        get_size();
-        get_color();
+      fn sizeAndColor() {
+        getSize();
+        getColor();
       }
 
       fn wrapper() {
-        size_and_color();
+        sizeAndColor();
       }
 
-      fn get_size_1() {
+      fn getSize_1() -> f32 {
         return 100;
       }
 
-      fn size_and_color_1() {
-        get_size_1();
-        get_color();
+      fn sizeAndColor_1() {
+        getSize_1();
+        getColor();
       }
 
       fn wrapper_1() {
-        size_and_color_1();
+        sizeAndColor_1();
       }
 
-      fn get_color_1() {
+      fn getColor_1() -> vec3f {
         return ${GREEN};
       }
 
-      fn size_and_color_2() {
-        get_size();
-        get_color_1();
+      fn sizeAndColor_2() {
+        getSize();
+        getColor_1();
       }
 
       fn wrapper_2() {
-        size_and_color_2();
+        sizeAndColor_2();
       }
 
-      fn size_and_color_3() {
-        get_size_1();
-        get_color_1();
+      fn sizeAndColor_3() {
+        getSize_1();
+        getColor_1();
       }
 
       fn wrapper_3() {
-        size_and_color_3();
+        sizeAndColor_3();
       }
 
       fn main() {
@@ -259,19 +328,39 @@ describe('wgsl.slot', () => {
   });
 
   it('unwraps layers of slots', () => {
-    const slotA = wgsl.slot<number>(1).$name('a');
-    const slotB = wgsl.slot<number>(2).$name('b');
-    const slotC = wgsl.slot<number>(3).$name('c');
-    const slotD = wgsl.slot<number>(4).$name('d');
+    const slotA = tgpu.slot(1).$name('a');
+    const slotB = tgpu.slot(2).$name('b');
+    const slotC = tgpu.slot(3).$name('c');
+    const slotD = tgpu.slot(4).$name('d');
 
-    const fn1 = wgsl.fn`() { let value = ${slotA}; }`.$name('fn1');
-    const fn2 = wgsl.fn`() { ${fn1}(); }`.$name('fn2').with(slotC, slotD);
-    const fn3 = wgsl.fn`() { ${fn2}(); }`.$name('fn3').with(slotB, slotC);
-    const fn4 = wgsl.fn`() { ${fn3}(); }`.$name('fn4').with(slotA, slotB);
+    const fn1 = tgpu
+      .fn([])
+      .does('() { let value = slotA; }')
+      .$uses({ slotA })
+      .$name('fn1');
+    const fn2 = tgpu
+      .fn([])
+      .does('() { fn1(); }')
+      .$uses({ fn1 })
+      .$name('fn2')
+      .with(slotC, slotD);
+    const fn3 = tgpu
+      .fn([])
+      .does('() { fn2(); }')
+      .$uses({ fn2 })
+      .$name('fn3')
+      .with(slotB, slotC);
+    const fn4 = tgpu
+      .fn([])
+      .does('() { fn3(); }')
+      .$uses({ fn3 })
+      .$name('fn4')
+      .with(slotA, slotB);
+    const main = tgpu.fn([]).does('() { fn4(); }').$uses({ fn4 }).$name('main');
 
-    const actual = wgsl`fn main() { ${fn4}(); }`;
+    const actual = tgpu.resolve({ input: main, names: 'strict' });
 
-    const expected = wgsl`
+    const expected = /* wgsl */ `
       fn fn1() { let value = 4; }
       fn fn2() { fn1(); }
       fn fn3() { fn2(); }

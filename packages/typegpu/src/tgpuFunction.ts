@@ -1,14 +1,7 @@
+import type { Eventual, SlotValuePair, TgpuSlot } from './core/slot/slotTypes';
 import type { TgpuNamable } from './namable';
 import { code } from './tgpuCode';
-import type {
-  Eventual,
-  InlineResolve,
-  ResolutionCtx,
-  SlotValuePair,
-  TgpuResolvable,
-  TgpuSlot,
-  Wgsl,
-} from './types';
+import type { ResolutionCtx, TgpuResolvable, Wgsl } from './types';
 
 // ----------
 // Public API
@@ -20,10 +13,7 @@ export interface TgpuFn extends TgpuResolvable, TgpuNamable {
 
 export type BoundTgpuFn = Omit<TgpuFn, '$name'>;
 
-export function fn(
-  strings: TemplateStringsArray,
-  ...params: (Wgsl | InlineResolve)[]
-): TgpuFn {
+export function fn(strings: TemplateStringsArray, ...params: Wgsl[]): TgpuFn {
   return new TgpuFnImpl(code(strings, ...params));
 }
 
