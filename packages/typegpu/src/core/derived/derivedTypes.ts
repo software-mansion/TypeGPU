@@ -1,7 +1,10 @@
-import type { BaseWgslData } from '../../data/wgslTypes';
-import type { Infer } from '../../shared/repr';
+export interface TgpuDerived<T> {
+  readonly resourceType: 'derived';
+  compute(): T;
+}
 
-export interface TgpuDerived<T extends BaseWgslData> {
-  readonly dataType: T;
-  readonly value: Infer<T>;
+export function isDerived<T extends TgpuDerived<unknown>>(
+  value: T | unknown,
+): value is T {
+  return (value as T)?.resourceType === 'derived';
 }

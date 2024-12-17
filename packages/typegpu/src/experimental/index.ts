@@ -2,6 +2,7 @@
  * @module typegpu/experimental
  */
 
+import { derived } from '../core/derived/derived';
 import { assignAst } from '../core/function/astUtils';
 import { computeFn } from '../core/function/tgpuComputeFn';
 import { fn, procedure } from '../core/function/tgpuFn';
@@ -33,6 +34,7 @@ export const tgpu = {
   computeFn,
   vertexLayout,
   bindGroupLayout,
+  derived,
 
   init: init as (
     options?: InitOptions | undefined,
@@ -75,6 +77,7 @@ export {
   isUsableAsUniform,
   isUsableAsVertex,
 } from '../core/buffer/buffer';
+export { isDerived } from '../core/derived/derivedTypes';
 export {
   sampler,
   comparisonSampler,
@@ -107,6 +110,7 @@ export type {
   TgpuBufferReadonly,
   TgpuBufferMutable,
 } from '../core/buffer/public';
+export type { TgpuDerived } from '../core/derived/derivedTypes';
 export type {
   TgpuTexture,
   TgpuReadonlyTexture,
