@@ -40,6 +40,7 @@ import type {
 import type { TextureProps } from './core/texture/textureProps';
 import {
   NotSampledError,
+  type Render,
   type Sampled,
   isUsableAsSampled,
 } from './core/texture/usageExtension';
@@ -267,7 +268,12 @@ type GetTextureLayoutToEntry<T extends TgpuLayoutTexture> = TgpuTexture<
     dimension?: GetDimension<T['viewDimension']>;
   }
 > &
-  Sampled;
+  (
+    | Sampled
+    | (Sampled & Render)
+    | (Sampled & Storage)
+    | (Sampled & Render & Storage)
+  );
 
 type GetStorageTextureLayoutToEntry<T extends TgpuLayoutStorageTexture> =
   TgpuTexture<
@@ -276,7 +282,12 @@ type GetStorageTextureLayoutToEntry<T extends TgpuLayoutStorageTexture> =
       dimension?: GetDimension<T['viewDimension']>;
     }
   > &
-    Storage;
+    (
+      | Storage
+      | (Storage & Render)
+      | (Storage & Sampled)
+      | (Storage & Render & Sampled)
+    );
 
 export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
   T extends TgpuLayoutUniform
