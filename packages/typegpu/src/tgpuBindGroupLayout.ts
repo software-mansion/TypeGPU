@@ -40,7 +40,6 @@ import type {
 import type { TextureProps } from './core/texture/textureProps';
 import {
   NotSampledError,
-  type Render,
   type Sampled,
   isUsableAsSampled,
 } from './core/texture/usageExtension';
@@ -262,33 +261,6 @@ type GetDimension<T extends GPUTextureViewDimension | undefined> =
 type GetDimensionWithDefault<T extends GPUTextureViewDimension | undefined> =
   T extends keyof ViewDimensionToDimension ? ViewDimensionToDimension[T] : '2d';
 
-type GetTextureLayoutToEntry<T extends TgpuLayoutTexture> = TgpuTexture<
-  TextureProps & {
-    format: ChannelTypeToLegalFormats[SampleTypeToStringChannelType[T['texture']]];
-    dimension?: GetDimension<T['viewDimension']>;
-  }
-> &
-  (
-    | Sampled
-    | (Sampled & Render)
-    | (Sampled & Storage)
-    | (Sampled & Render & Storage)
-  );
-
-type GetStorageTextureLayoutToEntry<T extends TgpuLayoutStorageTexture> =
-  TgpuTexture<
-    TextureProps & {
-      format: T['storageTexture'];
-      dimension?: GetDimension<T['viewDimension']>;
-    }
-  > &
-    (
-      | Storage
-      | (Storage & Render)
-      | (Storage & Sampled)
-      | (Storage & Render & Sampled)
-    );
-
 export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
   T extends TgpuLayoutUniform
     ? (TgpuBuffer<UnwrapRuntimeConstructor<T['uniform']>> & Uniform) | GPUBuffer
@@ -299,9 +271,25 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
       : T extends TgpuLayoutSampler
         ? GPUSampler
         : T extends TgpuLayoutTexture
-          ? GPUTextureView | GetTextureLayoutToEntry<T>
+          ?
+              | GPUTextureView
+              | (TgpuTexture<
+                  TextureProps & {
+                    format: ChannelTypeToLegalFormats[SampleTypeToStringChannelType[T['texture']]];
+                    dimension?: GetDimension<T['viewDimension']>;
+                  }
+                > &
+                  Sampled)
           : T extends TgpuLayoutStorageTexture
-            ? GPUTextureView | GetStorageTextureLayoutToEntry<T>
+            ?
+                | GPUTextureView
+                | (TgpuTexture<
+                    TextureProps & {
+                      format: T['storageTexture'];
+                      dimension?: GetDimension<T['viewDimension']>;
+                    }
+                  > &
+                    Storage)
             : T extends TgpuLayoutExternalTexture
               ? GPUExternalTexture
               : never;

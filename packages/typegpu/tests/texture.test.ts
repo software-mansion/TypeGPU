@@ -222,19 +222,27 @@ describe('TgpuTexture', () => {
     expect(getMutable).toThrow();
 
     expectTypeOf(getSampled).toEqualTypeOf<
-      () => NotAllowed<"missing .$usage('sampled')">
+      () =>
+        | NotAllowed<"missing .$usage('sampled')">
+        | TgpuSampledTexture<'2d', F32>
     >();
 
     expectTypeOf(getReadonly).toEqualTypeOf<
-      () => NotAllowed<"missing .$usage('storage')">
+      () =>
+        | NotAllowed<"missing .$usage('storage')">
+        | TgpuReadonlyTexture<'2d', Vec4f>
     >();
 
     expectTypeOf(getWriteonly).toEqualTypeOf<
-      () => NotAllowed<"missing .$usage('storage')">
+      () =>
+        | NotAllowed<"missing .$usage('storage')">
+        | TgpuWriteonlyTexture<'2d', Vec4f>
     >();
 
     expectTypeOf(getMutable).toEqualTypeOf<
-      () => NotAllowed<"missing .$usage('storage')">
+      () =>
+        | NotAllowed<"missing .$usage('storage')">
+        | TgpuMutableTexture<'2d', Vec4f>
     >();
   });
 });
