@@ -1,9 +1,10 @@
 import type { Block } from 'tinyest';
-import { isDerived } from './core/derived/derivedTypes';
 import { resolveData } from './core/resolve/resolveData';
 import {
+  type Eventual,
   type SlotValuePair,
   type TgpuSlot,
+  isDerived,
   isSlot,
 } from './core/slot/slotTypes';
 import { type AnyWgslData, isWgslData } from './data/wgslTypes';
@@ -20,7 +21,6 @@ import {
   bindGroupLayout,
 } from './tgpuBindGroupLayout';
 import type {
-  Eventual,
   FnToWgslOptions,
   ResolutionCtx,
   Resource,

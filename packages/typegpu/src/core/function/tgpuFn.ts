@@ -4,13 +4,8 @@ import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import { valueList } from '../../resolutionUtils';
 import { code } from '../../tgpuCode';
-import type {
-  Eventual,
-  ResolutionCtx,
-  TgpuResolvable,
-  Wgsl,
-} from '../../types';
-import type { TgpuSlot } from '../slot/slotTypes';
+import type { ResolutionCtx, TgpuResolvable, Wgsl } from '../../types';
+import type { Eventual, TgpuSlot } from '../slot/slotTypes';
 import { createFnCore } from './fnCore';
 import type { Implementation, InferArgs, InferReturn } from './fnTypes';
 

@@ -2,7 +2,6 @@
  * @module typegpu/experimental
  */
 
-import { derived } from '../core/derived/derived';
 import { assignAst } from '../core/function/astUtils';
 import { computeFn } from '../core/function/tgpuComputeFn';
 import { fn, procedure } from '../core/function/tgpuFn';
@@ -16,6 +15,7 @@ import {
   initFromDevice,
 } from '../core/root/init';
 import type { ExperimentalTgpuRoot } from '../core/root/rootTypes';
+import { derived } from '../core/slot/derived';
 import { slot } from '../core/slot/slot';
 import { vertexLayout } from '../core/vertexLayout/vertexLayout';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
@@ -79,8 +79,7 @@ export {
   isUsableAsUniform,
   isUsableAsVertex,
 } from '../core/buffer/buffer';
-export { isDerived } from '../core/derived/derivedTypes';
-export { isSlot } from '../core/slot/slotTypes';
+export { isSlot, isDerived } from '../core/slot/slotTypes';
 export {
   sampler,
   comparisonSampler,
@@ -104,7 +103,6 @@ export {
 } from '../core/buffer/bufferUsage';
 
 export type { Storage } from '../extension';
-export type { Eventual } from '../types';
 export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
 export type {
   TgpuBuffer,
@@ -114,8 +112,7 @@ export type {
   TgpuBufferReadonly,
   TgpuBufferMutable,
 } from '../core/buffer/public';
-export type { TgpuDerived } from '../core/derived/derivedTypes';
-export type { TgpuSlot } from '../core/slot/slotTypes';
+export type { TgpuSlot, TgpuDerived, Eventual } from '../core/slot/slotTypes';
 export type {
   TgpuTexture,
   TgpuReadonlyTexture,

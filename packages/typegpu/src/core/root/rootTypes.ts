@@ -12,7 +12,6 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout';
-import type { Eventual } from '../../types';
 import type { Unwrapper } from '../../unwrapper';
 import type { TgpuBuffer } from '../buffer/buffer';
 import type { IOLayout, IORecord } from '../function/fnTypes';
@@ -24,7 +23,7 @@ import type {
   FragmentOutToTargets,
   TgpuRenderPipeline,
 } from '../pipeline/renderPipeline';
-import type { TgpuSlot } from '../slot/slotTypes';
+import type { Eventual, TgpuSlot } from '../slot/slotTypes';
 import type { TgpuTexture } from '../texture/texture';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute';
 

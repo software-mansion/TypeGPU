@@ -1,4 +1,4 @@
-import type { TgpuDerived } from './derivedTypes';
+import type { TgpuDerived } from './slotTypes';
 
 // ----------
 // Public API
