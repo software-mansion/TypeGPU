@@ -104,6 +104,7 @@ export {
 } from '../core/buffer/bufferUsage';
 
 export type { Storage } from '../extension';
+export type { Eventual } from '../types';
 export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
 export type {
   TgpuBuffer,
@@ -114,7 +115,7 @@ export type {
   TgpuBufferMutable,
 } from '../core/buffer/public';
 export type { TgpuDerived } from '../core/derived/derivedTypes';
-export type { Eventual, TgpuSlot } from '../core/slot/slotTypes';
+export type { TgpuSlot } from '../core/slot/slotTypes';
 export type {
   TgpuTexture,
   TgpuReadonlyTexture,

@@ -1,6 +1,7 @@
-import type { Eventual, SlotValuePair, TgpuSlot } from './core/slot/slotTypes';
+import type { SlotValuePair, TgpuSlot } from './core/slot/slotTypes';
 import type { TgpuNamable } from './namable';
 import {
+  type Eventual,
   type ResolutionCtx,
   type TgpuResolvable,
   type Wgsl,

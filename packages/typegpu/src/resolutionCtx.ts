@@ -1,7 +1,7 @@
 import type { Block } from 'tinyest';
+import { isDerived } from './core/derived/derivedTypes';
 import { resolveData } from './core/resolve/resolveData';
 import {
-  type Eventual,
   type SlotValuePair,
   type TgpuSlot,
   isSlot,
@@ -20,6 +20,7 @@ import {
   bindGroupLayout,
 } from './tgpuBindGroupLayout';
 import type {
+  Eventual,
   FnToWgslOptions,
   ResolutionCtx,
   Resource,
@@ -362,14 +363,20 @@ class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   unwrap<T>(eventual: Eventual<T>): T {
-    let maybeSlot = eventual;
+    let maybeEventual = eventual;
 
     // Unwrapping all layers of slots.
-    while (isSlot(maybeSlot)) {
-      maybeSlot = this.readSlot(maybeSlot);
+    while (true) {
+      if (isSlot(maybeEventual)) {
+        maybeEventual = this.readSlot(maybeEventual);
+      } else if (isDerived(maybeEventual)) {
+        maybeEventual = maybeEventual.compute();
+      } else {
+        break;
+      }
     }
 
-    return maybeSlot;
+    return maybeEventual;
   }
 
   /**

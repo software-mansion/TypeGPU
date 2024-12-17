@@ -1,7 +1,8 @@
 import type { Block } from 'tinyest';
+import { type TgpuDerived, isDerived } from './core/derived/derivedTypes';
 import {
-  type Eventual,
   type SlotValuePair,
+  type TgpuSlot,
   isSlot,
 } from './core/slot/slotTypes';
 import type { AnyWgslData } from './data/wgslTypes';
@@ -98,9 +99,15 @@ export function isWgsl(value: unknown): value is Wgsl {
     typeof value === 'boolean' ||
     typeof value === 'string' ||
     isResolvable(value) ||
-    isSlot(value)
+    isSlot(value) ||
+    isDerived(value)
   );
 }
+
+/**
+ * Represents a value that is available at resolution time.
+ */
+export type Eventual<T> = T | TgpuSlot<T> | TgpuDerived<T>;
 
 export type BindableBufferUsage = 'uniform' | 'readonly' | 'mutable';
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';

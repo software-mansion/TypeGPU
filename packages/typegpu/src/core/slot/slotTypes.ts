@@ -17,12 +17,7 @@ export interface TgpuSlot<T> extends TgpuNamable {
 }
 
 export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {
-  return (value as TgpuSlot<T>).resourceType === 'slot';
+  return (value as TgpuSlot<T>)?.resourceType === 'slot';
 }
 
 export type SlotValuePair<T> = [TgpuSlot<T>, T];
-
-/**
- * Represents a value that is available at resolution time.
- */
-export type Eventual<T> = T | TgpuSlot<T>;
