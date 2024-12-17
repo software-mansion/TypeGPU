@@ -1,8 +1,8 @@
 import { parse } from '@typegpu/wgsl-parser';
 import { describe, expect, it } from 'vitest';
 import { f32, vec3f } from '../src/data';
-import tgpu, { wgsl } from '../src/experimental';
-import { parseWGSL } from './utils/parseWGSL';
+import tgpu from '../src/experimental';
+import { parseResolved } from './utils/parseResolved';
 
 describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {
@@ -22,23 +22,14 @@ describe('TGSL tgpu.fn function', () => {
       .does(() => {
         return 3;
       })
-      .$name('get_y');
+      .$name('getY');
 
-    const actual = parseWGSL(wgsl`
-      fn main() {
-        let x = ${getY}();
-      }
-    `);
+    const actual = parseResolved(getY);
 
     const expected = parse(`
-      fn get_y() -> f32 {
+      fn getY() -> f32 {
         return 3;
-      }
-
-      fn main() {
-        let x = get_y();
-      }
-    `);
+      }`);
 
     expect(actual).toEqual(expected);
   });
@@ -70,14 +61,10 @@ describe('TGSL tgpu.fn function', () => {
         const c = getColor();
         return getX();
       })
-      .$name('get_y')
+      .$name('getY')
       .$uses({ getX, getColor });
 
-    const actual = parseWGSL(wgsl`
-      fn main() {
-        var x = ${getY}();
-      }
-    `);
+    const actual = parseResolved(getY);
 
     const expected = parse(`
       fn get_color() -> vec3f {
@@ -91,13 +78,9 @@ describe('TGSL tgpu.fn function', () => {
         return 3;
       }
 
-      fn get_y() -> f32 {
+      fn getY() -> f32 {
         var c = get_color();
         return get_x();
-      }
-
-      fn main() {
-        var x = get_y();
       }
     `);
 

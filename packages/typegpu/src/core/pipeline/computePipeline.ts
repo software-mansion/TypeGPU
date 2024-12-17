@@ -5,9 +5,9 @@ import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout';
-import type { TgpuSlot } from '../../types';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
+import type { TgpuSlot } from '../slot/slotTypes';
 
 // ----------
 // Public API
@@ -148,7 +148,9 @@ class ComputePipelineCore {
       const { code, bindGroupLayouts, catchall } = resolve(
         {
           resolve: (ctx) => {
-            ctx.resolve(this._entryFn, this._slotBindings);
+            ctx.withSlots(this._slotBindings, () => {
+              ctx.resolve(this._entryFn);
+            });
             return '';
           },
         },

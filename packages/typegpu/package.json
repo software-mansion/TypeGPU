@@ -67,7 +67,6 @@
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@typegpu/wgsl-parser": "workspace:*",
-    "@typegpu/jit": "workspace:*",
     "@types/node": "^20.11.13",
     "@webgpu/types": "^0.1.51",
     "rollup-plugin-typegpu": "workspace:*",

@@ -6,7 +6,6 @@ import {
   type Resource,
   UnknownData,
   type Wgsl,
-  isResolvable,
   isWgsl,
 } from '../types';
 
@@ -15,7 +14,6 @@ export type GenerationCtx = ResolutionCtx & {
   indent(): string;
   dedent(): string;
   getById(id: string): Resource;
-  // getDataType(node: smol.AnyNode): AnyTgpuData;
 };
 
 function resolveRes(ctx: GenerationCtx, res: Resource): string {
@@ -80,7 +78,15 @@ function generateExpression(
     const target = generateExpression(ctx, targetId);
     const propertyStr = resolveRes(ctx, generateExpression(ctx, property));
 
-    if (isResolvable(target.value) || typeof target.value === 'object') {
+    if (typeof target.value === 'string') {
+      return {
+        value: `${target.value}.${propertyStr}`,
+        // TODO: Infer data type
+        dataType: UnknownData,
+      };
+    }
+
+    if (isWgsl(target.value)) {
       // NOTE: Temporary solution, assuming that access to `.value` of resolvables should always resolve to just the target.
       if (propertyStr === 'value') {
         return {
@@ -98,13 +104,16 @@ function generateExpression(
       };
     }
 
-    const targetStr = resolveRes(ctx, target);
+    if (typeof target.value === 'object') {
+      return {
+        // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
+        value: (target.value as any)[propertyStr],
+        // TODO: Infer data type
+        dataType: UnknownData,
+      };
+    }
 
-    return {
-      value: `${targetStr}.${propertyStr}`,
-      // TODO: Infer data type
-      dataType: UnknownData,
-    };
+    throw new Error(`Cannot access member ${propertyStr} of ${target.value}`);
   }
 
   if ('[]' in expression) {
@@ -139,20 +148,20 @@ function generateExpression(
     );
     const argValues = argResources.map((res) => resolveRes(ctx, res));
 
-    if (isResolvable(idValue) || typeof idValue === 'function') {
-      // Assuming that `id` is callable
-      // TODO: Pass in resources, not just values.
-      const result = (idValue as unknown as (...args: unknown[]) => unknown)(
-        ...argValues,
-      ) as Wgsl;
-      // TODO: Make function calls return resources instead of just values.
-      return { value: result, dataType: UnknownData };
+    if (typeof idValue === 'string') {
+      return {
+        value: `${idValue}(${argValues.join(', ')})`,
+        dataType: UnknownData,
+      };
     }
 
-    return {
-      value: `${String(idValue)}(${argValues.join(', ')})`,
-      dataType: UnknownData,
-    };
+    // Assuming that `id` is callable
+    // TODO: Pass in resources, not just values.
+    const result = (idValue as unknown as (...args: unknown[]) => unknown)(
+      ...argValues,
+    ) as Wgsl;
+    // TODO: Make function calls return resources instead of just values.
+    return { value: result, dataType: UnknownData };
   }
 
   assertExhaustive(expression);

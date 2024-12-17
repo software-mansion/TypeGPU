@@ -2,15 +2,8 @@ import type { Exotic, ExoticArray } from '../../data/exotic';
 import type { AnyWgslData } from '../../data/wgslTypes';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
-import { valueList } from '../../resolutionUtils';
-import { code } from '../../tgpuCode';
-import type {
-  Eventual,
-  ResolutionCtx,
-  TgpuResolvable,
-  TgpuSlot,
-  Wgsl,
-} from '../../types';
+import type { ResolutionCtx, TgpuResolvable, Wgsl } from '../../types';
+import type { Eventual, TgpuSlot } from '../slot/slotTypes';
 import { createFnCore } from './fnCore';
 import type { Implementation, InferArgs, InferReturn } from './fnTypes';
 
@@ -150,6 +143,10 @@ function createFn<
     get: () => core.label,
   });
 
+  Object.defineProperty(fn, 'toString', {
+    value: () => `fn:${core.label ?? '<unnamed>'}`,
+  });
+
   return fn;
 }
 
@@ -181,11 +178,16 @@ function createBoundFunction<
     },
 
     resolve(ctx: ResolutionCtx): string {
-      return ctx.resolve(innerFn, [[slot, slotValue]]);
+      return ctx.withSlots([[slot, slotValue]], () => ctx.resolve(innerFn));
     },
   };
 
   const call = (...args: InferArgs<Args>): unknown => {
+    if (inGPUMode()) {
+      // TODO: Filter out only those arguments which are valid to pass around
+      return new FnCall(fn, args as Wgsl[]);
+    }
+
     return innerFn(...args);
   };
 
@@ -194,6 +196,12 @@ function createBoundFunction<
   // Making the label available as a readonly property.
   Object.defineProperty(fn, 'label', {
     get: () => innerFn.label,
+  });
+
+  Object.defineProperty(fn, 'toString', {
+    value() {
+      return `fn:${innerFn.label ?? '<unnamed>'}[${slot.label ?? '<unnamed>'}=${slotValue}]`;
+    },
   });
 
   return fn;
@@ -212,6 +220,8 @@ class FnCall<Args extends AnyWgslData[], Return extends AnyWgslData | undefined>
   }
 
   resolve(ctx: ResolutionCtx): string {
-    return ctx.resolve(code`${this._fn}(${valueList(this._params)})`);
+    return ctx.resolve(
+      `${ctx.resolve(this._fn)}(${this._params.map((param) => ctx.resolve(param)).join(', ')})`,
+    );
   }
 }

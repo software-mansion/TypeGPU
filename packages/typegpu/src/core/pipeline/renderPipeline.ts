@@ -9,11 +9,11 @@ import {
   type TgpuBindGroupLayout,
   isBindGroupLayout,
 } from '../../tgpuBindGroupLayout';
-import type { TgpuSlot } from '../../types';
 import type { IOData, IOLayout } from '../function/fnTypes';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
+import type { TgpuSlot } from '../slot/slotTypes';
 import { type TgpuTexture, isTexture } from '../texture/texture';
 import type { Render } from '../texture/usageExtension';
 import { connectAttributesToShader } from '../vertexLayout/connectAttributesToShader';
@@ -300,8 +300,10 @@ class RenderPipelineCore {
       const { code, bindGroupLayouts, catchall } = resolve(
         {
           resolve: (ctx) => {
-            ctx.resolve(vertexFn, slotBindings);
-            ctx.resolve(fragmentFn, slotBindings);
+            ctx.withSlots(slotBindings, () => {
+              ctx.resolve(vertexFn);
+              ctx.resolve(fragmentFn);
+            });
             return '';
           },
         },

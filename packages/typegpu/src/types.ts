@@ -1,14 +1,20 @@
 import type { Block } from 'tinyest';
+import {
+  type Eventual,
+  type SlotValuePair,
+  isDerived,
+  isSlot,
+} from './core/slot/slotTypes';
 import type { AnyWgslData } from './data/wgslTypes';
-import type { TgpuNamable } from './namable';
 import type { NameRegistry } from './nameRegistry';
-import type { Infer } from './shared/repr';
 import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from './tgpuBindGroupLayout';
 
-export type Wgsl = string | number | boolean | TgpuResolvable | AnyWgslData;
+export type Wgsl = Eventual<
+  string | number | boolean | TgpuResolvable | AnyWgslData
+>;
 
 export const UnknownData = Symbol('Unknown data type');
 export type UnknownData = typeof UnknownData;
@@ -55,13 +61,15 @@ export interface ResolutionCtx {
     binding: number;
   };
 
+  withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T;
+
   /**
-   * Unwraps all layers of slot indirection and returns the concrete value if available.
+   * Unwraps all layers of slot/derived indirection and returns the concrete value if available.
    * @throws {MissingSlotValueError}
    */
   unwrap<T>(eventual: Eventual<T>): T;
 
-  resolve(item: Wgsl, slotValueOverrides?: SlotValuePair<unknown>[]): string;
+  resolve(item: Wgsl): string;
 
   transpileFn(fn: string): {
     argNames: string[];
@@ -92,24 +100,11 @@ export function isWgsl(value: unknown): value is Wgsl {
     typeof value === 'number' ||
     typeof value === 'boolean' ||
     typeof value === 'string' ||
-    isResolvable(value)
+    isResolvable(value) ||
+    isSlot(value) ||
+    isDerived(value)
   );
 }
-
-/**
- * Represents a value that is available at resolution time.
- */
-export type Eventual<T> = T | TgpuSlot<T>;
-
-export type EventualGetter = <T>(value: Eventual<T>) => T;
-
-export type InlineResolve = (get: EventualGetter) => Wgsl;
-
-export interface TgpuResolvableSlot<T extends Wgsl>
-  extends TgpuResolvable,
-    TgpuSlot<T> {}
-
-export type SlotValuePair<T> = [TgpuSlot<T>, T];
 
 export type BindableBufferUsage = 'uniform' | 'readonly' | 'mutable';
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
@@ -121,29 +116,4 @@ export function isGPUBuffer(value: unknown): value is GPUBuffer {
     'getMappedRange' in value &&
     'mapAsync' in value
   );
-}
-
-// -----------------
-// TypeGPU Resources
-// -----------------
-
-// Slot
-
-export interface TgpuSlot<T> extends TgpuNamable {
-  readonly __brand: 'TgpuSlot';
-
-  readonly defaultValue: T | undefined;
-
-  readonly label?: string | undefined;
-  /**
-   * Used to determine if code generated using either value `a` or `b` in place
-   * of the slot will be equivalent. Defaults to `Object.is`.
-   */
-  areEqual(a: T, b: T): boolean;
-
-  readonly value: Infer<T>;
-}
-
-export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {
-  return (value as TgpuSlot<T>).__brand === 'TgpuSlot';
 }
