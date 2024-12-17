@@ -3,6 +3,7 @@ import { resolveData } from './core/resolve/resolveData';
 import {
   type Eventual,
   type SlotValuePair,
+  type TgpuDerived,
   type TgpuSlot,
   isDerived,
   isSlot,
@@ -234,6 +235,12 @@ class ResolutionCtxImpl implements ResolutionCtx {
     TgpuResolvable | AnyWgslData,
     { slotToValueMap: SlotToValueMap; result: string }[]
   >();
+  private readonly _memoizedDerived = new WeakMap<
+    // WeakMap because if the "derived" does not exist anymore,
+    // apart from this map, there is no way to access the cached value anyway.
+    TgpuDerived<unknown>,
+    { slotToValueMap: SlotToValueMap; result: unknown }[]
+  >();
 
   private readonly _indentController = new IndentController();
   private readonly _jitTranspiler: JitTranspiler | undefined;
@@ -362,6 +369,16 @@ class ResolutionCtxImpl implements ResolutionCtx {
     return value;
   }
 
+  withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T {
+    this._itemStateStack.pushSlotBindings(pairs);
+    console.log(`Pushing ${pairs} onto stack`);
+    try {
+      return callback();
+    } finally {
+      this._itemStateStack.pop();
+    }
+  }
+
   unwrap<T>(eventual: Eventual<T>): T {
     let maybeEventual = eventual;
 
@@ -370,13 +387,56 @@ class ResolutionCtxImpl implements ResolutionCtx {
       if (isSlot(maybeEventual)) {
         maybeEventual = this.readSlot(maybeEventual);
       } else if (isDerived(maybeEventual)) {
-        maybeEventual = maybeEventual.compute();
+        maybeEventual = this._getOrCompute(maybeEventual);
       } else {
         break;
       }
     }
 
     return maybeEventual;
+  }
+
+  _getOrCompute<T>(derived: TgpuDerived<T>): T {
+    // All memoized versions of `derived`
+    const instances = this._memoizedDerived.get(derived) ?? [];
+
+    this._itemStateStack.pushItem();
+
+    try {
+      for (const instance of instances) {
+        const slotValuePairs = [...instance.slotToValueMap.entries()];
+
+        if (
+          slotValuePairs.every(([slot, expectedValue]) =>
+            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue),
+          )
+        ) {
+          return instance.result as T;
+        }
+      }
+
+      // If we got here, no item with the given slot-to-value combo exists in cache yet
+      const result = derived['~compute']();
+
+      // We know which slots the item used while resolving
+      const slotToValueMap = new Map<TgpuSlot<unknown>, unknown>();
+      for (const usedSlot of this._itemStateStack.topItem.usedSlots) {
+        slotToValueMap.set(usedSlot, this._itemStateStack.readSlot(usedSlot));
+      }
+
+      instances.push({ slotToValueMap, result });
+      this._memoizedDerived.set(derived, instances);
+
+      return result;
+    } catch (err) {
+      if (err instanceof ResolutionError) {
+        throw err.appendToTrace(derived);
+      }
+
+      throw new ResolutionError(err, [derived]);
+    } finally {
+      this._itemStateStack.pop();
+    }
   }
 
   /**
@@ -427,10 +487,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  resolve(
-    eventualItem: Wgsl,
-    slotValueOverrides: SlotValuePair<unknown>[] = [],
-  ): string {
+  resolve(eventualItem: Wgsl): string {
     const item = this.unwrap(eventualItem);
 
     if (
@@ -441,24 +498,12 @@ class ResolutionCtxImpl implements ResolutionCtx {
       return String(item);
     }
 
-    let pushedLayer = false;
-    if (slotValueOverrides.length > 0) {
-      pushedLayer = true;
-      this._itemStateStack.pushSlotBindings(slotValueOverrides);
+    if (this._itemStateStack.itemDepth === 0) {
+      const result = provideCtx(this, () => this._getOrInstantiate(item));
+      return `${[...this._declarations].join('\n\n')}${result}`;
     }
 
-    try {
-      if (this._itemStateStack.itemDepth === 0) {
-        const result = provideCtx(this, () => this._getOrInstantiate(item));
-        return `${[...this._declarations].join('\n\n')}${result}`;
-      }
-
-      return this._getOrInstantiate(item);
-    } finally {
-      if (pushedLayer) {
-        this._itemStateStack.pop();
-      }
-    }
+    return this._getOrInstantiate(item);
   }
 }
 

@@ -18,7 +18,14 @@ export interface TgpuSlot<T> extends TgpuNamable {
 
 export interface TgpuDerived<T> {
   readonly resourceType: 'derived';
-  compute(): T;
+  readonly value: Infer<T>;
+
+  with<TValue>(slot: TgpuSlot<TValue>, value: Eventual<TValue>): TgpuDerived<T>;
+
+  /**
+   * @internal
+   */
+  '~compute'(): T;
 }
 
 /**

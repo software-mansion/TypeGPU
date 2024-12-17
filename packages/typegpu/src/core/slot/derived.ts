@@ -1,24 +1,96 @@
-import type { TgpuDerived } from './slotTypes';
+import { getResolutionCtx } from '../../gpuMode';
+import type { Infer } from '../../shared/repr';
+import type {
+  Eventual,
+  SlotValuePair,
+  TgpuDerived,
+  TgpuSlot,
+} from './slotTypes';
 
 // ----------
 // Public API
 // ----------
 
-export function derived<T>(compute: () => T) {
-  return new TgpuDerivedImpl(compute);
+export function derived<T>(compute: () => T): TgpuDerived<T> {
+  return createDerived(compute);
 }
 
 // --------------
 // Implementation
 // --------------
 
-class TgpuDerivedImpl<T> implements TgpuDerived<T> {
-  readonly resourceType = 'derived';
+function createDerived<T>(compute: () => T): TgpuDerived<T> {
+  const result = {
+    resourceType: 'derived' as const,
+    '~compute': compute,
 
-  constructor(private readonly _compute: () => T) {}
+    get value(): Infer<T> {
+      const ctx = getResolutionCtx();
+      if (!ctx) {
+        throw new Error(
+          `Cannot access tgpu.derived's value outside of resolution.`,
+        );
+      }
 
-  compute(): T {
-    // TODO: Cache
-    return this._compute();
-  }
+      return ctx.unwrap(this) as Infer<T>;
+    },
+
+    with<TValue>(
+      slot: TgpuSlot<TValue>,
+      value: Eventual<TValue>,
+    ): TgpuDerived<T> {
+      return createBoundDerived(compute, this, [slot, value]);
+    },
+
+    toString(): string {
+      return 'derived';
+    },
+  };
+
+  return result;
+}
+
+function createBoundDerived<T>(
+  compute: () => T,
+  innerDerived: TgpuDerived<T>,
+  slotValuePair: SlotValuePair<unknown>,
+): TgpuDerived<T> {
+  const result = {
+    resourceType: 'derived' as const,
+    '~compute'() {
+      const ctx = getResolutionCtx();
+      if (!ctx) {
+        throw new Error(
+          `Cannot access tgpu.derived's value outside of resolution.`,
+        );
+      }
+
+      return ctx.withSlots([slotValuePair], () => ctx.unwrap(innerDerived));
+    },
+
+    get value(): Infer<T> {
+      const ctx = getResolutionCtx();
+      if (!ctx) {
+        throw new Error(
+          `Cannot access tgpu.derived's value outside of resolution.`,
+        );
+      }
+
+      return ctx.unwrap(this) as Infer<T>;
+    },
+
+    with<TValue>(
+      slot: TgpuSlot<TValue>,
+      value: Eventual<TValue>,
+    ): TgpuDerived<T> {
+      return createBoundDerived(compute, this, [slot, value]);
+    },
+
+    toString(): string {
+      const [slot, value] = slotValuePair;
+      return `derived[${slot.label ?? '<unnamed>'}=${value}]`;
+    },
+  };
+
+  return result;
 }
