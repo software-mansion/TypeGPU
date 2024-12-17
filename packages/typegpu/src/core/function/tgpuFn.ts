@@ -178,11 +178,16 @@ function createBoundFunction<
     },
 
     resolve(ctx: ResolutionCtx): string {
-      return ctx.resolve(innerFn, [[slot, slotValue]]);
+      return ctx.withSlots([[slot, slotValue]], () => ctx.resolve(innerFn));
     },
   };
 
   const call = (...args: InferArgs<Args>): unknown => {
+    if (inGPUMode()) {
+      // TODO: Filter out only those arguments which are valid to pass around
+      return new FnCall(fn, args as Wgsl[]);
+    }
+
     return innerFn(...args);
   };
 

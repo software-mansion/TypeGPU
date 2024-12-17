@@ -16,13 +16,31 @@ export interface TgpuSlot<T> extends TgpuNamable {
   readonly value: Infer<T>;
 }
 
-export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {
-  return (value as TgpuSlot<T>).resourceType === 'slot';
-}
+export interface TgpuDerived<T> {
+  readonly resourceType: 'derived';
+  readonly value: Infer<T>;
 
-export type SlotValuePair<T> = [TgpuSlot<T>, T];
+  with<TValue>(slot: TgpuSlot<TValue>, value: Eventual<TValue>): TgpuDerived<T>;
+
+  /**
+   * @internal
+   */
+  '~compute'(): T;
+}
 
 /**
  * Represents a value that is available at resolution time.
  */
-export type Eventual<T> = T | TgpuSlot<T>;
+export type Eventual<T> = T | TgpuSlot<T> | TgpuDerived<T>;
+
+export type SlotValuePair<T> = [TgpuSlot<T>, T];
+
+export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {
+  return (value as TgpuSlot<T>)?.resourceType === 'slot';
+}
+
+export function isDerived<T extends TgpuDerived<unknown>>(
+  value: T | unknown,
+): value is T {
+  return (value as T)?.resourceType === 'derived';
+}

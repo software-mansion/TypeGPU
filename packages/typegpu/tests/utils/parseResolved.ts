@@ -1,4 +1,3 @@
-import { JitTranspiler } from '@typegpu/jit';
 import { parse } from '@typegpu/wgsl-parser';
 import type { TgpuResolveOptions } from '../../src/core/resolve/tgpuResolve';
 import tgpu from '../../src/experimental';
@@ -7,7 +6,6 @@ export function parseResolved(resolvable: TgpuResolveOptions['input']) {
   const resolved = tgpu.resolve({
     input: resolvable,
     names: 'strict',
-    jitTranspiler: new JitTranspiler(),
   });
 
   try {

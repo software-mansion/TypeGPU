@@ -2,6 +2,7 @@ import type { Block } from 'tinyest';
 import {
   type Eventual,
   type SlotValuePair,
+  isDerived,
   isSlot,
 } from './core/slot/slotTypes';
 import type { AnyWgslData } from './data/wgslTypes';
@@ -60,13 +61,15 @@ export interface ResolutionCtx {
     binding: number;
   };
 
+  withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T;
+
   /**
-   * Unwraps all layers of slot indirection and returns the concrete value if available.
+   * Unwraps all layers of slot/derived indirection and returns the concrete value if available.
    * @throws {MissingSlotValueError}
    */
   unwrap<T>(eventual: Eventual<T>): T;
 
-  resolve(item: Wgsl, slotValueOverrides?: SlotValuePair<unknown>[]): string;
+  resolve(item: Wgsl): string;
 
   transpileFn(fn: string): {
     argNames: string[];
@@ -98,7 +101,8 @@ export function isWgsl(value: unknown): value is Wgsl {
     typeof value === 'boolean' ||
     typeof value === 'string' ||
     isResolvable(value) ||
-    isSlot(value)
+    isSlot(value) ||
+    isDerived(value)
   );
 }
 
