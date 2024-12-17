@@ -371,7 +371,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
 
   withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T {
     this._itemStateStack.pushSlotBindings(pairs);
-    console.log(`Pushing ${pairs} onto stack`);
+
     try {
       return callback();
     } finally {
