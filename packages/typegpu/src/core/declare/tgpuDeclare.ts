@@ -10,11 +10,22 @@ import {
 // Public API
 // ----------
 
+/**
+ * Extra declaration that shall be included in final WGSL code,
+ * when resolving objects that use it.
+ */
 export interface TgpuDeclare extends TgpuResolvable, TgpuNamable {
   readonly label: string | undefined;
   $uses(dependencyMap: Record<string, unknown>): this;
 }
 
+/**
+ * Allows defining extra declarations that shall be included in the final WGSL code,
+ * when resolving objects that use them.
+ *
+ * Using this API is generally discouraged, as it shouldn't be necessary in any common scenario.
+ * It was developed to ensure full compatibility of TypeGPU programs with current and future versions of WGSL.
+ */
 export function declare(declaration: string): TgpuDeclare {
   return new TgpuDeclareImpl(declaration);
 }
