@@ -8,7 +8,7 @@
       "**/dist/*",
       "**/coverage/*",
       "**/*.d.ts",
-      "packages/typegpu-wgsl-parser/src/grammar.ts",
+      "packages/tgpu-wgsl-parser/src/grammar.ts",
       "**/*.astro"
     ]
   },

@@ -1,8 +1,8 @@
-import { transpileFn } from '@typegpu/tgsl-tools';
 import type { AnyNode, CallExpression } from 'acorn';
 import { walk } from 'estree-walker';
 import MagicString from 'magic-string';
 import type { Plugin, SourceMap } from 'rollup';
+import { transpileFn } from 'tinyest-for-wgsl';
 
 const typegpuImportRegex = /import.*from\s*['"]typegpu.*['"]/g;
 const typegpuDynamicImportRegex = /import\s*\(\s*['"]\s*typegpu.*['"]/g;

@@ -1,4 +1,4 @@
-import { parse } from '@typegpu/wgsl-parser';
+import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data';
 import tgpu, { type TgpuBufferReadonly } from '../src/experimental';

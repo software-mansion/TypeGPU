@@ -62,9 +62,6 @@ importers:
       '@stackblitz/sdk':
         specifier: ^1.11.0
         version: 1.11.0
-      '@typegpu/jit':
-        specifier: workspace:*
-        version: link:../../packages/jit
       '@types/dom-mediacapture-transform':
         specifier: ^0.1.9
         version: 0.1.9
@@ -151,42 +148,17 @@ importers:
         specifier: ^1.8.2
         version: 1.10.7
 
-  packages/jit:
-    dependencies:
-      '@typegpu/tgsl-tools':
-        specifier: workspace:~0.0.0
-        version: link:../tgsl-tools
-      acorn:
-        specifier: ^8.12.1
-        version: 8.12.1
-      tinyest:
-        specifier: workspace:~0.0.0
-        version: link:../tinyest
-    devDependencies:
-      '@typegpu/tgpu-dev-cli':
-        specifier: workspace:*
-        version: link:../tgpu-dev-cli
-      tsup:
-        specifier: ^8.0.2
-        version: 8.0.2(typescript@5.5.4)
-      typescript:
-        specifier: ^5.3.3
-        version: 5.5.4
-      vitest:
-        specifier: ^2.1.5
-        version: 2.1.5(@types/node@20.11.19)
-
   packages/rollup-plugin:
     dependencies:
-      '@typegpu/tgsl-tools':
-        specifier: workspace:0.0.0
-        version: link:../tgsl-tools
       estree-walker:
         specifier: ^3.0.3
         version: 3.0.3
       magic-string:
         specifier: ^0.30.11
         version: 0.30.11
+      tinyest-for-wgsl:
+        specifier: workspace:~0.0.0
+        version: link:../tinyest-for-wgsl
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -235,25 +207,17 @@ importers:
         specifier: ^2.1.5
         version: 2.1.5(@types/node@20.11.19)
 
-  packages/tgsl-tools:
-    devDependencies:
-      '@typegpu/tgpu-dev-cli':
-        specifier: workspace:*
-        version: link:../tgpu-dev-cli
+  packages/tgpu-jit:
+    dependencies:
       acorn:
         specifier: ^8.12.1
         version: 8.12.1
       tinyest:
-        specifier: workspace:0.0.0
+        specifier: workspace:~0.0.0
         version: link:../tinyest
-      tsup:
-        specifier: ^8.0.2
-        version: 8.0.2(typescript@5.5.4)
-      typescript:
-        specifier: ^5.3.3
-        version: 5.5.4
-
-  packages/tinyest:
+      tinyest-for-wgsl:
+        specifier: workspace:~0.0.0
+        version: link:../tinyest-for-wgsl
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -264,45 +228,11 @@ importers:
       typescript:
         specifier: ^5.3.3
         version: 5.5.4
+      vitest:
+        specifier: ^2.1.5
+        version: 2.1.5(@types/node@20.11.19)
 
-  packages/typegpu:
-    dependencies:
-      tinyest:
-        specifier: workspace:0.0.0
-        version: link:../tinyest
-      typed-binary:
-        specifier: ^4.2.0
-        version: 4.2.0
-    devDependencies:
-      '@typegpu/tgpu-dev-cli':
-        specifier: workspace:*
-        version: link:../tgpu-dev-cli
-      '@typegpu/wgsl-parser':
-        specifier: workspace:*
-        version: link:../typegpu-wgsl-parser
-      '@types/node':
-        specifier: ^20.11.13
-        version: 20.11.19
-      '@webgpu/types':
-        specifier: ^0.1.51
-        version: 0.1.51
-      rollup-plugin-typegpu:
-        specifier: workspace:*
-        version: link:../rollup-plugin
-      tsup:
-        specifier: ^8.0.2
-        version: 8.0.2(typescript@5.5.4)
-      typegpu:
-        specifier: workspace:*
-        version: 'link:'
-      typescript:
-        specifier: ^5.3.3
-        version: 5.5.4
-      wgpu-matrix:
-        specifier: ^3.3.0
-        version: 3.3.0
-
-  packages/typegpu-wgsl-parser:
+  packages/tgpu-wgsl-parser:
     dependencies:
       nearley:
         specifier: ^2.20.1
@@ -335,6 +265,70 @@ importers:
       vitest:
         specifier: ^2.1.5
         version: 2.1.5(@types/node@20.11.19)
+
+  packages/tinyest:
+    devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
+      tsup:
+        specifier: ^8.0.2
+        version: 8.0.2(typescript@5.5.4)
+      typescript:
+        specifier: ^5.3.3
+        version: 5.5.4
+
+  packages/tinyest-for-wgsl:
+    devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
+      acorn:
+        specifier: ^8.12.1
+        version: 8.12.1
+      tinyest:
+        specifier: workspace:~0.0.0
+        version: link:../tinyest
+      tsup:
+        specifier: ^8.0.2
+        version: 8.0.2(typescript@5.5.4)
+      typescript:
+        specifier: ^5.3.3
+        version: 5.5.4
+
+  packages/typegpu:
+    dependencies:
+      tinyest:
+        specifier: workspace:~0.0.0
+        version: link:../tinyest
+      typed-binary:
+        specifier: ^4.2.0
+        version: 4.2.0
+    devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
+      '@types/node':
+        specifier: ^20.11.13
+        version: 20.11.19
+      '@webgpu/types':
+        specifier: ^0.1.51
+        version: 0.1.51
+      rollup-plugin-typegpu:
+        specifier: workspace:*
+        version: link:../rollup-plugin
+      tgpu-wgsl-parser:
+        specifier: workspace:*
+        version: link:../tgpu-wgsl-parser
+      tsup:
+        specifier: ^8.0.2
+        version: 8.0.2(typescript@5.5.4)
+      typescript:
+        specifier: ^5.3.3
+        version: 5.5.4
+      wgpu-matrix:
+        specifier: ^3.3.0
+        version: 3.3.0
 
 packages:
 
@@ -6748,7 +6742,7 @@ packages:
       bundle-require: 4.0.2(esbuild@0.19.12)
       cac: 6.7.14
       chokidar: 3.6.0
-      debug: 4.3.5
+      debug: 4.3.7
       esbuild: 0.19.12
       execa: 5.1.1
       globby: 11.1.0

@@ -66,18 +66,17 @@
   "homepage": "https://typegpu.com",
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
-    "@typegpu/wgsl-parser": "workspace:*",
     "@types/node": "^20.11.13",
     "@webgpu/types": "^0.1.51",
     "rollup-plugin-typegpu": "workspace:*",
+    "tgpu-wgsl-parser": "workspace:*",
     "tsup": "^8.0.2",
-    "typegpu": "workspace:*",
     "typescript": "^5.3.3",
     "wgpu-matrix": "^3.3.0"
   },
   "packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e",
   "dependencies": {
-    "tinyest": "workspace:0.0.0",
+    "tinyest": "workspace:~0.0.0",
     "typed-binary": "^4.2.0"
   }
 }
