@@ -3,10 +3,11 @@ import { isWgslData } from '../../data';
 import { readData, writeData } from '../../data/dataIO';
 import type { AnyData } from '../../data/dataTypes';
 import { sizeOf } from '../../data/sizeOf';
-import type { WgslTypeLiteral } from '../../data/wgslTypes';
+import type { BaseWgslData, WgslTypeLiteral } from '../../data/wgslTypes';
 import type { Storage } from '../../extension';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
+import type { MemIdentity } from '../../shared/repr';
 import type { UnionToIntersection } from '../../shared/utilityTypes';
 import { isGPUBuffer } from '../../types';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
@@ -35,7 +36,7 @@ type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
         ? Vertex
         : never;
 
-export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
+export interface TgpuBuffer<TData extends BaseWgslData> extends TgpuNamable {
   readonly resourceType: 'buffer';
   readonly dataType: TData;
   readonly initial?: Infer<TData> | undefined;
@@ -50,7 +51,7 @@ export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
   $addFlags(flags: GPUBufferUsageFlags): this;
 
   write(data: Infer<TData>): void;
-  copyFrom(srcBuffer: TgpuBuffer<TData>): void;
+  copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void;
   read(): Promise<Infer<TData>>;
   destroy(): void;
 }
@@ -91,13 +92,13 @@ export function isUsableAsVertex<T extends TgpuBuffer<AnyData>>(
 // Implementation
 // --------------
 
-type RestrictVertexUsages<TData extends AnyData> = TData extends {
+type RestrictVertexUsages<TData extends BaseWgslData> = TData extends {
   readonly type: WgslTypeLiteral;
 }
   ? ('uniform' | 'storage' | 'vertex')[]
   : 'vertex'[];
 
-class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
+class TgpuBufferImpl<TData extends BaseWgslData> implements TgpuBuffer<TData> {
   public readonly resourceType = 'buffer';
   public flags: GPUBufferUsageFlags =
     GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
@@ -168,7 +169,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     return this;
   }
 
-  $usage<T extends RestrictVertexUsages<TData>>(
+  $usage<T extends ('uniform' | 'storage' | 'vertex')[]>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>> {
     for (const usage of usages) {
@@ -213,7 +214,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
   }
 
-  copyFrom(srcBuffer: TgpuBuffer<TData>): void {
+  copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void {
     if (this.buffer.mapState === 'mapped') {
       throw new Error('Cannot copy to a mapped buffer.');
     }

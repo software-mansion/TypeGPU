@@ -1,4 +1,4 @@
-import type { Infer } from '../shared/repr';
+import type { Infer, MemIdentity } from '../shared/repr';
 import type { Exotic } from './exotic';
 import type { Atomic, I32, U32 } from './wgslTypes';
 
@@ -29,6 +29,8 @@ class AtomicImpl<TSchema extends U32 | I32> implements Atomic<TSchema> {
   public readonly type = 'atomic';
   /** Type-token, not available at runtime */
   public readonly '~repr'!: Infer<TSchema>;
+  /** Type-token, not available at runtime */
+  public readonly '~memIdent'!: MemIdentity<TSchema>;
 
   constructor(public readonly inner: TSchema) {}
 }
