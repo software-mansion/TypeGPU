@@ -16,15 +16,15 @@ describe('vec2f', () => {
   });
 
   it('should create a 2d vector with the given elements', () => {
-    const zero = d.vec2f(1, 2);
-    expect(zero.x).toEqual(1);
-    expect(zero.y).toEqual(2);
+    const vec = d.vec2f(1, 2);
+    expect(vec.x).toEqual(1);
+    expect(vec.y).toEqual(2);
   });
 
   it('should create a 2d vector from the given scalar element', () => {
-    const zero = d.vec2f(5);
-    expect(zero.x).toEqual(5);
-    expect(zero.y).toEqual(5);
+    const vec = d.vec2f(5);
+    expect(vec.x).toEqual(5);
+    expect(vec.y).toEqual(5);
   });
 
   it('should encode a 2d vector', () => {
@@ -76,15 +76,15 @@ describe('vec2i', () => {
   });
 
   it('should create a 2d vector with the given elements', () => {
-    const zero = d.vec2i(1, 2);
-    expect(zero.x).toEqual(1);
-    expect(zero.y).toEqual(2);
+    const vec = d.vec2i(1, 2);
+    expect(vec.x).toEqual(1);
+    expect(vec.y).toEqual(2);
   });
 
   it('should create a 2d vector from the given scalar element', () => {
-    const zero = d.vec2i(5);
-    expect(zero.x).toEqual(5);
-    expect(zero.y).toEqual(5);
+    const vec = d.vec2i(5);
+    expect(vec.x).toEqual(5);
+    expect(vec.y).toEqual(5);
   });
 
   it('should encode a 2d vector', () => {
@@ -137,17 +137,17 @@ describe('vec3f', () => {
   });
 
   it('should create a 3d vector with the given elements', () => {
-    const zero = d.vec3f(1, 2, 3);
-    expect(zero.x).toEqual(1);
-    expect(zero.y).toEqual(2);
-    expect(zero.z).toEqual(3);
+    const vec = d.vec3f(1, 2, 3);
+    expect(vec.x).toEqual(1);
+    expect(vec.y).toEqual(2);
+    expect(vec.z).toEqual(3);
   });
 
   it('should create a 3d vector from the given scalar element', () => {
-    const zero = d.vec3f(5);
-    expect(zero.x).toEqual(5);
-    expect(zero.y).toEqual(5);
-    expect(zero.z).toEqual(5);
+    const vec = d.vec3f(5);
+    expect(vec.x).toEqual(5);
+    expect(vec.y).toEqual(5);
+    expect(vec.z).toEqual(5);
   });
 
   it('should encode a 3d vector', () => {
@@ -202,17 +202,17 @@ describe('vec3i', () => {
   });
 
   it('should create a 3d vector with the given elements', () => {
-    const zero = d.vec3i(1, 2, 3);
-    expect(zero.x).toEqual(1);
-    expect(zero.y).toEqual(2);
-    expect(zero.z).toEqual(3);
+    const vec = d.vec3i(1, 2, 3);
+    expect(vec.x).toEqual(1);
+    expect(vec.y).toEqual(2);
+    expect(vec.z).toEqual(3);
   });
 
   it('should create a 3d vector from the given scalar element', () => {
-    const zero = d.vec3i(5);
-    expect(zero.x).toEqual(5);
-    expect(zero.y).toEqual(5);
-    expect(zero.z).toEqual(5);
+    const vec = d.vec3i(5);
+    expect(vec.x).toEqual(5);
+    expect(vec.y).toEqual(5);
+    expect(vec.z).toEqual(5);
   });
 
   it('should encode a 3d vector', () => {
@@ -268,19 +268,19 @@ describe('vec4f', () => {
   });
 
   it('should create a 4d vector with the given elements', () => {
-    const zero = d.vec4f(1, 2, 3, 4);
-    expect(zero.x).toEqual(1);
-    expect(zero.y).toEqual(2);
-    expect(zero.z).toEqual(3);
-    expect(zero.w).toEqual(4);
+    const vec = d.vec4f(1, 2, 3, 4);
+    expect(vec.x).toEqual(1);
+    expect(vec.y).toEqual(2);
+    expect(vec.z).toEqual(3);
+    expect(vec.w).toEqual(4);
   });
 
   it('should create a 4d vector from the given scalar element', () => {
-    const zero = d.vec4f(5);
-    expect(zero.x).toEqual(5);
-    expect(zero.y).toEqual(5);
-    expect(zero.z).toEqual(5);
-    expect(zero.w).toEqual(5);
+    const vec = d.vec4f(5);
+    expect(vec.x).toEqual(5);
+    expect(vec.y).toEqual(5);
+    expect(vec.z).toEqual(5);
+    expect(vec.w).toEqual(5);
   });
 
   it('should encode a 4d vector', () => {
@@ -332,15 +332,15 @@ describe('vec2h', () => {
   });
 
   it('should create a 2d vector with the given elements', () => {
-    const zero = d.vec2h(1, 2);
-    expect(zero.x).toEqual(1);
-    expect(zero.y).toEqual(2);
+    const vec = d.vec2h(1, 2);
+    expect(vec.x).toEqual(1);
+    expect(vec.y).toEqual(2);
   });
 
   it('should create a 2d vector from the given scalar element', () => {
-    const zero = d.vec2h(5);
-    expect(zero.x).toEqual(5);
-    expect(zero.y).toEqual(5);
+    const vec = d.vec2h(5);
+    expect(vec.x).toEqual(5);
+    expect(vec.y).toEqual(5);
   });
 
   it('should encode a 2d vector', () => {
