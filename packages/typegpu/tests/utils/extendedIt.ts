@@ -13,18 +13,6 @@ const navigatorMock = {
   },
 };
 
-const mappedBufferMock = {
-  get mock() {
-    return mappedBufferMock;
-  },
-  mapState: 'mapped',
-  usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-  getMappedRange: vi.fn(() => new ArrayBuffer(8)),
-  unmap: vi.fn(),
-  mapAsync: vi.fn(),
-  destroy: vi.fn(),
-};
-
 const mockTexture = {
   createView: vi.fn(() => 'view'),
 };
@@ -64,22 +52,25 @@ const mockDevice = {
   createBindGroupLayout: vi.fn(
     (_descriptor: GPUBindGroupLayoutDescriptor) => 'mockBindGroupLayout',
   ),
-  createBuffer: vi.fn(({ size, usage }: GPUBufferDescriptor) => {
-    const mockBuffer = {
-      mapState: 'unmapped',
-      usage,
-      getMappedRange: vi.fn(() => new ArrayBuffer(8)),
-      unmap: vi.fn(() => {
-        mockBuffer.mapState = 'unmapped';
-      }),
-      mapAsync: vi.fn(() => {
-        mockBuffer.mapState = 'mapped';
-      }),
-      destroy: vi.fn(),
-    };
+  createBuffer: vi.fn(
+    ({ size, usage, mappedAtCreation }: GPUBufferDescriptor) => {
+      const mockBuffer = {
+        mapState: mappedAtCreation ? 'mapped' : 'unmapped',
+        size,
+        usage,
+        getMappedRange: vi.fn(() => new ArrayBuffer(size)),
+        unmap: vi.fn(() => {
+          mockBuffer.mapState = 'unmapped';
+        }),
+        mapAsync: vi.fn(() => {
+          mockBuffer.mapState = 'mapped';
+        }),
+        destroy: vi.fn(),
+      };
 
-    return mockBuffer;
-  }),
+      return mockBuffer;
+    },
+  ),
   createCommandEncoder: vi.fn(() => mockCommandEncoder),
   createComputePipeline: vi.fn(() => 'mockComputePipeline'),
   createPipelineLayout: vi.fn(() => 'mockPipelineLayout'),
@@ -101,7 +92,6 @@ const mockDevice = {
 export const it = base.extend<{
   _global: undefined;
   commandEncoder: GPUCommandEncoder & { mock: typeof mockCommandEncoder };
-  mappedBuffer: GPUBuffer & { mock: typeof mappedBufferMock };
   device: GPUDevice & { mock: typeof mockDevice };
   root: ExperimentalTgpuRoot;
 }>({
@@ -121,14 +111,6 @@ export const it = base.extend<{
     await use(
       mockCommandEncoder as unknown as GPUCommandEncoder & {
         mock: typeof mockCommandEncoder;
-      },
-    );
-  },
-
-  mappedBuffer: async ({ task }, use) => {
-    await use(
-      mappedBufferMock as unknown as GPUBuffer & {
-        mock: typeof mappedBufferMock;
       },
     );
   },

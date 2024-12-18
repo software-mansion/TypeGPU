@@ -302,8 +302,8 @@ importers:
         specifier: workspace:~0.0.0
         version: link:../tinyest
       typed-binary:
-        specifier: ^4.2.0
-        version: 4.2.0
+        specifier: ^4.3.0
+        version: 4.3.0
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -6790,8 +6790,8 @@ packages:
     resolution: {integrity: sha512-6ZXhbBePH4XZY57o23PV6O/HAYWcsAkCSwTKI6DrN5xMBwOV+I1G+MtytSY2v+QU3VPzB5Kz6268Q3qYD0XIYA==}
     dev: false
 
-  /typed-binary@4.2.0:
-    resolution: {integrity: sha512-K8lXyQUAk095YkIkFqV929+epoQqxB0lsx9TBd1mb79565eVWXIRa7emCArRajH+g5nYa3t/ZoaSQIl0RDQMsQ==}
+  /typed-binary@4.3.0:
+    resolution: {integrity: sha512-9d6QZfUKcUXegpNl7nKUoyY+nBnS84pB9vGXDmzzMzFf/vW9A9w0IEOpuv/G4LCx+lJX2x6jcJAQub6MlwF+8w==}
     dev: false
 
   /typedoc-plugin-markdown@4.3.0(typedoc@0.27.1):
