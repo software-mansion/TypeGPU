@@ -5,10 +5,10 @@ import tgpu, {
   asReadonly,
   asUniform,
   wgsl,
-  std,
   type TgpuBufferReadonly,
   type TgpuBufferMutable,
 } from 'typegpu/experimental';
+import { cos, dot, fract } from 'typegpu/std';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -35,10 +35,10 @@ const setupRandomSeed = tgpu.fn([d.vec2f]).does((coord) => {
  * "Particle System in WebGPU" by Benedikt Peter
  */
 const rand01 = tgpu.fn([], d.f32).does(() => {
-  const a = std.dot(randSeed.value, d.vec2f(23.14077926, 232.61690225));
-  const b = std.dot(randSeed.value, d.vec2f(54.47856553, 345.84153136));
-  randSeed.value.x = std.fract(std.cos(a) * 136.8168);
-  randSeed.value.y = std.fract(std.cos(b) * 534.7645);
+  const a = dot(randSeed.value, d.vec2f(23.14077926, 232.61690225));
+  const b = dot(randSeed.value, d.vec2f(54.47856553, 345.84153136));
+  randSeed.value.x = fract(cos(a) * 136.8168);
+  randSeed.value.y = fract(cos(b) * 534.7645);
   return randSeed.value.y;
 });
 
