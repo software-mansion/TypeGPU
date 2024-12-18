@@ -2,6 +2,7 @@
  * @module typegpu/experimental
  */
 
+import { constant } from '../core/constant/tgpuConstant';
 import { assignAst } from '../core/function/astUtils';
 import { computeFn } from '../core/function/tgpuComputeFn';
 import { fn, procedure } from '../core/function/tgpuFn';
@@ -17,6 +18,7 @@ import {
 import type { ExperimentalTgpuRoot } from '../core/root/rootTypes';
 import { derived } from '../core/slot/derived';
 import { slot } from '../core/slot/slot';
+import { variable } from '../core/variable/tgpuVariable';
 import { vertexLayout } from '../core/vertexLayout/vertexLayout';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
 
@@ -37,6 +39,8 @@ export const tgpu = {
   bindGroupLayout,
   derived,
   slot,
+  var: variable,
+  const: constant,
 
   init: init as (
     options?: InitOptions | undefined,
@@ -72,7 +76,6 @@ export {
 } from '../core/root/rootTypes';
 export { StrictNameRegistry, RandomNameRegistry } from '../nameRegistry';
 
-export { default as wgsl } from '../wgsl';
 export { std } from '../std';
 export {
   isBuffer,
@@ -124,8 +127,12 @@ export type {
 export type { TextureProps } from '../core/texture/textureProps';
 export type { Render, Sampled } from '../core/texture/usageExtension';
 export type { InitOptions, InitFromDeviceOptions } from '../core/root/init';
-export type { TgpuConst } from '../tgpuConstant';
-export type { TgpuVar } from '../tgpuVariable';
+export type { TgpuConst } from '../core/constant/tgpuConstant';
+export type {
+  TgpuVar,
+  TgpuVarUninitialized,
+  VariableScope,
+} from '../core/variable/tgpuVariable';
 export type { TgpuSampler } from '../core/sampler/sampler';
 export type { JitTranspiler } from '../jitTranspiler';
 export type {
