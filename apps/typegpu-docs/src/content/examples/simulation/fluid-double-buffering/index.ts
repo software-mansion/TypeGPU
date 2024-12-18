@@ -22,7 +22,7 @@ context.configure({
 
 const MAX_GRID_SIZE = 1024;
 
-const randSeed = tgpu.var(d.vec2f);
+const randSeed = tgpu.privateVar(d.vec2f);
 
 const setupRandomSeed = tgpu.fn([d.vec2f]).does((coord) => {
   randSeed.value = coord;
