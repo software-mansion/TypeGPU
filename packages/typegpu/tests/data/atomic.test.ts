@@ -23,6 +23,7 @@ describe('d.atomic', () => {
       type: 'u32' as const,
       '~repr': undefined as unknown as number,
       '~exotic': undefined as unknown as d.U32,
+      '~memIdent': undefined as unknown as d.U32,
     };
 
     const u32Atomic = d.atomic(exoticU32);
@@ -34,6 +35,7 @@ describe('d.atomic', () => {
       type: 'i32' as const,
       '~repr': undefined as unknown as number,
       '~exotic': undefined as unknown as d.I32,
+      '~memIdent': undefined as unknown as d.I32,
     };
 
     const i32Atomic = d.atomic(exoticI32);
@@ -51,11 +53,13 @@ describe('d.isAtomic', () => {
     const atomicU32 = d.atomic({
       type: 'u32',
       '~repr': undefined as unknown as number,
+      '~memIdent': undefined as unknown as d.U32,
     });
 
     const atomicI32 = d.atomic({
       type: 'i32',
       '~repr': undefined as unknown as number,
+      '~memIdent': undefined as unknown as d.I32,
     });
 
     expect(d.isAtomic(atomicU32)).toEqual(true);

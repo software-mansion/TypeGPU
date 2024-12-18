@@ -1,5 +1,5 @@
 import type { TgpuNamable } from '../namable';
-import type { InferRecord } from '../shared/repr';
+import type { InferRecord, MemIdentityRecord } from '../shared/repr';
 import type { Prettify } from '../shared/utilityTypes';
 import type { ExoticRecord } from './exotic';
 import type { AnyWgslData, BaseWgslData, WgslStruct } from './wgslTypes';
@@ -51,6 +51,8 @@ class TgpuStructImpl<TProps extends Record<string, AnyWgslData>>
   public readonly '~repr'!: InferRecord<TProps>;
   /** Type-token, not available at runtime */
   public readonly '~exotic'!: WgslStruct<ExoticRecord<TProps>>;
+  /** Type-token, not available at runtime */
+  public readonly '~memIdent'!: WgslStruct<MemIdentityRecord<TProps>>;
 
   constructor(public readonly propTypes: TProps) {}
 
