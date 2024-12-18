@@ -2,6 +2,7 @@
  * @module typegpu/experimental
  */
 
+import { declare } from '../core/declare/tgpuDeclare';
 import { assignAst } from '../core/function/astUtils';
 import { computeFn } from '../core/function/tgpuComputeFn';
 import { fn, procedure } from '../core/function/tgpuFn';
@@ -37,6 +38,7 @@ export const tgpu = {
   bindGroupLayout,
   derived,
   slot,
+  declare,
 
   init: init as (
     options?: InitOptions | undefined,
@@ -162,3 +164,4 @@ export {
   WithLocations,
   withLocations,
 } from '../core/function/ioOutputType';
+export { TgpuDeclare } from '../core/declare/tgpuDeclare';
