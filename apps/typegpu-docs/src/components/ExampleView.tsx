@@ -1,7 +1,6 @@
 import cs from 'classnames';
 import { useAtomValue, useSetAtom } from 'jotai';
-import { type RefObject, useEffect, useMemo, useRef, useState } from 'react';
-import { debounce } from 'remeda';
+import { type RefObject, useEffect, useRef, useState } from 'react';
 import {
   codeEditorShownAtom,
   codeEditorShownMobileAtom,
@@ -12,7 +11,6 @@ import { executeExample } from '../utils/examples/exampleRunner';
 import type { ExampleState } from '../utils/examples/exampleState';
 import type { Example } from '../utils/examples/types';
 import { isGPUSupported } from '../utils/isGPUSupported';
-import useEvent from '../utils/useEvent';
 import { HtmlCodeEditor, TsCodeEditor } from './CodeEditor';
 import { ControlPanel } from './ControlPanel';
 import { Snackbar } from './design/Snackbar';
@@ -71,15 +69,8 @@ function useExample(
 type EditorTab = 'ts' | 'html';
 
 export function ExampleView({ example }: Props) {
-  const {
-    tsCode: initialTsCode,
-    htmlCode: intitialHtmlCode,
-    metadata,
-    execTsCode,
-  } = example;
+  const { tsCode, htmlCode, metadata, execTsCode } = example;
 
-  const [code, setCode] = useState(initialTsCode);
-  const [htmlCode, setHtmlCode] = useState(intitialHtmlCode);
   const [snackbarText, setSnackbarText] = useState<string | undefined>();
   const [currentEditorTab, setCurrentEditorTab] = useState<EditorTab>('ts');
 
@@ -94,31 +85,10 @@ export function ExampleView({ example }: Props) {
       return;
     }
     exampleHtmlRef.current.innerHTML = htmlCode;
-  }, [code, htmlCode]);
-
-  const setTsCodeDebouncer = useMemo(
-    () => debounce(setCode, { waitMs: 500 }),
-    [],
-  );
-  const handleTsCodeChange = useEvent((newCode: string) => {
-    setTsCodeDebouncer.call(newCode);
-  });
-
-  const setHtmlCodeDebouncer = useMemo(
-    () => debounce(setHtmlCode, { waitMs: 500 }),
-    [],
-  );
-  const handleHtmlCodeChange = useEvent((newCode: string) => {
-    setHtmlCodeDebouncer.call(newCode);
-  });
+  }, [tsCode, htmlCode]);
 
   useExample(execTsCode, htmlCode, setSnackbarText, metadata.tags);
-  useResizableCanvas(exampleHtmlRef, execTsCode, htmlCode);
-
-  useEffect(() => {
-    setCode(initialTsCode);
-    setHtmlCode(intitialHtmlCode);
-  }, [initialTsCode, intitialHtmlCode]);
+  useResizableCanvas(exampleHtmlRef, tsCode, htmlCode);
 
   return (
     <>
@@ -165,16 +135,11 @@ export function ExampleView({ example }: Props) {
                   setCurrentEditorTab={setCurrentEditorTab}
                 />
 
-                <TsCodeEditor
-                  shown={currentEditorTab === 'ts'}
-                  code={code}
-                  onCodeChange={handleTsCodeChange}
-                />
+                <TsCodeEditor shown={currentEditorTab === 'ts'} code={tsCode} />
 
                 <HtmlCodeEditor
                   shown={currentEditorTab === 'html'}
                   code={htmlCode}
-                  onCodeChange={handleHtmlCodeChange}
                 />
               </div>
             </div>

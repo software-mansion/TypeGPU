@@ -1,4 +1,4 @@
-import { parse } from '@typegpu/wgsl-parser';
+import { parse } from 'tgpu-wgsl-parser';
 import type { TgpuResolveOptions } from '../../src/core/resolve/tgpuResolve';
 import tgpu from '../../src/experimental';
 

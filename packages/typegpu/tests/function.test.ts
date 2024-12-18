@@ -1,4 +1,4 @@
-import { parse } from '@typegpu/wgsl-parser';
+import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { IOLayout, InferIO } from '../src/core/function/fnTypes';
 import * as d from '../src/data';
