@@ -18,7 +18,7 @@ import {
 import type { ExperimentalTgpuRoot } from '../core/root/rootTypes';
 import { derived } from '../core/slot/derived';
 import { slot } from '../core/slot/slot';
-import { variable } from '../core/variable/tgpuVariable';
+import { privateVar, workgroupVar } from '../core/variable/tgpuVariable';
 import { vertexLayout } from '../core/vertexLayout/vertexLayout';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
 
@@ -39,7 +39,8 @@ export const tgpu = {
   bindGroupLayout,
   derived,
   slot,
-  var: variable,
+  privateVar,
+  workgroupVar,
   const: constant,
 
   init: init as (
@@ -130,7 +131,6 @@ export type { InitOptions, InitFromDeviceOptions } from '../core/root/init';
 export type { TgpuConst } from '../core/constant/tgpuConstant';
 export type {
   TgpuVar,
-  TgpuVarUninitialized,
   VariableScope,
 } from '../core/variable/tgpuVariable';
 export type { TgpuSampler } from '../core/sampler/sampler';

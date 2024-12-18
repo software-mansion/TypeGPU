@@ -1,8 +1,8 @@
-import type { AnyWgslData } from '../../data';
+import type { AnyWgslData, Infer } from '../../data';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
-import type { Infer } from '../../shared/repr';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
+import type { Exotic } from './../../data/exotic';
 
 // ----------
 // Public API
@@ -19,9 +19,9 @@ export interface TgpuConst<TDataType extends AnyWgslData>
  * Creates a module constant with specified value.
  */
 export function constant<TDataType extends AnyWgslData>(
-  dataType: TDataType,
-  value: Infer<TDataType>,
-): TgpuConst<TDataType> {
+  dataType: Exotic<TDataType>,
+  value: Infer<Exotic<TDataType>>,
+): TgpuConst<Exotic<TDataType>> {
   return new TgpuConstImpl(dataType, value);
 }
 

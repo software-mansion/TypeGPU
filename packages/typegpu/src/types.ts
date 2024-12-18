@@ -5,9 +5,9 @@ import {
   isDerived,
   isSlot,
 } from './core/slot/slotTypes';
+import type { Infer } from './data';
 import type { AnyWgslData, BaseWgslData } from './data/wgslTypes';
 import type { NameRegistry } from './nameRegistry';
-import type { Infer } from './shared/repr';
 import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
