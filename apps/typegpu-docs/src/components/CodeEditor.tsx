@@ -10,7 +10,6 @@ import type { editor } from 'monaco-editor';
 import { entries, map, pipe } from 'remeda';
 import typedBinary from 'typed-binary/dist/index.d.ts?raw';
 import { tsCompilerOptions } from '../utils/liveEditor/embeddedTypeScript';
-import useEvent from '../utils/useEvent';
 
 const typegpuDtsFiles: Record<string, string> = import.meta.glob(
   '../../../../packages/typegpu/dist/**/*.d.ts',
@@ -81,7 +80,6 @@ function handleEditorOnMount(editor: editor.IStandaloneCodeEditor) {
 
 type Props = {
   code: string;
-  onCodeChange: (value: string) => unknown;
   shown: boolean;
 };
 
@@ -92,18 +90,13 @@ const createCodeEditorComponent =
     onMount?: OnMount,
   ) =>
   (props: Props) => {
-    const { code, onCodeChange, shown } = props;
-
-    const handleChange = useEvent((value: string | undefined) => {
-      onCodeChange(value ?? '');
-    });
+    const { code, shown } = props;
 
     return (
       <div className={shown ? 'contents' : 'hidden'}>
         <Editor
           defaultLanguage={language}
           value={code}
-          onChange={handleChange}
           beforeMount={beforeMount}
           onMount={onMount}
           options={{
