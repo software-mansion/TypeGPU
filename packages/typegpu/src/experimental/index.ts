@@ -71,7 +71,6 @@ export {
 export { StrictNameRegistry, RandomNameRegistry } from '../nameRegistry';
 
 export { default as wgsl } from '../wgsl';
-export * from '../std';
 export {
   isBuffer,
   isUsableAsUniform,
