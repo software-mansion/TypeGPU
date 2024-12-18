@@ -3,7 +3,6 @@ import tgpu, {
   asMutable,
   asReadonly,
   asUniform,
-  wgsl,
   std,
   type TgpuBufferReadonly,
   type TgpuBufferMutable,
@@ -23,7 +22,7 @@ context.configure({
 
 const MAX_GRID_SIZE = 1024;
 
-const randSeed = wgsl.var(d.vec2f);
+const randSeed = tgpu.var(d.vec2f);
 
 const setupRandomSeed = tgpu.fn([d.vec2f]).does((coord) => {
   randSeed.value = coord;
