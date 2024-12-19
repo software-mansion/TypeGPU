@@ -2,6 +2,8 @@
  * @module typegpu/experimental
  */
 
+import { constant } from '../core/constant/tgpuConstant';
+import { declare } from '../core/declare/tgpuDeclare';
 import { assignAst } from '../core/function/astUtils';
 import { computeFn } from '../core/function/tgpuComputeFn';
 import { fn, procedure } from '../core/function/tgpuFn';
@@ -17,6 +19,7 @@ import {
 import type { ExperimentalTgpuRoot } from '../core/root/rootTypes';
 import { derived } from '../core/slot/derived';
 import { slot } from '../core/slot/slot';
+import { privateVar, workgroupVar } from '../core/variable/tgpuVariable';
 import { vertexLayout } from '../core/vertexLayout/vertexLayout';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
 
@@ -37,6 +40,10 @@ export const tgpu = {
   bindGroupLayout,
   derived,
   slot,
+  privateVar,
+  workgroupVar,
+  const: constant,
+  declare,
 
   init: init as (
     options?: InitOptions | undefined,
@@ -62,7 +69,7 @@ export {
   NotUniformError,
   ResolutionError,
 } from '../errors';
-export {
+export type {
   TgpuRoot,
   ExperimentalTgpuRoot,
   WithBinding,
@@ -72,8 +79,6 @@ export {
 } from '../core/root/rootTypes';
 export { StrictNameRegistry, RandomNameRegistry } from '../nameRegistry';
 
-export { default as wgsl } from '../wgsl';
-export { std } from '../std';
 export {
   isBuffer,
   isUsableAsUniform,
@@ -101,6 +106,7 @@ export {
   asReadonly,
   asMutable,
 } from '../core/buffer/bufferUsage';
+export { withLocations } from '../core/function/ioOutputType';
 
 export type { Storage } from '../extension';
 export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
@@ -124,8 +130,11 @@ export type {
 export type { TextureProps } from '../core/texture/textureProps';
 export type { Render, Sampled } from '../core/texture/usageExtension';
 export type { InitOptions, InitFromDeviceOptions } from '../core/root/init';
-export type { TgpuConst } from '../tgpuConstant';
-export type { TgpuVar } from '../tgpuVariable';
+export type { TgpuConst } from '../core/constant/tgpuConstant';
+export type {
+  TgpuVar,
+  VariableScope,
+} from '../core/variable/tgpuVariable';
 export type { TgpuSampler } from '../core/sampler/sampler';
 export type { JitTranspiler } from '../jitTranspiler';
 export type {
@@ -157,8 +166,8 @@ export type {
   TgpuComputeFnShell,
   TgpuComputeFn,
 } from '../core/function/tgpuComputeFn';
-export {
+export type {
   IOLayoutToOutputSchema,
   WithLocations,
-  withLocations,
 } from '../core/function/ioOutputType';
+export type { TgpuDeclare } from '../core/declare/tgpuDeclare';

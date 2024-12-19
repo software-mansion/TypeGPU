@@ -8,12 +8,19 @@ import {
   isDerived,
   isSlot,
 } from './core/slot/slotTypes';
-import { type AnyWgslData, isWgslData } from './data/wgslTypes';
+import {
+  type AnyWgslData,
+  type BaseWgslData,
+  isWgslArray,
+  isWgslData,
+  isWgslStruct,
+} from './data/wgslTypes';
 import { MissingSlotValueError, ResolutionError } from './errors';
 import { provideCtx } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
 import { naturalsExcept } from './shared/generators';
+import type { Infer } from './shared/repr';
 import { generateFunction } from './smol';
 import {
   type TgpuBindGroup,
@@ -29,7 +36,7 @@ import type {
   TgpuResolvable,
   Wgsl,
 } from './types';
-import { UnknownData } from './types';
+import { UnknownData, isWgsl } from './types';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -505,6 +512,24 @@ class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     return this._getOrInstantiate(item);
+  }
+
+  resolveValue<T extends BaseWgslData>(value: Infer<T>, schema: T): string {
+    if (isWgsl(value)) {
+      return this.resolve(value);
+    }
+
+    if (isWgslArray(schema)) {
+      return `array(${(value as Infer<typeof schema>).map((element) => this.resolveValue(element, schema.elementType))})`;
+    }
+
+    if (isWgslStruct(schema)) {
+      return `${this.resolve(schema)}(${Object.entries(schema.propTypes).map(([key, type_]) => this.resolveValue((value as Infer<typeof schema>)[key], type_))})`;
+    }
+
+    throw new Error(
+      `Value ${value} of schema ${schema} is not resolvable to WGSL`,
+    );
   }
 }
 

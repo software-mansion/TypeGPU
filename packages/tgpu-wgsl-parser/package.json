@@ -1,5 +1,5 @@
 {
-  "name": "@typegpu/wgsl-parser",
+  "name": "tgpu-wgsl-parser",
   "private": true,
   "version": "0.0.0",
   "description": "A WGSL code parser.",

@@ -4,6 +4,8 @@ import {
   type TgpuArray,
   type U32,
   type Vec3f,
+  type Vec4f,
+  type Vec4i,
   type WgslArray,
   arrayOf,
   f32,
@@ -15,9 +17,12 @@ import tgpu, {
   type TgpuBufferUniform,
   type TgpuBufferReadonly,
   type TgpuBufferMutable,
+  type TgpuWriteonlyTexture,
+  type TgpuSampledTexture,
+  type TgpuMutableTexture,
 } from '../src/experimental';
 import './utils/webgpuGlobals';
-import { parse } from '@typegpu/wgsl-parser';
+import { parse } from 'tgpu-wgsl-parser';
 import {
   MissingBindingError,
   type TgpuBindGroup,
@@ -314,53 +319,20 @@ describe('TgpuBindGroup', () => {
   });
 
   describe('texture layout', () => {
-    let layout: TgpuBindGroupLayout<{ foo: { texture: 'float' } }>;
+    let layout2d: TgpuBindGroupLayout<{ foo: { texture: 'float' } }>;
+    let layout3d: TgpuBindGroupLayout<{
+      foo: { texture: 'float'; viewDimension: '3d' };
+    }>;
 
     beforeEach(() => {
-      layout = tgpu
+      layout2d = tgpu
         .bindGroupLayout({
           foo: { texture: 'float' },
         })
         .$name('example');
-    });
-
-    it('populates a simple layout with a raw texture view', ({ root }) => {
-      const view = root.device
-        .createTexture({
-          format: 'rgba8unorm',
-          size: [32, 32],
-          usage: GPUTextureUsage.TEXTURE_BINDING,
-        })
-        .createView();
-
-      const bindGroup = root.createBindGroup(layout, {
-        foo: view,
-      });
-
-      expect(root.device.createBindGroupLayout).not.toBeCalled();
-      root.unwrap(bindGroup);
-      expect(root.device.createBindGroupLayout).toBeCalled();
-
-      expect(root.device.createBindGroup).toBeCalledWith({
-        label: 'example',
-        layout: root.unwrap(layout),
-        entries: [
-          {
-            binding: 0,
-            resource: view,
-          },
-        ],
-      });
-    });
-  });
-
-  describe('storage texture layout', () => {
-    let layout: TgpuBindGroupLayout<{ foo: { storageTexture: 'rgba8unorm' } }>;
-
-    beforeEach(() => {
-      layout = tgpu
+      layout3d = tgpu
         .bindGroupLayout({
-          foo: { storageTexture: 'rgba8unorm' },
+          foo: { texture: 'float', viewDimension: '3d' },
         })
         .$name('example');
     });
@@ -374,7 +346,7 @@ describe('TgpuBindGroup', () => {
         })
         .createView();
 
-      const bindGroup = root.createBindGroup(layout, {
+      const bindGroup = root.createBindGroup(layout2d, {
         foo: view,
       });
 
@@ -384,7 +356,7 @@ describe('TgpuBindGroup', () => {
 
       expect(root.device.createBindGroup).toBeCalledWith({
         label: 'example',
-        layout: root.unwrap(layout),
+        layout: root.unwrap(layout2d),
         entries: [
           {
             binding: 0,
@@ -392,6 +364,261 @@ describe('TgpuBindGroup', () => {
           },
         ],
       });
+    });
+
+    it('populates a simple layout with a typed texture', ({ root }) => {
+      const texture = root
+        .createTexture({
+          size: [32, 128],
+          format: 'rgba8unorm',
+        })
+        .$usage('sampled');
+
+      const bindGroup = root.createBindGroup(layout2d, {
+        foo: texture,
+      });
+
+      expect(root.device.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(root.device.createBindGroupLayout).toBeCalled();
+
+      expect(root.device.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout2d),
+        entries: [
+          {
+            binding: 0,
+            resource: 'view',
+          },
+        ],
+      });
+    });
+
+    it('rejects typed textures of incorrect type', ({ root }) => {
+      const texture = root
+        .createTexture({
+          size: [64, 64],
+          format: 'r16uint',
+        })
+        .$usage('sampled');
+
+      const texture3d = root
+        .createTexture({
+          size: [64, 64, 64],
+          format: 'rgba8unorm',
+          dimension: '3d',
+        })
+        .$usage('sampled');
+
+      const textureControl = root
+        .createTexture({
+          size: [64, 64],
+          format: 'rgba8unorm',
+        })
+        .$usage('sampled');
+
+      root.createBindGroup(layout2d, {
+        // @ts-expect-error - incompatible format
+        foo: texture,
+      });
+
+      root.createBindGroup(layout2d, {
+        // @ts-expect-error - incompatible dimension
+        foo: texture3d,
+      });
+
+      root.createBindGroup(layout2d, {
+        foo: textureControl,
+      });
+
+      root.createBindGroup(layout3d, {
+        // @ts-expect-error - incompatible dimension
+        foo: texture,
+      });
+
+      root.createBindGroup(layout3d, {
+        foo: texture3d,
+      });
+    });
+
+    it('properly fill the bound property', () => {
+      const layout = tgpu.bindGroupLayout({
+        foo: { texture: 'float', viewDimension: '2d', mipLevelCount: 1 },
+        bar: { texture: 'unfilterable-float', viewDimension: 'cube-array' },
+      });
+
+      const { foo, bar } = layout.bound;
+
+      expectTypeOf(foo).toEqualTypeOf<TgpuSampledTexture<'2d', F32>>();
+      expectTypeOf(bar).toEqualTypeOf<TgpuSampledTexture<'2d', F32>>();
+    });
+  });
+
+  describe('storage texture layout', () => {
+    let layout3d: TgpuBindGroupLayout<{
+      foo: {
+        storageTexture: 'rgba8unorm';
+        viewDimension: '3d';
+        access: 'readonly' | 'writeonly';
+      };
+    }>;
+
+    let layout2d: TgpuBindGroupLayout<{
+      foo: {
+        storageTexture: 'rgba8unorm';
+        viewDimension: '2d-array';
+      };
+    }>;
+
+    beforeEach(() => {
+      layout3d = tgpu
+        .bindGroupLayout({
+          foo: {
+            storageTexture: 'rgba8unorm',
+            viewDimension: '3d',
+            access: 'readonly',
+          },
+        })
+        .$name('example');
+      layout2d = tgpu
+        .bindGroupLayout({
+          foo: {
+            storageTexture: 'rgba8unorm',
+            viewDimension: '2d-array',
+          },
+        })
+        .$name('example');
+    });
+
+    it('populates a simple layout with a raw texture view', ({ root }) => {
+      const view = root.device
+        .createTexture({
+          format: 'rgba8unorm',
+          size: [32, 32],
+          usage: GPUTextureUsage.TEXTURE_BINDING,
+        })
+        .createView();
+
+      const bindGroup = root.createBindGroup(layout3d, {
+        foo: view,
+      });
+
+      expect(root.device.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(root.device.createBindGroupLayout).toBeCalled();
+
+      expect(root.device.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout3d),
+        entries: [
+          {
+            binding: 0,
+            resource: view,
+          },
+        ],
+      });
+    });
+
+    it('populates a simple layout with a typed storage texture', ({ root }) => {
+      const texture = root
+        .createTexture({
+          size: [32, 32],
+          format: 'rgba8unorm',
+          dimension: '3d',
+        })
+        .$usage('storage');
+
+      const bindGroup = root.createBindGroup(layout3d, {
+        foo: texture,
+      });
+
+      expect(root.device.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(root.device.createBindGroupLayout).toBeCalled();
+
+      expect(root.device.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout3d),
+        entries: [
+          {
+            binding: 0,
+            resource: 'view',
+          },
+        ],
+      });
+    });
+
+    it('rejects typed storage textures of incorrect type', ({ root }) => {
+      const texture2d = root
+        .createTexture({
+          size: [64, 64],
+          format: 'rgba8unorm',
+          dimension: '2d',
+        })
+        .$usage('storage');
+
+      const texture3d = root
+        .createTexture({
+          size: [64, 64, 64],
+          format: 'rgba8unorm',
+          dimension: '3d',
+        })
+        .$usage('storage');
+
+      const texture1d = root
+        .createTexture({
+          size: [64],
+          format: 'rgba8snorm',
+          dimension: '1d',
+        })
+        .$usage('storage');
+
+      root.createBindGroup(layout3d, {
+        // @ts-expect-error - incompatible dimension
+        foo: texture2d,
+      });
+
+      root.createBindGroup(layout3d, {
+        // @ts-expect-error - incompatible dimension and format
+        foo: texture1d,
+      });
+
+      root.createBindGroup(layout3d, {
+        foo: texture3d,
+      });
+
+      root.createBindGroup(layout2d, {
+        // @ts-expect-error - incompatible dimension
+        foo: texture3d,
+      });
+
+      root.createBindGroup(layout2d, {
+        // @ts-expect-error - incompatible dimension and format
+        foo: texture1d,
+      });
+
+      root.createBindGroup(layout2d, {
+        foo: texture2d,
+      });
+    });
+
+    it('properly fill the bound property', () => {
+      const layout = tgpu.bindGroupLayout({
+        foo: {
+          storageTexture: 'rgba8unorm',
+          viewDimension: '3d',
+          access: 'mutable',
+        },
+        bar: {
+          storageTexture: 'rg32sint',
+          viewDimension: '2d-array',
+        },
+      });
+
+      const { foo, bar } = layout.bound;
+
+      expectTypeOf(foo).toEqualTypeOf<TgpuMutableTexture<'3d', Vec4f>>();
+      expectTypeOf(bar).toEqualTypeOf<TgpuWriteonlyTexture<'2d', Vec4i>>();
     });
   });
 
