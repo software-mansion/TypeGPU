@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "allowImportingTsExtensions": true,
     "typeRoots": ["./node_modules/@types"]
   },
   "include": ["src/**/*"],
