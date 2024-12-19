@@ -79,7 +79,6 @@ export type {
 } from '../core/root/rootTypes';
 export { StrictNameRegistry, RandomNameRegistry } from '../nameRegistry';
 
-export { std } from '../std';
 export {
   isBuffer,
   isUsableAsUniform,

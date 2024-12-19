@@ -32,6 +32,12 @@
       "module": "./dist/experimental/index.js",
       "import": "./dist/experimental/index.js",
       "default": "./dist/experimental/index.cjs"
+    },
+    "./std": {
+      "types": "./dist/std/index.d.ts",
+      "module": "./dist/std/index.js",
+      "import": "./dist/std/index.js",
+      "default": "./dist/std/index.cjs"
     }
   },
   "sideEffects": false,

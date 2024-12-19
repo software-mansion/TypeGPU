@@ -1,5 +1,6 @@
 import * as d from 'typegpu/data';
-import tgpu, { std } from 'typegpu/experimental';
+import tgpu from 'typegpu/experimental';
+import { cross, mul, normalize, sub } from 'typegpu/std';
 
 // init canvas and values
 
@@ -9,7 +10,7 @@ const Z = 7;
 
 const MAX_BOX_SIZE = 15;
 const cubeSize = d.vec3f(X * MAX_BOX_SIZE, Y * MAX_BOX_SIZE, Z * MAX_BOX_SIZE);
-const boxCenter = std.mul(0.5, cubeSize);
+const boxCenter = mul(0.5, cubeSize);
 const upAxis = d.vec3f(0, 1, 0);
 let rotationSpeed = 2;
 let cameraDistance = 250;
@@ -322,11 +323,11 @@ onFrame((deltaTime) => {
   );
 
   const cameraAxes = (() => {
-    const forwardAxis = std.normalize(std.sub(boxCenter, cameraPosition));
+    const forwardAxis = normalize(sub(boxCenter, cameraPosition));
     return {
       forward: forwardAxis,
       up: upAxis,
-      right: std.cross(upAxis, forwardAxis),
+      right: cross(upAxis, forwardAxis),
     };
   })();
 
