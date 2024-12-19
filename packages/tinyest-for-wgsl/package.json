@@ -36,7 +36,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/software-mansion/typegpu.git"
+    "url": "git+https://github.com/software-mansion/TypeGPU.git"
   },
   "keywords": [
     "webgpu",
