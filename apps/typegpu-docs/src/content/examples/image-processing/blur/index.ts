@@ -1,8 +1,8 @@
 // Original implementation:
 // https://webgpu.github.io/webgpu-samples/?sample=imageBlur
 
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
 
 const tileDim = 128;
 const batch = [4, 4];
@@ -297,7 +297,7 @@ function render() {
 
 render();
 
-// #region Example Controls & Cleanup
+// #region Example controls & Cleanup
 
 export const controls = {
   'filter size': {
