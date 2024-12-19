@@ -5,8 +5,9 @@ import {
   isDerived,
   isSlot,
 } from './core/slot/slotTypes';
-import type { AnyWgslData } from './data/wgslTypes';
+import type { AnyWgslData, BaseWgslData } from './data/wgslTypes';
 import type { NameRegistry } from './nameRegistry';
+import type { Infer } from './shared/repr';
 import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
@@ -70,6 +71,7 @@ export interface ResolutionCtx {
   unwrap<T>(eventual: Eventual<T>): T;
 
   resolve(item: Wgsl): string;
+  resolveValue<T extends BaseWgslData>(value: Infer<T>, schema: T): string;
 
   transpileFn(fn: string): {
     argNames: string[];
