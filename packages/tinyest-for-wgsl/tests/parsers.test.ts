@@ -13,7 +13,7 @@ describe('transpileFn', () => {
     const { argNames, body, externalNames } = transpileFn(p('() => {}'));
 
     expect(argNames).toEqual([]);
-    expect(body).toEqual({ block: [] });
+    expect(body).toEqual({ b: [] });
     expect(externalNames).toEqual([]);
   });
 
@@ -23,7 +23,7 @@ describe('transpileFn', () => {
     );
 
     expect(argNames).toEqual([]);
-    expect(body).toEqual({ block: [] });
+    expect(body).toEqual({ b: [] });
     expect(externalNames).toEqual([]);
   });
 
@@ -34,7 +34,7 @@ describe('transpileFn', () => {
 
     expect(argNames).toEqual(['a', 'b']);
     expect(body).toEqual({
-      block: [{ return: { x2: [{ x2: ['a', '+', 'b'] }, '-', 'c'] } }],
+      b: [{ r: { x: [{ x: ['a', '+', 'b'] }, '-', 'c'] } }],
     });
     expect(externalNames).toEqual(['c']);
   });
@@ -49,9 +49,9 @@ describe('transpileFn', () => {
 
     expect(argNames).toEqual([]);
     expect(body).toEqual({
-      block: [
-        { const: 'a', eq: { num: '0' } },
-        { x2: ['c', '=', { x2: ['a', '+', { num: '2' }] }] },
+      b: [
+        { c: ['a', { n: '0' }] },
+        { x: ['c', '=', { x: ['a', '+', { n: '2' }] }] },
       ],
     });
     // Only 'c' is external, as 'a' is declared in the same scope.
@@ -70,9 +70,9 @@ describe('transpileFn', () => {
 
     expect(argNames).toEqual([]);
     expect(body).toEqual({
-      block: [
-        { const: 'a', eq: { num: '0' } },
-        { block: [{ x2: ['c', '=', { x2: ['a', '+', { num: '2' }] }] }] },
+      b: [
+        { c: ['a', { n: '0' }] },
+        { b: [{ x: ['c', '=', { x: ['a', '+', { n: '2' }] }] }] },
       ],
     });
     // Only 'c' is external, as 'a' is declared in the outer scope.
@@ -86,7 +86,7 @@ describe('transpileFn', () => {
 
     expect(argNames).toEqual([]);
     expect(body).toEqual({
-      block: [{ return: { '.': [{ '.': ['external', 'outside'] }, 'prop'] } }],
+      b: [{ r: { a: [{ a: ['external', 'outside'] }, 'prop'] } }],
     });
     // Only 'external' is external.
     expect(externalNames).toEqual(['external']);
