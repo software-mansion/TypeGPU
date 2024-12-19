@@ -3,6 +3,7 @@
  */
 
 import { constant } from '../core/constant/tgpuConstant';
+import { declare } from '../core/declare/tgpuDeclare';
 import { assignAst } from '../core/function/astUtils';
 import { computeFn } from '../core/function/tgpuComputeFn';
 import { fn, procedure } from '../core/function/tgpuFn';
@@ -42,6 +43,7 @@ export const tgpu = {
   privateVar,
   workgroupVar,
   const: constant,
+  declare,
 
   init: init as (
     options?: InitOptions | undefined,
@@ -67,7 +69,7 @@ export {
   NotUniformError,
   ResolutionError,
 } from '../errors';
-export {
+export type {
   TgpuRoot,
   ExperimentalTgpuRoot,
   WithBinding,
@@ -105,6 +107,7 @@ export {
   asReadonly,
   asMutable,
 } from '../core/buffer/bufferUsage';
+export { withLocations } from '../core/function/ioOutputType';
 
 export type { Storage } from '../extension';
 export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
@@ -164,8 +167,8 @@ export type {
   TgpuComputeFnShell,
   TgpuComputeFn,
 } from '../core/function/tgpuComputeFn';
-export {
+export type {
   IOLayoutToOutputSchema,
   WithLocations,
-  withLocations,
 } from '../core/function/ioOutputType';
+export type { TgpuDeclare } from '../core/declare/tgpuDeclare';

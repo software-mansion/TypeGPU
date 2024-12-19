@@ -26,38 +26,28 @@ import {
 } from './vector';
 import type * as wgsl from './wgslTypes';
 
+type DataWriter<TSchema extends wgsl.BaseWgslData> = (
+  output: ISerialOutput,
+  schema: TSchema,
+  value: Infer<TSchema>,
+) => void;
+
+type DataReader<TSchema extends wgsl.BaseWgslData> = (
+  input: ISerialInput,
+  schema: TSchema,
+) => Infer<TSchema>;
+
 type CompleteDataWriters = {
-  [TType in AnyData['type']]: (
-    output: ISerialOutput,
-    schema: Extract<AnyData, { readonly type: TType }>,
-    value: Infer<Extract<AnyData, { readonly type: TType }>>,
-  ) => void;
+  [TType in AnyData['type']]: DataWriter<
+    Extract<AnyData, { readonly type: TType }>
+  >;
 };
 
 type CompleteDataReaders = {
-  [TType in AnyData['type']]: (
-    input: ISerialInput,
-    schema: Extract<AnyData, { readonly type: TType }>,
-  ) => Infer<Extract<AnyData, { readonly type: TType }>>;
+  [TType in AnyData['type']]: DataReader<
+    Extract<AnyData, { readonly type: TType }>
+  >;
 };
-
-function sint8Write(output: ISerialOutput, value: number) {
-  if (value >= 0) {
-    output.writeByte(value & 127);
-  } else {
-    output.writeByte((value & 127) | 128);
-  }
-}
-
-function sint8Read(input: ISerialInput): number {
-  const value = input.readByte();
-  if (value & 128) {
-    // has sign bit
-    return (value & 127) - 128;
-  }
-
-  return value & 127;
-}
 
 const dataWriters = {
   bool(output, _schema: wgsl.Bool, value: boolean) {
@@ -217,156 +207,108 @@ const dataWriters = {
   // Loose Types
 
   uint8(output, _, value: number) {
-    output.writeByte(value);
+    output.writeUint8(value);
   },
   uint8x2(output, _, value: wgsl.v2u) {
-    output.writeByte(value.x);
-    output.writeByte(value.y);
+    output.writeUint8(value.x);
+    output.writeUint8(value.y);
   },
   uint8x4(output, _, value: wgsl.v4u) {
-    output.writeByte(value.x);
-    output.writeByte(value.y);
-    output.writeByte(value.z);
-    output.writeByte(value.w);
+    output.writeUint8(value.x);
+    output.writeUint8(value.y);
+    output.writeUint8(value.z);
+    output.writeUint8(value.w);
   },
   sint8(output, _, value: number) {
-    sint8Write(output, value);
+    output.writeInt8(value);
   },
   sint8x2(output, _, value: wgsl.v2i) {
-    sint8Write(output, value.x);
-    sint8Write(output, value.y);
+    output.writeInt8(value.x);
+    output.writeInt8(value.y);
   },
   sint8x4(output, _, value: wgsl.v4i) {
-    sint8Write(output, value.x);
-    sint8Write(output, value.y);
-    sint8Write(output, value.z);
-    sint8Write(output, value.w);
+    output.writeInt8(value.x);
+    output.writeInt8(value.y);
+    output.writeInt8(value.z);
+    output.writeInt8(value.w);
   },
   unorm8(output, _, value: number) {
-    output.writeByte(Math.floor(value * 255));
+    output.writeUint8(value * 255);
   },
   unorm8x2(output, _, value: wgsl.v2f) {
-    output.writeByte(Math.floor(value.x * 255));
-    output.writeByte(Math.floor(value.y * 255));
+    output.writeUint8(value.x * 255);
+    output.writeUint8(value.y * 255);
   },
   unorm8x4(output, _, value: wgsl.v4f) {
-    output.writeByte(Math.floor(value.x * 255));
-    output.writeByte(Math.floor(value.y * 255));
-    output.writeByte(Math.floor(value.z * 255));
-    output.writeByte(Math.floor(value.w * 255));
+    output.writeUint8(value.x * 255);
+    output.writeUint8(value.y * 255);
+    output.writeUint8(value.z * 255);
+    output.writeUint8(value.w * 255);
   },
   snorm8(output, _, value: number) {
-    output.writeByte(Math.floor(value * 127 + 128));
+    output.writeUint8(value * 127 + 128);
   },
   snorm8x2(output, _, value: wgsl.v2f) {
-    output.writeByte(Math.floor(value.x * 127 + 128));
-    output.writeByte(Math.floor(value.y * 127 + 128));
+    output.writeUint8(value.x * 127 + 128);
+    output.writeUint8(value.y * 127 + 128);
   },
   snorm8x4(output, _, value: wgsl.v4f) {
-    output.writeByte(Math.floor(value.x * 127 + 128));
-    output.writeByte(Math.floor(value.y * 127 + 128));
-    output.writeByte(Math.floor(value.z * 127 + 128));
-    output.writeByte(Math.floor(value.w * 127 + 128));
+    output.writeUint8(value.x * 127 + 128);
+    output.writeUint8(value.y * 127 + 128);
+    output.writeUint8(value.z * 127 + 128);
+    output.writeUint8(value.w * 127 + 128);
   },
   uint16(output, _, value: number) {
-    const buffer = new ArrayBuffer(2);
-    const view = new DataView(buffer);
-    const littleEndian = output.endianness === 'little';
-    view.setUint16(0, value, littleEndian);
-    output.writeSlice(new Uint8Array(buffer));
+    output.writeUint16(value);
   },
   uint16x2(output, _, value: wgsl.v2u) {
-    const buffer = new ArrayBuffer(4);
-    const view = new DataView(buffer);
-    const littleEndian = output.endianness === 'little';
-    view.setUint16(0, value.x, littleEndian);
-    view.setUint16(2, value.y, littleEndian);
-    output.writeSlice(new Uint8Array(buffer));
+    output.writeUint16(value.x);
+    output.writeUint16(value.y);
   },
   uint16x4(output, _, value: wgsl.v4u) {
-    const buffer = new ArrayBuffer(8);
-    const view = new DataView(buffer);
-    const littleEndian = output.endianness === 'little';
-    view.setUint16(0, value.x, littleEndian);
-    view.setUint16(2, value.y, littleEndian);
-    view.setUint16(4, value.z, littleEndian);
-    view.setUint16(6, value.w, littleEndian);
-    output.writeSlice(new Uint8Array(buffer));
+    output.writeUint16(value.x);
+    output.writeUint16(value.y);
+    output.writeUint16(value.z);
+    output.writeUint16(value.w);
   },
   sint16(output, _, value: number) {
-    const buffer = new ArrayBuffer(2);
-    const view = new DataView(buffer);
-    const littleEndian = output.endianness === 'little';
-    view.setInt16(0, value, littleEndian);
-    output.writeSlice(new Uint8Array(buffer));
+    output.writeInt16(value);
   },
   sint16x2(output, _, value: wgsl.v2i) {
-    const buffer = new ArrayBuffer(4);
-    const view = new DataView(buffer);
-    const littleEndian = output.endianness === 'little';
-    view.setInt16(0, value.x, littleEndian);
-    view.setInt16(2, value.y, littleEndian);
-    output.writeSlice(new Uint8Array(buffer));
+    output.writeInt16(value.x);
+    output.writeInt16(value.y);
   },
   sint16x4(output, _, value: wgsl.v4i) {
-    const buffer = new ArrayBuffer(8);
-    const view = new DataView(buffer);
-    const littleEndian = output.endianness === 'little';
-    view.setInt16(0, value.x, littleEndian);
-    view.setInt16(2, value.y, littleEndian);
-    view.setInt16(4, value.z, littleEndian);
-    view.setInt16(6, value.w, littleEndian);
-    output.writeSlice(new Uint8Array(buffer));
+    output.writeInt16(value.x);
+    output.writeInt16(value.y);
+    output.writeInt16(value.z);
+    output.writeInt16(value.w);
   },
   unorm16(output, _, value: number) {
-    const buffer = new ArrayBuffer(2);
-    const view = new DataView(buffer);
-    const littleEndian = output.endianness === 'little';
-    view.setUint16(0, Math.floor(value * 65535), littleEndian);
-    output.writeSlice(new Uint8Array(buffer));
+    output.writeUint16(value * 65535);
   },
   unorm16x2(output, _, value: wgsl.v2f) {
-    const buffer = new ArrayBuffer(4);
-    const view = new DataView(buffer);
-    const littleEndian = output.endianness === 'little';
-    view.setUint16(0, Math.floor(value.x * 65535), littleEndian);
-    view.setUint16(2, Math.floor(value.y * 65535), littleEndian);
-    output.writeSlice(new Uint8Array(buffer));
+    output.writeUint16(value.x * 65535);
+    output.writeUint16(value.y * 65535);
   },
   unorm16x4(output, _, value: wgsl.v4f) {
-    const buffer = new ArrayBuffer(8);
-    const view = new DataView(buffer);
-    const littleEndian = output.endianness === 'little';
-    view.setUint16(0, Math.floor(value.x * 65535), littleEndian);
-    view.setUint16(2, Math.floor(value.y * 65535), littleEndian);
-    view.setUint16(4, Math.floor(value.z * 65535), littleEndian);
-    view.setUint16(6, Math.floor(value.w * 65535), littleEndian);
-    output.writeSlice(new Uint8Array(buffer));
+    output.writeUint16(value.x * 65535);
+    output.writeUint16(value.y * 65535);
+    output.writeUint16(value.z * 65535);
+    output.writeUint16(value.w * 65535);
   },
   snorm16(output, _, value: number) {
-    const buffer = new ArrayBuffer(2);
-    const view = new DataView(buffer);
-    const littleEndian = output.endianness === 'little';
-    view.setUint16(0, Math.floor(value * 32767 + 32768), littleEndian);
-    output.writeSlice(new Uint8Array(buffer));
+    output.writeUint16(value * 32767 + 32768);
   },
   snorm16x2(output, _, value: wgsl.v2f) {
-    const buffer = new ArrayBuffer(4);
-    const view = new DataView(buffer);
-    const littleEndian = output.endianness === 'little';
-    view.setUint16(0, Math.floor(value.x * 32767 + 32768), littleEndian);
-    view.setUint16(2, Math.floor(value.y * 32767 + 32768), littleEndian);
-    output.writeSlice(new Uint8Array(buffer));
+    output.writeUint16(value.x * 32767 + 32768);
+    output.writeUint16(value.y * 32767 + 32768);
   },
   snorm16x4(output, _, value: wgsl.v4f) {
-    const buffer = new ArrayBuffer(8);
-    const view = new DataView(buffer);
-    const littleEndian = output.endianness === 'little';
-    view.setUint16(0, Math.floor(value.x * 32767 + 32768), littleEndian);
-    view.setUint16(2, Math.floor(value.y * 32767 + 32768), littleEndian);
-    view.setUint16(4, Math.floor(value.z * 32767 + 32768), littleEndian);
-    view.setUint16(6, Math.floor(value.w * 32767 + 32768), littleEndian);
-    output.writeSlice(new Uint8Array(buffer));
+    output.writeUint16(value.x * 32767 + 32768);
+    output.writeUint16(value.y * 32767 + 32768);
+    output.writeUint16(value.z * 32767 + 32768);
+    output.writeUint16(value.w * 32767 + 32768);
   },
   float16(output, _, value: number) {
     output.writeFloat16(value);
@@ -444,10 +386,10 @@ const dataWriters = {
     output.writeUint32(packed);
   },
   'unorm8x4-bgra'(output, _, value: wgsl.v4f) {
-    output.writeByte(Math.floor(value.z * 255));
-    output.writeByte(Math.floor(value.y * 255));
-    output.writeByte(Math.floor(value.x * 255));
-    output.writeByte(Math.floor(value.w * 255));
+    output.writeUint8(value.z * 255);
+    output.writeUint8(value.y * 255);
+    output.writeUint8(value.x * 255);
+    output.writeUint8(value.w * 255);
   },
 
   'loose-array'(output, schema: LooseArray, value: unknown[]) {
@@ -502,35 +444,35 @@ export function writeData<TData extends wgsl.BaseWgslData>(
 }
 
 const dataReaders = {
-  bool(input: ISerialInput) {
+  bool(input: ISerialInput): boolean {
     return input.readBool();
   },
 
-  f32(input: ISerialInput) {
+  f32(input: ISerialInput): number {
     return input.readFloat32();
   },
 
-  f16(input: ISerialInput) {
+  f16(input: ISerialInput): number {
     return input.readFloat16();
   },
 
-  i32(input: ISerialInput) {
+  i32(input: ISerialInput): number {
     return input.readInt32();
   },
 
-  u32(input: ISerialInput) {
+  u32(input: ISerialInput): number {
     return input.readUint32();
   },
 
-  vec2f(input) {
+  vec2f(input: ISerialInput): wgsl.v2f {
     return vec2f(input.readFloat32(), input.readFloat32());
   },
 
-  vec3f(input: ISerialInput) {
+  vec3f(input: ISerialInput): wgsl.v3f {
     return vec3f(input.readFloat32(), input.readFloat32(), input.readFloat32());
   },
 
-  vec4f(input: ISerialInput) {
+  vec4f(input: ISerialInput): wgsl.v4f {
     return vec4f(
       input.readFloat32(),
       input.readFloat32(),
@@ -539,15 +481,15 @@ const dataReaders = {
     );
   },
 
-  vec2h(input) {
+  vec2h(input): wgsl.v2h {
     return vec2h(input.readFloat16(), input.readFloat16());
   },
 
-  vec3h(input: ISerialInput) {
+  vec3h(input: ISerialInput): wgsl.v3h {
     return vec3h(input.readFloat16(), input.readFloat16(), input.readFloat16());
   },
 
-  vec4h(input: ISerialInput) {
+  vec4h(input: ISerialInput): wgsl.v4h {
     return vec4h(
       input.readFloat16(),
       input.readFloat16(),
@@ -556,15 +498,15 @@ const dataReaders = {
     );
   },
 
-  vec2i(input) {
+  vec2i(input): wgsl.v2i {
     return vec2i(input.readInt32(), input.readInt32());
   },
 
-  vec3i(input: ISerialInput) {
+  vec3i(input: ISerialInput): wgsl.v3i {
     return vec3i(input.readInt32(), input.readInt32(), input.readInt32());
   },
 
-  vec4i(input: ISerialInput) {
+  vec4i(input: ISerialInput): wgsl.v4i {
     return vec4i(
       input.readInt32(),
       input.readInt32(),
@@ -573,15 +515,15 @@ const dataReaders = {
     );
   },
 
-  vec2u(input) {
+  vec2u(input): wgsl.v2u {
     return vec2u(input.readUint32(), input.readUint32());
   },
 
-  vec3u(input: ISerialInput) {
+  vec3u(input: ISerialInput): wgsl.v3u {
     return vec3u(input.readUint32(), input.readUint32(), input.readUint32());
   },
 
-  vec4u(input: ISerialInput) {
+  vec4u(input: ISerialInput): wgsl.v4u {
     return vec4u(
       input.readUint32(),
       input.readUint32(),
@@ -590,7 +532,7 @@ const dataReaders = {
     );
   },
 
-  mat2x2f(input: ISerialInput) {
+  mat2x2f(input: ISerialInput): wgsl.m2x2f {
     return mat2x2f(
       input.readFloat32(),
       input.readFloat32(),
@@ -599,7 +541,7 @@ const dataReaders = {
     );
   },
 
-  mat3x3f(input: ISerialInput) {
+  mat3x3f(input: ISerialInput): wgsl.m3x3f {
     const skipOneAfter = () => {
       const value = input.readFloat32();
       input.readFloat32(); // skipping;
@@ -621,7 +563,7 @@ const dataReaders = {
     );
   },
 
-  mat4x4f(input: ISerialInput) {
+  mat4x4f(input: ISerialInput): wgsl.m4x4f {
     return mat4x4f(
       input.readFloat32(),
       input.readFloat32(),
@@ -694,161 +636,61 @@ const dataReaders = {
 
   // Loose Types
 
-  uint8: (i) => i.readByte(),
-  uint8x2: (i) => vec2u(i.readByte(), i.readByte()),
-  uint8x4: (i) => vec4u(i.readByte(), i.readByte(), i.readByte(), i.readByte()),
-  sint8: (i) => sint8Read(i),
+  uint8: (i) => i.readUint8(),
+  uint8x2: (i) => vec2u(i.readUint8(), i.readUint8()),
+  uint8x4: (i) =>
+    vec4u(i.readUint8(), i.readUint8(), i.readUint8(), i.readUint8()),
+  sint8: (i) => i.readInt8(),
   sint8x2: (i) => {
-    return vec2i(sint8Read(i), sint8Read(i));
+    return vec2i(i.readInt8(), i.readInt8());
   },
-  sint8x4: (i) => vec4i(sint8Read(i), sint8Read(i), sint8Read(i), sint8Read(i)),
-  unorm8: (i) => i.readByte() / 255,
-  unorm8x2: (i) => vec2f(i.readByte() / 255, i.readByte() / 255),
+  sint8x4: (i) => vec4i(i.readInt8(), i.readInt8(), i.readInt8(), i.readInt8()),
+  unorm8: (i) => i.readUint8() / 255,
+  unorm8x2: (i) => vec2f(i.readUint8() / 255, i.readUint8() / 255),
   unorm8x4: (i) =>
     vec4f(
-      i.readByte() / 255,
-      i.readByte() / 255,
-      i.readByte() / 255,
-      i.readByte() / 255,
+      i.readUint8() / 255,
+      i.readUint8() / 255,
+      i.readUint8() / 255,
+      i.readUint8() / 255,
     ),
-  snorm8: (i) => (i.readByte() - 128) / 127,
+  snorm8: (i) => (i.readUint8() - 128) / 127,
   snorm8x2: (i) =>
-    vec2f((i.readByte() - 128) / 127, (i.readByte() - 128) / 127),
+    vec2f((i.readUint8() - 128) / 127, (i.readUint8() - 128) / 127),
   snorm8x4: (i) =>
     vec4f(
-      (i.readByte() - 128) / 127,
-      (i.readByte() - 128) / 127,
-      (i.readByte() - 128) / 127,
-      (i.readByte() - 128) / 127,
+      (i.readUint8() - 128) / 127,
+      (i.readUint8() - 128) / 127,
+      (i.readUint8() - 128) / 127,
+      (i.readUint8() - 128) / 127,
     ),
-  uint16(i) {
-    const buffer = new ArrayBuffer(2);
-    i.readSlice(new Uint8Array(buffer), 0, 2);
-    const view = new DataView(buffer);
-    const littleEndian = i.endianness === 'little';
-
-    return view.getUint16(0, littleEndian);
-  },
-  uint16x2(i) {
-    const buffer = new ArrayBuffer(4);
-    i.readSlice(new Uint8Array(buffer), 0, 4);
-    const view = new DataView(buffer);
-    const littleEndian = i.endianness === 'little';
-
-    return vec2u(
-      view.getUint16(0, littleEndian),
-      view.getUint16(2, littleEndian),
-    );
-  },
-  uint16x4(i) {
-    const buffer = new ArrayBuffer(8);
-    i.readSlice(new Uint8Array(buffer), 0, 8);
-    const view = new DataView(buffer);
-    const littleEndian = i.endianness === 'little';
-
-    return vec4u(
-      view.getUint16(0, littleEndian),
-      view.getUint16(2, littleEndian),
-      view.getUint16(4, littleEndian),
-      view.getUint16(6, littleEndian),
-    );
-  },
-  sint16(i) {
-    const buffer = new ArrayBuffer(2);
-    i.readSlice(new Uint8Array(buffer), 0, 2);
-    const view = new DataView(buffer);
-    const littleEndian = i.endianness === 'little';
-
-    return view.getInt16(0, littleEndian);
-  },
-  sint16x2(i) {
-    const buffer = new ArrayBuffer(4);
-    i.readSlice(new Uint8Array(buffer), 0, 4);
-    const view = new DataView(buffer);
-    const littleEndian = i.endianness === 'little';
-
-    return vec2i(
-      view.getInt16(0, littleEndian),
-      view.getInt16(2, littleEndian),
-    );
-  },
-  sint16x4(i) {
-    const buffer = new ArrayBuffer(8);
-    i.readSlice(new Uint8Array(buffer), 0, 8);
-    const view = new DataView(buffer);
-    const littleEndian = i.endianness === 'little';
-
-    return vec4i(
-      view.getInt16(0, littleEndian),
-      view.getInt16(2, littleEndian),
-      view.getInt16(4, littleEndian),
-      view.getInt16(6, littleEndian),
-    );
-  },
-  unorm16(i) {
-    const buffer = new ArrayBuffer(2);
-    i.readSlice(new Uint8Array(buffer), 0, 2);
-    const view = new DataView(buffer);
-    const littleEndian = i.endianness === 'little';
-
-    return view.getUint16(0, littleEndian) / 65535;
-  },
-  unorm16x2(i) {
-    const buffer = new ArrayBuffer(4);
-    i.readSlice(new Uint8Array(buffer), 0, 4);
-    const view = new DataView(buffer);
-    const littleEndian = i.endianness === 'little';
-
-    return vec2f(
-      view.getUint16(0, littleEndian) / 65535,
-      view.getUint16(2, littleEndian) / 65535,
-    );
-  },
-  unorm16x4(i) {
-    const buffer = new ArrayBuffer(8);
-    i.readSlice(new Uint8Array(buffer), 0, 8);
-    const view = new DataView(buffer);
-    const littleEndian = i.endianness === 'little';
-
-    return vec4f(
-      view.getUint16(0, littleEndian) / 65535,
-      view.getUint16(2, littleEndian) / 65535,
-      view.getUint16(4, littleEndian) / 65535,
-      view.getUint16(6, littleEndian) / 65535,
-    );
-  },
-  snorm16(i) {
-    const buffer = new ArrayBuffer(2);
-    i.readSlice(new Uint8Array(buffer), 0, 2);
-    const view = new DataView(buffer);
-    const littleEndian = i.endianness === 'little';
-
-    return view.getInt16(0, littleEndian) / 32767;
-  },
-  snorm16x2(i) {
-    const buffer = new ArrayBuffer(4);
-    i.readSlice(new Uint8Array(buffer), 0, 4);
-    const view = new DataView(buffer);
-    const littleEndian = i.endianness === 'little';
-
-    return vec2f(
-      (view.getUint16(0, littleEndian) - 32768) / 32767,
-      (view.getUint16(2, littleEndian) - 32768) / 32767,
-    );
-  },
-  snorm16x4(i) {
-    const buffer = new ArrayBuffer(8);
-    i.readSlice(new Uint8Array(buffer), 0, 8);
-    const view = new DataView(buffer);
-    const littleEndian = i.endianness === 'little';
-
-    return vec4f(
-      (view.getUint16(0, littleEndian) - 32768) / 32767,
-      (view.getUint16(2, littleEndian) - 32768) / 32767,
-      (view.getUint16(4, littleEndian) - 32768) / 32767,
-      (view.getUint16(6, littleEndian) - 32768) / 32767,
-    );
-  },
+  uint16: (i) => i.readUint16(),
+  uint16x2: (i) => vec2u(i.readUint16(), i.readUint16()),
+  uint16x4: (i) =>
+    vec4u(i.readUint16(), i.readUint16(), i.readUint16(), i.readUint16()),
+  sint16: (i) => i.readInt16(),
+  sint16x2: (i) => vec2i(i.readInt16(), i.readInt16()),
+  sint16x4: (i) =>
+    vec4i(i.readInt16(), i.readInt16(), i.readInt16(), i.readInt16()),
+  unorm16: (i) => i.readUint16() / 65535,
+  unorm16x2: (i) => vec2f(i.readUint16() / 65535, i.readUint16() / 65535),
+  unorm16x4: (i) =>
+    vec4f(
+      i.readUint16() / 65535,
+      i.readUint16() / 65535,
+      i.readUint16() / 65535,
+      i.readUint16() / 65535,
+    ),
+  snorm16: (i) => (i.readUint16() - 32768) / 32767,
+  snorm16x2: (i): wgsl.v2f =>
+    vec2f(dataReaders.snorm16(i), dataReaders.snorm16(i)),
+  snorm16x4: (i): wgsl.v4f =>
+    vec4f(
+      dataReaders.snorm16(i),
+      dataReaders.snorm16(i),
+      dataReaders.snorm16(i),
+      dataReaders.snorm16(i),
+    ),
   float16(i) {
     return i.readFloat16();
   },
@@ -917,19 +759,18 @@ const dataReaders = {
     input.seekTo(beginning + sizeOf(schema));
     return value;
   },
-} satisfies CompleteDataReaders as Record<
-  string,
-  (input: ISerialInput, schema: unknown) => unknown
->;
+} satisfies CompleteDataReaders;
 
 export function readData<TData extends wgsl.BaseWgslData>(
   input: ISerialInput,
   schema: TData,
 ): Infer<TData> {
-  const reader = dataReaders[schema.type];
+  const reader = (dataReaders as Record<string, unknown>)[
+    schema.type
+  ] as DataReader<TData>;
   if (!reader) {
     throw new Error(`Cannot read data of type '${schema.type}'.`);
   }
 
-  return reader(input, schema) as Infer<TData>;
+  return reader(input, schema);
 }

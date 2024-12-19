@@ -178,9 +178,6 @@ export async function executeExample(
       if (moduleKey === 'typegpu/data') {
         return await import('typegpu/data');
       }
-      if (moduleKey === '@typegpu/jit') {
-        return await import('@typegpu/jit');
-      }
       if (moduleKey === '@typegpu/example-toolkit') {
         return {
           onCleanup(callback: () => unknown) {
