@@ -2,33 +2,46 @@
 // Statement
 //
 
+/**
+ * Represents a return statement
+ */
 export type Return = {
-  return: Expression | null;
+  r: Expression | null;
 };
 
+/**
+ * Represents an if statement
+ */
 export type If = {
-  /** condition */
-  if: Expression;
-  do: Statement;
-  else?: Statement | undefined;
+  q:
+    | [condition: Expression, consequent: Statement]
+    | [condition: Expression, consequent: Statement, alternate: Statement];
 };
 
+/**
+ * Represents a block of statements
+ */
 export type Block = {
-  block: Statement[];
+  b: Statement[];
 };
 
+/**
+ * Represents a let statement
+ */
 export type Let = {
-  /** variable's identifier */
-  let: string;
-  eq?: Expression | undefined;
+  l: [identifier: string] | [identifier: string, value: Expression];
 };
 
+/**
+ * Represents a const statement
+ */
 export type Const = {
-  /** variable's identifier */
-  const: string;
-  eq?: Expression | undefined;
+  c: [identifier: string, value: Expression];
 };
 
+/**
+ * A union type of all statements
+ */
 export type Statement = Return | If | Block | Let | Const | Expression;
 
 //
@@ -54,7 +67,7 @@ export type BinaryOperator =
   | '&';
 
 export type BinaryExpression = {
-  x2: [Expression, BinaryOperator, Expression];
+  x: [lhs: Expression, op: BinaryOperator, rhs: Expression];
 };
 
 export type AssignmentOperator =
@@ -74,33 +87,30 @@ export type AssignmentOperator =
   | '&&=';
 
 export type AssignmentExpression = {
-  x2: [Expression, AssignmentOperator, Expression];
+  x: [lhs: Expression, op: AssignmentOperator, rhs: Expression];
 };
 
 export type LogicalOperator = '&&' | '||';
 
 export type LogicalExpression = {
-  x2: [Expression, LogicalOperator, Expression];
+  x: [lhs: Expression, op: LogicalOperator, rhs: Expression];
 };
 
 export type MemberAccess = {
-  '.': [Expression, string];
+  a: [object: Expression, member: string];
 };
 
 export type IndexAccess = {
-  '[]': [Expression, Expression];
+  i: [object: Expression, property: Expression];
 };
 
 export type Call = {
-  /** function identifier */
-  call: Expression;
-  /** expressions passed as function arguments */
-  args: Expression[];
+  f: [identifier: Expression, args: Expression[]];
 };
 
 /** A numeric literal */
 export type Num = {
-  num: string;
+  n: string;
 };
 
 export type Literal = Num | boolean;

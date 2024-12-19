@@ -213,7 +213,7 @@ importers:
         specifier: ^8.12.1
         version: 8.12.1
       tinyest:
-        specifier: workspace:~0.0.0
+        specifier: workspace:~0.1.0-alpha.0
         version: link:../tinyest
       tinyest-for-wgsl:
         specifier: workspace:~0.0.0
@@ -287,7 +287,7 @@ importers:
         specifier: ^8.12.1
         version: 8.12.1
       tinyest:
-        specifier: workspace:~0.0.0
+        specifier: workspace:~0.1.0-alpha.0
         version: link:../tinyest
       tsup:
         specifier: ^8.0.2
@@ -299,7 +299,7 @@ importers:
   packages/typegpu:
     dependencies:
       tinyest:
-        specifier: workspace:~0.0.0
+        specifier: workspace:~0.1.0-alpha.0
         version: link:../tinyest
       typed-binary:
         specifier: ^4.3.0

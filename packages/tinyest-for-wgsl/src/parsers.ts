@@ -111,7 +111,7 @@ const Transpilers: Partial<{
     ctx.stack.push({ declaredNames: [] });
 
     const result = {
-      block: node.body.map(
+      b: node.body.map(
         (statement) => transpile(ctx, statement) as smol.Statement,
       ),
     };
@@ -122,7 +122,7 @@ const Transpilers: Partial<{
   },
 
   ReturnStatement: (ctx, node) => ({
-    return: node.argument
+    r: node.argument
       ? (transpile(ctx, node.argument) as smol.Expression)
       : null,
   }),
@@ -139,21 +139,21 @@ const Transpilers: Partial<{
     const wgslOp = BINARY_OP_MAP[node.operator];
     const left = transpile(ctx, node.left);
     const right = transpile(ctx, node.right);
-    return { x2: [left, wgslOp, right] } as smol.BinaryExpression;
+    return { x: [left, wgslOp, right] } as smol.BinaryExpression;
   },
 
   LogicalExpression(ctx, node) {
     const wgslOp = LOGICAL_OP_MAP[node.operator];
     const left = transpile(ctx, node.left);
     const right = transpile(ctx, node.right);
-    return { x2: [left, wgslOp, right] } as smol.LogicalExpression;
+    return { x: [left, wgslOp, right] } as smol.LogicalExpression;
   },
 
   AssignmentExpression(ctx, node) {
     const wgslOp = ASSIGNMENT_OP_MAP[node.operator];
     const left = transpile(ctx, node.left);
     const right = transpile(ctx, node.right);
-    return { x2: [left, wgslOp, right] } as smol.AssignmentExpression;
+    return { x: [left, wgslOp, right] } as smol.AssignmentExpression;
   },
 
   MemberExpression(ctx, node) {
@@ -162,7 +162,7 @@ const Transpilers: Partial<{
     // If the property is computed, it could potentially be an external identifier.
     if (node.computed) {
       const property = transpile(ctx, node.property) as smol.Expression;
-      return { '[]': [object, property] };
+      return { i: [object, property] };
     }
 
     // If the property is not computed, we don't want to register identifiers as external.
@@ -174,14 +174,14 @@ const Transpilers: Partial<{
       throw new Error('Expected identifier as property access key.');
     }
 
-    return { '.': [object, property] };
+    return { a: [object, property] };
   },
 
   Literal(ctx, node) {
     if (typeof node.value === 'string') {
       throw new Error('String literals are not supported in TGSL.');
     }
-    return { num: node.raw ?? '' };
+    return { n: node.raw ?? '' };
   },
 
   CallExpression(ctx, node) {
@@ -191,7 +191,7 @@ const Transpilers: Partial<{
       transpile(ctx, arg),
     ) as smol.Expression[];
 
-    return { call: callee, args };
+    return { f: [callee, args] };
   },
 
   VariableDeclaration(ctx, node) {
@@ -226,10 +226,10 @@ const Transpilers: Partial<{
           'Did not provide initial value in `const` declaration.',
         );
       }
-      return { const: id, eq: init };
+      return { c: [id, init] };
     }
 
-    return { let: id, eq: init };
+    return { l: init ? [id, init] : [id] };
   },
 
   IfStatement(ctx, node) {
@@ -239,7 +239,9 @@ const Transpilers: Partial<{
       ? (transpile(ctx, node.alternate) as smol.Statement)
       : undefined;
 
-    return { if: test, do: consequent, else: alternate };
+    return {
+      q: alternate ? [test, consequent, alternate] : [test, consequent],
+    };
   },
 };
 
@@ -357,7 +359,7 @@ export function transpileFn(rootNode: acorn.AnyNode): TranspilationResult {
   return {
     argNames,
     body: {
-      block: [{ return: smolBody as smol.Expression }],
+      b: [{ r: smolBody as smol.Expression }],
     },
     externalNames,
   };
