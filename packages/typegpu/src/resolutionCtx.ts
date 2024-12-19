@@ -8,7 +8,6 @@ import {
   isDerived,
   isSlot,
 } from './core/slot/slotTypes';
-import type { Infer } from './data';
 import {
   type AnyWgslData,
   type BaseWgslData,
@@ -21,6 +20,7 @@ import { provideCtx } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
 import { naturalsExcept } from './shared/generators';
+import type { Infer } from './shared/repr';
 import { generateFunction } from './smol';
 import {
   type TgpuBindGroup,

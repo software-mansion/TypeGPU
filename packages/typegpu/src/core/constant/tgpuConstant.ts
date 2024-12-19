@@ -1,6 +1,7 @@
-import type { AnyWgslData, Infer } from '../../data';
+import type { AnyWgslData } from '../../data/wgslTypes';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
+import type { Infer } from '../../shared/repr';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import type { Exotic } from './../../data/exotic';
 

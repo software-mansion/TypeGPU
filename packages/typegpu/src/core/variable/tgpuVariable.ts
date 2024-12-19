@@ -1,8 +1,8 @@
-import type { Infer } from '../../data';
 import type { Exotic } from '../../data/exotic';
 import type { AnyWgslData } from '../../data/wgslTypes';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
+import type { Infer } from '../../shared/repr';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 
 // ----------
@@ -21,7 +21,10 @@ export interface TgpuVar<
 }
 
 /**
- * Creates a private module variable with an optional initial value.
+ * Defines a variable scoped to each entry function (private).
+ *
+ * @param dataType The schema of the held data's type
+ * @param initialValue If not provided, the variable will be initialized to the dataType's "zero-value".
  */
 export function privateVar<TDataType extends AnyWgslData>(
   dataType: Exotic<TDataType>,
@@ -31,7 +34,10 @@ export function privateVar<TDataType extends AnyWgslData>(
 }
 
 /**
- * Creates a workgroup module variable with an optional initial value.
+ * Defines a variable scoped to the whole workgroup, shared between entry functions
+ * of the same invocation.
+ *
+ * @param dataType The schema of the held data's type
  */
 export function workgroupVar<TDataType extends AnyWgslData>(
   dataType: TDataType,

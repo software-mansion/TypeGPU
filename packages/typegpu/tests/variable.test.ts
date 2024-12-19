@@ -1,4 +1,4 @@
-import { parse } from '@typegpu/wgsl-parser';
+import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data';
 import tgpu, { type VariableScope, type TgpuVar } from '../src/experimental';
@@ -30,7 +30,6 @@ describe('tgpu.var', () => {
       variable: TgpuVar<VariableScope, d.AnyWgslData>,
       expected: string,
     ) {
-      // console.log(tgpu.resolve({ input: variable, names: 'strict' }));
       expect(parseResolved(variable)).toEqual(parse(expected));
     }
 
