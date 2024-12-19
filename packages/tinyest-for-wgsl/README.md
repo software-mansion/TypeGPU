@@ -1,6 +1,7 @@
-# @typegpu/tgsl-tools
+# tinyest-for-wgsl
 
-A set of utilities for working with TGSL (TypeGPU Shader Language), a subset of JavaScript that can be run on the GPU through [**TypeGPU**](https://docs.swmansion.com/TypeGPU).
+Transforms JavaScript into its 'tinyest' form, to be used in generating equivalent (or close to) WGSL code.
+Used by [**TypeGPU**](https://docs.swmansion.com/TypeGPU) to allow for shaders to be written in JS.
 
 ## Basic principles
 
@@ -15,7 +16,7 @@ const foo = tgpu
 
 ```
 
-`@typegpu/tgsl-tools` is responsible for transforming the function bodies of `tgpu.fn` declarations into an abstract syntax tree, gathering external dependencies and inferring types of expressions.
+`tinyest-for-wgsl` is responsible for transforming the function bodies of `tgpu.fn` declarations into an abstract syntax tree, gathering external dependencies and inferring types of expressions.
 
 ```ts
 `(a, b) => {

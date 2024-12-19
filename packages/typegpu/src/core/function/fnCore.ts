@@ -61,7 +61,13 @@ export function createFnCore(
         const pluginData = getPrebuiltAstFor(implementation);
 
         if (pluginData?.externals) {
-          applyExternals(externalMap, pluginData.externals);
+          const missing = Object.fromEntries(
+            Object.entries(pluginData.externals).filter(
+              ([name]) => !(name in externalMap),
+            ),
+          );
+
+          applyExternals(externalMap, missing);
         }
         const ast = pluginData?.ast ?? ctx.transpileFn(String(implementation));
 

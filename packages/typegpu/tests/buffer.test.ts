@@ -51,7 +51,13 @@ describe('TgpuBuffer', () => {
     );
   });
 
-  it('should write to a mapped buffer', ({ root, mappedBuffer }) => {
+  it('should write to a mapped buffer', ({ root }) => {
+    const mappedBuffer = root.device.createBuffer({
+      size: 12,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      mappedAtCreation: true,
+    });
+
     const buffer = root.createBuffer(d.arrayOf(d.u32, 3), mappedBuffer);
     buffer.write([1, 2, 3]);
 
@@ -72,11 +78,17 @@ describe('TgpuBuffer', () => {
     expect(data).toBeDefined();
   });
 
-  it('should read from a mapped buffer', async ({ root, mappedBuffer }) => {
+  it('should read from a mapped buffer', async ({ root }) => {
+    const mappedBuffer = root.device.createBuffer({
+      size: 12,
+      usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+    });
+    await mappedBuffer.mapAsync(GPUMapMode.READ);
+
     const buffer = root.createBuffer(d.arrayOf(d.u32, 3), mappedBuffer);
     const data = await buffer.read();
 
-    expect(root.device.createBuffer).not.toHaveBeenCalled();
+    expect(root.device.createBuffer).toHaveBeenCalledOnce(); // only creating the mapped buffer
     expect(data).toBeDefined();
     expect(mappedBuffer.getMappedRange).toHaveBeenCalled();
     expect(mappedBuffer.unmap).not.toHaveBeenCalled();
