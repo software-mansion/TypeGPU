@@ -1,4 +1,3 @@
-import { JitTranspiler } from '@typegpu/jit';
 import * as d from 'typegpu/data';
 import tgpu, {
   asMutable,
@@ -14,7 +13,7 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const root = await tgpu.init({ unstable_jitTranspiler: new JitTranspiler() });
+const root = await tgpu.init();
 
 context.configure({
   device: root.device,

@@ -1,12 +1,12 @@
 import type { AnyWgslData } from '../../data/wgslTypes';
 import { MissingLinksError } from '../../errors';
 import type { ResolutionCtx, Resource } from '../../types';
-import { getPrebuiltAstFor } from './astUtils';
 import {
   type ExternalMap,
   applyExternals,
   replaceExternalsInWgsl,
-} from './externals';
+} from '../resolve/externals';
+import { getPrebuiltAstFor } from './astUtils';
 import type { Implementation } from './fnTypes';
 
 export interface TgpuFnShellBase<Args extends unknown[], Return> {
@@ -61,7 +61,13 @@ export function createFnCore(
         const pluginData = getPrebuiltAstFor(implementation);
 
         if (pluginData?.externals) {
-          applyExternals(externalMap, pluginData.externals);
+          const missing = Object.fromEntries(
+            Object.entries(pluginData.externals).filter(
+              ([name]) => !(name in externalMap),
+            ),
+          );
+
+          applyExternals(externalMap, missing);
         }
         const ast = pluginData?.ast ?? ctx.transpileFn(String(implementation));
 

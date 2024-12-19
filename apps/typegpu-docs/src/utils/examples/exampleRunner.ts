@@ -181,9 +181,6 @@ export async function executeExample(
       if (moduleKey === 'typegpu/std') {
         return await import('typegpu/std');
       }
-      if (moduleKey === '@typegpu/jit') {
-        return await import('@typegpu/jit');
-      }
       if (moduleKey === '@typegpu/example-toolkit') {
         return {
           onCleanup(callback: () => unknown) {

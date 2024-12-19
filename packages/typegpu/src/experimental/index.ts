@@ -2,6 +2,7 @@
  * @module typegpu/experimental
  */
 
+import { declare } from '../core/declare/tgpuDeclare';
 import { assignAst } from '../core/function/astUtils';
 import { computeFn } from '../core/function/tgpuComputeFn';
 import { fn, procedure } from '../core/function/tgpuFn';
@@ -15,6 +16,7 @@ import {
   initFromDevice,
 } from '../core/root/init';
 import type { ExperimentalTgpuRoot } from '../core/root/rootTypes';
+import { derived } from '../core/slot/derived';
 import { slot } from '../core/slot/slot';
 import { vertexLayout } from '../core/vertexLayout/vertexLayout';
 import { bindGroupLayout } from '../tgpuBindGroupLayout';
@@ -34,7 +36,9 @@ export const tgpu = {
   computeFn,
   vertexLayout,
   bindGroupLayout,
+  derived,
   slot,
+  declare,
 
   init: init as (
     options?: InitOptions | undefined,
@@ -60,7 +64,7 @@ export {
   NotUniformError,
   ResolutionError,
 } from '../errors';
-export {
+export type {
   TgpuRoot,
   ExperimentalTgpuRoot,
   WithBinding,
@@ -76,7 +80,7 @@ export {
   isUsableAsUniform,
   isUsableAsVertex,
 } from '../core/buffer/buffer';
-export { isSlot } from '../core/slot/slotTypes';
+export { isSlot, isDerived } from '../core/slot/slotTypes';
 export {
   sampler,
   comparisonSampler,
@@ -98,6 +102,7 @@ export {
   asReadonly,
   asMutable,
 } from '../core/buffer/bufferUsage';
+export { withLocations } from '../core/function/ioOutputType';
 
 export type { Storage } from '../extension';
 export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
@@ -109,7 +114,7 @@ export type {
   TgpuBufferReadonly,
   TgpuBufferMutable,
 } from '../core/buffer/public';
-export type { Eventual, TgpuSlot } from '../core/slot/slotTypes';
+export type { TgpuSlot, TgpuDerived, Eventual } from '../core/slot/slotTypes';
 export type {
   TgpuTexture,
   TgpuReadonlyTexture,
@@ -154,8 +159,8 @@ export type {
   TgpuComputeFnShell,
   TgpuComputeFn,
 } from '../core/function/tgpuComputeFn';
-export {
+export type {
   IOLayoutToOutputSchema,
   WithLocations,
-  withLocations,
 } from '../core/function/ioOutputType';
+export type { TgpuDeclare } from '../core/declare/tgpuDeclare';

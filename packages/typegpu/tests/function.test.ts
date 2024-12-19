@@ -1,44 +1,45 @@
-import { parse } from '@typegpu/wgsl-parser';
+import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { IOLayout, InferIO } from '../src/core/function/fnTypes';
 import * as d from '../src/data';
-import tgpu, { wgsl, type TgpuFnShell, type TgpuFn } from '../src/experimental';
-import { parseWGSL } from './utils/parseWGSL';
+import tgpu, { type TgpuFnShell, type TgpuFn } from '../src/experimental';
+import { parseResolved } from './utils/parseResolved';
 
-describe('wgsl.fn', () => {
+describe('tgpu.fn', () => {
   it('should inject function declaration of called function', () => {
-    const emptyFn = wgsl.fn`() {
-      // do nothing
-    }`.$name('empty');
+    const emptyFn = tgpu
+      .fn([])
+      .does(`() {
+        // do nothing
+      }`)
+      .$name('empty');
 
-    const actual = parseWGSL(wgsl`
-      fn main() {
-        ${emptyFn}();
-      }
-    `);
+    const actual = parseResolved(emptyFn);
 
-    const expected = parse(`
-      fn empty() {}
-
-      fn main() {
-        empty();
-      }
-    `);
+    const expected = parse('fn empty() {}');
 
     expect(actual).toEqual(expected);
   });
 
   it('should inject function declaration only once', () => {
-    const emptyFn = wgsl.fn`() {
-      // do nothing
-    }`.$name('empty');
+    const emptyFn = tgpu
+      .fn([])
+      .does(`() {
+        // do nothing
+      }`)
+      .$name('empty');
 
-    const actual = parseWGSL(wgsl`
-      fn main() {
-        ${emptyFn}();
-        ${emptyFn}();
-      }
-    `);
+    const actual = parseResolved(
+      tgpu
+        .fn([])
+        .does(`
+          () {
+            emptyFn();
+            emptyFn();
+          }`)
+        .$uses({ emptyFn })
+        .$name('main'),
+    );
 
     const expected = parse(`
       fn empty() {}
@@ -53,32 +54,47 @@ describe('wgsl.fn', () => {
   });
 
   it('should inject function declaration only once (calls are nested)', () => {
-    const emptyFn = wgsl.fn`() {
-      // do nothing
-    }`.$name('empty');
+    const emptyFn = tgpu
+      .fn([])
+      .does(`() {
+        // do nothing
+      }`)
+      .$name('empty');
 
-    const nestedAFn = wgsl.fn`() {
-      ${emptyFn}();
-    }`.$name('nested_a');
+    const nestedAFn = tgpu
+      .fn([])
+      .does(`() {
+        emptyFn();
+      }`)
+      .$uses({ emptyFn })
+      .$name('nested_a');
 
-    const nestedBFn = wgsl.fn`() {
-      ${emptyFn}();
-    }`.$name('nested_b');
+    const nestedBFn = tgpu
+      .fn([])
+      .does(`() {
+        emptyFn();
+      }`)
+      .$uses({ emptyFn })
+      .$name('nested_b');
 
-    const actual = parseWGSL(wgsl`
-      fn main() {
-        ${nestedAFn}();
-        ${nestedBFn}();
-      }
-    `);
+    const actual = parseResolved(
+      tgpu
+        .fn([])
+        .does(`() {
+          nestedAFn();
+          nestedBFn();
+        }`)
+        .$uses({ nestedAFn, nestedBFn })
+        .$name('main'),
+    );
 
     const expected = parse(`
       fn empty() {}
-      
+
       fn nested_a() {
         empty();
       }
-      
+
       fn nested_b() {
         empty();
       }
@@ -91,9 +107,7 @@ describe('wgsl.fn', () => {
 
     expect(actual).toEqual(expected);
   });
-});
 
-describe('tgpu.fn', () => {
   it('creates typed shell from parameters', () => {
     const proc = tgpu.fn([]);
     const one = tgpu.fn([d.f32]);

@@ -1,8 +1,8 @@
-import { parse } from '@typegpu/wgsl-parser';
+import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
 import { builtin, f32, vec3f, vec4f } from '../src/data';
-import tgpu, { wgsl } from '../src/experimental';
-import { parseWGSL } from './utils/parseWGSL';
+import tgpu from '../src/experimental';
+import { parseResolved } from './utils/parseResolved';
 
 describe('tgpu.fn with raw string WGSL implementation', () => {
   it('is namable', () => {
@@ -24,19 +24,11 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       }`)
       .$name('get_y');
 
-    const actual = parseWGSL(wgsl`
-      fn main() {
-        let x = ${getY}();
-      }
-    `);
+    const actual = parseResolved(getY);
 
     const expected = parse(`
       fn get_y() {
         return 3.0f;
-      }
-
-      fn main() {
-        let x = get_y();
       }
     `);
 
@@ -70,11 +62,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       .$name('get_y')
       .$uses({ getX, color: getColor });
 
-    const actual = parseWGSL(wgsl`
-      fn main() {
-        let x = ${getY}();
-      }
-    `);
+    const actual = parseResolved(getY);
 
     const expected = parse(`
       fn get_color() {
@@ -90,10 +78,6 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       fn get_y() {
         let c = get_color();
         return get_x();
-      }
-
-      fn main() {
-        let x = get_y();
       }
     `);
 
@@ -122,11 +106,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       .$name('get_y')
       .$uses({ getx });
 
-    const actual = parseWGSL(wgsl`
-      fn main() {
-        let x = ${getY}();
-      }
-    `);
+    const actual = parseResolved(getY);
 
     const expected = parse(`
       fn external() {
@@ -141,10 +121,6 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
         xgetx();
         getxx();
         return external();
-      }
-
-      fn main() {
-        let x = get_y();
       }
     `);
 
@@ -173,7 +149,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   }`)
       .$name('vertex_fn');
 
-    const resolved = tgpu.resolve({ input: [vertexFunction], names: 'strict' });
+    const resolved = tgpu.resolve({ input: vertexFunction, names: 'strict' });
 
     expect(resolved).toContain(`\
 struct vertex_fn_Output {
@@ -194,10 +170,7 @@ struct vertex_fn_Output {
   }`)
       .$name('fragment');
 
-    const resolved = tgpu.resolve({
-      input: [fragmentFunction],
-      names: 'strict',
-    });
+    const resolved = tgpu.resolve({ input: fragmentFunction, names: 'strict' });
 
     expect(resolved).toContain(`\
 struct fragment_Output {
@@ -216,8 +189,6 @@ struct fragment_Output {
       }`)
       .$name('fragment');
 
-    expect(
-      tgpu.resolve({ input: [fragmentFunction], names: 'strict' }),
-    ).not.toContain('struct');
+    expect(tgpu.resolve({ input: fragmentFunction })).not.toContain('struct');
   });
 });

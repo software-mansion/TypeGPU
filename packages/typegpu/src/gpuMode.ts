@@ -1,12 +1,21 @@
-let gpuDepth = 0;
+import { invariant } from './errors';
+import type { ResolutionCtx } from './types';
 
-export function onGPU<T>(callback: () => T): T {
-  gpuDepth++;
+let resolutionCtx: ResolutionCtx | null = null;
+
+export function provideCtx<T>(ctx: ResolutionCtx, callback: () => T): T {
+  invariant(resolutionCtx === null, 'Cannot nest context providers');
+
+  resolutionCtx = ctx;
   try {
     return callback();
   } finally {
-    gpuDepth--;
+    resolutionCtx = null;
   }
 }
 
-export const inGPUMode = () => gpuDepth > 0;
+export function getResolutionCtx(): ResolutionCtx | null {
+  return resolutionCtx;
+}
+
+export const inGPUMode = () => resolutionCtx !== null;
