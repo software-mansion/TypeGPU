@@ -3,7 +3,7 @@ import type { JitTranspiler } from '../../jitTranspiler';
 import { RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry';
 import { resolve as resolveImpl } from '../../resolutionCtx';
 import type { TgpuResolvable } from '../../types';
-import { applyExternals, replaceExternalsInWgsl } from '../function/externals';
+import { applyExternals, replaceExternalsInWgsl } from './externals';
 
 export interface TgpuResolveOptions {
   input:
