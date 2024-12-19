@@ -64,7 +64,7 @@ export {
   NotUniformError,
   ResolutionError,
 } from '../errors';
-export {
+export type {
   TgpuRoot,
   ExperimentalTgpuRoot,
   WithBinding,
@@ -103,6 +103,7 @@ export {
   asReadonly,
   asMutable,
 } from '../core/buffer/bufferUsage';
+export { withLocations } from '../core/function/ioOutputType';
 
 export type { Storage } from '../extension';
 export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
@@ -159,9 +160,8 @@ export type {
   TgpuComputeFnShell,
   TgpuComputeFn,
 } from '../core/function/tgpuComputeFn';
-export {
+export type {
   IOLayoutToOutputSchema,
   WithLocations,
-  withLocations,
 } from '../core/function/ioOutputType';
-export { TgpuDeclare } from '../core/declare/tgpuDeclare';
+export type { TgpuDeclare } from '../core/declare/tgpuDeclare';

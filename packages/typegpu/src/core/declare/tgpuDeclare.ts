@@ -1,4 +1,3 @@
-import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
 import {
   type ExternalMap,
@@ -14,8 +13,7 @@ import {
  * Extra declaration that shall be included in final WGSL code,
  * when resolving objects that use it.
  */
-export interface TgpuDeclare extends TgpuResolvable, TgpuNamable {
-  readonly label: string | undefined;
+export interface TgpuDeclare extends TgpuResolvable {
   $uses(dependencyMap: Record<string, unknown>): this;
 }
 
@@ -35,7 +33,6 @@ export function declare(declaration: string): TgpuDeclare {
 // --------------
 
 class TgpuDeclareImpl implements TgpuDeclare {
-  private _label: string | undefined;
   private externalsToApply: ExternalMap[] = [];
 
   constructor(private declaration: string) {}
@@ -43,10 +40,6 @@ class TgpuDeclareImpl implements TgpuDeclare {
   $uses(dependencyMap: Record<string, unknown>): this {
     this.externalsToApply.push(dependencyMap);
     return this;
-  }
-
-  get label(): string | undefined {
-    return this._label;
   }
 
   resolve(ctx: ResolutionCtx): string {
@@ -64,10 +57,5 @@ class TgpuDeclareImpl implements TgpuDeclare {
 
     ctx.addDeclaration(replacedDeclaration);
     return '';
-  }
-
-  $name(label?: string | undefined): this {
-    this._label = label;
-    return this;
   }
 }
