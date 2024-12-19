@@ -15,6 +15,7 @@ const navigatorMock = {
 
 const mockTexture = {
   createView: vi.fn(() => 'view'),
+  destroy: vi.fn(),
 };
 
 const mockCommandEncoder = {
