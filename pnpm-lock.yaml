@@ -279,6 +279,10 @@ importers:
         version: 5.5.4
 
   packages/tinyest-for-wgsl:
+    dependencies:
+      tinyest:
+        specifier: workspace:~0.1.0-alpha.0
+        version: link:../tinyest
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -286,9 +290,6 @@ importers:
       acorn:
         specifier: ^8.12.1
         version: 8.12.1
-      tinyest:
-        specifier: workspace:~0.1.0-alpha.0
-        version: link:../tinyest
       tsup:
         specifier: ^8.0.2
         version: 8.0.2(typescript@5.5.4)
