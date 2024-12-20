@@ -27,8 +27,10 @@ import {
   type TgpuBuffer,
   isBuffer,
 } from '../buffer/buffer';
+import type { TgpuBufferUsage } from '../buffer/bufferUsage';
 import type { IOLayout } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
+import type { TgpuFn } from '../function/tgpuFn';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
 import {
@@ -82,7 +84,7 @@ class WithBindingImpl implements WithBinding {
 
   with<T extends AnyWgslData>(
     slot: TgpuSlot<T> | TgpuAccessor<T>,
-    value: T,
+    value: T | TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
   ): WithBinding {
     return new WithBindingImpl(this._getRoot, [
       ...this._slotBindings,
