@@ -70,7 +70,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     if (isBufferUsage(value)) {
       return ctx.resolve(value);
     }
-    
+
     if (isTgpuFn(value)) {
       return `${ctx.resolve(value)}()`;
     }
