@@ -21,7 +21,97 @@ const lengthVec3 = (v: wgsl.v3f | wgsl.v3i | wgsl.v3u) =>
 const lengthVec4 = (v: wgsl.v4f | wgsl.v4i | wgsl.v4u) =>
   Math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2 + v.w ** 2);
 
+const clamp = (value: number, low: number, high: number) =>
+  Math.min(Math.max(low, value), high);
+
 export const VectorOps = {
+  abs: {
+    vec2f: (v: wgsl.v2f) => vec2f(Math.abs(v.x), Math.abs(v.y)),
+    vec2i: (v: wgsl.v2i) => vec2i(Math.abs(v.x), Math.abs(v.y)),
+    vec2u: (v: wgsl.v2u) => vec2u(Math.abs(v.x), Math.abs(v.y)),
+
+    vec3f: (v: wgsl.v3f) => vec3f(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z)),
+    vec3i: (v: wgsl.v3i) => vec3i(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z)),
+    vec3u: (v: wgsl.v3u) => vec3u(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z)),
+
+    vec4f: (v: wgsl.v4f) =>
+      vec4f(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z), Math.abs(v.w)),
+    vec4i: (v: wgsl.v4i) =>
+      vec4i(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z), Math.abs(v.w)),
+    vec4u: (v: wgsl.v4u) =>
+      vec4u(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z), Math.abs(v.w)),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  ceil: {
+    vec2f: (v: wgsl.v2f) => vec2f(Math.ceil(v.x), Math.ceil(v.y)),
+    vec2i: (v: wgsl.v2i) => vec2i(Math.ceil(v.x), Math.ceil(v.y)),
+    vec2u: (v: wgsl.v2u) => vec2u(Math.ceil(v.x), Math.ceil(v.y)),
+
+    vec3f: (v: wgsl.v3f) =>
+      vec3f(Math.ceil(v.x), Math.ceil(v.y), Math.ceil(v.z)),
+    vec3i: (v: wgsl.v3i) =>
+      vec3i(Math.ceil(v.x), Math.ceil(v.y), Math.ceil(v.z)),
+    vec3u: (v: wgsl.v3u) =>
+      vec3u(Math.ceil(v.x), Math.ceil(v.y), Math.ceil(v.z)),
+
+    vec4f: (v: wgsl.v4f) =>
+      vec4f(Math.ceil(v.x), Math.ceil(v.y), Math.ceil(v.z), Math.ceil(v.w)),
+    vec4i: (v: wgsl.v4i) =>
+      vec4i(Math.ceil(v.x), Math.ceil(v.y), Math.ceil(v.z), Math.ceil(v.w)),
+    vec4u: (v: wgsl.v4u) =>
+      vec4u(Math.ceil(v.x), Math.ceil(v.y), Math.ceil(v.z), Math.ceil(v.w)),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  clamp: {
+    vec2f: (v: wgsl.v2f, low: wgsl.v2f, high: wgsl.v2f) =>
+      vec2f(clamp(v.x, low.x, high.x), clamp(v.y, low.y, high.y)),
+    vec2i: (v: wgsl.v2i, low: wgsl.v2i, high: wgsl.v2i) =>
+      vec2i(clamp(v.x, low.x, high.x), clamp(v.y, low.y, high.y)),
+    vec2u: (v: wgsl.v2u, low: wgsl.v2u, high: wgsl.v2u) =>
+      vec2u(clamp(v.x, low.x, high.x), clamp(v.y, low.y, high.y)),
+
+    vec3f: (v: wgsl.v3f, low: wgsl.v3f, high: wgsl.v3f) =>
+      vec3f(
+        clamp(v.x, low.x, high.x),
+        clamp(v.y, low.y, high.y),
+        clamp(v.z, low.z, high.z),
+      ),
+    vec3i: (v: wgsl.v3i, low: wgsl.v3i, high: wgsl.v3f) =>
+      vec3i(
+        clamp(v.x, low.x, high.x),
+        clamp(v.y, low.y, high.y),
+        clamp(v.z, low.z, high.z),
+      ),
+    vec3u: (v: wgsl.v3u, low: wgsl.v3u, high: wgsl.v3f) =>
+      vec3u(
+        clamp(v.x, low.x, high.x),
+        clamp(v.y, low.y, high.y),
+        clamp(v.z, low.z, high.z),
+      ),
+
+    vec4f: (v: wgsl.v4f, low: wgsl.v4f, high: wgsl.v4f) =>
+      vec4f(
+        clamp(v.x, low.x, high.x),
+        clamp(v.y, low.y, high.y),
+        clamp(v.z, low.z, high.z),
+        clamp(v.w, low.w, high.w),
+      ),
+    vec4i: (v: wgsl.v4i, low: wgsl.v4i, high: wgsl.v4i) =>
+      vec4i(
+        clamp(v.x, low.x, high.x),
+        clamp(v.y, low.y, high.y),
+        clamp(v.z, low.z, high.z),
+        clamp(v.w, low.w, high.w),
+      ),
+    vec4u: (v: wgsl.v4u, low: wgsl.v4u, high: wgsl.v4u) =>
+      vec4u(
+        clamp(v.x, low.x, high.x),
+        clamp(v.y, low.y, high.y),
+        clamp(v.z, low.z, high.z),
+        clamp(v.w, low.w, high.w),
+      ),
+  } as Record<VecKind, <T extends vBase>(v: T, low: T, high: T) => T>,
+
   length: {
     vec2f: lengthVec2,
     vec2i: lengthVec2,
@@ -170,4 +260,100 @@ export const VectorOps = {
     'vec3f' | 'vec3i' | 'vec3u',
     <T extends wgsl.v3f | wgsl.v3i | wgsl.v3u>(a: T, b: T) => T
   >,
+
+  floor: {
+    vec2f: (v: wgsl.v2f) => vec2f(Math.floor(v.x), Math.floor(v.y)),
+    vec2i: (v: wgsl.v2i) => vec2i(Math.floor(v.x), Math.floor(v.y)),
+    vec2u: (v: wgsl.v2u) => vec2u(Math.floor(v.x), Math.floor(v.y)),
+
+    vec3f: (v: wgsl.v3f) =>
+      vec3f(Math.floor(v.x), Math.floor(v.y), Math.floor(v.z)),
+    vec3i: (v: wgsl.v3i) =>
+      vec3i(Math.floor(v.x), Math.floor(v.y), Math.floor(v.z)),
+    vec3u: (v: wgsl.v3u) =>
+      vec3u(Math.floor(v.x), Math.floor(v.y), Math.floor(v.z)),
+
+    vec4f: (v: wgsl.v4f) =>
+      vec4f(Math.floor(v.x), Math.floor(v.y), Math.floor(v.z), Math.floor(v.w)),
+    vec4i: (v: wgsl.v4i) =>
+      vec4i(Math.floor(v.x), Math.floor(v.y), Math.floor(v.z), Math.floor(v.w)),
+    vec4u: (v: wgsl.v4u) =>
+      vec4u(Math.floor(v.x), Math.floor(v.y), Math.floor(v.z), Math.floor(v.w)),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  max: {
+    vec2f: (a: wgsl.v2f, b: wgsl.v2f) =>
+      vec2f(Math.max(a.x, b.x), Math.max(a.y, b.y)),
+    vec2i: (a: wgsl.v2i, b: wgsl.v2i) =>
+      vec2i(Math.max(a.x, b.x), Math.max(a.y, b.y)),
+    vec2u: (a: wgsl.v2u, b: wgsl.v2u) =>
+      vec2u(Math.max(a.x, b.x), Math.max(a.y, b.y)),
+
+    vec3f: (a: wgsl.v3f, b: wgsl.v3f) =>
+      vec3f(Math.max(a.x, b.x), Math.max(a.y, b.y), Math.max(a.z, b.z)),
+    vec3i: (a: wgsl.v3i, b: wgsl.v3i) =>
+      vec3i(Math.max(a.x, b.x), Math.max(a.y, b.y), Math.max(a.z, b.z)),
+    vec3u: (a: wgsl.v3u, b: wgsl.v3u) =>
+      vec3u(Math.max(a.x, b.x), Math.max(a.y, b.y), Math.max(a.z, b.z)),
+
+    vec4f: (a: wgsl.v4f, b: wgsl.v4f) =>
+      vec4f(
+        Math.max(a.x, b.x),
+        Math.max(a.y, b.y),
+        Math.max(a.z, b.z),
+        Math.max(a.w + b.w),
+      ),
+    vec4i: (a: wgsl.v4i, b: wgsl.v4i) =>
+      vec4i(
+        Math.max(a.x, b.x),
+        Math.max(a.y, b.y),
+        Math.max(a.z, b.z),
+        Math.max(a.w + b.w),
+      ),
+    vec4u: (a: wgsl.v4u, b: wgsl.v4u) =>
+      vec4u(
+        Math.max(a.x, b.x),
+        Math.max(a.y, b.y),
+        Math.max(a.z, b.z),
+        Math.max(a.w + b.w),
+      ),
+  } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
+
+  min: {
+    vec2f: (a: wgsl.v2f, b: wgsl.v2f) =>
+      vec2f(Math.min(a.x, b.x), Math.min(a.y, b.y)),
+    vec2i: (a: wgsl.v2i, b: wgsl.v2i) =>
+      vec2i(Math.min(a.x, b.x), Math.min(a.y, b.y)),
+    vec2u: (a: wgsl.v2u, b: wgsl.v2u) =>
+      vec2u(Math.min(a.x, b.x), Math.min(a.y, b.y)),
+
+    vec3f: (a: wgsl.v3f, b: wgsl.v3f) =>
+      vec3f(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.min(a.z, b.z)),
+    vec3i: (a: wgsl.v3i, b: wgsl.v3i) =>
+      vec3i(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.min(a.z, b.z)),
+    vec3u: (a: wgsl.v3u, b: wgsl.v3u) =>
+      vec3u(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.min(a.z, b.z)),
+
+    vec4f: (a: wgsl.v4f, b: wgsl.v4f) =>
+      vec4f(
+        Math.min(a.x, b.x),
+        Math.min(a.y, b.y),
+        Math.min(a.z, b.z),
+        Math.min(a.w + b.w),
+      ),
+    vec4i: (a: wgsl.v4i, b: wgsl.v4i) =>
+      vec4i(
+        Math.min(a.x, b.x),
+        Math.min(a.y, b.y),
+        Math.min(a.z, b.z),
+        Math.min(a.w + b.w),
+      ),
+    vec4u: (a: wgsl.v4u, b: wgsl.v4u) =>
+      vec4u(
+        Math.min(a.x, b.x),
+        Math.min(a.y, b.y),
+        Math.min(a.z, b.z),
+        Math.min(a.w + b.w),
+      ),
+  } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
 };
