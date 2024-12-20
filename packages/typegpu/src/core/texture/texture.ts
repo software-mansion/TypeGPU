@@ -253,9 +253,7 @@ const accessMap = {
   writeonly: 'write',
 } as const;
 
-class TgpuTextureImpl<TProps extends TextureProps>
-  implements TgpuTexture<TProps>, INTERNAL_TgpuTexture
-{
+class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
   public readonly resourceType = 'texture';
   public usableAsSampled = false;
   public usableAsStorage = false;
@@ -267,7 +265,7 @@ class TgpuTextureImpl<TProps extends TextureProps>
   private _texture: GPUTexture | null = null;
 
   constructor(
-    public readonly props: TProps,
+    public readonly props: TextureProps,
     private readonly _branch: ExperimentalTgpuRoot,
   ) {}
 
@@ -325,7 +323,7 @@ class TgpuTextureImpl<TProps extends TextureProps>
       | TextureViewParams<StorageTextureDimension, StorageTextureTexelFormat>
       | undefined,
     access: StorageTextureAccess,
-  ): TgpuFixedStorageTextureImpl<TProps> {
+  ): TgpuFixedStorageTextureImpl {
     if (!this.usableAsStorage) {
       throw new Error('Unusable as storage');
     }
@@ -426,7 +424,7 @@ const dimensionToCodeMap = {
   '3d': '3d',
 } satisfies Record<GPUTextureViewDimension, string>;
 
-class TgpuFixedStorageTextureImpl<TProps extends TextureProps>
+class TgpuFixedStorageTextureImpl
   implements TgpuStorageTexture, INTERNAL_TgpuStorageTexture, TgpuNamable
 {
   public readonly resourceType = 'texture-storage-view';
@@ -441,7 +439,7 @@ class TgpuFixedStorageTextureImpl<TProps extends TextureProps>
       | TextureViewParams<StorageTextureDimension, StorageTextureTexelFormat>
       | undefined,
     public readonly access: StorageTextureAccess,
-    private readonly _texture: TgpuTexture<TProps> & INTERNAL_TgpuTexture,
+    private readonly _texture: TgpuTexture & INTERNAL_TgpuTexture,
   ) {
     this.dimension = props?.dimension ?? _texture.props.dimension ?? '2d';
     this._format =
@@ -522,7 +520,7 @@ export class TgpuLaidOutStorageTextureImpl implements TgpuStorageTexture {
   }
 }
 
-class TgpuFixedSampledTextureImpl<TProps extends TextureProps>
+class TgpuFixedSampledTextureImpl
   implements TgpuSampledTexture, INTERNAL_TgpuSampledTexture, TgpuNamable
 {
   public readonly resourceType = 'texture-sampled-view';
@@ -536,7 +534,7 @@ class TgpuFixedSampledTextureImpl<TProps extends TextureProps>
     private readonly _props:
       | TextureViewParams<GPUTextureViewDimension, GPUTextureFormat>
       | undefined,
-    private readonly _texture: TgpuTexture<TProps> & INTERNAL_TgpuTexture,
+    private readonly _texture: TgpuTexture & INTERNAL_TgpuTexture,
   ) {
     this.dimension = _props?.dimension ?? _texture.props.dimension ?? '2d';
     this._format =
