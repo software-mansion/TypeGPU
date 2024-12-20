@@ -46,6 +46,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
 
   $name(label: string) {
     this.label = label;
+    this.slot.$name(label);
     return this;
   }
 

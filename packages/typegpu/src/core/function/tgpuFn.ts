@@ -50,6 +50,7 @@ interface TgpuFnBase<
 > extends TgpuResolvable,
     TgpuNamable {
   readonly shell: TgpuFnShell<Args, Return>;
+  readonly resourceType: 'function';
 
   $uses(dependencyMap: Record<string, unknown>): this;
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuFn<Args, Return>;
@@ -99,9 +100,7 @@ export function isTgpuFn<
   Args extends AnyWgslData[],
   Return extends AnyWgslData | undefined = undefined,
 >(value: unknown | TgpuFn<Args, Return>): value is TgpuFn<Args, Return> {
-  return (
-    typeof value === 'function' && 'shell' in (value as TgpuFn<Args, Return>)
-  );
+  return (value as TgpuFn<Args, Return>)?.resourceType === 'function';
 }
 
 // --------------
@@ -121,6 +120,7 @@ function createFn<
 
   const fnBase: This = {
     shell,
+    resourceType: 'function',
 
     $uses(newExternals) {
       core.applyExternals(newExternals);
@@ -189,6 +189,7 @@ function createBoundFunction<
 
   const fnBase: This = {
     shell: innerFn.shell,
+    resourceType: 'function',
 
     $uses(newExternals) {
       innerFn.$uses(newExternals);

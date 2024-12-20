@@ -20,7 +20,7 @@ const resolutionRootMock = {
 } as TgpuResolvable;
 
 describe('tgpu.accessor', () => {
-  it('resolves to invokation of provided function', () => {
+  it('resolves to invocation of provided function', () => {
     const colorAccessor = tgpu.accessor(d.vec3f).$name('color');
 
     const getColor = tgpu
@@ -79,22 +79,24 @@ describe('tgpu.accessor', () => {
     );
   });
 
-  it('resolves to resolved form of provided JS value', ({ root }) => {
+  it('resolves to resolved form of provided JS value', () => {
     const colorAccessor = tgpu.accessor(d.vec3f).$name('color');
+    const multiplierAccessor = tgpu.accessor(d.f32).$name('multiplier');
 
     const getColor = tgpu
       .fn([], d.vec3f)
       .does(/* wgsl */ `() -> vec3f {
-        return color;
+        return color * multiplier;
       }`)
       .$name('getColor')
-      .$uses({ color: colorAccessor })
-      .with(colorAccessor, RED);
+      .$uses({ color: colorAccessor, multiplier: multiplierAccessor })
+      .with(colorAccessor, RED)
+      .with(multiplierAccessor, 2);
 
     expect(parseResolved(getColor)).toEqual(
       parse(/* wgsl */ `
         fn getColor() -> vec3f {
-          return ${RED_RESOLVED};
+          return ${RED_RESOLVED} * 2;
         }
     `),
     );
