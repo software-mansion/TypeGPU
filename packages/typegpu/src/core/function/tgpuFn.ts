@@ -1,9 +1,16 @@
+import type { Infer } from '../../data';
 import type { Exotic, ExoticArray } from '../../data/exotic';
 import type { AnyWgslData } from '../../data/wgslTypes';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable, Wgsl } from '../../types';
-import type { Eventual, TgpuSlot } from '../slot/slotTypes';
+import type { TgpuBufferUsage } from '../buffer/bufferUsage';
+import {
+  type Eventual,
+  type TgpuAccessor,
+  type TgpuSlot,
+  isAccessor,
+} from '../slot/slotTypes';
 import { createFnCore } from './fnCore';
 import type { Implementation, InferArgs, InferReturn } from './fnTypes';
 
@@ -46,6 +53,10 @@ interface TgpuFnBase<
 
   $uses(dependencyMap: Record<string, unknown>): this;
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuFn<Args, Return>;
+  with<T extends AnyWgslData>(
+    accessor: TgpuAccessor<T>,
+    value: TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
+  ): TgpuFn<Args, Return>;
 }
 
 export type TgpuFn<
@@ -121,8 +132,15 @@ function createFn<
       return this;
     },
 
-    with(slot, value): TgpuFn<Args, Return> {
-      return createBoundFunction(fn, slot, value);
+    with<T extends AnyWgslData>(
+      slot: TgpuSlot<T> | TgpuAccessor<T>,
+      value: T | TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
+    ): TgpuFn<Args, Return> {
+      return createBoundFunction(
+        fn,
+        isAccessor(slot) ? slot.slot : slot,
+        value,
+      );
     },
 
     resolve(ctx: ResolutionCtx): string {
@@ -182,8 +200,15 @@ function createBoundFunction<
       return this;
     },
 
-    with(slot, value): TgpuFn<Args, Return> {
-      return createBoundFunction(fn, slot, value);
+    with<T extends AnyWgslData>(
+      slot: TgpuSlot<T> | TgpuAccessor<T>,
+      value: T | TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
+    ): TgpuFn<Args, Return> {
+      return createBoundFunction(
+        fn,
+        isAccessor(slot) ? slot.slot : slot,
+        value,
+      );
     },
 
     resolve(ctx: ResolutionCtx): string {
