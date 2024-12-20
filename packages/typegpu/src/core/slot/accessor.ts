@@ -34,8 +34,8 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   public slot: TgpuSlot<TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>>;
 
   constructor(
-    public schema: T,
-    public defaultValue:
+    public readonly schema: T,
+    public readonly defaultValue:
       | TgpuFn<[], T>
       | TgpuBufferUsage<T>
       | Infer<T>
@@ -62,7 +62,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       );
     }
 
-    return ctx.unwrap(this.slot) as unknown as Infer<T>;
+    return this as unknown as Infer<T>;
   }
 
   resolve(ctx: ResolutionCtx): string {
