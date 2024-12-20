@@ -34,16 +34,12 @@ type ViewUsages<
   TProps extends TextureProps,
   TTexture extends TgpuTexture<TProps>,
 > = boolean extends TTexture['usableAsSampled']
-  ? TProps['format'] extends StorageTextureTexelFormat
-    ? boolean extends TTexture['usableAsStorage']
-      ? never
-      : 'readonly' | 'writeonly' | 'mutable'
-    : never
-  : TProps['format'] extends StorageTextureTexelFormat
-    ? boolean extends TTexture['usableAsStorage']
-      ? 'sampled'
-      : 'readonly' | 'writeonly' | 'mutable' | 'sampled'
-    : 'sampled';
+  ? boolean extends TTexture['usableAsStorage']
+    ? never
+    : 'readonly' | 'writeonly' | 'mutable'
+  : boolean extends TTexture['usableAsStorage']
+    ? 'sampled'
+    : 'readonly' | 'writeonly' | 'mutable' | 'sampled';
 
 // ----------
 // Public API
