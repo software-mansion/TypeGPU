@@ -84,6 +84,15 @@ export function procedure(implementation: () => void) {
   return fn([]).does(implementation);
 }
 
+export function isTgpuFn<
+  Args extends AnyWgslData[],
+  Return extends AnyWgslData | undefined = undefined,
+>(value: unknown | TgpuFn<Args, Return>): value is TgpuFn<Args, Return> {
+  return (
+    typeof value === 'function' && 'shell' in (value as TgpuFn<Args, Return>)
+  );
+}
+
 // --------------
 // Implementation
 // --------------

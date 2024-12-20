@@ -1,4 +1,5 @@
 import type { OmitBuiltins } from '../../builtin';
+import type { AnyWgslData } from '../../data';
 import type { AnyData } from '../../data/dataTypes';
 import { invariant } from '../../errors';
 import type { JitTranspiler } from '../../jitTranspiler';
@@ -42,7 +43,11 @@ import {
   type RenderPipelineCoreOptions,
   type TgpuRenderPipeline,
 } from '../pipeline/renderPipeline';
-import type { TgpuSlot } from '../slot/slotTypes';
+import {
+  type TgpuAccessor,
+  type TgpuSlot,
+  isAccessor,
+} from '../slot/slotTypes';
 import {
   type INTERNAL_TgpuSampledTexture,
   type INTERNAL_TgpuStorageTexture,
@@ -75,10 +80,13 @@ class WithBindingImpl implements WithBinding {
     private readonly _slotBindings: [TgpuSlot<unknown>, unknown][],
   ) {}
 
-  with<T>(slot: TgpuSlot<T>, value: T): WithBinding {
+  with<T extends AnyWgslData>(
+    slot: TgpuSlot<T> | TgpuAccessor<T>,
+    value: T,
+  ): WithBinding {
     return new WithBindingImpl(this._getRoot, [
       ...this._slotBindings,
-      [slot, value],
+      [isAccessor(slot) ? slot.slot : slot, value],
     ]);
   }
 
