@@ -22,7 +22,8 @@ import type {
 export type ResolvableObject =
   | TgpuResolvable
   | AnyWgslData
-  | TgpuFn<AnyWgslData[], AnyWgslData | undefined>;
+  // biome-ignore lint/suspicious/noExplicitAny: <has to be more permissive than unknown>
+  | TgpuFn<any, any>;
 
 export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
 
