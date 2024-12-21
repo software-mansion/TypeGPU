@@ -479,9 +479,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
       } else if (isResolvable(item)) {
         result = item.resolve(this);
       } else {
-        throw new Error(
-          `Cannot resolve item:\n- string: ${item}.\n- json: ${JSON.stringify(item)}`,
-        );
+        result = this.resolveValue(item);
       }
 
       // We know which slots the item used while resolving
@@ -524,21 +522,28 @@ class ResolutionCtxImpl implements ResolutionCtx {
     return String(item);
   }
 
-  resolveValue<T extends BaseWgslData>(value: Infer<T>, schema: T): string {
+  resolveValue<T extends BaseWgslData>(
+    value: Infer<T>,
+    schema?: T | undefined,
+  ): string {
     if (isWgsl(value)) {
       return this.resolve(value);
     }
 
-    if (isWgslArray(schema)) {
-      return `array(${(value as Infer<typeof schema>).map((element) => this.resolveValue(element, schema.elementType))})`;
+    if (schema && isWgslArray(schema)) {
+      return `array(${(value as unknown[]).map((element) => this.resolveValue(element, schema.elementType))})`;
     }
 
-    if (isWgslStruct(schema)) {
+    if (Array.isArray(value)) {
+      return `array(${value.map((element) => this.resolveValue(element))})`;
+    }
+
+    if (schema && isWgslStruct(schema)) {
       return `${this.resolve(schema)}(${Object.entries(schema.propTypes).map(([key, type_]) => this.resolveValue((value as Infer<typeof schema>)[key], type_))})`;
     }
 
     throw new Error(
-      `Value ${value} of schema ${schema} is not resolvable to WGSL`,
+      `Value ${value} (as json: ${JSON.stringify(value)}) of schema ${schema} is not resolvable to WGSL`,
     );
   }
 }
