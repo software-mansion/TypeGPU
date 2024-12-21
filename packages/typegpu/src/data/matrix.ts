@@ -259,9 +259,7 @@ abstract class mat3x3Impl<TColumn extends v3f> implements mat3x3<TColumn> {
   set [11](_: number) {}
 
   resolve(): string {
-    return `${this.kind}(${Array.from({ length: this.length })
-      .map((_, i) => this[i])
-      .join(', ')})`;
+    return `${this.kind}(${this[0]}, ${this[1]}, ${this[2]}, ${this[4]}, ${this[5]}, ${this[6]}, ${this[8]}, ${this[9]}, ${this[10]})`;
   }
 }
 
