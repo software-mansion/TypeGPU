@@ -2,7 +2,8 @@
  * @module typegpu
  */
 
-import { init, initFromDevice } from './core/root/init';
+import { type InitOptions, init, initFromDevice } from './core/root/init';
+import type { TgpuRoot } from './core/root/rootTypes';
 import { createBuffer } from './legacyBufferApi';
 import { bindGroupLayout } from './tgpuBindGroupLayout';
 import { read, write } from './tgpuBufferUtils';
@@ -17,7 +18,7 @@ export const tgpu = {
 
   bindGroupLayout,
 
-  init,
+  init: init as (options?: InitOptions) => Promise<TgpuRoot>,
   initFromDevice,
 
   createBuffer,
@@ -53,3 +54,4 @@ export type {
   Storage,
   Vertex,
 } from './core/buffer/buffer';
+export type { TgpuRoot } from './core/root/rootTypes';
