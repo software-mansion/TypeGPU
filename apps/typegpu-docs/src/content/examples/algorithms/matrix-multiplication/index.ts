@@ -1,30 +1,17 @@
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
 
-const workgroupSize = [8, 8] as [number, number];
-
+const WORKGROUP_SIZE = [8, 8] as [number, number];
 const MAX_MATRIX_SIZE = 6;
-
-const MatrixStruct = d.struct({
-  size: d.vec2f,
-  numbers: d.arrayOf(d.f32, MAX_MATRIX_SIZE ** 2),
-});
 
 let firstRowCount = 3;
 let firstColumnCount = 4;
 let secondColumnCount = 2;
 
-function createMatrix(
-  size: d.v2f,
-  initValue: (row: number, col: number) => number,
-) {
-  return {
-    size: size,
-    numbers: Array(size.x * size.y)
-      .fill(0)
-      .map((_, i) => initValue(Math.floor(i / size.y), i % size.y)),
-  };
-}
+const MatrixStruct = d.struct({
+  size: d.vec2f,
+  numbers: d.arrayOf(d.f32, MAX_MATRIX_SIZE ** 2),
+});
 
 const layout = tgpu.bindGroupLayout({
   firstMatrix: { storage: MatrixStruct, access: 'readonly' },
@@ -38,7 +25,7 @@ const shaderCode = /* wgsl */ `
 @group(0) @binding(1) var<storage, read> secondMatrix: MatrixStruct;
 @group(0) @binding(2) var<storage, read_write> resultMatrix: MatrixStruct;
 
-@compute @workgroup_size(${workgroupSize.join(', ')})
+@compute @workgroup_size(${WORKGROUP_SIZE.join(', ')})
 fn main(@builtin(global_invocation_id) global_id: vec3u) {
   if (global_id.x >= u32(firstMatrix.size.x) || global_id.y >= u32(secondMatrix.size.y)) {
     return;
@@ -88,6 +75,18 @@ const bindGroup = root.createBindGroup(layout, {
   resultMatrix: resultMatrixBuffer,
 });
 
+function createMatrix(
+  size: d.v2f,
+  initValue: (row: number, col: number) => number,
+) {
+  return {
+    size: size,
+    numbers: Array(size.x * size.y)
+      .fill(0)
+      .map((_, i) => initValue(Math.floor(i / size.y), i % size.y)),
+  };
+}
+
 async function run() {
   const firstMatrix = createMatrix(
     d.vec2f(firstRowCount, firstColumnCount),
@@ -101,8 +100,8 @@ async function run() {
   firstMatrixBuffer.write(firstMatrix);
   secondMatrixBuffer.write(secondMatrix);
 
-  const workgroupCountX = Math.ceil(firstMatrix.size.x / workgroupSize[0]);
-  const workgroupCountY = Math.ceil(secondMatrix.size.y / workgroupSize[1]);
+  const workgroupCountX = Math.ceil(firstMatrix.size.x / WORKGROUP_SIZE[0]);
+  const workgroupCountY = Math.ceil(secondMatrix.size.y / WORKGROUP_SIZE[1]);
 
   const encoder = device.createCommandEncoder();
 
@@ -142,7 +141,7 @@ function printMatrixToHtml(
 
 // #endregion
 
-// #region Example controls
+// #region Example controls & Cleanup
 
 const paramSettings = {
   min: 1,
@@ -185,8 +184,8 @@ export const controls = {
   },
 };
 
-// #endregion
-
 export function onCleanup() {
   root.destroy();
 }
+
+// #endregion
