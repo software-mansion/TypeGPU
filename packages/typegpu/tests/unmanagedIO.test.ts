@@ -6,7 +6,7 @@ import './utils/webgpuGlobals';
 const mockBuffer = {
   mapState: 'unmapped',
   usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-  getMappedRange: vi.fn(() => new ArrayBuffer(8)),
+  getMappedRange: vi.fn(() => new ArrayBuffer(32)),
   unmap: vi.fn(),
   mapAsync: vi.fn(),
   destroy: vi.fn(),
@@ -15,7 +15,7 @@ const mockBuffer = {
 const mockStagingBuffer = {
   mapState: 'unmapped',
   usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-  getMappedRange: vi.fn(() => new ArrayBuffer(8)),
+  getMappedRange: vi.fn(() => new ArrayBuffer(32)),
   unmap: vi.fn(),
   mapAsync: vi.fn(),
   destroy: vi.fn(),

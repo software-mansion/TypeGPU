@@ -6,7 +6,7 @@ import { plum } from '../src/tgpuPlum';
 import './utils/webgpuGlobals';
 
 const mockBuffer = {
-  getMappedRange: vi.fn(() => new ArrayBuffer(8)),
+  getMappedRange: vi.fn(() => new ArrayBuffer(32)),
   unmap: vi.fn(),
   mapAsync: vi.fn(),
 };
