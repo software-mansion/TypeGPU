@@ -66,7 +66,11 @@ export class ResolutionError extends Error {
   }
 
   appendToTrace(
-    ancestor: TgpuResolvable | TgpuDerived<unknown> | AnyWgslData,
+    ancestor:
+      | TgpuResolvable
+      | TgpuSlot<unknown>
+      | TgpuDerived<unknown>
+      | AnyWgslData,
   ): ResolutionError {
     const newTrace = [ancestor, ...this.trace];
 

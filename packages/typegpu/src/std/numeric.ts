@@ -26,6 +26,72 @@ export function mul<T extends vBase>(s: number, v: T): T {
   return VectorOps.mul[v.kind](s, v);
 }
 
+export function abs<T extends vBase | number>(value: T): T {
+  if (inGPUMode()) {
+    return `abs(${value})` as unknown as T;
+  }
+  if (typeof value === 'number') {
+    return Math.abs(value) as T;
+  }
+  return VectorOps.abs[value.kind](value) as T;
+}
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#ceil-builtin
+ */
+export function ceil<T extends vBase | number>(value: T): T {
+  if (inGPUMode()) {
+    return `ceil(${value})` as unknown as T;
+  }
+  if (typeof value === 'number') {
+    return Math.ceil(value) as T;
+  }
+  return VectorOps.ceil[value.kind](value) as T;
+}
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#clamp
+ */
+export function clamp<T extends vBase | number>(value: T, low: T, high: T): T {
+  if (inGPUMode()) {
+    return `clamp(${value}, ${low}, ${high})` as unknown as T;
+  }
+  if (typeof value === 'number') {
+    return Math.min(Math.max(low as number, value), high as number) as T;
+  }
+  return VectorOps.clamp[value.kind](value, low as vBase, high as vBase) as T;
+}
+
+// TODO: Accept vectors into `cos`
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#cos-builtin
+ */
+export function cos(radians: number): number {
+  if (inGPUMode()) {
+    return `cos(${radians})` as unknown as number;
+  }
+  return Math.cos(radians);
+}
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#cross-builtin
+ */
+export function cross<T extends v3f | v3i | v3u>(a: T, b: T): T {
+  if (inGPUMode()) {
+    return `cross(${a}, ${b})` as unknown as T;
+  }
+  return VectorOps.cross[a.kind](a, b);
+}
+
+/**
+ *
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#dot-builtin
+ */
 export function dot<T extends vBase>(lhs: T, rhs: T): number {
   if (inGPUMode()) {
     return `dot(${lhs}, ${rhs})` as unknown as number;
@@ -40,11 +106,18 @@ export function normalize<T extends vBase>(v: T): T {
   return VectorOps.normalize[v.kind](v);
 }
 
-export function cross<T extends v3f | v3i | v3u>(a: T, b: T): T {
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#floor-builtin
+ */
+export function floor<T extends vBase | number>(value: T): T {
   if (inGPUMode()) {
-    return `cross(${a}, ${b})` as unknown as T;
+    return `floor(${value})` as unknown as T;
   }
-  return VectorOps.cross[a.kind](a, b);
+  if (typeof value === 'number') {
+    return Math.floor(value) as T;
+  }
+  return VectorOps.floor[value.kind](value) as T;
 }
 
 export function fract(a: number): number {
@@ -54,11 +127,46 @@ export function fract(a: number): number {
   return a - Math.floor(a);
 }
 
-export function length<T extends vBase>(vector: T): number {
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#length-builtin
+ */
+export function length<T extends vBase | number>(value: T): number {
   if (inGPUMode()) {
-    return `length(${vector})` as unknown as number;
+    return `length(${value})` as unknown as number;
   }
-  return VectorOps.length[vector.kind](vector);
+  if (typeof value === 'number') {
+    return Math.abs(value);
+  }
+  return VectorOps.length[value.kind](value);
+}
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#max-float-builtin
+ */
+export function max<T extends vBase | number>(a: T, b: T): T {
+  if (inGPUMode()) {
+    return `max(${a}, ${b})` as unknown as T;
+  }
+  if (typeof a === 'number') {
+    return Math.max(a, b as number) as T;
+  }
+  return VectorOps.max[a.kind](a, b as vBase) as T;
+}
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#min-float-builtin
+ */
+export function min<T extends vBase | number>(a: T, b: T): T {
+  if (inGPUMode()) {
+    return `min(${a}, ${b})` as unknown as T;
+  }
+  if (typeof a === 'number') {
+    return Math.min(a, b as number) as T;
+  }
+  return VectorOps.min[a.kind](a, b as vBase) as T;
 }
 
 export function sin(radians: number): number {
@@ -66,11 +174,4 @@ export function sin(radians: number): number {
     return `sin(${radians})` as unknown as number;
   }
   return Math.sin(radians);
-}
-
-export function cos(radians: number): number {
-  if (inGPUMode()) {
-    return `cos(${radians})` as unknown as number;
-  }
-  return Math.cos(radians);
 }
