@@ -237,9 +237,9 @@ interface FixedBindingConfig {
 
 class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _memoizedResolves = new WeakMap<
-    // WeakMap because if the resolvable does not exist anymore,
+    // WeakMap because if the item does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
-    TgpuResolvable | AnyWgslData,
+    object,
     { slotToValueMap: SlotToValueMap; result: string }[]
   >();
   private readonly _memoizedDerived = new WeakMap<
@@ -449,7 +449,13 @@ class ResolutionCtxImpl implements ResolutionCtx {
   /**
    * @param item The item whose resolution should be either retrieved from the cache (if there is a cache hit), or resolved.
    */
-  _getOrInstantiate(item: TgpuResolvable | AnyWgslData): string {
+  _getOrInstantiate(
+    item:
+      | TgpuResolvable
+      | AnyWgslData
+      | TgpuSlot<TgpuResolvable | AnyWgslData | string | number | boolean>
+      | TgpuDerived<TgpuResolvable | AnyWgslData | string | number | boolean>,
+  ): string {
     // All memoized versions of `item`
     const instances = this._memoizedResolves.get(item) ?? [];
 
@@ -469,9 +475,14 @@ class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       // If we got here, no item with the given slot-to-value combo exists in cache yet
-      const result = isWgslData(item)
-        ? resolveData(this, item)
-        : item.resolve(this);
+      let result: string;
+      if (isWgslData(item)) {
+        result = resolveData(this, item);
+      } else if (isDerived(item) || isSlot(item)) {
+        result = this.resolve(this.unwrap(item));
+      } else {
+        result = item.resolve(this);
+      }
 
       // We know which slots the item used while resolving
       const slotToValueMap = new Map<TgpuSlot<unknown>, unknown>();
@@ -494,9 +505,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  resolve(eventualItem: Wgsl): string {
-    const item = this.unwrap(eventualItem);
-
+  resolve(item: Wgsl): string {
     if (
       typeof item === 'string' ||
       typeof item === 'number' ||
