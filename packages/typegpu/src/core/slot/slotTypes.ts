@@ -19,6 +19,7 @@ export interface TgpuSlot<T> extends TgpuNamable {
 export interface TgpuDerived<T> {
   readonly resourceType: 'derived';
   readonly value: Infer<T>;
+  readonly '~providing'?: Providing | undefined;
 
   with<TValue>(slot: TgpuSlot<TValue>, value: Eventual<TValue>): TgpuDerived<T>;
 
@@ -33,7 +34,12 @@ export interface TgpuDerived<T> {
  */
 export type Eventual<T> = T | TgpuSlot<T> | TgpuDerived<T>;
 
-export type SlotValuePair<T> = [TgpuSlot<T>, T];
+export type SlotValuePair<T = unknown> = [TgpuSlot<T>, T];
+
+export type Providing = {
+  inner: unknown;
+  pairs: SlotValuePair[];
+};
 
 export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {
   return (value as TgpuSlot<T>)?.resourceType === 'slot';
@@ -43,4 +49,10 @@ export function isDerived<T extends TgpuDerived<unknown>>(
   value: T | unknown,
 ): value is T {
   return (value as T)?.resourceType === 'derived';
+}
+
+export function isProviding(
+  value: unknown,
+): value is { '~providing': Providing } {
+  return (value as { '~providing': Providing })['~providing'] !== undefined;
 }

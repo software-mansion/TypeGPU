@@ -39,7 +39,7 @@ function createDerived<T>(compute: () => T): TgpuDerived<T> {
       slot: TgpuSlot<TValue>,
       value: Eventual<TValue>,
     ): TgpuDerived<T> {
-      return createBoundDerived(compute, this, [slot, value]);
+      return createBoundDerived(this, [[slot, value]]);
     },
 
     toString(): string {
@@ -51,21 +51,19 @@ function createDerived<T>(compute: () => T): TgpuDerived<T> {
 }
 
 function createBoundDerived<T>(
-  compute: () => T,
   innerDerived: TgpuDerived<T>,
-  slotValuePair: SlotValuePair<unknown>,
+  pairs: SlotValuePair[],
 ): TgpuDerived<T> {
   const result = {
     resourceType: 'derived' as const,
     '~compute'() {
-      const ctx = getResolutionCtx();
-      if (!ctx) {
-        throw new Error(
-          `Cannot access tgpu.derived's value outside of resolution.`,
-        );
-      }
-
-      return ctx.withSlots([slotValuePair], () => ctx.unwrap(innerDerived));
+      throw new Error(
+        `'~compute' should never be read on bound derived items.`,
+      );
+    },
+    '~providing': {
+      inner: innerDerived,
+      pairs,
     },
 
     get value(): Infer<T> {
@@ -83,12 +81,14 @@ function createBoundDerived<T>(
       slot: TgpuSlot<TValue>,
       value: Eventual<TValue>,
     ): TgpuDerived<T> {
-      return createBoundDerived(compute, this, [slot, value]);
+      return createBoundDerived(innerDerived, [...pairs, [slot, value]]);
     },
 
     toString(): string {
-      const [slot, value] = slotValuePair;
-      return `derived[${slot.label ?? '<unnamed>'}=${value}]`;
+      const stringifyPair = ([slot, value]: SlotValuePair) =>
+        `${slot.label ?? '<unnamed>'}=${value}`;
+
+      return `derived[${pairs.map(stringifyPair).join(', ')}]`;
     },
   };
 

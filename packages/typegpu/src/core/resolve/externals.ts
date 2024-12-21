@@ -1,5 +1,5 @@
 import { isNamable } from '../../namable';
-import { type ResolutionCtx, isWgsl } from '../../types';
+import type { ResolutionCtx } from '../../types';
 
 export type ExternalMap = Record<string, unknown>;
 
@@ -26,13 +26,9 @@ export function replaceExternalsInWgsl(
   wgsl: string,
 ) {
   return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
-    const resolvedExternal = isWgsl(external)
-      ? ctx.resolve(external)
-      : String(external);
-
     return acc.replaceAll(
       new RegExp(`(?<![\\w_])${externalName}(?![\\w_])`, 'g'),
-      resolvedExternal,
+      ctx.resolve(external),
     );
   }, wgsl);
 }

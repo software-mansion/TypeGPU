@@ -1,19 +1,12 @@
-import type { AnyWgslData } from '../../data/wgslTypes';
 import type { JitTranspiler } from '../../jitTranspiler';
 import { RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry';
 import { resolve as resolveImpl } from '../../resolutionCtx';
-import type { TgpuResolvable } from '../../types';
+import type { ResolvableObject, TgpuResolvable, Wgsl } from '../../types';
 import { applyExternals, replaceExternalsInWgsl } from './externals';
 
 export interface TgpuResolveOptions {
-  input:
-    | string
-    | TgpuResolvable
-    | AnyWgslData
-    | (string | TgpuResolvable | AnyWgslData)[];
-  extraDependencies?:
-    | Record<string, TgpuResolvable | AnyWgslData | string | number>
-    | undefined;
+  input: string | ResolvableObject | (string | ResolvableObject)[];
+  extraDependencies?: Record<string, Wgsl> | undefined;
   /**
    * @default 'random'
    */
@@ -29,10 +22,10 @@ export function resolve(options: TgpuResolveOptions): string {
 
   const stringCode = (Array.isArray(input) ? input : [input]).filter(
     (item) => typeof item === 'string',
-  ) as string[];
+  );
   const resolvableCode = (Array.isArray(input) ? input : [input]).filter(
     (item) => typeof item !== 'string',
-  ) as TgpuResolvable[];
+  );
 
   const resolutionObj: TgpuResolvable = {
     resolve(ctx) {

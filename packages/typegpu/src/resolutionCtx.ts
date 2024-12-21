@@ -6,6 +6,7 @@ import {
   type TgpuDerived,
   type TgpuSlot,
   isDerived,
+  isProviding,
   isSlot,
 } from './core/slot/slotTypes';
 import {
@@ -28,14 +29,8 @@ import {
   type TgpuLayoutEntry,
   bindGroupLayout,
 } from './tgpuBindGroupLayout';
-import type {
-  FnToWgslOptions,
-  ResolutionCtx,
-  Resource,
-  TgpuResolvable,
-  Wgsl,
-} from './types';
-import { UnknownData, isWgsl } from './types';
+import type { FnToWgslOptions, ResolutionCtx, Resource, Wgsl } from './types';
+import { UnknownData, isResolvable, isWgsl } from './types';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -387,6 +382,13 @@ class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   unwrap<T>(eventual: Eventual<T>): T {
+    if (isProviding(eventual)) {
+      return this.withSlots(
+        eventual['~providing'].pairs,
+        () => this.unwrap(eventual['~providing'].inner) as T,
+      );
+    }
+
     let maybeEventual = eventual;
 
     // Unwrapping all layers of slots.
@@ -449,13 +451,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
   /**
    * @param item The item whose resolution should be either retrieved from the cache (if there is a cache hit), or resolved.
    */
-  _getOrInstantiate(
-    item:
-      | TgpuResolvable
-      | AnyWgslData
-      | TgpuSlot<TgpuResolvable | AnyWgslData | string | number | boolean>
-      | TgpuDerived<TgpuResolvable | AnyWgslData | string | number | boolean>,
-  ): string {
+  _getOrInstantiate(item: object): string {
     // All memoized versions of `item`
     const instances = this._memoizedResolves.get(item) ?? [];
 
@@ -480,8 +476,10 @@ class ResolutionCtxImpl implements ResolutionCtx {
         result = resolveData(this, item);
       } else if (isDerived(item) || isSlot(item)) {
         result = this.resolve(this.unwrap(item));
-      } else {
+      } else if (isResolvable(item)) {
         result = item.resolve(this);
+      } else {
+        throw new Error(`Cannot resolve item ${item}`);
       }
 
       // We know which slots the item used while resolving
@@ -505,21 +503,23 @@ class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  resolve(item: Wgsl): string {
-    if (
-      typeof item === 'string' ||
-      typeof item === 'number' ||
-      typeof item === 'boolean'
-    ) {
-      return String(item);
+  resolve(item: unknown): string {
+    if (isProviding(item)) {
+      return this.withSlots(item['~providing'].pairs, () =>
+        this.resolve(item['~providing'].inner),
+      );
     }
 
-    if (this._itemStateStack.itemDepth === 0) {
-      const result = provideCtx(this, () => this._getOrInstantiate(item));
-      return `${[...this._declarations].join('\n\n')}${result}`;
+    if ((item && typeof item === 'object') || typeof item === 'function') {
+      if (this._itemStateStack.itemDepth === 0) {
+        const result = provideCtx(this, () => this._getOrInstantiate(item));
+        return `${[...this._declarations].join('\n\n')}${result}`;
+      }
+
+      return this._getOrInstantiate(item);
     }
 
-    return this._getOrInstantiate(item);
+    return String(item);
   }
 
   resolveValue<T extends BaseWgslData>(value: Infer<T>, schema: T): string {
