@@ -479,7 +479,9 @@ class ResolutionCtxImpl implements ResolutionCtx {
       } else if (isResolvable(item)) {
         result = item.resolve(this);
       } else {
-        throw new Error(`Cannot resolve item ${item}`);
+        throw new Error(
+          `Cannot resolve item:\n- string: ${item}.\n- json: ${JSON.stringify(item)}`,
+        );
       }
 
       // We know which slots the item used while resolving
