@@ -250,7 +250,7 @@ importers:
         specifier: ^8.0.2
         version: 8.0.2(typescript@5.5.4)
       typegpu:
-        specifier: workspace:^0.2.1
+        specifier: workspace:^0.2.2
         version: link:../typegpu
       typescript:
         specifier: ^5.3.3
@@ -259,8 +259,8 @@ importers:
   packages/typegpu:
     dependencies:
       typed-binary:
-        specifier: ^4.0.1
-        version: 4.0.1
+        specifier: ^4.3.1
+        version: 4.3.1
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -7400,8 +7400,8 @@ packages:
     resolution: {integrity: sha512-6ZXhbBePH4XZY57o23PV6O/HAYWcsAkCSwTKI6DrN5xMBwOV+I1G+MtytSY2v+QU3VPzB5Kz6268Q3qYD0XIYA==}
     dev: false
 
-  /typed-binary@4.0.1:
-    resolution: {integrity: sha512-nne2iMvXX8Qi3KI7do55udYsPNIUr7zFhPJNdWpujkWUzr6sJK6gQjCUcZGMM6+lws75oiFtGk8if6S2KgWppg==}
+  /typed-binary@4.3.1:
+    resolution: {integrity: sha512-yLoFov7uL+PItmyqbxcP8HnEm7R1wkzzTe2rkX1h+HDPZQIKGRJkfSd3egE0itPXxubPpQ9lTdko+zzjOCIXOA==}
     dev: false
 
   /typedoc-plugin-markdown@4.2.3(typedoc@0.26.5):
