@@ -5,7 +5,11 @@ import {
   isDerived,
   isSlot,
 } from './core/slot/slotTypes';
-import type { AnyWgslData, BaseWgslData } from './data/wgslTypes';
+import {
+  type AnyWgslData,
+  type BaseWgslData,
+  isWgslData,
+} from './data/wgslTypes';
 import type { NameRegistry } from './nameRegistry';
 import type { Infer } from './shared/repr';
 import type {
@@ -103,6 +107,7 @@ export function isWgsl(value: unknown): value is Wgsl {
     typeof value === 'boolean' ||
     typeof value === 'string' ||
     isResolvable(value) ||
+    isWgslData(value) ||
     isSlot(value) ||
     isDerived(value)
   );
