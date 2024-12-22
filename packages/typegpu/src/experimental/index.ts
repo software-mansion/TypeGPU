@@ -17,6 +17,7 @@ import {
   initFromDevice,
 } from '../core/root/init';
 import type { ExperimentalTgpuRoot } from '../core/root/rootTypes';
+import { accessor } from '../core/slot/accessor';
 import { derived } from '../core/slot/derived';
 import { slot } from '../core/slot/slot';
 import { privateVar, workgroupVar } from '../core/variable/tgpuVariable';
@@ -40,6 +41,7 @@ export const tgpu = {
   bindGroupLayout,
   derived,
   slot,
+  accessor,
   privateVar,
   workgroupVar,
   const: constant,
@@ -107,6 +109,7 @@ export {
   asMutable,
 } from '../core/buffer/bufferUsage';
 export { withLocations } from '../core/function/ioOutputType';
+export { isTgpuFn } from '../core/function/tgpuFn';
 
 export type { Storage } from '../extension';
 export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
@@ -118,7 +121,12 @@ export type {
   TgpuBufferReadonly,
   TgpuBufferMutable,
 } from '../core/buffer/public';
-export type { TgpuSlot, TgpuDerived, Eventual } from '../core/slot/slotTypes';
+export type {
+  TgpuSlot,
+  TgpuDerived,
+  TgpuAccessor,
+  Eventual,
+} from '../core/slot/slotTypes';
 export type {
   TgpuTexture,
   TgpuReadonlyTexture,

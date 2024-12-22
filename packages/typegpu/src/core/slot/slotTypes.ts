@@ -1,5 +1,9 @@
+import type { AnyWgslData } from '../../data';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
+import type { TgpuFn } from '../function/tgpuFn';
+import type { TgpuResolvable } from './../../types';
+import type { TgpuBufferUsage } from './../buffer/bufferUsage';
 
 export interface TgpuSlot<T> extends TgpuNamable {
   readonly resourceType: 'slot';
@@ -29,6 +33,23 @@ export interface TgpuDerived<T> {
   '~compute'(): T;
 }
 
+export interface TgpuAccessor<T extends AnyWgslData>
+  extends TgpuResolvable,
+    TgpuNamable {
+  readonly resourceType: 'accessor';
+
+  readonly schema: T;
+  readonly defaultValue:
+    | TgpuFn<[], T>
+    | TgpuBufferUsage<T>
+    | Infer<T>
+    | undefined;
+  readonly slot: TgpuSlot<TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>>;
+
+  readonly label?: string | undefined;
+  readonly value: Infer<T>;
+}
+
 /**
  * Represents a value that is available at resolution time.
  */
@@ -55,4 +76,10 @@ export function isProviding(
   value: unknown,
 ): value is { '~providing': Providing } {
   return (value as { '~providing': Providing })['~providing'] !== undefined;
+}
+
+export function isAccessor<T extends AnyWgslData>(
+  value: unknown | TgpuAccessor<T>,
+): value is TgpuAccessor<T> {
+  return (value as TgpuAccessor<T>)?.resourceType === 'accessor';
 }
