@@ -1,5 +1,5 @@
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
 
 const rareLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },
@@ -235,7 +235,7 @@ video.addEventListener('click', (event) => {
 
 // #endregion
 
-// #region Example Controls & Cleanup
+// #region Example controls & Cleanup
 
 export const controls = {
   threshold: {
