@@ -152,7 +152,6 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
       pass.end();
     }
     device.queue.submit([encoder.finish()]);
-    await device.queue.onSubmittedWorkDone();
 
     // Read the output
     return await output.read();
