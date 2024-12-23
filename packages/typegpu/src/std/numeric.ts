@@ -19,11 +19,14 @@ export function sub<T extends vBase>(lhs: T, rhs: T): T {
   return VectorOps.sub[lhs.kind](lhs, rhs);
 }
 
-export function mul<T extends vBase>(s: number, v: T): T {
+export function mul<T extends vBase>(s: number | T, v: T): T {
   if (inGPUMode()) {
     return `(${s} * ${v})` as unknown as T;
   }
-  return VectorOps.mul[v.kind](s, v);
+  if (typeof s === 'number') {
+    return VectorOps.mulSxV[v.kind](s, v);
+  }
+  return VectorOps.mulVxV[v.kind](s, v);
 }
 
 export function abs<T extends vBase | number>(value: T): T {
