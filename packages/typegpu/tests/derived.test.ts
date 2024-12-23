@@ -25,7 +25,7 @@ describe('TgpuDerived', () => {
     expect(parseResolved(main)).toEqual(
       parse(`
       fn main() -> f32 {
-        return 3 + 4;
+        return (3 + 4);
       }
     `),
     );

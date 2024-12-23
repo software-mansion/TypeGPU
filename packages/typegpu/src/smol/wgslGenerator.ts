@@ -65,7 +65,7 @@ function generateExpression(
     const lhsExpr = resolveRes(ctx, generateExpression(ctx, lhs));
     const rhsExpr = resolveRes(ctx, generateExpression(ctx, rhs));
     return {
-      value: `${lhsExpr} ${op} ${rhsExpr}`,
+      value: `(${lhsExpr} ${op} ${rhsExpr})`,
       // TODO: Infer data type from expression type and arguments.
       dataType: UnknownData,
     };
