@@ -7,6 +7,8 @@ import type { ResolutionCtx, TgpuResolvable, Wgsl } from '../../types';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage';
 import {
   type Eventual,
+  type Providing,
+  type SlotValuePair,
   type TgpuAccessor,
   type TgpuSlot,
   isAccessor,
@@ -47,10 +49,11 @@ export interface TgpuFnShell<
 interface TgpuFnBase<
   Args extends AnyWgslData[],
   Return extends AnyWgslData | undefined = undefined,
-> extends TgpuResolvable,
-    TgpuNamable {
-  readonly shell: TgpuFnShell<Args, Return>;
+> extends TgpuNamable {
   readonly resourceType: 'function';
+  readonly label?: string | undefined;
+  readonly shell: TgpuFnShell<Args, Return>;
+  readonly '~providing'?: Providing | undefined;
 
   $uses(dependencyMap: Record<string, unknown>): this;
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuFn<Args, Return>;
@@ -118,11 +121,11 @@ function createFn<
 
   const core = createFnCore(shell, implementation);
 
-  const fnBase: This = {
+  const fnBase = {
     shell,
-    resourceType: 'function',
+    resourceType: 'function' as const,
 
-    $uses(newExternals) {
+    $uses(newExternals: Record<string, unknown>) {
       core.applyExternals(newExternals);
       return this;
     },
@@ -136,11 +139,9 @@ function createFn<
       slot: TgpuSlot<T> | TgpuAccessor<T>,
       value: T | TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
     ): TgpuFn<Args, Return> {
-      return createBoundFunction(
-        fn,
-        isAccessor(slot) ? slot.slot : slot,
-        value,
-      );
+      return createBoundFunction(fn, [
+        [isAccessor(slot) ? slot.slot : slot, value],
+      ]);
     },
 
     resolve(ctx: ResolutionCtx): string {
@@ -163,7 +164,7 @@ function createFn<
     return implementation(...args);
   };
 
-  const fn = Object.assign(call, fnBase) as TgpuFn<Args, Return>;
+  const fn = Object.assign(call, fnBase as This) as TgpuFn<Args, Return>;
 
   // Making the label available as a readonly property.
   Object.defineProperty(fn, 'label', {
@@ -180,16 +181,16 @@ function createFn<
 function createBoundFunction<
   Args extends AnyWgslData[],
   Return extends AnyWgslData | undefined,
->(
-  innerFn: TgpuFn<Args, Return>,
-  slot: TgpuSlot<unknown>,
-  slotValue: unknown,
-): TgpuFn<Args, Return> {
+>(innerFn: TgpuFn<Args, Return>, pairs: SlotValuePair[]): TgpuFn<Args, Return> {
   type This = TgpuFnBase<Args, Return>;
 
   const fnBase: This = {
-    shell: innerFn.shell,
     resourceType: 'function',
+    shell: innerFn.shell,
+    '~providing': {
+      inner: innerFn,
+      pairs,
+    },
 
     $uses(newExternals) {
       innerFn.$uses(newExternals);
@@ -205,15 +206,10 @@ function createBoundFunction<
       slot: TgpuSlot<T> | TgpuAccessor<T>,
       value: T | TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
     ): TgpuFn<Args, Return> {
-      return createBoundFunction(
-        fn,
-        isAccessor(slot) ? slot.slot : slot,
-        value,
-      );
-    },
-
-    resolve(ctx: ResolutionCtx): string {
-      return ctx.withSlots([[slot, slotValue]], () => ctx.resolve(innerFn));
+      return createBoundFunction(fn, [
+        ...pairs,
+        [isAccessor(slot) ? slot.slot : slot, value],
+      ]);
     },
   };
 
@@ -235,7 +231,11 @@ function createBoundFunction<
 
   Object.defineProperty(fn, 'toString', {
     value() {
-      return `fn:${innerFn.label ?? '<unnamed>'}[${slot.label ?? '<unnamed>'}=${slotValue}]`;
+      const fnLabel = innerFn.label ?? '<unnamed>';
+      const stringifyPair = ([slot, value]: SlotValuePair) =>
+        `${slot.label ?? '<unnamed>'}=${value}`;
+
+      return `fn:${fnLabel}[${pairs.map(stringifyPair).join(', ')}]`;
     },
   });
 
