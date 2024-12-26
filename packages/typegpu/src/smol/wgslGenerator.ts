@@ -94,6 +94,18 @@ function generateExpression(
     };
   }
 
+  if ('u' in expression) {
+    // Unary Expression
+
+    const [op, arg] = expression.u;
+    const argExpr = resolveRes(ctx, generateExpression(ctx, arg));
+    return {
+      value: `${op}${argExpr}`,
+      // TODO: Infer data type from expression type and arguments.
+      dataType: UnknownData,
+    };
+  }
+
   if ('a' in expression) {
     // Member Access
 
