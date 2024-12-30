@@ -47,6 +47,10 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
     attachment: FragmentOutToColorAttachment<Output>,
   ): TgpuRenderPipeline;
 
+  withDepthStencilAttachment(
+    attachment: DepthStencilAttachment,
+  ): TgpuRenderPipeline;
+
   draw(
     vertexCount: number,
     instanceCount?: number,
@@ -110,6 +114,60 @@ export interface ColorAttachment {
   storeOp: GPUStoreOp;
 }
 
+export interface DepthStencilAttachment {
+  /**
+   * A {@link GPUTextureView} describing the texture subresource that will be output to
+   * and read from for this depth/stencil attachment.
+   */
+  view: (TgpuTexture & Render) | GPUTextureView;
+  /**
+   * Indicates the value to clear {@link GPURenderPassDepthStencilAttachment#view}'s depth component
+   * to prior to executing the render pass. Ignored if {@link GPURenderPassDepthStencilAttachment#depthLoadOp}
+   * is not {@link GPULoadOp#"clear"}. Must be between 0.0 and 1.0, inclusive (unless unrestricted depth is enabled).
+   */
+  depthClearValue?: number;
+  /**
+   * Indicates the load operation to perform on {@link GPURenderPassDepthStencilAttachment#view}'s
+   * depth component prior to executing the render pass.
+   * Note: It is recommended to prefer clearing; see {@link GPULoadOp#"clear"} for details.
+   */
+  depthLoadOp?: GPULoadOp;
+  /**
+   * The store operation to perform on {@link GPURenderPassDepthStencilAttachment#view}'s
+   * depth component after executing the render pass.
+   */
+  depthStoreOp?: GPUStoreOp;
+  /**
+   * Indicates that the depth component of {@link GPURenderPassDepthStencilAttachment#view}
+   * is read only.
+   */
+  depthReadOnly?: boolean;
+  /**
+   * Indicates the value to clear {@link GPURenderPassDepthStencilAttachment#view}'s stencil component
+   * to prior to executing the render pass. Ignored if {@link GPURenderPassDepthStencilAttachment#stencilLoadOp}
+   * is not {@link GPULoadOp#"clear"}.
+   * The value will be converted to the type of the stencil aspect of `view` by taking the same
+   * number of LSBs as the number of bits in the stencil aspect of one texel block|texel of `view`.
+   */
+  stencilClearValue?: GPUStencilValue;
+  /**
+   * Indicates the load operation to perform on {@link GPURenderPassDepthStencilAttachment#view}'s
+   * stencil component prior to executing the render pass.
+   * Note: It is recommended to prefer clearing; see {@link GPULoadOp#"clear"} for details.
+   */
+  stencilLoadOp?: GPULoadOp;
+  /**
+   * The store operation to perform on {@link GPURenderPassDepthStencilAttachment#view}'s
+   * stencil component after executing the render pass.
+   */
+  stencilStoreOp?: GPUStoreOp;
+  /**
+   * Indicates that the stencil component of {@link GPURenderPassDepthStencilAttachment#view}
+   * is read only.
+   */
+  stencilReadOnly?: boolean;
+}
+
 export type AnyFragmentColorAttachment =
   | ColorAttachment
   | Record<string, ColorAttachment>;
@@ -121,6 +179,7 @@ export type RenderPipelineCoreOptions = {
   vertexFn: TgpuVertexFn;
   fragmentFn: TgpuFragmentFn;
   primitiveState: GPUPrimitiveState | undefined;
+  depthStencilState: GPUDepthStencilState | undefined;
   targets: AnyFragmentTargets;
 };
 
@@ -142,6 +201,7 @@ type TgpuRenderPipelinePriors = {
     | Map<TgpuBindGroupLayout, TgpuBindGroup>
     | undefined;
   readonly colorAttachment?: AnyFragmentColorAttachment | undefined;
+  readonly depthStencilAttachment?: DepthStencilAttachment | undefined;
 };
 
 type Memo = {
@@ -211,6 +271,15 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     });
   }
 
+  withDepthStencilAttachment(
+    attachment: DepthStencilAttachment,
+  ): TgpuRenderPipeline {
+    return new TgpuRenderPipelineImpl(this._core, {
+      ...this._priors,
+      depthStencilAttachment: attachment,
+    });
+  }
+
   draw(
     vertexCount: number,
     instanceCount?: number,
@@ -234,10 +303,28 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       return attachment;
     }) as GPURenderPassColorAttachment[];
 
-    const pass = branch.commandEncoder.beginRenderPass({
-      label: this._core.label ?? '<unnamed>',
+    const renderPassDescriptor: GPURenderPassDescriptor = {
       colorAttachments,
-    });
+    };
+
+    if (this._core.label !== undefined) {
+      renderPassDescriptor.label = this._core.label;
+    }
+
+    if (this._priors.depthStencilAttachment !== undefined) {
+      const attachment = this._priors.depthStencilAttachment;
+      if (isTexture(attachment)) {
+        renderPassDescriptor.depthStencilAttachment = {
+          ...attachment,
+          view: branch.unwrap(attachment).createView(),
+        };
+      } else {
+        renderPassDescriptor.depthStencilAttachment =
+          attachment as GPURenderPassDepthStencilAttachment;
+      }
+    }
+
+    const pass = branch.commandEncoder.beginRenderPass(renderPassDescriptor);
 
     pass.setPipeline(memo.pipeline);
 
@@ -294,8 +381,14 @@ class RenderPipelineCore {
 
   public unwrap(): Memo {
     if (this._memo === undefined) {
-      const { branch, vertexFn, fragmentFn, slotBindings, primitiveState } =
-        this.options;
+      const {
+        branch,
+        vertexFn,
+        fragmentFn,
+        slotBindings,
+        primitiveState,
+        depthStencilState,
+      } = this.options;
 
       // Resolving code
       const { code, bindGroupLayouts, catchall } = resolve(
@@ -327,23 +420,35 @@ class RenderPipelineCore {
         code,
       });
 
-      this._memo = {
-        pipeline: device.createRenderPipeline({
-          label: this.label ?? '<unnamed>',
-          layout: device.createPipelineLayout({
-            label: `${this.label ?? '<unnamed>'} - Pipeline Layout`,
-            bindGroupLayouts: bindGroupLayouts.map((l) => branch.unwrap(l)),
-          }),
-          vertex: {
-            module,
-            buffers: this._vertexBufferLayouts,
-          },
-          fragment: {
-            module,
-            targets: this._targets,
-          },
-          primitive: primitiveState ?? {},
+      const descriptor: GPURenderPipelineDescriptor = {
+        layout: device.createPipelineLayout({
+          label: `${this.label ?? '<unnamed>'} - Pipeline Layout`,
+          bindGroupLayouts: bindGroupLayouts.map((l) => branch.unwrap(l)),
         }),
+        vertex: {
+          module,
+          buffers: this._vertexBufferLayouts,
+        },
+        fragment: {
+          module,
+          targets: this._targets,
+        },
+      };
+
+      if (this.label !== undefined) {
+        descriptor.label = this.label;
+      }
+
+      if (primitiveState) {
+        descriptor.primitive = primitiveState;
+      }
+
+      if (depthStencilState) {
+        descriptor.depthStencil = depthStencilState;
+      }
+
+      this._memo = {
+        pipeline: device.createRenderPipeline(descriptor),
         bindGroupLayouts,
         catchall,
       };

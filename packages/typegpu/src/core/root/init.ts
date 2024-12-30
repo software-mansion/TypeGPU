@@ -103,6 +103,7 @@ class WithBindingImpl implements WithBinding {
     return new WithVertexImpl({
       branch: this._getRoot(),
       primitiveState: undefined,
+      depthStencilState: undefined,
       slotBindings: this._slotBindings,
       vertexFn,
       vertexAttribs: attribs as AnyVertexAttribs,
@@ -153,8 +154,14 @@ class WithVertexImpl implements WithVertex {
 class WithFragmentImpl implements WithFragment {
   constructor(private readonly _options: RenderPipelineCoreOptions) {}
 
-  withPrimitive(primitiveState: GPUPrimitiveState): WithFragment {
+  withPrimitive(primitiveState: GPUPrimitiveState | undefined): WithFragment {
     return new WithFragmentImpl({ ...this._options, primitiveState });
+  }
+
+  withDepthStencil(
+    depthStencilState: GPUDepthStencilState | undefined,
+  ): WithFragment {
+    return new WithFragmentImpl({ ...this._options, depthStencilState });
   }
 
   createPipeline(): TgpuRenderPipeline {
