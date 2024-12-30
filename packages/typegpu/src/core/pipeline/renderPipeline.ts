@@ -37,19 +37,19 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
   with<TData extends WgslArray | LooseArray>(
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: TgpuBuffer<TData> & Vertex,
-  ): TgpuRenderPipeline;
+  ): TgpuRenderPipeline<IOLayout>;
   with(
     bindGroupLayout: TgpuBindGroupLayout,
     bindGroup: TgpuBindGroup,
-  ): TgpuRenderPipeline;
+  ): TgpuRenderPipeline<IOLayout>;
 
   withColorAttachment(
     attachment: FragmentOutToColorAttachment<Output>,
-  ): TgpuRenderPipeline;
+  ): TgpuRenderPipeline<IOLayout>;
 
   withDepthStencilAttachment(
     attachment: DepthStencilAttachment,
-  ): TgpuRenderPipeline;
+  ): TgpuRenderPipeline<IOLayout>;
 
   draw(
     vertexCount: number,
@@ -313,10 +313,10 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     if (this._priors.depthStencilAttachment !== undefined) {
       const attachment = this._priors.depthStencilAttachment;
-      if (isTexture(attachment)) {
+      if (isTexture(attachment.view)) {
         renderPassDescriptor.depthStencilAttachment = {
           ...attachment,
-          view: branch.unwrap(attachment).createView(),
+          view: branch.unwrap(attachment.view).createView(),
         };
       } else {
         renderPassDescriptor.depthStencilAttachment =
