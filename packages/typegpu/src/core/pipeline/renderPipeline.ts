@@ -364,28 +364,31 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     pass.setPipeline(memo.pipeline);
 
+    const missingBindGroups = new Set(memo.bindGroupLayouts);
+
     memo.bindGroupLayouts.forEach((layout, idx) => {
       if (memo.catchall && idx === memo.catchall[0]) {
         // Catch-all
         pass.setBindGroup(idx, branch.unwrap(memo.catchall[1]));
+        missingBindGroups.delete(layout);
       } else {
         const bindGroup = this._priors.bindGroupLayoutMap?.get(layout);
-        if (bindGroup === undefined) {
-          throw new MissingBindGroupError(layout.label);
+        if (bindGroup !== undefined) {
+          missingBindGroups.delete(layout);
+          pass.setBindGroup(idx, branch.unwrap(bindGroup));
         }
-        pass.setBindGroup(idx, branch.unwrap(bindGroup));
       }
     });
+
+    const missingVertexLayouts = new Set(this._core.usedVertexLayouts);
 
     const usedVertexLayouts = this._core.usedVertexLayouts;
     usedVertexLayouts.forEach((vertexLayout, idx) => {
       const buffer = this._priors.vertexLayoutMap?.get(vertexLayout);
-      if (!buffer) {
-        throw new Error(
-          `Missing vertex buffer for layout '${vertexLayout.label ?? '<unnamed>'}'. Please provide it using pipeline.with(layout, buffer).(...)`,
-        );
+      if (buffer) {
+        missingVertexLayouts.delete(vertexLayout);
+        pass.setVertexBuffer(idx, branch.unwrap(buffer));
       }
-      pass.setVertexBuffer(idx, branch.unwrap(buffer));
     });
 
     const renderPass: RenderPass = {
@@ -393,13 +396,26 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
         const idx = memo.bindGroupLayouts.indexOf(bindGroupLayout);
         pass.setBindGroup(idx, branch.unwrap(bindGroup));
       },
+
       setVertexBuffer(vertexLayout, buffer) {
         const idx = usedVertexLayouts.indexOf(vertexLayout);
         pass.setVertexBuffer(idx, branch.unwrap(buffer));
       },
+
       draw(vertexCount, instanceCount, firstVertex, firstInstance) {
+        for (const layout of missingBindGroups) {
+          throw new MissingBindGroupError(layout.label);
+        }
+
+        if (missingVertexLayouts.size > 0) {
+          throw new Error(
+            `Missing vertex buffers for layouts: '${[...missingVertexLayouts.values()].map((layout) => layout.label ?? '<unnamed>').join(', ')}'. Please provide it using pipeline.with(layout, buffer).(...)`,
+          );
+        }
+
         pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
       },
+
       drawIndexed(
         indexCount,
         instanceCount,
