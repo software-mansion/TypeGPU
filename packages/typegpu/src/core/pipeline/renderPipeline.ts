@@ -8,6 +8,7 @@ import type { AnyVertexAttribs } from '../../shared/vertexFormat';
 import {
   type TgpuBindGroup,
   type TgpuBindGroupLayout,
+  type TgpuLayoutEntry,
   isBindGroupLayout,
 } from '../../tgpuBindGroupLayout';
 import type { IOData, IOLayout } from '../function/fnTypes';
@@ -38,9 +39,9 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: TgpuBuffer<TData> & Vertex,
   ): TgpuRenderPipeline<IOLayout>;
-  with(
-    bindGroupLayout: TgpuBindGroupLayout,
-    bindGroup: TgpuBindGroup,
+  with<Entries extends Record<string, TgpuLayoutEntry | null>>(
+    bindGroupLayout: TgpuBindGroupLayout<Entries>,
+    bindGroup: TgpuBindGroup<Entries>,
   ): TgpuRenderPipeline<IOLayout>;
 
   withColorAttachment(
@@ -57,6 +58,8 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
     firstVertex?: number,
     firstInstance?: number,
   ): void;
+
+  beginPass(runner: (pass: RenderPass) => unknown): void;
 }
 
 export type FragmentOutToTargets<T extends IOLayout> = T extends IOData
@@ -183,6 +186,33 @@ export type RenderPipelineCoreOptions = {
   targets: AnyFragmentTargets;
 };
 
+export interface RenderPass {
+  setBindGroup<Entries extends Record<string, TgpuLayoutEntry | null>>(
+    bindGroupLayout: TgpuBindGroupLayout<Entries>,
+    bindGroup: TgpuBindGroup<Entries>,
+  ): void;
+
+  setVertexBuffer<TData extends WgslArray | LooseArray>(
+    vertexLayout: TgpuVertexLayout<TData>,
+    buffer: TgpuBuffer<TData> & Vertex,
+  ): void;
+
+  draw(
+    vertexCount: number,
+    instanceCount?: number | undefined,
+    firstVertex?: number | undefined,
+    firstInstance?: number | undefined,
+  ): void;
+
+  drawIndexed(
+    indexCount: number,
+    instanceCount?: number | undefined,
+    firstIndex?: number | undefined,
+    baseVertex?: number | undefined,
+    firstInstance?: number | undefined,
+  ): void;
+}
+
 export function INTERNAL_createRenderPipeline(
   options: RenderPipelineCoreOptions,
 ) {
@@ -286,6 +316,12 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     firstVertex?: number,
     firstInstance?: number,
   ): void {
+    this.beginPass((renderPass) => {
+      renderPass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+    });
+  }
+
+  beginPass(runner: (pass: RenderPass) => unknown): void {
     const memo = this._core.unwrap();
     const { branch, fragmentFn } = this._core.options;
 
@@ -341,7 +377,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       }
     });
 
-    this._core.usedVertexLayouts.forEach((vertexLayout, idx) => {
+    const usedVertexLayouts = this._core.usedVertexLayouts;
+    usedVertexLayouts.forEach((vertexLayout, idx) => {
       const buffer = this._priors.vertexLayoutMap?.get(vertexLayout);
       if (!buffer) {
         throw new Error(
@@ -351,7 +388,37 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       pass.setVertexBuffer(idx, branch.unwrap(buffer));
     });
 
-    pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+    const renderPass: RenderPass = {
+      setBindGroup(bindGroupLayout, bindGroup) {
+        const idx = memo.bindGroupLayouts.indexOf(bindGroupLayout);
+        pass.setBindGroup(idx, branch.unwrap(bindGroup));
+      },
+      setVertexBuffer(vertexLayout, buffer) {
+        const idx = usedVertexLayouts.indexOf(vertexLayout);
+        pass.setVertexBuffer(idx, branch.unwrap(buffer));
+      },
+      draw(vertexCount, instanceCount, firstVertex, firstInstance) {
+        pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+      },
+      drawIndexed(
+        indexCount,
+        instanceCount,
+        firstIndex,
+        baseVertex,
+        firstInstance,
+      ) {
+        pass.drawIndexed(
+          indexCount,
+          instanceCount,
+          firstIndex,
+          baseVertex,
+          firstInstance,
+        );
+      },
+    };
+
+    runner(renderPass);
+
     pass.end();
   }
 }
