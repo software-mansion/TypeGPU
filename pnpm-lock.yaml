@@ -157,7 +157,7 @@ importers:
         specifier: ^0.30.11
         version: 0.30.11
       tinyest-for-wgsl:
-        specifier: workspace:~0.0.0
+        specifier: workspace:~0.1.0-alpha.0
         version: link:../tinyest-for-wgsl
     devDependencies:
       '@typegpu/tgpu-dev-cli':
@@ -213,10 +213,10 @@ importers:
         specifier: ^8.12.1
         version: 8.12.1
       tinyest:
-        specifier: workspace:~0.1.0-alpha.0
+        specifier: workspace:~0.1.0-alpha.1
         version: link:../tinyest
       tinyest-for-wgsl:
-        specifier: workspace:~0.0.0
+        specifier: workspace:~0.1.0-alpha.0
         version: link:../tinyest-for-wgsl
     devDependencies:
       '@typegpu/tgpu-dev-cli':
@@ -300,11 +300,11 @@ importers:
   packages/typegpu:
     dependencies:
       tinyest:
-        specifier: workspace:~0.1.0-alpha.0
+        specifier: workspace:~0.1.0-alpha.1
         version: link:../tinyest
       typed-binary:
-        specifier: ^4.3.0
-        version: 4.3.0
+        specifier: ^4.3.1
+        version: 4.3.1
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -6791,8 +6791,8 @@ packages:
     resolution: {integrity: sha512-6ZXhbBePH4XZY57o23PV6O/HAYWcsAkCSwTKI6DrN5xMBwOV+I1G+MtytSY2v+QU3VPzB5Kz6268Q3qYD0XIYA==}
     dev: false
 
-  /typed-binary@4.3.0:
-    resolution: {integrity: sha512-9d6QZfUKcUXegpNl7nKUoyY+nBnS84pB9vGXDmzzMzFf/vW9A9w0IEOpuv/G4LCx+lJX2x6jcJAQub6MlwF+8w==}
+  /typed-binary@4.3.1:
+    resolution: {integrity: sha512-yLoFov7uL+PItmyqbxcP8HnEm7R1wkzzTe2rkX1h+HDPZQIKGRJkfSd3egE0itPXxubPpQ9lTdko+zzjOCIXOA==}
     dev: false
 
   /typedoc-plugin-markdown@4.3.0(typedoc@0.27.1):

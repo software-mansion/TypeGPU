@@ -1,6 +1,6 @@
 {
   "name": "rollup-plugin-typegpu",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A rollup plugin for TypeGPU, transpiling JavaScript functions into WGSL at build-time.",
   "keywords": [
     "rollup-plugin",
@@ -50,7 +50,7 @@
     "prepare-package": "tgpu-dev-cli prepack"
   },
   "dependencies": {
-    "tinyest-for-wgsl": "workspace:~0.0.0",
+    "tinyest-for-wgsl": "workspace:~0.1.0-alpha.0",
     "estree-walker": "^3.0.3",
     "magic-string": "^0.30.11"
   },

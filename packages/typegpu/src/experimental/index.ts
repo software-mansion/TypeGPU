@@ -113,6 +113,8 @@ export { isTgpuFn } from '../core/function/tgpuFn';
 
 export type { Storage } from '../extension';
 export type { TgpuVertexLayout } from '../core/vertexLayout/vertexLayout';
+export type { TgpuRenderPipeline } from '../core/pipeline/renderPipeline';
+export type { TgpuComputePipeline } from '../core/pipeline/computePipeline';
 export type {
   TgpuBuffer,
   Uniform,

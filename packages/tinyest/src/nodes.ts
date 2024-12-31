@@ -96,6 +96,19 @@ export type LogicalExpression = {
   x: [lhs: Expression, op: LogicalOperator, rhs: Expression];
 };
 
+export type UnaryOperator =
+  | '-'
+  | '+'
+  | '!'
+  | '~'
+  | 'typeof'
+  | 'void'
+  | 'delete';
+
+export type UnaryExpression = {
+  u: [op: UnaryOperator, inner: Expression];
+};
+
 export type MemberAccess = {
   a: [object: Expression, member: string];
 };
@@ -121,6 +134,7 @@ export type Expression =
   | BinaryExpression
   | AssignmentExpression
   | LogicalExpression
+  | UnaryExpression
   | MemberAccess
   | IndexAccess
   | Call

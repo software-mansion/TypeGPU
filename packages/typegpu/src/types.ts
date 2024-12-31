@@ -1,11 +1,17 @@
 import type { Block } from 'tinyest';
+import type { TgpuFn } from './core/function/tgpuFn';
 import {
   type Eventual,
   type SlotValuePair,
   isDerived,
+  isProviding,
   isSlot,
 } from './core/slot/slotTypes';
-import type { AnyWgslData, BaseWgslData } from './data/wgslTypes';
+import {
+  type AnyWgslData,
+  type BaseWgslData,
+  isWgslData,
+} from './data/wgslTypes';
 import type { NameRegistry } from './nameRegistry';
 import type { Infer } from './shared/repr';
 import type {
@@ -13,9 +19,13 @@ import type {
   TgpuLayoutEntry,
 } from './tgpuBindGroupLayout';
 
-export type Wgsl = Eventual<
-  string | number | boolean | TgpuResolvable | AnyWgslData
->;
+export type ResolvableObject =
+  | TgpuResolvable
+  | AnyWgslData
+  // biome-ignore lint/suspicious/noExplicitAny: <has to be more permissive than unknown>
+  | TgpuFn<any, any>;
+
+export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
 
 export const UnknownData = Symbol('Unknown data type');
 export type UnknownData = typeof UnknownData;
@@ -70,7 +80,7 @@ export interface ResolutionCtx {
    */
   unwrap<T>(eventual: Eventual<T>): T;
 
-  resolve(item: Wgsl): string;
+  resolve(item: unknown): string;
   resolveValue<T extends BaseWgslData>(value: Infer<T>, schema: T): string;
 
   transpileFn(fn: string): {
@@ -103,8 +113,10 @@ export function isWgsl(value: unknown): value is Wgsl {
     typeof value === 'boolean' ||
     typeof value === 'string' ||
     isResolvable(value) ||
+    isWgslData(value) ||
     isSlot(value) ||
-    isDerived(value)
+    isDerived(value) ||
+    isProviding(value)
   );
 }
 

@@ -77,7 +77,12 @@ export interface WithVertex<VertexOut extends IORecord = IORecord> {
 export interface WithFragment<
   Output extends IOLayout<Vec4f> = IOLayout<Vec4f>,
 > {
-  withPrimitive(primitiveState: GPUPrimitiveState): WithFragment<Output>;
+  withPrimitive(
+    primitiveState: GPUPrimitiveState | undefined,
+  ): WithFragment<Output>;
+  withDepthStencil(
+    depthStencilState: GPUDepthStencilState | undefined,
+  ): WithFragment<Output>;
   createPipeline(): TgpuRenderPipeline<Output>;
 }
 
