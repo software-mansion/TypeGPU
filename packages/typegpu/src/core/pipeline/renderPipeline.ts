@@ -394,11 +394,13 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const renderPass: RenderPass = {
       setBindGroup(bindGroupLayout, bindGroup) {
         const idx = memo.bindGroupLayouts.indexOf(bindGroupLayout);
+        missingBindGroups.delete(bindGroupLayout);
         pass.setBindGroup(idx, branch.unwrap(bindGroup));
       },
 
       setVertexBuffer(vertexLayout, buffer) {
         const idx = usedVertexLayouts.indexOf(vertexLayout);
+        missingVertexLayouts.delete(vertexLayout);
         pass.setVertexBuffer(idx, branch.unwrap(buffer));
       },
 
