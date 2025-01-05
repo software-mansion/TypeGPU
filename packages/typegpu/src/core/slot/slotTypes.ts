@@ -75,7 +75,7 @@ export function isDerived<T extends TgpuDerived<unknown>>(
 export function isProviding(
   value: unknown,
 ): value is { '~providing': Providing } {
-  return (value as { '~providing': Providing })['~providing'] !== undefined;
+  return (value as { '~providing': Providing })?.['~providing'] !== undefined;
 }
 
 export function isAccessor<T extends AnyWgslData>(
