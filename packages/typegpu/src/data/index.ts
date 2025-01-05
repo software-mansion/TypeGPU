@@ -15,6 +15,7 @@ export {
   isSizeAttrib,
 } from './wgslTypes';
 export type {
+  BaseWgslData,
   Bool,
   F32,
   F16,
