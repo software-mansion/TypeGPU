@@ -1,6 +1,6 @@
 import type { TgpuBuffer } from './core/buffer/buffer';
 import type { TgpuDerived, TgpuSlot } from './core/slot/slotTypes';
-import type { AnyData } from './data/dataTypes';
+import type { AnyHostShareableData } from './data/dataTypes';
 import type { AnyWgslData } from './data/wgslTypes';
 import type { TgpuResolvable } from './types';
 
@@ -90,7 +90,7 @@ export class MissingSlotValueError extends Error {
  * @category Errors
  */
 export class NotUniformError extends Error {
-  constructor(value: TgpuBuffer<AnyData>) {
+  constructor(value: TgpuBuffer<AnyHostShareableData>) {
     super(
       `Buffer '${value.label ?? '<unnamed>'}' is not bindable as a uniform. Use .$usage('uniform') to allow it.`,
     );

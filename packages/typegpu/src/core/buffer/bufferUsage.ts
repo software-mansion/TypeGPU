@@ -1,4 +1,8 @@
-import type { AnyWgslData, BaseWgslData } from '../../data/wgslTypes';
+import type {
+  AnyHostShareableWgslData,
+  AnyWgslData,
+  BaseWgslData,
+} from '../../data/wgslTypes';
 import { type Storage, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
 import type { Infer } from '../../shared/repr';
@@ -57,7 +61,7 @@ const usageToVarTemplateMap: Record<BindableBufferUsage, string> = {
 };
 
 class TgpuFixedBufferImpl<
-  TData extends AnyWgslData,
+  TData extends AnyHostShareableWgslData,
   TUsage extends BindableBufferUsage,
 > implements TgpuBufferUsage<TData, TUsage>
 {
@@ -151,11 +155,11 @@ export class TgpuLaidOutBufferImpl<
 }
 
 const mutableUsageMap = new WeakMap<
-  TgpuBuffer<AnyWgslData>,
-  TgpuFixedBufferImpl<AnyWgslData, 'mutable'>
+  TgpuBuffer<AnyHostShareableWgslData>,
+  TgpuFixedBufferImpl<AnyHostShareableWgslData, 'mutable'>
 >();
 
-export function asMutable<TData extends AnyWgslData>(
+export function asMutable<TData extends AnyHostShareableWgslData>(
   buffer: TgpuBuffer<TData> & Storage,
 ): TgpuBufferMutable<TData> {
   if (!isUsableAsStorage(buffer)) {
@@ -173,11 +177,11 @@ export function asMutable<TData extends AnyWgslData>(
 }
 
 const readonlyUsageMap = new WeakMap<
-  TgpuBuffer<AnyWgslData>,
-  TgpuFixedBufferImpl<AnyWgslData, 'readonly'>
+  TgpuBuffer<AnyHostShareableWgslData>,
+  TgpuFixedBufferImpl<AnyHostShareableWgslData, 'readonly'>
 >();
 
-export function asReadonly<TData extends AnyWgslData>(
+export function asReadonly<TData extends AnyHostShareableWgslData>(
   buffer: TgpuBuffer<TData> & Storage,
 ): TgpuBufferReadonly<TData> {
   if (!isUsableAsStorage(buffer)) {
@@ -195,11 +199,11 @@ export function asReadonly<TData extends AnyWgslData>(
 }
 
 const uniformUsageMap = new WeakMap<
-  TgpuBuffer<AnyWgslData>,
-  TgpuFixedBufferImpl<AnyWgslData, 'uniform'>
+  TgpuBuffer<AnyHostShareableWgslData>,
+  TgpuFixedBufferImpl<AnyHostShareableWgslData, 'uniform'>
 >();
 
-export function asUniform<TData extends AnyWgslData>(
+export function asUniform<TData extends AnyHostShareableWgslData>(
   buffer: TgpuBuffer<TData> & Uniform,
 ): TgpuBufferUniform<TData> {
   if (!isUsableAsUniform(buffer)) {

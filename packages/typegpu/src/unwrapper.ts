@@ -7,7 +7,7 @@ import type {
   TgpuTexture,
   TgpuWriteonlyTexture,
 } from './core/texture/texture';
-import type { AnyData } from './data/dataTypes';
+import type { AnyHostShareableWgslData } from './data/wgslTypes';
 import type { TgpuBindGroup, TgpuBindGroupLayout } from './tgpuBindGroupLayout';
 
 export interface Unwrapper {
@@ -15,7 +15,7 @@ export interface Unwrapper {
   unwrap(resource: TgpuComputePipeline): GPUComputePipeline;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
-  unwrap(resource: TgpuBuffer<AnyData>): GPUBuffer;
+  unwrap(resource: TgpuBuffer<AnyHostShareableWgslData>): GPUBuffer;
   unwrap(resource: TgpuTexture): GPUTexture;
   unwrap(
     resource:

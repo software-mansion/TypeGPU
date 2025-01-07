@@ -137,3 +137,7 @@ export function isData(value: unknown): value is AnyData {
 }
 
 export type AnyData = wgsl.AnyWgslData | AnyLooseData;
+/**
+ * Any data that can be shared between the host and the GPU (i.e. can describe a buffer).
+ */
+export type AnyHostShareableData = wgsl.AnyHostShareableWgslData | AnyLooseData;

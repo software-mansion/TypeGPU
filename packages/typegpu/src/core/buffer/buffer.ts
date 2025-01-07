@@ -1,9 +1,9 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { isWgslData } from '../../data';
 import { readData, writeData } from '../../data/dataIO';
-import type { AnyData } from '../../data/dataTypes';
+import type { AnyHostShareableData } from '../../data/dataTypes';
 import { sizeOf } from '../../data/sizeOf';
-import type { WgslTypeLiteral } from '../../data/wgslTypes';
+import type { WgslHostShareableTypeLiteral } from '../../data/wgslTypes';
 import type { Storage } from '../../extension';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
@@ -35,7 +35,8 @@ type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
         ? Vertex
         : never;
 
-export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
+export interface TgpuBuffer<TData extends AnyHostShareableData>
+  extends TgpuNamable {
   readonly resourceType: 'buffer';
   readonly dataType: TData;
   readonly initial?: Infer<TData> | undefined;
@@ -55,7 +56,7 @@ export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
   destroy(): void;
 }
 
-export function INTERNAL_createBuffer<TData extends AnyData>(
+export function INTERNAL_createBuffer<TData extends AnyHostShareableData>(
   group: ExperimentalTgpuRoot,
   typeSchema: TData,
   initialOrBuffer?: Infer<TData> | GPUBuffer,
@@ -69,19 +70,19 @@ export function INTERNAL_createBuffer<TData extends AnyData>(
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
 }
 
-export function isBuffer<T extends TgpuBuffer<AnyData>>(
+export function isBuffer<T extends TgpuBuffer<AnyHostShareableData>>(
   value: T | unknown,
 ): value is T {
-  return (value as TgpuBuffer<AnyData>).resourceType === 'buffer';
+  return (value as TgpuBuffer<AnyHostShareableData>).resourceType === 'buffer';
 }
 
-export function isUsableAsUniform<T extends TgpuBuffer<AnyData>>(
+export function isUsableAsUniform<T extends TgpuBuffer<AnyHostShareableData>>(
   buffer: T,
 ): buffer is T & Uniform {
   return !!(buffer as unknown as Uniform).usableAsUniform;
 }
 
-export function isUsableAsVertex<T extends TgpuBuffer<AnyData>>(
+export function isUsableAsVertex<T extends TgpuBuffer<AnyHostShareableData>>(
   buffer: T,
 ): buffer is T & Vertex {
   return !!(buffer as unknown as Vertex).usableAsVertex;
@@ -91,13 +92,15 @@ export function isUsableAsVertex<T extends TgpuBuffer<AnyData>>(
 // Implementation
 // --------------
 
-type RestrictVertexUsages<TData extends AnyData> = TData extends {
-  readonly type: WgslTypeLiteral;
+type RestrictVertexUsages<TData extends AnyHostShareableData> = TData extends {
+  readonly type: WgslHostShareableTypeLiteral;
 }
   ? ('uniform' | 'storage' | 'vertex')[]
   : 'vertex'[];
 
-class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
+class TgpuBufferImpl<TData extends AnyHostShareableData>
+  implements TgpuBuffer<TData>
+{
   public readonly resourceType = 'buffer';
   public flags: GPUBufferUsageFlags =
     GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;

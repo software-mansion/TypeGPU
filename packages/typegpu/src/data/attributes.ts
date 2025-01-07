@@ -1,7 +1,7 @@
 import type { Infer } from '../shared/repr';
 import { alignmentOf } from './alignmentOf';
 import {
-  type AnyData,
+  type AnyHostShareableData,
   type AnyLooseData,
   type LooseDecorated,
   type LooseTypeLiteral,
@@ -137,10 +137,10 @@ export function attribute<
  * @param alignment The multiple of bytes this data should align itself to.
  * @param data The data-type to align.
  */
-export function align<TAlign extends number, TData extends AnyData>(
-  alignment: TAlign,
-  data: TData,
-): Decorate<Exotic<TData>, Align<TAlign>> {
+export function align<
+  TAlign extends number,
+  TData extends AnyHostShareableData,
+>(alignment: TAlign, data: TData): Decorate<Exotic<TData>, Align<TAlign>> {
   // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   return attribute(data, { type: '@align', value: alignment }) as any;
 }
@@ -157,7 +157,7 @@ export function align<TAlign extends number, TData extends AnyData>(
  * @param size The amount of bytes that should be reserved for this data-type.
  * @param data The data-type to wrap.
  */
-export function size<TSize extends number, TData extends AnyData>(
+export function size<TSize extends number, TData extends AnyHostShareableData>(
   size: TSize,
   data: TData,
 ): Decorate<Exotic<TData>, Size<TSize>> {
@@ -178,7 +178,10 @@ export function size<TSize extends number, TData extends AnyData>(
  * @param location The explicit numeric location.
  * @param data The data-type to wrap.
  */
-export function location<TLocation extends number, TData extends AnyData>(
+export function location<
+  TLocation extends number,
+  TData extends AnyHostShareableData,
+>(
   location: TLocation,
   data: TData,
 ): Decorate<Exotic<TData>, Location<TLocation>> {

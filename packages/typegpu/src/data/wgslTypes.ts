@@ -739,7 +739,35 @@ export const wgslTypeLiterals = [
   'decorated',
 ] as const;
 
+export const wgslHostShareableTypeLiterals = [
+  'f32',
+  'f16',
+  'i32',
+  'u32',
+  'vec2f',
+  'vec2h',
+  'vec2i',
+  'vec2u',
+  'vec3f',
+  'vec3h',
+  'vec3i',
+  'vec3u',
+  'vec4f',
+  'vec4h',
+  'vec4i',
+  'vec4u',
+  'mat2x2f',
+  'mat3x3f',
+  'mat4x4f',
+  'struct',
+  'array',
+  'atomic',
+  'decorated',
+] as const;
+
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
+export type WgslHostShareableTypeLiteral =
+  (typeof wgslHostShareableTypeLiterals)[number];
 
 export type AnyWgslData =
   | Bool
@@ -767,10 +795,20 @@ export type AnyWgslData =
   | Atomic
   | Decorated;
 
+export type AnyHostShareableWgslData = Exclude<AnyWgslData, Bool>;
+
 // #endregion
 
 export function isWgslData(value: unknown): value is AnyWgslData {
   return wgslTypeLiterals.includes((value as AnyWgslData)?.type);
+}
+
+export function isWgslHostShareableData(
+  value: unknown,
+): value is AnyHostShareableWgslData {
+  return wgslHostShareableTypeLiterals.includes(
+    (value as AnyHostShareableWgslData)?.type,
+  );
 }
 
 /**

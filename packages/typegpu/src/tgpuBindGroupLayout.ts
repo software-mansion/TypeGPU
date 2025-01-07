@@ -43,9 +43,9 @@ import {
   type Sampled,
   isUsableAsSampled,
 } from './core/texture/usageExtension';
-import type { AnyData } from './data';
+import type { AnyHostShareableData } from './data/dataTypes';
 import type { Exotic } from './data/exotic';
-import type { AnyWgslData, BaseWgslData } from './data/wgslTypes';
+import type { AnyHostShareableWgslData, BaseWgslData } from './data/wgslTypes';
 import { NotUniformError } from './errors';
 import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
 import type { TgpuNamable } from './namable';
@@ -77,11 +77,13 @@ export type TgpuLayoutEntryBase = {
 };
 
 export type TgpuLayoutUniform = TgpuLayoutEntryBase & {
-  uniform: AnyWgslData;
+  uniform: AnyHostShareableWgslData;
 };
 
 export type TgpuLayoutStorage = TgpuLayoutEntryBase & {
-  storage: AnyWgslData | ((arrayLength: number) => AnyWgslData);
+  storage:
+    | AnyHostShareableWgslData
+    | ((arrayLength: number) => AnyHostShareableWgslData);
   /** @default 'readonly' */
   access?: 'mutable' | 'readonly';
 };
@@ -135,7 +137,7 @@ type UnwrapRuntimeConstructorInner<
 > = T extends (_: number) => BaseWgslData ? ReturnType<T> : T;
 
 export type UnwrapRuntimeConstructor<
-  T extends AnyData | ((_: number) => AnyData),
+  T extends AnyHostShareableData | ((_: number) => AnyHostShareableData),
 > = T extends unknown ? UnwrapRuntimeConstructorInner<T> : never;
 
 export interface TgpuBindGroupLayout<

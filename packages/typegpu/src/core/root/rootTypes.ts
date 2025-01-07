@@ -1,5 +1,5 @@
 import type { OmitBuiltins } from '../../builtin';
-import type { AnyData } from '../../data/dataTypes';
+import type { AnyHostShareableData } from '../../data/dataTypes';
 import type { Exotic } from '../../data/exotic';
 import type { Vec4f } from '../../data/wgslTypes';
 import type { JitTranspiler } from '../../jitTranspiler';
@@ -185,7 +185,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param typeSchema The type of data that this buffer will hold.
    * @param initial The initial value of the buffer. (optional)
    */
-  createBuffer<TData extends AnyData>(
+  createBuffer<TData extends AnyHostShareableData>(
     typeSchema: TData,
     initial?: Infer<Exotic<TData>> | undefined,
   ): TgpuBuffer<Exotic<TData>>;
@@ -194,7 +194,7 @@ export interface TgpuRoot extends Unwrapper {
    * @param typeSchema The type of data that this buffer will hold.
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
-  createBuffer<TData extends AnyData>(
+  createBuffer<TData extends AnyHostShareableData>(
     typeSchema: TData,
     gpuBuffer: GPUBuffer,
   ): TgpuBuffer<Exotic<TData>>;

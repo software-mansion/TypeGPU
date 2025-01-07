@@ -1,5 +1,5 @@
 import type { OmitBuiltins } from '../../builtin';
-import type { AnyData } from '../../data/dataTypes';
+import type { AnyHostShareableData } from '../../data/dataTypes';
 import { invariant } from '../../errors';
 import type { JitTranspiler } from '../../jitTranspiler';
 import { WeakMemo } from '../../memo';
@@ -189,7 +189,7 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
     return this._commandEncoder;
   }
 
-  createBuffer<TData extends AnyData>(
+  createBuffer<TData extends AnyHostShareableData>(
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuBuffer<TData> {
@@ -263,7 +263,7 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
   unwrap(resource: TgpuComputePipeline): GPUComputePipeline;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
-  unwrap(resource: TgpuBuffer<AnyData>): GPUBuffer;
+  unwrap(resource: TgpuBuffer<AnyHostShareableData>): GPUBuffer;
   unwrap(resource: TgpuTexture): GPUTexture;
   unwrap(
     resource:
@@ -277,7 +277,7 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
       | TgpuComputePipeline
       | TgpuBindGroupLayout
       | TgpuBindGroup
-      | TgpuBuffer<AnyData>
+      | TgpuBuffer<AnyHostShareableData>
       | TgpuTexture
       | TgpuReadonlyTexture
       | TgpuWriteonlyTexture

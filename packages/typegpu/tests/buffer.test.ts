@@ -181,4 +181,9 @@ describe('TgpuBuffer', () => {
         .$usage('storage');
     }).toThrow();
   });
+
+  it('should not allow the use of non-host-shareable data', ({ root }) => {
+    // @ts-expect-error
+    const buffer = root.createBuffer(d.bool);
+  });
 });

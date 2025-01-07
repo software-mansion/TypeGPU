@@ -1,5 +1,9 @@
 import type { TgpuBuffer, Vertex } from '../../core/buffer/buffer';
-import type { AnyWgslData, WgslArray } from '../../data/wgslTypes';
+import type {
+  AnyHostShareableWgslData,
+  AnyWgslData,
+  WgslArray,
+} from '../../data/wgslTypes';
 import { MissingBindGroupError } from '../../errors';
 import type { TgpuNamable } from '../../namable';
 import { resolve } from '../../resolutionCtx';
@@ -135,7 +139,7 @@ export function INTERNAL_createRenderPipeline(
 
 type TgpuRenderPipelinePriors = {
   readonly vertexLayoutMap?:
-    | Map<TgpuVertexLayout, TgpuBuffer<AnyWgslData> & Vertex>
+    | Map<TgpuVertexLayout, TgpuBuffer<AnyHostShareableWgslData> & Vertex>
     | undefined;
   readonly bindGroupLayoutMap?:
     | Map<TgpuBindGroupLayout, TgpuBindGroup>
@@ -176,7 +180,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   ): TgpuRenderPipeline;
   with(
     definition: TgpuVertexLayout | TgpuBindGroupLayout,
-    resource: (TgpuBuffer<AnyWgslData> & Vertex) | TgpuBindGroup,
+    resource: (TgpuBuffer<AnyHostShareableWgslData> & Vertex) | TgpuBindGroup,
   ): TgpuRenderPipeline {
     if (isBindGroupLayout(definition)) {
       return new TgpuRenderPipelineImpl(this._core, {
@@ -193,7 +197,10 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
         ...this._priors,
         vertexLayoutMap: new Map([
           ...(this._priors.vertexLayoutMap ?? []),
-          [definition, resource as TgpuBuffer<AnyWgslData> & Vertex],
+          [
+            definition,
+            resource as TgpuBuffer<AnyHostShareableWgslData> & Vertex,
+          ],
         ]),
       });
     }
