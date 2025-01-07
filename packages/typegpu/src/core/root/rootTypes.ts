@@ -1,7 +1,7 @@
 import type { OmitBuiltins } from '../../builtin';
 import type { AnyHostShareableData } from '../../data/dataTypes';
 import type { Exotic } from '../../data/exotic';
-import type { Vec4f } from '../../data/wgslTypes';
+import type { AnyWgslData, Vec4f } from '../../data/wgslTypes';
 import type { JitTranspiler } from '../../jitTranspiler';
 import type { NameRegistry } from '../../nameRegistry';
 import type { Infer } from '../../shared/repr';
@@ -14,8 +14,10 @@ import type {
 } from '../../tgpuBindGroupLayout';
 import type { Unwrapper } from '../../unwrapper';
 import type { TgpuBuffer } from '../buffer/buffer';
+import type { TgpuBufferUsage } from '../buffer/bufferUsage';
 import type { IOLayout, IORecord } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
+import type { TgpuFn } from '../function/tgpuFn';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline';
@@ -23,7 +25,7 @@ import type {
   FragmentOutToTargets,
   TgpuRenderPipeline,
 } from '../pipeline/renderPipeline';
-import type { Eventual, TgpuSlot } from '../slot/slotTypes';
+import type { Eventual, TgpuAccessor, TgpuSlot } from '../slot/slotTypes';
 import type { TgpuTexture } from '../texture/texture';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute';
 
@@ -81,6 +83,10 @@ export interface WithFragment<
 
 export interface WithBinding {
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): WithBinding;
+  with<T extends AnyWgslData>(
+    accessor: TgpuAccessor<T>,
+    value: TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
+  ): WithBinding;
 
   withCompute(entryFn: TgpuComputeFn): WithCompute;
 

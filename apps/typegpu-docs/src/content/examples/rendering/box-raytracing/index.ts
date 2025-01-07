@@ -1,5 +1,5 @@
 import * as d from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
+import tgpu, { asUniform } from 'typegpu/experimental';
 import { cross, mul, normalize, sub } from 'typegpu/std';
 
 // init canvas and values
@@ -98,16 +98,12 @@ const renderBindGroupLayout = tgpu.bindGroupLayout({
   boxMatrix: { storage: boxMatrixBuffer.dataType },
   cameraPosition: { storage: cameraPositionBuffer.dataType },
   cameraAxes: { storage: cameraAxesBuffer.dataType },
-  canvasDims: { uniform: canvasDimsBuffer.dataType },
-  boxSize: { uniform: boxSizeBuffer.dataType },
 });
 
 const renderBindGroup = root.createBindGroup(renderBindGroupLayout, {
   boxMatrix: boxMatrixBuffer,
   cameraPosition: cameraPositionBuffer,
   cameraAxes: cameraAxesBuffer,
-  canvasDims: canvasDimsBuffer,
-  boxSize: boxSizeBuffer,
 });
 
 // functions
@@ -206,6 +202,9 @@ const vertexFunction = tgpu
 }`)
   .$name('vertex_main');
 
+const boxSizeAccessor = tgpu.accessor(d.u32);
+const canvasDimsAccessor = tgpu.accessor(CanvasDimsStruct);
+
 const fragmentFunction = tgpu
   .fragmentFn({ position: d.builtin.position }, d.vec4f)
   .does(/* wgsl */ `(@builtin(position) position: vec4f) -> @location(0) vec4f {
@@ -268,30 +267,26 @@ const fragmentFunction = tgpu
     Z,
     MAX_BOX_SIZE,
     cubeSize,
+    boxSize: boxSizeAccessor,
+    canvasDims: canvasDimsAccessor,
   })
   .$name('fragment_main');
 
 // pipeline
 
-const resolved = tgpu.resolve({
-  input: [vertexFunction, fragmentFunction],
-});
-
-const resolvedModule = root.device.createShaderModule({
-  code: resolved,
-});
-
-const pipeline = root.device.createRenderPipeline({
-  layout: root.device.createPipelineLayout({
-    bindGroupLayouts: [root.unwrap(renderBindGroupLayout)],
-  }),
-  vertex: { module: resolvedModule },
-  fragment: {
-    module: resolvedModule,
-    targets: [{ format: presentationFormat }],
-  },
-  primitive: { topology: 'triangle-strip' },
-});
+const pipeline = root
+  .with(
+    boxSizeAccessor,
+    tgpu
+      .fn([], d.u32)
+      .does('() -> u32 { return boxSize; }')
+      .$uses({ boxSize: asUniform(boxSizeBuffer) }),
+  )
+  .with(canvasDimsAccessor, asUniform(canvasDimsBuffer))
+  .withVertex(vertexFunction, {})
+  .withFragment(fragmentFunction, { format: presentationFormat })
+  .createPipeline()
+  .with(renderBindGroupLayout, renderBindGroup);
 
 // UI
 
@@ -338,26 +333,14 @@ onFrame((deltaTime) => {
   frame += (rotationSpeed * deltaTime) / 1000;
 
   const textureView = context.getCurrentTexture().createView();
-
-  const commandEncoder = root.device.createCommandEncoder();
-
-  const renderPassDescriptor: GPURenderPassDescriptor = {
-    colorAttachments: [
-      {
-        view: textureView,
-        clearValue: [0, 0, 0, 0],
-        loadOp: 'clear',
-        storeOp: 'store',
-      },
-    ],
-  };
-  const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-  passEncoder.setPipeline(pipeline);
-  passEncoder.setBindGroup(0, root.unwrap(renderBindGroup));
-  passEncoder.draw(6);
-  passEncoder.end();
-
-  root.device.queue.submit([commandEncoder.finish()]);
+  pipeline
+    .withColorAttachment({
+      view: textureView,
+      clearValue: [0, 0, 0, 0],
+      loadOp: 'clear',
+      storeOp: 'store',
+    })
+    .draw(6);
 
   root.flush();
 });
