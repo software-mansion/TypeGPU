@@ -471,6 +471,17 @@ export interface v4u extends NumberArrayView, Swizzle4<v2u, v3u, v4u> {
   w: number;
 }
 
+export type AnyVecInstance =
+  | v2f
+  | v2i
+  | v2u
+  | v3f
+  | v3i
+  | v3u
+  | v4f
+  | v4i
+  | v4u;
+
 export interface matBase<TColumn> extends NumberArrayView {
   readonly columns: readonly TColumn[];
 }
@@ -528,6 +539,8 @@ export interface mat4x4<TColumn> extends matBase<TColumn> {
 export interface m4x4f extends mat4x4<v4f> {
   readonly kind: 'mat4x4f';
 }
+
+export type AnyMatInstance = m2x2f | m3x3f | m4x4f;
 
 // #endregion
 

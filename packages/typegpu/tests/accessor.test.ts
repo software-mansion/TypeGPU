@@ -6,7 +6,6 @@ import tgpu, {
   ResolutionError,
   asUniform,
 } from '../src/experimental';
-import type { TgpuResolvable } from '../src/types';
 import { it } from './utils/extendedIt';
 import { parseResolved } from './utils/parseResolved';
 
@@ -17,7 +16,7 @@ const resolutionRootMock = {
   toString() {
     return '<root>';
   },
-} as TgpuResolvable;
+};
 
 describe('tgpu.accessor', () => {
   it('resolves to invocation of provided function', () => {

@@ -1,7 +1,7 @@
 import type { OmitBuiltins } from '../../builtin';
 import { type Vec4f, isWgslStruct } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
-import type { ResolutionCtx, TgpuResolvable } from '../../types';
+import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
 import { createFnCore } from './fnCore';
 import type {
   ExoticIO,
@@ -47,8 +47,7 @@ export interface TgpuFragmentFnShell<
 export interface TgpuFragmentFn<
   Varying extends IOLayout = IOLayout,
   Output extends IOLayout<Vec4f> = IOLayout<Vec4f>,
-> extends TgpuResolvable,
-    TgpuNamable {
+> extends TgpuNamable {
   readonly shell: TgpuFragmentFnShell<Varying, Output>;
   readonly outputType: IOLayoutToOutputSchema<Output>;
 
@@ -95,12 +94,12 @@ function createFragmentFn(
   shell: TgpuFragmentFnShell<IOLayout, IOLayout<Vec4f>>,
   implementation: Implementation,
 ): TgpuFragmentFn {
-  type This = TgpuFragmentFn;
+  type This = TgpuFragmentFn & Labelled & SelfResolvable;
 
   const core = createFnCore(shell, implementation);
   const outputType = createOutputType(core, implementation, shell.returnType);
 
-  return {
+  const result: This = {
     shell,
     outputType,
 
@@ -121,8 +120,10 @@ function createFragmentFn(
       return this;
     },
 
-    resolve(ctx: ResolutionCtx): string {
+    '~resolve'(ctx: ResolutionCtx): string {
       return core.resolve(ctx, '@fragment ');
     },
   };
+
+  return result;
 }

@@ -3,7 +3,7 @@ import type { Exotic, ExoticArray } from '../../data/exotic';
 import type { AnyWgslData } from '../../data/wgslTypes';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
-import type { ResolutionCtx, TgpuResolvable, Wgsl } from '../../types';
+import type { ResolutionCtx, SelfResolvable, Wgsl } from '../../types';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage';
 import {
   type Eventual,
@@ -64,8 +64,8 @@ interface TgpuFnBase<
 }
 
 export type TgpuFn<
-  Args extends AnyWgslData[],
-  Return extends AnyWgslData | undefined = undefined,
+  Args extends AnyWgslData[] = AnyWgslData[],
+  Return extends AnyWgslData | undefined = AnyWgslData | undefined,
 > = TgpuFnBase<Args, Return> &
   ((...args: InferArgs<Args>) => InferReturn<Return>);
 
@@ -117,11 +117,11 @@ function createFn<
   shell: TgpuFnShell<Args, Return>,
   implementation: Implementation,
 ): TgpuFn<Args, Return> {
-  type This = TgpuFnBase<Args, Return>;
+  type This = TgpuFnBase<Args, Return> & SelfResolvable;
 
   const core = createFnCore(shell, implementation);
 
-  const fnBase = {
+  const fnBase: This = {
     shell,
     resourceType: 'function' as const,
 
@@ -144,7 +144,7 @@ function createFn<
       ]);
     },
 
-    resolve(ctx: ResolutionCtx): string {
+    '~resolve'(ctx: ResolutionCtx): string {
       return core.resolve(ctx);
     },
   };
@@ -243,7 +243,7 @@ function createBoundFunction<
 }
 
 class FnCall<Args extends AnyWgslData[], Return extends AnyWgslData | undefined>
-  implements TgpuResolvable
+  implements SelfResolvable
 {
   constructor(
     private readonly _fn: TgpuFnBase<Args, Return>,
@@ -254,7 +254,7 @@ class FnCall<Args extends AnyWgslData[], Return extends AnyWgslData | undefined>
     return this._fn.label;
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     return ctx.resolve(
       `${ctx.resolve(this._fn)}(${this._params.map((param) => ctx.resolve(param)).join(', ')})`,
     );

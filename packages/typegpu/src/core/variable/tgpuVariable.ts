@@ -3,7 +3,7 @@ import type { AnyWgslData } from '../../data/wgslTypes';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
-import type { ResolutionCtx, TgpuResolvable } from '../../types';
+import type { ResolutionCtx, SelfResolvable } from '../../types';
 
 // ----------
 // Public API
@@ -12,10 +12,9 @@ import type { ResolutionCtx, TgpuResolvable } from '../../types';
 export type VariableScope = 'private' | 'workgroup';
 
 export interface TgpuVar<
-  TScope extends VariableScope,
-  TDataType extends AnyWgslData,
-> extends TgpuResolvable,
-    TgpuNamable {
+  TScope extends VariableScope = VariableScope,
+  TDataType extends AnyWgslData = AnyWgslData,
+> extends TgpuNamable {
   value: Infer<TDataType>;
   readonly scope: TScope;
 }
@@ -50,7 +49,7 @@ export function workgroupVar<TDataType extends AnyWgslData>(
 // --------------
 
 class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyWgslData>
-  implements TgpuVar<TScope, TDataType>
+  implements TgpuVar<TScope, TDataType>, SelfResolvable
 {
   private _label: string | undefined;
 
@@ -65,7 +64,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyWgslData>
     return this;
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this._label);
 
     if (this._initialValue) {

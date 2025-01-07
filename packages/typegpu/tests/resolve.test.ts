@@ -49,7 +49,7 @@ describe('tgpu resolve', () => {
         return this;
       },
 
-      resolve(ctx: ResolutionCtx) {
+      '~resolve'(ctx: ResolutionCtx) {
         ctx.addDeclaration(
           '@group(0) @binding(0) var<uniform> intensity_1: f32;',
         );

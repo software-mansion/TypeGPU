@@ -1,13 +1,28 @@
 import type { Block } from 'tinyest';
+import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
+import type { TgpuConst } from './core/constant/tgpuConstant';
+import type { TgpuDeclare } from './core/declare/tgpuDeclare';
+import type { TgpuComputeFn } from './core/function/tgpuComputeFn';
 import type { TgpuFn } from './core/function/tgpuFn';
+import type { TgpuFragmentFn } from './core/function/tgpuFragmentFn';
+import type { TgpuVertexFn } from './core/function/tgpuVertexFn';
+import type { TgpuComputePipeline } from './core/pipeline/computePipeline';
+import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline';
+import type { TgpuSampler } from './core/sampler/sampler';
 import {
   type Eventual,
   type SlotValuePair,
+  type TgpuAccessor,
   isDerived,
   isProviding,
   isSlot,
 } from './core/slot/slotTypes';
+import type { TgpuExternalTexture } from './core/texture/externalTexture';
+import type { TgpuAnyTextureView, TgpuTexture } from './core/texture/texture';
+import type { TgpuVar } from './core/variable/tgpuVariable';
 import {
+  type AnyMatInstance,
+  type AnyVecInstance,
   type AnyWgslData,
   type BaseWgslData,
   isWgslData,
@@ -20,7 +35,24 @@ import type {
 } from './tgpuBindGroupLayout';
 
 export type ResolvableObject =
-  | TgpuResolvable
+  | SelfResolvable
+  | TgpuBufferUsage
+  | TgpuConst
+  | TgpuDeclare
+  | TgpuFn
+  | TgpuComputeFn
+  | TgpuFragmentFn
+  | TgpuComputePipeline
+  | TgpuRenderPipeline
+  | TgpuVertexFn
+  | TgpuSampler
+  | TgpuAccessor
+  | TgpuExternalTexture
+  | TgpuTexture
+  | TgpuAnyTextureView
+  | TgpuVar
+  | AnyVecInstance
+  | AnyMatInstance
   | AnyWgslData
   // biome-ignore lint/suspicious/noExplicitAny: <has to be more permissive than unknown>
   | TgpuFn<any, any>;
@@ -94,17 +126,21 @@ export interface ResolutionCtx {
   };
 }
 
-export interface TgpuResolvable {
-  readonly label?: string | undefined;
-  resolve(ctx: ResolutionCtx): string;
+/**
+ * Houses a method '~resolve` that returns a code string
+ * representing it, as opposed to offloading the resolution
+ * to another mechanism.
+ */
+export interface SelfResolvable {
+  '~resolve'(ctx: ResolutionCtx): string;
 }
 
-export function isResolvable(value: unknown): value is TgpuResolvable {
-  return (
-    !!value &&
-    (typeof value === 'object' || typeof value === 'function') &&
-    'resolve' in value
-  );
+export interface Labelled {
+  label?: string | undefined;
+}
+
+export function isSelfResolvable(value: unknown): value is SelfResolvable {
+  return typeof (value as SelfResolvable)?.['~resolve'] === 'function';
 }
 
 export function isWgsl(value: unknown): value is Wgsl {
@@ -112,7 +148,7 @@ export function isWgsl(value: unknown): value is Wgsl {
     typeof value === 'number' ||
     typeof value === 'boolean' ||
     typeof value === 'string' ||
-    isResolvable(value) ||
+    isSelfResolvable(value) ||
     isWgslData(value) ||
     isSlot(value) ||
     isDerived(value) ||

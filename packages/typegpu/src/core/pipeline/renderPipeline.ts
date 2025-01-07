@@ -478,7 +478,7 @@ class RenderPipelineCore {
       // Resolving code
       const { code, bindGroupLayouts, catchall } = resolve(
         {
-          resolve: (ctx) => {
+          '~resolve': (ctx) => {
             ctx.withSlots(slotBindings, () => {
               ctx.resolve(vertexFn);
               ctx.resolve(fragmentFn);

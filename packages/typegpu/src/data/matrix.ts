@@ -125,7 +125,7 @@ abstract class mat2x2Impl<TColumn extends v2f> implements mat2x2<TColumn> {
     this.columns[1].y = value;
   }
 
-  resolve(): string {
+  '~resolve'(): string {
     return `${this.kind}(${Array.from({ length: this.length })
       .map((_, i) => this[i])
       .join(', ')})`;
@@ -258,7 +258,7 @@ abstract class mat3x3Impl<TColumn extends v3f> implements mat3x3<TColumn> {
 
   set [11](_: number) {}
 
-  resolve(): string {
+  '~resolve'(): string {
     return `${this.kind}(${this[0]}, ${this[1]}, ${this[2]}, ${this[4]}, ${this[5]}, ${this[6]}, ${this[8]}, ${this[9]}, ${this[10]})`;
   }
 }
@@ -436,7 +436,7 @@ abstract class mat4x4Impl<TColumn extends v4f> implements mat4x4<TColumn> {
     this.columns[3].w = value;
   }
 
-  resolve(): string {
+  '~resolve'(): string {
     return `${this.kind}(${Array.from({ length: this.length })
       .map((_, i) => this[i])
       .join(', ')})`;

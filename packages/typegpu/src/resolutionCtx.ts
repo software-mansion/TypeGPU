@@ -30,7 +30,7 @@ import {
   bindGroupLayout,
 } from './tgpuBindGroupLayout';
 import type { FnToWgslOptions, ResolutionCtx, Resource, Wgsl } from './types';
-import { UnknownData, isResolvable, isWgsl } from './types';
+import { UnknownData, isSelfResolvable, isWgsl } from './types';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -476,8 +476,8 @@ class ResolutionCtxImpl implements ResolutionCtx {
         result = resolveData(this, item);
       } else if (isDerived(item) || isSlot(item)) {
         result = this.resolve(this.unwrap(item));
-      } else if (isResolvable(item)) {
-        result = item.resolve(this);
+      } else if (isSelfResolvable(item)) {
+        result = item['~resolve'](this);
       } else {
         result = this.resolveValue(item);
       }

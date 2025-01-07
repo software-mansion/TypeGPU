@@ -1,7 +1,7 @@
 import type { JitTranspiler } from '../../jitTranspiler';
 import { RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry';
 import { resolve as resolveImpl } from '../../resolutionCtx';
-import type { ResolvableObject, TgpuResolvable, Wgsl } from '../../types';
+import type { ResolvableObject, SelfResolvable, Wgsl } from '../../types';
 import { applyExternals, replaceExternalsInWgsl } from './externals';
 
 export interface TgpuResolveOptions {
@@ -17,7 +17,7 @@ export interface TgpuResolveOptions {
 export function resolve(options: TgpuResolveOptions): string {
   const { input, extraDependencies, names, jitTranspiler } = options;
 
-  const dependencies = {} as Record<string, TgpuResolvable>;
+  const dependencies = {} as Record<string, Wgsl>;
   applyExternals(dependencies, extraDependencies ?? {});
 
   const stringCode = (Array.isArray(input) ? input : [input]).filter(
@@ -27,8 +27,8 @@ export function resolve(options: TgpuResolveOptions): string {
     (item) => typeof item !== 'string',
   );
 
-  const resolutionObj: TgpuResolvable = {
-    resolve(ctx) {
+  const resolutionObj: SelfResolvable = {
+    '~resolve'(ctx) {
       const stringCodeResolved = stringCode.join('\n\n');
       for (const resolvable of resolvableCode) {
         ctx.resolve(resolvable);

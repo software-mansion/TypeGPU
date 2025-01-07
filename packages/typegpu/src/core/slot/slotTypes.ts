@@ -2,7 +2,6 @@ import type { AnyWgslData } from '../../data';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
 import type { TgpuFn } from '../function/tgpuFn';
-import type { TgpuResolvable } from './../../types';
 import type { TgpuBufferUsage } from './../buffer/bufferUsage';
 
 export interface TgpuSlot<T> extends TgpuNamable {
@@ -33,9 +32,8 @@ export interface TgpuDerived<T> {
   '~compute'(): T;
 }
 
-export interface TgpuAccessor<T extends AnyWgslData>
-  extends TgpuResolvable,
-    TgpuNamable {
+export interface TgpuAccessor<T extends AnyWgslData = AnyWgslData>
+  extends TgpuNamable {
   readonly resourceType: 'accessor';
 
   readonly schema: T;
