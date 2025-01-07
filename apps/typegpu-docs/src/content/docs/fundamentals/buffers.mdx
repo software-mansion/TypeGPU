@@ -114,7 +114,7 @@ const buffer = root.createBuffer(d.u32)
 ### Additional flags
 
 It is also possible to add any of the `GPUBufferUsage` flags to a typed buffer object, using the `.$addFlags` method.
-However it shouldn't be necessary in most scenarios as majority of the flags are handled automatically by the library 
+Though it shouldn't be necessary in most scenarios as majority of the flags are handled automatically by the library 
 or indirectly through the `.$usage` method.
 
 ```ts
@@ -122,8 +122,11 @@ buffer.$addFlags(GPUBufferUsage.QUERY_RESOLVE);
 ```
 
 :::note
-Every typed buffer has `COPY_DST` and `COPY_SRC` flags included by default.
+Every typed buffer created without providing existing GPU buffer has `COPY_DST` and `COPY_SRC` flags included by default.
 :::
+
+Flags can only be added this way if the typed buffer was not created with an existing GPU buffer. 
+If it was, then all flags need to be provided to the existing buffer when constructing it.
 
 ### Initial value
 
