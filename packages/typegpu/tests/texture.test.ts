@@ -10,7 +10,6 @@ import type { Render, Sampled } from '../src/core/texture/usageExtension';
 import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../src/data';
 import tgpu, { StrictNameRegistry } from '../src/experimental';
 import './utils/webgpuGlobals';
-import type { NotAllowed } from '../src/extension';
 import { it } from './utils/extendedIt';
 
 describe('TgpuTexture', () => {
@@ -190,8 +189,8 @@ describe('TgpuTexture', () => {
       names: new StrictNameRegistry(),
     };
 
-    const sampled1 = texture.asSampled();
-    const sampled2 = texture.asSampled({ dimension: '2d-array' });
+    const sampled1 = texture.createView('sampled');
+    const sampled2 = texture.createView('sampled', { dimension: '2d-array' });
 
     expect(tgpu.resolve({ input: sampled1 })).toContain('texture_2d<f32>');
 
@@ -200,7 +199,7 @@ describe('TgpuTexture', () => {
     );
   });
 
-  it('produces NotAllowed when getting view which is not allowed', ({
+  it('does not allow for creation of view when usage requirement is not met', ({
     root,
   }) => {
     const texture = root.createTexture({
@@ -208,39 +207,24 @@ describe('TgpuTexture', () => {
       format: 'rgba8unorm',
     });
 
-    const getSampled = () => texture.asSampled();
-    const getReadonly = () => texture.asReadonly();
-    const getWriteonly = () => texture.asWriteonly();
-    const getMutable = () => texture.asMutable();
+    // @ts-expect-error
+    const getSampled = () => texture.createView('sampled');
+    // @ts-expect-error
+    const getReadonly = () => texture.createView('readonly');
+    // @ts-expect-error
+    const getWriteonly = () => texture.createView('writeonly');
+    // @ts-expect-error
+    const getMutable = () => texture.createView('mutable');
 
-    expect(getSampled).toThrow();
-    expect(getReadonly).toThrow();
-    expect(getWriteonly).toThrow();
-    expect(getMutable).toThrow();
+    const texture2 = texture.$usage('sampled');
 
-    expectTypeOf(getSampled).toEqualTypeOf<
-      () =>
-        | NotAllowed<"missing .$usage('sampled')">
-        | TgpuSampledTexture<'2d', F32>
-    >();
-
-    expectTypeOf(getReadonly).toEqualTypeOf<
-      () =>
-        | NotAllowed<"missing .$usage('storage')">
-        | TgpuReadonlyTexture<'2d', Vec4f>
-    >();
-
-    expectTypeOf(getWriteonly).toEqualTypeOf<
-      () =>
-        | NotAllowed<"missing .$usage('storage')">
-        | TgpuWriteonlyTexture<'2d', Vec4f>
-    >();
-
-    expectTypeOf(getMutable).toEqualTypeOf<
-      () =>
-        | NotAllowed<"missing .$usage('storage')">
-        | TgpuMutableTexture<'2d', Vec4f>
-    >();
+    const getSampled2 = () => texture2.createView('sampled');
+    // @ts-expect-error
+    const getReadonly2 = () => texture2.createView('readonly');
+    // @ts-expect-error
+    const getWriteonly2 = () => texture2.createView('writeonly');
+    // @ts-expect-error
+    const getMutable2 = () => texture2.createView('mutable');
   });
 });
 
@@ -253,15 +237,15 @@ describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
       })
       .$usage('storage');
 
-    expectTypeOf(texture1.asReadonly()).toEqualTypeOf<
+    expectTypeOf(texture1.createView('readonly')).toEqualTypeOf<
       TgpuReadonlyTexture<'2d', Vec4f>
     >();
 
-    expectTypeOf(texture1.asWriteonly()).toEqualTypeOf<
+    expectTypeOf(texture1.createView('writeonly')).toEqualTypeOf<
       TgpuWriteonlyTexture<'2d', Vec4f>
     >();
 
-    expectTypeOf(texture1.asMutable()).toEqualTypeOf<
+    expectTypeOf(texture1.createView('mutable')).toEqualTypeOf<
       TgpuMutableTexture<'2d', Vec4f>
     >();
 
@@ -273,15 +257,15 @@ describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
       })
       .$usage('storage');
 
-    expectTypeOf(texture2.asReadonly()).toEqualTypeOf<
+    expectTypeOf(texture2.createView('readonly')).toEqualTypeOf<
       TgpuReadonlyTexture<'3d', Vec4u>
     >();
 
-    expectTypeOf(texture2.asWriteonly()).toEqualTypeOf<
+    expectTypeOf(texture2.createView('writeonly')).toEqualTypeOf<
       TgpuWriteonlyTexture<'3d', Vec4u>
     >();
 
-    expectTypeOf(texture2.asMutable()).toEqualTypeOf<
+    expectTypeOf(texture2.createView('mutable')).toEqualTypeOf<
       TgpuMutableTexture<'3d', Vec4u>
     >();
 
@@ -294,15 +278,15 @@ describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
       })
       .$usage('storage');
 
-    expectTypeOf(texture3.asReadonly()).toEqualTypeOf<
+    expectTypeOf(texture3.createView('readonly')).toEqualTypeOf<
       TgpuReadonlyTexture<'1d', Vec4i>
     >();
 
-    expectTypeOf(texture3.asWriteonly()).toEqualTypeOf<
+    expectTypeOf(texture3.createView('writeonly')).toEqualTypeOf<
       TgpuWriteonlyTexture<'1d', Vec4i>
     >();
 
-    expectTypeOf(texture3.asMutable()).toEqualTypeOf<
+    expectTypeOf(texture3.createView('mutable')).toEqualTypeOf<
       TgpuMutableTexture<'1d', Vec4i>
     >();
   });
@@ -318,17 +302,17 @@ describe('TgpuReadonlyTexture/TgpuWriteonlyTexture/TgpuMutableTexture', () => {
       })
       .$usage('storage');
 
-    texture.asReadonly({
+    texture.createView('readonly', {
       // @ts-expect-error
       format: 'rgba8snorm',
     });
 
-    texture.asWriteonly({
+    texture.createView('writeonly', {
       // @ts-expect-error
       format: 'rg32uint',
     });
 
-    texture.asMutable({
+    texture.createView('mutable', {
       // @ts-expect-error
       format: 'rgba32float',
     });
@@ -344,7 +328,7 @@ describe('TgpuSampledTexture', () => {
       })
       .$usage('sampled');
 
-    expectTypeOf(texture1.asSampled()).toEqualTypeOf<
+    expectTypeOf(texture1.createView('sampled')).toEqualTypeOf<
       TgpuSampledTexture<'2d', F32>
     >();
 
@@ -356,7 +340,7 @@ describe('TgpuSampledTexture', () => {
       })
       .$usage('sampled');
 
-    expectTypeOf(texture2.asSampled()).toEqualTypeOf<
+    expectTypeOf(texture2.createView('sampled')).toEqualTypeOf<
       TgpuSampledTexture<'3d', U32>
     >();
 
@@ -369,7 +353,7 @@ describe('TgpuSampledTexture', () => {
       })
       .$usage('sampled');
 
-    expectTypeOf(texture3.asSampled()).toEqualTypeOf<
+    expectTypeOf(texture3.createView('sampled')).toEqualTypeOf<
       TgpuSampledTexture<'1d', I32>
     >();
   });
@@ -385,7 +369,7 @@ describe('TgpuSampledTexture', () => {
       })
       .$usage('sampled');
 
-    texture.asSampled({
+    texture.createView('sampled', {
       // @ts-expect-error
       format: 'rgba8snorm',
     });
