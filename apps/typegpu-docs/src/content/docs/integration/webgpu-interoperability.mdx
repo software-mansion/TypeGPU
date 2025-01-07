@@ -291,13 +291,13 @@ const layout = tgpu.bindGroupLayout({
 -});
 +}).$idx(0); // <- forces code-gen to assign `0` as the group index.
 
-const rawShader = /* wgsl*/ `
+const rawShader = /* wgsl */ `
 -  @group(0) @binding(0) var<uniform> ambientColor: vec3f;
 -  @group(0) @binding(1) var<uniform> intensity: f32;
 -
   @fragment
   fn main() -> @location(0) vec4f {
-    return vec4f(ambientColor * intensity), 1.);
+    return vec4f(ambientColor * intensity, 1.);
   }
 `;
 
