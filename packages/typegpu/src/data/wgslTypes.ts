@@ -7,7 +7,7 @@ import type {
 
 type DecoratedLocation<T extends BaseWgslData> = Decorated<
   T,
-  Location<number>[] | []
+  Location<number>[]
 >;
 
 export interface NumberArrayView {
@@ -726,7 +726,7 @@ export interface Decorated<
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
   readonly '~memIdent': TAttribs extends Location<number>[]
-    ? MemIdentity<TInner>
+    ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<TInner, TAttribs>;
 }
 

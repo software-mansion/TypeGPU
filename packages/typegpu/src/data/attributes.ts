@@ -268,7 +268,9 @@ class DecoratedImpl<TInner extends BaseWgslData, TAttribs extends unknown[]>
   implements Decorated<TInner, TAttribs>
 {
   public readonly type = 'decorated';
-  public readonly '~memIdent'!: MemIdentity<TInner>;
+  public readonly '~memIdent'!: TAttribs extends Location<number>[]
+    ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
+    : Decorated<TInner, TAttribs>;
 }
 
 class LooseDecoratedImpl<
