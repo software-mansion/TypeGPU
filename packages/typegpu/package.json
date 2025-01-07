@@ -15,12 +15,6 @@
       "import": "./dist/index.js",
       "default": "./dist/index.cjs"
     },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "module": "./dist/*.js",
-      "import": "./dist/*.js",
-      "default": "./dist/*.cjs"
-    },
     "./data": {
       "types": "./dist/data/index.d.ts",
       "module": "./dist/data/index.js",
