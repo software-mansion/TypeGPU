@@ -667,7 +667,7 @@ export class TgpuBindGroupImpl<
               }
 
               resource = unwrapper.unwrap(
-                value.asSampled() as TgpuSampledTexture,
+                (value as TgpuTexture & Sampled).createView('sampled'),
               );
             } else {
               resource = value as GPUTextureView;
@@ -689,15 +689,15 @@ export class TgpuBindGroupImpl<
 
               if (entry.access === 'readonly') {
                 resource = unwrapper.unwrap(
-                  value.asReadonly() as TgpuReadonlyTexture,
+                  (value as TgpuTexture & Storage).createView('readonly'),
                 );
               } else if (entry.access === 'mutable') {
                 resource = unwrapper.unwrap(
-                  value.asMutable() as TgpuMutableTexture,
+                  (value as TgpuTexture & Storage).createView('mutable'),
                 );
               } else {
                 resource = unwrapper.unwrap(
-                  value.asReadonly() as TgpuReadonlyTexture,
+                  (value as TgpuTexture & Storage).createView('writeonly'),
                 );
               }
             } else {
