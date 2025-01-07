@@ -1,7 +1,7 @@
 {
   "name": "tinyest",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0-alpha.0",
   "description": "A compact, fast, and embeddable JavaScript AST for transpilation.",
   "license": "MIT",
   "type": "module",
@@ -35,13 +35,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/software-mansion/typegpu.git"
+    "url": "git+https://github.com/software-mansion/TypeGPU.git"
   },
   "keywords": ["ast", "javascript"],
   "bugs": {
-    "url": "https://github.com/software-mansion/typegpu/issues"
+    "url": "https://github.com/software-mansion/TypeGPU/issues"
   },
-  "homepage": "https://docs.swmansion.com/typegpu",
+  "homepage": "https://docs.swmansion.com/TypeGPU",
   "devDependencies": {
     "typescript": "^5.3.3",
     "tsup": "^8.0.2",

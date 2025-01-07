@@ -1,6 +1,6 @@
-import { transpileFn } from '@typegpu/tgsl-tools';
 import { parse } from 'acorn';
 import type { Block } from 'tinyest';
+import { transpileFn } from 'tinyest-for-wgsl';
 
 /**
  * Information extracted from transpiling a JS function.

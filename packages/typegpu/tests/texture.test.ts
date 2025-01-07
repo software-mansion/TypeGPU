@@ -8,8 +8,7 @@ import type {
 } from '../src/core/texture/texture';
 import type { Render, Sampled } from '../src/core/texture/usageExtension';
 import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../src/data';
-import { StrictNameRegistry, wgsl } from '../src/experimental';
-import { resolve } from '../src/resolutionCtx';
+import tgpu, { StrictNameRegistry } from '../src/experimental';
 import './utils/webgpuGlobals';
 import type { NotAllowed } from '../src/extension';
 import { it } from './utils/extendedIt';
@@ -194,11 +193,9 @@ describe('TgpuTexture', () => {
     const sampled1 = texture.asSampled();
     const sampled2 = texture.asSampled({ dimension: '2d-array' });
 
-    expect(resolve(wgsl`let x = ${sampled1};`, opts).code).toContain(
-      'texture_2d<f32>',
-    );
+    expect(tgpu.resolve({ input: sampled1 })).toContain('texture_2d<f32>');
 
-    expect(resolve(wgsl`let x = ${sampled2};`, opts).code).toContain(
+    expect(tgpu.resolve({ input: sampled2 })).toContain(
       'texture_2d_array<f32>',
     );
   });
@@ -222,19 +219,27 @@ describe('TgpuTexture', () => {
     expect(getMutable).toThrow();
 
     expectTypeOf(getSampled).toEqualTypeOf<
-      () => NotAllowed<"missing .$usage('sampled')">
+      () =>
+        | NotAllowed<"missing .$usage('sampled')">
+        | TgpuSampledTexture<'2d', F32>
     >();
 
     expectTypeOf(getReadonly).toEqualTypeOf<
-      () => NotAllowed<"missing .$usage('storage')">
+      () =>
+        | NotAllowed<"missing .$usage('storage')">
+        | TgpuReadonlyTexture<'2d', Vec4f>
     >();
 
     expectTypeOf(getWriteonly).toEqualTypeOf<
-      () => NotAllowed<"missing .$usage('storage')">
+      () =>
+        | NotAllowed<"missing .$usage('storage')">
+        | TgpuWriteonlyTexture<'2d', Vec4f>
     >();
 
     expectTypeOf(getMutable).toEqualTypeOf<
-      () => NotAllowed<"missing .$usage('storage')">
+      () =>
+        | NotAllowed<"missing .$usage('storage')">
+        | TgpuMutableTexture<'2d', Vec4f>
     >();
   });
 });

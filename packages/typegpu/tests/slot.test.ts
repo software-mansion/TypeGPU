@@ -1,12 +1,12 @@
+import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data';
 import tgpu, {
   MissingSlotValueError,
   ResolutionError,
-  wgsl,
 } from '../src/experimental';
 import type { TgpuResolvable } from '../src/types';
-import { parseWGSL } from './utils/parseWGSL';
+import { parseResolved } from './utils/parseResolved';
 
 const RED = 'vec3f(1., 0., 0.)';
 const GREEN = 'vec3f(0., 1., 0.)';
@@ -34,10 +34,10 @@ describe('tgpu.slot', () => {
       .$name('getColor')
       .$uses({ colorSlot });
 
-    const actual = tgpu.resolve({ input: getColor, names: 'strict' });
+    const actual = parseResolved(getColor);
 
-    expect(parseWGSL(actual)).toEqual(
-      parseWGSL(/* wgsl */ `
+    expect(actual).toEqual(
+      parse(/* wgsl */ `
       fn getColor() -> vec3f {
         return ${RED};
       }
@@ -67,10 +67,9 @@ describe('tgpu.slot', () => {
       .$name('main')
       .$uses({ getColorWithGreen });
 
-    const actual = tgpu.resolve({ input: main, names: 'strict' });
-
-    expect(parseWGSL(actual)).toEqual(
-      parseWGSL(/* wgsl */ `
+    const actual = parseResolved(main);
+    expect(actual).toEqual(
+      parse(/* wgsl */ `
       fn getColor() -> vec3f {
         return ${GREEN};
       }
@@ -104,11 +103,11 @@ describe('tgpu.slot', () => {
       .$name('main')
       .$uses({ getColorWithGreen });
 
-    const actual = tgpu.resolve({ input: main, names: 'strict' });
+    const actual = parseResolved(main);
 
     // should be green
-    expect(parseWGSL(actual)).toEqual(
-      parseWGSL(wgsl`
+    expect(actual).toEqual(
+      parse(`
         fn getColor() {
           return vec3f(0., 1., 0.);
         }
@@ -171,9 +170,9 @@ describe('tgpu.slot', () => {
       .$uses({ getColorWithRed, wrapperFn })
       .$name('main');
 
-    const actual = tgpu.resolve({ input: main, names: 'strict' });
+    const actual = parseResolved(main);
 
-    const expected = /* wgsl */ `
+    const expected = parse(/* wgsl */ `
       fn getColor() -> vec3f {
         return ${RED};
       }
@@ -190,9 +189,9 @@ describe('tgpu.slot', () => {
         getColor();
         wrapper();
       }
-    `;
+    `);
 
-    expect(parseWGSL(actual)).toEqual(parseWGSL(expected));
+    expect(actual).toEqual(expected);
   });
 
   it('reuses common nested functions', () => {
@@ -261,9 +260,9 @@ describe('tgpu.slot', () => {
       })
       .$name('main');
 
-    const actual = tgpu.resolve({ input: main, names: 'strict' });
+    const actual = parseResolved(main);
 
-    const expected = wgsl`
+    const expected = parse(`
       fn getSize() -> f32 {
         return 1;
       }
@@ -322,9 +321,9 @@ describe('tgpu.slot', () => {
         wrapper_2();
         wrapper_3();
       }
-    `;
+    `);
 
-    expect(parseWGSL(actual)).toEqual(parseWGSL(expected));
+    expect(actual).toEqual(expected);
   });
 
   it('unwraps layers of slots', () => {
@@ -358,16 +357,15 @@ describe('tgpu.slot', () => {
       .with(slotA, slotB);
     const main = tgpu.fn([]).does('() { fn4(); }').$uses({ fn4 }).$name('main');
 
-    const actual = tgpu.resolve({ input: main, names: 'strict' });
-
-    const expected = /* wgsl */ `
+    const actual = parseResolved(main);
+    const expected = parse(/* wgsl */ `
       fn fn1() { let value = 4; }
       fn fn2() { fn1(); }
       fn fn3() { fn2(); }
       fn fn4() { fn3(); }
       fn main() { fn4(); }
-    `;
+    `);
 
-    expect(parseWGSL(actual)).toEqual(parseWGSL(expected));
+    expect(actual).toEqual(expected);
   });
 });

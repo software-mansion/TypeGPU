@@ -1,5 +1,5 @@
 import * as d from 'typegpu/data';
-import tgpu, { asUniform, asMutable, asReadonly } from 'typegpu/experimental';
+import tgpu, { asMutable, asReadonly, asUniform } from 'typegpu/experimental';
 
 const root = await tgpu.init();
 
@@ -19,15 +19,15 @@ canvas.addEventListener('contextmenu', (event) => {
   }
 });
 
-const MAX_WATER_LEVEL_UNPRESSURIZED = '510u';
+const MAX_WATER_LEVEL_UNPRESSURIZED = 'u32(0xFF)';
 const MAX_WATER_LEVEL = '((1u << 24) - 1u)';
 const MAX_PRESSURE = '12u';
 
 const options = {
-  size: 64,
-  timestep: 25,
+  size: 32,
+  timestep: 50,
   stepsPerTimestep: 1,
-  workgroupSize: 16,
+  workgroupSize: 1,
   viscosity: 1000,
   brushSize: 0,
   brushType: 'water',
@@ -198,7 +198,7 @@ const checkForFlagsAndBounds = tgpu
 
   if (isWaterSource(x, y)) {
     persistFlags(x, y);
-    addToCell(x, y, 10u);
+    addToCell(x, y, 20u);
     return false;
   }
 
@@ -235,7 +235,7 @@ const decideWaterLevel = tgpu
     return;
   }
 
-  var remainingWater: u32 = getWaterLevel(x, y);
+  var remainingWater = getWaterLevel(x, y);
 
   if (remainingWater == 0u) {
     return;
@@ -305,25 +305,9 @@ const decideWaterLevel = tgpu
     getStableStateBelow,
     subtractFromCell,
     addToCell,
+    updateCell,
     viscosityData: viscosityUniform,
   });
-
-const compute = tgpu
-  .computeFn([d.builtin.globalInvocationId], {
-    workgroupSize: [options.workgroupSize, options.workgroupSize],
-  })
-  .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
-  let x = gid.x;
-  let y = gid.y;
-  decideWaterLevel(x, y);
-}`)
-  .$uses({ decideWaterLevel });
-
-console.log(
-  tgpu.resolve({
-    input: [compute],
-  }),
-);
 
 const vertex = tgpu
   .vertexFn(
@@ -340,9 +324,7 @@ const vertex = tgpu
   let x = ((f32(idx % w) + squareData.x) / f32(w) - 0.5) * 2. * f32(w) / f32(max(w, h));
   let y = (f32((idx - (idx % w)) / w + u32(squareData.y)) / f32(h) - 0.5) * 2. * f32(h) / f32(max(w, h));
   let cellFlags = currentStateData >> 24;
-  let cellVal = f32(currentStateData & 0xFFFFFF);
-  var cell: f32;
-  cell = cellVal;
+  var cell = f32(currentStateData & 0xFFFFFF);
   if (cellFlags == 1u) {
     cell = -1.;
   }
@@ -352,7 +334,7 @@ const vertex = tgpu
   if (cellFlags == 3u) {
     cell = -3.;
   }
-  return VertexOut(vec4<f32>(x, y, 0., 1.), cell);
+  return VertexOut(vec4f(x, y, 0., 1.), cell);
 }`)
   .$uses({
     sizeData: sizeUniform,
@@ -360,27 +342,24 @@ const vertex = tgpu
 
 const fragment = tgpu.fragmentFn({ cell: d.f32 }, d.vec4f).does(/* wgsl */ `(@location(0) cell: f32) -> @location(0) vec4f {
   if (cell == -1.) {
-    return vec4<f32>(0.5, 0.5, 0.5, 1.);
+    return vec4f(0.5, 0.5, 0.5, 1.);
   }
   if (cell == -2.) {
-    return vec4<f32>(0., 1., 0., 1.);
+    return vec4f(0., 1., 0., 1.);
   }
   if (cell == -3.) {
-    return vec4<f32>(1., 0., 0., 1.);
+    return vec4f(1., 0., 0., 1.);
   }
 
-  var r = f32((u32(cell) >> 16) & 0xFF)/255.;
-  var g = f32((u32(cell) >> 8) & 0xFF)/255.;
-  var b = f32(u32(cell) & 0xFF)/255.;
-  if (r > 0.) { g = 1.;}
-  if (g > 0.) { b = 1.;}
-  if (b > 0. && b < 0.5) { b = 0.5;}
+  let normalized = min(cell / f32(0xFF), 1.);
 
-  if (r == 0. && g == 0. && b == 0.) {
-    return vec4<f32>(0.937, 0.937, 0.976, 1.);
+  if (normalized == 0.) {
+    return vec4f(0.937, 0.937, 0.976, 1.);
   }
 
-  return vec4f(r, g, b, 1.);
+  let res = 1. / (1. + exp(-(normalized - 0.2) * 10.));
+  return vec4f(0, 0, max(0.5, res), res);
+
 }`);
 
 const vertexInstanceLayout = tgpu.vertexLayout(
@@ -402,6 +381,15 @@ let renderChanges: () => void;
 function resetGameData() {
   drawCanvasData = new Uint32Array(options.size * options.size);
 
+  const compute = tgpu
+    .computeFn([d.builtin.globalInvocationId], {
+      workgroupSize: [options.workgroupSize, options.workgroupSize],
+    })
+    .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
+    decideWaterLevel(gid.x, gid.y);
+  }`)
+    .$uses({ decideWaterLevel });
+
   const cpp = root.withCompute(compute).createPipeline();
   const vp = root
     .withVertex(vertex, {
@@ -414,7 +402,9 @@ function resetGameData() {
     .withPrimitive({
       topology: 'triangle-strip',
     })
-    .createPipeline();
+    .createPipeline()
+    .with(vertexLayout, squareBuffer)
+    .with(vertexInstanceLayout, currentStateBuffer);
 
   currentStateBuffer.write(Array.from({ length: 1024 ** 2 }, () => 0));
   nextStateBuffer.write(Array.from({ length: 1024 ** 2 }, () => 0));
@@ -433,14 +423,11 @@ function resetGameData() {
       clearValue: [0, 0, 0, 0],
       loadOp: 'clear' as const,
       storeOp: 'store' as const,
-    })
-      .with(vertexLayout, squareBuffer)
-      .with(vertexInstanceLayout, currentStateBuffer)
-      .draw(4, options.size ** 2);
+    }).draw(4, options.size ** 2);
 
     root.flush();
 
-    nextStateBuffer.copyFrom(currentStateBuffer);
+    currentStateBuffer.copyFrom(nextStateBuffer);
   };
 
   applyDrawCanvas = () => {
@@ -607,7 +594,7 @@ onFrame((deltaTime: number) => {
 
 export const controls = {
   size: {
-    initial: '64',
+    initial: '32',
     options: [16, 32, 64, 128, 256, 512, 1024].map((x) => x.toString()),
     onSelectChange: (value: string) => {
       options.size = Number.parseInt(value);
@@ -616,7 +603,7 @@ export const controls = {
   },
 
   'timestep (ms)': {
-    initial: 15,
+    initial: 50,
     min: 15,
     max: 100,
     step: 1,
@@ -626,7 +613,7 @@ export const controls = {
   },
 
   'steps per timestep': {
-    initial: 10,
+    initial: 1,
     min: 1,
     max: 50,
     step: 1,
@@ -636,7 +623,7 @@ export const controls = {
   },
 
   'workgroup size': {
-    initial: '16',
+    initial: '1',
     options: [1, 2, 4, 8, 16].map((x) => x.toString()),
     onSelectChange: (value: string) => {
       options.workgroupSize = Number.parseInt(value);

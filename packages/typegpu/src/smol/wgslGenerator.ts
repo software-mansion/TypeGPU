@@ -1,5 +1,4 @@
 import type * as smol from 'tinyest';
-import { isSlot } from '../core/slot/slotTypes';
 import { bool } from '../data';
 import { isWgslData } from '../data/wgslTypes';
 import {
@@ -7,7 +6,6 @@ import {
   type Resource,
   UnknownData,
   type Wgsl,
-  isResolvable,
   isWgsl,
 } from '../types';
 
@@ -16,7 +14,6 @@ export type GenerationCtx = ResolutionCtx & {
   indent(): string;
   dedent(): string;
   getById(id: string): Resource;
-  // getDataType(node: smol.AnyNode): AnyTgpuData;
 };
 
 function resolveRes(ctx: GenerationCtx, res: Resource): string {
@@ -41,7 +38,7 @@ function generateBoolean(ctx: GenerationCtx, value: boolean): Resource {
 
 function generateBlock(ctx: GenerationCtx, value: smol.Block): string {
   return `${ctx.indent()}{
-${value.block.map((statement) => generateStatement(ctx, statement)).join('\n')}
+${value.b.map((statement) => generateStatement(ctx, statement)).join('\n')}
 ${ctx.dedent()}}`;
 }
 
@@ -61,10 +58,10 @@ function generateExpression(
     return generateBoolean(ctx, expression);
   }
 
-  if ('x2' in expression) {
+  if ('x' in expression) {
     // Logical/Binary/Assignment Expression
 
-    const [lhs, op, rhs] = expression.x2;
+    const [lhs, op, rhs] = expression.x;
     const lhsExpr = resolveRes(ctx, generateExpression(ctx, lhs));
     const rhsExpr = resolveRes(ctx, generateExpression(ctx, rhs));
     return {
@@ -74,18 +71,22 @@ function generateExpression(
     };
   }
 
-  if ('.' in expression) {
+  if ('a' in expression) {
     // Member Access
 
-    const [targetId, property] = expression['.'];
+    const [targetId, property] = expression.a;
     const target = generateExpression(ctx, targetId);
     const propertyStr = resolveRes(ctx, generateExpression(ctx, property));
 
-    if (
-      isResolvable(target.value) ||
-      isSlot(target.value) ||
-      typeof target.value === 'object'
-    ) {
+    if (typeof target.value === 'string') {
+      return {
+        value: `${target.value}.${propertyStr}`,
+        // TODO: Infer data type
+        dataType: UnknownData,
+      };
+    }
+
+    if (isWgsl(target.value)) {
       // NOTE: Temporary solution, assuming that access to `.value` of resolvables should always resolve to just the target.
       if (propertyStr === 'value') {
         return {
@@ -103,19 +104,22 @@ function generateExpression(
       };
     }
 
-    const targetStr = resolveRes(ctx, target);
+    if (typeof target.value === 'object') {
+      return {
+        // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
+        value: (target.value as any)[propertyStr],
+        // TODO: Infer data type
+        dataType: UnknownData,
+      };
+    }
 
-    return {
-      value: `${targetStr}.${propertyStr}`,
-      // TODO: Infer data type
-      dataType: UnknownData,
-    };
+    throw new Error(`Cannot access member ${propertyStr} of ${target.value}`);
   }
 
-  if ('[]' in expression) {
+  if ('i' in expression) {
     // Index Access
 
-    const [target, property] = expression['[]'];
+    const [target, property] = expression.i;
     const targetStr = resolveRes(ctx, generateExpression(ctx, target));
     const propertyStr = resolveRes(ctx, generateExpression(ctx, property));
 
@@ -126,42 +130,37 @@ function generateExpression(
     };
   }
 
-  if ('num' in expression) {
+  if ('n' in expression) {
     // Numeric Literal
 
     // TODO: Infer numeric data type from literal
-    return { value: expression.num, dataType: UnknownData };
+    return { value: expression.n, dataType: UnknownData };
   }
 
-  if ('call' in expression) {
+  if ('f' in expression) {
     // Function Call
 
-    const id = generateExpression(ctx, expression.call);
+    const [callee, args] = expression.f;
+    const id = generateExpression(ctx, callee);
     const idValue = id.value;
 
-    const argResources = expression.args.map((arg) =>
-      generateExpression(ctx, arg),
-    );
+    const argResources = args.map((arg) => generateExpression(ctx, arg));
     const argValues = argResources.map((res) => resolveRes(ctx, res));
 
-    if (
-      isResolvable(idValue) ||
-      isSlot(idValue) ||
-      typeof idValue === 'function'
-    ) {
-      // Assuming that `id` is callable
-      // TODO: Pass in resources, not just values.
-      const result = (idValue as unknown as (...args: unknown[]) => unknown)(
-        ...argValues,
-      ) as Wgsl;
-      // TODO: Make function calls return resources instead of just values.
-      return { value: result, dataType: UnknownData };
+    if (typeof idValue === 'string') {
+      return {
+        value: `${idValue}(${argValues.join(', ')})`,
+        dataType: UnknownData,
+      };
     }
 
-    return {
-      value: `${String(idValue)}(${argValues.join(', ')})`,
-      dataType: UnknownData,
-    };
+    // Assuming that `id` is callable
+    // TODO: Pass in resources, not just values.
+    const result = (idValue as unknown as (...args: unknown[]) => unknown)(
+      ...argValues,
+    ) as Wgsl;
+    // TODO: Make function calls return resources instead of just values.
+    return { value: result, dataType: UnknownData };
   }
 
   assertExhaustive(expression);
@@ -179,23 +178,22 @@ function generateStatement(
     return `${ctx.pre}${resolveRes(ctx, generateBoolean(ctx, statement))};`;
   }
 
-  if ('return' in statement) {
-    return statement.return === null
+  if ('r' in statement) {
+    return statement.r === null
       ? `${ctx.pre}return;`
-      : `${ctx.pre}return ${resolveRes(ctx, generateExpression(ctx, statement.return))};`;
+      : `${ctx.pre}return ${resolveRes(ctx, generateExpression(ctx, statement.r))};`;
   }
 
-  if ('if' in statement) {
-    const condition = resolveRes(ctx, generateExpression(ctx, statement.if));
+  if ('q' in statement) {
+    const [cond, cons, alt] = statement.q;
+    const condition = resolveRes(ctx, generateExpression(ctx, cond));
 
     ctx.indent(); // {
-    const consequent = generateStatement(ctx, statement.do);
+    const consequent = generateStatement(ctx, cons);
     ctx.dedent(); // }
 
     ctx.indent(); // {
-    const alternate = statement.else
-      ? generateStatement(ctx, statement.else)
-      : undefined;
+    const alternate = alt ? generateStatement(ctx, alt) : undefined;
     ctx.dedent(); // }
 
     if (!alternate) {
@@ -211,15 +209,10 @@ ${ctx.pre}else
 ${alternate}`;
   }
 
-  if ('let' in statement || 'const' in statement) {
-    const id = resolveRes(
-      ctx,
-      generateIdentifier(
-        ctx,
-        'let' in statement ? statement.let : statement.const,
-      ),
-    );
-    const eq = statement.eq ? generateExpression(ctx, statement.eq) : undefined;
+  if ('l' in statement || 'c' in statement) {
+    const [rawId, rawValue] = 'l' in statement ? statement.l : statement.c;
+    const id = resolveRes(ctx, generateIdentifier(ctx, rawId));
+    const eq = rawValue ? generateExpression(ctx, rawValue) : undefined;
 
     if (!eq) {
       throw new Error('Cannot create variable without an initial value.');
@@ -228,7 +221,7 @@ ${alternate}`;
     return `${ctx.pre}var ${id} = ${resolveRes(ctx, eq)};`;
   }
 
-  if ('block' in statement) {
+  if ('b' in statement) {
     // TODO: Push block scope layer onto the stack
     return generateBlock(ctx, statement);
   }

@@ -3,7 +3,7 @@ export interface NotAllowed<TMsg> {
 }
 
 export type ExtensionGuard<TFlag, TMsg, TAllowed> = boolean extends TFlag
-  ? NotAllowed<TMsg>
+  ? NotAllowed<TMsg> | TAllowed
   : TAllowed;
 
 // #region Shared usage extensions
