@@ -199,7 +199,7 @@ describe('TgpuTexture', () => {
     );
   });
 
-  it('does not allow for creation of vievw when usage requirement is not met', ({
+  it('does not allow for creation of view when usage requirement is not met', ({
     root,
   }) => {
     const texture = root.createTexture({

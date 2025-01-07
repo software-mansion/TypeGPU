@@ -318,6 +318,29 @@ class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
     return this as this & UnionToIntersection<LiteralToExtensionMap[T[number]]>;
   }
 
+  createView(
+    access: 'mutable' | 'readonly' | 'writeonly' | 'sampled',
+    params?: TextureViewParams<GPUTextureViewDimension, GPUTextureFormat>,
+  ) {
+    if (access === 'sampled') {
+      return this._asSampled(params);
+    }
+
+    const storageParams = params as TextureViewParams<
+      StorageTextureDimension,
+      StorageTextureTexelFormat
+    >;
+
+    switch (access) {
+      case 'mutable':
+        return this._asMutable(storageParams);
+      case 'readonly':
+        return this._asReadonly(storageParams);
+      case 'writeonly':
+        return this._asWriteonly(storageParams);
+    }
+  }
+
   private _asStorage(
     params:
       | TextureViewParams<StorageTextureDimension, StorageTextureTexelFormat>
@@ -335,30 +358,7 @@ class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
     return new TgpuFixedStorageTextureImpl(params ?? {}, access, this);
   }
 
-  createView(
-    access: 'mutable' | 'readonly' | 'writeonly' | 'sampled',
-    params?: TextureViewParams<GPUTextureViewDimension, GPUTextureFormat>,
-  ) {
-    if (access === 'sampled') {
-      return this.asSampled(params);
-    }
-
-    const storageParams = params as TextureViewParams<
-      StorageTextureDimension,
-      StorageTextureTexelFormat
-    >;
-
-    switch (access) {
-      case 'mutable':
-        return this.asMutable(storageParams);
-      case 'readonly':
-        return this.asReadonly(storageParams);
-      case 'writeonly':
-        return this.asWriteonly(storageParams);
-    }
-  }
-
-  asReadonly(
+  private _asReadonly(
     params?: TextureViewParams<
       StorageTextureDimension,
       StorageTextureTexelFormat
@@ -368,7 +368,7 @@ class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
     return this._asStorage(params, 'readonly') as any;
   }
 
-  asWriteonly(
+  private _asWriteonly(
     params?: TextureViewParams<
       StorageTextureDimension,
       StorageTextureTexelFormat
@@ -378,7 +378,7 @@ class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
     return this._asStorage(params, 'writeonly') as any;
   }
 
-  asMutable(
+  private _asMutable(
     params?: TextureViewParams<
       StorageTextureDimension,
       StorageTextureTexelFormat
@@ -388,7 +388,7 @@ class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
     return this._asStorage(params, 'mutable') as any;
   }
 
-  asSampled(
+  private _asSampled(
     params?: TextureViewParams<GPUTextureViewDimension, GPUTextureFormat>,
     // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
   ): any {
