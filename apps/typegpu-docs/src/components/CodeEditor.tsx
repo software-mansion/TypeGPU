@@ -3,14 +3,12 @@ import Editor, {
   type Monaco,
   type OnMount,
 } from '@monaco-editor/react';
-import typegpuJitDts from '@typegpu/jit/dist/index.d.ts?raw';
 import webgpuTypes from '@webgpu/types/dist/index.d.ts?raw';
 // biome-ignore lint/correctness/noUnusedImports: <its a namespace, Biome>
 import type { editor } from 'monaco-editor';
 import { entries, map, pipe } from 'remeda';
 import typedBinary from 'typed-binary/dist/index.d.ts?raw';
 import { tsCompilerOptions } from '../utils/liveEditor/embeddedTypeScript';
-import useEvent from '../utils/useEvent';
 
 const typegpuDtsFiles: Record<string, string> = import.meta.glob(
   '../../../../packages/typegpu/dist/**/*.d.ts',
@@ -60,7 +58,6 @@ function handleEditorWillMount(monaco: Monaco) {
     tsDefaults.addExtraLib(lib.content, lib.filename);
   }
   tsDefaults.addExtraLib(typedBinary, 'typed-binary.d.ts');
-  tsDefaults.addExtraLib(typegpuJitDts, 'typegpu-jit.d.ts');
 
   tsDefaults.setCompilerOptions({
     ...tsCompilerOptions,
@@ -68,7 +65,6 @@ function handleEditorWillMount(monaco: Monaco) {
       typegpu: ['typegpu/dist/index.d.ts'],
       'typegpu/experimental': ['typegpu/dist/experimental/index.d.ts'],
       'typegpu/data': ['typegpu/dist/data/index.d.ts'],
-      '@typegpu/jit': ['typegpu-jit.d.ts'],
     },
   });
 }
@@ -81,7 +77,6 @@ function handleEditorOnMount(editor: editor.IStandaloneCodeEditor) {
 
 type Props = {
   code: string;
-  onCodeChange: (value: string) => unknown;
   shown: boolean;
 };
 
@@ -92,18 +87,13 @@ const createCodeEditorComponent =
     onMount?: OnMount,
   ) =>
   (props: Props) => {
-    const { code, onCodeChange, shown } = props;
-
-    const handleChange = useEvent((value: string | undefined) => {
-      onCodeChange(value ?? '');
-    });
+    const { code, shown } = props;
 
     return (
       <div className={shown ? 'contents' : 'hidden'}>
         <Editor
           defaultLanguage={language}
           value={code}
-          onChange={handleChange}
           beforeMount={beforeMount}
           onMount={onMount}
           options={{

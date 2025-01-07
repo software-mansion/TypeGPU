@@ -8,7 +8,6 @@ import tgpu, {
   asUniform,
   asVertex,
   builtin,
-  wgsl,
   type TgpuBuffer,
 } from 'typegpu/experimental';
 

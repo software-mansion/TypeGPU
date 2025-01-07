@@ -1,8 +1,8 @@
 {
-  "name": "@typegpu/jit",
+  "name": "tinyest-for-wgsl",
   "private": true,
   "version": "0.0.0",
-  "description": "A Just-In-Time (JIT) transpiler for TypeGPU. Allows users to test out TestGPU without a build-step at the cost of memory and efficiency.",
+  "description": "Transforms JavaScript into its 'tinyest' form, to be used in generating equivalent (or close to) WGSL code.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -36,7 +36,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/software-mansion/typegpu.git"
+    "url": "git+https://github.com/software-mansion/TypeGPU.git"
   },
   "keywords": [
     "webgpu",
@@ -46,22 +46,22 @@
     "compute",
     "shader",
     "shaders",
-    "gpgpu"
+    "gpgpu",
+    "typegpu",
+    "tinyest"
   ],
   "bugs": {
-    "url": "https://github.com/software-mansion/typegpu/issues"
+    "url": "https://github.com/software-mansion/TypeGPU/issues"
   },
-  "homepage": "https://docs.swmansion.com/typegpu",
+  "homepage": "https://docs.swmansion.com/TypeGPU",
   "devDependencies": {
-    "typescript": "^5.3.3",
     "tsup": "^8.0.2",
-    "@typegpu/tgpu-dev-cli": "workspace:*",
-    "vitest": "^2.1.5"
+    "typescript": "^5.3.3",
+    "acorn": "^8.12.1",
+    "@typegpu/tgpu-dev-cli": "workspace:*"
   },
   "packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e",
   "dependencies": {
-    "acorn": "^8.12.1",
-    "tinyest": "workspace:~0.0.0",
-    "@typegpu/tgsl-tools": "workspace:~0.0.0"
+    "tinyest": "workspace:~0.1.0-alpha.0"
   }
 }
