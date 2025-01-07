@@ -725,7 +725,9 @@ export interface Decorated<
   readonly attribs: TAttribs;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
-  readonly '~memIdent': MemIdentity<TInner>;
+  readonly '~memIdent': TAttribs extends Location<number>[]
+    ? MemIdentity<TInner>
+    : Decorated<TInner, TAttribs>;
 }
 
 export const wgslTypeLiterals = [

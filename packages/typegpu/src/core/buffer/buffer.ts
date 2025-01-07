@@ -3,7 +3,7 @@ import { isWgslData } from '../../data';
 import { readData, writeData } from '../../data/dataIO';
 import type { AnyData } from '../../data/dataTypes';
 import { sizeOf } from '../../data/sizeOf';
-import type { BaseWgslData, WgslTypeLiteral } from '../../data/wgslTypes';
+import type { WgslTypeLiteral } from '../../data/wgslTypes';
 import type { Storage } from '../../extension';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
@@ -36,7 +36,7 @@ type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
         ? Vertex
         : never;
 
-export interface TgpuBuffer<TData extends BaseWgslData> extends TgpuNamable {
+export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
   readonly resourceType: 'buffer';
   readonly dataType: TData;
   readonly initial?: Infer<TData> | undefined;
@@ -92,13 +92,13 @@ export function isUsableAsVertex<T extends TgpuBuffer<AnyData>>(
 // Implementation
 // --------------
 
-type RestrictVertexUsages<TData extends BaseWgslData> = TData extends {
+type RestrictVertexUsages<TData extends AnyData> = TData extends {
   readonly type: WgslTypeLiteral;
 }
   ? ('uniform' | 'storage' | 'vertex')[]
   : 'vertex'[];
 
-class TgpuBufferImpl<TData extends BaseWgslData> implements TgpuBuffer<TData> {
+class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   public readonly resourceType = 'buffer';
   public flags: GPUBufferUsageFlags =
     GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
@@ -169,7 +169,7 @@ class TgpuBufferImpl<TData extends BaseWgslData> implements TgpuBuffer<TData> {
     return this;
   }
 
-  $usage<T extends ('uniform' | 'storage' | 'vertex')[]>(
+  $usage<T extends RestrictVertexUsages<TData>>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>> {
     for (const usage of usages) {

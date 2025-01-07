@@ -1,3 +1,5 @@
+import type { AnyData } from '../data';
+
 /**
  * Extracts the inferred representation of a resource.
  * @example
@@ -10,7 +12,9 @@ export type InferRecord<T extends Record<string | number | symbol, unknown>> = {
   [Key in keyof T]: Infer<T[Key]>;
 };
 
-export type MemIdentity<T> = T extends { readonly '~memIdent': infer TMemIdent }
+export type MemIdentity<T> = T extends {
+  readonly '~memIdent': infer TMemIdent extends AnyData;
+}
   ? TMemIdent
   : T;
 
