@@ -115,6 +115,11 @@ export default defineConfig({
               label: 'Buffers',
               slug: 'fundamentals/buffers',
             },
+            DEV && {
+              label: 'Textures',
+              slug: 'fundamentals/textures',
+              badge: { text: '0.3' },
+            },
             {
               label: 'Data Schemas',
               slug: 'fundamentals/data-schemas',
@@ -128,18 +133,6 @@ export default defineConfig({
               label: 'Slots',
               slug: 'fundamentals/slots',
             },
-            // {
-            //   label: 'Basic Principles',
-            //   slug: 'guides/basic-principles',
-            // },
-            // {
-            //   label: 'State Management',
-            //   slug: 'guides/state-management',
-            // },
-            // {
-            //   label: 'Parametrized Functions',
-            //   slug: 'guides/parametrized-functions',
-            // },
           ]),
         },
         {
