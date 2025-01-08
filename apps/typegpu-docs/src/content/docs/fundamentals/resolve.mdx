@@ -13,7 +13,6 @@ ensuring that the shader code is always up-to-date with the latest changes to th
 :::
 
 Here's an example:
-
 ```ts
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
@@ -27,7 +26,7 @@ const layout = tgpu.bindGroupLayout({
   lightSource: { uniform: LightSource },
   sampling: { sampler: 'filtering' },
   bgTexture: { externalTexture: {} },
-});
+}).$idx(0);
 
 const rawShader = /* wgsl */ `
   @fragment
@@ -50,28 +49,29 @@ const resolved = tgpu.resolve({
     bgTexture: layout.bound.bgTexture,
     LightSource,
   },
+  names: 'strict',
 });
-
 ```
+
 Resolved WGSL shader code is as follows:
 
 ```wgsl
-struct Source_1 {
+struct Source {
   ambientColor: vec3f,
   intensity: f32,
 }
 
-@group(0) @binding(0) var<uniform> lightSource_0: Source_1;
-@group(0) @binding(1) var sampling_2: sampler;
-@group(0) @binding(2) var bgTexture_3: texture_external;
+@group(0) @binding(0) var<uniform> lightSource: Source;
+@group(0) @binding(1) var sampling: sampler;
+@group(0) @binding(2) var bgTexture: texture_external;
 
 @fragment
 fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
-  var bgColor = textureSampleBaseClampToEdge(inputTexture, sampling_2, uv).rgb;
+  var bgColor = textureSampleBaseClampToEdge(inputTexture, sampling, uv).rgb;
 
-  var newSource: Source_1;
-  newSource.ambientColor = bgColor + lightSource_0.ambientColor;
-  newSource.intensity = 0.6 * lightSource_0.intensity;
+  var newSource: Source;
+  newSource.ambientColor = bgColor + lightSource.ambientColor;
+  newSource.intensity = 0.6 * lightSource.intensity;
 
   return vec4f(newSource.ambientColor * newSource.intensity, 1.);
 }
@@ -106,72 +106,12 @@ To resolve bindings you can access each entry of a bindGroupLayout via the `layo
 
 * Name registry
 
-When extra dependencies are being resolved, they are given new name based on the specified naming registry type (argument `names`).
-The default naming schema is `random`. It uses labels given to the objects via `.$name` method, but appends some unique suffix to them to ensure that no identifiers conflict with each other. 
+When extra dependencies are being resolved, they are given new names based on the specified naming registry type (argument `names`).
+The default naming schema is `random`. It uses labels assigned to the objects via `.$name` method or, if they aren't present, the keys in the *extraDependencies* record. 
+In this mode however labels are later transformed to match the allowed identifier pattern, as well as include some unique suffix to ensure that no identifiers conflict with each other. 
 
-Another allowed value of the parameter is `strict` which names resolved objects in the WGSL code exactly as they are labeled by the user in JS.
-If there is no explicit `.$name` call, an object is named based on its associated key in the `extraDependencies` record. This approach makes all of the generated identifiers predictable, but requires the user to make sure no two labels repeat.
-
-```ts
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-
-const LightSource = d.struct({
-  ambientColor: d.vec3f,
-  intensity: d.f32,
-}).$name('Source');
-
-const layout = tgpu.bindGroupLayout({
-  lightSource: { uniform: LightSource },
-  sampling: { sampler: 'filtering' },
-  bgTexture: { externalTexture: {} },
-});
-
-const rawShader = /* wgsl */ `
-  @fragment
-  fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
-    var bgColor = textureSampleBaseClampToEdge(inputTexture, sampling, uv).rgb;
-
-    var newSource: LightSource;
-    newSource.ambientColor = bgColor + lightSource.ambientColor;
-    newSource.intensity = 0.6 * lightSource.intensity;
-
-    return vec4f(newSource.ambientColor * newSource.intensity, 1.);
-  }
-`;
-
-const resolved = tgpu.resolve({
-  input: rawShader,
-  extraDependencies: {
-    lightSource: layout.bound.lightSource,
-    sampling: layout.bound.sampling,
-    bgTexture: layout.bound.bgTexture,
-    LightSource,
-  },
-  names: 'strict',
-});
-```
-
-In that case the resolved WGSL shader code looks like this:
-
-```wgsl
-struct Source {
-  ambientColor: vec3f,
-  intensity: f32,
-}
-
-@group(0) @binding(0) var<uniform> lightSource: Source;
-@group(0) @binding(1) var sampling: sampler;
-@group(0) @binding(2) var bgTexture: texture_external;
-
-@fragment
-fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
-  var bgColor = textureSampleBaseClampToEdge(inputTexture, sampling, uv).rgb;
-
-  var newSource: Source;
-  newSource.ambientColor = bgColor + lightSource.ambientColor;
-  newSource.intensity = 0.6 * lightSource.intensity;
-
-  return vec4f(newSource.ambientColor * newSource.intensity, 1.);
-}
-```
+Another allowed value of the parameter is `strict` which names resolved objects in the WGSL code exactly as they are labeled by the user in JS, 
+unless there is a name conflict, then a suffix is added. 
+If there is no explicit `.$name` call, an object is named based on its associated key in `extraDependencies`. 
+This approach makes all of the generated identifiers predictable, but demands that all labels are valid identifiers 
+and requires explicit naming (via `.$name`) of all of the objects that aren't immediate values in the `extraDependencies` record.
