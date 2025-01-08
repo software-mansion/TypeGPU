@@ -24,7 +24,7 @@ describe('TGSL tgpu.fn function', () => {
       })
       .$name('getY');
 
-    const actual = parseResolved(getY);
+    const actual = parseResolved({ getY });
 
     const expected = parse(`
       fn getY() -> f32 {
@@ -64,7 +64,7 @@ describe('TGSL tgpu.fn function', () => {
       .$name('getY')
       .$uses({ getX, getColor });
 
-    const actual = parseResolved(getY);
+    const actual = parseResolved({ getY });
 
     const expected = parse(`
       fn get_color() -> vec3f {

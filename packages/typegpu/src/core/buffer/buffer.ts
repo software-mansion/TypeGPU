@@ -187,8 +187,23 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     return this as this & UnionToIntersection<LiteralToUsageType<T[number]>>;
   }
 
-  // Temporary solution
   $addFlags(flags: GPUBufferUsageFlags) {
+    if (!this._ownBuffer) {
+      throw new Error(
+        'Cannot add flags to a buffer that is not managed by TypeGPU.',
+      );
+    }
+
+    if (flags & GPUBufferUsage.MAP_READ) {
+      this.flags = GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ;
+      return this;
+    }
+
+    if (flags & GPUBufferUsage.MAP_WRITE) {
+      this.flags = GPUBufferUsage.COPY_SRC | GPUBufferUsage.MAP_WRITE;
+      return this;
+    }
+
     this.flags |= flags;
     return this;
   }
