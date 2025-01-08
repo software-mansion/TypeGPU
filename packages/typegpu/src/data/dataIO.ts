@@ -728,7 +728,7 @@ const dataReaders = {
     return vec4f(r, g, b, a);
   },
 
-  'unstruct'(input, schema: TgpuUnstruct) {
+  unstruct(input, schema: TgpuUnstruct) {
     const result = {} as Record<string, unknown>;
 
     for (const [key, property] of Object.entries(schema.propTypes)) {
@@ -738,7 +738,7 @@ const dataReaders = {
     return result as InferRecord<Record<string, wgsl.BaseWgslData>>;
   },
 
-  'disarray'(input, schema: TgpuDisarray) {
+  disarray(input, schema: TgpuDisarray) {
     const alignment = alignmentOf(schema);
     const elements: unknown[] = [];
 
