@@ -27,7 +27,7 @@ describe('d.align', () => {
       c: u32,
     }).$name('s1');
 
-    expect(tgpu.resolve({ input: s1, names: 'strict' })).toContain(
+    expect(tgpu.resolve({ externals: { s1 }, names: 'strict' })).toContain(
       '@align(16) b: u32,',
     );
   });

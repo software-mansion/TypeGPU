@@ -139,8 +139,8 @@ const rareBindGroup = root.createBindGroup(rareLayout, {
 
 const shaderModule = device.createShaderModule({
   code: tgpu.resolve({
-    input: shaderCode,
-    extraDependencies: {
+    template: shaderCode,
+    externals: {
       ...rareLayout.bound,
       ...frequentLayout.bound,
       VertexOutput,

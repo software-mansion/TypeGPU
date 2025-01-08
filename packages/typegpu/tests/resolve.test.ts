@@ -5,31 +5,14 @@ import tgpu, { type TgpuBufferReadonly } from '../src/experimental';
 import type { ResolutionCtx } from '../src/types';
 
 describe('tgpu resolve', () => {
-  it('should resolve a string (identity)', () => {
-    const mockCode = 'fn foo() { var v: Gradient; }';
-    const resolved = tgpu.resolve({ input: mockCode });
-    expect(parse(resolved)).toEqual(parse(mockCode));
-  });
-
-  it('should resolve a list of strings', () => {
-    const mockCode = [
-      'fn foo() { var v: Gradient; }',
-      'fn bar() { var v: Particle; }',
-    ];
-    const resolved = tgpu.resolve({ input: mockCode });
-    expect(parse(resolved)).toEqual(
-      parse('fn foo() { var v: Gradient; } fn bar() { var v: Particle; }'),
-    );
-  });
-
   it('should resolve an external struct', () => {
     const Gradient = d.struct({
       from: d.vec3f,
       to: d.vec3f,
     });
     const resolved = tgpu.resolve({
-      input: 'fn foo() { var g: Gradient; }',
-      extraDependencies: {
+      template: 'fn foo() { var g: Gradient; }',
+      externals: {
         Gradient,
       },
       names: 'strict',
@@ -68,7 +51,7 @@ describe('tgpu resolve', () => {
       .$name('fragment2');
 
     const resolved = tgpu.resolve({
-      input: [fragment1, fragment2],
+      externals: { fragment1, fragment2 },
       names: 'strict',
     });
 
@@ -108,8 +91,8 @@ describe('tgpu resolve', () => {
       }`;
 
     const resolved = tgpu.resolve({
-      input: [shaderLogic],
-      extraDependencies: {
+      template: shaderLogic,
+      externals: {
         PlayerData,
         getPlayerHealth,
       },
@@ -163,8 +146,8 @@ describe('tgpu resolve', () => {
       }`;
 
     const resolved = tgpu.resolve({
-      input: [shaderLogic],
-      extraDependencies: { randomTest: random },
+      template: shaderLogic,
+      externals: { randomTest: random },
       names: 'strict',
     });
 
