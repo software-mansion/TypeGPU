@@ -85,7 +85,8 @@ First argument of the `tgpu.resolve` function (`input`) is a string containing W
 
 Another (optional) argument is `extraDependencies` -- a record with TypeGPU objects that are to be included in the final resolved shader code. The values in the record are the objects themselves, while the keys are the names by which they are referenced in the input code. 
 
-What differentiates the extra dependencies from inputs is that beside the dependencies being resolved to WGSL string declarations and added to the output string, all their references in resolved input code are also replaced with their new names. Therefore it is very important to put objects in `extraDependencies` (instead of `input`) when they are being referenced in raw WGSL snippets passed as inputs. If an object is being referenced only by another TypeGPU object to be resolved, it doesn't have to be included in *extraDependencies*, example: a bindGroupLayout including a struct data type that isn't referenced in any code snippet otherwise.
+What differentiates the extra dependencies from inputs is that beside the dependencies being resolved to WGSL string declarations and added to the output string, all their references in resolved input code are also replaced with their new names. 
+Therefore it is very important to put objects in *extraDependencies* (instead of *input*) when they are being referenced in raw WGSL snippets passed as inputs. If an object is being referenced only by another TypeGPU object to be resolved, it doesn't have to be included in *extraDependencies*, example: a bindGroupLayout including a struct data type that isn't referenced in any code snippet otherwise.
 
 :::note
 To resolve bindings you can access each entry of a bindGroupLayout via the `layout.bound` property.
@@ -107,11 +108,11 @@ To resolve bindings you can access each entry of a bindGroupLayout via the `layo
 * Name registry
 
 When extra dependencies are being resolved, they are given new names based on the specified naming registry type (argument `names`).
-The default naming schema is `random`. It uses labels assigned to the objects via `.$name` method or, if they aren't present, the keys in the *extraDependencies* record. 
+The default naming schema is `random`. It uses labels assigned to the objects via *.$name* method or, if they aren't present, the keys in the *extraDependencies* record. 
 In this mode however labels are later transformed to match the allowed identifier pattern, as well as include some unique suffix to ensure that no identifiers conflict with each other. 
 
 Another allowed value of the parameter is `strict` which names resolved objects in the WGSL code exactly as they are labeled by the user in JS, 
 unless there is a name conflict, then a suffix is added. 
-If there is no explicit `.$name` call, an object is named based on its associated key in `extraDependencies`. 
+If there is no explicit *.$name* call, an object is named based on its associated key in *extraDependencies*. 
 This approach makes all of the generated identifiers predictable, but demands that all labels are valid identifiers 
-and requires explicit naming (via `.$name`) of all of the objects that aren't immediate values in the `extraDependencies` record.
+and requires explicit naming (via `.$name`) of all of the objects that aren't immediate values in the *extraDependencies* record.
