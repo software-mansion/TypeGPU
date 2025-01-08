@@ -37,7 +37,7 @@ describe('tgpu.accessor', () => {
           .$name('red'),
       );
 
-    expect(parseResolved(getColor)).toEqual(
+    expect(parseResolved({ getColor })).toEqual(
       parse(/* wgsl */ `
         fn red() -> vec3f {
           return ${RED_RESOLVED};
@@ -67,7 +67,7 @@ describe('tgpu.accessor', () => {
         ),
       );
 
-    expect(parseResolved(getColor)).toEqual(
+    expect(parseResolved({ getColor })).toEqual(
       parse(/* wgsl */ `
         @group(0) @binding(0) var<uniform> red: vec3f;
 
@@ -92,7 +92,7 @@ describe('tgpu.accessor', () => {
       .with(colorAccessor, RED)
       .with(multiplierAccessor, 2);
 
-    expect(parseResolved(getColor)).toEqual(
+    expect(parseResolved({ getColor })).toEqual(
       parse(/* wgsl */ `
         fn getColor() -> vec3f {
           return ${RED_RESOLVED} * 2;
@@ -112,7 +112,7 @@ describe('tgpu.accessor', () => {
       .$name('getColor')
       .$uses({ color: colorAccessor });
 
-    expect(parseResolved(getColor)).toEqual(
+    expect(parseResolved({ getColor })).toEqual(
       parse(/* wgsl */ `
       fn getColor() -> vec3f {
         return ${RED_RESOLVED};
@@ -143,7 +143,7 @@ describe('tgpu.accessor', () => {
       .$name('main')
       .$uses({ getColorWithGreen });
 
-    expect(parseResolved(main)).toEqual(
+    expect(parseResolved({ main })).toEqual(
       parse(/* wgsl */ `
         fn getColor() -> vec3f {
           return vec3f(0, 1, 0);
@@ -167,7 +167,9 @@ describe('tgpu.accessor', () => {
       .$name('getColor')
       .$uses({ color: colorAccessor });
 
-    expect(() => tgpu.resolve({ input: getColor, names: 'strict' })).toThrow(
+    expect(() =>
+      tgpu.resolve({ externals: { getColor }, names: 'strict' }),
+    ).toThrow(
       new ResolutionError(new MissingSlotValueError(colorAccessor.slot), [
         resolutionRootMock,
         getColor,

@@ -33,7 +33,7 @@ describe('tgpu.slot', () => {
       .$name('getColor')
       .$uses({ colorSlot });
 
-    const actual = parseResolved(getColor);
+    const actual = parseResolved({ getColor });
 
     expect(actual).toEqual(
       parse(/* wgsl */ `
@@ -66,7 +66,7 @@ describe('tgpu.slot', () => {
       .$name('main')
       .$uses({ getColorWithGreen });
 
-    const actual = parseResolved(main);
+    const actual = parseResolved({ main });
     expect(actual).toEqual(
       parse(/* wgsl */ `
       fn getColor() -> vec3f {
@@ -102,7 +102,7 @@ describe('tgpu.slot', () => {
       .$name('main')
       .$uses({ getColorWithGreen });
 
-    const actual = parseResolved(main);
+    const actual = parseResolved({ main });
 
     // should be green
     expect(actual).toEqual(
@@ -129,7 +129,9 @@ describe('tgpu.slot', () => {
       .$name('getColor')
       .$uses({ colorSlot });
 
-    expect(() => tgpu.resolve({ input: getColor, names: 'strict' })).toThrow(
+    expect(() =>
+      tgpu.resolve({ externals: { getColor }, names: 'strict' }),
+    ).toThrow(
       new ResolutionError(new MissingSlotValueError(colorSlot), [
         resolutionRootMock,
         getColor,
@@ -170,7 +172,7 @@ describe('tgpu.slot', () => {
       .$uses({ getColorWithRed, wrapperFn })
       .$name('main');
 
-    const actual = parseResolved(main);
+    const actual = parseResolved({ main });
 
     const expected = parse(/* wgsl */ `
       fn getColor() -> vec3f {
@@ -260,13 +262,13 @@ describe('tgpu.slot', () => {
       })
       .$name('main');
 
-    const actual = parseResolved(main);
+    const actual = parseResolved({ main });
 
     const expected = parse(`
       fn getSize() -> f32 {
         return 1;
       }
-      
+
       fn getColor() -> vec3f {
         return ${RED};
       }
@@ -357,7 +359,7 @@ describe('tgpu.slot', () => {
       .with(slotA, slotB);
     const main = tgpu.fn([]).does('() { fn4(); }').$uses({ fn4 }).$name('main');
 
-    const actual = parseResolved(main);
+    const actual = parseResolved({ main });
     const expected = parse(/* wgsl */ `
       fn fn1() { let value = 4; }
       fn fn2() { fn1(); }

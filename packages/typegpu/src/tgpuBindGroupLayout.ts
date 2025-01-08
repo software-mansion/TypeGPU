@@ -273,17 +273,17 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
         : T extends TgpuLayoutTexture
           ?
               | GPUTextureView
-              | (TgpuTexture<
-                  Prettify<TextureProps & GetTextureRestriction<T>>
-                > &
-                  Sampled)
+              | (Sampled &
+                  TgpuTexture<
+                    Prettify<TextureProps & GetTextureRestriction<T>>
+                  >)
           : T extends TgpuLayoutStorageTexture
             ?
                 | GPUTextureView
-                | (TgpuTexture<
-                    Prettify<TextureProps & GetStorageTextureRestriction<T>>
-                  > &
-                    Storage)
+                | (Storage &
+                    TgpuTexture<
+                      Prettify<TextureProps & GetStorageTextureRestriction<T>>
+                    >)
             : T extends TgpuLayoutExternalTexture
               ? GPUExternalTexture
               : never;

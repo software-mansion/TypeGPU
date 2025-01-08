@@ -24,7 +24,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       }`)
       .$name('get_y');
 
-    const actual = parseResolved(getY);
+    const actual = parseResolved({ getY });
 
     const expected = parse(`
       fn get_y() {
@@ -62,7 +62,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       .$name('get_y')
       .$uses({ getX, color: getColor });
 
-    const actual = parseResolved(getY);
+    const actual = parseResolved({ getY });
 
     const expected = parse(`
       fn get_color() {
@@ -106,7 +106,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       .$name('get_y')
       .$uses({ getx });
 
-    const actual = parseResolved(getY);
+    const actual = parseResolved({ getY });
 
     const expected = parse(`
       fn external() {
@@ -142,14 +142,17 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       vec2<f32>(-1, -1),
       vec2<f32>(-1,  1)
     );
-  
+
     var output: VertexOutput;
     output.outPos = vec4f(pos[vertexIndex], 0, 1);
     return output;
   }`)
       .$name('vertex_fn');
 
-    const resolved = tgpu.resolve({ input: vertexFunction, names: 'strict' });
+    const resolved = tgpu.resolve({
+      externals: { vertexFunction },
+      names: 'strict',
+    });
 
     expect(resolved).toContain(`\
 struct vertex_fn_Output {
@@ -170,7 +173,10 @@ struct vertex_fn_Output {
   }`)
       .$name('fragment');
 
-    const resolved = tgpu.resolve({ input: fragmentFunction, names: 'strict' });
+    const resolved = tgpu.resolve({
+      externals: { fragmentFunction },
+      names: 'strict',
+    });
 
     expect(resolved).toContain(`\
 struct fragment_Output {
@@ -189,6 +195,8 @@ struct fragment_Output {
       }`)
       .$name('fragment');
 
-    expect(tgpu.resolve({ input: fragmentFunction })).not.toContain('struct');
+    expect(tgpu.resolve({ externals: { fragmentFunction } })).not.toContain(
+      'struct',
+    );
   });
 });
