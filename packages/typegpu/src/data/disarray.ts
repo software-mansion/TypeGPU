@@ -1,5 +1,5 @@
 import type { Infer } from '../shared/repr';
-import type { AnyData, LooseArray } from './dataTypes';
+import type { AnyData, Disarray } from './dataTypes';
 import type { Exotic } from './exotic';
 
 // ----------
@@ -15,26 +15,26 @@ import type { Exotic } from './exotic';
  * via `d.align` function.
  *
  * @example
- * const looseArray = d.looseArrayOf(d.vec3f, 3); // packed array of vec3f
+ * const disarray = d.disarrayOf(d.vec3f, 3); // packed array of vec3f
  *
  * @example
- * const looseArray = d.looseArrayOf(d.align(16, d.vec3f), 3);
+ * const disarray = d.disarrayOf(d.align(16, d.vec3f), 3);
  *
  * @param elementType The type of elements in the array.
  * @param count The number of elements in the array.
  */
-export const looseArrayOf = <TElement extends AnyData>(
+export const disarrayOf = <TElement extends AnyData>(
   elementType: TElement,
   count: number,
-): LooseArray<Exotic<TElement>> =>
-  new LooseArrayImpl(elementType as Exotic<TElement>, count);
+): Disarray<Exotic<TElement>> =>
+  new DisarrayImpl(elementType as Exotic<TElement>, count);
 
 // --------------
 // Implementation
 // --------------
 
-class LooseArrayImpl<TElement extends AnyData> implements LooseArray<TElement> {
-  public readonly type = 'loose-array';
+class DisarrayImpl<TElement extends AnyData> implements Disarray<TElement> {
+  public readonly type = 'disarray';
   /** Type-token, not available at runtime */
   public readonly '~repr'!: Infer<TElement>[];
 
