@@ -6,7 +6,7 @@ import type {
   ColorAttachment,
 } from './renderPipeline';
 
-function isAttachment(
+function isColorAttachment(
   value: unknown | ColorAttachment,
 ): value is ColorAttachment {
   return typeof (value as ColorAttachment)?.loadOp === 'string';
@@ -17,7 +17,7 @@ export function connectAttachmentToShader(
   attachment: AnyFragmentColorAttachment,
 ): ColorAttachment[] {
   if (isData(shaderOutputLayout)) {
-    if (!isAttachment(attachment)) {
+    if (!isColorAttachment(attachment)) {
       throw new Error('Expected a single color attachment, not a record.');
     }
 

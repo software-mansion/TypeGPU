@@ -15,7 +15,7 @@ describe('tgpu.const', () => {
       .$uses({ x })
       .$name('fn1');
 
-    expect(parseResolved(fn1)).toEqual(
+    expect(parseResolved({ fn1 })).toEqual(
       parse(`
         const x = 2;
         fn fn1() {

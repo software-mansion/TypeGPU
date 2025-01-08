@@ -22,10 +22,10 @@ describe('TgpuDerived', () => {
       })
       .$name('main');
 
-    expect(parseResolved(main)).toEqual(
+    expect(parseResolved({ main })).toEqual(
       parse(`
       fn main() -> f32 {
-        return 3 + 4;
+        return (3 + 4);
       }
     `),
     );
@@ -57,7 +57,7 @@ describe('TgpuDerived', () => {
       })
       .$name('main');
 
-    expect(parseResolved(main)).toEqual(
+    expect(parseResolved({ main })).toEqual(
       parse(`
       fn getDouble() -> f32 {
         return 4;
@@ -105,7 +105,7 @@ describe('TgpuDerived', () => {
       .with(gridSizeSlot, 1)
       .$name('main');
 
-    expect(parseResolved(main)).toEqual(
+    expect(parseResolved({ main })).toEqual(
       parse(/* wgsl */ `
       fn fill(arr: array<f32, 1>) {}
       fn fill_1(arr: array<f32, 2>) {}

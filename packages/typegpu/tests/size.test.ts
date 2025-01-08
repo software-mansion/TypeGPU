@@ -87,26 +87,26 @@ describe('d.size', () => {
   });
 
   it('changes size of loose array element', () => {
-    const s1 = d.looseArrayOf(d.size(11, d.u32), 10);
+    const s1 = d.disarrayOf(d.size(11, d.u32), 10);
 
     expect(d.sizeOf(s1)).toEqual(110);
     expectTypeOf(s1).toEqualTypeOf<
-      d.LooseArray<d.Decorated<d.U32, [d.Size<11>]>>
+      d.Disarray<d.Decorated<d.U32, [d.Size<11>]>>
     >();
   });
 
   it('changes size of loose struct member of type loose array', () => {
-    const s1 = d.looseStruct({
+    const s1 = d.unstruct({
       a: d.u32, // 4
-      b: d.size(20, d.looseArrayOf(d.u32, 4)), // 20
+      b: d.size(20, d.disarrayOf(d.u32, 4)), // 20
       c: d.u32, // 4
     });
 
     expect(d.sizeOf(s1)).toEqual(28);
     expectTypeOf(s1).toEqualTypeOf<
-      d.LooseStruct<{
+      d.Unstruct<{
         a: d.U32;
-        b: d.LooseDecorated<d.LooseArray<d.U32>, [d.Size<20>]>;
+        b: d.LooseDecorated<d.Disarray<d.U32>, [d.Size<20>]>;
         c: d.U32;
       }>
     >();

@@ -192,9 +192,11 @@ describe('TgpuTexture', () => {
     const sampled1 = texture.createView('sampled');
     const sampled2 = texture.createView('sampled', { dimension: '2d-array' });
 
-    expect(tgpu.resolve({ input: sampled1 })).toContain('texture_2d<f32>');
+    expect(tgpu.resolve({ externals: { sampled1 } })).toContain(
+      'texture_2d<f32>',
+    );
 
-    expect(tgpu.resolve({ input: sampled2 })).toContain(
+    expect(tgpu.resolve({ externals: { sampled2 } })).toContain(
       'texture_2d_array<f32>',
     );
   });
