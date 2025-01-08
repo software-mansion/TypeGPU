@@ -14,7 +14,7 @@ describe('tgpu.fn', () => {
       }`)
       .$name('empty');
 
-    const actual = parseResolved(emptyFn);
+    const actual = parseResolved({ emptyFn });
 
     const expected = parse('fn empty() {}');
 
@@ -29,8 +29,8 @@ describe('tgpu.fn', () => {
       }`)
       .$name('empty');
 
-    const actual = parseResolved(
-      tgpu
+    const actual = parseResolved({
+      main: tgpu
         .fn([])
         .does(`
           () {
@@ -39,7 +39,7 @@ describe('tgpu.fn', () => {
           }`)
         .$uses({ emptyFn })
         .$name('main'),
-    );
+    });
 
     const expected = parse(`
       fn empty() {}
@@ -77,8 +77,8 @@ describe('tgpu.fn', () => {
       .$uses({ emptyFn })
       .$name('nested_b');
 
-    const actual = parseResolved(
-      tgpu
+    const actual = parseResolved({
+      main: tgpu
         .fn([])
         .does(`() {
           nestedAFn();
@@ -86,7 +86,7 @@ describe('tgpu.fn', () => {
         }`)
         .$uses({ nestedAFn, nestedBFn })
         .$name('main'),
-    );
+    });
 
     const expected = parse(`
       fn empty() {}

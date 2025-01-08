@@ -209,8 +209,8 @@ describe('TgpuBindGroupLayout', () => {
     const fooTexture = layout.bound.fooTexture;
 
     const resolved = tgpu.resolve({
-      input: 'fn main () { textureLoad(fooTexture); }',
-      extraDependencies: { fooTexture },
+      template: 'fn main () { textureLoad(fooTexture); }',
+      externals: { fooTexture },
       names: 'strict',
     });
 
