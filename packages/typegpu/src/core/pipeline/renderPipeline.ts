@@ -1,5 +1,5 @@
 import type { TgpuBuffer, Vertex } from '../../core/buffer/buffer';
-import type { LooseArray } from '../../data/dataTypes';
+import type { Disarray } from '../../data/dataTypes';
 import type { AnyWgslData, WgslArray } from '../../data/wgslTypes';
 import { MissingBindGroupError } from '../../errors';
 import type { TgpuNamable } from '../../namable';
@@ -35,7 +35,7 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
   readonly resourceType: 'render-pipeline';
   readonly label: string | undefined;
 
-  with<TData extends WgslArray | LooseArray>(
+  with<TData extends WgslArray | Disarray>(
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: TgpuBuffer<TData> & Vertex,
   ): TgpuRenderPipeline<IOLayout>;
@@ -192,7 +192,7 @@ export interface RenderPass {
     bindGroup: TgpuBindGroup<Entries>,
   ): void;
 
-  setVertexBuffer<TData extends WgslArray | LooseArray>(
+  setVertexBuffer<TData extends WgslArray | Disarray>(
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: TgpuBuffer<TData> & Vertex,
   ): void;
