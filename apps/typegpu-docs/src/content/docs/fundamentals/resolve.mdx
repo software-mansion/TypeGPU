@@ -6,7 +6,8 @@ description: Resolve API can be used to extend shader code with WGSL definitions
 Defining shader schemas and objects in JS/TS has lots of benefits, but for a while it meant introducing significant duplication between host and GPU code.
 In addition to that it was crucial to keep both sides in sync manually when making any changes.
 To mitigate this problem TypeGPU offers the **`tgpu.resolve`** API, which allows there to be just one source of truth,
-ensuring that the shader code is always up-to-date with the latest changes to the data schemas, bind group layouts and such. It takes WGSL code and all the external objects it uses, but doesn't declare, and returns the complete necessary WGSL code, ready to be used as part of a *GPUShaderModule*.
+ensuring that the shader code is always up-to-date with the latest changes to the data schemas, bind group layouts and such. 
+It takes WGSL code and all the external objects it uses, but doesn't declare, and returns the complete necessary WGSL code, ready to be used as part of a *GPUShaderModule*.
 
 :::note
 `tgpu.resolve` is essentially a dedicated TypeGPU linker.
@@ -42,8 +43,8 @@ const rawShader = /* wgsl */ `
 `;
 
 const resolved = tgpu.resolve({
-  input: rawShader,
-  extraDependencies: {
+  template: rawShader,
+  externals: {
     lightSource: layout.bound.lightSource,
     sampling: layout.bound.sampling,
     bgTexture: layout.bound.bgTexture,
@@ -77,42 +78,47 @@ fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
 }
 ```
 
-* Input(s)
+## Template
 
-First argument of the `tgpu.resolve` function (`input`) is a string containing WGSL code, that is meant to be extended with additional definitions. Moreover it can be any TypeGPU object which can be represented as a WGSL declaration. It is also possible to pass in an array of arguments, which resolutions are later concatenated to a single string output.
+This optional property of the `tgpu.resolve` function argument is a string containing WGSL code, that is meant to be extended with additional definitions. 
+It can contain references to objects passed in the `externals` record.
 
-* Extra dependencies
+## Externals
 
-Another (optional) argument is `extraDependencies` -- a record with TypeGPU objects that are to be included in the final resolved shader code. The values in the record are the objects themselves, while the keys are the names by which they are referenced in the input code. 
+This is a record with TypeGPU objects that are to be included in the final resolved shader code. 
+The values in the mapping are the objects themselves, while the keys are the names by which they are referenced in the template code.
+Each object is resolved to its WGSL declaration, which is included in the final shader code.
+Moreover each reference to the object in the template is replaced with the name used in its newly generated declaration.
 
-What differentiates the extra dependencies from inputs is that beside the dependencies being resolved to WGSL string declarations and added to the output string, all their references in resolved input code are also replaced with their new names. 
-Therefore it is very important to put objects in *extraDependencies* (instead of *input*) when they are being referenced in raw WGSL snippets passed as inputs. If an object is being referenced only by another TypeGPU object to be resolved, it doesn't have to be included in *extraDependencies*, example: a bindGroupLayout including a struct data type that isn't referenced in any code snippet otherwise.
+If an object is being referenced only by another TypeGPU object in *externals*, it doesn't have to be included in the record.
+Any passed-in object's dependencies are automatically resolved and included in the final result.
 
 :::note
-To resolve bindings you can access each entry of a bindGroupLayout via the `layout.bound` property.
+To resolve bindings you can access each entry of a [bindGroupLayout](/TypeGPU/fundamentals/bind-groups) via the `layout.bound` property.
 
 ```ts
-  extraDependencies: {
+  externals: {
     lightSource: layout.bound.lightSource,
     sampling: layout.bound.sampling,
     bgTexture: layout.bound.bgTexture,
   }
 
   // can be shortened to:
-  extraDependencies: {
+  externals: {
     { ...layout.bound },
   }
 ```
 :::
 
-* Name registry
+## Name registry
 
-When extra dependencies are being resolved, they are given new names based on the specified naming registry type (argument `names`).
-The default naming schema is `random`. It uses labels assigned to the objects via *.$name* method or, if they aren't present, the keys in the *extraDependencies* record. 
-In this mode however labels are later transformed to match the allowed identifier pattern, as well as include some unique suffix to ensure that no identifiers conflict with each other. 
+When externals are being resolved, they are given new names based on the specified naming registry type (parameter `names`).
+
+The default naming schema is `random`. It uses labels assigned to the objects via *.$name* method or, if they aren't present, the keys in the *externals* record. 
+In this mode labels are later transformed to match the allowed identifier pattern, as well as include some unique suffix to ensure that no identifiers conflict with each other. 
 
 Another allowed value of the parameter is `strict` which names resolved objects in the WGSL code exactly as they are labeled by the user in JS, 
 unless there is a name conflict, then a suffix is added. 
-If there is no explicit *.$name* call, an object is named based on its associated key in *extraDependencies*. 
+If there is no explicit *.$name* call, an object is named based on its associated key in *externals*. 
 This approach makes all of the generated identifiers predictable, but demands that all labels are valid identifiers 
-and requires explicit naming (via `.$name`) of all of the objects that aren't immediate values in the *extraDependencies* record.
+and requires explicit naming (via `.$name`) of all objects that aren't immediate values in the *externals* record.
