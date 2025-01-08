@@ -33,19 +33,6 @@ export {
   isUsableAsUniform,
   isUsableAsVertex,
 } from './core/buffer/buffer';
-export {
-  isSampler,
-  isComparisonSampler,
-} from './core/sampler/sampler';
-export {
-  isSampledTextureView,
-  isStorageTextureView,
-  isTexture,
-} from './core/texture/texture';
-export {
-  isUsableAsRender,
-  isUsableAsSampled,
-} from './core/texture/usageExtension';
 export { isUsableAsStorage } from './extension';
 
 export type { Storage } from './extension';
@@ -57,16 +44,6 @@ export type {
   TgpuBufferReadonly,
   TgpuBufferMutable,
 } from './core/buffer/public';
-export type {
-  TgpuTexture,
-  TgpuReadonlyTexture,
-  TgpuWriteonlyTexture,
-  TgpuMutableTexture,
-  TgpuSampledTexture,
-  TgpuAnyTextureView,
-} from './core/texture/texture';
-export type { TextureProps } from './core/texture/textureProps';
-export type { Render, Sampled } from './core/texture/usageExtension';
 export type { InitOptions, InitFromDeviceOptions } from './core/root/init';
 export type { TgpuSampler } from './core/sampler/sampler';
 export type {

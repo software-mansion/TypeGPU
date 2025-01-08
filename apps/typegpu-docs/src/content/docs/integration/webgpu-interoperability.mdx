@@ -46,13 +46,6 @@ const rawNumbersBuffer = root.unwrap(numbersBuffer); // => GPUBuffer
 ```
 
 ```ts
-const fooTexture = root.createTexture({ ... }).$usage('sampled');
-//    ^? TgpuTexture<...> & Sampled
-
-const rawFooTexture = root.unwrap(fooTexture); // => GPUTexture
-```
-
-```ts
 const bindGroup = root.createBindGroup(layout, { ... });
 //    ^? TgpuBindGroup<...>
 
@@ -239,7 +232,7 @@ Benefits gained:
 +   _: null, // #1 skipped!
 +   intensity: { uniform: d.f32 }, // #2 binding
 + });
-+ 
++
 + const rawLayout = root.unwrap(layout);
 ```
 
