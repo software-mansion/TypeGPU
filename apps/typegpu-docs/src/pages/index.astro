@@ -18,6 +18,7 @@ import MilestoneBindGroupsBadge from '../components/roadmap/MilestoneBindGroupsB
 import MilestoneFunctionsBadge from '../components/roadmap/MilestoneFunctionsBadge.astro';
 import MilestonePipelinesBadge from '../components/roadmap/MilestonePipelinesBadge.astro';
 import MilestoneCodeBadge from '../components/roadmap/MilestoneCodeBadge.astro';
+import MilestoneLinkerBadge from '../components/roadmap/MilestoneLinkerBadge.astro';
 
 const showcaseVideoResolution = [2048, 1200];
 ---
@@ -186,6 +187,12 @@ const showcaseVideoResolution = [2048, 1200];
               that are hard to catch at build-time/CI. By using named keys and typed
               data structures we can ensure that the provided resources are what
               the shader expects.
+            </RoadMapStep>
+            <RoadMapStep title="Linker" releasedIn="0.3">
+              <MilestoneLinkerBadge slot="visual" />
+              No more duplication between JS and GPU object definitions. A dedicated
+              linker combines WGSL code with TypeGPU objects it references, producing
+              a shader code ready to be used in pipelines.
             </RoadMapStep>
             <RoadMapStep title="Functions">
               <MilestoneFunctionsBadge slot="visual" />
