@@ -41,3 +41,4 @@ export type {
   Vertex,
 } from './core/buffer/public';
 export type { Storage } from './extension';
+export type { TgpuRoot } from './core/root/rootTypes';
