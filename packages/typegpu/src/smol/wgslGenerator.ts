@@ -9,6 +9,27 @@ import {
   isWgsl,
 } from '../types';
 
+const parenthesizedOps = [
+  '==',
+  '!=',
+  '<',
+  '<=',
+  '>',
+  '>=',
+  '<<',
+  '>>',
+  '+',
+  '-',
+  '*',
+  '/',
+  '%',
+  '|',
+  '^',
+  '&',
+  '&&',
+  '||',
+];
+
 export type GenerationCtx = ResolutionCtx & {
   readonly pre: string;
   indent(): string;
@@ -65,7 +86,21 @@ function generateExpression(
     const lhsExpr = resolveRes(ctx, generateExpression(ctx, lhs));
     const rhsExpr = resolveRes(ctx, generateExpression(ctx, rhs));
     return {
-      value: `${lhsExpr} ${op} ${rhsExpr}`,
+      value: parenthesizedOps.includes(op)
+        ? `(${lhsExpr} ${op} ${rhsExpr})`
+        : `${lhsExpr} ${op} ${rhsExpr}`,
+      // TODO: Infer data type from expression type and arguments.
+      dataType: UnknownData,
+    };
+  }
+
+  if ('u' in expression) {
+    // Unary Expression
+
+    const [op, arg] = expression.u;
+    const argExpr = resolveRes(ctx, generateExpression(ctx, arg));
+    return {
+      value: `${op}${argExpr}`,
       // TODO: Infer data type from expression type and arguments.
       dataType: UnknownData,
     };
