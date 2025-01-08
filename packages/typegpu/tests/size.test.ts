@@ -91,7 +91,7 @@ describe('d.size', () => {
 
     expect(d.sizeOf(s1)).toEqual(110);
     expectTypeOf(s1).toEqualTypeOf<
-      d.TgpuDisarray<d.Decorated<d.U32, [d.Size<11>]>>
+      d.Disarray<d.Decorated<d.U32, [d.Size<11>]>>
     >();
   });
 
@@ -104,9 +104,9 @@ describe('d.size', () => {
 
     expect(d.sizeOf(s1)).toEqual(28);
     expectTypeOf(s1).toEqualTypeOf<
-      d.TgpuUnstruct<{
+      d.Unstruct<{
         a: d.U32;
-        b: d.LooseDecorated<d.TgpuDisarray<d.U32>, [d.Size<20>]>;
+        b: d.LooseDecorated<d.Disarray<d.U32>, [d.Size<20>]>;
         c: d.U32;
       }>
     >();

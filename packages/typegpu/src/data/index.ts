@@ -66,8 +66,8 @@ export {
   arrayOf,
 } from './array';
 export type {
-  TgpuDisarray,
-  TgpuUnstruct,
+  Disarray,
+  Unstruct,
   LooseDecorated,
   AnyData,
   AnyLooseData,

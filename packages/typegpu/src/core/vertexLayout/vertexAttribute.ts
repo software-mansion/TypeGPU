@@ -1,4 +1,4 @@
-import type { TgpuDisarray, TgpuUnstruct } from '../../data/dataTypes';
+import type { Disarray, Unstruct } from '../../data/dataTypes';
 import type { WgslArray, WgslStruct } from '../../data/wgslTypes';
 import type {
   KindToAcceptedAttribMap,
@@ -15,7 +15,7 @@ import type {
  * - TgpuStruct<{ a: Vec3f, b: unorm8x2 }>
  * - TgpuStruct<{ nested: TgpuStruct<{ a: Vec3f }> }>
  */
-export type DataToContainedAttribs<T> = T extends WgslStruct | TgpuUnstruct
+export type DataToContainedAttribs<T> = T extends WgslStruct | Unstruct
   ? {
       [Key in keyof T['propTypes']]: DataToContainedAttribs<
         T['propTypes'][Key]
@@ -30,7 +30,7 @@ export type DataToContainedAttribs<T> = T extends WgslStruct | TgpuUnstruct
 /**
  * Interprets an array as a set of vertex attributes.
  */
-export type ArrayToContainedAttribs<T extends WgslArray | TgpuDisarray> =
+export type ArrayToContainedAttribs<T extends WgslArray | Disarray> =
   DataToContainedAttribs<T['elementType']>;
 
 export type LayoutToAllowedAttribs<T> = T extends {

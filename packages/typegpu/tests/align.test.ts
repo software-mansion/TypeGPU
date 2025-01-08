@@ -119,7 +119,7 @@ describe('d.align', () => {
     expect(d.isLooseData(alignedArray)).toEqual(false);
 
     expectTypeOf(alignedDisarray).toEqualTypeOf<
-      d.LooseDecorated<d.TgpuDisarray<d.Vec3f>, [d.Align<16>]>
+      d.LooseDecorated<d.Disarray<d.Vec3f>, [d.Align<16>]>
     >();
     expect(d.isLooseData(alignedDisarray)).toEqual(true);
   });

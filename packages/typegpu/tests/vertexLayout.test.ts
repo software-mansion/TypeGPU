@@ -7,13 +7,13 @@ import type { TgpuVertexAttrib } from '../src/shared/vertexFormat';
 
 describe('ArrayToContainedAttribs', () => {
   it('processes a loose array of uint8x2', () => {
-    type Result = ArrayToContainedAttribs<d.TgpuDisarray<d.uint8x2>>;
+    type Result = ArrayToContainedAttribs<d.Disarray<d.uint8x2>>;
 
     expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'uint8x2'>>();
   });
 
   it('processes a loose array of unorm10-10-10-2', () => {
-    type Result = ArrayToContainedAttribs<d.TgpuDisarray<d.unorm10_10_10_2>>;
+    type Result = ArrayToContainedAttribs<d.Disarray<d.unorm10_10_10_2>>;
 
     expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'unorm10-10-10-2'>>();
   });
@@ -25,14 +25,14 @@ describe('ArrayToContainedAttribs', () => {
   });
 
   it('processes a loose array of f32s', () => {
-    type Result = ArrayToContainedAttribs<d.TgpuDisarray<d.F32>>;
+    type Result = ArrayToContainedAttribs<d.Disarray<d.F32>>;
 
     expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'float32'>>();
   });
 
   it('processes a loose array of structs', () => {
     type Result = ArrayToContainedAttribs<
-      d.TgpuDisarray<d.WgslStruct<{ a: d.F32; b: d.F32 }>>
+      d.Disarray<d.WgslStruct<{ a: d.F32; b: d.F32 }>>
     >;
 
     expectTypeOf<Result>().toEqualTypeOf<{
@@ -43,7 +43,7 @@ describe('ArrayToContainedAttribs', () => {
 
   it('processes a loose array of loose struct', () => {
     type Result = ArrayToContainedAttribs<
-      d.TgpuDisarray<d.TgpuUnstruct<{ a: d.F32; b: d.F32 }>>
+      d.Disarray<d.Unstruct<{ a: d.F32; b: d.F32 }>>
     >;
 
     expectTypeOf<Result>().toEqualTypeOf<{
@@ -54,7 +54,7 @@ describe('ArrayToContainedAttribs', () => {
 
   it('processes an array of structs', () => {
     type Result = ArrayToContainedAttribs<
-      d.TgpuDisarray<d.TgpuUnstruct<{ a: d.F32; b: d.F32 }>>
+      d.Disarray<d.Unstruct<{ a: d.F32; b: d.F32 }>>
     >;
 
     expectTypeOf<Result>().toEqualTypeOf<{
@@ -70,7 +70,7 @@ describe('ArrayToContainedAttribs', () => {
   });
 
   it('processes a loose array of snorm16x2', () => {
-    type Result = ArrayToContainedAttribs<d.TgpuDisarray<d.snorm16x2>>;
+    type Result = ArrayToContainedAttribs<d.Disarray<d.snorm16x2>>;
 
     expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'snorm16x2'>>();
   });

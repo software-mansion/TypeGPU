@@ -1,6 +1,6 @@
 import { alignmentOf, customAlignmentOf } from '../../data/alignmentOf';
 import { isLooseDecorated, isUnstruct } from '../../data/dataTypes';
-import type { TgpuDisarray } from '../../data/dataTypes';
+import type { Disarray } from '../../data/dataTypes';
 import { sizeOf } from '../../data/sizeOf';
 import { isDecorated, isWgslStruct } from '../../data/wgslTypes';
 import type { BaseWgslData, WgslArray } from '../../data/wgslTypes';
@@ -23,7 +23,7 @@ import type {
 // ----------
 
 export interface TgpuVertexLayout<
-  TData extends WgslArray | TgpuDisarray = WgslArray | TgpuDisarray,
+  TData extends WgslArray | Disarray = WgslArray | Disarray,
 > extends TgpuNamable {
   readonly resourceType: 'vertex-layout';
   readonly label?: string | undefined;
@@ -37,7 +37,7 @@ export interface INTERNAL_TgpuVertexAttrib {
   readonly _layout: TgpuVertexLayout;
 }
 
-export function vertexLayout<TData extends WgslArray | TgpuDisarray>(
+export function vertexLayout<TData extends WgslArray | Disarray>(
   schemaForCount: (count: number) => TData,
   stepMode: 'vertex' | 'instance' = 'vertex',
 ): TgpuVertexLayout<ExoticIO<TData>> {
@@ -58,7 +58,7 @@ export function isVertexLayout<T extends TgpuVertexLayout>(
 // --------------
 
 function dataToContainedAttribs<
-  TLayoutData extends WgslArray | TgpuDisarray,
+  TLayoutData extends WgslArray | Disarray,
   TData extends BaseWgslData,
 >(
   layout: TgpuVertexLayout<TLayoutData>,
@@ -132,7 +132,7 @@ function dataToContainedAttribs<
   throw new Error(`Unsupported data used in vertex layout: ${String(data)}`);
 }
 
-class TgpuVertexLayoutImpl<TData extends WgslArray | TgpuDisarray>
+class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
   implements TgpuVertexLayout<TData>
 {
   public readonly resourceType = 'vertex-layout';

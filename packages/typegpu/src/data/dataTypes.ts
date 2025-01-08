@@ -11,7 +11,7 @@ import * as wgsl from './wgslTypes';
  * unless they are explicitly decorated with the custom align attribute
  * via `d.align` function.
  */
-export interface TgpuDisarray<
+export interface Disarray<
   TElement extends wgsl.BaseWgslData = wgsl.BaseWgslData,
 > {
   readonly type: 'disarray';
@@ -28,7 +28,7 @@ export interface TgpuDisarray<
  * unless they are explicitly decorated with the custom align attribute
  * via `d.align` function.
  */
-export interface TgpuUnstruct<
+export interface Unstruct<
   TProps extends Record<string, wgsl.BaseWgslData> = Record<
     string,
     wgsl.BaseWgslData
@@ -58,11 +58,7 @@ const looseTypeLiterals = [
 
 export type LooseTypeLiteral = (typeof looseTypeLiterals)[number];
 
-export type AnyLooseData =
-  | TgpuDisarray
-  | TgpuUnstruct
-  | LooseDecorated
-  | PackedData;
+export type AnyLooseData = Disarray | Unstruct | LooseDecorated | PackedData;
 
 export function isLooseData(data: unknown): data is AnyLooseData {
   return looseTypeLiterals.includes((data as AnyLooseData)?.type);
@@ -81,10 +77,10 @@ export function isLooseData(data: unknown): data is AnyLooseData {
  * isDisarray(d.disarrayOf(d.u32, 4)) // true
  * isDisarray(d.vec3f) // false
  */
-export function isDisarray<T extends TgpuDisarray>(
+export function isDisarray<T extends Disarray>(
   schema: T | unknown,
 ): schema is T {
-  return (schema as TgpuDisarray)?.type === 'disarray';
+  return (schema as Disarray)?.type === 'disarray';
 }
 
 /**
@@ -100,7 +96,7 @@ export function isDisarray<T extends TgpuDisarray>(
  * isUnstruct(d.unstruct({ a: d.u32 })) // true
  * isUnstruct(d.vec3f) // false
  */
-export function isUnstruct<T extends TgpuUnstruct>(
+export function isUnstruct<T extends Unstruct>(
   schema: T | unknown,
 ): schema is T {
   return (schema as T)?.type === 'unstruct';

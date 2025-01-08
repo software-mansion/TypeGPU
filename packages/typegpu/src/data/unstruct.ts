@@ -1,5 +1,5 @@
 import type { InferRecord } from '../shared/repr';
-import type { TgpuUnstruct } from './dataTypes';
+import type { Unstruct } from './dataTypes';
 import type { ExoticRecord } from './exotic';
 import type { BaseWgslData } from './wgslTypes';
 
@@ -27,15 +27,15 @@ import type { BaseWgslData } from './wgslTypes';
  */
 export const unstruct = <TProps extends Record<string, BaseWgslData>>(
   properties: TProps,
-): TgpuUnstruct<ExoticRecord<TProps>> =>
-  new TgpuUnstructImpl(properties as ExoticRecord<TProps>);
+): Unstruct<ExoticRecord<TProps>> =>
+  new UnstructImpl(properties as ExoticRecord<TProps>);
 
 // --------------
 // Implementation
 // --------------
 
-class TgpuUnstructImpl<TProps extends Record<string, BaseWgslData>>
-  implements TgpuUnstruct<TProps>
+class UnstructImpl<TProps extends Record<string, BaseWgslData>>
+  implements Unstruct<TProps>
 {
   public readonly type = 'unstruct';
   /** Type-token, not available at runtime */

@@ -1,5 +1,5 @@
 import type { Infer } from '../shared/repr';
-import type { AnyData, TgpuDisarray } from './dataTypes';
+import type { AnyData, Disarray } from './dataTypes';
 import type { Exotic } from './exotic';
 
 // ----------
@@ -26,16 +26,14 @@ import type { Exotic } from './exotic';
 export const disarrayOf = <TElement extends AnyData>(
   elementType: TElement,
   count: number,
-): TgpuDisarray<Exotic<TElement>> =>
-  new TgpuDisarrayImpl(elementType as Exotic<TElement>, count);
+): Disarray<Exotic<TElement>> =>
+  new DisarrayImpl(elementType as Exotic<TElement>, count);
 
 // --------------
 // Implementation
 // --------------
 
-class TgpuDisarrayImpl<TElement extends AnyData>
-  implements TgpuDisarray<TElement>
-{
+class DisarrayImpl<TElement extends AnyData> implements Disarray<TElement> {
   public readonly type = 'disarray';
   /** Type-token, not available at runtime */
   public readonly '~repr'!: Infer<TElement>[];

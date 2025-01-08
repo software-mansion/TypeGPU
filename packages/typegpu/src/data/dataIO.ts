@@ -2,12 +2,7 @@ import type { ISerialInput, ISerialOutput } from 'typed-binary';
 import type { Infer, InferRecord } from '../shared/repr';
 import alignIO from './alignIO';
 import { alignmentOf, customAlignmentOf } from './alignmentOf';
-import type {
-  AnyData,
-  LooseDecorated,
-  TgpuDisarray,
-  TgpuUnstruct,
-} from './dataTypes';
+import type { AnyData, Disarray, LooseDecorated, Unstruct } from './dataTypes';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix';
 import { sizeOf } from './sizeOf';
 import {
@@ -392,7 +387,7 @@ const dataWriters = {
     output.writeUint8(value.w * 255);
   },
 
-  disarray(output, schema: TgpuDisarray, value: unknown[]) {
+  disarray(output, schema: Disarray, value: unknown[]) {
     const alignment = alignmentOf(schema);
 
     alignIO(output, alignment);
@@ -409,7 +404,7 @@ const dataWriters = {
     output.seekTo(beginning + sizeOf(schema));
   },
 
-  unstruct(output, schema: TgpuUnstruct, value) {
+  unstruct(output, schema: Unstruct, value) {
     for (const [key, property] of Object.entries(schema.propTypes)) {
       dataWriters[property.type]?.(output, property, value[key]);
     }
@@ -728,7 +723,7 @@ const dataReaders = {
     return vec4f(r, g, b, a);
   },
 
-  unstruct(input, schema: TgpuUnstruct) {
+  unstruct(input, schema: Unstruct) {
     const result = {} as Record<string, unknown>;
 
     for (const [key, property] of Object.entries(schema.propTypes)) {
@@ -738,7 +733,7 @@ const dataReaders = {
     return result as InferRecord<Record<string, wgsl.BaseWgslData>>;
   },
 
-  disarray(input, schema: TgpuDisarray) {
+  disarray(input, schema: Disarray) {
     const alignment = alignmentOf(schema);
     const elements: unknown[] = [];
 

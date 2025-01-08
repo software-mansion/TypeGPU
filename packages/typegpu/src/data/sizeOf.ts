@@ -1,6 +1,6 @@
 import { roundUp } from '../mathUtils';
 import { alignmentOf, customAlignmentOf } from './alignmentOf';
-import type { AnyData, LooseTypeLiteral, TgpuUnstruct } from './dataTypes';
+import type { AnyData, LooseTypeLiteral, Unstruct } from './dataTypes';
 import {
   getCustomSize,
   isDisarray,
@@ -92,7 +92,7 @@ function sizeOfStruct(struct: WgslStruct) {
   return roundUp(size, alignmentOf(struct));
 }
 
-function sizeOfUnstruct(data: TgpuUnstruct) {
+function sizeOfUnstruct(data: Unstruct) {
   let size = 0;
 
   for (const property of Object.values(data.propTypes)) {
