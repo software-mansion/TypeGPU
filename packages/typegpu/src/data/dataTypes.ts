@@ -4,37 +4,37 @@ import type { PackedData } from './vertexFormatData';
 import * as wgsl from './wgslTypes';
 
 /**
- * Array schema constructed via `d.looseArrayOf` function.
+ * Array schema constructed via `d.disarrayOf` function.
  *
  * Useful for defining vertex buffers.
  * Elements in the schema are not aligned in respect to their `byteAlignment`,
  * unless they are explicitly decorated with the custom align attribute
  * via `d.align` function.
  */
-export interface LooseArray<
+export interface TgpuDisarray<
   TElement extends wgsl.BaseWgslData = wgsl.BaseWgslData,
 > {
-  readonly type: 'loose-array';
+  readonly type: 'disarray';
   readonly elementCount: number;
   readonly elementType: TElement;
   readonly '~repr': Infer<TElement>[];
 }
 
 /**
- * Struct schema constructed via `d.looseStruct` function.
+ * Struct schema constructed via `d.unstruct` function.
  *
  * Useful for defining vertex buffers, as the standard layout restrictions do not apply.
  * Members are not aligned in respect to their `byteAlignment`,
  * unless they are explicitly decorated with the custom align attribute
  * via `d.align` function.
  */
-export interface LooseStruct<
+export interface TgpuUnstruct<
   TProps extends Record<string, wgsl.BaseWgslData> = Record<
     string,
     wgsl.BaseWgslData
   >,
 > {
-  readonly type: 'loose-struct';
+  readonly type: 'unstruct';
   readonly propTypes: TProps;
   readonly '~repr': InferRecord<TProps>;
 }
@@ -50,8 +50,8 @@ export interface LooseDecorated<
 }
 
 const looseTypeLiterals = [
-  'loose-struct',
-  'loose-array',
+  'unstruct',
+  'disarray',
   'loose-decorated',
   ...vertexFormats,
 ] as const;
@@ -59,8 +59,8 @@ const looseTypeLiterals = [
 export type LooseTypeLiteral = (typeof looseTypeLiterals)[number];
 
 export type AnyLooseData =
-  | LooseArray
-  | LooseStruct
+  | TgpuDisarray
+  | TgpuUnstruct
   | LooseDecorated
   | PackedData;
 
@@ -69,41 +69,41 @@ export function isLooseData(data: unknown): data is AnyLooseData {
 }
 
 /**
- * Checks whether the passed in value is a loose-array schema,
+ * Checks whether the passed in value is a disarray schema,
  * as opposed to, e.g., a regular array schema.
  *
  * Array schemas can be used to describe uniform and storage buffers,
- * whereas looseArray schemas cannot. Loose arrays are useful for
+ * whereas disarray schemas cannot. Disarrays are useful for
  * defining vertex buffers instead.
  *
  * @example
- * isLooseArray(d.arrayOf(d.u32, 4)) // false
- * isLooseArray(d.looseArrayOf(d.u32, 4)) // true
- * isLooseArray(d.vec3f) // false
+ * isDisarray(d.arrayOf(d.u32, 4)) // false
+ * isDisarray(d.disarrayOf(d.u32, 4)) // true
+ * isDisarray(d.vec3f) // false
  */
-export function isLooseArray<T extends LooseArray>(
+export function isDisarray<T extends TgpuDisarray>(
   schema: T | unknown,
 ): schema is T {
-  return (schema as LooseArray)?.type === 'loose-array';
+  return (schema as TgpuDisarray)?.type === 'disarray';
 }
 
 /**
- * Checks whether passed in value is a looseStruct schema,
+ * Checks whether passed in value is a unstruct schema,
  * as opposed to, e.g., a struct schema.
  *
  * Struct schemas can be used to describe uniform and storage buffers,
- * whereas looseStruct schemas cannot. Loose structs are useful for
+ * whereas unstruct schemas cannot. Unstructs are useful for
  * defining vertex buffers instead.
  *
  * @example
- * isLooseStruct(d.struct({ a: d.u32 })) // false
- * isLooseStruct(d.looseStruct({ a: d.u32 })) // true
- * isLooseStruct(d.vec3f) // false
+ * isUnstruct(d.struct({ a: d.u32 })) // false
+ * isUnstruct(d.unstruct({ a: d.u32 })) // true
+ * isUnstruct(d.vec3f) // false
  */
-export function isLooseStruct<T extends LooseStruct>(
+export function isUnstruct<T extends TgpuUnstruct>(
   schema: T | unknown,
 ): schema is T {
-  return (schema as T)?.type === 'loose-struct';
+  return (schema as T)?.type === 'unstruct';
 }
 
 export function isLooseDecorated<T extends LooseDecorated>(

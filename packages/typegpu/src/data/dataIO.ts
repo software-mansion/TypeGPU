@@ -4,9 +4,9 @@ import alignIO from './alignIO';
 import { alignmentOf, customAlignmentOf } from './alignmentOf';
 import type {
   AnyData,
-  LooseArray,
   LooseDecorated,
-  LooseStruct,
+  TgpuDisarray,
+  TgpuUnstruct,
 } from './dataTypes';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix';
 import { sizeOf } from './sizeOf';
@@ -392,7 +392,7 @@ const dataWriters = {
     output.writeUint8(value.w * 255);
   },
 
-  'loose-array'(output, schema: LooseArray, value: unknown[]) {
+  disarray(output, schema: TgpuDisarray, value: unknown[]) {
     const alignment = alignmentOf(schema);
 
     alignIO(output, alignment);
@@ -409,7 +409,7 @@ const dataWriters = {
     output.seekTo(beginning + sizeOf(schema));
   },
 
-  'loose-struct'(output, schema: LooseStruct, value) {
+  unstruct(output, schema: TgpuUnstruct, value) {
     for (const [key, property] of Object.entries(schema.propTypes)) {
       dataWriters[property.type]?.(output, property, value[key]);
     }
@@ -728,7 +728,7 @@ const dataReaders = {
     return vec4f(r, g, b, a);
   },
 
-  'loose-struct'(input, schema: LooseStruct) {
+  'unstruct'(input, schema: TgpuUnstruct) {
     const result = {} as Record<string, unknown>;
 
     for (const [key, property] of Object.entries(schema.propTypes)) {
@@ -738,7 +738,7 @@ const dataReaders = {
     return result as InferRecord<Record<string, wgsl.BaseWgslData>>;
   },
 
-  'loose-array'(input, schema: LooseArray) {
+  'disarray'(input, schema: TgpuDisarray) {
     const alignment = alignmentOf(schema);
     const elements: unknown[] = [];
 

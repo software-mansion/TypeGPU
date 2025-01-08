@@ -1,6 +1,6 @@
 import { alignmentOf, customAlignmentOf } from '../../data/alignmentOf';
-import { isLooseDecorated, isLooseStruct } from '../../data/dataTypes';
-import type { LooseArray } from '../../data/dataTypes';
+import { isLooseDecorated, isUnstruct } from '../../data/dataTypes';
+import type { TgpuDisarray } from '../../data/dataTypes';
 import { sizeOf } from '../../data/sizeOf';
 import { isDecorated, isWgslStruct } from '../../data/wgslTypes';
 import type { BaseWgslData, WgslArray } from '../../data/wgslTypes';
@@ -23,7 +23,7 @@ import type {
 // ----------
 
 export interface TgpuVertexLayout<
-  TData extends WgslArray | LooseArray = WgslArray | LooseArray,
+  TData extends WgslArray | TgpuDisarray = WgslArray | TgpuDisarray,
 > extends TgpuNamable {
   readonly resourceType: 'vertex-layout';
   readonly label?: string | undefined;
@@ -37,7 +37,7 @@ export interface INTERNAL_TgpuVertexAttrib {
   readonly _layout: TgpuVertexLayout;
 }
 
-export function vertexLayout<TData extends WgslArray | LooseArray>(
+export function vertexLayout<TData extends WgslArray | TgpuDisarray>(
   schemaForCount: (count: number) => TData,
   stepMode: 'vertex' | 'instance' = 'vertex',
 ): TgpuVertexLayout<ExoticIO<TData>> {
@@ -58,7 +58,7 @@ export function isVertexLayout<T extends TgpuVertexLayout>(
 // --------------
 
 function dataToContainedAttribs<
-  TLayoutData extends WgslArray | LooseArray,
+  TLayoutData extends WgslArray | TgpuDisarray,
   TData extends BaseWgslData,
 >(
   layout: TgpuVertexLayout<TLayoutData>,
@@ -89,7 +89,7 @@ function dataToContainedAttribs<
     ) as DataToContainedAttribs<TData>;
   }
 
-  if (isLooseStruct(data)) {
+  if (isUnstruct(data)) {
     let memberOffset = offset;
 
     return Object.fromEntries(
@@ -132,7 +132,7 @@ function dataToContainedAttribs<
   throw new Error(`Unsupported data used in vertex layout: ${String(data)}`);
 }
 
-class TgpuVertexLayoutImpl<TData extends WgslArray | LooseArray>
+class TgpuVertexLayoutImpl<TData extends WgslArray | TgpuDisarray>
   implements TgpuVertexLayout<TData>
 {
   public readonly resourceType = 'vertex-layout';

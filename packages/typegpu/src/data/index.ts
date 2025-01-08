@@ -66,8 +66,8 @@ export {
   arrayOf,
 } from './array';
 export type {
-  LooseArray,
-  LooseStruct,
+  TgpuDisarray,
+  TgpuUnstruct,
   LooseDecorated,
   AnyData,
   AnyLooseData,
@@ -86,8 +86,8 @@ export {
   vec4i,
   vec4u,
 } from './vector';
-export { looseArrayOf } from './looseArray';
-export { looseStruct } from './looseStruct';
+export { disarrayOf } from './disarray';
+export { unstruct } from './unstruct';
 export {
   mat2x2f,
   mat3x3f,
@@ -106,8 +106,8 @@ export {
   HasCustomLocation,
 } from './attributes';
 export {
-  isLooseArray,
-  isLooseStruct,
+  isDisarray,
+  isUnstruct,
   isLooseDecorated,
   isData,
   isLooseData,
