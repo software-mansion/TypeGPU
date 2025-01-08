@@ -122,7 +122,8 @@ buffer.$addFlags(GPUBufferUsage.QUERY_RESOLVE);
 ```
 
 :::note
-Every typed buffer created without providing existing GPU buffer has `COPY_DST` and `COPY_SRC` flags included by default.
+Every typed buffer created without providing existing GPU buffer has `COPY_DST` and `COPY_SRC` flags included by default. 
+However once the `MAP_READ` flag is provided, the only other flag set is `COPY_DST`. Similarly when setting `MAP_WRITE` it is paired with `COPY_SRC`.
 :::
 
 Flags can only be added this way if the typed buffer was not created with an existing GPU buffer. 
