@@ -261,6 +261,6 @@ class FnCall<Args extends AnyWgslData[], Return extends AnyWgslData | undefined>
   }
 
   toString() {
-    return `fn call: ${this.label ?? '<unnamed>'}`;
+    return `call:${this.label ?? '<unnamed>'}`;
   }
 }
