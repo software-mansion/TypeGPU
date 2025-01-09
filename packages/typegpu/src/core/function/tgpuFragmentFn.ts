@@ -2,6 +2,7 @@ import type { OmitBuiltins } from '../../builtin';
 import { type Vec4f, isWgslStruct } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
 import type { ResolutionCtx, TgpuResolvable } from '../../types';
+import { addReturnTypeToExternals } from '../resolve/externals';
 import { createFnCore } from './fnCore';
 import type {
   ExoticIO,
@@ -99,6 +100,11 @@ function createFragmentFn(
 
   const core = createFnCore(shell, implementation);
   const outputType = createOutputType(core, implementation, shell.returnType);
+  if (typeof implementation === 'string') {
+    addReturnTypeToExternals(implementation, outputType, (externals) =>
+      core.applyExternals(externals),
+    );
+  }
 
   return {
     shell,

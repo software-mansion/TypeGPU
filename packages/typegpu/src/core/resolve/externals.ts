@@ -1,4 +1,4 @@
-import { isWgslData } from '../../data/wgslTypes';
+import { isWgslData, isWgslStruct } from '../../data/wgslTypes';
 import { isNamable } from '../../namable';
 import { type ResolutionCtx, type Wgsl, isResolvable } from '../../types';
 import { isSlot } from '../slot/slotTypes';
@@ -19,6 +19,42 @@ export function applyExternals(
     ) {
       value.$name(key);
     }
+  }
+}
+
+export function addArgTypesToExternals(
+  implementation: string,
+  argTypes: unknown[],
+  applyExternals: (externals: ExternalMap) => void,
+) {
+  const argTypeNames = implementation
+    .match(/^\s*\((?<args>.*?)\)\s*->/s)
+    ?.groups?.args?.split(',')
+    .map((arg) => arg.split(':')[1]?.trim());
+
+  applyExternals(
+    Object.fromEntries(
+      argTypes.flatMap((argType, i) => {
+        const argTypeName = argTypeNames ? argTypeNames[i] : undefined;
+        return isWgslStruct(argType) && argTypeName !== undefined
+          ? [[argTypeName, argType]]
+          : [];
+      }),
+    ),
+  );
+}
+
+export function addReturnTypeToExternals(
+  implementation: string,
+  returnType: unknown,
+  applyExternals: (externals: ExternalMap) => void,
+) {
+  const outputName = implementation
+    .match(/->(?<output>.*?){/s)
+    ?.groups?.output?.trim();
+
+  if (isWgslStruct(returnType) && outputName && !/\s/g.test(outputName)) {
+    applyExternals({ [outputName]: returnType });
   }
 }
 
