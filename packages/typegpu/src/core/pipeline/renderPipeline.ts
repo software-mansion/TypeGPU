@@ -306,6 +306,8 @@ class RenderPipelineCore {
             });
             return '';
           },
+
+          toString: () => `renderPipeline:${this.label ?? '<unnamed>'}`,
         },
         {
           names: branch.nameRegistry,

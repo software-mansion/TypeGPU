@@ -30,11 +30,9 @@ export function resolve(options: TgpuResolveOptions): string {
     resolve(ctx) {
       return replaceExternalsInWgsl(ctx, dependencies, template ?? '');
     },
-  };
 
-  Object.defineProperty(resolutionObj, 'toString', {
-    value: () => '<root>',
-  });
+    toString: () => '<root>',
+  };
 
   const { code } = resolveImpl(resolutionObj, {
     names:

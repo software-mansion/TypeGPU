@@ -58,6 +58,10 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     return id;
   }
 
+  toString() {
+    return `const:${this.label ?? '<unnamed>'}`;
+  }
+
   get value(): Infer<TDataType> {
     if (!inGPUMode()) {
       return this._value;

@@ -62,4 +62,8 @@ class TgpuStructImpl<TProps extends Record<string, AnyWgslData>>
     this._label = label;
     return this;
   }
+
+  toString() {
+    return `struct:${this.label ?? '<unnamed>'}`;
+  }
 }
