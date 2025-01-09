@@ -51,9 +51,7 @@ export function withLocations<T extends IOData>(
   );
 }
 
-export function createOutputType<T extends IOData>(
-  returnType: IOLayout<T>,
-): IOLayoutToOutputSchema<IOLayout<T>> {
+export function createOutputType<T extends IOData>(returnType: IOLayout<T>) {
   return (
     isData(returnType)
       ? location(0, returnType)
