@@ -154,7 +154,7 @@ class ComputePipelineCore {
             return '';
           },
 
-          toString: () => `compute pipeline code resolution: ${this._entryFn}`,
+          toString: () => `computePipeline:${this.label ?? '<unnamed>'}`,
         },
         {
           names: this.branch.nameRegistry,
