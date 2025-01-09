@@ -156,6 +156,12 @@ const Transpilers: Partial<{
     return { x: [left, wgslOp, right] } as smol.AssignmentExpression;
   },
 
+  UnaryExpression(ctx, node) {
+    const wgslOp = node.operator;
+    const argument = transpile(ctx, node.argument);
+    return { u: [wgslOp, argument] } as smol.UnaryExpression;
+  },
+
   MemberExpression(ctx, node) {
     const object = transpile(ctx, node.object) as smol.Expression;
 

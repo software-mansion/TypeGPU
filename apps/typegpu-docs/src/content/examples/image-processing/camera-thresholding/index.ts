@@ -93,8 +93,8 @@ context.configure({
 
 const renderShaderModule = device.createShaderModule({
   code: tgpu.resolve({
-    input: renderShaderCode,
-    extraDependencies: {
+    template: renderShaderCode,
+    externals: {
       ...rareLayout.bound,
       ...frequentLayout.bound,
       VertexOutput,

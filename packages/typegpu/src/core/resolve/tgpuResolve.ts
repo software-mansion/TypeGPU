@@ -6,14 +6,8 @@ import type { TgpuResolvable } from '../../types';
 import { applyExternals, replaceExternalsInWgsl } from './externals';
 
 export interface TgpuResolveOptions {
-  input:
-    | string
-    | TgpuResolvable
-    | AnyWgslData
-    | (string | TgpuResolvable | AnyWgslData)[];
-  extraDependencies?:
-    | Record<string, TgpuResolvable | AnyWgslData | string | number>
-    | undefined;
+  externals: Record<string, TgpuResolvable | AnyWgslData | string | number>;
+  template?: string | undefined;
   /**
    * @default 'random'
    */
@@ -23,29 +17,18 @@ export interface TgpuResolveOptions {
 
 export function resolve(options: TgpuResolveOptions): string {
   const {
-    input,
-    extraDependencies,
+    externals,
+    template,
     names,
     unstable_jitTranspiler: jitTranspiler,
   } = options;
 
   const dependencies = {} as Record<string, TgpuResolvable>;
-  applyExternals(dependencies, extraDependencies ?? {});
-
-  const stringCode = (Array.isArray(input) ? input : [input]).filter(
-    (item) => typeof item === 'string',
-  ) as string[];
-  const resolvableCode = (Array.isArray(input) ? input : [input]).filter(
-    (item) => typeof item !== 'string',
-  ) as TgpuResolvable[];
+  applyExternals(dependencies, externals ?? {});
 
   const resolutionObj: TgpuResolvable = {
     resolve(ctx) {
-      const stringCodeResolved = stringCode.join('\n\n');
-      for (const resolvable of resolvableCode) {
-        ctx.resolve(resolvable);
-      }
-      return replaceExternalsInWgsl(ctx, dependencies, stringCodeResolved);
+      return replaceExternalsInWgsl(ctx, dependencies, template ?? '');
     },
   };
 

@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 import * as d from '../src/data';
 import { readData, writeData } from '../src/data/dataIO';
 
-describe('d.looseStruct', () => {
+describe('d.unstruct', () => {
   it('properly calculates size with only loose members', () => {
-    const s = d.looseStruct({
+    const s = d.unstruct({
       a: d.unorm8x2, // 1 byte * 2 = 2
       b: d.sint16x2, // 2 bytes * 2 = 4
       c: d.float32x3, // 4 bytes * 3 = 12
@@ -13,14 +13,14 @@ describe('d.looseStruct', () => {
     });
     expect(d.sizeOf(s)).toEqual(18);
 
-    const s2 = d.looseStruct({
+    const s2 = d.unstruct({
       a: d.unorm10_10_10_2, // 4 bytes
       b: d.sint16x4, // 2 bytes * 4 = 8
       // Total: 4 + 8 = 12
     });
     expect(d.sizeOf(s2)).toEqual(12);
 
-    const s3 = d.looseStruct({
+    const s3 = d.unstruct({
       a: d.vec2f, // 8 bytes
       b: d.vec3u, // 12 bytes
       // Total: 8 + 12 = 20
@@ -29,7 +29,7 @@ describe('d.looseStruct', () => {
   });
 
   it('properly calculates size with only aligned members', () => {
-    const s = d.looseStruct({
+    const s = d.unstruct({
       a: d.align(16, d.unorm8x2), // 2 bytes
       b: d.align(16, d.sint16x2), // 14 padding bytes + 4 bytes = 18
       c: d.align(16, d.float32x3), // 12 padding bytes + 12 bytes = 24
@@ -37,7 +37,7 @@ describe('d.looseStruct', () => {
     });
     expect(d.sizeOf(s)).toEqual(44);
 
-    const s2 = d.looseStruct({
+    const s2 = d.unstruct({
       a: d.align(16, d.unorm10_10_10_2), // 4 bytes
       b: d.align(16, d.sint16x4), // 12 padding bytes + 8 bytes = 20
       c: d.align(16, d.vec3f), // 8 padding bytes + 12 bytes = 20
@@ -47,7 +47,7 @@ describe('d.looseStruct', () => {
   });
 
   it('properly calculates size with mixed members', () => {
-    const s = d.looseStruct({
+    const s = d.unstruct({
       a: d.unorm8x2, // 2 bytes
       b: d.align(16, d.sint16x2), // 14 padding bytes + 4 bytes = 18
       c: d.float32x3, // 12 bytes
@@ -55,7 +55,7 @@ describe('d.looseStruct', () => {
     });
     expect(d.sizeOf(s)).toEqual(32);
 
-    const s2 = d.looseStruct({
+    const s2 = d.unstruct({
       a: d.align(16, d.unorm10_10_10_2), // 4 bytes
       b: d.sint16x4, // 8 bytes
       c: d.vec3f, // 12 bytes
@@ -63,7 +63,7 @@ describe('d.looseStruct', () => {
     });
     expect(d.sizeOf(s2)).toEqual(24);
 
-    const s3 = d.looseStruct({
+    const s3 = d.unstruct({
       a: d.vec2f, // 8 bytes
       b: d.align(16, d.vec3u), // 8 padding bytes + 12 bytes = 20
       c: d.unorm10_10_10_2, // 4 bytes
@@ -72,31 +72,31 @@ describe('d.looseStruct', () => {
     expect(d.sizeOf(s3)).toEqual(32);
   });
 
-  it('properly calculates size when nested and combined with d.looseArrayOf', () => {
-    const s = d.looseStruct({
+  it('properly calculates size when nested and combined with d.disarray', () => {
+    const s = d.unstruct({
       a: d.unorm8x2, // 2 bytes
       b: d.align(16, d.sint16x2), // 14 padding bytes + 4 bytes = 18
-      c: d.looseArrayOf(d.vec3f, 2), // 12 bytes * 2 = 24
+      c: d.disarrayOf(d.vec3f, 2), // 12 bytes * 2 = 24
       // Total: 2 + 18 + 24 = 44
     });
     expect(d.sizeOf(s)).toEqual(44);
 
-    const s2 = d.looseStruct({
+    const s2 = d.unstruct({
       a: d.align(16, d.unorm10_10_10_2), // 4 bytes
       b: d.sint16x4, // 8 bytes
-      c: d.looseArrayOf(d.vec3f, 2), // 12 bytes * 2 = 24
+      c: d.disarrayOf(d.vec3f, 2), // 12 bytes * 2 = 24
       // Total: 4 + 8 + 24 = 36
     });
     expect(d.sizeOf(s2)).toEqual(36);
 
-    const s3 = d.looseStruct({
+    const s3 = d.unstruct({
       a: d.vec2f, // 8 bytes
       b: d.align(16, d.vec3u), // 8 padding bytes + 12 bytes = 20
       // Total: 8 + 20 = 28
     });
     expect(d.sizeOf(s3)).toEqual(28);
 
-    const s4 = d.looseStruct({
+    const s4 = d.unstruct({
       a: d.vec2f, // 8 bytes
       b: d.align(16, d.vec3u), // 8 padding bytes + 12 bytes = 20
       c: s2, // 4 padding bytes + 36 bytes = 40
@@ -106,7 +106,7 @@ describe('d.looseStruct', () => {
   });
 
   it('properly writes and reads data', () => {
-    const s = d.looseStruct({
+    const s = d.unstruct({
       a: d.unorm8x2,
       b: d.align(16, d.snorm16x2),
       c: d.float32x3,
@@ -134,10 +134,10 @@ describe('d.looseStruct', () => {
   });
 
   it('properly writes and reads data with nested structs', () => {
-    const s = d.looseStruct({
+    const s = d.unstruct({
       a: d.unorm8x2,
       b: d.align(16, d.snorm16x2),
-      c: d.looseStruct({
+      c: d.unstruct({
         a: d.float32x3,
         b: d.vec2i,
       }),
@@ -172,13 +172,13 @@ describe('d.looseStruct', () => {
   it('can be custom aligned and behaves properly', () => {
     const s = d.align(
       16,
-      d.looseStruct({
+      d.unstruct({
         a: d.unorm8x2, // 2 bytes
         b: d.align(8, d.snorm16x2), // 6 padding bytes + 4 bytes = 10
       }),
     );
 
-    const a = d.looseArrayOf(s, 8);
+    const a = d.disarrayOf(s, 8);
 
     expect(d.sizeOf(s)).toEqual(12);
     // since the struct is aligned to 16 bytes, the array stride should be 16 not 12
@@ -206,7 +206,7 @@ describe('d.looseStruct', () => {
   });
 
   it('works properly in conjunction with f16 based attributes', () => {
-    const s = d.looseStruct({
+    const s = d.unstruct({
       a: d.float16x2,
       b: d.unorm8x4_bgra,
       c: d.align(16, d.snorm16x2),

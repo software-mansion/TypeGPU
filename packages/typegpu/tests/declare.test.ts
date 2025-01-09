@@ -18,7 +18,7 @@ describe('tgpu.declare', () => {
       .$uses({ declaration })
       .$name('empty');
 
-    expect(parseResolved(fn)).toEqual(
+    expect(parseResolved({ fn })).toEqual(
       parse(`
       @group(0) @binding(0) var<uniform> val: f32;
 
@@ -41,7 +41,7 @@ describe('tgpu.declare', () => {
       .$uses({ declaration })
       .$name('empty');
 
-    expect(parseResolved(fn)).toEqual(
+    expect(parseResolved({ fn })).toEqual(
       parse(`
       @group(0) @binding(0) var<uniform> val: f32;
 
@@ -61,17 +61,17 @@ describe('tgpu.declare', () => {
           '@group(0) @binding(0) var<uniform> val: f32;',
         ),
         extraDeclaration2: tgpu.declare(`
-          struct Output { 
+          struct Output {
             x: u32,
           }`),
       })
       .$name('empty');
 
-    expect(parseResolved(fn)).toEqual(
+    expect(parseResolved({ fn })).toEqual(
       parse(`
       @group(0) @binding(0) var<uniform> val: f32;
 
-      struct Output { 
+      struct Output {
         x: u32,
       }
 
@@ -85,7 +85,7 @@ describe('tgpu.declare', () => {
       .declare('@group(0) @binding(0) var<uniform> val: f32;')
       .$uses({
         nestedDeclaration: tgpu.declare(
-          `struct Output { 
+          `struct Output {
               x: u32,
             }`,
         ),
@@ -99,14 +99,14 @@ describe('tgpu.declare', () => {
       .$uses({ declaration })
       .$name('empty');
 
-    expect(parseResolved(fn)).toEqual(
+    expect(parseResolved({ fn })).toEqual(
       parse(`
-        struct Output { 
+        struct Output {
           x: u32,
         }
 
         @group(0) @binding(0) var<uniform> val: f32;
-  
+
         fn empty() {}
       `),
     );
@@ -129,14 +129,14 @@ describe('tgpu.declare', () => {
       .$uses({ declaration })
       .$name('empty');
 
-    expect(parseResolved(fn)).toEqual(
+    expect(parseResolved({ fn })).toEqual(
       parse(`
-        struct Output { 
+        struct Output {
           x: u32,
         }
 
         @group(0) @binding(0) var<uniform> val: Output;
-  
+
         fn empty() {}
       `),
     );
@@ -155,7 +155,7 @@ describe('tgpu.declare', () => {
       })
       .$name('main');
 
-    expect(parseResolved(main)).toEqual(
+    expect(parseResolved({ main })).toEqual(
       parse(`
       @group(0) @binding(0) var<uniform> val: f32;
 
