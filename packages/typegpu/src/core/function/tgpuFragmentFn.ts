@@ -99,7 +99,7 @@ function createFragmentFn(
   type This = TgpuFragmentFn;
 
   const core = createFnCore(shell, implementation);
-  const outputType = createOutputType(core, implementation, shell.returnType);
+  const outputType = createOutputType(shell.returnType);
   if (typeof implementation === 'string') {
     addReturnTypeToExternals(implementation, outputType, (externals) =>
       core.applyExternals(externals),
