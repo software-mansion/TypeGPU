@@ -775,14 +775,14 @@ export function isWgslData(value: unknown): value is AnyWgslData {
 
 /**
  * Checks whether passed in value is an array schema,
- * as opposed to, e.g., a looseArray schema.
+ * as opposed to, e.g., a disarray schema.
  *
  * Array schemas can be used to describe uniform and storage buffers,
- * whereas looseArray schemas cannot.
+ * whereas disarray schemas cannot.
  *
  * @example
  * isWgslArray(d.arrayOf(d.u32, 4)) // true
- * isWgslArray(d.looseArrayOf(d.u32, 4)) // false
+ * isWgslArray(d.disarray(d.u32, 4)) // false
  * isWgslArray(d.vec3f) // false
  */
 export function isWgslArray<T extends WgslArray>(
@@ -793,14 +793,14 @@ export function isWgslArray<T extends WgslArray>(
 
 /**
  * Checks whether passed in value is a struct schema,
- * as opposed to, e.g., a looseStruct schema.
+ * as opposed to, e.g., an unstruct schema.
  *
  * Struct schemas can be used to describe uniform and storage buffers,
- * whereas looseStruct schemas cannot.
+ * whereas unstruct schemas cannot.
  *
  * @example
  * isWgslStruct(d.struct({ a: d.u32 })) // true
- * isWgslStruct(d.looseStruct({ a: d.u32 })) // false
+ * isWgslStruct(d.unstruct({ a: d.u32 })) // false
  * isWgslStruct(d.vec3f) // false
  */
 export function isWgslStruct<T extends WgslStruct>(

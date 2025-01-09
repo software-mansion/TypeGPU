@@ -123,5 +123,9 @@ function createVertexFn(
     resolve(ctx: ResolutionCtx): string {
       return core.resolve(ctx, '@vertex ');
     },
+
+    toString() {
+      return `vertexFn:${this.label ?? '<unnamed>'}`;
+    },
   };
 }

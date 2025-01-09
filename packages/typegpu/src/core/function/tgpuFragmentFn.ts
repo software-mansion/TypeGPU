@@ -124,5 +124,9 @@ function createFragmentFn(
     resolve(ctx: ResolutionCtx): string {
       return core.resolve(ctx, '@fragment ');
     },
+
+    toString() {
+      return `fragmentFn:${this.label ?? '<unnamed>'}`;
+    },
   };
 }

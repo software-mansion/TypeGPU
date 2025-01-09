@@ -15,7 +15,7 @@ describe('tgpu.var', () => {
       .$uses({ x })
       .$name('fn1');
 
-    expect(parseResolved(fn1)).toEqual(
+    expect(parseResolved({ fn1 })).toEqual(
       parse(`
         var<private> x: u32 = 2;
         fn fn1() {
@@ -30,7 +30,7 @@ describe('tgpu.var', () => {
       variable: TgpuVar<VariableScope, d.AnyWgslData>,
       expected: string,
     ) {
-      expect(parseResolved(variable)).toEqual(parse(expected));
+      expect(parseResolved({ x: variable })).toEqual(parse(expected));
     }
 
     test(tgpu.privateVar(d.u32, 2).$name('x'), 'var<private> x: u32 = 2;');

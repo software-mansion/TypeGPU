@@ -180,8 +180,8 @@ const computePipeline = device.createComputePipeline({
   compute: {
     module: device.createShaderModule({
       code: tgpu.resolve({
-        input: computeShaderCode,
-        extraDependencies: {
+        template: computeShaderCode,
+        externals: {
           Settings,
           ...uniformLayout.bound,
           ...ioLayout.bound,
@@ -235,8 +235,8 @@ const renderPassDescriptor: GPURenderPassDescriptor = {
 
 const renderShaderModule = device.createShaderModule({
   code: tgpu.resolve({
-    input: renderShaderCode,
-    extraDependencies: { VertexOutput, ...renderLayout.bound },
+    template: renderShaderCode,
+    externals: { VertexOutput, ...renderLayout.bound },
   }),
 });
 
