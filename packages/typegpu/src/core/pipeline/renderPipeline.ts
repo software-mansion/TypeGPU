@@ -307,8 +307,7 @@ class RenderPipelineCore {
             return '';
           },
 
-          toString: () =>
-            `render pipeline code resolution: ${vertexFn}, ${fragmentFn}`,
+          toString: () => `renderPipeline:${this.label ?? '<unnamed>'}`,
         },
         {
           names: branch.nameRegistry,
