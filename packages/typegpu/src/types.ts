@@ -87,7 +87,7 @@ export interface ResolutionCtx {
 export interface TgpuResolvable {
   readonly label?: string | undefined;
   resolve(ctx: ResolutionCtx): string;
-  toString: () => string;
+  toString(): string;
 }
 
 export function isResolvable(value: unknown): value is TgpuResolvable {

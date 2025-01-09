@@ -59,6 +59,6 @@ class TgpuArrayImpl<TElement extends AnyWgslData>
   }
 
   toString() {
-    return `array of ${this.elementType}`;
+    return `arrayOf(${this.elementType})`;
   }
 }
