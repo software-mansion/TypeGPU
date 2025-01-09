@@ -150,6 +150,10 @@ export class TgpuLaidOutSamplerImpl implements TgpuSampler {
 
     return id;
   }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+  }
 }
 
 export class TgpuLaidOutComparisonSamplerImpl implements TgpuComparisonSampler {
@@ -170,6 +174,10 @@ export class TgpuLaidOutComparisonSamplerImpl implements TgpuComparisonSampler {
     );
 
     return id;
+  }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
   }
 }
 
@@ -212,6 +220,10 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler {
 
     return id;
   }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+  }
 }
 
 class TgpuFixedComparisonSamplerImpl implements TgpuFixedComparisonSampler {
@@ -242,5 +254,9 @@ class TgpuFixedComparisonSamplerImpl implements TgpuFixedComparisonSampler {
     );
 
     return id;
+  }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
   }
 }

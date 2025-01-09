@@ -259,4 +259,8 @@ class FnCall<Args extends AnyWgslData[], Return extends AnyWgslData | undefined>
       `${ctx.resolve(this._fn)}(${this._params.map((param) => ctx.resolve(param)).join(', ')})`,
     );
   }
+
+  toString() {
+    return `fn call: ${this.label ?? '<unnamed>'}`;
+  }
 }

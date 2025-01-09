@@ -306,6 +306,9 @@ class RenderPipelineCore {
             });
             return '';
           },
+
+          toString: () =>
+            `render pipeline code resolution: ${vertexFn}, ${fragmentFn}`,
         },
         {
           names: branch.nameRegistry,

@@ -153,6 +153,8 @@ class ComputePipelineCore {
             });
             return '';
           },
+
+          toString: () => `compute pipeline code resolution: ${this._entryFn}`,
         },
         {
           names: this.branch.nameRegistry,

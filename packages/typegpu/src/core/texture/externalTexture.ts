@@ -38,4 +38,8 @@ export class TgpuExternalTextureImpl implements TgpuExternalTexture {
 
     return id;
   }
+
+  toString() {
+    return `${this.resourceType}: ${this.label ?? '<unnamed>'}`;
+  }
 }
