@@ -632,6 +632,6 @@ export class TgpuLaidOutSampledTextureImpl implements TgpuSampledTexture {
   }
 
   toString() {
-    return `${this.resourceType}: ${this.label ?? '<unnamed>'}`;
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
   }
 }
