@@ -3,11 +3,8 @@ title: Resolve
 description: Resolve API can be used to extend shader code with WGSL definitions of TypeGPU-defined objects.
 ---
 
-Defining shader schemas and objects in JS/TS has lots of benefits, but for a while it meant introducing significant duplication between host and GPU code.
-In addition to that it was crucial to keep both sides in sync manually when making any changes.
-To mitigate this problem TypeGPU offers the **`tgpu.resolve`** API, which allows there to be just one source of truth,
-ensuring that the shader code is always up-to-date with the latest changes to the data schemas, bind group layouts and such. 
-It takes WGSL code and all the external objects it uses, but doesn't declare, and returns the complete necessary WGSL code, ready to be used as part of a *GPUShaderModule*.
+Defining shader schemas and objects in JS/TS has lots of benefits, but having to keep them in sync with the corresponding WGSL code is hard to maintain.
+The `tgpu.resolve` API takes in a WGSL template, all TypeGPU schemas that you want to use in the shader, and generates a ready-to-use WGSL bundle.
 
 :::note
 `tgpu.resolve` is essentially a dedicated TypeGPU linker.
@@ -22,6 +19,7 @@ const LightSource = d.struct({
   ambientColor: d.vec3f,
   intensity: d.f32,
 }).$name('Source');
+// ^ Giving the struct an explicit (optional) name
 
 const layout = tgpu.bindGroupLayout({
   lightSource: { uniform: LightSource },
@@ -44,13 +42,12 @@ const rawShader = /* wgsl */ `
 
 const resolved = tgpu.resolve({
   template: rawShader,
-  externals: {
+  externals: { // keys are the names used for references in the template
     lightSource: layout.bound.lightSource,
     sampling: layout.bound.sampling,
     bgTexture: layout.bound.bgTexture,
     LightSource,
   },
-  names: 'strict',
 });
 ```
 
@@ -103,22 +100,23 @@ To resolve bindings you can access each entry of a [bindGroupLayout](/TypeGPU/fu
     bgTexture: layout.bound.bgTexture,
   }
 
-  // can be shortened to:
+  // As long as the names in the shader match the
+  // layout keys, it can be shortened to:
   externals: {
-    { ...layout.bound },
+    ...layout.bound,
   }
 ```
 :::
 
-## Name registry
+## Naming scheme
 
-When externals are being resolved, they are given new names based on the specified naming registry type (parameter `names`).
+When externals are being resolved, they are given new names based on the specified naming scheme (`names` parameter).
 
-The default naming schema is `random`. It uses labels assigned to the objects via *.$name* method or, if they aren't present, the keys in the *externals* record. 
+The default naming scheme is `"random"`. It uses labels assigned to the objects via `.$name("foo")` method or, if they aren't present, the keys in the *externals* record. 
 In this mode labels are later transformed to match the allowed identifier pattern, as well as include some unique suffix to ensure that no identifiers conflict with each other. 
 
-Another allowed value of the parameter is `strict` which names resolved objects in the WGSL code exactly as they are labeled by the user in JS, 
-unless there is a name conflict, then a suffix is added. 
+Another allowed value of the parameter is `"strict"` which names resolved objects in the WGSL code exactly as they are labeled by the user in JS,
+unless there is a name conflict, in which case a suffix is added.
 If there is no explicit *.$name* call, an object is named based on its associated key in *externals*. 
 This approach makes all of the generated identifiers predictable, but demands that all labels are valid identifiers 
 and requires explicit naming (via `.$name`) of all objects that aren't immediate values in the *externals* record.
