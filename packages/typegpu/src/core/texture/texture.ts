@@ -524,7 +524,7 @@ export class TgpuLaidOutStorageTextureImpl implements TgpuStorageTexture {
   }
 
   toString() {
-    return `${this.resourceType}: ${this.label ?? '<unnamed>'}`;
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
   }
 }
 
