@@ -1,3 +1,4 @@
+import { type Unstruct, formatToWGSLType } from '../../data';
 import { getAttributesString } from '../../data/attributes';
 import type {
   AnyWgslData,
@@ -27,6 +28,7 @@ import type {
 } from '../../data/wgslTypes';
 import { assertExhaustive } from '../../shared/utilityTypes';
 import type { ResolutionCtx } from '../../types';
+import { isAttribute } from '../vertexLayout/connectAttributesToShader';
 
 /**
  * Schemas for which their `type` property directly
@@ -95,6 +97,23 @@ function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
 struct ${id} {
 ${Object.entries(struct.propTypes)
   .map((prop) => resolveStructProperty(ctx, prop))
+  .join('')}\
+}\n`);
+
+  return id;
+}
+
+function resolveUnstruct(ctx: ResolutionCtx, unstruct: Unstruct) {
+  const id = ctx.names.makeUnique(unstruct.label);
+
+  ctx.addDeclaration(`
+struct ${id} {
+${Object.entries(unstruct.propTypes)
+  .map((prop) =>
+    isAttribute(prop[1])
+      ? resolveStructProperty(ctx, [prop[0], formatToWGSLType[prop[1].format]])
+      : resolveStructProperty(ctx, prop),
+  )
   .join('')}\
 }\n`);
 
