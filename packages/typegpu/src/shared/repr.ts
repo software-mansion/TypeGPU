@@ -1,4 +1,4 @@
-import type { AnyData } from '../data';
+import type { AnyData } from '../data/dataTypes';
 
 /**
  * Extracts the inferred representation of a resource.
