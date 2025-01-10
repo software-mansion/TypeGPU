@@ -12,6 +12,7 @@ export interface TgpuResolveOptions {
   externals: Record<string, TgpuResolvable | AnyWgslData | string | number>;
   /**
    * The code template to use for the resolution. All external names will be replaced with their resolved values.
+   * @default ''
    */
   template?: string | undefined;
   /**
@@ -40,7 +41,7 @@ export interface TgpuResolveOptions {
  *   to: d.vec3f,
  * });
  *
- * const resolved = resolve({
+ * const resolved = tgpu.resolve({
  *   template: `
  *     fn getGradientAngle(gradient: Gradient) -> f32 {
  *       return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);

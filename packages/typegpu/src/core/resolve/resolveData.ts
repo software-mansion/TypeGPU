@@ -125,7 +125,7 @@ ${Object.entries(struct.propTypes)
  *
  * @example
  * ```ts
- * resolveArray(ctx, d.arrayOf(d.u32)); // 'array<u32>'
+ * resolveArray(ctx, d.arrayOf(d.u32, 0)); // 'array<u32>' (not a real pattern, a function is preferred)
  * resolveArray(ctx, d.arrayOf(d.u32, 5)); // 'array<u32, 5>'
  * ```
  */
