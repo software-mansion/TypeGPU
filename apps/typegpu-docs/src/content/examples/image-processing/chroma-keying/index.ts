@@ -72,11 +72,11 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
   return col;
 }`;
 
-const width = 500;
-const height = 375;
-
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const video = document.querySelector('video') as HTMLVideoElement;
+
+const width = video.width;
+const height = video.height;
 
 let stream: MediaStream;
 

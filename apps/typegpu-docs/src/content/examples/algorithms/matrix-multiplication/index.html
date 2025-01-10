@@ -12,3 +12,22 @@
   <div>result matrix</div>
   <div class="matrix-result example-matrix"></div>
 </div>
+
+<style>
+  .example-matrix {
+    display: grid;
+    gap: 0.5rem;
+    background-color: white;
+    padding: 1rem;
+    border-radius: 0.5rem;
+  }
+
+  .example-matrix > div {
+    padding: 0.5rem;
+  }
+
+  div:has(+ .example-matrix) {
+    padding-bottom: 1rem;
+    text-align: center;
+  }
+</style>
