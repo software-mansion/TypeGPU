@@ -159,6 +159,14 @@ export interface TgpuBindGroupLayout<
   readonly index: number | undefined;
 
   /**
+   * Associates this bind group layout with an explicit numeric index. When a call to this
+   * method is omitted, a unique numeric index is assigned to it automatically.
+   *
+   * Used when generating WGSL code: `@group(${index}) @binding(...) ...;`
+   */
+  $idx(index?: number): this;
+
+  /**
    * @deprecated Use the `root.createBindGroup` API instead, accessible through `await tgpu.init()`
    */
   populate(
@@ -173,21 +181,6 @@ export interface TgpuBindGroupLayout<
    * @param unwrapper Used to unwrap any resources that this resource depends on.
    */
   unwrap(unwrapper: Unwrapper): GPUBindGroupLayout;
-}
-
-export interface TgpuBindGroupLayoutExperimental<
-  Entries extends Record<string, TgpuLayoutEntry | null> = Record<
-    string,
-    TgpuLayoutEntry | null
-  >,
-> extends TgpuBindGroupLayout<Entries> {
-  /**
-   * Associates this bind group layout with an explicit numeric index. When a call to this
-   * method is omitted, a unique numeric index is assigned to it automatically.
-   *
-   * Used when generating WGSL code: `@group(${index}) @binding(...) ...;`
-   */
-  $idx(index?: number): this;
 }
 
 type StorageUsageForEntry<T extends TgpuLayoutStorage> = T extends {
@@ -338,14 +331,6 @@ export function bindGroupLayout<
   return new TgpuBindGroupLayoutImpl(entries as ExoticEntries<Entries>);
 }
 
-export function bindGroupLayoutExperimental<
-  Entries extends Record<string, TgpuLayoutEntry | null>,
->(
-  entries: Entries,
-): TgpuBindGroupLayoutExperimental<Prettify<ExoticEntries<Entries>>> {
-  return new TgpuBindGroupLayoutImpl(entries as ExoticEntries<Entries>);
-}
-
 export function isBindGroupLayout<T extends TgpuBindGroupLayout>(
   value: T | unknown,
 ): value is T {
@@ -385,7 +370,7 @@ const DEFAULT_READONLY_VISIBILITY: TgpuShaderStage[] = [
 
 class TgpuBindGroupLayoutImpl<
   Entries extends Record<string, TgpuLayoutEntry | null>,
-> implements TgpuBindGroupLayoutExperimental<Entries>
+> implements TgpuBindGroupLayout<Entries>
 {
   private _label: string | undefined;
   private _index: number | undefined;

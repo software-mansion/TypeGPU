@@ -321,5 +321,5 @@ Benefits gained:
 - **Reduced fragility** - binding indices are now being handled end-to-end by TypeGPU, leaving human-readable keys
   as the way to connect the shader with JavaScript.
 - **Single source of truth** - typed bind group layouts not only describe JS behavior, but also WGSL behavior. This
-  allows `tgpu.resolve` to generate the appropriate WGSL code. Definitions of structs used as part of the layout will
+  allows [`tgpu.resolve`](/TypeGPU/fundamentals/resolve) to generate the appropriate WGSL code. Definitions of structs used as part of the layout will
   also be included in the returned shader code.

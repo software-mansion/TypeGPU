@@ -122,6 +122,11 @@ export default defineConfig({
               label: 'Bind Groups',
               slug: 'fundamentals/bind-groups',
             },
+            {
+              label: 'Resolve',
+              slug: 'fundamentals/resolve',
+              badge: { text: '0.3' },
+            },
             DEV && {
               label: 'Slots',
               slug: 'fundamentals/slots',

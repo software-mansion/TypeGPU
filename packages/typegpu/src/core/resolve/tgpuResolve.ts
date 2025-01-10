@@ -12,11 +12,16 @@ export interface TgpuResolveOptions {
    * @default 'random'
    */
   names?: 'strict' | 'random' | undefined;
-  jitTranspiler?: JitTranspiler | undefined;
+  unstable_jitTranspiler?: JitTranspiler | undefined;
 }
 
 export function resolve(options: TgpuResolveOptions): string {
-  const { externals, template, names, jitTranspiler } = options;
+  const {
+    externals,
+    template,
+    names,
+    unstable_jitTranspiler: jitTranspiler,
+  } = options;
 
   const dependencies = {} as Record<string, TgpuResolvable>;
   applyExternals(dependencies, externals ?? {});
