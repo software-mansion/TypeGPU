@@ -35,8 +35,8 @@ export interface TgpuResolveOptions {
  * @example
  * ```ts
  * const Gradient = d.struct({
- *   from: d.vec2,
- *   to: d.vec2,
+ *   from: d.vec3f,
+ *   to: d.vec3f,
  * });
  *
  * const resolved = resolve({
