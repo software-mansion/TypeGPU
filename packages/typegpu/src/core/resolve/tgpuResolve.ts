@@ -26,7 +26,8 @@ export interface TgpuResolveOptions {
 }
 
 /**
- * Resolves a template with external values.
+ * Resolves a template with external values. Each external will get resolved to a code string and replaced in the template.
+ * Any dependencies of the externals will also be resolved and included in the output.
  * @param options - The options for the resolution.
  *
  * @returns The resolved code.
