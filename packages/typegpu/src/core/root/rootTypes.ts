@@ -205,6 +205,30 @@ export interface TgpuRoot extends Unwrapper {
     gpuBuffer: GPUBuffer,
   ): TgpuBuffer<Exotic<TData>>;
 
+  createBindGroup<
+    Entries extends Record<string, TgpuLayoutEntry | null> = Record<
+      string,
+      TgpuLayoutEntry | null
+    >,
+  >(
+    layout: TgpuBindGroupLayout<Entries>,
+    entries: {
+      [K in keyof OmitProps<Entries, null>]: LayoutEntryToInput<Entries[K]>;
+    },
+  ): TgpuBindGroup<Entries>;
+
+  destroy(): void;
+}
+
+export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
+  readonly jitTranspiler?: JitTranspiler | undefined;
+  readonly nameRegistry: NameRegistry;
+  /**
+   * The current command encoder. This property will
+   * hold the same value until `flush()` is called.
+   */
+  readonly commandEncoder: GPUCommandEncoder;
+
   createTexture<
     TWidth extends number,
     THeight extends number,
@@ -237,30 +261,6 @@ export interface TgpuRoot extends Unwrapper {
       TDimension
     >
   >;
-
-  createBindGroup<
-    Entries extends Record<string, TgpuLayoutEntry | null> = Record<
-      string,
-      TgpuLayoutEntry | null
-    >,
-  >(
-    layout: TgpuBindGroupLayout<Entries>,
-    entries: {
-      [K in keyof OmitProps<Entries, null>]: LayoutEntryToInput<Entries[K]>;
-    },
-  ): TgpuBindGroup<Entries>;
-
-  destroy(): void;
-}
-
-export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
-  readonly jitTranspiler?: JitTranspiler | undefined;
-  readonly nameRegistry: NameRegistry;
-  /**
-   * The current command encoder. This property will
-   * hold the same value until `flush()` is called.
-   */
-  readonly commandEncoder: GPUCommandEncoder;
 
   /**
    * Causes all commands enqueued by pipelines to be

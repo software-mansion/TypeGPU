@@ -40,12 +40,7 @@ export {
 export {
   isSampledTextureView,
   isStorageTextureView,
-  isTexture,
 } from './core/texture/texture';
-export {
-  isUsableAsRender,
-  isUsableAsSampled,
-} from './core/texture/usageExtension';
 export { isUsableAsStorage } from './extension';
 
 export type { Storage } from './extension';
@@ -65,8 +60,6 @@ export type {
   TgpuSampledTexture,
   TgpuAnyTextureView,
 } from './core/texture/texture';
-export type { TextureProps } from './core/texture/textureProps';
-export type { Render, Sampled } from './core/texture/usageExtension';
 export type { InitOptions, InitFromDeviceOptions } from './core/root/init';
 export type { TgpuSampler } from './core/sampler/sampler';
 export type {
