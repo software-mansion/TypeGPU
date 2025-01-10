@@ -5,7 +5,7 @@ import { isSlot } from '../slot/slotTypes';
 
 /**
  * A key-value mapping where keys represent identifiers within shader code,
- * and values can be any type that can be resolved to a string.
+ * and values can be any type that can be resolved to a code string.
  */
 export type ExternalMap = Record<string, unknown>;
 
