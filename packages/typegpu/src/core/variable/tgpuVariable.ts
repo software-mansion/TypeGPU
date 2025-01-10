@@ -65,6 +65,10 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyWgslData>
     return this;
   }
 
+  get label() {
+    return this._label;
+  }
+
   resolve(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this._label);
 
@@ -79,6 +83,10 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyWgslData>
     }
 
     return id;
+  }
+
+  toString() {
+    return `var:${this.label ?? '<unnamed>'}`;
   }
 
   get value(): Infer<TDataType> {

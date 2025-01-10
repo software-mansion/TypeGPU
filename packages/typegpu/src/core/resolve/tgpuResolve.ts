@@ -9,7 +9,7 @@ export interface TgpuResolveOptions {
   /**
    * Map of external names to their resolvable values.
    */
-  externals: Record<string, TgpuResolvable | AnyWgslData | string | number>;
+  externals: Record<string, TgpuResolvable | AnyWgslData | boolean | number>;
   /**
    * The code template to use for the resolution. All external names will be replaced with their resolved values.
    */
@@ -62,7 +62,7 @@ export interface TgpuResolveOptions {
  * ```
  */
 export function resolve(options: TgpuResolveOptions): string {
-  const { externals, template, names, jitTranspiler } = options;
+  const { externals, template, names, unstable_jitTranspiler } = options;
 
   const dependencies = {} as Record<string, TgpuResolvable>;
   applyExternals(dependencies, externals ?? {});
@@ -71,16 +71,14 @@ export function resolve(options: TgpuResolveOptions): string {
     resolve(ctx) {
       return replaceExternalsInWgsl(ctx, dependencies, template ?? '');
     },
-  };
 
-  Object.defineProperty(resolutionObj, 'toString', {
-    value: () => '<root>',
-  });
+    toString: () => '<root>',
+  };
 
   const { code } = resolveImpl(resolutionObj, {
     names:
       names === 'strict' ? new StrictNameRegistry() : new RandomNameRegistry(),
-    jitTranspiler: jitTranspiler,
+    jitTranspiler: unstable_jitTranspiler,
   });
 
   return code;

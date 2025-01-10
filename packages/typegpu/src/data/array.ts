@@ -57,4 +57,8 @@ class TgpuArrayImpl<TElement extends AnyWgslData>
       throw new Error('Cannot nest runtime sized arrays.');
     }
   }
+
+  toString() {
+    return `arrayOf(${this.elementType})`;
+  }
 }
