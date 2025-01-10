@@ -6,7 +6,7 @@ import type { TgpuResolvable } from '../../types';
 import { applyExternals, replaceExternalsInWgsl } from './externals';
 
 export interface TgpuResolveOptions {
-  externals: Record<string, TgpuResolvable | AnyWgslData | string | number>;
+  externals: Record<string, TgpuResolvable | AnyWgslData | boolean | number>;
   template?: string | undefined;
   /**
    * @default 'random'
