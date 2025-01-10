@@ -20,9 +20,10 @@ export interface TgpuResolveOptions {
    */
   names?: 'strict' | 'random' | undefined;
   /**
+   * @experimental
    * Optional JIT transpiler for resolving TGSL functions.
    */
-  jitTranspiler?: JitTranspiler | undefined;
+  unstable_jitTranspiler?: JitTranspiler | undefined;
 }
 
 /**
