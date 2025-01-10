@@ -15,6 +15,7 @@ export interface TgpuResolveOptions {
    */
   template?: string | undefined;
   /**
+   * The naming strategy used for generating identifiers for resolved externals and their dependencies.
    * @default 'random'
    */
   names?: 'strict' | 'random' | undefined;
