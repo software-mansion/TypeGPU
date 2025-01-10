@@ -1,55 +1,47 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect } from 'vitest';
-import {
-  type Infer,
-  align,
-  looseArrayOf,
-  size,
-  sizeOf,
-  vec3f,
-  vec3u,
-} from '../src/data';
+import * as d from '../src/data';
 import { readData, writeData } from '../src/data/dataIO';
 import { it } from './utils/extendedIt';
 
-describe('loose', () => {
+describe('disarray', () => {
   it('does not take element alignment into account when measuring', () => {
-    const TestArray = looseArrayOf(vec3u, 3);
-    expect(sizeOf(TestArray)).toEqual(36);
+    const TestArray = d.disarrayOf(d.vec3u, 3);
+    expect(d.sizeOf(TestArray)).toEqual(36);
   });
 
   it('takes element alignment into account when measuring with custom aligned elements', () => {
-    const TestArray = looseArrayOf(align(16, vec3u), 3);
-    expect(sizeOf(TestArray)).toEqual(48);
+    const TestArray = d.disarrayOf(d.align(16, d.vec3u), 3);
+    expect(d.sizeOf(TestArray)).toEqual(48);
   });
 
   it('properly handles calculating nested loose array size', () => {
-    const TestArray = looseArrayOf(looseArrayOf(vec3u, 3), 3);
-    expect(sizeOf(TestArray)).toEqual(108);
+    const TestArray = d.disarrayOf(d.disarrayOf(d.vec3u, 3), 3);
+    expect(d.sizeOf(TestArray)).toEqual(108);
   });
 
   it('does not align array elements when writing', () => {
-    const TestArray = looseArrayOf(vec3u, 3);
-    const buffer = new ArrayBuffer(sizeOf(TestArray));
+    const TestArray = d.disarrayOf(d.vec3u, 3);
+    const buffer = new ArrayBuffer(d.sizeOf(TestArray));
     const writer = new BufferWriter(buffer);
 
     writeData(writer, TestArray, [
-      vec3u(1, 2, 3),
-      vec3u(4, 5, 6),
-      vec3u(7, 8, 9),
+      d.vec3u(1, 2, 3),
+      d.vec3u(4, 5, 6),
+      d.vec3u(7, 8, 9),
     ]);
     expect([...new Uint32Array(buffer)]).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
   it('aligns array elements when writing with custom aligned elements', () => {
-    const TestArray = looseArrayOf(align(16, vec3u), 3);
-    const buffer = new ArrayBuffer(sizeOf(TestArray));
+    const TestArray = d.disarrayOf(d.align(16, d.vec3u), 3);
+    const buffer = new ArrayBuffer(d.sizeOf(TestArray));
     const writer = new BufferWriter(buffer);
 
     writeData(writer, TestArray, [
-      vec3u(1, 2, 3),
-      vec3u(4, 5, 6),
-      vec3u(7, 8, 9),
+      d.vec3u(1, 2, 3),
+      d.vec3u(4, 5, 6),
+      d.vec3u(7, 8, 9),
     ]);
     expect([...new Uint32Array(buffer)]).toEqual([
       1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0,
@@ -57,58 +49,58 @@ describe('loose', () => {
   });
 
   it('does not align array elements when reading', () => {
-    const TestArray = looseArrayOf(vec3u, 3);
-    const buffer = new ArrayBuffer(sizeOf(TestArray));
+    const TestArray = d.disarrayOf(d.vec3u, 3);
+    const buffer = new ArrayBuffer(d.sizeOf(TestArray));
     const reader = new BufferReader(buffer);
 
     new Uint32Array(buffer).set([1, 2, 3, 0, 4, 5, 6, 0, 7]);
 
     expect(readData(reader, TestArray)).toEqual([
-      vec3u(1, 2, 3),
-      vec3u(0, 4, 5),
-      vec3u(6, 0, 7),
+      d.vec3u(1, 2, 3),
+      d.vec3u(0, 4, 5),
+      d.vec3u(6, 0, 7),
     ]);
   });
 
   it('aligns array elements when reading with custom aligned elements', () => {
-    const TestArray = looseArrayOf(align(16, vec3u), 3);
-    const buffer = new ArrayBuffer(sizeOf(TestArray));
+    const TestArray = d.disarrayOf(d.align(16, d.vec3u), 3);
+    const buffer = new ArrayBuffer(d.sizeOf(TestArray));
     const reader = new BufferReader(buffer);
 
     new Uint32Array(buffer).set([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
 
     expect(readData(reader, TestArray)).toEqual([
-      vec3u(1, 2, 3),
-      vec3u(4, 5, 6),
-      vec3u(7, 8, 9),
+      d.vec3u(1, 2, 3),
+      d.vec3u(4, 5, 6),
+      d.vec3u(7, 8, 9),
     ]);
   });
 
   it('aligns array elements when reading with custom aligned elements and other attributes', () => {
-    const TestArray = looseArrayOf(size(12, align(16, vec3u)), 3);
-    const buffer = new ArrayBuffer(sizeOf(TestArray));
+    const TestArray = d.disarrayOf(d.size(12, d.align(16, d.vec3u)), 3);
+    const buffer = new ArrayBuffer(d.sizeOf(TestArray));
     const reader = new BufferReader(buffer);
 
     new Uint32Array(buffer).set([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
 
     expect(readData(reader, TestArray)).toEqual([
-      vec3u(1, 2, 3),
-      vec3u(4, 5, 6),
-      vec3u(7, 8, 9),
+      d.vec3u(1, 2, 3),
+      d.vec3u(4, 5, 6),
+      d.vec3u(7, 8, 9),
     ]);
   });
 
   it('encodes and decodes arrays properly', () => {
-    const TestArray = looseArrayOf(vec3f, 5);
+    const TestArray = d.disarrayOf(d.vec3f, 5);
 
-    const buffer = new ArrayBuffer(sizeOf(TestArray));
+    const buffer = new ArrayBuffer(d.sizeOf(TestArray));
 
-    const value: Infer<typeof TestArray> = [
-      vec3f(1.5, 2, 3.5),
-      vec3f(),
-      vec3f(-1.5, 2, 3.5),
-      vec3f(1.5, -2, 3.5),
-      vec3f(1.5, 2, 15),
+    const value: d.Infer<typeof TestArray> = [
+      d.vec3f(1.5, 2, 3.5),
+      d.vec3f(),
+      d.vec3f(-1.5, 2, 3.5),
+      d.vec3f(1.5, -2, 3.5),
+      d.vec3f(1.5, 2, 15),
     ];
 
     writeData(new BufferWriter(buffer), TestArray, value);

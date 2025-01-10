@@ -1,4 +1,5 @@
 import type { Infer, InferRecord } from '../shared/repr';
+import type { TgpuResolvable } from '../types';
 
 export interface NumberArrayView {
   readonly length: number;
@@ -331,7 +332,10 @@ interface Swizzle4<T2, T3, T4> extends Swizzle3<T2, T3, T4> {
  * Interface representing its WGSL vector type counterpart: vec2f or vec2<f32>.
  * A vector with 2 elements of type f32
  */
-export interface v2f extends NumberArrayView, Swizzle2<v2f, v3f, v4f> {
+export interface v2f
+  extends NumberArrayView,
+    Swizzle2<v2f, v3f, v4f>,
+    TgpuResolvable {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2f';
   x: number;
@@ -342,7 +346,10 @@ export interface v2f extends NumberArrayView, Swizzle2<v2f, v3f, v4f> {
  * Interface representing its WGSL vector type counterpart: vec2h or vec2<f16>.
  * A vector with 2 elements of type f16
  */
-export interface v2h extends NumberArrayView, Swizzle2<v2h, v3h, v4h> {
+export interface v2h
+  extends NumberArrayView,
+    Swizzle2<v2h, v3h, v4h>,
+    TgpuResolvable {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2h';
   x: number;
@@ -353,7 +360,10 @@ export interface v2h extends NumberArrayView, Swizzle2<v2h, v3h, v4h> {
  * Interface representing its WGSL vector type counterpart: vec2i or vec2<i32>.
  * A vector with 2 elements of type i32
  */
-export interface v2i extends NumberArrayView, Swizzle2<v2i, v3i, v4i> {
+export interface v2i
+  extends NumberArrayView,
+    Swizzle2<v2i, v3i, v4i>,
+    TgpuResolvable {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2i';
   x: number;
@@ -364,7 +374,10 @@ export interface v2i extends NumberArrayView, Swizzle2<v2i, v3i, v4i> {
  * Interface representing its WGSL vector type counterpart: vec2u or vec2<u32>.
  * A vector with 2 elements of type u32
  */
-export interface v2u extends NumberArrayView, Swizzle2<v2u, v3u, v4u> {
+export interface v2u
+  extends NumberArrayView,
+    Swizzle2<v2u, v3u, v4u>,
+    TgpuResolvable {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2u';
   x: number;
@@ -375,7 +388,10 @@ export interface v2u extends NumberArrayView, Swizzle2<v2u, v3u, v4u> {
  * Interface representing its WGSL vector type counterpart: vec3f or vec3<f32>.
  * A vector with 3 elements of type f32
  */
-export interface v3f extends NumberArrayView, Swizzle3<v2f, v3f, v4f> {
+export interface v3f
+  extends NumberArrayView,
+    Swizzle3<v2f, v3f, v4f>,
+    TgpuResolvable {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3f';
   x: number;
@@ -387,7 +403,10 @@ export interface v3f extends NumberArrayView, Swizzle3<v2f, v3f, v4f> {
  * Interface representing its WGSL vector type counterpart: vec3h or vec3<f16>.
  * A vector with 3 elements of type f16
  */
-export interface v3h extends NumberArrayView, Swizzle3<v2h, v3h, v4h> {
+export interface v3h
+  extends NumberArrayView,
+    Swizzle3<v2h, v3h, v4h>,
+    TgpuResolvable {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3h';
   x: number;
@@ -399,7 +418,10 @@ export interface v3h extends NumberArrayView, Swizzle3<v2h, v3h, v4h> {
  * Interface representing its WGSL vector type counterpart: vec3i or vec3<i32>.
  * A vector with 3 elements of type i32
  */
-export interface v3i extends NumberArrayView, Swizzle3<v2i, v3i, v4i> {
+export interface v3i
+  extends NumberArrayView,
+    Swizzle3<v2i, v3i, v4i>,
+    TgpuResolvable {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3i';
   x: number;
@@ -411,7 +433,10 @@ export interface v3i extends NumberArrayView, Swizzle3<v2i, v3i, v4i> {
  * Interface representing its WGSL vector type counterpart: vec3u or vec3<u32>.
  * A vector with 3 elements of type u32
  */
-export interface v3u extends NumberArrayView, Swizzle3<v2u, v3u, v4u> {
+export interface v3u
+  extends NumberArrayView,
+    Swizzle3<v2u, v3u, v4u>,
+    TgpuResolvable {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3u';
   x: number;
@@ -423,7 +448,10 @@ export interface v3u extends NumberArrayView, Swizzle3<v2u, v3u, v4u> {
  * Interface representing its WGSL vector type counterpart: vec4f or vec4<f32>.
  * A vector with 4 elements of type f32
  */
-export interface v4f extends NumberArrayView, Swizzle4<v2f, v3f, v4f> {
+export interface v4f
+  extends NumberArrayView,
+    Swizzle4<v2f, v3f, v4f>,
+    TgpuResolvable {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4f';
   x: number;
@@ -436,7 +464,10 @@ export interface v4f extends NumberArrayView, Swizzle4<v2f, v3f, v4f> {
  * Interface representing its WGSL vector type counterpart: vec4h or vec4<f16>.
  * A vector with 4 elements of type f16
  */
-export interface v4h extends NumberArrayView, Swizzle4<v2h, v3h, v4h> {
+export interface v4h
+  extends NumberArrayView,
+    Swizzle4<v2h, v3h, v4h>,
+    TgpuResolvable {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4h';
   x: number;
@@ -449,7 +480,10 @@ export interface v4h extends NumberArrayView, Swizzle4<v2h, v3h, v4h> {
  * Interface representing its WGSL vector type counterpart: vec4i or vec4<i32>.
  * A vector with 4 elements of type i32
  */
-export interface v4i extends NumberArrayView, Swizzle4<v2i, v3i, v4i> {
+export interface v4i
+  extends NumberArrayView,
+    Swizzle4<v2i, v3i, v4i>,
+    TgpuResolvable {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4i';
   x: number;
@@ -462,7 +496,10 @@ export interface v4i extends NumberArrayView, Swizzle4<v2i, v3i, v4i> {
  * Interface representing its WGSL vector type counterpart: vec4u or vec4<u32>.
  * A vector with 4 elements of type u32
  */
-export interface v4u extends NumberArrayView, Swizzle4<v2u, v3u, v4u> {
+export interface v4u
+  extends NumberArrayView,
+    Swizzle4<v2u, v3u, v4u>,
+    TgpuResolvable {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4u';
   x: number;
@@ -775,14 +812,14 @@ export function isWgslData(value: unknown): value is AnyWgslData {
 
 /**
  * Checks whether passed in value is an array schema,
- * as opposed to, e.g., a looseArray schema.
+ * as opposed to, e.g., a disarray schema.
  *
  * Array schemas can be used to describe uniform and storage buffers,
- * whereas looseArray schemas cannot.
+ * whereas disarray schemas cannot.
  *
  * @example
  * isWgslArray(d.arrayOf(d.u32, 4)) // true
- * isWgslArray(d.looseArrayOf(d.u32, 4)) // false
+ * isWgslArray(d.disarray(d.u32, 4)) // false
  * isWgslArray(d.vec3f) // false
  */
 export function isWgslArray<T extends WgslArray>(
@@ -793,14 +830,14 @@ export function isWgslArray<T extends WgslArray>(
 
 /**
  * Checks whether passed in value is a struct schema,
- * as opposed to, e.g., a looseStruct schema.
+ * as opposed to, e.g., an unstruct schema.
  *
  * Struct schemas can be used to describe uniform and storage buffers,
- * whereas looseStruct schemas cannot.
+ * whereas unstruct schemas cannot.
  *
  * @example
  * isWgslStruct(d.struct({ a: d.u32 })) // true
- * isWgslStruct(d.looseStruct({ a: d.u32 })) // false
+ * isWgslStruct(d.unstruct({ a: d.u32 })) // false
  * isWgslStruct(d.vec3f) // false
  */
 export function isWgslStruct<T extends WgslStruct>(

@@ -104,5 +104,9 @@ function createComputeFn(
         `@compute @workgroup_size(${workgroupSize.join(', ')}) `,
       );
     },
+
+    toString() {
+      return `computeFn:${this.label ?? '<unnamed>'}`;
+    },
   };
 }

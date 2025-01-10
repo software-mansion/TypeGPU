@@ -26,9 +26,8 @@ import { parse } from 'tgpu-wgsl-parser';
 import {
   MissingBindingError,
   type TgpuBindGroup,
-  type TgpuBindGroupLayoutExperimental,
   type UnwrapRuntimeConstructor,
-  bindGroupLayoutExperimental,
+  bindGroupLayout,
 } from '../src/tgpuBindGroupLayout';
 import { it } from './utils/extendedIt';
 
@@ -37,7 +36,7 @@ const DEFAULT_READONLY_VISIBILITY_FLAGS =
 
 describe('TgpuBindGroupLayout', () => {
   it('infers the bound type of a uniform entry', () => {
-    const layout = bindGroupLayoutExperimental({
+    const layout = bindGroupLayout({
       position: { uniform: vec3f },
     });
 
@@ -47,7 +46,7 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('infers the bound type of a readonly storage entry', () => {
-    const layout = bindGroupLayoutExperimental({
+    const layout = bindGroupLayout({
       a: { storage: vec3f },
       b: { storage: vec3f, access: 'readonly' },
     });
@@ -59,7 +58,7 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('infers the bound type of a mutable storage entry', () => {
-    const layout = bindGroupLayoutExperimental({
+    const layout = bindGroupLayout({
       a: { storage: vec3f, access: 'mutable' },
     });
 
@@ -69,7 +68,7 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('works for entries passed as functions returning TgpuData', ({ root }) => {
-    const layout = bindGroupLayoutExperimental({
+    const layout = bindGroupLayout({
       a: {
         storage: (arrayLength: number) => arrayOf(u32, arrayLength),
         access: 'mutable',
@@ -77,13 +76,13 @@ describe('TgpuBindGroupLayout', () => {
       b: { storage: (arrayLength: number) => arrayOf(vec3f, arrayLength) },
     });
 
-    bindGroupLayoutExperimental({
+    bindGroupLayout({
       // @ts-expect-error
       c: { uniform: (arrayLength: number) => arrayOf(vec3f, arrayLength) },
     });
 
     expectTypeOf(layout).toEqualTypeOf<
-      TgpuBindGroupLayoutExperimental<{
+      TgpuBindGroupLayout<{
         a: {
           storage: (_: number) => WgslArray<U32>;
           access: 'mutable';
@@ -209,8 +208,8 @@ describe('TgpuBindGroupLayout', () => {
     const fooTexture = layout.bound.fooTexture;
 
     const resolved = tgpu.resolve({
-      input: 'fn main () { textureLoad(fooTexture); }',
-      extraDependencies: { fooTexture },
+      template: 'fn main () { textureLoad(fooTexture); }',
+      externals: { fooTexture },
       names: 'strict',
     });
 
