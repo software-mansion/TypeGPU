@@ -21,8 +21,8 @@ export interface TgpuResolveOptions {
    */
   names?: 'strict' | 'random' | undefined;
   /**
-   * @experimental
    * Optional JIT transpiler for resolving TGSL functions.
+   * @experimental
    */
   unstable_jitTranspiler?: JitTranspiler | undefined;
 }
@@ -63,7 +63,12 @@ export interface TgpuResolveOptions {
  * ```
  */
 export function resolve(options: TgpuResolveOptions): string {
-  const { externals, template, names, unstable_jitTranspiler } = options;
+  const {
+    externals,
+    template,
+    names,
+    unstable_jitTranspiler: jitTranspiler,
+  } = options;
 
   const dependencies = {} as Record<string, TgpuResolvable>;
   applyExternals(dependencies, externals ?? {});
@@ -79,7 +84,7 @@ export function resolve(options: TgpuResolveOptions): string {
   const { code } = resolveImpl(resolutionObj, {
     names:
       names === 'strict' ? new StrictNameRegistry() : new RandomNameRegistry(),
-    jitTranspiler: unstable_jitTranspiler,
+    jitTranspiler,
   });
 
   return code;
