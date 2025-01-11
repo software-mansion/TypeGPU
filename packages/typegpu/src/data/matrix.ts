@@ -1,3 +1,4 @@
+import { inGPUMode } from '../gpuMode';
 import { type VecKind, vec2f, vec3f, vec4f } from './vector';
 import type {
   Mat2x2f,
@@ -52,6 +53,10 @@ function createMatSchema<
   };
 
   const construct = (...args: (number | ColumnType)[]): ValueType => {
+    if (inGPUMode()) {
+      return `${MatSchema.type}(${args.join(', ')})` as unknown as ValueType;
+    }
+
     const elements: number[] = [];
 
     for (const arg of args) {
