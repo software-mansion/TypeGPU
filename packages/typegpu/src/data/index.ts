@@ -12,6 +12,7 @@ export {
   isAlignAttrib,
   isBuiltinAttrib,
   isLocationAttrib,
+  isInterpolateAttrib,
   isSizeAttrib,
 } from './wgslTypes';
 export type {
@@ -101,6 +102,7 @@ export {
   align,
   size,
   location,
+  interpolate,
   isBuiltin,
   AnyAttribute,
   IsBuiltin,

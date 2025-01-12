@@ -16,7 +16,13 @@ import {
   type BaseWgslData,
   type Builtin,
   type Decorated,
+  type FlatInterpolatableData,
+  type FlatInterpolationType,
+  type Interpolate,
+  type InterpolationType,
   type Location,
+  type PerspectiveOrLinearInterpolatableData,
+  type PerspectiveOrLinearInterpolationType,
   type Size,
   type WgslTypeLiteral,
   isAlignAttrib,
@@ -53,7 +59,8 @@ export type AnyAttribute =
   | Align<number>
   | Size<number>
   | Location<number>
-  | Builtin<BuiltinName>;
+  | Builtin<BuiltinName>
+  | Interpolate<InterpolationType>;
 
 export type ExtractAttributes<T> = T extends {
   readonly attribs: unknown[];
@@ -184,6 +191,68 @@ export function location<TLocation extends number, TData extends AnyData>(
 ): Decorate<Exotic<TData>, Location<TLocation>> {
   // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   return attribute(data, { type: '@location', value: location }) as any;
+}
+
+/**
+ * Specifies how user-defined vertex shader output (fragment shader input)
+ * must be interpolated.
+ *
+ * Tip: Integer outputs cannot be interpolated.
+ *
+ * @example
+ * const Data = d.ioStruct({
+ *   a: d.f32, // has implicit 'perspective, center' interpolation
+ *   b: d.interpolate('linear, sample', d.f32),
+ * });
+ *
+ * @param location The explicit numeric location.
+ * @param data The data-type to wrap.
+ */
+export function interpolate<
+  TInterpolation extends PerspectiveOrLinearInterpolationType,
+  TData extends PerspectiveOrLinearInterpolatableData,
+>(
+  interpolationType: TInterpolation,
+  data: TData,
+): Decorate<Exotic<TData>, Interpolate<TInterpolation>>;
+
+/**
+ * Specifies how user-defined vertex shader output (fragment shader input)
+ * must be interpolated.
+ *
+ * Tip: Default sampling method of `flat` is `first`. Unless you specifically
+ * need deterministic behavior provided by `'flat, first'`, prefer explicit
+ * `'flat, either'` as it could be slightly faster in hardware.
+ *
+ * @example
+ * const Data = d.ioStruct({
+ *   a: d.f32, // has implicit 'perspective, center' interpolation
+ *   b: d.interpolate('flat, either', d.u32), // integer outputs cannot interpolate
+ * });
+ *
+ * @param location The explicit numeric location.
+ * @param data The data-type to wrap.
+ */
+export function interpolate<
+  TInterpolation extends FlatInterpolationType,
+  TData extends FlatInterpolatableData,
+>(
+  interpolationType: TInterpolation,
+  data: TData,
+): Decorate<Exotic<TData>, Interpolate<TInterpolation>>;
+
+export function interpolate<
+  TInterpolation extends InterpolationType,
+  TData extends AnyData,
+>(
+  interpolationType: TInterpolation,
+  data: TData,
+): Decorate<Exotic<TData>, Interpolate<TInterpolation>> {
+  return attribute(data, {
+    type: '@interpolate',
+    value: interpolationType,
+    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+  }) as any;
 }
 
 export function isBuiltin<
