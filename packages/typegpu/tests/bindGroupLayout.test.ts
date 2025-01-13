@@ -23,9 +23,12 @@ import tgpu, {
 } from '../src/experimental';
 import './utils/webgpuGlobals';
 import { parse } from 'tgpu-wgsl-parser';
+import { comparisonSampler, sampler } from '../src/core/sampler/sampler';
 import {
   MissingBindingError,
   type TgpuBindGroup,
+  type TgpuLayoutComparisonSampler,
+  type TgpuLayoutSampler,
   type UnwrapRuntimeConstructor,
   bindGroupLayout,
 } from '../src/tgpuBindGroupLayout';
@@ -283,7 +286,7 @@ describe('TgpuBindGroup', () => {
   });
 
   describe('filtering sampler layout', () => {
-    let layout: TgpuBindGroupLayout<{ foo: { sampler: 'filtering' } }>;
+    let layout: TgpuBindGroupLayout<{ foo: TgpuLayoutSampler }>;
 
     beforeEach(() => {
       layout = tgpu
@@ -313,6 +316,84 @@ describe('TgpuBindGroup', () => {
             resource: sampler,
           },
         ],
+      });
+    });
+
+    it('accepts filtering/non-filtering sampler when creating bind group, but not comparison', ({
+      root,
+    }) => {
+      root.createBindGroup(layout, {
+        foo: sampler({ minFilter: 'linear' }),
+      });
+
+      root.createBindGroup(layout, {
+        foo: sampler({ minFilter: 'nearest' }),
+      });
+
+      root.createBindGroup(layout, {
+        foo: root.device.createSampler(),
+      });
+
+      root.createBindGroup(layout, {
+        // @ts-expect-error
+        foo: comparisonSampler({ compare: 'less' }),
+      });
+    });
+  });
+
+  describe('comparison sampler layout', () => {
+    let layout: TgpuBindGroupLayout<{ foo: TgpuLayoutComparisonSampler }>;
+
+    beforeEach(() => {
+      layout = tgpu
+        .bindGroupLayout({
+          foo: { sampler: 'comparison' },
+        })
+        .$name('example');
+    });
+
+    it('populates a simple layout with a raw sampler', ({ root }) => {
+      const sampler = root.device.createSampler();
+
+      const bindGroup = root.createBindGroup(layout, {
+        foo: sampler,
+      });
+
+      expect(root.device.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(root.device.createBindGroupLayout).toBeCalled();
+
+      expect(root.device.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout),
+        entries: [
+          {
+            binding: 0,
+            resource: sampler,
+          },
+        ],
+      });
+    });
+
+    it('accepts comparison sampler when creating bind group, but not filtering/non-filtering', ({
+      root,
+    }) => {
+      root.createBindGroup(layout, {
+        foo: comparisonSampler({ compare: 'equal' }),
+      });
+
+      root.createBindGroup(layout, {
+        foo: root.device.createSampler(),
+      });
+
+      root.createBindGroup(layout, {
+        // @ts-expect-error
+        foo: sampler({ minFilter: 'linear' }),
+      });
+
+      root.createBindGroup(layout, {
+        // @ts-expect-error
+        foo: sampler({ minFilter: 'nearest' }),
       });
     });
   });
