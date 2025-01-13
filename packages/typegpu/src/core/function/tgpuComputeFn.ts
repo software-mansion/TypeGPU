@@ -1,6 +1,6 @@
 import type { AnyBuiltin } from '../../builtin';
 import type { TgpuNamable } from '../../namable';
-import type { ResolutionCtx, TgpuResolvable } from '../../types';
+import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
 import { createFnCore } from './fnCore';
 import type { Implementation } from './fnTypes';
 
@@ -30,7 +30,7 @@ export interface TgpuComputeFnShell {
   does(implementation: string): TgpuComputeFn;
 }
 
-export interface TgpuComputeFn extends TgpuResolvable, TgpuNamable {
+export interface TgpuComputeFn extends TgpuNamable {
   readonly shell: TgpuComputeFnShell;
 
   $uses(dependencyMap: Record<string, unknown>): this;
@@ -77,11 +77,11 @@ function createComputeFn(
   workgroupSize: number[],
   implementation: Implementation<[], void>,
 ): TgpuComputeFn {
-  type This = TgpuComputeFn;
+  type This = TgpuComputeFn & Labelled & SelfResolvable;
 
   const core = createFnCore(shell, implementation);
 
-  return {
+  const result: This = {
     shell,
 
     get label() {
@@ -98,7 +98,7 @@ function createComputeFn(
       return this;
     },
 
-    resolve(ctx: ResolutionCtx): string {
+    '~resolve'(ctx: ResolutionCtx): string {
       return core.resolve(
         ctx,
         `@compute @workgroup_size(${workgroupSize.join(', ')}) `,
@@ -109,4 +109,6 @@ function createComputeFn(
       return `computeFn:${this.label ?? '<unnamed>'}`;
     },
   };
+
+  return result;
 }

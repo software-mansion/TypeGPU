@@ -5,7 +5,6 @@ import tgpu, {
   MissingSlotValueError,
   ResolutionError,
 } from '../src/experimental';
-import type { TgpuResolvable } from '../src/types';
 import { parseResolved } from './utils/parseResolved';
 
 const RED = 'vec3f(1., 0., 0.)';
@@ -20,7 +19,7 @@ const resolutionRootMock = {
   toString() {
     return '<root>';
   },
-} as TgpuResolvable;
+};
 
 describe('tgpu.slot', () => {
   it('resolves to default value if no value provided', () => {
@@ -136,6 +135,7 @@ describe('tgpu.slot', () => {
       new ResolutionError(new MissingSlotValueError(colorSlot), [
         resolutionRootMock,
         getColor,
+        colorSlot,
       ]),
     );
   });

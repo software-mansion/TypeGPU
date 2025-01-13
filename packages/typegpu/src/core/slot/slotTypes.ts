@@ -2,7 +2,6 @@ import type { AnyWgslData } from '../../data';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
 import type { TgpuFn } from '../function/tgpuFn';
-import type { TgpuResolvable } from './../../types';
 import type { TgpuBufferUsage } from './../buffer/bufferUsage';
 
 export interface TgpuSlot<T> extends TgpuNamable {
@@ -32,9 +31,8 @@ export interface TgpuDerived<T> {
   '~compute'(): T;
 }
 
-export interface TgpuAccessor<T extends AnyWgslData>
-  extends TgpuResolvable,
-    TgpuNamable {
+export interface TgpuAccessor<T extends AnyWgslData = AnyWgslData>
+  extends TgpuNamable {
   readonly resourceType: 'accessor';
 
   readonly schema: T;
@@ -54,7 +52,7 @@ export interface TgpuAccessor<T extends AnyWgslData>
  */
 export type Eventual<T> = T | TgpuSlot<T> | TgpuDerived<T>;
 
-export type SlotValuePair<T> = [TgpuSlot<T>, T];
+export type SlotValuePair<T = unknown> = [TgpuSlot<T>, T];
 
 export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {
   return (value as TgpuSlot<T>)?.resourceType === 'slot';

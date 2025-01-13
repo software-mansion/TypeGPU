@@ -29,14 +29,8 @@ import {
   type TgpuLayoutEntry,
   bindGroupLayout,
 } from './tgpuBindGroupLayout';
-import type {
-  FnToWgslOptions,
-  ResolutionCtx,
-  Resource,
-  TgpuResolvable,
-  Wgsl,
-} from './types';
-import { UnknownData, isWgsl } from './types';
+import type { FnToWgslOptions, ResolutionCtx, Resource, Wgsl } from './types';
+import { UnknownData, isSelfResolvable, isWgsl } from './types';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -238,9 +232,9 @@ interface FixedBindingConfig {
 
 class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _memoizedResolves = new WeakMap<
-    // WeakMap because if the resolvable does not exist anymore,
+    // WeakMap because if the item does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
-    TgpuResolvable | AnyWgslData,
+    object,
     { slotToValueMap: SlotToValueMap; result: string }[]
   >();
   private readonly _memoizedDerived = new WeakMap<
@@ -450,7 +444,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
   /**
    * @param item The item whose resolution should be either retrieved from the cache (if there is a cache hit), or resolved.
    */
-  _getOrInstantiate(item: TgpuResolvable | AnyWgslData): string {
+  _getOrInstantiate(item: object): string {
     // All memoized versions of `item`
     const instances = this._memoizedResolves.get(item) ?? [];
 
@@ -470,9 +464,16 @@ class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       // If we got here, no item with the given slot-to-value combo exists in cache yet
-      const result = isWgslData(item)
-        ? resolveData(this, item)
-        : item.resolve(this);
+      let result: string;
+      if (isWgslData(item)) {
+        result = resolveData(this, item);
+      } else if (isDerived(item) || isSlot(item)) {
+        result = this.resolve(this.unwrap(item));
+      } else if (isSelfResolvable(item)) {
+        result = item['~resolve'](this);
+      } else {
+        result = this.resolveValue(item);
+      }
 
       // We know which slots the item used while resolving
       const slotToValueMap = new Map<TgpuSlot<unknown>, unknown>();
@@ -495,40 +496,43 @@ class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  resolve(eventualItem: Wgsl): string {
+  resolve(eventualItem: unknown): string {
     const item = this.unwrap(eventualItem);
 
-    if (
-      typeof item === 'string' ||
-      typeof item === 'number' ||
-      typeof item === 'boolean'
-    ) {
-      return String(item);
+    if ((item && typeof item === 'object') || typeof item === 'function') {
+      if (this._itemStateStack.itemDepth === 0) {
+        const result = provideCtx(this, () => this._getOrInstantiate(item));
+        return `${[...this._declarations].join('\n\n')}${result}`;
+      }
+
+      return this._getOrInstantiate(item);
     }
 
-    if (this._itemStateStack.itemDepth === 0) {
-      const result = provideCtx(this, () => this._getOrInstantiate(item));
-      return `${[...this._declarations].join('\n\n')}${result}`;
-    }
-
-    return this._getOrInstantiate(item);
+    return String(item);
   }
 
-  resolveValue<T extends BaseWgslData>(value: Infer<T>, schema: T): string {
+  resolveValue<T extends BaseWgslData>(
+    value: Infer<T>,
+    schema?: T | undefined,
+  ): string {
     if (isWgsl(value)) {
       return this.resolve(value);
     }
 
-    if (isWgslArray(schema)) {
-      return `array(${(value as Infer<typeof schema>).map((element) => this.resolveValue(element, schema.elementType))})`;
+    if (schema && isWgslArray(schema)) {
+      return `array(${(value as unknown[]).map((element) => this.resolveValue(element, schema.elementType))})`;
     }
 
-    if (isWgslStruct(schema)) {
+    if (Array.isArray(value)) {
+      return `array(${value.map((element) => this.resolveValue(element))})`;
+    }
+
+    if (schema && isWgslStruct(schema)) {
       return `${this.resolve(schema)}(${Object.entries(schema.propTypes).map(([key, type_]) => this.resolveValue((value as Infer<typeof schema>)[key], type_))})`;
     }
 
     throw new Error(
-      `Value ${value} of schema ${schema} is not resolvable to WGSL`,
+      `Value ${value} (as json: ${JSON.stringify(value)}) of schema ${schema} is not resolvable to WGSL`,
     );
   }
 }

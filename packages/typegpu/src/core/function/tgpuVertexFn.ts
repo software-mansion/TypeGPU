@@ -1,7 +1,7 @@
 import type { OmitBuiltins } from '../../builtin';
 import { isWgslStruct } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
-import type { ResolutionCtx, TgpuResolvable } from '../../types';
+import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
 import { addReturnTypeToExternals } from '../resolve/externals';
 import { createFnCore } from './fnCore';
 import type {
@@ -48,8 +48,7 @@ export interface TgpuVertexFnShell<
 export interface TgpuVertexFn<
   VertexIn extends IOLayout = IOLayout,
   VertexOut extends IOLayout = IOLayout,
-> extends TgpuResolvable,
-    TgpuNamable {
+> extends TgpuNamable {
   readonly shell: TgpuVertexFnShell<VertexIn, VertexOut>;
   readonly outputType: IOLayoutToOutputSchema<VertexOut>;
 
@@ -95,7 +94,7 @@ function createVertexFn(
   shell: TgpuVertexFnShell<IOLayout, IOLayout>,
   implementation: Implementation,
 ): TgpuVertexFn<IOLayout, IOLayout> {
-  type This = TgpuVertexFn<IOLayout, IOLayout>;
+  type This = TgpuVertexFn<IOLayout, IOLayout> & Labelled & SelfResolvable;
 
   const core = createFnCore(shell, implementation);
   const outputType = createOutputType(shell.returnType);
@@ -105,7 +104,7 @@ function createVertexFn(
     );
   }
 
-  return {
+  const result: This = {
     shell,
     outputType,
 
@@ -126,7 +125,7 @@ function createVertexFn(
       return this;
     },
 
-    resolve(ctx: ResolutionCtx): string {
+    '~resolve'(ctx: ResolutionCtx): string {
       return core.resolve(ctx, '@vertex ');
     },
 
@@ -134,4 +133,6 @@ function createVertexFn(
       return `vertexFn:${this.label ?? '<unnamed>'}`;
     },
   };
+
+  return result;
 }

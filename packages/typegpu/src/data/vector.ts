@@ -106,12 +106,12 @@ abstract class vec2Impl {
     this.y = value;
   }
 
-  resolve(): string {
+  '~resolve'(): string {
     return `${this.kind}(${this.x}, ${this.y})`;
   }
 
   toString() {
-    return this.resolve();
+    return this['~resolve']();
   }
 }
 
@@ -220,12 +220,12 @@ abstract class vec3Impl {
     this.z = value;
   }
 
-  resolve(): string {
+  '~resolve'(): string {
     return `${this.kind}(${this.x}, ${this.y}, ${this.z})`;
   }
 
   toString() {
-    return this.resolve();
+    return this['~resolve']();
   }
 }
 
@@ -344,12 +344,12 @@ abstract class vec4Impl {
     this.w = value;
   }
 
-  resolve(): string {
+  '~resolve'(): string {
     return `${this.kind}(${this.x}, ${this.y}, ${this.z}, ${this.w})`;
   }
 
   toString() {
-    return this.resolve();
+    return this['~resolve']();
   }
 }
 
