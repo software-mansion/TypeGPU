@@ -26,7 +26,7 @@ const fooBuffer = ...;
 const barTexture = ...;
 
 // Create a bind group that can fulfill the required layout.
-const fooBindGroup = fooLayout.populate({
+const fooBindGroup = root.createBindGroup(fooLayout, {
   foo: fooBuffer,
   bar: barTexture,
 });
@@ -124,6 +124,10 @@ Matching WGSL statement:
 Apart from being able to specify any data type, we can signal that the shader is generalized to work on
 arbitrarily sized data by passing a function.
 
+:::note
+Runtime-sized arrays are only usable with **storage** buffers.
+:::
+
 ```ts
 // main.ts
 const Filter = (n: number) =>
@@ -195,7 +199,7 @@ You can see the list of supported storage texture formats [here](https://www.w3.
 ## Bind Groups
 
 Before execution of a pipeline, any bind group that matches a given layout can be put in its place and used by the shader.
-To create a bind group, you can call the `populate` method on the bind group layout and associate each named key with
+To create a bind group, you can call the `createBindGroup` method on the [root object](/TypeGPU/fundamentals/roots) and associate each named key with
 a proper resource.
 
 ```ts
@@ -205,13 +209,13 @@ const fooLayout = tgpu.bindGroupLayout({
   // ...
 });
 
-const fooBindGroup0 = fooLayout.populate({
+const fooBindGroup0 = root.createBindGroup(fooLayout, {
   key1: ...,
   key0: ...,
   // ...
 });
 
-const fooBindGroup1 = fooLayout.populate({
+const fooBindGroup1 = root.createBindGroup(fooLayout, {
   key0: ...,
   key1: ...,
   // ...

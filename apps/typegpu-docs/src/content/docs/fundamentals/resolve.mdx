@@ -1,0 +1,127 @@
+---
+title: Resolve
+description: Resolve API can be used to extend shader code with WGSL definitions of TypeGPU-defined objects.
+---
+
+Defining shader schemas and objects in JS/TS has lots of benefits, but having to keep them in sync with the corresponding WGSL code is hard to maintain.
+The `tgpu.resolve` API takes in a WGSL template, all TypeGPU schemas that you want to use in the shader, and generates a ready-to-use WGSL bundle.
+
+:::note
+`tgpu.resolve` is essentially a dedicated TypeGPU linker.
+:::
+
+Here's an example:
+```ts
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const LightSource = d
+  .struct({
+    ambientColor: d.vec3f,
+    intensity: d.f32,
+  })
+  .$name('Source');
+// ^ giving the struct an explicit name (optional)
+
+const layout = tgpu
+  .bindGroupLayout({
+    lightSource: { uniform: LightSource },
+    sampling: { sampler: 'filtering' },
+    bgTexture: { externalTexture: {} },
+  })
+  .$idx(0);
+// ^ forces code-gen to assign `0` as the group index (optional)
+
+const rawShader = /* wgsl */ `
+  @fragment
+  fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
+    var bgColor = textureSampleBaseClampToEdge(bgTexture, sampling, uv).rgb;
+
+    var newSource: LightSource;
+    newSource.ambientColor = (bgColor + lightSource.ambientColor) * factor;
+    newSource.intensity = 0.6;
+
+    return vec4f(newSource.ambientColor, newSource.intensity);
+  }
+`;
+
+const resolved = tgpu.resolve({
+  template: rawShader,
+  externals: {
+    // mapping names in the template to corresponding resources/values
+    LightSource,
+    factor: d.vec3f(0.4, 0.6, 1.0),
+    ...layout.bound,
+  },
+});
+```
+
+Resolved WGSL shader code is as follows:
+
+```wgsl
+struct Source_0 {
+  ambientColor: vec3f,
+  intensity: f32,
+}
+
+@group(0) @binding(0) var<uniform> lightSource_1: Source_0;
+@group(0) @binding(1) var sampling_2: sampler;
+@group(0) @binding(2) var bgTexture_3: texture_external;
+
+@fragment
+fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
+  var bgColor = textureSampleBaseClampToEdge(bgTexture_3, sampling_2, uv).rgb;
+
+  var newSource: Source_0; // identifiers for references are generated based on the chosen naming scheme
+  newSource.ambientColor = (bgColor + lightSource_1.ambientColor) * vec3f(0.4, 0.6, 1);
+  newSource.intensity = 0.6;
+
+  return vec4f(newSource.ambientColor, newSource.intensity);
+}
+```
+
+## Template
+
+This optional property of the `tgpu.resolve` function argument is a string containing WGSL code, that is meant to be extended with additional definitions. 
+It can contain references to objects passed in the `externals` record.
+
+## Externals
+
+This is a record with TypeGPU objects that are to be included in the final resolved shader code. 
+The values in the mapping are the objects themselves, while the keys are the names by which they are referenced in the template code.
+Each object is resolved to its WGSL declaration, which is included in the final shader code.
+Moreover each reference to the object in the template is replaced with the name used in its newly generated declaration.
+
+If an object is being referenced only by another TypeGPU object in *externals*, it doesn't have to be included in the record.
+Any passed-in object's dependencies are automatically resolved and included in the final result.
+
+:::note
+To resolve bindings you can access each entry of a [bindGroupLayout](/TypeGPU/fundamentals/bind-groups) via the `layout.bound` property.
+
+```ts
+  externals: {
+    lightSource: layout.bound.lightSource,
+    sampling: layout.bound.sampling,
+    bgTexture: layout.bound.bgTexture,
+  }
+
+  // As long as the names in the shader match the
+  // layout keys, it can be shortened to:
+  externals: {
+    ...layout.bound,
+  }
+```
+:::
+
+## Naming scheme
+
+When externals are being resolved, they are given new names based on the specified naming scheme (`names` parameter).
+
+The default naming scheme is `"random"`. It uses labels assigned to the objects via `.$name("foo")` method or, if they aren't present, the keys in the *externals* record. 
+In this mode labels are later transformed to match the allowed identifier pattern, as well as include some unique suffix to ensure that no identifiers conflict with each other. 
+
+Another allowed value of the parameter is `"strict"` which names resolved objects in the WGSL code exactly as they are labeled by the user in JS,
+unless there is a name conflict, in which case a suffix is added.
+If there is no explicit *.$name* call, an object is named based on its associated key in *externals*. 
+This approach makes all of the generated identifiers predictable, but demands that all labels are valid identifiers 
+and requires explicit naming (via `.$name`) of all objects that aren't immediate values in the *externals* record.

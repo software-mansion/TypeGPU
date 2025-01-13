@@ -1,5 +1,5 @@
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
 
 const rareLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },
@@ -72,11 +72,11 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
   return col;
 }`;
 
-const width = 500;
-const height = 375;
-
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const video = document.querySelector('video') as HTMLVideoElement;
+
+const width = video.width;
+const height = video.height;
 
 let stream: MediaStream;
 
@@ -235,7 +235,7 @@ video.addEventListener('click', (event) => {
 
 // #endregion
 
-// #region Example Controls & Cleanup
+// #region Example controls & Cleanup
 
 export const controls = {
   threshold: {
