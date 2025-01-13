@@ -188,6 +188,8 @@ export interface TgpuRoot extends Unwrapper {
   readonly device: GPUDevice;
 
   /**
+   * Creates a typed wrapper around a GPUBuffer.
+   *
    * @param typeSchema The type of data that this buffer will hold.
    * @param initial The initial value of the buffer. (optional)
    */
@@ -197,6 +199,8 @@ export interface TgpuRoot extends Unwrapper {
   ): TgpuBuffer<Exotic<TData>>;
 
   /**
+   * Creates a typed wrapper around a GPUBuffer.
+   *
    * @param typeSchema The type of data that this buffer will hold.
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
@@ -205,6 +209,27 @@ export interface TgpuRoot extends Unwrapper {
     gpuBuffer: GPUBuffer,
   ): TgpuBuffer<Exotic<TData>>;
 
+  /**
+   * Creates a typed wrapper around a GPUBindGroup.
+   *
+   * @example
+   * const fooLayout = tgpu.bindGroupLayout({
+   *  foo: { uniform: d.vec3f },
+   *  bar: { texture: 'float' },
+   * });
+   *
+   * const fooBuffer = ...;
+   * const barTexture = ...;
+   *
+   * const fooBindGroup = root.createBindGroup(fooLayout, {
+   *  foo: fooBuffer,
+   *  bar: barTexture,
+   * });
+   *
+   * @param layout Layout describing the bind group to be created.
+   * @param entries A record with values being the resources populating the bind group
+   * and keys being their associated names, matching the layout keys.
+   */
   createBindGroup<
     Entries extends Record<string, TgpuLayoutEntry | null> = Record<
       string,
@@ -217,6 +242,11 @@ export interface TgpuRoot extends Unwrapper {
     },
   ): TgpuBindGroup<Entries>;
 
+  /**
+   * Destroys all underlying resources (i.e. buffers...) created through this root object.
+   * If the object is created via `tgpu.init` instead of `tgpu.initFromDevice`,
+   * then the inner GPU device is destroyed as well.
+   */
   destroy(): void;
 }
 
