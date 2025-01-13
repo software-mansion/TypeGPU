@@ -14,7 +14,7 @@ const getRandomExampleKey = () => {
 /**
  * The example we want to show off first.
  */
-const FLAGSHIP = 'rendering--box-raytracing';
+const FLAGSHIP = 'simulation--boids';
 
 function RedirectToFlagship() {
   const setCurrentExample = useSetAtom(currentExampleAtom);
