@@ -319,7 +319,7 @@ describe('TgpuBindGroup', () => {
       });
     });
 
-    it('accepts filtering/non-filtering sampler when creating bind group, but not comparison ', ({
+    it('accepts filtering/non-filtering sampler when creating bind group, but not comparison', ({
       root,
     }) => {
       root.createBindGroup(layout, {
