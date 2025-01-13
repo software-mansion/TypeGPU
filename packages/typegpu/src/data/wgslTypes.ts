@@ -733,6 +733,18 @@ export interface Location<T extends number> {
   readonly value: T;
 }
 
+export type PerspectiveOrLinearInterpolationType =
+  `${'perspective' | 'linear'}${'' | ', center' | ', centroid' | ', sample'}`;
+export type FlatInterpolationType = `flat${'' | ', first' | ', either'}`;
+export type InterpolationType =
+  | PerspectiveOrLinearInterpolationType
+  | FlatInterpolationType;
+
+export interface Interpolate<T extends InterpolationType> {
+  readonly type: '@interpolate';
+  readonly value: T;
+}
+
 export interface Builtin<T extends string> {
   readonly type: '@builtin';
   readonly value: T;
@@ -777,6 +789,27 @@ export const wgslTypeLiterals = [
 ] as const;
 
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
+
+export type PerspectiveOrLinearInterpolatableData =
+  | F32
+  | F16
+  | Vec2f
+  | Vec2h
+  | Vec3f
+  | Vec3h
+  | Vec4f
+  | Vec4h;
+
+export type FlatInterpolatableData =
+  | PerspectiveOrLinearInterpolatableData
+  | I32
+  | U32
+  | Vec2i
+  | Vec2u
+  | Vec3i
+  | Vec3u
+  | Vec4i
+  | Vec4u;
 
 export type AnyWgslData =
   | Bool
@@ -875,6 +908,12 @@ export function isLocationAttrib<T extends Location<number>>(
   value: unknown | T,
 ): value is T {
   return (value as T)?.type === '@location';
+}
+
+export function isInterpolateAttrib<T extends Interpolate<InterpolationType>>(
+  value: unknown | T,
+): value is T {
+  return (value as T)?.type === '@interpolate';
 }
 
 export function isBuiltinAttrib<T extends Builtin<string>>(
