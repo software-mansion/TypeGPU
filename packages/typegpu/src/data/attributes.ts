@@ -176,11 +176,11 @@ export function size<TSize extends number, TData extends AnyData>(
  * Assigns an explicit numeric location to a struct member or a parameter that has this type.
  *
  * @example
- * const Data = d.struct({
+ * const VertexOutput = {
  *   a: d.u32, // has implicit location 0
  *   b: d.location(5, d.u32),
  *   c: d.u32, // has implicit location 6
- * });
+ * };
  *
  * @param location The explicit numeric location.
  * @param data The data-type to wrap.
