@@ -1,7 +1,7 @@
-import type { VecKind } from '../data/vector';
 import { VectorOps } from '../data/vectorOps';
 import type {
   AnyMatInstance,
+  VecKind,
   v2f,
   v2h,
   v3f,
