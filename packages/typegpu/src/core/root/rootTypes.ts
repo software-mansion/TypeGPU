@@ -188,7 +188,10 @@ export interface TgpuRoot extends Unwrapper {
   readonly device: GPUDevice;
 
   /**
-   * Creates a typed wrapper around a GPUBuffer.
+   * Allocates memory on the GPU, allows passing data between host and shader.
+   *
+   * @remarks
+   * Typed wrapper around a GPUBuffer.
    *
    * @param typeSchema The type of data that this buffer will hold.
    * @param initial The initial value of the buffer. (optional)
@@ -199,7 +202,10 @@ export interface TgpuRoot extends Unwrapper {
   ): TgpuBuffer<Exotic<TData>>;
 
   /**
-   * Creates a typed wrapper around a GPUBuffer.
+   * Allocates memory on the GPU, allows passing data between host and shader.
+   *
+   * @remarks
+   * Typed wrapper around a GPUBuffer.
    *
    * @param typeSchema The type of data that this buffer will hold.
    * @param gpuBuffer A vanilla WebGPU buffer.
@@ -210,7 +216,10 @@ export interface TgpuRoot extends Unwrapper {
   ): TgpuBuffer<Exotic<TData>>;
 
   /**
-   * Creates a typed wrapper around a GPUBindGroup.
+   * Creates a group of resources that can be bound to a shader based on a specified layout.
+   *
+   * @remarks
+   * Typed wrapper around a GPUBindGroup.
    *
    * @example
    * const fooLayout = tgpu.bindGroupLayout({
