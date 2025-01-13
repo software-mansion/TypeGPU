@@ -127,6 +127,52 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
     expect(actual).toEqual(expected);
   });
 
+  it("doesn't replace property access identifiers when replacing externals", () => {
+    const HighlightedCircle = d
+      .struct({
+        index: d.u32,
+        color: d.vec4f,
+      })
+      .$name('HighlightedCircle');
+
+    const uniformBindGroupLayout = tgpu.bindGroupLayout({
+      highlightedCircle: { uniform: HighlightedCircle },
+    });
+
+    const shaderCode = tgpu.resolve({
+      template: `
+        fn vs() {
+          out.highlighted = highlighted.index;
+          
+          let h = highlighted;
+          let x = a.b.c.highlighted.d;
+        }
+      `,
+      externals: {
+        highlighted: uniformBindGroupLayout.bound.highlightedCircle,
+      },
+      names: 'strict',
+    });
+
+    expect(parse(shaderCode)).toEqual(
+      parse(`
+        struct HighlightedCircle {
+          index: u32,
+          color: vec4f,
+        }
+
+        @group(0) @binding(0) var<uniform> highlightedCircle: HighlightedCircle;
+
+        fn vs() {
+          out.highlighted = highlightedCircle.index;
+
+          let h = highlightedCircle;
+          let x = a.b.c.highlighted.d;
+        }
+      `),
+    );
+  });
+
   it('adds output struct definition when resolving vertex functions', () => {
     const vertexFunction = tgpu
       .vertexFn(

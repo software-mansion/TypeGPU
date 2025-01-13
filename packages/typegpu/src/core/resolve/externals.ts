@@ -88,7 +88,7 @@ export function replaceExternalsInWgsl(
         : String(external);
 
     return acc.replaceAll(
-      new RegExp(`(?<![\\w_])${externalName}(?![\\w_])`, 'g'),
+      new RegExp(`(?<![\\w_.])${externalName}(?![\\w_])`, 'g'),
       resolvedExternal,
     );
   }, wgsl);
