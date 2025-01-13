@@ -37,10 +37,9 @@ export function addArgTypesToExternals(
   argTypes: unknown[],
   applyExternals: (externals: ExternalMap) => void,
 ) {
-  const argTypeNames = implementation
-    .match(/^\s*\((?<args>[^\()]*?)\)/s)
-    ?.groups?.args?.split(',')
-    .map((arg) => arg.split(':')[1]?.trim());
+  const argTypeNames = [
+    ...implementation.matchAll(/:\s*(?<arg>.*?)\s*[,)]/g),
+  ].map((found) => found.groups?.arg);
 
   applyExternals(
     Object.fromEntries(
