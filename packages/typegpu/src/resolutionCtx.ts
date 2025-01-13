@@ -468,7 +468,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
       if (isWgslData(item)) {
         result = resolveData(this, item);
       } else if (isDerived(item) || isSlot(item)) {
-        result = this.resolve(this.unwrap(item));
+        result = this.resolve(item);
       } else if (isSelfResolvable(item)) {
         result = item['~resolve'](this);
       } else {

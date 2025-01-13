@@ -82,7 +82,7 @@ export function replaceExternalsInWgsl(
 ) {
   return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
     return acc.replaceAll(
-      new RegExp(`(?<![\\w_])${externalName}(?![\\w_])`, 'g'),
+      new RegExp(`(?<![\\w_.])${externalName}(?![\\w_])`, 'g'),
       ctx.resolve(external),
     );
   }, wgsl);

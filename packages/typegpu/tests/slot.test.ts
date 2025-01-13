@@ -135,7 +135,6 @@ describe('tgpu.slot', () => {
       new ResolutionError(new MissingSlotValueError(colorSlot), [
         resolutionRootMock,
         getColor,
-        colorSlot,
       ]),
     );
   });
