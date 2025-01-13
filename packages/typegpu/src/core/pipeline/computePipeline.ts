@@ -153,6 +153,8 @@ class ComputePipelineCore {
             });
             return '';
           },
+
+          toString: () => `computePipeline:${this.label ?? '<unnamed>'}`,
         },
         {
           names: this.branch.nameRegistry,

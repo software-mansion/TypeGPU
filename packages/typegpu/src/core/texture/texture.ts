@@ -493,6 +493,10 @@ class TgpuFixedStorageTextureImpl
 
     return id;
   }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+  }
 }
 
 export class TgpuLaidOutStorageTextureImpl
@@ -524,6 +528,10 @@ export class TgpuLaidOutStorageTextureImpl
     );
 
     return id;
+  }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
   }
 }
 
@@ -592,6 +600,10 @@ class TgpuFixedSampledTextureImpl
 
     return id;
   }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+  }
 }
 
 export class TgpuLaidOutSampledTextureImpl
@@ -626,5 +638,9 @@ export class TgpuLaidOutSampledTextureImpl
     );
 
     return id;
+  }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
   }
 }

@@ -11,6 +11,7 @@ import {
   TgpuLaidOutBufferImpl,
 } from './core/buffer/bufferUsage';
 import {
+  type TgpuComparisonSampler,
   TgpuLaidOutComparisonSamplerImpl,
   TgpuLaidOutSamplerImpl,
   type TgpuSampler,
@@ -87,8 +88,13 @@ export type TgpuLayoutStorage = TgpuLayoutEntryBase & {
 };
 
 export type TgpuLayoutSampler = TgpuLayoutEntryBase & {
-  sampler: GPUSamplerBindingType;
+  sampler: 'filtering' | 'non-filtering';
 };
+
+export type TgpuLayoutComparisonSampler = TgpuLayoutEntryBase & {
+  sampler: 'comparison';
+};
+
 export type TgpuLayoutTexture<
   TSampleType extends GPUTextureSampleType = GPUTextureSampleType,
 > = TgpuLayoutEntryBase & {
@@ -126,6 +132,7 @@ export type TgpuLayoutEntry =
   | TgpuLayoutUniform
   | TgpuLayoutStorage
   | TgpuLayoutSampler
+  | TgpuLayoutComparisonSampler
   | TgpuLayoutTexture
   | TgpuLayoutStorageTexture
   | TgpuLayoutExternalTexture;
@@ -158,6 +165,17 @@ export interface TgpuBindGroupLayout<
    */
   readonly index: number | undefined;
 
+  /**
+   * Associates this bind group layout with an explicit numeric index. When a call to this
+   * method is omitted, a unique numeric index is assigned to it automatically.
+   *
+   * Used when generating WGSL code: `@group(${index}) @binding(...) ...;`
+   */
+  $idx(index?: number): this;
+
+  /**
+   * @deprecated Use the `root.createBindGroup` API instead, accessible through `await tgpu.init()`
+   */
   populate(
     entries: {
       [K in keyof OmitProps<Entries, null>]: LayoutEntryToInput<Entries[K]>;
@@ -170,21 +188,6 @@ export interface TgpuBindGroupLayout<
    * @param unwrapper Used to unwrap any resources that this resource depends on.
    */
   unwrap(unwrapper: Unwrapper): GPUBindGroupLayout;
-}
-
-export interface TgpuBindGroupLayoutExperimental<
-  Entries extends Record<string, TgpuLayoutEntry | null> = Record<
-    string,
-    TgpuLayoutEntry | null
-  >,
-> extends TgpuBindGroupLayout<Entries> {
-  /**
-   * Associates this bind group layout with an explicit numeric index. When a call to this
-   * method is omitted, a unique numeric index is assigned to it automatically.
-   *
-   * Used when generating WGSL code: `@group(${index}) @binding(...) ...;`
-   */
-  $idx(index?: number): this;
 }
 
 type StorageUsageForEntry<T extends TgpuLayoutStorage> = T extends {
@@ -269,24 +272,26 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
           | (TgpuBuffer<UnwrapRuntimeConstructor<T['storage']>> & Storage)
           | GPUBuffer
       : T extends TgpuLayoutSampler
-        ? GPUSampler
-        : T extends TgpuLayoutTexture
-          ?
-              | GPUTextureView
-              | (Sampled &
-                  TgpuTexture<
-                    Prettify<TextureProps & GetTextureRestriction<T>>
-                  >)
-          : T extends TgpuLayoutStorageTexture
+        ? TgpuSampler | GPUSampler
+        : T extends TgpuLayoutComparisonSampler
+          ? TgpuComparisonSampler | GPUSampler
+          : T extends TgpuLayoutTexture
             ?
                 | GPUTextureView
-                | (Storage &
+                | (Sampled &
                     TgpuTexture<
-                      Prettify<TextureProps & GetStorageTextureRestriction<T>>
+                      Prettify<TextureProps & GetTextureRestriction<T>>
                     >)
-            : T extends TgpuLayoutExternalTexture
-              ? GPUExternalTexture
-              : never;
+            : T extends TgpuLayoutStorageTexture
+              ?
+                  | GPUTextureView
+                  | (Storage &
+                      TgpuTexture<
+                        Prettify<TextureProps & GetStorageTextureRestriction<T>>
+                      >)
+              : T extends TgpuLayoutExternalTexture
+                ? GPUExternalTexture
+                : never;
 
 export type BindLayoutEntry<T extends TgpuLayoutEntry | null> =
   T extends TgpuLayoutUniform
@@ -295,14 +300,16 @@ export type BindLayoutEntry<T extends TgpuLayoutEntry | null> =
       ? StorageUsageForEntry<T>
       : T extends TgpuLayoutSampler
         ? TgpuSampler
-        : T extends TgpuLayoutTexture
-          ? TgpuSampledTexture<
-              Default<GetDimension<T['viewDimension']>, '2d'>,
-              ChannelFormatToSchema[T['texture']]
-            >
-          : T extends TgpuLayoutStorageTexture
-            ? StorageTextureUsageForEntry<T>
-            : never;
+        : T extends TgpuLayoutComparisonSampler
+          ? TgpuComparisonSampler
+          : T extends TgpuLayoutTexture
+            ? TgpuSampledTexture<
+                Default<GetDimension<T['viewDimension']>, '2d'>,
+                ChannelFormatToSchema[T['texture']]
+              >
+            : T extends TgpuLayoutStorageTexture
+              ? StorageTextureUsageForEntry<T>
+              : never;
 
 export type TgpuBindGroup<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<
@@ -332,14 +339,6 @@ type ExoticEntries<T extends Record<string, TgpuLayoutEntry | null>> = {
 export function bindGroupLayout<
   Entries extends Record<string, TgpuLayoutEntry | null>,
 >(entries: Entries): TgpuBindGroupLayout<Prettify<ExoticEntries<Entries>>> {
-  return new TgpuBindGroupLayoutImpl(entries as ExoticEntries<Entries>);
-}
-
-export function bindGroupLayoutExperimental<
-  Entries extends Record<string, TgpuLayoutEntry | null>,
->(
-  entries: Entries,
-): TgpuBindGroupLayoutExperimental<Prettify<ExoticEntries<Entries>>> {
   return new TgpuBindGroupLayoutImpl(entries as ExoticEntries<Entries>);
 }
 
@@ -382,7 +381,7 @@ const DEFAULT_READONLY_VISIBILITY: TgpuShaderStage[] = [
 
 class TgpuBindGroupLayoutImpl<
   Entries extends Record<string, TgpuLayoutEntry | null>,
-> implements TgpuBindGroupLayoutExperimental<Entries>
+> implements TgpuBindGroupLayout<Entries>
 {
   private _label: string | undefined;
   private _index: number | undefined;

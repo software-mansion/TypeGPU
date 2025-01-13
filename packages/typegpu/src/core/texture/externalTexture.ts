@@ -40,4 +40,8 @@ export class TgpuExternalTextureImpl
 
     return id;
   }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+  }
 }

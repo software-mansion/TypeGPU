@@ -109,6 +109,10 @@ abstract class vec2Impl {
   '~resolve'(): string {
     return `${this.kind}(${this.x}, ${this.y})`;
   }
+
+  toString() {
+    return this.resolve();
+  }
 }
 
 class vec2fImpl extends vec2Impl {
@@ -218,6 +222,10 @@ abstract class vec3Impl {
 
   '~resolve'(): string {
     return `${this.kind}(${this.x}, ${this.y}, ${this.z})`;
+  }
+
+  toString() {
+    return this.resolve();
   }
 }
 
@@ -338,6 +346,10 @@ abstract class vec4Impl {
 
   '~resolve'(): string {
     return `${this.kind}(${this.x}, ${this.y}, ${this.z}, ${this.w})`;
+  }
+
+  toString() {
+    return this.resolve();
   }
 }
 

@@ -150,6 +150,10 @@ export class TgpuLaidOutSamplerImpl implements TgpuSampler, SelfResolvable {
 
     return id;
   }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+  }
 }
 
 export class TgpuLaidOutComparisonSamplerImpl
@@ -172,6 +176,10 @@ export class TgpuLaidOutComparisonSamplerImpl
     );
 
     return id;
+  }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
   }
 }
 
@@ -214,6 +222,10 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
 
     return id;
   }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+  }
 }
 
 class TgpuFixedComparisonSamplerImpl
@@ -246,5 +258,9 @@ class TgpuFixedComparisonSamplerImpl
     );
 
     return id;
+  }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
   }
 }

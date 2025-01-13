@@ -80,6 +80,14 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyWgslData>
     return id;
   }
 
+  get label() {
+    return this._label;
+  }
+
+  toString() {
+    return `var:${this.label ?? '<unnamed>'}`;
+  }
+
   get value(): Infer<TDataType> {
     if (!inGPUMode()) {
       throw new Error(`Cannot access tgpu.var's value directly in JS.`);

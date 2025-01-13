@@ -58,4 +58,8 @@ class TgpuDeclareImpl implements TgpuDeclare, SelfResolvable {
     ctx.addDeclaration(replacedDeclaration);
     return '';
   }
+
+  toString() {
+    return `declare: ${this.declaration}`;
+  }
 }

@@ -136,7 +136,8 @@ export interface SelfResolvable {
 }
 
 export interface Labelled {
-  label?: string | undefined;
+  readonly label?: string | undefined;
+  toString(): string;
 }
 
 export function isSelfResolvable(value: unknown): value is SelfResolvable {
