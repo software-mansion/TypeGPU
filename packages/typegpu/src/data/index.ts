@@ -45,6 +45,7 @@ export type {
   Align,
   Builtin,
   Location,
+  Interpolate,
   AnyWgslData,
   v2f,
   v2i,

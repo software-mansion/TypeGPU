@@ -176,7 +176,7 @@ export function size<TSize extends number, TData extends AnyData>(
  * Assigns an explicit numeric location to a struct member or a parameter that has this type.
  *
  * @example
- * const Data = d.ioStruct({
+ * const Data = d.struct({
  *   a: d.u32, // has implicit location 0
  *   b: d.location(5, d.u32),
  *   c: d.u32, // has implicit location 6
@@ -200,12 +200,12 @@ export function location<TLocation extends number, TData extends AnyData>(
  * Tip: Integer outputs cannot be interpolated.
  *
  * @example
- * const Data = d.ioStruct({
+ * const VertexOutput = {
  *   a: d.f32, // has implicit 'perspective, center' interpolation
  *   b: d.interpolate('linear, sample', d.f32),
- * });
+ * };
  *
- * @param location The explicit numeric location.
+ * @param interpolationType How data should be interpolated.
  * @param data The data-type to wrap.
  */
 export function interpolate<
@@ -225,12 +225,12 @@ export function interpolate<
  * `'flat, either'` as it could be slightly faster in hardware.
  *
  * @example
- * const Data = d.ioStruct({
+ * const VertexOutput = {
  *   a: d.f32, // has implicit 'perspective, center' interpolation
  *   b: d.interpolate('flat, either', d.u32), // integer outputs cannot interpolate
- * });
+ * };
  *
- * @param location The explicit numeric location.
+ * @param interpolationType How data should be interpolated.
  * @param data The data-type to wrap.
  */
 export function interpolate<
