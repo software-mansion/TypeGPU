@@ -11,6 +11,7 @@ import {
   type TgpuLayoutEntry,
   isBindGroupLayout,
 } from '../../tgpuBindGroupLayout';
+import type { SelfResolvable } from '../../types';
 import type { IOData, IOLayout } from '../function/fnTypes';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
@@ -487,7 +488,7 @@ class RenderPipelineCore {
           },
 
           toString: () => `renderPipeline:${this.label ?? '<unnamed>'}`,
-        },
+        } as SelfResolvable,
         {
           names: branch.nameRegistry,
           jitTranspiler: branch.jitTranspiler,

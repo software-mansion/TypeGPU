@@ -111,7 +111,7 @@ abstract class vec2Impl {
   }
 
   toString() {
-    return this.resolve();
+    return this['~resolve']();
   }
 }
 
@@ -225,7 +225,7 @@ abstract class vec3Impl {
   }
 
   toString() {
-    return this.resolve();
+    return this['~resolve']();
   }
 }
 
@@ -349,7 +349,7 @@ abstract class vec4Impl {
   }
 
   toString() {
-    return this.resolve();
+    return this['~resolve']();
   }
 }
 
