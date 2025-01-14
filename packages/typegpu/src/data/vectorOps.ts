@@ -318,21 +318,21 @@ export const VectorOps = {
         Math.max(a.x, b.x),
         Math.max(a.y, b.y),
         Math.max(a.z, b.z),
-        Math.max(a.w + b.w),
+        Math.max(a.w, b.w),
       ),
     vec4i: (a: wgsl.v4i, b: wgsl.v4i) =>
       vec4i(
         Math.max(a.x, b.x),
         Math.max(a.y, b.y),
         Math.max(a.z, b.z),
-        Math.max(a.w + b.w),
+        Math.max(a.w, b.w),
       ),
     vec4u: (a: wgsl.v4u, b: wgsl.v4u) =>
       vec4u(
         Math.max(a.x, b.x),
         Math.max(a.y, b.y),
         Math.max(a.z, b.z),
-        Math.max(a.w + b.w),
+        Math.max(a.w, b.w),
       ),
   } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
 
@@ -356,21 +356,21 @@ export const VectorOps = {
         Math.min(a.x, b.x),
         Math.min(a.y, b.y),
         Math.min(a.z, b.z),
-        Math.min(a.w + b.w),
+        Math.min(a.w, b.w),
       ),
     vec4i: (a: wgsl.v4i, b: wgsl.v4i) =>
       vec4i(
         Math.min(a.x, b.x),
         Math.min(a.y, b.y),
         Math.min(a.z, b.z),
-        Math.min(a.w + b.w),
+        Math.min(a.w, b.w),
       ),
     vec4u: (a: wgsl.v4u, b: wgsl.v4u) =>
       vec4u(
         Math.min(a.x, b.x),
         Math.min(a.y, b.y),
         Math.min(a.z, b.z),
-        Math.min(a.w + b.w),
+        Math.min(a.w, b.w),
       ),
   } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
 };
