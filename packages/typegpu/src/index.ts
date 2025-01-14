@@ -75,3 +75,4 @@ export type {
   LayoutEntryToInput,
   TgpuBindGroup,
 } from './tgpuBindGroupLayout';
+export type { TgpuResolveOptions } from './core/resolve/tgpuResolve';

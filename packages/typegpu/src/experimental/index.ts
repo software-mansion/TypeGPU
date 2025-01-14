@@ -181,3 +181,4 @@ export type {
   WithLocations,
 } from '../core/function/ioOutputType';
 export type { TgpuDeclare } from '../core/declare/tgpuDeclare';
+export type { TgpuResolveOptions } from '../core/resolve/tgpuResolve';
