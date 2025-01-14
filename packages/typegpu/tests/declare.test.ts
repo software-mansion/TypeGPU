@@ -1,24 +1,22 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
+import { declare } from '../src/core/declare/tgpuDeclare';
+import { fn } from '../src/core/function/tgpuFn';
 import * as d from '../src/data';
-import tgpu from '../src/experimental';
 import { parseResolved } from './utils/parseResolved';
 
 describe('tgpu.declare', () => {
   it('should inject provided declaration when resolving a function', () => {
-    const declaration = tgpu.declare(
-      '@group(0) @binding(0) var<uniform> val: f32;',
-    );
+    const declaration = declare('@group(0) @binding(0) var<uniform> val: f32;');
 
-    const fn = tgpu
-      .fn([])
+    const fn_1 = fn([])
       .does(`() {
         // do nothing
       }`)
       .$uses({ declaration })
       .$name('empty');
 
-    expect(parseResolved({ fn })).toEqual(
+    expect(parseResolved({ fn: fn_1 })).toEqual(
       parse(`
       @group(0) @binding(0) var<uniform> val: f32;
 
@@ -28,12 +26,9 @@ describe('tgpu.declare', () => {
   });
 
   it('should replace declaration statement in raw wgsl', () => {
-    const declaration = tgpu.declare(
-      '@group(0) @binding(0) var<uniform> val: f32;',
-    );
+    const declaration = declare('@group(0) @binding(0) var<uniform> val: f32;');
 
-    const fn = tgpu
-      .fn([])
+    const fn_1 = fn([])
       .does(`() {
         declaration
         // do nothing
@@ -41,7 +36,7 @@ describe('tgpu.declare', () => {
       .$uses({ declaration })
       .$name('empty');
 
-    expect(parseResolved({ fn })).toEqual(
+    expect(parseResolved({ fn: fn_1 })).toEqual(
       parse(`
       @group(0) @binding(0) var<uniform> val: f32;
 
@@ -51,23 +46,22 @@ describe('tgpu.declare', () => {
   });
 
   it('should inject all provided declarations', () => {
-    const fn = tgpu
-      .fn([])
+    const fn_1 = fn([])
       .does(`() {
         // do nothing
       }`)
       .$uses({
-        extraDeclaration1: tgpu.declare(
+        extraDeclaration1: declare(
           '@group(0) @binding(0) var<uniform> val: f32;',
         ),
-        extraDeclaration2: tgpu.declare(`
+        extraDeclaration2: declare(`
           struct Output {
             x: u32,
           }`),
       })
       .$name('empty');
 
-    expect(parseResolved({ fn })).toEqual(
+    expect(parseResolved({ fn: fn_1 })).toEqual(
       parse(`
       @group(0) @binding(0) var<uniform> val: f32;
 
@@ -81,25 +75,24 @@ describe('tgpu.declare', () => {
   });
 
   it('should replace nested declarations', () => {
-    const declaration = tgpu
-      .declare('@group(0) @binding(0) var<uniform> val: f32;')
-      .$uses({
-        nestedDeclaration: tgpu.declare(
-          `struct Output {
+    const declaration = declare(
+      '@group(0) @binding(0) var<uniform> val: f32;',
+    ).$uses({
+      nestedDeclaration: declare(
+        `struct Output {
               x: u32,
             }`,
-        ),
-      });
+      ),
+    });
 
-    const fn = tgpu
-      .fn([])
+    const fn_1 = fn([])
       .does(`() {
         // do nothing
       }`)
       .$uses({ declaration })
       .$name('empty');
 
-    expect(parseResolved({ fn })).toEqual(
+    expect(parseResolved({ fn: fn_1 })).toEqual(
       parse(`
         struct Output {
           x: u32,
@@ -117,19 +110,18 @@ describe('tgpu.declare', () => {
       x: d.u32,
     });
 
-    const declaration = tgpu
-      .declare('@group(0) @binding(0) var<uniform> val: Output;')
-      .$uses({ Output });
+    const declaration = declare(
+      '@group(0) @binding(0) var<uniform> val: Output;',
+    ).$uses({ Output });
 
-    const fn = tgpu
-      .fn([])
+    const fn_1 = fn([])
       .does(`() {
         // do nothing
       }`)
       .$uses({ declaration })
       .$name('empty');
 
-    expect(parseResolved({ fn })).toEqual(
+    expect(parseResolved({ fn: fn_1 })).toEqual(
       parse(`
         struct Output {
           x: u32,
@@ -143,12 +135,9 @@ describe('tgpu.declare', () => {
   });
 
   it('works with tgsl functions', () => {
-    const declaration = tgpu.declare(
-      '@group(0) @binding(0) var<uniform> val: f32;',
-    );
+    const declaration = declare('@group(0) @binding(0) var<uniform> val: f32;');
 
-    const main = tgpu
-      .fn([], d.f32)
+    const main = fn([], d.f32)
       .does(() => {
         declaration;
         return 2;

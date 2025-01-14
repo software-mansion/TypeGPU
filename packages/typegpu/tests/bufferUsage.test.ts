@@ -1,7 +1,7 @@
 import { describe, expectTypeOf } from 'vitest';
 
+import { asUniform } from '../src/core/buffer/bufferUsage';
 import * as d from '../src/data';
-import { asUniform } from '../src/experimental';
 import type { Infer } from '../src/shared/repr';
 import { it } from './utils/extendedIt';
 

@@ -1,7 +1,10 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
+import type { TgpuBufferReadonly } from '../src/core/buffer/bufferUsage';
+import { fn } from '../src/core/function/tgpuFn';
+import { fragmentFn } from '../src/core/function/tgpuFragmentFn';
+import { resolve } from '../src/core/resolve/tgpuResolve';
 import * as d from '../src/data';
-import tgpu, { type TgpuBufferReadonly } from '../src/experimental';
 import type { ResolutionCtx } from '../src/types';
 
 describe('tgpu resolve', () => {
@@ -10,7 +13,7 @@ describe('tgpu resolve', () => {
       from: d.vec3f,
       to: d.vec3f,
     });
-    const resolved = tgpu.resolve({
+    const resolved = resolve({
       template: 'fn foo() { var g: Gradient; }',
       externals: {
         Gradient,
@@ -40,17 +43,15 @@ describe('tgpu resolve', () => {
       },
     } as unknown as TgpuBufferReadonly<d.F32>;
 
-    const fragment1 = tgpu
-      .fragmentFn({}, d.vec4f)
+    const fragment1 = fragmentFn({}, d.vec4f)
       .does(() => d.vec4f(0, intensity.value, 0, 1))
       .$name('fragment1');
 
-    const fragment2 = tgpu
-      .fragmentFn({}, d.vec4f)
+    const fragment2 = fragmentFn({}, d.vec4f)
       .does(() => d.vec4f(intensity.value, 0, 0, 1))
       .$name('fragment2');
 
-    const resolved = tgpu.resolve({
+    const resolved = resolve({
       externals: { fragment1, fragment2 },
       names: 'strict',
     });
@@ -75,8 +76,7 @@ describe('tgpu resolve', () => {
       health: d.f32,
     });
 
-    const getPlayerHealth = tgpu
-      .fn([PlayerData], d.f32)
+    const getPlayerHealth = fn([PlayerData], d.f32)
       .does((pInfo) => {
         return pInfo.health;
       })
@@ -90,7 +90,7 @@ describe('tgpu resolve', () => {
         let health = getPlayerHealth(player);
       }`;
 
-    const resolved = tgpu.resolve({
+    const resolved = resolve({
       template: shaderLogic,
       externals: {
         PlayerData,
@@ -127,8 +127,7 @@ describe('tgpu resolve', () => {
       range: d.vec2f,
     });
 
-    const random = tgpu
-      .fn([], d.f32)
+    const random = fn([], d.f32)
       .does(/* wgsl */ `() -> f32 {
         var r: Random;
         r.seed = vec2<f32>(3.14, 1.59);
@@ -145,7 +144,7 @@ describe('tgpu resolve', () => {
         var value = randomTest();
       }`;
 
-    const resolved = tgpu.resolve({
+    const resolved = resolve({
       template: shaderLogic,
       externals: { randomTest: random },
       names: 'strict',

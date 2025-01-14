@@ -29,13 +29,10 @@ function embedJSON(jsValue: unknown) {
 
 function gatherTgpuAliases(ctx: Context, node: AnyNode) {
   if (node.type === 'ImportDeclaration') {
-    if (
-      node.source.value === 'typegpu' ||
-      node.source.value === 'typegpu/experimental'
-    ) {
+    if (node.source.value === 'typegpu') {
       for (const spec of node.specifiers) {
         if (
-          // The default export of both 'typegpu' and 'typegpu/experimental' is the `tgpu` object.
+          // The default export of 'typegpu' is the `tgpu` object.
           spec.type === 'ImportDefaultSpecifier' ||
           // Aliasing 'tgpu' while importing, e.g. import { tgpu as t } from 'typegpu';
           (spec.type === 'ImportSpecifier' &&

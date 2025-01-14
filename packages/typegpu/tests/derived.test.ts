@@ -1,22 +1,23 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, vi } from 'vitest';
+import { fn } from '../src/core/function/tgpuFn';
+import { derived } from '../src/core/slot/derived';
+import { slot } from '../src/core/slot/slot';
 import * as d from '../src/data';
-import tgpu from '../src/experimental';
 import { it } from './utils/extendedIt';
 import { parseResolved } from './utils/parseResolved';
 
 describe('TgpuDerived', () => {
   it('memoizes results of transitive "derived"', () => {
-    const foo = tgpu.slot<number>(1).$name('foo');
+    const foo = slot<number>(1).$name('foo');
     const computeDouble = vi.fn(() => {
       return foo.value * 2;
     });
-    const double = tgpu.derived(computeDouble);
-    const a = tgpu.derived(() => double.value + 1);
-    const b = tgpu.derived(() => double.value + 2);
+    const double = derived(computeDouble);
+    const a = derived(() => double.value + 1);
+    const b = derived(() => double.value + 2);
 
-    const main = tgpu
-      .fn([], d.f32)
+    const main = fn([], d.f32)
       .does(() => {
         return a.value + b.value;
       })
@@ -34,11 +35,10 @@ describe('TgpuDerived', () => {
   });
 
   it('memoizes functions using derived values', () => {
-    const foo = tgpu.slot<number>().$name('foo');
-    const double = tgpu.derived(() => foo.value * 2);
+    const foo = slot<number>().$name('foo');
+    const double = derived(() => foo.value * 2);
 
-    const getDouble = tgpu
-      .fn([], d.f32)
+    const getDouble = fn([], d.f32)
       .does(() => {
         return double.value;
       })
@@ -48,8 +48,7 @@ describe('TgpuDerived', () => {
     const b = getDouble.with(foo, 2); // the same as `a`
     const c = getDouble.with(foo, 4);
 
-    const main = tgpu
-      .fn([])
+    const main = fn([])
       .does(() => {
         a();
         b();
@@ -77,13 +76,12 @@ describe('TgpuDerived', () => {
   });
 
   it('can use slot values from its surrounding context', () => {
-    const gridSizeSlot = tgpu.slot<number>().$name('gridSize');
+    const gridSizeSlot = slot<number>().$name('gridSize');
 
-    const fill = tgpu.derived(() => {
+    const fill = derived(() => {
       const gridSize = gridSizeSlot.value;
 
-      return tgpu
-        .fn([d.arrayOf(d.f32, gridSize)])
+      return fn([d.arrayOf(d.f32, gridSize)])
         .does((arr) => {
           // do something
         })
@@ -95,8 +93,7 @@ describe('TgpuDerived', () => {
 
     const exampleArray: number[] = [];
 
-    const main = tgpu
-      .fn([])
+    const main = fn([])
       .does(() => {
         fill.value(exampleArray);
         fillWith2.value(exampleArray);

@@ -257,6 +257,8 @@ export interface TgpuRoot extends Unwrapper {
    * then the inner GPU device is destroyed as well.
    */
   destroy(): void;
+
+  '~unstable': Omit<ExperimentalTgpuRoot, keyof TgpuRoot>;
 }
 
 export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {

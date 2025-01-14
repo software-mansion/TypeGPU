@@ -1,5 +1,5 @@
+import tgpu, { unstable_asMutable, unstable_asUniform } from 'typegpu';
 import * as d from 'typegpu/data';
-import tgpu, { asMutable, asUniform } from 'typegpu/experimental';
 
 // constants
 
@@ -51,7 +51,7 @@ const canvasAspectRatioBuffer = root
   .createBuffer(d.f32, canvas.width / canvas.height)
   .$usage('uniform');
 
-const canvasAspectRatioUniform = asUniform(canvasAspectRatioBuffer);
+const canvasAspectRatioUniform = unstable_asUniform(canvasAspectRatioBuffer);
 
 const particleGeometryBuffer = root
   .createBuffer(
@@ -76,21 +76,21 @@ const timeBuffer = root.createBuffer(d.f32).$usage('storage');
 
 // layouts
 
-const geometryLayout = tgpu
+const geometryLayout = tgpu['~unstable']
   .vertexLayout((n: number) => d.arrayOf(ParticleGeometry, n), 'instance')
   .$name('geometry');
 
-const dataLayout = tgpu
+const dataLayout = tgpu['~unstable']
   .vertexLayout((n: number) => d.arrayOf(ParticleData, n), 'instance')
   .$name('data');
 
-const particleDataStorage = asMutable(particleDataBuffer);
-const deltaTimeUniform = asUniform(deltaTimeBuffer);
-const timeStorage = asMutable(timeBuffer);
+const particleDataStorage = unstable_asMutable(particleDataBuffer);
+const deltaTimeUniform = unstable_asUniform(deltaTimeBuffer);
+const timeStorage = unstable_asMutable(timeBuffer);
 
 // functions
 
-const rotate = tgpu.fn([d.vec2f, d.f32], d.vec2f).does(/* wgsl */ `
+const rotate = tgpu['~unstable'].fn([d.vec2f, d.f32], d.vec2f).does(/* wgsl */ `
   (v: vec2f, angle: f32) -> vec2f {
     let pos = vec2(
       (v.x * cos(angle)) - (v.y * sin(angle)),
@@ -101,7 +101,7 @@ const rotate = tgpu.fn([d.vec2f, d.f32], d.vec2f).does(/* wgsl */ `
   }
 `);
 
-const mainVert = tgpu
+const mainVert = tgpu['~unstable']
   .vertexFn(
     {
       tilt: d.f32,
@@ -144,12 +144,14 @@ const mainVert = tgpu
     canvasAspectRatio: canvasAspectRatioUniform,
   });
 
-const mainFrag = tgpu.fragmentFn(VertexOutput, d.vec4f).does(/* wgsl */ `
+const mainFrag = tgpu['~unstable']
+  .fragmentFn(VertexOutput, d.vec4f)
+  .does(/* wgsl */ `
   (@location(0) color: vec4f) -> @location(0) vec4f {
     return color;
   }`);
 
-const mainCompute = tgpu
+const mainCompute = tgpu['~unstable']
   .computeFn([d.builtin.globalInvocationId], { workgroupSize: [1] })
   .does(
     /* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
@@ -169,7 +171,7 @@ const mainCompute = tgpu
 
 // pipelines
 
-const renderPipeline = root
+const renderPipeline = root['~unstable']
   .withVertex(mainVert, {
     tilt: geometryLayout.attrib.tilt,
     angle: geometryLayout.attrib.angle,
@@ -187,7 +189,7 @@ const renderPipeline = root
   .with(geometryLayout, particleGeometryBuffer)
   .with(dataLayout, particleDataBuffer);
 
-const computePipeline = root
+const computePipeline = root['~unstable']
   .withCompute(mainCompute)
   .createPipeline()
   .$name('move particles');
@@ -243,7 +245,7 @@ onFrame((deltaTime) => {
     })
     .draw(4, PARTICLE_AMOUNT);
 
-  root.flush();
+  root['~unstable'].flush();
 });
 
 // example controls and cleanup

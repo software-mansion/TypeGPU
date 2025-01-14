@@ -1,13 +1,12 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
+import { fn } from '../src/core/function/tgpuFn';
 import { f32, vec3f } from '../src/data';
-import tgpu from '../src/experimental';
 import { parseResolved } from './utils/parseResolved';
 
 describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {
-    const getX = tgpu
-      .fn([], f32)
+    const getX = fn([], f32)
       .does(() => {
         return 3;
       })
@@ -17,8 +16,7 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('resolves fn to WGSL', () => {
-    const getY = tgpu
-      .fn([], f32)
+    const getY = fn([], f32)
       .does(() => {
         return 3;
       })
@@ -36,8 +34,7 @@ describe('TGSL tgpu.fn function', () => {
 
   it('resolves externals', () => {
     const v = vec3f; // necessary workaround until we finish implementation of member access in the generator
-    const getColor = tgpu
-      .fn([], vec3f)
+    const getColor = fn([], vec3f)
       .does(() => {
         const color = v();
         const color2 = v(1, 2, 3);
@@ -46,8 +43,7 @@ describe('TGSL tgpu.fn function', () => {
       .$uses({ v: vec3f })
       .$name('get_color');
 
-    const getX = tgpu
-      .fn([], f32)
+    const getX = fn([], f32)
       .does(() => {
         const color = getColor();
         return 3;
@@ -55,8 +51,7 @@ describe('TGSL tgpu.fn function', () => {
       .$name('get_x')
       .$uses({ getColor });
 
-    const getY = tgpu
-      .fn([], f32)
+    const getY = fn([], f32)
       .does(() => {
         const c = getColor();
         return getX();

@@ -8,8 +8,9 @@ import type {
 } from '../src/core/texture/texture';
 import type { Render, Sampled } from '../src/core/texture/usageExtension';
 import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../src/data';
-import tgpu, { StrictNameRegistry } from '../src/experimental';
 import './utils/webgpuGlobals';
+import { resolve } from '../src/core/resolve/tgpuResolve';
+import { StrictNameRegistry } from '../src/nameRegistry';
 import { it } from './utils/extendedIt';
 
 describe('TgpuTexture', () => {
@@ -192,11 +193,9 @@ describe('TgpuTexture', () => {
     const sampled1 = texture.createView('sampled');
     const sampled2 = texture.createView('sampled', { dimension: '2d-array' });
 
-    expect(tgpu.resolve({ externals: { sampled1 } })).toContain(
-      'texture_2d<f32>',
-    );
+    expect(resolve({ externals: { sampled1 } })).toContain('texture_2d<f32>');
 
-    expect(tgpu.resolve({ externals: { sampled2 } })).toContain(
+    expect(resolve({ externals: { sampled2 } })).toContain(
       'texture_2d_array<f32>',
     );
   });

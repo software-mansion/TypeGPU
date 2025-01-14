@@ -1,5 +1,5 @@
 import { it as base, vi } from 'vitest';
-import tgpu, { type ExperimentalTgpuRoot } from '../../src/experimental';
+import tgpu, { type ExperimentalTgpuRoot } from '../../src';
 import './webgpuGlobals';
 
 const adapterMock = {
@@ -123,7 +123,7 @@ export const it = base.extend<{
   root: async ({ task }, use) => {
     const root = await tgpu.init();
 
-    await use(root);
+    await use(root as ExperimentalTgpuRoot);
 
     root.destroy();
   },

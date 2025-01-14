@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
+import { resolve } from '../src/core/resolve/tgpuResolve';
 import * as d from '../src/data';
 import { alignmentOf } from '../src/data/alignmentOf';
-import tgpu from '../src/experimental';
 
 describe('d.align', () => {
   it('adds @align attribute for custom aligned struct members', () => {
@@ -13,7 +13,7 @@ describe('d.align', () => {
       })
       .$name('s1');
 
-    expect(tgpu.resolve({ externals: { s1 }, names: 'strict' })).toContain(
+    expect(resolve({ externals: { s1 }, names: 'strict' })).toContain(
       '@align(16) b: u32,',
     );
   });

@@ -1,11 +1,11 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect } from 'vitest';
+import { asUniform } from '../src/core/buffer/bufferUsage';
+import { fn } from '../src/core/function/tgpuFn';
+import { resolve } from '../src/core/resolve/tgpuResolve';
+import { accessor } from '../src/core/slot/accessor';
 import * as d from '../src/data';
-import tgpu, {
-  MissingSlotValueError,
-  ResolutionError,
-  asUniform,
-} from '../src/experimental';
+import { MissingSlotValueError, ResolutionError } from '../src/errors';
 import type { TgpuResolvable } from '../src/types';
 import { it } from './utils/extendedIt';
 import { parseResolved } from './utils/parseResolved';
@@ -21,10 +21,9 @@ const resolutionRootMock = {
 
 describe('tgpu.accessor', () => {
   it('resolves to invocation of provided function', () => {
-    const colorAccessor = tgpu.accessor(d.vec3f).$name('color');
+    const colorAccessor = accessor(d.vec3f).$name('color');
 
-    const getColor = tgpu
-      .fn([], d.vec3f)
+    const getColor = fn([], d.vec3f)
       .does(/* wgsl */ `() -> vec3f {
         return color;
       }`)
@@ -32,8 +31,7 @@ describe('tgpu.accessor', () => {
       .$uses({ color: colorAccessor })
       .with(
         colorAccessor,
-        tgpu
-          .fn([], d.vec3f)
+        fn([], d.vec3f)
           .does(`() -> vec3f { return ${RED_RESOLVED}; }`)
           .$name('red'),
       );
@@ -52,10 +50,9 @@ describe('tgpu.accessor', () => {
   });
 
   it('resolves to provided buffer usage', ({ root }) => {
-    const colorAccessor = tgpu.accessor(d.vec3f).$name('color');
+    const colorAccessor = accessor(d.vec3f).$name('color');
 
-    const getColor = tgpu
-      .fn([], d.vec3f)
+    const getColor = fn([], d.vec3f)
       .does(/* wgsl */ `() -> vec3f {
         return color;
       }`)
@@ -80,11 +77,10 @@ describe('tgpu.accessor', () => {
   });
 
   it('resolves to resolved form of provided JS value', () => {
-    const colorAccessor = tgpu.accessor(d.vec3f).$name('color');
-    const multiplierAccessor = tgpu.accessor(d.f32).$name('multiplier');
+    const colorAccessor = accessor(d.vec3f).$name('color');
+    const multiplierAccessor = accessor(d.f32).$name('multiplier');
 
-    const getColor = tgpu
-      .fn([], d.vec3f)
+    const getColor = fn([], d.vec3f)
       .does(/* wgsl */ `() -> vec3f {
         return color * multiplier;
       }`)
@@ -103,10 +99,9 @@ describe('tgpu.accessor', () => {
   });
 
   it('resolves to default value if no value provided', () => {
-    const colorAccessor = tgpu.accessor(d.vec3f, RED).$name('color'); // red by default
+    const colorAccessor = accessor(d.vec3f, RED).$name('color'); // red by default
 
-    const getColor = tgpu
-      .fn([], d.vec3f)
+    const getColor = fn([], d.vec3f)
       .does(/* wgsl */ `() -> vec3f {
         return color;
       }`)
@@ -123,10 +118,9 @@ describe('tgpu.accessor', () => {
   });
 
   it('resolves to provided value rather than default value', () => {
-    const colorAccessor = tgpu.accessor(d.vec3f, RED).$name('color'); // red by default
+    const colorAccessor = accessor(d.vec3f, RED).$name('color'); // red by default
 
-    const getColor = tgpu
-      .fn([], d.vec3f)
+    const getColor = fn([], d.vec3f)
       .does(/* wgsl */ `() -> vec3f {
         return color;
       }`)
@@ -136,8 +130,7 @@ describe('tgpu.accessor', () => {
     // overriding to green
     const getColorWithGreen = getColor.with(colorAccessor, d.vec3f(0, 1, 0));
 
-    const main = tgpu
-      .fn([])
+    const main = fn([])
       .does(`() {
         return getColorWithGreen();
       }`)
@@ -158,19 +151,16 @@ describe('tgpu.accessor', () => {
   });
 
   it('throws error when no default nor value provided', () => {
-    const colorAccessor = tgpu.accessor(d.vec3f).$name('color');
+    const colorAccessor = accessor(d.vec3f).$name('color');
 
-    const getColor = tgpu
-      .fn([], d.vec3f)
+    const getColor = fn([], d.vec3f)
       .does(`() {
         return color;
       })`)
       .$name('getColor')
       .$uses({ color: colorAccessor });
 
-    expect(() =>
-      tgpu.resolve({ externals: { getColor }, names: 'strict' }),
-    ).toThrow(
+    expect(() => resolve({ externals: { getColor }, names: 'strict' })).toThrow(
       new ResolutionError(new MissingSlotValueError(colorAccessor.slot), [
         resolutionRootMock,
         getColor,

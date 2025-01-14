@@ -1,13 +1,16 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
+import { fn } from '../src/core/function/tgpuFn';
+import { fragmentFn } from '../src/core/function/tgpuFragmentFn';
+import { vertexFn } from '../src/core/function/tgpuVertexFn';
+import { resolve } from '../src/core/resolve/tgpuResolve';
 import * as d from '../src/data';
-import tgpu from '../src/experimental';
+import { bindGroupLayout } from '../src/tgpuBindGroupLayout';
 import { parseResolved } from './utils/parseResolved';
 
 describe('tgpu.fn with raw string WGSL implementation', () => {
   it('is namable', () => {
-    const getX = tgpu
-      .fn([], d.f32)
+    const getX = fn([], d.f32)
       .does(`() {
         return 3.0f;
       }`)
@@ -17,8 +20,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   });
 
   it('resolves rawFn to WGSL', () => {
-    const getY = tgpu
-      .fn([], d.f32)
+    const getY = fn([], d.f32)
       .does(`() {
         return 3.0f;
       }`)
@@ -36,16 +38,14 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   });
 
   it('resolves externals and replaces their usages in code', () => {
-    const getColor = tgpu
-      .fn([], d.vec3f)
+    const getColor = fn([], d.vec3f)
       .does(`() {
         let color = vec3f();
         return color;
       }`)
       .$name('get_color');
 
-    const getX = tgpu
-      .fn([], d.f32)
+    const getX = fn([], d.f32)
       .does(`() {
         let color = get_color();
         return 3.0f;
@@ -53,8 +53,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       .$name('get_x')
       .$uses({ get_color: getColor });
 
-    const getY = tgpu
-      .fn([], d.f32)
+    const getY = fn([], d.f32)
       .does(`() {
         let c = color();
         return getX();
@@ -85,15 +84,13 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   });
 
   it('replaces external usage just for exact identifier matches', () => {
-    const getx = tgpu
-      .fn([], d.f32)
+    const getx = fn([], d.f32)
       .does(`() {
         return 3.0f;
       }`)
       .$name('external');
 
-    const getY = tgpu
-      .fn([], d.f32)
+    const getY = fn([], d.f32)
       .does(`() {
         let x = getx();
         let y = getx() + getx();
@@ -135,11 +132,11 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       })
       .$name('HighlightedCircle');
 
-    const uniformBindGroupLayout = tgpu.bindGroupLayout({
+    const uniformBindGroupLayout = bindGroupLayout({
       highlightedCircle: { uniform: HighlightedCircle },
     });
 
-    const shaderCode = tgpu.resolve({
+    const shaderCode = resolve({
       template: `
         fn vs() {
           out.highlighted = highlighted.index;
@@ -174,11 +171,10 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   });
 
   it('adds output struct definition when resolving vertex functions', () => {
-    const vertexFunction = tgpu
-      .vertexFn(
-        { vertexIndex: d.builtin.vertexIndex },
-        { outPos: d.builtin.position },
-      )
+    const vertexFunction = vertexFn(
+      { vertexIndex: d.builtin.vertexIndex },
+      { outPos: d.builtin.position },
+    )
       .does(/* wgsl */ `(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
     var pos = array<vec2f, 6>(
       vec2<f32>( 1,  1),
@@ -195,7 +191,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   }`)
       .$name('vertex_fn');
 
-    const resolved = tgpu.resolve({
+    const resolved = resolve({
       externals: { vertexFunction },
       names: 'strict',
     });
@@ -209,8 +205,10 @@ struct vertex_fn_Output {
   });
 
   it('adds output struct definition when resolving fragment functions', () => {
-    const fragmentFunction = tgpu
-      .fragmentFn({ position: d.builtin.position }, { a: d.vec4f, b: d.vec4f })
+    const fragmentFunction = fragmentFn(
+      { position: d.builtin.position },
+      { a: d.vec4f, b: d.vec4f },
+    )
       .does(/* wgsl */ `(@builtin(position) position: vec4f) -> Output {
     var out: Output;
     out.a = vec4f(1.0);
@@ -219,7 +217,7 @@ struct vertex_fn_Output {
   }`)
       .$name('fragment');
 
-    const resolved = tgpu.resolve({
+    const resolved = resolve({
       externals: { fragmentFunction },
       names: 'strict',
     });
@@ -234,14 +232,16 @@ struct fragment_Output {
   });
 
   it("does not add redundant struct definition when there's no struct output", () => {
-    const fragmentFunction = tgpu
-      .fragmentFn({ position: d.builtin.position }, d.vec4f)
+    const fragmentFunction = fragmentFn(
+      { position: d.builtin.position },
+      d.vec4f,
+    )
       .does(/* wgsl */ `(@builtin(position) position: vec4f) -> @location(0) vec4f {
         return vec4f(1.0f);
       }`)
       .$name('fragment');
 
-    expect(tgpu.resolve({ externals: { fragmentFunction } })).not.toContain(
+    expect(resolve({ externals: { fragmentFunction } })).not.toContain(
       'struct',
     );
   });
@@ -252,8 +252,7 @@ struct fragment_Output {
       b: d.u32,
     });
 
-    const func = tgpu
-      .fn([d.vec4f, Point], undefined)
+    const func = fn([d.vec4f, Point], undefined)
       .does(/* wgsl */ `(a: vec4f, b: Point) {
     var newPoint: Point;
     newPoint = b;
@@ -282,8 +281,7 @@ struct fragment_Output {
       })
       .$name('P');
 
-    const func = tgpu
-      .fn([d.vec4f, Point], d.vec2f)
+    const func = fn([d.vec4f, Point], d.vec2f)
       .does(/* wgsl */ `(
         a: vec4f, 
         b : PointStruct ,
@@ -315,8 +313,7 @@ struct fragment_Output {
       })
       .$name('P');
 
-    const func = tgpu
-      .fn([d.vec4f], Point)
+    const func = fn([d.vec4f], Point)
       .does(/* wgsl */ `(a: vec4f) -> PointStruct {
     var newPoint: PointStruct;
     newPoint = b;

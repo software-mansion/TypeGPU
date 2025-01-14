@@ -21,12 +21,6 @@
       "import": "./dist/data/index.js",
       "default": "./dist/data/index.cjs"
     },
-    "./experimental": {
-      "types": "./dist/experimental/index.d.ts",
-      "module": "./dist/experimental/index.js",
-      "import": "./dist/experimental/index.js",
-      "default": "./dist/experimental/index.cjs"
-    },
     "./std": {
       "types": "./dist/std/index.d.ts",
       "module": "./dist/std/index.js",
