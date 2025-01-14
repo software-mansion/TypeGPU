@@ -1,15 +1,15 @@
 import type { AnyWgslData } from '../../data';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
+import type { Labelled } from '../../types';
 import type { TgpuFn } from '../function/tgpuFn';
 import type { TgpuBufferUsage } from './../buffer/bufferUsage';
 
-export interface TgpuSlot<T> extends TgpuNamable {
+export interface TgpuSlot<T> extends TgpuNamable, Labelled {
   readonly resourceType: 'slot';
 
   readonly defaultValue: T | undefined;
 
-  readonly label?: string | undefined;
   /**
    * Used to determine if code generated using either value `a` or `b` in place
    * of the slot will be equivalent. Defaults to `Object.is`.
@@ -32,7 +32,8 @@ export interface TgpuDerived<T> {
 }
 
 export interface TgpuAccessor<T extends AnyWgslData = AnyWgslData>
-  extends TgpuNamable {
+  extends TgpuNamable,
+    Labelled {
   readonly resourceType: 'accessor';
 
   readonly schema: T;
@@ -43,7 +44,6 @@ export interface TgpuAccessor<T extends AnyWgslData = AnyWgslData>
     | undefined;
   readonly slot: TgpuSlot<TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>>;
 
-  readonly label?: string | undefined;
   readonly value: Infer<T>;
 }
 

@@ -81,7 +81,7 @@ function createComputeFn(
 
   const core = createFnCore(shell, implementation);
 
-  const result: This = {
+  return {
     shell,
 
     get label() {
@@ -108,7 +108,5 @@ function createComputeFn(
     toString() {
       return `computeFn:${this.label ?? '<unnamed>'}`;
     },
-  };
-
-  return result;
+  } as This;
 }

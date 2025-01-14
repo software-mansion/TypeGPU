@@ -1,4 +1,5 @@
 import { inGPUMode } from '../gpuMode';
+import type { SelfResolvable } from '../types';
 import type {
   Vec2f,
   Vec2h,
@@ -74,7 +75,7 @@ function makeVecSchema<TType extends string, TValue>(
   return Object.assign(construct, VecSchema);
 }
 
-abstract class vec2Impl {
+abstract class vec2Impl implements SelfResolvable {
   public readonly length = 2;
   abstract readonly kind: `vec2${'f' | 'u' | 'i' | 'h'}`;
 
@@ -179,7 +180,7 @@ class vec2uImpl extends vec2Impl {
   }
 }
 
-abstract class vec3Impl {
+abstract class vec3Impl implements SelfResolvable {
   public readonly length = 3;
   abstract readonly kind: `vec3${'f' | 'u' | 'i' | 'h'}`;
   [n: number]: number;
@@ -293,7 +294,7 @@ class vec3uImpl extends vec3Impl {
   }
 }
 
-abstract class vec4Impl {
+abstract class vec4Impl implements SelfResolvable {
   public readonly length = 4;
   abstract readonly kind: `vec4${'f' | 'u' | 'i' | 'h'}`;
   [n: number]: number;

@@ -473,12 +473,15 @@ export interface v4u extends NumberArrayView, Swizzle4<v2u, v3u, v4u> {
 
 export type AnyVecInstance =
   | v2f
+  | v2h
   | v2i
   | v2u
   | v3f
+  | v3h
   | v3i
   | v3u
   | v4f
+  | v4h
   | v4i
   | v4u;
 
