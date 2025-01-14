@@ -1,12 +1,14 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
+import tgpu from '../src';
 import { fn } from '../src/core/function/tgpuFn';
 import { f32, vec3f } from '../src/data';
 import { parseResolved } from './utils/parseResolved';
 
 describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {
-    const getX = fn([], f32)
+    const getX = tgpu['~unstable']
+      .fn([], f32)
       .does(() => {
         return 3;
       })

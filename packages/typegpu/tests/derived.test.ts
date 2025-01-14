@@ -1,5 +1,6 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, vi } from 'vitest';
+import tgpu from '../src';
 import { fn } from '../src/core/function/tgpuFn';
 import { derived } from '../src/core/slot/derived';
 import { slot } from '../src/core/slot/slot';
@@ -38,7 +39,8 @@ describe('TgpuDerived', () => {
     const foo = slot<number>().$name('foo');
     const double = derived(() => foo.value * 2);
 
-    const getDouble = fn([], d.f32)
+    const getDouble = tgpu['~unstable']
+      .fn([], d.f32)
       .does(() => {
         return double.value;
       })

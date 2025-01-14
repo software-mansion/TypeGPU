@@ -1,5 +1,6 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
+import tgpu from '../src';
 import type { TgpuBufferReadonly } from '../src/core/buffer/bufferUsage';
 import { fn } from '../src/core/function/tgpuFn';
 import { fragmentFn } from '../src/core/function/tgpuFragmentFn';
@@ -43,7 +44,8 @@ describe('tgpu resolve', () => {
       },
     } as unknown as TgpuBufferReadonly<d.F32>;
 
-    const fragment1 = fragmentFn({}, d.vec4f)
+    const fragment1 = tgpu['~unstable']
+      .fragmentFn({}, d.vec4f)
       .does(() => d.vec4f(0, intensity.value, 0, 1))
       .$name('fragment1');
 

@@ -1,5 +1,6 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
+import tgpu from '../src';
 import { declare } from '../src/core/declare/tgpuDeclare';
 import { fn } from '../src/core/function/tgpuFn';
 import * as d from '../src/data';
@@ -9,7 +10,8 @@ describe('tgpu.declare', () => {
   it('should inject provided declaration when resolving a function', () => {
     const declaration = declare('@group(0) @binding(0) var<uniform> val: f32;');
 
-    const fn_1 = fn([])
+    const fn_1 = tgpu['~unstable']
+      .fn([])
       .does(`() {
         // do nothing
       }`)

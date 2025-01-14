@@ -1,11 +1,12 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import { computeFn } from '../src/core/function/tgpuComputeFn';
+import tgpu from '../src';
 import type { TgpuComputePipeline } from '../src/core/pipeline/computePipeline';
 import { it } from './utils/extendedIt';
 
 describe('TgpuComputePipeline', () => {
   it('can be created with a compute entry function', ({ root, device }) => {
-    const entryFn = computeFn([], { workgroupSize: [32] })
+    const entryFn = tgpu['~unstable']
+      .computeFn([], { workgroupSize: [32] })
       .does(() => {
         // do something
       })
