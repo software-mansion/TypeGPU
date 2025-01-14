@@ -1,5 +1,5 @@
-import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import tgpu from 'typegpu/experimental';
 
 const root = await tgpu.init();
 const device = root.device;
@@ -23,109 +23,6 @@ let timestep = 4;
 let swap = false;
 let paused = false;
 
-const computeShader = device.createShaderModule({
-  code: `
-@binding(0) @group(0) var<storage, read> size: vec2u;
-@binding(1) @group(0) var<storage, read> current: array<u32>;
-@binding(2) @group(0) var<storage, read_write> next: array<u32>;
-
-override blockSize = 8;
-
-fn getIndex(x: u32, y: u32) -> u32 {
-  let h = size.y;
-  let w = size.x;
-
-  return (y % h) * w + (x % w);
-}
-
-fn getCell(x: u32, y: u32) -> u32 {
-  return current[getIndex(x, y)];
-}
-
-fn countNeighbors(x: u32, y: u32) -> u32 {
-  return getCell(x - 1, y - 1) + getCell(x, y - 1) + getCell(x + 1, y - 1) + 
-         getCell(x - 1, y) +                         getCell(x + 1, y) + 
-         getCell(x - 1, y + 1) + getCell(x, y + 1) + getCell(x + 1, y + 1);
-}
-
-@compute @workgroup_size(blockSize, blockSize)
-fn main(@builtin(global_invocation_id) grid: vec3u) {
-  let x = grid.x;
-  let y = grid.y;
-  let n = countNeighbors(x, y);
-  next[getIndex(x, y)] = select(u32(n == 3u), u32(n == 2u || n == 3u), getCell(x, y) == 1u); 
-} 
-`,
-});
-
-const squareBuffer = root
-  .createBuffer(d.arrayOf(d.u32, 8), [0, 0, 1, 0, 0, 1, 1, 1])
-  .$usage('vertex');
-
-const squareStride: GPUVertexBufferLayout = {
-  arrayStride: 2 * Uint32Array.BYTES_PER_ELEMENT,
-  stepMode: 'vertex',
-  attributes: [
-    {
-      shaderLocation: 1,
-      offset: 0,
-      format: 'uint32x2',
-    },
-  ],
-};
-
-const vertexShader = device.createShaderModule({
-  code: `
-struct Out {
-  @builtin(position) pos: vec4f,
-  @location(0) cell: f32,
-}
-
-@binding(0) @group(0) var<uniform> size: vec2u;
-
-@vertex
-fn main(@builtin(instance_index) i: u32, @location(0) cell: u32, @location(1) pos: vec2u) -> Out {
-  let w = size.x;
-  let h = size.y;
-  let x = (f32(i % w + pos.x) / f32(w) - 0.5) * 2. * f32(w) / f32(max(w, h));
-  let y = (f32((i - (i % w)) / w + pos.y) / f32(h) - 0.5) * 2. * f32(h) / f32(max(w, h));
-
-  return Out(
-    vec4f(x, y, 0., 1.),
-    f32(cell),
-  );
-}`,
-});
-const fragmentShader = device.createShaderModule({
-  code: `
-@fragment
-fn main(@location(0) cell: f32, @builtin(position) pos: vec4f) -> @location(0) vec4f {
-  if (cell == 0.) {
-    discard;
-  }
-  
-  return vec4f(
-    max(f32(cell) * pos.x / 1024, 0), 
-    max(f32(cell) * pos.y / 1024, 0), 
-    max(f32(cell) * (1 - pos.x / 1024), 0),
-    1.
-  );
-}`,
-});
-let commandEncoder: GPUCommandEncoder;
-
-const cellsStride: GPUVertexBufferLayout = {
-  arrayStride: Uint32Array.BYTES_PER_ELEMENT,
-  stepMode: 'instance',
-  attributes: [
-    {
-      shaderLocation: 0,
-      offset: 0,
-      format: 'uint32',
-    },
-  ],
-};
-
 const layoutCompute = {
   size: {
     storage: d.vec2u,
@@ -140,6 +37,7 @@ const layoutCompute = {
     access: 'mutable',
   },
 } as const;
+
 const groupLayout = {
   size: {
     uniform: d.vec2u,
@@ -148,6 +46,97 @@ const groupLayout = {
 
 const bindGroupLayoutCompute = tgpu.bindGroupLayout(layoutCompute);
 const bindGroupLayoutRender = tgpu.bindGroupLayout(groupLayout);
+
+const computeShader = device.createShaderModule({
+  code: tgpu.resolve({
+    template: `
+override blockSize = 8;
+
+fn getIndex(x: u32, y: u32) -> u32 {
+  let h = size.y;
+  let w = size.x;
+
+  return (y % h) * w + (x % w);
+}
+
+fn getCell(x: u32, y: u32) -> u32 {
+  return current[getIndex(x, y)];
+}
+
+fn countNeighbors(x: u32, y: u32) -> u32 {
+  return getCell(x - 1, y - 1) + getCell(x, y - 1) + getCell(x + 1, y - 1) +
+         getCell(x - 1, y) +                         getCell(x + 1, y) +
+         getCell(x - 1, y + 1) + getCell(x, y + 1) + getCell(x + 1, y + 1);
+}
+
+@compute @workgroup_size(blockSize, blockSize)
+fn main(@builtin(global_invocation_id) grid: vec3u) {
+  let x = grid.x;
+  let y = grid.y;
+  let n = countNeighbors(x, y);
+  next[getIndex(x, y)] = select(u32(n == 3u), u32(n == 2u || n == 3u), getCell(x, y) == 1u);
+}
+`,
+    externals: {
+      ...bindGroupLayoutCompute.bound,
+    },
+  }),
+});
+
+const squareBuffer = root
+  .createBuffer(d.arrayOf(d.u32, 8), [0, 0, 1, 0, 0, 1, 1, 1])
+  .$usage('vertex');
+
+const squareVertexLayout = tgpu.vertexLayout(
+  (n: number) => d.arrayOf(d.location(1, d.vec2u), n),
+  'vertex',
+);
+
+const cellsVertexLayout = tgpu.vertexLayout(
+  (n: number) => d.arrayOf(d.location(0, d.u32), n),
+  'instance',
+);
+
+const renderShader = device.createShaderModule({
+  code: tgpu.resolve({
+    template: `
+struct Out {
+  @builtin(position) pos: vec4f,
+  @location(0) cell: f32,
+}
+
+@vertex
+fn vert(@builtin(instance_index) i: u32, @location(0) cell: u32, @location(1) pos: vec2u) -> Out {
+  let w = size.x;
+  let h = size.y;
+  let x = (f32(i % w + pos.x) / f32(w) - 0.5) * 2. * f32(w) / f32(max(w, h));
+  let y = (f32((i - (i % w)) / w + pos.y) / f32(h) - 0.5) * 2. * f32(h) / f32(max(w, h));
+
+  return Out(
+    vec4f(x, y, 0., 1.),
+    f32(cell),
+  );
+}
+
+@fragment
+fn frag(@location(0) cell: f32, @builtin(position) pos: vec4f) -> @location(0) vec4f {
+  if (cell == 0.) {
+    discard;
+  }
+
+  return vec4f(
+    max(f32(cell) * pos.x / 1024, 0),
+    max(f32(cell) * pos.y / 1024, 0),
+    max(f32(cell) * (1 - pos.x / 1024), 0),
+    1.
+  );
+}`,
+    externals: {
+      ...bindGroupLayoutRender.bound,
+    },
+  }),
+});
+let commandEncoder: GPUCommandEncoder;
 
 // compute pipeline
 const computePipeline = device.createComputePipeline({
@@ -271,11 +260,11 @@ const renderPipeline = device.createRenderPipeline({
     topology: 'triangle-strip',
   },
   vertex: {
-    module: vertexShader,
-    buffers: [cellsStride, squareStride],
+    module: renderShader,
+    buffers: [root.unwrap(cellsVertexLayout), root.unwrap(squareVertexLayout)],
   },
   fragment: {
-    module: fragmentShader,
+    module: renderShader,
     targets: [
       {
         format: presentationFormat,

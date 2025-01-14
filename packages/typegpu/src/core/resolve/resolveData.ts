@@ -83,6 +83,14 @@ function isIdentityType(data: AnyWgslData): data is IdentityType {
   return identityTypes.includes(data.type);
 }
 
+/**
+ * Resolves a single property of a struct.
+ * @param ctx - The resolution context.
+ * @param key - The key of the property.
+ * @param property - The property itself.
+ *
+ * @returns The resolved property string.
+ */
 function resolveStructProperty(
   ctx: ResolutionCtx,
   [key, property]: [string, BaseWgslData],
@@ -90,6 +98,13 @@ function resolveStructProperty(
   return `  ${getAttributesString(property)}${key}: ${ctx.resolve(property as AnyWgslData)},\n`;
 }
 
+/**
+ * Resolves a struct and adds its declaration to the resolution context.
+ * @param ctx - The resolution context.
+ * @param struct - The struct to resolve.
+ *
+ * @returns The resolved struct name.
+ */
 function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
   const id = ctx.names.makeUnique(struct.label);
 
@@ -103,6 +118,21 @@ ${Object.entries(struct.propTypes)
   return id;
 }
 
+/**
+ * Resolves an unstruct (struct that does not align data by default) to its struct data counterpart.
+ * @param ctx - The resolution context.
+ * @param unstruct - The unstruct to resolve.
+ *
+ * @returns The resolved unstruct name.
+ *
+ * @example
+ * ```ts
+ * resolveUnstruct(ctx, {
+ *   uv: d.float16x2, // -> d.vec2f after resolution
+ *   color: d.snorm8x4, -> d.vec4f after resolution
+ * });
+ * ```
+ */
 function resolveUnstruct(ctx: ResolutionCtx, unstruct: Unstruct) {
   const id = ctx.names.makeUnique(unstruct.label);
 
@@ -120,6 +150,19 @@ ${Object.entries(unstruct.propTypes)
   return id;
 }
 
+/**
+ * Resolves an array.
+ * @param ctx - The resolution context.
+ * @param array - The array to resolve.
+ *
+ * @returns The resolved array name along with its element type and count (if not runtime-sized).
+ *
+ * @example
+ * ```ts
+ * resolveArray(ctx, d.arrayOf(d.u32, 0)); // 'array<u32>' (not a real pattern, a function is preferred)
+ * resolveArray(ctx, d.arrayOf(d.u32, 5)); // 'array<u32, 5>'
+ * ```
+ */
 function resolveArray(ctx: ResolutionCtx, array: WgslArray) {
   const element = ctx.resolve(array.elementType as AnyWgslData);
 
@@ -128,7 +171,21 @@ function resolveArray(ctx: ResolutionCtx, array: WgslArray) {
     : `array<${element}, ${array.elementCount}>`;
 }
 
-export function resolveData(ctx: ResolutionCtx, data: AnyWgslData): string {
+/**
+ * Resolves a WGSL data-type schema to a string.
+ * @param ctx - The resolution context.
+ * @param data - The data-type to resolve.
+ *
+ * @returns The resolved data-type string.
+ */
+export function resolveData(
+  ctx: ResolutionCtx,
+  data: AnyWgslData | Unstruct,
+): string {
+  if (data.type === 'unstruct') {
+    return resolveUnstruct(ctx, data);
+  }
+
   if (isIdentityType(data)) {
     return data.type;
   }

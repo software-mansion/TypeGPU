@@ -65,6 +65,10 @@ import {
   isTexture,
 } from '../texture/texture';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute';
+import {
+  type TgpuVertexLayout,
+  isVertexLayout,
+} from '../vertexLayout/vertexLayout';
 import type {
   CreateTextureOptions,
   CreateTextureResult,
@@ -282,6 +286,7 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
       | TgpuMutableTexture
       | TgpuSampledTexture,
   ): GPUTextureView;
+  unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
   unwrap(
     resource:
       | TgpuComputePipeline
@@ -292,14 +297,16 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
       | TgpuReadonlyTexture
       | TgpuWriteonlyTexture
       | TgpuMutableTexture
-      | TgpuSampledTexture,
+      | TgpuSampledTexture
+      | TgpuVertexLayout,
   ):
     | GPUComputePipeline
     | GPUBindGroupLayout
     | GPUBindGroup
     | GPUBuffer
     | GPUTexture
-    | GPUTextureView {
+    | GPUTextureView
+    | GPUVertexBufferLayout {
     if (isComputePipeline(resource)) {
       return (resource as unknown as INTERNAL_TgpuComputePipeline).rawPipeline;
     }
@@ -326,6 +333,10 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
 
     if (isSampledTextureView(resource)) {
       return (resource as unknown as INTERNAL_TgpuSampledTexture).unwrap();
+    }
+
+    if (isVertexLayout(resource)) {
+      return resource.vertexLayout;
     }
 
     throw new Error(`Unknown resource type: ${resource}`);

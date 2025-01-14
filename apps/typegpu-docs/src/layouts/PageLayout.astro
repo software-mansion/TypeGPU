@@ -49,18 +49,6 @@ const { title } = Astro.props;
         margin: 0;
       }
 
-      .example-matrix {
-        @apply grid gap-2 bg-white p-4 rounded-lg;
-      }
-
-      .example-matrix > div {
-        @apply p-2;
-      }
-
-      div:has(+ .example-matrix) {
-        @apply pb-4 text-center;
-      }
-
     </style>
   </head>
   <body>

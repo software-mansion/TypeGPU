@@ -27,7 +27,7 @@ const Circle = d.struct({
 //   centerPos: d.vec3i;
 //   radius: number;
 // }
-type Circle = d.Parsed<typeof Circle>;
+type Circle = d.Infer<typeof Circle>;
 
 const redCircle: Circle = {
   centerPos: d.vec3i(2, 4, 0),
@@ -124,7 +124,7 @@ const Boid = d.struct({
   isActive: d.bool,
 });
 
-const boid: d.Parsed<typeof Boid> = {
+const boid: d.Infer<typeof Boid> = {
   position: d.vec3u(0, 0, 0),
   velocity: d.vec3f(1, 0.5, 0.5),
   color: d.vec4f(1.0, 0.2, 0.3, 1.0),
@@ -151,7 +151,7 @@ To define arrays of known constant length, use the `d.arrayOf` function. It acce
 ```ts
 const RecentResults = d.arrayOf(d.f32, 4);
 
-type RecentResults = Parsed<typeof RecentResults>; // => number[]
+type RecentResults = d.Infer<typeof RecentResults>; // => number[]
 
 const recentResults: RecentResults = [
   1, 0, 0.5, 20

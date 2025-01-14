@@ -3,6 +3,8 @@ import { MissingLinksError } from '../../errors';
 import type { ResolutionCtx, Resource } from '../../types';
 import {
   type ExternalMap,
+  addArgTypesToExternals,
+  addReturnTypeToExternals,
   applyExternals,
   replaceExternalsInWgsl,
 } from '../resolve/externals';
@@ -31,6 +33,15 @@ export function createFnCore(
    * entry fn).
    */
   const externalsToApply: ExternalMap[] = [];
+
+  if (typeof implementation === 'string') {
+    addArgTypesToExternals(implementation, shell.argTypes, (externals) =>
+      externalsToApply.push(externals),
+    );
+    addReturnTypeToExternals(implementation, shell.returnType, (externals) =>
+      externalsToApply.push(externals),
+    );
+  }
 
   return {
     label: undefined as string | undefined,

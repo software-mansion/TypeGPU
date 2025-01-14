@@ -189,6 +189,14 @@ If you pass an unmapped buffer, the data will be written to the buffer using `GP
 If you passed your own buffer to the `root.createBuffer` function, you need to ensure it has the `GPUBufferUsage.COPY_DST` usage flag if you want to write to it using the `write` method.
 :::
 
+There's also an option to copy value from another typed buffer using the `.copyFrom(buffer)` method, 
+as long as both buffers have a matching data schema.
+
+```ts
+const backupParticleBuffer = root.createBuffer(Particle);
+backupParticleBuffer.copyFrom(particleBuffer);
+```
+
 ## Reading from a buffer
 
 To read data from a buffer, you can use the `.read()` method.

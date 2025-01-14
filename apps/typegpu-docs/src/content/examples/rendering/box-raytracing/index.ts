@@ -178,7 +178,6 @@ const getBoxIntersection = tgpu
   return output;
 }
 `)
-  .$uses({ RayStruct, IntersectionStruct })
   .$name('box_intersection');
 
 const vertexFunction = tgpu

@@ -1,6 +1,5 @@
 ---
 title: WebGPU Interoperability
-draft: true
 ---
 
 TypeGPU is built in a way that allows you to pick and choose the primitives you need, incrementally adopt them into your project and have a working app at each step
@@ -44,13 +43,6 @@ const rawNumbersBuffer = root.unwrap(numbersBuffer); // => GPUBuffer
 
 // Operations on `rawNumbersBuffer` and `numbersBuffer` are shared, because
 // they are essentially the same resource.
-```
-
-```ts
-const fooTexture = root.createTexture({ ... }).$usage('sampled');
-//    ^? TgpuTexture<...> & Sampled
-
-const rawFooTexture = root.unwrap(fooTexture); // => GPUTexture
 ```
 
 ```ts
@@ -291,13 +283,13 @@ const layout = tgpu.bindGroupLayout({
 -});
 +}).$idx(0); // <- forces code-gen to assign `0` as the group index.
 
-const rawShader = /* wgsl*/ `
+const rawShader = /* wgsl */ `
 -  @group(0) @binding(0) var<uniform> ambientColor: vec3f;
 -  @group(0) @binding(1) var<uniform> intensity: f32;
 -
   @fragment
   fn main() -> @location(0) vec4f {
-    return vec4f(ambientColor * intensity), 1.);
+    return vec4f(ambientColor * intensity, 1.);
   }
 `;
 
@@ -322,5 +314,5 @@ Benefits gained:
 - **Reduced fragility** - binding indices are now being handled end-to-end by TypeGPU, leaving human-readable keys
   as the way to connect the shader with JavaScript.
 - **Single source of truth** - typed bind group layouts not only describe JS behavior, but also WGSL behavior. This
-  allows `tgpu.resolve` to generate the appropriate WGSL code. Definitions of structs used as part of the layout will
+  allows [`tgpu.resolve`](/TypeGPU/fundamentals/resolve) to generate the appropriate WGSL code. Definitions of structs used as part of the layout will
   also be included in the returned shader code.

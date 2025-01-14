@@ -188,6 +188,11 @@ export interface TgpuRoot extends Unwrapper {
   readonly device: GPUDevice;
 
   /**
+   * Allocates memory on the GPU, allows passing data between host and shader.
+   *
+   * @remarks
+   * Typed wrapper around a GPUBuffer.
+   *
    * @param typeSchema The type of data that this buffer will hold.
    * @param initial The initial value of the buffer. (optional)
    */
@@ -197,6 +202,11 @@ export interface TgpuRoot extends Unwrapper {
   ): TgpuBuffer<Exotic<TData>>;
 
   /**
+   * Allocates memory on the GPU, allows passing data between host and shader.
+   *
+   * @remarks
+   * Typed wrapper around a GPUBuffer.
+   *
    * @param typeSchema The type of data that this buffer will hold.
    * @param gpuBuffer A vanilla WebGPU buffer.
    */
@@ -204,6 +214,59 @@ export interface TgpuRoot extends Unwrapper {
     typeSchema: TData,
     gpuBuffer: GPUBuffer,
   ): TgpuBuffer<Exotic<TData>>;
+
+  /**
+   * Creates a group of resources that can be bound to a shader based on a specified layout.
+   *
+   * @remarks
+   * Typed wrapper around a GPUBindGroup.
+   *
+   * @example
+   * const fooLayout = tgpu.bindGroupLayout({
+   *  foo: { uniform: d.vec3f },
+   *  bar: { texture: 'float' },
+   * });
+   *
+   * const fooBuffer = ...;
+   * const barTexture = ...;
+   *
+   * const fooBindGroup = root.createBindGroup(fooLayout, {
+   *  foo: fooBuffer,
+   *  bar: barTexture,
+   * });
+   *
+   * @param layout Layout describing the bind group to be created.
+   * @param entries A record with values being the resources populating the bind group
+   * and keys being their associated names, matching the layout keys.
+   */
+  createBindGroup<
+    Entries extends Record<string, TgpuLayoutEntry | null> = Record<
+      string,
+      TgpuLayoutEntry | null
+    >,
+  >(
+    layout: TgpuBindGroupLayout<Entries>,
+    entries: {
+      [K in keyof OmitProps<Entries, null>]: LayoutEntryToInput<Entries[K]>;
+    },
+  ): TgpuBindGroup<Entries>;
+
+  /**
+   * Destroys all underlying resources (i.e. buffers...) created through this root object.
+   * If the object is created via `tgpu.init` instead of `tgpu.initFromDevice`,
+   * then the inner GPU device is destroyed as well.
+   */
+  destroy(): void;
+}
+
+export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
+  readonly jitTranspiler?: JitTranspiler | undefined;
+  readonly nameRegistry: NameRegistry;
+  /**
+   * The current command encoder. This property will
+   * hold the same value until `flush()` is called.
+   */
+  readonly commandEncoder: GPUCommandEncoder;
 
   createTexture<
     TWidth extends number,
@@ -237,30 +300,6 @@ export interface TgpuRoot extends Unwrapper {
       TDimension
     >
   >;
-
-  createBindGroup<
-    Entries extends Record<string, TgpuLayoutEntry | null> = Record<
-      string,
-      TgpuLayoutEntry | null
-    >,
-  >(
-    layout: TgpuBindGroupLayout<Entries>,
-    entries: {
-      [K in keyof OmitProps<Entries, null>]: LayoutEntryToInput<Entries[K]>;
-    },
-  ): TgpuBindGroup<Entries>;
-
-  destroy(): void;
-}
-
-export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
-  readonly jitTranspiler?: JitTranspiler | undefined;
-  readonly nameRegistry: NameRegistry;
-  /**
-   * The current command encoder. This property will
-   * hold the same value until `flush()` is called.
-   */
-  readonly commandEncoder: GPUCommandEncoder;
 
   /**
    * Causes all commands enqueued by pipelines to be

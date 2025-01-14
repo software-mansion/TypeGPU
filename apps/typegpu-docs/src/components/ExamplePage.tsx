@@ -14,7 +14,7 @@ const getRandomExampleKey = () => {
 /**
  * The example we want to show off first.
  */
-const FLAGSHIP = 'rendering--box-raytracing';
+const FLAGSHIP = 'simulation--boids';
 
 function RedirectToFlagship() {
   const setCurrentExample = useSetAtom(currentExampleAtom);
@@ -78,7 +78,7 @@ function ExamplePage() {
   })();
 
   return (
-    <main className="flex-1">
+    <main className="flex-1 max-w-full">
       <Suspense fallback={'Loading...'}>{content}</Suspense>
     </main>
   );

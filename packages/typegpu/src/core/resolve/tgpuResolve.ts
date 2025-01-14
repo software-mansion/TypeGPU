@@ -6,17 +6,69 @@ import type { TgpuResolvable } from '../../types';
 import { applyExternals, replaceExternalsInWgsl } from './externals';
 
 export interface TgpuResolveOptions {
-  externals: Record<string, TgpuResolvable | AnyWgslData | string | number>;
+  /**
+   * Map of external names to their resolvable values.
+   */
+  externals: Record<string, TgpuResolvable | AnyWgslData | boolean | number>;
+  /**
+   * The code template to use for the resolution. All external names will be replaced with their resolved values.
+   * @default ''
+   */
   template?: string | undefined;
   /**
+   * The naming strategy used for generating identifiers for resolved externals and their dependencies.
    * @default 'random'
    */
   names?: 'strict' | 'random' | undefined;
-  jitTranspiler?: JitTranspiler | undefined;
+  /**
+   * Optional JIT transpiler for resolving TGSL functions.
+   * @experimental
+   */
+  unstable_jitTranspiler?: JitTranspiler | undefined;
 }
 
+/**
+ * Resolves a template with external values. Each external will get resolved to a code string and replaced in the template.
+ * Any dependencies of the externals will also be resolved and included in the output.
+ * @param options - The options for the resolution.
+ *
+ * @returns The resolved code.
+ *
+ * @example
+ * ```ts
+ * const Gradient = d.struct({
+ *   from: d.vec3f,
+ *   to: d.vec3f,
+ * });
+ *
+ * const resolved = tgpu.resolve({
+ *   template: `
+ *     fn getGradientAngle(gradient: Gradient) -> f32 {
+ *       return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
+ *     }
+ *   `,
+ *   externals: {
+ *     Gradient,
+ *   },
+ * });
+ *
+ * console.log(resolved);
+ * // struct Gradient_0 {
+ * //   from: vec3f,
+ * //   to: vec3f,
+ * // }
+ * // fn getGradientAngle(gradient: Gradient_0) -> f32 {
+ * //   return atan(gradient.to.y - gradient.from.y, gradient.to.x - gradient.from.x);
+ * // }
+ * ```
+ */
 export function resolve(options: TgpuResolveOptions): string {
-  const { externals, template, names, jitTranspiler } = options;
+  const {
+    externals,
+    template,
+    names,
+    unstable_jitTranspiler: jitTranspiler,
+  } = options;
 
   const dependencies = {} as Record<string, TgpuResolvable>;
   applyExternals(dependencies, externals ?? {});
@@ -25,16 +77,14 @@ export function resolve(options: TgpuResolveOptions): string {
     resolve(ctx) {
       return replaceExternalsInWgsl(ctx, dependencies, template ?? '');
     },
-  };
 
-  Object.defineProperty(resolutionObj, 'toString', {
-    value: () => '<root>',
-  });
+    toString: () => '<root>',
+  };
 
   const { code } = resolveImpl(resolutionObj, {
     names:
       names === 'strict' ? new StrictNameRegistry() : new RandomNameRegistry(),
-    jitTranspiler: jitTranspiler,
+    jitTranspiler,
   });
 
   return code;

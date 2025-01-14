@@ -297,7 +297,7 @@ function render() {
 
 render();
 
-// #region Example Controls & Cleanup
+// #region Example controls & Cleanup
 
 export const controls = {
   'filter size': {
