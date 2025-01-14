@@ -338,4 +338,37 @@ struct fragment_Output {
     }`),
     );
   });
+
+  it('resolves object externals and replaces their usages in code', () => {
+    const getColor = tgpu
+      .fn([], d.vec3f)
+      .does(`() {
+        let color = vec3f();
+        return color;
+      }`)
+      .$name('get_color');
+
+    const main = tgpu
+      .fn([], d.f32)
+      .does(`() {
+        let c = functions.getColor();
+        return c;
+      }`)
+      .$name('main')
+      .$uses({ functions: { getColor } });
+
+    expect(parseResolved({ main })).toEqual(
+      parse(`
+      fn get_color() {
+        let color = vec3f();
+        return color;
+      }
+
+      fn main() {
+        let c = get_color();
+        return c;
+      }
+    `),
+    );
+  });
 });

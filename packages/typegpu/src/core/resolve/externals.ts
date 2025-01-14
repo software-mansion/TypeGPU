@@ -67,6 +67,10 @@ export function addReturnTypeToExternals(
   }
 }
 
+function identifierRegex(name: string) {
+  return new RegExp(`(?<![\\w_.])${name}(?![\\w_])`, 'g');
+}
+
 /**
  * Replaces all occurrences of external names in WGSL code with their resolved values.
  * It adds all necessary definitions to the resolution context.
@@ -80,16 +84,36 @@ export function replaceExternalsInWgsl(
   ctx: ResolutionCtx,
   externalMap: ExternalMap,
   wgsl: string,
-) {
-  return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
-    const resolvedExternal =
+): string {
+  return Object.entries(externalMap).reduce(
+    (acc, [externalName, external]) =>
       isResolvable(external) || isWgslData(external) || isSlot(external)
-        ? ctx.resolve(external as Wgsl)
-        : String(external);
-
-    return acc.replaceAll(
-      new RegExp(`(?<![\\w_.])${externalName}(?![\\w_])`, 'g'),
-      resolvedExternal,
-    );
-  }, wgsl);
+        ? acc.replaceAll(
+            identifierRegex(externalName),
+            ctx.resolve(external as Wgsl),
+          )
+        : external !== null && typeof external === 'object'
+          ? (
+              [
+                ...wgsl.matchAll(
+                  new RegExp(`${externalName}\\.(?<prop>.*?)(?![\\w_])`, 'g'),
+                ),
+              ].map((found) => found?.groups?.prop) ?? []
+            ).reduce(
+              (innerAcc: string, prop) =>
+                prop && prop in external
+                  ? replaceExternalsInWgsl(
+                      ctx,
+                      {
+                        [`${externalName}.${prop}`]:
+                          external[prop as keyof typeof external],
+                      },
+                      innerAcc,
+                    )
+                  : innerAcc,
+              acc,
+            )
+          : acc.replaceAll(identifierRegex(externalName), String(external)),
+    wgsl,
+  );
 }
