@@ -174,4 +174,18 @@ describe('tgpu resolve', () => {
       `),
     );
   });
+
+  it('should resolve an unstruct to its corresponding struct', () => {
+    const vertexInfo = d.unstruct({
+      color: d.snorm8x4,
+      colorHDR: d.unorm10_10_10_2,
+      position2d: d.float16x2,
+    });
+
+    const resolved = tgpu.resolve({
+      template: 'fn foo() { var v: vertexInfo; }',
+      externals: { vertexInfo },
+      names: 'strict',
+    });
+  });
 });
