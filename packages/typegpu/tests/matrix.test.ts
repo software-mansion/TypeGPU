@@ -1,6 +1,8 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
+import tgpu from '../src';
 import * as d from '../src/data';
+
 import { readData, writeData } from '../src/data/dataIO';
 
 describe('mat2x2f', () => {
@@ -76,6 +78,17 @@ describe('mat2x2f', () => {
     expect(mat.columns[0]).toEqual(d.vec2f(4, 5));
     expect(mat.columns[1]).toEqual(d.vec2f(6, 7));
     expect(d.matToArray(mat)).toEqual([4, 5, 6, 7]);
+  });
+
+  it('creates a matrix that resolves properly', () => {
+    const mat = d.mat2x2f(
+      d.vec2f(0, 1), // column 0
+      d.vec2f(2, 3), // column 1
+    );
+
+    expect(tgpu.resolve({ template: 'mat', externals: { mat } })).toContain(
+      'mat2x2f(0, 1, 2, 3)',
+    );
   });
 });
 
@@ -179,6 +192,18 @@ describe('mat3x3f', () => {
     expect(mat.columns[1]).toEqual(d.vec3f(12, 13, 14));
     expect(mat.columns[2]).toEqual(d.vec3f(15, 16, 17));
     expect(d.matToArray(mat)).toEqual([9, 10, 11, 12, 13, 14, 15, 16, 17]);
+  });
+
+  it('creates a matrix that resolves properly', () => {
+    const mat = d.mat3x3f(
+      d.vec3f(0, 1, 2), // column 0
+      d.vec3f(3, 4, 5), // column 1
+      d.vec3f(6, 7, 8), // column 2
+    );
+
+    expect(tgpu.resolve({ template: 'mat', externals: { mat } })).toContain(
+      'mat3x3f(0, 1, 2, 3, 4, 5, 6, 7, 8)',
+    );
   });
 });
 
@@ -297,5 +322,18 @@ describe('mat4x4f', () => {
     expect(d.matToArray(mat)).toEqual([
       16, 17, 18, 19, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ]);
+  });
+
+  it('creates a matrix that resolves properly', () => {
+    const mat = d.mat4x4f(
+      d.vec4f(0, 1, 2, 3), // column 0
+      d.vec4f(4, 5, 6, 7), // column 1
+      d.vec4f(8, 9, 10, 11), // column 2
+      d.vec4f(12, 13, 14, 15), // column 3
+    );
+
+    expect(tgpu.resolve({ template: 'mat', externals: { mat } })).toContain(
+      'mat4x4f(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)',
+    );
   });
 });

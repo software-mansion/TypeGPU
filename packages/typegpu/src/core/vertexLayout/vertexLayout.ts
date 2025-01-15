@@ -12,6 +12,7 @@ import {
   kindToDefaultFormatMap,
   vertexFormats,
 } from '../../shared/vertexFormat';
+import type { Labelled } from '../../types';
 import type { ExoticIO } from '../function/fnTypes';
 import type {
   ArrayToContainedAttribs,
@@ -24,9 +25,9 @@ import type {
 
 export interface TgpuVertexLayout<
   TData extends WgslArray | Disarray = WgslArray | Disarray,
-> extends TgpuNamable {
+> extends TgpuNamable,
+    Labelled {
   readonly resourceType: 'vertex-layout';
-  readonly label?: string | undefined;
   readonly stride: number;
   readonly stepMode: 'vertex' | 'instance';
   readonly attrib: ArrayToContainedAttribs<TData>;

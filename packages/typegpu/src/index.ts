@@ -66,6 +66,7 @@ export type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
   TgpuLayoutSampler,
+  TgpuLayoutComparisonSampler,
   TgpuLayoutTexture,
   TgpuLayoutStorage,
   TgpuLayoutStorageTexture,

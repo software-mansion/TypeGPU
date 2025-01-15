@@ -1,18 +1,14 @@
-import type { AnyWgslData } from '../../data/wgslTypes';
 import type { JitTranspiler } from '../../jitTranspiler';
 import { RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry';
 import { resolve as resolveImpl } from '../../resolutionCtx';
-import type { TgpuResolvable } from '../../types';
+import type { SelfResolvable, Wgsl } from '../../types';
 import { applyExternals, replaceExternalsInWgsl } from './externals';
 
 export interface TgpuResolveOptions {
   /**
    * Map of external names to their resolvable values.
    */
-  externals: Record<
-    string,
-    TgpuResolvable | AnyWgslData | boolean | number | object
-  >;
+  externals: Record<string, Wgsl | object>;
   /**
    * The code template to use for the resolution. All external names will be replaced with their resolved values.
    * @default ''
@@ -73,11 +69,11 @@ export function resolve(options: TgpuResolveOptions): string {
     unstable_jitTranspiler: jitTranspiler,
   } = options;
 
-  const dependencies = {} as Record<string, TgpuResolvable>;
+  const dependencies = {} as Record<string, Wgsl>;
   applyExternals(dependencies, externals ?? {});
 
-  const resolutionObj: TgpuResolvable = {
-    resolve(ctx) {
+  const resolutionObj: SelfResolvable = {
+    '~resolve'(ctx) {
       return replaceExternalsInWgsl(ctx, dependencies, template ?? '');
     },
 

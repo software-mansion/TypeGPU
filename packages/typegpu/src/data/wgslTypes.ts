@@ -1,5 +1,4 @@
 import type { Infer, InferRecord } from '../shared/repr';
-import type { TgpuResolvable } from '../types';
 
 export interface NumberArrayView {
   readonly length: number;
@@ -332,10 +331,7 @@ interface Swizzle4<T2, T3, T4> extends Swizzle3<T2, T3, T4> {
  * Interface representing its WGSL vector type counterpart: vec2f or vec2<f32>.
  * A vector with 2 elements of type f32
  */
-export interface v2f
-  extends NumberArrayView,
-    Swizzle2<v2f, v3f, v4f>,
-    TgpuResolvable {
+export interface v2f extends NumberArrayView, Swizzle2<v2f, v3f, v4f> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2f';
   x: number;
@@ -346,10 +342,7 @@ export interface v2f
  * Interface representing its WGSL vector type counterpart: vec2h or vec2<f16>.
  * A vector with 2 elements of type f16
  */
-export interface v2h
-  extends NumberArrayView,
-    Swizzle2<v2h, v3h, v4h>,
-    TgpuResolvable {
+export interface v2h extends NumberArrayView, Swizzle2<v2h, v3h, v4h> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2h';
   x: number;
@@ -360,10 +353,7 @@ export interface v2h
  * Interface representing its WGSL vector type counterpart: vec2i or vec2<i32>.
  * A vector with 2 elements of type i32
  */
-export interface v2i
-  extends NumberArrayView,
-    Swizzle2<v2i, v3i, v4i>,
-    TgpuResolvable {
+export interface v2i extends NumberArrayView, Swizzle2<v2i, v3i, v4i> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2i';
   x: number;
@@ -374,10 +364,7 @@ export interface v2i
  * Interface representing its WGSL vector type counterpart: vec2u or vec2<u32>.
  * A vector with 2 elements of type u32
  */
-export interface v2u
-  extends NumberArrayView,
-    Swizzle2<v2u, v3u, v4u>,
-    TgpuResolvable {
+export interface v2u extends NumberArrayView, Swizzle2<v2u, v3u, v4u> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2u';
   x: number;
@@ -388,10 +375,7 @@ export interface v2u
  * Interface representing its WGSL vector type counterpart: vec3f or vec3<f32>.
  * A vector with 3 elements of type f32
  */
-export interface v3f
-  extends NumberArrayView,
-    Swizzle3<v2f, v3f, v4f>,
-    TgpuResolvable {
+export interface v3f extends NumberArrayView, Swizzle3<v2f, v3f, v4f> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3f';
   x: number;
@@ -403,10 +387,7 @@ export interface v3f
  * Interface representing its WGSL vector type counterpart: vec3h or vec3<f16>.
  * A vector with 3 elements of type f16
  */
-export interface v3h
-  extends NumberArrayView,
-    Swizzle3<v2h, v3h, v4h>,
-    TgpuResolvable {
+export interface v3h extends NumberArrayView, Swizzle3<v2h, v3h, v4h> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3h';
   x: number;
@@ -418,10 +399,7 @@ export interface v3h
  * Interface representing its WGSL vector type counterpart: vec3i or vec3<i32>.
  * A vector with 3 elements of type i32
  */
-export interface v3i
-  extends NumberArrayView,
-    Swizzle3<v2i, v3i, v4i>,
-    TgpuResolvable {
+export interface v3i extends NumberArrayView, Swizzle3<v2i, v3i, v4i> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3i';
   x: number;
@@ -433,10 +411,7 @@ export interface v3i
  * Interface representing its WGSL vector type counterpart: vec3u or vec3<u32>.
  * A vector with 3 elements of type u32
  */
-export interface v3u
-  extends NumberArrayView,
-    Swizzle3<v2u, v3u, v4u>,
-    TgpuResolvable {
+export interface v3u extends NumberArrayView, Swizzle3<v2u, v3u, v4u> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3u';
   x: number;
@@ -448,10 +423,7 @@ export interface v3u
  * Interface representing its WGSL vector type counterpart: vec4f or vec4<f32>.
  * A vector with 4 elements of type f32
  */
-export interface v4f
-  extends NumberArrayView,
-    Swizzle4<v2f, v3f, v4f>,
-    TgpuResolvable {
+export interface v4f extends NumberArrayView, Swizzle4<v2f, v3f, v4f> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4f';
   x: number;
@@ -464,10 +436,7 @@ export interface v4f
  * Interface representing its WGSL vector type counterpart: vec4h or vec4<f16>.
  * A vector with 4 elements of type f16
  */
-export interface v4h
-  extends NumberArrayView,
-    Swizzle4<v2h, v3h, v4h>,
-    TgpuResolvable {
+export interface v4h extends NumberArrayView, Swizzle4<v2h, v3h, v4h> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4h';
   x: number;
@@ -480,10 +449,7 @@ export interface v4h
  * Interface representing its WGSL vector type counterpart: vec4i or vec4<i32>.
  * A vector with 4 elements of type i32
  */
-export interface v4i
-  extends NumberArrayView,
-    Swizzle4<v2i, v3i, v4i>,
-    TgpuResolvable {
+export interface v4i extends NumberArrayView, Swizzle4<v2i, v3i, v4i> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4i';
   x: number;
@@ -496,10 +462,7 @@ export interface v4i
  * Interface representing its WGSL vector type counterpart: vec4u or vec4<u32>.
  * A vector with 4 elements of type u32
  */
-export interface v4u
-  extends NumberArrayView,
-    Swizzle4<v2u, v3u, v4u>,
-    TgpuResolvable {
+export interface v4u extends NumberArrayView, Swizzle4<v2u, v3u, v4u> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4u';
   x: number;
@@ -507,6 +470,20 @@ export interface v4u
   z: number;
   w: number;
 }
+
+export type AnyVecInstance =
+  | v2f
+  | v2h
+  | v2i
+  | v2u
+  | v3f
+  | v3h
+  | v3i
+  | v3u
+  | v4f
+  | v4h
+  | v4i
+  | v4u;
 
 export interface matBase<TColumn> extends NumberArrayView {
   readonly columns: readonly TColumn[];
@@ -518,6 +495,7 @@ export interface matBase<TColumn> extends NumberArrayView {
  */
 export interface mat2x2<TColumn> extends matBase<TColumn> {
   readonly length: 4;
+  readonly kind: string;
   [n: number]: number;
 }
 
@@ -535,6 +513,7 @@ export interface m2x2f extends mat2x2<v2f> {
  */
 export interface mat3x3<TColumn> extends matBase<TColumn> {
   readonly length: 12;
+  readonly kind: string;
   [n: number]: number;
 }
 
@@ -552,6 +531,7 @@ export interface m3x3f extends mat3x3<v3f> {
  */
 export interface mat4x4<TColumn> extends matBase<TColumn> {
   readonly length: 16;
+  readonly kind: string;
   [n: number]: number;
 }
 
@@ -562,6 +542,8 @@ export interface mat4x4<TColumn> extends matBase<TColumn> {
 export interface m4x4f extends mat4x4<v4f> {
   readonly kind: 'mat4x4f';
 }
+
+export type AnyMatInstance = m2x2f | m3x3f | m4x4f;
 
 // #endregion
 
@@ -733,6 +715,18 @@ export interface Location<T extends number> {
   readonly value: T;
 }
 
+export type PerspectiveOrLinearInterpolationType =
+  `${'perspective' | 'linear'}${'' | ', center' | ', centroid' | ', sample'}`;
+export type FlatInterpolationType = `flat${'' | ', first' | ', either'}`;
+export type InterpolationType =
+  | PerspectiveOrLinearInterpolationType
+  | FlatInterpolationType;
+
+export interface Interpolate<T extends InterpolationType> {
+  readonly type: '@interpolate';
+  readonly value: T;
+}
+
 export interface Builtin<T extends string> {
   readonly type: '@builtin';
   readonly value: T;
@@ -777,6 +771,27 @@ export const wgslTypeLiterals = [
 ] as const;
 
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
+
+export type PerspectiveOrLinearInterpolatableData =
+  | F32
+  | F16
+  | Vec2f
+  | Vec2h
+  | Vec3f
+  | Vec3h
+  | Vec4f
+  | Vec4h;
+
+export type FlatInterpolatableData =
+  | PerspectiveOrLinearInterpolatableData
+  | I32
+  | U32
+  | Vec2i
+  | Vec2u
+  | Vec3i
+  | Vec3u
+  | Vec4i
+  | Vec4u;
 
 export type AnyWgslData =
   | Bool
@@ -875,6 +890,12 @@ export function isLocationAttrib<T extends Location<number>>(
   value: unknown | T,
 ): value is T {
   return (value as T)?.type === '@location';
+}
+
+export function isInterpolateAttrib<T extends Interpolate<InterpolationType>>(
+  value: unknown | T,
+): value is T {
+  return (value as T)?.type === '@interpolate';
 }
 
 export function isBuiltinAttrib<T extends Builtin<string>>(
