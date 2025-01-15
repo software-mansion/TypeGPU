@@ -93,20 +93,12 @@ export function replaceExternalsInWgsl(
     }
 
     if (external !== null && typeof external === 'object') {
-      const regExp = new RegExp(
-        `${externalName}\\.(?<prop>.*?)(?![\\w_])`,
-        'g',
-      );
-
-      const foundProperties = [];
-      while (true) {
-        const found = regExp.exec(wgsl);
-        if (found === null) {
-          break;
-        }
-
-        foundProperties.push(found[1]);
-      }
+      const foundProperties =
+        [
+          ...wgsl.matchAll(
+            new RegExp(`${externalName}\\.(?<prop>.*?)(?![\\w_])`, 'g'),
+          ),
+        ].map((found) => found[1]) ?? [];
 
       return foundProperties.reduce(
         (innerAcc: string, prop) =>
