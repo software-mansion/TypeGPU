@@ -340,7 +340,7 @@ struct fragment_Output {
   });
 
   it('resolves object externals and replaces their usages in code', () => {
-    const getColor = tgpu
+    const getColor = tgpu['~unstable']
       .fn([], d.vec3f)
       .does(`() {
         let color = vec3f();
@@ -348,7 +348,7 @@ struct fragment_Output {
       }`)
       .$name('get_color');
 
-    const main = tgpu
+    const main = tgpu['~unstable']
       .fn([], d.f32)
       .does(`() {
         let c = functions.getColor();

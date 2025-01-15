@@ -177,7 +177,7 @@ describe('tgpu resolve', () => {
   });
 
   it('should resolve object externals and replace their usages in template', () => {
-    const getColor = tgpu
+    const getColor = tgpu['~unstable']
       .fn([], d.vec3f)
       .does(`() {
         let color = vec3f();
@@ -218,7 +218,7 @@ describe('tgpu resolve', () => {
   });
 
   it('should resolve only used object externals and ignore non-existing', () => {
-    const getColor = tgpu
+    const getColor = tgpu['~unstable']
       .fn([], d.vec3f)
       .does(`() {
         let color = vec3f();
@@ -226,7 +226,7 @@ describe('tgpu resolve', () => {
       }`)
       .$name('get_color');
 
-    const getIntensity = tgpu
+    const getIntensity = tgpu['~unstable']
       .fn([], d.vec3f)
       .does(`() {
         return 1;
