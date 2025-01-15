@@ -4,7 +4,7 @@ on:
   # Trigger the workflow every time you push to the `main` branch
   # Using a different branch name? Replace `main` with your branch’s name
   push:
-    branches: [ main ]
+    branches: [main]
   # Allows you to run this workflow manually from the Actions tab on GitHub.
   workflow_dispatch:
 
@@ -41,7 +41,7 @@ jobs:
         run: pnpm install --recursive --frozen-lockfile
 
       - name: Build all
-        run: EXPERIMENTAL=true pnpm -r build
+        run: pnpm -r build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
