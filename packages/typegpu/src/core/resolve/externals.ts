@@ -1,7 +1,6 @@
-import { isWgslData, isWgslStruct } from '../../data/wgslTypes';
+import { isWgslStruct } from '../../data/wgslTypes';
 import { isNamable } from '../../namable';
-import { type ResolutionCtx, type Wgsl, isResolvable } from '../../types';
-import { isSlot } from '../slot/slotTypes';
+import type { ResolutionCtx } from '../../types';
 
 /**
  * A key-value mapping where keys represent identifiers within shader code,
@@ -81,15 +80,12 @@ export function replaceExternalsInWgsl(
   externalMap: ExternalMap,
   wgsl: string,
 ) {
-  return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
-    const resolvedExternal =
-      isResolvable(external) || isWgslData(external) || isSlot(external)
-        ? ctx.resolve(external as Wgsl)
-        : String(external);
-
-    return acc.replaceAll(
-      new RegExp(`(?<![\\w_.])${externalName}(?![\\w_])`, 'g'),
-      resolvedExternal,
-    );
-  }, wgsl);
+  return Object.entries(externalMap).reduce(
+    (acc, [externalName, external]) =>
+      acc.replaceAll(
+        new RegExp(`(?<![\\w_.])${externalName}(?![\\w_])`, 'g'),
+        ctx.resolve(external),
+      ),
+    wgsl,
+  );
 }

@@ -2,7 +2,7 @@ import type { AnyWgslData } from '../../data';
 import type { Exotic } from '../../data/exotic';
 import { getResolutionCtx } from '../../gpuMode';
 import type { Infer } from '../../shared/repr';
-import type { ResolutionCtx } from '../../types';
+import type { ResolutionCtx, SelfResolvable } from '../../types';
 import { type TgpuBufferUsage, isBufferUsage } from '../buffer/bufferUsage';
 import { type TgpuFn, isTgpuFn } from '../function/tgpuFn';
 import { slot } from './slot';
@@ -27,7 +27,7 @@ export function accessor<T extends AnyWgslData>(
 // --------------
 
 export class TgpuAccessorImpl<T extends AnyWgslData>
-  implements TgpuAccessor<T>
+  implements TgpuAccessor<T>, SelfResolvable
 {
   readonly resourceType = 'accessor';
   public label?: string | undefined;
@@ -65,7 +65,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
     return this as unknown as Infer<T>;
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     const value = ctx.unwrap(this.slot);
 
     if (isBufferUsage(value)) {

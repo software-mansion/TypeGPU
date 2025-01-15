@@ -51,8 +51,8 @@ import {
   isAccessor,
 } from '../slot/slotTypes';
 import {
-  type INTERNAL_TgpuSampledTexture,
-  type INTERNAL_TgpuStorageTexture,
+  type INTERNAL_TgpuFixedSampledTexture,
+  type INTERNAL_TgpuFixedStorageTexture,
   type INTERNAL_TgpuTexture,
   INTERNAL_createTexture,
   type TgpuMutableTexture,
@@ -157,7 +157,7 @@ class WithVertexImpl implements WithVertex {
 class WithFragmentImpl implements WithFragment {
   constructor(private readonly _options: RenderPipelineCoreOptions) {}
 
-  withPrimitive(primitiveState: GPUPrimitiveState): WithFragment {
+  withPrimitive(primitiveState: GPUPrimitiveState | undefined): WithFragment {
     return new WithFragmentImpl({ ...this._options, primitiveState });
   }
 
@@ -328,11 +328,13 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
     }
 
     if (isStorageTextureView(resource)) {
-      return (resource as unknown as INTERNAL_TgpuStorageTexture).unwrap();
+      // TODO: Verify that `resource` is actually a fixed view, not a laid-out one
+      return (resource as unknown as INTERNAL_TgpuFixedStorageTexture).unwrap();
     }
 
     if (isSampledTextureView(resource)) {
-      return (resource as unknown as INTERNAL_TgpuSampledTexture).unwrap();
+      // TODO: Verify that `resource` is actually a fixed view, not a laid-out one
+      return (resource as unknown as INTERNAL_TgpuFixedSampledTexture).unwrap();
     }
 
     if (isVertexLayout(resource)) {

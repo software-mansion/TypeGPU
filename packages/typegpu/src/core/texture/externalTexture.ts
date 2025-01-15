@@ -1,5 +1,5 @@
 import type { LayoutMembership } from '../../tgpuBindGroupLayout';
-import type { ResolutionCtx } from '../../types';
+import type { ResolutionCtx, SelfResolvable } from '../../types';
 
 // ----------
 // Public API
@@ -19,7 +19,9 @@ export function isExternalTexture<T extends TgpuExternalTexture>(
 // Implementation
 // --------------
 
-export class TgpuExternalTextureImpl implements TgpuExternalTexture {
+export class TgpuExternalTextureImpl
+  implements TgpuExternalTexture, SelfResolvable
+{
   public readonly resourceType = 'external-texture';
 
   constructor(private readonly _membership: LayoutMembership) {}
@@ -28,7 +30,7 @@ export class TgpuExternalTextureImpl implements TgpuExternalTexture {
     return this._membership.key;
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this.label);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
