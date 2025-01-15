@@ -161,4 +161,3 @@ export type {
   TgpuComputeFn,
 } from './core/function/tgpuComputeFn';
 export type { TgpuDeclare } from './core/declare/tgpuDeclare';
-export type { TgpuResolveOptions } from './core/resolve/tgpuResolve';
