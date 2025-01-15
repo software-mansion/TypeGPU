@@ -84,14 +84,12 @@ export {
   asReadonly as unstable_asReadonly,
   asMutable as unstable_asMutable,
 } from './core/buffer/bufferUsage';
-export { withLocations } from './core/function/ioOutputType';
 export { isTgpuFn } from './core/function/tgpuFn';
 
 // types
 
 export type {
   TgpuRoot,
-  ExperimentalTgpuRoot,
   WithBinding,
   WithCompute,
   WithFragment,
@@ -132,7 +130,6 @@ export type {
   VariableScope,
 } from './core/variable/tgpuVariable';
 export type { TgpuSampler } from './core/sampler/sampler';
-export type { JitTranspiler } from './jitTranspiler';
 export type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
@@ -163,8 +160,4 @@ export type {
   TgpuComputeFnShell,
   TgpuComputeFn,
 } from './core/function/tgpuComputeFn';
-export type {
-  IOLayoutToOutputSchema,
-  WithLocations,
-} from './core/function/ioOutputType';
 export type { TgpuDeclare } from './core/declare/tgpuDeclare';
