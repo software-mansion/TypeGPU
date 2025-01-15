@@ -1,4 +1,13 @@
 import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
+import tgpu, {
+  type TgpuBindGroupLayout,
+  type TgpuBufferUniform,
+  type TgpuBufferReadonly,
+  type TgpuBufferMutable,
+  type TgpuWriteonlyTexture,
+  type TgpuSampledTexture,
+  type TgpuMutableTexture,
+} from '../src';
 import {
   type F32,
   type TgpuArray,
@@ -14,26 +23,14 @@ import {
 } from '../src/data';
 import './utils/webgpuGlobals';
 import { parse } from 'tgpu-wgsl-parser';
-import type {
-  TgpuBufferMutable,
-  TgpuBufferReadonly,
-  TgpuBufferUniform,
-} from '../src/core/buffer/bufferUsage';
 import { resolve } from '../src/core/resolve/tgpuResolve';
 import { comparisonSampler, sampler } from '../src/core/sampler/sampler';
-import type {
-  TgpuMutableTexture,
-  TgpuSampledTexture,
-  TgpuWriteonlyTexture,
-} from '../src/core/texture/texture';
 import {
   MissingBindingError,
   type TgpuBindGroup,
-  type TgpuBindGroupLayout,
   type TgpuLayoutComparisonSampler,
   type TgpuLayoutSampler,
   type UnwrapRuntimeConstructor,
-  bindGroupLayout,
 } from '../src/tgpuBindGroupLayout';
 import { it } from './utils/extendedIt';
 
@@ -42,7 +39,7 @@ const DEFAULT_READONLY_VISIBILITY_FLAGS =
 
 describe('TgpuBindGroupLayout', () => {
   it('infers the bound type of a uniform entry', () => {
-    const layout = bindGroupLayout({
+    const layout = tgpu.bindGroupLayout({
       position: { uniform: vec3f },
     });
 
@@ -52,7 +49,7 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('infers the bound type of a readonly storage entry', () => {
-    const layout = bindGroupLayout({
+    const layout = tgpu.bindGroupLayout({
       a: { storage: vec3f },
       b: { storage: vec3f, access: 'readonly' },
     });
@@ -64,7 +61,7 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('infers the bound type of a mutable storage entry', () => {
-    const layout = bindGroupLayout({
+    const layout = tgpu.bindGroupLayout({
       a: { storage: vec3f, access: 'mutable' },
     });
 
@@ -74,7 +71,7 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('works for entries passed as functions returning TgpuData', ({ root }) => {
-    const layout = bindGroupLayout({
+    const layout = tgpu.bindGroupLayout({
       a: {
         storage: (arrayLength: number) => arrayOf(u32, arrayLength),
         access: 'mutable',
@@ -82,7 +79,7 @@ describe('TgpuBindGroupLayout', () => {
       b: { storage: (arrayLength: number) => arrayOf(vec3f, arrayLength) },
     });
 
-    bindGroupLayout({
+    tgpu.bindGroupLayout({
       // @ts-expect-error
       c: { uniform: (arrayLength: number) => arrayOf(vec3f, arrayLength) },
     });
@@ -167,11 +164,13 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('omits null properties', ({ root }) => {
-    const layout = bindGroupLayout({
-      a: { uniform: vec3f }, // binding 0
-      _0: null, // binding 1
-      c: { storage: vec3f }, // binding 2
-    }).$name('example_layout');
+    const layout = tgpu
+      .bindGroupLayout({
+        a: { uniform: vec3f }, // binding 0
+        _0: null, // binding 1
+        c: { storage: vec3f }, // binding 2
+      })
+      .$name('example_layout');
 
     expectTypeOf(layout).toEqualTypeOf<
       TgpuBindGroupLayout<{
@@ -205,7 +204,7 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('resolves textures to valid WGSL code', () => {
-    const layout = bindGroupLayout({
+    const layout = tgpu.bindGroupLayout({
       fooTexture: { texture: 'float', viewDimension: '1d' },
     });
 
@@ -232,9 +231,11 @@ describe('TgpuBindGroup', () => {
     let layout: TgpuBindGroupLayout<{ foo: { uniform: Vec3f } }>;
 
     beforeEach(() => {
-      layout = bindGroupLayout({
-        foo: { uniform: vec3f },
-      }).$name('example');
+      layout = tgpu
+        .bindGroupLayout({
+          foo: { uniform: vec3f },
+        })
+        .$name('example');
     });
 
     it('populates a simple layout with a raw buffer', ({ root }) => {
@@ -288,9 +289,11 @@ describe('TgpuBindGroup', () => {
     let layout: TgpuBindGroupLayout<{ foo: TgpuLayoutSampler }>;
 
     beforeEach(() => {
-      layout = bindGroupLayout({
-        foo: { sampler: 'filtering' },
-      }).$name('example');
+      layout = tgpu
+        .bindGroupLayout({
+          foo: { sampler: 'filtering' },
+        })
+        .$name('example');
     });
 
     it('populates a simple layout with a raw sampler', ({ root }) => {
@@ -342,9 +345,11 @@ describe('TgpuBindGroup', () => {
     let layout: TgpuBindGroupLayout<{ foo: TgpuLayoutComparisonSampler }>;
 
     beforeEach(() => {
-      layout = bindGroupLayout({
-        foo: { sampler: 'comparison' },
-      }).$name('example');
+      layout = tgpu
+        .bindGroupLayout({
+          foo: { sampler: 'comparison' },
+        })
+        .$name('example');
     });
 
     it('populates a simple layout with a raw sampler', ({ root }) => {
@@ -400,12 +405,16 @@ describe('TgpuBindGroup', () => {
     }>;
 
     beforeEach(() => {
-      layout2d = bindGroupLayout({
-        foo: { texture: 'float' },
-      }).$name('example');
-      layout3d = bindGroupLayout({
-        foo: { texture: 'float', viewDimension: '3d' },
-      }).$name('example');
+      layout2d = tgpu
+        .bindGroupLayout({
+          foo: { texture: 'float' },
+        })
+        .$name('example');
+      layout3d = tgpu
+        .bindGroupLayout({
+          foo: { texture: 'float', viewDimension: '3d' },
+        })
+        .$name('example');
     });
 
     it('populates a simple layout with a raw texture view', ({ root }) => {
@@ -513,7 +522,7 @@ describe('TgpuBindGroup', () => {
     });
 
     it('properly fill the bound property', () => {
-      const layout = bindGroupLayout({
+      const layout = tgpu.bindGroupLayout({
         foo: { texture: 'float', viewDimension: '2d', mipLevelCount: 1 },
         bar: { texture: 'unfilterable-float', viewDimension: 'cube-array' },
       });
@@ -542,19 +551,23 @@ describe('TgpuBindGroup', () => {
     }>;
 
     beforeEach(() => {
-      layout3d = bindGroupLayout({
-        foo: {
-          storageTexture: 'rgba8unorm',
-          viewDimension: '3d',
-          access: 'readonly',
-        },
-      }).$name('example');
-      layout2d = bindGroupLayout({
-        foo: {
-          storageTexture: 'rgba8unorm',
-          viewDimension: '2d-array',
-        },
-      }).$name('example');
+      layout3d = tgpu
+        .bindGroupLayout({
+          foo: {
+            storageTexture: 'rgba8unorm',
+            viewDimension: '3d',
+            access: 'readonly',
+          },
+        })
+        .$name('example');
+      layout2d = tgpu
+        .bindGroupLayout({
+          foo: {
+            storageTexture: 'rgba8unorm',
+            viewDimension: '2d-array',
+          },
+        })
+        .$name('example');
     });
 
     it('populates a simple layout with a raw texture view', ({ root }) => {
@@ -670,7 +683,7 @@ describe('TgpuBindGroup', () => {
     });
 
     it('properly fill the bound property', () => {
-      const layout = bindGroupLayout({
+      const layout = tgpu.bindGroupLayout({
         foo: {
           storageTexture: 'rgba8unorm',
           viewDimension: '3d',
@@ -695,9 +708,11 @@ describe('TgpuBindGroup', () => {
     }>;
 
     beforeEach(() => {
-      layout = bindGroupLayout({
-        foo: { externalTexture: {} },
-      }).$name('example');
+      layout = tgpu
+        .bindGroupLayout({
+          foo: { externalTexture: {} },
+        })
+        .$name('example');
     });
 
     it('populates a simple layout with a raw texture view', ({ root }) => {
@@ -735,12 +750,14 @@ describe('TgpuBindGroup', () => {
     }>;
 
     beforeEach(() => {
-      layout = bindGroupLayout({
-        a: { uniform: vec3f },
-        b: { storage: u32, access: 'mutable' },
-        _: null,
-        d: { storage: f32, access: 'readonly' },
-      }).$name('example');
+      layout = tgpu
+        .bindGroupLayout({
+          a: { uniform: vec3f },
+          b: { storage: u32, access: 'mutable' },
+          _: null,
+          d: { storage: f32, access: 'readonly' },
+        })
+        .$name('example');
     });
 
     it('requires all non-null entries to be populated', ({ root }) => {

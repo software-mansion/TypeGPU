@@ -1,13 +1,15 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, expectTypeOf, it } from 'vitest';
+import tgpu from '../src';
 import type { IOLayout, InferIO } from '../src/core/function/fnTypes';
-import { type TgpuFn, type TgpuFnShell, fn } from '../src/core/function/tgpuFn';
+import type { TgpuFn, TgpuFnShell } from '../src/core/function/tgpuFn';
 import * as d from '../src/data';
 import { parseResolved } from './utils/parseResolved';
 
 describe('tgpu.fn', () => {
   it('should inject function declaration of called function', () => {
-    const emptyFn = fn([])
+    const emptyFn = tgpu['~unstable']
+      .fn([])
       .does(`() {
         // do nothing
       }`)
@@ -21,14 +23,16 @@ describe('tgpu.fn', () => {
   });
 
   it('should inject function declaration only once', () => {
-    const emptyFn = fn([])
+    const emptyFn = tgpu['~unstable']
+      .fn([])
       .does(`() {
         // do nothing
       }`)
       .$name('empty');
 
     const actual = parseResolved({
-      main: fn([])
+      main: tgpu['~unstable']
+        .fn([])
         .does(`
           () {
             emptyFn();
@@ -51,20 +55,23 @@ describe('tgpu.fn', () => {
   });
 
   it('should inject function declaration only once (calls are nested)', () => {
-    const emptyFn = fn([])
+    const emptyFn = tgpu['~unstable']
+      .fn([])
       .does(`() {
         // do nothing
       }`)
       .$name('empty');
 
-    const nestedAFn = fn([])
+    const nestedAFn = tgpu['~unstable']
+      .fn([])
       .does(`() {
         emptyFn();
       }`)
       .$uses({ emptyFn })
       .$name('nested_a');
 
-    const nestedBFn = fn([])
+    const nestedBFn = tgpu['~unstable']
+      .fn([])
       .does(`() {
         emptyFn();
       }`)
@@ -72,7 +79,8 @@ describe('tgpu.fn', () => {
       .$name('nested_b');
 
     const actual = parseResolved({
-      main: fn([])
+      main: tgpu['~unstable']
+        .fn([])
         .does(`() {
           nestedAFn();
           nestedBFn();
@@ -102,9 +110,9 @@ describe('tgpu.fn', () => {
   });
 
   it('creates typed shell from parameters', () => {
-    const proc = fn([]);
-    const one = fn([d.f32]);
-    const two = fn([d.f32, d.u32]);
+    const proc = tgpu['~unstable'].fn([]);
+    const one = tgpu['~unstable'].fn([d.f32]);
+    const two = tgpu['~unstable'].fn([d.f32, d.u32]);
 
     expectTypeOf(proc).toEqualTypeOf<TgpuFnShell<[], undefined>>();
     expectTypeOf<ReturnType<typeof proc.does>>().toEqualTypeOf<
@@ -123,9 +131,9 @@ describe('tgpu.fn', () => {
   });
 
   it('creates typed shell from parameters and return type', () => {
-    const proc = fn([], d.bool);
-    const one = fn([d.f32], d.bool);
-    const two = fn([d.f32, d.u32], d.bool);
+    const proc = tgpu['~unstable'].fn([], d.bool);
+    const one = tgpu['~unstable'].fn([d.f32], d.bool);
+    const two = tgpu['~unstable'].fn([d.f32, d.u32], d.bool);
 
     expectTypeOf(proc).toEqualTypeOf<TgpuFnShell<[], d.Bool>>();
     expectTypeOf<ReturnType<typeof proc.does>>().toEqualTypeOf<

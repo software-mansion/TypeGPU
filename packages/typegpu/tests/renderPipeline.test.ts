@@ -1,25 +1,22 @@
 import { describe, expect } from 'vitest';
-import { fragmentFn } from '../src/core/function/tgpuFragmentFn';
-import { vertexFn } from '../src/core/function/tgpuVertexFn';
+import tgpu from '../src';
 import * as d from '../src/data';
 import { it } from './utils/extendedIt';
 
 describe('Inter-Stage Variables', () => {
   describe('Empty vertex output', () => {
-    const emptyVert = vertexFn({}, {}).does('');
-    const emptyVertWithBuiltin = vertexFn(
-      {},
-      { pos: d.builtin.vertexIndex },
-    ).does('');
+    const emptyVert = tgpu['~unstable'].vertexFn({}, {}).does('');
+    const emptyVertWithBuiltin = tgpu['~unstable']
+      .vertexFn({}, { pos: d.builtin.vertexIndex })
+      .does('');
 
     it('allows fragment functions to use a subset of the vertex output', ({
       root,
     }) => {
-      const emptyFragment = fragmentFn({}, {}).does('');
-      const emptyFragmentWithBuiltin = fragmentFn(
-        { pos: d.builtin.position },
-        {},
-      ).does('');
+      const emptyFragment = tgpu['~unstable'].fragmentFn({}, {}).does('');
+      const emptyFragmentWithBuiltin = tgpu['~unstable']
+        .fragmentFn({ pos: d.builtin.position }, {})
+        .does('');
 
       // Using none of none
       const pipeline = root
@@ -55,7 +52,9 @@ describe('Inter-Stage Variables', () => {
     it('rejects fragment functions that use non-existent vertex output', ({
       root,
     }) => {
-      const fragment = fragmentFn({ a: d.vec3f, c: d.f32 }, {}).does('');
+      const fragment = tgpu['~unstable']
+        .fragmentFn({ a: d.vec3f, c: d.f32 }, {})
+        .does('');
 
       root
         .withVertex(emptyVert, {})
@@ -66,23 +65,23 @@ describe('Inter-Stage Variables', () => {
   });
 
   describe('Non-empty vertex output', () => {
-    const vert = vertexFn({}, { a: d.vec3f, b: d.vec2f }).does('');
-    const vertWithBuiltin = vertexFn(
-      {},
-      { a: d.vec3f, b: d.vec2f, pos: d.builtin.position },
-    ).does('');
+    const vert = tgpu['~unstable']
+      .vertexFn({}, { a: d.vec3f, b: d.vec2f })
+      .does('');
+    const vertWithBuiltin = tgpu['~unstable']
+      .vertexFn({}, { a: d.vec3f, b: d.vec2f, pos: d.builtin.position })
+      .does('');
 
     it('allows fragment functions to use a subset of the vertex output', ({
       root,
     }) => {
-      const emptyFragment = fragmentFn({}, {}).does('');
-      const emptyFragmentWithBuiltin = fragmentFn(
-        { pos: d.builtin.frontFacing },
-        {},
-      ).does('');
-      const fullFragment = fragmentFn({ a: d.vec3f, b: d.vec2f }, d.vec4f).does(
-        '',
-      );
+      const emptyFragment = tgpu['~unstable'].fragmentFn({}, {}).does('');
+      const emptyFragmentWithBuiltin = tgpu['~unstable']
+        .fragmentFn({ pos: d.builtin.frontFacing }, {})
+        .does('');
+      const fullFragment = tgpu['~unstable']
+        .fragmentFn({ a: d.vec3f, b: d.vec2f }, d.vec4f)
+        .does('');
 
       // Using none
       const pipeline = root
@@ -125,7 +124,9 @@ describe('Inter-Stage Variables', () => {
     it('rejects fragment functions that use non-existent vertex output', ({
       root,
     }) => {
-      const fragment = fragmentFn({ a: d.vec3f, c: d.f32 }, {}).does('');
+      const fragment = tgpu['~unstable']
+        .fragmentFn({ a: d.vec3f, c: d.f32 }, {})
+        .does('');
 
       // @ts-expect-error: Missing from vertex output
       root.withVertex(vert, {}).withFragment(fragment, {}).createPipeline();
@@ -134,7 +135,9 @@ describe('Inter-Stage Variables', () => {
     it('rejects fragment functions that use mismatched vertex output data types', ({
       root,
     }) => {
-      const fragment = fragmentFn({ a: d.vec3f, b: d.f32 }, {}).does('');
+      const fragment = tgpu['~unstable']
+        .fragmentFn({ a: d.vec3f, b: d.f32 }, {})
+        .does('');
 
       // @ts-expect-error: Mismatched vertex output
       root.withVertex(vert, {}).withFragment(fragment, {}).createPipeline();

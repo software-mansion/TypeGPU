@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { resolve } from '../src/core/resolve/tgpuResolve';
+import tgpu from '../src';
 import * as d from '../src/data';
 import { alignmentOf } from '../src/data/alignmentOf';
 
@@ -13,7 +13,7 @@ describe('d.align', () => {
       })
       .$name('s1');
 
-    expect(resolve({ externals: { s1 }, names: 'strict' })).toContain(
+    expect(tgpu.resolve({ externals: { s1 }, names: 'strict' })).toContain(
       '@align(16) b: u32,',
     );
   });
