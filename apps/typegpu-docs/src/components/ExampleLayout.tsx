@@ -94,7 +94,7 @@ function SideMenu() {
       <ExampleList
         excludeTags={[
           isDev ? [] : ['experimental'],
-          MediaStreamTrackProcessor === undefined ? ['camera'] : [],
+          typeof MediaStreamTrackProcessor === 'undefined' ? ['camera'] : [],
         ].flat()}
       />
 
