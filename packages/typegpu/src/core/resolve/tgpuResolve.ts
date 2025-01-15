@@ -8,7 +8,7 @@ export interface TgpuResolveOptions {
   /**
    * Map of external names to their resolvable values.
    */
-  externals: Record<string, Wgsl>;
+  externals: Record<string, Wgsl | object>;
   /**
    * The code template to use for the resolution. All external names will be replaced with their resolved values.
    * @default ''

@@ -1,6 +1,6 @@
 import { isWgslStruct } from '../../data/wgslTypes';
 import { isNamable } from '../../namable';
-import type { ResolutionCtx } from '../../types';
+import { type ResolutionCtx, isWgsl } from '../../types';
 
 /**
  * A key-value mapping where keys represent identifiers within shader code,
@@ -66,6 +66,10 @@ export function addReturnTypeToExternals(
   }
 }
 
+function identifierRegex(name: string) {
+  return new RegExp(`(?<![\\w_.])${name}(?![\\w_])`, 'g');
+}
+
 /**
  * Replaces all occurrences of external names in WGSL code with their resolved values.
  * It adds all necessary definitions to the resolution context.
@@ -79,13 +83,39 @@ export function replaceExternalsInWgsl(
   ctx: ResolutionCtx,
   externalMap: ExternalMap,
   wgsl: string,
-) {
-  return Object.entries(externalMap).reduce(
-    (acc, [externalName, external]) =>
-      acc.replaceAll(
-        new RegExp(`(?<![\\w_.])${externalName}(?![\\w_])`, 'g'),
+): string {
+  return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
+    if (isWgsl(external)) {
+      return acc.replaceAll(
+        identifierRegex(externalName),
         ctx.resolve(external),
-      ),
-    wgsl,
-  );
+      );
+    }
+
+    if (external !== null && typeof external === 'object') {
+      const foundProperties =
+        [
+          ...wgsl.matchAll(
+            new RegExp(`${externalName}\\.(?<prop>.*?)(?![\\w_])`, 'g'),
+          ),
+        ].map((found) => found?.groups?.prop) ?? [];
+
+      return foundProperties.reduce(
+        (innerAcc: string, prop) =>
+          prop && prop in external
+            ? replaceExternalsInWgsl(
+                ctx,
+                {
+                  [`${externalName}.${prop}`]:
+                    external[prop as keyof typeof external],
+                },
+                innerAcc,
+              )
+            : innerAcc,
+        acc,
+      );
+    }
+
+    return acc;
+  }, wgsl);
 }

@@ -175,4 +175,103 @@ describe('tgpu resolve', () => {
       `),
     );
   });
+
+  it('should resolve object externals and replace their usages in template', () => {
+    const getColor = tgpu['~unstable']
+      .fn([], d.vec3f)
+      .does(`() {
+        let color = vec3f();
+        return color;
+      }`)
+      .$name('get_color');
+
+    const layout = tgpu.bindGroupLayout({
+      intensity: { uniform: d.u32 },
+    });
+
+    const resolved = tgpu.resolve({
+      template: `
+      fn main () {
+        let c = functions.getColor() * layout.bound.intensity;
+      }`,
+      externals: {
+        layout,
+        functions: { getColor },
+      },
+      names: 'strict',
+    });
+
+    expect(parse(resolved)).toEqual(
+      parse(`
+      @group(0) @binding(0) var<uniform> intensity: u32;
+
+      fn get_color() {
+        let color = vec3f();
+        return color;
+      }
+
+      fn main() {
+        let c = get_color() * intensity;
+      }
+    `),
+    );
+  });
+
+  it('should resolve only used object externals and ignore non-existing', () => {
+    const getColor = tgpu['~unstable']
+      .fn([], d.vec3f)
+      .does(`() {
+        let color = vec3f();
+        return color;
+      }`)
+      .$name('get_color');
+
+    const getIntensity = tgpu['~unstable']
+      .fn([], d.vec3f)
+      .does(`() {
+        return 1;
+      }`)
+      .$name('get_intensity');
+
+    const layout = tgpu.bindGroupLayout({
+      intensity: { uniform: d.u32 },
+    });
+
+    const resolved = tgpu.resolve({
+      template: `
+      fn main () {
+        let c = functions.getColor() * layout.bound.intensity;
+        let i = function.getWater();
+      }`,
+      externals: {
+        layout,
+        functions: { getColor, getIntensity },
+      },
+      names: 'strict',
+    });
+
+    expect(resolved).toContain('let i = function.getWater();');
+    expect(resolved).not.toContain('get_intensity');
+  });
+
+  it('should resolve deeply nested objects', () => {
+    expect(
+      parse(
+        tgpu.resolve({
+          template: 'fn main () { let x = a.b.c.d + a.e; }',
+          externals: {
+            a: {
+              b: {
+                c: {
+                  d: 2,
+                },
+              },
+              e: 3,
+            },
+          },
+          names: 'strict',
+        }),
+      ),
+    ).toEqual(parse('fn main() { let x = 2 + 3; }'));
+  });
 });
