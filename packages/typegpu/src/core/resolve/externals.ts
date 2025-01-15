@@ -84,32 +84,38 @@ export function replaceExternalsInWgsl(
   externalMap: ExternalMap,
   wgsl: string,
 ): string {
-  return Object.entries(externalMap).reduce(
-    (acc, [externalName, external]) =>
-      isWgsl(external)
-        ? acc.replaceAll(identifierRegex(externalName), ctx.resolve(external))
-        : external !== null && typeof external === 'object'
-          ? (
-              [
-                ...wgsl.matchAll(
-                  new RegExp(`${externalName}\\.(?<prop>.*?)(?![\\w_])`, 'g'),
-                ),
-              ].map((found) => found?.groups?.prop) ?? []
-            ).reduce(
-              (innerAcc: string, prop) =>
-                prop && prop in external
-                  ? replaceExternalsInWgsl(
-                      ctx,
-                      {
-                        [`${externalName}.${prop}`]:
-                          external[prop as keyof typeof external],
-                      },
-                      innerAcc,
-                    )
-                  : innerAcc,
-              acc,
-            )
-          : acc.replaceAll(identifierRegex(externalName), String(external)),
-    wgsl,
-  );
+  return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
+    if (isWgsl(external)) {
+      return acc.replaceAll(
+        identifierRegex(externalName),
+        ctx.resolve(external),
+      );
+    }
+
+    if (external !== null && typeof external === 'object') {
+      const foundProperties =
+        [
+          ...wgsl.matchAll(
+            new RegExp(`${externalName}\\.(?<prop>.*?)(?![\\w_])`, 'g'),
+          ),
+        ].map((found) => found?.groups?.prop) ?? [];
+
+      return foundProperties.reduce(
+        (innerAcc: string, prop) =>
+          prop && prop in external
+            ? replaceExternalsInWgsl(
+                ctx,
+                {
+                  [`${externalName}.${prop}`]:
+                    external[prop as keyof typeof external],
+                },
+                innerAcc,
+              )
+            : innerAcc,
+        acc,
+      );
+    }
+
+    return acc;
+  }, wgsl);
 }
