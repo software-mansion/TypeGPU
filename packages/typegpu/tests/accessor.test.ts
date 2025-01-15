@@ -3,7 +3,6 @@ import { describe, expect } from 'vitest';
 import tgpu, { unstable_asUniform } from '../src';
 import * as d from '../src/data';
 import { MissingSlotValueError, ResolutionError } from '../src/errors';
-import type { TgpuResolvable } from '../src/types';
 import { it } from './utils/extendedIt';
 import { parseResolved } from './utils/parseResolved';
 
@@ -14,7 +13,7 @@ const resolutionRootMock = {
   toString() {
     return '<root>';
   },
-} as TgpuResolvable;
+};
 
 describe('tgpu.accessor', () => {
   it('resolves to invocation of provided function', () => {

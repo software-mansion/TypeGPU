@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import tgpu from '../src';
 import * as d from '../src/data';
 import { MissingSlotValueError, ResolutionError } from '../src/errors';
-import type { TgpuResolvable } from '../src/types';
 import { parseResolved } from './utils/parseResolved';
 
 const RED = 'vec3f(1., 0., 0.)';
@@ -18,7 +17,7 @@ const resolutionRootMock = {
   toString() {
     return '<root>';
   },
-} as TgpuResolvable;
+};
 
 describe('tgpu.slot', () => {
   it('resolves to default value if no value provided', () => {

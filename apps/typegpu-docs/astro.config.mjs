@@ -56,6 +56,8 @@ export default defineConfig({
         'typegpu/dist/index.d.ts?raw': '../../packages/typegpu/dist/index.d.ts',
         'typegpu/dist/data/index.d.ts?raw':
           '../../packages/typegpu/dist/data/index.d.ts',
+        'typegpu/dist/std/index.d.ts?raw':
+          '../../packages/typegpu/dist/std/index.d.ts',
       }),
     ],
   },
@@ -70,6 +72,7 @@ export default defineConfig({
             entryPoints: [
               '../../packages/typegpu/src/index.ts',
               '../../packages/typegpu/src/data/index.ts',
+              '../../packages/typegpu/src/std/index.ts',
             ],
             tsconfig: '../../packages/typegpu/tsconfig.json',
             typeDoc: {
