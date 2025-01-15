@@ -147,7 +147,7 @@ class ComputePipelineCore {
       // Resolving code
       const { code, bindGroupLayouts, catchall } = resolve(
         {
-          resolve: (ctx) => {
+          '~resolve': (ctx) => {
             ctx.withSlots(this._slotBindings, () => {
               ctx.resolve(this._entryFn);
             });

@@ -6,7 +6,7 @@ import type { LayoutMembership } from '../../tgpuBindGroupLayout';
 import type {
   BindableBufferUsage,
   ResolutionCtx,
-  TgpuResolvable,
+  SelfResolvable,
 } from '../../types';
 import { type TgpuBuffer, type Uniform, isUsableAsUniform } from './buffer';
 
@@ -15,9 +15,9 @@ import { type TgpuBuffer, type Uniform, isUsableAsUniform } from './buffer';
 // ----------
 
 export interface TgpuBufferUsage<
-  TData extends BaseWgslData,
+  TData extends BaseWgslData = BaseWgslData,
   TUsage extends BindableBufferUsage = BindableBufferUsage,
-> extends TgpuResolvable {
+> {
   readonly resourceType: 'buffer-usage';
   readonly usage: TUsage;
   readonly '~repr': Infer<TData>;
@@ -59,7 +59,7 @@ const usageToVarTemplateMap: Record<BindableBufferUsage, string> = {
 class TgpuFixedBufferImpl<
   TData extends AnyWgslData,
   TUsage extends BindableBufferUsage,
-> implements TgpuBufferUsage<TData, TUsage>
+> implements TgpuBufferUsage<TData, TUsage>, SelfResolvable
 {
   /** Type-token, not available at runtime */
   public readonly '~repr'!: Infer<TData>;
@@ -78,7 +78,7 @@ class TgpuFixedBufferImpl<
     this.buffer.$name(label);
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this.label);
     const { group, binding } = ctx.allocateFixedEntry(
       this.usage === 'uniform'
@@ -110,7 +110,7 @@ class TgpuFixedBufferImpl<
 export class TgpuLaidOutBufferImpl<
   TData extends BaseWgslData,
   TUsage extends BindableBufferUsage,
-> implements TgpuBufferUsage<TData, TUsage>
+> implements TgpuBufferUsage<TData, TUsage>, SelfResolvable
 {
   /** Type-token, not available at runtime */
   public readonly '~repr'!: Infer<TData>;
@@ -126,7 +126,7 @@ export class TgpuLaidOutBufferImpl<
     return this._membership.key;
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this.label);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
     const usage = usageToVarTemplateMap[this.usage];

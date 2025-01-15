@@ -1,4 +1,5 @@
 import type { TgpuBuffer, Vertex } from '../../core/buffer/buffer';
+import type { Disarray } from '../../data/dataTypes';
 import type { AnyWgslData, WgslArray } from '../../data/wgslTypes';
 import { MissingBindGroupError } from '../../errors';
 import type { TgpuNamable } from '../../namable';
@@ -7,6 +8,7 @@ import type { AnyVertexAttribs } from '../../shared/vertexFormat';
 import {
   type TgpuBindGroup,
   type TgpuBindGroupLayout,
+  type TgpuLayoutEntry,
   isBindGroupLayout,
 } from '../../tgpuBindGroupLayout';
 import type { IOData, IOLayout } from '../function/fnTypes';
@@ -33,18 +35,18 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
   readonly resourceType: 'render-pipeline';
   readonly label: string | undefined;
 
-  with<TData extends WgslArray>(
+  with<TData extends WgslArray | Disarray>(
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: TgpuBuffer<TData> & Vertex,
-  ): TgpuRenderPipeline;
-  with(
-    bindGroupLayout: TgpuBindGroupLayout,
-    bindGroup: TgpuBindGroup,
-  ): TgpuRenderPipeline;
+  ): TgpuRenderPipeline<IOLayout>;
+  with<Entries extends Record<string, TgpuLayoutEntry | null>>(
+    bindGroupLayout: TgpuBindGroupLayout<Entries>,
+    bindGroup: TgpuBindGroup<Entries>,
+  ): TgpuRenderPipeline<IOLayout>;
 
   withColorAttachment(
     attachment: FragmentOutToColorAttachment<Output>,
-  ): TgpuRenderPipeline;
+  ): TgpuRenderPipeline<IOLayout>;
 
   draw(
     vertexCount: number,
@@ -299,7 +301,7 @@ class RenderPipelineCore {
       // Resolving code
       const { code, bindGroupLayouts, catchall } = resolve(
         {
-          resolve: (ctx) => {
+          '~resolve': (ctx) => {
             ctx.withSlots(slotBindings, () => {
               ctx.resolve(vertexFn);
               ctx.resolve(fragmentFn);
@@ -328,23 +330,31 @@ class RenderPipelineCore {
         code,
       });
 
-      this._memo = {
-        pipeline: device.createRenderPipeline({
-          label: this.label ?? '<unnamed>',
-          layout: device.createPipelineLayout({
-            label: `${this.label ?? '<unnamed>'} - Pipeline Layout`,
-            bindGroupLayouts: bindGroupLayouts.map((l) => branch.unwrap(l)),
-          }),
-          vertex: {
-            module,
-            buffers: this._vertexBufferLayouts,
-          },
-          fragment: {
-            module,
-            targets: this._targets,
-          },
-          primitive: primitiveState ?? {},
+      const descriptor: GPURenderPipelineDescriptor = {
+        layout: device.createPipelineLayout({
+          label: `${this.label ?? '<unnamed>'} - Pipeline Layout`,
+          bindGroupLayouts: bindGroupLayouts.map((l) => branch.unwrap(l)),
         }),
+        vertex: {
+          module,
+          buffers: this._vertexBufferLayouts,
+        },
+        fragment: {
+          module,
+          targets: this._targets,
+        },
+      };
+
+      if (this.label !== undefined) {
+        descriptor.label = this.label;
+      }
+
+      if (primitiveState) {
+        descriptor.primitive = primitiveState;
+      }
+
+      this._memo = {
+        pipeline: device.createRenderPipeline(descriptor),
         bindGroupLayouts,
         catchall,
       };

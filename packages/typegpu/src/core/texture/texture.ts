@@ -4,7 +4,7 @@ import type { TgpuNamable } from '../../namable';
 import type { Default } from '../../shared/utilityTypes';
 import type { UnionToIntersection } from '../../shared/utilityTypes';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout';
-import type { ResolutionCtx, TgpuResolvable } from '../../types';
+import type { ResolutionCtx, SelfResolvable } from '../../types';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 import {
   type SampledFormatOptions,
@@ -156,9 +156,13 @@ export interface TgpuStorageTexture<
   readonly access: StorageTextureAccess;
 }
 
-export interface INTERNAL_TgpuStorageTexture {
+export interface INTERNAL_TgpuFixedStorageTexture
+  extends SelfResolvable,
+    TgpuNamable {
   unwrap(): GPUTextureView;
 }
+
+export interface INTERNAL_TgpuLaidOutStorageTexture extends SelfResolvable {}
 
 /**
  * A texture accessed as "readonly" storage on the GPU.
@@ -166,8 +170,7 @@ export interface INTERNAL_TgpuStorageTexture {
 export interface TgpuReadonlyTexture<
   TDimension extends StorageTextureDimension = StorageTextureDimension,
   TData extends TexelData = TexelData,
-> extends TgpuStorageTexture<TDimension, TData>,
-    TgpuResolvable {
+> extends TgpuStorageTexture<TDimension, TData> {
   readonly access: 'readonly';
 }
 
@@ -177,8 +180,7 @@ export interface TgpuReadonlyTexture<
 export interface TgpuWriteonlyTexture<
   TDimension extends StorageTextureDimension = StorageTextureDimension,
   TData extends TexelData = TexelData,
-> extends TgpuStorageTexture<TDimension, TData>,
-    TgpuResolvable {
+> extends TgpuStorageTexture<TDimension, TData> {
   readonly access: 'writeonly';
 }
 
@@ -188,8 +190,7 @@ export interface TgpuWriteonlyTexture<
 export interface TgpuMutableTexture<
   TDimension extends StorageTextureDimension = StorageTextureDimension,
   TData extends TexelData = TexelData,
-> extends TgpuStorageTexture<TDimension, TData>,
-    TgpuResolvable {
+> extends TgpuStorageTexture<TDimension, TData> {
   readonly access: 'mutable';
 }
 
@@ -199,15 +200,19 @@ export interface TgpuMutableTexture<
 export interface TgpuSampledTexture<
   TDimension extends GPUTextureViewDimension = GPUTextureViewDimension,
   TData extends ChannelData = ChannelData,
-> extends TgpuResolvable {
+> {
   readonly resourceType: 'texture-sampled-view';
   readonly dimension: TDimension;
   readonly channelDataType: TData;
 }
 
-export interface INTERNAL_TgpuSampledTexture {
+export interface INTERNAL_TgpuFixedSampledTexture
+  extends SelfResolvable,
+    TgpuNamable {
   unwrap(): GPUTextureView;
 }
+
+export interface INTERNAL_TgpuLaidOutSampledTexture extends SelfResolvable {}
 
 export function INTERNAL_createTexture(
   props: TextureProps,
@@ -425,7 +430,7 @@ const dimensionToCodeMap = {
 } satisfies Record<GPUTextureViewDimension, string>;
 
 class TgpuFixedStorageTextureImpl
-  implements TgpuStorageTexture, INTERNAL_TgpuStorageTexture, TgpuNamable
+  implements TgpuStorageTexture, INTERNAL_TgpuFixedStorageTexture
 {
   public readonly resourceType = 'texture-storage-view';
   public readonly texelDataType: TexelData;
@@ -468,7 +473,7 @@ class TgpuFixedStorageTextureImpl
     return this._view;
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this.label);
     const { group, binding } = ctx.allocateFixedEntry(
       {
@@ -494,7 +499,9 @@ class TgpuFixedStorageTextureImpl
   }
 }
 
-export class TgpuLaidOutStorageTextureImpl implements TgpuStorageTexture {
+export class TgpuLaidOutStorageTextureImpl
+  implements TgpuStorageTexture, INTERNAL_TgpuLaidOutStorageTexture
+{
   public readonly resourceType = 'texture-storage-view';
   public readonly texelDataType: TexelData;
 
@@ -511,7 +518,7 @@ export class TgpuLaidOutStorageTextureImpl implements TgpuStorageTexture {
     return this._membership.key;
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this.label);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
     const type = `texture_storage_${dimensionToCodeMap[this.dimension]}`;
@@ -529,7 +536,7 @@ export class TgpuLaidOutStorageTextureImpl implements TgpuStorageTexture {
 }
 
 class TgpuFixedSampledTextureImpl
-  implements TgpuSampledTexture, INTERNAL_TgpuSampledTexture, TgpuNamable
+  implements TgpuSampledTexture, INTERNAL_TgpuFixedSampledTexture
 {
   public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;
@@ -570,7 +577,7 @@ class TgpuFixedSampledTextureImpl
     return this._view;
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this.label);
 
     const multisampled = (this._texture.props.sampleCount ?? 1) > 1;
@@ -599,7 +606,9 @@ class TgpuFixedSampledTextureImpl
   }
 }
 
-export class TgpuLaidOutSampledTextureImpl implements TgpuSampledTexture {
+export class TgpuLaidOutSampledTextureImpl
+  implements TgpuSampledTexture, INTERNAL_TgpuLaidOutSampledTexture
+{
   public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;
 
@@ -616,7 +625,7 @@ export class TgpuLaidOutSampledTextureImpl implements TgpuSampledTexture {
     return this._membership.key;
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this.label);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
