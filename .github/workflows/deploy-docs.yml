@@ -41,7 +41,7 @@ jobs:
         run: pnpm install --recursive --frozen-lockfile
 
       - name: Build all
-        run: EXPERIMENTAL=true pnpm -r build
+        run: pnpm -r build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
