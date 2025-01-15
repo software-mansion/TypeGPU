@@ -78,6 +78,14 @@ export const examplesStable = pipe(
   examples,
   entries(),
   filter(([_, example]) => !example.metadata.tags?.includes('experimental')),
+  filter(([_, example]) =>
+    [
+      'image-processing--camera-thresholding',
+      'image-processing--chroma-keying',
+    ].includes(example.key)
+      ? MediaStreamTrackProcessor === undefined
+      : true,
+  ),
   fromEntries(),
 );
 
