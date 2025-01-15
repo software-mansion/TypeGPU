@@ -100,6 +100,17 @@ export function replaceExternalsInWgsl(
           ),
         ].map((found) => found?.groups?.prop) ?? [];
 
+      const regexp = new RegExp(
+        `${externalName}\\.(?<prop>.*?)(?![\\w_])`,
+        'g',
+      );
+      const matches = [...wgsl.matchAll(regexp)];
+      console.log('----------------------');
+      console.log('external', external);
+      console.log('matches', matches);
+      console.log('reg', regexp);
+      console.log('foundProperties', foundProperties);
+
       return foundProperties.reduce(
         (innerAcc: string, prop) =>
           prop && prop in external
