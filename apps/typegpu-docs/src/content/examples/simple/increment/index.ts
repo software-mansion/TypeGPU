@@ -1,5 +1,5 @@
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
 
 const layout = tgpu.bindGroupLayout({
   counter: { storage: d.u32, access: 'mutable' },

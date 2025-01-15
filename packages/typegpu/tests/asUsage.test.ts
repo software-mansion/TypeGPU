@@ -1,7 +1,11 @@
 import { describe, expect } from 'vitest';
 import { u32 } from '../src/data';
-import { asMutable, asReadonly, asUniform } from '../src/experimental';
 import './utils/webgpuGlobals';
+import {
+  asMutable,
+  asReadonly,
+  asUniform,
+} from '../src/core/buffer/bufferUsage';
 import { it } from './utils/extendedIt';
 
 describe('asUsage', () => {
