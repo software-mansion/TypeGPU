@@ -23,7 +23,6 @@ import {
 } from '../src/data';
 import './utils/webgpuGlobals';
 import { parse } from 'tgpu-wgsl-parser';
-import { resolve } from '../src/core/resolve/tgpuResolve';
 import { comparisonSampler, sampler } from '../src/core/sampler/sampler';
 import {
   MissingBindingError,
@@ -210,7 +209,7 @@ describe('TgpuBindGroupLayout', () => {
 
     const fooTexture = layout.bound.fooTexture;
 
-    const resolved = resolve({
+    const resolved = tgpu.resolve({
       template: 'fn main () { textureLoad(fooTexture); }',
       externals: { fooTexture },
       names: 'strict',

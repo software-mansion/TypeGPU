@@ -78,13 +78,13 @@ describe('ArrayToContainedAttribs', () => {
 
 describe('tgpu.vertexLayout', () => {
   it('creates attributes from loose array of vec3f', () => {
-    const vertexLayout_ = tgpu['~unstable'].vertexLayout((count: number) =>
+    const vertexLayout = tgpu['~unstable'].vertexLayout((count: number) =>
       d.disarrayOf(d.vec3f, count),
     );
 
-    expect(vertexLayout_.stride).toEqual(12);
-    expect(vertexLayout_.attrib).toEqual({
-      _layout: vertexLayout_,
+    expect(vertexLayout.stride).toEqual(12);
+    expect(vertexLayout.attrib).toEqual({
+      _layout: vertexLayout,
       format: 'float32x3',
       offset: 0,
     });
@@ -97,24 +97,24 @@ describe('tgpu.vertexLayout', () => {
       c: d.f32, // + 4
     });
 
-    const vertexLayout_ = tgpu['~unstable'].vertexLayout((count: number) =>
+    const vertexLayout = tgpu['~unstable'].vertexLayout((count: number) =>
       d.disarrayOf(VertexData, count),
     );
 
-    expect(vertexLayout_.stride).toEqual(32);
-    expect(vertexLayout_.attrib).toEqual({
+    expect(vertexLayout.stride).toEqual(32);
+    expect(vertexLayout.attrib).toEqual({
       a: {
-        _layout: vertexLayout_,
+        _layout: vertexLayout,
         format: 'uint32',
         offset: 0,
       },
       b: {
-        _layout: vertexLayout_,
+        _layout: vertexLayout,
         format: 'float32x3',
         offset: 16,
       },
       c: {
-        _layout: vertexLayout_,
+        _layout: vertexLayout,
         format: 'float32',
         offset: 28,
       },
@@ -128,24 +128,24 @@ describe('tgpu.vertexLayout', () => {
       c: d.f32, // + 4
     });
 
-    const vertexLayout_ = tgpu['~unstable'].vertexLayout((count: number) =>
+    const vertexLayout = tgpu['~unstable'].vertexLayout((count: number) =>
       d.disarrayOf(VertexData, count),
     );
 
-    expect(vertexLayout_.stride).toEqual(20);
-    expect(vertexLayout_.attrib).toEqual({
+    expect(vertexLayout.stride).toEqual(20);
+    expect(vertexLayout.attrib).toEqual({
       a: {
-        _layout: vertexLayout_,
+        _layout: vertexLayout,
         format: 'uint32',
         offset: 0,
       },
       b: {
-        _layout: vertexLayout_,
+        _layout: vertexLayout,
         format: 'float32x3',
         offset: 4,
       },
       c: {
-        _layout: vertexLayout_,
+        _layout: vertexLayout,
         format: 'float32',
         offset: 16,
       },
@@ -153,13 +153,13 @@ describe('tgpu.vertexLayout', () => {
   });
 
   it('creates attributes from loose array with f16 variants', () => {
-    const vertexLayout_ = tgpu['~unstable'].vertexLayout((count: number) =>
+    const vertexLayout = tgpu['~unstable'].vertexLayout((count: number) =>
       d.disarrayOf(d.float16x4, count),
     );
 
-    expect(vertexLayout_.stride).toEqual(8);
-    expect(vertexLayout_.attrib).toEqual({
-      _layout: vertexLayout_,
+    expect(vertexLayout.stride).toEqual(8);
+    expect(vertexLayout.attrib).toEqual({
+      _layout: vertexLayout,
       format: 'float16x4',
       offset: 0,
     });
