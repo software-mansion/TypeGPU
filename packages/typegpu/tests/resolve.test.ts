@@ -274,4 +274,31 @@ describe('tgpu resolve', () => {
       ),
     ).toEqual(parse('fn main() { let x = 2 + 3; }'));
   });
+
+  it('should treat dot as a regular character in regex when resolving object access externals and not a wildcard', () => {
+    expect(
+      parse(
+        tgpu.resolve({
+          template: `
+        fn main () {
+          let x = a.b;
+          let y = axb;
+        }`,
+          externals: {
+            a: {
+              b: 3,
+            },
+            axb: 2,
+          },
+          names: 'strict',
+        }),
+      ),
+    ).toEqual(
+      parse(`
+        fn main () {
+          let x = 3;
+          let y = 2;
+        }`),
+    );
+  });
 });
