@@ -2,6 +2,7 @@ import type { AnyWgslData } from '../../data';
 import type { Exotic } from '../../data/exotic';
 import { getResolutionCtx } from '../../gpuMode';
 import type { Infer } from '../../shared/repr';
+import { valueProxyHandler } from '../../shared/valueProxyHandler';
 import type { ResolutionCtx, SelfResolvable } from '../../types';
 import { type TgpuBufferUsage, isBufferUsage } from '../buffer/bufferUsage';
 import { type TgpuFn, isTgpuFn } from '../function/tgpuFn';
@@ -62,7 +63,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       );
     }
 
-    return this as unknown as Infer<T>;
+    return new Proxy(this, valueProxyHandler) as unknown as Infer<T>;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {

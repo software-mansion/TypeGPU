@@ -122,15 +122,6 @@ function generateExpression(
     }
 
     if (isWgsl(target.value)) {
-      // NOTE: Temporary solution, assuming that access to `.value` of resolvables should always resolve to just the target.
-      if (propertyStr === 'value') {
-        return {
-          value: resolveRes(ctx, target),
-          // TODO: Infer data type
-          dataType: UnknownData,
-        };
-      }
-
       return {
         // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
         value: (target.value as any)[propertyStr],

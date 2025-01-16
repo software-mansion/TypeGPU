@@ -2,6 +2,7 @@ import type { AnyWgslData, BaseWgslData } from '../../data/wgslTypes';
 import { type Storage, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
 import type { Infer } from '../../shared/repr';
+import { valueProxyHandler } from '../../shared/valueProxyHandler';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout';
 import type {
   BindableBufferUsage,
@@ -103,10 +104,10 @@ class TgpuFixedBufferImpl<
     if (!inGPUMode()) {
       throw new Error(`Cannot access buffer's value directly in JS.`);
     }
-    return this as Infer<TData>;
+
+    return new Proxy(this, valueProxyHandler) as Infer<TData>;
   }
 }
-
 export class TgpuLaidOutBufferImpl<
   TData extends BaseWgslData,
   TUsage extends BindableBufferUsage,
@@ -146,7 +147,7 @@ export class TgpuLaidOutBufferImpl<
     if (!inGPUMode()) {
       throw new Error(`Cannot access buffer's value directly in JS.`);
     }
-    return this as Infer<TData>;
+    return new Proxy(this, valueProxyHandler) as Infer<TData>;
   }
 }
 
