@@ -39,6 +39,9 @@ class TgpuSlotImpl<T> implements TgpuSlot<T> {
       throw new Error(`Cannot access tgpu.slot's value outside of resolution.`);
     }
 
-    return ctx.unwrap(this) as Infer<T>;
+    const unwrapped = ctx.unwrap(this);
+    return (unwrapped && typeof unwrapped === 'object' && 'value' in unwrapped
+      ? unwrapped.value // TODO: user defined 'value' properties shouldn't be accessed here
+      : unwrapped) as unknown as Infer<T>;
   }
 }

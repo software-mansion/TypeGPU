@@ -1,7 +1,8 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, vi } from 'vitest';
-import tgpu from '../src';
+import tgpu, { unstable_asUniform } from '../src';
 import * as d from '../src/data';
+import { mul } from '../src/std';
 import { it } from './utils/extendedIt';
 import { parseResolved } from './utils/parseResolved';
 
@@ -117,6 +118,67 @@ describe('TgpuDerived', () => {
         fill_2();
       }
     `),
+    );
+  });
+
+  it('allows access to value in tgsl functions through the .value property ', ({
+    root,
+  }) => {
+    const vectorSlot = tgpu['~unstable'].slot(d.vec3f(1, 2, 3));
+    const doubledVectorSlot = tgpu['~unstable'].derived(() => {
+      const vec = vectorSlot.value;
+
+      return mul(2, vec);
+    });
+
+    const Boid = d
+      .struct({
+        pos: d.vec3f,
+        vel: d.vec3u,
+      })
+      .$name('Boid');
+
+    const buffer = root.createBuffer(Boid).$usage('uniform').$name('boid');
+    const uniform = unstable_asUniform(buffer);
+    const uniformSlot = tgpu['~unstable'].slot(uniform);
+
+    const derivedUniformSlot = tgpu['~unstable'].derived(() => {
+      const uniform = uniformSlot.value;
+      return uniform;
+    });
+
+    const derivedDerivedUniformSlot = tgpu['~unstable'].derived(() => {
+      const uniform = derivedUniformSlot.value;
+      return uniform;
+    });
+
+    const func = tgpu['~unstable'].fn([]).does(() => {
+      const pos = doubledVectorSlot.value;
+      const posX = doubledVectorSlot.value.x;
+      const vel = derivedDerivedUniformSlot.value.vel;
+      const velX = derivedDerivedUniformSlot.value.vel.x;
+    });
+
+    const resolved = tgpu.resolve({
+      externals: { func },
+      names: 'strict',
+    });
+
+    expect(parse(resolved)).toEqual(
+      parse(`
+        struct Boid {
+          pos: vec3f,
+          vel: vec3u,
+        }
+
+        @group(0) @binding(0) var<uniform> boid: Boid;
+
+        fn func(){
+          var pos = (2 * vec3f(1, 2, 3));
+          var posX = (2 * vec3f(1, 2, 3)).x;
+          var vel = boid.vel;
+          var velX = boid.vel.x;
+        }`),
     );
   });
 });

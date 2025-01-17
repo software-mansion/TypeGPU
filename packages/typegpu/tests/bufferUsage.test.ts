@@ -82,8 +82,6 @@ describe('TgpuBufferUniform', () => {
       names: 'strict',
     });
 
-    console.log(resolved);
-
     expect(parse(resolved)).toEqual(
       parse(`
         struct Boid {

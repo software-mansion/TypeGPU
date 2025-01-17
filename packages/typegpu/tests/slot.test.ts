@@ -1,8 +1,9 @@
 import { parse } from 'tgpu-wgsl-parser';
-import { describe, expect, it } from 'vitest';
-import tgpu from '../src';
+import { describe, expect } from 'vitest';
+import tgpu, { unstable_asUniform } from '../src';
 import * as d from '../src/data';
 import { MissingSlotValueError, ResolutionError } from '../src/errors';
+import { it } from './utils/extendedIt';
 import { parseResolved } from './utils/parseResolved';
 
 const RED = 'vec3f(1., 0., 0.)';
@@ -372,5 +373,50 @@ describe('tgpu.slot', () => {
     `);
 
     expect(actual).toEqual(expected);
+  });
+
+  it('allows access to value in tgsl functions through the .value property ', ({
+    root,
+  }) => {
+    const vectorSlot = tgpu['~unstable'].slot(d.vec3f(1, 2, 3));
+    const Boid = d
+      .struct({
+        pos: d.vec3f,
+        vel: d.vec3u,
+      })
+      .$name('Boid');
+
+    const buffer = root.createBuffer(Boid).$usage('uniform').$name('boid');
+    const uniform = unstable_asUniform(buffer);
+    const uniformSlot = tgpu['~unstable'].slot(uniform);
+
+    const func = tgpu['~unstable'].fn([]).does(() => {
+      const pos = vectorSlot.value;
+      const posX = vectorSlot.value.x;
+      const vel = uniformSlot.value.vel;
+      const velX = uniformSlot.value.vel.x;
+    });
+
+    const resolved = tgpu.resolve({
+      externals: { func },
+      names: 'strict',
+    });
+
+    expect(parse(resolved)).toEqual(
+      parse(`
+        struct Boid {
+          pos: vec3f,
+          vel: vec3u,
+        }
+
+        @group(0) @binding(0) var<uniform> boid: Boid;
+
+        fn func(){
+          var pos = vec3f(1, 2, 3);
+          var posX = 1;
+          var vel = boid.vel;
+          var velX = boid.vel.x;
+        }`),
+    );
   });
 });
