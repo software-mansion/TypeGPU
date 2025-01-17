@@ -136,7 +136,7 @@ export {
   BuiltinNumWorkgroups,
   AnyBuiltin,
 } from '../builtin';
-export type { Exotic as Normal } from './exotic';
+export type { Exotic as Base } from './exotic';
 
 import type { Infer as INTERNAL_Infer } from '../shared/repr';
 import type { Exotic } from './exotic';

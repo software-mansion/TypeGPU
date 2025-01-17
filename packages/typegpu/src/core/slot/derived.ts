@@ -19,6 +19,10 @@ export function derived<T>(compute: () => T): TgpuDerived<T> {
 // Implementation
 // --------------
 
+function stringifyPair([slot, value]: SlotValuePair): string {
+  return `${slot.label ?? '<unnamed>'}=${value}`;
+}
+
 function createDerived<T>(compute: () => T): TgpuDerived<T> {
   const result = {
     resourceType: 'derived' as const,
@@ -85,9 +89,6 @@ function createBoundDerived<T>(
     },
 
     toString(): string {
-      const stringifyPair = ([slot, value]: SlotValuePair) =>
-        `${slot.label ?? '<unnamed>'}=${value}`;
-
       return `derived[${pairs.map(stringifyPair).join(', ')}]`;
     },
   };

@@ -11,7 +11,6 @@ import {
   type TgpuLayoutEntry,
   isBindGroupLayout,
 } from '../../tgpuBindGroupLayout';
-import type { SelfResolvable } from '../../types';
 import type { IOData, IOLayout } from '../function/fnTypes';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
@@ -59,8 +58,6 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
     firstVertex?: number,
     firstInstance?: number,
   ): void;
-
-  beginPass(runner: (pass: RenderPass) => unknown): void;
 }
 
 export type FragmentOutToTargets<T extends IOLayout> = T extends IOData
@@ -187,33 +184,6 @@ export type RenderPipelineCoreOptions = {
   targets: AnyFragmentTargets;
 };
 
-export interface RenderPass {
-  setBindGroup<Entries extends Record<string, TgpuLayoutEntry | null>>(
-    bindGroupLayout: TgpuBindGroupLayout<Entries>,
-    bindGroup: TgpuBindGroup<Entries>,
-  ): void;
-
-  setVertexBuffer<TData extends WgslArray | Disarray>(
-    vertexLayout: TgpuVertexLayout<TData>,
-    buffer: TgpuBuffer<TData> & Vertex,
-  ): void;
-
-  draw(
-    vertexCount: number,
-    instanceCount?: number | undefined,
-    firstVertex?: number | undefined,
-    firstInstance?: number | undefined,
-  ): void;
-
-  drawIndexed(
-    indexCount: number,
-    instanceCount?: number | undefined,
-    firstIndex?: number | undefined,
-    baseVertex?: number | undefined,
-    firstInstance?: number | undefined,
-  ): void;
-}
-
 export function INTERNAL_createRenderPipeline(
   options: RenderPipelineCoreOptions,
 ) {
@@ -317,12 +287,6 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     firstVertex?: number,
     firstInstance?: number,
   ): void {
-    this.beginPass((renderPass) => {
-      renderPass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
-    });
-  }
-
-  beginPass(runner: (pass: RenderPass) => unknown): void {
     const memo = this._core.unwrap();
     const { branch, fragmentFn } = this._core.options;
 
@@ -392,51 +356,17 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       }
     });
 
-    const renderPass: RenderPass = {
-      setBindGroup(bindGroupLayout, bindGroup) {
-        const idx = memo.bindGroupLayouts.indexOf(bindGroupLayout);
-        missingBindGroups.delete(bindGroupLayout);
-        pass.setBindGroup(idx, branch.unwrap(bindGroup));
-      },
+    for (const layout of missingBindGroups) {
+      throw new MissingBindGroupError(layout.label);
+    }
 
-      setVertexBuffer(vertexLayout, buffer) {
-        const idx = usedVertexLayouts.indexOf(vertexLayout);
-        missingVertexLayouts.delete(vertexLayout);
-        pass.setVertexBuffer(idx, branch.unwrap(buffer));
-      },
+    if (missingVertexLayouts.size > 0) {
+      throw new Error(
+        `Missing vertex buffers for layouts: '${[...missingVertexLayouts.values()].map((layout) => layout.label ?? '<unnamed>').join(', ')}'. Please provide it using pipeline.with(layout, buffer).(...)`,
+      );
+    }
 
-      draw(vertexCount, instanceCount, firstVertex, firstInstance) {
-        for (const layout of missingBindGroups) {
-          throw new MissingBindGroupError(layout.label);
-        }
-
-        if (missingVertexLayouts.size > 0) {
-          throw new Error(
-            `Missing vertex buffers for layouts: '${[...missingVertexLayouts.values()].map((layout) => layout.label ?? '<unnamed>').join(', ')}'. Please provide it using pipeline.with(layout, buffer).(...)`,
-          );
-        }
-
-        pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
-      },
-
-      drawIndexed(
-        indexCount,
-        instanceCount,
-        firstIndex,
-        baseVertex,
-        firstInstance,
-      ) {
-        pass.drawIndexed(
-          indexCount,
-          instanceCount,
-          firstIndex,
-          baseVertex,
-          firstInstance,
-        );
-      },
-    };
-
-    runner(renderPass);
+    pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
 
     pass.end();
   }
@@ -488,7 +418,7 @@ class RenderPipelineCore {
           },
 
           toString: () => `renderPipeline:${this.label ?? '<unnamed>'}`,
-        } as SelfResolvable,
+        },
         {
           names: branch.nameRegistry,
           jitTranspiler: branch.jitTranspiler,

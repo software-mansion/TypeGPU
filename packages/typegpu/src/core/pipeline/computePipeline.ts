@@ -5,7 +5,6 @@ import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout';
-import type { SelfResolvable } from '../../types';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 import type { TgpuSlot } from '../slot/slotTypes';
@@ -156,7 +155,7 @@ class ComputePipelineCore {
           },
 
           toString: () => `computePipeline:${this.label ?? '<unnamed>'}`,
-        } as SelfResolvable,
+        },
         {
           names: this.branch.nameRegistry,
           jitTranspiler: this.branch.jitTranspiler,

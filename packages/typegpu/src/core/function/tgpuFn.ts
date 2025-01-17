@@ -111,6 +111,10 @@ export function isTgpuFn<
 // Implementation
 // --------------
 
+function stringifyPair([slot, value]: SlotValuePair): string {
+  return `${slot.label ?? '<unnamed>'}=${value}`;
+}
+
 function createFn<
   Args extends AnyWgslData[],
   Return extends AnyWgslData | undefined,
@@ -233,8 +237,6 @@ function createBoundFunction<
   Object.defineProperty(fn, 'toString', {
     value() {
       const fnLabel = innerFn.label ?? '<unnamed>';
-      const stringifyPair = ([slot, value]: SlotValuePair) =>
-        `${slot.label ?? '<unnamed>'}=${value}`;
 
       return `fn:${fnLabel}[${pairs.map(stringifyPair).join(', ')}]`;
     },
