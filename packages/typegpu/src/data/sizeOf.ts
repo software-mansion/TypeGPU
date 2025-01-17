@@ -1,4 +1,3 @@
-import type { TgpuStruct } from '.';
 import { roundUp } from '../mathUtils';
 import { alignmentOf, customAlignmentOf } from './alignmentOf';
 import type { AnyData, LooseTypeLiteral, Unstruct } from './dataTypes';
@@ -8,12 +7,7 @@ import {
   isLooseDecorated,
   isUnstruct,
 } from './dataTypes';
-import type {
-  AnyWgslData,
-  BaseWgslData,
-  WgslStruct,
-  WgslTypeLiteral,
-} from './wgslTypes';
+import type { BaseWgslData, WgslStruct, WgslTypeLiteral } from './wgslTypes';
 import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes';
 
 const knownSizesMap: Record<string, number> = {
@@ -169,8 +163,6 @@ export function sizeOf(schema: BaseWgslData): number {
 /**
  * Returns the size (in bytes) of data represented by the `schema`.
  */
-export function PUBLIC_sizeOf<T extends Record<string, AnyWgslData>>(
-  schema: AnyData | TgpuStruct<T>,
-): number {
+export function PUBLIC_sizeOf(schema: AnyData): number {
   return sizeOf(schema);
 }

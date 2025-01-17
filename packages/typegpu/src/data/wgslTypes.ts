@@ -683,6 +683,9 @@ export interface WgslStruct<
   readonly '~repr': InferRecord<TProps>;
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: <i'm sorry>
+export type AnyWgslStruct = WgslStruct<any>;
+
 export interface WgslArray<TElement = BaseWgslData> {
   readonly type: 'array';
   readonly elementCount: number;
@@ -815,7 +818,7 @@ export type AnyWgslData =
   | Mat2x2f
   | Mat3x3f
   | Mat4x4f
-  | WgslStruct
+  | AnyWgslStruct
   | WgslArray
   | Atomic
   | Decorated;
