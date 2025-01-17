@@ -1,5 +1,5 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   alignmentOf,
   arrayOf,
@@ -9,6 +9,7 @@ import {
   sizeOf,
   struct,
   u32,
+  type v3u,
   vec2h,
   vec2u,
   vec3f,
@@ -223,5 +224,17 @@ describe('struct', () => {
 
     writeData(new BufferWriter(buffer2), TestStruct2, value2);
     expect(readData(new BufferReader(buffer2), TestStruct2)).toEqual(value2);
+  });
+
+  it('can be called to create an object', () => {
+    const TestStruct = struct({
+      x: u32,
+      y: vec3u,
+    });
+
+    const obj = TestStruct({ x: 1, y: vec3u(1, 2, 3) });
+
+    expect(obj).toEqual({ x: 1, y: vec3u(1, 2, 3) });
+    expectTypeOf(obj).toEqualTypeOf<{ x: number; y: v3u }>();
   });
 });

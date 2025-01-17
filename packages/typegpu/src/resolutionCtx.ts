@@ -264,6 +264,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
   public readonly fixedBindings: FixedBindingConfig[] = [];
   // --
 
+  public readonly callStack: unknown[] = [];
   public readonly names: NameRegistry;
 
   constructor(opts: ResolutionCtxImplOptions) {

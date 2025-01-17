@@ -21,6 +21,10 @@ export interface TgpuStruct<TProps extends Record<string, BaseWgslData>>
   readonly '~exotic': WgslStruct<ExoticRecord<TProps>>;
 }
 
+export type NativeStruct<TProps extends Record<string, AnyWgslData>> =
+  TgpuStruct<Prettify<TProps>> &
+    ((props: InferRecord<TProps>) => InferRecord<TProps>);
+
 /**
  * Creates a struct schema that can be used to construct GPU buffers.
  * Ensures proper alignment and padding of properties (as opposed to a `d.unstruct` schema).
@@ -34,8 +38,12 @@ export interface TgpuStruct<TProps extends Record<string, BaseWgslData>>
  */
 export const struct = <TProps extends Record<string, AnyWgslData>>(
   props: TProps,
-): TgpuStruct<Prettify<ExoticRecord<TProps>>> =>
-  new TgpuStructImpl(props as ExoticRecord<TProps>);
+): NativeStruct<ExoticRecord<TProps>> => {
+  const struct = new TgpuStructImpl(props as ExoticRecord<TProps>);
+  const construct = (props: InferRecord<ExoticRecord<TProps>>) => props;
+
+  return Object.assign(construct, struct);
+};
 
 // --------------
 // Implementation
