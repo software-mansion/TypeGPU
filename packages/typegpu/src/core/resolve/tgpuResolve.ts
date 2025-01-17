@@ -8,7 +8,7 @@ export interface TgpuResolveOptions {
   /**
    * Map of external names to their resolvable values.
    */
-  externals: Record<string, Wgsl>;
+  externals: Record<string, Wgsl | object>;
   /**
    * The code template to use for the resolution. All external names will be replaced with their resolved values.
    * @default ''
@@ -72,13 +72,13 @@ export function resolve(options: TgpuResolveOptions): string {
   const dependencies = {} as Record<string, Wgsl>;
   applyExternals(dependencies, externals ?? {});
 
-  const resolutionObj = {
+  const resolutionObj: SelfResolvable = {
     '~resolve'(ctx) {
       return replaceExternalsInWgsl(ctx, dependencies, template ?? '');
     },
 
     toString: () => '<root>',
-  } as SelfResolvable;
+  };
 
   const { code } = resolveImpl(resolutionObj, {
     names:

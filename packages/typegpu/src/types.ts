@@ -133,11 +133,11 @@ export interface ResolutionCtx {
  */
 export interface SelfResolvable {
   '~resolve'(ctx: ResolutionCtx): string;
+  toString(): string;
 }
 
 export interface Labelled {
   readonly label?: string | undefined;
-  toString(): string;
 }
 
 export function isSelfResolvable(value: unknown): value is SelfResolvable {

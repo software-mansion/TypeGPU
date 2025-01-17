@@ -3,7 +3,12 @@ import type { Exotic, ExoticArray } from '../../data/exotic';
 import type { AnyWgslData } from '../../data/wgslTypes';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
-import type { ResolutionCtx, SelfResolvable, Wgsl } from '../../types';
+import type {
+  Labelled,
+  ResolutionCtx,
+  SelfResolvable,
+  Wgsl,
+} from '../../types';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage';
 import {
   type Eventual,
@@ -49,9 +54,9 @@ export interface TgpuFnShell<
 interface TgpuFnBase<
   Args extends AnyWgslData[],
   Return extends AnyWgslData | undefined = undefined,
-> extends TgpuNamable {
+> extends TgpuNamable,
+    Labelled {
   readonly resourceType: 'function';
-  readonly label?: string | undefined;
   readonly shell: TgpuFnShell<Args, Return>;
   readonly '~providing'?: Providing | undefined;
 
@@ -93,10 +98,6 @@ export function fn<
       return createFn(this, implementation as Implementation);
     },
   };
-}
-
-export function procedure(implementation: () => void) {
-  return fn([]).does(implementation);
 }
 
 export function isTgpuFn<

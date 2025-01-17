@@ -1,6 +1,6 @@
 import { isWgslStruct } from '../../data/wgslTypes';
 import { isNamable } from '../../namable';
-import type { ResolutionCtx } from '../../types';
+import { type ResolutionCtx, isWgsl } from '../../types';
 
 /**
  * A key-value mapping where keys represent identifiers within shader code,
@@ -38,7 +38,7 @@ export function addArgTypesToExternals(
 ) {
   const argTypeNames = [
     ...implementation.matchAll(/:\s*(?<arg>.*?)\s*[,)]/g),
-  ].map((found) => found.groups?.arg);
+  ].map((found) => (found ? found[1] : undefined));
 
   applyExternals(
     Object.fromEntries(
@@ -57,13 +57,19 @@ export function addReturnTypeToExternals(
   returnType: unknown,
   applyExternals: (externals: ExternalMap) => void,
 ) {
-  const outputName = implementation
-    .match(/->(?<output>.*?){/s)
-    ?.groups?.output?.trim();
+  const matched = implementation.match(/->(?<output>.*?){/s);
+  const outputName = matched ? matched[1]?.trim() : undefined;
 
   if (isWgslStruct(returnType) && outputName && !/\s/g.test(outputName)) {
     applyExternals({ [outputName]: returnType });
   }
+}
+
+function identifierRegex(name: string) {
+  return new RegExp(
+    `(?<![\\w_.])${name.replaceAll('.', '\\.')}(?![\\w_])`,
+    'g',
+  );
 }
 
 /**
@@ -79,11 +85,42 @@ export function replaceExternalsInWgsl(
   ctx: ResolutionCtx,
   externalMap: ExternalMap,
   wgsl: string,
-) {
+): string {
   return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
-    return acc.replaceAll(
-      new RegExp(`(?<![\\w_])${externalName}(?![\\w_])`, 'g'),
-      ctx.resolve(external),
-    );
+    if (isWgsl(external)) {
+      return acc.replaceAll(
+        identifierRegex(externalName),
+        ctx.resolve(external),
+      );
+    }
+
+    if (external !== null && typeof external === 'object') {
+      const foundProperties =
+        [
+          ...wgsl.matchAll(
+            new RegExp(
+              `${externalName.replaceAll('.', '\\.')}\\.(?<prop>.*?)(?![\\w_])`,
+              'g',
+            ),
+          ),
+        ].map((found) => found[1]) ?? [];
+
+      return foundProperties.reduce(
+        (innerAcc: string, prop) =>
+          prop && prop in external
+            ? replaceExternalsInWgsl(
+                ctx,
+                {
+                  [`${externalName}.${prop}`]:
+                    external[prop as keyof typeof external],
+                },
+                innerAcc,
+              )
+            : innerAcc,
+        acc,
+      );
+    }
+
+    return acc;
   }, wgsl);
 }

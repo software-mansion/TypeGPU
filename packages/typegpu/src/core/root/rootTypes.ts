@@ -80,9 +80,11 @@ export interface WithFragment<
   withPrimitive(
     primitiveState: GPUPrimitiveState | undefined,
   ): WithFragment<Output>;
+
   withDepthStencil(
     depthStencilState: GPUDepthStencilState | undefined,
   ): WithFragment<Output>;
+
   createPipeline(): TgpuRenderPipeline<Output>;
 }
 
@@ -262,6 +264,8 @@ export interface TgpuRoot extends Unwrapper {
    * then the inner GPU device is destroyed as well.
    */
   destroy(): void;
+
+  '~unstable': Omit<ExperimentalTgpuRoot, keyof TgpuRoot>;
 }
 
 export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {

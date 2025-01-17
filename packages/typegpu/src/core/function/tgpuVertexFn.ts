@@ -104,7 +104,7 @@ function createVertexFn(
     );
   }
 
-  const result: This = {
+  return {
     shell,
     outputType,
 
@@ -132,7 +132,5 @@ function createVertexFn(
     toString() {
       return `vertexFn:${this.label ?? '<unnamed>'}`;
     },
-  };
-
-  return result;
+  } as This;
 }

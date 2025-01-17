@@ -1,4 +1,5 @@
 import { inGPUMode } from '../gpuMode';
+import type { SelfResolvable } from '../types';
 import { type VecKind, vec2f, vec3f, vec4f } from './vector';
 import type {
   Mat2x2f,
@@ -83,7 +84,9 @@ function createMatSchema<
   } & MatConstructor<ValueType, ColumnType>;
 }
 
-abstract class mat2x2Impl<TColumn extends v2f> implements mat2x2<TColumn> {
+abstract class mat2x2Impl<TColumn extends v2f>
+  implements mat2x2<TColumn>, SelfResolvable
+{
   public readonly columns: readonly [TColumn, TColumn];
   public readonly length = 4;
   public abstract readonly kind: string;
@@ -145,7 +148,9 @@ class mat2x2fImpl extends mat2x2Impl<v2f> implements m2x2f {
   }
 }
 
-abstract class mat3x3Impl<TColumn extends v3f> implements mat3x3<TColumn> {
+abstract class mat3x3Impl<TColumn extends v3f>
+  implements mat3x3<TColumn>, SelfResolvable
+{
   public readonly columns: readonly [TColumn, TColumn, TColumn];
   public readonly length = 12;
   public abstract readonly kind: string;
@@ -275,7 +280,9 @@ class mat3x3fImpl extends mat3x3Impl<v3f> implements m3x3f {
   }
 }
 
-abstract class mat4x4Impl<TColumn extends v4f> implements mat4x4<TColumn> {
+abstract class mat4x4Impl<TColumn extends v4f>
+  implements mat4x4<TColumn>, SelfResolvable
+{
   public readonly columns: readonly [TColumn, TColumn, TColumn, TColumn];
   public abstract readonly kind: string;
 

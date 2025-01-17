@@ -1,16 +1,16 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
+import tgpu from '../src';
 import * as d from '../src/data';
-import tgpu from '../src/experimental';
 import { parseResolved } from './utils/parseResolved';
 
 describe('tgpu.declare', () => {
   it('should inject provided declaration when resolving a function', () => {
-    const declaration = tgpu.declare(
+    const declaration = tgpu['~unstable'].declare(
       '@group(0) @binding(0) var<uniform> val: f32;',
     );
 
-    const fn = tgpu
+    const fn = tgpu['~unstable']
       .fn([])
       .does(`() {
         // do nothing
@@ -28,11 +28,11 @@ describe('tgpu.declare', () => {
   });
 
   it('should replace declaration statement in raw wgsl', () => {
-    const declaration = tgpu.declare(
+    const declaration = tgpu['~unstable'].declare(
       '@group(0) @binding(0) var<uniform> val: f32;',
     );
 
-    const fn = tgpu
+    const fn = tgpu['~unstable']
       .fn([])
       .does(`() {
         declaration
@@ -51,16 +51,16 @@ describe('tgpu.declare', () => {
   });
 
   it('should inject all provided declarations', () => {
-    const fn = tgpu
+    const fn = tgpu['~unstable']
       .fn([])
       .does(`() {
         // do nothing
       }`)
       .$uses({
-        extraDeclaration1: tgpu.declare(
+        extraDeclaration1: tgpu['~unstable'].declare(
           '@group(0) @binding(0) var<uniform> val: f32;',
         ),
-        extraDeclaration2: tgpu.declare(`
+        extraDeclaration2: tgpu['~unstable'].declare(`
           struct Output {
             x: u32,
           }`),
@@ -81,17 +81,17 @@ describe('tgpu.declare', () => {
   });
 
   it('should replace nested declarations', () => {
-    const declaration = tgpu
+    const declaration = tgpu['~unstable']
       .declare('@group(0) @binding(0) var<uniform> val: f32;')
       .$uses({
-        nestedDeclaration: tgpu.declare(
+        nestedDeclaration: tgpu['~unstable'].declare(
           `struct Output {
               x: u32,
             }`,
         ),
       });
 
-    const fn = tgpu
+    const fn = tgpu['~unstable']
       .fn([])
       .does(`() {
         // do nothing
@@ -117,11 +117,11 @@ describe('tgpu.declare', () => {
       x: d.u32,
     });
 
-    const declaration = tgpu
+    const declaration = tgpu['~unstable']
       .declare('@group(0) @binding(0) var<uniform> val: Output;')
       .$uses({ Output });
 
-    const fn = tgpu
+    const fn = tgpu['~unstable']
       .fn([])
       .does(`() {
         // do nothing
@@ -143,11 +143,11 @@ describe('tgpu.declare', () => {
   });
 
   it('works with tgsl functions', () => {
-    const declaration = tgpu.declare(
+    const declaration = tgpu['~unstable'].declare(
       '@group(0) @binding(0) var<uniform> val: f32;',
     );
 
-    const main = tgpu
+    const main = tgpu['~unstable']
       .fn([], d.f32)
       .does(() => {
         declaration;

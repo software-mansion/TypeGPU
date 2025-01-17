@@ -1,4 +1,13 @@
 import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
+import tgpu, {
+  type TgpuBindGroupLayout,
+  type TgpuBufferUniform,
+  type TgpuBufferReadonly,
+  type TgpuBufferMutable,
+  type TgpuWriteonlyTexture,
+  type TgpuSampledTexture,
+  type TgpuMutableTexture,
+} from '../src';
 import {
   type F32,
   type TgpuArray,
@@ -12,15 +21,6 @@ import {
   u32,
   vec3f,
 } from '../src/data';
-import tgpu, {
-  type TgpuBindGroupLayout,
-  type TgpuBufferUniform,
-  type TgpuBufferReadonly,
-  type TgpuBufferMutable,
-  type TgpuWriteonlyTexture,
-  type TgpuSampledTexture,
-  type TgpuMutableTexture,
-} from '../src/experimental';
 import './utils/webgpuGlobals';
 import { parse } from 'tgpu-wgsl-parser';
 import { comparisonSampler, sampler } from '../src/core/sampler/sampler';
@@ -30,7 +30,6 @@ import {
   type TgpuLayoutComparisonSampler,
   type TgpuLayoutSampler,
   type UnwrapRuntimeConstructor,
-  bindGroupLayout,
 } from '../src/tgpuBindGroupLayout';
 import { it } from './utils/extendedIt';
 
@@ -39,7 +38,7 @@ const DEFAULT_READONLY_VISIBILITY_FLAGS =
 
 describe('TgpuBindGroupLayout', () => {
   it('infers the bound type of a uniform entry', () => {
-    const layout = bindGroupLayout({
+    const layout = tgpu.bindGroupLayout({
       position: { uniform: vec3f },
     });
 
@@ -49,7 +48,7 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('infers the bound type of a readonly storage entry', () => {
-    const layout = bindGroupLayout({
+    const layout = tgpu.bindGroupLayout({
       a: { storage: vec3f },
       b: { storage: vec3f, access: 'readonly' },
     });
@@ -61,7 +60,7 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('infers the bound type of a mutable storage entry', () => {
-    const layout = bindGroupLayout({
+    const layout = tgpu.bindGroupLayout({
       a: { storage: vec3f, access: 'mutable' },
     });
 
@@ -71,7 +70,7 @@ describe('TgpuBindGroupLayout', () => {
   });
 
   it('works for entries passed as functions returning TgpuData', ({ root }) => {
-    const layout = bindGroupLayout({
+    const layout = tgpu.bindGroupLayout({
       a: {
         storage: (arrayLength: number) => arrayOf(u32, arrayLength),
         access: 'mutable',
@@ -79,7 +78,7 @@ describe('TgpuBindGroupLayout', () => {
       b: { storage: (arrayLength: number) => arrayOf(vec3f, arrayLength) },
     });
 
-    bindGroupLayout({
+    tgpu.bindGroupLayout({
       // @ts-expect-error
       c: { uniform: (arrayLength: number) => arrayOf(vec3f, arrayLength) },
     });

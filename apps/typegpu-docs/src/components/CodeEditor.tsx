@@ -63,8 +63,8 @@ function handleEditorWillMount(monaco: Monaco) {
     ...tsCompilerOptions,
     paths: {
       typegpu: ['typegpu/dist/index.d.ts'],
-      'typegpu/experimental': ['typegpu/dist/experimental/index.d.ts'],
       'typegpu/data': ['typegpu/dist/data/index.d.ts'],
+      'typegpu/std': ['typegpu/dist/std/index.d.ts'],
     },
   });
 }

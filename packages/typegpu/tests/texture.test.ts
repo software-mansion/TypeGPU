@@ -8,8 +8,9 @@ import type {
 } from '../src/core/texture/texture';
 import type { Render, Sampled } from '../src/core/texture/usageExtension';
 import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../src/data';
-import tgpu, { StrictNameRegistry } from '../src/experimental';
 import './utils/webgpuGlobals';
+import tgpu from '../src';
+import { StrictNameRegistry } from '../src/nameRegistry';
 import { it } from './utils/extendedIt';
 
 describe('TgpuTexture', () => {

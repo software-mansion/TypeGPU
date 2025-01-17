@@ -91,7 +91,6 @@ export function cross<T extends v3f | v3i | v3u>(a: T, b: T): T {
 }
 
 /**
- *
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#dot-builtin
  */

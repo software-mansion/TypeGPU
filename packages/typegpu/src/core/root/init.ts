@@ -177,7 +177,12 @@ interface Disposable {
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a root can interact via GPU buffers.
  */
-class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
+class TgpuRootImpl
+  extends WithBindingImpl
+  implements TgpuRoot, ExperimentalTgpuRoot
+{
+  '~unstable': Omit<ExperimentalTgpuRoot, keyof TgpuRoot>;
+
   private _disposables: Disposable[] = [];
 
   private _unwrappedBindGroupLayouts = new WeakMemo(
@@ -196,6 +201,19 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
     private readonly _ownDevice: boolean,
   ) {
     super(() => this, []);
+
+    this['~unstable'] = {
+      nameRegistry: this.nameRegistry,
+      commandEncoder: this.commandEncoder,
+
+      createTexture: this.createTexture.bind(this),
+
+      with: this.with.bind(this),
+      withCompute: this.withCompute.bind(this),
+      withVertex: this.withVertex.bind(this),
+
+      flush: this.flush.bind(this),
+    };
   }
 
   get commandEncoder() {
@@ -213,6 +231,30 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer);
     this._disposables.push(buffer);
     return buffer;
+  }
+
+  createBindGroup<
+    Entries extends Record<string, TgpuLayoutEntry | null> = Record<
+      string,
+      TgpuLayoutEntry | null
+    >,
+  >(
+    layout: TgpuBindGroupLayout<Entries>,
+    entries: {
+      [K in keyof Entries]: LayoutEntryToInput<Entries[K]>;
+    },
+  ) {
+    return new TgpuBindGroupImpl(layout, entries);
+  }
+
+  destroy() {
+    for (const disposable of this._disposables) {
+      disposable.destroy();
+    }
+
+    if (this._ownDevice) {
+      this.device.destroy();
+    }
   }
 
   createTexture<
@@ -251,30 +293,6 @@ class TgpuRootImpl extends WithBindingImpl implements ExperimentalTgpuRoot {
     this._disposables.push(texture);
     // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
     return texture as any;
-  }
-
-  createBindGroup<
-    Entries extends Record<string, TgpuLayoutEntry | null> = Record<
-      string,
-      TgpuLayoutEntry | null
-    >,
-  >(
-    layout: TgpuBindGroupLayout<Entries>,
-    entries: {
-      [K in keyof Entries]: LayoutEntryToInput<Entries[K]>;
-    },
-  ) {
-    return new TgpuBindGroupImpl(layout, entries);
-  }
-
-  destroy() {
-    for (const disposable of this._disposables) {
-      disposable.destroy();
-    }
-
-    if (this._ownDevice) {
-      this.device.destroy();
-    }
   }
 
   unwrap(resource: TgpuComputePipeline): GPUComputePipeline;
