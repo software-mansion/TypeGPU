@@ -115,4 +115,51 @@ describe('TGSL tgpu.fn function', () => {
 
     expect(actual).toEqual(expected);
   });
+
+  it('resolves deeply nested structs', () => {
+    const A = struct({
+      b: f32,
+    }).$name('A');
+
+    const B = struct({
+      a: A,
+      c: f32,
+    }).$name('B');
+
+    const C = struct({
+      b: B,
+      a: A,
+    }).$name('C');
+
+    const pureConfusion = tgpu['~unstable']
+      .fn([], A)
+      .does(() => {
+        return C({ a: A({ b: 3 }), b: B({ a: A({ b: 4 }), c: 5 }) }).a;
+      })
+      .$name('pure_confusion');
+
+    const actual = parseResolved({ pureConfusion });
+
+    const expected = parse(`
+      struct A {
+        b: f32,
+      }
+
+      struct B {
+        a: A,
+        c: f32,
+      }
+
+      struct C {
+        b: B,
+        a: A,
+      }
+
+      fn pure_confusion() -> A {
+        return C(B(A(4), 5), A(3)).a;
+      }
+    `);
+
+    expect(actual).toEqual(expected);
+  });
 });
