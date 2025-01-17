@@ -113,9 +113,6 @@ describe('TGSL tgpu.fn function', () => {
       }
     `);
 
-    console.log(actual);
-    console.log(expected);
-
     expect(actual).toEqual(expected);
   });
 });

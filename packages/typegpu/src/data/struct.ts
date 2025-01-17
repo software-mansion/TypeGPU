@@ -18,12 +18,8 @@ import type { AnyWgslData, BaseWgslData, WgslStruct } from './wgslTypes';
 export interface TgpuStruct<TProps extends Record<string, BaseWgslData>>
   extends WgslStruct<TProps>,
     TgpuNamable {
-  readonly '~exotic': WgslStruct<ExoticRecord<TProps>>;
+  readonly '~exotic': WgslStruct<TProps>;
 }
-
-export type NativeStruct<TProps extends Record<string, AnyWgslData>> =
-  TgpuStruct<Prettify<TProps>> &
-    ((props: InferRecord<TProps>) => InferRecord<TProps>);
 
 /**
  * Creates a struct schema that can be used to construct GPU buffers.
@@ -38,40 +34,37 @@ export type NativeStruct<TProps extends Record<string, AnyWgslData>> =
  */
 export const struct = <TProps extends Record<string, AnyWgslData>>(
   props: TProps,
-): NativeStruct<ExoticRecord<TProps>> => {
-  const struct = new TgpuStructImpl(props as ExoticRecord<TProps>);
-  const construct = (props: InferRecord<ExoticRecord<TProps>>) => props;
+): TgpuStruct<Prettify<ExoticRecord<TProps>>> => {
+  const struct = <T>(props: T) => {
+    return props;
+  };
+  Object.setPrototypeOf(struct, TgpuStructImpl);
+  struct.propTypes = props as ExoticRecord<TProps>;
+  struct['~repr'] = {} as InferRecord<TProps>;
+  struct['~exotic'] = {} as WgslStruct<ExoticRecord<TProps>>;
 
-  return Object.assign(construct, struct);
+  return struct as unknown as TgpuStruct<Prettify<ExoticRecord<TProps>>>;
 };
 
 // --------------
 // Implementation
 // --------------
 
-class TgpuStructImpl<TProps extends Record<string, AnyWgslData>>
-  implements TgpuStruct<TProps>
-{
-  private _label: string | undefined;
+const TgpuStructImpl = {
+  type: 'struct',
 
-  public readonly type = 'struct';
-  /** Type-token, not available at runtime */
-  public readonly '~repr'!: InferRecord<TProps>;
-  /** Type-token, not available at runtime */
-  public readonly '~exotic'!: WgslStruct<ExoticRecord<TProps>>;
-
-  constructor(public readonly propTypes: TProps) {}
-
-  get label() {
+  get label(): string | undefined {
+    //@ts-ignore
     return this._label;
-  }
+  },
 
   $name(label: string) {
+    //@ts-ignore
     this._label = label;
     return this;
-  }
+  },
 
-  toString() {
+  toString(): string {
     return `struct:${this.label ?? '<unnamed>'}`;
-  }
-}
+  },
+};

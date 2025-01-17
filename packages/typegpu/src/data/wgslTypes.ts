@@ -675,6 +675,7 @@ export interface Mat4x4f {
 export interface WgslStruct<
   TProps extends Record<string, BaseWgslData> = Record<string, BaseWgslData>,
 > {
+  <T>(props: T): T;
   readonly type: 'struct';
   readonly label?: string | undefined;
   readonly propTypes: TProps;
