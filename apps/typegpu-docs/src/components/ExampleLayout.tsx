@@ -99,7 +99,7 @@ function SideMenu() {
       />
 
       <div className="flex justify-between text-tameplum-800 text-xs">
-        <div>&copy; 2024 Software Mansion S.A.</div>
+        <div>&copy; {new Date().getFullYear()} Software Mansion S.A.</div>
         <div className="flex gap-3 items-center">
           <a
             href="https://discord.gg/8jpfgDqPcM"
