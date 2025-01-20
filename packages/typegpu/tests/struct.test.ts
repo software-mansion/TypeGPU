@@ -237,4 +237,14 @@ describe('struct', () => {
     expect(obj).toEqual({ x: 1, y: vec3u(1, 2, 3) });
     expectTypeOf(obj).toEqualTypeOf<{ x: number; y: v3u }>();
   });
+
+  it('cannot be called with invalid properties', () => {
+    const TestStruct = struct({
+      x: u32,
+      y: vec3u,
+    });
+
+    // @ts-expect-error
+    TestStruct({ x: 1, z: 2 });
+  });
 });
