@@ -52,14 +52,13 @@ export const struct = <TProps extends Record<string, AnyWgslData>>(
 
 const TgpuStructImpl = {
   type: 'struct',
+  _label: undefined as string | undefined,
 
   get label(): string | undefined {
-    //@ts-ignore
     return this._label;
   },
 
   $name(label: string) {
-    //@ts-ignore
     this._label = label;
     return this;
   },
