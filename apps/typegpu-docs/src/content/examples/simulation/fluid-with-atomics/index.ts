@@ -23,9 +23,9 @@ canvas.addEventListener('contextmenu', (event) => {
   }
 });
 
-const MAX_WATER_LEVEL_UNPRESSURIZED = 'u32(0xFF)';
-const MAX_WATER_LEVEL = '((1u << 24) - 1u)';
-const MAX_PRESSURE = '12u';
+const MAX_WATER_LEVEL_UNPRESSURIZED = tgpu['~unstable'].const(d.u32, 0xff);
+const MAX_WATER_LEVEL = tgpu['~unstable'].const(d.u32, (1 << 24) - 1);
+const MAX_PRESSURE = tgpu['~unstable'].const(d.u32, 12);
 
 const options = {
   size: 32,
@@ -116,43 +116,54 @@ const addToCell = tgpu['~unstable']
   .fn([d.u32, d.u32, d.u32])
   .does(/* wgsl */ `(x: u32, y: u32, value: u32) {
     let cell = getCellNext(x, y);
-    let waterLevel = cell & ${MAX_WATER_LEVEL};
-    let newWaterLevel = min(waterLevel + value, ${MAX_WATER_LEVEL});
+    let waterLevel = cell & MAX_WATER_LEVEL;
+    let newWaterLevel = min(waterLevel + value, MAX_WATER_LEVEL);
     atomicAdd(&nextStateData[getIndex(x, y)], newWaterLevel - waterLevel);
   }`)
-  .$uses({ getCellNext, nextStateData: nextStateStorage, getIndex });
+  .$uses({
+    getCellNext,
+    nextStateData: nextStateStorage,
+    getIndex,
+    MAX_WATER_LEVEL,
+  });
 
 const subtractFromCell = tgpu['~unstable']
   .fn([d.u32, d.u32, d.u32])
   .does(/* wgsl */ `(x: u32, y: u32, value: u32) {
     let cell = getCellNext(x, y);
-    let waterLevel = cell & ${MAX_WATER_LEVEL};
+    let waterLevel = cell & MAX_WATER_LEVEL;
     let newWaterLevel = max(waterLevel - min(value, waterLevel), 0u);
     atomicSub(&nextStateData[getIndex(x, y)], waterLevel - newWaterLevel);
   }`)
-  .$uses({ getCellNext, nextStateData: nextStateStorage, getIndex });
+  .$uses({
+    getCellNext,
+    nextStateData: nextStateStorage,
+    getIndex,
+    MAX_WATER_LEVEL,
+  });
 
 const persistFlags = tgpu['~unstable']
   .fn([d.u32, d.u32])
   .does(/* wgsl */ `(x: u32, y: u32) {
     let cell = getCell(x, y);
-    let waterLevel = cell & ${MAX_WATER_LEVEL};
+    let waterLevel = cell & MAX_WATER_LEVEL;
     let flags = cell >> 24;
     updateCell(x, y, (flags << 24) | waterLevel);
   }`)
-  .$uses({ getCell, updateCell });
+  .$uses({ getCell, updateCell, MAX_WATER_LEVEL });
 
 const getStableStateBelow = tgpu['~unstable']
   .fn([d.u32, d.u32], d.u32)
   .does(/* wgsl */ `(upper: u32, lower: u32) -> u32 {
     let totalMass = upper + lower;
-    if (totalMass <= ${MAX_WATER_LEVEL_UNPRESSURIZED}) {
+    if (totalMass <= MAX_WATER_LEVEL_UNPRESSURIZED) {
       return totalMass;
-    } else if (totalMass >= ${MAX_WATER_LEVEL_UNPRESSURIZED} * 2 && upper > lower) {
-      return totalMass/2 + ${MAX_PRESSURE};
+    } else if (totalMass >= MAX_WATER_LEVEL_UNPRESSURIZED * 2 && upper > lower) {
+      return totalMass/2 + MAX_PRESSURE;
     }
-    return ${MAX_WATER_LEVEL_UNPRESSURIZED};
-  }`);
+    return MAX_WATER_LEVEL_UNPRESSURIZED;
+  }`)
+  .$uses({ MAX_PRESSURE, MAX_WATER_LEVEL_UNPRESSURIZED });
 
 const isWall = tgpu['~unstable']
   .fn([d.u32, d.u32], d.bool)
@@ -185,9 +196,9 @@ const isClearCell = tgpu['~unstable']
 const getWaterLevel = tgpu['~unstable']
   .fn([d.u32, d.u32], d.u32)
   .does(/* wgsl */ `(x: u32, y: u32) -> u32 {
-    return getCell(x, y) & ${MAX_WATER_LEVEL};
+    return getCell(x, y) &MAX_WATER_LEVEL;
   }`)
-  .$uses({ getCell });
+  .$uses({ getCell, MAX_WATER_LEVEL });
 
 const checkForFlagsAndBounds = tgpu['~unstable']
   .fn([d.u32, d.u32], d.bool)
