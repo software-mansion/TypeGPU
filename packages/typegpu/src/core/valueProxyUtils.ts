@@ -1,5 +1,9 @@
-import type { Labelled, ResolutionCtx, SelfResolvable } from '../types';
-import { isBufferUsage } from './buffer/bufferUsage';
+import {
+  type Labelled,
+  type ResolutionCtx,
+  type SelfResolvable,
+  isBufferUsage,
+} from '../types';
 import { isAccessor, isDerived, isSlot } from './slot/slotTypes';
 
 export const valueProxyHandler: ProxyHandler<SelfResolvable & Labelled> = {
@@ -23,7 +27,7 @@ export const valueProxyHandler: ProxyHandler<SelfResolvable & Labelled> = {
 
 export function unwrapProxy<T>(value: unknown): T {
   let unwrapped = value;
-  
+
   while (
     isSlot(unwrapped) ||
     isDerived(unwrapped) ||

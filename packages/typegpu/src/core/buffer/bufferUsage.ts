@@ -38,15 +38,6 @@ export interface TgpuBufferReadonly<TData extends BaseWgslData>
 export interface TgpuBufferMutable<TData extends BaseWgslData>
   extends TgpuBufferUsage<TData, 'mutable'> {}
 
-export function isBufferUsage<
-  T extends
-    | TgpuBufferUniform<BaseWgslData>
-    | TgpuBufferReadonly<BaseWgslData>
-    | TgpuBufferMutable<BaseWgslData>,
->(value: T | unknown): value is T {
-  return (value as T)?.resourceType === 'buffer-usage';
-}
-
 // --------------
 // Implementation
 // --------------

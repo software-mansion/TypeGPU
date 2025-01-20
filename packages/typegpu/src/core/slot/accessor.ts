@@ -2,8 +2,12 @@ import type { AnyWgslData } from '../../data';
 import type { Exotic } from '../../data/exotic';
 import { getResolutionCtx } from '../../gpuMode';
 import type { Infer } from '../../shared/repr';
-import type { ResolutionCtx, SelfResolvable } from '../../types';
-import { type TgpuBufferUsage, isBufferUsage } from '../buffer/bufferUsage';
+import {
+  type ResolutionCtx,
+  type SelfResolvable,
+  isBufferUsage,
+} from '../../types';
+import type { TgpuBufferUsage } from '../buffer/bufferUsage';
 import { type TgpuFn, isTgpuFn } from '../function/tgpuFn';
 import { valueProxyHandler } from '../valueProxyUtils';
 import { slot } from './slot';
