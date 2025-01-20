@@ -5,7 +5,7 @@ import type { Infer } from '../../shared/repr';
 import type { ResolutionCtx, SelfResolvable } from '../../types';
 import { type TgpuBufferUsage, isBufferUsage } from '../buffer/bufferUsage';
 import { type TgpuFn, isTgpuFn } from '../function/tgpuFn';
-import { valueProxyHandler } from '../valueProxyHandler';
+import { valueProxyHandler } from '../valueProxyUtils';
 import { slot } from './slot';
 import type { TgpuAccessor, TgpuSlot } from './slotTypes';
 

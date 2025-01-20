@@ -4,7 +4,7 @@ import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
 import type { ResolutionCtx, SelfResolvable } from '../../types';
-import { valueProxyHandler } from '../valueProxyHandler';
+import { valueProxyHandler } from '../valueProxyUtils';
 
 // ----------
 // Public API

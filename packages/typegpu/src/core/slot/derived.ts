@@ -1,6 +1,6 @@
 import { getResolutionCtx } from '../../gpuMode';
 import type { Infer } from '../../shared/repr';
-import { unwrapProxy } from '../valueProxyHandler';
+import { unwrapProxy } from '../valueProxyUtils';
 import type {
   Eventual,
   SlotValuePair,

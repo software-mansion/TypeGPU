@@ -8,7 +8,7 @@ import type {
   ResolutionCtx,
   SelfResolvable,
 } from '../../types';
-import { valueProxyHandler } from '../valueProxyHandler';
+import { valueProxyHandler } from '../valueProxyUtils';
 import { type TgpuBuffer, type Uniform, isUsableAsUniform } from './buffer';
 
 // ----------
