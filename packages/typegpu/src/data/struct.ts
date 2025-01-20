@@ -35,9 +35,7 @@ export interface TgpuStruct<TProps extends Record<string, BaseWgslData>>
 export const struct = <TProps extends Record<string, AnyWgslData>>(
   props: TProps,
 ): TgpuStruct<Prettify<ExoticRecord<TProps>>> => {
-  const struct = <T>(props: T) => {
-    return props;
-  };
+  const struct = <T>(props: T) => props;
   Object.setPrototypeOf(struct, TgpuStructImpl);
   struct.propTypes = props as ExoticRecord<TProps>;
   struct['~repr'] = {} as InferRecord<TProps>;
