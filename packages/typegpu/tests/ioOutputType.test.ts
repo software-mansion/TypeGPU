@@ -1,9 +1,9 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import * as d from '../src/data';
 import {
   type IOLayoutToOutputSchema,
   withLocations,
-} from '../src/experimental';
+} from '../src/core/function/ioOutputType';
+import * as d from '../src/data';
 
 describe('withLocations', () => {
   it("adds location attribute to non-builtin schemas in a record, if they don't have custom location specified", () => {

@@ -97,7 +97,7 @@ export function ExampleView({ example }: Props) {
       <div className="flex flex-col md:grid gap-4 md:grid-cols-[1fr_18.75rem] h-full">
         <div
           className={cs(
-            'flex-1 grid gap-4',
+            'flex-1 grid gap-4 overflow-auto',
             codeEditorShowing ? 'md:grid-rows-2' : '',
           )}
         >
@@ -107,8 +107,10 @@ export function ExampleView({ example }: Props) {
                 scrollbarGutter: 'stable',
               }}
               className={cs(
-                'flex justify-evenly items-center flex-wrap overflow-auto h-full box-border flex-col md:flex-row md:gap-4',
-                codeEditorShowing ? 'md:max-h-[calc(50vh-3rem)]' : '',
+                'flex justify-evenly items-center flex-wrap h-full box-border flex-col md:flex-row md:gap-4',
+                codeEditorShowing
+                  ? 'md:max-h-[calc(50vh-3rem)] md:overflow-auto'
+                  : '',
               )}
             >
               <div ref={exampleHtmlRef} className="contents w-full h-full" />

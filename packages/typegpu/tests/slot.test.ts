@@ -1,11 +1,8 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
+import tgpu from '../src';
 import * as d from '../src/data';
-import tgpu, {
-  MissingSlotValueError,
-  ResolutionError,
-} from '../src/experimental';
-import type { TgpuResolvable } from '../src/types';
+import { MissingSlotValueError, ResolutionError } from '../src/errors';
 import { parseResolved } from './utils/parseResolved';
 
 const RED = 'vec3f(1., 0., 0.)';
@@ -20,13 +17,13 @@ const resolutionRootMock = {
   toString() {
     return '<root>';
   },
-} as TgpuResolvable;
+};
 
 describe('tgpu.slot', () => {
   it('resolves to default value if no value provided', () => {
-    const colorSlot = tgpu.slot(RED).$name('color'); // red by default
+    const colorSlot = tgpu['~unstable'].slot(RED).$name('color'); // red by default
 
-    const getColor = tgpu
+    const getColor = tgpu['~unstable']
       .fn([], d.vec3f)
       .does(/* wgsl */ `() -> vec3f {
         return colorSlot;
@@ -34,7 +31,7 @@ describe('tgpu.slot', () => {
       .$name('getColor')
       .$uses({ colorSlot });
 
-    const actual = parseResolved(getColor);
+    const actual = parseResolved({ getColor });
 
     expect(actual).toEqual(
       parse(/* wgsl */ `
@@ -46,9 +43,9 @@ describe('tgpu.slot', () => {
   });
 
   it('resolves to provided value rather than default value', () => {
-    const colorSlot = tgpu.slot(RED).$name('color'); // red by default
+    const colorSlot = tgpu['~unstable'].slot(RED).$name('color'); // red by default
 
-    const getColor = tgpu
+    const getColor = tgpu['~unstable']
       .fn([], d.vec3f)
       .does(/* wgsl */ `() -> vec3f {
         return colorSlot;
@@ -59,7 +56,7 @@ describe('tgpu.slot', () => {
     // overriding to green
     const getColorWithGreen = getColor.with(colorSlot, GREEN);
 
-    const main = tgpu
+    const main = tgpu['~unstable']
       .fn([])
       .does(`() {
         return getColorWithGreen();
@@ -67,7 +64,7 @@ describe('tgpu.slot', () => {
       .$name('main')
       .$uses({ getColorWithGreen });
 
-    const actual = parseResolved(main);
+    const actual = parseResolved({ main });
     expect(actual).toEqual(
       parse(/* wgsl */ `
       fn getColor() -> vec3f {
@@ -82,9 +79,9 @@ describe('tgpu.slot', () => {
   });
 
   it('resolves to provided value', () => {
-    const colorSlot = tgpu.slot<string>().$name('color'); // no default
+    const colorSlot = tgpu['~unstable'].slot<string>().$name('color'); // no default
 
-    const getColor = tgpu
+    const getColor = tgpu['~unstable']
       .fn([], d.vec3f)
       .does(/* wgsl */ `() {
         return colorSlot;
@@ -95,7 +92,7 @@ describe('tgpu.slot', () => {
     // overriding to green
     const getColorWithGreen = getColor.with(colorSlot, 'vec3f(0., 1., 0.)');
 
-    const main = tgpu
+    const main = tgpu['~unstable']
       .fn([])
       .does(/* wgsl */ `() {
         getColorWithGreen();
@@ -103,7 +100,7 @@ describe('tgpu.slot', () => {
       .$name('main')
       .$uses({ getColorWithGreen });
 
-    const actual = parseResolved(main);
+    const actual = parseResolved({ main });
 
     // should be green
     expect(actual).toEqual(
@@ -120,9 +117,9 @@ describe('tgpu.slot', () => {
   });
 
   it('throws error when no default nor value provided', () => {
-    const colorSlot = tgpu.slot<string>().$name('color');
+    const colorSlot = tgpu['~unstable'].slot<string>().$name('color');
 
-    const getColor = tgpu
+    const getColor = tgpu['~unstable']
       .fn([], d.vec3f)
       .does(`() {
         return colorSlot;
@@ -130,7 +127,9 @@ describe('tgpu.slot', () => {
       .$name('getColor')
       .$uses({ colorSlot });
 
-    expect(() => tgpu.resolve({ input: getColor, names: 'strict' })).toThrow(
+    expect(() =>
+      tgpu.resolve({ externals: { getColor }, names: 'strict' }),
+    ).toThrow(
       new ResolutionError(new MissingSlotValueError(colorSlot), [
         resolutionRootMock,
         getColor,
@@ -139,9 +138,9 @@ describe('tgpu.slot', () => {
   });
 
   it('prefers closer scope', () => {
-    const colorSlot = tgpu.slot<string>().$name('color'); // no default
+    const colorSlot = tgpu['~unstable'].slot<string>().$name('color'); // no default
 
-    const getColor = tgpu
+    const getColor = tgpu['~unstable']
       .fn([], d.vec3f)
       .does(/* wgsl */ `() -> vec3f {
         return colorSlot;
@@ -152,7 +151,7 @@ describe('tgpu.slot', () => {
     const getColorWithRed = getColor.with(colorSlot, RED);
     const getColorWithGreen = getColor.with(colorSlot, GREEN);
 
-    const wrapperFn = tgpu
+    const wrapperFn = tgpu['~unstable']
       .fn([])
       .does(/* wgsl */ `() {
       return getColorWithGreen();
@@ -161,7 +160,7 @@ describe('tgpu.slot', () => {
       .$name('wrapper')
       .with(colorSlot, RED);
 
-    const main = tgpu
+    const main = tgpu['~unstable']
       .fn([])
       .does(/* wgsl */ `() {
         getColorWithRed();
@@ -170,7 +169,7 @@ describe('tgpu.slot', () => {
       .$uses({ getColorWithRed, wrapperFn })
       .$name('main');
 
-    const actual = parseResolved(main);
+    const actual = parseResolved({ main });
 
     const expected = parse(/* wgsl */ `
       fn getColor() -> vec3f {
@@ -195,10 +194,12 @@ describe('tgpu.slot', () => {
   });
 
   it('reuses common nested functions', () => {
-    const sizeSlot = tgpu.slot<1 | 100>().$name('size');
-    const colorSlot = tgpu.slot<typeof RED | typeof GREEN>().$name('color');
+    const sizeSlot = tgpu['~unstable'].slot<1 | 100>().$name('size');
+    const colorSlot = tgpu['~unstable']
+      .slot<typeof RED | typeof GREEN>()
+      .$name('color');
 
-    const getSize = tgpu
+    const getSize = tgpu['~unstable']
       .fn([], d.f32)
       .does(/* wgsl */ `() -> f32 {
         return sizeSlot;
@@ -206,7 +207,7 @@ describe('tgpu.slot', () => {
       .$uses({ sizeSlot })
       .$name('getSize');
 
-    const getColor = tgpu
+    const getColor = tgpu['~unstable']
       .fn([], d.vec3f)
       .does(/* wgsl */ `() -> vec3f {
         return colorSlot;
@@ -214,7 +215,7 @@ describe('tgpu.slot', () => {
       .$uses({ colorSlot })
       .$name('getColor');
 
-    const sizeAndColor = tgpu
+    const sizeAndColor = tgpu['~unstable']
       .fn([])
       .does(`() {
         getSize();
@@ -223,7 +224,7 @@ describe('tgpu.slot', () => {
       .$uses({ getSize, getColor })
       .$name('sizeAndColor');
 
-    const wrapperFn = tgpu
+    const wrapperFn = tgpu['~unstable']
       .fn([])
       .does(`() {
         sizeAndColor();
@@ -244,7 +245,7 @@ describe('tgpu.slot', () => {
       .with(sizeSlot, 100)
       .with(colorSlot, GREEN);
 
-    const main = tgpu
+    const main = tgpu['~unstable']
       .fn([])
       .does(`() {
         wrapperWithSmallRed();
@@ -260,13 +261,13 @@ describe('tgpu.slot', () => {
       })
       .$name('main');
 
-    const actual = parseResolved(main);
+    const actual = parseResolved({ main });
 
     const expected = parse(`
       fn getSize() -> f32 {
         return 1;
       }
-      
+
       fn getColor() -> vec3f {
         return ${RED};
       }
@@ -327,37 +328,41 @@ describe('tgpu.slot', () => {
   });
 
   it('unwraps layers of slots', () => {
-    const slotA = tgpu.slot(1).$name('a');
-    const slotB = tgpu.slot(2).$name('b');
-    const slotC = tgpu.slot(3).$name('c');
-    const slotD = tgpu.slot(4).$name('d');
+    const slotA = tgpu['~unstable'].slot(1).$name('a');
+    const slotB = tgpu['~unstable'].slot(2).$name('b');
+    const slotC = tgpu['~unstable'].slot(3).$name('c');
+    const slotD = tgpu['~unstable'].slot(4).$name('d');
 
-    const fn1 = tgpu
+    const fn1 = tgpu['~unstable']
       .fn([])
       .does('() { let value = slotA; }')
       .$uses({ slotA })
       .$name('fn1');
-    const fn2 = tgpu
+    const fn2 = tgpu['~unstable']
       .fn([])
       .does('() { fn1(); }')
       .$uses({ fn1 })
       .$name('fn2')
       .with(slotC, slotD);
-    const fn3 = tgpu
+    const fn3 = tgpu['~unstable']
       .fn([])
       .does('() { fn2(); }')
       .$uses({ fn2 })
       .$name('fn3')
       .with(slotB, slotC);
-    const fn4 = tgpu
+    const fn4 = tgpu['~unstable']
       .fn([])
       .does('() { fn3(); }')
       .$uses({ fn3 })
       .$name('fn4')
       .with(slotA, slotB);
-    const main = tgpu.fn([]).does('() { fn4(); }').$uses({ fn4 }).$name('main');
+    const main = tgpu['~unstable']
+      .fn([])
+      .does('() { fn4(); }')
+      .$uses({ fn4 })
+      .$name('main');
 
-    const actual = parseResolved(main);
+    const actual = parseResolved({ main });
     const expected = parse(/* wgsl */ `
       fn fn1() { let value = 4; }
       fn fn2() { fn1(); }

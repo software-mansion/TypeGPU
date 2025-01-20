@@ -176,7 +176,7 @@ describe('TgpuBuffer', () => {
   it('should restrict the usage to Vertex given loose data', ({ root }) => {
     expect(() => {
       const buffer = root
-        .createBuffer(d.looseStruct({ a: d.unorm16x2, b: d.snorm8x2 }))
+        .createBuffer(d.unstruct({ a: d.unorm16x2, b: d.snorm8x2 }))
         // @ts-expect-error
         .$usage('storage');
     }).toThrow();

@@ -23,7 +23,7 @@ export interface TgpuStruct<TProps extends Record<string, BaseWgslData>>
 
 /**
  * Creates a struct schema that can be used to construct GPU buffers.
- * Ensures proper alignment and padding of properties (as opposed to a `d.looseStruct` schema).
+ * Ensures proper alignment and padding of properties (as opposed to a `d.unstruct` schema).
  * The order of members matches the passed in properties object.
  *
  * @example
@@ -63,5 +63,9 @@ class TgpuStructImpl<TProps extends Record<string, AnyWgslData>>
   $name(label: string) {
     this._label = label;
     return this;
+  }
+
+  toString() {
+    return `struct:${this.label ?? '<unnamed>'}`;
   }
 }

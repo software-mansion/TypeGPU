@@ -1,3 +1,5 @@
+import { inGPUMode } from '../gpuMode';
+import type { SelfResolvable } from '../types';
 import { type VecKind, vec2f, vec3f, vec4f } from './vector';
 import type {
   Mat2x2f,
@@ -52,6 +54,10 @@ function createMatSchema<
   };
 
   const construct = (...args: (number | ColumnType)[]): ValueType => {
+    if (inGPUMode()) {
+      return `${MatSchema.type}(${args.join(', ')})` as unknown as ValueType;
+    }
+
     const elements: number[] = [];
 
     for (const arg of args) {
@@ -78,9 +84,12 @@ function createMatSchema<
   } & MatConstructor<ValueType, ColumnType>;
 }
 
-abstract class mat2x2Impl<TColumn extends v2f> implements mat2x2<TColumn> {
+abstract class mat2x2Impl<TColumn extends v2f>
+  implements mat2x2<TColumn>, SelfResolvable
+{
   public readonly columns: readonly [TColumn, TColumn];
   public readonly length = 4;
+  public abstract readonly kind: string;
   [n: number]: number;
 
   constructor(...elements: number[]) {
@@ -123,6 +132,12 @@ abstract class mat2x2Impl<TColumn extends v2f> implements mat2x2<TColumn> {
   set [3](value: number) {
     this.columns[1].y = value;
   }
+
+  '~resolve'(): string {
+    return `${this.kind}(${Array.from({ length: this.length })
+      .map((_, i) => this[i])
+      .join(', ')})`;
+  }
 }
 
 class mat2x2fImpl extends mat2x2Impl<v2f> implements m2x2f {
@@ -133,9 +148,12 @@ class mat2x2fImpl extends mat2x2Impl<v2f> implements m2x2f {
   }
 }
 
-abstract class mat3x3Impl<TColumn extends v3f> implements mat3x3<TColumn> {
+abstract class mat3x3Impl<TColumn extends v3f>
+  implements mat3x3<TColumn>, SelfResolvable
+{
   public readonly columns: readonly [TColumn, TColumn, TColumn];
   public readonly length = 12;
+  public abstract readonly kind: string;
   [n: number]: number;
 
   constructor(...elements: number[]) {
@@ -249,6 +267,10 @@ abstract class mat3x3Impl<TColumn extends v3f> implements mat3x3<TColumn> {
   }
 
   set [11](_: number) {}
+
+  '~resolve'(): string {
+    return `${this.kind}(${this[0]}, ${this[1]}, ${this[2]}, ${this[4]}, ${this[5]}, ${this[6]}, ${this[8]}, ${this[9]}, ${this[10]})`;
+  }
 }
 
 class mat3x3fImpl extends mat3x3Impl<v3f> implements m3x3f {
@@ -258,8 +280,11 @@ class mat3x3fImpl extends mat3x3Impl<v3f> implements m3x3f {
   }
 }
 
-abstract class mat4x4Impl<TColumn extends v4f> implements mat4x4<TColumn> {
+abstract class mat4x4Impl<TColumn extends v4f>
+  implements mat4x4<TColumn>, SelfResolvable
+{
   public readonly columns: readonly [TColumn, TColumn, TColumn, TColumn];
+  public abstract readonly kind: string;
 
   constructor(...elements: number[]) {
     this.columns = [
@@ -421,6 +446,12 @@ abstract class mat4x4Impl<TColumn extends v4f> implements mat4x4<TColumn> {
 
   set [15](value: number) {
     this.columns[3].w = value;
+  }
+
+  '~resolve'(): string {
+    return `${this.kind}(${Array.from({ length: this.length })
+      .map((_, i) => this[i])
+      .join(', ')})`;
   }
 }
 

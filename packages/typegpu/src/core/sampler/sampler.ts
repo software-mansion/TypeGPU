@@ -4,7 +4,7 @@
 
 import type { TgpuNamable } from '../../namable';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout';
-import type { ResolutionCtx, TgpuResolvable } from '../../types';
+import type { ResolutionCtx, SelfResolvable } from '../../types';
 
 export interface SamplerProps {
   addressModeU?: GPUAddressMode;
@@ -91,7 +91,7 @@ export interface ComparisonSamplerProps {
   maxAnisotropy?: number;
 }
 
-export interface TgpuSampler extends TgpuResolvable {
+export interface TgpuSampler {
   readonly resourceType: 'sampler';
 }
 
@@ -131,7 +131,7 @@ export function isComparisonSampler(
 // Implementation
 // --------------
 
-export class TgpuLaidOutSamplerImpl implements TgpuSampler {
+export class TgpuLaidOutSamplerImpl implements TgpuSampler, SelfResolvable {
   public readonly resourceType = 'sampler';
 
   constructor(private readonly _membership: LayoutMembership) {}
@@ -140,7 +140,7 @@ export class TgpuLaidOutSamplerImpl implements TgpuSampler {
     return this._membership.key;
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this.label);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
@@ -150,9 +150,15 @@ export class TgpuLaidOutSamplerImpl implements TgpuSampler {
 
     return id;
   }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+  }
 }
 
-export class TgpuLaidOutComparisonSamplerImpl implements TgpuComparisonSampler {
+export class TgpuLaidOutComparisonSamplerImpl
+  implements TgpuComparisonSampler, SelfResolvable
+{
   public readonly resourceType = 'sampler-comparison';
 
   constructor(private readonly _membership: LayoutMembership) {}
@@ -161,7 +167,7 @@ export class TgpuLaidOutComparisonSamplerImpl implements TgpuComparisonSampler {
     return this._membership.key;
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this.label);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
@@ -171,9 +177,13 @@ export class TgpuLaidOutComparisonSamplerImpl implements TgpuComparisonSampler {
 
     return id;
   }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+  }
 }
 
-class TgpuFixedSamplerImpl implements TgpuFixedSampler {
+class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
   public readonly resourceType = 'sampler';
 
   private _label: string | undefined;
@@ -196,7 +206,7 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler {
     return this;
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this._label);
 
     const { group, binding } = ctx.allocateFixedEntry(
@@ -212,9 +222,15 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler {
 
     return id;
   }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+  }
 }
 
-class TgpuFixedComparisonSamplerImpl implements TgpuFixedComparisonSampler {
+class TgpuFixedComparisonSamplerImpl
+  implements TgpuFixedComparisonSampler, SelfResolvable
+{
   public readonly resourceType = 'sampler-comparison';
 
   private _label: string | undefined;
@@ -230,7 +246,7 @@ class TgpuFixedComparisonSamplerImpl implements TgpuFixedComparisonSampler {
     return this;
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this.label);
     const { group, binding } = ctx.allocateFixedEntry(
       { sampler: 'comparison' },
@@ -242,5 +258,9 @@ class TgpuFixedComparisonSamplerImpl implements TgpuFixedComparisonSampler {
     );
 
     return id;
+  }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
   }
 }

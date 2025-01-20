@@ -1,7 +1,8 @@
 import type { OmitBuiltins } from '../../builtin';
 import { isWgslStruct } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
-import type { ResolutionCtx, TgpuResolvable } from '../../types';
+import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
+import { addReturnTypeToExternals } from '../resolve/externals';
 import { createFnCore } from './fnCore';
 import type {
   ExoticIO,
@@ -47,8 +48,7 @@ export interface TgpuVertexFnShell<
 export interface TgpuVertexFn<
   VertexIn extends IOLayout = IOLayout,
   VertexOut extends IOLayout = IOLayout,
-> extends TgpuResolvable,
-    TgpuNamable {
+> extends TgpuNamable {
   readonly shell: TgpuVertexFnShell<VertexIn, VertexOut>;
   readonly outputType: IOLayoutToOutputSchema<VertexOut>;
 
@@ -94,10 +94,15 @@ function createVertexFn(
   shell: TgpuVertexFnShell<IOLayout, IOLayout>,
   implementation: Implementation,
 ): TgpuVertexFn<IOLayout, IOLayout> {
-  type This = TgpuVertexFn<IOLayout, IOLayout>;
+  type This = TgpuVertexFn<IOLayout, IOLayout> & Labelled & SelfResolvable;
 
   const core = createFnCore(shell, implementation);
-  const outputType = createOutputType(core, implementation, shell.returnType);
+  const outputType = createOutputType(shell.returnType);
+  if (typeof implementation === 'string') {
+    addReturnTypeToExternals(implementation, outputType, (externals) =>
+      core.applyExternals(externals),
+    );
+  }
 
   return {
     shell,
@@ -120,8 +125,12 @@ function createVertexFn(
       return this;
     },
 
-    resolve(ctx: ResolutionCtx): string {
+    '~resolve'(ctx: ResolutionCtx): string {
       return core.resolve(ctx, '@vertex ');
     },
-  };
+
+    toString() {
+      return `vertexFn:${this.label ?? '<unnamed>'}`;
+    },
+  } as This;
 }

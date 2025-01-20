@@ -1,35 +1,19 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
+import tgpu from '../src';
+import type { TgpuBufferReadonly } from '../src/core/buffer/bufferUsage';
 import * as d from '../src/data';
-import tgpu, { type TgpuBufferReadonly } from '../src/experimental';
 import type { ResolutionCtx } from '../src/types';
 
 describe('tgpu resolve', () => {
-  it('should resolve a string (identity)', () => {
-    const mockCode = 'fn foo() { var v: Gradient; }';
-    const resolved = tgpu.resolve({ input: mockCode });
-    expect(parse(resolved)).toEqual(parse(mockCode));
-  });
-
-  it('should resolve a list of strings', () => {
-    const mockCode = [
-      'fn foo() { var v: Gradient; }',
-      'fn bar() { var v: Particle; }',
-    ];
-    const resolved = tgpu.resolve({ input: mockCode });
-    expect(parse(resolved)).toEqual(
-      parse('fn foo() { var v: Gradient; } fn bar() { var v: Particle; }'),
-    );
-  });
-
   it('should resolve an external struct', () => {
     const Gradient = d.struct({
       from: d.vec3f,
       to: d.vec3f,
     });
     const resolved = tgpu.resolve({
-      input: 'fn foo() { var g: Gradient; }',
-      extraDependencies: {
+      template: 'fn foo() { var g: Gradient; }',
+      externals: {
         Gradient,
       },
       names: 'strict',
@@ -49,7 +33,7 @@ describe('tgpu resolve', () => {
         return this;
       },
 
-      resolve(ctx: ResolutionCtx) {
+      '~resolve'(ctx: ResolutionCtx) {
         ctx.addDeclaration(
           '@group(0) @binding(0) var<uniform> intensity_1: f32;',
         );
@@ -57,18 +41,18 @@ describe('tgpu resolve', () => {
       },
     } as unknown as TgpuBufferReadonly<d.F32>;
 
-    const fragment1 = tgpu
+    const fragment1 = tgpu['~unstable']
       .fragmentFn({}, d.vec4f)
       .does(() => d.vec4f(0, intensity.value, 0, 1))
       .$name('fragment1');
 
-    const fragment2 = tgpu
+    const fragment2 = tgpu['~unstable']
       .fragmentFn({}, d.vec4f)
       .does(() => d.vec4f(intensity.value, 0, 0, 1))
       .$name('fragment2');
 
     const resolved = tgpu.resolve({
-      input: [fragment1, fragment2],
+      externals: { fragment1, fragment2 },
       names: 'strict',
     });
 
@@ -92,7 +76,7 @@ describe('tgpu resolve', () => {
       health: d.f32,
     });
 
-    const getPlayerHealth = tgpu
+    const getPlayerHealth = tgpu['~unstable']
       .fn([PlayerData], d.f32)
       .does((pInfo) => {
         return pInfo.health;
@@ -108,8 +92,8 @@ describe('tgpu resolve', () => {
       }`;
 
     const resolved = tgpu.resolve({
-      input: [shaderLogic],
-      extraDependencies: {
+      template: shaderLogic,
+      externals: {
         PlayerData,
         getPlayerHealth,
       },
@@ -144,7 +128,7 @@ describe('tgpu resolve', () => {
       range: d.vec2f,
     });
 
-    const random = tgpu
+    const random = tgpu['~unstable']
       .fn([], d.f32)
       .does(/* wgsl */ `() -> f32 {
         var r: Random;
@@ -163,8 +147,8 @@ describe('tgpu resolve', () => {
       }`;
 
     const resolved = tgpu.resolve({
-      input: [shaderLogic],
-      extraDependencies: { randomTest: random },
+      template: shaderLogic,
+      externals: { randomTest: random },
       names: 'strict',
     });
 
@@ -189,6 +173,132 @@ describe('tgpu resolve', () => {
           var value = randomTest();
         }
       `),
+    );
+  });
+
+  it('should resolve object externals and replace their usages in template', () => {
+    const getColor = tgpu['~unstable']
+      .fn([], d.vec3f)
+      .does(`() {
+        let color = vec3f();
+        return color;
+      }`)
+      .$name('get_color');
+
+    const layout = tgpu.bindGroupLayout({
+      intensity: { uniform: d.u32 },
+    });
+
+    const resolved = tgpu.resolve({
+      template: `
+      fn main () {
+        let c = functions.getColor() * layout.bound.intensity;
+      }`,
+      externals: {
+        layout,
+        functions: { getColor },
+      },
+      names: 'strict',
+    });
+
+    expect(parse(resolved)).toEqual(
+      parse(`
+      @group(0) @binding(0) var<uniform> intensity: u32;
+
+      fn get_color() {
+        let color = vec3f();
+        return color;
+      }
+
+      fn main() {
+        let c = get_color() * intensity;
+      }
+    `),
+    );
+  });
+
+  it('should resolve only used object externals and ignore non-existing', () => {
+    const getColor = tgpu['~unstable']
+      .fn([], d.vec3f)
+      .does(`() {
+        let color = vec3f();
+        return color;
+      }`)
+      .$name('get_color');
+
+    const getIntensity = tgpu['~unstable']
+      .fn([], d.vec3f)
+      .does(`() {
+        return 1;
+      }`)
+      .$name('get_intensity');
+
+    const layout = tgpu.bindGroupLayout({
+      intensity: { uniform: d.u32 },
+    });
+
+    const resolved = tgpu.resolve({
+      template: `
+      fn main () {
+        let c = functions.getColor() * layout.bound.intensity;
+        let i = function.getWater();
+      }`,
+      externals: {
+        layout,
+        functions: { getColor, getIntensity },
+      },
+      names: 'strict',
+    });
+
+    expect(resolved).toContain('let i = function.getWater();');
+    expect(resolved).not.toContain('get_intensity');
+  });
+
+  it('should resolve deeply nested objects', () => {
+    expect(
+      parse(
+        tgpu.resolve({
+          template: 'fn main () { let x = a.b.c.d + a.e; }',
+          externals: {
+            a: {
+              b: {
+                c: {
+                  d: 2,
+                },
+              },
+              e: 3,
+            },
+          },
+          names: 'strict',
+        }),
+      ),
+    ).toEqual(parse('fn main() { let x = 2 + 3; }'));
+  });
+
+  it('should treat dot as a regular character in regex when resolving object access externals and not a wildcard', () => {
+    expect(
+      parse(
+        tgpu.resolve({
+          template: `
+        fn main () {
+          let x = a.b;
+          let y = axb;
+        }`,
+          externals: {
+            a: {
+              b: 3,
+            },
+            axb: 2,
+          },
+          names: 'strict',
+        }),
+      ),
+    ).toEqual(
+      parse(`
+        fn main () {
+          let x = 3;
+          let y = 2;
+        }`),
     );
   });
 });

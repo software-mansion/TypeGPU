@@ -167,14 +167,6 @@ export async function executeExample(
       if (moduleKey === 'typegpu') {
         return await import('typegpu');
       }
-      if (moduleKey === 'typegpu/experimental') {
-        if (!tags?.includes('experimental')) {
-          throw new Error(
-            'Examples not labeled as experimental cannot import experimental modules.',
-          );
-        }
-        return await import('typegpu/experimental');
-      }
       if (moduleKey === 'typegpu/data') {
         return await import('typegpu/data');
       }

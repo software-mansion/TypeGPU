@@ -1,5 +1,5 @@
 import type { InferRecord } from '../shared/repr';
-import type { LooseStruct } from './dataTypes';
+import type { Unstruct } from './dataTypes';
 import type { ExoticRecord } from './exotic';
 import type { BaseWgslData } from './wgslTypes';
 
@@ -17,27 +17,27 @@ import type { BaseWgslData } from './wgslTypes';
  * via `d.align` function.
  *
  * @example
- * const CircleStruct = d.looseStruct({ radius: d.f32, pos: d.vec3f }); // packed struct with no padding
+ * const CircleStruct = d.unstruct({ radius: d.f32, pos: d.vec3f }); // packed struct with no padding
  *
  * @example
- * const CircleStruct = d.looseStruct({ radius: d.f32, pos: d.align(16, d.vec3f) });
+ * const CircleStruct = d.unstruct({ radius: d.f32, pos: d.align(16, d.vec3f) });
  *
  * @param properties Record with `string` keys and `TgpuData` or `TgpuLooseData` values,
  * each entry describing one struct member.
  */
-export const looseStruct = <TProps extends Record<string, BaseWgslData>>(
+export const unstruct = <TProps extends Record<string, BaseWgslData>>(
   properties: TProps,
-): LooseStruct<ExoticRecord<TProps>> =>
-  new LooseStructImpl(properties as ExoticRecord<TProps>);
+): Unstruct<ExoticRecord<TProps>> =>
+  new UnstructImpl(properties as ExoticRecord<TProps>);
 
 // --------------
 // Implementation
 // --------------
 
-class LooseStructImpl<TProps extends Record<string, BaseWgslData>>
-  implements LooseStruct<TProps>
+class UnstructImpl<TProps extends Record<string, BaseWgslData>>
+  implements Unstruct<TProps>
 {
-  public readonly type = 'loose-struct';
+  public readonly type = 'unstruct';
   /** Type-token, not available at runtime */
   public readonly '~repr'!: InferRecord<TProps>;
 

@@ -1,11 +1,11 @@
 import { roundUp } from '../mathUtils';
 import { alignmentOf, customAlignmentOf } from './alignmentOf';
-import type { AnyData, LooseStruct, LooseTypeLiteral } from './dataTypes';
+import type { AnyData, LooseTypeLiteral, Unstruct } from './dataTypes';
 import {
   getCustomSize,
-  isLooseArray,
+  isDisarray,
   isLooseDecorated,
-  isLooseStruct,
+  isUnstruct,
 } from './dataTypes';
 import type { BaseWgslData, WgslStruct, WgslTypeLiteral } from './wgslTypes';
 import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes';
@@ -93,7 +93,7 @@ function sizeOfStruct(struct: WgslStruct) {
   return roundUp(size, alignmentOf(struct));
 }
 
-function sizeOfLooseStruct(data: LooseStruct) {
+function sizeOfUnstruct(data: Unstruct) {
   let size = 0;
 
   for (const property of Object.values(data.propTypes)) {
@@ -116,8 +116,8 @@ function computeSize(data: object): number {
     return sizeOfStruct(data);
   }
 
-  if (isLooseStruct(data)) {
-    return sizeOfLooseStruct(data);
+  if (isUnstruct(data)) {
+    return sizeOfUnstruct(data);
   }
 
   if (isWgslArray(data)) {
@@ -130,7 +130,7 @@ function computeSize(data: object): number {
     return stride * data.elementCount;
   }
 
-  if (isLooseArray(data)) {
+  if (isDisarray(data)) {
     const alignment = customAlignmentOf(data.elementType);
     const stride = roundUp(sizeOf(data.elementType), alignment);
     return stride * data.elementCount;

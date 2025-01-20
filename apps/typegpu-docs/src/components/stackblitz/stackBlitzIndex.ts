@@ -53,7 +53,11 @@ const controlsPanel = document.createElement('div');
 controlsPanel.style.display = 'grid';
 controlsPanel.style.gridTemplateColumns = '1fr 1fr';
 controlsPanel.style.gap = '1rem';
-body.appendChild(controlsPanel);
+if (body.firstChild) {
+  body.insertBefore(controlsPanel, body.firstChild);
+} else {
+  body.appendChild(controlsPanel);
+}
 
 // Create example controls
 for (const controls of Object.values(example)) {

@@ -56,8 +56,8 @@ export default defineConfig({
         'typegpu/dist/index.d.ts?raw': '../../packages/typegpu/dist/index.d.ts',
         'typegpu/dist/data/index.d.ts?raw':
           '../../packages/typegpu/dist/data/index.d.ts',
-        'typegpu/dist/experimental/index.d.ts?raw':
-          '../../packages/typegpu/dist/experimental/index.d.ts',
+        'typegpu/dist/std/index.d.ts?raw':
+          '../../packages/typegpu/dist/std/index.d.ts',
       }),
     ],
   },
@@ -72,6 +72,7 @@ export default defineConfig({
             entryPoints: [
               '../../packages/typegpu/src/index.ts',
               '../../packages/typegpu/src/data/index.ts',
+              '../../packages/typegpu/src/std/index.ts',
             ],
             tsconfig: '../../packages/typegpu/tsconfig.json',
             typeDoc: {
@@ -109,7 +110,6 @@ export default defineConfig({
             {
               label: 'Roots',
               slug: 'fundamentals/roots',
-              badge: { text: '0.2' },
             },
             {
               label: 'Buffers',
@@ -122,7 +122,11 @@ export default defineConfig({
             {
               label: 'Bind Groups',
               slug: 'fundamentals/bind-groups',
-              badge: { text: '0.2' },
+            },
+            {
+              label: 'Resolve',
+              slug: 'fundamentals/resolve',
+              badge: { text: '0.3' },
             },
             DEV && {
               label: 'Slots',
@@ -145,7 +149,7 @@ export default defineConfig({
         {
           label: 'Integration',
           items: stripFalsy([
-            DEV && {
+            {
               label: 'WebGPU Interoperability',
               slug: 'integration/webgpu-interoperability',
               badge: { text: 'new' },
@@ -153,7 +157,6 @@ export default defineConfig({
             {
               label: 'Working with wgpu-matrix',
               slug: 'integration/working-with-wgpu-matrix',
-              badge: { text: 'new' },
             },
           ]),
         },
@@ -163,7 +166,6 @@ export default defineConfig({
             {
               label: 'Generator CLI',
               slug: 'tooling/tgpu-gen',
-              badge: { text: 'new' },
             },
           ]),
         },

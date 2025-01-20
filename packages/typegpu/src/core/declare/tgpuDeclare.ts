@@ -1,4 +1,4 @@
-import type { ResolutionCtx, TgpuResolvable } from '../../types';
+import type { ResolutionCtx, SelfResolvable } from '../../types';
 import {
   type ExternalMap,
   applyExternals,
@@ -13,7 +13,7 @@ import {
  * Extra declaration that shall be included in final WGSL code,
  * when resolving objects that use it.
  */
-export interface TgpuDeclare extends TgpuResolvable {
+export interface TgpuDeclare {
   $uses(dependencyMap: Record<string, unknown>): this;
 }
 
@@ -32,7 +32,7 @@ export function declare(declaration: string): TgpuDeclare {
 // Implementation
 // --------------
 
-class TgpuDeclareImpl implements TgpuDeclare {
+class TgpuDeclareImpl implements TgpuDeclare, SelfResolvable {
   private externalsToApply: ExternalMap[] = [];
 
   constructor(private declaration: string) {}
@@ -42,7 +42,7 @@ class TgpuDeclareImpl implements TgpuDeclare {
     return this;
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     const externalMap: ExternalMap = {};
 
     for (const externals of this.externalsToApply) {
@@ -57,5 +57,9 @@ class TgpuDeclareImpl implements TgpuDeclare {
 
     ctx.addDeclaration(replacedDeclaration);
     return '';
+  }
+
+  toString() {
+    return `declare: ${this.declaration}`;
   }
 }

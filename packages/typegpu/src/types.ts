@@ -1,11 +1,31 @@
 import type { Block } from 'tinyest';
+import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
+import type { TgpuConst } from './core/constant/tgpuConstant';
+import type { TgpuDeclare } from './core/declare/tgpuDeclare';
+import type { TgpuComputeFn } from './core/function/tgpuComputeFn';
+import type { TgpuFn } from './core/function/tgpuFn';
+import type { TgpuFragmentFn } from './core/function/tgpuFragmentFn';
+import type { TgpuVertexFn } from './core/function/tgpuVertexFn';
+import type { TgpuComputePipeline } from './core/pipeline/computePipeline';
+import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline';
+import type { TgpuSampler } from './core/sampler/sampler';
 import {
   type Eventual,
   type SlotValuePair,
+  type TgpuAccessor,
   isDerived,
   isSlot,
 } from './core/slot/slotTypes';
-import type { AnyWgslData, BaseWgslData } from './data/wgslTypes';
+import type { TgpuExternalTexture } from './core/texture/externalTexture';
+import type { TgpuAnyTextureView, TgpuTexture } from './core/texture/texture';
+import type { TgpuVar } from './core/variable/tgpuVariable';
+import {
+  type AnyMatInstance,
+  type AnyVecInstance,
+  type AnyWgslData,
+  type BaseWgslData,
+  isWgslData,
+} from './data/wgslTypes';
 import type { NameRegistry } from './nameRegistry';
 import type { Infer } from './shared/repr';
 import type {
@@ -13,9 +33,30 @@ import type {
   TgpuLayoutEntry,
 } from './tgpuBindGroupLayout';
 
-export type Wgsl = Eventual<
-  string | number | boolean | TgpuResolvable | AnyWgslData
->;
+export type ResolvableObject =
+  | SelfResolvable
+  | TgpuBufferUsage
+  | TgpuConst
+  | TgpuDeclare
+  | TgpuFn
+  | TgpuComputeFn
+  | TgpuFragmentFn
+  | TgpuComputePipeline
+  | TgpuRenderPipeline
+  | TgpuVertexFn
+  | TgpuSampler
+  | TgpuAccessor
+  | TgpuExternalTexture
+  | TgpuTexture
+  | TgpuAnyTextureView
+  | TgpuVar
+  | AnyVecInstance
+  | AnyMatInstance
+  | AnyWgslData
+  // biome-ignore lint/suspicious/noExplicitAny: <has to be more permissive than unknown>
+  | TgpuFn<any, any>;
+
+export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
 
 export const UnknownData = Symbol('Unknown data type');
 export type UnknownData = typeof UnknownData;
@@ -70,7 +111,7 @@ export interface ResolutionCtx {
    */
   unwrap<T>(eventual: Eventual<T>): T;
 
-  resolve(item: Wgsl): string;
+  resolve(item: unknown): string;
   resolveValue<T extends BaseWgslData>(value: Infer<T>, schema: T): string;
 
   transpileFn(fn: string): {
@@ -84,17 +125,22 @@ export interface ResolutionCtx {
   };
 }
 
-export interface TgpuResolvable {
-  readonly label?: string | undefined;
-  resolve(ctx: ResolutionCtx): string;
+/**
+ * Houses a method '~resolve` that returns a code string
+ * representing it, as opposed to offloading the resolution
+ * to another mechanism.
+ */
+export interface SelfResolvable {
+  '~resolve'(ctx: ResolutionCtx): string;
+  toString(): string;
 }
 
-export function isResolvable(value: unknown): value is TgpuResolvable {
-  return (
-    !!value &&
-    (typeof value === 'object' || typeof value === 'function') &&
-    'resolve' in value
-  );
+export interface Labelled {
+  readonly label?: string | undefined;
+}
+
+export function isSelfResolvable(value: unknown): value is SelfResolvable {
+  return typeof (value as SelfResolvable)?.['~resolve'] === 'function';
 }
 
 export function isWgsl(value: unknown): value is Wgsl {
@@ -102,7 +148,8 @@ export function isWgsl(value: unknown): value is Wgsl {
     typeof value === 'number' ||
     typeof value === 'boolean' ||
     typeof value === 'string' ||
-    isResolvable(value) ||
+    isSelfResolvable(value) ||
+    isWgslData(value) ||
     isSlot(value) ||
     isDerived(value)
   );

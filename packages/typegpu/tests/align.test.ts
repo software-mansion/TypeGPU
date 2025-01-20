@@ -1,33 +1,19 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import {
-  type Align,
-  type Decorated,
-  type LooseArray,
-  type LooseDecorated,
-  type Vec3f,
-  type WgslArray,
-  align,
-  arrayOf,
-  f32,
-  isLooseData,
-  looseArrayOf,
-  sizeOf,
-  struct,
-  u32,
-  vec3f,
-} from '../src/data';
+import tgpu from '../src';
+import * as d from '../src/data';
 import { alignmentOf } from '../src/data/alignmentOf';
-import tgpu from '../src/experimental';
 
 describe('d.align', () => {
   it('adds @align attribute for custom aligned struct members', () => {
-    const s1 = struct({
-      a: u32,
-      b: align(16, u32),
-      c: u32,
-    }).$name('s1');
+    const s1 = d
+      .struct({
+        a: d.u32,
+        b: d.align(16, d.u32),
+        c: d.u32,
+      })
+      .$name('s1');
 
-    expect(tgpu.resolve({ input: s1, names: 'strict' })).toContain(
+    expect(tgpu.resolve({ externals: { s1 }, names: 'strict' })).toContain(
       '@align(16) b: u32,',
     );
   });
@@ -35,20 +21,20 @@ describe('d.align', () => {
   it('changes alignment of a struct containing aligned member', () => {
     expect(
       alignmentOf(
-        struct({
-          a: u32,
-          b: u32,
-          c: u32,
+        d.struct({
+          a: d.u32,
+          b: d.u32,
+          c: d.u32,
         }),
       ),
     ).toEqual(4);
 
     expect(
       alignmentOf(
-        struct({
-          a: u32,
-          b: align(16, u32),
-          c: u32,
+        d.struct({
+          a: d.u32,
+          b: d.align(16, d.u32),
+          c: d.u32,
         }),
       ),
     ).toEqual(16);
@@ -56,57 +42,57 @@ describe('d.align', () => {
 
   it('changes size of a struct containing aligned member', () => {
     expect(
-      sizeOf(
-        struct({
-          a: u32,
-          b: u32,
-          c: u32,
+      d.sizeOf(
+        d.struct({
+          a: d.u32,
+          b: d.u32,
+          c: d.u32,
         }),
       ),
     ).toEqual(12);
 
     expect(
-      sizeOf(
-        struct({
-          a: u32,
-          b: align(16, u32),
-          c: u32,
+      d.sizeOf(
+        d.struct({
+          a: d.u32,
+          b: d.align(16, d.u32),
+          c: d.u32,
         }),
       ),
     ).toEqual(32);
 
     expect(
-      sizeOf(
-        struct({
-          a: u32,
-          b: align(16, u32),
-          c: align(16, u32),
+      d.sizeOf(
+        d.struct({
+          a: d.u32,
+          b: d.align(16, d.u32),
+          c: d.align(16, d.u32),
         }),
       ),
     ).toEqual(48);
 
     // nested
     expect(
-      sizeOf(
-        struct({
-          a: u32,
-          b: struct({
-            c: f32,
-            d: align(16, f32),
+      d.sizeOf(
+        d.struct({
+          a: d.u32,
+          b: d.struct({
+            c: d.f32,
+            d: d.align(16, d.f32),
           }),
         }),
       ),
     ).toEqual(48);
 
     expect(
-      sizeOf(
-        struct({
-          a: u32,
-          b: align(
+      d.sizeOf(
+        d.struct({
+          a: d.u32,
+          b: d.align(
             32,
-            struct({
-              c: f32,
-              d: align(16, f32),
+            d.struct({
+              c: d.f32,
+              d: d.align(16, d.f32),
             }),
           ),
         }),
@@ -115,42 +101,42 @@ describe('d.align', () => {
   });
 
   it('throws for invalid align values', () => {
-    expect(() => align(11, u32)).toThrow();
-    expect(() => align(8, vec3f)).toThrow();
-    expect(() => align(-2, u32)).toThrow();
+    expect(() => d.align(11, d.u32)).toThrow();
+    expect(() => d.align(8, d.vec3f)).toThrow();
+    expect(() => d.align(-2, d.u32)).toThrow();
   });
 
   it('allows aligning loose data without losing the looseness information', () => {
-    const array = arrayOf(vec3f, 2);
-    const alignedArray = align(16, array);
+    const array = d.arrayOf(d.vec3f, 2);
+    const alignedArray = d.align(16, array);
 
-    const looseArray = looseArrayOf(vec3f, 2);
-    const alignedLooseArray = align(16, looseArray);
+    const disarray = d.disarrayOf(d.vec3f, 2);
+    const alignedDisarray = d.align(16, disarray);
 
     expectTypeOf(alignedArray).toEqualTypeOf<
-      Decorated<WgslArray<Vec3f>, [Align<16>]>
+      d.Decorated<d.WgslArray<d.Vec3f>, [d.Align<16>]>
     >();
-    expect(isLooseData(alignedArray)).toEqual(false);
+    expect(d.isLooseData(alignedArray)).toEqual(false);
 
-    expectTypeOf(alignedLooseArray).toEqualTypeOf<
-      LooseDecorated<LooseArray<Vec3f>, [Align<16>]>
+    expectTypeOf(alignedDisarray).toEqualTypeOf<
+      d.LooseDecorated<d.Disarray<d.Vec3f>, [d.Align<16>]>
     >();
-    expect(isLooseData(alignedLooseArray)).toEqual(true);
+    expect(d.isLooseData(alignedDisarray)).toEqual(true);
   });
 
   it('does not allow aligned loose data as non-loose struct members', () => {
-    const array = arrayOf(u32, 2);
-    const alignedArray = align(16, array);
+    const array = d.arrayOf(d.u32, 2);
+    const alignedArray = d.align(16, array);
 
-    const looseArray = looseArrayOf(u32, 2);
-    const alignedLooseArray = align(16, looseArray);
+    const disarray = d.disarrayOf(d.u32, 2);
+    const alignedDisarray = d.align(16, disarray);
 
-    struct({
+    d.struct({
       // @ts-expect-error
-      a: alignedLooseArray,
+      a: alignedDisarray,
     });
 
-    struct({
+    d.struct({
       a: alignedArray,
     });
   });

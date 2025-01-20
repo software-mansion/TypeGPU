@@ -1,31 +1,31 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, vi } from 'vitest';
+import tgpu from '../src';
 import * as d from '../src/data';
-import tgpu from '../src/experimental';
 import { it } from './utils/extendedIt';
 import { parseResolved } from './utils/parseResolved';
 
 describe('TgpuDerived', () => {
   it('memoizes results of transitive "derived"', () => {
-    const foo = tgpu.slot<number>(1).$name('foo');
+    const foo = tgpu['~unstable'].slot<number>(1).$name('foo');
     const computeDouble = vi.fn(() => {
       return foo.value * 2;
     });
-    const double = tgpu.derived(computeDouble);
-    const a = tgpu.derived(() => double.value + 1);
-    const b = tgpu.derived(() => double.value + 2);
+    const double = tgpu['~unstable'].derived(computeDouble);
+    const a = tgpu['~unstable'].derived(() => double.value + 1);
+    const b = tgpu['~unstable'].derived(() => double.value + 2);
 
-    const main = tgpu
+    const main = tgpu['~unstable']
       .fn([], d.f32)
       .does(() => {
         return a.value + b.value;
       })
       .$name('main');
 
-    expect(parseResolved(main)).toEqual(
+    expect(parseResolved({ main })).toEqual(
       parse(`
       fn main() -> f32 {
-        return 3 + 4;
+        return (3 + 4);
       }
     `),
     );
@@ -34,10 +34,10 @@ describe('TgpuDerived', () => {
   });
 
   it('memoizes functions using derived values', () => {
-    const foo = tgpu.slot<number>().$name('foo');
-    const double = tgpu.derived(() => foo.value * 2);
+    const foo = tgpu['~unstable'].slot<number>().$name('foo');
+    const double = tgpu['~unstable'].derived(() => foo.value * 2);
 
-    const getDouble = tgpu
+    const getDouble = tgpu['~unstable']
       .fn([], d.f32)
       .does(() => {
         return double.value;
@@ -48,7 +48,7 @@ describe('TgpuDerived', () => {
     const b = getDouble.with(foo, 2); // the same as `a`
     const c = getDouble.with(foo, 4);
 
-    const main = tgpu
+    const main = tgpu['~unstable']
       .fn([])
       .does(() => {
         a();
@@ -57,7 +57,7 @@ describe('TgpuDerived', () => {
       })
       .$name('main');
 
-    expect(parseResolved(main)).toEqual(
+    expect(parseResolved({ main })).toEqual(
       parse(`
       fn getDouble() -> f32 {
         return 4;
@@ -77,12 +77,12 @@ describe('TgpuDerived', () => {
   });
 
   it('can use slot values from its surrounding context', () => {
-    const gridSizeSlot = tgpu.slot<number>().$name('gridSize');
+    const gridSizeSlot = tgpu['~unstable'].slot<number>().$name('gridSize');
 
-    const fill = tgpu.derived(() => {
+    const fill = tgpu['~unstable'].derived(() => {
       const gridSize = gridSizeSlot.value;
 
-      return tgpu
+      return tgpu['~unstable']
         .fn([d.arrayOf(d.f32, gridSize)])
         .does((arr) => {
           // do something
@@ -95,7 +95,7 @@ describe('TgpuDerived', () => {
 
     const exampleArray: number[] = [];
 
-    const main = tgpu
+    const main = tgpu['~unstable']
       .fn([])
       .does(() => {
         fill.value(exampleArray);
@@ -105,7 +105,7 @@ describe('TgpuDerived', () => {
       .with(gridSizeSlot, 1)
       .$name('main');
 
-    expect(parseResolved(main)).toEqual(
+    expect(parseResolved({ main })).toEqual(
       parse(/* wgsl */ `
       fn fill(arr: array<f32, 1>) {}
       fn fill_1(arr: array<f32, 2>) {}

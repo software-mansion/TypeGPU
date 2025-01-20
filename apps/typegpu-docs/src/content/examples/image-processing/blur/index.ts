@@ -1,8 +1,8 @@
 // Original implementation:
 // https://webgpu.github.io/webgpu-samples/?sample=imageBlur
 
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
 
 const tileDim = 128;
 const batch = [4, 4];
@@ -146,7 +146,7 @@ const response = await fetch('/TypeGPU/plums.jpg');
 const imageBitmap = await createImageBitmap(await response.blob());
 
 const [srcWidth, srcHeight] = [imageBitmap.width, imageBitmap.height];
-const imageTexture = root
+const imageTexture = root['~unstable']
   .createTexture({
     size: [srcWidth, srcHeight],
     format: 'rgba8unorm',
@@ -160,7 +160,7 @@ device.queue.copyExternalImageToTexture(
 );
 
 const textures = [0, 1].map(() => {
-  return root
+  return root['~unstable']
     .createTexture({
       size: [srcWidth, srcHeight],
       format: 'rgba8unorm',
@@ -180,8 +180,8 @@ const computePipeline = device.createComputePipeline({
   compute: {
     module: device.createShaderModule({
       code: tgpu.resolve({
-        input: computeShaderCode,
-        extraDependencies: {
+        template: computeShaderCode,
+        externals: {
           Settings,
           ...uniformLayout.bound,
           ...ioLayout.bound,
@@ -235,8 +235,8 @@ const renderPassDescriptor: GPURenderPassDescriptor = {
 
 const renderShaderModule = device.createShaderModule({
   code: tgpu.resolve({
-    input: renderShaderCode,
-    extraDependencies: { VertexOutput, ...renderLayout.bound },
+    template: renderShaderCode,
+    externals: { VertexOutput, ...renderLayout.bound },
   }),
 });
 
@@ -297,7 +297,7 @@ function render() {
 
 render();
 
-// #region Example Controls & Cleanup
+// #region Example controls & Cleanup
 
 export const controls = {
   'filter size': {

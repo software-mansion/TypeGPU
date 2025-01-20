@@ -8,8 +8,7 @@ import {
 } from '../../data/attributes';
 import { getCustomLocation, isData } from '../../data/dataTypes';
 import type { BaseWgslData, Location } from '../../data/wgslTypes';
-import type { FnCore } from './fnCore';
-import type { IOData, IOLayout, IORecord, Implementation } from './fnTypes';
+import type { IOData, IOLayout, IORecord } from './fnTypes';
 
 export type WithLocations<T extends IORecord> = {
   [Key in keyof T]: IsBuiltin<T[Key]> extends true
@@ -52,28 +51,10 @@ export function withLocations<T extends IOData>(
   );
 }
 
-export function createOutputType<T extends IOData>(
-  core: FnCore,
-  implementation: Implementation,
-  returnType: IOLayout<T>,
-) {
-  const Output: IOLayoutToOutputSchema<IOLayout<T>> = (
+export function createOutputType<T extends IOData>(returnType: IOLayout<T>) {
+  return (
     isData(returnType)
       ? location(0, returnType)
       : struct(withLocations(returnType) as Record<string, T>)
   ) as IOLayoutToOutputSchema<IOLayout<T>>;
-
-  if (typeof implementation === 'string') {
-    const outputName = implementation
-      .match(/->(?<output>.*?){/s)
-      ?.groups?.output?.trim();
-
-    if (outputName && !/\s/g.test(outputName)) {
-      core.applyExternals({
-        [outputName]: Output,
-      });
-    }
-  }
-
-  return Output;
 }

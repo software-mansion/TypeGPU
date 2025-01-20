@@ -18,6 +18,7 @@ import MilestoneBindGroupsBadge from '../components/roadmap/MilestoneBindGroupsB
 import MilestoneFunctionsBadge from '../components/roadmap/MilestoneFunctionsBadge.astro';
 import MilestonePipelinesBadge from '../components/roadmap/MilestonePipelinesBadge.astro';
 import MilestoneCodeBadge from '../components/roadmap/MilestoneCodeBadge.astro';
+import MilestoneLinkerBadge from '../components/roadmap/MilestoneLinkerBadge.astro';
 
 const showcaseVideoResolution = [2048, 1200];
 ---
@@ -187,6 +188,12 @@ const showcaseVideoResolution = [2048, 1200];
               data structures we can ensure that the provided resources are what
               the shader expects.
             </RoadMapStep>
+            <RoadMapStep title="Linker" releasedIn="0.3">
+              <MilestoneLinkerBadge slot="visual" />
+              No more duplication between JS and GPU object definitions. A dedicated
+              linker combines WGSL code with TypeGPU objects it references, producing
+              shader code ready to be used in pipelines.
+            </RoadMapStep>
             <RoadMapStep title="Functions">
               <MilestoneFunctionsBadge slot="visual" />
               By wrapping each function with a "typed shell", they can be moved across
@@ -312,7 +319,7 @@ const showcaseVideoResolution = [2048, 1200];
 
         <div class="flex items-center self-start gap-4 text-grayscale-100">
           <Image src={SwmLogomarkSvg} alt="Software Mansion Logomark" />
-          &copy; 2024 Software Mansion S.A.
+          &copy; {new Date().getFullYear()} Software Mansion S.A.
         </div>
 
         <div class="hidden md:grid">

@@ -38,15 +38,15 @@ const buffer = root
     d.arrayOf(Particle, 100),
     // Initial value
     Array.from({ length: 100 }).map(() => ({
-      position: vec3f(Math.random(), 2, Math.random()),
-      velocity: vec3f(0, 9.8, 0),
+      position: d.vec3f(Math.random(), 2, Math.random()),
+      velocity: d.vec3f(0, 9.8, 0),
       health: 100,
     })),
   );
 // ^? TgpuBuffer<TgpuArray<TgpuStruct<{
-//      position: Vec3f,
-//      velocity: Vec3f,
-//      health: F32,
+//      position: d.Vec3f,
+//      velocity: d.Vec3f,
+//      health: d.F32,
 //    }>>>
 
 // -
@@ -57,7 +57,7 @@ const buffer = root
 
 // Reading from the buffer
 const value = await buffer.read();
-//    ^? { position: vec3f, velocity: vec3f, health: number }[]
+//    ^? { position: d.vec3f, velocity: d.vec3f, health: number }[]
 
 // Using the value
 console.log(value);
@@ -102,16 +102,32 @@ const buffer = root.createBuffer(d.u32)
 
 ```
 
-import { Code } from '@astrojs/starlight/components';
-
 :::note
 Along with passing the appropriate flags to WebGPU, the methods will also embed type information into the buffer.
 ```ts
-// TgpuBuffer<U32> & Uniform & Storage
-const buffer = root.createBuffer(u32)
+// TgpuBuffer<d.U32> & Uniform & Storage
+const buffer = root.createBuffer(d.u32)
   .$usage('uniform', 'storage');
 ```
 :::
+
+### Additional flags
+
+It is also possible to add any of the `GPUBufferUsage` flags to a typed buffer object, using the `.$addFlags` method.
+Though it shouldn't be necessary in most scenarios as majority of the flags are handled automatically by the library 
+or indirectly through the `.$usage` method.
+
+```ts
+buffer.$addFlags(GPUBufferUsage.QUERY_RESOLVE);
+```
+
+:::note
+Every typed buffer created without providing existing GPU buffer has `COPY_DST` and `COPY_SRC` flags included by default. 
+However once the `MAP_READ` flag is provided, the only other flag set is `COPY_DST`. Similarly when setting `MAP_WRITE` it is paired with `COPY_SRC`.
+:::
+
+Flags can only be added this way if the typed buffer was not created with an existing GPU buffer. 
+If it was, then all flags need to be provided to the existing buffer when constructing it.
 
 ### Initial value
 
@@ -159,7 +175,7 @@ const Particle = d.struct({
 
 const particleBuffer = root.createBuffer(Particle);
 
-// .write(data: { position: vec2f, health: number })
+// .write(data: { position: d.vec2f, health: number })
 particleBuffer.write({
   position: vec2f(1.0, 2.0),
   health: 100,
@@ -172,6 +188,14 @@ If you pass an unmapped buffer, the data will be written to the buffer using `GP
 
 If you passed your own buffer to the `root.createBuffer` function, you need to ensure it has the `GPUBufferUsage.COPY_DST` usage flag if you want to write to it using the `write` method.
 :::
+
+There's also an option to copy value from another typed buffer using the `.copyFrom(buffer)` method, 
+as long as both buffers have a matching data schema.
+
+```ts
+const backupParticleBuffer = root.createBuffer(Particle);
+backupParticleBuffer.copyFrom(particleBuffer);
+```
 
 ## Reading from a buffer
 

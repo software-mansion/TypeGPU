@@ -1,12 +1,20 @@
 export {
+  // ops
   add,
   sub,
   mul,
-  dot,
-  normalize,
-  length,
-  sin,
+  // builtin functions
+  abs,
+  ceil,
+  clamp,
   cos,
-  fract,
   cross,
+  dot,
+  floor,
+  fract,
+  length,
+  max,
+  min,
+  normalize,
+  sin,
 } from './numeric';

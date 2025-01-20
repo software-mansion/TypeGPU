@@ -1,19 +1,19 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
+import tgpu from '../src';
 import { connectAttributesToShader } from '../src/core/vertexLayout/connectAttributesToShader';
 import type { ArrayToContainedAttribs } from '../src/core/vertexLayout/vertexAttribute';
 import * as d from '../src/data';
-import tgpu from '../src/experimental';
 import type { TgpuVertexAttrib } from '../src/shared/vertexFormat';
 
 describe('ArrayToContainedAttribs', () => {
   it('processes a loose array of uint8x2', () => {
-    type Result = ArrayToContainedAttribs<d.LooseArray<d.uint8x2>>;
+    type Result = ArrayToContainedAttribs<d.Disarray<d.uint8x2>>;
 
     expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'uint8x2'>>();
   });
 
   it('processes a loose array of unorm10-10-10-2', () => {
-    type Result = ArrayToContainedAttribs<d.LooseArray<d.unorm10_10_10_2>>;
+    type Result = ArrayToContainedAttribs<d.Disarray<d.unorm10_10_10_2>>;
 
     expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'unorm10-10-10-2'>>();
   });
@@ -25,14 +25,14 @@ describe('ArrayToContainedAttribs', () => {
   });
 
   it('processes a loose array of f32s', () => {
-    type Result = ArrayToContainedAttribs<d.LooseArray<d.F32>>;
+    type Result = ArrayToContainedAttribs<d.Disarray<d.F32>>;
 
     expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'float32'>>();
   });
 
   it('processes a loose array of structs', () => {
     type Result = ArrayToContainedAttribs<
-      d.LooseArray<d.WgslStruct<{ a: d.F32; b: d.F32 }>>
+      d.Disarray<d.WgslStruct<{ a: d.F32; b: d.F32 }>>
     >;
 
     expectTypeOf<Result>().toEqualTypeOf<{
@@ -43,7 +43,7 @@ describe('ArrayToContainedAttribs', () => {
 
   it('processes a loose array of loose struct', () => {
     type Result = ArrayToContainedAttribs<
-      d.LooseArray<d.LooseStruct<{ a: d.F32; b: d.F32 }>>
+      d.Disarray<d.Unstruct<{ a: d.F32; b: d.F32 }>>
     >;
 
     expectTypeOf<Result>().toEqualTypeOf<{
@@ -54,7 +54,7 @@ describe('ArrayToContainedAttribs', () => {
 
   it('processes an array of structs', () => {
     type Result = ArrayToContainedAttribs<
-      d.LooseArray<d.LooseStruct<{ a: d.F32; b: d.F32 }>>
+      d.Disarray<d.Unstruct<{ a: d.F32; b: d.F32 }>>
     >;
 
     expectTypeOf<Result>().toEqualTypeOf<{
@@ -70,7 +70,7 @@ describe('ArrayToContainedAttribs', () => {
   });
 
   it('processes a loose array of snorm16x2', () => {
-    type Result = ArrayToContainedAttribs<d.LooseArray<d.snorm16x2>>;
+    type Result = ArrayToContainedAttribs<d.Disarray<d.snorm16x2>>;
 
     expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'snorm16x2'>>();
   });
@@ -78,8 +78,8 @@ describe('ArrayToContainedAttribs', () => {
 
 describe('tgpu.vertexLayout', () => {
   it('creates attributes from loose array of vec3f', () => {
-    const vertexLayout = tgpu.vertexLayout((count: number) =>
-      d.looseArrayOf(d.vec3f, count),
+    const vertexLayout = tgpu['~unstable'].vertexLayout((count: number) =>
+      d.disarrayOf(d.vec3f, count),
     );
 
     expect(vertexLayout.stride).toEqual(12);
@@ -97,8 +97,8 @@ describe('tgpu.vertexLayout', () => {
       c: d.f32, // + 4
     });
 
-    const vertexLayout = tgpu.vertexLayout((count: number) =>
-      d.looseArrayOf(VertexData, count),
+    const vertexLayout = tgpu['~unstable'].vertexLayout((count: number) =>
+      d.disarrayOf(VertexData, count),
     );
 
     expect(vertexLayout.stride).toEqual(32);
@@ -122,14 +122,14 @@ describe('tgpu.vertexLayout', () => {
   });
 
   it('creates attributes from loose array of loose structs', () => {
-    const VertexData = d.looseStruct({
+    const VertexData = d.unstruct({
       a: d.u32, // +4
       b: d.vec3f, // + 12
       c: d.f32, // + 4
     });
 
-    const vertexLayout = tgpu.vertexLayout((count: number) =>
-      d.looseArrayOf(VertexData, count),
+    const vertexLayout = tgpu['~unstable'].vertexLayout((count: number) =>
+      d.disarrayOf(VertexData, count),
     );
 
     expect(vertexLayout.stride).toEqual(20);
@@ -153,8 +153,8 @@ describe('tgpu.vertexLayout', () => {
   });
 
   it('creates attributes from loose array with f16 variants', () => {
-    const vertexLayout = tgpu.vertexLayout((count: number) =>
-      d.looseArrayOf(d.float16x4, count),
+    const vertexLayout = tgpu['~unstable'].vertexLayout((count: number) =>
+      d.disarrayOf(d.float16x4, count),
     );
 
     expect(vertexLayout.stride).toEqual(8);
@@ -169,7 +169,7 @@ describe('tgpu.vertexLayout', () => {
 describe('connectAttributesToShader', () => {
   it('connects a single f32 attribute', () => {
     const shaderInputLayout = d.f32;
-    const layout = tgpu.vertexLayout((n) => d.arrayOf(d.f32, n));
+    const layout = tgpu['~unstable'].vertexLayout((n) => d.arrayOf(d.f32, n));
     const attrib = layout.attrib;
 
     expect(connectAttributesToShader(shaderInputLayout, attrib)).toEqual({
@@ -192,7 +192,9 @@ describe('connectAttributesToShader', () => {
 
   it('connects a single vec4f attribute (with custom shader location)', () => {
     const shaderInputLayout = d.location(3, d.vec4f);
-    const layout = tgpu.vertexLayout((n) => d.looseArrayOf(d.unorm16x4, n));
+    const layout = tgpu['~unstable'].vertexLayout((n) =>
+      d.disarrayOf(d.unorm16x4, n),
+    );
     const attrib = layout.attrib;
 
     expect(connectAttributesToShader(shaderInputLayout, attrib)).toEqual({
@@ -220,9 +222,9 @@ describe('connectAttributesToShader', () => {
       c: d.u32 /* should get @location(4) automatically */,
     };
 
-    const layout = tgpu.vertexLayout((n) =>
-      d.looseArrayOf(
-        d.looseStruct({
+    const layout = tgpu['~unstable'].vertexLayout((n) =>
+      d.disarrayOf(
+        d.unstruct({
           alpha: d.f32, // 4 bytes
           beta: d.unorm8x2, // 2 bytes
           gamma: d.u32, // 4 bytes
@@ -274,9 +276,9 @@ describe('connectAttributesToShader', () => {
       c: d.u32 /* should get @location(4) automatically */,
     };
 
-    const alphaBetaLayout = tgpu.vertexLayout((n) =>
-      d.looseArrayOf(
-        d.looseStruct({
+    const alphaBetaLayout = tgpu['~unstable'].vertexLayout((n) =>
+      d.disarrayOf(
+        d.unstruct({
           alpha: d.f32, // 4 bytes
           beta: d.unorm8x2, // 2 bytes
         }),
@@ -284,7 +286,9 @@ describe('connectAttributesToShader', () => {
       ),
     );
 
-    const gammaLayout = tgpu.vertexLayout((n) => d.arrayOf(d.u32, n));
+    const gammaLayout = tgpu['~unstable'].vertexLayout((n) =>
+      d.arrayOf(d.u32, n),
+    );
 
     const result = connectAttributesToShader(shaderInputLayout, {
       // purposefully out of order, which should be controlled by the shader input.
@@ -329,7 +333,9 @@ describe('connectAttributesToShader', () => {
 
   it('connects a single vec4h attribute', () => {
     const shaderInputLayout = d.vec4h;
-    const layout = tgpu.vertexLayout((n) => d.looseArrayOf(d.float16x4, n));
+    const layout = tgpu['~unstable'].vertexLayout((n) =>
+      d.disarrayOf(d.float16x4, n),
+    );
     const attrib = layout.attrib;
 
     expect(connectAttributesToShader(shaderInputLayout, attrib)).toEqual({
@@ -358,9 +364,9 @@ describe('connectAttributesToShader', () => {
       d: d.f32,
     };
 
-    const layout = tgpu.vertexLayout((n) =>
-      d.looseArrayOf(
-        d.looseStruct({
+    const layout = tgpu['~unstable'].vertexLayout((n) =>
+      d.disarrayOf(
+        d.unstruct({
           alpha: d.f16, // 2 bytes
           beta: d.float16x2, // 4 bytes
           gamma: d.u32, // 4 bytes
@@ -413,7 +419,7 @@ describe('connectAttributesToShader', () => {
 
   it('throws when trying to use type that has no attribute representation', () => {
     expect(() =>
-      tgpu.vertexLayout((n) => d.looseArrayOf(d.vec3h, n)),
+      tgpu['~unstable'].vertexLayout((n) => d.disarrayOf(d.vec3h, n)),
     ).toThrow();
   });
 });

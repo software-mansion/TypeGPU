@@ -481,6 +481,20 @@ export interface v4u extends NumberArrayView, Swizzle4<v2u, v3u, v4u> {
   w: number;
 }
 
+export type AnyVecInstance =
+  | v2f
+  | v2h
+  | v2i
+  | v2u
+  | v3f
+  | v3h
+  | v3i
+  | v3u
+  | v4f
+  | v4h
+  | v4i
+  | v4u;
+
 export interface matBase<TColumn> extends NumberArrayView {
   readonly columns: readonly TColumn[];
 }
@@ -491,6 +505,7 @@ export interface matBase<TColumn> extends NumberArrayView {
  */
 export interface mat2x2<TColumn> extends matBase<TColumn> {
   readonly length: 4;
+  readonly kind: string;
   [n: number]: number;
 }
 
@@ -508,6 +523,7 @@ export interface m2x2f extends mat2x2<v2f> {
  */
 export interface mat3x3<TColumn> extends matBase<TColumn> {
   readonly length: 12;
+  readonly kind: string;
   [n: number]: number;
 }
 
@@ -525,6 +541,7 @@ export interface m3x3f extends mat3x3<v3f> {
  */
 export interface mat4x4<TColumn> extends matBase<TColumn> {
   readonly length: 16;
+  readonly kind: string;
   [n: number]: number;
 }
 
@@ -535,6 +552,8 @@ export interface mat4x4<TColumn> extends matBase<TColumn> {
 export interface m4x4f extends mat4x4<v4f> {
   readonly kind: 'mat4x4f';
 }
+
+export type AnyMatInstance = m2x2f | m3x3f | m4x4f;
 
 // #endregion
 
@@ -711,6 +730,18 @@ export interface Location<T extends number> {
   readonly value: T;
 }
 
+export type PerspectiveOrLinearInterpolationType =
+  `${'perspective' | 'linear'}${'' | ', center' | ', centroid' | ', sample'}`;
+export type FlatInterpolationType = `flat${'' | ', first' | ', either'}`;
+export type InterpolationType =
+  | PerspectiveOrLinearInterpolationType
+  | FlatInterpolationType;
+
+export interface Interpolate<T extends InterpolationType> {
+  readonly type: '@interpolate';
+  readonly value: T;
+}
+
 export interface Builtin<T extends string> {
   readonly type: '@builtin';
   readonly value: T;
@@ -759,6 +790,27 @@ export const wgslTypeLiterals = [
 
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
 
+export type PerspectiveOrLinearInterpolatableData =
+  | F32
+  | F16
+  | Vec2f
+  | Vec2h
+  | Vec3f
+  | Vec3h
+  | Vec4f
+  | Vec4h;
+
+export type FlatInterpolatableData =
+  | PerspectiveOrLinearInterpolatableData
+  | I32
+  | U32
+  | Vec2i
+  | Vec2u
+  | Vec3i
+  | Vec3u
+  | Vec4i
+  | Vec4u;
+
 export type AnyWgslData =
   | Bool
   | F32
@@ -793,14 +845,14 @@ export function isWgslData(value: unknown): value is AnyWgslData {
 
 /**
  * Checks whether passed in value is an array schema,
- * as opposed to, e.g., a looseArray schema.
+ * as opposed to, e.g., a disarray schema.
  *
  * Array schemas can be used to describe uniform and storage buffers,
- * whereas looseArray schemas cannot.
+ * whereas disarray schemas cannot.
  *
  * @example
  * isWgslArray(d.arrayOf(d.u32, 4)) // true
- * isWgslArray(d.looseArrayOf(d.u32, 4)) // false
+ * isWgslArray(d.disarray(d.u32, 4)) // false
  * isWgslArray(d.vec3f) // false
  */
 export function isWgslArray<T extends WgslArray>(
@@ -811,14 +863,14 @@ export function isWgslArray<T extends WgslArray>(
 
 /**
  * Checks whether passed in value is a struct schema,
- * as opposed to, e.g., a looseStruct schema.
+ * as opposed to, e.g., an unstruct schema.
  *
  * Struct schemas can be used to describe uniform and storage buffers,
- * whereas looseStruct schemas cannot.
+ * whereas unstruct schemas cannot.
  *
  * @example
  * isWgslStruct(d.struct({ a: d.u32 })) // true
- * isWgslStruct(d.looseStruct({ a: d.u32 })) // false
+ * isWgslStruct(d.unstruct({ a: d.u32 })) // false
  * isWgslStruct(d.vec3f) // false
  */
 export function isWgslStruct<T extends WgslStruct>(
@@ -856,6 +908,12 @@ export function isLocationAttrib<T extends Location<number>>(
   value: unknown | T,
 ): value is T {
   return (value as T)?.type === '@location';
+}
+
+export function isInterpolateAttrib<T extends Interpolate<InterpolationType>>(
+  value: unknown | T,
+): value is T {
+  return (value as T)?.type === '@interpolate';
 }
 
 export function isBuiltinAttrib<T extends Builtin<string>>(

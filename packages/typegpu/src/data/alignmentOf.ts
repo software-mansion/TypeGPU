@@ -1,9 +1,9 @@
 import {
   type AnyData,
   getCustomAlignment,
-  isLooseArray,
+  isDisarray,
   isLooseDecorated,
-  isLooseStruct,
+  isUnstruct,
 } from './dataTypes';
 import { packedFormats } from './vertexFormatData';
 import {
@@ -54,13 +54,13 @@ function computeAlignment(data: object): number {
     return alignmentOf(data.elementType);
   }
 
-  if (isLooseStruct(data)) {
+  if (isUnstruct(data)) {
     // A loose struct is aligned to its first property.
     const firstProp = Object.values(data.propTypes)[0];
     return firstProp ? getCustomAlignment(firstProp) ?? 1 : 1;
   }
 
-  if (isLooseArray(data)) {
+  if (isDisarray(data)) {
     return getCustomAlignment(data.elementType) ?? 1;
   }
 
@@ -78,13 +78,13 @@ function computeAlignment(data: object): number {
 }
 
 function computeCustomAlignment(data: BaseWgslData): number {
-  if (isLooseStruct(data)) {
+  if (isUnstruct(data)) {
     // A loose struct is aligned to its first property.
     const firstProp = Object.values(data.propTypes)[0];
     return firstProp ? customAlignmentOf(firstProp) : 1;
   }
 
-  if (isLooseArray(data)) {
+  if (isDisarray(data)) {
     return customAlignmentOf(data.elementType);
   }
 

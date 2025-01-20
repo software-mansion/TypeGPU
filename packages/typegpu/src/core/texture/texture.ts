@@ -1,11 +1,10 @@
 import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes';
 import { invariant } from '../../errors';
-import type { ExtensionGuard } from '../../extension';
 import type { TgpuNamable } from '../../namable';
 import type { Default } from '../../shared/utilityTypes';
 import type { UnionToIntersection } from '../../shared/utilityTypes';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout';
-import type { ResolutionCtx, TgpuResolvable } from '../../types';
+import type { ResolutionCtx, SelfResolvable } from '../../types';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 import {
   type SampledFormatOptions,
@@ -21,6 +20,26 @@ import {
 } from './textureFormats';
 import type { TextureProps } from './textureProps';
 import type { AllowedUsages, LiteralToExtensionMap } from './usageExtension';
+
+type ResolveStorageDimension<
+  TDimension extends GPUTextureViewDimension,
+  TProps extends TextureProps,
+> = StorageTextureDimension extends TDimension
+  ? Default<TProps['dimension'], '2d'>
+  : TDimension extends StorageTextureDimension
+    ? TDimension
+    : '2d';
+
+type ViewUsages<
+  TProps extends TextureProps,
+  TTexture extends TgpuTexture<TProps>,
+> = boolean extends TTexture['usableAsSampled']
+  ? boolean extends TTexture['usableAsStorage']
+    ? never
+    : 'readonly' | 'writeonly' | 'mutable'
+  : boolean extends TTexture['usableAsStorage']
+    ? 'sampled'
+    : 'readonly' | 'writeonly' | 'mutable' | 'sampled';
 
 // ----------
 // Public API
@@ -47,95 +66,51 @@ export interface TgpuTexture<TProps extends TextureProps = TextureProps>
     ...usages: T
   ): this & UnionToIntersection<LiteralToExtensionMap[T[number]]>;
 
-  asReadonly<
-    TDimension extends StorageTextureDimension,
-    TFormat extends StorageFormatOptions<TProps>,
+  createView<
+    TUsage extends ViewUsages<TProps, this>,
+    TDimension extends 'sampled' extends TUsage
+      ? GPUTextureViewDimension
+      : StorageTextureDimension,
+    TFormat extends 'sampled' extends TUsage
+      ? SampledFormatOptions<TProps>
+      : StorageFormatOptions<TProps>,
   >(
+    access: TUsage,
     params?: TextureViewParams<TDimension, TFormat>,
-  ): ExtensionGuard<
-    // flag
-    this['usableAsStorage'],
-    // error msg
-    "missing .$usage('storage')",
-    // if allowed
-    TgpuReadonlyTexture<
-      StorageTextureDimension extends TDimension
-        ? Default<TProps['dimension'], '2d'>
-        : TDimension,
+  ): {
+    mutable: TgpuMutableTexture<
+      ResolveStorageDimension<TDimension, TProps>,
       TexelFormatToDataTypeOrNever<
         StorageFormatOptions<TProps> extends TFormat
           ? TProps['format']
           : TFormat
       >
-    >
-  >;
-
-  asWriteonly<
-    TDimension extends StorageTextureDimension,
-    TFormat extends StorageFormatOptions<TProps>,
-  >(
-    params?: TextureViewParams<TDimension, TFormat>,
-  ): ExtensionGuard<
-    // flag
-    this['usableAsStorage'],
-    // error msg
-    "missing .$usage('storage')",
-    // if allowed
-    TgpuWriteonlyTexture<
-      StorageTextureDimension extends TDimension
-        ? Default<TProps['dimension'], '2d'>
-        : TDimension,
+    >;
+    readonly: TgpuReadonlyTexture<
+      ResolveStorageDimension<TDimension, TProps>,
       TexelFormatToDataTypeOrNever<
         StorageFormatOptions<TProps> extends TFormat
           ? TProps['format']
           : TFormat
       >
-    >
-  >;
-
-  asMutable<
-    TDimension extends StorageTextureDimension,
-    TFormat extends StorageFormatOptions<TProps>,
-  >(
-    params?: TextureViewParams<TDimension, TFormat>,
-  ): ExtensionGuard<
-    // flag
-    this['usableAsStorage'],
-    // error msg
-    "missing .$usage('storage')",
-    // if allowed
-    TgpuMutableTexture<
-      StorageTextureDimension extends TDimension
-        ? Default<TProps['dimension'], '2d'>
-        : TDimension,
+    >;
+    writeonly: TgpuWriteonlyTexture<
+      ResolveStorageDimension<TDimension, TProps>,
       TexelFormatToDataTypeOrNever<
         StorageFormatOptions<TProps> extends TFormat
           ? TProps['format']
           : TFormat
       >
-    >
-  >;
-
-  asSampled<
-    TDimension extends GPUTextureViewDimension,
-    TFormat extends SampledFormatOptions<TProps>,
-  >(
-    params?: TextureViewParams<TDimension, TFormat>,
-  ): ExtensionGuard<
-    // flag
-    this['usableAsSampled'],
-    // error msg
-    "missing .$usage('sampled')",
-    // if allowed
-    TgpuSampledTexture<
+    >;
+    sampled: TgpuSampledTexture<
       GPUTextureViewDimension extends TDimension
         ? Default<TProps['dimension'], '2d'>
         : TDimension,
       TexelFormatToChannelType[SampledFormatOptions<TProps> extends TFormat
         ? TProps['format']
         : TFormat]
-    >
-  >;
+    >;
+  }[TUsage];
 
   destroy(): void;
 }
@@ -181,9 +156,13 @@ export interface TgpuStorageTexture<
   readonly access: StorageTextureAccess;
 }
 
-export interface INTERNAL_TgpuStorageTexture {
+export interface INTERNAL_TgpuFixedStorageTexture
+  extends SelfResolvable,
+    TgpuNamable {
   unwrap(): GPUTextureView;
 }
+
+export interface INTERNAL_TgpuLaidOutStorageTexture extends SelfResolvable {}
 
 /**
  * A texture accessed as "readonly" storage on the GPU.
@@ -191,8 +170,7 @@ export interface INTERNAL_TgpuStorageTexture {
 export interface TgpuReadonlyTexture<
   TDimension extends StorageTextureDimension = StorageTextureDimension,
   TData extends TexelData = TexelData,
-> extends TgpuStorageTexture<TDimension, TData>,
-    TgpuResolvable {
+> extends TgpuStorageTexture<TDimension, TData> {
   readonly access: 'readonly';
 }
 
@@ -202,8 +180,7 @@ export interface TgpuReadonlyTexture<
 export interface TgpuWriteonlyTexture<
   TDimension extends StorageTextureDimension = StorageTextureDimension,
   TData extends TexelData = TexelData,
-> extends TgpuStorageTexture<TDimension, TData>,
-    TgpuResolvable {
+> extends TgpuStorageTexture<TDimension, TData> {
   readonly access: 'writeonly';
 }
 
@@ -213,8 +190,7 @@ export interface TgpuWriteonlyTexture<
 export interface TgpuMutableTexture<
   TDimension extends StorageTextureDimension = StorageTextureDimension,
   TData extends TexelData = TexelData,
-> extends TgpuStorageTexture<TDimension, TData>,
-    TgpuResolvable {
+> extends TgpuStorageTexture<TDimension, TData> {
   readonly access: 'mutable';
 }
 
@@ -224,15 +200,19 @@ export interface TgpuMutableTexture<
 export interface TgpuSampledTexture<
   TDimension extends GPUTextureViewDimension = GPUTextureViewDimension,
   TData extends ChannelData = ChannelData,
-> extends TgpuResolvable {
+> {
   readonly resourceType: 'texture-sampled-view';
   readonly dimension: TDimension;
   readonly channelDataType: TData;
 }
 
-export interface INTERNAL_TgpuSampledTexture {
+export interface INTERNAL_TgpuFixedSampledTexture
+  extends SelfResolvable,
+    TgpuNamable {
   unwrap(): GPUTextureView;
 }
+
+export interface INTERNAL_TgpuLaidOutSampledTexture extends SelfResolvable {}
 
 export function INTERNAL_createTexture(
   props: TextureProps,
@@ -343,6 +323,29 @@ class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
     return this as this & UnionToIntersection<LiteralToExtensionMap[T[number]]>;
   }
 
+  createView(
+    access: 'mutable' | 'readonly' | 'writeonly' | 'sampled',
+    params?: TextureViewParams<GPUTextureViewDimension, GPUTextureFormat>,
+  ) {
+    if (access === 'sampled') {
+      return this._asSampled(params);
+    }
+
+    const storageParams = params as TextureViewParams<
+      StorageTextureDimension,
+      StorageTextureTexelFormat
+    >;
+
+    switch (access) {
+      case 'mutable':
+        return this._asMutable(storageParams);
+      case 'readonly':
+        return this._asReadonly(storageParams);
+      case 'writeonly':
+        return this._asWriteonly(storageParams);
+    }
+  }
+
   private _asStorage(
     params:
       | TextureViewParams<StorageTextureDimension, StorageTextureTexelFormat>
@@ -360,7 +363,7 @@ class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
     return new TgpuFixedStorageTextureImpl(params ?? {}, access, this);
   }
 
-  asReadonly(
+  private _asReadonly(
     params?: TextureViewParams<
       StorageTextureDimension,
       StorageTextureTexelFormat
@@ -370,7 +373,7 @@ class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
     return this._asStorage(params, 'readonly') as any;
   }
 
-  asWriteonly(
+  private _asWriteonly(
     params?: TextureViewParams<
       StorageTextureDimension,
       StorageTextureTexelFormat
@@ -380,7 +383,7 @@ class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
     return this._asStorage(params, 'writeonly') as any;
   }
 
-  asMutable(
+  private _asMutable(
     params?: TextureViewParams<
       StorageTextureDimension,
       StorageTextureTexelFormat
@@ -390,7 +393,7 @@ class TgpuTextureImpl implements TgpuTexture, INTERNAL_TgpuTexture {
     return this._asStorage(params, 'mutable') as any;
   }
 
-  asSampled(
+  private _asSampled(
     params?: TextureViewParams<GPUTextureViewDimension, GPUTextureFormat>,
     // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
   ): any {
@@ -427,7 +430,7 @@ const dimensionToCodeMap = {
 } satisfies Record<GPUTextureViewDimension, string>;
 
 class TgpuFixedStorageTextureImpl
-  implements TgpuStorageTexture, INTERNAL_TgpuStorageTexture, TgpuNamable
+  implements TgpuStorageTexture, INTERNAL_TgpuFixedStorageTexture
 {
   public readonly resourceType = 'texture-storage-view';
   public readonly texelDataType: TexelData;
@@ -441,7 +444,7 @@ class TgpuFixedStorageTextureImpl
       | TextureViewParams<StorageTextureDimension, StorageTextureTexelFormat>
       | undefined,
     public readonly access: StorageTextureAccess,
-    private readonly _texture: TgpuTexture<TextureProps> & INTERNAL_TgpuTexture,
+    private readonly _texture: TgpuTexture & INTERNAL_TgpuTexture,
   ) {
     this.dimension = props?.dimension ?? _texture.props.dimension ?? '2d';
     this._format =
@@ -470,7 +473,7 @@ class TgpuFixedStorageTextureImpl
     return this._view;
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this.label);
     const { group, binding } = ctx.allocateFixedEntry(
       {
@@ -490,9 +493,15 @@ class TgpuFixedStorageTextureImpl
 
     return id;
   }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+  }
 }
 
-export class TgpuLaidOutStorageTextureImpl implements TgpuStorageTexture {
+export class TgpuLaidOutStorageTextureImpl
+  implements TgpuStorageTexture, INTERNAL_TgpuLaidOutStorageTexture
+{
   public readonly resourceType = 'texture-storage-view';
   public readonly texelDataType: TexelData;
 
@@ -509,7 +518,7 @@ export class TgpuLaidOutStorageTextureImpl implements TgpuStorageTexture {
     return this._membership.key;
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this.label);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
     const type = `texture_storage_${dimensionToCodeMap[this.dimension]}`;
@@ -520,10 +529,14 @@ export class TgpuLaidOutStorageTextureImpl implements TgpuStorageTexture {
 
     return id;
   }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+  }
 }
 
 class TgpuFixedSampledTextureImpl
-  implements TgpuSampledTexture, INTERNAL_TgpuSampledTexture, TgpuNamable
+  implements TgpuSampledTexture, INTERNAL_TgpuFixedSampledTexture
 {
   public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;
@@ -536,7 +549,7 @@ class TgpuFixedSampledTextureImpl
     private readonly _props:
       | TextureViewParams<GPUTextureViewDimension, GPUTextureFormat>
       | undefined,
-    private readonly _texture: TgpuTexture<TextureProps> & INTERNAL_TgpuTexture,
+    private readonly _texture: TgpuTexture & INTERNAL_TgpuTexture,
   ) {
     this.dimension = _props?.dimension ?? _texture.props.dimension ?? '2d';
     this._format =
@@ -564,7 +577,7 @@ class TgpuFixedSampledTextureImpl
     return this._view;
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this.label);
 
     const multisampled = (this._texture.props.sampleCount ?? 1) > 1;
@@ -587,9 +600,15 @@ class TgpuFixedSampledTextureImpl
 
     return id;
   }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
+  }
 }
 
-export class TgpuLaidOutSampledTextureImpl implements TgpuSampledTexture {
+export class TgpuLaidOutSampledTextureImpl
+  implements TgpuSampledTexture, INTERNAL_TgpuLaidOutSampledTexture
+{
   public readonly resourceType = 'texture-sampled-view';
   public readonly channelDataType: ChannelData;
 
@@ -606,7 +625,7 @@ export class TgpuLaidOutSampledTextureImpl implements TgpuSampledTexture {
     return this._membership.key;
   }
 
-  resolve(ctx: ResolutionCtx): string {
+  '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this.label);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
 
@@ -619,5 +638,9 @@ export class TgpuLaidOutSampledTextureImpl implements TgpuSampledTexture {
     );
 
     return id;
+  }
+
+  toString() {
+    return `${this.resourceType}:${this.label ?? '<unnamed>'}`;
   }
 }

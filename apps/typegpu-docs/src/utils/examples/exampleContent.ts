@@ -78,6 +78,11 @@ export const examplesStable = pipe(
   examples,
   entries(),
   filter(([_, example]) => !example.metadata.tags?.includes('experimental')),
+  filter(([_, example]) =>
+    example.metadata.tags?.includes('camera')
+      ? typeof MediaStreamTrackProcessor === 'undefined'
+      : true,
+  ),
   fromEntries(),
 );
 

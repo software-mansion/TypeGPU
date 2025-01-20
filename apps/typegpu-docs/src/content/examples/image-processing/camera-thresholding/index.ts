@@ -1,5 +1,5 @@
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
 
 const rareLayout = tgpu.bindGroupLayout({
   sampling: { sampler: 'filtering' },
@@ -93,8 +93,8 @@ context.configure({
 
 const renderShaderModule = device.createShaderModule({
   code: tgpu.resolve({
-    input: renderShaderCode,
-    extraDependencies: {
+    template: renderShaderCode,
+    externals: {
       ...rareLayout.bound,
       ...frequentLayout.bound,
       VertexOutput,
@@ -159,6 +159,18 @@ function run() {
   device.queue.submit([encoder.finish()]);
 }
 
+// #region Example controls & Cleanup
+
+export const controls = {
+  threshold: {
+    initial: 0.4,
+    min: 0,
+    max: 1,
+    step: 0.01,
+    onSliderChange: (threshold: number) => thresholdBuffer.write(threshold),
+  },
+};
+
 export function onCleanup() {
   cancelAnimationFrame(frameRequest);
 
@@ -170,17 +182,5 @@ export function onCleanup() {
 
   root.destroy();
 }
-
-// #region UI
-
-export const controls = {
-  threshold: {
-    initial: 0.4,
-    min: 0,
-    max: 1,
-    step: 0.01,
-    onSliderChange: (threshold: number) => thresholdBuffer.write(threshold),
-  },
-};
 
 // #endregion
