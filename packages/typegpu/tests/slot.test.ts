@@ -389,12 +389,16 @@ describe('tgpu.slot', () => {
     const buffer = root.createBuffer(Boid).$usage('uniform').$name('boid');
     const uniform = unstable_asUniform(buffer);
     const uniformSlot = tgpu['~unstable'].slot(uniform);
+    const uniformSlotSlot = tgpu['~unstable'].slot(uniformSlot);
 
     const func = tgpu['~unstable'].fn([]).does(() => {
       const pos = vectorSlot.value;
       const posX = vectorSlot.value.x;
       const vel = uniformSlot.value.vel;
       const velX = uniformSlot.value.vel.x;
+
+      const vel_ = uniformSlotSlot.value.vel;
+      const velX_ = uniformSlotSlot.value.vel.x;
     });
 
     const resolved = tgpu.resolve({
@@ -416,6 +420,9 @@ describe('tgpu.slot', () => {
           var posX = 1;
           var vel = boid.vel;
           var velX = boid.vel.x;
+
+          var vel_ = boid.vel;
+          var velX_ = boid.vel.x;
         }`),
     );
   });

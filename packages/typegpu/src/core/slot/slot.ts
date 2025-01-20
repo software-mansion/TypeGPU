@@ -17,6 +17,7 @@ export function slot<T>(defaultValue?: T): TgpuSlot<T> {
 class TgpuSlotImpl<T> implements TgpuSlot<T> {
   readonly resourceType = 'slot';
   public label?: string | undefined;
+  '~repr' = undefined as Infer<T>;
 
   constructor(public defaultValue: T | undefined = undefined) {}
 

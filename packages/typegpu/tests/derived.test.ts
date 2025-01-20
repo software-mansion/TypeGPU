@@ -140,23 +140,20 @@ describe('TgpuDerived', () => {
 
     const buffer = root.createBuffer(Boid).$usage('uniform').$name('boid');
     const uniform = unstable_asUniform(buffer);
-    const uniformSlot = tgpu['~unstable'].slot(uniform);
 
-    const derivedUniformSlot = tgpu['~unstable'].derived(() => {
-      const uniform = uniformSlot.value;
-      return uniform;
-    });
-
-    const derivedDerivedUniformSlot = tgpu['~unstable'].derived(() => {
-      const uniform = derivedUniformSlot.value;
-      return uniform;
-    });
+    const derivedUniformSlot = tgpu['~unstable'].derived(() => uniform);
+    const derivedDerivedUniformSlot = tgpu['~unstable'].derived(
+      () => derivedUniformSlot,
+    );
 
     const func = tgpu['~unstable'].fn([]).does(() => {
       const pos = doubledVectorSlot.value;
       const posX = doubledVectorSlot.value.x;
-      const vel = derivedDerivedUniformSlot.value.vel;
-      const velX = derivedDerivedUniformSlot.value.vel.x;
+      const vel = derivedUniformSlot.value.vel;
+      const velX = derivedUniformSlot.value.vel.x;
+
+      const vel_ = derivedDerivedUniformSlot.value.vel;
+      const velX_ = derivedDerivedUniformSlot.value.vel.x;
     });
 
     const resolved = tgpu.resolve({
@@ -178,6 +175,9 @@ describe('TgpuDerived', () => {
           var posX = (2 * vec3f(1, 2, 3)).x;
           var vel = boid.vel;
           var velX = boid.vel.x;
+
+          var vel_ = boid.vel;
+          var velX_ = boid.vel.x;
         }`),
     );
   });

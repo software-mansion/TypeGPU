@@ -23,6 +23,7 @@ function createDerived<T>(compute: () => T): TgpuDerived<T> {
   const result = {
     resourceType: 'derived' as const,
     '~compute': compute,
+    '~repr': undefined as Infer<T>,
 
     get value(): Infer<T> {
       const ctx = getResolutionCtx();
@@ -60,6 +61,8 @@ function createBoundDerived<T>(
 ): TgpuDerived<T> {
   const result = {
     resourceType: 'derived' as const,
+    '~repr': undefined as Infer<T>,
+
     '~compute'() {
       const ctx = getResolutionCtx();
       if (!ctx) {
