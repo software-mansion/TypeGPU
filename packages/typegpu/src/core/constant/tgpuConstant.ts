@@ -2,8 +2,8 @@ import type { AnyWgslData } from '../../data/wgslTypes';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
-import { valueProxyHandler } from '../../shared/valueProxyHandler';
 import type { ResolutionCtx, SelfResolvable } from '../../types';
+import { valueProxyHandler } from '../valueProxyHandler';
 import type { Exotic } from './../../data/exotic';
 
 // ----------

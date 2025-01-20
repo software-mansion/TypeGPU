@@ -1,5 +1,6 @@
 import { getResolutionCtx } from '../../gpuMode';
 import type { Infer } from '../../shared/repr';
+import { unwrapProxy } from '../valueProxyHandler';
 import type { TgpuSlot } from './slotTypes';
 
 // ----------
@@ -40,9 +41,6 @@ class TgpuSlotImpl<T> implements TgpuSlot<T> {
       throw new Error(`Cannot access tgpu.slot's value outside of resolution.`);
     }
 
-    const unwrapped = ctx.unwrap(this);
-    return (unwrapped && typeof unwrapped === 'object' && 'value' in unwrapped
-      ? unwrapped.value // TODO: user defined 'value' properties shouldn't be accessed here
-      : unwrapped) as unknown as Infer<T>;
+    return unwrapProxy(ctx.unwrap(this));
   }
 }

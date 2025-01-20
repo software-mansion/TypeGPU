@@ -37,6 +37,7 @@ export interface TgpuAccessor<T extends AnyWgslData = AnyWgslData>
   extends TgpuNamable,
     Labelled {
   readonly resourceType: 'accessor';
+  '~repr': Infer<T>;
 
   readonly schema: T;
   readonly defaultValue:

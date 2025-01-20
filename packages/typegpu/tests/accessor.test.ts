@@ -180,4 +180,52 @@ describe('tgpu.accessor', () => {
       ]),
     );
   });
+
+  it('resolves in tgsl functions, using .value', ({ root }) => {
+    const colorAccessorValue = tgpu['~unstable'].accessor(d.vec3f, RED);
+    const colorAccessorUsage = tgpu['~unstable'].accessor(
+      d.vec3f,
+      unstable_asUniform(
+        root.createBuffer(d.vec3f, RED).$usage('uniform').$name('colorUniform'),
+      ),
+    );
+
+    const colorAccessorFn = tgpu['~unstable'].accessor(
+      d.vec3f,
+      tgpu['~unstable']
+        .fn([], d.vec3f)
+        .does(() => RED)
+        .$name('getColor'),
+    );
+
+    const main = tgpu['~unstable']
+      .fn([])
+      .does(() => {
+        const color = colorAccessorValue.value;
+        const color2 = colorAccessorUsage.value;
+        const color3 = colorAccessorFn.value;
+      })
+      .$name('main');
+
+    const resolved = tgpu.resolve({
+      externals: { main },
+      names: 'strict',
+    });
+
+    expect(parse(resolved)).toEqual(
+      parse(/* wgsl */ `
+        @group(0) @binding(0) var<uniform> colorUniform: vec3f;
+
+        fn getColor() -> vec3f {
+          return vec3f(1, 0, 0);
+        }
+
+        fn main() {
+          var color = vec3f(1, 0, 0);
+          var color2 = colorUniform;
+          var color3 = getColor();
+        }
+    `),
+    );
+  });
 });

@@ -391,6 +391,15 @@ describe('tgpu.slot', () => {
     const uniformSlot = tgpu['~unstable'].slot(uniform);
     const uniformSlotSlot = tgpu['~unstable'].slot(uniformSlot);
 
+    const colorAccessorFn = tgpu['~unstable'].accessor(
+      d.vec3f,
+      tgpu['~unstable']
+        .fn([], d.vec3f)
+        .does(() => d.vec3f(1, 2, 3))
+        .$name('getColor'),
+    );
+    const colorAccessorSlot = tgpu['~unstable'].slot(colorAccessorFn);
+
     const func = tgpu['~unstable'].fn([]).does(() => {
       const pos = vectorSlot.value;
       const posX = vectorSlot.value.x;
@@ -399,6 +408,8 @@ describe('tgpu.slot', () => {
 
       const vel_ = uniformSlotSlot.value.vel;
       const velX_ = uniformSlotSlot.value.vel.x;
+
+      const color = colorAccessorSlot.value;
     });
 
     const resolved = tgpu.resolve({
@@ -415,6 +426,10 @@ describe('tgpu.slot', () => {
 
         @group(0) @binding(0) var<uniform> boid: Boid;
 
+        fn getColor() -> vec3f {
+          return vec3f(1, 2, 3);
+        }
+
         fn func(){
           var pos = vec3f(1, 2, 3);
           var posX = 1;
@@ -423,6 +438,8 @@ describe('tgpu.slot', () => {
 
           var vel_ = boid.vel;
           var velX_ = boid.vel.x;
+
+          var color = getColor();
         }`),
     );
   });

@@ -2,10 +2,10 @@ import type { AnyWgslData } from '../../data';
 import type { Exotic } from '../../data/exotic';
 import { getResolutionCtx } from '../../gpuMode';
 import type { Infer } from '../../shared/repr';
-import { valueProxyHandler } from '../../shared/valueProxyHandler';
 import type { ResolutionCtx, SelfResolvable } from '../../types';
 import { type TgpuBufferUsage, isBufferUsage } from '../buffer/bufferUsage';
 import { type TgpuFn, isTgpuFn } from '../function/tgpuFn';
+import { valueProxyHandler } from '../valueProxyHandler';
 import { slot } from './slot';
 import type { TgpuAccessor, TgpuSlot } from './slotTypes';
 
@@ -31,6 +31,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
   implements TgpuAccessor<T>, SelfResolvable
 {
   readonly resourceType = 'accessor';
+  '~repr' = undefined as Infer<T>;
   public label?: string | undefined;
   public slot: TgpuSlot<TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>>;
 

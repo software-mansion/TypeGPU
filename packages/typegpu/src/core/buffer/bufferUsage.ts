@@ -2,13 +2,13 @@ import type { AnyWgslData, BaseWgslData } from '../../data/wgslTypes';
 import { type Storage, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
 import type { Infer } from '../../shared/repr';
-import { valueProxyHandler } from '../../shared/valueProxyHandler';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout';
 import type {
   BindableBufferUsage,
   ResolutionCtx,
   SelfResolvable,
 } from '../../types';
+import { valueProxyHandler } from '../valueProxyHandler';
 import { type TgpuBuffer, type Uniform, isUsableAsUniform } from './buffer';
 
 // ----------
