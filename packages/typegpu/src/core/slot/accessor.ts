@@ -63,7 +63,13 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       );
     }
 
-    return new Proxy(this, valueProxyHandler) as unknown as Infer<T>;
+    return new Proxy(
+      {
+        '~resolve': ((ctx: ResolutionCtx) => ctx.resolve(this)).bind(this),
+        toString: (() => `.value:${this.label ?? '<unnamed>'}`).bind(this),
+      },
+      valueProxyHandler,
+    ) as Infer<T>;
   }
 
   '~resolve'(ctx: ResolutionCtx): string {

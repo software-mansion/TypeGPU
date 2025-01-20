@@ -73,6 +73,6 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
         toString: (() => `.value:${this.label ?? '<unnamed>'}`).bind(this),
       },
       valueProxyHandler,
-    ) as Infer<TDataType> as Infer<TDataType>;
+    ) as Infer<TDataType>;
   }
 }
