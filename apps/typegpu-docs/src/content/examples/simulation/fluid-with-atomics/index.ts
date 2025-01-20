@@ -148,7 +148,7 @@ const getStableStateBelow = tgpu['~unstable']
     let totalMass = upper + lower;
     if (totalMass <= ${MAX_WATER_LEVEL_UNPRESSURIZED}) {
       return totalMass;
-    } else if (totalMass >= ${MAX_WATER_LEVEL_UNPRESSURIZED}*2 && upper > lower) {
+    } else if (totalMass >= ${MAX_WATER_LEVEL_UNPRESSURIZED} * 2 && upper > lower) {
       return totalMass/2 + ${MAX_PRESSURE};
     }
     return ${MAX_WATER_LEVEL_UNPRESSURIZED};
