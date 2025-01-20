@@ -66,6 +66,13 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     if (!inGPUMode()) {
       return this._value;
     }
-    return new Proxy(this, valueProxyHandler) as Infer<TDataType>;
+
+    return new Proxy(
+      {
+        '~resolve': ((ctx: ResolutionCtx) => ctx.resolve(this)).bind(this),
+        toString: (() => `.value:${this.label ?? '<unnamed>'}`).bind(this),
+      },
+      valueProxyHandler,
+    ) as Infer<TDataType> as Infer<TDataType>;
   }
 }

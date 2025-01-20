@@ -8,13 +8,11 @@ export const valueProxyHandler: ProxyHandler<SelfResolvable & Labelled> = {
 
     return new Proxy(
       {
-        '~resolve'(ctx: ResolutionCtx) {
-          return `${ctx.resolve(target)}.${String(prop)}`;
-        },
+        '~resolve': (ctx: ResolutionCtx) =>
+          `${ctx.resolve(target)}.${String(prop)}`,
 
-        toString() {
-          return `.value:${target.label ?? '<unnamed>'}`;
-        },
+        toString: () =>
+          `.value(...).${String(prop)}:${target.label ?? '<unnamed>'}`,
       },
       valueProxyHandler,
     );

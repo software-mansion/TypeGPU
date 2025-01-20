@@ -93,6 +93,13 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyWgslData>
     if (!inGPUMode()) {
       throw new Error(`Cannot access tgpu.var's value directly in JS.`);
     }
-    return new Proxy(this, valueProxyHandler) as Infer<TDataType>;
+
+    return new Proxy(
+      {
+        '~resolve': ((ctx: ResolutionCtx) => ctx.resolve(this)).bind(this),
+        toString: (() => `.value:${this.label ?? '<unnamed>'}`).bind(this),
+      },
+      valueProxyHandler,
+    ) as Infer<TDataType>;
   }
 }
