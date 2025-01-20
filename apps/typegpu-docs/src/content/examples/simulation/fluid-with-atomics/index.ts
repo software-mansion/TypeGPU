@@ -453,8 +453,6 @@ function resetGameData() {
   };
 
   applyDrawCanvas = () => {
-    const commandEncoder = root.device.createCommandEncoder();
-
     for (let i = 0; i < options.size; i++) {
       for (let j = 0; j < options.size; j++) {
         if (drawCanvasData[j * options.size + i] === 0) {
@@ -472,7 +470,6 @@ function resetGameData() {
       }
     }
 
-    root.device.queue.submit([commandEncoder.finish()]);
     drawCanvasData.fill(0);
   };
 
