@@ -683,7 +683,7 @@ export interface WgslStruct<
   readonly '~repr': InferRecord<TProps>;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: <i'm sorry>
+// biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than WgslStruct<Record<string, BaseWgslData>>
 export type AnyWgslStruct = WgslStruct<any>;
 
 export interface WgslArray<TElement = BaseWgslData> {
