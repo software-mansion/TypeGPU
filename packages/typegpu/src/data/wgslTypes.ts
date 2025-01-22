@@ -1,4 +1,9 @@
-import type { Infer, InferRecord } from '../shared/repr';
+import type {
+  Infer,
+  InferPartial,
+  InferPartialRecord,
+  InferRecord,
+} from '../shared/repr';
 
 export interface NumberArrayView {
   readonly length: number;
@@ -680,6 +685,7 @@ export interface WgslStruct<
   readonly propTypes: TProps;
   /** Type-token, not available at runtime */
   readonly '~repr': InferRecord<TProps>;
+  readonly '~reprPartial': Partial<InferPartialRecord<TProps>>;
 }
 
 export interface WgslArray<TElement = BaseWgslData> {
@@ -688,6 +694,7 @@ export interface WgslArray<TElement = BaseWgslData> {
   readonly elementType: TElement;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TElement>[];
+  readonly '~reprPartial': Record<number, InferPartial<TElement>>;
 }
 
 /**

@@ -181,4 +181,24 @@ describe('TgpuBuffer', () => {
         .$usage('storage');
     }).toThrow();
   });
+
+  it('should allow for partial writes', ({ root, device }) => {
+    const buffer = root.createBuffer(d.struct({ a: d.u32, b: d.u32 }));
+
+    buffer.writePartial({ a: 3 });
+
+    const rawBuffer = root.unwrap(buffer);
+    expect(rawBuffer).toBeDefined();
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 0, new Uint32Array([3]).buffer, 0, 4],
+    ]);
+
+    buffer.writePartial({ b: 4 });
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 0, new Uint32Array([3]).buffer, 0, 4],
+      [rawBuffer, 4, new Uint32Array([4]).buffer, 0, 4],
+    ]);
+  });
 });

@@ -2,11 +2,12 @@ import { BufferReader, BufferWriter } from 'typed-binary';
 import { isWgslData } from '../../data';
 import { readData, writeData } from '../../data/dataIO';
 import type { AnyData } from '../../data/dataTypes';
+import { partialWrite } from '../../data/partialIO';
 import { sizeOf } from '../../data/sizeOf';
 import type { WgslTypeLiteral } from '../../data/wgslTypes';
 import type { Storage } from '../../extension';
 import type { TgpuNamable } from '../../namable';
-import type { Infer } from '../../shared/repr';
+import type { Infer, InferPartial } from '../../shared/repr';
 import type { UnionToIntersection } from '../../shared/utilityTypes';
 import { isGPUBuffer } from '../../types';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
@@ -50,6 +51,7 @@ export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
   $addFlags(flags: GPUBufferUsageFlags): this;
 
   write(data: Infer<TData>): void;
+  writePartial(data: InferPartial<TData>): void;
   copyFrom(srcBuffer: TgpuBuffer<TData>): void;
   read(): Promise<Infer<TData>>;
   destroy(): void;
@@ -226,6 +228,34 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     const hostBuffer = new ArrayBuffer(size);
     writeData(new BufferWriter(hostBuffer), this.dataType, data);
     device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
+  }
+
+  writePartial(data: InferPartial<TData>): void {
+    const gpuBuffer = this.buffer;
+    const device = this._group.device;
+
+    if (gpuBuffer.mapState === 'mapped') {
+      const mapped = gpuBuffer.getMappedRange();
+      const instructions = partialWrite(this.dataType, data);
+      for (const instruction of instructions) {
+        new Uint8Array(mapped).set(
+          new Uint8Array(instruction.data),
+          instruction.start,
+        );
+      }
+      return;
+    }
+
+    const instructions = partialWrite(this.dataType, data);
+    for (const instruction of instructions) {
+      device.queue.writeBuffer(
+        gpuBuffer,
+        instruction.start,
+        instruction.data,
+        0,
+        instruction.length,
+      );
+    }
   }
 
   copyFrom(srcBuffer: TgpuBuffer<TData>): void {
