@@ -58,3 +58,7 @@ export function createOutputType<T extends IOData>(returnType: IOLayout<T>) {
       : struct(withLocations(returnType) as Record<string, T>)
   ) as IOLayoutToOutputSchema<IOLayout<T>>;
 }
+
+export function createStructFromIO<T extends IOData>(members: IORecord<T>) {
+  return struct(withLocations(members) as Record<string, T>);
+}

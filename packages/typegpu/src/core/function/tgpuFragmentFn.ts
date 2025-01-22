@@ -1,6 +1,6 @@
 import type { OmitBuiltins } from '../../builtin';
-import { type Vec4f, isWgslStruct } from '../../data/wgslTypes';
-import type { TgpuNamable } from '../../namable';
+import type { Vec4f } from '../../data/wgslTypes';
+import { type TgpuNamable, isNamable } from '../../namable';
 import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
 import { addReturnTypeToExternals } from '../resolve/externals';
 import { createFnCore } from './fnCore';
@@ -120,7 +120,7 @@ function createFragmentFn(
 
     $name(newLabel: string): This {
       core.label = newLabel;
-      if (isWgslStruct(outputType)) {
+      if (isNamable(outputType)) {
         outputType.$name(`${newLabel}_Output`);
       }
       return this;
