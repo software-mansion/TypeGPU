@@ -201,4 +201,38 @@ describe('TgpuBuffer', () => {
       [rawBuffer, 4, new Uint32Array([4]).buffer, 0, 4],
     ]);
   });
+
+  it('should allow for partial writes with complex data', ({
+    root,
+    device,
+  }) => {
+    const buffer = root.createBuffer(
+      d.struct({ a: d.u32, b: d.struct({ c: d.u32 }), d: d.arrayOf(d.u32, 3) }),
+    );
+
+    buffer.writePartial({ a: 3 });
+
+    const rawBuffer = root.unwrap(buffer);
+    expect(rawBuffer).toBeDefined();
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 0, new Uint32Array([3]).buffer, 0, 4],
+    ]);
+
+    buffer.writePartial({ b: { c: 4 } });
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 0, new Uint32Array([3]).buffer, 0, 4],
+      [rawBuffer, 4, new Uint32Array([4]).buffer, 0, 4],
+    ]);
+
+    buffer.writePartial({ d: { 0: 1, 2: 3 } });
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 0, new Uint32Array([3]).buffer, 0, 4],
+      [rawBuffer, 4, new Uint32Array([4]).buffer, 0, 4],
+      [rawBuffer, 8, new Uint32Array([1]).buffer, 0, 4],
+      [rawBuffer, 16, new Uint32Array([3]).buffer, 0, 4],
+    ]);
+  });
 });
