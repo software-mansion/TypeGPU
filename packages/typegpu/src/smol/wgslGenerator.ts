@@ -264,6 +264,15 @@ function generateStatement(
   }
 
   if ('r' in statement) {
+    // check if the thing at the top of the call stack is a struct
+    // if so wrap the value returned in a constructor of the struct (its resolved name)
+    if (
+      isWgslStruct(ctx.callStack[ctx.callStack.length - 1]) &&
+      statement.r !== null
+    ) {
+      return `${ctx.pre}return ${ctx.resolve(ctx.callStack[ctx.callStack.length - 1])}(${resolveRes(ctx, generateExpression(ctx, statement.r))});`;
+    }
+
     return statement.r === null
       ? `${ctx.pre}return;`
       : `${ctx.pre}return ${resolveRes(ctx, generateExpression(ctx, statement.r))};`;

@@ -141,6 +141,8 @@ describe('TGSL tgpu.fn function', () => {
 
     const actual = parseResolved({ pureConfusion });
 
+    console.log(tgpu.resolve({ externals: { pureConfusion } }));
+
     const expected = parse(`
       struct A {
         b: f32,
@@ -192,15 +194,21 @@ describe('TGSL tgpu.fn function', () => {
     const actual = parseResolved({ vertexFn });
 
     const expected = parse(`
-      fn vertex_fn(
-        vi: i32,
-        ii: i32,
-        color: vec4<f32>,
-      ) -> Output {
-        return Output(
-          vec4<f32>(color.w, ii, vi, 1),
-          vec2<f32>(color.w, vi),
-        );
+      struct vertex_fn_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+      struct VertexInput {
+        @builtin(vertex_index) vi: u32,
+        @builtin(instance_index) ii: u32,
+        @location(0) color: vec4f,
+      }
+
+      @vertex fn vertex_fn(input: VertexInput) -> vertex_fn_Output{
+        var vi = input.vi;
+        var ii = input.ii;
+        var color = input.color;
+        return vertex_fn_Output(vec4f(color.w, ii, vi, 1), vec2f(color.w, vi));
       }
     `);
 

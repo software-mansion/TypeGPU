@@ -1,6 +1,7 @@
 import type { OmitBuiltins } from '../../builtin';
 import type { AnyWgslStruct } from '../../data/wgslTypes';
 import { type TgpuNamable, isNamable } from '../../namable';
+import type { GenerationCtx } from '../../smol';
 import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
 import { addReturnTypeToExternals } from '../resolve/externals';
 import { createFnCore } from './fnCore';
@@ -132,7 +133,22 @@ function createVertexFn(
     },
 
     '~resolve'(ctx: ResolutionCtx): string {
-      return core.resolve(ctx, '@vertex ');
+      if (typeof implementation === 'string') {
+        return core.resolve(ctx, '@vertex ');
+      }
+
+      const generationCtx = ctx as GenerationCtx;
+      if (generationCtx.callStack === undefined) {
+        throw new Error(
+          'Cannot resolve a TGSL function outside of a generation context',
+        );
+      }
+
+      generationCtx.callStack.push(outputType);
+      const resolved = core.resolve(ctx, '@vertex ');
+      generationCtx.callStack.pop();
+
+      return resolved;
     },
 
     toString() {
