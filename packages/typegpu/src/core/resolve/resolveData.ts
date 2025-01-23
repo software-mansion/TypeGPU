@@ -1,11 +1,11 @@
+import { getAttributesString } from '../../data/attributes';
 import {
   type AnyData,
   type Disarray,
   type Unstruct,
-  formatToWGSLType,
   isLooseData,
-} from '../../data';
-import { getAttributesString } from '../../data/attributes';
+} from '../../data/dataTypes';
+import { formatToWGSLType } from '../../data/vertexFormatData';
 import type {
   AnyWgslData,
   BaseWgslData,
