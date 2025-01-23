@@ -1,5 +1,5 @@
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import tgpu from 'typegpu/experimental';
 
 const root = await tgpu.init();
 const device = root.device;
@@ -87,12 +87,12 @@ const squareBuffer = root
   .createBuffer(d.arrayOf(d.u32, 8), [0, 0, 1, 0, 0, 1, 1, 1])
   .$usage('vertex');
 
-const squareVertexLayout = tgpu.vertexLayout(
+const squareVertexLayout = tgpu['~unstable'].vertexLayout(
   (n: number) => d.arrayOf(d.location(1, d.vec2u), n),
   'vertex',
 );
 
-const cellsVertexLayout = tgpu.vertexLayout(
+const cellsVertexLayout = tgpu['~unstable'].vertexLayout(
   (n: number) => d.arrayOf(d.location(0, d.u32), n),
   'instance',
 );
