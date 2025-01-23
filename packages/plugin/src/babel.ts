@@ -2,12 +2,16 @@ import * as Babel from '@babel/standalone';
 import type TemplateGenerator from '@babel/template';
 import type { TraverseOptions } from '@babel/traverse';
 import type * as t from '@babel/types';
-import type { TypegpuPluginOptions } from 'rollup-plugin-typegpu';
 import { transpileFn } from 'tinyest-for-wgsl';
-
-const typegpuImportRegex = /import.*from\s*['"]typegpu.*['"]/g;
-const typegpuDynamicImportRegex = /import\s*\(\s*['"]\s*typegpu.*['"]/g;
-const typegpuRequireRegex = /require\s*\(\s*['"]\s*typegpu.*['"]\s*\)/g;
+import {
+  type Context,
+  type TypegpuPluginOptions,
+  embedJSON,
+  isTgpu,
+  typegpuDynamicImportRegex,
+  typegpuImportRegex,
+  typegpuRequireRegex,
+} from './common';
 
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
@@ -17,48 +21,6 @@ const template = (
 
 const types = (Babel as unknown as { packages: { types: typeof t } }).packages
   .types;
-
-type Context = {
-  /**
-   * How the `tgpu` object is used in code. Since it can be aliased, we
-   * need to catch that and act accordingly.
-   */
-  tgpuAliases: Set<string>;
-};
-
-function embedJSON(jsValue: unknown) {
-  return JSON.stringify(jsValue)
-    .replace(/\u2028/g, '\\u2028')
-    .replace(/\u2029/g, '\\u2029');
-}
-
-/**
- * Checks if `node` is an alias for the 'tgpu' object, traditionally
- * available via `import tgpu from 'typegpu'`.
- */
-function isTgpu(ctx: Context, node: t.Node): boolean {
-  let path = '';
-
-  let tail = node;
-  while (true) {
-    if (tail.type === 'MemberExpression') {
-      if (tail.property.type !== 'Identifier') {
-        // Not handling computed expressions.
-        break;
-      }
-
-      path = path ? `${tail.property.name}.${path}` : tail.property.name;
-      tail = tail.object;
-    } else if (tail.type === 'Identifier') {
-      path = path ? `${tail.name}.${path}` : tail.name;
-      break;
-    } else {
-      break;
-    }
-  }
-
-  return ctx.tgpuAliases.has(path);
-}
 
 function functionVisitor(ctx: Context): TraverseOptions {
   return {

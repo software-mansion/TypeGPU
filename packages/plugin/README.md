@@ -1,18 +1,35 @@
 <div align="center">
 
-# rollup-plugin-typegpu
+# plugin-typegpu
 
-⚠️ **This package is deprecated, please use `plugin-typegpu/rollup` instead.** ⚠️
+🚧 **Under Construction** 🚧 - [GitHub](https://github.com/software-mansion/TypeGPU/tree/main/packages/plugin)
 
 </div>
 
-A rollup plugin for [TypeGPU](https://typegpu.com), transpiling JavaScript functions into WGSL at build-time.
+Build plugins for [TypeGPU](https://typegpu.com), transpiling JavaScript functions into WGSL at build-time.
+
+Currently supported:
+* babel
+```js
+// babel.config.js (React Native with Expo)
+
+module.exports = function (api) {
+  api.cache(true);
+  return {
+    presets: ['babel-preset-expo'],
+    plugins: ['plugin-typegpu/babel']
+  };
+};
+
+```
+
+* rollup
 
 ```ts
 // vite.config.js
 
 import { defineConfig } from 'vite';
-import typegpu from 'rollup-plugin-typegpu';
+import typegpu from 'plugin-typegpu/rollup';
 
 export default defineConfig({
   plugins: [typegpu()],
@@ -23,7 +40,7 @@ export default defineConfig({
 ## Getting Started
 
 ```sh
-npm install rollup-plugin-typegpu
+npm install plugin-typegpu
 ```
 
 ## TypeGPU is created by Software Mansion
