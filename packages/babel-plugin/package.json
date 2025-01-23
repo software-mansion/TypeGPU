@@ -1,0 +1,67 @@
+{
+  "name": "babel-plugin-typegpu",
+  "version": "0.0.0",
+  "description": "A babel plugin for TypeGPU, transpiling JavaScript functions into WGSL at build-time.",
+  "keywords": [
+    "babel-plugin",
+    "typegpu",
+    "gpgpu",
+    "webgpu",
+    "wgpu",
+    "wgsl",
+    "typescript",
+    "shaders"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "module": "./dist/index.js",
+      "import": "./dist/index.js",
+      "default": "./dist/index.cjs"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "module": "./dist/*.js",
+      "import": "./dist/*.js",
+      "default": "./dist/*.cjs"
+    }
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/software-mansion/TypeGPU.git"
+  },
+  "bugs": {
+    "url": "https://github.com/software-mansion/TypeGPU/issues"
+  },
+  "homepage": "https://typegpu.com",
+  "scripts": {
+    "dev:watch": "DEV=true tsup --watch",
+    "dev:build": "DEV=true tsup",
+    "build": "tsup",
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
+    "publish": "echo \"Use pnpm prepare-package instead!\" && exit 1",
+    "prepare-package": "tgpu-dev-cli prepack"
+  },
+  "dependencies": {
+    "@babel/standalone": "^7.26.6",
+    "rollup-plugin-typegpu": "workspace:~0.0.1",
+    "tinyest-for-wgsl": "workspace:~0.1.0-alpha.0"
+  },
+  "devDependencies": {
+    "@babel/template": "^7.25.9",
+    "@babel/types": "^7.26.5",
+    "@typegpu/tgpu-dev-cli": "workspace:*",
+    "@types/babel__standalone": "^7.1.9",
+    "@types/babel__template": "^7.4.4",
+    "@types/babel__traverse": "^7.20.6",
+    "rollup": "~4.12.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.3.3"
+  }
+}

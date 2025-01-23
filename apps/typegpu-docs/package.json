@@ -15,7 +15,7 @@
     "@astrojs/starlight": "^0.25.2",
     "@astrojs/starlight-tailwind": "^2.0.3",
     "@astrojs/tailwind": "^5.1.0",
-    "@babel/standalone": "^7.24.7",
+    "@babel/standalone": "^7.26.6",
     "@monaco-editor/react": "^4.6.0",
     "@radix-ui/react-select": "^2.1.1",
     "@radix-ui/react-slider": "^1.2.0",
@@ -45,7 +45,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/babel__standalone": "^7.1.7",
+    "@types/babel__standalone": "^7.1.9",
     "@types/babel__template": "^7.4.4",
     "@types/babel__traverse": "^7.20.6",
     "@webgpu/types": "^0.1.43",
