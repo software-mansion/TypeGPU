@@ -154,7 +154,7 @@ importers:
         specifier: ^7.26.6
         version: 7.26.6
       rollup-plugin-typegpu:
-        specifier: workspace:*
+        specifier: workspace:~0.0.1
         version: link:../rollup-plugin
       tinyest-for-wgsl:
         specifier: workspace:~0.1.0-alpha.0
