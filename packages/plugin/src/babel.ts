@@ -7,10 +7,9 @@ import {
   type Context,
   type TypegpuPluginOptions,
   embedJSON,
-  isTgpu,
-  typegpuDynamicImportRegex,
-  typegpuImportRegex,
-  typegpuRequireRegex,
+  gatherTgpuAliases,
+  isDoesCall,
+  shouldSkipFile,
 } from './common';
 
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
@@ -18,47 +17,19 @@ import {
 const template = (
   Babel as unknown as { packages: { template: typeof TemplateGenerator } }
 ).packages.template;
-
 const types = (Babel as unknown as { packages: { types: typeof t } }).packages
   .types;
 
 function functionVisitor(ctx: Context): TraverseOptions {
   return {
     ImportDeclaration(path) {
-      const node = path.node;
-      if (node.source.value === 'typegpu') {
-        for (const spec of node.specifiers) {
-          if (
-            // The default export of 'typegpu' is the `tgpu` object.
-            spec.type === 'ImportDefaultSpecifier' ||
-            // Aliasing 'tgpu' while importing, e.g. import { tgpu as t } from 'typegpu';
-            (spec.type === 'ImportSpecifier' &&
-              spec.imported.type === 'Identifier' &&
-              spec.imported.name === 'tgpu')
-          ) {
-            ctx.tgpuAliases.add(spec.local.name);
-          } else if (spec.type === 'ImportNamespaceSpecifier') {
-            // Importing everything, e.g. import * as t from 'typegpu';
-            ctx.tgpuAliases.add(`${spec.local.name}.tgpu`);
-          }
-        }
-      }
+      gatherTgpuAliases(path.node, ctx);
     },
 
     CallExpression(path) {
       const node = path.node;
 
-      if (
-        node.callee.type === 'MemberExpression' &&
-        node.arguments.length === 1 &&
-        node.callee.property.type === 'Identifier' &&
-        ((node.callee.property.name === 'procedure' &&
-          isTgpu(ctx, node.callee.object)) ||
-          // Assuming that every call to `.does` is related to TypeGPU
-          // because shells can be created separately from calls to `tgpu`,
-          // making it hard to detect.
-          node.callee.property.name === 'does')
-      ) {
+      if (isDoesCall(node, ctx)) {
         const implementation = node.arguments[0];
 
         if (
@@ -98,20 +69,7 @@ export default function () {
         // @ts-ignore
         const id: string | undefined = state.filename;
 
-        if (code && !options?.include) {
-          if (
-            !typegpuImportRegex.test(code) &&
-            !typegpuRequireRegex.test(code) &&
-            !typegpuDynamicImportRegex.test(code)
-          ) {
-            // No imports to `typegpu` or its sub modules, exiting early.
-            return;
-          }
-        } else if (
-          options?.include &&
-          options.include !== 'all' &&
-          (!id || !options.include.some((pattern) => pattern.test(id)))
-        ) {
+        if (shouldSkipFile(options, id, code)) {
           return;
         }
 

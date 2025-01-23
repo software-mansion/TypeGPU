@@ -7,38 +7,15 @@ import {
   type Context,
   type TypegpuPluginOptions,
   embedJSON,
-  isTgpu,
-  typegpuDynamicImportRegex,
-  typegpuImportRegex,
-  typegpuRequireRegex,
+  gatherTgpuAliases,
+  isDoesCall,
+  shouldSkipFile,
 } from './common';
 
 type TgslFunctionDef = {
   varDecl: CallExpression;
   implementation: AnyNode;
 };
-
-function gatherTgpuAliases(ctx: Context, node: AnyNode) {
-  if (node.type === 'ImportDeclaration') {
-    if (node.source.value === 'typegpu') {
-      for (const spec of node.specifiers) {
-        if (
-          // The default export of 'typegpu' is the `tgpu` object.
-          spec.type === 'ImportDefaultSpecifier' ||
-          // Aliasing 'tgpu' while importing, e.g. import { tgpu as t } from 'typegpu';
-          (spec.type === 'ImportSpecifier' &&
-            spec.imported.type === 'Identifier' &&
-            spec.imported.name === 'tgpu')
-        ) {
-          ctx.tgpuAliases.add(spec.local.name);
-        } else if (spec.type === 'ImportNamespaceSpecifier') {
-          // Importing everything, e.g. import * as t from 'typegpu';
-          ctx.tgpuAliases.add(`${spec.local.name}.tgpu`);
-        }
-      }
-    }
-  }
-}
 
 export interface TypegpuRollupPlugin {
   name: 'rollup-plugin-typegpu';
@@ -54,19 +31,7 @@ export default function typegpu(
   return {
     name: 'rollup-plugin-typegpu' as const,
     transform(code, id) {
-      if (!options?.include) {
-        if (
-          !typegpuImportRegex.test(code) &&
-          !typegpuRequireRegex.test(code) &&
-          !typegpuDynamicImportRegex.test(code)
-        ) {
-          // No imports to `typegpu` or its sub modules, exiting early.
-          return;
-        }
-      } else if (
-        options.include !== 'all' &&
-        !options.include.some((pattern) => pattern.test(id))
-      ) {
+      if (shouldSkipFile(options, id, code)) {
         return;
       }
 
@@ -84,20 +49,12 @@ export default function typegpu(
         enter(_node, _parent, prop, index) {
           const node = _node as AnyNode;
 
-          gatherTgpuAliases(ctx, node);
+          if (node.type === 'ImportDeclaration') {
+            gatherTgpuAliases(node, ctx);
+          }
 
           if (node.type === 'CallExpression') {
-            if (
-              node.callee.type === 'MemberExpression' &&
-              node.arguments.length === 1 &&
-              node.callee.property.type === 'Identifier' &&
-              ((node.callee.property.name === 'procedure' &&
-                isTgpu(ctx, node.callee.object)) ||
-                // Assuming that every call to `.does` is related to TypeGPU
-                // because shells can be created separately from calls to `tgpu`,
-                // making it hard to detect.
-                node.callee.property.name === 'does')
-            ) {
+            if (isDoesCall(node, ctx)) {
               const implementation = node.arguments[0];
 
               if (
