@@ -1,4 +1,10 @@
-import { type Unstruct, formatToWGSLType } from '../../data';
+import {
+  type AnyData,
+  type Disarray,
+  type Unstruct,
+  formatToWGSLType,
+  isLooseData,
+} from '../../data';
 import { getAttributesString } from '../../data/attributes';
 import type {
   AnyWgslData,
@@ -171,6 +177,18 @@ function resolveArray(ctx: ResolutionCtx, array: WgslArray) {
     : `array<${element}, ${array.elementCount}>`;
 }
 
+function resolveDisarray(ctx: ResolutionCtx, disarray: Disarray) {
+  const element = ctx.resolve(
+    isAttribute(disarray.elementType)
+      ? formatToWGSLType[disarray.elementType.format]
+      : (disarray.elementType as AnyWgslData),
+  );
+
+  return disarray.elementCount === 0
+    ? `array<${element}>`
+    : `array<${element}, ${disarray.elementCount}>`;
+}
+
 /**
  * Resolves a WGSL data-type schema to a string.
  * @param ctx - The resolution context.
@@ -178,12 +196,25 @@ function resolveArray(ctx: ResolutionCtx, array: WgslArray) {
  *
  * @returns The resolved data-type string.
  */
-export function resolveData(
-  ctx: ResolutionCtx,
-  data: AnyWgslData | Unstruct,
-): string {
-  if (data.type === 'unstruct') {
-    return resolveUnstruct(ctx, data);
+export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
+  if (isLooseData(data)) {
+    if (data.type === 'unstruct') {
+      return resolveUnstruct(ctx, data);
+    }
+
+    if (data.type === 'disarray') {
+      return resolveDisarray(ctx, data);
+    }
+
+    if (data.type === 'loose-decorated') {
+      return ctx.resolve(
+        isAttribute(data.inner)
+          ? formatToWGSLType[data.inner.format]
+          : data.inner,
+      );
+    }
+
+    return ctx.resolve(formatToWGSLType[data.type]);
   }
 
   if (isIdentityType(data)) {

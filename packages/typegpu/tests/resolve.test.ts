@@ -187,5 +187,19 @@ describe('tgpu resolve', () => {
       externals: { vertexInfo },
       names: 'strict',
     });
+
+    expect(parse(resolved)).toEqual(
+      parse(`
+        struct vertexInfo {
+          color: vec4f,
+          colorHDR: vec4f,
+          position2d: vec2f,
+        }
+
+        fn foo() {
+          var v: vertexInfo;
+        }
+      `),
+    );
   });
 });
