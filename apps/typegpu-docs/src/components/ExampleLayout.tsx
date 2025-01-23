@@ -91,10 +91,15 @@ function SideMenu() {
 
       <hr className="my-0 box-border w-full border-t border-tameplum-100" />
 
-      <ExampleList excludeTags={isDev ? [] : ['experimental']} />
+      <ExampleList
+        excludeTags={[
+          isDev ? [] : ['experimental'],
+          typeof MediaStreamTrackProcessor === 'undefined' ? ['camera'] : [],
+        ].flat()}
+      />
 
       <div className="flex justify-between text-tameplum-800 text-xs">
-        <div>&copy; 2024 Software Mansion S.A.</div>
+        <div>&copy; {new Date().getFullYear()} Software Mansion S.A.</div>
         <div className="flex gap-3 items-center">
           <a
             href="https://discord.gg/8jpfgDqPcM"

@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import * as d from '../src/data';
-import { StrictNameRegistry } from '../src/experimental';
+import { StrictNameRegistry } from '../src/nameRegistry';
 import { resolve } from '../src/resolutionCtx';
 
 describe('d.interpolate', () => {

@@ -12,12 +12,13 @@ export const createOutputPathCompiler = (input, output) => {
     ? /\*\*\/.*\*.*/.test(output) // "**/" and "*" used in pattern
       ? (file) => {
           // retrieve what ** was matched as
-          const dir = new RegExp(
+          const matched = new RegExp(
             input
               .replace(/\*/g, '\\*')
               .replace('\\*\\*', '(?<dir>.*)')
               .replace('\\*', '.*'),
-          ).exec(file)?.groups?.dir;
+          ).exec(file);
+          const dir = matched ? matched[1] : undefined;
 
           return (
             dir === undefined

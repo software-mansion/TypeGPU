@@ -1,5 +1,5 @@
+import tgpu, { unstable_asUniform } from 'typegpu';
 import * as d from 'typegpu/data';
-import tgpu, { asUniform } from 'typegpu/experimental';
 import { cross, mul, normalize, sub } from 'typegpu/std';
 
 // init canvas and values
@@ -108,7 +108,7 @@ const renderBindGroup = root.createBindGroup(renderBindGroupLayout, {
 
 // functions
 
-const getBoxIntersection = tgpu
+const getBoxIntersection = tgpu['~unstable']
   .fn([d.vec3f, d.vec3f, RayStruct], IntersectionStruct)
   .does(/* wgsl */ `(
   boundMin: vec3f,
@@ -180,7 +180,7 @@ const getBoxIntersection = tgpu
 `)
   .$name('box_intersection');
 
-const vertexFunction = tgpu
+const vertexFunction = tgpu['~unstable']
   .vertexFn(
     { vertexIndex: d.builtin.vertexIndex },
     { outPos: d.builtin.position },
@@ -201,10 +201,10 @@ const vertexFunction = tgpu
 }`)
   .$name('vertex_main');
 
-const boxSizeAccessor = tgpu.accessor(d.u32);
-const canvasDimsAccessor = tgpu.accessor(CanvasDimsStruct);
+const boxSizeAccessor = tgpu['~unstable'].accessor(d.u32);
+const canvasDimsAccessor = tgpu['~unstable'].accessor(CanvasDimsStruct);
 
-const fragmentFunction = tgpu
+const fragmentFunction = tgpu['~unstable']
   .fragmentFn({ position: d.builtin.position }, d.vec4f)
   .does(/* wgsl */ `(@builtin(position) position: vec4f) -> @location(0) vec4f {
   let minDim = f32(min(canvasDims.width, canvasDims.height));
@@ -273,15 +273,15 @@ const fragmentFunction = tgpu
 
 // pipeline
 
-const pipeline = root
+const pipeline = root['~unstable']
   .with(
     boxSizeAccessor,
-    tgpu
+    tgpu['~unstable']
       .fn([], d.u32)
       .does('() -> u32 { return boxSize; }')
-      .$uses({ boxSize: asUniform(boxSizeBuffer) }),
+      .$uses({ boxSize: unstable_asUniform(boxSizeBuffer) }),
   )
-  .with(canvasDimsAccessor, asUniform(canvasDimsBuffer))
+  .with(canvasDimsAccessor, unstable_asUniform(canvasDimsBuffer))
   .withVertex(vertexFunction, {})
   .withFragment(fragmentFunction, { format: presentationFormat })
   .createPipeline()
@@ -341,7 +341,7 @@ onFrame((deltaTime) => {
     })
     .draw(6);
 
-  root.flush();
+  root['~unstable'].flush();
 });
 
 // #region Example controls and cleanup

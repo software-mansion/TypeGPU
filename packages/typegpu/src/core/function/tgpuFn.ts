@@ -97,10 +97,6 @@ export function fn<
   };
 }
 
-export function procedure(implementation: () => void) {
-  return fn([]).does(implementation);
-}
-
 export function isTgpuFn<
   Args extends AnyWgslData[],
   Return extends AnyWgslData | undefined = undefined,
