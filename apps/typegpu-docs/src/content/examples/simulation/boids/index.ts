@@ -199,13 +199,10 @@ const paramsBuffer = root
   .$usage('storage');
 
 const triangleVertexBuffer = root
-  .createBuffer(d.arrayOf(d.f32, 6), [
-    0.0,
-    triangleSize,
-    -triangleSize / 2,
-    -triangleSize / 2,
-    triangleSize / 2,
-    -triangleSize / 2,
+  .createBuffer(d.arrayOf(d.vec2f, 3), [
+    d.vec2f(0.0, triangleSize),
+    d.vec2f(-triangleSize / 2, -triangleSize / 2),
+    d.vec2f(triangleSize / 2, -triangleSize / 2),
   ])
   .$usage('vertex');
 
@@ -276,24 +273,19 @@ const computeModule = root.device.createShaderModule({
   }),
 });
 
+const vertexLayout = tgpu['~unstable'].vertexLayout((n) =>
+  d.arrayOf(d.location(0, d.vec2f), n),
+);
+
+console.log(root.unwrap(vertexLayout));
+
 const pipeline = root.device.createRenderPipeline({
   layout: root.device.createPipelineLayout({
     bindGroupLayouts: [root.unwrap(renderBindGroupLayout)],
   }),
   vertex: {
     module: renderModule,
-    buffers: [
-      {
-        arrayStride: 2 * 4,
-        attributes: [
-          {
-            shaderLocation: 0,
-            offset: 0,
-            format: 'float32x2' as const,
-          },
-        ],
-      },
-    ],
+    buffers: [root.unwrap(vertexLayout)],
   },
   fragment: {
     module: renderModule,
