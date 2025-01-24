@@ -211,9 +211,9 @@ class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
     }
 
     // check if all attributes have custom locations
-    const allAttributesHaveCustomLocations =
-      Object.values(this._customLocationMap).length ===
-      Object.keys(this.attrib).length;
+    const allAttributesHaveCustomLocations = Object.keys(this.attrib).every(
+      (key) => this._customLocationMap[key] !== undefined,
+    );
 
     if (!allAttributesHaveCustomLocations) {
       throw new Error(
