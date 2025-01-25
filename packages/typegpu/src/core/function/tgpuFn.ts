@@ -12,6 +12,8 @@ import type {
 import type { TgpuBufferUsage } from '../buffer/bufferUsage';
 import {
   type Eventual,
+  type Providing,
+  type SlotValuePair,
   type TgpuAccessor,
   type TgpuSlot,
   isAccessor,
@@ -56,6 +58,7 @@ interface TgpuFnBase<
     Labelled {
   readonly resourceType: 'function';
   readonly shell: TgpuFnShell<Args, Return>;
+  readonly '~providing'?: Providing | undefined;
 
   $uses(dependencyMap: Record<string, unknown>): this;
   with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TgpuFn<Args, Return>;
@@ -108,6 +111,10 @@ export function isTgpuFn<
 // Implementation
 // --------------
 
+function stringifyPair([slot, value]: SlotValuePair): string {
+  return `${slot.label ?? '<unnamed>'}=${value}`;
+}
+
 function createFn<
   Args extends AnyWgslData[],
   Return extends AnyWgslData | undefined,
@@ -137,11 +144,9 @@ function createFn<
       slot: TgpuSlot<T> | TgpuAccessor<T>,
       value: T | TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
     ): TgpuFn<Args, Return> {
-      return createBoundFunction(
-        fn,
-        isAccessor(slot) ? slot.slot : slot,
-        value,
-      );
+      return createBoundFunction(fn, [
+        [isAccessor(slot) ? slot.slot : slot, value],
+      ]);
     },
 
     '~resolve'(ctx: ResolutionCtx): string {
@@ -181,16 +186,16 @@ function createFn<
 function createBoundFunction<
   Args extends AnyWgslData[],
   Return extends AnyWgslData | undefined,
->(
-  innerFn: TgpuFn<Args, Return>,
-  slot: TgpuSlot<unknown>,
-  slotValue: unknown,
-): TgpuFn<Args, Return> {
-  type This = TgpuFnBase<Args, Return> & SelfResolvable;
+>(innerFn: TgpuFn<Args, Return>, pairs: SlotValuePair[]): TgpuFn<Args, Return> {
+  type This = TgpuFnBase<Args, Return>;
 
   const fnBase: This = {
     resourceType: 'function',
     shell: innerFn.shell,
+    '~providing': {
+      inner: innerFn,
+      pairs,
+    },
 
     $uses(newExternals) {
       innerFn.$uses(newExternals);
@@ -206,15 +211,10 @@ function createBoundFunction<
       slot: TgpuSlot<T> | TgpuAccessor<T>,
       value: T | TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
     ): TgpuFn<Args, Return> {
-      return createBoundFunction(
-        fn,
-        isAccessor(slot) ? slot.slot : slot,
-        value,
-      );
-    },
-
-    '~resolve'(ctx: ResolutionCtx): string {
-      return ctx.withSlots([[slot, slotValue]], () => ctx.resolve(innerFn));
+      return createBoundFunction(fn, [
+        ...pairs,
+        [isAccessor(slot) ? slot.slot : slot, value],
+      ]);
     },
   };
 
@@ -236,7 +236,9 @@ function createBoundFunction<
 
   Object.defineProperty(fn, 'toString', {
     value() {
-      return `fn:${innerFn.label ?? '<unnamed>'}[${slot.label ?? '<unnamed>'}=${slotValue}]`;
+      const fnLabel = innerFn.label ?? '<unnamed>';
+
+      return `fn:${fnLabel}[${pairs.map(stringifyPair).join(', ')}]`;
     },
   });
 
