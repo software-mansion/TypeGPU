@@ -1,7 +1,10 @@
 import type { TgpuBuffer, Vertex } from '../../core/buffer/buffer';
 import type { Disarray } from '../../data/dataTypes';
 import type { AnyWgslData, WgslArray } from '../../data/wgslTypes';
-import { MissingBindGroupError } from '../../errors';
+import {
+  MissingBindGroupsError,
+  MissingVertexBuffersError,
+} from '../../errors';
 import type { TgpuNamable } from '../../namable';
 import { resolve } from '../../resolutionCtx';
 import type { AnyVertexAttribs } from '../../shared/vertexFormat';
@@ -117,7 +120,7 @@ export interface ColorAttachment {
 
 export interface DepthStencilAttachment {
   /**
-   * A {@link GPUTextureView} describing the texture subresource that will be output to
+   * A {@link GPUTextureView} | ({@link TgpuTexture} & {@link Render}) describing the texture subresource that will be output to
    * and read from for this depth/stencil attachment.
    */
   view: (TgpuTexture & Render) | GPUTextureView;
@@ -356,14 +359,12 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       }
     });
 
-    for (const layout of missingBindGroups) {
-      throw new MissingBindGroupError(layout.label);
+    if (missingBindGroups.size > 0) {
+      throw new MissingBindGroupsError(missingBindGroups);
     }
 
     if (missingVertexLayouts.size > 0) {
-      throw new Error(
-        `Missing vertex buffers for layouts: '${[...missingVertexLayouts.values()].map((layout) => layout.label ?? '<unnamed>').join(', ')}'. Please provide it using pipeline.with(layout, buffer).(...)`,
-      );
+      throw new MissingVertexBuffersError(missingVertexLayouts);
     }
 
     pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
