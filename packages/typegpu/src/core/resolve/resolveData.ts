@@ -165,5 +165,9 @@ export function resolveData(ctx: ResolutionCtx, data: AnyWgslData): string {
     return ctx.resolve(data.inner as AnyWgslData);
   }
 
+  if (data.type === 'ptrFn') {
+    return `ptr<function, ${ctx.resolve(data.inner)}>`;
+  }
+
   assertExhaustive(data, 'resolveData');
 }

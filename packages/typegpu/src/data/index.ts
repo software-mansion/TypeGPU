@@ -7,6 +7,7 @@ export {
   isWgslData,
   isWgslArray,
   isWgslStruct,
+  isPtrFn,
   isAtomic,
   isDecorated,
   isAlignAttrib,
@@ -68,6 +69,7 @@ export {
   TgpuArray,
   arrayOf,
 } from './array';
+export { ptrFn } from './ptr';
 export type {
   Disarray,
   Unstruct,

@@ -690,6 +690,13 @@ export interface WgslArray<TElement = BaseWgslData> {
   readonly '~repr': Infer<TElement>[];
 }
 
+export interface PtrFn<TInner = BaseWgslData> {
+  readonly type: 'ptrFn';
+  readonly inner: TInner;
+  /** Type-token, not available at runtime */
+  readonly '~repr': Infer<TInner>;
+}
+
 /**
  * Schema representing the `atomic<...>` WGSL data type.
  */
@@ -766,6 +773,7 @@ export const wgslTypeLiterals = [
   'mat4x4f',
   'struct',
   'array',
+  'ptrFn',
   'atomic',
   'decorated',
 ] as const;
@@ -816,6 +824,7 @@ export type AnyWgslData =
   | Mat4x4f
   | WgslStruct
   | WgslArray
+  | PtrFn
   | Atomic
   | Decorated;
 
@@ -859,6 +868,17 @@ export function isWgslStruct<T extends WgslStruct>(
   schema: T | unknown,
 ): schema is T {
   return (schema as T)?.type === 'struct';
+}
+
+/**
+ * Checks whether passed in value is a pointer ('function' scope) schema.
+ *
+ * @example
+ * isPtrFn(d.ptrFn(d.f32)) // true
+ * isPtrFn(d.f32) // false
+ */
+export function isPtrFn<T extends PtrFn>(schema: T | unknown): schema is T {
+  return (schema as T)?.type === 'ptrFn';
 }
 
 /**
