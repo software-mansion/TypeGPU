@@ -6,6 +6,7 @@ import { transpileModule } from 'typescript';
 import { tsCompilerOptions } from '../liveEditor/embeddedTypeScript';
 import type { ExampleControlParam } from './exampleControlAtom';
 import type { ExampleState } from './exampleState';
+import { SANDBOX_MODULES } from './sandboxModules';
 
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
@@ -164,15 +165,6 @@ export async function executeExample(
      * modules available.
      */
     const _import = async (moduleKey: string) => {
-      if (moduleKey === 'typegpu') {
-        return await import('typegpu');
-      }
-      if (moduleKey === 'typegpu/data') {
-        return await import('typegpu/data');
-      }
-      if (moduleKey === 'typegpu/std') {
-        return await import('typegpu/std');
-      }
       if (moduleKey === '@typegpu/example-toolkit') {
         return {
           onCleanup(callback: () => unknown) {
@@ -181,6 +173,13 @@ export async function executeExample(
           addParameters,
         };
       }
+
+      if (moduleKey in SANDBOX_MODULES) {
+        return await SANDBOX_MODULES[
+          moduleKey as keyof typeof SANDBOX_MODULES
+        ].importer?.();
+      }
+
       throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
     };
 
