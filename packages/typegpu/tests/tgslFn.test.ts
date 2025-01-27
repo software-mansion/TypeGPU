@@ -141,8 +141,6 @@ describe('TGSL tgpu.fn function', () => {
 
     const actual = parseResolved({ pureConfusion });
 
-    console.log(tgpu.resolve({ externals: { pureConfusion } }));
-
     const expected = parse(`
       struct A {
         b: f32,

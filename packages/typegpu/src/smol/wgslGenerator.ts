@@ -238,7 +238,7 @@ function generateExpression(
 
       return {
         value: generateEntries(values),
-        dataType: UnknownData,
+        dataType: callee,
       };
     }
 

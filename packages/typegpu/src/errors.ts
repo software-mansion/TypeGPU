@@ -1,6 +1,9 @@
 import type { TgpuBuffer } from './core/buffer/buffer';
 import type { TgpuSlot } from './core/slot/slotTypes';
-import type { AnyData } from './data/dataTypes';
+import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout';
+import type { AnyData, Disarray } from './data/dataTypes';
+import type { WgslArray } from './data/wgslTypes';
+import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout';
 
 const prefix = 'Invariant failed';
 
@@ -102,13 +105,24 @@ export class MissingLinksError extends Error {
   }
 }
 
-export class MissingBindGroupError extends Error {
-  constructor(layoutLabel: string | undefined) {
+export class MissingBindGroupsError extends Error {
+  constructor(layouts: Iterable<TgpuBindGroupLayout>) {
     super(
-      `Bind group was not provided for '${layoutLabel ?? '<unnamed>'}' layout.`,
+      `Missing bind groups for layouts: '${[...layouts].map((layout) => layout.label ?? '<unnamed>').join(', ')}'. Please provide it using pipeline.with(layout, bindGroup).(...)`,
     );
 
     // Set the prototype explicitly.
-    Object.setPrototypeOf(this, MissingBindGroupError.prototype);
+    Object.setPrototypeOf(this, MissingBindGroupsError.prototype);
+  }
+}
+
+export class MissingVertexBuffersError extends Error {
+  constructor(layouts: Iterable<TgpuVertexLayout<WgslArray | Disarray>>) {
+    super(
+      `Missing vertex buffers for layouts: '${[...layouts].map((layout) => layout.label ?? '<unnamed>').join(', ')}'. Please provide it using pipeline.with(layout, buffer).(...)`,
+    );
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, MissingVertexBuffersError.prototype);
   }
 }

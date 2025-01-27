@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import tgpu from '../src';
+import tgpu, { MissingBindGroupsError } from '../src';
 import * as d from '../src/data';
 import { it } from './utils/extendedIt';
 
@@ -142,5 +142,35 @@ describe('Inter-Stage Variables', () => {
       // @ts-expect-error: Mismatched vertex output
       root.withVertex(vert, {}).withFragment(fragment, {}).createPipeline();
     });
+  });
+
+  it('throws an error if bind groups are missing', ({ root }) => {
+    const utgpu = tgpu['~unstable'];
+
+    const layout = tgpu
+      .bindGroupLayout({ alpha: { uniform: d.f32 } })
+      .$name('example-layout');
+
+    const vertexFn = utgpu
+      .vertexFn({}, {})
+      .does('() { layout.bound.alpha; }')
+      .$uses({ layout });
+
+    const fragmentFn = utgpu.fragmentFn({}, { out: d.vec4f }).does('() {}');
+
+    const pipeline = root
+      .withVertex(vertexFn, {})
+      .withFragment(fragmentFn, { out: { format: 'rgba8unorm' } })
+      .createPipeline()
+      // biome-ignore lint/suspicious/noExplicitAny: <not testing color attachment at this time>
+      .withColorAttachment({ out: {} } as any);
+
+    expect(() => pipeline.draw(6)).toThrowError(
+      new MissingBindGroupsError([layout]),
+    );
+
+    expect(() => pipeline.draw(6)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Missing bind groups for layouts: 'example-layout'. Please provide it using pipeline.with(layout, bindGroup).(...)]`,
+    );
   });
 });
