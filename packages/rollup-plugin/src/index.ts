@@ -1,4 +1,4 @@
-import rollupPlugin from 'plugin-typegpu/rollup';
-export { type TypegpuPluginOptions } from 'plugin-typegpu';
+import rollupPlugin from 'unplugin-typegpu/rollup';
+export { type TypegpuPluginOptions } from 'unplugin-typegpu';
 
 export default rollupPlugin;

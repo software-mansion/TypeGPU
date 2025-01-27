@@ -1,8 +1,8 @@
 <div align="center">
 
-# plugin-typegpu
+# unplugin-typegpu
 
-🚧 **Under Construction** 🚧 - [GitHub](https://github.com/software-mansion/TypeGPU/tree/main/packages/plugin)
+🚧 **Under Construction** 🚧 - [GitHub](https://github.com/software-mansion/TypeGPU/tree/main/packages/unplugin-typegpu)
 
 </div>
 
@@ -17,7 +17,7 @@ module.exports = function (api) {
   api.cache(true);
   return {
     presets: ['babel-preset-expo'],
-    plugins: ['plugin-typegpu/babel']
+    plugins: ['unplugin-typegpu/babel']
   };
 };
 
@@ -29,7 +29,7 @@ module.exports = function (api) {
 // vite.config.js
 
 import { defineConfig } from 'vite';
-import typegpu from 'plugin-typegpu/rollup';
+import typegpu from 'unplugin-typegpu/rollup';
 
 export default defineConfig({
   plugins: [typegpu()],
@@ -40,7 +40,7 @@ export default defineConfig({
 ## Getting Started
 
 ```sh
-npm install plugin-typegpu
+npm install unplugin-typegpu
 ```
 
 ## TypeGPU is created by Software Mansion
