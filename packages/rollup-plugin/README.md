@@ -2,7 +2,7 @@
 
 # rollup-plugin-typegpu
 
-⚠️ **This package is deprecated, please use `unplugin-typegpu/rollup` instead.** ⚠️
+⚠️ **This package is deprecated, please use `unplugin-typegpu` instead.** ⚠️
 
 </div>
 

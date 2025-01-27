@@ -6,7 +6,9 @@
 
 </div>
 
-Build plugins for [TypeGPU](https://typegpu.com), transpiling JavaScript functions into WGSL at build-time.
+Build plugins for [TypeGPU](https://typegpu.com) that enable:
+- Seamless JavaScript -> WGSL transpilation
+- [🚧 TODO] Improved debugging with automatic naming of resources
 
 Currently supported:
 * babel
