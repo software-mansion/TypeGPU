@@ -1,0 +1,187 @@
+---
+title: Vertex Layouts
+description: A guide on how to create and use typed vertex layouts
+---
+
+Typed vertex layouts are a way to describe the structure of vertex data in a typed manner. They are used to create a single source of truth for vertex data, which can be used in combination with [`tgpu.resolve`](/TypeGPU/fundamentals/resolve) and [`root.unwrap`](/TypeGPU/fundamentals/roots) to easily create and manage vertex buffers.
+
+## Creating a vertex layout
+
+To create a vertex layout, use the `tgpu.vertexLayout` function. It takes a function that takes a number and returns an array containing any data type, and a string that describes the type of the vertex layout. It can be either `vertex` or `instance` (default is `vertex`).
+
+```ts
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+
+const ParticleGeometry = d.struct({
+  tilt: d.f32,
+  angle: d.f32,
+  color: d.vec4f,
+});
+
+const geometryLayout = tgpu
+  .vertexLayout((n: number) => d.arrayOf(ParticleGeometry, n), 'instance');
+```
+
+## Utilizing loose schemas with vertex layouts
+
+The above example is great if the vertex buffer will also be used as a storage or uniform buffer. However, if you're only interested in the vertex data, you can use a loose schema instead.
+It is not restricted by alignment rules and can utilize many useful [vertex formats](https://www.w3.org/TR/webgpu/#vertex-formats). To create loose schemas, use `d.unstruct` instead of `d.struct` and `d.disarrayOf` instead of `d.arrayOf`.
+Inside of loose schemas you can use vertex formats as well as the usual data types.
+
+```ts
+const LooseParticleGeometry = d.unstruct({
+  tilt: d.f32,
+  angle: d.f32,
+  color: d.unorm8x4, // 4x8-bit unsigned normalized
+});
+```
+
+The size of `LooseParticleGeometry` will be 12 bytes, compared to 32 bytes of `ParticleGeometry`. This can be useful when you're working with large amounts of vertex data and want to save memory.
+
+:::tip[Aligning loose schemas]
+Sometimes you might want to align the data in a loose schema due to external requirements or performance reasons.
+You can do this by using the `d.align` function, just like in normal schemas. Even though loose schemas don't have alignment requirements, they will still respect any alignment you specify.
+
+```ts
+const LooseParticleGeometry = d.unstruct({
+  tilt: d.f32,
+  angle: d.f32,
+  color: d.align(16, d.unorm8x4),
+  // 4x8-bit unsigned normalized aligned to 16 bytes
+});
+```
+
+This will align the `color` field to 16 bytes, making the size of `LooseParticleGeometry` 20 bytes.
+:::
+
+## Using vertex layouts
+
+You can utilize [`root.unwrap`](/TypeGPU/fundamentals/roots) to get the raw `GPUVertexBufferLayout` from a typed vertex layout. It will automatically calculate the stride and attributes for you, according to the vertex layout you provided.
+
+:::caution
+Make sure that all attributes in the vertex layout are marked with the appropriate location. You can use the `d.location` function to specify the location of each attribute.
+If you don't do this, the unwrapping will fail at runtime.
+:::
+
+```ts
+const ParticleGeometry = d.struct({
+  tilt: d.location(0, d.f32),
+  angle: d.location(1, d.f32),
+  color: d.location(2, d.vec4f),
+});
+
+const geometryLayout = tgpu
+  .vertexLayout((n: number) => d.arrayOf(ParticleGeometry, n), 'instance');
+
+const geometry = root.unwrap(geometryLayout);
+
+console.log(geometry);
+//{
+//  "arrayStride": 32,
+//  "stepMode": "instance",
+//  "attributes": [
+//    {
+//      "format": "float32",
+//      "offset": 0,
+//      "shaderLocation": 0
+//    },
+//    {
+//      "format": "float32",
+//      "offset": 4,
+//      "shaderLocation": 1
+//    },
+//    {
+//      "format": "float32x4",
+//      "offset": 16,
+//      "shaderLocation": 2
+//    }
+//  ]
+//}
+```
+
+This will return a `GPUVertexBufferLayout` that can be used when creating a render pipeline.
+
+```diff lang=ts
+const renderPipeline = device.createRenderPipeline({
+  layout: device.createPipelineLayout({
+    bindGroupLayouts: [root.unwrap(bindGroupLayout)],
+  }),
+  primitive: {
+    topology: 'triangle-strip',
+  },
+  vertex: {
+    module: renderShader,
+-    buffers: [
+-      {
+-        arrayStride: 32,
+-        stepMode: 'instance',
+-        attributes: [
+-          {
+-            format: 'float32',
+-            offset: 0,
+-            shaderLocation: 0,
+-          },
+-          {
+-            format: 'float32',
+-            offset: 4,
+-            shaderLocation: 1,
+-          },
+-          {
+-            format: 'float32x4',
+-            offset: 16,
+-            shaderLocation: 2,
+-          },
+-        ],
+-      },
+-    ],
++    buffers: [root.unwrap(geometryLayout)],
+  },
+  fragment: {
+    ...
+  },
+});
+```
+
+If you are using a loose schema, you can now resolve it to get it's WGSL representation.
+
+```ts
+const LooseParticleGeometry = d.unstruct({
+  tilt: d.location(0, d.f32),
+  angle: d.location(1, d.f32),
+  color: d.location(2, d.unorm8x4),
+});
+
+const sampleShader = `
+  @vertex
+  fn main(particleGeometry: LooseParticleGeometry) -> @builtin(position) pos: vec4f {
+    return vec4f(
+      particleGeometry.tilt,
+      particleGeometry.angle,
+      particleGeometry.color.rgb,
+      1.0
+    );
+  }
+`;
+
+const wgslDefinition = tgpu.resolve({
+  template: sampleShader,
+  externals: { LooseParticleGeometry }
+});
+console.log(wgslDefinition);
+// struct LooseParticleGeometry_0 {
+//   @location(0) tilt: f32,
+//   @location(1) angle: f32,
+//   @location(2) color: vec4f,
+// }
+//
+// @vertex
+// fn main(particleGeometry: LooseParticleGeometry_0) -> @builtin(position) pos: vec4f {
+//   return vec4f(
+//     particleGeometry.tilt,
+//     particleGeometry.angle,
+//     particleGeometry.color.rgb,
+//     1.0
+//   );
+// }
+```
