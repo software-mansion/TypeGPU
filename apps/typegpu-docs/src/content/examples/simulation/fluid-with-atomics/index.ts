@@ -494,28 +494,24 @@ function resetGameData() {
 
 let isDrawing = false;
 let isErasing = false;
+let longTouchTimeout: number | null = null;
+let touchMoved = false;
 
-canvas.onmousedown = (event) => {
+const startDrawing = (erase: boolean) => {
   isDrawing = true;
-  isErasing = event.button === 2;
+  isErasing = erase;
 };
 
-canvas.onmouseup = () => {
+const stopDrawing = () => {
   isDrawing = false;
   renderChanges();
+  if (longTouchTimeout) {
+    clearTimeout(longTouchTimeout);
+    longTouchTimeout = null;
+  }
 };
 
-canvas.onmousemove = (event) => {
-  if (!isDrawing) {
-    return;
-  }
-
-  const cellSize = canvas.width / options.size;
-  const x = Math.floor((event.offsetX * window.devicePixelRatio) / cellSize);
-  const y =
-    options.size -
-    Math.floor((event.offsetY * window.devicePixelRatio) / cellSize) -
-    1;
+const handleDrawing = (x: number, y: number) => {
   const allAffectedCells = new Set<{ x: number; y: number }>();
   for (let i = -options.brushSize; i <= options.brushSize; i++) {
     for (let j = -options.brushSize; j <= options.brushSize; j++) {
@@ -545,6 +541,66 @@ canvas.onmousemove = (event) => {
 
   applyDrawCanvas();
   renderChanges();
+};
+
+canvas.onmousedown = (event) => {
+  startDrawing(event.button === 2);
+};
+
+canvas.onmouseup = stopDrawing;
+
+canvas.onmousemove = (event) => {
+  if (!isDrawing) {
+    return;
+  }
+
+  const cellSize = canvas.width / options.size;
+  const x = Math.floor((event.offsetX * window.devicePixelRatio) / cellSize);
+  const y =
+    options.size -
+    Math.floor((event.offsetY * window.devicePixelRatio) / cellSize) -
+    1;
+
+  handleDrawing(x, y);
+};
+
+canvas.ontouchstart = (event) => {
+  event.preventDefault();
+  touchMoved = false;
+  longTouchTimeout = window.setTimeout(() => {
+    if (!touchMoved) {
+      startDrawing(true);
+    }
+  }, 500);
+  startDrawing(false);
+};
+
+canvas.ontouchend = (event) => {
+  event.preventDefault();
+  stopDrawing();
+};
+
+canvas.ontouchmove = (event) => {
+  event.preventDefault();
+  touchMoved = true;
+  if (!isDrawing) {
+    return;
+  }
+
+  const touch = event.touches[0];
+  const cellSize = canvas.width / options.size;
+  const canvasPos = canvas.getBoundingClientRect();
+  const x = Math.floor(
+    ((touch.clientX - canvasPos.left) * window.devicePixelRatio) / cellSize,
+  );
+  const y =
+    options.size -
+    Math.floor(
+      ((touch.clientY - canvasPos.top) * window.devicePixelRatio) / cellSize,
+    ) -
+    1;
+
+  handleDrawing(x, y);
 };
 
 const createSampleScene = () => {

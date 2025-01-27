@@ -228,9 +228,18 @@ describe('TgpuBuffer', () => {
       }),
     );
 
+    const copy32 = root.createBuffer(
+      d.struct({
+        one: d.size(12, d.f32),
+        two: d.u32,
+      }),
+    );
+
     // @ts-expect-error
     buffer3.copyFrom(copy3);
     // @ts-expect-error
     buffer3.copyFrom(copy31);
+    // @ts-expect-error
+    buffer3.copyFrom(copy32);
   });
 });
