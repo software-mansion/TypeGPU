@@ -31,6 +31,19 @@ export type Mutable<T> = {
   -readonly [P in keyof T]: T[P];
 };
 
+/**
+ * Creates an N element tuple type with elements of type T
+ */
+export type NTuple<T, N extends number> = N extends N
+  ? number extends N
+    ? T[]
+    : _NTupleOf<T, N, []>
+  : never;
+
+type _NTupleOf<T, N extends number, R extends unknown[]> = R['length'] extends N
+  ? R
+  : _NTupleOf<T, N, [T, ...R]>;
+
 export function assertExhaustive(x: never, location: string): never {
   throw new Error(`Failed to handle ${x} at ${location}`);
 }

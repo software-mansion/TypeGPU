@@ -2,7 +2,7 @@ import { BufferReader, BufferWriter } from 'typed-binary';
 import { isWgslData } from '../../data';
 import { readData, writeData } from '../../data/dataIO';
 import type { AnyData } from '../../data/dataTypes';
-import { partialWrite } from '../../data/partialIO';
+import { getWriteInstructions } from '../../data/partialIO';
 import { sizeOf } from '../../data/sizeOf';
 import type { WgslTypeLiteral } from '../../data/wgslTypes';
 import type { Storage } from '../../extension';
@@ -230,30 +230,45 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
   }
 
-  writePartial(data: InferPartial<TData>): void {
+  public writePartial(data: InferPartial<TData>): void {
     const gpuBuffer = this.buffer;
     const device = this._group.device;
 
+    // Produce minimal instructions with typed arrays or ArrayBuffers
+    const instructions = getWriteInstructions(this.dataType, data);
+
+    // If the buffer is already mapped on the CPU side:
     if (gpuBuffer.mapState === 'mapped') {
-      const mapped = gpuBuffer.getMappedRange();
-      const instructions = partialWrite(this.dataType, data);
+      const mappedRange = gpuBuffer.getMappedRange();
+      const mappedView = new Uint8Array(mappedRange);
+
       for (const instruction of instructions) {
-        new Uint8Array(mapped).set(
-          new Uint8Array(instruction.data),
-          instruction.start,
-        );
+        // Convert 'instruction.data' to Uint8Array if not already
+        const source =
+          instruction.data instanceof Uint8Array
+            ? instruction.data
+            : new Uint8Array(instruction.data);
+
+        // Copy the bytes into the mapped buffer at the correct offset
+        mappedView.set(source, instruction.start);
       }
+
       return;
     }
 
-    const instructions = partialWrite(this.dataType, data);
+    // Otherwise, use GPU queue writes
     for (const instruction of instructions) {
+      const source =
+        instruction.data instanceof Uint8Array
+          ? instruction.data
+          : new Uint8Array(instruction.data);
+
       device.queue.writeBuffer(
         gpuBuffer,
         instruction.start,
-        instruction.data,
+        source,
         0,
-        instruction.length,
+        instruction.length, // in bytes
       );
     }
   }
