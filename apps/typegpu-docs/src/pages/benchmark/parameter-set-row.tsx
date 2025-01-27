@@ -66,12 +66,13 @@ export function ParameterSetRow(props: {
         <DeleteIcon />
       </button>
       <select
-        className="w-20 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        className="w-22 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
         value={typeValue}
+        data-value={typeValue}
         onChange={(event) => setType(event.target.value as 'local' | 'npm')}
       >
-        <option value="local">local</option>
-        <option value="npm">npm</option>
+        <option value="local">📌 local</option>
+        <option value="npm">⬇️ npm</option>
       </select>
       <div className="flex-1 flex justify-start items-center">
         {typeValue === 'local' && <p className="text-sm">typegpu</p>}

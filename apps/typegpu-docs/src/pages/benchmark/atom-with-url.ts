@@ -55,13 +55,12 @@ export const atomWithUrl = <T>(
       searchParams.set(key, encode(newValue));
 
       set(
-        // biome-ignore lint/suspicious/noExplicitAny: <really annoying>
-        locationAtom as any,
+        locationAtom,
         {
           ...prev,
           searchParams: searchParams,
         },
-        { replace: false },
+        { replace: true },
       );
     },
   );
