@@ -14,6 +14,7 @@ import {
   type SlotValuePair,
   type TgpuAccessor,
   isDerived,
+  isProviding,
   isSlot,
 } from './core/slot/slotTypes';
 import type { TgpuExternalTexture } from './core/texture/externalTexture';
@@ -152,7 +153,8 @@ export function isWgsl(value: unknown): value is Wgsl {
     isSelfResolvable(value) ||
     isWgslData(value) ||
     isSlot(value) ||
-    isDerived(value)
+    isDerived(value) ||
+    isProviding(value)
   );
 }
 

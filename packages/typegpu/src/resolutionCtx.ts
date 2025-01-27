@@ -6,6 +6,7 @@ import {
   type TgpuDerived,
   type TgpuSlot,
   isDerived,
+  isProviding,
   isSlot,
 } from './core/slot/slotTypes';
 import { isLooseData } from './data';
@@ -265,6 +266,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
   public readonly fixedBindings: FixedBindingConfig[] = [];
   // --
 
+  public readonly callStack: unknown[] = [];
   public readonly names: NameRegistry;
 
   constructor(opts: ResolutionCtxImplOptions) {
@@ -383,6 +385,13 @@ class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   unwrap<T>(eventual: Eventual<T>): T {
+    if (isProviding(eventual)) {
+      return this.withSlots(
+        eventual['~providing'].pairs,
+        () => this.unwrap(eventual['~providing'].inner) as T,
+      );
+    }
+
     let maybeEventual = eventual;
 
     // Unwrapping all layers of slots.
@@ -469,7 +478,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
       if (isWgslData(item) || isLooseData(item)) {
         result = resolveData(this, item);
       } else if (isDerived(item) || isSlot(item)) {
-        result = this.resolve(item);
+        result = this.resolve(this.unwrap(item));
       } else if (isSelfResolvable(item)) {
         result = item['~resolve'](this);
       } else {
@@ -497,8 +506,12 @@ class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  resolve(eventualItem: unknown): string {
-    const item = this.unwrap(eventualItem);
+  resolve(item: unknown): string {
+    if (isProviding(item)) {
+      return this.withSlots(item['~providing'].pairs, () =>
+        this.resolve(item['~providing'].inner),
+      );
+    }
 
     if ((item && typeof item === 'object') || typeof item === 'function') {
       if (this._itemStateStack.itemDepth === 0) {
