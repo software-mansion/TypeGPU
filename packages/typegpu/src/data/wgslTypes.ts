@@ -680,6 +680,7 @@ export interface Mat4x4f {
 export interface WgslStruct<
   TProps extends Record<string, BaseWgslData> = Record<string, BaseWgslData>,
 > {
+  (props: InferRecord<TProps>): InferRecord<TProps>;
   readonly type: 'struct';
   readonly label?: string | undefined;
   readonly propTypes: TProps;
@@ -687,6 +688,9 @@ export interface WgslStruct<
   readonly '~repr': InferRecord<TProps>;
   readonly '~reprPartial': Partial<InferPartialRecord<TProps>>;
 }
+
+// biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than WgslStruct<Record<string, BaseWgslData>>
+export type AnyWgslStruct = WgslStruct<any>;
 
 export interface WgslArray<TElement = BaseWgslData> {
   readonly type: 'array';
@@ -821,7 +825,7 @@ export type AnyWgslData =
   | Mat2x2f
   | Mat3x3f
   | Mat4x4f
-  | WgslStruct
+  | AnyWgslStruct
   | WgslArray
   | Atomic
   | Decorated;

@@ -1,6 +1,6 @@
 import type * as smol from 'tinyest';
 import { bool } from '../data';
-import { isWgslData } from '../data/wgslTypes';
+import { isWgslData, isWgslStruct } from '../data/wgslTypes';
 import {
   type ResolutionCtx,
   type Resource,
@@ -32,6 +32,7 @@ const parenthesizedOps = [
 
 export type GenerationCtx = ResolutionCtx & {
   readonly pre: string;
+  readonly callStack: unknown[];
   indent(): string;
   dedent(): string;
   getById(id: string): Resource;
@@ -179,12 +180,25 @@ function generateExpression(
     const id = generateExpression(ctx, callee);
     const idValue = id.value;
 
+    ctx.callStack.push(idValue);
+
     const argResources = args.map((arg) => generateExpression(ctx, arg));
     const argValues = argResources.map((res) => resolveRes(ctx, res));
+
+    ctx.callStack.pop();
 
     if (typeof idValue === 'string') {
       return {
         value: `${idValue}(${argValues.join(', ')})`,
+        dataType: UnknownData,
+      };
+    }
+
+    if (isWgslStruct(idValue)) {
+      const id = ctx.resolve(idValue);
+
+      return {
+        value: `${id}(${argValues.join(', ')})`,
         dataType: UnknownData,
       };
     }
@@ -196,6 +210,42 @@ function generateExpression(
     ) as Wgsl;
     // TODO: Make function calls return resources instead of just values.
     return { value: result, dataType: UnknownData };
+  }
+
+  if ('o' in expression) {
+    const obj = expression.o;
+    const callee = ctx.callStack[ctx.callStack.length - 1];
+
+    const generateEntries = (values: smol.Expression[]) =>
+      values
+        .map((value) => {
+          const valueRes = generateExpression(ctx, value);
+          return resolveRes(ctx, valueRes);
+        })
+        .join(', ');
+
+    if (isWgslStruct(callee)) {
+      const propKeys = Object.keys(callee.propTypes);
+      const values = propKeys.map((key) => {
+        const val = obj[key];
+        if (val === undefined) {
+          throw new Error(
+            `Missing property ${key} in object literal for struct ${callee}`,
+          );
+        }
+        return val;
+      });
+
+      return {
+        value: generateEntries(values),
+        dataType: callee,
+      };
+    }
+
+    return {
+      value: generateEntries(Object.values(obj)),
+      dataType: UnknownData,
+    };
   }
 
   assertExhaustive(expression);

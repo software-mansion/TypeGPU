@@ -9,7 +9,9 @@ const cachedOffsets = new WeakMap<WgslStruct, Record<string, number>>();
 export function offsetsForProps<T extends Record<string, BaseWgslData>>(
   struct: WgslStruct<T>,
 ): Record<keyof T, number> {
-  const cached = cachedOffsets.get(struct);
+  const cached = cachedOffsets.get(
+    struct as WgslStruct<Record<string, BaseWgslData>>,
+  );
   if (cached) {
     return cached as Record<keyof T, number>;
   }
@@ -27,6 +29,9 @@ export function offsetsForProps<T extends Record<string, BaseWgslData>>(
     measurer.add(sizeOf(prop));
   }
 
-  cachedOffsets.set(struct, offsets);
+  cachedOffsets.set(
+    struct as WgslStruct<Record<string, BaseWgslData>>,
+    offsets,
+  );
   return offsets;
 }
