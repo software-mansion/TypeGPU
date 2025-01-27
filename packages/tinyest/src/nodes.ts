@@ -109,6 +109,10 @@ export type UnaryExpression = {
   u: [op: UnaryOperator, inner: Expression];
 };
 
+export type ObjectExpression = {
+  o: Record<string, Expression>;
+};
+
 export type MemberAccess = {
   a: [object: Expression, member: string];
 };
@@ -126,7 +130,12 @@ export type Num = {
   n: string;
 };
 
-export type Literal = Num | boolean;
+/** A string literal */
+export type Str = {
+  s: string;
+};
+
+export type Literal = Num | Str | boolean;
 
 /** Identifiers are just strings, since string literals are rare in WGSL, and identifiers are everywhere. */
 export type Expression =
@@ -135,6 +144,7 @@ export type Expression =
   | AssignmentExpression
   | LogicalExpression
   | UnaryExpression
+  | ObjectExpression
   | MemberAccess
   | IndexAccess
   | Call
