@@ -81,7 +81,9 @@ class TgpuFixedBufferImpl<
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var<${usage}> ${id}: ${ctx.resolve(this.buffer.dataType)};`,
+      `@group(${group}) @binding(${binding}) var<${usage}> ${id}: ${ctx.resolve(
+        this.buffer.dataType,
+      )};`,
     );
 
     return id;
@@ -98,8 +100,8 @@ class TgpuFixedBufferImpl<
 
     return new Proxy(
       {
-        '~resolve': ((ctx: ResolutionCtx) => ctx.resolve(this)).bind(this),
-        toString: (() => `.value:${this.label ?? '<unnamed>'}`).bind(this),
+        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        toString: () => `.value:${this.label ?? '<unnamed>'}`,
       },
       valueProxyHandler,
     ) as Infer<TData>;
@@ -130,7 +132,9 @@ export class TgpuLaidOutBufferImpl<
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${this._membership.idx}) var<${usage}> ${id}: ${ctx.resolve(this.dataType as AnyWgslData)};`,
+      `@group(${group}) @binding(${
+        this._membership.idx
+      }) var<${usage}> ${id}: ${ctx.resolve(this.dataType as AnyWgslData)};`,
     );
 
     return id;
@@ -147,8 +151,8 @@ export class TgpuLaidOutBufferImpl<
 
     return new Proxy(
       {
-        '~resolve': ((ctx: ResolutionCtx) => ctx.resolve(this)).bind(this),
-        toString: (() => `.value:${this.label ?? '<unnamed>'}`).bind(this),
+        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        toString: () => `.value:${this.label ?? '<unnamed>'}`,
       },
       valueProxyHandler,
     ) as Infer<TData>;
