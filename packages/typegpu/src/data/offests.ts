@@ -1,13 +1,17 @@
 import { Measurer } from 'typed-binary';
 import alignIO from './alignIO';
-import { alignmentOf } from './alignmentOf';
+import { alignmentOf, customAlignmentOf } from './alignmentOf';
+import { type Unstruct, isUnstruct } from './dataTypes';
 import { sizeOf } from './sizeOf';
 import type { BaseWgslData, WgslStruct } from './wgslTypes';
 
-const cachedOffsets = new WeakMap<WgslStruct, Record<string, number>>();
+const cachedOffsets = new WeakMap<
+  WgslStruct | Unstruct,
+  Record<string, number>
+>();
 
 export function offsetsForProps<T extends Record<string, BaseWgslData>>(
-  struct: WgslStruct<T>,
+  struct: WgslStruct<T> | Unstruct<T>,
 ): Record<keyof T, number> {
   const cached = cachedOffsets.get(
     struct as WgslStruct<Record<string, BaseWgslData>>,
@@ -24,13 +28,19 @@ export function offsetsForProps<T extends Record<string, BaseWgslData>>(
       throw new Error(`Property ${key} is undefined in struct`);
     }
 
-    alignIO(measurer, alignmentOf(prop));
+    if (isUnstruct(struct)) {
+      alignIO(measurer, customAlignmentOf(prop));
+    } else {
+      alignIO(measurer, alignmentOf(prop));
+    }
     offsets[key] = measurer.size;
     measurer.add(sizeOf(prop));
   }
 
   cachedOffsets.set(
-    struct as WgslStruct<Record<string, BaseWgslData>>,
+    struct as
+      | WgslStruct<Record<string, BaseWgslData>>
+      | Unstruct<Record<string, BaseWgslData>>,
     offsets,
   );
   return offsets;

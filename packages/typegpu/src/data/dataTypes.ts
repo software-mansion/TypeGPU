@@ -1,4 +1,9 @@
-import type { Infer, InferRecord } from '../shared/repr';
+import type {
+  Infer,
+  InferPartial,
+  InferPartialRecord,
+  InferRecord,
+} from '../shared/repr';
 import { vertexFormats } from '../shared/vertexFormat';
 import type { PackedData } from './vertexFormatData';
 import * as wgsl from './wgslTypes';
@@ -18,6 +23,7 @@ export interface Disarray<
   readonly elementCount: number;
   readonly elementType: TElement;
   readonly '~repr': Infer<TElement>[];
+  readonly '~reprPartial': Record<number, InferPartial<TElement>>;
 }
 
 /**
@@ -37,6 +43,7 @@ export interface Unstruct<
   readonly type: 'unstruct';
   readonly propTypes: TProps;
   readonly '~repr': InferRecord<TProps>;
+  readonly '~reprPartial': Partial<InferPartialRecord<TProps>>;
 }
 
 export interface LooseDecorated<

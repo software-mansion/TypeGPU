@@ -3,6 +3,7 @@ import { roundUp } from '../mathUtils';
 import type { Infer, InferPartial } from '../shared/repr';
 import { alignmentOf } from './alignmentOf';
 import { writeData } from './dataIO';
+import { isDisarray, isUnstruct } from './dataTypes';
 import { offsetsForProps } from './offests';
 import { sizeOf } from './sizeOf';
 import type * as wgsl from './wgslTypes';
@@ -20,7 +21,7 @@ export function getWriteInstructions<TData extends wgsl.BaseWgslData>(
   instructions: WriteInstruction[] = [],
   offset = 0,
 ): WriteInstruction[] {
-  if (isWgslStruct(schema)) {
+  if (isWgslStruct(schema) || isUnstruct(schema)) {
     for (const key in schema.propTypes) {
       const prop = schema.propTypes[key];
       if (prop === undefined) {
@@ -41,7 +42,7 @@ export function getWriteInstructions<TData extends wgsl.BaseWgslData>(
     return instructions;
   }
 
-  if (isWgslArray(schema)) {
+  if (isWgslArray(schema) || isDisarray(schema)) {
     const arraySchema = schema as wgsl.WgslArray<wgsl.AnyWgslData>;
     const elementSize = roundUp(
       sizeOf(arraySchema.elementType),

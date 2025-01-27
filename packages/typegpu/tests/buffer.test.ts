@@ -207,7 +207,11 @@ describe('TgpuBuffer', () => {
     device,
   }) => {
     const buffer = root.createBuffer(
-      d.struct({ a: d.u32, b: d.struct({ c: d.u32 }), d: d.arrayOf(d.u32, 3) }),
+      d.struct({
+        a: d.u32,
+        b: d.struct({ c: d.vec2f }),
+        d: d.arrayOf(d.u32, 3),
+      }),
     );
 
     buffer.writePartial({ a: 3 });
@@ -219,20 +223,54 @@ describe('TgpuBuffer', () => {
       [rawBuffer, 0, new Uint32Array([3]).buffer, 0, 4],
     ]);
 
-    buffer.writePartial({ b: { c: 4 } });
+    buffer.writePartial({ b: { c: d.vec2f(1, 2) } });
 
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
       [rawBuffer, 0, new Uint32Array([3]).buffer, 0, 4],
-      [rawBuffer, 4, new Uint32Array([4]).buffer, 0, 4],
+      [rawBuffer, 8, new Float32Array([1, 2]).buffer, 0, 8],
     ]);
 
     buffer.writePartial({ d: { 0: 1, 2: 3 } });
 
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
       [rawBuffer, 0, new Uint32Array([3]).buffer, 0, 4],
-      [rawBuffer, 4, new Uint32Array([4]).buffer, 0, 4],
-      [rawBuffer, 8, new Uint32Array([1]).buffer, 0, 4],
-      [rawBuffer, 16, new Uint32Array([3]).buffer, 0, 4],
+      [rawBuffer, 8, new Float32Array([1, 2]).buffer, 0, 8],
+      [rawBuffer, 16, new Uint32Array([1]).buffer, 0, 4],
+      [rawBuffer, 24, new Uint32Array([3]).buffer, 0, 4],
+    ]);
+  });
+
+  it('should allow for partial writes with loose data', ({ root, device }) => {
+    const buffer = root.createBuffer(
+      d.unstruct({
+        a: d.disarrayOf(d.unorm16x2, 4),
+        b: d.snorm8x2,
+        c: d.unstruct({ d: d.u32 }),
+      }),
+    );
+
+    buffer.writePartial({ a: { 2: d.vec2f(0.5, 0.5) } });
+
+    const rawBuffer = root.unwrap(buffer);
+    expect(rawBuffer).toBeDefined();
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 8, new Uint8Array([-1, 127, -1, 127]).buffer, 0, 4],
+    ]);
+
+    buffer.writePartial({ b: d.vec2f(-0.5, 0.5) });
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 8, new Uint8Array([-1, 127, -1, 127]).buffer, 0, 4],
+      [rawBuffer, 16, new Uint8Array([64, -65]).buffer, 0, 2],
+    ]);
+
+    buffer.writePartial({ c: { d: 3 } });
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 8, new Uint8Array([-1, 127, -1, 127]).buffer, 0, 4],
+      [rawBuffer, 16, new Uint8Array([64, -65]).buffer, 0, 2],
+      [rawBuffer, 18, new Uint32Array([3]).buffer, 0, 4],
     ]);
   });
 });
