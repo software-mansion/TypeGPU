@@ -1,5 +1,5 @@
 import type { Disarray, Unstruct } from '../../data/dataTypes';
-import type { WgslArray, WgslStruct } from '../../data/wgslTypes';
+import type { AnyWgslStruct, WgslArray } from '../../data/wgslTypes';
 import type {
   KindToAcceptedAttribMap,
   KindToDefaultFormatMap,
@@ -15,7 +15,7 @@ import type {
  * - TgpuStruct<{ a: Vec3f, b: unorm8x2 }>
  * - TgpuStruct<{ nested: TgpuStruct<{ a: Vec3f }> }>
  */
-export type DataToContainedAttribs<T> = T extends WgslStruct | Unstruct
+export type DataToContainedAttribs<T> = T extends AnyWgslStruct | Unstruct
   ? {
       [Key in keyof T['propTypes']]: DataToContainedAttribs<
         T['propTypes'][Key]

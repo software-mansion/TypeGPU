@@ -52,7 +52,8 @@ Object.assign(tgpu, {
 });
 
 export {
-  MissingBindGroupError,
+  MissingBindGroupsError,
+  MissingVertexBuffersError,
   MissingLinksError,
   MissingSlotValueError,
   NotUniformError,

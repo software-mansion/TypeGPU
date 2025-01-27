@@ -1,4 +1,4 @@
-import { MissingBindGroupError } from '../../errors';
+import { MissingBindGroupsError } from '../../errors';
 import type { TgpuNamable } from '../../namable';
 import { resolve } from '../../resolutionCtx';
 import type {
@@ -100,25 +100,33 @@ class TgpuComputePipelineImpl
     z?: number | undefined,
   ): void {
     const memo = this._core.unwrap();
+    const { branch, label } = this._core;
 
-    const pass = this._core.branch.commandEncoder.beginComputePass({
-      label: this._core.label ?? '<unnamed>',
+    const pass = branch.commandEncoder.beginComputePass({
+      label: label ?? '<unnamed>',
     });
 
     pass.setPipeline(memo.pipeline);
 
+    const missingBindGroups = new Set(memo.bindGroupLayouts);
+
     memo.bindGroupLayouts.forEach((layout, idx) => {
       if (memo.catchall && idx === memo.catchall[0]) {
         // Catch-all
-        pass.setBindGroup(idx, this._core.branch.unwrap(memo.catchall[1]));
+        pass.setBindGroup(idx, branch.unwrap(memo.catchall[1]));
+        missingBindGroups.delete(layout);
       } else {
         const bindGroup = this._priors.bindGroupLayoutMap?.get(layout);
-        if (bindGroup === undefined) {
-          throw new MissingBindGroupError(layout.label);
+        if (bindGroup !== undefined) {
+          missingBindGroups.delete(layout);
+          pass.setBindGroup(idx, branch.unwrap(bindGroup));
         }
-        pass.setBindGroup(idx, this._core.branch.unwrap(bindGroup));
       }
     });
+
+    if (missingBindGroups.size > 0) {
+      throw new MissingBindGroupsError(missingBindGroups);
+    }
 
     pass.dispatchWorkgroups(x, y, z);
     pass.end();
