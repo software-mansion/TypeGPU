@@ -181,4 +181,43 @@ describe('TgpuDerived', () => {
         }`),
     );
   });
+
+  it('allows slot bindings to pass downstream from derived (#697)', () => {
+    const utgpu = tgpu['~unstable'];
+    const valueSlot = utgpu.slot(1).$name('valueSlot');
+
+    const derivedFn = utgpu.derived(() => {
+      return utgpu
+        .fn([], d.f32)
+        .does(() => valueSlot.value)
+        .$name('innerFn');
+    });
+
+    const derivedFnWith2 = derivedFn.with(valueSlot, 2);
+
+    const mainFn = utgpu
+      .fn([])
+      .does(() => {
+        derivedFn.value();
+        derivedFnWith2.value();
+      })
+      .$name('main');
+
+    expect(parseResolved({ mainFn })).toEqual(
+      parse(`
+        fn innerFn() -> f32 {
+          return 1;
+        }
+
+        fn innerFn_1() -> f32 {
+          return 2;
+        }
+
+        fn main() {
+          innerFn();
+          innerFn_1();
+        }
+      `),
+    );
+  });
 });

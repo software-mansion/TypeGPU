@@ -38,7 +38,7 @@ export function addArgTypesToExternals(
 ) {
   const argTypeNames = [
     ...implementation.matchAll(/:\s*(?<arg>.*?)\s*[,)]/g),
-  ].map((found) => found.groups?.arg);
+  ].map((found) => (found ? found[1] : undefined));
 
   applyExternals(
     Object.fromEntries(
@@ -57,9 +57,8 @@ export function addReturnTypeToExternals(
   returnType: unknown,
   applyExternals: (externals: ExternalMap) => void,
 ) {
-  const outputName = implementation
-    .match(/->(?<output>.*?){/s)
-    ?.groups?.output?.trim();
+  const matched = implementation.match(/->(?<output>.*?){/s);
+  const outputName = matched ? matched[1]?.trim() : undefined;
 
   if (isWgslStruct(returnType) && outputName && !/\s/g.test(outputName)) {
     applyExternals({ [outputName]: returnType });
@@ -67,7 +66,10 @@ export function addReturnTypeToExternals(
 }
 
 function identifierRegex(name: string) {
-  return new RegExp(`(?<![\\w_.])${name}(?![\\w_])`, 'g');
+  return new RegExp(
+    `(?<![\\w_.])${name.replaceAll('.', '\\.')}(?![\\w_])`,
+    'g',
+  );
 }
 
 /**
@@ -96,7 +98,10 @@ export function replaceExternalsInWgsl(
       const foundProperties =
         [
           ...wgsl.matchAll(
-            new RegExp(`${externalName}\\.(?<prop>.*?)(?![\\w_])`, 'g'),
+            new RegExp(
+              `${externalName.replaceAll('.', '\\.')}\\.(?<prop>.*?)(?![\\w_])`,
+              'g',
+            ),
           ),
         ].map((found) => found[1]) ?? [];
 

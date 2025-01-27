@@ -1,7 +1,7 @@
 import type { OmitBuiltins } from '../../builtin';
-import type { AnyData } from '../../data/dataTypes';
+import type { AnyData, Disarray } from '../../data/dataTypes';
 import type { Exotic } from '../../data/exotic';
-import type { AnyWgslData, Vec4f } from '../../data/wgslTypes';
+import type { AnyWgslData, Vec4f, WgslArray } from '../../data/wgslTypes';
 import type { JitTranspiler } from '../../jitTranspiler';
 import type { NameRegistry } from '../../nameRegistry';
 import type { Infer } from '../../shared/repr';
@@ -13,7 +13,7 @@ import type {
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout';
 import type { Unwrapper } from '../../unwrapper';
-import type { TgpuBuffer } from '../buffer/buffer';
+import type { TgpuBuffer, Vertex } from '../buffer/buffer';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage';
 import type { IOLayout, IORecord } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
@@ -28,6 +28,7 @@ import type {
 import type { Eventual, TgpuAccessor, TgpuSlot } from '../slot/slotTypes';
 import type { TgpuTexture } from '../texture/texture';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute';
+import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout';
 
 // ----------
 // Public API
@@ -80,6 +81,11 @@ export interface WithFragment<
   withPrimitive(
     primitiveState: GPUPrimitiveState | undefined,
   ): WithFragment<Output>;
+
+  withDepthStencil(
+    depthStencilState: GPUDepthStencilState | undefined,
+  ): WithFragment<Output>;
+
   createPipeline(): TgpuRenderPipeline<Output>;
 }
 
@@ -182,6 +188,39 @@ export type CreateTextureResult<
     undefined
   >
 >;
+
+/**
+ * TODO: Implement flexible pipelines as per discussion:
+ * https://github.com/software-mansion/TypeGPU/discussions/713
+ */
+interface RenderPass {
+  setPipeline(): void;
+
+  setBindGroup<Entries extends Record<string, TgpuLayoutEntry | null>>(
+    bindGroupLayout: TgpuBindGroupLayout<Entries>,
+    bindGroup: TgpuBindGroup<Entries>,
+  ): void;
+
+  setVertexBuffer<TData extends WgslArray | Disarray>(
+    vertexLayout: TgpuVertexLayout<TData>,
+    buffer: TgpuBuffer<TData> & Vertex,
+  ): void;
+
+  draw(
+    vertexCount: number,
+    instanceCount?: number | undefined,
+    firstVertex?: number | undefined,
+    firstInstance?: number | undefined,
+  ): void;
+
+  drawIndexed(
+    indexCount: number,
+    instanceCount?: number | undefined,
+    firstIndex?: number | undefined,
+    baseVertex?: number | undefined,
+    firstInstance?: number | undefined,
+  ): void;
+}
 
 export interface TgpuRoot extends Unwrapper {
   /**
