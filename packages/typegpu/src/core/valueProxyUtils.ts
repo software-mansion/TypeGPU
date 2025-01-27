@@ -12,6 +12,10 @@ export const valueProxyHandler: ProxyHandler<SelfResolvable & Labelled> = {
       return Reflect.get(target, prop);
     }
 
+    if (prop === '~providing') {
+      return undefined;
+    }
+
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) =>
