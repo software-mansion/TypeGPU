@@ -23,7 +23,7 @@ export interface Disarray<
   readonly elementCount: number;
   readonly elementType: TElement;
   readonly '~repr': Infer<TElement>[];
-  readonly '~reprPartial': Record<number, InferPartial<TElement>>;
+  readonly '~reprPartial': { idx: number; value: InferPartial<TElement> }[];
 }
 
 /**

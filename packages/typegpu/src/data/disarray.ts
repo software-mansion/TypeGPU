@@ -38,7 +38,10 @@ class DisarrayImpl<TElement extends AnyData> implements Disarray<TElement> {
   /** Type-token, not available at runtime */
   public readonly '~repr'!: Infer<TElement>[];
   /** Type-token, not available at runtime */
-  public readonly '~reprPartial'!: Record<number, InferPartial<TElement>>;
+  public readonly '~reprPartial'!: {
+    idx: number;
+    value: InferPartial<TElement>;
+  }[];
 
   constructor(
     public readonly elementType: TElement,

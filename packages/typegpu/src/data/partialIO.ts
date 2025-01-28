@@ -10,8 +10,6 @@ import type * as wgsl from './wgslTypes';
 import { isWgslArray, isWgslStruct } from './wgslTypes';
 
 export interface WriteInstruction {
-  start: number;
-  length: number;
   data: Uint8Array;
 }
 
@@ -27,12 +25,17 @@ export function getWriteInstructions<TData extends wgsl.BaseWgslData>(
   const bigBuffer = new ArrayBuffer(totalSize);
   const writer = new BufferWriter(bigBuffer);
 
-  const segments: Array<{ start: number; end: number }> = [];
+  const segments: Array<{
+    start: number;
+    end: number;
+    padding?: number | undefined;
+  }> = [];
 
   function gatherAndWrite<T extends wgsl.BaseWgslData>(
     node: T,
     partialValue: InferPartial<T> | undefined,
     offset: number,
+    padding?: number | undefined,
   ) {
     if (partialValue === undefined || partialValue === null) {
       return;
@@ -42,7 +45,7 @@ export function getWriteInstructions<TData extends wgsl.BaseWgslData>(
       const propOffsets = offsetsForProps(node);
 
       const sortedProps = Object.entries(propOffsets).sort(
-        (a, b) => a[1] - b[1], // Sort by offset
+        (a, b) => a[1].offset - b[1].offset, // Sort by offset
       );
 
       for (const [key, propOffset] of sortedProps) {
@@ -51,7 +54,12 @@ export function getWriteInstructions<TData extends wgsl.BaseWgslData>(
 
         const childValue = partialValue[key as keyof typeof partialValue];
         if (childValue !== undefined) {
-          gatherAndWrite(subSchema, childValue, offset + propOffset);
+          gatherAndWrite(
+            subSchema,
+            childValue,
+            offset + propOffset.offset,
+            propOffset.padding ?? padding,
+          );
         }
       }
       return;
@@ -64,18 +72,20 @@ export function getWriteInstructions<TData extends wgsl.BaseWgslData>(
         alignmentOf(arrSchema.elementType),
       );
 
-      const indices = Object.keys(partialValue)
-        .map(Number)
-        .sort((a, b) => a - b); // Sort by index
-      for (const i of indices) {
-        const partialKey = i as keyof typeof partialValue;
-        if (partialValue[partialKey] !== undefined) {
-          gatherAndWrite(
-            arrSchema.elementType,
-            partialValue[partialKey],
-            offset + i * elementSize,
-          );
-        }
+      if (!Array.isArray(partialValue)) {
+        throw new Error('Partial value for array must be an array');
+      }
+
+      partialValue.sort((a, b) => a.idx - b.idx);
+
+      for (const i of partialValue) {
+        const { idx, value } = i;
+        gatherAndWrite(
+          arrSchema.elementType,
+          value,
+          offset + idx * elementSize,
+          elementSize - sizeOf(arrSchema.elementType),
+        );
       }
       return;
     }
@@ -84,7 +94,8 @@ export function getWriteInstructions<TData extends wgsl.BaseWgslData>(
     writer.seekTo(offset);
     writeData(writer, node, partialValue as Infer<T>);
 
-    segments.push({ start: offset, end: offset + leafSize });
+    const toPush = { start: offset, end: offset + leafSize, padding };
+    segments.push(toPush);
   }
 
   gatherAndWrite(schema, data, 0);
@@ -103,12 +114,11 @@ export function getWriteInstructions<TData extends wgsl.BaseWgslData>(
     if (!next || !current) {
       throw new Error('Internal error: missing segment');
     }
-    if (next.start === current.end) {
+    if (next.start === current.end + (current.padding ?? 0)) {
       current.end = next.end;
+      current.padding = next.padding;
     } else {
       instructions.push({
-        start: current.start,
-        length: current.end - current.start,
         data: new Uint8Array(
           bigBuffer,
           current.start,
@@ -124,8 +134,6 @@ export function getWriteInstructions<TData extends wgsl.BaseWgslData>(
   }
 
   instructions.push({
-    start: current.start,
-    length: current.end - current.start,
     data: new Uint8Array(bigBuffer, current.start, current.end - current.start),
   });
 

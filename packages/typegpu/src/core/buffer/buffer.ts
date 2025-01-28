@@ -234,41 +234,26 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     const gpuBuffer = this.buffer;
     const device = this._group.device;
 
-    // Produce minimal instructions with typed arrays or ArrayBuffers
     const instructions = getWriteInstructions(this.dataType, data);
 
-    // If the buffer is already mapped on the CPU side:
     if (gpuBuffer.mapState === 'mapped') {
       const mappedRange = gpuBuffer.getMappedRange();
       const mappedView = new Uint8Array(mappedRange);
 
       for (const instruction of instructions) {
-        // Convert 'instruction.data' to Uint8Array if not already
-        const source =
-          instruction.data instanceof Uint8Array
-            ? instruction.data
-            : new Uint8Array(instruction.data);
-
-        // Copy the bytes into the mapped buffer at the correct offset
-        mappedView.set(source, instruction.start);
+        mappedView.set(instruction.data, instruction.data.byteOffset);
       }
 
       return;
     }
 
-    // Otherwise, use GPU queue writes
     for (const instruction of instructions) {
-      const source =
-        instruction.data instanceof Uint8Array
-          ? instruction.data
-          : new Uint8Array(instruction.data);
-
       device.queue.writeBuffer(
         gpuBuffer,
-        instruction.start,
-        source,
+        instruction.data.byteOffset,
+        instruction.data,
         0,
-        instruction.length, // in bytes
+        instruction.data.byteLength,
       );
     }
   }

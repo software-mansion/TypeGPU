@@ -47,7 +47,10 @@ class TgpuArrayImpl<TElement extends AnyWgslData>
   /** Type-token, not available at runtime */
   public readonly '~repr'!: Infer<TElement>[];
   /** Type-token, not available at runtime */
-  public readonly '~reprPartial'!: Record<number, InferPartial<TElement>>;
+  public readonly '~reprPartial'!: {
+    idx: number;
+    value: InferPartial<TElement>;
+  }[];
   /** Type-token, not available at runtime */
   public readonly '~exotic'!: WgslArray<Exotic<TElement>>;
 

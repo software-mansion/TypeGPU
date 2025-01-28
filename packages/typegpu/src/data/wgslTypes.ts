@@ -698,7 +698,7 @@ export interface WgslArray<TElement = BaseWgslData> {
   readonly elementType: TElement;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TElement>[];
-  readonly '~reprPartial': Record<number, InferPartial<TElement>>;
+  readonly '~reprPartial': { idx: number; value: InferPartial<TElement> }[];
 }
 
 /**
