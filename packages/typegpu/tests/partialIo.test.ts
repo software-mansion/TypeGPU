@@ -76,9 +76,59 @@ describe('offsetsForProps', () => {
       c: { offset: 80, size: 4, padding: 12 },
     });
   });
+
+  it('should return correct offsets for deeply nested structs', () => {
+    const One = d.struct({
+      a: d.u32,
+      b: d.vec3f,
+    });
+
+    const Two = d.struct({
+      c: d.arrayOf(One, 3),
+      d: d.vec4u,
+    });
+
+    const Three = d.struct({
+      e: One,
+      f: d.arrayOf(Two, 2),
+    });
+
+    const offsets = offsetsForProps(Three);
+
+    expect(offsets).toStrictEqual({
+      e: { offset: 0, size: 32, padding: 0 },
+      f: { offset: 32, size: 224, padding: 0 },
+    });
+
+    const oneOffsets = offsetsForProps(One);
+
+    expect(oneOffsets).toStrictEqual({
+      a: { offset: 0, size: 4, padding: 12 },
+      b: { offset: 16, size: 12, padding: 4 },
+    });
+
+    const twoOffsets = offsetsForProps(Two);
+
+    expect(twoOffsets).toStrictEqual({
+      c: { offset: 0, size: 96, padding: 0 },
+      d: { offset: 96, size: 16, padding: 0 },
+    });
+  });
 });
 
 describe('getWriteInstructions', () => {
+  it('should return correct write instructions for simple data', () => {
+    const instructions = getWriteInstructions(d.u32, 3) as [WriteInstruction];
+
+    expect(instructions).toHaveLength(1);
+
+    expectInstruction(instructions[0], {
+      start: 0,
+      length: 4,
+      expectedData: new Uint32Array([3]),
+    });
+  });
+
   it('should return correct write instructions for props', () => {
     const struct = d.struct({
       a: d.u32,
@@ -183,5 +233,73 @@ describe('getWriteInstructions', () => {
         new Uint32Array([4]),
       ],
     });
+  });
+
+  it('should return correct write instructions for arrays of structs', () => {
+    const Boid = d.struct({
+      position: d.vec3f,
+      velocity: d.vec3f,
+    });
+
+    const struct = d.struct({
+      boids: d.arrayOf(Boid, 3),
+    });
+
+    const data = [
+      {
+        idx: 1,
+        value: { position: d.vec3f(1, 2, 3) },
+      },
+    ];
+
+    const instructions = getWriteInstructions(struct, {
+      boids: data,
+    }) as [WriteInstruction];
+
+    expect(instructions).toHaveLength(1);
+
+    expectInstruction(instructions[0], {
+      start: 32,
+      length: 12,
+      expectedData: [new Float32Array([1, 2, 3])],
+    });
+  });
+
+  it('should not accept invalid data', () => {
+    const struct = d.struct({
+      a: d.u32,
+      b: d.vec3f,
+      c: d.struct({ d: d.u32 }),
+    });
+
+    // @ts-expect-error
+    getWriteInstructions(struct, { a: 3, b: 4, c: 5 });
+  });
+
+  it('should not merge instructions if there is a gap', () => {
+    const array = d.arrayOf(d.vec3f, 1024);
+
+    const data = Array.from({ length: 1024 })
+      .map((_, i) => i)
+      .filter((i) => i % 2 === 0)
+      .map((i) => ({ idx: i, value: d.vec3f(1, 2, 3) }));
+
+    const instructions = getWriteInstructions(array, data) as NTuple<
+      WriteInstruction,
+      512
+    >;
+
+    expect(instructions).toHaveLength(512);
+
+    for (let i = 0; i < 512; i++) {
+      if (instructions[i] === undefined) {
+        throw new Error('Instruction is undefined');
+      }
+      expectInstruction(instructions[i] as WriteInstruction, {
+        start: i * 2 * 16,
+        length: 12,
+        expectedData: new Float32Array([1, 2, 3]),
+      });
+    }
   });
 });
