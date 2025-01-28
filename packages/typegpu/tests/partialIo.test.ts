@@ -58,7 +58,7 @@ describe('offsetsForProps', () => {
     expect(offsets).toStrictEqual({
       a: { offset: 0, size: 4, padding: 12 },
       b: { offset: 16, size: 12, padding: 0 },
-      c: { offset: 28, size: 4 },
+      c: { offset: 28, size: 4, padding: 0 },
     });
   });
 
@@ -73,7 +73,7 @@ describe('offsetsForProps', () => {
     expect(offsets).toStrictEqual({
       a: { offset: 0, size: 4, padding: 12 },
       b: { offset: 16, size: 64, padding: 0 },
-      c: { offset: 80, size: 4 },
+      c: { offset: 80, size: 4, padding: 12 },
     });
   });
 });
