@@ -190,6 +190,7 @@ describe('TgpuDerived', () => {
       return utgpu
         .fn([], d.f32)
         .does(() => valueSlot.value)
+        .with(valueSlot, valueSlot.value)
         .$name('innerFn');
     });
 

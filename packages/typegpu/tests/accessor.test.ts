@@ -204,6 +204,10 @@ describe('tgpu.accessor', () => {
         const color = colorAccessorValue.value;
         const color2 = colorAccessorUsage.value;
         const color3 = colorAccessorFn.value;
+
+        const colorX = colorAccessorValue.value.x;
+        const color2X = colorAccessorUsage.value.x;
+        const color3X = colorAccessorFn.value.x;
       })
       .$name('main');
 
@@ -224,6 +228,10 @@ describe('tgpu.accessor', () => {
           var color = vec3f(1, 0, 0);
           var color2 = colorUniform;
           var color3 = getColor();
+
+          var colorX = vec3f(1, 0, 0).x;
+          var color2X = colorUniform.x;
+          var color3X = getColor().x;
         }
     `),
     );

@@ -96,8 +96,8 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyWgslData>
 
     return new Proxy(
       {
-        '~resolve': ((ctx: ResolutionCtx) => ctx.resolve(this)).bind(this),
-        toString: (() => `.value:${this.label ?? '<unnamed>'}`).bind(this),
+        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        toString: () => `.value:${this.label ?? '<unnamed>'}`,
       },
       valueProxyHandler,
     ) as Infer<TDataType>;
