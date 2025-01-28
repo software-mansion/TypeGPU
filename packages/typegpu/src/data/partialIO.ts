@@ -49,16 +49,19 @@ export function getWriteInstructions<TData extends wgsl.BaseWgslData>(
       alignmentOf(arraySchema.elementType),
     );
 
-    const selectedElements = data as Record<
-      number,
-      InferPartial<wgsl.AnyWgslData>
-    >;
-    for (const index in selectedElements) {
-      const elementData = selectedElements[index];
-      const newOffset = offset + elementSize * Number(index);
+    if (!Array.isArray(data)) {
+      throw new Error('Data is not an array');
+    }
+
+    for (const entry of data) {
+      const { idx, value } = entry as unknown as {
+        idx: number;
+        value: InferPartial<wgsl.AnyWgslData>;
+      };
+      const newOffset = offset + elementSize * idx;
       getWriteInstructions(
         arraySchema.elementType,
-        elementData,
+        value,
         instructions,
         newOffset,
       );

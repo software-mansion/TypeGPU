@@ -230,7 +230,12 @@ describe('TgpuBuffer', () => {
       [rawBuffer, 8, new Float32Array([1, 2]).buffer, 0, 8],
     ]);
 
-    buffer.writePartial({ d: { 0: 1, 2: 3 } });
+    buffer.writePartial({
+      d: [
+        { idx: 0, value: 1 },
+        { idx: 2, value: 3 },
+      ],
+    });
 
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
       [rawBuffer, 0, new Uint32Array([3]).buffer, 0, 4],
@@ -249,7 +254,7 @@ describe('TgpuBuffer', () => {
       }),
     );
 
-    buffer.writePartial({ a: { 2: d.vec2f(0.5, 0.5) } });
+    buffer.writePartial({ a: [{ idx: 2, value: d.vec2f(0.5, 0.5) }] });
 
     const rawBuffer = root.unwrap(buffer);
     expect(rawBuffer).toBeDefined();

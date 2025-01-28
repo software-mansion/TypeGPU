@@ -24,7 +24,7 @@ async function runBench(params: BenchParameterSet): Promise<BenchResults> {
 
   const bench = new Bench({
     name: stringifyLocator('typegpu', params.typegpu),
-    time: 1000,
+    time: 10000,
   });
 
   const amountOfBoids = 10000;
