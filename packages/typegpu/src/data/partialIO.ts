@@ -94,8 +94,7 @@ export function getWriteInstructions<TData extends wgsl.BaseWgslData>(
     writer.seekTo(offset);
     writeData(writer, node, partialValue as Infer<T>);
 
-    const toPush = { start: offset, end: offset + leafSize, padding };
-    segments.push(toPush);
+    segments.push({ start: offset, end: offset + leafSize, padding });
   }
 
   gatherAndWrite(schema, data, 0);
