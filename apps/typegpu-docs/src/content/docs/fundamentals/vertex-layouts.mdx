@@ -144,7 +144,7 @@ const renderPipeline = device.createRenderPipeline({
 });
 ```
 
-If you are using a loose schema, you can now resolve it to get it's WGSL representation.
+If you are using a loose schema, you can now resolve it to get its WGSL representation.
 
 ```ts
 const LooseParticleGeometry = d.unstruct({
@@ -169,6 +169,7 @@ const wgslDefinition = tgpu.resolve({
   template: sampleShader,
   externals: { LooseParticleGeometry }
 });
+
 console.log(wgslDefinition);
 // struct LooseParticleGeometry_0 {
 //   @location(0) tilt: f32,

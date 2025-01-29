@@ -150,7 +150,7 @@ ${Object.entries(unstruct.propTypes)
       ? resolveStructProperty(ctx, [prop[0], formatToWGSLType[prop[1].format]])
       : resolveStructProperty(ctx, prop),
   )
-  .join('')}\
+  .join('')}
 }\n`);
 
   return id;
