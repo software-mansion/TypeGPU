@@ -103,8 +103,6 @@ export function getWriteInstructions<TData extends wgsl.BaseWgslData>(
     return [];
   }
 
-  segments.sort((a, b) => a.start - b.start);
-
   const instructions: WriteInstruction[] = [];
   let current = segments[0];
 

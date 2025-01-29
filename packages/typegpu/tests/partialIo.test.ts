@@ -137,8 +137,8 @@ describe('getWriteInstructions', () => {
     });
 
     const data = {
-      a: 3,
       b: d.vec3f(1, 2, 3),
+      a: 3,
       c: { d: 4 },
     };
 
@@ -167,13 +167,13 @@ describe('getWriteInstructions', () => {
 
     const data = {
       a: 3,
-      b: [
-        { idx: 0, value: d.vec3f(1, 2, 3) },
-        { idx: 1, value: d.vec3f(4, 5, 6) },
-        { idx: 2, value: d.vec3f(7, 8, 9) },
-        { idx: 3, value: d.vec3f(10, 11, 12) },
-      ],
       c: { d: 4 },
+      b: [
+        { idx: 1, value: d.vec3f(4, 5, 6) },
+        { idx: 0, value: d.vec3f(1, 2, 3) },
+        { idx: 3, value: d.vec3f(10, 11, 12) },
+        { idx: 2, value: d.vec3f(7, 8, 9) },
+      ],
     };
 
     const instructions = getWriteInstructions(struct, data) as NTuple<
@@ -205,8 +205,8 @@ describe('getWriteInstructions', () => {
 
     const data = {
       b: [
-        { idx: 0, value: d.vec3f(1, 2, 3) },
         { idx: 2, value: d.vec3f(7, 8, 9) },
+        { idx: 0, value: d.vec3f(1, 2, 3) },
         { idx: 3, value: d.vec3f(10, 11, 12) },
       ],
       c: { d: 4 },
