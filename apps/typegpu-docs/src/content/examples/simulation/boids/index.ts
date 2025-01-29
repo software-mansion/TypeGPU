@@ -277,7 +277,6 @@ const vertexLayout = tgpu['~unstable'].vertexLayout((n) =>
   d.arrayOf(d.location(0, d.vec2f), n),
 );
 
-
 const pipeline = root.device.createRenderPipeline({
   layout: root.device.createPipelineLayout({
     bindGroupLayouts: [root.unwrap(renderBindGroupLayout)],

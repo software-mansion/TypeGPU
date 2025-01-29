@@ -23,7 +23,7 @@ let timestep = 4;
 let swap = false;
 let paused = false;
 
-const layoutCompute = {
+const bindGroupLayoutCompute = tgpu.bindGroupLayout({
   size: {
     storage: d.vec2u,
     access: 'readonly',
@@ -36,16 +36,12 @@ const layoutCompute = {
     storage: (arrayLength: number) => d.arrayOf(d.u32, arrayLength),
     access: 'mutable',
   },
-} as const;
-
-const groupLayout = {
+});
+const bindGroupLayoutRender = tgpu.bindGroupLayout({
   size: {
     uniform: d.vec2u,
   },
-} as const;
-
-const bindGroupLayoutCompute = tgpu.bindGroupLayout(layoutCompute);
-const bindGroupLayoutRender = tgpu.bindGroupLayout(groupLayout);
+});
 
 const computeShader = device.createShaderModule({
   code: tgpu.resolve({

@@ -197,6 +197,15 @@ class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
     // If defaultAttribEntry is in the custom location map,
     // it means that the vertex layout is based on a single attribute
     if (this._customLocationMap[defaultAttribEntry] !== undefined) {
+      if (
+        typeof this.attrib.format !== 'string' ||
+        typeof this.attrib.offset !== 'number'
+      ) {
+        throw new Error(
+          'Single attribute vertex layouts must have a format and offset.',
+        );
+      }
+
       return {
         arrayStride: this.stride,
         stepMode: this.stepMode,
@@ -206,7 +215,7 @@ class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
             offset: this.attrib.offset,
             shaderLocation: this._customLocationMap[defaultAttribEntry],
           },
-        ] as unknown as GPUVertexAttribute[],
+        ],
       };
     }
 
@@ -225,16 +234,12 @@ class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
       arrayStride: this.stride,
       stepMode: this.stepMode,
       attributes: [
-        ...Object.entries(this.attrib).map(([key, attrib]) => {
-          return {
-            //@ts-ignore
-            format: attrib.format,
-            //@ts-ignore
-            offset: attrib.offset,
-            shaderLocation: this._customLocationMap[key],
-          };
-        }),
-      ] as unknown as GPUVertexAttribute[],
+        ...Object.entries(this.attrib).map(([key, attrib]) => ({
+          format: attrib.format,
+          offset: attrib.offset,
+          shaderLocation: this._customLocationMap[key],
+        })),
+      ] as GPUVertexAttribute[],
     };
   }
 
