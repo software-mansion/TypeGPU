@@ -33,6 +33,7 @@ export function offsetsForProps<T extends Record<string, BaseWgslData>>(
     OffsetInfo
   >;
   let lastEntry: OffsetInfo | undefined = undefined;
+
   for (const key in struct.propTypes) {
     const prop = struct.propTypes[key];
     if (prop === undefined) {
@@ -41,11 +42,10 @@ export function offsetsForProps<T extends Record<string, BaseWgslData>>(
 
     const beforeAlignment = measurer.size;
 
-    if (isUnstruct(struct)) {
-      alignIO(measurer, customAlignmentOf(prop));
-    } else {
-      alignIO(measurer, alignmentOf(prop));
-    }
+    alignIO(
+      measurer,
+      isUnstruct(struct) ? customAlignmentOf(prop) : alignmentOf(prop),
+    );
 
     if (lastEntry) {
       lastEntry.padding = measurer.size - beforeAlignment;
@@ -56,10 +56,10 @@ export function offsetsForProps<T extends Record<string, BaseWgslData>>(
     lastEntry = offsets[key];
     measurer.add(propSize);
   }
+
   if (lastEntry) {
     lastEntry.padding =
-      roundUp(sizeOf(struct), alignmentOf(struct)) -
-      (lastEntry.offset + lastEntry.size);
+      roundUp(sizeOf(struct), alignmentOf(struct)) - measurer.size;
   }
 
   cachedOffsets.set(
@@ -68,5 +68,6 @@ export function offsetsForProps<T extends Record<string, BaseWgslData>>(
       | Unstruct<Record<string, BaseWgslData>>,
     offsets,
   );
+
   return offsets;
 }
