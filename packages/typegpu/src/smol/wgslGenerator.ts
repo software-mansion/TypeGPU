@@ -5,7 +5,6 @@ import {
   type ResolutionCtx,
   type Resource,
   UnknownData,
-  type Wgsl,
   isWgsl,
 } from '../types';
 
@@ -180,13 +179,7 @@ function generateExpression(
       };
     }
 
-    // Assuming that `id` is callable
-    // TODO: Pass in resources, not just values.
-    const result = (idValue as unknown as (...args: unknown[]) => unknown)(
-      ...argValues,
-    ) as Wgsl;
-    // TODO: Make function calls return resources instead of just values.
-    return { value: result, dataType: UnknownData };
+    return ctx.resolveCall(idValue, argValues);
   }
 
   assertExhaustive(expression);

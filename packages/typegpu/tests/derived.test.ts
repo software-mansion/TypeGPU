@@ -183,11 +183,10 @@ describe('TgpuDerived', () => {
   });
 
   it('allows slot bindings to pass downstream from derived (#697)', () => {
-    const utgpu = tgpu['~unstable'];
-    const valueSlot = utgpu.slot(1).$name('valueSlot');
+    const valueSlot = tgpu['~unstable'].slot(1).$name('valueSlot');
 
-    const derivedFn = utgpu.derived(() => {
-      return utgpu
+    const derivedFn = tgpu['~unstable'].derived(() => {
+      return tgpu['~unstable']
         .fn([], d.f32)
         .does(() => valueSlot.value)
         .$name('innerFn');
@@ -195,7 +194,7 @@ describe('TgpuDerived', () => {
 
     const derivedFnWith2 = derivedFn.with(valueSlot, 2);
 
-    const mainFn = utgpu
+    const mainFn = tgpu['~unstable']
       .fn([])
       .does(() => {
         derivedFn.value();

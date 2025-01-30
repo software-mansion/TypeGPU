@@ -1,7 +1,7 @@
 import type { Infer } from '../../data';
 import type { Exotic, ExoticArray } from '../../data/exotic';
 import type { AnyWgslData } from '../../data/wgslTypes';
-import { inGPUMode } from '../../gpuMode';
+import { getResolutionCtx, inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import type {
   Labelled,
@@ -95,7 +95,15 @@ export function fn<
     does(
       implementation: Implementation<InferArgs<Args>, InferReturn<Return>>,
     ): TgpuFn<Args, Return> {
-      return createFn(this, implementation as Implementation);
+      const fn = createFn(this, implementation as Implementation);
+
+      const ctx = getResolutionCtx();
+      if (ctx) {
+        // Creating a function during resolution.
+        const snapshot = Array.from(ctx.getSlotSnapshot());
+        return createBoundFunction(fn, snapshot);
+      }
+      return fn;
     },
   };
 }
