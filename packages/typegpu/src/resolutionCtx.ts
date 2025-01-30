@@ -58,7 +58,7 @@ type ItemLayer = {
 
 type SlotBindingLayer = {
   type: 'slotBinding';
-  bindingMap: WeakMap<TgpuSlot<unknown>, unknown>;
+  bindingMap: Map<TgpuSlot<unknown>, unknown>;
 };
 
 type FunctionScopeLayer = {
@@ -105,7 +105,7 @@ class ItemStateStack {
   pushSlotBindings(pairs: SlotValuePair<unknown>[]) {
     this._stack.push({
       type: 'slotBinding',
-      bindingMap: new WeakMap(pairs),
+      bindingMap: new Map(pairs),
     });
   }
 
@@ -152,6 +152,30 @@ class ItemStateStack {
     }
 
     return slot.defaultValue;
+  }
+
+  /**
+   * @returns A flattened list of slot->value pairs that are bound at the
+   *          time of calling the function.
+   */
+  getSlotSnapshot(): Iterable<SlotValuePair<unknown>> {
+    const flattened = new Map<TgpuSlot<unknown>, unknown>();
+
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+
+      if (layer?.type === 'slotBinding') {
+        for (const [slot, value] of layer.bindingMap.entries()) {
+          // Since we're going bottom-up (or fine->coarse), we only
+          // acknowledge a slot if it hasn't been seen yet.
+          if (!flattened.has(slot)) {
+            flattened.set(slot, value);
+          }
+        }
+      }
+    }
+
+    return flattened.entries();
   }
 
   getResourceById(id: string): Resource | undefined {
@@ -372,6 +396,10 @@ class ResolutionCtxImpl implements ResolutionCtx {
     return value;
   }
 
+  getSlotSnapshot(): Iterable<SlotValuePair<unknown>> {
+    return this._itemStateStack.getSlotSnapshot();
+  }
+
   withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T {
     this._itemStateStack.pushSlotBindings(pairs);
 
@@ -546,6 +574,22 @@ class ResolutionCtxImpl implements ResolutionCtx {
     throw new Error(
       `Value ${value} (as json: ${JSON.stringify(value)}) of schema ${schema} is not resolvable to WGSL`,
     );
+  }
+
+  resolveCall(fn: unknown, args: unknown[]): Resource {
+    if (isProviding(fn)) {
+      return this.withSlots(fn['~providing'].pairs, () =>
+        this.resolveCall(fn['~providing'].inner, args),
+      );
+    }
+
+    if (typeof fn === 'function') {
+      const result = fn(...args);
+      // TODO: Make function calls return resources instead of just values.
+      return { value: result, dataType: UnknownData };
+    }
+
+    throw new Error(`Cannot call ${fn} (as json: ${JSON.stringify(fn)}).`);
   }
 }
 

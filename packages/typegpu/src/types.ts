@@ -109,6 +109,12 @@ export interface ResolutionCtx {
     binding: number;
   };
 
+  /**
+   * @returns A flattened list of slot->value pairs that are bound at the
+   *          time of calling the function.
+   */
+  getSlotSnapshot(): Iterable<SlotValuePair<unknown>>;
+
   withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T;
 
   /**
@@ -119,6 +125,7 @@ export interface ResolutionCtx {
 
   resolve(item: unknown): string;
   resolveValue<T extends BaseWgslData>(value: Infer<T>, schema: T): string;
+  resolveCall(fn: unknown, args: unknown[]): Resource;
 
   transpileFn(fn: string): {
     argNames: string[];
