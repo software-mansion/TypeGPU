@@ -1071,6 +1071,36 @@ export type AnyWgslData =
 
 // #endregion
 
+export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {
+  return (value as AnyWgslData)?.type.startsWith('vec2');
+}
+
+export function isVec3(value: unknown): value is Vec3f | Vec3h | Vec3i | Vec3u {
+  return (value as AnyWgslData)?.type.startsWith('vec3');
+}
+
+export function isVec4(value: unknown): value is Vec4f | Vec4h | Vec4i | Vec4u {
+  return (value as AnyWgslData)?.type.startsWith('vec4');
+}
+
+export function isVec(
+  value: unknown,
+): value is
+  | Vec2f
+  | Vec2h
+  | Vec2i
+  | Vec2u
+  | Vec3f
+  | Vec3h
+  | Vec3i
+  | Vec3u
+  | Vec4f
+  | Vec4h
+  | Vec4i
+  | Vec4u {
+  return isVec2(value) || isVec3(value) || isVec4(value);
+}
+
 export function isWgslData(value: unknown): value is AnyWgslData {
   return wgslTypeLiterals.includes((value as AnyWgslData)?.type);
 }
