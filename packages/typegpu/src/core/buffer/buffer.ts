@@ -1,5 +1,9 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { isWgslData } from '../../data';
+import {
+  EVAL_ALLOWED_IN_ENV,
+  getCompiledWriterForSchema,
+} from '../../data/compiledIO';
 import { readData, writeData } from '../../data/dataIO';
 import type { AnyData } from '../../data/dataTypes';
 import { getWriteInstructions } from '../../data/partialIO';
@@ -251,6 +255,11 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
 
     if (gpuBuffer.mapState === 'mapped') {
       const mapped = gpuBuffer.getMappedRange();
+      if (EVAL_ALLOWED_IN_ENV) {
+        const writer = getCompiledWriterForSchema(this.dataType);
+        writer(new DataView(mapped), 0, data);
+        return;
+      }
       writeData(new BufferWriter(mapped), this.dataType, data);
       return;
     }
@@ -261,7 +270,12 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     this._group.flush();
 
     const hostBuffer = new ArrayBuffer(size);
-    writeData(new BufferWriter(hostBuffer), this.dataType, data);
+    if (EVAL_ALLOWED_IN_ENV) {
+      const writer = getCompiledWriterForSchema(this.dataType);
+      writer(new DataView(hostBuffer), 0, data);
+    } else {
+      writeData(new BufferWriter(hostBuffer), this.dataType, data);
+    }
     device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
   }
 
