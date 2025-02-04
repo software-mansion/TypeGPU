@@ -60,7 +60,7 @@ untyped value of a typed resource, use the `root.unwrap` function.
 {/* | `root.unwrap(resource: TgpuReadonlyTexture \| TgpuWriteonlyTexture \| TgpuMutableTexture \| TgpuSampledTexture)` | Returns a `GPUTextureView`. | */}
 
 :::note
-To unwrap a `TgpuVertexLayout` make sure that all its attributes are marked with the appropriate location.
+To unwrap a `TgpuVertexLayout` make sure to explicitly mark each of its attributes with the appropriate location using `d.location(...)`.
 :::
 
 ## Destroying resources

@@ -177,7 +177,7 @@ describe('tgpu resolve', () => {
   });
 
   it('should resolve an unstruct to its corresponding struct', () => {
-    const vertexInfo = d.unstruct({
+    const VertexInfo = d.unstruct({
       color: d.snorm8x4,
       colorHDR: d.unorm10_10_10_2,
       position2d: d.float16x2,
