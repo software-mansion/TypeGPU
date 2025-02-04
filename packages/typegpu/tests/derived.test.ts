@@ -1,7 +1,8 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, vi } from 'vitest';
-import tgpu from '../src';
+import tgpu, { unstable_asUniform } from '../src';
 import * as d from '../src/data';
+import { mul } from '../src/std';
 import { it } from './utils/extendedIt';
 import { parseResolved } from './utils/parseResolved';
 
@@ -120,6 +121,70 @@ describe('TgpuDerived', () => {
     );
   });
 
+  it('allows access to value in tgsl functions through the .value property ', ({
+    root,
+  }) => {
+    const vectorSlot = tgpu['~unstable'].slot(d.vec3f(1, 2, 3));
+    const doubledVectorSlot = tgpu['~unstable'].derived(() => {
+      const vec = vectorSlot.value;
+
+      return mul(2, vec);
+    });
+
+    const Boid = d
+      .struct({
+        pos: d.vec3f,
+        vel: d.vec3u,
+      })
+      .$name('Boid');
+
+    const buffer = root.createBuffer(Boid).$usage('uniform').$name('boid');
+    const uniform = unstable_asUniform(buffer);
+
+    const derivedUniformSlot = tgpu['~unstable'].derived(() => uniform);
+    const derivedDerivedUniformSlot = tgpu['~unstable'].derived(
+      () => derivedUniformSlot,
+    );
+
+    const func = tgpu['~unstable'].fn([]).does(() => {
+      const pos = doubledVectorSlot.value;
+      const posX = doubledVectorSlot.value.x;
+      const vel = derivedUniformSlot.value.vel;
+      const velX = derivedUniformSlot.value.vel.x;
+
+      const vel_ = derivedDerivedUniformSlot.value.vel;
+      const velX_ = derivedDerivedUniformSlot.value.vel.x;
+    });
+
+    const resolved = tgpu.resolve({
+      externals: { func },
+      names: 'strict',
+    });
+
+    expect(parse(resolved)).toEqual(
+      parse(`
+        struct Boid {
+          pos: vec3f,
+          vel: vec3u,
+        }
+
+        @group(0) @binding(0) var<uniform> boid: Boid;
+
+        fn func(){
+          var pos = (2 * vec3f(1, 2, 3));
+          var posX = (2 * vec3f(1, 2, 3)).x;
+          var vel = boid.vel;
+          var velX = boid.vel.x;
+
+          var vel_ = boid.vel;
+          var velX_ = boid.vel.x;
+        }`),
+    );
+  });
+
+  // TODO: rethink this behavior of derived returning a function,
+  // in context of whether the function should automatically have
+  // slot values set on derived and how to achieve that
   it('allows slot bindings to pass downstream from derived (#697)', () => {
     const utgpu = tgpu['~unstable'];
     const valueSlot = utgpu.slot(1).$name('valueSlot');
@@ -128,6 +193,7 @@ describe('TgpuDerived', () => {
       return utgpu
         .fn([], d.f32)
         .does(() => valueSlot.value)
+        .with(valueSlot, valueSlot.value) // currently necessary to work :/
         .$name('innerFn');
     });
 
