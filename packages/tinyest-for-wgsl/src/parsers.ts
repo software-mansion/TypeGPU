@@ -276,6 +276,11 @@ const Transpilers: Partial<{
         );
       }
 
+      // TODO: Handle Object method
+      if (prop.type === 'ObjectMethod') {
+        throw new Error('Object method elements are not supported in TGSL.');
+      }
+
       ctx.ignoreExternalDepth++;
       const key =
         prop.key.type === 'Identifier'
