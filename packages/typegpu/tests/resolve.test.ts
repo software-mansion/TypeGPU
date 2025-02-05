@@ -184,25 +184,25 @@ describe('tgpu resolve', () => {
     });
 
     const resolved = tgpu.resolve({
-      template: 'fn foo() { var v: vertexInfo; }',
-      externals: { vertexInfo },
+      template: 'fn foo() { var v: VertexInfo; }',
+      externals: { VertexInfo },
       names: 'strict',
     });
 
     expect(parse(resolved)).toEqual(
       parse(`
-        struct vertexInfo {
+        struct VertexInfo {
           color: vec4f,
           colorHDR: vec4f,
           position2d: vec2f,
         }
-        fn foo() { var v: vertexInfo; }
+        fn foo() { var v: VertexInfo; }
       `),
     );
   });
 
   it('should resolve an unstruct with a disarray to its corresponding struct', () => {
-    const vertexInfo = d.unstruct({
+    const VertexInfo = d.unstruct({
       color: d.snorm8x4,
       colorHDR: d.unorm10_10_10_2,
       position2d: d.float16x2,
@@ -210,26 +210,26 @@ describe('tgpu resolve', () => {
     });
 
     const resolved = tgpu.resolve({
-      template: 'fn foo() { var v: vertexInfo; }',
-      externals: { vertexInfo },
+      template: 'fn foo() { var v: VertexInfo; }',
+      externals: { VertexInfo },
       names: 'strict',
     });
 
     expect(parse(resolved)).toEqual(
       parse(`
-        struct vertexInfo {
+        struct VertexInfo {
           color: vec4f,
           colorHDR: vec4f,
           position2d: vec2f,
           extra: array<vec4f, 16>,
         }
-        fn foo() { var v: vertexInfo; }
+        fn foo() { var v: VertexInfo; }
       `),
     );
   });
 
   it('should resolve an unstruct with a complex nested structure', () => {
-    const vertexInfo = d.unstruct({
+    const VertexInfo = d.unstruct({
       color: d.snorm8x4,
       colorHDR: d.unorm10_10_10_2,
       position2d: d.float16x2,
@@ -247,8 +247,8 @@ describe('tgpu resolve', () => {
     });
 
     const resolved = tgpu.resolve({
-      template: 'fn foo() { var v: vertexInfo; }',
-      externals: { vertexInfo },
+      template: 'fn foo() { var v: VertexInfo; }',
+      externals: { VertexInfo },
       names: 'strict',
     });
 
@@ -265,7 +265,7 @@ describe('tgpu resolve', () => {
           b: vec4f,
         }
 
-        struct vertexInfo {
+        struct VertexInfo {
           color: vec4f,
           colorHDR: vec4f,
           position2d: vec2f,
@@ -273,7 +273,7 @@ describe('tgpu resolve', () => {
           more: array<more, 16>,
         }
 
-        fn foo() { var v: vertexInfo; }
+        fn foo() { var v: VertexInfo; }
       `),
     );
   });
