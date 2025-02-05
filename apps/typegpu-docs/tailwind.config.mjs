@@ -1,4 +1,7 @@
 import starlightPlugin from '@astrojs/starlight-tailwind';
+import tailwindcssMotion from 'tailwindcss-motion';
+// @ts-check
+import plugin from 'tailwindcss/plugin';
 
 const accent = {
   200: '#c3c4f1',
@@ -17,6 +20,7 @@ const gray = {
   900: '#171724',
 };
 
+/** @type {import('tailwindcss').Config} */
 export default {
   content: ['./src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}'],
   theme: {
@@ -70,5 +74,11 @@ export default {
       lg: '1441px',
     },
   },
-  plugins: [starlightPlugin()],
+  plugins: [
+    starlightPlugin(),
+    tailwindcssMotion,
+    plugin(({ addVariant }) => {
+      addVariant('starting', '@starting-style');
+    }),
+  ],
 };

@@ -1,0 +1,19 @@
+---
+import { Image } from 'astro:assets';
+import PageLayout from '../../layouts/PageLayout.astro';
+import BenchmarkApp from './benchmark-app.tsx';
+import TypeGPULogoDark from '../../assets/typegpu-logo-dark.svg';
+---
+
+<PageLayout title="Benchmark" theme="dark">
+  <h1 class="w-full flex items-center justify-center">
+    <Image
+      src={TypeGPULogoDark}
+      alt="TypeGPU Logo"
+      class="w-[10rem] relative"
+    />
+    <p class="text-lg font-sans">— benchmark</p>
+  </h1>
+
+  <BenchmarkApp client:only="react" />
+</PageLayout>

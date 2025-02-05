@@ -7,6 +7,7 @@ import type { TgpuBufferUsage } from './../buffer/bufferUsage';
 
 export interface TgpuSlot<T> extends TgpuNamable, Labelled {
   readonly resourceType: 'slot';
+  '~repr': Infer<T>;
 
   readonly defaultValue: T | undefined;
 
@@ -22,6 +23,7 @@ export interface TgpuSlot<T> extends TgpuNamable, Labelled {
 export interface TgpuDerived<T> {
   readonly resourceType: 'derived';
   readonly value: Infer<T>;
+  '~repr': Infer<T>;
   readonly '~providing'?: Providing | undefined;
 
   with<TValue>(slot: TgpuSlot<TValue>, value: Eventual<TValue>): TgpuDerived<T>;
@@ -36,6 +38,7 @@ export interface TgpuAccessor<T extends AnyWgslData = AnyWgslData>
   extends TgpuNamable,
     Labelled {
   readonly resourceType: 'accessor';
+  '~repr': Infer<T>;
 
   readonly schema: T;
   readonly defaultValue:

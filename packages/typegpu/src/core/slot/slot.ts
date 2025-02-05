@@ -1,5 +1,6 @@
 import { getResolutionCtx } from '../../gpuMode';
 import type { Infer } from '../../shared/repr';
+import { unwrapProxy } from '../valueProxyUtils';
 import type { TgpuSlot } from './slotTypes';
 
 // ----------
@@ -17,6 +18,7 @@ export function slot<T>(defaultValue?: T): TgpuSlot<T> {
 class TgpuSlotImpl<T> implements TgpuSlot<T> {
   readonly resourceType = 'slot';
   public label?: string | undefined;
+  '~repr' = undefined as Infer<T>;
 
   constructor(public defaultValue: T | undefined = undefined) {}
 
@@ -39,6 +41,6 @@ class TgpuSlotImpl<T> implements TgpuSlot<T> {
       throw new Error(`Cannot access tgpu.slot's value outside of resolution.`);
     }
 
-    return ctx.unwrap(this) as Infer<T>;
+    return unwrapProxy(ctx.unwrap(this));
   }
 }
