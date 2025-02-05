@@ -675,6 +675,7 @@ export interface Mat4x4f {
 export interface WgslStruct<
   TProps extends Record<string, BaseWgslData> = Record<string, BaseWgslData>,
 > {
+  (props: InferRecord<TProps>): InferRecord<TProps>;
   readonly type: 'struct';
   readonly label?: string | undefined;
   readonly propTypes: TProps;
@@ -682,12 +683,22 @@ export interface WgslStruct<
   readonly '~repr': InferRecord<TProps>;
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than WgslStruct<Record<string, BaseWgslData>>
+export type AnyWgslStruct = WgslStruct<any>;
+
 export interface WgslArray<TElement = BaseWgslData> {
   readonly type: 'array';
   readonly elementCount: number;
   readonly elementType: TElement;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TElement>[];
+}
+
+export interface PtrFn<TInner = BaseWgslData> {
+  readonly type: 'ptrFn';
+  readonly inner: TInner;
+  /** Type-token, not available at runtime */
+  readonly '~repr': Infer<TInner>;
 }
 
 /**
@@ -766,6 +777,7 @@ export const wgslTypeLiterals = [
   'mat4x4f',
   'struct',
   'array',
+  'ptrFn',
   'atomic',
   'decorated',
 ] as const;
@@ -814,8 +826,9 @@ export type AnyWgslData =
   | Mat2x2f
   | Mat3x3f
   | Mat4x4f
-  | WgslStruct
+  | AnyWgslStruct
   | WgslArray
+  | PtrFn
   | Atomic
   | Decorated;
 
@@ -859,6 +872,17 @@ export function isWgslStruct<T extends WgslStruct>(
   schema: T | unknown,
 ): schema is T {
   return (schema as T)?.type === 'struct';
+}
+
+/**
+ * Checks whether passed in value is a pointer ('function' scope) schema.
+ *
+ * @example
+ * isPtrFn(d.ptrFn(d.f32)) // true
+ * isPtrFn(d.f32) // false
+ */
+export function isPtrFn<T extends PtrFn>(schema: T | unknown): schema is T {
+  return (schema as T)?.type === 'ptrFn';
 }
 
 /**

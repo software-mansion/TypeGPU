@@ -7,6 +7,7 @@ export {
   isWgslData,
   isWgslArray,
   isWgslStruct,
+  isPtrFn,
   isAtomic,
   isDecorated,
   isAlignAttrib,
@@ -39,6 +40,7 @@ export type {
   Mat4x4f,
   WgslStruct,
   WgslArray,
+  PtrFn,
   Atomic,
   Decorated,
   Size,
@@ -68,6 +70,7 @@ export {
   TgpuArray,
   arrayOf,
 } from './array';
+export { ptrFn } from './ptr';
 export type {
   Disarray,
   Unstruct,
@@ -136,6 +139,7 @@ export {
   BuiltinNumWorkgroups,
   AnyBuiltin,
 } from '../builtin';
+export type { Exotic as Base } from './exotic';
 
 import type { Infer as INTERNAL_Infer } from '../shared/repr';
 import type { Exotic } from './exotic';

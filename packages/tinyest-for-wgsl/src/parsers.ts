@@ -191,7 +191,7 @@ const Transpilers: Partial<{
 
   Literal(ctx, node) {
     if (typeof node.value === 'string') {
-      throw new Error('String literals are not supported in TGSL.');
+      return { s: node.value };
     }
     return { n: node.raw ?? '' };
   },
@@ -258,6 +258,36 @@ const Transpilers: Partial<{
     return {
       q: alternate ? [test, consequent, alternate] : [test, consequent],
     };
+  },
+
+  ObjectExpression(ctx, node) {
+    const properties: Record<string, smol.Expression> = {};
+
+    for (const prop of node.properties) {
+      // TODO: Handle SpreadElement
+      if (prop.type === 'SpreadElement') {
+        throw new Error('Spread elements are not supported in TGSL.');
+      }
+
+      // TODO: Handle computed properties
+      if (prop.key.type !== 'Identifier' && prop.key.type !== 'Literal') {
+        throw new Error(
+          'Only Identifier and Literal keys are supported as object keys.',
+        );
+      }
+
+      ctx.ignoreExternalDepth++;
+      const key =
+        prop.key.type === 'Identifier'
+          ? (transpile(ctx, prop.key) as string)
+          : String(prop.key.value);
+      const value = transpile(ctx, prop.value) as smol.Expression;
+      ctx.ignoreExternalDepth--;
+
+      properties[key] = value;
+    }
+
+    return { o: properties };
   },
 };
 

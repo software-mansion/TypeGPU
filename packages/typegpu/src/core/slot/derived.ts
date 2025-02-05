@@ -1,5 +1,6 @@
 import { getResolutionCtx } from '../../gpuMode';
 import type { Infer } from '../../shared/repr';
+import { unwrapProxy } from '../valueProxyUtils';
 import type {
   Eventual,
   SlotValuePair,
@@ -19,10 +20,15 @@ export function derived<T>(compute: () => T): TgpuDerived<T> {
 // Implementation
 // --------------
 
+function stringifyPair([slot, value]: SlotValuePair): string {
+  return `${slot.label ?? '<unnamed>'}=${value}`;
+}
+
 function createDerived<T>(compute: () => T): TgpuDerived<T> {
   const result = {
     resourceType: 'derived' as const,
     '~compute': compute,
+    '~repr': undefined as Infer<T>,
 
     get value(): Infer<T> {
       const ctx = getResolutionCtx();
@@ -32,14 +38,14 @@ function createDerived<T>(compute: () => T): TgpuDerived<T> {
         );
       }
 
-      return ctx.unwrap(this) as Infer<T>;
+      return unwrapProxy(ctx.unwrap(this));
     },
 
     with<TValue>(
       slot: TgpuSlot<TValue>,
       value: Eventual<TValue>,
     ): TgpuDerived<T> {
-      return createBoundDerived(compute, this, [slot, value]);
+      return createBoundDerived(this, [[slot, value]]);
     },
 
     toString(): string {
@@ -51,21 +57,21 @@ function createDerived<T>(compute: () => T): TgpuDerived<T> {
 }
 
 function createBoundDerived<T>(
-  compute: () => T,
   innerDerived: TgpuDerived<T>,
-  slotValuePair: SlotValuePair<unknown>,
+  pairs: SlotValuePair[],
 ): TgpuDerived<T> {
   const result = {
     resourceType: 'derived' as const,
-    '~compute'() {
-      const ctx = getResolutionCtx();
-      if (!ctx) {
-        throw new Error(
-          `Cannot access tgpu.derived's value outside of resolution.`,
-        );
-      }
+    '~repr': undefined as Infer<T>,
 
-      return ctx.withSlots([slotValuePair], () => ctx.unwrap(innerDerived));
+    '~compute'() {
+      throw new Error(
+        `'~compute' should never be read on bound derived items.`,
+      );
+    },
+    '~providing': {
+      inner: innerDerived,
+      pairs,
     },
 
     get value(): Infer<T> {
@@ -76,19 +82,18 @@ function createBoundDerived<T>(
         );
       }
 
-      return ctx.unwrap(this) as Infer<T>;
+      return unwrapProxy(ctx.unwrap(this));
     },
 
     with<TValue>(
       slot: TgpuSlot<TValue>,
       value: Eventual<TValue>,
     ): TgpuDerived<T> {
-      return createBoundDerived(compute, this, [slot, value]);
+      return createBoundDerived(innerDerived, [...pairs, [slot, value]]);
     },
 
     toString(): string {
-      const [slot, value] = slotValuePair;
-      return `derived[${slot.label ?? '<unnamed>'}=${value}]`;
+      return `derived[${pairs.map(stringifyPair).join(', ')}]`;
     },
   };
 

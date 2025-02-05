@@ -7,6 +7,7 @@ import type { TgpuBufferUsage } from './../buffer/bufferUsage';
 
 export interface TgpuSlot<T> extends TgpuNamable, Labelled {
   readonly resourceType: 'slot';
+  '~repr': Infer<T>;
 
   readonly defaultValue: T | undefined;
 
@@ -22,6 +23,8 @@ export interface TgpuSlot<T> extends TgpuNamable, Labelled {
 export interface TgpuDerived<T> {
   readonly resourceType: 'derived';
   readonly value: Infer<T>;
+  '~repr': Infer<T>;
+  readonly '~providing'?: Providing | undefined;
 
   with<TValue>(slot: TgpuSlot<TValue>, value: Eventual<TValue>): TgpuDerived<T>;
 
@@ -35,6 +38,7 @@ export interface TgpuAccessor<T extends AnyWgslData = AnyWgslData>
   extends TgpuNamable,
     Labelled {
   readonly resourceType: 'accessor';
+  '~repr': Infer<T>;
 
   readonly schema: T;
   readonly defaultValue:
@@ -54,6 +58,11 @@ export type Eventual<T> = T | TgpuSlot<T> | TgpuDerived<T>;
 
 export type SlotValuePair<T = unknown> = [TgpuSlot<T>, T];
 
+export type Providing = {
+  inner: unknown;
+  pairs: SlotValuePair[];
+};
+
 export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {
   return (value as TgpuSlot<T>)?.resourceType === 'slot';
 }
@@ -62,6 +71,12 @@ export function isDerived<T extends TgpuDerived<unknown>>(
   value: T | unknown,
 ): value is T {
   return (value as T)?.resourceType === 'derived';
+}
+
+export function isProviding(
+  value: unknown,
+): value is { '~providing': Providing } {
+  return (value as { '~providing': Providing })?.['~providing'] !== undefined;
 }
 
 export function isAccessor<T extends AnyWgslData>(

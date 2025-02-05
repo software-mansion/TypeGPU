@@ -3,6 +3,7 @@ import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
 import type { ResolutionCtx, SelfResolvable } from '../../types';
+import { valueProxyHandler } from '../valueProxyUtils';
 import type { Exotic } from './../../data/exotic';
 
 // ----------
@@ -65,6 +66,13 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     if (!inGPUMode()) {
       return this._value;
     }
-    return this as Infer<TDataType>;
+
+    return new Proxy(
+      {
+        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        toString: () => `.value:${this.label ?? '<unnamed>'}`,
+      },
+      valueProxyHandler,
+    ) as Infer<TDataType>;
   }
 }
