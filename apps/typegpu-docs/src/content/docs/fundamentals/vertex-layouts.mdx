@@ -3,6 +3,14 @@ title: Vertex Layouts
 description: A guide on how to create and use typed vertex layouts
 ---
 
+:::note[Recommended reading]
+We assume that you are familiar with the following concepts:
+- <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-vertex-buffers.html" target="_blank" rel="noopener noreferrer">Vertex Buffers</a>
+- <a href="https://www.w3.org/TR/webgpu/#vertex-state" target="_blank" rel="noopener noreferrer">WebGPU Vertex State</a>
+- <a href="https://www.w3.org/TR/WGSL/#input-output-locations" target="_blank" rel="noopener noreferrer">Input-output locations</a>
+- <a href="https://developer.mozilla.org/en-US/docs/Web/API/GPURenderPassEncoder" target="_blank" rel="noopener noreferrer">Render pass encoding</a>
+:::
+
 Vertex layouts are much like bind group layouts, in that they define the relationship between shaders and buffers. More precisely, they define what vertex attributes a shader expects, and how they are laid out in the corresponding vertex buffer.
 
 ## Creating a vertex layout
