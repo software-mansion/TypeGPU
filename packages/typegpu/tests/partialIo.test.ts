@@ -27,10 +27,10 @@ function expectInstruction(
     ? expectedData
     : [expectedData];
 
-  let totalByteLength = 0;
-  for (const arr of dataArrays) {
-    totalByteLength += arr.byteLength;
-  }
+  const totalByteLength = dataArrays.reduce(
+    (acc, arr) => acc + arr.byteLength,
+    0,
+  );
 
   const mergedExpected = new Uint8Array(totalByteLength);
   let offset = 0;
