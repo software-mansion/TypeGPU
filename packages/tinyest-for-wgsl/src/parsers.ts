@@ -197,7 +197,6 @@ const Transpilers: Partial<{
   },
 
   NumericLiteral(ctx, node) {
-    // @ts-ignore
     return { n: String(node.value) ?? '' };
   },
 
