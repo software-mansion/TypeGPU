@@ -1,7 +1,8 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
 import tgpu from '../src';
-import { f32, struct, vec3f } from '../src/data';
+import { builtin } from '../src/builtin';
+import { f32, struct, vec2f, vec3f, vec4f } from '../src/data';
 import { parseResolved } from './utils/parseResolved';
 
 describe('TGSL tgpu.fn function', () => {
@@ -157,6 +158,55 @@ describe('TGSL tgpu.fn function', () => {
 
       fn pure_confusion() -> A {
         return C(B(A(4), 5), A(3)).a;
+      }
+    `);
+
+    expect(actual).toEqual(expected);
+  });
+
+  it('resolves vertexFn', () => {
+    const vertexFn = tgpu['~unstable']
+      .vertexFn(
+        {
+          vi: builtin.vertexIndex,
+          ii: builtin.instanceIndex,
+          color: vec4f,
+        },
+        {
+          pos: builtin.position,
+          uv: vec2f,
+        },
+      )
+      .does((input) => {
+        const vi = input.vi;
+        const ii = input.ii;
+        const color = input.color;
+
+        return {
+          pos: vec4f(color.w, ii, vi, 1),
+          uv: vec2f(color.w, vi),
+        };
+      })
+      .$name('vertex_fn');
+
+    const actual = parseResolved({ vertexFn });
+
+    const expected = parse(`
+      struct vertex_fn_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+      struct vertex_fn_Input {
+        @builtin(vertex_index) vi: u32,
+        @builtin(instance_index) ii: u32,
+        @location(0) color: vec4f,
+      }
+
+      @vertex fn vertex_fn(input: vertex_fn_Input) -> vertex_fn_Output{
+        var vi = input.vi;
+        var ii = input.ii;
+        var color = input.color;
+        return vertex_fn_Output(vec4f(color.w, ii, vi, 1), vec2f(color.w, vi));
       }
     `);
 

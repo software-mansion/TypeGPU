@@ -490,7 +490,7 @@ const vertexMain = tgpu['~unstable']
     { idx: d.builtin.vertexIndex },
     { pos: d.builtin.position, uv: d.vec2f },
   )
-  .does(/* wgsl */ `(@builtin(vertex_index) idx: u32) -> VertexOut {
+  .does(/* wgsl */ `(input: VertexInput) -> VertexOut {
     var pos = array<vec2f, 4>(
       vec2(1, 1), // top-right
       vec2(-1, 1), // top-left
@@ -506,8 +506,8 @@ const vertexMain = tgpu['~unstable']
     );
 
     var output: VertexOut;
-    output.pos = vec4f(pos[idx].x, pos[idx].y, 0.0, 1.0);
-    output.uv = uv[idx];
+    output.pos = vec4f(pos[input.idx].x, pos[input.idx].y, 0.0, 1.0);
+    output.uv = uv[input.idx];
     return output;
   }`);
 

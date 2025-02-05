@@ -1,6 +1,7 @@
 import type { OmitBuiltins } from '../../builtin';
-import { isWgslStruct } from '../../data/wgslTypes';
-import type { TgpuNamable } from '../../namable';
+import type { AnyWgslStruct } from '../../data/wgslTypes';
+import { type TgpuNamable, isNamable } from '../../namable';
+import type { GenerationCtx } from '../../smol/wgslGenerator';
 import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
 import { addReturnTypeToExternals } from '../resolve/externals';
 import { createFnCore } from './fnCore';
@@ -11,7 +12,11 @@ import type {
   Implementation,
   InferIO,
 } from './fnTypes';
-import { type IOLayoutToOutputSchema, createOutputType } from './ioOutputType';
+import {
+  type IOLayoutToSchema,
+  createOutputType,
+  createStructFromIO,
+} from './ioOutputType';
 
 // ----------
 // Public API
@@ -24,8 +29,9 @@ export interface TgpuVertexFnShell<
   VertexIn extends IOLayout,
   VertexOut extends IOLayout,
 > {
-  readonly argTypes: [VertexIn];
+  readonly argTypes: [AnyWgslStruct];
   readonly returnType: VertexOut;
+  readonly attributes: [VertexIn];
 
   /**
    * Creates a type-safe implementation of this signature
@@ -50,7 +56,8 @@ export interface TgpuVertexFn<
   VertexOut extends IOLayout = IOLayout,
 > extends TgpuNamable {
   readonly shell: TgpuVertexFnShell<VertexIn, VertexOut>;
-  readonly outputType: IOLayoutToOutputSchema<VertexOut>;
+  readonly outputType: IOLayoutToSchema<VertexOut>;
+  readonly inputType: IOLayoutToSchema<VertexIn>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
 }
@@ -67,7 +74,7 @@ export interface TgpuVertexFn<
  *   passed onto the fragment shader stage.
  */
 export function vertexFn<
-  VertexIn extends IOLayout,
+  VertexIn extends IORecord,
   // Not allowing single-value output, as it is better practice
   // to properly label what the vertex shader is outputting.
   VertexOut extends IORecord,
@@ -76,8 +83,9 @@ export function vertexFn<
   outputType: VertexOut,
 ): TgpuVertexFnShell<ExoticIO<VertexIn>, ExoticIO<VertexOut>> {
   return {
-    argTypes: [inputType as ExoticIO<VertexIn>],
-    returnType: outputType as ExoticIO<VertexOut>,
+    attributes: [inputType as ExoticIO<VertexIn>],
+    returnType: createOutputType(outputType) as ExoticIO<VertexOut>,
+    argTypes: [createStructFromIO(inputType)],
 
     does(implementation) {
       // biome-ignore lint/suspicious/noExplicitAny: <no thanks>
@@ -97,7 +105,8 @@ function createVertexFn(
   type This = TgpuVertexFn<IOLayout, IOLayout> & Labelled & SelfResolvable;
 
   const core = createFnCore(shell, implementation);
-  const outputType = createOutputType(shell.returnType);
+  const outputType = shell.returnType;
+  const inputType = shell.argTypes[0];
   if (typeof implementation === 'string') {
     addReturnTypeToExternals(implementation, outputType, (externals) =>
       core.applyExternals(externals),
@@ -107,6 +116,7 @@ function createVertexFn(
   return {
     shell,
     outputType,
+    inputType,
 
     get label() {
       return core.label;
@@ -119,14 +129,33 @@ function createVertexFn(
 
     $name(newLabel: string): This {
       core.label = newLabel;
-      if (isWgslStruct(outputType)) {
+      if (isNamable(outputType)) {
         outputType.$name(`${newLabel}_Output`);
+      }
+      if (isNamable(inputType)) {
+        inputType.$name(`${newLabel}_Input`);
       }
       return this;
     },
 
     '~resolve'(ctx: ResolutionCtx): string {
-      return core.resolve(ctx, '@vertex ');
+      if (typeof implementation === 'string') {
+        return core.resolve(ctx, '@vertex ');
+      }
+
+      const generationCtx = ctx as GenerationCtx;
+      if (generationCtx.callStack === undefined) {
+        throw new Error(
+          'Cannot resolve a TGSL function outside of a generation context',
+        );
+      }
+
+      try {
+        generationCtx.callStack.push(outputType);
+        return core.resolve(ctx, '@vertex ');
+      } finally {
+        generationCtx.callStack.pop();
+      }
     },
 
     toString() {
