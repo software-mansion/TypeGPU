@@ -18,7 +18,7 @@ export type WithLocations<T extends IORecord> = {
       : Decorate<T[Key], Location<number>>;
 };
 
-export type IOLayoutToOutputSchema<T extends IOLayout> = T extends BaseWgslData
+export type IOLayoutToSchema<T extends IOLayout> = T extends BaseWgslData
   ? Decorate<T, Location<0>>
   : T extends IORecord
     ? TgpuStruct<WithLocations<T>>
@@ -56,7 +56,7 @@ export function createOutputType<T extends IOData>(returnType: IOLayout<T>) {
     isData(returnType)
       ? location(0, returnType)
       : struct(withLocations(returnType) as Record<string, T>)
-  ) as IOLayoutToOutputSchema<IOLayout<T>>;
+  ) as IOLayoutToSchema<IOLayout<T>>;
 }
 
 export function createStructFromIO<T extends IOData>(members: IORecord<T>) {

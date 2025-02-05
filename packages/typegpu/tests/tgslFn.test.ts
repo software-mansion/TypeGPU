@@ -196,13 +196,13 @@ describe('TGSL tgpu.fn function', () => {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
-      struct VertexInput {
+      struct vertex_fn_Input {
         @builtin(vertex_index) vi: u32,
         @builtin(instance_index) ii: u32,
         @location(0) color: vec4f,
       }
 
-      @vertex fn vertex_fn(input: VertexInput) -> vertex_fn_Output{
+      @vertex fn vertex_fn(input: vertex_fn_Input) -> vertex_fn_Output{
         var vi = input.vi;
         var ii = input.ii;
         var color = input.color;

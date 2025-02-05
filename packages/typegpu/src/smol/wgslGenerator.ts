@@ -270,7 +270,11 @@ function generateStatement(
       isWgslStruct(ctx.callStack[ctx.callStack.length - 1]) &&
       statement.r !== null
     ) {
-      return `${ctx.pre}return ${ctx.resolve(ctx.callStack[ctx.callStack.length - 1])}(${resolveRes(ctx, generateExpression(ctx, statement.r))});`;
+      const resource = resolveRes(ctx, generateExpression(ctx, statement.r));
+      const resolvedStruct = ctx.resolve(
+        ctx.callStack[ctx.callStack.length - 1],
+      );
+      return `${ctx.pre}return ${resolvedStruct}(${resource});`;
     }
 
     return statement.r === null

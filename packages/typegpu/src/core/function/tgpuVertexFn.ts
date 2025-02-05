@@ -13,7 +13,7 @@ import type {
   InferIO,
 } from './fnTypes';
 import {
-  type IOLayoutToOutputSchema,
+  type IOLayoutToSchema,
   createOutputType,
   createStructFromIO,
 } from './ioOutputType';
@@ -56,7 +56,8 @@ export interface TgpuVertexFn<
   VertexOut extends IOLayout = IOLayout,
 > extends TgpuNamable {
   readonly shell: TgpuVertexFnShell<VertexIn, VertexOut>;
-  readonly outputType: IOLayoutToOutputSchema<VertexOut>;
+  readonly outputType: IOLayoutToSchema<VertexOut>;
+  readonly inputType: IOLayoutToSchema<VertexIn>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
 }
@@ -84,7 +85,7 @@ export function vertexFn<
   return {
     attributes: [inputType as ExoticIO<VertexIn>],
     returnType: createOutputType(outputType) as ExoticIO<VertexOut>,
-    argTypes: [createStructFromIO(inputType).$name('VertexInput')],
+    argTypes: [createStructFromIO(inputType)],
 
     does(implementation) {
       // biome-ignore lint/suspicious/noExplicitAny: <no thanks>
@@ -105,8 +106,9 @@ function createVertexFn(
 
   const core = createFnCore(shell, implementation);
   const outputType = shell.returnType;
+  const inputType = shell.argTypes[0];
   if (typeof implementation === 'string') {
-    addReturnTypeToExternals(implementation, shell.returnType, (externals) =>
+    addReturnTypeToExternals(implementation, outputType, (externals) =>
       core.applyExternals(externals),
     );
   }
@@ -114,6 +116,7 @@ function createVertexFn(
   return {
     shell,
     outputType,
+    inputType,
 
     get label() {
       return core.label;
@@ -128,6 +131,9 @@ function createVertexFn(
       core.label = newLabel;
       if (isNamable(outputType)) {
         outputType.$name(`${newLabel}_Output`);
+      }
+      if (isNamable(inputType)) {
+        inputType.$name(`${newLabel}_Input`);
       }
       return this;
     },

@@ -11,7 +11,7 @@ import type {
   Implementation,
   InferIO,
 } from './fnTypes';
-import { type IOLayoutToOutputSchema, createOutputType } from './ioOutputType';
+import { type IOLayoutToSchema, createOutputType } from './ioOutputType';
 
 // ----------
 // Public API
@@ -50,7 +50,7 @@ export interface TgpuFragmentFn<
   Output extends IOLayout<Vec4f> = IOLayout<Vec4f>,
 > extends TgpuNamable {
   readonly shell: TgpuFragmentFnShell<Varying, Output>;
-  readonly outputType: IOLayoutToOutputSchema<Output>;
+  readonly outputType: IOLayoutToSchema<Output>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
 }
