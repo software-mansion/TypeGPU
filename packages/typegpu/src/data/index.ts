@@ -131,7 +131,6 @@ export {
   BuiltinFragDepth,
   BuiltinSampleIndex,
   BuiltinSampleMask,
-  BuiltinFragment,
   BuiltinLocalInvocationId,
   BuiltinLocalInvocationIndex,
   BuiltinGlobalInvocationId,
