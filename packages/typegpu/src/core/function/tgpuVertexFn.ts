@@ -144,11 +144,12 @@ function createVertexFn(
         );
       }
 
-      generationCtx.callStack.push(outputType);
-      const resolved = core.resolve(ctx, '@vertex ');
-      generationCtx.callStack.pop();
-
-      return resolved;
+      try {
+        generationCtx.callStack.push(outputType);
+        return core.resolve(ctx, '@vertex ');
+      } finally {
+        generationCtx.callStack.pop();
+      }
     },
 
     toString() {
