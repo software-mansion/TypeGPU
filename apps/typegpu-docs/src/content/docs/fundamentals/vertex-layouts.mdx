@@ -1,14 +1,13 @@
 ---
 title: Vertex Layouts
 description: A guide on how to create and use typed vertex layouts
-draft: true
 ---
 
-Typed vertex layouts are a way to describe the structure of vertex data in a typed manner. They are used to create a single source of truth for vertex data, which can be used in combination with [`tgpu.resolve`](/TypeGPU/fundamentals/resolve) and [`root.unwrap`](/TypeGPU/fundamentals/roots) to easily create and manage vertex buffers.
+Vertex layouts are much like bind group layouts, in that they define the relationship between shaders and buffers. More precisely, they define what vertex attributes a shader expects, and how they are laid out in the corresponding vertex buffer.
 
 ## Creating a vertex layout
 
-To create a vertex layout, use the `tgpu.vertexLayout` function. It takes a function that takes a number and returns an array containing any data type, and a string that describes the type of the vertex layout. It can be either `vertex` or `instance` (default is `vertex`).
+To create a vertex layout, use the `tgpu.vertexLayout` function. It takes an array schema constructor, i.e., a function that returns an array schema given the number of elements to render (vertices/instances). To determine what each element of the array corresponds to, you can pass an optional `stepMode` argument, which can be either `vertex` (default) or `instance`.
 
 ```ts
 import tgpu from 'typegpu';
@@ -21,7 +20,7 @@ const ParticleGeometry = d.struct({
 });
 
 const geometryLayout = tgpu
-  .vertexLayout((n: number) => d.arrayOf(ParticleGeometry, n), 'instance');
+  .vertexLayout((n) => d.arrayOf(ParticleGeometry, n), 'instance');
 ```
 
 ## Utilizing loose schemas with vertex layouts

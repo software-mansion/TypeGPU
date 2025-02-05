@@ -128,10 +128,10 @@ export default defineConfig({
               slug: 'fundamentals/resolve',
               badge: { text: '0.3' },
             },
-            DEV && {
+            {
               label: 'Vertex Layouts',
               slug: 'fundamentals/vertex-layouts',
-              badge: { text: '0.3.3' },
+              badge: { text: '0.4' },
             },
             DEV && {
               label: 'Slots',
