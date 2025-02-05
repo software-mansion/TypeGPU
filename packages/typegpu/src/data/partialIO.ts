@@ -4,7 +4,7 @@ import type { Infer, InferPartial } from '../shared/repr';
 import { alignmentOf } from './alignmentOf';
 import { writeData } from './dataIO';
 import { isDisarray, isUnstruct } from './dataTypes';
-import { offsetsForProps } from './offests';
+import { offsetsForProps } from './offsets';
 import { sizeOf } from './sizeOf';
 import type * as wgsl from './wgslTypes';
 import { isWgslArray, isWgslStruct } from './wgslTypes';
@@ -50,7 +50,9 @@ export function getWriteInstructions<TData extends wgsl.BaseWgslData>(
 
       for (const [key, propOffset] of sortedProps) {
         const subSchema = node.propTypes[key];
-        if (!subSchema) continue;
+        if (!subSchema) {
+          continue;
+        }
 
         const childValue = partialValue[key as keyof typeof partialValue];
         if (childValue !== undefined) {
@@ -62,11 +64,8 @@ export function getWriteInstructions<TData extends wgsl.BaseWgslData>(
           );
         }
       }
-      return;
-    }
-
-    if (isWgslArray(node) || isDisarray(node)) {
-      const arrSchema = node as wgsl.WgslArray<wgsl.AnyWgslData>;
+    } else if (isWgslArray(node) || isDisarray(node)) {
+      const arrSchema = node;
       const elementSize = roundUp(
         sizeOf(arrSchema.elementType),
         alignmentOf(arrSchema.elementType),
@@ -75,11 +74,11 @@ export function getWriteInstructions<TData extends wgsl.BaseWgslData>(
       if (!Array.isArray(partialValue)) {
         throw new Error('Partial value for array must be an array');
       }
+      const arrayPartialValue = partialValue as InferPartial<wgsl.WgslArray>;
 
-      partialValue.sort((a, b) => a.idx - b.idx);
+      arrayPartialValue.sort((a, b) => a.idx - b.idx);
 
-      for (const i of partialValue) {
-        const { idx, value } = i;
+      for (const { idx, value } of arrayPartialValue) {
         gatherAndWrite(
           arrSchema.elementType,
           value,
@@ -87,14 +86,13 @@ export function getWriteInstructions<TData extends wgsl.BaseWgslData>(
           elementSize - sizeOf(arrSchema.elementType),
         );
       }
-      return;
+    } else {
+      const leafSize = sizeOf(node);
+      writer.seekTo(offset);
+      writeData(writer, node, partialValue as Infer<T>);
+
+      segments.push({ start: offset, end: offset + leafSize, padding });
     }
-
-    const leafSize = sizeOf(node);
-    writer.seekTo(offset);
-    writeData(writer, node, partialValue as Infer<T>);
-
-    segments.push({ start: offset, end: offset + leafSize, padding });
   }
 
   gatherAndWrite(schema, data, 0);

@@ -243,18 +243,16 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
       for (const instruction of instructions) {
         mappedView.set(instruction.data, instruction.data.byteOffset);
       }
-
-      return;
-    }
-
-    for (const instruction of instructions) {
-      device.queue.writeBuffer(
-        gpuBuffer,
-        instruction.data.byteOffset,
-        instruction.data,
-        0,
-        instruction.data.byteLength,
-      );
+    } else {
+      for (const instruction of instructions) {
+        device.queue.writeBuffer(
+          gpuBuffer,
+          instruction.data.byteOffset,
+          instruction.data,
+          0,
+          instruction.data.byteLength,
+        );
+      }
     }
   }
 

@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import * as d from '../src/data';
-import { offsetsForProps } from '../src/data/offests';
+import { offsetsForProps } from '../src/data/offsets';
 import {
   type WriteInstruction,
   getWriteInstructions,

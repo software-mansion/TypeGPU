@@ -28,10 +28,7 @@ export function offsetsForProps<T extends Record<string, BaseWgslData>>(
   }
 
   const measurer = new Measurer();
-  const offsets: Record<keyof T, OffsetInfo> = {} as Record<
-    keyof T,
-    OffsetInfo
-  >;
+  const offsets = {} as Record<keyof T, OffsetInfo>;
   let lastEntry: OffsetInfo | undefined = undefined;
 
   for (const key in struct.propTypes) {
