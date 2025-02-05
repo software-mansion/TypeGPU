@@ -54,13 +54,19 @@ const staticToDynamicImports = {
       const wildCard = imports.wildCard;
       const nonWildCard = imports.nonWildCard;
 
-      path.replaceWith(
-        template.program.ast(
-          `
-            ${wildCard?.length ? `const ${wildCard[0][1]} = await _import('${moduleName}');` : ''}
-            ${nonWildCard?.length ? `const { ${nonWildCard.map((imp) => (imp[0] === imp[1] ? imp[0] : `${imp[0]}: ${imp[1]}`)).join(',')} } = await _import('${moduleName}');` : ''}
-          `,
-        ),
+      path.replaceWithMultiple(
+        [
+          wildCard?.length
+            ? [
+                template.statement`const ${wildCard[0][1]} = await _import('${moduleName}');`(),
+              ]
+            : [],
+          nonWildCard?.length
+            ? [
+                template.statement`const { ${nonWildCard.map((imp) => (imp[0] === imp[1] ? imp[0] : `${imp[0]}: ${imp[1]}`)).join(',')} } = await _import('${moduleName}');`(),
+              ]
+            : [],
+        ].flat(),
       );
     },
   } satisfies TraverseOptions,
@@ -76,24 +82,21 @@ const exportedOptionsToExampleControls = () => {
 
         if (declaration?.type === 'VariableDeclaration') {
           const init = declaration.declarations[0].init;
+
           if (init) {
-            path.replaceWith(
-              template.program.ast(
-                `import { addParameters } from '@typegpu/example-toolkit';
-                addParameters(${code.slice(init.start ?? 0, init.end ?? 0)});`,
-              ),
-            );
+            path.replaceWithMultiple([
+              template.statement`import { addParameters } from '@typegpu/example-toolkit'`(),
+              template.statement`addParameters(${code.slice(init.start ?? 0, init.end ?? 0)});`(),
+            ]);
           }
         }
 
         if (declaration?.type === 'FunctionDeclaration') {
           const body = declaration.body;
-          path.replaceWith(
-            template.program.ast(
-              `import { onCleanup } from '@typegpu/example-toolkit';
-              onCleanup(() => ${code.slice(body.start ?? 0, body.end ?? 0)});`,
-            ),
-          );
+          path.replaceWithMultiple([
+            template.statement`import { onCleanup } from '@typegpu/example-toolkit'`(),
+            template.statement`onCleanup(() => ${code.slice(body.start ?? 0, body.end ?? 0)});`(),
+          ]);
         }
       },
     } satisfies TraverseOptions,

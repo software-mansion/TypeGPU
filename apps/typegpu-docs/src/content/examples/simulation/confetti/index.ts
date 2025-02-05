@@ -113,22 +113,16 @@ const mainVert = tgpu['~unstable']
     VertexOutput,
   )
   .does(
-    /* wgsl */ `(
-      @location(0) tilt: f32,
-      @location(1) angle: f32,
-      @location(2) color: vec4f,
-      @location(3) center: vec2f,
-      @builtin(vertex_index) index: u32,
-    ) -> VertexOutput {
-    let width = tilt;
-    let height = tilt / 2;
+    /* wgsl */ `(input: VertexInput) -> VertexOutput {
+    let width = input.tilt;
+    let height = input.tilt / 2;
 
     var pos = rotate(array<vec2f, 4>(
       vec2f(0, 0),
       vec2f(width, 0),
       vec2f(0, height),
       vec2f(width, height),
-    )[index] / 350, angle) + center;
+    )[input.index] / 350, input.angle) + input.center;
 
     if (canvasAspectRatio < 1) {
       pos.x /= canvasAspectRatio;
@@ -136,7 +130,7 @@ const mainVert = tgpu['~unstable']
       pos.y *= canvasAspectRatio;
     }
 
-    return VertexOutput(vec4f(pos, 0.0, 1.0), color);
+    return VertexOutput(vec4f(pos, 0.0, 1.0), input.color);
   }`,
   )
   .$uses({

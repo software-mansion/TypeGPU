@@ -185,7 +185,7 @@ const vertexFunction = tgpu['~unstable']
     { vertexIndex: d.builtin.vertexIndex },
     { outPos: d.builtin.position },
   )
-  .does(/* wgsl */ `(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+  .does(/* wgsl */ `(input: VertexInput) -> VertexOutput {
   var pos = array<vec2f, 6>(
     vec2<f32>( 1,  1),
     vec2<f32>( 1, -1),
@@ -196,7 +196,7 @@ const vertexFunction = tgpu['~unstable']
   );
 
   var output: VertexOutput;
-  output.outPos = vec4f(pos[vertexIndex], 0, 1);
+  output.outPos = vec4f(pos[input.vertexIndex], 0, 1);
   return output;
 }`)
   .$name('vertex_main');

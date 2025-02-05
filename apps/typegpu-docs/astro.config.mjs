@@ -5,9 +5,9 @@ import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import tailwind from '@astrojs/tailwind';
 import { defineConfig } from 'astro/config';
-import typegpu from 'rollup-plugin-typegpu';
 import starlightBlog from 'starlight-blog';
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
+import typegpu from 'unplugin-typegpu/rollup';
 import importRawRedirectPlugin from './vite-import-raw-redirect-plugin.mjs';
 
 /**
