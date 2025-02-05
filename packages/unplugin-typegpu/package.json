@@ -1,9 +1,10 @@
 {
-  "name": "rollup-plugin-typegpu",
-  "version": "0.0.1",
-  "description": "A rollup plugin for TypeGPU, transpiling JavaScript functions into WGSL at build-time.",
+  "name": "unplugin-typegpu",
+  "version": "0.0.0",
+  "description": "Build plugins for TypeGPU, enabling seamless JavaScript -> WGSL transpilation and improved debugging.",
   "keywords": [
     "rollup-plugin",
+    "babel-plugin",
     "vite-plugin",
     "typegpu",
     "gpgpu",
@@ -25,11 +26,17 @@
       "import": "./dist/index.js",
       "default": "./dist/index.cjs"
     },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "module": "./dist/*.js",
-      "import": "./dist/*.js",
-      "default": "./dist/*.cjs"
+    "./rollup": {
+      "types": "./dist/rollup.d.ts",
+      "module": "./dist/rollup.js",
+      "import": "./dist/rollup.js",
+      "default": "./dist/rollup.cjs"
+    },
+    "./babel": {
+      "types": "./dist/babel.d.ts",
+      "module": "./dist/babel.js",
+      "import": "./dist/babel.js",
+      "default": "./dist/babel.cjs"
     }
   },
   "sideEffects": false,
@@ -50,10 +57,19 @@
     "prepare-package": "tgpu-dev-cli prepack"
   },
   "dependencies": {
-    "unplugin-typegpu": "workspace:^0.0.0"
+    "tinyest-for-wgsl": "workspace:~0.1.0-alpha.0",
+    "estree-walker": "^3.0.3",
+    "magic-string": "^0.30.11",
+    "@babel/standalone": "^7.26.6"
   },
   "devDependencies": {
+    "@babel/template": "^7.25.9",
+    "@babel/types": "^7.26.5",
     "@typegpu/tgpu-dev-cli": "workspace:*",
+    "@types/babel__standalone": "^7.1.9",
+    "@types/babel__template": "^7.4.4",
+    "@types/babel__traverse": "^7.20.6",
+    "acorn": "^8.12.1",
     "rollup": "~4.12.0",
     "tsup": "^8.0.2",
     "typescript": "^5.3.3"
