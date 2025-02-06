@@ -34,6 +34,7 @@ const knownAlignmentMap: Record<string, number> = {
   mat2x2f: 8,
   mat3x3f: 16,
   mat4x4f: 16,
+  atomic: 4,
 };
 
 function computeAlignment(data: object): number {

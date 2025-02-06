@@ -7,6 +7,7 @@ import type { WgslTypeLiteral } from '../../data/wgslTypes';
 import type { Storage } from '../../extension';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
+import type { MemIdentity } from '../../shared/repr';
 import type { UnionToIntersection } from '../../shared/utilityTypes';
 import { isGPUBuffer } from '../../types';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
@@ -50,7 +51,7 @@ export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
   $addFlags(flags: GPUBufferUsageFlags): this;
 
   write(data: Infer<TData>): void;
-  copyFrom(srcBuffer: TgpuBuffer<TData>): void;
+  copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void;
   read(): Promise<Infer<TData>>;
   destroy(): void;
 }
@@ -228,7 +229,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
   }
 
-  copyFrom(srcBuffer: TgpuBuffer<TData>): void {
+  copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void {
     if (this.buffer.mapState === 'mapped') {
       throw new Error('Cannot copy to a mapped buffer.');
     }

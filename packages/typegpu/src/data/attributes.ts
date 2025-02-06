@@ -1,4 +1,4 @@
-import type { Infer } from '../shared/repr';
+import type { Infer, MemIdentity } from '../shared/repr';
 import { alignmentOf } from './alignmentOf';
 import {
   type AnyData,
@@ -337,6 +337,9 @@ class DecoratedImpl<TInner extends BaseWgslData, TAttribs extends unknown[]>
   implements Decorated<TInner, TAttribs>
 {
   public readonly type = 'decorated';
+  public readonly '~memIdent'!: TAttribs extends Location<number>[]
+    ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
+    : Decorated<MemIdentity<TInner>, TAttribs>;
 }
 
 class LooseDecoratedImpl<
