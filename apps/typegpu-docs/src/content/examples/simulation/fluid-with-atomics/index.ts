@@ -479,30 +479,21 @@ const stopDrawing = () => {
 };
 
 const handleDrawing = (x: number, y: number) => {
-  const allAffectedCells = new Set<{ x: number; y: number }>();
-  for (let i = -options.brushSize; i <= options.brushSize; i++) {
-    for (let j = -options.brushSize; j <= options.brushSize; j++) {
-      if (
-        i * i + j * j <= options.brushSize * options.brushSize &&
-        x + i >= 0 &&
-        x + i < options.size &&
-        y + j >= 0 &&
-        y + j < options.size
-      ) {
-        allAffectedCells.add({ x: x + i, y: y + j });
-      }
-    }
-  }
+  const { brushSize, size, brushType } = options;
+  const drawValue = isErasing ? 4 << 24 : encodeBrushType(brushType);
 
-  if (isErasing) {
-    for (const cell of allAffectedCells) {
-      drawCanvasData[cell.y * options.size + cell.x] = 4 << 24;
-    }
-  } else {
-    for (const cell of allAffectedCells) {
-      drawCanvasData[cell.y * options.size + cell.x] = encodeBrushType(
-        options.brushType,
-      );
+  for (let i = -brushSize; i <= brushSize; i++) {
+    const cellX = x + i;
+    if (cellX < 0 || cellX >= size) continue;
+    const iSq = i * i;
+
+    for (let j = -brushSize; j <= brushSize; j++) {
+      const cellY = y + j;
+      if (cellY < 0 || cellY >= size) continue;
+      if (iSq + j * j > brushSize * brushSize) continue;
+
+      const index = cellY * size + cellX;
+      drawCanvasData[index] = drawValue;
     }
   }
 
@@ -599,6 +590,10 @@ const createSampleScene = () => {
 
   for (let i = 0; i < Math.floor(options.size / 8); i++) {
     drawCanvasData[i * options.size] = 1 << 24;
+  }
+
+  for (let i = 0; i < Math.floor(options.size / 8); i++) {
+    drawCanvasData[i * options.size - 1 + options.size] = 1 << 24;
   }
 };
 
