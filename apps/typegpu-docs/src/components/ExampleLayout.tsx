@@ -47,11 +47,13 @@ export function ExampleLayout() {
   );
 }
 
+const experimentalShowingLSKey = 'experimental-showing';
+
 function SideMenu() {
   const menuShown = useAtomValue(menuShownAtom);
   const menuShownMobile = useAtomValue(menuShownMobileAtom);
   const [experimentalShowing, setExperimentalShowing] = useState(
-    localStorage.getItem('experimental-showing') === 'true',
+    localStorage.getItem(experimentalShowingLSKey) === 'true',
   );
 
   return (
@@ -110,7 +112,7 @@ function SideMenu() {
           onChange={(e) => {
             const checked = e.target.checked;
             localStorage.setItem(
-              'experimental-showing',
+              experimentalShowingLSKey,
               checked ? 'true' : 'false',
             );
             setExperimentalShowing(checked);
