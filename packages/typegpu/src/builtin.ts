@@ -28,7 +28,6 @@ export type BuiltinFrontFacing = Decorated<F32, [Builtin<'front_facing'>]>;
 export type BuiltinFragDepth = Decorated<F32, [Builtin<'frag_depth'>]>;
 export type BuiltinSampleIndex = Decorated<U32, [Builtin<'sample_index'>]>;
 export type BuiltinSampleMask = Decorated<U32, [Builtin<'sample_mask'>]>;
-export type BuiltinFragment = Decorated<Vec4f, [Builtin<'fragment'>]>;
 export type BuiltinLocalInvocationId = Decorated<
   Vec3u,
   [Builtin<'local_invocation_id'>]
@@ -103,6 +102,12 @@ export const builtin = {
 } as const;
 
 export type AnyBuiltin = (typeof builtin)[keyof typeof builtin];
+export type AnyComputeBuiltin =
+  | BuiltinLocalInvocationId
+  | BuiltinLocalInvocationIndex
+  | BuiltinGlobalInvocationId
+  | BuiltinWorkgroupId
+  | BuiltinNumWorkgroups;
 
 export type OmitBuiltins<S> = S extends AnyBuiltin
   ? never
