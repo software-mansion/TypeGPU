@@ -335,13 +335,13 @@ const vertex = tgpu['~unstable']
     },
     { pos: d.builtin.position, cell: d.f32 },
   )
-  .does(/* wgsl */ `(@builtin(instance_index) idx: u32, @location(0) squareData: vec2f, @location(1) currentStateData: u32) -> VertexOut {
+  .does(/* wgsl */ `(input: VertexIn) -> VertexOut {
     let w = sizeData.x;
     let h = sizeData.y;
-    let x = ((f32(idx % w) + squareData.x) / f32(w) - 0.5) * 2. * f32(w) / f32(max(w, h));
-    let y = (f32((idx - (idx % w)) / w + u32(squareData.y)) / f32(h) - 0.5) * 2. * f32(h) / f32(max(w, h));
-    let cellFlags = currentStateData >> 24;
-    var cell = f32(currentStateData & 0xFFFFFF);
+    let x = ((f32(input.idx % w) + input.squareData.x) / f32(w) - 0.5) * 2. * f32(w) / f32(max(w, h));
+    let y = (f32((input.idx - (input.idx % w)) / w + u32(input.squareData.y)) / f32(h) - 0.5) * 2. * f32(h) / f32(max(w, h));
+    let cellFlags = input.currentStateData >> 24;
+    var cell = f32(input.currentStateData & 0xFFFFFF);
     if (cellFlags == 1u) {
       cell = -1.;
     }
