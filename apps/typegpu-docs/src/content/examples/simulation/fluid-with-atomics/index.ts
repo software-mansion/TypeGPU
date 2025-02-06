@@ -4,6 +4,7 @@ import tgpu, {
   unstable_asUniform,
 } from 'typegpu';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 
 const root = await tgpu.init();
 
@@ -82,21 +83,15 @@ const squareBuffer = root
   .$usage('vertex')
   .$name('square');
 
-const getIndex = tgpu['~unstable']
-  .fn([d.u32, d.u32], d.u32)
-  .does(/* wgsl */ `(x: u32, y: u32) -> u32 {
-    let h = sizeData.y;
-    let w = sizeData.x;
-    return (y % h) * w + (x % w);
-  }`)
-  .$uses({ sizeData: sizeUniform });
+const getIndex = tgpu['~unstable'].fn([d.u32, d.u32], d.u32).does((x, y) => {
+  const h = sizeUniform.value.y;
+  const w = sizeUniform.value.x;
+  return (y % h) * w + (x % w);
+});
 
 const getCell = tgpu['~unstable']
   .fn([d.u32, d.u32], d.u32)
-  .does(/* wgsl */ `(x: u32, y: u32) -> u32 {
-    return currentStateData[getIndex(x, y)];
-  }`)
-  .$uses({ currentStateData: currentStateStorage, getIndex });
+  .does((x, y) => currentStateStorage.value[getIndex(x, y)]);
 
 const getCellNext = tgpu['~unstable']
   .fn([d.u32, d.u32], d.u32)
@@ -142,69 +137,51 @@ const subtractFromCell = tgpu['~unstable']
     MAX_WATER_LEVEL,
   });
 
-const persistFlags = tgpu['~unstable']
-  .fn([d.u32, d.u32])
-  .does(/* wgsl */ `(x: u32, y: u32) {
-    let cell = getCell(x, y);
-    let waterLevel = cell & MAX_WATER_LEVEL;
-    let flags = cell >> 24;
-    updateCell(x, y, (flags << 24) | waterLevel);
-  }`)
-  .$uses({ getCell, updateCell, MAX_WATER_LEVEL });
+const persistFlags = tgpu['~unstable'].fn([d.u32, d.u32]).does((x, y) => {
+  const cell = getCell(x, y);
+  const waterLevel = cell & MAX_WATER_LEVEL.value;
+  const flags = cell >> 24;
+  updateCell(x, y, (flags << 24) | waterLevel);
+});
 
 const getStableStateBelow = tgpu['~unstable']
   .fn([d.u32, d.u32], d.u32)
-  .does(/* wgsl */ `(upper: u32, lower: u32) -> u32 {
-    let totalMass = upper + lower;
-    if (totalMass <= MAX_WATER_LEVEL_UNPRESSURIZED) {
+  .does((upper, lower) => {
+    const totalMass = upper + lower;
+    if (totalMass <= MAX_WATER_LEVEL_UNPRESSURIZED.value) {
       return totalMass;
-    } else if (totalMass >= MAX_WATER_LEVEL_UNPRESSURIZED * 2 && upper > lower) {
-      return totalMass/2 + MAX_PRESSURE;
     }
-    return MAX_WATER_LEVEL_UNPRESSURIZED;
-  }`)
-  .$uses({ MAX_PRESSURE, MAX_WATER_LEVEL_UNPRESSURIZED });
+    if (totalMass >= MAX_WATER_LEVEL_UNPRESSURIZED.value * 2 && upper > lower) {
+      return totalMass / 2 + MAX_PRESSURE.value;
+    }
+    return MAX_WATER_LEVEL_UNPRESSURIZED.value;
+  });
 
 const isWall = tgpu['~unstable']
   .fn([d.u32, d.u32], d.bool)
-  .does(/* wgsl */ `(x: u32, y: u32) -> bool {
-    return (getCell(x, y) >> 24) == 1u;
-  }`)
-  .$uses({ getCell });
+  .does((x, y) => getCell(x, y) >> 24 === 1);
 
 const isWaterSource = tgpu['~unstable']
   .fn([d.u32, d.u32], d.bool)
-  .does(/* wgsl */ `(x: u32, y: u32) -> bool {
-    return (getCell(x, y) >> 24) == 2u;
-  }`)
-  .$uses({ getCell });
+  .does((x, y) => getCell(x, y) >> 24 === 2);
 
 const isWaterDrain = tgpu['~unstable']
   .fn([d.u32, d.u32], d.bool)
-  .does(/* wgsl */ `(x: u32, y: u32) -> bool {
-    return (getCell(x, y) >> 24) == 3u;
-  }`)
-  .$uses({ getCell });
+  .does((x, y) => getCell(x, y) >> 24 === 3);
 
 const isClearCell = tgpu['~unstable']
   .fn([d.u32, d.u32], d.bool)
-  .does(/* wgsl */ `(x: u32, y: u32) -> bool {
-    return (getCell(x, y) >> 24) == 4u;
-  }`)
-  .$uses({ getCell });
+  .does((x, y) => getCell(x, y) >> 24 === 4);
 
 const getWaterLevel = tgpu['~unstable']
   .fn([d.u32, d.u32], d.u32)
-  .does(/* wgsl */ `(x: u32, y: u32) -> u32 {
-    return getCell(x, y) &MAX_WATER_LEVEL;
-  }`)
-  .$uses({ getCell, MAX_WATER_LEVEL });
+  .does((x, y) => getCell(x, y) & MAX_WATER_LEVEL.value);
 
 const checkForFlagsAndBounds = tgpu['~unstable']
   .fn([d.u32, d.u32], d.bool)
-  .does(/* wgsl */ `(x: u32, y: u32) -> bool {
+  .does((x, y) => {
     if (isClearCell(x, y)) {
-      updateCell(x, y, 0u);
+      updateCell(x, y, 0);
       return true;
     }
 
@@ -215,116 +192,97 @@ const checkForFlagsAndBounds = tgpu['~unstable']
 
     if (isWaterSource(x, y)) {
       persistFlags(x, y);
-      addToCell(x, y, 20u);
+      addToCell(x, y, 20);
       return false;
     }
 
     if (isWaterDrain(x, y)) {
       persistFlags(x, y);
-      updateCell(x, y, 3u << 24);
+      updateCell(x, y, 3 << 24);
       return true;
     }
 
-    if (y == 0 || y == sizeData.y - 1u || x == 0 || x == sizeData.x - 1u) {
+    if (
+      y === 0 ||
+      y === sizeUniform.value.y - 1 ||
+      x === 0 ||
+      x === sizeUniform.value.x - 1
+    ) {
       subtractFromCell(x, y, getWaterLevel(x, y));
       return true;
     }
 
     return false;
-  }`)
-  .$uses({
-    isClearCell,
-    updateCell,
-    persistFlags,
-    addToCell,
-    subtractFromCell,
-    isWall,
-    isWaterSource,
-    isWaterDrain,
-    getWaterLevel,
-    sizeData: sizeUniform,
   });
 
-const decideWaterLevel = tgpu['~unstable']
-  .fn([d.u32, d.u32])
-  .does(/* wgsl */ `(x: u32, y: u32) {
-    if (checkForFlagsAndBounds(x, y)) {
-      return;
-    }
+const decideWaterLevel = tgpu['~unstable'].fn([d.u32, d.u32]).does((x, y) => {
+  if (checkForFlagsAndBounds(x, y)) {
+    return;
+  }
 
-    var remainingWater = getWaterLevel(x, y);
+  let remainingWater = getWaterLevel(x, y);
 
-    if (remainingWater == 0u) {
-      return;
-    }
+  if (remainingWater === 0) {
+    return;
+  }
 
-    if (!isWall(x, y - 1u)) {
-      let waterLevelBelow = getWaterLevel(x, y - 1u);
-      let stable = getStableStateBelow(remainingWater, waterLevelBelow);
-      if (waterLevelBelow < stable) {
-        let change = stable - waterLevelBelow;
-        let flow = min(change, viscosityData);
-        subtractFromCell(x, y, flow);
-        addToCell(x, y - 1u, flow);
-        remainingWater -= flow;
-      }
+  if (!isWall(x, y - 1)) {
+    const waterLevelBelow = getWaterLevel(x, y - 1);
+    const stable = getStableStateBelow(remainingWater, waterLevelBelow);
+    if (waterLevelBelow < stable) {
+      const change = stable - waterLevelBelow;
+      const flow = std.min(change, viscosityUniform.value);
+      subtractFromCell(x, y, flow);
+      addToCell(x, y - 1, flow);
+      remainingWater -= flow;
     }
+  }
 
-    if (remainingWater == 0u) {
-      return;
-    }
+  if (remainingWater === 0) {
+    return;
+  }
 
-    let waterLevelBefore = remainingWater;
-    if (!isWall(x - 1u, y)) {
-      let flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel(x - 1u, y)));
-      if (flowRaw > 0) {
-        let change = max(min(4u, remainingWater), u32(flowRaw)/4);
-        let flow = min(change, viscosityData);
-        subtractFromCell(x, y, flow);
-        addToCell(x - 1u, y, flow);
-        remainingWater -= flow;
-      }
+  const waterLevelBefore = remainingWater;
+  if (!isWall(x - 1, y)) {
+    const flowRaw = d.i32(waterLevelBefore) - d.i32(getWaterLevel(x - 1, y));
+    if (flowRaw > 0) {
+      const change = std.max(std.min(4, remainingWater), d.u32(flowRaw) / 4);
+      const flow = std.min(change, viscosityUniform.value);
+      subtractFromCell(x, y, flow);
+      addToCell(x - 1, y, flow);
+      remainingWater -= flow;
     }
+  }
 
-    if (remainingWater == 0u) {
-      return;
-    }
+  if (remainingWater === 0) {
+    return;
+  }
 
-    if (!isWall(x + 1u, y)) {
-      let flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel(x + 1, y)));
-      if (flowRaw > 0) {
-        let change = max(min(4u, remainingWater), u32(flowRaw)/4);
-        let flow = min(change, viscosityData);
-        subtractFromCell(x, y, flow);
-        addToCell(x + 1u, y, flow);
-        remainingWater -= flow;
-      }
+  if (!isWall(x + 1, y)) {
+    const flowRaw = d.i32(waterLevelBefore) - d.i32(getWaterLevel(x + 1, y));
+    if (flowRaw > 0) {
+      const change = std.max(std.min(4, remainingWater), d.u32(flowRaw) / 4);
+      const flow = std.min(change, viscosityUniform.value);
+      subtractFromCell(x, y, flow);
+      addToCell(x + 1, y, flow);
+      remainingWater -= flow;
     }
+  }
 
-    if (remainingWater == 0u) {
-      return;
-    }
+  if (remainingWater === 0) {
+    return;
+  }
 
-    if (!isWall(x, y + 1u)) {
-      let stable = getStableStateBelow(getWaterLevel(x, y + 1u), remainingWater);
-      if (stable < remainingWater) {
-        let flow = min(remainingWater - stable, viscosityData);
-        subtractFromCell(x, y, flow);
-        addToCell(x, y + 1u, flow);
-        remainingWater -= flow;
-      }
+  if (!isWall(x, y + 1)) {
+    const stable = getStableStateBelow(getWaterLevel(x, y + 1), remainingWater);
+    if (stable < remainingWater) {
+      const flow = std.min(remainingWater - stable, viscosityUniform.value);
+      subtractFromCell(x, y, flow);
+      addToCell(x, y + 1, flow);
+      remainingWater -= flow;
     }
-  }`)
-  .$uses({
-    checkForFlagsAndBounds,
-    getWaterLevel,
-    isWall,
-    getStableStateBelow,
-    subtractFromCell,
-    addToCell,
-    updateCell,
-    viscosityData: viscosityUniform,
-  });
+  }
+});
 
 const vertex = tgpu['~unstable']
   .vertexFn(
@@ -335,26 +293,33 @@ const vertex = tgpu['~unstable']
     },
     { pos: d.builtin.position, cell: d.f32 },
   )
-  .does(/* wgsl */ `(input: VertexIn) -> VertexOut {
-    let w = sizeData.x;
-    let h = sizeData.y;
-    let x = ((f32(input.idx % w) + input.squareData.x) / f32(w) - 0.5) * 2. * f32(w) / f32(max(w, h));
-    let y = (f32((input.idx - (input.idx % w)) / w + u32(input.squareData.y)) / f32(h) - 0.5) * 2. * f32(h) / f32(max(w, h));
-    let cellFlags = input.currentStateData >> 24;
-    var cell = f32(input.currentStateData & 0xFFFFFF);
-    if (cellFlags == 1u) {
-      cell = -1.;
+  .does((input) => {
+    const w = sizeUniform.value.x;
+    const h = sizeUniform.value.y;
+    const x =
+      (((d.f32(input.idx % w) + input.squareData.x) / d.f32(w) - 0.5) *
+        2 *
+        d.f32(w)) /
+      d.f32(std.max(w, h));
+    const y =
+      ((d.f32((input.idx - (input.idx % w)) / w + d.u32(input.squareData.y)) /
+        d.f32(h) -
+        0.5) *
+        2 *
+        d.f32(h)) /
+      d.f32(std.max(w, h));
+    const cellFlags = input.currentStateData >> 24;
+    let cell = d.f32(input.currentStateData & 0xffffff);
+    if (cellFlags === 1) {
+      cell = -1;
     }
-    if (cellFlags == 2u) {
-      cell = -2.;
+    if (cellFlags === 2) {
+      cell = -2;
     }
-    if (cellFlags == 3u) {
-      cell = -3.;
+    if (cellFlags === 3) {
+      cell = -3;
     }
-    return VertexOut(vec4f(x, y, 0., 1.), cell);
-  }`)
-  .$uses({
-    sizeData: sizeUniform,
+    return { pos: d.vec4f(x, y, 0, 1), cell };
   });
 
 const fragment = tgpu['~unstable']
@@ -400,13 +365,15 @@ function resetGameData() {
   drawCanvasData = new Uint32Array(options.size * options.size);
 
   const compute = tgpu['~unstable']
-    .computeFn([d.builtin.globalInvocationId], {
-      workgroupSize: [options.workgroupSize, options.workgroupSize],
-    })
-    .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
-      decideWaterLevel(gid.x, gid.y);
-    }`)
-    .$uses({ decideWaterLevel });
+    .computeFn(
+      { gid: d.builtin.globalInvocationId },
+      {
+        workgroupSize: [options.workgroupSize, options.workgroupSize],
+      },
+    )
+    .does((input) => {
+      decideWaterLevel(input.gid.x, input.gid.y);
+    });
 
   const computePipeline = root['~unstable']
     .withCompute(compute)
