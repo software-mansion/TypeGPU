@@ -34,8 +34,8 @@ function functionVisitor(ctx: Context): TraverseOptions {
 
         if (
           implementation &&
-          !(implementation.type === 'TemplateLiteral') &&
-          !(implementation.type === 'StringLiteral')
+          (implementation.type === 'FunctionExpression' ||
+            implementation.type === 'ArrowFunctionExpression')
         ) {
           const { argNames, body, externalNames } = transpileFn(implementation);
 
