@@ -6,24 +6,25 @@ description: A guide on how to use the TypeGPU Generator CLI
 import { FileTree } from '@astrojs/starlight/components';
 import FileDiff from '../../../components/FileDiff.astro';
 
-TypeGPU Generator (tgpu-gen) is a command-line interface for the TypeGPU code generator.
-It provides a way for a highly automated migration process and is a great tool
-for existing WebGPU projects that want to start taking advantage of type-safe TypeGPU features.
+TypeGPU Generator (tgpu-gen) is a CLI companion tool that transforms WGSL code files into
+matching TypeGPU definitions. It can be used for integrating TypeGPU into established WebGPU projects, or automating the migration process.
+
+- ✨ Generate TypeGPU definitions from WGSL shaders
+- 👀 Continuously watch for changes in WGSL files and update the generated definitions
+- 🌲 Specify input and output using glob patterns
+- 🎯 Choose the output extension and CJS or ESM format
 
 ## Installation
 
-Using npm:
-
+You can use it directly through `npx`:
+```bash
+npx tgpu-gen path/to/shader.wgsl
+```
+Or install it globally:
 ```bash
 npm install -g tgpu-gen
+tgpu-gen path/to/shader.wgsl
 ```
-
-## Feature overview
-
-- Generate TypeGPU definitions from WGSL shaders
-- Continuously watch for changes in WGSL files and update the generated definitions
-- Specify input and output using glob patterns
-- Choose the output extension and CommonJS or ES module format
 
 ## Example
 
