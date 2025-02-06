@@ -1,6 +1,57 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
+const Span = d.struct({
+  x: d.u32,
+  y: d.u32,
+});
+
+// A description of what data our shader program
+// needs from the outside.
+const layout = tgpu
+  .bindGroupLayout({
+    span: { uniform: Span },
+  })
+  .$idx(0);
+
+const shaderCode = tgpu.resolve({
+  template: /* wgsl */ `
+    struct VertexOutput {
+      @builtin(position) pos: vec4f,
+      @location(0) uv: vec2f,
+    }
+
+    @vertex
+    fn main_vertex(
+      @builtin(vertex_index) vertexIndex: u32,
+    ) -> VertexOutput {
+      var pos = array<vec2f, 4>(
+        vec2(1, 1), // top-right
+        vec2(-1, 1), // top-left
+        vec2(1, -1), // bottom-right
+        vec2(-1, -1) // bottom-left
+      );
+      var out: VertexOutput;
+      out.pos = vec4f(pos[vertexIndex], 0.0, 1.0);
+      out.uv = (pos[vertexIndex] + 1) * 0.5;
+      return out;
+    }
+
+    @fragment
+    fn main_fragment(
+      @location(0) uv: vec2f,
+    ) -> @location(0) vec4f {
+      let red = floor(uv.x * f32(_EXT_.span.x)) / f32(_EXT_.span.x);
+      let green = floor(uv.y * f32(_EXT_.span.y)) / f32(_EXT_.span.y);
+      return vec4(red, green, 0.5, 1.0);
+    }
+  `,
+  externals: {
+    // Linking the shader template with our layout
+    _EXT_: { span: layout.bound.span },
+  },
+});
+
 const root = await tgpu.init();
 const device = root.device;
 
@@ -8,77 +59,23 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const vertWGSL = /* wgsl */ `
-
-struct Output {
-  @builtin(position) pos: vec4f,
-  @location(0) uv: vec2f,
-}
-
-@vertex
-fn main(
-  @builtin(vertex_index) vertexIndex: u32,
-) -> Output {
-  var pos = array<vec2f, 4>(
-    vec2(1, 1), // top-right
-    vec2(-1, 1), // top-left
-    vec2(1, -1), // bottom-right
-    vec2(-1, -1) // bottom-left
-  );
-  var uv = array<vec2f, 4>(
-    vec2(1., 1.), // top-right
-    vec2(0., 1.), // top-left
-    vec2(1., 0.), // bottom-right
-    vec2(0., 0.) // bottom-left
-  );
-  var out: Output;
-  out.pos = vec4f(pos[vertexIndex], 0.0, 1.0);
-  out.uv = uv[vertexIndex];
-  return out;
-}`;
-
-const fragWGSL = /* wgsl */ `
-
-struct Span {
-  x: u32,
-  y: u32,
-}
-
-@group(0) @binding(0) var<uniform> span: Span;
-
-@fragment
-fn main(
-  @location(0) uv: vec2f,
-) -> @location(0) vec4f {
-  let red = floor(uv.x * f32(span.x)) / f32(span.x);
-  let green = floor(uv.y * f32(span.y)) / f32(span.y);
-  return vec4(red, green, 0.5, 1.0);
-}`;
-
 context.configure({
   device: device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
 
-const Span = d.struct({
-  x: d.u32,
-  y: d.u32,
-});
-
-const spanBuffer = root.createBuffer(Span, { x: 10, y: 10 }).$usage('uniform');
+const shaderModule = device.createShaderModule({ code: shaderCode });
 
 const pipeline = device.createRenderPipeline({
-  layout: 'auto',
+  layout: device.createPipelineLayout({
+    bindGroupLayouts: [root.unwrap(layout)],
+  }),
   vertex: {
-    module: device.createShaderModule({
-      code: vertWGSL,
-    }),
+    module: shaderModule,
   },
   fragment: {
-    module: device.createShaderModule({
-      code: fragWGSL,
-    }),
+    module: shaderModule,
     targets: [
       {
         format: presentationFormat,
@@ -90,19 +87,13 @@ const pipeline = device.createRenderPipeline({
   },
 });
 
-const bindGroup = device.createBindGroup({
-  layout: pipeline.getBindGroupLayout(0),
-  entries: [
-    {
-      binding: 0,
-      resource: {
-        buffer: spanBuffer.buffer,
-      },
-    },
-  ],
+const spanBuffer = root.createBuffer(Span, { x: 10, y: 10 }).$usage('uniform');
+
+const bindGroup = root.createBindGroup(layout, {
+  span: spanBuffer,
 });
 
-const draw = (spanXValue: number, spanYValue: number) => {
+function draw(spanXValue: number, spanYValue: number) {
   const textureView = context.getCurrentTexture().createView();
   const renderPassDescriptor: GPURenderPassDescriptor = {
     colorAttachments: [
@@ -120,12 +111,12 @@ const draw = (spanXValue: number, spanYValue: number) => {
   const commandEncoder = device.createCommandEncoder();
   const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
   passEncoder.setPipeline(pipeline);
-  passEncoder.setBindGroup(0, bindGroup);
+  passEncoder.setBindGroup(0, root.unwrap(bindGroup));
   passEncoder.draw(4);
   passEncoder.end();
 
   device.queue.submit([commandEncoder.finish()]);
-};
+}
 
 let spanX = 10;
 let spanY = 10;

@@ -186,6 +186,10 @@ const dataWriters = {
     output.seekTo(beginning + sizeOf(schema));
   },
 
+  ptrFn() {
+    throw new Error('Pointers are not host-shareable');
+  },
+
   atomic(output, schema: wgsl.Atomic, value: number) {
     dataWriters[schema.inner.type]?.(output, schema, value);
   },
@@ -613,6 +617,10 @@ const dataReaders = {
 
     alignIO(input, alignment);
     return elements as never[];
+  },
+
+  ptrFn() {
+    throw new Error('Pointers are not host-shareable');
   },
 
   atomic(input, schema: wgsl.Atomic): number {

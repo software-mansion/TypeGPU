@@ -8,6 +8,7 @@ import type {
   ResolutionCtx,
   SelfResolvable,
 } from '../../types';
+import { valueProxyHandler } from '../valueProxyUtils';
 import { type TgpuBuffer, type Uniform, isUsableAsUniform } from './buffer';
 
 // ----------
@@ -36,15 +37,6 @@ export interface TgpuBufferReadonly<TData extends BaseWgslData>
 
 export interface TgpuBufferMutable<TData extends BaseWgslData>
   extends TgpuBufferUsage<TData, 'mutable'> {}
-
-export function isBufferUsage<
-  T extends
-    | TgpuBufferUniform<BaseWgslData>
-    | TgpuBufferReadonly<BaseWgslData>
-    | TgpuBufferMutable<BaseWgslData>,
->(value: T | unknown): value is T {
-  return (value as T)?.resourceType === 'buffer-usage';
-}
 
 // --------------
 // Implementation
@@ -89,7 +81,9 @@ class TgpuFixedBufferImpl<
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var<${usage}> ${id}: ${ctx.resolve(this.buffer.dataType)};`,
+      `@group(${group}) @binding(${binding}) var<${usage}> ${id}: ${ctx.resolve(
+        this.buffer.dataType,
+      )};`,
     );
 
     return id;
@@ -103,10 +97,16 @@ class TgpuFixedBufferImpl<
     if (!inGPUMode()) {
       throw new Error(`Cannot access buffer's value directly in JS.`);
     }
-    return this as Infer<TData>;
+
+    return new Proxy(
+      {
+        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        toString: () => `.value:${this.label ?? '<unnamed>'}`,
+      },
+      valueProxyHandler,
+    ) as Infer<TData>;
   }
 }
-
 export class TgpuLaidOutBufferImpl<
   TData extends BaseWgslData,
   TUsage extends BindableBufferUsage,
@@ -132,7 +132,9 @@ export class TgpuLaidOutBufferImpl<
     const usage = usageToVarTemplateMap[this.usage];
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${this._membership.idx}) var<${usage}> ${id}: ${ctx.resolve(this.dataType as AnyWgslData)};`,
+      `@group(${group}) @binding(${
+        this._membership.idx
+      }) var<${usage}> ${id}: ${ctx.resolve(this.dataType as AnyWgslData)};`,
     );
 
     return id;
@@ -146,7 +148,14 @@ export class TgpuLaidOutBufferImpl<
     if (!inGPUMode()) {
       throw new Error(`Cannot access buffer's value directly in JS.`);
     }
-    return this as Infer<TData>;
+
+    return new Proxy(
+      {
+        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        toString: () => `.value:${this.label ?? '<unnamed>'}`,
+      },
+      valueProxyHandler,
+    ) as Infer<TData>;
   }
 }
 

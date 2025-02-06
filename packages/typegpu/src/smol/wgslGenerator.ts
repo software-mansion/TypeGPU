@@ -123,15 +123,6 @@ function generateExpression(
     }
 
     if (isWgsl(target.value)) {
-      // NOTE: Temporary solution, assuming that access to `.value` of resolvables should always resolve to just the target.
-      if (propertyStr === 'value') {
-        return {
-          value: resolveRes(ctx, target),
-          // TODO: Infer data type
-          dataType: UnknownData,
-        };
-      }
-
       return {
         // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
         value: (target.value as any)[propertyStr],
@@ -264,6 +255,19 @@ function generateStatement(
   }
 
   if ('r' in statement) {
+    // check if the thing at the top of the call stack is a struct
+    // if so wrap the value returned in a constructor of the struct (its resolved name)
+    if (
+      isWgslStruct(ctx.callStack[ctx.callStack.length - 1]) &&
+      statement.r !== null
+    ) {
+      const resource = resolveRes(ctx, generateExpression(ctx, statement.r));
+      const resolvedStruct = ctx.resolve(
+        ctx.callStack[ctx.callStack.length - 1],
+      );
+      return `${ctx.pre}return ${resolvedStruct}(${resource});`;
+    }
+
     return statement.r === null
       ? `${ctx.pre}return;`
       : `${ctx.pre}return ${resolveRes(ctx, generateExpression(ctx, statement.r))};`;

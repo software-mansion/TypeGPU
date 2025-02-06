@@ -156,7 +156,7 @@ describe('Inter-Stage Variables', () => {
       .does('() { layout.bound.alpha; }')
       .$uses({ layout });
 
-    const fragmentFn = utgpu.vertexFn({}, { out: d.vec4f }).does('() {}');
+    const fragmentFn = utgpu.fragmentFn({}, { out: d.vec4f }).does('() {}');
 
     const pipeline = root
       .withVertex(vertexFn, {})
