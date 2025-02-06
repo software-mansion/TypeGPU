@@ -145,6 +145,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   private _buffer: GPUBuffer | null = null;
   private _ownBuffer: boolean;
   private _destroyed = false;
+  private _hostBuffer: ArrayBuffer | undefined;
 
   private _label: string | undefined;
   readonly initial: Infer<TData> | undefined;
@@ -265,18 +266,20 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     }
 
     const size = sizeOf(this.dataType);
+    if (!this._hostBuffer) {
+      this._hostBuffer = new ArrayBuffer(size);
+    }
 
     // Flushing any commands yet to be encoded.
     this._group.flush();
 
-    const hostBuffer = new ArrayBuffer(size);
     if (EVAL_ALLOWED_IN_ENV) {
       const writer = getCompiledWriterForSchema(this.dataType);
-      writer(new DataView(hostBuffer), 0, data);
+      writer(new DataView(this._hostBuffer), 0, data);
     } else {
-      writeData(new BufferWriter(hostBuffer), this.dataType, data);
+      writeData(new BufferWriter(this._hostBuffer), this.dataType, data);
     }
-    device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
+    device.queue.writeBuffer(gpuBuffer, 0, this._hostBuffer, 0, size);
   }
 
   public writePartial(data: InferPartial<TData>): void {

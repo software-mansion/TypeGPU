@@ -2,7 +2,7 @@ import { roundUp } from '../mathUtils';
 import type { Infer } from '../shared/repr';
 import { alignmentOf } from './alignmentOf';
 import { isDisarray, isUnstruct } from './dataTypes';
-import { offsetsForProps } from './offests';
+import { offsetsForProps } from './offsets';
 import { sizeOf } from './sizeOf';
 import {
   isVec,
@@ -22,6 +22,16 @@ try {
 } catch {
   EVAL_ALLOWED_IN_ENV = false;
 }
+
+const compiledWriters = new WeakMap<
+  wgsl.BaseWgslData,
+  (
+    output: DataView,
+    offset: number,
+    value: unknown,
+    endianness?: boolean,
+  ) => void
+>();
 
 export interface CompiledWriteInstructions {
   primitive: 'u32' | 'i32' | 'f32';
@@ -143,16 +153,6 @@ function buildAccessor(path: string[]) {
 
   return path.length === 0 ? 'value' : `value.${path.join('.')}`;
 }
-
-const compiledWriters = new Map<
-  wgsl.BaseWgslData,
-  (
-    output: DataView,
-    offset: number,
-    value: unknown,
-    endianness?: boolean,
-  ) => void
->();
 
 export function getCompiledWriterForSchema<T extends wgsl.BaseWgslData>(
   schema: T,
