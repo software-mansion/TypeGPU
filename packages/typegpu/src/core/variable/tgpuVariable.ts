@@ -4,6 +4,7 @@ import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
 import type { ResolutionCtx, SelfResolvable } from '../../types';
+import { valueProxyHandler } from '../valueProxyUtils';
 
 // ----------
 // Public API
@@ -92,6 +93,13 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyWgslData>
     if (!inGPUMode()) {
       throw new Error(`Cannot access tgpu.var's value directly in JS.`);
     }
-    return this as Infer<TDataType>;
+
+    return new Proxy(
+      {
+        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        toString: () => `.value:${this.label ?? '<unnamed>'}`,
+      },
+      valueProxyHandler,
+    ) as Infer<TDataType>;
   }
 }

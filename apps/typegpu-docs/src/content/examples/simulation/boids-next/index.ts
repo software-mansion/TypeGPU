@@ -42,11 +42,11 @@ const VertexOutput = {
 
 const mainVert = tgpu['~unstable']
   .vertexFn({ v: d.vec2f, center: d.vec2f, velocity: d.vec2f }, VertexOutput)
-  .does(/* wgsl */ `(@location(0) v: vec2f, @location(1) center: vec2f, @location(2) velocity: vec2f) -> VertexOutput {
-    let angle = getRotationFromVelocity(velocity);
-    let rotated = rotate(v, angle);
+  .does(/* wgsl */ `(input: VertexInput) -> VertexOutput {
+    let angle = getRotationFromVelocity(input.velocity);
+    let rotated = rotate(input.v, angle);
 
-    let pos = vec4(rotated + center, 0.0, 1.0);
+    let pos = vec4(rotated + input.center, 0.0, 1.0);
 
     let color = vec4(
         sin(angle + colorPalette.r) * 0.45 + 0.45,
@@ -223,7 +223,7 @@ const mainCompute = tgpu['~unstable']
     var alignmentCount = 0u;
     var cohesion = vec2(0.0, 0.0);
     var cohesionCount = 0u;
-    
+
     for (var i = 0u; i < arrayLength(&currentTrianglePos); i = i + 1) {
       if (i == index) {
         continue;
@@ -253,7 +253,7 @@ const mainCompute = tgpu['~unstable']
       + (alignment * params.alignmentStrength)
       + (cohesion * params.cohesionStrength);
     instanceInfo.velocity = normalize(instanceInfo.velocity) * clamp(length(instanceInfo.velocity), 0.0, 0.01);
-    
+
     if (instanceInfo.position[0] > 1.0 + triangleSize) {
       instanceInfo.position[0] = -1.0 - triangleSize;
     }
@@ -340,7 +340,7 @@ export const controls = {
     onButtonClick: () => paramsBuffer.write(presets.blobs),
   },
 
-  '⚛️ Particles': {
+  '⚛ Particles': {
     onButtonClick: () => paramsBuffer.write(presets.particles),
   },
 

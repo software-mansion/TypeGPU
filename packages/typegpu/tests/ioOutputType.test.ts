@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
-  type IOLayoutToOutputSchema,
+  type IOLayoutToSchema,
   withLocations,
 } from '../src/core/function/ioOutputType';
 import * as d from '../src/data';
@@ -36,7 +36,7 @@ describe('withLocations', () => {
 describe('IOLayoutToOutputSchema', () => {
   it('decorates types in a struct with location attribute for non-builtins and no custom locations', () => {
     expectTypeOf<
-      IOLayoutToOutputSchema<{
+      IOLayoutToSchema<{
         a: d.Decorated<d.Vec4f, [d.Location<5>]>;
         b: d.Vec4f;
         pos: d.BuiltinPosition;
@@ -51,7 +51,7 @@ describe('IOLayoutToOutputSchema', () => {
   });
 
   it('decorates non-struct types', () => {
-    expectTypeOf<IOLayoutToOutputSchema<d.Vec4f>>().toEqualTypeOf<
+    expectTypeOf<IOLayoutToSchema<d.Vec4f>>().toEqualTypeOf<
       d.Decorated<d.Vec4f, [d.Location<0>]>
     >();
   });

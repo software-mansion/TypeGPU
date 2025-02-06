@@ -143,7 +143,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       template: `
         fn vs() {
           out.highlighted = highlighted.index;
-          
+
           let h = highlighted;
           let x = a.b.c.highlighted.d;
         }
@@ -285,7 +285,7 @@ struct fragment_Output {
     const func = tgpu['~unstable']
       .fn([d.vec4f, Point], d.vec2f)
       .does(/* wgsl */ `(
-        a: vec4f, 
+        a: vec4f,
         b : PointStruct ,
     ) -> vec2f {
     var newPoint: PointStruct;

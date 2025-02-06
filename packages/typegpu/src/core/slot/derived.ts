@@ -1,5 +1,6 @@
 import { getResolutionCtx } from '../../gpuMode';
 import type { Infer } from '../../shared/repr';
+import { unwrapProxy } from '../valueProxyUtils';
 import type {
   Eventual,
   SlotValuePair,
@@ -27,6 +28,7 @@ function createDerived<T>(compute: () => T): TgpuDerived<T> {
   const result = {
     resourceType: 'derived' as const,
     '~compute': compute,
+    '~repr': undefined as Infer<T>,
 
     get value(): Infer<T> {
       const ctx = getResolutionCtx();
@@ -36,7 +38,7 @@ function createDerived<T>(compute: () => T): TgpuDerived<T> {
         );
       }
 
-      return ctx.unwrap(this) as Infer<T>;
+      return unwrapProxy(ctx.unwrap(this));
     },
 
     with<TValue>(
@@ -60,6 +62,8 @@ function createBoundDerived<T>(
 ): TgpuDerived<T> {
   const result = {
     resourceType: 'derived' as const,
+    '~repr': undefined as Infer<T>,
+
     '~compute'() {
       throw new Error(
         `'~compute' should never be read on bound derived items.`,
@@ -78,7 +82,7 @@ function createBoundDerived<T>(
         );
       }
 
-      return ctx.unwrap(this) as Infer<T>;
+      return unwrapProxy(ctx.unwrap(this));
     },
 
     with<TValue>(

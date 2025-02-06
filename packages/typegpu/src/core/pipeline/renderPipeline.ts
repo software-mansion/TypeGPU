@@ -383,7 +383,7 @@ class RenderPipelineCore {
 
   constructor(public readonly options: RenderPipelineCoreOptions) {
     const connectedAttribs = connectAttributesToShader(
-      options.vertexFn.shell.argTypes[0],
+      options.vertexFn.shell.attributes[0],
       options.vertexAttribs,
     );
 

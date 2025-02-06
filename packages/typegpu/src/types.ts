@@ -1,5 +1,10 @@
 import type { Block } from 'tinyest';
-import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
+import type {
+  TgpuBufferMutable,
+  TgpuBufferReadonly,
+  TgpuBufferUniform,
+  TgpuBufferUsage,
+} from './core/buffer/bufferUsage';
 import type { TgpuConst } from './core/constant/tgpuConstant';
 import type { TgpuDeclare } from './core/declare/tgpuDeclare';
 import type { TgpuComputeFn } from './core/function/tgpuComputeFn';
@@ -167,4 +172,13 @@ export function isGPUBuffer(value: unknown): value is GPUBuffer {
     'getMappedRange' in value &&
     'mapAsync' in value
   );
+}
+
+export function isBufferUsage<
+  T extends
+    | TgpuBufferUniform<BaseWgslData>
+    | TgpuBufferReadonly<BaseWgslData>
+    | TgpuBufferMutable<BaseWgslData>,
+>(value: T | unknown): value is T {
+  return (value as T)?.resourceType === 'buffer-usage';
 }
