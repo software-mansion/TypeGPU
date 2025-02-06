@@ -214,9 +214,9 @@ const computeBindGroupLayout = tgpu
 const { currentTrianglePos, nextTrianglePos } = computeBindGroupLayout.bound;
 
 const mainCompute = tgpu['~unstable']
-  .computeFn([], { workgroupSize: [1] })
-  .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
-    let index = gid.x;
+  .computeFn({ gid: d.builtin.globalInvocationId }, { workgroupSize: [1] })
+  .does(/* wgsl */ `(input: ComputeInput) {
+    let index = input.gid.x;
     var instanceInfo = currentTrianglePos[index];
     var separation = vec2(0.0, 0.0);
     var alignment = vec2(0.0, 0.0);
