@@ -1,5 +1,6 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
+import { useState } from 'react';
 import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
 import HamburgerSvg from '../assets/hamburger.svg';
@@ -11,8 +12,7 @@ import {
 import ExampleList from './ExampleList';
 import ExamplePage from './ExamplePage';
 import { Button } from './design/Button';
-
-const isDev = import.meta.env.DEV;
+import { Toggle } from './design/Toggle';
 
 export function ExampleLayout() {
   const menuShown = useAtomValue(menuShownAtom);
@@ -50,6 +50,9 @@ export function ExampleLayout() {
 function SideMenu() {
   const menuShown = useAtomValue(menuShownAtom);
   const menuShownMobile = useAtomValue(menuShownMobileAtom);
+  const [experimentalShowing, setExperimentalShowing] = useState(
+    localStorage.getItem('experimental-showing') === 'true',
+  );
 
   return (
     <aside
@@ -93,10 +96,27 @@ function SideMenu() {
 
       <ExampleList
         excludeTags={[
-          isDev ? [] : ['experimental'],
+          experimentalShowing ? [] : ['experimental'],
           typeof MediaStreamTrackProcessor === 'undefined' ? ['camera'] : [],
         ].flat()}
       />
+
+      <hr className="my-0 box-border w-full border-t border-tameplum-100" />
+
+      <label className="flex items-center justify-between gap-3 text-sm cursor-pointer">
+        <span>Experimental examples</span>
+        <Toggle
+          checked={experimentalShowing}
+          onChange={(e) => {
+            const checked = e.target.checked;
+            localStorage.setItem(
+              'experimental-showing',
+              checked ? 'true' : 'false',
+            );
+            setExperimentalShowing(checked);
+          }}
+        />
+      </label>
 
       <div className="flex justify-between text-tameplum-800 text-xs">
         <div>&copy; {new Date().getFullYear()} Software Mansion S.A.</div>

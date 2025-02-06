@@ -19,7 +19,13 @@ function ExampleList({ excludeTags = [] }: { excludeTags?: string[] }) {
             }
 
             return (
-              <ExampleLink key={example.key} exampleKey={example.key}>
+              <ExampleLink
+                key={example.key}
+                exampleKey={example.key}
+                isExperimental={
+                  example.metadata.tags?.includes('experimental') ?? false
+                }
+              >
                 {example.metadata.title}
               </ExampleLink>
             );
