@@ -212,4 +212,49 @@ describe('TGSL tgpu.fn function', () => {
 
     expect(actual).toEqual(expected);
   });
+
+  it('resolves computeFn', () => {
+    const computeFn = tgpu['~unstable']
+      .computeFn({ gid: builtin.globalInvocationId }, { workgroupSize: [24] })
+      .does((input) => {
+        const index = input.gid.x;
+        const iterationF = f32(0);
+        const sign = 0;
+        const change = vec4f(0, 0, 0, 0);
+      })
+      .$name('compute_fn');
+
+    const actual = parseResolved({ computeFn });
+
+    const expected = parse(`
+      struct compute_fn_Input {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      @compute @workgroup_size(24)
+      fn compute_fn(input: compute_fn_Input) {
+        var index = input.gid.x;
+        var iterationF = f32(0);
+        var sign = 0;
+        var change = vec4f(0, 0, 0, 0);
+      }
+    `);
+
+    expect(actual).toEqual(expected);
+  });
+
+  it('rejects invalid arguments for computeFn', () => {
+    tgpu['~unstable']
+      // @ts-expect-error
+      .computeFn({ vid: builtin.vertexIndex }, { workgroupSize: [24] })
+      .does(() => {});
+
+    tgpu['~unstable']
+      .computeFn(
+        // @ts-expect-error
+        { gid: builtin.globalInvocationId, random: f32 },
+        { workgroupSize: [24] },
+      )
+      .does(() => {});
+  });
 });
