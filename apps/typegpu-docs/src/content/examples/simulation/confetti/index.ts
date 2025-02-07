@@ -146,10 +146,10 @@ const mainFrag = tgpu['~unstable']
   }`);
 
 const mainCompute = tgpu['~unstable']
-  .computeFn([d.builtin.globalInvocationId], { workgroupSize: [1] })
+  .computeFn({ gid: d.builtin.globalInvocationId }, { workgroupSize: [1] })
   .does(
-    /* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
-    let index = gid.x;
+    /* wgsl */ `(input: ComputeInput) {
+    let index = input.gid.x;
     if index == 0 {
       time += deltaTime;
     }

@@ -177,3 +177,10 @@ export function sin(radians: number): number {
   }
   return Math.sin(radians);
 }
+
+export function exp(value: number): number {
+  if (inGPUMode()) {
+    return `exp(${value})` as unknown as number;
+  }
+  return Math.exp(value);
+}

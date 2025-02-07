@@ -1,4 +1,4 @@
-import type { OmitBuiltins } from '../../builtin';
+import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin';
 import type { AnyWgslData } from '../../data';
 import type { AnyData } from '../../data/dataTypes';
 import { invariant } from '../../errors';
@@ -96,7 +96,9 @@ class WithBindingImpl implements WithBinding {
     ]);
   }
 
-  withCompute(entryFn: TgpuComputeFn): WithCompute {
+  withCompute<ComputeIn extends Record<string, AnyComputeBuiltin>>(
+    entryFn: TgpuComputeFn<ComputeIn>,
+  ): WithCompute {
     return new WithComputeImpl(this._getRoot(), this._slotBindings, entryFn);
   }
 

@@ -1,4 +1,14 @@
-import type { Infer, InferRecord } from '../shared/repr';
+import type {
+  Infer,
+  InferRecord,
+  MemIdentity,
+  MemIdentityRecord,
+} from '../shared/repr';
+
+type DecoratedLocation<T extends BaseWgslData> = Decorated<
+  T,
+  Location<number>[]
+>;
 
 export interface NumberArrayView {
   readonly length: number;
@@ -574,12 +584,14 @@ export interface I32 {
   readonly type: 'i32';
   /** Type-token, not available at runtime */
   readonly '~repr': number;
+  readonly '~memIdent': I32 | Atomic<I32> | DecoratedLocation<I32>;
 }
 
 export interface U32 {
   readonly type: 'u32';
   /** Type-token, not available at runtime */
   readonly '~repr': number;
+  readonly '~memIdent': U32 | Atomic<U32> | DecoratedLocation<U32>;
 }
 
 export interface Vec2f {
@@ -681,6 +693,7 @@ export interface WgslStruct<
   readonly propTypes: TProps;
   /** Type-token, not available at runtime */
   readonly '~repr': InferRecord<TProps>;
+  readonly '~memIdent': WgslStruct<MemIdentityRecord<TProps>>;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than WgslStruct<Record<string, BaseWgslData>>
@@ -692,6 +705,7 @@ export interface WgslArray<TElement = BaseWgslData> {
   readonly elementType: TElement;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TElement>[];
+  readonly '~memIdent': WgslArray<MemIdentity<TElement>>;
 }
 
 export interface PtrFn<TInner = BaseWgslData> {
@@ -709,6 +723,7 @@ export interface Atomic<TInner extends U32 | I32 = U32 | I32> {
   readonly inner: TInner;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
+  readonly '~memIdent': MemIdentity<TInner>;
 }
 
 export interface Align<T extends number> {
@@ -752,6 +767,9 @@ export interface Decorated<
   readonly attribs: TAttribs;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
+  readonly '~memIdent': TAttribs extends Location<number>[]
+    ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
+    : Decorated<MemIdentity<TInner>, TAttribs>;
 }
 
 export const wgslTypeLiterals = [

@@ -72,6 +72,7 @@ const knownSizesMap: Record<string, number> = {
   sint32x4: 16,
   'unorm10-10-10-2': 4,
   'unorm8x4-bgra': 4,
+  atomic: 4,
 } satisfies Partial<Record<WgslTypeLiteral | LooseTypeLiteral, number>>;
 
 function sizeOfStruct(struct: WgslStruct) {

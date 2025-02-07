@@ -11,10 +11,11 @@ import useEvent from '../utils/useEvent';
 type Props = {
   exampleKey: string | undefined;
   children?: string;
+  isExperimental: boolean;
 };
 
 export function ExampleLink(props: Props) {
-  const { exampleKey, children } = props;
+  const { exampleKey, children, isExperimental } = props;
 
   const [currentExample, setCurrentExample] = useAtom(currentExampleAtom);
   const setMenuShownMobile = useSetAtom(menuShownMobileAtom);
@@ -40,7 +41,9 @@ export function ExampleLink(props: Props) {
         'flex justify-between items-center cursor-pointer no-underline',
         active
           ? 'bg-clip-text bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark text-transparent'
-          : 'text-black',
+          : isExperimental
+            ? 'text-gray-400'
+            : 'text-black',
       )}
     >
       {children}
