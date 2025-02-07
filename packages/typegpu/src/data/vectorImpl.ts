@@ -1,6 +1,7 @@
 import type { SelfResolvable } from '../types';
 import type { VecKind } from './wgslTypes';
 
+// biome-ignore format: swizzles should not expand
 export abstract class VecBase extends Array implements SelfResolvable {
   abstract get kind(): VecKind;
 
@@ -26,277 +27,6 @@ export abstract class VecBase extends Array implements SelfResolvable {
 
   toString() {
     return this['~resolve']();
-  }
-}
-
-type Tuple2 = [number, number];
-type Tuple3 = [number, number, number];
-type Tuple4 = [number, number, number, number];
-
-// biome-ignore format: swizzles should not expand
-abstract class Vec2 extends VecBase implements Tuple2 {
-  declare readonly length = 2;
-
-  0: number;
-  1: number;
-
-  constructor(x?: number, y?: number) {
-    super(2);
-    this[0] = x ?? 0;
-    this[1] = y ?? x ?? 0;
-  }
-
-  get x() {
-    return this[0];
-  }
-
-  get y() {
-    return this[1];
-  }
-
-  set x(value: number) {
-    this[0] = value;
-  }
-
-  set y(value: number) {
-    this[1] = value;
-  }
-
-  get xx() { return new this._Vec2(this[0], this[0]); }
-  get xy() { return new this._Vec2(this[0], this[1]); }
-  get yx() { return new this._Vec2(this[1], this[0]); }
-  get yy() { return new this._Vec2(this[1], this[1]); }
-  get xxx() { return new this._Vec3(this[0], this[0], this[0]); }
-  get xxy() { return new this._Vec3(this[0], this[0], this[1]); }
-  get xyx() { return new this._Vec3(this[0], this[1], this[0]); }
-  get xyy() { return new this._Vec3(this[0], this[1], this[1]); }
-  get yxx() { return new this._Vec3(this[1], this[0], this[0]); }
-  get yxy() { return new this._Vec3(this[1], this[0], this[1]); }
-  get yyx() { return new this._Vec3(this[1], this[1], this[0]); }
-  get yyy() { return new this._Vec3(this[1], this[1], this[1]); }
-  get xxxx() { return new this._Vec4(this[0], this[0], this[0], this[0]); }
-  get xxxy() { return new this._Vec4(this[0], this[0], this[0], this[1]); }
-  get xxyx() { return new this._Vec4(this[0], this[0], this[1], this[0]); }
-  get xxyy() { return new this._Vec4(this[0], this[0], this[1], this[1]); }
-  get xyxx() { return new this._Vec4(this[0], this[1], this[0], this[0]); }
-  get xyxy() { return new this._Vec4(this[0], this[1], this[0], this[1]); }
-  get xyyx() { return new this._Vec4(this[0], this[1], this[1], this[0]); }
-  get xyyy() { return new this._Vec4(this[0], this[1], this[1], this[1]); }
-  get yxxx() { return new this._Vec4(this[1], this[0], this[0], this[0]); }
-  get yxxy() { return new this._Vec4(this[1], this[0], this[0], this[1]); }
-  get yxyx() { return new this._Vec4(this[1], this[0], this[1], this[0]); }
-  get yxyy() { return new this._Vec4(this[1], this[0], this[1], this[1]); }
-  get yyxx() { return new this._Vec4(this[1], this[1], this[0], this[0]); }
-  get yyxy() { return new this._Vec4(this[1], this[1], this[0], this[1]); }
-  get yyyx() { return new this._Vec4(this[1], this[1], this[1], this[0]); }
-  get yyyy() { return new this._Vec4(this[1], this[1], this[1], this[1]); }
-}
-
-// biome-ignore format: swizzles should not expand
-abstract class Vec3 extends VecBase implements Tuple3 {
-  declare readonly length = 3;
-
-  0: number;
-  1: number;
-  2: number;
-
-  constructor(x?: number, y?: number, z?: number) {
-    super(3);
-    this[0] = x ?? 0;
-    this[1] = y ?? x ?? 0;
-    this[2] = z ?? x ?? 0;
-  }
-
-  get x() {
-    return this[0];
-  }
-
-  get y() {
-    return this[1];
-  }
-
-  get z() {
-    return this[2];
-  }
-
-  set x(value: number) {
-    this[0] = value;
-  }
-
-  set y(value: number) {
-    this[1] = value;
-  }
-
-  set z(value: number) {
-    this[2] = value;
-  }
-
-  get xx() { return new this._Vec2(this[0], this[0]); }
-  get xy() { return new this._Vec2(this[0], this[1]); }
-  get xz() { return new this._Vec2(this[0], this[2]); }
-  get yx() { return new this._Vec2(this[1], this[0]); }
-  get yy() { return new this._Vec2(this[1], this[1]); }
-  get yz() { return new this._Vec2(this[1], this[2]); }
-  get zx() { return new this._Vec2(this[2], this[0]); }
-  get zy() { return new this._Vec2(this[2], this[1]); }
-  get zz() { return new this._Vec2(this[2], this[2]); }
-  get xxx() { return new this._Vec3(this[0], this[0], this[0]); }
-  get xxy() { return new this._Vec3(this[0], this[0], this[1]); }
-  get xxz() { return new this._Vec3(this[0], this[0], this[2]); }
-  get xyx() { return new this._Vec3(this[0], this[1], this[0]); }
-  get xyy() { return new this._Vec3(this[0], this[1], this[1]); }
-  get xyz() { return new this._Vec3(this[0], this[1], this[2]); }
-  get xzx() { return new this._Vec3(this[0], this[2], this[0]); }
-  get xzy() { return new this._Vec3(this[0], this[2], this[1]); }
-  get xzz() { return new this._Vec3(this[0], this[2], this[2]); }
-  get yxx() { return new this._Vec3(this[1], this[0], this[0]); }
-  get yxy() { return new this._Vec3(this[1], this[0], this[1]); }
-  get yxz() { return new this._Vec3(this[1], this[0], this[2]); }
-  get yyx() { return new this._Vec3(this[1], this[1], this[0]); }
-  get yyy() { return new this._Vec3(this[1], this[1], this[1]); }
-  get yyz() { return new this._Vec3(this[1], this[1], this[2]); }
-  get yzx() { return new this._Vec3(this[1], this[2], this[0]); }
-  get yzy() { return new this._Vec3(this[1], this[2], this[1]); }
-  get yzz() { return new this._Vec3(this[1], this[2], this[2]); }
-  get zxx() { return new this._Vec3(this[2], this[0], this[0]); }
-  get zxy() { return new this._Vec3(this[2], this[0], this[1]); }
-  get zxz() { return new this._Vec3(this[2], this[0], this[2]); }
-  get zyx() { return new this._Vec3(this[2], this[1], this[0]); }
-  get zyy() { return new this._Vec3(this[2], this[1], this[1]); }
-  get zyz() { return new this._Vec3(this[2], this[1], this[2]); }
-  get zzx() { return new this._Vec3(this[2], this[2], this[0]); }
-  get zzy() { return new this._Vec3(this[2], this[2], this[1]); }
-  get zzz() { return new this._Vec3(this[2], this[2], this[2]); }
-  get xxxx() { return new this._Vec4(this[0], this[0], this[0], this[0]); }
-  get xxxy() { return new this._Vec4(this[0], this[0], this[0], this[1]); }
-  get xxxz() { return new this._Vec4(this[0], this[0], this[0], this[2]); }
-  get xxyx() { return new this._Vec4(this[0], this[0], this[1], this[0]); }
-  get xxyy() { return new this._Vec4(this[0], this[0], this[1], this[1]); }
-  get xxyz() { return new this._Vec4(this[0], this[0], this[1], this[2]); }
-  get xxzx() { return new this._Vec4(this[0], this[0], this[2], this[0]); }
-  get xxzy() { return new this._Vec4(this[0], this[0], this[2], this[1]); }
-  get xxzz() { return new this._Vec4(this[0], this[0], this[2], this[2]); }
-  get xyxx() { return new this._Vec4(this[0], this[1], this[0], this[0]); }
-  get xyxy() { return new this._Vec4(this[0], this[1], this[0], this[1]); }
-  get xyxz() { return new this._Vec4(this[0], this[1], this[0], this[2]); }
-  get xyyx() { return new this._Vec4(this[0], this[1], this[1], this[0]); }
-  get xyyy() { return new this._Vec4(this[0], this[1], this[1], this[1]); }
-  get xyyz() { return new this._Vec4(this[0], this[1], this[1], this[2]); }
-  get xyzx() { return new this._Vec4(this[0], this[1], this[2], this[0]); }
-  get xyzy() { return new this._Vec4(this[0], this[1], this[2], this[1]); }
-  get xyzz() { return new this._Vec4(this[0], this[1], this[2], this[2]); }
-  get xzxx() { return new this._Vec4(this[0], this[2], this[0], this[0]); }
-  get xzxy() { return new this._Vec4(this[0], this[2], this[0], this[1]); }
-  get xzxz() { return new this._Vec4(this[0], this[2], this[0], this[2]); }
-  get xzyx() { return new this._Vec4(this[0], this[2], this[1], this[0]); }
-  get xzyy() { return new this._Vec4(this[0], this[2], this[1], this[1]); }
-  get xzyz() { return new this._Vec4(this[0], this[2], this[1], this[2]); }
-  get xzzx() { return new this._Vec4(this[0], this[2], this[2], this[0]); }
-  get xzzy() { return new this._Vec4(this[0], this[2], this[2], this[1]); }
-  get xzzz() { return new this._Vec4(this[0], this[2], this[2], this[2]); }
-  get yxxx() { return new this._Vec4(this[1], this[0], this[0], this[0]); }
-  get yxxy() { return new this._Vec4(this[1], this[0], this[0], this[1]); }
-  get yxxz() { return new this._Vec4(this[1], this[0], this[0], this[2]); }
-  get yxyx() { return new this._Vec4(this[1], this[0], this[1], this[0]); }
-  get yxyy() { return new this._Vec4(this[1], this[0], this[1], this[1]); }
-  get yxyz() { return new this._Vec4(this[1], this[0], this[1], this[2]); }
-  get yxzx() { return new this._Vec4(this[1], this[0], this[2], this[0]); }
-  get yxzy() { return new this._Vec4(this[1], this[0], this[2], this[1]); }
-  get yxzz() { return new this._Vec4(this[1], this[0], this[2], this[2]); }
-  get yyxx() { return new this._Vec4(this[1], this[1], this[0], this[0]); }
-  get yyxy() { return new this._Vec4(this[1], this[1], this[0], this[1]); }
-  get yyxz() { return new this._Vec4(this[1], this[1], this[0], this[2]); }
-  get yyyx() { return new this._Vec4(this[1], this[1], this[1], this[0]); }
-  get yyyy() { return new this._Vec4(this[1], this[1], this[1], this[1]); }
-  get yyyz() { return new this._Vec4(this[1], this[1], this[1], this[2]); }
-  get yyzx() { return new this._Vec4(this[1], this[1], this[2], this[0]); }
-  get yyzy() { return new this._Vec4(this[1], this[1], this[2], this[1]); }
-  get yyzz() { return new this._Vec4(this[1], this[1], this[2], this[2]); }
-  get yzxx() { return new this._Vec4(this[1], this[2], this[0], this[0]); }
-  get yzxy() { return new this._Vec4(this[1], this[2], this[0], this[1]); }
-  get yzxz() { return new this._Vec4(this[1], this[2], this[0], this[2]); }
-  get yzyx() { return new this._Vec4(this[1], this[2], this[1], this[0]); }
-  get yzyy() { return new this._Vec4(this[1], this[2], this[1], this[1]); }
-  get yzyz() { return new this._Vec4(this[1], this[2], this[1], this[2]); }
-  get yzzx() { return new this._Vec4(this[1], this[2], this[2], this[0]); }
-  get yzzy() { return new this._Vec4(this[1], this[2], this[2], this[1]); }
-  get yzzz() { return new this._Vec4(this[1], this[2], this[2], this[2]); }
-  get zxxx() { return new this._Vec4(this[2], this[0], this[0], this[0]); }
-  get zxxy() { return new this._Vec4(this[2], this[0], this[0], this[1]); }
-  get zxxz() { return new this._Vec4(this[2], this[0], this[0], this[2]); }
-  get zxyx() { return new this._Vec4(this[2], this[0], this[1], this[0]); }
-  get zxyy() { return new this._Vec4(this[2], this[0], this[1], this[1]); }
-  get zxyz() { return new this._Vec4(this[2], this[0], this[1], this[2]); }
-  get zxzx() { return new this._Vec4(this[2], this[0], this[2], this[0]); }
-  get zxzy() { return new this._Vec4(this[2], this[0], this[2], this[1]); }
-  get zxzz() { return new this._Vec4(this[2], this[0], this[2], this[2]); }
-  get zyxx() { return new this._Vec4(this[2], this[1], this[0], this[0]); }
-  get zyxy() { return new this._Vec4(this[2], this[1], this[0], this[1]); }
-  get zyxz() { return new this._Vec4(this[2], this[1], this[0], this[2]); }
-  get zyyx() { return new this._Vec4(this[2], this[1], this[1], this[0]); }
-  get zyyy() { return new this._Vec4(this[2], this[1], this[1], this[1]); }
-  get zyyz() { return new this._Vec4(this[2], this[1], this[1], this[2]); }
-  get zyzx() { return new this._Vec4(this[2], this[1], this[2], this[0]); }
-  get zyzy() { return new this._Vec4(this[2], this[1], this[2], this[1]); }
-  get zyzz() { return new this._Vec4(this[2], this[1], this[2], this[2]); }
-  get zzxx() { return new this._Vec4(this[2], this[2], this[0], this[0]); }
-  get zzxy() { return new this._Vec4(this[2], this[2], this[0], this[1]); }
-  get zzxz() { return new this._Vec4(this[2], this[2], this[0], this[2]); }
-  get zzyx() { return new this._Vec4(this[2], this[2], this[1], this[0]); }
-  get zzyy() { return new this._Vec4(this[2], this[2], this[1], this[1]); }
-  get zzyz() { return new this._Vec4(this[2], this[2], this[1], this[2]); }
-  get zzzx() { return new this._Vec4(this[2], this[2], this[2], this[0]); }
-  get zzzy() { return new this._Vec4(this[2], this[2], this[2], this[1]); }
-  get zzzz() { return new this._Vec4(this[2], this[2], this[2], this[2]); }
-}
-
-// biome-ignore format: swizzles should not expand
-abstract class Vec4 extends VecBase implements Tuple4 {
-  declare readonly length = 4;
-
-  0: number;
-  1: number;
-  2: number;
-  3: number;
-
-  constructor(x?: number, y?: number, z?: number, w?: number) {
-    super(4);
-    this[0] = x ?? 0;
-    this[1] = y ?? x ?? 0;
-    this[2] = z ?? x ?? 0;
-    this[3] = w ?? x ?? 0;
-  }
-
-  get x() {
-    return this[0];
-  }
-
-  get y() {
-    return this[1];
-  }
-
-  get z() {
-    return this[2];
-  }
-
-  get w() {
-    return this[3];
-  }
-
-  set x(value: number) {
-    this[0] = value;
-  }
-
-  set y(value: number) {
-    this[1] = value;
-  }
-
-  set z(value: number) {
-    this[2] = value;
-  }
-
-  set w(value: number) {
-    this[3] = value;
   }
 
   get xx() { return new this._Vec2(this[0], this[0]); }
@@ -635,6 +365,127 @@ abstract class Vec4 extends VecBase implements Tuple4 {
   get wwwy() { return new this._Vec4(this[3], this[3], this[3], this[1]); }
   get wwwz() { return new this._Vec4(this[3], this[3], this[3], this[2]); }
   get wwww() { return new this._Vec4(this[3], this[3], this[3], this[3]); }
+}
+
+type Tuple2 = [number, number];
+type Tuple3 = [number, number, number];
+type Tuple4 = [number, number, number, number];
+
+abstract class Vec2 extends VecBase implements Tuple2 {
+  declare readonly length = 2;
+
+  0: number;
+  1: number;
+
+  constructor(x?: number, y?: number) {
+    super(2);
+    this[0] = x ?? 0;
+    this[1] = y ?? x ?? 0;
+  }
+
+  get x() {
+    return this[0];
+  }
+
+  get y() {
+    return this[1];
+  }
+
+  set x(value: number) {
+    this[0] = value;
+  }
+
+  set y(value: number) {
+    this[1] = value;
+  }
+}
+
+abstract class Vec3 extends VecBase implements Tuple3 {
+  declare readonly length = 3;
+
+  0: number;
+  1: number;
+  2: number;
+
+  constructor(x?: number, y?: number, z?: number) {
+    super(3);
+    this[0] = x ?? 0;
+    this[1] = y ?? x ?? 0;
+    this[2] = z ?? x ?? 0;
+  }
+
+  get x() {
+    return this[0];
+  }
+
+  get y() {
+    return this[1];
+  }
+
+  get z() {
+    return this[2];
+  }
+
+  set x(value: number) {
+    this[0] = value;
+  }
+
+  set y(value: number) {
+    this[1] = value;
+  }
+
+  set z(value: number) {
+    this[2] = value;
+  }
+}
+
+abstract class Vec4 extends VecBase implements Tuple4 {
+  declare readonly length = 4;
+
+  0: number;
+  1: number;
+  2: number;
+  3: number;
+
+  constructor(x?: number, y?: number, z?: number, w?: number) {
+    super(4);
+    this[0] = x ?? 0;
+    this[1] = y ?? x ?? 0;
+    this[2] = z ?? x ?? 0;
+    this[3] = w ?? x ?? 0;
+  }
+
+  get x() {
+    return this[0];
+  }
+
+  get y() {
+    return this[1];
+  }
+
+  get z() {
+    return this[2];
+  }
+
+  get w() {
+    return this[3];
+  }
+
+  set x(value: number) {
+    this[0] = value;
+  }
+
+  set y(value: number) {
+    this[1] = value;
+  }
+
+  set z(value: number) {
+    this[2] = value;
+  }
+
+  set w(value: number) {
+    this[3] = value;
+  }
 }
 
 export class Vec2fImpl extends Vec2 {

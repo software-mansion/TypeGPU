@@ -1,18 +1,7 @@
 /**
- * Prints the swizzling getters to be manually added to the Vec2, Vec3 and Vec4 abstract classes.
+ * Prints the swizzling getters to be manually added to the VecBase abstract class.
  */
-function main() {
-  console.log('\nVec2');
-  printSwizzlingFor('xy');
-
-  console.log('\nVec3');
-  printSwizzlingFor('xyz');
-
-  console.log('\nVec4');
-  printSwizzlingFor('xyzw');
-}
-
-main();
+printSwizzlingFor('xyzw');
 
 /**
  * Yields combinations of letters from `components` of given `length`.
