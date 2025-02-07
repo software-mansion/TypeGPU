@@ -46,7 +46,7 @@ import {
 } from './core/texture/usageExtension';
 import type { AnyData } from './data';
 import type { Exotic } from './data/exotic';
-import type { AnyWgslData, BaseWgslData } from './data/wgslTypes';
+import type { AnyWgslData, BaseData } from './data/wgslTypes';
 import { NotUniformError } from './errors';
 import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
 import type { TgpuNamable } from './namable';
@@ -138,8 +138,8 @@ export type TgpuLayoutEntry =
   | TgpuLayoutExternalTexture;
 
 type UnwrapRuntimeConstructorInner<
-  T extends BaseWgslData | ((_: number) => BaseWgslData),
-> = T extends (_: number) => BaseWgslData ? ReturnType<T> : T;
+  T extends BaseData | ((_: number) => BaseData),
+> = T extends (_: number) => BaseData ? ReturnType<T> : T;
 
 export type UnwrapRuntimeConstructor<
   T extends AnyData | ((_: number) => AnyData),
@@ -324,7 +324,7 @@ export type TgpuBindGroup<
 
 type ExoticEntry<T> = T extends Record<string | number | symbol, unknown>
   ? {
-      [Key in keyof T]: T[Key] extends BaseWgslData
+      [Key in keyof T]: T[Key] extends BaseData
         ? Exotic<T[Key]>
         : T[Key] extends (...args: infer TArgs) => infer TReturn
           ? (...args: TArgs) => Exotic<TReturn>
