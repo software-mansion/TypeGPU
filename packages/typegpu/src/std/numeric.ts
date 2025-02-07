@@ -1,6 +1,6 @@
 import type { VecKind } from '../data/vector';
 import { VectorOps } from '../data/vectorOps';
-import type { v3f, v3i, v3u } from '../data/wgslTypes';
+import type { AnyMatInstance, v3f, v3i, v3u } from '../data/wgslTypes';
 import { inGPUMode } from '../gpuMode';
 
 type vBase = { kind: VecKind };
@@ -19,7 +19,7 @@ export function sub<T extends vBase>(lhs: T, rhs: T): T {
   return VectorOps.sub[lhs.kind](lhs, rhs);
 }
 
-export function mul<T extends vBase>(s: number | T, v: T): T {
+export function mul<T extends vBase | AnyMatInstance>(s: number | T, v: T): T {
   if (inGPUMode()) {
     return `(${s} * ${v})` as unknown as T;
   }
