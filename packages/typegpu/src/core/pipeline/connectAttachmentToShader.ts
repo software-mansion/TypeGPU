@@ -1,6 +1,5 @@
 import { isData } from '../../data/dataTypes';
-import type { Vec4f } from '../../data/wgslTypes';
-import type { IOLayout } from '../function/fnTypes';
+import type { FragmentOutConstrained } from '../function/tgpuFragmentFn';
 import type {
   AnyFragmentColorAttachment,
   ColorAttachment,
@@ -13,7 +12,7 @@ function isColorAttachment(
 }
 
 export function connectAttachmentToShader(
-  shaderOutputLayout: IOLayout<Vec4f>,
+  shaderOutputLayout: FragmentOutConstrained,
   attachment: AnyFragmentColorAttachment,
 ): ColorAttachment[] {
   if (isData(shaderOutputLayout)) {

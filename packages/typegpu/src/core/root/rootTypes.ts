@@ -1,7 +1,7 @@
 import type { OmitBuiltins } from '../../builtin';
 import type { AnyData, Disarray } from '../../data/dataTypes';
 import type { Exotic } from '../../data/exotic';
-import type { AnyWgslData, Vec4f, WgslArray } from '../../data/wgslTypes';
+import type { AnyWgslData, WgslArray } from '../../data/wgslTypes';
 import type { JitTranspiler } from '../../jitTranspiler';
 import type { NameRegistry } from '../../nameRegistry';
 import type { Infer } from '../../shared/repr';
@@ -18,7 +18,10 @@ import type { TgpuBufferUsage } from '../buffer/bufferUsage';
 import type { IOLayout, IORecord } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import type { TgpuFn } from '../function/tgpuFn';
-import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
+import type {
+  FragmentOutConstrained,
+  TgpuFragmentFn,
+} from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline';
 import type {
@@ -41,7 +44,7 @@ export interface WithCompute {
 export type ValidateFragmentIn<
   VertexOut extends IORecord,
   FragmentIn extends IORecord,
-  FragmentOut extends IOLayout<Vec4f>,
+  FragmentOut extends FragmentOutConstrained,
 > = FragmentIn extends Partial<VertexOut>
   ? VertexOut extends FragmentIn
     ? [
@@ -69,14 +72,14 @@ export type ValidateFragmentIn<
 export interface WithVertex<VertexOut extends IORecord = IORecord> {
   withFragment<
     FragmentIn extends IORecord,
-    FragmentOut extends IOLayout<Vec4f>,
+    FragmentOut extends FragmentOutConstrained,
   >(
     ...args: ValidateFragmentIn<VertexOut, FragmentIn, FragmentOut>
   ): WithFragment<FragmentOut>;
 }
 
 export interface WithFragment<
-  Output extends IOLayout<Vec4f> = IOLayout<Vec4f>,
+  Output extends FragmentOutConstrained = FragmentOutConstrained,
 > {
   withPrimitive(
     primitiveState: GPUPrimitiveState | undefined,

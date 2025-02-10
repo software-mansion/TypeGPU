@@ -1,6 +1,16 @@
-import type { OmitBuiltins } from '../../builtin';
-import type { Vec4f } from '../../data/wgslTypes';
+import type {
+  BuiltinFragDepth,
+  BuiltinSampleMask,
+  OmitBuiltins,
+} from '../../builtin';
+import type {
+  AnyWgslStruct,
+  Decorated,
+  Location,
+  Vec4f,
+} from '../../data/wgslTypes';
 import { type TgpuNamable, isNamable } from '../../namable';
+import type { GenerationCtx } from '../../smol/wgslGenerator';
 import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
 import { addReturnTypeToExternals } from '../resolve/externals';
 import { createFnCore } from './fnCore';
@@ -11,20 +21,36 @@ import type {
   Implementation,
   InferIO,
 } from './fnTypes';
-import { type IOLayoutToSchema, createOutputType } from './ioOutputType';
+import {
+  type IOLayoutToSchema,
+  createOutputType,
+  createStructFromIO,
+} from './ioOutputType';
 
 // ----------
 // Public API
 // ----------
+
+export type FragmentOutConstrained =
+  | Vec4f
+  | Decorated<Vec4f, [Location<number>]>
+  | BuiltinSampleMask
+  | BuiltinFragDepth
+  | IORecord<
+      | Vec4f
+      | Decorated<Vec4f, [Location<number>]>
+      | BuiltinSampleMask
+      | BuiltinFragDepth
+    >;
 
 /**
  * Describes a fragment entry function signature (its arguments and return type)
  */
 export interface TgpuFragmentFnShell<
   FragmentIn extends IOLayout,
-  FragmentOut extends IOLayout<Vec4f>,
+  FragmentOut extends FragmentOutConstrained,
 > {
-  readonly argTypes: [FragmentIn];
+  readonly argTypes: [AnyWgslStruct];
   readonly returnType: FragmentOut;
 
   /**
@@ -47,7 +73,7 @@ export interface TgpuFragmentFnShell<
 
 export interface TgpuFragmentFn<
   Varying extends IOLayout = IOLayout,
-  Output extends IOLayout<Vec4f> = IOLayout<Vec4f>,
+  Output extends FragmentOutConstrained = FragmentOutConstrained,
 > extends TgpuNamable {
   readonly shell: TgpuFragmentFnShell<Varying, Output>;
   readonly outputType: IOLayoutToSchema<Output>;
@@ -71,14 +97,14 @@ export function fragmentFn<
   // Not allowing single-value input, as using objects here is more
   // readable, and refactoring to use a builtin argument is too much hassle.
   FragmentIn extends IORecord,
-  FragmentOut extends IOLayout<Vec4f>,
+  FragmentOut extends FragmentOutConstrained,
 >(
   inputType: FragmentIn,
   outputType: FragmentOut,
 ): TgpuFragmentFnShell<ExoticIO<FragmentIn>, ExoticIO<FragmentOut>> {
   return {
-    argTypes: [inputType as ExoticIO<FragmentIn>],
-    returnType: outputType as ExoticIO<FragmentOut>,
+    argTypes: [createStructFromIO(inputType)],
+    returnType: createOutputType(outputType) as ExoticIO<FragmentOut>,
 
     does(implementation) {
       // biome-ignore lint/suspicious/noExplicitAny: <the usual>
@@ -92,13 +118,16 @@ export function fragmentFn<
 // --------------
 
 function createFragmentFn(
-  shell: TgpuFragmentFnShell<IOLayout, IOLayout<Vec4f>>,
+  shell: TgpuFragmentFnShell<IOLayout, FragmentOutConstrained>,
   implementation: Implementation,
 ): TgpuFragmentFn {
   type This = TgpuFragmentFn & Labelled & SelfResolvable;
 
   const core = createFnCore(shell, implementation);
-  const outputType = createOutputType(shell.returnType);
+  const outputType = shell.returnType as IOLayoutToSchema<
+    typeof shell.returnType
+  >;
+  const inputType = shell.argTypes[0];
   if (typeof implementation === 'string') {
     addReturnTypeToExternals(implementation, outputType, (externals) =>
       core.applyExternals(externals),
@@ -123,11 +152,30 @@ function createFragmentFn(
       if (isNamable(outputType)) {
         outputType.$name(`${newLabel}_Output`);
       }
+      if (isNamable(inputType)) {
+        inputType.$name(`${newLabel}_Input`);
+      }
       return this;
     },
 
     '~resolve'(ctx: ResolutionCtx): string {
-      return core.resolve(ctx, '@fragment ');
+      if (typeof implementation === 'string') {
+        return core.resolve(ctx, '@fragment ');
+      }
+
+      const generationCtx = ctx as GenerationCtx;
+      if (generationCtx.callStack === undefined) {
+        throw new Error(
+          'Cannot resolve a TGSL function outside of a generation context',
+        );
+      }
+
+      try {
+        generationCtx.callStack.push(outputType);
+        return core.resolve(ctx, '@fragment ');
+      } finally {
+        generationCtx.callStack.pop();
+      }
     },
 
     toString() {

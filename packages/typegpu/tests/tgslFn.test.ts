@@ -2,7 +2,7 @@ import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
 import tgpu from '../src';
 import { builtin } from '../src/builtin';
-import { f32, struct, vec2f, vec3f, vec4f } from '../src/data';
+import { f32, location, struct, vec2f, vec3f, vec4f } from '../src/data';
 import { parseResolved } from './utils/parseResolved';
 
 describe('TGSL tgpu.fn function', () => {
@@ -256,5 +256,84 @@ describe('TGSL tgpu.fn function', () => {
         { workgroupSize: [24] },
       )
       .does(() => {});
+  });
+
+  it('resolves fragmentFn', () => {
+    const fragmentFn = tgpu['~unstable']
+      .fragmentFn(
+        { pos: builtin.position, uv: vec2f, sampleMask: builtin.sampleMask },
+        {
+          sampleMask: builtin.sampleMask,
+          fragDepth: builtin.fragDepth,
+          out: location(0, vec4f),
+        },
+      )
+      .does((input) => {
+        const pos = input.pos;
+        const out = {
+          out: vec4f(0, 0, 0, 0),
+          fragDepth: 1,
+          sampleMask: 0,
+        };
+        if (input.sampleMask > 0 && pos.x > 0) {
+          out.sampleMask = 1;
+        }
+
+        return out;
+      })
+      .$name('fragment_fn');
+
+    const actual = parseResolved({ fragmentFn });
+
+    const expected = parse(`
+      struct fragment_fn_Output {
+        @builtin(sample_mask) sampleMask: u32,
+        @builtin(frag_depth) fragDepth: f32,
+        @location(0) out: vec4f,
+      }
+
+      struct fragment_fn_Input {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+        @builtin(sample_mask) sampleMask: u32,
+      }
+
+      @fragment
+      fn fragment_fn(input: fragment_fn_Input) -> fragment_fn_Output {
+        var pos = input.pos;
+        var out = fragment_fn_Output(0, 1, vec4f(0, 0, 0, 0));
+        if (((input.sampleMask > 0) && (pos.x > 0))) {
+          out.sampleMask = 1;
+        }
+
+        return out;
+      }
+    `);
+
+    expect(actual).toEqual(expected);
+  });
+
+  it('resolves fragmentFn with a single output', () => {
+    const fragmentFn = tgpu['~unstable']
+      .fragmentFn({ pos: builtin.position }, vec4f)
+      .does((input) => {
+        return input.pos;
+      })
+      .$name('fragment_fn');
+
+    const actual = parseResolved({ fragmentFn });
+
+    const expected = parse(`
+      struct fragment_fn_Input {
+        @builtin(position) pos: vec4f,
+      }
+
+      @fragment
+      fn fragment_fn(input: fragment_fn_Input) -> @location(0) vec4f {
+        return input.pos;
+      }
+    `);
+
+    expect(actual).toEqual(expected);
   });
 });
