@@ -1,4 +1,4 @@
-import tgpu, { unstable_asUniform } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 const triangleAmount = 1000;
@@ -149,7 +149,7 @@ context.configure({
 const paramsBuffer = root
   .createBuffer(Params, presets.default)
   .$usage('uniform');
-const params = unstable_asUniform(paramsBuffer);
+const params = paramsBuffer.as('uniform');
 
 const triangleVertexBuffer = root
   .createBuffer(d.arrayOf(d.vec2f, 3), [

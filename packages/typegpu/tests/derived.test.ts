@@ -1,6 +1,6 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, vi } from 'vitest';
-import tgpu, { unstable_asUniform } from '../src';
+import tgpu from '../src';
 import * as d from '../src/data';
 import { mul } from '../src/std';
 import { it } from './utils/extendedIt';
@@ -139,7 +139,7 @@ describe('TgpuDerived', () => {
       .$name('Boid');
 
     const buffer = root.createBuffer(Boid).$usage('uniform').$name('boid');
-    const uniform = unstable_asUniform(buffer);
+    const uniform = buffer.as('uniform');
 
     const derivedUniformSlot = tgpu['~unstable'].derived(() => uniform);
     const derivedDerivedUniformSlot = tgpu['~unstable'].derived(

@@ -1,3 +1,4 @@
+import type { AnyData } from '../../data/dataTypes';
 import type { AnyWgslData, BaseWgslData } from '../../data/wgslTypes';
 import { type Storage, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
@@ -9,7 +10,7 @@ import type {
   SelfResolvable,
 } from '../../types';
 import { valueProxyHandler } from '../valueProxyUtils';
-import { type TgpuBuffer, type Uniform, isUsableAsUniform } from './buffer';
+import type { TgpuBuffer, Uniform } from './buffer';
 
 // ----------
 // Public API
@@ -37,6 +38,12 @@ export interface TgpuBufferReadonly<TData extends BaseWgslData>
 
 export interface TgpuBufferMutable<TData extends BaseWgslData>
   extends TgpuBufferUsage<TData, 'mutable'> {}
+
+export function isUsableAsUniform<T extends TgpuBuffer<AnyData>>(
+  buffer: T,
+): buffer is T & Uniform {
+  return !!(buffer as unknown as Uniform).usableAsUniform;
+}
 
 // --------------
 // Implementation
@@ -164,6 +171,9 @@ const mutableUsageMap = new WeakMap<
   TgpuFixedBufferImpl<AnyWgslData, 'mutable'>
 >();
 
+/**
+ * @deprecated Use buffer.as('mutable') instead.
+ */
 export function asMutable<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & Storage,
 ): TgpuBufferMutable<TData> {
@@ -186,6 +196,9 @@ const readonlyUsageMap = new WeakMap<
   TgpuFixedBufferImpl<AnyWgslData, 'readonly'>
 >();
 
+/**
+ * @deprecated Use buffer.as('readonly') instead.
+ */
 export function asReadonly<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & Storage,
 ): TgpuBufferReadonly<TData> {
@@ -208,6 +221,9 @@ const uniformUsageMap = new WeakMap<
   TgpuFixedBufferImpl<AnyWgslData, 'uniform'>
 >();
 
+/**
+ * @deprecated Use buffer.as('uniform') instead.
+ */
 export function asUniform<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & Uniform,
 ): TgpuBufferUniform<TData> {

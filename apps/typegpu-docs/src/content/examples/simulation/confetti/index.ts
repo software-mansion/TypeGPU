@@ -1,4 +1,4 @@
-import tgpu, { unstable_asMutable, unstable_asUniform } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 // constants
@@ -51,7 +51,7 @@ const canvasAspectRatioBuffer = root
   .createBuffer(d.f32, canvas.width / canvas.height)
   .$usage('uniform');
 
-const canvasAspectRatioUniform = unstable_asUniform(canvasAspectRatioBuffer);
+const canvasAspectRatioUniform = canvasAspectRatioBuffer.as('uniform');
 
 const particleGeometryBuffer = root
   .createBuffer(
@@ -84,9 +84,9 @@ const dataLayout = tgpu['~unstable']
   .vertexLayout((n: number) => d.arrayOf(ParticleData, n), 'instance')
   .$name('data');
 
-const particleDataStorage = unstable_asMutable(particleDataBuffer);
-const deltaTimeUniform = unstable_asUniform(deltaTimeBuffer);
-const timeStorage = unstable_asMutable(timeBuffer);
+const particleDataStorage = particleDataBuffer.as('mutable');
+const deltaTimeUniform = deltaTimeBuffer.as('uniform');
+const timeStorage = timeBuffer.as('mutable');
 
 // functions
 

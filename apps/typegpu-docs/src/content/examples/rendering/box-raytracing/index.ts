@@ -1,4 +1,4 @@
-import tgpu, { unstable_asUniform } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { cross, mul, normalize, sub } from 'typegpu/std';
 
@@ -279,9 +279,9 @@ const pipeline = root['~unstable']
     tgpu['~unstable']
       .fn([], d.u32)
       .does('() -> u32 { return boxSize; }')
-      .$uses({ boxSize: unstable_asUniform(boxSizeBuffer) }),
+      .$uses({ boxSize: boxSizeBuffer.as('uniform') }),
   )
-  .with(canvasDimsAccessor, unstable_asUniform(canvasDimsBuffer))
+  .with(canvasDimsAccessor, canvasDimsBuffer.as('uniform'))
   .withVertex(vertexFunction, {})
   .withFragment(fragmentFunction, { format: presentationFormat })
   .createPipeline()

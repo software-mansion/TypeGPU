@@ -1,14 +1,10 @@
-import {
-  type TgpuBuffer,
-  type Uniform,
-  isBuffer,
-  isUsableAsUniform,
-} from './core/buffer/buffer';
+import { type TgpuBuffer, type Uniform, isBuffer } from './core/buffer/buffer';
 import {
   type TgpuBufferMutable,
   type TgpuBufferReadonly,
   type TgpuBufferUniform,
   TgpuLaidOutBufferImpl,
+  isUsableAsUniform,
 } from './core/buffer/bufferUsage';
 import {
   type TgpuComparisonSampler,
