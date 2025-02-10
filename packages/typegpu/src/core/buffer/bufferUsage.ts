@@ -24,6 +24,8 @@ export interface TgpuBufferUsage<
   readonly usage: TUsage;
   readonly '~repr': Infer<TData>;
   value: Infer<TData>;
+
+  write(data: Infer<TData>): void;
 }
 
 export interface TgpuBufferUniform<TData extends BaseWgslData>
@@ -96,6 +98,10 @@ class TgpuFixedBufferImpl<
     return id;
   }
 
+  write(data: Infer<TData>) {
+    this.buffer.write(data);
+  }
+
   toString(): string {
     return `${this.usage}:${this.label ?? '<unnamed>'}`;
   }
@@ -131,6 +137,10 @@ export class TgpuLaidOutBufferImpl<
 
   get label() {
     return this._membership.key;
+  }
+
+  write(data: Infer<TData>) {
+    throw new Error("Can't write to laid-out buffer usage");
   }
 
   '~resolve'(ctx: ResolutionCtx): string {
