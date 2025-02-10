@@ -587,76 +587,160 @@ export interface U32 {
   readonly '~memIdent': U32 | Atomic<U32> | DecoratedLocation<U32>;
 }
 
+/**
+ * Type of the `d.vec2f` object/function: vector data type schema/constructor
+ */
 export interface Vec2f {
   readonly type: 'vec2f';
   /** Type-token, not available at runtime */
   readonly '~repr': v2f;
+
+  (x: number, y: number): v2f;
+  (xy: number): v2f;
+  (): v2f;
 }
 
+/**
+ * Type of the `d.vec2h` object/function: vector data type schema/constructor
+ */
 export interface Vec2h {
   readonly type: 'vec2h';
   /** Type-token, not available at runtime */
   readonly '~repr': v2h;
+
+  (x: number, y: number): v2h;
+  (xy: number): v2h;
+  (): v2h;
 }
 
+/**
+ * Type of the `d.vec2i` object/function: vector data type schema/constructor
+ */
 export interface Vec2i {
   readonly type: 'vec2i';
   /** Type-token, not available at runtime */
   readonly '~repr': v2i;
+
+  (x: number, y: number): v2i;
+  (xy: number): v2i;
+  (): v2i;
 }
 
+/**
+ * Type of the `d.vec2u` object/function: vector data type schema/constructor
+ */
 export interface Vec2u {
   readonly type: 'vec2u';
   /** Type-token, not available at runtime */
   readonly '~repr': v2u;
+
+  (x: number, y: number): v2u;
+  (xy: number): v2u;
+  (): v2u;
 }
 
+/**
+ * Type of the `d.vec3f` object/function: vector data type schema/constructor
+ */
 export interface Vec3f {
   readonly type: 'vec3f';
   /** Type-token, not available at runtime */
   readonly '~repr': v3f;
+
+  (x: number, y: number, z: number): v3f;
+  (xyz: number): v3f;
+  (): v3f;
 }
 
+/**
+ * Type of the `d.vec3h` object/function: vector data type schema/constructor
+ */
 export interface Vec3h {
   readonly type: 'vec3h';
   /** Type-token, not available at runtime */
   readonly '~repr': v3h;
+
+  (x: number, y: number, z: number): v3h;
+  (xyz: number): v3h;
+  (): v3h;
 }
 
+/**
+ * Type of the `d.vec3i` object/function: vector data type schema/constructor
+ */
 export interface Vec3i {
   readonly type: 'vec3i';
   /** Type-token, not available at runtime */
   readonly '~repr': v3i;
+
+  (x: number, y: number, z: number): v3i;
+  (xyz: number): v3i;
+  (): v3i;
 }
 
+/**
+ * Type of the `d.vec3u` object/function: vector data type schema/constructor
+ */
 export interface Vec3u {
   readonly type: 'vec3u';
   /** Type-token, not available at runtime */
   readonly '~repr': v3u;
+
+  (x: number, y: number, z: number): v3u;
+  (xyz: number): v3u;
+  (): v3u;
 }
 
+/**
+ * Type of the `d.vec4f` object/function: vector data type schema/constructor
+ */
 export interface Vec4f {
   readonly type: 'vec4f';
   /** Type-token, not available at runtime */
   readonly '~repr': v4f;
+
+  (x: number, y: number, z: number, w: number): v4f;
+  (xyzw: number): v4f;
+  (): v4f;
 }
 
+/**
+ * Type of the `d.vec4h` object/function: vector data type schema/constructor
+ */
 export interface Vec4h {
   readonly type: 'vec4h';
   /** Type-token, not available at runtime */
   readonly '~repr': v4h;
+
+  (x: number, y: number, z: number, w: number): v4h;
+  (xyzw: number): v4h;
+  (): v4h;
 }
 
+/**
+ * Type of the `d.vec4i` object/function: vector data type schema/constructor
+ */
 export interface Vec4i {
   readonly type: 'vec4i';
   /** Type-token, not available at runtime */
   readonly '~repr': v4i;
+
+  (x: number, y: number, z: number, w: number): v4i;
+  (xyzw: number): v4i;
+  (): v4i;
 }
 
+/**
+ * Type of the `d.vec4u` object/function: vector data type schema/constructor
+ */
 export interface Vec4u {
   readonly type: 'vec4u';
   /** Type-token, not available at runtime */
   readonly '~repr': v4u;
+
+  (x: number, y: number, z: number, w: number): v4u;
+  (xyzw: number): v4u;
+  (): v4u;
 }
 
 export interface Mat2x2f {
