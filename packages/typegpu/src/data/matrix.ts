@@ -486,8 +486,8 @@ export type NativeMat2x2f = Mat2x2f & { '~exotic': Mat2x2f } & ((
  *
  * @example
  * const mat = mat2x2f(0, 1, 2, 3);
- * mat[0] // vec2f(0, 1)
- * mat[1] // vec2f(2, 3)
+ * mat.columns[0] // vec2f(0, 1)
+ * mat.columns[1] // vec2f(2, 3)
  *
  * @example
  * const mat = mat2x2f(
@@ -524,9 +524,9 @@ export type NativeMat3x3f = Mat3x3f & { '~exotic': Mat3x3f } & ((
  *
  * @example
  * const mat = mat3x3f(0, 1, 2, 3, 4, 5, 6, 7, 8);
- * mat[0] // vec3f(0, 1, 2)
- * mat[1] // vec3f(3, 4, 5)
- * mat[2] // vec3f(6, 7, 8)
+ * mat.columns[0] // vec3f(0, 1, 2)
+ * mat.columns[1] // vec3f(3, 4, 5)
+ * mat.columns[2] // vec3f(6, 7, 8)
  *
  * @example
  * const mat = mat3x3f(
@@ -564,10 +564,10 @@ export type NativeMat4x4f = Mat4x4f & { '~exotic': Mat4x4f } & ((
  *
  * @example
  * const mat = mat3x3f(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
- * mat[0] // vec4f(0, 1, 2, 3)
- * mat[1] // vec4f(4, 5, 6, 7)
- * mat[2] // vec4f(8, 9, 10, 11)
- * mat[3] // vec4f(12, 13, 14, 15)
+ * mat.columns[0] // vec4f(0, 1, 2, 3)
+ * mat.columns[1] // vec4f(4, 5, 6, 7)
+ * mat.columns[2] // vec4f(8, 9, 10, 11)
+ * mat.columns[3] // vec4f(12, 13, 14, 15)
  *
  * @example
  * const mat = mat3x3f(
