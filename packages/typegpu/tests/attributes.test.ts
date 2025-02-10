@@ -20,7 +20,7 @@ describe('attributes', () => {
     expect(resolve(s1, opts).code).toContain('@size(8) @align(16) b: u32,');
 
     expectTypeOf(s1).toEqualTypeOf<
-      d.TgpuStruct<{
+      d.WgslStruct<{
         a: d.U32;
         b: d.Decorated<d.U32, [d.Size<8>, d.Align<16>]>;
         c: d.U32;

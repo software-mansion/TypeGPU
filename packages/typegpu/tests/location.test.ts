@@ -14,7 +14,7 @@ describe('d.location', () => {
       .$name('s1');
 
     expectTypeOf(s1).toEqualTypeOf<
-      d.TgpuStruct<{
+      d.WgslStruct<{
         a: d.U32;
         b: d.Decorated<d.U32, [d.Location<3>]>;
         c: d.U32;

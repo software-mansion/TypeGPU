@@ -1,4 +1,4 @@
-import type { AnyWgslData, BaseWgslData } from '../../data/wgslTypes';
+import type { AnyWgslData, BaseData } from '../../data/wgslTypes';
 import { type Storage, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
 import type { Infer } from '../../shared/repr';
@@ -16,7 +16,7 @@ import { type TgpuBuffer, type Uniform, isUsableAsUniform } from './buffer';
 // ----------
 
 export interface TgpuBufferUsage<
-  TData extends BaseWgslData = BaseWgslData,
+  TData extends BaseData = BaseData,
   TUsage extends BindableBufferUsage = BindableBufferUsage,
 > {
   readonly resourceType: 'buffer-usage';
@@ -25,17 +25,17 @@ export interface TgpuBufferUsage<
   value: Infer<TData>;
 }
 
-export interface TgpuBufferUniform<TData extends BaseWgslData>
+export interface TgpuBufferUniform<TData extends BaseData>
   extends TgpuBufferUsage<TData, 'uniform'> {
   readonly value: Infer<TData>;
 }
 
-export interface TgpuBufferReadonly<TData extends BaseWgslData>
+export interface TgpuBufferReadonly<TData extends BaseData>
   extends TgpuBufferUsage<TData, 'readonly'> {
   readonly value: Infer<TData>;
 }
 
-export interface TgpuBufferMutable<TData extends BaseWgslData>
+export interface TgpuBufferMutable<TData extends BaseData>
   extends TgpuBufferUsage<TData, 'mutable'> {}
 
 // --------------
@@ -108,7 +108,7 @@ class TgpuFixedBufferImpl<
   }
 }
 export class TgpuLaidOutBufferImpl<
-  TData extends BaseWgslData,
+  TData extends BaseData,
   TUsage extends BindableBufferUsage,
 > implements TgpuBufferUsage<TData, TUsage>, SelfResolvable
 {
