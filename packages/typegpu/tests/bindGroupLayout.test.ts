@@ -10,7 +10,6 @@ import tgpu, {
 } from '../src';
 import {
   type F32,
-  type TgpuArray,
   type U32,
   type Vec3f,
   type Vec4f,
@@ -820,16 +819,16 @@ describe('TgpuBindGroup', () => {
 describe('UnwrapRuntimeConstructor', () => {
   it('unwraps return types of functions returning TgpuData', () => {
     expectTypeOf<UnwrapRuntimeConstructor<U32>>().toEqualTypeOf<U32>();
-    expectTypeOf<UnwrapRuntimeConstructor<TgpuArray<Vec3f>>>().toEqualTypeOf<
-      TgpuArray<Vec3f>
+    expectTypeOf<UnwrapRuntimeConstructor<WgslArray<Vec3f>>>().toEqualTypeOf<
+      WgslArray<Vec3f>
     >();
 
     expectTypeOf<
       UnwrapRuntimeConstructor<(_: number) => U32>
     >().toEqualTypeOf<U32>();
     expectTypeOf<
-      UnwrapRuntimeConstructor<(_: number) => TgpuArray<Vec3f>>
-    >().toEqualTypeOf<TgpuArray<Vec3f>>();
+      UnwrapRuntimeConstructor<(_: number) => WgslArray<Vec3f>>
+    >().toEqualTypeOf<WgslArray<Vec3f>>();
 
     expectTypeOf<
       UnwrapRuntimeConstructor<F32 | ((_: number) => U32)>
