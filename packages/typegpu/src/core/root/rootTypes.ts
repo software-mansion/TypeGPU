@@ -202,8 +202,8 @@ export type CreateTextureResult<
  * TODO: Implement flexible pipelines as per discussion:
  * https://github.com/software-mansion/TypeGPU/discussions/713
  */
-interface RenderPass {
-  setPipeline(): void;
+export interface RenderPass {
+  setPipeline(pipeline: TgpuRenderPipeline): void;
 
   setBindGroup<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
@@ -367,6 +367,11 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
       TDimension
     >
   >;
+
+  beginRenderPass(
+    descriptor: GPURenderPassDescriptor,
+    callback: (pass: RenderPass) => void,
+  ): void;
 
   /**
    * Causes all commands enqueued by pipelines to be
