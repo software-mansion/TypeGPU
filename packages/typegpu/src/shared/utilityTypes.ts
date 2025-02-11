@@ -31,6 +31,17 @@ export type Mutable<T> = {
   -readonly [P in keyof T]: T[P];
 };
 
+/**
+ * Any typed array
+ */
+export type TypedArray =
+  | Uint8Array
+  | Uint16Array
+  | Uint32Array
+  | Int32Array
+  | Float32Array
+  | Float64Array;
+
 export function assertExhaustive(x: never, location: string): never {
   throw new Error(`Failed to handle ${x} at ${location}`);
 }

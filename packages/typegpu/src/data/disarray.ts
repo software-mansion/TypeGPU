@@ -1,4 +1,4 @@
-import type { Infer } from '../shared/repr';
+import type { Infer, InferPartial } from '../shared/repr';
 import type { AnyData, Disarray } from './dataTypes';
 import type { Exotic } from './exotic';
 
@@ -37,6 +37,11 @@ class DisarrayImpl<TElement extends AnyData> implements Disarray<TElement> {
   public readonly type = 'disarray';
   /** Type-token, not available at runtime */
   public readonly '~repr'!: Infer<TElement>[];
+  /** Type-token, not available at runtime */
+  public readonly '~reprPartial'!: {
+    idx: number;
+    value: InferPartial<TElement>;
+  }[];
 
   constructor(
     public readonly elementType: TElement,

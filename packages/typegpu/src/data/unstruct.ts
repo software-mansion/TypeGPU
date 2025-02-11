@@ -1,4 +1,4 @@
-import type { InferRecord } from '../shared/repr';
+import type { InferPartialRecord, InferRecord } from '../shared/repr';
 import type { Unstruct } from './dataTypes';
 import type { ExoticRecord } from './exotic';
 import type { BaseData } from './wgslTypes';
@@ -42,6 +42,8 @@ class UnstructImpl<TProps extends Record<string, BaseData>>
   public readonly type = 'unstruct';
   /** Type-token, not available at runtime */
   public readonly '~repr'!: InferRecord<TProps>;
+  /** Type-token, not available at runtime */
+  public readonly '~reprPartial'!: Partial<InferPartialRecord<TProps>>;
 
   constructor(public readonly propTypes: TProps) {}
 

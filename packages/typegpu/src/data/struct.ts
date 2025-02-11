@@ -1,5 +1,9 @@
 import type { TgpuNamable } from '../namable';
-import type { InferRecord, MemIdentityRecord } from '../shared/repr';
+import type {
+  InferPartialRecord,
+  InferRecord,
+  MemIdentityRecord,
+} from '../shared/repr';
 import type { Prettify } from '../shared/utilityTypes';
 import type { ExoticRecord } from './exotic';
 import type { AnyWgslData, BaseData } from './wgslTypes';
@@ -26,6 +30,8 @@ export interface WgslStruct<
   readonly '~repr': InferRecord<TProps>;
   /** Type-token, not available at runtime */
   readonly '~memIdent': WgslStruct<MemIdentityRecord<TProps>>;
+  /** Type-token, not available at runtime */
+  readonly '~reprPartial': Partial<InferPartialRecord<TProps>>;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than WgslStruct<Record<string, BaseWgslData>>

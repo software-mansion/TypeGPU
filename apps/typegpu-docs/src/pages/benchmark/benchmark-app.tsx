@@ -79,7 +79,109 @@ async function runBench(params: BenchParameterSet): Promise<BenchResults> {
       root.device.queue.writeBuffer(root.unwrap(buffer), 0, data);
 
       root.destroy();
-    });
+    })
+    .add('mass boid transfer (partial write)', async () => {
+      const root = await tgpu.init();
+
+      const Boid = d.struct({
+        pos: d.vec3f,
+        vel: d.vec3f,
+      });
+
+      const BoidArray = d.arrayOf(Boid, amountOfBoids);
+
+      const buffer = root.createBuffer(BoidArray);
+
+      const randomBoid = Math.floor(Math.random() * amountOfBoids);
+
+      buffer.writePartial([
+        {
+          idx: randomBoid,
+          value: { pos: d.vec3f(1, 2, 3), vel: d.vec3f(4, 5, 6) },
+        },
+      ]);
+
+      root.destroy();
+    })
+    .add(
+      'mass boid transfer (partial write 20% of the buffer - not contiguous)',
+      async () => {
+        const root = await tgpu.init();
+
+        const Boid = d.struct({
+          pos: d.vec3f,
+          vel: d.vec3f,
+        });
+
+        const BoidArray = d.arrayOf(Boid, amountOfBoids);
+
+        const buffer = root.createBuffer(BoidArray);
+
+        const writes = Array.from({ length: amountOfBoids })
+          .map((_, i) => i)
+          .filter((i) => i % 5 === 0)
+          .map((i) => ({
+            idx: i,
+            value: { pos: d.vec3f(1, 2, 3), vel: d.vec3f(4, 5, 6) },
+          }));
+
+        buffer.writePartial(writes);
+
+        root.destroy();
+      },
+    )
+    .add(
+      'mass boid transfer (partial write 20% of the buffer, contiguous)',
+      async () => {
+        const root = await tgpu.init();
+
+        const Boid = d.struct({
+          pos: d.vec3f,
+          vel: d.vec3f,
+        });
+
+        const BoidArray = d.arrayOf(Boid, amountOfBoids);
+
+        const buffer = root.createBuffer(BoidArray);
+
+        const writes = Array.from({ length: amountOfBoids / 5 })
+          .map((_, i) => i)
+          .map((i) => ({
+            idx: i,
+            value: { pos: d.vec3f(1, 2, 3), vel: d.vec3f(4, 5, 6) },
+          }));
+
+        buffer.writePartial(writes);
+
+        root.destroy();
+      },
+    )
+    .add(
+      'mass boid transfer (partial write 100% of the buffer - contiguous (duh))',
+      async () => {
+        const root = await tgpu.init();
+
+        const Boid = d.struct({
+          pos: d.vec3f,
+          vel: d.vec3f,
+        });
+
+        const BoidArray = d.arrayOf(Boid, amountOfBoids);
+
+        const buffer = root.createBuffer(BoidArray);
+
+        const writes = Array.from({ length: amountOfBoids })
+          .map((_, i) => i)
+          .map((i) => ({
+            idx: i,
+            value: { pos: d.vec3f(1, 2, 3), vel: d.vec3f(4, 5, 6) },
+          }));
+
+        buffer.writePartial(writes);
+
+        root.destroy();
+      },
+    );
 
   await bench.run();
 
