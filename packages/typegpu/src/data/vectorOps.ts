@@ -643,7 +643,7 @@ export const VectorOps = {
         base.x ** exponent.x,
         base.y ** exponent.y,
         base.z ** exponent.z,
-        base.z ** exponent.z,
+        base.w ** exponent.w,
       ),
   } as Record<
     'vec2f' | 'vec3f' | 'vec4f',
