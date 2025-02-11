@@ -4,7 +4,7 @@ import { readData, writeData } from '../../data/dataIO';
 import type { AnyData } from '../../data/dataTypes';
 import { getWriteInstructions } from '../../data/partialIO';
 import { sizeOf } from '../../data/sizeOf';
-import type { WgslTypeLiteral } from '../../data/wgslTypes';
+import type { BaseData, WgslTypeLiteral } from '../../data/wgslTypes';
 import type { Storage } from '../../extension';
 import type { TgpuNamable } from '../../namable';
 import type { Infer, InferPartial } from '../../shared/repr';
@@ -12,6 +12,15 @@ import type { MemIdentity } from '../../shared/repr';
 import type { UnionToIntersection } from '../../shared/utilityTypes';
 import { isGPUBuffer } from '../../types';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
+import {
+  type TgpuBufferMutable,
+  type TgpuBufferReadonly,
+  type TgpuBufferUniform,
+  type TgpuFixedBufferUsage,
+  asMutable,
+  asReadonly,
+  asUniform,
+} from './bufferUsage';
 
 // ----------
 // Public API
@@ -25,9 +34,6 @@ export interface Vertex {
   usableAsVertex: true;
 }
 
-export const Uniform = { usableAsUniform: true } as Uniform;
-export const Vertex = { usableAsVertex: true } as Vertex;
-
 type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
   T extends 'uniform'
     ? Uniform
@@ -37,7 +43,25 @@ type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
         ? Vertex
         : never;
 
-export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
+type ViewUsages<TBuffer extends TgpuBuffer<BaseData>> =
+  | (boolean extends TBuffer['usableAsUniform'] ? never : 'uniform')
+  | (boolean extends TBuffer['usableAsStorage']
+      ? never
+      : 'readonly' | 'mutable');
+
+type UsageTypeToBufferUsage<TData extends BaseData> = {
+  uniform: TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData>;
+  mutable: TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData>;
+  readonly: TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData>;
+};
+
+const usageToUsageConstructor = {
+  uniform: asUniform,
+  mutable: asMutable,
+  readonly: asReadonly,
+};
+
+export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly resourceType: 'buffer';
   readonly dataType: TData;
   readonly initial?: Infer<TData> | undefined;
@@ -46,10 +70,16 @@ export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
   readonly buffer: GPUBuffer;
   readonly destroyed: boolean;
 
+  usableAsUniform: boolean;
+  usableAsStorage: boolean;
+  usableAsVertex: boolean;
+
   $usage<T extends RestrictVertexUsages<TData>>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>>;
   $addFlags(flags: GPUBufferUsageFlags): this;
+
+  as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferUsage<TData>[T];
 
   write(data: Infer<TData>): void;
   writePartial(data: InferPartial<TData>): void;
@@ -78,12 +108,6 @@ export function isBuffer<T extends TgpuBuffer<AnyData>>(
   return (value as TgpuBuffer<AnyData>).resourceType === 'buffer';
 }
 
-export function isUsableAsUniform<T extends TgpuBuffer<AnyData>>(
-  buffer: T,
-): buffer is T & Uniform {
-  return !!(buffer as unknown as Uniform).usableAsUniform;
-}
-
 export function isUsableAsVertex<T extends TgpuBuffer<AnyData>>(
   buffer: T,
 ): buffer is T & Vertex {
@@ -94,7 +118,7 @@ export function isUsableAsVertex<T extends TgpuBuffer<AnyData>>(
 // Implementation
 // --------------
 
-type RestrictVertexUsages<TData extends AnyData> = TData extends {
+type RestrictVertexUsages<TData extends BaseData> = TData extends {
   readonly type: WgslTypeLiteral;
 }
   ? ('uniform' | 'storage' | 'vertex')[]
@@ -111,9 +135,9 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   private _label: string | undefined;
   readonly initial: Infer<TData> | undefined;
 
-  public usableAsUniform = false;
-  public usableAsStorage = false;
-  public usableAsVertex = false;
+  usableAsUniform = false;
+  usableAsStorage = false;
+  usableAsVertex = false;
 
   constructor(
     private readonly _group: ExperimentalTgpuRoot,
@@ -177,7 +201,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     for (const usage of usages) {
       if (this._disallowedUsages?.includes(usage)) {
         throw new Error(
-          `Buffer of type ${this.dataType} cannot be used as ${usage}`,
+          `Buffer of type ${this.dataType.type} cannot be used as ${usage}`,
         );
       }
       this.flags |= usage === 'uniform' ? GPUBufferUsage.UNIFORM : 0;
@@ -314,6 +338,12 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     stagingBuffer.destroy();
 
     return res;
+  }
+
+  as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferUsage<TData>[T] {
+    return usageToUsageConstructor[usage]?.(
+      this as never,
+    ) as UsageTypeToBufferUsage<TData>[T];
   }
 
   destroy() {
