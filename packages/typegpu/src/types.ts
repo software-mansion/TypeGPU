@@ -25,6 +25,7 @@ import {
 import type { TgpuExternalTexture } from './core/texture/externalTexture';
 import type { TgpuAnyTextureView, TgpuTexture } from './core/texture/texture';
 import type { TgpuVar } from './core/variable/tgpuVariable';
+import type { AnyData } from './data';
 import {
   type AnyMatInstance,
   type AnyVecInstance,
@@ -58,7 +59,7 @@ export type ResolvableObject =
   | TgpuVar
   | AnyVecInstance
   | AnyMatInstance
-  | AnyWgslData
+  | AnyData
   // biome-ignore lint/suspicious/noExplicitAny: <has to be more permissive than unknown>
   | TgpuFn<any, any>;
 

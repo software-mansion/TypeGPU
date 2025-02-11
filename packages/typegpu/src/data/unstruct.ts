@@ -37,9 +37,20 @@ export const unstruct = <TProps extends Record<string, BaseData>>(
 class UnstructImpl<TProps extends Record<string, BaseData>>
   implements Unstruct<TProps>
 {
+  private _label: string | undefined;
+
   public readonly type = 'unstruct';
   /** Type-token, not available at runtime */
   public readonly '~repr'!: InferRecord<TProps>;
 
   constructor(public readonly propTypes: TProps) {}
+
+  get label() {
+    return this._label;
+  }
+
+  $name(label: string) {
+    this._label = label;
+    return this;
+  }
 }

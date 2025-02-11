@@ -1,5 +1,12 @@
 import { getAttributesString } from '../../data/attributes';
+import {
+  type AnyData,
+  type Disarray,
+  type Unstruct,
+  isLooseData,
+} from '../../data/dataTypes';
 import type { WgslStruct } from '../../data/struct';
+import { formatToWGSLType } from '../../data/vertexFormatData';
 import type {
   AnyWgslData,
   BaseData,
@@ -27,6 +34,7 @@ import type {
 } from '../../data/wgslTypes';
 import { assertExhaustive } from '../../shared/utilityTypes';
 import type { ResolutionCtx } from '../../types';
+import { isAttribute } from '../vertexLayout/connectAttributesToShader';
 
 /**
  * Schemas for which their `type` property directly
@@ -117,6 +125,38 @@ ${Object.entries(struct.propTypes)
 }
 
 /**
+ * Resolves an unstruct (struct that does not align data by default) to its struct data counterpart.
+ * @param ctx - The resolution context.
+ * @param unstruct - The unstruct to resolve.
+ *
+ * @returns The resolved unstruct name.
+ *
+ * @example
+ * ```ts
+ * resolveUnstruct(ctx, {
+ *   uv: d.float16x2, // -> d.vec2f after resolution
+ *   color: d.snorm8x4, -> d.vec4f after resolution
+ * });
+ * ```
+ */
+function resolveUnstruct(ctx: ResolutionCtx, unstruct: Unstruct) {
+  const id = ctx.names.makeUnique(unstruct.label);
+
+  ctx.addDeclaration(`
+struct ${id} {
+${Object.entries(unstruct.propTypes)
+  .map((prop) =>
+    isAttribute(prop[1])
+      ? resolveStructProperty(ctx, [prop[0], formatToWGSLType[prop[1].format]])
+      : resolveStructProperty(ctx, prop),
+  )
+  .join('')}
+}\n`);
+
+  return id;
+}
+
+/**
  * Resolves an array.
  * @param ctx - The resolution context.
  * @param array - The array to resolve.
@@ -137,6 +177,18 @@ function resolveArray(ctx: ResolutionCtx, array: WgslArray) {
     : `array<${element}, ${array.elementCount}>`;
 }
 
+function resolveDisarray(ctx: ResolutionCtx, disarray: Disarray) {
+  const element = ctx.resolve(
+    isAttribute(disarray.elementType)
+      ? formatToWGSLType[disarray.elementType.format]
+      : (disarray.elementType as AnyWgslData),
+  );
+
+  return disarray.elementCount === 0
+    ? `array<${element}>`
+    : `array<${element}, ${disarray.elementCount}>`;
+}
+
 /**
  * Resolves a WGSL data-type schema to a string.
  * @param ctx - The resolution context.
@@ -144,7 +196,27 @@ function resolveArray(ctx: ResolutionCtx, array: WgslArray) {
  *
  * @returns The resolved data-type string.
  */
-export function resolveData(ctx: ResolutionCtx, data: AnyWgslData): string {
+export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
+  if (isLooseData(data)) {
+    if (data.type === 'unstruct') {
+      return resolveUnstruct(ctx, data);
+    }
+
+    if (data.type === 'disarray') {
+      return resolveDisarray(ctx, data);
+    }
+
+    if (data.type === 'loose-decorated') {
+      return ctx.resolve(
+        isAttribute(data.inner)
+          ? formatToWGSLType[data.inner.format]
+          : data.inner,
+      );
+    }
+
+    return ctx.resolve(formatToWGSLType[data.type]);
+  }
+
   if (isIdentityType(data)) {
     return data.type;
   }
