@@ -42,7 +42,7 @@ describe('IOLayoutToOutputSchema', () => {
         pos: d.BuiltinPosition;
       }>
     >().toEqualTypeOf<
-      d.TgpuStruct<{
+      d.WgslStruct<{
         a: d.Decorated<d.Vec4f, [d.Location<5>]>;
         b: d.Decorated<d.Vec4f, [d.Location<number>]>;
         pos: d.BuiltinPosition;

@@ -1,5 +1,5 @@
 import type { AnyComputeBuiltin } from '../../builtin';
-import type { AnyWgslStruct } from '../../data/wgslTypes';
+import type { AnyWgslStruct } from '../../data/struct';
 import { type TgpuNamable, isNamable } from '../../namable';
 import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
 import { createFnCore } from './fnCore';

@@ -7,7 +7,7 @@ import {
 } from './dataTypes';
 import { packedFormats } from './vertexFormatData';
 import {
-  type BaseWgslData,
+  type BaseData,
   isDecorated,
   isWgslArray,
   isWgslStruct,
@@ -38,7 +38,7 @@ const knownAlignmentMap: Record<string, number> = {
 };
 
 function computeAlignment(data: object): number {
-  const dataType = (data as BaseWgslData)?.type;
+  const dataType = (data as BaseData)?.type;
   const knownAlignment = knownAlignmentMap[dataType];
   if (knownAlignment !== undefined) {
     return knownAlignment;
@@ -77,7 +77,7 @@ function computeAlignment(data: object): number {
   );
 }
 
-function computeCustomAlignment(data: BaseWgslData): number {
+function computeCustomAlignment(data: BaseData): number {
   if (isUnstruct(data)) {
     // A loose struct is aligned to its first property.
     const firstProp = Object.values(data.propTypes)[0];
@@ -104,7 +104,7 @@ const cachedAlignments = new WeakMap<object, number>();
 
 const cachedCustomAlignments = new WeakMap<object, number>();
 
-export function alignmentOf(data: BaseWgslData): number {
+export function alignmentOf(data: BaseData): number {
   let alignment = cachedAlignments.get(data);
   if (alignment === undefined) {
     alignment = computeAlignment(data);
@@ -114,7 +114,7 @@ export function alignmentOf(data: BaseWgslData): number {
   return alignment;
 }
 
-export function customAlignmentOf(data: BaseWgslData): number {
+export function customAlignmentOf(data: BaseData): number {
   let alignment = cachedCustomAlignments.get(data);
   if (alignment === undefined) {
     alignment = computeCustomAlignment(data);

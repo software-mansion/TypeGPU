@@ -29,7 +29,7 @@ import {
   type AnyMatInstance,
   type AnyVecInstance,
   type AnyWgslData,
-  type BaseWgslData,
+  type BaseData,
   isWgslData,
 } from './data/wgslTypes';
 import type { NameRegistry } from './nameRegistry';
@@ -118,7 +118,7 @@ export interface ResolutionCtx {
   unwrap<T>(eventual: Eventual<T>): T;
 
   resolve(item: unknown): string;
-  resolveValue<T extends BaseWgslData>(value: Infer<T>, schema: T): string;
+  resolveValue<T extends BaseData>(value: Infer<T>, schema: T): string;
 
   transpileFn(fn: string): {
     argNames: string[];
@@ -176,9 +176,9 @@ export function isGPUBuffer(value: unknown): value is GPUBuffer {
 
 export function isBufferUsage<
   T extends
-    | TgpuBufferUniform<BaseWgslData>
-    | TgpuBufferReadonly<BaseWgslData>
-    | TgpuBufferMutable<BaseWgslData>,
+    | TgpuBufferUniform<BaseData>
+    | TgpuBufferReadonly<BaseData>
+    | TgpuBufferMutable<BaseData>,
 >(value: T | unknown): value is T {
   return (value as T)?.resourceType === 'buffer-usage';
 }

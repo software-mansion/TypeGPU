@@ -1,7 +1,8 @@
 import { getAttributesString } from '../../data/attributes';
+import type { WgslStruct } from '../../data/struct';
 import type {
   AnyWgslData,
-  BaseWgslData,
+  BaseData,
   Bool,
   F16,
   F32,
@@ -23,7 +24,6 @@ import type {
   Vec4i,
   Vec4u,
   WgslArray,
-  WgslStruct,
 } from '../../data/wgslTypes';
 import { assertExhaustive } from '../../shared/utilityTypes';
 import type { ResolutionCtx } from '../../types';
@@ -91,7 +91,7 @@ function isIdentityType(data: AnyWgslData): data is IdentityType {
  */
 function resolveStructProperty(
   ctx: ResolutionCtx,
-  [key, property]: [string, BaseWgslData],
+  [key, property]: [string, BaseData],
 ) {
   return `  ${getAttributesString(property)}${key}: ${ctx.resolve(property as AnyWgslData)},\n`;
 }
