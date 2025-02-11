@@ -54,6 +54,12 @@ type UsageTypeToBufferUsage<TData extends BaseData> = {
   readonly: TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData>;
 };
 
+const usageToUsageConstructor = {
+  uniform: asUniform,
+  mutable: asMutable,
+  readonly: asReadonly,
+};
+
 export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly resourceType: 'buffer';
   readonly dataType: TData;
@@ -307,14 +313,8 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   }
 
   as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferUsage<TData>[T] {
-    return (
-      usage === 'uniform'
-        ? asUniform(this as never)
-        : usage === 'mutable'
-          ? asMutable(this as never)
-          : usage === 'readonly'
-            ? asReadonly(this as never)
-            : null
+    return usageToUsageConstructor[usage]?.(
+      this as never,
     ) as UsageTypeToBufferUsage<TData>[T];
   }
 
