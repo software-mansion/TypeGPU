@@ -4,7 +4,7 @@ import type { AnyData } from '../data/dataTypes';
  * Extracts the inferred representation of a resource.
  * @example
  * type A = Infer<F32> // => number
- * type B = Infer<TgpuArray<F32>> // => number[]
+ * type B = Infer<WgslArray<F32>> // => number[]
  */
 export type Infer<T> = T extends { readonly '~repr': infer TRepr } ? TRepr : T;
 

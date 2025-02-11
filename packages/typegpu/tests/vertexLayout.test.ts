@@ -19,7 +19,7 @@ describe('ArrayToContainedAttribs', () => {
   });
 
   it('processes an array of u32s', () => {
-    type Result = ArrayToContainedAttribs<d.TgpuArray<d.U32>>;
+    type Result = ArrayToContainedAttribs<d.WgslArray<d.U32>>;
 
     expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'uint32'>>();
   });
@@ -64,7 +64,7 @@ describe('ArrayToContainedAttribs', () => {
   });
 
   it('processes an array of f16s', () => {
-    type Result = ArrayToContainedAttribs<d.TgpuArray<d.F16>>;
+    type Result = ArrayToContainedAttribs<d.WgslArray<d.F16>>;
 
     expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'float16'>>();
   });
