@@ -1,21 +1,14 @@
-import type {
-  Infer,
-  InferRecord,
-  MemIdentity,
-  MemIdentityRecord,
-} from '../shared/repr';
+import type { Infer, MemIdentity } from '../shared/repr';
+import type { AnyWgslStruct, WgslStruct } from './struct';
 
-type DecoratedLocation<T extends BaseWgslData> = Decorated<
-  T,
-  Location<number>[]
->;
+type DecoratedLocation<T extends BaseData> = Decorated<T, Location<number>[]>;
 
 export interface NumberArrayView {
   readonly length: number;
   [n: number]: number;
 }
 
-export interface BaseWgslData {
+export interface BaseData {
   type: string;
   /** Type-token, not available at runtime */
   readonly '~repr': unknown;
@@ -684,22 +677,7 @@ export interface Mat4x4f {
   readonly '~repr': m4x4f;
 }
 
-export interface WgslStruct<
-  TProps extends Record<string, BaseWgslData> = Record<string, BaseWgslData>,
-> {
-  (props: InferRecord<TProps>): InferRecord<TProps>;
-  readonly type: 'struct';
-  readonly label?: string | undefined;
-  readonly propTypes: TProps;
-  /** Type-token, not available at runtime */
-  readonly '~repr': InferRecord<TProps>;
-  readonly '~memIdent': WgslStruct<MemIdentityRecord<TProps>>;
-}
-
-// biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than WgslStruct<Record<string, BaseWgslData>>
-export type AnyWgslStruct = WgslStruct<any>;
-
-export interface WgslArray<TElement = BaseWgslData> {
+export interface WgslArray<TElement = BaseData> {
   readonly type: 'array';
   readonly elementCount: number;
   readonly elementType: TElement;
@@ -708,7 +686,7 @@ export interface WgslArray<TElement = BaseWgslData> {
   readonly '~memIdent': WgslArray<MemIdentity<TElement>>;
 }
 
-export interface PtrFn<TInner = BaseWgslData> {
+export interface PtrFn<TInner = BaseData> {
   readonly type: 'ptrFn';
   readonly inner: TInner;
   /** Type-token, not available at runtime */
@@ -759,7 +737,7 @@ export interface Builtin<T extends string> {
 }
 
 export interface Decorated<
-  TInner extends BaseWgslData = BaseWgslData,
+  TInner extends BaseData = BaseData,
   TAttribs extends unknown[] = unknown[],
 > {
   readonly type: 'decorated';

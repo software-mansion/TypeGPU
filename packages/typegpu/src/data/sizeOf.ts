@@ -7,7 +7,8 @@ import {
   isLooseDecorated,
   isUnstruct,
 } from './dataTypes';
-import type { BaseWgslData, WgslStruct, WgslTypeLiteral } from './wgslTypes';
+import type { WgslStruct } from './struct';
+import type { BaseData, WgslTypeLiteral } from './wgslTypes';
 import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes';
 
 const knownSizesMap: Record<string, number> = {
@@ -106,7 +107,7 @@ function sizeOfUnstruct(data: Unstruct) {
 }
 
 function computeSize(data: object): number {
-  const knownSize = knownSizesMap[(data as BaseWgslData)?.type];
+  const knownSize = knownSizesMap[(data as BaseData)?.type];
 
   if (knownSize !== undefined) {
     return knownSize;
@@ -148,9 +149,9 @@ function computeSize(data: object): number {
  * not stored on them. Instead, this weak map acts as an extended property
  * of those data types.
  */
-const cachedSizes = new WeakMap<BaseWgslData, number>();
+const cachedSizes = new WeakMap<BaseData, number>();
 
-export function sizeOf(schema: BaseWgslData): number {
+export function sizeOf(schema: BaseData): number {
   let size = cachedSizes.get(schema);
 
   if (size === undefined) {
