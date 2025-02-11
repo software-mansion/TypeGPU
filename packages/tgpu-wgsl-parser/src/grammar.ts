@@ -118,7 +118,7 @@ export type GlobalDecl =
 export type FunctionArgument = { type: 'func_argument', ident: string, typespec: TypeSpecifier };
 export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement, attrs: Attribute[] };
 export type FunctionHeader = { type: 'function_header', ident: string, returntype: ReturnType | null, args: FunctionArgument[] | null };
-export type ReturnType = { type: 'return_type', typespec: TypeSpecifier };
+export type ReturnType = { type: 'return_type', attrs: Attribute[], typespec: TypeSpecifier };
 
 
  export type ReturnStatement = { type: 'return_statement', expression: Expression | null }; 
@@ -311,7 +311,9 @@ const grammar: Grammar = {
     {"name": "template_arg_comma_list$ebnf$2", "symbols": [{"literal":","}], "postprocess": id},
     {"name": "template_arg_comma_list$ebnf$2", "symbols": [], "postprocess": () => null},
     {"name": "template_arg_comma_list", "symbols": ["expression", "template_arg_comma_list$ebnf$1", "template_arg_comma_list$ebnf$2"], "postprocess": ([first, rest]) => [first, ...rest.map(tuple => tuple[1])]},
-    {"name": "return_type", "symbols": [{"literal":"->"}, "type_specifier"], "postprocess": ([, typespec]) => ({ type: 'return_type', typespec })},
+    {"name": "return_type$ebnf$1", "symbols": []},
+    {"name": "return_type$ebnf$1", "symbols": ["return_type$ebnf$1", "attribute"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "return_type", "symbols": [{"literal":"->"}, "return_type$ebnf$1", "type_specifier"], "postprocess": ([, attrs, typespec]) => ({ type: 'return_type', attrs, typespec })},
     {"name": "function_decl$ebnf$1", "symbols": []},
     {"name": "function_decl$ebnf$1", "symbols": ["function_decl$ebnf$1", "attribute"], "postprocess": (d) => d[0].concat([d[1]])},
     {"name": "function_decl", "symbols": ["function_decl$ebnf$1", "function_header", "compound_statement"], "postprocess": ([attrs, header, body]) => ({ type: 'function_decl', header, body, attrs })},
@@ -338,6 +340,7 @@ const grammar: Grammar = {
     {"name": "statement", "symbols": ["if_statement"], "postprocess": id},
     {"name": "statement", "symbols": ["for_statement"], "postprocess": id},
     {"name": "statement", "symbols": ["call_statement", {"literal":";"}], "postprocess": id},
+    {"name": "statement", "symbols": ["func_call_statement", {"literal":";"}], "postprocess": id},
     {"name": "statement", "symbols": ["variable_or_value_statement", {"literal":";"}], "postprocess": id},
     {"name": "statement", "symbols": ["variable_updating_statement", {"literal":";"}], "postprocess": id},
     {"name": "statement", "symbols": ["compound_statement"], "postprocess": id},
@@ -479,6 +482,7 @@ const grammar: Grammar = {
     {"name": "expression", "symbols": ["short_circuit_and_expression", {"literal":"&&"}, "relational_expression"], "postprocess": ([lhs, , rhs]) => ({ type: 'logic_and', lhs, rhs })},
     {"name": "expression", "symbols": ["short_circuit_or_expression", {"literal":"||"}, "relational_expression"], "postprocess": ([lhs, , rhs]) => ({ type: 'logic_or', lhs, rhs })},
     {"name": "expression", "symbols": ["bitwise_expression"], "postprocess": id},
+    {"name": "func_call_statement", "symbols": ["call_phrase"], "postprocess": ([phrase]) => ({ type: 'call_statement', ident: phrase.ident, args: phrase.args })},
     {"name": "call_phrase", "symbols": ["template_elaborated_ident", "argument_expression_list"], "postprocess": ([ident, args]) => ({ ident, args })},
     {"name": "attribute$ebnf$1", "symbols": ["argument_expression_list"], "postprocess": id},
     {"name": "attribute$ebnf$1", "symbols": [], "postprocess": () => null},

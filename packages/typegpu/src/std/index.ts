@@ -18,4 +18,6 @@ export {
   normalize,
   sin,
   exp,
+  mix,
+  pow,
 } from './numeric';

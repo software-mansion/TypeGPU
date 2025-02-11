@@ -632,4 +632,136 @@ export const VectorOps = {
         Math.min(a.w, b.w),
       ),
   } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
+
+  pow: {
+    vec2f: (base: wgsl.v2f, exponent: wgsl.v2f) =>
+      vec2f(base.x ** exponent.x, base.y ** exponent.y),
+    vec2h: (base: wgsl.v2h, exponent: wgsl.v2h) =>
+      vec2h(base.x ** exponent.x, base.y ** exponent.y),
+
+    vec3f: (base: wgsl.v3f, exponent: wgsl.v3f) =>
+      vec3f(base.x ** exponent.x, base.y ** exponent.y, base.z ** exponent.z),
+    vec3h: (base: wgsl.v3h, exponent: wgsl.v3h) =>
+      vec3h(base.x ** exponent.x, base.y ** exponent.y, base.z ** exponent.z),
+
+    vec4f: (base: wgsl.v4f, exponent: wgsl.v4f) =>
+      vec4f(
+        base.x ** exponent.x,
+        base.y ** exponent.y,
+        base.z ** exponent.z,
+        base.w ** exponent.w,
+      ),
+    vec4h: (base: wgsl.v4h, exponent: wgsl.v4h) =>
+      vec4h(
+        base.x ** exponent.x,
+        base.y ** exponent.y,
+        base.z ** exponent.z,
+        base.w ** exponent.w,
+      ),
+  } as Record<
+    'vec2f' | 'vec3f' | 'vec4f' | 'vec2h' | 'vec3h' | 'vec4h' | 'number',
+    <
+      T extends
+        | wgsl.v2f
+        | wgsl.v3f
+        | wgsl.v4f
+        | wgsl.v2h
+        | wgsl.v3h
+        | wgsl.v4h
+        | number,
+    >(
+      a: T,
+      b: T,
+    ) => T
+  >,
+
+  mix: {
+    vec2f: (e1: wgsl.v2f, e2: wgsl.v2f, e3: wgsl.v2f | number) => {
+      if (typeof e3 === 'number') {
+        return vec2f(e1.x * (1 - e3) + e2.x * e3, e1.y * (1 - e3) + e2.y * e3);
+      }
+      return vec2f(
+        e1.x * (1 - e3.x) + e2.x * e3.x,
+        e1.y * (1 - e3.y) + e2.y * e3.y,
+      );
+    },
+    vec2h: (e1: wgsl.v2h, e2: wgsl.v2h, e3: wgsl.v2h | number) => {
+      if (typeof e3 === 'number') {
+        return vec2h(e1.x * (1 - e3) + e2.x * e3, e1.y * (1 - e3) + e2.y * e3);
+      }
+      return vec2h(
+        e1.x * (1 - e3.x) + e2.x * e3.x,
+        e1.y * (1 - e3.y) + e2.y * e3.y,
+      );
+    },
+
+    vec3f: (e1: wgsl.v3f, e2: wgsl.v3f, e3: wgsl.v3f | number) => {
+      if (typeof e3 === 'number') {
+        return vec3f(
+          e1.x * (1 - e3) + e2.x * e3,
+          e1.y * (1 - e3) + e2.y * e3,
+          e1.z * (1 - e3) + e2.z * e3,
+        );
+      }
+      return vec3f(
+        e1.x * (1 - e3.x) + e2.x * e3.x,
+        e1.y * (1 - e3.y) + e2.y * e3.y,
+        e1.z * (1 - e3.z) + e2.z * e3.z,
+      );
+    },
+    vec3h: (e1: wgsl.v3h, e2: wgsl.v3h, e3: wgsl.v3h | number) => {
+      if (typeof e3 === 'number') {
+        return vec3h(
+          e1.x * (1 - e3) + e2.x * e3,
+          e1.y * (1 - e3) + e2.y * e3,
+          e1.z * (1 - e3) + e2.z * e3,
+        );
+      }
+      return vec3h(
+        e1.x * (1 - e3.x) + e2.x * e3.x,
+        e1.y * (1 - e3.y) + e2.y * e3.y,
+        e1.z * (1 - e3.z) + e2.z * e3.z,
+      );
+    },
+
+    vec4f: (e1: wgsl.v4f, e2: wgsl.v4f, e3: wgsl.v4f | number) => {
+      if (typeof e3 === 'number') {
+        return vec4f(
+          e1.x * (1 - e3) + e2.x * e3,
+          e1.y * (1 - e3) + e2.y * e3,
+          e1.z * (1 - e3) + e2.z * e3,
+          e1.w * (1 - e3) + e2.w * e3,
+        );
+      }
+      return vec4f(
+        e1.x * (1 - e3.x) + e2.x * e3.x,
+        e1.y * (1 - e3.y) + e2.y * e3.y,
+        e1.z * (1 - e3.z) + e2.z * e3.z,
+        e1.w * (1 - e3.w) + e2.w * e3.w,
+      );
+    },
+    vec4h: (e1: wgsl.v4h, e2: wgsl.v4h, e3: wgsl.v4h | number) => {
+      if (typeof e3 === 'number') {
+        return vec4h(
+          e1.x * (1 - e3) + e2.x * e3,
+          e1.y * (1 - e3) + e2.y * e3,
+          e1.z * (1 - e3) + e2.z * e3,
+          e1.w * (1 - e3) + e2.w * e3,
+        );
+      }
+      return vec4h(
+        e1.x * (1 - e3.x) + e2.x * e3.x,
+        e1.y * (1 - e3.y) + e2.y * e3.y,
+        e1.z * (1 - e3.z) + e2.z * e3.z,
+        e1.w * (1 - e3.w) + e2.w * e3.w,
+      );
+    },
+  } as Record<
+    'vec2f' | 'vec3f' | 'vec4f' | 'vec2h' | 'vec3h' | 'vec4h',
+    <T extends wgsl.v2f | wgsl.v3f | wgsl.v4f | wgsl.v2h | wgsl.v3h | wgsl.v4h>(
+      a: T,
+      b: T,
+      c: T | number,
+    ) => T
+  >,
 };

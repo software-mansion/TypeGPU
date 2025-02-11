@@ -319,27 +319,27 @@ const vertex = tgpu['~unstable']
   });
 
 const fragment = tgpu['~unstable']
-  .fragmentFn({ cell: d.f32 }, d.vec4f)
-  .does(/* wgsl */ `(@location(0) cell: f32) -> @location(0) vec4f {
-    if (cell == -1.) {
-      return vec4f(0.5, 0.5, 0.5, 1.);
+  .fragmentFn({ cell: d.f32 }, d.location(0, d.vec4f))
+  .does((input) => {
+    if (input.cell === -1) {
+      return d.vec4f(0.5, 0.5, 0.5, 1);
     }
-    if (cell == -2.) {
-      return vec4f(0., 1., 0., 1.);
+    if (input.cell === -2) {
+      return d.vec4f(0, 1, 0, 1);
     }
-    if (cell == -3.) {
-      return vec4f(1., 0., 0., 1.);
-    }
-
-    let normalized = min(cell / f32(0xFF), 1.);
-
-    if (normalized == 0.) {
-      return vec4f();
+    if (input.cell === -3) {
+      return d.vec4f(1, 0, 0, 1);
     }
 
-    let res = 1. / (1. + exp(-(normalized - 0.2) * 10.));
-    return vec4f(0, 0, max(0.5, res), res);
-  }`);
+    const normalized = std.min(input.cell / d.f32(0xff), 1);
+
+    if (normalized === 0) {
+      return d.vec4f();
+    }
+
+    const res = 1 / (1 + std.exp(-(normalized - 0.2) * 10));
+    return d.vec4f(0, 0, std.max(0.5, res), res);
+  });
 
 const vertexInstanceLayout = tgpu['~unstable'].vertexLayout(
   (n: number) => d.arrayOf(d.u32, n),

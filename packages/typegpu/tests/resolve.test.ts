@@ -59,10 +59,10 @@ describe('tgpu resolve', () => {
     expect(parse(resolved)).toEqual(
       parse(
         `@group(0) @binding(0) var<uniform> intensity_1: f32;
-        @fragment fn fragment1() -> vec4f {
+        @fragment fn fragment1() -> @location(0) vec4f {
           return vec4f(0, intensity_1, 0, 1);
         }
-        @fragment fn fragment2() -> vec4f {
+        @fragment fn fragment2() -> @location(0) vec4f {
           return vec4f(intensity_1, 0, 0, 1);
         }`,
       ),
