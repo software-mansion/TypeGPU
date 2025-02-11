@@ -294,7 +294,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const { branch, fragmentFn } = this._core.options;
 
     const colorAttachments = connectAttachmentToShader(
-      fragmentFn.shell.returnType,
+      fragmentFn.shell.targets,
       this._priors.colorAttachment ?? {},
     ).map((attachment) => {
       if (isTexture(attachment.view)) {
@@ -391,7 +391,7 @@ class RenderPipelineCore {
     this.usedVertexLayouts = connectedAttribs.usedVertexLayouts;
 
     this._targets = connectTargetsToShader(
-      options.fragmentFn.shell.returnType,
+      options.fragmentFn.shell.targets,
       options.targets,
     );
   }

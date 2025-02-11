@@ -51,6 +51,7 @@ export interface TgpuFragmentFnShell<
   FragmentOut extends FragmentOutConstrained,
 > {
   readonly argTypes: [AnyWgslStruct];
+  readonly targets: FragmentOut;
   readonly returnType: FragmentOut;
 
   /**
@@ -104,6 +105,7 @@ export function fragmentFn<
 ): TgpuFragmentFnShell<ExoticIO<FragmentIn>, ExoticIO<FragmentOut>> {
   return {
     argTypes: [createStructFromIO(inputType)],
+    targets: outputType as ExoticIO<FragmentOut>,
     returnType: createOutputType(outputType) as ExoticIO<FragmentOut>,
 
     does(implementation) {

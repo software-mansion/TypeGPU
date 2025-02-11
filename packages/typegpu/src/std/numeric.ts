@@ -1,6 +1,13 @@
 import type { VecKind } from '../data/vector';
 import { VectorOps } from '../data/vectorOps';
-import type { AnyMatInstance, v3f, v3i, v3u } from '../data/wgslTypes';
+import type {
+  AnyMatInstance,
+  v2f,
+  v3f,
+  v3i,
+  v3u,
+  v4f,
+} from '../data/wgslTypes';
 import { inGPUMode } from '../gpuMode';
 
 type vBase = { kind: VecKind };
@@ -183,4 +190,54 @@ export function exp(value: number): number {
     return `exp(${value})` as unknown as number;
   }
   return Math.exp(value);
+}
+
+export function pow<T extends v2f | v3f | v4f | number>(
+  base: T,
+  exponent: T,
+): T {
+  if (inGPUMode()) {
+    return `pow(${base}, ${exponent})` as unknown as T;
+  }
+  if (typeof base === 'number' && typeof exponent === 'number') {
+    return (base ** exponent) as T;
+  }
+  if (
+    typeof base === 'object' &&
+    typeof exponent === 'object' &&
+    'kind' in base &&
+    'kind' in exponent
+  ) {
+    return VectorOps.pow[base.kind](base, exponent) as T;
+  }
+  throw new Error('Invalid arguments to pow()');
+}
+
+export function mix(e1: number, e2: number, e3: number): number;
+export function mix<T extends v2f | v3f | v4f>(e1: T, e2: T, e3: number): T;
+export function mix<T extends v2f | v3f | v4f>(e1: T, e2: T, e3: T): T;
+
+export function mix<T extends v2f | v3f | v4f | number>(
+  e1: T,
+  e2: T,
+  e3: T | number,
+): T {
+  if (inGPUMode()) {
+    return `mix(${e1}, ${e2}, ${e3})` as unknown as T;
+  }
+
+  if (typeof e1 === 'number') {
+    if (typeof e3 !== 'number' || typeof e2 !== 'number') {
+      throw new Error(
+        'When e1 and e2 are numbers, the blend factor must be a number.',
+      );
+    }
+    return (e1 * (1 - e3) + e2 * e3) as T;
+  }
+
+  if (typeof e1 === 'number' || typeof e2 === 'number') {
+    throw new Error('e1 and e2 need to both be vectors of the same kind.');
+  }
+
+  return VectorOps.mix[e1.kind](e1, e2, e3) as T;
 }

@@ -141,8 +141,8 @@ const mainVert = tgpu['~unstable']
 const mainFrag = tgpu['~unstable']
   .fragmentFn(VertexOutput, d.vec4f)
   .does(/* wgsl */ `
-  (@location(0) color: vec4f) -> @location(0) vec4f {
-    return color;
+  (input: FragmentInput) -> @location(0) vec4f {
+    return input.color;
   }`);
 
 const mainCompute = tgpu['~unstable']
