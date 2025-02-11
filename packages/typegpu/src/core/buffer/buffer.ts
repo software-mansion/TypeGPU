@@ -15,6 +15,7 @@ import {
   type TgpuBufferMutable,
   type TgpuBufferReadonly,
   type TgpuBufferUniform,
+  type TgpuBufferUsageWritable,
   asMutable,
   asReadonly,
   asUniform,
@@ -48,9 +49,9 @@ type ViewUsages<TBuffer extends TgpuBuffer<BaseWgslData>> =
       : 'readonly' | 'mutable');
 
 type UsageTypeToBufferUsage<TData extends BaseWgslData> = {
-  uniform: TgpuBufferUniform<TData>;
-  mutable: TgpuBufferMutable<TData>;
-  readonly: TgpuBufferReadonly<TData>;
+  uniform: TgpuBufferUniform<TData> & TgpuBufferUsageWritable<TData>;
+  mutable: TgpuBufferMutable<TData> & TgpuBufferUsageWritable<TData>;
+  readonly: TgpuBufferReadonly<TData> & TgpuBufferUsageWritable<TData>;
 };
 
 export interface TgpuBuffer<TData extends BaseWgslData> extends TgpuNamable {

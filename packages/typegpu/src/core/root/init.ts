@@ -32,6 +32,7 @@ import type {
   TgpuBufferReadonly,
   TgpuBufferUniform,
   TgpuBufferUsage,
+  TgpuBufferUsageWritable,
 } from '../buffer/bufferUsage';
 import type { IOLayout } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
@@ -247,28 +248,31 @@ class TgpuRootImpl
   createUniform<TData extends AnyWgslData>(
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
-  ): TgpuBufferUniform<TData> {
+  ): TgpuBufferUniform<TData> & TgpuBufferUsageWritable<TData> {
     return this.createBuffer<AnyWgslData>(typeSchema, initialOrBuffer)
       .$usage('uniform')
-      .as('uniform') as TgpuBufferUniform<TData>;
+      .as('uniform') as TgpuBufferUniform<TData> &
+      TgpuBufferUsageWritable<TData>;
   }
 
   createMutable<TData extends AnyWgslData>(
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
-  ): TgpuBufferMutable<TData> {
+  ): TgpuBufferMutable<TData> & TgpuBufferUsageWritable<TData> {
     return this.createBuffer<AnyWgslData>(typeSchema, initialOrBuffer)
       .$usage('storage')
-      .as('mutable') as TgpuBufferMutable<TData>;
+      .as('mutable') as TgpuBufferMutable<TData> &
+      TgpuBufferUsageWritable<TData>;
   }
 
   createReadonly<TData extends AnyWgslData>(
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
-  ): TgpuBufferReadonly<TData> {
+  ): TgpuBufferReadonly<TData> & TgpuBufferUsageWritable<TData> {
     return this.createBuffer<AnyWgslData>(typeSchema, initialOrBuffer)
       .$usage('storage')
-      .as('readonly') as TgpuBufferReadonly<TData>;
+      .as('readonly') as TgpuBufferReadonly<TData> &
+      TgpuBufferUsageWritable<TData>;
   }
 
   createBindGroup<

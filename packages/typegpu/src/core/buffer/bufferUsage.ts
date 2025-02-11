@@ -24,8 +24,6 @@ export interface TgpuBufferUsage<
   readonly usage: TUsage;
   readonly '~repr': Infer<TData>;
   value: Infer<TData>;
-
-  write(data: Infer<TData>): void;
 }
 
 export interface TgpuBufferUniform<TData extends BaseWgslData>
@@ -36,6 +34,10 @@ export interface TgpuBufferUniform<TData extends BaseWgslData>
 export interface TgpuBufferReadonly<TData extends BaseWgslData>
   extends TgpuBufferUsage<TData, 'readonly'> {
   readonly value: Infer<TData>;
+}
+
+export interface TgpuBufferUsageWritable<TData extends BaseWgslData> {
+  write(data: Infer<TData>): void;
 }
 
 export interface TgpuBufferMutable<TData extends BaseWgslData>
@@ -60,7 +62,10 @@ const usageToVarTemplateMap: Record<BindableBufferUsage, string> = {
 class TgpuFixedBufferImpl<
   TData extends AnyWgslData,
   TUsage extends BindableBufferUsage,
-> implements TgpuBufferUsage<TData, TUsage>, SelfResolvable
+> implements
+    TgpuBufferUsage<TData, TUsage>,
+    SelfResolvable,
+    TgpuBufferUsageWritable<TData>
 {
   /** Type-token, not available at runtime */
   public readonly '~repr'!: Infer<TData>;
@@ -139,10 +144,6 @@ export class TgpuLaidOutBufferImpl<
     return this._membership.key;
   }
 
-  write(data: Infer<TData>) {
-    throw new Error("Can't write to laid-out buffer usage");
-  }
-
   '~resolve'(ctx: ResolutionCtx): string {
     const id = ctx.names.makeUnique(this.label);
     const group = ctx.allocateLayoutEntry(this._membership.layout);
@@ -186,7 +187,7 @@ const mutableUsageMap = new WeakMap<
  */
 export function asMutable<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & Storage,
-): TgpuBufferMutable<TData> {
+): TgpuBufferMutable<TData> & TgpuBufferUsageWritable<TData> {
   if (!isUsableAsStorage(buffer)) {
     throw new Error(
       `Cannot pass ${buffer} to asMutable, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.`,
@@ -198,7 +199,7 @@ export function asMutable<TData extends AnyWgslData>(
     usage = new TgpuFixedBufferImpl('mutable', buffer);
     mutableUsageMap.set(buffer, usage);
   }
-  return usage as unknown as TgpuBufferMutable<TData>;
+  return usage as TgpuBufferMutable<TData> & TgpuBufferUsageWritable<TData>;
 }
 
 const readonlyUsageMap = new WeakMap<
@@ -211,7 +212,7 @@ const readonlyUsageMap = new WeakMap<
  */
 export function asReadonly<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & Storage,
-): TgpuBufferReadonly<TData> {
+): TgpuBufferReadonly<TData> & TgpuBufferUsageWritable<TData> {
   if (!isUsableAsStorage(buffer)) {
     throw new Error(
       `Cannot pass ${buffer} to asReadonly, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.`,
@@ -223,7 +224,7 @@ export function asReadonly<TData extends AnyWgslData>(
     usage = new TgpuFixedBufferImpl('readonly', buffer);
     readonlyUsageMap.set(buffer, usage);
   }
-  return usage as unknown as TgpuBufferReadonly<TData>;
+  return usage as TgpuBufferReadonly<TData> & TgpuBufferUsageWritable<TData>;
 }
 
 const uniformUsageMap = new WeakMap<
@@ -236,7 +237,7 @@ const uniformUsageMap = new WeakMap<
  */
 export function asUniform<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & Uniform,
-): TgpuBufferUniform<TData> {
+): TgpuBufferUniform<TData> & TgpuBufferUsageWritable<TData> {
   if (!isUsableAsUniform(buffer)) {
     throw new Error(
       `Cannot pass ${buffer} to asUniform, as it is not allowed to be used as a uniform. To allow it, call .$usage('uniform') when creating the buffer.`,
@@ -248,5 +249,5 @@ export function asUniform<TData extends AnyWgslData>(
     usage = new TgpuFixedBufferImpl('uniform', buffer);
     uniformUsageMap.set(buffer, usage);
   }
-  return usage as unknown as TgpuBufferUniform<TData>;
+  return usage as TgpuBufferUniform<TData> & TgpuBufferUsageWritable<TData>;
 }
