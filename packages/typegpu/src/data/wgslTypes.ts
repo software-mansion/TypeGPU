@@ -561,30 +561,50 @@ export interface Bool {
   readonly '~repr': boolean;
 }
 
+/**
+ * 32-bit float schema representing a single WGSL f32 value.
+ */
 export interface F32 {
   readonly type: 'f32';
   /** Type-token, not available at runtime */
   readonly '~repr': number;
+
+  (v: number | boolean): number;
 }
 
+/**
+ * 16-bit float schema representing a single WGSL f16 value.
+ */
 export interface F16 {
   readonly type: 'f16';
   /** Type-token, not available at runtime */
   readonly '~repr': number;
+
+  (v: number | boolean): number;
 }
 
+/**
+ * Signed 32-bit integer schema representing a single WGSL i32 value.
+ */
 export interface I32 {
   readonly type: 'i32';
   /** Type-token, not available at runtime */
   readonly '~repr': number;
   readonly '~memIdent': I32 | Atomic<I32> | DecoratedLocation<I32>;
+
+  (v: number | boolean): number;
 }
 
+/**
+ * Unsigned 32-bit integer schema representing a single WGSL u32 value.
+ */
 export interface U32 {
   readonly type: 'u32';
   /** Type-token, not available at runtime */
   readonly '~repr': number;
   readonly '~memIdent': U32 | Atomic<U32> | DecoratedLocation<U32>;
+
+  (v: number | boolean): number;
 }
 
 export interface Vec2f {
