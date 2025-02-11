@@ -1,29 +1,47 @@
 import tgpu from 'typegpu';
 
-async function main() {
-  const input = {
-    functions: {
-      f: {
-        code: 'sin(x*10)/2',
-        color: '1.0, 0.0, 0.0',
-      },
-      g: {
-        code: 'x * x - 0.5',
-        color: '0.0, 1.0, 0.0',
-      },
-      h: {
-        code: '(x+0.1) * x * (x-0.1)',
-        color: '0.0, 0.0, 1.0',
-      },
-    },
-    interpolationPoins: 1000,
-  };
+type FunctionDef = {
+  code: string;
+  color: `${number}, ${number}, ${number}`;
+};
 
+type Input = {
+  functions: Record<string, FunctionDef>;
+  interpolationPoints: number;
+  lineWidth: number;
+};
+
+const input: Input = {
+  functions: {
+    f: {
+      code: 'sin(x*10)/2',
+      color: '1.0, 0.0, 0.0',
+    },
+    g: {
+      code: 'x * x - 0.5',
+      color: '0.0, 1.0, 0.0',
+    },
+    h: {
+      code: '(x+0.1) * x * (x-0.1)',
+      color: '0.0, 0.0, 1.0',
+    },
+  },
+  interpolationPoints: 256,
+  lineWidth: 0.1,
+};
+
+// deferring to wait for canvas to init
+setTimeout(() => {
+  draw(input);
+}, 100);
+
+async function draw(input: Input) {
   const root = await tgpu.init();
   const device = root.device;
 
   const canvas = document.querySelector('canvas') as HTMLCanvasElement;
   const context = canvas.getContext('webgpu') as GPUCanvasContext;
+
   const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
   context.configure({
@@ -35,27 +53,18 @@ async function main() {
   for (const fn in input.functions) {
     const { code: fnString, color } = input.functions[fn];
 
-    const buffer = runComputePass(device, fnString, input.interpolationPoins);
+    const buffer = runComputePass(device, fnString, input.interpolationPoints);
 
-    runRenderPass(
-      device,
-      context,
-      presentationFormat,
-      buffer,
-      input.interpolationPoins,
-      color,
-    );
+    runRenderPass(device, context, presentationFormat, buffer, input, color);
   }
 }
 
-main();
-
-// function definitions
+// #region function definitions
 
 function runComputePass(
   device: GPUDevice,
   functionString: string,
-  interpolationPoins: number,
+  interpolationPoints: number,
 ) {
   const computeShaderCode = /* wgsl */ `
 fn interpolatedFunction(x: f32) -> f32 {
@@ -67,7 +76,7 @@ return ${functionString};
 @compute @workgroup_size(1) fn computePoints(
 @builtin(global_invocation_id) id: vec3u
 ) {
-let point = (-1.0 + 2.0/(${interpolationPoins} - 1) * f32(id.x));
+let point = (-1.0 + 2.0/(${interpolationPoints} - 1) * f32(id.x));
 let value = interpolatedFunction(point);
 lineVertices[id.x] = vec2f(point, value);
 }
@@ -88,7 +97,7 @@ lineVertices[id.x] = vec2f(point, value);
 
   const lineVerticesBuffer = device.createBuffer({
     label: 'Function points buffer',
-    size: interpolationPoins * 4 * 2,
+    size: interpolationPoints * 4 * 2,
     usage: GPUBufferUsage.STORAGE,
   });
 
@@ -106,7 +115,7 @@ lineVertices[id.x] = vec2f(point, value);
   });
   pass.setPipeline(computePipeline);
   pass.setBindGroup(0, bindGroup);
-  pass.dispatchWorkgroups(interpolationPoins);
+  pass.dispatchWorkgroups(interpolationPoints);
   pass.end();
 
   const commandBuffer = encoder.finish();
@@ -120,7 +129,7 @@ function runRenderPass(
   context: GPUCanvasContext,
   presentationFormat: GPUTextureFormat,
   lineVerticesBuffer: GPUBuffer,
-  interpolationPoins: number,
+  input: Input,
   color: string,
 ) {
   const vertexFragmentShaderCode = /* wgsl */ `
@@ -138,7 +147,7 @@ fn othronormalForLine(p1: vec2f, p2: vec2f) -> vec2f {
 }
 
 fn orthonormalForVertex(index: u32) -> vec2f {
-  if (index == 0 || index == ${interpolationPoins}-1) {
+  if (index == 0 || index == ${input.interpolationPoints}-1) {
     return vec2f(0.0, 1.0);
   }
   let previous = lineVertices[index-1];
@@ -156,7 +165,7 @@ fn orthonormalForVertex(index: u32) -> vec2f {
 @vertex fn vs(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4f {
   let currentVertex = vertexIndex/2;
   let orthonormal = orthonormalForVertex(currentVertex);
-  let offset = orthonormal * 0.02 * select(-1.0, 1.0, vertexIndex%2==0);
+  let offset = orthonormal * ${input.lineWidth} * select(-1.0, 1.0, vertexIndex%2==0);
   return vec4f(lineVertices[currentVertex] + offset, 0.0, 1.0);
 }
 
@@ -165,7 +174,7 @@ fn orthonormalForVertex(index: u32) -> vec2f {
 }
   `;
 
-  const vertexFraxmentShaderModule = device.createShaderModule({
+  const vertexFragmentShaderModule = device.createShaderModule({
     label: 'Render module',
     code: vertexFragmentShaderCode,
   });
@@ -174,10 +183,10 @@ fn orthonormalForVertex(index: u32) -> vec2f {
     label: 'Render pipeline',
     layout: 'auto',
     vertex: {
-      module: vertexFraxmentShaderModule,
+      module: vertexFragmentShaderModule,
     },
     fragment: {
-      module: vertexFraxmentShaderModule,
+      module: vertexFragmentShaderModule,
       targets: [{ format: presentationFormat }],
     },
     primitive: {
@@ -213,7 +222,7 @@ fn orthonormalForVertex(index: u32) -> vec2f {
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(renderPipeline);
     pass.setBindGroup(0, renderBindGroup);
-    pass.draw(interpolationPoins * 2); // call our vertex shader 2 times per point drawn
+    pass.draw(input.interpolationPoints * 2); // call our vertex shader 2 times per point drawn
     pass.end();
 
     const commandBuffer = encoder.finish();
@@ -222,5 +231,29 @@ fn orthonormalForVertex(index: u32) -> vec2f {
 
   render();
 }
+
+// #region Example controls
+
+export const controls = {
+  'line width': {
+    initial: 0.01,
+    min: 0.0,
+    max: 0.025,
+    step: 0.001,
+    onSliderChange: (value: number) => {
+      input.lineWidth = value;
+      draw(input);
+    },
+  },
+  'interpolation points count': {
+    initial: '256',
+    options: [16, 64, 256, 1024, 4096].map((x) => x.toString()),
+    onSelectChange: (value: string) => {
+      const num = Number.parseInt(value);
+      input.interpolationPoints = num;
+      draw(input);
+    },
+  },
+};
 
 // #endregion
