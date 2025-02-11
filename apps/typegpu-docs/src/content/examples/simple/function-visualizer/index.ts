@@ -3,10 +3,20 @@ import tgpu from 'typegpu';
 async function main() {
   const input = {
     functions: {
-      f: 'sin(x*10)/2',
-      // f: 'abs(x)',
+      f: {
+        code: 'sin(x*10)/2',
+        color: '1.0, 0.0, 0.0',
+      },
+      g: {
+        code: 'x * x - 0.5',
+        color: '0.0, 1.0, 0.0',
+      },
+      h: {
+        code: '(x+0.1) * x * (x-0.1)',
+        color: '0.0, 0.0, 1.0',
+      },
     },
-    interpolationPoins: 10,
+    interpolationPoins: 1000,
   };
 
   const root = await tgpu.init();
@@ -22,19 +32,20 @@ async function main() {
     alphaMode: 'premultiplied',
   });
 
-  const buffer = runComputePass(
-    device,
-    input.functions.f,
-    input.interpolationPoins,
-  );
+  for (const fn in input.functions) {
+    const { code: fnString, color } = input.functions[fn];
 
-  runRenderPass(
-    device,
-    context,
-    presentationFormat,
-    buffer,
-    input.interpolationPoins,
-  );
+    const buffer = runComputePass(device, fnString, input.interpolationPoins);
+
+    runRenderPass(
+      device,
+      context,
+      presentationFormat,
+      buffer,
+      input.interpolationPoins,
+      color,
+    );
+  }
 }
 
 main();
@@ -110,16 +121,20 @@ function runRenderPass(
   presentationFormat: GPUTextureFormat,
   lineVerticesBuffer: GPUBuffer,
   interpolationPoins: number,
+  color: string,
 ) {
   const vertexFragmentShaderCode = /* wgsl */ `
 @group(0) @binding(0) var<storage, read> lineVertices: array<vec2f>;
 
+fn normalVector(v: vec2f) -> vec2f {
+  let length = sqrt(v.x * v.x + v.y * v.y);
+  return v / length;
+}
+
 fn othronormalForLine(p1: vec2f, p2: vec2f) -> vec2f {
   let line = p2 - p1;
   let ortho = vec2f(-line.y, line.x);
-  let length = sqrt(ortho.x * ortho.x + ortho.y * ortho.y);
-  let norm = ortho / length;
-  return norm;
+  return normalVector(ortho);
 }
 
 fn orthonormalForVertex(index: u32) -> vec2f {
@@ -133,7 +148,9 @@ fn orthonormalForVertex(index: u32) -> vec2f {
   let n1 = othronormalForLine(previous, current);
   let n2 = othronormalForLine(current, next);
 
-  return (n1+n2)/2.0;
+  let avg = (n1+n2)/2.0;
+
+  return normalVector(avg);
 }
 
 @vertex fn vs(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4f {
@@ -144,7 +161,7 @@ fn orthonormalForVertex(index: u32) -> vec2f {
 }
 
 @fragment fn fs() -> @location(0) vec4f {
-  return vec4f(1, 0, 0, 1);
+  return vec4f(${color}, 1);
 }
   `;
 
@@ -180,7 +197,7 @@ fn orthonormalForVertex(index: u32) -> vec2f {
       {
         view: undefined as unknown as GPUTextureView,
         clearValue: [0.3, 0.3, 0.3, 1] as const,
-        loadOp: 'clear' as const,
+        loadOp: 'load' as const,
         storeOp: 'store' as const,
       },
     ],
