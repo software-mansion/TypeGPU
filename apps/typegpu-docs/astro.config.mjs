@@ -112,6 +112,10 @@ export default defineConfig({
               slug: 'fundamentals/roots',
             },
             {
+              label: 'Functions',
+              slug: 'fundamentals/functions',
+            },
+            {
               label: 'Buffers',
               slug: 'fundamentals/buffers',
             },
