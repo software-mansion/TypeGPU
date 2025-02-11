@@ -72,9 +72,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>>;
   $addFlags(flags: GPUBufferUsageFlags): this;
 
-  as<T extends ViewUsages<this>>(
-    usage: T,
-  ): TData extends BaseData ? UsageTypeToBufferUsage<TData>[T] : never;
+  as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferUsage<TData>[T];
 
   write(data: Infer<TData>): void;
   copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void;
@@ -308,9 +306,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     return res;
   }
 
-  as<T extends ViewUsages<this>>(
-    usage: T,
-  ): TData extends BaseData ? UsageTypeToBufferUsage<TData>[T] : never {
+  as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferUsage<TData>[T] {
     return (
       usage === 'uniform'
         ? asUniform(this as never)
@@ -319,7 +315,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
           : usage === 'readonly'
             ? asReadonly(this as never)
             : null
-    ) as TData extends BaseData ? UsageTypeToBufferUsage<TData>[T] : never;
+    ) as UsageTypeToBufferUsage<TData>[T];
   }
 
   destroy() {
