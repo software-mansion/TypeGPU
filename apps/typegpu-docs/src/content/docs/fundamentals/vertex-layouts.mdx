@@ -33,15 +33,21 @@ const geometryLayout = tgpu
 
 ## Utilizing loose schemas with vertex layouts
 
-The above example is great if the vertex buffer will also be used as a storage or uniform buffer. However, if you're only interested in the vertex data, you can use a loose schema instead.
-It is not restricted by alignment rules and can utilize many useful [vertex formats](https://www.w3.org/TR/webgpu/#vertex-formats). To create loose schemas, use `d.unstruct` instead of `d.struct` and `d.disarrayOf` instead of `d.arrayOf`.
-Inside of loose schemas you can use vertex formats as well as the usual data types.
+If the vertex buffer is not required to function as a storage or uniform buffer, a *loose schema* may be used to define the vertex data layout. Loose schemas are not subject to alignment restrictions and allow the use of various [vertex formats](https://www.w3.org/TR/webgpu/#vertex-formats).
+
+To define a loose schema:
+- Use `d.unstruct` instead of `d.struct`.
+- Use `d.disarrayOf` instead of `d.arrayOf`.
+
+Within a loose schema, both standard data types and vertex formats can be utilized.
 
 ```ts
 const LooseParticleGeometry = d.unstruct({
   tilt: d.f32,
   angle: d.f32,
-  color: d.unorm8x4, // 4x8-bit unsigned normalized
+  // four 8-bit values, unsigned & normalized
+  // i.e., four integers in (0, 255) represent four floats in the range of (0.0, 1.0)
+  color: d.unorm8x4,
 });
 ```
 
@@ -151,7 +157,7 @@ const renderPipeline = device.createRenderPipeline({
 });
 ```
 
-If you are using a loose schema, you can now resolve it to get its WGSL representation.
+Loose schemas can be interpreted in multiple ways within a shader. However, for convenience, they can be resolved to their default WGSL representation.
 
 ```ts
 const LooseParticleGeometry = d.unstruct({
