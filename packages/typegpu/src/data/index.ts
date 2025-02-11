@@ -66,10 +66,7 @@ export {
   WgslStruct,
   struct,
 } from './struct';
-export {
-  TgpuArray,
-  arrayOf,
-} from './array';
+export { arrayOf } from './array';
 export { ptrFn } from './ptr';
 export type {
   Disarray,
@@ -147,6 +144,6 @@ import type { Exotic } from './exotic';
  * Extracts the inferred representation of a resource.
  * @example
  * type A = Infer<F32> // => number
- * type B = Infer<TgpuArray<F32>> // => number[]
+ * type B = Infer<WgslArray<F32>> // => number[]
  */
 export type Infer<T> = INTERNAL_Infer<Exotic<T>>;

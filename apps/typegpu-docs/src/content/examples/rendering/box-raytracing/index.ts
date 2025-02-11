@@ -204,13 +204,13 @@ const canvasDimsAccessor = tgpu['~unstable'].accessor(CanvasDimsStruct);
 
 const fragmentFunction = tgpu['~unstable']
   .fragmentFn({ position: d.builtin.position }, d.vec4f)
-  .does(/* wgsl */ `(@builtin(position) position: vec4f) -> @location(0) vec4f {
+  .does(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
   let minDim = f32(min(canvasDims.width, canvasDims.height));
 
   var ray: RayStruct;
   ray.origin = cameraPosition;
-  ray.direction += cameraAxes.right * (position.x - f32(canvasDims.width)/2)/minDim;
-  ray.direction += cameraAxes.up * (position.y - f32(canvasDims.height)/2)/minDim;
+  ray.direction += cameraAxes.right * (input.position.x - f32(canvasDims.width)/2)/minDim;
+  ray.direction += cameraAxes.up * (input.position.y - f32(canvasDims.height)/2)/minDim;
   ray.direction += cameraAxes.forward;
   ray.direction = normalize(ray.direction);
 

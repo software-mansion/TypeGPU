@@ -763,25 +763,53 @@ export interface Vec4u {
   (): v4u;
 }
 
+/**
+ * Type of the `d.mat2x2f` object/function: matrix data type schema/constructor
+ */
 export interface Mat2x2f {
   readonly type: 'mat2x2f';
   /** Type-token, not available at runtime */
   readonly '~repr': m2x2f;
+
+  (...elements: number[]): m2x2f;
+  (...columns: v2f[]): m2x2f;
+  (): m2x2f;
 }
 
+/**
+ * Type of the `d.mat3x3f` object/function: matrix data type schema/constructor
+ */
 export interface Mat3x3f {
   readonly type: 'mat3x3f';
   /** Type-token, not available at runtime */
   readonly '~repr': m3x3f;
+
+  (...elements: number[]): m3x3f;
+  (...columns: v3f[]): m3x3f;
+  (): m3x3f;
 }
 
+/**
+ * Type of the `d.mat4x4f` object/function: matrix data type schema/constructor
+ */
 export interface Mat4x4f {
   readonly type: 'mat4x4f';
   /** Type-token, not available at runtime */
   readonly '~repr': m4x4f;
+
+  (...elements: number[]): m4x4f;
+  (...columns: v4f[]): m4x4f;
+  (): m4x4f;
 }
 
-export interface WgslArray<TElement = BaseData> {
+/**
+ * Array schema constructed via `d.arrayOf` function.
+ *
+ * Responsible for handling reading and writing array values
+ * between binary and JS representation. Takes into account
+ * the `byteAlignment` requirement of its elementType.
+ */
+export interface WgslArray<TElement extends BaseData = BaseData> {
   readonly type: 'array';
   readonly elementCount: number;
   readonly elementType: TElement;

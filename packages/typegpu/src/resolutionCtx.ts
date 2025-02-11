@@ -10,6 +10,7 @@ import {
   isSlot,
 } from './core/slot/slotTypes';
 import { isLooseData } from './data';
+import { getAttributesString } from './data/attributes';
 import {
   type AnyWgslData,
   type BaseData,
@@ -329,7 +330,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
     return {
       head:
         options.returnType !== undefined
-          ? `(${argList}) -> ${this.resolve(options.returnType)}`
+          ? `(${argList}) -> ${getAttributesString(options.returnType)} ${this.resolve(options.returnType)}`
           : `(${argList})`,
       body: str,
     };

@@ -127,6 +127,7 @@ describe('function_decl', () => {
             ident: 'example',
             returntype: {
               type: 'return_type',
+              attrs: [],
               typespec: {
                 type: 'template_elaborated_ident',
                 ident: 'u32',

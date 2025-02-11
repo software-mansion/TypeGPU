@@ -1,6 +1,5 @@
 import { isData } from '../../data/dataTypes';
-import type { Vec4f } from '../../data/wgslTypes';
-import type { IOLayout } from '../function/fnTypes';
+import type { FragmentOutConstrained } from '../function/tgpuFragmentFn';
 import type { AnyFragmentTargets } from './renderPipeline';
 
 function isColorTargetState(
@@ -10,7 +9,7 @@ function isColorTargetState(
 }
 
 export function connectTargetsToShader(
-  shaderOutputLayout: IOLayout<Vec4f>,
+  shaderOutputLayout: FragmentOutConstrained,
   targets: AnyFragmentTargets,
 ): GPUColorTargetState[] {
   if (isData(shaderOutputLayout)) {

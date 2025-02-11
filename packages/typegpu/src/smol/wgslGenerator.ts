@@ -255,11 +255,13 @@ function generateStatement(
   }
 
   if ('r' in statement) {
-    // check if the thing at the top of the call stack is a struct
+    // check if the thing at the top of the call stack is a struct and the statement is a plain JS object
     // if so wrap the value returned in a constructor of the struct (its resolved name)
     if (
       isWgslStruct(ctx.callStack[ctx.callStack.length - 1]) &&
-      statement.r !== null
+      statement.r !== null &&
+      typeof statement.r === 'object' &&
+      'o' in statement.r
     ) {
       const resource = resolveRes(ctx, generateExpression(ctx, statement.r));
       const resolvedStruct = ctx.resolve(
@@ -303,8 +305,20 @@ ${alternate}`;
     const id = resolveRes(ctx, generateIdentifier(ctx, rawId));
     const eq = rawValue ? generateExpression(ctx, rawValue) : undefined;
 
-    if (!eq) {
+    if (!eq || !rawValue) {
       throw new Error('Cannot create variable without an initial value.');
+    }
+
+    // If the value is a plain JS object it has to be an output struct
+    if (
+      typeof rawValue === 'object' &&
+      'o' in rawValue &&
+      isWgslStruct(ctx.callStack[ctx.callStack.length - 1])
+    ) {
+      const resolvedStruct = ctx.resolve(
+        ctx.callStack[ctx.callStack.length - 1],
+      );
+      return `${ctx.pre}var ${id} = ${resolvedStruct}(${resolveRes(ctx, eq)});`;
     }
 
     return `${ctx.pre}var ${id} = ${resolveRes(ctx, eq)};`;
