@@ -2,11 +2,7 @@ import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, expectTypeOf } from 'vitest';
 
 import tgpu from '../src';
-import {
-  asMutable,
-  asReadonly,
-  asUniform,
-} from '../src/core/buffer/bufferUsage';
+
 import * as d from '../src/data';
 import type { Infer } from '../src/shared/repr';
 import { it } from './utils/extendedIt';
@@ -14,14 +10,14 @@ import { it } from './utils/extendedIt';
 describe('TgpuBufferUniform', () => {
   it('represents a `number` value', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('uniform');
-    const uniform = asUniform(buffer);
+    const uniform = buffer.as('uniform');
 
     expectTypeOf<Infer<typeof uniform>>().toEqualTypeOf<number>();
   });
 
   it('resolves to buffer binding in code', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('uniform').$name('param');
-    const uniform = asUniform(buffer);
+    const uniform = buffer.as('uniform');
 
     const resolved = tgpu.resolve({
       template: `
@@ -44,7 +40,7 @@ describe('TgpuBufferUniform', () => {
 
   it('resolves to buffer binding in tgsl functions', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('uniform').$name('param');
-    const uniform = asUniform(buffer);
+    const uniform = buffer.as('uniform');
 
     const func = tgpu['~unstable'].fn([]).does(() => {
       const x = uniform.value;
@@ -74,7 +70,7 @@ describe('TgpuBufferUniform', () => {
       .$name('Boid');
 
     const buffer = root.createBuffer(Boid).$usage('uniform').$name('boid');
-    const uniform = asUniform(buffer);
+    const uniform = buffer.as('uniform');
 
     const func = tgpu['~unstable'].fn([]).does(() => {
       const pos = uniform.value.pos;
@@ -106,14 +102,14 @@ describe('TgpuBufferUniform', () => {
 describe('TgpuBufferMutable', () => {
   it('represents a `number` value', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('storage');
-    const mutable = asMutable(buffer);
+    const mutable = buffer.as('mutable');
 
     expectTypeOf<Infer<typeof mutable>>().toEqualTypeOf<number>();
   });
 
   it('resolves to buffer binding in code', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('storage').$name('param');
-    const mutable = asMutable(buffer);
+    const mutable = buffer.as('mutable');
 
     const resolved = tgpu.resolve({
       template: `
@@ -136,7 +132,7 @@ describe('TgpuBufferMutable', () => {
 
   it('resolves to buffer binding in tgsl functions', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('storage').$name('param');
-    const mutable = asMutable(buffer);
+    const mutable = buffer.as('mutable');
 
     const func = tgpu['~unstable'].fn([]).does(() => {
       const x = mutable.value;
@@ -166,7 +162,7 @@ describe('TgpuBufferMutable', () => {
       .$name('Boid');
 
     const buffer = root.createBuffer(Boid).$usage('storage').$name('boid');
-    const mutable = asMutable(buffer);
+    const mutable = buffer.as('mutable');
 
     const func = tgpu['~unstable'].fn([]).does(() => {
       const pos = mutable.value.pos;
@@ -198,14 +194,14 @@ describe('TgpuBufferMutable', () => {
 describe('TgpuBufferReadonly', () => {
   it('represents a `number` value', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('storage');
-    const readonly = asReadonly(buffer);
+    const readonly = buffer.as('readonly');
 
     expectTypeOf<Infer<typeof readonly>>().toEqualTypeOf<number>();
   });
 
   it('resolves to buffer binding in code', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('storage').$name('param');
-    const readonly = asReadonly(buffer);
+    const readonly = buffer.as('readonly');
 
     const resolved = tgpu.resolve({
       template: `
@@ -228,7 +224,7 @@ describe('TgpuBufferReadonly', () => {
 
   it('resolves to buffer binding in tgsl functions', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('storage').$name('param');
-    const readonly = asReadonly(buffer);
+    const readonly = buffer.as('readonly');
 
     const func = tgpu['~unstable'].fn([]).does(() => {
       const x = readonly.value;
@@ -258,7 +254,7 @@ describe('TgpuBufferReadonly', () => {
       .$name('Boid');
 
     const buffer = root.createBuffer(Boid).$usage('storage').$name('boid');
-    const readonly = asReadonly(buffer);
+    const readonly = buffer.as('readonly');
 
     const func = tgpu['~unstable'].fn([]).does(() => {
       const pos = readonly.value.pos;

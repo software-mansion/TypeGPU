@@ -1,6 +1,6 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect } from 'vitest';
-import tgpu, { unstable_asUniform } from '../src';
+import tgpu from '../src';
 import * as d from '../src/data';
 import { MissingSlotValueError, ResolutionError } from '../src/errors';
 import { it } from './utils/extendedIt';
@@ -388,7 +388,7 @@ describe('tgpu.slot', () => {
       .$name('Boid');
 
     const buffer = root.createBuffer(Boid).$usage('uniform').$name('boid');
-    const uniform = unstable_asUniform(buffer);
+    const uniform = buffer.as('uniform');
     const uniformSlot = tgpu['~unstable'].slot(uniform);
     const uniformSlotSlot = tgpu['~unstable'].slot(uniformSlot);
 

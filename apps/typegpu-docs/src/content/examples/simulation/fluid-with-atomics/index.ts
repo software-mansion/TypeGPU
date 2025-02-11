@@ -1,8 +1,4 @@
-import tgpu, {
-  unstable_asReadonly,
-  unstable_asMutable,
-  unstable_asUniform,
-} from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
@@ -53,25 +49,25 @@ function encodeBrushType(brushType: (typeof BrushTypes)[number]) {
 }
 
 const sizeBuffer = root.createBuffer(d.vec2u).$name('size').$usage('uniform');
-const sizeUniform = unstable_asUniform(sizeBuffer);
+const sizeUniform = sizeBuffer.as('uniform');
 
 const viscosityBuffer = root
   .createBuffer(d.u32)
   .$name('viscosity')
   .$usage('uniform');
-const viscosityUniform = unstable_asUniform(viscosityBuffer);
+const viscosityUniform = viscosityBuffer.as('uniform');
 
 const currentStateBuffer = root
   .createBuffer(d.arrayOf(d.u32, 1024 ** 2))
   .$name('current')
   .$usage('storage', 'vertex');
-const currentStateStorage = unstable_asReadonly(currentStateBuffer);
+const currentStateStorage = currentStateBuffer.as('readonly');
 
 const nextStateBuffer = root
   .createBuffer(d.arrayOf(d.atomic(d.u32), 1024 ** 2))
   .$name('next')
   .$usage('storage');
-const nextStateStorage = unstable_asMutable(nextStateBuffer);
+const nextStateStorage = nextStateBuffer.as('mutable');
 
 const squareBuffer = root
   .createBuffer(d.arrayOf(d.vec2f, 4), [

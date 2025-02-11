@@ -43,3 +43,48 @@ describe('asUsage', () => {
     ).toThrow();
   });
 });
+
+describe('buffer.as(usage)', () => {
+  it('allows creating bufferUsages only for buffers allowing them', ({
+    root,
+  }) => {
+    root.createBuffer(u32, 2).$usage('storage').as('readonly');
+    root.createBuffer(u32, 2).$usage('storage', 'uniform').as('readonly');
+    root.createBuffer(u32, 2).$usage('storage', 'vertex').as('readonly');
+    // @ts-expect-error
+    expect(() => root.createBuffer(u32, 2).as('readonly')).toThrow();
+    expect(() =>
+      root
+        .createBuffer(u32, 2)
+        .$usage('uniform')
+        // @ts-expect-error
+        .as('readonly'),
+    ).toThrow();
+
+    root.createBuffer(u32, 2).$usage('uniform').as('uniform');
+    root.createBuffer(u32, 2).$usage('uniform', 'storage').as('uniform');
+    root.createBuffer(u32, 2).$usage('uniform', 'vertex').as('uniform');
+    // @ts-expect-error
+    expect(() => root.createBuffer(u32, 2).as('uniform')).toThrow();
+    expect(() =>
+      root
+        .createBuffer(u32, 2)
+        .$usage('storage')
+        // @ts-expect-error
+        .as('uniform'),
+    ).toThrow();
+
+    root.createBuffer(u32, 2).$usage('storage').as('mutable');
+    root.createBuffer(u32, 2).$usage('storage', 'uniform').as('mutable');
+    root.createBuffer(u32, 2).$usage('vertex', 'storage').as('mutable');
+    // @ts-expect-error
+    expect(() => root.createBuffer(u32, 2).as('mutable')).toThrow();
+    expect(() =>
+      root
+        .createBuffer(u32, 2)
+        .$usage('uniform')
+        // @ts-expect-error
+        .as('mutable'),
+    ).toThrow();
+  });
+});

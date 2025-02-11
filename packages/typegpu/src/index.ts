@@ -62,7 +62,6 @@ export {
 export { StrictNameRegistry, RandomNameRegistry } from './nameRegistry';
 export {
   isBuffer,
-  isUsableAsUniform,
   isUsableAsVertex,
 } from './core/buffer/buffer';
 export { isSlot, isDerived } from './core/slot/slotTypes';
@@ -84,6 +83,7 @@ export {
   asUniform as unstable_asUniform,
   asReadonly as unstable_asReadonly,
   asMutable as unstable_asMutable,
+  isUsableAsUniform,
 } from './core/buffer/bufferUsage';
 export { isTgpuFn } from './core/function/tgpuFn';
 

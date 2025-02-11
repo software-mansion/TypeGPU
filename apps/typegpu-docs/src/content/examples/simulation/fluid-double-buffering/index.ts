@@ -1,10 +1,4 @@
-import tgpu, {
-  unstable_asMutable,
-  unstable_asReadonly,
-  unstable_asUniform,
-  type TgpuBufferReadonly,
-  type TgpuBufferMutable,
-} from 'typegpu';
+import tgpu, { type TgpuBufferReadonly, type TgpuBufferMutable } from 'typegpu';
 import * as d from 'typegpu/data';
 import { cos, dot, fract, length, max, min, mix, pow } from 'typegpu/std';
 
@@ -58,7 +52,7 @@ const BoxObstacle = d.struct({
 
 const gridSize = 256;
 const gridSizeBuffer = root.createBuffer(d.i32).$usage('uniform');
-const gridSizeUniform = unstable_asUniform(gridSizeBuffer);
+const gridSizeUniform = gridSizeBuffer.as('uniform');
 
 const gridAlphaBuffer = root.createBuffer(GridData).$usage('storage');
 const gridBetaBuffer = root.createBuffer(GridData).$usage('storage');
@@ -74,13 +68,13 @@ const prevObstaclesBuffer = root
   .createBuffer(d.arrayOf(BoxObstacle, MAX_OBSTACLES))
   .$usage('storage');
 
-const prevObstacleReadonly = unstable_asReadonly(prevObstaclesBuffer);
+const prevObstacleReadonly = prevObstaclesBuffer.as('readonly');
 
 const obstaclesBuffer = root
   .createBuffer(d.arrayOf(BoxObstacle, MAX_OBSTACLES))
   .$usage('storage');
 
-const obstaclesReadonly = unstable_asReadonly(obstaclesBuffer);
+const obstaclesReadonly = obstaclesBuffer.as('readonly');
 
 const isValidCoord = tgpu['~unstable']
   .fn([d.i32, d.i32], d.bool)
@@ -152,7 +146,7 @@ const flowFromCell = tgpu['~unstable']
   });
 
 const timeBuffer = root.createBuffer(d.f32).$usage('uniform');
-const timeUniform = unstable_asUniform(timeBuffer);
+const timeUniform = timeBuffer.as('uniform');
 
 const isInsideObstacle = tgpu['~unstable']
   .fn([d.i32, d.i32], d.bool)
@@ -386,7 +380,7 @@ const sourceParamsBuffer = root
     }),
   )
   .$usage('uniform');
-const sourceParamsUniform = unstable_asUniform(sourceParamsBuffer);
+const sourceParamsUniform = sourceParamsBuffer.as('uniform');
 
 const getMinimumInFlow = tgpu['~unstable']
   .fn([d.i32, d.i32], d.f32)
@@ -612,16 +606,16 @@ function makePipelines(
 
 const even = makePipelines(
   // in
-  unstable_asReadonly(gridAlphaBuffer),
+  gridAlphaBuffer.as('readonly'),
   // out
-  unstable_asMutable(gridBetaBuffer),
+  gridBetaBuffer.as('mutable'),
 );
 
 const odd = makePipelines(
   // in
-  unstable_asReadonly(gridBetaBuffer),
+  gridBetaBuffer.as('readonly'),
   // out
-  unstable_asMutable(gridAlphaBuffer),
+  gridAlphaBuffer.as('mutable'),
 );
 
 let primary = even;
