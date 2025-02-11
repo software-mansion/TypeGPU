@@ -73,19 +73,19 @@ const pipeline = device.createComputePipeline({
 
 interface LayerData {
   shape: readonly [number] | readonly [number, number];
-  buffer: TgpuBuffer<d.TgpuArray<d.F32>> & Storage;
+  buffer: TgpuBuffer<d.WgslArray<d.F32>> & Storage;
 }
 
 interface Layer {
-  weights: TgpuBuffer<d.TgpuArray<d.F32>> & Storage;
-  biases: TgpuBuffer<d.TgpuArray<d.F32>> & Storage;
-  state: TgpuBuffer<d.TgpuArray<d.F32>> & Storage;
+  weights: TgpuBuffer<d.WgslArray<d.F32>> & Storage;
+  biases: TgpuBuffer<d.WgslArray<d.F32>> & Storage;
+  state: TgpuBuffer<d.WgslArray<d.F32>> & Storage;
 }
 
 interface Network {
   layers: Layer[];
-  input: TgpuBuffer<d.TgpuArray<d.F32>> & Storage;
-  output: TgpuBuffer<d.TgpuArray<d.F32>> & Storage;
+  input: TgpuBuffer<d.WgslArray<d.F32>> & Storage;
+  output: TgpuBuffer<d.WgslArray<d.F32>> & Storage;
 
   inference(data: number[]): Promise<number[]>;
 }

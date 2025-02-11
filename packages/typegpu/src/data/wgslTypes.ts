@@ -802,7 +802,14 @@ export interface Mat4x4f {
   (): m4x4f;
 }
 
-export interface WgslArray<TElement = BaseData> {
+/**
+ * Array schema constructed via `d.arrayOf` function.
+ *
+ * Responsible for handling reading and writing array values
+ * between binary and JS representation. Takes into account
+ * the `byteAlignment` requirement of its elementType.
+ */
+export interface WgslArray<TElement extends BaseData = BaseData> {
   readonly type: 'array';
   readonly elementCount: number;
   readonly elementType: TElement;
