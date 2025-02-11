@@ -3,10 +3,13 @@ import { VectorOps } from '../data/vectorOps';
 import type {
   AnyMatInstance,
   v2f,
+  v2h,
   v3f,
+  v3h,
   v3i,
   v3u,
   v4f,
+  v4h,
 } from '../data/wgslTypes';
 import { inGPUMode } from '../gpuMode';
 
@@ -192,7 +195,12 @@ export function exp(value: number): number {
   return Math.exp(value);
 }
 
-export function pow<T extends v2f | v3f | v4f | number>(
+export function pow(base: number, exponent: number): number;
+export function pow<T extends v2f | v3f | v4f | v2h | v3h | v4h>(
+  base: T,
+  exponent: T,
+): T;
+export function pow<T extends v2f | v3f | v4f | v2h | v3h | v4h | number>(
   base: T,
   exponent: T,
 ): T {
@@ -214,10 +222,18 @@ export function pow<T extends v2f | v3f | v4f | number>(
 }
 
 export function mix(e1: number, e2: number, e3: number): number;
-export function mix<T extends v2f | v3f | v4f>(e1: T, e2: T, e3: number): T;
-export function mix<T extends v2f | v3f | v4f>(e1: T, e2: T, e3: T): T;
+export function mix<T extends v2f | v3f | v4f | v2h | v3h | v4h>(
+  e1: T,
+  e2: T,
+  e3: number,
+): T;
+export function mix<T extends v2f | v3f | v4f | v2h | v3h | v4h>(
+  e1: T,
+  e2: T,
+  e3: T,
+): T;
 
-export function mix<T extends v2f | v3f | v4f | number>(
+export function mix<T extends v2f | v3f | v4f | v2h | v3h | v4h | number>(
   e1: T,
   e2: T,
   e3: T | number,
