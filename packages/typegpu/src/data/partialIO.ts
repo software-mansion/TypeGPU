@@ -13,7 +13,7 @@ export interface WriteInstruction {
   data: Uint8Array;
 }
 
-export function getWriteInstructions<TData extends wgsl.BaseWgslData>(
+export function getWriteInstructions<TData extends wgsl.BaseData>(
   schema: TData,
   data: InferPartial<TData>,
 ): WriteInstruction[] {
@@ -31,7 +31,7 @@ export function getWriteInstructions<TData extends wgsl.BaseWgslData>(
     padding?: number | undefined;
   }> = [];
 
-  function gatherAndWrite<T extends wgsl.BaseWgslData>(
+  function gatherAndWrite<T extends wgsl.BaseData>(
     node: T,
     partialValue: InferPartial<T> | undefined,
     offset: number,

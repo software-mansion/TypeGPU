@@ -7,6 +7,7 @@ import type {
   TgpuTexture,
   TgpuWriteonlyTexture,
 } from './core/texture/texture';
+import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout';
 import type { AnyData } from './data/dataTypes';
 import type { TgpuBindGroup, TgpuBindGroupLayout } from './tgpuBindGroupLayout';
 
@@ -24,4 +25,5 @@ export interface Unwrapper {
       | TgpuMutableTexture
       | TgpuSampledTexture,
   ): GPUTextureView;
+  unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
 }

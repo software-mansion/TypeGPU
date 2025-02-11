@@ -247,10 +247,10 @@ const computeVelocity = tgpu['~unstable']
   .$uses({ getCell, isValidFlowOut, isValidCoord, rand01 });
 
 const mainInitWorld = tgpu['~unstable']
-  .computeFn([d.builtin.globalInvocationId], { workgroupSize: [1] })
-  .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
-    let x = i32(gid.x);
-    let y = i32(gid.y);
+  .computeFn({ gid: d.builtin.globalInvocationId }, { workgroupSize: [1] })
+  .does(/* wgsl */ `(input: ComputeInput) {
+    let x = i32(input.gid.x);
+    let y = i32(input.gid.y);
     let index = coordsToIndex(x, y);
 
     var value = vec4f();
@@ -271,7 +271,7 @@ const mainInitWorld = tgpu['~unstable']
   .$uses({ coordsToIndex, isValidFlowOut, gridSizeUniform, outputGridSlot });
 
 const mainMoveObstacles = tgpu['~unstable']
-  .computeFn([], { workgroupSize: [1] })
+  .computeFn({}, { workgroupSize: [1] })
   .does(/* wgsl */ `() {
     for (var obs_idx = 0; obs_idx < MAX_OBSTACLES; obs_idx += 1) {
       let obs = prevObstacleReadonly[obs_idx];
@@ -413,10 +413,10 @@ const getMinimumInFlow = tgpu['~unstable']
   });
 
 const mainCompute = tgpu['~unstable']
-  .computeFn([d.builtin.globalInvocationId], { workgroupSize: [8, 8] })
-  .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
-    let x = i32(gid.x);
-    let y = i32(gid.y);
+  .computeFn({ gid: d.builtin.globalInvocationId }, { workgroupSize: [8, 8] })
+  .does(/* wgsl */ `(input: ComputeInput) {
+    let x = i32(input.gid.x);
+    let y = i32(input.gid.y);
     let index = coordsToIndex(x, y);
 
     setupRandomSeed(vec2f(f32(index), timeUniform));

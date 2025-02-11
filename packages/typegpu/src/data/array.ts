@@ -1,4 +1,4 @@
-import type { Infer, InferPartial } from '../shared/repr';
+import type { Infer, InferPartial, MemIdentity } from '../shared/repr';
 import type { Exotic } from './exotic';
 import { sizeOf } from './sizeOf';
 import type { AnyWgslData, WgslArray } from './wgslTypes';
@@ -53,6 +53,8 @@ class TgpuArrayImpl<TElement extends AnyWgslData>
   }[];
   /** Type-token, not available at runtime */
   public readonly '~exotic'!: WgslArray<Exotic<TElement>>;
+  /** Type-token, not available at runtime */
+  public readonly '~memIdent'!: WgslArray<MemIdentity<TElement>>;
 
   constructor(
     public readonly elementType: TElement,

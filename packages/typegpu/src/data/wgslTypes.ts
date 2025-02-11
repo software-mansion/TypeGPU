@@ -1,16 +1,14 @@
-import type {
-  Infer,
-  InferPartial,
-  InferPartialRecord,
-  InferRecord,
-} from '../shared/repr';
+import type { Infer, InferPartial, MemIdentity } from '../shared/repr';
+import type { AnyWgslStruct, WgslStruct } from './struct';
+
+type DecoratedLocation<T extends BaseData> = Decorated<T, Location<number>[]>;
 
 export interface NumberArrayView {
   readonly length: number;
   [n: number]: number;
 }
 
-export interface BaseWgslData {
+export interface BaseData {
   type: string;
   /** Type-token, not available at runtime */
   readonly '~repr': unknown;
@@ -579,12 +577,14 @@ export interface I32 {
   readonly type: 'i32';
   /** Type-token, not available at runtime */
   readonly '~repr': number;
+  readonly '~memIdent': I32 | Atomic<I32> | DecoratedLocation<I32>;
 }
 
 export interface U32 {
   readonly type: 'u32';
   /** Type-token, not available at runtime */
   readonly '~repr': number;
+  readonly '~memIdent': U32 | Atomic<U32> | DecoratedLocation<U32>;
 }
 
 export interface Vec2f {
@@ -677,31 +677,17 @@ export interface Mat4x4f {
   readonly '~repr': m4x4f;
 }
 
-export interface WgslStruct<
-  TProps extends Record<string, BaseWgslData> = Record<string, BaseWgslData>,
-> {
-  (props: InferRecord<TProps>): InferRecord<TProps>;
-  readonly type: 'struct';
-  readonly label?: string | undefined;
-  readonly propTypes: TProps;
-  /** Type-token, not available at runtime */
-  readonly '~repr': InferRecord<TProps>;
-  readonly '~reprPartial': Partial<InferPartialRecord<TProps>>;
-}
-
-// biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than WgslStruct<Record<string, BaseWgslData>>
-export type AnyWgslStruct = WgslStruct<any>;
-
-export interface WgslArray<TElement = BaseWgslData> {
+export interface WgslArray<TElement = BaseData> {
   readonly type: 'array';
   readonly elementCount: number;
   readonly elementType: TElement;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TElement>[];
   readonly '~reprPartial': { idx: number; value: InferPartial<TElement> }[];
+  readonly '~memIdent': WgslArray<MemIdentity<TElement>>;
 }
 
-export interface PtrFn<TInner = BaseWgslData> {
+export interface PtrFn<TInner = BaseData> {
   readonly type: 'ptrFn';
   readonly inner: TInner;
   /** Type-token, not available at runtime */
@@ -716,6 +702,7 @@ export interface Atomic<TInner extends U32 | I32 = U32 | I32> {
   readonly inner: TInner;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
+  readonly '~memIdent': MemIdentity<TInner>;
 }
 
 export interface Align<T extends number> {
@@ -751,7 +738,7 @@ export interface Builtin<T extends string> {
 }
 
 export interface Decorated<
-  TInner extends BaseWgslData = BaseWgslData,
+  TInner extends BaseData = BaseData,
   TAttribs extends unknown[] = unknown[],
 > {
   readonly type: 'decorated';
@@ -759,6 +746,9 @@ export interface Decorated<
   readonly attribs: TAttribs;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
+  readonly '~memIdent': TAttribs extends Location<number>[]
+    ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
+    : Decorated<MemIdentity<TInner>, TAttribs>;
 }
 
 export const wgslTypeLiterals = [

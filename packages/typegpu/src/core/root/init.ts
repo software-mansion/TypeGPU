@@ -1,4 +1,4 @@
-import type { OmitBuiltins } from '../../builtin';
+import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin';
 import type { AnyWgslData } from '../../data';
 import type { AnyData } from '../../data/dataTypes';
 import { invariant } from '../../errors';
@@ -65,6 +65,10 @@ import {
   isTexture,
 } from '../texture/texture';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute';
+import {
+  type TgpuVertexLayout,
+  isVertexLayout,
+} from '../vertexLayout/vertexLayout';
 import type {
   CreateTextureOptions,
   CreateTextureResult,
@@ -92,7 +96,9 @@ class WithBindingImpl implements WithBinding {
     ]);
   }
 
-  withCompute(entryFn: TgpuComputeFn): WithCompute {
+  withCompute<ComputeIn extends Record<string, AnyComputeBuiltin>>(
+    entryFn: TgpuComputeFn<ComputeIn>,
+  ): WithCompute {
     return new WithComputeImpl(this._getRoot(), this._slotBindings, entryFn);
   }
 
@@ -307,6 +313,7 @@ class TgpuRootImpl
       | TgpuMutableTexture
       | TgpuSampledTexture,
   ): GPUTextureView;
+  unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
   unwrap(
     resource:
       | TgpuComputePipeline
@@ -317,14 +324,16 @@ class TgpuRootImpl
       | TgpuReadonlyTexture
       | TgpuWriteonlyTexture
       | TgpuMutableTexture
-      | TgpuSampledTexture,
+      | TgpuSampledTexture
+      | TgpuVertexLayout,
   ):
     | GPUComputePipeline
     | GPUBindGroupLayout
     | GPUBindGroup
     | GPUBuffer
     | GPUTexture
-    | GPUTextureView {
+    | GPUTextureView
+    | GPUVertexBufferLayout {
     if (isComputePipeline(resource)) {
       return (resource as unknown as INTERNAL_TgpuComputePipeline).rawPipeline;
     }
@@ -353,6 +362,10 @@ class TgpuRootImpl
     if (isSampledTextureView(resource)) {
       // TODO: Verify that `resource` is actually a fixed view, not a laid-out one
       return (resource as unknown as INTERNAL_TgpuFixedSampledTexture).unwrap();
+    }
+
+    if (isVertexLayout(resource)) {
+      return resource.vertexLayout;
     }
 
     throw new Error(`Unknown resource type: ${resource}`);

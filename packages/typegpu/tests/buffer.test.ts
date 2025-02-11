@@ -328,4 +328,65 @@ describe('TgpuBuffer', () => {
       [rawBuffer, 18, new Uint8Array([3, 0, 0, 0]), 0, 4],
     ]);
   });
+
+  it('should be able to copy from a buffer identical on the byte level', ({
+    root,
+  }) => {
+    const buffer = root.createBuffer(d.u32);
+    const copy = root.createBuffer(d.atomic(d.u32));
+
+    buffer.copyFrom(copy);
+
+    const buffer2 = root.createBuffer(
+      d.struct({
+        one: d.location(0, d.f32), // does nothing outside an IO struct
+        two: d.atomic(d.u32),
+        three: d.arrayOf(d.u32, 3),
+      }),
+    );
+    const copy2 = root.createBuffer(
+      d.struct({
+        one: d.f32,
+        two: d.u32,
+        three: d.arrayOf(d.atomic(d.u32), 3),
+      }),
+    );
+
+    buffer2.copyFrom(copy2);
+
+    const buffer3 = root.createBuffer(
+      d.struct({
+        one: d.size(16, d.f32),
+        two: d.atomic(d.u32),
+      }),
+    );
+
+    const copy3 = root.createBuffer(
+      d.struct({
+        one: d.f32,
+        two: d.u32,
+      }),
+    );
+
+    const copy31 = root.createBuffer(
+      d.struct({
+        one: d.location(0, d.f32),
+        two: d.u32,
+      }),
+    );
+
+    const copy32 = root.createBuffer(
+      d.struct({
+        one: d.size(12, d.f32),
+        two: d.u32,
+      }),
+    );
+
+    // @ts-expect-error
+    buffer3.copyFrom(copy3);
+    // @ts-expect-error
+    buffer3.copyFrom(copy31);
+    // @ts-expect-error
+    buffer3.copyFrom(copy32);
+  });
 });

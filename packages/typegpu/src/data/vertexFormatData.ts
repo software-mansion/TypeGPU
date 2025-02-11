@@ -30,7 +30,7 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat>
   constructor(public readonly type: T) {}
 }
 
-const formatToWGSLType = {
+export const formatToWGSLType = {
   uint8: u32,
   uint8x2: vec2u,
   uint8x4: vec4u,

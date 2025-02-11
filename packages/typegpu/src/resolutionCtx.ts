@@ -9,9 +9,10 @@ import {
   isProviding,
   isSlot,
 } from './core/slot/slotTypes';
+import { isLooseData } from './data';
 import {
   type AnyWgslData,
-  type BaseWgslData,
+  type BaseData,
   isWgslArray,
   isWgslData,
   isWgslStruct,
@@ -474,7 +475,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
 
       // If we got here, no item with the given slot-to-value combo exists in cache yet
       let result: string;
-      if (isWgslData(item)) {
+      if (isWgslData(item) || isLooseData(item)) {
         result = resolveData(this, item);
       } else if (isDerived(item) || isSlot(item)) {
         result = this.resolve(this.unwrap(item));
@@ -524,7 +525,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
     return String(item);
   }
 
-  resolveValue<T extends BaseWgslData>(
+  resolveValue<T extends BaseData>(
     value: Infer<T>,
     schema?: T | undefined,
   ): string {

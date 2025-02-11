@@ -4,7 +4,7 @@ import * as d from 'typegpu/data';
 const triangleAmount = 1000;
 const triangleSize = 0.03;
 
-const renderCode = /* wgsl */ `
+const utilityFunctions = /* wgsl */ `
   fn rotate(v: vec2f, angle: f32) -> vec2f {
     let pos = vec2(
       (v.x * cos(angle)) - (v.y * sin(angle)),
@@ -16,19 +16,13 @@ const renderCode = /* wgsl */ `
   fn getRotationFromVelocity(velocity: vec2f) -> f32 {
     return -atan2(velocity.x, velocity.y);
   };
+`;
 
-  struct TriangleData {
-    position : vec2f,
-    velocity : vec2f,
-  };
-
+const renderCode = /* wgsl */ `
   struct VertexOutput {
     @builtin(position) position : vec4f,
     @location(1) color : vec4f,
   };
-
-  @binding(0) @group(0) var<uniform> trianglePos : array<TriangleData, ${triangleAmount}>;
-  @binding(1) @group(0) var<uniform> colorPalette : vec3f;
 
   @vertex
   fn mainVert(@builtin(instance_index) ii: u32, @location(0) v: vec2f) -> VertexOutput {
@@ -56,24 +50,6 @@ const renderCode = /* wgsl */ `
 `;
 
 const computeCode = /* wgsl */ `
-  struct TriangleData {
-    position : vec2f,
-    velocity : vec2f,
-  };
-
-  struct Parameters {
-    separation_distance : f32,
-    separation_strength : f32,
-    alignment_distance : f32,
-    alignment_strength : f32,
-    cohesion_distance : f32,
-    cohesion_strength : f32,
-  };
-
-  @binding(0) @group(0) var<uniform> currentTrianglePos : array<TriangleData, ${triangleAmount}>;
-  @binding(1) @group(0) var<storage, read_write> nextTrianglePos : array<TriangleData, ${triangleAmount}>;
-  @binding(2) @group(0) var<storage> params : Parameters;
-
   @compute @workgroup_size(1)
   fn mainCompute(@builtin(global_invocation_id) gid: vec3u) {
     let index = gid.x;
@@ -89,14 +65,14 @@ const computeCode = /* wgsl */ `
       }
       var other = currentTrianglePos[i];
       var dist = distance(instanceInfo.position, other.position);
-      if (dist < params.separation_distance) {
+      if (dist < params.separationDistance) {
         separation += instanceInfo.position - other.position;
       }
-      if (dist < params.alignment_distance) {
+      if (dist < params.alignmentDistance) {
         alignment += other.velocity;
         alignmentCount++;
       }
-      if (dist < params.cohesion_distance) {
+      if (dist < params.cohesionDistance) {
         cohesion += other.position;
         cohesionCount++;
       }
@@ -108,9 +84,9 @@ const computeCode = /* wgsl */ `
       cohesion = (cohesion / f32(cohesionCount)) - instanceInfo.position;
     }
     instanceInfo.velocity +=
-      (separation * params.separation_strength)
-      + (alignment * params.alignment_strength)
-      + (cohesion * params.cohesion_strength);
+      (separation * params.separationStrength)
+      + (alignment * params.alignmentStrength)
+      + (cohesion * params.cohesionStrength);
     instanceInfo.velocity = normalize(instanceInfo.velocity) * clamp(length(instanceInfo.velocity), 0.0, 0.01);
     let triangleSize = ${triangleSize};
     if (instanceInfo.position[0] > 1.0 + triangleSize) {
@@ -223,13 +199,10 @@ const paramsBuffer = root
   .$usage('storage');
 
 const triangleVertexBuffer = root
-  .createBuffer(d.arrayOf(d.f32, 6), [
-    0.0,
-    triangleSize,
-    -triangleSize / 2,
-    -triangleSize / 2,
-    triangleSize / 2,
-    -triangleSize / 2,
+  .createBuffer(d.arrayOf(d.vec2f, 3), [
+    d.vec2f(0.0, triangleSize),
+    d.vec2f(-triangleSize / 2, -triangleSize / 2),
+    d.vec2f(triangleSize / 2, -triangleSize / 2),
   ])
   .$usage('vertex');
 
@@ -266,18 +239,43 @@ const updateParams = (newOptions: BoidsOptions) => {
   paramsBuffer.write(newOptions);
 };
 
-const renderModule = root.device.createShaderModule({
-  code: renderCode,
-});
-
-const computeModule = root.device.createShaderModule({
-  code: computeCode,
-});
-
 const renderBindGroupLayout = tgpu.bindGroupLayout({
   trianglePos: { uniform: d.arrayOf(TriangleInfoStruct, triangleAmount) },
   colorPalette: { uniform: d.vec3f },
 });
+
+const computeBindGroupLayout = tgpu.bindGroupLayout({
+  currentTrianglePos: {
+    uniform: d.arrayOf(TriangleInfoStruct, triangleAmount),
+  },
+  nextTrianglePos: {
+    storage: d.arrayOf(TriangleInfoStruct, triangleAmount),
+    access: 'mutable',
+  },
+  params: { storage: Params },
+});
+
+const renderModule = root.device.createShaderModule({
+  code: tgpu.resolve({
+    template: renderCode.concat(utilityFunctions),
+    externals: {
+      ...renderBindGroupLayout.bound,
+    },
+  }),
+});
+
+const computeModule = root.device.createShaderModule({
+  code: tgpu.resolve({
+    template: computeCode,
+    externals: {
+      ...computeBindGroupLayout.bound,
+    },
+  }),
+});
+
+const vertexLayout = tgpu['~unstable'].vertexLayout((n) =>
+  d.arrayOf(d.location(0, d.vec2f), n),
+);
 
 const pipeline = root.device.createRenderPipeline({
   layout: root.device.createPipelineLayout({
@@ -285,18 +283,7 @@ const pipeline = root.device.createRenderPipeline({
   }),
   vertex: {
     module: renderModule,
-    buffers: [
-      {
-        arrayStride: 2 * 4,
-        attributes: [
-          {
-            shaderLocation: 0,
-            offset: 0,
-            format: 'float32x2' as const,
-          },
-        ],
-      },
-    ],
+    buffers: [root.unwrap(vertexLayout)],
   },
   fragment: {
     module: renderModule,
@@ -309,17 +296,6 @@ const pipeline = root.device.createRenderPipeline({
   primitive: {
     topology: 'triangle-list',
   },
-});
-
-const computeBindGroupLayout = tgpu.bindGroupLayout({
-  currentTrianglePos: {
-    uniform: d.arrayOf(TriangleInfoStruct, triangleAmount),
-  },
-  nextTrianglePos: {
-    storage: d.arrayOf(TriangleInfoStruct, triangleAmount),
-    access: 'mutable',
-  },
-  params: { storage: Params },
 });
 
 const computePipeline = root.device.createComputePipeline({
@@ -410,7 +386,7 @@ export const controls = {
     onButtonClick: () => updateParams(presets.blobs),
   },
 
-  '⚛️ Particles': {
+  '⚛ Particles': {
     onButtonClick: () => updateParams(presets.particles),
   },
 

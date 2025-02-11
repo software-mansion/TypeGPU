@@ -1,3 +1,4 @@
+import { mat2x2f, mat3x3f, mat4x4f } from './matrix';
 import {
   type VecKind,
   vec2f,
@@ -19,6 +20,8 @@ type vBase = { kind: VecKind };
 type v2 = wgsl.v2f | wgsl.v2h | wgsl.v2i | wgsl.v2u;
 type v3 = wgsl.v3f | wgsl.v3h | wgsl.v3i | wgsl.v3u;
 type v4 = wgsl.v4f | wgsl.v4h | wgsl.v4i | wgsl.v4u;
+
+type MatKind = 'mat2x2f' | 'mat3x3f' | 'mat4x4f';
 
 const lengthVec2 = (v: v2) => Math.sqrt(v.x ** 2 + v.y ** 2);
 const lengthVec3 = (v: v3) => Math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2);
@@ -222,7 +225,57 @@ export const VectorOps = {
       vec4i(s * v.x, s * v.y, s * v.z, s * v.w),
     vec4u: (s: number, v: wgsl.v4u) =>
       vec4u(s * v.x, s * v.y, s * v.z, s * v.w),
-  } as Record<VecKind, <T extends vBase>(s: number, v: T) => T>,
+
+    mat2x2f: (s: number, m: wgsl.m2x2f) => {
+      const m_ = m.columns as [wgsl.v2f, wgsl.v2f];
+      return mat2x2f(s * m_[0].x, s * m_[0].y, s * m_[1].x, s * m_[1].y);
+    },
+
+    mat3x3f: (s: number, m: wgsl.m3x3f) => {
+      const m_ = m.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
+      return mat3x3f(
+        s * m_[0].x,
+        s * m_[0].y,
+        s * m_[0].z,
+
+        s * m_[1].x,
+        s * m_[1].y,
+        s * m_[1].z,
+
+        s * m_[2].x,
+        s * m_[2].y,
+        s * m_[2].z,
+      );
+    },
+
+    mat4x4f: (s: number, m: wgsl.m4x4f) => {
+      const m_ = m.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
+      return mat3x3f(
+        s * m_[0].x,
+        s * m_[0].y,
+        s * m_[0].z,
+        s * m_[0].w,
+
+        s * m_[1].x,
+        s * m_[1].y,
+        s * m_[1].z,
+        s * m_[1].w,
+
+        s * m_[2].x,
+        s * m_[2].y,
+        s * m_[2].z,
+        s * m_[2].w,
+
+        s * m_[3].x,
+        s * m_[3].y,
+        s * m_[3].z,
+        s * m_[3].w,
+      );
+    },
+  } as Record<
+    VecKind | MatKind,
+    <T extends vBase | wgsl.AnyMatInstance>(s: number, v: T) => T
+  >,
 
   mulVxV: {
     vec2f: (a: wgsl.v2f, b: wgsl.v2f) => vec2f(a.x * b.x, a.y * b.y),
@@ -243,7 +296,117 @@ export const VectorOps = {
       vec4i(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w),
     vec4u: (a: wgsl.v4u, b: wgsl.v4u) =>
       vec4u(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w),
-  } as Record<VecKind, <T extends vBase>(lhs: T, rhs: T) => T>,
+
+    mat2x2f: (a: wgsl.m2x2f, b: wgsl.m2x2f) => {
+      const a_ = a.columns as [wgsl.v2f, wgsl.v2f];
+      const b_ = b.columns as [wgsl.v2f, wgsl.v2f];
+
+      return mat2x2f(
+        a_[0].x * b_[0].x + a_[1].x * b_[0].y,
+        a_[0].y * b_[0].x + a_[1].y * b_[0].y,
+
+        a_[0].x * b_[1].x + a_[1].x * b_[1].y,
+        a_[0].y * b_[1].x + a_[1].y * b_[1].y,
+      );
+    },
+
+    mat3x3f: (a: wgsl.m3x3f, b: wgsl.m3x3f) => {
+      const a_ = a.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
+      const b_ = b.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
+
+      return mat3x3f(
+        a_[0].x * b_[0].x + a_[1].x * b_[0].y + a_[2].x * b_[0].z,
+        a_[0].y * b_[0].x + a_[1].y * b_[0].y + a_[2].y * b_[0].z,
+        a_[0].z * b_[0].x + a_[1].z * b_[0].y + a_[2].z * b_[0].z,
+
+        a_[0].x * b_[1].x + a_[1].x * b_[1].y + a_[2].x * b_[1].z,
+        a_[0].y * b_[1].x + a_[1].y * b_[1].y + a_[2].y * b_[1].z,
+        a_[0].z * b_[1].x + a_[1].z * b_[1].y + a_[2].z * b_[1].z,
+
+        a_[0].x * b_[2].x + a_[1].x * b_[2].y + a_[2].x * b_[2].z,
+        a_[0].y * b_[2].x + a_[1].y * b_[2].y + a_[2].y * b_[2].z,
+        a_[0].z * b_[2].x + a_[1].z * b_[2].y + a_[2].z * b_[2].z,
+      );
+    },
+
+    mat4x4f: (a: wgsl.m4x4f, b: wgsl.m4x4f) => {
+      const a_ = a.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
+      const b_ = b.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
+
+      return mat4x4f(
+        a_[0].x * b_[0].x +
+          a_[1].x * b_[0].y +
+          a_[2].x * b_[0].z +
+          a_[3].x * b_[0].w,
+        a_[0].y * b_[0].x +
+          a_[1].y * b_[0].y +
+          a_[2].y * b_[0].z +
+          a_[3].y * b_[0].w,
+        a_[0].z * b_[0].x +
+          a_[1].z * b_[0].y +
+          a_[2].z * b_[0].z +
+          a_[3].z * b_[0].w,
+        a_[0].w * b_[0].x +
+          a_[1].w * b_[0].y +
+          a_[2].w * b_[0].z +
+          a_[3].w * b_[0].w,
+
+        a_[0].x * b_[1].x +
+          a_[1].x * b_[1].y +
+          a_[2].x * b_[1].z +
+          a_[3].x * b_[1].w,
+        a_[0].y * b_[1].x +
+          a_[1].y * b_[1].y +
+          a_[2].y * b_[1].z +
+          a_[3].y * b_[1].w,
+        a_[0].z * b_[1].x +
+          a_[1].z * b_[1].y +
+          a_[2].z * b_[1].z +
+          a_[3].z * b_[1].w,
+        a_[0].w * b_[1].x +
+          a_[1].w * b_[1].y +
+          a_[2].w * b_[1].z +
+          a_[3].w * b_[1].w,
+
+        a_[0].x * b_[2].x +
+          a_[1].x * b_[2].y +
+          a_[2].x * b_[2].z +
+          a_[3].x * b_[2].w,
+        a_[0].y * b_[2].x +
+          a_[1].y * b_[2].y +
+          a_[2].y * b_[2].z +
+          a_[3].y * b_[2].w,
+        a_[0].z * b_[2].x +
+          a_[1].z * b_[2].y +
+          a_[2].z * b_[2].z +
+          a_[3].z * b_[2].w,
+        a_[0].w * b_[2].x +
+          a_[1].w * b_[2].y +
+          a_[2].w * b_[2].z +
+          a_[3].w * b_[2].w,
+
+        a_[0].x * b_[3].x +
+          a_[1].x * b_[3].y +
+          a_[2].x * b_[3].z +
+          a_[3].x * b_[3].w,
+        a_[0].y * b_[3].x +
+          a_[1].y * b_[3].y +
+          a_[2].y * b_[3].z +
+          a_[3].y * b_[3].w,
+        a_[0].z * b_[3].x +
+          a_[1].z * b_[3].y +
+          a_[2].z * b_[3].z +
+          a_[3].z * b_[3].w,
+        a_[0].w * b_[3].x +
+          a_[1].w * b_[3].y +
+          a_[2].w * b_[3].z +
+          a_[3].w * b_[3].w,
+      );
+    },
+  } as Record<
+    VecKind | MatKind,
+    <T extends vBase | wgsl.AnyMatInstance>(lhs: T, rhs: T) => T
+  >,
 
   dot: {
     vec2f: dotVec2,

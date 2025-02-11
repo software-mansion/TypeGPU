@@ -1,7 +1,12 @@
 import type { TgpuNamable } from '../namable';
+import type {
+  InferPartialRecord,
+  InferRecord,
+  MemIdentityRecord,
+} from '../shared/repr';
 import type { Prettify } from '../shared/utilityTypes';
 import type { ExoticRecord } from './exotic';
-import type { AnyWgslData, BaseWgslData, WgslStruct } from './wgslTypes';
+import type { AnyWgslData, BaseData } from './wgslTypes';
 
 // ----------
 // Public API
@@ -14,11 +19,23 @@ import type { AnyWgslData, BaseWgslData, WgslStruct } from './wgslTypes';
  * between binary and JS representation. Takes into account
  * the `byteAlignment` requirement of its members.
  */
-export interface TgpuStruct<TProps extends Record<string, BaseWgslData>>
-  extends WgslStruct<TProps>,
-    TgpuNamable {
-  readonly '~exotic': WgslStruct<TProps>;
+export interface WgslStruct<
+  TProps extends Record<string, BaseData> = Record<string, BaseData>,
+> extends TgpuNamable {
+  (props: InferRecord<TProps>): InferRecord<TProps>;
+  readonly type: 'struct';
+  readonly label?: string | undefined;
+  readonly propTypes: TProps;
+  /** Type-token, not available at runtime */
+  readonly '~repr': InferRecord<TProps>;
+  /** Type-token, not available at runtime */
+  readonly '~memIdent': WgslStruct<MemIdentityRecord<TProps>>;
+  /** Type-token, not available at runtime */
+  readonly '~reprPartial': Partial<InferPartialRecord<TProps>>;
 }
+
+// biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than WgslStruct<Record<string, BaseWgslData>>
+export type AnyWgslStruct = WgslStruct<any>;
 
 /**
  * Creates a struct schema that can be used to construct GPU buffers.
@@ -31,21 +48,21 @@ export interface TgpuStruct<TProps extends Record<string, BaseWgslData>>
  * @param props Record with `string` keys and `TgpuData` values,
  * each entry describing one struct member.
  */
-export const struct = <TProps extends Record<string, AnyWgslData>>(
+export function struct<TProps extends Record<string, AnyWgslData>>(
   props: TProps,
-): TgpuStruct<Prettify<ExoticRecord<TProps>>> => {
+): WgslStruct<Prettify<ExoticRecord<TProps>>> {
   const struct = <T>(props: T) => props;
-  Object.setPrototypeOf(struct, TgpuStructImpl);
+  Object.setPrototypeOf(struct, WgslStructImpl);
   struct.propTypes = props as ExoticRecord<TProps>;
 
-  return struct as unknown as TgpuStruct<Prettify<ExoticRecord<TProps>>>;
-};
+  return struct as unknown as WgslStruct<Prettify<ExoticRecord<TProps>>>;
+}
 
 // --------------
 // Implementation
 // --------------
 
-const TgpuStructImpl = {
+const WgslStructImpl = {
   type: 'struct',
   _label: undefined as string | undefined,
 

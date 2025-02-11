@@ -1,4 +1,4 @@
-import type { Infer } from '../shared/repr';
+import type { Infer, MemIdentity } from '../shared/repr';
 import { alignmentOf } from './alignmentOf';
 import {
   type AnyData,
@@ -13,7 +13,7 @@ import { sizeOf } from './sizeOf';
 import {
   type Align,
   type AnyWgslData,
-  type BaseWgslData,
+  type BaseData,
   type Builtin,
   type Decorated,
   type FlatInterpolatableData,
@@ -85,7 +85,7 @@ type Undecorate<T> = T extends { readonly inner: infer TInner } ? TInner : T;
  *     - Wrap `TData` with `Decorated` and a single attribute `[TAttrib]`
  */
 export type Decorate<
-  TData extends BaseWgslData,
+  TData extends BaseData,
   TAttrib extends AnyAttribute,
 > = TData['type'] extends WgslTypeLiteral
   ? Decorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
@@ -105,10 +105,10 @@ export type HasCustomLocation<T> = ExtractAttributes<T>[number] extends []
     ? true
     : false;
 
-export function attribute<
-  TData extends BaseWgslData,
-  TAttrib extends AnyAttribute,
->(data: TData, attrib: TAttrib): Decorated | LooseDecorated {
+export function attribute<TData extends BaseData, TAttrib extends AnyAttribute>(
+  data: TData,
+  attrib: TAttrib,
+): Decorated | LooseDecorated {
   if (isDecorated(data)) {
     return new DecoratedImpl(data.inner, [
       attrib,
@@ -266,7 +266,7 @@ export function isBuiltin<
   );
 }
 
-export function getAttributesString<T extends BaseWgslData>(field: T): string {
+export function getAttributesString<T extends BaseData>(field: T): string {
   if (!isDecorated(field) && !isLooseDecorated(field)) {
     return '';
   }
@@ -280,10 +280,7 @@ export function getAttributesString<T extends BaseWgslData>(field: T): string {
 // Implementation
 // --------------
 
-class BaseDecoratedImpl<
-  TInner extends BaseWgslData,
-  TAttribs extends unknown[],
-> {
+class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
   // Type-token, not available at runtime
   public readonly '~repr'!: Infer<TInner>;
 
@@ -332,17 +329,17 @@ class BaseDecoratedImpl<
   }
 }
 
-class DecoratedImpl<TInner extends BaseWgslData, TAttribs extends unknown[]>
+class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements Decorated<TInner, TAttribs>
 {
   public readonly type = 'decorated';
+  public readonly '~memIdent'!: TAttribs extends Location<number>[]
+    ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
+    : Decorated<MemIdentity<TInner>, TAttribs>;
 }
 
-class LooseDecoratedImpl<
-    TInner extends BaseWgslData,
-    TAttribs extends unknown[],
-  >
+class LooseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements LooseDecorated<TInner, TAttribs>
 {

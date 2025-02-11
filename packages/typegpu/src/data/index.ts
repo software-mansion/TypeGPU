@@ -17,7 +17,8 @@ export {
   isSizeAttrib,
 } from './wgslTypes';
 export type {
-  BaseWgslData,
+  BaseData,
+  BaseData as BaseWgslData,
   Bool,
   F32,
   F16,
@@ -38,7 +39,6 @@ export type {
   Mat2x2f,
   Mat3x3f,
   Mat4x4f,
-  WgslStruct,
   WgslArray,
   PtrFn,
   Atomic,
@@ -63,7 +63,7 @@ export type {
   m4x4f,
 } from './wgslTypes';
 export {
-  TgpuStruct,
+  WgslStruct,
   struct,
 } from './struct';
 export {
@@ -131,7 +131,6 @@ export {
   BuiltinFragDepth,
   BuiltinSampleIndex,
   BuiltinSampleMask,
-  BuiltinFragment,
   BuiltinLocalInvocationId,
   BuiltinLocalInvocationIndex,
   BuiltinGlobalInvocationId,

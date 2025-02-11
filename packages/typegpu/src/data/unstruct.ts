@@ -1,7 +1,7 @@
 import type { InferPartialRecord, InferRecord } from '../shared/repr';
 import type { Unstruct } from './dataTypes';
 import type { ExoticRecord } from './exotic';
-import type { BaseWgslData } from './wgslTypes';
+import type { BaseData } from './wgslTypes';
 
 // ----------
 // Public API
@@ -25,7 +25,7 @@ import type { BaseWgslData } from './wgslTypes';
  * @param properties Record with `string` keys and `TgpuData` or `TgpuLooseData` values,
  * each entry describing one struct member.
  */
-export const unstruct = <TProps extends Record<string, BaseWgslData>>(
+export const unstruct = <TProps extends Record<string, BaseData>>(
   properties: TProps,
 ): Unstruct<ExoticRecord<TProps>> =>
   new UnstructImpl(properties as ExoticRecord<TProps>);
@@ -34,9 +34,11 @@ export const unstruct = <TProps extends Record<string, BaseWgslData>>(
 // Implementation
 // --------------
 
-class UnstructImpl<TProps extends Record<string, BaseWgslData>>
+class UnstructImpl<TProps extends Record<string, BaseData>>
   implements Unstruct<TProps>
 {
+  private _label: string | undefined;
+
   public readonly type = 'unstruct';
   /** Type-token, not available at runtime */
   public readonly '~repr'!: InferRecord<TProps>;
@@ -44,4 +46,13 @@ class UnstructImpl<TProps extends Record<string, BaseWgslData>>
   public readonly '~reprPartial'!: Partial<InferPartialRecord<TProps>>;
 
   constructor(public readonly propTypes: TProps) {}
+
+  get label() {
+    return this._label;
+  }
+
+  $name(label: string) {
+    this._label = label;
+    return this;
+  }
 }

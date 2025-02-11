@@ -8,6 +8,7 @@ import type { WgslTypeLiteral } from '../../data/wgslTypes';
 import type { Storage } from '../../extension';
 import type { TgpuNamable } from '../../namable';
 import type { Infer, InferPartial } from '../../shared/repr';
+import type { MemIdentity } from '../../shared/repr';
 import type { UnionToIntersection } from '../../shared/utilityTypes';
 import { isGPUBuffer } from '../../types';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
@@ -52,7 +53,7 @@ export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
 
   write(data: Infer<TData>): void;
   writePartial(data: InferPartial<TData>): void;
-  copyFrom(srcBuffer: TgpuBuffer<TData>): void;
+  copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void;
   read(): Promise<Infer<TData>>;
   destroy(): void;
 }
@@ -256,7 +257,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     }
   }
 
-  copyFrom(srcBuffer: TgpuBuffer<TData>): void {
+  copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void {
     if (this.buffer.mapState === 'mapped') {
       throw new Error('Cannot copy to a mapped buffer.');
     }

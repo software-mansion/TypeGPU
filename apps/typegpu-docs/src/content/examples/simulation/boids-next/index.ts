@@ -214,17 +214,17 @@ const computeBindGroupLayout = tgpu
 const { currentTrianglePos, nextTrianglePos } = computeBindGroupLayout.bound;
 
 const mainCompute = tgpu['~unstable']
-  .computeFn([], { workgroupSize: [1] })
-  .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
-    let index = gid.x;
+  .computeFn({ gid: d.builtin.globalInvocationId }, { workgroupSize: [1] })
+  .does(/* wgsl */ `(input: ComputeInput) {
+    let index = input.gid.x;
     var instanceInfo = currentTrianglePos[index];
-    var separation = vec2(0.0, 0.0);
-    var alignment = vec2(0.0, 0.0);
+    var separation = vec2f();
+    var alignment = vec2f();
+    var cohesion = vec2f();
     var alignmentCount = 0u;
-    var cohesion = vec2(0.0, 0.0);
     var cohesionCount = 0u;
 
-    for (var i = 0u; i < arrayLength(&currentTrianglePos); i = i + 1) {
+    for (var i = 0u; i < arrayLength(&currentTrianglePos); i += 1) {
       if (i == index) {
         continue;
       }

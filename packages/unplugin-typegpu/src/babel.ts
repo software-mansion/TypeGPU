@@ -34,8 +34,8 @@ function functionVisitor(ctx: Context): TraverseOptions {
 
         if (
           implementation &&
-          !(implementation.type === 'TemplateLiteral') &&
-          !(implementation.type === 'StringLiteral')
+          (implementation.type === 'FunctionExpression' ||
+            implementation.type === 'ArrowFunctionExpression')
         ) {
           const { argNames, body, externalNames } = transpileFn(implementation);
 
@@ -44,9 +44,14 @@ function functionVisitor(ctx: Context): TraverseOptions {
               types.callExpression(template.expression('tgpu.__assignAst')(), [
                 implementation,
                 template.expression`${embedJSON({ argNames, body, externalNames })}`(),
-                externalNames.length > 0
-                  ? template.expression`{${externalNames.join(', ')}}`()
-                  : template.expression`undefined`(),
+                types.objectExpression(
+                  externalNames.map((name) =>
+                    types.objectProperty(
+                      types.identifier(name),
+                      types.identifier(name),
+                    ),
+                  ),
+                ),
               ]),
             ]),
           );
