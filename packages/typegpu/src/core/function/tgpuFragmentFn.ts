@@ -3,12 +3,8 @@ import type {
   BuiltinSampleMask,
   OmitBuiltins,
 } from '../../builtin';
-import type {
-  AnyWgslStruct,
-  Decorated,
-  Location,
-  Vec4f,
-} from '../../data/wgslTypes';
+import type { AnyWgslStruct } from '../../data/struct';
+import type { Decorated, Location, Vec4f } from '../../data/wgslTypes';
 import { type TgpuNamable, isNamable } from '../../namable';
 import type { GenerationCtx } from '../../smol/wgslGenerator';
 import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
