@@ -5,11 +5,11 @@ type Props = {
 
 export function TextArea({ value, onChange }: Props) {
   return (
-    <input 
+    <input
       className="box-border p-3 bg-grayscale-20 h-10 rounded-[0.25rem] relative flex overflow-hidden"
-      type="text" 
+      type="text"
       value={value}
-      onChange = {(event) => onChange(event.target.value)}
+      onChange={(event) => onChange(event.target.value)}
     />
   );
 }
