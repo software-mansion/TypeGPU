@@ -3,7 +3,7 @@ import { isWgslData } from '../../data';
 import { readData, writeData } from '../../data/dataIO';
 import type { AnyData } from '../../data/dataTypes';
 import { sizeOf } from '../../data/sizeOf';
-import type { BaseWgslData, WgslTypeLiteral } from '../../data/wgslTypes';
+import type { BaseData, WgslTypeLiteral } from '../../data/wgslTypes';
 import type { Storage } from '../../extension';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
@@ -42,19 +42,19 @@ type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
         ? Vertex
         : never;
 
-type ViewUsages<TBuffer extends TgpuBuffer<BaseWgslData>> =
+type ViewUsages<TBuffer extends TgpuBuffer<BaseData>> =
   | (boolean extends TBuffer['usableAsUniform'] ? never : 'uniform')
   | (boolean extends TBuffer['usableAsStorage']
       ? never
       : 'readonly' | 'mutable');
 
-type UsageTypeToBufferUsage<TData extends BaseWgslData> = {
+type UsageTypeToBufferUsage<TData extends BaseData> = {
   uniform: TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData>;
   mutable: TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData>;
   readonly: TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData>;
 };
 
-export interface TgpuBuffer<TData extends BaseWgslData> extends TgpuNamable {
+export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly resourceType: 'buffer';
   readonly dataType: TData;
   readonly initial?: Infer<TData> | undefined;
@@ -74,7 +74,7 @@ export interface TgpuBuffer<TData extends BaseWgslData> extends TgpuNamable {
 
   as<T extends ViewUsages<this>>(
     usage: T,
-  ): TData extends BaseWgslData ? UsageTypeToBufferUsage<TData>[T] : never;
+  ): TData extends BaseData ? UsageTypeToBufferUsage<TData>[T] : never;
 
   write(data: Infer<TData>): void;
   copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void;
@@ -112,7 +112,7 @@ export function isUsableAsVertex<T extends TgpuBuffer<AnyData>>(
 // Implementation
 // --------------
 
-type RestrictVertexUsages<TData extends BaseWgslData> = TData extends {
+type RestrictVertexUsages<TData extends BaseData> = TData extends {
   readonly type: WgslTypeLiteral;
 }
   ? ('uniform' | 'storage' | 'vertex')[]
@@ -310,7 +310,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
 
   as<T extends ViewUsages<this>>(
     usage: T,
-  ): TData extends BaseWgslData ? UsageTypeToBufferUsage<TData>[T] : never {
+  ): TData extends BaseData ? UsageTypeToBufferUsage<TData>[T] : never {
     return (
       usage === 'uniform'
         ? asUniform(this as never)
@@ -319,7 +319,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
           : usage === 'readonly'
             ? asReadonly(this as never)
             : null
-    ) as TData extends BaseWgslData ? UsageTypeToBufferUsage<TData>[T] : never;
+    ) as TData extends BaseData ? UsageTypeToBufferUsage<TData>[T] : never;
   }
 
   destroy() {
