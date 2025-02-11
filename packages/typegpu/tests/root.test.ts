@@ -1,4 +1,5 @@
 import { describe, expect, vi } from 'vitest';
+import tgpu from '../src';
 import * as d from '../src/data';
 import { it } from './utils/extendedIt';
 
@@ -99,6 +100,64 @@ describe('TgpuRoot', () => {
 
       const buffer = root.createBuffer(d.u32, rawBuffer);
       expect(root.unwrap(buffer)).toBe(rawBuffer);
+    });
+
+    it('should return the correct GPUVertexBufferLayout for a simple vertex layout', ({
+      root,
+    }) => {
+      const vertexLayout = tgpu['~unstable'].vertexLayout(
+        (n) => d.arrayOf(d.location(0, d.vec2u), n),
+        'vertex',
+      );
+
+      expect(root.unwrap(vertexLayout)).toEqual({
+        arrayStride: 8,
+        stepMode: 'vertex',
+        attributes: [
+          {
+            format: 'uint32x2',
+            offset: 0,
+            shaderLocation: 0,
+          },
+        ],
+      });
+    });
+
+    it('should return the correct GPUVertexBufferLayout for a complex vertex layout', ({
+      root,
+    }) => {
+      const VertexData = d.unstruct({
+        position: d.location(0, d.float32x3),
+        color: d.location(1, d.unorm10_10_10_2),
+        something: d.location(2, d.u32),
+      });
+
+      const vertexLayout = tgpu['~unstable'].vertexLayout(
+        (n) => d.disarrayOf(VertexData, n),
+        'instance',
+      );
+
+      expect(root.unwrap(vertexLayout)).toEqual({
+        arrayStride: 20,
+        stepMode: 'instance',
+        attributes: [
+          {
+            format: 'float32x3',
+            offset: 0,
+            shaderLocation: 0,
+          },
+          {
+            format: 'unorm10-10-10-2',
+            offset: 12,
+            shaderLocation: 1,
+          },
+          {
+            format: 'uint32',
+            offset: 16,
+            shaderLocation: 2,
+          },
+        ],
+      });
     });
   });
 

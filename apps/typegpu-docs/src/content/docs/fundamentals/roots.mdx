@@ -55,9 +55,13 @@ untyped value of a typed resource, use the `root.unwrap` function.
 | `root.unwrap(resource: TgpuBuffer<AnyData>)` | Returns a `GPUBuffer`. |
 | `root.unwrap(resource: TgpuBindGroupLayout)` | Returns a `GPUBindGroupLayout`. |
 | `root.unwrap(resource: TgpuBindGroup)` | Returns a `GPUBindGroup`. |
+| `root.unwrap(resource: TgpuVertexLayout)` | Returns a `GPUVertexBufferLayout`. |
 {/* | `root.unwrap(resource: TgpuTexture)` | Returns a `GPUTexture`. | */}
 {/* | `root.unwrap(resource: TgpuReadonlyTexture \| TgpuWriteonlyTexture \| TgpuMutableTexture \| TgpuSampledTexture)` | Returns a `GPUTextureView`. | */}
 
+:::note
+To unwrap a `TgpuVertexLayout` make sure to explicitly mark each of its attributes with the appropriate location using `d.location(...)`.
+:::
 
 ## Destroying resources
 
@@ -86,7 +90,7 @@ import React from 'react';
 function SceneView() {
   const ref = useWebGPU(({ context, device, presentationFormat }) => {
     const root = tgpu.initFromDevice({ device });
-  
+
     // create all resources...
   });
 

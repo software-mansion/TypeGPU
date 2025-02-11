@@ -16,9 +16,9 @@ export interface ConnectAttributesToShaderResult {
   bufferDefinitions: GPUVertexBufferLayout[];
 }
 
-function isAttribute<T extends TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib>(
-  value: unknown | T,
-): value is T {
+export function isAttribute<
+  T extends TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib,
+>(value: unknown | T): value is T {
   return typeof (value as T)?.format === 'string';
 }
 
