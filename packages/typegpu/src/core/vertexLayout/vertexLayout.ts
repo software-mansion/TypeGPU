@@ -7,7 +7,7 @@ import {
 import type { Disarray } from '../../data/dataTypes';
 import { sizeOf } from '../../data/sizeOf';
 import { isDecorated, isWgslStruct } from '../../data/wgslTypes';
-import type { BaseWgslData, WgslArray } from '../../data/wgslTypes';
+import type { BaseData, WgslArray } from '../../data/wgslTypes';
 import { roundUp } from '../../mathUtils';
 import type { TgpuNamable } from '../../namable';
 import {
@@ -67,7 +67,7 @@ const defaultAttribEntry = Symbol('defaultAttribEntry');
 
 function dataToContainedAttribs<
   TLayoutData extends WgslArray | Disarray,
-  TData extends BaseWgslData,
+  TData extends BaseData,
 >(
   layout: TgpuVertexLayout<TLayoutData>,
   data: TData,

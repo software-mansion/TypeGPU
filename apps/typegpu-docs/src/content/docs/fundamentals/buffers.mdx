@@ -43,7 +43,7 @@ const buffer = root
       health: 100,
     })),
   );
-// ^? TgpuBuffer<TgpuArray<TgpuStruct<{
+// ^? TgpuBuffer<d.WgslArray<d.WgslStruct<{
 //      position: d.Vec3f,
 //      velocity: d.Vec3f,
 //      health: d.F32,
@@ -76,11 +76,11 @@ const countBuffer = root.createBuffer(d.u32);
 
 const listBuffer = root
   .createBuffer(d.arrayOf(d.f32));
-// ^? TgpuBuffer<d.TgpuArray<d.F32>>
+// ^? TgpuBuffer<d.WgslArray<d.F32>>
 
 const uniformsBuffer = root
   .createBuffer(d.struct({ a: d.f32, b: d.f32 }));
-// ^? TgpuBuffer<d.TgpuStruct<{ a: d.F32, b: d.F32 }>>
+// ^? TgpuBuffer<d.WgslStruct<{ a: d.F32, b: d.F32 }>>
 ```
 
 ### Usage flags

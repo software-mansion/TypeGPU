@@ -12,9 +12,7 @@ import * as wgsl from './wgslTypes';
  * unless they are explicitly decorated with the custom align attribute
  * via `d.align` function.
  */
-export interface Disarray<
-  TElement extends wgsl.BaseWgslData = wgsl.BaseWgslData,
-> {
+export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
   readonly type: 'disarray';
   readonly elementCount: number;
   readonly elementType: TElement;
@@ -30,10 +28,7 @@ export interface Disarray<
  * via `d.align` function.
  */
 export interface Unstruct<
-  TProps extends Record<string, wgsl.BaseWgslData> = Record<
-    string,
-    wgsl.BaseWgslData
-  >,
+  TProps extends Record<string, wgsl.BaseData> = Record<string, wgsl.BaseData>,
 > extends TgpuNamable {
   readonly label?: string | undefined;
   readonly type: 'unstruct';
@@ -42,7 +37,7 @@ export interface Unstruct<
 }
 
 export interface LooseDecorated<
-  TInner extends wgsl.BaseWgslData = wgsl.BaseWgslData,
+  TInner extends wgsl.BaseData = wgsl.BaseData,
   TAttribs extends unknown[] = unknown[],
 > {
   readonly type: 'loose-decorated';
@@ -110,21 +105,19 @@ export function isLooseDecorated<T extends LooseDecorated>(
   return (value as T)?.type === 'loose-decorated';
 }
 
-export function getCustomAlignment(
-  data: wgsl.BaseWgslData,
-): number | undefined {
+export function getCustomAlignment(data: wgsl.BaseData): number | undefined {
   return (data as unknown as wgsl.Decorated | LooseDecorated).attribs?.find(
     wgsl.isAlignAttrib,
   )?.value;
 }
 
-export function getCustomSize(data: wgsl.BaseWgslData): number | undefined {
+export function getCustomSize(data: wgsl.BaseData): number | undefined {
   return (data as unknown as wgsl.Decorated | LooseDecorated).attribs?.find(
     wgsl.isSizeAttrib,
   )?.value;
 }
 
-export function getCustomLocation(data: wgsl.BaseWgslData): number | undefined {
+export function getCustomLocation(data: wgsl.BaseData): number | undefined {
   return (data as unknown as wgsl.Decorated | LooseDecorated).attribs?.find(
     wgsl.isLocationAttrib,
   )?.value;

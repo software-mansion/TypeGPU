@@ -12,7 +12,7 @@ import {
 import { isLooseData } from './data';
 import {
   type AnyWgslData,
-  type BaseWgslData,
+  type BaseData,
   isWgslArray,
   isWgslData,
   isWgslStruct,
@@ -525,7 +525,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
     return String(item);
   }
 
-  resolveValue<T extends BaseWgslData>(
+  resolveValue<T extends BaseData>(
     value: Infer<T>,
     schema?: T | undefined,
   ): string {
