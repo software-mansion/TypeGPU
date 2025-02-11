@@ -468,15 +468,6 @@ class mat4x4fImpl extends mat4x4Impl<v4f> implements m4x4f {
 // ----------
 
 /**
- * Type of the `d.mat2x2f` object/function: matrix data type schema/constructor
- */
-export type NativeMat2x2f = Mat2x2f & { '~exotic': Mat2x2f } & ((
-    ...elements: number[]
-  ) => m2x2f) &
-  ((...columns: v2f[]) => m2x2f) &
-  (() => m2x2f);
-
-/**
  *
  * Schema representing mat2x2f - a matrix with 2 rows and 2 columns, with elements of type f32.
  * Also a constructor function for this matrix type.
@@ -503,16 +494,7 @@ export const mat2x2f = createMatSchema<'mat2x2f', m2x2f, v2f>({
   rows: 2,
   columns: 2,
   makeFromElements: (...elements: number[]) => new mat2x2fImpl(...elements),
-}) as NativeMat2x2f;
-
-/**
- * Type of the `d.mat3x3f` object/function: matrix data type schema/constructor
- */
-export type NativeMat3x3f = Mat3x3f & { '~exotic': Mat3x3f } & ((
-    ...elements: number[]
-  ) => m3x3f) &
-  ((...columns: v3f[]) => m3x3f) &
-  (() => m3x3f);
+}) as Mat2x2f;
 
 /**
  *
@@ -543,16 +525,7 @@ export const mat3x3f = createMatSchema<'mat3x3f', m3x3f, v3f>({
   rows: 3,
   columns: 3,
   makeFromElements: (...elements: number[]) => new mat3x3fImpl(...elements),
-}) as NativeMat3x3f;
-
-/**
- * Type of the `d.mat4x4f` object/function: matrix data type schema/constructor
- */
-export type NativeMat4x4f = Mat4x4f & { '~exotic': Mat4x4f } & ((
-    ...elements: number[]
-  ) => m4x4f) &
-  ((...columns: v4f[]) => m4x4f) &
-  (() => m4x4f);
+}) as Mat3x3f;
 
 /**
  *
@@ -585,7 +558,7 @@ export const mat4x4f = createMatSchema<'mat4x4f', m4x4f, v4f>({
   rows: 4,
   columns: 4,
   makeFromElements: (...elements: number[]) => new mat4x4fImpl(...elements),
-}) as NativeMat4x4f;
+}) as Mat4x4f;
 
 export function matToArray(mat: m2x2f | m3x3f | m4x4f): number[] {
   if (mat.kind === 'mat3x3f') {
