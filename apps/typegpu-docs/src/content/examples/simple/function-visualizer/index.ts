@@ -254,6 +254,13 @@ export const controls = {
       draw(input);
     },
   },
+  'red function': {
+    initial: 'sin(x*10)/2',
+    onTextChange: (value: string) => {
+      input.functions.f.code = value;
+      draw(input);
+    },
+  },
 };
 
 // #endregion
