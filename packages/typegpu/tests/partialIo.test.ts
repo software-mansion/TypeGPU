@@ -5,7 +5,7 @@ import {
   type WriteInstruction,
   getWriteInstructions,
 } from '../src/data/partialIO';
-import type { NTuple, TypedArray } from '../src/shared/utilityTypes';
+import type { TypedArray } from '../src/shared/utilityTypes';
 import { it } from './utils/extendedIt';
 
 function expectInstruction(
@@ -176,10 +176,9 @@ describe('getWriteInstructions', () => {
       ],
     };
 
-    const instructions = getWriteInstructions(struct, data) as NTuple<
+    const instructions = getWriteInstructions(struct, data) as [
       WriteInstruction,
-      1
-    >;
+    ];
     expect(instructions).toHaveLength(1);
 
     expectInstruction(instructions[0], {
@@ -212,10 +211,10 @@ describe('getWriteInstructions', () => {
       c: { d: 4 },
     };
 
-    const instructions = getWriteInstructions(struct, data) as NTuple<
+    const instructions = getWriteInstructions(struct, data) as [
       WriteInstruction,
-      2
-    >;
+      WriteInstruction,
+    ];
     expect(instructions).toHaveLength(2);
 
     expectInstruction(instructions[0], {
@@ -284,10 +283,7 @@ describe('getWriteInstructions', () => {
       .filter((i) => i % 2 === 0)
       .map((i) => ({ idx: i, value: d.vec3f(1, 2, 3) }));
 
-    const instructions = getWriteInstructions(array, data) as NTuple<
-      WriteInstruction,
-      512
-    >;
+    const instructions = getWriteInstructions(array, data);
 
     expect(instructions).toHaveLength(512);
 

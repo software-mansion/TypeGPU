@@ -44,11 +44,7 @@ export function getWriteInstructions<TData extends wgsl.BaseData>(
     if (isWgslStruct(node) || isUnstruct(node)) {
       const propOffsets = offsetsForProps(node);
 
-      const sortedProps = Object.entries(propOffsets).sort(
-        (a, b) => a[1].offset - b[1].offset, // Sort by offset
-      );
-
-      for (const [key, propOffset] of sortedProps) {
+      for (const [key, propOffset] of Object.entries(propOffsets)) {
         const subSchema = node.propTypes[key];
         if (!subSchema) {
           continue;

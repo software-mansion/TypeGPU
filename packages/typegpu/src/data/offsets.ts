@@ -4,7 +4,7 @@ import alignIO from './alignIO';
 import { alignmentOf, customAlignmentOf } from './alignmentOf';
 import { type Unstruct, isUnstruct } from './dataTypes';
 import { sizeOf } from './sizeOf';
-import type { WgslStruct } from './struct';
+import type { AnyWgslStruct, WgslStruct } from './struct';
 import type { BaseData } from './wgslTypes';
 
 export interface OffsetInfo {
@@ -14,16 +14,14 @@ export interface OffsetInfo {
 }
 
 const cachedOffsets = new WeakMap<
-  WgslStruct | Unstruct,
+  AnyWgslStruct | Unstruct,
   Record<string, OffsetInfo>
 >();
 
 export function offsetsForProps<T extends Record<string, BaseData>>(
   struct: WgslStruct<T> | Unstruct<T>,
 ): Record<keyof T, OffsetInfo> {
-  const cached = cachedOffsets.get(
-    struct as WgslStruct<Record<string, BaseData>>,
-  );
+  const cached = cachedOffsets.get(struct);
   if (cached) {
     return cached as Record<keyof T, OffsetInfo>;
   }
