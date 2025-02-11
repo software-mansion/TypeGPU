@@ -47,11 +47,10 @@ const ParticleData = d.struct({
 
 // buffers
 
-const canvasAspectRatioBuffer = root
-  .createBuffer(d.f32, canvas.width / canvas.height)
-  .$usage('uniform');
-
-const canvasAspectRatioUniform = canvasAspectRatioBuffer.as('uniform');
+const canvasAspectRatioUniform = root['~unstable'].createUniform(
+  d.f32,
+  canvas.width / canvas.height,
+);
 
 const particleGeometryBuffer = root
   .createBuffer(
@@ -71,8 +70,10 @@ const particleDataBuffer = root
   .createBuffer(d.arrayOf(ParticleData, PARTICLE_AMOUNT))
   .$usage('storage', 'uniform', 'vertex');
 
-const deltaTimeBuffer = root.createBuffer(d.f32).$usage('uniform');
-const timeBuffer = root.createBuffer(d.f32).$usage('storage');
+const deltaTimeUniform = root['~unstable'].createUniform(d.f32);
+const timeStorage = root['~unstable'].createMutable(d.f32);
+
+const particleDataStorage = particleDataBuffer.as('mutable');
 
 // layouts
 
@@ -83,10 +84,6 @@ const geometryLayout = tgpu['~unstable']
 const dataLayout = tgpu['~unstable']
   .vertexLayout((n: number) => d.arrayOf(ParticleData, n), 'instance')
   .$name('data');
-
-const particleDataStorage = particleDataBuffer.as('mutable');
-const deltaTimeUniform = deltaTimeBuffer.as('uniform');
-const timeStorage = timeBuffer.as('mutable');
 
 // functions
 
@@ -225,8 +222,8 @@ function onFrame(loop: (deltaTime: number) => unknown) {
 }
 
 onFrame((deltaTime) => {
-  deltaTimeBuffer.write(deltaTime);
-  canvasAspectRatioBuffer.write(canvas.width / canvas.height);
+  deltaTimeUniform.write(deltaTime);
+  canvasAspectRatioUniform.write(canvas.width / canvas.height);
 
   computePipeline.dispatchWorkgroups(PARTICLE_AMOUNT);
 

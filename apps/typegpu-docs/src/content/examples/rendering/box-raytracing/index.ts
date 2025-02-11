@@ -82,15 +82,13 @@ const cameraAxesBuffer = root
   .$name('camera_axes')
   .$usage('storage');
 
-const canvasDimsBuffer = root
-  .createBuffer(CanvasDimsStruct)
-  .$name('canvas_dims')
-  .$usage('uniform');
+const canvasDimsUniform = root['~unstable']
+  .createUniform(CanvasDimsStruct)
+  .$name('canvas_dims');
 
-const boxSizeBuffer = root
-  .createBuffer(d.u32, MAX_BOX_SIZE)
-  .$name('box_size')
-  .$usage('uniform');
+const boxSizeUniform = root['~unstable']
+  .createUniform(d.u32, MAX_BOX_SIZE)
+  .$name('box_size');
 
 // bind groups and layouts
 
@@ -279,9 +277,9 @@ const pipeline = root['~unstable']
     tgpu['~unstable']
       .fn([], d.u32)
       .does('() -> u32 { return boxSize; }')
-      .$uses({ boxSize: boxSizeBuffer.as('uniform') }),
+      .$uses({ boxSize: boxSizeUniform }),
   )
-  .with(canvasDimsAccessor, canvasDimsBuffer.as('uniform'))
+  .with(canvasDimsAccessor, canvasDimsUniform)
   .withVertex(vertexFunction, {})
   .withFragment(fragmentFunction, { format: presentationFormat })
   .createPipeline()
@@ -327,7 +325,7 @@ onFrame((deltaTime) => {
 
   cameraPositionBuffer.write(cameraPosition);
   cameraAxesBuffer.write(cameraAxes);
-  canvasDimsBuffer.write({ width, height });
+  canvasDimsUniform.write({ width, height });
 
   frame += (rotationSpeed * deltaTime) / 1000;
 
@@ -370,7 +368,7 @@ export const controls = {
     min: 1,
     max: MAX_BOX_SIZE,
     onSliderChange: (value: number) => {
-      boxSizeBuffer.write(value);
+      boxSizeUniform.write(value);
     },
   },
 };

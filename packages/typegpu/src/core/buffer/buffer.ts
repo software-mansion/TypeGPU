@@ -15,7 +15,7 @@ import {
   type TgpuBufferMutable,
   type TgpuBufferReadonly,
   type TgpuBufferUniform,
-  type TgpuBufferUsageWritable,
+  type TgpuFixedBufferUsage,
   asMutable,
   asReadonly,
   asUniform,
@@ -49,9 +49,9 @@ type ViewUsages<TBuffer extends TgpuBuffer<BaseWgslData>> =
       : 'readonly' | 'mutable');
 
 type UsageTypeToBufferUsage<TData extends BaseWgslData> = {
-  uniform: TgpuBufferUniform<TData> & TgpuBufferUsageWritable<TData>;
-  mutable: TgpuBufferMutable<TData> & TgpuBufferUsageWritable<TData>;
-  readonly: TgpuBufferReadonly<TData> & TgpuBufferUsageWritable<TData>;
+  uniform: TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData>;
+  mutable: TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData>;
+  readonly: TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData>;
 };
 
 export interface TgpuBuffer<TData extends BaseWgslData> extends TgpuNamable {
@@ -195,7 +195,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     for (const usage of usages) {
       if (this._disallowedUsages?.includes(usage)) {
         throw new Error(
-          `Buffer of type ${this.dataType} cannot be used as ${usage}`,
+          `Buffer of type ${this.dataType.type} cannot be used as ${usage}`,
         );
       }
       this.flags |= usage === 'uniform' ? GPUBufferUsage.UNIFORM : 0;

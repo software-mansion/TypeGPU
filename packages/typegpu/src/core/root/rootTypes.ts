@@ -19,7 +19,7 @@ import type {
   TgpuBufferReadonly,
   TgpuBufferUniform,
   TgpuBufferUsage,
-  TgpuBufferUsageWritable,
+  TgpuFixedBufferUsage,
 } from '../buffer/bufferUsage';
 import type { IOLayout, IORecord } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
@@ -320,17 +320,17 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
   createUniform<TData extends AnyWgslData>(
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
-  ): TgpuBufferUniform<TData> & TgpuBufferUsageWritable<TData>;
+  ): TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData>;
 
   createMutable<TData extends AnyWgslData>(
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
-  ): TgpuBufferMutable<TData> & TgpuBufferUsageWritable<TData>;
+  ): TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData>;
 
   createReadonly<TData extends AnyWgslData>(
     typeSchema: TData,
     initialOrBuffer?: Infer<TData> | GPUBuffer,
-  ): TgpuBufferReadonly<TData> & TgpuBufferUsageWritable<TData>;
+  ): TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData>;
 
   createTexture<
     TWidth extends number,
