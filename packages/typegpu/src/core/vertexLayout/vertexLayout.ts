@@ -1,5 +1,9 @@
 import { alignmentOf, customAlignmentOf } from '../../data/alignmentOf';
-import { isLooseDecorated, isUnstruct } from '../../data/dataTypes';
+import {
+  getCustomLocation,
+  isLooseDecorated,
+  isUnstruct,
+} from '../../data/dataTypes';
 import type { Disarray } from '../../data/dataTypes';
 import { sizeOf } from '../../data/sizeOf';
 import { isDecorated, isWgslStruct } from '../../data/wgslTypes';
@@ -31,6 +35,7 @@ export interface TgpuVertexLayout<
   readonly stride: number;
   readonly stepMode: 'vertex' | 'instance';
   readonly attrib: ArrayToContainedAttribs<TData>;
+  readonly vertexLayout: GPUVertexBufferLayout;
   schemaForCount(n: number): TData;
 }
 
@@ -58,6 +63,8 @@ export function isVertexLayout<T extends TgpuVertexLayout>(
 // Implementation
 // --------------
 
+const defaultAttribEntry = Symbol('defaultAttribEntry');
+
 function dataToContainedAttribs<
   TLayoutData extends WgslArray | Disarray,
   TData extends BaseData,
@@ -65,12 +72,20 @@ function dataToContainedAttribs<
   layout: TgpuVertexLayout<TLayoutData>,
   data: TData,
   offset: number,
+  customLocationMap: Record<string | symbol, number>,
+  key?: string,
 ): DataToContainedAttribs<TData> {
   if (isDecorated(data) || isLooseDecorated(data)) {
+    const customLocation = getCustomLocation(data);
+    if (customLocation !== undefined) {
+      customLocationMap[key ?? defaultAttribEntry] = customLocation;
+    }
+
     return dataToContainedAttribs(
       layout,
       data.inner,
       roundUp(offset, customAlignmentOf(data)),
+      customLocationMap,
     );
   }
 
@@ -82,7 +97,13 @@ function dataToContainedAttribs<
         memberOffset = roundUp(memberOffset, alignmentOf(value));
         const attrib = [
           key,
-          dataToContainedAttribs(layout, value, memberOffset),
+          dataToContainedAttribs(
+            layout,
+            value,
+            memberOffset,
+            customLocationMap,
+            key,
+          ),
         ];
         memberOffset += sizeOf(value);
         return attrib;
@@ -98,7 +119,13 @@ function dataToContainedAttribs<
         memberOffset = roundUp(memberOffset, customAlignmentOf(value));
         const attrib = [
           key,
-          dataToContainedAttribs(layout, value, memberOffset),
+          dataToContainedAttribs(
+            layout,
+            value,
+            memberOffset,
+            customLocationMap,
+            key,
+          ),
         ];
         memberOffset += sizeOf(value);
         return attrib;
@@ -139,6 +166,7 @@ class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
   public readonly resourceType = 'vertex-layout';
   public readonly stride: number;
   public readonly attrib: ArrayToContainedAttribs<TData>;
+  private readonly _customLocationMap = {} as Record<string | symbol, number>;
 
   private _label: string | undefined;
 
@@ -153,11 +181,66 @@ class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
       sizeOf(arraySchema.elementType),
       alignmentOf(arraySchema),
     );
-    this.attrib = dataToContainedAttribs(this, arraySchema.elementType, 0);
+    this.attrib = dataToContainedAttribs(
+      this,
+      arraySchema.elementType,
+      0,
+      this._customLocationMap,
+    );
   }
 
   get label(): string | undefined {
     return this._label;
+  }
+
+  get vertexLayout(): GPUVertexBufferLayout {
+    // If defaultAttribEntry is in the custom location map,
+    // it means that the vertex layout is based on a single attribute
+    if (this._customLocationMap[defaultAttribEntry] !== undefined) {
+      if (
+        typeof this.attrib.format !== 'string' ||
+        typeof this.attrib.offset !== 'number'
+      ) {
+        throw new Error(
+          'Single attribute vertex layouts must have a format and offset.',
+        );
+      }
+
+      return {
+        arrayStride: this.stride,
+        stepMode: this.stepMode,
+        attributes: [
+          {
+            format: this.attrib.format,
+            offset: this.attrib.offset,
+            shaderLocation: this._customLocationMap[defaultAttribEntry],
+          },
+        ],
+      };
+    }
+
+    // check if all attributes have custom locations
+    const allAttributesHaveCustomLocations = Object.keys(this.attrib).every(
+      (key) => this._customLocationMap[key] !== undefined,
+    );
+
+    if (!allAttributesHaveCustomLocations) {
+      throw new Error(
+        'All attributes must have custom locations in order to unwrap a vertex layout.',
+      );
+    }
+
+    return {
+      arrayStride: this.stride,
+      stepMode: this.stepMode,
+      attributes: [
+        ...Object.entries(this.attrib).map(([key, attrib]) => ({
+          format: attrib.format,
+          offset: attrib.offset,
+          shaderLocation: this._customLocationMap[key],
+        })),
+      ] as GPUVertexAttribute[],
+    };
   }
 
   $name(label?: string | undefined): this {
