@@ -135,15 +135,4 @@ export {
   BuiltinNumWorkgroups,
   AnyBuiltin,
 } from '../builtin';
-export type { Exotic as Base } from './exotic';
-
-import type { Infer as INTERNAL_Infer } from '../shared/repr';
-import type { Exotic } from './exotic';
-
-/**
- * Extracts the inferred representation of a resource.
- * @example
- * type A = Infer<F32> // => number
- * type B = Infer<WgslArray<F32>> // => number[]
- */
-export type Infer<T> = INTERNAL_Infer<Exotic<T>>;
+export type { Infer } from '../shared/repr';

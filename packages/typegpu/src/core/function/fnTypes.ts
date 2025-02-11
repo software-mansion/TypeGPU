@@ -1,6 +1,5 @@
 import type * as smol from 'tinyest';
 import type { AnyAttribute } from '../../data/attributes';
-import type { Exotic } from '../../data/exotic';
 import type {
   Decorated,
   F16,
@@ -85,10 +84,4 @@ export type InferIO<T> = T extends { type: string }
   ? Infer<T>
   : T extends Record<string, unknown>
     ? { [K in keyof T]: Infer<T[K]> }
-    : T;
-
-export type ExoticIO<T> = T extends { type: string }
-  ? Exotic<T>
-  : T extends Record<string, unknown>
-    ? { [K in keyof T]: Exotic<T[K]> }
     : T;

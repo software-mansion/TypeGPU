@@ -1,5 +1,4 @@
 import type { Infer, MemIdentity } from '../shared/repr';
-import type { Exotic } from './exotic';
 import type { Atomic, I32, U32 } from './wgslTypes';
 
 // ----------
@@ -17,8 +16,8 @@ import type { Atomic, I32, U32 } from './wgslTypes';
  */
 export function atomic<TSchema extends U32 | I32>(
   data: TSchema,
-): Atomic<Exotic<TSchema>> {
-  return new AtomicImpl(data as Exotic<TSchema>);
+): Atomic<TSchema> {
+  return new AtomicImpl(data);
 }
 
 // --------------
