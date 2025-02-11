@@ -1,3 +1,4 @@
+import type { TgpuNamable } from '../namable';
 import type { Infer, InferRecord } from '../shared/repr';
 import { vertexFormats } from '../shared/vertexFormat';
 import type { PackedData } from './vertexFormatData';
@@ -28,7 +29,8 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
  */
 export interface Unstruct<
   TProps extends Record<string, wgsl.BaseData> = Record<string, wgsl.BaseData>,
-> {
+> extends TgpuNamable {
+  readonly label?: string | undefined;
   readonly type: 'unstruct';
   readonly propTypes: TProps;
   readonly '~repr': InferRecord<TProps>;
