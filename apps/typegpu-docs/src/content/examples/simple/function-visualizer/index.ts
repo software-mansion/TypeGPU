@@ -4,8 +4,9 @@ async function main() {
   const input = {
     functions: {
       f: 'sin(x*10)/2',
+      // f: 'abs(x)',
     },
-    interpolationPoins: 100,
+    interpolationPoins: 10,
   };
 
   const root = await tgpu.init();
@@ -113,10 +114,33 @@ function runRenderPass(
   const vertexFragmentShaderCode = /* wgsl */ `
 @group(0) @binding(0) var<storage, read> lineVertices: array<vec2f>;
 
-@vertex fn vs(
-  @builtin(vertex_index) vertexIndex : u32
-) -> @builtin(position) vec4f {
-  return vec4f(lineVertices[vertexIndex/4], 0.0, 1.0);
+fn othronormalForLine(p1: vec2f, p2: vec2f) -> vec2f {
+  let line = p2 - p1;
+  let ortho = vec2f(-line.y, line.x);
+  let length = sqrt(ortho.x * ortho.x + ortho.y * ortho.y);
+  let norm = ortho / length;
+  return norm;
+}
+
+fn orthonormalForVertex(index: u32) -> vec2f {
+  if (index == 0 || index == ${interpolationPoins}-1) {
+    return vec2f(0.0, 1.0);
+  }
+  let previous = lineVertices[index-1];
+  let current = lineVertices[index];
+  let next = lineVertices[index+1];
+
+  let n1 = othronormalForLine(previous, current);
+  let n2 = othronormalForLine(current, next);
+
+  return (n1+n2)/2.0;
+}
+
+@vertex fn vs(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4f {
+  let currentVertex = vertexIndex/2;
+  let orthonormal = orthonormalForVertex(currentVertex);
+  let offset = orthonormal * 0.02 * select(-1.0, 1.0, vertexIndex%2==0);
+  return vec4f(lineVertices[currentVertex] + offset, 0.0, 1.0);
 }
 
 @fragment fn fs() -> @location(0) vec4f {
@@ -140,7 +164,7 @@ function runRenderPass(
       targets: [{ format: presentationFormat }],
     },
     primitive: {
-      topology: 'line-strip',
+      topology: 'triangle-strip',
     },
   });
 
@@ -172,7 +196,7 @@ function runRenderPass(
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(renderPipeline);
     pass.setBindGroup(0, renderBindGroup);
-    pass.draw(interpolationPoins * 4); // call our vertex shader 4 times per point drawn
+    pass.draw(interpolationPoins * 2); // call our vertex shader 2 times per point drawn
     pass.end();
 
     const commandBuffer = encoder.finish();
