@@ -14,7 +14,13 @@ import type {
 } from '../../tgpuBindGroupLayout';
 import type { Unwrapper } from '../../unwrapper';
 import type { TgpuBuffer, Vertex } from '../buffer/buffer';
-import type { TgpuBufferUsage } from '../buffer/bufferUsage';
+import type {
+  TgpuBufferMutable,
+  TgpuBufferReadonly,
+  TgpuBufferUniform,
+  TgpuBufferUsage,
+  TgpuFixedBufferUsage,
+} from '../buffer/bufferUsage';
 import type { IOLayout, IORecord } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import type { TgpuFn } from '../function/tgpuFn';
@@ -310,6 +316,21 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
    * hold the same value until `flush()` is called.
    */
   readonly commandEncoder: GPUCommandEncoder;
+
+  createUniform<TData extends AnyWgslData>(
+    typeSchema: TData,
+    initialOrBuffer?: Infer<TData> | GPUBuffer,
+  ): TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData>;
+
+  createMutable<TData extends AnyWgslData>(
+    typeSchema: TData,
+    initialOrBuffer?: Infer<TData> | GPUBuffer,
+  ): TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData>;
+
+  createReadonly<TData extends AnyWgslData>(
+    typeSchema: TData,
+    initialOrBuffer?: Infer<TData> | GPUBuffer,
+  ): TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData>;
 
   createTexture<
     TWidth extends number,

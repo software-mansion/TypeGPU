@@ -1,6 +1,6 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect } from 'vitest';
-import tgpu, { unstable_asUniform } from '../src';
+import tgpu from '../src';
 import * as d from '../src/data';
 import { MissingSlotValueError, ResolutionError } from '../src/errors';
 import { it } from './utils/extendedIt';
@@ -59,9 +59,11 @@ describe('tgpu.accessor', () => {
       .$uses({ color: colorAccessor })
       .with(
         colorAccessor,
-        unstable_asUniform(
-          root.createBuffer(d.vec3f, RED).$usage('uniform').$name('red'),
-        ),
+        root
+          .createBuffer(d.vec3f, RED)
+          .$usage('uniform')
+          .$name('red')
+          .as('uniform'),
       );
 
     expect(parseResolved({ getColor })).toEqual(
@@ -185,9 +187,11 @@ describe('tgpu.accessor', () => {
     const colorAccessorValue = tgpu['~unstable'].accessor(d.vec3f, RED);
     const colorAccessorUsage = tgpu['~unstable'].accessor(
       d.vec3f,
-      unstable_asUniform(
-        root.createBuffer(d.vec3f, RED).$usage('uniform').$name('colorUniform'),
-      ),
+      root
+        .createBuffer(d.vec3f, RED)
+        .$usage('uniform')
+        .$name('colorUniform')
+        .as('uniform'),
     );
 
     const colorAccessorFn = tgpu['~unstable'].accessor(

@@ -161,6 +161,42 @@ describe('TgpuRoot', () => {
     });
   });
 
+  describe('.$usage', () => {
+    it('should only allow vertex usage for buffers with loose data', ({
+      root,
+    }) => {
+      root.createBuffer(d.f32).$usage('storage', 'uniform', 'vertex');
+
+      root.createBuffer(d.disarrayOf(d.f32, 1)).$usage('vertex');
+      expect(() =>
+        root
+          .createBuffer(d.disarrayOf(d.f32, 1))
+          //@ts-expect-error
+          .$usage('storage'),
+      ).toThrow();
+      expect(() =>
+        root
+          .createBuffer(d.disarrayOf(d.f32, 1))
+          //@ts-expect-error
+          .$usage('uniform'),
+      ).toThrow();
+
+      root.createBuffer(d.unstruct({ a: d.u32 })).$usage('vertex');
+      expect(() =>
+        root
+          .createBuffer(d.unstruct({ a: d.u32 }))
+          //@ts-expect-error
+          .$usage('storage'),
+      ).toThrow();
+      expect(() =>
+        root
+          .createBuffer(d.unstruct({ a: d.u32 }))
+          //@ts-expect-error
+          .$usage('uniform'),
+      ).toThrow();
+    });
+  });
+
   // TODO: Adapt the tests to the new API
   // it('creates a pipeline descriptor with a valid vertex buffer', () => {
   //   const root = tgpu.initFromDevice({

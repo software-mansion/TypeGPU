@@ -27,7 +27,13 @@ import {
   type TgpuBuffer,
   isBuffer,
 } from '../buffer/buffer';
-import type { TgpuBufferUsage } from '../buffer/bufferUsage';
+import type {
+  TgpuBufferMutable,
+  TgpuBufferReadonly,
+  TgpuBufferUniform,
+  TgpuBufferUsage,
+  TgpuFixedBufferUsage,
+} from '../buffer/bufferUsage';
 import type { IOLayout } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import type { TgpuFn } from '../function/tgpuFn';
@@ -212,6 +218,10 @@ class TgpuRootImpl
       nameRegistry: this.nameRegistry,
       commandEncoder: this.commandEncoder,
 
+      createUniform: this.createUniform.bind(this),
+      createMutable: this.createMutable.bind(this),
+      createReadonly: this.createReadonly.bind(this),
+
       createTexture: this.createTexture.bind(this),
 
       with: this.with.bind(this),
@@ -237,6 +247,34 @@ class TgpuRootImpl
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer);
     this._disposables.push(buffer);
     return buffer;
+  }
+
+  createUniform<TData extends AnyWgslData>(
+    typeSchema: TData,
+    initialOrBuffer?: Infer<TData> | GPUBuffer,
+  ): TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData> {
+    return this.createBuffer<AnyWgslData>(typeSchema, initialOrBuffer)
+      .$usage('uniform')
+      .as('uniform') as TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData>;
+  }
+
+  createMutable<TData extends AnyWgslData>(
+    typeSchema: TData,
+    initialOrBuffer?: Infer<TData> | GPUBuffer,
+  ): TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData> {
+    return this.createBuffer<AnyWgslData>(typeSchema, initialOrBuffer)
+      .$usage('storage')
+      .as('mutable') as TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData>;
+  }
+
+  createReadonly<TData extends AnyWgslData>(
+    typeSchema: TData,
+    initialOrBuffer?: Infer<TData> | GPUBuffer,
+  ): TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData> {
+    return this.createBuffer<AnyWgslData>(typeSchema, initialOrBuffer)
+      .$usage('storage')
+      .as('readonly') as TgpuBufferReadonly<TData> &
+      TgpuFixedBufferUsage<TData>;
   }
 
   createBindGroup<

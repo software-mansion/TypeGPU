@@ -1,4 +1,4 @@
-import tgpu, { unstable_asMutable } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 const table = document.querySelector('.counter') as HTMLDivElement;
@@ -8,7 +8,7 @@ const root = await tgpu.init();
 const counterBuffer = root
   .createBuffer(d.vec3f, d.vec3f(0, 1, 0))
   .$usage('storage');
-const counter = unstable_asMutable(counterBuffer);
+const counter = counterBuffer.as('mutable');
 
 const increment = tgpu['~unstable']
   .computeFn({ num: d.builtin.numWorkgroups }, { workgroupSize: [1] })
