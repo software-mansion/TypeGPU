@@ -31,7 +31,6 @@ const input: Input = {
   lineWidth: 0.1,
 };
 
-// let lastPos: number[] | null = null;
 const transformation = mat4.identity();
 
 const root = await tgpu.init();
@@ -109,12 +108,12 @@ return ${functionString};
 @group(0) @binding(2) var<uniform> invertedTransformation: mat4x4f;
 
 @compute @workgroup_size(1) fn computePoints(@builtin(global_invocation_id) id: vec3u) {
-  let start = (transformation * vec4f(-1, 0, 0, 0)).x;
-  let end = (transformation * vec4f(1, 0, 0, 0)).x;
+  let start = (transformation * vec4f(-1, 0, 0, 1)).x;
+  let end = (transformation * vec4f(1, 0, 0, 1)).x;
 
   let pointX = (start + (end-start)/(${interpolationPoints} - 1) * f32(id.x));
   let pointY = interpolatedFunction(pointX);
-  let result = invertedTransformation * vec4f(pointX, pointY, 0, 0);
+  let result = invertedTransformation * vec4f(pointX, pointY, 0, 1);
   lineVertices[id.x] = result.xy;
 }
 `;
@@ -276,7 +275,7 @@ export const controls = {
     step: 0.001,
     onSliderChange: (value: number) => {
       input.lineWidth = value;
-      draw(input);
+      draw();
     },
   },
   'interpolation points count': {
@@ -285,43 +284,49 @@ export const controls = {
     onSelectChange: (value: string) => {
       const num = Number.parseInt(value);
       input.interpolationPoints = num;
-      draw(input);
+      draw();
     },
   },
   'red function': {
     initial: 'sin(x*10)/2',
     onTextChange: (value: string) => {
       input.functions.f.code = value;
-      draw(input);
+      draw();
     },
   },
 };
 
 // #region canvas controls
 
-// canvas.onmousedown = (event) => {
-//   lastPos = [event.offsetX, event.offsetY];
-// };
+let lastPos: number[] | null = null;
 
-// canvas.onmouseup = (_) => {
-//   lastPos = null;
-// };
+canvas.onmousedown = (event) => {
+  lastPos = [event.offsetX, event.offsetY];
+};
 
-// canvas.onmousemove = (event) => {
-//   if (lastPos == null) {
-//     return;
-//   }
-//   const currentPos = [event.offsetX, event.offsetY];
+canvas.onmouseup = (_) => {
+  lastPos = null;
+};
 
-//   mat4.translate(
-//     transformation,
-//     [currentPos[0] - lastPos[0], currentPos[1] - lastPos[1], 0],
-//     transformation,
-//   );
+canvas.onmousemove = (event) => {
+  if (lastPos == null) {
+    return;
+  }
+  const currentPos = [event.offsetX, event.offsetY];
+  const translation = [
+    (-(currentPos[0] - lastPos[0]) / canvas.width) *
+      2.0 *
+      window.devicePixelRatio,
+    ((currentPos[1] - lastPos[1]) / canvas.height) *
+      2.0 *
+      window.devicePixelRatio,
+    0.0,
+  ];
+  mat4.translate(transformation, translation, transformation);
 
-//   lastPos = currentPos;
-//   console.log(getCorners());
-// };
+  lastPos = currentPos;
+  draw();
+};
 
 canvas.onwheel = (event) => {
   event.preventDefault();
@@ -330,16 +335,7 @@ canvas.onwheel = (event) => {
   const scale = event.deltaY > 0 ? delta : 1 / delta;
 
   mat4.scale(transformation, [scale, scale, 1], transformation);
-  console.log(getCorners());
   draw();
 };
-
-function getCorners() {
-  const c1 = vec4.create(1, 1, 0, 0);
-  const c2 = vec4.create(-1, -1, 0, 0);
-  mat4.mul(transformation, c1, c1);
-  mat4.mul(transformation, c2, c2);
-  return [c1[0], c1[1], c2[0], c2[1]];
-}
 
 // #endregion
