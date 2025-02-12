@@ -106,7 +106,7 @@ describe('TgpuRoot', () => {
       root,
     }) => {
       const vertexLayout = tgpu['~unstable'].vertexLayout(
-        (n) => d.arrayOf(d.location(0, d.vec2u), n),
+        (n: number) => d.arrayOf(d.location(0, d.vec2u), n),
         'vertex',
       );
 
@@ -133,7 +133,7 @@ describe('TgpuRoot', () => {
       });
 
       const vertexLayout = tgpu['~unstable'].vertexLayout(
-        (n) => d.disarrayOf(VertexData, n),
+        (n: number) => d.disarrayOf(VertexData, n),
         'instance',
       );
 
