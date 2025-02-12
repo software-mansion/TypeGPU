@@ -45,6 +45,11 @@ export type BuiltinNumWorkgroups = Decorated<
   Vec3u,
   [Builtin<'num_workgroups'>]
 >;
+export type BuiltinSubgroupInvocationId = Decorated<
+  U32,
+  [Builtin<'subgroup_invocation_id'>]
+>;
+export type BuiltinSubgroupSize = Decorated<U32, [Builtin<'subgroup_size'>]>;
 
 export const builtin = {
   vertexIndex: attribute(u32, {
@@ -99,6 +104,14 @@ export const builtin = {
     type: '@builtin',
     value: 'num_workgroups',
   }) as BuiltinNumWorkgroups,
+  subgroupInvocationId: attribute(u32, {
+    type: '@builtin',
+    value: 'subgroup_invocation_id',
+  }) as BuiltinSubgroupInvocationId,
+  subgroupSize: attribute(u32, {
+    type: '@builtin',
+    value: 'subgroup_size',
+  }) as BuiltinSubgroupSize,
 } as const;
 
 export type AnyBuiltin = (typeof builtin)[keyof typeof builtin];
@@ -107,7 +120,19 @@ export type AnyComputeBuiltin =
   | BuiltinLocalInvocationIndex
   | BuiltinGlobalInvocationId
   | BuiltinWorkgroupId
-  | BuiltinNumWorkgroups;
+  | BuiltinNumWorkgroups
+  | BuiltinSubgroupInvocationId
+  | BuiltinSubgroupSize;
+export type AnyVertexInputBuiltin = BuiltinVertexIndex | BuiltinInstanceIndex;
+export type AnyVertexOutputBuiltin = BuiltinClipDistances | BuiltinPosition;
+export type AnyFragmentInputBuiltin =
+  | BuiltinPosition
+  | BuiltinFrontFacing
+  | BuiltinSampleIndex
+  | BuiltinSampleMask
+  | BuiltinSubgroupInvocationId
+  | BuiltinSubgroupSize;
+export type AnyFragmentOutputBuiltin = BuiltinFragDepth | BuiltinSampleMask;
 
 export type OmitBuiltins<S> = S extends AnyBuiltin
   ? never

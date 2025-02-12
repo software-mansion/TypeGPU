@@ -1,8 +1,9 @@
 import type {
-  BuiltinFragDepth,
-  BuiltinSampleMask,
+  AnyFragmentInputBuiltin,
+  AnyFragmentOutputBuiltin,
   OmitBuiltins,
 } from '../../builtin';
+import type { AnyAttribute } from '../../data/attributes';
 import type { AnyWgslStruct } from '../../data/struct';
 import type { Decorated, Location, Vec4f } from '../../data/wgslTypes';
 import { type TgpuNamable, isNamable } from '../../namable';
@@ -10,7 +11,7 @@ import type { GenerationCtx } from '../../smol/wgslGenerator';
 import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
 import { addReturnTypeToExternals } from '../resolve/externals';
 import { createFnCore } from './fnCore';
-import type { IOLayout, IORecord, Implementation, InferIO } from './fnTypes';
+import type { BaseIOData, IORecord, Implementation, InferIO } from './fnTypes';
 import {
   type IOLayoutToSchema,
   createOutputType,
@@ -24,20 +25,22 @@ import {
 export type FragmentOutConstrained =
   | Vec4f
   | Decorated<Vec4f, [Location<number>]>
-  | BuiltinSampleMask
-  | BuiltinFragDepth
+  | AnyFragmentOutputBuiltin
   | IORecord<
-      | Vec4f
-      | Decorated<Vec4f, [Location<number>]>
-      | BuiltinSampleMask
-      | BuiltinFragDepth
+      Vec4f | Decorated<Vec4f, [Location<number>]> | AnyFragmentOutputBuiltin
     >;
+
+export type FragmentInConstrained = IORecord<
+  | BaseIOData
+  | Decorated<BaseIOData, AnyAttribute<never>[]>
+  | AnyFragmentInputBuiltin
+>;
 
 /**
  * Describes a fragment entry function signature (its arguments and return type)
  */
 export interface TgpuFragmentFnShell<
-  FragmentIn extends IOLayout,
+  FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
 > {
   readonly argTypes: [AnyWgslStruct];
@@ -63,7 +66,7 @@ export interface TgpuFragmentFnShell<
 }
 
 export interface TgpuFragmentFn<
-  Varying extends IOLayout = IOLayout,
+  Varying extends FragmentInConstrained = FragmentInConstrained,
   Output extends FragmentOutConstrained = FragmentOutConstrained,
 > extends TgpuNamable {
   readonly shell: TgpuFragmentFnShell<Varying, Output>;
@@ -86,7 +89,7 @@ export interface TgpuFragmentFn<
 export function fragmentFn<
   // Not allowing single-value input, as using objects here is more
   // readable, and refactoring to use a builtin argument is too much hassle.
-  FragmentIn extends IORecord,
+  FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
 >(options: {
   in: FragmentIn;
@@ -109,7 +112,7 @@ export function fragmentFn<
 // --------------
 
 function createFragmentFn(
-  shell: TgpuFragmentFnShell<IOLayout, FragmentOutConstrained>,
+  shell: TgpuFragmentFnShell<FragmentInConstrained, FragmentOutConstrained>,
   implementation: Implementation,
 ): TgpuFragmentFn {
   type This = TgpuFragmentFn & Labelled & SelfResolvable;
