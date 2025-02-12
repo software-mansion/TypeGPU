@@ -84,7 +84,7 @@ export interface TgpuFragmentFn<
  * @param options.in
  *  Values computed in the vertex stage and builtins to be made available to functions that implement this shell.
  * @param options.out
- *  A `vec4f`, signaling this function outputs a color for one target, or a struct/array containing colors for multiple targets.
+ *  A `vec4f`, signaling this function outputs a color for one target, or a record containing colors for multiple targets.
  */
 export function fragmentFn<
   // Not allowing single-value input, as using objects here is more

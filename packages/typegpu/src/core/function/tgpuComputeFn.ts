@@ -56,7 +56,7 @@ export interface ComputeFnOptions {
  * that implements this shell can perform general-purpose computation.
  *
  * @param options.in
- *   Compute function arguments.
+ *   Record with builtins used by the compute shader.
  * @param options.workgroupSize
  *   Size of blocks that the thread grid will be divided into (up to 3 dimensions).
  */

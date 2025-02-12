@@ -64,7 +64,7 @@ export interface TgpuVertexFn<
  * @param options.in
  *   Vertex attributes and builtins to be made available to functions that implement this shell.
  * @param options.out
- *   A struct type containing the final position of the vertex, and any information
+ *   A record containing the final position of the vertex, and any information
  *   passed onto the fragment shader stage.
  */
 export function vertexFn<
