@@ -143,6 +143,9 @@ importers:
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../../packages/unplugin-typegpu
+      wgpu-matrix:
+        specifier: ^3.3.0
+        version: 3.3.0
       zod:
         specifier: ^3.23.8
         version: 3.23.8
@@ -7885,7 +7888,6 @@ packages:
 
   /wgpu-matrix@3.3.0:
     resolution: {integrity: sha512-MRdywXdzTwX9pVbO5Z/oRX9l7464Wkfv28glG1c7t7s5v/0Dvts6yV8b4AOTOTl1UDGq9KUEAoSN6KW5P12ruQ==}
-    dev: true
 
   /whatwg-url@7.1.0:
     resolution: {integrity: sha512-WUu7Rg1DroM7oQvGWfOiAK21n74Gg+T4elXEQYkOhtyLeWiJFoOGLXPKI/9gzIie9CtwVLm8wtw6YJdKyxSjeg==}
