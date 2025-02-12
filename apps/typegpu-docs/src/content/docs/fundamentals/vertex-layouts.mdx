@@ -28,7 +28,7 @@ const ParticleGeometry = d.struct({
 });
 
 const geometryLayout = tgpu
-  .vertexLayout((n) => d.arrayOf(ParticleGeometry, n), 'instance');
+  .vertexLayout((n: number) => d.arrayOf(ParticleGeometry, n), 'instance');
 ```
 
 ## Utilizing loose schemas with vertex layouts

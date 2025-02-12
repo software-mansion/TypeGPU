@@ -105,8 +105,8 @@ describe('TgpuRoot', () => {
     it('should return the correct GPUVertexBufferLayout for a simple vertex layout', ({
       root,
     }) => {
-      const vertexLayout = tgpu['~unstable'].vertexLayout(
-        (n) => d.arrayOf(d.location(0, d.vec2u), n),
+      const vertexLayout = tgpu.vertexLayout(
+        (n: number) => d.arrayOf(d.location(0, d.vec2u), n),
         'vertex',
       );
 
@@ -132,8 +132,8 @@ describe('TgpuRoot', () => {
         something: d.location(2, d.u32),
       });
 
-      const vertexLayout = tgpu['~unstable'].vertexLayout(
-        (n) => d.disarrayOf(VertexData, n),
+      const vertexLayout = tgpu.vertexLayout(
+        (n: number) => d.disarrayOf(VertexData, n),
         'instance',
       );
 
