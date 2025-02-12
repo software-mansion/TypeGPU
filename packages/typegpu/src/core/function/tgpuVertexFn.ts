@@ -56,6 +56,21 @@ export interface TgpuVertexFn<
   $uses(dependencyMap: Record<string, unknown>): this;
 }
 
+export function vertexFn<VertexOut extends IORecord>(options: {
+  out: VertexOut;
+  // biome-ignore lint/complexity/noBannedTypes: it's fine
+}): TgpuVertexFnShell<{}, VertexOut>;
+
+export function vertexFn<
+  VertexIn extends IORecord,
+  // Not allowing single-value output, as it is better practice
+  // to properly label what the vertex shader is outputting.
+  VertexOut extends IORecord,
+>(options: {
+  in: VertexIn;
+  out: VertexOut;
+}): TgpuVertexFnShell<VertexIn, VertexOut>;
+
 /**
  * Creates a shell of a typed entry function for the vertex shader stage. Any function
  * that implements this shell can run for each vertex, allowing the inner code to process
@@ -73,13 +88,13 @@ export function vertexFn<
   // to properly label what the vertex shader is outputting.
   VertexOut extends IORecord,
 >(options: {
-  in: VertexIn;
+  in?: VertexIn;
   out: VertexOut;
 }): TgpuVertexFnShell<VertexIn, VertexOut> {
   return {
-    attributes: [options.in],
+    attributes: [options.in ?? ({} as VertexIn)],
     returnType: createOutputType(options.out) as unknown as VertexOut,
-    argTypes: [createStructFromIO(options.in)],
+    argTypes: [createStructFromIO(options.in ?? {})],
 
     does(implementation) {
       // biome-ignore lint/suspicious/noExplicitAny: <no thanks>

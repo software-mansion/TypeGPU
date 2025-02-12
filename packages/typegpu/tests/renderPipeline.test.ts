@@ -1,13 +1,17 @@
-import { describe, expect } from 'vitest';
-import tgpu, { MissingBindGroupsError } from '../src';
+import { describe, expect, expectTypeOf } from 'vitest';
+import tgpu, {
+  MissingBindGroupsError,
+  type TgpuFragmentFnShell,
+  type TgpuVertexFnShell,
+} from '../src';
 import * as d from '../src/data';
 import { it } from './utils/extendedIt';
 
 describe('Inter-Stage Variables', () => {
   describe('Empty vertex output', () => {
-    const emptyVert = tgpu['~unstable'].vertexFn({ in: {}, out: {} }).does('');
+    const emptyVert = tgpu['~unstable'].vertexFn({ out: {} }).does('');
     const emptyVertWithBuiltin = tgpu['~unstable']
-      .vertexFn({ in: {}, out: { pos: d.builtin.vertexIndex } })
+      .vertexFn({ out: { pos: d.builtin.vertexIndex } })
       .does('');
 
     it('allows fragment functions to use a subset of the vertex output', ({
@@ -68,11 +72,10 @@ describe('Inter-Stage Variables', () => {
 
   describe('Non-empty vertex output', () => {
     const vert = tgpu['~unstable']
-      .vertexFn({ in: {}, out: { a: d.vec3f, b: d.vec2f } })
+      .vertexFn({ out: { a: d.vec3f, b: d.vec2f } })
       .does('');
     const vertWithBuiltin = tgpu['~unstable']
       .vertexFn({
-        in: {},
         out: { a: d.vec3f, b: d.vec2f, pos: d.builtin.position },
       })
       .does('');
@@ -159,12 +162,12 @@ describe('Inter-Stage Variables', () => {
       .$name('example-layout');
 
     const vertexFn = utgpu
-      .vertexFn({ in: {}, out: {} })
+      .vertexFn({ out: {} })
       .does('() { layout.bound.alpha; }')
       .$uses({ layout });
 
     const fragmentFn = utgpu
-      .fragmentFn({ in: {}, out: { out: d.vec4f } })
+      .fragmentFn({ out: { out: d.vec4f } })
       .does('() {}');
 
     const pipeline = root
@@ -181,5 +184,27 @@ describe('Inter-Stage Variables', () => {
     expect(() => pipeline.draw(6)).toThrowErrorMatchingInlineSnapshot(
       `[Error: Missing bind groups for layouts: 'example-layout'. Please provide it using pipeline.with(layout, bindGroup).(...)]`,
     );
+  });
+
+  it('allows to omit input in entry function shell', () => {
+    expectTypeOf(
+      tgpu['~unstable'].vertexFn({ in: {}, out: {} }),
+      // biome-ignore lint/complexity/noBannedTypes: it's fine
+    ).toEqualTypeOf<TgpuVertexFnShell<{}, {}>>();
+
+    expectTypeOf(
+      tgpu['~unstable'].vertexFn({ out: {} }),
+      // biome-ignore lint/complexity/noBannedTypes: it's fine
+    ).toEqualTypeOf<TgpuVertexFnShell<{}, {}>>();
+
+    expectTypeOf(
+      tgpu['~unstable'].fragmentFn({ in: {}, out: {} }),
+      // biome-ignore lint/complexity/noBannedTypes: it's fine
+    ).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
+
+    expectTypeOf(
+      tgpu['~unstable'].fragmentFn({ out: {} }),
+      // biome-ignore lint/complexity/noBannedTypes: it's fine
+    ).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
   });
 });

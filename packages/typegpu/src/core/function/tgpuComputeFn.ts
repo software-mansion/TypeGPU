@@ -51,6 +51,18 @@ export interface ComputeFnOptions {
   workgroupSize: number[];
 }
 
+export function computeFn(options: {
+  workgroupSize: number[];
+  // biome-ignore lint/complexity/noBannedTypes: it's fine
+}): TgpuComputeFnShell<{}>;
+
+export function computeFn<
+  ComputeIn extends Record<string, AnyComputeBuiltin>,
+>(options: {
+  in: ComputeIn;
+  workgroupSize: number[];
+}): TgpuComputeFnShell<ComputeIn>;
+
 /**
  * Creates a shell of a typed entry function for the compute shader stage. Any function
  * that implements this shell can perform general-purpose computation.
@@ -63,11 +75,11 @@ export interface ComputeFnOptions {
 export function computeFn<
   ComputeIn extends Record<string, AnyComputeBuiltin>,
 >(options: {
-  in: ComputeIn;
+  in?: ComputeIn;
   workgroupSize: number[];
 }): TgpuComputeFnShell<ComputeIn> {
   return {
-    argTypes: [createStructFromIO(options.in)],
+    argTypes: [createStructFromIO(options.in ?? {})],
     returnType: undefined,
     workgroupSize: [
       options.workgroupSize[0] ?? 1,

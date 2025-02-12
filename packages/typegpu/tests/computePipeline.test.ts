@@ -1,12 +1,16 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import tgpu, { MissingBindGroupsError, type TgpuComputePipeline } from '../src';
+import tgpu, {
+  MissingBindGroupsError,
+  type TgpuComputeFnShell,
+  type TgpuComputePipeline,
+} from '../src';
 import * as d from '../src/data';
 import { it } from './utils/extendedIt';
 
 describe('TgpuComputePipeline', () => {
   it('can be created with a compute entry function', ({ root, device }) => {
     const entryFn = tgpu['~unstable']
-      .computeFn({ in: {}, workgroupSize: [32] })
+      .computeFn({ workgroupSize: [32] })
       .does(() => {
         // do something
       })
@@ -36,7 +40,7 @@ describe('TgpuComputePipeline', () => {
       .$name('example-layout');
 
     const entryFn = tgpu['~unstable']
-      .computeFn({ in: {}, workgroupSize: [1] })
+      .computeFn({ workgroupSize: [1] })
       .does(() => {
         layout.bound.alpha; // Using an entry of the layout
       })
@@ -53,5 +57,17 @@ describe('TgpuComputePipeline', () => {
     ).toThrowErrorMatchingInlineSnapshot(
       `[Error: Missing bind groups for layouts: 'example-layout'. Please provide it using pipeline.with(layout, bindGroup).(...)]`,
     );
+  });
+
+  it('allows to omit input in entry function shell', () => {
+    expectTypeOf(
+      tgpu['~unstable'].computeFn({ in: {}, workgroupSize: [1] }),
+      // biome-ignore lint/complexity/noBannedTypes: it's fine
+    ).toEqualTypeOf<TgpuComputeFnShell<{}>>();
+
+    expectTypeOf(
+      tgpu['~unstable'].computeFn({ workgroupSize: [1] }),
+      // biome-ignore lint/complexity/noBannedTypes: it's fine
+    ).toEqualTypeOf<TgpuComputeFnShell<{}>>();
   });
 });

@@ -247,18 +247,18 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('rejects invalid arguments for computeFn', () => {
-    tgpu['~unstable']
-      // @ts-expect-error
-      .computeFn({ in: { vid: builtin.vertexIndex }, workgroupSize: [24] })
-      .does(() => {});
+    const u = tgpu['~unstable'];
 
-    tgpu['~unstable']
-      .computeFn({
-        // @ts-expect-error
-        in: { gid: builtin.globalInvocationId, random: f32 },
-        workgroupSize: [24],
-      })
-      .does(() => {});
+    // @ts-expect-error
+    u.computeFn({ in: { vid: builtin.vertexIndex }, workgroupSize: [24] }).does(
+      () => {},
+    );
+
+    // @ts-expect-error
+    u.computeFn({
+      in: { gid: builtin.globalInvocationId, random: f32 },
+      workgroupSize: [24],
+    }).does(() => {});
   });
 
   it('resolves fragmentFn', () => {

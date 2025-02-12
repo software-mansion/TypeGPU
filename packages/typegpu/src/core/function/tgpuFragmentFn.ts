@@ -75,6 +75,21 @@ export interface TgpuFragmentFn<
   $uses(dependencyMap: Record<string, unknown>): this;
 }
 
+export function fragmentFn<
+  FragmentOut extends FragmentOutConstrained,
+>(options: {
+  out: FragmentOut;
+  // biome-ignore lint/complexity/noBannedTypes: it's fine
+}): TgpuFragmentFnShell<{}, FragmentOut>;
+
+export function fragmentFn<
+  FragmentIn extends FragmentInConstrained,
+  FragmentOut extends FragmentOutConstrained,
+>(options: {
+  in: FragmentIn;
+  out: FragmentOut;
+}): TgpuFragmentFnShell<FragmentIn, FragmentOut>;
+
 /**
  * Creates a shell of a typed entry function for the fragment shader stage. Any function
  * that implements this shell can run for each fragment (pixel), allowing the inner code
@@ -92,11 +107,11 @@ export function fragmentFn<
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
 >(options: {
-  in: FragmentIn;
+  in?: FragmentIn;
   out: FragmentOut;
 }): TgpuFragmentFnShell<FragmentIn, FragmentOut> {
   return {
-    argTypes: [createStructFromIO(options.in)],
+    argTypes: [createStructFromIO(options.in ?? {})],
     targets: options.out,
     returnType: createOutputType(options.out) as FragmentOut,
 
