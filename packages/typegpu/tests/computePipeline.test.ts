@@ -6,7 +6,7 @@ import { it } from './utils/extendedIt';
 describe('TgpuComputePipeline', () => {
   it('can be created with a compute entry function', ({ root, device }) => {
     const entryFn = tgpu['~unstable']
-      .computeFn({}, { workgroupSize: [32] })
+      .computeFn({ in: {}, workgroupSize: [32] })
       .does(() => {
         // do something
       })
@@ -36,7 +36,7 @@ describe('TgpuComputePipeline', () => {
       .$name('example-layout');
 
     const entryFn = tgpu['~unstable']
-      .computeFn({}, { workgroupSize: [1] })
+      .computeFn({ in: {}, workgroupSize: [1] })
       .does(() => {
         layout.bound.alpha; // Using an entry of the layout
       })
