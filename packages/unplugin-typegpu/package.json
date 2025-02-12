@@ -1,6 +1,6 @@
 {
   "name": "unplugin-typegpu",
-  "version": "0.0.0",
+  "version": "0.1.0-alpha.1",
   "description": "Build plugins for TypeGPU, enabling seamless JavaScript -> WGSL transpilation and improved debugging.",
   "keywords": [
     "rollup-plugin",
