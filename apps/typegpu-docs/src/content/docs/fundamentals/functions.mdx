@@ -43,7 +43,7 @@ Externals can be any value or TypeGPU resource that can be resolved to WGSL (fun
 ```ts
 const getBlue = tgpu['~unstable']
   .fn([], d.f32)
-  .does('() -> f32 { return 0.941 }');
+  .does('() -> f32 { return 0.941; }');
 
 const getColor = tgpu['~unstable']
   .fn([d.f32], d.vec4f)
@@ -58,7 +58,7 @@ const getColor = tgpu['~unstable']
 The `getColor` function, when resolved to WGSL, includes the definitions of all used external resources:
 
 ```wgsl
-fn getBlue_1() -> f32 { return 0.941 }
+fn getBlue_1() -> f32 { return 0.941; }
 
 fn getColor_0(alpha: f32) -> vec4f {
   let color = vec4f(0.114, 0.447, getBlue_1(), alpha);
