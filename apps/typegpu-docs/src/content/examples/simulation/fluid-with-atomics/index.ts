@@ -341,11 +341,11 @@ const fragment = tgpu['~unstable']
     return d.vec4f(0, 0, std.max(0.5, res), res);
   });
 
-const vertexInstanceLayout = tgpu['~unstable'].vertexLayout(
+const vertexInstanceLayout = tgpu.vertexLayout(
   (n: number) => d.arrayOf(d.u32, n),
   'instance',
 );
-const vertexLayout = tgpu['~unstable'].vertexLayout(
+const vertexLayout = tgpu.vertexLayout(
   (n: number) => d.arrayOf(d.vec2f, n),
   'vertex',
 );

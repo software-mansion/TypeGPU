@@ -78,7 +78,7 @@ describe('ArrayToContainedAttribs', () => {
 
 describe('tgpu.vertexLayout', () => {
   it('creates attributes from loose array of vec3f', () => {
-    const vertexLayout = tgpu['~unstable'].vertexLayout((count: number) =>
+    const vertexLayout = tgpu.vertexLayout((count: number) =>
       d.disarrayOf(d.vec3f, count),
     );
 
@@ -97,7 +97,7 @@ describe('tgpu.vertexLayout', () => {
       c: d.f32, // + 4
     });
 
-    const vertexLayout = tgpu['~unstable'].vertexLayout((count: number) =>
+    const vertexLayout = tgpu.vertexLayout((count: number) =>
       d.disarrayOf(VertexData, count),
     );
 
@@ -128,7 +128,7 @@ describe('tgpu.vertexLayout', () => {
       c: d.f32, // + 4
     });
 
-    const vertexLayout = tgpu['~unstable'].vertexLayout((count: number) =>
+    const vertexLayout = tgpu.vertexLayout((count: number) =>
       d.disarrayOf(VertexData, count),
     );
 
@@ -153,7 +153,7 @@ describe('tgpu.vertexLayout', () => {
   });
 
   it('creates attributes from loose array with f16 variants', () => {
-    const vertexLayout = tgpu['~unstable'].vertexLayout((count: number) =>
+    const vertexLayout = tgpu.vertexLayout((count: number) =>
       d.disarrayOf(d.float16x4, count),
     );
 
@@ -169,9 +169,7 @@ describe('tgpu.vertexLayout', () => {
 describe('connectAttributesToShader', () => {
   it('connects a single f32 attribute', () => {
     const shaderInputLayout = d.f32;
-    const layout = tgpu['~unstable'].vertexLayout((n: number) =>
-      d.arrayOf(d.f32, n),
-    );
+    const layout = tgpu.vertexLayout((n: number) => d.arrayOf(d.f32, n));
     const attrib = layout.attrib;
 
     expect(connectAttributesToShader(shaderInputLayout, attrib)).toEqual({
@@ -194,7 +192,7 @@ describe('connectAttributesToShader', () => {
 
   it('connects a single vec4f attribute (with custom shader location)', () => {
     const shaderInputLayout = d.location(3, d.vec4f);
-    const layout = tgpu['~unstable'].vertexLayout((n: number) =>
+    const layout = tgpu.vertexLayout((n: number) =>
       d.disarrayOf(d.unorm16x4, n),
     );
     const attrib = layout.attrib;
@@ -224,7 +222,7 @@ describe('connectAttributesToShader', () => {
       c: d.u32 /* should get @location(4) automatically */,
     };
 
-    const layout = tgpu['~unstable'].vertexLayout((n: number) =>
+    const layout = tgpu.vertexLayout((n: number) =>
       d.disarrayOf(
         d.unstruct({
           alpha: d.f32, // 4 bytes
@@ -278,7 +276,7 @@ describe('connectAttributesToShader', () => {
       c: d.u32 /* should get @location(4) automatically */,
     };
 
-    const alphaBetaLayout = tgpu['~unstable'].vertexLayout((n: number) =>
+    const alphaBetaLayout = tgpu.vertexLayout((n: number) =>
       d.disarrayOf(
         d.unstruct({
           alpha: d.f32, // 4 bytes
@@ -288,9 +286,7 @@ describe('connectAttributesToShader', () => {
       ),
     );
 
-    const gammaLayout = tgpu['~unstable'].vertexLayout((n: number) =>
-      d.arrayOf(d.u32, n),
-    );
+    const gammaLayout = tgpu.vertexLayout((n: number) => d.arrayOf(d.u32, n));
 
     const result = connectAttributesToShader(shaderInputLayout, {
       // purposefully out of order, which should be controlled by the shader input.
@@ -335,7 +331,7 @@ describe('connectAttributesToShader', () => {
 
   it('connects a single vec4h attribute', () => {
     const shaderInputLayout = d.vec4h;
-    const layout = tgpu['~unstable'].vertexLayout((n: number) =>
+    const layout = tgpu.vertexLayout((n: number) =>
       d.disarrayOf(d.float16x4, n),
     );
     const attrib = layout.attrib;
@@ -366,7 +362,7 @@ describe('connectAttributesToShader', () => {
       d: d.f32,
     };
 
-    const layout = tgpu['~unstable'].vertexLayout((n: number) =>
+    const layout = tgpu.vertexLayout((n: number) =>
       d.disarrayOf(
         d.unstruct({
           alpha: d.f16, // 2 bytes
@@ -421,7 +417,7 @@ describe('connectAttributesToShader', () => {
 
   it('throws when trying to use type that has no attribute representation', () => {
     expect(() =>
-      tgpu['~unstable'].vertexLayout((n: number) => d.disarrayOf(d.vec3h, n)),
+      tgpu.vertexLayout((n: number) => d.disarrayOf(d.vec3h, n)),
     ).toThrow();
   });
 });
