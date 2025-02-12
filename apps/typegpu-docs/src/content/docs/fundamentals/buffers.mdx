@@ -114,7 +114,7 @@ const buffer = root.createBuffer(d.u32)
 ### Additional flags
 
 It is also possible to add any of the `GPUBufferUsage` flags to a typed buffer object, using the `.$addFlags` method.
-Though it shouldn't be necessary in most scenarios as majority of the flags are handled automatically by the library 
+Though it shouldn't be necessary in most scenarios as majority of the flags are handled automatically by the library
 or indirectly through the `.$usage` method.
 
 ```ts
@@ -122,11 +122,11 @@ buffer.$addFlags(GPUBufferUsage.QUERY_RESOLVE);
 ```
 
 :::note
-Every typed buffer created without providing existing GPU buffer has `COPY_DST` and `COPY_SRC` flags included by default. 
+Every typed buffer created without providing existing GPU buffer has `COPY_DST` and `COPY_SRC` flags included by default.
 However once the `MAP_READ` flag is provided, the only other flag set is `COPY_DST`. Similarly when setting `MAP_WRITE` it is paired with `COPY_SRC`.
 :::
 
-Flags can only be added this way if the typed buffer was not created with an existing GPU buffer. 
+Flags can only be added this way if the typed buffer was not created with an existing GPU buffer.
 If it was, then all flags need to be provided to the existing buffer when constructing it.
 
 ### Initial value
@@ -182,6 +182,37 @@ particleBuffer.write({
 });
 ```
 
+When you want to update only a subset of a buffer’s fields, you can use the `.writePartial(data)` method. This method updates only the fields provided in the `data` object and leaves the other fields unchanged.
+
+The format of the `data` value depends on your schema type:
+
+- **For `d.struct` schemas:**
+  Provide an object with keys corresponding to the subset of the schema’s fields you wish to update.
+
+- **For `d.array` schemas:**
+  Provide an array of objects. Each object should specify:
+  - `idx`: the index of the element to update.
+  - `value`: the new value for that element.
+
+```ts
+const Planet = d.struct({
+  radius: d.f32,
+  mass: d.f32,
+  position: d.vec3f,
+  colors: d.arrayOf(d.vec3f, 5),
+});
+
+const planetBuffer = root.createBuffer(Planet);
+
+planetBuffer.writePartial({
+  mass: 123.1,
+  colors: [
+    { idx: 2, value: d.vec3f(1, 0, 0) },
+    { idx: 4, value: d.vec3f(0, 0, 1) },
+  ],
+});
+```
+
 :::caution[WebGPU Interoperability]
 If you create a buffer from an existing WebGPU buffer that happens to be mapped, the data will be written directly to the buffer (the buffer will not be unmapped).
 If you pass an unmapped buffer, the data will be written to the buffer using `GPUQueue.writeBuffer`.
@@ -189,7 +220,7 @@ If you pass an unmapped buffer, the data will be written to the buffer using `GP
 If you passed your own buffer to the `root.createBuffer` function, you need to ensure it has the `GPUBufferUsage.COPY_DST` usage flag if you want to write to it using the `write` method.
 :::
 
-There's also an option to copy value from another typed buffer using the `.copyFrom(buffer)` method, 
+There's also an option to copy value from another typed buffer using the `.copyFrom(buffer)` method,
 as long as both buffers have a matching data schema.
 
 ```ts
