@@ -273,7 +273,7 @@ const computeModule = root.device.createShaderModule({
   }),
 });
 
-const vertexLayout = tgpu['~unstable'].vertexLayout((n) =>
+const vertexLayout = tgpu['~unstable'].vertexLayout((n: number) =>
   d.arrayOf(d.location(0, d.vec2f), n),
 );
 
