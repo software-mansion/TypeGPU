@@ -5,13 +5,7 @@ import type { GenerationCtx } from '../../smol/wgslGenerator';
 import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
 import { addReturnTypeToExternals } from '../resolve/externals';
 import { createFnCore } from './fnCore';
-import type {
-  ExoticIO,
-  IOLayout,
-  IORecord,
-  Implementation,
-  InferIO,
-} from './fnTypes';
+import type { IOLayout, IORecord, Implementation, InferIO } from './fnTypes';
 import {
   type IOLayoutToSchema,
   createOutputType,
@@ -81,10 +75,10 @@ export function vertexFn<
 >(
   inputType: VertexIn,
   outputType: VertexOut,
-): TgpuVertexFnShell<ExoticIO<VertexIn>, ExoticIO<VertexOut>> {
+): TgpuVertexFnShell<VertexIn, VertexOut> {
   return {
-    attributes: [inputType as ExoticIO<VertexIn>],
-    returnType: createOutputType(outputType) as ExoticIO<VertexOut>,
+    attributes: [inputType],
+    returnType: createOutputType(outputType) as unknown as VertexOut,
     argTypes: [createStructFromIO(inputType)],
 
     does(implementation) {

@@ -41,7 +41,6 @@ import {
   isUsableAsSampled,
 } from './core/texture/usageExtension';
 import type { AnyData } from './data';
-import type { Exotic } from './data/exotic';
 import type { AnyWgslData, BaseData } from './data/wgslTypes';
 import { NotUniformError } from './errors';
 import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
@@ -318,24 +317,10 @@ export type TgpuBindGroup<
   unwrap(unwrapper: Unwrapper): GPUBindGroup;
 };
 
-type ExoticEntry<T> = T extends Record<string | number | symbol, unknown>
-  ? {
-      [Key in keyof T]: T[Key] extends BaseData
-        ? Exotic<T[Key]>
-        : T[Key] extends (...args: infer TArgs) => infer TReturn
-          ? (...args: TArgs) => Exotic<TReturn>
-          : T[Key];
-    }
-  : T;
-
-type ExoticEntries<T extends Record<string, TgpuLayoutEntry | null>> = {
-  [BindingKey in keyof T]: ExoticEntry<T[BindingKey]>;
-};
-
 export function bindGroupLayout<
   Entries extends Record<string, TgpuLayoutEntry | null>,
->(entries: Entries): TgpuBindGroupLayout<Prettify<ExoticEntries<Entries>>> {
-  return new TgpuBindGroupLayoutImpl(entries as ExoticEntries<Entries>);
+>(entries: Entries): TgpuBindGroupLayout<Prettify<Entries>> {
+  return new TgpuBindGroupLayoutImpl(entries);
 }
 
 export function isBindGroupLayout<T extends TgpuBindGroupLayout>(

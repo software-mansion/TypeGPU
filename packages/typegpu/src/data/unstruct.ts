@@ -1,6 +1,5 @@
 import type { InferPartialRecord, InferRecord } from '../shared/repr';
 import type { Unstruct } from './dataTypes';
-import type { ExoticRecord } from './exotic';
 import type { BaseData } from './wgslTypes';
 
 // ----------
@@ -25,10 +24,11 @@ import type { BaseData } from './wgslTypes';
  * @param properties Record with `string` keys and `TgpuData` or `TgpuLooseData` values,
  * each entry describing one struct member.
  */
-export const unstruct = <TProps extends Record<string, BaseData>>(
+export function unstruct<TProps extends Record<string, BaseData>>(
   properties: TProps,
-): Unstruct<ExoticRecord<TProps>> =>
-  new UnstructImpl(properties as ExoticRecord<TProps>);
+): Unstruct<TProps> {
+  return new UnstructImpl(properties as TProps);
+}
 
 // --------------
 // Implementation

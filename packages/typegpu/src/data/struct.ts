@@ -5,7 +5,6 @@ import type {
   MemIdentityRecord,
 } from '../shared/repr';
 import type { Prettify } from '../shared/utilityTypes';
-import type { ExoticRecord } from './exotic';
 import type { AnyWgslData, BaseData } from './wgslTypes';
 
 // ----------
@@ -50,12 +49,12 @@ export type AnyWgslStruct = WgslStruct<any>;
  */
 export function struct<TProps extends Record<string, AnyWgslData>>(
   props: TProps,
-): WgslStruct<Prettify<ExoticRecord<TProps>>> {
+): WgslStruct<Prettify<TProps>> {
   const struct = <T>(props: T) => props;
   Object.setPrototypeOf(struct, WgslStructImpl);
-  struct.propTypes = props as ExoticRecord<TProps>;
+  struct.propTypes = props;
 
-  return struct as unknown as WgslStruct<Prettify<ExoticRecord<TProps>>>;
+  return struct as unknown as WgslStruct<Prettify<TProps>>;
 }
 
 // --------------
