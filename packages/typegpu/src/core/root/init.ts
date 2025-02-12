@@ -463,6 +463,8 @@ class TgpuRootImpl
 
         const memo = currentPipeline.core.unwrap();
 
+        pass.setPipeline(memo.pipeline);
+
         const missingBindGroups = new Set(memo.bindGroupLayouts);
 
         memo.bindGroupLayouts.forEach((layout, idx) => {
