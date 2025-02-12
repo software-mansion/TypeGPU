@@ -350,7 +350,7 @@ const vertexLayout = tgpu['~unstable'].vertexLayout(
   'vertex',
 );
 
-let drawCanvasData = new Array<{ idx: number; value: number }>();
+let drawCanvasData: { idx: number; value: number }[] = [];
 
 let msSinceLastTick = 0;
 let render: () => void;
