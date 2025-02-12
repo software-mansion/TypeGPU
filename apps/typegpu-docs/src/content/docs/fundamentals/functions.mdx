@@ -13,12 +13,12 @@ We assume that you are familiar with the following concepts:
 - <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-wgsl.html" target="_blank" rel="noopener noreferrer">WebGPU Shading Language</a>
 :::
 
-TypeGPU allows writing shaders by composing typed functions, which are special wrappers around WGSL code. These functions can reference outside resources, like other user-defined or helper functions, buffers, bind group layouts etc. 
-TypeGPU also requires functions for quickly defining and running render and compute pipelines.
+TypeGPU allows writing shaders by composing typed functions, which are special wrappers around WGSL code. 
+These functions can reference outside resources, like other user-defined or helper functions, buffers, bind group layouts etc. 
 
 ## Creating a function
 
-The following code defines a function accepting one argument and returning one value.
+The following code defines a function that accepts one argument and returns one value.
 
 ```ts
 const getColor = tgpu['~unstable']
@@ -30,7 +30,7 @@ const getColor = tgpu['~unstable']
   .$name('getColor');
 ```
 
-Functions are constructed by first defining their shells, that is their inputs and outputs. 
+Functions are constructed by first defining their shells, which specify their inputs and outputs.
 Then the actual WGSL implementation is passed in through the `does` method.
 
 If you're using Visual Studio Code, you can use an [extension](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal) that brings syntax highlighting to the code fragments marked with `/* wgsl */` comments.
@@ -38,12 +38,12 @@ If you're using Visual Studio Code, you can use an [extension](https://marketpla
 ## External resources
 
 Functions can use external resources passed inside a record via the `$uses` method. 
-Externals can be any value or tgpu object that can be resolved to WGSL.
+Externals can be any value or TypeGPU resource that can be resolved to WGSL (functions, buffer usages, slots, accessors, constants, variables, declarations, vectors, matrices, textures, samplers etc.).
 
 ```ts
-const getBlue = = tgpu['~unstable']
-  .fn({}, d.f32)
-  .does(`() -> f32 { return 0.941 }`);
+const getBlue = tgpu['~unstable']
+  .fn([], d.f32)
+  .does('() -> f32 { return 0.941 }');
 
 const getColor = tgpu['~unstable']
   .fn([d.f32], d.vec4f)
@@ -55,9 +55,24 @@ const getColor = tgpu['~unstable']
   .$name('getColor');
 ```
 
+The `getColor` function, when resolved to WGSL, includes the definitions of all used external resources:
+
+```wgsl
+fn getBlue_1() -> f32 { return 0.941 }
+
+fn getColor_0(alpha: f32) -> vec4f {
+  let color = vec4f(0.114, 0.447, getBlue_1(), alpha);
+  return color;
+}
+```
+
 ## Entry functions
 
-Defining entry functions is similar to regular ones, but is done through dedicated constructors: `tgpu['~unstable'].vertexFn`, `tgpu['~unstable'].fragmentFn`, `tgpu['~unstable'].computeFn`. 
+Defining entry functions is similar to regular ones, but is done through dedicated constructors:
+- `tgpu['~unstable'].vertexFn`
+- `tgpu['~unstable'].fragmentFn`
+- `tgpu['~unstable'].computeFn`
+
 They can be passed to root-defined pipelines and they accept special arguments like builtins (`d.builtin`) and decorated data (`d.location`).
 
 ```ts
