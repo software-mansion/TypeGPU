@@ -183,6 +183,9 @@ export async function executeExample(
           addParameters,
         };
       }
+      if (moduleKey === 'wgpu-matrix') {
+        return await import('wgpu-matrix');
+      }
       throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
     };
 

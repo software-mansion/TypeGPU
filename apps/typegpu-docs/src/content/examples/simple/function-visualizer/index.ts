@@ -1,4 +1,5 @@
 import tgpu from 'typegpu';
+import { mat4, vec4 } from 'wgpu-matrix';
 
 type FunctionDef = {
   code: string;
@@ -18,11 +19,11 @@ const input: Input = {
       color: '1.0, 0.0, 0.0',
     },
     g: {
-      code: 'x * x - 0.5',
+      code: '0.1 * x * x - 0.5',
       color: '0.0, 1.0, 0.0',
     },
     h: {
-      code: '(x+0.1) * x * (x-0.1)',
+      code: '(x+0.1) * x * (x-0.1) * 0.01',
       color: '0.0, 0.0, 1.0',
     },
   },
@@ -30,41 +31,73 @@ const input: Input = {
   lineWidth: 0.1,
 };
 
+// let lastPos: number[] | null = null;
+const transformation = mat4.identity();
+
+const root = await tgpu.init();
+const device = root.device;
+
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = canvas.getContext('webgpu') as GPUCanvasContext;
+
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
 // deferring to wait for canvas to init
 setTimeout(() => {
-  draw(input);
+  draw();
 }, 100);
 
-async function draw(input: Input) {
-  const root = await tgpu.init();
-  const device = root.device;
-
-  const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-  const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
-  const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
+async function draw() {
   context.configure({
     device: device,
     format: presentationFormat,
     alphaMode: 'premultiplied',
   });
 
+  const transformationMatrixBuffer = device.createBuffer({
+    label: 'transformation matrix buffer',
+    size: 4 * 4 * 4,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(
+    transformationMatrixBuffer,
+    0,
+    transformation.buffer,
+  );
+
+  const invertedTransformationMatrixBuffer = device.createBuffer({
+    label: 'transformation matrix buffer',
+    size: 4 * 4 * 4,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  const inverted = mat4.inverse(transformation);
+  device.queue.writeBuffer(
+    invertedTransformationMatrixBuffer,
+    0,
+    inverted.buffer,
+  );
+
   for (const fn in input.functions) {
     const { code: fnString, color } = input.functions[fn];
 
-    const buffer = runComputePass(device, fnString, input.interpolationPoints);
+    const lineVerticesBuffer = runComputePass(
+      fnString,
+      input.interpolationPoints,
+      transformationMatrixBuffer,
+      invertedTransformationMatrixBuffer,
+    );
 
-    runRenderPass(device, context, presentationFormat, buffer, input, color);
+    runRenderPass(lineVerticesBuffer, color);
   }
 }
 
 // #region function definitions
 
 function runComputePass(
-  device: GPUDevice,
   functionString: string,
   interpolationPoints: number,
+  transformationMatrixBuffer: GPUBuffer,
+  invertedTransformationMatrixBuffer: GPUBuffer,
 ) {
   const computeShaderCode = /* wgsl */ `
 fn interpolatedFunction(x: f32) -> f32 {
@@ -72,13 +105,17 @@ return ${functionString};
 }
 
 @group(0) @binding(0) var<storage, read_write> lineVertices: array<vec2f>;
+@group(0) @binding(1) var<uniform> transformation: mat4x4f;
+@group(0) @binding(2) var<uniform> invertedTransformation: mat4x4f;
 
-@compute @workgroup_size(1) fn computePoints(
-@builtin(global_invocation_id) id: vec3u
-) {
-let point = (-1.0 + 2.0/(${interpolationPoints} - 1) * f32(id.x));
-let value = interpolatedFunction(point);
-lineVertices[id.x] = vec2f(point, value);
+@compute @workgroup_size(1) fn computePoints(@builtin(global_invocation_id) id: vec3u) {
+  let start = (transformation * vec4f(-1, 0, 0, 0)).x;
+  let end = (transformation * vec4f(1, 0, 0, 0)).x;
+
+  let pointX = (start + (end-start)/(${interpolationPoints} - 1) * f32(id.x));
+  let pointY = interpolatedFunction(pointX);
+  let result = invertedTransformation * vec4f(pointX, pointY, 0, 0);
+  lineVertices[id.x] = result.xy;
 }
 `;
 
@@ -104,7 +141,11 @@ lineVertices[id.x] = vec2f(point, value);
   const bindGroup = device.createBindGroup({
     label: 'Compute function points bind group',
     layout: computePipeline.getBindGroupLayout(0),
-    entries: [{ binding: 0, resource: { buffer: lineVerticesBuffer } }],
+    entries: [
+      { binding: 0, resource: { buffer: lineVerticesBuffer } },
+      { binding: 1, resource: { buffer: transformationMatrixBuffer } },
+      { binding: 2, resource: { buffer: invertedTransformationMatrixBuffer } },
+    ],
   });
 
   const encoder = device.createCommandEncoder({
@@ -124,14 +165,7 @@ lineVertices[id.x] = vec2f(point, value);
   return lineVerticesBuffer;
 }
 
-function runRenderPass(
-  device: GPUDevice,
-  context: GPUCanvasContext,
-  presentationFormat: GPUTextureFormat,
-  lineVerticesBuffer: GPUBuffer,
-  input: Input,
-  color: string,
-) {
+function runRenderPass(lineVerticesBuffer: GPUBuffer, color: string) {
   const vertexFragmentShaderCode = /* wgsl */ `
 @group(0) @binding(0) var<storage, read> lineVertices: array<vec2f>;
 
@@ -262,5 +296,50 @@ export const controls = {
     },
   },
 };
+
+// #region canvas controls
+
+// canvas.onmousedown = (event) => {
+//   lastPos = [event.offsetX, event.offsetY];
+// };
+
+// canvas.onmouseup = (_) => {
+//   lastPos = null;
+// };
+
+// canvas.onmousemove = (event) => {
+//   if (lastPos == null) {
+//     return;
+//   }
+//   const currentPos = [event.offsetX, event.offsetY];
+
+//   mat4.translate(
+//     transformation,
+//     [currentPos[0] - lastPos[0], currentPos[1] - lastPos[1], 0],
+//     transformation,
+//   );
+
+//   lastPos = currentPos;
+//   console.log(getCorners());
+// };
+
+canvas.onwheel = (event) => {
+  event.preventDefault();
+
+  const delta = Math.abs(event.deltaY) / 1000.0 + 1;
+  const scale = event.deltaY > 0 ? delta : 1 / delta;
+
+  mat4.scale(transformation, [scale, scale, 1], transformation);
+  console.log(getCorners());
+  draw();
+};
+
+function getCorners() {
+  const c1 = vec4.create(1, 1, 0, 0);
+  const c2 = vec4.create(-1, -1, 0, 0);
+  mat4.mul(transformation, c1, c1);
+  mat4.mul(transformation, c2, c2);
+  return [c1[0], c1[1], c2[0], c2[1]];
+}
 
 // #endregion
