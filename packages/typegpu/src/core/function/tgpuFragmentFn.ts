@@ -10,13 +10,7 @@ import type { GenerationCtx } from '../../smol/wgslGenerator';
 import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
 import { addReturnTypeToExternals } from '../resolve/externals';
 import { createFnCore } from './fnCore';
-import type {
-  ExoticIO,
-  IOLayout,
-  IORecord,
-  Implementation,
-  InferIO,
-} from './fnTypes';
+import type { IOLayout, IORecord, Implementation, InferIO } from './fnTypes';
 import {
   type IOLayoutToSchema,
   createOutputType,
@@ -98,11 +92,11 @@ export function fragmentFn<
 >(
   inputType: FragmentIn,
   outputType: FragmentOut,
-): TgpuFragmentFnShell<ExoticIO<FragmentIn>, ExoticIO<FragmentOut>> {
+): TgpuFragmentFnShell<FragmentIn, FragmentOut> {
   return {
     argTypes: [createStructFromIO(inputType)],
-    targets: outputType as ExoticIO<FragmentOut>,
-    returnType: createOutputType(outputType) as ExoticIO<FragmentOut>,
+    targets: outputType,
+    returnType: createOutputType(outputType) as FragmentOut,
 
     does(implementation) {
       // biome-ignore lint/suspicious/noExplicitAny: <the usual>
