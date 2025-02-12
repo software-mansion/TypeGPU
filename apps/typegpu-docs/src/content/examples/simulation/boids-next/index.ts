@@ -181,7 +181,7 @@ const colorPaletteBuffer = root
 
 const TriangleDataArray = (n: number) => d.arrayOf(TriangleData, n);
 
-const vertexLayout = tgpu['~unstable'].vertexLayout((n) =>
+const vertexLayout = tgpu['~unstable'].vertexLayout((n: number) =>
   d.arrayOf(d.vec2f, n),
 );
 const instanceLayout = tgpu['~unstable'].vertexLayout(
