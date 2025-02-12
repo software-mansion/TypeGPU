@@ -21,6 +21,7 @@ import { bindGroupLayout } from './tgpuBindGroupLayout';
 
 export const tgpu = {
   bindGroupLayout,
+  vertexLayout,
 
   init,
   initFromDevice,

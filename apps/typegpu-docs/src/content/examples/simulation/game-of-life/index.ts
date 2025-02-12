@@ -83,12 +83,12 @@ const squareBuffer = root
   .createBuffer(d.arrayOf(d.u32, 8), [0, 0, 1, 0, 0, 1, 1, 1])
   .$usage('vertex');
 
-const squareVertexLayout = tgpu['~unstable'].vertexLayout(
+const squareVertexLayout = tgpu.vertexLayout(
   (n: number) => d.arrayOf(d.location(1, d.vec2u), n),
   'vertex',
 );
 
-const cellsVertexLayout = tgpu['~unstable'].vertexLayout(
+const cellsVertexLayout = tgpu.vertexLayout(
   (n: number) => d.arrayOf(d.location(0, d.u32), n),
   'instance',
 );
