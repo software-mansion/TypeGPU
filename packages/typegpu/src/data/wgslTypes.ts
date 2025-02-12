@@ -1,4 +1,4 @@
-import type { Infer, MemIdentity } from '../shared/repr';
+import type { Infer, InferPartial, MemIdentity } from '../shared/repr';
 import type { AnyWgslStruct, WgslStruct } from './struct';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location<number>[]>;
@@ -815,6 +815,7 @@ export interface WgslArray<TElement extends BaseData = BaseData> {
   readonly elementType: TElement;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TElement>[];
+  readonly '~reprPartial': { idx: number; value: InferPartial<TElement> }[];
   readonly '~memIdent': WgslArray<MemIdentity<TElement>>;
 }
 

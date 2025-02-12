@@ -1,4 +1,4 @@
-import type { Infer, MemIdentity } from '../shared/repr';
+import type { Infer, InferPartial, MemIdentity } from '../shared/repr';
 import { sizeOf } from './sizeOf';
 import type { AnyWgslData, BaseData, WgslArray } from './wgslTypes';
 
@@ -32,6 +32,11 @@ class WgslArrayImpl<TElement extends BaseData> implements WgslArray<TElement> {
   public readonly type = 'array';
   /** Type-token, not available at runtime */
   public readonly '~repr'!: Infer<TElement>[];
+  /** Type-token, not available at runtime */
+  public readonly '~reprPartial'!: {
+    idx: number;
+    value: InferPartial<TElement>;
+  }[];
   /** Type-token, not available at runtime */
   public readonly '~memIdent'!: WgslArray<MemIdentity<TElement>>;
 
