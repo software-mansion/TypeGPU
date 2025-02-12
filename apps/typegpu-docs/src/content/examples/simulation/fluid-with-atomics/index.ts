@@ -281,14 +281,14 @@ const decideWaterLevel = tgpu['~unstable'].fn([d.u32, d.u32]).does((x, y) => {
 });
 
 const vertex = tgpu['~unstable']
-  .vertexFn(
-    {
+  .vertexFn({
+    in: {
       squareData: d.vec2f,
       currentStateData: d.u32,
       idx: d.builtin.instanceIndex,
     },
-    { pos: d.builtin.position, cell: d.f32 },
-  )
+    out: { pos: d.builtin.position, cell: d.f32 },
+  })
   .does((input) => {
     const w = sizeUniform.value.x;
     const h = sizeUniform.value.y;
@@ -319,7 +319,7 @@ const vertex = tgpu['~unstable']
   });
 
 const fragment = tgpu['~unstable']
-  .fragmentFn({ cell: d.f32 }, d.location(0, d.vec4f))
+  .fragmentFn({ in: { cell: d.f32 }, out: d.location(0, d.vec4f) })
   .does((input) => {
     if (input.cell === -1) {
       return d.vec4f(0.5, 0.5, 0.5, 1);
@@ -361,12 +361,10 @@ function resetGameData() {
   drawCanvasData = new Uint32Array(options.size * options.size);
 
   const compute = tgpu['~unstable']
-    .computeFn(
-      { gid: d.builtin.globalInvocationId },
-      {
-        workgroupSize: [options.workgroupSize, options.workgroupSize],
-      },
-    )
+    .computeFn({
+      in: { gid: d.builtin.globalInvocationId },
+      workgroupSize: [options.workgroupSize, options.workgroupSize],
+    })
     .does((input) => {
       decideWaterLevel(input.gid.x, input.gid.y);
     });

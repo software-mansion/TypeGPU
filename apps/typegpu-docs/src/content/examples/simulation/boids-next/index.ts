@@ -41,7 +41,10 @@ const VertexOutput = {
 };
 
 const mainVert = tgpu['~unstable']
-  .vertexFn({ v: d.vec2f, center: d.vec2f, velocity: d.vec2f }, VertexOutput)
+  .vertexFn({
+    in: { v: d.vec2f, center: d.vec2f, velocity: d.vec2f },
+    out: VertexOutput,
+  })
   .does(/* wgsl */ `(input: VertexInput) -> VertexOutput {
     let angle = getRotationFromVelocity(input.velocity);
     let rotated = rotate(input.v, angle);
@@ -64,7 +67,7 @@ const mainVert = tgpu['~unstable']
   });
 
 const mainFrag = tgpu['~unstable']
-  .fragmentFn(VertexOutput, d.vec4f)
+  .fragmentFn({ in: VertexOutput, out: d.vec4f })
   .does(/* wgsl */ `
   (input: FragmentInput) -> @location(0) vec4f {
     return input.color;
@@ -214,7 +217,7 @@ const computeBindGroupLayout = tgpu
 const { currentTrianglePos, nextTrianglePos } = computeBindGroupLayout.bound;
 
 const mainCompute = tgpu['~unstable']
-  .computeFn({ gid: d.builtin.globalInvocationId }, { workgroupSize: [1] })
+  .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })
   .does(/* wgsl */ `(input: ComputeInput) {
     let index = input.gid.x;
     var instanceInfo = currentTrianglePos[index];

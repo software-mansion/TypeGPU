@@ -236,7 +236,7 @@ const computeVelocity = tgpu['~unstable']
   .$uses({ getCell, isValidFlowOut, isValidCoord, rand01 });
 
 const mainInitWorld = tgpu['~unstable']
-  .computeFn({ gid: d.builtin.globalInvocationId }, { workgroupSize: [1] })
+  .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })
   .does((input) => {
     const x = d.i32(input.gid.x);
     const y = d.i32(input.gid.y);
@@ -258,7 +258,7 @@ const mainInitWorld = tgpu['~unstable']
   });
 
 const mainMoveObstacles = tgpu['~unstable']
-  .computeFn({}, { workgroupSize: [1] })
+  .computeFn({ in: {}, workgroupSize: [1] })
   .does(/* wgsl */ `() {
     for (var obs_idx = 0; obs_idx < MAX_OBSTACLES; obs_idx += 1) {
       let obs = prevObstacleReadonly[obs_idx];
@@ -403,7 +403,10 @@ const getMinimumInFlow = tgpu['~unstable']
   });
 
 const mainCompute = tgpu['~unstable']
-  .computeFn({ gid: d.builtin.globalInvocationId }, { workgroupSize: [8, 8] })
+  .computeFn({
+    in: { gid: d.builtin.globalInvocationId },
+    workgroupSize: [8, 8],
+  })
   .does((input) => {
     const x = d.i32(input.gid.x);
     const y = d.i32(input.gid.y);
@@ -464,10 +467,10 @@ let boxY = 0.2;
 let leftWallX = 0;
 
 const vertexMain = tgpu['~unstable']
-  .vertexFn(
-    { idx: d.builtin.vertexIndex },
-    { pos: d.builtin.position, uv: d.vec2f },
-  )
+  .vertexFn({
+    in: { idx: d.builtin.vertexIndex },
+    out: { pos: d.builtin.position, uv: d.vec2f },
+  })
   .does(/* wgsl */ `(input: VertexInput) -> VertexOut {
     var pos = array<vec2f, 4>(
       vec2(1, 1), // top-right
@@ -490,7 +493,7 @@ const vertexMain = tgpu['~unstable']
   }`);
 
 const fragmentMain = tgpu['~unstable']
-  .fragmentFn({ uv: d.vec2f }, d.vec4f)
+  .fragmentFn({ in: { uv: d.vec2f }, out: d.vec4f })
   .does((input) => {
     const x = d.i32(input.uv.x * d.f32(gridSizeUniform.value));
     const y = d.i32(input.uv.y * d.f32(gridSizeUniform.value));

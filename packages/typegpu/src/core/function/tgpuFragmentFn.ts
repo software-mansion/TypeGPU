@@ -78,25 +78,24 @@ export interface TgpuFragmentFn<
  * to process information received from the vertex shader stage and builtins to determine
  * the final color of the pixel (many pixels in case of multiple targets).
  *
- * @param inputType
- *   Values computed in the vertex stage and builtins to be made available to functions that implement this shell.
- * @param outputType
- *   A `vec4f`, signaling this function outputs a color for one target, or a struct/array containing
- *   colors for multiple targets.
+ * @param options.in
+ *  Values computed in the vertex stage and builtins to be made available to functions that implement this shell.
+ * @param options.out
+ *  A `vec4f`, signaling this function outputs a color for one target, or a struct/array containing colors for multiple targets.
  */
 export function fragmentFn<
   // Not allowing single-value input, as using objects here is more
   // readable, and refactoring to use a builtin argument is too much hassle.
   FragmentIn extends IORecord,
   FragmentOut extends FragmentOutConstrained,
->(
-  inputType: FragmentIn,
-  outputType: FragmentOut,
-): TgpuFragmentFnShell<FragmentIn, FragmentOut> {
+>(options: {
+  in: FragmentIn;
+  out: FragmentOut;
+}): TgpuFragmentFnShell<FragmentIn, FragmentOut> {
   return {
-    argTypes: [createStructFromIO(inputType)],
-    targets: outputType,
-    returnType: createOutputType(outputType) as FragmentOut,
+    argTypes: [createStructFromIO(options.in)],
+    targets: options.out,
+    returnType: createOutputType(options.out) as FragmentOut,
 
     does(implementation) {
       // biome-ignore lint/suspicious/noExplicitAny: <the usual>

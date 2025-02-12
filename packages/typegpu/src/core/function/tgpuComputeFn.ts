@@ -55,28 +55,30 @@ export interface ComputeFnOptions {
  * Creates a shell of a typed entry function for the compute shader stage. Any function
  * that implements this shell can perform general-purpose computation.
  *
- * @param workgroupSize
+ * @param options.in
+ *   Compute function arguments.
+ * @param options.workgroupSize
  *   Size of blocks that the thread grid will be divided into (up to 3 dimensions).
  */
-export function computeFn<ComputeIn extends Record<string, AnyComputeBuiltin>>(
-  argTypes: ComputeIn,
-  options: ComputeFnOptions,
-): TgpuComputeFnShell<ComputeIn> {
-  const { workgroupSize } = options;
-
+export function computeFn<
+  ComputeIn extends Record<string, AnyComputeBuiltin>,
+>(options: {
+  in: ComputeIn;
+  workgroupSize: number[];
+}): TgpuComputeFnShell<ComputeIn> {
   return {
-    argTypes: [createStructFromIO(argTypes)],
+    argTypes: [createStructFromIO(options.in)],
     returnType: undefined,
     workgroupSize: [
-      workgroupSize[0] ?? 1,
-      workgroupSize[1] ?? 1,
-      workgroupSize[2] ?? 1,
+      options.workgroupSize[0] ?? 1,
+      options.workgroupSize[1] ?? 1,
+      options.workgroupSize[2] ?? 1,
     ],
 
     does(implementation) {
       return createComputeFn(
         this,
-        workgroupSize,
+        options.workgroupSize,
         implementation as Implementation,
       );
     },
