@@ -182,6 +182,15 @@ particleBuffer.write({
 });
 ```
 
+:::caution[WebGPU Interoperability]
+If you create a buffer from an existing WebGPU buffer that happens to be mapped, the data will be written directly to the buffer (the buffer will not be unmapped).
+If you pass an unmapped buffer, the data will be written to the buffer using `GPUQueue.writeBuffer`.
+
+If you passed your own buffer to the `root.createBuffer` function, you need to ensure it has the `GPUBufferUsage.COPY_DST` usage flag if you want to write to it using the `write` method.
+:::
+
+### Partial writes
+
 When you want to update only a subset of a buffer’s fields, you can use the `.writePartial(data)` method. This method updates only the fields provided in the `data` object and leaves the other fields unchanged.
 
 The format of the `data` value depends on your schema type:
@@ -213,12 +222,7 @@ planetBuffer.writePartial({
 });
 ```
 
-:::caution[WebGPU Interoperability]
-If you create a buffer from an existing WebGPU buffer that happens to be mapped, the data will be written directly to the buffer (the buffer will not be unmapped).
-If you pass an unmapped buffer, the data will be written to the buffer using `GPUQueue.writeBuffer`.
-
-If you passed your own buffer to the `root.createBuffer` function, you need to ensure it has the `GPUBufferUsage.COPY_DST` usage flag if you want to write to it using the `write` method.
-:::
+### Copying
 
 There's also an option to copy value from another typed buffer using the `.copyFrom(buffer)` method,
 as long as both buffers have a matching data schema.
