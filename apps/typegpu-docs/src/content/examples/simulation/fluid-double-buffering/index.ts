@@ -258,7 +258,7 @@ const mainInitWorld = tgpu['~unstable']
   });
 
 const mainMoveObstacles = tgpu['~unstable']
-  .computeFn({ in: {}, workgroupSize: [1] })
+  .computeFn({ workgroupSize: [1] })
   .does(/* wgsl */ `() {
     for (var obs_idx = 0; obs_idx < MAX_OBSTACLES; obs_idx += 1) {
       let obs = prevObstacleReadonly[obs_idx];
