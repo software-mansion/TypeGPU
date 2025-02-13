@@ -29,7 +29,15 @@ Since 2012 [Software Mansion](https://swmansion.com) is a software agency with e
 
 ## Repository structure
 **Packages**:
-- [packages/typegpu](/packages/typegpu) - the core library.
+- [packages/typegpu](/packages/typegpu) - the core library
+- [packages/tgpu-dev-cli](/packages/tgpu-dev-cli) - some TypeGPU development tools
+- [packages/tgpu-gen](/packages/tgpu-gen) - CLI tool for automatic TypeGPU code generation
+- [packages/tgpu-jit](/packages/tgpu-jit) - Just-In-Time transpiler for TypeGPU
+- [packages/tgpu-wgsl-parser](/packages/tgpu-wgsl-parser) - WGSL code parser
+- [packages/tinyest](/packages/tinyest) - compact JavaScript AST for transpilation
+- [packages/tinyest-for-wgsl](/packages/tinyest-for-wgsl) - WGSL to tinyest parser
+- [packages/unplugin-typegpu](/packages/unplugin-typegpu) - build plugins for TypeGPU
+- ~~[packages/rollup-plugin](/packages/rollup-plugin) - rollup plugin for TypeGPU~~ (replaced by unplugin-typegpu)
 
 **Apps**:
-- [apps/typegpu-docs](/apps/typegpu-docs) - the documentation webpage.
+- [apps/typegpu-docs](/apps/typegpu-docs) - the documentation, examples and benchmarks webpage
