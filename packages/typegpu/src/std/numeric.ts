@@ -2,6 +2,8 @@ import type { VecKind } from '../data/vector';
 import { VectorOps } from '../data/vectorOps';
 import type {
   AnyMatInstance,
+  m2x2f,
+  m3x3f,
   v2f,
   v2h,
   v3f,
@@ -29,13 +31,55 @@ export function sub<T extends vBase>(lhs: T, rhs: T): T {
   return VectorOps.sub[lhs.kind](lhs, rhs);
 }
 
-export function mul<T extends vBase | AnyMatInstance>(s: number | T, v: T): T {
+type vBaseForMat<T extends AnyMatInstance> = T extends m2x2f
+  ? v2f
+  : T extends m3x3f
+    ? v3f
+    : v4f;
+
+export function mul<T extends AnyMatInstance, TVec extends vBaseForMat<T>>(
+  s: T,
+  v: TVec,
+): TVec;
+export function mul<T extends AnyMatInstance, TVec extends vBaseForMat<T>>(
+  s: TVec,
+  v: T,
+): TVec;
+export function mul<T extends vBase | AnyMatInstance>(s: number | T, v: T): T;
+export function mul(
+  s: vBase | AnyMatInstance | number,
+  v: vBase | AnyMatInstance,
+): vBase | AnyMatInstance {
   if (inGPUMode()) {
-    return `(${s} * ${v})` as unknown as T;
+    return `(${s} * ${v})` as unknown as vBase | AnyMatInstance;
   }
   if (typeof s === 'number') {
     return VectorOps.mulSxV[v.kind](s, v);
   }
+  if (
+    typeof s === 'object' &&
+    typeof v === 'object' &&
+    'kind' in s &&
+    'kind' in v
+  ) {
+    const sIsVector = !s.kind.includes('mat');
+    const vIsVector = !v.kind.includes('mat');
+    if (!sIsVector && vIsVector) {
+      // Matrix * Vector case
+      return VectorOps.mulMxV[(s as AnyMatInstance).kind](
+        s as AnyMatInstance,
+        v as vBaseForMat<AnyMatInstance>,
+      );
+    }
+    if (sIsVector && !vIsVector) {
+      // Vector * Matrix case
+      return VectorOps.mulVxM[(v as AnyMatInstance).kind](
+        s as vBaseForMat<AnyMatInstance>,
+        v as AnyMatInstance,
+      );
+    }
+  }
+  // Fallback to vector * vector multiplication
   return VectorOps.mulVxV[v.kind](s, v);
 }
 
