@@ -49,6 +49,7 @@ const modules: Record<string, GPUShaderModule> = {
   f: compileComputeModule(initialFunctions.f.code),
   g: compileComputeModule(initialFunctions.g.code),
   h: compileComputeModule(initialFunctions.h.code),
+  background: compileBackgroundRenderModule(),
   draw: compileRenderModule(),
 };
 
@@ -133,56 +134,14 @@ function runComputePass(module: GPUShaderModule, resultBuffer: GPUBuffer) {
 }
 
 function runRenderBackgroundPass() {
-  const renderBackgroundCode = /* wgsl */ `
-struct Properties {
-  transformation: mat4x4f,
-  invertedTransformation: mat4x4f,
-  interpolationPoints: u32,
-  lineWidthBuffer: f32,
-  dashedLine: u32,
-};
-
-@group(0) @binding(0) var<uniform> properties: Properties;
-
-@vertex fn vs(
-  @builtin(vertex_index) vertexIndex : u32,
-  @builtin(instance_index) instanceIndex : u32,
-) -> @builtin(position) vec4f {
-  let leftBot = properties.transformation * vec4f(-1, -1, 0, 1);
-  let rightTop = properties.transformation * vec4f(1, 1, 0, 1);
-
-  let transformedPoints = array(
-    vec2f(leftBot.x, 0.0),
-    vec2f(rightTop.x, 0.0),
-    vec2f(0.0, leftBot.y),
-    vec2f(0.0, rightTop.y),
-  );
-
-  let currentPoint = properties.invertedTransformation * vec4f(transformedPoints[2 * instanceIndex + vertexIndex/2].xy, 0, 1);
-  return vec4f(
-    currentPoint.x + f32(instanceIndex) * select(-1.0, 1.0, vertexIndex%2 == 0) * 0.005,
-    currentPoint.y + f32(1-instanceIndex) * select(-1.0, 1.0, vertexIndex%2 == 0) * 0.005,
-    currentPoint.zw
-  );
-}
-
-@fragment fn fs() -> @location(0) vec4f {
-  return vec4f(0.0, 0.0, 0.0, 1.0);
-}
-  `;
-  const renderBackgroundModule = device.createShaderModule({
-    label: 'Render module',
-    code: renderBackgroundCode,
-  });
-
   const renderPipeline = device.createRenderPipeline({
     label: 'Render pipeline',
     layout: 'auto',
     vertex: {
-      module: renderBackgroundModule,
+      module: modules.background,
     },
     fragment: {
-      module: renderBackgroundModule,
+      module: modules.background,
       targets: [{ format: presentationFormat }],
     },
     primitive: {
@@ -337,6 +296,51 @@ async function tryCompileComputeModule(
   }
 
   return computeShaderModule;
+}
+
+function compileBackgroundRenderModule() {
+  const renderBackgroundCode = /* wgsl */ `
+struct Properties {
+  transformation: mat4x4f,
+  invertedTransformation: mat4x4f,
+  interpolationPoints: u32,
+  lineWidthBuffer: f32,
+  dashedLine: u32,
+};
+
+@group(0) @binding(0) var<uniform> properties: Properties;
+
+@vertex fn vs(
+  @builtin(vertex_index) vertexIndex : u32,
+  @builtin(instance_index) instanceIndex : u32,
+) -> @builtin(position) vec4f {
+  let leftBot = properties.transformation * vec4f(-1, -1, 0, 1);
+  let rightTop = properties.transformation * vec4f(1, 1, 0, 1);
+
+  let transformedPoints = array(
+    vec2f(leftBot.x, 0.0),
+    vec2f(rightTop.x, 0.0),
+    vec2f(0.0, leftBot.y),
+    vec2f(0.0, rightTop.y),
+  );
+
+  let currentPoint = properties.invertedTransformation * vec4f(transformedPoints[2 * instanceIndex + vertexIndex/2].xy, 0, 1);
+  return vec4f(
+    currentPoint.x + f32(instanceIndex) * select(-1.0, 1.0, vertexIndex%2 == 0) * 0.005,
+    currentPoint.y + f32(1-instanceIndex) * select(-1.0, 1.0, vertexIndex%2 == 0) * 0.005,
+    currentPoint.zw
+  );
+}
+
+@fragment fn fs() -> @location(0) vec4f {
+  return vec4f(0.0, 0.0, 0.0, 1.0);
+}
+  `;
+  const renderBackgroundModule = device.createShaderModule({
+    label: 'Render module',
+    code: renderBackgroundCode,
+  });
+  return renderBackgroundModule;
 }
 
 function compileRenderModule() {
