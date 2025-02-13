@@ -29,15 +29,16 @@ Since 2012 [Software Mansion](https://swmansion.com) is a software agency with e
 
 ## Repository structure
 **Packages**:
-- [packages/typegpu](/packages/typegpu) - the core library
-- [packages/tgpu-gen](/packages/tgpu-gen) - CLI tool for automatic TypeGPU code generation
-- [packages/tgpu-jit](/packages/tgpu-jit) - Just-In-Time transpiler for TypeGPU
-- [packages/tgpu-wgsl-parser](/packages/tgpu-wgsl-parser) - WGSL code parser
-- [packages/tinyest](/packages/tinyest) - compact JavaScript AST for transpilation
-- [packages/tinyest-for-wgsl](/packages/tinyest-for-wgsl) - WGSL to tinyest parser
-- [packages/unplugin-typegpu](/packages/unplugin-typegpu) - build plugins for TypeGPU
-- ~~[packages/rollup-plugin](/packages/rollup-plugin) - rollup plugin for TypeGPU~~ (replaced by unplugin-typegpu)
-- [packages/tgpu-dev-cli](/packages/tgpu-dev-cli) - some TypeGPU development tools
+- [packages/typegpu](/packages/typegpu) - The core library.
+- [packages/unplugin-typegpu](/packages/unplugin-typegpu) - Build plugins for TypeGPU.
+- [packages/tgpu-gen](/packages/tgpu-gen) - CLI tool for automatic TypeGPU code generation.
+- [packages/tgpu-jit](/packages/tgpu-jit) - Just-In-Time transpiler for TypeGPU.
+- [packages/tinyest](/packages/tinyest) - Type definitions for a JS embeddable syntax tree.
+- [packages/tinyest-for-wgsl](/packages/tinyest-for-wgsl) - Transforms JavaScript into its *tinyest* form, to be used in generating equivalent (or close to) WGSL code.
+- [packages/tgpu-wgsl-parser](/packages/tgpu-wgsl-parser) - WGSL code parser.
+- ~~[packages/rollup-plugin](/packages/rollup-plugin) - Rollup plugin for TypeGPU.~~ (replaced by *unplugin-typegpu*)
+
+- [packages/tgpu-dev-cli](/packages/tgpu-dev-cli) - Development tools for packages in the monorepo.
 
 **Apps**:
-- [apps/typegpu-docs](/apps/typegpu-docs) - the documentation, examples and benchmarks webpage
+- [apps/typegpu-docs](/apps/typegpu-docs) - The documentation, examples and benchmarks webpage.
