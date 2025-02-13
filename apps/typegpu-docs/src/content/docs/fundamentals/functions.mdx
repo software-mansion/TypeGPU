@@ -108,7 +108,7 @@ const mainFragment = tgpu['~unstable']
 ```
 
 When entry function inputs or outputs are specified as objects containing builtins and inter-stage variables, the WGSL implementations need to access these arguments as passed in via structs (see *VertexInput*, *VertexOutput*, *FragmentInput*). 
-TypeGPU schemas for these structs are created automatically by the library and their definitions are included when resolving the functions. The names referenced in the implementations do not matter. The schemas can be accessed through dedicated properties on created entry functions (`mainVertex.inputType`, `mainVertex.outputType`, `mainFragment.outputType`).
+TypeGPU schemas for these structs are created automatically by the library and their definitions are included when resolving the functions. The names referenced in the implementations do not matter.
 
 ## Usage in pipelines
 
