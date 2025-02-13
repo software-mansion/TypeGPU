@@ -1,29 +1,25 @@
 import tgpu from 'typegpu';
 import { mat4 } from 'wgpu-matrix';
 
+// #region Globals and init
+
 type FunctionDef = {
   code: string;
-  color: `${number}, ${number}, ${number}`;
+  color: Float32Array;
 };
 
-type Input = {
-  functions: Record<string, FunctionDef>;
-};
-
-const input: Input = {
-  functions: {
-    f: {
-      code: 'sin(x*10)/2',
-      color: '1.0, 0.0, 0.0',
-    },
-    g: {
-      code: '0.1 * x * x - 0.5',
-      color: '0.0, 1.0, 0.0',
-    },
-    h: {
-      code: '(x+0.1) * x * (x-0.1) * 0.01',
-      color: '0.0, 0.0, 1.0',
-    },
+const initialFunctions: Record<string, FunctionDef> = {
+  f: {
+    code: 'sin(x*10)/2',
+    color: Float32Array.of(1.0, 0.0, 0.0, 1.0),
+  },
+  g: {
+    code: '0.1 * x * x - 0.5',
+    color: Float32Array.of(0.0, 1.0, 0.0, 1.0),
+  },
+  h: {
+    code: '(x+0.1) * x * (x-0.1) * 0.01',
+    color: Float32Array.of(0.0, 0.0, 1.0, 1.0),
   },
 };
 
@@ -49,17 +45,32 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const propertiesBuffer = device.createBuffer({
-  label: 'properties buffer',
-  size:
-    4 * 4 * 4 + // transformation
-    4 * 4 * 4 + // inverseTransformation
-    4 + // interpolationPoints
-    4 + // lineWidthBuffer
-    4 + // dashedLine
-    4, // padding
-  usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-});
+const modules: Record<string, GPUShaderModule> = {
+  f: recompileComputeModule(initialFunctions.f.code),
+  g: recompileComputeModule(initialFunctions.g.code),
+  h: recompileComputeModule(initialFunctions.h.code),
+  draw: recompileRenderModule(),
+};
+
+const buffers: Record<string, GPUBuffer> = {
+  properties: device.createBuffer({
+    label: 'properties buffer',
+    size:
+      4 * 4 * 4 + // transformation
+      4 * 4 * 4 + // inverseTransformation
+      4 + // interpolationPoints
+      4 + // lineWidthBuffer
+      4 + // dashedLine
+      4, // padding
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  }),
+  lineVertices: recreateLineVerticesBuffer(),
+  color: device.createBuffer({
+    label: 'properties buffer',
+    size: 4 * 4,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  }),
+};
 
 // deferring to wait for canvas to init
 setTimeout(() => {
@@ -69,29 +80,110 @@ setTimeout(() => {
 async function draw() {
   queuePropertiesBufferUpdate();
 
-  for (const fn in input.functions) {
-    const { code: fnString, color } = input.functions[fn];
+  for (const fn in initialFunctions) {
+    const { color } = initialFunctions[fn];
 
-    const lineVerticesBuffer = runComputePass(
-      fnString,
-      properties.interpolationPoints,
-      propertiesBuffer,
-    );
+    runComputePass(modules[fn]);
 
-    runRenderPass(lineVerticesBuffer, propertiesBuffer, color);
+    device.queue.writeBuffer(buffers.color, 0, color.buffer);
+
+    runRenderPass();
   }
 }
 
 // #region function definitions
 
-function runComputePass(
-  functionString: string,
-  interpolationPoints: number,
-  propertiesBuffer: GPUBuffer,
-) {
+function runComputePass(module: GPUShaderModule) {
+  const computePipeline = device.createComputePipeline({
+    label: 'Compute function points pipeline',
+    layout: 'auto',
+    compute: {
+      module: module,
+    },
+  });
+
+  const bindGroup = device.createBindGroup({
+    label: 'Compute function points bind group',
+    layout: computePipeline.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: { buffer: buffers.lineVertices } },
+      { binding: 1, resource: { buffer: buffers.properties } },
+    ],
+  });
+
+  const encoder = device.createCommandEncoder({
+    label: 'Compute function points encoder',
+  });
+  const pass = encoder.beginComputePass({
+    label: 'Compute function points compute pass',
+  });
+  pass.setPipeline(computePipeline);
+  pass.setBindGroup(0, bindGroup);
+  pass.dispatchWorkgroups(properties.interpolationPoints);
+  pass.end();
+
+  const commandBuffer = encoder.finish();
+  device.queue.submit([commandBuffer]);
+}
+
+function runRenderPass() {
+  const renderPipeline = device.createRenderPipeline({
+    label: 'Render pipeline',
+    layout: 'auto',
+    vertex: {
+      module: modules.draw,
+    },
+    fragment: {
+      module: modules.draw,
+      targets: [{ format: presentationFormat }],
+    },
+    primitive: {
+      topology: 'triangle-strip',
+    },
+  });
+
+  const renderBindGroup = device.createBindGroup({
+    label: 'Render bindGroup',
+    layout: renderPipeline.getBindGroupLayout(0),
+    entries: [
+      { binding: 0, resource: { buffer: buffers.lineVertices } },
+      { binding: 1, resource: { buffer: buffers.properties } },
+      { binding: 2, resource: { buffer: buffers.color } },
+    ],
+  });
+
+  const renderPassDescriptor = {
+    label: 'Render pass',
+    colorAttachments: [
+      {
+        view: undefined as unknown as GPUTextureView,
+        clearValue: [0.3, 0.3, 0.3, 1] as const,
+        loadOp: 'load' as const,
+        storeOp: 'store' as const,
+      },
+    ],
+  };
+
+  renderPassDescriptor.colorAttachments[0].view = context
+    .getCurrentTexture()
+    .createView();
+
+  const encoder = device.createCommandEncoder({ label: 'Render encoder' });
+
+  const pass = encoder.beginRenderPass(renderPassDescriptor);
+  pass.setPipeline(renderPipeline);
+  pass.setBindGroup(0, renderBindGroup);
+  pass.draw(properties.interpolationPoints * 2); // call our vertex shader 2 times per point drawn
+  pass.end();
+
+  const commandBuffer = encoder.finish();
+  device.queue.submit([commandBuffer]);
+}
+
+function recompileComputeModule(functionCode: string) {
   const computeShaderCode = /* wgsl */ `
 fn interpolatedFunction(x: f32) -> f32 {
-return ${functionString};
+return ${functionCode};
 }
 
 struct Properties {
@@ -115,57 +207,14 @@ struct Properties {
   lineVertices[id.x] = result.xy;
 }
 `;
-
   const computeShaderModule = device.createShaderModule({
-    label: 'Compute function points shader module',
+    label: `Compute function points shader module for f(x) = ${functionCode}`,
     code: computeShaderCode,
   });
-
-  const computePipeline = device.createComputePipeline({
-    label: 'Compute function points pipeline',
-    layout: 'auto',
-    compute: {
-      module: computeShaderModule,
-    },
-  });
-
-  const lineVerticesBuffer = device.createBuffer({
-    label: 'Function points buffer',
-    size: interpolationPoints * 4 * 2,
-    usage: GPUBufferUsage.STORAGE,
-  });
-
-  const bindGroup = device.createBindGroup({
-    label: 'Compute function points bind group',
-    layout: computePipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: { buffer: lineVerticesBuffer } },
-      { binding: 1, resource: { buffer: propertiesBuffer } },
-    ],
-  });
-
-  const encoder = device.createCommandEncoder({
-    label: 'Compute function points encoder',
-  });
-  const pass = encoder.beginComputePass({
-    label: 'Compute function points compute pass',
-  });
-  pass.setPipeline(computePipeline);
-  pass.setBindGroup(0, bindGroup);
-  pass.dispatchWorkgroups(interpolationPoints);
-  pass.end();
-
-  const commandBuffer = encoder.finish();
-  device.queue.submit([commandBuffer]);
-
-  return lineVerticesBuffer;
+  return computeShaderModule;
 }
 
-function runRenderPass(
-  lineVerticesBuffer: GPUBuffer,
-  propertiesBuffer: GPUBuffer,
-  color: string,
-) {
+function recompileRenderModule() {
   const vertexFragmentShaderCode = /* wgsl */ `
 struct Properties {
   transformation: mat4x4f,
@@ -177,6 +226,7 @@ struct Properties {
 
 @group(0) @binding(0) var<storage, read> lineVertices: array<vec2f>;
 @group(0) @binding(1) var<uniform> properties: Properties;
+@group(0) @binding(2) var<uniform> color: vec4f;
 
 fn othronormalForLine(p1: vec2f, p2: vec2f) -> vec2f {
   let line = p2 - p1;
@@ -208,7 +258,7 @@ fn orthonormalForVertex(index: u32) -> vec2f {
 }
 
 @fragment fn fs() -> @location(0) vec4f {
-  return vec4f(${color}, 1);
+  return color;
 }
   `;
 
@@ -217,60 +267,16 @@ fn orthonormalForVertex(index: u32) -> vec2f {
     code: vertexFragmentShaderCode,
   });
 
-  const renderPipeline = device.createRenderPipeline({
-    label: 'Render pipeline',
-    layout: 'auto',
-    vertex: {
-      module: vertexFragmentShaderModule,
-    },
-    fragment: {
-      module: vertexFragmentShaderModule,
-      targets: [{ format: presentationFormat }],
-    },
-    primitive: {
-      topology: 'triangle-strip',
-    },
+  return vertexFragmentShaderModule;
+}
+
+function recreateLineVerticesBuffer() {
+  const lineVerticesBuffer = device.createBuffer({
+    label: 'Function points buffer',
+    size: properties.interpolationPoints * 4 * 2,
+    usage: GPUBufferUsage.STORAGE,
   });
-
-  const renderBindGroup = device.createBindGroup({
-    label: 'Render bindGroup',
-    layout: renderPipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: { buffer: lineVerticesBuffer } },
-      { binding: 1, resource: { buffer: propertiesBuffer } },
-    ],
-  });
-
-  const renderPassDescriptor = {
-    label: 'Render pass',
-    colorAttachments: [
-      {
-        view: undefined as unknown as GPUTextureView,
-        clearValue: [0.3, 0.3, 0.3, 1] as const,
-        loadOp: 'load' as const,
-        storeOp: 'store' as const,
-      },
-    ],
-  };
-
-  function render() {
-    renderPassDescriptor.colorAttachments[0].view = context
-      .getCurrentTexture()
-      .createView();
-
-    const encoder = device.createCommandEncoder({ label: 'Render encoder' });
-
-    const pass = encoder.beginRenderPass(renderPassDescriptor);
-    pass.setPipeline(renderPipeline);
-    pass.setBindGroup(0, renderBindGroup);
-    pass.draw(properties.interpolationPoints * 2); // call our vertex shader 2 times per point drawn
-    pass.end();
-
-    const commandBuffer = encoder.finish();
-    device.queue.submit([commandBuffer]);
-  }
-
-  render();
+  return lineVerticesBuffer;
 }
 
 function queuePropertiesBufferUpdate() {
@@ -283,27 +289,27 @@ function queuePropertiesBufferUpdate() {
   properties.inverseTransformation = mat4.inverse(properties.transformation);
 
   device.queue.writeBuffer(
-    propertiesBuffer,
+    buffers.properties,
     transformationOffset,
     properties.transformation.buffer,
   );
   device.queue.writeBuffer(
-    propertiesBuffer,
+    buffers.properties,
     inverseTransformationOffset,
     properties.inverseTransformation.buffer,
   );
   device.queue.writeBuffer(
-    propertiesBuffer,
+    buffers.properties,
     interpolationPointsOffset,
     Int32Array.of(properties.interpolationPoints).buffer,
   );
   device.queue.writeBuffer(
-    propertiesBuffer,
+    buffers.properties,
     lineWidthBufferOffset,
     Float32Array.of(properties.lineWidthBuffer).buffer,
   );
   device.queue.writeBuffer(
-    propertiesBuffer,
+    buffers.properties,
     dashedLineOffset,
     Int32Array.of(properties.dashedLine).buffer,
   );
@@ -324,17 +330,18 @@ export const controls = {
   },
   'interpolation points count': {
     initial: '256',
-    options: [16, 64, 256, 1024, 4096].map((x) => x.toString()),
+    options: [4, 16, 64, 256, 1024, 4096].map((x) => x.toString()),
     onSelectChange: (value: string) => {
       const num = Number.parseInt(value);
       properties.interpolationPoints = num;
+      buffers.lineVertices = recreateLineVerticesBuffer();
       draw();
     },
   },
   'red function': {
     initial: 'sin(x*10)/2',
     onTextChange: (value: string) => {
-      input.functions.f.code = value;
+      modules.f = recompileComputeModule(value);
       draw();
     },
   },
