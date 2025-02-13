@@ -42,12 +42,12 @@ describe('tgpu resolve', () => {
     } as unknown as TgpuBufferReadonly<d.F32>;
 
     const fragment1 = tgpu['~unstable']
-      .fragmentFn({}, d.vec4f)
+      .fragmentFn({ out: d.vec4f })
       .does(() => d.vec4f(0, intensity.value, 0, 1))
       .$name('fragment1');
 
     const fragment2 = tgpu['~unstable']
-      .fragmentFn({}, d.vec4f)
+      .fragmentFn({ out: d.vec4f })
       .does(() => d.vec4f(intensity.value, 0, 0, 1))
       .$name('fragment2');
 
