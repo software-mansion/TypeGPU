@@ -50,7 +50,7 @@
     "prepare-package": "tgpu-dev-cli prepack"
   },
   "dependencies": {
-    "unplugin-typegpu": "workspace:^0.0.0"
+    "unplugin-typegpu": "workspace:^0.1.0-alpha.2"
   },
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",

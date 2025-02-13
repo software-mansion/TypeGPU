@@ -137,7 +137,7 @@ const Filter = (n: number) =>
   });
 
 const fooLayout = tgpu.bindGroupLayout({
-  factors: { storage: (n) => d.arrayOf(d.f32, n) },
+  factors: { storage: (n: number) => d.arrayOf(d.f32, n) },
   filter: { storage: Filter },
   // ...
 });
@@ -171,10 +171,10 @@ To be able to sample a texture in a shader, create a property with the value mat
 ```ts
 {
   texture: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
-  
+
   /** @default '2d' */
   viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-  
+
   /** @default false */
   multisampled?: boolean;
 }
@@ -241,4 +241,3 @@ If you accidentally pass the wrong type of resource, the TypeScript compiler wil
     - `GPUSampler` - raw WebGPU samplers created *with* a `compare` function.
   - `sampler === 'filtering'` or `sampler === 'non-filtering'`
     - `GPUSampler` - raw WebGPU samplers created *without* a `compare` function.
-

@@ -26,7 +26,7 @@ const MAX_PRESSURE = tgpu['~unstable'].const(d.u32, 12);
 
 const options = {
   size: 32,
-  timestep: 50,
+  timestep: 25,
   stepsPerTimestep: 1,
   workgroupSize: 1,
   viscosity: 1000,
@@ -341,16 +341,16 @@ const fragment = tgpu['~unstable']
     return d.vec4f(0, 0, std.max(0.5, res), res);
   });
 
-const vertexInstanceLayout = tgpu['~unstable'].vertexLayout(
+const vertexInstanceLayout = tgpu.vertexLayout(
   (n: number) => d.arrayOf(d.u32, n),
   'instance',
 );
-const vertexLayout = tgpu['~unstable'].vertexLayout(
+const vertexLayout = tgpu.vertexLayout(
   (n: number) => d.arrayOf(d.vec2f, n),
   'vertex',
 );
 
-let drawCanvasData = new Uint32Array(options.size * options.size);
+let drawCanvasData: { idx: number; value: number }[] = [];
 
 let msSinceLastTick = 0;
 let render: () => void;
@@ -358,7 +358,7 @@ let applyDrawCanvas: () => void;
 let renderChanges: () => void;
 
 function resetGameData() {
-  drawCanvasData = new Uint32Array(options.size * options.size);
+  drawCanvasData = [];
 
   const compute = tgpu['~unstable']
     .computeFn({
@@ -414,24 +414,9 @@ function resetGameData() {
   };
 
   applyDrawCanvas = () => {
-    for (let i = 0; i < options.size; i++) {
-      for (let j = 0; j < options.size; j++) {
-        if (drawCanvasData[j * options.size + i] === 0) {
-          continue;
-        }
+    nextStateBuffer.writePartial(drawCanvasData);
 
-        const index = j * options.size + i;
-        root.device.queue.writeBuffer(
-          nextStateBuffer.buffer,
-          index * Uint32Array.BYTES_PER_ELEMENT,
-          drawCanvasData,
-          index,
-          1,
-        );
-      }
-    }
-
-    drawCanvasData.fill(0);
+    drawCanvasData = [];
   };
 
   renderChanges = () => {
@@ -457,14 +442,17 @@ let isDrawing = false;
 let isErasing = false;
 let longTouchTimeout: number | null = null;
 let touchMoved = false;
+let lastPoint: { x: number; y: number } | null = null;
 
 const startDrawing = (erase: boolean) => {
   isDrawing = true;
   isErasing = erase;
+  lastPoint = null;
 };
 
 const stopDrawing = () => {
   isDrawing = false;
+  lastPoint = null;
   renderChanges();
   if (longTouchTimeout) {
     clearTimeout(longTouchTimeout);
@@ -476,21 +464,37 @@ const handleDrawing = (x: number, y: number) => {
   const { brushSize, size, brushType } = options;
   const drawValue = isErasing ? 4 << 24 : encodeBrushType(brushType);
 
-  for (let i = -brushSize; i <= brushSize; i++) {
-    const cellX = x + i;
-    if (cellX < 0 || cellX >= size) continue;
-    const iSq = i * i;
+  const drawAtPoint = (px: number, py: number) => {
+    for (let i = -brushSize; i <= brushSize; i++) {
+      const cellX = px + i;
+      if (cellX < 0 || cellX >= size) continue;
+      const iSq = i * i;
 
-    for (let j = -brushSize; j <= brushSize; j++) {
-      const cellY = y + j;
-      if (cellY < 0 || cellY >= size) continue;
-      if (iSq + j * j > brushSize * brushSize) continue;
+      for (let j = -brushSize; j <= brushSize; j++) {
+        const cellY = py + j;
+        if (cellY < 0 || cellY >= size) continue;
+        if (iSq + j * j > brushSize * brushSize) continue;
 
-      const index = cellY * size + cellX;
-      drawCanvasData[index] = drawValue;
+        const index = cellY * size + cellX;
+        drawCanvasData.push({ idx: index, value: drawValue });
+      }
     }
+  };
+
+  if (lastPoint) {
+    const dx = x - lastPoint.x;
+    const dy = y - lastPoint.y;
+    const steps = Math.max(Math.abs(dx), Math.abs(dy));
+    for (let step = 0; step <= steps; step++) {
+      const interpX = Math.round(lastPoint.x + (dx * step) / steps);
+      const interpY = Math.round(lastPoint.y + (dy * step) / steps);
+      drawAtPoint(interpX, interpY);
+    }
+  } else {
+    drawAtPoint(x, y);
   }
 
+  lastPoint = { x, y };
   applyDrawCanvas();
   renderChanges();
 };
@@ -561,8 +565,10 @@ const createSampleScene = () => {
   for (let i = -radius; i <= radius; i++) {
     for (let j = -radius; j <= radius; j++) {
       if (i * i + j * j <= radius * radius) {
-        drawCanvasData[(middlePoint + j) * options.size + middlePoint + i] =
-          1 << 24;
+        drawCanvasData.push({
+          idx: (middlePoint + j) * options.size + middlePoint + i,
+          value: 1 << 24,
+        });
       }
     }
   }
@@ -571,23 +577,30 @@ const createSampleScene = () => {
   for (let i = -smallRadius; i <= smallRadius; i++) {
     for (let j = -smallRadius; j <= smallRadius; j++) {
       if (i * i + j * j <= smallRadius * smallRadius) {
-        drawCanvasData[
-          (middlePoint + j + options.size / 4) * options.size + middlePoint + i
-        ] = 2 << 24;
+        drawCanvasData.push({
+          idx:
+            (middlePoint + j + options.size / 4) * options.size +
+            middlePoint +
+            i,
+          value: 2 << 24,
+        });
       }
     }
   }
 
   for (let i = 0; i < options.size; i++) {
-    drawCanvasData[i] = 1 << 24;
+    drawCanvasData.push({ idx: i, value: 1 << 24 });
   }
 
   for (let i = 0; i < Math.floor(options.size / 8); i++) {
-    drawCanvasData[i * options.size] = 1 << 24;
+    drawCanvasData.push({ idx: i * options.size, value: 1 << 24 });
   }
 
   for (let i = 0; i < Math.floor(options.size / 8); i++) {
-    drawCanvasData[i * options.size - 1 + options.size] = 1 << 24;
+    drawCanvasData.push({
+      idx: i * options.size + options.size - 1,
+      value: 1 << 24,
+    });
   }
 };
 
@@ -635,7 +648,7 @@ export const controls = {
   },
 
   'timestep (ms)': {
-    initial: 50,
+    initial: 25,
     min: 15,
     max: 100,
     step: 1,
@@ -677,7 +690,7 @@ export const controls = {
   'brush size': {
     initial: 1,
     min: 1,
-    max: 20,
+    max: 10,
     step: 1,
     onSliderChange: (value: number) => {
       options.brushSize = value - 1;

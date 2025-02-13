@@ -77,11 +77,11 @@ const particleDataStorage = particleDataBuffer.as('mutable');
 
 // layouts
 
-const geometryLayout = tgpu['~unstable']
+const geometryLayout = tgpu
   .vertexLayout((n: number) => d.arrayOf(ParticleGeometry, n), 'instance')
   .$name('geometry');
 
-const dataLayout = tgpu['~unstable']
+const dataLayout = tgpu
   .vertexLayout((n: number) => d.arrayOf(ParticleData, n), 'instance')
   .$name('data');
 

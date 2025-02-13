@@ -163,7 +163,7 @@ importers:
   packages/rollup-plugin:
     dependencies:
       unplugin-typegpu:
-        specifier: workspace:^0.0.0
+        specifier: workspace:^0.1.0-alpha.2
         version: link:../unplugin-typegpu
     devDependencies:
       '@typegpu/tgpu-dev-cli':
@@ -216,10 +216,10 @@ importers:
         specifier: ^8.12.1
         version: 8.12.1
       tinyest:
-        specifier: workspace:~0.1.0-alpha.1
+        specifier: workspace:~0.1.0-alpha.2
         version: link:../tinyest
       tinyest-for-wgsl:
-        specifier: workspace:~0.1.0-alpha.0
+        specifier: workspace:~0.1.0-alpha.1
         version: link:../tinyest-for-wgsl
     devDependencies:
       '@typegpu/tgpu-dev-cli':
@@ -284,7 +284,7 @@ importers:
   packages/tinyest-for-wgsl:
     dependencies:
       tinyest:
-        specifier: workspace:~0.1.0-alpha.0
+        specifier: workspace:~0.1.0-alpha.2
         version: link:../tinyest
     devDependencies:
       '@babel/types':
@@ -306,7 +306,7 @@ importers:
   packages/typegpu:
     dependencies:
       tinyest:
-        specifier: workspace:~0.1.0-alpha.1
+        specifier: workspace:~0.1.0-alpha.2
         version: link:../tinyest
       typed-binary:
         specifier: ^4.3.1
@@ -349,7 +349,7 @@ importers:
         specifier: ^0.30.11
         version: 0.30.12
       tinyest-for-wgsl:
-        specifier: workspace:~0.1.0-alpha.0
+        specifier: workspace:~0.1.0-alpha.1
         version: link:../tinyest-for-wgsl
     devDependencies:
       '@babel/template':
