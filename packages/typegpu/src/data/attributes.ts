@@ -50,16 +50,20 @@ export const builtinNames = [
   'global_invocation_id',
   'workgroup_id',
   'num_workgroups',
+  'subgroup_invocation_id',
+  'subgroup_size',
 ] as const;
 
 export type BuiltinName = (typeof builtinNames)[number];
 
-export type AnyAttribute =
+export type AnyAttribute<
+  AllowedBuiltins extends Builtin<BuiltinName> = Builtin<BuiltinName>,
+> =
   | Align<number>
   | Size<number>
   | Location<number>
-  | Builtin<BuiltinName>
-  | Interpolate<InterpolationType>;
+  | Interpolate<InterpolationType>
+  | AllowedBuiltins;
 
 export type ExtractAttributes<T> = T extends {
   readonly attribs: unknown[];
