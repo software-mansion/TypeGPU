@@ -72,12 +72,7 @@ const buffers: Record<string, GPUBuffer> = {
   }),
 };
 
-// deferring to wait for canvas to init
-setTimeout(() => {
-  draw();
-}, 100);
-
-async function draw() {
+function draw() {
   queuePropertiesBufferUpdate();
 
   for (const fn in initialFunctions) {
@@ -89,7 +84,10 @@ async function draw() {
 
     runRenderPass();
   }
+
+  requestAnimationFrame(draw);
 }
+requestAnimationFrame(draw);
 
 // #region function definitions
 
@@ -348,7 +346,6 @@ canvas.onmousemove = (event) => {
   );
 
   lastPos = currentPos;
-  draw();
 };
 
 canvas.onwheel = (event) => {
@@ -362,7 +359,6 @@ canvas.onwheel = (event) => {
     [scale, scale, 1],
     properties.transformation,
   );
-  draw();
 };
 
 // #region Example controls
@@ -375,7 +371,6 @@ export const controls = {
     step: 0.001,
     onSliderChange: (value: number) => {
       properties.lineWidthBuffer = value;
-      draw();
     },
   },
   'interpolation points count': {
@@ -385,28 +380,24 @@ export const controls = {
       const num = Number.parseInt(value);
       properties.interpolationPoints = num;
       buffers.lineVertices = recreateLineVerticesBuffer();
-      draw();
     },
   },
   'red function': {
     initial: initialFunctions.f.code,
     onTextChange: (value: string) => {
       modules.f = recompileComputeModule(value);
-      draw();
     },
   },
   'green function': {
     initial: initialFunctions.g.code,
     onTextChange: (value: string) => {
       modules.g = recompileComputeModule(value);
-      draw();
     },
   },
   'blue function': {
     initial: initialFunctions.h.code,
     onTextChange: (value: string) => {
       modules.h = recompileComputeModule(value);
-      draw();
     },
   },
 };
