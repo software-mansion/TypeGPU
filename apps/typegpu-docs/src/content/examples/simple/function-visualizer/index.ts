@@ -315,38 +315,6 @@ function queuePropertiesBufferUpdate() {
   );
 }
 
-// #region Example controls
-
-export const controls = {
-  'line width': {
-    initial: 0.01,
-    min: 0.0,
-    max: 0.025,
-    step: 0.001,
-    onSliderChange: (value: number) => {
-      properties.lineWidthBuffer = value;
-      draw();
-    },
-  },
-  'interpolation points count': {
-    initial: '256',
-    options: [4, 16, 64, 256, 1024, 4096].map((x) => x.toString()),
-    onSelectChange: (value: string) => {
-      const num = Number.parseInt(value);
-      properties.interpolationPoints = num;
-      buffers.lineVertices = recreateLineVerticesBuffer();
-      draw();
-    },
-  },
-  'red function': {
-    initial: 'sin(x*10)/2',
-    onTextChange: (value: string) => {
-      modules.f = recompileComputeModule(value);
-      draw();
-    },
-  },
-};
-
 // #region canvas controls
 
 let lastPos: number[] | null = null;
@@ -395,6 +363,52 @@ canvas.onwheel = (event) => {
     properties.transformation,
   );
   draw();
+};
+
+// #region Example controls
+
+export const controls = {
+  'line width': {
+    initial: 0.01,
+    min: 0.0,
+    max: 0.025,
+    step: 0.001,
+    onSliderChange: (value: number) => {
+      properties.lineWidthBuffer = value;
+      draw();
+    },
+  },
+  'interpolation points count': {
+    initial: '256',
+    options: [4, 16, 64, 256, 1024, 4096].map((x) => x.toString()),
+    onSelectChange: (value: string) => {
+      const num = Number.parseInt(value);
+      properties.interpolationPoints = num;
+      buffers.lineVertices = recreateLineVerticesBuffer();
+      draw();
+    },
+  },
+  'red function': {
+    initial: initialFunctions.f.code,
+    onTextChange: (value: string) => {
+      modules.f = recompileComputeModule(value);
+      draw();
+    },
+  },
+  'green function': {
+    initial: initialFunctions.g.code,
+    onTextChange: (value: string) => {
+      modules.g = recompileComputeModule(value);
+      draw();
+    },
+  },
+  'blue function': {
+    initial: initialFunctions.h.code,
+    onTextChange: (value: string) => {
+      modules.h = recompileComputeModule(value);
+      draw();
+    },
+  },
 };
 
 // #endregion
