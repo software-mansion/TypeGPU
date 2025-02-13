@@ -77,11 +77,11 @@ const particleDataStorage = particleDataBuffer.as('mutable');
 
 // layouts
 
-const geometryLayout = tgpu['~unstable']
+const geometryLayout = tgpu
   .vertexLayout((n: number) => d.arrayOf(ParticleGeometry, n), 'instance')
   .$name('geometry');
 
-const dataLayout = tgpu['~unstable']
+const dataLayout = tgpu
   .vertexLayout((n: number) => d.arrayOf(ParticleData, n), 'instance')
   .$name('data');
 
@@ -99,16 +99,16 @@ const rotate = tgpu['~unstable'].fn([d.vec2f, d.f32], d.vec2f).does(/* wgsl */ `
 `);
 
 const mainVert = tgpu['~unstable']
-  .vertexFn(
-    {
+  .vertexFn({
+    in: {
       tilt: d.f32,
       angle: d.f32,
       color: d.vec4f,
       center: d.vec2f,
       index: d.builtin.vertexIndex,
     },
-    VertexOutput,
-  )
+    out: VertexOutput,
+  })
   .does(
     /* wgsl */ `(input: VertexInput) -> VertexOutput {
     let width = input.tilt;
@@ -136,14 +136,14 @@ const mainVert = tgpu['~unstable']
   });
 
 const mainFrag = tgpu['~unstable']
-  .fragmentFn(VertexOutput, d.vec4f)
+  .fragmentFn({ in: VertexOutput, out: d.vec4f })
   .does(/* wgsl */ `
   (input: FragmentInput) -> @location(0) vec4f {
     return input.color;
   }`);
 
 const mainCompute = tgpu['~unstable']
-  .computeFn({ gid: d.builtin.globalInvocationId }, { workgroupSize: [1] })
+  .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })
   .does(
     /* wgsl */ `(input: ComputeInput) {
     let index = input.gid.x;

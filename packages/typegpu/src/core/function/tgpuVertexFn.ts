@@ -5,13 +5,7 @@ import type { GenerationCtx } from '../../smol/wgslGenerator';
 import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
 import { addReturnTypeToExternals } from '../resolve/externals';
 import { createFnCore } from './fnCore';
-import type {
-  ExoticIO,
-  IOLayout,
-  IORecord,
-  Implementation,
-  InferIO,
-} from './fnTypes';
+import type { IOLayout, IORecord, Implementation, InferIO } from './fnTypes';
 import {
   type IOLayoutToSchema,
   createOutputType,
@@ -62,15 +56,30 @@ export interface TgpuVertexFn<
   $uses(dependencyMap: Record<string, unknown>): this;
 }
 
+export function vertexFn<VertexOut extends IORecord>(options: {
+  out: VertexOut;
+  // biome-ignore lint/complexity/noBannedTypes: it's fine
+}): TgpuVertexFnShell<{}, VertexOut>;
+
+export function vertexFn<
+  VertexIn extends IORecord,
+  // Not allowing single-value output, as it is better practice
+  // to properly label what the vertex shader is outputting.
+  VertexOut extends IORecord,
+>(options: {
+  in: VertexIn;
+  out: VertexOut;
+}): TgpuVertexFnShell<VertexIn, VertexOut>;
+
 /**
  * Creates a shell of a typed entry function for the vertex shader stage. Any function
  * that implements this shell can run for each vertex, allowing the inner code to process
  * attributes and determine the final position of the vertex.
  *
- * @param inputType
+ * @param options.in
  *   Vertex attributes and builtins to be made available to functions that implement this shell.
- * @param outputType
- *   A struct type containing the final position of the vertex, and any information
+ * @param options.out
+ *   A record containing the final position of the vertex, and any information
  *   passed onto the fragment shader stage.
  */
 export function vertexFn<
@@ -78,14 +87,14 @@ export function vertexFn<
   // Not allowing single-value output, as it is better practice
   // to properly label what the vertex shader is outputting.
   VertexOut extends IORecord,
->(
-  inputType: VertexIn,
-  outputType: VertexOut,
-): TgpuVertexFnShell<ExoticIO<VertexIn>, ExoticIO<VertexOut>> {
+>(options: {
+  in?: VertexIn;
+  out: VertexOut;
+}): TgpuVertexFnShell<VertexIn, VertexOut> {
   return {
-    attributes: [inputType as ExoticIO<VertexIn>],
-    returnType: createOutputType(outputType) as ExoticIO<VertexOut>,
-    argTypes: [createStructFromIO(inputType)],
+    attributes: [options.in ?? ({} as VertexIn)],
+    returnType: createOutputType(options.out) as unknown as VertexOut,
+    argTypes: [createStructFromIO(options.in ?? {})],
 
     does(implementation) {
       // biome-ignore lint/suspicious/noExplicitAny: <no thanks>

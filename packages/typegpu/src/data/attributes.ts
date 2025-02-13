@@ -8,7 +8,6 @@ import {
   isLooseData,
   isLooseDecorated,
 } from './dataTypes';
-import type { Exotic } from './exotic';
 import { sizeOf } from './sizeOf';
 import {
   type Align,
@@ -51,16 +50,20 @@ export const builtinNames = [
   'global_invocation_id',
   'workgroup_id',
   'num_workgroups',
+  'subgroup_invocation_id',
+  'subgroup_size',
 ] as const;
 
 export type BuiltinName = (typeof builtinNames)[number];
 
-export type AnyAttribute =
+export type AnyAttribute<
+  AllowedBuiltins extends Builtin<BuiltinName> = Builtin<BuiltinName>,
+> =
   | Align<number>
   | Size<number>
   | Location<number>
-  | Builtin<BuiltinName>
-  | Interpolate<InterpolationType>;
+  | Interpolate<InterpolationType>
+  | AllowedBuiltins;
 
 export type ExtractAttributes<T> = T extends {
   readonly attribs: unknown[];
@@ -147,7 +150,7 @@ export function attribute<TData extends BaseData, TAttrib extends AnyAttribute>(
 export function align<TAlign extends number, TData extends AnyData>(
   alignment: TAlign,
   data: TData,
-): Decorate<Exotic<TData>, Align<TAlign>> {
+): Decorate<TData, Align<TAlign>> {
   // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   return attribute(data, { type: '@align', value: alignment }) as any;
 }
@@ -167,7 +170,7 @@ export function align<TAlign extends number, TData extends AnyData>(
 export function size<TSize extends number, TData extends AnyData>(
   size: TSize,
   data: TData,
-): Decorate<Exotic<TData>, Size<TSize>> {
+): Decorate<TData, Size<TSize>> {
   // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   return attribute(data, { type: '@size', value: size }) as any;
 }
@@ -188,7 +191,7 @@ export function size<TSize extends number, TData extends AnyData>(
 export function location<TLocation extends number, TData extends AnyData>(
   location: TLocation,
   data: TData,
-): Decorate<Exotic<TData>, Location<TLocation>> {
+): Decorate<TData, Location<TLocation>> {
   // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   return attribute(data, { type: '@location', value: location }) as any;
 }
@@ -214,7 +217,7 @@ export function interpolate<
 >(
   interpolationType: TInterpolation,
   data: TData,
-): Decorate<Exotic<TData>, Interpolate<TInterpolation>>;
+): Decorate<TData, Interpolate<TInterpolation>>;
 
 /**
  * Specifies how user-defined vertex shader output (fragment shader input)
@@ -239,7 +242,7 @@ export function interpolate<
 >(
   interpolationType: TInterpolation,
   data: TData,
-): Decorate<Exotic<TData>, Interpolate<TInterpolation>>;
+): Decorate<TData, Interpolate<TInterpolation>>;
 
 export function interpolate<
   TInterpolation extends InterpolationType,
@@ -247,7 +250,7 @@ export function interpolate<
 >(
   interpolationType: TInterpolation,
   data: TData,
-): Decorate<Exotic<TData>, Interpolate<TInterpolation>> {
+): Decorate<TData, Interpolate<TInterpolation>> {
   return attribute(data, {
     type: '@interpolate',
     value: interpolationType,

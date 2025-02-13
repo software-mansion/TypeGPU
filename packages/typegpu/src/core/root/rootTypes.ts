@@ -1,6 +1,5 @@
 import type { OmitBuiltins } from '../../builtin';
 import type { AnyData, Disarray } from '../../data/dataTypes';
-import type { Exotic } from '../../data/exotic';
 import type { AnyWgslData, WgslArray } from '../../data/wgslTypes';
 import type { JitTranspiler } from '../../jitTranspiler';
 import type { NameRegistry } from '../../nameRegistry';
@@ -25,6 +24,7 @@ import type { IOLayout, IORecord } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import type { TgpuFn } from '../function/tgpuFn';
 import type {
+  FragmentInConstrained,
   FragmentOutConstrained,
   TgpuFragmentFn,
 } from '../function/tgpuFragmentFn';
@@ -49,7 +49,7 @@ export interface WithCompute {
 
 export type ValidateFragmentIn<
   VertexOut extends IORecord,
-  FragmentIn extends IORecord,
+  FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
 > = FragmentIn extends Partial<VertexOut>
   ? VertexOut extends FragmentIn
@@ -77,7 +77,7 @@ export type ValidateFragmentIn<
 
 export interface WithVertex<VertexOut extends IORecord = IORecord> {
   withFragment<
-    FragmentIn extends IORecord,
+    FragmentIn extends FragmentInConstrained,
     FragmentOut extends FragmentOutConstrained,
   >(
     ...args: ValidateFragmentIn<VertexOut, FragmentIn, FragmentOut>
@@ -248,8 +248,8 @@ export interface TgpuRoot extends Unwrapper {
    */
   createBuffer<TData extends AnyData>(
     typeSchema: TData,
-    initial?: Infer<Exotic<TData>> | undefined,
-  ): TgpuBuffer<Exotic<TData>>;
+    initial?: Infer<TData> | undefined,
+  ): TgpuBuffer<TData>;
 
   /**
    * Allocates memory on the GPU, allows passing data between host and shader.
@@ -263,7 +263,7 @@ export interface TgpuRoot extends Unwrapper {
   createBuffer<TData extends AnyData>(
     typeSchema: TData,
     gpuBuffer: GPUBuffer,
-  ): TgpuBuffer<Exotic<TData>>;
+  ): TgpuBuffer<TData>;
 
   /**
    * Creates a group of resources that can be bound to a shader based on a specified layout.

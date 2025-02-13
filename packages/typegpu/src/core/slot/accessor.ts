@@ -1,5 +1,4 @@
 import type { AnyWgslData } from '../../data';
-import type { Exotic } from '../../data/exotic';
 import { getResolutionCtx } from '../../gpuMode';
 import type { Infer } from '../../shared/repr';
 import {
@@ -19,12 +18,9 @@ import type { TgpuAccessor, TgpuSlot } from './slotTypes';
 
 export function accessor<T extends AnyWgslData>(
   schema: T,
-  defaultValue?:
-    | TgpuFn<[], Exotic<T>>
-    | TgpuBufferUsage<Exotic<T>>
-    | Infer<Exotic<T>>,
-): TgpuAccessor<Exotic<T>> {
-  return new TgpuAccessorImpl(schema as Exotic<T>, defaultValue);
+  defaultValue?: TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>,
+): TgpuAccessor<T> {
+  return new TgpuAccessorImpl(schema, defaultValue);
 }
 
 // --------------

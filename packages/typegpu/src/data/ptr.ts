@@ -1,10 +1,9 @@
 import type { AnyData } from './dataTypes';
-import type { Exotic } from './exotic';
 import type { PtrFn } from './wgslTypes';
 
-export function ptrFn<T extends AnyData>(inner: T): PtrFn<Exotic<T>> {
+export function ptrFn<T extends AnyData>(inner: T): PtrFn<T> {
   return {
     type: 'ptrFn',
-    inner: inner as Exotic<T>,
-  } as PtrFn<Exotic<T>>;
+    inner: inner,
+  } as PtrFn<T>;
 }
