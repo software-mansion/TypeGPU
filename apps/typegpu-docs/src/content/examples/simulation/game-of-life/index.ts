@@ -305,7 +305,7 @@ export const controls = {
     },
   },
 
-  reset: {
+  Reset: {
     onButtonClick: resetGameData,
   },
 };
