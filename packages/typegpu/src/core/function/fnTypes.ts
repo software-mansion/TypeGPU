@@ -48,7 +48,7 @@ export type Implementation<
   Return = unknown,
 > = string | ((...args: Args) => Return);
 
-type BaseIOData =
+export type BaseIOData =
   | F32
   | F16
   | I32
