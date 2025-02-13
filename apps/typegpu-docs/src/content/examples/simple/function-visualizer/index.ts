@@ -1,5 +1,5 @@
 import tgpu from 'typegpu';
-import { mat4, vec4 } from 'wgpu-matrix';
+import { mat4 } from 'wgpu-matrix';
 
 type FunctionDef = {
   code: string;
@@ -8,8 +8,6 @@ type FunctionDef = {
 
 type Input = {
   functions: Record<string, FunctionDef>;
-  interpolationPoints: number;
-  lineWidth: number;
 };
 
 const input: Input = {
@@ -27,11 +25,15 @@ const input: Input = {
       color: '0.0, 0.0, 1.0',
     },
   },
-  interpolationPoints: 256,
-  lineWidth: 0.1,
 };
 
-const transformation = mat4.identity();
+const properties = {
+  transformation: mat4.identity(),
+  inverseTransformation: mat4.identity(),
+  interpolationPoints: 256,
+  lineWidthBuffer: 0.01,
+  dashedLine: 0,
+};
 
 const root = await tgpu.init();
 const device = root.device;
@@ -41,52 +43,42 @@ const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
+context.configure({
+  device: device,
+  format: presentationFormat,
+  alphaMode: 'premultiplied',
+});
+
+const propertiesBuffer = device.createBuffer({
+  label: 'properties buffer',
+  size:
+    4 * 4 * 4 + // transformation
+    4 * 4 * 4 + // inverseTransformation
+    4 + // interpolationPoints
+    4 + // lineWidthBuffer
+    4 + // dashedLine
+    4, // padding
+  usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+});
+
 // deferring to wait for canvas to init
 setTimeout(() => {
   draw();
 }, 100);
 
 async function draw() {
-  context.configure({
-    device: device,
-    format: presentationFormat,
-    alphaMode: 'premultiplied',
-  });
-
-  const transformationMatrixBuffer = device.createBuffer({
-    label: 'transformation matrix buffer',
-    size: 4 * 4 * 4,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-  device.queue.writeBuffer(
-    transformationMatrixBuffer,
-    0,
-    transformation.buffer,
-  );
-
-  const invertedTransformationMatrixBuffer = device.createBuffer({
-    label: 'transformation matrix buffer',
-    size: 4 * 4 * 4,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-  const inverted = mat4.inverse(transformation);
-  device.queue.writeBuffer(
-    invertedTransformationMatrixBuffer,
-    0,
-    inverted.buffer,
-  );
+  queuePropertiesBufferUpdate();
 
   for (const fn in input.functions) {
     const { code: fnString, color } = input.functions[fn];
 
     const lineVerticesBuffer = runComputePass(
       fnString,
-      input.interpolationPoints,
-      transformationMatrixBuffer,
-      invertedTransformationMatrixBuffer,
+      properties.interpolationPoints,
+      propertiesBuffer,
     );
 
-    runRenderPass(lineVerticesBuffer, color);
+    runRenderPass(lineVerticesBuffer, propertiesBuffer, color);
   }
 }
 
@@ -95,25 +87,31 @@ async function draw() {
 function runComputePass(
   functionString: string,
   interpolationPoints: number,
-  transformationMatrixBuffer: GPUBuffer,
-  invertedTransformationMatrixBuffer: GPUBuffer,
+  propertiesBuffer: GPUBuffer,
 ) {
   const computeShaderCode = /* wgsl */ `
 fn interpolatedFunction(x: f32) -> f32 {
 return ${functionString};
 }
 
+struct Properties {
+  transformation: mat4x4f,
+  invertedTransformation: mat4x4f,
+  interpolationPoints: u32,
+  lineWidthBuffer: f32,
+  dashedLine: u32,
+};
+
 @group(0) @binding(0) var<storage, read_write> lineVertices: array<vec2f>;
-@group(0) @binding(1) var<uniform> transformation: mat4x4f;
-@group(0) @binding(2) var<uniform> invertedTransformation: mat4x4f;
+@group(0) @binding(1) var<uniform> properties: Properties;
 
 @compute @workgroup_size(1) fn computePoints(@builtin(global_invocation_id) id: vec3u) {
-  let start = (transformation * vec4f(-1, 0, 0, 1)).x;
-  let end = (transformation * vec4f(1, 0, 0, 1)).x;
+  let start = (properties.transformation * vec4f(-1, 0, 0, 1)).x;
+  let end = (properties.transformation * vec4f(1, 0, 0, 1)).x;
 
-  let pointX = (start + (end-start)/(${interpolationPoints} - 1) * f32(id.x));
+  let pointX = (start + (end-start)/(f32(properties.interpolationPoints)-1.0) * f32(id.x));
   let pointY = interpolatedFunction(pointX);
-  let result = invertedTransformation * vec4f(pointX, pointY, 0, 1);
+  let result = properties.invertedTransformation * vec4f(pointX, pointY, 0, 1);
   lineVertices[id.x] = result.xy;
 }
 `;
@@ -142,8 +140,7 @@ return ${functionString};
     layout: computePipeline.getBindGroupLayout(0),
     entries: [
       { binding: 0, resource: { buffer: lineVerticesBuffer } },
-      { binding: 1, resource: { buffer: transformationMatrixBuffer } },
-      { binding: 2, resource: { buffer: invertedTransformationMatrixBuffer } },
+      { binding: 1, resource: { buffer: propertiesBuffer } },
     ],
   });
 
@@ -164,23 +161,31 @@ return ${functionString};
   return lineVerticesBuffer;
 }
 
-function runRenderPass(lineVerticesBuffer: GPUBuffer, color: string) {
+function runRenderPass(
+  lineVerticesBuffer: GPUBuffer,
+  propertiesBuffer: GPUBuffer,
+  color: string,
+) {
   const vertexFragmentShaderCode = /* wgsl */ `
-@group(0) @binding(0) var<storage, read> lineVertices: array<vec2f>;
+struct Properties {
+  transformation: mat4x4f,
+  invertedTransformation: mat4x4f,
+  interpolationPoints: u32,
+  lineWidth: f32,
+  dashedLine: u32,
+};
 
-fn normalVector(v: vec2f) -> vec2f {
-  let length = sqrt(v.x * v.x + v.y * v.y);
-  return v / length;
-}
+@group(0) @binding(0) var<storage, read> lineVertices: array<vec2f>;
+@group(0) @binding(1) var<uniform> properties: Properties;
 
 fn othronormalForLine(p1: vec2f, p2: vec2f) -> vec2f {
   let line = p2 - p1;
   let ortho = vec2f(-line.y, line.x);
-  return normalVector(ortho);
+  return normalize(ortho);
 }
 
 fn orthonormalForVertex(index: u32) -> vec2f {
-  if (index == 0 || index == ${input.interpolationPoints}-1) {
+  if (index == 0 || index == properties.interpolationPoints-1) {
     return vec2f(0.0, 1.0);
   }
   let previous = lineVertices[index-1];
@@ -192,13 +197,13 @@ fn orthonormalForVertex(index: u32) -> vec2f {
 
   let avg = (n1+n2)/2.0;
 
-  return normalVector(avg);
+  return normalize(avg);
 }
 
 @vertex fn vs(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4f {
   let currentVertex = vertexIndex/2;
   let orthonormal = orthonormalForVertex(currentVertex);
-  let offset = orthonormal * ${input.lineWidth} * select(-1.0, 1.0, vertexIndex%2==0);
+  let offset = orthonormal * properties.lineWidth * select(-1.0, 1.0, vertexIndex%2==0);
   return vec4f(lineVertices[currentVertex] + offset, 0.0, 1.0);
 }
 
@@ -230,7 +235,10 @@ fn orthonormalForVertex(index: u32) -> vec2f {
   const renderBindGroup = device.createBindGroup({
     label: 'Render bindGroup',
     layout: renderPipeline.getBindGroupLayout(0),
-    entries: [{ binding: 0, resource: { buffer: lineVerticesBuffer } }],
+    entries: [
+      { binding: 0, resource: { buffer: lineVerticesBuffer } },
+      { binding: 1, resource: { buffer: propertiesBuffer } },
+    ],
   });
 
   const renderPassDescriptor = {
@@ -255,7 +263,7 @@ fn orthonormalForVertex(index: u32) -> vec2f {
     const pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(renderPipeline);
     pass.setBindGroup(0, renderBindGroup);
-    pass.draw(input.interpolationPoints * 2); // call our vertex shader 2 times per point drawn
+    pass.draw(properties.interpolationPoints * 2); // call our vertex shader 2 times per point drawn
     pass.end();
 
     const commandBuffer = encoder.finish();
@@ -263,6 +271,42 @@ fn orthonormalForVertex(index: u32) -> vec2f {
   }
 
   render();
+}
+
+function queuePropertiesBufferUpdate() {
+  const transformationOffset = 0;
+  const inverseTransformationOffset = 16 * 4;
+  const interpolationPointsOffset = 32 * 4;
+  const lineWidthBufferOffset = 33 * 4;
+  const dashedLineOffset = 34 * 4;
+
+  properties.inverseTransformation = mat4.inverse(properties.transformation);
+
+  device.queue.writeBuffer(
+    propertiesBuffer,
+    transformationOffset,
+    properties.transformation.buffer,
+  );
+  device.queue.writeBuffer(
+    propertiesBuffer,
+    inverseTransformationOffset,
+    properties.inverseTransformation.buffer,
+  );
+  device.queue.writeBuffer(
+    propertiesBuffer,
+    interpolationPointsOffset,
+    Int32Array.of(properties.interpolationPoints).buffer,
+  );
+  device.queue.writeBuffer(
+    propertiesBuffer,
+    lineWidthBufferOffset,
+    Float32Array.of(properties.lineWidthBuffer).buffer,
+  );
+  device.queue.writeBuffer(
+    propertiesBuffer,
+    dashedLineOffset,
+    Int32Array.of(properties.dashedLine).buffer,
+  );
 }
 
 // #region Example controls
@@ -274,7 +318,7 @@ export const controls = {
     max: 0.025,
     step: 0.001,
     onSliderChange: (value: number) => {
-      input.lineWidth = value;
+      properties.lineWidthBuffer = value;
       draw();
     },
   },
@@ -283,7 +327,7 @@ export const controls = {
     options: [16, 64, 256, 1024, 4096].map((x) => x.toString()),
     onSelectChange: (value: string) => {
       const num = Number.parseInt(value);
-      input.interpolationPoints = num;
+      properties.interpolationPoints = num;
       draw();
     },
   },
@@ -322,7 +366,11 @@ canvas.onmousemove = (event) => {
       window.devicePixelRatio,
     0.0,
   ];
-  mat4.translate(transformation, translation, transformation);
+  mat4.translate(
+    properties.transformation,
+    translation,
+    properties.transformation,
+  );
 
   lastPos = currentPos;
   draw();
@@ -334,7 +382,11 @@ canvas.onwheel = (event) => {
   const delta = Math.abs(event.deltaY) / 1000.0 + 1;
   const scale = event.deltaY > 0 ? delta : 1 / delta;
 
-  mat4.scale(transformation, [scale, scale, 1], transformation);
+  mat4.scale(
+    properties.transformation,
+    [scale, scale, 1],
+    properties.transformation,
+  );
   draw();
 };
 
