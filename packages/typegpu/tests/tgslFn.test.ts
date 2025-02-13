@@ -166,17 +166,17 @@ describe('TGSL tgpu.fn function', () => {
 
   it('resolves vertexFn', () => {
     const vertexFn = tgpu['~unstable']
-      .vertexFn(
-        {
+      .vertexFn({
+        in: {
           vi: builtin.vertexIndex,
           ii: builtin.instanceIndex,
           color: vec4f,
         },
-        {
+        out: {
           pos: builtin.position,
           uv: vec2f,
         },
-      )
+      })
       .does((input) => {
         const vi = input.vi;
         const ii = input.ii;
@@ -215,7 +215,10 @@ describe('TGSL tgpu.fn function', () => {
 
   it('resolves computeFn', () => {
     const computeFn = tgpu['~unstable']
-      .computeFn({ gid: builtin.globalInvocationId }, { workgroupSize: [24] })
+      .computeFn({
+        in: { gid: builtin.globalInvocationId },
+        workgroupSize: [24],
+      })
       .does((input) => {
         const index = input.gid.x;
         const iterationF = f32(0);
@@ -244,30 +247,34 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('rejects invalid arguments for computeFn', () => {
-    tgpu['~unstable']
-      // @ts-expect-error
-      .computeFn({ vid: builtin.vertexIndex }, { workgroupSize: [24] })
-      .does(() => {});
+    const u = tgpu['~unstable'];
 
-    tgpu['~unstable']
-      .computeFn(
-        // @ts-expect-error
-        { gid: builtin.globalInvocationId, random: f32 },
-        { workgroupSize: [24] },
-      )
-      .does(() => {});
+    // @ts-expect-error
+    u.computeFn({ in: { vid: builtin.vertexIndex }, workgroupSize: [24] }).does(
+      () => {},
+    );
+
+    // @ts-expect-error
+    u.computeFn({
+      in: { gid: builtin.globalInvocationId, random: f32 },
+      workgroupSize: [24],
+    }).does(() => {});
   });
 
   it('resolves fragmentFn', () => {
     const fragmentFn = tgpu['~unstable']
-      .fragmentFn(
-        { pos: builtin.position, uv: vec2f, sampleMask: builtin.sampleMask },
-        {
+      .fragmentFn({
+        in: {
+          pos: builtin.position,
+          uv: vec2f,
+          sampleMask: builtin.sampleMask,
+        },
+        out: {
           sampleMask: builtin.sampleMask,
           fragDepth: builtin.fragDepth,
           out: location(0, vec4f),
         },
-      )
+      })
       .does((input) => {
         const pos = input.pos;
         const out = {
@@ -315,7 +322,7 @@ describe('TGSL tgpu.fn function', () => {
 
   it('resolves fragmentFn with a single output', () => {
     const fragmentFn = tgpu['~unstable']
-      .fragmentFn({ pos: builtin.position }, vec4f)
+      .fragmentFn({ in: { pos: builtin.position }, out: vec4f })
       .does((input) => {
         return input.pos;
       })

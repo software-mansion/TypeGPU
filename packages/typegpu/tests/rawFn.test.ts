@@ -175,10 +175,10 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
 
   it('adds output struct definition when resolving vertex functions', () => {
     const vertexFunction = tgpu['~unstable']
-      .vertexFn(
-        { vertexIndex: d.builtin.vertexIndex },
-        { outPos: d.builtin.position },
-      )
+      .vertexFn({
+        in: { vertexIndex: d.builtin.vertexIndex },
+        out: { outPos: d.builtin.position },
+      })
       .does(/* wgsl */ `(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
     var pos = array<vec2f, 6>(
       vec2<f32>( 1,  1),
@@ -210,10 +210,10 @@ struct vertex_fn_Output {
 
   it('adds output struct definition when resolving fragment functions', () => {
     const fragmentFunction = tgpu['~unstable']
-      .fragmentFn(
-        { position: d.builtin.position },
-        { a: d.vec4f, b: d.builtin.fragDepth },
-      )
+      .fragmentFn({
+        in: { position: d.builtin.position },
+        out: { a: d.vec4f, b: d.builtin.fragDepth },
+      })
       .does(/* wgsl */ `(@builtin(position) position: vec4f) -> Output {
     var out: Output;
     out.a = vec4f(1.0);
@@ -238,7 +238,7 @@ struct fragment_Output {
 
   it('properly handles fragment functions with a single output argument', () => {
     const fragmentFunction = tgpu['~unstable']
-      .fragmentFn({ position: d.builtin.position }, d.vec4f)
+      .fragmentFn({ in: { position: d.builtin.position }, out: d.vec4f })
       .does(/* wgsl */ `(input: FragmentIn) -> @location(0) vec4f {
         return vec4f(1.0f);
       }`)
