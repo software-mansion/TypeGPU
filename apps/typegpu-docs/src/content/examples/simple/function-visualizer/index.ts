@@ -10,15 +10,15 @@ type FunctionDef = {
 
 const initialFunctions: Record<string, FunctionDef> = {
   f: {
-    code: 'sin(x*10)/2',
+    code: 'x',
     color: Float32Array.of(1.0, 0.0, 0.0, 1.0),
   },
   g: {
-    code: '0.1 * x * x - 0.5',
-    color: Float32Array.of(0.0, 1.0, 0.0, 1.0),
+    code: 'cos(x*5)/3-x',
+    color: Float32Array.of(0.0, 0.8, 0.0, 1.0),
   },
   h: {
-    code: '(x+0.1) * x * (x-0.1) * 0.01',
+    code: 'x*sin(log(abs(x)))',
     color: Float32Array.of(0.0, 0.0, 1.0, 1.0),
   },
 };
@@ -46,10 +46,10 @@ context.configure({
 });
 
 const modules: Record<string, GPUShaderModule> = {
-  f: recompileComputeModule(initialFunctions.f.code),
-  g: recompileComputeModule(initialFunctions.g.code),
-  h: recompileComputeModule(initialFunctions.h.code),
-  draw: recompileRenderModule(),
+  f: compileComputeModule(initialFunctions.f.code),
+  g: compileComputeModule(initialFunctions.g.code),
+  h: compileComputeModule(initialFunctions.h.code),
+  draw: compileRenderModule(),
 };
 
 type GPUBufferGroup = Record<string, GPUBuffer>;
@@ -187,33 +187,37 @@ function runRenderPass() {
   device.queue.submit([commandBuffer]);
 }
 
-function recompileComputeModule(functionCode: string) {
-  const computeShaderCode = /* wgsl */ `
-fn interpolatedFunction(x: f32) -> f32 {
-return ${functionCode};
+function createComputeShaderCode(functionCode: string) {
+  return /* wgsl */ `
+  fn interpolatedFunction(x: f32) -> f32 {
+    return ${functionCode};
+  }
+  
+  struct Properties {
+    transformation: mat4x4f,
+    invertedTransformation: mat4x4f,
+    interpolationPoints: u32,
+    lineWidthBuffer: f32,
+    dashedLine: u32,
+  };
+  
+  @group(0) @binding(0) var<storage, read_write> lineVertices: array<vec2f>;
+  @group(0) @binding(1) var<uniform> properties: Properties;
+  
+  @compute @workgroup_size(1) fn computePoints(@builtin(global_invocation_id) id: vec3u) {
+    let start = (properties.transformation * vec4f(-1, 0, 0, 1)).x;
+    let end = (properties.transformation * vec4f(1, 0, 0, 1)).x;
+  
+    let pointX = (start + (end-start)/(f32(properties.interpolationPoints)-1.0) * f32(id.x));
+    let pointY = interpolatedFunction(pointX);
+    let result = properties.invertedTransformation * vec4f(pointX, pointY, 0, 1);
+    lineVertices[id.x] = result.xy;
+  }
+  `;
 }
 
-struct Properties {
-  transformation: mat4x4f,
-  invertedTransformation: mat4x4f,
-  interpolationPoints: u32,
-  lineWidthBuffer: f32,
-  dashedLine: u32,
-};
-
-@group(0) @binding(0) var<storage, read_write> lineVertices: array<vec2f>;
-@group(0) @binding(1) var<uniform> properties: Properties;
-
-@compute @workgroup_size(1) fn computePoints(@builtin(global_invocation_id) id: vec3u) {
-  let start = (properties.transformation * vec4f(-1, 0, 0, 1)).x;
-  let end = (properties.transformation * vec4f(1, 0, 0, 1)).x;
-
-  let pointX = (start + (end-start)/(f32(properties.interpolationPoints)-1.0) * f32(id.x));
-  let pointY = interpolatedFunction(pointX);
-  let result = properties.invertedTransformation * vec4f(pointX, pointY, 0, 1);
-  lineVertices[id.x] = result.xy;
-}
-`;
+function compileComputeModule(functionCode: string) {
+  const computeShaderCode = createComputeShaderCode(functionCode);
   const computeShaderModule = device.createShaderModule({
     label: `Compute function points shader module for f(x) = ${functionCode}`,
     code: computeShaderCode,
@@ -221,7 +225,28 @@ struct Properties {
   return computeShaderModule;
 }
 
-function recompileRenderModule() {
+async function tryCompileComputeModule(
+  functionCode: string,
+): Promise<GPUShaderModule> {
+  const codeToCompile = functionCode === '' ? '0' : functionCode;
+
+  const computeShaderCode = createComputeShaderCode(codeToCompile);
+
+  device.pushErrorScope('validation');
+  const computeShaderModule = device.createShaderModule({
+    label: `Compute function points shader module for f(x) = ${codeToCompile}`,
+    code: computeShaderCode,
+  });
+  const error = await device.popErrorScope();
+
+  if (error) {
+    throw new Error(`Function f(x) = '${codeToCompile}' is invalid.`);
+  }
+
+  return computeShaderModule;
+}
+
+function compileRenderModule() {
   const vertexFragmentShaderCode = /* wgsl */ `
 struct Properties {
   transformation: mat4x4f,
@@ -268,7 +293,6 @@ fn orthonormalForVertex(index: u32) -> vec2f {
   return color;
 }
   `;
-
   const vertexFragmentShaderModule = device.createShaderModule({
     label: 'Render module',
     code: vertexFragmentShaderCode,
@@ -380,7 +404,7 @@ canvas.onwheel = (event) => {
   );
 };
 
-// #region Example controls
+// #region Example controls and cleanup
 
 export const controls = {
   'line width': {
@@ -405,22 +429,38 @@ export const controls = {
   },
   'red function': {
     initial: initialFunctions.f.code,
-    onTextChange: (value: string) => {
-      modules.f = recompileComputeModule(value);
+    onTextChange: async (value: string) => {
+      try {
+        modules.f = await tryCompileComputeModule(value);
+      } catch (e) {
+        console.log(e);
+      }
     },
   },
   'green function': {
     initial: initialFunctions.g.code,
-    onTextChange: (value: string) => {
-      modules.g = recompileComputeModule(value);
+    onTextChange: async (value: string) => {
+      try {
+        modules.g = await tryCompileComputeModule(value);
+      } catch (e) {
+        console.log(e);
+      }
     },
   },
   'blue function': {
     initial: initialFunctions.h.code,
-    onTextChange: (value: string) => {
-      modules.h = recompileComputeModule(value);
+    onTextChange: async (value: string) => {
+      try {
+        modules.h = await tryCompileComputeModule(value);
+      } catch (e) {
+        console.log(e);
+      }
     },
   },
 };
+
+export function onCleanup() {
+  root.destroy();
+}
 
 // #endregion
