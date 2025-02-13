@@ -6,13 +6,12 @@ const device = root.device;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const devicePixelRatio = window.devicePixelRatio;
-canvas.width = canvas.clientWidth * devicePixelRatio;
-canvas.height = canvas.clientHeight * devicePixelRatio;
+
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 context.configure({
   device,
   format: presentationFormat,
+  alphaMode: 'premultiplied',
 });
 
 let workgroupSize = 16;
@@ -37,6 +36,7 @@ const bindGroupLayoutCompute = tgpu.bindGroupLayout({
     access: 'mutable',
   },
 });
+
 const bindGroupLayoutRender = tgpu.bindGroupLayout({
   size: {
     uniform: d.vec2u,
@@ -121,10 +121,10 @@ fn frag(@location(0) cell: f32, @builtin(position) pos: vec4f) -> @location(0) v
   }
 
   return vec4f(
-    max(f32(cell) * pos.x / 1024, 0),
-    max(f32(cell) * pos.y / 1024, 0),
-    max(f32(cell) * (1 - pos.x / 1024), 0),
-    1.
+    max(pos.x / 2048, 0),
+    max(pos.y / 2048, 0),
+    max(1 - pos.x / 2048, 0),
+    0.8
   );
 }`,
     externals: {
@@ -132,9 +132,7 @@ fn frag(@location(0) cell: f32, @builtin(position) pos: vec4f) -> @location(0) v
     },
   }),
 });
-let commandEncoder: GPUCommandEncoder;
 
-// compute pipeline
 const computePipeline = device.createComputePipeline({
   layout: device.createPipelineLayout({
     bindGroupLayouts: [root.unwrap(bindGroupLayoutCompute)],
@@ -159,7 +157,7 @@ const resetGameData = () => {
   const length = gameWidth * gameHeight;
   const cells = Array.from({ length })
     .fill(0)
-    .map((_, i) => (Math.random() < 0.25 ? 1 : 0));
+    .map(() => (Math.random() < 0.25 ? 1 : 0));
 
   const buffer0 = root
     .createBuffer(d.arrayOf(d.u32, length), cells)
@@ -191,14 +189,14 @@ const resetGameData = () => {
       colorAttachments: [
         {
           view,
-          clearValue: { r: 239 / 255, g: 239 / 255, b: 249 / 255, a: 1 },
+          clearValue: [0, 0, 0, 0],
           loadOp: 'clear',
           storeOp: 'store',
         },
       ],
     };
 
-    commandEncoder = device.createCommandEncoder();
+    const commandEncoder = device.createCommandEncoder();
     const passEncoderCompute = commandEncoder.beginComputePass();
 
     passEncoderCompute.setPipeline(computePipeline);
@@ -271,7 +269,7 @@ const renderPipeline = device.createRenderPipeline({
 
 export const controls = {
   size: {
-    initial: '1024',
+    initial: '64',
     options: [16, 32, 64, 128, 256, 512, 1024].map((x) => x.toString()),
     onSelectChange: (value: string) => {
       gameWidth = Number.parseInt(value);
@@ -306,9 +304,14 @@ export const controls = {
       paused = value;
     },
   },
+
+  reset: {
+    onButtonClick: resetGameData,
+  },
 };
 
 export function onCleanup() {
+  paused = true;
   root.destroy();
   root.device.destroy();
 }
