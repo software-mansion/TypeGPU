@@ -90,6 +90,7 @@ function draw() {
   for (const fn in initialFunctions) {
     runComputePass(modules[fn], buffers.lineVertices[fn]);
   }
+  runRenderBackgroundPass();
   runRenderPass();
 
   requestAnimationFrame(draw);
@@ -125,6 +126,98 @@ function runComputePass(module: GPUShaderModule, resultBuffer: GPUBuffer) {
   pass.setPipeline(computePipeline);
   pass.setBindGroup(0, bindGroup);
   pass.dispatchWorkgroups(properties.interpolationPoints);
+  pass.end();
+
+  const commandBuffer = encoder.finish();
+  device.queue.submit([commandBuffer]);
+}
+
+function runRenderBackgroundPass() {
+  const renderBackgroundCode = /* wgsl */ `
+struct Properties {
+  transformation: mat4x4f,
+  invertedTransformation: mat4x4f,
+  interpolationPoints: u32,
+  lineWidthBuffer: f32,
+  dashedLine: u32,
+};
+
+@group(0) @binding(0) var<uniform> properties: Properties;
+
+@vertex fn vs(
+  @builtin(vertex_index) vertexIndex : u32,
+  @builtin(instance_index) instanceIndex : u32,
+) -> @builtin(position) vec4f {
+  let leftBot = properties.transformation * vec4f(-1, -1, 0, 1);
+  let rightTop = properties.transformation * vec4f(1, 1, 0, 1);
+
+  let transformedPoints = array(
+    vec2f(leftBot.x, 0.0),
+    vec2f(rightTop.x, 0.0),
+    vec2f(0.0, leftBot.y),
+    vec2f(0.0, rightTop.y),
+  );
+
+  let currentPoint = properties.invertedTransformation * vec4f(transformedPoints[2 * instanceIndex + vertexIndex/2].xy, 0, 1);
+  return vec4f(
+    currentPoint.x + f32(instanceIndex) * select(-1.0, 1.0, vertexIndex%2 == 0) * 0.005,
+    currentPoint.y + f32(1-instanceIndex) * select(-1.0, 1.0, vertexIndex%2 == 0) * 0.005,
+    currentPoint.zw
+  );
+}
+
+@fragment fn fs() -> @location(0) vec4f {
+  return vec4f(0.0, 0.0, 0.0, 1.0);
+}
+  `;
+  const renderBackgroundModule = device.createShaderModule({
+    label: 'Render module',
+    code: renderBackgroundCode,
+  });
+
+  const renderPipeline = device.createRenderPipeline({
+    label: 'Render pipeline',
+    layout: 'auto',
+    vertex: {
+      module: renderBackgroundModule,
+    },
+    fragment: {
+      module: renderBackgroundModule,
+      targets: [{ format: presentationFormat }],
+    },
+    primitive: {
+      topology: 'triangle-strip',
+    },
+  });
+
+  const renderPassDescriptor = {
+    label: 'Render pass',
+    colorAttachments: [
+      {
+        view: undefined as unknown as GPUTextureView,
+        clearValue: [1.0, 1.0, 1.0, 1] as const,
+        loadOp: 'clear' as const,
+        storeOp: 'store' as const,
+      },
+    ],
+  };
+
+  renderPassDescriptor.colorAttachments[0].view = context
+    .getCurrentTexture()
+    .createView();
+
+  const encoder = device.createCommandEncoder({ label: 'Render encoder' });
+
+  const pass = encoder.beginRenderPass(renderPassDescriptor);
+
+  const renderBindGroup = device.createBindGroup({
+    label: 'Render bindGroup',
+    layout: renderPipeline.getBindGroupLayout(0),
+    entries: [{ binding: 0, resource: { buffer: buffers.properties } }],
+  });
+  pass.setPipeline(renderPipeline);
+  pass.setBindGroup(0, renderBindGroup);
+  pass.draw(4, 2);
   pass.end();
 
   const commandBuffer = encoder.finish();
