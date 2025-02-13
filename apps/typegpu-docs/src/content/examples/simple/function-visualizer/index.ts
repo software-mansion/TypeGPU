@@ -52,7 +52,15 @@ const modules: Record<string, GPUShaderModule> = {
   draw: recompileRenderModule(),
 };
 
-const buffers: Record<string, GPUBuffer> = {
+type GPUBufferGroup = Record<string, GPUBuffer>;
+
+type Buffers = {
+  properties: GPUBuffer;
+  lineVertices: GPUBufferGroup;
+  colors: GPUBufferGroup;
+};
+
+const buffers: Buffers = {
   properties: device.createBuffer({
     label: 'properties buffer',
     size:
@@ -64,26 +72,25 @@ const buffers: Record<string, GPUBuffer> = {
       4, // padding
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   }),
-  lineVertices: recreateLineVerticesBuffer(),
-  color: device.createBuffer({
-    label: 'properties buffer',
-    size: 4 * 4,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  }),
+  lineVertices: {
+    f: recreateLineVerticesBuffer(),
+    g: recreateLineVerticesBuffer(),
+    h: recreateLineVerticesBuffer(),
+  },
+  colors: {
+    f: recreateColorBuffer(initialFunctions.f.color),
+    g: recreateColorBuffer(initialFunctions.g.color),
+    h: recreateColorBuffer(initialFunctions.h.color),
+  },
 };
 
 function draw() {
   queuePropertiesBufferUpdate();
 
   for (const fn in initialFunctions) {
-    const { color } = initialFunctions[fn];
-
-    runComputePass(modules[fn]);
-
-    device.queue.writeBuffer(buffers.color, 0, color.buffer);
-
-    runRenderPass();
+    runComputePass(modules[fn], buffers.lineVertices[fn]);
   }
+  runRenderPass();
 
   requestAnimationFrame(draw);
 }
@@ -91,7 +98,7 @@ requestAnimationFrame(draw);
 
 // #region function definitions
 
-function runComputePass(module: GPUShaderModule) {
+function runComputePass(module: GPUShaderModule, resultBuffer: GPUBuffer) {
   const computePipeline = device.createComputePipeline({
     label: 'Compute function points pipeline',
     layout: 'auto',
@@ -104,7 +111,7 @@ function runComputePass(module: GPUShaderModule) {
     label: 'Compute function points bind group',
     layout: computePipeline.getBindGroupLayout(0),
     entries: [
-      { binding: 0, resource: { buffer: buffers.lineVertices } },
+      { binding: 0, resource: { buffer: resultBuffer } },
       { binding: 1, resource: { buffer: buffers.properties } },
     ],
   });
@@ -140,16 +147,6 @@ function runRenderPass() {
     },
   });
 
-  const renderBindGroup = device.createBindGroup({
-    label: 'Render bindGroup',
-    layout: renderPipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: { buffer: buffers.lineVertices } },
-      { binding: 1, resource: { buffer: buffers.properties } },
-      { binding: 2, resource: { buffer: buffers.color } },
-    ],
-  });
-
   const renderPassDescriptor = {
     label: 'Render pass',
     colorAttachments: [
@@ -169,9 +166,21 @@ function runRenderPass() {
   const encoder = device.createCommandEncoder({ label: 'Render encoder' });
 
   const pass = encoder.beginRenderPass(renderPassDescriptor);
-  pass.setPipeline(renderPipeline);
-  pass.setBindGroup(0, renderBindGroup);
-  pass.draw(properties.interpolationPoints * 2); // call our vertex shader 2 times per point drawn
+
+  for (const fn in initialFunctions) {
+    const renderBindGroup = device.createBindGroup({
+      label: 'Render bindGroup',
+      layout: renderPipeline.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: buffers.lineVertices[fn] } },
+        { binding: 1, resource: { buffer: buffers.properties } },
+        { binding: 2, resource: { buffer: buffers.colors[fn] } },
+      ],
+    });
+    pass.setPipeline(renderPipeline);
+    pass.setBindGroup(0, renderBindGroup);
+    pass.draw(properties.interpolationPoints * 2); // call our vertex shader 2 times per point drawn
+  }
   pass.end();
 
   const commandBuffer = encoder.finish();
@@ -277,6 +286,16 @@ function recreateLineVerticesBuffer() {
   return lineVerticesBuffer;
 }
 
+function recreateColorBuffer(color: Float32Array) {
+  const colorBuffer = device.createBuffer({
+    label: 'properties buffer',
+    size: 4 * 4,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(colorBuffer, 0, color.buffer);
+  return colorBuffer;
+}
+
 function queuePropertiesBufferUpdate() {
   const transformationOffset = 0;
   const inverseTransformationOffset = 16 * 4;
@@ -379,7 +398,9 @@ export const controls = {
     onSelectChange: (value: string) => {
       const num = Number.parseInt(value);
       properties.interpolationPoints = num;
-      buffers.lineVertices = recreateLineVerticesBuffer();
+      buffers.lineVertices.f = recreateLineVerticesBuffer();
+      buffers.lineVertices.g = recreateLineVerticesBuffer();
+      buffers.lineVertices.h = recreateLineVerticesBuffer();
     },
   },
   'red function': {
