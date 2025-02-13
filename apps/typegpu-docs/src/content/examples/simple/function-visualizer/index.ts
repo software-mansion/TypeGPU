@@ -33,7 +33,6 @@ const properties = {
 
 const root = await tgpu.init();
 const device = root.device;
-
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 
@@ -98,7 +97,7 @@ function draw() {
 }
 requestAnimationFrame(draw);
 
-// #region function definitions
+// #region Function definitions
 
 function runComputePass(module: GPUShaderModule, resultBuffer: GPUBuffer) {
   const computePipeline = device.createComputePipeline({
@@ -183,22 +182,22 @@ function runRenderBackgroundPass() {
   device.queue.submit([commandBuffer]);
 }
 
-function runRenderPass() {
-  const renderPipeline = device.createRenderPipeline({
-    label: 'Render pipeline',
-    layout: 'auto',
-    vertex: {
-      module: modules.draw,
-    },
-    fragment: {
-      module: modules.draw,
-      targets: [{ format: presentationFormat }],
-    },
-    primitive: {
-      topology: 'triangle-strip',
-    },
-  });
+const renderPipeline = device.createRenderPipeline({
+  label: 'Render pipeline',
+  layout: 'auto',
+  vertex: {
+    module: modules.draw,
+  },
+  fragment: {
+    module: modules.draw,
+    targets: [{ format: presentationFormat }],
+  },
+  primitive: {
+    topology: 'triangle-strip',
+  },
+});
 
+function runRenderPass() {
   const renderPassDescriptor = {
     label: 'Render pass',
     colorAttachments: [
@@ -333,7 +332,7 @@ struct Properties {
 }
 
 @fragment fn fs() -> @location(0) vec4f {
-  return vec4f(0.0, 0.0, 0.0, 1.0);
+  return vec4f(0.9, 0.9, 0.9, 1.0);
 }
   `;
   const renderBackgroundModule = device.createShaderModule({
@@ -453,7 +452,7 @@ function queuePropertiesBufferUpdate() {
   );
 }
 
-// #region canvas controls
+// #region Canvas controls
 
 let lastPos: number[] | null = null;
 
