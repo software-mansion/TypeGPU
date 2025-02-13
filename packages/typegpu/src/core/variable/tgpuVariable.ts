@@ -1,4 +1,3 @@
-import type { Exotic } from '../../data/exotic';
 import type { AnyWgslData } from '../../data/wgslTypes';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
@@ -27,9 +26,9 @@ export interface TgpuVar<
  * @param initialValue If not provided, the variable will be initialized to the dataType's "zero-value".
  */
 export function privateVar<TDataType extends AnyWgslData>(
-  dataType: Exotic<TDataType>,
-  initialValue?: Infer<Exotic<TDataType>>,
-): TgpuVar<'private', Exotic<TDataType>> {
+  dataType: TDataType,
+  initialValue?: Infer<TDataType>,
+): TgpuVar<'private', TDataType> {
   return new TgpuVarImpl('private', dataType, initialValue);
 }
 

@@ -96,9 +96,8 @@ function computeCustomAlignment(data: BaseData): number {
 }
 
 /**
- * Since alignments can be inferred from exotic/native data types, they are
- * not stored on them. Instead, this weak map acts as an extended property
- * of those data types.
+ * Since alignments can be inferred from data types, they are not stored on them.
+ * Instead, this weak map acts as an extended property of those data types.
  */
 const cachedAlignments = new WeakMap<object, number>();
 

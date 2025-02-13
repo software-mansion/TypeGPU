@@ -21,6 +21,7 @@ import { bindGroupLayout } from './tgpuBindGroupLayout';
 
 export const tgpu = {
   bindGroupLayout,
+  vertexLayout,
 
   init,
   initFromDevice,
@@ -104,10 +105,12 @@ export type {
   TgpuBuffer,
   Uniform,
   Vertex,
+} from './core/buffer/buffer';
+export type {
   TgpuBufferUniform,
   TgpuBufferReadonly,
   TgpuBufferMutable,
-} from './core/buffer/public';
+} from './core/buffer/bufferUsage';
 export type {
   TgpuSlot,
   TgpuDerived,
