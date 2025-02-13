@@ -15,6 +15,12 @@ export function importTypeGPU(locator: PackageLocator): Promise<TypeGPUModule> {
     );
   }
 
+  if (locator.type === 'pr') {
+    return import(
+      /* @vite-ignore */ `https://esm.sh/pr/typegpu@${locator.version}/`
+    );
+  }
+
   throw new Error('Unsupported import of `typegpu`');
 }
 
@@ -28,6 +34,12 @@ export function importTypeGPUData(
   if (locator.type === 'npm') {
     return import(
       /* @vite-ignore */ `https://esm.sh/typegpu@${locator.version}/data`
+    );
+  }
+
+  if (locator.type === 'pr') {
+    return import(
+      /* @vite-ignore */ `https://esm.sh/pr/typegpu@${locator.version}/data`
     );
   }
 

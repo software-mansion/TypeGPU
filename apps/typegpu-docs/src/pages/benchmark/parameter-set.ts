@@ -8,6 +8,10 @@ export type PackageLocator =
       version?: string;
     }
   | {
+      type: 'pr';
+      version?: string;
+    }
+  | {
       type: 'local';
     };
 
@@ -22,6 +26,10 @@ export function stringifyLocator(
 ): string {
   if (locator.type === 'npm') {
     return `${name}@${locator.version}`;
+  }
+
+  if (locator.type === 'pr') {
+    return `${name}#${locator.version}`;
   }
 
   if (locator.type === 'local') {
