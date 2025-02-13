@@ -439,16 +439,8 @@ export const VectorOps = {
     MatKind,
     <T extends wgsl.AnyMatInstance>(
       m: T,
-      v: T extends wgsl.m2x2f
-        ? wgsl.v2f
-        : T extends wgsl.m3x3f
-          ? wgsl.v3f
-          : wgsl.v4f,
-    ) => T extends wgsl.m2x2f
-      ? wgsl.v2f
-      : T extends wgsl.m3x3f
-        ? wgsl.v3f
-        : wgsl.v4f
+      v: wgsl.vBaseForMat<T>,
+    ) => wgsl.vBaseForMat<T>
   >,
 
   mulVxM: {
@@ -481,17 +473,9 @@ export const VectorOps = {
   } as Record<
     MatKind,
     <T extends wgsl.AnyMatInstance>(
-      v: T extends wgsl.m2x2f
-        ? wgsl.v2f
-        : T extends wgsl.m3x3f
-          ? wgsl.v3f
-          : wgsl.v4f,
+      v: wgsl.vBaseForMat<T>,
       m: T,
-    ) => T extends wgsl.m2x2f
-      ? wgsl.v2f
-      : T extends wgsl.m3x3f
-        ? wgsl.v3f
-        : wgsl.v4f
+    ) => wgsl.vBaseForMat<T>
   >,
 
   dot: {

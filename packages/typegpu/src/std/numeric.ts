@@ -2,8 +2,6 @@ import type { VecKind } from '../data/vector';
 import { VectorOps } from '../data/vectorOps';
 import type {
   AnyMatInstance,
-  m2x2f,
-  m3x3f,
   v2f,
   v2h,
   v3f,
@@ -12,6 +10,7 @@ import type {
   v3u,
   v4f,
   v4h,
+  vBaseForMat,
 } from '../data/wgslTypes';
 import { inGPUMode } from '../gpuMode';
 
@@ -31,12 +30,6 @@ export function sub<T extends vBase>(lhs: T, rhs: T): T {
   return VectorOps.sub[lhs.kind](lhs, rhs);
 }
 
-type vBaseForMat<T extends AnyMatInstance> = T extends m2x2f
-  ? v2f
-  : T extends m3x3f
-    ? v3f
-    : v4f;
-
 export function mul<T extends AnyMatInstance, TVec extends vBaseForMat<T>>(
   s: T,
   v: TVec,
@@ -54,6 +47,7 @@ export function mul(
     return `(${s} * ${v})` as unknown as vBase | AnyMatInstance;
   }
   if (typeof s === 'number') {
+    // Scalar * Vector/Matrix case
     return VectorOps.mulSxV[v.kind](s, v);
   }
   if (
@@ -79,7 +73,7 @@ export function mul(
       );
     }
   }
-  // Fallback to vector * vector multiplication
+  // Vector * Vector or Matrix * Matrix case
   return VectorOps.mulVxV[v.kind](s, v);
 }
 
