@@ -121,9 +121,9 @@ fn frag(@location(0) cell: f32, @builtin(position) pos: vec4f) -> @location(0) v
   }
 
   return vec4f(
-    max(pos.x / 2048, 0),
-    max(pos.y / 2048, 0),
-    max(1 - pos.x / 2048, 0),
+    pos.x / 2048,
+    pos.y / 2048,
+    1 - pos.x / 2048,
     0.8
   );
 }`,
@@ -189,7 +189,6 @@ const resetGameData = () => {
       colorAttachments: [
         {
           view,
-          clearValue: [0, 0, 0, 0],
           loadOp: 'clear',
           storeOp: 'store',
         },
