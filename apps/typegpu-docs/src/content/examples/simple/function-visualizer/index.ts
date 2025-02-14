@@ -64,11 +64,8 @@ const propertiesBuffer = root
   .createBuffer(PropertiesSchema, properties)
   .$usage('uniform');
 
-const lineVerticesBuffers: Record<string, GPUBuffer> = {
-  f: recreateLineVerticesBuffer(),
-  g: recreateLineVerticesBuffer(),
-  h: recreateLineVerticesBuffer(),
-};
+const lineVerticesBuffers: Record<string, GPUBuffer> =
+  recreateLineVerticesBuffers();
 
 const colorBuffers: Record<string, GPUBuffer> = {
   f: recreateColorBuffer(initialFunctions.f.color),
@@ -76,7 +73,12 @@ const colorBuffers: Record<string, GPUBuffer> = {
   h: recreateColorBuffer(initialFunctions.h.color),
 };
 
+let destroyed = false;
 function draw() {
+  if (destroyed) {
+    return;
+  }
+
   queuePropertiesBufferUpdate();
 
   for (const fn in initialFunctions) {
@@ -391,13 +393,18 @@ fn orthonormalForVertex(index: u32) -> vec2f {
   return vertexFragmentShaderModule;
 }
 
-function recreateLineVerticesBuffer() {
-  const lineVerticesBuffer = device.createBuffer({
-    label: 'Function points buffer',
-    size: properties.interpolationPoints * 4 * 2,
-    usage: GPUBufferUsage.STORAGE,
-  });
-  return lineVerticesBuffer;
+function recreateLineVerticesBuffers() {
+  const Scheme = d.arrayOf(d.vec2f, properties.interpolationPoints);
+  const buffers: Record<string, GPUBuffer> = {
+    f: undefined as unknown as GPUBuffer,
+    g: undefined as unknown as GPUBuffer,
+    h: undefined as unknown as GPUBuffer,
+  };
+  for (const fn in initialFunctions) {
+    const buffer = root.createBuffer(Scheme).$usage('storage');
+    buffers[fn] = root.unwrap(buffer);
+  }
+  return buffers;
 }
 
 function recreateColorBuffer(color: Float32Array) {
@@ -481,9 +488,7 @@ export const controls = {
     onSelectChange: (value: string) => {
       const num = Number.parseInt(value);
       properties.interpolationPoints = num;
-      lineVerticesBuffers.f = recreateLineVerticesBuffer();
-      lineVerticesBuffers.g = recreateLineVerticesBuffer();
-      lineVerticesBuffers.h = recreateLineVerticesBuffer();
+      recreateLineVerticesBuffers();
     },
   },
   'red function': {
@@ -519,6 +524,7 @@ export const controls = {
 };
 
 export function onCleanup() {
+  destroyed = true;
   root.destroy();
 }
 
