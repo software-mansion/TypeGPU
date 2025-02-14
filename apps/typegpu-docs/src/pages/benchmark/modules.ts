@@ -17,7 +17,7 @@ export function importTypeGPU(locator: PackageLocator): Promise<TypeGPUModule> {
 
   if (locator.type === 'pr') {
     return import(
-      /* @vite-ignore */ `https://esm.sh/pr/typegpu@${locator.version}/`
+      /* @vite-ignore */ `https://esm.sh/pr/typegpu@${locator.commit}/`
     );
   }
 
@@ -39,7 +39,7 @@ export function importTypeGPUData(
 
   if (locator.type === 'pr') {
     return import(
-      /* @vite-ignore */ `https://esm.sh/pr/typegpu@${locator.version}/data`
+      /* @vite-ignore */ `https://esm.sh/pr/typegpu@${locator.commit}/data`
     );
   }
 

@@ -44,13 +44,13 @@ function PrParameters(props: {
   const [parameterSet, setParameterSet] = useAtom(props.parameterSetAtom);
 
   const version =
-    parameterSet.typegpu.type === 'pr' ? parameterSet.typegpu.version : '';
+    parameterSet.typegpu.type === 'pr' ? parameterSet.typegpu.commit : '';
 
-  const setVersion = useCallback(
-    (version: string) => {
+  const setCommit = useCallback(
+    (commit: string) => {
       setParameterSet((prev) => ({
         ...prev,
-        typegpu: { ...prev.typegpu, version },
+        typegpu: { ...prev.typegpu, commit },
       }));
     },
     [setParameterSet],
@@ -58,13 +58,13 @@ function PrParameters(props: {
 
   return (
     <>
-      <p className="text-sm">typegpu#</p>
+      <p className="text-sm">typegpu@</p>
       <input
         type="text"
         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
         value={version}
-        onChange={(e) => setVersion(e.target.value)}
-        placeholder="abc123"
+        onChange={(e) => setCommit(e.target.value)}
+        placeholder="b364de3"
       />
     </>
   );

@@ -9,7 +9,7 @@ export type PackageLocator =
     }
   | {
       type: 'pr';
-      version?: string;
+      commit?: string;
     }
   | {
       type: 'local';
@@ -29,7 +29,7 @@ export function stringifyLocator(
   }
 
   if (locator.type === 'pr') {
-    return `${name}#${locator.version}`;
+    return `${name}#${locator.commit}`;
   }
 
   if (locator.type === 'local') {
