@@ -1,6 +1,5 @@
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix';
 import {
-  type VecKind,
   vec2f,
   vec2h,
   vec2i,
@@ -15,6 +14,7 @@ import {
   vec4u,
 } from './vector';
 import type * as wgsl from './wgslTypes';
+import type { VecKind } from './wgslTypes';
 
 type vBase = { kind: VecKind };
 type v2 = wgsl.v2f | wgsl.v2h | wgsl.v2i | wgsl.v2u;
