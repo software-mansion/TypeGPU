@@ -442,6 +442,54 @@ class TgpuRootImpl
       | (TgpuRenderPipeline & INTERNAL_TgpuRenderPipeline)
       | undefined;
 
+    const setupPassBeforeDraw = () => {
+      if (!currentPipeline) {
+        throw new Error('Cannot draw without a call to pass.setPipeline');
+      }
+
+      const { core, priors } = currentPipeline;
+      const memo = core.unwrap();
+
+      pass.setPipeline(memo.pipeline);
+
+      const missingBindGroups = new Set(memo.bindGroupLayouts);
+      memo.bindGroupLayouts.forEach((layout, idx) => {
+        if (memo.catchall && idx === memo.catchall[0]) {
+          // Catch-all
+          pass.setBindGroup(idx, this.unwrap(memo.catchall[1]));
+          missingBindGroups.delete(layout);
+        } else {
+          const bindGroup =
+            priors.bindGroupLayoutMap?.get(layout) ?? bindGroups.get(layout);
+          if (bindGroup !== undefined) {
+            missingBindGroups.delete(layout);
+            pass.setBindGroup(idx, this.unwrap(bindGroup));
+          }
+        }
+      });
+
+      const missingVertexLayouts = new Set<TgpuVertexLayout>();
+      core.usedVertexLayouts.forEach((vertexLayout, idx) => {
+        const buffer =
+          priors.vertexLayoutMap?.get(vertexLayout) ??
+          vertexBuffers.get(vertexLayout);
+
+        if (!buffer) {
+          missingVertexLayouts.add(vertexLayout);
+        } else {
+          pass.setVertexBuffer(idx, this.unwrap(buffer));
+        }
+      });
+
+      if (missingBindGroups.size > 0) {
+        throw new MissingBindGroupsError(missingBindGroups);
+      }
+
+      if (missingVertexLayouts.size > 0) {
+        throw new MissingVertexBuffersError(missingVertexLayouts);
+      }
+    };
+
     callback({
       setPipeline(pipeline) {
         currentPipeline = pipeline as TgpuRenderPipeline &
@@ -456,63 +504,14 @@ class TgpuRootImpl
         vertexBuffers.set(vertexLayout, buffer);
       },
 
-      draw: (vertexCount, instanceCount, firstVertex, firstInstance) => {
-        if (!currentPipeline) {
-          throw new Error('Cannot draw without a call to pass.setPipeline');
-        }
-
-        const memo = currentPipeline.core.unwrap();
-
-        pass.setPipeline(memo.pipeline);
-
-        const missingBindGroups = new Set(memo.bindGroupLayouts);
-
-        memo.bindGroupLayouts.forEach((layout, idx) => {
-          if (memo.catchall && idx === memo.catchall[0]) {
-            // Catch-all
-            pass.setBindGroup(idx, this.unwrap(memo.catchall[1]));
-            missingBindGroups.delete(layout);
-          } else {
-            const bindGroup = bindGroups.get(layout);
-            if (bindGroup !== undefined) {
-              missingBindGroups.delete(layout);
-              pass.setBindGroup(idx, this.unwrap(bindGroup));
-            }
-          }
-        });
-
-        const missingVertexLayouts = new Set(
-          currentPipeline.core.usedVertexLayouts,
-        );
-
-        const usedVertexLayouts = currentPipeline.core.usedVertexLayouts;
-        usedVertexLayouts.forEach((vertexLayout, idx) => {
-          const buffer = vertexBuffers.get(vertexLayout);
-          if (buffer) {
-            missingVertexLayouts.delete(vertexLayout);
-            pass.setVertexBuffer(idx, this.unwrap(buffer));
-          }
-        });
-
-        if (missingBindGroups.size > 0) {
-          throw new MissingBindGroupsError(missingBindGroups);
-        }
-
-        if (missingVertexLayouts.size > 0) {
-          throw new MissingVertexBuffersError(missingVertexLayouts);
-        }
-
+      draw(vertexCount, instanceCount, firstVertex, firstInstance) {
+        setupPassBeforeDraw();
         pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
       },
 
-      drawIndexed: (
-        indexCount,
-        instanceCount,
-        firstIndex,
-        baseVertex,
-        firstInstance,
-      ) => {
-        // TODO: Implement
+      drawIndexed(...args) {
+        setupPassBeforeDraw();
+        pass.drawIndexed(...args);
       },
     });
 

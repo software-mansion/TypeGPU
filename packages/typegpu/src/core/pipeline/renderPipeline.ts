@@ -65,6 +65,7 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
 
 export interface INTERNAL_TgpuRenderPipeline {
   readonly core: RenderPipelineCore;
+  readonly priors: TgpuRenderPipelinePriors;
 }
 
 export type FragmentOutToTargets<T extends IOLayout> = T extends IOData
@@ -228,8 +229,8 @@ class TgpuRenderPipelineImpl
   public readonly resourceType = 'render-pipeline';
 
   constructor(
-    readonly core: RenderPipelineCore,
-    private readonly _priors: TgpuRenderPipelinePriors,
+    public readonly core: RenderPipelineCore,
+    public readonly priors: TgpuRenderPipelinePriors,
   ) {}
 
   get label() {
@@ -255,9 +256,9 @@ class TgpuRenderPipelineImpl
   ): TgpuRenderPipeline {
     if (isBindGroupLayout(definition)) {
       return new TgpuRenderPipelineImpl(this.core, {
-        ...this._priors,
+        ...this.priors,
         bindGroupLayoutMap: new Map([
-          ...(this._priors.bindGroupLayoutMap ?? []),
+          ...(this.priors.bindGroupLayoutMap ?? []),
           [definition, resource as TgpuBindGroup],
         ]),
       });
@@ -265,9 +266,9 @@ class TgpuRenderPipelineImpl
 
     if (isVertexLayout(definition)) {
       return new TgpuRenderPipelineImpl(this.core, {
-        ...this._priors,
+        ...this.priors,
         vertexLayoutMap: new Map([
-          ...(this._priors.vertexLayoutMap ?? []),
+          ...(this.priors.vertexLayoutMap ?? []),
           [definition, resource as TgpuBuffer<AnyWgslData> & Vertex],
         ]),
       });
@@ -280,7 +281,7 @@ class TgpuRenderPipelineImpl
     attachment: AnyFragmentColorAttachment,
   ): TgpuRenderPipeline {
     return new TgpuRenderPipelineImpl(this.core, {
-      ...this._priors,
+      ...this.priors,
       colorAttachment: attachment,
     });
   }
@@ -289,7 +290,7 @@ class TgpuRenderPipelineImpl
     attachment: DepthStencilAttachment,
   ): TgpuRenderPipeline {
     return new TgpuRenderPipelineImpl(this.core, {
-      ...this._priors,
+      ...this.priors,
       depthStencilAttachment: attachment,
     });
   }
@@ -305,7 +306,7 @@ class TgpuRenderPipelineImpl
 
     const colorAttachments = connectAttachmentToShader(
       fragmentFn.shell.targets,
-      this._priors.colorAttachment ?? {},
+      this.priors.colorAttachment ?? {},
     ).map((attachment) => {
       if (isTexture(attachment.view)) {
         return {
@@ -325,8 +326,8 @@ class TgpuRenderPipelineImpl
       renderPassDescriptor.label = this.core.label;
     }
 
-    if (this._priors.depthStencilAttachment !== undefined) {
-      const attachment = this._priors.depthStencilAttachment;
+    if (this.priors.depthStencilAttachment !== undefined) {
+      const attachment = this.priors.depthStencilAttachment;
       if (isTexture(attachment.view)) {
         renderPassDescriptor.depthStencilAttachment = {
           ...attachment,
@@ -350,7 +351,7 @@ class TgpuRenderPipelineImpl
         pass.setBindGroup(idx, branch.unwrap(memo.catchall[1]));
         missingBindGroups.delete(layout);
       } else {
-        const bindGroup = this._priors.bindGroupLayoutMap?.get(layout);
+        const bindGroup = this.priors.bindGroupLayoutMap?.get(layout);
         if (bindGroup !== undefined) {
           missingBindGroups.delete(layout);
           pass.setBindGroup(idx, branch.unwrap(bindGroup));
@@ -362,7 +363,7 @@ class TgpuRenderPipelineImpl
 
     const usedVertexLayouts = this.core.usedVertexLayouts;
     usedVertexLayouts.forEach((vertexLayout, idx) => {
-      const buffer = this._priors.vertexLayoutMap?.get(vertexLayout);
+      const buffer = this.priors.vertexLayoutMap?.get(vertexLayout);
       if (buffer) {
         missingVertexLayouts.delete(vertexLayout);
         pass.setVertexBuffer(idx, branch.unwrap(buffer));

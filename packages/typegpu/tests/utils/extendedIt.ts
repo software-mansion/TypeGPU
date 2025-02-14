@@ -20,6 +20,9 @@ const mockTexture = {
 };
 
 const mockCommandEncoder = {
+  get mock() {
+    return mockCommandEncoder;
+  },
   beginComputePass: vi.fn(() => mockComputePassEncoder),
   beginRenderPass: vi.fn(() => mockRenderPassEncoder),
   copyBufferToBuffer: vi.fn(),
