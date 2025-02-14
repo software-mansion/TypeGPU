@@ -488,6 +488,8 @@ export type AnyVecInstance =
   | v4i
   | v4u;
 
+export type VecKind = AnyVecInstance['kind'];
+
 export interface matBase<TColumn> extends NumberArrayView {
   readonly columns: readonly TColumn[];
 }
