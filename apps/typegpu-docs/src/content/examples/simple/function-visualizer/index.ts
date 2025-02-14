@@ -53,8 +53,6 @@ context.configure({
 });
 
 const functionComputeModules: Array<GPUShaderModule> = compileComputeModules();
-const backgroundModule = compileBackgroundRenderModule();
-const drawModule = compileRenderModule();
 
 const propertiesBuffer = root
   .createBuffer(PropertiesSchema, properties)
@@ -115,22 +113,23 @@ function runComputePass(module: GPUShaderModule, resultBuffer: GPUBuffer) {
   device.queue.submit([commandBuffer]);
 }
 
-function runRenderBackgroundPass() {
-  const renderPipeline = device.createRenderPipeline({
-    label: 'Render pipeline',
-    layout: 'auto',
-    vertex: {
-      module: backgroundModule,
-    },
-    fragment: {
-      module: backgroundModule,
-      targets: [{ format: presentationFormat }],
-    },
-    primitive: {
-      topology: 'triangle-strip',
-    },
-  });
+const backgroundModule = compileBackgroundRenderModule();
+const renderBackgroundPipeline = device.createRenderPipeline({
+  label: 'Render pipeline',
+  layout: 'auto',
+  vertex: {
+    module: backgroundModule,
+  },
+  fragment: {
+    module: backgroundModule,
+    targets: [{ format: presentationFormat }],
+  },
+  primitive: {
+    topology: 'triangle-strip',
+  },
+});
 
+function runRenderBackgroundPass() {
   const renderPassDescriptor = {
     label: 'Render pass',
     colorAttachments: [
@@ -153,12 +152,12 @@ function runRenderBackgroundPass() {
 
   const renderBindGroup = device.createBindGroup({
     label: 'Render bindGroup',
-    layout: renderPipeline.getBindGroupLayout(0),
+    layout: renderBackgroundPipeline.getBindGroupLayout(0),
     entries: [
       { binding: 0, resource: { buffer: root.unwrap(propertiesBuffer) } },
     ],
   });
-  pass.setPipeline(renderPipeline);
+  pass.setPipeline(renderBackgroundPipeline);
   pass.setBindGroup(0, renderBindGroup);
   pass.draw(4, 2);
   pass.end();
@@ -167,6 +166,7 @@ function runRenderBackgroundPass() {
   device.queue.submit([commandBuffer]);
 }
 
+const drawModule = compileRenderModule();
 const renderPipeline = device.createRenderPipeline({
   label: 'Render pipeline',
   layout: 'auto',
