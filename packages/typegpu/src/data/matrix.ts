@@ -1,10 +1,11 @@
 import { inGPUMode } from '../gpuMode';
 import type { SelfResolvable } from '../types';
-import { type VecKind, vec2f, vec3f, vec4f } from './vector';
+import { vec2f, vec3f, vec4f } from './vector';
 import type {
   Mat2x2f,
   Mat3x3f,
   Mat4x4f,
+  VecKind,
   m2x2f,
   m3x3f,
   m4x4f,

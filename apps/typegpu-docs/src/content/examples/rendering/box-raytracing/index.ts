@@ -179,10 +179,10 @@ const getBoxIntersection = tgpu['~unstable']
   .$name('box_intersection');
 
 const vertexFunction = tgpu['~unstable']
-  .vertexFn(
-    { vertexIndex: d.builtin.vertexIndex },
-    { outPos: d.builtin.position },
-  )
+  .vertexFn({
+    in: { vertexIndex: d.builtin.vertexIndex },
+    out: { outPos: d.builtin.position },
+  })
   .does(/* wgsl */ `(input: VertexInput) -> VertexOutput {
   var pos = array<vec2f, 6>(
     vec2<f32>( 1,  1),
@@ -203,7 +203,7 @@ const boxSizeAccessor = tgpu['~unstable'].accessor(d.u32);
 const canvasDimsAccessor = tgpu['~unstable'].accessor(CanvasDimsStruct);
 
 const fragmentFunction = tgpu['~unstable']
-  .fragmentFn({ position: d.builtin.position }, d.vec4f)
+  .fragmentFn({ in: { position: d.builtin.position }, out: d.vec4f })
   .does(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
   let minDim = f32(min(canvasDims.width, canvasDims.height));
 

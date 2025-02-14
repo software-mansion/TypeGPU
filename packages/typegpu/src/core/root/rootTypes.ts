@@ -24,6 +24,7 @@ import type { IOLayout, IORecord } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import type { TgpuFn } from '../function/tgpuFn';
 import type {
+  FragmentInConstrained,
   FragmentOutConstrained,
   TgpuFragmentFn,
 } from '../function/tgpuFragmentFn';
@@ -48,7 +49,7 @@ export interface WithCompute {
 
 export type ValidateFragmentIn<
   VertexOut extends IORecord,
-  FragmentIn extends IORecord,
+  FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
 > = FragmentIn extends Partial<VertexOut>
   ? VertexOut extends FragmentIn
@@ -76,7 +77,7 @@ export type ValidateFragmentIn<
 
 export interface WithVertex<VertexOut extends IORecord = IORecord> {
   withFragment<
-    FragmentIn extends IORecord,
+    FragmentIn extends FragmentInConstrained,
     FragmentOut extends FragmentOutConstrained,
   >(
     ...args: ValidateFragmentIn<VertexOut, FragmentIn, FragmentOut>

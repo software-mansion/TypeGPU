@@ -11,7 +11,7 @@ const counterBuffer = root
 const counter = counterBuffer.as('mutable');
 
 const increment = tgpu['~unstable']
-  .computeFn({ num: d.builtin.numWorkgroups }, { workgroupSize: [1] })
+  .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })
   .does((input) => {
     const tmp = counter.value.x;
     counter.value.x = counter.value.y;
