@@ -1,0 +1,140 @@
+---
+title: Functions
+description: A guide on how to create and use the TypeGPU typed functions.
+---
+
+:::caution[Experimental]
+Functions are an *unstable* feature. The API may be subject to change in the near future.
+:::
+
+:::note[Recommended reading]
+We assume that you are familiar with the following concepts:
+- <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html" target="_blank" rel="noopener noreferrer">WebGPU Fundamentals</a>
+- <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-wgsl.html" target="_blank" rel="noopener noreferrer">WebGPU Shading Language</a>
+:::
+
+TypeGPU allows writing shaders by composing typed functions, which are special wrappers around WGSL code. 
+These functions can reference outside resources, like other user-defined or helper functions, buffers, bind group layouts etc. 
+
+## Creating a function
+
+Functions are constructed by first defining their shells, which specify their inputs and outputs.
+Then the actual WGSL implementation is passed in through the `does` method.
+
+The following code defines a function that accepts one argument and returns one value.
+
+```ts
+const getGradientColor = tgpu['~unstable']
+  .fn([d.f32], d.vec4f)
+  .does(`(ratio: f32) -> vec4f {
+    let color = mix(vec4f(0.769, 0.392, 1.0, 1), d.vec4f(0.114, 0.447, 0.941, 1), ratio);
+    return color;
+  }`)
+  .$name('getGradientColor');
+```
+
+If you're using Visual Studio Code, you can use an [extension](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal) that brings syntax highlighting to the code fragments marked with `/* wgsl */` comments.
+
+## External resources
+
+Functions can use external resources passed inside a record via the `$uses` method. 
+Externals can be any value or TypeGPU resource that can be resolved to WGSL (functions, buffer usages, slots, accessors, constants, variables, declarations, vectors, matrices, textures, samplers etc.).
+
+```ts
+const getBlue = tgpu['~unstable']
+  .fn([], d.f32)
+  .does('() -> f32 { return 0.941; }');
+
+const purple = d.vec4f(0.769, 0.392, 1.0, 1);
+
+const getGradientColor = tgpu['~unstable']
+  .fn([d.f32], d.vec4f)
+  .does(`(ratio: f32) -> vec4f {
+    let color = mix(purple, getBlue(), ratio);
+    return color;
+  }`)
+  .$uses({ purple, getBlue })
+  .$name('getGradientColor');
+```
+
+The `getGradientColor` function, when resolved to WGSL, includes the definitions of all used external resources:
+
+```wgsl
+fn getBlue_1() -> f32 { return 0.941; }
+
+fn getGradientColor_0(ratio: f32) -> vec4f {
+  let color = mix(vec4f(0.769, 0.392, 1, 1), getBlue_1(), ratio);
+  return color;
+}
+```
+
+## Entry functions
+
+Defining entry functions is similar to regular ones, but is done through dedicated constructors:
+- `tgpu['~unstable'].vertexFn`
+- `tgpu['~unstable'].fragmentFn`
+- `tgpu['~unstable'].computeFn`
+
+They can be passed to root-defined pipelines and they accept special arguments like builtins (`d.builtin`) and decorated data (`d.location`).
+
+```ts
+const mainVertex = tgpu['~unstable']
+  .vertexFn(
+    { vertexIndex: d.builtin.vertexIndex },
+    { outPos: d.builtin.position, uv: d.vec2f },
+  )
+  .does(/* wgsl */ `(input: VertexInput) -> VertexOutput {
+    var pos = array<vec2f, 3>(
+      vec2(0.0, 0.5),
+      vec2(-0.5, -0.5),
+      vec2(0.5, -0.5)
+    );
+
+    var uv = array<vec2f, 3>(
+      vec2(0.5, 1.0),
+      vec2(0.0, 0.0),
+      vec2(1.0, 0.0),
+    );
+
+    return VertexOutput(vec4f(pos[input.vertexIndex], 0.0, 1.0), uv[input.vertexIndex]);
+  }`);
+
+const mainFragment = tgpu['~unstable']
+  .fragmentFn({ uv: d.vec2f }, d.vec4f)
+  .does(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
+    return getGradientColor((input.uv[0] + input.uv[1]) / 2);
+  }`)
+  .$uses({ getGradientColor });
+```
+
+When entry function inputs or outputs are specified as objects containing builtins and inter-stage variables, the WGSL implementations need to access these arguments as passed in via structs (see *VertexInput*, *VertexOutput*, *FragmentInput*). 
+TypeGPU schemas for these structs are created automatically by the library and their definitions are included when resolving the functions. The names referenced in the implementations do not matter.
+
+## Usage in pipelines
+
+Typed functions are crucial for simplified pipeline creation offered by TypeGPU. You can define and run pipelines as follows:
+
+```ts
+const pipeline = root['~unstable']
+  .withVertex(mainVertex, {})
+  .withFragment(mainFragment, { format: presentationFormat })
+  .createPipeline();
+
+pipeline
+  .withColorAttachment({
+    view: context.getCurrentTexture().createView(),
+    clearValue: [0, 0, 0, 0],
+    loadOp: 'clear',
+    storeOp: 'store',
+  })
+  .draw(3);
+
+root['~unstable'].flush();
+```
+
+The rendering result looks like this:
+![rendering result - gradient triangle](./triangle-result.png)
+
+You can check out the full example on [our examples page](/TypeGPU/examples#example=simple--triangle).
+
+
