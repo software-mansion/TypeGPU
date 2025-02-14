@@ -139,13 +139,13 @@ importers:
         version: 4.4.2(typedoc@0.27.7(typescript@5.7.3))
       typegpu:
         specifier: workspace:*
-        version: link:../../packages/typegpu
+        version: link:../../packages/typegpu/dist
       typescript:
         specifier: ^5.7.3
         version: 5.7.3
       unplugin-typegpu:
         specifier: workspace:*
-        version: link:../../packages/unplugin-typegpu
+        version: link:../../packages/unplugin-typegpu/dist
       zod:
         specifier: ^3.23.8
         version: 3.24.2
@@ -173,7 +173,7 @@ importers:
     dependencies:
       unplugin-typegpu:
         specifier: workspace:^0.1.0-alpha.2
-        version: link:../unplugin-typegpu
+        version: link:../unplugin-typegpu/dist
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -236,10 +236,10 @@ importers:
         version: 8.14.0
       tinyest:
         specifier: workspace:~0.1.0-alpha.2
-        version: link:../tinyest
+        version: link:../tinyest/dist
       tinyest-for-wgsl:
         specifier: workspace:~0.1.0-alpha.2
-        version: link:../tinyest-for-wgsl
+        version: link:../tinyest-for-wgsl/dist
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -307,7 +307,7 @@ importers:
     dependencies:
       tinyest:
         specifier: workspace:~0.1.0-alpha.2
-        version: link:../tinyest
+        version: link:../tinyest/dist
     devDependencies:
       '@babel/types':
         specifier: 7.26.5
@@ -330,7 +330,7 @@ importers:
     dependencies:
       tinyest:
         specifier: workspace:~0.1.0-alpha.2
-        version: link:../tinyest
+        version: link:../tinyest/dist
       typed-binary:
         specifier: ^4.3.1
         version: 4.3.2
@@ -349,7 +349,7 @@ importers:
         version: 2.4.2
       tgpu-wgsl-parser:
         specifier: workspace:*
-        version: link:../tgpu-wgsl-parser
+        version: link:../tgpu-wgsl-parser/dist
       tsup:
         specifier: ^8.0.2
         version: 8.3.6(jiti@2.4.2)(postcss@8.5.2)(tsx@4.19.3)(typescript@5.7.3)(yaml@2.7.0)
@@ -358,7 +358,7 @@ importers:
         version: 5.7.3
       unplugin-typegpu:
         specifier: workspace:*
-        version: link:../unplugin-typegpu
+        version: link:../unplugin-typegpu/dist
       wgpu-matrix:
         specifier: ^3.3.0
         version: 3.3.0
@@ -377,7 +377,10 @@ importers:
         version: 0.30.17
       tinyest-for-wgsl:
         specifier: workspace:~0.1.0-alpha.2
-        version: link:../tinyest-for-wgsl
+        version: link:../tinyest-for-wgsl/dist
+      unplugin:
+        specifier: ^2.2.0
+        version: 2.2.0
     devDependencies:
       '@babel/template':
         specifier: ^7.25.9
@@ -4248,6 +4251,10 @@ packages:
     resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==}
     engines: {node: '>= 10.0.0'}
 
+  unplugin@2.2.0:
+    resolution: {integrity: sha512-m1ekpSwuOT5hxkJeZGRxO7gXbXT3gF26NjQ7GdVHoLoF8/nopLcd/QfPigpCy7i51oFHiRJg/CyHhj4vs2+KGw==}
+    engines: {node: '>=18.12.0'}
+
   unstorage@1.14.4:
     resolution: {integrity: sha512-1SYeamwuYeQJtJ/USE1x4l17LkmQBzg7deBJ+U9qOBoHo15d1cDxG4jM31zKRgF7pG0kirZy4wVMX6WL6Zoscg==}
     peerDependencies:
@@ -4576,6 +4583,9 @@ packages:
 
   webidl-conversions@4.0.2:
     resolution: {integrity: sha512-YQ+BmxuTgd6UXZW3+ICGfyqRyHXVlD5GtQr5+qjiNW7bF0cqrzX500HVXPBOvgXb5YnzDd+h0zqyv61KUD7+Sg==}
+
+  webpack-virtual-modules@0.6.2:
+    resolution: {integrity: sha512-66/V2i5hQanC51vBQKPH4aI8NMAcBW59FVBs+rC7eGHupMyfn34q7rZIE+ETlJ+XTevqfUhVVBgSUNSW2flEUQ==}
 
   wgpu-matrix@3.3.0:
     resolution: {integrity: sha512-MRdywXdzTwX9pVbO5Z/oRX9l7464Wkfv28glG1c7t7s5v/0Dvts6yV8b4AOTOTl1UDGq9KUEAoSN6KW5P12ruQ==}
@@ -9063,6 +9073,11 @@ snapshots:
 
   universalify@2.0.1: {}
 
+  unplugin@2.2.0:
+    dependencies:
+      acorn: 8.14.0
+      webpack-virtual-modules: 0.6.2
+
   unstorage@1.14.4:
     dependencies:
       anymatch: 3.1.3
@@ -9310,6 +9325,8 @@ snapshots:
   web-namespaces@2.0.1: {}
 
   webidl-conversions@4.0.2: {}
+
+  webpack-virtual-modules@0.6.2: {}
 
   wgpu-matrix@3.3.0: {}
 
