@@ -432,10 +432,19 @@ class TgpuRootImpl
   ): void {
     const pass = this.commandEncoder.beginRenderPass(descriptor);
 
-    const bindGroups = new Map<TgpuBindGroupLayout, TgpuBindGroup>();
+    const bindGroups = new Map<
+      TgpuBindGroupLayout,
+      TgpuBindGroup | GPUBindGroup
+    >();
     const vertexBuffers = new Map<
       TgpuVertexLayout,
-      TgpuBuffer<WgslArray<BaseData> | Disarray<BaseData>> & Vertex
+      {
+        buffer:
+          | (TgpuBuffer<WgslArray<BaseData> | Disarray<BaseData>> & Vertex)
+          | GPUBuffer;
+        offset?: number | undefined;
+        size?: number | undefined;
+      }
     >();
 
     let currentPipeline:
@@ -463,21 +472,35 @@ class TgpuRootImpl
             priors.bindGroupLayoutMap?.get(layout) ?? bindGroups.get(layout);
           if (bindGroup !== undefined) {
             missingBindGroups.delete(layout);
-            pass.setBindGroup(idx, this.unwrap(bindGroup));
+            if (isBindGroup(bindGroup)) {
+              pass.setBindGroup(idx, this.unwrap(bindGroup));
+            } else {
+              pass.setBindGroup(idx, bindGroup);
+            }
           }
         }
       });
 
       const missingVertexLayouts = new Set<TgpuVertexLayout>();
       core.usedVertexLayouts.forEach((vertexLayout, idx) => {
-        const buffer =
-          priors.vertexLayoutMap?.get(vertexLayout) ??
-          vertexBuffers.get(vertexLayout);
+        const opts =
+          {
+            buffer: priors.vertexLayoutMap?.get(vertexLayout),
+            offset: undefined,
+            size: undefined,
+          } ?? vertexBuffers.get(vertexLayout);
 
-        if (!buffer) {
+        if (!opts || !opts.buffer) {
           missingVertexLayouts.add(vertexLayout);
+        } else if (isBuffer(opts.buffer)) {
+          pass.setVertexBuffer(
+            idx,
+            this.unwrap(opts.buffer),
+            opts.offset,
+            opts.size,
+          );
         } else {
-          pass.setVertexBuffer(idx, this.unwrap(buffer));
+          pass.setVertexBuffer(idx, opts.buffer, opts.offset, opts.size);
         }
       });
 
@@ -491,17 +514,46 @@ class TgpuRootImpl
     };
 
     callback({
+      setViewport(...args) {
+        pass.setViewport(...args);
+      },
+      setScissorRect(...args) {
+        pass.setScissorRect(...args);
+      },
+      setBlendConstant(...args) {
+        pass.setBlendConstant(...args);
+      },
+      setStencilReference(...args) {
+        pass.setStencilReference(...args);
+      },
+      beginOcclusionQuery(...args) {
+        pass.beginOcclusionQuery(...args);
+      },
+      endOcclusionQuery(...args) {
+        pass.endOcclusionQuery(...args);
+      },
+      executeBundles(...args) {
+        pass.executeBundles(...args);
+      },
       setPipeline(pipeline) {
         currentPipeline = pipeline as TgpuRenderPipeline &
           INTERNAL_TgpuRenderPipeline;
       },
 
-      setBindGroup(bindGroupLayout, bindGroup) {
-        bindGroups.set(bindGroupLayout, bindGroup);
+      setIndexBuffer: (buffer, indexFormat, offset, size) => {
+        if (isBuffer(buffer)) {
+          pass.setIndexBuffer(this.unwrap(buffer), indexFormat, offset, size);
+        } else {
+          pass.setIndexBuffer(buffer, indexFormat, offset, size);
+        }
       },
 
-      setVertexBuffer(vertexLayout, buffer) {
-        vertexBuffers.set(vertexLayout, buffer);
+      setVertexBuffer(vertexLayout, buffer, offset, size) {
+        vertexBuffers.set(vertexLayout, { buffer, offset, size });
+      },
+
+      setBindGroup(bindGroupLayout, bindGroup) {
+        bindGroups.set(bindGroupLayout, bindGroup);
       },
 
       draw(vertexCount, instanceCount, firstVertex, firstInstance) {
@@ -512,6 +564,16 @@ class TgpuRootImpl
       drawIndexed(...args) {
         setupPassBeforeDraw();
         pass.drawIndexed(...args);
+      },
+
+      drawIndirect(...args) {
+        setupPassBeforeDraw();
+        pass.drawIndirect(...args);
+      },
+
+      drawIndexedIndirect(...args) {
+        setupPassBeforeDraw();
+        pass.drawIndexedIndirect(...args);
       },
     });
 
