@@ -6,23 +6,23 @@ import { mat4 } from 'wgpu-matrix';
 
 type FunctionDef = {
   code: string;
-  color: Float32Array;
+  color: d.v4f;
 };
 
-const initialFunctions: Record<string, FunctionDef> = {
-  f: {
+const initialFunctions: Array<FunctionDef> = [
+  {
     code: 'x',
-    color: Float32Array.of(1.0, 0.0, 0.0, 1.0),
+    color: d.vec4f(1.0, 0.0, 0.0, 1.0),
   },
-  g: {
+  {
     code: 'cos(x*5)/3-x',
-    color: Float32Array.of(0.0, 0.8, 0.0, 1.0),
+    color: d.vec4f(0.0, 1.0, 0.0, 1.0),
   },
-  h: {
+  {
     code: 'x*sin(log(abs(x)))',
-    color: Float32Array.of(0.0, 0.0, 1.0, 1.0),
+    color: d.vec4f(0.0, 0.0, 1.0, 1.0),
   },
-};
+];
 
 const PropertiesSchema = d.struct({
   transformation: d.mat4x4f,
@@ -52,10 +52,9 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
+const computeFunctionModules: Array<GPUShaderModule> = compileComputeModules();
+
 const modules: Record<string, GPUShaderModule> = {
-  f: compileComputeModule(initialFunctions.f.code),
-  g: compileComputeModule(initialFunctions.g.code),
-  h: compileComputeModule(initialFunctions.h.code),
   background: compileBackgroundRenderModule(),
   draw: compileRenderModule(),
 };
@@ -64,14 +63,9 @@ const propertiesBuffer = root
   .createBuffer(PropertiesSchema, properties)
   .$usage('uniform');
 
-const lineVerticesBuffers: Record<string, GPUBuffer> =
-  recreateLineVerticesBuffers();
+const lineVerticesBuffers: Array<GPUBuffer> = recreateLineVerticesBuffers();
 
-const colorBuffers: Record<string, GPUBuffer> = {
-  f: recreateColorBuffer(initialFunctions.f.color),
-  g: recreateColorBuffer(initialFunctions.g.color),
-  h: recreateColorBuffer(initialFunctions.h.color),
-};
+const colorBuffers: Array<GPUBuffer> = createColorBuffers();
 
 let destroyed = false;
 function draw() {
@@ -81,9 +75,9 @@ function draw() {
 
   queuePropertiesBufferUpdate();
 
-  for (const fn in initialFunctions) {
-    runComputePass(modules[fn], lineVerticesBuffers[fn]);
-  }
+  initialFunctions.forEach((_, i) => {
+    runComputePass(computeFunctionModules[i], lineVerticesBuffers[i]);
+  });
   runRenderBackgroundPass();
   runRenderPass();
 
@@ -214,20 +208,23 @@ function runRenderPass() {
 
   const pass = encoder.beginRenderPass(renderPassDescriptor);
 
-  for (const fn in initialFunctions) {
+  initialFunctions.forEach((_, i) => {
     const renderBindGroup = device.createBindGroup({
       label: 'Render bindGroup',
       layout: renderPipeline.getBindGroupLayout(0),
       entries: [
-        { binding: 0, resource: { buffer: lineVerticesBuffers[fn] } },
+        {
+          binding: 0,
+          resource: { buffer: lineVerticesBuffers[i] },
+        },
         { binding: 1, resource: { buffer: root.unwrap(propertiesBuffer) } },
-        { binding: 2, resource: { buffer: colorBuffers[fn] } },
+        { binding: 2, resource: { buffer: colorBuffers[i] } },
       ],
     });
     pass.setPipeline(renderPipeline);
     pass.setBindGroup(0, renderBindGroup);
     pass.draw(properties.interpolationPoints * 2); // call our vertex shader 2 times per point drawn
-  }
+  });
   pass.end();
 
   const commandBuffer = encoder.finish();
@@ -263,13 +260,17 @@ function createComputeShaderCode(functionCode: string) {
   `;
 }
 
-function compileComputeModule(functionCode: string) {
-  const computeShaderCode = createComputeShaderCode(functionCode);
-  const computeShaderModule = device.createShaderModule({
-    label: `Compute function points shader module for f(x) = ${functionCode}`,
-    code: computeShaderCode,
-  });
-  return computeShaderModule;
+function compileComputeModules() {
+  const compileModules = [];
+  for (const functionData of initialFunctions) {
+    const computeShaderCode = createComputeShaderCode(functionData.code);
+    const computeShaderModule = device.createShaderModule({
+      label: `Compute function points shader module for f(x) = ${functionData.code}`,
+      code: computeShaderCode,
+    });
+    compileModules.push(computeShaderModule);
+  }
+  return compileModules;
 }
 
 async function tryCompileComputeModule(
@@ -395,26 +396,25 @@ fn orthonormalForVertex(index: u32) -> vec2f {
 
 function recreateLineVerticesBuffers() {
   const Scheme = d.arrayOf(d.vec2f, properties.interpolationPoints);
-  const buffers: Record<string, GPUBuffer> = {
-    f: undefined as unknown as GPUBuffer,
-    g: undefined as unknown as GPUBuffer,
-    h: undefined as unknown as GPUBuffer,
-  };
-  for (const fn in initialFunctions) {
+  const lineVerticesBuffers = [];
+
+  for (const _ in initialFunctions) {
     const buffer = root.createBuffer(Scheme).$usage('storage');
-    buffers[fn] = root.unwrap(buffer);
+    lineVerticesBuffers.push(root.unwrap(buffer));
   }
-  return buffers;
+  return lineVerticesBuffers;
 }
 
-function recreateColorBuffer(color: Float32Array) {
-  const colorBuffer = device.createBuffer({
-    label: 'properties buffer',
-    size: 4 * 4,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-  device.queue.writeBuffer(colorBuffer, 0, color.buffer);
-  return colorBuffer;
+function createColorBuffers() {
+  const Scheme = d.vec4f;
+  const colorBuffers = [];
+  for (const functionData of initialFunctions) {
+    const buffer = root
+      .createBuffer(Scheme, functionData.color)
+      .$usage('uniform');
+    colorBuffers.push(root.unwrap(buffer));
+  }
+  return colorBuffers;
 }
 
 function queuePropertiesBufferUpdate() {
@@ -492,30 +492,30 @@ export const controls = {
     },
   },
   'red function': {
-    initial: initialFunctions.f.code,
+    initial: initialFunctions[0].code,
     onTextChange: async (value: string) => {
       try {
-        modules.f = await tryCompileComputeModule(value);
+        computeFunctionModules[0] = await tryCompileComputeModule(value);
       } catch (e) {
         console.log(e);
       }
     },
   },
   'green function': {
-    initial: initialFunctions.g.code,
+    initial: initialFunctions[1].code,
     onTextChange: async (value: string) => {
       try {
-        modules.g = await tryCompileComputeModule(value);
+        computeFunctionModules[1] = await tryCompileComputeModule(value);
       } catch (e) {
         console.log(e);
       }
     },
   },
   'blue function': {
-    initial: initialFunctions.h.code,
+    initial: initialFunctions[2].code,
     onTextChange: async (value: string) => {
       try {
-        modules.h = await tryCompileComputeModule(value);
+        computeFunctionModules[2] = await tryCompileComputeModule(value);
       } catch (e) {
         console.log(e);
       }
