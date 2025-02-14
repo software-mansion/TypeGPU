@@ -3,7 +3,7 @@ name: Publish PR package (pkg.pr.new)
 on: [push, pull_request]
 
 jobs:
-  build:
+  build-and-publish:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout your repository using git
@@ -31,9 +31,5 @@ jobs:
       - name: Nightly build
         run: pnpm nightly-build
 
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
       - name: Publish (pkg.pr.new)
-        run: npx pkg-pr-new publish './packages/typegpu/dist' --compact
+        run: npx pkg-pr-new publish './packages/typegpu/dist'
