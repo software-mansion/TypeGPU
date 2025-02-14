@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import tgpu, { type TgpuBuffer, type Storage } from 'typegpu';
 import * as d from 'typegpu/data';
 import { mat4 } from 'wgpu-matrix';
 
@@ -52,7 +52,9 @@ const properties: d.Infer<typeof PropertiesSchema> = {
 const propertiesBuffer = root
   .createBuffer(PropertiesSchema, properties)
   .$usage('uniform');
-let lineVerticesBuffers: Array<GPUBuffer> = recreateLineVerticesBuffers();
+type LineVerticesBuffer = TgpuBuffer<d.WgslArray<d.Vec2f>> & Storage;
+let lineVerticesBuffers: Array<LineVerticesBuffer> =
+  createLineVerticesBuffers();
 const colorBuffers: Array<GPUBuffer> = createColorBuffers();
 
 let destroyed = false;
@@ -75,7 +77,10 @@ requestAnimationFrame(draw);
 
 // #region Function definitions
 
-function runComputePass(module: GPUShaderModule, resultBuffer: GPUBuffer) {
+function runComputePass(
+  module: GPUShaderModule,
+  resultBuffer: LineVerticesBuffer,
+) {
   const computePipeline = device.createComputePipeline({
     label: 'Compute function points pipeline',
     layout: 'auto',
@@ -88,7 +93,7 @@ function runComputePass(module: GPUShaderModule, resultBuffer: GPUBuffer) {
     label: 'Compute function points bind group',
     layout: computePipeline.getBindGroupLayout(0),
     entries: [
-      { binding: 0, resource: { buffer: resultBuffer } },
+      { binding: 0, resource: { buffer: root.unwrap(resultBuffer) } },
       { binding: 1, resource: { buffer: root.unwrap(propertiesBuffer) } },
     ],
   });
@@ -205,7 +210,7 @@ function runRenderPass() {
       entries: [
         {
           binding: 0,
-          resource: { buffer: lineVerticesBuffers[i] },
+          resource: { buffer: root.unwrap(lineVerticesBuffers[i]) },
         },
         { binding: 1, resource: { buffer: root.unwrap(propertiesBuffer) } },
         { binding: 2, resource: { buffer: colorBuffers[i] } },
@@ -385,13 +390,13 @@ fn orthonormalForVertex(index: u32) -> vec2f {
   return vertexFragmentShaderModule;
 }
 
-function recreateLineVerticesBuffers() {
+function createLineVerticesBuffers() {
   const Scheme = d.arrayOf(d.vec2f, properties.interpolationPoints);
-  const lineVerticesBuffers = [];
+  const lineVerticesBuffers: Array<LineVerticesBuffer> = [];
 
   for (const _ in initialFunctions) {
     const buffer = root.createBuffer(Scheme).$usage('storage');
-    lineVerticesBuffers.push(root.unwrap(buffer));
+    lineVerticesBuffers.push(buffer);
   }
   return lineVerticesBuffers;
 }
@@ -509,7 +514,7 @@ export const controls = {
     onSelectChange: (value: string) => {
       const num = Number.parseInt(value);
       properties.interpolationPoints = num;
-      lineVerticesBuffers = recreateLineVerticesBuffers();
+      lineVerticesBuffers = createLineVerticesBuffers();
     },
   },
   Recenter: {
