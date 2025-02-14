@@ -43,10 +43,43 @@ function getFreeKey(get: Getter): number {
   return Math.max(...get(parameterSetsAtom).map((params) => params.key)) + 1;
 }
 
-export const parameterSetsAtom = atomWithUrl<BenchParameterSet[]>('p', [
-  { key: 1, typegpu: { type: 'local' } },
-  { key: 2, typegpu: { type: 'npm', version: 'latest' } },
-]);
+export const parameterSetsAtom = atomWithUrl<BenchParameterSet[]>(
+  'p',
+  [
+    { key: 1, typegpu: { type: 'local' } },
+    { key: 2, typegpu: { type: 'npm', version: 'latest' } },
+  ],
+  {
+    encode: (values) =>
+      values
+        .map(
+          (value) =>
+            `${value.typegpu.type === 'npm' ? `npm-${value.typegpu.version ?? ''}` : value.typegpu.type === 'pr' ? `pr-${value.typegpu.commit ?? ''}` : 'local'}`,
+        )
+        .join('_'),
+
+    decode: (encoded) =>
+      encoded.split('_').map((value, i) =>
+        value.startsWith('npm-')
+          ? {
+              key: i + 1,
+              typegpu: {
+                type: 'npm',
+                version: value.slice('npm-'.length) ?? '',
+              },
+            }
+          : value.startsWith('pr-')
+            ? {
+                key: i + 1,
+                typegpu: {
+                  type: 'pr',
+                  commit: value.slice('pr-'.length) ?? '',
+                },
+              }
+            : { key: i + 1, typegpu: { type: 'local' } },
+      ),
+  },
+);
 
 export const parameterSetAtomsAtom = splitAtom(
   parameterSetsAtom,
