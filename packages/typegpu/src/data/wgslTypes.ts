@@ -827,9 +827,23 @@ export interface WgslArray<TElement extends BaseData = BaseData> {
   readonly '~memIdent': WgslArray<MemIdentity<TElement>>;
 }
 
-export interface PtrFn<TInner = BaseData> {
-  readonly type: 'ptrFn';
+export type AddressSpace =
+  | 'uniform'
+  | 'storage'
+  | 'workgroup'
+  | 'private'
+  | 'function';
+export type Access = 'read' | 'write' | 'read-write';
+
+export interface Ptr<
+  TAddr extends AddressSpace = AddressSpace,
+  TInner extends BaseData = BaseData, // can also be sampler or texture (╯'□')╯︵ ┻━┻
+  TAccess extends Access = Access,
+> {
+  readonly type: 'ptr';
   readonly inner: TInner;
+  readonly addressSpace: TAddr;
+  readonly access: TAccess;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
 }
@@ -914,7 +928,7 @@ export const wgslTypeLiterals = [
   'mat4x4f',
   'struct',
   'array',
-  'ptrFn',
+  'ptr',
   'atomic',
   'decorated',
 ] as const;
@@ -965,7 +979,7 @@ export type AnyWgslData =
   | Mat4x4f
   | AnyWgslStruct
   | WgslArray
-  | PtrFn
+  | Ptr
   | Atomic
   | Decorated;
 
@@ -1018,8 +1032,8 @@ export function isWgslStruct<T extends WgslStruct>(
  * isPtrFn(d.ptrFn(d.f32)) // true
  * isPtrFn(d.f32) // false
  */
-export function isPtrFn<T extends PtrFn>(schema: T | unknown): schema is T {
-  return (schema as T)?.type === 'ptrFn';
+export function isPtr<T extends Ptr>(schema: T | unknown): schema is T {
+  return (schema as T)?.type === 'ptr';
 }
 
 /**
