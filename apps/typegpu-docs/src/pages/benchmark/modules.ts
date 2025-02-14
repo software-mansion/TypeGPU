@@ -17,7 +17,7 @@ export function importTypeGPU(locator: PackageLocator): Promise<TypeGPUModule> {
 
   if (locator.type === 'pr') {
     return import(
-      /* @vite-ignore */ `https://esm.sh/pr/typegpu@${locator.commit}/`
+      /* @vite-ignore */ `https://esm.sh/pr/software-mansion/TypeGPU/typegpu@${locator.commit}/`
     );
   }
 

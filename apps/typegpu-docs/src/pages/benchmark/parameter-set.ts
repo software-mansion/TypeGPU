@@ -29,7 +29,7 @@ export function stringifyLocator(
   }
 
   if (locator.type === 'pr') {
-    return `${name}#${locator.commit}`;
+    return `${name}@${locator.commit}`;
   }
 
   if (locator.type === 'local') {
