@@ -64,31 +64,23 @@ const propertiesBuffer = root
   .createBuffer(PropertiesSchema, properties)
   .$usage('uniform');
 
-type GPUBufferGroup = Record<string, GPUBuffer>;
-
-type Buffers = {
-  lineVertices: GPUBufferGroup;
-  colors: GPUBufferGroup;
+const lineVerticesBuffers: Record<string, GPUBuffer> = {
+  f: recreateLineVerticesBuffer(),
+  g: recreateLineVerticesBuffer(),
+  h: recreateLineVerticesBuffer(),
 };
 
-const buffers: Buffers = {
-  lineVertices: {
-    f: recreateLineVerticesBuffer(),
-    g: recreateLineVerticesBuffer(),
-    h: recreateLineVerticesBuffer(),
-  },
-  colors: {
-    f: recreateColorBuffer(initialFunctions.f.color),
-    g: recreateColorBuffer(initialFunctions.g.color),
-    h: recreateColorBuffer(initialFunctions.h.color),
-  },
+const colorBuffers: Record<string, GPUBuffer> = {
+  f: recreateColorBuffer(initialFunctions.f.color),
+  g: recreateColorBuffer(initialFunctions.g.color),
+  h: recreateColorBuffer(initialFunctions.h.color),
 };
 
 function draw() {
   queuePropertiesBufferUpdate();
 
   for (const fn in initialFunctions) {
-    runComputePass(modules[fn], buffers.lineVertices[fn]);
+    runComputePass(modules[fn], lineVerticesBuffers[fn]);
   }
   runRenderBackgroundPass();
   runRenderPass();
@@ -225,9 +217,9 @@ function runRenderPass() {
       label: 'Render bindGroup',
       layout: renderPipeline.getBindGroupLayout(0),
       entries: [
-        { binding: 0, resource: { buffer: buffers.lineVertices[fn] } },
+        { binding: 0, resource: { buffer: lineVerticesBuffers[fn] } },
         { binding: 1, resource: { buffer: root.unwrap(propertiesBuffer) } },
-        { binding: 2, resource: { buffer: buffers.colors[fn] } },
+        { binding: 2, resource: { buffer: colorBuffers[fn] } },
       ],
     });
     pass.setPipeline(renderPipeline);
@@ -489,9 +481,9 @@ export const controls = {
     onSelectChange: (value: string) => {
       const num = Number.parseInt(value);
       properties.interpolationPoints = num;
-      buffers.lineVertices.f = recreateLineVerticesBuffer();
-      buffers.lineVertices.g = recreateLineVerticesBuffer();
-      buffers.lineVertices.h = recreateLineVerticesBuffer();
+      lineVerticesBuffers.f = recreateLineVerticesBuffer();
+      lineVerticesBuffers.g = recreateLineVerticesBuffer();
+      lineVerticesBuffers.h = recreateLineVerticesBuffer();
     },
   },
   'red function': {
