@@ -82,21 +82,27 @@ function runComputePass(
   module: GPUShaderModule,
   resultBuffer: LineVerticesBuffer,
 ) {
+  const layout = tgpu.bindGroupLayout({
+    lineVertices: {
+      storage: d.arrayOf(d.vec2f, properties.interpolationPoints),
+      access: 'mutable',
+    },
+    properties: { uniform: PropertiesSchema },
+  });
+
   const computePipeline = device.createComputePipeline({
     label: 'Compute function points pipeline',
-    layout: 'auto',
+    layout: device.createPipelineLayout({
+      bindGroupLayouts: [root.unwrap(layout)],
+    }),
     compute: {
       module: module,
     },
   });
 
-  const bindGroup = device.createBindGroup({
-    label: 'Compute function points bind group',
-    layout: computePipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: { buffer: root.unwrap(resultBuffer) } },
-      { binding: 1, resource: { buffer: root.unwrap(propertiesBuffer) } },
-    ],
+  const bindGroup = root.createBindGroup(layout, {
+    lineVertices: resultBuffer,
+    properties: propertiesBuffer,
   });
 
   const encoder = device.createCommandEncoder({
@@ -106,7 +112,7 @@ function runComputePass(
     label: 'Compute function points compute pass',
   });
   pass.setPipeline(computePipeline);
-  pass.setBindGroup(0, bindGroup);
+  pass.setBindGroup(0, root.unwrap(bindGroup));
   pass.dispatchWorkgroups(properties.interpolationPoints);
   pass.end();
 
