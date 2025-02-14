@@ -24,7 +24,7 @@ try {
 }
 
 const compiledWriters = new WeakMap<
-  wgsl.BaseWgslData,
+  wgsl.BaseData,
   (
     output: DataView,
     offset: number,
@@ -66,12 +66,12 @@ const primitiveToWriteFunction = {
   f32: 'setFloat32',
 } as const;
 
-export function createCompileInstructions<TData extends wgsl.BaseWgslData>(
+export function createCompileInstructions<TData extends wgsl.BaseData>(
   schema: TData,
 ) {
   const segments: CompiledWriteInstructions[] = [];
 
-  function gather<T extends wgsl.BaseWgslData>(
+  function gather<T extends wgsl.BaseData>(
     node: T,
     offset: number,
     path: string[],
@@ -154,7 +154,7 @@ function buildAccessor(path: string[]) {
   return path.length === 0 ? 'value' : `value.${path.join('.')}`;
 }
 
-export function getCompiledWriterForSchema<T extends wgsl.BaseWgslData>(
+export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
   schema: T,
 ): (
   output: DataView,

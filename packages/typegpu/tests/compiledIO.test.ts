@@ -6,7 +6,6 @@ import {
   getCompiledWriterForSchema,
 } from '../src/data/compiledIO';
 import { sizeOf } from '../src/data/sizeOf';
-import type { NTuple } from '../src/shared/utilityTypes';
 import { it } from './utils/extendedIt';
 
 describe('createCompileInstructions', () => {
@@ -19,10 +18,11 @@ describe('createCompileInstructions', () => {
     const instructions = createCompileInstructions(struct);
     expect(instructions).toHaveLength(4);
 
-    const [f1, f2x, f2y, f2z] = instructions as NTuple<
-      CompiledWriteInstructions,
-      4
-    >;
+    const [f1, f2x, f2y, f2z] = instructions;
+
+    if (!f1 || !f2x || !f2y || !f2z) {
+      throw new Error('Invalid instructions');
+    }
 
     expect(f1.offset).toBe(0);
     expect(f1.primitive).toBe('u32');
@@ -51,8 +51,22 @@ describe('createCompileInstructions', () => {
     const instructions = createCompileInstructions(struct);
     expect(instructions).toHaveLength(10);
 
-    const [f1, f2x, f2y, f2z, f3x, f3y, f3z, f4, f5, f6] =
-      instructions as NTuple<CompiledWriteInstructions, 10>;
+    const [f1, f2x, f2y, f2z, f3x, f3y, f3z, f4, f5, f6] = instructions;
+
+    if (
+      !f1 ||
+      !f2x ||
+      !f2y ||
+      !f2z ||
+      !f3x ||
+      !f3y ||
+      !f3z ||
+      !f4 ||
+      !f5 ||
+      !f6
+    ) {
+      throw new Error('Invalid instructions');
+    }
 
     expect(f1.offset).toBe(0);
     expect(f1.primitive).toBe('u32');
@@ -107,10 +121,11 @@ describe('createCompileInstructions', () => {
     const instructions = createCompileInstructions(struct);
     expect(instructions).toHaveLength(7);
 
-    const [f1, f2x, f2y, f2z, f3, f4, f5] = instructions as NTuple<
-      CompiledWriteInstructions,
-      7
-    >;
+    const [f1, f2x, f2y, f2z, f3, f4, f5] = instructions;
+
+    if (!f1 || !f2x || !f2y || !f2z || !f3 || !f4 || !f5) {
+      throw new Error('Invalid instructions');
+    }
 
     expect(f1.offset).toBe(0);
     expect(f1.primitive).toBe('u32');
