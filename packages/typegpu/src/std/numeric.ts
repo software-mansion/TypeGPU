@@ -56,8 +56,8 @@ export function mul(
     'kind' in s &&
     'kind' in v
   ) {
-    const sIsVector = !s.kind.includes('mat');
-    const vIsVector = !v.kind.includes('mat');
+    const sIsVector = !s.kind.startsWith('mat');
+    const vIsVector = !v.kind.startsWith('mat');
     if (!sIsVector && vIsVector) {
       // Matrix * Vector case
       return VectorOps.mulMxV[(s as AnyMatInstance).kind](
