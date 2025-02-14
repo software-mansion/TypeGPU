@@ -52,13 +52,13 @@ jobs:
 
             const commitUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${sha}`;
 
-            const body = `## pkg.pr.new
+            const body = `**pkg.pr.new**
 
             *packages*
             \`\`\`
             pnpm i https://pkg.pr.new/software-mansion/TypeGPU/typegpu@${context.issue.number}
             ${output.packages
-              .map((p) => `pnpm i https://pkg.pr.new/software-mansion/TypeGPU/${p.name}@${p.url}`)
+              .map((p) => `pnpm i ${p.url}`)
               .join('\n')}
             \`\`\`
 
@@ -68,7 +68,7 @@ jobs:
             *commit*
             [view commit](${commitUrl})`;
 
-            const botCommentIdentifier = '## pkg.pr.new';
+            const botCommentIdentifier = '**pkg.pr.new**';
 
             async function findBotComment(issueNumber) {
               if (!issueNumber) return null;
