@@ -1,4 +1,5 @@
 import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
 import { mat4 } from 'wgpu-matrix';
 
 // #region Globals and init
@@ -23,7 +24,15 @@ const initialFunctions: Record<string, FunctionDef> = {
   },
 };
 
-const properties = {
+const PropertiesSchema = d.struct({
+  transformation: d.mat4x4f,
+  inverseTransformation: d.mat4x4f,
+  interpolationPoints: d.u32,
+  lineWidthBuffer: d.f32,
+  dashedLine: d.u32,
+});
+
+const properties: d.Infer<typeof PropertiesSchema> = {
   transformation: mat4.identity(),
   inverseTransformation: mat4.identity(),
   interpolationPoints: 256,
@@ -35,7 +44,6 @@ const root = await tgpu.init();
 const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 context.configure({
@@ -52,26 +60,18 @@ const modules: Record<string, GPUShaderModule> = {
   draw: compileRenderModule(),
 };
 
+const propertiesBuffer = root
+  .createBuffer(PropertiesSchema, properties)
+  .$usage('uniform');
+
 type GPUBufferGroup = Record<string, GPUBuffer>;
 
 type Buffers = {
-  properties: GPUBuffer;
   lineVertices: GPUBufferGroup;
   colors: GPUBufferGroup;
 };
 
 const buffers: Buffers = {
-  properties: device.createBuffer({
-    label: 'properties buffer',
-    size:
-      4 * 4 * 4 + // transformation
-      4 * 4 * 4 + // inverseTransformation
-      4 + // interpolationPoints
-      4 + // lineWidthBuffer
-      4 + // dashedLine
-      4, // padding
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  }),
   lineVertices: {
     f: recreateLineVerticesBuffer(),
     g: recreateLineVerticesBuffer(),
@@ -113,7 +113,7 @@ function runComputePass(module: GPUShaderModule, resultBuffer: GPUBuffer) {
     layout: computePipeline.getBindGroupLayout(0),
     entries: [
       { binding: 0, resource: { buffer: resultBuffer } },
-      { binding: 1, resource: { buffer: buffers.properties } },
+      { binding: 1, resource: { buffer: root.unwrap(propertiesBuffer) } },
     ],
   });
 
@@ -171,7 +171,9 @@ function runRenderBackgroundPass() {
   const renderBindGroup = device.createBindGroup({
     label: 'Render bindGroup',
     layout: renderPipeline.getBindGroupLayout(0),
-    entries: [{ binding: 0, resource: { buffer: buffers.properties } }],
+    entries: [
+      { binding: 0, resource: { buffer: root.unwrap(propertiesBuffer) } },
+    ],
   });
   pass.setPipeline(renderPipeline);
   pass.setBindGroup(0, renderBindGroup);
@@ -224,7 +226,7 @@ function runRenderPass() {
       layout: renderPipeline.getBindGroupLayout(0),
       entries: [
         { binding: 0, resource: { buffer: buffers.lineVertices[fn] } },
-        { binding: 1, resource: { buffer: buffers.properties } },
+        { binding: 1, resource: { buffer: root.unwrap(propertiesBuffer) } },
         { binding: 2, resource: { buffer: buffers.colors[fn] } },
       ],
     });
@@ -417,39 +419,8 @@ function recreateColorBuffer(color: Float32Array) {
 }
 
 function queuePropertiesBufferUpdate() {
-  const transformationOffset = 0;
-  const inverseTransformationOffset = 16 * 4;
-  const interpolationPointsOffset = 32 * 4;
-  const lineWidthBufferOffset = 33 * 4;
-  const dashedLineOffset = 34 * 4;
-
   properties.inverseTransformation = mat4.inverse(properties.transformation);
-
-  device.queue.writeBuffer(
-    buffers.properties,
-    transformationOffset,
-    properties.transformation.buffer,
-  );
-  device.queue.writeBuffer(
-    buffers.properties,
-    inverseTransformationOffset,
-    properties.inverseTransformation.buffer,
-  );
-  device.queue.writeBuffer(
-    buffers.properties,
-    interpolationPointsOffset,
-    Int32Array.of(properties.interpolationPoints).buffer,
-  );
-  device.queue.writeBuffer(
-    buffers.properties,
-    lineWidthBufferOffset,
-    Float32Array.of(properties.lineWidthBuffer).buffer,
-  );
-  device.queue.writeBuffer(
-    buffers.properties,
-    dashedLineOffset,
-    Int32Array.of(properties.dashedLine).buffer,
-  );
+  propertiesBuffer.write(properties);
 }
 
 // #region Canvas controls
