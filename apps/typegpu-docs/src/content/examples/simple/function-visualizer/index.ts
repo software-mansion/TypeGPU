@@ -514,7 +514,12 @@ export const controls = {
     onSelectChange: (value: string) => {
       const num = Number.parseInt(value);
       properties.interpolationPoints = num;
+
+      const oldBuffers = lineVerticesBuffers;
       lineVerticesBuffers = createLineVerticesBuffers();
+      oldBuffers.forEach((buffer, _) => {
+        buffer.destroy();
+      });
     },
   },
   Recenter: {
