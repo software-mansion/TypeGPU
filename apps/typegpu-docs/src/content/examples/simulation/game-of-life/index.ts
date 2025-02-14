@@ -99,6 +99,7 @@ const renderShader = device.createShaderModule({
 struct Out {
   @builtin(position) pos: vec4f,
   @location(0) cell: f32,
+  @location(1) uv: vec2f,
 }
 
 @vertex
@@ -111,19 +112,20 @@ fn vert(@builtin(instance_index) i: u32, @location(0) cell: u32, @location(1) po
   return Out(
     vec4f(x, y, 0., 1.),
     f32(cell),
+    vec2f((x + 1) / 2, (y + 1) / 2)
   );
 }
 
 @fragment
-fn frag(@location(0) cell: f32, @builtin(position) pos: vec4f) -> @location(0) vec4f {
+fn frag(@location(0) cell: f32, @builtin(position) pos: vec4f, @location(1) uv: vec2f) -> @location(0) vec4f {
   if (cell == 0.) {
     discard;
   }
 
   return vec4f(
-    pos.x / 2048,
-    pos.y / 2048,
-    1 - pos.x / 2048,
+    uv.x / 1.5,
+    uv.y / 1.5,
+    1 - uv.x / 1.5,
     0.8
   );
 }`,
