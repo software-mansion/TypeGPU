@@ -59,9 +59,7 @@ const drawModule = compileRenderModule();
 const propertiesBuffer = root
   .createBuffer(PropertiesSchema, properties)
   .$usage('uniform');
-
-const lineVerticesBuffers: Array<GPUBuffer> = recreateLineVerticesBuffers();
-
+let lineVerticesBuffers: Array<GPUBuffer> = recreateLineVerticesBuffers();
 const colorBuffers: Array<GPUBuffer> = createColorBuffers();
 
 let destroyed = false;
@@ -516,7 +514,7 @@ export const controls = {
     onSelectChange: (value: string) => {
       const num = Number.parseInt(value);
       properties.interpolationPoints = num;
-      recreateLineVerticesBuffers();
+      lineVerticesBuffers = recreateLineVerticesBuffers();
     },
   },
   Recenter: {
