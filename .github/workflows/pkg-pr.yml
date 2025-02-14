@@ -5,6 +5,10 @@ on: [pull_request]
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      repository-projects: write
     steps:
       - name: Checkout your repository using git
         uses: actions/checkout@v4
