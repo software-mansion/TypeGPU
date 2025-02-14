@@ -38,6 +38,7 @@
     "@biomejs/biome": "^1.8.3",
     "@types/node": "^20.11.13",
     "dpdm": "^3.14.0",
+    "pkg-pr-new": "^0.0.39",
     "tsup": "^8.0.2",
     "typescript": "^5.3.3",
     "vitest": "^2.1.9"

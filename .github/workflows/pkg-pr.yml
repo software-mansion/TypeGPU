@@ -1,0 +1,39 @@
+name: Publish PR package (pkg.pr.new)
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout your repository using git
+        uses: actions/checkout@v4
+
+      - name: Print commit id, message and tag
+        run: |
+          git show -s --format='%h %s'
+          echo "github.ref -> {{ github.ref }}"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --recursive --frozen-lockfile
+
+      - name: Nightly build
+        run: pnpm nightly-build
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish (pkg.pr.new)
+        run: npx pkg-pr-new publish './packages/typegpu/dist' --compact
