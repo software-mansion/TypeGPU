@@ -473,25 +473,7 @@ canvas.onwheel = (event) => {
 // #region Example controls and cleanup
 
 export const controls = {
-  'line width': {
-    initial: 0.01,
-    min: 0.0,
-    max: 0.025,
-    step: 0.001,
-    onSliderChange: (value: number) => {
-      properties.lineWidthBuffer = value;
-    },
-  },
-  'interpolation points count': {
-    initial: '256',
-    options: [4, 16, 64, 256, 1024, 4096].map((x) => x.toString()),
-    onSelectChange: (value: string) => {
-      const num = Number.parseInt(value);
-      properties.interpolationPoints = num;
-      recreateLineVerticesBuffers();
-    },
-  },
-  'red function': {
+  'Red function': {
     initial: initialFunctions[0].code,
     onTextChange: async (value: string) => {
       try {
@@ -501,7 +483,7 @@ export const controls = {
       }
     },
   },
-  'green function': {
+  'Green function': {
     initial: initialFunctions[1].code,
     onTextChange: async (value: string) => {
       try {
@@ -511,7 +493,7 @@ export const controls = {
       }
     },
   },
-  'blue function': {
+  'Blue function': {
     initial: initialFunctions[2].code,
     onTextChange: async (value: string) => {
       try {
@@ -519,6 +501,29 @@ export const controls = {
       } catch (e) {
         console.log(e);
       }
+    },
+  },
+  'Line width': {
+    initial: 0.01,
+    min: 0.0,
+    max: 0.025,
+    step: 0.001,
+    onSliderChange: (value: number) => {
+      properties.lineWidthBuffer = value;
+    },
+  },
+  'Interpolation points count': {
+    initial: '256',
+    options: [4, 16, 64, 256, 1024, 4096].map((x) => x.toString()),
+    onSelectChange: (value: string) => {
+      const num = Number.parseInt(value);
+      properties.interpolationPoints = num;
+      recreateLineVerticesBuffers();
+    },
+  },
+  Recenter: {
+    onButtonClick: async () => {
+      properties.transformation = mat4.identity();
     },
   },
 };
