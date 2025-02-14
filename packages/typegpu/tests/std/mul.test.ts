@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  mat2x2f,
+  mat3x3f,
+  mat4x4f,
   vec2f,
   vec2i,
   vec2u,
@@ -62,5 +65,102 @@ describe('mul', () => {
     expect(mul(-1, vec4i(-1, -2, -3, -4))).toEqual(vec4i(1, 2, 3, 4));
     expect(mul(0, vec4i(1))).toEqual(vec4i());
     expect(mul(8, vec4i(2))).toEqual(vec4i(16));
+  });
+
+  it('computes product of a mat2x2 and mat2x2', () => {
+    const a = mat2x2f(1, 2, 3, 4);
+    const b = mat2x2f(5, 6, 7, 8);
+    const expected = mat2x2f(23, 34, 31, 46);
+    expect(mul(a, b)).toEqual(expected);
+  });
+
+  it('computes product of a mat3x3 and mat3x3', () => {
+    const a = mat3x3f(1, 2, 3, 4, 5, 6, 7, 8, 9);
+    const b = mat3x3f(10, 11, 12, 13, 14, 15, 16, 17, 18);
+    const expected = mat3x3f(138, 171, 204, 174, 216, 258, 210, 261, 312);
+    expect(mul(a, b)).toEqual(expected);
+  });
+
+  it('computes product of a mat4x4 and mat4x4', () => {
+    const a = mat4x4f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
+    const b = mat4x4f(
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+    );
+    const expected = mat4x4f(
+      538,
+      612,
+      686,
+      760,
+      650,
+      740,
+      830,
+      920,
+      762,
+      868,
+      974,
+      1080,
+      874,
+      996,
+      1118,
+      1240,
+    );
+    expect(mul(a, b)).toEqual(expected);
+  });
+
+  it('computes product of a mat2x2 and vec2f', () => {
+    const m = mat2x2f(1, 2, 3, 4);
+    const v = vec2f(5, 6);
+    const expected = vec2f(23, 34);
+    expect(mul(m, v)).toEqual(expected);
+  });
+
+  it('computes product of a vec2f and mat2x2', () => {
+    const v = vec2f(5, 6);
+    const m = mat2x2f(1, 2, 3, 4);
+    const expected = vec2f(17, 39);
+    expect(mul(v, m)).toEqual(expected);
+  });
+
+  it('computes product of a mat3x3 and vec3f', () => {
+    const m = mat3x3f(1, 2, 3, 4, 5, 6, 7, 8, 9);
+    const v = vec3f(10, 11, 12);
+    const expected = vec3f(138, 171, 204);
+    expect(mul(m, v)).toEqual(expected);
+  });
+
+  it('computes product of a vec3f and mat3x3', () => {
+    const v = vec3f(10, 11, 12);
+    const m = mat3x3f(1, 2, 3, 4, 5, 6, 7, 8, 9);
+    const expected = vec3f(68, 167, 266);
+    expect(mul(v, m)).toEqual(expected);
+  });
+
+  it('computes product of a mat4x4 and vec4f', () => {
+    const m = mat4x4f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
+    const v = vec4f(17, 18, 19, 20);
+    const expected = vec4f(538, 612, 686, 760);
+    expect(mul(m, v)).toEqual(expected);
+  });
+
+  it('computes product of a vec4f and mat4x4', () => {
+    const v = vec4f(17, 18, 19, 20);
+    const m = mat4x4f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
+    const expected = vec4f(190, 486, 782, 1078);
+    expect(mul(v, m)).toEqual(expected);
   });
 });

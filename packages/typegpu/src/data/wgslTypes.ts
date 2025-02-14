@@ -488,6 +488,8 @@ export type AnyVecInstance =
   | v4i
   | v4u;
 
+export type VecKind = AnyVecInstance['kind'];
+
 export interface matBase<TColumn> extends NumberArrayView {
   readonly columns: readonly TColumn[];
 }
@@ -547,6 +549,12 @@ export interface m4x4f extends mat4x4<v4f> {
 }
 
 export type AnyMatInstance = m2x2f | m3x3f | m4x4f;
+
+export type vBaseForMat<T extends AnyMatInstance> = T extends m2x2f
+  ? v2f
+  : T extends m3x3f
+    ? v3f
+    : v4f;
 
 // #endregion
 

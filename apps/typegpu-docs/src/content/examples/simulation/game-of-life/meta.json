@@ -1,5 +1,4 @@
 {
   "title": "Game of Life",
-  "category": "simulation",
-  "tags": ["experimental"]
+  "category": "simulation"
 }
