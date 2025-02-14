@@ -45,13 +45,6 @@ jobs:
             const fs = require('fs');
             const output = JSON.parse(fs.readFileSync('output.json', 'utf8'));
 
-            const packages = output.packages
-              .map((p) => `- ${p.name}: ${p.url}`)
-              .join('\n');
-            const templates = output.templates
-              .map((t) => `- [${t.name}](${t.url})`)
-              .join('\n');
-
             const sha =
               context.event_name === 'pull_request'
                 ? context.payload.pull_request.head.sha
@@ -59,19 +52,23 @@ jobs:
 
             const commitUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${sha}`;
 
-            const body = `## Custom Publish Message
+            const body = `## pkg.pr.new
 
-            ### Published Packages:
+            *packages*
+            ```
+            pnpm i https://pkg.pr.new/software-mansion/TypeGPU/typegpu@${context.issue.number}
+            ${output.packages
+              .map((p) => `pnpm i https://pkg.pr.new/software-mansion/TypeGPU/${p.name}@${p.url}`)
+              .join('\n');}
+            ```
 
-            ${packages}
+            *benchmark*
+            [view benchmark](https://docs.swmansion.com/TypeGPU/benchmark?p=npm-latest_pr-${context.issue.number})
 
-            ### Templates:
+            *commit*
+            [view commit](${commitUrl})`;
 
-            ${templates}
-
-            [View Commit](${commitUrl})`;
-
-            const botCommentIdentifier = '## Custom Publish Message';
+            const botCommentIdentifier = '## pkg.pr.new';
 
             async function findBotComment(issueNumber) {
               if (!issueNumber) return null;
