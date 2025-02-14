@@ -197,6 +197,10 @@ export default defineConfig({
               label: 'Data Schema Cheatsheet',
               slug: 'reference/data-schema-cheatsheet',
             },
+            DEV && {
+              label: 'Naming Convention',
+              slug: 'reference/naming-convention',
+            },
             DEV && typeDocSidebarGroup,
           ]),
         },
