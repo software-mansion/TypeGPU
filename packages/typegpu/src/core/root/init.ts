@@ -222,23 +222,7 @@ class TgpuRootImpl
   ) {
     super(() => this, []);
 
-    this['~unstable'] = {
-      nameRegistry: this.nameRegistry,
-      commandEncoder: this.commandEncoder,
-
-      createUniform: this.createUniform.bind(this),
-      createMutable: this.createMutable.bind(this),
-      createReadonly: this.createReadonly.bind(this),
-
-      createTexture: this.createTexture.bind(this),
-
-      with: this.with.bind(this),
-      withCompute: this.withCompute.bind(this),
-      withVertex: this.withVertex.bind(this),
-      beginRenderPass: this.beginRenderPass.bind(this),
-
-      flush: this.flush.bind(this),
-    };
+    this['~unstable'] = this;
   }
 
   get commandEncoder() {
