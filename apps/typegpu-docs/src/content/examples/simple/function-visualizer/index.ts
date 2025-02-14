@@ -1,4 +1,4 @@
-import tgpu, { type TgpuBuffer, type Storage } from 'typegpu';
+import tgpu, { type TgpuBuffer, type Storage, type Uniform } from 'typegpu';
 import * as d from 'typegpu/data';
 import { mat4 } from 'wgpu-matrix';
 
@@ -55,7 +55,8 @@ const propertiesBuffer = root
 type LineVerticesBuffer = TgpuBuffer<d.WgslArray<d.Vec2f>> & Storage;
 let lineVerticesBuffers: Array<LineVerticesBuffer> =
   createLineVerticesBuffers();
-const colorBuffers: Array<GPUBuffer> = createColorBuffers();
+type ColorBuffer = TgpuBuffer<d.Vec4f> & Uniform;
+const colorBuffers: Array<ColorBuffer> = createColorBuffers();
 
 let destroyed = false;
 function draw() {
@@ -213,7 +214,7 @@ function runRenderPass() {
           resource: { buffer: root.unwrap(lineVerticesBuffers[i]) },
         },
         { binding: 1, resource: { buffer: root.unwrap(propertiesBuffer) } },
-        { binding: 2, resource: { buffer: colorBuffers[i] } },
+        { binding: 2, resource: { buffer: root.unwrap(colorBuffers[i]) } },
       ],
     });
     pass.setPipeline(renderPipeline);
@@ -403,12 +404,12 @@ function createLineVerticesBuffers() {
 
 function createColorBuffers() {
   const Scheme = d.vec4f;
-  const colorBuffers = [];
+  const colorBuffers: ColorBuffer[] = [];
   for (const functionData of initialFunctions) {
     const buffer = root
       .createBuffer(Scheme, functionData.color)
       .$usage('uniform');
-    colorBuffers.push(root.unwrap(buffer));
+    colorBuffers.push(buffer);
   }
   return colorBuffers;
 }
