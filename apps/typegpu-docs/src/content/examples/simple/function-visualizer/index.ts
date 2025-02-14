@@ -52,12 +52,9 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const computeFunctionModules: Array<GPUShaderModule> = compileComputeModules();
-
-const modules: Record<string, GPUShaderModule> = {
-  background: compileBackgroundRenderModule(),
-  draw: compileRenderModule(),
-};
+const functionComputeModules: Array<GPUShaderModule> = compileComputeModules();
+const backgroundModule = compileBackgroundRenderModule();
+const drawModule = compileRenderModule();
 
 const propertiesBuffer = root
   .createBuffer(PropertiesSchema, properties)
@@ -76,7 +73,7 @@ function draw() {
   queuePropertiesBufferUpdate();
 
   initialFunctions.forEach((_, i) => {
-    runComputePass(computeFunctionModules[i], lineVerticesBuffers[i]);
+    runComputePass(functionComputeModules[i], lineVerticesBuffers[i]);
   });
   runRenderBackgroundPass();
   runRenderPass();
@@ -125,10 +122,10 @@ function runRenderBackgroundPass() {
     label: 'Render pipeline',
     layout: 'auto',
     vertex: {
-      module: modules.background,
+      module: backgroundModule,
     },
     fragment: {
-      module: modules.background,
+      module: backgroundModule,
       targets: [{ format: presentationFormat }],
     },
     primitive: {
@@ -176,10 +173,10 @@ const renderPipeline = device.createRenderPipeline({
   label: 'Render pipeline',
   layout: 'auto',
   vertex: {
-    module: modules.draw,
+    module: drawModule,
   },
   fragment: {
-    module: modules.draw,
+    module: drawModule,
     targets: [{ format: presentationFormat }],
   },
   primitive: {
@@ -223,7 +220,8 @@ function runRenderPass() {
     });
     pass.setPipeline(renderPipeline);
     pass.setBindGroup(0, renderBindGroup);
-    pass.draw(properties.interpolationPoints * 2); // call our vertex shader 2 times per point drawn
+    // call our vertex shader 2 times per point drawn
+    pass.draw(properties.interpolationPoints * 2);
   });
   pass.end();
 
@@ -477,7 +475,7 @@ export const controls = {
     initial: initialFunctions[0].code,
     onTextChange: async (value: string) => {
       try {
-        computeFunctionModules[0] = await tryCompileComputeModule(value);
+        functionComputeModules[0] = await tryCompileComputeModule(value);
       } catch (e) {
         console.log(e);
       }
@@ -487,7 +485,7 @@ export const controls = {
     initial: initialFunctions[1].code,
     onTextChange: async (value: string) => {
       try {
-        computeFunctionModules[1] = await tryCompileComputeModule(value);
+        functionComputeModules[1] = await tryCompileComputeModule(value);
       } catch (e) {
         console.log(e);
       }
@@ -497,7 +495,7 @@ export const controls = {
     initial: initialFunctions[2].code,
     onTextChange: async (value: string) => {
       try {
-        computeFunctionModules[2] = await tryCompileComputeModule(value);
+        functionComputeModules[2] = await tryCompileComputeModule(value);
       } catch (e) {
         console.log(e);
       }
