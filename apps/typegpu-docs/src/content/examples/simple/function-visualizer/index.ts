@@ -4,12 +4,19 @@ import { mat4 } from 'wgpu-matrix';
 
 // #region Globals and init
 
-type FunctionDef = {
-  code: string;
-  color: d.v4f;
-};
+const root = await tgpu.init();
+const device = root.device;
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const initialFunctions: Array<FunctionDef> = [
+context.configure({
+  device: device,
+  format: presentationFormat,
+  alphaMode: 'premultiplied',
+});
+
+const initialFunctions: Array<{ code: string; color: d.v4f }> = [
   {
     code: 'x',
     color: d.vec4f(1.0, 0.0, 0.0, 1.0),
@@ -23,6 +30,8 @@ const initialFunctions: Array<FunctionDef> = [
     color: d.vec4f(0.0, 0.0, 1.0, 1.0),
   },
 ];
+
+const functionComputeModules: Array<GPUShaderModule> = compileComputeModules();
 
 const PropertiesSchema = d.struct({
   transformation: d.mat4x4f,
@@ -39,20 +48,6 @@ const properties: d.Infer<typeof PropertiesSchema> = {
   lineWidthBuffer: 0.01,
   dashedLine: 0,
 };
-
-const root = await tgpu.init();
-const device = root.device;
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device: device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
-
-const functionComputeModules: Array<GPUShaderModule> = compileComputeModules();
 
 const propertiesBuffer = root
   .createBuffer(PropertiesSchema, properties)
