@@ -55,12 +55,12 @@ jobs:
             const body = `## pkg.pr.new
 
             *packages*
-            ```
+            \`\`\`
             pnpm i https://pkg.pr.new/software-mansion/TypeGPU/typegpu@${context.issue.number}
             ${output.packages
               .map((p) => `pnpm i https://pkg.pr.new/software-mansion/TypeGPU/${p.name}@${p.url}`)
-              .join('\n');}
-            ```
+              .join('\n')}
+            \`\`\`
 
             *benchmark*
             [view benchmark](https://docs.swmansion.com/TypeGPU/benchmark?p=npm-latest_pr-${context.issue.number})
