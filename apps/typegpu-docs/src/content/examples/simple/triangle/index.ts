@@ -26,10 +26,10 @@ const getGradientColor = tgpu['~unstable']
   .$name('getGradientColor');
 
 const mainVertex = tgpu['~unstable']
-  .vertexFn({
-    in: { vertexIndex: d.builtin.vertexIndex },
-    out: { outPos: d.builtin.position, uv: d.vec2f },
-  })
+  .vertexFn(
+    { vertexIndex: d.builtin.vertexIndex },
+    { outPos: d.builtin.position, uv: d.vec2f },
+  )
   .does(/* wgsl */ `(input: VertexInput) -> VertexOutput {
     var pos = array<vec2f, 3>(
       vec2(0.0, 0.5),
@@ -47,7 +47,7 @@ const mainVertex = tgpu['~unstable']
   }`);
 
 const mainFragment = tgpu['~unstable']
-  .fragmentFn({ in: { uv: d.vec2f }, out: d.vec4f })
+  .fragmentFn({ uv: d.vec2f }, d.vec4f)
   .does(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
     return getGradientColor((input.uv[0] + input.uv[1]) / 2);
   }`)

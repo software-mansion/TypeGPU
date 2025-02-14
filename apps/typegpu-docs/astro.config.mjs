@@ -130,7 +130,6 @@ export default defineConfig({
             {
               label: 'Resolve',
               slug: 'fundamentals/resolve',
-              badge: { text: '0.3' },
             },
             {
               label: 'Vertex Layouts',
@@ -161,7 +160,6 @@ export default defineConfig({
             {
               label: 'WebGPU Interoperability',
               slug: 'integration/webgpu-interoperability',
-              badge: { text: 'new' },
             },
             {
               label: 'Working with wgpu-matrix',
