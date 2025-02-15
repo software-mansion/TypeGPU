@@ -6,8 +6,13 @@
 import { exec } from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import process from 'node:process';
+import { consola } from 'consola';
+import { execa } from 'execa';
 import { entries, mapValues } from 'remeda';
+import color from './colors.mjs';
+import { FAIL, IN_PROGRESS, SUCCESS } from './icons.mjs';
 import { Frog } from './log.mjs';
+import { progress } from './progress.mjs';
 
 const cwd = new URL(`file:${process.cwd()}/`);
 
@@ -68,9 +73,14 @@ async function transformPackageJSON() {
   const distPackageJsonUrl = new URL('./dist/package.json', cwd);
 
   const packageJson = JSON.parse(await fs.readFile(packageJsonUrl, 'utf-8'));
+  let distPackageJson = structuredClone(packageJson);
+
+  // Replacing `exports` with `publishConfig.exports`
+  distPackageJson.exports = distPackageJson.publishConfig.exports;
+  distPackageJson.publishConfig = undefined;
 
   // Altering paths in the package.json
-  const distPackageJson = deepMapStrings(packageJson, (_path, value) => {
+  distPackageJson = deepMapStrings(distPackageJson, (_path, value) => {
     if (value.startsWith('./dist/')) {
       return value.replace(/^\.\/dist/, '.');
     }
@@ -117,23 +127,97 @@ async function transformReadme() {
   await fs.writeFile(distReadmeUrl, readme, 'utf-8');
 }
 
+/**
+ * @typedef {'in_progress'|'success'|'fail'} TaskStatus
+ */
+
+/** @type {Record<TaskStatus, string>} */
+const ICON = {
+  in_progress: IN_PROGRESS,
+  success: SUCCESS,
+  fail: FAIL,
+};
+
 async function main() {
-  await promiseExec(
-    'pnpm build && pnpm -w test:spec && pnpm -w test:types && biome check .',
+  consola.start('Preparing the package for publishing');
+  console.log('');
+
+  /** @type {PromiseSettledResult<*>[]} */
+  const results = await progress('', async (update) => {
+    /** @typedef {'biome' | 'build' | 'spec' | 'types'} TaskName */
+
+    /** @type {Record<TaskName, TaskStatus>} */
+    const status = {
+      biome: 'in_progress',
+      build: 'in_progress',
+      spec: 'in_progress',
+      types: 'in_progress',
+    };
+
+    const taskString = (/** @type {TaskName} */ name) =>
+      `${{ in_progress: color.Magenta, success: color.Green, fail: color.Red }[status[name]]}${ICON[status[name]]}${color.Reset} ${name}`;
+
+    const updateMsg = () =>
+      update(
+        `${color.BrightBlack}${Frog} working on tasks...${color.Reset}  ${taskString('biome')}, ${taskString('build')}, ${taskString('spec')}, ${taskString('types')}`,
+      );
+
+    /**
+     * @template {Promise<*>} T
+     * @param {TaskName} name
+     * @param {T} promise
+     * @returns {T}
+     */
+    const withStatusUpdate = (name, promise) =>
+      /** @type {T} */ (
+        promise
+          .then((result) => {
+            status[name] = 'success';
+            updateMsg();
+            return result;
+          })
+          .catch((err) => {
+            status[name] = 'fail';
+            updateMsg();
+            err.taskName = name;
+            throw err;
+          })
+      );
+
+    const $ = execa({ all: true });
+
+    const results = await Promise.allSettled([
+      withStatusUpdate('biome', $`biome check .`),
+      withStatusUpdate('build', $`pnpm build`),
+      withStatusUpdate('spec', $`pnpm -w test:spec`),
+      withStatusUpdate('types', $`pnpm -w test:types`),
+    ]);
+
+    update(
+      `${color.BrightBlack}${Frog} finished!${color.Reset}  ${taskString('biome')}, ${taskString('build')}, ${taskString('spec')}, ${taskString('types')}`,
+    );
+
+    return results;
+  });
+
+  console.log('');
+
+  const rejected = /** @type {PromiseRejectedResult[]} */ (
+    results.filter((result) => result.status === 'rejected')
   );
+
+  for (const rej of rejected) {
+    consola.error(`Task '${rej.reason.taskName}' failed\n`, rej.reason.stderr);
+  }
+  if (rejected.length > 0) {
+    process.exit(1);
+  }
+
+  consola.start('Transforming miscellaneous files...');
 
   await Promise.all([transformPackageJSON(), transformReadme()]);
 
-  console.log(
-    `
-
--------------------------------------------------------------------------
-
-${Frog} Package prepared! Now run the following to publish the package:
-
-cd dist && pnpm publish
-`,
-  );
+  consola.success('Package prepared!');
 }
 
 export default main;
