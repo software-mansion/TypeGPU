@@ -42,12 +42,12 @@ describe('tgpu resolve', () => {
     } as unknown as TgpuBufferReadonly<d.F32>;
 
     const fragment1 = tgpu['~unstable']
-      .fragmentFn({}, d.vec4f)
+      .fragmentFn({ out: d.vec4f })
       .does(() => d.vec4f(0, intensity.value, 0, 1))
       .$name('fragment1');
 
     const fragment2 = tgpu['~unstable']
-      .fragmentFn({}, d.vec4f)
+      .fragmentFn({ out: d.vec4f })
       .does(() => d.vec4f(intensity.value, 0, 0, 1))
       .$name('fragment2');
 
@@ -59,10 +59,10 @@ describe('tgpu resolve', () => {
     expect(parse(resolved)).toEqual(
       parse(
         `@group(0) @binding(0) var<uniform> intensity_1: f32;
-        @fragment fn fragment1() -> vec4f {
+        @fragment fn fragment1() -> @location(0) vec4f {
           return vec4f(0, intensity_1, 0, 1);
         }
-        @fragment fn fragment2() -> vec4f {
+        @fragment fn fragment2() -> @location(0) vec4f {
           return vec4f(intensity_1, 0, 0, 1);
         }`,
       ),
@@ -172,6 +172,108 @@ describe('tgpu resolve', () => {
         fn main() {
           var value = randomTest();
         }
+      `),
+    );
+  });
+
+  it('should resolve an unstruct to its corresponding struct', () => {
+    const VertexInfo = d.unstruct({
+      color: d.snorm8x4,
+      colorHDR: d.unorm10_10_10_2,
+      position2d: d.float16x2,
+    });
+
+    const resolved = tgpu.resolve({
+      template: 'fn foo() { var v: VertexInfo; }',
+      externals: { VertexInfo },
+      names: 'strict',
+    });
+
+    expect(parse(resolved)).toEqual(
+      parse(`
+        struct VertexInfo {
+          color: vec4f,
+          colorHDR: vec4f,
+          position2d: vec2f,
+        }
+        fn foo() { var v: VertexInfo; }
+      `),
+    );
+  });
+
+  it('should resolve an unstruct with a disarray to its corresponding struct', () => {
+    const VertexInfo = d.unstruct({
+      color: d.snorm8x4,
+      colorHDR: d.unorm10_10_10_2,
+      position2d: d.float16x2,
+      extra: d.disarrayOf(d.snorm8x4, 16),
+    });
+
+    const resolved = tgpu.resolve({
+      template: 'fn foo() { var v: VertexInfo; }',
+      externals: { VertexInfo },
+      names: 'strict',
+    });
+
+    expect(parse(resolved)).toEqual(
+      parse(`
+        struct VertexInfo {
+          color: vec4f,
+          colorHDR: vec4f,
+          position2d: vec2f,
+          extra: array<vec4f, 16>,
+        }
+        fn foo() { var v: VertexInfo; }
+      `),
+    );
+  });
+
+  it('should resolve an unstruct with a complex nested structure', () => {
+    const VertexInfo = d.unstruct({
+      color: d.snorm8x4,
+      colorHDR: d.unorm10_10_10_2,
+      position2d: d.float16x2,
+      extra: d
+        .unstruct({
+          a: d.snorm8,
+          b: d.snorm8x4,
+          c: d.float16x2,
+        })
+        .$name('extra'),
+      more: d.disarrayOf(
+        d.unstruct({ a: d.snorm8, b: d.snorm8x4 }).$name('more'),
+        16,
+      ),
+    });
+
+    const resolved = tgpu.resolve({
+      template: 'fn foo() { var v: VertexInfo; }',
+      externals: { VertexInfo },
+      names: 'strict',
+    });
+
+    expect(parse(resolved)).toEqual(
+      parse(`
+        struct extra {
+          a: f32,
+          b: vec4f,
+          c: vec2f,
+        }
+
+        struct more {
+          a: f32,
+          b: vec4f,
+        }
+
+        struct VertexInfo {
+          color: vec4f,
+          colorHDR: vec4f,
+          position2d: vec2f,
+          extra: extra,
+          more: array<more, 16>,
+        }
+
+        fn foo() { var v: VertexInfo; }
       `),
     );
   });

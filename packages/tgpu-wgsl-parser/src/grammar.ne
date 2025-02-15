@@ -169,11 +169,11 @@ template_arg_comma_list ->
 export type FunctionArgument = { type: 'func_argument', ident: string, typespec: TypeSpecifier };
 export type FunctionDecl = { type: 'function_decl', header: FunctionHeader, body: CompoundStatement, attrs: Attribute[] };
 export type FunctionHeader = { type: 'function_header', ident: string, returntype: ReturnType | null, args: FunctionArgument[] | null };
-export type ReturnType = { type: 'return_type', typespec: TypeSpecifier };
+export type ReturnType = { type: 'return_type', attrs: Attribute[], typespec: TypeSpecifier };
 
 %}
 return_type ->
-  "->" type_specifier {% ([, typespec]) => ({ type: 'return_type', typespec }) %}
+  "->" attribute:* type_specifier {% ([, attrs, typespec]) => ({ type: 'return_type', attrs, typespec }) %}
 function_decl -> attribute:* function_header compound_statement {% ([attrs, header, body]) => ({ type: 'function_decl', header, body, attrs }) %}
 func_argument -> ident ":" type_specifier {% ([ident,, typespec]) => ({ type: 'func_argument', ident: ident.value, typespec }) %}
 argument_list ->
@@ -218,7 +218,7 @@ statement ->
   | for_statement {% id %}
 # | while_statement {% id %}
   | call_statement ";" {% id %}
-# | func_call_statement ";" {% id %}
+  | func_call_statement ";" {% id %}
   | variable_or_value_statement ";" {% id %}
 # | break_statement ";" {% id %}
 # | continue_statement ";" {% id %}
@@ -544,6 +544,9 @@ expression ->
 #
 # Partials
 #
+
+func_call_statement ->
+  call_phrase {% ([phrase]) => ({ type: 'call_statement', ident: phrase.ident, args: phrase.args }) %}
 
 call_phrase ->
   template_elaborated_ident argument_expression_list {% ([ident, args]) => ({ ident, args }) %}

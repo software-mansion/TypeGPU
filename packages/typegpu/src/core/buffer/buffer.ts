@@ -2,14 +2,25 @@ import { BufferReader, BufferWriter } from 'typed-binary';
 import { isWgslData } from '../../data';
 import { readData, writeData } from '../../data/dataIO';
 import type { AnyData } from '../../data/dataTypes';
+import { getWriteInstructions } from '../../data/partialIO';
 import { sizeOf } from '../../data/sizeOf';
-import type { WgslTypeLiteral } from '../../data/wgslTypes';
+import type { BaseData, WgslTypeLiteral } from '../../data/wgslTypes';
 import type { Storage } from '../../extension';
 import type { TgpuNamable } from '../../namable';
-import type { Infer } from '../../shared/repr';
+import type { Infer, InferPartial } from '../../shared/repr';
+import type { MemIdentity } from '../../shared/repr';
 import type { UnionToIntersection } from '../../shared/utilityTypes';
 import { isGPUBuffer } from '../../types';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes';
+import {
+  type TgpuBufferMutable,
+  type TgpuBufferReadonly,
+  type TgpuBufferUniform,
+  type TgpuFixedBufferUsage,
+  asMutable,
+  asReadonly,
+  asUniform,
+} from './bufferUsage';
 
 // ----------
 // Public API
@@ -23,9 +34,6 @@ export interface Vertex {
   usableAsVertex: true;
 }
 
-export const Uniform = { usableAsUniform: true } as Uniform;
-export const Vertex = { usableAsVertex: true } as Vertex;
-
 type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
   T extends 'uniform'
     ? Uniform
@@ -35,7 +43,25 @@ type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
         ? Vertex
         : never;
 
-export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
+type ViewUsages<TBuffer extends TgpuBuffer<BaseData>> =
+  | (boolean extends TBuffer['usableAsUniform'] ? never : 'uniform')
+  | (boolean extends TBuffer['usableAsStorage']
+      ? never
+      : 'readonly' | 'mutable');
+
+type UsageTypeToBufferUsage<TData extends BaseData> = {
+  uniform: TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData>;
+  mutable: TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData>;
+  readonly: TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData>;
+};
+
+const usageToUsageConstructor = {
+  uniform: asUniform,
+  mutable: asMutable,
+  readonly: asReadonly,
+};
+
+export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly resourceType: 'buffer';
   readonly dataType: TData;
   readonly initial?: Infer<TData> | undefined;
@@ -44,13 +70,20 @@ export interface TgpuBuffer<TData extends AnyData> extends TgpuNamable {
   readonly buffer: GPUBuffer;
   readonly destroyed: boolean;
 
+  usableAsUniform: boolean;
+  usableAsStorage: boolean;
+  usableAsVertex: boolean;
+
   $usage<T extends RestrictVertexUsages<TData>>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>>;
   $addFlags(flags: GPUBufferUsageFlags): this;
 
+  as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferUsage<TData>[T];
+
   write(data: Infer<TData>): void;
-  copyFrom(srcBuffer: TgpuBuffer<TData>): void;
+  writePartial(data: InferPartial<TData>): void;
+  copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void;
   read(): Promise<Infer<TData>>;
   destroy(): void;
 }
@@ -75,12 +108,6 @@ export function isBuffer<T extends TgpuBuffer<AnyData>>(
   return (value as TgpuBuffer<AnyData>).resourceType === 'buffer';
 }
 
-export function isUsableAsUniform<T extends TgpuBuffer<AnyData>>(
-  buffer: T,
-): buffer is T & Uniform {
-  return !!(buffer as unknown as Uniform).usableAsUniform;
-}
-
 export function isUsableAsVertex<T extends TgpuBuffer<AnyData>>(
   buffer: T,
 ): buffer is T & Vertex {
@@ -91,7 +118,7 @@ export function isUsableAsVertex<T extends TgpuBuffer<AnyData>>(
 // Implementation
 // --------------
 
-type RestrictVertexUsages<TData extends AnyData> = TData extends {
+type RestrictVertexUsages<TData extends BaseData> = TData extends {
   readonly type: WgslTypeLiteral;
 }
   ? ('uniform' | 'storage' | 'vertex')[]
@@ -108,9 +135,9 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   private _label: string | undefined;
   readonly initial: Infer<TData> | undefined;
 
-  public usableAsUniform = false;
-  public usableAsStorage = false;
-  public usableAsVertex = false;
+  usableAsUniform = false;
+  usableAsStorage = false;
+  usableAsVertex = false;
 
   constructor(
     private readonly _group: ExperimentalTgpuRoot,
@@ -174,7 +201,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     for (const usage of usages) {
       if (this._disallowedUsages?.includes(usage)) {
         throw new Error(
-          `Buffer of type ${this.dataType} cannot be used as ${usage}`,
+          `Buffer of type ${this.dataType.type} cannot be used as ${usage}`,
         );
       }
       this.flags |= usage === 'uniform' ? GPUBufferUsage.UNIFORM : 0;
@@ -228,7 +255,33 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
   }
 
-  copyFrom(srcBuffer: TgpuBuffer<TData>): void {
+  public writePartial(data: InferPartial<TData>): void {
+    const gpuBuffer = this.buffer;
+    const device = this._group.device;
+
+    const instructions = getWriteInstructions(this.dataType, data);
+
+    if (gpuBuffer.mapState === 'mapped') {
+      const mappedRange = gpuBuffer.getMappedRange();
+      const mappedView = new Uint8Array(mappedRange);
+
+      for (const instruction of instructions) {
+        mappedView.set(instruction.data, instruction.data.byteOffset);
+      }
+    } else {
+      for (const instruction of instructions) {
+        device.queue.writeBuffer(
+          gpuBuffer,
+          instruction.data.byteOffset,
+          instruction.data,
+          0,
+          instruction.data.byteLength,
+        );
+      }
+    }
+  }
+
+  copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void {
     if (this.buffer.mapState === 'mapped') {
       throw new Error('Cannot copy to a mapped buffer.');
     }
@@ -285,6 +338,12 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     stagingBuffer.destroy();
 
     return res;
+  }
+
+  as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferUsage<TData>[T] {
+    return usageToUsageConstructor[usage]?.(
+      this as never,
+    ) as UsageTypeToBufferUsage<TData>[T];
   }
 
   destroy() {

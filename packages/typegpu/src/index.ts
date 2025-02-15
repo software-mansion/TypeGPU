@@ -21,6 +21,7 @@ import { bindGroupLayout } from './tgpuBindGroupLayout';
 
 export const tgpu = {
   bindGroupLayout,
+  vertexLayout,
 
   init,
   initFromDevice,
@@ -32,6 +33,9 @@ export const tgpu = {
     fragmentFn,
     vertexFn,
     computeFn,
+    /**
+     * @deprecated This feature is now stable, use tgpu.vertexLayout.
+     */
     vertexLayout,
     derived,
     slot,
@@ -62,7 +66,6 @@ export {
 export { StrictNameRegistry, RandomNameRegistry } from './nameRegistry';
 export {
   isBuffer,
-  isUsableAsUniform,
   isUsableAsVertex,
 } from './core/buffer/buffer';
 export { isSlot, isDerived } from './core/slot/slotTypes';
@@ -84,6 +87,7 @@ export {
   asUniform as unstable_asUniform,
   asReadonly as unstable_asReadonly,
   asMutable as unstable_asMutable,
+  isUsableAsUniform,
 } from './core/buffer/bufferUsage';
 export { isTgpuFn } from './core/function/tgpuFn';
 
@@ -104,10 +108,12 @@ export type {
   TgpuBuffer,
   Uniform,
   Vertex,
+} from './core/buffer/buffer';
+export type {
   TgpuBufferUniform,
   TgpuBufferReadonly,
   TgpuBufferMutable,
-} from './core/buffer/public';
+} from './core/buffer/bufferUsage';
 export type {
   TgpuSlot,
   TgpuDerived,

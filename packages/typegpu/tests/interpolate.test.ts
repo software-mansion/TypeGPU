@@ -14,7 +14,7 @@ describe('d.interpolate', () => {
       .$name('s1');
 
     expectTypeOf(s1).toEqualTypeOf<
-      d.TgpuStruct<{
+      d.WgslStruct<{
         a: d.U32;
         b: d.Decorated<d.U32, [d.Interpolate<'flat'>]>;
         c: d.U32;
@@ -38,7 +38,7 @@ describe('d.interpolate', () => {
       .$name('s1');
 
     expectTypeOf(s1).toEqualTypeOf<
-      d.TgpuStruct<{
+      d.WgslStruct<{
         a: d.U32;
         b: d.Decorated<d.F32, [d.Interpolate<'linear, sample'>]>;
         c: d.U32;

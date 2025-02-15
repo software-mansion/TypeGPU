@@ -1,11 +1,14 @@
-import type { Infer, InferRecord } from '../shared/repr';
+import type { Infer, InferPartial, MemIdentity } from '../shared/repr';
+import type { AnyWgslStruct, WgslStruct } from './struct';
+
+type DecoratedLocation<T extends BaseData> = Decorated<T, Location<number>[]>;
 
 export interface NumberArrayView {
   readonly length: number;
   [n: number]: number;
 }
 
-export interface BaseWgslData {
+export interface BaseData {
   type: string;
   /** Type-token, not available at runtime */
   readonly '~repr': unknown;
@@ -485,6 +488,8 @@ export type AnyVecInstance =
   | v4i
   | v4u;
 
+export type VecKind = AnyVecInstance['kind'];
+
 export interface matBase<TColumn> extends NumberArrayView {
   readonly columns: readonly TColumn[];
 }
@@ -545,6 +550,12 @@ export interface m4x4f extends mat4x4<v4f> {
 
 export type AnyMatInstance = m2x2f | m3x3f | m4x4f;
 
+export type vBaseForMat<T extends AnyMatInstance> = T extends m2x2f
+  ? v2f
+  : T extends m3x3f
+    ? v3f
+    : v4f;
+
 // #endregion
 
 // #region WGSL Schema Types
@@ -558,136 +569,269 @@ export interface Bool {
   readonly '~repr': boolean;
 }
 
+/**
+ * 32-bit float schema representing a single WGSL f32 value.
+ */
 export interface F32 {
   readonly type: 'f32';
   /** Type-token, not available at runtime */
   readonly '~repr': number;
+
+  (v: number | boolean): number;
 }
 
+/**
+ * 16-bit float schema representing a single WGSL f16 value.
+ */
 export interface F16 {
   readonly type: 'f16';
   /** Type-token, not available at runtime */
   readonly '~repr': number;
+
+  (v: number | boolean): number;
 }
 
+/**
+ * Signed 32-bit integer schema representing a single WGSL i32 value.
+ */
 export interface I32 {
   readonly type: 'i32';
   /** Type-token, not available at runtime */
   readonly '~repr': number;
+  readonly '~memIdent': I32 | Atomic<I32> | DecoratedLocation<I32>;
+
+  (v: number | boolean): number;
 }
 
+/**
+ * Unsigned 32-bit integer schema representing a single WGSL u32 value.
+ */
 export interface U32 {
   readonly type: 'u32';
   /** Type-token, not available at runtime */
   readonly '~repr': number;
+  readonly '~memIdent': U32 | Atomic<U32> | DecoratedLocation<U32>;
+
+  (v: number | boolean): number;
 }
 
+/**
+ * Type of the `d.vec2f` object/function: vector data type schema/constructor
+ */
 export interface Vec2f {
   readonly type: 'vec2f';
   /** Type-token, not available at runtime */
   readonly '~repr': v2f;
+
+  (x: number, y: number): v2f;
+  (xy: number): v2f;
+  (): v2f;
 }
 
+/**
+ * Type of the `d.vec2h` object/function: vector data type schema/constructor
+ */
 export interface Vec2h {
   readonly type: 'vec2h';
   /** Type-token, not available at runtime */
   readonly '~repr': v2h;
+
+  (x: number, y: number): v2h;
+  (xy: number): v2h;
+  (): v2h;
 }
 
+/**
+ * Type of the `d.vec2i` object/function: vector data type schema/constructor
+ */
 export interface Vec2i {
   readonly type: 'vec2i';
   /** Type-token, not available at runtime */
   readonly '~repr': v2i;
+
+  (x: number, y: number): v2i;
+  (xy: number): v2i;
+  (): v2i;
 }
 
+/**
+ * Type of the `d.vec2u` object/function: vector data type schema/constructor
+ */
 export interface Vec2u {
   readonly type: 'vec2u';
   /** Type-token, not available at runtime */
   readonly '~repr': v2u;
+
+  (x: number, y: number): v2u;
+  (xy: number): v2u;
+  (): v2u;
 }
 
+/**
+ * Type of the `d.vec3f` object/function: vector data type schema/constructor
+ */
 export interface Vec3f {
   readonly type: 'vec3f';
   /** Type-token, not available at runtime */
   readonly '~repr': v3f;
+
+  (x: number, y: number, z: number): v3f;
+  (xyz: number): v3f;
+  (): v3f;
 }
 
+/**
+ * Type of the `d.vec3h` object/function: vector data type schema/constructor
+ */
 export interface Vec3h {
   readonly type: 'vec3h';
   /** Type-token, not available at runtime */
   readonly '~repr': v3h;
+
+  (x: number, y: number, z: number): v3h;
+  (xyz: number): v3h;
+  (): v3h;
 }
 
+/**
+ * Type of the `d.vec3i` object/function: vector data type schema/constructor
+ */
 export interface Vec3i {
   readonly type: 'vec3i';
   /** Type-token, not available at runtime */
   readonly '~repr': v3i;
+
+  (x: number, y: number, z: number): v3i;
+  (xyz: number): v3i;
+  (): v3i;
 }
 
+/**
+ * Type of the `d.vec3u` object/function: vector data type schema/constructor
+ */
 export interface Vec3u {
   readonly type: 'vec3u';
   /** Type-token, not available at runtime */
   readonly '~repr': v3u;
+
+  (x: number, y: number, z: number): v3u;
+  (xyz: number): v3u;
+  (): v3u;
 }
 
+/**
+ * Type of the `d.vec4f` object/function: vector data type schema/constructor
+ */
 export interface Vec4f {
   readonly type: 'vec4f';
   /** Type-token, not available at runtime */
   readonly '~repr': v4f;
+
+  (x: number, y: number, z: number, w: number): v4f;
+  (xyzw: number): v4f;
+  (): v4f;
 }
 
+/**
+ * Type of the `d.vec4h` object/function: vector data type schema/constructor
+ */
 export interface Vec4h {
   readonly type: 'vec4h';
   /** Type-token, not available at runtime */
   readonly '~repr': v4h;
+
+  (x: number, y: number, z: number, w: number): v4h;
+  (xyzw: number): v4h;
+  (): v4h;
 }
 
+/**
+ * Type of the `d.vec4i` object/function: vector data type schema/constructor
+ */
 export interface Vec4i {
   readonly type: 'vec4i';
   /** Type-token, not available at runtime */
   readonly '~repr': v4i;
+
+  (x: number, y: number, z: number, w: number): v4i;
+  (xyzw: number): v4i;
+  (): v4i;
 }
 
+/**
+ * Type of the `d.vec4u` object/function: vector data type schema/constructor
+ */
 export interface Vec4u {
   readonly type: 'vec4u';
   /** Type-token, not available at runtime */
   readonly '~repr': v4u;
+
+  (x: number, y: number, z: number, w: number): v4u;
+  (xyzw: number): v4u;
+  (): v4u;
 }
 
+/**
+ * Type of the `d.mat2x2f` object/function: matrix data type schema/constructor
+ */
 export interface Mat2x2f {
   readonly type: 'mat2x2f';
   /** Type-token, not available at runtime */
   readonly '~repr': m2x2f;
+
+  (...elements: number[]): m2x2f;
+  (...columns: v2f[]): m2x2f;
+  (): m2x2f;
 }
 
+/**
+ * Type of the `d.mat3x3f` object/function: matrix data type schema/constructor
+ */
 export interface Mat3x3f {
   readonly type: 'mat3x3f';
   /** Type-token, not available at runtime */
   readonly '~repr': m3x3f;
+
+  (...elements: number[]): m3x3f;
+  (...columns: v3f[]): m3x3f;
+  (): m3x3f;
 }
 
+/**
+ * Type of the `d.mat4x4f` object/function: matrix data type schema/constructor
+ */
 export interface Mat4x4f {
   readonly type: 'mat4x4f';
   /** Type-token, not available at runtime */
   readonly '~repr': m4x4f;
+
+  (...elements: number[]): m4x4f;
+  (...columns: v4f[]): m4x4f;
+  (): m4x4f;
 }
 
-export interface WgslStruct<
-  TProps extends Record<string, BaseWgslData> = Record<string, BaseWgslData>,
-> {
-  readonly type: 'struct';
-  readonly label?: string | undefined;
-  readonly propTypes: TProps;
-  /** Type-token, not available at runtime */
-  readonly '~repr': InferRecord<TProps>;
-}
-
-export interface WgslArray<TElement = BaseWgslData> {
+/**
+ * Array schema constructed via `d.arrayOf` function.
+ *
+ * Responsible for handling reading and writing array values
+ * between binary and JS representation. Takes into account
+ * the `byteAlignment` requirement of its elementType.
+ */
+export interface WgslArray<TElement extends BaseData = BaseData> {
   readonly type: 'array';
   readonly elementCount: number;
   readonly elementType: TElement;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TElement>[];
+  readonly '~reprPartial': { idx: number; value: InferPartial<TElement> }[];
+  readonly '~memIdent': WgslArray<MemIdentity<TElement>>;
+}
+
+export interface PtrFn<TInner = BaseData> {
+  readonly type: 'ptrFn';
+  readonly inner: TInner;
+  /** Type-token, not available at runtime */
+  readonly '~repr': Infer<TInner>;
 }
 
 /**
@@ -698,6 +842,7 @@ export interface Atomic<TInner extends U32 | I32 = U32 | I32> {
   readonly inner: TInner;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
+  readonly '~memIdent': MemIdentity<TInner>;
 }
 
 export interface Align<T extends number> {
@@ -733,7 +878,7 @@ export interface Builtin<T extends string> {
 }
 
 export interface Decorated<
-  TInner extends BaseWgslData = BaseWgslData,
+  TInner extends BaseData = BaseData,
   TAttribs extends unknown[] = unknown[],
 > {
   readonly type: 'decorated';
@@ -741,6 +886,9 @@ export interface Decorated<
   readonly attribs: TAttribs;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
+  readonly '~memIdent': TAttribs extends Location<number>[]
+    ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
+    : Decorated<MemIdentity<TInner>, TAttribs>;
 }
 
 export const wgslTypeLiterals = [
@@ -766,6 +914,7 @@ export const wgslTypeLiterals = [
   'mat4x4f',
   'struct',
   'array',
+  'ptrFn',
   'atomic',
   'decorated',
 ] as const;
@@ -814,8 +963,9 @@ export type AnyWgslData =
   | Mat2x2f
   | Mat3x3f
   | Mat4x4f
-  | WgslStruct
+  | AnyWgslStruct
   | WgslArray
+  | PtrFn
   | Atomic
   | Decorated;
 
@@ -859,6 +1009,17 @@ export function isWgslStruct<T extends WgslStruct>(
   schema: T | unknown,
 ): schema is T {
   return (schema as T)?.type === 'struct';
+}
+
+/**
+ * Checks whether passed in value is a pointer ('function' scope) schema.
+ *
+ * @example
+ * isPtrFn(d.ptrFn(d.f32)) // true
+ * isPtrFn(d.f32) // false
+ */
+export function isPtrFn<T extends PtrFn>(schema: T | unknown): schema is T {
+  return (schema as T)?.type === 'ptrFn';
 }
 
 /**

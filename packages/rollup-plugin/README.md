@@ -2,7 +2,7 @@
 
 # rollup-plugin-typegpu
 
-🚧 **Under Construction** 🚧 - [GitHub](https://github.com/software-mansion/TypeGPU/tree/main/packages/rollup-plugin)
+⚠️ **This package is deprecated, please use `unplugin-typegpu` instead.** ⚠️
 
 </div>
 

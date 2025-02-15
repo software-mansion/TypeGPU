@@ -1,4 +1,4 @@
-import tgpu, { unstable_asUniform } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 const triangleAmount = 1000;
@@ -41,12 +41,15 @@ const VertexOutput = {
 };
 
 const mainVert = tgpu['~unstable']
-  .vertexFn({ v: d.vec2f, center: d.vec2f, velocity: d.vec2f }, VertexOutput)
-  .does(/* wgsl */ `(@location(0) v: vec2f, @location(1) center: vec2f, @location(2) velocity: vec2f) -> VertexOutput {
-    let angle = getRotationFromVelocity(velocity);
-    let rotated = rotate(v, angle);
+  .vertexFn({
+    in: { v: d.vec2f, center: d.vec2f, velocity: d.vec2f },
+    out: VertexOutput,
+  })
+  .does(/* wgsl */ `(input: VertexInput) -> VertexOutput {
+    let angle = getRotationFromVelocity(input.velocity);
+    let rotated = rotate(input.v, angle);
 
-    let pos = vec4(rotated + center, 0.0, 1.0);
+    let pos = vec4(rotated + input.center, 0.0, 1.0);
 
     let color = vec4(
         sin(angle + colorPalette.r) * 0.45 + 0.45,
@@ -64,10 +67,10 @@ const mainVert = tgpu['~unstable']
   });
 
 const mainFrag = tgpu['~unstable']
-  .fragmentFn(VertexOutput, d.vec4f)
+  .fragmentFn({ in: VertexOutput, out: d.vec4f })
   .does(/* wgsl */ `
-  (@location(0) color: vec4f) -> @location(0) vec4f {
-    return color;
+  (input: FragmentInput) -> @location(0) vec4f {
+    return input.color;
   }
 `);
 
@@ -149,7 +152,7 @@ context.configure({
 const paramsBuffer = root
   .createBuffer(Params, presets.default)
   .$usage('uniform');
-const params = unstable_asUniform(paramsBuffer);
+const params = paramsBuffer.as('uniform');
 
 const triangleVertexBuffer = root
   .createBuffer(d.arrayOf(d.vec2f, 3), [
@@ -181,13 +184,8 @@ const colorPaletteBuffer = root
 
 const TriangleDataArray = (n: number) => d.arrayOf(TriangleData, n);
 
-const vertexLayout = tgpu['~unstable'].vertexLayout((n) =>
-  d.arrayOf(d.vec2f, n),
-);
-const instanceLayout = tgpu['~unstable'].vertexLayout(
-  TriangleDataArray,
-  'instance',
-);
+const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(d.vec2f, n));
+const instanceLayout = tgpu.vertexLayout(TriangleDataArray, 'instance');
 
 const renderPipeline = root['~unstable']
   .withVertex(mainVert, {
@@ -214,17 +212,17 @@ const computeBindGroupLayout = tgpu
 const { currentTrianglePos, nextTrianglePos } = computeBindGroupLayout.bound;
 
 const mainCompute = tgpu['~unstable']
-  .computeFn([], { workgroupSize: [1] })
-  .does(/* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
-    let index = gid.x;
+  .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })
+  .does(/* wgsl */ `(input: ComputeInput) {
+    let index = input.gid.x;
     var instanceInfo = currentTrianglePos[index];
-    var separation = vec2(0.0, 0.0);
-    var alignment = vec2(0.0, 0.0);
+    var separation = vec2f();
+    var alignment = vec2f();
+    var cohesion = vec2f();
     var alignmentCount = 0u;
-    var cohesion = vec2(0.0, 0.0);
     var cohesionCount = 0u;
-    
-    for (var i = 0u; i < arrayLength(&currentTrianglePos); i = i + 1) {
+
+    for (var i = 0u; i < arrayLength(&currentTrianglePos); i += 1) {
       if (i == index) {
         continue;
       }
@@ -253,7 +251,7 @@ const mainCompute = tgpu['~unstable']
       + (alignment * params.alignmentStrength)
       + (cohesion * params.cohesionStrength);
     instanceInfo.velocity = normalize(instanceInfo.velocity) * clamp(length(instanceInfo.velocity), 0.0, 0.01);
-    
+
     if (instanceInfo.position[0] > 1.0 + triangleSize) {
       instanceInfo.position[0] = -1.0 - triangleSize;
     }
@@ -340,7 +338,7 @@ export const controls = {
     onButtonClick: () => paramsBuffer.write(presets.blobs),
   },
 
-  '⚛️ Particles': {
+  '⚛ Particles': {
     onButtonClick: () => paramsBuffer.write(presets.particles),
   },
 

@@ -1,6 +1,5 @@
-import type { Infer } from '../shared/repr';
+import type { Infer, InferPartial } from '../shared/repr';
 import type { AnyData, Disarray } from './dataTypes';
-import type { Exotic } from './exotic';
 
 // ----------
 // Public API
@@ -23,11 +22,12 @@ import type { Exotic } from './exotic';
  * @param elementType The type of elements in the array.
  * @param count The number of elements in the array.
  */
-export const disarrayOf = <TElement extends AnyData>(
+export function disarrayOf<TElement extends AnyData>(
   elementType: TElement,
   count: number,
-): Disarray<Exotic<TElement>> =>
-  new DisarrayImpl(elementType as Exotic<TElement>, count);
+): Disarray<TElement> {
+  return new DisarrayImpl(elementType, count);
+}
 
 // --------------
 // Implementation
@@ -37,6 +37,11 @@ class DisarrayImpl<TElement extends AnyData> implements Disarray<TElement> {
   public readonly type = 'disarray';
   /** Type-token, not available at runtime */
   public readonly '~repr'!: Infer<TElement>[];
+  /** Type-token, not available at runtime */
+  public readonly '~reprPartial'!: {
+    idx: number;
+    value: InferPartial<TElement>;
+  }[];
 
   constructor(
     public readonly elementType: TElement,

@@ -1,6 +1,6 @@
 import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect } from 'vitest';
-import tgpu, { unstable_asUniform } from '../src';
+import tgpu from '../src';
 import * as d from '../src/data';
 import { MissingSlotValueError, ResolutionError } from '../src/errors';
 import { it } from './utils/extendedIt';
@@ -59,9 +59,11 @@ describe('tgpu.accessor', () => {
       .$uses({ color: colorAccessor })
       .with(
         colorAccessor,
-        unstable_asUniform(
-          root.createBuffer(d.vec3f, RED).$usage('uniform').$name('red'),
-        ),
+        root
+          .createBuffer(d.vec3f, RED)
+          .$usage('uniform')
+          .$name('red')
+          .as('uniform'),
       );
 
     expect(parseResolved({ getColor })).toEqual(
@@ -178,6 +180,64 @@ describe('tgpu.accessor', () => {
         getColor,
         colorAccessor,
       ]),
+    );
+  });
+
+  it('resolves in tgsl functions, using .value', ({ root }) => {
+    const colorAccessorValue = tgpu['~unstable'].accessor(d.vec3f, RED);
+    const colorAccessorUsage = tgpu['~unstable'].accessor(
+      d.vec3f,
+      root
+        .createBuffer(d.vec3f, RED)
+        .$usage('uniform')
+        .$name('colorUniform')
+        .as('uniform'),
+    );
+
+    const colorAccessorFn = tgpu['~unstable'].accessor(
+      d.vec3f,
+      tgpu['~unstable']
+        .fn([], d.vec3f)
+        .does(() => RED)
+        .$name('getColor'),
+    );
+
+    const main = tgpu['~unstable']
+      .fn([])
+      .does(() => {
+        const color = colorAccessorValue.value;
+        const color2 = colorAccessorUsage.value;
+        const color3 = colorAccessorFn.value;
+
+        const colorX = colorAccessorValue.value.x;
+        const color2X = colorAccessorUsage.value.x;
+        const color3X = colorAccessorFn.value.x;
+      })
+      .$name('main');
+
+    const resolved = tgpu.resolve({
+      externals: { main },
+      names: 'strict',
+    });
+
+    expect(parse(resolved)).toEqual(
+      parse(/* wgsl */ `
+        @group(0) @binding(0) var<uniform> colorUniform: vec3f;
+
+        fn getColor() -> vec3f {
+          return vec3f(1, 0, 0);
+        }
+
+        fn main() {
+          var color = vec3f(1, 0, 0);
+          var color2 = colorUniform;
+          var color3 = getColor();
+
+          var colorX = vec3f(1, 0, 0).x;
+          var color2X = colorUniform.x;
+          var color3X = getColor().x;
+        }
+    `),
     );
   });
 });

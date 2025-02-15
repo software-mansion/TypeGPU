@@ -1,4 +1,4 @@
-import type { Infer } from '../shared/repr';
+import type { Infer, MemIdentity } from '../shared/repr';
 import { alignmentOf } from './alignmentOf';
 import {
   type AnyData,
@@ -8,12 +8,11 @@ import {
   isLooseData,
   isLooseDecorated,
 } from './dataTypes';
-import type { Exotic } from './exotic';
 import { sizeOf } from './sizeOf';
 import {
   type Align,
   type AnyWgslData,
-  type BaseWgslData,
+  type BaseData,
   type Builtin,
   type Decorated,
   type FlatInterpolatableData,
@@ -51,16 +50,20 @@ export const builtinNames = [
   'global_invocation_id',
   'workgroup_id',
   'num_workgroups',
+  'subgroup_invocation_id',
+  'subgroup_size',
 ] as const;
 
 export type BuiltinName = (typeof builtinNames)[number];
 
-export type AnyAttribute =
+export type AnyAttribute<
+  AllowedBuiltins extends Builtin<BuiltinName> = Builtin<BuiltinName>,
+> =
   | Align<number>
   | Size<number>
   | Location<number>
-  | Builtin<BuiltinName>
-  | Interpolate<InterpolationType>;
+  | Interpolate<InterpolationType>
+  | AllowedBuiltins;
 
 export type ExtractAttributes<T> = T extends {
   readonly attribs: unknown[];
@@ -85,7 +88,7 @@ type Undecorate<T> = T extends { readonly inner: infer TInner } ? TInner : T;
  *     - Wrap `TData` with `Decorated` and a single attribute `[TAttrib]`
  */
 export type Decorate<
-  TData extends BaseWgslData,
+  TData extends BaseData,
   TAttrib extends AnyAttribute,
 > = TData['type'] extends WgslTypeLiteral
   ? Decorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
@@ -105,10 +108,10 @@ export type HasCustomLocation<T> = ExtractAttributes<T>[number] extends []
     ? true
     : false;
 
-export function attribute<
-  TData extends BaseWgslData,
-  TAttrib extends AnyAttribute,
->(data: TData, attrib: TAttrib): Decorated | LooseDecorated {
+export function attribute<TData extends BaseData, TAttrib extends AnyAttribute>(
+  data: TData,
+  attrib: TAttrib,
+): Decorated | LooseDecorated {
   if (isDecorated(data)) {
     return new DecoratedImpl(data.inner, [
       attrib,
@@ -147,7 +150,7 @@ export function attribute<
 export function align<TAlign extends number, TData extends AnyData>(
   alignment: TAlign,
   data: TData,
-): Decorate<Exotic<TData>, Align<TAlign>> {
+): Decorate<TData, Align<TAlign>> {
   // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   return attribute(data, { type: '@align', value: alignment }) as any;
 }
@@ -167,7 +170,7 @@ export function align<TAlign extends number, TData extends AnyData>(
 export function size<TSize extends number, TData extends AnyData>(
   size: TSize,
   data: TData,
-): Decorate<Exotic<TData>, Size<TSize>> {
+): Decorate<TData, Size<TSize>> {
   // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   return attribute(data, { type: '@size', value: size }) as any;
 }
@@ -188,7 +191,7 @@ export function size<TSize extends number, TData extends AnyData>(
 export function location<TLocation extends number, TData extends AnyData>(
   location: TLocation,
   data: TData,
-): Decorate<Exotic<TData>, Location<TLocation>> {
+): Decorate<TData, Location<TLocation>> {
   // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
   return attribute(data, { type: '@location', value: location }) as any;
 }
@@ -214,7 +217,7 @@ export function interpolate<
 >(
   interpolationType: TInterpolation,
   data: TData,
-): Decorate<Exotic<TData>, Interpolate<TInterpolation>>;
+): Decorate<TData, Interpolate<TInterpolation>>;
 
 /**
  * Specifies how user-defined vertex shader output (fragment shader input)
@@ -239,7 +242,7 @@ export function interpolate<
 >(
   interpolationType: TInterpolation,
   data: TData,
-): Decorate<Exotic<TData>, Interpolate<TInterpolation>>;
+): Decorate<TData, Interpolate<TInterpolation>>;
 
 export function interpolate<
   TInterpolation extends InterpolationType,
@@ -247,7 +250,7 @@ export function interpolate<
 >(
   interpolationType: TInterpolation,
   data: TData,
-): Decorate<Exotic<TData>, Interpolate<TInterpolation>> {
+): Decorate<TData, Interpolate<TInterpolation>> {
   return attribute(data, {
     type: '@interpolate',
     value: interpolationType,
@@ -266,7 +269,7 @@ export function isBuiltin<
   );
 }
 
-export function getAttributesString<T extends BaseWgslData>(field: T): string {
+export function getAttributesString<T extends BaseData>(field: T): string {
   if (!isDecorated(field) && !isLooseDecorated(field)) {
     return '';
   }
@@ -280,10 +283,7 @@ export function getAttributesString<T extends BaseWgslData>(field: T): string {
 // Implementation
 // --------------
 
-class BaseDecoratedImpl<
-  TInner extends BaseWgslData,
-  TAttribs extends unknown[],
-> {
+class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
   // Type-token, not available at runtime
   public readonly '~repr'!: Infer<TInner>;
 
@@ -332,17 +332,17 @@ class BaseDecoratedImpl<
   }
 }
 
-class DecoratedImpl<TInner extends BaseWgslData, TAttribs extends unknown[]>
+class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements Decorated<TInner, TAttribs>
 {
   public readonly type = 'decorated';
+  public readonly '~memIdent'!: TAttribs extends Location<number>[]
+    ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
+    : Decorated<MemIdentity<TInner>, TAttribs>;
 }
 
-class LooseDecoratedImpl<
-    TInner extends BaseWgslData,
-    TAttribs extends unknown[],
-  >
+class LooseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   extends BaseDecoratedImpl<TInner, TAttribs>
   implements LooseDecorated<TInner, TAttribs>
 {

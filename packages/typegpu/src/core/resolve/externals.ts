@@ -1,3 +1,4 @@
+import { isLooseData } from '../../data/dataTypes';
 import { isWgslStruct } from '../../data/wgslTypes';
 import { isNamable } from '../../namable';
 import { type ResolutionCtx, isWgsl } from '../../types';
@@ -87,7 +88,7 @@ export function replaceExternalsInWgsl(
   wgsl: string,
 ): string {
   return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
-    if (isWgsl(external)) {
+    if (isWgsl(external) || isLooseData(external)) {
       return acc.replaceAll(
         identifierRegex(externalName),
         ctx.resolve(external),

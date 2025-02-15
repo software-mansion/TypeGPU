@@ -1,23 +1,10 @@
-import type { Infer } from '../shared/repr';
-import type { Exotic } from './exotic';
+import type { Infer, InferPartial, MemIdentity } from '../shared/repr';
 import { sizeOf } from './sizeOf';
-import type { AnyWgslData, WgslArray } from './wgslTypes';
+import type { AnyWgslData, BaseData, WgslArray } from './wgslTypes';
 
 // ----------
 // Public API
 // ----------
-
-/**
- * Array schema constructed via `d.arrayOf` function.
- *
- * Responsible for handling reading and writing array values
- * between binary and JS representation. Takes into account
- * the `byteAlignment` requirement of its elementType.
- */
-export interface TgpuArray<TElement extends AnyWgslData>
-  extends WgslArray<TElement> {
-  readonly '~exotic': WgslArray<Exotic<TElement>>;
-}
 
 /**
  * Creates an array schema that can be used to construct gpu buffers.
@@ -30,24 +17,28 @@ export interface TgpuArray<TElement extends AnyWgslData>
  * @param elementType The type of elements in the array.
  * @param elementCount The number of elements in the array.
  */
-export const arrayOf = <TElement extends AnyWgslData>(
+export function arrayOf<TElement extends AnyWgslData>(
   elementType: TElement,
   elementCount: number,
-): TgpuArray<Exotic<TElement>> =>
-  new TgpuArrayImpl(elementType as Exotic<TElement>, elementCount);
+): WgslArray<TElement> {
+  return new WgslArrayImpl(elementType, elementCount);
+}
 
 // --------------
 // Implementation
 // --------------
 
-class TgpuArrayImpl<TElement extends AnyWgslData>
-  implements TgpuArray<TElement>
-{
+class WgslArrayImpl<TElement extends BaseData> implements WgslArray<TElement> {
   public readonly type = 'array';
   /** Type-token, not available at runtime */
   public readonly '~repr'!: Infer<TElement>[];
   /** Type-token, not available at runtime */
-  public readonly '~exotic'!: WgslArray<Exotic<TElement>>;
+  public readonly '~reprPartial'!: {
+    idx: number;
+    value: InferPartial<TElement>;
+  }[];
+  /** Type-token, not available at runtime */
+  public readonly '~memIdent'!: WgslArray<MemIdentity<TElement>>;
 
   constructor(
     public readonly elementType: TElement,

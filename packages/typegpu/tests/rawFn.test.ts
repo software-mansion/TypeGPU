@@ -143,7 +143,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       template: `
         fn vs() {
           out.highlighted = highlighted.index;
-          
+
           let h = highlighted;
           let x = a.b.c.highlighted.d;
         }
@@ -175,10 +175,10 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
 
   it('adds output struct definition when resolving vertex functions', () => {
     const vertexFunction = tgpu['~unstable']
-      .vertexFn(
-        { vertexIndex: d.builtin.vertexIndex },
-        { outPos: d.builtin.position },
-      )
+      .vertexFn({
+        in: { vertexIndex: d.builtin.vertexIndex },
+        out: { outPos: d.builtin.position },
+      })
       .does(/* wgsl */ `(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
     var pos = array<vec2f, 6>(
       vec2<f32>( 1,  1),
@@ -210,11 +210,14 @@ struct vertex_fn_Output {
 
   it('adds output struct definition when resolving fragment functions', () => {
     const fragmentFunction = tgpu['~unstable']
-      .fragmentFn({ position: d.builtin.position }, { a: d.vec4f, b: d.vec4f })
+      .fragmentFn({
+        in: { position: d.builtin.position },
+        out: { a: d.vec4f, b: d.builtin.fragDepth },
+      })
       .does(/* wgsl */ `(@builtin(position) position: vec4f) -> Output {
     var out: Output;
     out.a = vec4f(1.0);
-    out.b = vec4f(0.5);
+    out.b = 1;
     return out;
   }`)
       .$name('fragment');
@@ -227,22 +230,30 @@ struct vertex_fn_Output {
     expect(resolved).toContain(`\
 struct fragment_Output {
   @location(0) a: vec4f,
-  @location(1) b: vec4f,
+  @builtin(frag_depth) b: f32,
 }`);
     expect(resolved).toContain('-> fragment_Output {');
     expect(resolved).not.toContain(' Output');
   });
 
-  it("does not add redundant struct definition when there's no struct output", () => {
+  it('properly handles fragment functions with a single output argument', () => {
     const fragmentFunction = tgpu['~unstable']
-      .fragmentFn({ position: d.builtin.position }, d.vec4f)
-      .does(/* wgsl */ `(@builtin(position) position: vec4f) -> @location(0) vec4f {
+      .fragmentFn({ in: { position: d.builtin.position }, out: d.vec4f })
+      .does(/* wgsl */ `(input: FragmentIn) -> @location(0) vec4f {
         return vec4f(1.0f);
       }`)
       .$name('fragment');
 
-    expect(tgpu.resolve({ externals: { fragmentFunction } })).not.toContain(
-      'struct',
+    expect(parseResolved({ fragmentFunction })).toEqual(
+      parse(`
+    struct fragment_Input {
+      @builtin(position) position: vec4f,
+    }
+
+    @fragment
+    fn fragment(input: fragment_Input) -> @location(0) vec4f {
+      return vec4f(1.0f);
+    }`),
     );
   });
 
@@ -285,7 +296,7 @@ struct fragment_Output {
     const func = tgpu['~unstable']
       .fn([d.vec4f, Point], d.vec2f)
       .does(/* wgsl */ `(
-        a: vec4f, 
+        a: vec4f,
         b : PointStruct ,
     ) -> vec2f {
     var newPoint: PointStruct;

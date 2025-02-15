@@ -1,6 +1,6 @@
 import type * as smol from 'tinyest';
 import { bool } from '../data';
-import { isWgslData } from '../data/wgslTypes';
+import { isWgslData, isWgslStruct } from '../data/wgslTypes';
 import {
   type ResolutionCtx,
   type Resource,
@@ -32,6 +32,7 @@ const parenthesizedOps = [
 
 export type GenerationCtx = ResolutionCtx & {
   readonly pre: string;
+  readonly callStack: unknown[];
   indent(): string;
   dedent(): string;
   getById(id: string): Resource;
@@ -122,15 +123,6 @@ function generateExpression(
     }
 
     if (isWgsl(target.value)) {
-      // NOTE: Temporary solution, assuming that access to `.value` of resolvables should always resolve to just the target.
-      if (propertyStr === 'value') {
-        return {
-          value: resolveRes(ctx, target),
-          // TODO: Infer data type
-          dataType: UnknownData,
-        };
-      }
-
       return {
         // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
         value: (target.value as any)[propertyStr],
@@ -179,12 +171,25 @@ function generateExpression(
     const id = generateExpression(ctx, callee);
     const idValue = id.value;
 
+    ctx.callStack.push(idValue);
+
     const argResources = args.map((arg) => generateExpression(ctx, arg));
     const argValues = argResources.map((res) => resolveRes(ctx, res));
+
+    ctx.callStack.pop();
 
     if (typeof idValue === 'string') {
       return {
         value: `${idValue}(${argValues.join(', ')})`,
+        dataType: UnknownData,
+      };
+    }
+
+    if (isWgslStruct(idValue)) {
+      const id = ctx.resolve(idValue);
+
+      return {
+        value: `${id}(${argValues.join(', ')})`,
         dataType: UnknownData,
       };
     }
@@ -196,6 +201,42 @@ function generateExpression(
     ) as Wgsl;
     // TODO: Make function calls return resources instead of just values.
     return { value: result, dataType: UnknownData };
+  }
+
+  if ('o' in expression) {
+    const obj = expression.o;
+    const callee = ctx.callStack[ctx.callStack.length - 1];
+
+    const generateEntries = (values: smol.Expression[]) =>
+      values
+        .map((value) => {
+          const valueRes = generateExpression(ctx, value);
+          return resolveRes(ctx, valueRes);
+        })
+        .join(', ');
+
+    if (isWgslStruct(callee)) {
+      const propKeys = Object.keys(callee.propTypes);
+      const values = propKeys.map((key) => {
+        const val = obj[key];
+        if (val === undefined) {
+          throw new Error(
+            `Missing property ${key} in object literal for struct ${callee}`,
+          );
+        }
+        return val;
+      });
+
+      return {
+        value: generateEntries(values),
+        dataType: callee,
+      };
+    }
+
+    return {
+      value: generateEntries(Object.values(obj)),
+      dataType: UnknownData,
+    };
   }
 
   assertExhaustive(expression);
@@ -214,6 +255,21 @@ function generateStatement(
   }
 
   if ('r' in statement) {
+    // check if the thing at the top of the call stack is a struct and the statement is a plain JS object
+    // if so wrap the value returned in a constructor of the struct (its resolved name)
+    if (
+      isWgslStruct(ctx.callStack[ctx.callStack.length - 1]) &&
+      statement.r !== null &&
+      typeof statement.r === 'object' &&
+      'o' in statement.r
+    ) {
+      const resource = resolveRes(ctx, generateExpression(ctx, statement.r));
+      const resolvedStruct = ctx.resolve(
+        ctx.callStack[ctx.callStack.length - 1],
+      );
+      return `${ctx.pre}return ${resolvedStruct}(${resource});`;
+    }
+
     return statement.r === null
       ? `${ctx.pre}return;`
       : `${ctx.pre}return ${resolveRes(ctx, generateExpression(ctx, statement.r))};`;
@@ -249,8 +305,20 @@ ${alternate}`;
     const id = resolveRes(ctx, generateIdentifier(ctx, rawId));
     const eq = rawValue ? generateExpression(ctx, rawValue) : undefined;
 
-    if (!eq) {
+    if (!eq || !rawValue) {
       throw new Error('Cannot create variable without an initial value.');
+    }
+
+    // If the value is a plain JS object it has to be an output struct
+    if (
+      typeof rawValue === 'object' &&
+      'o' in rawValue &&
+      isWgslStruct(ctx.callStack[ctx.callStack.length - 1])
+    ) {
+      const resolvedStruct = ctx.resolve(
+        ctx.callStack[ctx.callStack.length - 1],
+      );
+      return `${ctx.pre}var ${id} = ${resolvedStruct}(${resolveRes(ctx, eq)});`;
     }
 
     return `${ctx.pre}var ${id} = ${resolveRes(ctx, eq)};`;

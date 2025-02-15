@@ -1,4 +1,4 @@
-import tgpu, { unstable_asUniform } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { cross, mul, normalize, sub } from 'typegpu/std';
 
@@ -82,15 +82,13 @@ const cameraAxesBuffer = root
   .$name('camera_axes')
   .$usage('storage');
 
-const canvasDimsBuffer = root
-  .createBuffer(CanvasDimsStruct)
-  .$name('canvas_dims')
-  .$usage('uniform');
+const canvasDimsUniform = root['~unstable']
+  .createUniform(CanvasDimsStruct)
+  .$name('canvas_dims');
 
-const boxSizeBuffer = root
-  .createBuffer(d.u32, MAX_BOX_SIZE)
-  .$name('box_size')
-  .$usage('uniform');
+const boxSizeUniform = root['~unstable']
+  .createUniform(d.u32, MAX_BOX_SIZE)
+  .$name('box_size');
 
 // bind groups and layouts
 
@@ -181,11 +179,11 @@ const getBoxIntersection = tgpu['~unstable']
   .$name('box_intersection');
 
 const vertexFunction = tgpu['~unstable']
-  .vertexFn(
-    { vertexIndex: d.builtin.vertexIndex },
-    { outPos: d.builtin.position },
-  )
-  .does(/* wgsl */ `(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+  .vertexFn({
+    in: { vertexIndex: d.builtin.vertexIndex },
+    out: { outPos: d.builtin.position },
+  })
+  .does(/* wgsl */ `(input: VertexInput) -> VertexOutput {
   var pos = array<vec2f, 6>(
     vec2<f32>( 1,  1),
     vec2<f32>( 1, -1),
@@ -196,7 +194,7 @@ const vertexFunction = tgpu['~unstable']
   );
 
   var output: VertexOutput;
-  output.outPos = vec4f(pos[vertexIndex], 0, 1);
+  output.outPos = vec4f(pos[input.vertexIndex], 0, 1);
   return output;
 }`)
   .$name('vertex_main');
@@ -205,14 +203,14 @@ const boxSizeAccessor = tgpu['~unstable'].accessor(d.u32);
 const canvasDimsAccessor = tgpu['~unstable'].accessor(CanvasDimsStruct);
 
 const fragmentFunction = tgpu['~unstable']
-  .fragmentFn({ position: d.builtin.position }, d.vec4f)
-  .does(/* wgsl */ `(@builtin(position) position: vec4f) -> @location(0) vec4f {
+  .fragmentFn({ in: { position: d.builtin.position }, out: d.vec4f })
+  .does(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
   let minDim = f32(min(canvasDims.width, canvasDims.height));
 
   var ray: RayStruct;
   ray.origin = cameraPosition;
-  ray.direction += cameraAxes.right * (position.x - f32(canvasDims.width)/2)/minDim;
-  ray.direction += cameraAxes.up * (position.y - f32(canvasDims.height)/2)/minDim;
+  ray.direction += cameraAxes.right * (input.position.x - f32(canvasDims.width)/2)/minDim;
+  ray.direction += cameraAxes.up * (input.position.y - f32(canvasDims.height)/2)/minDim;
   ray.direction += cameraAxes.forward;
   ray.direction = normalize(ray.direction);
 
@@ -279,9 +277,9 @@ const pipeline = root['~unstable']
     tgpu['~unstable']
       .fn([], d.u32)
       .does('() -> u32 { return boxSize; }')
-      .$uses({ boxSize: unstable_asUniform(boxSizeBuffer) }),
+      .$uses({ boxSize: boxSizeUniform }),
   )
-  .with(canvasDimsAccessor, unstable_asUniform(canvasDimsBuffer))
+  .with(canvasDimsAccessor, canvasDimsUniform)
   .withVertex(vertexFunction, {})
   .withFragment(fragmentFunction, { format: presentationFormat })
   .createPipeline()
@@ -327,7 +325,7 @@ onFrame((deltaTime) => {
 
   cameraPositionBuffer.write(cameraPosition);
   cameraAxesBuffer.write(cameraAxes);
-  canvasDimsBuffer.write({ width, height });
+  canvasDimsUniform.write({ width, height });
 
   frame += (rotationSpeed * deltaTime) / 1000;
 
@@ -370,7 +368,7 @@ export const controls = {
     min: 1,
     max: MAX_BOX_SIZE,
     onSliderChange: (value: number) => {
-      boxSizeBuffer.write(value);
+      boxSizeUniform.write(value);
     },
   },
 };

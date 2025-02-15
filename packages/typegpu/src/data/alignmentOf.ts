@@ -7,7 +7,7 @@ import {
 } from './dataTypes';
 import { packedFormats } from './vertexFormatData';
 import {
-  type BaseWgslData,
+  type BaseData,
   isDecorated,
   isWgslArray,
   isWgslStruct,
@@ -34,10 +34,11 @@ const knownAlignmentMap: Record<string, number> = {
   mat2x2f: 8,
   mat3x3f: 16,
   mat4x4f: 16,
+  atomic: 4,
 };
 
 function computeAlignment(data: object): number {
-  const dataType = (data as BaseWgslData)?.type;
+  const dataType = (data as BaseData)?.type;
   const knownAlignment = knownAlignmentMap[dataType];
   if (knownAlignment !== undefined) {
     return knownAlignment;
@@ -76,7 +77,7 @@ function computeAlignment(data: object): number {
   );
 }
 
-function computeCustomAlignment(data: BaseWgslData): number {
+function computeCustomAlignment(data: BaseData): number {
   if (isUnstruct(data)) {
     // A loose struct is aligned to its first property.
     const firstProp = Object.values(data.propTypes)[0];
@@ -95,15 +96,14 @@ function computeCustomAlignment(data: BaseWgslData): number {
 }
 
 /**
- * Since alignments can be inferred from exotic/native data types, they are
- * not stored on them. Instead, this weak map acts as an extended property
- * of those data types.
+ * Since alignments can be inferred from data types, they are not stored on them.
+ * Instead, this weak map acts as an extended property of those data types.
  */
 const cachedAlignments = new WeakMap<object, number>();
 
 const cachedCustomAlignments = new WeakMap<object, number>();
 
-export function alignmentOf(data: BaseWgslData): number {
+export function alignmentOf(data: BaseData): number {
   let alignment = cachedAlignments.get(data);
   if (alignment === undefined) {
     alignment = computeAlignment(data);
@@ -113,7 +113,7 @@ export function alignmentOf(data: BaseWgslData): number {
   return alignment;
 }
 
-export function customAlignmentOf(data: BaseWgslData): number {
+export function customAlignmentOf(data: BaseData): number {
   let alignment = cachedCustomAlignments.get(data);
   if (alignment === undefined) {
     alignment = computeCustomAlignment(data);

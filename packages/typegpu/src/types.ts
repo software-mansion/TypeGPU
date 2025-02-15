@@ -1,5 +1,10 @@
 import type { Block } from 'tinyest';
-import type { TgpuBufferUsage } from './core/buffer/bufferUsage';
+import type {
+  TgpuBufferMutable,
+  TgpuBufferReadonly,
+  TgpuBufferUniform,
+  TgpuBufferUsage,
+} from './core/buffer/bufferUsage';
 import type { TgpuConst } from './core/constant/tgpuConstant';
 import type { TgpuDeclare } from './core/declare/tgpuDeclare';
 import type { TgpuComputeFn } from './core/function/tgpuComputeFn';
@@ -20,11 +25,12 @@ import {
 import type { TgpuExternalTexture } from './core/texture/externalTexture';
 import type { TgpuAnyTextureView, TgpuTexture } from './core/texture/texture';
 import type { TgpuVar } from './core/variable/tgpuVariable';
+import type { AnyData } from './data';
 import {
   type AnyMatInstance,
   type AnyVecInstance,
   type AnyWgslData,
-  type BaseWgslData,
+  type BaseData,
   isWgslData,
 } from './data/wgslTypes';
 import type { NameRegistry } from './nameRegistry';
@@ -53,7 +59,7 @@ export type ResolvableObject =
   | TgpuVar
   | AnyVecInstance
   | AnyMatInstance
-  | AnyWgslData
+  | AnyData
   // biome-ignore lint/suspicious/noExplicitAny: <has to be more permissive than unknown>
   | TgpuFn<any, any>;
 
@@ -113,7 +119,7 @@ export interface ResolutionCtx {
   unwrap<T>(eventual: Eventual<T>): T;
 
   resolve(item: unknown): string;
-  resolveValue<T extends BaseWgslData>(value: Infer<T>, schema: T): string;
+  resolveValue<T extends BaseData>(value: Infer<T>, schema: T): string;
 
   transpileFn(fn: string): {
     argNames: string[];
@@ -167,4 +173,13 @@ export function isGPUBuffer(value: unknown): value is GPUBuffer {
     'getMappedRange' in value &&
     'mapAsync' in value
   );
+}
+
+export function isBufferUsage<
+  T extends
+    | TgpuBufferUniform<BaseData>
+    | TgpuBufferReadonly<BaseData>
+    | TgpuBufferMutable<BaseData>,
+>(value: T | unknown): value is T {
+  return (value as T)?.resourceType === 'buffer-usage';
 }

@@ -5,6 +5,7 @@ import { alignmentOf, customAlignmentOf } from './alignmentOf';
 import type { AnyData, Disarray, LooseDecorated, Unstruct } from './dataTypes';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix';
 import { sizeOf } from './sizeOf';
+import type { WgslStruct } from './struct';
 import {
   vec2f,
   vec2h,
@@ -21,13 +22,13 @@ import {
 } from './vector';
 import type * as wgsl from './wgslTypes';
 
-type DataWriter<TSchema extends wgsl.BaseWgslData> = (
+type DataWriter<TSchema extends wgsl.BaseData> = (
   output: ISerialOutput,
   schema: TSchema,
   value: Infer<TSchema>,
 ) => void;
 
-type DataReader<TSchema extends wgsl.BaseWgslData> = (
+type DataReader<TSchema extends wgsl.BaseData> = (
   input: ISerialInput,
   schema: TSchema,
 ) => Infer<TSchema>;
@@ -157,21 +158,21 @@ const dataWriters = {
 
   struct(
     output,
-    schema: wgsl.WgslStruct,
-    value: InferRecord<Record<string, wgsl.BaseWgslData>>,
+    schema: WgslStruct,
+    value: InferRecord<Record<string, wgsl.BaseData>>,
   ) {
     const alignment = alignmentOf(schema);
     alignIO(output, alignment);
 
     for (const [key, property] of Object.entries(schema.propTypes)) {
       alignIO(output, alignmentOf(property));
-      writeData(output, property, value[key] as wgsl.BaseWgslData);
+      writeData(output, property, value[key] as wgsl.BaseData);
     }
 
     alignIO(output, alignment);
   },
 
-  array(output, schema: wgsl.WgslArray, value: Infer<wgsl.BaseWgslData>[]) {
+  array(output, schema: wgsl.WgslArray, value: Infer<wgsl.BaseData>[]) {
     if (schema.elementCount === 0) {
       throw new Error('Cannot write using a runtime-sized schema.');
     }
@@ -184,6 +185,10 @@ const dataWriters = {
       writeData(output, schema.elementType, value[i]);
     }
     output.seekTo(beginning + sizeOf(schema));
+  },
+
+  ptrFn() {
+    throw new Error('Pointers are not host-shareable');
   },
 
   atomic(output, schema: wgsl.Atomic, value: number) {
@@ -425,7 +430,7 @@ const dataWriters = {
   (output: ISerialOutput, schema: unknown, value: unknown) => void
 >;
 
-export function writeData<TData extends wgsl.BaseWgslData>(
+export function writeData<TData extends wgsl.BaseData>(
   output: ISerialOutput,
   schema: TData,
   value: Infer<TData>,
@@ -582,7 +587,7 @@ const dataReaders = {
     );
   },
 
-  struct(input: ISerialInput, schema: wgsl.WgslStruct) {
+  struct(input: ISerialInput, schema: WgslStruct) {
     const alignment = alignmentOf(schema);
     alignIO(input, alignment);
     const result = {} as Record<string, unknown>;
@@ -593,7 +598,7 @@ const dataReaders = {
     }
 
     alignIO(input, alignment);
-    return result as InferRecord<Record<string, wgsl.BaseWgslData>>;
+    return result as InferRecord<Record<string, wgsl.BaseData>>;
   },
 
   array(input, schema) {
@@ -613,6 +618,10 @@ const dataReaders = {
 
     alignIO(input, alignment);
     return elements as never[];
+  },
+
+  ptrFn() {
+    throw new Error('Pointers are not host-shareable');
   },
 
   atomic(input, schema: wgsl.Atomic): number {
@@ -730,7 +739,7 @@ const dataReaders = {
       result[key] = readData(input, property);
     }
 
-    return result as InferRecord<Record<string, wgsl.BaseWgslData>>;
+    return result as InferRecord<Record<string, wgsl.BaseData>>;
   },
 
   disarray(input, schema: Disarray) {
@@ -756,7 +765,7 @@ const dataReaders = {
   },
 } satisfies CompleteDataReaders;
 
-export function readData<TData extends wgsl.BaseWgslData>(
+export function readData<TData extends wgsl.BaseData>(
   input: ISerialInput,
   schema: TData,
 ): Infer<TData> {

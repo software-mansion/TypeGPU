@@ -5,9 +5,9 @@ import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import tailwind from '@astrojs/tailwind';
 import { defineConfig } from 'astro/config';
-import typegpu from 'rollup-plugin-typegpu';
 import starlightBlog from 'starlight-blog';
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
+import typegpu from 'unplugin-typegpu/rollup';
 import importRawRedirectPlugin from './vite-import-raw-redirect-plugin.mjs';
 
 /**
@@ -112,6 +112,10 @@ export default defineConfig({
               slug: 'fundamentals/roots',
             },
             {
+              label: 'Functions',
+              slug: 'fundamentals/functions',
+            },
+            {
               label: 'Buffers',
               slug: 'fundamentals/buffers',
             },
@@ -126,7 +130,11 @@ export default defineConfig({
             {
               label: 'Resolve',
               slug: 'fundamentals/resolve',
-              badge: { text: '0.3' },
+            },
+            {
+              label: 'Vertex Layouts',
+              slug: 'fundamentals/vertex-layouts',
+              badge: { text: '0.4' },
             },
             DEV && {
               label: 'Slots',
@@ -152,7 +160,6 @@ export default defineConfig({
             {
               label: 'WebGPU Interoperability',
               slug: 'integration/webgpu-interoperability',
-              badge: { text: 'new' },
             },
             {
               label: 'Working with wgpu-matrix',
@@ -189,6 +196,10 @@ export default defineConfig({
             {
               label: 'Data Schema Cheatsheet',
               slug: 'reference/data-schema-cheatsheet',
+            },
+            DEV && {
+              label: 'Naming Convention',
+              slug: 'reference/naming-convention',
             },
             DEV && typeDocSidebarGroup,
           ]),

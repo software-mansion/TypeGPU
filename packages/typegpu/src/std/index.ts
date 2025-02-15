@@ -17,4 +17,7 @@ export {
   min,
   normalize,
   sin,
+  exp,
+  mix,
+  pow,
 } from './numeric';

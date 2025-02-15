@@ -1,5 +1,4 @@
 import type { Infer } from '../../data';
-import type { Exotic, ExoticArray } from '../../data/exotic';
 import type { AnyWgslData } from '../../data/wgslTypes';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
@@ -77,12 +76,12 @@ export type TgpuFn<
 export function fn<Args extends AnyWgslData[] | []>(
   argTypes: Args,
   returnType?: undefined,
-): TgpuFnShell<ExoticArray<Args>, undefined>;
+): TgpuFnShell<Args, undefined>;
 
 export function fn<Args extends AnyWgslData[] | [], Return extends AnyWgslData>(
   argTypes: Args,
   returnType: Return,
-): TgpuFnShell<ExoticArray<Args>, Exotic<Return>>;
+): TgpuFnShell<Args, Return>;
 
 export function fn<
   Args extends AnyWgslData[],

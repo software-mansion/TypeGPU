@@ -1,8 +1,10 @@
-import type { AnyBuiltin } from '../../builtin';
-import type { TgpuNamable } from '../../namable';
+import type { AnyComputeBuiltin } from '../../builtin';
+import type { AnyWgslStruct } from '../../data/struct';
+import { type TgpuNamable, isNamable } from '../../namable';
 import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
 import { createFnCore } from './fnCore';
-import type { Implementation } from './fnTypes';
+import type { Implementation, InferIO } from './fnTypes';
+import { createStructFromIO } from './ioOutputType';
 
 // ----------
 // Public API
@@ -11,15 +13,19 @@ import type { Implementation } from './fnTypes';
 /**
  * Describes a compute entry function signature (its arguments and return type)
  */
-export interface TgpuComputeFnShell {
-  readonly argTypes: [];
+export interface TgpuComputeFnShell<
+  ComputeIn extends Record<string, AnyComputeBuiltin>,
+> {
+  readonly argTypes: [AnyWgslStruct];
   readonly returnType: undefined;
   readonly workgroupSize: [number, number, number];
 
   /**
    * Creates a type-safe implementation of this signature
    */
-  does(implementation: () => undefined): TgpuComputeFn;
+  does(
+    implementation: (input: InferIO<ComputeIn>) => undefined,
+  ): TgpuComputeFn<ComputeIn>;
 
   /**
    * @param implementation
@@ -27,11 +33,16 @@ export interface TgpuComputeFnShell {
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  does(implementation: string): TgpuComputeFn;
+  does(implementation: string): TgpuComputeFn<ComputeIn>;
 }
 
-export interface TgpuComputeFn extends TgpuNamable {
-  readonly shell: TgpuComputeFnShell;
+export interface TgpuComputeFn<
+  ComputeIn extends Record<string, AnyComputeBuiltin> = Record<
+    string,
+    AnyComputeBuiltin
+  >,
+> extends TgpuNamable {
+  readonly shell: TgpuComputeFnShell<ComputeIn>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
 }
@@ -40,30 +51,48 @@ export interface ComputeFnOptions {
   workgroupSize: number[];
 }
 
+export function computeFn(options: {
+  workgroupSize: number[];
+  // biome-ignore lint/complexity/noBannedTypes: it's fine
+}): TgpuComputeFnShell<{}>;
+
+export function computeFn<
+  ComputeIn extends Record<string, AnyComputeBuiltin>,
+>(options: {
+  in: ComputeIn;
+  workgroupSize: number[];
+}): TgpuComputeFnShell<ComputeIn>;
+
 /**
  * Creates a shell of a typed entry function for the compute shader stage. Any function
  * that implements this shell can perform general-purpose computation.
  *
- * @param workgroupSize
+ * @param options.in
+ *   Record with builtins used by the compute shader.
+ * @param options.workgroupSize
  *   Size of blocks that the thread grid will be divided into (up to 3 dimensions).
  */
-export function computeFn(
-  argTypes: AnyBuiltin[],
-  options: ComputeFnOptions,
-): TgpuComputeFnShell {
-  const { workgroupSize } = options;
-
+export function computeFn<
+  ComputeIn extends Record<string, AnyComputeBuiltin>,
+>(options: {
+  in?: ComputeIn;
+  workgroupSize: number[];
+}): TgpuComputeFnShell<ComputeIn> {
   return {
-    argTypes: [],
+    argTypes: [createStructFromIO(options.in ?? {})],
     returnType: undefined,
     workgroupSize: [
-      workgroupSize[0] ?? 1,
-      workgroupSize[1] ?? 1,
-      workgroupSize[2] ?? 1,
+      options.workgroupSize[0] ?? 1,
+      options.workgroupSize[1] ?? 1,
+      options.workgroupSize[2] ?? 1,
     ],
 
     does(implementation) {
-      return createComputeFn(this, workgroupSize, implementation);
+      return createComputeFn(
+        this,
+        options.workgroupSize,
+        implementation as Implementation,
+      );
     },
   };
 }
@@ -72,14 +101,15 @@ export function computeFn(
 // Implementation
 // --------------
 
-function createComputeFn(
-  shell: TgpuComputeFnShell,
+function createComputeFn<ComputeIn extends Record<string, AnyComputeBuiltin>>(
+  shell: TgpuComputeFnShell<ComputeIn>,
   workgroupSize: number[],
-  implementation: Implementation<[], void>,
-): TgpuComputeFn {
-  type This = TgpuComputeFn & Labelled & SelfResolvable;
+  implementation: Implementation,
+): TgpuComputeFn<ComputeIn> {
+  type This = TgpuComputeFn<ComputeIn> & Labelled & SelfResolvable;
 
   const core = createFnCore(shell, implementation);
+  const inputType = shell.argTypes[0];
 
   return {
     shell,
@@ -95,6 +125,9 @@ function createComputeFn(
 
     $name(newLabel: string): This {
       core.label = newLabel;
+      if (isNamable(inputType)) {
+        inputType.$name(`${newLabel}_Input`);
+      }
       return this;
     },
 

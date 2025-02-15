@@ -3,7 +3,7 @@ import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
 import type { ResolutionCtx, SelfResolvable } from '../../types';
-import type { Exotic } from './../../data/exotic';
+import { valueProxyHandler } from '../valueProxyUtils';
 
 // ----------
 // Public API
@@ -19,9 +19,9 @@ export interface TgpuConst<TDataType extends AnyWgslData = AnyWgslData>
  * Creates a module constant with specified value.
  */
 export function constant<TDataType extends AnyWgslData>(
-  dataType: Exotic<TDataType>,
-  value: Infer<Exotic<TDataType>>,
-): TgpuConst<Exotic<TDataType>> {
+  dataType: TDataType,
+  value: Infer<TDataType>,
+): TgpuConst<TDataType> {
   return new TgpuConstImpl(dataType, value);
 }
 
@@ -65,6 +65,13 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
     if (!inGPUMode()) {
       return this._value;
     }
-    return this as Infer<TDataType>;
+
+    return new Proxy(
+      {
+        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        toString: () => `.value:${this.label ?? '<unnamed>'}`,
+      },
+      valueProxyHandler,
+    ) as Infer<TDataType>;
   }
 }

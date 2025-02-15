@@ -1,7 +1,11 @@
-import type { OmitBuiltins } from '../../builtin';
-import type { AnyWgslData } from '../../data';
-import type { AnyData } from '../../data/dataTypes';
-import { invariant } from '../../errors';
+import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin';
+import type { AnyData, Disarray } from '../../data/dataTypes';
+import type { AnyWgslData, BaseData, WgslArray } from '../../data/wgslTypes';
+import {
+  MissingBindGroupsError,
+  MissingVertexBuffersError,
+  invariant,
+} from '../../errors';
 import type { JitTranspiler } from '../../jitTranspiler';
 import { WeakMemo } from '../../memo';
 import {
@@ -25,9 +29,16 @@ import {
 import {
   INTERNAL_createBuffer,
   type TgpuBuffer,
+  type Vertex,
   isBuffer,
 } from '../buffer/buffer';
-import type { TgpuBufferUsage } from '../buffer/bufferUsage';
+import type {
+  TgpuBufferMutable,
+  TgpuBufferReadonly,
+  TgpuBufferUniform,
+  TgpuBufferUsage,
+  TgpuFixedBufferUsage,
+} from '../buffer/bufferUsage';
 import type { IOLayout } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import type { TgpuFn } from '../function/tgpuFn';
@@ -41,9 +52,11 @@ import {
 } from '../pipeline/computePipeline';
 import {
   type AnyFragmentTargets,
+  type INTERNAL_TgpuRenderPipeline,
   INTERNAL_createRenderPipeline,
   type RenderPipelineCoreOptions,
   type TgpuRenderPipeline,
+  isRenderPipeline,
 } from '../pipeline/renderPipeline';
 import {
   type TgpuAccessor,
@@ -65,10 +78,15 @@ import {
   isTexture,
 } from '../texture/texture';
 import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute';
+import {
+  type TgpuVertexLayout,
+  isVertexLayout,
+} from '../vertexLayout/vertexLayout';
 import type {
   CreateTextureOptions,
   CreateTextureResult,
   ExperimentalTgpuRoot,
+  RenderPass,
   TgpuRoot,
   WithBinding,
   WithCompute,
@@ -92,7 +110,9 @@ class WithBindingImpl implements WithBinding {
     ]);
   }
 
-  withCompute(entryFn: TgpuComputeFn): WithCompute {
+  withCompute<ComputeIn extends Record<string, AnyComputeBuiltin>>(
+    entryFn: TgpuComputeFn<ComputeIn>,
+  ): WithCompute {
     return new WithComputeImpl(this._getRoot(), this._slotBindings, entryFn);
   }
 
@@ -202,18 +222,7 @@ class TgpuRootImpl
   ) {
     super(() => this, []);
 
-    this['~unstable'] = {
-      nameRegistry: this.nameRegistry,
-      commandEncoder: this.commandEncoder,
-
-      createTexture: this.createTexture.bind(this),
-
-      with: this.with.bind(this),
-      withCompute: this.withCompute.bind(this),
-      withVertex: this.withVertex.bind(this),
-
-      flush: this.flush.bind(this),
-    };
+    this['~unstable'] = this;
   }
 
   get commandEncoder() {
@@ -231,6 +240,34 @@ class TgpuRootImpl
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer);
     this._disposables.push(buffer);
     return buffer;
+  }
+
+  createUniform<TData extends AnyWgslData>(
+    typeSchema: TData,
+    initialOrBuffer?: Infer<TData> | GPUBuffer,
+  ): TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData> {
+    return this.createBuffer<AnyWgslData>(typeSchema, initialOrBuffer)
+      .$usage('uniform')
+      .as('uniform') as TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData>;
+  }
+
+  createMutable<TData extends AnyWgslData>(
+    typeSchema: TData,
+    initialOrBuffer?: Infer<TData> | GPUBuffer,
+  ): TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData> {
+    return this.createBuffer<AnyWgslData>(typeSchema, initialOrBuffer)
+      .$usage('storage')
+      .as('mutable') as TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData>;
+  }
+
+  createReadonly<TData extends AnyWgslData>(
+    typeSchema: TData,
+    initialOrBuffer?: Infer<TData> | GPUBuffer,
+  ): TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData> {
+    return this.createBuffer<AnyWgslData>(typeSchema, initialOrBuffer)
+      .$usage('storage')
+      .as('readonly') as TgpuBufferReadonly<TData> &
+      TgpuFixedBufferUsage<TData>;
   }
 
   createBindGroup<
@@ -296,6 +333,7 @@ class TgpuRootImpl
   }
 
   unwrap(resource: TgpuComputePipeline): GPUComputePipeline;
+  unwrap(resource: TgpuRenderPipeline): GPURenderPipeline;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
   unwrap(resource: TgpuBuffer<AnyData>): GPUBuffer;
@@ -307,9 +345,11 @@ class TgpuRootImpl
       | TgpuMutableTexture
       | TgpuSampledTexture,
   ): GPUTextureView;
+  unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
   unwrap(
     resource:
       | TgpuComputePipeline
+      | TgpuRenderPipeline
       | TgpuBindGroupLayout
       | TgpuBindGroup
       | TgpuBuffer<AnyData>
@@ -317,16 +357,24 @@ class TgpuRootImpl
       | TgpuReadonlyTexture
       | TgpuWriteonlyTexture
       | TgpuMutableTexture
-      | TgpuSampledTexture,
+      | TgpuSampledTexture
+      | TgpuVertexLayout,
   ):
     | GPUComputePipeline
+    | GPURenderPipeline
     | GPUBindGroupLayout
     | GPUBindGroup
     | GPUBuffer
     | GPUTexture
-    | GPUTextureView {
+    | GPUTextureView
+    | GPUVertexBufferLayout {
     if (isComputePipeline(resource)) {
       return (resource as unknown as INTERNAL_TgpuComputePipeline).rawPipeline;
+    }
+
+    if (isRenderPipeline(resource)) {
+      return (resource as unknown as INTERNAL_TgpuRenderPipeline).core.unwrap()
+        .pipeline;
     }
 
     if (isBindGroupLayout(resource)) {
@@ -355,7 +403,165 @@ class TgpuRootImpl
       return (resource as unknown as INTERNAL_TgpuFixedSampledTexture).unwrap();
     }
 
+    if (isVertexLayout(resource)) {
+      return resource.vertexLayout;
+    }
+
     throw new Error(`Unknown resource type: ${resource}`);
+  }
+
+  beginRenderPass(
+    descriptor: GPURenderPassDescriptor,
+    callback: (pass: RenderPass) => void,
+  ): void {
+    const pass = this.commandEncoder.beginRenderPass(descriptor);
+
+    const bindGroups = new Map<
+      TgpuBindGroupLayout,
+      TgpuBindGroup | GPUBindGroup
+    >();
+    const vertexBuffers = new Map<
+      TgpuVertexLayout,
+      {
+        buffer:
+          | (TgpuBuffer<WgslArray<BaseData> | Disarray<BaseData>> & Vertex)
+          | GPUBuffer;
+        offset?: number | undefined;
+        size?: number | undefined;
+      }
+    >();
+
+    let currentPipeline:
+      | (TgpuRenderPipeline & INTERNAL_TgpuRenderPipeline)
+      | undefined;
+
+    const setupPassBeforeDraw = () => {
+      if (!currentPipeline) {
+        throw new Error('Cannot draw without a call to pass.setPipeline');
+      }
+
+      const { core, priors } = currentPipeline;
+      const memo = core.unwrap();
+
+      pass.setPipeline(memo.pipeline);
+
+      const missingBindGroups = new Set(memo.bindGroupLayouts);
+      memo.bindGroupLayouts.forEach((layout, idx) => {
+        if (memo.catchall && idx === memo.catchall[0]) {
+          // Catch-all
+          pass.setBindGroup(idx, this.unwrap(memo.catchall[1]));
+          missingBindGroups.delete(layout);
+        } else {
+          const bindGroup =
+            priors.bindGroupLayoutMap?.get(layout) ?? bindGroups.get(layout);
+          if (bindGroup !== undefined) {
+            missingBindGroups.delete(layout);
+            if (isBindGroup(bindGroup)) {
+              pass.setBindGroup(idx, this.unwrap(bindGroup));
+            } else {
+              pass.setBindGroup(idx, bindGroup);
+            }
+          }
+        }
+      });
+
+      const missingVertexLayouts = new Set<TgpuVertexLayout>();
+      core.usedVertexLayouts.forEach((vertexLayout, idx) => {
+        const opts =
+          {
+            buffer: priors.vertexLayoutMap?.get(vertexLayout),
+            offset: undefined,
+            size: undefined,
+          } ?? vertexBuffers.get(vertexLayout);
+
+        if (!opts || !opts.buffer) {
+          missingVertexLayouts.add(vertexLayout);
+        } else if (isBuffer(opts.buffer)) {
+          pass.setVertexBuffer(
+            idx,
+            this.unwrap(opts.buffer),
+            opts.offset,
+            opts.size,
+          );
+        } else {
+          pass.setVertexBuffer(idx, opts.buffer, opts.offset, opts.size);
+        }
+      });
+
+      if (missingBindGroups.size > 0) {
+        throw new MissingBindGroupsError(missingBindGroups);
+      }
+
+      if (missingVertexLayouts.size > 0) {
+        throw new MissingVertexBuffersError(missingVertexLayouts);
+      }
+    };
+
+    callback({
+      setViewport(...args) {
+        pass.setViewport(...args);
+      },
+      setScissorRect(...args) {
+        pass.setScissorRect(...args);
+      },
+      setBlendConstant(...args) {
+        pass.setBlendConstant(...args);
+      },
+      setStencilReference(...args) {
+        pass.setStencilReference(...args);
+      },
+      beginOcclusionQuery(...args) {
+        pass.beginOcclusionQuery(...args);
+      },
+      endOcclusionQuery(...args) {
+        pass.endOcclusionQuery(...args);
+      },
+      executeBundles(...args) {
+        pass.executeBundles(...args);
+      },
+      setPipeline(pipeline) {
+        currentPipeline = pipeline as TgpuRenderPipeline &
+          INTERNAL_TgpuRenderPipeline;
+      },
+
+      setIndexBuffer: (buffer, indexFormat, offset, size) => {
+        if (isBuffer(buffer)) {
+          pass.setIndexBuffer(this.unwrap(buffer), indexFormat, offset, size);
+        } else {
+          pass.setIndexBuffer(buffer, indexFormat, offset, size);
+        }
+      },
+
+      setVertexBuffer(vertexLayout, buffer, offset, size) {
+        vertexBuffers.set(vertexLayout, { buffer, offset, size });
+      },
+
+      setBindGroup(bindGroupLayout, bindGroup) {
+        bindGroups.set(bindGroupLayout, bindGroup);
+      },
+
+      draw(vertexCount, instanceCount, firstVertex, firstInstance) {
+        setupPassBeforeDraw();
+        pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+      },
+
+      drawIndexed(...args) {
+        setupPassBeforeDraw();
+        pass.drawIndexed(...args);
+      },
+
+      drawIndirect(...args) {
+        setupPassBeforeDraw();
+        pass.drawIndirect(...args);
+      },
+
+      drawIndexedIndirect(...args) {
+        setupPassBeforeDraw();
+        pass.drawIndexedIndirect(...args);
+      },
+    });
+
+    pass.end();
   }
 
   flush() {

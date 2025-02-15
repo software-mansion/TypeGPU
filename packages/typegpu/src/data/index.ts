@@ -7,6 +7,7 @@ export {
   isWgslData,
   isWgslArray,
   isWgslStruct,
+  isPtrFn,
   isAtomic,
   isDecorated,
   isAlignAttrib,
@@ -16,7 +17,8 @@ export {
   isSizeAttrib,
 } from './wgslTypes';
 export type {
-  BaseWgslData,
+  BaseData,
+  BaseData as BaseWgslData,
   Bool,
   F32,
   F16,
@@ -37,8 +39,8 @@ export type {
   Mat2x2f,
   Mat3x3f,
   Mat4x4f,
-  WgslStruct,
   WgslArray,
+  PtrFn,
   Atomic,
   Decorated,
   Size,
@@ -61,13 +63,11 @@ export type {
   m4x4f,
 } from './wgslTypes';
 export {
-  TgpuStruct,
+  WgslStruct,
   struct,
 } from './struct';
-export {
-  TgpuArray,
-  arrayOf,
-} from './array';
+export { arrayOf } from './array';
+export { ptrFn } from './ptr';
 export type {
   Disarray,
   Unstruct,
@@ -128,7 +128,6 @@ export {
   BuiltinFragDepth,
   BuiltinSampleIndex,
   BuiltinSampleMask,
-  BuiltinFragment,
   BuiltinLocalInvocationId,
   BuiltinLocalInvocationIndex,
   BuiltinGlobalInvocationId,
@@ -136,15 +135,4 @@ export {
   BuiltinNumWorkgroups,
   AnyBuiltin,
 } from '../builtin';
-export type { Exotic as Base } from './exotic';
-
-import type { Infer as INTERNAL_Infer } from '../shared/repr';
-import type { Exotic } from './exotic';
-
-/**
- * Extracts the inferred representation of a resource.
- * @example
- * type A = Infer<F32> // => number
- * type B = Infer<TgpuArray<F32>> // => number[]
- */
-export type Infer<T> = INTERNAL_Infer<Exotic<T>>;
+export type { Infer } from '../shared/repr';

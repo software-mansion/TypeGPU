@@ -1,3 +1,4 @@
+import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import type * as smol from 'tinyest';
 
@@ -13,6 +14,8 @@ type Context = {
   ignoreExternalDepth: number;
   stack: Scope[];
 };
+
+type JsNode = babel.Node | acorn.AnyNode;
 
 function isDeclared(ctx: Context, name: string) {
   return ctx.stack.some((scope) => scope.declaredNames.includes(name));
@@ -52,6 +55,9 @@ const BINARY_OP_MAP = {
       'The `**` operator is unsupported in TGSL. Use std.pow() instead.',
     );
   },
+  get '|>'(): never {
+    throw new Error('The `|>` operator is unsupported in TGSL.');
+  },
 } as const;
 
 const LOGICAL_OP_MAP = {
@@ -86,9 +92,9 @@ const ASSIGNMENT_OP_MAP = {
 } as const;
 
 const Transpilers: Partial<{
-  [Type in acorn.AnyNode['type']]: (
+  [Type in JsNode['type']]: (
     ctx: Context,
-    node: Extract<acorn.AnyNode, { type: Type }>,
+    node: Extract<JsNode, { type: Type }>,
   ) => smol.AnyNode;
 }> = {
   Program(ctx, node) {
@@ -150,7 +156,7 @@ const Transpilers: Partial<{
   },
 
   AssignmentExpression(ctx, node) {
-    const wgslOp = ASSIGNMENT_OP_MAP[node.operator];
+    const wgslOp = ASSIGNMENT_OP_MAP[node.operator as acorn.AssignmentOperator];
     const left = transpile(ctx, node.left);
     const right = transpile(ctx, node.right);
     return { x: [left, wgslOp, right] } as smol.AssignmentExpression;
@@ -185,9 +191,13 @@ const Transpilers: Partial<{
 
   Literal(ctx, node) {
     if (typeof node.value === 'string') {
-      throw new Error('String literals are not supported in TGSL.');
+      return { s: node.value };
     }
     return { n: node.raw ?? '' };
+  },
+
+  NumericLiteral(ctx, node) {
+    return { n: String(node.value) ?? '' };
   },
 
   CallExpression(ctx, node) {
@@ -249,16 +259,52 @@ const Transpilers: Partial<{
       q: alternate ? [test, consequent, alternate] : [test, consequent],
     };
   },
+
+  ObjectExpression(ctx, node) {
+    const properties: Record<string, smol.Expression> = {};
+
+    for (const prop of node.properties) {
+      // TODO: Handle SpreadElement
+      if (prop.type === 'SpreadElement') {
+        throw new Error('Spread elements are not supported in TGSL.');
+      }
+
+      // TODO: Handle computed properties
+      if (prop.key.type !== 'Identifier' && prop.key.type !== 'Literal') {
+        throw new Error(
+          'Only Identifier and Literal keys are supported as object keys.',
+        );
+      }
+
+      // TODO: Handle Object method
+      if (prop.type === 'ObjectMethod') {
+        throw new Error('Object method elements are not supported in TGSL.');
+      }
+
+      ctx.ignoreExternalDepth++;
+      const key =
+        prop.key.type === 'Identifier'
+          ? (transpile(ctx, prop.key) as string)
+          : String(prop.key.value);
+      const value = transpile(ctx, prop.value) as smol.Expression;
+      ctx.ignoreExternalDepth--;
+
+      properties[key] = value;
+    }
+
+    return { o: properties };
+  },
 };
 
-function transpile(ctx: Context, node: acorn.AnyNode): smol.AnyNode {
+function transpile(ctx: Context, node: JsNode): smol.AnyNode {
   const transpiler = Transpilers[node.type];
 
   if (!transpiler) {
     throw new Error(`Unsupported JS functionality: ${node.type}`);
   }
 
-  return transpiler(ctx, node as never);
+  // @ts-ignore <too much for typescript, it seems :/ >
+  return transpiler(ctx, node);
 }
 
 export type TranspilationResult = {
@@ -271,15 +317,22 @@ export type TranspilationResult = {
   externalNames: string[];
 };
 
-export function extractFunctionParts(rootNode: acorn.AnyNode): {
+export function extractFunctionParts(rootNode: JsNode): {
   params: acorn.Identifier[];
-  body: acorn.BlockStatement | acorn.Expression;
+  body:
+    | acorn.BlockStatement
+    | acorn.Expression
+    | babel.BlockStatement
+    | babel.Expression;
 } {
   let functionNode:
     | acorn.ArrowFunctionExpression
     | acorn.FunctionExpression
     | acorn.FunctionDeclaration
     | acorn.AnonymousFunctionDeclaration
+    | babel.ArrowFunctionExpression
+    | babel.FunctionExpression
+    | babel.FunctionDeclaration
     | null = null;
 
   // Unwrapping until we get to a function
@@ -337,7 +390,7 @@ export function extractFunctionParts(rootNode: acorn.AnyNode): {
   };
 }
 
-export function transpileFn(rootNode: acorn.AnyNode): TranspilationResult {
+export function transpileFn(rootNode: JsNode): TranspilationResult {
   const { params, body } = extractFunctionParts(rootNode);
   const argNames = params.map((p) => p.name);
 

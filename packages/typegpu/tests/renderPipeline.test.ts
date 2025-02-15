@@ -1,21 +1,27 @@
-import { describe, expect } from 'vitest';
-import tgpu, { MissingBindGroupsError } from '../src';
+import { describe, expect, expectTypeOf } from 'vitest';
+import tgpu, {
+  MissingBindGroupsError,
+  type TgpuFragmentFnShell,
+  type TgpuVertexFnShell,
+} from '../src';
 import * as d from '../src/data';
 import { it } from './utils/extendedIt';
 
 describe('Inter-Stage Variables', () => {
   describe('Empty vertex output', () => {
-    const emptyVert = tgpu['~unstable'].vertexFn({}, {}).does('');
+    const emptyVert = tgpu['~unstable'].vertexFn({ out: {} }).does('');
     const emptyVertWithBuiltin = tgpu['~unstable']
-      .vertexFn({}, { pos: d.builtin.vertexIndex })
+      .vertexFn({ out: { pos: d.builtin.vertexIndex } })
       .does('');
 
     it('allows fragment functions to use a subset of the vertex output', ({
       root,
     }) => {
-      const emptyFragment = tgpu['~unstable'].fragmentFn({}, {}).does('');
+      const emptyFragment = tgpu['~unstable']
+        .fragmentFn({ in: {}, out: {} })
+        .does('');
       const emptyFragmentWithBuiltin = tgpu['~unstable']
-        .fragmentFn({ pos: d.builtin.position }, {})
+        .fragmentFn({ in: { pos: d.builtin.position }, out: {} })
         .does('');
 
       // Using none of none
@@ -53,7 +59,7 @@ describe('Inter-Stage Variables', () => {
       root,
     }) => {
       const fragment = tgpu['~unstable']
-        .fragmentFn({ a: d.vec3f, c: d.f32 }, {})
+        .fragmentFn({ in: { a: d.vec3f, c: d.f32 }, out: {} })
         .does('');
 
       root
@@ -66,21 +72,25 @@ describe('Inter-Stage Variables', () => {
 
   describe('Non-empty vertex output', () => {
     const vert = tgpu['~unstable']
-      .vertexFn({}, { a: d.vec3f, b: d.vec2f })
+      .vertexFn({ out: { a: d.vec3f, b: d.vec2f } })
       .does('');
     const vertWithBuiltin = tgpu['~unstable']
-      .vertexFn({}, { a: d.vec3f, b: d.vec2f, pos: d.builtin.position })
+      .vertexFn({
+        out: { a: d.vec3f, b: d.vec2f, pos: d.builtin.position },
+      })
       .does('');
 
     it('allows fragment functions to use a subset of the vertex output', ({
       root,
     }) => {
-      const emptyFragment = tgpu['~unstable'].fragmentFn({}, {}).does('');
+      const emptyFragment = tgpu['~unstable']
+        .fragmentFn({ in: {}, out: {} })
+        .does('');
       const emptyFragmentWithBuiltin = tgpu['~unstable']
-        .fragmentFn({ pos: d.builtin.frontFacing }, {})
+        .fragmentFn({ in: { pos: d.builtin.frontFacing }, out: {} })
         .does('');
       const fullFragment = tgpu['~unstable']
-        .fragmentFn({ a: d.vec3f, b: d.vec2f }, d.vec4f)
+        .fragmentFn({ in: { a: d.vec3f, b: d.vec2f }, out: d.vec4f })
         .does('');
 
       // Using none
@@ -125,7 +135,7 @@ describe('Inter-Stage Variables', () => {
       root,
     }) => {
       const fragment = tgpu['~unstable']
-        .fragmentFn({ a: d.vec3f, c: d.f32 }, {})
+        .fragmentFn({ in: { a: d.vec3f, c: d.f32 }, out: {} })
         .does('');
 
       // @ts-expect-error: Missing from vertex output
@@ -136,7 +146,7 @@ describe('Inter-Stage Variables', () => {
       root,
     }) => {
       const fragment = tgpu['~unstable']
-        .fragmentFn({ a: d.vec3f, b: d.f32 }, {})
+        .fragmentFn({ in: { a: d.vec3f, b: d.f32 }, out: {} })
         .does('');
 
       // @ts-expect-error: Mismatched vertex output
@@ -152,11 +162,13 @@ describe('Inter-Stage Variables', () => {
       .$name('example-layout');
 
     const vertexFn = utgpu
-      .vertexFn({}, {})
+      .vertexFn({ out: {} })
       .does('() { layout.bound.alpha; }')
       .$uses({ layout });
 
-    const fragmentFn = utgpu.vertexFn({}, { out: d.vec4f }).does('() {}');
+    const fragmentFn = utgpu
+      .fragmentFn({ out: { out: d.vec4f } })
+      .does('() {}');
 
     const pipeline = root
       .withVertex(vertexFn, {})
@@ -172,5 +184,27 @@ describe('Inter-Stage Variables', () => {
     expect(() => pipeline.draw(6)).toThrowErrorMatchingInlineSnapshot(
       `[Error: Missing bind groups for layouts: 'example-layout'. Please provide it using pipeline.with(layout, bindGroup).(...)]`,
     );
+  });
+
+  it('allows to omit input in entry function shell', () => {
+    expectTypeOf(
+      tgpu['~unstable'].vertexFn({ in: {}, out: {} }),
+      // biome-ignore lint/complexity/noBannedTypes: it's fine
+    ).toEqualTypeOf<TgpuVertexFnShell<{}, {}>>();
+
+    expectTypeOf(
+      tgpu['~unstable'].vertexFn({ out: {} }),
+      // biome-ignore lint/complexity/noBannedTypes: it's fine
+    ).toEqualTypeOf<TgpuVertexFnShell<{}, {}>>();
+
+    expectTypeOf(
+      tgpu['~unstable'].fragmentFn({ in: {}, out: {} }),
+      // biome-ignore lint/complexity/noBannedTypes: it's fine
+    ).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
+
+    expectTypeOf(
+      tgpu['~unstable'].fragmentFn({ out: {} }),
+      // biome-ignore lint/complexity/noBannedTypes: it's fine
+    ).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
   });
 });

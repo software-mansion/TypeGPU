@@ -1,4 +1,4 @@
-import tgpu, { unstable_asMutable, unstable_asUniform } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
 // constants
@@ -47,11 +47,10 @@ const ParticleData = d.struct({
 
 // buffers
 
-const canvasAspectRatioBuffer = root
-  .createBuffer(d.f32, canvas.width / canvas.height)
-  .$usage('uniform');
-
-const canvasAspectRatioUniform = unstable_asUniform(canvasAspectRatioBuffer);
+const canvasAspectRatioUniform = root['~unstable'].createUniform(
+  d.f32,
+  canvas.width / canvas.height,
+);
 
 const particleGeometryBuffer = root
   .createBuffer(
@@ -71,22 +70,20 @@ const particleDataBuffer = root
   .createBuffer(d.arrayOf(ParticleData, PARTICLE_AMOUNT))
   .$usage('storage', 'uniform', 'vertex');
 
-const deltaTimeBuffer = root.createBuffer(d.f32).$usage('uniform');
-const timeBuffer = root.createBuffer(d.f32).$usage('storage');
+const deltaTimeUniform = root['~unstable'].createUniform(d.f32);
+const timeStorage = root['~unstable'].createMutable(d.f32);
+
+const particleDataStorage = particleDataBuffer.as('mutable');
 
 // layouts
 
-const geometryLayout = tgpu['~unstable']
+const geometryLayout = tgpu
   .vertexLayout((n: number) => d.arrayOf(ParticleGeometry, n), 'instance')
   .$name('geometry');
 
-const dataLayout = tgpu['~unstable']
+const dataLayout = tgpu
   .vertexLayout((n: number) => d.arrayOf(ParticleData, n), 'instance')
   .$name('data');
-
-const particleDataStorage = unstable_asMutable(particleDataBuffer);
-const deltaTimeUniform = unstable_asUniform(deltaTimeBuffer);
-const timeStorage = unstable_asMutable(timeBuffer);
 
 // functions
 
@@ -102,33 +99,27 @@ const rotate = tgpu['~unstable'].fn([d.vec2f, d.f32], d.vec2f).does(/* wgsl */ `
 `);
 
 const mainVert = tgpu['~unstable']
-  .vertexFn(
-    {
+  .vertexFn({
+    in: {
       tilt: d.f32,
       angle: d.f32,
       color: d.vec4f,
       center: d.vec2f,
       index: d.builtin.vertexIndex,
     },
-    VertexOutput,
-  )
+    out: VertexOutput,
+  })
   .does(
-    /* wgsl */ `(
-      @location(0) tilt: f32,
-      @location(1) angle: f32,
-      @location(2) color: vec4f,
-      @location(3) center: vec2f,
-      @builtin(vertex_index) index: u32,
-    ) -> VertexOutput {
-    let width = tilt;
-    let height = tilt / 2;
+    /* wgsl */ `(input: VertexInput) -> VertexOutput {
+    let width = input.tilt;
+    let height = input.tilt / 2;
 
     var pos = rotate(array<vec2f, 4>(
       vec2f(0, 0),
       vec2f(width, 0),
       vec2f(0, height),
       vec2f(width, height),
-    )[index] / 350, angle) + center;
+    )[input.index] / 350, input.angle) + input.center;
 
     if (canvasAspectRatio < 1) {
       pos.x /= canvasAspectRatio;
@@ -136,7 +127,7 @@ const mainVert = tgpu['~unstable']
       pos.y *= canvasAspectRatio;
     }
 
-    return VertexOutput(vec4f(pos, 0.0, 1.0), color);
+    return VertexOutput(vec4f(pos, 0.0, 1.0), input.color);
   }`,
   )
   .$uses({
@@ -145,17 +136,17 @@ const mainVert = tgpu['~unstable']
   });
 
 const mainFrag = tgpu['~unstable']
-  .fragmentFn(VertexOutput, d.vec4f)
+  .fragmentFn({ in: VertexOutput, out: d.vec4f })
   .does(/* wgsl */ `
-  (@location(0) color: vec4f) -> @location(0) vec4f {
-    return color;
+  (input: FragmentInput) -> @location(0) vec4f {
+    return input.color;
   }`);
 
 const mainCompute = tgpu['~unstable']
-  .computeFn([d.builtin.globalInvocationId], { workgroupSize: [1] })
+  .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })
   .does(
-    /* wgsl */ `(@builtin(global_invocation_id) gid: vec3u) {
-    let index = gid.x;
+    /* wgsl */ `(input: ComputeInput) {
+    let index = input.gid.x;
     if index == 0 {
       time += deltaTime;
     }
@@ -231,8 +222,8 @@ function onFrame(loop: (deltaTime: number) => unknown) {
 }
 
 onFrame((deltaTime) => {
-  deltaTimeBuffer.write(deltaTime);
-  canvasAspectRatioBuffer.write(canvas.width / canvas.height);
+  deltaTimeUniform.write(deltaTime);
+  canvasAspectRatioUniform.write(canvas.width / canvas.height);
 
   computePipeline.dispatchWorkgroups(PARTICLE_AMOUNT);
 

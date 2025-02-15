@@ -3,7 +3,7 @@ import { attribute } from './data/attributes';
 import { f32, u32 } from './data/numeric';
 import { vec3u, vec4f } from './data/vector';
 import type {
-  BaseWgslData,
+  BaseData,
   Builtin,
   Decorated,
   F32,
@@ -28,7 +28,6 @@ export type BuiltinFrontFacing = Decorated<F32, [Builtin<'front_facing'>]>;
 export type BuiltinFragDepth = Decorated<F32, [Builtin<'frag_depth'>]>;
 export type BuiltinSampleIndex = Decorated<U32, [Builtin<'sample_index'>]>;
 export type BuiltinSampleMask = Decorated<U32, [Builtin<'sample_mask'>]>;
-export type BuiltinFragment = Decorated<Vec4f, [Builtin<'fragment'>]>;
 export type BuiltinLocalInvocationId = Decorated<
   Vec3u,
   [Builtin<'local_invocation_id'>]
@@ -46,6 +45,11 @@ export type BuiltinNumWorkgroups = Decorated<
   Vec3u,
   [Builtin<'num_workgroups'>]
 >;
+export type BuiltinSubgroupInvocationId = Decorated<
+  U32,
+  [Builtin<'subgroup_invocation_id'>]
+>;
+export type BuiltinSubgroupSize = Decorated<U32, [Builtin<'subgroup_size'>]>;
 
 export const builtin = {
   vertexIndex: attribute(u32, {
@@ -100,13 +104,39 @@ export const builtin = {
     type: '@builtin',
     value: 'num_workgroups',
   }) as BuiltinNumWorkgroups,
+  subgroupInvocationId: attribute(u32, {
+    type: '@builtin',
+    value: 'subgroup_invocation_id',
+  }) as BuiltinSubgroupInvocationId,
+  subgroupSize: attribute(u32, {
+    type: '@builtin',
+    value: 'subgroup_size',
+  }) as BuiltinSubgroupSize,
 } as const;
 
 export type AnyBuiltin = (typeof builtin)[keyof typeof builtin];
+export type AnyComputeBuiltin =
+  | BuiltinLocalInvocationId
+  | BuiltinLocalInvocationIndex
+  | BuiltinGlobalInvocationId
+  | BuiltinWorkgroupId
+  | BuiltinNumWorkgroups
+  | BuiltinSubgroupInvocationId
+  | BuiltinSubgroupSize;
+export type AnyVertexInputBuiltin = BuiltinVertexIndex | BuiltinInstanceIndex;
+export type AnyVertexOutputBuiltin = BuiltinClipDistances | BuiltinPosition;
+export type AnyFragmentInputBuiltin =
+  | BuiltinPosition
+  | BuiltinFrontFacing
+  | BuiltinSampleIndex
+  | BuiltinSampleMask
+  | BuiltinSubgroupInvocationId
+  | BuiltinSubgroupSize;
+export type AnyFragmentOutputBuiltin = BuiltinFragDepth | BuiltinSampleMask;
 
 export type OmitBuiltins<S> = S extends AnyBuiltin
   ? never
-  : S extends BaseWgslData
+  : S extends BaseData
     ? S
     : {
         [Key in keyof S as S[Key] extends AnyBuiltin ? never : Key]: S[Key];

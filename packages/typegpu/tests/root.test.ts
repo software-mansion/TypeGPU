@@ -1,4 +1,5 @@
 import { describe, expect, vi } from 'vitest';
+import tgpu from '../src';
 import * as d from '../src/data';
 import { it } from './utils/extendedIt';
 
@@ -99,6 +100,211 @@ describe('TgpuRoot', () => {
 
       const buffer = root.createBuffer(d.u32, rawBuffer);
       expect(root.unwrap(buffer)).toBe(rawBuffer);
+    });
+
+    it('should return the correct GPUVertexBufferLayout for a simple vertex layout', ({
+      root,
+    }) => {
+      const vertexLayout = tgpu.vertexLayout(
+        (n: number) => d.arrayOf(d.location(0, d.vec2u), n),
+        'vertex',
+      );
+
+      expect(root.unwrap(vertexLayout)).toEqual({
+        arrayStride: 8,
+        stepMode: 'vertex',
+        attributes: [
+          {
+            format: 'uint32x2',
+            offset: 0,
+            shaderLocation: 0,
+          },
+        ],
+      });
+    });
+
+    it('should return the correct GPUVertexBufferLayout for a complex vertex layout', ({
+      root,
+    }) => {
+      const VertexData = d.unstruct({
+        position: d.location(0, d.float32x3),
+        color: d.location(1, d.unorm10_10_10_2),
+        something: d.location(2, d.u32),
+      });
+
+      const vertexLayout = tgpu.vertexLayout(
+        (n: number) => d.disarrayOf(VertexData, n),
+        'instance',
+      );
+
+      expect(root.unwrap(vertexLayout)).toEqual({
+        arrayStride: 20,
+        stepMode: 'instance',
+        attributes: [
+          {
+            format: 'float32x3',
+            offset: 0,
+            shaderLocation: 0,
+          },
+          {
+            format: 'unorm10-10-10-2',
+            offset: 12,
+            shaderLocation: 1,
+          },
+          {
+            format: 'uint32',
+            offset: 16,
+            shaderLocation: 2,
+          },
+        ],
+      });
+    });
+  });
+
+  describe('.$usage', () => {
+    it('should only allow vertex usage for buffers with loose data', ({
+      root,
+    }) => {
+      root.createBuffer(d.f32).$usage('storage', 'uniform', 'vertex');
+      root.createBuffer(d.disarrayOf(d.f32, 1)).$usage('vertex');
+
+      expect(() =>
+        root
+          .createBuffer(d.disarrayOf(d.f32, 1))
+          //@ts-expect-error
+          .$usage('storage'),
+      ).toThrow();
+      expect(() =>
+        root
+          .createBuffer(d.disarrayOf(d.f32, 1))
+          //@ts-expect-error
+          .$usage('uniform'),
+      ).toThrow();
+
+      root.createBuffer(d.unstruct({ a: d.u32 })).$usage('vertex');
+      expect(() =>
+        root
+          .createBuffer(d.unstruct({ a: d.u32 }))
+          //@ts-expect-error
+          .$usage('storage'),
+      ).toThrow();
+      expect(() =>
+        root
+          .createBuffer(d.unstruct({ a: d.u32 }))
+          //@ts-expect-error
+          .$usage('uniform'),
+      ).toThrow();
+    });
+  });
+
+  describe('beginRenderPass', () => {
+    const layout = tgpu.bindGroupLayout({ foo: { uniform: d.f32 } });
+
+    // A vertex function that is using entries from the layout
+    const mainVertexUsing = tgpu['~unstable'].vertexFn({ out: {} }).does(() => {
+      layout.bound.foo.value;
+      return {};
+    });
+
+    // A vertex function that is using none of the layout's entries
+    const mainVertexNotUsing = tgpu['~unstable']
+      .vertexFn({ out: {} })
+      .does(() => ({}));
+
+    const mainFragment = tgpu['~unstable']
+      .fragmentFn({ out: {} })
+      .does(() => ({}));
+
+    it('ignores bind groups that are not used in the shader', ({
+      root,
+      commandEncoder,
+    }) => {
+      const group = root.createBindGroup(layout, {
+        foo: root.createBuffer(d.f32).$usage('uniform'),
+      });
+
+      const pipeline = root
+        .withVertex(mainVertexNotUsing, {})
+        .withFragment(mainFragment, {})
+        .createPipeline();
+
+      root.beginRenderPass(
+        {
+          colorAttachments: [],
+        },
+        (pass) => {
+          pass.setPipeline(pipeline);
+          pass.setBindGroup(layout, group);
+          pass.draw(1);
+        },
+      );
+
+      const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
+        ?.value as GPURenderPassEncoder;
+      expect(renderPassMock.setPipeline).toBeCalled();
+      expect(renderPassMock.setBindGroup).not.toBeCalled();
+    });
+
+    it('accepts bind groups that are used in the shader', ({
+      root,
+      commandEncoder,
+    }) => {
+      const group = root.createBindGroup(layout, {
+        foo: root.createBuffer(d.f32).$usage('uniform'),
+      });
+
+      const pipeline = root
+        .withVertex(mainVertexUsing, {})
+        .withFragment(mainFragment, {})
+        .createPipeline();
+
+      root.beginRenderPass(
+        {
+          colorAttachments: [],
+        },
+        (pass) => {
+          pass.setPipeline(pipeline);
+          pass.setBindGroup(layout, group);
+          pass.draw(1);
+        },
+      );
+
+      const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
+        ?.value as GPURenderPassEncoder;
+      expect(renderPassMock.setPipeline).toBeCalled();
+      expect(renderPassMock.setBindGroup).toBeCalledTimes(1);
+      expect(renderPassMock.setBindGroup).toBeCalledWith(0, root.unwrap(group));
+    });
+
+    it('respects bind groups bound directly to pipelines', ({
+      root,
+      commandEncoder,
+    }) => {
+      const group = root.createBindGroup(layout, {
+        foo: root.createBuffer(d.f32).$usage('uniform'),
+      });
+
+      const pipeline = root
+        .withVertex(mainVertexUsing, {})
+        .withFragment(mainFragment, {})
+        .createPipeline()
+        .with(layout, group);
+
+      root.beginRenderPass(
+        {
+          colorAttachments: [],
+        },
+        (pass) => {
+          pass.setPipeline(pipeline);
+          pass.draw(1);
+        },
+      );
+
+      const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
+        ?.value as GPURenderPassEncoder;
+      expect(renderPassMock.setPipeline).toBeCalled();
+      expect(renderPassMock.setBindGroup).toBeCalledTimes(1);
+      expect(renderPassMock.setBindGroup).toBeCalledWith(0, root.unwrap(group));
     });
   });
 

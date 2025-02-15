@@ -1,30 +1,50 @@
-import type { OmitBuiltins } from '../../builtin';
-import { type Vec4f, isWgslStruct } from '../../data/wgslTypes';
-import type { TgpuNamable } from '../../namable';
+import type {
+  AnyFragmentInputBuiltin,
+  AnyFragmentOutputBuiltin,
+  OmitBuiltins,
+} from '../../builtin';
+import type { AnyAttribute } from '../../data/attributes';
+import type { AnyWgslStruct } from '../../data/struct';
+import type { Decorated, Location, Vec4f } from '../../data/wgslTypes';
+import { type TgpuNamable, isNamable } from '../../namable';
+import type { GenerationCtx } from '../../smol/wgslGenerator';
 import type { Labelled, ResolutionCtx, SelfResolvable } from '../../types';
 import { addReturnTypeToExternals } from '../resolve/externals';
 import { createFnCore } from './fnCore';
-import type {
-  ExoticIO,
-  IOLayout,
-  IORecord,
-  Implementation,
-  InferIO,
-} from './fnTypes';
-import { type IOLayoutToOutputSchema, createOutputType } from './ioOutputType';
+import type { BaseIOData, IORecord, Implementation, InferIO } from './fnTypes';
+import {
+  type IOLayoutToSchema,
+  createOutputType,
+  createStructFromIO,
+} from './ioOutputType';
 
 // ----------
 // Public API
 // ----------
 
+export type FragmentOutConstrained =
+  | Vec4f
+  | Decorated<Vec4f, [Location<number>]>
+  | AnyFragmentOutputBuiltin
+  | IORecord<
+      Vec4f | Decorated<Vec4f, [Location<number>]> | AnyFragmentOutputBuiltin
+    >;
+
+export type FragmentInConstrained = IORecord<
+  | BaseIOData
+  | Decorated<BaseIOData, AnyAttribute<never>[]>
+  | AnyFragmentInputBuiltin
+>;
+
 /**
  * Describes a fragment entry function signature (its arguments and return type)
  */
 export interface TgpuFragmentFnShell<
-  FragmentIn extends IOLayout,
-  FragmentOut extends IOLayout<Vec4f>,
+  FragmentIn extends FragmentInConstrained,
+  FragmentOut extends FragmentOutConstrained,
 > {
-  readonly argTypes: [FragmentIn];
+  readonly argTypes: [AnyWgslStruct];
+  readonly targets: FragmentOut;
   readonly returnType: FragmentOut;
 
   /**
@@ -46,14 +66,29 @@ export interface TgpuFragmentFnShell<
 }
 
 export interface TgpuFragmentFn<
-  Varying extends IOLayout = IOLayout,
-  Output extends IOLayout<Vec4f> = IOLayout<Vec4f>,
+  Varying extends FragmentInConstrained = FragmentInConstrained,
+  Output extends FragmentOutConstrained = FragmentOutConstrained,
 > extends TgpuNamable {
   readonly shell: TgpuFragmentFnShell<Varying, Output>;
-  readonly outputType: IOLayoutToOutputSchema<Output>;
+  readonly outputType: IOLayoutToSchema<Output>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
 }
+
+export function fragmentFn<
+  FragmentOut extends FragmentOutConstrained,
+>(options: {
+  out: FragmentOut;
+  // biome-ignore lint/complexity/noBannedTypes: it's fine
+}): TgpuFragmentFnShell<{}, FragmentOut>;
+
+export function fragmentFn<
+  FragmentIn extends FragmentInConstrained,
+  FragmentOut extends FragmentOutConstrained,
+>(options: {
+  in: FragmentIn;
+  out: FragmentOut;
+}): TgpuFragmentFnShell<FragmentIn, FragmentOut>;
 
 /**
  * Creates a shell of a typed entry function for the fragment shader stage. Any function
@@ -61,24 +96,24 @@ export interface TgpuFragmentFn<
  * to process information received from the vertex shader stage and builtins to determine
  * the final color of the pixel (many pixels in case of multiple targets).
  *
- * @param inputType
- *   Values computed in the vertex stage and builtins to be made available to functions that implement this shell.
- * @param outputType
- *   A `vec4f`, signaling this function outputs a color for one target, or a struct/array containing
- *   colors for multiple targets.
+ * @param options.in
+ *  Values computed in the vertex stage and builtins to be made available to functions that implement this shell.
+ * @param options.out
+ *  A `vec4f`, signaling this function outputs a color for one target, or a record containing colors for multiple targets.
  */
 export function fragmentFn<
   // Not allowing single-value input, as using objects here is more
   // readable, and refactoring to use a builtin argument is too much hassle.
-  FragmentIn extends IORecord,
-  FragmentOut extends IOLayout<Vec4f>,
->(
-  inputType: FragmentIn,
-  outputType: FragmentOut,
-): TgpuFragmentFnShell<ExoticIO<FragmentIn>, ExoticIO<FragmentOut>> {
+  FragmentIn extends FragmentInConstrained,
+  FragmentOut extends FragmentOutConstrained,
+>(options: {
+  in?: FragmentIn;
+  out: FragmentOut;
+}): TgpuFragmentFnShell<FragmentIn, FragmentOut> {
   return {
-    argTypes: [inputType as ExoticIO<FragmentIn>],
-    returnType: outputType as ExoticIO<FragmentOut>,
+    argTypes: [createStructFromIO(options.in ?? {})],
+    targets: options.out,
+    returnType: createOutputType(options.out) as FragmentOut,
 
     does(implementation) {
       // biome-ignore lint/suspicious/noExplicitAny: <the usual>
@@ -92,13 +127,16 @@ export function fragmentFn<
 // --------------
 
 function createFragmentFn(
-  shell: TgpuFragmentFnShell<IOLayout, IOLayout<Vec4f>>,
+  shell: TgpuFragmentFnShell<FragmentInConstrained, FragmentOutConstrained>,
   implementation: Implementation,
 ): TgpuFragmentFn {
   type This = TgpuFragmentFn & Labelled & SelfResolvable;
 
   const core = createFnCore(shell, implementation);
-  const outputType = createOutputType(shell.returnType);
+  const outputType = shell.returnType as IOLayoutToSchema<
+    typeof shell.returnType
+  >;
+  const inputType = shell.argTypes[0];
   if (typeof implementation === 'string') {
     addReturnTypeToExternals(implementation, outputType, (externals) =>
       core.applyExternals(externals),
@@ -120,14 +158,33 @@ function createFragmentFn(
 
     $name(newLabel: string): This {
       core.label = newLabel;
-      if (isWgslStruct(outputType)) {
+      if (isNamable(outputType)) {
         outputType.$name(`${newLabel}_Output`);
+      }
+      if (isNamable(inputType)) {
+        inputType.$name(`${newLabel}_Input`);
       }
       return this;
     },
 
     '~resolve'(ctx: ResolutionCtx): string {
-      return core.resolve(ctx, '@fragment ');
+      if (typeof implementation === 'string') {
+        return core.resolve(ctx, '@fragment ');
+      }
+
+      const generationCtx = ctx as GenerationCtx;
+      if (generationCtx.callStack === undefined) {
+        throw new Error(
+          'Cannot resolve a TGSL function outside of a generation context',
+        );
+      }
+
+      try {
+        generationCtx.callStack.push(outputType);
+        return core.resolve(ctx, '@fragment ');
+      } finally {
+        generationCtx.callStack.pop();
+      }
     },
 
     toString() {

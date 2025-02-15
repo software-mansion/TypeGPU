@@ -50,14 +50,11 @@
     "prepare-package": "tgpu-dev-cli prepack"
   },
   "dependencies": {
-    "tinyest-for-wgsl": "workspace:~0.1.0-alpha.0",
-    "estree-walker": "^3.0.3",
-    "magic-string": "^0.30.11"
+    "unplugin-typegpu": "workspace:^0.1.0-alpha.2"
   },
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
-    "acorn": "^8.12.1",
-    "rollup": "~4.12.0",
+    "rollup": "~4.22.4",
     "tsup": "^8.0.2",
     "typescript": "^5.3.3"
   }

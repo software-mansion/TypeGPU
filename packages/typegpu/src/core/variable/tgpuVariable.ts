@@ -1,9 +1,9 @@
-import type { Exotic } from '../../data/exotic';
 import type { AnyWgslData } from '../../data/wgslTypes';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
 import type { ResolutionCtx, SelfResolvable } from '../../types';
+import { valueProxyHandler } from '../valueProxyUtils';
 
 // ----------
 // Public API
@@ -26,9 +26,9 @@ export interface TgpuVar<
  * @param initialValue If not provided, the variable will be initialized to the dataType's "zero-value".
  */
 export function privateVar<TDataType extends AnyWgslData>(
-  dataType: Exotic<TDataType>,
-  initialValue?: Infer<Exotic<TDataType>>,
-): TgpuVar<'private', Exotic<TDataType>> {
+  dataType: TDataType,
+  initialValue?: Infer<TDataType>,
+): TgpuVar<'private', TDataType> {
   return new TgpuVarImpl('private', dataType, initialValue);
 }
 
@@ -92,6 +92,13 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyWgslData>
     if (!inGPUMode()) {
       throw new Error(`Cannot access tgpu.var's value directly in JS.`);
     }
-    return this as Infer<TDataType>;
+
+    return new Proxy(
+      {
+        '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
+        toString: () => `.value:${this.label ?? '<unnamed>'}`,
+      },
+      valueProxyHandler,
+    ) as Infer<TDataType>;
   }
 }

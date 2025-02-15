@@ -1,4 +1,4 @@
-import { type TgpuStruct, isBuiltin, struct } from '../../data';
+import { type WgslStruct, isBuiltin, struct } from '../../data';
 import {
   type Decorate,
   type HasCustomLocation,
@@ -7,7 +7,7 @@ import {
   location,
 } from '../../data/attributes';
 import { getCustomLocation, isData } from '../../data/dataTypes';
-import type { BaseWgslData, Location } from '../../data/wgslTypes';
+import type { BaseData, Location } from '../../data/wgslTypes';
 import type { IOData, IOLayout, IORecord } from './fnTypes';
 
 export type WithLocations<T extends IORecord> = {
@@ -18,10 +18,10 @@ export type WithLocations<T extends IORecord> = {
       : Decorate<T[Key], Location<number>>;
 };
 
-export type IOLayoutToOutputSchema<T extends IOLayout> = T extends BaseWgslData
+export type IOLayoutToSchema<T extends IOLayout> = T extends BaseData
   ? Decorate<T, Location<0>>
   : T extends IORecord
-    ? TgpuStruct<WithLocations<T>>
+    ? WgslStruct<WithLocations<T>>
     : never;
 
 export function withLocations<T extends IOData>(
@@ -54,7 +54,13 @@ export function withLocations<T extends IOData>(
 export function createOutputType<T extends IOData>(returnType: IOLayout<T>) {
   return (
     isData(returnType)
-      ? location(0, returnType)
+      ? getCustomLocation(returnType) !== undefined
+        ? returnType
+        : location(0, returnType)
       : struct(withLocations(returnType) as Record<string, T>)
-  ) as IOLayoutToOutputSchema<IOLayout<T>>;
+  ) as IOLayoutToSchema<IOLayout<T>>;
+}
+
+export function createStructFromIO<T extends IOData>(members: IORecord<T>) {
+  return struct(withLocations(members) as Record<string, T>);
 }
