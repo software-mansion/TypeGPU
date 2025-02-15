@@ -6,18 +6,26 @@
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "module": "./dist/index.mjs",
-      "import": "./dist/index.mjs",
-      "default": "./dist/index.cjs"
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "directory": "dist",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "module": "./dist/index.mjs",
+        "import": "./dist/index.mjs",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "files": ["README.md", "package.json", "dist/**/*"],
   "sideEffects": false,
   "scripts": {
-    "build": "unbuild",
-    "dev:build": "unbuild --stub"
+    "build": "tsup",
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit && pnpm tsc --p ./tsconfig.test.json --noEmit",
+    "publish": "echo \"Use pnpm prepare-package instead!\" && exit 1",
+    "prepare-package": "tgpu-dev-cli prepack"
   },
   "keywords": [],
   "license": "MIT",
@@ -26,9 +34,10 @@
   },
   "devDependencies": {
     "@webgpu/types": "^0.1.51",
+    "@typegpu/tgpu-dev-cli": "workspace:*",
     "rollup-plugin-typegpu": "workspace:*",
     "typegpu": "workspace:*",
     "typescript": "^5.7.2",
-    "unbuild": "^3.3.1"
+    "tsup": "^8.0.2"
   }
 }
