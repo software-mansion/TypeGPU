@@ -40,7 +40,7 @@
     "dpdm": "^3.14.0",
     "pkg-pr-new": "^0.0.39",
     "tsup": "^8.0.2",
-    "typescript": "^5.3.3",
+    "typescript": "^5.7.3",
     "vitest": "^2.1.9"
   },
   "packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e"

@@ -56,7 +56,7 @@ ${example.htmlCode}
       "preview": "vite preview"
     },
     "devDependencies": {
-      "typescript": "^5.5.3",
+      "typescript": "^5.7.3",
       "vite": "^5.4.2"
     },
     "dependencies": {

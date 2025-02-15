@@ -8,32 +8,27 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./data": "./src/data/index.ts",
-    "./std": "./src/std/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "module": "./dist/index.js",
+      "import": "./dist/index.js",
+      "default": "./dist/index.cjs"
+    },
+    "./data": {
+      "types": "./dist/data/index.d.ts",
+      "module": "./dist/data/index.js",
+      "import": "./dist/data/index.js",
+      "default": "./dist/data/index.cjs"
+    },
+    "./std": {
+      "types": "./dist/std/index.d.ts",
+      "module": "./dist/std/index.js",
+      "import": "./dist/std/index.js",
+      "default": "./dist/std/index.cjs"
+    }
   },
   "publishConfig": {
-    "directory": "dist",
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "module": "./dist/index.js",
-        "import": "./dist/index.js",
-        "default": "./dist/index.cjs"
-      },
-      "./data": {
-        "types": "./dist/data/index.d.ts",
-        "module": "./dist/data/index.js",
-        "import": "./dist/data/index.js",
-        "default": "./dist/data/index.cjs"
-      },
-      "./std": {
-        "types": "./dist/std/index.d.ts",
-        "module": "./dist/std/index.js",
-        "import": "./dist/std/index.js",
-        "default": "./dist/std/index.cjs"
-      }
-    }
+    "directory": "dist"
   },
   "sideEffects": false,
   "scripts": {
@@ -71,7 +66,7 @@
     "rollup-plugin-typegpu": "workspace:*",
     "tgpu-wgsl-parser": "workspace:*",
     "tsup": "^8.0.2",
-    "typescript": "^5.3.3",
+    "typescript": "^5.7.3",
     "wgpu-matrix": "^3.3.0"
   },
   "packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e",

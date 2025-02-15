@@ -5,21 +5,18 @@
   "description": "Transforms JavaScript into its 'tinyest' form, to be used in generating equivalent (or close to) WGSL code.",
   "license": "MIT",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    "./package.json": "./package.json",
-    ".": {
-      "types": "./dist/index.d.ts",
-      "module": "./dist/index.js",
-      "import": "./dist/index.js",
-      "default": "./dist/index.cjs"
-    },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "module": "./dist/*.js",
-      "import": "./dist/*.js",
-      "default": "./dist/*.cjs"
+  "exports": "./src/index.ts",
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      "./package.json": "./package.json",
+      ".": {
+        "types": "./dist/index.d.ts",
+        "module": "./dist/index.js",
+        "import": "./dist/index.js",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "sideEffects": false,
@@ -56,7 +53,7 @@
   "homepage": "https://docs.swmansion.com/TypeGPU",
   "devDependencies": {
     "tsup": "^8.0.2",
-    "typescript": "^5.3.3",
+    "typescript": "^5.7.3",
     "acorn": "^8.12.1",
     "@babel/types": "7.26.5",
     "@typegpu/tgpu-dev-cli": "workspace:*"

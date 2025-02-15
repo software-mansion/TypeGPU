@@ -1,16 +1,21 @@
 {
   "compilerOptions": {
-    "target": "esnext",
+    // important stuff
+    "outDir": "${configDir}/dist",
+    "declaration": true,
+    "declarationMap": true,
+
+    // basics
+    "lib": ["ESNext", "DOM"],
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleDetection": "force",
     "strict": true,
+    "allowJs": true,
     "esModuleInterop": true,
-    "module": "esnext",
     "moduleResolution": "bundler",
-    "noUncheckedIndexedAccess": true,
-    "noEmit": true,
     "skipLibCheck": true,
-    "exactOptionalPropertyTypes": true,
-    "baseUrl": ".",
-    "lib": ["DOM", "es2021"],
-    "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"]
-  }
+    "jsx": "react-jsx"
+  },
+  "exclude": ["${configDir}/dist"]
 }

@@ -56,6 +56,6 @@
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "rollup": "~4.22.4",
     "tsup": "^8.0.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.7.3"
   }
 }
