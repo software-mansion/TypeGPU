@@ -74,6 +74,9 @@ async function transformPackageJSON() {
     if (value.startsWith('./dist/')) {
       return value.replace(/^\.\/dist/, '.');
     }
+    if (value.startsWith('./src/')) {
+      return value.replace(/^\.\/src/, '.');
+    }
     return value;
   });
 

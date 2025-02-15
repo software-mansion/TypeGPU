@@ -1,3 +1,4 @@
+import { BPETER, rand } from '@typegpu/noise';
 import tgpu, { type TgpuBufferReadonly, type TgpuBufferMutable } from 'typegpu';
 import * as d from 'typegpu/data';
 import { cos, dot, fract, length, max, min, mix, pow } from 'typegpu/std';
@@ -15,24 +16,6 @@ context.configure({
 });
 
 const MAX_GRID_SIZE = 1024;
-
-const randSeed = tgpu['~unstable'].privateVar(d.vec2f);
-
-const setupRandomSeed = tgpu['~unstable'].fn([d.vec2f]).does((coord) => {
-  randSeed.value = coord;
-});
-
-/**
- * Yoinked from https://www.cg.tuwien.ac.at/research/publications/2023/PETER-2023-PSW/PETER-2023-PSW-.pdf
- * "Particle System in WebGPU" by Benedikt Peter
- */
-const rand01 = tgpu['~unstable'].fn([], d.f32).does(() => {
-  const a = dot(randSeed.value, d.vec2f(23.14077926, 232.61690225));
-  const b = dot(randSeed.value, d.vec2f(54.47856553, 345.84153136));
-  randSeed.value.x = fract(cos(a) * 136.8168);
-  randSeed.value.y = fract(cos(b) * 534.7645);
-  return randSeed.value.y;
-});
 
 type GridData = typeof GridData;
 /**
@@ -233,7 +216,7 @@ const computeVelocity = tgpu['~unstable']
     let least_cost_dir = dir_choices[u32(rand01() * f32(dir_choice_count))];
     return least_cost_dir;
   }`)
-  .$uses({ getCell, isValidFlowOut, isValidCoord, rand01 });
+  .$uses({ getCell, isValidFlowOut, isValidCoord, rand01: rand.float01 });
 
 const mainInitWorld = tgpu['~unstable']
   .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })
