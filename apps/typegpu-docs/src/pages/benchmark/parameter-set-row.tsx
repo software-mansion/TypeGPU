@@ -38,6 +38,38 @@ function NpmParameters(props: {
   );
 }
 
+function PrParameters(props: {
+  parameterSetAtom: PrimitiveAtom<BenchParameterSet>;
+}) {
+  const [parameterSet, setParameterSet] = useAtom(props.parameterSetAtom);
+
+  const version =
+    parameterSet.typegpu.type === 'pr' ? parameterSet.typegpu.commit : '';
+
+  const setCommit = useCallback(
+    (commit: string) => {
+      setParameterSet((prev) => ({
+        ...prev,
+        typegpu: { ...prev.typegpu, commit },
+      }));
+    },
+    [setParameterSet],
+  );
+
+  return (
+    <>
+      <p className="text-sm">typegpu@</p>
+      <input
+        type="text"
+        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-1 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        value={version}
+        onChange={(e) => setCommit(e.target.value)}
+        placeholder="b364de3"
+      />
+    </>
+  );
+}
+
 export function ParameterSetRow(props: {
   parameterSetAtom: PrimitiveAtom<BenchParameterSet>;
 }) {
@@ -47,7 +79,7 @@ export function ParameterSetRow(props: {
   const typeValue = parameterSet.typegpu.type;
 
   const setType = useCallback(
-    (type: 'local' | 'npm') => {
+    (type: 'local' | 'npm' | 'pr') => {
       setParameterSet((prev) => ({
         ...prev,
         typegpu: { type },
@@ -73,11 +105,15 @@ export function ParameterSetRow(props: {
       >
         <option value="local">📌 local</option>
         <option value="npm">⬇️ npm</option>
+        <option value="pr">🌳 pr</option>
       </select>
       <div className="flex-1 flex justify-start items-center">
         {typeValue === 'local' && <p className="text-sm">typegpu</p>}
         {typeValue === 'npm' && (
           <NpmParameters parameterSetAtom={props.parameterSetAtom} />
+        )}
+        {typeValue === 'pr' && (
+          <PrParameters parameterSetAtom={props.parameterSetAtom} />
         )}
       </div>
     </div>
