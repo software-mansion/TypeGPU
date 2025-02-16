@@ -13,6 +13,17 @@
  * @returns {Promise<T>}
  */
 export async function progress(initial, task) {
+  const ciMode =
+    typeof process.stdout.clearLine !== 'function' ||
+    typeof process.stdout.cursorTo !== 'function';
+
+  if (ciMode) {
+    console.log(initial);
+    return await task((val) => {
+      console.log(val);
+    });
+  }
+
   process.stdout.write(initial);
 
   try {
