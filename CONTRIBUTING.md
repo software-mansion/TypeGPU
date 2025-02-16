@@ -21,14 +21,12 @@ After your pull request is submitted, we will review it at as soon as possible. 
 ## Release Checklist
 
 1. Create new branch, update version string in package.json and in openInStackBlitz.ts, run `pnpm install`
-2. Take the built package from code sandbox CI and test the changes on StackBlitz (optional)
+2. Take the Continuous Release build and test the changes on StackBlitz (optional)
 3. Merge to main
 4. Prepare the package for publishing
 ```bash
 cd packages/typegpu
-pnpm prepare-package
-cd dist
-pnpm publish -—dry-run # (if alpha, --tag alpha)
+pnpm publish --dry-run # (if alpha, --tag alpha)
 ```
 5. If everything looks okay, then `pnpm publish` (if alpha, `--tag alpha`)
 6. Rebase *release* branch on *main*
