@@ -39,7 +39,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
-    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit && pnpm tsc --p ./tsconfig.test.json --noEmit",
+    "test:types": "pnpm tsc --p ./tsconfig.test.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "engines": {
