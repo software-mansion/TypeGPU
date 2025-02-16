@@ -15,21 +15,17 @@
   ],
   "license": "MIT",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    "./package.json": "./package.json",
-    ".": {
-      "types": "./dist/index.d.ts",
-      "module": "./dist/index.js",
-      "import": "./dist/index.js",
-      "default": "./dist/index.cjs"
-    },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "module": "./dist/*.js",
-      "import": "./dist/*.js",
-      "default": "./dist/*.cjs"
+  "exports": "./src/index.ts",
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "module": "./dist/index.js",
+        "import": "./dist/index.js",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "sideEffects": false,
@@ -42,8 +38,6 @@
   },
   "homepage": "https://typegpu.com",
   "scripts": {
-    "dev:watch": "DEV=true tsup --watch",
-    "dev:build": "DEV=true tsup",
     "build": "tsup",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
     "publish": "echo \"Use pnpm prepare-package instead!\" && exit 1",
