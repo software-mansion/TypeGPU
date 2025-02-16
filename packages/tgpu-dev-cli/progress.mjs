@@ -17,7 +17,12 @@ export async function progress(initial, task) {
 
   try {
     return await task((val) => {
-      process.stdout.clearLine(0);
+      if (
+        process.stdout.clearLine &&
+        typeof process.stdout.clearLine === 'function'
+      ) {
+        process.stdout.clearLine(0);
+      }
       process.stdout.cursorTo(0);
       process.stdout.write(val);
     });
