@@ -9,8 +9,6 @@
     "module": "ESNext",
     "strict": true,
     "allowJs": true,
-    "composite": true,
-    "incremental": true,
     "esModuleInterop": true,
     "moduleResolution": "bundler",
     "noUncheckedIndexedAccess": true,
