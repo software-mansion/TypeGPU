@@ -63,6 +63,7 @@
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@types/node": "^20.11.13",
     "@webgpu/types": "^0.1.51",
+    "jiti": "^2.4.2",
     "rollup-plugin-typegpu": "workspace:*",
     "tgpu-wgsl-parser": "workspace:*",
     "tsup": "^8.0.2",

@@ -133,7 +133,7 @@ importers:
         version: 4.3.0(typedoc@0.27.1)
       typegpu:
         specifier: workspace:*
-        version: link:../../packages/typegpu
+        version: link:../../packages/typegpu/dist
       typescript:
         specifier: ^5.7.3
         version: 5.7.3
@@ -333,6 +333,9 @@ importers:
       '@webgpu/types':
         specifier: ^0.1.51
         version: 0.1.51
+      jiti:
+        specifier: ^2.4.2
+        version: 2.4.2
       rollup-plugin-typegpu:
         specifier: workspace:*
         version: link:../rollup-plugin
@@ -4758,6 +4761,11 @@ packages:
   /jiti@1.21.6:
     resolution: {integrity: sha512-2yTgeWTWzMWkHu6Jp9NKgePDaYHbntiwvYuuJLbbN9vl7DC9DvXKOB2BC3ZZ92D3cvV/aflH0osDfwpHepQ53w==}
     hasBin: true
+
+  /jiti@2.4.2:
+    resolution: {integrity: sha512-rg9zJN+G4n2nfJl5MW3BMygZX56zKPNVEYYqq7adpmMh4Jn2QNEwhvQlFy6jPVdcod7txZtKHWnyZiA3a0zP7A==}
+    hasBin: true
+    dev: true
 
   /jotai-location@0.5.5(jotai@2.8.4):
     resolution: {integrity: sha512-6QW/7W9IJHjhbn7gRgAw4sC30k0/G6JiC4uPlKi8ZPZGYk7R7r9PyMD2eVhL4XSxxag89JxS1iSyr6BIXsB4Sw==}

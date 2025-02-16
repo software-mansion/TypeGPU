@@ -54,12 +54,16 @@ async function transformPackageJSON() {
   let distPackageJson = structuredClone(packageJson);
 
   // Replacing `exports`, `main`, and `types` with `publishConfig.*`
-  if (distPackageJson.publishConfig) {
+  if (distPackageJson.publishConfig?.main) {
     distPackageJson.main = distPackageJson.publishConfig.main;
-    distPackageJson.types = distPackageJson.publishConfig.types;
-    distPackageJson.exports = distPackageJson.publishConfig.exports;
-    distPackageJson.publishConfig = undefined;
   }
+  if (distPackageJson.publishConfig?.types) {
+    distPackageJson.types = distPackageJson.publishConfig.types;
+  }
+  if (distPackageJson.publishConfig?.exports) {
+    distPackageJson.exports = distPackageJson.publishConfig.exports;
+  }
+  distPackageJson.publishConfig = undefined;
 
   // Altering paths in the package.json
   distPackageJson = deepMapStrings(distPackageJson, (_path, value) => {
