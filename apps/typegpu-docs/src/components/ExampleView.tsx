@@ -49,7 +49,7 @@ function useExample(
       .catch((err) => {
         if (err instanceof SyntaxError) {
           setSnackbarText(`${err.name}: ${err.message}`);
-          console.log(err);
+          console.error(err);
         } else if (err instanceof ExecutionCancelledError) {
           // Ignore, to be expected.
           cancelled = true;
