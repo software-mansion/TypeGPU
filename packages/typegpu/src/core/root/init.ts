@@ -467,12 +467,14 @@ class TgpuRootImpl
 
       const missingVertexLayouts = new Set<TgpuVertexLayout>();
       core.usedVertexLayouts.forEach((vertexLayout, idx) => {
-        const opts =
-          {
-            buffer: priors.vertexLayoutMap?.get(vertexLayout),
-            offset: undefined,
-            size: undefined,
-          } ?? vertexBuffers.get(vertexLayout);
+        const priorBuffer = priors.vertexLayoutMap?.get(vertexLayout);
+        const opts = priorBuffer
+          ? {
+              buffer: priorBuffer,
+              offset: undefined,
+              size: undefined,
+            }
+          : vertexBuffers.get(vertexLayout);
 
         if (!opts || !opts.buffer) {
           missingVertexLayouts.add(vertexLayout);

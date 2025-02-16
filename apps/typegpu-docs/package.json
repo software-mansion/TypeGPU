@@ -53,6 +53,7 @@
     "@types/babel__traverse": "^7.20.6",
     "@webgpu/types": "^0.1.43",
     "astro-vtbot": "^1.8.2",
-    "tailwindcss-motion": "^1.0.1"
+    "tailwindcss-motion": "^1.0.1",
+    "typed-binary": "^4.0.0"
   }
 }

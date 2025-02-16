@@ -7,3 +7,5 @@ export function parse(code: string): Main {
 
   return parser.results[0];
 }
+
+export type * from './grammar.ne';

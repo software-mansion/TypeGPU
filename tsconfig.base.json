@@ -15,7 +15,11 @@
     "esModuleInterop": true,
     "moduleResolution": "bundler",
     "skipLibCheck": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "typeRoots": [
+      "${configDir}/node_modules/@types",
+      "${configDir}/node_modules/@webgpu/types"
+    ]
   },
   "exclude": ["${configDir}/dist"]
 }
