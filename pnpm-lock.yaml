@@ -181,6 +181,7 @@ importers:
       typescript:
         specifier: ^5.7.3
         version: 5.7.3
+    publishDirectory: dist
 
   packages/tgpu-dev-cli:
     dependencies:
@@ -281,6 +282,7 @@ importers:
       vitest:
         specifier: ^2.1.9
         version: 2.1.9(@types/node@20.11.19)
+    publishDirectory: dist
 
   packages/tinyest:
     devDependencies:
@@ -316,6 +318,7 @@ importers:
       typescript:
         specifier: ^5.7.3
         version: 5.7.3
+    publishDirectory: dist
 
   packages/typegpu:
     dependencies:
@@ -400,6 +403,7 @@ importers:
       typescript:
         specifier: ^5.7.3
         version: 5.7.3
+    publishDirectory: dist
 
 packages:
 
