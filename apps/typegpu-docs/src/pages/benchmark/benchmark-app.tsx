@@ -254,10 +254,7 @@ function BenchmarkResults() {
 function BenchmarkFallback() {
   return (
     <div className="flex items-center justify-center font-sans benchmark-fallback h-32">
-      <div
-        role="status"
-        className="flex items-center gap-2 motion-preset-focus"
-      >
+      <div className="flex items-center gap-2 motion-preset-focus">
         <svg
           aria-hidden="true"
           className="w-8 h-8 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600"
