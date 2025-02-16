@@ -145,7 +145,7 @@ async function main() {
 
     const updateMsg = () =>
       update(
-        `${color.BrightBlack}${Frog} working on tasks...${color.Reset}  ${taskString('biome')}, ${taskString('build')}, ${taskString('spec')}, ${taskString('types')}`,
+        `${color.BgBrightMagenta}${color.Black}${Frog} working on tasks...${color.Reset}  ${taskString('biome')}, ${taskString('build')}, ${taskString('spec')}, ${taskString('types')}`,
       );
 
     /**
@@ -180,7 +180,7 @@ async function main() {
     ]);
 
     update(
-      `${color.BrightBlack}${Frog} finished!${color.Reset}  ${taskString('biome')}, ${taskString('build')}, ${taskString('spec')}, ${taskString('types')}`,
+      `${color.BgBrightMagenta}${color.Black}${Frog} finished!${color.Reset}  ${taskString('biome')}, ${taskString('build')}, ${taskString('spec')}, ${taskString('types')}`,
     );
 
     return results;
