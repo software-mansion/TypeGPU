@@ -8,7 +8,6 @@ import { defineConfig } from 'astro/config';
 import starlightBlog from 'starlight-blog';
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import typegpu from 'unplugin-typegpu/rollup';
-import importRawRedirectPlugin from './vite-import-raw-redirect-plugin.mjs';
 
 /**
  * @template T
@@ -49,17 +48,7 @@ export default defineConfig({
   site: 'https://docs.swmansion.com',
   base: 'TypeGPU',
   vite: {
-    plugins: [
-      typegpu({ include: [/tgpu=true/] }),
-      toRawPlugin(),
-      importRawRedirectPlugin({
-        'typegpu/dist/index.d.ts?raw': '../../packages/typegpu/dist/index.d.ts',
-        'typegpu/dist/data/index.d.ts?raw':
-          '../../packages/typegpu/dist/data/index.d.ts',
-        'typegpu/dist/std/index.d.ts?raw':
-          '../../packages/typegpu/dist/std/index.d.ts',
-      }),
-    ],
+    plugins: [typegpu({ include: [/tgpu=true/] }), toRawPlugin()],
   },
   integrations: [
     starlight({
