@@ -40,7 +40,7 @@
   "devDependencies": {
     "@types/moo": "^0.5.9",
     "@types/nearley": "^2.11.5",
-    "@webgpu/types": "^0.1.51",
+    "@webgpu/types": "^0.1.54",
     "moo": "^0.5.2",
     "tsup": "^8.0.2",
     "tsx": "^4.16.2",

@@ -14,6 +14,9 @@ importers:
       '@types/node':
         specifier: ^20.11.13
         version: 20.11.19
+      '@webgpu/types':
+        specifier: ^0.1.54
+        version: 0.1.54
       dpdm:
         specifier: ^3.14.0
         version: 3.14.0
@@ -133,13 +136,13 @@ importers:
         version: 4.3.0(typedoc@0.27.1)
       typegpu:
         specifier: workspace:*
-        version: link:../../packages/typegpu
+        version: link:../../packages/typegpu/dist
       typescript:
         specifier: ^5.7.3
         version: 5.7.3
       unplugin-typegpu:
         specifier: workspace:*
-        version: link:../../packages/unplugin-typegpu
+        version: link:../../packages/unplugin-typegpu/dist
       zod:
         specifier: ^3.23.8
         version: 3.23.8
@@ -154,8 +157,8 @@ importers:
         specifier: ^7.20.6
         version: 7.20.6
       '@webgpu/types':
-        specifier: ^0.1.43
-        version: 0.1.43
+        specifier: ^0.1.54
+        version: 0.1.54
       astro-vtbot:
         specifier: ^1.8.2
         version: 1.10.7
@@ -167,7 +170,7 @@ importers:
     dependencies:
       unplugin-typegpu:
         specifier: workspace:^0.1.0-alpha.2
-        version: link:../unplugin-typegpu
+        version: link:../unplugin-typegpu/dist
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -230,10 +233,10 @@ importers:
         version: 8.12.1
       tinyest:
         specifier: workspace:~0.1.0-alpha.2
-        version: link:../tinyest
+        version: link:../tinyest/dist
       tinyest-for-wgsl:
         specifier: workspace:~0.1.0-alpha.1
-        version: link:../tinyest-for-wgsl
+        version: link:../tinyest-for-wgsl/dist
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -265,8 +268,8 @@ importers:
         specifier: ^2.11.5
         version: 2.11.5
       '@webgpu/types':
-        specifier: ^0.1.51
-        version: 0.1.51
+        specifier: ^0.1.54
+        version: 0.1.54
       moo:
         specifier: ^0.5.2
         version: 0.5.2
@@ -301,7 +304,7 @@ importers:
     dependencies:
       tinyest:
         specifier: workspace:~0.1.0-alpha.2
-        version: link:../tinyest
+        version: link:../tinyest/dist
     devDependencies:
       '@babel/types':
         specifier: 7.26.5
@@ -324,7 +327,7 @@ importers:
     dependencies:
       tinyest:
         specifier: workspace:~0.1.0-alpha.2
-        version: link:../tinyest
+        version: link:../tinyest/dist
       typed-binary:
         specifier: ^4.3.1
         version: 4.3.1
@@ -336,17 +339,17 @@ importers:
         specifier: ^20.11.13
         version: 20.11.19
       '@webgpu/types':
-        specifier: ^0.1.51
-        version: 0.1.51
+        specifier: ^0.1.54
+        version: 0.1.54
       jiti:
         specifier: ^2.4.2
         version: 2.4.2
       rollup-plugin-typegpu:
         specifier: workspace:*
-        version: link:../rollup-plugin
+        version: link:../rollup-plugin/dist
       tgpu-wgsl-parser:
         specifier: workspace:*
-        version: link:../tgpu-wgsl-parser
+        version: link:../tgpu-wgsl-parser/dist
       tsup:
         specifier: ^8.0.2
         version: 8.0.2(typescript@5.7.3)
@@ -371,7 +374,7 @@ importers:
         version: 0.30.12
       tinyest-for-wgsl:
         specifier: workspace:~0.1.0-alpha.1
-        version: link:../tinyest-for-wgsl
+        version: link:../tinyest-for-wgsl/dist
     devDependencies:
       '@babel/template':
         specifier: ^7.25.9
@@ -3015,12 +3018,8 @@ packages:
     resolution: {integrity: sha512-2WoBbs3v7hWxu6BXvWab4G8MJIFr21vEcJ5Y4mhXlYifVzHLSf5M+aHxEEk62DMOeVmjHwqt8DK47GYnFrEqmg==}
     dev: true
 
-  /@webgpu/types@0.1.43:
-    resolution: {integrity: sha512-HoP+d+m+Kuq8CsE63BZ3+BYBKAemrqbHUNrCalxrUju5XW+q/094Q3oeIa+2pTraEbO8ckJmGpibzyGT4OV4YQ==}
-    dev: true
-
-  /@webgpu/types@0.1.51:
-    resolution: {integrity: sha512-ktR3u64NPjwIViNCck+z9QeyN0iPkQCUOQ07ZCV1RzlkfP+olLTeEZ95O1QHS+v4w9vJeY9xj/uJuSphsHy5rQ==}
+  /@webgpu/types@0.1.54:
+    resolution: {integrity: sha512-81oaalC8LFrXjhsczomEQ0u3jG+TqE6V9QHLA8GNZq/Rnot0KDugu3LhSYSlie8tSdooAN1Hov05asrUUp9qgg==}
     dev: true
 
   /acorn-jsx@5.3.2(acorn@8.14.0):

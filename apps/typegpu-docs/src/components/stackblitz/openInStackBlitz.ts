@@ -60,7 +60,7 @@ ${example.htmlCode}
       "vite": "^5.4.2"
     },
     "dependencies": {
-      "@webgpu/types": "^0.1.44",
+      "@webgpu/types": "^0.1.54",
       "typegpu": "^0.4.1"
     }
 }`,
