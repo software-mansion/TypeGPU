@@ -1,4 +1,4 @@
-import tgpu, { type TgpuBuffer, type Storage, type Uniform } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { mat4 } from 'wgpu-matrix';
 
@@ -34,7 +34,7 @@ const initialFunctions: Array<{ name: string; color: d.v4f; code: string }> = [
   },
 ];
 
-const PropertiesSchema = d.struct({
+const Properties = d.struct({
   transformation: d.mat4x4f,
   inverseTransformation: d.mat4x4f,
   interpolationPoints: d.u32,
@@ -42,7 +42,7 @@ const PropertiesSchema = d.struct({
   dashedLine: d.u32,
 });
 
-const properties: d.Infer<typeof PropertiesSchema> = {
+const properties: d.Infer<typeof Properties> = {
   transformation: mat4.identity(d.mat4x4f()),
   inverseTransformation: mat4.identity(d.mat4x4f()),
   interpolationPoints: 256,
@@ -53,15 +53,21 @@ const properties: d.Infer<typeof PropertiesSchema> = {
 // #region Buffers
 
 const propertiesBuffer = root
-  .createBuffer(PropertiesSchema, properties)
+  .createBuffer(Properties, properties)
   .$usage('uniform');
 
-type LineVerticesBuffer = TgpuBuffer<d.WgslArray<d.Vec2f>> & Storage;
-let lineVerticesBuffers: Array<LineVerticesBuffer> =
-  createLineVerticesBuffers();
+// these buffers are recreated with a different size on interpolationPoints change
+function createLineVerticesBuffers() {
+  const Schema = d.arrayOf(d.vec2f, properties.interpolationPoints);
+  return initialFunctions.map((_) =>
+    root.createBuffer(Schema).$usage('storage'),
+  );
+}
+let lineVerticesBuffers = createLineVerticesBuffers();
 
-type DrawColorBuffer = TgpuBuffer<d.Vec4f> & Uniform;
-const drawColorBuffers: Array<DrawColorBuffer> = createColorBuffers();
+const drawColorBuffers = initialFunctions.map((data, _) =>
+  root.createBuffer(d.vec4f, data.color).$usage('uniform'),
+);
 
 // #region Compute shader
 
@@ -70,7 +76,7 @@ const computeLayout = tgpu.bindGroupLayout({
     storage: (n: number) => d.arrayOf(d.vec2f, n),
     access: 'mutable',
   },
-  properties: { uniform: PropertiesSchema },
+  properties: { uniform: Properties },
 });
 
 function createComputeShaderCode(functionCode: string) {
@@ -96,31 +102,32 @@ fn interpolatedFunction(x: f32) -> f32 {
   });
 }
 
-const computePipelines: Array<GPUComputePipeline> = [];
-for (const functionData of initialFunctions) {
-  const computeShaderCode = createComputeShaderCode(functionData.code);
-  const computeShaderModule = device.createShaderModule({
-    label: `Compute function points shader module for f(x) = ${functionData.code}`,
-    code: computeShaderCode,
-  });
+const computePipelines: Array<GPUComputePipeline> = initialFunctions.map(
+  (functionData, _) => {
+    const computeShaderCode = createComputeShaderCode(functionData.code);
+    const computeShaderModule = device.createShaderModule({
+      label: `Compute function points shader module for f(x) = ${functionData.code}`,
+      code: computeShaderCode,
+    });
 
-  const computePipeline = device.createComputePipeline({
-    label: 'Compute function points pipeline',
-    layout: device.createPipelineLayout({
-      bindGroupLayouts: [root.unwrap(computeLayout)],
-    }),
-    compute: {
-      module: computeShaderModule,
-    },
-  });
+    const computePipeline = device.createComputePipeline({
+      label: 'Compute function points pipeline',
+      layout: device.createPipelineLayout({
+        bindGroupLayouts: [root.unwrap(computeLayout)],
+      }),
+      compute: {
+        module: computeShaderModule,
+      },
+    });
 
-  computePipelines.push(computePipeline);
-}
+    return computePipeline;
+  },
+);
 
 // #region Render background shader
 
 const renderBackgroundLayout = tgpu.bindGroupLayout({
-  properties: { uniform: PropertiesSchema },
+  properties: { uniform: Properties },
 });
 
 const rawRenderBackgroundCode = /* wgsl */ `
@@ -184,7 +191,7 @@ const renderBackgroundPipeline = device.createRenderPipeline({
 
 const renderLayout = tgpu.bindGroupLayout({
   lineVertices: { storage: (n: number) => d.arrayOf(d.vec2f, n) },
-  properties: { uniform: PropertiesSchema },
+  properties: { uniform: Properties },
   color: { uniform: d.vec4f },
 });
 
@@ -399,29 +406,6 @@ async function tryRecreateComputePipeline(
   return computePipeline;
 }
 
-function createLineVerticesBuffers() {
-  const Scheme = d.arrayOf(d.vec2f, properties.interpolationPoints);
-  const lineVerticesBuffers: Array<LineVerticesBuffer> = [];
-
-  for (const _ in initialFunctions) {
-    const buffer = root.createBuffer(Scheme).$usage('storage');
-    lineVerticesBuffers.push(buffer);
-  }
-  return lineVerticesBuffers;
-}
-
-function createColorBuffers() {
-  const Scheme = d.vec4f;
-  const colorBuffers: DrawColorBuffer[] = [];
-  for (const functionData of initialFunctions) {
-    const buffer = root
-      .createBuffer(Scheme, functionData.color)
-      .$usage('uniform');
-    colorBuffers.push(buffer);
-  }
-  return colorBuffers;
-}
-
 function queuePropertiesBufferUpdate() {
   properties.inverseTransformation = mat4.inverse(properties.transformation);
   propertiesBuffer.write(properties);
@@ -533,7 +517,7 @@ export const controls = {
   },
   Recenter: {
     onButtonClick: async () => {
-      properties.transformation = mat4.identity();
+      properties.transformation = mat4.identity(d.mat4x4f());
     },
   },
 };
