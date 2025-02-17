@@ -1,8 +1,10 @@
-import { parse } from 'tgpu-wgsl-parser';
+import { type Main, parse } from 'tgpu-wgsl-parser';
 import tgpu from '../../src';
 import type { TgpuResolveOptions } from '../../src/core/resolve/tgpuResolve';
 
-export function parseResolved(resolvable: TgpuResolveOptions['externals']) {
+export function parseResolved(
+  resolvable: TgpuResolveOptions['externals'],
+): Main {
   const resolved = tgpu.resolve({
     externals: resolvable,
     names: 'strict',

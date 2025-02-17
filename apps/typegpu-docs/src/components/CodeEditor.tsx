@@ -7,11 +7,10 @@ import webgpuTypes from '@webgpu/types/dist/index.d.ts?raw';
 // biome-ignore lint/correctness/noUnusedImports: <its a namespace, Biome>
 import type { editor } from 'monaco-editor';
 import { entries, map, pipe } from 'remeda';
-import typedBinary from 'typed-binary/dist/index.d.ts?raw';
 import { tsCompilerOptions } from '../utils/liveEditor/embeddedTypeScript';
 
-const typegpuDtsFiles: Record<string, string> = import.meta.glob(
-  '../../../../packages/typegpu/dist/**/*.d.ts',
+const typegpuSrcFiles: Record<string, string> = import.meta.glob(
+  '../../../../packages/typegpu/src/**/*.ts',
   {
     query: 'raw',
     eager: true,
@@ -20,9 +19,9 @@ const typegpuDtsFiles: Record<string, string> = import.meta.glob(
 );
 
 const typegpuExtraLibs = pipe(
-  entries(typegpuDtsFiles),
+  entries(typegpuSrcFiles),
   map(([path, content]) => ({
-    filename: path.replace('../../../../packages/typegpu/dist', 'typegpu/dist'),
+    filename: path.replace('../../../../packages/', ''),
     content,
   })),
 );
@@ -57,14 +56,13 @@ function handleEditorWillMount(monaco: Monaco) {
   for (const lib of mediacaptureExtraLibs) {
     tsDefaults.addExtraLib(lib.content, lib.filename);
   }
-  tsDefaults.addExtraLib(typedBinary, 'typed-binary.d.ts');
 
   tsDefaults.setCompilerOptions({
     ...tsCompilerOptions,
     paths: {
-      typegpu: ['typegpu/dist/index.d.ts'],
-      'typegpu/data': ['typegpu/dist/data/index.d.ts'],
-      'typegpu/std': ['typegpu/dist/std/index.d.ts'],
+      typegpu: ['typegpu/src/index.ts'],
+      'typegpu/data': ['typegpu/src/data/index.ts'],
+      'typegpu/std': ['typegpu/src/std/index.ts'],
     },
   });
 }
