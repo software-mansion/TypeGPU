@@ -10,7 +10,7 @@ To contribute by resolving an open issue or developing a new feature, please adh
 
 1. Fork this repository.
 2. Create a new feature branch from the `main` branch.
-3. Ensure that the `pnpm dev` script is running at all times during development.
+3. **(tip)** Run the `pnpm dev` to start a local dev-server for the docs/examples/benchmarking app
 4. Stage your changes and commit them. We recommend following the [Conventional Commit Specification](https://www.conventionalcommits.org/en/v1.0.0/) for commit messages.
 5. Make sure all the tests pass when running `pnpm test`.
 6. Submit the PR for review.

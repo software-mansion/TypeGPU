@@ -68,7 +68,7 @@
     "@types/node": "^20.11.13",
     "@webgpu/types": "^0.1.54",
     "jiti": "^2.4.2",
-    "rollup-plugin-typegpu": "workspace:*",
+    "unplugin-typegpu": "workspace:*",
     "tgpu-wgsl-parser": "workspace:*",
     "tsup": "^8.0.2",
     "typescript": "^5.7.3",

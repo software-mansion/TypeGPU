@@ -344,9 +344,6 @@ importers:
       jiti:
         specifier: ^2.4.2
         version: 2.4.2
-      rollup-plugin-typegpu:
-        specifier: workspace:*
-        version: link:../rollup-plugin
       tgpu-wgsl-parser:
         specifier: workspace:*
         version: link:../tgpu-wgsl-parser
@@ -356,6 +353,9 @@ importers:
       typescript:
         specifier: ^5.7.3
         version: 5.7.3
+      unplugin-typegpu:
+        specifier: workspace:*
+        version: link:../unplugin-typegpu
       wgpu-matrix:
         specifier: ^3.3.0
         version: 3.3.0

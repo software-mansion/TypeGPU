@@ -1,11 +1,11 @@
 import { createJiti } from 'jiti';
-import type TypeGPUPlugin from 'rollup-plugin-typegpu';
 import nearleyRedirectPlugin from 'tgpu-wgsl-parser/nearley-redirect-plugin';
+import type TypeGPUPlugin from 'unplugin-typegpu/rollup';
 import { defineConfig } from 'vitest/config';
 
 const jiti = createJiti(import.meta.url);
 const typegpu = await jiti.import<typeof TypeGPUPlugin>(
-  'rollup-plugin-typegpu',
+  'unplugin-typegpu/rollup',
   { default: true },
 );
 

@@ -114,7 +114,7 @@ async function transformReadme() {
 }
 
 /**
- * @typedef {'in_progress'|'success'|'fail'} TaskStatus
+ * @typedef {'in_progress' | 'success' | 'fail'} TaskStatus
  */
 
 /** @type {Record<TaskStatus, string>} */
