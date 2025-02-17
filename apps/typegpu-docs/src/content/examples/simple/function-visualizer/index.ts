@@ -108,7 +108,7 @@ const computePipelines: Array<GPUComputePipeline> = initialFunctions.map(
       code: computeShaderCode,
     });
 
-    const computePipeline = device.createComputePipeline({
+    return device.createComputePipeline({
       label: 'Compute function points pipeline',
       layout: device.createPipelineLayout({
         bindGroupLayouts: [root.unwrap(computeLayout)],
@@ -117,8 +117,6 @@ const computePipelines: Array<GPUComputePipeline> = initialFunctions.map(
         module: computeShaderModule,
       },
     });
-
-    return computePipeline;
   },
 );
 
@@ -231,7 +229,7 @@ fn orthonormalForVertex(index: u32) -> vec2f {
 @vertex fn vs(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4f {
   let currentVertex = vertexIndex/2;
   let orthonormal = orthonormalForVertex(currentVertex);
-  let offset = orthonormal * properties.lineWidth * select(-1.0, 1.0, vertexIndex%2==0);
+  let offset = orthonormal * properties.lineWidth * select(-1.0, 1.0, vertexIndex%2 == 0);
   return vec4f(lineVertices[currentVertex] + offset, 0.0, 1.0);
 }
 
@@ -321,8 +319,7 @@ function runComputePass(functionNumber: number) {
   pass.dispatchWorkgroups(properties.interpolationPoints);
   pass.end();
 
-  const commandBuffer = encoder.finish();
-  device.queue.submit([commandBuffer]);
+  device.queue.submit([encoder.finish()]);
 }
 
 function runRenderBackgroundPass() {
@@ -368,8 +365,7 @@ function runRenderPass() {
   });
   pass.end();
 
-  const commandBuffer = encoder.finish();
-  device.queue.submit([commandBuffer]);
+  device.queue.submit([encoder.finish()]);
 }
 
 // #region Helper definitions
