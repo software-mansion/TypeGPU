@@ -57,6 +57,6 @@
   "dependencies": {
     "acorn": "^8.12.1",
     "tinyest": "workspace:~0.1.0-alpha.3",
-    "tinyest-for-wgsl": "workspace:~0.1.0-alpha.2"
+    "tinyest-for-wgsl": "workspace:~0.1.0-alpha.3"
   }
 }
