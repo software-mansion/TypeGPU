@@ -11,7 +11,7 @@ const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 context.configure({
-  device: device,
+  device,
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
@@ -59,13 +59,13 @@ const propertiesBuffer = root
 // these buffers are recreated with a different size on interpolationPoints change
 function createLineVerticesBuffers() {
   const Schema = d.arrayOf(d.vec2f, properties.interpolationPoints);
-  return initialFunctions.map((_) =>
+  return initialFunctions.map(() =>
     root.createBuffer(Schema).$usage('storage'),
   );
 }
 let lineVerticesBuffers = createLineVerticesBuffers();
 
-const drawColorBuffers = initialFunctions.map((data, _) =>
+const drawColorBuffers = initialFunctions.map((data) =>
   root.createBuffer(d.vec4f, data.color).$usage('uniform'),
 );
 
@@ -187,6 +187,18 @@ const renderBackgroundPipeline = device.createRenderPipeline({
   },
 });
 
+const renderBackgroundPassDescriptor = {
+  label: 'Render pass',
+  colorAttachments: [
+    {
+      view: undefined as unknown as GPUTextureView,
+      clearValue: [1.0, 1.0, 1.0, 1] as const,
+      loadOp: 'clear' as const,
+      storeOp: 'store' as const,
+    },
+  ],
+};
+
 // #region Render shader
 
 const renderLayout = tgpu.bindGroupLayout({
@@ -259,6 +271,18 @@ const renderPipeline = device.createRenderPipeline({
   },
 });
 
+const renderPassDescriptor = {
+  label: 'Render pass',
+  colorAttachments: [
+    {
+      view: undefined as unknown as GPUTextureView,
+      clearValue: [0.3, 0.3, 0.3, 1] as const,
+      loadOp: 'load' as const,
+      storeOp: 'store' as const,
+    },
+  ],
+};
+
 // #region Draw
 
 let destroyed = false;
@@ -308,25 +332,13 @@ function runRenderBackgroundPass() {
     properties: propertiesBuffer,
   });
 
-  const renderPassDescriptor = {
-    label: 'Render pass',
-    colorAttachments: [
-      {
-        view: undefined as unknown as GPUTextureView,
-        clearValue: [1.0, 1.0, 1.0, 1] as const,
-        loadOp: 'clear' as const,
-        storeOp: 'store' as const,
-      },
-    ],
-  };
-
-  renderPassDescriptor.colorAttachments[0].view = context
+  renderBackgroundPassDescriptor.colorAttachments[0].view = context
     .getCurrentTexture()
     .createView();
 
   const encoder = device.createCommandEncoder({ label: 'Render encoder' });
 
-  const pass = encoder.beginRenderPass(renderPassDescriptor);
+  const pass = encoder.beginRenderPass(renderBackgroundPassDescriptor);
   pass.setPipeline(renderBackgroundPipeline);
   pass.setBindGroup(0, root.unwrap(renderBindGroup));
   pass.draw(4, 2);
@@ -337,18 +349,6 @@ function runRenderBackgroundPass() {
 }
 
 function runRenderPass() {
-  const renderPassDescriptor = {
-    label: 'Render pass',
-    colorAttachments: [
-      {
-        view: undefined as unknown as GPUTextureView,
-        clearValue: [0.3, 0.3, 0.3, 1] as const,
-        loadOp: 'load' as const,
-        storeOp: 'store' as const,
-      },
-    ],
-  };
-
   renderPassDescriptor.colorAttachments[0].view = context
     .getCurrentTexture()
     .createView();
