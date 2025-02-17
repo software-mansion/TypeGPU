@@ -29,5 +29,11 @@
       "indentStyle": "space",
       "quoteStyle": "single"
     }
+  },
+  "css": {
+    "formatter": {
+      "indentStyle": "space",
+      "quoteStyle": "single"
+    }
   }
 }

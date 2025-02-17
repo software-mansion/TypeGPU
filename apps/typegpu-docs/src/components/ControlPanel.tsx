@@ -1,6 +1,6 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
 import { examples } from '../utils/examples/exampleContent';
@@ -27,12 +27,18 @@ function ToggleRow({
 }) {
   const [value, setValue] = useState(initial);
 
+  const toggleId = useId();
+
   return (
     <>
       <div className="text-sm">{label}</div>
 
-      <label className="grid items-center justify-end h-10 cursor-pointer">
+      <label
+        htmlFor={toggleId}
+        className="grid items-center justify-end h-10 cursor-pointer"
+      >
         <Toggle
+          id={toggleId}
           checked={value}
           onChange={(e) => {
             onChange(e.target.checked);
@@ -162,6 +168,9 @@ export function ControlPanel() {
   const currentExample = useAtomValue(currentExampleAtom);
   const exampleControlParams = useAtomValue(exampleControlsAtom);
 
+  const showLeftMenuId = useId();
+  const showCodeEditorId = useId();
+
   return (
     <div
       className={cs(
@@ -171,16 +180,24 @@ export function ControlPanel() {
     >
       <div className="hidden md:flex flex-col gap-4">
         <h2 className="text-xl font-medium">Control panel</h2>
-        <label className="flex items-center justify-between gap-3 text-sm cursor-pointer">
+        <label
+          htmlFor={showLeftMenuId}
+          className="flex items-center justify-between gap-3 text-sm cursor-pointer"
+        >
           <span>Show left menu</span>
           <Toggle
+            id={showLeftMenuId}
             checked={menuShowing}
             onChange={(e) => setMenuShowing(e.target.checked)}
           />
         </label>
-        <label className="flex items-center justify-between gap-3 text-sm cursor-pointer">
+        <label
+          htmlFor={showCodeEditorId}
+          className="flex items-center justify-between gap-3 text-sm cursor-pointer"
+        >
           <span>Show code editor</span>
           <Toggle
+            id={showCodeEditorId}
             checked={codeEditorShowing}
             onChange={(e) => setCodeEditorShowing(e.target.checked)}
           />

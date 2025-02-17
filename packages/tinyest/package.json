@@ -5,30 +5,31 @@
   "description": "A compact, fast, and embeddable JavaScript AST for transpilation.",
   "license": "MIT",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    "./package.json": "./package.json",
-    ".": {
-      "types": "./dist/index.d.ts",
-      "module": "./dist/index.js",
-      "import": "./dist/index.js",
-      "default": "./dist/index.cjs"
-    },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "module": "./dist/*.js",
-      "import": "./dist/*.js",
-      "default": "./dist/*.cjs"
+  "exports": "./src/index.ts",
+  "publishConfig": {
+    "directory": "dist",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      "./package.json": "./package.json",
+      ".": {
+        "types": "./dist/index.d.ts",
+        "module": "./dist/index.js",
+        "import": "./dist/index.js",
+        "default": "./dist/index.cjs"
+      },
+      "./*": {
+        "types": "./dist/*.d.ts",
+        "module": "./dist/*.js",
+        "import": "./dist/*.js",
+        "default": "./dist/*.cjs"
+      }
     }
   },
   "sideEffects": false,
   "scripts": {
-    "dev:watch": "DEV=true tsup --watch",
-    "dev:build": "DEV=true tsup",
     "build": "tsup",
-    "publish": "echo \"Use pnpm prepare-package instead!\" && exit 1",
-    "prepare-package": "tgpu-dev-cli prepack"
+    "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "engines": {
     "node": ">=12.20.0"
@@ -43,7 +44,7 @@
   },
   "homepage": "https://docs.swmansion.com/TypeGPU",
   "devDependencies": {
-    "typescript": "^5.3.3",
+    "typescript": "^5.7.3",
     "tsup": "^8.0.2",
     "@typegpu/tgpu-dev-cli": "workspace:*"
   },
