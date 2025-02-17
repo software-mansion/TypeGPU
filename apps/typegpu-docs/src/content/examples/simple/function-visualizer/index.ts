@@ -18,18 +18,18 @@ context.configure({
 
 const initialFunctions: Array<{ name: string; color: d.v4f; code: string }> = [
   {
-    name: 'Red function',
-    color: d.vec4f(1.0, 0.0, 0.0, 1.0),
+    name: 'blue function',
+    color: fromHex('#1D72F0'),
     code: 'x',
   },
   {
-    name: 'Blue function',
-    color: d.vec4f(0.0, 1.0, 0.0, 1.0),
+    name: 'green function',
+    color: fromHex('#3CB371'),
     code: 'cos(x*5)/3-x',
   },
   {
-    name: 'Green function',
-    color: d.vec4f(0.0, 0.0, 1.0, 1.0),
+    name: 'purple function',
+    color: fromHex('#C464FF'),
     code: 'x*sin(log(abs(x)))',
   },
 ];
@@ -370,6 +370,14 @@ function runRenderPass() {
 
 // #region Helper definitions
 
+function fromHex(hex: string) {
+  const r = Number.parseInt(hex.slice(1, 3), 16);
+  const g = Number.parseInt(hex.slice(3, 5), 16);
+  const b = Number.parseInt(hex.slice(5, 7), 16);
+
+  return d.vec4f(r / 255.0, g / 255.0, b / 255.0, 1.0);
+}
+
 async function tryRecreateComputePipeline(
   functionCode: string,
 ): Promise<GPUComputePipeline> {
@@ -486,7 +494,7 @@ export const controls = {
       }
     },
   },
-  'Line width': {
+  'line width': {
     initial: 0.01,
     min: 0.0,
     max: 0.025,
@@ -495,7 +503,7 @@ export const controls = {
       properties.lineWidth = value;
     },
   },
-  'Interpolation points count': {
+  'interpolation points count': {
     initial: '256',
     options: [4, 16, 64, 256, 1024, 4096].map((x) => x.toString()),
     onSelectChange: (value: string) => {
