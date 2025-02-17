@@ -59,6 +59,55 @@ export const VectorOps = {
       vec4u(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z), Math.abs(v.w)),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
+  atan2: {
+    vec2f: (a: wgsl.v2f, b: wgsl.v2f) =>
+      vec2f(Math.atan2(a.x, b.x), Math.atan2(a.y, b.y)),
+    vec2h: (a: wgsl.v2h, b: wgsl.v2h) =>
+      vec2h(Math.atan2(a.x, b.x), Math.atan2(a.y, b.y)),
+    vec2i: (a: wgsl.v2i, b: wgsl.v2i) =>
+      vec2i(Math.atan2(a.x, b.x), Math.atan2(a.y, b.y)),
+    vec2u: (a: wgsl.v2u, b: wgsl.v2u) =>
+      vec2u(Math.atan2(a.x, b.x), Math.atan2(a.y, b.y)),
+
+    vec3f: (a: wgsl.v3f, b: wgsl.v3f) =>
+      vec3f(Math.atan2(a.x, b.x), Math.atan2(a.y, b.y), Math.atan2(a.z, b.z)),
+    vec3h: (a: wgsl.v3h, b: wgsl.v3h) =>
+      vec3h(Math.atan2(a.x, b.x), Math.atan2(a.y, b.y), Math.atan2(a.z, b.z)),
+    vec3i: (a: wgsl.v3i, b: wgsl.v3i) =>
+      vec3i(Math.atan2(a.x, b.x), Math.atan2(a.y, b.y), Math.atan2(a.z, b.z)),
+    vec3u: (a: wgsl.v3u, b: wgsl.v3u) =>
+      vec3u(Math.atan2(a.x, b.x), Math.atan2(a.y, b.y), Math.atan2(a.z, b.z)),
+
+    vec4f: (a: wgsl.v4f, b: wgsl.v4f) =>
+      vec4f(
+        Math.atan2(a.x, b.x),
+        Math.atan2(a.y, b.y),
+        Math.atan2(a.z, b.z),
+        Math.atan2(a.w, b.w),
+      ),
+    vec4h: (a: wgsl.v4h, b: wgsl.v4h) =>
+      vec4h(
+        Math.atan2(a.x, b.x),
+        Math.atan2(a.y, b.y),
+        Math.atan2(a.z, b.z),
+        Math.atan2(a.w, b.w),
+      ),
+    vec4i: (a: wgsl.v4i, b: wgsl.v4i) =>
+      vec4i(
+        Math.atan2(a.x, b.x),
+        Math.atan2(a.y, b.y),
+        Math.atan2(a.z, b.z),
+        Math.atan2(a.w, b.w),
+      ),
+    vec4u: (a: wgsl.v4u, b: wgsl.v4u) =>
+      vec4u(
+        Math.atan2(a.x, b.x),
+        Math.atan2(a.y, b.y),
+        Math.atan2(a.z, b.z),
+        Math.atan2(a.w, b.w),
+      ),
+  } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
+
   ceil: {
     vec2f: (v: wgsl.v2f) => vec2f(Math.ceil(v.x), Math.ceil(v.y)),
     vec2h: (v: wgsl.v2h) => vec2h(Math.ceil(v.x), Math.ceil(v.y)),
