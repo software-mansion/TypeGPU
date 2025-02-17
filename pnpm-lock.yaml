@@ -136,13 +136,13 @@ importers:
         version: 4.3.0(typedoc@0.27.1)
       typegpu:
         specifier: workspace:*
-        version: link:../../packages/typegpu/dist
+        version: link:../../packages/typegpu
       typescript:
         specifier: ^5.7.3
         version: 5.7.3
       unplugin-typegpu:
         specifier: workspace:*
-        version: link:../../packages/unplugin-typegpu/dist
+        version: link:../../packages/unplugin-typegpu
       zod:
         specifier: ^3.23.8
         version: 3.23.8
@@ -170,7 +170,7 @@ importers:
     dependencies:
       unplugin-typegpu:
         specifier: workspace:^0.1.0-alpha.2
-        version: link:../unplugin-typegpu/dist
+        version: link:../unplugin-typegpu
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -233,10 +233,10 @@ importers:
         version: 8.12.1
       tinyest:
         specifier: workspace:~0.1.0-alpha.2
-        version: link:../tinyest/dist
+        version: link:../tinyest
       tinyest-for-wgsl:
         specifier: workspace:~0.1.0-alpha.1
-        version: link:../tinyest-for-wgsl/dist
+        version: link:../tinyest-for-wgsl
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -304,7 +304,7 @@ importers:
     dependencies:
       tinyest:
         specifier: workspace:~0.1.0-alpha.2
-        version: link:../tinyest/dist
+        version: link:../tinyest
     devDependencies:
       '@babel/types':
         specifier: 7.26.5
@@ -327,7 +327,7 @@ importers:
     dependencies:
       tinyest:
         specifier: workspace:~0.1.0-alpha.2
-        version: link:../tinyest/dist
+        version: link:../tinyest
       typed-binary:
         specifier: ^4.3.1
         version: 4.3.1
@@ -346,10 +346,10 @@ importers:
         version: 2.4.2
       rollup-plugin-typegpu:
         specifier: workspace:*
-        version: link:../rollup-plugin/dist
+        version: link:../rollup-plugin
       tgpu-wgsl-parser:
         specifier: workspace:*
-        version: link:../tgpu-wgsl-parser/dist
+        version: link:../tgpu-wgsl-parser
       tsup:
         specifier: ^8.0.2
         version: 8.0.2(typescript@5.7.3)
@@ -374,7 +374,7 @@ importers:
         version: 0.30.12
       tinyest-for-wgsl:
         specifier: workspace:~0.1.0-alpha.1
-        version: link:../tinyest-for-wgsl/dist
+        version: link:../tinyest-for-wgsl
     devDependencies:
       '@babel/template':
         specifier: ^7.25.9
