@@ -114,6 +114,16 @@ function generateExpression(
     const target = generateExpression(ctx, targetId);
     const propertyStr = resolveRes(ctx, generateExpression(ctx, property));
 
+    // A quick workaround for vector spreading.
+    // TODO: Remove this!
+    if (propertyStr === 't') {
+      return {
+        value: target.value,
+        // TODO: Infer data type
+        dataType: UnknownData,
+      };
+    }
+
     if (typeof target.value === 'string') {
       return {
         value: `${target.value}.${propertyStr}`,
