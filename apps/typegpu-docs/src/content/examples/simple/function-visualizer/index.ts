@@ -31,8 +31,6 @@ const initialFunctions: Array<{ code: string; color: d.v4f }> = [
   },
 ];
 
-const functionComputeModules: Array<GPUShaderModule> = compileComputeModules();
-
 const PropertiesSchema = d.struct({
   transformation: d.mat4x4f,
   inverseTransformation: d.mat4x4f,
@@ -49,14 +47,35 @@ const properties: d.Infer<typeof PropertiesSchema> = {
   dashedLine: 0,
 };
 
+// #region Buffers
+
 const propertiesBuffer = root
   .createBuffer(PropertiesSchema, properties)
   .$usage('uniform');
+
 type LineVerticesBuffer = TgpuBuffer<d.WgslArray<d.Vec2f>> & Storage;
 let lineVerticesBuffers: Array<LineVerticesBuffer> =
   createLineVerticesBuffers();
-type ColorBuffer = TgpuBuffer<d.Vec4f> & Uniform;
-const colorBuffers: Array<ColorBuffer> = createColorBuffers();
+
+type DrawColorBuffer = TgpuBuffer<d.Vec4f> & Uniform;
+const drawColorBuffers: Array<DrawColorBuffer> = createColorBuffers();
+
+// #region Compute shader
+
+const computeLayout = tgpu.bindGroupLayout({
+  lineVertices: {
+    storage: d.arrayOf(d.vec2f, properties.interpolationPoints),
+    access: 'mutable',
+  },
+  properties: { uniform: PropertiesSchema },
+});
+const computePipelines: Array<GPUComputePipeline> = createComputePipelines();
+
+// #region Draw background shader
+
+// #region Draw shader
+
+// #region Draw
 
 let destroyed = false;
 function draw() {
@@ -67,7 +86,7 @@ function draw() {
   queuePropertiesBufferUpdate();
 
   initialFunctions.forEach((_, i) => {
-    runComputePass(functionComputeModules[i], lineVerticesBuffers[i]);
+    runComputePass(i);
   });
   runRenderBackgroundPass();
   runRenderPass();
@@ -78,30 +97,11 @@ requestAnimationFrame(draw);
 
 // #region Function definitions
 
-function runComputePass(
-  module: GPUShaderModule,
-  resultBuffer: LineVerticesBuffer,
-) {
-  const layout = tgpu.bindGroupLayout({
-    lineVertices: {
-      storage: d.arrayOf(d.vec2f, properties.interpolationPoints),
-      access: 'mutable',
-    },
-    properties: { uniform: PropertiesSchema },
-  });
+function runComputePass(functionNumber: number) {
+  const computePipeline = computePipelines[functionNumber];
 
-  const computePipeline = device.createComputePipeline({
-    label: 'Compute function points pipeline',
-    layout: device.createPipelineLayout({
-      bindGroupLayouts: [root.unwrap(layout)],
-    }),
-    compute: {
-      module: module,
-    },
-  });
-
-  const bindGroup = root.createBindGroup(layout, {
-    lineVertices: resultBuffer,
+  const bindGroup = root.createBindGroup(computeLayout, {
+    lineVertices: lineVerticesBuffers[functionNumber],
     properties: propertiesBuffer,
   });
 
@@ -220,7 +220,7 @@ function runRenderPass() {
           resource: { buffer: root.unwrap(lineVerticesBuffers[i]) },
         },
         { binding: 1, resource: { buffer: root.unwrap(propertiesBuffer) } },
-        { binding: 2, resource: { buffer: root.unwrap(colorBuffers[i]) } },
+        { binding: 2, resource: { buffer: root.unwrap(drawColorBuffers[i]) } },
       ],
     });
     pass.setPipeline(renderPipeline);
@@ -263,22 +263,33 @@ function createComputeShaderCode(functionCode: string) {
   `;
 }
 
-function compileComputeModules() {
-  const compileModules = [];
+function createComputePipelines() {
+  const compilePipelines = [];
   for (const functionData of initialFunctions) {
     const computeShaderCode = createComputeShaderCode(functionData.code);
     const computeShaderModule = device.createShaderModule({
       label: `Compute function points shader module for f(x) = ${functionData.code}`,
       code: computeShaderCode,
     });
-    compileModules.push(computeShaderModule);
+
+    const computePipeline = device.createComputePipeline({
+      label: 'Compute function points pipeline',
+      layout: device.createPipelineLayout({
+        bindGroupLayouts: [root.unwrap(computeLayout)],
+      }),
+      compute: {
+        module: computeShaderModule,
+      },
+    });
+
+    compilePipelines.push(computePipeline);
   }
-  return compileModules;
+  return compilePipelines;
 }
 
-async function tryCompileComputeModule(
+async function tryRecreateComputePipeline(
   functionCode: string,
-): Promise<GPUShaderModule> {
+): Promise<GPUComputePipeline> {
   const codeToCompile = functionCode === '' ? '0' : functionCode;
 
   const computeShaderCode = createComputeShaderCode(codeToCompile);
@@ -289,12 +300,21 @@ async function tryCompileComputeModule(
     code: computeShaderCode,
   });
   const error = await device.popErrorScope();
-
   if (error) {
     throw new Error(`Function f(x) = '${codeToCompile}' is invalid.`);
   }
 
-  return computeShaderModule;
+  const computePipeline = device.createComputePipeline({
+    label: 'Compute function points pipeline',
+    layout: device.createPipelineLayout({
+      bindGroupLayouts: [root.unwrap(computeLayout)],
+    }),
+    compute: {
+      module: computeShaderModule,
+    },
+  });
+
+  return computePipeline;
 }
 
 function compileBackgroundRenderModule() {
@@ -410,7 +430,7 @@ function createLineVerticesBuffers() {
 
 function createColorBuffers() {
   const Scheme = d.vec4f;
-  const colorBuffers: ColorBuffer[] = [];
+  const colorBuffers: DrawColorBuffer[] = [];
   for (const functionData of initialFunctions) {
     const buffer = root
       .createBuffer(Scheme, functionData.color)
@@ -480,7 +500,7 @@ export const controls = {
     initial: initialFunctions[0].code,
     onTextChange: async (value: string) => {
       try {
-        functionComputeModules[0] = await tryCompileComputeModule(value);
+        computePipelines[0] = await tryRecreateComputePipeline(value);
       } catch (e) {
         console.log(e);
       }
@@ -490,7 +510,7 @@ export const controls = {
     initial: initialFunctions[1].code,
     onTextChange: async (value: string) => {
       try {
-        functionComputeModules[1] = await tryCompileComputeModule(value);
+        computePipelines[0] = await tryRecreateComputePipeline(value);
       } catch (e) {
         console.log(e);
       }
@@ -500,7 +520,7 @@ export const controls = {
     initial: initialFunctions[2].code,
     onTextChange: async (value: string) => {
       try {
-        functionComputeModules[2] = await tryCompileComputeModule(value);
+        computePipelines[0] = await tryRecreateComputePipeline(value);
       } catch (e) {
         console.log(e);
       }
