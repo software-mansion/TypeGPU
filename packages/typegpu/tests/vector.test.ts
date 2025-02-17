@@ -395,3 +395,11 @@ describe('vec2h', () => {
     expect(vec).toEqual(d.vec2h(3, 4));
   });
 });
+
+describe('vector instances', () => {
+  it('can be spread', () => {
+    const red = d.vec3f(0.9, 0.2, 0.1);
+    const result = d.vec4f(...red.t, 1);
+    expect(result).toEqual(d.vec4f(0.9, 0.2, 0.1, 1));
+  });
+});
