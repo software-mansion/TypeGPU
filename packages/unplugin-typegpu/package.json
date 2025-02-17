@@ -19,7 +19,13 @@
   "exports": {
     ".": "./src/index.ts",
     "./rollup": "./src/rollup.ts",
-    "./babel": "./src/babel.ts"
+    "./babel": "./src/babel.ts",
+    "./esbuild": "./src/esbuild.ts",
+    "./farm": "./src/farm.ts",
+    "./rolldown": "./src/rolldown.ts",
+    "./rspack": "./src/rspack.ts",
+    "./vite": "./src/vite.ts",
+    "./webpack": "./src/webpack.ts"
   },
   "publishConfig": {
     "directory": "dist",
