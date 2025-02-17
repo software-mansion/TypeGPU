@@ -422,4 +422,23 @@ describe('v3f', () => {
     `),
     );
   });
+
+  it('can be spread in TGSL (2)', () => {
+    const main = tgpu['~unstable']
+      .fn([], d.vec4f)
+      .does(() => {
+        const red = d.vec3f(0.9, 0.2, 0.1);
+        return d.vec4f(...red.t, 1);
+      })
+      .$name('main');
+
+    expect(parseResolved({ main })).toEqual(
+      parse(`
+      fn main() -> vec4f {
+        var red = vec3f(0.9, 0.2, 0.1);
+        return vec4f(red, 1);
+      }
+    `),
+    );
+  });
 });
