@@ -123,17 +123,7 @@ const renderBackgroundLayout = tgpu.bindGroupLayout({
   properties: { uniform: PropertiesSchema },
 });
 
-const renderBackgroundCode = /* wgsl */ `
-struct Properties {
-  transformation: mat4x4f,
-  inverseTransformation: mat4x4f,
-  interpolationPoints: u32,
-  lineWidth: f32,
-  dashedLine: u32,
-};
-
-@group(0) @binding(0) var<uniform> properties: Properties;
-
+const rawRenderBackgroundCode = /* wgsl */ `
 @vertex fn vs(
   @builtin(vertex_index) vertexIndex : u32,
   @builtin(instance_index) instanceIndex : u32,
@@ -160,6 +150,13 @@ struct Properties {
   return vec4f(0.9, 0.9, 0.9, 1.0);
 }
 `;
+
+const renderBackgroundCode = tgpu.resolve({
+  template: rawRenderBackgroundCode,
+  externals: {
+    ...renderBackgroundLayout.bound,
+  },
+});
 
 const renderBackgroundModule = device.createShaderModule({
   label: 'Render module',
@@ -191,19 +188,7 @@ const renderLayout = tgpu.bindGroupLayout({
   color: { uniform: d.vec4f },
 });
 
-const renderCode = /* wgsl */ `
-struct Properties {
-  transformation: mat4x4f,
-  inverseTransformation: mat4x4f,
-  interpolationPoints: u32,
-  lineWidth: f32,
-  dashedLine: u32,
-};
-
-@group(0) @binding(0) var<storage, read> lineVertices: array<vec2f>;
-@group(0) @binding(1) var<uniform> properties: Properties;
-@group(0) @binding(2) var<uniform> color: vec4f;
-
+const rawRenderCode = /* wgsl */ `
 fn othronormalForLine(p1: vec2f, p2: vec2f) -> vec2f {
   let line = p2 - p1;
   let ortho = vec2f(-line.y, line.x);
@@ -237,6 +222,13 @@ fn orthonormalForVertex(index: u32) -> vec2f {
   return color;
 }
 `;
+
+const renderCode = tgpu.resolve({
+  template: rawRenderCode,
+  externals: {
+    ...renderLayout.bound,
+  },
+});
 
 const renderModule = device.createShaderModule({
   label: 'Render module',
@@ -552,4 +544,3 @@ export function onCleanup() {
 }
 
 // #endregion
-// 561
