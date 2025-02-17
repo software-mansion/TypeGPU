@@ -290,8 +290,8 @@ const Transpilers: Partial<{
         prop.key.type === 'Identifier'
           ? (transpile(ctx, prop.key) as string)
           : String(prop.key.value);
-      const value = transpile(ctx, prop.value) as smol.Expression;
       ctx.ignoreExternalDepth--;
+      const value = transpile(ctx, prop.value) as smol.Expression;
 
       properties[key] = value;
     }
