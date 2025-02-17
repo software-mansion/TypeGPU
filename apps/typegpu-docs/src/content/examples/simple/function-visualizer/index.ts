@@ -39,7 +39,6 @@ const Properties = d.struct({
   inverseTransformation: d.mat4x4f,
   interpolationPoints: d.u32,
   lineWidth: d.f32,
-  dashedLine: d.u32,
 });
 
 const properties: d.Infer<typeof Properties> = {
@@ -47,7 +46,6 @@ const properties: d.Infer<typeof Properties> = {
   inverseTransformation: mat4.identity(d.mat4x4f()),
   interpolationPoints: 256,
   lineWidth: 0.01,
-  dashedLine: 0,
 };
 
 // #region Buffers
