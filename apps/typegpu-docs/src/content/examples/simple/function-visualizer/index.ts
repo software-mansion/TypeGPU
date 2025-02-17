@@ -43,8 +43,8 @@ const PropertiesSchema = d.struct({
 });
 
 const properties: d.Infer<typeof PropertiesSchema> = {
-  transformation: mat4.identity(),
-  inverseTransformation: mat4.identity(),
+  transformation: mat4.identity(d.mat4x4f()),
+  inverseTransformation: mat4.identity(d.mat4x4f()),
   interpolationPoints: 256,
   lineWidthBuffer: 0.01,
   dashedLine: 0,
@@ -67,12 +67,61 @@ const drawColorBuffers: Array<DrawColorBuffer> = createColorBuffers();
 
 const computeLayout = tgpu.bindGroupLayout({
   lineVertices: {
-    storage: d.arrayOf(d.vec2f, properties.interpolationPoints),
+    storage: (n: number) => d.arrayOf(d.vec2f, n),
     access: 'mutable',
   },
   properties: { uniform: PropertiesSchema },
 });
-const computePipelines: Array<GPUComputePipeline> = createComputePipelines();
+
+function createComputeShaderCode(functionCode: string) {
+  return /* wgsl */ `
+  fn interpolatedFunction(x: f32) -> f32 {
+    return ${functionCode};
+  }
+  
+  struct Properties {
+    transformation: mat4x4f,
+    invertedTransformation: mat4x4f,
+    interpolationPoints: u32,
+    lineWidthBuffer: f32,
+    dashedLine: u32,
+  };
+  
+  @group(0) @binding(0) var<storage, read_write> lineVertices: array<vec2f>;
+  @group(0) @binding(1) var<uniform> properties: Properties;
+  
+  @compute @workgroup_size(1) fn computePoints(@builtin(global_invocation_id) id: vec3u) {
+    let start = (properties.transformation * vec4f(-1, 0, 0, 1)).x;
+    let end = (properties.transformation * vec4f(1, 0, 0, 1)).x;
+  
+    let pointX = (start + (end-start)/(f32(properties.interpolationPoints)-1.0) * f32(id.x));
+    let pointY = interpolatedFunction(pointX);
+    let result = properties.invertedTransformation * vec4f(pointX, pointY, 0, 1);
+    lineVertices[id.x] = result.xy;
+  }
+  `;
+}
+
+const computePipelines: Array<GPUComputePipeline> = [];
+for (const functionData of initialFunctions) {
+  const computeShaderCode = createComputeShaderCode(functionData.code);
+  const computeShaderModule = device.createShaderModule({
+    label: `Compute function points shader module for f(x) = ${functionData.code}`,
+    code: computeShaderCode,
+  });
+
+  const computePipeline = device.createComputePipeline({
+    label: 'Compute function points pipeline',
+    layout: device.createPipelineLayout({
+      bindGroupLayouts: [root.unwrap(computeLayout)],
+    }),
+    compute: {
+      module: computeShaderModule,
+    },
+  });
+
+  computePipelines.push(computePipeline);
+}
 
 // #region Render background shader
 
@@ -142,6 +191,81 @@ const renderBackgroundPipeline = device.createRenderPipeline({
 
 // #region Render shader
 
+const renderLayout = tgpu.bindGroupLayout({
+  lineVertices: { storage: (n: number) => d.arrayOf(d.vec2f, n) },
+  properties: { uniform: PropertiesSchema },
+  color: { uniform: d.vec4f },
+});
+
+const renderCode = /* wgsl */ `
+struct Properties {
+  transformation: mat4x4f,
+  invertedTransformation: mat4x4f,
+  interpolationPoints: u32,
+  lineWidth: f32,
+  dashedLine: u32,
+};
+
+@group(0) @binding(0) var<storage, read> lineVertices: array<vec2f>;
+@group(0) @binding(1) var<uniform> properties: Properties;
+@group(0) @binding(2) var<uniform> color: vec4f;
+
+fn othronormalForLine(p1: vec2f, p2: vec2f) -> vec2f {
+  let line = p2 - p1;
+  let ortho = vec2f(-line.y, line.x);
+  return normalize(ortho);
+}
+
+fn orthonormalForVertex(index: u32) -> vec2f {
+  if (index == 0 || index == properties.interpolationPoints-1) {
+    return vec2f(0.0, 1.0);
+  }
+  let previous = lineVertices[index-1];
+  let current = lineVertices[index];
+  let next = lineVertices[index+1];
+
+  let n1 = othronormalForLine(previous, current);
+  let n2 = othronormalForLine(current, next);
+
+  let avg = (n1+n2)/2.0;
+
+  return normalize(avg);
+}
+
+@vertex fn vs(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4f {
+  let currentVertex = vertexIndex/2;
+  let orthonormal = orthonormalForVertex(currentVertex);
+  let offset = orthonormal * properties.lineWidth * select(-1.0, 1.0, vertexIndex%2==0);
+  return vec4f(lineVertices[currentVertex] + offset, 0.0, 1.0);
+}
+
+@fragment fn fs() -> @location(0) vec4f {
+  return color;
+}
+`;
+
+const renderModule = device.createShaderModule({
+  label: 'Render module',
+  code: renderCode,
+});
+
+const renderPipeline = device.createRenderPipeline({
+  label: 'Render pipeline',
+  layout: device.createPipelineLayout({
+    bindGroupLayouts: [root.unwrap(renderLayout)],
+  }),
+  vertex: {
+    module: renderModule,
+  },
+  fragment: {
+    module: renderModule,
+    targets: [{ format: presentationFormat }],
+  },
+  primitive: {
+    topology: 'triangle-strip',
+  },
+});
+
 // #region Draw
 
 let destroyed = false;
@@ -161,8 +285,6 @@ function draw() {
   requestAnimationFrame(draw);
 }
 requestAnimationFrame(draw);
-
-// #region Function definitions
 
 function runComputePass(functionNumber: number) {
   const computePipeline = computePipelines[functionNumber];
@@ -221,22 +343,6 @@ function runRenderBackgroundPass() {
   device.queue.submit([commandBuffer]);
 }
 
-const drawModule = compileRenderModule();
-const renderPipeline = device.createRenderPipeline({
-  label: 'Render pipeline',
-  layout: 'auto',
-  vertex: {
-    module: drawModule,
-  },
-  fragment: {
-    module: drawModule,
-    targets: [{ format: presentationFormat }],
-  },
-  primitive: {
-    topology: 'triangle-strip',
-  },
-});
-
 function runRenderPass() {
   const renderPassDescriptor = {
     label: 'Render pass',
@@ -259,20 +365,13 @@ function runRenderPass() {
   const pass = encoder.beginRenderPass(renderPassDescriptor);
 
   initialFunctions.forEach((_, i) => {
-    const renderBindGroup = device.createBindGroup({
-      label: 'Render bindGroup',
-      layout: renderPipeline.getBindGroupLayout(0),
-      entries: [
-        {
-          binding: 0,
-          resource: { buffer: root.unwrap(lineVerticesBuffers[i]) },
-        },
-        { binding: 1, resource: { buffer: root.unwrap(propertiesBuffer) } },
-        { binding: 2, resource: { buffer: root.unwrap(drawColorBuffers[i]) } },
-      ],
+    const renderBindGroup = root.createBindGroup(renderLayout, {
+      lineVertices: lineVerticesBuffers[i],
+      properties: propertiesBuffer,
+      color: drawColorBuffers[i],
     });
     pass.setPipeline(renderPipeline);
-    pass.setBindGroup(0, renderBindGroup);
+    pass.setBindGroup(0, root.unwrap(renderBindGroup));
     // call our vertex shader 2 times per point drawn
     pass.draw(properties.interpolationPoints * 2);
   });
@@ -282,58 +381,7 @@ function runRenderPass() {
   device.queue.submit([commandBuffer]);
 }
 
-function createComputeShaderCode(functionCode: string) {
-  return /* wgsl */ `
-  fn interpolatedFunction(x: f32) -> f32 {
-    return ${functionCode};
-  }
-  
-  struct Properties {
-    transformation: mat4x4f,
-    invertedTransformation: mat4x4f,
-    interpolationPoints: u32,
-    lineWidthBuffer: f32,
-    dashedLine: u32,
-  };
-  
-  @group(0) @binding(0) var<storage, read_write> lineVertices: array<vec2f>;
-  @group(0) @binding(1) var<uniform> properties: Properties;
-  
-  @compute @workgroup_size(1) fn computePoints(@builtin(global_invocation_id) id: vec3u) {
-    let start = (properties.transformation * vec4f(-1, 0, 0, 1)).x;
-    let end = (properties.transformation * vec4f(1, 0, 0, 1)).x;
-  
-    let pointX = (start + (end-start)/(f32(properties.interpolationPoints)-1.0) * f32(id.x));
-    let pointY = interpolatedFunction(pointX);
-    let result = properties.invertedTransformation * vec4f(pointX, pointY, 0, 1);
-    lineVertices[id.x] = result.xy;
-  }
-  `;
-}
-
-function createComputePipelines() {
-  const compilePipelines = [];
-  for (const functionData of initialFunctions) {
-    const computeShaderCode = createComputeShaderCode(functionData.code);
-    const computeShaderModule = device.createShaderModule({
-      label: `Compute function points shader module for f(x) = ${functionData.code}`,
-      code: computeShaderCode,
-    });
-
-    const computePipeline = device.createComputePipeline({
-      label: 'Compute function points pipeline',
-      layout: device.createPipelineLayout({
-        bindGroupLayouts: [root.unwrap(computeLayout)],
-      }),
-      compute: {
-        module: computeShaderModule,
-      },
-    });
-
-    compilePipelines.push(computePipeline);
-  }
-  return compilePipelines;
-}
+// #region Helper definitions
 
 async function tryRecreateComputePipeline(
   functionCode: string,
@@ -363,61 +411,6 @@ async function tryRecreateComputePipeline(
   });
 
   return computePipeline;
-}
-
-function compileRenderModule() {
-  const vertexFragmentShaderCode = /* wgsl */ `
-struct Properties {
-  transformation: mat4x4f,
-  invertedTransformation: mat4x4f,
-  interpolationPoints: u32,
-  lineWidth: f32,
-  dashedLine: u32,
-};
-
-@group(0) @binding(0) var<storage, read> lineVertices: array<vec2f>;
-@group(0) @binding(1) var<uniform> properties: Properties;
-@group(0) @binding(2) var<uniform> color: vec4f;
-
-fn othronormalForLine(p1: vec2f, p2: vec2f) -> vec2f {
-  let line = p2 - p1;
-  let ortho = vec2f(-line.y, line.x);
-  return normalize(ortho);
-}
-
-fn orthonormalForVertex(index: u32) -> vec2f {
-  if (index == 0 || index == properties.interpolationPoints-1) {
-    return vec2f(0.0, 1.0);
-  }
-  let previous = lineVertices[index-1];
-  let current = lineVertices[index];
-  let next = lineVertices[index+1];
-
-  let n1 = othronormalForLine(previous, current);
-  let n2 = othronormalForLine(current, next);
-
-  let avg = (n1+n2)/2.0;
-
-  return normalize(avg);
-}
-
-@vertex fn vs(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4f {
-  let currentVertex = vertexIndex/2;
-  let orthonormal = orthonormalForVertex(currentVertex);
-  let offset = orthonormal * properties.lineWidth * select(-1.0, 1.0, vertexIndex%2==0);
-  return vec4f(lineVertices[currentVertex] + offset, 0.0, 1.0);
-}
-
-@fragment fn fs() -> @location(0) vec4f {
-  return color;
-}
-  `;
-  const vertexFragmentShaderModule = device.createShaderModule({
-    label: 'Render module',
-    code: vertexFragmentShaderCode,
-  });
-
-  return vertexFragmentShaderModule;
 }
 
 function createLineVerticesBuffers() {
