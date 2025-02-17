@@ -5,6 +5,7 @@ import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import tailwind from '@astrojs/tailwind';
 import { defineConfig } from 'astro/config';
+import ecTwoSlash from 'expressive-code-twoslash';
 import starlightBlog from 'starlight-blog';
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import typegpu from 'unplugin-typegpu/rollup';
@@ -39,6 +40,7 @@ function toRawPlugin() {
             .replace(/\u2029/g, '\\u2029')};`,
         };
       }
+      return undefined;
     },
   };
 }
@@ -194,6 +196,9 @@ export default defineConfig({
           ]),
         },
       ]),
+      expressiveCode: {
+        plugins: [ecTwoSlash()],
+      },
     }),
     tailwind({
       applyBaseStyles: false,
