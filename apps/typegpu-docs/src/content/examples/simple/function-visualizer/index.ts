@@ -38,7 +38,7 @@ const PropertiesSchema = d.struct({
   transformation: d.mat4x4f,
   inverseTransformation: d.mat4x4f,
   interpolationPoints: d.u32,
-  lineWidthBuffer: d.f32,
+  lineWidth: d.f32,
   dashedLine: d.u32,
 });
 
@@ -46,7 +46,7 @@ const properties: d.Infer<typeof PropertiesSchema> = {
   transformation: mat4.identity(d.mat4x4f()),
   inverseTransformation: mat4.identity(d.mat4x4f()),
   interpolationPoints: 256,
-  lineWidthBuffer: 0.01,
+  lineWidth: 0.01,
   dashedLine: 0,
 };
 
@@ -74,32 +74,26 @@ const computeLayout = tgpu.bindGroupLayout({
 });
 
 function createComputeShaderCode(functionCode: string) {
-  return /* wgsl */ `
-  fn interpolatedFunction(x: f32) -> f32 {
-    return ${functionCode};
-  }
-  
-  struct Properties {
-    transformation: mat4x4f,
-    invertedTransformation: mat4x4f,
-    interpolationPoints: u32,
-    lineWidthBuffer: f32,
-    dashedLine: u32,
-  };
-  
-  @group(0) @binding(0) var<storage, read_write> lineVertices: array<vec2f>;
-  @group(0) @binding(1) var<uniform> properties: Properties;
-  
-  @compute @workgroup_size(1) fn computePoints(@builtin(global_invocation_id) id: vec3u) {
-    let start = (properties.transformation * vec4f(-1, 0, 0, 1)).x;
-    let end = (properties.transformation * vec4f(1, 0, 0, 1)).x;
-  
-    let pointX = (start + (end-start)/(f32(properties.interpolationPoints)-1.0) * f32(id.x));
-    let pointY = interpolatedFunction(pointX);
-    let result = properties.invertedTransformation * vec4f(pointX, pointY, 0, 1);
-    lineVertices[id.x] = result.xy;
-  }
+  const rawComputeCode = /* wgsl */ `
+fn interpolatedFunction(x: f32) -> f32 {
+  return ${functionCode};
+}
+@compute @workgroup_size(1) fn computePoints(@builtin(global_invocation_id) id: vec3u) {
+  let start = (properties.transformation * vec4f(-1, 0, 0, 1)).x;
+  let end = (properties.transformation * vec4f(1, 0, 0, 1)).x;
+
+  let pointX = (start + (end-start)/(f32(properties.interpolationPoints)-1.0) * f32(id.x));
+  let pointY = interpolatedFunction(pointX);
+  let result = properties.inverseTransformation * vec4f(pointX, pointY, 0, 1);
+  lineVertices[id.x] = result.xy;
+}
   `;
+  return tgpu.resolve({
+    template: rawComputeCode,
+    externals: {
+      ...computeLayout.bound,
+    },
+  });
 }
 
 const computePipelines: Array<GPUComputePipeline> = [];
@@ -132,9 +126,9 @@ const renderBackgroundLayout = tgpu.bindGroupLayout({
 const renderBackgroundCode = /* wgsl */ `
 struct Properties {
   transformation: mat4x4f,
-  invertedTransformation: mat4x4f,
+  inverseTransformation: mat4x4f,
   interpolationPoints: u32,
-  lineWidthBuffer: f32,
+  lineWidth: f32,
   dashedLine: u32,
 };
 
@@ -154,7 +148,7 @@ struct Properties {
     vec2f(0.0, rightTop.y),
   );
 
-  let currentPoint = properties.invertedTransformation * vec4f(transformedPoints[2 * instanceIndex + vertexIndex/2].xy, 0, 1);
+  let currentPoint = properties.inverseTransformation * vec4f(transformedPoints[2 * instanceIndex + vertexIndex/2].xy, 0, 1);
   return vec4f(
     currentPoint.x + f32(instanceIndex) * select(-1.0, 1.0, vertexIndex%2 == 0) * 0.005,
     currentPoint.y + f32(1-instanceIndex) * select(-1.0, 1.0, vertexIndex%2 == 0) * 0.005,
@@ -200,7 +194,7 @@ const renderLayout = tgpu.bindGroupLayout({
 const renderCode = /* wgsl */ `
 struct Properties {
   transformation: mat4x4f,
-  invertedTransformation: mat4x4f,
+  inverseTransformation: mat4x4f,
   interpolationPoints: u32,
   lineWidth: f32,
   dashedLine: u32,
@@ -528,7 +522,7 @@ export const controls = {
     max: 0.025,
     step: 0.001,
     onSliderChange: (value: number) => {
-      properties.lineWidthBuffer = value;
+      properties.lineWidth = value;
     },
   },
   'Interpolation points count': {
@@ -558,3 +552,4 @@ export function onCleanup() {
 }
 
 // #endregion
+// 561
