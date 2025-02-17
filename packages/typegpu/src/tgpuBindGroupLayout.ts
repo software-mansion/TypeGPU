@@ -625,7 +625,7 @@ export class TgpuBindGroupImpl<
 
             if (isBuffer(value)) {
               if (!isUsableAsStorage(value)) {
-                throw new NotUniformError(value);
+                throw new NotStorageError(value);
               }
               resource = { buffer: unwrapper.unwrap(value) };
             } else {
