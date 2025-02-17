@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { mat4 } from 'wgpu-matrix';
 
-// #region Globals and init
+// Globals and init
 
 const root = await tgpu.init();
 const device = root.device;
@@ -48,7 +48,7 @@ const properties: d.Infer<typeof Properties> = {
   lineWidth: 0.01,
 };
 
-// #region Buffers
+// Buffers
 
 const propertiesBuffer = root
   .createBuffer(Properties, properties)
@@ -67,7 +67,7 @@ const drawColorBuffers = initialFunctions.map((data) =>
   root.createBuffer(d.vec4f, data.color).$usage('uniform'),
 );
 
-// #region Compute shader
+// Compute shader
 
 const computeLayout = tgpu.bindGroupLayout({
   lineVertices: {
@@ -120,7 +120,7 @@ const computePipelines: Array<GPUComputePipeline> = initialFunctions.map(
   },
 );
 
-// #region Render background shader
+// Render background shader
 
 const renderBackgroundLayout = tgpu.bindGroupLayout({
   properties: { uniform: Properties },
@@ -195,7 +195,7 @@ const renderBackgroundPassDescriptor = {
   ],
 };
 
-// #region Render shader
+// Render shader
 
 const renderLayout = tgpu.bindGroupLayout({
   lineVertices: { storage: (n: number) => d.arrayOf(d.vec2f, n) },
@@ -279,7 +279,7 @@ const renderPassDescriptor = {
   ],
 };
 
-// #region Draw
+// Draw
 
 let destroyed = false;
 function draw() {
@@ -368,7 +368,7 @@ function runRenderPass() {
   device.queue.submit([encoder.finish()]);
 }
 
-// #region Helper definitions
+// Helper definitions
 
 function fromHex(hex: string) {
   const r = Number.parseInt(hex.slice(1, 3), 16);
@@ -413,7 +413,7 @@ function queuePropertiesBufferUpdate() {
   propertiesBuffer.write(properties);
 }
 
-// #region Canvas controls
+// Canvas controls
 
 let lastPos: number[] | null = null;
 
