@@ -46,7 +46,7 @@ function resolveRes(ctx: GenerationCtx, res: Resource): string {
   return String(res.value);
 }
 
-function assertExhaustive(value: unknown): never {
+function assertExhaustive(value: never): never {
   throw new Error(
     `'${JSON.stringify(value)}' was not handled by the WGSL generator.`,
   );
@@ -237,6 +237,21 @@ function generateExpression(
       value: generateEntries(Object.values(obj)),
       dataType: UnknownData,
     };
+  }
+
+  if ('s' in expression) {
+    throw new Error('Cannot use string literals in TGSL.');
+  }
+
+  if ('d' in expression) {
+    // Treating the spread element like a no-op in order to support
+    // vector spreading. A more general solution would be to strip
+    // the spread element only if the expression's data-type is a
+    // vector.
+
+    // TODO: Implement a more general solution to spread element stripping
+    console.log(generateExpression(ctx, expression.d));
+    return generateExpression(ctx, expression.d);
   }
 
   assertExhaustive(expression);

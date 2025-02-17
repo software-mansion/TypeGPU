@@ -1,8 +1,11 @@
+import { parse } from 'tgpu-wgsl-parser';
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
+import tgpu from '../src';
 import * as d from '../src/data';
 import { readData, writeData } from '../src/data/dataIO';
 import { sizeOf } from '../src/data/sizeOf';
+import { parseResolved } from './utils/parseResolved';
 
 describe('vec2f', () => {
   it('should span 8 bytes', () => {
@@ -396,10 +399,27 @@ describe('vec2h', () => {
   });
 });
 
-describe('vector instances', () => {
+describe('v3f', () => {
   it('can be spread', () => {
     const red = d.vec3f(0.9, 0.2, 0.1);
     const result = d.vec4f(...red.t, 1);
     expect(result).toEqual(d.vec4f(0.9, 0.2, 0.1, 1));
+  });
+
+  it('can be spread in TGSL', () => {
+    const red = d.vec3f(0.9, 0.2, 0.1);
+
+    const main = tgpu['~unstable']
+      .fn([], d.vec4f)
+      .does(() => d.vec4f(...red.t, 1))
+      .$name('main');
+
+    expect(parseResolved({ main })).toEqual(
+      parse(`
+      fn main() -> vec4f {
+        return vec4f(vec3f(0.9, 0.2, 0.1), 1);
+      }
+    `),
+    );
   });
 });

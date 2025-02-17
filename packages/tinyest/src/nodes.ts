@@ -113,6 +113,16 @@ export type ObjectExpression = {
   o: Record<string, Expression>;
 };
 
+/**
+ * @example
+ * ```js
+ * ...expression
+ * ```
+ */
+export type SpreadElement = {
+  d: Expression;
+};
+
 export type MemberAccess = {
   a: [object: Expression, member: string];
 };
@@ -145,6 +155,7 @@ export type Expression =
   | LogicalExpression
   | UnaryExpression
   | ObjectExpression
+  | SpreadElement
   | MemberAccess
   | IndexAccess
   | Call
