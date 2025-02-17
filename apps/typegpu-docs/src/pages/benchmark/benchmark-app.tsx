@@ -3,6 +3,7 @@ import { atom } from 'jotai/vanilla';
 import { CirclePlus } from 'lucide-react';
 import { Suspense, useMemo } from 'react';
 import { Bench } from 'tinybench';
+import type { TgpuBuffer, TgpuRoot } from 'typegpu';
 import { importTypeGPU, importTypeGPUData } from './modules.js';
 import { ParameterSetRow } from './parameter-set-row.js';
 import {
@@ -25,23 +26,41 @@ async function runBench(params: BenchParameterSet): Promise<BenchResults> {
   const bench = new Bench({
     name: stringifyLocator('typegpu', params.typegpu),
     time: 1000,
+    setup: async () => {
+      root = await tgpu.init();
+
+      buffer = root.createBuffer(BoidArray);
+      vectorlessBuffer = root.createBuffer(VectorlessBoidArray);
+    },
+    teardown: () => {
+      root.destroy();
+    },
   });
 
-  const amountOfBoids = 10000;
+  const amountOfBoids = 5096;
+
+  const Boid = d.struct({
+    pos: d.vec3f,
+    vel: d.vec3f,
+  });
+  const VectorlessBoid = d.struct({
+    posX: d.f32,
+    posY: d.f32,
+    posZ: d.f32,
+    velX: d.f32,
+    velY: d.f32,
+    velZ: d.f32,
+  });
+
+  const BoidArray = d.arrayOf(Boid, amountOfBoids);
+  const VectorlessBoidArray = d.arrayOf(VectorlessBoid, amountOfBoids);
+
+  let root: TgpuRoot;
+  let buffer: TgpuBuffer<typeof BoidArray>;
+  let vectorlessBuffer: TgpuBuffer<typeof VectorlessBoidArray>;
 
   bench
     .add('mass boid transfer', async () => {
-      const root = await tgpu.init();
-
-      const Boid = d.struct({
-        pos: d.vec3f,
-        vel: d.vec3f,
-      });
-
-      const BoidArray = d.arrayOf(Boid, amountOfBoids);
-
-      const buffer = root.createBuffer(BoidArray);
-
       buffer.write(
         Array.from({ length: amountOfBoids }).map(() => ({
           pos: d.vec3f(1, 2, 3),
@@ -49,20 +68,23 @@ async function runBench(params: BenchParameterSet): Promise<BenchResults> {
         })),
       );
 
-      root.destroy();
+      await root.device.queue.onSubmittedWorkDone();
+    })
+    .add('mass boid transfer (vectorless)', async () => {
+      vectorlessBuffer.write(
+        Array.from({ length: amountOfBoids }).map(() => ({
+          posX: 1,
+          posY: 2,
+          posZ: 3,
+          velX: 4,
+          velY: 5,
+          velZ: 6,
+        })),
+      );
+
+      await root.device.queue.onSubmittedWorkDone();
     })
     .add('mass boid transfer (manual reference)', async () => {
-      const root = await tgpu.init();
-
-      const Boid = d.struct({
-        pos: d.vec3f,
-        vel: d.vec3f,
-      });
-
-      const BoidArray = d.arrayOf(Boid, amountOfBoids);
-
-      const buffer = root.createBuffer(BoidArray);
-
       const data = new ArrayBuffer(d.sizeOf(BoidArray));
       const fView = new Float32Array(data);
 
@@ -77,21 +99,9 @@ async function runBench(params: BenchParameterSet): Promise<BenchResults> {
       }
 
       root.device.queue.writeBuffer(root.unwrap(buffer), 0, data);
-
-      root.destroy();
+      await root.device.queue.onSubmittedWorkDone();
     })
     .add('mass boid transfer (partial write)', async () => {
-      const root = await tgpu.init();
-
-      const Boid = d.struct({
-        pos: d.vec3f,
-        vel: d.vec3f,
-      });
-
-      const BoidArray = d.arrayOf(Boid, amountOfBoids);
-
-      const buffer = root.createBuffer(BoidArray);
-
       const randomBoid = Math.floor(Math.random() * amountOfBoids);
 
       buffer.writePartial([
@@ -101,22 +111,11 @@ async function runBench(params: BenchParameterSet): Promise<BenchResults> {
         },
       ]);
 
-      root.destroy();
+      await root.device.queue.onSubmittedWorkDone();
     })
     .add(
       'mass boid transfer (partial write 20% of the buffer - not contiguous)',
       async () => {
-        const root = await tgpu.init();
-
-        const Boid = d.struct({
-          pos: d.vec3f,
-          vel: d.vec3f,
-        });
-
-        const BoidArray = d.arrayOf(Boid, amountOfBoids);
-
-        const buffer = root.createBuffer(BoidArray);
-
         const writes = Array.from({ length: amountOfBoids })
           .map((_, i) => i)
           .filter((i) => i % 5 === 0)
@@ -127,23 +126,12 @@ async function runBench(params: BenchParameterSet): Promise<BenchResults> {
 
         buffer.writePartial(writes);
 
-        root.destroy();
+        await root.device.queue.onSubmittedWorkDone();
       },
     )
     .add(
       'mass boid transfer (partial write 20% of the buffer, contiguous)',
       async () => {
-        const root = await tgpu.init();
-
-        const Boid = d.struct({
-          pos: d.vec3f,
-          vel: d.vec3f,
-        });
-
-        const BoidArray = d.arrayOf(Boid, amountOfBoids);
-
-        const buffer = root.createBuffer(BoidArray);
-
         const writes = Array.from({ length: amountOfBoids / 5 })
           .map((_, i) => i)
           .map((i) => ({
@@ -153,23 +141,12 @@ async function runBench(params: BenchParameterSet): Promise<BenchResults> {
 
         buffer.writePartial(writes);
 
-        root.destroy();
+        await root.device.queue.onSubmittedWorkDone();
       },
     )
     .add(
       'mass boid transfer (partial write 100% of the buffer - contiguous (duh))',
       async () => {
-        const root = await tgpu.init();
-
-        const Boid = d.struct({
-          pos: d.vec3f,
-          vel: d.vec3f,
-        });
-
-        const BoidArray = d.arrayOf(Boid, amountOfBoids);
-
-        const buffer = root.createBuffer(BoidArray);
-
         const writes = Array.from({ length: amountOfBoids })
           .map((_, i) => i)
           .map((i) => ({
@@ -179,7 +156,7 @@ async function runBench(params: BenchParameterSet): Promise<BenchResults> {
 
         buffer.writePartial(writes);
 
-        root.destroy();
+        await root.device.queue.onSubmittedWorkDone();
       },
     );
 

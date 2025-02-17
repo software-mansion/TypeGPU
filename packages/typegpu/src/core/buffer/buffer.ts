@@ -1,5 +1,9 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { isWgslData } from '../../data';
+import {
+  EVAL_ALLOWED_IN_ENV,
+  getCompiledWriterForSchema,
+} from '../../data/compiledIO';
 import { readData, writeData } from '../../data/dataIO';
 import type { AnyData } from '../../data/dataTypes';
 import { getWriteInstructions } from '../../data/partialIO';
@@ -131,6 +135,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
   private _buffer: GPUBuffer | null = null;
   private _ownBuffer: boolean;
   private _destroyed = false;
+  private _hostBuffer: ArrayBuffer | undefined;
 
   private _label: string | undefined;
   readonly initial: Infer<TData> | undefined;
@@ -241,18 +246,30 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
 
     if (gpuBuffer.mapState === 'mapped') {
       const mapped = gpuBuffer.getMappedRange();
+      if (EVAL_ALLOWED_IN_ENV) {
+        const writer = getCompiledWriterForSchema(this.dataType);
+        writer(new DataView(mapped), 0, data);
+        return;
+      }
       writeData(new BufferWriter(mapped), this.dataType, data);
       return;
     }
 
     const size = sizeOf(this.dataType);
+    if (!this._hostBuffer) {
+      this._hostBuffer = new ArrayBuffer(size);
+    }
 
     // Flushing any commands yet to be encoded.
     this._group.flush();
 
-    const hostBuffer = new ArrayBuffer(size);
-    writeData(new BufferWriter(hostBuffer), this.dataType, data);
-    device.queue.writeBuffer(gpuBuffer, 0, hostBuffer, 0, size);
+    if (EVAL_ALLOWED_IN_ENV) {
+      const writer = getCompiledWriterForSchema(this.dataType);
+      writer(new DataView(this._hostBuffer), 0, data);
+    } else {
+      writeData(new BufferWriter(this._hostBuffer), this.dataType, data);
+    }
+    device.queue.writeBuffer(gpuBuffer, 0, this._hostBuffer, 0, size);
   }
 
   public writePartial(data: InferPartial<TData>): void {
