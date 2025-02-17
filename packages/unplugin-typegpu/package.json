@@ -43,6 +43,42 @@
         "module": "./dist/babel.js",
         "import": "./dist/babel.js",
         "default": "./dist/babel.cjs"
+      },
+      "./esbuild": {
+        "types": "./dist/esbuild.d.ts",
+        "module": "./dist/esbuild.js",
+        "import": "./dist/esbuild.js",
+        "default": "./dist/esbuild.cjs"
+      },
+      "./farm": {
+        "types": "./dist/farm.d.ts",
+        "module": "./dist/farm.js",
+        "import": "./dist/farm.js",
+        "default": "./dist/farm.cjs"
+      },
+      "./rolldown": {
+        "types": "./dist/rolldown.d.ts",
+        "module": "./dist/rolldown.js",
+        "import": "./dist/rolldown.js",
+        "default": "./dist/rolldown.cjs"
+      },
+      "./rspack": {
+        "types": "./dist/rspack.d.ts",
+        "module": "./dist/rspack.js",
+        "import": "./dist/rspack.js",
+        "default": "./dist/rspack.cjs"
+      },
+      "./vite": {
+        "types": "./dist/vite.d.ts",
+        "module": "./dist/vite.js",
+        "import": "./dist/vite.js",
+        "default": "./dist/vite.cjs"
+      },
+      "./webpack": {
+        "types": "./dist/webpack.d.ts",
+        "module": "./dist/webpack.js",
+        "import": "./dist/webpack.js",
+        "default": "./dist/webpack.cjs"
       }
     }
   },
