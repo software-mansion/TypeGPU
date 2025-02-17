@@ -16,18 +16,21 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const initialFunctions: Array<{ code: string; color: d.v4f }> = [
+const initialFunctions: Array<{ name: string; color: d.v4f; code: string }> = [
   {
-    code: 'x',
+    name: 'Red function',
     color: d.vec4f(1.0, 0.0, 0.0, 1.0),
+    code: 'x',
   },
   {
-    code: 'cos(x*5)/3-x',
+    name: 'Blue function',
     color: d.vec4f(0.0, 1.0, 0.0, 1.0),
+    code: 'cos(x*5)/3-x',
   },
   {
-    code: 'x*sin(log(abs(x)))',
+    name: 'Green function',
     color: d.vec4f(0.0, 0.0, 1.0, 1.0),
+    code: 'x*sin(log(abs(x)))',
   },
 ];
 
@@ -496,7 +499,7 @@ canvas.onwheel = (event) => {
 // #region Example controls and cleanup
 
 export const controls = {
-  'Red function': {
+  [initialFunctions[0].name]: {
     initial: initialFunctions[0].code,
     onTextChange: async (value: string) => {
       try {
@@ -506,21 +509,21 @@ export const controls = {
       }
     },
   },
-  'Green function': {
+  [initialFunctions[1].name]: {
     initial: initialFunctions[1].code,
     onTextChange: async (value: string) => {
       try {
-        computePipelines[0] = await tryRecreateComputePipeline(value);
+        computePipelines[1] = await tryRecreateComputePipeline(value);
       } catch (e) {
         console.log(e);
       }
     },
   },
-  'Blue function': {
+  [initialFunctions[2].name]: {
     initial: initialFunctions[2].code,
     onTextChange: async (value: string) => {
       try {
-        computePipelines[0] = await tryRecreateComputePipeline(value);
+        computePipelines[2] = await tryRecreateComputePipeline(value);
       } catch (e) {
         console.log(e);
       }
