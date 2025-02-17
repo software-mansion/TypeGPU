@@ -204,7 +204,7 @@ const renderLayout = tgpu.bindGroupLayout({
 });
 
 const rawRenderCode = /* wgsl */ `
-fn othronormalForLine(p1: vec2f, p2: vec2f) -> vec2f {
+fn orthonormalForLine(p1: vec2f, p2: vec2f) -> vec2f {
   let line = p2 - p1;
   let ortho = vec2f(-line.y, line.x);
   return normalize(ortho);
@@ -218,8 +218,8 @@ fn orthonormalForVertex(index: u32) -> vec2f {
   let current = lineVertices[index];
   let next = lineVertices[index+1];
 
-  let n1 = othronormalForLine(previous, current);
-  let n2 = othronormalForLine(current, next);
+  let n1 = orthonormalForLine(previous, current);
+  let n2 = orthonormalForLine(current, next);
 
   let avg = (n1+n2)/2.0;
 
