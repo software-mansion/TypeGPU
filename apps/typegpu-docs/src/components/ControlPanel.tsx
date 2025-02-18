@@ -1,8 +1,10 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
+import { useSetAtom } from 'jotai';
 import { useState } from 'react';
 import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
+import { runWithCatchAtom } from '../utils/examples/currentSnackbarAtom';
 import { examples } from '../utils/examples/exampleContent';
 import {
   type ExampleControlParam,
@@ -15,8 +17,6 @@ import { Select } from './design/Select';
 import { Slider } from './design/Slider';
 import { Toggle } from './design/Toggle';
 import { openInStackBlitz } from './stackblitz/openInStackBlitz';
-import { useSetAtom } from 'jotai';
-import { runWithCatchAtom } from '../utils/examples/currentSnackbarAtom';
 
 function ToggleRow({
   label,
@@ -115,7 +115,7 @@ function SelectRow({
 
 function ButtonRow({ label, onClick }: { label: string; onClick: () => void }) {
   const runWithCatch = useSetAtom(runWithCatchAtom);
-  
+
   return (
     <div className="grid h-10 col-span-2">
       <Button onClick={() => runWithCatch(() => onClick())}>{label}</Button>

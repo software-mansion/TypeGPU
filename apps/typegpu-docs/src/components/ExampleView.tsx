@@ -1,13 +1,13 @@
 import cs from 'classnames';
-import { useAtomValue, useSetAtom, useAtom } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { type RefObject, useEffect, useRef, useState } from 'react';
 import {
   codeEditorShownAtom,
   codeEditorShownMobileAtom,
 } from '../utils/examples/codeEditorShownAtom';
+import { currentSnackbarAtom } from '../utils/examples/currentSnackbarAtom';
 import { ExecutionCancelledError } from '../utils/examples/errors';
 import { exampleControlsAtom } from '../utils/examples/exampleControlAtom';
-import { currentSnackbarAtom } from '../utils/examples/currentSnackbarAtom';
 import { executeExample } from '../utils/examples/exampleRunner';
 import type { ExampleState } from '../utils/examples/exampleState';
 import type { Example } from '../utils/examples/types';
