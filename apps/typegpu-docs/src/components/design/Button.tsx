@@ -1,8 +1,5 @@
 import cs from 'classnames';
 import { type ReactNode, forwardRef } from 'react';
-import { useSetAtom } from 'jotai';
-import { runWithCatchAtom } from '../../utils/examples/currentSnackbarAtom';
-
 
 type Props = {
   accent?: boolean;
@@ -12,7 +9,6 @@ type Props = {
 
 export const Button = forwardRef<HTMLButtonElement, Props>((props, ref) => {
   const { onClick, accent, children } = props;
-  const runWithCatch = useSetAtom(runWithCatchAtom);
 
   return (
     <button
@@ -24,9 +20,7 @@ export const Button = forwardRef<HTMLButtonElement, Props>((props, ref) => {
       )}
       type="button"
       ref={ref}
-      onClick={() => {
-        runWithCatch(() => onClick?.());
-      }}
+      onClick={onClick}
     >
       {children}
     </button>
