@@ -426,7 +426,7 @@ canvas.onmouseup = (_) => {
 };
 
 canvas.onmousemove = (event) => {
-  if (lastPos == null) {
+  if (lastPos === null) {
     return;
   }
   const currentPos = [event.offsetX, event.offsetY];
@@ -466,7 +466,7 @@ canvas.onwheel = (event) => {
 export const controls = {
   [initialFunctions[0].name]: {
     initial: initialFunctions[0].code,
-    onTextChange: async (value: string) => {
+    async onTextChange(value: string) {
       try {
         computePipelines[0] = await tryRecreateComputePipeline(value);
       } catch (e) {
@@ -476,7 +476,7 @@ export const controls = {
   },
   [initialFunctions[1].name]: {
     initial: initialFunctions[1].code,
-    onTextChange: async (value: string) => {
+    async onTextChange(value: string) {
       try {
         computePipelines[1] = await tryRecreateComputePipeline(value);
       } catch (e) {
@@ -486,7 +486,7 @@ export const controls = {
   },
   [initialFunctions[2].name]: {
     initial: initialFunctions[2].code,
-    onTextChange: async (value: string) => {
+    async onTextChange(value: string) {
       try {
         computePipelines[2] = await tryRecreateComputePipeline(value);
       } catch (e) {
@@ -499,14 +499,14 @@ export const controls = {
     min: 0.0,
     max: 0.025,
     step: 0.001,
-    onSliderChange: (value: number) => {
+    onSliderChange(value: number) {
       properties.lineWidth = value;
     },
   },
   'interpolation points count': {
     initial: '256',
     options: [4, 16, 64, 256, 1024, 4096].map((x) => x.toString()),
-    onSelectChange: (value: string) => {
+    onSelectChange(value: string) {
       const num = Number.parseInt(value);
       properties.interpolationPoints = num;
 
@@ -518,7 +518,7 @@ export const controls = {
     },
   },
   Recenter: {
-    onButtonClick: async () => {
+    async onButtonClick() {
       properties.transformation = mat4.identity(d.mat4x4f());
     },
   },
