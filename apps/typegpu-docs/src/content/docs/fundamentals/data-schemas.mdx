@@ -15,7 +15,8 @@ Complex data types such as structs require particular byte alignment and padding
 
 Let's look at some examples of defining custom data types using the `typegpu/data` module. If you're familiar with [Zod](https://zod.dev/), then this style of schema definitions may already seem familiar.
 
-```ts
+```ts twoslash
+// @moduleResolution: bundler
 import * as d from 'typegpu/data';
 
 const Circle = d.struct({
@@ -23,11 +24,8 @@ const Circle = d.struct({
   radius: d.f32,
 });
 
-// type Circle = {
-//   centerPos: d.vec3i;
-//   radius: number;
-// }
 type Circle = d.Infer<typeof Circle>;
+//   ^?
 
 const redCircle: Circle = {
   centerPos: d.vec3i(2, 4, 0),
@@ -40,34 +38,55 @@ definition, which we can use to validate our data values. When reading from or w
 is inferred automatically, and it's enforced by TypeScript. Thanks to that, whenever we mistakenly set or assume a wrong value for an object,
 we get a type error, avoiding unnecessary debugging afterwards. That's a big improvement to the development process.
 
-```ts
-const redCircle: Circle = {
-  // Error: Property 'z' is missing in type 'vec2i' but required in type 'vec3i'.
+```ts twoslash
+// @moduleResolution: bundler
+// @errors: 2740 2322 2741 2339
+
+import * as d from 'typegpu/data';
+
+const Circle = d.struct({
+  centerPos: d.vec3i,
+  radius: d.f32,
+});
+
+type Circle = d.Infer<typeof Circle>;
+
+// ---cut---
+const redCircle1: Circle = {
   centerPos: d.vec2i(2, 4), 
   radius: 0.2,
 };
 
-const redCircle: Circle = {
+const redCircle2: Circle = {
   centerPos: d.vec3i(2, 4, 0), 
-  // Error: Type 'string' is not assignable to type 'number'.
   radius: "0.2",
 };
 
-// Error: Property 'radius' is missing in type '{ centerPos: vec3i; }' 
-// but required in type '{ centerPos: vec3i; radius: number; }'.
-const redCircle: Circle = {
+const redCircle3: Circle = {
   centerPos: d.vec3i(2, 4, 0), 
 };
 
-// Error: Property 'rad' does not exist on type '{ centerPos: vec3i; radius: number; }'.
-const diam = redCircle.rad * 2;
+const diam = redCircle1.rad * 2;
 ```
 
 Defined data structures automatically measure and hold information about their memory layout parameters, which is useful for writing to and reading data from the GPU.
 
-```ts
-Circle.size // 16
-Circle.byteAlignment // 16
+```ts twoslash
+// @moduleResolution: bundler
+
+import * as d from 'typegpu/data';
+import { sizeOf, alignmentOf } from 'typegpu/data';
+
+const Circle = d.struct({
+  centerPos: d.vec3i,
+  radius: d.f32,
+});
+
+type Circle = d.Infer<typeof Circle>;
+
+// ---cut---
+sizeOf(Circle) // 16
+alignmentOf(Circle) // 16
 ```
 
 TypeGPU data types are essential for the library's automated data marshalling capabilities.
