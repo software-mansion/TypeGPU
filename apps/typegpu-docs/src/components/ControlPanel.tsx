@@ -118,7 +118,7 @@ function ButtonRow({ label, onClick }: { label: string; onClick: () => void }) {
 
   return (
     <div className="grid h-10 col-span-2">
-      <Button onClick={() => runWithCatch(() => onClick())}>{label}</Button>
+      <Button onClick={() => runWithCatch(onClick)}>{label}</Button>
     </div>
   );
 }
