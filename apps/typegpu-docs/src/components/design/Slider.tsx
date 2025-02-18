@@ -1,4 +1,6 @@
 import * as RadixSlider from '@radix-ui/react-slider';
+import { useSetAtom } from 'jotai';
+import { runWithCatchAtom } from '../../utils/examples/currentSnackbarAtom';
 
 type Props = {
   min: number;
@@ -9,6 +11,8 @@ type Props = {
 };
 
 export function Slider({ min, max, step, value, onChange }: Props) {
+  const runWithCatch = useSetAtom(runWithCatchAtom);
+
   return (
     <RadixSlider.Root
       value={[value]}
@@ -16,7 +20,7 @@ export function Slider({ min, max, step, value, onChange }: Props) {
       max={max}
       step={step}
       onValueChange={(value) => {
-        onChange(value[0]);
+        runWithCatch(() => onChange(value[0]));
       }}
       className="bg-grayscale-20 h-10 rounded-[0.25rem] relative flex overflow-hidden"
     >

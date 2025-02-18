@@ -1,4 +1,6 @@
 import * as RadixSelect from '@radix-ui/react-select';
+import { useSetAtom } from 'jotai';
+import { runWithCatchAtom } from '../../utils/examples/currentSnackbarAtom';
 
 export function Select({
   value,
@@ -9,8 +11,12 @@ export function Select({
   options: string[];
   onChange: (value: string) => void;
 }) {
+  const runWithCatch = useSetAtom(runWithCatchAtom);
+  
   return (
-    <RadixSelect.Root value={value} onValueChange={onChange}>
+    <RadixSelect.Root value={value} onValueChange={(event) => {
+      runWithCatch(() => onChange(event));
+    }}>
       <RadixSelect.Trigger className="flex justify-between items-center w-full h-10 border border-grayscale-20 hover:border-grayscale-60 rounded-[0.25rem] px-3 text-sm">
         <RadixSelect.Value>{value}</RadixSelect.Value>
         <RadixSelect.Icon />
