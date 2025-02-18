@@ -41,12 +41,12 @@ const Properties = d.struct({
   lineWidth: d.f32,
 });
 
-const properties: d.Infer<typeof Properties> = {
+const properties = Properties({
   transformation: mat4.identity(d.mat4x4f()),
   inverseTransformation: mat4.identity(d.mat4x4f()),
   interpolationPoints: 256,
   lineWidth: 0.01,
-};
+});
 
 // Buffers
 
