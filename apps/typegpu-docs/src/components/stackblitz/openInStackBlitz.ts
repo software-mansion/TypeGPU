@@ -61,7 +61,7 @@ ${example.htmlCode}
     },
     "dependencies": {
       "@webgpu/types": "^0.1.54",
-      "typegpu": "^0.4.1",
+      "typegpu": "^0.4.2",
       "unplugin-typegpu": "^0.1.0-alpha.2"
     }
 }`,
