@@ -99,7 +99,7 @@ for (const controls of Object.values(example)) {
       if ('onSelectChange' in params) {
         const select = document.createElement('select');
         select.innerHTML = params.options
-          .map((option) => `<option value="\${option}">${option}</option>`)
+          .map((option) => `<option value="${option}">${option}</option>`)
           .join('');
         select.value = params.initial ?? params.options[0];
 
