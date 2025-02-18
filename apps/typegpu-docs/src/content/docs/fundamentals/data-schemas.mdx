@@ -15,7 +15,8 @@ Complex data types such as structs require particular byte alignment and padding
 
 Let's look at some examples of defining custom data types using the `typegpu/data` module. If you're familiar with [Zod](https://zod.dev/), then this style of schema definitions may already seem familiar.
 
-```ts
+```ts twoslash
+// @moduleResolution: bundler
 import * as d from 'typegpu/data';
 
 const Circle = d.struct({
@@ -23,11 +24,8 @@ const Circle = d.struct({
   radius: d.f32,
 });
 
-// type Circle = {
-//   centerPos: d.vec3i;
-//   radius: number;
-// }
 type Circle = d.Infer<typeof Circle>;
+//   ^?
 
 const redCircle: Circle = {
   centerPos: d.vec3i(2, 4, 0),
@@ -40,34 +38,55 @@ definition, which we can use to validate our data values. When reading from or w
 is inferred automatically, and it's enforced by TypeScript. Thanks to that, whenever we mistakenly set or assume a wrong value for an object,
 we get a type error, avoiding unnecessary debugging afterwards. That's a big improvement to the development process.
 
-```ts
-const redCircle: Circle = {
-  // Error: Property 'z' is missing in type 'vec2i' but required in type 'vec3i'.
+```ts twoslash
+// @moduleResolution: bundler
+// @errors: 2740 2322 2741 2339
+
+import * as d from 'typegpu/data';
+
+const Circle = d.struct({
+  centerPos: d.vec3i,
+  radius: d.f32,
+});
+
+type Circle = d.Infer<typeof Circle>;
+
+// ---cut---
+const redCircle1: Circle = {
   centerPos: d.vec2i(2, 4), 
   radius: 0.2,
 };
 
-const redCircle: Circle = {
+const redCircle2: Circle = {
   centerPos: d.vec3i(2, 4, 0), 
-  // Error: Type 'string' is not assignable to type 'number'.
   radius: "0.2",
 };
 
-// Error: Property 'radius' is missing in type '{ centerPos: vec3i; }' 
-// but required in type '{ centerPos: vec3i; radius: number; }'.
-const redCircle: Circle = {
+const redCircle3: Circle = {
   centerPos: d.vec3i(2, 4, 0), 
 };
 
-// Error: Property 'rad' does not exist on type '{ centerPos: vec3i; radius: number; }'.
-const diam = redCircle.rad * 2;
+const diam = redCircle1.rad * 2;
 ```
 
 Defined data structures automatically measure and hold information about their memory layout parameters, which is useful for writing to and reading data from the GPU.
 
-```ts
-Circle.size // 16
-Circle.byteAlignment // 16
+```ts twoslash
+// @moduleResolution: bundler
+
+import * as d from 'typegpu/data';
+import { sizeOf, alignmentOf } from 'typegpu/data';
+
+const Circle = d.struct({
+  centerPos: d.vec3i,
+  radius: d.f32,
+});
+
+type Circle = d.Infer<typeof Circle>;
+
+// ---cut---
+sizeOf(Circle) // 16
+alignmentOf(Circle) // 16
 ```
 
 TypeGPU data types are essential for the library's automated data marshalling capabilities.
@@ -82,23 +101,35 @@ There are a few ways to categorize numeric data-types in TypeGPU.
 `d.f32`, `d.i32` and `d.u32` all represent single-component 32-bit numeric values. When reading/writing values
 in JS, they are all seen as just `number`.
 
-Vectors (`d.vec2f`, `d.vec3f`, ...) are interpreted in JS as special objects, which can be created by "calling" the schema
-with numeric components, e.g.:
-```ts
-const v0 = d.vec3f(1.1, 2.5, 3.3); // => vec3f
-const v1 = d.vec4u(3, 4, 5, 2); // => vec4u
+Vectors (`d.v2f`, `d.v3f`, ...) are interpreted in JS as special objects, which can be created by "calling" the
+corresponding schema with numeric components, e.g.:
+```ts twoslash
+// @moduleResolution: bundler
+import * as d from 'typegpu/data';
+// ---cut---
+const v0 = d.vec3f(1.1, 2.5, 3.3);
+//    ^?
+
+const v1 = d.vec4u(3, 4, 5, 2);
+//    ^?
+
 // ...
 ```
 
 Matrices work in a similar way.
-```ts
+```ts twoslash
+// @moduleResolution: bundler
+import * as d from 'typegpu/data';
+// ---cut---
 const mat0 = d.mat3x3f(
+//    ^?
   1.1, 2.5, 3.3,
   1.2, 2.6, 3.4,
   1.3, 2.7, 3.5,
-); // => mat3x3f
+);
 
-const mat1 = d.mat2x2f(3, 4, 5, 2); // => mat2x2f
+const mat1 = d.mat2x2f(3, 4, 5, 2);
+//    ^?
 
 // ...
 ```
@@ -114,7 +145,8 @@ to a seamless integration with `wgpu-matrix`, which you can [read more about her
 
 Values of different types can be grouped into structs.
 
-```ts 
+```ts twoslash
+// @moduleResolution: bundler
 import * as d from 'typegpu/data';
 
 const Boid = d.struct({
@@ -124,7 +156,10 @@ const Boid = d.struct({
   isActive: d.bool,
 });
 
-const boid: d.Infer<typeof Boid> = {
+type Boid = d.Infer<typeof Boid>;
+//   ^?
+
+const boid: Boid = {
   position: d.vec3u(0, 0, 0),
   velocity: d.vec3f(1, 0.5, 0.5),
   color: d.vec4f(1.0, 0.2, 0.3, 1.0),
@@ -132,10 +167,37 @@ const boid: d.Infer<typeof Boid> = {
 };
 ```
 
+You can also use the struct schema as a constructor that type-checks the object literal and provides autocomplete.
+
+```ts twoslash
+// @ts-nocheck
+// @moduleResolution: bundler
+import * as d from 'typegpu/data';
+
+const Boid = d.struct({
+  position: d.vec3u,
+  velocity: d.vec3f,
+  color: d.vec4f,
+  isActive: d.bool,
+});
+
+// ---cut---
+const boid = Boid({
+  position: d.vec3u(0, 0, 0),
+  velocity: d.vec3f(1, 0.5, 0.5),
+  color: d.vec4f(1.0, 0.2, 0.3, 1.0),
+  isAct
+  //   ^|
+});
+```
+
 Struct schemas adjust the padding and alignment automatically, so that they comply with WebGPU's memory alignment rules.
 It is also possible to override default byte alignment and size for particular fields via the `align` and `size ` functions.
 
-```ts 
+```ts twoslash
+// @moduleResolution: bundler
+import * as d from 'typegpu/data';
+// ---cut---
 const Boid = d.struct({
   position: d.align(32, d.vec3u), // Aligned to multiples of 32 bytes
   velocity: d.vec3f,
@@ -148,10 +210,15 @@ const Boid = d.struct({
 
 To define arrays of known constant length, use the `d.arrayOf` function. It accepts as arguments the array's elements data type constructor and the length of the array.
 
-```ts
+```ts twoslash
+// @moduleResolution: bundler
+import * as d from 'typegpu/data';
+
+// ---cut---
 const RecentResults = d.arrayOf(d.f32, 4);
 
-type RecentResults = d.Infer<typeof RecentResults>; // => number[]
+type RecentResults = d.Infer<typeof RecentResults>;
+//   ^?
 
 const recentResults: RecentResults = [
   1, 0, 0.5, 20
