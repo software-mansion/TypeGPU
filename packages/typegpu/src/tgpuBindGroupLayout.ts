@@ -1,4 +1,8 @@
-import { type TgpuBuffer, type Uniform, isBuffer } from './core/buffer/buffer';
+import {
+  type TgpuBuffer,
+  type UniformFlag,
+  isBuffer,
+} from './core/buffer/buffer';
 import {
   type TgpuBufferMutable,
   type TgpuBufferReadonly,
@@ -265,7 +269,9 @@ type GetStorageTextureRestriction<T extends TgpuLayoutStorageTexture> = Default<
 
 export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
   T extends TgpuLayoutUniform
-    ? (TgpuBuffer<UnwrapRuntimeConstructor<T['uniform']>> & Uniform) | GPUBuffer
+    ?
+        | (TgpuBuffer<UnwrapRuntimeConstructor<T['uniform']>> & UniformFlag)
+        | GPUBuffer
     : T extends TgpuLayoutStorage
       ?
           | (TgpuBuffer<UnwrapRuntimeConstructor<T['storage']>> & StorageFlag)

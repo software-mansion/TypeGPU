@@ -37,7 +37,7 @@ const rawLayout = root.unwrap(layout); // => GPUBindGroupLayout
 
 ```ts
 const numbersBuffer = root.createBuffer(d.f32).$usage('uniform');
-//    ^? TgpuBuffer<d.F32> & Uniform
+//    ^? TgpuBuffer<d.F32> & UniformFlag
 
 const rawNumbersBuffer = root.unwrap(numbersBuffer); // => GPUBuffer
 

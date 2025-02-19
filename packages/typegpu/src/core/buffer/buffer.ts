@@ -26,9 +26,14 @@ import {
 // Public API
 // ----------
 
-export interface Uniform {
+export interface UniformFlag {
   usableAsUniform: true;
 }
+
+/**
+ * @deprecated Use UniformFlag instead.
+ */
+export type Uniform = UniformFlag;
 
 export interface Vertex {
   usableAsVertex: true;
@@ -36,7 +41,7 @@ export interface Vertex {
 
 type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
   T extends 'uniform'
-    ? Uniform
+    ? UniformFlag
     : T extends 'storage'
       ? StorageFlag
       : T extends 'vertex'

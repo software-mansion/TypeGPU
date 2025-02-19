@@ -106,6 +106,7 @@ export type { TgpuRenderPipeline } from './core/pipeline/renderPipeline';
 export type { TgpuComputePipeline } from './core/pipeline/computePipeline';
 export type {
   TgpuBuffer,
+  UniformFlag,
   Uniform,
   Vertex,
 } from './core/buffer/buffer';

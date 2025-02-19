@@ -11,7 +11,7 @@ import type {
   SelfResolvable,
 } from '../../types';
 import { valueProxyHandler } from '../valueProxyUtils';
-import type { TgpuBuffer, Uniform } from './buffer';
+import type { TgpuBuffer, UniformFlag } from './buffer';
 
 // ----------
 // Public API
@@ -48,8 +48,8 @@ export interface TgpuBufferMutable<TData extends BaseData>
 
 export function isUsableAsUniform<T extends TgpuBuffer<AnyData>>(
   buffer: T,
-): buffer is T & Uniform {
-  return !!(buffer as unknown as Uniform).usableAsUniform;
+): buffer is T & UniformFlag {
+  return !!(buffer as unknown as UniformFlag).usableAsUniform;
 }
 
 // --------------
@@ -242,7 +242,7 @@ const uniformUsageMap = new WeakMap<
  * @deprecated Use buffer.as('uniform') instead.
  */
 export function asUniform<TData extends AnyWgslData>(
-  buffer: TgpuBuffer<TData> & Uniform,
+  buffer: TgpuBuffer<TData> & UniformFlag,
 ): TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData> {
   if (!isUsableAsUniform(buffer)) {
     throw new Error(
