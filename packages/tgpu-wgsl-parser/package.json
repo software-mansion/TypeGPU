@@ -11,6 +11,7 @@
   },
   "publishConfig": {
     "directory": "dist",
+    "linkDirectory": false,
     "main": "./dist/index.js",
     "types": "./index.d.ts",
     "exports": {
