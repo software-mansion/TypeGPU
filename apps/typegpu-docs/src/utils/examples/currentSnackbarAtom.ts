@@ -4,9 +4,9 @@ export const currentSnackbarAtom = atom<string | undefined>(undefined);
 
 export const runWithCatchAtom = atom(
   null,
-  (_get, set, callback: () => unknown) => {
+  async (_get, set, callback: () => unknown) => {
     try {
-      callback();
+      await callback();
       set(currentSnackbarAtom, undefined);
     } catch (err) {
       if (err instanceof Error) {

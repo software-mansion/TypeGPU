@@ -100,6 +100,7 @@ function TextAreaRow({
   onChange: (value: string) => void;
 }) {
   const [value, setValue] = useState(initial ?? "");
+  const runWithCatch = useSetAtom(runWithCatchAtom);
 
   return (
     <>
@@ -109,7 +110,7 @@ function TextAreaRow({
         value={value}
         onChange={(newValue) => {
           setValue(newValue);
-          onChange(newValue);
+          runWithCatch(() => onChange(newValue));
         }}
       />
     </>
