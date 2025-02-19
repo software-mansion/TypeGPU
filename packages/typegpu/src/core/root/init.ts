@@ -29,7 +29,7 @@ import {
 import {
   INTERNAL_createBuffer,
   type TgpuBuffer,
-  type Vertex,
+  type VertexFlag,
   isBuffer,
 } from '../buffer/buffer';
 import type {
@@ -424,7 +424,7 @@ class TgpuRootImpl
       TgpuVertexLayout,
       {
         buffer:
-          | (TgpuBuffer<WgslArray<BaseData> | Disarray<BaseData>> & Vertex)
+          | (TgpuBuffer<WgslArray<BaseData> | Disarray<BaseData>> & VertexFlag)
           | GPUBuffer;
         offset?: number | undefined;
         size?: number | undefined;

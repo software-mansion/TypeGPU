@@ -108,6 +108,7 @@ export type {
   TgpuBuffer,
   UniformFlag,
   Uniform,
+  VertexFlag,
   Vertex,
 } from './core/buffer/buffer';
 export type {

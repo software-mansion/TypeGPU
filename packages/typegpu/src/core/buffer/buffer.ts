@@ -35,9 +35,14 @@ export interface UniformFlag {
  */
 export type Uniform = UniformFlag;
 
-export interface Vertex {
+export interface VertexFlag {
   usableAsVertex: true;
 }
+
+/**
+ * @deprecated Use VertexFlag instead.
+ */
+export type Vertex = VertexFlag;
 
 type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
   T extends 'uniform'
@@ -45,7 +50,7 @@ type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
     : T extends 'storage'
       ? StorageFlag
       : T extends 'vertex'
-        ? Vertex
+        ? VertexFlag
         : never;
 
 type ViewUsages<TBuffer extends TgpuBuffer<BaseData>> =
@@ -115,8 +120,8 @@ export function isBuffer<T extends TgpuBuffer<AnyData>>(
 
 export function isUsableAsVertex<T extends TgpuBuffer<AnyData>>(
   buffer: T,
-): buffer is T & Vertex {
-  return !!(buffer as unknown as Vertex).usableAsVertex;
+): buffer is T & VertexFlag {
+  return !!(buffer as unknown as VertexFlag).usableAsVertex;
 }
 
 // --------------
