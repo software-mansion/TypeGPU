@@ -266,7 +266,9 @@ const Transpilers: Partial<{
     for (const prop of node.properties) {
       // TODO: Handle SpreadElement
       if (prop.type === 'SpreadElement') {
-        throw new Error('Spread elements are not supported in TGSL.');
+        throw new Error(
+          'Spread elements are not supported in object expressions.',
+        );
       }
 
       // TODO: Handle computed properties
@@ -278,7 +280,9 @@ const Transpilers: Partial<{
 
       // TODO: Handle Object method
       if (prop.type === 'ObjectMethod') {
-        throw new Error('Object method elements are not supported in TGSL.');
+        throw new Error(
+          'Object method elements are not supported in object expressions.',
+        );
       }
 
       ctx.ignoreExternalDepth++;
@@ -293,6 +297,11 @@ const Transpilers: Partial<{
     }
 
     return { o: properties };
+  },
+
+  SpreadElement(ctx, node) {
+    const argument = transpile(ctx, node.argument) as smol.Expression;
+    return { d: argument };
   },
 };
 
