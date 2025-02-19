@@ -19,7 +19,7 @@ updates:
     directory: "/packages/tgpu-wgsl-parser"
     schedule:
       interval: "weekly"
-- package-ecosystem: "pnpm"
+  - package-ecosystem: "pnpm"
     directory: "/packages/tinyest"
     schedule:
       interval: "weekly"
