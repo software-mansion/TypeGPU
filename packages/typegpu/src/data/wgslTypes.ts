@@ -1,4 +1,9 @@
-import type { Infer, InferPartial, MemIdentity } from '../shared/repr';
+import type {
+  Infer,
+  InferGPU,
+  InferPartial,
+  MemIdentity,
+} from '../shared/repr';
 import type { AnyWgslStruct, WgslStruct } from './struct';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location<number>[]>;
@@ -823,6 +828,7 @@ export interface WgslArray<TElement extends BaseData = BaseData> {
   readonly elementType: TElement;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TElement>[];
+  readonly '~gpuRepr': InferGPU<TElement>[];
   readonly '~reprPartial': { idx: number; value: InferPartial<TElement> }[];
   readonly '~memIdent': WgslArray<MemIdentity<TElement>>;
 }
@@ -856,6 +862,7 @@ export interface Atomic<TInner extends U32 | I32 = U32 | I32> {
   readonly inner: TInner;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
+  readonly '~gpuRepr': Atomic<TInner>;
   readonly '~memIdent': MemIdentity<TInner>;
 }
 
@@ -900,6 +907,8 @@ export interface Decorated<
   readonly attribs: TAttribs;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
+  readonly '~gpuRepr': InferGPU<TInner>;
+  readonly '~reprPartial': InferPartial<TInner>;
   readonly '~memIdent': TAttribs extends Location<number>[]
     ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<MemIdentity<TInner>, TAttribs>;

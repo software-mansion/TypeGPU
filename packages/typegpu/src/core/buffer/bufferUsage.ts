@@ -3,7 +3,7 @@ import type { AnyWgslData, BaseData } from '../../data/wgslTypes';
 import { type Storage, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
-import type { Infer } from '../../shared/repr';
+import type { Infer, InferGPU } from '../../shared/repr';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout';
 import type {
   BindableBufferUsage,
@@ -24,17 +24,17 @@ export interface TgpuBufferUsage<
   readonly resourceType: 'buffer-usage';
   readonly usage: TUsage;
   readonly '~repr': Infer<TData>;
-  value: Infer<TData>;
+  value: InferGPU<TData>;
 }
 
 export interface TgpuBufferUniform<TData extends BaseData>
   extends TgpuBufferUsage<TData, 'uniform'> {
-  readonly value: Infer<TData>;
+  readonly value: InferGPU<TData>;
 }
 
 export interface TgpuBufferReadonly<TData extends BaseData>
   extends TgpuBufferUsage<TData, 'readonly'> {
-  readonly value: Infer<TData>;
+  readonly value: InferGPU<TData>;
 }
 
 export interface TgpuFixedBufferUsage<TData extends BaseData>
@@ -115,7 +115,7 @@ class TgpuFixedBufferImpl<
     return `${this.usage}:${this.label ?? '<unnamed>'}`;
   }
 
-  get value(): Infer<TData> {
+  get value(): InferGPU<TData> {
     if (!inGPUMode()) {
       throw new Error(`Cannot access buffer's value directly in JS.`);
     }
@@ -126,7 +126,7 @@ class TgpuFixedBufferImpl<
         toString: () => `.value:${this.label ?? '<unnamed>'}`,
       },
       valueProxyHandler,
-    ) as Infer<TData>;
+    ) as InferGPU<TData>;
   }
 }
 export class TgpuLaidOutBufferImpl<
@@ -166,7 +166,7 @@ export class TgpuLaidOutBufferImpl<
     return `${this.usage}:${this.label ?? '<unnamed>'}`;
   }
 
-  get value(): Infer<TData> {
+  get value(): InferGPU<TData> {
     if (!inGPUMode()) {
       throw new Error(`Cannot access buffer's value directly in JS.`);
     }
@@ -177,7 +177,7 @@ export class TgpuLaidOutBufferImpl<
         toString: () => `.value:${this.label ?? '<unnamed>'}`,
       },
       valueProxyHandler,
-    ) as Infer<TData>;
+    ) as InferGPU<TData>;
   }
 }
 

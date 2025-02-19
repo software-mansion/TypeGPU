@@ -30,6 +30,8 @@ class AtomicImpl<TSchema extends U32 | I32> implements Atomic<TSchema> {
   public readonly '~repr'!: Infer<TSchema>;
   /** Type-token, not available at runtime */
   public readonly '~memIdent'!: MemIdentity<TSchema>;
+  /** Type-token, not available at runtime */
+  readonly '~gpuRepr': Atomic<TSchema>;
 
   constructor(public readonly inner: TSchema) {}
 }

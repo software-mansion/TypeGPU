@@ -21,3 +21,15 @@ export {
   mix,
   pow,
 } from './numeric';
+
+export {
+  atomicLoad,
+  atomicStore,
+  atomicAdd,
+  atomicSub,
+  atomicMax,
+  atomicMin,
+  atomicAnd,
+  atomicOr,
+  atomicXor,
+} from './atomic';
