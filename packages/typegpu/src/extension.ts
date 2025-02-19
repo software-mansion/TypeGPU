@@ -8,14 +8,17 @@ export type ExtensionGuard<TFlag, TMsg, TAllowed> = boolean extends TFlag
 
 // #region Shared usage extensions
 
-export interface Storage {
+export interface StorageFlag {
   usableAsStorage: true;
 }
 
-export const Storage = { usableAsStorage: true } as Storage;
+/**
+ * @deprecated Use StorageFlag instead.
+ */
+export type Storage = StorageFlag;
 
-export function isUsableAsStorage<T>(value: T): value is T & Storage {
-  return !!(value as unknown as Storage)?.usableAsStorage;
+export function isUsableAsStorage<T>(value: T): value is T & StorageFlag {
+  return !!(value as unknown as StorageFlag)?.usableAsStorage;
 }
 
 /**

@@ -5,7 +5,7 @@ import type { AnyData } from '../../data/dataTypes';
 import { getWriteInstructions } from '../../data/partialIO';
 import { sizeOf } from '../../data/sizeOf';
 import type { BaseData, WgslTypeLiteral } from '../../data/wgslTypes';
-import type { Storage } from '../../extension';
+import type { StorageFlag } from '../../extension';
 import type { TgpuNamable } from '../../namable';
 import type { Infer, InferPartial } from '../../shared/repr';
 import type { MemIdentity } from '../../shared/repr';
@@ -38,7 +38,7 @@ type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
   T extends 'uniform'
     ? Uniform
     : T extends 'storage'
-      ? Storage
+      ? StorageFlag
       : T extends 'vertex'
         ? Vertex
         : never;

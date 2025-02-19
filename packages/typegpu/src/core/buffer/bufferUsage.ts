@@ -1,6 +1,6 @@
 import type { AnyData } from '../../data/dataTypes';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes';
-import { type Storage, isUsableAsStorage } from '../../extension';
+import { type StorageFlag, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import type { Infer } from '../../shared/repr';
@@ -190,7 +190,7 @@ const mutableUsageMap = new WeakMap<
  * @deprecated Use buffer.as('mutable') instead.
  */
 export function asMutable<TData extends AnyWgslData>(
-  buffer: TgpuBuffer<TData> & Storage,
+  buffer: TgpuBuffer<TData> & StorageFlag,
 ): TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData> {
   if (!isUsableAsStorage(buffer)) {
     throw new Error(
@@ -216,7 +216,7 @@ const readonlyUsageMap = new WeakMap<
  * @deprecated Use buffer.as('readonly') instead.
  */
 export function asReadonly<TData extends AnyWgslData>(
-  buffer: TgpuBuffer<TData> & Storage,
+  buffer: TgpuBuffer<TData> & StorageFlag,
 ): TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData> {
   if (!isUsableAsStorage(buffer)) {
     throw new Error(

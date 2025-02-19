@@ -1,4 +1,4 @@
-import tgpu, { type TgpuBuffer, type Storage } from 'typegpu';
+import tgpu, { type TgpuBuffer, type StorageFlag } from 'typegpu';
 import * as d from 'typegpu/data';
 
 const SIZE = 28;
@@ -73,19 +73,19 @@ const pipeline = device.createComputePipeline({
 
 interface LayerData {
   shape: readonly [number] | readonly [number, number];
-  buffer: TgpuBuffer<d.WgslArray<d.F32>> & Storage;
+  buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
 }
 
 interface Layer {
-  weights: TgpuBuffer<d.WgslArray<d.F32>> & Storage;
-  biases: TgpuBuffer<d.WgslArray<d.F32>> & Storage;
-  state: TgpuBuffer<d.WgslArray<d.F32>> & Storage;
+  weights: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
+  biases: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
+  state: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
 }
 
 interface Network {
   layers: Layer[];
-  input: TgpuBuffer<d.WgslArray<d.F32>> & Storage;
-  output: TgpuBuffer<d.WgslArray<d.F32>> & Storage;
+  input: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
+  output: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
 
   inference(data: number[]): Promise<number[]>;
 }
