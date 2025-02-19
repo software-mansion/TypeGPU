@@ -46,7 +46,7 @@
     "tsup": "^8.3.6",
     "tsx": "^4.16.2",
     "typescript": "^5.7.3",
-    "vitest": "^2.1.9",
+    "vitest": "^3.0.6",
     "@typegpu/tgpu-dev-cli": "workspace:*"
   }
 }
