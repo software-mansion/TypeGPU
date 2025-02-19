@@ -5,30 +5,29 @@
   "description": "A WGSL code parser.",
   "license": "MIT",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./index.d.ts",
   "exports": {
-    "./package.json": "./package.json",
-    ".": {
-      "types": "./dist/index.d.ts",
-      "module": "./dist/index.js",
-      "import": "./dist/index.js",
-      "default": "./dist/index.cjs"
-    },
-    "./*": {
-      "types": "./*.d.ts",
-      "module": "./dist/*.js",
-      "import": "./dist/*.js",
-      "default": "./dist/*.cjs"
+    ".": "./src/index.ts",
+    "./nearley-redirect-plugin": "./nearley-redirect-plugin.mjs"
+  },
+  "publishConfig": {
+    "directory": "dist",
+    "main": "./dist/index.js",
+    "types": "./index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "module": "./dist/index.js",
+        "import": "./dist/index.js",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "files": ["dist"],
   "sideEffects": false,
   "scripts": {
-    "dev:watch": "DEV=true tsup --watch",
-    "dev:build": "DEV=true tsup",
     "build": "tsup",
-    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit"
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
+    "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "engines": {
     "node": ">=12.20.0"
@@ -41,11 +40,11 @@
   "devDependencies": {
     "@types/moo": "^0.5.9",
     "@types/nearley": "^2.11.5",
-    "@webgpu/types": "^0.1.51",
+    "@webgpu/types": "^0.1.54",
     "moo": "^0.5.2",
     "tsup": "^8.0.2",
     "tsx": "^4.16.2",
-    "typescript": "^5.3.3",
+    "typescript": "^5.7.3",
     "vitest": "^2.1.9",
     "@typegpu/tgpu-dev-cli": "workspace:*"
   }

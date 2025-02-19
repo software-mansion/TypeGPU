@@ -56,12 +56,12 @@ ${example.htmlCode}
       "preview": "vite preview"
     },
     "devDependencies": {
-      "typescript": "^5.5.3",
+      "typescript": "^5.7.3",
       "vite": "^5.4.2"
     },
     "dependencies": {
-      "@webgpu/types": "^0.1.44",
-      "typegpu": "^0.4.1",
+      "@webgpu/types": "^0.1.54",
+      "typegpu": "^0.4.2",
       "unplugin-typegpu": "^0.1.0-alpha.2"
     }
 }`,

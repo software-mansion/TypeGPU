@@ -1,12 +1,14 @@
 ---
-import BlogSidebar from 'starlight-blog/overrides/Sidebar.astro';
-import type { Props } from '@astrojs/starlight/props';
+import VanillaSidebar from '@astrojs/starlight/components/Sidebar.astro';
 ---
 
 <div class="md:sl-hidden">
   <a href="/TypeGPU/examples">Live Examples</a>
 </div>
-<BlogSidebar {...Astro.props} />
+<div class="md:sl-hidden">
+  <a href="/TypeGPU/blog">Blog</a>
+</div>
+<VanillaSidebar />
 
 <style>
   div a {

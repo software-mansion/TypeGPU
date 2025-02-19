@@ -1,5 +1,11 @@
-import { atom } from 'jotai';
+import { type ExtractAtomArgs, atom } from 'jotai';
 import { atomWithLocation } from 'jotai-location';
+
+type Location = {
+  pathname?: string;
+  searchParams?: URLSearchParams;
+  hash?: string;
+};
 
 const locationAtom = atomWithLocation();
 
@@ -54,7 +60,7 @@ export const atomWithUrl = <T>(
       const searchParams = new URLSearchParams(prev.searchParams);
       searchParams.set(key, encode(newValue));
 
-      set(
+      set<Location, ExtractAtomArgs<typeof locationAtom>, void>(
         locationAtom,
         {
           ...prev,

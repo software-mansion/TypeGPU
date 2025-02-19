@@ -1,6 +1,5 @@
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix';
 import {
-  type VecKind,
   vec2f,
   vec2h,
   vec2i,
@@ -15,6 +14,7 @@ import {
   vec4u,
 } from './vector';
 import type * as wgsl from './wgslTypes';
+import type { VecKind } from './wgslTypes';
 
 type vBase = { kind: VecKind };
 type v2 = wgsl.v2f | wgsl.v2h | wgsl.v2i | wgsl.v2u;
@@ -250,7 +250,7 @@ export const VectorOps = {
 
     mat4x4f: (s: number, m: wgsl.m4x4f) => {
       const m_ = m.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
-      return mat3x3f(
+      return mat4x4f(
         s * m_[0].x,
         s * m_[0].y,
         s * m_[0].z,
@@ -406,6 +406,76 @@ export const VectorOps = {
   } as Record<
     VecKind | MatKind,
     <T extends vBase | wgsl.AnyMatInstance>(lhs: T, rhs: T) => T
+  >,
+
+  mulMxV: {
+    mat2x2f: (m: wgsl.m2x2f, v: wgsl.v2f) => {
+      const m_ = m.columns as [wgsl.v2f, wgsl.v2f];
+      return vec2f(
+        m_[0].x * v.x + m_[1].x * v.y,
+        m_[0].y * v.x + m_[1].y * v.y,
+      );
+    },
+
+    mat3x3f: (m: wgsl.m3x3f, v: wgsl.v3f) => {
+      const m_ = m.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
+      return vec3f(
+        m_[0].x * v.x + m_[1].x * v.y + m_[2].x * v.z,
+        m_[0].y * v.x + m_[1].y * v.y + m_[2].y * v.z,
+        m_[0].z * v.x + m_[1].z * v.y + m_[2].z * v.z,
+      );
+    },
+
+    mat4x4f: (m: wgsl.m4x4f, v: wgsl.v4f) => {
+      const m_ = m.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
+      return vec4f(
+        m_[0].x * v.x + m_[1].x * v.y + m_[2].x * v.z + m_[3].x * v.w,
+        m_[0].y * v.x + m_[1].y * v.y + m_[2].y * v.z + m_[3].y * v.w,
+        m_[0].z * v.x + m_[1].z * v.y + m_[2].z * v.z + m_[3].z * v.w,
+        m_[0].w * v.x + m_[1].w * v.y + m_[2].w * v.z + m_[3].w * v.w,
+      );
+    },
+  } as Record<
+    MatKind,
+    <T extends wgsl.AnyMatInstance>(
+      m: T,
+      v: wgsl.vBaseForMat<T>,
+    ) => wgsl.vBaseForMat<T>
+  >,
+
+  mulVxM: {
+    mat2x2f: (v: wgsl.v2f, m: wgsl.m2x2f) => {
+      const m_ = m.columns as [wgsl.v2f, wgsl.v2f];
+      return vec2f(
+        v.x * m_[0].x + v.y * m_[0].y,
+        v.x * m_[1].x + v.y * m_[1].y,
+      );
+    },
+
+    mat3x3f: (v: wgsl.v3f, m: wgsl.m3x3f) => {
+      const m_ = m.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
+      return vec3f(
+        v.x * m_[0].x + v.y * m_[0].y + v.z * m_[0].z,
+        v.x * m_[1].x + v.y * m_[1].y + v.z * m_[1].z,
+        v.x * m_[2].x + v.y * m_[2].y + v.z * m_[2].z,
+      );
+    },
+
+    mat4x4f: (v: wgsl.v4f, m: wgsl.m4x4f) => {
+      const m_ = m.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
+      return vec4f(
+        v.x * m_[0].x + v.y * m_[0].y + v.z * m_[0].z + v.w * m_[0].w,
+        v.x * m_[1].x + v.y * m_[1].y + v.z * m_[1].z + v.w * m_[1].w,
+        v.x * m_[2].x + v.y * m_[2].y + v.z * m_[2].z + v.w * m_[2].w,
+        v.x * m_[3].x + v.y * m_[3].y + v.z * m_[3].z + v.w * m_[3].w,
+      );
+    },
+  } as Record<
+    MatKind,
+    <T extends wgsl.AnyMatInstance>(
+      v: wgsl.vBaseForMat<T>,
+      m: T,
+    ) => wgsl.vBaseForMat<T>
   >,
 
   dot: {

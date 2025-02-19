@@ -16,27 +16,34 @@
   ],
   "license": "MIT",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
-    "./package.json": "./package.json",
-    ".": {
-      "types": "./dist/index.d.ts",
-      "module": "./dist/index.js",
-      "import": "./dist/index.js",
-      "default": "./dist/index.cjs"
-    },
-    "./rollup": {
-      "types": "./dist/rollup.d.ts",
-      "module": "./dist/rollup.js",
-      "import": "./dist/rollup.js",
-      "default": "./dist/rollup.cjs"
-    },
-    "./babel": {
-      "types": "./dist/babel.d.ts",
-      "module": "./dist/babel.js",
-      "import": "./dist/babel.js",
-      "default": "./dist/babel.cjs"
+    ".": "./src/index.ts",
+    "./rollup": "./src/rollup.ts",
+    "./babel": "./src/babel.ts"
+  },
+  "publishConfig": {
+    "directory": "dist",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "module": "./dist/index.js",
+        "import": "./dist/index.js",
+        "default": "./dist/index.cjs"
+      },
+      "./rollup": {
+        "types": "./dist/rollup.d.ts",
+        "module": "./dist/rollup.js",
+        "import": "./dist/rollup.js",
+        "default": "./dist/rollup.cjs"
+      },
+      "./babel": {
+        "types": "./dist/babel.d.ts",
+        "module": "./dist/babel.js",
+        "import": "./dist/babel.js",
+        "default": "./dist/babel.cjs"
+      }
     }
   },
   "sideEffects": false,
@@ -49,15 +56,12 @@
   },
   "homepage": "https://typegpu.com",
   "scripts": {
-    "dev:watch": "DEV=true tsup --watch",
-    "dev:build": "DEV=true tsup",
     "build": "tsup",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
-    "publish": "echo \"Use pnpm prepare-package instead!\" && exit 1",
-    "prepare-package": "tgpu-dev-cli prepack"
+    "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "dependencies": {
-    "tinyest-for-wgsl": "workspace:~0.1.0-alpha.1",
+    "tinyest-for-wgsl": "workspace:~0.1.0-alpha.2",
     "estree-walker": "^3.0.3",
     "magic-string": "^0.30.11",
     "@babel/standalone": "^7.26.6"
@@ -72,6 +76,6 @@
     "acorn": "^8.12.1",
     "rollup": "~4.22.4",
     "tsup": "^8.0.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.7.3"
   }
 }

@@ -33,6 +33,9 @@ export const tgpu = {
     fragmentFn,
     vertexFn,
     computeFn,
+    /**
+     * @deprecated This feature is now stable, use tgpu.vertexLayout.
+     */
     vertexLayout,
     derived,
     slot,

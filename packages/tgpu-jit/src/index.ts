@@ -23,7 +23,7 @@ interface IJitTranspiler {
 }
 
 export class JitTranspiler implements IJitTranspiler {
-  transpileFn(rawJs: string) {
+  transpileFn(rawJs: string): TranspilationResult {
     const program = parse(rawJs, { ecmaVersion: 'latest' });
     return transpileFn(program);
   }
