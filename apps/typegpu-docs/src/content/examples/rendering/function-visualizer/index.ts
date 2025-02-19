@@ -181,13 +181,29 @@ const renderBackgroundPipeline = device.createRenderPipeline({
   primitive: {
     topology: 'triangle-strip',
   },
+  multisample: {
+    count: 4,
+  },
 });
+
+const msTexture = device.createTexture({
+  size: [
+    canvas.clientWidth * window.devicePixelRatio,
+    canvas.clientHeight * window.devicePixelRatio,
+  ],
+  sampleCount: 4,
+  format: presentationFormat,
+  usage: GPUTextureUsage.RENDER_ATTACHMENT,
+});
+
+const msView = msTexture.createView();
 
 const renderBackgroundPassDescriptor = {
   label: 'Render pass',
   colorAttachments: [
     {
-      view: undefined as unknown as GPUTextureView,
+      view: msView,
+      resolveTarget: context.getCurrentTexture().createView(),
       clearValue: [1.0, 1.0, 1.0, 1] as const,
       loadOp: 'clear' as const,
       storeOp: 'store' as const,
@@ -265,13 +281,17 @@ const renderPipeline = device.createRenderPipeline({
   primitive: {
     topology: 'triangle-strip',
   },
+  multisample: {
+    count: 4,
+  },
 });
 
 const renderPassDescriptor = {
   label: 'Render pass',
   colorAttachments: [
     {
-      view: undefined as unknown as GPUTextureView,
+      view: msView,
+      resolveTarget: context.getCurrentTexture().createView(),
       clearValue: [0.3, 0.3, 0.3, 1] as const,
       loadOp: 'load' as const,
       storeOp: 'store' as const,
@@ -327,7 +347,7 @@ function runRenderBackgroundPass() {
     properties: propertiesBuffer,
   });
 
-  renderBackgroundPassDescriptor.colorAttachments[0].view = context
+  renderBackgroundPassDescriptor.colorAttachments[0].resolveTarget = context
     .getCurrentTexture()
     .createView();
 
@@ -344,7 +364,7 @@ function runRenderBackgroundPass() {
 }
 
 function runRenderPass() {
-  renderPassDescriptor.colorAttachments[0].view = context
+  renderPassDescriptor.colorAttachments[0].resolveTarget = context
     .getCurrentTexture()
     .createView();
 
