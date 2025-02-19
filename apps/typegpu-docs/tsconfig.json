@@ -8,5 +8,7 @@
       "./node_modules/@types",
       "src/types"
     ]
-  }
+  },
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["dist"]
 }

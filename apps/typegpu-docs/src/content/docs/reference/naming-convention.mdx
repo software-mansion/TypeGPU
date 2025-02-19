@@ -1,0 +1,87 @@
+---
+title: Naming Convention
+draft: true
+---
+
+Here's how we recommend naming things in your code.
+
+## Structs & custom data types
+
+We give structs and other custom data types *PascalCase* names.
+
+```ts
+const Boid = struct({
+  pos: vec2f,
+  vel: vec2f,
+});
+
+const BoidArray = (n: number) => arrayOf(Boid, n);
+```
+
+
+## Functions
+
+We give tgpu functions *camelCase* names, without any special suffix or prefix. Usually imperative mood, verb-phrase structure (i.e., `"doSomething"`).
+
+```ts
+const createBoid = tgpu
+  .fn([], Boid)
+  .does(() => ({
+    pos: vec2f(),
+    vel: vec2f(0, 1),
+  }));
+```
+
+## Buffers
+
+We give buffers *camelCase* names with a `Buffer` suffix.
+
+```ts
+const boidsBuffer = root
+  .createBuffer(BoidArray(512))
+  .$usage('uniform');
+```
+
+## Buffer usages
+
+We give buffer usages *camelCase* names with a suffix that corresponds to their usage.
+
+```ts
+const boidsUniform = boidsBuffer.as('uniform');
+const boidsMutable = boidsBuffer.as('mutable');
+const boidsReadonly = boidsBuffer.as('readonly');
+
+const cellsUniform = root['~unstable'].createUniform(Cells);
+const cellsMutable = root['~unstable'].createMutable(Cells);
+const cellsReadonly = root['~unstable'].createReadonly(Cells);
+```
+
+## Slots
+
+We give slots *camelCase* names, without any special prefix or suffix. Our justification is
+that if there's a name clash, meaning there's a concrete value of the same name, then there's
+no need for the slot. We can just use the value instead.
+
+```ts
+const color = tgpu['~unstable'].slot(vec4f(1, 0, 0, 1));
+```
+
+## Accessors
+
+We give accessors *camelCase* names, without any special prefix or suffix. Our justification is
+that if there's a name clash, meaning there's a concrete value of the same name, then there's
+no need for the accessor. We can just use the value instead.
+
+```ts
+const color = tgpu['~unstable'].accessor(vec4f);
+```
+
+## Derived
+
+We give derived values *camelCase* names, without any special prefix or suffix. Our justification is
+that if there's a name clash, meaning there's a concrete value of the same name, then there's
+no need for the derived value. We can just use the value instead.
+
+```ts
+const lighterColor = tgpu['~unstable'].derived(() => add(color.value, vec4f(0.2, 0.2, 0.2, 0)));
+```

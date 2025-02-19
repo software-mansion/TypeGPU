@@ -1,6 +1,5 @@
 ---
 import StarlightThemeSelect from '@astrojs/starlight/components/ThemeSelect.astro';
-import type { Props } from '@astrojs/starlight/props';
 ---
 
 <div>
@@ -9,7 +8,7 @@ import type { Props } from '@astrojs/starlight/props';
 <div>
   <a href="/TypeGPU/blog">Blog</a>
 </div>
-<StarlightThemeSelect {...Astro.props}>
+<StarlightThemeSelect>
   <slot />
 </StarlightThemeSelect>
 

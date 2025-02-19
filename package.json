@@ -10,9 +10,9 @@
     "check": "biome check --write .",
     "coverage": "vitest --coverage",
     "test": "DEV=true pnpm -r dev:build && pnpm run '/^test:.*/'",
-    "test:types": "pnpm run -r test:types",
+    "test:types": "pnpm run -r --parallel test:types",
     "test:spec": "vitest run",
-    "nightly-build": "pnpm -r dev:build && pnpm --filter typegpu prepare-package"
+    "nightly-build": "pnpm -r dev:build && pnpm --filter typegpu prepublishOnly"
   },
   "engines": {
     "node": ">=12.20.0"
@@ -35,11 +35,13 @@
   },
   "homepage": "https://docs.swmansion.com/TypeGPU",
   "devDependencies": {
-    "@biomejs/biome": "^1.8.3",
+    "@biomejs/biome": "^1.9.4",
+    "@webgpu/types": "^0.1.54",
     "@types/node": "^20.11.13",
     "dpdm": "^3.14.0",
+    "pkg-pr-new": "^0.0.39",
     "tsup": "^8.0.2",
-    "typescript": "^5.3.3",
+    "typescript": "^5.7.3",
     "vitest": "^2.1.9"
   },
   "packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e"

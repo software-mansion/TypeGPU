@@ -8,7 +8,6 @@ import { defineConfig } from 'astro/config';
 import starlightBlog from 'starlight-blog';
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import typegpu from 'unplugin-typegpu/rollup';
-import importRawRedirectPlugin from './vite-import-raw-redirect-plugin.mjs';
 
 /**
  * @template T
@@ -40,6 +39,7 @@ function toRawPlugin() {
             .replace(/\u2029/g, '\\u2029')};`,
         };
       }
+      return undefined;
     },
   };
 }
@@ -49,17 +49,7 @@ export default defineConfig({
   site: 'https://docs.swmansion.com',
   base: 'TypeGPU',
   vite: {
-    plugins: [
-      typegpu({ include: [/tgpu=true/] }),
-      toRawPlugin(),
-      importRawRedirectPlugin({
-        'typegpu/dist/index.d.ts?raw': '../../packages/typegpu/dist/index.d.ts',
-        'typegpu/dist/data/index.d.ts?raw':
-          '../../packages/typegpu/dist/data/index.d.ts',
-        'typegpu/dist/std/index.d.ts?raw':
-          '../../packages/typegpu/dist/std/index.d.ts',
-      }),
-    ],
+    plugins: [typegpu({ include: [/tgpu=true/] }), toRawPlugin()],
   },
   integrations: [
     starlight({
@@ -112,6 +102,10 @@ export default defineConfig({
               slug: 'fundamentals/roots',
             },
             {
+              label: 'Functions',
+              slug: 'fundamentals/functions',
+            },
+            {
               label: 'Buffers',
               slug: 'fundamentals/buffers',
             },
@@ -126,7 +120,6 @@ export default defineConfig({
             {
               label: 'Resolve',
               slug: 'fundamentals/resolve',
-              badge: { text: '0.3' },
             },
             {
               label: 'Vertex Layouts',
@@ -157,7 +150,6 @@ export default defineConfig({
             {
               label: 'WebGPU Interoperability',
               slug: 'integration/webgpu-interoperability',
-              badge: { text: 'new' },
             },
             {
               label: 'Working with wgpu-matrix',
@@ -194,6 +186,10 @@ export default defineConfig({
             {
               label: 'Data Schema Cheatsheet',
               slug: 'reference/data-schema-cheatsheet',
+            },
+            DEV && {
+              label: 'Naming Convention',
+              slug: 'reference/naming-convention',
             },
             DEV && typeDocSidebarGroup,
           ]),

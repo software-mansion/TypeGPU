@@ -87,7 +87,7 @@
   font-weight: 600;
   font-style: normal;
   font-display: swap;
-} 
+}
 
 @font-face {
   font-family: 'Aeonik';
@@ -95,7 +95,7 @@
   font-weight: 600;
   font-style: italic;
   font-display: swap;
-} 
+}
 
 /* NOTE: Uncomment if needed */
 /* @font-face {
@@ -114,7 +114,6 @@
   font-display: swap;
 }  */
 
-
 /* NOTE: Uncomment if needed */
 /* @font-face {
   font-family: 'Aeonik';
@@ -131,4 +130,3 @@
   font-style: italic;
   font-display: swap;
 }  */
-

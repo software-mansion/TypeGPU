@@ -63,6 +63,11 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
   ): void;
 }
 
+export interface INTERNAL_TgpuRenderPipeline {
+  readonly core: RenderPipelineCore;
+  readonly priors: TgpuRenderPipelinePriors;
+}
+
 export type FragmentOutToTargets<T extends IOLayout> = T extends IOData
   ? GPUColorTargetState
   : T extends Record<string, unknown>
@@ -193,6 +198,10 @@ export function INTERNAL_createRenderPipeline(
   return new TgpuRenderPipelineImpl(new RenderPipelineCore(options), {});
 }
 
+export function isRenderPipeline(value: unknown): value is TgpuRenderPipeline {
+  return (value as TgpuRenderPipeline)?.resourceType === 'render-pipeline';
+}
+
 // --------------
 // Implementation
 // --------------
@@ -214,20 +223,22 @@ type Memo = {
   catchall: [number, TgpuBindGroup] | null;
 };
 
-class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
+class TgpuRenderPipelineImpl
+  implements TgpuRenderPipeline, INTERNAL_TgpuRenderPipeline
+{
   public readonly resourceType = 'render-pipeline';
 
   constructor(
-    private readonly _core: RenderPipelineCore,
-    private readonly _priors: TgpuRenderPipelinePriors,
+    public readonly core: RenderPipelineCore,
+    public readonly priors: TgpuRenderPipelinePriors,
   ) {}
 
   get label() {
-    return this._core.label;
+    return this.core.label;
   }
 
   $name(label?: string | undefined): this {
-    this._core.label = label;
+    this.core.label = label;
     return this;
   }
 
@@ -244,20 +255,20 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     resource: (TgpuBuffer<AnyWgslData> & Vertex) | TgpuBindGroup,
   ): TgpuRenderPipeline {
     if (isBindGroupLayout(definition)) {
-      return new TgpuRenderPipelineImpl(this._core, {
-        ...this._priors,
+      return new TgpuRenderPipelineImpl(this.core, {
+        ...this.priors,
         bindGroupLayoutMap: new Map([
-          ...(this._priors.bindGroupLayoutMap ?? []),
+          ...(this.priors.bindGroupLayoutMap ?? []),
           [definition, resource as TgpuBindGroup],
         ]),
       });
     }
 
     if (isVertexLayout(definition)) {
-      return new TgpuRenderPipelineImpl(this._core, {
-        ...this._priors,
+      return new TgpuRenderPipelineImpl(this.core, {
+        ...this.priors,
         vertexLayoutMap: new Map([
-          ...(this._priors.vertexLayoutMap ?? []),
+          ...(this.priors.vertexLayoutMap ?? []),
           [definition, resource as TgpuBuffer<AnyWgslData> & Vertex],
         ]),
       });
@@ -269,8 +280,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   withColorAttachment(
     attachment: AnyFragmentColorAttachment,
   ): TgpuRenderPipeline {
-    return new TgpuRenderPipelineImpl(this._core, {
-      ...this._priors,
+    return new TgpuRenderPipelineImpl(this.core, {
+      ...this.priors,
       colorAttachment: attachment,
     });
   }
@@ -278,8 +289,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   withDepthStencilAttachment(
     attachment: DepthStencilAttachment,
   ): TgpuRenderPipeline {
-    return new TgpuRenderPipelineImpl(this._core, {
-      ...this._priors,
+    return new TgpuRenderPipelineImpl(this.core, {
+      ...this.priors,
       depthStencilAttachment: attachment,
     });
   }
@@ -290,12 +301,12 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     firstVertex?: number,
     firstInstance?: number,
   ): void {
-    const memo = this._core.unwrap();
-    const { branch, fragmentFn } = this._core.options;
+    const memo = this.core.unwrap();
+    const { branch, fragmentFn } = this.core.options;
 
     const colorAttachments = connectAttachmentToShader(
       fragmentFn.shell.targets,
-      this._priors.colorAttachment ?? {},
+      this.priors.colorAttachment ?? {},
     ).map((attachment) => {
       if (isTexture(attachment.view)) {
         return {
@@ -311,12 +322,12 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       colorAttachments,
     };
 
-    if (this._core.label !== undefined) {
-      renderPassDescriptor.label = this._core.label;
+    if (this.core.label !== undefined) {
+      renderPassDescriptor.label = this.core.label;
     }
 
-    if (this._priors.depthStencilAttachment !== undefined) {
-      const attachment = this._priors.depthStencilAttachment;
+    if (this.priors.depthStencilAttachment !== undefined) {
+      const attachment = this.priors.depthStencilAttachment;
       if (isTexture(attachment.view)) {
         renderPassDescriptor.depthStencilAttachment = {
           ...attachment,
@@ -340,7 +351,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
         pass.setBindGroup(idx, branch.unwrap(memo.catchall[1]));
         missingBindGroups.delete(layout);
       } else {
-        const bindGroup = this._priors.bindGroupLayoutMap?.get(layout);
+        const bindGroup = this.priors.bindGroupLayoutMap?.get(layout);
         if (bindGroup !== undefined) {
           missingBindGroups.delete(layout);
           pass.setBindGroup(idx, branch.unwrap(bindGroup));
@@ -348,11 +359,11 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       }
     });
 
-    const missingVertexLayouts = new Set(this._core.usedVertexLayouts);
+    const missingVertexLayouts = new Set(this.core.usedVertexLayouts);
 
-    const usedVertexLayouts = this._core.usedVertexLayouts;
+    const usedVertexLayouts = this.core.usedVertexLayouts;
     usedVertexLayouts.forEach((vertexLayout, idx) => {
-      const buffer = this._priors.vertexLayoutMap?.get(vertexLayout);
+      const buffer = this.priors.vertexLayoutMap?.get(vertexLayout);
       if (buffer) {
         missingVertexLayouts.delete(vertexLayout);
         pass.setVertexBuffer(idx, branch.unwrap(buffer));
