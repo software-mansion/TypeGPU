@@ -59,6 +59,12 @@ import {
   isRenderPipeline,
 } from '../pipeline/renderPipeline';
 import {
+  type TgpuComparisonSampler,
+  type TgpuSampler,
+  isComparisonSampler,
+  isSampler,
+} from '../sampler/sampler';
+import {
   type TgpuAccessor,
   type TgpuSlot,
   isAccessor,
@@ -346,6 +352,8 @@ class TgpuRootImpl
       | TgpuSampledTexture,
   ): GPUTextureView;
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
+  unwrap(resource: TgpuSampler): GPUSampler;
+  unwrap(resource: TgpuComparisonSampler): GPUSampler;
   unwrap(
     resource:
       | TgpuComputePipeline
@@ -358,7 +366,9 @@ class TgpuRootImpl
       | TgpuWriteonlyTexture
       | TgpuMutableTexture
       | TgpuSampledTexture
-      | TgpuVertexLayout,
+      | TgpuVertexLayout
+      | TgpuSampler
+      | TgpuComparisonSampler,
   ):
     | GPUComputePipeline
     | GPURenderPipeline
@@ -367,7 +377,8 @@ class TgpuRootImpl
     | GPUBuffer
     | GPUTexture
     | GPUTextureView
-    | GPUVertexBufferLayout {
+    | GPUVertexBufferLayout
+    | GPUSampler {
     if (isComputePipeline(resource)) {
       return (resource as unknown as INTERNAL_TgpuComputePipeline).rawPipeline;
     }
@@ -405,6 +416,20 @@ class TgpuRootImpl
 
     if (isVertexLayout(resource)) {
       return resource.vertexLayout;
+    }
+
+    if (isSampler(resource)) {
+      if ('unwrap' in resource && typeof resource.unwrap === 'function') {
+        return resource.unwrap(this);
+      }
+      throw new Error('Cannot unwrap laid-out sampler.');
+    }
+
+    if (isComparisonSampler(resource)) {
+      if ('unwrap' in resource && typeof resource.unwrap === 'function') {
+        return resource.unwrap(this);
+      }
+      throw new Error('Cannot unwrap laid-out comparison sampler.');
     }
 
     throw new Error(`Unknown resource type: ${resource}`);

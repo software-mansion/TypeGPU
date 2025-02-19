@@ -2,6 +2,10 @@ import type { TgpuBuffer } from './core/buffer/buffer';
 import type { TgpuComputePipeline } from './core/pipeline/computePipeline';
 import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline';
 import type {
+  TgpuComparisonSampler,
+  TgpuSampler,
+} from './core/sampler/sampler';
+import type {
   TgpuMutableTexture,
   TgpuReadonlyTexture,
   TgpuSampledTexture,
@@ -28,4 +32,6 @@ export interface Unwrapper {
       | TgpuSampledTexture,
   ): GPUTextureView;
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
+  unwrap(resource: TgpuSampler): GPUSampler;
+  unwrap(resource: TgpuComparisonSampler): GPUSampler;
 }

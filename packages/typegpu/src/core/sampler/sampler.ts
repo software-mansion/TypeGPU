@@ -5,6 +5,7 @@
 import type { TgpuNamable } from '../../namable';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout';
 import type { ResolutionCtx, SelfResolvable } from '../../types';
+import type { ExperimentalTgpuRoot } from '../root/rootTypes';
 
 export interface SamplerProps {
   addressModeU?: GPUAddressMode;
@@ -188,6 +189,7 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
 
   private _label: string | undefined;
   private _filtering: boolean;
+  private _sampler: GPUSampler | null = null;
 
   constructor(private readonly _props: SamplerProps) {
     // Based on https://www.w3.org/TR/webgpu/#sampler-creation
@@ -195,6 +197,20 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
       _props.minFilter === 'linear' ||
       _props.magFilter === 'linear' ||
       _props.mipmapFilter === 'linear';
+  }
+
+  /**
+   * NOTE: Internal use only
+   */
+  unwrap(branch: ExperimentalTgpuRoot): GPUSampler {
+    if (!this._sampler) {
+      this._sampler = branch.device.createSampler({
+        ...this._props,
+        label: this._label ?? '<unnamed>',
+      });
+    }
+
+    return this._sampler;
   }
 
   get label() {
@@ -234,8 +250,23 @@ class TgpuFixedComparisonSamplerImpl
   public readonly resourceType = 'sampler-comparison';
 
   private _label: string | undefined;
+  private _sampler: GPUSampler | null = null;
 
   constructor(private readonly _props: ComparisonSamplerProps) {}
+
+  /**
+   * NOTE: Internal use only
+   */
+  unwrap(branch: ExperimentalTgpuRoot): GPUSampler {
+    if (!this._sampler) {
+      this._sampler = branch.device.createSampler({
+        ...this._props,
+        label: this._label ?? '<unnamed>',
+      });
+    }
+
+    return this._sampler;
+  }
 
   get label(): string | undefined {
     return this._label;
