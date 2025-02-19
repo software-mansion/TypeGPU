@@ -33,7 +33,7 @@
     "node": ">=12.20.0"
   },
   "keywords": ["webgpu", "wgpu", "wgsl", "parser", "ast"],
-  "packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e",
+  "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af",
   "dependencies": {
     "nearley": "^2.20.1"
   },
