@@ -139,13 +139,13 @@ importers:
         version: 4.3.0(typedoc@0.27.1)
       typegpu:
         specifier: workspace:*
-        version: link:../../packages/typegpu/dist
+        version: link:../../packages/typegpu
       typescript:
         specifier: ^5.7.3
         version: 5.7.3
       unplugin-typegpu:
         specifier: workspace:*
-        version: link:../../packages/unplugin-typegpu/dist
+        version: link:../../packages/unplugin-typegpu
       zod:
         specifier: ^3.23.8
         version: 3.23.8
@@ -173,7 +173,7 @@ importers:
     dependencies:
       unplugin-typegpu:
         specifier: workspace:^0.1.0-alpha.2
-        version: link:../unplugin-typegpu/dist
+        version: link:../unplugin-typegpu
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -236,10 +236,10 @@ importers:
         version: 8.12.1
       tinyest:
         specifier: workspace:~0.1.0-alpha.2
-        version: link:../tinyest/dist
+        version: link:../tinyest
       tinyest-for-wgsl:
         specifier: workspace:~0.1.0-alpha.2
-        version: link:../tinyest-for-wgsl/dist
+        version: link:../tinyest-for-wgsl
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -307,7 +307,7 @@ importers:
     dependencies:
       tinyest:
         specifier: workspace:~0.1.0-alpha.2
-        version: link:../tinyest/dist
+        version: link:../tinyest
     devDependencies:
       '@babel/types':
         specifier: 7.26.5
@@ -330,7 +330,7 @@ importers:
     dependencies:
       tinyest:
         specifier: workspace:~0.1.0-alpha.2
-        version: link:../tinyest/dist
+        version: link:../tinyest
       typed-binary:
         specifier: ^4.3.1
         version: 4.3.1
@@ -349,7 +349,7 @@ importers:
         version: 2.4.2
       tgpu-wgsl-parser:
         specifier: workspace:*
-        version: link:../tgpu-wgsl-parser/dist
+        version: link:../tgpu-wgsl-parser
       tsup:
         specifier: ^8.3.6
         version: 8.3.6(jiti@2.4.2)(typescript@5.7.3)
@@ -358,7 +358,7 @@ importers:
         version: 5.7.3
       unplugin-typegpu:
         specifier: workspace:*
-        version: link:../unplugin-typegpu/dist
+        version: link:../unplugin-typegpu
       wgpu-matrix:
         specifier: ^3.3.0
         version: 3.3.0
@@ -377,7 +377,7 @@ importers:
         version: 0.30.12
       tinyest-for-wgsl:
         specifier: workspace:~0.1.0-alpha.2
-        version: link:../tinyest-for-wgsl/dist
+        version: link:../tinyest-for-wgsl
       unplugin:
         specifier: ^2.2.0
         version: 2.2.0
