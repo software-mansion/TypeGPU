@@ -70,7 +70,7 @@
     "jiti": "^2.4.2",
     "unplugin-typegpu": "workspace:*",
     "tgpu-wgsl-parser": "workspace:*",
-    "tsup": "^8.0.2",
+    "tsup": "^8.3.6",
     "typescript": "^5.7.3",
     "wgpu-matrix": "^3.3.0"
   },
