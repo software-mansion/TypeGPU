@@ -45,7 +45,7 @@
   "homepage": "https://docs.swmansion.com/TypeGPU",
   "devDependencies": {
     "typescript": "^5.7.3",
-    "tsup": "^8.0.2",
+    "tsup": "^8.3.6",
     "@typegpu/tgpu-dev-cli": "workspace:*"
   },
   "packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e"
