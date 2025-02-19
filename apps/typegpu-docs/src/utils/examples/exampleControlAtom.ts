@@ -27,10 +27,17 @@ export type ButtonControlParam = {
   label: string;
 };
 
+export type TextAreaControlParam = {
+  onTextChange: (newValue: string) => void;
+  initial?: string;
+  label: string;
+};
+
 export type ExampleControlParam =
   | SelectControlParam
   | ToggleControlParam
   | SliderControlParam
-  | ButtonControlParam;
+  | ButtonControlParam
+  | TextAreaControlParam;
 
 export const exampleControlsAtom = atom<ExampleControlParam[]>([]);

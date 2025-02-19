@@ -13,6 +13,7 @@ import { isGPUSupported } from '../utils/isGPUSupported';
 import { Button } from './design/Button';
 import { Select } from './design/Select';
 import { Slider } from './design/Slider';
+import { TextArea } from './design/TextArea';
 import { Toggle } from './design/Toggle';
 import { openInStackBlitz } from './stackblitz/openInStackBlitz';
 
@@ -75,6 +76,32 @@ function SliderRow({
         min={min}
         max={max}
         step={step}
+        value={value}
+        onChange={(newValue) => {
+          setValue(newValue);
+          onChange(newValue);
+        }}
+      />
+    </>
+  );
+}
+
+function TextAreaRow({
+  label,
+  initial,
+  onChange,
+}: {
+  label: string;
+  initial?: string;
+  onChange: (value: string) => void;
+}) {
+  const [value, setValue] = useState(initial ?? "");
+
+  return (
+    <>
+      <div className="text-sm">{label}</div>
+
+      <TextArea
         value={value}
         onChange={(newValue) => {
           setValue(newValue);
@@ -153,6 +180,13 @@ function paramToControlRow(param: ExampleControlParam) {
       key={param.label}
       label={param.label}
       onClick={param.onButtonClick}
+    />
+  ) : 'onTextChange' in param ? (
+    <TextAreaRow
+      key={param.label}
+      label={param.label}
+      onChange={param.onTextChange}
+      initial={param.initial}
     />
   ) : (
     unreachable(param)
