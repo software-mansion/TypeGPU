@@ -166,8 +166,8 @@ importers:
         specifier: ^0.1.54
         version: 0.1.54
       astro-vtbot:
-        specifier: ^1.8.2
-        version: 1.10.7
+        specifier: ^2.0.6
+        version: 2.0.6
       tailwindcss-motion:
         specifier: ^1.0.1
         version: 1.1.0(tailwindcss@3.4.17)
@@ -2028,8 +2028,8 @@ packages:
     resolution: {integrity: sha512-ufS/aOBXQKAe6hZ5NbiHUsC01o0ZcEwS+nNhd/mr1avLV+NbgYJEbwY8VRorzLs/GH5COOTaxl2795DkGIUTcw==}
     engines: {node: '>=18.14.1'}
 
-  astro-vtbot@1.10.7:
-    resolution: {integrity: sha512-lwCMq+ruuTbHooJ/ZYL2tA99KXDXqbmD5JNBtlnuO7EsEp7FBpwIVBOHt/lDkqUtDt+vQkWRPA5cLZ3tEny48g==}
+  astro-vtbot@2.0.6:
+    resolution: {integrity: sha512-5S9PChJDVgvZXK+MdoXH+Q9dN5htznvzR1CoPbMrFydEOtGrGwP7amYEXHjvNPVT1HodtYGzzSp3In76esJkjA==}
 
   astro@5.3.0:
     resolution: {integrity: sha512-e88l/Yk/6enR/ZDddLbqtM+oblBFk5mneNSmNesyVYGL/6Dj4UA67GPAZOk79VxT5dbLlclZSyyw/wlxN1aj3A==}
@@ -6137,7 +6137,7 @@ snapshots:
       marked-smartypants: 1.1.9(marked@12.0.2)
       ultrahtml: 1.5.3
 
-  astro-vtbot@1.10.7:
+  astro-vtbot@2.0.6:
     dependencies:
       '@vtbag/cam-shaft': 1.0.5
       '@vtbag/element-crossing': 1.1.0
