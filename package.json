@@ -37,7 +37,7 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@webgpu/types": "^0.1.54",
-    "@types/node": "^20.11.13",
+    "@types/node": "^22.13.4",
     "dpdm": "^3.14.0",
     "pkg-pr-new": "^0.0.39",
     "tsup": "^8.3.6",
