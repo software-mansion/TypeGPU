@@ -13,12 +13,12 @@ import {
 } from './parameter-set.js';
 import { suites } from './suites.js';
 
-interface BenchResults {
+interface InstanceResults {
   parameterSet: BenchParameterSet;
-  bench: Bench;
+  benches: Bench[];
 }
 
-async function runSuitesForTgpu(params: BenchParameterSet) {
+async function runSuitesForTgpu(params: BenchParameterSet): Promise<InstanceResults> {
   const tgpu = await importTypeGPU(params.typegpu);
   const d = await importTypeGPUData(params.typegpu);
   const results = []
@@ -30,12 +30,12 @@ async function runSuitesForTgpu(params: BenchParameterSet) {
       bench.add(`${suiteName}: ${testName}`, suite.tests[testName]);
     }
     await bench.run();
-    results.push({parameterSet: params, bench });
+    results.push( bench );
   }
-  return results;
+  return { parameterSet: params, benches: results };
 }
 
-const benchResultsAtom = atom<Promise<BenchResults[]> | null>(null);
+const benchResultsAtom = atom<Promise<InstanceResults[]> | null>(null);
 
 const runBenchmarksAtom = atom(null, async (get, set) => {
   const parameterSets = get(parameterSetsAtom);
@@ -43,11 +43,11 @@ const runBenchmarksAtom = atom(null, async (get, set) => {
   set(
     benchResultsAtom,
     (async () => {
-      const results: BenchResults[] = [];
+      const results: InstanceResults[] = [];
 
       // Running each benchmark in sequence
       for (const params of parameterSets) {
-        results.push(...await runSuitesForTgpu(params));
+        results.push(await runSuitesForTgpu(params));
       }
 
       return results;
@@ -55,14 +55,15 @@ const runBenchmarksAtom = atom(null, async (get, set) => {
   );
 });
 
-function SingleBenchResults(props: { results: BenchResults }) {
-  const { bench } = props.results;
-  const results = useMemo(() => bench.table(), [bench]);
-  const columns = Object.keys(results?.[0] ?? {});
+function SingleInstanceResults(props: { results: InstanceResults }) {
+  const { benches } = props.results;
+  const allResults = useMemo(() => benches.flatMap(bench => bench.table()), [benches]);
+  const name = benches[0].name;
+  const columns = Object.keys(allResults?.[0] ?? {});
 
   return (
     <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 mb-4">
-      <caption>{bench.name}</caption>
+      <caption>{name}</caption>
       <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
         <tr>
           {columns.map((columnKey) => (
@@ -73,7 +74,7 @@ function SingleBenchResults(props: { results: BenchResults }) {
         </tr>
       </thead>
       <tbody>
-        {results.map((task) => (
+        {allResults.map((task) => (
           <tr
             key={task?.['Task name']}
             className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 border-gray-200"
@@ -94,7 +95,7 @@ function BenchmarkResults() {
   const benchResults = useAtomValue(benchResultsAtom);
 
   return benchResults?.map((results) => (
-    <SingleBenchResults key={results.bench.name ?? ''} results={results} />
+    <SingleInstanceResults key={results.benches[0].name ?? ''} results={results} />
   ));
 }
 
