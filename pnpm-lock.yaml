@@ -159,7 +159,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/typegpu
       typescript:
-        specifier: ^5.7.3
+        specifier: 'catalog:'
         version: 5.7.3
       unplugin-typegpu:
         specifier: workspace:*
@@ -178,7 +178,7 @@ importers:
         specifier: ^7.20.6
         version: 7.20.6
       '@webgpu/types':
-        specifier: ^0.1.54
+        specifier: 'catalog:'
         version: 0.1.54
       astro-vtbot:
         specifier: ^2.0.6
@@ -314,10 +314,10 @@ importers:
         specifier: workspace:*
         version: link:../tgpu-dev-cli
       tsup:
-        specifier: ^8.3.6
+        specifier: 'catalog:'
         version: 8.3.6(jiti@2.4.2)(postcss@8.5.2)(tsx@4.19.3)(typescript@5.7.3)(yaml@2.7.0)
       typescript:
-        specifier: ^5.7.3
+        specifier: 'catalog:'
         version: 5.7.3
     publishDirectory: dist
 
@@ -337,10 +337,10 @@ importers:
         specifier: ^8.12.1
         version: 8.14.0
       tsup:
-        specifier: ^8.3.6
+        specifier: 'catalog:'
         version: 8.3.6(jiti@2.4.2)(postcss@8.5.2)(tsx@4.19.3)(typescript@5.7.3)(yaml@2.7.0)
       typescript:
-        specifier: ^5.7.3
+        specifier: 'catalog:'
         version: 5.7.3
     publishDirectory: dist
 
@@ -425,10 +425,10 @@ importers:
         specifier: 4.34.8
         version: 4.34.8
       tsup:
-        specifier: ^8.3.6
+        specifier: 'catalog:'
         version: 8.3.6(jiti@2.4.2)(postcss@8.5.2)(tsx@4.19.3)(typescript@5.7.3)(yaml@2.7.0)
       typescript:
-        specifier: ^5.7.3
+        specifier: 'catalog:'
         version: 5.7.3
     publishDirectory: dist
 

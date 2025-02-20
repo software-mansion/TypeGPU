@@ -44,7 +44,7 @@
     "typedoc": "^0.27.1",
     "typedoc-plugin-markdown": "^4.3.0",
     "typegpu": "workspace:*",
-    "typescript": "^5.7.3",
+    "typescript": "catalog:",
     "unplugin-typegpu": "workspace:*",
     "zod": "^3.23.8"
   },
@@ -52,7 +52,7 @@
     "@types/babel__standalone": "^7.1.9",
     "@types/babel__template": "^7.4.4",
     "@types/babel__traverse": "^7.20.6",
-    "@webgpu/types": "^0.1.54",
+    "@webgpu/types": "catalog:",
     "astro-vtbot": "^2.0.6",
     "tailwindcss-motion": "^1.0.1"
   }
