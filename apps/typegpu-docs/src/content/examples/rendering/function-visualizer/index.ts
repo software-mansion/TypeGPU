@@ -412,7 +412,7 @@ async function tryRecreateComputePipeline(
   });
   const error = await device.popErrorScope();
   if (error) {
-    throw new Error(`Function f(x) = '${codeToCompile}' is invalid.`);
+    throw new Error(`Invalid function f(x) = ${codeToCompile}.`);
   }
 
   const computePipeline = device.createComputePipeline({
@@ -487,31 +487,19 @@ export const controls = {
   [initialFunctions[0].name]: {
     initial: initialFunctions[0].code,
     async onTextChange(value: string) {
-      try {
-        computePipelines[0] = await tryRecreateComputePipeline(value);
-      } catch (e) {
-        console.log(e);
-      }
+      computePipelines[0] = await tryRecreateComputePipeline(value);
     },
   },
   [initialFunctions[1].name]: {
     initial: initialFunctions[1].code,
     async onTextChange(value: string) {
-      try {
-        computePipelines[1] = await tryRecreateComputePipeline(value);
-      } catch (e) {
-        console.log(e);
-      }
+      computePipelines[1] = await tryRecreateComputePipeline(value);
     },
   },
   [initialFunctions[2].name]: {
     initial: initialFunctions[2].code,
     async onTextChange(value: string) {
-      try {
-        computePipelines[2] = await tryRecreateComputePipeline(value);
-      } catch (e) {
-        console.log(e);
-      }
+      computePipelines[2] = await tryRecreateComputePipeline(value);
     },
   },
   'line width': {
