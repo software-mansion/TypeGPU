@@ -2,7 +2,15 @@
  * @module typegpu/data
  */
 
-export { bool, f32, f16, i32, u32 } from './numeric';
+export {
+  bool,
+  f32,
+  f16,
+  i32,
+  u32,
+  abstractInt,
+  abstractFloat,
+} from './numeric';
 export {
   isWgslData,
   isWgslArray,

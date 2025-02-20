@@ -232,7 +232,7 @@ interface FixedBindingConfig {
   resource: object;
 }
 
-class ResolutionCtxImpl implements ResolutionCtx {
+export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _memoizedResolves = new WeakMap<
     // WeakMap because if the item does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.

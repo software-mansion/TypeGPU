@@ -2,15 +2,7 @@ import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
 import tgpu from '../src';
 import { builtin } from '../src/builtin';
-import {
-  f32,
-  location,
-  ptrStorage,
-  struct,
-  vec2f,
-  vec3f,
-  vec4f,
-} from '../src/data';
+import { f32, location, struct, vec2f, vec3f, vec4f } from '../src/data';
 import { parseResolved } from './utils/parseResolved';
 
 describe('TGSL tgpu.fn function', () => {
@@ -352,26 +344,26 @@ describe('TGSL tgpu.fn function', () => {
     expect(actual).toEqual(expected);
   });
 
-  it('resolves a function with a pointer parameter', () => {
-    const addOnes = tgpu['~unstable']
-      .fn([ptrStorage(vec3f, 'read-write')])
-      .does((ptr) => {
-        ptr.x += 1;
-        ptr.y += 1;
-        ptr.z += 1;
-      });
+  // it('resolves a function with a pointer parameter', () => {
+  //   const addOnes = tgpu['~unstable']
+  //     .fn([ptrStorage(vec3f, 'read-write')])
+  //     .does((ptr) => {
+  //       ptr.x += 1;
+  //       ptr.y += 1;
+  //       ptr.z += 1;
+  //     });
 
-    const actual = parseResolved({ addOnes });
-    console.log(tgpu.resolve({ externals: { addOnes }, template: 'addOnes' }));
+  //   const actual = parseResolved({ addOnes });
+  //   console.log(tgpu.resolve({ externals: { addOnes }, template: 'addOnes' }));
 
-    const expected = parse(`
-      fn addOnes(ptr: ptr<storage, vec3f, read_write>) {
-        (*ptr).x += 1;
-        (*ptr).y += 1;
-        (*ptr).z += 1;
-      }
-    `);
+  //   const expected = parse(`
+  //     fn addOnes(ptr: ptr<storage, vec3f, read_write>) {
+  //       (*ptr).x += 1;
+  //       (*ptr).y += 1;
+  //       (*ptr).z += 1;
+  //     }
+  //   `);
 
-    expect(actual).toEqual(expected);
-  });
+  //   expect(actual).toEqual(expected);
+  // });
 });

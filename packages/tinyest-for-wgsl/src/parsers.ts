@@ -190,6 +190,9 @@ const Transpilers: Partial<{
   },
 
   Literal(ctx, node) {
+    if (typeof node.value === 'boolean') {
+      return node.value;
+    }
     if (typeof node.value === 'string') {
       return { s: node.value };
     }

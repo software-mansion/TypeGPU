@@ -67,7 +67,9 @@ export type ResolvableObject =
 
 export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
 
-export const UnknownData = Symbol('Unknown data type');
+export const UnknownData = {
+  type: 'unknown',
+};
 export type UnknownData = typeof UnknownData;
 
 export type Resource = {

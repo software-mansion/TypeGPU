@@ -25,14 +25,14 @@ export interface BaseData {
  * Represents a 64-bit integer.
  */
 export interface AbstractInt {
-  readonly kind: 'int';
+  readonly type: 'abstractInt';
 }
 
 /**
  * Represents a 64-bit IEEE 754 floating point number.
  */
 export interface AbstractFloat {
-  readonly kind: 'float';
+  readonly type: 'abstractFloat';
 }
 
 interface Swizzle2<T2, T3, T4> {
@@ -1116,9 +1116,9 @@ export function isDecorated<T extends Decorated>(
 }
 
 export function isAbstractFloat(value: unknown): value is AbstractFloat {
-  return (value as AbstractFloat).kind === 'float';
+  return (value as AbstractFloat).type === 'abstractFloat';
 }
 
 export function isAbstractInt(value: unknown): value is AbstractInt {
-  return (value as AbstractInt).kind === 'int';
+  return (value as AbstractInt).type === 'abstractInt';
 }
