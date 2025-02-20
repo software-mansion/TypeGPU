@@ -2,18 +2,11 @@ import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect } from 'vitest';
 import tgpu from '../src';
 import * as d from '../src/data';
-import { MissingSlotValueError, ResolutionError } from '../src/errors';
 import { it } from './utils/extendedIt';
 import { parseResolved } from './utils/parseResolved';
 
 const RED = d.vec3f(1, 0, 0);
 const RED_RESOLVED = 'vec3f(1, 0, 0)';
-
-const resolutionRootMock = {
-  toString() {
-    return '<root>';
-  },
-};
 
 describe('tgpu.accessor', () => {
   it('resolves to invocation of provided function', () => {
@@ -174,13 +167,12 @@ describe('tgpu.accessor', () => {
 
     expect(() =>
       tgpu.resolve({ externals: { getColor }, names: 'strict' }),
-    ).toThrow(
-      new ResolutionError(new MissingSlotValueError(colorAccessor.slot), [
-        resolutionRootMock,
-        getColor,
-        colorAccessor,
-      ]),
-    );
+    ).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed: 
+        - <root>
+        - fn:getColor
+        - accessor:color]
+      `);
   });
 
   it('resolves in tgsl functions, using .value', ({ root }) => {

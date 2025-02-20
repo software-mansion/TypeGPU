@@ -51,8 +51,8 @@
   },
   "homepage": "https://docs.swmansion.com/TypeGPU",
   "devDependencies": {
-    "tsup": "^8.3.6",
-    "typescript": "^5.7.3",
+    "tsup": "catalog:",
+    "typescript": "catalog:",
     "acorn": "^8.12.1",
     "@babel/types": "7.26.5",
     "@typegpu/tgpu-dev-cli": "workspace:*"

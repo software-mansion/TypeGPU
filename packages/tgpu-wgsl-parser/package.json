@@ -41,12 +41,12 @@
   "devDependencies": {
     "@types/moo": "^0.5.9",
     "@types/nearley": "^2.11.5",
-    "@webgpu/types": "^0.1.54",
+    "@webgpu/types": "catalog:",
     "moo": "^0.5.2",
-    "tsup": "^8.3.6",
+    "tsup": "catalog:",
     "tsx": "^4.16.2",
-    "typescript": "^5.7.3",
-    "vitest": "^2.1.9",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
     "@typegpu/tgpu-dev-cli": "workspace:*"
   }
 }
