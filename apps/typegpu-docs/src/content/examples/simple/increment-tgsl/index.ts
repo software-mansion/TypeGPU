@@ -13,6 +13,8 @@ const counter = counterBuffer.as('mutable');
 const increment = tgpu['~unstable']
   .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })
   .does((input) => {
+    const primitive = 12;
+    const primitive2 = d.vec2f(1, 2);
     const tmp = counter.value.x;
     counter.value.x = counter.value.y;
     counter.value.y += tmp;

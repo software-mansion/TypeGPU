@@ -67,7 +67,14 @@ export {
   struct,
 } from './struct';
 export { arrayOf } from './array';
-export { ptrFn } from './ptr';
+export {
+  ptrFn,
+  ptrPrivate,
+  ptrHandle,
+  ptrStorage,
+  ptrUniform,
+  ptrWorkgroup,
+} from './ptr';
 export type {
   Disarray,
   Unstruct,

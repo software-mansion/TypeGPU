@@ -27,6 +27,8 @@ import type { TgpuAnyTextureView, TgpuTexture } from './core/texture/texture';
 import type { TgpuVar } from './core/variable/tgpuVariable';
 import type { AnyData } from './data';
 import {
+  type AbstractFloat,
+  type AbstractInt,
   type AnyMatInstance,
   type AnyVecInstance,
   type AnyWgslData,
@@ -70,7 +72,7 @@ export type UnknownData = typeof UnknownData;
 
 export type Resource = {
   value: unknown;
-  dataType: AnyWgslData | UnknownData;
+  dataType: AnyWgslData | UnknownData | AbstractInt | AbstractFloat;
 };
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';

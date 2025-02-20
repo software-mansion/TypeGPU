@@ -21,6 +21,20 @@ export interface BaseData {
 
 // #region Instance Types
 
+/**
+ * Represents a 64-bit integer.
+ */
+export interface AbstractInt {
+  readonly kind: 'int';
+}
+
+/**
+ * Represents a 64-bit IEEE 754 floating point number.
+ */
+export interface AbstractFloat {
+  readonly kind: 'float';
+}
+
 interface Swizzle2<T2, T3, T4> {
   readonly xx: T2;
   readonly xy: T2;
@@ -838,7 +852,8 @@ export type AddressSpace =
   | 'storage'
   | 'workgroup'
   | 'private'
-  | 'function';
+  | 'function'
+  | 'handle';
 export type Access = 'read' | 'write' | 'read-write';
 
 export interface Ptr<
@@ -852,6 +867,12 @@ export interface Ptr<
   readonly access: TAccess;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
+}
+
+export function unwrapPtr<T extends BaseData>(
+  ptr: Ptr<AddressSpace, T, Access>,
+): T {
+  return ptr.inner;
 }
 
 /**
@@ -1092,4 +1113,12 @@ export function isDecorated<T extends Decorated>(
   value: unknown | T,
 ): value is T {
   return (value as T)?.type === 'decorated';
+}
+
+export function isAbstractFloat(value: unknown): value is AbstractFloat {
+  return (value as AbstractFloat).kind === 'float';
+}
+
+export function isAbstractInt(value: unknown): value is AbstractInt {
+  return (value as AbstractInt).kind === 'int';
 }
