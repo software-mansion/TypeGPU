@@ -3,40 +3,10 @@
 
 version: 2
 updates:
-  - package-ecosystem: "pnpm"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "pnpm"
-    directory: "/packages/tgpu-gen"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "pnpm"
-    directory: "/packages/tgpu-jit"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "pnpm"
-    directory: "/packages/tgpu-wgsl-parser"
-    schedule:
-      interval: "weekly"
-- package-ecosystem: "pnpm"
-    directory: "/packages/tinyest"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "pnpm"
-    directory: "/packages/tinyest-for-wgsl"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "pnpm"
-    directory: "/packages/typegpu"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "pnpm"
-    directory: "/packages/unplugin-typegpu"
-    schedule:
-      interval: "weekly"
-
-  - package-ecosystem: "pnpm"
-    directory: "/apps/typegpu-docs"
+  - package-ecosystem: "npm"
+    directories:
+      - /
+      - /packages/*
+      - /apps/*
     schedule:
       interval: "weekly"

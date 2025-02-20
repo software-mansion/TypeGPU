@@ -18,6 +18,7 @@
   "exports": "./src/index.ts",
   "publishConfig": {
     "directory": "dist",
+    "linkDirectory": false,
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "exports": {
@@ -49,7 +50,7 @@
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "rollup": "~4.22.4",
-    "tsup": "^8.0.2",
+    "tsup": "^8.3.6",
     "typescript": "^5.7.3"
   }
 }

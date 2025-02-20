@@ -28,10 +28,10 @@
     "expressive-code-twoslash": "^0.4.0",
     "jotai": "^2.8.4",
     "jotai-location": "^0.5.5",
-    "lucide-react": "^0.474.0",
+    "lucide-react": "^0.475.0",
     "lz-string": "^1.5.0",
-    "monaco-editor": "^0.50.0",
-    "motion": "^12.0.5",
+    "monaco-editor": "^0.52.2",
+    "motion": "^12.4.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "remeda": "^2.3.0",
@@ -44,7 +44,7 @@
     "typedoc": "^0.27.1",
     "typedoc-plugin-markdown": "^4.3.0",
     "typegpu": "workspace:*",
-    "typescript": "^5.7.3",
+    "typescript": "catalog:",
     "unplugin-typegpu": "workspace:*",
     "zod": "^3.23.8"
   },
@@ -52,8 +52,8 @@
     "@types/babel__standalone": "^7.1.9",
     "@types/babel__template": "^7.4.4",
     "@types/babel__traverse": "^7.20.6",
-    "@webgpu/types": "^0.1.54",
-    "astro-vtbot": "^1.8.2",
+    "@webgpu/types": "catalog:",
+    "astro-vtbot": "^2.0.6",
     "tailwindcss-motion": "^1.0.1"
   }
 }
