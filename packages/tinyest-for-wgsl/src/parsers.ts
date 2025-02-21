@@ -426,3 +426,17 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
     externalNames,
   };
 }
+
+export function transpileNode(node: JsNode): smol.AnyNode {
+  const ctx: Context = {
+    externalNames: new Set(),
+    ignoreExternalDepth: 0,
+    stack: [
+      {
+        declaredNames: [],
+      },
+    ],
+  };
+
+  return transpile(ctx, node);
+}

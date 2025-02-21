@@ -38,7 +38,7 @@ export type GenerationCtx = ResolutionCtx & {
   getById(id: string): Resource;
 };
 
-function resolveRes(ctx: GenerationCtx, res: Resource): string {
+export function resolveRes(ctx: GenerationCtx, res: Resource): string {
   if (isWgsl(res.value) || wgsl.isWgslData(res.value)) {
     return ctx.resolve(res.value);
   }
@@ -52,28 +52,26 @@ function assertExhaustive(value: unknown): never {
   );
 }
 
-function generateBoolean(ctx: GenerationCtx, value: boolean): Resource {
+export function generateBoolean(ctx: GenerationCtx, value: boolean): Resource {
   return value
     ? { value: 'true', dataType: d.bool }
     : { value: 'false', dataType: d.bool };
 }
 
-function generateBlock(ctx: GenerationCtx, value: smol.Block): string {
+export function generateBlock(ctx: GenerationCtx, value: smol.Block): string {
   return `${ctx.indent()}{
 ${value.b.map((statement) => generateStatement(ctx, statement)).join('\n')}
 ${ctx.dedent()}}`;
 }
 
-function generateIdentifier(ctx: GenerationCtx, id: string): Resource {
+export function generateIdentifier(ctx: GenerationCtx, id: string): Resource {
   return ctx.getById(id);
 }
 
-function generateExpression(
+export function generateExpression(
   ctx: GenerationCtx,
   expression: smol.Expression,
 ): Resource {
-  console.log(expression);
-
   if (typeof expression === 'string') {
     return generateIdentifier(ctx, expression);
   }
@@ -163,13 +161,7 @@ function generateExpression(
     // Numeric Literal
     const value = expression.n;
 
-    // Integer literals
-    const intRegex = /^-?\d+$/;
-    if (intRegex.test(value)) {
-      return { value: `${value}`, dataType: d.abstractInt };
-    }
-
-    // Hex literals
+    // Hex literals (since JS does not have float hex literals, we'll assume it's an int)
     const hexRegex = /^0x[0-9a-f]+$/i;
     if (hexRegex.test(value)) {
       return { value: `${value}`, dataType: d.abstractInt };
@@ -180,13 +172,12 @@ function generateExpression(
     if (binRegex.test(value)) {
       // Since wgsl doesn't support binary literals, we'll convert it to a decimal number
       return {
-        value: `${Number.parseInt(value, 2)}`,
+        value: `${Number.parseInt(value.slice(2), 2)}`,
         dataType: d.abstractInt,
       };
     }
 
-    // Floating point literals (excluding scientific notation)
-    const floatRegex = /^-?\d+\.\d+$/;
+    const floatRegex = /^-?(?:\d+\.\d*|\d*\.\d+)$/;
     if (floatRegex.test(value)) {
       return { value: `${value}`, dataType: d.abstractFloat };
     }
@@ -194,11 +185,16 @@ function generateExpression(
     // Floating point literals with scientific notation
     const sciFloatRegex = /^-?\d+\.\d+e-?\d+$/;
     if (sciFloatRegex.test(value)) {
-      // Since wgsl doesn't support scientific notation, we'll convert it to a floating point number
       return {
-        value: `${Number.parseFloat(value)}`,
+        value: `${value}`,
         dataType: d.abstractFloat,
       };
+    }
+
+    // Integer literals
+    const intRegex = /^-?\d+$/;
+    if (intRegex.test(value)) {
+      return { value: `${value}`, dataType: d.abstractInt };
     }
 
     throw new Error(`Invalid numeric literal ${value}`);
@@ -282,7 +278,7 @@ function generateExpression(
   assertExhaustive(expression);
 }
 
-function generateStatement(
+export function generateStatement(
   ctx: GenerationCtx,
   statement: smol.Statement,
 ): string {

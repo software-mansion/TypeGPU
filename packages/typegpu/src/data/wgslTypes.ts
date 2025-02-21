@@ -883,8 +883,16 @@ export interface Atomic<TInner extends U32 | I32 = U32 | I32> {
   readonly inner: TInner;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
-  readonly '~gpuRepr': Atomic<TInner>;
+  readonly '~gpuRepr': TInner extends U32 ? atomicU32 : atomicI32;
   readonly '~memIdent': MemIdentity<TInner>;
+}
+
+export interface atomicU32 {
+  type: 'atomicU32';
+}
+
+export interface atomicI32 {
+  type: 'atomicI32';
 }
 
 export interface Align<T extends number> {
