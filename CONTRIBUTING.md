@@ -30,3 +30,4 @@ pnpm publish --dry-run # (if alpha, --tag alpha)
 ```
 5. If everything looks okay, then `pnpm publish` (if alpha, `--tag alpha`)
 6. Rebase *release* branch on *main*
+7. Generate and edit release notes on GitHub
