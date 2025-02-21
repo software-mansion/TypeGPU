@@ -12,7 +12,7 @@ import type {
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout';
 import type { Unwrapper } from '../../unwrapper';
-import type { TgpuBuffer, Vertex } from '../buffer/buffer';
+import type { TgpuBuffer, VertexFlag } from '../buffer/buffer';
 import type {
   TgpuBufferMutable,
   TgpuBufferReadonly,
@@ -283,7 +283,7 @@ export interface RenderPass {
 
   setVertexBuffer<TData extends WgslArray | Disarray>(
     vertexLayout: TgpuVertexLayout<TData>,
-    buffer: (TgpuBuffer<TData> & Vertex) | GPUBuffer,
+    buffer: (TgpuBuffer<TData> & VertexFlag) | GPUBuffer,
     offset?: GPUSize64,
     size?: GPUSize64,
   ): void;

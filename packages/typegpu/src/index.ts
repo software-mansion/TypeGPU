@@ -100,13 +100,15 @@ export type {
   WithFragment,
   WithVertex,
 } from './core/root/rootTypes';
-export type { Storage } from './extension';
+export type { StorageFlag, Storage } from './extension';
 export type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout';
 export type { TgpuRenderPipeline } from './core/pipeline/renderPipeline';
 export type { TgpuComputePipeline } from './core/pipeline/computePipeline';
 export type {
   TgpuBuffer,
+  UniformFlag,
   Uniform,
+  VertexFlag,
   Vertex,
 } from './core/buffer/buffer';
 export type {

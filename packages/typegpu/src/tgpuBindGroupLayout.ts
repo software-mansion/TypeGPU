@@ -1,4 +1,8 @@
-import { type TgpuBuffer, type Uniform, isBuffer } from './core/buffer/buffer';
+import {
+  type TgpuBuffer,
+  type UniformFlag,
+  isBuffer,
+} from './core/buffer/buffer';
 import {
   type TgpuBufferMutable,
   type TgpuBufferReadonly,
@@ -43,7 +47,11 @@ import {
 import type { AnyData } from './data';
 import type { AnyWgslData, BaseData } from './data/wgslTypes';
 import { NotUniformError } from './errors';
-import { NotStorageError, type Storage, isUsableAsStorage } from './extension';
+import {
+  NotStorageError,
+  type StorageFlag,
+  isUsableAsStorage,
+} from './extension';
 import type { TgpuNamable } from './namable';
 import type { Default, OmitProps, Prettify } from './shared/utilityTypes';
 import type { TgpuShaderStage } from './types';
@@ -261,10 +269,12 @@ type GetStorageTextureRestriction<T extends TgpuLayoutStorageTexture> = Default<
 
 export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
   T extends TgpuLayoutUniform
-    ? (TgpuBuffer<UnwrapRuntimeConstructor<T['uniform']>> & Uniform) | GPUBuffer
+    ?
+        | (TgpuBuffer<UnwrapRuntimeConstructor<T['uniform']>> & UniformFlag)
+        | GPUBuffer
     : T extends TgpuLayoutStorage
       ?
-          | (TgpuBuffer<UnwrapRuntimeConstructor<T['storage']>> & Storage)
+          | (TgpuBuffer<UnwrapRuntimeConstructor<T['storage']>> & StorageFlag)
           | GPUBuffer
       : T extends TgpuLayoutSampler
         ? TgpuSampler | GPUSampler
@@ -280,7 +290,7 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
             : T extends TgpuLayoutStorageTexture
               ?
                   | GPUTextureView
-                  | (Storage &
+                  | (StorageFlag &
                       TgpuTexture<
                         Prettify<TextureProps & GetStorageTextureRestriction<T>>
                       >)
@@ -669,15 +679,15 @@ export class TgpuBindGroupImpl<
 
               if (entry.access === 'readonly') {
                 resource = unwrapper.unwrap(
-                  (value as TgpuTexture & Storage).createView('readonly'),
+                  (value as TgpuTexture & StorageFlag).createView('readonly'),
                 );
               } else if (entry.access === 'mutable') {
                 resource = unwrapper.unwrap(
-                  (value as TgpuTexture & Storage).createView('mutable'),
+                  (value as TgpuTexture & StorageFlag).createView('mutable'),
                 );
               } else {
                 resource = unwrapper.unwrap(
-                  (value as TgpuTexture & Storage).createView('writeonly'),
+                  (value as TgpuTexture & StorageFlag).createView('writeonly'),
                 );
               }
             } else {

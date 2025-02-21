@@ -105,7 +105,7 @@ const buffer = root.createBuffer(d.u32)
 :::note
 Along with passing the appropriate flags to WebGPU, the methods will also embed type information into the buffer.
 ```ts
-// TgpuBuffer<d.U32> & Uniform & Storage
+// TgpuBuffer<d.U32> & UniformFlag & StorageFlag
 const buffer = root.createBuffer(d.u32)
   .$usage('uniform', 'storage');
 ```

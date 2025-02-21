@@ -1,4 +1,4 @@
-import type { Storage } from '../../extension';
+import type { StorageFlag } from '../../extension';
 import type { StorageTextureTexelFormat } from './textureFormats';
 import type { TextureProps } from './textureProps';
 
@@ -11,7 +11,7 @@ export interface Render {
 }
 
 export type LiteralToExtensionMap = {
-  storage: Storage; // <- shared between buffers and textures
+  storage: StorageFlag; // <- shared between buffers and textures
   sampled: Sampled;
   render: Render;
 };
