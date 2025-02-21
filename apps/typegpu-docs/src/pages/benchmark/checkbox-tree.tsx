@@ -2,33 +2,10 @@ import { useAtom } from 'jotai/react';
 import { useEffect, useRef, useState } from 'react';
 import {
   selectedTestsAtom,
-  testIdentifierOf,
+  identifierOf,
   type Suite,
   type TestIdentifier,
 } from './suites.js';
-
-export function TestCheckbox(props: { suiteName: string; testName: string }) {
-  const { suiteName, testName } = props;
-  const identifier = testIdentifierOf(suiteName, testName);
-  const [selected, setSelected] = useAtom(selectedTestsAtom);
-
-  return (
-    <div>
-      <input
-        type="checkbox"
-        id="option"
-        className="ml-6 text-sm"
-        checked={selected.includes(identifier)}
-        onChange={() =>
-          selected.includes(identifier)
-            ? setSelected(selected.filter((item) => item !== identifier))
-            : setSelected([...selected, identifier])
-        }
-      />
-      {testName}
-    </div>
-  );
-}
 
 type CheckboxState = 'checked' | 'unchecked' | 'indeterminate';
 
@@ -40,7 +17,7 @@ export function SuiteCheckbox(props: { suiteName: string; suite: Suite }) {
 
   const childrenIdentifiers: TestIdentifier[] = [];
   for (const testName in tests) {
-    childrenIdentifiers.push(testIdentifierOf(suiteName, testName));
+    childrenIdentifiers.push(identifierOf(suiteName, testName));
   }
 
   const selectedChildren = selected.filter((item) =>
@@ -88,6 +65,29 @@ export function SuiteCheckbox(props: { suiteName: string; suite: Suite }) {
         Object.keys(suite().tests).map((key) => (
           <TestCheckbox suiteName={suiteName} testName={key} key={key} />
         ))}
+    </div>
+  );
+}
+
+export function TestCheckbox(props: { suiteName: string; testName: string }) {
+  const { suiteName, testName } = props;
+  const identifier = identifierOf(suiteName, testName);
+  const [selected, setSelected] = useAtom(selectedTestsAtom);
+
+  return (
+    <div>
+      <input
+        type="checkbox"
+        id="option"
+        className="ml-6 text-sm"
+        checked={selected.includes(identifier)}
+        onChange={() =>
+          selected.includes(identifier)
+            ? setSelected(selected.filter((item) => item !== identifier))
+            : setSelected([...selected, identifier])
+        }
+      />
+      {testName}
     </div>
   );
 }
