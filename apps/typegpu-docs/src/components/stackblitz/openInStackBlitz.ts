@@ -61,8 +61,8 @@ ${example.htmlCode}
     },
     "dependencies": {
       "@webgpu/types": "^0.1.54",
-      "typegpu": "^0.4.2",
-      "unplugin-typegpu": "^0.1.0-alpha.2"
+      "typegpu": "^0.4.3",
+      "unplugin-typegpu": "^0.1.0-alpha.3"
     }
 }`,
         'vite.config.js': `\

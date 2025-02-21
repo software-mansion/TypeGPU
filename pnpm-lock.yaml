@@ -190,7 +190,7 @@ importers:
   packages/rollup-plugin:
     dependencies:
       unplugin-typegpu:
-        specifier: workspace:^0.1.0-alpha.2
+        specifier: workspace:^0.1.0-alpha.3
         version: link:../unplugin-typegpu
     devDependencies:
       '@typegpu/tgpu-dev-cli':
