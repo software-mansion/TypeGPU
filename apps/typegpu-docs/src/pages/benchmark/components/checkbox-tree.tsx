@@ -5,7 +5,30 @@ import {
   identifierOf,
   type Suite,
   type TestIdentifier,
-} from './suites.js';
+} from '../suites.js';
+
+function TestCheckbox(props: { suiteName: string; testName: string }) {
+  const { suiteName, testName } = props;
+  const identifier = identifierOf(suiteName, testName);
+  const [selected, setSelected] = useAtom(selectedTestsAtom);
+
+  return (
+    <div>
+      <input
+        type="checkbox"
+        id="option"
+        className="ml-6 text-sm"
+        checked={selected.includes(identifier)}
+        onChange={() =>
+          selected.includes(identifier)
+            ? setSelected(selected.filter((item) => item !== identifier))
+            : setSelected([...selected, identifier])
+        }
+      />
+      {testName}
+    </div>
+  );
+}
 
 type CheckboxState = 'checked' | 'unchecked' | 'indeterminate';
 
@@ -65,29 +88,6 @@ export function SuiteCheckbox(props: { suiteName: string; suite: Suite }) {
         Object.keys(suite().tests).map((key) => (
           <TestCheckbox suiteName={suiteName} testName={key} key={key} />
         ))}
-    </div>
-  );
-}
-
-export function TestCheckbox(props: { suiteName: string; testName: string }) {
-  const { suiteName, testName } = props;
-  const identifier = identifierOf(suiteName, testName);
-  const [selected, setSelected] = useAtom(selectedTestsAtom);
-
-  return (
-    <div>
-      <input
-        type="checkbox"
-        id="option"
-        className="ml-6 text-sm"
-        checked={selected.includes(identifier)}
-        onChange={() =>
-          selected.includes(identifier)
-            ? setSelected(selected.filter((item) => item !== identifier))
-            : setSelected([...selected, identifier])
-        }
-      />
-      {testName}
     </div>
   );
 }
