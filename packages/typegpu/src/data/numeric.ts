@@ -1,6 +1,22 @@
 import bin from 'typed-binary';
 import { inGPUMode } from '../gpuMode';
-import type { Bool, F16, F32, I32, U32 } from './wgslTypes';
+import type {
+  AbstractFloat,
+  AbstractInt,
+  Bool,
+  F16,
+  F32,
+  I32,
+  U32,
+} from './wgslTypes';
+
+export const abstractInt = {
+  type: 'abstractInt',
+} as AbstractInt;
+
+export const abstractFloat = {
+  type: 'abstractFloat',
+} as AbstractFloat;
 
 /**
  * A schema that represents a boolean value. (equivalent to `bool` in WGSL)

@@ -9,13 +9,12 @@ import {
   isProviding,
   isSlot,
 } from './core/slot/slotTypes';
-import { isLooseData } from './data';
+import { isData } from './data';
 import { getAttributesString } from './data/attributes';
 import {
   type AnyWgslData,
   type BaseData,
   isWgslArray,
-  isWgslData,
   isWgslStruct,
 } from './data/wgslTypes';
 import { MissingSlotValueError, ResolutionError } from './errors';
@@ -233,7 +232,7 @@ interface FixedBindingConfig {
   resource: object;
 }
 
-class ResolutionCtxImpl implements ResolutionCtx {
+export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _memoizedResolves = new WeakMap<
     // WeakMap because if the item does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
@@ -476,7 +475,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
 
       // If we got here, no item with the given slot-to-value combo exists in cache yet
       let result: string;
-      if (isWgslData(item) || isLooseData(item)) {
+      if (isData(item)) {
         result = resolveData(this, item);
       } else if (isDerived(item) || isSlot(item)) {
         result = this.resolve(this.unwrap(item));

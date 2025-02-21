@@ -1,4 +1,9 @@
-import type { Infer, MemIdentity } from '../shared/repr';
+import type {
+  Infer,
+  InferGPU,
+  InferPartial,
+  MemIdentity,
+} from '../shared/repr';
 import { alignmentOf } from './alignmentOf';
 import {
   type AnyData,
@@ -337,6 +342,8 @@ class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   implements Decorated<TInner, TAttribs>
 {
   public readonly type = 'decorated';
+  readonly '~gpuRepr': InferGPU<TInner>;
+  readonly '~reprPartial': InferPartial<TInner>;
   public readonly '~memIdent'!: TAttribs extends Location<number>[]
     ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<MemIdentity<TInner>, TAttribs>;

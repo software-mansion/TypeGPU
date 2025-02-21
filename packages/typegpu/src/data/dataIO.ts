@@ -187,7 +187,7 @@ const dataWriters = {
     output.seekTo(beginning + sizeOf(schema));
   },
 
-  ptrFn() {
+  ptr() {
     throw new Error('Pointers are not host-shareable');
   },
 
@@ -620,7 +620,7 @@ const dataReaders = {
     return elements as never[];
   },
 
-  ptrFn() {
+  ptr() {
     throw new Error('Pointers are not host-shareable');
   },
 

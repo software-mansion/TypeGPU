@@ -190,6 +190,9 @@ const Transpilers: Partial<{
   },
 
   Literal(ctx, node) {
+    if (typeof node.value === 'boolean') {
+      return node.value;
+    }
     if (typeof node.value === 'string') {
       return { s: node.value };
     }
@@ -422,4 +425,18 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
     },
     externalNames,
   };
+}
+
+export function transpileNode(node: JsNode): smol.AnyNode {
+  const ctx: Context = {
+    externalNames: new Set(),
+    ignoreExternalDepth: 0,
+    stack: [
+      {
+        declaredNames: [],
+      },
+    ],
+  };
+
+  return transpile(ctx, node);
 }

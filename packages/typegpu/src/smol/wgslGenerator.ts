@@ -1,6 +1,6 @@
 import type * as smol from 'tinyest';
-import { bool } from '../data';
-import { isWgslData, isWgslStruct } from '../data/wgslTypes';
+import * as d from '../data';
+import * as wgsl from '../data/wgslTypes';
 import {
   type ResolutionCtx,
   type Resource,
@@ -38,8 +38,8 @@ export type GenerationCtx = ResolutionCtx & {
   getById(id: string): Resource;
 };
 
-function resolveRes(ctx: GenerationCtx, res: Resource): string {
-  if (isWgsl(res.value) || isWgslData(res.value)) {
+export function resolveRes(ctx: GenerationCtx, res: Resource): string {
+  if (isWgsl(res.value) || wgsl.isWgslData(res.value)) {
     return ctx.resolve(res.value);
   }
 
@@ -52,23 +52,23 @@ function assertExhaustive(value: unknown): never {
   );
 }
 
-function generateBoolean(ctx: GenerationCtx, value: boolean): Resource {
+export function generateBoolean(ctx: GenerationCtx, value: boolean): Resource {
   return value
-    ? { value: 'true', dataType: bool }
-    : { value: 'false', dataType: bool };
+    ? { value: 'true', dataType: d.bool }
+    : { value: 'false', dataType: d.bool };
 }
 
-function generateBlock(ctx: GenerationCtx, value: smol.Block): string {
+export function generateBlock(ctx: GenerationCtx, value: smol.Block): string {
   return `${ctx.indent()}{
 ${value.b.map((statement) => generateStatement(ctx, statement)).join('\n')}
 ${ctx.dedent()}}`;
 }
 
-function generateIdentifier(ctx: GenerationCtx, id: string): Resource {
+export function generateIdentifier(ctx: GenerationCtx, id: string): Resource {
   return ctx.getById(id);
 }
 
-function generateExpression(
+export function generateExpression(
   ctx: GenerationCtx,
   expression: smol.Expression,
 ): Resource {
@@ -159,9 +159,45 @@ function generateExpression(
 
   if ('n' in expression) {
     // Numeric Literal
+    const value = expression.n;
 
-    // TODO: Infer numeric data type from literal
-    return { value: expression.n, dataType: UnknownData };
+    // Hex literals (since JS does not have float hex literals, we'll assume it's an int)
+    const hexRegex = /^0x[0-9a-f]+$/i;
+    if (hexRegex.test(value)) {
+      return { value: `${value}`, dataType: d.abstractInt };
+    }
+
+    // Binary literals
+    const binRegex = /^0b[01]+$/i;
+    if (binRegex.test(value)) {
+      // Since wgsl doesn't support binary literals, we'll convert it to a decimal number
+      return {
+        value: `${Number.parseInt(value.slice(2), 2)}`,
+        dataType: d.abstractInt,
+      };
+    }
+
+    const floatRegex = /^-?(?:\d+\.\d*|\d*\.\d+)$/;
+    if (floatRegex.test(value)) {
+      return { value: `${value}`, dataType: d.abstractFloat };
+    }
+
+    // Floating point literals with scientific notation
+    const sciFloatRegex = /^-?\d+\.\d+e-?\d+$/;
+    if (sciFloatRegex.test(value)) {
+      return {
+        value: `${value}`,
+        dataType: d.abstractFloat,
+      };
+    }
+
+    // Integer literals
+    const intRegex = /^-?\d+$/;
+    if (intRegex.test(value)) {
+      return { value: `${value}`, dataType: d.abstractInt };
+    }
+
+    throw new Error(`Invalid numeric literal ${value}`);
   }
 
   if ('f' in expression) {
@@ -185,7 +221,7 @@ function generateExpression(
       };
     }
 
-    if (isWgslStruct(idValue)) {
+    if (wgsl.isWgslStruct(idValue)) {
       const id = ctx.resolve(idValue);
 
       return {
@@ -215,7 +251,7 @@ function generateExpression(
         })
         .join(', ');
 
-    if (isWgslStruct(callee)) {
+    if (wgsl.isWgslStruct(callee)) {
       const propKeys = Object.keys(callee.propTypes);
       const values = propKeys.map((key) => {
         const val = obj[key];
@@ -242,7 +278,7 @@ function generateExpression(
   assertExhaustive(expression);
 }
 
-function generateStatement(
+export function generateStatement(
   ctx: GenerationCtx,
   statement: smol.Statement,
 ): string {
@@ -258,7 +294,7 @@ function generateStatement(
     // check if the thing at the top of the call stack is a struct and the statement is a plain JS object
     // if so wrap the value returned in a constructor of the struct (its resolved name)
     if (
-      isWgslStruct(ctx.callStack[ctx.callStack.length - 1]) &&
+      wgsl.isWgslStruct(ctx.callStack[ctx.callStack.length - 1]) &&
       statement.r !== null &&
       typeof statement.r === 'object' &&
       'o' in statement.r
@@ -313,7 +349,7 @@ ${alternate}`;
     if (
       typeof rawValue === 'object' &&
       'o' in rawValue &&
-      isWgslStruct(ctx.callStack[ctx.callStack.length - 1])
+      wgsl.isWgslStruct(ctx.callStack[ctx.callStack.length - 1])
     ) {
       const resolvedStruct = ctx.resolve(
         ctx.callStack[ctx.callStack.length - 1],

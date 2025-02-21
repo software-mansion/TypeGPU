@@ -9,8 +9,8 @@ const lexer = moo.compile({
   comment: /\/\/.*?$/,
   decimal_float_literal: /0[fh]|[1-9][0-9]*[fh]|[0-9]*\.[0-9]+(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+\.[0-9]*(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+[eE][+-]?[0-9]+[fh]?/,
   hex_float_literal: /0[xX][0-9a-fA-F]*\.[0-9a-fA-F]+(?:[pP][+-]?[0-9]+[fh]?)?|0[xX][0-9a-fA-F]+\.[0-9a-fA-F]*(?:[pP][+-]?[0-9]+[fh]?)?|0[xX][0-9a-fA-F]+[pP][+-]?[0-9]+[fh]?/,
-  decimal_int_literal: { match: /(?:0|[1-9][0-9]*)[iu]?/ },
   hex_int_literal: { match: /0[xX][0-9a-fA-F]+[iu]?/ },
+  decimal_int_literal: { match: /(?:0|[1-9][0-9]*)[iu]?/ },
 
   // WGSL spec apparently accepts plenty of Unicode, but lets limit it to just ASCII for now.
   ident_pattern: {
@@ -402,12 +402,10 @@ component_or_swizzle_specifier ->
 export type SingularExpression =
     PrimaryExpression
   | { type: 'accessor', expression: PrimaryExpression, accessor: Accessor };
-
 %}
 
 singular_expression ->
-    primary_expression {% id %}
-  | primary_expression component_or_swizzle_specifier  {% ([expression, accessor]) => ({ type: 'accessor', expression, accessor }) %}
+    primary_expression component_or_swizzle_specifier:? {% ([expression, accessor]) => accessor ? { type: 'accessor', expression, accessor } : expression %}
 
 @{%
 export type UnaryExpression =
