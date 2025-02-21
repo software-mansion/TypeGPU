@@ -1,7 +1,7 @@
 import { useAtomValue, useSetAtom } from 'jotai/react';
 import { atom } from 'jotai/vanilla';
 import { CirclePlus } from 'lucide-react';
-import { Suspense, useMemo } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import type { Bench } from 'tinybench';
 import { importTypeGPU, importTypeGPUData } from './modules.js';
 import { ParameterSetRow } from './parameter-set-row.js';
@@ -11,7 +11,7 @@ import {
   parameterSetAtomsAtom,
   parameterSetsAtom,
 } from './parameter-set.js';
-import { suites } from './suites.js';
+import { suites, type Suite } from './suites.js';
 
 interface InstanceResults {
   parameterSet: BenchParameterSet;
@@ -23,8 +23,8 @@ async function runSuitesForTgpu(params: BenchParameterSet): Promise<InstanceResu
   const d = await importTypeGPUData(params.typegpu);
   const results = []
 
-  for (const {name: suiteName, generator} of suites) {
-    const suite = generator();
+  for (const suiteName in suites) {
+    const suite = suites[suiteName]();
     const bench = suite.suiteSetup(params, tgpu, d);
     for (const testName in suite.tests) {
       bench.add(`${suiteName}: ${testName}`, suite.tests[testName]);
@@ -125,6 +125,37 @@ function BenchmarkFallback() {
   );
 }
 
+export function ChildCheckBox(props: {suiteName: string, testName: string}) {
+  const { suiteName, testName } = props;
+
+  return (
+    <div>
+      <input type="checkbox" id="option" className="ml-6 text-sm"/>
+      {testName}
+    </div>
+  );
+}
+
+export function ParentCheckBox(props: {suiteName: string, suite: Suite}) {
+  const [opened, setOpened] = useState(false);
+  const [childrenChecked, setChildrenChecked] = useState(0);
+  const { suiteName, suite } = props;
+
+  return (
+    <div>
+      <input type="checkbox" id="option" className="indeterminate"/>
+      <button
+            type="button"
+            className="bg-transparent text-base text-white"
+            onClick={() => setOpened(!opened)}
+          >
+        {`${opened ? "▼" : "▶"} ${suiteName}`}
+      </button>
+      {opened && Object.entries(suite().tests).map(entry => <ChildCheckBox suiteName={suiteName} testName={entry[0]} key={entry[0]}/>)}
+    </div>
+  );
+}
+
 export default function BenchmarkApp() {
   const parameterSetAtoms = useAtomValue(parameterSetAtomsAtom);
   const runBenchmarks = useSetAtom(runBenchmarksAtom);
@@ -154,13 +185,18 @@ export default function BenchmarkApp() {
             <CirclePlus />
           </button>
         </div>
+        <p className="w-full mt-1 mb-3 text-lg">Benchmark suites to run:</p>
+        <div className="w-full">
+          {Object.entries(suites).map(entry => <ParentCheckBox suiteName={entry[0]} suite={entry[1]} key={entry[0]}/>)}
+        </div>
+
         <button
           type="button"
           className="mt-5 text-white bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-purple-300 dark:focus:ring-purple-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2"
           onClick={runBenchmarks}
         >
           Run Benchmarks
-        </button>
+        </button>        
       </div>
       <Suspense fallback={<BenchmarkFallback />}>
         <BenchmarkResults />

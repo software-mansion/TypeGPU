@@ -13,13 +13,41 @@ export type Suite = () => {
   tests: Record<string, () => void>;
 };
 
-export const suites: { name: string; generator: Suite }[] = [
-  {
-    name: 'Dummy',
-    generator: dummySuite,
-  },
-  {
-    name: 'Mass transfer',
-    generator: massTransferSuite,
-  },
-];
+export const suites: Record<string, Suite> = {
+  Dummy: dummySuite,
+  'Mass transfer': massTransferSuite,
+};
+
+export type TestIdentifier = `${string}_${string}`;
+
+export function testIdentifierOf(
+  suiteName: string,
+  testName: string,
+): TestIdentifier {
+  return `${suiteName.replaceAll(' ', '-')}_${testName.replaceAll(' ', '-')}`;
+}
+
+export function namesFromIdentifier(identifier: TestIdentifier): {
+  suiteName: string;
+  testName: string;
+} {
+  const split = identifier.split('_');
+  if (split.length !== 2) {
+    throw new Error(`Invalid test identifier ${identifier}.`);
+  }
+  return {
+    suiteName: split[0].replaceAll('-', ' '),
+    testName: split[1].replaceAll('-', ' '),
+  };
+}
+
+export function testIdentifiers(): Set<TestIdentifier> {
+  const result = new Set<TestIdentifier>();
+  for (const suiteName in suites) {
+    const suite = suites[suiteName]();
+    for (const testName in suite) {
+      result.add(testIdentifierOf(suiteName, testName));
+    }
+  }
+  return result;
+}
