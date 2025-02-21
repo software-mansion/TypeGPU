@@ -1,7 +1,7 @@
 import { useAtomValue, useSetAtom } from 'jotai/react';
 import { atom } from 'jotai/vanilla';
 import { CirclePlus } from 'lucide-react';
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useMemo } from 'react';
 import type { Bench } from 'tinybench';
 import { importTypeGPU, importTypeGPUData } from './modules.js';
 import { ParameterSetRow } from './parameter-set-row.js';
@@ -11,17 +11,20 @@ import {
   parameterSetAtomsAtom,
   parameterSetsAtom,
 } from './parameter-set.js';
-import { suites, type Suite } from './suites.js';
+import { suites } from './suites.js';
+import { SuiteCheckbox } from './checkbox-tree.js';
 
 interface InstanceResults {
   parameterSet: BenchParameterSet;
   benches: Bench[];
 }
 
-async function runSuitesForTgpu(params: BenchParameterSet): Promise<InstanceResults> {
+async function runSuitesForTgpu(
+  params: BenchParameterSet,
+): Promise<InstanceResults> {
   const tgpu = await importTypeGPU(params.typegpu);
   const d = await importTypeGPUData(params.typegpu);
-  const results = []
+  const results = [];
 
   for (const suiteName in suites) {
     const suite = suites[suiteName]();
@@ -30,7 +33,7 @@ async function runSuitesForTgpu(params: BenchParameterSet): Promise<InstanceResu
       bench.add(`${suiteName}: ${testName}`, suite.tests[testName]);
     }
     await bench.run();
-    results.push( bench );
+    results.push(bench);
   }
   return { parameterSet: params, benches: results };
 }
@@ -57,7 +60,10 @@ const runBenchmarksAtom = atom(null, async (get, set) => {
 
 function SingleInstanceResults(props: { results: InstanceResults }) {
   const { benches } = props.results;
-  const allResults = useMemo(() => benches.flatMap(bench => bench.table()), [benches]);
+  const allResults = useMemo(
+    () => benches.flatMap((bench) => bench.table()),
+    [benches],
+  );
   const name = benches[0].name;
   const columns = Object.keys(allResults?.[0] ?? {});
 
@@ -95,7 +101,10 @@ function BenchmarkResults() {
   const benchResults = useAtomValue(benchResultsAtom);
 
   return benchResults?.map((results) => (
-    <SingleInstanceResults key={results.benches[0].name ?? ''} results={results} />
+    <SingleInstanceResults
+      key={results.benches[0].name ?? ''}
+      results={results}
+    />
   ));
 }
 
@@ -121,37 +130,6 @@ function BenchmarkFallback() {
         </svg>
         <p>Running...</p>
       </div>
-    </div>
-  );
-}
-
-export function ChildCheckBox(props: {suiteName: string, testName: string}) {
-  const { suiteName, testName } = props;
-
-  return (
-    <div>
-      <input type="checkbox" id="option" className="ml-6 text-sm"/>
-      {testName}
-    </div>
-  );
-}
-
-export function ParentCheckBox(props: {suiteName: string, suite: Suite}) {
-  const [opened, setOpened] = useState(false);
-  const [childrenChecked, setChildrenChecked] = useState(0);
-  const { suiteName, suite } = props;
-
-  return (
-    <div>
-      <input type="checkbox" id="option" className="indeterminate"/>
-      <button
-            type="button"
-            className="bg-transparent text-base text-white"
-            onClick={() => setOpened(!opened)}
-          >
-        {`${opened ? "▼" : "▶"} ${suiteName}`}
-      </button>
-      {opened && Object.entries(suite().tests).map(entry => <ChildCheckBox suiteName={suiteName} testName={entry[0]} key={entry[0]}/>)}
     </div>
   );
 }
@@ -187,7 +165,13 @@ export default function BenchmarkApp() {
         </div>
         <p className="w-full mt-1 mb-3 text-lg">Benchmark suites to run:</p>
         <div className="w-full">
-          {Object.entries(suites).map(entry => <ParentCheckBox suiteName={entry[0]} suite={entry[1]} key={entry[0]}/>)}
+          {Object.entries(suites).map((entry) => (
+            <SuiteCheckbox
+              suiteName={entry[0]}
+              suite={entry[1]}
+              key={entry[0]}
+            />
+          ))}
         </div>
 
         <button
@@ -196,7 +180,7 @@ export default function BenchmarkApp() {
           onClick={runBenchmarks}
         >
           Run Benchmarks
-        </button>        
+        </button>
       </div>
       <Suspense fallback={<BenchmarkFallback />}>
         <BenchmarkResults />

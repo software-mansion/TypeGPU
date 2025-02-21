@@ -3,6 +3,7 @@ import { massTransferSuite } from './test_suites/mass-transfer';
 import type { TypeGPUDataModule, TypeGPUModule } from './modules';
 import type { BenchParameterSet } from './parameter-set';
 import { dummySuite } from './test_suites/dummy';
+import { atomWithUrl } from './atom-with-url';
 
 export type Suite = () => {
   suiteSetup(
@@ -51,3 +52,5 @@ export function testIdentifiers(): Set<TestIdentifier> {
   }
   return result;
 }
+
+export const selectedTestsAtom = atomWithUrl<TestIdentifier[]>('t', []);
