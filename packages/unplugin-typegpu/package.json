@@ -1,9 +1,10 @@
 {
   "name": "unplugin-typegpu",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "description": "Build plugins for TypeGPU, enabling seamless JavaScript -> WGSL transpilation and improved debugging.",
   "keywords": [
     "rollup-plugin",
+    "unplugin",
     "babel-plugin",
     "vite-plugin",
     "typegpu",
@@ -19,10 +20,17 @@
   "exports": {
     ".": "./src/index.ts",
     "./rollup": "./src/rollup.ts",
-    "./babel": "./src/babel.ts"
+    "./babel": "./src/babel.ts",
+    "./esbuild": "./src/esbuild.ts",
+    "./farm": "./src/farm.ts",
+    "./rolldown": "./src/rolldown.ts",
+    "./rspack": "./src/rspack.ts",
+    "./vite": "./src/vite.ts",
+    "./webpack": "./src/webpack.ts"
   },
   "publishConfig": {
     "directory": "dist",
+    "linkDirectory": false,
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "exports": {
@@ -43,6 +51,42 @@
         "module": "./dist/babel.js",
         "import": "./dist/babel.js",
         "default": "./dist/babel.cjs"
+      },
+      "./esbuild": {
+        "types": "./dist/esbuild.d.ts",
+        "module": "./dist/esbuild.js",
+        "import": "./dist/esbuild.js",
+        "default": "./dist/esbuild.cjs"
+      },
+      "./farm": {
+        "types": "./dist/farm.d.ts",
+        "module": "./dist/farm.js",
+        "import": "./dist/farm.js",
+        "default": "./dist/farm.cjs"
+      },
+      "./rolldown": {
+        "types": "./dist/rolldown.d.ts",
+        "module": "./dist/rolldown.js",
+        "import": "./dist/rolldown.js",
+        "default": "./dist/rolldown.cjs"
+      },
+      "./rspack": {
+        "types": "./dist/rspack.d.ts",
+        "module": "./dist/rspack.js",
+        "import": "./dist/rspack.js",
+        "default": "./dist/rspack.cjs"
+      },
+      "./vite": {
+        "types": "./dist/vite.d.ts",
+        "module": "./dist/vite.js",
+        "import": "./dist/vite.js",
+        "default": "./dist/vite.cjs"
+      },
+      "./webpack": {
+        "types": "./dist/webpack.d.ts",
+        "module": "./dist/webpack.js",
+        "import": "./dist/webpack.js",
+        "default": "./dist/webpack.cjs"
       }
     }
   },
@@ -61,10 +105,11 @@
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "dependencies": {
+    "@babel/standalone": "^7.26.6",
     "tinyest-for-wgsl": "workspace:~0.1.0-alpha.2",
     "estree-walker": "^3.0.3",
     "magic-string": "^0.30.11",
-    "@babel/standalone": "^7.26.6"
+    "unplugin": "^2.2.0"
   },
   "devDependencies": {
     "@babel/template": "^7.25.9",
@@ -75,7 +120,7 @@
     "@types/babel__traverse": "^7.20.6",
     "acorn": "^8.12.1",
     "rollup": "~4.22.4",
-    "tsup": "^8.0.2",
-    "typescript": "^5.7.3"
+    "tsup": "catalog:",
+    "typescript": "catalog:"
   }
 }

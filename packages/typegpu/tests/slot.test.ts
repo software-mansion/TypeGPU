@@ -2,23 +2,11 @@ import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect } from 'vitest';
 import tgpu from '../src';
 import * as d from '../src/data';
-import { MissingSlotValueError, ResolutionError } from '../src/errors';
 import { it } from './utils/extendedIt';
 import { parseResolved } from './utils/parseResolved';
 
 const RED = 'vec3f(1., 0., 0.)';
 const GREEN = 'vec3f(0., 1., 0.)';
-
-/**
- * Using `tgpu.resolve()` wraps all inputs into a root object.
- * This mock allows us to verify that proper resolution errors are
- * getting thrown, with the root on top.
- */
-const resolutionRootMock = {
-  toString() {
-    return '<root>';
-  },
-};
 
 describe('tgpu.slot', () => {
   it('resolves to default value if no value provided', () => {
@@ -130,13 +118,12 @@ describe('tgpu.slot', () => {
 
     expect(() =>
       tgpu.resolve({ externals: { getColor }, names: 'strict' }),
-    ).toThrow(
-      new ResolutionError(new MissingSlotValueError(colorSlot), [
-        resolutionRootMock,
-        getColor,
-        colorSlot,
-      ]),
-    );
+    ).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed: 
+        - <root>
+        - fn:getColor
+        - slot:color]
+      `);
   });
 
   it('prefers closer scope', () => {

@@ -1,4 +1,4 @@
-import type { TgpuBuffer, Vertex } from '../../core/buffer/buffer';
+import type { TgpuBuffer, VertexFlag } from '../../core/buffer/buffer';
 import type { Disarray } from '../../data/dataTypes';
 import type { AnyWgslData, WgslArray } from '../../data/wgslTypes';
 import {
@@ -40,7 +40,7 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
 
   with<TData extends WgslArray | Disarray>(
     vertexLayout: TgpuVertexLayout<TData>,
-    buffer: TgpuBuffer<TData> & Vertex,
+    buffer: TgpuBuffer<TData> & VertexFlag,
   ): TgpuRenderPipeline<IOLayout>;
   with<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
@@ -208,7 +208,7 @@ export function isRenderPipeline(value: unknown): value is TgpuRenderPipeline {
 
 type TgpuRenderPipelinePriors = {
   readonly vertexLayoutMap?:
-    | Map<TgpuVertexLayout, TgpuBuffer<AnyWgslData> & Vertex>
+    | Map<TgpuVertexLayout, TgpuBuffer<AnyWgslData> & VertexFlag>
     | undefined;
   readonly bindGroupLayoutMap?:
     | Map<TgpuBindGroupLayout, TgpuBindGroup>
@@ -244,7 +244,7 @@ class TgpuRenderPipelineImpl
 
   with<TData extends WgslArray<AnyWgslData>>(
     vertexLayout: TgpuVertexLayout<TData>,
-    buffer: TgpuBuffer<TData> & Vertex,
+    buffer: TgpuBuffer<TData> & VertexFlag,
   ): TgpuRenderPipeline;
   with(
     bindGroupLayout: TgpuBindGroupLayout,
@@ -252,7 +252,7 @@ class TgpuRenderPipelineImpl
   ): TgpuRenderPipeline;
   with(
     definition: TgpuVertexLayout | TgpuBindGroupLayout,
-    resource: (TgpuBuffer<AnyWgslData> & Vertex) | TgpuBindGroup,
+    resource: (TgpuBuffer<AnyWgslData> & VertexFlag) | TgpuBindGroup,
   ): TgpuRenderPipeline {
     if (isBindGroupLayout(definition)) {
       return new TgpuRenderPipelineImpl(this.core, {
@@ -269,7 +269,7 @@ class TgpuRenderPipelineImpl
         ...this.priors,
         vertexLayoutMap: new Map([
           ...(this.priors.vertexLayoutMap ?? []),
-          [definition, resource as TgpuBuffer<AnyWgslData> & Vertex],
+          [definition, resource as TgpuBuffer<AnyWgslData> & VertexFlag],
         ]),
       });
     }
