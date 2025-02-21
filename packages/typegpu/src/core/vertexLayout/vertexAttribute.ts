@@ -1,6 +1,6 @@
 import type { Disarray, Unstruct } from '../../data/dataTypes';
 import type { AnyWgslStruct } from '../../data/struct';
-import type { WgslArray } from '../../data/wgslTypes';
+import type { Decorated, WgslArray } from '../../data/wgslTypes';
 import type {
   KindToAcceptedAttribMap,
   KindToDefaultFormatMap,
@@ -26,7 +26,9 @@ export type DataToContainedAttribs<T> = T extends AnyWgslStruct | Unstruct
     ? TgpuVertexAttrib<T['type']>
     : T extends { type: keyof KindToDefaultFormatMap }
       ? TgpuVertexAttrib<KindToDefaultFormatMap[T['type']]>
-      : never;
+      : T extends Decorated<infer TInner>
+        ? DataToContainedAttribs<TInner>
+        : never;
 
 /**
  * Interprets an array as a set of vertex attributes.

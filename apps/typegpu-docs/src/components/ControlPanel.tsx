@@ -99,7 +99,7 @@ function TextAreaRow({
   initial?: string;
   onChange: (value: string) => void;
 }) {
-  const [value, setValue] = useState(initial ?? "");
+  const [value, setValue] = useState(initial ?? '');
   const runWithCatch = useSetAtom(runWithCatchAtom);
 
   return (
