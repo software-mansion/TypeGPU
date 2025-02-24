@@ -18,7 +18,7 @@ results of parallel computation back to JS. When creating a buffer, a schema for
 
 As an example, let's create a buffer for storing particles.
 
-```ts
+```ts twoslash {22-28}
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
@@ -29,38 +29,34 @@ const Particle = d.struct({
   health: d.f32,
 });
 
+// Utility for creating a random particle
+function createParticle(): d.Infer<typeof Particle> {
+  return {
+    position: d.vec3f(Math.random(), 2, Math.random()),
+    velocity: d.vec3f(0, 9.8, 0),
+    health: 100,
+  };
+}
+
 const root = await tgpu.init();
 
 // Creating and initializing a buffer.
 const buffer = root
   .createBuffer(
-    // Can hold an array of 100 particles
-    d.arrayOf(Particle, 100),
-    // Initial value
-    Array.from({ length: 100 }).map(() => ({
-      position: d.vec3f(Math.random(), 2, Math.random()),
-      velocity: d.vec3f(0, 9.8, 0),
-      health: 100,
-    })),
-  );
-// ^? TgpuBuffer<d.WgslArray<d.WgslStruct<{
-//      position: d.Vec3f,
-//      velocity: d.Vec3f,
-//      health: d.F32,
-//    }>>>
+    d.arrayOf(Particle, 100), // <- holds 100 particles
+    Array.from({ length: 100 }).map(createParticle), // <- initial value
+  )
+  .$usage('storage'); // <- can be used as a "storage buffer"
 
 // -
 // --
-// --- Using in shader...
+// --- Shader omitted for brevity...
 // --
 // -
 
-// Reading from the buffer
+// Reading back from the buffer
 const value = await buffer.read();
-//    ^? { position: d.vec3f, velocity: d.vec3f, health: number }[]
-
-// Using the value
-console.log(value);
+//    ^?
 ```
 
 This buffer can then be used and/or updated by a WGSL shader.
@@ -70,44 +66,60 @@ This buffer can then be used and/or updated by a WGSL shader.
 To create a buffer, you will need to define its schema by composing data types imported from `typegpu/data`. Every WGSL data-type can be represented as JS schemas, including
 structs and arrays. They will be explored in more detail in [a following chapter](/TypeGPU/fundamentals/data-schemas).
 
-```ts
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+// ---cut---
 const countBuffer = root.createBuffer(d.u32);
-//    ^? TgpuBuffer<d.U32>
+//    ^?
 
-const listBuffer = root
-  .createBuffer(d.arrayOf(d.f32));
-// ^? TgpuBuffer<d.WgslArray<d.F32>>
+const listBuffer = root.createBuffer(d.arrayOf(d.f32, 10));
+//    ^?
 
-const uniformsBuffer = root
-  .createBuffer(d.struct({ a: d.f32, b: d.f32 }));
-// ^? TgpuBuffer<d.WgslStruct<{ a: d.F32, b: d.F32 }>>
+const uniformsBuffer = root.createBuffer(d.struct({ a: d.f32, b: d.f32 }));
+//    ^?
 ```
 
 ### Usage flags
 
 To be able to use these buffers in WGSL shaders, we have to declare their usage upfront with `.$usage(...)`.
 
-```ts
+```ts twoslash
+// @noErrors
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+// ---cut---
 const buffer = root.createBuffer(d.u32)
   .$usage('uniform')
-  .$usage('storage');
+  .$usage('')
+//         ^|
 ```
 
 You can also add all flags in a single `$usage()`.
 
-```ts
-
+```ts twoslash
+// @noErrors
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+// ---cut---
 const buffer = root.createBuffer(d.u32)
-  .$usage('uniform', 'storage');
-
+  .$usage('uniform', 'storage', '');
+//                               ^|
 ```
 
 :::note
 Along with passing the appropriate flags to WebGPU, the methods will also embed type information into the buffer.
-```ts
-// TgpuBuffer<d.U32> & UniformFlag & StorageFlag
-const buffer = root.createBuffer(d.u32)
-  .$usage('uniform', 'storage');
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+// ---cut---
+
+const buffer = root.createBuffer(d.u32).$usage('uniform', 'storage');
+//    ^?
 ```
 :::
 
@@ -117,7 +129,13 @@ It is also possible to add any of the `GPUBufferUsage` flags to a typed buffer o
 Though it shouldn't be necessary in most scenarios as majority of the flags are handled automatically by the library
 or indirectly through the `.$usage` method.
 
-```ts
+```ts twoslash
+/// <reference types="@webgpu/types" />
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+const buffer = root.createBuffer(d.f32);
+// ---cut---
 buffer.$addFlags(GPUBufferUsage.QUERY_RESOLVE);
 ```
 
@@ -134,24 +152,37 @@ If it was, then all flags need to be provided to the existing buffer when constr
 You can also pass an initial value to the `root.createBuffer` function.
 When the buffer is created, it will be mapped at creation, and the initial value will be written to the buffer.
 
-```ts
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+// ---cut---
 // Will be initialized to `100`
-const buffer = root.createBuffer(d.u32, 100);
+const buffer1 = root.createBuffer(d.u32, 100);
 
 // Will be initialized to an array of two vec3fs with the specified values.
-const buffer = root
-  .createBuffer(
-    d.arrayOf(d.vec3f, 2),
-    [d.vec3f(0, 1, 2), d.vec3f(3, 4, 5)],
-  );
+const buffer2 = root.createBuffer(d.arrayOf(d.vec3f, 2), [
+  d.vec3f(0, 1, 2),
+  d.vec3f(3, 4, 5),
+]);
 ```
 
 ### Using an existing buffer
 
 You can also create a buffer using an existing WebGPU buffer. This is useful when you have existing logic but want to introduce type-safe data operations.
 
-```ts
-const existingBuffer = device.createBuffer(...);
+```ts twoslash {7}
+/// <reference types="@webgpu/types" />
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+const device = root.device;
+// ---cut---
+// A raw WebGPU buffer
+const existingBuffer = root.device.createBuffer({
+  size: 4,
+  usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+});
 
 const buffer = root.createBuffer(d.u32, existingBuffer);
 
@@ -167,7 +198,12 @@ Since the buffer is already created, you are responsible for the buffer's lifecy
 To write data to a buffer, you can use the `.write(value)` method. The typed schema enables auto-complete as well as static validation of this
 method's arguments.
 
-```ts
+```ts twoslash
+// @noErrors
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+// ---cut---
 const Particle = d.struct({
   position: d.vec2f,
   health: d.u32,
@@ -175,10 +211,10 @@ const Particle = d.struct({
 
 const particleBuffer = root.createBuffer(Particle);
 
-// .write(data: { position: d.vec2f, health: number })
 particleBuffer.write({
-  position: vec2f(1.0, 2.0),
-  health: 100,
+  position: d.vec2f(1.0, 2.0),
+  heal
+  //  ^|
 });
 ```
 
@@ -203,7 +239,11 @@ The format of the `data` value depends on your schema type:
   - `idx`: the index of the element to update.
   - `value`: the new value for that element.
 
-```ts
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+// ---cut---
 const Planet = d.struct({
   radius: d.f32,
   mass: d.f32,
@@ -227,7 +267,18 @@ planetBuffer.writePartial({
 There's also an option to copy value from another typed buffer using the `.copyFrom(buffer)` method,
 as long as both buffers have a matching data schema.
 
-```ts
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+
+const Particle = d.struct({
+  position: d.vec2f,
+  health: d.u32,
+});
+
+const particleBuffer = root.createBuffer(Particle);
+// ---cut---
 const backupParticleBuffer = root.createBuffer(Particle);
 backupParticleBuffer.copyFrom(particleBuffer);
 ```
@@ -237,10 +288,15 @@ backupParticleBuffer.copyFrom(particleBuffer);
 To read data from a buffer, you can use the `.read()` method.
 It returns a promise that resolves to the data read from the buffer.
 
-```ts
+```ts twoslash
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+// ---cut---
 const buffer = root.createBuffer(d.arrayOf(d.u32, 10));
 
-const data = await buffer.read(); // => number[]
+const data = await buffer.read();
+//    ^?
 ```
 
 import ListItem from '../../../components/ListItem.astro';
