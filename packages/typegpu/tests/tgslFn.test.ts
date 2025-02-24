@@ -344,6 +344,7 @@ describe('TGSL tgpu.fn function', () => {
     expect(actual).toEqual(expected);
   });
 
+  // TODO: Add this back when we can properly infer ast types
   // it('resolves a function with a pointer parameter', () => {
   //   const addOnes = tgpu['~unstable']
   //     .fn([ptrStorage(vec3f, 'read-write')])
