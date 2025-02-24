@@ -11,7 +11,12 @@ import {
   parameterSetAtomsAtom,
   parameterSetsAtom,
 } from './parameter-set.js';
-import { selectedTestsAtom, suites, type TestIdentifier } from './suites.js';
+import {
+  getFilteredSuites,
+  selectedTestsAtom,
+  unfilteredSuites,
+  type Suite,
+} from './suites.js';
 import { SuiteCheckbox } from './components/checkbox-tree.js';
 import {
   BenchmarkFallback,
@@ -25,26 +30,20 @@ export interface InstanceResults {
 
 async function runSuitesForTgpu(
   params: BenchParameterSet,
-  selectedTests: TestIdentifier[],
+  filteredSuites: Record<string, Suite>,
 ): Promise<InstanceResults> {
   const tgpu = await importTypeGPU(params.typegpu);
   const d = await importTypeGPUData(params.typegpu);
   const results = [];
 
-  for (const suiteName in suites) {
-    console.log(`${suiteName}`);
-
-    const suite = suites[suiteName];
-    // const testsToRun = pipe(
-    //   suite.tests,
-    //   entries(),
-    //   filter((entry) =>
-    //     selectedTests.includes(identifierOf(suiteName, entry[0])),
-    //   ),
-    // );
+  for (const suiteName in filteredSuites) {
+    const suite = filteredSuites[suiteName];
     const ctx = suite.setup(params, tgpu, d);
     for (const testName in suite.tests) {
-      ctx.bench.add(`${suiteName}: ${testName}`, suite.tests[testName](ctx));
+      ctx.bench.add(
+        `${suiteName}: ${testName}`,
+        suite.tests[testName](() => ctx),
+      );
     }
     await ctx.bench.run();
     results.push(ctx.bench);
@@ -57,6 +56,7 @@ export const benchResultsAtom = atom<Promise<InstanceResults[]> | null>(null);
 const runBenchmarksAtom = atom(null, async (get, set) => {
   const parameterSets = get(parameterSetsAtom);
   const selectedTests = get(selectedTestsAtom);
+  const filteredSuites = getFilteredSuites(selectedTests);
 
   set(
     benchResultsAtom,
@@ -65,7 +65,7 @@ const runBenchmarksAtom = atom(null, async (get, set) => {
 
       // for each instance of tgpu, we run all selected tests
       for (const params of parameterSets) {
-        results.push(await runSuitesForTgpu(params, selectedTests));
+        results.push(await runSuitesForTgpu(params, filteredSuites));
       }
 
       return results;
@@ -104,7 +104,7 @@ export default function BenchmarkApp() {
         </div>
         <p className="w-full mt-1 mb-3 text-lg">Benchmark suites to run:</p>
         <div className="w-full">
-          {Object.entries(suites).map((entry) => (
+          {Object.entries(unfilteredSuites).map((entry) => (
             <SuiteCheckbox
               suiteName={entry[0]}
               suite={entry[1]}

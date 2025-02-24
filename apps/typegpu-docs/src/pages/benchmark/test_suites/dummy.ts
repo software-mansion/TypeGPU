@@ -20,10 +20,9 @@ export const dummySuite = createSuite(
     };
   },
   {
-    dummy:
-      ({ foo }) =>
-      async () => {
-        await new Promise((resolve) => setTimeout(resolve, foo));
-      },
+    dummy: (getCtx) => async () => {
+      const { foo } = getCtx();
+      await new Promise((resolve) => setTimeout(resolve, foo));
+    },
   },
 );

@@ -28,49 +28,45 @@ export const massTransferSuite = createSuite(
       buffer: null as unknown as TgpuBuffer<typeof BoidArray>,
     };
 
-    // test setup
-    let root: TgpuRoot;
-
     ctx.bench = new Bench({
       name: stringifyLocator('typegpu', params.typegpu),
       time: 1000,
       async setup() {
-        root = await tgpu.init();
-
-        ctx.buffer = root.createBuffer(BoidArray);
+        ctx.root = await tgpu.init();
+        ctx.buffer = ctx.root.createBuffer(BoidArray);
       },
       teardown() {
-        root.destroy();
+        ctx.root.destroy();
       },
     });
 
     return ctx;
   },
   {
-    default:
-      ({ amountOfBoids, d, root, buffer }) =>
-      async () => {
-        const Boid = d.struct({
-          pos: d.vec3f,
-          vel: d.vec3f,
-        });
+    default: (getCtx) => async () => {
+      const { amountOfBoids, d, root, buffer } = getCtx();
 
-        const BoidArray = d.arrayOf(Boid, amountOfBoids);
+      const Boid = d.struct({
+        pos: d.vec3f,
+        vel: d.vec3f,
+      });
 
-        const data = new ArrayBuffer(d.sizeOf(BoidArray));
-        const fView = new Float32Array(data);
+      const BoidArray = d.arrayOf(Boid, amountOfBoids);
 
-        for (let i = 0; i < amountOfBoids; ++i) {
-          fView[i * 8 + 0] = 1;
-          fView[i * 8 + 1] = 2;
-          fView[i * 8 + 2] = 3;
+      const data = new ArrayBuffer(d.sizeOf(BoidArray));
+      const fView = new Float32Array(data);
 
-          fView[i * 8 + 4] = 4;
-          fView[i * 8 + 5] = 5;
-          fView[i * 8 + 6] = 6;
-        }
+      for (let i = 0; i < amountOfBoids; ++i) {
+        fView[i * 8 + 0] = 1;
+        fView[i * 8 + 1] = 2;
+        fView[i * 8 + 2] = 3;
 
-        root.device.queue.writeBuffer(root.unwrap(buffer), 0, data);
-      },
+        fView[i * 8 + 4] = 4;
+        fView[i * 8 + 5] = 5;
+        fView[i * 8 + 6] = 6;
+      }
+
+      root.device.queue.writeBuffer(root.unwrap(buffer), 0, data);
+    },
   },
 );
