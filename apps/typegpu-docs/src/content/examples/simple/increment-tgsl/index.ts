@@ -13,10 +13,6 @@ const counter = counterBuffer.as('mutable');
 const increment = tgpu['~unstable']
   .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })
   .does((input) => {
-    let some = 12.3;
-    const someMore = some;
-    some += 22;
-    const confusion = some ^ 12;
     const tmp = counter.value.x;
     counter.value.x = counter.value.y;
     counter.value.y += tmp;
