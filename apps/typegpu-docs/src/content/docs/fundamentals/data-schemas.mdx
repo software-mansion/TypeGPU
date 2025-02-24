@@ -16,7 +16,6 @@ Complex data types such as structs require particular byte alignment and padding
 Let's look at some examples of defining custom data types using the `typegpu/data` module. If you're familiar with [Zod](https://zod.dev/), then this style of schema definitions may already seem familiar.
 
 ```ts twoslash
-// @moduleResolution: bundler
 import * as d from 'typegpu/data';
 
 const Circle = d.struct({
@@ -39,7 +38,6 @@ is inferred automatically, and it's enforced by TypeScript. Thanks to that, when
 we get a type error, avoiding unnecessary debugging afterwards. That's a big improvement to the development process.
 
 ```ts twoslash
-// @moduleResolution: bundler
 // @errors: 2740 2322 2741 2339
 
 import * as d from 'typegpu/data';
@@ -72,8 +70,6 @@ const diam = redCircle1.rad * 2;
 Defined data structures automatically measure and hold information about their memory layout parameters, which is useful for writing to and reading data from the GPU.
 
 ```ts twoslash
-// @moduleResolution: bundler
-
 import * as d from 'typegpu/data';
 import { sizeOf, alignmentOf } from 'typegpu/data';
 
@@ -104,7 +100,6 @@ in JS, they are all seen as just `number`.
 Vectors (`d.v2f`, `d.v3f`, ...) are interpreted in JS as special objects, which can be created by "calling" the
 corresponding schema with numeric components, e.g.:
 ```ts twoslash
-// @moduleResolution: bundler
 import * as d from 'typegpu/data';
 // ---cut---
 const v0 = d.vec3f(1.1, 2.5, 3.3);
@@ -118,7 +113,6 @@ const v1 = d.vec4u(3, 4, 5, 2);
 
 Matrices work in a similar way.
 ```ts twoslash
-// @moduleResolution: bundler
 import * as d from 'typegpu/data';
 // ---cut---
 const mat0 = d.mat3x3f(
@@ -146,7 +140,6 @@ to a seamless integration with `wgpu-matrix`, which you can [read more about her
 Values of different types can be grouped into structs.
 
 ```ts twoslash
-// @moduleResolution: bundler
 import * as d from 'typegpu/data';
 
 const Boid = d.struct({
@@ -170,8 +163,7 @@ const boid: Boid = {
 You can also use the struct schema as a constructor that type-checks the object literal and provides autocomplete.
 
 ```ts twoslash
-// @ts-nocheck
-// @moduleResolution: bundler
+// @noErrors
 import * as d from 'typegpu/data';
 
 const Boid = d.struct({
@@ -195,7 +187,6 @@ Struct schemas adjust the padding and alignment automatically, so that they comp
 It is also possible to override default byte alignment and size for particular fields via the `align` and `size ` functions.
 
 ```ts twoslash
-// @moduleResolution: bundler
 import * as d from 'typegpu/data';
 // ---cut---
 const Boid = d.struct({
@@ -211,7 +202,6 @@ const Boid = d.struct({
 To define arrays of known constant length, use the `d.arrayOf` function. It accepts as arguments the array's elements data type constructor and the length of the array.
 
 ```ts twoslash
-// @moduleResolution: bundler
 import * as d from 'typegpu/data';
 
 // ---cut---
