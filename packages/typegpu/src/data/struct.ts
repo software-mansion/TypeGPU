@@ -26,11 +26,11 @@ export interface WgslStruct<
   readonly label?: string | undefined;
   readonly propTypes: TProps;
   /** Type-token, not available at runtime */
-  readonly '~repr': InferRecord<TProps>;
+  readonly '~repr': Prettify<InferRecord<TProps>>;
   /** Type-token, not available at runtime */
   readonly '~memIdent': WgslStruct<MemIdentityRecord<TProps>>;
   /** Type-token, not available at runtime */
-  readonly '~reprPartial': Partial<InferPartialRecord<TProps>>;
+  readonly '~reprPartial': Prettify<Partial<InferPartialRecord<TProps>>>;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than WgslStruct<Record<string, BaseWgslData>>
