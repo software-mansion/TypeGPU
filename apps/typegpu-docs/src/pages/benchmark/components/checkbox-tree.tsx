@@ -36,17 +36,16 @@ export function SuiteCheckbox(props: { suiteName: string; suite: Suite }) {
   const [opened, setOpened] = useState(false);
   const { suiteName, suite } = props;
   const [selected, setSelected] = useAtom(selectedTestsAtom);
-  const tests = suite().tests;
 
   const childrenIdentifiers: TestIdentifier[] = [];
-  for (const testName in tests) {
+  for (const testName in suite.tests) {
     childrenIdentifiers.push(identifierOf(suiteName, testName));
   }
 
   const selectedChildren = selected.filter((item) =>
     childrenIdentifiers.includes(item),
   ).length;
-  const totalChildren = Object.keys(tests).length;
+  const totalChildren = Object.keys(suite.tests).length;
   const status: CheckboxState =
     selectedChildren === totalChildren
       ? 'checked'
@@ -85,7 +84,7 @@ export function SuiteCheckbox(props: { suiteName: string; suite: Suite }) {
         {`${opened ? '▼' : '▶'} ${suiteName}`}
       </button>
       {opened &&
-        Object.keys(suite().tests).map((key) => (
+        Object.keys(suite.tests).map((key) => (
           <TestCheckbox suiteName={suiteName} testName={key} key={key} />
         ))}
     </div>

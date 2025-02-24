@@ -16,14 +16,29 @@ export function identifierOf(
 
 export const selectedTestsAtom = atomWithUrl<TestIdentifier[]>('t', []);
 
-export type Suite = () => {
-  suiteSetup(
+// biome-ignore lint/suspicious/noExplicitAny: <sshhhhhh...>
+export type Suite<T extends { bench: Bench } = any> = {
+  setup(
     params: BenchParameterSet,
     { tgpu }: TypeGPUModule,
     dArg: TypeGPUDataModule,
-  ): Bench;
-  tests: Record<string, () => void>;
+  ): T;
+  tests: Record<string, (ctx: T) => () => Promise<unknown>>;
 };
+
+export function createSuite<T extends { bench: Bench }>(
+  setup: (
+    params: BenchParameterSet,
+    { tgpu }: TypeGPUModule,
+    dArg: TypeGPUDataModule,
+  ) => T,
+  tests: Record<string, (ctx: T) => () => Promise<unknown>>,
+): Suite<T> {
+  return {
+    setup,
+    tests,
+  };
+}
 
 export const suites: Record<string, Suite> = {
   Dummy: dummySuite,
