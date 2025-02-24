@@ -1,4 +1,0 @@
-{
-  "buildCommand": "nightly-build",
-  "packages": ["packages/typegpu/dist"]
-}
