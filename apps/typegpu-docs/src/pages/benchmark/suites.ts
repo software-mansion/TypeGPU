@@ -1,5 +1,5 @@
 import type { Bench } from 'tinybench';
-import { massTransferSuite } from './test_suites/partial-write';
+import { partialWriteSuite } from './test_suites/partial-write';
 import type { TypeGPUDataModule, TypeGPUModule } from './modules';
 import type { BenchParameterSet } from './parameter-set';
 import { atomWithUrl } from './atom-with-url';
@@ -36,7 +36,7 @@ export function createSuite<T extends { bench: Bench }>(
 }
 
 export const unfilteredSuites: Record<string, Suite> = {
-  'Partial write': massTransferSuite,
+  'Partial write': partialWriteSuite,
 };
 
 export function getFilteredSuites(selectedTests: TestIdentifier[]) {

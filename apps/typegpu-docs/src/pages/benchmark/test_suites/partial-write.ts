@@ -3,7 +3,7 @@ import { stringifyLocator } from '../parameter-set';
 import type { TgpuBuffer, TgpuRoot } from 'typegpu';
 import { createSuite } from '../suites';
 
-export const massTransferSuite = createSuite(
+export const partialWriteSuite = createSuite(
   ({ params, tgpuModule, d }) => {
     const { tgpu } = tgpuModule;
     const amountOfBoids = 10000;
@@ -75,7 +75,7 @@ export const massTransferSuite = createSuite(
       await root.device.queue.onSubmittedWorkDone();
     },
 
-    'one operation': (getCtx) => async () => {
+    'one struct write': (getCtx) => async () => {
       const { amountOfBoids, d, root, buffer } = getCtx();
 
       const randomBoid = Math.floor(Math.random() * amountOfBoids);
