@@ -1,16 +1,11 @@
 import { Bench } from 'tinybench';
-import type { TypeGPUDataModule, TypeGPUModule } from '../modules';
-import { stringifyLocator, type BenchParameterSet } from '../parameter-set';
+import { stringifyLocator } from '../parameter-set';
 import type { TgpuBuffer, TgpuRoot } from 'typegpu';
 import { createSuite } from '../suites';
 
 export const massTransferSuite = createSuite(
-  (
-    // AAA wyjąć to do jakiegoś obiektu Options
-    params: BenchParameterSet,
-    { tgpu }: TypeGPUModule,
-    d: TypeGPUDataModule,
-  ) => {
+  ({ params, tgpuModule, d }) => {
+    const { tgpu } = tgpuModule;
     const amountOfBoids = 10000;
 
     const Boid = d.struct({
