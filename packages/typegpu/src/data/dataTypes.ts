@@ -1,13 +1,14 @@
-import type { TgpuNamable } from '../namable';
+import type { TgpuNamable } from '../namable.js';
 import type {
   Infer,
   InferPartial,
   InferPartialRecord,
   InferRecord,
-} from '../shared/repr';
-import { vertexFormats } from '../shared/vertexFormat';
-import type { PackedData } from './vertexFormatData';
-import * as wgsl from './wgslTypes';
+} from '../shared/repr.js';
+import type { Prettify } from '../shared/utilityTypes.js';
+import { vertexFormats } from '../shared/vertexFormat.js';
+import type { PackedData } from './vertexFormatData.js';
+import * as wgsl from './wgslTypes.js';
 
 /**
  * Array schema constructed via `d.disarrayOf` function.
@@ -39,8 +40,8 @@ export interface Unstruct<
   readonly label?: string | undefined;
   readonly type: 'unstruct';
   readonly propTypes: TProps;
-  readonly '~repr': InferRecord<TProps>;
-  readonly '~reprPartial': Partial<InferPartialRecord<TProps>>;
+  readonly '~repr': Prettify<InferRecord<TProps>>;
+  readonly '~reprPartial': Prettify<Partial<InferPartialRecord<TProps>>>;
 }
 
 export interface LooseDecorated<
