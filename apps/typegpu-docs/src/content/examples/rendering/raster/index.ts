@@ -29,61 +29,67 @@ function getColor(): d.Infer<typeof Vertex>['color'] {
   return d.vec4f(Math.random(), Math.random(), Math.random(), 1);
 }
 
+function createFace(vertices: number[][]): d.Infer<typeof Vertex>[] {
+  return vertices.map((pos) => ({
+    position: d.vec4f(...(pos as [number, number, number, number])),
+    color: getColor(),
+  }));
+}
+
 function createCube(): d.Infer<typeof Vertex>[] {
-  // Front face
-  const front: d.Infer<typeof Vertex>[] = [
-    { position: d.vec4f(-1, -1, 1, 1), color: getColor() },
-    { position: d.vec4f(1, -1, 1, 1), color: getColor() },
-    { position: d.vec4f(1, 1, 1, 1), color: getColor() },
-    { position: d.vec4f(-1, -1, 1, 1), color: getColor() },
-    { position: d.vec4f(1, 1, 1, 1), color: getColor() },
-    { position: d.vec4f(-1, 1, 1, 1), color: getColor() },
-  ];
-  // Back face
-  const back: d.Infer<typeof Vertex>[] = [
-    { position: d.vec4f(-1, -1, -1, 1), color: getColor() },
-    { position: d.vec4f(-1, 1, -1, 1), color: getColor() },
-    { position: d.vec4f(1, -1, -1, 1), color: getColor() },
-    { position: d.vec4f(1, -1, -1, 1), color: getColor() },
-    { position: d.vec4f(-1, 1, -1, 1), color: getColor() },
-    { position: d.vec4f(1, 1, -1, 1), color: getColor() },
-  ];
-  // Top face
-  const top: d.Infer<typeof Vertex>[] = [
-    { position: d.vec4f(-1, 1, -1, 1), color: getColor() },
-    { position: d.vec4f(-1, 1, 1, 1), color: getColor() },
-    { position: d.vec4f(1, 1, -1, 1), color: getColor() },
-    { position: d.vec4f(1, 1, -1, 1), color: getColor() },
-    { position: d.vec4f(-1, 1, 1, 1), color: getColor() },
-    { position: d.vec4f(1, 1, 1, 1), color: getColor() },
-  ];
-  // Bottom face
-  const bottom: d.Infer<typeof Vertex>[] = [
-    { position: d.vec4f(-1, -1, -1, 1), color: getColor() },
-    { position: d.vec4f(1, -1, -1, 1), color: getColor() },
-    { position: d.vec4f(-1, -1, 1, 1), color: getColor() },
-    { position: d.vec4f(1, -1, -1, 1), color: getColor() },
-    { position: d.vec4f(1, -1, 1, 1), color: getColor() },
-    { position: d.vec4f(-1, -1, 1, 1), color: getColor() },
-  ];
-  // Right face
-  const right: d.Infer<typeof Vertex>[] = [
-    { position: d.vec4f(1, -1, -1, 1), color: getColor() },
-    { position: d.vec4f(1, 1, -1, 1), color: getColor() },
-    { position: d.vec4f(1, -1, 1, 1), color: getColor() },
-    { position: d.vec4f(1, -1, 1, 1), color: getColor() },
-    { position: d.vec4f(1, 1, -1, 1), color: getColor() },
-    { position: d.vec4f(1, 1, 1, 1), color: getColor() },
-  ];
-  // Left face
-  const left: d.Infer<typeof Vertex>[] = [
-    { position: d.vec4f(-1, -1, -1, 1), color: getColor() },
-    { position: d.vec4f(-1, -1, 1, 1), color: getColor() },
-    { position: d.vec4f(-1, 1, -1, 1), color: getColor() },
-    { position: d.vec4f(-1, -1, 1, 1), color: getColor() },
-    { position: d.vec4f(-1, 1, 1, 1), color: getColor() },
-    { position: d.vec4f(-1, 1, -1, 1), color: getColor() },
-  ];
+  const front = createFace([
+    [-1, -1, 1, 1],
+    [1, -1, 1, 1],
+    [1, 1, 1, 1],
+    [-1, -1, 1, 1],
+    [1, 1, 1, 1],
+    [-1, 1, 1, 1],
+  ]);
+
+  const back = createFace([
+    [-1, -1, -1, 1],
+    [-1, 1, -1, 1],
+    [1, -1, -1, 1],
+    [1, -1, -1, 1],
+    [-1, 1, -1, 1],
+    [1, 1, -1, 1],
+  ]);
+
+  const top = createFace([
+    [-1, 1, -1, 1],
+    [-1, 1, 1, 1],
+    [1, 1, -1, 1],
+    [1, 1, -1, 1],
+    [-1, 1, 1, 1],
+    [1, 1, 1, 1],
+  ]);
+
+  const bottom = createFace([
+    [-1, -1, -1, 1],
+    [1, -1, -1, 1],
+    [-1, -1, 1, 1],
+    [1, -1, -1, 1],
+    [1, -1, 1, 1],
+    [-1, -1, 1, 1],
+  ]);
+
+  const right = createFace([
+    [1, -1, -1, 1],
+    [1, 1, -1, 1],
+    [1, -1, 1, 1],
+    [1, -1, 1, 1],
+    [1, 1, -1, 1],
+    [1, 1, 1, 1],
+  ]);
+
+  const left = createFace([
+    [-1, -1, -1, 1],
+    [-1, -1, 1, 1],
+    [-1, 1, -1, 1],
+    [-1, -1, 1, 1],
+    [-1, 1, 1, 1],
+    [-1, 1, -1, 1],
+  ]);
 
   return [...front, ...back, ...top, ...bottom, ...right, ...left];
 }
@@ -139,7 +145,7 @@ const pipeline = root['~unstable']
   .withVertex(vertex, vertexLayout.attrib)
   .withFragment(fragment, { format: presentationFormat })
   .withPrimitive({
-    // culling is a replacement for z-buffer in this instance (which is not the intended use)
+    // culling is a replacement for z-buffer in this instance (it will break for multiple objects)
     cullMode: 'back',
   })
   .createPipeline()
@@ -168,6 +174,7 @@ let isDragging = false;
 let prevX = 0;
 let prevY = 0;
 let rotation = m.mat4.identity(d.mat4x4f());
+
 canvas.addEventListener('mousedown', (event) => {
   isDragging = true;
   prevX = event.clientX;
@@ -178,7 +185,7 @@ canvas.addEventListener('mouseup', () => {
   isDragging = false;
 });
 
-canvas.addEventListener('mousemove', async (event) => {
+canvas.addEventListener('mousemove', (event) => {
   if (!isDragging) {
     return;
   }
@@ -188,7 +195,7 @@ canvas.addEventListener('mousemove', async (event) => {
   prevX = event.clientX;
   prevY = event.clientY;
   const sensitivity = 0.003;
-  const yaw = dx * sensitivity;
+  const yaw = -dx * sensitivity;
   const pitch = -dy * sensitivity;
 
   const yawMatrix = m.mat4.rotateY(
@@ -202,11 +209,10 @@ canvas.addEventListener('mousemove', async (event) => {
     d.mat4x4f(),
   );
 
-  rotation = m.mat4.mul(yawMatrix, rotation, d.mat4x4f());
-  rotation = m.mat4.mul(pitchMatrix, rotation, d.mat4x4f());
+  const deltaRotation = m.mat4.mul(yawMatrix, pitchMatrix, d.mat4x4f());
+  rotation = m.mat4.mul(deltaRotation, rotation, d.mat4x4f());
 
   const rotatedCamPos = m.mat4.mul(rotation, cameraInitialPos, d.vec4f());
-
   const newView = m.mat4.lookAt(
     rotatedCamPos,
     target,
@@ -214,8 +220,9 @@ canvas.addEventListener('mousemove', async (event) => {
     d.mat4x4f(),
   );
 
-  const { projection } = await cameraBuffer.read();
-  cameraBuffer.write({ view: newView, projection });
+  cameraBuffer.writePartial({
+    view: newView,
+  });
 });
 
 frame();
