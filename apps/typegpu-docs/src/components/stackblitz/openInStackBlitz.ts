@@ -1,16 +1,21 @@
 import StackBlitzSDK from '@stackblitz/sdk';
-import yaml from 'js-yaml';
+import { parse } from '@std/yaml';
+import { type } from 'arktype';
 import typegpuPackageJson from '../../../../../packages/typegpu/package.json';
 import unpluginPackageJson from '../../../../../packages/unplugin-typegpu/package.json';
 import pnpmWorkspace from '../../../../../pnpm-workspace.yaml?raw';
 import type { Example } from '../../utils/examples/types';
 import index from './stackBlitzIndex.ts?raw';
 
-const pnpmWorkspaceYaml = yaml.load(pnpmWorkspace) as {
-  catalog: { typescript: string; '@webgpu/types': string };
-};
+const pnpmWorkspaceYaml = type({
+  catalog: { typescript: 'string', '@webgpu/types': 'string' },
+})(parse(pnpmWorkspace));
 
 export function openInStackBlitz(example: Example) {
+  if (pnpmWorkspaceYaml instanceof type.errors) {
+    throw new Error(pnpmWorkspaceYaml.message);
+  }
+
   StackBlitzSDK.openProject(
     {
       template: 'node',

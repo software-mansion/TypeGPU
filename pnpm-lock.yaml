@@ -86,6 +86,9 @@ importers:
       '@stackblitz/sdk':
         specifier: ^1.11.0
         version: 1.11.0
+      '@std/yaml':
+        specifier: npm:@jsr/std__yaml@^1.0.5
+        version: '@jsr/std__yaml@1.0.5'
       '@types/dom-mediacapture-transform':
         specifier: ^0.1.9
         version: 0.1.10
@@ -95,6 +98,9 @@ importers:
       '@types/react-dom':
         specifier: ^18.3.0
         version: 18.3.5(@types/react@18.3.18)
+      arktype:
+        specifier: ^2.1.0
+        version: 2.1.0
       astro:
         specifier: ^5.3.0
         version: 5.3.0(@types/node@22.13.4)(jiti@2.4.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.7.3)(yaml@2.7.0)
@@ -110,9 +116,6 @@ importers:
       jotai-location:
         specifier: ^0.5.5
         version: 0.5.5(jotai@2.12.1(@types/react@18.3.18)(react@18.3.1))
-      js-yaml:
-        specifier: ^4.1.0
-        version: 4.1.0
       lucide-react:
         specifier: ^0.475.0
         version: 0.475.0(react@18.3.1)
@@ -183,9 +186,6 @@ importers:
       '@types/babel__traverse':
         specifier: ^7.20.6
         version: 7.20.6
-      '@types/js-yaml':
-        specifier: ^4.0.9
-        version: 4.0.9
       '@webgpu/types':
         specifier: 'catalog:'
         version: 0.1.54
@@ -450,6 +450,12 @@ packages:
   '@ampproject/remapping@2.3.0':
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
+
+  '@ark/schema@0.40.0':
+    resolution: {integrity: sha512-vD78TCZkoMWYDVfJVyoBI4ndxaR5jGUeYQuhFNZHXV8Ve2pKrwb4vQFD/VHg7GgF8Pd1pxy0CPouerKNR3y79g==}
+
+  '@ark/util@0.40.0':
+    resolution: {integrity: sha512-YN+qWGs1q5Pl19VcnCWZMUpDEKW9aST6kuSOs0iAswDDe494xjgmg+DJeX0OF2MspH5yY03VqitNcvkywqXNpw==}
 
   '@astrojs/check@0.9.4':
     resolution: {integrity: sha512-IOheHwCtpUfvogHHsvu0AbeRZEnjJg3MopdLddkJE70mULItS/Vh37BHcI00mcOJcH1vhD3odbpvWokpxam7xA==}
@@ -1160,6 +1166,9 @@ packages:
   '@jsdevtools/ez-spawn@3.0.4':
     resolution: {integrity: sha512-f5DRIOZf7wxogefH03RjMPMdBF7ADTWUMoOs9kaJo06EfwF+aFhMZMDZxHg/Xe12hptN9xoZjGso2fdjapBRIA==}
     engines: {node: '>=10'}
+
+  '@jsr/std__yaml@1.0.5':
+    resolution: {integrity: sha512-jbh2xwnja+ar+7NE0oDTlbST1WW29dAQOKX8+1DZgdT54NVt9lZ9YVDrzh4uP1w6ZHVirtY0z99BSym0v+Zh4Q==, tarball: https://npm.jsr.io/~/11/@jsr/std__yaml/1.0.5.tgz}
 
   '@mdx-js/mdx@3.1.0':
     resolution: {integrity: sha512-/QxEhPAvGwbQmy1Px8F899L5Uc2KZ6JtXwlCgJmjSTBedwOZkByYcBG4GceIGPXRDsmfxhHazuS+hlOShRLeDw==}
@@ -1893,6 +1902,9 @@ packages:
   aria-query@5.3.2:
     resolution: {integrity: sha512-COROpnaoap1E2F000S62r6A60uHZnmlvomhfyT2DlTcrY1OrBKn2UhH7qn5wTC9zMvD0AY7csdPSNwKP+7WiQw==}
     engines: {node: '>= 0.4'}
+
+  arktype@2.1.0:
+    resolution: {integrity: sha512-BjXPbh4S8nBSuHmlakrQ+ViiGIhTcxAw7dWuJjW3nlHdY8wGktuuKfP52eWjmC3Y/Og1BbbRYEDGr/H0Kg26Mg==}
 
   array-iterate@2.0.1:
     resolution: {integrity: sha512-I1jXZMjAgCMmxT4qxXfPXa6SthSoE8h6gkSI9BGGNv8mP8G/v0blc+qFnZu6K42vTOiuME596QaLO0TP3Lk0xg==}
@@ -4475,6 +4487,12 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.8
       '@jridgewell/trace-mapping': 0.3.25
 
+  '@ark/schema@0.40.0':
+    dependencies:
+      '@ark/util': 0.40.0
+
+  '@ark/util@0.40.0': {}
+
   '@astrojs/check@0.9.4(typescript@5.7.3)':
     dependencies:
       '@astrojs/language-server': 2.15.4(typescript@5.7.3)
@@ -5149,6 +5167,8 @@ snapshots:
       cross-spawn: 7.0.6
       string-argv: 0.3.2
       type-detect: 4.1.0
+
+  '@jsr/std__yaml@1.0.5': {}
 
   '@mdx-js/mdx@3.1.0(acorn@8.14.0)':
     dependencies:
@@ -5898,6 +5918,11 @@ snapshots:
       tslib: 2.8.1
 
   aria-query@5.3.2: {}
+
+  arktype@2.1.0:
+    dependencies:
+      '@ark/schema': 0.40.0
+      '@ark/util': 0.40.0
 
   array-iterate@2.0.1: {}
 
