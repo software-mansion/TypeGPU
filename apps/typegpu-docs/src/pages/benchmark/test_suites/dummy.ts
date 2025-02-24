@@ -1,16 +1,11 @@
 import { Bench } from 'tinybench';
-import { createSuite } from '../suites';
-import { stringifyLocator, type BenchParameterSet } from '../parameter-set';
-import type { TypeGPUDataModule, TypeGPUModule } from '../modules';
+import { createSuite, type SuiteSetupOptions } from '../suites';
+import { stringifyLocator } from '../parameter-set';
 
 export const dummySuite = createSuite(
-  (
-    params: BenchParameterSet,
-    { tgpu }: TypeGPUModule,
-    dArg: TypeGPUDataModule,
-  ) => {
+  (options: SuiteSetupOptions) => {
     const bench = new Bench({
-      name: stringifyLocator('typegpu', params.typegpu),
+      name: stringifyLocator('typegpu', options.params.typegpu),
       time: 1000,
     });
 

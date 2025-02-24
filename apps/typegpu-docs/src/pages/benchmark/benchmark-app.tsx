@@ -38,7 +38,7 @@ async function runSuitesForTgpu(
 
   for (const suiteName in filteredSuites) {
     const suite = filteredSuites[suiteName];
-    const ctx = suite.setup(params, tgpu, d);
+    const ctx = suite.setup({ params, tgpuModule: tgpu, d });
     for (const testName in suite.tests) {
       ctx.bench.add(
         `${suiteName}: ${testName}`,
