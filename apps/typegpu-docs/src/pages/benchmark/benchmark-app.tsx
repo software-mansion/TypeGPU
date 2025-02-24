@@ -11,7 +11,7 @@ import {
   parameterSetAtomsAtom,
   parameterSetsAtom,
 } from './parameter-set.js';
-import { suites } from './suites.js';
+import { selectedTestsAtom, suites, type TestIdentifier } from './suites.js';
 import { SuiteCheckbox } from './components/checkbox-tree.js';
 import {
   BenchmarkFallback,
@@ -23,10 +23,40 @@ export interface InstanceResults {
   benches: Bench[];
 }
 
+async function runSuitesForTgpu(
+  params: BenchParameterSet,
+  selectedTests: TestIdentifier[],
+): Promise<InstanceResults> {
+  const tgpu = await importTypeGPU(params.typegpu);
+  const d = await importTypeGPUData(params.typegpu);
+  const results = [];
+
+  for (const suiteName in suites) {
+    console.log(`${suiteName}`);
+
+    const suite = suites[suiteName];
+    // const testsToRun = pipe(
+    //   suite.tests,
+    //   entries(),
+    //   filter((entry) =>
+    //     selectedTests.includes(identifierOf(suiteName, entry[0])),
+    //   ),
+    // );
+    const ctx = suite.setup(params, tgpu, d);
+    for (const testName in suite.tests) {
+      ctx.bench.add(`${suiteName}: ${testName}`, suite.tests[testName](ctx));
+    }
+    await ctx.bench.run();
+    results.push(ctx.bench);
+  }
+  return { parameterSet: params, benches: results };
+}
+
 export const benchResultsAtom = atom<Promise<InstanceResults[]> | null>(null);
 
 const runBenchmarksAtom = atom(null, async (get, set) => {
   const parameterSets = get(parameterSetsAtom);
+  const selectedTests = get(selectedTestsAtom);
 
   set(
     benchResultsAtom,
@@ -35,32 +65,13 @@ const runBenchmarksAtom = atom(null, async (get, set) => {
 
       // for each instance of tgpu, we run all selected tests
       for (const params of parameterSets) {
-        results.push(await runSuitesForTgpu(params));
+        results.push(await runSuitesForTgpu(params, selectedTests));
       }
 
       return results;
     })(),
   );
 });
-
-async function runSuitesForTgpu(
-  params: BenchParameterSet,
-): Promise<InstanceResults> {
-  const tgpu = await importTypeGPU(params.typegpu);
-  const d = await importTypeGPUData(params.typegpu);
-  const results = [];
-
-  for (const suiteName in suites) {
-    const suite = suites[suiteName]();
-    const bench = suite.suiteSetup(params, tgpu, d);
-    for (const testName in suite.tests) {
-      bench.add(`${suiteName}: ${testName}`, suite.tests[testName]);
-    }
-    await bench.run();
-    results.push(bench);
-  }
-  return { parameterSet: params, benches: results };
-}
 
 export default function BenchmarkApp() {
   const parameterSetAtoms = useAtomValue(parameterSetAtomsAtom);
