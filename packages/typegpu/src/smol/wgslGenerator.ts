@@ -30,12 +30,46 @@ const parenthesizedOps = [
   '||',
 ];
 
+function binaryOperatorToType<
+  TL extends wgsl.AnyWgslData | UnknownData,
+  TR extends wgsl.AnyWgslData | UnknownData,
+>(
+  lhs: TL,
+  op: smol.BinaryOperator | smol.AssignmentOperator | smol.LogicalOperator,
+  rhs: TR,
+): TL | TR | wgsl.Bool {
+  if (
+    op === '==' ||
+    op === '!=' ||
+    op === '<' ||
+    op === '<=' ||
+    op === '>' ||
+    op === '>=' ||
+    op === '&&' ||
+    op === '||'
+  ) {
+    return d.bool;
+  }
+
+  if (op === '=') {
+    return rhs;
+  }
+
+  return lhs;
+}
+
 export type GenerationCtx = ResolutionCtx & {
   readonly pre: string;
   readonly callStack: unknown[];
   indent(): string;
   dedent(): string;
-  getById(id: string): Resource;
+  pushBlockScope(): void;
+  popBlockScope(): void;
+  getById(id: string): Resource | null;
+  defineVariable(
+    id: string,
+    dataType: wgsl.AnyWgslData | UnknownData,
+  ): Resource;
 };
 
 export function resolveRes(ctx: GenerationCtx, res: Resource): string {
@@ -59,13 +93,31 @@ export function generateBoolean(ctx: GenerationCtx, value: boolean): Resource {
 }
 
 export function generateBlock(ctx: GenerationCtx, value: smol.Block): string {
-  return `${ctx.indent()}{
+  ctx.pushBlockScope();
+  try {
+    return `${ctx.indent()}{
 ${value.b.map((statement) => generateStatement(ctx, statement)).join('\n')}
 ${ctx.dedent()}}`;
+  } finally {
+    ctx.popBlockScope();
+  }
+}
+
+export function registerBlockVariable(
+  ctx: GenerationCtx,
+  id: string,
+  dataType: wgsl.AnyWgslData | UnknownData,
+): Resource {
+  return ctx.defineVariable(id, dataType);
 }
 
 export function generateIdentifier(ctx: GenerationCtx, id: string): Resource {
-  return ctx.getById(id);
+  const res = ctx.getById(id);
+  if (!res) {
+    throw new Error(`Identifier ${id} not found`);
+  }
+
+  return res;
 }
 
 export function generateExpression(
@@ -84,14 +136,18 @@ export function generateExpression(
     // Logical/Binary/Assignment Expression
 
     const [lhs, op, rhs] = expression.x;
-    const lhsExpr = resolveRes(ctx, generateExpression(ctx, lhs));
-    const rhsExpr = resolveRes(ctx, generateExpression(ctx, rhs));
+    const lhsExpr = generateExpression(ctx, lhs);
+    const lhsStr = resolveRes(ctx, lhsExpr);
+    const rhsExpr = generateExpression(ctx, rhs);
+    const rhsStr = resolveRes(ctx, rhsExpr);
+
+    const type = binaryOperatorToType(lhsExpr.dataType, op, rhsExpr.dataType);
+
     return {
       value: parenthesizedOps.includes(op)
-        ? `(${lhsExpr} ${op} ${rhsExpr})`
-        : `${lhsExpr} ${op} ${rhsExpr}`,
-      // TODO: Infer data type from expression type and arguments.
-      dataType: UnknownData,
+        ? `(${lhsStr} ${op} ${rhsStr})`
+        : `${lhsStr} ${op} ${rhsStr}`,
+      dataType: type,
     };
   }
 
@@ -338,12 +394,14 @@ ${alternate}`;
 
   if ('l' in statement || 'c' in statement) {
     const [rawId, rawValue] = 'l' in statement ? statement.l : statement.c;
-    const id = resolveRes(ctx, generateIdentifier(ctx, rawId));
     const eq = rawValue ? generateExpression(ctx, rawValue) : undefined;
 
     if (!eq || !rawValue) {
       throw new Error('Cannot create variable without an initial value.');
     }
+
+    registerBlockVariable(ctx, rawId, eq.dataType);
+    const id = resolveRes(ctx, generateIdentifier(ctx, rawId));
 
     // If the value is a plain JS object it has to be an output struct
     if (
@@ -361,8 +419,12 @@ ${alternate}`;
   }
 
   if ('b' in statement) {
-    // TODO: Push block scope layer onto the stack
-    return generateBlock(ctx, statement);
+    ctx.pushBlockScope();
+    try {
+      return generateBlock(ctx, statement);
+    } finally {
+      ctx.popBlockScope();
+    }
   }
 
   return `${ctx.pre}${resolveRes(ctx, generateExpression(ctx, statement))};`;

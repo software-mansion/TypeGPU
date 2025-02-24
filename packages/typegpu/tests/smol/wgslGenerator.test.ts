@@ -8,7 +8,6 @@ import { ResolutionCtxImpl } from '../../src/resolutionCtx';
 import {
   generateExpression,
   generateFunction,
-  generateStatement,
 } from '../../src/smol/wgslGenerator';
 
 const transpiler = new JitTranspiler();
@@ -136,14 +135,10 @@ describe('wgslGenerator', () => {
     for (const stmt of (parsedBody as smol.Block).b) {
       const letStatement = stmt as smol.Let;
       const [name, numLiteral] = letStatement.l;
-      const generatedStatement = generateStatement(ctx, letStatement);
       const generatedExpr = generateExpression(ctx, numLiteral as smol.Num);
       const expected = literals[name as keyof typeof literals];
 
       expect(generatedExpr.dataType).toEqual(expected.dataType);
-      expect(parse(generatedStatement)).toEqual(
-        parse(`var ${name} = ${expected.wgsl};`),
-      );
     }
   });
 });

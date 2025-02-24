@@ -2,7 +2,13 @@ import type { ISerialInput, ISerialOutput } from 'typed-binary';
 import type { Infer, InferRecord } from '../shared/repr';
 import alignIO from './alignIO';
 import { alignmentOf, customAlignmentOf } from './alignmentOf';
-import type { AnyData, Disarray, LooseDecorated, Unstruct } from './dataTypes';
+import type {
+  AnyConcreteData,
+  AnyData,
+  Disarray,
+  LooseDecorated,
+  Unstruct,
+} from './dataTypes';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix';
 import { sizeOf } from './sizeOf';
 import type { WgslStruct } from './struct';
@@ -34,13 +40,13 @@ type DataReader<TSchema extends wgsl.BaseData> = (
 ) => Infer<TSchema>;
 
 type CompleteDataWriters = {
-  [TType in AnyData['type']]: DataWriter<
+  [TType in AnyConcreteData['type']]: DataWriter<
     Extract<AnyData, { readonly type: TType }>
   >;
 };
 
 type CompleteDataReaders = {
-  [TType in AnyData['type']]: DataReader<
+  [TType in AnyConcreteData['type']]: DataReader<
     Extract<AnyData, { readonly type: TType }>
   >;
 };

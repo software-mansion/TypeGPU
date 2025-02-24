@@ -244,5 +244,9 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
     return `ptr<${data.addressSpace}, ${ctx.resolve(data.inner)}>`;
   }
 
+  if (data.type === 'abstractInt' || data.type === 'abstractFloat') {
+    throw new Error('Abstract types have no concrete representation in WGSL');
+  }
+
   assertExhaustive(data, 'resolveData');
 }

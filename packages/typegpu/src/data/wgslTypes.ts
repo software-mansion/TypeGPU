@@ -26,6 +26,7 @@ export interface BaseData {
  */
 export interface AbstractInt {
   readonly type: 'abstractInt';
+  readonly '~repr': number;
 }
 
 /**
@@ -33,6 +34,7 @@ export interface AbstractInt {
  */
 export interface AbstractFloat {
   readonly type: 'abstractFloat';
+  readonly '~repr': number;
 }
 
 interface Swizzle2<T2, T3, T4> {
@@ -969,6 +971,8 @@ export const wgslTypeLiterals = [
   'ptr',
   'atomic',
   'decorated',
+  'abstractInt',
+  'abstractFloat',
 ] as const;
 
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
@@ -1019,7 +1023,9 @@ export type AnyWgslData =
   | WgslArray
   | Ptr
   | Atomic
-  | Decorated;
+  | Decorated
+  | AbstractInt
+  | AbstractFloat;
 
 // #endregion
 

@@ -135,3 +135,7 @@ export function isData(value: unknown): value is AnyData {
 }
 
 export type AnyData = wgsl.AnyWgslData | AnyLooseData;
+export type AnyConcreteData = Exclude<
+  AnyData,
+  wgsl.AbstractInt | wgsl.AbstractFloat
+>;
