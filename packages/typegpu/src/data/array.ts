@@ -47,6 +47,16 @@ class WgslArrayImpl<TElement extends BaseData> implements WgslArray<TElement> {
     if (Number.isNaN(sizeOf(elementType))) {
       throw new Error('Cannot nest runtime sized arrays.');
     }
+
+    if (
+      Number.isNaN(elementCount) ||
+      !Number.isInteger(elementCount) ||
+      elementCount < 0
+    ) {
+      throw new Error(
+        `Cannot create array with invalid element count: ${elementCount}.`,
+      );
+    }
   }
 
   toString() {

@@ -46,5 +46,15 @@ class DisarrayImpl<TElement extends AnyData> implements Disarray<TElement> {
   constructor(
     public readonly elementType: TElement,
     public readonly elementCount: number,
-  ) {}
+  ) {
+    if (
+      Number.isNaN(elementCount) ||
+      !Number.isInteger(elementCount) ||
+      elementCount < 0
+    ) {
+      throw new Error(
+        `Cannot create disarray with invalid element count: ${elementCount}.`,
+      );
+    }
+  }
 }
