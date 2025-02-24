@@ -1,8 +1,10 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
+import { useSetAtom } from 'jotai';
 import { useId, useState } from 'react';
 import { codeEditorShownAtom } from '../utils/examples/codeEditorShownAtom';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom';
+import { runWithCatchAtom } from '../utils/examples/currentSnackbarAtom';
 import { examples } from '../utils/examples/exampleContent';
 import {
   type ExampleControlParam,
@@ -13,6 +15,7 @@ import { isGPUSupported } from '../utils/isGPUSupported';
 import { Button } from './design/Button';
 import { Select } from './design/Select';
 import { Slider } from './design/Slider';
+import { TextArea } from './design/TextArea';
 import { Toggle } from './design/Toggle';
 import { openInStackBlitz } from './stackblitz/openInStackBlitz';
 
@@ -26,6 +29,7 @@ function ToggleRow({
   onChange: (value: boolean) => void;
 }) {
   const [value, setValue] = useState(initial);
+  const runWithCatch = useSetAtom(runWithCatchAtom);
 
   const toggleId = useId();
 
@@ -41,8 +45,8 @@ function ToggleRow({
           id={toggleId}
           checked={value}
           onChange={(e) => {
-            onChange(e.target.checked);
             setValue(e.target.checked);
+            runWithCatch(() => onChange(e.target.checked));
           }}
         />
       </label>
@@ -66,6 +70,7 @@ function SliderRow({
   onChange: (value: number) => void;
 }) {
   const [value, setValue] = useState(initial ?? min);
+  const runWithCatch = useSetAtom(runWithCatchAtom);
 
   return (
     <>
@@ -78,7 +83,34 @@ function SliderRow({
         value={value}
         onChange={(newValue) => {
           setValue(newValue);
-          onChange(newValue);
+          runWithCatch(() => onChange(newValue));
+        }}
+      />
+    </>
+  );
+}
+
+function TextAreaRow({
+  label,
+  initial,
+  onChange,
+}: {
+  label: string;
+  initial?: string;
+  onChange: (value: string) => void;
+}) {
+  const [value, setValue] = useState(initial ?? '');
+  const runWithCatch = useSetAtom(runWithCatchAtom);
+
+  return (
+    <>
+      <div className="text-sm">{label}</div>
+
+      <TextArea
+        value={value}
+        onChange={(newValue) => {
+          setValue(newValue);
+          runWithCatch(() => onChange(newValue));
         }}
       />
     </>
@@ -97,6 +129,7 @@ function SelectRow({
   onChange: (value: string) => void;
 }) {
   const [value, setValue] = useState(initial ?? options[0]);
+  const runWithCatch = useSetAtom(runWithCatchAtom);
 
   return (
     <>
@@ -107,7 +140,7 @@ function SelectRow({
         options={options}
         onChange={(newValue) => {
           setValue(newValue);
-          onChange(newValue);
+          runWithCatch(() => onChange(newValue));
         }}
       />
     </>
@@ -115,9 +148,11 @@ function SelectRow({
 }
 
 function ButtonRow({ label, onClick }: { label: string; onClick: () => void }) {
+  const runWithCatch = useSetAtom(runWithCatchAtom);
+
   return (
     <div className="grid h-10 col-span-2">
-      <Button onClick={onClick}>{label}</Button>
+      <Button onClick={() => runWithCatch(onClick)}>{label}</Button>
     </div>
   );
 }
@@ -153,6 +188,13 @@ function paramToControlRow(param: ExampleControlParam) {
       key={param.label}
       label={param.label}
       onClick={param.onButtonClick}
+    />
+  ) : 'onTextChange' in param ? (
+    <TextAreaRow
+      key={param.label}
+      label={param.label}
+      onChange={param.onTextChange}
+      initial={param.initial}
     />
   ) : (
     unreachable(param)

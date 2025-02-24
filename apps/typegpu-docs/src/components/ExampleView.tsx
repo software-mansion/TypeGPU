@@ -1,10 +1,11 @@
 import cs from 'classnames';
-import { useAtomValue, useSetAtom } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { type RefObject, useEffect, useRef, useState } from 'react';
 import {
   codeEditorShownAtom,
   codeEditorShownMobileAtom,
 } from '../utils/examples/codeEditorShownAtom';
+import { currentSnackbarAtom } from '../utils/examples/currentSnackbarAtom';
 import { ExecutionCancelledError } from '../utils/examples/errors';
 import { exampleControlsAtom } from '../utils/examples/exampleControlAtom';
 import { executeExample } from '../utils/examples/exampleRunner';
@@ -70,7 +71,7 @@ type EditorTab = 'ts' | 'html';
 export function ExampleView({ example }: Props) {
   const { tsCode, htmlCode, execTsCode } = example;
 
-  const [snackbarText, setSnackbarText] = useState<string | undefined>();
+  const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
   const [currentEditorTab, setCurrentEditorTab] = useState<EditorTab>('ts');
 
   const codeEditorShowing = useAtomValue(codeEditorShownAtom);

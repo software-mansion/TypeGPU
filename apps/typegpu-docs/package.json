@@ -46,6 +46,7 @@
     "typegpu": "workspace:*",
     "typescript": "catalog:",
     "unplugin-typegpu": "workspace:*",
+    "wgpu-matrix": "^3.3.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
