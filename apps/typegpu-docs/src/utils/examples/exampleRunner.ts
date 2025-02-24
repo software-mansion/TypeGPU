@@ -113,7 +113,6 @@ type Labelless<T> = T extends unknown ? Omit<T, 'label'> : never;
 
 export async function executeExample(
   exampleCode: string,
-  tags?: string[],
 ): Promise<ExampleState> {
   const cleanupCallbacks: (() => unknown)[] = [];
 
@@ -183,6 +182,9 @@ export async function executeExample(
           },
           addParameters,
         };
+      }
+      if (moduleKey === 'wgpu-matrix') {
+        return await import('wgpu-matrix');
       }
       throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
     };

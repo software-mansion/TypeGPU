@@ -1,6 +1,6 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue } from 'jotai';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import DiscordIconSvg from '../assets/discord-icon.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
 import HamburgerSvg from '../assets/hamburger.svg';
@@ -56,6 +56,8 @@ function SideMenu() {
     localStorage.getItem(experimentalShowingLSKey) === 'true',
   );
 
+  const experimentalExamplesToggleId = useId();
+
   return (
     <aside
       className={cs(
@@ -105,9 +107,13 @@ function SideMenu() {
 
       <hr className="my-0 box-border w-full border-t border-tameplum-100" />
 
-      <label className="flex items-center justify-between gap-3 text-sm cursor-pointer">
+      <label
+        htmlFor={experimentalExamplesToggleId}
+        className="flex items-center justify-between gap-3 text-sm cursor-pointer"
+      >
         <span>Experimental examples</span>
         <Toggle
+          id={experimentalExamplesToggleId}
           checked={experimentalShowing}
           onChange={(e) => {
             const checked = e.target.checked;

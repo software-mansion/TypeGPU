@@ -13,7 +13,7 @@ export function openInStackBlitz(example: Example) {
           '/TypeGPU',
           'https://docs.swmansion.com/TypeGPU',
         ),
-        'index.html': `
+        'index.html': `\
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -56,14 +56,23 @@ ${example.htmlCode}
       "preview": "vite preview"
     },
     "devDependencies": {
-      "typescript": "^5.5.3",
+      "typescript": "^5.7.3",
       "vite": "^5.4.2"
     },
     "dependencies": {
-      "@webgpu/types": "^0.1.44",
-      "typegpu": "^0.4.1"
+      "@webgpu/types": "^0.1.54",
+      "typegpu": "^0.4.3",
+      "unplugin-typegpu": "^0.1.0-alpha.3"
     }
 }`,
+        'vite.config.js': `\
+import { defineConfig } from 'vite';
+import typegpuPlugin from 'unplugin-typegpu/rollup';
+
+export default defineConfig({
+  plugins: [typegpuPlugin()],
+});
+`,
       },
     },
     {

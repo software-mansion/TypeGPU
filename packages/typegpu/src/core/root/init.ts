@@ -29,7 +29,7 @@ import {
 import {
   INTERNAL_createBuffer,
   type TgpuBuffer,
-  type Vertex,
+  type VertexFlag,
   isBuffer,
 } from '../buffer/buffer';
 import type {
@@ -449,7 +449,7 @@ class TgpuRootImpl
       TgpuVertexLayout,
       {
         buffer:
-          | (TgpuBuffer<WgslArray<BaseData> | Disarray<BaseData>> & Vertex)
+          | (TgpuBuffer<WgslArray<BaseData> | Disarray<BaseData>> & VertexFlag)
           | GPUBuffer;
         offset?: number | undefined;
         size?: number | undefined;
@@ -492,12 +492,14 @@ class TgpuRootImpl
 
       const missingVertexLayouts = new Set<TgpuVertexLayout>();
       core.usedVertexLayouts.forEach((vertexLayout, idx) => {
-        const opts =
-          {
-            buffer: priors.vertexLayoutMap?.get(vertexLayout),
-            offset: undefined,
-            size: undefined,
-          } ?? vertexBuffers.get(vertexLayout);
+        const priorBuffer = priors.vertexLayoutMap?.get(vertexLayout);
+        const opts = priorBuffer
+          ? {
+              buffer: priorBuffer,
+              offset: undefined,
+              size: undefined,
+            }
+          : vertexBuffers.get(vertexLayout);
 
         if (!opts || !opts.buffer) {
           missingVertexLayouts.add(vertexLayout);

@@ -1,41 +1,47 @@
 {
   "name": "typegpu",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.4.3",
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "license": "MIT",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
-    "./package.json": "./package.json",
-    ".": {
-      "types": "./dist/index.d.ts",
-      "module": "./dist/index.js",
-      "import": "./dist/index.js",
-      "default": "./dist/index.cjs"
-    },
-    "./data": {
-      "types": "./dist/data/index.d.ts",
-      "module": "./dist/data/index.js",
-      "import": "./dist/data/index.js",
-      "default": "./dist/data/index.cjs"
-    },
-    "./std": {
-      "types": "./dist/std/index.d.ts",
-      "module": "./dist/std/index.js",
-      "import": "./dist/std/index.js",
-      "default": "./dist/std/index.cjs"
+    ".": "./src/index.ts",
+    "./data": "./src/data/index.ts",
+    "./std": "./src/std/index.ts"
+  },
+  "publishConfig": {
+    "directory": "dist",
+    "linkDirectory": false,
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      "./package.json": "./package.json",
+      ".": {
+        "types": "./dist/index.d.ts",
+        "module": "./dist/index.js",
+        "import": "./dist/index.js",
+        "default": "./dist/index.cjs"
+      },
+      "./data": {
+        "types": "./dist/data/index.d.ts",
+        "module": "./dist/data/index.js",
+        "import": "./dist/data/index.js",
+        "default": "./dist/data/index.cjs"
+      },
+      "./std": {
+        "types": "./dist/std/index.d.ts",
+        "module": "./dist/std/index.js",
+        "import": "./dist/std/index.js",
+        "default": "./dist/std/index.cjs"
+      }
     }
   },
   "sideEffects": false,
   "scripts": {
-    "dev:watch": "DEV=true tsup --watch",
-    "dev:build": "DEV=true tsup",
     "build": "tsup",
-    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit && pnpm tsc --p ./tsconfig.test.json --noEmit",
-    "publish": "echo \"Use pnpm prepare-package instead!\" && exit 1",
-    "prepare-package": "tgpu-dev-cli prepack"
+    "test:types": "pnpm tsc --p ./tsconfig.test.json --noEmit",
+    "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "engines": {
     "node": ">=12.20.0"
@@ -60,15 +66,16 @@
   "homepage": "https://typegpu.com",
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
-    "@types/node": "^20.11.13",
-    "@webgpu/types": "^0.1.51",
-    "rollup-plugin-typegpu": "workspace:*",
+    "@types/node": "^22.13.4",
+    "@webgpu/types": "catalog:",
+    "jiti": "^2.4.2",
+    "unplugin-typegpu": "workspace:*",
     "tgpu-wgsl-parser": "workspace:*",
-    "tsup": "^8.0.2",
-    "typescript": "^5.3.3",
+    "tsup": "catalog:",
+    "typescript": "catalog:",
     "wgpu-matrix": "^3.3.0"
   },
-  "packageManager": "pnpm@8.15.8+sha256.691fe176eea9a8a80df20e4976f3dfb44a04841ceb885638fe2a26174f81e65e",
+  "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af",
   "dependencies": {
     "tinyest": "workspace:~0.1.0-alpha.2",
     "typed-binary": "^4.3.1"

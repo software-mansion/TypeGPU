@@ -5,7 +5,7 @@ import type { AnyData } from '../../data/dataTypes';
 import { getWriteInstructions } from '../../data/partialIO';
 import { sizeOf } from '../../data/sizeOf';
 import type { BaseData, WgslTypeLiteral } from '../../data/wgslTypes';
-import type { Storage } from '../../extension';
+import type { StorageFlag } from '../../extension';
 import type { TgpuNamable } from '../../namable';
 import type { Infer, InferPartial } from '../../shared/repr';
 import type { MemIdentity } from '../../shared/repr';
@@ -26,21 +26,31 @@ import {
 // Public API
 // ----------
 
-export interface Uniform {
+export interface UniformFlag {
   usableAsUniform: true;
 }
 
-export interface Vertex {
+/**
+ * @deprecated Use UniformFlag instead.
+ */
+export type Uniform = UniformFlag;
+
+export interface VertexFlag {
   usableAsVertex: true;
 }
 
+/**
+ * @deprecated Use VertexFlag instead.
+ */
+export type Vertex = VertexFlag;
+
 type LiteralToUsageType<T extends 'uniform' | 'storage' | 'vertex'> =
   T extends 'uniform'
-    ? Uniform
+    ? UniformFlag
     : T extends 'storage'
-      ? Storage
+      ? StorageFlag
       : T extends 'vertex'
-        ? Vertex
+        ? VertexFlag
         : never;
 
 type ViewUsages<TBuffer extends TgpuBuffer<BaseData>> =
@@ -110,8 +120,8 @@ export function isBuffer<T extends TgpuBuffer<AnyData>>(
 
 export function isUsableAsVertex<T extends TgpuBuffer<AnyData>>(
   buffer: T,
-): buffer is T & Vertex {
-  return !!(buffer as unknown as Vertex).usableAsVertex;
+): buffer is T & VertexFlag {
+  return !!(buffer as unknown as VertexFlag).usableAsVertex;
 }
 
 // --------------

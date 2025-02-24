@@ -63,7 +63,7 @@ export type {
   m4x4f,
 } from './wgslTypes';
 export {
-  WgslStruct,
+  type WgslStruct,
   struct,
 } from './struct';
 export { arrayOf } from './array';
@@ -105,9 +105,9 @@ export {
   location,
   interpolate,
   isBuiltin,
-  AnyAttribute,
-  IsBuiltin,
-  HasCustomLocation,
+  type AnyAttribute,
+  type IsBuiltin,
+  type HasCustomLocation,
 } from './attributes';
 export {
   isDisarray,
@@ -118,8 +118,8 @@ export {
 } from './dataTypes';
 export { PUBLIC_sizeOf as sizeOf } from './sizeOf';
 export { PUBLIC_alignmentOf as alignmentOf } from './alignmentOf';
-export {
-  builtin,
+export { builtin } from '../builtin';
+export type {
   BuiltinVertexIndex,
   BuiltinInstanceIndex,
   BuiltinPosition,

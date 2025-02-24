@@ -1,3 +1,9 @@
 packages:
   - 'packages/*'
   - 'apps/*'
+
+catalog:
+  typescript: ^5.7.3
+  tsup: ^8.3.6
+  "@webgpu/types": ^0.1.54
+  vitest: ^3.0.6

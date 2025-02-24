@@ -227,10 +227,10 @@ const fooBindGroup1 = root.createBindGroup(fooLayout, {
 If you accidentally pass the wrong type of resource, the TypeScript compiler will catch the error at compile time.
 
 - **Uniform** bindings with schema `TData` accept:
-  - `TgpuBuffer<TData> & Uniform` - buffers of type `TData` with `'uniform'` usage,
+  - `TgpuBuffer<TData> & UniformFlag` - buffers of type `TData` with `'uniform'` usage,
   - `GPUBuffer` - raw WebGPU buffers.
 - **Storage** bindings with schema `TData` accept:
-  - `TgpuBuffer<TData> & Storage` - buffers of type `TData` with `'storage'` usage,
+  - `TgpuBuffer<TData> & StorageFlag` - buffers of type `TData` with `'storage'` usage,
   - `GPUBuffer` - raw WebGPU buffers.
 - **Texture** bindings:
   - `GPUTextureView` - views of raw WebGPU textures.
