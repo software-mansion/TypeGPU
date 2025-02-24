@@ -48,13 +48,9 @@ class WgslArrayImpl<TElement extends BaseData> implements WgslArray<TElement> {
       throw new Error('Cannot nest runtime sized arrays.');
     }
 
-    if (
-      Number.isNaN(elementCount) ||
-      !Number.isInteger(elementCount) ||
-      elementCount < 0
-    ) {
+    if (!Number.isInteger(elementCount) || elementCount < 0) {
       throw new Error(
-        `Cannot create array with invalid element count: ${elementCount}.`,
+        `Cannot create array schema with invalid element count: ${elementCount}.`,
       );
     }
   }
