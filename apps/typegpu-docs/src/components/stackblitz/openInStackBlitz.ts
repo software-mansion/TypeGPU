@@ -1,6 +1,14 @@
 import StackBlitzSDK from '@stackblitz/sdk';
+import yaml from 'js-yaml';
+import typegpuPackageJson from '../../../../../packages/typegpu/package.json';
+import unpluginPackageJson from '../../../../../packages/unplugin-typegpu/package.json';
+import pnpmWorkspace from '../../../../../pnpm-workspace.yaml?raw';
 import type { Example } from '../../utils/examples/types';
 import index from './stackBlitzIndex.ts?raw';
+
+const pnpmWorkspaceYaml = yaml.load(pnpmWorkspace) as {
+  catalog: { typescript: string; '@webgpu/types': string };
+};
 
 export function openInStackBlitz(example: Example) {
   StackBlitzSDK.openProject(
@@ -56,13 +64,13 @@ ${example.htmlCode}
       "preview": "vite preview"
     },
     "devDependencies": {
-      "typescript": "^5.7.3",
-      "vite": "^5.4.2"
+      "typescript": "${pnpmWorkspaceYaml.catalog.typescript}",
+      "vite": "^6.1.1",
+      "@webgpu/types": "${pnpmWorkspaceYaml.catalog['@webgpu/types']}"
     },
     "dependencies": {
-      "@webgpu/types": "^0.1.54",
-      "typegpu": "^0.4.3",
-      "unplugin-typegpu": "^0.1.0-alpha.3"
+      "typegpu": "^${typegpuPackageJson.version}",
+      "unplugin-typegpu": "^${unpluginPackageJson.version}"
     }
 }`,
         'vite.config.js': `\

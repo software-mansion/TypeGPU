@@ -28,6 +28,7 @@
     "expressive-code-twoslash": "^0.4.0",
     "jotai": "^2.8.4",
     "jotai-location": "^0.5.5",
+    "js-yaml": "^4.1.0",
     "lucide-react": "^0.475.0",
     "lz-string": "^1.5.0",
     "monaco-editor": "^0.52.2",
@@ -53,6 +54,7 @@
     "@types/babel__standalone": "^7.1.9",
     "@types/babel__template": "^7.4.4",
     "@types/babel__traverse": "^7.20.6",
+    "@types/js-yaml": "^4.0.9",
     "@webgpu/types": "catalog:",
     "astro-vtbot": "^2.0.6",
     "tailwindcss-motion": "^1.0.1"
