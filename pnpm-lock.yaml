@@ -135,8 +135,8 @@ importers:
         specifier: ^0.32.5
         version: 0.32.6
       starlight-blog:
-        specifier: ^0.17.2
-        version: 0.17.2(@astrojs/starlight@0.32.1(astro@5.3.1(@types/node@22.13.4)(jiti@2.4.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.7.3)(yaml@2.7.0)))(astro@5.3.1(@types/node@22.13.4)(jiti@2.4.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.7.3)(yaml@2.7.0))
+        specifier: ^0.17.3
+        version: 0.17.3(@astrojs/starlight@0.32.1(astro@5.3.1(@types/node@22.13.4)(jiti@2.4.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.7.3)(yaml@2.7.0)))(astro@5.3.1(@types/node@22.13.4)(jiti@2.4.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.7.3)(yaml@2.7.0))
       starlight-typedoc:
         specifier: ^0.19.0
         version: 0.19.0(@astrojs/starlight@0.32.1(astro@5.3.1(@types/node@22.13.4)(jiti@2.4.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.7.3)(yaml@2.7.0)))(typedoc-plugin-markdown@4.4.2(typedoc@0.27.7(typescript@5.7.3)))(typedoc@0.27.7(typescript@5.7.3))
@@ -2378,8 +2378,8 @@ packages:
   fast-uri@3.0.6:
     resolution: {integrity: sha512-Atfo14OibSv5wAp4VWNsFYE1AchQRTv9cBGWET4pZWHzYshFSS9NQI6I57rdKn9croWVMbYFbLhJ+yJvmZIIHw==}
 
-  fast-xml-parser@4.5.2:
-    resolution: {integrity: sha512-xmnYV9o0StIz/0ArdzmWTxn9oDy0lH8Z80/8X/TD2EUQKXY4DHxoT9mYBqgGIG17DgddCJtH1M6DriMbalNsAA==}
+  fast-xml-parser@4.5.3:
+    resolution: {integrity: sha512-RKihhV+SHsIUGXObeVy9AXiBbFwkVk7Syp8XgwN5U3JV416+Gwp/GO9i0JYKmikykgz/UHRrrV4ROuZEo/T0ig==}
     hasBin: true
 
   fastq@1.19.0:
@@ -3733,8 +3733,8 @@ packages:
   stackback@0.0.2:
     resolution: {integrity: sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==}
 
-  starlight-blog@0.17.2:
-    resolution: {integrity: sha512-X8qfp2JN/vN5G6+VUkRBM2h85Ej1o4L/Vh/Z3WNeK+QBj8/05L80msXl2mZyKW7SW4oDSkC5U7agaf1/L2zcnQ==}
+  starlight-blog@0.17.3:
+    resolution: {integrity: sha512-EFBbxwIYB+NdGHlyYst9mJdxXtfpp2kSGtoKqrLuNa1MPiiGaO2I0xi+0y6Ei+R4RfzF06N+DNh0eojwX30Ojg==}
     engines: {node: '>=18.17.1'}
     peerDependencies:
       '@astrojs/starlight': '>=0.32.0'
@@ -3801,8 +3801,8 @@ packages:
     resolution: {integrity: sha512-4gB8na07fecVVkOI6Rs4e7T6NOTki5EmL7TUduTs6bu3EdnSycntVJ4re8kgZA+wx9IueI2Y11bfbgwtzuE0KQ==}
     engines: {node: '>=0.10.0'}
 
-  strnum@1.0.5:
-    resolution: {integrity: sha512-J8bbNyKKXl5qYcR36TIO8W3mVGVHrmmxsd5PAItGkmyzwJvybiw2IVq5nqd0i4LSNSkB/sx9VHllbfFdr9k1JA==}
+  strnum@1.1.1:
+    resolution: {integrity: sha512-O7aCHfYCamLCctjAiaucmE+fHf2DYHkus2OKCn4Wv03sykfFtgeECn505X6K4mPl8CRNd/qurC9guq+ynoN4pw==}
 
   style-to-object@1.0.8:
     resolution: {integrity: sha512-xT47I/Eo0rwJmaXC4oilDGDWLohVhR6o/xAQcPQN8q6QBuZVL8qMYL85kLmST5cPjAorwvqIA4qXTRQoYHaL6g==}
@@ -4588,7 +4588,7 @@ snapshots:
 
   '@astrojs/rss@4.0.11':
     dependencies:
-      fast-xml-parser: 4.5.2
+      fast-xml-parser: 4.5.3
       kleur: 4.1.5
 
   '@astrojs/sitemap@3.2.1':
@@ -6516,9 +6516,9 @@ snapshots:
 
   fast-uri@3.0.6: {}
 
-  fast-xml-parser@4.5.2:
+  fast-xml-parser@4.5.3:
     dependencies:
-      strnum: 1.0.5
+      strnum: 1.1.1
 
   fastq@1.19.0:
     dependencies:
@@ -8325,7 +8325,7 @@ snapshots:
 
   stackback@0.0.2: {}
 
-  starlight-blog@0.17.2(@astrojs/starlight@0.32.1(astro@5.3.1(@types/node@22.13.4)(jiti@2.4.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.7.3)(yaml@2.7.0)))(astro@5.3.1(@types/node@22.13.4)(jiti@2.4.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.7.3)(yaml@2.7.0)):
+  starlight-blog@0.17.3(@astrojs/starlight@0.32.1(astro@5.3.1(@types/node@22.13.4)(jiti@2.4.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.7.3)(yaml@2.7.0)))(astro@5.3.1(@types/node@22.13.4)(jiti@2.4.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.7.3)(yaml@2.7.0)):
     dependencies:
       '@astrojs/mdx': 4.0.8(astro@5.3.1(@types/node@22.13.4)(jiti@2.4.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.7.3)(yaml@2.7.0))
       '@astrojs/rss': 4.0.11
@@ -8402,7 +8402,7 @@ snapshots:
 
   strip-json-comments@2.0.1: {}
 
-  strnum@1.0.5: {}
+  strnum@1.1.1: {}
 
   style-to-object@1.0.8:
     dependencies:
