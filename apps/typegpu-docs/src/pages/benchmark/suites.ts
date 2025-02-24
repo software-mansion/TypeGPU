@@ -2,7 +2,6 @@ import type { Bench } from 'tinybench';
 import { massTransferSuite } from './test_suites/partial-write';
 import type { TypeGPUDataModule, TypeGPUModule } from './modules';
 import type { BenchParameterSet } from './parameter-set';
-import { dummySuite } from './test_suites/dummy';
 import { atomWithUrl } from './atom-with-url';
 import { entries, filter, fromEntries, map, pipe } from 'remeda';
 
@@ -37,7 +36,6 @@ export function createSuite<T extends { bench: Bench }>(
 }
 
 export const unfilteredSuites: Record<string, Suite> = {
-  Dummy: dummySuite,
   'Partial write': massTransferSuite,
 };
 
