@@ -43,7 +43,7 @@ const root = await tgpu.init();
 // Creating and initializing a buffer.
 const buffer = root
   .createBuffer(
-    d.arrayOf(Particle, 100), // <- holds a 100 particles
+    d.arrayOf(Particle, 100), // <- holds 100 particles
     Array.from({ length: 100 }).map(createParticle), // <- initial value
   )
   .$usage('storage'); // <- can be used as a "storage buffer"
