@@ -59,6 +59,7 @@ import {
   isRenderPipeline,
 } from '../pipeline/renderPipeline';
 import {
+  type INTERNAL_TgpuFixedSampler,
   type TgpuComparisonSampler,
   type TgpuSampler,
   isComparisonSampler,
@@ -419,15 +420,15 @@ class TgpuRootImpl
     }
 
     if (isSampler(resource)) {
-      if ('unwrap' in resource && typeof resource.unwrap === 'function') {
-        return resource.unwrap(this);
+      if ('unwrap' in resource) {
+        return (resource as INTERNAL_TgpuFixedSampler).unwrap(this);
       }
       throw new Error('Cannot unwrap laid-out sampler.');
     }
 
     if (isComparisonSampler(resource)) {
-      if ('unwrap' in resource && typeof resource.unwrap === 'function') {
-        return resource.unwrap(this);
+      if ('unwrap' in resource) {
+        return (resource as INTERNAL_TgpuFixedSampler).unwrap(this);
       }
       throw new Error('Cannot unwrap laid-out comparison sampler.');
     }

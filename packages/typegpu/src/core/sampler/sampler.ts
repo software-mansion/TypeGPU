@@ -5,7 +5,7 @@
 import type { TgpuNamable } from '../../namable';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout';
 import type { ResolutionCtx, SelfResolvable } from '../../types';
-import type { ExperimentalTgpuRoot } from '../root/rootTypes';
+import type { Unwrapper } from '../../unwrapper';
 
 export interface SamplerProps {
   addressModeU?: GPUAddressMode;
@@ -102,6 +102,10 @@ export interface TgpuComparisonSampler {
 
 export interface TgpuFixedSampler extends TgpuSampler, TgpuNamable {}
 
+export interface INTERNAL_TgpuFixedSampler {
+  unwrap(branch: Unwrapper): GPUSampler;
+}
+
 export interface TgpuFixedComparisonSampler
   extends TgpuComparisonSampler,
     TgpuNamable {}
@@ -184,7 +188,9 @@ export class TgpuLaidOutComparisonSamplerImpl
   }
 }
 
-class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
+class TgpuFixedSamplerImpl
+  implements TgpuFixedSampler, SelfResolvable, INTERNAL_TgpuFixedSampler
+{
   public readonly resourceType = 'sampler';
 
   private _label: string | undefined;
@@ -202,7 +208,7 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
   /**
    * NOTE: Internal use only
    */
-  unwrap(branch: ExperimentalTgpuRoot): GPUSampler {
+  unwrap(branch: Unwrapper): GPUSampler {
     if (!this._sampler) {
       this._sampler = branch.device.createSampler({
         ...this._props,
@@ -245,7 +251,10 @@ class TgpuFixedSamplerImpl implements TgpuFixedSampler, SelfResolvable {
 }
 
 class TgpuFixedComparisonSamplerImpl
-  implements TgpuFixedComparisonSampler, SelfResolvable
+  implements
+    TgpuFixedComparisonSampler,
+    SelfResolvable,
+    INTERNAL_TgpuFixedSampler
 {
   public readonly resourceType = 'sampler-comparison';
 
@@ -257,7 +266,7 @@ class TgpuFixedComparisonSamplerImpl
   /**
    * NOTE: Internal use only
    */
-  unwrap(branch: ExperimentalTgpuRoot): GPUSampler {
+  unwrap(branch: Unwrapper): GPUSampler {
     if (!this._sampler) {
       this._sampler = branch.device.createSampler({
         ...this._props,
