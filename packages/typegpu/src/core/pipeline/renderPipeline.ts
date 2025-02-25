@@ -55,8 +55,6 @@ export interface TgpuRenderPipeline<Output extends IOLayout = IOLayout>
     attachment: DepthStencilAttachment,
   ): TgpuRenderPipeline<IOLayout>;
 
-  withMultisampleState(multisampleState: MultisampleState): TgpuRenderPipeline;
-
   draw(
     vertexCount: number,
     instanceCount?: number,
@@ -224,7 +222,6 @@ type TgpuRenderPipelinePriors = {
     | undefined;
   readonly colorAttachment?: AnyFragmentColorAttachment | undefined;
   readonly depthStencilAttachment?: DepthStencilAttachment | undefined;
-  readonly multisampleState?: MultisampleState | undefined;
 };
 
 type Memo = {
@@ -302,13 +299,6 @@ class TgpuRenderPipelineImpl
     return new TgpuRenderPipelineImpl(this.core, {
       ...this.priors,
       depthStencilAttachment: attachment,
-    });
-  }
-
-  withMultisampleState(multisampleState: MultisampleState): TgpuRenderPipeline {
-    return new TgpuRenderPipelineImpl(this.core, {
-      ...this.priors,
-      multisampleState: multisampleState,
     });
   }
 
