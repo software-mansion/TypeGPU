@@ -186,7 +186,7 @@ const renderBackgroundPipeline = device.createRenderPipeline({
   },
 });
 
-const msTexture = device.createTexture({
+let msTexture = device.createTexture({
   size: [
     canvas.clientWidth * window.devicePixelRatio,
     canvas.clientHeight * window.devicePixelRatio,
@@ -196,7 +196,7 @@ const msTexture = device.createTexture({
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
 });
 
-const msView = msTexture.createView();
+let msView = msTexture.createView();
 
 const renderBackgroundPassDescriptor = {
   label: 'Render pass',
@@ -480,6 +480,26 @@ canvas.onwheel = (event) => {
     properties.transformation,
   );
 };
+
+// add resize observer that recreates the multisampled texture on canvas resize
+const resizeObserver = new ResizeObserver(() => {
+  msTexture.destroy();
+  msTexture = device.createTexture({
+    size: [
+      canvas.clientWidth * window.devicePixelRatio,
+      canvas.clientHeight * window.devicePixelRatio,
+    ],
+    sampleCount: 4,
+    format: presentationFormat,
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+  msView = msTexture.createView();
+
+  renderPassDescriptor.colorAttachments[0].view = msView;
+  renderBackgroundPassDescriptor.colorAttachments[0].view = msView;
+});
+
+resizeObserver.observe(canvas);
 
 // #region Example controls and cleanup
 
