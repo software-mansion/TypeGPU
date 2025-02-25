@@ -91,46 +91,36 @@ const getCell = tgpu['~unstable']
 
 const getCellNext = tgpu['~unstable']
   .fn([d.u32, d.u32], d.u32)
-  .does(/* wgsl */ `(x: u32, y: u32) -> u32 {
-    return atomicLoad(&nextStateData[getIndex(x, y)]);
-  }`)
-  .$uses({ nextStateData: nextStateStorage, getIndex });
+  .does((x, y) => std.atomicLoad(nextStateStorage.value[getIndex(x, y)]));
 
 const updateCell = tgpu['~unstable']
   .fn([d.u32, d.u32, d.u32])
-  .does(/* wgsl */ `(x: u32, y: u32, value: u32) {
-    atomicStore(&nextStateData[getIndex(x, y)], value);
-  }`)
-  .$uses({ nextStateData: nextStateStorage, getIndex });
+  .does((x, y, value) => {
+    std.atomicStore(nextStateStorage.value[getIndex(x, y)], value);
+  });
 
 const addToCell = tgpu['~unstable']
   .fn([d.u32, d.u32, d.u32])
-  .does(/* wgsl */ `(x: u32, y: u32, value: u32) {
-    let cell = getCellNext(x, y);
-    let waterLevel = cell & MAX_WATER_LEVEL;
-    let newWaterLevel = min(waterLevel + value, MAX_WATER_LEVEL);
-    atomicAdd(&nextStateData[getIndex(x, y)], newWaterLevel - waterLevel);
-  }`)
-  .$uses({
-    getCellNext,
-    nextStateData: nextStateStorage,
-    getIndex,
-    MAX_WATER_LEVEL,
+  .does((x, y, value) => {
+    const cell = getCellNext(x, y);
+    const waterLevel = cell & MAX_WATER_LEVEL.value;
+    const newWaterLevel = std.min(waterLevel + value, MAX_WATER_LEVEL.value);
+    std.atomicAdd(
+      nextStateStorage.value[getIndex(x, y)],
+      newWaterLevel - waterLevel,
+    );
   });
 
 const subtractFromCell = tgpu['~unstable']
   .fn([d.u32, d.u32, d.u32])
-  .does(/* wgsl */ `(x: u32, y: u32, value: u32) {
-    let cell = getCellNext(x, y);
-    let waterLevel = cell & MAX_WATER_LEVEL;
-    let newWaterLevel = max(waterLevel - min(value, waterLevel), 0u);
-    atomicSub(&nextStateData[getIndex(x, y)], waterLevel - newWaterLevel);
-  }`)
-  .$uses({
-    getCellNext,
-    nextStateData: nextStateStorage,
-    getIndex,
-    MAX_WATER_LEVEL,
+  .does((x, y, value) => {
+    const cell = getCellNext(x, y);
+    const waterLevel = cell & MAX_WATER_LEVEL.value;
+    const newWaterLevel = std.max(waterLevel - std.min(value, waterLevel), 0);
+    std.atomicSub(
+      nextStateStorage.value[getIndex(x, y)],
+      waterLevel - newWaterLevel,
+    );
   });
 
 const persistFlags = tgpu['~unstable'].fn([d.u32, d.u32]).does((x, y) => {

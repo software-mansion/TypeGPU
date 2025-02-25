@@ -374,6 +374,9 @@ importers:
       jiti:
         specifier: ^2.4.2
         version: 2.4.2
+      tgpu-jit:
+        specifier: workspace:*
+        version: link:../tgpu-jit
       tgpu-wgsl-parser:
         specifier: workspace:*
         version: link:../tgpu-wgsl-parser
