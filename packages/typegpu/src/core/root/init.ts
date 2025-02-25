@@ -42,7 +42,10 @@ import type {
 import type { IOLayout } from '../function/fnTypes';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn';
 import type { TgpuFn } from '../function/tgpuFn';
-import type { TgpuFragmentFn } from '../function/tgpuFragmentFn';
+import type {
+  FragmentOutConstrained,
+  TgpuFragmentFn,
+} from '../function/tgpuFragmentFn';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn';
 import {
   type INTERNAL_TgpuComputePipeline,
@@ -134,6 +137,7 @@ class WithBindingImpl implements WithBinding {
       slotBindings: this._slotBindings,
       vertexFn,
       vertexAttribs: attribs as AnyVertexAttribs,
+      multisampleState: undefined,
     });
   }
 }
@@ -189,6 +193,12 @@ class WithFragmentImpl implements WithFragment {
     depthStencilState: GPUDepthStencilState | undefined,
   ): WithFragment {
     return new WithFragmentImpl({ ...this._options, depthStencilState });
+  }
+
+  withMultisample(
+    multisampleState: GPUMultisampleState | undefined,
+  ): WithFragment<FragmentOutConstrained> {
+    return new WithFragmentImpl({ ...this._options, multisampleState });
   }
 
   createPipeline(): TgpuRenderPipeline {
