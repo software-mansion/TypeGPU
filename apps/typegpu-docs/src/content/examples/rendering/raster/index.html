@@ -1,11 +1,23 @@
+<style>
+  body {
+    font-family: 'Aeonik';
+  }
+  .controls {
+    font-size: 0.8rem;
+  }
+  .controls-header {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+  }
+</style>
 <div
   id="help"
   style="
     position: absolute;
     margin: 0 auto;
-    text-align: center;
+    text-align: left;
     z-index: 100;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.7);
     color: white;
     padding: 10px;
     border-radius: 10px;
@@ -13,9 +25,11 @@
     pointer-events: none;
     transition: opacity 0.5s;
   ">
-  <h3>Controls</h3>
-  <p>LMB/drag: Orbit camera</p>
-  <p>RBM/two finger drag: Rotate cubes</p>
-  <p>Scroll: Zoom</p>
+  <h3 class="controls-header">Controls</h3>
+  <p class="controls"><b>Left Mouse Button / Drag:</b> Orbit camera</p>
+  <p class="controls">
+    <b>Right Mouse Button / Two-Finger Drag:</b> Rotate cubes
+  </p>
+  <p class="controls"><b>Scroll:</b> Zoom</p>
 </div>
 <canvas></canvas>
