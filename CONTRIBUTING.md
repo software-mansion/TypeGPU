@@ -20,7 +20,7 @@ After your pull request is submitted, we will review it at as soon as possible. 
 
 ## Release Checklist
 
-1. Create new branch, update version string in package.json and in openInStackBlitz.ts, run `pnpm install`
+1. Create new branch, update version string in package.json, run `pnpm install`
 2. Take the Continuous Release build and test the changes on StackBlitz (optional)
 3. Merge to main
 4. Prepare the package for publishing
