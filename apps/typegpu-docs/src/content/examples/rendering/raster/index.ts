@@ -276,12 +276,12 @@ let rightPrevY = 0;
 const initialCamX = 10;
 const initialCamY = 2;
 const initialCamZ = 10;
-// Good old pythagorean theorem.
 let orbitRadius = Math.sqrt(
   initialCamX * initialCamX +
     initialCamY * initialCamY +
     initialCamZ * initialCamZ,
 );
+
 // Yaw and pitch angles facing the origin.
 let orbitYaw = Math.atan2(initialCamX, initialCamZ);
 let orbitPitch = Math.asin(initialCamY / orbitRadius);
@@ -360,12 +360,12 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
 
 canvas.addEventListener('mousedown', (event) => {
   if (event.button === 0) {
-    // Left Mouse Button now controls Camera Orbit.
+    // Left Mouse Button controls Camera Orbit.
     isRightDragging = true;
     rightPrevX = event.clientX;
     rightPrevY = event.clientY;
   } else if (event.button === 2) {
-    // Right Mouse Button now controls Cube Rotation.
+    // Right Mouse Button controls Cube Rotation.
     isDragging = true;
     prevX = event.clientX;
     prevY = event.clientY;
