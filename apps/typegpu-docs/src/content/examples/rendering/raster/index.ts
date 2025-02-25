@@ -12,6 +12,7 @@ const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+const helpInfo = document.getElementById('help') as HTMLDivElement;
 
 context.configure({
   device,
@@ -162,7 +163,7 @@ const planeTransformBuffer = root
   })
   .$usage('uniform');
 
-const depthTexture = device.createTexture({
+let depthTexture = device.createTexture({
   size: [canvas.width, canvas.height, 1],
   format: 'depth24plus',
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
@@ -341,6 +342,20 @@ canvas.addEventListener('contextmenu', (event) => {
   event.preventDefault();
 });
 
+canvas.addEventListener('mouseover', () => {
+  helpInfo.style.opacity = '0';
+});
+canvas.addEventListener('mouseout', () => {
+  helpInfo.style.opacity = '1';
+});
+// handle mobile devices
+canvas.addEventListener('touchstart', () => {
+  helpInfo.style.opacity = '0';
+});
+canvas.addEventListener('touchend', () => {
+  helpInfo.style.opacity = '1';
+});
+
 canvas.addEventListener('wheel', (event: WheelEvent) => {
   event.preventDefault();
   const zoomSensitivity = 0.05;
@@ -441,6 +456,16 @@ canvas.addEventListener('touchend', (event: TouchEvent) => {
     isDragging = false;
   }
 });
+
+const resizeObserver = new ResizeObserver(() => {
+  depthTexture.destroy();
+  depthTexture = device.createTexture({
+    size: [context.canvas.width, context.canvas.height, 1],
+    format: 'depth24plus',
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+});
+resizeObserver.observe(canvas);
 
 export function onCleanup() {
   disposed = true;
