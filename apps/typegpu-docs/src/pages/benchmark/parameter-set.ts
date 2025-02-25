@@ -92,7 +92,7 @@ export const createParameterSetAtom = atom(null, (get, set) => {
 
   set(parameterSetsAtom, [
     ...prev,
-    { key, typegpu: { type: 'npm', version: '' } },
+    { key, typegpu: { type: 'npm', version: 'latest' } },
   ]);
 });
 
