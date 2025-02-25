@@ -11,11 +11,11 @@ const pnpmWorkspaceYaml = type({
   catalog: { typescript: 'string', '@webgpu/types': 'string' },
 })(parse(pnpmWorkspace));
 
-export function openInStackBlitz(example: Example) {
-  if (pnpmWorkspaceYaml instanceof type.errors) {
-    throw new Error(pnpmWorkspaceYaml.message);
-  }
+if (pnpmWorkspaceYaml instanceof type.errors) {
+  throw new Error(pnpmWorkspaceYaml.message);
+}
 
+export const openInStackBlitz = (example: Example) => {
   StackBlitzSDK.openProject(
     {
       template: 'node',
@@ -94,4 +94,4 @@ export default defineConfig({
       theme: 'light',
     },
   );
-}
+};
