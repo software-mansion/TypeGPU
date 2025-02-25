@@ -40,7 +40,16 @@ export function SuiteCheckbox(props: { suiteName: string; suite: Suite }) {
 
   return (
     <div>
-      <div className="flex">
+      <div className="flex items-center">
+        <button
+          type="button"
+          className="bg-transparent text-base text-white cursor-pointer"
+          onClick={() => setOpened(!opened)}
+        >
+          <span className={cs(opened ? 'scale-y-[-1]' : '', 'inline-block')}>
+            {'▽'}
+          </span>
+        </button>
         <StylizedCheckbox
           id="option"
           state={state}
@@ -59,15 +68,10 @@ export function SuiteCheckbox(props: { suiteName: string; suite: Suite }) {
           className="bg-transparent text-base text-white cursor-pointer"
           onClick={() => setOpened(!opened)}
         >
-          <span
-            className={cs(opened ? 'scale-y-[-1]' : '', 'w-4 inline-block')}
-          >
-            {'▽'}
-          </span>
-          {` ${suiteName}`}
+          {suiteName}
         </button>
       </div>
-      <div className="ps-6">
+      <div className="ps-12">
         {opened &&
           Object.keys(suite.tests).map((key) => (
             <TestCheckbox suiteName={suiteName} testName={key} key={key} />
@@ -83,20 +87,24 @@ function TestCheckbox(props: { suiteName: string; testName: string }) {
   const [selected, setSelected] = useAtom(selectedTestsAtom);
   const state = selected.includes(identifier) ? 'checked' : 'unchecked';
 
+  function changeState() {
+    selected.includes(identifier)
+      ? setSelected(selected.filter((item) => item !== identifier))
+      : setSelected([...selected, identifier]);
+  }
+
   return (
     <div className="flex">
       <div>
-        <StylizedCheckbox
-          id="option"
-          state={state}
-          onChange={() =>
-            selected.includes(identifier)
-              ? setSelected(selected.filter((item) => item !== identifier))
-              : setSelected([...selected, identifier])
-          }
-        />
+        <StylizedCheckbox id="option" state={state} onChange={changeState} />
       </div>
-      <div className="text-sm ps-2">{testName}</div>
+      <button
+        type="button"
+        className="bg-transparent text-white cursor-pointer text-sm"
+        onClick={changeState}
+      >
+        {testName}
+      </button>
     </div>
   );
 }
