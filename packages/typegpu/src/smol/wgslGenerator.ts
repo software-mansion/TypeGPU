@@ -220,7 +220,7 @@ export function generateExpression(
     // Hex literals (since JS does not have float hex literals, we'll assume it's an int)
     const hexRegex = /^0x[0-9a-f]+$/i;
     if (hexRegex.test(value)) {
-      return { value: `${value}`, dataType: d.abstractInt };
+      return { value: value, dataType: d.abstractInt };
     }
 
     // Binary literals
@@ -242,7 +242,7 @@ export function generateExpression(
     const sciFloatRegex = /^-?\d+\.\d+e-?\d+$/;
     if (sciFloatRegex.test(value)) {
       return {
-        value: `${value}`,
+        value: value,
         dataType: d.abstractFloat,
       };
     }
@@ -250,7 +250,7 @@ export function generateExpression(
     // Integer literals
     const intRegex = /^-?\d+$/;
     if (intRegex.test(value)) {
-      return { value: `${value}`, dataType: d.abstractInt };
+      return { value: value, dataType: d.abstractInt };
     }
 
     throw new Error(`Invalid numeric literal ${value}`);
