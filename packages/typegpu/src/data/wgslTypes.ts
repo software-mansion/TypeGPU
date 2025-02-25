@@ -871,12 +871,6 @@ export interface Ptr<
   readonly '~repr': Infer<TInner>;
 }
 
-export function unwrapPtr<T extends BaseData>(
-  ptr: Ptr<AddressSpace, T, Access>,
-): T {
-  return ptr.inner;
-}
-
 /**
  * Schema representing the `atomic<...>` WGSL data type.
  */

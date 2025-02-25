@@ -235,7 +235,7 @@ export function generateExpression(
 
     const floatRegex = /^-?(?:\d+\.\d*|\d*\.\d+)$/;
     if (floatRegex.test(value)) {
-      return { value: `${value}`, dataType: d.abstractFloat };
+      return { value, dataType: d.abstractFloat };
     }
 
     // Floating point literals with scientific notation
