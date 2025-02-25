@@ -481,7 +481,7 @@ canvas.onwheel = (event) => {
   );
 };
 
-// add resize observer that recreates the multisampled texture on canvas resize
+// recreate the multisampled texture on canvas resize
 const resizeObserver = new ResizeObserver(() => {
   msTexture.destroy();
   msTexture = device.createTexture({
@@ -554,6 +554,7 @@ export const controls = {
 
 export function onCleanup() {
   destroyed = true;
+  resizeObserver.disconnect();
   root.destroy();
 }
 
