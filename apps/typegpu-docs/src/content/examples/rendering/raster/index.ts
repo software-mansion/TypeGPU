@@ -7,6 +7,8 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
 
+// Initialization
+
 const root = await tgpu.init();
 const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -19,6 +21,8 @@ context.configure({
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
+
+// Data Structures
 
 const Vertex = d.struct({
   position: d.vec4f,
@@ -33,6 +37,21 @@ const Camera = d.struct({
 const Transform = d.struct({
   model: d.mat4x4f,
 });
+
+const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(Vertex, n));
+
+// Scene Setup
+
+const aspect = canvas.clientWidth / canvas.clientHeight;
+const target = d.vec3f(0, 0, 0);
+const cameraInitialPos = d.vec4f(12, 5, 12, 1);
+
+const cameraInitial = {
+  view: m.mat4.lookAt(cameraInitialPos, target, d.vec3f(0, 1, 0), d.mat4x4f()),
+  projection: m.mat4.perspective(Math.PI / 4, aspect, 0.1, 1000, d.mat4x4f()),
+};
+
+// Geometry Creation
 
 function getColor(): d.Infer<typeof Vertex>['color'] {
   return d.vec4f(Math.random(), Math.random(), Math.random(), 1);
@@ -108,16 +127,7 @@ function createPlane(): d.Infer<typeof Vertex>[] {
   ]);
 }
 
-const aspect = canvas.clientWidth / canvas.clientHeight;
-const target = d.vec3f(0, 0, 0);
-const cameraInitialPos = d.vec4f(10, 2, 10, 1);
-
-const cameraInitial = {
-  view: m.mat4.lookAt(cameraInitialPos, target, d.vec3f(0, 1, 0), d.mat4x4f()),
-  projection: m.mat4.perspective(Math.PI / 4, aspect, 0.1, 1000, d.mat4x4f()),
-};
-
-const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(Vertex, n));
+// Transform Helpers
 
 function getCubeTransform(translation: d.v3f, rotation: d.m4x4f) {
   return m.mat4.mul(
@@ -134,6 +144,8 @@ function getPlaneTransform(translation: d.v3f, scale: d.v3f) {
     d.mat4x4f(),
   );
 }
+
+// Buffers and Bind Groups
 
 const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
 const cubeBuffer = root
@@ -163,12 +175,6 @@ const planeTransformBuffer = root
   })
   .$usage('uniform');
 
-let depthTexture = device.createTexture({
-  size: [canvas.width, canvas.height, 1],
-  format: 'depth24plus',
-  usage: GPUTextureUsage.RENDER_ATTACHMENT,
-});
-
 const bindGroupLayout = tgpu.bindGroupLayout({
   camera: { uniform: Camera },
   transform: { uniform: Transform },
@@ -187,6 +193,40 @@ const planeBindGroup = root.createBindGroup(bindGroupLayout, {
   camera: cameraBuffer,
   transform: planeTransformBuffer,
 });
+
+// Textures
+
+let depthTexture: GPUTexture;
+let depthTextureView: GPUTextureView;
+let msaaTexture: GPUTexture;
+let msaaTextureView: GPUTextureView;
+
+function createDepthAndMsaaTextures() {
+  if (depthTexture) {
+    depthTexture.destroy();
+  }
+  depthTexture = device.createTexture({
+    size: [canvas.width, canvas.height, 1],
+    format: 'depth24plus',
+    sampleCount: 4,
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+  depthTextureView = depthTexture.createView();
+
+  if (msaaTexture) {
+    msaaTexture.destroy();
+  }
+  msaaTexture = device.createTexture({
+    size: [canvas.width, canvas.height, 1],
+    format: presentationFormat,
+    sampleCount: 4,
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+  msaaTextureView = msaaTexture.createView();
+}
+createDepthAndMsaaTextures();
+
+// Shaders and Pipeline
 
 const vertex = tgpu['~unstable']
   .vertexFn({
@@ -219,7 +259,12 @@ const pipeline = root['~unstable']
     depthWriteEnabled: true,
     depthCompare: 'less',
   })
+  .withMultisample({
+    count: 4,
+  })
   .createPipeline();
+
+// Render Loop
 
 function drawObject(
   buffer: TgpuBuffer<d.WgslArray<typeof Vertex>> & VertexFlag,
@@ -229,13 +274,14 @@ function drawObject(
 ) {
   pipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: msaaTextureView,
+      resolveTarget: context.getCurrentTexture().createView(),
       clearValue: [0, 0, 0, 0],
       loadOp: loadOp,
       storeOp: 'store',
     })
     .withDepthStencilAttachment({
-      view: depthTexture.createView(),
+      view: depthTextureView,
       depthClearValue: 1,
       depthLoadOp: loadOp,
       depthStoreOp: 'store',
@@ -274,18 +320,15 @@ let prevY = 0;
 let isRightDragging = false;
 let rightPrevX = 0;
 let rightPrevY = 0;
-const initialCamX = 10;
-const initialCamY = 2;
-const initialCamZ = 10;
 let orbitRadius = Math.sqrt(
-  initialCamX * initialCamX +
-    initialCamY * initialCamY +
-    initialCamZ * initialCamZ,
+  cameraInitialPos.x * cameraInitialPos.x +
+    cameraInitialPos.y * cameraInitialPos.y +
+    cameraInitialPos.z * cameraInitialPos.z,
 );
 
 // Yaw and pitch angles facing the origin.
-let orbitYaw = Math.atan2(initialCamX, initialCamZ);
-let orbitPitch = Math.asin(initialCamY / orbitRadius);
+let orbitYaw = Math.atan2(cameraInitialPos.x, cameraInitialPos.z);
+let orbitPitch = Math.asin(cameraInitialPos.y / orbitRadius);
 let cube1Rotation = m.mat4.identity(d.mat4x4f());
 let cube2Rotation = m.mat4.identity(d.mat4x4f());
 
@@ -458,17 +501,13 @@ canvas.addEventListener('touchend', (event: TouchEvent) => {
 });
 
 const resizeObserver = new ResizeObserver(() => {
-  depthTexture.destroy();
-  depthTexture = device.createTexture({
-    size: [context.canvas.width, context.canvas.height, 1],
-    format: 'depth24plus',
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
-  });
+  createDepthAndMsaaTextures();
 });
 resizeObserver.observe(canvas);
 
 export function onCleanup() {
   disposed = true;
+  resizeObserver.disconnect();
   root.destroy();
 }
 
