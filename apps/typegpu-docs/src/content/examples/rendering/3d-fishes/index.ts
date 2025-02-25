@@ -1,19 +1,19 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 
 const triangleAmount = 1000;
 const triangleSize = 0.03;
 
-const rotate = tgpu['~unstable'].fn([d.vec2f, d.f32], d.vec2f).does(/* wgsl */ `
-  (v: vec2f, angle: f32) -> vec2f {
-    let pos = vec2(
-      (v.x * cos(angle)) - (v.y * sin(angle)),
-      (v.x * sin(angle)) + (v.y * cos(angle))
+const rotate = tgpu['~unstable']
+  .fn([d.vec2f, d.f32], d.vec2f)
+  .does((v, angle) => {
+    const pos = d.vec2f(
+      v.x * std.cos(angle) - v.y * std.sin(angle),
+      v.x * std.sin(angle) + v.y * std.cos(angle),
     );
-
     return pos;
-  }
-`);
+  });
 
 const getRotationFromVelocity = tgpu['~unstable']
   .fn([d.vec2f], d.f32)
@@ -45,34 +45,26 @@ const mainVert = tgpu['~unstable']
     in: { v: d.vec2f, center: d.vec2f, velocity: d.vec2f },
     out: VertexOutput,
   })
-  .does(/* wgsl */ `(input: VertexInput) -> VertexOutput {
-    let angle = getRotationFromVelocity(input.velocity);
-    let rotated = rotate(input.v, angle);
+  .does((input) => {
+    const angle = getRotationFromVelocity(input.velocity);
+    const rotated = rotate(input.v, angle);
 
-    let pos = vec4(rotated + input.center, 0.0, 1.0);
+    const translated = std.add(rotated, input.center);
+    const pos = d.vec4f(translated.x, translated.y, 0.0, 1.0);
 
-    let color = vec4(
-        sin(angle + colorPalette.r) * 0.45 + 0.45,
-        sin(angle + colorPalette.g) * 0.45 + 0.45,
-        sin(angle + colorPalette.b) * 0.45 + 0.45,
-        1.0);
+    const color = d.vec4f(
+      std.sin(angle + colorPalette.value.x) * 0.45 + 0.45,
+      std.sin(angle + colorPalette.value.y) * 0.45 + 0.45,
+      std.sin(angle + colorPalette.value.z) * 0.45 + 0.45,
+      1.0,
+    );
 
-    return VertexOutput(pos, color);
-  }`)
-  .$uses({
-    trianglePos,
-    colorPalette,
-    getRotationFromVelocity,
-    rotate,
+    return { position: pos, color };
   });
 
 const mainFrag = tgpu['~unstable']
   .fragmentFn({ in: VertexOutput, out: d.vec4f })
-  .does(/* wgsl */ `
-  (input: FragmentInput) -> @location(0) vec4f {
-    return input.color;
-  }
-`);
+  .does((input) => input.color);
 
 const Params = d
   .struct({
