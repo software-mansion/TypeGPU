@@ -79,42 +79,45 @@ export default function BenchmarkApp() {
 
   return (
     <div className="px-4">
-      <div className="mx-auto p-4 my-10 flex flex-col items-center justify-between w-96 border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-        <p className="w-full mt-1 mb-3 text-lg">Versions to compare:</p>
-        <ul className="w-full flex flex-col items-start gap-1 my-1 list-none p-0 m-0">
-          {parameterSetAtoms.map((paramsAtom, index) => (
-            <li
-              // biome-ignore lint/suspicious/noArrayIndexKey: <it's fine React>
-              key={`${index}`}
-              className="w-full"
+      <div className="gap-4 mx-auto p-4 my-10 flex flex-col items-center justify-between w-96 border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+        <div>
+          <p className="w-full text-lg mb-2">Versions to compare:</p>
+          <ul className="w-full flex flex-col items-start gap-1 my-1 list-none p-0 m-0">
+            {parameterSetAtoms.map((paramsAtom, index) => (
+              <li
+                // biome-ignore lint/suspicious/noArrayIndexKey: <it's fine React>
+                key={`${index}`}
+                className="w-full"
+              >
+                <ParameterSetRow parameterSetAtom={paramsAtom} />
+              </li>
+            ))}
+          </ul>
+          <div className="w-full">
+            <button
+              type="button"
+              className="cursor-pointer select-none p-2 flex justify-center items-center w-10 h-10 bg-transparent text-white transition-colors hover:bg-gray-700 rounded-md text-sm text-center me-2"
+              onClick={createParameterSet}
             >
-              <ParameterSetRow parameterSetAtom={paramsAtom} />
-            </li>
-          ))}
-        </ul>
-        <div className="w-full">
-          <button
-            type="button"
-            className="cursor-pointer select-none p-2 flex justify-center items-center w-10 h-10 bg-transparent text-white transition-colors hover:bg-gray-700 rounded-md text-sm text-center me-2"
-            onClick={createParameterSet}
-          >
-            <CirclePlus />
-          </button>
+              <CirclePlus />
+            </button>
+          </div>
         </div>
-        <p className="w-full mt-1 mb-3 text-lg">Benchmark suites to run:</p>
         <div className="w-full">
-          {Object.entries(unfilteredSuites).map(([suiteName, suite]) => (
-            <SuiteCheckbox
-              suiteName={suiteName}
-              suite={suite}
-              key={suiteName}
-            />
-          ))}
+          <p className="text-lg mb-2">Benchmark suites to run:</p>
+          <div className="w-full">
+            {Object.entries(unfilteredSuites).map(([suiteName, suite]) => (
+              <SuiteCheckbox
+                suiteName={suiteName}
+                suite={suite}
+                key={suiteName}
+              />
+            ))}
+          </div>
         </div>
-
         <button
           type="button"
-          className="mt-5 text-white bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-purple-300 dark:focus:ring-purple-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2"
+          className="text-white bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-purple-300 dark:focus:ring-purple-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
           onClick={runBenchmarks}
         >
           Run Benchmarks
