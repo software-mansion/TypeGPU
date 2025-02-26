@@ -315,11 +315,9 @@ frame();
 
 // Variables for mouse interaction.
 let isDragging = false;
+let isRightDragging = false;
 let prevX = 0;
 let prevY = 0;
-let isRightDragging = false;
-let rightPrevX = 0;
-let rightPrevY = 0;
 let orbitRadius = Math.sqrt(
   cameraInitialPos.x * cameraInitialPos.x +
     cameraInitialPos.y * cameraInitialPos.y +
@@ -413,41 +411,36 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
   );
-  cameraBuffer.write({ view: newView, projection: cameraInitial.projection });
+  cameraBuffer.writePartial({ view: newView });
 });
 
 canvas.addEventListener('mousedown', (event) => {
   if (event.button === 0) {
     // Left Mouse Button controls Camera Orbit.
     isRightDragging = true;
-    rightPrevX = event.clientX;
-    rightPrevY = event.clientY;
   } else if (event.button === 2) {
     // Right Mouse Button controls Cube Rotation.
     isDragging = true;
-    prevX = event.clientX;
-    prevY = event.clientY;
   }
+  prevX = event.clientX;
+  prevY = event.clientY;
 });
 
-window.addEventListener('mouseup', (event) => {
+window.addEventListener('mouseup', () => {
   isDragging = false;
   isRightDragging = false;
 });
 
 canvas.addEventListener('mousemove', (event) => {
+  const dx = event.clientX - prevX;
+  const dy = event.clientY - prevY;
+  prevX = event.clientX;
+  prevY = event.clientY;
+
   if (isDragging) {
-    const dx = event.clientX - prevX;
-    const dy = event.clientY - prevY;
-    prevX = event.clientX;
-    prevY = event.clientY;
     updateCubesRotation(dx, dy);
   }
   if (isRightDragging) {
-    const dx = event.clientX - rightPrevX;
-    const dy = event.clientY - rightPrevY;
-    rightPrevX = event.clientX;
-    rightPrevY = event.clientY;
     updateCameraOrbit(dx, dy);
   }
 });
@@ -458,33 +451,27 @@ canvas.addEventListener('touchstart', (event: TouchEvent) => {
   if (event.touches.length === 1) {
     // Single touch controls Camera Orbit.
     isRightDragging = true;
-    rightPrevX = event.touches[0].clientX;
-    rightPrevY = event.touches[0].clientY;
   } else if (event.touches.length === 2) {
     // Two-finger touch controls Cube Rotation.
     isDragging = true;
-    // Use the first touch for rotation.
-    prevX = event.touches[0].clientX;
-    prevY = event.touches[0].clientY;
   }
+  // Use the first touch for rotation.
+  prevX = event.touches[0].clientX;
+  prevY = event.touches[0].clientY;
 });
 
 canvas.addEventListener('touchmove', (event: TouchEvent) => {
   event.preventDefault();
+  const touch = event.touches[0];
+  const dx = touch.clientX - prevX;
+  const dy = touch.clientY - prevY;
+  prevX = touch.clientX;
+  prevY = touch.clientY;
+
   if (isRightDragging && event.touches.length === 1) {
-    const touch = event.touches[0];
-    const dx = touch.clientX - rightPrevX;
-    const dy = touch.clientY - rightPrevY;
-    rightPrevX = touch.clientX;
-    rightPrevY = touch.clientY;
     updateCameraOrbit(dx, dy);
   }
   if (isDragging && event.touches.length === 2) {
-    const touch = event.touches[0];
-    const dx = touch.clientX - prevX;
-    const dy = touch.clientY - prevY;
-    prevX = touch.clientX;
-    prevY = touch.clientY;
     updateCubesRotation(dx, dy);
   }
 });
