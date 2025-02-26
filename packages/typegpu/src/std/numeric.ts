@@ -300,8 +300,6 @@ export function reflect<T extends vBase>(e1: T, e2: T): T {
   if (inGPUMode()) {
     return `reflect(${e1}, ${e2})` as unknown as T;
   }
-  if (typeof e1 === 'number' || typeof e2 === 'number') {
-    throw new Error('e1 and e2 need to both be vectors of the same kind.');
-  }
+
   return sub(e1, mul(2 * dot(e2, e1), e2));
 }
