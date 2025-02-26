@@ -51,7 +51,6 @@ export function SuiteCheckbox(props: { suiteName: string; suite: Suite }) {
           </span>
         </button>
         <StylizedCheckbox
-          id="option"
           state={state}
           onChange={() => {
             const newSelected = selected.filter(
@@ -96,7 +95,7 @@ function TestCheckbox(props: { suiteName: string; testName: string }) {
   return (
     <div className="flex">
       <div>
-        <StylizedCheckbox id="option" state={state} onChange={changeState} />
+        <StylizedCheckbox state={state} onChange={changeState} />
       </div>
       <button
         type="button"
@@ -110,7 +109,6 @@ function TestCheckbox(props: { suiteName: string; testName: string }) {
 }
 
 function StylizedCheckbox(props: {
-  id: string;
   state: CheckboxState;
   onChange: () => void;
 }) {

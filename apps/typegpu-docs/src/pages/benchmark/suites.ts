@@ -1,5 +1,5 @@
 import type { Bench } from 'tinybench';
-import { partialWriteSuite } from './test_suites/partial-write';
+import { partialWriteSuite } from './test-suites/partial-write';
 import type { TypeGPUDataModule, TypeGPUModule } from './modules';
 import type { BenchParameterSet } from './parameter-set';
 import { atomWithUrl } from './atom-with-url';
