@@ -1,10 +1,10 @@
 import { type PrimitiveAtom, useAtom, useSetAtom } from 'jotai';
 import { useCallback } from 'react';
-import { DeleteIcon } from '../../components/design/DeleteIcon.js';
+import { DeleteIcon } from '../../../components/design/DeleteIcon.js';
 import {
   type BenchParameterSet,
   deleteParameterSetAtom,
-} from './parameter-set.js';
+} from '../parameter-set.js';
 
 function NpmParameters(props: {
   parameterSetAtom: PrimitiveAtom<BenchParameterSet>;
