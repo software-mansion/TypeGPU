@@ -359,7 +359,7 @@ function updateCubesRotation(dx: number, dy: number) {
 function updateCameraOrbit(dx: number, dy: number) {
   const orbitSensitivity = 0.005;
   orbitYaw += -dx * orbitSensitivity;
-  orbitPitch += -dy * orbitSensitivity;
+  orbitPitch += dy * orbitSensitivity;
   // if we don't limit pitch, it would lead to flipping the camera which is disorienting.
   const maxPitch = Math.PI / 2 - 0.01;
   if (orbitPitch > maxPitch) orbitPitch = maxPitch;
@@ -430,12 +430,9 @@ canvas.addEventListener('mousedown', (event) => {
   }
 });
 
-canvas.addEventListener('mouseup', (event) => {
-  if (event.button === 0) {
-    isRightDragging = false;
-  } else if (event.button === 2) {
-    isDragging = false;
-  }
+window.addEventListener('mouseup', (event) => {
+  isDragging = false;
+  isRightDragging = false;
 });
 
 canvas.addEventListener('mousemove', (event) => {
