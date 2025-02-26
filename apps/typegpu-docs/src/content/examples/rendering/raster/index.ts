@@ -148,23 +148,22 @@ function getPlaneTransform(translation: d.v3f, scale: d.v3f) {
 // Buffers and Bind Groups
 
 const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
-const cubeBuffer = root
-  .createBuffer(vertexLayout.schemaForCount(36), createCube())
-  .$usage('vertex');
-const transformBuffer = root
-  .createBuffer(Transform, {
-    model: getCubeTransform(d.vec3f(-2, 0, 0), m.mat4.identity(d.mat4x4f())),
-  })
-  .$usage('uniform');
 
-const secondCubeBuffer = root
-  .createBuffer(vertexLayout.schemaForCount(36), createCube())
-  .$usage('vertex');
-const secondTransformBuffer = root
-  .createBuffer(Transform, {
-    model: getCubeTransform(d.vec3f(2, 0, 0), m.mat4.identity(d.mat4x4f())),
-  })
-  .$usage('uniform');
+const [cubeBuffer, secondCubeBuffer] = [createCube(), createCube()].map(
+  (cube) =>
+    root.createBuffer(vertexLayout.schemaForCount(36), cube).$usage('vertex'),
+);
+
+const [transformBuffer, secondTransformBuffer] = [
+  d.vec3f(-2, 0, 0), // initial translation for the first cube
+  d.vec3f(2, 0, 0), // initial translation for the second cube
+].map((translation) =>
+  root
+    .createBuffer(Transform, {
+      model: getCubeTransform(translation, m.mat4.identity(d.mat4x4f())),
+    })
+    .$usage('uniform'),
+);
 
 const planeBuffer = root
   .createBuffer(vertexLayout.schemaForCount(6), createPlane())
@@ -314,8 +313,8 @@ frame();
 // #region Example controls and cleanup
 
 // Variables for mouse interaction.
-let isDragging = false;
 let isRightDragging = false;
+let isDragging = false;
 let prevX = 0;
 let prevY = 0;
 let orbitRadius = Math.sqrt(
@@ -358,7 +357,7 @@ function updateCameraOrbit(dx: number, dy: number) {
   const orbitSensitivity = 0.005;
   orbitYaw += -dx * orbitSensitivity;
   orbitPitch += dy * orbitSensitivity;
-  // if we don't limit pitch, it would lead to flipping the camera which is disorienting.
+  // if we didn't limit pitch, it would lead to flipping the camera which is disorienting.
   const maxPitch = Math.PI / 2 - 0.01;
   if (orbitPitch > maxPitch) orbitPitch = maxPitch;
   if (orbitPitch < -maxPitch) orbitPitch = -maxPitch;
@@ -417,18 +416,18 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
 canvas.addEventListener('mousedown', (event) => {
   if (event.button === 0) {
     // Left Mouse Button controls Camera Orbit.
-    isRightDragging = true;
+    isDragging = true;
   } else if (event.button === 2) {
     // Right Mouse Button controls Cube Rotation.
-    isDragging = true;
+    isRightDragging = true;
   }
   prevX = event.clientX;
   prevY = event.clientY;
 });
 
 window.addEventListener('mouseup', () => {
-  isDragging = false;
   isRightDragging = false;
+  isDragging = false;
 });
 
 canvas.addEventListener('mousemove', (event) => {
@@ -438,10 +437,10 @@ canvas.addEventListener('mousemove', (event) => {
   prevY = event.clientY;
 
   if (isDragging) {
-    updateCubesRotation(dx, dy);
+    updateCameraOrbit(dx, dy);
   }
   if (isRightDragging) {
-    updateCameraOrbit(dx, dy);
+    updateCubesRotation(dx, dy);
   }
 });
 
@@ -450,10 +449,10 @@ canvas.addEventListener('touchstart', (event: TouchEvent) => {
   event.preventDefault();
   if (event.touches.length === 1) {
     // Single touch controls Camera Orbit.
-    isRightDragging = true;
+    isDragging = true;
   } else if (event.touches.length === 2) {
     // Two-finger touch controls Cube Rotation.
-    isDragging = true;
+    isRightDragging = true;
   }
   // Use the first touch for rotation.
   prevX = event.touches[0].clientX;
@@ -468,10 +467,10 @@ canvas.addEventListener('touchmove', (event: TouchEvent) => {
   prevX = touch.clientX;
   prevY = touch.clientY;
 
-  if (isRightDragging && event.touches.length === 1) {
+  if (isDragging && event.touches.length === 1) {
     updateCameraOrbit(dx, dy);
   }
-  if (isDragging && event.touches.length === 2) {
+  if (isRightDragging && event.touches.length === 2) {
     updateCubesRotation(dx, dy);
   }
 });
