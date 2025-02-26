@@ -196,7 +196,7 @@ export type RenderPipelineCoreOptions = {
   primitiveState: GPUPrimitiveState | undefined;
   depthStencilState: GPUDepthStencilState | undefined;
   targets: AnyFragmentTargets;
-  multisampleState: MultisampleState | undefined;
+  multisampleState: GPUMultisampleState | undefined;
 };
 
 export function INTERNAL_createRenderPipeline(
