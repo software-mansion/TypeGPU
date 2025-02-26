@@ -173,9 +173,6 @@ importers:
       wgpu-matrix:
         specifier: ^3.3.0
         version: 3.3.0
-      zod:
-        specifier: ^3.23.8
-        version: 3.24.2
     devDependencies:
       '@types/babel__standalone':
         specifier: ^7.1.9
