@@ -20,8 +20,8 @@ const lexer = moo.compile({
   comment: /\/\/.*?$/,
   decimal_float_literal: /0[fh]|[1-9][0-9]*[fh]|[0-9]*\.[0-9]+(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+\.[0-9]*(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+[eE][+-]?[0-9]+[fh]?/,
   hex_float_literal: /0[xX][0-9a-fA-F]*\.[0-9a-fA-F]+(?:[pP][+-]?[0-9]+[fh]?)?|0[xX][0-9a-fA-F]+\.[0-9a-fA-F]*(?:[pP][+-]?[0-9]+[fh]?)?|0[xX][0-9a-fA-F]+[pP][+-]?[0-9]+[fh]?/,
-  decimal_int_literal: { match: /(?:0|[1-9][0-9]*)[iu]?/ },
   hex_int_literal: { match: /0[xX][0-9a-fA-F]+[iu]?/ },
+  decimal_int_literal: { match: /(?:0|[1-9][0-9]*)[iu]?/ },
 
   // WGSL spec apparently accepts plenty of Unicode, but lets limit it to just ASCII for now.
   ident_pattern: {
@@ -189,7 +189,6 @@ export type Accessor =
 export type SingularExpression =
     PrimaryExpression
   | { type: 'accessor', expression: PrimaryExpression, accessor: Accessor };
-
 
 
 export type UnaryExpression =
@@ -429,8 +428,9 @@ const grammar: Grammar = {
     {"name": "component_or_swizzle_specifier$ebnf$3", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
     {"name": "component_or_swizzle_specifier$ebnf$3", "symbols": [], "postprocess": () => null},
     {"name": "component_or_swizzle_specifier", "symbols": [{"literal":"."}, "swizzle", "component_or_swizzle_specifier$ebnf$3"], "postprocess": ([ , swizzle, next]) => ({ type: 'swizzle_accessor', swizzle, next })},
-    {"name": "singular_expression", "symbols": ["primary_expression"], "postprocess": id},
-    {"name": "singular_expression", "symbols": ["primary_expression", "component_or_swizzle_specifier"], "postprocess": ([expression, accessor]) => ({ type: 'accessor', expression, accessor })},
+    {"name": "singular_expression$ebnf$1", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
+    {"name": "singular_expression$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "singular_expression", "symbols": ["primary_expression", "singular_expression$ebnf$1"], "postprocess": ([expression, accessor]) => accessor ? { type: 'accessor', expression, accessor } : expression},
     {"name": "unary_expression", "symbols": ["singular_expression"], "postprocess": id},
     {"name": "unary_expression", "symbols": [{"literal":"-"}, "unary_expression"], "postprocess": ([ , expression]) => ({ type: 'negate', expression })},
     {"name": "unary_expression", "symbols": [{"literal":"!"}, "unary_expression"], "postprocess": ([ , expression]) => ({ type: 'logic_not', expression })},

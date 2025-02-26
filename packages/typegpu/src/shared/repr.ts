@@ -15,6 +15,10 @@ export type InferPartial<T> = T extends { readonly '~reprPartial': infer TRepr }
       ? InferPartialRecord<T>
       : T;
 
+export type InferGPU<T> = T extends { readonly '~gpuRepr': infer TRepr }
+  ? TRepr
+  : Infer<T>;
+
 export type InferRecord<T extends Record<string | number | symbol, unknown>> = {
   [Key in keyof T]: Infer<T[Key]>;
 };
@@ -23,6 +27,12 @@ export type InferPartialRecord<
   T extends Record<string | number | symbol, unknown>,
 > = {
   [Key in keyof T]: InferPartial<T[Key]>;
+};
+
+export type InferGPURecord<
+  T extends Record<string | number | symbol, unknown>,
+> = {
+  [Key in keyof T]: InferGPU<T[Key]>;
 };
 
 export type MemIdentity<T> = T extends {

@@ -1,4 +1,9 @@
-import type { Infer, InferPartial, MemIdentity } from '../shared/repr';
+import type {
+  Infer,
+  InferGPU,
+  InferPartial,
+  MemIdentity,
+} from '../shared/repr';
 import type { AnyWgslStruct, WgslStruct } from './struct';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location<number>[]>;
@@ -15,6 +20,22 @@ export interface BaseData {
 }
 
 // #region Instance Types
+
+/**
+ * Represents a 64-bit integer.
+ */
+export interface AbstractInt {
+  readonly type: 'abstractInt';
+  readonly '~repr': number;
+}
+
+/**
+ * Represents a 64-bit IEEE 754 floating point number.
+ */
+export interface AbstractFloat {
+  readonly type: 'abstractFloat';
+  readonly '~repr': number;
+}
 
 interface Swizzle2<T2, T3, T4> {
   readonly xx: T2;
@@ -823,13 +844,29 @@ export interface WgslArray<TElement extends BaseData = BaseData> {
   readonly elementType: TElement;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TElement>[];
+  readonly '~gpuRepr': InferGPU<TElement>[];
   readonly '~reprPartial': { idx: number; value: InferPartial<TElement> }[];
   readonly '~memIdent': WgslArray<MemIdentity<TElement>>;
 }
 
-export interface PtrFn<TInner = BaseData> {
-  readonly type: 'ptrFn';
+export type AddressSpace =
+  | 'uniform'
+  | 'storage'
+  | 'workgroup'
+  | 'private'
+  | 'function'
+  | 'handle';
+export type Access = 'read' | 'write' | 'read-write';
+
+export interface Ptr<
+  TAddr extends AddressSpace = AddressSpace,
+  TInner extends BaseData = BaseData, // can also be sampler or texture (╯'□')╯︵ ┻━┻
+  TAccess extends Access = Access,
+> {
+  readonly type: 'ptr';
   readonly inner: TInner;
+  readonly addressSpace: TAddr;
+  readonly access: TAccess;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
 }
@@ -842,7 +879,16 @@ export interface Atomic<TInner extends U32 | I32 = U32 | I32> {
   readonly inner: TInner;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
+  readonly '~gpuRepr': TInner extends U32 ? atomicU32 : atomicI32;
   readonly '~memIdent': MemIdentity<TInner>;
+}
+
+export interface atomicU32 {
+  type: 'atomicU32';
+}
+
+export interface atomicI32 {
+  type: 'atomicI32';
 }
 
 export interface Align<T extends number> {
@@ -886,6 +932,8 @@ export interface Decorated<
   readonly attribs: TAttribs;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
+  readonly '~gpuRepr': InferGPU<TInner>;
+  readonly '~reprPartial': InferPartial<TInner>;
   readonly '~memIdent': TAttribs extends Location<number>[]
     ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<MemIdentity<TInner>, TAttribs>;
@@ -914,9 +962,11 @@ export const wgslTypeLiterals = [
   'mat4x4f',
   'struct',
   'array',
-  'ptrFn',
+  'ptr',
   'atomic',
   'decorated',
+  'abstractInt',
+  'abstractFloat',
 ] as const;
 
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
@@ -965,9 +1015,11 @@ export type AnyWgslData =
   | Mat4x4f
   | AnyWgslStruct
   | WgslArray
-  | PtrFn
+  | Ptr
   | Atomic
-  | Decorated;
+  | Decorated
+  | AbstractInt
+  | AbstractFloat;
 
 // #endregion
 
@@ -1018,8 +1070,8 @@ export function isWgslStruct<T extends WgslStruct>(
  * isPtrFn(d.ptrFn(d.f32)) // true
  * isPtrFn(d.f32) // false
  */
-export function isPtrFn<T extends PtrFn>(schema: T | unknown): schema is T {
-  return (schema as T)?.type === 'ptrFn';
+export function isPtr<T extends Ptr>(schema: T | unknown): schema is T {
+  return (schema as T)?.type === 'ptr';
 }
 
 /**
@@ -1069,4 +1121,12 @@ export function isDecorated<T extends Decorated>(
   value: unknown | T,
 ): value is T {
   return (value as T)?.type === 'decorated';
+}
+
+export function isAbstractFloat(value: unknown): value is AbstractFloat {
+  return (value as AbstractFloat).type === 'abstractFloat';
+}
+
+export function isAbstractInt(value: unknown): value is AbstractInt {
+  return (value as AbstractInt).type === 'abstractInt';
 }
