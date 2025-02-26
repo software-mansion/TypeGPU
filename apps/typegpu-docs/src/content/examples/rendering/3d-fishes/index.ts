@@ -87,6 +87,8 @@ const Params = d
     alignmentStrength: d.f32,
     cohesionDistance: d.f32,
     cohesionStrength: d.f32,
+    wallRepulsionDistance: d.f32,
+    wallRepulsionStrength: d.f32,
   })
   .$name('Params');
 
@@ -104,6 +106,8 @@ const presets = {
     alignmentStrength: 0.01,
     cohesionDistance: 0.3,
     cohesionStrength: 0.001,
+    wallRepulsionDistance: 0.3,
+    wallRepulsionStrength: 0.0002,
   },
 } as const;
 
@@ -237,11 +241,22 @@ const mainCompute = tgpu['~unstable']
     if (cohesionCount > 0u) {
       cohesion = (cohesion / f32(cohesionCount)) - instanceInfo.position.xyz;
     }
+    for (var i = 0u; i< 3; i += 1) {
+      var vec = vec3f(0, 0, 0);
+      vec[i] = 1.0;
+      if (instanceInfo.position[i] > 1 - params.wallRepulsionDistance) {
+        wallRepulsion += -1 * vec; 
+      }
+      if (instanceInfo.position[i] < -1 + params.wallRepulsionDistance) {
+        wallRepulsion += 1 * vec; 
+      }
+    }
       
     instanceInfo.velocity +=
       (separation * params.separationStrength)
       + (alignment * params.alignmentStrength)
-      + (cohesion * params.cohesionStrength);
+      + (cohesion * params.cohesionStrength)
+      + (wallRepulsion * params.wallRepulsionStrength);
     instanceInfo.velocity = normalize(instanceInfo.velocity) * clamp(length(instanceInfo.velocity), 0.0, 0.01);
 
     if (instanceInfo.position[0] > 1.0 + triangleSize) {
@@ -297,7 +312,7 @@ let drawCube: () => void;
   const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(Vertex, n));
 
   function getColor(): d.Infer<typeof Vertex>['color'] {
-    return d.vec4f(173 / 255 + Math.random() / 5, 216 / 255, 230 / 255, 1);
+    return d.vec4f(173 / 255 + Math.random() / 5, 216 / 255, 230 / 255, 0.9);
   }
 
   function createFace(vertices: number[][]): d.Infer<typeof Vertex>[] {
