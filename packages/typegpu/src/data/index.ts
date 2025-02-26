@@ -8,8 +8,6 @@ export {
   f16,
   i32,
   u32,
-  abstractInt,
-  abstractFloat,
 } from './numeric';
 export {
   isWgslData,

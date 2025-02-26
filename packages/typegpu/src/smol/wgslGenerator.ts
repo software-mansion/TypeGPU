@@ -1,3 +1,4 @@
+import { abstractFloat, abstractInt } from 'src/data/numeric';
 import type * as smol from 'tinyest';
 import * as d from '../data';
 import * as wgsl from '../data/wgslTypes';
@@ -220,7 +221,7 @@ export function generateExpression(
     // Hex literals (since JS does not have float hex literals, we'll assume it's an int)
     const hexRegex = /^0x[0-9a-f]+$/i;
     if (hexRegex.test(value)) {
-      return { value: value, dataType: d.abstractInt };
+      return { value: value, dataType: abstractInt };
     }
 
     // Binary literals
@@ -229,13 +230,13 @@ export function generateExpression(
       // Since wgsl doesn't support binary literals, we'll convert it to a decimal number
       return {
         value: `${Number.parseInt(value.slice(2), 2)}`,
-        dataType: d.abstractInt,
+        dataType: abstractInt,
       };
     }
 
     const floatRegex = /^-?(?:\d+\.\d*|\d*\.\d+)$/;
     if (floatRegex.test(value)) {
-      return { value, dataType: d.abstractFloat };
+      return { value, dataType: abstractFloat };
     }
 
     // Floating point literals with scientific notation
@@ -243,14 +244,14 @@ export function generateExpression(
     if (sciFloatRegex.test(value)) {
       return {
         value: value,
-        dataType: d.abstractFloat,
+        dataType: abstractFloat,
       };
     }
 
     // Integer literals
     const intRegex = /^-?\d+$/;
     if (intRegex.test(value)) {
-      return { value: value, dataType: d.abstractInt };
+      return { value: value, dataType: abstractInt };
     }
 
     throw new Error(`Invalid numeric literal ${value}`);

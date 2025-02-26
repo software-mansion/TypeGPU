@@ -3,7 +3,7 @@ import { parse } from 'tgpu-wgsl-parser';
 import type * as smol from 'tinyest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { StrictNameRegistry } from '../../src';
-import * as d from '../../src/data';
+import { abstractFloat, abstractInt } from '../../src/data/numeric';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx';
 import {
   generateExpression,
@@ -91,31 +91,31 @@ describe('wgslGenerator', () => {
 
   it('Creates correct resources for numeric literals', () => {
     const literals = {
-      intLiteral: { value: '12', wgsl: '12', dataType: d.abstractInt },
-      floatLiteral: { value: '12.5', wgsl: '12.5', dataType: d.abstractFloat },
+      intLiteral: { value: '12', wgsl: '12', dataType: abstractInt },
+      floatLiteral: { value: '12.5', wgsl: '12.5', dataType: abstractFloat },
       weirdFloatLiteral: {
         value: '.32',
         wgsl: '.32',
-        dataType: d.abstractFloat,
+        dataType: abstractFloat,
       },
       sneakyFloatLiteral: {
         value: '32.',
         wgsl: '32.',
-        dataType: d.abstractFloat,
+        dataType: abstractFloat,
       },
       scientificLiteral: {
         value: '1.2e3',
         wgsl: '1.2e3',
-        dataType: d.abstractFloat,
+        dataType: abstractFloat,
       },
       scientificNegativeExponentLiteral: {
         value: '1.2e-3',
         wgsl: '1.2e-3',
-        dataType: d.abstractFloat,
+        dataType: abstractFloat,
       },
-      hexLiteral: { value: '0x12', wgsl: '0x12', dataType: d.abstractInt },
+      hexLiteral: { value: '0x12', wgsl: '0x12', dataType: abstractInt },
       // Since binary literals are not supported in WGSL, they are converted to decimal.
-      binLiteral: { value: '0b1010', wgsl: '10', dataType: d.abstractInt },
+      binLiteral: { value: '0b1010', wgsl: '10', dataType: abstractInt },
     } as const;
 
     const code = `{

@@ -13,8 +13,7 @@ export function atomicLoad<T extends AnyAtomic>(a: T): number {
 export function atomicStore<T extends AnyAtomic>(a: T, value: number): void {
   if (inGPUMode()) {
     // biome-ignore lint/correctness/noVoidTypeReturn: <string-void duality>
-    // biome-ignore lint/suspicious/noConfusingVoidType: <^>
-    return `atomicStore(&${a}, ${value})` as unknown as void;
+    return `atomicStore(&${a}, ${value})` as unknown as undefined;
   }
   throw new Error('Atomic operations are not supported outside of GPU mode.');
 }
