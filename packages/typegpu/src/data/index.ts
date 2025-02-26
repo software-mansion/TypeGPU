@@ -2,12 +2,18 @@
  * @module typegpu/data
  */
 
-export { bool, f32, f16, i32, u32 } from './numeric';
+export {
+  bool,
+  f32,
+  f16,
+  i32,
+  u32,
+} from './numeric';
 export {
   isWgslData,
   isWgslArray,
   isWgslStruct,
-  isPtrFn,
+  isPtr,
   isAtomic,
   isDecorated,
   isAlignAttrib,
@@ -40,7 +46,7 @@ export type {
   Mat3x3f,
   Mat4x4f,
   WgslArray,
-  PtrFn,
+  Ptr,
   Atomic,
   Decorated,
   Size,
@@ -67,7 +73,14 @@ export {
   struct,
 } from './struct';
 export { arrayOf } from './array';
-export { ptrFn } from './ptr';
+export {
+  ptrFn,
+  ptrPrivate,
+  ptrHandle,
+  ptrStorage,
+  ptrUniform,
+  ptrWorkgroup,
+} from './ptr';
 export type {
   Disarray,
   Unstruct,

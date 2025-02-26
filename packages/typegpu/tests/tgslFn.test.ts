@@ -343,4 +343,28 @@ describe('TGSL tgpu.fn function', () => {
 
     expect(actual).toEqual(expected);
   });
+
+  // TODO: Add this back when we can properly infer ast types
+  // it('resolves a function with a pointer parameter', () => {
+  //   const addOnes = tgpu['~unstable']
+  //     .fn([ptrStorage(vec3f, 'read-write')])
+  //     .does((ptr) => {
+  //       ptr.x += 1;
+  //       ptr.y += 1;
+  //       ptr.z += 1;
+  //     });
+
+  //   const actual = parseResolved({ addOnes });
+  //   console.log(tgpu.resolve({ externals: { addOnes }, template: 'addOnes' }));
+
+  //   const expected = parse(`
+  //     fn addOnes(ptr: ptr<storage, vec3f, read_write>) {
+  //       (*ptr).x += 1;
+  //       (*ptr).y += 1;
+  //       (*ptr).z += 1;
+  //     }
+  //   `);
+
+  //   expect(actual).toEqual(expected);
+  // });
 });
