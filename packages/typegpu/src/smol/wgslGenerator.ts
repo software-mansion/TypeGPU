@@ -1,6 +1,6 @@
-import { abstractFloat, abstractInt } from 'src/data/numeric';
 import type * as smol from 'tinyest';
 import * as d from '../data';
+import { abstractFloat, abstractInt } from '../data/numeric';
 import * as wgsl from '../data/wgslTypes';
 import {
   type ResolutionCtx,
