@@ -177,12 +177,6 @@ export interface DepthStencilAttachment {
   stencilReadOnly?: boolean;
 }
 
-export interface MultisampleState {
-  count?: number;
-  mask?: number;
-  alphaToCoverageEnabled?: boolean;
-}
-
 export type AnyFragmentColorAttachment =
   | ColorAttachment
   | Record<string, ColorAttachment>;
