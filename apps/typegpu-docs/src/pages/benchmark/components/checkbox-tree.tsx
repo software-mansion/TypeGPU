@@ -112,17 +112,17 @@ function StylizedCheckbox(props: {
   state: CheckboxState;
   onChange: () => void;
 }) {
-  const cRef = useRef<HTMLInputElement>(null);
+  const checkboxRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    if (cRef.current)
-      cRef.current.indeterminate = props.state === 'indeterminate';
+    if (checkboxRef.current)
+      checkboxRef.current.indeterminate = props.state === 'indeterminate';
   }, [props]);
 
   return (
     <div className="inline-flex items-center">
       <label className="flex items-center cursor-pointer relative">
         <input
-          ref={cRef}
+          ref={checkboxRef}
           type="checkbox"
           checked={props.state === 'checked'}
           className="peer h-4 w-4 cursor-pointer transition-all appearance-none rounded shadow hover:shadow-md border border-slate-300 checked:bg-gradient-purple-dark checked:border-gradient-purple indeterminate:bg-gradient-purple-dark indeterminate:border-gradient-purple"
