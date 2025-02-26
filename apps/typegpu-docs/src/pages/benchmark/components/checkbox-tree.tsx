@@ -47,7 +47,7 @@ export function SuiteCheckbox(props: { suiteName: string; suite: Suite }) {
           onClick={() => setOpened(!opened)}
         >
           <span className={cs(opened ? 'scale-y-[-1]' : '', 'inline-block')}>
-            {'▽'}
+            ▽
           </span>
         </button>
         <StylizedCheckbox
@@ -129,7 +129,6 @@ function StylizedCheckbox(props: {
           checked={props.state === 'checked'}
           className="peer h-4 w-4 cursor-pointer transition-all appearance-none rounded shadow hover:shadow-md border border-slate-300 checked:bg-gradient-purple-dark checked:border-gradient-purple indeterminate:bg-gradient-purple-dark indeterminate:border-gradient-purple"
           onChange={props.onChange}
-          id="check2"
         />
         <span className="absolute inset-0 text-white opacity-0 peer-checked:opacity-100 flex items-center justify-center">
           <img
@@ -142,7 +141,7 @@ function StylizedCheckbox(props: {
         <span className="absolute inset-0 text-white opacity-0 peer-indeterminate:opacity-100 flex items-center justify-center">
           <img
             src={IndeterminateSvg.src}
-            alt="checked"
+            alt="indeterminate"
             className="h-4 w-4"
             draggable="false"
           />

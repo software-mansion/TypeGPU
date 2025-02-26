@@ -36,8 +36,7 @@ async function runSuitesForTgpu(
   const d = await importTypeGPUData(params.typegpu);
   const results = [];
 
-  for (const suiteName in filteredSuites) {
-    const suite = filteredSuites[suiteName];
+  for (const [suiteName, suite] of Object.entries(filteredSuites)) {
     const ctx = suite.setup({ params, tgpuModule: tgpu, d });
     for (const testName in suite.tests) {
       ctx.bench.add(
@@ -104,11 +103,11 @@ export default function BenchmarkApp() {
         </div>
         <p className="w-full mt-1 mb-3 text-lg">Benchmark suites to run:</p>
         <div className="w-full">
-          {Object.entries(unfilteredSuites).map((entry) => (
+          {Object.entries(unfilteredSuites).map(([suiteName, suite]) => (
             <SuiteCheckbox
-              suiteName={entry[0]}
-              suite={entry[1]}
-              key={entry[0]}
+              suiteName={suiteName}
+              suite={suite}
+              key={suiteName}
             />
           ))}
         </div>

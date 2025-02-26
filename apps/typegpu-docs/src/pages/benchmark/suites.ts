@@ -58,10 +58,9 @@ export function getFilteredSuites(selectedTests: TestIdentifier[]) {
         fromEntries(),
       );
 
-      entry[1] = { setup, tests: filteredTests };
-      return entry;
+      return [suiteName, { setup, tests: filteredTests }] as const;
     }),
-    // filter the suites to retain only non-empty suites
+    // filter the suites to retain only non-empty
     filter((entry) => Object.keys(entry[1]).length > 0),
     fromEntries(),
   );
