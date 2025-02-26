@@ -286,6 +286,132 @@ const computeBindGroups = [0, 1].map((idx) =>
   }),
 );
 
+// unoptimized background cube
+let drawCube: () => void;
+{
+  const Vertex = d.struct({
+    position: d.vec4f,
+    color: d.vec4f,
+  });
+
+  const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(Vertex, n));
+
+  function getColor(): d.Infer<typeof Vertex>['color'] {
+    return d.vec4f(173 / 255 + Math.random() / 5, 216 / 255, 230 / 255, 1);
+  }
+
+  function createFace(vertices: number[][]): d.Infer<typeof Vertex>[] {
+    return vertices.map((pos) => ({
+      position: d.vec4f(...(pos as [number, number, number, number])),
+      color: getColor(),
+    }));
+  }
+
+  function createCube(): d.Infer<typeof Vertex>[] {
+    const front = createFace([
+      [-1, -1, 1, 1],
+      [1, -1, 1, 1],
+      [1, 1, 1, 1],
+      [-1, -1, 1, 1],
+      [1, 1, 1, 1],
+      [-1, 1, 1, 1],
+    ]);
+    const back = createFace([
+      [-1, -1, -1, 1],
+      [-1, 1, -1, 1],
+      [1, -1, -1, 1],
+      [1, -1, -1, 1],
+      [-1, 1, -1, 1],
+      [1, 1, -1, 1],
+    ]);
+    const top = createFace([
+      [-1, 1, -1, 1],
+      [-1, 1, 1, 1],
+      [1, 1, -1, 1],
+      [1, 1, -1, 1],
+      [-1, 1, 1, 1],
+      [1, 1, 1, 1],
+    ]);
+    const bottom = createFace([
+      [-1, -1, -1, 1],
+      [1, -1, -1, 1],
+      [-1, -1, 1, 1],
+      [1, -1, -1, 1],
+      [1, -1, 1, 1],
+      [-1, -1, 1, 1],
+    ]);
+    const right = createFace([
+      [1, -1, -1, 1],
+      [1, 1, -1, 1],
+      [1, -1, 1, 1],
+      [1, -1, 1, 1],
+      [1, 1, -1, 1],
+      [1, 1, 1, 1],
+    ]);
+    const left = createFace([
+      [-1, -1, -1, 1],
+      [-1, -1, 1, 1],
+      [-1, 1, -1, 1],
+      [-1, -1, 1, 1],
+      [-1, 1, 1, 1],
+      [-1, 1, -1, 1],
+    ]);
+    return [...front, ...back, ...top, ...bottom, ...right, ...left];
+  }
+
+  const cubeBuffer = root
+    .createBuffer(vertexLayout.schemaForCount(36), createCube())
+    .$usage('vertex');
+
+  const bindGroupLayout = tgpu.bindGroupLayout({
+    camera: { uniform: Camera },
+  });
+  const { camera } = bindGroupLayout.bound;
+
+  const bindGroup = root.createBindGroup(bindGroupLayout, {
+    camera: cameraBuffer,
+  });
+
+  const vertex = tgpu['~unstable']
+    .vertexFn({
+      in: { position: d.vec4f, color: d.vec4f },
+      out: { pos: d.builtin.position, color: d.vec4f },
+    })
+    .does((input) => {
+      const pos = std.mul(
+        camera.value.projection,
+        std.mul(camera.value.view, input.position),
+      );
+      return { pos, color: input.color };
+    });
+
+  const fragment = tgpu['~unstable']
+    .fragmentFn({
+      in: { color: d.vec4f },
+      out: d.vec4f,
+    })
+    .does((input) => input.color);
+
+  const pipeline = root['~unstable']
+    .withVertex(vertex, vertexLayout.attrib)
+    .withFragment(fragment, { format: presentationFormat })
+    .createPipeline();
+
+  drawCube = () => {
+    pipeline
+      .withColorAttachment({
+        view: context.getCurrentTexture().createView(),
+        clearValue: [0, 0, 0, 0],
+        loadOp: 'load',
+        storeOp: 'store',
+      })
+      .with(vertexLayout, cubeBuffer)
+      .with(bindGroupLayout, bindGroup)
+      .draw(36);
+    root['~unstable'].flush();
+  };
+}
+
 let even = false;
 let disposed = false;
 
@@ -293,6 +419,8 @@ function frame() {
   if (disposed) {
     return;
   }
+
+  drawCube();
 
   even = !even;
 
@@ -304,7 +432,7 @@ function frame() {
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       clearValue: [1, 1, 1, 1],
-      loadOp: 'clear' as const,
+      loadOp: 'load' as const,
       storeOp: 'store' as const,
     })
     .with(instanceLayout, trianglePosBuffers[even ? 1 : 0])
@@ -347,7 +475,7 @@ let orbitPitch = Math.asin(initialCamY / orbitRadius);
 function updateCameraOrbit(dx: number, dy: number) {
   const orbitSensitivity = 0.005;
   orbitYaw += -dx * orbitSensitivity;
-  orbitPitch += -dy * orbitSensitivity;
+  orbitPitch += dy * orbitSensitivity;
   // if we don't limit pitch, it would lead to flipping the camera which is disorienting.
   const maxPitch = Math.PI / 2 - 0.01;
   if (orbitPitch > maxPitch) orbitPitch = maxPitch;
