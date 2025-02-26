@@ -7,8 +7,6 @@ import {
   type Suite,
   type TestIdentifier,
 } from '../suites.js';
-import IndeterminateSvg from './indeterminate.svg';
-import CheckedSvg from './checked.svg';
 
 type CheckboxState = 'checked' | 'unchecked' | 'indeterminate';
 
@@ -129,20 +127,37 @@ function StylizedCheckbox(props: {
           onChange={props.onChange}
         />
         <span className="absolute inset-0 text-white opacity-0 peer-checked:opacity-100 flex items-center justify-center">
-          <img
-            src={CheckedSvg.src}
-            alt="checked"
-            className="h-4 w-4"
-            draggable="false"
-          />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+            className="w-4 h-4"
+            viewBox="0 2 100 102"
+          >
+            <path
+              d="M80 20 L40 78 L20 60"
+              stroke="white"
+              strokeWidth="15"
+              fill="none"
+            />
+          </svg>
         </span>
         <span className="absolute inset-0 text-white opacity-0 peer-indeterminate:opacity-100 flex items-center justify-center">
-          <img
-            src={IndeterminateSvg.src}
-            alt="indeterminate"
-            className="h-4 w-4"
-            draggable="false"
-          />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+            className="w-4 h-4"
+            viewBox="0 2 100 102"
+          >
+            <line
+              x1="20"
+              y1="50"
+              x2="80"
+              y2="50"
+              stroke="white"
+              strokeWidth="15"
+              fill="none"
+            />
+          </svg>
         </span>
       </label>
     </div>
