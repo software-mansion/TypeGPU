@@ -214,7 +214,7 @@ function GPUUnsupportedPanel() {
 }
 
 function useResizableCanvas(
-  exampleHtmlRef: RefObject<HTMLDivElement>,
+  exampleHtmlRef: RefObject<HTMLDivElement | null>,
   tsCode: string,
   htmlCode: string,
 ) {
