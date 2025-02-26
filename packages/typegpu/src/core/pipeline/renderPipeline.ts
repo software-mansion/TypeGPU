@@ -177,12 +177,6 @@ export interface DepthStencilAttachment {
   stencilReadOnly?: boolean;
 }
 
-export interface MultisampleState {
-  count?: number;
-  mask?: number;
-  alphaToCoverageEnabled?: boolean;
-}
-
 export type AnyFragmentColorAttachment =
   | ColorAttachment
   | Record<string, ColorAttachment>;
@@ -196,7 +190,7 @@ export type RenderPipelineCoreOptions = {
   primitiveState: GPUPrimitiveState | undefined;
   depthStencilState: GPUDepthStencilState | undefined;
   targets: AnyFragmentTargets;
-  multisampleState: MultisampleState | undefined;
+  multisampleState: GPUMultisampleState | undefined;
 };
 
 export function INTERNAL_createRenderPipeline(
