@@ -1,3 +1,4 @@
+import { group } from 'console';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
@@ -18,6 +19,8 @@ const Params = d
     wallRepulsionStrength: d.f32,
     // make sure that all relevant boids are within 2/groupsCountOnAxis distance on every axis!
     groupsCountOnAxis: d.u32,
+    // make sure that this value is fine tuned
+    groupSize: d.u32,
   })
   .$name('Params');
 
@@ -37,7 +40,8 @@ const presets = {
     cohesionStrength: 0.001,
     wallRepulsionDistance: 0.3,
     wallRepulsionStrength: 0.0002,
-    groupsCountOnAxis: 4,
+    groupsCountOnAxis: 2,
+    groupSize: 500,
   },
 } as const;
 
@@ -91,6 +95,19 @@ const TriangleData = d.struct({
 });
 
 const TriangleDataArray = (n: number) => d.arrayOf(TriangleData, n);
+// grouping the fishes into n*n*n cubes,
+// each containing the number of fishes in it and up to m instances of fish data
+const VoxelFishStorage = (n: number, m: number) =>
+  d.arrayOf(
+    d.arrayOf(
+      d.arrayOf(
+        d.struct({ size: d.u32, fishes: d.arrayOf(TriangleData, m) }),
+        n,
+      ),
+      n,
+    ),
+    n,
+  );
 
 const renderBindGroupLayout = tgpu.bindGroupLayout({
   trianglePos: { storage: TriangleDataArray },
