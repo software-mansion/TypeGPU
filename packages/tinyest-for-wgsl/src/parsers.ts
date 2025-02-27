@@ -297,6 +297,34 @@ const Transpilers: Partial<{
 
     return { o: properties };
   },
+
+  ForStatement(ctx, node) {
+    const init = node.init
+      ? (transpile(ctx, node.init) as smol.Statement)
+      : undefined;
+    const condition = node.test
+      ? (transpile(ctx, node.test) as smol.Expression)
+      : undefined;
+    const update = node.update
+      ? (transpile(ctx, node.update) as smol.Statement)
+      : undefined;
+    const body = transpile(ctx, node.body) as smol.Statement;
+    return { j: [init, condition, update, body] };
+  },
+
+  WhileStatement(ctx, node) {
+    const condition = transpile(ctx, node.test) as smol.Expression;
+    const body = transpile(ctx, node.body) as smol.Statement;
+    return { w: [condition, body] };
+  },
+
+  ContinueStatement() {
+    return { k: null };
+  },
+
+  BreakStatement() {
+    return { d: null };
+  },
 };
 
 function transpile(ctx: Context, node: JsNode): smol.AnyNode {

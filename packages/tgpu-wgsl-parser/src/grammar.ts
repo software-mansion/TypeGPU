@@ -133,6 +133,9 @@ export type Statement =
   | CompoundStatement;
 
 
+ export type BreakStatement = { type: 'break_statement' }; 
+ export type ContinueStatement = { type: 'continue_statement' }; 
+ export type WhileStatement = { type: 'while_statement', expression: Expression, body: CompoundStatement }; 
  export type VariableUpdatingStatement = AssignmentStatement; 
  export type CallStatement = { type: 'call_statement', ident: TemplateElaboratedIdent, args: Expression[] }; 
  export type Swizzle = { type: 'swizzle', value: string }; 
@@ -338,11 +341,19 @@ const grammar: Grammar = {
     {"name": "statement", "symbols": ["return_statement", {"literal":";"}], "postprocess": id},
     {"name": "statement", "symbols": ["if_statement"], "postprocess": id},
     {"name": "statement", "symbols": ["for_statement"], "postprocess": id},
+    {"name": "statement", "symbols": ["while_statement"], "postprocess": id},
     {"name": "statement", "symbols": ["call_statement", {"literal":";"}], "postprocess": id},
     {"name": "statement", "symbols": ["func_call_statement", {"literal":";"}], "postprocess": id},
     {"name": "statement", "symbols": ["variable_or_value_statement", {"literal":";"}], "postprocess": id},
+    {"name": "statement", "symbols": ["break_statement", {"literal":";"}], "postprocess": id},
+    {"name": "statement", "symbols": ["continue_statement", {"literal":";"}], "postprocess": id},
     {"name": "statement", "symbols": ["variable_updating_statement", {"literal":";"}], "postprocess": id},
     {"name": "statement", "symbols": ["compound_statement"], "postprocess": id},
+    {"name": "break_statement", "symbols": [{"literal":"break"}], "postprocess": () => ({ type: 'break_statement' })},
+    {"name": "continue_statement", "symbols": [{"literal":"continue"}], "postprocess": () => ({ type: 'continue_statement' })},
+    {"name": "while_statement$ebnf$1", "symbols": []},
+    {"name": "while_statement$ebnf$1", "symbols": ["while_statement$ebnf$1", "attribute"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "while_statement", "symbols": ["while_statement$ebnf$1", {"literal":"while"}, "expression", "compound_statement"], "postprocess": ([attrs, , expression, body]) => ({ type: 'while_statement', expression, body })},
     {"name": "variable_updating_statement", "symbols": ["assignment_statement"], "postprocess": id},
     {"name": "variable_updating_statement", "symbols": ["increment_statement"], "postprocess": id},
     {"name": "variable_updating_statement", "symbols": ["decrement_statement"], "postprocess": id},

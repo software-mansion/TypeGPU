@@ -1,6 +1,6 @@
 import tgpu, { type TgpuBufferReadonly, type TgpuBufferMutable } from 'typegpu';
 import * as d from 'typegpu/data';
-import { cos, dot, fract, length, max, min, mix, pow } from 'typegpu/std';
+import * as std from 'typegpu/std';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -27,10 +27,10 @@ const setupRandomSeed = tgpu['~unstable'].fn([d.vec2f]).does((coord) => {
  * "Particle System in WebGPU" by Benedikt Peter
  */
 const rand01 = tgpu['~unstable'].fn([], d.f32).does(() => {
-  const a = dot(randSeed.value, d.vec2f(23.14077926, 232.61690225));
-  const b = dot(randSeed.value, d.vec2f(54.47856553, 345.84153136));
-  randSeed.value.x = fract(cos(a) * 136.8168);
-  randSeed.value.y = fract(cos(b) * 534.7645);
+  const a = std.dot(randSeed.value, d.vec2f(23.14077926, 232.61690225));
+  const b = std.dot(randSeed.value, d.vec2f(54.47856553, 345.84153136));
+  randSeed.value.x = std.fract(std.cos(a) * 136.8168);
+  randSeed.value.y = std.fract(std.cos(b) * 534.7645);
   return randSeed.value.y;
 });
 
@@ -127,9 +127,9 @@ const flowFromCell = tgpu['~unstable']
     const destPos = d.vec2i(x + d.i32(src.x), y + d.i32(src.y));
     const dest = getCell(destPos.x, destPos.y);
     const diff = src.z - dest.z;
-    let outFlow = min(max(0.01, 0.3 + diff * 0.1), src.z);
+    let outFlow = std.min(std.max(0.01, 0.3 + diff * 0.1), src.z);
 
-    if (length(src.xy) < 0.5) {
+    if (std.length(src.xy) < 0.5) {
       outFlow = 0;
     }
 
@@ -150,18 +150,24 @@ const timeUniform = timeBuffer.as('uniform');
 
 const isInsideObstacle = tgpu['~unstable']
   .fn([d.i32, d.i32], d.bool)
-  .does(/* wgsl */ `(x: i32, y: i32) -> bool {
-    for (var obs_idx = 0; obs_idx < MAX_OBSTACLES; obs_idx += 1) {
-      let obs = obstaclesReadonly[obs_idx];
+  .does((x, y) => {
+    for (let obs_idx = 0; obs_idx < MAX_OBSTACLES; obs_idx += 1) {
+      const obs = obstaclesReadonly.value[obs_idx];
 
-      if (obs.enabled == 0) {
+      if (obs.enabled === 0) {
         continue;
       }
 
-      let min_x = i32(max(0, i32(obs.center.x) - i32(obs.size.x/2)));
-      let max_x = i32(max(0, i32(obs.center.x) + i32(obs.size.x/2)));
-      let min_y = i32(max(0, i32(obs.center.y) - i32(obs.size.y/2)));
-      let max_y = i32(max(0, i32(obs.center.y) + i32(obs.size.y/2)));
+      const min_x = std.max(0, d.i32(obs.center.x) - d.i32(obs.size.x) / 2);
+      const max_x = std.min(
+        d.i32(gridSize),
+        d.i32(obs.center.x) + d.i32(obs.size.x) / 2,
+      );
+      const min_y = std.max(0, d.i32(obs.center.y) - d.i32(obs.size.y) / 2);
+      const max_y = std.min(
+        d.i32(gridSize),
+        d.i32(obs.center.y) + d.i32(obs.size.y) / 2,
+      );
 
       if (x >= min_x && x <= max_x && y >= min_y && y <= max_y) {
         return true;
@@ -169,8 +175,7 @@ const isInsideObstacle = tgpu['~unstable']
     }
 
     return false;
-  }`)
-  .$uses({ MAX_OBSTACLES, obstaclesReadonly });
+  });
 
 const isValidFlowOut = tgpu['~unstable']
   .fn([d.i32, d.i32], d.bool)
@@ -259,113 +264,124 @@ const mainInitWorld = tgpu['~unstable']
 
 const mainMoveObstacles = tgpu['~unstable']
   .computeFn({ workgroupSize: [1] })
-  .does(/* wgsl */ `() {
-    for (var obs_idx = 0; obs_idx < MAX_OBSTACLES; obs_idx += 1) {
-      let obs = prevObstacleReadonly[obs_idx];
-      let next_obs = obstaclesReadonly[obs_idx];
+  .does(() => {
+    for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx += 1) {
+      const obs = prevObstacleReadonly.value[obsIdx];
+      const nextObs = obstaclesReadonly.value[obsIdx];
 
-      if (obs.enabled == 0) {
+      if (obs.enabled === 0) {
         continue;
       }
 
-      let diff = vec2i(next_obs.center) - vec2i(obs.center);
+      const diff = std.sub(
+        d.vec2i(d.i32(nextObs.center.x), d.i32(nextObs.center.y)),
+        d.vec2i(d.i32(obs.center.x), d.i32(obs.center.y)),
+      );
 
-      let min_x = i32(max(0, i32(obs.center.x) - i32(obs.size.x/2)));
-      let max_x = i32(max(0, i32(obs.center.x) + i32(obs.size.x/2)));
-      let min_y = i32(max(0, i32(obs.center.y) - i32(obs.size.y/2)));
-      let max_y = i32(max(0, i32(obs.center.y) + i32(obs.size.y/2)));
+      const min_x = std.max(0, d.i32(obs.center.x) - d.i32(obs.size.x) / 2);
+      const max_x = std.min(
+        d.i32(gridSize),
+        d.i32(obs.center.x) + d.i32(obs.size.x) / 2,
+      );
+      const min_y = std.max(0, d.i32(obs.center.y) - d.i32(obs.size.y) / 2);
+      const max_y = std.min(
+        d.i32(gridSize),
+        d.i32(obs.center.y) + d.i32(obs.size.y) / 2,
+      );
 
-      let next_min_x = i32(max(0, i32(next_obs.center.x) - i32(obs.size.x/2)));
-      let next_max_x = i32(max(0, i32(next_obs.center.x) + i32(obs.size.x/2)));
-      let next_min_y = i32(max(0, i32(next_obs.center.y) - i32(obs.size.y/2)));
-      let next_max_y = i32(max(0, i32(next_obs.center.y) + i32(obs.size.y/2)));
+      const nextMinX = std.max(
+        0,
+        d.i32(nextObs.center.x) - d.i32(obs.size.x) / 2,
+      );
+      const nextMaxX = std.min(
+        d.i32(gridSize),
+        d.i32(nextObs.center.x) + d.i32(obs.size.x) / 2,
+      );
+      const nextMinY = std.max(
+        0,
+        d.i32(nextObs.center.y) - d.i32(obs.size.y) / 2,
+      );
+      const nextMaxY = std.min(
+        d.i32(gridSize),
+        d.i32(nextObs.center.y) + d.i32(obs.size.y) / 2,
+      );
 
       // does it move right
       if (diff.x > 0) {
-        for (var y = min_y; y <= max_y; y += 1) {
-          var row_density = 0.;
-          for (var x = max_x; x <= next_max_x; x += 1) {
-            var cell = getCell(x, y);
-            row_density += cell.z;
+        for (let y = min_y; y <= max_y; y += 1) {
+          let rowDensity = d.f32(0);
+          for (let x = max_x; x <= nextMaxX; x += 1) {
+            const cell = getCell(x, y);
+            rowDensity += cell.z;
             cell.z = 0;
             setCell(x, y, cell);
           }
 
-          addDensity(next_max_x + 1, y, row_density);
+          addDensity(nextMaxX + 1, y, rowDensity);
         }
       }
 
       // does it move left
       if (diff.x < 0) {
-        for (var y = min_y; y <= max_y; y += 1) {
-          var row_density = 0.;
-          for (var x = next_min_x; x < min_x; x += 1) {
-            var cell = getCell(x, y);
-            row_density += cell.z;
+        for (let y = min_y; y <= max_y; y += 1) {
+          let rowDensity = d.f32(0);
+          for (let x = nextMinX; x < min_x; x += 1) {
+            const cell = getCell(x, y);
+            rowDensity += cell.z;
             cell.z = 0;
             setCell(x, y, cell);
           }
 
-          addDensity(next_min_x - 1, y, row_density);
+          addDensity(nextMinX - 1, y, rowDensity);
         }
       }
 
       // does it move up
       if (diff.y > 0) {
-        for (var x = min_x; x <= max_x; x += 1) {
-          var col_density = 0.;
-          for (var y = max_y; y <= next_max_y; y += 1) {
-            var cell = getCell(x, y);
-            col_density += cell.z;
+        for (let x = min_x; x <= max_x; x += 1) {
+          let colDensity = d.f32(0);
+          for (let y = max_y; y <= nextMaxY; y += 1) {
+            const cell = getCell(x, y);
+            colDensity += cell.z;
             cell.z = 0;
             setCell(x, y, cell);
           }
 
-          addDensity(x, next_max_y + 1, col_density);
+          addDensity(x, nextMaxY + 1, colDensity);
         }
       }
 
       // does it move down
-      if (diff.y < 0) {
-        for (var x = min_x; x <= max_x; x += 1) {
-          var col_density = 0.;
-          for (var y = next_min_y; y < min_y; y += 1) {
-            var cell = getCell(x, y);
-            col_density += cell.z;
-            cell.z = 0;
-            setCell(x, y, cell);
-          }
-
-          addDensity(x, next_min_y - 1, col_density);
+      for (let x = min_x; x <= max_x; x += 1) {
+        let colDensity = d.f32(0);
+        for (let y = nextMinY; y < min_y; y += 1) {
+          const cell = getCell(x, y);
+          colDensity += cell.z;
+          cell.z = 0;
+          setCell(x, y, cell);
         }
+
+        addDensity(x, nextMinY - 1, colDensity);
       }
 
-      // Recompute velocity around the obstacle so that no cells end up inside it on the
-      // next tick.
+      // Recompute velocity around the obstacle so that no cells end up inside it on the next tick.
 
       // left column
-      for (var y = next_min_y; y <= next_max_y; y += 1) {
-        let new_vel = computeVelocity(next_min_x - 1, y);
-        setVelocity(next_min_x - 1, y, new_vel);
+      for (let y = nextMinY; y <= nextMaxY; y += 1) {
+        const newVel = computeVelocity(nextMinX - 1, y);
+        setVelocity(nextMinX - 1, y, newVel);
       }
 
       // right column
-      for (var y = max(1, next_min_y); y <= min(next_max_y, gridSizeUniform - 2); y += 1) {
-        let new_vel = computeVelocity(next_max_x + 2, y);
-        setVelocity(next_max_x + 2, y, new_vel);
+      for (
+        let y = std.max(1, nextMinY);
+        y <= std.min(nextMaxY, gridSize - 2);
+        y += 1
+      ) {
+        const newVel = computeVelocity(nextMaxX + 2, y);
+        setVelocity(nextMaxX + 2, y, newVel);
       }
     }
-  }`)
-  .$uses({
-    MAX_OBSTACLES,
-    prevObstacleReadonly,
-    obstaclesReadonly,
-    getCell,
-    setCell,
-    addDensity,
-    computeVelocity,
-    setVelocity,
-    gridSizeUniform,
   });
 
 let sourceIntensity = 0.1;
@@ -386,14 +402,17 @@ const getMinimumInFlow = tgpu['~unstable']
   .fn([d.i32, d.i32], d.f32)
   .does((x, y) => {
     const gridSizeF = d.f32(gridSizeUniform.value);
-    const sourceRadius = max(1, sourceParamsUniform.value.radius * gridSizeF);
+    const sourceRadius = std.max(
+      1,
+      sourceParamsUniform.value.radius * gridSizeF,
+    );
     const sourcePos = d.vec2f(
       sourceParamsUniform.value.center.x * gridSizeF,
       sourceParamsUniform.value.center.y * gridSizeF,
     );
 
     if (
-      length(d.vec2f(d.f32(x) - sourcePos.x, d.f32(y) - sourcePos.y)) <
+      std.length(d.vec2f(d.f32(x) - sourcePos.x, d.f32(y) - sourcePos.y)) <
       sourceRadius
     ) {
       return sourceParamsUniform.value.intensity;
@@ -428,7 +447,7 @@ const mainCompute = tgpu['~unstable']
     next.z += flowFromCell(x, y, x - 1, y);
 
     const min_inflow = getMinimumInFlow(x, y);
-    next.z = max(min_inflow, next.z);
+    next.z = std.max(min_inflow, next.z);
 
     outputGridSlot.value[index] = next;
   });
@@ -500,7 +519,7 @@ const fragmentMain = tgpu['~unstable']
 
     const index = coordsToIndex(x, y);
     const cell = inputGridSlot.value[index];
-    const density = max(0, cell.z);
+    const density = std.max(0, cell.z);
 
     const obstacleColor = d.vec4f(0.1, 0.1, 0.1, 1);
 
@@ -522,22 +541,22 @@ const fragmentMain = tgpu['~unstable']
     }
 
     if (density <= firstThreshold) {
-      const t = 1 - pow(1 - density / firstThreshold, 2);
-      return mix(background, first_color, t);
+      const t = 1 - std.pow(1 - density / firstThreshold, 2);
+      return std.mix(background, first_color, t);
     }
 
     if (density <= secondThreshold) {
-      return mix(
+      return std.mix(
         first_color,
         second_color,
         (density - firstThreshold) / (secondThreshold - firstThreshold),
       );
     }
 
-    return mix(
+    return std.mix(
       second_color,
       third_color,
-      min((density - secondThreshold) / thirdThreshold, 1),
+      std.min((density - secondThreshold) / thirdThreshold, 1),
     );
   });
 

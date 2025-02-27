@@ -3,6 +3,30 @@ import { inGPUMode } from '../gpuMode';
 
 type AnyAtomic = atomicI32 | atomicU32;
 
+export function workgroupBarrier(): void {
+  if (inGPUMode()) {
+    // biome-ignore lint/correctness/noVoidTypeReturn: <string-void duality>
+    return 'workgroupBarrier()' as unknown as undefined;
+  }
+  console.warn('workgroupBarrier is a no-op outside of GPU mode.');
+}
+
+export function storageBarrier(): void {
+  if (inGPUMode()) {
+    // biome-ignore lint/correctness/noVoidTypeReturn: <string-void duality>
+    return 'storageBarrier()' as unknown as undefined;
+  }
+  console.warn('storageBarrier is a no-op outside of GPU mode.');
+}
+
+export function textureBarrier(): void {
+  if (inGPUMode()) {
+    // biome-ignore lint/correctness/noVoidTypeReturn: <string-void duality>
+    return 'textureBarrier()' as unknown as undefined;
+  }
+  console.warn('textureBarrier is a no-op outside of GPU mode.');
+}
+
 export function atomicLoad<T extends AnyAtomic>(a: T): number {
   if (inGPUMode()) {
     return `atomicLoad(&${a})` as unknown as number;
