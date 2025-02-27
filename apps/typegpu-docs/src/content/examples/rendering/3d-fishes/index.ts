@@ -204,8 +204,12 @@ const params = paramsBuffer.as('uniform');
 
 const trianglePosBuffers = Array.from({ length: 2 }, () =>
   root
-    .createBuffer(d.arrayOf(TriangleData, triangleAmount))
+    .createBuffer(TriangleDataArray(triangleAmount))
     .$usage('storage', 'uniform', 'vertex'),
+);
+
+const voxelBuffers = Array.from({ length: 2 }, () =>
+  root.createBuffer(VoxelFishArray).$usage('storage', 'uniform', 'vertex'),
 );
 
 const randomizePositions = () => {
@@ -245,8 +249,8 @@ const renderPipeline = root['~unstable']
 
 const computeBindGroupLayout = tgpu
   .bindGroupLayout({
-    // currentVoxelStorage: { storage: (n: number) => VoxelFishArray(n, 12) },
-    // memoryLocationOf: { storage: MemoryPositionArray },
+    currentVoxelStorage: { storage: VoxelFishArray },
+    nextVoxelStorage: { storage: VoxelFishArray },
     currentTrianglePos: { storage: TriangleDataArray },
     nextTrianglePos: {
       storage: TriangleDataArray,
@@ -255,11 +259,18 @@ const computeBindGroupLayout = tgpu
   })
   .$name('compute');
 
-const { currentTrianglePos, nextTrianglePos } = computeBindGroupLayout.bound;
+const {
+  currentTrianglePos,
+  nextTrianglePos,
+  currentVoxelStorage,
+  nextVoxelStorage,
+} = computeBindGroupLayout.bound;
 
 const mainCompute = tgpu['~unstable']
   .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })
   .does(/* wgsl */ `(input: ComputeInput) {
+    var a = currentVoxelStorage[0][0][0];
+    var b = nextVoxelStorage[0][0][0];
     let index = input.gid.x;
     var instanceInfo = currentTrianglePos[index];
     var separation = vec3f();
@@ -332,7 +343,15 @@ const mainCompute = tgpu['~unstable']
     instanceInfo.position += vec4f(instanceInfo.velocity, 0);
     nextTrianglePos[index] = instanceInfo;
   }`)
-  .$uses({ currentTrianglePos, nextTrianglePos, params, triangleSize });
+  .$uses({
+    currentTrianglePos,
+    nextTrianglePos,
+    currentVoxelStorage,
+    nextVoxelStorage,
+    params,
+    triangleSize,
+    voxelBuffers,
+  });
 
 const computePipeline = root['~unstable']
   .withCompute(mainCompute)
@@ -351,6 +370,8 @@ const computeBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(computeBindGroupLayout, {
     currentTrianglePos: trianglePosBuffers[idx],
     nextTrianglePos: trianglePosBuffers[1 - idx],
+    currentVoxelStorage: voxelBuffers[idx],
+    nextVoxelStorage: voxelBuffers[1 - idx],
   }),
 );
 
