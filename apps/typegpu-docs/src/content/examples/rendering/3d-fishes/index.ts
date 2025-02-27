@@ -29,20 +29,18 @@ const colorPresets = {
   jeans: d.vec3f(2.0, 1.5, 1.0),
 };
 
-const presets = {
-  default: {
-    separationDistance: 0.05,
-    separationStrength: 0.001,
-    alignmentDistance: 0.3,
-    alignmentStrength: 0.01,
-    cohesionDistance: 0.3,
-    cohesionStrength: 0.001,
-    wallRepulsionDistance: 0.3,
-    wallRepulsionStrength: 0.0002,
-    groupsCountOnAxis: 2,
-    groupSize: 500,
-  },
-} as const;
+const defaultParams: Params = {
+  separationDistance: 0.05,
+  separationStrength: 0.001,
+  alignmentDistance: 0.3,
+  alignmentStrength: 0.01,
+  cohesionDistance: 0.3,
+  cohesionStrength: 0.001,
+  wallRepulsionDistance: 0.3,
+  wallRepulsionStrength: 0.0002,
+  groupsCountOnAxis: 2,
+  groupSize: 500,
+};
 
 const rotate = tgpu['~unstable']
   .fn([d.vec2f, d.f32], d.vec2f)
@@ -65,17 +63,14 @@ const getRotationFromVelocity = tgpu['~unstable']
 const getGroupIndex = tgpu['~unstable']
   .fn([d.u32, d.vec3f], d.vec3u)
   .does((groupsCountOnAxis, position) => {
-    // console.log('position: ' + position);
     const normalizedPosition = std.mul(
       std.add(d.vec3f(1), position),
       d.vec3f(0.5),
     );
-    // console.log('norm: ' + normalizedPosition);
     const groupIndexFloat = std.mul(
       normalizedPosition,
       d.vec3f(d.f32(groupsCountOnAxis)),
     );
-    // console.log('group:' + groupIndex);
     return d.vec3u(
       std.clamp(d.u32(groupIndexFloat.x), 0, groupsCountOnAxis - 1),
       std.clamp(d.u32(groupIndexFloat.y), 0, groupsCountOnAxis - 1),
@@ -96,20 +91,24 @@ const TriangleData = d.struct({
 const TriangleDataArray = (n: number) => d.arrayOf(TriangleData, n);
 // grouping the fishes into n*n*n cubes,
 // each containing the number of fishes in it and up to m instances of fish data
-const VoxelFishStorage = (n: number, m: number) =>
+const VoxelFishArray = d.arrayOf(
   d.arrayOf(
     d.arrayOf(
-      d.arrayOf(
-        d.struct({ size: d.u32, fishes: d.arrayOf(TriangleData, m) }),
-        n,
-      ),
-      n,
+      d.struct({
+        size: d.u32,
+        fishIds: d.arrayOf(d.u32, defaultParams.groupSize),
+      }),
+      defaultParams.groupsCountOnAxis,
     ),
-    n,
-  );
+    defaultParams.groupsCountOnAxis,
+  ),
+  defaultParams.groupsCountOnAxis,
+);
 
 const renderBindGroupLayout = tgpu.bindGroupLayout({
-  trianglePos: { storage: TriangleDataArray },
+  trianglePos: {
+    storage: TriangleDataArray,
+  },
   colorPalette: { uniform: d.vec3f },
   camera: { uniform: Camera },
   params: { uniform: Params },
@@ -200,9 +199,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const paramsBuffer = root
-  .createBuffer(Params, presets.default)
-  .$usage('uniform');
+const paramsBuffer = root.createBuffer(Params, defaultParams).$usage('uniform');
 const params = paramsBuffer.as('uniform');
 
 const trianglePosBuffers = Array.from({ length: 2 }, () =>
@@ -248,6 +245,8 @@ const renderPipeline = root['~unstable']
 
 const computeBindGroupLayout = tgpu
   .bindGroupLayout({
+    // currentVoxelStorage: { storage: (n: number) => VoxelFishArray(n, 12) },
+    // memoryLocationOf: { storage: MemoryPositionArray },
     currentTrianglePos: { storage: TriangleDataArray },
     nextTrianglePos: {
       storage: TriangleDataArray,
