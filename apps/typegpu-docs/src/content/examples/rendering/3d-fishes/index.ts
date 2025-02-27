@@ -6,6 +6,41 @@ import * as m from 'wgpu-matrix';
 const triangleAmount = 1000;
 const triangleSize = 0.03;
 
+const Params = d
+  .struct({
+    separationDistance: d.f32,
+    separationStrength: d.f32,
+    alignmentDistance: d.f32,
+    alignmentStrength: d.f32,
+    cohesionDistance: d.f32,
+    cohesionStrength: d.f32,
+    wallRepulsionDistance: d.f32,
+    wallRepulsionStrength: d.f32,
+    // make sure that all relevant boids are within 2/groupsCountOnAxis distance on every axis!
+    groupsCountOnAxis: d.u32,
+  })
+  .$name('Params');
+
+type Params = d.Infer<typeof Params>;
+
+const colorPresets = {
+  jeans: d.vec3f(2.0, 1.5, 1.0),
+};
+
+const presets = {
+  default: {
+    separationDistance: 0.05,
+    separationStrength: 0.001,
+    alignmentDistance: 0.3,
+    alignmentStrength: 0.01,
+    cohesionDistance: 0.3,
+    cohesionStrength: 0.001,
+    wallRepulsionDistance: 0.3,
+    wallRepulsionStrength: 0.0002,
+    groupsCountOnAxis: 4,
+  },
+} as const;
+
 const rotate = tgpu['~unstable']
   .fn([d.vec2f, d.f32], d.vec2f)
   .does((v, angle) => {
@@ -24,6 +59,27 @@ const getRotationFromVelocity = tgpu['~unstable']
   }
 `);
 
+const getGroupIndex = tgpu['~unstable']
+  .fn([d.u32, d.vec3f], d.vec3u)
+  .does((groupsCountOnAxis, position) => {
+    // console.log('position: ' + position);
+    const normalizedPosition = std.mul(
+      std.add(d.vec3f(1), position),
+      d.vec3f(0.5),
+    );
+    // console.log('norm: ' + normalizedPosition);
+    const groupIndexFloat = std.mul(
+      normalizedPosition,
+      d.vec3f(d.f32(groupsCountOnAxis)),
+    );
+    // console.log('group:' + groupIndex);
+    return d.vec3u(
+      std.clamp(d.u32(groupIndexFloat.x), 0, groupsCountOnAxis - 1),
+      std.clamp(d.u32(groupIndexFloat.y), 0, groupsCountOnAxis - 1),
+      std.clamp(d.u32(groupIndexFloat.z), 0, groupsCountOnAxis - 1),
+    );
+  });
+
 const Camera = d.struct({
   view: d.mat4x4f,
   projection: d.mat4x4f,
@@ -34,17 +90,25 @@ const TriangleData = d.struct({
   velocity: d.vec3f,
 });
 
+const TriangleDataArray = (n: number) => d.arrayOf(TriangleData, n);
+
 const renderBindGroupLayout = tgpu.bindGroupLayout({
-  trianglePos: { uniform: d.arrayOf(TriangleData, triangleAmount) },
+  trianglePos: { storage: TriangleDataArray },
   colorPalette: { uniform: d.vec3f },
   camera: { uniform: Camera },
+  params: { uniform: Params },
 });
 
-const { trianglePos, colorPalette, camera } = renderBindGroupLayout.bound;
+const {
+  trianglePos,
+  colorPalette,
+  camera,
+  params: paramsB,
+} = renderBindGroupLayout.bound;
 
 const VertexOutput = {
+  trianglePosition: d.vec4f,
   position: d.builtin.position,
-  color: d.vec4f,
 };
 
 const mainVert = tgpu['~unstable']
@@ -65,51 +129,21 @@ const mainVert = tgpu['~unstable']
     );
     pos = std.mul(camera.value.projection, std.mul(camera.value.view, pos));
 
-    const color = d.vec4f(
-      std.sin(angle + colorPalette.value.x) * 0.45 + 0.45,
-      std.sin(angle + colorPalette.value.y) * 0.45 + 0.45,
-      std.sin(angle + colorPalette.value.z) * 0.45 + 0.45,
-      1.0,
-    );
-
-    return { position: pos, color };
+    return { position: pos, trianglePosition: input.center };
   });
 
 const mainFrag = tgpu['~unstable']
   .fragmentFn({ in: VertexOutput, out: d.vec4f })
-  .does((input) => input.color);
-
-const Params = d
-  .struct({
-    separationDistance: d.f32,
-    separationStrength: d.f32,
-    alignmentDistance: d.f32,
-    alignmentStrength: d.f32,
-    cohesionDistance: d.f32,
-    cohesionStrength: d.f32,
-    wallRepulsionDistance: d.f32,
-    wallRepulsionStrength: d.f32,
-  })
-  .$name('Params');
-
-type Params = d.Infer<typeof Params>;
-
-const colorPresets = {
-  jeans: d.vec3f(2.0, 1.5, 1.0),
-};
-
-const presets = {
-  default: {
-    separationDistance: 0.05,
-    separationStrength: 0.001,
-    alignmentDistance: 0.3,
-    alignmentStrength: 0.01,
-    cohesionDistance: 0.3,
-    cohesionStrength: 0.001,
-    wallRepulsionDistance: 0.3,
-    wallRepulsionStrength: 0.0002,
-  },
-} as const;
+  .does((input) => {
+    const groupIndex = getGroupIndex(
+      paramsB.value.groupsCountOnAxis,
+      input.trianglePosition.xyz,
+    );
+    const r = d.f32((groupIndex.x * 16381) % 255) / 255;
+    const g = d.f32((groupIndex.y * 63254) % 255) / 255;
+    const b = d.f32((groupIndex.z * 23545) % 255) / 255;
+    return d.vec4f(r, g, b, d.f32(1.0));
+  });
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -175,8 +209,6 @@ randomizePositions();
 const colorPaletteBuffer = root
   .createBuffer(d.vec3f, colorPresets.jeans)
   .$usage('uniform');
-
-const TriangleDataArray = (n: number) => d.arrayOf(TriangleData, n);
 
 const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(d.vec4f, n));
 const instanceLayout = tgpu.vertexLayout(TriangleDataArray, 'instance');
@@ -291,6 +323,7 @@ const renderBindGroups = [0, 1].map((idx) =>
     trianglePos: trianglePosBuffers[idx],
     colorPalette: colorPaletteBuffer,
     camera: cameraBuffer,
+    params: paramsBuffer,
   }),
 );
 
@@ -466,6 +499,20 @@ frame();
 export const controls = {
   Randomize: {
     onButtonClick: () => randomizePositions(),
+  },
+  'boids count': {
+    initial: triangleAmount,
+    options: [4, 16, 64, 256, 1024, 4096].map((x) => x.toString()),
+    onSelectChange(value: string) {
+      const num = Number.parseInt(value);
+      // triangleAmount = num;
+
+      // const oldBuffers = trianglePosBuffers;
+      // trianglePosBuffers = generateBuffers(triangleAmount);
+      // oldBuffers.forEach((buffer, _) => {
+      //   buffer.destroy();
+      // });
+    },
   },
 };
 
