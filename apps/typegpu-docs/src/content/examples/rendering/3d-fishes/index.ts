@@ -1,4 +1,3 @@
-import { group } from 'console';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
@@ -130,12 +129,28 @@ const VertexOutput = {
 
 const mainVert = tgpu['~unstable']
   .vertexFn({
-    in: { v: d.vec4f, center: d.vec4f, velocity: d.vec3f },
+    in: {
+      center: d.vec4f,
+      velocity: d.vec3f,
+      vertexIndex: d.builtin.vertexIndex,
+    },
     out: VertexOutput,
   })
   .does((input) => {
+    const v0 = d.vec4f(0.0, triangleSize, 0.0, 1.0);
+    const v1 = d.vec4f(-triangleSize / 2, -triangleSize / 2, 0.0, 1.0);
+    const v2 = d.vec4f(triangleSize / 2, -triangleSize / 2, 0.0, 1.0);
+    let v: d.v4f = d.vec4f();
+    if (input.vertexIndex === 0) {
+      v = v0;
+    } else if (input.vertexIndex === 1) {
+      v = v1;
+    } else {
+      v = v2;
+    }
+
     const angle = getRotationFromVelocity(input.velocity.xy);
-    const rotated = rotate(input.v.xy, angle);
+    const rotated = rotate(v.xy, angle);
 
     const translated = std.add(rotated, input.center.xy);
     let pos = d.vec4f(
@@ -156,9 +171,9 @@ const mainFrag = tgpu['~unstable']
       paramsB.value.groupsCountOnAxis,
       input.trianglePosition.xyz,
     );
-    const r = d.f32((groupIndex.x * 16381) % 255) / 255;
-    const g = d.f32((groupIndex.y * 63254) % 255) / 255;
-    const b = d.f32((groupIndex.z * 23545) % 255) / 255;
+    const r = d.f32((groupIndex.x * 26381) % 255) / 255;
+    const g = d.f32((groupIndex.y * 53254) % 255) / 255;
+    const b = d.f32((groupIndex.z * 43545) % 255) / 255;
     return d.vec4f(r, g, b, d.f32(1.0));
   });
 
@@ -170,7 +185,7 @@ const root = await tgpu.init();
 
 const aspect = canvas.clientWidth / canvas.clientHeight;
 const target = d.vec3f(0, 0, 0);
-const cameraInitialPos = d.vec4f(10, 2, 10, 1);
+const cameraInitialPos = d.vec4f(2, 2, 2, 1);
 
 const cameraInitial = {
   view: m.mat4.lookAt(cameraInitialPos, target, d.vec3f(0, 1, 0), d.mat4x4f()),
@@ -189,14 +204,6 @@ const paramsBuffer = root
   .createBuffer(Params, presets.default)
   .$usage('uniform');
 const params = paramsBuffer.as('uniform');
-
-const triangleVertexBuffer = root
-  .createBuffer(d.arrayOf(d.vec4f, 3), [
-    d.vec4f(0.0, triangleSize, 0.0, 1.0),
-    d.vec4f(-triangleSize / 2, -triangleSize / 2, 0.0, 1.0),
-    d.vec4f(triangleSize / 2, -triangleSize / 2, 0.0, 1.0),
-  ])
-  .$usage('vertex');
 
 const trianglePosBuffers = Array.from({ length: 2 }, () =>
   root
@@ -227,20 +234,17 @@ const colorPaletteBuffer = root
   .createBuffer(d.vec3f, colorPresets.jeans)
   .$usage('uniform');
 
-const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(d.vec4f, n));
 const instanceLayout = tgpu.vertexLayout(TriangleDataArray, 'instance');
 
 const renderPipeline = root['~unstable']
   .withVertex(mainVert, {
-    v: vertexLayout.attrib,
     center: instanceLayout.attrib.position,
     velocity: instanceLayout.attrib.velocity,
   })
   .withFragment(mainFrag, {
     format: presentationFormat,
   })
-  .createPipeline()
-  .with(vertexLayout, triangleVertexBuffer);
+  .createPipeline();
 
 const computeBindGroupLayout = tgpu
   .bindGroupLayout({
@@ -537,9 +541,9 @@ export const controls = {
 let isRightDragging = false;
 let rightPrevX = 0;
 let rightPrevY = 0;
-const initialCamX = 10;
+const initialCamX = 2;
 const initialCamY = 2;
-const initialCamZ = 10;
+const initialCamZ = 2;
 let orbitRadius = Math.sqrt(
   initialCamX * initialCamX +
     initialCamY * initialCamY +
