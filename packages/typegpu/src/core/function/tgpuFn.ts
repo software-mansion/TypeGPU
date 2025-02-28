@@ -17,7 +17,7 @@ import {
   type TgpuSlot,
   isAccessor,
 } from '../slot/slotTypes';
-import { createFnCore } from './fnCore';
+import { createFnCore, functionInternal } from './fnCore';
 import type { Implementation, InferArgs, InferReturn } from './fnTypes';
 
 // ----------
@@ -177,6 +177,12 @@ function createFn<
 
   Object.defineProperty(fn, 'toString', {
     value: () => `fn:${core.label ?? '<unnamed>'}`,
+  });
+
+  Object.defineProperty(fn, functionInternal, {
+    get: () => ({
+      implementation,
+    }),
   });
 
   return fn;

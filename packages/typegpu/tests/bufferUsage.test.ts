@@ -88,7 +88,7 @@ describe('TgpuBufferUniform', () => {
           pos: vec3f,
           vel: vec3u,
         }
-        
+
         @group(0) @binding(0) var<uniform> boid: Boid;
 
         fn func() {
@@ -180,7 +180,7 @@ describe('TgpuBufferMutable', () => {
           pos: vec3f,
           vel: vec3u,
         }
-        
+
         @group(0) @binding(0) var<storage, read_write> boid: Boid;
 
         fn func() {
@@ -272,7 +272,7 @@ describe('TgpuBufferReadonly', () => {
           pos: vec3f,
           vel: vec3u,
         }
-        
+
         @group(0) @binding(0) var<storage, read> boid: Boid;
 
         fn func() {

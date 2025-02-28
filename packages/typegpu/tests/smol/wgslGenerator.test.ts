@@ -1,15 +1,31 @@
 import { JitTranspiler } from 'tgpu-jit';
 import { parse } from 'tgpu-wgsl-parser';
 import type * as smol from 'tinyest';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { StrictNameRegistry } from '../../src';
+import { beforeEach, describe, expect } from 'vitest';
+import { StrictNameRegistry, type TgpuFn } from '../../src';
+import tgpu from '../../src';
+import { getPrebuiltAstFor } from '../../src/core/function/astUtils';
+import { functionInternal } from '../../src/core/function/fnCore';
+import * as d from '../../src/data';
 import { abstractFloat, abstractInt } from '../../src/data/numeric';
-import { ResolutionCtxImpl } from '../../src/resolutionCtx';
+import { provideCtx } from '../../src/gpuMode';
+import { ResolutionCtxImpl, contextInternal } from '../../src/resolutionCtx';
 import {
   generateExpression,
   generateFunction,
 } from '../../src/smol/wgslGenerator';
+import { it } from '../utils/extendedIt';
 
+type TestFn = TgpuFn & {
+  implementation: () => unknown;
+  // biome-ignore lint/suspicious/noExplicitAny: <Too complex>
+  [functionInternal]: any;
+};
+
+type ExposedContext = ResolutionCtxImpl & {
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  [contextInternal]: any;
+};
 const transpiler = new JitTranspiler();
 
 const createContext = () => {
@@ -20,13 +36,13 @@ const createContext = () => {
 };
 
 describe('wgslGenerator', () => {
-  let ctx: ResolutionCtxImpl;
+  let ctx: ExposedContext;
 
   beforeEach(() => {
-    ctx = createContext();
+    ctx = createContext() as ExposedContext;
   });
 
-  it('Creates a simple return statement', () => {
+  it('creates a simple return statement', () => {
     const code = `
       function main() {
         return true;
@@ -48,7 +64,7 @@ describe('wgslGenerator', () => {
     expect(parse(gen)).toEqual(parse('{return true;}'));
   });
 
-  it('Creates a function body', () => {
+  it('creates a function body', () => {
     const code = `
       function main() {
         let a = 12;
@@ -89,7 +105,7 @@ describe('wgslGenerator', () => {
     expect(parse(gen)).toEqual(parse('{var a = 12;a += 21;return a;}'));
   });
 
-  it('Creates correct resources for numeric literals', () => {
+  it('creates correct resources for numeric literals', () => {
     const literals = {
       intLiteral: { value: '12', wgsl: '12', dataType: abstractInt },
       floatLiteral: { value: '12.5', wgsl: '12.5', dataType: abstractFloat },
@@ -140,5 +156,87 @@ describe('wgslGenerator', () => {
 
       expect(generatedExpr.dataType).toEqual(expected.dataType);
     }
+  });
+
+  it('generates correct resources for member access expressions', ({
+    root,
+  }) => {
+    const testBuffer = root
+      .createBuffer(
+        d.struct({
+          a: d.u32,
+          b: d.vec2f,
+        }),
+      )
+      .$usage('storage');
+
+    const testUsage = testBuffer.as('mutable');
+
+    const testFn = tgpu['~unstable'].fn([], d.u32).does(() => {
+      return testUsage.value.a + testUsage.value.b.x;
+    }) as unknown as TestFn;
+
+    const astInfo = getPrebuiltAstFor(testFn[functionInternal].implementation);
+    if (!astInfo) {
+      throw new Error('Expected prebuilt AST to be present');
+    }
+
+    const expectedAst = {
+      b: [
+        {
+          r: {
+            x: [
+              {
+                a: [
+                  {
+                    a: ['testUsage', 'value'],
+                  },
+                  'a',
+                ],
+              },
+              '+',
+              {
+                a: [
+                  {
+                    a: [
+                      {
+                        a: ['testUsage', 'value'],
+                      },
+                      'b',
+                    ],
+                  },
+                  'x',
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    } as const;
+
+    expect(astInfo.ast.body).toEqual(expectedAst);
+    ctx[contextInternal].itemStateStack.pushFunctionScope(
+      [],
+      d.u32,
+      astInfo.externals,
+    );
+
+    const res1 = provideCtx(ctx, () =>
+      generateExpression(
+        ctx,
+        (astInfo.ast.body as unknown as typeof expectedAst).b[0].r
+          .x[0] as smol.Expression,
+      ),
+    );
+    expect(res1.dataType).toEqual(d.u32);
+
+    const res2 = provideCtx(ctx, () =>
+      generateExpression(
+        ctx,
+        (astInfo.ast.body as unknown as typeof expectedAst).b[0].r
+          .x[2] as smol.Expression,
+      ),
+    );
+    expect(res2.dataType).toEqual(d.f32);
   });
 });
