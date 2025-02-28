@@ -3,7 +3,8 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
 
-const triangleAmount = 1000;
+const triangleAmount = 10000;
+const workGroupSize = 250;
 const triangleSize = 0.03;
 
 const Params = d
@@ -38,8 +39,8 @@ const defaultParams: Params = {
   cohesionStrength: 0.001,
   wallRepulsionDistance: 0.3,
   wallRepulsionStrength: 0.0002,
-  groupsCountOnAxis: 2,
-  groupSize: 500,
+  groupsCountOnAxis: 10,
+  groupSize: 50,
 };
 
 const rotate = tgpu['~unstable']
@@ -86,16 +87,29 @@ const Camera = d.struct({
 const TriangleData = d.struct({
   position: d.vec4f,
   velocity: d.vec3f,
+  alive: d.u32,
 });
 
 const TriangleDataArray = (n: number) => d.arrayOf(TriangleData, n);
 // grouping the fishes into n*n*n cubes,
 // each containing the number of fishes in it and up to m instances of fish data
+const VoxelData = d.struct({
+  size: d.atomic(d.u32),
+  fishIds: d.arrayOf(d.u32, defaultParams.groupSize),
+});
 const VoxelFishArray = d.arrayOf(
+  d.arrayOf(
+    d.arrayOf(VoxelData, defaultParams.groupsCountOnAxis),
+    defaultParams.groupsCountOnAxis,
+  ),
+  defaultParams.groupsCountOnAxis,
+);
+
+const VoxelFishArrayAtomicless = d.arrayOf(
   d.arrayOf(
     d.arrayOf(
       d.struct({
-        size: d.atomic(d.u32),
+        size: d.u32,
         fishIds: d.arrayOf(d.u32, defaultParams.groupSize),
       }),
       defaultParams.groupsCountOnAxis,
@@ -132,6 +146,7 @@ const mainVert = tgpu['~unstable']
       center: d.vec4f,
       velocity: d.vec3f,
       vertexIndex: d.builtin.vertexIndex,
+      alive: d.u32,
     },
     out: VertexOutput,
   })
@@ -147,6 +162,10 @@ const mainVert = tgpu['~unstable']
     } else {
       v = v2;
     }
+
+    // if (input.alive === 0) {
+    //   std.discard();
+    // }
 
     const angle = getRotationFromVelocity(input.velocity.xy);
     const rotated = rotate(v.xy, angle);
@@ -225,6 +244,7 @@ const randomizePositions = () => {
       Math.random() * 0.1 - 0.05,
       0,
     ),
+    alive: 1,
   }));
   trianglePosBuffers[0].write(positions);
   trianglePosBuffers[1].write(positions);
@@ -241,6 +261,7 @@ const renderPipeline = root['~unstable']
   .withVertex(mainVert, {
     center: instanceLayout.attrib.position,
     velocity: instanceLayout.attrib.velocity,
+    alive: instanceLayout.attrib.alive,
   })
   .withFragment(mainFrag, {
     format: presentationFormat,
@@ -249,7 +270,10 @@ const renderPipeline = root['~unstable']
 
 const computeBindGroupLayout = tgpu
   .bindGroupLayout({
-    currentVoxelStorage: { storage: VoxelFishArray, access: 'mutable' },
+    currentVoxelStorage: {
+      storage: VoxelFishArrayAtomicless,
+      access: 'mutable',
+    },
     nextVoxelStorage: { storage: VoxelFishArray, access: 'mutable' },
     currentTrianglePos: { storage: TriangleDataArray },
     nextTrianglePos: {
@@ -267,12 +291,15 @@ const {
 } = computeBindGroupLayout.bound;
 
 const mainCompute = tgpu['~unstable']
-  .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })
+  .computeFn({
+    in: { gid: d.builtin.globalInvocationId },
+    workgroupSize: [workGroupSize],
+  })
   .does(/* wgsl */ `(input: ComputeInput) {
     let index = input.gid.x;
 
-    var position = currentTrianglePos[index].position;
-    var groupIndex = getGroupIndex(params.groupsCountOnAxis, position.xyz);
+    let position = currentTrianglePos[index].position;
+    let groupIndex = getGroupIndex(params.groupsCountOnAxis, position.xyz);
 
     var instanceInfo = currentTrianglePos[index];
     var separation = vec3f();
@@ -282,12 +309,25 @@ const mainCompute = tgpu['~unstable']
     var alignmentCount = 0u;
     var cohesionCount = 0u;
 
-    var groupCount = params.groupsCountOnAxis;
-    for (var x = 0u; x<groupCount; x++) {
-      for (var y = 0u; y<groupCount; y++) {
-        for (var z = 0u; z<groupCount; z++) {
-          var stackSize = atomicLoad(&currentVoxelStorage[x][y][z].size);
-          for (var w = 0u; w<stackSize; w++) {
+
+    var xi = i32(groupIndex.x);
+    var yi = i32(groupIndex.y);
+    var zi = i32(groupIndex.z);
+    var groupCount = i32(params.groupsCountOnAxis);
+
+    for (var xd = -1; xd<= 1; xd++) {
+      if (clamp(xi+xd, 0, groupCount-1) != xi+xd) { continue; }
+      for (var yd = -1; yd<= 1; yd++) {
+        if (clamp(yi+yd, 0, groupCount-1) != yi+yd) { continue; }
+        for (var zd = -1; zd<= 1; zd++) {
+          if (clamp(zi+zd, 0, groupCount-1) != zi+zd) { continue; }
+
+          var x = u32(xi+xd);
+          var y = u32(yi+yd);
+          var z = u32(zi+zd);
+
+          var stackSize = currentVoxelStorage[x][y][z].size;
+          for (var w = 0u; w<max(params.groupSize-1, stackSize); w++) {
             var i = currentVoxelStorage[x][y][z].fishIds[w];
             var other = currentTrianglePos[i];
             var dist = distance(instanceInfo.position, other.position);
@@ -331,31 +371,15 @@ const mainCompute = tgpu['~unstable']
       + (wallRepulsion * params.wallRepulsionStrength);
     instanceInfo.velocity = normalize(instanceInfo.velocity) * clamp(length(instanceInfo.velocity), 0.0, 0.01);
 
-    if (instanceInfo.position[0] > 1.0 + triangleSize) {
-      instanceInfo.position[0] = -1.0 - triangleSize;
-    }
-    if (instanceInfo.position[1] > 1.0 + triangleSize) {
-      instanceInfo.position[1] = -1.0 - triangleSize;
-    }
-    if (instanceInfo.position[2] > 1.0 + triangleSize) {
-      instanceInfo.position[2] = -1.0 - triangleSize;
-    }
-    if (instanceInfo.position[0] < -1.0 - triangleSize) {
-      instanceInfo.position[0] = 1.0 + triangleSize;
-    }
-    if (instanceInfo.position[1] < -1.0 - triangleSize) {
-      instanceInfo.position[1] = 1.0 + triangleSize;
-    }
-    if (instanceInfo.position[2] < -1.0 - triangleSize) {
-      instanceInfo.position[2] = 1.0 + triangleSize;
-    }
     instanceInfo.position += vec4f(instanceInfo.velocity, 0);
-    nextTrianglePos[index] = instanceInfo;
     
     var ni = getGroupIndex(params.groupsCountOnAxis, instanceInfo.position.xyz);
     var stackIndex = atomicAdd(&(nextVoxelStorage[ni.x][ni.y][ni.z].size), 1u);
-    nextVoxelStorage[ni.x][ni.y][ni.z].fishIds[stackIndex] = index;
-  }`)
+    if (stackIndex < params.groupSize) {
+      nextVoxelStorage[ni.x][ni.y][ni.z].fishIds[stackIndex] = index;
+    }
+    nextTrianglePos[index] = instanceInfo;
+}`)
   .$uses({
     currentTrianglePos,
     nextTrianglePos,
@@ -518,7 +542,23 @@ let drawCube: () => void;
 let even = false;
 let disposed = false;
 
+const emptyVoxelStorage = Array.from(
+  { length: defaultParams.groupsCountOnAxis },
+  () => {
+    return Array.from({ length: defaultParams.groupsCountOnAxis }, () => {
+      return Array.from({ length: defaultParams.groupsCountOnAxis }, () => {
+        return VoxelData({
+          size: 0,
+          fishIds: [0],
+        });
+      });
+    });
+  },
+);
+
+let frameCount = 0;
 function frame() {
+  frameCount += 1;
   if (disposed) {
     return;
   }
@@ -528,34 +568,11 @@ function frame() {
   even = !even;
 
   const nextVoxelStorage = voxelBuffers[1 - (even ? 0 : 1)];
-  for (let x = 0; x < defaultParams.groupsCountOnAxis; x++) {
-    for (let y = 0; y < defaultParams.groupsCountOnAxis; y++) {
-      for (let z = 0; z < defaultParams.groupsCountOnAxis; z++) {
-        nextVoxelStorage.writePartial([
-          {
-            idx: x,
-            value: [
-              {
-                idx: y,
-                value: [
-                  {
-                    idx: z,
-                    value: {
-                      size: 0,
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-        ]);
-      }
-    }
-  }
+  nextVoxelStorage.write(emptyVoxelStorage);
 
   computePipeline
     .with(computeBindGroupLayout, computeBindGroups[even ? 0 : 1])
-    .dispatchWorkgroups(triangleAmount);
+    .dispatchWorkgroups(triangleAmount / workGroupSize);
 
   renderPipeline
     .withColorAttachment({
@@ -571,6 +588,13 @@ function frame() {
   root['~unstable'].flush();
 
   requestAnimationFrame(frame);
+
+  if (frameCount % 30 === 0) {
+    trianglePosBuffers[0].read().then((data) => {
+      const sum = data.filter((value) => value.alive).length;
+      console.log(`Boids left: ${sum}`);
+    });
+  }
 }
 
 frame();
