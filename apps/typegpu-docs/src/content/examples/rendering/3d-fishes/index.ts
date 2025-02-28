@@ -95,7 +95,7 @@ const VoxelFishArray = d.arrayOf(
   d.arrayOf(
     d.arrayOf(
       d.struct({
-        size: d.u32,
+        size: d.atomic(d.u32),
         fishIds: d.arrayOf(d.u32, defaultParams.groupSize),
       }),
       defaultParams.groupsCountOnAxis,
@@ -249,8 +249,8 @@ const renderPipeline = root['~unstable']
 
 const computeBindGroupLayout = tgpu
   .bindGroupLayout({
-    currentVoxelStorage: { storage: VoxelFishArray },
-    nextVoxelStorage: { storage: VoxelFishArray },
+    currentVoxelStorage: { storage: VoxelFishArray, access: 'mutable' },
+    nextVoxelStorage: { storage: VoxelFishArray, access: 'mutable' },
     currentTrianglePos: { storage: TriangleDataArray },
     nextTrianglePos: {
       storage: TriangleDataArray,
@@ -269,9 +269,17 @@ const {
 const mainCompute = tgpu['~unstable']
   .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })
   .does(/* wgsl */ `(input: ComputeInput) {
-    var a = currentVoxelStorage[0][0][0];
-    var b = nextVoxelStorage[0][0][0];
     let index = input.gid.x;
+
+
+    var a = atomicAdd(&(currentVoxelStorage[0][0][0].size), 1u);
+    var b = atomicAdd(&(nextVoxelStorage[0][0][0].size), 1u);
+    var position = currentTrianglePos[index].position;
+    var groupIndex = getGroupIndex(params.groupsCountOnAxis, position.xyz);
+
+
+
+
     var instanceInfo = currentTrianglePos[index];
     var separation = vec3f();
     var alignment = vec3f();
@@ -351,6 +359,7 @@ const mainCompute = tgpu['~unstable']
     params,
     triangleSize,
     voxelBuffers,
+    getGroupIndex,
   });
 
 const computePipeline = root['~unstable']
