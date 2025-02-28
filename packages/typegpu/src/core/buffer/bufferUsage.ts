@@ -22,6 +22,7 @@ export interface TgpuBufferUsage<
   TUsage extends BindableBufferUsage = BindableBufferUsage,
 > {
   readonly resourceType: 'buffer-usage';
+  readonly dataType: TData;
   readonly usage: TUsage;
   readonly '~repr': Infer<TData>;
   value: InferGPU<TData>;
@@ -73,11 +74,14 @@ class TgpuFixedBufferImpl<
   /** Type-token, not available at runtime */
   public readonly '~repr'!: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
+  public readonly dataType: TData;
 
   constructor(
     public readonly usage: TUsage,
     public readonly buffer: TgpuBuffer<TData>,
-  ) {}
+  ) {
+    this.dataType = buffer.dataType;
+  }
 
   get label() {
     return this.buffer.label;
@@ -124,6 +128,7 @@ class TgpuFixedBufferImpl<
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${this.label ?? '<unnamed>'}`,
+        dataType: this.dataType,
       },
       valueProxyHandler,
     ) as InferGPU<TData>;
@@ -175,6 +180,7 @@ export class TgpuLaidOutBufferImpl<
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${this.label ?? '<unnamed>'}`,
+        dataType: this.dataType,
       },
       valueProxyHandler,
     ) as InferGPU<TData>;

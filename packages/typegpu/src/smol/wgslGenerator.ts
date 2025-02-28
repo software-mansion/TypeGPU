@@ -1,7 +1,10 @@
 import type * as smol from 'tinyest';
 import * as d from '../data';
-import { abstractFloat, abstractInt } from '../data/numeric';
 import * as wgsl from '../data/wgslTypes';
+import {
+  getTypeForPropAccess,
+  numericLiteralToResource,
+} from '../shared/helpers';
 import {
   type ResolutionCtx,
   type Resource,
@@ -74,7 +77,8 @@ export type GenerationCtx = ResolutionCtx & {
 };
 
 export function resolveRes(ctx: GenerationCtx, res: Resource): string {
-  if (isWgsl(res.value) || wgsl.isWgslData(res.value)) {
+  console.log('resolveRes', res);
+  if (isWgsl(res.value)) {
     return ctx.resolve(res.value);
   }
 
@@ -88,12 +92,14 @@ function assertExhaustive(value: unknown): never {
 }
 
 export function generateBoolean(ctx: GenerationCtx, value: boolean): Resource {
+  console.log('generateBoolean', value);
   return value
     ? { value: 'true', dataType: d.bool }
     : { value: 'false', dataType: d.bool };
 }
 
 export function generateBlock(ctx: GenerationCtx, value: smol.Block): string {
+  console.log('generateBlock', value);
   ctx.pushBlockScope();
   try {
     return `${ctx.indent()}{
@@ -109,10 +115,12 @@ export function registerBlockVariable(
   id: string,
   dataType: wgsl.AnyWgslData | UnknownData,
 ): Resource {
+  console.log('registerBlockVariable', id, dataType);
   return ctx.defineVariable(id, dataType);
 }
 
 export function generateIdentifier(ctx: GenerationCtx, id: string): Resource {
+  console.log('generateIdentifier', id);
   const res = ctx.getById(id);
   if (!res) {
     throw new Error(`Identifier ${id} not found`);
@@ -125,6 +133,7 @@ export function generateExpression(
   ctx: GenerationCtx,
   expression: smol.Expression,
 ): Resource {
+  console.log('generateExpression', expression);
   if (typeof expression === 'string') {
     return generateIdentifier(ctx, expression);
   }
@@ -169,7 +178,9 @@ export function generateExpression(
 
     const [targetId, property] = expression.a;
     const target = generateExpression(ctx, targetId);
-    const propertyStr = resolveRes(ctx, generateExpression(ctx, property));
+    const propertyStr = property;
+
+    console.log('member access target', target);
 
     if (typeof target.value === 'string') {
       return {
@@ -180,15 +191,22 @@ export function generateExpression(
     }
 
     if (isWgsl(target.value)) {
+      console.log('member access target is wgsl value');
+      console.log(
+        `searching for ${propertyStr}, found: ${getTypeForPropAccess(target.value as d.AnyWgslData, propertyStr)}`,
+      );
       return {
         // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
         value: (target.value as any)[propertyStr],
         // TODO: Infer data type
-        dataType: UnknownData,
+        dataType:
+          getTypeForPropAccess(target.value as d.AnyWgslData, propertyStr) ??
+          UnknownData,
       };
     }
 
     if (typeof target.value === 'object') {
+      console.log('member access target is object');
       return {
         // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
         value: (target.value as any)[propertyStr],
@@ -218,40 +236,9 @@ export function generateExpression(
     // Numeric Literal
     const value = expression.n;
 
-    // Hex literals (since JS does not have float hex literals, we'll assume it's an int)
-    const hexRegex = /^0x[0-9a-f]+$/i;
-    if (hexRegex.test(value)) {
-      return { value: value, dataType: abstractInt };
-    }
-
-    // Binary literals
-    const binRegex = /^0b[01]+$/i;
-    if (binRegex.test(value)) {
-      // Since wgsl doesn't support binary literals, we'll convert it to a decimal number
-      return {
-        value: `${Number.parseInt(value.slice(2), 2)}`,
-        dataType: abstractInt,
-      };
-    }
-
-    const floatRegex = /^-?(?:\d+\.\d*|\d*\.\d+)$/;
-    if (floatRegex.test(value)) {
-      return { value, dataType: abstractFloat };
-    }
-
-    // Floating point literals with scientific notation
-    const sciFloatRegex = /^-?\d+\.\d+e-?\d+$/;
-    if (sciFloatRegex.test(value)) {
-      return {
-        value: value,
-        dataType: abstractFloat,
-      };
-    }
-
-    // Integer literals
-    const intRegex = /^-?\d+$/;
-    if (intRegex.test(value)) {
-      return { value: value, dataType: abstractInt };
+    const type = numericLiteralToResource(value);
+    if (type) {
+      return type;
     }
 
     throw new Error(`Invalid numeric literal ${value}`);
@@ -339,6 +326,7 @@ export function generateStatement(
   ctx: GenerationCtx,
   statement: smol.Statement,
 ): string {
+  console.log('generateStatement', statement);
   if (typeof statement === 'string') {
     return `${ctx.pre}${resolveRes(ctx, generateIdentifier(ctx, statement))};`;
   }
@@ -365,7 +353,10 @@ export function generateStatement(
 
     return statement.r === null
       ? `${ctx.pre}return;`
-      : `${ctx.pre}return ${resolveRes(ctx, generateExpression(ctx, statement.r))};`;
+      : `${ctx.pre}return ${resolveRes(
+          ctx,
+          generateExpression(ctx, statement.r),
+        )};`;
   }
 
   if ('q' in statement) {
@@ -432,5 +423,6 @@ ${alternate}`;
 }
 
 export function generateFunction(ctx: GenerationCtx, body: smol.Block): string {
+  console.log('generateFunction', body);
   return generateBlock(ctx, body);
 }

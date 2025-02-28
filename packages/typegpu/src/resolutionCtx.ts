@@ -22,6 +22,7 @@ import { provideCtx } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
 import { naturalsExcept } from './shared/generators';
+import { getTypeFormWgsl } from './shared/helpers';
 import type { Infer } from './shared/repr';
 import { generateFunction } from './smol';
 import {
@@ -33,6 +34,8 @@ import {
 } from './tgpuBindGroupLayout';
 import type { FnToWgslOptions, ResolutionCtx, Resource, Wgsl } from './types';
 import { UnknownData, isSelfResolvable, isWgsl } from './types';
+
+export const contextInternal = Symbol('internal');
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -170,19 +173,33 @@ class ItemStateStack {
   }
 
   getResourceById(id: string): Resource | undefined {
+    console.log('getResourceById', id);
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
 
       if (layer?.type === 'functionScope') {
+        console.log(
+          `searching in function scope: ${Object.values(layer.args).map((a) => Object.keys(a))}`,
+        );
         const arg = layer.args.find((a) => a.value === id);
+        console.log(`${arg ? 'found' : 'not found'}`);
         if (arg !== undefined) {
           return arg;
         }
 
         const external = layer.externalMap[id];
+        console.log(
+          `searching in external map: ${Object.keys(layer.externalMap)}`,
+        );
+        console.log(`${external ? 'found' : 'not found'}`);
         if (external !== undefined) {
           // TODO: Extract the type of the external value.
-          return { value: external, dataType: UnknownData };
+          return {
+            value: external,
+            dataType: isWgsl(external)
+              ? getTypeFormWgsl(external)
+              : UnknownData,
+          };
         }
 
         // Since functions cannot access resources from the calling scope, we
@@ -279,6 +296,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _itemStateStack = new ItemStateStack();
   private readonly _declarations: string[] = [];
 
+  get [contextInternal]() {
+    return {
+      itemStateStack: this._itemStateStack,
+    };
+  }
+
   // -- Bindings
   /**
    * A map from registered bind group layouts to random strings put in
@@ -317,24 +340,21 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   getById(id: string): Resource | null {
     // TODO: Provide access to external values
     // TODO: Provide data type information
-    // TODO: Return null if no id is found (when we can properly handle it)
-    return (
-      this._itemStateStack.getResourceById(id) ?? {
-        value: id,
-        dataType: UnknownData,
-      }
-    );
+    const item = this._itemStateStack.getResourceById(id);
+
+    if (item === undefined) {
+      return null;
+    }
+
+    return item;
   }
 
   defineVariable(id: string, dataType: AnyWgslData | UnknownData): Resource {
-    // TODO: Bring this behavior back when we have type inference
-    // const resource = this.getById(id);
+    const resource = this.getById(id);
 
-    // if (resource) {
-    //   throw new Error(`Resource ${id} already exists in the current scope.`);
-    // } else {
-    //   return this._itemStateStack.defineBlockVariable(id, dataType);
-    // }
+    if (resource) {
+      throw new Error(`Resource ${id} already exists in the current scope.`);
+    }
     return this._itemStateStack.defineBlockVariable(id, dataType);
   }
 

@@ -68,6 +68,7 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${this.label ?? '<unnamed>'}`,
+        dataType: this.schema,
       },
       valueProxyHandler,
     ) as Infer<T>;

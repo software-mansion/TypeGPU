@@ -1,12 +1,17 @@
+import type { BaseData } from '../data';
+import { getTypeForPropAccess } from '../shared/helpers';
 import {
   type Labelled,
   type ResolutionCtx,
   type SelfResolvable,
+  type Wgsl,
   isBufferUsage,
 } from '../types';
 import { isAccessor, isDerived, isSlot } from './slot/slotTypes';
 
-export const valueProxyHandler: ProxyHandler<SelfResolvable & Labelled> = {
+export const valueProxyHandler: ProxyHandler<
+  SelfResolvable & Labelled & { dataType: BaseData }
+> = {
   get(target, prop) {
     if (prop in target) {
       return Reflect.get(target, prop);
@@ -16,6 +21,14 @@ export const valueProxyHandler: ProxyHandler<SelfResolvable & Labelled> = {
       return undefined;
     }
 
+    if (
+      prop === 'toString' ||
+      prop === Symbol.toStringTag ||
+      prop === Symbol.toPrimitive
+    ) {
+      return () => target.toString();
+    }
+
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) =>
@@ -23,6 +36,10 @@ export const valueProxyHandler: ProxyHandler<SelfResolvable & Labelled> = {
 
         toString: () =>
           `.value(...).${String(prop)}:${target.label ?? '<unnamed>'}`,
+
+        dataType:
+          getTypeForPropAccess(target.dataType as Wgsl, String(prop)) ??
+          target.dataType,
       },
       valueProxyHandler,
     );
