@@ -21,7 +21,11 @@ const bindGroupLayout = tgpu.bindGroupLayout({
   texture: { texture: 'float' },
   sampler: { sampler: 'filtering' },
 });
-const { camera, texture: shaderTexture, sampler: shaderSampler } = bindGroupLayout.bound;
+const {
+  camera,
+  texture: shaderTexture,
+  sampler: shaderSampler,
+} = bindGroupLayout.bound;
 
 // Shaders
 const sampleTexture = tgpu['~unstable']
@@ -52,12 +56,11 @@ const mainVertex = tgpu['~unstable']
 
 const mainFragment = tgpu['~unstable']
   .fragmentFn({
-    in: {uv: d.location(1, d.vec2f)},
+    in: { uv: d.location(1, d.vec2f) },
     out: d.location(0, d.vec4f),
   })
   .does((input) => sampleTexture(input.uv))
   .$name('mainFragment');
-
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -73,7 +76,7 @@ context.configure({
 const cubeModel = await load('assets/gravity/blahaj.obj', OBJLoader);
 const textureResponse = await fetch('assets/gravity/texture.png');
 const imageBitmap = await createImageBitmap(await textureResponse.blob());
-const cubeTexture = root[`~unstable`]
+const cubeTexture = root['~unstable']
   .createTexture({
     size: [imageBitmap.width, imageBitmap.height],
     format: 'rgba8unorm',
@@ -85,7 +88,6 @@ device.queue.copyExternalImageToTexture(
   { texture: root.unwrap(cubeTexture) },
   [imageBitmap.width, imageBitmap.height],
 );
-console.log(cubeModel.attributes);
 
 const sampler = device.createSampler({
   magFilter: 'linear',
@@ -94,7 +96,7 @@ const sampler = device.createSampler({
 
 // Camera
 const target = d.vec3f(0, 0, 0);
-const cameraInitialPos = d.vec4f(5, 2, 5, 1);
+const cameraInitialPos = d.vec4f(0, 0, 5, 1);
 const cameraInitial = {
   view: m.mat4.lookAt(cameraInitialPos, target, d.vec3f(0, 1, 0), d.mat4x4f()),
   projection: m.mat4.perspective(
@@ -107,7 +109,6 @@ const cameraInitial = {
 };
 const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
 
-
 const bindGroup = root.createBindGroup(bindGroupLayout, {
   camera: cameraBuffer,
   texture: cubeTexture,
@@ -117,19 +118,17 @@ const bindGroup = root.createBindGroup(bindGroupLayout, {
 // Vertex
 const vertexBuffer = root
   .createBuffer(
-    vertexLayout.schemaForCount(
-      cubeModel.attributes['POSITION'].value.length / 3,
-    ),
+    vertexLayout.schemaForCount(cubeModel.attributes.POSITION.value.length / 3),
   )
   .$usage('vertex')
   .$name('vertex');
 
-const positions = cubeModel.attributes['POSITION'].value;
-const normals = cubeModel.attributes['NORMAL']
-  ? cubeModel.attributes['NORMAL'].value
+const positions = cubeModel.attributes.POSITION.value;
+const normals = cubeModel.attributes.NORMAL
+  ? cubeModel.attributes.NORMAL.value
   : new Float32Array(positions.length);
-const uvs = cubeModel.attributes['TEXCOORD_0']
-  ? cubeModel.attributes['TEXCOORD_0'].value
+const uvs = cubeModel.attributes.TEXCOORD_0
+  ? cubeModel.attributes.TEXCOORD_0.value
   : new Float32Array((positions.length / 3) * 2);
 
 const vertices = [];
@@ -152,8 +151,19 @@ vertexBuffer.write(vertices);
 const renderPipeline = root['~unstable']
   .withVertex(mainVertex, vertexLayout.attrib)
   .withFragment(mainFragment, { format: presentationFormat })
-  .withPrimitive({ topology: 'triangle-list', cullMode: 'back' })
+  .withDepthStencil({
+    format: 'depth24plus',
+    depthWriteEnabled: true,
+    depthCompare: 'less',
+  })
+  .withPrimitive({ topology: 'triangle-list' })
   .createPipeline();
+
+const depthTexture = device.createTexture({
+  size: [canvas.width, canvas.height, 1],
+  format: 'depth24plus',
+  usage: GPUTextureUsage.RENDER_ATTACHMENT,
+});
 
 function render() {
   renderPipeline
@@ -163,14 +173,18 @@ function render() {
       storeOp: 'store',
       clearValue: [1, 1, 1, 1],
     })
+    .withDepthStencilAttachment({
+      view: depthTexture.createView(),
+      depthClearValue: 1,
+      depthLoadOp: 'clear',
+      depthStoreOp: 'store',
+    })
     .with(vertexLayout, vertexBuffer)
     .with(bindGroupLayout, bindGroup)
-    .draw(positions.length/3);
-  console.log(positions.length)
+    .draw(positions.length / 3);
 
   root['~unstable'].flush();
 }
-console.log('Cube position:', await vertexBuffer.read());
 
 let destoyed = false;
 function frame() {
