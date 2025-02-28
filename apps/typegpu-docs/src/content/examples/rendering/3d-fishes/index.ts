@@ -271,14 +271,8 @@ const mainCompute = tgpu['~unstable']
   .does(/* wgsl */ `(input: ComputeInput) {
     let index = input.gid.x;
 
-
-    var a = atomicAdd(&(currentVoxelStorage[0][0][0].size), 1u);
-    var b = atomicAdd(&(nextVoxelStorage[0][0][0].size), 1u);
     var position = currentTrianglePos[index].position;
     var groupIndex = getGroupIndex(params.groupsCountOnAxis, position.xyz);
-
-
-
 
     var instanceInfo = currentTrianglePos[index];
     var separation = vec3f();
@@ -288,24 +282,31 @@ const mainCompute = tgpu['~unstable']
     var alignmentCount = 0u;
     var cohesionCount = 0u;
 
-    for (var i = 0u; i < arrayLength(&currentTrianglePos); i += 1) {
-      if (i == index) {
-        continue;
+    var groupCount = params.groupsCountOnAxis;
+    for (var x = 0u; x<groupCount; x++) {
+      for (var y = 0u; y<groupCount; y++) {
+        for (var z = 0u; z<groupCount; z++) {
+          var stackSize = atomicLoad(&currentVoxelStorage[x][y][z].size);
+          for (var w = 0u; w<stackSize; w++) {
+            var i = currentVoxelStorage[x][y][z].fishIds[w];
+            var other = currentTrianglePos[i];
+            var dist = distance(instanceInfo.position, other.position);
+            if (dist < params.separationDistance) {
+              separation += instanceInfo.position.xyz - other.position.xyz;
+            }
+            if (dist < params.alignmentDistance) {
+              alignment += other.velocity;
+              alignmentCount++;
+            }
+            if (dist < params.cohesionDistance) {
+              cohesion += other.position.xyz;
+              cohesionCount++;
+            }
+          }
+        }
       }
-      var other = currentTrianglePos[i];
-      var dist = distance(instanceInfo.position, other.position);
-      if (dist < params.separationDistance) {
-        separation += instanceInfo.position.xyz - other.position.xyz;
-      }
-      if (dist < params.alignmentDistance) {
-        alignment += other.velocity;
-        alignmentCount++;
-      }
-      if (dist < params.cohesionDistance) {
-        cohesion += other.position.xyz;
-        cohesionCount++;
-      }
-    };
+    }
+
     if (alignmentCount > 0u) {
       alignment = alignment / f32(alignmentCount);
     }
@@ -350,6 +351,10 @@ const mainCompute = tgpu['~unstable']
     }
     instanceInfo.position += vec4f(instanceInfo.velocity, 0);
     nextTrianglePos[index] = instanceInfo;
+    
+    var ni = getGroupIndex(params.groupsCountOnAxis, instanceInfo.position.xyz);
+    var stackIndex = atomicAdd(&(nextVoxelStorage[ni.x][ni.y][ni.z].size), 1u);
+    nextVoxelStorage[ni.x][ni.y][ni.z].fishIds[stackIndex] = index;
   }`)
   .$uses({
     currentTrianglePos,
@@ -521,6 +526,32 @@ function frame() {
   drawCube();
 
   even = !even;
+
+  const nextVoxelStorage = voxelBuffers[1 - (even ? 0 : 1)];
+  for (let x = 0; x < defaultParams.groupsCountOnAxis; x++) {
+    for (let y = 0; y < defaultParams.groupsCountOnAxis; y++) {
+      for (let z = 0; z < defaultParams.groupsCountOnAxis; z++) {
+        nextVoxelStorage.writePartial([
+          {
+            idx: x,
+            value: [
+              {
+                idx: y,
+                value: [
+                  {
+                    idx: z,
+                    value: {
+                      size: 0,
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ]);
+      }
+    }
+  }
 
   computePipeline
     .with(computeBindGroupLayout, computeBindGroups[even ? 0 : 1])
