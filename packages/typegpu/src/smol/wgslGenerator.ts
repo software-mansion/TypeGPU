@@ -171,16 +171,6 @@ export function generateExpression(
     const target = generateExpression(ctx, targetId);
     const propertyStr = resolveRes(ctx, generateExpression(ctx, property));
 
-    // A quick workaround for vector spreading.
-    // TODO: Remove this!
-    if (propertyStr === 't') {
-      return {
-        value: target.value,
-        // TODO: Infer data type
-        dataType: UnknownData,
-      };
-    }
-
     if (typeof target.value === 'string') {
       return {
         value: `${target.value}.${propertyStr}`,
@@ -344,17 +334,6 @@ export function generateExpression(
 
   if ('s' in expression) {
     throw new Error('Cannot use string literals in TGSL.');
-  }
-
-  if ('d' in expression) {
-    // Treating the spread element like a no-op in order to support
-    // vector spreading. A more general solution would be to strip
-    // the spread element only if the expression's data-type is a
-    // vector.
-
-    // TODO: Implement a more general solution to spread element stripping
-    console.log(generateExpression(ctx, expression.d));
-    return generateExpression(ctx, expression.d);
   }
 
   assertExhaustive(expression);
