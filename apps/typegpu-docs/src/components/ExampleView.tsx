@@ -69,10 +69,14 @@ function useExample(
 type EditorTab = 'ts' | 'html';
 
 export function ExampleView({ example }: Props) {
-  const { tsCode, htmlCode, execTsCode } = example;
+  const { tsCodes, htmlCode, execTsCode } = example;
 
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
   const [currentEditorTab, setCurrentEditorTab] = useState<EditorTab>('ts');
+  // New state: keep track of the currently selected TS file.
+  const [currentTSFile, setCurrentTSFile] = useState<string>(
+    Object.keys(tsCodes)[0] || ''
+  );
 
   const codeEditorShowing = useAtomValue(codeEditorShownAtom);
   const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
@@ -85,10 +89,10 @@ export function ExampleView({ example }: Props) {
       return;
     }
     exampleHtmlRef.current.innerHTML = htmlCode;
-  }, [tsCode, htmlCode]);
+  }, [execTsCode, htmlCode]);
 
-  useExample(execTsCode, htmlCode, setSnackbarText);
-  useResizableCanvas(exampleHtmlRef, tsCode, htmlCode);
+  useExample(execTsCode, htmlCode, setSnackbarText); // live example
+  useResizableCanvas(exampleHtmlRef, execTsCode, htmlCode);
 
   return (
     <>
@@ -137,12 +141,31 @@ export function ExampleView({ example }: Props) {
                   setCurrentEditorTab={setCurrentEditorTab}
                 />
 
-                <TsCodeEditor shown={currentEditorTab === 'ts'} code={tsCode} />
+                {currentEditorTab === 'ts' && (
+                  <>
+                  
+                    <div className="flex border-b border-gray-300">
+                      {Object.keys(tsCodes).map((fileName) => (
+                        <button
+                          key={fileName}
+                          type="button"
+                          onClick={() => setCurrentTSFile(fileName)}
+                          className={cs(
+                            'px-4 py-2',
+                            currentTSFile === fileName ? 'rounded-lg bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark' : 'rounded-lg bg-white border-tameplum-100 border-2 hover:bg-tameplum-20'
+                          )}
+                        >
+                          {fileName}
+                        </button>
+                      ))}
+                    </div>
+                    <TsCodeEditor shown code={tsCodes[currentTSFile]} />
+                  </>
+                )}
 
-                <HtmlCodeEditor
-                  shown={currentEditorTab === 'html'}
-                  code={htmlCode}
-                />
+                {currentEditorTab === 'html' && (
+                  <HtmlCodeEditor shown code={htmlCode} />
+                )}
               </div>
             </div>
           ) : null}
