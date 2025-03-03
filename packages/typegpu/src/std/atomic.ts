@@ -1,5 +1,5 @@
 import { type atomicI32, type atomicU32, isWgslData } from '../data/wgslTypes';
-import { createDualImpl } from '../smol/helpers';
+import { createDualImpl } from '../shared/generators';
 import { Void } from '../types';
 
 type AnyAtomic = atomicI32 | atomicU32;
@@ -11,7 +11,6 @@ export const atomicLoad = createDualImpl(
   },
   // GPU implementation
   (a) => {
-    console.log('atomicLoad', a);
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
       return { value: `atomicLoad(&${a.value})`, dataType: a.dataType.inner };
     }
@@ -40,10 +39,10 @@ export const atomicAdd = createDualImpl(
   },
   // GPU implementation
   (a, value) => {
-    if (isWgslData(a.value) && a.value.type === 'atomic') {
+    if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
       return {
         value: `atomicAdd(&${a.value}, ${value.value})`,
-        dataType: a.value.inner,
+        dataType: a.dataType.inner,
       };
     }
     throw new Error('Invalid atomic type');
@@ -57,10 +56,10 @@ export const atomicSub = createDualImpl(
   },
   // GPU implementation
   (a, value) => {
-    if (isWgslData(a.value) && a.value.type === 'atomic') {
+    if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
       return {
         value: `atomicSub(&${a.value}, ${value.value})`,
-        dataType: a.value.inner,
+        dataType: a.dataType.inner,
       };
     }
     throw new Error('Invalid atomic type');
@@ -74,10 +73,10 @@ export const atomicMax = createDualImpl(
   },
   // GPU implementation
   (a, value) => {
-    if (isWgslData(a.value) && a.value.type === 'atomic') {
+    if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
       return {
         value: `atomicMax(&${a.value}, ${value.value})`,
-        dataType: a.value.inner,
+        dataType: a.dataType.inner,
       };
     }
     throw new Error('Invalid atomic type');
@@ -91,10 +90,10 @@ export const atomicMin = createDualImpl(
   },
   // GPU implementation
   (a, value) => {
-    if (isWgslData(a.value) && a.value.type === 'atomic') {
+    if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
       return {
         value: `atomicMin(&${a.value}, ${value.value})`,
-        dataType: a.value.inner,
+        dataType: a.dataType.inner,
       };
     }
     throw new Error('Invalid atomic type');
@@ -108,10 +107,10 @@ export const atomicAnd = createDualImpl(
   },
   // GPU implementation
   (a, value) => {
-    if (isWgslData(a.value) && a.value.type === 'atomic') {
+    if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
       return {
         value: `atomicAnd(&${a.value}, ${value.value})`,
-        dataType: a.value.inner,
+        dataType: a.dataType.inner,
       };
     }
     throw new Error('Invalid atomic type');
@@ -125,10 +124,10 @@ export const atomicOr = createDualImpl(
   },
   // GPU implementation
   (a, value) => {
-    if (isWgslData(a.value) && a.value.type === 'atomic') {
+    if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
       return {
         value: `atomicOr(&${a.value}, ${value.value})`,
-        dataType: a.value.inner,
+        dataType: a.dataType.inner,
       };
     }
     throw new Error('Invalid atomic type');
@@ -142,10 +141,10 @@ export const atomicXor = createDualImpl(
   },
   // GPU implementation
   (a, value) => {
-    if (isWgslData(a.value) && a.value.type === 'atomic') {
+    if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
       return {
         value: `atomicXor(&${a.value}, ${value.value})`,
-        dataType: a.value.inner,
+        dataType: a.dataType.inner,
       };
     }
     throw new Error('Invalid atomic type');

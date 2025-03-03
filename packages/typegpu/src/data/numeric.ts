@@ -1,5 +1,5 @@
 import bin from 'typed-binary';
-import { createDualImpl } from '../smol/helpers';
+import { createDualImpl } from '../shared/generators';
 import type {
   AbstractFloat,
   AbstractInt,
@@ -25,7 +25,7 @@ export const bool: Bool = {
   type: 'bool',
 } as Bool;
 
-const u32CastImpl = createDualImpl(
+const u32Cast = createDualImpl(
   // CPU implementation
   (v: number | boolean) => {
     if (typeof v === 'boolean') {
@@ -45,9 +45,6 @@ const u32CastImpl = createDualImpl(
     return { value: `u32(${v.value})`, dataType: u32 };
   },
 );
-const u32Cast = (v: number | boolean) => {
-  return u32CastImpl(v);
-};
 
 /**
  * A schema that represents an unsigned 32-bit integer value. (equivalent to `u32` in WGSL)

@@ -1,9 +1,35 @@
-import { isDerived } from '../core/slot/slotTypes';
-import { isSlot } from '../core/slot/slotTypes';
-import { isDecorated, isWgslData } from '../data';
-import * as d from '../data';
-import { abstractFloat, abstractInt } from '../data/numeric';
-import { inGPUMode } from '../gpuMode';
+import { isDerived, isSlot } from '../core/slot/slotTypes';
+import {
+  abstractFloat,
+  abstractInt,
+  bool,
+  f16,
+  f32,
+  i32,
+  u32,
+} from '../data/numeric';
+import type { WgslStruct } from '../data/struct';
+import {
+  vec2f,
+  vec2h,
+  vec2i,
+  vec2u,
+  vec3f,
+  vec3h,
+  vec3i,
+  vec3u,
+  vec4f,
+  vec4h,
+  vec4i,
+  vec4u,
+} from '../data/vector';
+import {
+  type AnyWgslData,
+  type BaseData,
+  isDecorated,
+  isWgslArray,
+  isWgslData,
+} from '../data/wgslTypes';
 import { type Resource, UnknownData, type Wgsl } from '../types';
 
 const indexableTypes = [
@@ -27,39 +53,57 @@ type SwizzleLength = 1 | 2 | 3 | 4;
 
 const swizzleLenToType: {
   [key in SwizzleableType]: {
-    [key in SwizzleLength]: d.AnyWgslData;
+    [key in SwizzleLength]: AnyWgslData;
   };
 } = {
   f: {
-    1: d.f32,
-    2: d.vec2f,
-    3: d.vec3f,
-    4: d.vec4f,
+    1: f32,
+    2: vec2f,
+    3: vec3f,
+    4: vec4f,
   },
   h: {
-    1: d.f16,
-    2: d.vec2h,
-    3: d.vec3h,
-    4: d.vec4h,
+    1: f16,
+    2: vec2h,
+    3: vec3h,
+    4: vec4h,
   },
   i: {
-    1: d.i32,
-    2: d.vec2i,
-    3: d.vec3i,
-    4: d.vec4i,
+    1: i32,
+    2: vec2i,
+    3: vec3i,
+    4: vec4i,
   },
   u: {
-    1: d.u32,
-    2: d.vec2u,
-    3: d.vec3u,
-    4: d.vec4u,
+    1: u32,
+    2: vec2u,
+    3: vec3u,
+    4: vec4u,
   },
+} as const;
+
+const indexableTypeToResult = {
+  vec2f: f32,
+  vec2h: f16,
+  vec2i: i32,
+  vec2u: u32,
+  vec3f: f32,
+  vec3h: f16,
+  vec3i: i32,
+  vec3u: u32,
+  vec4f: f32,
+  vec4h: f16,
+  vec4i: i32,
+  vec4u: u32,
+  mat2x2f: vec2f,
+  mat3x3f: vec3f,
+  mat4x4f: vec4f,
 } as const;
 
 export function getTypeForPropAccess(
   targetType: Wgsl,
   propName: string,
-): d.BaseData | undefined {
+): BaseData | undefined {
   if (
     typeof targetType === 'string' ||
     typeof targetType === 'number' ||
@@ -72,19 +116,18 @@ export function getTypeForPropAccess(
     return getTypeForPropAccess(targetType.value as Wgsl, propName);
   }
 
-  let target = targetType as d.AnyWgslData;
+  let target = targetType as AnyWgslData;
   if ('dataType' in target) {
-    target = target.dataType as d.AnyWgslData;
+    target = target.dataType as AnyWgslData;
   }
   while (isDecorated(target)) {
-    target = target.inner as d.AnyWgslData;
+    target = target.inner as AnyWgslData;
   }
   const targetTypeStr =
     'kind' in target ? (target.kind as string) : target.type;
 
   if (targetTypeStr === 'struct') {
-    console.log(`got struct: ${target}.${propName}`);
-    return (target as d.WgslStruct).propTypes[propName];
+    return (target as WgslStruct).propTypes[propName];
   }
 
   const propLength = propName.length;
@@ -93,7 +136,6 @@ export function getTypeForPropAccess(
     propLength >= 1 &&
     propLength <= 4
   ) {
-    console.log(`got indexable type: ${target}.${propName}`);
     const swizzleType =
       swizzleLenToType[targetTypeStr[4] as SwizzleableType][
         propLength as SwizzleLength
@@ -104,17 +146,38 @@ export function getTypeForPropAccess(
   }
 
   if (isWgslData(target)) {
-    // if (isWgslArray(target)) {
-    //   return target.elementType;
-    // }
     return target;
   }
 
-  console.log(`got unknown type: ${targetType}.${propName}`);
   return undefined;
 }
 
-export function getTypeFormWgsl(resource: Wgsl): d.AnyWgslData | UnknownData {
+export function getTypeForIndexAccess(resource: Wgsl): BaseData | undefined {
+  if (typeof resource === 'string' || typeof resource === 'number') {
+    return undefined;
+  }
+
+  if (isDerived(resource) || isSlot(resource)) {
+    return getTypeForIndexAccess(resource.value as Wgsl);
+  }
+
+  if (isWgslData(resource)) {
+    // array
+    if (isWgslArray(resource)) {
+      return resource.elementType;
+    }
+    // vector or matrix
+    if (Object.keys(indexableTypeToResult).includes(resource.type)) {
+      return indexableTypeToResult[
+        resource.type as keyof typeof indexableTypeToResult
+      ];
+    }
+  }
+
+  return undefined;
+}
+
+export function getTypeFormWgsl(resource: Wgsl): AnyWgslData | UnknownData {
   if (isDerived(resource) || isSlot(resource)) {
     return getTypeFormWgsl(resource.value as Wgsl);
   }
@@ -126,7 +189,7 @@ export function getTypeFormWgsl(resource: Wgsl): d.AnyWgslData | UnknownData {
     return numericLiteralToResource(String(resource))?.dataType ?? UnknownData;
   }
   if (typeof resource === 'boolean') {
-    return d.bool;
+    return bool;
   }
 
   if (isWgslData(resource)) {
@@ -174,22 +237,4 @@ export function numericLiteralToResource(value: string): Resource | undefined {
   }
 
   return undefined;
-}
-
-type MapValueToResource<T> = { [K in keyof T]: Resource };
-
-// biome-ignore lint/suspicious/noExplicitAny: <it's very convenient>
-export function createDualImpl<T extends (...args: any[]) => any>(
-  jsImpl: T,
-  gpuImpl: (...args: MapValueToResource<Parameters<T>>) => Resource,
-): T {
-  return ((...args: Parameters<T>) => {
-    if (inGPUMode()) {
-      return gpuImpl(
-        ...(args as unknown as MapValueToResource<Parameters<T>>),
-      ) as unknown as Resource;
-    }
-    // biome-ignore lint/suspicious/noExplicitAny: <t's very convenient>
-    return jsImpl(...(args as any));
-  }) as T;
 }

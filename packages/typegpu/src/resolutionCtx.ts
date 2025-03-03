@@ -24,7 +24,7 @@ import type { NameRegistry } from './nameRegistry';
 import { naturalsExcept } from './shared/generators';
 import type { Infer } from './shared/repr';
 import { generateFunction } from './smol';
-import { getTypeFormWgsl } from './smol/helpers';
+import { getTypeFormWgsl } from './smol/generationHelpers';
 import {
   type TgpuBindGroup,
   TgpuBindGroupImpl,
@@ -181,27 +181,16 @@ class ItemStateStack {
   }
 
   getResourceById(id: string): Resource | undefined {
-    console.log('getResourceById', id);
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
 
       if (layer?.type === 'functionScope') {
-        console.log(
-          `searching in function args: ${layer.args.map((a) => `${a.value} (${a.dataType})`).join(', ')}`,
-        );
         const arg = layer.args.find((a) => a.value === id);
-        console.log(
-          `${arg ? `found ${`${arg.value} (${arg.dataType})`}` : 'not found'}`,
-        );
         if (arg !== undefined) {
           return arg;
         }
 
         const external = layer.externalMap[id];
-        console.log(
-          `searching in external map: ${Object.keys(layer.externalMap)}`,
-        );
-        console.log(`${external ? 'found' : 'not found'}`);
         if (external !== undefined) {
           // TODO: Extract the type of the external value.
           return {

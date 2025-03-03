@@ -1,4 +1,4 @@
-import { createDualImpl } from '../smol/helpers';
+import { createDualImpl } from '../shared/generators';
 import type { SelfResolvable } from '../types';
 import { vec2f, vec3f, vec4f } from './vector';
 import type {

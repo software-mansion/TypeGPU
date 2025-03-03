@@ -14,7 +14,7 @@ import type {
   v4h,
   vBaseForMat,
 } from '../data/wgslTypes';
-import { createDualImpl } from '../smol/helpers';
+import { createDualImpl } from '../shared/generators';
 
 type vBase = { kind: VecKind };
 

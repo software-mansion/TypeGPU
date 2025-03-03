@@ -1,7 +1,7 @@
 import type { Infer } from '../../data';
 import type { AnyWgslData } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
-import { createDualImpl } from '../../smol/helpers';
+import { createDualImpl } from '../../shared/generators';
 import {
   type Labelled,
   type ResolutionCtx,

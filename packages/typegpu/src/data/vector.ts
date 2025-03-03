@@ -1,4 +1,4 @@
-import { createDualImpl } from '../smol/helpers';
+import { createDualImpl } from '../shared/generators';
 import {
   Vec2fImpl,
   Vec2hImpl,
@@ -56,7 +56,6 @@ function makeVecSchema<TValue>(
       );
     },
     (...args) => {
-      console.log('creating vec with args:', args);
       return {
         value: `${type}(${args.map((v) => v.value).join(', ')})`,
         dataType: { type },

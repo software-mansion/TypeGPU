@@ -8,7 +8,11 @@ import {
   type Wgsl,
   isWgsl,
 } from '../types';
-import { getTypeForPropAccess, numericLiteralToResource } from './helpers';
+import {
+  getTypeForIndexAccess,
+  getTypeForPropAccess,
+  numericLiteralToResource,
+} from './generationHelpers';
 
 const parenthesizedOps = [
   '==',
@@ -74,7 +78,6 @@ export type GenerationCtx = ResolutionCtx & {
 };
 
 export function resolveRes(ctx: GenerationCtx, res: Resource): string {
-  console.log('resolveRes', res);
   if (isWgsl(res.value)) {
     return ctx.resolve(res.value);
   }
@@ -89,14 +92,12 @@ function assertExhaustive(value: unknown): never {
 }
 
 export function generateBoolean(ctx: GenerationCtx, value: boolean): Resource {
-  console.log('generateBoolean', value);
   return value
     ? { value: 'true', dataType: d.bool }
     : { value: 'false', dataType: d.bool };
 }
 
 export function generateBlock(ctx: GenerationCtx, value: smol.Block): string {
-  console.log('generateBlock', value);
   ctx.pushBlockScope();
   try {
     return `${ctx.indent()}{
@@ -112,12 +113,10 @@ export function registerBlockVariable(
   id: string,
   dataType: wgsl.AnyWgslData | UnknownData,
 ): Resource {
-  console.log('registerBlockVariable', id, dataType);
   return ctx.defineVariable(id, dataType);
 }
 
 export function generateIdentifier(ctx: GenerationCtx, id: string): Resource {
-  console.log('generateIdentifier', id);
   const res = ctx.getById(id);
   if (!res) {
     throw new Error(`Identifier ${id} not found`);
@@ -130,7 +129,6 @@ export function generateExpression(
   ctx: GenerationCtx,
   expression: smol.Expression,
 ): Resource {
-  console.log('generateExpression', expression);
   if (typeof expression === 'string') {
     return generateIdentifier(ctx, expression);
   }
@@ -177,8 +175,6 @@ export function generateExpression(
     const target = generateExpression(ctx, targetId);
     const propertyStr = property;
 
-    console.log('member access target', target);
-
     if (typeof target.value === 'string') {
       return {
         value: `${target.value}.${propertyStr}`,
@@ -189,10 +185,6 @@ export function generateExpression(
     }
 
     if (isWgsl(target.value)) {
-      console.log('member access target is wgsl value');
-      console.log(
-        `searching for ${propertyStr}, found: ${getTypeForPropAccess(target.value as d.AnyWgslData, propertyStr)}`,
-      );
       return {
         // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
         value: (target.value as any)[propertyStr],
@@ -204,11 +196,6 @@ export function generateExpression(
     }
 
     if (typeof target.value === 'object') {
-      console.log('member access target is object');
-      console.log(
-        // @ts-ignore
-        `searching for ${propertyStr}, found: ${target.value[propertyStr] ?? 'not found'}`,
-      );
       return {
         // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
         value: (target.value as any)[propertyStr],
@@ -224,13 +211,16 @@ export function generateExpression(
     // Index Access
 
     const [target, property] = expression.i;
-    const targetStr = resolveRes(ctx, generateExpression(ctx, target));
-    const propertyStr = resolveRes(ctx, generateExpression(ctx, property));
+    const targetExpr = generateExpression(ctx, target);
+    const targetStr = resolveRes(ctx, targetExpr);
+    const propertyExpr = generateExpression(ctx, property);
+    const propertyStr = resolveRes(ctx, propertyExpr);
 
     return {
       value: `${targetStr}[${propertyStr}]`,
-      // TODO: Infer data type
-      dataType: UnknownData,
+      dataType:
+        getTypeForIndexAccess(targetExpr.dataType as d.AnyWgslData) ??
+        UnknownData,
     };
   }
 
@@ -251,7 +241,6 @@ export function generateExpression(
 
     const [callee, args] = expression.f;
     const id = generateExpression(ctx, callee);
-    console.log(`function call ${id.value}, args:`, args);
     const idValue = id.value;
 
     ctx.callStack.push(idValue);
@@ -261,10 +250,7 @@ export function generateExpression(
       value: resolveRes(ctx, res),
       dataType: res.dataType,
     }));
-    console.log('resolvedResources', resolvedResources);
     const argValues = resolvedResources.map((res) => res.value);
-
-    console.log('argValues', argValues);
 
     ctx.callStack.pop();
 
@@ -336,7 +322,6 @@ export function generateStatement(
   ctx: GenerationCtx,
   statement: smol.Statement,
 ): string {
-  console.log('generateStatement', statement);
   if (typeof statement === 'string') {
     return `${ctx.pre}${resolveRes(ctx, generateIdentifier(ctx, statement))};`;
   }
@@ -433,6 +418,5 @@ ${alternate}`;
 }
 
 export function generateFunction(ctx: GenerationCtx, body: smol.Block): string {
-  console.log('generateFunction', body);
   return generateBlock(ctx, body);
 }
