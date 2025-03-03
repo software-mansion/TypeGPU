@@ -4,6 +4,9 @@ export {
   sub,
   mul,
   // builtin functions
+  acos,
+  asin,
+  atan2,
   abs,
   ceil,
   clamp,

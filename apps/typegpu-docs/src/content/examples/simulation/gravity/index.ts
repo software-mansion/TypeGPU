@@ -2,7 +2,7 @@ import { load } from '@loaders.gl/core';
 import { OBJLoader } from '@loaders.gl/obj';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { mul } from 'typegpu/std';
+import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
 
 const Vertex = d.struct({
@@ -16,8 +16,15 @@ const Camera = d.struct({
   view: d.mat4x4f,
   projection: d.mat4x4f,
 });
+
+const TriangleData = d.struct({
+  pos: d.vec4f,
+  vel: d.vec4f,
+});
+
 const bindGroupLayout = tgpu.bindGroupLayout({
   camera: { uniform: Camera },
+  triangleData: { uniform: TriangleData },
   texture: { texture: 'float' },
   sampler: { sampler: 'filtering' },
 });
@@ -25,42 +32,10 @@ const {
   camera,
   texture: shaderTexture,
   sampler: shaderSampler,
+  triangleData,
 } = bindGroupLayout.bound;
 
-// Shaders
-const sampleTexture = tgpu['~unstable']
-  .fn([d.vec2f], d.vec4f)
-  .does(/*wgsl*/ `(uv: vec2<f32>) -> vec4<f32> {
-    return textureSample(shaderTexture, shaderSampler, uv);
-  }`)
-  .$uses({ shaderTexture, shaderSampler })
-  .$name('sampleShader');
-
-const mainVertex = tgpu['~unstable']
-  .vertexFn({
-    in: { position: d.vec4f, normal: d.vec3f, uv: d.vec2f },
-    out: { position: d.builtin.position, uv: d.location(1, d.vec2f) },
-  })
-  .does((input) => {
-    const pos = mul(
-      camera.value.projection,
-      mul(camera.value.view, input.position),
-    );
-
-    return {
-      position: pos,
-      uv: input.uv,
-    };
-  })
-  .$name('mainVertex');
-
-const mainFragment = tgpu['~unstable']
-  .fragmentFn({
-    in: { uv: d.location(1, d.vec2f) },
-    out: d.location(0, d.vec4f),
-  })
-  .does((input) => sampleTexture(input.uv))
-  .$name('mainFragment');
+// setup
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -96,7 +71,7 @@ const sampler = device.createSampler({
 
 // Camera
 const target = d.vec3f(0, 0, 0);
-const cameraInitialPos = d.vec4f(0, 0, 5, 1);
+const cameraInitialPos = d.vec4f(0, 0, 10, 1);
 const cameraInitial = {
   view: m.mat4.lookAt(cameraInitialPos, target, d.vec3f(0, 1, 0), d.mat4x4f()),
   projection: m.mat4.perspective(
@@ -108,10 +83,12 @@ const cameraInitial = {
   ),
 };
 const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
+const dataBuffer = root.createBuffer(TriangleData).$usage('uniform');
 
 const bindGroup = root.createBindGroup(bindGroupLayout, {
   camera: cameraBuffer,
   texture: cubeTexture,
+  triangleData: dataBuffer,
   sampler,
 });
 
@@ -147,6 +124,83 @@ vertices.reverse();
 
 vertexBuffer.write(vertices);
 
+// Shaders
+const sampleTexture = tgpu['~unstable']
+  .fn([d.vec2f], d.vec4f)
+  .does(/*wgsl*/ `(uv: vec2<f32>) -> vec4<f32> {
+    return textureSample(shaderTexture, shaderSampler, uv);
+  }`)
+  .$uses({ shaderTexture, shaderSampler })
+  .$name('sampleShader');
+
+const mainVertex = tgpu['~unstable']
+  .vertexFn({
+    in: { position: d.vec4f, normal: d.vec3f, uv: d.vec2f },
+    out: { position: d.builtin.position, uv: d.location(1, d.vec2f) },
+  })
+  .does((input) => {
+    const localPos = input.position;
+
+    const vel = triangleData.value.vel;
+    const normVel = std.normalize(vel);
+
+    const yaw = std.atan2(normVel.z, normVel.x) + Math.PI;
+    const yawCos = std.cos(yaw);
+    const yawSin = std.sin(yaw);
+
+    // biome-ignore format:
+    const yawRotation = d.mat4x4f(
+      yawCos,   0, yawSin,  0,
+      0,        1, 0,       0,
+      -yawSin,  0, yawCos,  0,
+      0,        0, 0,       1,
+    );
+
+    const pitch = -std.asin(-normVel.y) - 0.6;
+    const pitchCos = std.cos(pitch);
+    const pitchSin = std.sin(pitch);
+
+    // biome-ignore format:
+    const pitchRotation = d.mat4x4f(
+      pitchCos, -pitchSin, 0, 0,
+      pitchSin, pitchCos,  0, 0,
+      0,        0,         1, 0,
+      0,        0,         0, 1,
+    );
+
+    const cubePos = std.add(
+      // std.mul(pitchRotation, localPos),
+      std.mul(pitchRotation, std.mul(yawRotation, localPos)),
+      // std.mul(yawRotation, std.mul(pitchRotation, localPos)),
+      // std.mul(pitchRotation, localPos),
+      // std.mul(yawRotation, localPos),
+      // localPos,
+
+      // ...
+
+      triangleData.value.pos,
+    );
+
+    const pos = std.mul(
+      camera.value.projection,
+      std.mul(camera.value.view, cubePos),
+    );
+
+    return {
+      position: pos,
+      uv: input.uv,
+    };
+  })
+  .$name('mainVertex');
+
+const mainFragment = tgpu['~unstable']
+  .fragmentFn({
+    in: { uv: d.location(1, d.vec2f) },
+    out: d.location(0, d.vec4f),
+  })
+  .does((input) => sampleTexture(input.uv))
+  .$name('mainFragment');
+
 // Render pipeline
 const renderPipeline = root['~unstable']
   .withVertex(mainVertex, vertexLayout.attrib)
@@ -165,7 +219,16 @@ const depthTexture = device.createTexture({
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
 });
 
+let pos = d.vec4f(0, 0, 0, 1);
+
 function render() {
+  const vel = d.vec4f(-1 * 0.002, Math.sin(Date.now() * 0.001) * 0.002, 0, 0);
+  pos = std.add(pos, vel);
+  dataBuffer.write({
+    pos,
+    vel,
+  });
+
   renderPipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
@@ -191,6 +254,7 @@ function frame() {
   if (destoyed) {
     return;
   }
+
   requestAnimationFrame(frame);
   render();
 }

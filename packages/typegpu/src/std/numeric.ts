@@ -89,6 +89,39 @@ export function abs<T extends vBase | number>(value: T): T {
 
 /**
  * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#acos-builtin
+ */
+export function acos(value: number): number {
+  if (inGPUMode()) {
+    return `acos(${value})` as unknown as number;
+  }
+  return Math.acos(value);
+}
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#asin-builtin
+ */
+export function asin(value: number): number {
+  if (inGPUMode()) {
+    return `asin(${value})` as unknown as number;
+  }
+  return Math.asin(value);
+}
+
+/**
+ * @privateRemarks
+ * https://www.w3.org/TR/WGSL/#atan2-builtin
+ */
+export function atan2(y: number, x: number): number {
+  if (inGPUMode()) {
+    return `atan2(${y}, ${x})` as unknown as number;
+  }
+  return Math.atan2(y, x);
+}
+
+/**
+ * @privateRemarks
  * https://www.w3.org/TR/WGSL/#ceil-builtin
  */
 export function ceil<T extends vBase | number>(value: T): T {
