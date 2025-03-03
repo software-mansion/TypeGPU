@@ -109,10 +109,58 @@ function tsToJs(code: string): string {
   }).outputText;
 }
 
+function bundleFiles(files: Record<string, string>): string {
+  const entryFile = files['index.ts'];
+  if (!entryFile) {
+    throw new Error("index.ts not found");
+  }
+
+  // Get a list of module names based on the other file keys (strip the .ts extension).
+  const otherModules = Object.keys(files)
+    .filter((filename) => filename !== 'index.ts')
+    .map((filename) => filename.replace(/\.ts$/, ''));
+
+  const entryLines = entryFile.split('\n');
+  const filteredEntryLines = entryLines.filter((line) => {
+    const importMatch = line.match(/from\s+['"](.+?)['"]/);
+    if (importMatch) {
+      let moduleName = importMatch[1];
+      // Normalize relative paths "./module" -> "module")
+      moduleName = moduleName.replace(/^\.\/|^\.\.\//, '');
+      moduleName = moduleName.replace(/\.ts$/, '');
+      if (otherModules.includes(moduleName)) {
+        return false;
+      }
+    }
+    return true;
+  });
+  const newEntryContent = filteredEntryLines.join('\n');
+
+  let bundled = newEntryContent;
+  for (const [filename, content] of Object.entries(files)) {
+    if (filename === 'index.ts') continue;
+    // Remove duplicate import statements from inlined content.
+    const cleanedContent = content
+      .split('\n')
+      .filter((line) => {
+        if (/^\s*import\s/.test(line)) {
+          return true;
+        }
+        return true;
+      })
+      .join('\n');
+
+    bundled += `\n\n// Inlined content from ${filename}\n${cleanedContent}`;
+  }
+
+  console.log("BUNDLED", bundled);
+  return bundled;
+}
+
 type Labelless<T> = T extends unknown ? Omit<T, 'label'> : never;
 
 export async function executeExample(
-  exampleCode: string,
+  exampleCode: Record<string, string>,
 ): Promise<ExampleState> {
   const cleanupCallbacks: (() => unknown)[] = [];
 
@@ -189,7 +237,10 @@ export async function executeExample(
       throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
     };
 
-    const jsCode = tsToJs(exampleCode);
+    // Bundle index.ts and its dependencies.
+    const bundledTs = bundleFiles(exampleCode);
+
+    const jsCode = tsToJs(bundledTs);
 
     const transformedCode =
       Babel.transform(jsCode, {

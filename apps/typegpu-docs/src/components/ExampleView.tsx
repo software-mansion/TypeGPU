@@ -22,7 +22,7 @@ type Props = {
 };
 
 function useExample(
-  exampleCode: string,
+  exampleCode: Record<string, string>,
   htmlCode: string,
   setSnackbarText: (text: string | undefined) => void,
 ) {
@@ -68,6 +68,7 @@ function useExample(
 
 type EditorTab = 'ts' | 'html';
 
+
 export function ExampleView({ example }: Props) {
   const { tsCodes, htmlCode, execTsCode } = example;
 
@@ -91,7 +92,7 @@ export function ExampleView({ example }: Props) {
     exampleHtmlRef.current.innerHTML = htmlCode;
   }, [execTsCode, htmlCode]);
 
-  useExample(execTsCode, htmlCode, setSnackbarText); // live example
+  useExample(tsCodes, htmlCode, setSnackbarText); // live example
   useResizableCanvas(exampleHtmlRef, execTsCode, htmlCode);
 
   return (
