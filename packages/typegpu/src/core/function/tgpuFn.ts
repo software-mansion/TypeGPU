@@ -1,12 +1,13 @@
 import type { Infer } from '../../data';
 import type { AnyWgslData } from '../../data/wgslTypes';
-import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
-import type {
-  Labelled,
-  ResolutionCtx,
-  SelfResolvable,
-  Wgsl,
+import { createDualImpl } from '../../smol/helpers';
+import {
+  type Labelled,
+  type ResolutionCtx,
+  type SelfResolvable,
+  UnknownData,
+  type Wgsl,
 } from '../../types';
 import type { TgpuBufferUsage } from '../buffer/bufferUsage';
 import {
@@ -153,20 +154,23 @@ function createFn<
     },
   };
 
-  const call = (...args: unknown[]): unknown => {
-    if (inGPUMode()) {
-      // TODO: Filter out only those arguments which are valid to pass around
-      return new FnCall(fn, args as Wgsl[]);
-    }
+  const call = createDualImpl(
+    (...args: unknown[]): unknown => {
+      if (typeof implementation === 'string') {
+        throw new Error(
+          'Cannot execute on the CPU functions constructed with raw WGSL',
+        );
+      }
 
-    if (typeof implementation === 'string') {
-      throw new Error(
-        'Cannot execute on the CPU functions constructed with raw WGSL',
-      );
-    }
-
-    return implementation(...args);
-  };
+      return implementation(...args);
+    },
+    (...args) => {
+      return {
+        value: new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
+        dataType: shell.returnType ?? UnknownData,
+      };
+    },
+  );
 
   const fn = Object.assign(call, fnBase as This) as TgpuFn<Args, Return>;
 
@@ -223,14 +227,17 @@ function createBoundFunction<
     },
   };
 
-  const call = (...args: InferArgs<Args>): unknown => {
-    if (inGPUMode()) {
-      // TODO: Filter out only those arguments which are valid to pass around
-      return new FnCall(fn, args as Wgsl[]);
-    }
-
-    return innerFn(...args);
-  };
+  const call = createDualImpl(
+    (...args: InferArgs<Args>): unknown => {
+      return innerFn(...args);
+    },
+    (...args) => {
+      return {
+        value: new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
+        dataType: innerFn.shell.returnType ?? UnknownData,
+      };
+    },
+  );
 
   const fn = Object.assign(call, fnBase) as TgpuFn<Args, Return>;
 

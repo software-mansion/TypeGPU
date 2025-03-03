@@ -1,5 +1,5 @@
 import type { BaseData } from '../data';
-import { getTypeForPropAccess } from '../shared/helpers';
+import { getTypeForPropAccess } from '../smol/helpers';
 import {
   type Labelled,
   type ResolutionCtx,

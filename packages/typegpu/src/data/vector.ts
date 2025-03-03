@@ -1,4 +1,4 @@
-import { inGPUMode } from '../gpuMode';
+import { createDualImpl } from '../smol/helpers';
 import {
   Vec2fImpl,
   Vec2hImpl,
@@ -43,21 +43,26 @@ function makeVecSchema<TValue>(
 ): VecSchemaBase<TValue> & ((...args: number[]) => TValue) {
   const { kind: type, length: componentCount } = new VecImpl();
 
-  const construct = (...args: number[]): TValue => {
-    const values = args; // TODO: Allow users to pass in vectors that fill part of the values.
+  const construct = createDualImpl(
+    (...args: number[]): TValue => {
+      const values = args; // TODO: Allow users to pass in vectors that fill part of the values.
 
-    if (inGPUMode()) {
-      return `${type}(${values.join(', ')})` as unknown as TValue;
-    }
+      if (values.length <= 1 || values.length === componentCount) {
+        return new VecImpl(...values) as TValue;
+      }
 
-    if (values.length <= 1 || values.length === componentCount) {
-      return new VecImpl(...values) as TValue;
-    }
-
-    throw new Error(
-      `'${type}' constructor called with invalid number of arguments.`,
-    );
-  };
+      throw new Error(
+        `'${type}' constructor called with invalid number of arguments.`,
+      );
+    },
+    (...args) => {
+      console.log('creating vec with args:', args);
+      return {
+        value: `${type}(${args.map((v) => v.value).join(', ')})`,
+        dataType: { type },
+      };
+    },
+  );
 
   return Object.assign(construct, { type, '~repr': undefined as TValue });
 }

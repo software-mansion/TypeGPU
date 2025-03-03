@@ -239,4 +239,45 @@ describe('wgslGenerator', () => {
     );
     expect(res2.dataType).toEqual(d.f32);
   });
+
+  it('generates correct resources for external resource array index access', ({
+    root,
+  }) => {
+    const testBuffer = root
+      .createBuffer(d.arrayOf(d.u32, 16))
+      .$usage('uniform');
+
+    const testUsage = testBuffer.as('uniform');
+
+    const testFn = tgpu['~unstable'].fn([], d.u32).does(() => {
+      return testUsage.value[3] as number;
+    }) as unknown as TestFn;
+
+    const astInfo = getPrebuiltAstFor(testFn[functionInternal].implementation);
+
+    if (!astInfo) {
+      throw new Error('Expected prebuilt AST to be present');
+    }
+
+    const expectedAst = {
+      b: [
+        {
+          r: {
+            x: [
+              {
+                a: [
+                  {
+                    a: ['testUsage', 'value'],
+                  },
+                  '3',
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    } as const;
+
+    expect(astInfo.ast.body).toEqual(expectedAst);
+  });
 });

@@ -1,68 +1,153 @@
-import type { atomicI32, atomicU32 } from '../data/wgslTypes';
-import { inGPUMode } from '../gpuMode';
+import { type atomicI32, type atomicU32, isWgslData } from '../data/wgslTypes';
+import { createDualImpl } from '../smol/helpers';
+import { Void } from '../types';
 
 type AnyAtomic = atomicI32 | atomicU32;
 
-export function atomicLoad<T extends AnyAtomic>(a: T): number {
-  if (inGPUMode()) {
-    return `atomicLoad(&${a})` as unknown as number;
-  }
-  throw new Error('Atomic operations are not supported outside of GPU mode.');
-}
+export const atomicLoad = createDualImpl(
+  // CPU implementation
+  <T extends AnyAtomic>(a: T): number => {
+    throw new Error('Atomic operations are not supported outside of GPU mode.');
+  },
+  // GPU implementation
+  (a) => {
+    console.log('atomicLoad', a);
+    if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
+      return { value: `atomicLoad(&${a.value})`, dataType: a.dataType.inner };
+    }
+    throw new Error(`Invalid atomic type: ${a.dataType}`);
+  },
+);
 
-export function atomicStore<T extends AnyAtomic>(a: T, value: number): void {
-  if (inGPUMode()) {
-    // biome-ignore lint/correctness/noVoidTypeReturn: <string-void duality>
-    return `atomicStore(&${a}, ${value})` as unknown as undefined;
-  }
-  throw new Error('Atomic operations are not supported outside of GPU mode.');
-}
+export const atomicStore = createDualImpl(
+  // CPU implementation
+  <T extends AnyAtomic>(a: T, value: number): void => {
+    throw new Error('Atomic operations are not supported outside of GPU mode.');
+  },
+  // GPU implementation
+  (a, value) => {
+    return {
+      value: `atomicStore(&${a.value}, ${value.value})`,
+      dataType: Void,
+    };
+  },
+);
 
-export function atomicAdd<T extends AnyAtomic>(a: T, value: number): number {
-  if (inGPUMode()) {
-    return `atomicAdd(&${a}, ${value})` as unknown as number;
-  }
-  throw new Error('Atomic operations are not supported outside of GPU mode.');
-}
+export const atomicAdd = createDualImpl(
+  // CPU implementation
+  <T extends AnyAtomic>(a: T, value: number): number => {
+    throw new Error('Atomic operations are not supported outside of GPU mode.');
+  },
+  // GPU implementation
+  (a, value) => {
+    if (isWgslData(a.value) && a.value.type === 'atomic') {
+      return {
+        value: `atomicAdd(&${a.value}, ${value.value})`,
+        dataType: a.value.inner,
+      };
+    }
+    throw new Error('Invalid atomic type');
+  },
+);
 
-export function atomicSub<T extends AnyAtomic>(a: T, value: number): number {
-  if (inGPUMode()) {
-    return `atomicSub(&${a}, ${value})` as unknown as number;
-  }
-  throw new Error('Atomic operations are not supported outside of GPU mode.');
-}
+export const atomicSub = createDualImpl(
+  // CPU implementation
+  <T extends AnyAtomic>(a: T, value: number): number => {
+    throw new Error('Atomic operations are not supported outside of GPU mode.');
+  },
+  // GPU implementation
+  (a, value) => {
+    if (isWgslData(a.value) && a.value.type === 'atomic') {
+      return {
+        value: `atomicSub(&${a.value}, ${value.value})`,
+        dataType: a.value.inner,
+      };
+    }
+    throw new Error('Invalid atomic type');
+  },
+);
 
-export function atomicMax<T extends AnyAtomic>(a: T, value: number): number {
-  if (inGPUMode()) {
-    return `atomicMax(&${a}, ${value})` as unknown as number;
-  }
-  throw new Error('Atomic operations are not supported outside of GPU mode.');
-}
+export const atomicMax = createDualImpl(
+  // CPU implementation
+  <T extends AnyAtomic>(a: T, value: number): number => {
+    throw new Error('Atomic operations are not supported outside of GPU mode.');
+  },
+  // GPU implementation
+  (a, value) => {
+    if (isWgslData(a.value) && a.value.type === 'atomic') {
+      return {
+        value: `atomicMax(&${a.value}, ${value.value})`,
+        dataType: a.value.inner,
+      };
+    }
+    throw new Error('Invalid atomic type');
+  },
+);
 
-export function atomicMin<T extends AnyAtomic>(a: T, value: number): number {
-  if (inGPUMode()) {
-    return `atomicMin(&${a}, ${value})` as unknown as number;
-  }
-  throw new Error('Atomic operations are not supported outside of GPU mode.');
-}
+export const atomicMin = createDualImpl(
+  // CPU implementation
+  <T extends AnyAtomic>(a: T, value: number): number => {
+    throw new Error('Atomic operations are not supported outside of GPU mode.');
+  },
+  // GPU implementation
+  (a, value) => {
+    if (isWgslData(a.value) && a.value.type === 'atomic') {
+      return {
+        value: `atomicMin(&${a.value}, ${value.value})`,
+        dataType: a.value.inner,
+      };
+    }
+    throw new Error('Invalid atomic type');
+  },
+);
 
-export function atomicAnd<T extends AnyAtomic>(a: T, value: number): number {
-  if (inGPUMode()) {
-    return `atomicAnd(&${a}, ${value})` as unknown as number;
-  }
-  throw new Error('Atomic operations are not supported outside of GPU mode.');
-}
+export const atomicAnd = createDualImpl(
+  // CPU implementation
+  <T extends AnyAtomic>(a: T, value: number): number => {
+    throw new Error('Atomic operations are not supported outside of GPU mode.');
+  },
+  // GPU implementation
+  (a, value) => {
+    if (isWgslData(a.value) && a.value.type === 'atomic') {
+      return {
+        value: `atomicAnd(&${a.value}, ${value.value})`,
+        dataType: a.value.inner,
+      };
+    }
+    throw new Error('Invalid atomic type');
+  },
+);
 
-export function atomicOr<T extends AnyAtomic>(a: T, value: number): number {
-  if (inGPUMode()) {
-    return `atomicOr(&${a}, ${value})` as unknown as number;
-  }
-  throw new Error('Atomic operations are not supported outside of GPU mode.');
-}
+export const atomicOr = createDualImpl(
+  // CPU implementation
+  <T extends AnyAtomic>(a: T, value: number): number => {
+    throw new Error('Atomic operations are not supported outside of GPU mode.');
+  },
+  // GPU implementation
+  (a, value) => {
+    if (isWgslData(a.value) && a.value.type === 'atomic') {
+      return {
+        value: `atomicOr(&${a.value}, ${value.value})`,
+        dataType: a.value.inner,
+      };
+    }
+    throw new Error('Invalid atomic type');
+  },
+);
 
-export function atomicXor<T extends AnyAtomic>(a: T, value: number): number {
-  if (inGPUMode()) {
-    return `atomicXor(&${a}, ${value})` as unknown as number;
-  }
-  throw new Error('Atomic operations are not supported outside of GPU mode.');
-}
+export const atomicXor = createDualImpl(
+  // CPU implementation
+  <T extends AnyAtomic>(a: T, value: number): number => {
+    throw new Error('Atomic operations are not supported outside of GPU mode.');
+  },
+  // GPU implementation
+  (a, value) => {
+    if (isWgslData(a.value) && a.value.type === 'atomic') {
+      return {
+        value: `atomicXor(&${a.value}, ${value.value})`,
+        dataType: a.value.inner,
+      };
+    }
+    throw new Error('Invalid atomic type');
+  },
+);

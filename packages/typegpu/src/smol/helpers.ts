@@ -3,6 +3,7 @@ import { isSlot } from '../core/slot/slotTypes';
 import { isDecorated, isWgslData } from '../data';
 import * as d from '../data';
 import { abstractFloat, abstractInt } from '../data/numeric';
+import { inGPUMode } from '../gpuMode';
 import { type Resource, UnknownData, type Wgsl } from '../types';
 
 const indexableTypes = [
@@ -102,6 +103,13 @@ export function getTypeForPropAccess(
     }
   }
 
+  if (isWgslData(target)) {
+    // if (isWgslArray(target)) {
+    //   return target.elementType;
+    // }
+    return target;
+  }
+
   console.log(`got unknown type: ${targetType}.${propName}`);
   return undefined;
 }
@@ -166,4 +174,22 @@ export function numericLiteralToResource(value: string): Resource | undefined {
   }
 
   return undefined;
+}
+
+type MapValueToResource<T> = { [K in keyof T]: Resource };
+
+// biome-ignore lint/suspicious/noExplicitAny: <it's very convenient>
+export function createDualImpl<T extends (...args: any[]) => any>(
+  jsImpl: T,
+  gpuImpl: (...args: MapValueToResource<Parameters<T>>) => Resource,
+): T {
+  return ((...args: Parameters<T>) => {
+    if (inGPUMode()) {
+      return gpuImpl(
+        ...(args as unknown as MapValueToResource<Parameters<T>>),
+      ) as unknown as Resource;
+    }
+    // biome-ignore lint/suspicious/noExplicitAny: <t's very convenient>
+    return jsImpl(...(args as any));
+  }) as T;
 }

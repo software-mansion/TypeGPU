@@ -2,16 +2,13 @@ import type * as smol from 'tinyest';
 import * as d from '../data';
 import * as wgsl from '../data/wgslTypes';
 import {
-  getTypeForPropAccess,
-  numericLiteralToResource,
-} from '../shared/helpers';
-import {
   type ResolutionCtx,
   type Resource,
   UnknownData,
   type Wgsl,
   isWgsl,
 } from '../types';
+import { getTypeForPropAccess, numericLiteralToResource } from './helpers';
 
 const parenthesizedOps = [
   '==',
@@ -185,8 +182,9 @@ export function generateExpression(
     if (typeof target.value === 'string') {
       return {
         value: `${target.value}.${propertyStr}`,
-        // TODO: Infer data type
-        dataType: UnknownData,
+        dataType:
+          getTypeForPropAccess(target.dataType as Wgsl, propertyStr) ??
+          UnknownData,
       };
     }
 
@@ -207,10 +205,14 @@ export function generateExpression(
 
     if (typeof target.value === 'object') {
       console.log('member access target is object');
+      console.log(
+        // @ts-ignore
+        `searching for ${propertyStr}, found: ${target.value[propertyStr] ?? 'not found'}`,
+      );
       return {
         // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
         value: (target.value as any)[propertyStr],
-        // TODO: Infer data type
+        // TODO: Infer data type (but how? what if this is a function call?)
         dataType: UnknownData,
       };
     }
@@ -249,38 +251,46 @@ export function generateExpression(
 
     const [callee, args] = expression.f;
     const id = generateExpression(ctx, callee);
+    console.log(`function call ${id.value}, args:`, args);
     const idValue = id.value;
 
     ctx.callStack.push(idValue);
 
     const argResources = args.map((arg) => generateExpression(ctx, arg));
-    const argValues = argResources.map((res) => resolveRes(ctx, res));
+    const resolvedResources = argResources.map((res) => ({
+      value: resolveRes(ctx, res),
+      dataType: res.dataType,
+    }));
+    console.log('resolvedResources', resolvedResources);
+    const argValues = resolvedResources.map((res) => res.value);
+
+    console.log('argValues', argValues);
 
     ctx.callStack.pop();
 
     if (typeof idValue === 'string') {
       return {
         value: `${idValue}(${argValues.join(', ')})`,
-        dataType: UnknownData,
+        dataType: id.dataType,
       };
     }
 
     if (wgsl.isWgslStruct(idValue)) {
-      const id = ctx.resolve(idValue);
+      const resolvedId = ctx.resolve(idValue);
 
       return {
-        value: `${id}(${argValues.join(', ')})`,
-        dataType: UnknownData,
+        value: `${resolvedId}(${argValues.join(', ')})`,
+        dataType: id.dataType,
       };
     }
 
     // Assuming that `id` is callable
     // TODO: Pass in resources, not just values.
     const result = (idValue as unknown as (...args: unknown[]) => unknown)(
-      ...argValues,
-    ) as Wgsl;
+      ...resolvedResources,
+    ) as Resource;
     // TODO: Make function calls return resources instead of just values.
-    return { value: result, dataType: UnknownData };
+    return result;
   }
 
   if ('o' in expression) {

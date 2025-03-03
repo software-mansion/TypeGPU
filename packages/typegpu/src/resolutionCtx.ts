@@ -22,9 +22,9 @@ import { provideCtx } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
 import { naturalsExcept } from './shared/generators';
-import { getTypeFormWgsl } from './shared/helpers';
 import type { Infer } from './shared/repr';
 import { generateFunction } from './smol';
+import { getTypeFormWgsl } from './smol/helpers';
 import {
   type TgpuBindGroup,
   TgpuBindGroupImpl,
@@ -134,9 +134,17 @@ class ItemStateStack {
   }
 
   popBlockScope() {
-    const layer = this._stack.pop();
-    if (layer?.type !== 'blockScope') {
-      throw new Error('Expected block scope layer to be on top.');
+    // pop block scope (if top layer is not block scope, traverse until block scope is found)
+    while (this._stack.length > 0) {
+      const layer = this._stack[this._stack.length - 1];
+      if (!layer) {
+        throw new Error('Internal error, expected a layer to be on top.');
+      }
+      if (layer.type === 'blockScope') {
+        this._stack.pop();
+        return;
+      }
+      this._stack.pop();
     }
   }
 
@@ -179,10 +187,12 @@ class ItemStateStack {
 
       if (layer?.type === 'functionScope') {
         console.log(
-          `searching in function scope: ${Object.values(layer.args).map((a) => Object.keys(a))}`,
+          `searching in function args: ${layer.args.map((a) => `${a.value} (${a.dataType})`).join(', ')}`,
         );
         const arg = layer.args.find((a) => a.value === id);
-        console.log(`${arg ? 'found' : 'not found'}`);
+        console.log(
+          `${arg ? `found ${`${arg.value} (${arg.dataType})`}` : 'not found'}`,
+        );
         if (arg !== undefined) {
           return arg;
         }

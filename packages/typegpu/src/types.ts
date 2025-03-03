@@ -71,10 +71,14 @@ export const UnknownData = {
   type: 'unknown',
 };
 export type UnknownData = typeof UnknownData;
+export const Void = {
+  type: 'void',
+};
+export type Void = typeof Void;
 
 export type Resource = {
   value: unknown;
-  dataType: AnyWgslData | UnknownData | AbstractInt | AbstractFloat;
+  dataType: AnyWgslData | UnknownData | AbstractInt | AbstractFloat | Void;
 };
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';

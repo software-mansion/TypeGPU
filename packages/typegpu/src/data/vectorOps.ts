@@ -834,4 +834,128 @@ export const VectorOps = {
       c: T | number,
     ) => T
   >,
+
+  sin: {
+    vec2f: (v: wgsl.v2f) => vec2f(Math.sin(v.x), Math.sin(v.y)),
+    vec2h: (v: wgsl.v2h) => vec2h(Math.sin(v.x), Math.sin(v.y)),
+    vec2i: (v: wgsl.v2i) => vec2i(Math.sin(v.x), Math.sin(v.y)),
+    vec2u: (v: wgsl.v2u) => vec2u(Math.sin(v.x), Math.sin(v.y)),
+
+    vec3f: (v: wgsl.v3f) => vec3f(Math.sin(v.x), Math.sin(v.y), Math.sin(v.z)),
+    vec3h: (v: wgsl.v3h) => vec3h(Math.sin(v.x), Math.sin(v.y), Math.sin(v.z)),
+    vec3i: (v: wgsl.v3i) => vec3i(Math.sin(v.x), Math.sin(v.y), Math.sin(v.z)),
+    vec3u: (v: wgsl.v3u) => vec3u(Math.sin(v.x), Math.sin(v.y), Math.sin(v.z)),
+
+    vec4f: (v: wgsl.v4f) =>
+      vec4f(Math.sin(v.x), Math.sin(v.y), Math.sin(v.z), Math.sin(v.w)),
+    vec4h: (v: wgsl.v4h) =>
+      vec4h(Math.sin(v.x), Math.sin(v.y), Math.sin(v.z), Math.sin(v.w)),
+    vec4i: (v: wgsl.v4i) =>
+      vec4i(Math.sin(v.x), Math.sin(v.y), Math.sin(v.z), Math.sin(v.w)),
+    vec4u: (v: wgsl.v4u) =>
+      vec4u(Math.sin(v.x), Math.sin(v.y), Math.sin(v.z), Math.sin(v.w)),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  cos: {
+    vec2f: (v: wgsl.v2f) => vec2f(Math.cos(v.x), Math.cos(v.y)),
+    vec2h: (v: wgsl.v2h) => vec2h(Math.cos(v.x), Math.cos(v.y)),
+    vec2i: (v: wgsl.v2i) => vec2i(Math.cos(v.x), Math.cos(v.y)),
+    vec2u: (v: wgsl.v2u) => vec2u(Math.cos(v.x), Math.cos(v.y)),
+
+    vec3f: (v: wgsl.v3f) => vec3f(Math.cos(v.x), Math.cos(v.y), Math.cos(v.z)),
+    vec3h: (v: wgsl.v3h) => vec3h(Math.cos(v.x), Math.cos(v.y), Math.cos(v.z)),
+    vec3i: (v: wgsl.v3i) => vec3i(Math.cos(v.x), Math.cos(v.y), Math.cos(v.z)),
+    vec3u: (v: wgsl.v3u) => vec3u(Math.cos(v.x), Math.cos(v.y), Math.cos(v.z)),
+
+    vec4f: (v: wgsl.v4f) =>
+      vec4f(Math.cos(v.x), Math.cos(v.y), Math.cos(v.z), Math.cos(v.w)),
+    vec4h: (v: wgsl.v4h) =>
+      vec4h(Math.cos(v.x), Math.cos(v.y), Math.cos(v.z), Math.cos(v.w)),
+    vec4i: (v: wgsl.v4i) =>
+      vec4i(Math.cos(v.x), Math.cos(v.y), Math.cos(v.z), Math.cos(v.w)),
+    vec4u: (v: wgsl.v4u) =>
+      vec4u(Math.cos(v.x), Math.cos(v.y), Math.cos(v.z), Math.cos(v.w)),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  exp: {
+    vec2f: (v: wgsl.v2f) => vec2f(Math.exp(v.x), Math.exp(v.y)),
+    vec2h: (v: wgsl.v2h) => vec2h(Math.exp(v.x), Math.exp(v.y)),
+    vec2i: (v: wgsl.v2i) => vec2i(Math.exp(v.x), Math.exp(v.y)),
+    vec2u: (v: wgsl.v2u) => vec2u(Math.exp(v.x), Math.exp(v.y)),
+
+    vec3f: (v: wgsl.v3f) => vec3f(Math.exp(v.x), Math.exp(v.y), Math.exp(v.z)),
+    vec3h: (v: wgsl.v3h) => vec3h(Math.exp(v.x), Math.exp(v.y), Math.exp(v.z)),
+    vec3i: (v: wgsl.v3i) => vec3i(Math.exp(v.x), Math.exp(v.y), Math.exp(v.z)),
+    vec3u: (v: wgsl.v3u) => vec3u(Math.exp(v.x), Math.exp(v.y), Math.exp(v.z)),
+
+    vec4f: (v: wgsl.v4f) =>
+      vec4f(Math.exp(v.x), Math.exp(v.y), Math.exp(v.z), Math.exp(v.w)),
+    vec4h: (v: wgsl.v4h) =>
+      vec4h(Math.exp(v.x), Math.exp(v.y), Math.exp(v.z), Math.exp(v.w)),
+    vec4i: (v: wgsl.v4i) =>
+      vec4i(Math.exp(v.x), Math.exp(v.y), Math.exp(v.z), Math.exp(v.w)),
+    vec4u: (v: wgsl.v4u) =>
+      vec4u(Math.exp(v.x), Math.exp(v.y), Math.exp(v.z), Math.exp(v.w)),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  fract: {
+    vec2f: (v: wgsl.v2f) => vec2f(v.x - Math.floor(v.x), v.y - Math.floor(v.y)),
+    vec2h: (v: wgsl.v2h) => vec2h(v.x - Math.floor(v.x), v.y - Math.floor(v.y)),
+    vec2i: (v: wgsl.v2i) => vec2i(v.x - Math.floor(v.x), v.y - Math.floor(v.y)),
+    vec2u: (v: wgsl.v2u) => vec2u(v.x - Math.floor(v.x), v.y - Math.floor(v.y)),
+
+    vec3f: (v: wgsl.v3f) =>
+      vec3f(
+        v.x - Math.floor(v.x),
+        v.y - Math.floor(v.y),
+        v.z - Math.floor(v.z),
+      ),
+    vec3h: (v: wgsl.v3h) =>
+      vec3h(
+        v.x - Math.floor(v.x),
+        v.y - Math.floor(v.y),
+        v.z - Math.floor(v.z),
+      ),
+    vec3i: (v: wgsl.v3i) =>
+      vec3i(
+        v.x - Math.floor(v.x),
+        v.y - Math.floor(v.y),
+        v.z - Math.floor(v.z),
+      ),
+    vec3u: (v: wgsl.v3u) =>
+      vec3u(
+        v.x - Math.floor(v.x),
+        v.y - Math.floor(v.y),
+        v.z - Math.floor(v.z),
+      ),
+
+    vec4f: (v: wgsl.v4f) =>
+      vec4f(
+        v.x - Math.floor(v.x),
+        v.y - Math.floor(v.y),
+        v.z - Math.floor(v.z),
+        v.w - Math.floor(v.w),
+      ),
+    vec4h: (v: wgsl.v4h) =>
+      vec4h(
+        v.x - Math.floor(v.x),
+        v.y - Math.floor(v.y),
+        v.z - Math.floor(v.z),
+        v.w - Math.floor(v.w),
+      ),
+    vec4i: (v: wgsl.v4i) =>
+      vec4i(
+        v.x - Math.floor(v.x),
+        v.y - Math.floor(v.y),
+        v.z - Math.floor(v.z),
+        v.w - Math.floor(v.w),
+      ),
+    vec4u: (v: wgsl.v4u) =>
+      vec4u(
+        v.x - Math.floor(v.x),
+        v.y - Math.floor(v.y),
+        v.z - Math.floor(v.z),
+        v.w - Math.floor(v.w),
+      ),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
 };

@@ -1,4 +1,4 @@
-import { inGPUMode } from '../gpuMode';
+import { createDualImpl } from '../smol/helpers';
 import type { SelfResolvable } from '../types';
 import { vec2f, vec3f, vec4f } from './vector';
 import type {
@@ -54,30 +54,36 @@ function createMatSchema<
     label: options.type,
   };
 
-  const construct = (...args: (number | ColumnType)[]): ValueType => {
-    if (inGPUMode()) {
-      return `${MatSchema.type}(${args.join(', ')})` as unknown as ValueType;
-    }
+  const construct = createDualImpl(
+    // CPU implementation
+    (...args: (number | ColumnType)[]): ValueType => {
+      const elements: number[] = [];
 
-    const elements: number[] = [];
-
-    for (const arg of args) {
-      if (typeof arg === 'number') {
-        elements.push(arg);
-      } else {
-        for (let i = 0; i < arg.length; ++i) {
-          elements.push(arg[i] as number);
+      for (const arg of args) {
+        if (typeof arg === 'number') {
+          elements.push(arg);
+        } else {
+          for (let i = 0; i < arg.length; ++i) {
+            elements.push(arg[i] as number);
+          }
         }
       }
-    }
 
-    // Fill the rest with zeros
-    for (let i = elements.length; i < options.columns * options.rows; ++i) {
-      elements.push(0);
-    }
+      // Fill the rest with zeros
+      for (let i = elements.length; i < options.columns * options.rows; ++i) {
+        elements.push(0);
+      }
 
-    return options.makeFromElements(...elements);
-  };
+      return options.makeFromElements(...elements);
+    },
+    // GPU implementation
+    (...args) => {
+      return {
+        value: `${MatSchema.type}(${args.map((v) => v.value).join(', ')})`,
+        dataType: MatSchema,
+      };
+    },
+  );
 
   return Object.assign(construct, MatSchema) as unknown as {
     type: TType;
