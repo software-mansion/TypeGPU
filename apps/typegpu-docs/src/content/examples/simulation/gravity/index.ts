@@ -50,7 +50,7 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const cubeModel = await load('assets/gravity/blahaj.obj', OBJLoader);
+const cubeModel = await load('assets/gravity/blahaj_smooth.obj', OBJLoader);
 const textureResponse = await fetch('assets/gravity/texture.png');
 const imageBitmap = await createImageBitmap(await textureResponse.blob());
 const cubeTexture = root['~unstable']
