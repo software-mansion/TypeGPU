@@ -2,30 +2,19 @@ import { JitTranspiler } from 'tgpu-jit';
 import { parse } from 'tgpu-wgsl-parser';
 import type * as smol from 'tinyest';
 import { beforeEach, describe, expect, vi } from 'vitest';
-import { StrictNameRegistry, type TgpuFn } from '../../src';
+import { StrictNameRegistry } from '../../src';
 import tgpu from '../../src';
 import { getPrebuiltAstFor } from '../../src/core/function/astUtils';
-import { functionInternal } from '../../src/core/function/fnCore';
 import * as d from '../../src/data';
 import { abstractFloat, abstractInt } from '../../src/data/numeric';
 import * as gpu from '../../src/gpuMode';
-import { ResolutionCtxImpl, contextInternal } from '../../src/resolutionCtx';
-import {
-  generateExpression,
-  generateFunction,
-} from '../../src/smol/wgslGenerator';
+import { ResolutionCtxImpl } from '../../src/resolutionCtx';
+import { $internal } from '../../src/shared/symbols';
+import * as wgslGenerator from '../../src/smol/wgslGenerator';
+import * as std from '../../src/std';
+import { Void } from '../../src/types';
 import { it } from '../utils/extendedIt';
 
-type TestFn = TgpuFn & {
-  implementation: () => unknown;
-  // biome-ignore lint/suspicious/noExplicitAny: <Too complex>
-  [functionInternal]: any;
-};
-
-type ExposedContext = ResolutionCtxImpl & {
-  // biome-ignore lint/suspicious/noExplicitAny: <Too complex>
-  [contextInternal]: any;
-};
 const transpiler = new JitTranspiler();
 
 const createContext = () => {
@@ -36,11 +25,11 @@ const createContext = () => {
 };
 
 describe('wgslGenerator', () => {
-  let ctx: ExposedContext;
+  let ctx: ResolutionCtxImpl;
 
   beforeEach(() => {
     vi.spyOn(gpu, 'inGPUMode').mockReturnValue(true);
-    ctx = createContext() as ExposedContext;
+    ctx = createContext();
   });
 
   it('creates a simple return statement', () => {
@@ -60,7 +49,7 @@ describe('wgslGenerator', () => {
       ],
     });
 
-    const gen = generateFunction(ctx, parsedBody);
+    const gen = wgslGenerator.generateFunction(ctx, parsedBody);
 
     expect(parse(gen)).toEqual(parse('{return true;}'));
   });
@@ -76,32 +65,10 @@ describe('wgslGenerator', () => {
 
     const parsedBody = transpiler.transpileFn(code).body;
 
-    expect(parsedBody).toEqual({
-      b: [
-        {
-          l: [
-            'a',
-            {
-              n: '12',
-            },
-          ],
-        },
-        {
-          x: [
-            'a',
-            '+=',
-            {
-              n: '21',
-            },
-          ],
-        },
-        {
-          r: 'a',
-        },
-      ],
-    });
+    // biome-ignore format: <it's better that way>
+    expect(parsedBody).toEqual({ b: [{ l: ['a', { n: '12', },], }, { x: ['a', '+=', { n: '21', },], }, { r: 'a', },], });
 
-    const gen = generateFunction(ctx, parsedBody);
+    const gen = wgslGenerator.generateFunction(ctx, parsedBody);
 
     expect(parse(gen)).toEqual(parse('{var a = 12;a += 21;return a;}'));
   });
@@ -152,7 +119,10 @@ describe('wgslGenerator', () => {
     for (const stmt of (parsedBody as smol.Block).b) {
       const letStatement = stmt as smol.Let;
       const [name, numLiteral] = letStatement.l;
-      const generatedExpr = generateExpression(ctx, numLiteral as smol.Num);
+      const generatedExpr = wgslGenerator.generateExpression(
+        ctx,
+        numLiteral as smol.Num,
+      );
       const expected = literals[name as keyof typeof literals];
 
       expect(generatedExpr.dataType).toEqual(expected.dataType);
@@ -164,65 +134,43 @@ describe('wgslGenerator', () => {
   }) => {
     const testBuffer = root
       .createBuffer(
-        d.struct({
-          a: d.u32,
-          b: d.vec2f,
-        }),
+        d
+          .struct({
+            a: d.u32,
+            b: d.vec2u,
+          })
+          .$name('TestStruct'),
       )
-      .$usage('storage');
+      .$usage('storage')
+      .$name('testBuffer');
 
     const testUsage = testBuffer.as('mutable');
 
-    const testFn = tgpu['~unstable'].fn([], d.u32).does(() => {
-      return testUsage.value.a + testUsage.value.b.x;
-    }) as unknown as TestFn;
+    const testFn = tgpu['~unstable']
+      .fn([], d.u32)
+      .does(() => {
+        return testUsage.value.a + testUsage.value.b.x;
+      })
+      .$name('testFn');
 
-    const astInfo = getPrebuiltAstFor(testFn[functionInternal].implementation);
+    const astInfo = getPrebuiltAstFor(
+      testFn[$internal].implementation as (...args: unknown[]) => unknown,
+    );
     if (!astInfo) {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    const expectedAst = {
-      b: [
-        {
-          r: {
-            x: [
-              {
-                a: [
-                  {
-                    a: ['testUsage', 'value'],
-                  },
-                  'a',
-                ],
-              },
-              '+',
-              {
-                a: [
-                  {
-                    a: [
-                      {
-                        a: ['testUsage', 'value'],
-                      },
-                      'b',
-                    ],
-                  },
-                  'x',
-                ],
-              },
-            ],
-          },
-        },
-      ],
-    } as const;
+    // biome-ignore format: <it's better that way>
+    const expectedAst = { b: [{ r: { x: [{ a: [{ a: ['testUsage', 'value'], }, 'a',], }, '+', { a: [{ a: [{ a: ['testUsage', 'value'], }, 'b',], }, 'x',], },], }, },], } as const;
 
     expect(astInfo.ast.body).toEqual(expectedAst);
-    ctx[contextInternal].itemStateStack.pushFunctionScope(
+    ctx[$internal].itemStateStack.pushFunctionScope(
       [],
       d.u32,
-      astInfo.externals,
+      astInfo.externals ?? {},
     );
 
-    const res1 = generateExpression(
+    const res1 = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body as unknown as typeof expectedAst).b[0].r
         .x[0] as smol.Expression,
@@ -230,12 +178,19 @@ describe('wgslGenerator', () => {
 
     expect(res1.dataType).toEqual(d.u32);
 
-    const res2 = generateExpression(
+    const res2 = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body as unknown as typeof expectedAst).b[0].r
         .x[2] as smol.Expression,
     );
-    expect(res2.dataType).toEqual(d.f32);
+    expect(res2.dataType).toEqual(d.u32);
+
+    const sum = wgslGenerator.generateExpression(
+      ctx,
+      (astInfo.ast.body as unknown as typeof expectedAst).b[0]
+        .r as smol.Expression,
+    );
+    expect(sum.dataType).toEqual(d.u32);
   });
 
   it('generates correct resources for external resource array index access', ({
@@ -250,45 +205,151 @@ describe('wgslGenerator', () => {
 
     const testFn = tgpu['~unstable'].fn([], d.u32).does(() => {
       return testUsage.value[3] as number;
-    }) as unknown as TestFn;
+    });
 
-    const astInfo = getPrebuiltAstFor(testFn[functionInternal].implementation);
+    const astInfo = getPrebuiltAstFor(
+      testFn[$internal].implementation as (...args: unknown[]) => unknown,
+    );
 
     if (!astInfo) {
       throw new Error('Expected prebuilt AST to be present');
     }
 
-    const expectedAst = {
-      b: [
-        {
-          r: {
-            i: [
-              {
-                a: ['testUsage', 'value'],
-              },
-              {
-                n: '3',
-              },
-            ],
-          },
-        },
-      ],
-    } as const;
+    // biome-ignore format: <it's better that way>
+    const expectedAst = { b: [{ r: { i: [{ a: ['testUsage', 'value'], }, { n: '3', },], }, },], } as const;
 
     expect(astInfo.ast.body).toEqual(expectedAst);
 
-    ctx[contextInternal].itemStateStack.pushFunctionScope(
+    ctx[$internal].itemStateStack.pushFunctionScope(
       [],
       d.u32,
-      astInfo.externals,
+      astInfo.externals ?? {},
     );
 
-    const res = generateExpression(
+    const res = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body as unknown as typeof expectedAst).b[0]
         .r as smol.Expression,
     );
 
     expect(res.dataType).toEqual(d.u32);
+  });
+
+  it('generates correct resources for nested struct with atomics in a complex expression', ({
+    root,
+  }) => {
+    const testBuffer = root
+      .createBuffer(
+        d
+          .struct({
+            a: d.vec4f,
+            b: d
+              .struct({
+                aa: d.arrayOf(
+                  d
+                    .struct({ x: d.atomic(d.u32), y: d.atomic(d.i32) })
+                    .$name('DeeplyNestedStruct'),
+                  64,
+                ),
+              })
+              .$name('NestedStruct'),
+          })
+          .$name('TestStruct'),
+      )
+      .$usage('storage')
+      .$name('testBuffer');
+
+    const testUsage = testBuffer.as('mutable');
+
+    const testFn = tgpu['~unstable']
+      .fn([d.u32], d.vec4f)
+      .does((idx) => {
+        // biome-ignore lint/style/noNonNullAssertion: <no thanks>
+        const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
+        const vec = std.mix(d.vec4f(), testUsage.value.a, value);
+        // biome-ignore lint/style/noNonNullAssertion: <no thanks>
+        std.atomicStore(testUsage.value.b.aa[idx]!.x, vec.y);
+        return vec;
+      })
+      .$name('testFn');
+
+    const astInfo = getPrebuiltAstFor(
+      testFn[$internal].implementation as (...args: unknown[]) => unknown,
+    );
+
+    if (!astInfo) {
+      throw new Error('Expected prebuilt AST to be present');
+    }
+
+    // One AST to rule them all ৻(•̀ ᗜ •́৻)
+    const expectedAst = {
+      b: [
+        // biome-ignore format: <good luck with this formatted>
+        { c: ['value', { f: [{ a: ['std', 'atomicLoad'] }, [{ a: [{ i: [{ a: [{ a: [{ a: ['testUsage', 'value'] }, 'b'] }, 'aa'] }, 'idx'] }, 'y'] }]] }] },
+        // biome-ignore format: <good luck with this formatted>
+        { c: ['vec', { f: [{ a: ['std', 'mix'] }, [{ f: [{ a: ['d', 'vec4f'] }, []] }, { a: [{ a: ['testUsage', 'value'] }, 'a'] }, 'value']] }] },
+        // biome-ignore format: <good luck with this formatted>
+        { f: [{ a: ['std', 'atomicStore'] }, [{ a: [{ i: [{ a: [{ a: [{ a: ['testUsage', 'value'] }, 'b'] }, 'aa'] }, 'idx'] }, 'x'] }, { a: ['vec', 'y'] }]] },
+        { r: 'vec' },
+      ],
+    } as const;
+    expect(astInfo.ast.body).toEqual(expectedAst);
+
+    const args = astInfo.ast.argNames.map((name) => ({
+      value: name,
+      dataType: d.u32,
+    }));
+
+    ctx[$internal].itemStateStack.pushFunctionScope(
+      args,
+      d.vec4f,
+      astInfo.externals ?? {},
+    );
+
+    // Check for: const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
+    //                           ^ this part should be a u32
+    const res = wgslGenerator.generateExpression(
+      ctx,
+      // biome-ignore lint/style/noNonNullAssertion: <it's there>
+      (astInfo.ast.body as unknown as typeof expectedAst).b[0]!
+        .c![1] as unknown as smol.Expression,
+    );
+
+    expect(res.dataType).toEqual(d.i32);
+
+    // Check for: const vec = std.mix(d.vec4f(), testUsage.value.a, value);
+    //                        ^ this part should be a vec4f
+    ctx[$internal].itemStateStack.pushBlockScope();
+    wgslGenerator.registerBlockVariable(ctx, 'value', d.i32);
+    const res2 = wgslGenerator.generateExpression(
+      ctx,
+      // biome-ignore lint/style/noNonNullAssertion: <it's there>
+      (astInfo.ast.body as unknown as typeof expectedAst).b[1]!
+        .c![1] as unknown as smol.Expression,
+    );
+    ctx[$internal].itemStateStack.popBlockScope();
+
+    expect(res2.dataType).toEqual(d.vec4f);
+
+    // Check for: std.atomicStore(testUsage.value.b.aa[idx]!.x, vec.y);
+    //                             ^ this part should be an atomic u32
+    //                  ^ this part should be void
+    ctx[$internal].itemStateStack.pushBlockScope();
+    wgslGenerator.registerBlockVariable(ctx, 'vec', d.vec4f);
+    const res3 = wgslGenerator.generateExpression(
+      ctx,
+      // biome-ignore lint/style/noNonNullAssertion: <it's there>
+      (astInfo.ast.body as unknown as typeof expectedAst).b[2]!
+        .f![1][0] as unknown as smol.Expression,
+    );
+    const res4 = wgslGenerator.generateExpression(
+      ctx,
+      (astInfo.ast.body as unknown as typeof expectedAst)
+        .b[2] as unknown as smol.Expression,
+    );
+    ctx[$internal].itemStateStack.popBlockScope();
+
+    expect(res3.dataType).toEqual(d.atomic(d.u32));
+    expect(res4.dataType).toEqual(Void);
   });
 });

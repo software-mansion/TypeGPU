@@ -35,14 +35,26 @@ const parenthesizedOps = [
   '||',
 ];
 
-function binaryOperatorToType<
+function operatorToType<
   TL extends wgsl.AnyWgslData | UnknownData,
   TR extends wgsl.AnyWgslData | UnknownData,
 >(
   lhs: TL,
-  op: smol.BinaryOperator | smol.AssignmentOperator | smol.LogicalOperator,
-  rhs: TR,
+  op:
+    | smol.BinaryOperator
+    | smol.AssignmentOperator
+    | smol.LogicalOperator
+    | smol.UnaryOperator,
+  rhs?: TR,
 ): TL | TR | wgsl.Bool {
+  if (!rhs) {
+    if (op === '!' || op === '~') {
+      return d.bool;
+    }
+
+    return lhs;
+  }
+
   if (
     op === '==' ||
     op === '!=' ||
@@ -146,7 +158,7 @@ export function generateExpression(
     const rhsExpr = generateExpression(ctx, rhs);
     const rhsStr = resolveRes(ctx, rhsExpr);
 
-    const type = binaryOperatorToType(lhsExpr.dataType, op, rhsExpr.dataType);
+    const type = operatorToType(lhsExpr.dataType, op, rhsExpr.dataType);
 
     return {
       value: parenthesizedOps.includes(op)
@@ -160,20 +172,30 @@ export function generateExpression(
     // Unary Expression
 
     const [op, arg] = expression.u;
-    const argExpr = resolveRes(ctx, generateExpression(ctx, arg));
+    const argExpr = generateExpression(ctx, arg);
+    const argStr = resolveRes(ctx, argExpr);
+
+    const type = operatorToType(argExpr.dataType, op);
     return {
-      value: `${op}${argExpr}`,
-      // TODO: Infer data type from expression type and arguments.
-      dataType: UnknownData,
+      value: `${op}${argStr}`,
+      dataType: type,
     };
   }
 
   if ('a' in expression) {
     // Member Access
+    console.log('accessing member', expression.a);
 
     const [targetId, property] = expression.a;
     const target = generateExpression(ctx, targetId);
     const propertyStr = property;
+
+    console.log('target:', target);
+    console.log('property:', propertyStr);
+    console.log(
+      'typeforpropaccess:',
+      getTypeForPropAccess(target.dataType as Wgsl, propertyStr),
+    );
 
     if (typeof target.value === 'string') {
       return {
@@ -199,7 +221,7 @@ export function generateExpression(
       return {
         // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
         value: (target.value as any)[propertyStr],
-        // TODO: Infer data type (but how? what if this is a function call?)
+        // TODO: Infer data type (but how? what if this is a function call? The return type is not very useful as it's a lie)
         dataType: UnknownData,
       };
     }

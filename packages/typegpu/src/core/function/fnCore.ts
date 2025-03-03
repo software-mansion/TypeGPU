@@ -11,8 +11,6 @@ import {
 import { getPrebuiltAstFor } from './astUtils';
 import type { Implementation } from './fnTypes';
 
-export const functionInternal = Symbol('internal');
-
 export interface TgpuFnShellBase<Args extends unknown[], Return> {
   readonly argTypes: Args;
   readonly returnType: Return | undefined;

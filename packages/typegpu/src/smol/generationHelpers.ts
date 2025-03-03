@@ -30,6 +30,7 @@ import {
   isWgslArray,
   isWgslData,
 } from '../data/wgslTypes';
+import { getResolutionCtx } from '../gpuMode';
 import { type Resource, UnknownData, type Wgsl } from '../types';
 
 const indexableTypes = [
@@ -112,8 +113,15 @@ export function getTypeForPropAccess(
     return undefined;
   }
 
-  if (isDerived(targetType) || isSlot(targetType)) {
-    return getTypeForPropAccess(targetType.value as Wgsl, propName);
+  if ((isDerived(targetType) || isSlot(targetType)) && propName === 'value') {
+    console.log('unwrapping slot or derived');
+    const ctx = getResolutionCtx();
+    if (!ctx) {
+      throw new Error(
+        'Resolution context not found when unwrapping slot or derived',
+      );
+    }
+    return ctx.unwrap(targetType) as BaseData;
   }
 
   let target = targetType as AnyWgslData;

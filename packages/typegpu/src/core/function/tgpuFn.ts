@@ -2,6 +2,7 @@ import type { Infer } from '../../data';
 import type { AnyWgslData } from '../../data/wgslTypes';
 import type { TgpuNamable } from '../../namable';
 import { createDualImpl } from '../../shared/generators';
+import { $internal } from '../../shared/symbols';
 import {
   type Labelled,
   type ResolutionCtx,
@@ -18,7 +19,7 @@ import {
   type TgpuSlot,
   isAccessor,
 } from '../slot/slotTypes';
-import { createFnCore, functionInternal } from './fnCore';
+import { createFnCore } from './fnCore';
 import type { Implementation, InferArgs, InferReturn } from './fnTypes';
 
 // ----------
@@ -72,7 +73,11 @@ export type TgpuFn<
   Args extends AnyWgslData[] = AnyWgslData[],
   Return extends AnyWgslData | undefined = AnyWgslData | undefined,
 > = TgpuFnBase<Args, Return> &
-  ((...args: InferArgs<Args>) => InferReturn<Return>);
+  ((...args: InferArgs<Args>) => InferReturn<Return>) & {
+    readonly [$internal]: {
+      implementation: Implementation<InferArgs<Args>, InferReturn<Return>>;
+    };
+  };
 
 export function fn<Args extends AnyWgslData[] | []>(
   argTypes: Args,
@@ -172,7 +177,16 @@ function createFn<
     },
   );
 
-  const fn = Object.assign(call, fnBase as This) as TgpuFn<Args, Return>;
+  Object.defineProperty(call, $internal, {
+    value: {
+      implementation,
+    },
+  });
+
+  const fn = Object.assign(call, fnBase as This) as unknown as TgpuFn<
+    Args,
+    Return
+  >;
 
   // Making the label available as a readonly property.
   Object.defineProperty(fn, 'label', {
@@ -181,12 +195,6 @@ function createFn<
 
   Object.defineProperty(fn, 'toString', {
     value: () => `fn:${core.label ?? '<unnamed>'}`,
-  });
-
-  Object.defineProperty(fn, functionInternal, {
-    get: () => ({
-      implementation,
-    }),
   });
 
   return fn;
@@ -251,6 +259,12 @@ function createBoundFunction<
       const fnLabel = innerFn.label ?? '<unnamed>';
 
       return `fn:${fnLabel}[${pairs.map(stringifyPair).join(', ')}]`;
+    },
+  });
+
+  Object.defineProperty(fn, $internal, {
+    value: {
+      implementation: innerFn[$internal].implementation,
     },
   });
 

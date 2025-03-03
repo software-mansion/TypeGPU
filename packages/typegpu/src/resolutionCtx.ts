@@ -23,6 +23,7 @@ import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
 import { naturalsExcept } from './shared/generators';
 import type { Infer } from './shared/repr';
+import { $internal } from './shared/symbols';
 import { generateFunction } from './smol';
 import { getTypeFormWgsl } from './smol/generationHelpers';
 import {
@@ -32,10 +33,15 @@ import {
   type TgpuLayoutEntry,
   bindGroupLayout,
 } from './tgpuBindGroupLayout';
-import type { FnToWgslOptions, ResolutionCtx, Resource, Wgsl } from './types';
+import type {
+  FnToWgslOptions,
+  ItemLayer,
+  ItemStateStack,
+  ResolutionCtx,
+  Resource,
+  Wgsl,
+} from './types';
 import { UnknownData, isSelfResolvable, isWgsl } from './types';
-
-export const contextInternal = Symbol('internal');
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -55,11 +61,6 @@ export type ResolutionCtxImplOptions = {
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
 
-type ItemLayer = {
-  type: 'item';
-  usedSlots: Set<TgpuSlot<unknown>>;
-};
-
 type SlotBindingLayer = {
   type: 'slotBinding';
   bindingMap: WeakMap<TgpuSlot<unknown>, unknown>;
@@ -77,7 +78,7 @@ type BlockScopeLayer = {
   declarations: Map<string, AnyWgslData | UnknownData>;
 };
 
-class ItemStateStack {
+class ItemStateStackImpl implements ItemStateStack {
   private _stack: (
     | ItemLayer
     | SlotBindingLayer
@@ -292,14 +293,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   private readonly _indentController = new IndentController();
   private readonly _jitTranspiler: JitTranspiler | undefined;
-  private readonly _itemStateStack = new ItemStateStack();
+  private readonly _itemStateStack = new ItemStateStackImpl();
   private readonly _declarations: string[] = [];
 
-  get [contextInternal]() {
-    return {
-      itemStateStack: this._itemStateStack,
-    };
-  }
+  [$internal] = {
+    itemStateStack: this._itemStateStack,
+  };
 
   // -- Bindings
   /**

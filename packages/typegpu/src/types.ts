@@ -18,6 +18,7 @@ import {
   type Eventual,
   type SlotValuePair,
   type TgpuAccessor,
+  type TgpuSlot,
   isDerived,
   isProviding,
   isSlot,
@@ -37,6 +38,7 @@ import {
 } from './data/wgslTypes';
 import type { NameRegistry } from './nameRegistry';
 import type { Infer } from './shared/repr';
+import { $internal } from './shared/symbols';
 import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
@@ -72,7 +74,7 @@ export const UnknownData = {
 };
 export type UnknownData = typeof UnknownData;
 export const Void = {
-  type: 'void',
+  type: 'void' as const,
 };
 export type Void = typeof Void;
 
@@ -88,6 +90,30 @@ export interface FnToWgslOptions {
   returnType: AnyWgslData;
   body: Block;
   externalMap: Record<string, unknown>;
+}
+
+export type ItemLayer = {
+  type: 'item';
+  usedSlots: Set<TgpuSlot<unknown>>;
+};
+
+export interface ItemStateStack {
+  readonly itemDepth: number;
+  readonly topItem: ItemLayer;
+
+  pushItem(): void;
+  pushSlotBindings(pairs: SlotValuePair<unknown>[]): void;
+  pushFunctionScope(
+    args: Resource[],
+    returnType: AnyWgslData | undefined,
+    externalMap: Record<string, unknown>,
+  ): void;
+  pushBlockScope(): void;
+  popBlockScope(): void;
+  pop(): void;
+  readSlot<T>(slot: TgpuSlot<T>): T | undefined;
+  getResourceById(id: string): Resource | undefined;
+  defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Resource;
 }
 
 /**
@@ -137,6 +163,10 @@ export interface ResolutionCtx {
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;
     body: Wgsl;
+  };
+
+  [$internal]: {
+    itemStateStack: ItemStateStack;
   };
 }
 

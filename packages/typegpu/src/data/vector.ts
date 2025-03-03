@@ -29,43 +29,6 @@ import type {
   Vec4u,
 } from './wgslTypes';
 
-// --------------
-// Implementation
-// --------------
-
-type VecSchemaBase<TValue> = {
-  readonly type: string;
-  readonly '~repr': TValue;
-};
-
-function makeVecSchema<TValue>(
-  VecImpl: new (...args: number[]) => VecBase,
-): VecSchemaBase<TValue> & ((...args: number[]) => TValue) {
-  const { kind: type, length: componentCount } = new VecImpl();
-
-  const construct = createDualImpl(
-    (...args: number[]): TValue => {
-      const values = args; // TODO: Allow users to pass in vectors that fill part of the values.
-
-      if (values.length <= 1 || values.length === componentCount) {
-        return new VecImpl(...values) as TValue;
-      }
-
-      throw new Error(
-        `'${type}' constructor called with invalid number of arguments.`,
-      );
-    },
-    (...args) => {
-      return {
-        value: `${type}(${args.map((v) => v.value).join(', ')})`,
-        dataType: { type },
-      };
-    },
-  );
-
-  return Object.assign(construct, { type, '~repr': undefined as TValue });
-}
-
 // ----------
 // Public API
 // ----------
@@ -249,3 +212,54 @@ export const vec4i = makeVecSchema(Vec4iImpl) as Vec4i;
  * const buffer = root.createBuffer(d.vec4u, d.vec4u(0, 1, 2, 3)); // buffer holding a d.vec4u value, with an initial value of vec4u(0, 1, 2, 3);
  */
 export const vec4u = makeVecSchema(Vec4uImpl) as Vec4u;
+
+// --------------
+// Implementation
+// --------------
+const vecTypeToConstructor = {
+  vec2f: vec2f,
+  vec2h: vec2h,
+  vec2i: vec2i,
+  vec2u: vec2u,
+  vec3f: vec3f,
+  vec3h: vec3h,
+  vec3i: vec3i,
+  vec3u: vec3u,
+  vec4f: vec4f,
+  vec4h: vec4h,
+  vec4i: vec4i,
+  vec4u: vec4u,
+} as const;
+
+type VecSchemaBase<TValue> = {
+  readonly type: string;
+  readonly '~repr': TValue;
+};
+
+function makeVecSchema<TValue>(
+  VecImpl: new (...args: number[]) => VecBase,
+): VecSchemaBase<TValue> & ((...args: number[]) => TValue) {
+  const { kind: type, length: componentCount } = new VecImpl();
+
+  const construct = createDualImpl(
+    (...args: number[]): TValue => {
+      const values = args; // TODO: Allow users to pass in vectors that fill part of the values.
+
+      if (values.length <= 1 || values.length === componentCount) {
+        return new VecImpl(...values) as TValue;
+      }
+
+      throw new Error(
+        `'${type}' constructor called with invalid number of arguments.`,
+      );
+    },
+    (...args) => {
+      return {
+        value: `${type}(${args.map((v) => v.value).join(', ')})`,
+        dataType: vecTypeToConstructor[type],
+      };
+    },
+  );
+
+  return Object.assign(construct, { type, '~repr': undefined as TValue });
+}
