@@ -42,6 +42,26 @@ function pathToExampleFilesMap<T>(record: Record<string, T>): Record<string, Rec
   return groups;
 }
 
+// Add a new helper that returns a mapping from filename to filepath
+function pathToExampleFilesMapFilePaths(record: Record<string, unknown>): Record<string, Record<string, string>> {
+  const groups: Record<string, Record<string, string>> = {};
+  for (const filePath in record) {
+    const groupKey = pipe(
+      filePath,
+      (p) => p.replace(/^..\/..\/content\/examples\//, ''),
+      (p) => p.replace(/\/[^\/]*$/, ''),
+      (p) => p.replace(/\//, '--')
+    );
+    const fileNameMatch = filePath.match(/\/([^\/]+\.ts)$/);
+    const fileName = fileNameMatch ? fileNameMatch[1] : filePath;
+    if (!groups[groupKey]) {
+      groups[groupKey] = {};
+    }
+    groups[groupKey][fileName] = filePath;
+  }
+  return groups;
+}
+
 const metaFiles: Record<string, ExampleMetadata> = pathToExampleKey(
   import.meta.glob('../../content/examples/**/meta.json', {
     eager: true,
@@ -54,6 +74,20 @@ const readonlyTsFiles: Record<string, Record<string, string>> = pathToExampleFil
     query: 'raw',
     eager: true,
     import: 'default',
+  })
+);
+
+const TsSources: Record<string, Record<string, string>> = pathToExampleFilesMap(
+  import.meta.glob('../../content/examples/**/*.ts', {
+    query: 'raw',
+    eager: true,
+  })
+);
+
+const tsSourceFilePaths: Record<string, Record<string, string>> = pathToExampleFilesMapFilePaths(
+  import.meta.glob('../../content/examples/**/*.ts', {
+    query: 'raw',
+    eager: true,
   })
 );
 
@@ -85,6 +119,7 @@ export const examples = pipe(
       key,
       metadata: value,
       tsCodes: readonlyTsFiles[key] ?? {},
+      tsSources: tsSourceFilePaths[key] ?? {},
       htmlCode: htmlFiles[key] ?? '',
       execTsCode: moduleToString(execTsFiles[key]),
     },

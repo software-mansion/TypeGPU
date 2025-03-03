@@ -18,6 +18,7 @@ export const exampleCategories = [
 export type Example = {
   key: string;
   tsCodes: Record<string, string>;
+  tsSources: Record<string, string>;
   htmlCode: string;
   metadata: ExampleMetadata;
   execTsCode: string;
