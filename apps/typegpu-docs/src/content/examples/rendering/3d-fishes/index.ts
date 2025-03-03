@@ -163,10 +163,6 @@ const mainVert = tgpu['~unstable']
       v = v2;
     }
 
-    // if (input.alive === 0) {
-    //   std.discard();
-    // }
-
     const angle = getRotationFromVelocity(input.velocity.xy);
     const rotated = rotate(v.xy, angle);
 
@@ -408,6 +404,7 @@ const computeBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(computeBindGroupLayout, {
     currentTrianglePos: trianglePosBuffers[idx],
     nextTrianglePos: trianglePosBuffers[1 - idx],
+    // @ts-expect-error yeah ik
     currentVoxelStorage: voxelBuffers[idx],
     nextVoxelStorage: voxelBuffers[1 - idx],
   }),

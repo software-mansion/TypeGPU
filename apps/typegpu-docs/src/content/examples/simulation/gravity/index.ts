@@ -5,6 +5,8 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
 
+const scale = 5;
+
 const Vertex = d.struct({
   position: d.location(0, d.vec3f),
   normal: d.location(1, d.vec3f),
@@ -71,7 +73,7 @@ const sampler = device.createSampler({
 
 // Camera
 const target = d.vec3f(0, 0, 0);
-const cameraInitialPos = d.vec4f(0, 0, 10, 1);
+const cameraInitialPos = d.vec4f(0, 0, 5, 1);
 const cameraInitial = {
   view: m.mat4.lookAt(cameraInitialPos, target, d.vec3f(0, 1, 0), d.mat4x4f()),
   projection: m.mat4.perspective(
@@ -133,10 +135,17 @@ const sampleTexture = tgpu['~unstable']
   .$uses({ shaderTexture, shaderSampler })
   .$name('sampleShader');
 
+const VertexOutput = {
+  position: d.builtin.position,
+  uv: d.vec2f,
+  normals: d.vec3f,
+  worldPosition: d.vec4f,
+};
+
 const mainVertex = tgpu['~unstable']
   .vertexFn({
     in: { position: d.vec4f, normal: d.vec3f, uv: d.vec2f },
-    out: { position: d.builtin.position, uv: d.location(1, d.vec2f) },
+    out: VertexOutput,
   })
   .does((input) => {
     const localPos = input.position;
@@ -168,37 +177,73 @@ const mainVertex = tgpu['~unstable']
       0,        0,         0, 1,
     );
 
-    const cubePos = std.add(
-      // std.mul(pitchRotation, localPos),
-      std.mul(pitchRotation, std.mul(yawRotation, localPos)),
-      // std.mul(yawRotation, std.mul(pitchRotation, localPos)),
-      // std.mul(pitchRotation, localPos),
-      // std.mul(yawRotation, localPos),
-      // localPos,
+    const worldPos = std.add(
+      std.mul(pitchRotation, std.mul(yawRotation, std.mul(scale, localPos))),
+      triangleData.value.pos,
+    );
 
-      // ...
-
+    const uniformNormal = d.vec4f(
+      input.normal.x,
+      input.normal.y,
+      input.normal.z,
+      1,
+    );
+    const worldNormal = std.add(
+      std.mul(pitchRotation, std.mul(yawRotation, uniformNormal)),
       triangleData.value.pos,
     );
 
     const pos = std.mul(
       camera.value.projection,
-      std.mul(camera.value.view, cubePos),
+      std.mul(camera.value.view, worldPos),
     );
 
     return {
       position: pos,
       uv: input.uv,
+      normals: worldNormal.xyz,
+      worldPosition: worldPos,
     };
   })
   .$name('mainVertex');
 
+const lightColor = d.vec3f(1, 0.8, 0.7);
+const lightDirection = std.normalize(d.vec3f(-1.0, 0.0, 0.0));
+const negLightDirection = std.mul(-1, lightDirection);
+
 const mainFragment = tgpu['~unstable']
   .fragmentFn({
-    in: { uv: d.location(1, d.vec2f) },
+    in: VertexOutput,
     out: d.location(0, d.vec4f),
   })
-  .does((input) => sampleTexture(input.uv))
+  .does((input) => {
+    const normal = std.normalize(input.normals);
+
+    // Directional lighting
+    const attenuation = std.max(std.dot(normal, negLightDirection), 0.0);
+    const sunColor = std.mul(attenuation, lightColor);
+
+    const surfaceToLight = negLightDirection;
+
+    const albedoWithAlpha = sampleTexture(input.uv); // base color
+    const albedo = albedoWithAlpha.xyz;
+    const ambient = d.vec3f(0.4);
+
+    const surfaceToCamera = std.normalize(
+      std.sub(cameraInitialPos, input.worldPosition),
+    );
+
+    const halfVector = std.normalize(
+      std.add(surfaceToLight, surfaceToCamera.xyz),
+    );
+    const specular = std.pow(std.max(std.dot(normal, halfVector), 0.0), 3);
+
+    const finalColor = std.add(
+      std.mul(albedo, std.add(ambient, sunColor)),
+      std.mul(specular, lightColor),
+    );
+    return d.vec4f(finalColor.x, finalColor.y, finalColor.z, 1);
+  })
   .$name('mainFragment');
 
 // Render pipeline
@@ -222,7 +267,12 @@ const depthTexture = device.createTexture({
 let pos = d.vec4f(0, 0, 0, 1);
 
 function render() {
-  const vel = d.vec4f(-1 * 0.002, Math.sin(Date.now() * 0.001) * 0.002, 0, 0);
+  const vel = d.vec4f(
+    -1 * 0.00002,
+    Math.sin(Date.now() * 0.001) * 0.00002,
+    0,
+    0,
+  );
   pos = std.add(pos, vel);
   dataBuffer.write({
     pos,
@@ -249,9 +299,9 @@ function render() {
   root['~unstable'].flush();
 }
 
-let destoyed = false;
+let destroyed = false;
 function frame() {
-  if (destoyed) {
+  if (destroyed) {
     return;
   }
 
@@ -319,6 +369,6 @@ canvas.addEventListener('mousemove', (event) => {
 frame();
 
 export function onCleanup() {
-  destoyed = true;
+  destroyed = true;
   root.destroy();
 }
