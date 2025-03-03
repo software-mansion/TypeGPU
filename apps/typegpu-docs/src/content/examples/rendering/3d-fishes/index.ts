@@ -3,7 +3,11 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
 
-const triangleAmount = 10000;
+const triangleAmount = 20000;
+// we wszystkich 3 próbach TriangleDataArray jest takie samo
+// brak vokseli => stabile 60 fps (czyli stabilny lag, powinno być 120 fps)
+// array of structs => niestabline, spadki do 38 fps z 20.000
+// struct of arrays => niestabilne, spadki do 21 fps z 20.000
 const workGroupSize = 250;
 const triangleSize = 0.03;
 
@@ -39,7 +43,7 @@ const defaultParams: Params = {
   cohesionStrength: 0.001,
   wallRepulsionDistance: 0.3,
   wallRepulsionStrength: 0.0002,
-  groupsCountOnAxis: 10,
+  groupsCountOnAxis: 4,
   groupSize: 50,
 };
 
@@ -79,6 +83,27 @@ const getGroupIndex = tgpu['~unstable']
     );
   });
 
+const compressIndex = tgpu['~unstable'].fn([d.vec4u], d.u32).does((index) => {
+  const n = d.u32(defaultParams.groupsCountOnAxis);
+  const m = d.u32(defaultParams.groupSize);
+  return index.x * n * n * m + index.y * n * m + index.z * m + d.u32(index.w);
+});
+
+const decompressIndex = tgpu['~unstable'].fn([d.u32], d.vec4u).does((index) => {
+  const n = d.u32(defaultParams.groupsCountOnAxis);
+  const m = d.u32(defaultParams.groupSize);
+  return d.vec4u(
+    (index / n / n / m) | 0,
+    ((index / n / m) | 0) % n,
+    ((index / m) | 0) % n,
+    index % m,
+  );
+});
+
+// const index = d.vec4u(1, 1, 3, 14);
+// console.log(compressIndex(index));
+// console.log(decompressIndex(compressIndex(index)));
+
 const Camera = d.struct({
   view: d.mat4x4f,
   projection: d.mat4x4f,
@@ -97,27 +122,22 @@ const VoxelData = d.struct({
   size: d.atomic(d.u32),
   fishIds: d.arrayOf(d.u32, defaultParams.groupSize),
 });
-const VoxelFishArray = d.arrayOf(
-  d.arrayOf(
-    d.arrayOf(VoxelData, defaultParams.groupsCountOnAxis),
-    defaultParams.groupsCountOnAxis,
-  ),
-  defaultParams.groupsCountOnAxis,
-);
 
-const VoxelFishArrayAtomicless = d.arrayOf(
-  d.arrayOf(
-    d.arrayOf(
-      d.struct({
-        size: d.u32,
-        fishIds: d.arrayOf(d.u32, defaultParams.groupSize),
-      }),
-      defaultParams.groupsCountOnAxis,
-    ),
-    defaultParams.groupsCountOnAxis,
+const VoxelStorageArrayOptimized = d.struct({
+  sizes: d.arrayOf(d.atomic(d.u32), defaultParams.groupsCountOnAxis ** 3),
+  fishIds: d.arrayOf(
+    d.u32,
+    defaultParams.groupSize * defaultParams.groupsCountOnAxis ** 3,
   ),
-  defaultParams.groupsCountOnAxis,
-);
+});
+
+const VoxelStorageArrayOptimizedAtomicless = d.struct({
+  sizes: d.arrayOf(d.u32, defaultParams.groupsCountOnAxis ** 3),
+  fishIds: d.arrayOf(
+    d.u32,
+    defaultParams.groupSize * defaultParams.groupsCountOnAxis ** 3,
+  ),
+});
 
 const renderBindGroupLayout = tgpu.bindGroupLayout({
   trianglePos: {
@@ -224,7 +244,9 @@ const trianglePosBuffers = Array.from({ length: 2 }, () =>
 );
 
 const voxelBuffers = Array.from({ length: 2 }, () =>
-  root.createBuffer(VoxelFishArray).$usage('storage', 'uniform', 'vertex'),
+  root
+    .createBuffer(VoxelStorageArrayOptimized)
+    .$usage('storage', 'uniform', 'vertex'),
 );
 
 const randomizePositions = () => {
@@ -267,10 +289,13 @@ const renderPipeline = root['~unstable']
 const computeBindGroupLayout = tgpu
   .bindGroupLayout({
     currentVoxelStorage: {
-      storage: VoxelFishArrayAtomicless,
+      storage: VoxelStorageArrayOptimizedAtomicless,
       access: 'mutable',
     },
-    nextVoxelStorage: { storage: VoxelFishArray, access: 'mutable' },
+    nextVoxelStorage: {
+      storage: VoxelStorageArrayOptimized,
+      access: 'mutable',
+    },
     currentTrianglePos: { storage: TriangleDataArray },
     nextTrianglePos: {
       storage: TriangleDataArray,
@@ -322,9 +347,12 @@ const mainCompute = tgpu['~unstable']
           var y = u32(yi+yd);
           var z = u32(zi+zd);
 
-          var stackSize = currentVoxelStorage[x][y][z].size;
+          var sizeIndex = compressIndex(vec4u(x, y, z, 0)) / params.groupSize;
+          var stackSize = currentVoxelStorage.sizes[sizeIndex];
+
           for (var w = 0u; w<max(params.groupSize-1, stackSize); w++) {
-            var i = currentVoxelStorage[x][y][z].fishIds[w];
+            var fishIndex = sizeIndex * params.groupSize + w;
+            var i = currentVoxelStorage.fishIds[fishIndex];
             var other = currentTrianglePos[i];
             var dist = distance(instanceInfo.position, other.position);
             if (dist < params.separationDistance) {
@@ -370,9 +398,11 @@ const mainCompute = tgpu['~unstable']
     instanceInfo.position += vec4f(instanceInfo.velocity, 0);
     
     var ni = getGroupIndex(params.groupsCountOnAxis, instanceInfo.position.xyz);
-    var stackIndex = atomicAdd(&(nextVoxelStorage[ni.x][ni.y][ni.z].size), 1u);
+    var nc = compressIndex(vec4u(ni.x, ni.y, ni.z, 0)) / params.groupSize;
+    var stackIndex = atomicAdd(&nextVoxelStorage.sizes[nc], 1u);
     if (stackIndex < params.groupSize) {
-      nextVoxelStorage[ni.x][ni.y][ni.z].fishIds[stackIndex] = index;
+      let fishIndex = compressIndex(vec4u(ni.x, ni.y, ni.z, stackIndex));
+      nextVoxelStorage.fishIds[fishIndex] = index;
     }
     nextTrianglePos[index] = instanceInfo;
 }`)
@@ -385,6 +415,8 @@ const mainCompute = tgpu['~unstable']
     triangleSize,
     voxelBuffers,
     getGroupIndex,
+    compressIndex,
+    // decompressIndex,
   });
 
 const computePipeline = root['~unstable']
@@ -539,23 +571,34 @@ let drawCube: () => void;
 let even = false;
 let disposed = false;
 
-const emptyVoxelStorage = Array.from(
-  { length: defaultParams.groupsCountOnAxis },
-  () => {
-    return Array.from({ length: defaultParams.groupsCountOnAxis }, () => {
-      return Array.from({ length: defaultParams.groupsCountOnAxis }, () => {
-        return VoxelData({
-          size: 0,
-          fishIds: [0],
-        });
-      });
-    });
-  },
-);
+const emptyVoxelStorage = {
+  sizes: Array.from({ length: defaultParams.groupsCountOnAxis ** 3 }, () => 0),
+  fishIds: Array.from(
+    { length: defaultParams.groupSize * defaultParams.groupsCountOnAxis ** 3 },
+    () => 0,
+  ),
+};
 
-let frameCount = 0;
+const FrameCounter = (() => {
+  let lastTimestamp = 0;
+  const averagingWindow = 60 /* frames */;
+  let frameCount = 0;
+
+  return {
+    tick() {
+      frameCount += 1;
+      if (frameCount % averagingWindow === 0) {
+        const now = performance.now();
+        const frameDuration = (now - lastTimestamp) / averagingWindow / 1000;
+        console.log(1 / frameDuration);
+        lastTimestamp = now;
+      }
+    },
+  };
+})();
+
 function frame() {
-  frameCount += 1;
+  FrameCounter.tick();
   if (disposed) {
     return;
   }
@@ -585,13 +628,6 @@ function frame() {
   root['~unstable'].flush();
 
   requestAnimationFrame(frame);
-
-  if (frameCount % 30 === 0) {
-    trianglePosBuffers[0].read().then((data) => {
-      const sum = data.filter((value) => value.alive).length;
-      console.log(`Boids left: ${sum}`);
-    });
-  }
 }
 
 frame();
