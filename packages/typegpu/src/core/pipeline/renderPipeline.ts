@@ -190,6 +190,7 @@ export type RenderPipelineCoreOptions = {
   primitiveState: GPUPrimitiveState | undefined;
   depthStencilState: GPUDepthStencilState | undefined;
   targets: AnyFragmentTargets;
+  multisampleState: GPUMultisampleState | undefined;
 };
 
 export function INTERNAL_createRenderPipeline(
@@ -416,6 +417,7 @@ class RenderPipelineCore {
         slotBindings,
         primitiveState,
         depthStencilState,
+        multisampleState,
       } = this.options;
 
       // Resolving code
@@ -475,6 +477,10 @@ class RenderPipelineCore {
 
       if (depthStencilState) {
         descriptor.depthStencil = depthStencilState;
+      }
+
+      if (multisampleState) {
+        descriptor.multisample = multisampleState;
       }
 
       this._memo = {
