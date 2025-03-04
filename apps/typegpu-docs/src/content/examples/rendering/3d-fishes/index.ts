@@ -43,13 +43,13 @@ const FishModelVertex = d.struct({
 
 // constants
 
-const triangleAmount = 1024 * 8;
 const workGroupSize = 256;
-const triangleSize = 0.03;
-const scale = 0.01;
-const cameraInitialPos = d.vec4f(2, 2, 2, 1);
 
-const defaultParams = FishParameters({
+const fishAmount = 1024 * 8;
+const fishModelScale = 0.01;
+
+// TODO: remove the buffer and struct, just reference the constants
+const fishParameters = FishParameters({
   separationDistance: 0.05,
   separationStrength: 0.001,
   alignmentDistance: 0.3,
@@ -60,9 +60,9 @@ const defaultParams = FishParameters({
   wallRepulsionStrength: 0.0002,
 });
 
+const initialCameraPos = d.vec4f(2, 2, 2, 1);
 const lightColor = d.vec3f(1, 0.8, 0.7);
 const lightDirection = std.normalize(d.vec3f(-1.0, 0.0, 0.0));
-const negLightDirection = std.mul(-1, lightDirection);
 
 // layouts
 
@@ -142,7 +142,10 @@ const mainVert = tgpu['~unstable']
         );
 
     const worldPos = std.add(
-      std.mul(yawRotation, std.mul(pitchRotation, std.mul(scale, localPos))),
+      std.mul(
+        yawRotation,
+        std.mul(pitchRotation, std.mul(fishModelScale, localPos)),
+      ),
       instance.position,
     );
 
@@ -187,17 +190,20 @@ const mainFrag = tgpu['~unstable']
     const normal = std.normalize(input.normals);
 
     // Directional lighting
-    const attenuation = std.max(std.dot(normal, negLightDirection), 0.0);
+    const attenuation = std.max(
+      std.dot(normal, std.mul(-1, lightDirection)),
+      0.0,
+    );
     const sunColor = std.mul(attenuation, lightColor);
 
-    const surfaceToLight = negLightDirection;
+    const surfaceToLight = std.mul(-1, lightDirection);
 
     const albedoWithAlpha = sampleTexture(input.uv); // base color
     const albedo = albedoWithAlpha.xyz;
     const ambient = d.vec3f(0.4);
 
     const surfaceToCamera = std.normalize(
-      std.sub(cameraInitialPos, input.worldPosition),
+      std.sub(initialCameraPos, input.worldPosition),
     );
 
     const halfVector = std.normalize(
@@ -223,7 +229,7 @@ const aspect = canvas.clientWidth / canvas.clientHeight;
 const target = d.vec3f(0, 0, 0);
 
 const cameraInitial = {
-  view: m.mat4.lookAt(cameraInitialPos, target, d.vec3f(0, 1, 0), d.mat4x4f()),
+  view: m.mat4.lookAt(initialCameraPos, target, d.vec3f(0, 1, 0), d.mat4x4f()),
   projection: m.mat4.perspective(Math.PI / 4, aspect, 0.1, 1000, d.mat4x4f()),
 };
 
@@ -236,18 +242,18 @@ context.configure({
 });
 
 const paramsBuffer = root
-  .createBuffer(FishParameters, defaultParams)
+  .createBuffer(FishParameters, fishParameters)
   .$usage('uniform');
 const params = paramsBuffer.as('uniform');
 
 const trianglePosBuffers = Array.from({ length: 2 }, () =>
   root
-    .createBuffer(FishDataArray(triangleAmount))
+    .createBuffer(FishDataArray(fishAmount))
     .$usage('storage', 'uniform', 'vertex'),
 );
 
 const randomizePositions = () => {
-  const positions = Array.from({ length: triangleAmount }, () => ({
+  const positions = Array.from({ length: fishAmount }, () => ({
     position: d.vec4f(
       Math.random() * 2 - 1,
       Math.random() * 2 - 1,
@@ -353,24 +359,6 @@ const mainCompute = tgpu['~unstable']
       + (wallRepulsion * params.wallRepulsionStrength);
     instanceInfo.velocity = normalize(instanceInfo.velocity) * clamp(length(instanceInfo.velocity), 0.0, 0.01);
 
-    if (instanceInfo.position[0] > 1.0 + triangleSize) {
-      instanceInfo.position[0] = -1.0 - triangleSize;
-    }
-    if (instanceInfo.position[1] > 1.0 + triangleSize) {
-      instanceInfo.position[1] = -1.0 - triangleSize;
-    }
-    if (instanceInfo.position[2] > 1.0 + triangleSize) {
-      instanceInfo.position[2] = -1.0 - triangleSize;
-    }
-    if (instanceInfo.position[0] < -1.0 - triangleSize) {
-      instanceInfo.position[0] = 1.0 + triangleSize;
-    }
-    if (instanceInfo.position[1] < -1.0 - triangleSize) {
-      instanceInfo.position[1] = 1.0 + triangleSize;
-    }
-    if (instanceInfo.position[2] < -1.0 - triangleSize) {
-      instanceInfo.position[2] = 1.0 + triangleSize;
-    }
     instanceInfo.position += vec4f(instanceInfo.velocity, 0);
     nextTrianglePos[index] = instanceInfo;
 }`)
@@ -378,7 +366,6 @@ const mainCompute = tgpu['~unstable']
     currentTrianglePos,
     nextTrianglePos,
     params,
-    triangleSize,
   });
 
 const computePipeline = root['~unstable']
@@ -598,7 +585,7 @@ function frame() {
   even = !even;
   computePipeline
     .with(computeBindGroupLayout, computeBindGroups[even ? 0 : 1])
-    .dispatchWorkgroups(triangleAmount / workGroupSize);
+    .dispatchWorkgroups(fishAmount / workGroupSize);
 
   renderPipeline
     .withColorAttachment({
@@ -616,7 +603,7 @@ function frame() {
     .with(vertexLayout, vertexBuffer)
     .with(instanceLayout, trianglePosBuffers[even ? 1 : 0])
     .with(renderBindGroupLayout, renderBindGroups[even ? 1 : 0])
-    .draw(positions.length / 3, triangleAmount);
+    .draw(positions.length / 3, fishAmount);
 
   root['~unstable'].flush();
 
@@ -632,7 +619,7 @@ export const controls = {
     onButtonClick: () => randomizePositions(),
   },
   'boids count': {
-    initial: triangleAmount,
+    initial: fishAmount,
     options: [4, 16, 64, 256, 1024, 4096].map((x) => x.toString()),
     onSelectChange(value: string) {
       const num = Number.parseInt(value);
