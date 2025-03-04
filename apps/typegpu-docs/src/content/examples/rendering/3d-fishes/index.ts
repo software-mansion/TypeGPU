@@ -24,7 +24,7 @@ const Camera = d.struct({
 });
 
 const FishData = d.struct({
-  position: d.vec4f,
+  position: d.vec3f,
   velocity: d.vec3f,
 });
 
@@ -38,8 +38,7 @@ const FishModelVertexInput = {
 } as const;
 
 const FishModelVertexOutput = {
-  // TODO: decide on vec4f or vec3f globally
-  worldPosition: d.vec4f,
+  worldPosition: d.vec3f,
   worldNormal: d.vec3f,
   canvasPosition: d.builtin.position,
   textureUV: d.vec2f,
@@ -64,7 +63,7 @@ const fishParameters = FishParameters({
   wallRepulsionStrength: 0.0002,
 });
 
-const cameraInitialPosition = d.vec4f(2, 2, 2, 1);
+const cameraInitialPosition = d.vec3f(2, 2, 2);
 const cameraInitialTarget = d.vec3f(0, 0, 0);
 
 const lightColor = d.vec3f(1, 0.8, 0.7);
@@ -114,31 +113,24 @@ const vertexShader = tgpu['~unstable']
     // https://simple.wikipedia.org/wiki/Pitch,_yaw,_and_roll
     const fishData = renderFishData.value[input.instanceIndex];
 
-    const modelPosition = d.vec4f(
-      input.modelPosition.x,
-      input.modelPosition.y,
-      input.modelPosition.z,
-      1,
-    );
+    const modelPosition = input.modelPosition;
 
     const direction = std.normalize(fishData.velocity);
 
     const yaw = std.atan2(direction.z, direction.x) + Math.PI;
     // biome-ignore format:
-    const yawMatrix = d.mat4x4f(
-          std.cos(yaw),  0, std.sin(yaw), 0,
-          0,             1, 0,            0,
-          -std.sin(yaw), 0, std.cos(yaw), 0,
-          0,             0, 0,            1,
+    const yawMatrix = d.mat3x3f(
+          std.cos(yaw),  0, std.sin(yaw),
+          0,             1, 0,           
+          -std.sin(yaw), 0, std.cos(yaw),
         );
 
     const pitch = -std.asin(-direction.y);
     // biome-ignore format:
-    const pitchMatrix = d.mat4x4f(
-          std.cos(pitch), -std.sin(pitch), 0, 0,
-          std.sin(pitch), std.cos(pitch),  0, 0,
-          0,              0,               1, 0,
-          0,              0,               0, 1,
+    const pitchMatrix = d.mat3x3f(
+          std.cos(pitch), -std.sin(pitch), 0,
+          std.sin(pitch), std.cos(pitch),  0,
+          0,              0,               1,
         );
 
     const worldPosition = std.add(
@@ -150,29 +142,29 @@ const vertexShader = tgpu['~unstable']
     );
 
     // calculate where the normal vector points to
-    const uniformNormal = d.vec4f(
-      input.modelNormal.x,
-      input.modelNormal.y,
-      input.modelNormal.z,
-      1,
-    );
     const worldNormal = std.normalize(
       std.add(
-        std.mul(pitchMatrix, std.mul(yawMatrix, uniformNormal)),
+        std.mul(pitchMatrix, std.mul(yawMatrix, input.modelNormal)),
         fishData.position,
-      ).xyz,
+      ),
     );
 
     // project the world position into the camera
+    const worldPositionUniform = d.vec4f(
+      worldPosition.x,
+      worldPosition.y,
+      worldPosition.z,
+      1,
+    );
     const canvasPosition = std.mul(
       renderCamera.value.projection,
-      std.mul(renderCamera.value.view, worldPosition),
+      std.mul(renderCamera.value.view, worldPositionUniform),
     );
 
     return {
       canvasPosition: canvasPosition,
       textureUV: input.textureUV,
-      worldNormal: worldNormal.xyz,
+      worldNormal: worldNormal,
       worldPosition: worldPosition,
     };
   });
@@ -211,9 +203,7 @@ const fragmentShader = tgpu['~unstable']
       std.sub(cameraInitialPosition, input.worldPosition),
     );
 
-    const halfVector = std.normalize(
-      std.add(surfaceToLight, surfaceToCamera.xyz),
-    );
+    const halfVector = std.normalize(std.add(surfaceToLight, surfaceToCamera));
     const specular = std.pow(std.max(std.dot(normal, halfVector), 0.0), 3);
 
     const finalColor = std.add(
@@ -259,11 +249,11 @@ const mainCompute = tgpu['~unstable']
         continue;
       }
       const other = computeCurrentFishData.value[i];
-      const dist = distance(fishData.position.xyz, other.position.xyz);
+      const dist = distance(fishData.position, other.position);
       if (dist < computeFishParameters.value.separationDistance) {
         separation = std.add(
           separation,
-          std.sub(fishData.position.xyz, other.position.xyz),
+          std.sub(fishData.position, other.position),
         );
       }
       if (dist < computeFishParameters.value.alignmentDistance) {
@@ -271,7 +261,7 @@ const mainCompute = tgpu['~unstable']
         alignmentCount = alignmentCount + 1;
       }
       if (dist < computeFishParameters.value.cohesionDistance) {
-        cohesion = std.add(cohesion, other.position.xyz);
+        cohesion = std.add(cohesion, other.position);
         cohesionCount = cohesionCount + 1;
       }
     }
@@ -281,7 +271,7 @@ const mainCompute = tgpu['~unstable']
     if (cohesionCount > 0) {
       cohesion = std.sub(
         std.mul(1 / d.f32(cohesionCount), cohesion),
-        fishData.position.xyz,
+        fishData.position,
       );
     }
     for (let i = 0; i < 3; i += 1) {
@@ -323,13 +313,7 @@ const mainCompute = tgpu['~unstable']
       std.normalize(fishData.velocity),
     );
 
-    const velocityUniform = d.vec4f(
-      fishData.velocity.x,
-      fishData.velocity.y,
-      fishData.velocity.z,
-      0,
-    );
-    fishData.position = std.add(fishData.position, velocityUniform);
+    fishData.position = std.add(fishData.position, fishData.velocity);
     computeNextFishData.value[fishIndex] = fishData;
   });
 
@@ -380,11 +364,10 @@ const fishDataBuffers = Array.from({ length: 2 }, () =>
 
 const randomizeFishPositions = () => {
   const positions = Array.from({ length: fishAmount }, () => ({
-    position: d.vec4f(
+    position: d.vec3f(
       Math.random() * 2 - 1,
       Math.random() * 2 - 1,
       Math.random() * 2 - 1,
-      1,
     ),
     velocity: d.vec3f(
       Math.random() * 0.1 - 0.05,
@@ -670,9 +653,9 @@ export const controls = {
 };
 
 // Variables for mouse interaction.
-let isRightDragging = false;
-let rightPrevX = 0;
-let rightPrevY = 0;
+let isDragging = false;
+let prevX = 0;
+let prevY = 0;
 const initialCamX = 2;
 const initialCamY = 2;
 const initialCamZ = 2;
@@ -741,25 +724,24 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
 
 canvas.addEventListener('mousedown', (event) => {
   if (event.button === 0) {
-    // Left Mouse Button controls Camera Orbit.
-    isRightDragging = true;
-    rightPrevX = event.clientX;
-    rightPrevY = event.clientY;
+    isDragging = true;
+    prevX = event.clientX;
+    prevY = event.clientY;
   }
 });
 
 canvas.addEventListener('mouseup', (event) => {
   if (event.button === 0) {
-    isRightDragging = false;
+    isDragging = false;
   }
 });
 
 canvas.addEventListener('mousemove', (event) => {
-  if (isRightDragging) {
-    const dx = event.clientX - rightPrevX;
-    const dy = event.clientY - rightPrevY;
-    rightPrevX = event.clientX;
-    rightPrevY = event.clientY;
+  if (isDragging) {
+    const dx = event.clientX - prevX;
+    const dy = event.clientY - prevY;
+    prevX = event.clientX;
+    prevY = event.clientY;
     updateCameraOrbit(dx, dy);
   }
 });
