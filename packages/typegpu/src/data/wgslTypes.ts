@@ -509,6 +509,10 @@ export type AnyVecInstance =
   | v4i
   | v4u;
 
+export type AnyVec2Instance = v2f | v2h | v2i | v2u;
+export type AnyVec3Instance = v3f | v3h | v3i | v3u;
+export type AnyVec4Instance = v4f | v4h | v4i | v4u;
+
 export type VecKind = AnyVecInstance['kind'];
 
 export interface matBase<TColumn> extends NumberArrayView {
@@ -647,6 +651,7 @@ export interface Vec2f {
   (x: number, y: number): v2f;
   (xy: number): v2f;
   (): v2f;
+  (v: AnyVec2Instance): v2f;
 }
 
 /**
@@ -660,6 +665,7 @@ export interface Vec2h {
   (x: number, y: number): v2h;
   (xy: number): v2h;
   (): v2h;
+  (v: AnyVec2Instance): v2h;
 }
 
 /**
@@ -673,6 +679,7 @@ export interface Vec2i {
   (x: number, y: number): v2i;
   (xy: number): v2i;
   (): v2i;
+  (v: AnyVec2Instance): v2i;
 }
 
 /**
@@ -686,6 +693,7 @@ export interface Vec2u {
   (x: number, y: number): v2u;
   (xy: number): v2u;
   (): v2u;
+  (v: AnyVec2Instance): v2u;
 }
 
 /**
@@ -699,6 +707,9 @@ export interface Vec3f {
   (x: number, y: number, z: number): v3f;
   (xyz: number): v3f;
   (): v3f;
+  (v: AnyVec3Instance): v3f;
+  (v0: AnyVec2Instance, z: number): v3f;
+  (x: number, v0: AnyVec2Instance): v3f;
 }
 
 /**
@@ -712,6 +723,9 @@ export interface Vec3h {
   (x: number, y: number, z: number): v3h;
   (xyz: number): v3h;
   (): v3h;
+  (v: AnyVec3Instance): v3h;
+  (v0: AnyVec2Instance, z: number): v3h;
+  (x: number, v0: AnyVec2Instance): v3h;
 }
 
 /**
@@ -725,6 +739,9 @@ export interface Vec3i {
   (x: number, y: number, z: number): v3i;
   (xyz: number): v3i;
   (): v3i;
+  (v: AnyVec3Instance): v3i;
+  (v0: AnyVec2Instance, z: number): v3i;
+  (x: number, v0: AnyVec2Instance): v3i;
 }
 
 /**
@@ -738,6 +755,9 @@ export interface Vec3u {
   (x: number, y: number, z: number): v3u;
   (xyz: number): v3u;
   (): v3u;
+  (v: AnyVec3Instance): v3u;
+  (v0: AnyVec2Instance, z: number): v3u;
+  (x: number, v0: AnyVec2Instance): v3u;
 }
 
 /**
@@ -751,6 +771,13 @@ export interface Vec4f {
   (x: number, y: number, z: number, w: number): v4f;
   (xyzw: number): v4f;
   (): v4f;
+  (v: AnyVec4Instance): v4f;
+  (v0: AnyVec3Instance, w: number): v4f;
+  (x: number, v0: AnyVec3Instance): v4f;
+  (v0: AnyVec2Instance, v1: AnyVec2Instance): v4f;
+  (v0: AnyVec2Instance, z: number, w: number): v4f;
+  (x: number, v0: AnyVec2Instance, z: number): v4f;
+  (x: number, y: number, v0: AnyVec2Instance): v4f;
 }
 
 /**
@@ -764,6 +791,13 @@ export interface Vec4h {
   (x: number, y: number, z: number, w: number): v4h;
   (xyzw: number): v4h;
   (): v4h;
+  (v: AnyVec4Instance): v4h;
+  (v0: AnyVec3Instance, w: number): v4h;
+  (x: number, v0: AnyVec3Instance): v4h;
+  (v0: AnyVec2Instance, v1: AnyVec2Instance): v4h;
+  (v0: AnyVec2Instance, z: number, w: number): v4h;
+  (x: number, v0: AnyVec2Instance, z: number): v4h;
+  (x: number, y: number, v0: AnyVec2Instance): v4h;
 }
 
 /**
@@ -777,6 +811,13 @@ export interface Vec4i {
   (x: number, y: number, z: number, w: number): v4i;
   (xyzw: number): v4i;
   (): v4i;
+  (v: AnyVec4Instance): v4i;
+  (v0: AnyVec3Instance, w: number): v4i;
+  (x: number, v0: AnyVec3Instance): v4i;
+  (v0: AnyVec2Instance, v1: AnyVec2Instance): v4i;
+  (v0: AnyVec2Instance, z: number, w: number): v4i;
+  (x: number, v0: AnyVec2Instance, z: number): v4i;
+  (x: number, y: number, v0: AnyVec2Instance): v4i;
 }
 
 /**
@@ -790,6 +831,13 @@ export interface Vec4u {
   (x: number, y: number, z: number, w: number): v4u;
   (xyzw: number): v4u;
   (): v4u;
+  (v: AnyVec4Instance): v4u;
+  (v0: AnyVec3Instance, w: number): v4u;
+  (x: number, v0: AnyVec3Instance): v4u;
+  (v0: AnyVec2Instance, v1: AnyVec2Instance): v4u;
+  (v0: AnyVec2Instance, z: number, w: number): v4u;
+  (x: number, v0: AnyVec2Instance, z: number): v4u;
+  (x: number, y: number, v0: AnyVec2Instance): v4u;
 }
 
 /**

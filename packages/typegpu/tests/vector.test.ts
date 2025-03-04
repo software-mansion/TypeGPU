@@ -1,8 +1,11 @@
+import { parse } from 'tgpu-wgsl-parser';
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
+import tgpu from '../src';
 import * as d from '../src/data';
 import { readData, writeData } from '../src/data/dataIO';
 import { sizeOf } from '../src/data/sizeOf';
+import { parseResolved } from './utils/parseResolved';
 
 describe('vec2f', () => {
   it('should span 8 bytes', () => {
@@ -393,5 +396,114 @@ describe('vec2h', () => {
     vec[0] = 3;
     vec[1] = 4;
     expect(vec).toEqual(d.vec2h(3, 4));
+  });
+});
+
+describe('v3f', () => {
+  describe('(v2f, number) constructor', () => {
+    it('works in JS', () => {
+      const planarPos = d.vec2f(1, 2);
+      const pos = d.vec3f(planarPos, 12);
+      expect(pos).toEqual(d.vec3f(1, 2, 12));
+    });
+
+    it('works in TGSL', () => {
+      const planarPos = d.vec2f(1, 2);
+
+      const main = tgpu['~unstable']
+        .fn([])
+        .does(() => {
+          const planarPosLocal = d.vec2f(1, 2);
+
+          const one = d.vec3f(planarPos, 12); // external
+          const two = d.vec3f(planarPosLocal, 12); // local variable
+          const three = d.vec3f(d.vec2f(1, 2), 12); // literal
+        })
+        .$name('main');
+
+      expect(parseResolved({ main })).toEqual(
+        parse(`
+          fn main() {
+            var planarPosLocal = vec2f(1, 2);
+            
+            var one = vec3f(vec2f(1, 2), 12);
+            var two = vec3f(planarPosLocal, 12);
+            var three = vec3f(vec2f(1, 2), 12);
+          }
+        `),
+      );
+    });
+  });
+});
+
+describe('v4f', () => {
+  describe('(v3f, number) constructor', () => {
+    it('works in JS', () => {
+      const red = d.vec3f(0.9, 0.2, 0.1);
+      const redWithAlpha = d.vec4f(red, 1);
+      expect(redWithAlpha).toEqual(d.vec4f(0.9, 0.2, 0.1, 1));
+    });
+
+    it('works in TGSL', () => {
+      const red = d.vec3f(0.9, 0.2, 0.1);
+
+      const main = tgpu['~unstable']
+        .fn([])
+        .does(() => {
+          const green = d.vec3f(0, 1, 0);
+
+          const one = d.vec4f(red, 1); // external
+          const two = d.vec4f(green, 1); // local variable
+          const three = d.vec4f(d.vec3f(0, 0, 1), 1); // literal
+        })
+        .$name('main');
+
+      expect(parseResolved({ main })).toEqual(
+        parse(`
+          fn main() {
+            var green = vec3f(0, 1, 0);
+            
+            var one = vec4f(vec3f(0.9, 0.2, 0.1), 1);
+            var two = vec4f(green, 1);
+            var three = vec4f(vec3f(0, 0, 1), 1);
+          }
+        `),
+      );
+    });
+  });
+
+  describe('(number, v3f) constructor', () => {
+    it('works in JS', () => {
+      const foo = d.vec3f(0.2, 0.3, 0.4);
+      const bar = d.vec4f(0.1, foo);
+      expect(bar).toEqual(d.vec4f(0.1, 0.2, 0.3, 0.4));
+    });
+
+    it('works in TGSL', () => {
+      const foo = d.vec3f(0.2, 0.3, 0.4);
+
+      const main = tgpu['~unstable']
+        .fn([])
+        .does(() => {
+          const fooLocal = d.vec3f(0.2, 0.3, 0.4);
+
+          const one = d.vec4f(0.1, foo); // external
+          const two = d.vec4f(0.1, fooLocal); // local variable
+          const three = d.vec4f(0.1, d.vec3f(0.2, 0.3, 0.4)); // literal
+        })
+        .$name('main');
+
+      expect(parseResolved({ main })).toEqual(
+        parse(`
+        fn main() {
+          var fooLocal = vec3f(0.2, 0.3, 0.4);
+          
+          var one = vec4f(0.1, vec3f(0.2, 0.3, 0.4));
+          var two = vec4f(0.1, fooLocal);
+          var three = vec4f(0.1, vec3f(0.2, 0.3, 0.4));
+        }
+      `),
+      );
+    });
   });
 });

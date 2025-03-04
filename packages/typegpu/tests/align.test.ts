@@ -72,17 +72,14 @@ describe('d.align', () => {
     ).toEqual(48);
 
     // nested
-    expect(
-      d.sizeOf(
-        d.struct({
-          a: d.u32,
-          b: d.struct({
-            c: d.f32,
-            d: d.align(16, d.f32),
-          }),
-        }),
-      ),
-    ).toEqual(48);
+    const FooStruct = d.struct({
+      a: d.u32,
+      b: d.struct({
+        c: d.f32,
+        d: d.align(16, d.f32),
+      }),
+    });
+    expect(d.sizeOf(FooStruct)).toEqual(48);
 
     expect(
       d.sizeOf(

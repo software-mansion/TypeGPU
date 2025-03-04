@@ -37,51 +37,124 @@ const dotVec4 = (lhs: v4, rhs: v4) =>
 const clamp = (value: number, low: number, high: number) =>
   Math.min(Math.max(low, value), high);
 
+type UnaryOp = (a: number) => number;
+type BinaryOp = (a: number, b: number) => number;
+
+const unary2f = (op: UnaryOp) => (a: wgsl.v2f) => vec2f(op(a.x), op(a.y));
+const unary2h = (op: UnaryOp) => (a: wgsl.v2h) => vec2h(op(a.x), op(a.y));
+const unary2i = (op: UnaryOp) => (a: wgsl.v2i) => vec2i(op(a.x), op(a.y));
+const unary2u = (op: UnaryOp) => (a: wgsl.v2u) => vec2u(op(a.x), op(a.y));
+
+const unary3f = (op: UnaryOp) => (a: wgsl.v3f) =>
+  vec3f(op(a.x), op(a.y), op(a.z));
+
+const unary3h = (op: UnaryOp) => (a: wgsl.v3h) =>
+  vec3h(op(a.x), op(a.y), op(a.z));
+
+const unary3i = (op: UnaryOp) => (a: wgsl.v3i) =>
+  vec3i(op(a.x), op(a.y), op(a.z));
+
+const unary3u = (op: UnaryOp) => (a: wgsl.v3u) =>
+  vec3u(op(a.x), op(a.y), op(a.z));
+
+const unary4f = (op: UnaryOp) => (a: wgsl.v4f) =>
+  vec4f(op(a.x), op(a.y), op(a.z), op(a.w));
+
+const unary4h = (op: UnaryOp) => (a: wgsl.v4h) =>
+  vec4h(op(a.x), op(a.y), op(a.z), op(a.w));
+
+const unary4i = (op: UnaryOp) => (a: wgsl.v4i) =>
+  vec4i(op(a.x), op(a.y), op(a.z), op(a.w));
+
+const unary4u = (op: UnaryOp) => (a: wgsl.v4u) =>
+  vec4u(op(a.x), op(a.y), op(a.z), op(a.w));
+
+const binaryComponentWise2f = (op: BinaryOp) => (a: wgsl.v2f, b: wgsl.v2f) =>
+  vec2f(op(a.x, b.x), op(a.y, b.y));
+
+const binaryComponentWise2h = (op: BinaryOp) => (a: wgsl.v2h, b: wgsl.v2h) =>
+  vec2h(op(a.x, b.x), op(a.y, b.y));
+
+const binaryComponentWise2i = (op: BinaryOp) => (a: wgsl.v2i, b: wgsl.v2i) =>
+  vec2i(op(a.x, b.x), op(a.y, b.y));
+
+const binaryComponentWise2u = (op: BinaryOp) => (a: wgsl.v2u, b: wgsl.v2u) =>
+  vec2u(op(a.x, b.x), op(a.y, b.y));
+
+const binaryComponentWise3f = (op: BinaryOp) => (a: wgsl.v3f, b: wgsl.v3f) =>
+  vec3f(op(a.x, b.x), op(a.y, b.y), op(a.z, b.z));
+
+const binaryComponentWise3h = (op: BinaryOp) => (a: wgsl.v3h, b: wgsl.v3h) =>
+  vec3h(op(a.x, b.x), op(a.y, b.y), op(a.z, b.z));
+
+const binaryComponentWise3i = (op: BinaryOp) => (a: wgsl.v3i, b: wgsl.v3i) =>
+  vec3i(op(a.x, b.x), op(a.y, b.y), op(a.z, b.z));
+
+const binaryComponentWise3u = (op: BinaryOp) => (a: wgsl.v3u, b: wgsl.v3u) =>
+  vec3u(op(a.x, b.x), op(a.y, b.y), op(a.z, b.z));
+
+const binaryComponentWise4f = (op: BinaryOp) => (a: wgsl.v4f, b: wgsl.v4f) =>
+  vec4f(op(a.x, b.x), op(a.y, b.y), op(a.z, b.z), op(a.w, b.w));
+
+const binaryComponentWise4h = (op: BinaryOp) => (a: wgsl.v4h, b: wgsl.v4h) =>
+  vec4h(op(a.x, b.x), op(a.y, b.y), op(a.z, b.z), op(a.w, b.w));
+
+const binaryComponentWise4i = (op: BinaryOp) => (a: wgsl.v4i, b: wgsl.v4i) =>
+  vec4i(op(a.x, b.x), op(a.y, b.y), op(a.z, b.z), op(a.w, b.w));
+
+const binaryComponentWise4u = (op: BinaryOp) => (a: wgsl.v4u, b: wgsl.v4u) =>
+  vec4u(op(a.x, b.x), op(a.y, b.y), op(a.z, b.z), op(a.w, b.w));
+
 export const VectorOps = {
   abs: {
-    vec2f: (v: wgsl.v2f) => vec2f(Math.abs(v.x), Math.abs(v.y)),
-    vec2h: (v: wgsl.v2h) => vec2h(Math.abs(v.x), Math.abs(v.y)),
-    vec2i: (v: wgsl.v2i) => vec2i(Math.abs(v.x), Math.abs(v.y)),
-    vec2u: (v: wgsl.v2u) => vec2u(Math.abs(v.x), Math.abs(v.y)),
+    vec2f: unary2f(Math.abs),
+    vec2h: unary2h(Math.abs),
+    vec2i: unary2i(Math.abs),
+    vec2u: unary2u(Math.abs),
 
-    vec3f: (v: wgsl.v3f) => vec3f(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z)),
-    vec3h: (v: wgsl.v3h) => vec3h(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z)),
-    vec3i: (v: wgsl.v3i) => vec3i(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z)),
-    vec3u: (v: wgsl.v3u) => vec3u(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z)),
+    vec3f: unary3f(Math.abs),
+    vec3h: unary3h(Math.abs),
+    vec3i: unary3i(Math.abs),
+    vec3u: unary3u(Math.abs),
 
-    vec4f: (v: wgsl.v4f) =>
-      vec4f(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z), Math.abs(v.w)),
-    vec4h: (v: wgsl.v4h) =>
-      vec4h(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z), Math.abs(v.w)),
-    vec4i: (v: wgsl.v4i) =>
-      vec4i(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z), Math.abs(v.w)),
-    vec4u: (v: wgsl.v4u) =>
-      vec4u(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z), Math.abs(v.w)),
+    vec4f: unary4f(Math.abs),
+    vec4h: unary4h(Math.abs),
+    vec4i: unary4i(Math.abs),
+    vec4u: unary4u(Math.abs),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
+  atan2: {
+    vec2f: binaryComponentWise2f(Math.atan2),
+    vec2h: binaryComponentWise2h(Math.atan2),
+    vec2i: binaryComponentWise2i(Math.atan2),
+    vec2u: binaryComponentWise2u(Math.atan2),
+
+    vec3f: binaryComponentWise3f(Math.atan2),
+    vec3h: binaryComponentWise3h(Math.atan2),
+    vec3i: binaryComponentWise3i(Math.atan2),
+    vec3u: binaryComponentWise3u(Math.atan2),
+
+    vec4f: binaryComponentWise4f(Math.atan2),
+    vec4h: binaryComponentWise4h(Math.atan2),
+    vec4i: binaryComponentWise4i(Math.atan2),
+    vec4u: binaryComponentWise4u(Math.atan2),
+  } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
+
   ceil: {
-    vec2f: (v: wgsl.v2f) => vec2f(Math.ceil(v.x), Math.ceil(v.y)),
-    vec2h: (v: wgsl.v2h) => vec2h(Math.ceil(v.x), Math.ceil(v.y)),
-    vec2i: (v: wgsl.v2i) => vec2i(Math.ceil(v.x), Math.ceil(v.y)),
-    vec2u: (v: wgsl.v2u) => vec2u(Math.ceil(v.x), Math.ceil(v.y)),
+    vec2f: unary2f(Math.ceil),
+    vec2h: unary2h(Math.ceil),
+    vec2i: unary2i(Math.ceil),
+    vec2u: unary2u(Math.ceil),
 
-    vec3f: (v: wgsl.v3f) =>
-      vec3f(Math.ceil(v.x), Math.ceil(v.y), Math.ceil(v.z)),
-    vec3h: (v: wgsl.v3h) =>
-      vec3h(Math.ceil(v.x), Math.ceil(v.y), Math.ceil(v.z)),
-    vec3i: (v: wgsl.v3i) =>
-      vec3i(Math.ceil(v.x), Math.ceil(v.y), Math.ceil(v.z)),
-    vec3u: (v: wgsl.v3u) =>
-      vec3u(Math.ceil(v.x), Math.ceil(v.y), Math.ceil(v.z)),
+    vec3f: unary3f(Math.ceil),
+    vec3h: unary3h(Math.ceil),
+    vec3i: unary3i(Math.ceil),
+    vec3u: unary3u(Math.ceil),
 
-    vec4f: (v: wgsl.v4f) =>
-      vec4f(Math.ceil(v.x), Math.ceil(v.y), Math.ceil(v.z), Math.ceil(v.w)),
-    vec4h: (v: wgsl.v4h) =>
-      vec4h(Math.ceil(v.x), Math.ceil(v.y), Math.ceil(v.z), Math.ceil(v.w)),
-    vec4i: (v: wgsl.v4i) =>
-      vec4i(Math.ceil(v.x), Math.ceil(v.y), Math.ceil(v.z), Math.ceil(v.w)),
-    vec4u: (v: wgsl.v4u) =>
-      vec4u(Math.ceil(v.x), Math.ceil(v.y), Math.ceil(v.z), Math.ceil(v.w)),
+    vec4f: unary4f(Math.ceil),
+    vec4h: unary4h(Math.ceil),
+    vec4i: unary4i(Math.ceil),
+    vec4u: unary4u(Math.ceil),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   clamp: {
@@ -581,126 +654,54 @@ export const VectorOps = {
   >,
 
   floor: {
-    vec2f: (v: wgsl.v2f) => vec2f(Math.floor(v.x), Math.floor(v.y)),
-    vec2h: (v: wgsl.v2h) => vec2h(Math.floor(v.x), Math.floor(v.y)),
-    vec2i: (v: wgsl.v2i) => vec2i(Math.floor(v.x), Math.floor(v.y)),
-    vec2u: (v: wgsl.v2u) => vec2u(Math.floor(v.x), Math.floor(v.y)),
+    vec2f: unary2f(Math.floor),
+    vec2h: unary2h(Math.floor),
+    vec2i: unary2i(Math.floor),
+    vec2u: unary2u(Math.floor),
 
-    vec3f: (v: wgsl.v3f) =>
-      vec3f(Math.floor(v.x), Math.floor(v.y), Math.floor(v.z)),
-    vec3h: (v: wgsl.v3h) =>
-      vec3h(Math.floor(v.x), Math.floor(v.y), Math.floor(v.z)),
-    vec3i: (v: wgsl.v3i) =>
-      vec3i(Math.floor(v.x), Math.floor(v.y), Math.floor(v.z)),
-    vec3u: (v: wgsl.v3u) =>
-      vec3u(Math.floor(v.x), Math.floor(v.y), Math.floor(v.z)),
+    vec3f: unary3f(Math.floor),
+    vec3h: unary3h(Math.floor),
+    vec3i: unary3i(Math.floor),
+    vec3u: unary3u(Math.floor),
 
-    vec4f: (v: wgsl.v4f) =>
-      vec4f(Math.floor(v.x), Math.floor(v.y), Math.floor(v.z), Math.floor(v.w)),
-    vec4h: (v: wgsl.v4h) =>
-      vec4h(Math.floor(v.x), Math.floor(v.y), Math.floor(v.z), Math.floor(v.w)),
-    vec4i: (v: wgsl.v4i) =>
-      vec4i(Math.floor(v.x), Math.floor(v.y), Math.floor(v.z), Math.floor(v.w)),
-    vec4u: (v: wgsl.v4u) =>
-      vec4u(Math.floor(v.x), Math.floor(v.y), Math.floor(v.z), Math.floor(v.w)),
+    vec4f: unary4f(Math.floor),
+    vec4h: unary4h(Math.floor),
+    vec4i: unary4i(Math.floor),
+    vec4u: unary4u(Math.floor),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   max: {
-    vec2f: (a: wgsl.v2f, b: wgsl.v2f) =>
-      vec2f(Math.max(a.x, b.x), Math.max(a.y, b.y)),
-    vec2h: (a: wgsl.v2h, b: wgsl.v2h) =>
-      vec2h(Math.max(a.x, b.x), Math.max(a.y, b.y)),
-    vec2i: (a: wgsl.v2i, b: wgsl.v2i) =>
-      vec2i(Math.max(a.x, b.x), Math.max(a.y, b.y)),
-    vec2u: (a: wgsl.v2u, b: wgsl.v2u) =>
-      vec2u(Math.max(a.x, b.x), Math.max(a.y, b.y)),
+    vec2f: binaryComponentWise2f(Math.max),
+    vec2h: binaryComponentWise2h(Math.max),
+    vec2i: binaryComponentWise2i(Math.max),
+    vec2u: binaryComponentWise2u(Math.max),
 
-    vec3f: (a: wgsl.v3f, b: wgsl.v3f) =>
-      vec3f(Math.max(a.x, b.x), Math.max(a.y, b.y), Math.max(a.z, b.z)),
-    vec3h: (a: wgsl.v3h, b: wgsl.v3h) =>
-      vec3h(Math.max(a.x, b.x), Math.max(a.y, b.y), Math.max(a.z, b.z)),
-    vec3i: (a: wgsl.v3i, b: wgsl.v3i) =>
-      vec3i(Math.max(a.x, b.x), Math.max(a.y, b.y), Math.max(a.z, b.z)),
-    vec3u: (a: wgsl.v3u, b: wgsl.v3u) =>
-      vec3u(Math.max(a.x, b.x), Math.max(a.y, b.y), Math.max(a.z, b.z)),
+    vec3f: binaryComponentWise3f(Math.max),
+    vec3h: binaryComponentWise3h(Math.max),
+    vec3i: binaryComponentWise3i(Math.max),
+    vec3u: binaryComponentWise3u(Math.max),
 
-    vec4f: (a: wgsl.v4f, b: wgsl.v4f) =>
-      vec4f(
-        Math.max(a.x, b.x),
-        Math.max(a.y, b.y),
-        Math.max(a.z, b.z),
-        Math.max(a.w, b.w),
-      ),
-    vec4h: (a: wgsl.v4h, b: wgsl.v4h) =>
-      vec4h(
-        Math.max(a.x, b.x),
-        Math.max(a.y, b.y),
-        Math.max(a.z, b.z),
-        Math.max(a.w, b.w),
-      ),
-    vec4i: (a: wgsl.v4i, b: wgsl.v4i) =>
-      vec4i(
-        Math.max(a.x, b.x),
-        Math.max(a.y, b.y),
-        Math.max(a.z, b.z),
-        Math.max(a.w, b.w),
-      ),
-    vec4u: (a: wgsl.v4u, b: wgsl.v4u) =>
-      vec4u(
-        Math.max(a.x, b.x),
-        Math.max(a.y, b.y),
-        Math.max(a.z, b.z),
-        Math.max(a.w, b.w),
-      ),
+    vec4f: binaryComponentWise4f(Math.max),
+    vec4h: binaryComponentWise4h(Math.max),
+    vec4i: binaryComponentWise4i(Math.max),
+    vec4u: binaryComponentWise4u(Math.max),
   } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
 
   min: {
-    vec2f: (a: wgsl.v2f, b: wgsl.v2f) =>
-      vec2f(Math.min(a.x, b.x), Math.min(a.y, b.y)),
-    vec2h: (a: wgsl.v2h, b: wgsl.v2h) =>
-      vec2h(Math.min(a.x, b.x), Math.min(a.y, b.y)),
-    vec2i: (a: wgsl.v2i, b: wgsl.v2i) =>
-      vec2i(Math.min(a.x, b.x), Math.min(a.y, b.y)),
-    vec2u: (a: wgsl.v2u, b: wgsl.v2u) =>
-      vec2u(Math.min(a.x, b.x), Math.min(a.y, b.y)),
+    vec2f: binaryComponentWise2f(Math.min),
+    vec2h: binaryComponentWise2h(Math.min),
+    vec2i: binaryComponentWise2i(Math.min),
+    vec2u: binaryComponentWise2u(Math.min),
 
-    vec3f: (a: wgsl.v3f, b: wgsl.v3f) =>
-      vec3f(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.min(a.z, b.z)),
-    vec3h: (a: wgsl.v3h, b: wgsl.v3h) =>
-      vec3h(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.min(a.z, b.z)),
-    vec3i: (a: wgsl.v3i, b: wgsl.v3i) =>
-      vec3i(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.min(a.z, b.z)),
-    vec3u: (a: wgsl.v3u, b: wgsl.v3u) =>
-      vec3u(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.min(a.z, b.z)),
+    vec3f: binaryComponentWise3f(Math.min),
+    vec3h: binaryComponentWise3h(Math.min),
+    vec3i: binaryComponentWise3i(Math.min),
+    vec3u: binaryComponentWise3u(Math.min),
 
-    vec4f: (a: wgsl.v4f, b: wgsl.v4f) =>
-      vec4f(
-        Math.min(a.x, b.x),
-        Math.min(a.y, b.y),
-        Math.min(a.z, b.z),
-        Math.min(a.w, b.w),
-      ),
-    vec4h: (a: wgsl.v4h, b: wgsl.v4h) =>
-      vec4h(
-        Math.min(a.x, b.x),
-        Math.min(a.y, b.y),
-        Math.min(a.z, b.z),
-        Math.min(a.w, b.w),
-      ),
-    vec4i: (a: wgsl.v4i, b: wgsl.v4i) =>
-      vec4i(
-        Math.min(a.x, b.x),
-        Math.min(a.y, b.y),
-        Math.min(a.z, b.z),
-        Math.min(a.w, b.w),
-      ),
-    vec4u: (a: wgsl.v4u, b: wgsl.v4u) =>
-      vec4u(
-        Math.min(a.x, b.x),
-        Math.min(a.y, b.y),
-        Math.min(a.z, b.z),
-        Math.min(a.w, b.w),
-      ),
+    vec4f: binaryComponentWise4f(Math.min),
+    vec4h: binaryComponentWise4h(Math.min),
+    vec4i: binaryComponentWise4i(Math.min),
+    vec4u: binaryComponentWise4u(Math.min),
   } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
 
   pow: {
