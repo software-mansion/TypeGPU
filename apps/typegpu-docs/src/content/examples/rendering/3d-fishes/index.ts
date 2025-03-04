@@ -48,8 +48,11 @@ const FishModelVertexOutput = {
 
 const workGroupSize = 256;
 
-const fishAmount = 1024 * 1;
+const fishAmount = 1024 * 8;
 const fishModelScale = 0.05;
+
+const aquariumSize = d.vec3f(2, 2, 2);
+// const wrappingSides = d.vec3u(1, 0, 0);
 
 // TODO: remove the buffer and struct, just reference the constants
 const fishParameters = FishParameters({
@@ -275,19 +278,19 @@ const mainCompute = tgpu['~unstable']
       );
     }
     for (let i = 0; i < 3; i += 1) {
-      const vec = d.vec3f(0, 0, 0);
-      vec[i] = 1.0;
-      if (
-        fishData.position[i] >
-        1 - computeFishParameters.value.wallRepulsionDistance
-      ) {
-        wallRepulsion = std.add(wallRepulsion, std.mul(-1, vec));
+      const repulsion = d.vec3f();
+      repulsion[i] = 1.0;
+
+      const axisAquariumSize = aquariumSize[i] / 2;
+      const axisPosition = fishData.position[i];
+      const distance = computeFishParameters.value.wallRepulsionDistance;
+
+      if (axisPosition > axisAquariumSize - distance) {
+        wallRepulsion = std.sub(wallRepulsion, repulsion);
       }
-      if (
-        fishData.position[i] <
-        -1 + computeFishParameters.value.wallRepulsionDistance
-      ) {
-        wallRepulsion = std.add(wallRepulsion, std.mul(1, vec));
+
+      if (axisPosition < -axisAquariumSize + distance) {
+        wallRepulsion = std.add(wallRepulsion, repulsion);
       }
     }
 
@@ -372,7 +375,7 @@ const randomizeFishPositions = () => {
     velocity: d.vec3f(
       Math.random() * 0.1 - 0.05,
       Math.random() * 0.1 - 0.05,
-      0,
+      Math.random() * 0.1 - 0.05,
     ),
     alive: 1,
   }));
@@ -500,53 +503,57 @@ let drawCube: () => void;
   }
 
   function createCube(): d.Infer<typeof Vertex>[] {
+    const x = aquariumSize.x / 2;
+    const y = aquariumSize.y / 2;
+    const z = aquariumSize.z / 2;
+
     const front = createFace([
-      [-1, -1, 1, 1],
-      [1, -1, 1, 1],
-      [1, 1, 1, 1],
-      [-1, -1, 1, 1],
-      [1, 1, 1, 1],
-      [-1, 1, 1, 1],
+      [-x, -y, z, 1],
+      [x, -y, z, 1],
+      [x, y, z, 1],
+      [-x, -y, z, 1],
+      [x, y, z, 1],
+      [-x, y, z, 1],
     ]);
     const back = createFace([
-      [-1, -1, -1, 1],
-      [-1, 1, -1, 1],
-      [1, -1, -1, 1],
-      [1, -1, -1, 1],
-      [-1, 1, -1, 1],
-      [1, 1, -1, 1],
+      [-x, -y, -z, 1],
+      [-x, y, -z, 1],
+      [x, -y, -z, 1],
+      [x, -y, -z, 1],
+      [-x, y, -z, 1],
+      [x, y, -z, 1],
     ]);
     const top = createFace([
-      [-1, 1, -1, 1],
-      [-1, 1, 1, 1],
-      [1, 1, -1, 1],
-      [1, 1, -1, 1],
-      [-1, 1, 1, 1],
-      [1, 1, 1, 1],
+      [-x, y, -z, 1],
+      [-x, y, z, 1],
+      [x, y, -z, 1],
+      [x, y, -z, 1],
+      [-x, y, z, 1],
+      [x, y, z, 1],
     ]);
     const bottom = createFace([
-      [-1, -1, -1, 1],
-      [1, -1, -1, 1],
-      [-1, -1, 1, 1],
-      [1, -1, -1, 1],
-      [1, -1, 1, 1],
-      [-1, -1, 1, 1],
+      [-x, -y, -z, 1],
+      [x, -y, -z, 1],
+      [-x, -y, z, 1],
+      [x, -y, -z, 1],
+      [x, -y, z, 1],
+      [-x, -y, z, 1],
     ]);
     const right = createFace([
-      [1, -1, -1, 1],
-      [1, 1, -1, 1],
-      [1, -1, 1, 1],
-      [1, -1, 1, 1],
-      [1, 1, -1, 1],
-      [1, 1, 1, 1],
+      [x, -y, -z, 1],
+      [x, y, -z, 1],
+      [x, -y, z, 1],
+      [x, -y, z, 1],
+      [x, y, -z, 1],
+      [x, y, z, 1],
     ]);
     const left = createFace([
-      [-1, -1, -1, 1],
-      [-1, -1, 1, 1],
-      [-1, 1, -1, 1],
-      [-1, -1, 1, 1],
-      [-1, 1, 1, 1],
-      [-1, 1, -1, 1],
+      [-x, -y, -z, 1],
+      [-x, -y, z, 1],
+      [-x, y, -z, 1],
+      [-x, -y, z, 1],
+      [-x, y, z, 1],
+      [-x, y, -z, 1],
     ]);
     return [...front, ...back, ...top, ...bottom, ...right, ...left];
   }
