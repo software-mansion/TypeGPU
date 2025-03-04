@@ -110,6 +110,8 @@ const vertexShader = tgpu['~unstable']
     out: FishModelVertexOutput,
   })
   .does((input) => {
+    // rotate the model so that it aligns with model's direction of movement
+    // https://simple.wikipedia.org/wiki/Pitch,_yaw,_and_roll
     const fishData = renderFishData.value[input.instanceIndex];
 
     const modelPosition = d.vec4f(
@@ -147,6 +149,7 @@ const vertexShader = tgpu['~unstable']
       fishData.position,
     );
 
+    // calculate where the normal vector points to
     const uniformNormal = d.vec4f(
       input.modelNormal.x,
       input.modelNormal.y,
@@ -160,6 +163,7 @@ const vertexShader = tgpu['~unstable']
       ).xyz,
     );
 
+    // project the world position into the camera
     const canvasPosition = std.mul(
       renderCamera.value.projection,
       std.mul(renderCamera.value.view, worldPosition),
@@ -187,9 +191,10 @@ const fragmentShader = tgpu['~unstable']
     out: d.location(0, d.vec4f),
   })
   .does((input) => {
+    // Directional lighting in Phong reflection model
+    // https://en.wikipedia.org/wiki/Phong_reflection_model
     const normal = input.worldNormal;
 
-    // Directional lighting
     const attenuation = std.max(
       std.dot(normal, std.mul(-1, lightDirection)),
       0.0,
@@ -229,9 +234,9 @@ const distance = tgpu['~unstable']
   });
 
 const {
-  currentFishData: currentTrianglePos,
-  nextFishData: nextTrianglePos,
-  fishParameters: params,
+  currentFishData: computeCurrentFishData,
+  nextFishData: computeNextFishData,
+  fishParameters: computeFishParameters,
 } = computeBindGroupLayout.bound;
 
 const mainCompute = tgpu['~unstable']
@@ -240,86 +245,92 @@ const mainCompute = tgpu['~unstable']
     workgroupSize: [workGroupSize],
   })
   .does((input) => {
-    const index = input.gid.x;
-    const instanceInfo = currentTrianglePos.value[index];
+    const fishIndex = input.gid.x;
+    const fishData = computeCurrentFishData.value[fishIndex];
     let separation = d.vec3f();
     let alignment = d.vec3f();
-    let cohesion = d.vec3f();
-    let wallRepulsion = d.vec3f();
     let alignmentCount = 0;
+    let cohesion = d.vec3f();
     let cohesionCount = 0;
+    let wallRepulsion = d.vec3f();
 
-    for (let i = 0; i < fishAmount; i = i + 1) {
-      if (d.u32(i) === index) {
+    for (let i = 0; i < fishAmount; i += 1) {
+      if (d.u32(i) === fishIndex) {
         continue;
       }
-      const other = currentTrianglePos.value[i];
-      const dist = distance(instanceInfo.position.xyz, other.position.xyz);
-      if (dist < params.value.separationDistance) {
+      const other = computeCurrentFishData.value[i];
+      const dist = distance(fishData.position.xyz, other.position.xyz);
+      if (dist < computeFishParameters.value.separationDistance) {
         separation = std.add(
           separation,
-          std.sub(instanceInfo.position.xyz, other.position.xyz),
+          std.sub(fishData.position.xyz, other.position.xyz),
         );
       }
-      if (dist < params.value.alignmentDistance) {
+      if (dist < computeFishParameters.value.alignmentDistance) {
         alignment = std.add(alignment, other.velocity);
         alignmentCount = alignmentCount + 1;
       }
-      if (dist < params.value.cohesionDistance) {
+      if (dist < computeFishParameters.value.cohesionDistance) {
         cohesion = std.add(cohesion, other.position.xyz);
         cohesionCount = cohesionCount + 1;
       }
     }
     if (alignmentCount > 0) {
-      alignment = std.mul(0.99 / d.f32(alignmentCount), alignment);
+      alignment = std.mul(1 / d.f32(alignmentCount), alignment);
     }
     if (cohesionCount > 0) {
       cohesion = std.sub(
-        std.mul(0.99 / d.f32(cohesionCount), cohesion),
-        instanceInfo.position.xyz,
+        std.mul(1 / d.f32(cohesionCount), cohesion),
+        fishData.position.xyz,
       );
     }
-    for (let i = 0; i < 3; i = i + 1) {
+    for (let i = 0; i < 3; i += 1) {
       const vec = d.vec3f(0, 0, 0);
       vec[i] = 1.0;
-      if (instanceInfo.position[i] > 1 - params.value.wallRepulsionDistance) {
+      if (
+        fishData.position[i] >
+        1 - computeFishParameters.value.wallRepulsionDistance
+      ) {
         wallRepulsion = std.add(wallRepulsion, std.mul(-1, vec));
       }
-      if (instanceInfo.position[i] < -1 + params.value.wallRepulsionDistance) {
+      if (
+        fishData.position[i] <
+        -1 + computeFishParameters.value.wallRepulsionDistance
+      ) {
         wallRepulsion = std.add(wallRepulsion, std.mul(1, vec));
       }
     }
 
-    instanceInfo.velocity = std.add(
-      instanceInfo.velocity,
-      std.mul(params.value.separationStrength, separation),
+    fishData.velocity = std.add(
+      fishData.velocity,
+      std.mul(computeFishParameters.value.separationStrength, separation),
     );
-    instanceInfo.velocity = std.add(
-      instanceInfo.velocity,
-      std.mul(params.value.alignmentStrength, alignment),
+    fishData.velocity = std.add(
+      fishData.velocity,
+      std.mul(computeFishParameters.value.alignmentStrength, alignment),
     );
-    instanceInfo.velocity = std.add(
-      instanceInfo.velocity,
-      std.mul(params.value.cohesionStrength, cohesion),
+    fishData.velocity = std.add(
+      fishData.velocity,
+      std.mul(computeFishParameters.value.cohesionStrength, cohesion),
     );
-    instanceInfo.velocity = std.add(
-      instanceInfo.velocity,
-      std.mul(params.value.wallRepulsionStrength, wallRepulsion),
+    fishData.velocity = std.add(
+      fishData.velocity,
+      std.mul(computeFishParameters.value.wallRepulsionStrength, wallRepulsion),
     );
 
-    instanceInfo.velocity = std.mul(
-      std.clamp(std.length(instanceInfo.velocity), 0.0, 0.01),
-      std.normalize(instanceInfo.velocity),
+    fishData.velocity = std.mul(
+      std.clamp(std.length(fishData.velocity), 0.0, 0.01),
+      std.normalize(fishData.velocity),
     );
 
     const velocityUniform = d.vec4f(
-      instanceInfo.velocity.x,
-      instanceInfo.velocity.y,
-      instanceInfo.velocity.z,
+      fishData.velocity.x,
+      fishData.velocity.y,
+      fishData.velocity.z,
       0,
     );
-    instanceInfo.position = std.add(instanceInfo.position, velocityUniform);
-    nextTrianglePos.value[index] = instanceInfo;
+    fishData.position = std.add(fishData.position, velocityUniform);
+    computeNextFishData.value[fishIndex] = fishData;
   });
 
 // reszta
