@@ -7,25 +7,21 @@ import * as m from 'wgpu-matrix';
 
 // data schemas
 
-const FishParameters = d
-  .struct({
-    separationDistance: d.f32,
-    separationStrength: d.f32,
-    alignmentDistance: d.f32,
-    alignmentStrength: d.f32,
-    cohesionDistance: d.f32,
-    cohesionStrength: d.f32,
-    wallRepulsionDistance: d.f32,
-    wallRepulsionStrength: d.f32,
-  })
-  .$name('FishParameters');
+const FishParameters = d.struct({
+  separationDistance: d.f32,
+  separationStrength: d.f32,
+  alignmentDistance: d.f32,
+  alignmentStrength: d.f32,
+  cohesionDistance: d.f32,
+  cohesionStrength: d.f32,
+  wallRepulsionDistance: d.f32,
+  wallRepulsionStrength: d.f32,
+});
 
-const Camera = d
-  .struct({
-    view: d.mat4x4f,
-    projection: d.mat4x4f,
-  })
-  .$name('Camera');
+const Camera = d.struct({
+  view: d.mat4x4f,
+  projection: d.mat4x4f,
+});
 
 const FishData = d.struct({
   position: d.vec4f,
@@ -60,31 +56,43 @@ const fishParameters = FishParameters({
   wallRepulsionStrength: 0.0002,
 });
 
-const initialCameraPos = d.vec4f(2, 2, 2, 1);
+const cameraPosition = d.vec4f(2, 2, 2, 1);
+const cameraTarget = d.vec3f(0, 0, 0);
+
 const lightColor = d.vec3f(1, 0.8, 0.7);
 const lightDirection = std.normalize(d.vec3f(-1.0, 0.0, 0.0));
 
 // layouts
 
-const renderBindGroupLayout = tgpu.bindGroupLayout({
-  trianglePos: {
-    storage: FishDataArray,
-  },
-  camera: { uniform: Camera },
-  params: { uniform: FishParameters },
-  texture: { texture: 'float' },
-  sampler: { sampler: 'filtering' },
-});
-
-const vertexLayout = tgpu.vertexLayout((n: number) =>
+const fishModelVertexLayout = tgpu.vertexLayout((n: number) =>
   d.arrayOf(FishModelVertex, n),
 );
 
+const renderInstanceLayout = tgpu.vertexLayout(FishDataArray, 'instance');
+
+const renderBindGroupLayout = tgpu.bindGroupLayout({
+  fishData: { storage: FishDataArray },
+  camera: { uniform: Camera },
+  fishParameters: { uniform: FishParameters },
+  fishTexture: { texture: 'float' },
+  fishSampler: { sampler: 'filtering' },
+});
+
+const computeBindGroupLayout = tgpu.bindGroupLayout({
+  currentFishData: { storage: FishDataArray },
+  nextFishData: {
+    storage: FishDataArray,
+    access: 'mutable',
+  },
+});
+
+// reszta
+
 const {
   camera,
-  texture: shaderTexture,
-  sampler: shaderSampler,
-  trianglePos: shaderTrianglePos,
+  fishTexture: shaderTexture,
+  fishSampler: shaderSampler,
+  fishData: shaderTrianglePos,
 } = renderBindGroupLayout.bound;
 
 const VertexOutput = {
@@ -203,7 +211,7 @@ const mainFrag = tgpu['~unstable']
     const ambient = d.vec3f(0.4);
 
     const surfaceToCamera = std.normalize(
-      std.sub(initialCameraPos, input.worldPosition),
+      std.sub(cameraPosition, input.worldPosition),
     );
 
     const halfVector = std.normalize(
@@ -226,10 +234,14 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const root = await tgpu.init();
 
 const aspect = canvas.clientWidth / canvas.clientHeight;
-const target = d.vec3f(0, 0, 0);
 
 const cameraInitial = {
-  view: m.mat4.lookAt(initialCameraPos, target, d.vec3f(0, 1, 0), d.mat4x4f()),
+  view: m.mat4.lookAt(
+    cameraPosition,
+    cameraTarget,
+    d.vec3f(0, 1, 0),
+    d.mat4x4f(),
+  ),
   projection: m.mat4.perspective(Math.PI / 4, aspect, 0.1, 1000, d.mat4x4f()),
 };
 
@@ -272,10 +284,8 @@ const randomizePositions = () => {
 };
 randomizePositions();
 
-const instanceLayout = tgpu.vertexLayout(FishDataArray, 'instance');
-
 const renderPipeline = root['~unstable']
-  .withVertex(mainVert, vertexLayout.attrib)
+  .withVertex(mainVert, fishModelVertexLayout.attrib)
   .withFragment(mainFrag, { format: presentationFormat })
   .withDepthStencil({
     format: 'depth24plus',
@@ -291,17 +301,8 @@ let depthTexture = root.device.createTexture({
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
 });
 
-const computeBindGroupLayout = tgpu
-  .bindGroupLayout({
-    currentTrianglePos: { storage: FishDataArray },
-    nextTrianglePos: {
-      storage: FishDataArray,
-      access: 'mutable',
-    },
-  })
-  .$name('compute');
-
-const { currentTrianglePos, nextTrianglePos } = computeBindGroupLayout.bound;
+const { currentFishData: currentTrianglePos, nextFishData: nextTrianglePos } =
+  computeBindGroupLayout.bound;
 
 const mainCompute = tgpu['~unstable']
   .computeFn({
@@ -398,7 +399,9 @@ const sampler = root.device.createSampler({
 
 const vertexBuffer = root
   .createBuffer(
-    vertexLayout.schemaForCount(cubeModel.attributes.POSITION.value.length / 3),
+    fishModelVertexLayout.schemaForCount(
+      cubeModel.attributes.POSITION.value.length / 3,
+    ),
   )
   .$usage('vertex')
   .$name('vertex');
@@ -432,18 +435,18 @@ vertexBuffer.write(vertices);
 
 const renderBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(renderBindGroupLayout, {
-    trianglePos: trianglePosBuffers[idx],
+    fishData: trianglePosBuffers[idx],
     camera: cameraBuffer,
-    params: paramsBuffer,
-    texture: cubeTexture,
-    sampler,
+    fishParameters: paramsBuffer,
+    fishTexture: cubeTexture,
+    fishSampler: sampler,
   }),
 );
 
 const computeBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(computeBindGroupLayout, {
-    currentTrianglePos: trianglePosBuffers[idx],
-    nextTrianglePos: trianglePosBuffers[1 - idx],
+    currentFishData: trianglePosBuffers[idx],
+    nextFishData: trianglePosBuffers[1 - idx],
   }),
 );
 
@@ -600,8 +603,8 @@ function frame() {
       depthLoadOp: 'clear',
       depthStoreOp: 'store',
     })
-    .with(vertexLayout, vertexBuffer)
-    .with(instanceLayout, trianglePosBuffers[even ? 1 : 0])
+    .with(fishModelVertexLayout, vertexBuffer)
+    .with(renderInstanceLayout, trianglePosBuffers[even ? 1 : 0])
     .with(renderBindGroupLayout, renderBindGroups[even ? 1 : 0])
     .draw(positions.length / 3, fishAmount);
 
@@ -669,7 +672,7 @@ function updateCameraOrbit(dx: number, dy: number) {
 
   const newView = m.mat4.lookAt(
     newCameraPos,
-    target,
+    cameraTarget,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
   );
@@ -691,7 +694,7 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
   const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
   const newView = m.mat4.lookAt(
     newCameraPos,
-    target,
+    cameraTarget,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
   );
