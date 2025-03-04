@@ -301,11 +301,6 @@ const Transpilers: Partial<{
 
     return { o: properties };
   },
-
-  SpreadElement(ctx, node) {
-    const argument = transpile(ctx, node.argument) as smol.Expression;
-    return { d: argument };
-  },
 };
 
 function transpile(ctx: Context, node: JsNode): smol.AnyNode {
