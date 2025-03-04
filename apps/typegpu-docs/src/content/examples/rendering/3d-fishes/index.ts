@@ -1,11 +1,16 @@
+import { load } from '@loaders.gl/core';
+import { OBJLoader } from '@loaders.gl/obj';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
 
 const triangleAmount = 10000;
-const workGroupSize = 250;
+const workGroupSize = 200;
 const triangleSize = 0.03;
+const scale = 0.01;
+
+const cameraInitialPos = d.vec4f(2, 2, 2, 1);
 
 const Params = d
   .struct({
@@ -37,20 +42,6 @@ const defaultParams: Params = {
   wallRepulsionStrength: 0.0002,
 };
 
-const rotate = tgpu['~unstable']
-  .fn([d.vec2f, d.f32], d.vec2f)
-  .does((v, angle) => {
-    const pos = d.vec2f(
-      v.x * std.cos(angle) - v.y * std.sin(angle),
-      v.x * std.sin(angle) + v.y * std.cos(angle),
-    );
-    return pos;
-  });
-
-const getRotationFromVelocity = tgpu['~unstable']
-  .fn([d.vec2f], d.f32)
-  .does((velocity) => -std.atan2(velocity.x, velocity.y));
-
 const Camera = d.struct({
   view: d.mat4x4f,
   projection: d.mat4x4f,
@@ -70,56 +61,155 @@ const renderBindGroupLayout = tgpu.bindGroupLayout({
   colorPalette: { uniform: d.vec3f },
   camera: { uniform: Camera },
   params: { uniform: Params },
+  texture: { texture: 'float' },
+  sampler: { sampler: 'filtering' },
 });
 
-const { camera } = renderBindGroupLayout.bound;
+const Vertex = d.struct({
+  localPosition: d.location(0, d.vec3f),
+  normal: d.location(1, d.vec3f),
+  uv: d.location(2, d.vec2f),
+  instanceIndex: d.location(3, d.builtin.instanceIndex),
+});
+
+const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(Vertex, n));
+
+const {
+  camera,
+  texture: shaderTexture,
+  sampler: shaderSampler,
+  trianglePos: shaderTrianglePos,
+} = renderBindGroupLayout.bound;
 
 const VertexOutput = {
-  trianglePosition: d.vec4f,
   position: d.builtin.position,
+  uv: d.vec2f,
+  normals: d.vec3f,
+  worldPosition: d.vec4f,
 };
 
 const mainVert = tgpu['~unstable']
   .vertexFn({
     in: {
-      center: d.vec4f,
-      velocity: d.vec3f,
-      vertexIndex: d.builtin.vertexIndex,
-      alive: d.u32,
+      localPosition: d.vec3f,
+      normal: d.vec3f,
+      uv: d.vec2f,
+      instanceIndex: d.builtin.instanceIndex,
     },
     out: VertexOutput,
   })
   .does((input) => {
-    const v0 = d.vec4f(0.0, triangleSize, 0.0, 1.0);
-    const v1 = d.vec4f(-triangleSize / 2, -triangleSize / 2, 0.0, 1.0);
-    const v2 = d.vec4f(triangleSize / 2, -triangleSize / 2, 0.0, 1.0);
-    let v: d.v4f = d.vec4f();
-    if (input.vertexIndex === 0) {
-      v = v0;
-    } else if (input.vertexIndex === 1) {
-      v = v1;
-    } else {
-      v = v2;
-    }
+    const instance = shaderTrianglePos.value[input.instanceIndex];
 
-    const angle = getRotationFromVelocity(input.velocity.xy);
-    const rotated = rotate(v.xy, angle);
-
-    const translated = std.add(rotated, input.center.xy);
-    let pos = d.vec4f(
-      translated.x,
-      translated.y,
-      input.center.z,
-      input.center.w,
+    const localPos = d.vec4f(
+      input.localPosition.x,
+      input.localPosition.y,
+      input.localPosition.z,
+      1,
     );
-    pos = std.mul(camera.value.projection, std.mul(camera.value.view, pos));
 
-    return { position: pos, trianglePosition: input.center };
+    const vel = instance.velocity;
+    const normVel = std.normalize(vel);
+
+    const yaw = std.atan2(normVel.z, normVel.x) + Math.PI;
+    const yawCos = std.cos(yaw);
+    const yawSin = std.sin(yaw);
+
+    // biome-ignore format:
+    const yawRotation = d.mat4x4f(
+          yawCos,   0, yawSin,  0,
+          0,        1, 0,       0,
+          -yawSin,  0, yawCos,  0,
+          0,        0, 0,       1,
+        );
+
+    const pitch = -std.asin(-normVel.y);
+    const pitchCos = std.cos(pitch);
+    const pitchSin = std.sin(pitch);
+
+    // biome-ignore format:
+    const pitchRotation = d.mat4x4f(
+          pitchCos, -pitchSin, 0, 0,
+          pitchSin, pitchCos,  0, 0,
+          0,        0,         1, 0,
+          0,        0,         0, 1,
+        );
+
+    const worldPos = std.add(
+      std.mul(yawRotation, std.mul(pitchRotation, std.mul(scale, localPos))),
+      instance.position,
+    );
+
+    const uniformNormal = d.vec4f(
+      input.normal.x,
+      input.normal.y,
+      input.normal.z,
+      1,
+    );
+    const worldNormal = std.add(
+      std.mul(pitchRotation, std.mul(yawRotation, uniformNormal)),
+      instance.position,
+    );
+
+    const pos = std.mul(
+      camera.value.projection,
+      std.mul(camera.value.view, worldPos),
+    );
+
+    return {
+      position: pos,
+      uv: input.uv,
+      normals: worldNormal.xyz,
+      worldPosition: worldPos,
+    };
   });
 
+const sampleTexture = tgpu['~unstable']
+  .fn([d.vec2f], d.vec4f)
+  .does(/*wgsl*/ `(uv: vec2<f32>) -> vec4<f32> {
+      return textureSample(shaderTexture, shaderSampler, uv);
+    }`)
+  .$uses({ shaderTexture, shaderSampler })
+  .$name('sampleShader');
+
+const lightColor = d.vec3f(1, 0.8, 0.7);
+const lightDirection = std.normalize(d.vec3f(-1.0, 0.0, 0.0));
+const negLightDirection = std.mul(-1, lightDirection);
+
 const mainFrag = tgpu['~unstable']
-  .fragmentFn({ in: VertexOutput, out: d.vec4f })
-  .does(() => d.vec4f(1, 0, 0, 1));
+  .fragmentFn({
+    in: VertexOutput,
+    out: d.location(0, d.vec4f),
+  })
+  .does((input) => {
+    const normal = std.normalize(input.normals);
+
+    // Directional lighting
+    const attenuation = std.max(std.dot(normal, negLightDirection), 0.0);
+    const sunColor = std.mul(attenuation, lightColor);
+
+    const surfaceToLight = negLightDirection;
+
+    const albedoWithAlpha = sampleTexture(input.uv); // base color
+    const albedo = albedoWithAlpha.xyz;
+    const ambient = d.vec3f(0.4);
+
+    const surfaceToCamera = std.normalize(
+      std.sub(cameraInitialPos, input.worldPosition),
+    );
+
+    const halfVector = std.normalize(
+      std.add(surfaceToLight, surfaceToCamera.xyz),
+    );
+    const specular = std.pow(std.max(std.dot(normal, halfVector), 0.0), 3);
+
+    const finalColor = std.add(
+      std.mul(albedo, std.add(ambient, sunColor)),
+      std.mul(specular, lightColor),
+    );
+    return d.vec4f(finalColor.x, finalColor.y, finalColor.z, 1);
+  })
+  .$name('mainFragment');
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -129,7 +219,6 @@ const root = await tgpu.init();
 
 const aspect = canvas.clientWidth / canvas.clientHeight;
 const target = d.vec3f(0, 0, 0);
-const cameraInitialPos = d.vec4f(2, 2, 2, 1);
 
 const cameraInitial = {
   view: m.mat4.lookAt(cameraInitialPos, target, d.vec3f(0, 1, 0), d.mat4x4f()),
@@ -180,15 +269,21 @@ const colorPaletteBuffer = root
 const instanceLayout = tgpu.vertexLayout(TriangleDataArray, 'instance');
 
 const renderPipeline = root['~unstable']
-  .withVertex(mainVert, {
-    center: instanceLayout.attrib.position,
-    velocity: instanceLayout.attrib.velocity,
-    alive: instanceLayout.attrib.alive,
+  .withVertex(mainVert, vertexLayout.attrib)
+  .withFragment(mainFrag, { format: presentationFormat })
+  .withDepthStencil({
+    format: 'depth24plus',
+    depthWriteEnabled: true,
+    depthCompare: 'less',
   })
-  .withFragment(mainFrag, {
-    format: presentationFormat,
-  })
+  .withPrimitive({ topology: 'triangle-list' })
   .createPipeline();
+
+let depthTexture = root.device.createTexture({
+  size: [canvas.width, canvas.height, 1],
+  format: 'depth24plus',
+  usage: GPUTextureUsage.RENDER_ATTACHMENT,
+});
 
 const computeBindGroupLayout = tgpu
   .bindGroupLayout({
@@ -290,12 +385,72 @@ const computePipeline = root['~unstable']
   .withCompute(mainCompute)
   .createPipeline();
 
+const textureResponse = await fetch('assets/gravity/texture.png');
+const imageBitmap = await createImageBitmap(await textureResponse.blob());
+const cubeTexture = root['~unstable']
+  .createTexture({
+    size: [imageBitmap.width, imageBitmap.height],
+    format: 'rgba8unorm',
+  })
+  .$usage('sampled', 'render');
+
+root.device.queue.copyExternalImageToTexture(
+  { source: imageBitmap },
+  { texture: root.unwrap(cubeTexture) },
+  [imageBitmap.width, imageBitmap.height],
+);
+
+const cubeModel = await load('assets/gravity/blahaj_smooth.obj', OBJLoader);
+
+const sampler = root.device.createSampler({
+  magFilter: 'linear',
+  minFilter: 'linear',
+});
+
+// model
+
+const vertexBuffer = root
+  .createBuffer(
+    vertexLayout.schemaForCount(cubeModel.attributes.POSITION.value.length / 3),
+  )
+  .$usage('vertex')
+  .$name('vertex');
+
+const positions = cubeModel.attributes.POSITION.value;
+const normals = cubeModel.attributes.NORMAL
+  ? cubeModel.attributes.NORMAL.value
+  : new Float32Array(positions.length);
+const uvs = cubeModel.attributes.TEXCOORD_0
+  ? cubeModel.attributes.TEXCOORD_0.value
+  : new Float32Array((positions.length / 3) * 2);
+
+const vertices = [];
+for (let i = 0; i < positions.length / 3; i++) {
+  vertices.push({
+    localPosition: d.vec3f(
+      positions[3 * i],
+      positions[3 * i + 1],
+      positions[3 * i + 2],
+    ),
+    normal: d.vec3f(normals[3 * i], normals[3 * i + 1], normals[3 * i + 2]),
+    uv: d.vec2f(uvs[2 * i], 1 - uvs[2 * i + 1]),
+    instanceIndex: 0,
+  });
+}
+vertices.reverse();
+
+vertexBuffer.write(vertices);
+
+// end of model
+
 const renderBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(renderBindGroupLayout, {
     trianglePos: trianglePosBuffers[idx],
     colorPalette: colorPaletteBuffer,
     camera: cameraBuffer,
     params: paramsBuffer,
+    texture: cubeTexture,
+    sampler,
   }),
 );
 
@@ -453,9 +608,16 @@ function frame() {
       loadOp: 'load' as const,
       storeOp: 'store' as const,
     })
+    .withDepthStencilAttachment({
+      view: depthTexture.createView(),
+      depthClearValue: 1,
+      depthLoadOp: 'clear',
+      depthStoreOp: 'store',
+    })
+    .with(vertexLayout, vertexBuffer)
     .with(instanceLayout, trianglePosBuffers[even ? 1 : 0])
     .with(renderBindGroupLayout, renderBindGroups[even ? 1 : 0])
-    .draw(3, triangleAmount);
+    .draw(positions.length / 3, triangleAmount);
 
   root['~unstable'].flush();
 
@@ -575,15 +737,15 @@ canvas.addEventListener('mousemove', (event) => {
   }
 });
 
-// const resizeObserver = new ResizeObserver(() => {
-//   depthTexture.destroy();
-//   depthTexture = root.device.createTexture({
-//     size: [context.canvas.width, context.canvas.height, 1],
-//     format: 'depth24plus',
-//     usage: GPUTextureUsage.RENDER_ATTACHMENT,
-//   });
-// });
-// resizeObserver.observe(canvas);
+const resizeObserver = new ResizeObserver(() => {
+  depthTexture.destroy();
+  depthTexture = root.device.createTexture({
+    size: [context.canvas.width, context.canvas.height, 1],
+    format: 'depth24plus',
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+});
+resizeObserver.observe(canvas);
 
 export function onCleanup() {
   disposed = true;

@@ -165,7 +165,7 @@ const mainVertex = tgpu['~unstable']
       0,        0, 0,       1,
     );
 
-    const pitch = -std.asin(-normVel.y) - 0.6;
+    const pitch = -std.asin(-normVel.y);
     const pitchCos = std.cos(pitch);
     const pitchSin = std.sin(pitch);
 
