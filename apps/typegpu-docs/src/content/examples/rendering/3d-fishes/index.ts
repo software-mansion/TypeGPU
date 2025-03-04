@@ -656,18 +656,11 @@ export const controls = {
 let isDragging = false;
 let prevX = 0;
 let prevY = 0;
-const initialCamX = 2;
-const initialCamY = 2;
-const initialCamZ = 2;
-let orbitRadius = Math.sqrt(
-  initialCamX * initialCamX +
-    initialCamY * initialCamY +
-    initialCamZ * initialCamZ,
-);
+let orbitRadius = distance(cameraInitialPosition, d.vec3f());
 
 // Yaw and pitch angles facing the origin.
-let orbitYaw = Math.atan2(initialCamX, initialCamZ);
-let orbitPitch = Math.asin(initialCamY / orbitRadius);
+let orbitYaw = Math.atan2(cameraInitialPosition.x, cameraInitialPosition.z);
+let orbitPitch = Math.asin(cameraInitialPosition.y / orbitRadius);
 
 // Helper functions for updating transforms.
 function updateCameraOrbit(dx: number, dy: number) {
