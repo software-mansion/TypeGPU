@@ -5,14 +5,9 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
 
-const triangleAmount = 10000;
-const workGroupSize = 200;
-const triangleSize = 0.03;
-const scale = 0.01;
+// data schemas
 
-const cameraInitialPos = d.vec4f(2, 2, 2, 1);
-
-const Params = d
+const FishParameters = d
   .struct({
     separationDistance: d.f32,
     separationStrength: d.f32,
@@ -23,15 +18,38 @@ const Params = d
     wallRepulsionDistance: d.f32,
     wallRepulsionStrength: d.f32,
   })
-  .$name('Params');
+  .$name('FishParameters');
 
-type Params = d.Infer<typeof Params>;
+const Camera = d
+  .struct({
+    view: d.mat4x4f,
+    projection: d.mat4x4f,
+  })
+  .$name('Camera');
 
-const colorPresets = {
-  jeans: d.vec3f(2.0, 1.5, 1.0),
-};
+const FishData = d.struct({
+  position: d.vec4f,
+  velocity: d.vec3f,
+});
 
-const defaultParams: Params = {
+const FishDataArray = (n: number) => d.arrayOf(FishData, n);
+
+const FishModelVertex = d.struct({
+  localPosition: d.location(0, d.vec3f),
+  normal: d.location(1, d.vec3f),
+  uv: d.location(2, d.vec2f),
+  instanceIndex: d.location(3, d.builtin.instanceIndex),
+});
+
+// constants
+
+const triangleAmount = 1024 * 8;
+const workGroupSize = 256;
+const triangleSize = 0.03;
+const scale = 0.01;
+const cameraInitialPos = d.vec4f(2, 2, 2, 1);
+
+const defaultParams = FishParameters({
   separationDistance: 0.05,
   separationStrength: 0.001,
   alignmentDistance: 0.3,
@@ -40,39 +58,27 @@ const defaultParams: Params = {
   cohesionStrength: 0.001,
   wallRepulsionDistance: 0.3,
   wallRepulsionStrength: 0.0002,
-};
-
-const Camera = d.struct({
-  view: d.mat4x4f,
-  projection: d.mat4x4f,
 });
 
-const TriangleData = d.struct({
-  position: d.vec4f,
-  velocity: d.vec3f,
-  alive: d.u32,
-});
+const lightColor = d.vec3f(1, 0.8, 0.7);
+const lightDirection = std.normalize(d.vec3f(-1.0, 0.0, 0.0));
+const negLightDirection = std.mul(-1, lightDirection);
 
-const TriangleDataArray = (n: number) => d.arrayOf(TriangleData, n);
+// layouts
+
 const renderBindGroupLayout = tgpu.bindGroupLayout({
   trianglePos: {
-    storage: TriangleDataArray,
+    storage: FishDataArray,
   },
-  colorPalette: { uniform: d.vec3f },
   camera: { uniform: Camera },
-  params: { uniform: Params },
+  params: { uniform: FishParameters },
   texture: { texture: 'float' },
   sampler: { sampler: 'filtering' },
 });
 
-const Vertex = d.struct({
-  localPosition: d.location(0, d.vec3f),
-  normal: d.location(1, d.vec3f),
-  uv: d.location(2, d.vec2f),
-  instanceIndex: d.location(3, d.builtin.instanceIndex),
-});
-
-const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(Vertex, n));
+const vertexLayout = tgpu.vertexLayout((n: number) =>
+  d.arrayOf(FishModelVertex, n),
+);
 
 const {
   camera,
@@ -172,10 +178,6 @@ const sampleTexture = tgpu['~unstable']
   .$uses({ shaderTexture, shaderSampler })
   .$name('sampleShader');
 
-const lightColor = d.vec3f(1, 0.8, 0.7);
-const lightDirection = std.normalize(d.vec3f(-1.0, 0.0, 0.0));
-const negLightDirection = std.mul(-1, lightDirection);
-
 const mainFrag = tgpu['~unstable']
   .fragmentFn({
     in: VertexOutput,
@@ -233,12 +235,14 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const paramsBuffer = root.createBuffer(Params, defaultParams).$usage('uniform');
+const paramsBuffer = root
+  .createBuffer(FishParameters, defaultParams)
+  .$usage('uniform');
 const params = paramsBuffer.as('uniform');
 
 const trianglePosBuffers = Array.from({ length: 2 }, () =>
   root
-    .createBuffer(TriangleDataArray(triangleAmount))
+    .createBuffer(FishDataArray(triangleAmount))
     .$usage('storage', 'uniform', 'vertex'),
 );
 
@@ -262,11 +266,7 @@ const randomizePositions = () => {
 };
 randomizePositions();
 
-const colorPaletteBuffer = root
-  .createBuffer(d.vec3f, colorPresets.jeans)
-  .$usage('uniform');
-
-const instanceLayout = tgpu.vertexLayout(TriangleDataArray, 'instance');
+const instanceLayout = tgpu.vertexLayout(FishDataArray, 'instance');
 
 const renderPipeline = root['~unstable']
   .withVertex(mainVert, vertexLayout.attrib)
@@ -287,9 +287,9 @@ let depthTexture = root.device.createTexture({
 
 const computeBindGroupLayout = tgpu
   .bindGroupLayout({
-    currentTrianglePos: { storage: TriangleDataArray },
+    currentTrianglePos: { storage: FishDataArray },
     nextTrianglePos: {
-      storage: TriangleDataArray,
+      storage: FishDataArray,
       access: 'mutable',
     },
   })
@@ -446,7 +446,6 @@ vertexBuffer.write(vertices);
 const renderBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(renderBindGroupLayout, {
     trianglePos: trianglePosBuffers[idx],
-    colorPalette: colorPaletteBuffer,
     camera: cameraBuffer,
     params: paramsBuffer,
     texture: cubeTexture,
