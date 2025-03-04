@@ -82,10 +82,8 @@ export async function executeExample(
     }
   }
 
-  const file = await import('./hello.ts');
-  console.log(file);
+  const entryExampleFile = await import(`${exampleSources['index.ts']}?t=${Date.now()}`);
 
-  // Running the code
 
   return {
     dispose,
