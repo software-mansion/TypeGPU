@@ -383,7 +383,7 @@ randomizeFishPositions();
 
 // fish model and texture
 
-const fishModel = await load('assets/gravity/blahaj_smooth.obj', OBJLoader);
+const fishModel = await load('assets/3d-fishes/fish.obj', OBJLoader);
 const fishModelPolygonCount = fishModel.attributes.POSITION.value.length / 3;
 
 const fishVertexBuffer = root
@@ -415,7 +415,7 @@ fishModelVertices.reverse();
 
 fishVertexBuffer.write(fishModelVertices);
 
-const textureResponse = await fetch('assets/gravity/texture.png');
+const textureResponse = await fetch('assets/3d-fishes/fish.png');
 const imageBitmap = await createImageBitmap(await textureResponse.blob());
 const cubeTexture = root['~unstable']
   .createTexture({
