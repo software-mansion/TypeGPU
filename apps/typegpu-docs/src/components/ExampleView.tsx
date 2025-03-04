@@ -23,6 +23,7 @@ type Props = {
 
 function useExample(
   exampleCode: Record<string, string>,
+  tsSources: Record<string, string>,
   htmlCode: string,
   setSnackbarText: (text: string | undefined) => void,
 ) {
@@ -34,7 +35,7 @@ function useExample(
     let cancelled = false;
     setSnackbarText(undefined);
 
-    executeExample(exampleCode)
+    executeExample(exampleCode, tsSources)
       .then((example) => {
         if (cancelled) {
           // Another instance was started in the meantime.
@@ -70,7 +71,7 @@ type EditorTab = 'ts' | 'html';
 
 
 export function ExampleView({ example }: Props) {
-  const { tsCodes, htmlCode, execTsCode } = example;
+  const { tsCodes, tsSources, htmlCode, execTsCode } = example;
 
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
   const [currentEditorTab, setCurrentEditorTab] = useState<EditorTab>('ts');
@@ -92,7 +93,7 @@ export function ExampleView({ example }: Props) {
     exampleHtmlRef.current.innerHTML = htmlCode;
   }, [execTsCode, htmlCode]);
 
-  useExample(tsCodes, htmlCode, setSnackbarText); // live example
+  useExample(tsCodes, tsSources, htmlCode, setSnackbarText); // live example
   useResizableCanvas(exampleHtmlRef, execTsCode, htmlCode);
 
   return (
