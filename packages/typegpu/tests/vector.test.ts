@@ -399,6 +399,43 @@ describe('vec2h', () => {
   });
 });
 
+describe('v3f', () => {
+  describe('(v2f, number) constructor', () => {
+    it('works in JS', () => {
+      const planarPos = d.vec2f(1, 2);
+      const pos = d.vec3f(planarPos, 12);
+      expect(pos).toEqual(d.vec3f(1, 2, 12));
+    });
+
+    it('works in TGSL', () => {
+      const planarPos = d.vec2f(1, 2);
+
+      const main = tgpu['~unstable']
+        .fn([])
+        .does(() => {
+          const planarPosLocal = d.vec2f(1, 2);
+
+          const one = d.vec3f(planarPos, 12); // external
+          const two = d.vec3f(planarPosLocal, 12); // local variable
+          const three = d.vec3f(d.vec2f(1, 2), 12); // literal
+        })
+        .$name('main');
+
+      expect(parseResolved({ main })).toEqual(
+        parse(`
+          fn main() {
+            var planarPosLocal = vec2f(1, 2);
+            
+            var one = vec3f(vec2f(1, 2), 12);
+            var two = vec3f(planarPosLocal, 12);
+            var three = vec3f(vec2f(1, 2), 12);
+          }
+        `),
+      );
+    });
+  });
+});
+
 describe('v4f', () => {
   describe('(v3f, number) constructor', () => {
     it('works in JS', () => {
@@ -423,14 +460,14 @@ describe('v4f', () => {
 
       expect(parseResolved({ main })).toEqual(
         parse(`
-        fn main() {
-          var green = vec3f(0, 1, 0);
-          
-          var one = vec4f(vec3f(0.9, 0.2, 0.1), 1);
-          var two = vec4f(green, 1);
-          var three = vec4f(vec3f(0, 0, 1), 1);
-        }
-      `),
+          fn main() {
+            var green = vec3f(0, 1, 0);
+            
+            var one = vec4f(vec3f(0.9, 0.2, 0.1), 1);
+            var two = vec4f(green, 1);
+            var three = vec4f(vec3f(0, 0, 1), 1);
+          }
+        `),
       );
     });
   });

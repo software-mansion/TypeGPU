@@ -56,9 +56,9 @@ function makeVecSchema<TValue>(
       if (typeof arg === 'number') {
         values[j++] = arg;
       } else {
-        values[j++] = arg[0];
-        values[j++] = arg[1];
-        values[j++] = arg[2];
+        for (let c = 0; c < arg.length; ++c) {
+          values[j++] = arg[c];
+        }
       }
     }
 
