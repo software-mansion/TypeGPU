@@ -92,6 +92,7 @@ const computeBindGroupLayout = tgpu.bindGroupLayout({
     storage: FishDataArray,
     access: 'mutable',
   },
+  fishParameters: { uniform: FishParameters },
 });
 
 // render sharers
@@ -218,91 +219,21 @@ const fragmentShader = tgpu['~unstable']
   })
   .$name('mainFragment');
 
-// reszta
+// compute shader
 
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-const root = await tgpu.init();
-
-const aspect = canvas.clientWidth / canvas.clientHeight;
-
-const cameraInitial = {
-  view: m.mat4.lookAt(
-    cameraPosition,
-    cameraTarget,
-    d.vec3f(0, 1, 0),
-    d.mat4x4f(),
-  ),
-  projection: m.mat4.perspective(Math.PI / 4, aspect, 0.1, 1000, d.mat4x4f()),
-};
-
-const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
-
-const paramsBuffer = root
-  .createBuffer(FishParameters, fishParameters)
-  .$usage('uniform');
-const params = paramsBuffer.as('uniform');
-
-const trianglePosBuffers = Array.from({ length: 2 }, () =>
-  root
-    .createBuffer(FishDataArray(fishAmount))
-    .$usage('storage', 'uniform', 'vertex'),
-);
-
-const randomizePositions = () => {
-  const positions = Array.from({ length: fishAmount }, () => ({
-    position: d.vec4f(
-      Math.random() * 2 - 1,
-      Math.random() * 2 - 1,
-      Math.random() * 2 - 1,
-      1,
-    ),
-    velocity: d.vec3f(
-      Math.random() * 0.1 - 0.05,
-      Math.random() * 0.1 - 0.05,
-      0,
-    ),
-    alive: 1,
-  }));
-  trianglePosBuffers[0].write(positions);
-  trianglePosBuffers[1].write(positions);
-};
-randomizePositions();
-
-const renderPipeline = root['~unstable']
-  .withVertex(vertexShader, fishModelVertexLayout.attrib)
-  .withFragment(fragmentShader, { format: presentationFormat })
-  .withDepthStencil({
-    format: 'depth24plus',
-    depthWriteEnabled: true,
-    depthCompare: 'less',
-  })
-  .withPrimitive({ topology: 'triangle-list' })
-  .createPipeline();
-
-let depthTexture = root.device.createTexture({
-  size: [canvas.width, canvas.height, 1],
-  format: 'depth24plus',
-  usage: GPUTextureUsage.RENDER_ATTACHMENT,
-});
-
-const { currentFishData: currentTrianglePos, nextFishData: nextTrianglePos } =
-  computeBindGroupLayout.bound;
+const {
+  currentFishData: currentTrianglePos,
+  nextFishData: nextTrianglePos,
+  fishParameters: params,
+} = computeBindGroupLayout.bound;
 
 const mainCompute = tgpu['~unstable']
   .computeFn({
     in: { gid: d.builtin.globalInvocationId },
     workgroupSize: [workGroupSize],
   })
-  .does(/* wgsl */ `(input: ComputeInput) {    let index = input.gid.x;
+  .does(/* wgsl */ `(input: ComputeInput) {    
+    let index = input.gid.x;
     var instanceInfo = currentTrianglePos[index];
     var separation = vec3f();
     var alignment = vec3f();
@@ -361,6 +292,81 @@ const mainCompute = tgpu['~unstable']
     nextTrianglePos,
     params,
   });
+
+// reszta
+
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+const root = await tgpu.init();
+
+const aspect = canvas.clientWidth / canvas.clientHeight;
+
+const cameraInitial = {
+  view: m.mat4.lookAt(
+    cameraPosition,
+    cameraTarget,
+    d.vec3f(0, 1, 0),
+    d.mat4x4f(),
+  ),
+  projection: m.mat4.perspective(Math.PI / 4, aspect, 0.1, 1000, d.mat4x4f()),
+};
+
+const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
+
+context.configure({
+  device: root.device,
+  format: presentationFormat,
+  alphaMode: 'premultiplied',
+});
+
+const paramsBuffer = root
+  .createBuffer(FishParameters, fishParameters)
+  .$usage('uniform');
+
+const trianglePosBuffers = Array.from({ length: 2 }, () =>
+  root
+    .createBuffer(FishDataArray(fishAmount))
+    .$usage('storage', 'uniform', 'vertex'),
+);
+
+const randomizePositions = () => {
+  const positions = Array.from({ length: fishAmount }, () => ({
+    position: d.vec4f(
+      Math.random() * 2 - 1,
+      Math.random() * 2 - 1,
+      Math.random() * 2 - 1,
+      1,
+    ),
+    velocity: d.vec3f(
+      Math.random() * 0.1 - 0.05,
+      Math.random() * 0.1 - 0.05,
+      0,
+    ),
+    alive: 1,
+  }));
+  trianglePosBuffers[0].write(positions);
+  trianglePosBuffers[1].write(positions);
+};
+randomizePositions();
+
+const renderPipeline = root['~unstable']
+  .withVertex(vertexShader, fishModelVertexLayout.attrib)
+  .withFragment(fragmentShader, { format: presentationFormat })
+  .withDepthStencil({
+    format: 'depth24plus',
+    depthWriteEnabled: true,
+    depthCompare: 'less',
+  })
+  .withPrimitive({ topology: 'triangle-list' })
+  .createPipeline();
+
+let depthTexture = root.device.createTexture({
+  size: [canvas.width, canvas.height, 1],
+  format: 'depth24plus',
+  usage: GPUTextureUsage.RENDER_ATTACHMENT,
+});
 
 const computePipeline = root['~unstable']
   .withCompute(mainCompute)
@@ -444,6 +450,7 @@ const computeBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(computeBindGroupLayout, {
     currentFishData: trianglePosBuffers[idx],
     nextFishData: trianglePosBuffers[1 - idx],
+    fishParameters: paramsBuffer,
   }),
 );
 
