@@ -221,6 +221,13 @@ const fragmentShader = tgpu['~unstable']
 
 // compute shader
 
+const distance = tgpu['~unstable']
+  .fn([d.vec3f, d.vec3f], d.f32)
+  .does((v1, v2) => {
+    const diff = std.sub(v1, v2);
+    return std.pow(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z, 0.5);
+  });
+
 const {
   currentFishData: currentTrianglePos,
   nextFishData: nextTrianglePos,
@@ -232,65 +239,87 @@ const mainCompute = tgpu['~unstable']
     in: { gid: d.builtin.globalInvocationId },
     workgroupSize: [workGroupSize],
   })
-  .does(/* wgsl */ `(input: ComputeInput) {    
-    let index = input.gid.x;
-    var instanceInfo = currentTrianglePos[index];
-    var separation = vec3f();
-    var alignment = vec3f();
-    var cohesion = vec3f();
-    var wallRepulsion = vec3f();
-    var alignmentCount = 0u;
-    var cohesionCount = 0u;
+  .does((input) => {
+    const index = input.gid.x;
+    const instanceInfo = currentTrianglePos.value[index];
+    let separation = d.vec3f();
+    let alignment = d.vec3f();
+    let cohesion = d.vec3f();
+    let wallRepulsion = d.vec3f();
+    let alignmentCount = 0;
+    let cohesionCount = 0;
 
-    for (var i = 0u; i < arrayLength(&currentTrianglePos); i += 1) {
-      if (i == index) {
+    for (let i = 0; i < fishAmount; i = i + 1) {
+      if (d.u32(i) === index) {
         continue;
       }
-      var other = currentTrianglePos[i];
-      var dist = distance(instanceInfo.position, other.position);
-      if (dist < params.separationDistance) {
-        separation += instanceInfo.position.xyz - other.position.xyz;
+      const other = currentTrianglePos.value[i];
+      const dist = distance(instanceInfo.position.xyz, other.position.xyz);
+      if (dist < params.value.separationDistance) {
+        separation = std.add(
+          separation,
+          std.sub(instanceInfo.position.xyz, other.position.xyz),
+        );
       }
-      if (dist < params.alignmentDistance) {
-        alignment += other.velocity;
-        alignmentCount++;
+      if (dist < params.value.alignmentDistance) {
+        alignment = std.add(alignment, other.velocity);
+        alignmentCount = alignmentCount + 1;
       }
-      if (dist < params.cohesionDistance) {
-        cohesion += other.position.xyz;
-        cohesionCount++;
+      if (dist < params.value.cohesionDistance) {
+        cohesion = std.add(cohesion, other.position.xyz);
+        cohesionCount = cohesionCount + 1;
       }
-    };
-    if (alignmentCount > 0u) {
-      alignment = alignment / f32(alignmentCount);
     }
-    if (cohesionCount > 0u) {
-      cohesion = (cohesion / f32(cohesionCount)) - instanceInfo.position.xyz;
+    if (alignmentCount > 0) {
+      alignment = std.mul(0.99 / d.f32(alignmentCount), alignment);
     }
-    for (var i = 0u; i< 3; i += 1) {
-      var vec = vec3f(0, 0, 0);
+    if (cohesionCount > 0) {
+      cohesion = std.sub(
+        std.mul(0.99 / d.f32(cohesionCount), cohesion),
+        instanceInfo.position.xyz,
+      );
+    }
+    for (let i = 0; i < 3; i = i + 1) {
+      const vec = d.vec3f(0, 0, 0);
       vec[i] = 1.0;
-      if (instanceInfo.position[i] > 1 - params.wallRepulsionDistance) {
-        wallRepulsion += -1 * vec; 
+      if (instanceInfo.position[i] > 1 - params.value.wallRepulsionDistance) {
+        wallRepulsion = std.add(wallRepulsion, std.mul(-1, vec));
       }
-      if (instanceInfo.position[i] < -1 + params.wallRepulsionDistance) {
-        wallRepulsion += 1 * vec; 
+      if (instanceInfo.position[i] < -1 + params.value.wallRepulsionDistance) {
+        wallRepulsion = std.add(wallRepulsion, std.mul(1, vec));
       }
     }
-      
-    instanceInfo.velocity +=
-      (separation * params.separationStrength)
-      + (alignment * params.alignmentStrength)
-      + (cohesion * params.cohesionStrength)
-      + (wallRepulsion * params.wallRepulsionStrength);
-    instanceInfo.velocity = normalize(instanceInfo.velocity) * clamp(length(instanceInfo.velocity), 0.0, 0.01);
 
-    instanceInfo.position += vec4f(instanceInfo.velocity, 0);
-    nextTrianglePos[index] = instanceInfo;
-}`)
-  .$uses({
-    currentTrianglePos,
-    nextTrianglePos,
-    params,
+    instanceInfo.velocity = std.add(
+      instanceInfo.velocity,
+      std.mul(params.value.separationStrength, separation),
+    );
+    instanceInfo.velocity = std.add(
+      instanceInfo.velocity,
+      std.mul(params.value.alignmentStrength, alignment),
+    );
+    instanceInfo.velocity = std.add(
+      instanceInfo.velocity,
+      std.mul(params.value.cohesionStrength, cohesion),
+    );
+    instanceInfo.velocity = std.add(
+      instanceInfo.velocity,
+      std.mul(params.value.wallRepulsionStrength, wallRepulsion),
+    );
+
+    instanceInfo.velocity = std.mul(
+      std.clamp(std.length(instanceInfo.velocity), 0.0, 0.01),
+      std.normalize(instanceInfo.velocity),
+    );
+
+    const velocityUniform = d.vec4f(
+      instanceInfo.velocity.x,
+      instanceInfo.velocity.y,
+      instanceInfo.velocity.z,
+      0,
+    );
+    instanceInfo.position = std.add(instanceInfo.position, velocityUniform);
+    nextTrianglePos.value[index] = instanceInfo;
   });
 
 // reszta
