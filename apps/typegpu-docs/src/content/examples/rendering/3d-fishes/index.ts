@@ -30,19 +30,27 @@ const FishData = d.struct({
 
 const FishDataArray = (n: number) => d.arrayOf(FishData, n);
 
-const FishModelVertex = d.struct({
-  localPosition: d.location(0, d.vec3f),
-  normal: d.location(1, d.vec3f),
-  uv: d.location(2, d.vec2f),
-  instanceIndex: d.location(3, d.builtin.instanceIndex),
-});
+const FishModelVertexInput = {
+  modelPosition: d.vec3f,
+  modelNormal: d.vec3f,
+  textureUV: d.vec2f,
+  instanceIndex: d.builtin.instanceIndex,
+} as const;
+
+const FishModelVertexOutput = {
+  // TODO: decide on vec4f or vec3f globally
+  worldPosition: d.vec4f,
+  worldNormal: d.vec3f,
+  canvasPosition: d.builtin.position,
+  textureUV: d.vec2f,
+} as const;
 
 // constants
 
 const workGroupSize = 256;
 
-const fishAmount = 1024 * 8;
-const fishModelScale = 0.01;
+const fishAmount = 1024 * 1;
+const fishModelScale = 0.05;
 
 // TODO: remove the buffer and struct, just reference the constants
 const fishParameters = FishParameters({
@@ -65,7 +73,7 @@ const lightDirection = std.normalize(d.vec3f(-1.0, 0.0, 0.0));
 // layouts
 
 const fishModelVertexLayout = tgpu.vertexLayout((n: number) =>
-  d.arrayOf(FishModelVertex, n),
+  d.arrayOf(d.struct(FishModelVertexInput), n),
 );
 
 const renderInstanceLayout = tgpu.vertexLayout(FishDataArray, 'instance');
@@ -86,98 +94,81 @@ const computeBindGroupLayout = tgpu.bindGroupLayout({
   },
 });
 
-// reszta
+// render sharers
 
 const {
-  camera,
-  fishTexture: shaderTexture,
-  fishSampler: shaderSampler,
-  fishData: shaderTrianglePos,
+  camera: renderCamera,
+  fishTexture: renderFishTexture,
+  fishSampler: renderFishSampler,
+  fishData: renderFishData,
 } = renderBindGroupLayout.bound;
 
-const VertexOutput = {
-  position: d.builtin.position,
-  uv: d.vec2f,
-  normals: d.vec3f,
-  worldPosition: d.vec4f,
-};
-
-const mainVert = tgpu['~unstable']
+const vertexShader = tgpu['~unstable']
   .vertexFn({
-    in: {
-      localPosition: d.vec3f,
-      normal: d.vec3f,
-      uv: d.vec2f,
-      instanceIndex: d.builtin.instanceIndex,
-    },
-    out: VertexOutput,
+    in: FishModelVertexInput,
+    out: FishModelVertexOutput,
   })
   .does((input) => {
-    const instance = shaderTrianglePos.value[input.instanceIndex];
+    const fishData = renderFishData.value[input.instanceIndex];
 
-    const localPos = d.vec4f(
-      input.localPosition.x,
-      input.localPosition.y,
-      input.localPosition.z,
+    const modelPosition = d.vec4f(
+      input.modelPosition.x,
+      input.modelPosition.y,
+      input.modelPosition.z,
       1,
     );
 
-    const vel = instance.velocity;
-    const normVel = std.normalize(vel);
+    const direction = std.normalize(fishData.velocity);
 
-    const yaw = std.atan2(normVel.z, normVel.x) + Math.PI;
-    const yawCos = std.cos(yaw);
-    const yawSin = std.sin(yaw);
-
+    const yaw = std.atan2(direction.z, direction.x) + Math.PI;
     // biome-ignore format:
-    const yawRotation = d.mat4x4f(
-          yawCos,   0, yawSin,  0,
-          0,        1, 0,       0,
-          -yawSin,  0, yawCos,  0,
-          0,        0, 0,       1,
+    const yawMatrix = d.mat4x4f(
+          std.cos(yaw),  0, std.sin(yaw), 0,
+          0,             1, 0,            0,
+          -std.sin(yaw), 0, std.cos(yaw), 0,
+          0,             0, 0,            1,
         );
 
-    const pitch = -std.asin(-normVel.y);
-    const pitchCos = std.cos(pitch);
-    const pitchSin = std.sin(pitch);
-
+    const pitch = -std.asin(-direction.y);
     // biome-ignore format:
-    const pitchRotation = d.mat4x4f(
-          pitchCos, -pitchSin, 0, 0,
-          pitchSin, pitchCos,  0, 0,
-          0,        0,         1, 0,
-          0,        0,         0, 1,
+    const pitchMatrix = d.mat4x4f(
+          std.cos(pitch), -std.sin(pitch), 0, 0,
+          std.sin(pitch), std.cos(pitch),  0, 0,
+          0,              0,               1, 0,
+          0,              0,               0, 1,
         );
 
-    const worldPos = std.add(
+    const worldPosition = std.add(
       std.mul(
-        yawRotation,
-        std.mul(pitchRotation, std.mul(fishModelScale, localPos)),
+        yawMatrix,
+        std.mul(pitchMatrix, std.mul(fishModelScale, modelPosition)),
       ),
-      instance.position,
+      fishData.position,
     );
 
     const uniformNormal = d.vec4f(
-      input.normal.x,
-      input.normal.y,
-      input.normal.z,
+      input.modelNormal.x,
+      input.modelNormal.y,
+      input.modelNormal.z,
       1,
     );
-    const worldNormal = std.add(
-      std.mul(pitchRotation, std.mul(yawRotation, uniformNormal)),
-      instance.position,
+    const worldNormal = std.normalize(
+      std.add(
+        std.mul(pitchMatrix, std.mul(yawMatrix, uniformNormal)),
+        fishData.position,
+      ).xyz,
     );
 
-    const pos = std.mul(
-      camera.value.projection,
-      std.mul(camera.value.view, worldPos),
+    const canvasPosition = std.mul(
+      renderCamera.value.projection,
+      std.mul(renderCamera.value.view, worldPosition),
     );
 
     return {
-      position: pos,
-      uv: input.uv,
-      normals: worldNormal.xyz,
-      worldPosition: worldPos,
+      canvasPosition: canvasPosition,
+      textureUV: input.textureUV,
+      worldNormal: worldNormal.xyz,
+      worldPosition: worldPosition,
     };
   });
 
@@ -186,16 +177,16 @@ const sampleTexture = tgpu['~unstable']
   .does(/*wgsl*/ `(uv: vec2<f32>) -> vec4<f32> {
       return textureSample(shaderTexture, shaderSampler, uv);
     }`)
-  .$uses({ shaderTexture, shaderSampler })
+  .$uses({ shaderTexture: renderFishTexture, shaderSampler: renderFishSampler })
   .$name('sampleShader');
 
-const mainFrag = tgpu['~unstable']
+const fragmentShader = tgpu['~unstable']
   .fragmentFn({
-    in: VertexOutput,
+    in: FishModelVertexOutput,
     out: d.location(0, d.vec4f),
   })
   .does((input) => {
-    const normal = std.normalize(input.normals);
+    const normal = input.worldNormal;
 
     // Directional lighting
     const attenuation = std.max(
@@ -206,7 +197,7 @@ const mainFrag = tgpu['~unstable']
 
     const surfaceToLight = std.mul(-1, lightDirection);
 
-    const albedoWithAlpha = sampleTexture(input.uv); // base color
+    const albedoWithAlpha = sampleTexture(input.textureUV); // base color
     const albedo = albedoWithAlpha.xyz;
     const ambient = d.vec3f(0.4);
 
@@ -226,6 +217,8 @@ const mainFrag = tgpu['~unstable']
     return d.vec4f(finalColor.x, finalColor.y, finalColor.z, 1);
   })
   .$name('mainFragment');
+
+// reszta
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -285,8 +278,8 @@ const randomizePositions = () => {
 randomizePositions();
 
 const renderPipeline = root['~unstable']
-  .withVertex(mainVert, fishModelVertexLayout.attrib)
-  .withFragment(mainFrag, { format: presentationFormat })
+  .withVertex(vertexShader, fishModelVertexLayout.attrib)
+  .withFragment(fragmentShader, { format: presentationFormat })
   .withDepthStencil({
     format: 'depth24plus',
     depthWriteEnabled: true,
@@ -417,13 +410,17 @@ const uvs = cubeModel.attributes.TEXCOORD_0
 const vertices = [];
 for (let i = 0; i < positions.length / 3; i++) {
   vertices.push({
-    localPosition: d.vec3f(
+    modelPosition: d.vec3f(
       positions[3 * i],
       positions[3 * i + 1],
       positions[3 * i + 2],
     ),
-    normal: d.vec3f(normals[3 * i], normals[3 * i + 1], normals[3 * i + 2]),
-    uv: d.vec2f(uvs[2 * i], 1 - uvs[2 * i + 1]),
+    modelNormal: d.vec3f(
+      normals[3 * i],
+      normals[3 * i + 1],
+      normals[3 * i + 2],
+    ),
+    textureUV: d.vec2f(uvs[2 * i], 1 - uvs[2 * i + 1]),
     instanceIndex: 0,
   });
 }
