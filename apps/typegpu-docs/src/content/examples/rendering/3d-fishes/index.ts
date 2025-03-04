@@ -398,7 +398,7 @@ const randomizeFishPositions = () => {
 };
 randomizeFishPositions();
 
-// fish model
+// fish model and texture
 
 const fishModel = await load('assets/gravity/blahaj_smooth.obj', OBJLoader);
 const fishModelPolygonCount = fishModel.attributes.POSITION.value.length / 3;
@@ -432,7 +432,22 @@ fishModelVertices.reverse();
 
 fishVertexBuffer.write(fishModelVertices);
 
-// reszta
+const textureResponse = await fetch('assets/gravity/texture.png');
+const imageBitmap = await createImageBitmap(await textureResponse.blob());
+const cubeTexture = root['~unstable']
+  .createTexture({
+    size: [imageBitmap.width, imageBitmap.height],
+    format: 'rgba8unorm',
+  })
+  .$usage('sampled', 'render');
+
+root.device.queue.copyExternalImageToTexture(
+  { source: imageBitmap },
+  { texture: root.unwrap(cubeTexture) },
+  [imageBitmap.width, imageBitmap.height],
+);
+
+// pipelines
 
 const renderPipeline = root['~unstable']
   .withVertex(vertexShader, fishModelVertexLayout.attrib)
@@ -455,27 +470,12 @@ const computePipeline = root['~unstable']
   .withCompute(mainCompute)
   .createPipeline();
 
-const textureResponse = await fetch('assets/gravity/texture.png');
-const imageBitmap = await createImageBitmap(await textureResponse.blob());
-const cubeTexture = root['~unstable']
-  .createTexture({
-    size: [imageBitmap.width, imageBitmap.height],
-    format: 'rgba8unorm',
-  })
-  .$usage('sampled', 'render');
-
-root.device.queue.copyExternalImageToTexture(
-  { source: imageBitmap },
-  { texture: root.unwrap(cubeTexture) },
-  [imageBitmap.width, imageBitmap.height],
-);
+// bind groups
 
 const sampler = root.device.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
-
-// end of model
 
 const renderBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(renderBindGroupLayout, {
@@ -621,7 +621,9 @@ let drawCube: () => void;
   };
 }
 
-let even = false;
+// frame
+
+let odd = false;
 let disposed = false;
 function frame() {
   if (disposed) {
@@ -630,9 +632,9 @@ function frame() {
 
   drawCube();
 
-  even = !even;
+  odd = !odd;
   computePipeline
-    .with(computeBindGroupLayout, computeBindGroups[even ? 0 : 1])
+    .with(computeBindGroupLayout, computeBindGroups[odd ? 1 : 0])
     .dispatchWorkgroups(fishAmount / workGroupSize);
 
   renderPipeline
@@ -649,36 +651,21 @@ function frame() {
       depthStoreOp: 'store',
     })
     .with(fishModelVertexLayout, fishVertexBuffer)
-    .with(renderInstanceLayout, fishDataBuffers[even ? 1 : 0])
-    .with(renderBindGroupLayout, renderBindGroups[even ? 1 : 0])
+    .with(renderInstanceLayout, fishDataBuffers[odd ? 1 : 0])
+    .with(renderBindGroupLayout, renderBindGroups[odd ? 1 : 0])
     .draw(fishModelPolygonCount, fishAmount);
 
   root['~unstable'].flush();
 
   requestAnimationFrame(frame);
 }
-
 frame();
 
 // #region Example controls and cleanup
 
 export const controls = {
-  Randomize: {
+  'Randomize positions': {
     onButtonClick: () => randomizeFishPositions(),
-  },
-  'boids count': {
-    initial: fishAmount,
-    options: [4, 16, 64, 256, 1024, 4096].map((x) => x.toString()),
-    onSelectChange(value: string) {
-      const num = Number.parseInt(value);
-      // triangleAmount = num;
-
-      // const oldBuffers = trianglePosBuffers;
-      // trianglePosBuffers = generateBuffers(triangleAmount);
-      // oldBuffers.forEach((buffer, _) => {
-      //   buffer.destroy();
-      // });
-    },
   },
 };
 
