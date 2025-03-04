@@ -1,4 +1,4 @@
-import { inGPUMode } from '../gpuMode';
+import { inGPUMode } from '../gpuMode.js';
 
 export function discard(): never {
   if (!inGPUMode()) {

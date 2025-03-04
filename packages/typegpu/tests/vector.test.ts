@@ -399,46 +399,74 @@ describe('vec2h', () => {
   });
 });
 
-describe('v3f', () => {
-  it('can be spread', () => {
-    const red = d.vec3f(0.9, 0.2, 0.1);
-    const result = d.vec4f(...red.t, 1);
-    expect(result).toEqual(d.vec4f(0.9, 0.2, 0.1, 1));
+describe('v4f', () => {
+  describe('(v3f, number) constructor', () => {
+    it('works in JS', () => {
+      const red = d.vec3f(0.9, 0.2, 0.1);
+      const redWithAlpha = d.vec4f(red, 1);
+      expect(redWithAlpha).toEqual(d.vec4f(0.9, 0.2, 0.1, 1));
+    });
+
+    it('works in TGSL', () => {
+      const red = d.vec3f(0.9, 0.2, 0.1);
+
+      const main = tgpu['~unstable']
+        .fn([])
+        .does(() => {
+          const green = d.vec3f(0, 1, 0);
+
+          const one = d.vec4f(red, 1); // external
+          const two = d.vec4f(green, 1); // local variable
+          const three = d.vec4f(d.vec3f(0, 0, 1), 1); // literal
+        })
+        .$name('main');
+
+      expect(parseResolved({ main })).toEqual(
+        parse(`
+        fn main() {
+          var green = vec3f(0, 1, 0);
+          
+          var one = vec4f(vec3f(0.9, 0.2, 0.1), 1);
+          var two = vec4f(green, 1);
+          var three = vec4f(vec3f(0, 0, 1), 1);
+        }
+      `),
+      );
+    });
   });
 
-  it('can be spread in TGSL', () => {
-    const red = d.vec3f(0.9, 0.2, 0.1);
+  describe('(number, v3f) constructor', () => {
+    it('works in JS', () => {
+      const foo = d.vec3f(0.2, 0.3, 0.4);
+      const bar = d.vec4f(0.1, foo);
+      expect(bar).toEqual(d.vec4f(0.1, 0.2, 0.3, 0.4));
+    });
 
-    const main = tgpu['~unstable']
-      .fn([], d.vec4f)
-      .does(() => d.vec4f(...red.t, 1))
-      .$name('main');
+    it('works in TGSL', () => {
+      const foo = d.vec3f(0.2, 0.3, 0.4);
 
-    expect(parseResolved({ main })).toEqual(
-      parse(`
-      fn main() -> vec4f {
-        return vec4f(vec3f(0.9, 0.2, 0.1), 1);
-      }
-    `),
-    );
-  });
+      const main = tgpu['~unstable']
+        .fn([])
+        .does(() => {
+          const fooLocal = d.vec3f(0.2, 0.3, 0.4);
 
-  it('can be spread in TGSL (2)', () => {
-    const main = tgpu['~unstable']
-      .fn([], d.vec4f)
-      .does(() => {
-        const red = d.vec3f(0.9, 0.2, 0.1);
-        return d.vec4f(...red.t, 1);
-      })
-      .$name('main');
+          const one = d.vec4f(0.1, foo); // external
+          const two = d.vec4f(0.1, fooLocal); // local variable
+          const three = d.vec4f(0.1, d.vec3f(0.2, 0.3, 0.4)); // literal
+        })
+        .$name('main');
 
-    expect(parseResolved({ main })).toEqual(
-      parse(`
-      fn main() -> vec4f {
-        var red = vec3f(0.9, 0.2, 0.1);
-        return vec4f(red, 1);
-      }
-    `),
-    );
+      expect(parseResolved({ main })).toEqual(
+        parse(`
+        fn main() {
+          var fooLocal = vec3f(0.2, 0.3, 0.4);
+          
+          var one = vec4f(0.1, vec3f(0.2, 0.3, 0.4));
+          var two = vec4f(0.1, fooLocal);
+          var three = vec4f(0.1, vec3f(0.2, 0.3, 0.4));
+        }
+      `),
+      );
+    });
   });
 });

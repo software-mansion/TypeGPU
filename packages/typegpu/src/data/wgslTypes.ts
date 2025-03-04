@@ -351,47 +351,11 @@ interface Swizzle4<T2, T3, T4> extends Swizzle3<T2, T3, T4> {
   readonly wwww: T4;
 }
 
-interface Tuple2 {
-  /**
-   * Gives access to the vector as a tuple. Useful for spreading into other vectors.
-   * @example
-   * ```ts
-   * const uv = vec2f(0.1, 0.2);
-   * const pos = vec4f(...uv.t, 0, 1);
-   * ```
-   */
-  readonly t: readonly [number, number];
-}
-
-interface Tuple3 {
-  /**
-   * Gives access to the vector as a tuple. Useful for spreading into other vectors.
-   * @example
-   * ```ts
-   * const red = vec3f(0.9, 0.2, 0.1);
-   * const result = vec4f(...red.t, 1);
-   * ```
-   */
-  readonly t: readonly [number, number, number];
-}
-
-interface Tuple4 {
-  /**
-   * Gives access to the vector as a tuple. Useful for spreading into other vectors.
-   * @example
-   * ```ts
-   * const original = vec4f(0, 1, 2, 3);
-   * const clone = vec4f(...original.t);
-   * ```
-   */
-  readonly t: readonly [number, number, number, number];
-}
-
 /**
  * Interface representing its WGSL vector type counterpart: vec2f or vec2<f32>.
  * A vector with 2 elements of type f32
  */
-export interface v2f extends NumberArrayView, Swizzle2<v2f, v3f, v4f>, Tuple2 {
+export interface v2f extends NumberArrayView, Swizzle2<v2f, v3f, v4f> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2f';
   x: number;
@@ -402,7 +366,7 @@ export interface v2f extends NumberArrayView, Swizzle2<v2f, v3f, v4f>, Tuple2 {
  * Interface representing its WGSL vector type counterpart: vec2h or vec2<f16>.
  * A vector with 2 elements of type f16
  */
-export interface v2h extends NumberArrayView, Swizzle2<v2h, v3h, v4h>, Tuple2 {
+export interface v2h extends NumberArrayView, Swizzle2<v2h, v3h, v4h> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2h';
   x: number;
@@ -413,7 +377,7 @@ export interface v2h extends NumberArrayView, Swizzle2<v2h, v3h, v4h>, Tuple2 {
  * Interface representing its WGSL vector type counterpart: vec2i or vec2<i32>.
  * A vector with 2 elements of type i32
  */
-export interface v2i extends NumberArrayView, Swizzle2<v2i, v3i, v4i>, Tuple2 {
+export interface v2i extends NumberArrayView, Swizzle2<v2i, v3i, v4i> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2i';
   x: number;
@@ -424,7 +388,7 @@ export interface v2i extends NumberArrayView, Swizzle2<v2i, v3i, v4i>, Tuple2 {
  * Interface representing its WGSL vector type counterpart: vec2u or vec2<u32>.
  * A vector with 2 elements of type u32
  */
-export interface v2u extends NumberArrayView, Swizzle2<v2u, v3u, v4u>, Tuple2 {
+export interface v2u extends NumberArrayView, Swizzle2<v2u, v3u, v4u> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2u';
   x: number;
@@ -435,7 +399,7 @@ export interface v2u extends NumberArrayView, Swizzle2<v2u, v3u, v4u>, Tuple2 {
  * Interface representing its WGSL vector type counterpart: vec3f or vec3<f32>.
  * A vector with 3 elements of type f32
  */
-export interface v3f extends NumberArrayView, Swizzle3<v2f, v3f, v4f>, Tuple3 {
+export interface v3f extends NumberArrayView, Swizzle3<v2f, v3f, v4f> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3f';
   x: number;
@@ -447,7 +411,7 @@ export interface v3f extends NumberArrayView, Swizzle3<v2f, v3f, v4f>, Tuple3 {
  * Interface representing its WGSL vector type counterpart: vec3h or vec3<f16>.
  * A vector with 3 elements of type f16
  */
-export interface v3h extends NumberArrayView, Swizzle3<v2h, v3h, v4h>, Tuple3 {
+export interface v3h extends NumberArrayView, Swizzle3<v2h, v3h, v4h> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3h';
   x: number;
@@ -459,7 +423,7 @@ export interface v3h extends NumberArrayView, Swizzle3<v2h, v3h, v4h>, Tuple3 {
  * Interface representing its WGSL vector type counterpart: vec3i or vec3<i32>.
  * A vector with 3 elements of type i32
  */
-export interface v3i extends NumberArrayView, Swizzle3<v2i, v3i, v4i>, Tuple3 {
+export interface v3i extends NumberArrayView, Swizzle3<v2i, v3i, v4i> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3i';
   x: number;
@@ -471,7 +435,7 @@ export interface v3i extends NumberArrayView, Swizzle3<v2i, v3i, v4i>, Tuple3 {
  * Interface representing its WGSL vector type counterpart: vec3u or vec3<u32>.
  * A vector with 3 elements of type u32
  */
-export interface v3u extends NumberArrayView, Swizzle3<v2u, v3u, v4u>, Tuple3 {
+export interface v3u extends NumberArrayView, Swizzle3<v2u, v3u, v4u> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3u';
   x: number;
@@ -483,7 +447,7 @@ export interface v3u extends NumberArrayView, Swizzle3<v2u, v3u, v4u>, Tuple3 {
  * Interface representing its WGSL vector type counterpart: vec4f or vec4<f32>.
  * A vector with 4 elements of type f32
  */
-export interface v4f extends NumberArrayView, Swizzle4<v2f, v3f, v4f>, Tuple4 {
+export interface v4f extends NumberArrayView, Swizzle4<v2f, v3f, v4f> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4f';
   x: number;
@@ -496,7 +460,7 @@ export interface v4f extends NumberArrayView, Swizzle4<v2f, v3f, v4f>, Tuple4 {
  * Interface representing its WGSL vector type counterpart: vec4h or vec4<f16>.
  * A vector with 4 elements of type f16
  */
-export interface v4h extends NumberArrayView, Swizzle4<v2h, v3h, v4h>, Tuple4 {
+export interface v4h extends NumberArrayView, Swizzle4<v2h, v3h, v4h> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4h';
   x: number;
@@ -509,7 +473,7 @@ export interface v4h extends NumberArrayView, Swizzle4<v2h, v3h, v4h>, Tuple4 {
  * Interface representing its WGSL vector type counterpart: vec4i or vec4<i32>.
  * A vector with 4 elements of type i32
  */
-export interface v4i extends NumberArrayView, Swizzle4<v2i, v3i, v4i>, Tuple4 {
+export interface v4i extends NumberArrayView, Swizzle4<v2i, v3i, v4i> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4i';
   x: number;
@@ -522,7 +486,7 @@ export interface v4i extends NumberArrayView, Swizzle4<v2i, v3i, v4i>, Tuple4 {
  * Interface representing its WGSL vector type counterpart: vec4u or vec4<u32>.
  * A vector with 4 elements of type u32
  */
-export interface v4u extends NumberArrayView, Swizzle4<v2u, v3u, v4u>, Tuple4 {
+export interface v4u extends NumberArrayView, Swizzle4<v2u, v3u, v4u> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4u';
   x: number;
@@ -544,6 +508,10 @@ export type AnyVecInstance =
   | v4h
   | v4i
   | v4u;
+
+export type AnyVec2Instance = v2f | v2h | v2i | v2u;
+export type AnyVec3Instance = v3f | v3h | v3i | v3u;
+export type AnyVec4Instance = v4f | v4h | v4i | v4u;
 
 export type VecKind = AnyVecInstance['kind'];
 
@@ -683,6 +651,7 @@ export interface Vec2f {
   (x: number, y: number): v2f;
   (xy: number): v2f;
   (): v2f;
+  (v: AnyVec2Instance): v2f;
 }
 
 /**
@@ -696,6 +665,7 @@ export interface Vec2h {
   (x: number, y: number): v2h;
   (xy: number): v2h;
   (): v2h;
+  (v: AnyVec2Instance): v2h;
 }
 
 /**
@@ -709,6 +679,7 @@ export interface Vec2i {
   (x: number, y: number): v2i;
   (xy: number): v2i;
   (): v2i;
+  (v: AnyVec2Instance): v2i;
 }
 
 /**
@@ -722,6 +693,7 @@ export interface Vec2u {
   (x: number, y: number): v2u;
   (xy: number): v2u;
   (): v2u;
+  (v: AnyVec2Instance): v2u;
 }
 
 /**
@@ -735,6 +707,9 @@ export interface Vec3f {
   (x: number, y: number, z: number): v3f;
   (xyz: number): v3f;
   (): v3f;
+  (v: AnyVec3Instance): v3f;
+  (v0: AnyVec2Instance, z: number): v3f;
+  (x: number, v0: AnyVec2Instance): v3f;
 }
 
 /**
@@ -748,6 +723,9 @@ export interface Vec3h {
   (x: number, y: number, z: number): v3h;
   (xyz: number): v3h;
   (): v3h;
+  (v: AnyVec3Instance): v3h;
+  (v0: AnyVec2Instance, z: number): v3h;
+  (x: number, v0: AnyVec2Instance): v3h;
 }
 
 /**
@@ -761,6 +739,9 @@ export interface Vec3i {
   (x: number, y: number, z: number): v3i;
   (xyz: number): v3i;
   (): v3i;
+  (v: AnyVec3Instance): v3i;
+  (v0: AnyVec2Instance, z: number): v3i;
+  (x: number, v0: AnyVec2Instance): v3i;
 }
 
 /**
@@ -774,6 +755,9 @@ export interface Vec3u {
   (x: number, y: number, z: number): v3u;
   (xyz: number): v3u;
   (): v3u;
+  (v: AnyVec3Instance): v3u;
+  (v0: AnyVec2Instance, z: number): v3u;
+  (x: number, v0: AnyVec2Instance): v3u;
 }
 
 /**
@@ -787,6 +771,13 @@ export interface Vec4f {
   (x: number, y: number, z: number, w: number): v4f;
   (xyzw: number): v4f;
   (): v4f;
+  (v: AnyVec4Instance): v4f;
+  (v0: AnyVec3Instance, w: number): v4f;
+  (x: number, v0: AnyVec3Instance): v4f;
+  (v0: AnyVec2Instance, v1: AnyVec2Instance): v4f;
+  (v0: AnyVec2Instance, z: number, w: number): v4f;
+  (x: number, v0: AnyVec2Instance, z: number): v4f;
+  (x: number, y: number, v0: AnyVec2Instance): v4f;
 }
 
 /**
@@ -800,6 +791,13 @@ export interface Vec4h {
   (x: number, y: number, z: number, w: number): v4h;
   (xyzw: number): v4h;
   (): v4h;
+  (v: AnyVec4Instance): v4h;
+  (v0: AnyVec3Instance, w: number): v4h;
+  (x: number, v0: AnyVec3Instance): v4h;
+  (v0: AnyVec2Instance, v1: AnyVec2Instance): v4h;
+  (v0: AnyVec2Instance, z: number, w: number): v4h;
+  (x: number, v0: AnyVec2Instance, z: number): v4h;
+  (x: number, y: number, v0: AnyVec2Instance): v4h;
 }
 
 /**
@@ -813,6 +811,13 @@ export interface Vec4i {
   (x: number, y: number, z: number, w: number): v4i;
   (xyzw: number): v4i;
   (): v4i;
+  (v: AnyVec4Instance): v4i;
+  (v0: AnyVec3Instance, w: number): v4i;
+  (x: number, v0: AnyVec3Instance): v4i;
+  (v0: AnyVec2Instance, v1: AnyVec2Instance): v4i;
+  (v0: AnyVec2Instance, z: number, w: number): v4i;
+  (x: number, v0: AnyVec2Instance, z: number): v4i;
+  (x: number, y: number, v0: AnyVec2Instance): v4i;
 }
 
 /**
@@ -826,6 +831,13 @@ export interface Vec4u {
   (x: number, y: number, z: number, w: number): v4u;
   (xyzw: number): v4u;
   (): v4u;
+  (v: AnyVec4Instance): v4u;
+  (v0: AnyVec3Instance, w: number): v4u;
+  (x: number, v0: AnyVec3Instance): v4u;
+  (v0: AnyVec2Instance, v1: AnyVec2Instance): v4u;
+  (v0: AnyVec2Instance, z: number, w: number): v4u;
+  (x: number, v0: AnyVec2Instance, z: number): v4u;
+  (x: number, y: number, v0: AnyVec2Instance): v4u;
 }
 
 /**
