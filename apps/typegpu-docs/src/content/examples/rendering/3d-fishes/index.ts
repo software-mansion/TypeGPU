@@ -64,8 +64,8 @@ const fishParameters = FishParameters({
   wallRepulsionStrength: 0.0002,
 });
 
-const cameraPosition = d.vec4f(2, 2, 2, 1);
-const cameraTarget = d.vec3f(0, 0, 0);
+const cameraInitialPosition = d.vec4f(2, 2, 2, 1);
+const cameraInitialTarget = d.vec3f(0, 0, 0);
 
 const lightColor = d.vec3f(1, 0.8, 0.7);
 const lightDirection = std.normalize(d.vec3f(-1.0, 0.0, 0.0));
@@ -208,7 +208,7 @@ const fragmentShader = tgpu['~unstable']
     const ambient = d.vec3f(0.4);
 
     const surfaceToCamera = std.normalize(
-      std.sub(cameraPosition, input.worldPosition),
+      std.sub(cameraInitialPosition, input.worldPosition),
     );
 
     const halfVector = std.normalize(
@@ -333,27 +333,12 @@ const mainCompute = tgpu['~unstable']
     computeNextFishData.value[fishIndex] = fishData;
   });
 
-// reszta
+// setup
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
 const root = await tgpu.init();
-
-const aspect = canvas.clientWidth / canvas.clientHeight;
-
-const cameraInitial = {
-  view: m.mat4.lookAt(
-    cameraPosition,
-    cameraTarget,
-    d.vec3f(0, 1, 0),
-    d.mat4x4f(),
-  ),
-  projection: m.mat4.perspective(Math.PI / 4, aspect, 0.1, 1000, d.mat4x4f()),
-};
-
-const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
 
 context.configure({
   device: root.device,
@@ -361,17 +346,39 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const paramsBuffer = root
+// buffers
+
+const cameraInitialValue = {
+  view: m.mat4.lookAt(
+    cameraInitialPosition,
+    cameraInitialTarget,
+    d.vec3f(0, 1, 0),
+    d.mat4x4f(),
+  ),
+  projection: m.mat4.perspective(
+    Math.PI / 4,
+    canvas.clientWidth / canvas.clientHeight,
+    0.1,
+    1000,
+    d.mat4x4f(),
+  ),
+};
+
+const cameraBuffer = root
+  .createBuffer(Camera, cameraInitialValue)
+  .$usage('uniform');
+
+const fishParametersBuffer = root
   .createBuffer(FishParameters, fishParameters)
   .$usage('uniform');
 
-const trianglePosBuffers = Array.from({ length: 2 }, () =>
+const fishDataBuffers = Array.from({ length: 2 }, () =>
   root
     .createBuffer(FishDataArray(fishAmount))
     .$usage('storage', 'uniform', 'vertex'),
 );
 
-const randomizePositions = () => {
+const randomizeFishPositions = () => {
   const positions = Array.from({ length: fishAmount }, () => ({
     position: d.vec4f(
       Math.random() * 2 - 1,
@@ -386,10 +393,46 @@ const randomizePositions = () => {
     ),
     alive: 1,
   }));
-  trianglePosBuffers[0].write(positions);
-  trianglePosBuffers[1].write(positions);
+  fishDataBuffers[0].write(positions);
+  fishDataBuffers[1].write(positions);
 };
-randomizePositions();
+randomizeFishPositions();
+
+// fish model
+
+const fishModel = await load('assets/gravity/blahaj_smooth.obj', OBJLoader);
+const fishModelPolygonCount = fishModel.attributes.POSITION.value.length / 3;
+
+const fishVertexBuffer = root
+  .createBuffer(fishModelVertexLayout.schemaForCount(fishModelPolygonCount))
+  .$usage('vertex')
+  .$name('vertex');
+
+const fishModelVertices = [];
+for (let i = 0; i < fishModelPolygonCount; i++) {
+  fishModelVertices.push({
+    modelPosition: d.vec3f(
+      fishModel.attributes.POSITION.value[3 * i],
+      fishModel.attributes.POSITION.value[3 * i + 1],
+      fishModel.attributes.POSITION.value[3 * i + 2],
+    ),
+    modelNormal: d.vec3f(
+      fishModel.attributes.NORMAL.value[3 * i],
+      fishModel.attributes.NORMAL.value[3 * i + 1],
+      fishModel.attributes.NORMAL.value[3 * i + 2],
+    ),
+    textureUV: d.vec2f(
+      fishModel.attributes.TEXCOORD_0.value[2 * i],
+      1 - fishModel.attributes.TEXCOORD_0.value[2 * i + 1],
+    ),
+    instanceIndex: 0,
+  });
+}
+fishModelVertices.reverse();
+
+fishVertexBuffer.write(fishModelVertices);
+
+// reszta
 
 const renderPipeline = root['~unstable']
   .withVertex(vertexShader, fishModelVertexLayout.attrib)
@@ -427,60 +470,18 @@ root.device.queue.copyExternalImageToTexture(
   [imageBitmap.width, imageBitmap.height],
 );
 
-const cubeModel = await load('assets/gravity/blahaj_smooth.obj', OBJLoader);
-
 const sampler = root.device.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
 
-// model
-
-const vertexBuffer = root
-  .createBuffer(
-    fishModelVertexLayout.schemaForCount(
-      cubeModel.attributes.POSITION.value.length / 3,
-    ),
-  )
-  .$usage('vertex')
-  .$name('vertex');
-
-const positions = cubeModel.attributes.POSITION.value;
-const normals = cubeModel.attributes.NORMAL
-  ? cubeModel.attributes.NORMAL.value
-  : new Float32Array(positions.length);
-const uvs = cubeModel.attributes.TEXCOORD_0
-  ? cubeModel.attributes.TEXCOORD_0.value
-  : new Float32Array((positions.length / 3) * 2);
-
-const vertices = [];
-for (let i = 0; i < positions.length / 3; i++) {
-  vertices.push({
-    modelPosition: d.vec3f(
-      positions[3 * i],
-      positions[3 * i + 1],
-      positions[3 * i + 2],
-    ),
-    modelNormal: d.vec3f(
-      normals[3 * i],
-      normals[3 * i + 1],
-      normals[3 * i + 2],
-    ),
-    textureUV: d.vec2f(uvs[2 * i], 1 - uvs[2 * i + 1]),
-    instanceIndex: 0,
-  });
-}
-vertices.reverse();
-
-vertexBuffer.write(vertices);
-
 // end of model
 
 const renderBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(renderBindGroupLayout, {
-    fishData: trianglePosBuffers[idx],
+    fishData: fishDataBuffers[idx],
     camera: cameraBuffer,
-    fishParameters: paramsBuffer,
+    fishParameters: fishParametersBuffer,
     fishTexture: cubeTexture,
     fishSampler: sampler,
   }),
@@ -488,9 +489,9 @@ const renderBindGroups = [0, 1].map((idx) =>
 
 const computeBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(computeBindGroupLayout, {
-    currentFishData: trianglePosBuffers[idx],
-    nextFishData: trianglePosBuffers[1 - idx],
-    fishParameters: paramsBuffer,
+    currentFishData: fishDataBuffers[idx],
+    nextFishData: fishDataBuffers[1 - idx],
+    fishParameters: fishParametersBuffer,
   }),
 );
 
@@ -647,10 +648,10 @@ function frame() {
       depthLoadOp: 'clear',
       depthStoreOp: 'store',
     })
-    .with(fishModelVertexLayout, vertexBuffer)
-    .with(renderInstanceLayout, trianglePosBuffers[even ? 1 : 0])
+    .with(fishModelVertexLayout, fishVertexBuffer)
+    .with(renderInstanceLayout, fishDataBuffers[even ? 1 : 0])
     .with(renderBindGroupLayout, renderBindGroups[even ? 1 : 0])
-    .draw(positions.length / 3, fishAmount);
+    .draw(fishModelPolygonCount, fishAmount);
 
   root['~unstable'].flush();
 
@@ -663,7 +664,7 @@ frame();
 
 export const controls = {
   Randomize: {
-    onButtonClick: () => randomizePositions(),
+    onButtonClick: () => randomizeFishPositions(),
   },
   'boids count': {
     initial: fishAmount,
@@ -716,11 +717,14 @@ function updateCameraOrbit(dx: number, dy: number) {
 
   const newView = m.mat4.lookAt(
     newCameraPos,
-    cameraTarget,
+    cameraInitialTarget,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
   );
-  cameraBuffer.write({ view: newView, projection: cameraInitial.projection });
+  cameraBuffer.write({
+    view: newView,
+    projection: cameraInitialValue.projection,
+  });
 }
 
 // Prevent the context menu from appearing on right click.
@@ -738,11 +742,14 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
   const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
   const newView = m.mat4.lookAt(
     newCameraPos,
-    cameraTarget,
+    cameraInitialTarget,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
   );
-  cameraBuffer.write({ view: newView, projection: cameraInitial.projection });
+  cameraBuffer.write({
+    view: newView,
+    projection: cameraInitialValue.projection,
+  });
 });
 
 canvas.addEventListener('mousedown', (event) => {
