@@ -33,4 +33,8 @@ export {
   atomicAnd,
   atomicOr,
   atomicXor,
+  // synchronization
+  workgroupBarrier,
+  storageBarrier,
+  textureBarrier,
 } from './atomic';

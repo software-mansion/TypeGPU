@@ -428,6 +428,51 @@ ${alternate}`;
     }
   }
 
+  // 'j' stands for for (trust me)
+  if ('j' in statement) {
+    const [init, condition, update, body] = statement.j;
+
+    const initStatement = init ? generateStatement(ctx, init) : undefined;
+    const initStr = initStatement ? initStatement.slice(0, -1) : '';
+
+    const conditionExpr = condition
+      ? generateExpression(ctx, condition)
+      : undefined;
+    const conditionStr = conditionExpr ? resolveRes(ctx, conditionExpr) : '';
+
+    const updateStatement = update ? generateStatement(ctx, update) : undefined;
+    const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
+
+    ctx.indent();
+    const bodyStr = generateStatement(ctx, body);
+    ctx.dedent();
+
+    return `\
+${ctx.pre}for (${initStr}; ${conditionStr}; ${updateStr})
+${bodyStr}`;
+  }
+
+  if ('w' in statement) {
+    const [condition, body] = statement.w;
+    const conditionStr = resolveRes(ctx, generateExpression(ctx, condition));
+
+    ctx.indent();
+    const bodyStr = generateStatement(ctx, body);
+    ctx.dedent();
+
+    return `\
+${ctx.pre}while (${conditionStr})
+${bodyStr}`;
+  }
+
+  if ('k' in statement) {
+    return `${ctx.pre}continue;`;
+  }
+
+  if ('d' in statement) {
+    return `${ctx.pre}break;`;
+  }
+
   return `${ctx.pre}${resolveRes(ctx, generateExpression(ctx, statement))};`;
 }
 
