@@ -13,8 +13,6 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-
-
 const getGradientColor = tgpu['~unstable']
   .fn([d.f32], d.vec4f)
   .does(/* wgsl */ `(ratio: f32) -> vec4f {

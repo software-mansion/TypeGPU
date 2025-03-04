@@ -16,16 +16,24 @@ if (pnpmWorkspaceYaml instanceof type.errors) {
 }
 
 export const openInStackBlitz = (example: Example) => {
+  const tsFiles = Object.entries(example.tsCodes).reduce(
+    (acc, [fileName, code]) => {
+      acc[`src/${fileName}`] = code.replaceAll(
+        '/TypeGPU',
+        'https://docs.swmansion.com/TypeGPU',
+      );
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
+
   StackBlitzSDK.openProject(
     {
       template: 'node',
       title: example.metadata.title,
       files: {
         'index.ts': index.slice('// @ts-ignore\n'.length),
-        'src/example.ts': example.tsCode.replaceAll(
-          '/TypeGPU',
-          'https://docs.swmansion.com/TypeGPU',
-        ),
+        ...tsFiles,
         'index.html': `\
 <!DOCTYPE html>
 <html lang="en">
@@ -54,7 +62,7 @@ ${example.htmlCode}
         "noEmit": true,
         "strict": true,
         "noUnusedLocals": true,
-        "noUnusedParameters": true,
+        "noUnusedParameters": true
     },
     "include": ["src", "index.ts"]
 }`,
@@ -89,7 +97,7 @@ export default defineConfig({
       },
     },
     {
-      openFile: 'src/example.ts',
+      openFile: 'src/index.ts',
       newWindow: true,
       theme: 'light',
     },
