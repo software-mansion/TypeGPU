@@ -1,6 +1,12 @@
 import { entries, filter, fromEntries, groupBy, map, pipe } from 'remeda';
 import type { Example, ExampleMetadata, Module } from './types';
 
+const HELP = import.meta.glob('../../content/examples/**/*.ts', {
+  import: 'default',
+})
+
+console.log('HELP', HELP);
+
 function pathToExampleKey<T>(record: Record<string, T>): Record<string, T> {
   return pipe(
     record,
@@ -101,7 +107,7 @@ const htmlFiles: Record<string, string> = pathToExampleKey(
 
 const execTsFiles: Record<string, Module> = pathToExampleKey(
   import.meta.glob('../../content/examples/**/index.ts', {
-    query: { tgpu: true },
+    query: 'raw',
     eager: true,
   })
 );

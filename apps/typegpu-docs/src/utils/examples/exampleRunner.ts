@@ -50,7 +50,7 @@ export async function executeExample(
   }
 
   const entryExampleFile = await import(
-    `${exampleSources['index.ts']}?t=${Date.now()}`
+  `${exampleSources['index.ts']}?t=${Date.now()}&tgpu=true`
   );
   const controls = entryExampleFile.controls;
   if (controls) {
