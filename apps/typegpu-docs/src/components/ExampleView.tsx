@@ -143,7 +143,10 @@ export function ExampleView({ example }: Props) {
                 {currentEditorTab === 'ts' && (
                   <>
                     <div className="flex border-b border-gray-300">
-                      {Object.keys(tsCodes).map((fileName) => (
+                      {[
+                        ...Object.keys(tsCodes),
+                        'index.html'
+                      ].map((fileName) => (
                         <button
                           key={fileName}
                           type="button"
@@ -159,7 +162,11 @@ export function ExampleView({ example }: Props) {
                         </button>
                       ))}
                     </div>
-                    <TsCodeEditor shown code={tsCodes[currentTSFile]} />
+                    {currentTSFile === 'index.html' ? (
+                      <HtmlCodeEditor shown code={htmlCode} />
+                    ) : (
+                      <TsCodeEditor shown code={tsCodes[currentTSFile]} />
+                    )}
                   </>
                 )}
 
