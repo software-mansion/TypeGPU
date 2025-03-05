@@ -1,9 +1,11 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { purple, blue } from './data';
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
+
+const purple = d.vec4f(0.769, 0.392, 1.0, 1);
+const blue = d.vec4f(0.114, 0.447, 0.941, 1);
 
 const root = await tgpu.init();
 

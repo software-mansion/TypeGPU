@@ -151,8 +151,8 @@ export function ExampleView({ example }: Props) {
                           className={cs(
                             'px-4 py-2',
                             currentTSFile === fileName
-                              ? 'rounded-lg bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
-                              : 'rounded-lg bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
+                              ? 'rounded-t-lg rounded-bl-none rounded-br-none bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
+                              : 'rounded-t-lg rounded-bl-none rounded-br-none bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
                           )}
                         >
                           {fileName}
