@@ -5,7 +5,7 @@ type Labelless<T> = T extends unknown ? Omit<T, 'label'> : never;
 
 export async function executeExample(
   exampleCode: Record<string, string>,
-  exampleSources: Record<string, string>,
+  exampleSources: Record<string, () => void>,
 ): Promise<ExampleState> {
   const cleanupCallbacks: (() => unknown)[] = [];
   let disposed = false;
@@ -49,7 +49,7 @@ export async function executeExample(
     }
   }
 
-  function myExtractUrlFromViteImport(importFn: any): string | undefined  {
+  function myExtractUrlFromViteImport(importFn: () => void): string | undefined  {
     const filePath = String(importFn);
     const match = filePath.match(/\(\)\s*=>\s*import\("([^"]+)"\)/);
     if (match?.[1]) {
@@ -58,24 +58,25 @@ export async function executeExample(
     }
   }
   
-  function noCacheImport(importFn: any): any {
+  function noCacheImport(importFn: () => void): Promise<Record<string, unknown>> {
     const url = `${myExtractUrlFromViteImport(importFn)}&update=${Date.now()}`;
   
     // @vite-ignore
+    console.log('ja[oeroole', typeof(import(url)));
     return import(url);
   }
   
-
   const entryExampleFile = await noCacheImport(exampleSources['index.ts']);
-  const controls = entryExampleFile.controls;
+  const { controls, onCleanup } = entryExampleFile as { controls?: Record<string, Labelless<ExampleControlParam>> | undefined, onCleanup?: () => void };
+
   if (controls) {
     addParameters(controls);
   }
 
-  // clean-up
-  if (entryExampleFile.onCleanup) {
-    cleanupCallbacks.push(entryExampleFile.onCleanup);
+  if (onCleanup) {
+    cleanupCallbacks.push(onCleanup);
   }
+
   return {
     dispose,
     controlParams,
