@@ -78,6 +78,16 @@ export function ExampleView({ example }: Props) {
   const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
 
+  const editorTabsList = [
+    ...(Object.keys(tsCodes).includes('index.ts')
+      ? [
+          'index.ts',
+          ...Object.keys(tsCodes).filter((name) => name !== 'index.ts'),
+        ]
+      : Object.keys(tsCodes)),
+    'index.html',
+  ];
+
   useEffect(() => {
     if (!exampleHtmlRef.current) {
       return;
@@ -129,21 +139,11 @@ export function ExampleView({ example }: Props) {
                 'absolute bg-tameplum-50 z-20 md:relative h-[calc(100%-2rem)] w-[calc(100%-2rem)] md:w-full md:h-full',
               )}
             >
-              <div className="absolute inset-0">
+              <div className="absolute inset-1">
                 {
                   <>
-                    <div className="flex border-b border-gray-300">
-                      {[
-                        ...(Object.keys(tsCodes).includes('index.ts')
-                          ? [
-                              'index.ts',
-                              ...Object.keys(tsCodes).filter(
-                                (name) => name !== 'index.ts',
-                              ),
-                            ]
-                          : Object.keys(tsCodes)),
-                        'index.html',
-                      ].map((fileName) => (
+                    <div className="flex overflow-auto border-gray-300">
+                      {editorTabsList.map((fileName) => (
                         <button
                           key={fileName}
                           type="button"
