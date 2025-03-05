@@ -1,3 +1,4 @@
+export { discard } from './discard.js';
 export {
   // ops
   add,
@@ -5,6 +6,7 @@ export {
   mul,
   // builtin functions
   abs,
+  atan2,
   ceil,
   clamp,
   cos,
@@ -20,7 +22,8 @@ export {
   exp,
   mix,
   pow,
-} from './numeric';
+  reflect,
+} from './numeric.js';
 
 export {
   atomicLoad,
@@ -32,4 +35,8 @@ export {
   atomicAnd,
   atomicOr,
   atomicXor,
-} from './atomic';
+  // synchronization
+  workgroupBarrier,
+  storageBarrier,
+  textureBarrier,
+} from './atomic.js';

@@ -352,4 +352,131 @@ describe('wgslGenerator', () => {
     expect(res3.dataType).toEqual(d.atomic(d.u32));
     expect(res4.dataType).toEqual(Void);
   });
+
+  it('creates correct code for for statements', () => {
+    const code = `
+      function main() {
+        for (let i = 0; i < 10; i += 1) {
+          continue;
+        }
+      }
+    `;
+
+    const parsed = transpiler.transpileFn(code).body;
+
+    expect(parsed).toEqual({
+      b: [
+        {
+          j: [
+            {
+              l: ['i', { n: '0' }],
+            },
+            {
+              x: ['i', '<', { n: '10' }],
+            },
+            {
+              x: ['i', '+=', { n: '1' }],
+            },
+            {
+              b: [
+                {
+                  k: null,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const gen = wgslGenerator.generateFunction(ctx, parsed);
+
+    expect(parse(gen)).toEqual(
+      parse('{for(var i = 0;(i < 10);i += 1){continue;}}'),
+    );
+  });
+
+  it('creates correct code for for statements with outside init', () => {
+    const code = `
+      function main() {
+        let i = 0;
+        for (; i < 10; i += 1) {
+          continue;
+        }
+      }
+    `;
+
+    const parsed = transpiler.transpileFn(code).body;
+
+    expect(parsed).toEqual({
+      b: [
+        {
+          l: ['i', { n: '0' }],
+        },
+        {
+          j: [
+            undefined,
+            {
+              x: ['i', '<', { n: '10' }],
+            },
+            {
+              x: ['i', '+=', { n: '1' }],
+            },
+            {
+              b: [
+                {
+                  k: null,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const gen = wgslGenerator.generateFunction(ctx, parsed);
+
+    expect(parse(gen)).toEqual(
+      parse('{var i = 0;for(;(i < 10);i += 1){continue;}}'),
+    );
+  });
+
+  it('creates correct code for while statements', () => {
+    const code = `
+      function main() {
+        let i = 0;
+        while (i < 10) {
+          i += 1;
+        }
+      }
+    `;
+
+    const parsed = transpiler.transpileFn(code).body;
+
+    expect(parsed).toEqual({
+      b: [
+        {
+          l: ['i', { n: '0' }],
+        },
+        {
+          w: [
+            {
+              x: ['i', '<', { n: '10' }],
+            },
+            {
+              b: [
+                {
+                  x: ['i', '+=', { n: '1' }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const gen = wgslGenerator.generateFunction(ctx, parsed);
+
+    expect(parse(gen)).toEqual(parse('{var i = 0;while((i < 10)){i += 1;}}'));
+  });
 });

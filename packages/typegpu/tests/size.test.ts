@@ -52,28 +52,22 @@ describe('d.size', () => {
     ).toEqual(28);
 
     // nested
-    expect(
-      d.sizeOf(
-        d.struct({
-          a: d.u32,
-          b: d.struct({
-            c: d.size(20, d.f32),
-          }),
-        }),
-      ),
-    ).toEqual(24);
+    const NestedStruct = d.struct({
+      a: d.u32,
+      b: d.struct({
+        c: d.size(20, d.f32),
+      }),
+    });
+    expect(d.sizeOf(NestedStruct)).toEqual(24);
 
     // taking alignment into account
-    expect(
-      d.sizeOf(
-        d.struct({
-          a: d.struct({
-            c: d.size(17, d.f32),
-          }),
-          b: d.u32,
-        }),
-      ),
-    ).toEqual(24);
+    const AlignedStruct = d.struct({
+      a: d.struct({
+        c: d.size(17, d.f32),
+      }),
+      b: d.u32,
+    });
+    expect(d.sizeOf(AlignedStruct)).toEqual(24);
   });
 
   it('throws for invalid size values', () => {

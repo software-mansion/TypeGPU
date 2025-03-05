@@ -18,7 +18,7 @@ import {
   isWgslStruct,
 } from './data/wgslTypes';
 import { MissingSlotValueError, ResolutionError } from './errors';
-import { provideCtx } from './gpuMode';
+import { RuntimeMode, popMode, provideCtx, pushMode } from './gpuMode';
 import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
 import { naturalsExcept } from './shared/generators';
@@ -582,8 +582,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     if ((item && typeof item === 'object') || typeof item === 'function') {
       if (this._itemStateStack.itemDepth === 0) {
-        const result = provideCtx(this, () => this._getOrInstantiate(item));
-        return `${[...this._declarations].join('\n\n')}${result}`;
+        try {
+          pushMode(RuntimeMode.GPU);
+          const result = provideCtx(this, () => this._getOrInstantiate(item));
+          return `${[...this._declarations].join('\n\n')}${result}`;
+        } finally {
+          popMode(RuntimeMode.GPU);
+        }
       }
 
       return this._getOrInstantiate(item);

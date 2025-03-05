@@ -15,6 +15,7 @@ import {
   type VecBase,
 } from './vectorImpl';
 import type {
+  AnyVecInstance,
   Vec2f,
   Vec2h,
   Vec2i,
@@ -216,6 +217,7 @@ export const vec4u = makeVecSchema(Vec4uImpl) as Vec4u;
 // --------------
 // Implementation
 // --------------
+
 const vecTypeToConstructor = {
   vec2f: vec2f,
   vec2h: vec2h,
@@ -238,12 +240,23 @@ type VecSchemaBase<TValue> = {
 
 function makeVecSchema<TValue>(
   VecImpl: new (...args: number[]) => VecBase,
-): VecSchemaBase<TValue> & ((...args: number[]) => TValue) {
+): VecSchemaBase<TValue> & ((...args: (number | AnyVecInstance)[]) => TValue) {
   const { kind: type, length: componentCount } = new VecImpl();
 
   const construct = createDualImpl(
-    (...args: number[]): TValue => {
-      const values = args; // TODO: Allow users to pass in vectors that fill part of the values.
+    (...args: (number | AnyVecInstance)[]): TValue => {
+      const values = new Array(args.length);
+
+      let j = 0;
+      for (const arg of args) {
+        if (typeof arg === 'number') {
+          values[j++] = arg;
+        } else {
+          for (let c = 0; c < arg.length; ++c) {
+            values[j++] = arg[c];
+          }
+        }
+      }
 
       if (values.length <= 1 || values.length === componentCount) {
         return new VecImpl(...values) as TValue;

@@ -114,6 +114,20 @@ export const abs = createDualImpl(
   },
 );
 
+export const atan2 = createDualImpl(
+  // CPU implementation
+  <T extends vBase | number>(y: T, x: T): T => {
+    if (typeof y === 'number' && typeof x === 'number') {
+      return Math.atan2(y, x) as T;
+    }
+    return VectorOps.atan2[(y as vBase).kind](y as never, x as never) as T;
+  },
+  // GPU implementation
+  (y, x) => {
+    return { value: `atan2(${y.value}, ${x.value})`, dataType: y.dataType };
+  },
+);
+
 /**
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#ceil-builtin
@@ -399,6 +413,20 @@ export const mix: MixOverload = createDualImpl(
   (e1, e2, e3) => {
     return {
       value: `mix(${e1.value}, ${e2.value}, ${e3.value})`,
+      dataType: e1.dataType,
+    };
+  },
+);
+
+export const reflect = createDualImpl(
+  // CPU implementation
+  <T extends vBase>(e1: T, e2: T): T => {
+    return sub(e1, mul(2 * dot(e2, e1), e2));
+  },
+  // GPU implementation
+  (e1, e2) => {
+    return {
+      value: `reflect(${e1.value}, ${e2.value})`,
       dataType: e1.dataType,
     };
   },
