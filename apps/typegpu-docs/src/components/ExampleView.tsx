@@ -42,7 +42,6 @@ function useExample(
           example.dispose();
           return;
         }
-
         // Success
         setExampleControlParams(example.controlParams);
         exampleRef.current = example;
@@ -67,14 +66,10 @@ function useExample(
   }, [exampleCode, htmlCode, setSnackbarText, setExampleControlParams]);
 }
 
-type EditorTab = 'ts' | 'html';
-
 export function ExampleView({ example }: Props) {
   const { tsCodes, tsSources, htmlCode } = example;
 
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
-  const [currentEditorTab, setCurrentEditorTab] = useState<EditorTab>('ts');
-  // New state: keep track of the currently selected TS file.
   const [currentTSFile, setCurrentTSFile] = useState<string>(
     Object.keys(tsCodes)[0] || '',
   );
@@ -135,17 +130,19 @@ export function ExampleView({ example }: Props) {
               )}
             >
               <div className="absolute inset-0">
-                <EditorTabButtonPanel
-                  currentEditorTab={currentEditorTab}
-                  setCurrentEditorTab={setCurrentEditorTab}
-                />
-
-                {currentEditorTab === 'ts' && (
+                {
                   <>
                     <div className="flex border-b border-gray-300">
                       {[
-                        ...Object.keys(tsCodes),
-                        'index.html'
+                        ...(Object.keys(tsCodes).includes('index.ts')
+                          ? [
+                              'index.ts',
+                              ...Object.keys(tsCodes).filter(
+                                (name) => name !== 'index.ts',
+                              ),
+                            ]
+                          : Object.keys(tsCodes)),
+                        'index.html',
                       ].map((fileName) => (
                         <button
                           key={fileName}
@@ -168,11 +165,9 @@ export function ExampleView({ example }: Props) {
                       <TsCodeEditor shown code={tsCodes[currentTSFile]} />
                     )}
                   </>
-                )}
+                }
 
-                {currentEditorTab === 'html' && (
-                  <HtmlCodeEditor shown code={htmlCode} />
-                )}
+                {<HtmlCodeEditor shown code={htmlCode} />}
               </div>
             </div>
           ) : null}
@@ -180,48 +175,6 @@ export function ExampleView({ example }: Props) {
         <ControlPanel />
       </div>
     </>
-  );
-}
-
-function EditorTabButtonPanel({
-  currentEditorTab,
-  setCurrentEditorTab,
-}: {
-  currentEditorTab: EditorTab;
-  setCurrentEditorTab: (tab: EditorTab) => void;
-}) {
-  const commonStyle =
-    'inline-flex justify-center items-center box-border text-sm px-5 py-1';
-  const activeStyle =
-    'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark';
-  const inactiveStyle =
-    'bg-white border-tameplum-100 border-2 hover:bg-tameplum-20';
-
-  return (
-    <div className="absolute right-0 md:right-6 top-2 z-10 flex">
-      <button
-        className={cs(
-          commonStyle,
-          'rounded-l-lg',
-          currentEditorTab === 'ts' ? activeStyle : inactiveStyle,
-        )}
-        type="button"
-        onClick={() => setCurrentEditorTab('ts')}
-      >
-        TS
-      </button>
-      <button
-        className={cs(
-          commonStyle,
-          'rounded-r-lg',
-          currentEditorTab === 'html' ? activeStyle : inactiveStyle,
-        )}
-        type="button"
-        onClick={() => setCurrentEditorTab('html')}
-      >
-        HTML
-      </button>
-    </div>
   );
 }
 

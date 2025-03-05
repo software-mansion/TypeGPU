@@ -54,7 +54,6 @@ export async function executeExample(
     const filePath = String(importFn);
     const match = filePath.match(/\(\)\s*=>\s*import\("([^"]+)"\)/);
     if (match?.[1]) {
-      console.log(match[1]);
       return match[1];
     }
   }

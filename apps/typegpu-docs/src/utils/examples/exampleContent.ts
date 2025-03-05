@@ -42,11 +42,10 @@ function pathToExampleFilesMap<T>(
     }
     groups[groupKey][fileName] = value;
   }
-
   return groups;
 }
 
-function pathToExampleFilesMapFilePaths(
+function pathToExampleFilesToImportMap(
   record: Record<string, () => Promise<unknown>>,
 ): Record<string, Record<string, () => Promise<unknown>>> {
   const groups: Record<string, Record<string, () => Promise<unknown>>> = {};
@@ -87,10 +86,10 @@ const readonlyTsFiles: Record<
   }),
 );
 
-const tsSourceFilePaths: Record<
+const tsFilesImportFunctions: Record<
   string,
   Record<string, () => Promise<unknown>>
-> = pathToExampleFilesMapFilePaths(
+> = pathToExampleFilesToImportMap(
   import.meta.glob('../../content/examples/**/*.ts', {
     query: '?tgpu=true',
   }),
@@ -115,7 +114,7 @@ export const examples = pipe(
           key,
           metadata: value,
           tsCodes: readonlyTsFiles[key] ?? {},
-          tsSources: tsSourceFilePaths[key] ?? {},
+          tsSources: tsFilesImportFunctions[key] ?? {},
           htmlCode: htmlFiles[key] ?? '',
         },
       ] satisfies [string, Example],
