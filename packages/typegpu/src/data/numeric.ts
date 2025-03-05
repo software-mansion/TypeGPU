@@ -140,6 +140,7 @@ const f16Cast = createDualImpl(
     return bin.f16.read(new bin.BufferReader(arr));
   },
   // GPU implementation
+  // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
   (v) => {
     return { value: `f16(${v.value})`, dataType: f16 };
   },

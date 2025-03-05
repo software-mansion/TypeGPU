@@ -170,6 +170,8 @@ describe('wgslGenerator', () => {
       astInfo.externals ?? {},
     );
 
+    // Check for: return testUsage.value.a + testUsage.value.b.x;
+    //                      ^ this should be a u32
     const res1 = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body as unknown as typeof expectedAst).b[0].r
@@ -178,6 +180,8 @@ describe('wgslGenerator', () => {
 
     expect(res1.dataType).toEqual(d.u32);
 
+    // Check for: return testUsage.value.a + testUsage.value.b.x;
+    //                                            ^ this should be a u32
     const res2 = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body as unknown as typeof expectedAst).b[0].r
@@ -185,6 +189,8 @@ describe('wgslGenerator', () => {
     );
     expect(res2.dataType).toEqual(d.u32);
 
+    // Check for: return testUsage.value.a + testUsage.value.b.x;
+    //              ^ this should be a u32
     const sum = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body as unknown as typeof expectedAst).b[0]
@@ -226,6 +232,8 @@ describe('wgslGenerator', () => {
       astInfo.externals ?? {},
     );
 
+    // Check for: return testUsage.value[3];
+    //              ^ this should be a u32
     const res = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body as unknown as typeof expectedAst).b[0]
