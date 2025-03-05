@@ -1,29 +1,29 @@
 import { entries, filter, fromEntries, groupBy, map, pipe } from 'remeda';
-import type { Example, ExampleMetadata, Module } from './types';
-
-const HELP = import.meta.glob('../../content/examples/**/*.ts', {
-  query: '?tgpu=true',
-})
+import type { Example, ExampleMetadata } from './types';
 
 function pathToExampleKey<T>(record: Record<string, T>): Record<string, T> {
   return pipe(
     record,
     entries(),
-    map(([path, value]) => [
-      pipe(
-        path,
-        (p) => p.replace(/^..\/..\/content\/examples\//, ''),
-        (p) => p.replace(/\/[^\/]*$/, ''),
-        (p) => p.replace(/\//, '--')
-      ),
-      value,
-    ] as const),
-    fromEntries()
+    map(
+      ([path, value]) =>
+        [
+          pipe(
+            path,
+            (p) => p.replace(/^..\/..\/content\/examples\//, ''),
+            (p) => p.replace(/\/[^\/]*$/, ''),
+            (p) => p.replace(/\//, '--'),
+          ),
+          value,
+        ] as const,
+    ),
+    fromEntries(),
   );
 }
 
-
-function pathToExampleFilesMap<T>(record: Record<string, T>): Record<string, Record<string, T>> {
+function pathToExampleFilesMap<T>(
+  record: Record<string, T>,
+): Record<string, Record<string, T>> {
   const groups: Record<string, Record<string, T>> = {};
 
   for (const [path, value] of Object.entries(record)) {
@@ -31,7 +31,7 @@ function pathToExampleFilesMap<T>(record: Record<string, T>): Record<string, Rec
       path,
       (p) => p.replace(/^..\/..\/content\/examples\//, ''),
       (p) => p.replace(/\/[^\/]*$/, ''),
-      (p) => p.replace(/\//, '--')
+      (p) => p.replace(/\//, '--'),
     );
 
     const fileNameMatch = path.match(/\/([^\/]+\.ts)$/);
@@ -46,7 +46,9 @@ function pathToExampleFilesMap<T>(record: Record<string, T>): Record<string, Rec
   return groups;
 }
 
-function pathToExampleFilesMapFilePaths(record: Record<string, () => Promise<unknown>>): Record<string, Record<string, () => Promise<unknown>>> {
+function pathToExampleFilesMapFilePaths(
+  record: Record<string, () => Promise<unknown>>,
+): Record<string, Record<string, () => Promise<unknown>>> {
   const groups: Record<string, Record<string, () => Promise<unknown>>> = {};
 
   for (const [filePath, dynamicImport] of Object.entries(record)) {
@@ -54,7 +56,7 @@ function pathToExampleFilesMapFilePaths(record: Record<string, () => Promise<unk
       filePath,
       (p) => p.replace(/^..\/..\/content\/examples\//, ''),
       (p) => p.replace(/\/[^\/]*$/, ''),
-      (p) => p.replace(/\//, '--')
+      (p) => p.replace(/\//, '--'),
     );
     const fileNameMatch = filePath.match(/\/([^\/]+\.ts)$/);
     const fileName = fileNameMatch ? fileNameMatch[1] : filePath;
@@ -71,28 +73,27 @@ const metaFiles: Record<string, ExampleMetadata> = pathToExampleKey(
   import.meta.glob('../../content/examples/**/meta.json', {
     eager: true,
     import: 'default',
-  })
+  }),
 );
 
-const readonlyTsFiles: Record<string, Record<string, string>> = pathToExampleFilesMap(
+const readonlyTsFiles: Record<
+  string,
+  Record<string, string>
+> = pathToExampleFilesMap(
   import.meta.glob('../../content/examples/**/*.ts', {
     query: 'raw',
     eager: true,
     import: 'default',
-  })
+  }),
 );
 
-const TsSources: Record<string, Record<string, string>> = pathToExampleFilesMap(
+const tsSourceFilePaths: Record<
+  string,
+  Record<string, () => Promise<unknown>>
+> = pathToExampleFilesMapFilePaths(
   import.meta.glob('../../content/examples/**/*.ts', {
-    query: 'raw',
-    eager: true,
-  })
-);
-
-const tsSourceFilePaths: Record<string, Record<string, () => Promise<unknown>>> = pathToExampleFilesMapFilePaths(
-  import.meta.glob('../../content/examples/**/*.ts', {
-    query: '?tgpu',
-  })
+    query: '?tgpu=true',
+  }),
 );
 
 const htmlFiles: Record<string, string> = pathToExampleKey(
@@ -100,37 +101,27 @@ const htmlFiles: Record<string, string> = pathToExampleKey(
     query: 'raw',
     eager: true,
     import: 'default',
-  })
+  }),
 );
-
-const execTsFiles: Record<string, Module> = pathToExampleKey(
-  import.meta.glob('../../content/examples/**/index.ts', {
-    query: 'raw',
-    eager: true,
-  })
-);
-
-function moduleToString(module?: Module) {
-  return module ? `${module.default}` : '';
-}
 
 export const examples = pipe(
   metaFiles,
   entries(),
-  map(([key, value]) => [
-    key,
-    {
-      key,
-      metadata: value,
-      tsCodes: readonlyTsFiles[key] ?? {},
-      tsSources: tsSourceFilePaths[key] ?? {},
-      htmlCode: htmlFiles[key] ?? '',
-      execTsCode: moduleToString(execTsFiles[key]),
-    },
-  ] satisfies [string, Example]),
-  fromEntries()
+  map(
+    ([key, value]) =>
+      [
+        key,
+        {
+          key,
+          metadata: value,
+          tsCodes: readonlyTsFiles[key] ?? {},
+          tsSources: tsSourceFilePaths[key] ?? {},
+          htmlCode: htmlFiles[key] ?? '',
+        },
+      ] satisfies [string, Example],
+  ),
+  fromEntries(),
 );
-console.log('examples', examples);
 
 export const examplesStable = pipe(
   examples,
@@ -139,14 +130,14 @@ export const examplesStable = pipe(
   filter(([_, example]) =>
     example.metadata.tags?.includes('camera')
       ? typeof MediaStreamTrackProcessor === 'undefined'
-      : true
+      : true,
   ),
-  fromEntries()
+  fromEntries(),
 );
 
 export const examplesByCategory = groupBy(
   Object.values(examples),
-  (example) => example.metadata.category
+  (example) => example.metadata.category,
 );
 
 export const PLAYGROUND_KEY = 'playground__';
