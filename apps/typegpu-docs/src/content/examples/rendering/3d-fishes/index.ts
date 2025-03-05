@@ -52,7 +52,7 @@ const fishAmount = 1024 * 8;
 const fishModelScale = 0.03;
 
 const aquariumSize = d.vec3f(2, 2, 2);
-// const wrappingSides = d.vec3u(1, 0, 0);
+const wrappingSides = d.vec3u(1, 0, 0); // 1 for true, 0 for false
 
 // TODO: remove the buffer and struct, just reference the constants
 const fishParameters = FishParameters({
@@ -278,6 +278,10 @@ const mainCompute = tgpu['~unstable']
       );
     }
     for (let i = 0; i < 3; i += 1) {
+      if (wrappingSides[i] === 1) {
+        continue;
+      }
+
       const repulsion = d.vec3f();
       repulsion[i] = 1.0;
 
@@ -286,19 +290,13 @@ const mainCompute = tgpu['~unstable']
       const distance = computeFishParameters.value.wallRepulsionDistance;
 
       if (axisPosition > axisAquariumSize - distance) {
-        const strength = std.pow(
-          2,
-          axisPosition - (axisAquariumSize - distance),
-        );
-        wallRepulsion = std.sub(wallRepulsion, std.mul(strength, repulsion));
+        const str = std.pow(2, axisPosition - (axisAquariumSize - distance));
+        wallRepulsion = std.sub(wallRepulsion, std.mul(str, repulsion));
       }
 
       if (axisPosition < -axisAquariumSize + distance) {
-        const strength = std.pow(
-          2,
-          -(-axisAquariumSize + distance - axisPosition),
-        );
-        wallRepulsion = std.add(wallRepulsion, std.mul(strength, repulsion));
+        const str = std.pow(2, -(-axisAquariumSize + distance - axisPosition));
+        wallRepulsion = std.add(wallRepulsion, std.mul(str, repulsion));
       }
     }
 
@@ -325,6 +323,17 @@ const mainCompute = tgpu['~unstable']
     );
 
     fishData.position = std.add(fishData.position, fishData.velocity);
+    for (let i = 0; i < 3; i += 1) {
+      if (wrappingSides[i] === 0) {
+        continue;
+      }
+      if (fishData.position[i] - fishModelScale > aquariumSize[i] / 2) {
+        fishData.position[i] = -aquariumSize[i] / 2;
+      } else if (fishData.position[i] + fishModelScale < -aquariumSize[i] / 2) {
+        fishData.position[i] = aquariumSize[i] / 2;
+      }
+    }
+
     computeNextFishData.value[fishIndex] = fishData;
   });
 
