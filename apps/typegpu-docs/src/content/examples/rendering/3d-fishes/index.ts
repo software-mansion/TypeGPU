@@ -44,7 +44,8 @@ const FishModelVertexOutput = {
   textureUV: d.vec2f,
 } as const;
 
-const MouseRepulsionRay = d.struct({
+const MouseRay = d.struct({
+  activated: d.u32,
   pointX: d.vec3f,
   pointY: d.vec3f,
 });
@@ -100,7 +101,7 @@ const computeBindGroupLayout = tgpu.bindGroupLayout({
     access: 'mutable',
   },
   fishParameters: { uniform: FishParameters },
-  mouseRepulsionRay: { uniform: MouseRepulsionRay },
+  mouseRay: { uniform: MouseRay },
 });
 
 // render sharers
@@ -246,7 +247,7 @@ const {
   currentFishData: computeCurrentFishData,
   nextFishData: computeNextFishData,
   fishParameters: computeFishParameters,
-  mouseRepulsionRay: computeMouseRepulsionRay,
+  mouseRay: computeMouseRay,
 } = computeBindGroupLayout.bound;
 
 const mainCompute = tgpu['~unstable']
@@ -342,8 +343,8 @@ const mainCompute = tgpu['~unstable']
 
     if (
       distanceFromLine(
-        computeMouseRepulsionRay.value.pointX,
-        computeMouseRepulsionRay.value.pointY,
+        computeMouseRay.value.pointX,
+        computeMouseRay.value.pointY,
         fishData.position,
       ) < 0.1
     ) {
@@ -410,9 +411,7 @@ const fishDataBuffers = Array.from({ length: 2 }, () =>
     .$usage('storage', 'uniform', 'vertex'),
 );
 
-const mouseRepulsionRayBuffer = root
-  .createBuffer(MouseRepulsionRay)
-  .$usage('uniform');
+const mouseRayBuffer = root.createBuffer(MouseRay).$usage('uniform');
 
 const randomizeFishPositions = () => {
   const positions = Array.from({ length: fishAmount }, () => ({
@@ -527,7 +526,7 @@ const computeBindGroups = [0, 1].map((idx) =>
     currentFishData: fishDataBuffers[idx],
     nextFishData: fishDataBuffers[1 - idx],
     fishParameters: fishParametersBuffer,
-    mouseRepulsionRay: mouseRepulsionRayBuffer,
+    mouseRay: mouseRayBuffer,
   }),
 );
 
@@ -665,10 +664,34 @@ let drawCube: () => void;
 
 let odd = false;
 let disposed = false;
+let currentCameraPos = d.vec4f(
+  cameraInitialPosition.x,
+  cameraInitialPosition.y,
+  cameraInitialPosition.z,
+  1,
+);
+let currentCameraView = m.mat4.lookAt(
+  currentCameraPos,
+  cameraInitialTarget,
+  d.vec3f(0, 1, 0),
+  d.mat4x4f(),
+);
+let currentMouseRay = MouseRay({
+  activated: 0,
+  pointX: d.vec3f(),
+  pointY: d.vec3f(),
+});
+
 function frame() {
   if (disposed) {
     return;
   }
+
+  cameraBuffer.write({
+    view: currentCameraView,
+    projection: cameraInitialValue.projection,
+  });
+  mouseRayBuffer.write(currentMouseRay);
 
   drawCube();
 
@@ -710,66 +733,50 @@ export const controls = {
 };
 
 // Variables for mouse interaction.
-let isDragging = false;
-let prevX = 0;
-let prevY = 0;
-let currentCameraPos = d.vec4f(
-  cameraInitialPosition.x,
-  cameraInitialPosition.y,
-  cameraInitialPosition.z,
-  1,
-);
-let isRayFired = false;
-let orbitRadius = distance(cameraInitialPosition, d.vec3f());
+let isLeftPressed = false;
+let previousMouseX = 0;
+let previousMouseY = 0;
+let isRightPressed = false;
 
-// Yaw and pitch angles facing the origin.
-let orbitYaw = Math.atan2(cameraInitialPosition.x, cameraInitialPosition.z);
-let orbitPitch = Math.asin(cameraInitialPosition.y / orbitRadius);
+let cameraRadius = std.length(cameraInitialPosition);
+let cameraYaw = Math.atan2(cameraInitialPosition.x, cameraInitialPosition.z);
+let cameraPitch = Math.asin(cameraInitialPosition.y / cameraRadius);
 
-// Helper functions for updating transforms.
 function updateCameraOrbit(dx: number, dy: number) {
-  const orbitSensitivity = 0.005;
-  orbitYaw += -dx * orbitSensitivity;
-  orbitPitch += dy * orbitSensitivity;
+  cameraYaw += -dx * 0.005;
+  cameraPitch += dy * 0.005;
+
   // if we don't limit pitch, it would lead to flipping the camera which is disorienting.
   const maxPitch = Math.PI / 2 - 0.01;
-  if (orbitPitch > maxPitch) orbitPitch = maxPitch;
-  if (orbitPitch < -maxPitch) orbitPitch = -maxPitch;
-  // basically converting spherical coordinates to cartesian.
-  // like sampling points on a unit sphere and then scaling them by the radius.
-  const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
-  const newCamY = orbitRadius * Math.sin(orbitPitch);
-  const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
-  currentCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
+  if (cameraPitch > maxPitch) cameraPitch = maxPitch;
+  if (cameraPitch < -maxPitch) cameraPitch = -maxPitch;
 
-  const newView = m.mat4.lookAt(
+  const newCamX = cameraRadius * Math.sin(cameraYaw) * Math.cos(cameraPitch);
+  const newCamY = cameraRadius * Math.sin(cameraPitch);
+  const newCamZ = cameraRadius * Math.cos(cameraYaw) * Math.cos(cameraPitch);
+
+  currentCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
+  currentCameraView = m.mat4.lookAt(
     currentCameraPos,
     cameraInitialTarget,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
   );
-  cameraBuffer.write({
-    view: newView,
-    projection: cameraInitialValue.projection,
-  });
 }
 
 async function updateMouseRay(cx: number, cy: number) {
-  const canvasPos = canvas.getBoundingClientRect();
-  const x = Math.floor((cx - canvasPos.left) * window.devicePixelRatio);
-  const y = Math.floor((cy - canvasPos.top) * window.devicePixelRatio);
-  isRayFired = true;
+  const boundingBox = canvas.getBoundingClientRect();
+  const canvasX = Math.floor((cx - boundingBox.left) * window.devicePixelRatio);
+  const canvasY = Math.floor((cy - boundingBox.top) * window.devicePixelRatio);
   const canvasPoint = d.vec4f(
-    (x / canvas.width) * 2 - 1,
-    (1 - y / canvas.height) * 2 - 1,
+    (canvasX / canvas.width) * 2 - 1,
+    (1 - canvasY / canvas.height) * 2 - 1,
     0,
     1,
   );
-  const cameraData = await cameraBuffer.read();
-  const invView = d.mat4x4f();
-  m.mat4.inverse(cameraData.view, invView);
-  const invProj = d.mat4x4f();
-  m.mat4.inverse(cameraData.projection, invProj);
+
+  const invView = m.mat4.inverse(currentCameraView, d.mat4x4f());
+  const invProj = m.mat4.inverse(cameraInitialValue.projection, d.mat4x4f());
   const intermediate = std.mul(invProj, canvasPoint);
   const worldPos = std.mul(invView, intermediate);
   const worldPosNonUniform = d.vec3f(
@@ -778,10 +785,11 @@ async function updateMouseRay(cx: number, cy: number) {
     worldPos.z / worldPos.w,
   );
 
-  mouseRepulsionRayBuffer.write({
+  currentMouseRay = {
+    activated: 1,
     pointX: currentCameraPos.xyz,
     pointY: worldPosNonUniform,
-  });
+  };
 }
 
 // Prevent the context menu from appearing on right click.
@@ -791,55 +799,56 @@ canvas.addEventListener('contextmenu', (event) => {
 
 canvas.addEventListener('wheel', (event: WheelEvent) => {
   event.preventDefault();
-  const zoomSensitivity = 0.05;
-  orbitRadius = Math.max(1, orbitRadius + event.deltaY * zoomSensitivity);
-  const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
-  const newCamY = orbitRadius * Math.sin(orbitPitch);
-  const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
+  cameraRadius = Math.max(1, cameraRadius + event.deltaY * 0.05);
+  const newCamX = cameraRadius * Math.sin(cameraYaw) * Math.cos(cameraPitch);
+  const newCamY = cameraRadius * Math.sin(cameraPitch);
+  const newCamZ = cameraRadius * Math.cos(cameraYaw) * Math.cos(cameraPitch);
   currentCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
-  const newView = m.mat4.lookAt(
+  currentCameraView = m.mat4.lookAt(
     currentCameraPos,
     cameraInitialTarget,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
   );
-  cameraBuffer.write({
-    view: newView,
-    projection: cameraInitialValue.projection,
-  });
 });
 
 canvas.addEventListener('mousedown', async (event) => {
+  previousMouseX = event.clientX;
+  previousMouseY = event.clientY;
   if (event.button === 0) {
-    isDragging = true;
-    prevX = event.clientX;
-    prevY = event.clientY;
+    isLeftPressed = true;
   }
   if (event.button === 2) {
-    isRayFired = true;
+    isRightPressed = true;
     updateMouseRay(event.clientX, event.clientY);
   }
 });
 
 canvas.addEventListener('mouseup', (event) => {
   if (event.button === 0) {
-    isDragging = false;
+    isLeftPressed = false;
   }
   if (event.button === 2) {
-    isRayFired = false;
+    isRightPressed = false;
+    currentMouseRay = {
+      activated: 1,
+      pointX: d.vec3f(),
+      pointY: d.vec3f(),
+    };
   }
 });
 
 canvas.addEventListener('mousemove', (event) => {
-  if (isDragging) {
-    const dx = event.clientX - prevX;
-    const dy = event.clientY - prevY;
-    prevX = event.clientX;
-    prevY = event.clientY;
+  const dx = event.clientX - previousMouseX;
+  const dy = event.clientY - previousMouseY;
+  previousMouseX = event.clientX;
+  previousMouseY = event.clientY;
+
+  if (isLeftPressed) {
     updateCameraOrbit(dx, dy);
   }
 
-  if (isRayFired) {
+  if (isRightPressed) {
     updateMouseRay(event.clientX, event.clientY);
   }
 });
