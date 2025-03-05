@@ -44,6 +44,11 @@ const FishModelVertexOutput = {
   textureUV: d.vec2f,
 } as const;
 
+const MouseRepulsionRay = d.struct({
+  pointX: d.vec3f,
+  pointY: d.vec3f,
+});
+
 // constants
 
 const workGroupSize = 256;
@@ -95,6 +100,7 @@ const computeBindGroupLayout = tgpu.bindGroupLayout({
     access: 'mutable',
   },
   fishParameters: { uniform: FishParameters },
+  mouseRepulsionRay: { uniform: MouseRepulsionRay },
 });
 
 // render sharers
@@ -226,10 +232,21 @@ const distance = tgpu['~unstable']
     return std.pow(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z, 0.5);
   });
 
+const distanceFromLine = tgpu['~unstable']
+  .fn([d.vec3f, d.vec3f, d.vec3f], d.f32)
+  .does((l1, l2, x) => {
+    const d = std.normalize(std.sub(l2, l1));
+    const v = std.sub(x, l1);
+    const t = std.dot(v, d);
+    const p = std.add(l1, std.mul(t, d));
+    return distance(x, p);
+  });
+
 const {
   currentFishData: computeCurrentFishData,
   nextFishData: computeNextFishData,
   fishParameters: computeFishParameters,
+  mouseRepulsionRay: computeMouseRepulsionRay,
 } = computeBindGroupLayout.bound;
 
 const mainCompute = tgpu['~unstable']
@@ -251,6 +268,7 @@ const mainCompute = tgpu['~unstable']
       if (d.u32(i) === fishIndex) {
         continue;
       }
+
       const other = computeCurrentFishData.value[i];
       const dist = distance(fishData.position, other.position);
       if (dist < computeFishParameters.value.separationDistance) {
@@ -322,6 +340,16 @@ const mainCompute = tgpu['~unstable']
       std.normalize(fishData.velocity),
     );
 
+    if (
+      distanceFromLine(
+        computeMouseRepulsionRay.value.pointX,
+        computeMouseRepulsionRay.value.pointY,
+        fishData.position,
+      ) < 0.1
+    ) {
+      fishData.velocity = std.mul(0.01, fishData.velocity);
+    }
+
     fishData.position = std.add(fishData.position, fishData.velocity);
     for (let i = 0; i < 3; i += 1) {
       if (wrappingSides[i] === 0) {
@@ -381,6 +409,10 @@ const fishDataBuffers = Array.from({ length: 2 }, () =>
     .createBuffer(FishDataArray(fishAmount))
     .$usage('storage', 'uniform', 'vertex'),
 );
+
+const mouseRepulsionRayBuffer = root
+  .createBuffer(MouseRepulsionRay)
+  .$usage('uniform');
 
 const randomizeFishPositions = () => {
   const positions = Array.from({ length: fishAmount }, () => ({
@@ -495,6 +527,7 @@ const computeBindGroups = [0, 1].map((idx) =>
     currentFishData: fishDataBuffers[idx],
     nextFishData: fishDataBuffers[1 - idx],
     fishParameters: fishParametersBuffer,
+    mouseRepulsionRay: mouseRepulsionRayBuffer,
   }),
 );
 
@@ -680,6 +713,13 @@ export const controls = {
 let isDragging = false;
 let prevX = 0;
 let prevY = 0;
+let currentCameraPos = d.vec4f(
+  cameraInitialPosition.x,
+  cameraInitialPosition.y,
+  cameraInitialPosition.z,
+  1,
+);
+let isRayFired = false;
 let orbitRadius = distance(cameraInitialPosition, d.vec3f());
 
 // Yaw and pitch angles facing the origin.
@@ -700,10 +740,10 @@ function updateCameraOrbit(dx: number, dy: number) {
   const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
   const newCamY = orbitRadius * Math.sin(orbitPitch);
   const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
-  const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
+  currentCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
 
   const newView = m.mat4.lookAt(
-    newCameraPos,
+    currentCameraPos,
     cameraInitialTarget,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
@@ -711,6 +751,36 @@ function updateCameraOrbit(dx: number, dy: number) {
   cameraBuffer.write({
     view: newView,
     projection: cameraInitialValue.projection,
+  });
+}
+
+async function updateMouseRay(cx: number, cy: number) {
+  const canvasPos = canvas.getBoundingClientRect();
+  const x = Math.floor((cx - canvasPos.left) * window.devicePixelRatio);
+  const y = Math.floor((cy - canvasPos.top) * window.devicePixelRatio);
+  isRayFired = true;
+  const canvasPoint = d.vec4f(
+    (x / canvas.width) * 2 - 1,
+    (1 - y / canvas.height) * 2 - 1,
+    0,
+    1,
+  );
+  const cameraData = await cameraBuffer.read();
+  const invView = d.mat4x4f();
+  m.mat4.inverse(cameraData.view, invView);
+  const invProj = d.mat4x4f();
+  m.mat4.inverse(cameraData.projection, invProj);
+  const intermediate = std.mul(invProj, canvasPoint);
+  const worldPos = std.mul(invView, intermediate);
+  const worldPosNonUniform = d.vec3f(
+    worldPos.x / worldPos.w,
+    worldPos.y / worldPos.w,
+    worldPos.z / worldPos.w,
+  );
+
+  mouseRepulsionRayBuffer.write({
+    pointX: currentCameraPos.xyz,
+    pointY: worldPosNonUniform,
   });
 }
 
@@ -726,9 +796,9 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
   const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
   const newCamY = orbitRadius * Math.sin(orbitPitch);
   const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
-  const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
+  currentCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
   const newView = m.mat4.lookAt(
-    newCameraPos,
+    currentCameraPos,
     cameraInitialTarget,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
@@ -739,17 +809,24 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
   });
 });
 
-canvas.addEventListener('mousedown', (event) => {
+canvas.addEventListener('mousedown', async (event) => {
   if (event.button === 0) {
     isDragging = true;
     prevX = event.clientX;
     prevY = event.clientY;
+  }
+  if (event.button === 2) {
+    isRayFired = true;
+    updateMouseRay(event.clientX, event.clientY);
   }
 });
 
 canvas.addEventListener('mouseup', (event) => {
   if (event.button === 0) {
     isDragging = false;
+  }
+  if (event.button === 2) {
+    isRayFired = false;
   }
 });
 
@@ -760,6 +837,10 @@ canvas.addEventListener('mousemove', (event) => {
     prevX = event.clientX;
     prevY = event.clientY;
     updateCameraOrbit(dx, dy);
+  }
+
+  if (isRayFired) {
+    updateMouseRay(event.clientX, event.clientY);
   }
 });
 
