@@ -11,6 +11,7 @@ import {
 import {
   getTypeForIndexAccess,
   getTypeForPropAccess,
+  getTypeFormWgsl,
   numericLiteralToResource,
 } from './generationHelpers';
 
@@ -182,12 +183,12 @@ export function generateExpression(
           UnknownData,
       };
     }
+    // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
+    const value = (target.value as any)[propertyStr];
 
     if (isWgsl(target.value)) {
       return {
-        // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
-        value: (target.value as any)[propertyStr],
-        // TODO: Infer data type
+        value,
         dataType:
           getTypeForPropAccess(target.value as d.AnyWgslData, propertyStr) ??
           UnknownData,
@@ -195,11 +196,14 @@ export function generateExpression(
     }
 
     if (typeof target.value === 'object') {
+      const dataType =
+        !target.value === null && isWgsl(value)
+          ? getTypeFormWgsl(value)
+          : UnknownData;
+
       return {
-        // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
-        value: (target.value as any)[propertyStr],
-        // TODO: Infer data type (but how? what if this is a function call? The return type is not very useful as it's a lie)
-        dataType: UnknownData,
+        value,
+        dataType,
       };
     }
 
@@ -265,11 +269,9 @@ export function generateExpression(
     }
 
     // Assuming that `id` is callable
-    // TODO: Pass in resources, not just values.
     const result = (idValue as unknown as (...args: unknown[]) => unknown)(
       ...resolvedResources,
     ) as Resource;
-    // TODO: Make function calls return resources instead of just values.
     return result;
   }
 

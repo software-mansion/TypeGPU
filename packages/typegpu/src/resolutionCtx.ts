@@ -193,7 +193,6 @@ class ItemStateStackImpl implements ItemStateStack {
 
         const external = layer.externalMap[id];
         if (external !== undefined) {
-          // TODO: Extract the type of the external value.
           return {
             value: external,
             dataType: isWgsl(external)
@@ -336,8 +335,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   getById(id: string): Resource | null {
-    // TODO: Provide access to external values
-    // TODO: Provide data type information
     const item = this._itemStateStack.getResourceById(id);
 
     if (item === undefined) {
