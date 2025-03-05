@@ -15,6 +15,7 @@ import {
   type VecBase,
 } from './vectorImpl';
 import type {
+  AnyVecInstance,
   Vec2f,
   Vec2h,
   Vec2i,
@@ -40,14 +41,25 @@ type VecSchemaBase<TValue> = {
 
 function makeVecSchema<TValue>(
   VecImpl: new (...args: number[]) => VecBase,
-): VecSchemaBase<TValue> & ((...args: number[]) => TValue) {
+): VecSchemaBase<TValue> & ((...args: (number | AnyVecInstance)[]) => TValue) {
   const { kind: type, length: componentCount } = new VecImpl();
 
-  const construct = (...args: number[]): TValue => {
-    const values = args; // TODO: Allow users to pass in vectors that fill part of the values.
-
+  const construct = (...args: (number | AnyVecInstance)[]): TValue => {
     if (inGPUMode()) {
-      return `${type}(${values.join(', ')})` as unknown as TValue;
+      return `${type}(${args.join(', ')})` as unknown as TValue;
+    }
+
+    const values = new Array(args.length);
+
+    let j = 0;
+    for (const arg of args) {
+      if (typeof arg === 'number') {
+        values[j++] = arg;
+      } else {
+        for (let c = 0; c < arg.length; ++c) {
+          values[j++] = arg[c];
+        }
+      }
     }
 
     if (values.length <= 1 || values.length === componentCount) {

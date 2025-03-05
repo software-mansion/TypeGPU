@@ -81,7 +81,7 @@ export function resolveRes(ctx: GenerationCtx, res: Resource): string {
   return String(res.value);
 }
 
-function assertExhaustive(value: unknown): never {
+function assertExhaustive(value: never): never {
   throw new Error(
     `'${JSON.stringify(value)}' was not handled by the WGSL generator.`,
   );
@@ -330,6 +330,10 @@ export function generateExpression(
       value: generateEntries(Object.values(obj)),
       dataType: UnknownData,
     };
+  }
+
+  if ('s' in expression) {
+    throw new Error('Cannot use string literals in TGSL.');
   }
 
   assertExhaustive(expression);
