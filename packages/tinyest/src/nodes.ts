@@ -39,10 +39,43 @@ export type Const = {
   c: [identifier: string, value: Expression];
 };
 
+export type For = {
+  j: [
+    init: Statement | undefined,
+    condition: Expression | undefined,
+    update: Statement | undefined,
+    body: Statement,
+  ];
+};
+
+export type While = {
+  w: [condition: Expression, body: Statement];
+};
+
+export type Continue = {
+  // kontinue
+  k: null;
+};
+
+export type Break = {
+  // demolish
+  d: null;
+};
+
 /**
  * A union type of all statements
  */
-export type Statement = Return | If | Block | Let | Const | Expression;
+export type Statement =
+  | Return
+  | If
+  | Block
+  | Let
+  | Const
+  | Expression
+  | For
+  | While
+  | Continue
+  | Break;
 
 //
 // Expression

@@ -87,6 +87,16 @@ export function abs<T extends vBase | number>(value: T): T {
   return VectorOps.abs[value.kind](value) as T;
 }
 
+export function atan2<T extends vBase | number>(y: T, x: T): T {
+  if (inGPUMode()) {
+    return `atan2(${y}, ${x})` as unknown as T;
+  }
+  if (typeof y === 'number' && typeof x === 'number') {
+    return Math.atan2(y, x) as T;
+  }
+  return VectorOps.atan2[(y as vBase).kind](y as never, x as never) as T;
+}
+
 /**
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#ceil-builtin
