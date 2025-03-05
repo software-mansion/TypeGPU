@@ -184,18 +184,9 @@ export function generateExpression(
 
   if ('a' in expression) {
     // Member Access
-    console.log('accessing member', expression.a);
-
     const [targetId, property] = expression.a;
     const target = generateExpression(ctx, targetId);
     const propertyStr = property;
-
-    console.log('target:', target);
-    console.log('property:', propertyStr);
-    console.log(
-      'typeforpropaccess:',
-      getTypeForPropAccess(target.dataType as Wgsl, propertyStr),
-    );
 
     if (typeof target.value === 'string') {
       return {

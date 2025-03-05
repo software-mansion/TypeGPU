@@ -114,7 +114,6 @@ export function getTypeForPropAccess(
   }
 
   if ((isDerived(targetType) || isSlot(targetType)) && propName === 'value') {
-    console.log('unwrapping slot or derived');
     const ctx = getResolutionCtx();
     if (!ctx) {
       throw new Error(

@@ -120,10 +120,6 @@ class TgpuFixedBufferImpl<
   }
 
   get value(): InferGPU<TData> {
-    if (!inGPUMode()) {
-      throw new Error(`Cannot access buffer's value directly in JS.`);
-    }
-
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
