@@ -102,7 +102,7 @@ const createCodeEditorComponent =
             },
             readOnly: true,
           }}
-          className='rounded-tl-none'
+          className="rounded-tl-none"
         />
       </div>
     );
