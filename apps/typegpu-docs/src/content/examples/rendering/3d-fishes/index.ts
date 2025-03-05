@@ -49,7 +49,7 @@ const FishModelVertexOutput = {
 const workGroupSize = 256;
 
 const fishAmount = 1024 * 8;
-const fishModelScale = 0.05;
+const fishModelScale = 0.03;
 
 const aquariumSize = d.vec3f(2, 2, 2);
 // const wrappingSides = d.vec3u(1, 0, 0);
@@ -63,7 +63,7 @@ const fishParameters = FishParameters({
   cohesionDistance: 0.3,
   cohesionStrength: 0.001,
   wallRepulsionDistance: 0.3,
-  wallRepulsionStrength: 0.0002,
+  wallRepulsionStrength: 0.0003,
 });
 
 const cameraInitialPosition = d.vec3f(2, 2, 2);
@@ -286,11 +286,19 @@ const mainCompute = tgpu['~unstable']
       const distance = computeFishParameters.value.wallRepulsionDistance;
 
       if (axisPosition > axisAquariumSize - distance) {
-        wallRepulsion = std.sub(wallRepulsion, repulsion);
+        const strength = std.pow(
+          2,
+          axisPosition - (axisAquariumSize - distance),
+        );
+        wallRepulsion = std.sub(wallRepulsion, std.mul(strength, repulsion));
       }
 
       if (axisPosition < -axisAquariumSize + distance) {
-        wallRepulsion = std.add(wallRepulsion, repulsion);
+        const strength = std.pow(
+          2,
+          -(-axisAquariumSize + distance - axisPosition),
+        );
+        wallRepulsion = std.add(wallRepulsion, std.mul(strength, repulsion));
       }
     }
 
