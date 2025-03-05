@@ -2,12 +2,8 @@ import { entries, filter, fromEntries, groupBy, map, pipe } from 'remeda';
 import type { Example, ExampleMetadata, Module } from './types';
 
 const HELP = import.meta.glob('../../content/examples/**/*.ts', {
-  query: { url: true },
-  import: 'default',
+  query: '?tgpu=true',
 })
-
-console.log('HELP', HELP);
-
 
 function pathToExampleKey<T>(record: Record<string, T>): Record<string, T> {
   return pipe(
@@ -50,9 +46,10 @@ function pathToExampleFilesMap<T>(record: Record<string, T>): Record<string, Rec
   return groups;
 }
 
-function pathToExampleFilesMapFilePaths(record: Record<string, unknown>): Record<string, Record<string, string>> {
-  const groups: Record<string, Record<string, string>> = {};
-  for (const filePath in record) {
+function pathToExampleFilesMapFilePaths(record: Record<string, () => Promise<unknown>>): Record<string, Record<string, () => Promise<unknown>>> {
+  const groups: Record<string, Record<string, () => Promise<unknown>>> = {};
+
+  for (const [filePath, dynamicImport] of Object.entries(record)) {
     const groupKey = pipe(
       filePath,
       (p) => p.replace(/^..\/..\/content\/examples\//, ''),
@@ -64,8 +61,9 @@ function pathToExampleFilesMapFilePaths(record: Record<string, unknown>): Record
     if (!groups[groupKey]) {
       groups[groupKey] = {};
     }
-    groups[groupKey][fileName] = filePath;
+    groups[groupKey][fileName] = dynamicImport;
   }
+
   return groups;
 }
 
@@ -91,10 +89,9 @@ const TsSources: Record<string, Record<string, string>> = pathToExampleFilesMap(
   })
 );
 
-const tsSourceFilePaths: Record<string, Record<string, string>> = pathToExampleFilesMapFilePaths(
+const tsSourceFilePaths: Record<string, Record<string, () => Promise<unknown>>> = pathToExampleFilesMapFilePaths(
   import.meta.glob('../../content/examples/**/*.ts', {
-    query: 'raw',
-    eager: true,
+    query: '?tgpu',
   })
 );
 

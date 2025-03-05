@@ -49,9 +49,24 @@ export async function executeExample(
     }
   }
 
-  const entryExampleFile = await import(
-  `${exampleSources['index.ts']}?t=${Date.now()}&tgpu=true`
-  );
+  function myExtractUrlFromViteImport(importFn: any): string | undefined  {
+    const filePath = String(importFn);
+    const match = filePath.match(/\(\)\s*=>\s*import\("([^"]+)"\)/);
+    if (match?.[1]) {
+      console.log(match[1])
+      return match[1];
+    }
+  }
+  
+  function noCacheImport(importFn: any): any {
+    const url = `${myExtractUrlFromViteImport(importFn)}&update=${Date.now()}`;
+  
+    // @vite-ignore
+    return import(url);
+  }
+  
+
+  const entryExampleFile = await noCacheImport(exampleSources['index.ts']);
   const controls = entryExampleFile.controls;
   if (controls) {
     addParameters(controls);
