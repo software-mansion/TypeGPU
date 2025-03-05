@@ -78,13 +78,11 @@ export function ExampleView({ example }: Props) {
   const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
 
+  const codeFiles = Object.keys(tsCodes);
   const editorTabsList = [
-    ...(Object.keys(tsCodes).includes('index.ts')
-      ? [
-          'index.ts',
-          ...Object.keys(tsCodes).filter((name) => name !== 'index.ts'),
-        ]
-      : Object.keys(tsCodes)),
+    ...(codeFiles.includes('index.ts')
+      ? ['index.ts', ...codeFiles.filter((name) => name !== 'index.ts')]
+      : codeFiles),
     'index.html',
   ];
 

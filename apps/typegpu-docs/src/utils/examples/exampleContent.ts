@@ -1,22 +1,20 @@
 import { entries, filter, fromEntries, groupBy, map, pipe } from 'remeda';
 import type { Example, ExampleMetadata } from './types';
 
+function pathPipe(path: string): string {
+  return pipe(
+    path,
+    (p) => p.replace(/^..\/..\/content\/examples\//, ''), // removing parent folder
+    (p) => p.replace(/\/[^\/]*$/, ''), // removing leaf file names (e.g. meta.json, index.ts)
+    (p) => p.replace(/\//, '--'), // replacing path separators with '--'
+  );
+}
+
 function pathToExampleKey<T>(record: Record<string, T>): Record<string, T> {
   return pipe(
     record,
     entries(),
-    map(
-      ([path, value]) =>
-        [
-          pipe(
-            path,
-            (p) => p.replace(/^..\/..\/content\/examples\//, ''),
-            (p) => p.replace(/\/[^\/]*$/, ''),
-            (p) => p.replace(/\//, '--'),
-          ),
-          value,
-        ] as const,
-    ),
+    map(([path, value]) => [pathPipe(path), value] as const),
     fromEntries(),
   );
 }
@@ -27,12 +25,7 @@ function pathToExampleFilesMap<T>(
   const groups: Record<string, Record<string, T>> = {};
 
   for (const [path, value] of Object.entries(record)) {
-    const groupKey = pipe(
-      path,
-      (p) => p.replace(/^..\/..\/content\/examples\//, ''),
-      (p) => p.replace(/\/[^\/]*$/, ''),
-      (p) => p.replace(/\//, '--'),
-    );
+    const groupKey = pathPipe(path);
 
     const fileNameMatch = path.match(/\/([^\/]+\.ts)$/);
     const fileName = fileNameMatch ? fileNameMatch[1] : path;
@@ -51,12 +44,7 @@ function pathToExampleFilesToImportMap(
   const groups: Record<string, Record<string, () => Promise<unknown>>> = {};
 
   for (const [filePath, dynamicImport] of Object.entries(record)) {
-    const groupKey = pipe(
-      filePath,
-      (p) => p.replace(/^..\/..\/content\/examples\//, ''),
-      (p) => p.replace(/\/[^\/]*$/, ''),
-      (p) => p.replace(/\//, '--'),
-    );
+    const groupKey = pathPipe(filePath);
     const fileNameMatch = filePath.match(/\/([^\/]+\.ts)$/);
     const fileName = fileNameMatch ? fileNameMatch[1] : filePath;
     if (!groups[groupKey]) {
