@@ -52,11 +52,10 @@ const indexableTypes = [
 type SwizzleableType = 'f' | 'h' | 'i' | 'u';
 type SwizzleLength = 1 | 2 | 3 | 4;
 
-const swizzleLenToType: {
-  [key in SwizzleableType]: {
-    [key in SwizzleLength]: AnyWgslData;
-  };
-} = {
+const swizzleLenToType: Record<
+  SwizzleableType,
+  Record<SwizzleLength, AnyWgslData>
+> = {
   f: {
     1: f32,
     2: vec2f,
@@ -143,20 +142,15 @@ export function getTypeForPropAccess(
     propLength >= 1 &&
     propLength <= 4
   ) {
+    const swizzleTypeChar = targetTypeStr[4] as SwizzleableType;
     const swizzleType =
-      swizzleLenToType[targetTypeStr[4] as SwizzleableType][
-        propLength as SwizzleLength
-      ];
+      swizzleLenToType[swizzleTypeChar][propLength as SwizzleLength];
     if (swizzleType) {
       return swizzleType;
     }
   }
 
-  if (isWgslData(target)) {
-    return target;
-  }
-
-  return undefined;
+  return isWgslData(target) ? target : undefined;
 }
 
 export function getTypeForIndexAccess(resource: Wgsl): BaseData | undefined {
@@ -173,8 +167,9 @@ export function getTypeForIndexAccess(resource: Wgsl): BaseData | undefined {
     if (isWgslArray(resource)) {
       return resource.elementType;
     }
+
     // vector or matrix
-    if (Object.keys(indexableTypeToResult).includes(resource.type)) {
+    if (resource.type in indexableTypeToResult) {
       return indexableTypeToResult[
         resource.type as keyof typeof indexableTypeToResult
       ];
@@ -199,48 +194,36 @@ export function getTypeFormWgsl(resource: Wgsl): AnyWgslData | UnknownData {
     return bool;
   }
 
-  if (isWgslData(resource)) {
-    return resource;
-  }
-
-  return UnknownData;
+  return isWgslData(resource) ? resource : UnknownData;
 }
 
 export function numericLiteralToResource(value: string): Resource | undefined {
-  // Hex literals (since JS does not have float hex literals, we'll assume it's an int)
-  const hexRegex = /^0x[0-9a-f]+$/i;
-  if (hexRegex.test(value)) {
-    return { value: value, dataType: abstractInt };
+  // Hex literals
+  if (/^0x[0-9a-f]+$/i.test(value)) {
+    return { value, dataType: abstractInt };
   }
 
   // Binary literals
-  const binRegex = /^0b[01]+$/i;
-  if (binRegex.test(value)) {
-    // Since wgsl doesn't support binary literals, we'll convert it to a decimal number
+  if (/^0b[01]+$/i.test(value)) {
     return {
       value: `${Number.parseInt(value.slice(2), 2)}`,
       dataType: abstractInt,
     };
   }
 
-  const floatRegex = /^-?(?:\d+\.\d*|\d*\.\d+)$/;
-  if (floatRegex.test(value)) {
+  // Floating point literals
+  if (/^-?(?:\d+\.\d*|\d*\.\d+)$/i.test(value)) {
     return { value, dataType: abstractFloat };
   }
 
   // Floating point literals with scientific notation
-  const sciFloatRegex = /^-?\d+\.\d+e-?\d+$/;
-  if (sciFloatRegex.test(value)) {
-    return {
-      value: value,
-      dataType: abstractFloat,
-    };
+  if (/^-?\d+\.\d+e-?\d+$/i.test(value)) {
+    return { value, dataType: abstractFloat };
   }
 
   // Integer literals
-  const intRegex = /^-?\d+$/;
-  if (intRegex.test(value)) {
-    return { value: value, dataType: abstractInt };
+  if (/^-?\d+$/i.test(value)) {
+    return { value, dataType: abstractInt };
   }
 
   return undefined;

@@ -35,18 +35,18 @@ const parenthesizedOps = [
   '||',
 ];
 
+const logicalOps = ['&&', '||', '!', '==', '!=', '<', '<=', '>', '>='];
+
+type OpratorTypes =
+  | smol.BinaryOperator
+  | smol.AssignmentOperator
+  | smol.LogicalOperator
+  | smol.UnaryOperator;
+
 function operatorToType<
   TL extends wgsl.AnyWgslData | UnknownData,
   TR extends wgsl.AnyWgslData | UnknownData,
->(
-  lhs: TL,
-  op:
-    | smol.BinaryOperator
-    | smol.AssignmentOperator
-    | smol.LogicalOperator
-    | smol.UnaryOperator,
-  rhs?: TR,
-): TL | TR | wgsl.Bool {
+>(lhs: TL, op: OpratorTypes, rhs?: TR): TL | TR | wgsl.Bool {
   if (!rhs) {
     if (op === '!' || op === '~') {
       return d.bool;
@@ -55,16 +55,7 @@ function operatorToType<
     return lhs;
   }
 
-  if (
-    op === '==' ||
-    op === '!=' ||
-    op === '<' ||
-    op === '<=' ||
-    op === '>' ||
-    op === '>=' ||
-    op === '&&' ||
-    op === '||'
-  ) {
+  if (logicalOps.includes(op)) {
     return d.bool;
   }
 
@@ -104,9 +95,7 @@ function assertExhaustive(value: never): never {
 }
 
 export function generateBoolean(ctx: GenerationCtx, value: boolean): Resource {
-  return value
-    ? { value: 'true', dataType: d.bool }
-    : { value: 'false', dataType: d.bool };
+  return { value: value ? 'true' : 'false', dataType: d.bool };
 }
 
 export function generateBlock(ctx: GenerationCtx, value: smol.Block): string {
@@ -144,20 +133,18 @@ export function generateExpression(
   if (typeof expression === 'string') {
     return generateIdentifier(ctx, expression);
   }
-
   if (typeof expression === 'boolean') {
     return generateBoolean(ctx, expression);
   }
 
   if ('x' in expression) {
     // Logical/Binary/Assignment Expression
-
     const [lhs, op, rhs] = expression.x;
     const lhsExpr = generateExpression(ctx, lhs);
-    const lhsStr = resolveRes(ctx, lhsExpr);
     const rhsExpr = generateExpression(ctx, rhs);
-    const rhsStr = resolveRes(ctx, rhsExpr);
 
+    const lhsStr = resolveRes(ctx, lhsExpr);
+    const rhsStr = resolveRes(ctx, rhsExpr);
     const type = operatorToType(lhsExpr.dataType, op, rhsExpr.dataType);
 
     return {
@@ -170,7 +157,6 @@ export function generateExpression(
 
   if ('u' in expression) {
     // Unary Expression
-
     const [op, arg] = expression.u;
     const argExpr = generateExpression(ctx, arg);
     const argStr = resolveRes(ctx, argExpr);
@@ -222,11 +208,10 @@ export function generateExpression(
 
   if ('i' in expression) {
     // Index Access
-
     const [target, property] = expression.i;
     const targetExpr = generateExpression(ctx, target);
-    const targetStr = resolveRes(ctx, targetExpr);
     const propertyExpr = generateExpression(ctx, property);
+    const targetStr = resolveRes(ctx, targetExpr);
     const propertyStr = resolveRes(ctx, propertyExpr);
 
     return {
@@ -239,19 +224,15 @@ export function generateExpression(
 
   if ('n' in expression) {
     // Numeric Literal
-    const value = expression.n;
-
-    const type = numericLiteralToResource(value);
-    if (type) {
-      return type;
+    const type = numericLiteralToResource(expression.n);
+    if (!type) {
+      throw new Error(`Invalid numeric literal ${expression.n}`);
     }
-
-    throw new Error(`Invalid numeric literal ${value}`);
+    return type;
   }
 
   if ('f' in expression) {
     // Function Call
-
     const [callee, args] = expression.f;
     const id = generateExpression(ctx, callee);
     const idValue = id.value;
@@ -293,6 +274,7 @@ export function generateExpression(
   }
 
   if ('o' in expression) {
+    // Object Literal
     const obj = expression.o;
     const callee = ctx.callStack[ctx.callStack.length - 1];
 
