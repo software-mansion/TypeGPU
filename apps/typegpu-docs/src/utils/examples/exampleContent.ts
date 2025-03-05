@@ -2,10 +2,12 @@ import { entries, filter, fromEntries, groupBy, map, pipe } from 'remeda';
 import type { Example, ExampleMetadata, Module } from './types';
 
 const HELP = import.meta.glob('../../content/examples/**/*.ts', {
+  query: { url: true },
   import: 'default',
 })
 
 console.log('HELP', HELP);
+
 
 function pathToExampleKey<T>(record: Record<string, T>): Record<string, T> {
   return pipe(
@@ -48,7 +50,6 @@ function pathToExampleFilesMap<T>(record: Record<string, T>): Record<string, Rec
   return groups;
 }
 
-// Add a new helper that returns a mapping from filename to filepath
 function pathToExampleFilesMapFilePaths(record: Record<string, unknown>): Record<string, Record<string, string>> {
   const groups: Record<string, Record<string, string>> = {};
   for (const filePath in record) {
