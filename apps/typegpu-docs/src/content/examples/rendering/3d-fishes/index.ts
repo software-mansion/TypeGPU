@@ -16,6 +16,8 @@ const FishParameters = d.struct({
   cohesionStrength: d.f32,
   wallRepulsionDistance: d.f32,
   wallRepulsionStrength: d.f32,
+  mouseRayRepulsionDistance: d.f32,
+  mouseRayRepulsionStrength: d.f32,
 });
 
 const Camera = d.struct({
@@ -57,7 +59,7 @@ const workGroupSize = 256;
 const fishAmount = 1024 * 8;
 const fishModelScale = 0.03;
 
-const aquariumSize = d.vec3f(2, 2, 2);
+const aquariumSize = d.vec3f(4, 2, 2);
 const wrappingSides = d.vec3u(1, 0, 0); // 1 for true, 0 for false
 
 // TODO: remove the buffer and struct, just reference the constants
@@ -70,6 +72,8 @@ const fishParameters = FishParameters({
   cohesionStrength: 0.001,
   wallRepulsionDistance: 0.3,
   wallRepulsionStrength: 0.0003,
+  mouseRayRepulsionDistance: 0.2,
+  mouseRayRepulsionStrength: 0.005,
 });
 
 const cameraInitialPosition = d.vec3f(2, 2, 2);
@@ -233,14 +237,14 @@ const distance = tgpu['~unstable']
     return std.pow(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z, 0.5);
   });
 
-const distanceFromLine = tgpu['~unstable']
-  .fn([d.vec3f, d.vec3f, d.vec3f], d.f32)
+const distanceVectorFromLine = tgpu['~unstable']
+  .fn([d.vec3f, d.vec3f, d.vec3f], d.vec3f)
   .does((l1, l2, x) => {
     const d = std.normalize(std.sub(l2, l1));
     const v = std.sub(x, l1);
     const t = std.dot(v, d);
     const p = std.add(l1, std.mul(t, d));
-    return distance(x, p);
+    return std.sub(x, p);
   });
 
 const {
@@ -264,6 +268,7 @@ const mainCompute = tgpu['~unstable']
     let cohesion = d.vec3f();
     let cohesionCount = 0;
     let wallRepulsion = d.vec3f();
+    let rayRepulsion = d.vec3f();
 
     for (let i = 0; i < fishAmount; i += 1) {
       if (d.u32(i) === fishIndex) {
@@ -319,6 +324,18 @@ const mainCompute = tgpu['~unstable']
       }
     }
 
+    if (computeMouseRay.value.activated === 1) {
+      const distanceVector = distanceVectorFromLine(
+        computeMouseRay.value.pointX,
+        computeMouseRay.value.pointY,
+        fishData.position,
+      );
+      const limit = computeFishParameters.value.mouseRayRepulsionDistance;
+      const str =
+        std.pow(2, std.clamp(limit - std.length(distanceVector), 0, limit)) - 1;
+      rayRepulsion = std.mul(str, std.normalize(distanceVector));
+    }
+
     fishData.velocity = std.add(
       fishData.velocity,
       std.mul(computeFishParameters.value.separationStrength, separation),
@@ -335,21 +352,18 @@ const mainCompute = tgpu['~unstable']
       fishData.velocity,
       std.mul(computeFishParameters.value.wallRepulsionStrength, wallRepulsion),
     );
+    fishData.velocity = std.add(
+      fishData.velocity,
+      std.mul(
+        computeFishParameters.value.mouseRayRepulsionStrength,
+        rayRepulsion,
+      ),
+    );
 
     fishData.velocity = std.mul(
       std.clamp(std.length(fishData.velocity), 0.0, 0.01),
       std.normalize(fishData.velocity),
     );
-
-    if (
-      distanceFromLine(
-        computeMouseRay.value.pointX,
-        computeMouseRay.value.pointY,
-        fishData.position,
-      ) < 0.1
-    ) {
-      fishData.velocity = std.mul(0.01, fishData.velocity);
-    }
 
     fishData.position = std.add(fishData.position, fishData.velocity);
     for (let i = 0; i < 3; i += 1) {
@@ -831,7 +845,7 @@ canvas.addEventListener('mouseup', (event) => {
   if (event.button === 2) {
     isRightPressed = false;
     currentMouseRay = {
-      activated: 1,
+      activated: 0,
       pointX: d.vec3f(),
       pointY: d.vec3f(),
     };
