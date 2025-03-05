@@ -102,7 +102,6 @@ const createCodeEditorComponent =
             },
             readOnly: true,
           }}
-          className="pt-16 md:pt-0"
         />
       </div>
     );

@@ -142,7 +142,7 @@ export function ExampleView({ example }: Props) {
               <div className="absolute inset-1">
                 {
                   <>
-                    <div className="flex overflow-auto border-gray-300">
+                    <div className="flex overflow-auto border-gray-300 pt-16 md:pt-0">
                       {editorTabsList.map((fileName) => (
                         <button
                           key={fileName}
