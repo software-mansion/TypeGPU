@@ -124,6 +124,18 @@ for (const controls of Object.values(example)) {
         params.onToggleChange(toggle.checked);
       }
 
+      if ('onTextChange' in params) {
+        const input = document.createElement('input');
+        input.value = params.initial ?? '';
+
+        input.addEventListener('input', () => {
+          params.onTextChange(input.value);
+        });
+
+        controlRow.appendChild(input);
+        params.onTextChange(input.value);
+      }
+
       controlsPanel.appendChild(controlRow);
     }
   }
@@ -152,8 +164,14 @@ type ButtonControlParam = {
   onButtonClick: (() => void) | (() => Promise<void>);
 };
 
+type TextAreaControlParam = {
+  onTextChange: (newValue: string) => void;
+  initial?: string;
+};
+
 type ExampleControlParam =
   | SelectControlParam
   | ToggleControlParam
   | SliderControlParam
-  | ButtonControlParam;
+  | ButtonControlParam
+  | TextAreaControlParam;
