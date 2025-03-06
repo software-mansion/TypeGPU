@@ -4,15 +4,7 @@ import { alignmentOf } from './alignmentOf';
 import { isDisarray, isUnstruct } from './dataTypes';
 import { offsetsForProps } from './offsets';
 import { sizeOf } from './sizeOf';
-import {
-  isVec,
-  isVec2,
-  isVec3,
-  isVec4,
-  isWgslArray,
-  isWgslStruct,
-} from './wgslTypes';
-import type * as wgsl from './wgslTypes';
+import * as wgsl from './wgslTypes';
 
 export let EVAL_ALLOWED_IN_ENV: boolean;
 
@@ -66,92 +58,63 @@ const primitiveToWriteFunction = {
   f32: 'setFloat32',
 } as const;
 
-export function createCompileInstructions<TData extends wgsl.BaseData>(
-  schema: TData,
-) {
-  const segments: CompiledWriteInstructions[] = [];
-
-  function gather<T extends wgsl.BaseData>(
-    node: T,
-    offset: number,
-    path: string[],
-  ) {
-    if (isWgslStruct(node) || isUnstruct(node)) {
-      const propOffsets = offsetsForProps(node);
-
-      const sortedProps = Object.entries(propOffsets).sort(
-        (a, b) => a[1].offset - b[1].offset, // Sort by offset
+export function buildWriter(
+  node: wgsl.BaseData,
+  offsetExpr: string,
+  valueExpr: string,
+): string {
+  if (wgsl.isWgslStruct(node) || isUnstruct(node)) {
+    const propOffsets = offsetsForProps(node);
+    const sortedProps = Object.entries(propOffsets).sort(
+      (a, b) => a[1].offset - b[1].offset,
+    );
+    let code = '';
+    for (const [key, propOffset] of sortedProps) {
+      const subSchema = node.propTypes[key];
+      if (!subSchema) continue;
+      code += buildWriter(
+        subSchema,
+        `(${offsetExpr} + ${propOffset.offset})`,
+        `${valueExpr}.${key}`,
       );
-
-      for (const [key, propOffset] of sortedProps) {
-        const subSchema = node.propTypes[key];
-        if (!subSchema) continue;
-
-        gather(subSchema, offset + propOffset.offset, [...path, key]);
-      }
-      return;
     }
-
-    if (isWgslArray(node) || isDisarray(node)) {
-      const arrSchema = node as wgsl.WgslArray;
-      const elementSize = roundUp(
-        sizeOf(arrSchema.elementType),
-        alignmentOf(arrSchema.elementType),
-      );
-
-      for (let i = 0; i < arrSchema.elementCount; i++) {
-        const newPath = [...path];
-        const last = newPath.pop();
-        if (last !== undefined) {
-          newPath.push(`${last}[${i}]`);
-        } else {
-          newPath.push(`[${i}]`);
-        }
-        gather(arrSchema.elementType, offset + i * elementSize, newPath);
-      }
-      return;
-    }
-
-    if (isVec(node)) {
-      const primitive = typeToPrimitive[node.type];
-      if (isVec2(node)) {
-        segments.push({ primitive, offset, path: [...path, 'x'] });
-        segments.push({ primitive, offset: offset + 4, path: [...path, 'y'] });
-      }
-      if (isVec3(node)) {
-        segments.push({ primitive, offset, path: [...path, 'x'] });
-        segments.push({ primitive, offset: offset + 4, path: [...path, 'y'] });
-        segments.push({ primitive, offset: offset + 8, path: [...path, 'z'] });
-      }
-      if (isVec4(node)) {
-        segments.push({ primitive, offset, path: [...path, 'x'] });
-        segments.push({ primitive, offset: offset + 4, path: [...path, 'y'] });
-        segments.push({ primitive, offset: offset + 8, path: [...path, 'z'] });
-        segments.push({ primitive, offset: offset + 12, path: [...path, 'w'] });
-      }
-
-      return;
-    }
-
-    const primitive =
-      typeToPrimitive[node.type as keyof typeof typeToPrimitive];
-    segments.push({ primitive, offset, path });
+    return code;
   }
 
-  gather(schema, 0, []);
+  if (wgsl.isWgslArray(node) || isDisarray(node)) {
+    const arrSchema = node as wgsl.WgslArray;
+    const elementSize = roundUp(
+      sizeOf(arrSchema.elementType),
+      alignmentOf(arrSchema.elementType),
+    );
+    let code = '';
 
-  return segments;
-}
+    code += `for (let i = 0; i < ${arrSchema.elementCount}; i++) {\n`;
+    code += buildWriter(
+      arrSchema.elementType,
+      `(${offsetExpr} + i * ${elementSize})`,
+      `${valueExpr}[i]`,
+    );
+    code += '}\n';
 
-function buildAccessor(path: string[]) {
-  const rootIsArray = path[0]?.startsWith('[');
-
-  if (rootIsArray) {
-    const index = path.shift();
-    return `value${index}${path.map((p) => `.${p}`).join('')}`;
+    return code;
   }
 
-  return path.length === 0 ? 'value' : `value.${path.join('.')}`;
+  if (wgsl.isVec(node)) {
+    const primitive = typeToPrimitive[node.type];
+    let code = '';
+    const writeFunc = primitiveToWriteFunction[primitive];
+    const components = ['x', 'y', 'z', 'w'];
+    const count = wgsl.isVec2(node) ? 2 : wgsl.isVec3(node) ? 3 : 4;
+
+    for (let i = 0; i < count; i++) {
+      code += `output.${writeFunc}((${offsetExpr} + ${i * 4}), ${valueExpr}.${components[i]}, endianness);\n`;
+    }
+    return code;
+  }
+
+  const primitive = typeToPrimitive[node.type as keyof typeof typeToPrimitive];
+  return `output.${primitiveToWriteFunction[primitive]}(${offsetExpr}, ${valueExpr}, endianness);\n`;
 }
 
 export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
@@ -171,14 +134,7 @@ export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
     ) => void;
   }
 
-  const instructions = createCompileInstructions(schema);
-
-  const body = instructions
-    .map(
-      ({ primitive, offset, path }) =>
-        `output.${primitiveToWriteFunction[primitive]}(offset+${offset}, ${buildAccessor(path)}, endianness)`,
-    )
-    .join('\n');
+  const body = buildWriter(schema, 'offset', 'value');
 
   const fn = new Function(
     'output',
