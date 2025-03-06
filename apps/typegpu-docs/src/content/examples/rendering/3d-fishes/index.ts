@@ -61,7 +61,7 @@ const workGroupSize = 256;
 const fishAmount = 1024 * 8;
 const fishModelScale = 0.03;
 
-const aquariumSize = d.vec3f(4, 4, 4);
+const aquariumSize = d.vec3f(8, 2, 6);
 const wrappingSides = d.vec3u(1, 0, 0); // 1 for true, 0 for false
 
 // TODO: remove the buffer and struct, just reference the constants
@@ -70,8 +70,8 @@ const fishParameters = FishParameters({
   separationStrength: 0.001,
   alignmentDistance: 0.2,
   alignmentStrength: 0.02,
-  cohesionDistance: 0.3,
-  cohesionStrength: 0.001,
+  cohesionDistance: 0.25,
+  cohesionStrength: 0.0008,
   wallRepulsionDistance: 0.3,
   wallRepulsionStrength: 0.0003,
   mouseRayRepulsionDistance: 0.3,
@@ -82,7 +82,7 @@ const cameraInitialPosition = d.vec4f(2, 2, 2, 1);
 const cameraInitialTarget = d.vec3f(0, 0, 0);
 
 const fogDistance = 1.5;
-const fogThickness = 1;
+const fogThickness = 0.5;
 const lightColor = d.vec3f(0.8, 0.8, 1);
 const lightDirection = std.normalize(d.vec3f(1.0, 1.0, 1.0));
 const backgroundColor = d.vec3f(137 / 255, 220 / 255, 255 / 255);
@@ -535,6 +535,12 @@ const fishModel = await loadModel(
   'assets/3d-fishes/fish.png',
 );
 
+const oceanFloorModel = await loadModel(
+  root,
+  'assets/3d-fishes/ocean_floor.obj',
+  'assets/3d-fishes/ocean_floor.jpg',
+);
+
 // pipelines
 
 const renderPipeline = root['~unstable']
@@ -565,15 +571,31 @@ const sampler = root.device.createSampler({
   minFilter: 'linear',
 });
 
-const renderBindGroups = [0, 1].map((idx) =>
+const renderFishesBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(renderBindGroupLayout, {
     modelData: fishDataBuffers[idx],
     camera: cameraBuffer,
-    fishParameters: fishParametersBuffer,
     modelTexture: fishModel.texture,
     sampler: sampler,
   }),
 );
+
+const oceanFloorDataBuffer = root
+  .createBuffer(ModelDataArray(1), [
+    {
+      position: d.vec3f(0, -aquariumSize.y / 2 + 1, 0),
+      direction: d.vec3f(1, 0, 0),
+      scale: 1,
+    },
+  ])
+  .$usage('storage', 'vertex', 'uniform');
+
+const renderOceanFloorBindGroups = root.createBindGroup(renderBindGroupLayout, {
+  modelData: oceanFloorDataBuffer,
+  camera: cameraBuffer,
+  modelTexture: oceanFloorModel.texture,
+  sampler: sampler,
+});
 
 const computeBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(computeBindGroupLayout, {
@@ -620,9 +642,27 @@ function frame() {
       depthLoadOp: 'clear',
       depthStoreOp: 'store',
     })
+    .with(modelVertexLayout, oceanFloorModel.vertexBuffer)
+    .with(renderInstanceLayout, oceanFloorDataBuffer)
+    .with(renderBindGroupLayout, renderOceanFloorBindGroups)
+    .draw(oceanFloorModel.polygonCount, 1);
+
+  renderPipeline
+    .withColorAttachment({
+      view: context.getCurrentTexture().createView(),
+      clearValue: [backgroundColor.x, backgroundColor.y, backgroundColor.z, 1],
+      loadOp: 'load' as const,
+      storeOp: 'store' as const,
+    })
+    .withDepthStencilAttachment({
+      view: depthTexture.createView(),
+      depthClearValue: 1,
+      depthLoadOp: 'load',
+      depthStoreOp: 'store',
+    })
     .with(modelVertexLayout, fishModel.vertexBuffer)
     .with(renderInstanceLayout, fishDataBuffers[odd ? 1 : 0])
-    .with(renderBindGroupLayout, renderBindGroups[odd ? 1 : 0])
+    .with(renderBindGroupLayout, renderFishesBindGroups[odd ? 1 : 0])
     .draw(fishModel.polygonCount, fishAmount);
 
   root['~unstable'].flush();
