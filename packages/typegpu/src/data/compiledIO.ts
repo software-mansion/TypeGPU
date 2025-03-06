@@ -25,12 +25,6 @@ const compiledWriters = new WeakMap<
   ) => void
 >();
 
-export interface CompiledWriteInstructions {
-  primitive: 'u32' | 'i32' | 'f32';
-  offset: number;
-  path: string[];
-}
-
 const typeToPrimitive = {
   u32: 'u32',
   vec2u: 'u32',
