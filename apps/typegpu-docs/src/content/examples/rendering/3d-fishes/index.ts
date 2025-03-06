@@ -26,12 +26,13 @@ const Camera = d.struct({
   projection: d.mat4x4f,
 });
 
-const FishData = d.struct({
+const ModelData = d.struct({
   position: d.vec3f,
-  velocity: d.vec3f,
+  direction: d.vec3f, // in case of the fish, this is also the velocity
+  scale: d.f32,
 });
 
-const FishDataArray = (n: number) => d.arrayOf(FishData, n);
+const ModelDataArray = (n: number) => d.arrayOf(ModelData, n);
 
 const modelVertexInput = {
   modelPosition: d.vec3f,
@@ -92,20 +93,19 @@ const modelVertexLayout = tgpu.vertexLayout((n: number) =>
   d.arrayOf(d.struct(modelVertexInput), n),
 );
 
-const renderInstanceLayout = tgpu.vertexLayout(FishDataArray, 'instance');
+const renderInstanceLayout = tgpu.vertexLayout(ModelDataArray, 'instance');
 
 const renderBindGroupLayout = tgpu.bindGroupLayout({
-  fishData: { storage: FishDataArray },
+  modelData: { storage: ModelDataArray },
+  modelTexture: { texture: 'float' },
   camera: { uniform: Camera },
-  fishParameters: { uniform: FishParameters },
-  fishTexture: { texture: 'float' },
-  fishSampler: { sampler: 'filtering' },
+  sampler: { sampler: 'filtering' },
 });
 
 const computeBindGroupLayout = tgpu.bindGroupLayout({
-  currentFishData: { storage: FishDataArray },
+  currentFishData: { storage: ModelDataArray },
   nextFishData: {
-    storage: FishDataArray,
+    storage: ModelDataArray,
     access: 'mutable',
   },
   fishParameters: { uniform: FishParameters },
@@ -116,9 +116,9 @@ const computeBindGroupLayout = tgpu.bindGroupLayout({
 
 const {
   camera: renderCamera,
-  fishTexture: renderFishTexture,
-  fishSampler: renderFishSampler,
-  fishData: renderFishData,
+  modelTexture: renderModelTexture,
+  sampler: renderSampler,
+  modelData: renderModelData,
 } = renderBindGroupLayout.bound;
 
 const vertexShader = tgpu['~unstable']
@@ -129,11 +129,11 @@ const vertexShader = tgpu['~unstable']
   .does((input) => {
     // rotate the model so that it aligns with model's direction of movement
     // https://simple.wikipedia.org/wiki/Pitch,_yaw,_and_roll
-    const fishData = renderFishData.value[input.instanceIndex];
+    const modelData = renderModelData.value[input.instanceIndex];
 
     const modelPosition = input.modelPosition;
 
-    const direction = std.normalize(fishData.velocity);
+    const direction = std.normalize(modelData.direction);
 
     const yaw = std.atan2(direction.z, direction.x) + Math.PI;
     // biome-ignore format:
@@ -154,9 +154,9 @@ const vertexShader = tgpu['~unstable']
     const worldPosition = std.add(
       std.mul(
         yawMatrix,
-        std.mul(pitchMatrix, std.mul(fishModelScale, modelPosition)),
+        std.mul(pitchMatrix, std.mul(modelData.scale, modelPosition)),
       ),
-      fishData.position,
+      modelData.position,
     );
 
     // calculate where the normal vector points to
@@ -189,7 +189,7 @@ const sampleTexture = tgpu['~unstable']
   .does(/*wgsl*/ `(uv: vec2<f32>) -> vec4<f32> {
       return textureSample(shaderTexture, shaderSampler, uv);
     }`)
-  .$uses({ shaderTexture: renderFishTexture, shaderSampler: renderFishSampler })
+  .$uses({ shaderTexture: renderModelTexture, shaderSampler: renderSampler })
   .$name('sampleShader');
 
 const reflect = tgpu['~unstable']
@@ -307,7 +307,7 @@ const mainCompute = tgpu['~unstable']
         );
       }
       if (dist < computeFishParameters.value.alignmentDistance) {
-        alignment = std.add(alignment, other.velocity);
+        alignment = std.add(alignment, other.direction);
         alignmentCount = alignmentCount + 1;
       }
       if (dist < computeFishParameters.value.cohesionDistance) {
@@ -359,36 +359,36 @@ const mainCompute = tgpu['~unstable']
       rayRepulsion = std.mul(str, std.normalize(distanceVector));
     }
 
-    fishData.velocity = std.add(
-      fishData.velocity,
+    fishData.direction = std.add(
+      fishData.direction,
       std.mul(computeFishParameters.value.separationStrength, separation),
     );
-    fishData.velocity = std.add(
-      fishData.velocity,
+    fishData.direction = std.add(
+      fishData.direction,
       std.mul(computeFishParameters.value.alignmentStrength, alignment),
     );
-    fishData.velocity = std.add(
-      fishData.velocity,
+    fishData.direction = std.add(
+      fishData.direction,
       std.mul(computeFishParameters.value.cohesionStrength, cohesion),
     );
-    fishData.velocity = std.add(
-      fishData.velocity,
+    fishData.direction = std.add(
+      fishData.direction,
       std.mul(computeFishParameters.value.wallRepulsionStrength, wallRepulsion),
     );
-    fishData.velocity = std.add(
-      fishData.velocity,
+    fishData.direction = std.add(
+      fishData.direction,
       std.mul(
         computeFishParameters.value.mouseRayRepulsionStrength,
         rayRepulsion,
       ),
     );
 
-    fishData.velocity = std.mul(
-      std.clamp(std.length(fishData.velocity), 0.0, 0.01),
-      std.normalize(fishData.velocity),
+    fishData.direction = std.mul(
+      std.clamp(std.length(fishData.direction), 0.0, 0.01),
+      std.normalize(fishData.direction),
     );
 
-    fishData.position = std.add(fishData.position, fishData.velocity);
+    fishData.position = std.add(fishData.position, fishData.direction);
     for (let i = 0; i < 3; i += 1) {
       if (wrappingSides[i] === 0) {
         continue;
@@ -443,7 +443,7 @@ const fishParametersBuffer = root
 
 const fishDataBuffers = Array.from({ length: 2 }, () =>
   root
-    .createBuffer(FishDataArray(fishAmount))
+    .createBuffer(ModelDataArray(fishAmount))
     .$usage('storage', 'uniform', 'vertex'),
 );
 
@@ -456,12 +456,12 @@ const randomizeFishPositions = () => {
       Math.random() * 2 - 1,
       Math.random() * 2 - 1,
     ),
-    velocity: d.vec3f(
+    direction: d.vec3f(
       Math.random() * 0.1 - 0.05,
       Math.random() * 0.1 - 0.05,
       Math.random() * 0.1 - 0.05,
     ),
-    alive: 1,
+    scale: fishModelScale * (1 + (Math.random() - 0.5) * 0.8),
   }));
   fishDataBuffers[0].write(positions);
   fishDataBuffers[1].write(positions);
@@ -567,11 +567,11 @@ const sampler = root.device.createSampler({
 
 const renderBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(renderBindGroupLayout, {
-    fishData: fishDataBuffers[idx],
+    modelData: fishDataBuffers[idx],
     camera: cameraBuffer,
     fishParameters: fishParametersBuffer,
-    fishTexture: fishModel.texture,
-    fishSampler: sampler,
+    modelTexture: fishModel.texture,
+    sampler: sampler,
   }),
 );
 
