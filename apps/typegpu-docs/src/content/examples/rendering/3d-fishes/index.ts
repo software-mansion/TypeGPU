@@ -1,6 +1,6 @@
 import { load } from '@loaders.gl/core';
 import { OBJLoader } from '@loaders.gl/obj';
-import tgpu from 'typegpu';
+import tgpu, { type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
@@ -33,14 +33,14 @@ const FishData = d.struct({
 
 const FishDataArray = (n: number) => d.arrayOf(FishData, n);
 
-const FishModelVertexInput = {
+const modelVertexInput = {
   modelPosition: d.vec3f,
   modelNormal: d.vec3f,
   textureUV: d.vec2f,
   instanceIndex: d.builtin.instanceIndex,
 } as const;
 
-const FishModelVertexOutput = {
+const modelVertexOutput = {
   worldPosition: d.vec3f,
   worldNormal: d.vec3f,
   canvasPosition: d.builtin.position,
@@ -65,10 +65,10 @@ const wrappingSides = d.vec3u(1, 0, 0); // 1 for true, 0 for false
 
 // TODO: remove the buffer and struct, just reference the constants
 const fishParameters = FishParameters({
-  separationDistance: 0.05,
+  separationDistance: 0.08,
   separationStrength: 0.001,
-  alignmentDistance: 0.3,
-  alignmentStrength: 0.01,
+  alignmentDistance: 0.2,
+  alignmentStrength: 0.02,
   cohesionDistance: 0.3,
   cohesionStrength: 0.001,
   wallRepulsionDistance: 0.3,
@@ -80,16 +80,16 @@ const fishParameters = FishParameters({
 const cameraInitialPosition = d.vec4f(2, 2, 2, 1);
 const cameraInitialTarget = d.vec3f(0, 0, 0);
 
-const fogDistance = 1;
-const fogThickness = 0.5;
+const fogDistance = 1.5;
+const fogThickness = 1;
 const lightColor = d.vec3f(0.8, 0.8, 1);
 const lightDirection = std.normalize(d.vec3f(1.0, 1.0, 1.0));
 const backgroundColor = d.vec3f(137 / 255, 220 / 255, 255 / 255);
 
 // layouts
 
-const fishModelVertexLayout = tgpu.vertexLayout((n: number) =>
-  d.arrayOf(d.struct(FishModelVertexInput), n),
+const modelVertexLayout = tgpu.vertexLayout((n: number) =>
+  d.arrayOf(d.struct(modelVertexInput), n),
 );
 
 const renderInstanceLayout = tgpu.vertexLayout(FishDataArray, 'instance');
@@ -123,8 +123,8 @@ const {
 
 const vertexShader = tgpu['~unstable']
   .vertexFn({
-    in: FishModelVertexInput,
-    out: FishModelVertexOutput,
+    in: modelVertexInput,
+    out: modelVertexOutput,
   })
   .does((input) => {
     // rotate the model so that it aligns with model's direction of movement
@@ -205,11 +205,11 @@ const distance = tgpu['~unstable']
 
 const fragmentShader = tgpu['~unstable']
   .fragmentFn({
-    in: FishModelVertexOutput,
+    in: modelVertexOutput,
     out: d.location(0, d.vec4f),
   })
   .does((input) => {
-    // Directional lighting in Phong reflection model
+    // shade the fragment in Phong reflection model
     // https://en.wikipedia.org/wiki/Phong_reflection_model
 
     const viewDirection = std.normalize(
@@ -468,59 +468,77 @@ const randomizeFishPositions = () => {
 };
 randomizeFishPositions();
 
-// fish model and texture
+// models and textures
 
-const fishModel = await load('assets/3d-fishes/fish.obj', OBJLoader);
-const fishModelPolygonCount = fishModel.attributes.POSITION.value.length / 3;
+async function loadModel(
+  root: TgpuRoot,
+  modelPath: string,
+  texturePath: string,
+) {
+  const modelMesh = await load(modelPath, OBJLoader);
+  const polygonCount = modelMesh.attributes.POSITION.value.length / 3;
 
-const fishVertexBuffer = root
-  .createBuffer(fishModelVertexLayout.schemaForCount(fishModelPolygonCount))
-  .$usage('vertex')
-  .$name('vertex');
+  const vertexBuffer = root
+    .createBuffer(modelVertexLayout.schemaForCount(polygonCount))
+    .$usage('vertex')
+    .$name('vertex');
 
-const fishModelVertices = [];
-for (let i = 0; i < fishModelPolygonCount; i++) {
-  fishModelVertices.push({
-    modelPosition: d.vec3f(
-      fishModel.attributes.POSITION.value[3 * i],
-      fishModel.attributes.POSITION.value[3 * i + 1],
-      fishModel.attributes.POSITION.value[3 * i + 2],
-    ),
-    modelNormal: d.vec3f(
-      fishModel.attributes.NORMAL.value[3 * i],
-      fishModel.attributes.NORMAL.value[3 * i + 1],
-      fishModel.attributes.NORMAL.value[3 * i + 2],
-    ),
-    textureUV: d.vec2f(
-      fishModel.attributes.TEXCOORD_0.value[2 * i],
-      1 - fishModel.attributes.TEXCOORD_0.value[2 * i + 1],
-    ),
-    instanceIndex: 0,
-  });
+  const modelVertices = [];
+  for (let i = 0; i < polygonCount; i++) {
+    modelVertices.push({
+      modelPosition: d.vec3f(
+        modelMesh.attributes.POSITION.value[3 * i],
+        modelMesh.attributes.POSITION.value[3 * i + 1],
+        modelMesh.attributes.POSITION.value[3 * i + 2],
+      ),
+      modelNormal: d.vec3f(
+        modelMesh.attributes.NORMAL.value[3 * i],
+        modelMesh.attributes.NORMAL.value[3 * i + 1],
+        modelMesh.attributes.NORMAL.value[3 * i + 2],
+      ),
+      textureUV: d.vec2f(
+        modelMesh.attributes.TEXCOORD_0.value[2 * i],
+        1 - modelMesh.attributes.TEXCOORD_0.value[2 * i + 1],
+      ),
+      instanceIndex: 0,
+    });
+  }
+  modelVertices.reverse();
+
+  vertexBuffer.write(modelVertices);
+
+  const textureResponse = await fetch(texturePath);
+  const imageBitmap = await createImageBitmap(await textureResponse.blob());
+  const texture = root['~unstable']
+    .createTexture({
+      size: [imageBitmap.width, imageBitmap.height],
+      format: 'rgba8unorm',
+    })
+    .$usage('sampled', 'render');
+
+  root.device.queue.copyExternalImageToTexture(
+    { source: imageBitmap },
+    { texture: root.unwrap(texture) },
+    [imageBitmap.width, imageBitmap.height],
+  );
+
+  return {
+    vertexBuffer: vertexBuffer,
+    polygonCount: polygonCount,
+    texture: texture,
+  };
 }
-fishModelVertices.reverse();
 
-fishVertexBuffer.write(fishModelVertices);
-
-const textureResponse = await fetch('assets/3d-fishes/fish.png');
-const imageBitmap = await createImageBitmap(await textureResponse.blob());
-const cubeTexture = root['~unstable']
-  .createTexture({
-    size: [imageBitmap.width, imageBitmap.height],
-    format: 'rgba8unorm',
-  })
-  .$usage('sampled', 'render');
-
-root.device.queue.copyExternalImageToTexture(
-  { source: imageBitmap },
-  { texture: root.unwrap(cubeTexture) },
-  [imageBitmap.width, imageBitmap.height],
+const fishModel = await loadModel(
+  root,
+  'assets/3d-fishes/fish.obj',
+  'assets/3d-fishes/fish.png',
 );
 
 // pipelines
 
 const renderPipeline = root['~unstable']
-  .withVertex(vertexShader, fishModelVertexLayout.attrib)
+  .withVertex(vertexShader, modelVertexLayout.attrib)
   .withFragment(fragmentShader, { format: presentationFormat })
   .withDepthStencil({
     format: 'depth24plus',
@@ -552,7 +570,7 @@ const renderBindGroups = [0, 1].map((idx) =>
     fishData: fishDataBuffers[idx],
     camera: cameraBuffer,
     fishParameters: fishParametersBuffer,
-    fishTexture: cubeTexture,
+    fishTexture: fishModel.texture,
     fishSampler: sampler,
   }),
 );
@@ -602,10 +620,10 @@ function frame() {
       depthLoadOp: 'clear',
       depthStoreOp: 'store',
     })
-    .with(fishModelVertexLayout, fishVertexBuffer)
+    .with(modelVertexLayout, fishModel.vertexBuffer)
     .with(renderInstanceLayout, fishDataBuffers[odd ? 1 : 0])
     .with(renderBindGroupLayout, renderBindGroups[odd ? 1 : 0])
-    .draw(fishModelPolygonCount, fishAmount);
+    .draw(fishModel.polygonCount, fishAmount);
 
   root['~unstable'].flush();
 
