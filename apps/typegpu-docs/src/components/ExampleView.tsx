@@ -165,7 +165,6 @@ export function ExampleView({ example }: Props) {
                   </>
                 }
 
-                {<HtmlCodeEditor shown code={htmlCode} />}
               </div>
             </div>
           ) : null}

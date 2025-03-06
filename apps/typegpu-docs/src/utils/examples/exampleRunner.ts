@@ -48,20 +48,20 @@ export async function executeExample(
     }
   }
 
-  function myExtractUrlFromViteImport(
+  function extractUrlFromViteImport(
     importFn: () => void,
-  ): string | undefined {
+  ): URL | undefined {
     const filePath = String(importFn);
     const match = filePath.match(/\(\)\s*=>\s*import\("([^"]+)"\)/);
     if (match?.[1]) {
-      return match[1];
+      return new URL(match[1], window.location.origin);
     }
   }
 
   function noCacheImport(
     importFn: () => void,
   ): Promise<Record<string, unknown>> {
-    const url = `${myExtractUrlFromViteImport(importFn)}&update=${Date.now()}`;
+    const url = `${extractUrlFromViteImport(importFn)}&update=${Date.now()}`;
 
     // @vite-ignore
     return import(url);
