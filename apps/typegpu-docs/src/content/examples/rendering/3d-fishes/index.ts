@@ -21,6 +21,7 @@ const FishParameters = d.struct({
 });
 
 const Camera = d.struct({
+  position: d.vec4f,
   view: d.mat4x4f,
   projection: d.mat4x4f,
 });
@@ -59,7 +60,7 @@ const workGroupSize = 256;
 const fishAmount = 1024 * 8;
 const fishModelScale = 0.03;
 
-const aquariumSize = d.vec3f(4, 2, 2);
+const aquariumSize = d.vec3f(4, 4, 4);
 const wrappingSides = d.vec3u(1, 0, 0); // 1 for true, 0 for false
 
 // TODO: remove the buffer and struct, just reference the constants
@@ -72,15 +73,16 @@ const fishParameters = FishParameters({
   cohesionStrength: 0.001,
   wallRepulsionDistance: 0.3,
   wallRepulsionStrength: 0.0003,
-  mouseRayRepulsionDistance: 0.2,
+  mouseRayRepulsionDistance: 0.3,
   mouseRayRepulsionStrength: 0.005,
 });
 
-const cameraInitialPosition = d.vec3f(2, 2, 2);
+const cameraInitialPosition = d.vec4f(2, 2, 2, 1);
 const cameraInitialTarget = d.vec3f(0, 0, 0);
 
 const lightColor = d.vec3f(1, 0.8, 0.7);
-const lightDirection = std.normalize(d.vec3f(-1.0, 0.0, 0.0));
+const lightDirection = std.normalize(d.vec3f(0.0, -1.0, 0.0));
+const backgroundColor = d.vec3f(137 / 255, 220 / 255, 255 / 255);
 
 // layouts
 
@@ -207,24 +209,44 @@ const fragmentShader = tgpu['~unstable']
     );
     const sunColor = std.mul(attenuation, lightColor);
 
-    const surfaceToLight = std.mul(-1, lightDirection);
-
     const albedoWithAlpha = sampleTexture(input.textureUV); // base color
     const albedo = albedoWithAlpha.xyz;
     const ambient = d.vec3f(0.4);
 
     const surfaceToCamera = std.normalize(
-      std.sub(cameraInitialPosition, input.worldPosition),
+      std.sub(renderCamera.value.position.xyz, input.worldPosition),
     );
 
-    const halfVector = std.normalize(std.add(surfaceToLight, surfaceToCamera));
+    const halfVector = std.normalize(
+      std.add(std.mul(-1, lightDirection), surfaceToCamera),
+    );
     const specular = std.pow(std.max(std.dot(normal, halfVector), 0.0), 3);
 
-    const finalColor = std.add(
+    const color = std.add(
       std.mul(albedo, std.add(ambient, sunColor)),
       std.mul(specular, lightColor),
     );
-    return d.vec4f(finalColor.x, finalColor.y, finalColor.z, 1);
+
+    const zFactor = d.f32(0.0);
+    const finalColor = d.vec4f(
+      std.mix(
+        color.x,
+        backgroundColor.x,
+        d.f32(input.canvasPosition.z) * zFactor,
+      ),
+      std.mix(
+        color.y,
+        backgroundColor.y,
+        d.f32(input.canvasPosition.z) * zFactor,
+      ),
+      std.mix(
+        color.z,
+        backgroundColor.z,
+        d.f32(input.canvasPosition.z) * zFactor,
+      ),
+      d.f32(1),
+    );
+    return finalColor;
   })
   .$name('mainFragment');
 
@@ -395,7 +417,8 @@ context.configure({
 
 // buffers
 
-const cameraInitialValue = {
+const camera = {
+  position: cameraInitialPosition,
   view: m.mat4.lookAt(
     cameraInitialPosition,
     cameraInitialTarget,
@@ -411,9 +434,7 @@ const cameraInitialValue = {
   ),
 };
 
-const cameraBuffer = root
-  .createBuffer(Camera, cameraInitialValue)
-  .$usage('uniform');
+const cameraBuffer = root.createBuffer(Camera, camera).$usage('uniform');
 
 const fishParametersBuffer = root
   .createBuffer(FishParameters, fishParameters)
@@ -544,153 +565,11 @@ const computeBindGroups = [0, 1].map((idx) =>
   }),
 );
 
-// unoptimized background cube
-let drawCube: () => void;
-{
-  const Vertex = d.struct({
-    position: d.vec4f,
-    color: d.vec4f,
-  });
-
-  const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(Vertex, n));
-
-  function getColor(): d.Infer<typeof Vertex>['color'] {
-    return d.vec4f(173 / 255 + Math.random() / 5, 216 / 255, 230 / 255, 0.9);
-  }
-
-  function createFace(vertices: number[][]): d.Infer<typeof Vertex>[] {
-    return vertices.map((pos) => ({
-      position: d.vec4f(...(pos as [number, number, number, number])),
-      color: getColor(),
-    }));
-  }
-
-  function createCube(): d.Infer<typeof Vertex>[] {
-    const x = aquariumSize.x / 2;
-    const y = aquariumSize.y / 2;
-    const z = aquariumSize.z / 2;
-
-    const front = createFace([
-      [-x, -y, z, 1],
-      [x, -y, z, 1],
-      [x, y, z, 1],
-      [-x, -y, z, 1],
-      [x, y, z, 1],
-      [-x, y, z, 1],
-    ]);
-    const back = createFace([
-      [-x, -y, -z, 1],
-      [-x, y, -z, 1],
-      [x, -y, -z, 1],
-      [x, -y, -z, 1],
-      [-x, y, -z, 1],
-      [x, y, -z, 1],
-    ]);
-    const top = createFace([
-      [-x, y, -z, 1],
-      [-x, y, z, 1],
-      [x, y, -z, 1],
-      [x, y, -z, 1],
-      [-x, y, z, 1],
-      [x, y, z, 1],
-    ]);
-    const bottom = createFace([
-      [-x, -y, -z, 1],
-      [x, -y, -z, 1],
-      [-x, -y, z, 1],
-      [x, -y, -z, 1],
-      [x, -y, z, 1],
-      [-x, -y, z, 1],
-    ]);
-    const right = createFace([
-      [x, -y, -z, 1],
-      [x, y, -z, 1],
-      [x, -y, z, 1],
-      [x, -y, z, 1],
-      [x, y, -z, 1],
-      [x, y, z, 1],
-    ]);
-    const left = createFace([
-      [-x, -y, -z, 1],
-      [-x, -y, z, 1],
-      [-x, y, -z, 1],
-      [-x, -y, z, 1],
-      [-x, y, z, 1],
-      [-x, y, -z, 1],
-    ]);
-    return [...front, ...back, ...top, ...bottom, ...right, ...left];
-  }
-
-  const cubeBuffer = root
-    .createBuffer(vertexLayout.schemaForCount(36), createCube())
-    .$usage('vertex');
-
-  const bindGroupLayout = tgpu.bindGroupLayout({
-    camera: { uniform: Camera },
-  });
-  const { camera } = bindGroupLayout.bound;
-
-  const bindGroup = root.createBindGroup(bindGroupLayout, {
-    camera: cameraBuffer,
-  });
-
-  const vertex = tgpu['~unstable']
-    .vertexFn({
-      in: { position: d.vec4f, color: d.vec4f },
-      out: { pos: d.builtin.position, color: d.vec4f },
-    })
-    .does((input) => {
-      const pos = std.mul(
-        camera.value.projection,
-        std.mul(camera.value.view, input.position),
-      );
-      return { pos, color: input.color };
-    });
-
-  const fragment = tgpu['~unstable']
-    .fragmentFn({
-      in: { color: d.vec4f },
-      out: d.vec4f,
-    })
-    .does((input) => input.color);
-
-  const pipeline = root['~unstable']
-    .withVertex(vertex, vertexLayout.attrib)
-    .withFragment(fragment, { format: presentationFormat })
-    .createPipeline();
-
-  drawCube = () => {
-    pipeline
-      .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
-        clearValue: [0, 0, 0, 0],
-        loadOp: 'load',
-        storeOp: 'store',
-      })
-      .with(vertexLayout, cubeBuffer)
-      .with(bindGroupLayout, bindGroup)
-      .draw(36);
-    root['~unstable'].flush();
-  };
-}
-
 // frame
 
 let odd = false;
 let disposed = false;
-let currentCameraPos = d.vec4f(
-  cameraInitialPosition.x,
-  cameraInitialPosition.y,
-  cameraInitialPosition.z,
-  1,
-);
-let currentCameraView = m.mat4.lookAt(
-  currentCameraPos,
-  cameraInitialTarget,
-  d.vec3f(0, 1, 0),
-  d.mat4x4f(),
-);
-let currentMouseRay = MouseRay({
+let mouseRay = MouseRay({
   activated: 0,
   pointX: d.vec3f(),
   pointY: d.vec3f(),
@@ -701,13 +580,8 @@ function frame() {
     return;
   }
 
-  cameraBuffer.write({
-    view: currentCameraView,
-    projection: cameraInitialValue.projection,
-  });
-  mouseRayBuffer.write(currentMouseRay);
-
-  drawCube();
+  cameraBuffer.write(camera);
+  mouseRayBuffer.write(mouseRay);
 
   odd = !odd;
   computePipeline
@@ -717,8 +591,8 @@ function frame() {
   renderPipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
-      clearValue: [1, 1, 1, 1],
-      loadOp: 'load' as const,
+      clearValue: [backgroundColor.x, backgroundColor.y, backgroundColor.z, 1],
+      loadOp: 'clear' as const,
       storeOp: 'store' as const,
     })
     .withDepthStencilAttachment({
@@ -769,9 +643,9 @@ function updateCameraOrbit(dx: number, dy: number) {
   const newCamY = cameraRadius * Math.sin(cameraPitch);
   const newCamZ = cameraRadius * Math.cos(cameraYaw) * Math.cos(cameraPitch);
 
-  currentCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
-  currentCameraView = m.mat4.lookAt(
-    currentCameraPos,
+  camera.position = d.vec4f(newCamX, newCamY, newCamZ, 1);
+  camera.view = m.mat4.lookAt(
+    camera.position,
     cameraInitialTarget,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
@@ -789,8 +663,8 @@ async function updateMouseRay(cx: number, cy: number) {
     1,
   );
 
-  const invView = m.mat4.inverse(currentCameraView, d.mat4x4f());
-  const invProj = m.mat4.inverse(cameraInitialValue.projection, d.mat4x4f());
+  const invView = m.mat4.inverse(camera.view, d.mat4x4f());
+  const invProj = m.mat4.inverse(camera.projection, d.mat4x4f());
   const intermediate = std.mul(invProj, canvasPoint);
   const worldPos = std.mul(invView, intermediate);
   const worldPosNonUniform = d.vec3f(
@@ -799,9 +673,9 @@ async function updateMouseRay(cx: number, cy: number) {
     worldPos.z / worldPos.w,
   );
 
-  currentMouseRay = {
+  mouseRay = {
     activated: 1,
-    pointX: currentCameraPos.xyz,
+    pointX: camera.position.xyz,
     pointY: worldPosNonUniform,
   };
 }
@@ -817,9 +691,9 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
   const newCamX = cameraRadius * Math.sin(cameraYaw) * Math.cos(cameraPitch);
   const newCamY = cameraRadius * Math.sin(cameraPitch);
   const newCamZ = cameraRadius * Math.cos(cameraYaw) * Math.cos(cameraPitch);
-  currentCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
-  currentCameraView = m.mat4.lookAt(
-    currentCameraPos,
+  camera.position = d.vec4f(newCamX, newCamY, newCamZ, 1);
+  camera.view = m.mat4.lookAt(
+    camera.position,
     cameraInitialTarget,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
@@ -844,7 +718,7 @@ canvas.addEventListener('mouseup', (event) => {
   }
   if (event.button === 2) {
     isRightPressed = false;
-    currentMouseRay = {
+    mouseRay = {
       activated: 0,
       pointX: d.vec3f(),
       pointY: d.vec3f(),
