@@ -529,12 +529,15 @@ async function loadModel(
   };
 }
 
+// https://sketchfab.com/3d-models/low-poly-blahaj-5ac23e0cd44d49dcaaa14967f7d7a778
 const fishModel = await loadModel(
   root,
   'assets/3d-fishes/fish.obj',
   'assets/3d-fishes/fish.png',
 );
 
+// https://www.cgtrader.com/free-3d-models/space/other/rainy-ocean
+// https://www.istockphoto.com/pl/obrazy/sand
 const oceanFloorModel = await loadModel(
   root,
   'assets/3d-fishes/ocean_floor.obj',
@@ -567,6 +570,8 @@ const computePipeline = root['~unstable']
 // bind groups
 
 const sampler = root.device.createSampler({
+  addressModeU: 'repeat',
+  addressModeV: 'repeat',
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -694,9 +699,9 @@ function updateCameraOrbit(dx: number, dy: number) {
   cameraPitch += dy * 0.005;
 
   // if we don't limit pitch, it would lead to flipping the camera which is disorienting.
+  const minPitch = 0;
   const maxPitch = Math.PI / 2 - 0.01;
-  if (cameraPitch > maxPitch) cameraPitch = maxPitch;
-  if (cameraPitch < -maxPitch) cameraPitch = -maxPitch;
+  cameraPitch = std.clamp(cameraPitch, minPitch, maxPitch);
 
   const newCamX = cameraRadius * Math.sin(cameraYaw) * Math.cos(cameraPitch);
   const newCamY = cameraRadius * Math.sin(cameraPitch);
@@ -746,7 +751,7 @@ canvas.addEventListener('contextmenu', (event) => {
 
 canvas.addEventListener('wheel', (event: WheelEvent) => {
   event.preventDefault();
-  cameraRadius = Math.max(1, cameraRadius + event.deltaY * 0.05);
+  cameraRadius = std.clamp(cameraRadius + event.deltaY * 0.05, 1, 11);
   const newCamX = cameraRadius * Math.sin(cameraYaw) * Math.cos(cameraPitch);
   const newCamY = cameraRadius * Math.sin(cameraPitch);
   const newCamZ = cameraRadius * Math.cos(cameraYaw) * Math.cos(cameraPitch);
