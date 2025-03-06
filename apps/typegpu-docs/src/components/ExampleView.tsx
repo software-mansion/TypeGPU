@@ -70,7 +70,7 @@ export function ExampleView({ example }: Props) {
   const { tsCodes, tsSources, htmlCode } = example;
 
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
-  const [currentTSFile, setCurrentTSFile] = useState<string>(
+  const [currentFile, setCurrentFile] = useState<string>(
     Object.keys(tsCodes)[0] || '',
   );
 
@@ -138,33 +138,30 @@ export function ExampleView({ example }: Props) {
               )}
             >
               <div className="absolute inset-1">
-                {
-                  <>
-                    <div className="flex overflow-auto border-gray-300 pt-16 md:pt-0">
-                      {editorTabsList.map((fileName) => (
-                        <button
-                          key={fileName}
-                          type="button"
-                          onClick={() => setCurrentTSFile(fileName)}
-                          className={cs(
-                            'px-4 py-2',
-                            currentTSFile === fileName
-                              ? 'rounded-t-lg rounded-bl-none rounded-br-none bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
-                              : 'rounded-t-lg rounded-bl-none rounded-br-none bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
-                          )}
-                        >
-                          {fileName}
-                        </button>
-                      ))}
-                    </div>
-                    {currentTSFile === 'index.html' ? (
-                      <HtmlCodeEditor shown code={htmlCode} />
-                    ) : (
-                      <TsCodeEditor shown code={tsCodes[currentTSFile]} />
-                    )}
-                  </>
-                }
-
+                <>
+                  <div className="flex overflow-auto border-gray-300 pt-16 md:pt-0">
+                    {editorTabsList.map((fileName) => (
+                      <button
+                        key={fileName}
+                        type="button"
+                        onClick={() => setCurrentFile(fileName)}
+                        className={cs(
+                          'px-4 py-2',
+                          currentFile === fileName
+                            ? 'rounded-t-lg rounded-bl-none rounded-br-none bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
+                            : 'rounded-t-lg rounded-bl-none rounded-br-none bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
+                        )}
+                      >
+                        {fileName}
+                      </button>
+                    ))}
+                  </div>
+                  {currentFile === 'index.html' ? (
+                    <HtmlCodeEditor shown code={htmlCode} />
+                  ) : (
+                    <TsCodeEditor shown code={tsCodes[currentFile]} />
+                  )}
+                </>
               </div>
             </div>
           ) : null}

@@ -73,7 +73,7 @@ export async function executeExample(
 
     url.searchParams.append('update', Date.now().toString());
 
-    // @vite-ignore
+    /* @vite-ignore */
     return import(`${isRelative ? '.' : ''}${url.pathname}${url.search}`);
   }
 
