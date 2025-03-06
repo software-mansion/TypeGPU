@@ -95,6 +95,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
 
   as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferUsage<TData>[T];
 
+  compileWriter(): void;
   write(data: Infer<TData>): void;
   writePartial(data: InferPartial<TData>): void;
   copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void;
@@ -248,6 +249,14 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
 
     this.flags |= flags;
     return this;
+  }
+
+  compileWriter(): void {
+    if (EVAL_ALLOWED_IN_ENV) {
+      getCompiledWriterForSchema(this.dataType);
+    } else {
+      throw new Error('This enviorment does not allow eval');
+    }
   }
 
   write(data: Infer<TData>): void {
