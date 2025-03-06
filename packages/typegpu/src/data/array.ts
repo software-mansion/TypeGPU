@@ -1,4 +1,9 @@
-import type { Infer, InferPartial, MemIdentity } from '../shared/repr';
+import type {
+  Infer,
+  InferGPU,
+  InferPartial,
+  MemIdentity,
+} from '../shared/repr';
 import { sizeOf } from './sizeOf';
 import type { AnyWgslData, BaseData, WgslArray } from './wgslTypes';
 
@@ -33,6 +38,8 @@ class WgslArrayImpl<TElement extends BaseData> implements WgslArray<TElement> {
   /** Type-token, not available at runtime */
   public readonly '~repr'!: Infer<TElement>[];
   /** Type-token, not available at runtime */
+  public readonly '~gpuRepr'!: InferGPU<TElement>[];
+  /** Type-token, not available at runtime */
   public readonly '~reprPartial'!: {
     idx: number;
     value: InferPartial<TElement>;
@@ -46,6 +53,12 @@ class WgslArrayImpl<TElement extends BaseData> implements WgslArray<TElement> {
   ) {
     if (Number.isNaN(sizeOf(elementType))) {
       throw new Error('Cannot nest runtime sized arrays.');
+    }
+
+    if (!Number.isInteger(elementCount) || elementCount < 0) {
+      throw new Error(
+        `Cannot create array schema with invalid element count: ${elementCount}.`,
+      );
     }
   }
 

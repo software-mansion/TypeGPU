@@ -190,6 +190,9 @@ const Transpilers: Partial<{
   },
 
   Literal(ctx, node) {
+    if (typeof node.value === 'boolean') {
+      return node.value;
+    }
     if (typeof node.value === 'string') {
       return { s: node.value };
     }
@@ -286,13 +289,41 @@ const Transpilers: Partial<{
         prop.key.type === 'Identifier'
           ? (transpile(ctx, prop.key) as string)
           : String(prop.key.value);
-      const value = transpile(ctx, prop.value) as smol.Expression;
       ctx.ignoreExternalDepth--;
+      const value = transpile(ctx, prop.value) as smol.Expression;
 
       properties[key] = value;
     }
 
     return { o: properties };
+  },
+
+  ForStatement(ctx, node) {
+    const init = node.init
+      ? (transpile(ctx, node.init) as smol.Statement)
+      : undefined;
+    const condition = node.test
+      ? (transpile(ctx, node.test) as smol.Expression)
+      : undefined;
+    const update = node.update
+      ? (transpile(ctx, node.update) as smol.Statement)
+      : undefined;
+    const body = transpile(ctx, node.body) as smol.Statement;
+    return { j: [init, condition, update, body] };
+  },
+
+  WhileStatement(ctx, node) {
+    const condition = transpile(ctx, node.test) as smol.Expression;
+    const body = transpile(ctx, node.body) as smol.Statement;
+    return { w: [condition, body] };
+  },
+
+  ContinueStatement() {
+    return { k: null };
+  },
+
+  BreakStatement() {
+    return { d: null };
   },
 };
 
@@ -422,4 +453,18 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
     },
     externalNames,
   };
+}
+
+export function transpileNode(node: JsNode): smol.AnyNode {
+  const ctx: Context = {
+    externalNames: new Set(),
+    ignoreExternalDepth: 0,
+    stack: [
+      {
+        declaredNames: [],
+      },
+    ],
+  };
+
+  return transpile(ctx, node);
 }

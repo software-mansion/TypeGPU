@@ -114,7 +114,6 @@ type Labelless<T> = T extends unknown ? Omit<T, 'label'> : never;
 
 export async function executeExample(
   exampleCode: string,
-  tags?: string[],
 ): Promise<ExampleState> {
   const cleanupCallbacks: (() => unknown)[] = [];
 

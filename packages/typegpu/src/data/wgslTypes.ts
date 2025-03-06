@@ -1,4 +1,9 @@
-import type { Infer, InferPartial, MemIdentity } from '../shared/repr';
+import type {
+  Infer,
+  InferGPU,
+  InferPartial,
+  MemIdentity,
+} from '../shared/repr';
 import type { AnyWgslStruct, WgslStruct } from './struct';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location<number>[]>;
@@ -15,6 +20,22 @@ export interface BaseData {
 }
 
 // #region Instance Types
+
+/**
+ * Represents a 64-bit integer.
+ */
+export interface AbstractInt {
+  readonly type: 'abstractInt';
+  readonly '~repr': number;
+}
+
+/**
+ * Represents a 64-bit IEEE 754 floating point number.
+ */
+export interface AbstractFloat {
+  readonly type: 'abstractFloat';
+  readonly '~repr': number;
+}
 
 interface Swizzle2<T2, T3, T4> {
   readonly xx: T2;
@@ -488,6 +509,10 @@ export type AnyVecInstance =
   | v4i
   | v4u;
 
+export type AnyVec2Instance = v2f | v2h | v2i | v2u;
+export type AnyVec3Instance = v3f | v3h | v3i | v3u;
+export type AnyVec4Instance = v4f | v4h | v4i | v4u;
+
 export type VecKind = AnyVecInstance['kind'];
 
 export interface matBase<TColumn> extends NumberArrayView {
@@ -626,6 +651,7 @@ export interface Vec2f {
   (x: number, y: number): v2f;
   (xy: number): v2f;
   (): v2f;
+  (v: AnyVec2Instance): v2f;
 }
 
 /**
@@ -639,6 +665,7 @@ export interface Vec2h {
   (x: number, y: number): v2h;
   (xy: number): v2h;
   (): v2h;
+  (v: AnyVec2Instance): v2h;
 }
 
 /**
@@ -652,6 +679,7 @@ export interface Vec2i {
   (x: number, y: number): v2i;
   (xy: number): v2i;
   (): v2i;
+  (v: AnyVec2Instance): v2i;
 }
 
 /**
@@ -665,6 +693,7 @@ export interface Vec2u {
   (x: number, y: number): v2u;
   (xy: number): v2u;
   (): v2u;
+  (v: AnyVec2Instance): v2u;
 }
 
 /**
@@ -678,6 +707,9 @@ export interface Vec3f {
   (x: number, y: number, z: number): v3f;
   (xyz: number): v3f;
   (): v3f;
+  (v: AnyVec3Instance): v3f;
+  (v0: AnyVec2Instance, z: number): v3f;
+  (x: number, v0: AnyVec2Instance): v3f;
 }
 
 /**
@@ -691,6 +723,9 @@ export interface Vec3h {
   (x: number, y: number, z: number): v3h;
   (xyz: number): v3h;
   (): v3h;
+  (v: AnyVec3Instance): v3h;
+  (v0: AnyVec2Instance, z: number): v3h;
+  (x: number, v0: AnyVec2Instance): v3h;
 }
 
 /**
@@ -704,6 +739,9 @@ export interface Vec3i {
   (x: number, y: number, z: number): v3i;
   (xyz: number): v3i;
   (): v3i;
+  (v: AnyVec3Instance): v3i;
+  (v0: AnyVec2Instance, z: number): v3i;
+  (x: number, v0: AnyVec2Instance): v3i;
 }
 
 /**
@@ -717,6 +755,9 @@ export interface Vec3u {
   (x: number, y: number, z: number): v3u;
   (xyz: number): v3u;
   (): v3u;
+  (v: AnyVec3Instance): v3u;
+  (v0: AnyVec2Instance, z: number): v3u;
+  (x: number, v0: AnyVec2Instance): v3u;
 }
 
 /**
@@ -730,6 +771,13 @@ export interface Vec4f {
   (x: number, y: number, z: number, w: number): v4f;
   (xyzw: number): v4f;
   (): v4f;
+  (v: AnyVec4Instance): v4f;
+  (v0: AnyVec3Instance, w: number): v4f;
+  (x: number, v0: AnyVec3Instance): v4f;
+  (v0: AnyVec2Instance, v1: AnyVec2Instance): v4f;
+  (v0: AnyVec2Instance, z: number, w: number): v4f;
+  (x: number, v0: AnyVec2Instance, z: number): v4f;
+  (x: number, y: number, v0: AnyVec2Instance): v4f;
 }
 
 /**
@@ -743,6 +791,13 @@ export interface Vec4h {
   (x: number, y: number, z: number, w: number): v4h;
   (xyzw: number): v4h;
   (): v4h;
+  (v: AnyVec4Instance): v4h;
+  (v0: AnyVec3Instance, w: number): v4h;
+  (x: number, v0: AnyVec3Instance): v4h;
+  (v0: AnyVec2Instance, v1: AnyVec2Instance): v4h;
+  (v0: AnyVec2Instance, z: number, w: number): v4h;
+  (x: number, v0: AnyVec2Instance, z: number): v4h;
+  (x: number, y: number, v0: AnyVec2Instance): v4h;
 }
 
 /**
@@ -756,6 +811,13 @@ export interface Vec4i {
   (x: number, y: number, z: number, w: number): v4i;
   (xyzw: number): v4i;
   (): v4i;
+  (v: AnyVec4Instance): v4i;
+  (v0: AnyVec3Instance, w: number): v4i;
+  (x: number, v0: AnyVec3Instance): v4i;
+  (v0: AnyVec2Instance, v1: AnyVec2Instance): v4i;
+  (v0: AnyVec2Instance, z: number, w: number): v4i;
+  (x: number, v0: AnyVec2Instance, z: number): v4i;
+  (x: number, y: number, v0: AnyVec2Instance): v4i;
 }
 
 /**
@@ -769,6 +831,13 @@ export interface Vec4u {
   (x: number, y: number, z: number, w: number): v4u;
   (xyzw: number): v4u;
   (): v4u;
+  (v: AnyVec4Instance): v4u;
+  (v0: AnyVec3Instance, w: number): v4u;
+  (x: number, v0: AnyVec3Instance): v4u;
+  (v0: AnyVec2Instance, v1: AnyVec2Instance): v4u;
+  (v0: AnyVec2Instance, z: number, w: number): v4u;
+  (x: number, v0: AnyVec2Instance, z: number): v4u;
+  (x: number, y: number, v0: AnyVec2Instance): v4u;
 }
 
 /**
@@ -823,13 +892,29 @@ export interface WgslArray<TElement extends BaseData = BaseData> {
   readonly elementType: TElement;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TElement>[];
+  readonly '~gpuRepr': InferGPU<TElement>[];
   readonly '~reprPartial': { idx: number; value: InferPartial<TElement> }[];
   readonly '~memIdent': WgslArray<MemIdentity<TElement>>;
 }
 
-export interface PtrFn<TInner = BaseData> {
-  readonly type: 'ptrFn';
+export type AddressSpace =
+  | 'uniform'
+  | 'storage'
+  | 'workgroup'
+  | 'private'
+  | 'function'
+  | 'handle';
+export type Access = 'read' | 'write' | 'read-write';
+
+export interface Ptr<
+  TAddr extends AddressSpace = AddressSpace,
+  TInner extends BaseData = BaseData, // can also be sampler or texture (╯'□')╯︵ ┻━┻
+  TAccess extends Access = Access,
+> {
+  readonly type: 'ptr';
   readonly inner: TInner;
+  readonly addressSpace: TAddr;
+  readonly access: TAccess;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
 }
@@ -842,7 +927,16 @@ export interface Atomic<TInner extends U32 | I32 = U32 | I32> {
   readonly inner: TInner;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
+  readonly '~gpuRepr': TInner extends U32 ? atomicU32 : atomicI32;
   readonly '~memIdent': MemIdentity<TInner>;
+}
+
+export interface atomicU32 {
+  type: 'atomicU32';
+}
+
+export interface atomicI32 {
+  type: 'atomicI32';
 }
 
 export interface Align<T extends number> {
@@ -886,6 +980,8 @@ export interface Decorated<
   readonly attribs: TAttribs;
   /** Type-token, not available at runtime */
   readonly '~repr': Infer<TInner>;
+  readonly '~gpuRepr': InferGPU<TInner>;
+  readonly '~reprPartial': InferPartial<TInner>;
   readonly '~memIdent': TAttribs extends Location<number>[]
     ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<MemIdentity<TInner>, TAttribs>;
@@ -914,9 +1010,11 @@ export const wgslTypeLiterals = [
   'mat4x4f',
   'struct',
   'array',
-  'ptrFn',
+  'ptr',
   'atomic',
   'decorated',
+  'abstractInt',
+  'abstractFloat',
 ] as const;
 
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
@@ -965,9 +1063,11 @@ export type AnyWgslData =
   | Mat4x4f
   | AnyWgslStruct
   | WgslArray
-  | PtrFn
+  | Ptr
   | Atomic
-  | Decorated;
+  | Decorated
+  | AbstractInt
+  | AbstractFloat;
 
 // #endregion
 
@@ -1018,8 +1118,8 @@ export function isWgslStruct<T extends WgslStruct>(
  * isPtrFn(d.ptrFn(d.f32)) // true
  * isPtrFn(d.f32) // false
  */
-export function isPtrFn<T extends PtrFn>(schema: T | unknown): schema is T {
-  return (schema as T)?.type === 'ptrFn';
+export function isPtr<T extends Ptr>(schema: T | unknown): schema is T {
+  return (schema as T)?.type === 'ptr';
 }
 
 /**
@@ -1069,4 +1169,12 @@ export function isDecorated<T extends Decorated>(
   value: unknown | T,
 ): value is T {
   return (value as T)?.type === 'decorated';
+}
+
+export function isAbstractFloat(value: unknown): value is AbstractFloat {
+  return (value as AbstractFloat).type === 'abstractFloat';
+}
+
+export function isAbstractInt(value: unknown): value is AbstractInt {
+  return (value as AbstractInt).type === 'abstractInt';
 }

@@ -5,14 +5,15 @@ const layout = tgpu.bindGroupLayout({
   counter: { storage: d.u32, access: 'mutable' },
 });
 
-const shaderCode = /* wgsl */ `
-
-@group(0) @binding(0) var<storage, read_write> counter: u32;
-
-@compute @workgroup_size(1)
-fn main() {
-  counter += 1;
-}`;
+const shaderCode = tgpu.resolve({
+  template: /* wgsl */ `
+    @compute @workgroup_size(1)
+    fn main() {
+      counter += 1;
+    }
+  `,
+  externals: { counter: layout.bound.counter },
+});
 
 const root = await tgpu.init();
 const device = root.device;

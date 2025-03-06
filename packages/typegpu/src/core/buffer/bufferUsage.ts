@@ -1,9 +1,9 @@
 import type { AnyData } from '../../data/dataTypes';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes';
-import { type Storage, isUsableAsStorage } from '../../extension';
+import { type StorageFlag, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
-import type { Infer } from '../../shared/repr';
+import type { Infer, InferGPU } from '../../shared/repr';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout';
 import type {
   BindableBufferUsage,
@@ -11,7 +11,7 @@ import type {
   SelfResolvable,
 } from '../../types';
 import { valueProxyHandler } from '../valueProxyUtils';
-import type { TgpuBuffer, Uniform } from './buffer';
+import type { TgpuBuffer, UniformFlag } from './buffer';
 
 // ----------
 // Public API
@@ -24,17 +24,17 @@ export interface TgpuBufferUsage<
   readonly resourceType: 'buffer-usage';
   readonly usage: TUsage;
   readonly '~repr': Infer<TData>;
-  value: Infer<TData>;
+  value: InferGPU<TData>;
 }
 
 export interface TgpuBufferUniform<TData extends BaseData>
   extends TgpuBufferUsage<TData, 'uniform'> {
-  readonly value: Infer<TData>;
+  readonly value: InferGPU<TData>;
 }
 
 export interface TgpuBufferReadonly<TData extends BaseData>
   extends TgpuBufferUsage<TData, 'readonly'> {
-  readonly value: Infer<TData>;
+  readonly value: InferGPU<TData>;
 }
 
 export interface TgpuFixedBufferUsage<TData extends BaseData>
@@ -48,8 +48,8 @@ export interface TgpuBufferMutable<TData extends BaseData>
 
 export function isUsableAsUniform<T extends TgpuBuffer<AnyData>>(
   buffer: T,
-): buffer is T & Uniform {
-  return !!(buffer as unknown as Uniform).usableAsUniform;
+): buffer is T & UniformFlag {
+  return !!(buffer as unknown as UniformFlag).usableAsUniform;
 }
 
 // --------------
@@ -115,7 +115,7 @@ class TgpuFixedBufferImpl<
     return `${this.usage}:${this.label ?? '<unnamed>'}`;
   }
 
-  get value(): Infer<TData> {
+  get value(): InferGPU<TData> {
     if (!inGPUMode()) {
       throw new Error(`Cannot access buffer's value directly in JS.`);
     }
@@ -126,7 +126,7 @@ class TgpuFixedBufferImpl<
         toString: () => `.value:${this.label ?? '<unnamed>'}`,
       },
       valueProxyHandler,
-    ) as Infer<TData>;
+    ) as InferGPU<TData>;
   }
 }
 export class TgpuLaidOutBufferImpl<
@@ -166,7 +166,7 @@ export class TgpuLaidOutBufferImpl<
     return `${this.usage}:${this.label ?? '<unnamed>'}`;
   }
 
-  get value(): Infer<TData> {
+  get value(): InferGPU<TData> {
     if (!inGPUMode()) {
       throw new Error(`Cannot access buffer's value directly in JS.`);
     }
@@ -177,7 +177,7 @@ export class TgpuLaidOutBufferImpl<
         toString: () => `.value:${this.label ?? '<unnamed>'}`,
       },
       valueProxyHandler,
-    ) as Infer<TData>;
+    ) as InferGPU<TData>;
   }
 }
 
@@ -190,7 +190,7 @@ const mutableUsageMap = new WeakMap<
  * @deprecated Use buffer.as('mutable') instead.
  */
 export function asMutable<TData extends AnyWgslData>(
-  buffer: TgpuBuffer<TData> & Storage,
+  buffer: TgpuBuffer<TData> & StorageFlag,
 ): TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData> {
   if (!isUsableAsStorage(buffer)) {
     throw new Error(
@@ -216,7 +216,7 @@ const readonlyUsageMap = new WeakMap<
  * @deprecated Use buffer.as('readonly') instead.
  */
 export function asReadonly<TData extends AnyWgslData>(
-  buffer: TgpuBuffer<TData> & Storage,
+  buffer: TgpuBuffer<TData> & StorageFlag,
 ): TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData> {
   if (!isUsableAsStorage(buffer)) {
     throw new Error(
@@ -242,7 +242,7 @@ const uniformUsageMap = new WeakMap<
  * @deprecated Use buffer.as('uniform') instead.
  */
 export function asUniform<TData extends AnyWgslData>(
-  buffer: TgpuBuffer<TData> & Uniform,
+  buffer: TgpuBuffer<TData> & UniformFlag,
 ): TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData> {
   if (!isUsableAsUniform(buffer)) {
     throw new Error(

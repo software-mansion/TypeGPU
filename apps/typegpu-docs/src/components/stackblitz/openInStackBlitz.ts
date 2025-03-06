@@ -1,8 +1,22 @@
 import StackBlitzSDK from '@stackblitz/sdk';
+import { parse } from '@std/yaml';
+import { type } from 'arktype';
+import typegpuPackageJson from '../../../../../packages/typegpu/package.json';
+import unpluginPackageJson from '../../../../../packages/unplugin-typegpu/package.json';
+import pnpmWorkspace from '../../../../../pnpm-workspace.yaml?raw';
+import typegpuDocsPackageJson from '../../../package.json';
 import type { Example } from '../../utils/examples/types';
 import index from './stackBlitzIndex.ts?raw';
 
-export function openInStackBlitz(example: Example) {
+const pnpmWorkspaceYaml = type({
+  catalog: { typescript: 'string', '@webgpu/types': 'string' },
+})(parse(pnpmWorkspace));
+
+if (pnpmWorkspaceYaml instanceof type.errors) {
+  throw new Error(pnpmWorkspaceYaml.message);
+}
+
+export const openInStackBlitz = (example: Example) => {
   StackBlitzSDK.openProject(
     {
       template: 'node',
@@ -13,7 +27,7 @@ export function openInStackBlitz(example: Example) {
           '/TypeGPU',
           'https://docs.swmansion.com/TypeGPU',
         ),
-        'index.html': `
+        'index.html': `\
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -56,14 +70,24 @@ ${example.htmlCode}
       "preview": "vite preview"
     },
     "devDependencies": {
-      "typescript": "^5.5.3",
-      "vite": "^5.4.2"
+      "typescript": "${pnpmWorkspaceYaml.catalog.typescript}",
+      "vite": "^6.1.1",
+      "@webgpu/types": "${pnpmWorkspaceYaml.catalog['@webgpu/types']}"
     },
     "dependencies": {
-      "@webgpu/types": "^0.1.44",
-      "typegpu": "^0.4.1"
+      "typegpu": "^${typegpuPackageJson.version}",
+      "unplugin-typegpu": "^${unpluginPackageJson.version}",
+      "wgpu-matrix": "${typegpuDocsPackageJson.dependencies['wgpu-matrix']}"
     }
 }`,
+        'vite.config.js': `\
+import { defineConfig } from 'vite';
+import typegpuPlugin from 'unplugin-typegpu/rollup';
+
+export default defineConfig({
+  plugins: [typegpuPlugin()],
+});
+`,
       },
     },
     {
@@ -72,4 +96,4 @@ ${example.htmlCode}
       theme: 'light',
     },
   );
-}
+};

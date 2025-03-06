@@ -237,8 +237,15 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
     return ctx.resolve(data.inner as AnyWgslData);
   }
 
-  if (data.type === 'ptrFn') {
-    return `ptr<function, ${ctx.resolve(data.inner)}>`;
+  if (data.type === 'ptr') {
+    if (data.addressSpace === 'storage') {
+      return `ptr<storage, ${ctx.resolve(data.inner)}, ${data.access === 'read-write' ? 'read_write' : data.access}>`;
+    }
+    return `ptr<${data.addressSpace}, ${ctx.resolve(data.inner)}>`;
+  }
+
+  if (data.type === 'abstractInt' || data.type === 'abstractFloat') {
+    throw new Error('Abstract types have no concrete representation in WGSL');
   }
 
   assertExhaustive(data, 'resolveData');

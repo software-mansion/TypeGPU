@@ -99,7 +99,7 @@ for (const controls of Object.values(example)) {
       if ('onSelectChange' in params) {
         const select = document.createElement('select');
         select.innerHTML = params.options
-          .map((option) => `<option value="\${option}">${option}</option>`)
+          .map((option) => `<option value="${option}">${option}</option>`)
           .join('');
         select.value = params.initial ?? params.options[0];
 
@@ -122,6 +122,18 @@ for (const controls of Object.values(example)) {
 
         controlRow.appendChild(toggle);
         params.onToggleChange(toggle.checked);
+      }
+
+      if ('onTextChange' in params) {
+        const input = document.createElement('input');
+        input.value = params.initial ?? '';
+
+        input.addEventListener('input', () => {
+          params.onTextChange(input.value);
+        });
+
+        controlRow.appendChild(input);
+        params.onTextChange(input.value);
       }
 
       controlsPanel.appendChild(controlRow);
@@ -152,8 +164,14 @@ type ButtonControlParam = {
   onButtonClick: (() => void) | (() => Promise<void>);
 };
 
+type TextAreaControlParam = {
+  onTextChange: (newValue: string) => void;
+  initial?: string;
+};
+
 type ExampleControlParam =
   | SelectControlParam
   | ToggleControlParam
   | SliderControlParam
-  | ButtonControlParam;
+  | ButtonControlParam
+  | TextAreaControlParam;

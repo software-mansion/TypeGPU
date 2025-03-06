@@ -10,7 +10,7 @@ To contribute by resolving an open issue or developing a new feature, please adh
 
 1. Fork this repository.
 2. Create a new feature branch from the `main` branch.
-3. Ensure that the `pnpm dev` script is running at all times during development.
+3. **(tip)** Run the `pnpm dev` to start a local dev-server for the docs/examples/benchmarking app
 4. Stage your changes and commit them. We recommend following the [Conventional Commit Specification](https://www.conventionalcommits.org/en/v1.0.0/) for commit messages.
 5. Make sure all the tests pass when running `pnpm test`.
 6. Submit the PR for review.
@@ -20,15 +20,13 @@ After your pull request is submitted, we will review it at as soon as possible. 
 
 ## Release Checklist
 
-1. Create new branch, update version string in package.json and in openInStackBlitz.ts, run `pnpm install`
-2. Take the built package from code sandbox CI and test the changes on StackBlitz (optional)
+1. Create new branch, update version string in package.json, run `pnpm install`
+2. Take the Continuous Release build and test the changes on StackBlitz (optional)
 3. Merge to main
 4. Prepare the package for publishing
 ```bash
 cd packages/typegpu
-pnpm prepare-package
-cd dist
-pnpm publish -—dry-run # (if alpha, --tag alpha)
+pnpm publish --dry-run # (if alpha, --tag alpha)
 ```
 5. If everything looks okay, then `pnpm publish` (if alpha, `--tag alpha`)
 6. Rebase *release* branch on *main*

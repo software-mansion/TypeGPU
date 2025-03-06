@@ -1,6 +1,6 @@
 import { parse } from 'acorn';
-import type { Block } from 'tinyest';
-import { transpileFn } from 'tinyest-for-wgsl';
+import type { AnyNode, Block } from 'tinyest';
+import { transpileFn, transpileNode } from 'tinyest-for-wgsl';
 
 /**
  * Information extracted from transpiling a JS function.
@@ -20,11 +20,17 @@ type TranspilationResult = {
  */
 interface IJitTranspiler {
   transpileFn(rawJs: string): TranspilationResult;
+  transpile(rawJs: string): AnyNode;
 }
 
 export class JitTranspiler implements IJitTranspiler {
-  transpileFn(rawJs: string) {
+  transpileFn(rawJs: string): TranspilationResult {
     const program = parse(rawJs, { ecmaVersion: 'latest' });
     return transpileFn(program);
+  }
+
+  transpile(rawJs: string): AnyNode {
+    const program = parse(rawJs, { ecmaVersion: 'latest' });
+    return transpileNode(program);
   }
 }

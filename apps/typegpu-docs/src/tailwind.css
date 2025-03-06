@@ -2,7 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-button, input {
+button,
+input {
   font-family: inherit;
 }
 
@@ -13,13 +14,13 @@ button, input {
   top: -1px;
 }
 
-.sl-badge:is([data-theme="light"] *) {
+.sl-badge:is([data-theme='light'] *) {
   background-color: white;
   color: var(--sl-badge-default-border);
   font-weight: normal !important;
 }
 
-a[aria-current="page"]>.sl-badge:is([data-theme="light"] *) {
+a[aria-current='page'] > .sl-badge:is([data-theme='light'] *) {
   background-color: rgba(255, 255, 255, 0.6);
   color: var(--sl-badge-default-border);
 }

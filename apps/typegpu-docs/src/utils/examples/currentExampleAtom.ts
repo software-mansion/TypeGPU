@@ -40,6 +40,8 @@ type CurrentExampleAtom = WritableAtom<
   void
 >;
 
-export const currentExampleAtom: CurrentExampleAtom = atomWithHash<
-  string | undefined
->('example', undefined, options);
+export const currentExampleAtom = atomWithHash<string | undefined>(
+  'example',
+  undefined,
+  options,
+) as CurrentExampleAtom;

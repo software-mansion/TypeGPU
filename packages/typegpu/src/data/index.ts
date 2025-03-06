@@ -2,12 +2,18 @@
  * @module typegpu/data
  */
 
-export { bool, f32, f16, i32, u32 } from './numeric';
+export {
+  bool,
+  f32,
+  f16,
+  i32,
+  u32,
+} from './numeric';
 export {
   isWgslData,
   isWgslArray,
   isWgslStruct,
-  isPtrFn,
+  isPtr,
   isAtomic,
   isDecorated,
   isAlignAttrib,
@@ -40,7 +46,7 @@ export type {
   Mat3x3f,
   Mat4x4f,
   WgslArray,
-  PtrFn,
+  Ptr,
   Atomic,
   Decorated,
   Size,
@@ -63,11 +69,18 @@ export type {
   m4x4f,
 } from './wgslTypes';
 export {
-  WgslStruct,
+  type WgslStruct,
   struct,
 } from './struct';
 export { arrayOf } from './array';
-export { ptrFn } from './ptr';
+export {
+  ptrFn,
+  ptrPrivate,
+  ptrHandle,
+  ptrStorage,
+  ptrUniform,
+  ptrWorkgroup,
+} from './ptr';
 export type {
   Disarray,
   Unstruct,
@@ -105,9 +118,9 @@ export {
   location,
   interpolate,
   isBuiltin,
-  AnyAttribute,
-  IsBuiltin,
-  HasCustomLocation,
+  type AnyAttribute,
+  type IsBuiltin,
+  type HasCustomLocation,
 } from './attributes';
 export {
   isDisarray,
@@ -118,8 +131,8 @@ export {
 } from './dataTypes';
 export { PUBLIC_sizeOf as sizeOf } from './sizeOf';
 export { PUBLIC_alignmentOf as alignmentOf } from './alignmentOf';
-export {
-  builtin,
+export { builtin } from '../builtin';
+export type {
   BuiltinVertexIndex,
   BuiltinInstanceIndex,
   BuiltinPosition,

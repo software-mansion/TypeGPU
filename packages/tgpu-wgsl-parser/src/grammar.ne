@@ -9,8 +9,8 @@ const lexer = moo.compile({
   comment: /\/\/.*?$/,
   decimal_float_literal: /0[fh]|[1-9][0-9]*[fh]|[0-9]*\.[0-9]+(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+\.[0-9]*(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+[eE][+-]?[0-9]+[fh]?/,
   hex_float_literal: /0[xX][0-9a-fA-F]*\.[0-9a-fA-F]+(?:[pP][+-]?[0-9]+[fh]?)?|0[xX][0-9a-fA-F]+\.[0-9a-fA-F]*(?:[pP][+-]?[0-9]+[fh]?)?|0[xX][0-9a-fA-F]+[pP][+-]?[0-9]+[fh]?/,
-  decimal_int_literal: { match: /(?:0|[1-9][0-9]*)[iu]?/ },
   hex_int_literal: { match: /0[xX][0-9a-fA-F]+[iu]?/ },
+  decimal_int_literal: { match: /(?:0|[1-9][0-9]*)[iu]?/ },
 
   // WGSL spec apparently accepts plenty of Unicode, but lets limit it to just ASCII for now.
   ident_pattern: {
@@ -216,16 +216,25 @@ statement ->
 # | switch_statement {% id %}
 # | loop_statement {% id %}
   | for_statement {% id %}
-# | while_statement {% id %}
+  | while_statement {% id %}
   | call_statement ";" {% id %}
   | func_call_statement ";" {% id %}
   | variable_or_value_statement ";" {% id %}
-# | break_statement ";" {% id %}
-# | continue_statement ";" {% id %}
+  | break_statement ";" {% id %}
+  | continue_statement ";" {% id %}
 # | "discard" ";" {% id %}
   | variable_updating_statement ";" {% id %}
   | compound_statement {% id %}
 # | const_assert_statement ";" {% id %}
+
+@{% export type BreakStatement = { type: 'break_statement' }; %}
+break_statement -> "break" {% () => ({ type: 'break_statement' }) %}
+
+@{% export type ContinueStatement = { type: 'continue_statement' }; %}
+continue_statement -> "continue" {% () => ({ type: 'continue_statement' }) %}
+
+@{% export type WhileStatement = { type: 'while_statement', expression: Expression, body: CompoundStatement }; %}
+while_statement -> attribute:* "while" expression compound_statement {% ([attrs, , expression, body]) => ({ type: 'while_statement', expression, body }) %}
 
 @{% export type VariableUpdatingStatement = AssignmentStatement; %}
 variable_updating_statement ->
@@ -402,12 +411,10 @@ component_or_swizzle_specifier ->
 export type SingularExpression =
     PrimaryExpression
   | { type: 'accessor', expression: PrimaryExpression, accessor: Accessor };
-
 %}
 
 singular_expression ->
-    primary_expression {% id %}
-  | primary_expression component_or_swizzle_specifier  {% ([expression, accessor]) => ({ type: 'accessor', expression, accessor }) %}
+    primary_expression component_or_swizzle_specifier:? {% ([expression, accessor]) => accessor ? { type: 'accessor', expression, accessor } : expression %}
 
 @{%
 export type UnaryExpression =

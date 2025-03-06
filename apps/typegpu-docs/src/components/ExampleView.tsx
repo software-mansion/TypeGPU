@@ -1,10 +1,11 @@
 import cs from 'classnames';
-import { useAtomValue, useSetAtom } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { type RefObject, useEffect, useRef, useState } from 'react';
 import {
   codeEditorShownAtom,
   codeEditorShownMobileAtom,
 } from '../utils/examples/codeEditorShownAtom';
+import { currentSnackbarAtom } from '../utils/examples/currentSnackbarAtom';
 import { ExecutionCancelledError } from '../utils/examples/errors';
 import { exampleControlsAtom } from '../utils/examples/exampleControlAtom';
 import { executeExample } from '../utils/examples/exampleRunner';
@@ -24,7 +25,6 @@ function useExample(
   exampleCode: string,
   htmlCode: string,
   setSnackbarText: (text: string | undefined) => void,
-  tags?: string[],
 ) {
   const exampleRef = useRef<ExampleState | null>(null);
   const setExampleControlParams = useSetAtom(exampleControlsAtom);
@@ -34,7 +34,7 @@ function useExample(
     let cancelled = false;
     setSnackbarText(undefined);
 
-    executeExample(exampleCode, tags)
+    executeExample(exampleCode)
       .then((example) => {
         if (cancelled) {
           // Another instance was started in the meantime.
@@ -49,7 +49,7 @@ function useExample(
       .catch((err) => {
         if (err instanceof SyntaxError) {
           setSnackbarText(`${err.name}: ${err.message}`);
-          console.log(err);
+          console.error(err);
         } else if (err instanceof ExecutionCancelledError) {
           // Ignore, to be expected.
           cancelled = true;
@@ -63,15 +63,15 @@ function useExample(
       exampleRef.current?.dispose();
       cancelled = true;
     };
-  }, [exampleCode, htmlCode, setSnackbarText, setExampleControlParams, tags]);
+  }, [exampleCode, htmlCode, setSnackbarText, setExampleControlParams]);
 }
 
 type EditorTab = 'ts' | 'html';
 
 export function ExampleView({ example }: Props) {
-  const { tsCode, htmlCode, metadata, execTsCode } = example;
+  const { tsCode, htmlCode, execTsCode } = example;
 
-  const [snackbarText, setSnackbarText] = useState<string | undefined>();
+  const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
   const [currentEditorTab, setCurrentEditorTab] = useState<EditorTab>('ts');
 
   const codeEditorShowing = useAtomValue(codeEditorShownAtom);
@@ -87,7 +87,7 @@ export function ExampleView({ example }: Props) {
     exampleHtmlRef.current.innerHTML = htmlCode;
   }, [tsCode, htmlCode]);
 
-  useExample(execTsCode, htmlCode, setSnackbarText, metadata.tags);
+  useExample(execTsCode, htmlCode, setSnackbarText);
   useResizableCanvas(exampleHtmlRef, tsCode, htmlCode);
 
   return (
@@ -214,7 +214,7 @@ function GPUUnsupportedPanel() {
 }
 
 function useResizableCanvas(
-  exampleHtmlRef: RefObject<HTMLDivElement>,
+  exampleHtmlRef: RefObject<HTMLDivElement | null>,
   tsCode: string,
   htmlCode: string,
 ) {
