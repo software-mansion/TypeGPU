@@ -1,1 +1,45 @@
+<style>
+    body {
+        font-family: 'Aeonik';
+    }
+
+    .controls-header {
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .controls {
+        font-size: 0.8rem;
+    }
+
+    .credits {
+        font-size: 0.8rem;
+        margin-top: 1rem;
+    }
+
+    #help {
+        position: absolute;
+        margin: 0 auto;
+        text-align: left;
+        z-index: 1;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 10px;
+        border-radius: 10px;
+        user-select: none;
+        pointer-events: none;
+        transition: opacity 0.5s;
+    }
+</style>
+<div id="help">
+    <h3 class="controls-header">Controls (click to dismiss)</h3>
+    <p class="controls"><b>Left Mouse Button:</b> Move camera</p>
+    <p class="controls"><b>Scroll:</b> Zoom camera</p>
+    <p class="controls">
+        <b>Right Mouse Button:</b> Repel fishes from the cursor
+    </p>
+    <p class="credits">
+        Fish model by IsabelleDotJpeg
+    </p>
+</div>
 <canvas></canvas>

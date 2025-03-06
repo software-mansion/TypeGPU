@@ -61,7 +61,7 @@ const workGroupSize = 256;
 const fishAmount = 1024 * 8;
 const fishModelScale = 0.03;
 
-const aquariumSize = d.vec3f(8, 2, 6);
+const aquariumSize = d.vec3f(8, 2, 8);
 const wrappingSides = d.vec3u(1, 0, 0); // 1 for true, 0 for false
 
 // TODO: remove the buffer and struct, just reference the constants
@@ -78,7 +78,7 @@ const fishParameters = FishParameters({
   mouseRayRepulsionStrength: 0.005,
 });
 
-const cameraInitialPosition = d.vec4f(2, 2, 2, 1);
+const cameraInitialPosition = d.vec4f(0.5, 1.5, 3.5, 1);
 const cameraInitialTarget = d.vec3f(0, 0, 0);
 
 const fogDistance = 1.5;
@@ -452,9 +452,9 @@ const mouseRayBuffer = root.createBuffer(MouseRay).$usage('uniform');
 const randomizeFishPositions = () => {
   const positions = Array.from({ length: fishAmount }, () => ({
     position: d.vec3f(
-      Math.random() * 2 - 1,
-      Math.random() * 2 - 1,
-      Math.random() * 2 - 1,
+      Math.random() * aquariumSize.x - aquariumSize.x / 2,
+      Math.random() * aquariumSize.y - aquariumSize.y / 2,
+      Math.random() * aquariumSize.z - aquariumSize.z / 2,
     ),
     direction: d.vec3f(
       Math.random() * 0.1 - 0.05,
@@ -768,6 +768,8 @@ canvas.addEventListener('mousedown', async (event) => {
   previousMouseX = event.clientX;
   previousMouseY = event.clientY;
   if (event.button === 0) {
+    const helpInfo = document.getElementById('help') as HTMLDivElement;
+    helpInfo.style.opacity = '0';
     isLeftPressed = true;
   }
   if (event.button === 2) {
