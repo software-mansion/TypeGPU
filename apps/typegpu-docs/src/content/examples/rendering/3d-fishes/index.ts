@@ -80,8 +80,10 @@ const fishParameters = FishParameters({
 const cameraInitialPosition = d.vec4f(2, 2, 2, 1);
 const cameraInitialTarget = d.vec3f(0, 0, 0);
 
-const lightColor = d.vec3f(1, 0.8, 0.7);
-const lightDirection = std.normalize(d.vec3f(0.0, -1.0, 0.0));
+const fogDistance = 1;
+const fogThickness = 0.5;
+const lightColor = d.vec3f(0.8, 0.8, 1);
+const lightDirection = std.normalize(d.vec3f(1.0, 1.0, 1.0));
 const backgroundColor = d.vec3f(137 / 255, 220 / 255, 255 / 255);
 
 // layouts
@@ -159,10 +161,7 @@ const vertexShader = tgpu['~unstable']
 
     // calculate where the normal vector points to
     const worldNormal = std.normalize(
-      std.add(
-        std.mul(pitchMatrix, std.mul(yawMatrix, input.modelNormal)),
-        fishData.position,
-      ),
+      std.mul(pitchMatrix, std.mul(yawMatrix, input.modelNormal)),
     );
 
     // project the world position into the camera
@@ -193,6 +192,17 @@ const sampleTexture = tgpu['~unstable']
   .$uses({ shaderTexture: renderFishTexture, shaderSampler: renderFishSampler })
   .$name('sampleShader');
 
+const reflect = tgpu['~unstable']
+  .fn([d.vec3f, d.vec3f], d.vec3f)
+  .does((i, n) => std.sub(i, std.mul(2.0, std.mul(std.dot(n, i), n))));
+
+const distance = tgpu['~unstable']
+  .fn([d.vec3f, d.vec3f], d.f32)
+  .does((v1, v2) => {
+    const diff = std.sub(v1, v2);
+    return std.pow(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z, 0.5);
+  });
+
 const fragmentShader = tgpu['~unstable']
   .fragmentFn({
     in: FishModelVertexOutput,
@@ -201,63 +211,54 @@ const fragmentShader = tgpu['~unstable']
   .does((input) => {
     // Directional lighting in Phong reflection model
     // https://en.wikipedia.org/wiki/Phong_reflection_model
-    const normal = input.worldNormal;
 
-    const attenuation = std.max(
-      std.dot(normal, std.mul(-1, lightDirection)),
-      0.0,
-    );
-    const sunColor = std.mul(attenuation, lightColor);
-
-    const albedoWithAlpha = sampleTexture(input.textureUV); // base color
-    const albedo = albedoWithAlpha.xyz;
-    const ambient = d.vec3f(0.4);
-
-    const surfaceToCamera = std.normalize(
+    const viewDirection = std.normalize(
       std.sub(renderCamera.value.position.xyz, input.worldPosition),
     );
+    const textureColorWithAlpha = sampleTexture(input.textureUV); // base color
+    const textureColor = textureColorWithAlpha.xyz;
 
-    const halfVector = std.normalize(
-      std.add(std.mul(-1, lightDirection), surfaceToCamera),
+    let ambient = d.vec3f();
+    let diffuse = d.vec3f();
+    let specular = d.vec3f();
+
+    ambient = std.mul(0.5, std.mul(textureColor, lightColor));
+
+    const cosTheta = std.max(0.0, std.dot(input.worldNormal, lightDirection));
+    if (cosTheta > 0) {
+      diffuse = std.mul(cosTheta, std.mul(textureColor, lightColor));
+
+      const reflectionDirection = reflect(lightDirection, input.worldNormal);
+
+      specular = std.mul(
+        textureColor,
+        std.mul(std.dot(reflectionDirection, viewDirection), lightColor),
+      );
+    }
+
+    const fragmentColor = std.add(ambient, std.add(diffuse, specular));
+    const distanceFromCamera = distance(
+      renderCamera.value.position.xyz,
+      input.worldPosition,
     );
-    const specular = std.pow(std.max(std.dot(normal, halfVector), 0.0), 3);
 
-    const color = std.add(
-      std.mul(albedo, std.add(ambient, sunColor)),
-      std.mul(specular, lightColor),
+    const fogParameter = std.max(
+      0,
+      (distanceFromCamera - fogDistance) * fogThickness,
     );
+    const fogFactor = fogParameter / (1 + fogParameter);
 
-    const zFactor = d.f32(0.0);
-    const finalColor = d.vec4f(
-      std.mix(
-        color.x,
-        backgroundColor.x,
-        d.f32(input.canvasPosition.z) * zFactor,
-      ),
-      std.mix(
-        color.y,
-        backgroundColor.y,
-        d.f32(input.canvasPosition.z) * zFactor,
-      ),
-      std.mix(
-        color.z,
-        backgroundColor.z,
-        d.f32(input.canvasPosition.z) * zFactor,
-      ),
+    const foggedColor = d.vec4f(
+      std.mix(fragmentColor.x, backgroundColor.x, fogFactor),
+      std.mix(fragmentColor.y, backgroundColor.y, fogFactor),
+      std.mix(fragmentColor.z, backgroundColor.z, fogFactor),
       d.f32(1),
     );
-    return finalColor;
+    return foggedColor;
   })
   .$name('mainFragment');
 
 // compute shader
-
-const distance = tgpu['~unstable']
-  .fn([d.vec3f, d.vec3f], d.f32)
-  .does((v1, v2) => {
-    const diff = std.sub(v1, v2);
-    return std.pow(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z, 0.5);
-  });
 
 const distanceVectorFromLine = tgpu['~unstable']
   .fn([d.vec3f, d.vec3f, d.vec3f], d.vec3f)
