@@ -2,10 +2,10 @@ import cs from 'classnames';
 import { useAtom } from 'jotai/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  selectedTestsAtom,
-  identifierOf,
   type Suite,
   type TestIdentifier,
+  identifierOf,
+  selectedTestsAtom,
 } from '../suites.js';
 
 type CheckboxState = 'checked' | 'unchecked' | 'indeterminate';
