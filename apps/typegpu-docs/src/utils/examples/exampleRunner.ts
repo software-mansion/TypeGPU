@@ -50,21 +50,31 @@ export async function executeExample(
 
   function extractUrlFromViteImport(
     importFn: () => void,
-  ): URL | undefined {
+  ): [URL | undefined, boolean] {
     const filePath = String(importFn);
     const match = filePath.match(/\(\)\s*=>\s*import\("([^"]+)"\)/);
+
     if (match?.[1]) {
-      return new URL(match[1], window.location.origin);
+      const isRelative = match[1].startsWith('./');
+      return [new URL(match[1], window.location.origin), isRelative];
     }
+
+    return [undefined, false];
   }
 
   function noCacheImport(
     importFn: () => void,
   ): Promise<Record<string, unknown>> {
-    const url = `${extractUrlFromViteImport(importFn)}&update=${Date.now()}`;
+    const [url, isRelative] = extractUrlFromViteImport(importFn);
+
+    if (!url) {
+      throw new Error(`Could not no-cache-import using ${importFn}`);
+    }
+
+    url.searchParams.append('update', Date.now().toString());
 
     // @vite-ignore
-    return import(url);
+    return import(`${isRelative ? '.' : ''}${url.pathname}${url.search}`);
   }
 
   const entryExampleFile = await noCacheImport(exampleSources['index.ts']);
