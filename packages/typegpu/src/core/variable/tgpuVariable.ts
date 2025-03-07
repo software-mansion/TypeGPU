@@ -97,6 +97,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyWgslData>
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${this.label ?? '<unnamed>'}`,
+        dataType: this._dataType,
       },
       valueProxyHandler,
     ) as Infer<TDataType>;

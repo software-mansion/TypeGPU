@@ -1,4 +1,9 @@
-import { getResolutionCtx } from '../../gpuMode';
+import {
+  RuntimeMode,
+  getResolutionCtx,
+  popMode,
+  pushMode,
+} from '../../gpuMode';
 import type { Infer } from '../../shared/repr';
 import { unwrapProxy } from '../valueProxyUtils';
 import type {
@@ -38,7 +43,12 @@ function createDerived<T>(compute: () => T): TgpuDerived<T> {
         );
       }
 
-      return unwrapProxy(ctx.unwrap(this));
+      try {
+        pushMode(RuntimeMode.CPU);
+        return unwrapProxy(ctx.unwrap(this));
+      } finally {
+        popMode(RuntimeMode.CPU);
+      }
     },
 
     with<TValue>(
