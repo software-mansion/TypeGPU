@@ -345,11 +345,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   defineVariable(id: string, dataType: AnyWgslData | UnknownData): Resource {
-    const resource = this.getById(id);
-
-    if (resource) {
-      throw new Error(`Resource ${id} already exists in the current scope.`);
-    }
     return this._itemStateStack.defineBlockVariable(id, dataType);
   }
 
