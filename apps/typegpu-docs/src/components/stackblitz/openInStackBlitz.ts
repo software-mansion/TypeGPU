@@ -4,6 +4,7 @@ import { type } from 'arktype';
 import typegpuPackageJson from '../../../../../packages/typegpu/package.json';
 import unpluginPackageJson from '../../../../../packages/unplugin-typegpu/package.json';
 import pnpmWorkspace from '../../../../../pnpm-workspace.yaml?raw';
+import typegpuDocsPackageJson from '../../../package.json';
 import type { Example } from '../../utils/examples/types';
 import index from './stackBlitzIndex.ts?raw';
 
@@ -75,7 +76,8 @@ ${example.htmlCode}
     },
     "dependencies": {
       "typegpu": "^${typegpuPackageJson.version}",
-      "unplugin-typegpu": "^${unpluginPackageJson.version}"
+      "unplugin-typegpu": "^${unpluginPackageJson.version}",
+      "wgpu-matrix": "${typegpuDocsPackageJson.dependencies['wgpu-matrix']}"
     }
 }`,
         'vite.config.js': `\
