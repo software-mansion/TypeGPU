@@ -20,24 +20,22 @@ type vBase = { kind: VecKind };
 
 export const add = createDualImpl(
   // CPU implementation
-  <T extends vBase>(lhs: T, rhs: T): T => {
-    return VectorOps.add[lhs.kind](lhs, rhs);
-  },
+  <T extends vBase>(lhs: T, rhs: T): T => VectorOps.add[lhs.kind](lhs, rhs),
   // GPU implementation
-  (lhs, rhs) => {
-    return { value: `(${lhs.value} + ${rhs.value})`, dataType: lhs.dataType };
-  },
+  (lhs, rhs) => ({
+    value: `(${lhs.value} + ${rhs.value})`,
+    dataType: lhs.dataType,
+  }),
 );
 
 export const sub = createDualImpl(
   // CPU implementation
-  <T extends vBase>(lhs: T, rhs: T): T => {
-    return VectorOps.sub[lhs.kind](lhs, rhs);
-  },
+  <T extends vBase>(lhs: T, rhs: T): T => VectorOps.sub[lhs.kind](lhs, rhs),
   // GPU implementation
-  (lhs, rhs) => {
-    return { value: `(${lhs.value} - ${rhs.value})`, dataType: lhs.dataType };
-  },
+  (lhs, rhs) => ({
+    value: `(${lhs.value} - ${rhs.value})`,
+    dataType: lhs.dataType,
+  }),
 );
 
 type MulOverload = {
@@ -109,9 +107,7 @@ export const abs = createDualImpl(
     return VectorOps.abs[value.kind](value) as T;
   },
   // GPU implementation
-  (value) => {
-    return { value: `abs(${value.value})`, dataType: value.dataType };
-  },
+  (value) => ({ value: `abs(${value.value})`, dataType: value.dataType }),
 );
 
 export const atan2 = createDualImpl(
@@ -123,9 +119,7 @@ export const atan2 = createDualImpl(
     return VectorOps.atan2[(y as vBase).kind](y as never, x as never) as T;
   },
   // GPU implementation
-  (y, x) => {
-    return { value: `atan2(${y.value}, ${x.value})`, dataType: y.dataType };
-  },
+  (y, x) => ({ value: `atan2(${y.value}, ${x.value})`, dataType: y.dataType }),
 );
 
 /**
@@ -141,9 +135,7 @@ export const ceil = createDualImpl(
     return VectorOps.ceil[value.kind](value) as T;
   },
   // GPU implementation
-  (value) => {
-    return { value: `ceil(${value.value})`, dataType: value.dataType };
-  },
+  (value) => ({ value: `ceil(${value.value})`, dataType: value.dataType }),
 );
 
 /**
@@ -180,9 +172,7 @@ export const cos = createDualImpl(
     return VectorOps.cos[value.kind](value) as T;
   },
   // GPU implementation
-  (value) => {
-    return { value: `cos(${value.value})`, dataType: value.dataType };
-  },
+  (value) => ({ value: `cos(${value.value})`, dataType: value.dataType }),
 );
 
 /**
@@ -191,13 +181,9 @@ export const cos = createDualImpl(
  */
 export const cross = createDualImpl(
   // CPU implementation
-  <T extends v3f | v3i | v3u>(a: T, b: T): T => {
-    return VectorOps.cross[a.kind](a, b);
-  },
+  <T extends v3f | v3i | v3u>(a: T, b: T): T => VectorOps.cross[a.kind](a, b),
   // GPU implementation
-  (a, b) => {
-    return { value: `cross(${a.value}, ${b.value})`, dataType: a.dataType };
-  },
+  (a, b) => ({ value: `cross(${a.value}, ${b.value})`, dataType: a.dataType }),
 );
 
 /**
@@ -206,24 +192,17 @@ export const cross = createDualImpl(
  */
 export const dot = createDualImpl(
   // CPU implementation
-  <T extends vBase>(lhs: T, rhs: T): number => {
-    return VectorOps.dot[lhs.kind](lhs, rhs);
-  },
+  <T extends vBase>(lhs: T, rhs: T): number =>
+    VectorOps.dot[lhs.kind](lhs, rhs),
   // GPU implementation
-  (lhs, rhs) => {
-    return { value: `dot(${lhs.value}, ${rhs.value})`, dataType: f32 };
-  },
+  (lhs, rhs) => ({ value: `dot(${lhs.value}, ${rhs.value})`, dataType: f32 }),
 );
 
 export const normalize = createDualImpl(
   // CPU implementation
-  <T extends vBase>(v: T): T => {
-    return VectorOps.normalize[v.kind](v);
-  },
+  <T extends vBase>(v: T): T => VectorOps.normalize[v.kind](v),
   // GPU implementation
-  (v) => {
-    return { value: `normalize(${v.value})`, dataType: v.dataType };
-  },
+  (v) => ({ value: `normalize(${v.value})`, dataType: v.dataType }),
 );
 
 /**
@@ -239,9 +218,7 @@ export const floor = createDualImpl(
     return VectorOps.floor[value.kind](value) as T;
   },
   // GPU implementation
-  (value) => {
-    return { value: `floor(${value.value})`, dataType: value.dataType };
-  },
+  (value) => ({ value: `floor(${value.value})`, dataType: value.dataType }),
 );
 
 export const fract = createDualImpl(
@@ -253,9 +230,7 @@ export const fract = createDualImpl(
     return VectorOps.fract[a.kind](a) as T;
   },
   // GPU implementation
-  (a) => {
-    return { value: `fract(${a.value})`, dataType: a.dataType };
-  },
+  (a) => ({ value: `fract(${a.value})`, dataType: a.dataType }),
 );
 
 /**
@@ -271,9 +246,7 @@ export const length = createDualImpl(
     return VectorOps.length[value.kind](value);
   },
   // GPU implementation
-  (value) => {
-    return { value: `length(${value.value})`, dataType: f32 };
-  },
+  (value) => ({ value: `length(${value.value})`, dataType: f32 }),
 );
 
 /**
@@ -289,9 +262,7 @@ export const max = createDualImpl(
     return VectorOps.max[a.kind](a, b as vBase) as T;
   },
   // GPU implementation
-  (a, b) => {
-    return { value: `max(${a.value}, ${b.value})`, dataType: a.dataType };
-  },
+  (a, b) => ({ value: `max(${a.value}, ${b.value})`, dataType: a.dataType }),
 );
 
 /**
@@ -307,9 +278,7 @@ export const min = createDualImpl(
     return VectorOps.min[a.kind](a, b as vBase) as T;
   },
   // GPU implementation
-  (a, b) => {
-    return { value: `min(${a.value}, ${b.value})`, dataType: a.dataType };
-  },
+  (a, b) => ({ value: `min(${a.value}, ${b.value})`, dataType: a.dataType }),
 );
 
 /**
@@ -325,9 +294,7 @@ export const sin = createDualImpl(
     return VectorOps.sin[value.kind](value) as T;
   },
   // GPU implementation
-  (value) => {
-    return { value: `sin(${value.value})`, dataType: value.dataType };
-  },
+  (value) => ({ value: `sin(${value.value})`, dataType: value.dataType }),
 );
 
 /**
@@ -343,9 +310,7 @@ export const exp = createDualImpl(
     return VectorOps.exp[value.kind](value) as T;
   },
   // GPU implementation
-  (value) => {
-    return { value: `exp(${value.value})`, dataType: value.dataType };
-  },
+  (value) => ({ value: `exp(${value.value})`, dataType: value.dataType }),
 );
 
 type PowOverload = {
@@ -420,9 +385,7 @@ export const mix: MixOverload = createDualImpl(
 
 export const reflect = createDualImpl(
   // CPU implementation
-  <T extends vBase>(e1: T, e2: T): T => {
-    return sub(e1, mul(2 * dot(e2, e1), e2));
-  },
+  <T extends vBase>(e1: T, e2: T): T => sub(e1, mul(2 * dot(e2, e1), e2)),
   // GPU implementation
   (e1, e2) => {
     return {

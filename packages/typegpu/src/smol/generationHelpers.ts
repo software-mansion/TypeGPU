@@ -33,7 +33,7 @@ import {
 import { getResolutionCtx } from '../gpuMode';
 import { type Resource, UnknownData, type Wgsl } from '../types';
 
-const indexableTypes = [
+const swizzleableTypes = [
   'vec2f',
   'vec2h',
   'vec2i',
@@ -138,7 +138,9 @@ export function getTypeForPropAccess(
 
   const propLength = propName.length;
   if (
-    indexableTypes.includes(targetTypeStr as (typeof indexableTypes)[number]) &&
+    swizzleableTypes.includes(
+      targetTypeStr as (typeof swizzleableTypes)[number],
+    ) &&
     propLength >= 1 &&
     propLength <= 4
   ) {
@@ -179,9 +181,9 @@ export function getTypeForIndexAccess(resource: Wgsl): BaseData | undefined {
   return undefined;
 }
 
-export function getTypeFormWgsl(resource: Wgsl): AnyWgslData | UnknownData {
+export function getTypeFromWgsl(resource: Wgsl): AnyWgslData | UnknownData {
   if (isDerived(resource) || isSlot(resource)) {
-    return getTypeFormWgsl(resource.value as Wgsl);
+    return getTypeFromWgsl(resource.value as Wgsl);
   }
 
   if (typeof resource === 'string') {

@@ -25,7 +25,7 @@ import { naturalsExcept } from './shared/generators';
 import type { Infer } from './shared/repr';
 import { $internal } from './shared/symbols';
 import { generateFunction } from './smol';
-import { getTypeFormWgsl } from './smol/generationHelpers';
+import { getTypeFromWgsl } from './smol/generationHelpers';
 import {
   type TgpuBindGroup,
   TgpuBindGroupImpl,
@@ -196,7 +196,7 @@ class ItemStateStackImpl implements ItemStateStack {
           return {
             value: external,
             dataType: isWgsl(external)
-              ? getTypeFormWgsl(external)
+              ? getTypeFromWgsl(external)
               : UnknownData,
           };
         }

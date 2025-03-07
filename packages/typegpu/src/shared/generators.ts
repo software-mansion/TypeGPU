@@ -31,7 +31,7 @@ export function createDualImpl<T extends (...args: any[]) => any>(
         ...(args as unknown as MapValueToResource<Parameters<T>>),
       ) as unknown as Resource;
     }
-    // biome-ignore lint/suspicious/noExplicitAny: <t's very convenient>
+    // biome-ignore lint/suspicious/noExplicitAny: <it's very convenient>
     return jsImpl(...(args as any));
   }) as T;
 }

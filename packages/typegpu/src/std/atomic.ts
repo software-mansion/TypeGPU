@@ -6,35 +6,23 @@ type AnyAtomic = atomicI32 | atomicU32;
 
 export const workgroupBarrier = createDualImpl(
   // CPU implementation
-  () => {
-    console.warn('workgroupBarrier is a no-op outside of GPU mode.');
-  },
+  () => console.warn('workgroupBarrier is a no-op outside of GPU mode.'),
   // GPU implementation
-  () => {
-    return { value: 'workgroupBarrier()', dataType: Void };
-  },
+  () => ({ value: 'workgroupBarrier()', dataType: Void }),
 );
 
 export const storageBarrier = createDualImpl(
   // CPU implementation
-  () => {
-    console.warn('storageBarrier is a no-op outside of GPU mode.');
-  },
+  () => console.warn('storageBarrier is a no-op outside of GPU mode.'),
   // GPU implementation
-  () => {
-    return { value: 'storageBarrier()', dataType: Void };
-  },
+  () => ({ value: 'storageBarrier()', dataType: Void }),
 );
 
 export const textureBarrier = createDualImpl(
   // CPU implementation
-  () => {
-    console.warn('textureBarrier is a no-op outside of GPU mode.');
-  },
+  () => console.warn('textureBarrier is a no-op outside of GPU mode.'),
   // GPU implementation
-  () => {
-    return { value: 'textureBarrier()', dataType: Void };
-  },
+  () => ({ value: 'textureBarrier()', dataType: Void }),
 );
 
 export const atomicLoad = createDualImpl(

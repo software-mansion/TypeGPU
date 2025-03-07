@@ -219,18 +219,18 @@ export const vec4u = makeVecSchema(Vec4uImpl) as Vec4u;
 // --------------
 
 const vecTypeToConstructor = {
-  vec2f: vec2f,
-  vec2h: vec2h,
-  vec2i: vec2i,
-  vec2u: vec2u,
-  vec3f: vec3f,
-  vec3h: vec3h,
-  vec3i: vec3i,
-  vec3u: vec3u,
-  vec4f: vec4f,
-  vec4h: vec4h,
-  vec4i: vec4i,
-  vec4u: vec4u,
+  vec2f,
+  vec2h,
+  vec2i,
+  vec2u,
+  vec3f,
+  vec3h,
+  vec3i,
+  vec3u,
+  vec4f,
+  vec4h,
+  vec4i,
+  vec4u,
 } as const;
 
 type VecSchemaBase<TValue> = {

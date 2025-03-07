@@ -11,7 +11,7 @@ import {
 import {
   getTypeForIndexAccess,
   getTypeForPropAccess,
-  getTypeFormWgsl,
+  getTypeFromWgsl,
   numericLiteralToResource,
 } from './generationHelpers';
 
@@ -36,9 +36,9 @@ const parenthesizedOps = [
   '||',
 ];
 
-const logicalOps = ['&&', '||', '!', '==', '!=', '<', '<=', '>', '>='];
+const binaryLogicalOps = ['&&', '||', '==', '!=', '<', '<=', '>', '>='];
 
-type OpratorTypes =
+type Oprator =
   | smol.BinaryOperator
   | smol.AssignmentOperator
   | smol.LogicalOperator
@@ -47,7 +47,7 @@ type OpratorTypes =
 function operatorToType<
   TL extends wgsl.AnyWgslData | UnknownData,
   TR extends wgsl.AnyWgslData | UnknownData,
->(lhs: TL, op: OpratorTypes, rhs?: TR): TL | TR | wgsl.Bool {
+>(lhs: TL, op: Oprator, rhs?: TR): TL | TR | wgsl.Bool {
   if (!rhs) {
     if (op === '!' || op === '~') {
       return d.bool;
@@ -56,7 +56,7 @@ function operatorToType<
     return lhs;
   }
 
-  if (logicalOps.includes(op)) {
+  if (binaryLogicalOps.includes(op)) {
     return d.bool;
   }
 
@@ -173,33 +173,29 @@ export function generateExpression(
     // Member Access
     const [targetId, property] = expression.a;
     const target = generateExpression(ctx, targetId);
-    const propertyStr = property;
 
     if (typeof target.value === 'string') {
       return {
-        value: `${target.value}.${propertyStr}`,
+        value: `${target.value}.${property}`,
         dataType:
-          getTypeForPropAccess(target.dataType as Wgsl, propertyStr) ??
+          getTypeForPropAccess(target.dataType as Wgsl, property) ??
           UnknownData,
       };
     }
     // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
-    const value = (target.value as any)[propertyStr];
+    const value = (target.value as any)[property];
 
     if (isWgsl(target.value)) {
       return {
         value,
         dataType:
-          getTypeForPropAccess(target.value as d.AnyWgslData, propertyStr) ??
+          getTypeForPropAccess(target.value as d.AnyWgslData, property) ??
           UnknownData,
       };
     }
 
     if (typeof target.value === 'object') {
-      const dataType =
-        !target.value === null && isWgsl(value)
-          ? getTypeFormWgsl(value)
-          : UnknownData;
+      const dataType = isWgsl(value) ? getTypeFromWgsl(value) : UnknownData;
 
       return {
         value,
@@ -207,7 +203,7 @@ export function generateExpression(
       };
     }
 
-    throw new Error(`Cannot access member ${propertyStr} of ${target.value}`);
+    throw new Error(`Cannot access member ${property} of ${target.value}`);
   }
 
   if ('i' in expression) {
@@ -269,10 +265,9 @@ export function generateExpression(
     }
 
     // Assuming that `id` is callable
-    const result = (idValue as unknown as (...args: unknown[]) => unknown)(
+    return (idValue as unknown as (...args: unknown[]) => unknown)(
       ...resolvedResources,
     ) as Resource;
-    return result;
   }
 
   if ('o' in expression) {
