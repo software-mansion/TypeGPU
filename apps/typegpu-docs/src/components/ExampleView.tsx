@@ -22,7 +22,8 @@ type Props = {
 };
 
 function useExample(
-  exampleCode: string,
+  exampleCode: Record<string, string>,
+  tsSources: Record<string, () => void>,
   htmlCode: string,
   setSnackbarText: (text: string | undefined) => void,
 ) {
@@ -34,14 +35,13 @@ function useExample(
     let cancelled = false;
     setSnackbarText(undefined);
 
-    executeExample(exampleCode)
+    executeExample(tsSources)
       .then((example) => {
         if (cancelled) {
           // Another instance was started in the meantime.
           example.dispose();
           return;
         }
-
         // Success
         setExampleControlParams(example.controlParams);
         exampleRef.current = example;
@@ -66,29 +66,35 @@ function useExample(
   }, [exampleCode, htmlCode, setSnackbarText, setExampleControlParams]);
 }
 
-type EditorTab = 'ts' | 'html';
-
 export function ExampleView({ example }: Props) {
-  const { tsCode, htmlCode, execTsCode } = example;
+  const { tsCodes, tsSources, htmlCode } = example;
 
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
-  const [currentEditorTab, setCurrentEditorTab] = useState<EditorTab>('ts');
+  const [currentFile, setCurrentFile] = useState<string>(
+    Object.keys(tsCodes)[0] || '',
+  );
 
   const codeEditorShowing = useAtomValue(codeEditorShownAtom);
   const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
-
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset embedded html on code change
+  const codeFiles = Object.keys(tsCodes);
+  const editorTabsList = [
+    ...(codeFiles.includes('index.ts')
+      ? ['index.ts', ...codeFiles.filter((name) => name !== 'index.ts')]
+      : codeFiles),
+    'index.html',
+  ];
+
   useEffect(() => {
     if (!exampleHtmlRef.current) {
       return;
     }
     exampleHtmlRef.current.innerHTML = htmlCode;
-  }, [tsCode, htmlCode]);
+  }, [htmlCode]);
 
-  useExample(execTsCode, htmlCode, setSnackbarText);
-  useResizableCanvas(exampleHtmlRef, tsCode, htmlCode);
+  useExample(tsCodes, tsSources, htmlCode, setSnackbarText); // live example
+  useResizableCanvas(exampleHtmlRef, htmlCode);
 
   return (
     <>
@@ -131,18 +137,29 @@ export function ExampleView({ example }: Props) {
                 'absolute bg-tameplum-50 z-20 md:relative h-[calc(100%-2rem)] w-[calc(100%-2rem)] md:w-full md:h-full',
               )}
             >
-              <div className="absolute inset-0">
-                <EditorTabButtonPanel
-                  currentEditorTab={currentEditorTab}
-                  setCurrentEditorTab={setCurrentEditorTab}
-                />
-
-                <TsCodeEditor shown={currentEditorTab === 'ts'} code={tsCode} />
-
-                <HtmlCodeEditor
-                  shown={currentEditorTab === 'html'}
-                  code={htmlCode}
-                />
+              <div className="absolute inset-1">
+                <div className="flex overflow-auto border-gray-300 pt-16 md:pt-0">
+                  {editorTabsList.map((fileName) => (
+                    <button
+                      key={fileName}
+                      type="button"
+                      onClick={() => setCurrentFile(fileName)}
+                      className={cs(
+                        'px-4 py-2',
+                        currentFile === fileName
+                          ? 'rounded-t-lg rounded-bl-none rounded-br-none bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
+                          : 'rounded-t-lg rounded-bl-none rounded-br-none bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
+                      )}
+                    >
+                      {fileName}
+                    </button>
+                  ))}
+                </div>
+                {currentFile === 'index.html' ? (
+                  <HtmlCodeEditor shown code={htmlCode} />
+                ) : (
+                  <TsCodeEditor shown code={tsCodes[currentFile]} />
+                )}
               </div>
             </div>
           ) : null}
@@ -150,48 +167,6 @@ export function ExampleView({ example }: Props) {
         <ControlPanel />
       </div>
     </>
-  );
-}
-
-function EditorTabButtonPanel({
-  currentEditorTab,
-  setCurrentEditorTab,
-}: {
-  currentEditorTab: EditorTab;
-  setCurrentEditorTab: (tab: EditorTab) => void;
-}) {
-  const commonStyle =
-    'inline-flex justify-center items-center box-border text-sm px-5 py-1';
-  const activeStyle =
-    'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark';
-  const inactiveStyle =
-    'bg-white border-tameplum-100 border-2 hover:bg-tameplum-20';
-
-  return (
-    <div className="absolute right-0 md:right-6 top-2 z-10 flex">
-      <button
-        className={cs(
-          commonStyle,
-          'rounded-l-lg',
-          currentEditorTab === 'ts' ? activeStyle : inactiveStyle,
-        )}
-        type="button"
-        onClick={() => setCurrentEditorTab('ts')}
-      >
-        TS
-      </button>
-      <button
-        className={cs(
-          commonStyle,
-          'rounded-r-lg',
-          currentEditorTab === 'html' ? activeStyle : inactiveStyle,
-        )}
-        type="button"
-        onClick={() => setCurrentEditorTab('html')}
-      >
-        HTML
-      </button>
-    </div>
   );
 }
 
@@ -215,7 +190,6 @@ function GPUUnsupportedPanel() {
 
 function useResizableCanvas(
   exampleHtmlRef: RefObject<HTMLDivElement | null>,
-  tsCode: string,
   htmlCode: string,
 ) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: should be run on every htmlCode and tsCode change
@@ -276,5 +250,5 @@ function useResizableCanvas(
         observer.disconnect();
       }
     };
-  }, [exampleHtmlRef, tsCode, htmlCode]);
+  }, [exampleHtmlRef, htmlCode]);
 }

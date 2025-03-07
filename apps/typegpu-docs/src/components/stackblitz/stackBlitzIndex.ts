@@ -1,5 +1,5 @@
 // @ts-ignore
-import * as example from './src/example.ts';
+import * as example from './src/index.ts';
 
 const body = document.querySelector('body') as HTMLBodyElement;
 body.style.display = 'flex';
