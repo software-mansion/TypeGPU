@@ -59,7 +59,7 @@ const MouseRay = d.struct({
 const workGroupSize = 256;
 
 const fishAmount = 1024 * 8;
-const fishModelScale = 0.03;
+const fishModelScale = 0.015;
 
 const aquariumSize = d.vec3f(8, 2, 8);
 const wrappingSides = d.vec3u(0, 0, 0); // 1 for true, 0 for false
@@ -85,7 +85,7 @@ const fogDistance = 1.5;
 const fogThickness = 0.2;
 const lightColor = d.vec3f(0.8, 0.8, 1);
 const lightDirection = std.normalize(d.vec3f(1.0, 1.0, 1.0));
-const backgroundColor = d.vec3f(137 / 255, 220 / 255, 255 / 255);
+const backgroundColor = std.mul(0.6, d.vec3f(90 / 255, 170 / 255, 255 / 255));
 
 // layouts
 
@@ -535,7 +535,7 @@ async function loadModel(
   };
 }
 
-// https://sketchfab.com/3d-models/low-poly-blahaj-5ac23e0cd44d49dcaaa14967f7d7a778
+// https://free3d.com/3d-model/fish---low-poly-82864.html
 const fishModel = await loadModel(
   root,
   'assets/3d-fishes/fish.obj',
