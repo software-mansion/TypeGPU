@@ -4,6 +4,9 @@ export {
   sub,
   mul,
   // builtin functions
+  acos,
+  asin,
+  atan2,
   abs,
   ceil,
   clamp,
@@ -21,3 +24,19 @@ export {
   mix,
   pow,
 } from './numeric';
+
+export {
+  atomicLoad,
+  atomicStore,
+  atomicAdd,
+  atomicSub,
+  atomicMax,
+  atomicMin,
+  atomicAnd,
+  atomicOr,
+  atomicXor,
+  // synchronization
+  workgroupBarrier,
+  storageBarrier,
+  textureBarrier,
+} from './atomic';

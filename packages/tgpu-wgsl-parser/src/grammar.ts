@@ -20,8 +20,8 @@ const lexer = moo.compile({
   comment: /\/\/.*?$/,
   decimal_float_literal: /0[fh]|[1-9][0-9]*[fh]|[0-9]*\.[0-9]+(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+\.[0-9]*(?:[eE][+-]?[0-9]+)?[fh]?|[0-9]+[eE][+-]?[0-9]+[fh]?/,
   hex_float_literal: /0[xX][0-9a-fA-F]*\.[0-9a-fA-F]+(?:[pP][+-]?[0-9]+[fh]?)?|0[xX][0-9a-fA-F]+\.[0-9a-fA-F]*(?:[pP][+-]?[0-9]+[fh]?)?|0[xX][0-9a-fA-F]+[pP][+-]?[0-9]+[fh]?/,
-  decimal_int_literal: { match: /(?:0|[1-9][0-9]*)[iu]?/ },
   hex_int_literal: { match: /0[xX][0-9a-fA-F]+[iu]?/ },
+  decimal_int_literal: { match: /(?:0|[1-9][0-9]*)[iu]?/ },
 
   // WGSL spec apparently accepts plenty of Unicode, but lets limit it to just ASCII for now.
   ident_pattern: {
@@ -133,6 +133,9 @@ export type Statement =
   | CompoundStatement;
 
 
+ export type BreakStatement = { type: 'break_statement' }; 
+ export type ContinueStatement = { type: 'continue_statement' }; 
+ export type WhileStatement = { type: 'while_statement', expression: Expression, body: CompoundStatement }; 
  export type VariableUpdatingStatement = AssignmentStatement; 
  export type CallStatement = { type: 'call_statement', ident: TemplateElaboratedIdent, args: Expression[] }; 
  export type Swizzle = { type: 'swizzle', value: string }; 
@@ -189,7 +192,6 @@ export type Accessor =
 export type SingularExpression =
     PrimaryExpression
   | { type: 'accessor', expression: PrimaryExpression, accessor: Accessor };
-
 
 
 export type UnaryExpression =
@@ -339,11 +341,19 @@ const grammar: Grammar = {
     {"name": "statement", "symbols": ["return_statement", {"literal":";"}], "postprocess": id},
     {"name": "statement", "symbols": ["if_statement"], "postprocess": id},
     {"name": "statement", "symbols": ["for_statement"], "postprocess": id},
+    {"name": "statement", "symbols": ["while_statement"], "postprocess": id},
     {"name": "statement", "symbols": ["call_statement", {"literal":";"}], "postprocess": id},
     {"name": "statement", "symbols": ["func_call_statement", {"literal":";"}], "postprocess": id},
     {"name": "statement", "symbols": ["variable_or_value_statement", {"literal":";"}], "postprocess": id},
+    {"name": "statement", "symbols": ["break_statement", {"literal":";"}], "postprocess": id},
+    {"name": "statement", "symbols": ["continue_statement", {"literal":";"}], "postprocess": id},
     {"name": "statement", "symbols": ["variable_updating_statement", {"literal":";"}], "postprocess": id},
     {"name": "statement", "symbols": ["compound_statement"], "postprocess": id},
+    {"name": "break_statement", "symbols": [{"literal":"break"}], "postprocess": () => ({ type: 'break_statement' })},
+    {"name": "continue_statement", "symbols": [{"literal":"continue"}], "postprocess": () => ({ type: 'continue_statement' })},
+    {"name": "while_statement$ebnf$1", "symbols": []},
+    {"name": "while_statement$ebnf$1", "symbols": ["while_statement$ebnf$1", "attribute"], "postprocess": (d) => d[0].concat([d[1]])},
+    {"name": "while_statement", "symbols": ["while_statement$ebnf$1", {"literal":"while"}, "expression", "compound_statement"], "postprocess": ([attrs, , expression, body]) => ({ type: 'while_statement', expression, body })},
     {"name": "variable_updating_statement", "symbols": ["assignment_statement"], "postprocess": id},
     {"name": "variable_updating_statement", "symbols": ["increment_statement"], "postprocess": id},
     {"name": "variable_updating_statement", "symbols": ["decrement_statement"], "postprocess": id},
@@ -429,8 +439,9 @@ const grammar: Grammar = {
     {"name": "component_or_swizzle_specifier$ebnf$3", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
     {"name": "component_or_swizzle_specifier$ebnf$3", "symbols": [], "postprocess": () => null},
     {"name": "component_or_swizzle_specifier", "symbols": [{"literal":"."}, "swizzle", "component_or_swizzle_specifier$ebnf$3"], "postprocess": ([ , swizzle, next]) => ({ type: 'swizzle_accessor', swizzle, next })},
-    {"name": "singular_expression", "symbols": ["primary_expression"], "postprocess": id},
-    {"name": "singular_expression", "symbols": ["primary_expression", "component_or_swizzle_specifier"], "postprocess": ([expression, accessor]) => ({ type: 'accessor', expression, accessor })},
+    {"name": "singular_expression$ebnf$1", "symbols": ["component_or_swizzle_specifier"], "postprocess": id},
+    {"name": "singular_expression$ebnf$1", "symbols": [], "postprocess": () => null},
+    {"name": "singular_expression", "symbols": ["primary_expression", "singular_expression$ebnf$1"], "postprocess": ([expression, accessor]) => accessor ? { type: 'accessor', expression, accessor } : expression},
     {"name": "unary_expression", "symbols": ["singular_expression"], "postprocess": id},
     {"name": "unary_expression", "symbols": [{"literal":"-"}, "unary_expression"], "postprocess": ([ , expression]) => ({ type: 'negate', expression })},
     {"name": "unary_expression", "symbols": [{"literal":"!"}, "unary_expression"], "postprocess": ([ , expression]) => ({ type: 'logic_not', expression })},

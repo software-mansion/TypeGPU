@@ -95,6 +95,10 @@ export interface WithFragment<
     depthStencilState: GPUDepthStencilState | undefined,
   ): WithFragment<Output>;
 
+  withMultisample(
+    multisampleState: GPUMultisampleState | undefined,
+  ): WithFragment<Output>;
+
   createPipeline(): TgpuRenderPipeline<Output>;
 }
 

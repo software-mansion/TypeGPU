@@ -186,6 +186,12 @@ export async function executeExample(
       if (moduleKey === 'wgpu-matrix') {
         return await import('wgpu-matrix');
       }
+      if (moduleKey === '@loaders.gl/core') {
+        return await import('@loaders.gl/core');
+      }
+      if (moduleKey === '@loaders.gl/obj') {
+        return await import('@loaders.gl/obj');
+      }
       throw new Error(`Module ${moduleKey} is not available in the sandbox.`);
     };
 

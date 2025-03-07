@@ -9,13 +9,12 @@ import {
   isProviding,
   isSlot,
 } from './core/slot/slotTypes';
-import { isLooseData } from './data';
+import { isData } from './data';
 import { getAttributesString } from './data/attributes';
 import {
   type AnyWgslData,
   type BaseData,
   isWgslArray,
-  isWgslData,
   isWgslStruct,
 } from './data/wgslTypes';
 import { MissingSlotValueError, ResolutionError } from './errors';
@@ -124,6 +123,20 @@ class ItemStateStack {
     });
   }
 
+  pushBlockScope() {
+    this._stack.push({
+      type: 'blockScope',
+      declarations: new Map<string, AnyWgslData | UnknownData>(),
+    });
+  }
+
+  popBlockScope() {
+    const layer = this._stack.pop();
+    if (layer?.type !== 'blockScope') {
+      throw new Error('Expected block scope layer to be on top.');
+    }
+  }
+
   pop() {
     const layer = this._stack.pop();
     if (layer?.type === 'item') {
@@ -189,6 +202,20 @@ class ItemStateStack {
 
     return undefined;
   }
+
+  defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Resource {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+
+      if (layer?.type === 'blockScope') {
+        layer.declarations.set(id, type);
+
+        return { value: id, dataType: type };
+      }
+    }
+
+    throw new Error('No block scope found to define a variable in.');
+  }
 }
 
 const INDENT = [
@@ -233,7 +260,7 @@ interface FixedBindingConfig {
   resource: object;
 }
 
-class ResolutionCtxImpl implements ResolutionCtx {
+export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _memoizedResolves = new WeakMap<
     // WeakMap because if the item does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
@@ -287,15 +314,36 @@ class ResolutionCtxImpl implements ResolutionCtx {
     return this._indentController.dedent();
   }
 
-  getById(id: string): Resource {
+  getById(id: string): Resource | null {
     // TODO: Provide access to external values
     // TODO: Provide data type information
+    // TODO: Return null if no id is found (when we can properly handle it)
     return (
       this._itemStateStack.getResourceById(id) ?? {
         value: id,
         dataType: UnknownData,
       }
     );
+  }
+
+  defineVariable(id: string, dataType: AnyWgslData | UnknownData): Resource {
+    // TODO: Bring this behavior back when we have type inference
+    // const resource = this.getById(id);
+
+    // if (resource) {
+    //   throw new Error(`Resource ${id} already exists in the current scope.`);
+    // } else {
+    //   return this._itemStateStack.defineBlockVariable(id, dataType);
+    // }
+    return this._itemStateStack.defineBlockVariable(id, dataType);
+  }
+
+  pushBlockScope() {
+    this._itemStateStack.pushBlockScope();
+  }
+
+  popBlockScope() {
+    this._itemStateStack.popBlockScope();
   }
 
   transpileFn(fn: string): {
@@ -476,7 +524,7 @@ class ResolutionCtxImpl implements ResolutionCtx {
 
       // If we got here, no item with the given slot-to-value combo exists in cache yet
       let result: string;
-      if (isWgslData(item) || isLooseData(item)) {
+      if (isData(item)) {
         result = resolveData(this, item);
       } else if (isDerived(item) || isSlot(item)) {
         result = this.resolve(this.unwrap(item));
