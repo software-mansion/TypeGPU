@@ -1,9 +1,9 @@
+import { entries, filter, fromEntries, map, pipe } from 'remeda';
 import type { Bench } from 'tinybench';
-import { partialWriteSuite } from './test-suites/partial-write';
+import { atomWithUrl } from './atom-with-url';
 import type { TypeGPUDataModule, TypeGPUModule } from './modules';
 import type { BenchParameterSet } from './parameter-set';
-import { atomWithUrl } from './atom-with-url';
-import { entries, filter, fromEntries, map, pipe } from 'remeda';
+import { partialWriteSuite } from './test-suites/partial-write';
 
 export type TestIdentifier = `${string}_${string}`;
 
