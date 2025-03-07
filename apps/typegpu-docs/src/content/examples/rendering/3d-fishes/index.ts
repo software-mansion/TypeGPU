@@ -62,7 +62,7 @@ const fishAmount = 1024 * 8;
 const fishModelScale = 0.03;
 
 const aquariumSize = d.vec3f(8, 2, 8);
-const wrappingSides = d.vec3u(1, 0, 0); // 1 for true, 0 for false
+const wrappingSides = d.vec3u(0, 0, 0); // 1 for true, 0 for false
 
 // TODO: remove the buffer and struct, just reference the constants
 const fishParameters = FishParameters({
@@ -82,7 +82,7 @@ const cameraInitialPosition = d.vec4f(0.5, 1.5, 3.5, 1);
 const cameraInitialTarget = d.vec3f(0, 0, 0);
 
 const fogDistance = 1.5;
-const fogThickness = 0.5;
+const fogThickness = 0.2;
 const lightColor = d.vec3f(0.8, 0.8, 1);
 const lightDirection = std.normalize(d.vec3f(1.0, 1.0, 1.0));
 const backgroundColor = d.vec3f(137 / 255, 220 / 255, 255 / 255);
@@ -228,11 +228,17 @@ const fragmentShader = tgpu['~unstable']
     if (cosTheta > 0) {
       diffuse = std.mul(cosTheta, std.mul(textureColor, lightColor));
 
-      const reflectionDirection = reflect(lightDirection, input.worldNormal);
+      const reflectionDirection = reflect(
+        std.mul(-1, lightDirection),
+        input.worldNormal,
+      );
 
       specular = std.mul(
-        textureColor,
-        std.mul(std.dot(reflectionDirection, viewDirection), lightColor),
+        0.5,
+        std.mul(
+          textureColor,
+          std.mul(std.dot(reflectionDirection, viewDirection), lightColor),
+        ),
       );
     }
 
