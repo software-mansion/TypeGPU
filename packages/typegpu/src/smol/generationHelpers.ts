@@ -219,7 +219,7 @@ export function numericLiteralToResource(value: string): Resource | undefined {
   }
 
   // Floating point literals with scientific notation
-  if (/^-?\d+\.?\d+e-?\d+$/i.test(value)) {
+  if (/^-?\d+(?:\.\d+)?e-?\d+$/i.test(value)) {
     return { value, dataType: abstractFloat };
   }
 
