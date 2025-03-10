@@ -3,8 +3,13 @@ import { atom } from 'jotai/vanilla';
 import { CirclePlus } from 'lucide-react';
 import { Suspense } from 'react';
 import type { Bench } from 'tinybench';
-import { importTypeGPU, importTypeGPUData } from './modules.js';
+import {
+  BenchmarkFallback,
+  BenchmarkResults,
+} from './components/benchmark-results.js';
+import { SuiteCheckbox } from './components/checkbox-tree.js';
 import { ParameterSetRow } from './components/parameter-set-row.js';
+import { importTypeGPU, importTypeGPUData } from './modules.js';
 import {
   type BenchParameterSet,
   createParameterSetAtom,
@@ -12,16 +17,11 @@ import {
   parameterSetsAtom,
 } from './parameter-set.js';
 import {
+  type Suite,
   getFilteredSuites,
   selectedTestsAtom,
   unfilteredSuites,
-  type Suite,
 } from './suites.js';
-import { SuiteCheckbox } from './components/checkbox-tree.js';
-import {
-  BenchmarkFallback,
-  BenchmarkResults,
-} from './components/benchmark-results.js';
 
 export interface InstanceResults {
   parameterSet: BenchParameterSet;

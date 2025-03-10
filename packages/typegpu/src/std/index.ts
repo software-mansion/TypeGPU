@@ -1,3 +1,4 @@
+export { discard } from './discard.js';
 export {
   // ops
   add,
@@ -23,7 +24,8 @@ export {
   exp,
   mix,
   pow,
-} from './numeric';
+  reflect,
+} from './numeric.js';
 
 export {
   atomicLoad,
@@ -39,4 +41,4 @@ export {
   workgroupBarrier,
   storageBarrier,
   textureBarrier,
-} from './atomic';
+} from './atomic.js';
