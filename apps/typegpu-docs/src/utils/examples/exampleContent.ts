@@ -78,9 +78,7 @@ const tsFilesImportFunctions: Record<
   string,
   Record<string, () => Promise<unknown>>
 > = pathToExampleFilesToImportMap(
-  import.meta.glob('../../content/examples/**/*.ts', {
-    query: '?tgpu=true',
-  }),
+  import.meta.glob('../../content/examples/**/*.ts'),
 );
 
 const htmlFiles: Record<string, string> = pathToExampleKey(
