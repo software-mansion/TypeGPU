@@ -103,7 +103,7 @@ export function ExampleView({ example }: Props) {
       <div className="flex flex-col md:grid gap-4 md:grid-cols-[1fr_18.75rem] h-full">
         <div
           className={cs(
-            'flex-1 grid gap-4 overflow-auto',
+            'flex-1 grid gap-4',
             codeEditorShowing ? 'md:grid-rows-2' : '',
           )}
         >
@@ -137,7 +137,7 @@ export function ExampleView({ example }: Props) {
                 'absolute bg-tameplum-50 z-20 md:relative h-[calc(100%-2rem)] w-[calc(100%-2rem)] md:w-full md:h-full',
               )}
             >
-              <div className="absolute inset-1">
+              <div className="absolute h-[94%] inset-1">
                 <div className="flex overflow-auto border-gray-300 pt-16 md:pt-0">
                   {editorTabsList.map((fileName) => (
                     <button
