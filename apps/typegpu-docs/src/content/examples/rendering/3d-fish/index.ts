@@ -38,8 +38,6 @@ const lightColor = d.vec3f(0.8, 0.8, 1);
 const lightDirection = std.normalize(d.vec3f(1.0, 1.0, 1.0));
 const backgroundColor = std.mul(1 / 255, d.vec3f(0x00, 0x7a, 0xcc));
 
-// color helpers
-
 // data schemas
 
 const Camera = d.struct({
@@ -774,7 +772,7 @@ canvas.addEventListener('mousedown', async (event) => {
   }
 });
 
-canvas.addEventListener('mouseup', (event) => {
+window.addEventListener('mouseup', (event) => {
   if (event.button === 0) {
     isLeftPressed = false;
   }
@@ -788,7 +786,7 @@ canvas.addEventListener('mouseup', (event) => {
   }
 });
 
-canvas.addEventListener('mousemove', (event) => {
+window.addEventListener('mousemove', (event) => {
   const dx = event.clientX - previousMouseX;
   const dy = event.clientY - previousMouseY;
   previousMouseX = event.clientX;
