@@ -6,6 +6,7 @@ import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
 
 // TODO: split into files
+// TODO: update acos and asin to vector functions
 
 // constants
 

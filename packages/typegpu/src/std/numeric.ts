@@ -121,17 +121,6 @@ export function asin(value: number): number {
 
 /**
  * @privateRemarks
- * https://www.w3.org/TR/WGSL/#atan2-builtin
- */
-export function atan2(y: number, x: number): number {
-  if (inGPUMode()) {
-    return `atan2(${y}, ${x})` as unknown as number;
-  }
-  return Math.atan2(y, x);
-}
-
-/**
- * @privateRemarks
  * https://www.w3.org/TR/WGSL/#ceil-builtin
  */
 export function ceil<T extends vBase | number>(value: T): T {
