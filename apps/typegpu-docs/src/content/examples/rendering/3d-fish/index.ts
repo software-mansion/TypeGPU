@@ -15,7 +15,6 @@ const fishModelScale = 0.015;
 const aquariumSize = d.vec3f(8, 2, 8);
 const wrappingSides = d.vec3u(0, 0, 0); // vec3 of bools
 
-// TODO: replace "fishes" with "fish"
 // TODO: change camera to be located in a point
 // TODO: split into files
 const fishSeparationDistance = 0.08;
@@ -612,16 +611,16 @@ async function loadModel(
 // https://free3d.com/3d-model/fish---low-poly-82864.html
 const fishModel = await loadModel(
   root,
-  'assets/3d-fishes/fish.obj',
-  'assets/3d-fishes/fish.png',
+  'assets/3d-fish/fish.obj',
+  'assets/3d-fish/fish.png',
 );
 
 // https://www.cgtrader.com/free-3d-models/space/other/rainy-ocean
 // https://www.istockphoto.com/pl/obrazy/sand
 const oceanFloorModel = await loadModel(
   root,
-  'assets/3d-fishes/ocean_floor.obj',
-  'assets/3d-fishes/ocean_floor.jpg',
+  'assets/3d-fish/ocean_floor.obj',
+  'assets/3d-fish/ocean_floor.jpg',
 );
 
 // pipelines
@@ -656,7 +655,7 @@ const sampler = root.device.createSampler({
   minFilter: 'linear',
 });
 
-const renderFishesBindGroups = [0, 1].map((idx) =>
+const renderFishBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(renderBindGroupLayout, {
     modelData: fishDataBuffers[idx],
     camera: cameraBuffer,
@@ -748,7 +747,7 @@ function frame() {
     })
     .with(modelVertexLayout, fishModel.vertexBuffer)
     .with(renderInstanceLayout, fishDataBuffers[odd ? 1 : 0])
-    .with(renderBindGroupLayout, renderFishesBindGroups[odd ? 1 : 0])
+    .with(renderBindGroupLayout, renderFishBindGroups[odd ? 1 : 0])
     .draw(fishModel.polygonCount, fishAmount);
 
   root['~unstable'].flush();
