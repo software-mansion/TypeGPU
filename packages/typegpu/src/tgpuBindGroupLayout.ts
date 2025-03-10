@@ -484,8 +484,6 @@ class TgpuBindGroupLayoutImpl<
   }
 
   unwrap(unwrapper: Unwrapper) {
-    console.log('unwrapping bind group layout');
-    console.log(this.entries);
     const unwrapped = unwrapper.device.createBindGroupLayout({
       label: this.label ?? '<unnamed>',
       entries: Object.values(this.entries)

@@ -246,14 +246,6 @@ const materialBuffer = root
   .$usage('uniform');
 
 const cubemapTexture = await loadCubemap(root.device, cubemapUrls);
-const linSampler = tgpu['~unstable'].sampler({
-  magFilter: 'linear',
-  minFilter: 'linear',
-  mipmapFilter: 'linear',
-  addressModeU: 'clamp-to-edge',
-  addressModeV: 'clamp-to-edge',
-  addressModeW: 'clamp-to-edge',
-});
 
 const rederLayout = tgpu.bindGroupLayout({
   camera: { uniform: Camera },
@@ -263,16 +255,14 @@ const rederLayout = tgpu.bindGroupLayout({
     texture: 'float',
     viewDimension: 'cube',
   },
-  sampler: { sampler: 'filtering' },
 });
-const { camera, light, material, cubemap, sampler } = rederLayout.bound;
+const { camera, light, material } = rederLayout.bound;
 
 const renderBindGroup = root.createBindGroup(rederLayout, {
   camera: cameraBuffer,
   light: lightBuffer,
   material: materialBuffer,
   cubemap: cubemapTexture,
-  sampler: linSampler,
 });
 
 const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(Vertex, n));
@@ -302,11 +292,6 @@ const vertexFn = tgpu['~unstable']
       worldPos: worldPos,
     };
   });
-
-const sampleTexture = tgpu['~unstable'].fn([]).does(`
-  (texture: texture_cube<f32>, s: sampler, uv: vec3<f32>) -> vec4<f32> {
-    return textureSample(texture, s, uv);
-  }`);
 
 const fragmentFn = tgpu['~unstable']
   .fragmentFn({
@@ -361,13 +346,12 @@ const fragmentFn = tgpu['~unstable']
     );
 
     // @ts-ignore
-    const cubemapColor = sampleTexture(cubemap, sampler, reflectionVector);
+    const cubemapColor = std.sampleTexture(cubemap, sampler, reflectionVector);
 
     // Mix the base color with the cubemap reflection based on the material's reflectivity
     const finalColor = std.mix(
       d.vec3f(baseResult),
-      //@ts-ignore
-      d.vec3f(cubemapColor.xyz),
+      d.vec3f(reflectionVector.xyz),
       material.value.reflectivity,
     );
 
