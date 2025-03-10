@@ -1,3 +1,4 @@
+import { $internal } from '../../shared/symbols';
 import type { AnyWgslData } from '../../data/wgslTypes';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
@@ -11,8 +12,11 @@ import { valueProxyHandler } from '../valueProxyUtils';
 
 export interface TgpuConst<TDataType extends AnyWgslData = AnyWgslData>
   extends TgpuNamable {
-  readonly dataType: TDataType;
   readonly value: Infer<TDataType>;
+
+  readonly [$internal]: {
+    readonly dataType: TDataType;
+  };
 }
 
 /**
@@ -33,11 +37,16 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
   implements TgpuConst<TDataType>, SelfResolvable
 {
   private _label: string | undefined;
+  public readonly [$internal]: {
+    readonly dataType: TDataType;
+  };
 
   constructor(
     public readonly dataType: TDataType,
     private readonly _value: Infer<TDataType>,
-  ) {}
+  ) {
+    this[$internal] = { dataType };
+  }
 
   get label() {
     return this._label;
@@ -70,7 +79,9 @@ class TgpuConstImpl<TDataType extends AnyWgslData>
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${this.label ?? '<unnamed>'}`,
-        dataType: this.dataType,
+        [$internal]: {
+          dataType: this.dataType,
+        },
       },
       valueProxyHandler,
     ) as Infer<TDataType>;

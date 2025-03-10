@@ -458,7 +458,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       if (isSlot(maybeEventual)) {
         maybeEventual = this.readSlot(maybeEventual);
       } else if (isDerived(maybeEventual)) {
+        pushMode(RuntimeMode.CPU);
         maybeEventual = this._getOrCompute(maybeEventual);
+        popMode(RuntimeMode.CPU);
       } else {
         break;
       }

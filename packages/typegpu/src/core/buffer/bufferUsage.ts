@@ -124,11 +124,17 @@ class TgpuFixedBufferImpl<
   }
 
   get value(): InferGPU<TData> {
+    if (!inGPUMode()) {
+      throw new Error(`Cannot access buffer's value directly in JS.`);
+    }
+
     return new Proxy(
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${this.label ?? '<unnamed>'}`,
-        dataType: this[$internal].dataType,
+        [$internal]: {
+          dataType: this[$internal].dataType,
+        },
       },
       valueProxyHandler,
     ) as InferGPU<TData>;
@@ -183,7 +189,9 @@ export class TgpuLaidOutBufferImpl<
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${this.label ?? '<unnamed>'}`,
-        dataType: this[$internal].dataType,
+        [$internal]: {
+          dataType: this[$internal].dataType,
+        },
       },
       valueProxyHandler,
     ) as InferGPU<TData>;

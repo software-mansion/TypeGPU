@@ -1,3 +1,4 @@
+import { $internal } from '../shared/symbols';
 import type { BaseData } from '../data';
 import { getTypeForPropAccess } from '../smol/generationHelpers';
 import {
@@ -10,7 +11,8 @@ import {
 import { isAccessor, isDerived, isSlot } from './slot/slotTypes';
 
 export const valueProxyHandler: ProxyHandler<
-  SelfResolvable & Labelled & { dataType: BaseData }
+  SelfResolvable &
+    Labelled & { readonly [$internal]: { readonly dataType: BaseData } }
 > = {
   get(target, prop) {
     if (prop in target) {
@@ -37,9 +39,13 @@ export const valueProxyHandler: ProxyHandler<
         toString: () =>
           `.value(...).${String(prop)}:${target.label ?? '<unnamed>'}`,
 
-        dataType:
-          getTypeForPropAccess(target.dataType as Wgsl, String(prop)) ??
-          target.dataType,
+        [$internal]: {
+          dataType:
+            getTypeForPropAccess(
+              target[$internal].dataType as Wgsl,
+              String(prop),
+            ) ?? target[$internal].dataType,
+        },
       },
       valueProxyHandler,
     );
