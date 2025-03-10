@@ -4,7 +4,7 @@ import * as std from 'typegpu/std';
 export const workGroupSize = 256;
 
 export const fishAmount = 1024 * 8;
-export const fishModelScale = 0.015;
+export const fishModelScale = 0.02;
 
 export const aquariumSize = d.vec3f(10, 4, 10);
 export const wrappingSides = d.vec3u(0, 0, 0); // vec3 of bools
