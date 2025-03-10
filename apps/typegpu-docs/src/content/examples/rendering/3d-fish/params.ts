@@ -6,9 +6,6 @@ export const workGroupSize = 256;
 export const fishAmount = 1024 * 8;
 export const fishModelScale = 0.02;
 
-export const aquariumSize = d.vec3f(10, 4, 10);
-export const wrappingSides = d.vec3u(0, 0, 0); // vec3 of bools
-
 export const fishSeparationDistance = 0.3;
 export const fishSeparationStrength = 0.0006;
 export const fishAlignmentDistance = 0.3;
@@ -19,6 +16,8 @@ export const fishWallRepulsionDistance = 0.1;
 export const fishWallRepulsionStrength = 0.0001;
 export const fishMouseRayRepulsionDistance = 0.9;
 export const fishMouseRayRepulsionStrength = 0.0005;
+
+export const aquariumSize = d.vec3f(10, 4, 10);
 
 export const cameraInitialPosition = d.vec4f(-5, 0, -5, 1);
 export const cameraInitialTarget = d.vec4f(0, 0, 0, 1);

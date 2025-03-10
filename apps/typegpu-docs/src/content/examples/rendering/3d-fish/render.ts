@@ -152,6 +152,6 @@ export const fragmentShader = tgpu['~unstable']
       foggedColor = std.mix(foggedColor, p.backgroundColor, fogFactor);
     }
 
-    return d.vec4f(foggedColor.x, foggedColor.y, foggedColor.z, 1);
+    return d.vec4f(foggedColor.xyz, 1);
   })
   .$name('mainFragment');

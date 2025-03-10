@@ -59,10 +59,6 @@ export const mainCompute = tgpu['~unstable']
       );
     }
     for (let i = 0; i < 3; i += 1) {
-      if (p.wrappingSides[i] === 1) {
-        continue;
-      }
-
       const repulsion = d.vec3f();
       repulsion[i] = 1.0;
 
@@ -120,19 +116,5 @@ export const mainCompute = tgpu['~unstable']
     );
 
     fishData.position = std.add(fishData.position, fishData.direction);
-    for (let i = 0; i < 3; i += 1) {
-      if (p.wrappingSides[i] === 0) {
-        continue;
-      }
-      if (fishData.position[i] - p.fishModelScale > p.aquariumSize[i] / 2) {
-        fishData.position[i] = -p.aquariumSize[i] / 2;
-      } else if (
-        fishData.position[i] + p.fishModelScale <
-        -p.aquariumSize[i] / 2
-      ) {
-        fishData.position[i] = p.aquariumSize[i] / 2;
-      }
-    }
-
     computeNextFishData.value[fishIndex] = fishData;
   });

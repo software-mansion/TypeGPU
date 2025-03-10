@@ -17,8 +17,6 @@ import { fragmentShader, vertexShader } from './render';
 import { mainCompute } from './compute';
 import { loadModel } from './load-model';
 
-// TODO: remove wrapping sides
-// TODO: split into files
 // TODO: add vector spread where possible
 // TODO: make fishes frame independent
 // TODO: canvas on entire screen
@@ -55,26 +53,6 @@ const oceanFloorModel = await loadModel(
 
 // buffers
 
-const camera = {
-  position: p.cameraInitialPosition,
-  c_target: p.cameraInitialTarget,
-  view: m.mat4.lookAt(
-    p.cameraInitialPosition,
-    p.cameraInitialTarget,
-    d.vec3f(0, 1, 0),
-    d.mat4x4f(),
-  ),
-  projection: m.mat4.perspective(
-    Math.PI / 4,
-    canvas.clientWidth / canvas.clientHeight,
-    0.1,
-    1000,
-    d.mat4x4f(),
-  ),
-};
-
-const cameraBuffer = root.createBuffer(Camera, camera).$usage('uniform');
-
 const fishDataBuffers = Array.from({ length: 2 }, () =>
   root
     .createBuffer(ModelDataArray(p.fishAmount))
@@ -102,7 +80,33 @@ const randomizeFishPositions = () => {
 };
 randomizeFishPositions();
 
-const mouseRayBuffer = root.createBuffer(MouseRay).$usage('uniform');
+const camera = {
+  position: p.cameraInitialPosition,
+  c_target: p.cameraInitialTarget,
+  view: m.mat4.lookAt(
+    p.cameraInitialPosition,
+    p.cameraInitialTarget,
+    d.vec3f(0, 1, 0),
+    d.mat4x4f(),
+  ),
+  projection: m.mat4.perspective(
+    Math.PI / 4,
+    canvas.clientWidth / canvas.clientHeight,
+    0.1,
+    1000,
+    d.mat4x4f(),
+  ),
+};
+
+const cameraBuffer = root.createBuffer(Camera, camera).$usage('uniform');
+
+let mouseRay = MouseRay({
+  activated: 0,
+  pointX: d.vec3f(),
+  pointY: d.vec3f(),
+});
+
+const mouseRayBuffer = root.createBuffer(MouseRay, mouseRay).$usage('uniform');
 
 // pipelines
 
@@ -176,11 +180,6 @@ const computeBindGroups = [0, 1].map((idx) =>
 
 let odd = false;
 let disposed = false;
-let mouseRay = MouseRay({
-  activated: 0,
-  pointX: d.vec3f(),
-  pointY: d.vec3f(),
-});
 
 function frame() {
   if (disposed) {
