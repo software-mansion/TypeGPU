@@ -31,7 +31,8 @@ import {
   isWgslData,
 } from '../data/wgslTypes';
 import { getResolutionCtx } from '../gpuMode';
-import { type Resource, UnknownData, type Wgsl } from '../types';
+import { $internal } from '../shared/symbols';
+import { type Resource, UnknownData, type Wgsl, isBufferUsage } from '../types';
 
 const swizzleableTypes = [
   'vec2f',
@@ -112,7 +113,7 @@ export function getTypeForPropAccess(
     return undefined;
   }
 
-  if ((isDerived(targetType) || isSlot(targetType)) && propName === 'value') {
+  if (isDerived(targetType) || isSlot(targetType)) {
     const ctx = getResolutionCtx();
     if (!ctx) {
       throw new Error(
@@ -122,13 +123,18 @@ export function getTypeForPropAccess(
     return ctx.unwrap(targetType) as BaseData;
   }
 
-  let target = targetType as AnyWgslData;
+  let target = targetType as BaseData;
+
+  if (isBufferUsage(targetType)) {
+    target = targetType[$internal].dataType as BaseData;
+  }
   if ('dataType' in target) {
     target = target.dataType as AnyWgslData;
   }
   while (isDecorated(target)) {
-    target = target.inner as AnyWgslData;
+    target = target.inner;
   }
+
   const targetTypeStr =
     'kind' in target ? (target.kind as string) : target.type;
 

@@ -295,7 +295,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _itemStateStack = new ItemStateStackImpl();
   private readonly _declarations: string[] = [];
 
-  [$internal] = {
+  readonly [$internal] = {
     itemStateStack: this._itemStateStack,
   };
 

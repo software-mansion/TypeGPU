@@ -266,12 +266,10 @@ function makeVecSchema<TValue>(
         `'${type}' constructor called with invalid number of arguments.`,
       );
     },
-    (...args) => {
-      return {
-        value: `${type}(${args.map((v) => v.value).join(', ')})`,
-        dataType: vecTypeToConstructor[type],
-      };
-    },
+    (...args) => ({
+      value: `${type}(${args.map((v) => v.value).join(', ')})`,
+      dataType: vecTypeToConstructor[type],
+    }),
   );
 
   return Object.assign(construct, { type, '~repr': undefined as TValue });
