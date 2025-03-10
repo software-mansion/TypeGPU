@@ -5,6 +5,7 @@ import { hsvToRgb, rgbToHsv } from './color-helpers';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
+import * as p from './params';
 import {
   Camera,
   computeBindGroupLayout,
@@ -17,36 +18,11 @@ import {
   renderInstanceLayout,
 } from './schemas';
 
+// TODO: remove wrapping sides
 // TODO: split into files
 // TODO: add vector spread where possible
 // TODO: make fishes frame independent
 // TODO: canvas on entire screen
-
-const workGroupSize = 256;
-
-const fishAmount = 1024 * 8;
-const fishModelScale = 0.015;
-
-const aquariumSize = d.vec3f(10, 4, 10);
-const wrappingSides = d.vec3u(0, 0, 0); // vec3 of bools
-
-const fishSeparationDistance = 0.3;
-const fishSeparationStrength = 0.0006;
-const fishAlignmentDistance = 0.3;
-const fishAlignmentStrength = 0.005;
-const fishCohesionDistance = 0.5;
-const fishCohesionStrength = 0.0008;
-const fishWallRepulsionDistance = 0.1;
-const fishWallRepulsionStrength = 0.0001;
-const fishMouseRayRepulsionDistance = 0.9;
-const fishMouseRayRepulsionStrength = 0.0005;
-
-const cameraInitialPosition = d.vec4f(-5, 0, -5, 1);
-const cameraInitialTarget = d.vec4f(0, 0, 0, 1);
-
-const lightColor = d.vec3f(0.8, 0.8, 1);
-const lightDirection = std.normalize(d.vec3f(1.0, 1.0, 1.0));
-const backgroundColor = std.mul(1 / 255, d.vec3f(0x00, 0x7a, 0xcc));
 
 // render sharers
 
@@ -161,14 +137,14 @@ const fragmentShader = tgpu['~unstable']
     let diffuse = d.vec3f();
     let specular = d.vec3f();
 
-    ambient = std.mul(0.5, std.mul(textureColor, lightColor));
+    ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));
 
-    const cosTheta = std.max(0.0, std.dot(input.worldNormal, lightDirection));
+    const cosTheta = std.max(0.0, std.dot(input.worldNormal, p.lightDirection));
     if (cosTheta > 0) {
-      diffuse = std.mul(cosTheta, std.mul(textureColor, lightColor));
+      diffuse = std.mul(cosTheta, std.mul(textureColor, p.lightColor));
 
       const reflectionDirection = reflect(
-        std.mul(-1, lightDirection),
+        std.mul(-1, p.lightDirection),
         input.worldNormal,
       );
 
@@ -176,7 +152,7 @@ const fragmentShader = tgpu['~unstable']
         0.5,
         std.mul(
           textureColor,
-          std.mul(std.dot(reflectionDirection, viewDirection), lightColor),
+          std.mul(std.dot(reflectionDirection, viewDirection), p.lightColor),
         ),
       );
     }
@@ -201,7 +177,7 @@ const fragmentShader = tgpu['~unstable']
     if (input.seaFog === 1) {
       const fogParameter = std.max(0, (distanceFromCamera - 1.5) * 0.2);
       const fogFactor = fogParameter / (1 + fogParameter);
-      foggedColor = std.mix(foggedColor, backgroundColor, fogFactor);
+      foggedColor = std.mix(foggedColor, p.backgroundColor, fogFactor);
     }
 
     return d.vec4f(foggedColor.x, foggedColor.y, foggedColor.z, 1);
@@ -229,7 +205,7 @@ const {
 const mainCompute = tgpu['~unstable']
   .computeFn({
     in: { gid: d.builtin.globalInvocationId },
-    workgroupSize: [workGroupSize],
+    workgroupSize: [p.workGroupSize],
   })
   .does((input) => {
     const fishIndex = input.gid.x;
@@ -242,24 +218,24 @@ const mainCompute = tgpu['~unstable']
     let wallRepulsion = d.vec3f();
     let rayRepulsion = d.vec3f();
 
-    for (let i = 0; i < fishAmount; i += 1) {
+    for (let i = 0; i < p.fishAmount; i += 1) {
       if (d.u32(i) === fishIndex) {
         continue;
       }
 
       const other = computeCurrentFishData.value[i];
       const dist = distance(fishData.position, other.position);
-      if (dist < fishSeparationDistance) {
+      if (dist < p.fishSeparationDistance) {
         separation = std.add(
           separation,
           std.sub(fishData.position, other.position),
         );
       }
-      if (dist < fishAlignmentDistance) {
+      if (dist < p.fishAlignmentDistance) {
         alignment = std.add(alignment, other.direction);
         alignmentCount = alignmentCount + 1;
       }
-      if (dist < fishCohesionDistance) {
+      if (dist < p.fishCohesionDistance) {
         cohesion = std.add(cohesion, other.position);
         cohesionCount = cohesionCount + 1;
       }
@@ -274,16 +250,16 @@ const mainCompute = tgpu['~unstable']
       );
     }
     for (let i = 0; i < 3; i += 1) {
-      if (wrappingSides[i] === 1) {
+      if (p.wrappingSides[i] === 1) {
         continue;
       }
 
       const repulsion = d.vec3f();
       repulsion[i] = 1.0;
 
-      const axisAquariumSize = aquariumSize[i] / 2;
+      const axisAquariumSize = p.aquariumSize[i] / 2;
       const axisPosition = fishData.position[i];
-      const distance = fishWallRepulsionDistance;
+      const distance = p.fishWallRepulsionDistance;
 
       if (axisPosition > axisAquariumSize - distance) {
         const str = axisPosition - (axisAquariumSize - distance);
@@ -302,7 +278,7 @@ const mainCompute = tgpu['~unstable']
         computeMouseRay.value.pointY,
         fishData.position,
       );
-      const limit = fishMouseRayRepulsionDistance;
+      const limit = p.fishMouseRayRepulsionDistance;
       const str =
         std.pow(2, std.clamp(limit - std.length(distanceVector), 0, limit)) - 1;
       rayRepulsion = std.mul(str, std.normalize(distanceVector));
@@ -310,23 +286,23 @@ const mainCompute = tgpu['~unstable']
 
     fishData.direction = std.add(
       fishData.direction,
-      std.mul(fishSeparationStrength, separation),
+      std.mul(p.fishSeparationStrength, separation),
     );
     fishData.direction = std.add(
       fishData.direction,
-      std.mul(fishAlignmentStrength, alignment),
+      std.mul(p.fishAlignmentStrength, alignment),
     );
     fishData.direction = std.add(
       fishData.direction,
-      std.mul(fishCohesionStrength, cohesion),
+      std.mul(p.fishCohesionStrength, cohesion),
     );
     fishData.direction = std.add(
       fishData.direction,
-      std.mul(fishWallRepulsionStrength, wallRepulsion),
+      std.mul(p.fishWallRepulsionStrength, wallRepulsion),
     );
     fishData.direction = std.add(
       fishData.direction,
-      std.mul(fishMouseRayRepulsionStrength, rayRepulsion),
+      std.mul(p.fishMouseRayRepulsionStrength, rayRepulsion),
     );
 
     fishData.direction = std.mul(
@@ -336,13 +312,16 @@ const mainCompute = tgpu['~unstable']
 
     fishData.position = std.add(fishData.position, fishData.direction);
     for (let i = 0; i < 3; i += 1) {
-      if (wrappingSides[i] === 0) {
+      if (p.wrappingSides[i] === 0) {
         continue;
       }
-      if (fishData.position[i] - fishModelScale > aquariumSize[i] / 2) {
-        fishData.position[i] = -aquariumSize[i] / 2;
-      } else if (fishData.position[i] + fishModelScale < -aquariumSize[i] / 2) {
-        fishData.position[i] = aquariumSize[i] / 2;
+      if (fishData.position[i] - p.fishModelScale > p.aquariumSize[i] / 2) {
+        fishData.position[i] = -p.aquariumSize[i] / 2;
+      } else if (
+        fishData.position[i] + p.fishModelScale <
+        -p.aquariumSize[i] / 2
+      ) {
+        fishData.position[i] = p.aquariumSize[i] / 2;
       }
     }
 
@@ -365,11 +344,11 @@ context.configure({
 // buffers
 
 const camera = {
-  position: cameraInitialPosition,
-  c_target: cameraInitialTarget,
+  position: p.cameraInitialPosition,
+  c_target: p.cameraInitialTarget,
   view: m.mat4.lookAt(
-    cameraInitialPosition,
-    cameraInitialTarget,
+    p.cameraInitialPosition,
+    p.cameraInitialTarget,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
   ),
@@ -386,25 +365,25 @@ const cameraBuffer = root.createBuffer(Camera, camera).$usage('uniform');
 
 const fishDataBuffers = Array.from({ length: 2 }, () =>
   root
-    .createBuffer(ModelDataArray(fishAmount))
+    .createBuffer(ModelDataArray(p.fishAmount))
     .$usage('storage', 'uniform', 'vertex'),
 );
 
 const mouseRayBuffer = root.createBuffer(MouseRay).$usage('uniform');
 
 const randomizeFishPositions = () => {
-  const positions = Array.from({ length: fishAmount }, () => ({
+  const positions = Array.from({ length: p.fishAmount }, () => ({
     position: d.vec3f(
-      Math.random() * aquariumSize.x - aquariumSize.x / 2,
-      Math.random() * aquariumSize.y - aquariumSize.y / 2,
-      Math.random() * aquariumSize.z - aquariumSize.z / 2,
+      Math.random() * p.aquariumSize.x - p.aquariumSize.x / 2,
+      Math.random() * p.aquariumSize.y - p.aquariumSize.y / 2,
+      Math.random() * p.aquariumSize.z - p.aquariumSize.z / 2,
     ),
     direction: d.vec3f(
       Math.random() * 0.1 - 0.05,
       Math.random() * 0.1 - 0.05,
       Math.random() * 0.1 - 0.05,
     ),
-    scale: fishModelScale * (1 + (Math.random() - 0.5) * 0.8),
+    scale: p.fishModelScale * (1 + (Math.random() - 0.5) * 0.8),
     seaFog: 1,
     seaBlindness: 1,
   }));
@@ -533,7 +512,7 @@ const renderFishBindGroups = [0, 1].map((idx) =>
 const oceanFloorDataBuffer = root
   .createBuffer(ModelDataArray(1), [
     {
-      position: d.vec3f(0, -aquariumSize.y / 2 - 1, 0),
+      position: d.vec3f(0, -p.aquariumSize.y / 2 - 1, 0),
       direction: d.vec3f(1, 0, 0),
       scale: 1,
       seaFog: 1,
@@ -578,12 +557,17 @@ function frame() {
   odd = !odd;
   computePipeline
     .with(computeBindGroupLayout, computeBindGroups[odd ? 1 : 0])
-    .dispatchWorkgroups(fishAmount / workGroupSize);
+    .dispatchWorkgroups(p.fishAmount / p.workGroupSize);
 
   renderPipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
-      clearValue: [backgroundColor.x, backgroundColor.y, backgroundColor.z, 1],
+      clearValue: [
+        p.backgroundColor.x,
+        p.backgroundColor.y,
+        p.backgroundColor.z,
+        1,
+      ],
       loadOp: 'clear' as const,
       storeOp: 'store' as const,
     })
@@ -601,7 +585,12 @@ function frame() {
   renderPipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
-      clearValue: [backgroundColor.x, backgroundColor.y, backgroundColor.z, 1],
+      clearValue: [
+        p.backgroundColor.x,
+        p.backgroundColor.y,
+        p.backgroundColor.z,
+        1,
+      ],
       loadOp: 'load' as const,
       storeOp: 'store' as const,
     })
@@ -614,7 +603,7 @@ function frame() {
     .with(modelVertexLayout, fishModel.vertexBuffer)
     .with(renderInstanceLayout, fishDataBuffers[odd ? 1 : 0])
     .with(renderBindGroupLayout, renderFishBindGroups[odd ? 1 : 0])
-    .draw(fishModel.polygonCount, fishAmount);
+    .draw(fishModel.polygonCount, p.fishAmount);
 
   root['~unstable'].flush();
 
@@ -637,13 +626,13 @@ let previousMouseY = 0;
 let isRightPressed = false;
 
 const cameraRadius = distance(
-  cameraInitialPosition.xyz,
-  cameraInitialTarget.xyz,
+  p.cameraInitialPosition.xyz,
+  p.cameraInitialTarget.xyz,
 );
 let cameraYaw =
-  (Math.atan2(cameraInitialPosition.x, cameraInitialPosition.z) + Math.PI) %
+  (Math.atan2(p.cameraInitialPosition.x, p.cameraInitialPosition.z) + Math.PI) %
   Math.PI;
-let cameraPitch = Math.asin(cameraInitialPosition.y / cameraRadius);
+let cameraPitch = Math.asin(p.cameraInitialPosition.y / cameraRadius);
 
 function updateCameraTarget(cx: number, cy: number) {
   // make it so the drag does the same movement regardless of size
@@ -663,7 +652,7 @@ function updateCameraTarget(cx: number, cy: number) {
 
   camera.c_target = d.vec4f(newCamX, newCamY, newCamZ, 1);
   camera.view = m.mat4.lookAt(
-    cameraInitialPosition,
+    p.cameraInitialPosition,
     camera.c_target,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
