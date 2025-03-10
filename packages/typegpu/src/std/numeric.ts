@@ -101,22 +101,28 @@ export function atan2<T extends vBase | number>(y: T, x: T): T {
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#acos-builtin
  */
-export function acos(value: number): number {
+export function acos<T extends vBase | number>(value: T): T {
   if (inGPUMode()) {
-    return `acos(${value})` as unknown as number;
+    return `acos(${value})` as unknown as T;
   }
-  return Math.acos(value);
+  if (typeof value === 'number') {
+    return Math.acos(value) as T;
+  }
+  return VectorOps.acos[(value as vBase).kind](value as never) as T;
 }
 
 /**
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#asin-builtin
  */
-export function asin(value: number): number {
+export function asin<T extends vBase | number>(value: T): T {
   if (inGPUMode()) {
-    return `asin(${value})` as unknown as number;
+    return `asin(${value})` as unknown as T;
   }
-  return Math.asin(value);
+  if (typeof value === 'number') {
+    return Math.asin(value) as T;
+  }
+  return VectorOps.asin[(value as vBase).kind](value as never) as T;
 }
 
 /**

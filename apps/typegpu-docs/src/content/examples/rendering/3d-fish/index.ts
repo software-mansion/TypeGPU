@@ -6,7 +6,8 @@ import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
 
 // TODO: split into files
-// TODO: update acos and asin to vector functions
+// TODO: add vector spread where possible
+// TODO: make fishes frame independent
 
 // constants
 
@@ -34,7 +35,7 @@ const cameraInitialTarget = d.vec4f(0, 0, 0, 1);
 
 const lightColor = d.vec3f(0.8, 0.8, 1);
 const lightDirection = std.normalize(d.vec3f(1.0, 1.0, 1.0));
-const backgroundColor = d.vec3f(0x00 / 255, 0x7a / 255, 0xcc / 255);
+const backgroundColor = std.mul(1 / 255, d.vec3f(0x00, 0x7a, 0xcc));
 
 // color helpers
 
