@@ -193,26 +193,6 @@ importers:
         specifier: ^1.0.1
         version: 1.1.0(tailwindcss@3.4.17)
 
-  packages/rollup-plugin:
-    dependencies:
-      unplugin-typegpu:
-        specifier: workspace:^0.1.0-alpha.4
-        version: link:../unplugin-typegpu
-    devDependencies:
-      '@typegpu/tgpu-dev-cli':
-        specifier: workspace:*
-        version: link:../tgpu-dev-cli
-      rollup:
-        specifier: 4.34.8
-        version: 4.34.8
-      tsup:
-        specifier: ^8.3.6
-        version: 8.3.6(jiti@2.4.2)(postcss@8.5.3)(tsx@4.19.3)(typescript@5.7.3)(yaml@2.7.0)
-      typescript:
-        specifier: ^5.7.3
-        version: 5.7.3
-    publishDirectory: dist
-
   packages/tgpu-dev-cli:
     dependencies:
       arg:

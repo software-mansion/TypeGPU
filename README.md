@@ -36,8 +36,6 @@ Since 2012 [Software Mansion](https://swmansion.com) is a software agency with e
 - [packages/tinyest](/packages/tinyest) - Type definitions for a JS embeddable syntax tree.
 - [packages/tinyest-for-wgsl](/packages/tinyest-for-wgsl) - Transforms JavaScript into its *tinyest* form, to be used in generating equivalent (or close to) WGSL code.
 - [packages/tgpu-wgsl-parser](/packages/tgpu-wgsl-parser) - WGSL code parser.
-- ~~[packages/rollup-plugin](/packages/rollup-plugin) - Rollup plugin for TypeGPU.~~ (replaced by *unplugin-typegpu*)
-
 - [packages/tgpu-dev-cli](/packages/tgpu-dev-cli) - Development tools for packages in the monorepo.
 
 **Apps**:
