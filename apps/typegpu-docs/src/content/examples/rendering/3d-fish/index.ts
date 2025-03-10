@@ -12,22 +12,22 @@ const workGroupSize = 256;
 const fishAmount = 1024 * 8;
 const fishModelScale = 0.015;
 
-const aquariumSize = d.vec3f(8, 2, 8);
+const aquariumSize = d.vec3f(10, 4, 10);
 const wrappingSides = d.vec3u(0, 0, 0); // vec3 of bools
 
 // TODO: split into files
-const fishSeparationDistance = 0.08;
-const fishSeparationStrength = 0.001;
-const fishAlignmentDistance = 0.2;
-const fishAlignmentStrength = 0.02;
-const fishCohesionDistance = 0.25;
+const fishSeparationDistance = 0.3;
+const fishSeparationStrength = 0.0006;
+const fishAlignmentDistance = 0.3;
+const fishAlignmentStrength = 0.005;
+const fishCohesionDistance = 0.5;
 const fishCohesionStrength = 0.0008;
-const fishWallRepulsionDistance = 0.3;
-const fishWallRepulsionStrength = 0.0003;
-const fishMouseRayRepulsionDistance = 0.3;
-const fishMouseRayRepulsionStrength = 0.005;
+const fishWallRepulsionDistance = 0.1;
+const fishWallRepulsionStrength = 0.0001;
+const fishMouseRayRepulsionDistance = 0.9;
+const fishMouseRayRepulsionStrength = 0.0005;
 
-const cameraInitialPosition = d.vec4f(0, 0, 0, 1);
+const cameraInitialPosition = d.vec4f(-5, 0, -5, 1);
 const cameraInitialTarget = d.vec4f(1, 0, 0, 1);
 
 const lightColor = d.vec3f(0.8, 0.8, 1);
@@ -327,7 +327,6 @@ const fragmentShader = tgpu['~unstable']
       const blindedParameter = (distanceFromCamera - 5) / 10;
       const blindedFactor = -std.atan2(blindedParameter, 1) / 3;
       const hsv = rgbToHsv(blindedColor);
-      hsv.y += blindedFactor / 2;
       hsv.z += blindedFactor;
       blindedColor = hsvToRgb(hsv);
     }
@@ -421,12 +420,12 @@ const mainCompute = tgpu['~unstable']
       const distance = fishWallRepulsionDistance;
 
       if (axisPosition > axisAquariumSize - distance) {
-        const str = std.pow(2, axisPosition - (axisAquariumSize - distance));
+        const str = axisPosition - (axisAquariumSize - distance);
         wallRepulsion = std.sub(wallRepulsion, std.mul(str, repulsion));
       }
 
       if (axisPosition < -axisAquariumSize + distance) {
-        const str = std.pow(2, -(-axisAquariumSize + distance - axisPosition));
+        const str = -axisAquariumSize + distance - axisPosition;
         wallRepulsion = std.add(wallRepulsion, std.mul(str, repulsion));
       }
     }
@@ -860,7 +859,7 @@ canvas.addEventListener('mousemove', (event) => {
   previousMouseY = event.clientY;
 
   if (isLeftPressed) {
-    updateCameraTarget(dx, dy);
+    updateCameraTarget(dx / devicePixelRatio, dy / devicePixelRatio);
   }
 
   if (isRightPressed) {
