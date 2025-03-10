@@ -111,6 +111,7 @@ export function getTypeForPropAccess(
   targetType: Wgsl,
   propName: string,
 ): BaseData | undefined {
+  console.log(`getTypeForPropAccess(${targetType}, ${propName})`);
   if (
     typeof targetType === 'string' ||
     typeof targetType === 'number' ||
@@ -131,9 +132,6 @@ export function getTypeForPropAccess(
 
   let target = targetType as BaseData;
 
-  if (isBufferUsage(target)) {
-    target = target[$internal].dataType as BaseData;
-  }
   if (hasInternalDataType(target)) {
     target = target[$internal].dataType;
   }
