@@ -1,4 +1,4 @@
-import { inGPUMode } from '../gpuMode';
+import { createDualImpl } from '../shared/generators';
 import {
   Vec2fImpl,
   Vec2hImpl,
@@ -29,50 +29,6 @@ import type {
   Vec4i,
   Vec4u,
 } from './wgslTypes';
-
-// --------------
-// Implementation
-// --------------
-
-type VecSchemaBase<TValue> = {
-  readonly type: string;
-  readonly '~repr': TValue;
-};
-
-function makeVecSchema<TValue>(
-  VecImpl: new (...args: number[]) => VecBase,
-): VecSchemaBase<TValue> & ((...args: (number | AnyVecInstance)[]) => TValue) {
-  const { kind: type, length: componentCount } = new VecImpl();
-
-  const construct = (...args: (number | AnyVecInstance)[]): TValue => {
-    if (inGPUMode()) {
-      return `${type}(${args.join(', ')})` as unknown as TValue;
-    }
-
-    const values = new Array(args.length);
-
-    let j = 0;
-    for (const arg of args) {
-      if (typeof arg === 'number') {
-        values[j++] = arg;
-      } else {
-        for (let c = 0; c < arg.length; ++c) {
-          values[j++] = arg[c];
-        }
-      }
-    }
-
-    if (values.length <= 1 || values.length === componentCount) {
-      return new VecImpl(...values) as TValue;
-    }
-
-    throw new Error(
-      `'${type}' constructor called with invalid number of arguments.`,
-    );
-  };
-
-  return Object.assign(construct, { type, '~repr': undefined as TValue });
-}
 
 // ----------
 // Public API
@@ -257,3 +213,64 @@ export const vec4i = makeVecSchema(Vec4iImpl) as Vec4i;
  * const buffer = root.createBuffer(d.vec4u, d.vec4u(0, 1, 2, 3)); // buffer holding a d.vec4u value, with an initial value of vec4u(0, 1, 2, 3);
  */
 export const vec4u = makeVecSchema(Vec4uImpl) as Vec4u;
+
+// --------------
+// Implementation
+// --------------
+
+const vecTypeToConstructor = {
+  vec2f,
+  vec2h,
+  vec2i,
+  vec2u,
+  vec3f,
+  vec3h,
+  vec3i,
+  vec3u,
+  vec4f,
+  vec4h,
+  vec4i,
+  vec4u,
+} as const;
+
+type VecSchemaBase<TValue> = {
+  readonly type: string;
+  readonly '~repr': TValue;
+};
+
+function makeVecSchema<TValue>(
+  VecImpl: new (...args: number[]) => VecBase,
+): VecSchemaBase<TValue> & ((...args: (number | AnyVecInstance)[]) => TValue) {
+  const { kind: type, length: componentCount } = new VecImpl();
+
+  const construct = createDualImpl(
+    (...args: (number | AnyVecInstance)[]): TValue => {
+      const values = new Array(args.length);
+
+      let j = 0;
+      for (const arg of args) {
+        if (typeof arg === 'number') {
+          values[j++] = arg;
+        } else {
+          for (let c = 0; c < arg.length; ++c) {
+            values[j++] = arg[c];
+          }
+        }
+      }
+
+      if (values.length <= 1 || values.length === componentCount) {
+        return new VecImpl(...values) as TValue;
+      }
+
+      throw new Error(
+        `'${type}' constructor called with invalid number of arguments.`,
+      );
+    },
+    (...args) => ({
+      value: `${type}(${args.map((v) => v.value).join(', ')})`,
+      dataType: vecTypeToConstructor[type],
+    }),
+  );
+
+  return Object.assign(construct, { type, '~repr': undefined as TValue });
+}

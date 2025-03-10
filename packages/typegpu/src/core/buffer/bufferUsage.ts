@@ -4,6 +4,7 @@ import { type StorageFlag, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
 import type { Infer, InferGPU } from '../../shared/repr';
+import { $internal } from '../../shared/symbols';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout';
 import type {
   BindableBufferUsage,
@@ -25,6 +26,10 @@ export interface TgpuBufferUsage<
   readonly usage: TUsage;
   readonly '~repr': Infer<TData>;
   value: InferGPU<TData>;
+
+  readonly [$internal]: {
+    readonly dataType: TData;
+  };
 }
 
 export interface TgpuBufferUniform<TData extends BaseData>
@@ -73,11 +78,14 @@ class TgpuFixedBufferImpl<
   /** Type-token, not available at runtime */
   public readonly '~repr'!: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
+  public readonly [$internal]: { readonly dataType: TData };
 
   constructor(
     public readonly usage: TUsage,
     public readonly buffer: TgpuBuffer<TData>,
-  ) {}
+  ) {
+    this[$internal] = { dataType: buffer.dataType };
+  }
 
   get label() {
     return this.buffer.label;
@@ -124,6 +132,9 @@ class TgpuFixedBufferImpl<
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${this.label ?? '<unnamed>'}`,
+        [$internal]: {
+          dataType: this.buffer.dataType,
+        },
       },
       valueProxyHandler,
     ) as InferGPU<TData>;
@@ -137,12 +148,15 @@ export class TgpuLaidOutBufferImpl<
   /** Type-token, not available at runtime */
   public readonly '~repr'!: Infer<TData>;
   public readonly resourceType = 'buffer-usage' as const;
+  public readonly [$internal]: { readonly dataType: TData };
 
   constructor(
     public readonly usage: TUsage,
     public readonly dataType: TData,
     private readonly _membership: LayoutMembership,
-  ) {}
+  ) {
+    this[$internal] = { dataType };
+  }
 
   get label() {
     return this._membership.key;
@@ -175,6 +189,9 @@ export class TgpuLaidOutBufferImpl<
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${this.label ?? '<unnamed>'}`,
+        [$internal]: {
+          dataType: this.dataType,
+        },
       },
       valueProxyHandler,
     ) as InferGPU<TData>;
