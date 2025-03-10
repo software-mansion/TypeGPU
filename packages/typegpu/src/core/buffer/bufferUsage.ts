@@ -133,7 +133,7 @@ class TgpuFixedBufferImpl<
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${this.label ?? '<unnamed>'}`,
         [$internal]: {
-          dataType: this[$internal].dataType,
+          dataType: this.buffer.dataType,
         },
       },
       valueProxyHandler,
@@ -190,7 +190,7 @@ export class TgpuLaidOutBufferImpl<
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${this.label ?? '<unnamed>'}`,
         [$internal]: {
-          dataType: this[$internal].dataType,
+          dataType: this.dataType,
         },
       },
       valueProxyHandler,

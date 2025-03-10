@@ -1,3 +1,4 @@
+import { $internal } from '../../shared/symbols';
 import type { AnyWgslData } from '../../data/wgslTypes';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
@@ -97,7 +98,9 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends AnyWgslData>
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${this.label ?? '<unnamed>'}`,
-        dataType: this._dataType,
+        [$internal]: {
+          dataType: this._dataType,
+        },
       },
       valueProxyHandler,
     ) as Infer<TDataType>;

@@ -1,3 +1,4 @@
+import { $internal } from '../../shared/symbols';
 import type { AnyWgslData } from '../../data';
 import { getResolutionCtx } from '../../gpuMode';
 import type { Infer } from '../../shared/repr';
@@ -68,7 +69,9 @@ export class TgpuAccessorImpl<T extends AnyWgslData>
       {
         '~resolve': (ctx: ResolutionCtx) => ctx.resolve(this),
         toString: () => `.value:${this.label ?? '<unnamed>'}`,
-        dataType: this.schema,
+        [$internal]: {
+          dataType: this.schema,
+        },
       },
       valueProxyHandler,
     ) as Infer<T>;

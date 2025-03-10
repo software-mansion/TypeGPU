@@ -221,3 +221,12 @@ export function isBufferUsage<
 >(value: T | unknown): value is T {
   return (value as T)?.resourceType === 'buffer-usage';
 }
+
+export function hasInternalDataType(
+  value: unknown,
+): value is { [$internal]: { dataType: BaseData } } {
+  return (
+    typeof (value as { [$internal]: { dataType: BaseData } })?.[$internal]
+      ?.dataType === 'object'
+  );
+}

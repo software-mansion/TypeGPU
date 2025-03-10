@@ -32,7 +32,13 @@ import {
 } from '../data/wgslTypes';
 import { getResolutionCtx } from '../gpuMode';
 import { $internal } from '../shared/symbols';
-import { type Resource, UnknownData, type Wgsl, isBufferUsage } from '../types';
+import {
+  type Resource,
+  UnknownData,
+  type Wgsl,
+  hasInternalDataType,
+  isBufferUsage,
+} from '../types';
 
 const swizzleableTypes = [
   'vec2f',
@@ -125,11 +131,11 @@ export function getTypeForPropAccess(
 
   let target = targetType as BaseData;
 
-  if (isBufferUsage(targetType)) {
-    target = targetType[$internal].dataType as BaseData;
+  if (isBufferUsage(target)) {
+    target = target[$internal].dataType as BaseData;
   }
-  if ('dataType' in target) {
-    target = target.dataType as AnyWgslData;
+  if (hasInternalDataType(target)) {
+    target = target[$internal].dataType;
   }
   while (isDecorated(target)) {
     target = target.inner;

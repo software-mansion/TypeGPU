@@ -35,7 +35,9 @@ export const atomicLoad = createDualImpl(
     if (isWgslData(a.dataType) && a.dataType.type === 'atomic') {
       return { value: `atomicLoad(&${a.value})`, dataType: a.dataType.inner };
     }
-    throw new Error(`Invalid atomic type: ${a.dataType}`);
+    throw new Error(
+      `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
+    );
   },
 );
 
@@ -46,6 +48,11 @@ export const atomicStore = createDualImpl(
   },
   // GPU implementation
   (a, value) => {
+    if (!isWgslData(a.dataType) || a.dataType.type !== 'atomic') {
+      throw new Error(
+        `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
+      );
+    }
     return {
       value: `atomicStore(&${a.value}, ${value.value})`,
       dataType: Void,
@@ -66,7 +73,9 @@ export const atomicAdd = createDualImpl(
         dataType: a.dataType.inner,
       };
     }
-    throw new Error('Invalid atomic type');
+    throw new Error(
+      `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
+    );
   },
 );
 
@@ -83,7 +92,9 @@ export const atomicSub = createDualImpl(
         dataType: a.dataType.inner,
       };
     }
-    throw new Error('Invalid atomic type');
+    throw new Error(
+      `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
+    );
   },
 );
 
@@ -100,7 +111,9 @@ export const atomicMax = createDualImpl(
         dataType: a.dataType.inner,
       };
     }
-    throw new Error('Invalid atomic type');
+    throw new Error(
+      `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
+    );
   },
 );
 
@@ -117,7 +130,9 @@ export const atomicMin = createDualImpl(
         dataType: a.dataType.inner,
       };
     }
-    throw new Error('Invalid atomic type');
+    throw new Error(
+      `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
+    );
   },
 );
 
@@ -134,7 +149,9 @@ export const atomicAnd = createDualImpl(
         dataType: a.dataType.inner,
       };
     }
-    throw new Error('Invalid atomic type');
+    throw new Error(
+      `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
+    );
   },
 );
 
@@ -151,7 +168,9 @@ export const atomicOr = createDualImpl(
         dataType: a.dataType.inner,
       };
     }
-    throw new Error('Invalid atomic type');
+    throw new Error(
+      `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
+    );
   },
 );
 
@@ -168,6 +187,8 @@ export const atomicXor = createDualImpl(
         dataType: a.dataType.inner,
       };
     }
-    throw new Error('Invalid atomic type');
+    throw new Error(
+      `Invalid atomic type: ${JSON.stringify(a.dataType, null, 2)}`,
+    );
   },
 );
