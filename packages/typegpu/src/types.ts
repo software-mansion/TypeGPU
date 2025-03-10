@@ -226,7 +226,8 @@ export function hasInternalDataType(
   value: unknown,
 ): value is { [$internal]: { dataType: BaseData } } {
   return (
-    typeof (value as { [$internal]: { dataType: BaseData } })?.[$internal]
-      ?.dataType === 'object'
+    !!value &&
+    typeof value === 'object' &&
+    !!(value as { [$internal]: { dataType: BaseData } })?.[$internal]?.dataType
   );
 }
