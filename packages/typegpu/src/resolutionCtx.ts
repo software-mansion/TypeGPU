@@ -458,9 +458,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       if (isSlot(maybeEventual)) {
         maybeEventual = this.readSlot(maybeEventual);
       } else if (isDerived(maybeEventual)) {
-        pushMode(RuntimeMode.CPU);
         maybeEventual = this._getOrCompute(maybeEventual);
-        popMode(RuntimeMode.CPU);
       } else {
         break;
       }
@@ -489,7 +487,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       // If we got here, no item with the given slot-to-value combo exists in cache yet
+      pushMode(RuntimeMode.CPU);
       const result = derived['~compute']();
+      popMode(RuntimeMode.CPU);
 
       // We know which slots the item used while resolving
       const slotToValueMap = new Map<TgpuSlot<unknown>, unknown>();
