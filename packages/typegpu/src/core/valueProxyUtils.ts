@@ -1,5 +1,5 @@
-import { $internal } from '../shared/symbols';
 import type { BaseData } from '../data';
+import { $internal } from '../shared/symbols';
 import { getTypeForPropAccess } from '../smol/generationHelpers';
 import {
   type Labelled,
