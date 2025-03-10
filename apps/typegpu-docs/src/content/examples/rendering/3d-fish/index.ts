@@ -5,6 +5,8 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
 
+// TODO: split into files
+
 // constants
 
 const workGroupSize = 256;
@@ -15,7 +17,6 @@ const fishModelScale = 0.015;
 const aquariumSize = d.vec3f(10, 4, 10);
 const wrappingSides = d.vec3u(0, 0, 0); // vec3 of bools
 
-// TODO: split into files
 const fishSeparationDistance = 0.3;
 const fishSeparationStrength = 0.0006;
 const fishAlignmentDistance = 0.3;
@@ -28,7 +29,7 @@ const fishMouseRayRepulsionDistance = 0.9;
 const fishMouseRayRepulsionStrength = 0.0005;
 
 const cameraInitialPosition = d.vec4f(-5, 0, -5, 1);
-const cameraInitialTarget = d.vec4f(1, 0, 0, 1);
+const cameraInitialTarget = d.vec4f(0, 0, 0, 1);
 
 const lightColor = d.vec3f(0.8, 0.8, 1);
 const lightDirection = std.normalize(d.vec3f(1.0, 1.0, 1.0));
@@ -667,7 +668,7 @@ const renderFishBindGroups = [0, 1].map((idx) =>
 const oceanFloorDataBuffer = root
   .createBuffer(ModelDataArray(1), [
     {
-      position: d.vec3f(0, -aquariumSize.y / 2 + 1, 0),
+      position: d.vec3f(0, -aquariumSize.y / 2 - 1, 0),
       direction: d.vec3f(1, 0, 0),
       scale: 1,
       seaFog: 1,
@@ -774,17 +775,22 @@ const cameraRadius = distance(
   cameraInitialPosition.xyz,
   cameraInitialTarget.xyz,
 );
-let cameraYaw = Math.atan2(cameraInitialPosition.x, cameraInitialPosition.z);
+let cameraYaw =
+  (Math.atan2(cameraInitialPosition.x, cameraInitialPosition.z) + Math.PI) %
+  Math.PI;
 let cameraPitch = Math.asin(cameraInitialPosition.y / cameraRadius);
 
-function updateCameraTarget(dx: number, dy: number) {
-  cameraYaw += dx * 0.005;
-  cameraPitch += dy * 0.005;
+function updateCameraTarget(cx: number, cy: number) {
+  // make it so the drag does the same movement regardless of size
+  const box = canvas.getBoundingClientRect();
+  const dx = cx / box.width;
+  const dy = cy / box.height;
 
-  // if we don't limit pitch, it would lead to flipping the camera which is disorienting.
-  const minPitch = 0;
-  const maxPitch = Math.PI / 4 - 0.01;
-  cameraPitch = std.clamp(cameraPitch, minPitch, maxPitch);
+  cameraYaw += dx * 2.5;
+  cameraPitch += dy * 2.5;
+
+  cameraYaw = std.clamp(cameraYaw, (Math.PI / 4) * -0.2, (Math.PI / 4) * 2.2);
+  cameraPitch = std.clamp(cameraPitch, -Math.PI / 4, Math.PI / 4);
 
   const newCamX = cameraRadius * Math.sin(cameraYaw) * Math.cos(cameraPitch);
   const newCamY = cameraRadius * Math.sin(cameraPitch);
@@ -867,7 +873,7 @@ canvas.addEventListener('mousemove', (event) => {
   previousMouseY = event.clientY;
 
   if (isLeftPressed) {
-    updateCameraTarget(dx / devicePixelRatio, dy / devicePixelRatio);
+    updateCameraTarget(dx, dy);
   }
 
   if (isRightPressed) {
