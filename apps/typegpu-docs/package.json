@@ -15,7 +15,6 @@
     "@astrojs/starlight": "^0.32.1",
     "@astrojs/starlight-tailwind": "^3.0.0",
     "@astrojs/tailwind": "^6.0.0",
-    "@babel/standalone": "^7.26.6",
     "@monaco-editor/react": "^4.6.0",
     "@radix-ui/react-select": "^2.1.1",
     "@radix-ui/react-slider": "^1.2.0",
