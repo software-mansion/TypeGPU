@@ -5,6 +5,39 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
 
+// constants
+
+const workGroupSize = 256;
+
+const fishAmount = 1024 * 8;
+const fishModelScale = 0.015;
+
+const aquariumSize = d.vec3f(8, 2, 8);
+const wrappingSides = d.vec3u(0, 0, 0); // vec3 of bools
+
+// TODO: replace "fishes" with "fish"
+// TODO: change camera to be located in a point
+// TODO: split into files
+const fishSeparationDistance = 0.08;
+const fishSeparationStrength = 0.001;
+const fishAlignmentDistance = 0.2;
+const fishAlignmentStrength = 0.02;
+const fishCohesionDistance = 0.25;
+const fishCohesionStrength = 0.0008;
+const fishWallRepulsionDistance = 0.3;
+const fishWallRepulsionStrength = 0.0003;
+const fishMouseRayRepulsionDistance = 0.3;
+const fishMouseRayRepulsionStrength = 0.005;
+
+const cameraInitialPosition = d.vec4f(0.5, 1.5, 3.5, 1);
+const cameraInitialTarget = d.vec3f(0, 0, 0);
+
+const lightColor = d.vec3f(0.8, 0.8, 1);
+const lightDirection = std.normalize(d.vec3f(1.0, 1.0, 1.0));
+const backgroundColor = d.vec3f(0x00 / 255, 0x7a / 255, 0xcc / 255);
+
+// color helpers
+
 const hsvToRgb = tgpu['~unstable'].fn([d.vec3f], d.vec3f).does((hsv) => {
   const h = hsv.x;
   const s = hsv.y;
@@ -88,19 +121,6 @@ const rgbToHsv = tgpu['~unstable'].fn([d.vec3f], d.vec3f).does((rgb) => {
 
 // data schemas
 
-const FishParameters = d.struct({
-  separationDistance: d.f32,
-  separationStrength: d.f32,
-  alignmentDistance: d.f32,
-  alignmentStrength: d.f32,
-  cohesionDistance: d.f32,
-  cohesionStrength: d.f32,
-  wallRepulsionDistance: d.f32,
-  wallRepulsionStrength: d.f32,
-  mouseRayRepulsionDistance: d.f32,
-  mouseRayRepulsionStrength: d.f32,
-});
-
 const Camera = d.struct({
   position: d.vec4f,
   view: d.mat4x4f,
@@ -139,40 +159,6 @@ const MouseRay = d.struct({
   pointY: d.vec3f,
 });
 
-// constants
-
-const workGroupSize = 256;
-
-const fishAmount = 1024 * 8;
-const fishModelScale = 0.015;
-
-const aquariumSize = d.vec3f(8, 2, 8);
-const wrappingSides = d.vec3u(0, 0, 0); // vec3 of bools
-
-// TODO: replace "fishes" with "fish"
-// TODO: remove the buffer and struct, just reference the constants
-// TODO: change camera to be located in a point
-// TODO: split into files
-const fishParameters = FishParameters({
-  separationDistance: 0.08,
-  separationStrength: 0.001,
-  alignmentDistance: 0.2,
-  alignmentStrength: 0.02,
-  cohesionDistance: 0.25,
-  cohesionStrength: 0.0008,
-  wallRepulsionDistance: 0.3,
-  wallRepulsionStrength: 0.0003,
-  mouseRayRepulsionDistance: 0.3,
-  mouseRayRepulsionStrength: 0.005,
-});
-
-const cameraInitialPosition = d.vec4f(0.5, 1.5, 3.5, 1);
-const cameraInitialTarget = d.vec3f(0, 0, 0);
-
-const lightColor = d.vec3f(0.8, 0.8, 1);
-const lightDirection = std.normalize(d.vec3f(1.0, 1.0, 1.0));
-const backgroundColor = d.vec3f(0x00 / 255, 0x7a / 255, 0xcc / 255);
-
 // layouts
 
 const modelVertexLayout = tgpu.vertexLayout((n: number) =>
@@ -194,7 +180,6 @@ const computeBindGroupLayout = tgpu.bindGroupLayout({
     storage: ModelDataArray,
     access: 'mutable',
   },
-  fishParameters: { uniform: FishParameters },
   mouseRay: { uniform: MouseRay },
 });
 
@@ -374,7 +359,6 @@ const distanceVectorFromLine = tgpu['~unstable']
 const {
   currentFishData: computeCurrentFishData,
   nextFishData: computeNextFishData,
-  fishParameters: computeFishParameters,
   mouseRay: computeMouseRay,
 } = computeBindGroupLayout.bound;
 
@@ -401,17 +385,17 @@ const mainCompute = tgpu['~unstable']
 
       const other = computeCurrentFishData.value[i];
       const dist = distance(fishData.position, other.position);
-      if (dist < computeFishParameters.value.separationDistance) {
+      if (dist < fishSeparationDistance) {
         separation = std.add(
           separation,
           std.sub(fishData.position, other.position),
         );
       }
-      if (dist < computeFishParameters.value.alignmentDistance) {
+      if (dist < fishAlignmentDistance) {
         alignment = std.add(alignment, other.direction);
         alignmentCount = alignmentCount + 1;
       }
-      if (dist < computeFishParameters.value.cohesionDistance) {
+      if (dist < fishCohesionDistance) {
         cohesion = std.add(cohesion, other.position);
         cohesionCount = cohesionCount + 1;
       }
@@ -435,7 +419,7 @@ const mainCompute = tgpu['~unstable']
 
       const axisAquariumSize = aquariumSize[i] / 2;
       const axisPosition = fishData.position[i];
-      const distance = computeFishParameters.value.wallRepulsionDistance;
+      const distance = fishWallRepulsionDistance;
 
       if (axisPosition > axisAquariumSize - distance) {
         const str = std.pow(2, axisPosition - (axisAquariumSize - distance));
@@ -454,7 +438,7 @@ const mainCompute = tgpu['~unstable']
         computeMouseRay.value.pointY,
         fishData.position,
       );
-      const limit = computeFishParameters.value.mouseRayRepulsionDistance;
+      const limit = fishMouseRayRepulsionDistance;
       const str =
         std.pow(2, std.clamp(limit - std.length(distanceVector), 0, limit)) - 1;
       rayRepulsion = std.mul(str, std.normalize(distanceVector));
@@ -462,26 +446,23 @@ const mainCompute = tgpu['~unstable']
 
     fishData.direction = std.add(
       fishData.direction,
-      std.mul(computeFishParameters.value.separationStrength, separation),
+      std.mul(fishSeparationStrength, separation),
     );
     fishData.direction = std.add(
       fishData.direction,
-      std.mul(computeFishParameters.value.alignmentStrength, alignment),
+      std.mul(fishAlignmentStrength, alignment),
     );
     fishData.direction = std.add(
       fishData.direction,
-      std.mul(computeFishParameters.value.cohesionStrength, cohesion),
+      std.mul(fishCohesionStrength, cohesion),
     );
     fishData.direction = std.add(
       fishData.direction,
-      std.mul(computeFishParameters.value.wallRepulsionStrength, wallRepulsion),
+      std.mul(fishWallRepulsionStrength, wallRepulsion),
     );
     fishData.direction = std.add(
       fishData.direction,
-      std.mul(
-        computeFishParameters.value.mouseRayRepulsionStrength,
-        rayRepulsion,
-      ),
+      std.mul(fishMouseRayRepulsionStrength, rayRepulsion),
     );
 
     fishData.direction = std.mul(
@@ -537,10 +518,6 @@ const camera = {
 };
 
 const cameraBuffer = root.createBuffer(Camera, camera).$usage('uniform');
-
-const fishParametersBuffer = root
-  .createBuffer(FishParameters, fishParameters)
-  .$usage('uniform');
 
 const fishDataBuffers = Array.from({ length: 2 }, () =>
   root
@@ -711,7 +688,6 @@ const computeBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(computeBindGroupLayout, {
     currentFishData: fishDataBuffers[idx],
     nextFishData: fishDataBuffers[1 - idx],
-    fishParameters: fishParametersBuffer,
     mouseRay: mouseRayBuffer,
   }),
 );
