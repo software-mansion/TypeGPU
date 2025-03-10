@@ -82,3 +82,28 @@ export const rgbToHsv = tgpu['~unstable'].fn([d.vec3f], d.vec3f).does((rgb) => {
 
   return d.vec3f(h, s, v);
 });
+
+export const distance = tgpu['~unstable']
+  .fn([d.vec3f, d.vec3f], d.f32)
+  .does((v1, v2) => {
+    const diff = std.sub(v1, v2);
+    return std.pow(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z, 0.5);
+  });
+
+// given a line and a point,
+// calculate a vector from the line to the point of the shortest length
+export const distanceVectorFromLine = tgpu['~unstable']
+  .fn([d.vec3f, d.vec3f, d.vec3f], d.vec3f)
+  .does((l1, l2, x) => {
+    const d = std.normalize(std.sub(l2, l1));
+    const v = std.sub(x, l1);
+    const t = std.dot(v, d);
+    const p = std.add(l1, std.mul(t, d));
+    return std.sub(x, p);
+  });
+
+// given a vector and a normal of a plane,
+// calculate a reflection vector
+export const reflect = tgpu['~unstable']
+  .fn([d.vec3f, d.vec3f], d.vec3f)
+  .does((i, n) => std.sub(i, std.mul(2.0, std.mul(std.dot(n, i), n))));

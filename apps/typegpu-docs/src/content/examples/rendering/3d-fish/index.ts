@@ -1,7 +1,13 @@
 import { load } from '@loaders.gl/core';
 import { OBJLoader } from '@loaders.gl/obj';
 import tgpu, { type TgpuRoot } from 'typegpu';
-import { hsvToRgb, rgbToHsv } from './color-helpers';
+import {
+  distance,
+  distanceVectorFromLine,
+  hsvToRgb,
+  reflect,
+  rgbToHsv,
+} from './tgsl-helpers';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
@@ -106,17 +112,6 @@ const sampleTexture = tgpu['~unstable']
   .$uses({ shaderTexture: renderModelTexture, shaderSampler: renderSampler })
   .$name('sampleShader');
 
-const reflect = tgpu['~unstable']
-  .fn([d.vec3f, d.vec3f], d.vec3f)
-  .does((i, n) => std.sub(i, std.mul(2.0, std.mul(std.dot(n, i), n))));
-
-const distance = tgpu['~unstable']
-  .fn([d.vec3f, d.vec3f], d.f32)
-  .does((v1, v2) => {
-    const diff = std.sub(v1, v2);
-    return std.pow(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z, 0.5);
-  });
-
 const fragmentShader = tgpu['~unstable']
   .fragmentFn({
     in: ModelVertexOutput,
@@ -185,16 +180,6 @@ const fragmentShader = tgpu['~unstable']
   .$name('mainFragment');
 
 // compute shader
-
-const distanceVectorFromLine = tgpu['~unstable']
-  .fn([d.vec3f, d.vec3f, d.vec3f], d.vec3f)
-  .does((l1, l2, x) => {
-    const d = std.normalize(std.sub(l2, l1));
-    const v = std.sub(x, l1);
-    const t = std.dot(v, d);
-    const p = std.add(l1, std.mul(t, d));
-    return std.sub(x, p);
-  });
 
 const {
   currentFishData: computeCurrentFishData,
