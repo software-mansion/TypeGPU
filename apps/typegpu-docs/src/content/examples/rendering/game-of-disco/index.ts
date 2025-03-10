@@ -255,6 +255,9 @@ const rederLayout = tgpu.bindGroupLayout({
     texture: 'float',
     viewDimension: 'cube',
   },
+  sampler: {
+    sampler: 'filtering',
+  },
 });
 const { camera, light, material } = rederLayout.bound;
 
@@ -263,6 +266,11 @@ const renderBindGroup = root.createBindGroup(rederLayout, {
   light: lightBuffer,
   material: materialBuffer,
   cubemap: cubemapTexture,
+  sampler: tgpu['~unstable'].sampler({
+    magFilter: 'linear',
+    minFilter: 'linear',
+    mipmapFilter: 'linear',
+  }),
 });
 
 const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(Vertex, n));
