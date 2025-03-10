@@ -1,16 +1,26 @@
 import { load } from '@loaders.gl/core';
 import { OBJLoader } from '@loaders.gl/obj';
 import tgpu, { type TgpuRoot } from 'typegpu';
-import { hsvToRgb, rgbToHsv } from './color';
+import { hsvToRgb, rgbToHsv } from './color-helpers';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
+import {
+  Camera,
+  computeBindGroupLayout,
+  ModelDataArray,
+  ModelVertexInput,
+  modelVertexLayout,
+  ModelVertexOutput,
+  MouseRay,
+  renderBindGroupLayout,
+  renderInstanceLayout,
+} from './schemas';
 
 // TODO: split into files
 // TODO: add vector spread where possible
 // TODO: make fishes frame independent
-
-// constants
+// TODO: canvas on entire screen
 
 const workGroupSize = 256;
 
@@ -38,71 +48,6 @@ const lightColor = d.vec3f(0.8, 0.8, 1);
 const lightDirection = std.normalize(d.vec3f(1.0, 1.0, 1.0));
 const backgroundColor = std.mul(1 / 255, d.vec3f(0x00, 0x7a, 0xcc));
 
-// data schemas
-
-const Camera = d.struct({
-  position: d.vec4f,
-  c_target: d.vec4f,
-  view: d.mat4x4f,
-  projection: d.mat4x4f,
-});
-
-const ModelData = d.struct({
-  position: d.vec3f,
-  direction: d.vec3f, // in case of the fish, this is also the velocity
-  scale: d.f32,
-  seaFog: d.u32, // bool
-  seaBlindness: d.u32, // bool
-});
-
-const ModelDataArray = (n: number) => d.arrayOf(ModelData, n);
-
-const modelVertexInput = {
-  modelPosition: d.vec3f,
-  modelNormal: d.vec3f,
-  textureUV: d.vec2f,
-  instanceIndex: d.builtin.instanceIndex,
-} as const;
-
-const modelVertexOutput = {
-  worldPosition: d.vec3f,
-  worldNormal: d.vec3f,
-  canvasPosition: d.builtin.position,
-  textureUV: d.vec2f,
-  seaFog: d.interpolate('flat', d.u32), // bool
-  seaBlindness: d.interpolate('flat', d.u32), // bool
-} as const;
-
-const MouseRay = d.struct({
-  activated: d.u32,
-  pointX: d.vec3f,
-  pointY: d.vec3f,
-});
-
-// layouts
-
-const modelVertexLayout = tgpu.vertexLayout((n: number) =>
-  d.arrayOf(d.struct(modelVertexInput), n),
-);
-
-const renderInstanceLayout = tgpu.vertexLayout(ModelDataArray, 'instance');
-
-const renderBindGroupLayout = tgpu.bindGroupLayout({
-  modelData: { storage: ModelDataArray },
-  modelTexture: { texture: 'float' },
-  camera: { uniform: Camera },
-  sampler: { sampler: 'filtering' },
-});
-
-const computeBindGroupLayout = tgpu.bindGroupLayout({
-  currentFishData: { storage: ModelDataArray },
-  nextFishData: {
-    storage: ModelDataArray,
-    access: 'mutable',
-  },
-  mouseRay: { uniform: MouseRay },
-});
-
 // render sharers
 
 const {
@@ -114,8 +59,8 @@ const {
 
 const vertexShader = tgpu['~unstable']
   .vertexFn({
-    in: modelVertexInput,
-    out: modelVertexOutput,
+    in: ModelVertexInput,
+    out: ModelVertexOutput,
   })
   .does((input) => {
     // rotate the model so that it aligns with model's direction of movement
@@ -198,7 +143,7 @@ const distance = tgpu['~unstable']
 
 const fragmentShader = tgpu['~unstable']
   .fragmentFn({
-    in: modelVertexOutput,
+    in: ModelVertexOutput,
     out: d.location(0, d.vec4f),
   })
   .does((input) => {
