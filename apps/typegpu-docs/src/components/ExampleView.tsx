@@ -77,9 +77,8 @@ export function ExampleView({ example }: Props) {
 
   const codeFiles = Object.keys(tsCodes);
   const editorTabsList = [
-    ...(codeFiles.includes('index.ts')
-      ? ['index.ts', ...codeFiles.filter((name) => name !== 'index.ts')]
-      : codeFiles),
+    'index.ts',
+    ...codeFiles.filter((name) => name !== 'index.ts'),
     'index.html',
   ];
 
