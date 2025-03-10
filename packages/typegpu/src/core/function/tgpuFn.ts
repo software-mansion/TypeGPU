@@ -169,12 +169,10 @@ function createFn<
 
       return implementation(...args);
     },
-    (...args) => {
-      return {
-        value: new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
-        dataType: shell.returnType ?? UnknownData,
-      };
-    },
+    (...args) => ({
+      value: new FnCall(fn, args.map((arg) => arg.value) as Wgsl[]),
+      dataType: shell.returnType ?? UnknownData,
+    }),
   );
 
   Object.defineProperty(call, $internal, {
