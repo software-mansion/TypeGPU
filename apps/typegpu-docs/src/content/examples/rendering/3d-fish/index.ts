@@ -15,7 +15,6 @@ const fishModelScale = 0.015;
 const aquariumSize = d.vec3f(8, 2, 8);
 const wrappingSides = d.vec3u(0, 0, 0); // vec3 of bools
 
-// TODO: change camera to be located in a point
 // TODO: split into files
 const fishSeparationDistance = 0.08;
 const fishSeparationStrength = 0.001;
@@ -28,8 +27,8 @@ const fishWallRepulsionStrength = 0.0003;
 const fishMouseRayRepulsionDistance = 0.3;
 const fishMouseRayRepulsionStrength = 0.005;
 
-const cameraInitialPosition = d.vec4f(0.5, 1.5, 3.5, 1);
-const cameraInitialTarget = d.vec3f(0, 0, 0);
+const cameraInitialPosition = d.vec4f(0, 0, 0, 1);
+const cameraInitialTarget = d.vec4f(1, 0, 0, 1);
 
 const lightColor = d.vec3f(0.8, 0.8, 1);
 const lightDirection = std.normalize(d.vec3f(1.0, 1.0, 1.0));
@@ -122,6 +121,7 @@ const rgbToHsv = tgpu['~unstable'].fn([d.vec3f], d.vec3f).does((rgb) => {
 
 const Camera = d.struct({
   position: d.vec4f,
+  c_target: d.vec4f,
   view: d.mat4x4f,
   projection: d.mat4x4f,
 });
@@ -501,6 +501,7 @@ context.configure({
 
 const camera = {
   position: cameraInitialPosition,
+  c_target: cameraInitialTarget,
   view: m.mat4.lookAt(
     cameraInitialPosition,
     cameraInitialTarget,
@@ -770,27 +771,30 @@ let previousMouseX = 0;
 let previousMouseY = 0;
 let isRightPressed = false;
 
-let cameraRadius = std.length(cameraInitialPosition);
+const cameraRadius = distance(
+  cameraInitialPosition.xyz,
+  cameraInitialTarget.xyz,
+);
 let cameraYaw = Math.atan2(cameraInitialPosition.x, cameraInitialPosition.z);
 let cameraPitch = Math.asin(cameraInitialPosition.y / cameraRadius);
 
-function updateCameraOrbit(dx: number, dy: number) {
-  cameraYaw += -dx * 0.005;
+function updateCameraTarget(dx: number, dy: number) {
+  cameraYaw += dx * 0.005;
   cameraPitch += dy * 0.005;
 
   // if we don't limit pitch, it would lead to flipping the camera which is disorienting.
   const minPitch = 0;
-  const maxPitch = Math.PI / 2 - 0.01;
+  const maxPitch = Math.PI / 4 - 0.01;
   cameraPitch = std.clamp(cameraPitch, minPitch, maxPitch);
 
   const newCamX = cameraRadius * Math.sin(cameraYaw) * Math.cos(cameraPitch);
   const newCamY = cameraRadius * Math.sin(cameraPitch);
   const newCamZ = cameraRadius * Math.cos(cameraYaw) * Math.cos(cameraPitch);
 
-  camera.position = d.vec4f(newCamX, newCamY, newCamZ, 1);
+  camera.c_target = d.vec4f(newCamX, newCamY, newCamZ, 1);
   camera.view = m.mat4.lookAt(
-    camera.position,
-    cameraInitialTarget,
+    cameraInitialPosition,
+    camera.c_target,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
   );
@@ -829,21 +833,6 @@ canvas.addEventListener('contextmenu', (event) => {
   event.preventDefault();
 });
 
-canvas.addEventListener('wheel', (event: WheelEvent) => {
-  event.preventDefault();
-  cameraRadius = std.clamp(cameraRadius + event.deltaY * 0.05, 1, 11);
-  const newCamX = cameraRadius * Math.sin(cameraYaw) * Math.cos(cameraPitch);
-  const newCamY = cameraRadius * Math.sin(cameraPitch);
-  const newCamZ = cameraRadius * Math.cos(cameraYaw) * Math.cos(cameraPitch);
-  camera.position = d.vec4f(newCamX, newCamY, newCamZ, 1);
-  camera.view = m.mat4.lookAt(
-    camera.position,
-    cameraInitialTarget,
-    d.vec3f(0, 1, 0),
-    d.mat4x4f(),
-  );
-});
-
 canvas.addEventListener('mousedown', async (event) => {
   previousMouseX = event.clientX;
   previousMouseY = event.clientY;
@@ -879,7 +868,7 @@ canvas.addEventListener('mousemove', (event) => {
   previousMouseY = event.clientY;
 
   if (isLeftPressed) {
-    updateCameraOrbit(dx, dy);
+    updateCameraTarget(dx, dy);
   }
 
   if (isRightPressed) {
