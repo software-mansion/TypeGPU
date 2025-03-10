@@ -72,7 +72,9 @@ export async function executeExample(
     }
 
     url.searchParams.append('update', Date.now().toString());
-    return import(/* @vite-ignore */ `${isRelative ? '.' : ''}${url.pathname}${url.search}`);
+    return import(
+      /* @vite-ignore */ `${isRelative ? '.' : ''}${url.pathname}${url.search}`
+    );
   }
 
   const entryExampleFile = await noCacheImport(exampleSources['index.ts']);
