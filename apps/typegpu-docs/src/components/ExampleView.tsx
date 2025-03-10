@@ -22,7 +22,6 @@ type Props = {
 };
 
 function useExample(
-  exampleCode: Record<string, string>,
   tsSources: Record<string, () => void>,
   htmlCode: string,
   setSnackbarText: (text: string | undefined) => void,
@@ -63,16 +62,14 @@ function useExample(
       exampleRef.current?.dispose();
       cancelled = true;
     };
-  }, [exampleCode, htmlCode, setSnackbarText, setExampleControlParams]);
+  }, [htmlCode, setSnackbarText, setExampleControlParams]);
 }
 
 export function ExampleView({ example }: Props) {
   const { tsCodes, tsSources, htmlCode } = example;
 
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
-  const [currentFile, setCurrentFile] = useState<string>(
-    Object.keys(tsCodes)[0] || '',
-  );
+  const [currentFile, setCurrentFile] = useState<string>('index.ts');
 
   const codeEditorShowing = useAtomValue(codeEditorShownAtom);
   const codeEditorMobileShowing = useAtomValue(codeEditorShownMobileAtom);
@@ -93,7 +90,7 @@ export function ExampleView({ example }: Props) {
     exampleHtmlRef.current.innerHTML = htmlCode;
   }, [htmlCode]);
 
-  useExample(tsCodes, tsSources, htmlCode, setSnackbarText); // live example
+  useExample(tsSources, htmlCode, setSnackbarText); // live example
   useResizableCanvas(exampleHtmlRef, htmlCode);
 
   return (
