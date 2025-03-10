@@ -37,7 +37,6 @@ import {
   UnknownData,
   type Wgsl,
   hasInternalDataType,
-  isBufferUsage,
 } from '../types';
 
 const swizzleableTypes = [
@@ -111,7 +110,6 @@ export function getTypeForPropAccess(
   targetType: Wgsl,
   propName: string,
 ): BaseData | undefined {
-  console.log(`getTypeForPropAccess(${targetType}, ${propName})`);
   if (
     typeof targetType === 'string' ||
     typeof targetType === 'number' ||
