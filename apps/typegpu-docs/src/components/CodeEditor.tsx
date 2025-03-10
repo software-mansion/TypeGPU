@@ -92,7 +92,7 @@ const createCodeEditorComponent =
     return (
       <div
         className={
-          shown ? 'block h-[calc(100%-6rem)] md:h-[calc(100%-2rem)]' : 'hidden'
+          shown ? 'h-[calc(100%-6rem)] md:h-[calc(100%-2rem)]' : 'hidden'
         }
       >
         <Editor

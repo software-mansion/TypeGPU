@@ -22,7 +22,7 @@ type Props = {
 };
 
 function useExample(
-  tsImports: Record<string, () => void>,
+  tsImports: Record<string, () => Promise<unknown>>,
   htmlCode: string,
   setSnackbarText: (text: string | undefined) => void,
 ) {
