@@ -1,7 +1,5 @@
-import { load } from '@loaders.gl/core';
-import { OBJLoader } from '@loaders.gl/obj';
-import tgpu, { type TgpuRoot } from 'typegpu';
-import { distance, distanceVectorFromLine } from './tgsl-helpers';
+import tgpu from 'typegpu';
+import { distance } from './tgsl-helpers';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
@@ -16,146 +14,14 @@ import {
   renderInstanceLayout,
 } from './schemas';
 import { fragmentShader, vertexShader } from './render';
+import { mainCompute } from './compute';
+import { loadModel } from './load-model';
 
 // TODO: remove wrapping sides
 // TODO: split into files
 // TODO: add vector spread where possible
 // TODO: make fishes frame independent
 // TODO: canvas on entire screen
-
-// compute shader
-
-const {
-  currentFishData: computeCurrentFishData,
-  nextFishData: computeNextFishData,
-  mouseRay: computeMouseRay,
-} = computeBindGroupLayout.bound;
-
-const mainCompute = tgpu['~unstable']
-  .computeFn({
-    in: { gid: d.builtin.globalInvocationId },
-    workgroupSize: [p.workGroupSize],
-  })
-  .does((input) => {
-    const fishIndex = input.gid.x;
-    const fishData = computeCurrentFishData.value[fishIndex];
-    let separation = d.vec3f();
-    let alignment = d.vec3f();
-    let alignmentCount = 0;
-    let cohesion = d.vec3f();
-    let cohesionCount = 0;
-    let wallRepulsion = d.vec3f();
-    let rayRepulsion = d.vec3f();
-
-    for (let i = 0; i < p.fishAmount; i += 1) {
-      if (d.u32(i) === fishIndex) {
-        continue;
-      }
-
-      const other = computeCurrentFishData.value[i];
-      const dist = distance(fishData.position, other.position);
-      if (dist < p.fishSeparationDistance) {
-        separation = std.add(
-          separation,
-          std.sub(fishData.position, other.position),
-        );
-      }
-      if (dist < p.fishAlignmentDistance) {
-        alignment = std.add(alignment, other.direction);
-        alignmentCount = alignmentCount + 1;
-      }
-      if (dist < p.fishCohesionDistance) {
-        cohesion = std.add(cohesion, other.position);
-        cohesionCount = cohesionCount + 1;
-      }
-    }
-    if (alignmentCount > 0) {
-      alignment = std.mul(1 / d.f32(alignmentCount), alignment);
-    }
-    if (cohesionCount > 0) {
-      cohesion = std.sub(
-        std.mul(1 / d.f32(cohesionCount), cohesion),
-        fishData.position,
-      );
-    }
-    for (let i = 0; i < 3; i += 1) {
-      if (p.wrappingSides[i] === 1) {
-        continue;
-      }
-
-      const repulsion = d.vec3f();
-      repulsion[i] = 1.0;
-
-      const axisAquariumSize = p.aquariumSize[i] / 2;
-      const axisPosition = fishData.position[i];
-      const distance = p.fishWallRepulsionDistance;
-
-      if (axisPosition > axisAquariumSize - distance) {
-        const str = axisPosition - (axisAquariumSize - distance);
-        wallRepulsion = std.sub(wallRepulsion, std.mul(str, repulsion));
-      }
-
-      if (axisPosition < -axisAquariumSize + distance) {
-        const str = -axisAquariumSize + distance - axisPosition;
-        wallRepulsion = std.add(wallRepulsion, std.mul(str, repulsion));
-      }
-    }
-
-    if (computeMouseRay.value.activated === 1) {
-      const distanceVector = distanceVectorFromLine(
-        computeMouseRay.value.pointX,
-        computeMouseRay.value.pointY,
-        fishData.position,
-      );
-      const limit = p.fishMouseRayRepulsionDistance;
-      const str =
-        std.pow(2, std.clamp(limit - std.length(distanceVector), 0, limit)) - 1;
-      rayRepulsion = std.mul(str, std.normalize(distanceVector));
-    }
-
-    fishData.direction = std.add(
-      fishData.direction,
-      std.mul(p.fishSeparationStrength, separation),
-    );
-    fishData.direction = std.add(
-      fishData.direction,
-      std.mul(p.fishAlignmentStrength, alignment),
-    );
-    fishData.direction = std.add(
-      fishData.direction,
-      std.mul(p.fishCohesionStrength, cohesion),
-    );
-    fishData.direction = std.add(
-      fishData.direction,
-      std.mul(p.fishWallRepulsionStrength, wallRepulsion),
-    );
-    fishData.direction = std.add(
-      fishData.direction,
-      std.mul(p.fishMouseRayRepulsionStrength, rayRepulsion),
-    );
-
-    fishData.direction = std.mul(
-      std.clamp(std.length(fishData.direction), 0.0, 0.01),
-      std.normalize(fishData.direction),
-    );
-
-    fishData.position = std.add(fishData.position, fishData.direction);
-    for (let i = 0; i < 3; i += 1) {
-      if (p.wrappingSides[i] === 0) {
-        continue;
-      }
-      if (fishData.position[i] - p.fishModelScale > p.aquariumSize[i] / 2) {
-        fishData.position[i] = -p.aquariumSize[i] / 2;
-      } else if (
-        fishData.position[i] + p.fishModelScale <
-        -p.aquariumSize[i] / 2
-      ) {
-        fishData.position[i] = p.aquariumSize[i] / 2;
-      }
-    }
-
-    computeNextFishData.value[fishIndex] = fishData;
-  });
 
 // setup
 
@@ -169,6 +35,23 @@ context.configure({
   format: presentationFormat,
   alphaMode: 'premultiplied',
 });
+
+// models and textures
+
+// https://free3d.com/3d-model/fish---low-poly-82864.html
+const fishModel = await loadModel(
+  root,
+  'assets/3d-fish/fish.obj',
+  'assets/3d-fish/fish.png',
+);
+
+// https://www.cgtrader.com/free-3d-models/space/other/rainy-ocean
+// https://www.istockphoto.com/pl/obrazy/sand
+const oceanFloorModel = await loadModel(
+  root,
+  'assets/3d-fish/ocean_floor.obj',
+  'assets/3d-fish/ocean_floor.jpg',
+);
 
 // buffers
 
@@ -198,8 +81,6 @@ const fishDataBuffers = Array.from({ length: 2 }, () =>
     .$usage('storage', 'uniform', 'vertex'),
 );
 
-const mouseRayBuffer = root.createBuffer(MouseRay).$usage('uniform');
-
 const randomizeFishPositions = () => {
   const positions = Array.from({ length: p.fishAmount }, () => ({
     position: d.vec3f(
@@ -221,81 +102,7 @@ const randomizeFishPositions = () => {
 };
 randomizeFishPositions();
 
-// models and textures
-
-async function loadModel(
-  root: TgpuRoot,
-  modelPath: string,
-  texturePath: string,
-) {
-  const modelMesh = await load(modelPath, OBJLoader);
-  const polygonCount = modelMesh.attributes.POSITION.value.length / 3;
-
-  const vertexBuffer = root
-    .createBuffer(modelVertexLayout.schemaForCount(polygonCount))
-    .$usage('vertex')
-    .$name('vertex');
-
-  const modelVertices = [];
-  for (let i = 0; i < polygonCount; i++) {
-    modelVertices.push({
-      modelPosition: d.vec3f(
-        modelMesh.attributes.POSITION.value[3 * i],
-        modelMesh.attributes.POSITION.value[3 * i + 1],
-        modelMesh.attributes.POSITION.value[3 * i + 2],
-      ),
-      modelNormal: d.vec3f(
-        modelMesh.attributes.NORMAL.value[3 * i],
-        modelMesh.attributes.NORMAL.value[3 * i + 1],
-        modelMesh.attributes.NORMAL.value[3 * i + 2],
-      ),
-      textureUV: d.vec2f(
-        modelMesh.attributes.TEXCOORD_0.value[2 * i],
-        1 - modelMesh.attributes.TEXCOORD_0.value[2 * i + 1],
-      ),
-      instanceIndex: 0,
-    });
-  }
-  modelVertices.reverse();
-
-  vertexBuffer.write(modelVertices);
-
-  const textureResponse = await fetch(texturePath);
-  const imageBitmap = await createImageBitmap(await textureResponse.blob());
-  const texture = root['~unstable']
-    .createTexture({
-      size: [imageBitmap.width, imageBitmap.height],
-      format: 'rgba8unorm',
-    })
-    .$usage('sampled', 'render');
-
-  root.device.queue.copyExternalImageToTexture(
-    { source: imageBitmap },
-    { texture: root.unwrap(texture) },
-    [imageBitmap.width, imageBitmap.height],
-  );
-
-  return {
-    vertexBuffer: vertexBuffer,
-    polygonCount: polygonCount,
-    texture: texture,
-  };
-}
-
-// https://free3d.com/3d-model/fish---low-poly-82864.html
-const fishModel = await loadModel(
-  root,
-  'assets/3d-fish/fish.obj',
-  'assets/3d-fish/fish.png',
-);
-
-// https://www.cgtrader.com/free-3d-models/space/other/rainy-ocean
-// https://www.istockphoto.com/pl/obrazy/sand
-const oceanFloorModel = await loadModel(
-  root,
-  'assets/3d-fish/ocean_floor.obj',
-  'assets/3d-fish/ocean_floor.jpg',
-);
+const mouseRayBuffer = root.createBuffer(MouseRay).$usage('uniform');
 
 // pipelines
 
