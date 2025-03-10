@@ -1,7 +1,9 @@
-import tgpu, { type TgpuTexture } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
+
+const root = await tgpu.init();
 
 /**
  * Creates an icosphere with the specified level of subdivision
@@ -130,7 +132,6 @@ function createVertex(position: d.v4f): ReturnType<typeof Vertex> {
   });
 }
 
-// Cubemap face textures URLs - replace with actual paths when available
 const cubemapUrls = [
   'cubemapTest/posx.jpg', // right
   'cubemapTest/negx.jpg', // left
@@ -140,21 +141,16 @@ const cubemapUrls = [
   'cubemapTest/negz.jpg', // back
 ];
 
-// Function to load cubemap texture
-async function loadCubemap(
-  device: GPUDevice,
-  urls: string[],
-): Promise<TgpuTexture> {
-  const size = 512; // Texture size for each face, adjust as needed
+async function loadCubemap(device: GPUDevice, urls: string[]) {
+  const size = 512;
 
-  // Create the cubemap texture
   const texture = root['~unstable']
     .createTexture({
       dimension: '2d',
-      size: [size, size, 6], // width, height, 6 faces
+      size: [size, size, 6],
       format: 'rgba8unorm',
     })
-    .$usage('sampled', 'render');
+    .$usage('sampled', 'render', 'storage');
 
   // Load each face
   for (let i = 0; i < 6; i++) {
@@ -164,7 +160,7 @@ async function loadCubemap(
 
     device.queue.copyExternalImageToTexture(
       { source: imageBitmap },
-      { texture, origin: [0, 0, i] },
+      { texture: root.unwrap(texture), mipLevel: 0, origin: [0, 0, i] },
       [size, size],
     );
   }
@@ -175,8 +171,6 @@ async function loadCubemap(
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-const root = await tgpu.init();
 
 context.configure({
   device: root.device,
@@ -202,13 +196,12 @@ const DirectionalLight = d.struct({
   intensity: d.f32,
 });
 
-// Material properties for Phong lighting
 const Material = d.struct({
   ambient: d.vec3f,
   diffuse: d.vec3f,
   specular: d.vec3f,
   shininess: d.f32,
-  reflectivity: d.f32, // Added reflectivity for controlling cubemap influence
+  reflectivity: d.f32,
 });
 
 const subdivisions = 6;
@@ -248,13 +241,12 @@ const materialBuffer = root
     diffuse: d.vec3f(0.7, 0.7, 0.7),
     specular: d.vec3f(1.0, 1.0, 1.0),
     shininess: 21,
-    reflectivity: 0.6, // Adjust this value to control reflection strength
+    reflectivity: 0.6,
   })
   .$usage('uniform');
 
-// Load the cubemap
 const cubemapTexture = await loadCubemap(root.device, cubemapUrls);
-const sampler = tgpu['~unstable'].sampler({
+const linSampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
   minFilter: 'linear',
   mipmapFilter: 'linear',
@@ -263,27 +255,24 @@ const sampler = tgpu['~unstable'].sampler({
   addressModeW: 'clamp-to-edge',
 });
 
-const cubemapView = cubemapTexture.createView({
-  dimension: 'cube',
-});
-
 const rederLayout = tgpu.bindGroupLayout({
   camera: { uniform: Camera },
   light: { uniform: DirectionalLight },
   material: { uniform: Material },
   cubemap: {
     texture: 'float',
-    sampler: 'filtering',
     viewDimension: 'cube',
   },
+  sampler: { sampler: 'filtering' },
 });
-const { camera, light, material, cubemap } = rederLayout.bound;
+const { camera, light, material, cubemap, sampler } = rederLayout.bound;
 
 const renderBindGroup = root.createBindGroup(rederLayout, {
   camera: cameraBuffer,
   light: lightBuffer,
   material: materialBuffer,
-  cubemap: sampler,
+  cubemap: cubemapTexture,
+  sampler: linSampler,
 });
 
 const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(Vertex, n));
@@ -313,6 +302,11 @@ const vertexFn = tgpu['~unstable']
       worldPos: worldPos,
     };
   });
+
+const sampleTexture = tgpu['~unstable'].fn([]).does(`
+  (texture: texture_cube<f32>, s: sampler, uv: vec3<f32>) -> vec4<f32> {
+    return textureSample(texture, s, uv);
+  }`);
 
 const fragmentFn = tgpu['~unstable']
   .fragmentFn({
@@ -366,16 +360,13 @@ const fragmentFn = tgpu['~unstable']
       std.normalize(input.normal).xyz,
     );
 
-    // Sample the cubemap using the reflection vector
-    const cubemapColor = std.textureSample(
-      cubemap.value,
-      cubemapSamplerRef.value,
-      reflectionVector,
-    );
+    // @ts-ignore
+    const cubemapColor = sampleTexture(cubemap, sampler, reflectionVector);
 
     // Mix the base color with the cubemap reflection based on the material's reflectivity
     const finalColor = std.mix(
       d.vec3f(baseResult),
+      //@ts-ignore
       d.vec3f(cubemapColor.xyz),
       material.value.reflectivity,
     );
