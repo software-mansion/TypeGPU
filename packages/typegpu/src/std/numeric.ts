@@ -87,6 +87,16 @@ export function abs<T extends vBase | number>(value: T): T {
   return VectorOps.abs[value.kind](value) as T;
 }
 
+export function atan2<T extends vBase | number>(y: T, x: T): T {
+  if (inGPUMode()) {
+    return `atan2(${y}, ${x})` as unknown as T;
+  }
+  if (typeof y === 'number' && typeof x === 'number') {
+    return Math.atan2(y, x) as T;
+  }
+  return VectorOps.atan2[(y as vBase).kind](y as never, x as never) as T;
+}
+
 /**
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#ceil-builtin
@@ -294,4 +304,12 @@ export function mix<T extends v2f | v3f | v4f | v2h | v3h | v4h | number>(
   }
 
   return VectorOps.mix[e1.kind](e1, e2, e3) as T;
+}
+
+export function reflect<T extends vBase>(e1: T, e2: T): T {
+  if (inGPUMode()) {
+    return `reflect(${e1}, ${e2})` as unknown as T;
+  }
+
+  return sub(e1, mul(2 * dot(e2, e1), e2));
 }

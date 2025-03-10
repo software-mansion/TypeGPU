@@ -58,14 +58,16 @@ const pipeline = root['~unstable']
   .withFragment(mainFragment, { format: presentationFormat })
   .createPipeline();
 
-pipeline
-  .withColorAttachment({
-    view: context.getCurrentTexture().createView(),
-    clearValue: [0, 0, 0, 0],
-    loadOp: 'clear',
-    storeOp: 'store',
-  })
-  .draw(3);
+setTimeout(() => {
+  pipeline
+    .withColorAttachment({
+      view: context.getCurrentTexture().createView(),
+      clearValue: [0, 0, 0, 0],
+      loadOp: 'clear',
+      storeOp: 'store',
+    })
+    .draw(3);
 
-root['~unstable'].flush();
-root.destroy();
+  root['~unstable'].flush();
+  root.destroy();
+}, 100);
