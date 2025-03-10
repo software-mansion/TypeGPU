@@ -134,7 +134,7 @@ export function ExampleView({ example }: Props) {
                 'absolute bg-tameplum-50 z-20 md:relative h-[calc(100%-2rem)] w-[calc(100%-2rem)] md:w-full md:h-full',
               )}
             >
-              <div className="absolute overflow-hidden inset-1">
+              <div className="absolute inset-1">
                 <div className="flex overflow-auto border-gray-300 pt-16 md:pt-0">
                   {editorTabsList.map((fileName) => (
                     <button
