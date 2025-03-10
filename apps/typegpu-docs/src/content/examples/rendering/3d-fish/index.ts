@@ -775,14 +775,22 @@ const cameraRadius = distance(
   cameraInitialTarget.xyz,
 );
 let cameraYaw = Math.atan2(cameraInitialPosition.x, cameraInitialPosition.z);
+let cameraPitch = Math.asin(cameraInitialPosition.y / cameraRadius);
 
 function updateCameraTarget(dx: number, dy: number) {
   cameraYaw += dx * 0.005;
+  cameraPitch += dy * 0.005;
 
-  const newTargetX = cameraRadius * Math.sin(cameraYaw);
-  const newTargetZ = cameraRadius * Math.cos(cameraYaw);
+  // if we don't limit pitch, it would lead to flipping the camera which is disorienting.
+  const minPitch = 0;
+  const maxPitch = Math.PI / 4 - 0.01;
+  cameraPitch = std.clamp(cameraPitch, minPitch, maxPitch);
 
-  camera.c_target = d.vec4f(newTargetX, 0, newTargetZ, 1);
+  const newCamX = cameraRadius * Math.sin(cameraYaw) * Math.cos(cameraPitch);
+  const newCamY = cameraRadius * Math.sin(cameraPitch);
+  const newCamZ = cameraRadius * Math.cos(cameraYaw) * Math.cos(cameraPitch);
+
+  camera.c_target = d.vec4f(newCamX, newCamY, newCamZ, 1);
   camera.view = m.mat4.lookAt(
     cameraInitialPosition,
     camera.c_target,
