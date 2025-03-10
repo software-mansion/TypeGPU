@@ -18,7 +18,7 @@ export const exampleCategories = [
 export type Example = {
   key: string;
   tsCodes: Record<string, string>;
-  tsSources: Record<string, () => Promise<unknown>>;
+  tsImports: Record<string, () => Promise<unknown>>;
   htmlCode: string;
   metadata: ExampleMetadata;
 };

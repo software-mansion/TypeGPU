@@ -102,7 +102,7 @@ export const examples = pipe(
           key,
           metadata: value,
           tsCodes: readonlyTsFiles[key] ?? {},
-          tsSources: tsFilesImportFunctions[key] ?? {},
+          tsImports: tsFilesImportFunctions[key] ?? {},
           htmlCode: htmlFiles[key] ?? '',
         },
       ] satisfies [string, Example],

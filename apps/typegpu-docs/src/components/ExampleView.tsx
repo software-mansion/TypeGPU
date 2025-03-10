@@ -22,7 +22,7 @@ type Props = {
 };
 
 function useExample(
-  tsSources: Record<string, () => void>,
+  tsImports: Record<string, () => void>,
   htmlCode: string,
   setSnackbarText: (text: string | undefined) => void,
 ) {
@@ -34,7 +34,7 @@ function useExample(
     let cancelled = false;
     setSnackbarText(undefined);
 
-    executeExample(tsSources)
+    executeExample(tsImports)
       .then((example) => {
         if (cancelled) {
           // Another instance was started in the meantime.
@@ -66,7 +66,7 @@ function useExample(
 }
 
 export function ExampleView({ example }: Props) {
-  const { tsCodes, tsSources, htmlCode } = example;
+  const { tsCodes, tsImports, htmlCode } = example;
 
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
   const [currentFile, setCurrentFile] = useState<string>('index.ts');
@@ -90,7 +90,7 @@ export function ExampleView({ example }: Props) {
     exampleHtmlRef.current.innerHTML = htmlCode;
   }, [htmlCode]);
 
-  useExample(tsSources, htmlCode, setSnackbarText); // live example
+  useExample(tsImports, htmlCode, setSnackbarText); // live example
   useResizableCanvas(exampleHtmlRef, htmlCode);
 
   return (
