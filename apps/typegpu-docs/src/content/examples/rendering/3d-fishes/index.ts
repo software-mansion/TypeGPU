@@ -5,6 +5,87 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
 
+const hsvToRgb = tgpu['~unstable'].fn([d.vec3f], d.vec3f).does((hsv) => {
+  const h = hsv.x;
+  const s = hsv.y;
+  const v = hsv.z;
+
+  const i = std.floor(h * 6);
+  const f = h * 6 - i;
+  const p = v * (1 - s);
+  const q = v * (1 - f * s);
+  const t = v * (1 - (1 - f) * s);
+
+  let r = d.f32(0);
+  let g = d.f32(0);
+  let b = d.f32(0);
+  if (i % 6 === 0) {
+    r = v;
+    g = t;
+    b = p;
+  } else if (i % 6 === 1) {
+    r = q;
+    g = v;
+    b = p;
+  } else if (i % 6 === 2) {
+    r = p;
+    g = v;
+    b = t;
+  } else if (i % 6 === 3) {
+    r = p;
+    g = q;
+    b = v;
+  } else if (i % 6 === 4) {
+    r = t;
+    g = p;
+    b = v;
+  } else {
+    r = v;
+    g = p;
+    b = q;
+  }
+  return d.vec3f(r, g, b);
+});
+
+const rgbToHsv = tgpu['~unstable'].fn([d.vec3f], d.vec3f).does((rgb) => {
+  const r = rgb.x;
+  const g = rgb.y;
+  const b = rgb.z;
+
+  const max = std.max(r, std.max(g, b));
+  const min = std.min(r, std.min(g, b));
+  const delta = d.f32(max - min);
+  let h = d.f32(0);
+  let s = d.f32(0);
+  if (max === 0) {
+    s = 0;
+  } else {
+    s = delta / max;
+  }
+  const v = max;
+
+  if (max === min) {
+    h = 0;
+  } else if (max === r) {
+    let cond = d.f32(0);
+    if (g < b) {
+      cond = 6;
+    } else {
+      cond = 0;
+    }
+    h = g - b + delta * cond;
+    h /= 6 * delta;
+  } else if (max === g) {
+    h = b - r + delta * 2;
+    h /= 6 * delta;
+  } else if (max === b) {
+    h = r - g + delta * 4;
+    h /= 6 * delta;
+  }
+
+  return d.vec3f(h, s, v);
+});
+
 // data schemas
 
 const FishParameters = d.struct({
@@ -30,6 +111,8 @@ const ModelData = d.struct({
   position: d.vec3f,
   direction: d.vec3f, // in case of the fish, this is also the velocity
   scale: d.f32,
+  seaFog: d.u32, // bool
+  seaBlindness: d.u32, // bool
 });
 
 const ModelDataArray = (n: number) => d.arrayOf(ModelData, n);
@@ -46,6 +129,8 @@ const modelVertexOutput = {
   worldNormal: d.vec3f,
   canvasPosition: d.builtin.position,
   textureUV: d.vec2f,
+  seaFog: d.interpolate('flat', d.u32), // bool
+  seaBlindness: d.interpolate('flat', d.u32), // bool
 } as const;
 
 const MouseRay = d.struct({
@@ -62,9 +147,12 @@ const fishAmount = 1024 * 8;
 const fishModelScale = 0.015;
 
 const aquariumSize = d.vec3f(8, 2, 8);
-const wrappingSides = d.vec3u(0, 0, 0); // 1 for true, 0 for false
+const wrappingSides = d.vec3u(0, 0, 0); // vec3 of bools
 
+// TODO: replace "fishes" with "fish"
 // TODO: remove the buffer and struct, just reference the constants
+// TODO: change camera to be located in a point
+// TODO: split into files
 const fishParameters = FishParameters({
   separationDistance: 0.08,
   separationStrength: 0.001,
@@ -81,11 +169,9 @@ const fishParameters = FishParameters({
 const cameraInitialPosition = d.vec4f(0.5, 1.5, 3.5, 1);
 const cameraInitialTarget = d.vec3f(0, 0, 0);
 
-const fogDistance = 1.5;
-const fogThickness = 0.2;
 const lightColor = d.vec3f(0.8, 0.8, 1);
 const lightDirection = std.normalize(d.vec3f(1.0, 1.0, 1.0));
-const backgroundColor = std.mul(0.6, d.vec3f(90 / 255, 170 / 255, 255 / 255));
+const backgroundColor = d.vec3f(0x00 / 255, 0x7a / 255, 0xcc / 255);
 
 // layouts
 
@@ -181,6 +267,8 @@ const vertexShader = tgpu['~unstable']
       textureUV: input.textureUV,
       worldNormal: worldNormal,
       worldPosition: worldPosition,
+      seaFog: renderModelData.value[input.instanceIndex].seaFog,
+      seaBlindness: renderModelData.value[input.instanceIndex].seaBlindness,
     };
   });
 
@@ -211,6 +299,7 @@ const fragmentShader = tgpu['~unstable']
   .does((input) => {
     // shade the fragment in Phong reflection model
     // https://en.wikipedia.org/wiki/Phong_reflection_model
+    // then apply sea fog and sea blindness
 
     const viewDirection = std.normalize(
       std.sub(renderCamera.value.position.xyz, input.worldPosition),
@@ -242,25 +331,31 @@ const fragmentShader = tgpu['~unstable']
       );
     }
 
-    const fragmentColor = std.add(ambient, std.add(diffuse, specular));
+    const lightedColor = std.add(ambient, std.add(diffuse, specular));
+
     const distanceFromCamera = distance(
       renderCamera.value.position.xyz,
       input.worldPosition,
     );
 
-    const fogParameter = std.max(
-      0,
-      (distanceFromCamera - fogDistance) * fogThickness,
-    );
-    const fogFactor = fogParameter / (1 + fogParameter);
+    let blindedColor = lightedColor;
+    if (input.seaBlindness === 1) {
+      const blindedParameter = (distanceFromCamera - 5) / 10;
+      const blindedFactor = -std.atan2(blindedParameter, 1) / 3;
+      const hsv = rgbToHsv(blindedColor);
+      hsv.y += blindedFactor / 2;
+      hsv.z += blindedFactor;
+      blindedColor = hsvToRgb(hsv);
+    }
 
-    const foggedColor = d.vec4f(
-      std.mix(fragmentColor.x, backgroundColor.x, fogFactor),
-      std.mix(fragmentColor.y, backgroundColor.y, fogFactor),
-      std.mix(fragmentColor.z, backgroundColor.z, fogFactor),
-      d.f32(1),
-    );
-    return foggedColor;
+    let foggedColor = blindedColor;
+    if (input.seaFog === 1) {
+      const fogParameter = std.max(0, (distanceFromCamera - 1.5) * 0.2);
+      const fogFactor = fogParameter / (1 + fogParameter);
+      foggedColor = std.mix(foggedColor, backgroundColor, fogFactor);
+    }
+
+    return d.vec4f(foggedColor.x, foggedColor.y, foggedColor.z, 1);
   })
   .$name('mainFragment');
 
@@ -468,6 +563,8 @@ const randomizeFishPositions = () => {
       Math.random() * 0.1 - 0.05,
     ),
     scale: fishModelScale * (1 + (Math.random() - 0.5) * 0.8),
+    seaFog: 1,
+    seaBlindness: 1,
   }));
   fishDataBuffers[0].write(positions);
   fishDataBuffers[1].write(positions);
@@ -597,6 +694,8 @@ const oceanFloorDataBuffer = root
       position: d.vec3f(0, -aquariumSize.y / 2 + 1, 0),
       direction: d.vec3f(1, 0, 0),
       scale: 1,
+      seaFog: 1,
+      seaBlindness: 0,
     },
   ])
   .$usage('storage', 'vertex', 'uniform');
