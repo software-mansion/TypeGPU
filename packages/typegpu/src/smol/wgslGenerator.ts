@@ -38,7 +38,7 @@ const parenthesizedOps = [
 
 const binaryLogicalOps = ['&&', '||', '==', '!=', '<', '<=', '>', '>='];
 
-type Oprator =
+type Operator =
   | smol.BinaryOperator
   | smol.AssignmentOperator
   | smol.LogicalOperator
@@ -47,7 +47,7 @@ type Oprator =
 function operatorToType<
   TL extends wgsl.AnyWgslData | UnknownData,
   TR extends wgsl.AnyWgslData | UnknownData,
->(lhs: TL, op: Oprator, rhs?: TR): TL | TR | wgsl.Bool {
+>(lhs: TL, op: Operator, rhs?: TR): TL | TR | wgsl.Bool {
   if (!rhs) {
     if (op === '!' || op === '~') {
       return d.bool;
