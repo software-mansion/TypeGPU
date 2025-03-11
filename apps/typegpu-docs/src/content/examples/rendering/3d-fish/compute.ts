@@ -117,7 +117,7 @@ export const mainCompute = tgpu['~unstable']
     );
 
     const translation = std.mul(
-      d.f32(computeTimePassed.value) / 8,
+      d.f32(std.min(999, computeTimePassed.value)) / 8,
       fishData.direction,
     );
     fishData.position = std.add(fishData.position, translation);

@@ -19,7 +19,7 @@ export const fishMouseRayRepulsionStrength = 0.0005;
 
 export const aquariumSize = d.vec3f(10, 4, 10);
 
-export const cameraInitialPosition = d.vec4f(-5, 0, -5, 1);
+export const cameraInitialPosition = d.vec4f(-5.2, 0, -5.2, 1);
 export const cameraInitialTarget = d.vec4f(0, 0, 0, 1);
 
 export const lightColor = d.vec3f(0.8, 0.8, 1);

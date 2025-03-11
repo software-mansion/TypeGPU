@@ -17,9 +17,6 @@ import { fragmentShader, vertexShader } from './render';
 import { mainCompute } from './compute';
 import { loadModel } from './load-model';
 
-// TODO: fix aspect ratio
-// TODO: make controls show up after hovering over the canvas
-
 // setup
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -266,6 +263,9 @@ let previousMouseX = 0;
 let previousMouseY = 0;
 let isRightPressed = false;
 
+let isPopupDiscarded = false;
+const controlsPopup = document.getElementById('help') as HTMLDivElement;
+
 const cameraRadius = distance(
   p.cameraInitialPosition.xyz,
   p.cameraInitialTarget.xyz,
@@ -336,9 +336,10 @@ canvas.addEventListener('contextmenu', (event) => {
 canvas.addEventListener('mousedown', async (event) => {
   previousMouseX = event.clientX;
   previousMouseY = event.clientY;
+  controlsPopup.style.opacity = '0';
+  isPopupDiscarded = true;
+
   if (event.button === 0) {
-    const helpInfo = document.getElementById('help') as HTMLDivElement;
-    helpInfo.style.opacity = '0';
     isLeftPressed = true;
   }
   if (event.button === 2) {
@@ -358,6 +359,12 @@ window.addEventListener('mouseup', (event) => {
       pointX: d.vec3f(),
       pointY: d.vec3f(),
     };
+  }
+});
+
+canvas.addEventListener('mousemove', () => {
+  if (!isPopupDiscarded) {
+    controlsPopup.style.opacity = '1';
   }
 });
 
