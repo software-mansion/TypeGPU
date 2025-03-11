@@ -60,12 +60,7 @@ export const vertexShader = tgpu['~unstable']
     );
 
     // project the world position into the camera
-    const worldPositionUniform = d.vec4f(
-      worldPosition.x,
-      worldPosition.y,
-      worldPosition.z,
-      1,
-    );
+    const worldPositionUniform = d.vec4f(worldPosition.xyz, 1);
     const canvasPosition = std.mul(
       renderCamera.value.projection,
       std.mul(renderCamera.value.view, worldPositionUniform),
@@ -98,7 +93,7 @@ export const fragmentShader = tgpu['~unstable']
   .does((input) => {
     // shade the fragment in Phong reflection model
     // https://en.wikipedia.org/wiki/Phong_reflection_model
-    // then apply sea fog and sea blindness
+    // then apply sea fog and sea desaturation
 
     const viewDirection = std.normalize(
       std.sub(renderCamera.value.position.xyz, input.worldPosition),
@@ -137,16 +132,17 @@ export const fragmentShader = tgpu['~unstable']
       input.worldPosition,
     );
 
-    let blindedColor = lightedColor;
+    let desaturatedColor = lightedColor;
     if (input.applySeaDesaturation === 1) {
-      const blindedParameter = (distanceFromCamera - 5) / 10;
-      const blindedFactor = -std.atan2(blindedParameter, 1) / 3;
-      const hsv = rgbToHsv(blindedColor);
-      hsv.z += blindedFactor;
-      blindedColor = hsvToRgb(hsv);
+      const desaturationFactor =
+        -std.atan2((distanceFromCamera - 5) / 10, 1) / 3;
+      const hsv = rgbToHsv(desaturatedColor);
+      hsv.y += desaturationFactor / 2;
+      hsv.z += desaturationFactor;
+      desaturatedColor = hsvToRgb(hsv);
     }
 
-    let foggedColor = blindedColor;
+    let foggedColor = desaturatedColor;
     if (input.applySeaFog === 1) {
       const fogParameter = std.max(0, (distanceFromCamera - 1.5) * 0.2);
       const fogFactor = fogParameter / (1 + fogParameter);

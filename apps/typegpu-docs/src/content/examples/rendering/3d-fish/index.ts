@@ -110,6 +110,18 @@ const mouseRayBuffer = root.createBuffer(MouseRay, mouseRay).$usage('uniform');
 
 const timePassedBuffer = root.createBuffer(d.u32).$usage('uniform');
 
+const oceanFloorDataBuffer = root
+  .createBuffer(ModelDataArray(1), [
+    {
+      position: d.vec3f(0, -p.aquariumSize.y / 2 - 1, 0),
+      direction: d.vec3f(1, 0, 0),
+      scale: 1,
+      applySeaFog: 1,
+      applySeaDesaturation: 0,
+    },
+  ])
+  .$usage('storage', 'vertex', 'uniform');
+
 // pipelines
 
 const renderPipeline = root['~unstable']
@@ -151,18 +163,6 @@ const renderFishBindGroups = [0, 1].map((idx) =>
   }),
 );
 
-const oceanFloorDataBuffer = root
-  .createBuffer(ModelDataArray(1), [
-    {
-      position: d.vec3f(0, -p.aquariumSize.y / 2 - 1, 0),
-      direction: d.vec3f(1, 0, 0),
-      scale: 1,
-      applySeaFog: 1,
-      applySeaDesaturation: 0,
-    },
-  ])
-  .$usage('storage', 'vertex', 'uniform');
-
 const renderOceanFloorBindGroups = root.createBindGroup(renderBindGroupLayout, {
   modelData: oceanFloorDataBuffer,
   camera: cameraBuffer,
@@ -189,6 +189,7 @@ function frame() {
   if (disposed) {
     return;
   }
+  odd = !odd;
 
   const currentTimestamp = Date.now();
   timePassedBuffer.write(currentTimestamp - lastTimestamp);
@@ -196,7 +197,6 @@ function frame() {
   cameraBuffer.write(camera);
   mouseRayBuffer.write(mouseRay);
 
-  odd = !odd;
   computePipeline
     .with(computeBindGroupLayout, computeBindGroups[odd ? 1 : 0])
     .dispatchWorkgroups(p.fishAmount / p.workGroupSize);
@@ -262,6 +262,7 @@ export const controls = {
 };
 
 // Variables for mouse interaction.
+
 let isLeftPressed = false;
 let previousMouseX = 0;
 let previousMouseY = 0;
