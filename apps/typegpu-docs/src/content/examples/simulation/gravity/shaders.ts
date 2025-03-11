@@ -10,7 +10,7 @@ export const Camera = d.struct({
 
 export const bindGroupLayout = tgpu.bindGroupLayout({
   camera: { uniform: Camera },
-  texture: { texture: 'float' },
+  // texture: { texture: 'float' },
   sampler: { sampler: 'filtering' },
 });
 

@@ -1,9 +1,8 @@
-import { load } from '@loaders.gl/core';
-import { OBJLoader } from '@loaders.gl/obj';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
 import { mainFragment, mainVertex, Camera, bindGroupLayout } from './shaders';
+import { cubeModel, vertices } from './cube';
 
 const Vertex = d.struct({
   position: d.vec3f,
@@ -23,21 +22,28 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const cubeModel = await load('assets/gravity/cube_blend.obj', OBJLoader);
-const textureResponse = await fetch('assets/gravity/cube_texture.png');
-const imageBitmap = await createImageBitmap(await textureResponse.blob());
-const cubeTexture = root['~unstable']
-  .createTexture({
-    size: [imageBitmap.width, imageBitmap.height],
-    format: 'rgba8unorm',
-  })
-  .$usage('sampled', 'render');
 
-device.queue.copyExternalImageToTexture(
-  { source: imageBitmap },
-  { texture: root.unwrap(cubeTexture) },
-  [imageBitmap.width, imageBitmap.height],
-);
+// const cubeTexture = root['~unstable']
+//   .createTexture({
+//     size: [imageBitmap.width, imageBitmap.height],
+//     format: 'rgba8unorm',
+//   })
+//   .$usage('sampled', 'render');
+
+// device.queue.copyExternalImageToTexture(
+//   { source: imageBitmap },
+//   { texture: root.unwrap(cubeTexture) },
+//   [imageBitmap.width, imageBitmap.height],
+// );
+
+
+const vertexBuffer = root
+  .createBuffer(
+    vertexLayout.schemaForCount(cubeModel.attributes.POSITION.value.length / 3),
+  )
+  .$usage('vertex')
+  .$name('vertex');
+  vertexBuffer.write(vertices);
 console.log(cubeModel.attributes);
 
 const sampler = device.createSampler({
@@ -63,43 +69,13 @@ const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
 
 const bindGroup = root.createBindGroup(bindGroupLayout, {
   camera: cameraBuffer,
-  texture: cubeTexture,
+  // texture: cubeTexture,
   sampler,
 });
 
-// Vertex
-const vertexBuffer = root
-  .createBuffer(
-    vertexLayout.schemaForCount(cubeModel.attributes.POSITION.value.length / 3),
-  )
-  .$usage('vertex')
-  .$name('vertex');
 
-const positions = cubeModel.attributes.POSITION.value;
-const normals = cubeModel.attributes.NORMAL
-  ? cubeModel.attributes.NORMAL.value
-  : new Float32Array(positions.length);
-const uvs = cubeModel.attributes.TEXCOORD_0
-  ? cubeModel.attributes.TEXCOORD_0.value
-  : new Float32Array((positions.length / 3) * 2);
-
-const vertices = [];
-for (let i = 0; i < positions.length / 3; i++) {
-  vertices.push({
-    position: d.vec3f(
-      positions[3 * i],
-      positions[3 * i + 1],
-      positions[3 * i + 2],
-    ),
-    normal: d.vec3f(normals[3 * i], normals[3 * i + 1], normals[3 * i + 2]),
-    uv: d.vec2f(uvs[2 * i], 1 - uvs[2 * i + 1]),
-  });
-}
-
-vertexBuffer.write(vertices);
 
 // Render pipeline
-
 const renderPipeline = root['~unstable']
   .withVertex(mainVertex, vertexLayout.attrib)
   .withFragment(mainFragment, { format: presentationFormat })
@@ -132,7 +108,6 @@ function frame() {
 }
 
 // #region Camera controls
-
 // Variables for mouse interaction.
 let isDragging = false;
 let prevX = 0;
