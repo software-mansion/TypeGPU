@@ -383,7 +383,7 @@ importers:
         specifier: ^0.30.11
         version: 0.30.17
       tinyest-for-wgsl:
-        specifier: workspace:~0.1.0-alpha.4
+        specifier: workspace:~0.1.0-alpha.5
         version: link:../tinyest-for-wgsl
       unplugin:
         specifier: ^2.2.0
