@@ -3,11 +3,11 @@ import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
 import { mainFragment, mainVertex } from './shaders';
 import { cubeModel, vertices } from './cube';
-import { cameraInitialPos, target } from './env';
-import { bindGroupLayout, Camera, Vertex } from './structs';
+import { cameraInitialPos, cubePos, cubeVelocity, gravity, target } from './env';
+import { bindGroupLayout, CameraStruct, objectLayout, ObjectStruct, VertexStruct } from './structs';
 
 
-const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(Vertex, n));
+const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(VertexStruct, n));
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -46,7 +46,7 @@ const sampler = device.createSampler({
 });
 
 // Camera
-const cameraInitial = Camera({
+const cameraInitial = CameraStruct({
   position: cameraInitialPos.xyz,
   view: m.mat4.lookAt(cameraInitialPos, target, d.vec3f(0, 1, 0), d.mat4x4f()),
   projection: m.mat4.perspective(
@@ -57,10 +57,25 @@ const cameraInitial = Camera({
     d.mat4x4f(),
   ),
 });
-const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
+const cameraBuffer = root.createBuffer(CameraStruct, cameraInitial).$usage('uniform');
+
+
+let lastTime = performance.now();
+const cubeModelMatrix = d.mat4x4f();
+m.mat4.identity(cubeModelMatrix);
+m.mat4.translate(cubeModelMatrix, d.vec3f(cubePos.x, cubePos.y, cubePos.z), cubeModelMatrix);
+
+const objectBuffer = root.createBuffer(ObjectStruct, {
+  modelMatrix: cubeModelMatrix,
+}).$usage('uniform');
+
+const objectBindGroup = root.createBindGroup(objectLayout, {
+  object: objectBuffer,
+});
+
 const bindGroup = root.createBindGroup(bindGroupLayout, {
   camera: cameraBuffer,
-  // texture: cubeTexture,
+  // cube: cubeBuffer,
   sampler,
 });
 
@@ -88,11 +103,28 @@ function render() {
 console.log('Cube position:', await vertexBuffer.read());
 
 let destroyed = false;
+
+function updateCubePhysics() {
+  const now = performance.now();
+  const dt = (now - lastTime) / 1000;
+  lastTime = now;
+
+  cubeVelocity.y += gravity * dt;
+  cubePos.y += cubeVelocity.y * dt;
+  m.mat4.identity(cubeModelMatrix);
+  m.mat4.translate(cubeModelMatrix, d.vec3f(cubePos.x, cubePos.y, cubePos.z), cubeModelMatrix);
+  objectBuffer.write({
+    modelMatrix: cubeModelMatrix,
+  });
+  
+}
+// Frame loop
 function frame() {
   if (destroyed) {
     return;
   }
   requestAnimationFrame(frame);
+  updateCubePhysics();
   render();
 }
 
