@@ -17,6 +17,8 @@ import { fragmentShader, vertexShader } from './render';
 import { mainCompute } from './compute';
 import { loadModel } from './load-model';
 
+// TODO: fix aspect ratio
+// TODO: make controls show up after hovering over the canvas
 // TODO: canvas on entire screen
 
 // setup
