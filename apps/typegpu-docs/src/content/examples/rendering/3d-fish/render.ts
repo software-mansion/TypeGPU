@@ -76,8 +76,9 @@ export const vertexShader = tgpu['~unstable']
       textureUV: input.textureUV,
       worldNormal: worldNormal,
       worldPosition: worldPosition,
-      seaFog: renderModelData.value[input.instanceIndex].seaFog,
-      seaBlindness: renderModelData.value[input.instanceIndex].seaBlindness,
+      applySeaFog: renderModelData.value[input.instanceIndex].applySeaFog,
+      applySeaDesaturation:
+        renderModelData.value[input.instanceIndex].applySeaDesaturation,
     };
   });
 
@@ -137,7 +138,7 @@ export const fragmentShader = tgpu['~unstable']
     );
 
     let blindedColor = lightedColor;
-    if (input.seaBlindness === 1) {
+    if (input.applySeaDesaturation === 1) {
       const blindedParameter = (distanceFromCamera - 5) / 10;
       const blindedFactor = -std.atan2(blindedParameter, 1) / 3;
       const hsv = rgbToHsv(blindedColor);
@@ -146,7 +147,7 @@ export const fragmentShader = tgpu['~unstable']
     }
 
     let foggedColor = blindedColor;
-    if (input.seaFog === 1) {
+    if (input.applySeaFog === 1) {
       const fogParameter = std.max(0, (distanceFromCamera - 1.5) * 0.2);
       const fogFactor = fogParameter / (1 + fogParameter);
       foggedColor = std.mix(foggedColor, p.backgroundColor, fogFactor);

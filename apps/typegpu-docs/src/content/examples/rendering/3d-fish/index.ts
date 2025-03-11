@@ -7,6 +7,7 @@ import * as p from './params';
 import {
   Camera,
   computeBindGroupLayout,
+  type ModelData,
   ModelDataArray,
   modelVertexLayout,
   MouseRay,
@@ -56,21 +57,24 @@ const fishDataBuffers = Array.from({ length: 2 }, () =>
 );
 
 const randomizeFishPositions = () => {
-  const positions = Array.from({ length: p.fishAmount }, () => ({
-    position: d.vec3f(
-      Math.random() * p.aquariumSize.x - p.aquariumSize.x / 2,
-      Math.random() * p.aquariumSize.y - p.aquariumSize.y / 2,
-      Math.random() * p.aquariumSize.z - p.aquariumSize.z / 2,
-    ),
-    direction: d.vec3f(
-      Math.random() * 0.1 - 0.05,
-      Math.random() * 0.1 - 0.05,
-      Math.random() * 0.1 - 0.05,
-    ),
-    scale: p.fishModelScale * (1 + (Math.random() - 0.5) * 0.8),
-    seaFog: 1,
-    seaBlindness: 1,
-  }));
+  const positions: d.Infer<typeof ModelData>[] = Array.from(
+    { length: p.fishAmount },
+    () => ({
+      position: d.vec3f(
+        Math.random() * p.aquariumSize.x - p.aquariumSize.x / 2,
+        Math.random() * p.aquariumSize.y - p.aquariumSize.y / 2,
+        Math.random() * p.aquariumSize.z - p.aquariumSize.z / 2,
+      ),
+      direction: d.vec3f(
+        Math.random() * 0.1 - 0.05,
+        Math.random() * 0.1 - 0.05,
+        Math.random() * 0.1 - 0.05,
+      ),
+      scale: p.fishModelScale * (1 + (Math.random() - 0.5) * 0.8),
+      applySeaFog: 1,
+      applySeaDesaturation: 1,
+    }),
+  );
   fishDataBuffers[0].write(positions);
   fishDataBuffers[1].write(positions);
 };
@@ -153,8 +157,8 @@ const oceanFloorDataBuffer = root
       position: d.vec3f(0, -p.aquariumSize.y / 2 - 1, 0),
       direction: d.vec3f(1, 0, 0),
       scale: 1,
-      seaFog: 1,
-      seaBlindness: 0,
+      applySeaFog: 1,
+      applySeaDesaturation: 0,
     },
   ])
   .$usage('storage', 'vertex', 'uniform');

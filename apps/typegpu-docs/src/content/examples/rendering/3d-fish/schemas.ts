@@ -14,8 +14,8 @@ export const ModelData = d.struct({
   position: d.vec3f,
   direction: d.vec3f, // in case of the fish, this is also the velocity
   scale: d.f32,
-  seaFog: d.u32, // bool
-  seaBlindness: d.u32, // bool
+  applySeaFog: d.u32, // bool
+  applySeaDesaturation: d.u32, // bool
 });
 
 export const ModelDataArray = (n: number) => d.arrayOf(ModelData, n);
@@ -32,8 +32,8 @@ export const ModelVertexOutput = {
   worldNormal: d.vec3f,
   canvasPosition: d.builtin.position,
   textureUV: d.vec2f,
-  seaFog: d.interpolate('flat', d.u32), // bool
-  seaBlindness: d.interpolate('flat', d.u32), // bool
+  applySeaFog: d.interpolate('flat', d.u32), // bool
+  applySeaDesaturation: d.interpolate('flat', d.u32), // bool
 } as const;
 
 export const MouseRay = d.struct({
