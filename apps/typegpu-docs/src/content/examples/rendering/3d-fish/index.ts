@@ -19,7 +19,6 @@ import { loadModel } from './load-model';
 
 // TODO: fix aspect ratio
 // TODO: make controls show up after hovering over the canvas
-// TODO: canvas on entire screen
 
 // setup
 
@@ -378,9 +377,17 @@ window.addEventListener('mousemove', (event) => {
 });
 
 const resizeObserver = new ResizeObserver(() => {
+  camera.projection = m.mat4.perspective(
+    Math.PI / 4,
+    canvas.clientWidth / canvas.clientHeight,
+    0.1,
+    1000,
+    d.mat4x4f(),
+  );
+
   depthTexture.destroy();
   depthTexture = root.device.createTexture({
-    size: [context.canvas.width, context.canvas.height, 1],
+    size: [canvas.width, canvas.height, 1],
     format: 'depth24plus',
     usage: GPUTextureUsage.RENDER_ATTACHMENT,
   });
