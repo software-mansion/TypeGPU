@@ -1,16 +1,13 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
-import { mainFragment, mainVertex, Camera, bindGroupLayout } from './shaders';
+import { mainFragment, mainVertex } from './shaders';
 import { cubeModel, vertices } from './cube';
+import { cameraInitialPos, target } from './env';
+import { bindGroupLayout, Camera, Vertex } from './structs';
 
-const Vertex = d.struct({
-  position: d.vec3f,
-  normal: d.vec3f,
-  uv: d.vec2f,
-});
+
 const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(Vertex, n));
-
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -22,20 +19,17 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-
 // const cubeTexture = root['~unstable']
 //   .createTexture({
 //     size: [imageBitmap.width, imageBitmap.height],
 //     format: 'rgba8unorm',
 //   })
 //   .$usage('sampled', 'render');
-
 // device.queue.copyExternalImageToTexture(
 //   { source: imageBitmap },
 //   { texture: root.unwrap(cubeTexture) },
 //   [imageBitmap.width, imageBitmap.height],
 // );
-
 
 const vertexBuffer = root
   .createBuffer(
@@ -51,9 +45,7 @@ const sampler = device.createSampler({
   minFilter: 'linear',
 });
 
-// Cameraff
-const target = d.vec3f(0, 0, 0);
-const cameraInitialPos = d.vec4f(5, 2, 5, 1);
+// Camera
 const cameraInitial = Camera({
   position: cameraInitialPos.xyz,
   view: m.mat4.lookAt(cameraInitialPos, target, d.vec3f(0, 1, 0), d.mat4x4f()),
@@ -66,14 +58,11 @@ const cameraInitial = Camera({
   ),
 });
 const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
-
 const bindGroup = root.createBindGroup(bindGroupLayout, {
   camera: cameraBuffer,
   // texture: cubeTexture,
   sampler,
 });
-
-
 
 // Render pipeline
 const renderPipeline = root['~unstable']

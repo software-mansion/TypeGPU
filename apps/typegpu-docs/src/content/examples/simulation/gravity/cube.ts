@@ -1,7 +1,6 @@
-import { load } from "@loaders.gl/core";
-import { OBJLoader } from "@loaders.gl/obj";
+import { load } from '@loaders.gl/core';
+import { OBJLoader } from '@loaders.gl/obj';
 import * as d from 'typegpu/data';
-
 
 export const cubeModel = await load('assets/gravity/cube_blend.obj', OBJLoader);
 const textureResponse = await fetch('assets/gravity/cube_texture.png');

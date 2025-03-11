@@ -1,18 +1,8 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { add, dot, max, mul, normalize, pow, sub } from 'typegpu/std';
-
-export const Camera = d.struct({
-  position: d.vec3f,
-  view: d.mat4x4f,
-  projection: d.mat4x4f,
-});
-
-export const bindGroupLayout = tgpu.bindGroupLayout({
-  camera: { uniform: Camera },
-  // texture: { texture: 'float' },
-  sampler: { sampler: 'filtering' },
-});
+import { lightDirection, lightPosition } from './env';
+import { bindGroupLayout } from './structs';
 
 export const EXT = bindGroupLayout.bound;
 
@@ -22,8 +12,6 @@ const VertexOutput = {
   normals: d.vec3f,
   worldPosition: d.vec3f,
 };
-const lightPosition = d.vec3f(3.0, 3.0, 2.5);
-const lightDirection = normalize(d.vec3f(2.0, 1.0, 0.5));
 
 export const mainVertex = tgpu['~unstable']
   .vertexFn({
@@ -80,10 +68,10 @@ export const mainFragment = tgpu['~unstable']
   })
   .$name('mainFragment');
 
-const sampleTexture = tgpu['~unstable']
-  .fn([d.vec2f], d.vec4f)
-  .does(/*wgsl*/ `(uv: vec2<f32>) -> vec4<f32> {
-        return textureSample(EXT.texture, EXT.sampler, uv);
-    }`)
-  .$uses({ EXT })
-  .$name('sampleShader');
+// const sampleTexture = tgpu['~unstable']
+//   .fn([d.vec2f], d.vec4f)
+//   .does(/*wgsl*/ `(uv: vec2<f32>) -> vec4<f32> {
+//         return textureSample(EXT.texture, EXT.sampler, uv);
+//     }`)
+//   .$uses({ EXT })
+//   .$name('sampleShader');
