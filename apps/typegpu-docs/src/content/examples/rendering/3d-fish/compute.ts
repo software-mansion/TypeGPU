@@ -9,6 +9,7 @@ const {
   currentFishData: computeCurrentFishData,
   nextFishData: computeNextFishData,
   mouseRay: computeMouseRay,
+  timePassed: computeTimePassed,
 } = computeBindGroupLayout.bound;
 
 export const mainCompute = tgpu['~unstable']
@@ -115,6 +116,10 @@ export const mainCompute = tgpu['~unstable']
       std.normalize(fishData.direction),
     );
 
-    fishData.position = std.add(fishData.position, fishData.direction);
+    const translation = std.mul(
+      d.f32(computeTimePassed.value) / 8,
+      fishData.direction,
+    );
+    fishData.position = std.add(fishData.position, translation);
     computeNextFishData.value[fishIndex] = fishData;
   });

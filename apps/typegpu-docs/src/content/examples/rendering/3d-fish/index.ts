@@ -17,8 +17,6 @@ import { fragmentShader, vertexShader } from './render';
 import { mainCompute } from './compute';
 import { loadModel } from './load-model';
 
-// TODO: add vector spread where possible
-// TODO: make fishes frame independent
 // TODO: canvas on entire screen
 
 // setup
@@ -108,6 +106,8 @@ let mouseRay = MouseRay({
 
 const mouseRayBuffer = root.createBuffer(MouseRay, mouseRay).$usage('uniform');
 
+const timePassedBuffer = root.createBuffer(d.u32).$usage('uniform');
+
 // pipelines
 
 const renderPipeline = root['~unstable']
@@ -173,12 +173,14 @@ const computeBindGroups = [0, 1].map((idx) =>
     currentFishData: fishDataBuffers[idx],
     nextFishData: fishDataBuffers[1 - idx],
     mouseRay: mouseRayBuffer,
+    timePassed: timePassedBuffer,
   }),
 );
 
 // frame
 
 let odd = false;
+let lastTimestamp = Date.now();
 let disposed = false;
 
 function frame() {
@@ -186,6 +188,9 @@ function frame() {
     return;
   }
 
+  const currentTimestamp = Date.now();
+  timePassedBuffer.write(currentTimestamp - lastTimestamp);
+  lastTimestamp = currentTimestamp;
   cameraBuffer.write(camera);
   mouseRayBuffer.write(mouseRay);
 

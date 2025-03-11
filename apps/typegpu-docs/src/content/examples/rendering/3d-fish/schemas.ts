@@ -67,4 +67,5 @@ export const computeBindGroupLayout = tgpu.bindGroupLayout({
     access: 'mutable',
   },
   mouseRay: { uniform: MouseRay },
+  timePassed: { uniform: d.u32 },
 });
