@@ -78,7 +78,7 @@ randomizeFishPositions();
 
 const camera = {
   position: p.cameraInitialPosition,
-  c_target: p.cameraInitialTarget,
+  targetPos: p.cameraInitialTarget,
   view: m.mat4.lookAt(
     p.cameraInitialPosition,
     p.cameraInitialTarget,
@@ -291,10 +291,10 @@ function updateCameraTarget(cx: number, cy: number) {
   const newCamY = cameraRadius * Math.sin(cameraPitch);
   const newCamZ = cameraRadius * Math.cos(cameraYaw) * Math.cos(cameraPitch);
 
-  camera.c_target = d.vec4f(newCamX, newCamY, newCamZ, 1);
+  camera.targetPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
   camera.view = m.mat4.lookAt(
     p.cameraInitialPosition,
-    camera.c_target,
+    camera.targetPos,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
   );

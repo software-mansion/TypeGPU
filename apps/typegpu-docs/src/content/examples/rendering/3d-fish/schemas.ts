@@ -5,7 +5,7 @@ import tgpu from 'typegpu';
 
 export const Camera = d.struct({
   position: d.vec4f,
-  c_target: d.vec4f,
+  targetPos: d.vec4f,
   view: d.mat4x4f,
   projection: d.mat4x4f,
 });
