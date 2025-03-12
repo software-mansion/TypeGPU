@@ -1,3 +1,4 @@
+import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix';
 import { isDerived, isSlot } from '../core/slot/slotTypes';
 import {
   abstractFloat,
@@ -88,6 +89,24 @@ const swizzleLenToType: Record<
   },
 } as const;
 
+const kindToSchema = {
+  vec2f: vec2f,
+  vec2h: vec2h,
+  vec2i: vec2i,
+  vec2u: vec2u,
+  vec3f: vec3f,
+  vec3h: vec3h,
+  vec3i: vec3i,
+  vec3u: vec3u,
+  vec4f: vec4f,
+  vec4h: vec4h,
+  vec4i: vec4i,
+  vec4u: vec4u,
+  mat2x2f: mat2x2f,
+  mat3x3f: mat3x3f,
+  mat4x4f: mat4x4f,
+} as const;
+
 const indexableTypeToResult = {
   vec2f: f32,
   vec2h: f16,
@@ -109,13 +128,13 @@ const indexableTypeToResult = {
 export function getTypeForPropAccess(
   targetType: Wgsl,
   propName: string,
-): BaseData | undefined {
+): BaseData | UnknownData {
   if (
     typeof targetType === 'string' ||
     typeof targetType === 'number' ||
     typeof targetType === 'boolean'
   ) {
-    return undefined;
+    return UnknownData;
   }
 
   if (isDerived(targetType) || isSlot(targetType)) {
@@ -125,7 +144,9 @@ export function getTypeForPropAccess(
         'Resolution context not found when unwrapping slot or derived',
       );
     }
-    return ctx.unwrap(targetType) as BaseData;
+    const unwrapped = ctx.unwrap(targetType);
+
+    return getTypeFromWgsl(unwrapped as Wgsl) as BaseData;
   }
 
   let target = targetType as BaseData;
@@ -141,7 +162,7 @@ export function getTypeForPropAccess(
     'kind' in target ? (target.kind as string) : target.type;
 
   if (targetTypeStr === 'struct') {
-    return (target as WgslStruct).propTypes[propName];
+    return (target as WgslStruct).propTypes[propName] ?? UnknownData;
   }
 
   const propLength = propName.length;
@@ -160,18 +181,10 @@ export function getTypeForPropAccess(
     }
   }
 
-  return isWgslData(target) ? target : undefined;
+  return isWgslData(target) ? target : UnknownData;
 }
 
-export function getTypeForIndexAccess(resource: Wgsl): BaseData | undefined {
-  if (typeof resource === 'string' || typeof resource === 'number') {
-    return undefined;
-  }
-
-  if (isDerived(resource) || isSlot(resource)) {
-    return getTypeForIndexAccess(resource.value as Wgsl);
-  }
-
+export function getTypeForIndexAccess(resource: Wgsl): BaseData | UnknownData {
   if (isWgslData(resource)) {
     // array
     if (isWgslArray(resource)) {
@@ -186,10 +199,10 @@ export function getTypeForIndexAccess(resource: Wgsl): BaseData | undefined {
     }
   }
 
-  return undefined;
+  return UnknownData;
 }
 
-export function getTypeFromWgsl(resource: Wgsl): AnyWgslData | UnknownData {
+export function getTypeFromWgsl(resource: Wgsl): BaseData | UnknownData {
   if (isDerived(resource) || isSlot(resource)) {
     return getTypeFromWgsl(resource.value as Wgsl);
   }
@@ -202,6 +215,13 @@ export function getTypeFromWgsl(resource: Wgsl): AnyWgslData | UnknownData {
   }
   if (typeof resource === 'boolean') {
     return bool;
+  }
+
+  if ('kind' in resource) {
+    const kind = resource.kind;
+    if (kind in kindToSchema) {
+      return kindToSchema[kind];
+    }
   }
 
   return isWgslData(resource) ? resource : UnknownData;

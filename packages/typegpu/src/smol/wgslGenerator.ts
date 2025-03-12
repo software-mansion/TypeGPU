@@ -177,28 +177,26 @@ export function generateExpression(
     if (typeof target.value === 'string') {
       return {
         value: `${target.value}.${property}`,
-        dataType:
-          getTypeForPropAccess(target.dataType as Wgsl, property) ??
-          UnknownData,
+        dataType: getTypeForPropAccess(target.dataType as Wgsl, property),
       };
     }
     // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
-    const value = (target.value as any)[property];
+    const propValue = (target.value as any)[property];
 
     if (isWgsl(target.value)) {
       return {
-        value,
-        dataType:
-          getTypeForPropAccess(target.value as d.AnyWgslData, property) ??
-          UnknownData,
+        value: propValue,
+        dataType: getTypeForPropAccess(target.value as d.AnyWgslData, property),
       };
     }
 
     if (typeof target.value === 'object') {
-      const dataType = isWgsl(value) ? getTypeFromWgsl(value) : UnknownData;
+      const dataType = isWgsl(propValue)
+        ? getTypeFromWgsl(propValue)
+        : UnknownData;
 
       return {
-        value,
+        value: propValue,
         dataType,
       };
     }
@@ -216,9 +214,7 @@ export function generateExpression(
 
     return {
       value: `${targetStr}[${propertyStr}]`,
-      dataType:
-        getTypeForIndexAccess(targetExpr.dataType as d.AnyWgslData) ??
-        UnknownData,
+      dataType: getTypeForIndexAccess(targetExpr.dataType as d.AnyWgslData),
     };
   }
 

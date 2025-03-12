@@ -1,11 +1,12 @@
 import { JitTranspiler } from 'tgpu-jit';
 import { parse } from 'tgpu-wgsl-parser';
 import type * as smol from 'tinyest';
-import { beforeEach, describe, expect, vi } from 'vitest';
+import { beforeEach, describe, expect, afterEach } from 'vitest';
 import { StrictNameRegistry } from '../../src';
 import tgpu from '../../src';
 import { getPrebuiltAstFor } from '../../src/core/function/astUtils';
 import * as d from '../../src/data';
+import { mul } from '../../src/std';
 import { abstractFloat, abstractInt } from '../../src/data/numeric';
 import * as gpu from '../../src/gpuMode';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx';
@@ -14,6 +15,7 @@ import * as wgslGenerator from '../../src/smol/wgslGenerator';
 import * as std from '../../src/std';
 import { Void } from '../../src/types';
 import { it } from '../utils/extendedIt';
+import { parseResolved } from '../utils/parseResolved';
 
 const transpiler = new JitTranspiler();
 
@@ -28,8 +30,12 @@ describe('wgslGenerator', () => {
   let ctx: ResolutionCtxImpl;
 
   beforeEach(() => {
-    vi.spyOn(gpu, 'inGPUMode').mockReturnValue(true);
+    gpu.pushMode(gpu.RuntimeMode.GPU);
     ctx = createContext();
+  });
+
+  afterEach(() => {
+    gpu.popMode(gpu.RuntimeMode.GPU);
   });
 
   it('creates a simple return statement', () => {
@@ -486,5 +492,57 @@ describe('wgslGenerator', () => {
     const gen = wgslGenerator.generateFunction(ctx, parsed);
 
     expect(parse(gen)).toEqual(parse('{var i = 0;while((i < 10)){i += 1;}}'));
+  });
+
+  it('creates correct resources for derived values and slots', ({ root }) => {
+    const numberSlot = tgpu['~unstable'].slot(44);
+    const derived = tgpu['~unstable'].derived(() =>
+      mul(d.u32(numberSlot.value), d.vec4u(1, 2, 3, 4)),
+    );
+
+    const testFn = tgpu['~unstable']
+      .fn([], d.vec4u)
+      .does(() => {
+        return derived.value;
+      })
+      .$name('testFn');
+
+    expect(parseResolved({ testFn })).toEqual(
+      parse(`
+      fn testFn() -> vec4u {
+        return vec4u(44, 88, 132, 176);
+      }`),
+    );
+
+    const astInfo = getPrebuiltAstFor(
+      testFn[$internal].implementation as (...args: unknown[]) => unknown,
+    );
+
+    if (!astInfo) {
+      throw new Error('Expected prebuilt AST to be present');
+    }
+
+    // biome-ignore format: <it's better that way>
+    const expectedAst = { b: [{ r: { a: ['derived', 'value'], }, },], } as const;
+
+    expect(astInfo.ast.body).toEqual(expectedAst);
+
+    ctx[$internal].itemStateStack.pushFunctionScope(
+      [],
+      d.vec4u,
+      astInfo.externals ?? {},
+    );
+
+    // Check for: return derived.value;
+    //                      ^ this should be a u32
+    const res = gpu.provideCtx(ctx, () =>
+      wgslGenerator.generateExpression(
+        ctx,
+        (astInfo.ast.body as unknown as typeof expectedAst).b[0]
+          .r as smol.Expression,
+      ),
+    );
+
+    expect(res.dataType).toEqual(d.vec4u);
   });
 });

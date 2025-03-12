@@ -135,18 +135,11 @@ class ItemStateStackImpl implements ItemStateStack {
   }
 
   popBlockScope() {
-    // pop block scope (if top layer is not block scope, traverse until block scope is found)
-    while (this._stack.length > 0) {
-      const layer = this._stack[this._stack.length - 1];
-      if (!layer) {
-        throw new Error('Internal error, expected a layer to be on top.');
-      }
-      if (layer.type === 'blockScope') {
-        this._stack.pop();
-        return;
-      }
-      this._stack.pop();
+    const layer = this._stack[this._stack.length - 1];
+    if (!layer || layer.type !== 'blockScope') {
+      throw new Error('Internal error, expected a layer to be on top.');
     }
+    this._stack.pop();
   }
 
   pop() {
@@ -487,9 +480,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       // If we got here, no item with the given slot-to-value combo exists in cache yet
+      // Derived computations are always done on the CPU
       pushMode(RuntimeMode.CPU);
-      const result = derived['~compute']();
-      popMode(RuntimeMode.CPU);
+
+      let result: T;
+      try {
+        result = derived['~compute']();
+      } finally {
+        popMode(RuntimeMode.CPU);
+      }
 
       // We know which slots the item used while resolving
       const slotToValueMap = new Map<TgpuSlot<unknown>, unknown>();
