@@ -317,13 +317,15 @@ export function reflect<T extends vBase>(e1: T, e2: T): T {
 export function isCloseTo<T extends v2f | v3f | v4f | v2h | v3h | v4h>(
   e1: T,
   e2: T,
-  precision = 2,
+  precisionDigits = 2,
 ): boolean {
-  const diffLimit = 10 ** -precision;
+  const prec = 10 ** -precisionDigits;
 
   if (inGPUMode()) {
-    return `all(abs(${e1}-${e2}) <= (${e1}-${e1})+${diffLimit})` as unknown as boolean;
+    // https://www.w3.org/TR/WGSL/#vector-multi-component:~:text=Binary%20arithmetic%20expressions%20with%20mixed%20scalar%20and%20vector%20operands
+    // (a-a)+prec creates a vector of a.length elements, all equal to prec
+    return `all(abs(${e1}-${e2}) <= (${e1}-${e1})+${prec})` as unknown as boolean;
   }
 
-  return VectorOps.isCloseToZero[e1.kind](sub(e1, e2), diffLimit);
+  return VectorOps.isCloseToZero[e1.kind](sub(e1, e2), prec);
 }
