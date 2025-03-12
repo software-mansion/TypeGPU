@@ -40,11 +40,10 @@ export const valueProxyHandler: ProxyHandler<
           `.value(...).${String(prop)}:${target.label ?? '<unnamed>'}`,
 
         [$internal]: {
-          dataType:
-            getTypeForPropAccess(
-              target[$internal].dataType as Wgsl,
-              String(prop),
-            ) ?? target[$internal].dataType,
+          dataType: getTypeForPropAccess(
+            target[$internal].dataType as Wgsl,
+            String(prop),
+          ) as BaseData,
         },
       },
       valueProxyHandler,
