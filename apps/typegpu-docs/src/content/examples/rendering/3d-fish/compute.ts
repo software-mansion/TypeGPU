@@ -5,12 +5,8 @@ import tgpu from 'typegpu';
 import * as p from './params';
 import { distance, distanceVectorFromLine } from './tgsl-helpers';
 
-const {
-  currentFishData: computeCurrentFishData,
-  nextFishData: computeNextFishData,
-  mouseRay: computeMouseRay,
-  timePassed: computeTimePassed,
-} = computeBindGroupLayout.bound;
+const { currentFishData, nextFishData, mouseRay, timePassed } =
+  computeBindGroupLayout.bound;
 
 export const mainCompute = tgpu['~unstable']
   .computeFn({
@@ -19,7 +15,7 @@ export const mainCompute = tgpu['~unstable']
   })
   .does((input) => {
     const fishIndex = input.gid.x;
-    const fishData = computeCurrentFishData.value[fishIndex];
+    const fishData = currentFishData.value[fishIndex];
     let separation = d.vec3f();
     let alignment = d.vec3f();
     let alignmentCount = 0;
@@ -33,7 +29,7 @@ export const mainCompute = tgpu['~unstable']
         continue;
       }
 
-      const other = computeCurrentFishData.value[i];
+      const other = currentFishData.value[i];
       const dist = distance(fishData.position, other.position);
       if (dist < p.fishSeparationDistance) {
         separation = std.add(
@@ -78,10 +74,10 @@ export const mainCompute = tgpu['~unstable']
       }
     }
 
-    if (computeMouseRay.value.activated === 1) {
+    if (mouseRay.value.activated === 1) {
       const distanceVector = distanceVectorFromLine(
-        computeMouseRay.value.pointX,
-        computeMouseRay.value.pointY,
+        mouseRay.value.pointX,
+        mouseRay.value.pointY,
         fishData.position,
       );
       const limit = p.fishMouseRayRepulsionDistance;
@@ -117,9 +113,9 @@ export const mainCompute = tgpu['~unstable']
     );
 
     const translation = std.mul(
-      d.f32(std.min(999, computeTimePassed.value)) / 8,
+      d.f32(std.min(999, timePassed.value)) / 8,
       fishData.direction,
     );
     fishData.position = std.add(fishData.position, translation);
-    computeNextFishData.value[fishIndex] = fishData;
+    nextFishData.value[fishIndex] = fishData;
   });
