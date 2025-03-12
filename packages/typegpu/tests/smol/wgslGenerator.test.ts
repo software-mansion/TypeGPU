@@ -1,12 +1,11 @@
 import { JitTranspiler } from 'tgpu-jit';
 import { parse } from 'tgpu-wgsl-parser';
 import type * as smol from 'tinyest';
-import { beforeEach, describe, expect, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
 import { StrictNameRegistry } from '../../src';
 import tgpu from '../../src';
 import { getPrebuiltAstFor } from '../../src/core/function/astUtils';
 import * as d from '../../src/data';
-import { mul } from '../../src/std';
 import { abstractFloat, abstractInt } from '../../src/data/numeric';
 import * as gpu from '../../src/gpuMode';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx';
@@ -32,6 +31,7 @@ describe('wgslGenerator', () => {
   beforeEach(() => {
     gpu.pushMode(gpu.RuntimeMode.GPU);
     ctx = createContext();
+    vi.spyOn(gpu, 'getResolutionCtx').mockReturnValue(ctx);
   });
 
   afterEach(() => {
@@ -497,7 +497,7 @@ describe('wgslGenerator', () => {
   it('creates correct resources for derived values and slots', ({ root }) => {
     const numberSlot = tgpu['~unstable'].slot(44);
     const derived = tgpu['~unstable'].derived(() =>
-      mul(d.u32(numberSlot.value), d.vec4u(1, 2, 3, 4)),
+      std.mul(d.u32(numberSlot.value), d.vec4u(1, 2, 3, 4)),
     );
 
     const testFn = tgpu['~unstable']
@@ -535,14 +535,57 @@ describe('wgslGenerator', () => {
 
     // Check for: return derived.value;
     //                      ^ this should be a u32
-    const res = gpu.provideCtx(ctx, () =>
-      wgslGenerator.generateExpression(
-        ctx,
-        (astInfo.ast.body as unknown as typeof expectedAst).b[0]
-          .r as smol.Expression,
-      ),
+    const res = wgslGenerator.generateExpression(
+      ctx,
+      (astInfo.ast.body as unknown as typeof expectedAst).b[0]
+        .r as smol.Expression,
     );
 
     expect(res.dataType).toEqual(d.vec4u);
+  });
+
+  it('creates correct resources for indexing into a derived value', ({
+    root,
+  }) => {
+    const numberSlot = tgpu['~unstable'].slot(44);
+    const derived = tgpu['~unstable'].derived(() =>
+      std.mul(d.f32(numberSlot.value), d.vec2f(1, 2)),
+    );
+
+    const testFn = tgpu['~unstable']
+      .fn([d.u32], d.f32)
+      .does((idx) => {
+        return derived.value[idx] as number;
+      })
+      .$name('testFn');
+
+    const astInfo = getPrebuiltAstFor(
+      testFn[$internal].implementation as (...args: unknown[]) => unknown,
+    );
+
+    if (!astInfo) {
+      throw new Error('Expected prebuilt AST to be present');
+    }
+
+    // biome-ignore format: <it's better that way>
+    const expectedAst = { b: [{ r: { i: [{ a: ['derived', 'value'], }, 'idx'] }, },], } as const;
+
+    expect(astInfo.ast.body).toEqual(expectedAst);
+
+    ctx[$internal].itemStateStack.pushFunctionScope(
+      [{ value: 'idx', dataType: d.u32 }],
+      d.f32,
+      astInfo.externals ?? {},
+    );
+
+    // Check for: return derived.value[idx];
+    //                      ^ this should be a u32
+    const res = wgslGenerator.generateExpression(
+      ctx,
+      (astInfo.ast.body as unknown as typeof expectedAst).b[0]
+        .r as smol.Expression,
+    );
+
+    expect(res.dataType).toEqual(d.f32);
   });
 });

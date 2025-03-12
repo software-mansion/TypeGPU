@@ -1,5 +1,5 @@
-import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix';
 import { isDerived, isSlot } from '../core/slot/slotTypes';
+import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix';
 import {
   abstractFloat,
   abstractInt,
