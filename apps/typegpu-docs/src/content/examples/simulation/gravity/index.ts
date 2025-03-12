@@ -111,17 +111,33 @@ function updateCubePhysics() {
   const dt = (now - lastTime) / 1000;
   lastTime = now;
 
-  cubeVelocity.y += G * dt;
+  const distance = Math.hypot(cubePos.x, cubePos.y, cubePos.z);
+  // Avoid division by zero.
+  const invLength = distance > 0 ? 1 / distance : 0;
+  const normDir = {
+    x: cubePos.x * invLength,
+    y: cubePos.y * invLength,
+    z: cubePos.z * invLength,
+  };
+
+  // acceleration
+  cubeVelocity.x += -G * normDir.x * dt;
+  cubeVelocity.y += -G * normDir.y * dt;
+  cubeVelocity.z += -G * normDir.z * dt;
+
+  // position
+  cubePos.x += cubeVelocity.x * dt;
   cubePos.y += cubeVelocity.y * dt;
-  console.log('Cube position:', cubePos.y);
-  console.log('Cube velocity:', cubeVelocity.y);
+  cubePos.z += cubeVelocity.z * dt;
+
+  console.log('Cube position:', cubePos);
+  console.log('Cube velocity:', cubeVelocity);
+
   m.mat4.identity(cubeModelMatrix);
   m.mat4.translate(cubeModelMatrix, d.vec3f(cubePos.x, cubePos.y, cubePos.z), cubeModelMatrix);
-  objectBuffer.write({
-    modelMatrix: cubeModelMatrix,
-  });
-  
+  objectBuffer.write({ modelMatrix: cubeModelMatrix });
 }
+
 // Frame loop
 function frame() {
   if (destroyed) {
