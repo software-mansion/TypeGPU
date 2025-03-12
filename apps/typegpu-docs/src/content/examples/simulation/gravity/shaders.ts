@@ -2,10 +2,10 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { add, dot, max, mul, normalize, pow, sub } from 'typegpu/std';
 import { lightDirection, lightPosition } from './env';
-import { bindGroupLayout } from './structs';
+import { bindGroupLayout, bindObjectLayout } from './structs';
 
 export const EXT = bindGroupLayout.bound;
-
+export const extObject = bindObjectLayout.bound;
 const VertexOutput = {
   position: d.builtin.position,
   uv: d.vec2f,
@@ -20,9 +20,11 @@ export const mainVertex = tgpu['~unstable']
   })
   .does((input) => {
     const camera = EXT.camera.value;
-    const worldPosition = input.position;
-    const relativeToCamera = mul(camera.view, worldPosition);
 
+
+    const object = extObject.object.value; 
+    const worldPosition = mul(object.modelMatrix, input.position);
+    const relativeToCamera = mul(camera.view, worldPosition);
     return {
       position: mul(camera.projection, relativeToCamera),
       uv: input.uv,

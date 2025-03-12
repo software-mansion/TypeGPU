@@ -9,4 +9,4 @@ export const cameraInitialPos = d.vec4f(5, 2, 5, 1);
 
 export const cubePos = { x: 0, y: 10, z: 0 }; 
 export const cubeVelocity = { x: 0, y: 0, z: 0 };
-export const gravity = -9.8; // gravity acceleration
+export const G = -9.8; // gravity acceleration

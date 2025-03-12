@@ -3,8 +3,8 @@ import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
 import { mainFragment, mainVertex } from './shaders';
 import { cubeModel, vertices } from './cube';
-import { cameraInitialPos, cubePos, cubeVelocity, gravity, target } from './env';
-import { bindGroupLayout, CameraStruct, objectLayout, ObjectStruct, VertexStruct } from './structs';
+import { cameraInitialPos, cubePos, cubeVelocity, G, target } from './env';
+import { bindGroupLayout, CameraStruct, bindObjectLayout, ObjectStruct, VertexStruct } from './structs';
 
 
 const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(VertexStruct, n));
@@ -69,7 +69,7 @@ const objectBuffer = root.createBuffer(ObjectStruct, {
   modelMatrix: cubeModelMatrix,
 }).$usage('uniform');
 
-const objectBindGroup = root.createBindGroup(objectLayout, {
+const objectBindGroup = root.createBindGroup(bindObjectLayout, {
   object: objectBuffer,
 });
 
@@ -96,10 +96,12 @@ function render() {
     })
     .with(vertexLayout, vertexBuffer)
     .with(bindGroupLayout, bindGroup)
+    .with(bindObjectLayout, objectBindGroup)
     .draw(36);
 
   root['~unstable'].flush();
 }
+
 console.log('Cube position:', await vertexBuffer.read());
 
 let destroyed = false;
@@ -109,8 +111,10 @@ function updateCubePhysics() {
   const dt = (now - lastTime) / 1000;
   lastTime = now;
 
-  cubeVelocity.y += gravity * dt;
+  cubeVelocity.y += G * dt;
   cubePos.y += cubeVelocity.y * dt;
+  console.log('Cube position:', cubePos.y);
+  console.log('Cube velocity:', cubeVelocity.y);
   m.mat4.identity(cubeModelMatrix);
   m.mat4.translate(cubeModelMatrix, d.vec3f(cubePos.x, cubePos.y, cubePos.z), cubeModelMatrix);
   objectBuffer.write({
@@ -167,6 +171,7 @@ function updateCameraOrbit(dx: number, dy: number) {
   const newCamY = -orbitRadius * Math.sin(orbitPitch);
   const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
   const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
+  // const newCameraPos = cameraInitialPos;
 
   const newView = m.mat4.lookAt(
     newCameraPos,

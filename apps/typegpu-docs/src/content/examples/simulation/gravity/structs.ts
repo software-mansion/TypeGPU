@@ -16,7 +16,7 @@ export const ObjectStruct = d.struct({
   modelMatrix: d.mat4x4f,
 });
 
-export const objectLayout = tgpu.bindGroupLayout({
+export const bindObjectLayout = tgpu.bindGroupLayout({
   object: { uniform: ObjectStruct },
 });
 
