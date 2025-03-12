@@ -9,12 +9,8 @@ import * as d from 'typegpu/data';
 import * as p from './params';
 import { distance, hsvToRgb, reflect, rgbToHsv } from './tgsl-helpers';
 
-const {
-  camera: renderCamera,
-  modelTexture: renderModelTexture,
-  sampler: renderSampler,
-  modelData: renderModelData,
-} = renderBindGroupLayout.bound;
+const { camera, modelTexture, sampler, modelData } =
+  renderBindGroupLayout.bound;
 
 export const vertexShader = tgpu['~unstable']
   .vertexFn({
@@ -24,11 +20,11 @@ export const vertexShader = tgpu['~unstable']
   .does((input) => {
     // rotate the model so that it aligns with model's direction of movement
     // https://simple.wikipedia.org/wiki/Pitch,_yaw,_and_roll
-    const modelData = renderModelData.value[input.instanceIndex];
+    const currentModelData = modelData.value[input.instanceIndex];
 
     const modelPosition = input.modelPosition;
 
-    const direction = std.normalize(modelData.direction);
+    const direction = std.normalize(currentModelData.direction);
 
     const yaw = std.atan2(direction.z, direction.x) + Math.PI;
     // biome-ignore format:
@@ -49,9 +45,9 @@ export const vertexShader = tgpu['~unstable']
     const worldPosition = std.add(
       std.mul(
         yawMatrix,
-        std.mul(pitchMatrix, std.mul(modelData.scale, modelPosition)),
+        std.mul(pitchMatrix, std.mul(currentModelData.scale, modelPosition)),
       ),
-      modelData.position,
+      currentModelData.position,
     );
 
     // calculate where the normal vector points to
@@ -62,8 +58,8 @@ export const vertexShader = tgpu['~unstable']
     // project the world position into the camera
     const worldPositionUniform = d.vec4f(worldPosition.xyz, 1);
     const canvasPosition = std.mul(
-      renderCamera.value.projection,
-      std.mul(renderCamera.value.view, worldPositionUniform),
+      camera.value.projection,
+      std.mul(camera.value.view, worldPositionUniform),
     );
 
     return {
@@ -71,9 +67,8 @@ export const vertexShader = tgpu['~unstable']
       textureUV: input.textureUV,
       worldNormal: worldNormal,
       worldPosition: worldPosition,
-      applySeaFog: renderModelData.value[input.instanceIndex].applySeaFog,
-      applySeaDesaturation:
-        renderModelData.value[input.instanceIndex].applySeaDesaturation,
+      applySeaFog: currentModelData.applySeaFog,
+      applySeaDesaturation: currentModelData.applySeaDesaturation,
     };
   });
 
@@ -82,7 +77,7 @@ const sampleTexture = tgpu['~unstable']
   .does(/*wgsl*/ `(uv: vec2<f32>) -> vec4<f32> {
       return textureSample(shaderTexture, shaderSampler, uv);
     }`)
-  .$uses({ shaderTexture: renderModelTexture, shaderSampler: renderSampler })
+  .$uses({ shaderTexture: modelTexture, shaderSampler: sampler })
   .$name('sampleShader');
 
 export const fragmentShader = tgpu['~unstable']
@@ -96,7 +91,7 @@ export const fragmentShader = tgpu['~unstable']
     // then apply sea fog and sea desaturation
 
     const viewDirection = std.normalize(
-      std.sub(renderCamera.value.position.xyz, input.worldPosition),
+      std.sub(camera.value.position.xyz, input.worldPosition),
     );
     const textureColorWithAlpha = sampleTexture(input.textureUV); // base color
     const textureColor = textureColorWithAlpha.xyz;
@@ -128,7 +123,7 @@ export const fragmentShader = tgpu['~unstable']
     const lightedColor = std.add(ambient, std.add(diffuse, specular));
 
     const distanceFromCamera = distance(
-      renderCamera.value.position.xyz,
+      camera.value.position.xyz,
       input.worldPosition,
     );
 
