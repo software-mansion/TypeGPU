@@ -313,3 +313,17 @@ export function reflect<T extends vBase>(e1: T, e2: T): T {
 
   return sub(e1, mul(2 * dot(e2, e1), e2));
 }
+
+export function isCloseTo<T extends v2f | v3f | v4f | v2h | v3h | v4h>(
+  e1: T,
+  e2: T,
+  precision = 2,
+): boolean {
+  const diffLimit = 10 ** -precision;
+
+  if (inGPUMode()) {
+    return `all(abs(${e1}-${e2}) <= (${e1}-${e1})+${diffLimit})` as unknown as boolean;
+  }
+
+  return VectorOps.isCloseToZero[e1.kind](sub(e1, e2), diffLimit);
+}
