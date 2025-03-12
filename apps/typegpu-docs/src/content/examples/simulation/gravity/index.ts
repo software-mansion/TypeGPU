@@ -111,24 +111,14 @@ function updateCubePhysics() {
   const dt = (now - lastTime) / 1000;
   lastTime = now;
 
-  const distance = Math.hypot(cubePos.x, cubePos.y, cubePos.z);
-  // Avoid division by zero.
-  const invLength = distance > 0 ? 1 / distance : 0;
-  const normDir = {
-    x: cubePos.x * invLength,
-    y: cubePos.y * invLength,
-    z: cubePos.z * invLength,
-  };
+  const dist = Math.hypot(cubePos.x, cubePos.y, cubePos.z);
+  const normDir = dist ? { x: cubePos.x / dist, y: cubePos.y / dist, z: cubePos.z / dist } : { x: 0, y: 0, z: 0 };
 
-  // acceleration
-  cubeVelocity.x += -G * normDir.x * dt;
-  cubeVelocity.y += -G * normDir.y * dt;
-  cubeVelocity.z += -G * normDir.z * dt;
-
-  // position
-  cubePos.x += cubeVelocity.x * dt;
-  cubePos.y += cubeVelocity.y * dt;
-  cubePos.z += cubeVelocity.z * dt;
+  for (const axis of ['x', 'y', 'z'] as const) {
+    cubeVelocity[axis] += -G * normDir[axis] * dt;
+    cubePos[axis] += cubeVelocity[axis] * dt;
+    cubeVelocity[axis] *= 0.99;
+  }
 
   console.log('Cube position:', cubePos);
   console.log('Cube velocity:', cubeVelocity);
