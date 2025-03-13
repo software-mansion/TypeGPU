@@ -737,6 +737,13 @@ describe('TgpuBindGroup', () => {
         }),
       });
 
+      root.createBindGroup(layout3d, {
+        // @ts-expect-error - invalid access
+        foo: texture.createView('mutable', {
+          dimension: '3d',
+        }),
+      });
+
       expect(root.device.createBindGroupLayout).not.toBeCalled();
       root.unwrap(bindGroup);
       expect(root.device.createBindGroupLayout).toBeCalled();
