@@ -7,7 +7,7 @@ import {
   ModelVertexOutput,
   renderBindGroupLayout,
 } from './schemas';
-import { distance, hsvToRgb, rgbToHsv } from './tgsl-helpers';
+import { hsvToRgb, rgbToHsv } from './tgsl-helpers';
 
 const { camera, modelTexture, sampler, modelData } =
   renderBindGroupLayout.bound;
@@ -121,9 +121,8 @@ export const fragmentShader = tgpu['~unstable']
 
     const lightedColor = std.add(ambient, std.add(diffuse, specular));
 
-    const distanceFromCamera = distance(
-      camera.value.position.xyz,
-      input.worldPosition,
+    const distanceFromCamera = std.length(
+      std.sub(camera.value.position.xyz, input.worldPosition),
     );
 
     let desaturatedColor = lightedColor;

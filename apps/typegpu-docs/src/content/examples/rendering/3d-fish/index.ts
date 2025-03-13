@@ -16,7 +16,6 @@ import {
   renderBindGroupLayout,
   renderInstanceLayout,
 } from './schemas';
-import { distance } from './tgsl-helpers';
 
 // setup
 
@@ -284,9 +283,8 @@ let isRightPressed = false;
 let isPopupDiscarded = false;
 const controlsPopup = document.getElementById('help') as HTMLDivElement;
 
-const cameraRadius = distance(
-  p.cameraInitialPosition.xyz,
-  p.cameraInitialTarget.xyz,
+const cameraRadius = std.length(
+  std.sub(p.cameraInitialPosition.xyz, p.cameraInitialTarget.xyz),
 );
 let cameraYaw =
   (Math.atan2(p.cameraInitialPosition.x, p.cameraInitialPosition.z) + Math.PI) %

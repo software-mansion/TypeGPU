@@ -3,7 +3,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as p from './params';
 import { computeBindGroupLayout } from './schemas';
-import { distance, distanceVectorFromLine } from './tgsl-helpers';
+import { distanceVectorFromLine } from './tgsl-helpers';
 
 const { currentFishData, nextFishData, mouseRay, timePassed } =
   computeBindGroupLayout.bound;
@@ -30,7 +30,7 @@ export const computeShader = tgpu['~unstable']
       }
 
       const other = currentFishData.value[i];
-      const dist = distance(fishData.position, other.position);
+      const dist = std.length(std.sub(fishData.position, other.position));
       if (dist < p.fishSeparationDistance) {
         separation = std.add(
           separation,

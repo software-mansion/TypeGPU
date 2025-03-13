@@ -89,14 +89,6 @@ export const rgbToHsv = tgpu['~unstable']
   })
   .$name('rgb to hsv');
 
-export const distance = tgpu['~unstable']
-  .fn([d.vec3f, d.vec3f], d.f32)
-  .does((v1, v2) => {
-    const diff = std.sub(v1, v2);
-    return std.pow(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z, 0.5);
-  })
-  .$name('distance');
-
 // given a line and a point,
 // calculate a vector from the line to the point of the shortest length
 export const distanceVectorFromLine = tgpu['~unstable']
