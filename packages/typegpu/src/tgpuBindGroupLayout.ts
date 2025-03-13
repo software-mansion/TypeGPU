@@ -665,8 +665,17 @@ export class TgpuBindGroupImpl<
                 throw new NotSampledError(value);
               }
 
+              const dimension = entry.viewDimension ?? undefined;
+
               resource = unwrapper.unwrap(
-                (value as TgpuTexture & Sampled).createView('sampled'),
+                (value as TgpuTexture & Sampled).createView(
+                  'sampled',
+                  dimension
+                    ? {
+                        dimension,
+                      }
+                    : undefined,
+                ),
               );
             } else if (isSampledTextureView(value)) {
               resource = unwrapper.unwrap(value);
