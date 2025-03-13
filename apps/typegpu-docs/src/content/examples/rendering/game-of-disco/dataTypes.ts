@@ -6,10 +6,10 @@ export const Camera = d.struct({
   position: d.vec4f,
 });
 
-export const Vertex = d.struct({
-  position: d.vec4f,
-  color: d.vec4f,
-  normal: d.vec4f,
+export const Vertex = d.unstruct({
+  position: d.float16x4,
+  color: d.unorm8x4,
+  normal: d.float16x4,
 });
 
 export const CubeVertex = d.struct({
