@@ -18,38 +18,12 @@ const stripFalsy = (items) =>
 
 const DEV = import.meta.env.DEV;
 
-/**
- * Plugin that converts code transformed by the `typegpu` plugin to a raw string.
- * @returns {{
- *   name: string;
- *   enforce: 'post';
- *   transform(code: string, id: string): { code: string } | undefined;
- * }}
- */
-function toRawPlugin() {
-  return {
-    name: 'to-raw',
-    enforce: 'post',
-
-    transform(code, id) {
-      if (id.endsWith('?tgpu=true')) {
-        return {
-          code: `export default ${JSON.stringify(code)
-            .replace(/\u2028/g, '\\u2028')
-            .replace(/\u2029/g, '\\u2029')};`,
-        };
-      }
-      return undefined;
-    },
-  };
-}
-
 // https://astro.build/config
 export default defineConfig({
   site: 'https://docs.swmansion.com',
   base: 'TypeGPU',
   vite: {
-    plugins: [typegpu({ include: [/tgpu=true/] }), toRawPlugin()],
+    plugins: [typegpu({ include: [/content\/examples.+\.ts/] })],
   },
   integrations: [
     starlight({
