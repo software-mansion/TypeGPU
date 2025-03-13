@@ -408,6 +408,7 @@ resizeObserver.observe(canvas);
 
 export function onCleanup() {
   disposed = true;
+  resizeObserver.disconnect();
   root.destroy();
 }
 
