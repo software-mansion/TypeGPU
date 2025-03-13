@@ -11,6 +11,7 @@ export type Context = {
 
 export interface TypegpuPluginOptions {
   include?: 'all' | RegExp[];
+  forceTgpuAlias?: string;
 }
 
 export function embedJSON(jsValue: unknown) {

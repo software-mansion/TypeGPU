@@ -38,21 +38,28 @@ function functionVisitor(ctx: Context): TraverseOptions {
             implementation.type === 'ArrowFunctionExpression')
         ) {
           const { argNames, body, externalNames } = transpileFn(implementation);
+          const tgpuAlias = ctx.tgpuAliases.values().next().value;
+          if (tgpuAlias === undefined) {
+            throw new Error('No typegpu import found, cannot assign ast.');
+          }
 
           path.replaceWith(
             types.callExpression(node.callee, [
-              types.callExpression(template.expression('tgpu.__assignAst')(), [
-                implementation,
-                template.expression`${embedJSON({ argNames, body, externalNames })}`(),
-                types.objectExpression(
-                  externalNames.map((name) =>
-                    types.objectProperty(
-                      types.identifier(name),
-                      types.identifier(name),
+              types.callExpression(
+                template.expression(`${tgpuAlias}.__assignAst`)(),
+                [
+                  implementation,
+                  template.expression`${embedJSON({ argNames, body, externalNames })}`(),
+                  types.objectExpression(
+                    externalNames.map((name) =>
+                      types.objectProperty(
+                        types.identifier(name),
+                        types.identifier(name),
+                      ),
                     ),
                   ),
-                ),
-              ]),
+                ],
+              ),
             ]),
           );
 
@@ -79,7 +86,9 @@ export default function () {
         }
 
         const ctx: Context = {
-          tgpuAliases: new Set(['tgpu']),
+          tgpuAliases: new Set<string>(
+            options?.forceTgpuAlias ? [options.forceTgpuAlias] : [],
+          ),
         };
 
         path.traverse(functionVisitor(ctx));
