@@ -18,6 +18,7 @@ export {
   max,
   min,
   normalize,
+  distance,
   sin,
   exp,
   mix,
