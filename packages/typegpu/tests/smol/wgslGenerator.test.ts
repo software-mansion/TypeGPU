@@ -321,7 +321,7 @@ describe('wgslGenerator', () => {
     );
 
     // Check for: const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
-    //                           ^ this part should be a u32
+    //                           ^ this part should be a i32
     const res = wgslGenerator.generateExpression(
       ctx,
       // biome-ignore lint/style/noNonNullAssertion: <it's there>
