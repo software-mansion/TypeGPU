@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { vec2h, vec3h, vec4h, vec2f, vec3f, vec4f } from '../../src/data';
+import { vec2f, vec2h, vec3f, vec3h, vec4f, vec4h } from '../../src/data';
 import { isCloseTo } from '../../src/std/numeric';
 
 describe('isCloseTo', () => {
