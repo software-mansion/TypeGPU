@@ -156,6 +156,18 @@ export function generateExpression(
     };
   }
 
+  if ('p' in expression) {
+    // Update Expression
+    const [op, arg] = expression.p;
+    const argExpr = generateExpression(ctx, arg);
+    const argStr = resolveRes(ctx, argExpr);
+
+    return {
+      value: `${argStr}${op}`,
+      dataType: argExpr.dataType,
+    };
+  }
+
   if ('u' in expression) {
     // Unary Expression
     const [op, arg] = expression.u;
@@ -184,6 +196,13 @@ export function generateExpression(
     const propValue = (target.value as any)[property];
 
     if (isWgsl(target.value)) {
+      if (target.dataType.type.startsWith('mat') && property === 'columns') {
+        return {
+          value: target.value,
+          dataType: target.dataType,
+        };
+      }
+
       return {
         value: propValue,
         dataType: getTypeForPropAccess(target.value as d.AnyWgslData, property),

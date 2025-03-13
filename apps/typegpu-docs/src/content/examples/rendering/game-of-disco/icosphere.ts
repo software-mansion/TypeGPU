@@ -4,20 +4,13 @@ import { Vertex } from './dataTypes';
 /**
  * Creates an icosphere with the specified level of subdivision
  * @param subdivisions Number of recursive subdivisions to apply
+ * @param useNormalizedNormals Whether to use normalized vertex normals (true) or face normals (false)
  * @returns Array of vertices defining the icosphere triangles
  */
 export function createIcosphere(
   subdivisions: number,
+  useNormalizedNormals = true,
 ): d.Infer<typeof Vertex>[] {
-  const maxSafeSubdivisions = 8;
-  const actualSubdivisions = Math.min(subdivisions, maxSafeSubdivisions);
-
-  if (subdivisions > maxSafeSubdivisions) {
-    console.warn(
-      `Requested ${subdivisions} subdivisions, but limiting to ${maxSafeSubdivisions} to prevent too many vertices`,
-    );
-  }
-
   // Golden ratio for icosahedron construction
   const goldenRatio = (1 + Math.sqrt(5)) / 2;
 
@@ -82,8 +75,9 @@ export function createIcosphere(
       initialVertices[i1],
       initialVertices[i2],
       initialVertices[i3],
-      actualSubdivisions,
+      subdivisions,
       vertices,
+      useNormalizedNormals,
     );
   }
 
@@ -99,12 +93,30 @@ function subdivideTriangle(
   v3: d.v4f,
   depth: number,
   vertices: ReturnType<typeof Vertex>[],
+  useNormalizedNormals: boolean,
 ): void {
   if (depth === 0) {
     // Base case: add the triangle vertices
-    vertices.push(createVertex(v1));
-    vertices.push(createVertex(v2));
-    vertices.push(createVertex(v3));
+    if (useNormalizedNormals) {
+      vertices.push(createVertex(v1, v1));
+      vertices.push(createVertex(v2, v2));
+      vertices.push(createVertex(v3, v3));
+    } else {
+      // Calculate face normal
+      const edge1 = d.vec4f(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z, 0);
+      const edge2 = d.vec4f(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z, 0);
+      const faceNormal = normalizeSafely(
+        d.vec4f(
+          edge1.y * edge2.z - edge1.z * edge2.y,
+          edge1.z * edge2.x - edge1.x * edge2.z,
+          edge1.x * edge2.y - edge1.y * edge2.x,
+          0,
+        ),
+      );
+      vertices.push(createVertex(v1, faceNormal));
+      vertices.push(createVertex(v2, faceNormal));
+      vertices.push(createVertex(v3, faceNormal));
+    }
     return;
   }
 
@@ -114,10 +126,10 @@ function subdivideTriangle(
   const v31 = normalizeSafely(calculateMidpoint(v3, v1));
 
   // Recursively subdivide the four resulting triangles
-  subdivideTriangle(v1, v12, v31, depth - 1, vertices);
-  subdivideTriangle(v2, v23, v12, depth - 1, vertices);
-  subdivideTriangle(v3, v31, v23, depth - 1, vertices);
-  subdivideTriangle(v12, v23, v31, depth - 1, vertices);
+  subdivideTriangle(v1, v12, v31, depth - 1, vertices, useNormalizedNormals);
+  subdivideTriangle(v2, v23, v12, depth - 1, vertices, useNormalizedNormals);
+  subdivideTriangle(v3, v31, v23, depth - 1, vertices, useNormalizedNormals);
+  subdivideTriangle(v12, v23, v31, depth - 1, vertices, useNormalizedNormals);
 }
 
 /**
@@ -134,11 +146,12 @@ function calculateMidpoint(v1: d.v4f, v2: d.v4f): d.v4f {
 
 /**
  * Creates a vertex with position, color, and normal
- * For a unit sphere, the normal equals the normalized position
  */
-function createVertex(position: d.v4f): ReturnType<typeof Vertex> {
+function createVertex(
+  position: d.v4f,
+  normal: d.v4f,
+): ReturnType<typeof Vertex> {
   const color = d.vec4f(0.8, 1, 1, 1); // White color
-  const normal = position;
 
   return Vertex({
     position,

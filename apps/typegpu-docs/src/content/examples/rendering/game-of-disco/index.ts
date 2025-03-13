@@ -25,15 +25,16 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const subdivisions = 3;
-const vertices = createIcosphere(subdivisions);
+const subdivisions = 5;
+const vertices = createIcosphere(subdivisions, true);
+console.log(`Icosphere vertices: ${vertices.length}`);
 
 const cubeVertexBuffer = root
   .createBuffer(d.arrayOf(CubeVertex, cubeVertices.length), cubeVertices)
   .$usage('vertex');
 
 const vertexBuffer = root
-  .createBuffer(d.arrayOf(Vertex, vertices.length), vertices)
+  .createBuffer(d.disarrayOf(Vertex, vertices.length), vertices)
   .$usage('vertex');
 
 const cameraPosition = d.vec4f(0, 0, 5, 1); // Camera position for specular lighting
@@ -93,7 +94,7 @@ const renderBindGroup = root.createBindGroup(renderLayout, {
   sampler: cubemapSampler,
 });
 
-const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(Vertex, n));
+const vertexLayout = tgpu.vertexLayout((n: number) => d.disarrayOf(Vertex, n));
 
 const cubeVertexLayout = tgpu.vertexLayout((n: number) =>
   d.arrayOf(CubeVertex, n),
@@ -177,32 +178,33 @@ const cubeVertexFn = tgpu['~unstable']
     },
     out: {
       pos: d.builtin.position,
-      uv: d.vec2f,
-      fragPos: d.vec4f,
+      texCoord: d.vec3f,
     },
   })
   .does((input) => {
-    const pos = std.mul(camera.value.view, input.position);
-    const fragPos = std.mul(0.5, std.add(input.position, d.vec4f(1, 1, 1, 1)));
+    const viewRotationMatrix = d.mat4x4f(
+      camera.value.view.columns[0],
+      camera.value.view.columns[1],
+      camera.value.view.columns[2],
+      d.vec4f(0, 0, 0, 1),
+    );
+    const pos = std.mul(viewRotationMatrix, input.position);
     return {
       pos: std.mul(camera.value.projection, pos),
-      uv: input.uv,
-      fragPos: fragPos,
+      texCoord: input.position.xyz,
     };
   });
 
 const cubeFragmentFn = tgpu['~unstable']
   .fragmentFn({
     in: {
-      uv: d.vec2f,
-      fragPos: d.vec4f,
+      texCoord: d.vec3f,
     },
     out: d.vec4f,
   })
   .does(`(input: vi) -> @location(0) vec4f {
-    var cubemapVec = input.fragPos.xyz - vec3f(0.5);
-    cubemapVec.z *= -1.0;
-    return textureSample(cubemap, sampler, cubemapVec);
+    let dir = normalize(input.texCoord);
+    return textureSample(cubemap, sampler, dir);
   }`)
   .$uses({
     cubemap,
@@ -307,7 +309,7 @@ canvas.addEventListener('wheel', (event: WheelEvent) => {
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
   );
-  cameraBuffer.writePartial({ view: newView });
+  cameraBuffer.writePartial({ view: newView, position: newCameraPos });
 });
 
 canvas.addEventListener('mousedown', (event) => {

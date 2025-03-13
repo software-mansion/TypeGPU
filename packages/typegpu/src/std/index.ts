@@ -18,6 +18,7 @@ export {
   max,
   min,
   normalize,
+  distance,
   sin,
   exp,
   mix,
@@ -40,3 +41,5 @@ export {
   storageBarrier,
   textureBarrier,
 } from './atomic.js';
+
+export { arrayLength } from './array.js';
