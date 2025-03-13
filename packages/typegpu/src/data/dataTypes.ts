@@ -2,9 +2,11 @@ import type { TgpuNamable } from '../namable.js';
 import type {
   $repr,
   Infer,
+  InferGPURecord,
   InferPartial,
   InferPartialRecord,
   InferRecord,
+  MemIdentityRecord,
 } from '../shared/repr.js';
 import type { Prettify } from '../shared/utilityTypes.js';
 import { vertexFormats } from '../shared/vertexFormat.js';
@@ -38,12 +40,18 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
 export interface Unstruct<
   TProps extends Record<string, wgsl.BaseData> = Record<string, wgsl.BaseData>,
 > extends TgpuNamable {
+  (props: InferRecord<TProps>): InferRecord<TProps>;
   readonly label?: string | undefined;
   readonly type: 'unstruct';
   readonly propTypes: TProps;
   readonly [$repr]: Prettify<InferRecord<TProps>>;
+  readonly '~gpuRepr': InferGPURecord<TProps>;
+  readonly '~memIdent': Unstruct<MemIdentityRecord<TProps>>;
   readonly '~reprPartial': Prettify<Partial<InferPartialRecord<TProps>>>;
 }
+
+// biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than Unstruct<Record<string, BaseData>>
+export type AnyUnstruct = Unstruct<any>;
 
 export interface LooseDecorated<
   TInner extends wgsl.BaseData = wgsl.BaseData,
@@ -64,7 +72,7 @@ const looseTypeLiterals = [
 
 export type LooseTypeLiteral = (typeof looseTypeLiterals)[number];
 
-export type AnyLooseData = Disarray | Unstruct | LooseDecorated | PackedData;
+export type AnyLooseData = Disarray | AnyUnstruct | LooseDecorated | PackedData;
 
 export function isLooseData(data: unknown): data is AnyLooseData {
   return looseTypeLiterals.includes((data as AnyLooseData)?.type);

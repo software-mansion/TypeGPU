@@ -215,6 +215,13 @@ export function generateExpression(
     const propValue = (target.value as any)[property];
 
     if (isWgsl(target.value)) {
+      if (target.dataType.type.startsWith('mat') && property === 'columns') {
+        return {
+          value: target.value,
+          dataType: target.dataType,
+        };
+      }
+
       return {
         value: propValue,
         dataType: getTypeForPropAccess(target.value as d.AnyWgslData, property),
