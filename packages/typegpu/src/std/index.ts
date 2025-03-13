@@ -40,3 +40,5 @@ export {
   storageBarrier,
   textureBarrier,
 } from './atomic.js';
+
+export { arrayLength } from './array.js';
