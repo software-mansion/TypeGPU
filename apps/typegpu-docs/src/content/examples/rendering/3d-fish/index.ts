@@ -264,7 +264,7 @@ function frame() {
 
   requestAnimationFrame(frame);
 }
-frame();
+requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
 

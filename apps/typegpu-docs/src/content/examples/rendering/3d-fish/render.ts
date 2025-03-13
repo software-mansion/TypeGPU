@@ -75,7 +75,7 @@ export const vertexShader = tgpu['~unstable']
 
 const sampleTexture = tgpu['~unstable']
   .fn([d.vec2f], d.vec4f)
-  .does(/*wgsl*/ `(uv: vec2<f32>) -> vec4<f32> {
+  .does(/* wgsl */ `(uv: vec2f) -> vec4f {
       return textureSample(shaderTexture, shaderSampler, uv);
     }`)
   .$uses({ shaderTexture: modelTexture, shaderSampler: sampler })
@@ -84,7 +84,7 @@ const sampleTexture = tgpu['~unstable']
 export const fragmentShader = tgpu['~unstable']
   .fragmentFn({
     in: ModelVertexOutput,
-    out: d.location(0, d.vec4f),
+    out: d.vec4f,
   })
   .does((input) => {
     // shade the fragment in Phong reflection model
@@ -97,11 +97,9 @@ export const fragmentShader = tgpu['~unstable']
     const textureColorWithAlpha = sampleTexture(input.textureUV); // base color
     const textureColor = textureColorWithAlpha.xyz;
 
-    let ambient = d.vec3f();
     let diffuse = d.vec3f();
     let specular = d.vec3f();
-
-    ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));
+    const ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));
 
     const cosTheta = std.max(0.0, std.dot(input.worldNormal, p.lightDirection));
     if (cosTheta > 0) {
