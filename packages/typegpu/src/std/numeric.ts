@@ -1,4 +1,4 @@
-import { f32 } from '../data/numeric';
+import { bool, f32, i32 } from '../data/numeric';
 import { VectorOps } from '../data/vectorOps';
 import type {
   AnyMatInstance,
@@ -12,7 +12,6 @@ import type {
   v3u,
   v4f,
   v4h,
-  vBaseForMat,
 } from '../data/wgslTypes';
 import { createDualImpl } from '../shared/generators';
 
@@ -396,24 +395,27 @@ export const reflect = createDualImpl(
 );
 
 /**
- * Checks component-wise whether the elements of given vectors differ by at most 1e-2.
+ * Checks component-wise whether the elements of given vectors differ by at most 0.01.
  * @example
  * isCloseTo(vec3f(0, 0, 0), vec3f(0.002, -0.009, 0)) // returns true
  *
- * @param {number} precisionDigits number argument that specifies the exponent of maximum allowed difference, 2 by default.
+ * @param {number} precision argument that specifies the maximum allowed difference, 0.01 by default.
  */
-export function isCloseTo<T extends v2f | v3f | v4f | v2h | v3h | v4h>(
-  e1: T,
-  e2: T,
-  precisionDigits = 2,
-): boolean {
-  const prec = 10 ** -precisionDigits;
 
-  if (inGPUMode()) {
-    // https://www.w3.org/TR/WGSL/#vector-multi-component:~:text=Binary%20arithmetic%20expressions%20with%20mixed%20scalar%20and%20vector%20operands
-    // (a-a)+prec creates a vector of a.length elements, all equal to prec
-    return `all(abs(${e1}-${e2}) <= (${e1}-${e1})+${prec})` as unknown as boolean;
-  }
-
-  return VectorOps.isCloseToZero[e1.kind](sub(e1, e2), prec);
-}
+export const isCloseTo = createDualImpl(
+  // CPU implementation
+  <T extends v2f | v3f | v4f | v2h | v3h | v4h>(
+    e1: T,
+    e2: T,
+    precision = 0.01,
+  ) => VectorOps.isCloseToZero[e1.kind](sub(e1, e2), precision),
+  // GPU implementation
+  // https://www.w3.org/TR/WGSL/#vector-multi-component:~:text=Binary%20arithmetic%20expressions%20with%20mixed%20scalar%20and%20vector%20operands
+  // (a-a)+prec creates a vector of a.length elements, all equal to prec
+  (e1, e2, precisionDigits = { value: 0.01, dataType: i32 }) => {
+    return {
+      value: `all(abs(${e1.value}-${e2.value}) <= (${e1.value} * 0)+${precisionDigits.value})`,
+      dataType: bool,
+    };
+  },
+);
