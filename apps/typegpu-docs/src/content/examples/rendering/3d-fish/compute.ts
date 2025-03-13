@@ -1,8 +1,8 @@
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { computeBindGroupLayout } from './schemas';
-import tgpu from 'typegpu';
 import * as p from './params';
+import { computeBindGroupLayout } from './schemas';
 import { distance, distanceVectorFromLine } from './tgsl-helpers';
 
 const { currentFishData, nextFishData, mouseRay, timePassed } =

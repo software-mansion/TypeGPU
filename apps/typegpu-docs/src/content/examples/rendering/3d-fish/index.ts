@@ -1,22 +1,22 @@
 import tgpu from 'typegpu';
-import { distance } from './tgsl-helpers';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
+import { mainCompute } from './compute';
+import { loadModel } from './load-model';
 import * as p from './params';
+import { fragmentShader, vertexShader } from './render';
 import {
   Camera,
-  computeBindGroupLayout,
   type ModelData,
   ModelDataArray,
-  modelVertexLayout,
   MouseRay,
+  computeBindGroupLayout,
+  modelVertexLayout,
   renderBindGroupLayout,
   renderInstanceLayout,
 } from './schemas';
-import { fragmentShader, vertexShader } from './render';
-import { mainCompute } from './compute';
-import { loadModel } from './load-model';
+import { distance } from './tgsl-helpers';
 
 // setup
 

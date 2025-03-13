@@ -1,12 +1,12 @@
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
+import * as p from './params';
 import {
   ModelVertexInput,
   ModelVertexOutput,
   renderBindGroupLayout,
 } from './schemas';
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as p from './params';
 import { distance, hsvToRgb, reflect, rgbToHsv } from './tgsl-helpers';
 
 const { camera, modelTexture, sampler, modelData } =

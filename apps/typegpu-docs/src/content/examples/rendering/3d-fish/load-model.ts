@@ -1,8 +1,8 @@
 import { load } from '@loaders.gl/core';
-import type { TgpuRoot } from 'typegpu';
-import { modelVertexLayout } from './schemas';
 import { OBJLoader } from '@loaders.gl/obj';
+import type { TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
+import { modelVertexLayout } from './schemas';
 
 export async function loadModel(
   root: TgpuRoot,

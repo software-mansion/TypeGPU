@@ -1,5 +1,5 @@
-import * as d from 'typegpu/data';
 import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
 
 // schemas
 
