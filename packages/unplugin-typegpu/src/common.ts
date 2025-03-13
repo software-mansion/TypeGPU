@@ -7,6 +7,7 @@ export type Context = {
    * need to catch that and act accordingly.
    */
   tgpuAliases: Set<string>;
+  fileId?: string | undefined;
 };
 
 export interface TypegpuPluginOptions {

@@ -31,6 +31,7 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
       tgpuAliases: new Set<string>(
         options.forceTgpuAlias ? [options.forceTgpuAlias] : [],
       ),
+      fileId: id,
     };
 
     const ast = this.parse(code, {
@@ -68,6 +69,12 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
 
     const magicString = new MagicString(code);
     const tgpuAlias = ctx.tgpuAliases.values().next().value;
+
+    if (tgpuAlias === undefined && tgslFunctionDefs.length > 0) {
+      throw new Error(
+        `No tgpu import found, cannot assign ast to function in file: ${id}`,
+      );
+    }
 
     for (const expr of tgslFunctionDefs) {
       const { argNames, body, externalNames } = transpileFn(

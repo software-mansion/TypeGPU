@@ -40,7 +40,9 @@ function functionVisitor(ctx: Context): TraverseOptions {
           const { argNames, body, externalNames } = transpileFn(implementation);
           const tgpuAlias = ctx.tgpuAliases.values().next().value;
           if (tgpuAlias === undefined) {
-            throw new Error('No typegpu import found, cannot assign ast.');
+            throw new Error(
+              `No tgpu import found, cannot assign ast to function in file: ${ctx.fileId ?? ''}`,
+            );
           }
 
           path.replaceWith(
@@ -89,6 +91,7 @@ export default function () {
           tgpuAliases: new Set<string>(
             options?.forceTgpuAlias ? [options.forceTgpuAlias] : [],
           ),
+          fileId: id,
         };
 
         path.traverse(functionVisitor(ctx));
