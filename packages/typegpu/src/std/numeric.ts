@@ -394,3 +394,10 @@ export const reflect = createDualImpl(
     };
   },
 );
+
+export const distance = createDualImpl(
+  // CPU implementation
+  <T extends vBase>(a: T, b: T): number => length(sub(a, b)),
+  // GPU implementation
+  (a, b) => ({ value: `distance(${a.value}, ${b.value})`, dataType: f32 }),
+);

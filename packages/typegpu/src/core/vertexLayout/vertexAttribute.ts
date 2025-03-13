@@ -1,4 +1,4 @@
-import type { Disarray, Unstruct } from '../../data/dataTypes';
+import type { AnyUnstruct, Disarray } from '../../data/dataTypes';
 import type { AnyWgslStruct } from '../../data/struct';
 import type { Decorated, WgslArray } from '../../data/wgslTypes';
 import type {
@@ -16,7 +16,7 @@ import type {
  * - WgslStruct<{ a: Vec3f, b: unorm8x2 }>
  * - WgslStruct<{ nested: WgslStruct<{ a: Vec3f }> }>
  */
-export type DataToContainedAttribs<T> = T extends AnyWgslStruct | Unstruct
+export type DataToContainedAttribs<T> = T extends AnyWgslStruct | AnyUnstruct
   ? {
       [Key in keyof T['propTypes']]: DataToContainedAttribs<
         T['propTypes'][Key]

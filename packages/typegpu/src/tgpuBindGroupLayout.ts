@@ -15,6 +15,7 @@ import {
   TgpuLaidOutComparisonSamplerImpl,
   TgpuLaidOutSamplerImpl,
   type TgpuSampler,
+  isSampler,
 } from './core/sampler/sampler';
 import { TgpuExternalTextureImpl } from './core/texture/externalTexture';
 import {
@@ -656,8 +657,17 @@ export class TgpuBindGroupImpl<
                 throw new NotSampledError(value);
               }
 
+              const dimension = entry.viewDimension ?? undefined;
+
               resource = unwrapper.unwrap(
-                (value as TgpuTexture & Sampled).createView('sampled'),
+                (value as TgpuTexture & Sampled).createView(
+                  'sampled',
+                  dimension
+                    ? {
+                        dimension,
+                      }
+                    : undefined,
+                ),
               );
             } else {
               resource = value as GPUTextureView;
@@ -700,10 +710,24 @@ export class TgpuBindGroupImpl<
             };
           }
 
-          if ('externalTexture' in entry || 'sampler' in entry) {
+          if ('sampler' in entry) {
+            if (isSampler(value)) {
+              return {
+                binding: idx,
+                resource: unwrapper.unwrap(value as TgpuSampler),
+              };
+            }
+
             return {
               binding: idx,
-              resource: value as GPUExternalTexture | GPUSampler,
+              resource: value as GPUSampler,
+            };
+          }
+
+          if ('externalTexture' in entry) {
+            return {
+              binding: idx,
+              resource: value as GPUExternalTexture,
             };
           }
 
