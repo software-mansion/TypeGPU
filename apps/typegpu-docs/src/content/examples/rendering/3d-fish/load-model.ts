@@ -34,7 +34,6 @@ export async function loadModel(
         modelMesh.attributes.TEXCOORD_0.value[2 * i],
         1 - modelMesh.attributes.TEXCOORD_0.value[2 * i + 1],
       ),
-      instanceIndex: 0,
     });
   }
   modelVertices.reverse();

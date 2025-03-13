@@ -28,7 +28,6 @@ export const ModelVertexInput = {
   modelPosition: d.vec3f,
   modelNormal: d.vec3f,
   textureUV: d.vec2f,
-  instanceIndex: d.builtin.instanceIndex,
 } as const;
 
 export const ModelVertexOutput = {

@@ -14,7 +14,7 @@ const { camera, modelTexture, sampler, modelData } =
 
 export const vertexShader = tgpu['~unstable']
   .vertexFn({
-    in: ModelVertexInput,
+    in: { ...ModelVertexInput, instanceIndex: d.builtin.instanceIndex },
     out: ModelVertexOutput,
   })
   .does((input) => {
