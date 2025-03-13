@@ -12,6 +12,11 @@ export const Vertex = d.struct({
   normal: d.vec4f,
 });
 
+export const CubeVertex = d.struct({
+  position: d.vec4f,
+  uv: d.vec2f,
+});
+
 export const DirectionalLight = d.struct({
   direction: d.vec3f,
   color: d.vec3f,

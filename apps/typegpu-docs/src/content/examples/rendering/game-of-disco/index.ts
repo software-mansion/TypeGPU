@@ -2,48 +2,18 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
-import { Camera, DirectionalLight, Material, Vertex } from './dataTypes';
+import { cubeVertices } from './cubemap';
+import { loadCubemap } from './cubemap';
+import {
+  Camera,
+  CubeVertex,
+  DirectionalLight,
+  Material,
+  Vertex,
+} from './dataTypes';
 import { createIcosphere } from './icosphere';
 
 const root = await tgpu.init();
-
-const cubemapUrls = [
-  'cubemapTest/posx.jpg', // right
-  'cubemapTest/negx.jpg', // left
-  'cubemapTest/posy.jpg', // top
-  'cubemapTest/negy.jpg', // bottom
-  'cubemapTest/posz.jpg', // front
-  'cubemapTest/negz.jpg', // back
-];
-
-async function loadCubemap(device: GPUDevice, urls: string[]) {
-  const size = 512;
-
-  const texture = root['~unstable']
-    .createTexture({
-      dimension: '2d',
-      size: [size, size, 6],
-      format: 'rgba8unorm',
-    })
-    .$usage('sampled', 'render', 'storage');
-
-  // Load each face concurrently
-  await Promise.all(
-    urls.map(async (url, i) => {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const imageBitmap = await createImageBitmap(blob);
-
-      device.queue.copyExternalImageToTexture(
-        { source: imageBitmap },
-        { texture: root.unwrap(texture), mipLevel: 0, origin: [0, 0, i] },
-        [size, size],
-      );
-    }),
-  );
-
-  return texture;
-}
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -55,8 +25,12 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const subdivisions = 6;
+const subdivisions = 3;
 const vertices = createIcosphere(subdivisions);
+
+const cubeVertexBuffer = root
+  .createBuffer(d.arrayOf(CubeVertex, cubeVertices.length), cubeVertices)
+  .$usage('vertex');
 
 const vertexBuffer = root
   .createBuffer(d.arrayOf(Vertex, vertices.length), vertices)
@@ -88,21 +62,18 @@ const lightBuffer = root
 
 const materialBuffer = root
   .createBuffer(Material, {
-    ambient: d.vec3f(0.2, 0.2, 0.2),
-    diffuse: d.vec3f(0.7, 0.7, 0.7),
-    specular: d.vec3f(0.1, 0.1, 0.1),
-    shininess: 21,
-    reflectivity: 0.1,
+    ambient: d.vec3f(0.1, 0.1, 0.1),
+    diffuse: d.vec3f(0.3, 0.3, 0.3),
+    specular: d.vec3f(0.8, 0.8, 0.8),
+    shininess: 32,
+    reflectivity: 0.7,
   })
   .$usage('uniform');
 
-const cubemapTexture = await loadCubemap(root.device, cubemapUrls);
+const cubemapTexture = await loadCubemap(root);
 const cubemapSampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
   minFilter: 'linear',
-  addressModeU: 'clamp-to-edge',
-  addressModeV: 'clamp-to-edge',
-  addressModeW: 'clamp-to-edge',
 });
 
 const renderLayout = tgpu.bindGroupLayout({
@@ -124,6 +95,10 @@ const renderBindGroup = root.createBindGroup(renderLayout, {
 
 const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(Vertex, n));
 
+const cubeVertexLayout = tgpu.vertexLayout((n: number) =>
+  d.arrayOf(CubeVertex, n),
+);
+
 const vertexFn = tgpu['~unstable']
   .vertexFn({
     in: {
@@ -141,11 +116,10 @@ const vertexFn = tgpu['~unstable']
   .does((input) => {
     const worldPos = input.position;
     const pos = std.mul(camera.value.view, input.position);
-    const normal = std.mul(camera.value.view, input.normal);
     return {
       pos: std.mul(camera.value.projection, pos),
       color: input.color,
-      normal: normal,
+      normal: input.normal,
       worldPos: worldPos,
     };
   });
@@ -195,6 +169,54 @@ const fragmentFn = tgpu['~unstable']
     sampler,
   });
 
+const cubeVertexFn = tgpu['~unstable']
+  .vertexFn({
+    in: {
+      position: d.vec4f,
+      uv: d.vec2f,
+    },
+    out: {
+      pos: d.builtin.position,
+      uv: d.vec2f,
+      fragPos: d.vec4f,
+    },
+  })
+  .does((input) => {
+    const pos = std.mul(camera.value.view, input.position);
+    const fragPos = std.mul(0.5, std.add(input.position, d.vec4f(1, 1, 1, 1)));
+    return {
+      pos: std.mul(camera.value.projection, pos),
+      uv: input.uv,
+      fragPos: fragPos,
+    };
+  });
+
+const cubeFragmentFn = tgpu['~unstable']
+  .fragmentFn({
+    in: {
+      uv: d.vec2f,
+      fragPos: d.vec4f,
+    },
+    out: d.vec4f,
+  })
+  .does(`(input: vi) -> @location(0) vec4f {
+    var cubemapVec = input.fragPos.xyz - vec3f(0.5);
+    cubemapVec.z *= -1.0;
+    return textureSample(cubemap, sampler, cubemapVec);
+  }`)
+  .$uses({
+    cubemap,
+    sampler,
+  });
+
+const cubePipeline = root['~unstable']
+  .withVertex(cubeVertexFn, cubeVertexLayout.attrib)
+  .withFragment(cubeFragmentFn, { format: presentationFormat })
+  .withPrimitive({
+    cullMode: 'front',
+  })
+  .createPipeline();
+
 const pipeline = root['~unstable']
   .withVertex(vertexFn, vertexLayout.attrib)
   .withFragment(fragmentFn, { format: presentationFormat })
@@ -204,11 +226,22 @@ const pipeline = root['~unstable']
   .createPipeline();
 
 function render() {
-  pipeline
+  cubePipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1 },
       loadOp: 'clear',
+      storeOp: 'store',
+    })
+    .with(cubeVertexLayout, cubeVertexBuffer)
+    .with(renderLayout, renderBindGroup)
+    .draw(cubeVertices.length);
+
+  pipeline
+    .withColorAttachment({
+      view: context.getCurrentTexture().createView(),
+      clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1 },
+      loadOp: 'load',
       storeOp: 'store',
     })
     .with(vertexLayout, vertexBuffer)
