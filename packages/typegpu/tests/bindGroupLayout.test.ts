@@ -317,6 +317,34 @@ describe('TgpuBindGroup', () => {
       });
     });
 
+    it('populates a simple layout with a typed sampler', ({ root }) => {
+      const sampler = tgpu['~unstable'].sampler({
+        magFilter: 'linear',
+        minFilter: 'linear',
+      });
+
+      const bindGroup = root.createBindGroup(layout, {
+        foo: sampler,
+      });
+
+      expect(root.device.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(root.device.createBindGroupLayout).toBeCalled();
+
+      // check if createView() on mock texture is called with correct parameters
+
+      expect(root.device.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout),
+        entries: [
+          {
+            binding: 0,
+            resource: root.unwrap(sampler),
+          },
+        ],
+      });
+    });
+
     it('accepts filtering/non-filtering sampler when creating bind group, but not comparison', ({
       root,
     }) => {
@@ -373,6 +401,31 @@ describe('TgpuBindGroup', () => {
       });
     });
 
+    it('populates a simple layout with a typed sampler', ({ root }) => {
+      const sampler = tgpu['~unstable'].comparisonSampler({
+        compare: 'equal',
+      });
+
+      const bindGroup = root.createBindGroup(layout, {
+        foo: sampler,
+      });
+
+      expect(root.device.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(root.device.createBindGroupLayout).toBeCalled();
+
+      expect(root.device.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout),
+        entries: [
+          {
+            binding: 0,
+            resource: root.unwrap(sampler),
+          },
+        ],
+      });
+    });
+
     it('accepts comparison sampler when creating bind group, but not filtering/non-filtering', ({
       root,
     }) => {
@@ -401,6 +454,9 @@ describe('TgpuBindGroup', () => {
     let layout3d: TgpuBindGroupLayout<{
       foo: { texture: 'float'; viewDimension: '3d' };
     }>;
+    let layoutCube: TgpuBindGroupLayout<{
+      foo: { texture: 'float'; viewDimension: 'cube' };
+    }>;
 
     beforeEach(() => {
       layout2d = tgpu
@@ -411,6 +467,11 @@ describe('TgpuBindGroup', () => {
       layout3d = tgpu
         .bindGroupLayout({
           foo: { texture: 'float', viewDimension: '3d' },
+        })
+        .$name('example');
+      layoutCube = tgpu
+        .bindGroupLayout({
+          foo: { texture: 'float', viewDimension: 'cube' },
         })
         .$name('example');
     });
@@ -463,6 +524,38 @@ describe('TgpuBindGroup', () => {
       expect(root.device.createBindGroup).toBeCalledWith({
         label: 'example',
         layout: root.unwrap(layout2d),
+        entries: [
+          {
+            binding: 0,
+            resource: 'view',
+          },
+        ],
+      });
+    });
+
+    it('populates a simple layout with a typed texture view', ({ root }) => {
+      const texture = root
+        .createTexture({
+          dimension: '2d',
+          size: [1024, 1024, 6],
+          format: 'rgba8unorm',
+        })
+        .$usage('sampled')
+        .$name('example_texture');
+
+      const bindGroup = root.createBindGroup(layoutCube, {
+        foo: texture.createView('sampled', {
+          dimension: 'cube',
+        }),
+      });
+
+      expect(root.device.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(root.device.createBindGroupLayout).toBeCalled();
+
+      expect(root.device.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layoutCube),
         entries: [
           {
             binding: 0,
@@ -608,6 +701,40 @@ describe('TgpuBindGroup', () => {
 
       const bindGroup = root.createBindGroup(layout3d, {
         foo: texture,
+      });
+
+      expect(root.device.createBindGroupLayout).not.toBeCalled();
+      root.unwrap(bindGroup);
+      expect(root.device.createBindGroupLayout).toBeCalled();
+
+      expect(root.device.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout3d),
+        entries: [
+          {
+            binding: 0,
+            resource: 'view',
+          },
+        ],
+      });
+    });
+
+    it('populates a simple layout with a typed storage texture view', ({
+      root,
+    }) => {
+      const texture = root
+        .createTexture({
+          size: [32, 32, 32],
+          format: 'rgba8unorm',
+          dimension: '3d',
+        })
+        .$usage('storage');
+
+      const bindGroup = root.createBindGroup(layout3d, {
+        foo: texture.createView('writeonly', {
+          dimension: '3d',
+          mipLevelCount: 1,
+        }),
       });
 
       expect(root.device.createBindGroupLayout).not.toBeCalled();
