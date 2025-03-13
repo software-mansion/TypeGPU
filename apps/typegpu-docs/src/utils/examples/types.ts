@@ -17,10 +17,10 @@ export const exampleCategories = [
 
 export type Example = {
   key: string;
-  tsCode: string;
+  tsCodes: Record<string, string>;
+  tsImports: Record<string, () => Promise<unknown>>;
   htmlCode: string;
   metadata: ExampleMetadata;
-  execTsCode: string;
 };
 
 export type Module = {
