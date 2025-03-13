@@ -15,6 +15,8 @@ import {
   TgpuLaidOutComparisonSamplerImpl,
   TgpuLaidOutSamplerImpl,
   type TgpuSampler,
+  isComparisonSampler,
+  isSampler,
 } from './core/sampler/sampler';
 import { TgpuExternalTextureImpl } from './core/texture/externalTexture';
 import {
@@ -26,6 +28,8 @@ import {
   type TgpuSampledTexture,
   type TgpuTexture,
   type TgpuWriteonlyTexture,
+  isSampledTextureView,
+  isStorageTextureView,
   isTexture,
 } from './core/texture/texture';
 import type {
@@ -287,6 +291,10 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
                     TgpuTexture<
                       Prettify<TextureProps & GetTextureRestriction<T>>
                     >)
+                | TgpuSampledTexture<
+                    Default<T['viewDimension'], '2d'>,
+                    ChannelFormatToSchema[T['texture']]
+                  >
             : T extends TgpuLayoutStorageTexture
               ?
                   | GPUTextureView
@@ -294,6 +302,7 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
                       TgpuTexture<
                         Prettify<TextureProps & GetStorageTextureRestriction<T>>
                       >)
+                  | StorageTextureUsageForEntry<T>
               : T extends TgpuLayoutExternalTexture
                 ? GPUExternalTexture
                 : never;
@@ -659,6 +668,8 @@ export class TgpuBindGroupImpl<
               resource = unwrapper.unwrap(
                 (value as TgpuTexture & Sampled).createView('sampled'),
               );
+            } else if (isSampledTextureView(value)) {
+              resource = unwrapper.unwrap(value);
             } else {
               resource = value as GPUTextureView;
             }
@@ -690,6 +701,8 @@ export class TgpuBindGroupImpl<
                   (value as TgpuTexture & StorageFlag).createView('writeonly'),
                 );
               }
+            } else if (isStorageTextureView(value)) {
+              resource = unwrapper.unwrap(value);
             } else {
               resource = value as GPUTextureView;
             }
@@ -700,10 +713,24 @@ export class TgpuBindGroupImpl<
             };
           }
 
-          if ('externalTexture' in entry || 'sampler' in entry) {
+          if ('sampler' in entry) {
+            if (isSampler(value) || isComparisonSampler(value)) {
+              return {
+                binding: idx,
+                resource: unwrapper.unwrap(value as TgpuSampler),
+              };
+            }
+
             return {
               binding: idx,
-              resource: value as GPUExternalTexture | GPUSampler,
+              resource: value as GPUSampler,
+            };
+          }
+
+          if ('externalTexture' in entry) {
+            return {
+              binding: idx,
+              resource: value as GPUExternalTexture,
             };
           }
 
