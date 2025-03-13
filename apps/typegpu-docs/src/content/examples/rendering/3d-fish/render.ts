@@ -7,7 +7,7 @@ import {
   ModelVertexOutput,
   renderBindGroupLayout,
 } from './schemas';
-import { distance, hsvToRgb, reflect, rgbToHsv } from './tgsl-helpers';
+import { distance, hsvToRgb, rgbToHsv } from './tgsl-helpers';
 
 const { camera, modelTexture, sampler, modelData } =
   renderBindGroupLayout.bound;
@@ -105,7 +105,7 @@ export const fragmentShader = tgpu['~unstable']
     if (cosTheta > 0) {
       diffuse = std.mul(cosTheta, std.mul(textureColor, p.lightColor));
 
-      const reflectionDirection = reflect(
+      const reflectionDirection = std.reflect(
         std.mul(-1, p.lightDirection),
         input.worldNormal,
       );

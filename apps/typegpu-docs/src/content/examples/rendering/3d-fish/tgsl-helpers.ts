@@ -109,10 +109,3 @@ export const distanceVectorFromLine = tgpu['~unstable']
     return std.sub(x, p);
   })
   .$name('distance vector from line');
-
-// given a vector and a normal of a plane,
-// calculate a reflection vector
-export const reflect = tgpu['~unstable']
-  .fn([d.vec3f, d.vec3f], d.vec3f)
-  .does((i, n) => std.sub(i, std.mul(2.0, std.mul(std.dot(n, i), n))))
-  .$name('reflect');
