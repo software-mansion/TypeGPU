@@ -1,5 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
+import * as std from 'typegpu/std';
 
 const triangleAmount = 1000;
 const triangleSize = 0.03;
@@ -213,61 +214,80 @@ const { currentTrianglePos, nextTrianglePos } = computeBindGroupLayout.bound;
 
 const mainCompute = tgpu['~unstable']
   .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })
-  .does(/* wgsl */ `(input: ComputeInput) {
-    let index = input.gid.x;
-    var instanceInfo = currentTrianglePos[index];
-    var separation = vec2f();
-    var alignment = vec2f();
-    var cohesion = vec2f();
-    var alignmentCount = 0u;
-    var cohesionCount = 0u;
+  .does((input) => {
+    const index = input.gid.x;
+    const instanceInfo = currentTrianglePos.value[index];
+    let separation = d.vec2f();
+    let alignment = d.vec2f();
+    let cohesion = d.vec2f();
+    let alignmentCount = 0;
+    let cohesionCount = 0;
 
-    for (var i = 0u; i < arrayLength(&currentTrianglePos); i += 1) {
-      if (i == index) {
+    for (let i = d.u32(0); i < std.arrayLength(currentTrianglePos.value); i++) {
+      if (i === index) {
         continue;
       }
-      var other = currentTrianglePos[i];
-      var dist = distance(instanceInfo.position, other.position);
-      if (dist < params.separationDistance) {
-        separation += instanceInfo.position - other.position;
+      const other = currentTrianglePos.value[i];
+      const dist = std.distance(instanceInfo.position, other.position);
+      if (dist < params.value.separationDistance) {
+        separation = std.add(
+          separation,
+          std.sub(instanceInfo.position, other.position),
+        );
       }
-      if (dist < params.alignmentDistance) {
-        alignment += other.velocity;
+      if (dist < params.value.alignmentDistance) {
+        alignment = std.add(alignment, other.velocity);
         alignmentCount++;
       }
-      if (dist < params.cohesionDistance) {
-        cohesion += other.position;
+      if (dist < params.value.cohesionDistance) {
+        cohesion = std.add(cohesion, other.position);
         cohesionCount++;
       }
-    };
-    if (alignmentCount > 0u) {
-      alignment = alignment / f32(alignmentCount);
     }
-    if (cohesionCount > 0u) {
-      cohesion = (cohesion / f32(cohesionCount)) - instanceInfo.position;
+    if (alignmentCount > 0) {
+      alignment = std.mul(1.0 / d.f32(alignmentCount), alignment);
     }
-    instanceInfo.velocity +=
-      (separation * params.separationStrength)
-      + (alignment * params.alignmentStrength)
-      + (cohesion * params.cohesionStrength);
-    instanceInfo.velocity = normalize(instanceInfo.velocity) * clamp(length(instanceInfo.velocity), 0.0, 0.01);
+    if (cohesionCount > 0) {
+      cohesion = std.mul(1.0 / d.f32(cohesionCount), cohesion);
+      cohesion = std.sub(cohesion, instanceInfo.position);
+    }
 
-    if (instanceInfo.position[0] > 1.0 + triangleSize) {
-      instanceInfo.position[0] = -1.0 - triangleSize;
+    let velocity = std.mul(params.value.separationStrength, separation);
+    velocity = std.add(
+      velocity,
+      std.mul(params.value.alignmentStrength, alignment),
+    );
+    velocity = std.add(
+      velocity,
+      std.mul(params.value.cohesionStrength, cohesion),
+    );
+
+    instanceInfo.velocity = std.add(instanceInfo.velocity, velocity);
+    instanceInfo.velocity = std.mul(
+      std.clamp(std.length(instanceInfo.velocity), 0, 0.01),
+      std.normalize(instanceInfo.velocity),
+    );
+
+    if (instanceInfo.position.x > 1.0 + triangleSize) {
+      instanceInfo.position.x = -1.0 - triangleSize;
     }
-    if (instanceInfo.position[1] > 1.0 + triangleSize) {
-      instanceInfo.position[1] = -1.0 - triangleSize;
+    if (instanceInfo.position.y > 1.0 + triangleSize) {
+      instanceInfo.position.y = -1.0 - triangleSize;
     }
-    if (instanceInfo.position[0] < -1.0 - triangleSize) {
-      instanceInfo.position[0] = 1.0 + triangleSize;
+    if (instanceInfo.position.x < -1.0 - triangleSize) {
+      instanceInfo.position.x = 1.0 + triangleSize;
     }
-    if (instanceInfo.position[1] < -1.0 - triangleSize) {
-      instanceInfo.position[1] = 1.0 + triangleSize;
+    if (instanceInfo.position.y < -1.0 - triangleSize) {
+      instanceInfo.position.y = 1.0 + triangleSize;
     }
-    instanceInfo.position += instanceInfo.velocity;
-    nextTrianglePos[index] = instanceInfo;
-  }`)
-  .$uses({ currentTrianglePos, nextTrianglePos, params, triangleSize });
+
+    instanceInfo.position = std.add(
+      instanceInfo.position,
+      instanceInfo.velocity,
+    );
+
+    nextTrianglePos.value[index] = instanceInfo;
+  });
 
 const computePipeline = root['~unstable']
   .withCompute(mainCompute)

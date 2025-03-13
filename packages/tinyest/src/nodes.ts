@@ -158,6 +158,11 @@ export type Call = {
   f: [identifier: Expression, args: Expression[]];
 };
 
+export type Update = {
+  // p like please update
+  p: [operator: '++' | '--', argument: Expression];
+};
+
 /** A numeric literal */
 export type Num = {
   n: string;
@@ -180,6 +185,7 @@ export type Expression =
   | ObjectExpression
   | MemberAccess
   | IndexAccess
+  | Update
   | Call
   | Literal;
 

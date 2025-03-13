@@ -156,6 +156,18 @@ export function generateExpression(
     };
   }
 
+  if ('p' in expression) {
+    // Update Expression
+    const [op, arg] = expression.p;
+    const argExpr = generateExpression(ctx, arg);
+    const argStr = resolveRes(ctx, argExpr);
+
+    return {
+      value: `${argStr}${op}`,
+      dataType: argExpr.dataType,
+    };
+  }
+
   if ('u' in expression) {
     // Unary Expression
     const [op, arg] = expression.u;
