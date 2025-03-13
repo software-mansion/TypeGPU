@@ -1,5 +1,4 @@
 import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 import { Vertex } from './dataTypes';
 
 /**
@@ -10,6 +9,15 @@ import { Vertex } from './dataTypes';
 export function createIcosphere(
   subdivisions: number,
 ): d.Infer<typeof Vertex>[] {
+  const maxSafeSubdivisions = 8;
+  const actualSubdivisions = Math.min(subdivisions, maxSafeSubdivisions);
+
+  if (subdivisions > maxSafeSubdivisions) {
+    console.warn(
+      `Requested ${subdivisions} subdivisions, but limiting to ${maxSafeSubdivisions} to prevent too many vertices`,
+    );
+  }
+
   // Golden ratio for icosahedron construction
   const goldenRatio = (1 + Math.sqrt(5)) / 2;
 
@@ -32,7 +40,10 @@ export function createIcosphere(
     d.vec4f(goldenRatio, 0, 1, 1),
     d.vec4f(-goldenRatio, 0, -1, 1),
     d.vec4f(-goldenRatio, 0, 1, 1),
-  ].map((v) => d.vec4f(std.normalize(v).xyz, 1));
+  ].map((v) => {
+    const length = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+    return d.vec4f(v.x / length, v.y / length, v.z / length, 1);
+  });
 
   // Define the 20 triangular faces of the icosahedron using vertex indices
   const faces: [number, number, number][] = [
@@ -71,7 +82,7 @@ export function createIcosphere(
       initialVertices[i1],
       initialVertices[i2],
       initialVertices[i3],
-      subdivisions,
+      actualSubdivisions,
       vertices,
     );
   }
@@ -98,9 +109,9 @@ function subdivideTriangle(
   }
 
   // Calculate midpoints of each edge and project them onto the unit sphere
-  const v12 = d.vec4f(std.normalize(calculateMidpoint(v1, v2).xyz), 1);
-  const v23 = d.vec4f(std.normalize(calculateMidpoint(v2, v3).xyz), 1);
-  const v31 = d.vec4f(std.normalize(calculateMidpoint(v3, v1).xyz), 1);
+  const v12 = normalizeSafely(calculateMidpoint(v1, v2));
+  const v23 = normalizeSafely(calculateMidpoint(v2, v3));
+  const v31 = normalizeSafely(calculateMidpoint(v3, v1));
 
   // Recursively subdivide the four resulting triangles
   subdivideTriangle(v1, v12, v31, depth - 1, vertices);
@@ -113,7 +124,12 @@ function subdivideTriangle(
  * Calculates the midpoint between two vertices
  */
 function calculateMidpoint(v1: d.v4f, v2: d.v4f): d.v4f {
-  return d.vec4f((v1.x + v2.x) / 2, (v1.y + v2.y) / 2, (v1.z + v2.z) / 2, 1);
+  return d.vec4f(
+    (v1.x + v2.x) * 0.5,
+    (v1.y + v2.y) * 0.5,
+    (v1.z + v2.z) * 0.5,
+    1,
+  );
 }
 
 /**
@@ -122,11 +138,22 @@ function calculateMidpoint(v1: d.v4f, v2: d.v4f): d.v4f {
  */
 function createVertex(position: d.v4f): ReturnType<typeof Vertex> {
   const color = d.vec4f(0.8, 1, 1, 1); // White color
-  const normal = std.normalize(position);
+  const normal = position;
 
   return Vertex({
     position,
     color,
     normal,
   });
+}
+
+/**
+ * Safely normalizes a vector to prevent numerical instability
+ */
+function normalizeSafely(v: d.v4f): d.v4f {
+  const length = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+  if (length < 1e-8) {
+    return d.vec4f(0, 0, 1, 1);
+  }
+  return d.vec4f(v.x / length, v.y / length, v.z / length, 1);
 }
