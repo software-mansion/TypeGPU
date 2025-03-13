@@ -213,7 +213,7 @@ function useResizableCanvas(
 
       frame.className = 'relative';
 
-      if (canvas.dataset.fitToContainer) {
+      if (canvas.dataset.fitToContainer !== undefined) {
         frame.style.width = '100%';
         frame.style.height = '100%';
       } else {
