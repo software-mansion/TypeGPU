@@ -194,18 +194,17 @@ const computeBindGroups = [0, 1].map((idx) =>
 // frame
 
 let odd = false;
-let lastTimestamp = Date.now();
+let lastTimestamp: DOMHighResTimeStamp = 0;
 let disposed = false;
 
-function frame() {
+function frame(timestamp: DOMHighResTimeStamp) {
   if (disposed) {
     return;
   }
   odd = !odd;
 
-  const currentTimestamp = Date.now();
-  timePassedBuffer.write(currentTimestamp - lastTimestamp);
-  lastTimestamp = currentTimestamp;
+  timePassedBuffer.write(timestamp - lastTimestamp);
+  lastTimestamp = timestamp;
   cameraBuffer.write(camera);
   mouseRayBuffer.write(mouseRay);
 
