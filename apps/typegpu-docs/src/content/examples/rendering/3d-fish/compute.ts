@@ -8,7 +8,7 @@ import { distance, distanceVectorFromLine } from './tgsl-helpers';
 const { currentFishData, nextFishData, mouseRay, timePassed } =
   computeBindGroupLayout.bound;
 
-export const mainCompute = tgpu['~unstable']
+export const computeShader = tgpu['~unstable']
   .computeFn({
     in: { gid: d.builtin.globalInvocationId },
     workgroupSize: [p.workGroupSize],
@@ -118,4 +118,5 @@ export const mainCompute = tgpu['~unstable']
     );
     fishData.position = std.add(fishData.position, translation);
     nextFishData.value[fishIndex] = fishData;
-  });
+  })
+  .$name('compute shader');

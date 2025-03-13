@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
-import { mainCompute } from './compute';
+import { computeShader } from './compute';
 import { loadModel } from './load-model';
 import * as p from './params';
 import { fragmentShader, vertexShader } from './render';
@@ -50,10 +50,11 @@ const oceanFloorModel = await loadModel(
 
 // buffers
 
-const fishDataBuffers = Array.from({ length: 2 }, () =>
+const fishDataBuffers = Array.from({ length: 2 }, (idx) =>
   root
     .createBuffer(ModelDataArray(p.fishAmount))
-    .$usage('storage', 'uniform', 'vertex'),
+    .$usage('storage', 'uniform', 'vertex')
+    .$name(`fish data buffer ${idx}`),
 );
 
 const randomizeFishPositions = () => {
@@ -98,7 +99,10 @@ const camera = {
   ),
 };
 
-const cameraBuffer = root.createBuffer(Camera, camera).$usage('uniform');
+const cameraBuffer = root
+  .createBuffer(Camera, camera)
+  .$usage('uniform')
+  .$name('camera buffer');
 
 let mouseRay = MouseRay({
   activated: 0,
@@ -106,9 +110,15 @@ let mouseRay = MouseRay({
   pointY: d.vec3f(),
 });
 
-const mouseRayBuffer = root.createBuffer(MouseRay, mouseRay).$usage('uniform');
+const mouseRayBuffer = root
+  .createBuffer(MouseRay, mouseRay)
+  .$usage('uniform')
+  .$name('mouse buffer');
 
-const timePassedBuffer = root.createBuffer(d.u32).$usage('uniform');
+const timePassedBuffer = root
+  .createBuffer(d.u32)
+  .$usage('uniform')
+  .$name('time passed buffer');
 
 const oceanFloorDataBuffer = root
   .createBuffer(ModelDataArray(1), [
@@ -120,7 +130,8 @@ const oceanFloorDataBuffer = root
       applySeaDesaturation: 0,
     },
   ])
-  .$usage('storage', 'vertex', 'uniform');
+  .$usage('storage', 'vertex', 'uniform')
+  .$name('ocean floor buffer');
 
 // pipelines
 
@@ -133,7 +144,8 @@ const renderPipeline = root['~unstable']
     depthCompare: 'less',
   })
   .withPrimitive({ topology: 'triangle-list' })
-  .createPipeline();
+  .createPipeline()
+  .$name('render pipeline');
 
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height, 1],
@@ -142,8 +154,9 @@ let depthTexture = root.device.createTexture({
 });
 
 const computePipeline = root['~unstable']
-  .withCompute(mainCompute)
-  .createPipeline();
+  .withCompute(computeShader)
+  .createPipeline()
+  .$name('compute pipeline');
 
 // bind groups
 
@@ -163,7 +176,7 @@ const renderFishBindGroups = [0, 1].map((idx) =>
   }),
 );
 
-const renderOceanFloorBindGroups = root.createBindGroup(renderBindGroupLayout, {
+const renderOceanFloorBindGroup = root.createBindGroup(renderBindGroupLayout, {
   modelData: oceanFloorDataBuffer,
   camera: cameraBuffer,
   modelTexture: oceanFloorModel.texture,
@@ -221,7 +234,7 @@ function frame() {
     })
     .with(modelVertexLayout, oceanFloorModel.vertexBuffer)
     .with(renderInstanceLayout, oceanFloorDataBuffer)
-    .with(renderBindGroupLayout, renderOceanFloorBindGroups)
+    .with(renderBindGroupLayout, renderOceanFloorBindGroup)
     .draw(oceanFloorModel.polygonCount, 1);
 
   renderPipeline

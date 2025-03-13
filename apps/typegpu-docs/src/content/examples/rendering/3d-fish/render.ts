@@ -70,7 +70,8 @@ export const vertexShader = tgpu['~unstable']
       applySeaFog: currentModelData.applySeaFog,
       applySeaDesaturation: currentModelData.applySeaDesaturation,
     };
-  });
+  })
+  .$name('vertex shader');
 
 const sampleTexture = tgpu['~unstable']
   .fn([d.vec2f], d.vec4f)
@@ -146,4 +147,4 @@ export const fragmentShader = tgpu['~unstable']
 
     return d.vec4f(foggedColor.xyz, 1);
   })
-  .$name('mainFragment');
+  .$name('fragment shader');
