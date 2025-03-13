@@ -836,6 +836,74 @@ export const VectorOps = {
     ) => T
   >,
 
+  sin: {
+    vec2f: unary2f(Math.sin),
+    vec2h: unary2h(Math.sin),
+    vec2i: unary2i(Math.sin),
+    vec2u: unary2u(Math.sin),
+
+    vec3f: unary3f(Math.sin),
+    vec3h: unary3h(Math.sin),
+    vec3i: unary3i(Math.sin),
+    vec3u: unary3u(Math.sin),
+
+    vec4f: unary4f(Math.sin),
+    vec4h: unary4h(Math.sin),
+    vec4i: unary4i(Math.sin),
+    vec4u: unary4u(Math.sin),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  cos: {
+    vec2f: unary2f(Math.cos),
+    vec2h: unary2h(Math.cos),
+    vec2i: unary2i(Math.cos),
+    vec2u: unary2u(Math.cos),
+
+    vec3f: unary3f(Math.cos),
+    vec3h: unary3h(Math.cos),
+    vec3i: unary3i(Math.cos),
+    vec3u: unary3u(Math.cos),
+
+    vec4f: unary4f(Math.cos),
+    vec4h: unary4h(Math.cos),
+    vec4i: unary4i(Math.cos),
+    vec4u: unary4u(Math.cos),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  exp: {
+    vec2f: unary2f(Math.exp),
+    vec2h: unary2h(Math.exp),
+    vec2i: unary2i(Math.exp),
+    vec2u: unary2u(Math.exp),
+
+    vec3f: unary3f(Math.exp),
+    vec3h: unary3h(Math.exp),
+    vec3i: unary3i(Math.exp),
+    vec3u: unary3u(Math.exp),
+
+    vec4f: unary4f(Math.exp),
+    vec4h: unary4h(Math.exp),
+    vec4i: unary4i(Math.exp),
+    vec4u: unary4u(Math.exp),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  fract: {
+    vec2f: unary2f((value) => value - Math.floor(value)),
+    vec2h: unary2h((value) => value - Math.floor(value)),
+    vec2i: unary2i((value) => value - Math.floor(value)),
+    vec2u: unary2u((value) => value - Math.floor(value)),
+
+    vec3f: unary3f((value) => value - Math.floor(value)),
+    vec3h: unary3h((value) => value - Math.floor(value)),
+    vec3i: unary3i((value) => value - Math.floor(value)),
+    vec3u: unary3u((value) => value - Math.floor(value)),
+
+    vec4f: unary4f((value) => value - Math.floor(value)),
+    vec4h: unary4h((value) => value - Math.floor(value)),
+    vec4i: unary4i((value) => value - Math.floor(value)),
+    vec4u: unary4u((value) => value - Math.floor(value)),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
   isCloseToZero: {
     vec2f: (v: wgsl.v2f, n: number) => Math.abs(v.x) <= n && Math.abs(v.y) <= n,
     vec2h: (v: wgsl.v2h, n: number) => Math.abs(v.x) <= n && Math.abs(v.y) <= n,
