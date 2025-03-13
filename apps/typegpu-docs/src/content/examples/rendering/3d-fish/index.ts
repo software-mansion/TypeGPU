@@ -49,7 +49,7 @@ const oceanFloorModel = await loadModel(
 
 // buffers
 
-const fishDataBuffers = Array.from({ length: 2 }, (idx) =>
+const fishDataBuffers = Array.from({ length: 2 }, (_, idx) =>
   root
     .createBuffer(ModelDataArray(p.fishAmount))
     .$usage('storage', 'vertex')
