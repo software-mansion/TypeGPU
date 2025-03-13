@@ -494,7 +494,7 @@ describe('wgslGenerator', () => {
     expect(parse(gen)).toEqual(parse('{var i = 0;while((i < 10)){i += 1;}}'));
   });
 
-  it('creates correct resources for derived values and slots', ({ root }) => {
+  it('creates correct resources for derived values and slots', () => {
     const numberSlot = tgpu['~unstable'].slot(44);
     const derived = tgpu['~unstable'].derived(() =>
       std.mul(d.u32(numberSlot.value), d.vec4u(1, 2, 3, 4)),
@@ -544,9 +544,7 @@ describe('wgslGenerator', () => {
     expect(res.dataType).toEqual(d.vec4u);
   });
 
-  it('creates correct resources for indexing into a derived value', ({
-    root,
-  }) => {
+  it('creates correct resources for indexing into a derived value', () => {
     const numberSlot = tgpu['~unstable'].slot(44);
     const derived = tgpu['~unstable'].derived(() =>
       std.mul(d.f32(numberSlot.value), d.vec2f(1, 2)),
