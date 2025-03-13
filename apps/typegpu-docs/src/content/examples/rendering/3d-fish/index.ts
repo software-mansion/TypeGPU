@@ -52,7 +52,7 @@ const oceanFloorModel = await loadModel(
 const fishDataBuffers = Array.from({ length: 2 }, (idx) =>
   root
     .createBuffer(ModelDataArray(p.fishAmount))
-    .$usage('storage', 'uniform', 'vertex')
+    .$usage('storage', 'vertex')
     .$name(`fish data buffer ${idx}`),
 );
 
@@ -129,7 +129,7 @@ const oceanFloorDataBuffer = root
       applySeaDesaturation: 0,
     },
   ])
-  .$usage('storage', 'vertex', 'uniform')
+  .$usage('storage', 'vertex')
   .$name('ocean floor buffer');
 
 // pipelines
