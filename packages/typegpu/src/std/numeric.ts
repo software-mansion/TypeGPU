@@ -314,6 +314,13 @@ export function reflect<T extends vBase>(e1: T, e2: T): T {
   return sub(e1, mul(2 * dot(e2, e1), e2));
 }
 
+/**
+ * Checks component-wise whether the elements of given vectors differ by at most 1e-2.
+ * @example
+ * isCloseTo(vec3f(0, 0, 0), vec3f(0.002, -0.009, 0)) // returns true
+ *
+ * @param {int} precisionDigits number argument that specifies the exponent of maximum allowed difference, 2 by default.
+ */
 export function isCloseTo<T extends v2f | v3f | v4f | v2h | v3h | v4h>(
   e1: T,
   e2: T,
