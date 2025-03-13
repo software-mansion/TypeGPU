@@ -27,18 +27,20 @@ async function loadCubemap(device: GPUDevice, urls: string[]) {
     })
     .$usage('sampled', 'render', 'storage');
 
-  // Load each face
-  for (let i = 0; i < 6; i++) {
-    const response = await fetch(urls[i]);
-    const blob = await response.blob();
-    const imageBitmap = await createImageBitmap(blob);
+  // Load each face concurrently
+  await Promise.all(
+    urls.map(async (url, i) => {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const imageBitmap = await createImageBitmap(blob);
 
-    device.queue.copyExternalImageToTexture(
-      { source: imageBitmap },
-      { texture: root.unwrap(texture), mipLevel: 0, origin: [0, 0, i] },
-      [size, size],
-    );
-  }
+      device.queue.copyExternalImageToTexture(
+        { source: imageBitmap },
+        { texture: root.unwrap(texture), mipLevel: 0, origin: [0, 0, i] },
+        [size, size],
+      );
+    }),
+  );
 
   return texture;
 }
@@ -61,7 +63,7 @@ const vertexBuffer = root
   .$usage('vertex');
 
 const cameraPosition = d.vec4f(0, 0, 5, 1); // Camera position for specular lighting
-const cameraInitialPos = d.vec3f(0, 0, 5);
+const cameraInitialPos = d.vec3f(0, 1, 5);
 const cameraBuffer = root
   .createBuffer(Camera, {
     view: m.mat4.lookAt(cameraInitialPos, [0, 0, 0], [0, 1, 0], d.mat4x4f()),
@@ -78,7 +80,7 @@ const cameraBuffer = root
 
 const lightBuffer = root
   .createBuffer(DirectionalLight, {
-    direction: d.vec3f(0, 0, 1),
+    direction: d.vec3f(1, 1, 5),
     color: d.vec3f(1, 1, 1),
     intensity: 1,
   })
@@ -88,38 +90,36 @@ const materialBuffer = root
   .createBuffer(Material, {
     ambient: d.vec3f(0.2, 0.2, 0.2),
     diffuse: d.vec3f(0.7, 0.7, 0.7),
-    specular: d.vec3f(1.0, 1.0, 1.0),
+    specular: d.vec3f(0.1, 0.1, 0.1),
     shininess: 21,
-    reflectivity: 0.6,
+    reflectivity: 0.1,
   })
   .$usage('uniform');
 
 const cubemapTexture = await loadCubemap(root.device, cubemapUrls);
+const cubemapSampler = tgpu['~unstable'].sampler({
+  magFilter: 'linear',
+  minFilter: 'linear',
+  addressModeU: 'clamp-to-edge',
+  addressModeV: 'clamp-to-edge',
+  addressModeW: 'clamp-to-edge',
+});
 
-const rederLayout = tgpu.bindGroupLayout({
+const renderLayout = tgpu.bindGroupLayout({
   camera: { uniform: Camera },
   light: { uniform: DirectionalLight },
   material: { uniform: Material },
-  cubemap: {
-    texture: 'float',
-    viewDimension: 'cube',
-  },
-  sampler: {
-    sampler: 'filtering',
-  },
+  cubemap: { texture: 'float', viewDimension: 'cube' },
+  sampler: { sampler: 'filtering' },
 });
-const { camera, light, material } = rederLayout.bound;
+const { camera, light, material, cubemap, sampler } = renderLayout.bound;
 
-const renderBindGroup = root.createBindGroup(rederLayout, {
+const renderBindGroup = root.createBindGroup(renderLayout, {
   camera: cameraBuffer,
   light: lightBuffer,
   material: materialBuffer,
   cubemap: cubemapTexture,
-  sampler: tgpu['~unstable'].sampler({
-    magFilter: 'linear',
-    minFilter: 'linear',
-    mipmapFilter: 'linear',
-  }),
+  sampler: cubemapSampler,
 });
 
 const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(Vertex, n));
@@ -159,60 +159,40 @@ const fragmentFn = tgpu['~unstable']
     },
     out: d.vec4f,
   })
-  .does((input) => {
-    // Normalize vectors
-    const normal = std.normalize(input.normal);
-    const lightDir = std.normalize(light.value.direction);
+  .does(`(input: vi) -> @location(0) vec4f {
+    // Calculate normalized vectors for lighting
+    let norm = normalize(input.normal.xyz);
+    let lDir = normalize(light.direction);
 
     // Ambient component
-    const ambient = std.mul(material.value.ambient, light.value.color);
+    let ambient = material.ambient * light.color * light.intensity;
 
-    // Diffuse component (Lambert's cosine law)
-    const diffuseFactor = std.max(std.dot(normal.xyz, lightDir), 0.0);
-    const diffuse = std.mul(
-      diffuseFactor * light.value.intensity,
-      std.mul(material.value.diffuse, light.value.color),
-    );
+    // Diffuse component
+    let diffFactor = max(dot(norm, lDir), 0.0);
+    let diffuse = diffFactor * material.diffuse * light.color * light.intensity;
 
-    // Specular component (Phong reflection model)
-    // Calculate reflection vector
-    const viewDir = std.normalize(
-      std.sub(camera.value.position.xyz, input.worldPos.xyz),
-    );
-    const reflectDir = std.normalize(
-      std.reflect(d.vec3f(-lightDir.x, -lightDir.y, -lightDir.z), normal.xyz),
-    );
+    // Specular component
+    let vDir = normalize(camera.position.xyz - input.worldPos.xyz);
+    let rDir = reflect(-lDir, norm);
+    let specFactor = pow(max(dot(vDir, rDir), 0.0), material.shininess);
+    let specular = specFactor * material.specular * light.color * light.intensity;
 
-    const specularFactor = std.pow(
-      std.max(std.dot(viewDir, reflectDir), 0.0),
-      material.value.shininess,
-    );
-    const specular = std.mul(
-      specularFactor * light.value.intensity,
-      std.mul(material.value.specular, light.value.color),
-    );
+    // Environment reflection
+    let reflView = reflect(-vDir, norm);
+    let envColor = textureSample(cubemap, sampler, reflView);
 
-    // Combine lighting components for the base color
-    const baseColor = std.add(std.add(ambient, diffuse), specular);
-    const baseResult = std.mul(baseColor, input.color.xyz);
+    // Combine direct lighting with environmental reflection
+    let directLighting = (ambient + diffuse + specular) * input.color.xyz;
+    let finalColor = mix(directLighting, envColor.xyz, material.reflectivity);
 
-    // Calculate reflection vector for cubemap sampling
-    const reflectionVector = std.reflect(
-      std.mul(-1, viewDir),
-      std.normalize(input.normal).xyz,
-    );
-
-    // @ts-ignore
-    const cubemapColor = std.sampleTexture(cubemap, sampler, reflectionVector);
-
-    // Mix the base color with the cubemap reflection based on the material's reflectivity
-    const finalColor = std.mix(
-      d.vec3f(baseResult),
-      d.vec3f(reflectionVector.xyz),
-      material.value.reflectivity,
-    );
-
-    return d.vec4f(finalColor, 1.0);
+    return vec4f(finalColor, 1.0);
+  }`)
+  .$uses({
+    camera,
+    light,
+    material,
+    cubemap,
+    sampler,
   });
 
 const pipeline = root['~unstable']
@@ -232,7 +212,7 @@ function render() {
       storeOp: 'store',
     })
     .with(vertexLayout, vertexBuffer)
-    .with(rederLayout, renderBindGroup)
+    .with(renderLayout, renderBindGroup)
     .draw(vertices.length);
 
   root['~unstable'].flush();
@@ -261,12 +241,11 @@ function updateCameraOrbit(dx: number, dy: number) {
   const orbitSensitivity = 0.005;
   orbitYaw += -dx * orbitSensitivity;
   orbitPitch += dy * orbitSensitivity;
-  // if we didn't limit pitch, it would lead to flipping the camera which is disorienting.
+  // Clamp pitch to avoid flipping
   const maxPitch = Math.PI / 2 - 0.01;
   if (orbitPitch > maxPitch) orbitPitch = maxPitch;
   if (orbitPitch < -maxPitch) orbitPitch = -maxPitch;
-  // basically converting spherical coordinates to cartesian.
-  // like sampling points on a unit sphere and then scaling them by the radius.
+  // Convert spherical coordinates to cartesian coordinates
   const newCamX = orbitRadius * Math.sin(orbitYaw) * Math.cos(orbitPitch);
   const newCamY = orbitRadius * Math.sin(orbitPitch);
   const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
