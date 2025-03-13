@@ -534,7 +534,7 @@ describe('wgslGenerator', () => {
     );
 
     // Check for: return derived.value;
-    //                      ^ this should be a u32
+    //                      ^ this should be a vec4u
     const res = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body as unknown as typeof expectedAst).b[0]
@@ -579,7 +579,7 @@ describe('wgslGenerator', () => {
     );
 
     // Check for: return derived.value[idx];
-    //                      ^ this should be a u32
+    //                      ^ this should be a f32
     const res = wgslGenerator.generateExpression(
       ctx,
       (astInfo.ast.body as unknown as typeof expectedAst).b[0]
