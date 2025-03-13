@@ -84,7 +84,7 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
           `, {${externalNames.join(', ')}})`,
         );
       } else {
-        magicString.appendRight(expr.implementation.end, ', undefined)');
+        magicString.appendRight(expr.implementation.end, ')');
       }
     }
 
