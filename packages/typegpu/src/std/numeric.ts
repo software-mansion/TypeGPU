@@ -122,33 +122,29 @@ export const atan2 = createDualImpl(
   (y, x) => ({ value: `atan2(${y.value}, ${x.value})`, dataType: y.dataType }),
 );
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#acos-builtin
- */
-export function acos<T extends vBase | number>(value: T): T {
-  if (inGPUMode()) {
-    return `acos(${value})` as unknown as T;
-  }
-  if (typeof value === 'number') {
-    return Math.acos(value) as T;
-  }
-  return VectorOps.acos[(value as vBase).kind](value as never) as T;
-}
+export const acos = createDualImpl(
+  // CPU implementation
+  <T extends vBase | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.acos(value) as T;
+    }
+    return VectorOps.acos[(value as vBase).kind](value as never) as T;
+  },
+  // GPU implementation
+  (value) => ({ value: `acos(${value.value})`, dataType: value.dataType }),
+);
 
-/**
- * @privateRemarks
- * https://www.w3.org/TR/WGSL/#asin-builtin
- */
-export function asin<T extends vBase | number>(value: T): T {
-  if (inGPUMode()) {
-    return `asin(${value})` as unknown as T;
-  }
-  if (typeof value === 'number') {
-    return Math.asin(value) as T;
-  }
-  return VectorOps.asin[(value as vBase).kind](value as never) as T;
-}
+export const asin = createDualImpl(
+  // CPU implementation
+  <T extends vBase | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.asin(value) as T;
+    }
+    return VectorOps.asin[(value as vBase).kind](value as never) as T;
+  },
+  // GPU implementation
+  (value) => ({ value: `asin(${value.value})`, dataType: value.dataType }),
+);
 
 /**
  * @privateRemarks
