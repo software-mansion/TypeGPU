@@ -1,5 +1,5 @@
 import type { Resource } from 'src/types';
-import { bool, f32, i32 } from '../data/numeric';
+import { bool, f32 } from '../data/numeric';
 import { VectorOps } from '../data/vectorOps';
 import type {
   AnyMatInstance,
@@ -433,7 +433,7 @@ export const isCloseTo = createDualImpl(
     return false;
   },
   // GPU implementation
-  (e1, e2, precision = { value: 0.01, dataType: i32 }) => {
+  (e1, e2, precision = { value: 0.01, dataType: f32 }) => {
     if (isNumeric(e1) && isNumeric(e2)) {
       return {
         value: `abs(f32(${e1.value})-f32(${e2.value})) <= ${precision.value}`,
