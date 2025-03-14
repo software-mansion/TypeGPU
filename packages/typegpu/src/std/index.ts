@@ -1,6 +1,7 @@
 export { discard } from './discard.js';
 export {
   // ops
+  eq,
   add,
   sub,
   mul,

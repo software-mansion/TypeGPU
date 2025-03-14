@@ -31,6 +31,16 @@ function isNumeric(element: Resource) {
 
 type vBase = { kind: VecKind };
 
+export const eq = createDualImpl(
+  // CPU implementation
+  <T extends vBase | number>(lhs: T, rhs: T): boolean => lhs === rhs,
+  // GPU implementation
+  (lhs, rhs) => ({
+    value: `(${lhs.value} == ${rhs.value})`,
+    dataType: bool,
+  }),
+);
+
 export const add = createDualImpl(
   // CPU implementation
   <T extends vBase>(lhs: T, rhs: T): T => VectorOps.add[lhs.kind](lhs, rhs),
@@ -436,7 +446,7 @@ export const isCloseTo = createDualImpl(
   (e1, e2, precision = { value: 0.01, dataType: f32 }) => {
     if (isNumeric(e1) && isNumeric(e2)) {
       return {
-        value: `abs(f32(${e1.value})-f32(${e2.value})) <= ${precision.value}`,
+        value: `(abs(f32(${e1.value})-f32(${e2.value})) <= ${precision.value})`,
         dataType: bool,
       };
     }
