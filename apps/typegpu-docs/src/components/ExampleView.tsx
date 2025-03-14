@@ -134,7 +134,7 @@ export function ExampleView({ example }: Props) {
               )}
             >
               <div className="absolute inset-0 flex flex-col justify-between">
-                <div className="h-12 justify-end pt-16 md:pt-0">
+                <div className="h-12 pt-16 md:pt-0">
                   <div className="flex overflow-x-auto border-gray-300 h-full">
                     {editorTabsList.map((fileName) => (
                       <button
@@ -142,7 +142,7 @@ export function ExampleView({ example }: Props) {
                         type="button"
                         onClick={() => setCurrentFile(fileName)}
                         className={cs(
-                          'px-4 rounded-t-lg rounded-b-none text-nowrap h-full',
+                          'px-4 rounded-t-lg rounded-b-none text-nowrap',
                           currentFile === fileName
                             ? 'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
                             : 'bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
