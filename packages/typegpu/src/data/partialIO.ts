@@ -60,8 +60,11 @@ export function getWriteInstructions<TData extends wgsl.BaseData>(
           );
         }
       }
-    } else if (isWgslArray(node) || isDisarray(node)) {
-      const arrSchema = node;
+      return;
+    }
+
+    if (isWgslArray(node) || isDisarray(node)) {
+      const arrSchema = node as wgsl.WgslArray;
       const elementSize = roundUp(
         sizeOf(arrSchema.elementType),
         alignmentOf(arrSchema.elementType),
