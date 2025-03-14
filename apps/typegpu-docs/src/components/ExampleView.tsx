@@ -100,7 +100,7 @@ export function ExampleView({ example }: Props) {
         <div
           className={cs(
             'flex-1 grid gap-4',
-            codeEditorShowing ? 'md:grid-rows-2' : '',
+            codeEditorShowing ? 'md:grid-rows-[2fr_3fr]' : '',
           )}
         >
           {isGPUSupported ? (
@@ -133,29 +133,39 @@ export function ExampleView({ example }: Props) {
                 'absolute bg-tameplum-50 z-20 md:relative h-[calc(100%-2rem)] w-[calc(100%-2rem)] md:w-full md:h-full',
               )}
             >
-              <div className="absolute inset-1">
-                <div className="flex overflow-auto border-gray-300 pt-16 md:pt-0">
-                  {editorTabsList.map((fileName) => (
-                    <button
-                      key={fileName}
-                      type="button"
-                      onClick={() => setCurrentFile(fileName)}
-                      className={cs(
-                        'px-4 py-2',
-                        currentFile === fileName
-                          ? 'rounded-t-lg rounded-bl-none rounded-br-none bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
-                          : 'rounded-t-lg rounded-bl-none rounded-br-none bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
-                      )}
-                    >
-                      {fileName}
-                    </button>
-                  ))}
+              <div className="absolute inset-0 flex flex-col justify-between">
+                <div className="h-12 pt-16 md:pt-0">
+                  <div className="flex overflow-x-auto border-gray-300 h-full">
+                    {editorTabsList.map((fileName) => (
+                      <button
+                        key={fileName}
+                        type="button"
+                        onClick={() => setCurrentFile(fileName)}
+                        className={cs(
+                          'px-4 rounded-t-lg rounded-b-none text-nowrap',
+                          currentFile === fileName
+                            ? 'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
+                            : 'bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
+                        )}
+                      >
+                        {fileName}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                {currentFile === 'index.html' ? (
-                  <HtmlCodeEditor shown code={htmlCode} />
-                ) : (
-                  <TsCodeEditor shown code={tsCodes[currentFile]} />
-                )}
+
+                <HtmlCodeEditor
+                  shown={currentFile === 'index.html'}
+                  code={htmlCode}
+                />
+
+                {Object.entries(tsCodes).map(([key, value]) => (
+                  <TsCodeEditor
+                    shown={key === currentFile}
+                    code={value}
+                    key={key}
+                  />
+                ))}
               </div>
             </div>
           ) : null}
