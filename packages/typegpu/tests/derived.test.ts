@@ -171,8 +171,8 @@ describe('TgpuDerived', () => {
         @group(0) @binding(0) var<uniform> boid: Boid;
 
         fn func(){
-          var pos = (2 * vec3f(1, 2, 3));
-          var posX = (2 * vec3f(1, 2, 3)).x;
+          var pos = vec3f(2, 4, 6);
+          var posX = 2;
           var vel = boid.vel;
           var velX = boid.vel.x;
 

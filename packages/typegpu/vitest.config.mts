@@ -10,5 +10,8 @@ const typegpu = await jiti.import<typeof TypeGPUPlugin>(
 );
 
 export default defineConfig({
-  plugins: [typegpu({ include: [/.*\.test\.ts/] }), nearleyRedirectPlugin()],
+  plugins: [
+    typegpu({ include: [/.*\.test\.ts/], forceTgpuAlias: 'tgpu' }),
+    nearleyRedirectPlugin(),
+  ],
 });

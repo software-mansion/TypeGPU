@@ -28,7 +28,10 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
     }
 
     const ctx: Context = {
-      tgpuAliases: new Set(['tgpu']),
+      tgpuAliases: new Set<string>(
+        options.forceTgpuAlias ? [options.forceTgpuAlias] : [],
+      ),
+      fileId: id,
     };
 
     const ast = this.parse(code, {
@@ -65,6 +68,13 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
     });
 
     const magicString = new MagicString(code);
+    const tgpuAlias = ctx.tgpuAliases.values().next().value;
+
+    if (tgpuAlias === undefined && tgslFunctionDefs.length > 0) {
+      throw new Error(
+        `No tgpu import found, cannot assign ast to function in file: ${id}`,
+      );
+    }
 
     for (const expr of tgslFunctionDefs) {
       const { argNames, body, externalNames } = transpileFn(
@@ -72,7 +82,10 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
       );
 
       // Wrap the implementation in a call to `tgpu.__assignAst` to associate the AST with the implementation.
-      magicString.appendLeft(expr.implementation.start, 'tgpu.__assignAst(');
+      magicString.appendLeft(
+        expr.implementation.start,
+        `${tgpuAlias}.__assignAst(`,
+      );
       magicString.appendRight(
         expr.implementation.end,
         `, ${embedJSON({ argNames, body, externalNames })}`,
@@ -84,7 +97,7 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
           `, {${externalNames.join(', ')}})`,
         );
       } else {
-        magicString.appendRight(expr.implementation.end, ', undefined)');
+        magicString.appendRight(expr.implementation.end, ')');
       }
     }
 

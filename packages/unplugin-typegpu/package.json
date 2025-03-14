@@ -1,6 +1,6 @@
 {
   "name": "unplugin-typegpu",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.5",
   "description": "Build plugins for TypeGPU, enabling seamless JavaScript -> WGSL transpilation and improved debugging.",
   "keywords": [
     "rollup-plugin",
@@ -106,14 +106,15 @@
   },
   "dependencies": {
     "@babel/standalone": "^7.26.6",
-    "tinyest-for-wgsl": "workspace:~0.1.0-alpha.3",
     "estree-walker": "^3.0.3",
     "magic-string": "^0.30.11",
+    "tinyest-for-wgsl": "workspace:~0.1.0-alpha.5",
     "unplugin": "^2.2.0"
   },
   "devDependencies": {
     "@babel/template": "^7.25.9",
     "@babel/types": "^7.26.5",
+    "@rollup/plugin-virtual": "^3.0.2",
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@types/babel__standalone": "^7.1.9",
     "@types/babel__template": "^7.4.4",

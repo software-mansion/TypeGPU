@@ -203,6 +203,14 @@ const Transpilers: Partial<{
     return { n: String(node.value) ?? '' };
   },
 
+  BooleanLiteral(ctx, node) {
+    return node.value;
+  },
+
+  StringLiteral(ctx, node) {
+    return { s: node.value };
+  },
+
   CallExpression(ctx, node) {
     const callee = transpile(ctx, node.callee) as smol.Expression;
 
