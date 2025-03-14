@@ -1,3 +1,4 @@
+import type { Resource } from 'src/types';
 import { bool, f32, i32 } from '../data/numeric';
 import { VectorOps } from '../data/vectorOps';
 import type {
@@ -12,8 +13,21 @@ import type {
   v3u,
   v4f,
   v4h,
+  vBaseForMat,
 } from '../data/wgslTypes';
 import { createDualImpl } from '../shared/generators';
+
+function isNumeric(element: Resource) {
+  const type = element.dataType.type;
+  return (
+    type === 'abstractInt' ||
+    type === 'abstractFloat' ||
+    type === 'f32' ||
+    type === 'f16' ||
+    type === 'i32' ||
+    type === 'u32'
+  );
+}
 
 type vBase = { kind: VecKind };
 
@@ -395,8 +409,10 @@ export const reflect = createDualImpl(
 );
 
 /**
- * Checks component-wise whether the elements of given vectors differ by at most 0.01.
+ * Checks whether the given elements differ by at most 0.01.
+ * Component-wise if arguments are vectors.
  * @example
+ * isCloseTo(0, 0.1) // returns false
  * isCloseTo(vec3f(0, 0, 0), vec3f(0.002, -0.009, 0)) // returns true
  *
  * @param {number} precision argument that specifies the maximum allowed difference, 0.01 by default.
@@ -404,17 +420,37 @@ export const reflect = createDualImpl(
 
 export const isCloseTo = createDualImpl(
   // CPU implementation
-  <T extends v2f | v3f | v4f | v2h | v3h | v4h>(
+  <T extends number | v2f | v3f | v4f | v2h | v3h | v4h>(
     e1: T,
     e2: T,
     precision = 0.01,
-  ) => VectorOps.isCloseToZero[e1.kind](sub(e1, e2), precision),
+  ) => {
+    if (typeof e1 === 'number' && typeof e2 === 'number') {
+      return Math.abs(e1 - e2) < precision;
+    }
+    if (typeof e1 !== 'number' && typeof e2 !== 'number') {
+      return VectorOps.isCloseToZero[e1.kind](sub(e1, e2), precision);
+    }
+    return false;
+  },
   // GPU implementation
-  // https://www.w3.org/TR/WGSL/#vector-multi-component:~:text=Binary%20arithmetic%20expressions%20with%20mixed%20scalar%20and%20vector%20operands
-  // (a-a)+prec creates a vector of a.length elements, all equal to prec
-  (e1, e2, precisionDigits = { value: 0.01, dataType: i32 }) => {
+  (e1, e2, precision = { value: 0.01, dataType: i32 }) => {
+    if (isNumeric(e1) && isNumeric(e2)) {
+      return {
+        value: `abs(f32(${e1})-f32(${e2}) <= ${precision.value})`,
+        dataType: bool,
+      };
+    }
+    if (!isNumeric(e1) && !isNumeric(e2)) {
+      return {
+        // https://www.w3.org/TR/WGSL/#vector-multi-component:~:text=Binary%20arithmetic%20expressions%20with%20mixed%20scalar%20and%20vector%20operands
+        // (a-a)+prec creates a vector of a.length elements, all equal to prec
+        value: `all(abs(${e1.value}-${e2.value}) <= (${e1.value} - ${e1.value})+${precision.value})`,
+        dataType: bool,
+      };
+    }
     return {
-      value: `all(abs(${e1.value}-${e2.value}) <= (${e1.value} * 0)+${precisionDigits.value})`,
+      value: 'false',
       dataType: bool,
     };
   },

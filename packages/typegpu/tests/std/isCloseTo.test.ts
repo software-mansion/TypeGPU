@@ -46,17 +46,17 @@ describe('isCloseTo', () => {
   });
 
   it('applies precision correctly', () => {
-    // default precision of 2
+    // default precision of 0.01
     expect(isCloseTo(vec2h(0, 0), vec2h(0, 0.009))).toBeTruthy();
     expect(isCloseTo(vec2h(0, 0), vec2h(0, 0.011))).toBeFalsy();
 
-    expect(isCloseTo(vec2h(0, 0), vec2h(0, 0.09), 1)).toBeTruthy();
-    expect(isCloseTo(vec2h(0, 0), vec2h(0, 0.11), 1)).toBeFalsy();
+    expect(isCloseTo(vec2h(0, 0), vec2h(0, 0.09), 0.1)).toBeTruthy();
+    expect(isCloseTo(vec2h(0, 0), vec2h(0, 0.11), 0.1)).toBeFalsy();
 
-    expect(isCloseTo(vec2h(0, 0), vec2h(0, 0.0009), 3)).toBeTruthy();
-    expect(isCloseTo(vec2h(0, 0), vec2h(0, 0.0011), 3)).toBeFalsy();
+    expect(isCloseTo(vec2h(0, 0), vec2h(0, 0.0009), 0.001)).toBeTruthy();
+    expect(isCloseTo(vec2h(0, 0), vec2h(0, 0.0011), 0.001)).toBeFalsy();
 
-    expect(isCloseTo(vec2h(0, 0), vec2h(0, 9), -1)).toBeTruthy();
-    expect(isCloseTo(vec2h(0, 0), vec2h(0, 11), -1)).toBeFalsy();
+    expect(isCloseTo(vec2h(0, 0), vec2h(0, 9), 10)).toBeTruthy();
+    expect(isCloseTo(vec2h(0, 0), vec2h(0, 11), 10)).toBeFalsy();
   });
 });
