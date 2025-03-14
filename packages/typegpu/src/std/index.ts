@@ -23,6 +23,7 @@ export {
   mix,
   pow,
   reflect,
+  isCloseTo,
 } from './numeric.js';
 
 export {

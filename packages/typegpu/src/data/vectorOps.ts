@@ -903,4 +903,25 @@ export const VectorOps = {
     vec4i: unary4i((value) => value - Math.floor(value)),
     vec4u: unary4u((value) => value - Math.floor(value)),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  isCloseToZero: {
+    vec2f: (v: wgsl.v2f, n: number) => Math.abs(v.x) <= n && Math.abs(v.y) <= n,
+    vec2h: (v: wgsl.v2h, n: number) => Math.abs(v.x) <= n && Math.abs(v.y) <= n,
+
+    vec3f: (v: wgsl.v3f, n: number) =>
+      Math.abs(v.x) <= n && Math.abs(v.y) <= n && Math.abs(v.z) <= n,
+    vec3h: (v: wgsl.v3h, n: number) =>
+      Math.abs(v.x) <= n && Math.abs(v.y) <= n && Math.abs(v.z) <= n,
+
+    vec4f: (v: wgsl.v4f, n: number) =>
+      Math.abs(v.x) <= n &&
+      Math.abs(v.y) <= n &&
+      Math.abs(v.z) <= n &&
+      Math.abs(v.w) <= n,
+    vec4h: (v: wgsl.v4h, n: number) =>
+      Math.abs(v.x) <= n &&
+      Math.abs(v.y) <= n &&
+      Math.abs(v.z) <= n &&
+      Math.abs(v.w) <= n,
+  } as Record<VecKind, <T extends vBase>(v: T, n: number) => boolean>,
 };
