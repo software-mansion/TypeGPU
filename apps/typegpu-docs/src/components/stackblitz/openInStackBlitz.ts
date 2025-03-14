@@ -85,7 +85,9 @@ ${example.htmlCode}
     "dependencies": {
       "typegpu": "^${typegpuPackageJson.version}",
       "unplugin-typegpu": "^${unpluginPackageJson.version}",
-      "wgpu-matrix": "${typegpuDocsPackageJson.dependencies['wgpu-matrix']}"
+      "wgpu-matrix": "${typegpuDocsPackageJson.dependencies['wgpu-matrix']}",
+      "@loaders.gl/core": "${typegpuDocsPackageJson.dependencies['@loaders.gl/core']}",
+      "@loaders.gl/obj": "${typegpuDocsPackageJson.dependencies['@loaders.gl/obj']}"
     }
 }`,
         'vite.config.js': `\

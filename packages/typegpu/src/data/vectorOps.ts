@@ -140,6 +140,40 @@ export const VectorOps = {
     vec4u: binaryComponentWise4u(Math.atan2),
   } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
 
+  acos: {
+    vec2f: unary2f(Math.acos),
+    vec2h: unary2h(Math.acos),
+    vec2i: unary2i(Math.acos),
+    vec2u: unary2u(Math.acos),
+
+    vec3f: unary3f(Math.acos),
+    vec3h: unary3h(Math.acos),
+    vec3i: unary3i(Math.acos),
+    vec3u: unary3u(Math.acos),
+
+    vec4f: unary4f(Math.acos),
+    vec4h: unary4h(Math.acos),
+    vec4i: unary4i(Math.acos),
+    vec4u: unary4u(Math.acos),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
+  asin: {
+    vec2f: unary2f(Math.asin),
+    vec2h: unary2h(Math.asin),
+    vec2i: unary2i(Math.asin),
+    vec2u: unary2u(Math.asin),
+
+    vec3f: unary3f(Math.asin),
+    vec3h: unary3h(Math.asin),
+    vec3i: unary3i(Math.asin),
+    vec3u: unary3u(Math.asin),
+
+    vec4f: unary4f(Math.asin),
+    vec4h: unary4h(Math.asin),
+    vec4i: unary4i(Math.asin),
+    vec4u: unary4u(Math.asin),
+  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+
   ceil: {
     vec2f: unary2f(Math.ceil),
     vec2h: unary2h(Math.ceil),
