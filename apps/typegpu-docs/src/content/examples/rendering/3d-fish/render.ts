@@ -29,10 +29,10 @@ export const vertexShader = tgpu['~unstable']
     const yaw = std.atan2(direction.z, direction.x) + Math.PI;
     // biome-ignore format:
     const yawMatrix = d.mat3x3f(
-          std.cos(yaw),  0, std.sin(yaw),
-          0,             1, 0,           
-          -std.sin(yaw), 0, std.cos(yaw),
-        );
+      std.cos(yaw),  0, std.sin(yaw),
+      0,             1, 0,           
+      -std.sin(yaw), 0, std.cos(yaw),
+    );
 
     const pitch = -std.asin(-direction.y);
     // biome-ignore format:
