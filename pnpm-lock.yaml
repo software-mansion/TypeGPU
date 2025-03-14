@@ -86,6 +86,9 @@ importers:
       '@std/yaml':
         specifier: npm:@jsr/std__yaml@^1.0.5
         version: '@jsr/std__yaml@1.0.5'
+      '@typegpu/noise':
+        specifier: workspace:*
+        version: link:../../packages/typegpu-noise/dist
       '@types/dom-mediacapture-transform':
         specifier: ^0.1.9
         version: 0.1.10
@@ -369,6 +372,28 @@ importers:
       wgpu-matrix:
         specifier: ^3.3.0
         version: 3.3.0
+    publishDirectory: dist
+
+  packages/typegpu-noise:
+    devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
+      '@webgpu/types':
+        specifier: ^0.1.51
+        version: 0.1.54
+      rollup-plugin-typegpu:
+        specifier: workspace:*
+        version: link:../rollup-plugin
+      tsup:
+        specifier: ^8.0.2
+        version: 8.3.6(jiti@2.4.2)(postcss@8.5.3)(tsx@4.19.3)(typescript@5.7.3)(yaml@2.7.0)
+      typegpu:
+        specifier: workspace:*
+        version: link:../typegpu
+      typescript:
+        specifier: ^5.7.2
+        version: 5.7.3
     publishDirectory: dist
 
   packages/unplugin-typegpu:

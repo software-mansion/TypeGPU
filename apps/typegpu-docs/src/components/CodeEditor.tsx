@@ -3,7 +3,6 @@ import Editor, {
   type Monaco,
   type OnMount,
 } from '@monaco-editor/react';
-import webgpuTypes from '@webgpu/types/dist/index.d.ts?raw';
 // biome-ignore lint/correctness/noUnusedImports: <its a namespace, Biome>
 import type { editor } from 'monaco-editor';
 import { entries, map, pipe } from 'remeda';
@@ -47,25 +46,44 @@ const mediacaptureExtraLibs = pipe(
   })),
 );
 
+import {
+  entries,
+  filter,
+  fromEntries,
+  isTruthy,
+  map,
+  pipe,
+  values,
+} from 'remeda';
+import { SANDBOX_MODULES } from '../utils/examples/sandboxModules';
+
 function handleEditorWillMount(monaco: Monaco) {
   const tsDefaults = monaco?.languages.typescript.typescriptDefaults;
 
-  tsDefaults.addExtraLib(webgpuTypes);
-  for (const lib of typegpuExtraLibs) {
-    tsDefaults.addExtraLib(lib.content, lib.filename);
+  for (const moduleDef of values(SANDBOX_MODULES)) {
+    if ('content' in moduleDef.typeDef) {
+      tsDefaults.addExtraLib(
+        moduleDef.typeDef.content,
+        moduleDef.typeDef.filename,
+      );
+    }
   }
-  for (const lib of mediacaptureExtraLibs) {
-    tsDefaults.addExtraLib(lib.content, lib.filename);
-  }
-  tsDefaults.addExtraLib(wgpuMatrixDts, 'wgpu-matrix.d.ts');
+
+  const reroutes = pipe(
+    entries(SANDBOX_MODULES),
+    map(([key, moduleDef]) => {
+      if ('reroute' in moduleDef.typeDef) {
+        return [key, moduleDef.typeDef.reroute] as const;
+      }
+      return null;
+    }),
+    filter(isTruthy),
+    fromEntries(),
+  );
 
   tsDefaults.setCompilerOptions({
     ...tsCompilerOptions,
-    paths: {
-      typegpu: ['typegpu/src/index.ts'],
-      'typegpu/data': ['typegpu/src/data/index.ts'],
-      'typegpu/std': ['typegpu/src/std/index.ts'],
-    },
+    paths: reroutes,
   });
 }
 
