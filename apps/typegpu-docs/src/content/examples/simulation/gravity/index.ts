@@ -1,10 +1,10 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
-import { mainFragment, mainVertex } from './shaders';
+import { mainFragment, mainVertex } from './main-shaders';
 import { cubeModel, vertices } from './cube';
 import { cameraInitialPos, cubePos, cubeVelocity, G, target } from './env';
-import { bindGroupLayout, CameraStruct, bindObjectLayout, ObjectStruct, VertexStruct } from './structs';
+import { bindGroupLayout, CameraStruct, bindObjectLayout, ObjectStruct, VertexStruct, CelectialBodyStruct } from './structs';
 
 
 const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(VertexStruct, n));
@@ -78,6 +78,20 @@ const bindGroup = root.createBindGroup(bindGroupLayout, {
   // cube: cubeBuffer,
   sampler,
 });
+
+const celestialBodiesBufferA = root.createBuffer(d.arrayOf(CelectialBodyStruct, 1), [{
+  position: d.vec3f(0, 0, 0),
+  velocity: d.vec3f(0, 0, 0),
+  mass: 1,
+}]).$usage('uniform');
+const celestialBodiesBufferB = root.createBuffer(d.arrayOf(CelectialBodyStruct, 1), [{
+  position: d.vec3f(0, 0, 0),
+  velocity: d.vec3f(0, 0, 0),
+  mass: 1,
+}]).$usage('uniform');
+
+// biome-ignore lint/style/useConst: <explanation>
+let flip = false;
 
 // Render pipeline
 const renderPipeline = root['~unstable']

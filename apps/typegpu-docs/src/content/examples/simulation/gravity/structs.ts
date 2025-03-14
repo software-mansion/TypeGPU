@@ -12,6 +12,7 @@ export const CameraStruct = d.struct({
   projection: d.mat4x4f,
 });
 
+// Cube
 export const ObjectStruct = d.struct({
   modelMatrix: d.mat4x4f,
 });
@@ -24,4 +25,18 @@ export const bindGroupLayout = tgpu.bindGroupLayout({
   camera: { uniform: CameraStruct },
   // texture: { texture: 'float' },
   sampler: { sampler: 'filtering' },
+});
+
+// Celestial Bodies
+export const CelectialBodyStruct = d.struct({
+  position: d.vec3f,
+  velocity: d.vec3f,
+  mass: d.f32,
+});
+export const CelestialBodyArray = (n: number) =>
+  d.arrayOf(CelectialBodyStruct, n);
+
+export const bindCelestialBodyLayout = tgpu.bindGroupLayout({
+  inState: { uniform: CelestialBodyArray(1), access: 'readonly' },
+  outState: { uniform: CelestialBodyArray(1), access: 'writeonly' },
 });
