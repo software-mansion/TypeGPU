@@ -126,35 +126,23 @@ export const VectorOps = {
   atan2: {
     vec2f: binaryComponentWise2f(Math.atan2),
     vec2h: binaryComponentWise2h(Math.atan2),
-    vec2i: binaryComponentWise2i(Math.atan2),
-    vec2u: binaryComponentWise2u(Math.atan2),
 
     vec3f: binaryComponentWise3f(Math.atan2),
     vec3h: binaryComponentWise3h(Math.atan2),
-    vec3i: binaryComponentWise3i(Math.atan2),
-    vec3u: binaryComponentWise3u(Math.atan2),
 
     vec4f: binaryComponentWise4f(Math.atan2),
     vec4h: binaryComponentWise4h(Math.atan2),
-    vec4i: binaryComponentWise4i(Math.atan2),
-    vec4u: binaryComponentWise4u(Math.atan2),
   } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
 
   ceil: {
     vec2f: unary2f(Math.ceil),
     vec2h: unary2h(Math.ceil),
-    vec2i: unary2i(Math.ceil),
-    vec2u: unary2u(Math.ceil),
 
     vec3f: unary3f(Math.ceil),
     vec3h: unary3h(Math.ceil),
-    vec3i: unary3i(Math.ceil),
-    vec3u: unary3u(Math.ceil),
 
     vec4f: unary4f(Math.ceil),
     vec4h: unary4h(Math.ceil),
-    vec4i: unary4i(Math.ceil),
-    vec4u: unary4u(Math.ceil),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   clamp: {
@@ -225,16 +213,12 @@ export const VectorOps = {
   length: {
     vec2f: lengthVec2,
     vec2h: lengthVec2,
-    vec2i: lengthVec2,
-    vec2u: lengthVec2,
+
     vec3f: lengthVec3,
     vec3h: lengthVec3,
-    vec3i: lengthVec3,
-    vec3u: lengthVec3,
+
     vec4f: lengthVec4,
     vec4h: lengthVec4,
-    vec4i: lengthVec4,
-    vec4u: lengthVec4,
   } as Record<VecKind, (v: vBase) => number>,
 
   add: {
@@ -656,18 +640,12 @@ export const VectorOps = {
   floor: {
     vec2f: unary2f(Math.floor),
     vec2h: unary2h(Math.floor),
-    vec2i: unary2i(Math.floor),
-    vec2u: unary2u(Math.floor),
 
     vec3f: unary3f(Math.floor),
     vec3h: unary3h(Math.floor),
-    vec3i: unary3i(Math.floor),
-    vec3u: unary3u(Math.floor),
 
     vec4f: unary4f(Math.floor),
     vec4h: unary4h(Math.floor),
-    vec4i: unary4i(Math.floor),
-    vec4u: unary4u(Math.floor),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   max: {
@@ -839,69 +817,45 @@ export const VectorOps = {
   sin: {
     vec2f: unary2f(Math.sin),
     vec2h: unary2h(Math.sin),
-    vec2i: unary2i(Math.sin),
-    vec2u: unary2u(Math.sin),
 
     vec3f: unary3f(Math.sin),
     vec3h: unary3h(Math.sin),
-    vec3i: unary3i(Math.sin),
-    vec3u: unary3u(Math.sin),
 
     vec4f: unary4f(Math.sin),
     vec4h: unary4h(Math.sin),
-    vec4i: unary4i(Math.sin),
-    vec4u: unary4u(Math.sin),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   cos: {
     vec2f: unary2f(Math.cos),
     vec2h: unary2h(Math.cos),
-    vec2i: unary2i(Math.cos),
-    vec2u: unary2u(Math.cos),
 
     vec3f: unary3f(Math.cos),
     vec3h: unary3h(Math.cos),
-    vec3i: unary3i(Math.cos),
-    vec3u: unary3u(Math.cos),
 
     vec4f: unary4f(Math.cos),
     vec4h: unary4h(Math.cos),
-    vec4i: unary4i(Math.cos),
-    vec4u: unary4u(Math.cos),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   exp: {
     vec2f: unary2f(Math.exp),
     vec2h: unary2h(Math.exp),
-    vec2i: unary2i(Math.exp),
-    vec2u: unary2u(Math.exp),
 
     vec3f: unary3f(Math.exp),
     vec3h: unary3h(Math.exp),
-    vec3i: unary3i(Math.exp),
-    vec3u: unary3u(Math.exp),
 
     vec4f: unary4f(Math.exp),
     vec4h: unary4h(Math.exp),
-    vec4i: unary4i(Math.exp),
-    vec4u: unary4u(Math.exp),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   fract: {
     vec2f: unary2f((value) => value - Math.floor(value)),
     vec2h: unary2h((value) => value - Math.floor(value)),
-    vec2i: unary2i((value) => value - Math.floor(value)),
-    vec2u: unary2u((value) => value - Math.floor(value)),
 
     vec3f: unary3f((value) => value - Math.floor(value)),
     vec3h: unary3h((value) => value - Math.floor(value)),
-    vec3i: unary3i((value) => value - Math.floor(value)),
-    vec3u: unary3u((value) => value - Math.floor(value)),
 
     vec4f: unary4f((value) => value - Math.floor(value)),
     vec4h: unary4h((value) => value - Math.floor(value)),
-    vec4i: unary4i((value) => value - Math.floor(value)),
-    vec4u: unary4u((value) => value - Math.floor(value)),
   } as Record<VecKind, <T extends vBase>(v: T) => T>,
 
   isCloseToZero: {

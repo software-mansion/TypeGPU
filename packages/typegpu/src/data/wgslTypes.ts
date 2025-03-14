@@ -495,19 +495,11 @@ export interface v4u extends NumberArrayView, Swizzle4<v2u, v3u, v4u> {
   w: number;
 }
 
-export type AnyVecInstance =
-  | v2f
-  | v2h
-  | v2i
-  | v2u
-  | v3f
-  | v3h
-  | v3i
-  | v3u
-  | v4f
-  | v4h
-  | v4i
-  | v4u;
+export type AnyFloatVecInstance = v2f | v2h | v3f | v3h | v4f | v4h;
+
+export type AnyIntegerVecInstance = v2i | v2u | v3i | v3u | v4i | v4u;
+
+export type AnyVecInstance = AnyFloatVecInstance | AnyIntegerVecInstance;
 
 export type AnyVec2Instance = v2f | v2h | v2i | v2u;
 export type AnyVec3Instance = v3f | v3h | v3i | v3u;
