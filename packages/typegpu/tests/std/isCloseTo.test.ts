@@ -29,6 +29,11 @@ describe('isCloseTo', () => {
     ).toBeTruthy();
   });
 
+  it('returns true for close numbers', () => {
+    expect(isCloseTo(0, 0.009)).toBeTruthy();
+    expect(isCloseTo(0, 0.0009)).toBeTruthy();
+  });
+
   it('returns false for distant f32 containers', () => {
     expect(isCloseTo(vec2f(0, 0), vec2f(0, 1))).toBeFalsy();
     expect(isCloseTo(vec3f(100, 100, 100), vec3f(101, 100, 100))).toBeFalsy();
@@ -43,6 +48,11 @@ describe('isCloseTo', () => {
     expect(
       isCloseTo(vec4h(1, 2, 3, 4), vec4h(1.02, 2.02, 3.02, 4.02)),
     ).toBeFalsy();
+  });
+
+  it('returns false for distant numbers', () => {
+    expect(isCloseTo(0, 0.9)).toBeFalsy();
+    expect(isCloseTo(0, 0.09)).toBeFalsy();
   });
 
   it('applies precision correctly', () => {
