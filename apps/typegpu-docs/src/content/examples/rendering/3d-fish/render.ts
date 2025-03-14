@@ -37,10 +37,10 @@ export const vertexShader = tgpu['~unstable']
     const pitch = -std.asin(-direction.y);
     // biome-ignore format:
     const pitchMatrix = d.mat3x3f(
-          std.cos(pitch), -std.sin(pitch), 0,
-          std.sin(pitch), std.cos(pitch),  0,
-          0,              0,               1,
-        );
+      std.cos(pitch), -std.sin(pitch), 0,
+      std.sin(pitch), std.cos(pitch),  0,
+      0,              0,               1,
+    );
 
     const worldPosition = std.add(
       std.mul(
