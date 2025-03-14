@@ -1,4 +1,3 @@
-import type { Resource } from 'src/types';
 import { bool, f32 } from '../data/numeric';
 import { VectorOps } from '../data/vectorOps';
 import type {
@@ -16,6 +15,7 @@ import type {
   vBaseForMat,
 } from '../data/wgslTypes';
 import { createDualImpl } from '../shared/generators';
+import type { Resource } from '../types';
 
 function isNumeric(element: Resource) {
   const type = element.dataType.type;
