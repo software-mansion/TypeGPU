@@ -23,7 +23,9 @@ import type { JitTranspiler } from './jitTranspiler';
 import type { NameRegistry } from './nameRegistry';
 import { naturalsExcept } from './shared/generators';
 import type { Infer } from './shared/repr';
+import { $internal } from './shared/symbols';
 import { generateFunction } from './smol';
+import { getTypeFromWgsl } from './smol/generationHelpers';
 import {
   type TgpuBindGroup,
   TgpuBindGroupImpl,
@@ -31,7 +33,14 @@ import {
   type TgpuLayoutEntry,
   bindGroupLayout,
 } from './tgpuBindGroupLayout';
-import type { FnToWgslOptions, ResolutionCtx, Resource, Wgsl } from './types';
+import type {
+  FnToWgslOptions,
+  ItemLayer,
+  ItemStateStack,
+  ResolutionCtx,
+  Resource,
+  Wgsl,
+} from './types';
 import { UnknownData, isSelfResolvable, isWgsl } from './types';
 
 /**
@@ -52,11 +61,6 @@ export type ResolutionCtxImplOptions = {
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
 
-type ItemLayer = {
-  type: 'item';
-  usedSlots: Set<TgpuSlot<unknown>>;
-};
-
 type SlotBindingLayer = {
   type: 'slotBinding';
   bindingMap: WeakMap<TgpuSlot<unknown>, unknown>;
@@ -74,7 +78,7 @@ type BlockScopeLayer = {
   declarations: Map<string, AnyWgslData | UnknownData>;
 };
 
-class ItemStateStack {
+class ItemStateStackImpl implements ItemStateStack {
   private _stack: (
     | ItemLayer
     | SlotBindingLayer
@@ -131,10 +135,11 @@ class ItemStateStack {
   }
 
   popBlockScope() {
-    const layer = this._stack.pop();
-    if (layer?.type !== 'blockScope') {
-      throw new Error('Expected block scope layer to be on top.');
+    const layer = this._stack[this._stack.length - 1];
+    if (!layer || layer.type !== 'blockScope') {
+      throw new Error('Internal error, expected a layer to be on top.');
     }
+    this._stack.pop();
   }
 
   pop() {
@@ -181,8 +186,12 @@ class ItemStateStack {
 
         const external = layer.externalMap[id];
         if (external !== undefined) {
-          // TODO: Extract the type of the external value.
-          return { value: external, dataType: UnknownData };
+          return {
+            value: external,
+            dataType: isWgsl(external)
+              ? getTypeFromWgsl(external)
+              : UnknownData,
+          };
         }
 
         // Since functions cannot access resources from the calling scope, we
@@ -276,8 +285,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   private readonly _indentController = new IndentController();
   private readonly _jitTranspiler: JitTranspiler | undefined;
-  private readonly _itemStateStack = new ItemStateStack();
+  private readonly _itemStateStack = new ItemStateStackImpl();
   private readonly _declarations: string[] = [];
+
+  readonly [$internal] = {
+    itemStateStack: this._itemStateStack,
+  };
 
   // -- Bindings
   /**
@@ -315,26 +328,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   getById(id: string): Resource | null {
-    // TODO: Provide access to external values
-    // TODO: Provide data type information
-    // TODO: Return null if no id is found (when we can properly handle it)
-    return (
-      this._itemStateStack.getResourceById(id) ?? {
-        value: id,
-        dataType: UnknownData,
-      }
-    );
+    const item = this._itemStateStack.getResourceById(id);
+
+    if (item === undefined) {
+      return null;
+    }
+
+    return item;
   }
 
   defineVariable(id: string, dataType: AnyWgslData | UnknownData): Resource {
-    // TODO: Bring this behavior back when we have type inference
-    // const resource = this.getById(id);
-
-    // if (resource) {
-    //   throw new Error(`Resource ${id} already exists in the current scope.`);
-    // } else {
-    //   return this._itemStateStack.defineBlockVariable(id, dataType);
-    // }
     return this._itemStateStack.defineBlockVariable(id, dataType);
   }
 
@@ -477,7 +480,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       }
 
       // If we got here, no item with the given slot-to-value combo exists in cache yet
-      const result = derived['~compute']();
+      // Derived computations are always done on the CPU
+      pushMode(RuntimeMode.CPU);
+
+      let result: T;
+      try {
+        result = derived['~compute']();
+      } finally {
+        popMode(RuntimeMode.CPU);
+      }
 
       // We know which slots the item used while resolving
       const slotToValueMap = new Map<TgpuSlot<unknown>, unknown>();

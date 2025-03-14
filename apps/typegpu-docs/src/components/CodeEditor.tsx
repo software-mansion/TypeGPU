@@ -108,7 +108,11 @@ const createCodeEditorComponent =
     const { code, shown } = props;
 
     return (
-      <div className={shown ? 'contents' : 'hidden'}>
+      <div
+        className={
+          shown ? 'h-[calc(100%-7rem)] md:h-[calc(100%-3rem)]' : 'hidden'
+        }
+      >
         <Editor
           defaultLanguage={language}
           value={code}
@@ -120,7 +124,6 @@ const createCodeEditorComponent =
             },
             readOnly: true,
           }}
-          className="pt-16 md:pt-0"
         />
       </div>
     );
