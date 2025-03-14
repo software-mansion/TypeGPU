@@ -4,7 +4,7 @@ import * as std from 'typegpu/std';
 export const workGroupSize = 256;
 
 export const fishAmount = 1024 * 8;
-export const fishModelScale = 0.02;
+export const fishModelScale = 0.07;
 
 export const fishSeparationDistance = 0.3;
 export const fishSeparationStrength = 0.0006;
