@@ -1071,6 +1071,52 @@ export type AnyWgslData =
 
 // #endregion
 
+export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {
+  return (value as AnyWgslData)?.type.startsWith('vec2');
+}
+
+export function isVec3(value: unknown): value is Vec3f | Vec3h | Vec3i | Vec3u {
+  return (value as AnyWgslData)?.type.startsWith('vec3');
+}
+
+export function isVec4(value: unknown): value is Vec4f | Vec4h | Vec4i | Vec4u {
+  return (value as AnyWgslData)?.type.startsWith('vec4');
+}
+
+export function isVec(
+  value: unknown,
+): value is
+  | Vec2f
+  | Vec2h
+  | Vec2i
+  | Vec2u
+  | Vec3f
+  | Vec3h
+  | Vec3i
+  | Vec3u
+  | Vec4f
+  | Vec4h
+  | Vec4i
+  | Vec4u {
+  return isVec2(value) || isVec3(value) || isVec4(value);
+}
+
+export function isMat2x2f(value: unknown): value is Mat2x2f {
+  return (value as AnyWgslData)?.type === 'mat2x2f';
+}
+
+export function isMat3x3f(value: unknown): value is Mat3x3f {
+  return (value as AnyWgslData)?.type === 'mat3x3f';
+}
+
+export function isMat4x4f(value: unknown): value is Mat4x4f {
+  return (value as AnyWgslData)?.type === 'mat4x4f';
+}
+
+export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
+  return isMat2x2f(value) || isMat3x3f(value) || isMat4x4f(value);
+}
+
 export function isWgslData(value: unknown): value is AnyWgslData {
   return wgslTypeLiterals.includes((value as AnyWgslData)?.type);
 }
