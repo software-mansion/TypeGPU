@@ -16,10 +16,10 @@ describe('buildWriter', () => {
     const writer = buildWriter(struct, 'offset', 'value');
 
     expect(writer).toMatchInlineSnapshot(`
-      "output.setUint32((offset + 0), value.a, endianness);
-      output.setFloat32(((offset + 16) + 0), value.b.x, endianness);
-      output.setFloat32(((offset + 16) + 4), value.b.y, endianness);
-      output.setFloat32(((offset + 16) + 8), value.b.z, endianness);
+      "output.setUint32((offset + 0), value.a, littleEndian);
+      output.setFloat32(((offset + 16) + 0), value.b.x, littleEndian);
+      output.setFloat32(((offset + 16) + 4), value.b.y, littleEndian);
+      output.setFloat32(((offset + 16) + 8), value.b.z, littleEndian);
       "
     `);
   });
@@ -33,14 +33,14 @@ describe('buildWriter', () => {
     const writer = buildWriter(struct, 'offset', 'value');
 
     expect(writer).toMatchInlineSnapshot(`
-      "output.setUint32((offset + 0), value.a, endianness);
+      "output.setUint32((offset + 0), value.a, littleEndian);
       for (let i = 0; i < 2; i++) {
-      output.setFloat32((((offset + 16) + i * 16) + 0), value.b[i].x, endianness);
-      output.setFloat32((((offset + 16) + i * 16) + 4), value.b[i].y, endianness);
-      output.setFloat32((((offset + 16) + i * 16) + 8), value.b[i].z, endianness);
+      output.setFloat32((((offset + 16) + i * 16) + 0), value.b[i].x, littleEndian);
+      output.setFloat32((((offset + 16) + i * 16) + 4), value.b[i].y, littleEndian);
+      output.setFloat32((((offset + 16) + i * 16) + 8), value.b[i].z, littleEndian);
       }
       for (let i = 0; i < 3; i++) {
-      output.setUint32(((offset + 48) + i * 4), value.c[i], endianness);
+      output.setUint32(((offset + 48) + i * 4), value.c[i], littleEndian);
       }
       "
     `);
@@ -56,12 +56,12 @@ describe('buildWriter', () => {
     const writer = buildWriter(struct, 'offset', 'value');
 
     expect(writer).toMatchInlineSnapshot(`
-      "output.setUint32((offset + 0), value.a, endianness);
-      output.setFloat32((((offset + 16) + 0) + 0), value.b.d.x, endianness);
-      output.setFloat32((((offset + 16) + 0) + 4), value.b.d.y, endianness);
-      output.setFloat32((((offset + 16) + 0) + 8), value.b.d.z, endianness);
+      "output.setUint32((offset + 0), value.a, littleEndian);
+      output.setFloat32((((offset + 16) + 0) + 0), value.b.d.x, littleEndian);
+      output.setFloat32((((offset + 16) + 0) + 4), value.b.d.y, littleEndian);
+      output.setFloat32((((offset + 16) + 0) + 8), value.b.d.z, littleEndian);
       for (let i = 0; i < 3; i++) {
-      output.setUint32((((offset + 32) + i * 4) + 0), value.c[i].d, endianness);
+      output.setUint32((((offset + 32) + i * 4) + 0), value.c[i].d, littleEndian);
       }
       "
     `);
@@ -73,9 +73,9 @@ describe('buildWriter', () => {
 
     expect(writer).toMatchInlineSnapshot(`
       "for (let i = 0; i < 5; i++) {
-      output.setFloat32(((offset + i * 16) + 0), value[i].x, endianness);
-      output.setFloat32(((offset + i * 16) + 4), value[i].y, endianness);
-      output.setFloat32(((offset + i * 16) + 8), value[i].z, endianness);
+      output.setFloat32(((offset + i * 16) + 0), value[i].x, littleEndian);
+      output.setFloat32(((offset + i * 16) + 4), value[i].y, littleEndian);
+      output.setFloat32(((offset + i * 16) + 8), value[i].z, littleEndian);
       }
       "
     `);

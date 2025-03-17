@@ -21,7 +21,7 @@ const compiledWriters = new WeakMap<
     output: DataView,
     offset: number,
     value: unknown,
-    endianness?: boolean,
+    littleEndian?: boolean,
   ) => void
 >();
 
@@ -106,7 +106,7 @@ export function buildWriter(
     const count = wgsl.isVec2(node) ? 2 : wgsl.isVec3(node) ? 3 : 4;
 
     for (let i = 0; i < count; i++) {
-      code += `output.${writeFunc}((${offsetExpr} + ${i * 4}), ${valueExpr}.${components[i]}, endianness);\n`;
+      code += `output.${writeFunc}((${offsetExpr} + ${i * 4}), ${valueExpr}.${components[i]}, littleEndian);\n`;
     }
     return code;
   }
@@ -125,14 +125,14 @@ export function buildWriter(
       const rowIndex = i % matSize;
       const byteOffset = colIndex * rowStride + rowIndex * 4;
 
-      code += `output.${writeFunc}((${offsetExpr} + ${byteOffset}), ${valueExpr}.columns[${colIndex}].${['x', 'y', 'z', 'w'][rowIndex]}, endianness);\n`;
+      code += `output.${writeFunc}((${offsetExpr} + ${byteOffset}), ${valueExpr}.columns[${colIndex}].${['x', 'y', 'z', 'w'][rowIndex]}, littleEndian);\n`;
     }
 
     return code;
   }
 
   const primitive = typeToPrimitive[node.type as keyof typeof typeToPrimitive];
-  return `output.${primitiveToWriteFunction[primitive]}(${offsetExpr}, ${valueExpr}, endianness);\n`;
+  return `output.${primitiveToWriteFunction[primitive]}(${offsetExpr}, ${valueExpr}, littleEndian);\n`;
 }
 
 export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
@@ -141,14 +141,14 @@ export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
   output: DataView,
   offset: number,
   value: Infer<T>,
-  endianness?: boolean,
+  littleEndian?: boolean,
 ) => void {
   if (compiledWriters.has(schema)) {
     return compiledWriters.get(schema) as (
       output: DataView,
       offset: number,
       value: Infer<T>,
-      endianness?: boolean,
+      littleEndian?: boolean,
     ) => void;
   }
 
@@ -158,13 +158,13 @@ export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
     'output',
     'offset',
     'value',
-    'endianness=true',
+    'littleEndian=true',
     body,
   ) as (
     output: DataView,
     offset: number,
     value: Infer<T> | unknown,
-    endianness?: boolean,
+    littleEndian?: boolean,
   ) => void;
 
   compiledWriters.set(schema, fn);

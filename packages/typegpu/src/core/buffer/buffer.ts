@@ -1,4 +1,5 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
+import { getSystemEndianness } from 'typed-binary';
 import { isWgslData } from '../../data';
 import {
   EVAL_ALLOWED_IN_ENV,
@@ -132,6 +133,7 @@ export function isUsableAsVertex<T extends TgpuBuffer<AnyData>>(
 // --------------
 // Implementation
 // --------------
+const endianness = getSystemEndianness();
 
 type RestrictVertexUsages<TData extends BaseData> = TData extends {
   readonly type: WgslTypeLiteral;
@@ -267,7 +269,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
       const mapped = gpuBuffer.getMappedRange();
       if (EVAL_ALLOWED_IN_ENV) {
         const writer = getCompiledWriterForSchema(this.dataType);
-        writer(new DataView(mapped), 0, data);
+        writer(new DataView(mapped), 0, data, endianness === 'little');
         return;
       }
       writeData(new BufferWriter(mapped), this.dataType, data);
@@ -284,7 +286,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
 
     if (EVAL_ALLOWED_IN_ENV) {
       const writer = getCompiledWriterForSchema(this.dataType);
-      writer(new DataView(this._hostBuffer), 0, data);
+      writer(new DataView(this._hostBuffer), 0, data, endianness === 'little');
     } else {
       writeData(new BufferWriter(this._hostBuffer), this.dataType, data);
     }
