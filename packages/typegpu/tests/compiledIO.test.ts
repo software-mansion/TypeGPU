@@ -172,4 +172,58 @@ describe('createCompileInstructions', () => {
       ]);
     }
   });
+
+  it('should compile a writer for a mat4x4f', () => {
+    const Schema = d.struct({
+      transform: d.mat4x4f,
+    });
+    const writer = getCompiledWriterForSchema(Schema);
+
+    const arr = new ArrayBuffer(sizeOf(Schema));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, {
+      transform: d.mat4x4f(...Array.from({ length: 16 }).map((_, i) => i)),
+    });
+
+    expect([...new Float32Array(arr)]).toEqual(
+      Array.from({ length: 16 }).map((_, i) => i),
+    );
+  });
+
+  it('should compile a writer for a mat3x3f', () => {
+    const Schema = d.struct({
+      transform: d.mat3x3f,
+    });
+    const writer = getCompiledWriterForSchema(Schema);
+
+    const arr = new ArrayBuffer(sizeOf(Schema));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, {
+      transform: d.mat3x3f(...Array.from({ length: 9 }).map((_, i) => i)),
+    });
+
+    expect(arr.byteLength).toBe(48);
+    expect([...new Float32Array(arr)]).toEqual([
+      0, 1, 2, 0, 3, 4, 5, 0, 6, 7, 8, 0,
+    ]);
+  });
+
+  it('should compile a writer for a mat2x2f', () => {
+    const Schema = d.struct({
+      transform: d.mat2x2f,
+    });
+    const writer = getCompiledWriterForSchema(Schema);
+
+    const arr = new ArrayBuffer(sizeOf(Schema));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, {
+      transform: d.mat2x2f(...Array.from({ length: 4 }).map((_, i) => i)),
+    });
+
+    expect(arr.byteLength).toBe(16);
+    expect([...new Float32Array(arr)]).toEqual([0, 1, 2, 3]);
+  });
 });

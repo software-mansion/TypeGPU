@@ -255,7 +255,7 @@ class TgpuBufferImpl<TData extends AnyData> implements TgpuBuffer<TData> {
     if (EVAL_ALLOWED_IN_ENV) {
       getCompiledWriterForSchema(this.dataType);
     } else {
-      throw new Error('This enviorment does not allow eval');
+      throw new Error('This environment does not allow eval');
     }
   }
 

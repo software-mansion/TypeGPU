@@ -6,14 +6,14 @@ import { offsetsForProps } from './offsets';
 import { sizeOf } from './sizeOf';
 import * as wgsl from './wgslTypes';
 
-export let EVAL_ALLOWED_IN_ENV: boolean;
-
-try {
-  new Function('return true');
-  EVAL_ALLOWED_IN_ENV = true;
-} catch {
-  EVAL_ALLOWED_IN_ENV = false;
-}
+export const EVAL_ALLOWED_IN_ENV: boolean = (() => {
+  try {
+    new Function('return true');
+    return true;
+  } catch {
+    return false;
+  }
+})();
 
 const compiledWriters = new WeakMap<
   wgsl.BaseData,
@@ -44,6 +44,10 @@ const typeToPrimitive = {
   vec2h: 'f32',
   vec3h: 'f32',
   vec4h: 'f32',
+
+  mat2x2f: 'f32',
+  mat3x3f: 'f32',
+  mat4x4f: 'f32',
 } as const;
 
 const primitiveToWriteFunction = {
@@ -104,6 +108,26 @@ export function buildWriter(
     for (let i = 0; i < count; i++) {
       code += `output.${writeFunc}((${offsetExpr} + ${i * 4}), ${valueExpr}.${components[i]}, endianness);\n`;
     }
+    return code;
+  }
+
+  if (wgsl.isMat(node)) {
+    const primitive = typeToPrimitive[node.type];
+    const writeFunc = primitiveToWriteFunction[primitive];
+
+    const matSize = wgsl.isMat2x2f(node) ? 2 : wgsl.isMat3x3f(node) ? 3 : 4;
+    const elementCount = matSize * matSize;
+    const rowStride = roundUp(matSize * 4, 8);
+
+    let code = '';
+    for (let i = 0; i < elementCount; i++) {
+      const colIndex = Math.floor(i / matSize);
+      const rowIndex = i % matSize;
+      const byteOffset = colIndex * rowStride + rowIndex * 4;
+
+      code += `output.${writeFunc}((${offsetExpr} + ${byteOffset}), ${valueExpr}.columns[${colIndex}].${['x', 'y', 'z', 'w'][rowIndex]}, endianness);\n`;
+    }
+
     return code;
   }
 
