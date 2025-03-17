@@ -407,6 +407,18 @@ export const reflect = createDualImpl(
   },
 );
 
+export const distance = createDualImpl(
+  // CPU implementation
+  <T extends vBase | number>(a: T, b: T): number => {
+    if (typeof a === 'number' && typeof b === 'number') {
+      return Math.abs(a - b);
+    }
+    return length(sub(a as vBase, b as vBase)) as number;
+  },
+  // GPU implementation
+  (a, b) => ({ value: `distance(${a.value}, ${b.value})`, dataType: f32 }),
+);
+
 /**
  * Checks whether the given elements differ by at most 0.01.
  * Component-wise if arguments are vectors.
@@ -416,7 +428,6 @@ export const reflect = createDualImpl(
  *
  * @param {number} precision argument that specifies the maximum allowed difference, 0.01 by default.
  */
-
 export const isCloseTo = createDualImpl(
   // CPU implementation
   <T extends v2f | v3f | v4f | v2h | v3h | v4h | number>(
