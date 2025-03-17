@@ -35,16 +35,16 @@ context.configure({
 // https://sketchfab.com/3d-models/animated-low-poly-fish-64adc2e5a4be471e8279532b9610c878
 const fishModel = await loadModel(
   root,
-  'assets/3d-fish/fish.obj',
-  'assets/3d-fish/fish.jpg',
+  '/TypeGPU/assets/3d-fish/fish.obj',
+  '/TypeGPU/assets/3d-fish/fish.jpg',
 );
 
 // https://www.cgtrader.com/free-3d-models/space/other/rainy-ocean
 // https://www.rawpixel.com/image/6032317/white-sand-texture-free-public-domain-cc0-photo
 const oceanFloorModel = await loadModel(
   root,
-  'assets/3d-fish/ocean_floor.obj',
-  'assets/3d-fish/ocean_floor.png',
+  '/TypeGPU/assets/3d-fish/ocean_floor.obj',
+  '/TypeGPU/assets/3d-fish/ocean_floor.png',
 );
 
 // buffers
