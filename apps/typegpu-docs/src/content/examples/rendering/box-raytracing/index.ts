@@ -338,8 +338,6 @@ onFrame((deltaTime) => {
       storeOp: 'store',
     })
     .draw(6);
-
-  root['~unstable'].flush();
 });
 
 // #region Example controls and cleanup
