@@ -331,8 +331,6 @@ describe('TgpuBindGroup', () => {
       root.unwrap(bindGroup);
       expect(root.device.createBindGroupLayout).toBeCalled();
 
-      // check if createView() on mock texture is called with correct parameters
-
       expect(root.device.createBindGroup).toBeCalledWith({
         label: 'example',
         layout: root.unwrap(layout),
