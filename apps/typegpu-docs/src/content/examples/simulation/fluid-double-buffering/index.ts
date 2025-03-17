@@ -1,4 +1,4 @@
-import tgpu, { type TgpuBufferReadonly, type TgpuBufferMutable } from 'typegpu';
+import tgpu, { type TgpuBufferMutable, type TgpuBufferReadonly } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
@@ -592,16 +592,12 @@ function makePipelines(
   return {
     init() {
       initWorldPipeline.dispatchWorkgroups(gridSize, gridSize);
-      root['~unstable'].flush();
     },
 
     applyMovedObstacles(bufferData: d.Infer<BoxObstacle>[]) {
       obstaclesBuffer.write(bufferData);
       moveObstaclesPipeline.dispatchWorkgroups(1);
-      root['~unstable'].flush();
-
       prevObstaclesBuffer.write(bufferData);
-      root['~unstable'].flush();
     },
 
     compute() {
@@ -662,7 +658,6 @@ function tick() {
 
   primary = primary === even ? odd : even;
   primary.compute();
-  root['~unstable'].flush();
 }
 
 let disposed = false;
@@ -690,7 +685,6 @@ onFrame((deltaTime) => {
       tick();
     }
     primary.render();
-    root['~unstable'].flush();
     msSinceLastTick -= timestep;
   }
 });
