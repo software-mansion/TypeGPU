@@ -151,7 +151,7 @@ const timeUniform = timeBuffer.as('uniform');
 const isInsideObstacle = tgpu['~unstable']
   .fn([d.i32, d.i32], d.bool)
   .does((x, y) => {
-    for (let obs_idx = 0; obs_idx < MAX_OBSTACLES; obs_idx += 1) {
+    for (let obs_idx = 0; obs_idx < MAX_OBSTACLES; obs_idx++) {
       const obs = obstaclesReadonly.value[obs_idx];
 
       if (obs.enabled === 0) {
@@ -214,7 +214,7 @@ const computeVelocity = tgpu['~unstable']
     ];
     let dir_choice_count = 1;
 
-    for (let i = 0; i < 4; i += 1) {
+    for (let i = 0; i < 4; i++) {
       const offset = neighbor_offsets[i];
       const neighbor_density = getCell(x + offset.x, y + offset.y);
       const cost = neighbor_density.z + d.f32(offset.y) * gravity_cost;
@@ -229,7 +229,7 @@ const computeVelocity = tgpu['~unstable']
           d.f32(offset.x),
           d.f32(offset.y),
         );
-        dir_choice_count += 1;
+        dir_choice_count++;
       } else if (cost < least_cost) {
         least_cost = cost;
         dir_choices[0] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
@@ -267,7 +267,7 @@ const mainInitWorld = tgpu['~unstable']
 const mainMoveObstacles = tgpu['~unstable']
   .computeFn({ workgroupSize: [1] })
   .does(() => {
-    for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx += 1) {
+    for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
       const obs = prevObstacleReadonly.value[obsIdx];
       const nextObs = obstaclesReadonly.value[obsIdx];
 
@@ -310,9 +310,9 @@ const mainMoveObstacles = tgpu['~unstable']
 
       // does it move right
       if (diff.x > 0) {
-        for (let y = min_y; y <= max_y; y += 1) {
+        for (let y = min_y; y <= max_y; y++) {
           let rowDensity = d.f32(0);
-          for (let x = max_x; x <= nextMaxX; x += 1) {
+          for (let x = max_x; x <= nextMaxX; x++) {
             const cell = getCell(x, y);
             rowDensity += cell.z;
             cell.z = 0;
@@ -325,9 +325,9 @@ const mainMoveObstacles = tgpu['~unstable']
 
       // does it move left
       if (diff.x < 0) {
-        for (let y = min_y; y <= max_y; y += 1) {
+        for (let y = min_y; y <= max_y; y++) {
           let rowDensity = d.f32(0);
-          for (let x = nextMinX; x < min_x; x += 1) {
+          for (let x = nextMinX; x < min_x; x++) {
             const cell = getCell(x, y);
             rowDensity += cell.z;
             cell.z = 0;
@@ -340,9 +340,9 @@ const mainMoveObstacles = tgpu['~unstable']
 
       // does it move up
       if (diff.y > 0) {
-        for (let x = min_x; x <= max_x; x += 1) {
+        for (let x = min_x; x <= max_x; x++) {
           let colDensity = d.f32(0);
-          for (let y = max_y; y <= nextMaxY; y += 1) {
+          for (let y = max_y; y <= nextMaxY; y++) {
             const cell = getCell(x, y);
             colDensity += cell.z;
             cell.z = 0;
@@ -354,9 +354,9 @@ const mainMoveObstacles = tgpu['~unstable']
       }
 
       // does it move down
-      for (let x = min_x; x <= max_x; x += 1) {
+      for (let x = min_x; x <= max_x; x++) {
         let colDensity = d.f32(0);
-        for (let y = nextMinY; y < min_y; y += 1) {
+        for (let y = nextMinY; y < min_y; y++) {
           const cell = getCell(x, y);
           colDensity += cell.z;
           cell.z = 0;
@@ -369,7 +369,7 @@ const mainMoveObstacles = tgpu['~unstable']
       // Recompute velocity around the obstacle so that no cells end up inside it on the next tick.
 
       // left column
-      for (let y = nextMinY; y <= nextMaxY; y += 1) {
+      for (let y = nextMinY; y <= nextMaxY; y++) {
         const newVel = computeVelocity(nextMinX - 1, y);
         setVelocity(nextMinX - 1, y, newVel);
       }
@@ -378,7 +378,7 @@ const mainMoveObstacles = tgpu['~unstable']
       for (
         let y = std.max(1, nextMinY);
         y <= std.min(nextMaxY, gridSize - 2);
-        y += 1
+        y++
       ) {
         const newVel = computeVelocity(nextMaxX + 2, y);
         setVelocity(nextMaxX + 2, y, newVel);
