@@ -312,8 +312,6 @@ function frame() {
     .with(renderBindGroupLayout, renderBindGroups[even ? 1 : 0])
     .draw(3, triangleAmount);
 
-  root['~unstable'].flush();
-
   requestAnimationFrame(frame);
 }
 
