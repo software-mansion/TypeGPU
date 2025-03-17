@@ -315,6 +315,27 @@ export function generateExpression(
     };
   }
 
+  if ('y' in expression) {
+    // Array Expression
+    const values = expression.y.map((value) => {
+      return generateExpression(ctx, value);
+    });
+    if (values.length === 0) {
+      throw new Error('Cannot create empty array literal.');
+    }
+
+    const type = values[0]?.dataType;
+    if (!values.every((value) => value.dataType === type)) {
+      throw new Error('Cannot mix types in array literal.');
+    }
+
+    const dataType = getTypeFromWgsl(type as Wgsl);
+
+    return {
+      value: `[${values.map((value) => resolveRes(ctx, value)).join(', ')}]`,
+    };
+  }
+
   if ('s' in expression) {
     throw new Error('Cannot use string literals in TGSL.');
   }
