@@ -193,52 +193,54 @@ const isValidFlowOut = tgpu['~unstable']
 
 const computeVelocity = tgpu['~unstable']
   .fn([d.i32, d.i32], d.vec2f)
-  .does(/* wgsl */ `(x: i32, y: i32) -> vec2f {
-    let gravity_cost = 0.5;
+  .does((x, y) => {
+    const gravity_cost = 0.5;
 
-    let neighbor_offsets = array<vec2i, 4>(
-      vec2i( 0,  1),
-      vec2i( 0, -1),
-      vec2i( 1,  0),
-      vec2i(-1,  0),
-    );
+    const neighbor_offsets = [
+      d.vec2i(0, 1),
+      d.vec2i(0, -1),
+      d.vec2i(1, 0),
+      d.vec2i(-1, 0),
+    ];
 
-    let cell = getCell(x, y);
-    var least_cost = cell.z;
+    const cell = getCell(x, y);
+    let least_cost = cell.z;
 
-    // Direction choices of the same cost, one is chosen
-    // randomly at the end of the process.
-    var dir_choices: array<vec2f, 4>;
-    var dir_choice_count: u32 = 1;
-    dir_choices[0] = vec2f(0., 0.);
+    const dir_choices = [
+      d.vec2f(0, 0),
+      d.vec2f(0, 0),
+      d.vec2f(0, 0),
+      d.vec2f(0, 0),
+    ];
+    let dir_choice_count = 1;
 
-    for (var i = 0; i < 4; i++) {
-      let offset = neighbor_offsets[i];
-      let neighbor_density = getCell(x + offset.x, y + offset.y).z;
-      let cost = neighbor_density + f32(offset.y) * gravity_cost;
-      let is_valid_flow_out = isValidFlowOut(x + offset.x, y + offset.y);
+    for (let i = 0; i < 4; i += 1) {
+      const offset = neighbor_offsets[i];
+      const neighbor_density = getCell(x + offset.x, y + offset.y);
+      const cost = neighbor_density.z + d.f32(offset.y) * gravity_cost;
+      const is_valid_flow_out = isValidFlowOut(x + offset.x, y + offset.y);
 
       if (!is_valid_flow_out) {
         continue;
       }
 
-      if (cost == least_cost) {
-        // another valid direction
-        dir_choices[dir_choice_count] = vec2f(f32(offset.x), f32(offset.y));
-        dir_choice_count++;
-      }
-      else if (cost < least_cost) {
-        // new best choice
+      if (cost === least_cost) {
+        dir_choices[dir_choice_count] = d.vec2f(
+          d.f32(offset.x),
+          d.f32(offset.y),
+        );
+        dir_choice_count += 1;
+      } else if (cost < least_cost) {
         least_cost = cost;
-        dir_choices[0] = vec2f(f32(offset.x), f32(offset.y));
+        dir_choices[0] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
         dir_choice_count = 1;
       }
     }
 
-    let least_cost_dir = dir_choices[u32(rand01() * f32(dir_choice_count))];
+    const least_cost_dir =
+      dir_choices[d.u32(rand01() * d.f32(dir_choice_count))];
     return least_cost_dir;
-  }`)
-  .$uses({ getCell, isValidFlowOut, isValidCoord, rand01 });
+  });
 
 const mainInitWorld = tgpu['~unstable']
   .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })
@@ -490,26 +492,20 @@ const vertexMain = tgpu['~unstable']
     in: { idx: d.builtin.vertexIndex },
     out: { pos: d.builtin.position, uv: d.vec2f },
   })
-  .does(/* wgsl */ `(input: VertexInput) -> VertexOut {
-    var pos = array<vec2f, 4>(
-      vec2(1, 1), // top-right
-      vec2(-1, 1), // top-left
-      vec2(1, -1), // bottom-right
-      vec2(-1, -1) // bottom-left
-    );
+  .does((input) => {
+    const pos = [
+      d.vec2f(1, 1),
+      d.vec2f(-1, 1),
+      d.vec2f(1, -1),
+      d.vec2f(-1, -1),
+    ];
+    const uv = [d.vec2f(1, 1), d.vec2f(0, 1), d.vec2f(1, 0), d.vec2f(0, 0)];
 
-    var uv = array<vec2f, 4>(
-      vec2(1., 1.), // top-right
-      vec2(0., 1.), // top-left
-      vec2(1., 0.), // bottom-right
-      vec2(0., 0.) // bottom-left
-    );
-
-    var output: VertexOut;
-    output.pos = vec4f(pos[input.idx].x, pos[input.idx].y, 0.0, 1.0);
-    output.uv = uv[input.idx];
-    return output;
-  }`);
+    return {
+      pos: d.vec4f(pos[input.idx].x, pos[input.idx].y, 0.0, 1.0),
+      uv: uv[input.idx],
+    };
+  });
 
 const fragmentMain = tgpu['~unstable']
   .fragmentFn({ in: { uv: d.vec2f }, out: d.vec4f })
