@@ -36,7 +36,7 @@ export const CelectialBodyStruct = d.struct({
 export const CelestialBodyArray = (n: number) =>
   d.arrayOf(CelectialBodyStruct, n);
 
-export const bindCelestialBodyLayout = tgpu.bindGroupLayout({
+export const celestialBodyBindGroup = tgpu.bindGroupLayout({
   inState: { uniform: CelestialBodyArray(1), access: 'readonly' },
   outState: { uniform: CelestialBodyArray(1), access: 'writeonly' },
 });
