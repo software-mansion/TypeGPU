@@ -324,15 +324,33 @@ export function generateExpression(
       throw new Error('Cannot create empty array literal.');
     }
 
-    const type = values[0]?.dataType;
-    if (!values.every((value) => value.dataType === type)) {
-      throw new Error('Cannot mix types in array literal.');
+    let type = values[0]?.dataType;
+    const mismatchedType = values.find((value) => value.dataType !== type);
+    if (mismatchedType) {
+      throw new Error(
+        `Cannot mix types in array literal. Type ${mismatchedType.dataType.type} does not match expected type ${type?.type}.`,
+      );
     }
 
-    const dataType = getTypeFromWgsl(type as Wgsl);
+    if (!wgsl.isWgslData(type)) {
+      throw new Error('Cannot use non-WGSL data types in array literals.');
+    }
+
+    type =
+      type.type === 'abstractInt'
+        ? d.u32
+        : type.type === 'abstractFloat'
+          ? d.f32
+          : type;
+
+    const typeId = ctx.resolve(type);
+
+    const arrayType = `array<${typeId}, ${values.length}>`;
+    const arrayValues = values.map((value) => resolveRes(ctx, value));
 
     return {
-      value: `[${values.map((value) => resolveRes(ctx, value)).join(', ')}]`,
+      value: `${arrayType}( ${arrayValues.join(', ')} )`,
+      dataType: d.arrayOf(type as d.AnyWgslData, values.length),
     };
   }
 
