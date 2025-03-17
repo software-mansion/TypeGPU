@@ -3,6 +3,7 @@ name: Publish PR package (pkg.pr.new)
 on: [pull_request]
 
 jobs:
+  if: github.event.pull_request.head.repo.full_name == github.repository
   build-and-publish:
     runs-on: ubuntu-latest
     permissions:
