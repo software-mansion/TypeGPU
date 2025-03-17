@@ -102,15 +102,18 @@ export interface ItemStateStack {
   readonly topItem: ItemLayer;
 
   pushItem(): void;
+  popItem(): void;
   pushSlotBindings(pairs: SlotValuePair<unknown>[]): void;
+  popSlotBindings(): void;
   pushFunctionScope(
     args: Resource[],
     returnType: AnyWgslData | undefined,
     externalMap: Record<string, unknown>,
   ): void;
+  popFunctionScope(): void;
   pushBlockScope(): void;
   popBlockScope(): void;
-  pop(): void;
+  pop(type?: 'functionScope' | 'blockScope' | 'slotBinding' | 'item'): void;
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
   getResourceById(id: string): Resource | undefined;
   defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Resource;
