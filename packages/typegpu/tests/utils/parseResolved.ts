@@ -1,9 +1,9 @@
-import * as wesl from 'wesl';
+import { WeslStream } from 'wesl';
 import tgpu from '../../src';
 import type { TgpuResolveOptions } from '../../src/core/resolve/tgpuResolve';
 
 function tokenize(code: string): string {
-  const stream = new wesl.WeslStream(code);
+  const stream = new WeslStream(code);
   const firstToken = stream.nextToken();
   if (firstToken === null) {
     return '';
