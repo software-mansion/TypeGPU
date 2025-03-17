@@ -76,8 +76,8 @@ export const vertexShader = tgpu['~unstable']
 const sampleTexture = tgpu['~unstable']
   .fn([d.vec2f], d.vec4f)
   .does(/* wgsl */ `(uv: vec2f) -> vec4f {
-      return textureSample(shaderTexture, shaderSampler, uv);
-    }`)
+    return textureSample(shaderTexture, shaderSampler, uv);
+  }`)
   .$uses({ shaderTexture: modelTexture, shaderSampler: sampler })
   .$name('sampleShader');
 
