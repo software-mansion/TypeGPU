@@ -122,7 +122,7 @@ describe('tgpu.slot', () => {
         [Error: Resolution of the following tree failed: 
         - <root>
         - fn:getColor
-        - slot:color]
+        - slot:color: Missing value for 'slot:color']
       `);
   });
 

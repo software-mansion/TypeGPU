@@ -398,8 +398,6 @@ function resetGameData() {
       })
       .draw(4, options.size ** 2);
 
-    root['~unstable'].flush();
-
     currentStateBuffer.copyFrom(nextStateBuffer);
   };
 
@@ -420,7 +418,6 @@ function resetGameData() {
       .with(vertexLayout, squareBuffer)
       .with(vertexInstanceLayout, currentStateBuffer)
       .draw(4, options.size ** 2);
-    root['~unstable'].flush();
   };
 
   createSampleScene();
