@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec3f } from '../../src/data';
-import { acos, isCloseTo } from '../../src/std';
+import { vec3f } from '../../../src/data';
+import { acos, isCloseTo } from '../../../src/std';
 
 describe('acos', () => {
   it('computes acos of numeric value', () => {

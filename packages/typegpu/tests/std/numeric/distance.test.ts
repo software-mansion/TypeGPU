@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3u } from '../../src/data';
-import { distance } from '../../src/std';
+import { vec2f, vec3u } from '../../../src/data';
+import { distance } from '../../../src/std';
 
 describe('distance', () => {
   it('computes distance between two points', () => {
