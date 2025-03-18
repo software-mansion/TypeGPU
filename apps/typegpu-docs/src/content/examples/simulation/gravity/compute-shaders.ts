@@ -4,6 +4,7 @@ import * as m from 'wgpu-matrix';
 import * as std from 'typegpu/std';
 import { celestialBodyBindGroup } from './structs';
 import { G } from './env';
+import { centerObjectBuffer } from '.';
 
 const celestialBodiesBindGroup = celestialBodyBindGroup.bound;
 
@@ -30,10 +31,18 @@ export const cubeComputeShader = tgpu['~unstable']
       position[i] = position[i] + (velocity[i] * dt);
       velocity[i] = velocity[i] * 0.99; // damping 
     }
+    
+    const cubeModelMatrix = d.mat4x4f();
+  
+    m.mat4.identity(cubeModelMatrix);
+    m.mat4.translate(cubeModelMatrix, position, cubeModelMatrix);
+    centerObjectBuffer.write({ modelMatrix: cubeModelMatrix });
 
-    // m.mat4.identity(cubeModelMatrix);
-    // m.mat4.translate(cubeModelMatrix, position, cubeModelMatrix);
-    // objectBuffer.write({ modelMatrix: cubeModelMatrix });
+    celestialBodiesBindGroup.outState.value[0] = {
+      position: position,
+      velocity: velocity,
+      mass: cubeState.mass,
+    };
 
     // cubeData.value.position = position;
     // cubeData.value.velocity = velocity;

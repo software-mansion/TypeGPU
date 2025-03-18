@@ -4,7 +4,7 @@ import * as m from 'wgpu-matrix';
 import { mainFragment, mainVertex } from './main-shaders';
 import { cubeModel, vertices } from './cube';
 import { cameraInitialPos, cubePos, cubeVelocity, G, target } from './env';
-import { bindGroupLayout, CameraStruct, bindObjectLayout, ObjectStruct, VertexStruct, CelectialBodyStruct } from './structs';
+import { bindGroupLayout, CameraStruct, centerObjectbindGroupLayout, ObjectStruct, VertexStruct, CelectialBodyStruct } from './structs';
 
 
 const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(VertexStruct, n));
@@ -65,15 +65,15 @@ const cubeModelMatrix = d.mat4x4f();
 m.mat4.identity(cubeModelMatrix);
 m.mat4.translate(cubeModelMatrix, d.vec3f(cubePos.x, cubePos.y, cubePos.z), cubeModelMatrix);
 
-const objectBuffer = root.createBuffer(ObjectStruct, {
+export const centerObjectBuffer = root.createBuffer(ObjectStruct, {
   modelMatrix: cubeModelMatrix,
 }).$usage('uniform');
 
-const objectBindGroup = root.createBindGroup(bindObjectLayout, {
-  object: objectBuffer,
+const centerObjectBindGroup = root.createBindGroup(centerObjectbindGroupLayout, {
+  object: centerObjectBuffer,
 });
 
-const bindGroup = root.createBindGroup(bindGroupLayout, {
+const cameraBindGroup = root.createBindGroup(bindGroupLayout, {
   camera: cameraBuffer,
   // cube: cubeBuffer,
   sampler,
@@ -109,8 +109,8 @@ function render() {
       clearValue: [1, 1, 1, 1],
     })
     .with(vertexLayout, vertexBuffer)
-    .with(bindGroupLayout, bindGroup)
-    .with(bindObjectLayout, objectBindGroup)
+    .with(bindGroupLayout, cameraBindGroup)
+    .with(centerObjectbindGroupLayout, centerObjectBindGroup)
     .draw(36);
 
   root['~unstable'].flush();
@@ -139,7 +139,7 @@ function updateCubePhysics() {
 
   m.mat4.identity(cubeModelMatrix);
   m.mat4.translate(cubeModelMatrix, d.vec3f(cubePos.x, cubePos.y, cubePos.z), cubeModelMatrix);
-  objectBuffer.write({ modelMatrix: cubeModelMatrix });
+  centerObjectBuffer.write({ modelMatrix: cubeModelMatrix });
 }
 
 // Frame loop
