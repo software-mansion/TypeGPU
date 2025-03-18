@@ -49,7 +49,7 @@ export const neg = createDualImpl(
   // GPU implementation
   (value) => ({
     value: `!(${value.value})`,
-    dataType: bool,
+    dataType: value.dataType,
   }),
 );
 
@@ -57,6 +57,18 @@ export const all = createDualImpl(
   // CPU implementation
   (value: AnyBooleanVecInstance) => {
     return VectorOps.all[value.kind](value);
+  },
+  // GPU implementation
+  (value) => ({
+    value: `all(${value.value})`,
+    dataType: bool,
+  }),
+);
+
+export const any = createDualImpl(
+  // CPU implementation
+  (value: AnyBooleanVecInstance) => {
+    return VectorOps.any[value.kind](value);
   },
   // GPU implementation
   (value) => ({

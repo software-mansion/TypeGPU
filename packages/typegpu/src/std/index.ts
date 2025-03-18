@@ -33,6 +33,7 @@ export {
   eq,
   neg,
   all,
+  any,
 } from './boolean.js';
 
 export {
