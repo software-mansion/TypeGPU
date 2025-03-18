@@ -385,6 +385,9 @@ importers:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
         version: link:../tgpu-dev-cli
+      '@types/node':
+        specifier: ^22.13.4
+        version: 22.13.4
       '@webgpu/types':
         specifier: 'catalog:'
         version: 0.1.54

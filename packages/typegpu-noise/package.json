@@ -33,11 +33,12 @@
     "typegpu": "^0.5.0"
   },
   "devDependencies": {
-    "@webgpu/types": "catalog:",
     "@typegpu/tgpu-dev-cli": "workspace:*",
-    "unplugin-typegpu": "workspace:*",
+    "@types/node": "^22.13.4",
+    "@webgpu/types": "catalog:",
+    "tsup": "catalog:",
     "typegpu": "workspace:*",
     "typescript": "catalog:",
-    "tsup": "catalog:"
+    "unplugin-typegpu": "workspace:*"
   }
 }
