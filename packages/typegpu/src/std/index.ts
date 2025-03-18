@@ -32,6 +32,7 @@ export {
 export {
   eq,
   neg,
+  or,
   all,
   any,
 } from './boolean.js';

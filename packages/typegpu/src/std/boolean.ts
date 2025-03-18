@@ -53,6 +53,18 @@ export const neg = createDualImpl(
   }),
 );
 
+export const or = createDualImpl(
+  // CPU implementation
+  <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) => {
+    return VectorOps.or[lhs.kind](lhs, rhs);
+  },
+  // GPU implementation
+  (lhs, rhs) => ({
+    value: `(${lhs.value} || ${rhs.value})`,
+    dataType: lhs.dataType,
+  }),
+);
+
 export const all = createDualImpl(
   // CPU implementation
   (value: AnyBooleanVecInstance) => {
@@ -72,7 +84,7 @@ export const any = createDualImpl(
   },
   // GPU implementation
   (value) => ({
-    value: `all(${value.value})`,
+    value: `any(${value.value})`,
     dataType: bool,
   }),
 );
