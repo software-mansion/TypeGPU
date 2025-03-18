@@ -11,14 +11,13 @@ A set of noise/pseudo-random functions for use in WebGPU/TypeGPU apps.
 ```ts
 import { setSeed, rand } from '@typegpu/noise';
 
-const timeBuffer = root.createBuffer(f32).$usage('uniform');
-const timeUniform = timeBuffer.as('uniform');
+const timeUniform = root.createUniform(f32);
 
-const main = tgpu
-  .fragmentFn({ pos: builtin.position }, vec4f)
-  .does(({ pos }) => {
+const mainFrag = tgpu
+  .fragmentFn({ in: { pos: builtin.position }, out: vec4f })
+  .does((input) => {
     const time = timeUniform.value;
-    setSeed(add(pos.xy, vec2f(time)));
+    setSeed(add(input.pos.xy, vec2f(time)));
 
     const val = rand.float01(); // => number
     const normal = rand.onUnitSphere(); // => v3f
