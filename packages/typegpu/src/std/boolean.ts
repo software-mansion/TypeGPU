@@ -1,6 +1,8 @@
-import { bool } from '../data';
+import { Resource } from 'src/types';
+import { bool, vec2b, vec3b, vec4b } from '../data';
 import { VectorOps } from '../data/vectorOps';
 import type {
+  AnyBooleanVecInstance,
   AnyVec2Instance,
   AnyVec3Instance,
   AnyVec4Instance,
@@ -17,6 +19,16 @@ export type EqOverload = {
   <T extends AnyVec4Instance>(s: T, v: T): v4b;
 };
 
+function correspondingBooleanVectorSchema(value: Resource) {
+  if (value.dataType.type.includes('2')) {
+    return vec2b;
+  }
+  if (value.dataType.type.includes('3')) {
+    return vec3b;
+  }
+  return vec4b;
+}
+
 export const eq: EqOverload = createDualImpl(
   // CPU implementation
   (<T extends AnyVecInstance>(lhs: T, rhs: T) => {
@@ -25,6 +37,18 @@ export const eq: EqOverload = createDualImpl(
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} == ${rhs.value})`,
+    dataType: correspondingBooleanVectorSchema(lhs),
+  }),
+);
+
+export const all = createDualImpl(
+  // CPU implementation
+  (value: AnyBooleanVecInstance) => {
+    return VectorOps.all[value.kind](value);
+  },
+  // GPU implementation
+  (value) => ({
+    value: `all(${value.value})`,
     dataType: bool,
   }),
 );

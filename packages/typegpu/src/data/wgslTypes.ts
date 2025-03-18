@@ -741,6 +741,7 @@ export interface Vec2u {
 
 /**
  * Type of the `d.vec2b` object/function: vector data type schema/constructor
+ * Cannot be used inside buffers as it is not host-shareable.
  */
 export interface Vec2b {
   readonly type: 'vec2b';
@@ -819,6 +820,7 @@ export interface Vec3u {
 
 /**
  * Type of the `d.vec3b` object/function: vector data type schema/constructor
+ * Cannot be used inside buffers as it is not host-shareable.
  */
 export interface Vec3b {
   readonly type: 'vec3b';
@@ -915,6 +917,7 @@ export interface Vec4u {
 
 /**
  * Type of the `d.vec4b` object/function: vector data type schema/constructor
+ * Cannot be used inside buffers as it is not host-shareable.
  */
 export interface Vec4b {
   readonly type: 'vec4b';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec3f, vec3i, vec3u } from '../../src/data';
-import { cross } from '../../src/std';
+import { vec3f, vec3i, vec3u } from '../../../src/data';
+import { cross } from '../../../src/std';
 
 describe('cross', () => {
   it('computes cross product of two vec3f', () => {

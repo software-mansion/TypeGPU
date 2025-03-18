@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec4f } from '../../src/data';
-import { atan2, isCloseTo } from '../../src/std';
+import { vec4f } from '../../../src/data';
+import { atan2, isCloseTo } from '../../../src/std';
 
 describe('atan2', () => {
   it('computes atan2 of two values', () => {

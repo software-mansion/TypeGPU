@@ -12,8 +12,8 @@ import {
   vec4f,
   vec4i,
   vec4u,
-} from '../../src/data';
-import { mul } from '../../src/std';
+} from '../../../src/data';
+import { mul } from '../../../src/std';
 
 describe('mul', () => {
   it('computes product of a number and vec2f', () => {
