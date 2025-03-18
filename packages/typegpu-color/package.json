@@ -1,8 +1,8 @@
 {
-  "name": "@typegpu/noise",
+  "name": "@typegpu/color",
   "type": "module",
-  "version": "0.0.3",
-  "description": "A set of noise/pseudo-random functions for use in WebGPU/TypeGPU apps.",
+  "version": "0.1.0-alpha.1",
+  "description": "A set of color helper functions for use in WebGPU/TypeGPU apps.",
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"
@@ -38,9 +38,9 @@
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@types/node": "^22.13.4",
     "@webgpu/types": "catalog:",
-    "unbuild": "catalog:",
     "typegpu": "workspace:*",
     "typescript": "catalog:",
+    "unbuild": "catalog:",
     "unplugin-typegpu": "workspace:*"
   }
 }
