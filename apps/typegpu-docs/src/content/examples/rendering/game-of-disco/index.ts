@@ -90,7 +90,7 @@ const renderBindGroup = root.createBindGroup(renderLayout, {
   camera: cameraBuffer,
   light: lightBuffer,
   material: materialBuffer,
-  cubemap: cubemapTexture,
+  cubemap: cubemapTexture.createView('sampled', { dimension: 'cube' }),
   sampler: cubemapSampler,
 });
 
