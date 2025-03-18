@@ -96,14 +96,17 @@ export {
   vec2h,
   vec2i,
   vec2u,
+  vec2b,
   vec3f,
   vec3h,
   vec3i,
   vec3u,
+  vec3b,
   vec4f,
   vec4h,
   vec4i,
   vec4u,
+  vec4b,
 } from './vector';
 export { disarrayOf } from './disarray';
 export { unstruct } from './unstruct';

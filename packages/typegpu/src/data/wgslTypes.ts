@@ -401,8 +401,8 @@ export interface v2u extends NumberArrayView, Swizzle2<v2u, v3u, v4u> {
 }
 
 /**
- * Interface representing its WGSL vector type counterpart: vec2<bool>.
- * A vector with 2 elements of type bool
+ * Interface representing its WGSL vector type counterpart: `vec2<bool>`.
+ * A vector with 2 elements of type `bool`
  */
 export interface v2b extends BooleanArrayView, Swizzle2<v2b, v3b, v4b> {
   /** use to distinguish between vectors of the same size on the type level */
@@ -460,8 +460,8 @@ export interface v3u extends NumberArrayView, Swizzle3<v2u, v3u, v4u> {
 }
 
 /**
- * Interface representing its WGSL vector type counterpart: vec3<bool>.
- * A vector with 3 elements of type bool
+ * Interface representing its WGSL vector type counterpart: `vec3<bool>`.
+ * A vector with 3 elements of type `bool`
  */
 export interface v3b extends BooleanArrayView, Swizzle2<v2b, v3b, v4b> {
   /** use to distinguish between vectors of the same size on the type level */
@@ -524,8 +524,8 @@ export interface v4u extends NumberArrayView, Swizzle4<v2u, v3u, v4u> {
 }
 
 /**
- * Interface representing its WGSL vector type counterpart: vec4<bool>.
- * A vector with 4 elements of type bool
+ * Interface representing its WGSL vector type counterpart: `vec4<bool>`.
+ * A vector with 4 elements of type `bool`
  */
 export interface v4b extends BooleanArrayView, Swizzle2<v2b, v3b, v4b> {
   /** use to distinguish between vectors of the same size on the type level */
@@ -550,6 +550,10 @@ export type AnyVecInstance =
 export type AnyNumericVec2Instance = v2f | v2h | v2i | v2u;
 export type AnyNumericVec3Instance = v3f | v3h | v3i | v3u;
 export type AnyNumericVec4Instance = v4f | v4h | v4i | v4u;
+
+export type AnyVec2Instance = AnyNumericVec2Instance | v2b;
+export type AnyVec3Instance = AnyNumericVec3Instance | v3b;
+export type AnyVec4Instance = AnyNumericVec4Instance | v4b;
 
 export type VecKind = AnyVecInstance['kind'];
 

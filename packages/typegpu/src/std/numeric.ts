@@ -25,25 +25,6 @@ function isNumeric(element: Resource) {
   );
 }
 
-// export const eq = createDualImpl(
-//   // CPU implementation
-//   <T extends AnyVecInstance | number>(lhs: T, rhs: T): boolean => {
-//     if (typeof(lhs) === 'number' && typeof(rhs) === 'number') {
-//       return lhs === rhs;
-//     }
-//     if (typeof(lhs) !== 'number' && typeof(rhs) !== 'number') {
-//       const a = vec2f();
-
-//     }
-//     return false;
-//   },
-//   // GPU implementation
-//   (lhs, rhs) => ({
-//     value: `(${lhs.value} == ${rhs.value})`,
-//     dataType: bool,
-//   }),
-// );
-
 export const add = createDualImpl(
   // CPU implementation
   <T extends AnyVecInstance>(lhs: T, rhs: T): T =>
