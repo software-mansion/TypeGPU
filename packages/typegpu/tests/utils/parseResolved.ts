@@ -2,7 +2,7 @@ import { WeslStream } from 'wesl';
 import tgpu from '../../src';
 import type { TgpuResolveOptions } from '../../src/core/resolve/tgpuResolve';
 
-function tokenize(code: string): string {
+export function parse(code: string): string {
   const stream = new WeslStream(code);
   const firstToken = stream.nextToken();
   if (firstToken === null) {
@@ -18,10 +18,6 @@ function tokenize(code: string): string {
   return result;
 }
 
-export function parse(code: string): string {
-  return tokenize(code);
-}
-
 export function parseResolved(
   resolvable: TgpuResolveOptions['externals'],
 ): string {
@@ -31,7 +27,7 @@ export function parseResolved(
   });
 
   try {
-    return tokenize(resolved);
+    return parse(resolved);
   } catch (e) {
     throw new Error(
       `Failed to parse the following: \n${resolved}\n\nCause:${String(e).substring(0, 128)}`,

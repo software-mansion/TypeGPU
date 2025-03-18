@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import tgpu from '../src';
 import * as d from '../src/data';
-import { parse } from './utils/parseResolved';
-import { parseResolved } from './utils/parseResolved';
+import { parse, parseResolved } from './utils/parseResolved';
 
 describe('tgpu.fn with raw string WGSL implementation', () => {
   it('is namable', () => {
