@@ -235,8 +235,6 @@ onFrame((deltaTime) => {
       storeOp: 'store' as const,
     })
     .draw(4, PARTICLE_AMOUNT);
-
-  root['~unstable'].flush();
 });
 
 // example controls and cleanup

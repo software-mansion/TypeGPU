@@ -134,6 +134,30 @@ export const atan2 = createDualImpl(
   (y, x) => ({ value: `atan2(${y.value}, ${x.value})`, dataType: y.dataType }),
 );
 
+export const acos = createDualImpl(
+  // CPU implementation
+  <T extends vBase | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.acos(value) as T;
+    }
+    return VectorOps.acos[(value as vBase).kind](value as never) as T;
+  },
+  // GPU implementation
+  (value) => ({ value: `acos(${value.value})`, dataType: value.dataType }),
+);
+
+export const asin = createDualImpl(
+  // CPU implementation
+  <T extends vBase | number>(value: T): T => {
+    if (typeof value === 'number') {
+      return Math.asin(value) as T;
+    }
+    return VectorOps.asin[(value as vBase).kind](value as never) as T;
+  },
+  // GPU implementation
+  (value) => ({ value: `asin(${value.value})`, dataType: value.dataType }),
+);
+
 /**
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#ceil-builtin
@@ -407,6 +431,18 @@ export const reflect = createDualImpl(
   },
 );
 
+export const distance = createDualImpl(
+  // CPU implementation
+  <T extends vBase | number>(a: T, b: T): number => {
+    if (typeof a === 'number' && typeof b === 'number') {
+      return Math.abs(a - b);
+    }
+    return length(sub(a as vBase, b as vBase)) as number;
+  },
+  // GPU implementation
+  (a, b) => ({ value: `distance(${a.value}, ${b.value})`, dataType: f32 }),
+);
+
 /**
  * Checks whether the given elements differ by at most 0.01.
  * Component-wise if arguments are vectors.
@@ -416,7 +452,6 @@ export const reflect = createDualImpl(
  *
  * @param {number} precision argument that specifies the maximum allowed difference, 0.01 by default.
  */
-
 export const isCloseTo = createDualImpl(
   // CPU implementation
   <T extends v2f | v3f | v4f | v2h | v3h | v4h | number>(

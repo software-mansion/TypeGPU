@@ -107,11 +107,19 @@ class ItemStateStackImpl implements ItemStateStack {
     });
   }
 
+  popItem() {
+    this.pop('item');
+  }
+
   pushSlotBindings(pairs: SlotValuePair<unknown>[]) {
     this._stack.push({
       type: 'slotBinding',
       bindingMap: new WeakMap(pairs),
     });
+  }
+
+  popSlotBindings() {
+    this.pop('slotBinding');
   }
 
   pushFunctionScope(
@@ -127,6 +135,10 @@ class ItemStateStackImpl implements ItemStateStack {
     });
   }
 
+  popFunctionScope() {
+    this.pop('functionScope');
+  }
+
   pushBlockScope() {
     this._stack.push({
       type: 'blockScope',
@@ -135,16 +147,17 @@ class ItemStateStackImpl implements ItemStateStack {
   }
 
   popBlockScope() {
-    const layer = this._stack[this._stack.length - 1];
-    if (!layer || layer.type !== 'blockScope') {
-      throw new Error('Internal error, expected a layer to be on top.');
-    }
-    this._stack.pop();
+    this.pop('blockScope');
   }
 
-  pop() {
-    const layer = this._stack.pop();
-    if (layer?.type === 'item') {
+  pop(type?: (typeof this._stack)[number]['type']) {
+    const layer = this._stack[this._stack.length - 1];
+    if (!layer || (type && layer.type !== type)) {
+      throw new Error(`Internal error, expected a ${type} layer to be on top.`);
+    }
+
+    this._stack.pop();
+    if (type === 'item') {
       this._itemDepth--;
     }
   }
@@ -369,22 +382,26 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       options.returnType,
       options.externalMap,
     );
-    const str = generateFunction(this, options.body);
-    this._itemStateStack.pop();
 
-    const argList = options.args
-      .map(
-        (arg) => `${arg.value}: ${this.resolve(arg.dataType as AnyWgslData)}`,
-      )
-      .join(', ');
+    try {
+      const str = generateFunction(this, options.body);
 
-    return {
-      head:
-        options.returnType !== undefined
-          ? `(${argList}) -> ${getAttributesString(options.returnType)} ${this.resolve(options.returnType)}`
-          : `(${argList})`,
-      body: str,
-    };
+      const argList = options.args
+        .map(
+          (arg) => `${arg.value}: ${this.resolve(arg.dataType as AnyWgslData)}`,
+        )
+        .join(', ');
+
+      return {
+        head:
+          options.returnType !== undefined
+            ? `(${argList}) -> ${getAttributesString(options.returnType)} ${this.resolve(options.returnType)}`
+            : `(${argList})`,
+        body: str,
+      };
+    } finally {
+      this._itemStateStack.popFunctionScope();
+    }
   }
 
   addDeclaration(declaration: string): void {
@@ -432,7 +449,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     try {
       return callback();
     } finally {
-      this._itemStateStack.pop();
+      this._itemStateStack.popSlotBindings();
     }
   }
 
@@ -498,7 +515,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       instances.push({ slotToValueMap, result });
       this._memoizedDerived.set(derived, instances);
-
       return result;
     } catch (err) {
       if (err instanceof ResolutionError) {
@@ -507,7 +523,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       throw new ResolutionError(err, [derived]);
     } finally {
-      this._itemStateStack.pop();
+      this._itemStateStack.popItem();
     }
   }
 
@@ -562,7 +578,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       throw new ResolutionError(err, [item]);
     } finally {
-      this._itemStateStack.pop();
+      this._itemStateStack.popItem();
     }
   }
 
