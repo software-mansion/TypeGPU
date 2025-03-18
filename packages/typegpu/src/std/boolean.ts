@@ -41,6 +41,18 @@ export const eq: EqOverload = createDualImpl(
   }),
 );
 
+export const neg = createDualImpl(
+  // CPU implementation
+  (value: AnyBooleanVecInstance) => {
+    return VectorOps.neg[value.kind](value);
+  },
+  // GPU implementation
+  (value) => ({
+    value: `!(${value.value})`,
+    dataType: bool,
+  }),
+);
+
 export const all = createDualImpl(
   // CPU implementation
   (value: AnyBooleanVecInstance) => {

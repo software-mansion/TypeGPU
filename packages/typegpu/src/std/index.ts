@@ -31,6 +31,7 @@ export {
 
 export {
   eq,
+  neg,
   all,
 } from './boolean.js';
 

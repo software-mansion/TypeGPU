@@ -142,6 +142,12 @@ export const VectorOps = {
     <T extends wgsl.AnyVecInstance>(e1: T, e2: T) => wgsl.AnyBooleanVecInstance
   >,
 
+  neg: {
+    vec2b: (e: wgsl.v2b) => vec2b(!e.x, !e.y),
+    vec3b: (e: wgsl.v3b) => vec3b(!e.x, !e.y, !e.z),
+    vec4b: (e: wgsl.v4b) => vec4b(!e.x, !e.y, !e.z, !e.w),
+  } as Record<VecKind, <T extends wgsl.AnyBooleanVecInstance>(v: T) => T>,
+
   all: {
     vec2b: (e: wgsl.v2b) => e.x && e.y,
     vec3b: (e: wgsl.v3b) => e.x && e.y && e.z,
