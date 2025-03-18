@@ -29,6 +29,7 @@ export const bindGroupLayout = tgpu.bindGroupLayout({
 
 // Celestial Bodies
 export const CelectialBodyStruct = d.struct({
+  modelMatrix: d.mat4x4f,
   position: d.vec3f,
   velocity: d.vec3f,
   mass: d.f32,

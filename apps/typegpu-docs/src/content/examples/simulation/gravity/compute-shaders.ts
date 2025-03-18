@@ -15,9 +15,11 @@ export const cubeComputeShader = tgpu['~unstable']
   .does((input) => {
     const dt = 0.016;
 
-    const cubeState = celestialBodiesBindGroup.inState.value[0];
-    const position = cubeState.position;
-    const velocity = cubeState.velocity;
+    const objectState = celestialBodiesBindGroup.inState.value[0];
+    const position = objectState.position;
+    const velocity = objectState.velocity;
+    const mass = objectState.mass;
+    const modelMatrix = objectState.modelMatrix;
 
     let normDirection = d.vec3f();
     if (std.length(position) !== 0) {
@@ -32,19 +34,16 @@ export const cubeComputeShader = tgpu['~unstable']
       velocity[i] = velocity[i] * 0.99; // damping 
     }
     
-    const cubeModelMatrix = d.mat4x4f();
   
-    m.mat4.identity(cubeModelMatrix);
-    m.mat4.translate(cubeModelMatrix, position, cubeModelMatrix);
-    centerObjectBuffer.write({ modelMatrix: cubeModelMatrix });
+    m.mat4.identity(modelMatrix);
+    m.mat4.translate(modelMatrix, position, modelMatrix);
+    centerObjectBuffer.write({ modelMatrix: modelMatrix });
 
     celestialBodiesBindGroup.outState.value[0] = {
       position: position,
       velocity: velocity,
-      mass: cubeState.mass,
+      mass: objectState.mass,
+      modelMatrix: modelMatrix,
     };
-
-    // cubeData.value.position = position;
-    // cubeData.value.velocity = velocity;
   })
   .$name('cube physics compute shader');
