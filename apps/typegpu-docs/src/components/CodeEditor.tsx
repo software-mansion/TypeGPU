@@ -5,29 +5,12 @@ import Editor, {
 } from '@monaco-editor/react';
 // biome-ignore lint/correctness/noUnusedImports: <its a namespace, Biome>
 import type { editor } from 'monaco-editor';
-import {
-  entries,
-  filter,
-  fromEntries,
-  isTruthy,
-  map,
-  pipe,
-  values,
-} from 'remeda';
+import { entries, filter, fromEntries, isTruthy, map, pipe } from 'remeda';
 import { SANDBOX_MODULES } from '../utils/examples/sandboxModules';
 import { tsCompilerOptions } from '../utils/liveEditor/embeddedTypeScript';
 
 function handleEditorWillMount(monaco: Monaco) {
   const tsDefaults = monaco?.languages.typescript.typescriptDefaults;
-
-  for (const moduleDef of values(SANDBOX_MODULES)) {
-    if ('content' in moduleDef.typeDef) {
-      tsDefaults.addExtraLib(
-        moduleDef.typeDef.content,
-        moduleDef.typeDef.filename,
-      );
-    }
-  }
 
   const reroutes = pipe(
     entries(SANDBOX_MODULES),
@@ -40,6 +23,25 @@ function handleEditorWillMount(monaco: Monaco) {
     filter(isTruthy),
     fromEntries(),
   );
+
+  for (const [moduleKey, moduleDef] of entries(SANDBOX_MODULES)) {
+    if ('content' in moduleDef.typeDef) {
+      tsDefaults.addExtraLib(
+        moduleDef.typeDef.content,
+        moduleDef.typeDef.filename,
+      );
+
+      if (
+        moduleDef.typeDef.filename &&
+        moduleDef.typeDef.filename !== moduleKey // the redirect is not a no-op
+      ) {
+        reroutes[moduleKey] = [
+          ...(reroutes[moduleKey] ?? []),
+          moduleDef.typeDef.filename,
+        ];
+      }
+    }
+  }
 
   tsDefaults.setCompilerOptions({
     ...tsCompilerOptions,
