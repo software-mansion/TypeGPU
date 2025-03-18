@@ -1,7 +1,6 @@
 export { discard } from './discard.js';
 export {
   // ops
-  // eq,
   add,
   sub,
   mul,
@@ -26,6 +25,10 @@ export {
   reflect,
   isCloseTo,
 } from './numeric.js';
+
+export {
+  eq,
+} from './boolean.js';
 
 export {
   atomicLoad,

@@ -634,7 +634,7 @@ export class Vec3uImpl extends Vec3<number> {
 
 export class Vec3bImpl extends Vec3<boolean> {
   get kind() {
-    return 'vec2b' as const;
+    return 'vec3b' as const;
   }
 
   get _Vec2() {
@@ -714,7 +714,7 @@ export class Vec4uImpl extends Vec4<number> {
 
 export class Vec4bImpl extends Vec4<boolean> {
   get kind() {
-    return 'vec2b' as const;
+    return 'vec4b' as const;
   }
 
   get _Vec2() {

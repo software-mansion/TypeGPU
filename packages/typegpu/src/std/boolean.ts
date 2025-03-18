@@ -1,5 +1,5 @@
-import { bool } from 'src/data';
-import { VectorOps } from 'src/data/vectorOps';
+import { bool } from '../data';
+import { VectorOps } from '../data/vectorOps';
 import type {
   AnyVec2Instance,
   AnyVec3Instance,
@@ -8,10 +8,10 @@ import type {
   v2b,
   v3b,
   v4b,
-} from 'src/data/wgslTypes';
-import { createDualImpl } from 'src/shared/generators';
+} from '../data/wgslTypes';
+import { createDualImpl } from '../shared/generators';
 
-type EqOverload = {
+export type EqOverload = {
   <T extends AnyVec2Instance>(s: T, v: T): v2b;
   <T extends AnyVec3Instance>(s: T, v: T): v3b;
   <T extends AnyVec4Instance>(s: T, v: T): v4b;

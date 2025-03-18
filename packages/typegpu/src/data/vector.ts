@@ -102,7 +102,7 @@ export const vec2u = makeVecSchema(Vec2uImpl, 0) as Vec2u;
 
 /**
  *
- * Schema representing vec2<bool> - a vector with 2 elements of type bool.
+ * Schema representing `vec2<bool>` - a vector with 2 elements of type `bool`.
  * Also a constructor function for this vector value.
  *
  * @example
@@ -174,7 +174,7 @@ export const vec3u = makeVecSchema(Vec3uImpl, 0) as Vec3u;
 
 /**
  *
- * Schema representing vec3<bool> - a vector with 3 elements of type bool.
+ * Schema representing `vec3<bool>` - a vector with 3 elements of type `bool`.
  * Also a constructor function for this vector value.
  *
  * @example
@@ -246,7 +246,7 @@ export const vec4u = makeVecSchema(Vec4uImpl, 0) as Vec4u;
 
 /**
  *
- * Schema representing vec4<bool> - a vector with 4 elements of type bool.
+ * Schema representing `vec4<bool>` - a vector with 4 elements of type `bool`.
  * Also a constructor function for this vector value.
  *
  * @example
