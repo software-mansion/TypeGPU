@@ -28,6 +28,7 @@ export {
 
 export {
   eq,
+  all,
 } from './boolean.js';
 
 export {

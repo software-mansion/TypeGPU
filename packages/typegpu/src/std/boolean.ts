@@ -1,4 +1,3 @@
-import { Resource } from 'src/types';
 import { bool, vec2b, vec3b, vec4b } from '../data';
 import { VectorOps } from '../data/vectorOps';
 import type {
@@ -12,6 +11,7 @@ import type {
   v4b,
 } from '../data/wgslTypes';
 import { createDualImpl } from '../shared/generators';
+import type { Resource } from '../types';
 
 export type EqOverload = {
   <T extends AnyVec2Instance>(s: T, v: T): v2b;
