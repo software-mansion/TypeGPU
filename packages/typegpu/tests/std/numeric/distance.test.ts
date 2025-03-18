@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3u } from '../../../src/data';
+import { vec2f, vec3h } from '../../../src/data';
 import { distance } from '../../../src/std';
 
 describe('distance', () => {
@@ -9,11 +9,11 @@ describe('distance', () => {
     expect(distance(vec2f(0, 0), vec2f(0, 1))).toBeCloseTo(1);
     expect(distance(vec2f(0, 0), vec2f(1, 1))).toBeCloseTo(Math.sqrt(2));
 
-    expect(distance(vec3u(0, 0, 0), vec3u(0, 0, 0))).toBeCloseTo(0);
-    expect(distance(vec3u(0, 0, 0), vec3u(1, 0, 0))).toBeCloseTo(1);
-    expect(distance(vec3u(0, 0, 0), vec3u(0, 1, 0))).toBeCloseTo(1);
-    expect(distance(vec3u(0, 0, 0), vec3u(0, 0, 1))).toBeCloseTo(1);
-    expect(distance(vec3u(0, 0, 0), vec3u(1, 1, 1))).toBeCloseTo(Math.sqrt(3));
+    expect(distance(vec3h(0, 0, 0), vec3h(0, 0, 0))).toBeCloseTo(0);
+    expect(distance(vec3h(0, 0, 0), vec3h(1, 0, 0))).toBeCloseTo(1);
+    expect(distance(vec3h(0, 0, 0), vec3h(0, 1, 0))).toBeCloseTo(1);
+    expect(distance(vec3h(0, 0, 0), vec3h(0, 0, 1))).toBeCloseTo(1);
+    expect(distance(vec3h(0, 0, 0), vec3h(1, 1, 1))).toBeCloseTo(Math.sqrt(3));
 
     expect(distance(0, 2)).toBeCloseTo(2);
     expect(distance(-233, 87)).toBeCloseTo(320);
@@ -21,7 +21,7 @@ describe('distance', () => {
 
   it('does not accept different types', () => {
     // @ts-expect-error
-    distance(vec2f(0, 0), vec3u(0, 0, 0));
+    distance(vec2f(0, 0), vec3h(0, 0, 0));
     // @ts-expect-error
     distance(vec2f(0, 0), 0);
   });

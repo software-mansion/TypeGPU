@@ -135,11 +135,13 @@ export const atan2 = createDualImpl(
 
 export const acos = createDualImpl(
   // CPU implementation
-  <T extends vBase | number>(value: T): T => {
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
     if (typeof value === 'number') {
       return Math.acos(value) as T;
     }
-    return VectorOps.acos[(value as vBase).kind](value as never) as T;
+    return VectorOps.acos[(value as AnyFloatVecInstance).kind](
+      value as never,
+    ) as T;
   },
   // GPU implementation
   (value) => ({ value: `acos(${value.value})`, dataType: value.dataType }),
@@ -147,11 +149,13 @@ export const acos = createDualImpl(
 
 export const asin = createDualImpl(
   // CPU implementation
-  <T extends vBase | number>(value: T): T => {
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
     if (typeof value === 'number') {
       return Math.asin(value) as T;
     }
-    return VectorOps.asin[(value as vBase).kind](value as never) as T;
+    return VectorOps.asin[(value as AnyFloatVecInstance).kind](
+      value as never,
+    ) as T;
   },
   // GPU implementation
   (value) => ({ value: `asin(${value.value})`, dataType: value.dataType }),
@@ -430,11 +434,13 @@ export const reflect = createDualImpl(
 
 export const distance = createDualImpl(
   // CPU implementation
-  <T extends vBase | number>(a: T, b: T): number => {
+  <T extends AnyFloatVecInstance | number>(a: T, b: T): number => {
     if (typeof a === 'number' && typeof b === 'number') {
       return Math.abs(a - b);
     }
-    return length(sub(a as vBase, b as vBase)) as number;
+    return length(
+      sub(a as AnyFloatVecInstance, b as AnyFloatVecInstance),
+    ) as number;
   },
   // GPU implementation
   (a, b) => ({ value: `distance(${a.value}, ${b.value})`, dataType: f32 }),
