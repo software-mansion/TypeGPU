@@ -49,7 +49,7 @@
     "typegpu": "workspace:*",
     "typescript": "catalog:",
     "unplugin-typegpu": "workspace:*",
-    "wgpu-matrix": "^3.3.0"
+    "wgpu-matrix": "^3.4.0"
   },
   "devDependencies": {
     "@types/babel__standalone": "^7.1.9",
