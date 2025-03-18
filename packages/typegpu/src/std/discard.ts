@@ -1,8 +1,14 @@
-import { inGPUMode } from '../gpuMode.js';
+import { createDualImpl } from '../shared/generators.js';
+import { Void } from '../types.js';
 
-export function discard(): never {
-  if (!inGPUMode()) {
+export const discard = createDualImpl(
+  // CPU
+  (): never => {
     throw new Error('discard() can only be used on the GPU.');
-  }
-  return 'discard;' as never;
-}
+  },
+  // GPU
+  () => ({
+    value: 'discard;',
+    dataType: Void,
+  }),
+);

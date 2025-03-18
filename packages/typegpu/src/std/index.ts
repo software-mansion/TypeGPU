@@ -5,8 +5,10 @@ export {
   sub,
   mul,
   // builtin functions
-  abs,
+  acos,
+  asin,
   atan2,
+  abs,
   ceil,
   clamp,
   cos,
@@ -18,6 +20,7 @@ export {
   max,
   min,
   normalize,
+  distance,
   sin,
   exp,
   mix,
@@ -46,3 +49,5 @@ export {
   storageBarrier,
   textureBarrier,
 } from './atomic.js';
+
+export { arrayLength } from './array.js';
