@@ -26,7 +26,6 @@ export {
   mix,
   pow,
   reflect,
-  isCloseTo,
 } from './numeric.js';
 
 export {
@@ -35,6 +34,7 @@ export {
   or,
   all,
   any,
+  isCloseTo,
 } from './boolean.js';
 
 export {

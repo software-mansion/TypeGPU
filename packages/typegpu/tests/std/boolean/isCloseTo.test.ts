@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { vec2f, vec2h, vec3f, vec3h, vec4f, vec4h } from '../../../src/data';
-import { isCloseTo } from '../../../src/std/numeric';
+import { isCloseTo } from '../../../src/std/boolean';
 
 describe('isCloseTo', () => {
   it('returns true for close f32 containers', () => {
