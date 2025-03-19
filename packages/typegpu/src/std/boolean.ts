@@ -52,7 +52,7 @@ export const eq: AnyToBooleanComponentWise = createDualImpl(
 export const neq: AnyToBooleanComponentWise = createDualImpl(
   // CPU implementation
   (<T extends AnyVecInstance>(lhs: T, rhs: T) => {
-    return neg(VectorOps.eq[lhs.kind](lhs, rhs));
+    return not(VectorOps.eq[lhs.kind](lhs, rhs));
   }) as AnyToBooleanComponentWise,
   // GPU implementation
   (lhs, rhs) => ({
@@ -98,8 +98,8 @@ export const greaterThan: NumericToBooleanComponentWise = createDualImpl(
   // CPU implementation
   (<T extends AnyNumericVecInstance>(lhs: T, rhs: T) => {
     return and(
-      neg(VectorOps.lessThan[lhs.kind](lhs, rhs)),
-      neg(VectorOps.eq[lhs.kind](lhs, rhs)),
+      not(VectorOps.lessThan[lhs.kind](lhs, rhs)),
+      not(VectorOps.eq[lhs.kind](lhs, rhs)),
     );
   }) as NumericToBooleanComponentWise,
   // GPU implementation
@@ -112,7 +112,7 @@ export const greaterThan: NumericToBooleanComponentWise = createDualImpl(
 export const greaterThanOrEqual: NumericToBooleanComponentWise = createDualImpl(
   // CPU implementation
   (<T extends AnyNumericVecInstance>(lhs: T, rhs: T) => {
-    return neg(VectorOps.lessThan[lhs.kind](lhs, rhs));
+    return not(VectorOps.lessThan[lhs.kind](lhs, rhs));
   }) as NumericToBooleanComponentWise,
   // GPU implementation
   (lhs, rhs) => ({
@@ -123,7 +123,7 @@ export const greaterThanOrEqual: NumericToBooleanComponentWise = createDualImpl(
 
 // logical ops
 
-export const neg = createDualImpl(
+export const not = createDualImpl(
   // CPU implementation
   (value: AnyBooleanVecInstance) => {
     return VectorOps.neg[value.kind](value);
@@ -150,7 +150,7 @@ export const or = createDualImpl(
 export const and = createDualImpl(
   // CPU implementation
   <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) => {
-    return neg(or(neg(lhs), neg(rhs)));
+    return not(or(not(lhs), not(rhs)));
   },
   // GPU implementation
   (lhs, rhs) => ({

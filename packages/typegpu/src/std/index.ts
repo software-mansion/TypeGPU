@@ -1,66 +1,66 @@
 export { discard } from './discard.js';
 export {
-  // ops
-  add,
-  sub,
-  mul,
+  abs,
   // builtin functions
   acos,
+  // ops
+  add,
   asin,
   atan2,
-  abs,
   ceil,
   clamp,
   cos,
   cross,
+  distance,
   dot,
+  exp,
   floor,
   fract,
   length,
   max,
   min,
-  normalize,
-  distance,
-  sin,
-  exp,
   mix,
+  mul,
+  normalize,
   pow,
   reflect,
+  sin,
+  sub,
 } from './numeric.js';
 
 export {
-  // comparison
-  eq,
-  neq,
-  lessThan,
-  lessThanOrEqual,
-  greaterThan,
-  greaterThanOrEqual,
-  // logical ops
-  neg,
-  or,
-  and,
   // logical aggregation
   all,
+  and,
   any,
+  // comparison
+  eq,
+  greaterThan,
+  greaterThanOrEqual,
   // other
   isCloseTo,
+  lessThan,
+  lessThanOrEqual,
+  // logical ops
+  not as neg,
+  neq,
+  or,
 } from './boolean.js';
 
 export {
-  atomicLoad,
-  atomicStore,
   atomicAdd,
-  atomicSub,
+  atomicAnd,
+  atomicLoad,
   atomicMax,
   atomicMin,
-  atomicAnd,
   atomicOr,
+  atomicStore,
+  atomicSub,
   atomicXor,
-  // synchronization
-  workgroupBarrier,
   storageBarrier,
   textureBarrier,
+  // synchronization
+  workgroupBarrier,
 } from './atomic.js';
 
 export { arrayLength } from './array.js';
