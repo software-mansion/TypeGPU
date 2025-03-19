@@ -1,0 +1,139 @@
+---
+title: WESL Interoperability
+---
+
+:::caution[In development]
+This functionality is under **heavy** development. This guide acts mostly as a Northern Star for the functionality we would
+like to achieve. If you'd like to follow the development, join our Discord server!
+:::
+
+We are working with [WESL](https://wesl-lang.dev), a community standard for enhanced WGSL, to enable
+hybrid programs that mix-and-match between *shader-centric* and *host-centric* approaches. Shaders written in
+WGSL or [WESL](https://wesl-lang.dev) can be reflected into JS/TS as TypeGPU definitions, with proper types
+generated on the fly.
+
+- ✨ Take advantage of type-safe buffers while keeping your shaders in WESL
+- ⚔️ Eliminate manual byte alignment and padding
+
+## Setting up
+
+This functionality is provided as an extension to [`wesl-plugin`](https://wesl-lang.dev/docs/Getting-Started-JavaScript).
+Consult their documentation on what to install, and how to use it with your bundler of choice.
+
+Our official [`wesl-ext-typepgu`](https://github.com/software-mansion-labs/wesl-ext-typegpu) package extends the capabilities of `wesl-plugin`.
+Install it before proceeding.
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+<Tabs syncKey="package-manager">
+  <TabItem label="npm" icon="seti:npm">
+    ```sh frame=none
+    npm add --save-dev wesl-ext-typegpu
+    ```
+  </TabItem>
+  <TabItem label="pnpm" icon="pnpm">
+    ```sh frame=none
+    pnpm add -D wesl-ext-typegpu
+    ```
+  </TabItem>
+  <TabItem label="yarn" icon="seti:yarn">
+    ```sh frame=none
+    yarn add -D wesl-ext-typegpu
+    ```
+  </TabItem>
+</Tabs>
+
+Next up, reference the extension in your bundler's configuration. Below is an example using Vite.
+
+```ts {4, 7} "typegpuExtension"
+import { defineConfig } from "vite";
+import weslPlugin from "wesl-plugin/vite";
+import { linkBuildExtension } from "wesl-plugin";
+import { typegpuExtension } from "wesl-ext-typegpu";
+
+export default defineConfig({
+  plugins: [weslPlugin({ extensions: [linkBuildExtension, typegpuExtension] })],
+});
+```
+
+And finally, to let the TypeScript language server know where to look for typing of the
+.wgsl/.wesl you're importing, change the following in your tsconfig.json:
+
+```json
+{
+  // ...
+  "include": [/* all other files you're including */, ".wesl/types"]
+  // ...
+}
+```
+
+## Reflection
+
+Let's say we have to following shader program, split across two files.
+
+```wgsl title="shaders/shared.wesl"
+struct BoidState {
+  position: vec3f,
+  velocity: vec3f,
+}
+
+struct Fish {
+  kind: u32,
+  state: BoidState,
+}
+```
+
+```wgsl title="shaders/main.wesl"
+use package::shared::Fish;
+
+@group(0) @binding(0) var<storage, read_write> fish: array<Fish>;
+
+@compute @workgroup_size(32)
+fn main() {
+  // ...
+}
+```
+
+Given a shader written in WGSL/WESL, we can use the `?typegpu` query parameter to import
+reified references to any struct definition.
+
+```ts twoslash title="main.ts"
+// @filename ./mock-imports.ts
+// @noErrors
+// ---cut---
+// Importing a WGSL struct into JS
+import { Fish } from './shaders/shared.wesl?typegpu';
+// ---cut-start---
+// @filename: ./main.ts
+import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
+const root = await tgpu.init();
+const BoidState = d.struct({
+  position: d.vec3f,
+  velocity: d.vec3f,
+});
+
+const Fish = d.struct({
+  kind: d.u32,
+  state: BoidState,
+});
+// ---cut-end---
+
+const FishArray = (n: number) => d.arrayOf(Fish, n);
+
+const buffer = root.createBuffer(FishArray(512)).$usage('storage');
+//    ^?
+
+// Updating the 123rd fish's position
+buffer.writePartial([
+  {
+    idx: 123,
+    value: {
+      state: {
+        posit
+        //   ^|
+      },
+    }
+  }
+]);
+```
