@@ -78,4 +78,7 @@ export const SANDBOX_MODULES: Record<
   '@typegpu/noise': {
     typeDef: { reroute: ['typegpu-noise/src/index.ts'] },
   },
+  '@typegpu/color': {
+    typeDef: { reroute: ['typegpu-color/src/index.ts'] },
+  },
 };
