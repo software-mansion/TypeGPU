@@ -65,6 +65,21 @@ export const lessThan: NumericToBooleanComponentWise = createDualImpl(
   }),
 );
 
+export const lessThanOrEqual: NumericToBooleanComponentWise = createDualImpl(
+  // CPU implementation
+  (<T extends AnyNumericVecInstance>(lhs: T, rhs: T) => {
+    return or(
+      VectorOps.lessThan[lhs.kind](lhs, rhs),
+      VectorOps.eq[lhs.kind](lhs, rhs),
+    );
+  }) as NumericToBooleanComponentWise,
+  // GPU implementation
+  (lhs, rhs) => ({
+    value: `(${lhs.value} <= ${rhs.value})`,
+    dataType: correspondingBooleanVectorSchema(lhs),
+  }),
+);
+
 export const neg = createDualImpl(
   // CPU implementation
   (value: AnyBooleanVecInstance) => {
