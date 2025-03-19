@@ -221,14 +221,16 @@ function generateType(type_, options) {
     type_ instanceof StructInfo
       ? type_.name
       : type_ instanceof ArrayInfo
-      ? `d.arrayOf(${generateType(type_.format, options)}, ${
-          type_.count > 0 ? type_.count : LENGTH_VAR
-        })`
-      : type_ instanceof TemplateInfo && type_.name === 'atomic' && type_.format
-      ? `d.atomic(${generateType(type_.format, options)})`
-      : type_.size === 0
-      ? type_.name
-      : `d.${replaceWithAlias(type_)}`;
+        ? `d.arrayOf(${generateType(type_.format, options)}, ${
+            type_.count > 0 ? type_.count : LENGTH_VAR
+          })`
+        : type_ instanceof TemplateInfo &&
+            type_.name === 'atomic' &&
+            type_.format
+          ? `d.atomic(${generateType(type_.format, options)})`
+          : type_.size === 0
+            ? type_.name
+            : `d.${replaceWithAlias(type_)}`;
 
   const result =
     type_.attributes?.reduce(
@@ -355,8 +357,8 @@ function generateStorageVariable(variable, options) {
         ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => `
         : ''
     }${generateType(variable.type, options)},${
-    variable.access ? `\n    access: '${ACCESS_TYPES[variable.access]}',` : ''
-  }
+      variable.access ? `\n    access: '${ACCESS_TYPES[variable.access]}',` : ''
+    }
   }`;
 }
 
@@ -368,18 +370,18 @@ function getViewDimension(variable) {
   const dimension = type_.includes('_1d')
     ? '1d'
     : type_.includes('_2d')
-    ? '2d'
-    : type_.includes('_3d')
-    ? '3d'
-    : type_.includes('_cube')
-    ? 'cube'
-    : null;
+      ? '2d'
+      : type_.includes('_3d')
+        ? '3d'
+        : type_.includes('_cube')
+          ? 'cube'
+          : null;
 
   return type_.includes('_array')
     ? `${dimension ?? '2d'}-array`
     : dimension !== '2d'
-    ? dimension
-    : null;
+      ? dimension
+      : null;
 }
 
 /**
@@ -392,8 +394,8 @@ function generateStorageTextureVariable(variable) {
 
   return `{
     storageTexture: '${variable.format?.name}',${
-    access ? `\n    access: '${ACCESS_TYPES[access]}',` : ''
-  }${viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''}
+      access ? `\n    access: '${ACCESS_TYPES[access]}',` : ''
+    }${viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''}
   }`;
 }
 
@@ -427,8 +429,8 @@ function generateTextureVariable(variable) {
 
   return `{
     texture: '${type_.includes('_depth') ? 'depth' : SAMPLE_TYPES[format]}',${
-    viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''
-  }${multisampled ? '\n    multisampled: true,' : ''}
+      viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''
+    }${multisampled ? '\n    multisampled: true,' : ''}
   }`;
 }
 
@@ -479,8 +481,8 @@ function generateFunction(func, wgsl, options) {
     func.stage === 'fragment'
       ? 'fragmentFn'
       : func.stage === 'vertex'
-      ? 'vertexFn'
-      : 'fn';
+        ? 'vertexFn'
+        : 'fn';
 
   const inputs = `[${func.arguments
     .flatMap((arg) =>
