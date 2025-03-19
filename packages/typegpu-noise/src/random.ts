@@ -10,10 +10,6 @@ import {
 import { cos, dot, mul, sin } from 'typegpu/std';
 import { randomGeneratorSlot } from './generator.js';
 
-/**
- * @typedef {import('typegpu/data').Vec3f} Vec3f
- */
-
 const TWO_PI = Math.PI * 2;
 
 // TODO: Contribute back to typegpu/std
