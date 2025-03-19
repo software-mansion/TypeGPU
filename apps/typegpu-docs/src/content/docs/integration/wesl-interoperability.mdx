@@ -12,6 +12,9 @@ hybrid programs that mix-and-match between *shader-centric* and *host-centric* a
 WGSL or [WESL](https://wesl-lang.dev) can be reflected into JS/TS as TypeGPU definitions, with proper types
 generated on the fly.
 
+- ✨ Take advantage of type-safe buffers while keeping your shaders in WESL
+- ⚔️ Eliminate manual byte alignment and padding
+
 ## Setting up
 
 This functionality is provided as an extension to [`wesl-plugin`](https://wesl-lang.dev/docs/Getting-Started-JavaScript).
@@ -63,8 +66,6 @@ And finally, to let the TypeScript language server know where to look for typing
   // ...
 }
 ```
-
-{/* importing definitions from .wgsl/.wesl files as TypeGPU definitions. */}
 
 ## Reflection
 
