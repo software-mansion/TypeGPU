@@ -131,7 +131,12 @@ export function buildWriter(
     return code;
   }
 
-  const primitive = typeToPrimitive[node.type as keyof typeof typeToPrimitive];
+  const primitive =
+    typeToPrimitive[
+      wgsl.isAtomic(node)
+        ? node.inner.type
+        : (node.type as keyof typeof typeToPrimitive)
+    ];
   return `output.${primitiveToWriteFunction[primitive]}(${offsetExpr}, ${valueExpr}, littleEndian);\n`;
 }
 
