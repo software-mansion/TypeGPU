@@ -2,8 +2,7 @@ import { JitTranspiler } from 'tgpu-jit';
 import { parse } from 'tgpu-wgsl-parser';
 import type * as smol from 'tinyest';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
-import { StrictNameRegistry } from '../../src';
-import tgpu from '../../src';
+import tgpu, { StrictNameRegistry } from '../../src';
 import { getPrebuiltAstFor } from '../../src/core/function/astUtils';
 import * as d from '../../src/data';
 import { abstractFloat, abstractInt } from '../../src/data/numeric';
@@ -153,8 +152,10 @@ describe('wgslGenerator', () => {
     const testUsage = testBuffer.as('mutable');
 
     const testFn = tgpu['~unstable']
-      .fn([], d.u32)
-      .does(() => {
+      .fn(
+        [],
+        d.u32,
+      )(() => {
         return testUsage.value.a + testUsage.value.b.x;
       })
       .$name('testFn');
@@ -215,7 +216,10 @@ describe('wgslGenerator', () => {
 
     const testUsage = testBuffer.as('uniform');
 
-    const testFn = tgpu['~unstable'].fn([], d.u32).does(() => {
+    const testFn = tgpu['~unstable'].fn(
+      [],
+      d.u32,
+    )(() => {
       return testUsage.value[3] as number;
     });
 
@@ -276,8 +280,10 @@ describe('wgslGenerator', () => {
     const testUsage = testBuffer.as('mutable');
 
     const testFn = tgpu['~unstable']
-      .fn([d.u32], d.vec4f)
-      .does((idx) => {
+      .fn(
+        [d.u32],
+        d.vec4f,
+      )((idx) => {
         // biome-ignore lint/style/noNonNullAssertion: <no thanks>
         const value = std.atomicLoad(testUsage.value.b.aa[idx]!.y);
         const vec = std.mix(d.vec4f(), testUsage.value.a, value);
@@ -501,8 +507,10 @@ describe('wgslGenerator', () => {
     );
 
     const testFn = tgpu['~unstable']
-      .fn([], d.vec4u)
-      .does(() => {
+      .fn(
+        [],
+        d.vec4u,
+      )(() => {
         return derived.value;
       })
       .$name('testFn');
@@ -551,8 +559,10 @@ describe('wgslGenerator', () => {
     );
 
     const testFn = tgpu['~unstable']
-      .fn([d.u32], d.f32)
-      .does((idx) => {
+      .fn(
+        [d.u32],
+        d.f32,
+      )((idx) => {
         return derived.value[idx] as number;
       })
       .$name('testFn');

@@ -39,37 +39,39 @@ export type FragmentInConstrained = IORecord<
 /**
  * Describes a fragment entry function signature (its arguments and return type)
  */
-export interface TgpuFragmentFnShell<
+export type TgpuFragmentFnShellHeader<
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
-> {
+> = {
   readonly argTypes: [AnyWgslStruct];
   readonly targets: FragmentOut;
   readonly returnType: FragmentOut;
+};
 
-  /**
-   * Creates a type-safe implementation of this signature
-   */
-  does(
+export type TgpuFragmentFnShell<
+  FragmentIn extends FragmentInConstrained,
+  FragmentOut extends FragmentOutConstrained,
+> = TgpuFragmentFnShellHeader<FragmentIn, FragmentOut> /**
+ * Creates a type-safe implementation of this signature
+ */ &
+  ((
     implementation: (input: InferIO<FragmentIn>) => InferIO<FragmentOut>,
-  ): TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>;
-
+  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>) &
   /**
    * @param implementation
    *   Raw WGSL function implementation with header and body
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  does(
+  ((
     implementation: string,
-  ): TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>;
-}
+  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>);
 
 export interface TgpuFragmentFn<
   Varying extends FragmentInConstrained = FragmentInConstrained,
   Output extends FragmentOutConstrained = FragmentOutConstrained,
 > extends TgpuNamable {
-  readonly shell: TgpuFragmentFnShell<Varying, Output>;
+  readonly shell: TgpuFragmentFnShellHeader<Varying, Output>;
   readonly outputType: IOLayoutToSchema<Output>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
@@ -110,16 +112,20 @@ export function fragmentFn<
   in?: FragmentIn;
   out: FragmentOut;
 }): TgpuFragmentFnShell<FragmentIn, FragmentOut> {
-  return {
+  const shell: TgpuFragmentFnShellHeader<FragmentIn, FragmentOut> = {
     argTypes: [createStructFromIO(options.in ?? {})],
     targets: options.out,
     returnType: createOutputType(options.out) as FragmentOut,
-
-    does(implementation) {
-      // biome-ignore lint/suspicious/noExplicitAny: <the usual>
-      return createFragmentFn(this, implementation as Implementation) as any;
-    },
   };
+
+  const call = (
+    implementation:
+      | ((input: InferIO<FragmentIn>) => InferIO<FragmentOut>)
+      | string,
+    // biome-ignore lint/suspicious/noExplicitAny: <the usual>
+  ) => createFragmentFn(shell, implementation as Implementation) as any;
+
+  return Object.assign(call, shell);
 }
 
 // --------------
@@ -127,7 +133,10 @@ export function fragmentFn<
 // --------------
 
 function createFragmentFn(
-  shell: TgpuFragmentFnShell<FragmentInConstrained, FragmentOutConstrained>,
+  shell: TgpuFragmentFnShellHeader<
+    FragmentInConstrained,
+    FragmentOutConstrained
+  >,
   implementation: Implementation,
 ): TgpuFragmentFn {
   type This = TgpuFragmentFn & Labelled & SelfResolvable;

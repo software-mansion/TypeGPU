@@ -9,7 +9,7 @@ import {
   type TypegpuPluginOptions,
   embedJSON,
   gatherTgpuAliases,
-  isDoesCall,
+  isShellImplementationCall,
   shouldSkipFile,
 } from './common';
 
@@ -49,7 +49,7 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
         }
 
         if (node.type === 'CallExpression') {
-          if (isDoesCall(node, ctx)) {
+          if (isShellImplementationCall(node, ctx)) {
             const implementation = node.arguments[0];
 
             if (

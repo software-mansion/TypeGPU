@@ -19,14 +19,13 @@ These functions can reference outside resources, like other user-defined or help
 ## Creating a function
 
 Functions are constructed by first defining their shells, which specify their inputs and outputs.
-Then the actual WGSL implementation is passed in through the `does` method.
+Then the actual WGSL implementation is passed in as an argument to shell invocation.
 
 The following code defines a function that accepts one argument and returns one value.
 
 ```ts
 const getGradientColor = tgpu['~unstable']
-  .fn([d.f32], d.vec4f)
-  .does(`(ratio: f32) -> vec4f {
+  .fn([d.f32], d.vec4f)(`(ratio: f32) -> vec4f {
     let color = mix(vec4f(0.769, 0.392, 1.0, 1), d.vec4f(0.114, 0.447, 0.941, 1), ratio);
     return color;
   }`)
@@ -42,14 +41,12 @@ Externals can be any value or TypeGPU resource that can be resolved to WGSL (fun
 
 ```ts
 const getBlue = tgpu['~unstable']
-  .fn([], d.f32)
-  .does('() -> f32 { return 0.941; }');
+  .fn([], d.f32)('() -> f32 { return 0.941; }');
 
 const purple = d.vec4f(0.769, 0.392, 1.0, 1);
 
 const getGradientColor = tgpu['~unstable']
-  .fn([d.f32], d.vec4f)
-  .does(`(ratio: f32) -> vec4f {
+  .fn([d.f32], d.vec4f)(`(ratio: f32) -> vec4f {
     let color = mix(purple, getBlue(), ratio);
     return color;
   }`)
@@ -82,8 +79,7 @@ const mainVertex = tgpu['~unstable']
   .vertexFn({
     in: { vertexIndex: d.builtin.vertexIndex },
     out: { outPos: d.builtin.position, uv: d.vec2f },
-  })
-  .does(/* wgsl */ `(input: VertexInput) -> VertexOutput {
+  })(/* wgsl */ `(input: VertexInput) -> VertexOutput {
     var pos = array<vec2f, 3>(
       vec2(0.0, 0.5),
       vec2(-0.5, -0.5),
@@ -100,8 +96,7 @@ const mainVertex = tgpu['~unstable']
   }`);
 
 const mainFragment = tgpu['~unstable']
-  .fragmentFn({ in: { uv: d.vec2f }, out: d.vec4f })
-  .does(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
+  .fragmentFn({ in: { uv: d.vec2f }, out: d.vec4f })(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
     return getGradientColor((input.uv[0] + input.uv[1]) / 2);
   }`)
   .$uses({ getGradientColor });

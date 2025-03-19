@@ -87,7 +87,10 @@ const dataLayout = tgpu
 
 // functions
 
-const rotate = tgpu['~unstable'].fn([d.vec2f, d.f32], d.vec2f).does(/* wgsl */ `
+const rotate = tgpu['~unstable'].fn(
+  [d.vec2f, d.f32],
+  d.vec2f,
+)(/* wgsl */ `
   (v: vec2f, angle: f32) -> vec2f {
     let pos = vec2(
       (v.x * cos(angle)) - (v.y * sin(angle)),
@@ -108,8 +111,7 @@ const mainVert = tgpu['~unstable']
       index: d.builtin.vertexIndex,
     },
     out: VertexOutput,
-  })
-  .does(
+  })(
     /* wgsl */ `(input: VertexInput) -> VertexOutput {
     let width = input.tilt;
     let height = input.tilt / 2;
@@ -135,16 +137,16 @@ const mainVert = tgpu['~unstable']
     canvasAspectRatio: canvasAspectRatioUniform,
   });
 
-const mainFrag = tgpu['~unstable']
-  .fragmentFn({ in: VertexOutput, out: d.vec4f })
-  .does(/* wgsl */ `
+const mainFrag = tgpu['~unstable'].fragmentFn({
+  in: VertexOutput,
+  out: d.vec4f,
+})(/* wgsl */ `
   (input: FragmentInput) -> @location(0) vec4f {
     return input.color;
   }`);
 
 const mainCompute = tgpu['~unstable']
-  .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })
-  .does(
+  .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })(
     /* wgsl */ `(input: ComputeInput) {
     let index = input.gid.x;
     if index == 0 {

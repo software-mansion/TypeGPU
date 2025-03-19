@@ -12,9 +12,8 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
             .$usage('storage');
         const counter = counterBuffer.as('mutable');
 
-        const increment = tgpu['~unstable']
-            .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })
-            .does((input) => {
+        const increment = tgpu
+            .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })((input) => {
                 const tmp = counter.value.x;
                 counter.value.x = counter.value.y;
                 counter.value.y += tmp;
@@ -27,12 +26,12 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       import * as d from 'typegpu/data';
       const counterBuffer = root.createBuffer(d.vec3f, d.vec3f(0, 1, 0)).$usage('storage');
       const counter = counterBuffer.as('mutable');
-      const increment = tgpu['~unstable'].computeFn({
+      const increment = tgpu.computeFn({
         in: {
           num: d.builtin.numWorkgroups
         },
         workgroupSize: [1]
-      }).does(tgpu.__assignAst(input => {
+      })(tgpu.__assignAst(input => {
         const tmp = counter.value.x;
         counter.value.x = counter.value.y;
         counter.value.y += tmp;
@@ -48,35 +47,35 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
     const code = `\
         import tgpu from 'typegpu';
 
-        const a = tgpu['~unstable'].computeFn({ workgroupSize: [1] }).does((input) => {
+        const a = tgpu['~unstable'].computeFn({ workgroupSize: [1] })((input) => {
         const x = true;
         });
 
-        const b = tgpu['~unstable'].fn([]).does(() => {
+        const b = tgpu['~unstable'].fn([])(() => {
         const y = 2 + 2;
         });
 
         const cx = 2;
-        const c = tgpu['~unstable'].fn([]).does(() => cx);
+        const c = tgpu['~unstable'].fn([])(() => cx);
 
-        const d = tgpu['~unstable'].fn([]).does('() {}');
+        const d = tgpu['~unstable'].fn([])('() {}');
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       const a = tgpu['~unstable'].computeFn({
         workgroupSize: [1]
-      }).does(tgpu.__assignAst(input => {
+      })(tgpu.__assignAst(input => {
         const x = true;
       }, {"argNames":["input"],"body":{"b":[{"c":["x",true]}]},"externalNames":[]}, {}));
-      const b = tgpu['~unstable'].fn([]).does(tgpu.__assignAst(() => {
+      const b = tgpu['~unstable'].fn([])(tgpu.__assignAst(() => {
         const y = 2 + 2;
       }, {"argNames":[],"body":{"b":[{"c":["y",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}, {}));
       const cx = 2;
-      const c = tgpu['~unstable'].fn([]).does(tgpu.__assignAst(() => cx, {"argNames":[],"body":{"b":[{"r":"cx"}]},"externalNames":["cx"]}, {
+      const c = tgpu['~unstable'].fn([])(tgpu.__assignAst(() => cx, {"argNames":[],"body":{"b":[{"r":"cx"}]},"externalNames":["cx"]}, {
         cx: cx
       }));
-      const d = tgpu['~unstable'].fn([]).does('() {}');"
+      const d = tgpu['~unstable'].fn([])('() {}');"
     `);
   });
 });
@@ -93,8 +92,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
         const counter = counterBuffer.as('mutable');
         
         const increment = tgpu['~unstable']
-            .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })
-            .does((input) => {
+            .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })((input) => {
             const tmp = counter.value.x;
             counter.value.x = counter.value.y;
             counter.value.y += tmp;
@@ -112,8 +110,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
               const counter = counterBuffer.as('mutable');
               
               tgpu['~unstable']
-                  .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })
-                  .does(tgpu.__assignAst((input) => {
+                  .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })(tgpu.__assignAst((input) => {
                   const tmp = counter.value.x;
                   counter.value.x = counter.value.y;
                   counter.value.y += tmp;
@@ -127,33 +124,33 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
     const code = `\
         import tgpu from 'typegpu';
 
-        const a = tgpu['~unstable'].computeFn({ workgroupSize: [1] }).does((input) => {
+        const a = tgpu['~unstable'].computeFn({ workgroupSize: [1] })((input) => {
         const x = true;
         });
 
-        const b = tgpu['~unstable'].fn([]).does(() => {
+        const b = tgpu['~unstable'].fn([])(() => {
         const y = 2 + 2;
         });
 
         const cx = 2;
-        const c = tgpu['~unstable'].fn([]).does(() => cx);
+        const c = tgpu['~unstable'].fn([])(() => cx);
 
-        const d = tgpu['~unstable'].fn([]).does('() {}');
+        const d = tgpu['~unstable'].fn([])('() {}');
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      tgpu['~unstable'].computeFn({ workgroupSize: [1] }).does(tgpu.__assignAst((input) => {
+      tgpu['~unstable'].computeFn({ workgroupSize: [1] })(tgpu.__assignAst((input) => {
               }, {"argNames":["input"],"body":{"b":[{"c":["x",true]}]},"externalNames":[]}));
 
-              tgpu['~unstable'].fn([]).does(tgpu.__assignAst(() => {
+              tgpu['~unstable'].fn([])(tgpu.__assignAst(() => {
               }, {"argNames":[],"body":{"b":[{"c":["y",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}));
 
               const cx = 2;
-              tgpu['~unstable'].fn([]).does(tgpu.__assignAst(() => cx, {"argNames":[],"body":{"b":[{"r":"cx"}]},"externalNames":["cx"]}, {cx}));
+              tgpu['~unstable'].fn([])(tgpu.__assignAst(() => cx, {"argNames":[],"body":{"b":[{"r":"cx"}]},"externalNames":["cx"]}, {cx}));
 
-              tgpu['~unstable'].fn([]).does('() {}');
+              tgpu['~unstable'].fn([])('() {}');
       "
     `);
   });

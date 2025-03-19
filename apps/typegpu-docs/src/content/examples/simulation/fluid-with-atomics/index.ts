@@ -79,41 +79,43 @@ const squareBuffer = root
   .$usage('vertex')
   .$name('square');
 
-const getIndex = tgpu['~unstable'].fn([d.u32, d.u32], d.u32).does((x, y) => {
+const getIndex = tgpu['~unstable'].fn(
+  [d.u32, d.u32],
+  d.u32,
+)((x, y) => {
   const h = sizeUniform.value.y;
   const w = sizeUniform.value.x;
   return (y % h) * w + (x % w);
 });
 
-const getCell = tgpu['~unstable']
-  .fn([d.u32, d.u32], d.u32)
-  .does((x, y) => currentStateStorage.value[getIndex(x, y)]);
+const getCell = tgpu['~unstable'].fn(
+  [d.u32, d.u32],
+  d.u32,
+)((x, y) => currentStateStorage.value[getIndex(x, y)]);
 
-const getCellNext = tgpu['~unstable']
-  .fn([d.u32, d.u32], d.u32)
-  .does((x, y) => std.atomicLoad(nextStateStorage.value[getIndex(x, y)]));
+const getCellNext = tgpu['~unstable'].fn(
+  [d.u32, d.u32],
+  d.u32,
+)((x, y) => std.atomicLoad(nextStateStorage.value[getIndex(x, y)]));
 
-const updateCell = tgpu['~unstable']
-  .fn([d.u32, d.u32, d.u32])
-  .does((x, y, value) => {
+const updateCell = tgpu['~unstable'].fn([d.u32, d.u32, d.u32])(
+  (x, y, value) => {
     std.atomicStore(nextStateStorage.value[getIndex(x, y)], value);
-  });
+  },
+);
 
-const addToCell = tgpu['~unstable']
-  .fn([d.u32, d.u32, d.u32])
-  .does((x, y, value) => {
-    const cell = getCellNext(x, y);
-    const waterLevel = cell & MAX_WATER_LEVEL.value;
-    const newWaterLevel = std.min(waterLevel + value, MAX_WATER_LEVEL.value);
-    std.atomicAdd(
-      nextStateStorage.value[getIndex(x, y)],
-      newWaterLevel - waterLevel,
-    );
-  });
+const addToCell = tgpu['~unstable'].fn([d.u32, d.u32, d.u32])((x, y, value) => {
+  const cell = getCellNext(x, y);
+  const waterLevel = cell & MAX_WATER_LEVEL.value;
+  const newWaterLevel = std.min(waterLevel + value, MAX_WATER_LEVEL.value);
+  std.atomicAdd(
+    nextStateStorage.value[getIndex(x, y)],
+    newWaterLevel - waterLevel,
+  );
+});
 
-const subtractFromCell = tgpu['~unstable']
-  .fn([d.u32, d.u32, d.u32])
-  .does((x, y, value) => {
+const subtractFromCell = tgpu['~unstable'].fn([d.u32, d.u32, d.u32])(
+  (x, y, value) => {
     const cell = getCellNext(x, y);
     const waterLevel = cell & MAX_WATER_LEVEL.value;
     const newWaterLevel = std.max(waterLevel - std.min(value, waterLevel), 0);
@@ -121,87 +123,95 @@ const subtractFromCell = tgpu['~unstable']
       nextStateStorage.value[getIndex(x, y)],
       waterLevel - newWaterLevel,
     );
-  });
+  },
+);
 
-const persistFlags = tgpu['~unstable'].fn([d.u32, d.u32]).does((x, y) => {
+const persistFlags = tgpu['~unstable'].fn([d.u32, d.u32])((x, y) => {
   const cell = getCell(x, y);
   const waterLevel = cell & MAX_WATER_LEVEL.value;
   const flags = cell >> 24;
   updateCell(x, y, (flags << 24) | waterLevel);
 });
 
-const getStableStateBelow = tgpu['~unstable']
-  .fn([d.u32, d.u32], d.u32)
-  .does((upper, lower) => {
-    const totalMass = upper + lower;
-    if (totalMass <= MAX_WATER_LEVEL_UNPRESSURIZED.value) {
-      return totalMass;
-    }
-    if (totalMass >= MAX_WATER_LEVEL_UNPRESSURIZED.value * 2 && upper > lower) {
-      return totalMass / 2 + MAX_PRESSURE.value;
-    }
-    return MAX_WATER_LEVEL_UNPRESSURIZED.value;
-  });
+const getStableStateBelow = tgpu['~unstable'].fn(
+  [d.u32, d.u32],
+  d.u32,
+)((upper, lower) => {
+  const totalMass = upper + lower;
+  if (totalMass <= MAX_WATER_LEVEL_UNPRESSURIZED.value) {
+    return totalMass;
+  }
+  if (totalMass >= MAX_WATER_LEVEL_UNPRESSURIZED.value * 2 && upper > lower) {
+    return totalMass / 2 + MAX_PRESSURE.value;
+  }
+  return MAX_WATER_LEVEL_UNPRESSURIZED.value;
+});
 
-const isWall = tgpu['~unstable']
-  .fn([d.u32, d.u32], d.bool)
-  .does((x, y) => getCell(x, y) >> 24 === 1);
+const isWall = tgpu['~unstable'].fn(
+  [d.u32, d.u32],
+  d.bool,
+)((x, y) => getCell(x, y) >> 24 === 1);
 
-const isWaterSource = tgpu['~unstable']
-  .fn([d.u32, d.u32], d.bool)
-  .does((x, y) => getCell(x, y) >> 24 === 2);
+const isWaterSource = tgpu['~unstable'].fn(
+  [d.u32, d.u32],
+  d.bool,
+)((x, y) => getCell(x, y) >> 24 === 2);
 
-const isWaterDrain = tgpu['~unstable']
-  .fn([d.u32, d.u32], d.bool)
-  .does((x, y) => getCell(x, y) >> 24 === 3);
+const isWaterDrain = tgpu['~unstable'].fn(
+  [d.u32, d.u32],
+  d.bool,
+)((x, y) => getCell(x, y) >> 24 === 3);
 
-const isClearCell = tgpu['~unstable']
-  .fn([d.u32, d.u32], d.bool)
-  .does((x, y) => getCell(x, y) >> 24 === 4);
+const isClearCell = tgpu['~unstable'].fn(
+  [d.u32, d.u32],
+  d.bool,
+)((x, y) => getCell(x, y) >> 24 === 4);
 
-const getWaterLevel = tgpu['~unstable']
-  .fn([d.u32, d.u32], d.u32)
-  .does((x, y) => getCell(x, y) & MAX_WATER_LEVEL.value);
+const getWaterLevel = tgpu['~unstable'].fn(
+  [d.u32, d.u32],
+  d.u32,
+)((x, y) => getCell(x, y) & MAX_WATER_LEVEL.value);
 
-const checkForFlagsAndBounds = tgpu['~unstable']
-  .fn([d.u32, d.u32], d.bool)
-  .does((x, y) => {
-    if (isClearCell(x, y)) {
-      updateCell(x, y, 0);
-      return true;
-    }
+const checkForFlagsAndBounds = tgpu['~unstable'].fn(
+  [d.u32, d.u32],
+  d.bool,
+)((x, y) => {
+  if (isClearCell(x, y)) {
+    updateCell(x, y, 0);
+    return true;
+  }
 
-    if (isWall(x, y)) {
-      persistFlags(x, y);
-      return true;
-    }
+  if (isWall(x, y)) {
+    persistFlags(x, y);
+    return true;
+  }
 
-    if (isWaterSource(x, y)) {
-      persistFlags(x, y);
-      addToCell(x, y, 20);
-      return false;
-    }
-
-    if (isWaterDrain(x, y)) {
-      persistFlags(x, y);
-      updateCell(x, y, 3 << 24);
-      return true;
-    }
-
-    if (
-      y === 0 ||
-      y === sizeUniform.value.y - 1 ||
-      x === 0 ||
-      x === sizeUniform.value.x - 1
-    ) {
-      subtractFromCell(x, y, getWaterLevel(x, y));
-      return true;
-    }
-
+  if (isWaterSource(x, y)) {
+    persistFlags(x, y);
+    addToCell(x, y, 20);
     return false;
-  });
+  }
 
-const decideWaterLevel = tgpu['~unstable'].fn([d.u32, d.u32]).does((x, y) => {
+  if (isWaterDrain(x, y)) {
+    persistFlags(x, y);
+    updateCell(x, y, 3 << 24);
+    return true;
+  }
+
+  if (
+    y === 0 ||
+    y === sizeUniform.value.y - 1 ||
+    x === 0 ||
+    x === sizeUniform.value.x - 1
+  ) {
+    subtractFromCell(x, y, getWaterLevel(x, y));
+    return true;
+  }
+
+  return false;
+});
+
+const decideWaterLevel = tgpu['~unstable'].fn([d.u32, d.u32])((x, y) => {
   if (checkForFlagsAndBounds(x, y)) {
     return;
   }
@@ -270,66 +280,65 @@ const decideWaterLevel = tgpu['~unstable'].fn([d.u32, d.u32]).does((x, y) => {
   }
 });
 
-const vertex = tgpu['~unstable']
-  .vertexFn({
-    in: {
-      squareData: d.vec2f,
-      currentStateData: d.u32,
-      idx: d.builtin.instanceIndex,
-    },
-    out: { pos: d.builtin.position, cell: d.f32 },
-  })
-  .does((input) => {
-    const w = sizeUniform.value.x;
-    const h = sizeUniform.value.y;
-    const x =
-      (((d.f32(input.idx % w) + input.squareData.x) / d.f32(w) - 0.5) *
-        2 *
-        d.f32(w)) /
-      d.f32(std.max(w, h));
-    const y =
-      ((d.f32((input.idx - (input.idx % w)) / w + d.u32(input.squareData.y)) /
-        d.f32(h) -
-        0.5) *
-        2 *
-        d.f32(h)) /
-      d.f32(std.max(w, h));
-    const cellFlags = input.currentStateData >> 24;
-    let cell = d.f32(input.currentStateData & 0xffffff);
-    if (cellFlags === 1) {
-      cell = -1;
-    }
-    if (cellFlags === 2) {
-      cell = -2;
-    }
-    if (cellFlags === 3) {
-      cell = -3;
-    }
-    return { pos: d.vec4f(x, y, 0, 1), cell };
-  });
+const vertex = tgpu['~unstable'].vertexFn({
+  in: {
+    squareData: d.vec2f,
+    currentStateData: d.u32,
+    idx: d.builtin.instanceIndex,
+  },
+  out: { pos: d.builtin.position, cell: d.f32 },
+})((input) => {
+  const w = sizeUniform.value.x;
+  const h = sizeUniform.value.y;
+  const x =
+    (((d.f32(input.idx % w) + input.squareData.x) / d.f32(w) - 0.5) *
+      2 *
+      d.f32(w)) /
+    d.f32(std.max(w, h));
+  const y =
+    ((d.f32((input.idx - (input.idx % w)) / w + d.u32(input.squareData.y)) /
+      d.f32(h) -
+      0.5) *
+      2 *
+      d.f32(h)) /
+    d.f32(std.max(w, h));
+  const cellFlags = input.currentStateData >> 24;
+  let cell = d.f32(input.currentStateData & 0xffffff);
+  if (cellFlags === 1) {
+    cell = -1;
+  }
+  if (cellFlags === 2) {
+    cell = -2;
+  }
+  if (cellFlags === 3) {
+    cell = -3;
+  }
+  return { pos: d.vec4f(x, y, 0, 1), cell };
+});
 
-const fragment = tgpu['~unstable']
-  .fragmentFn({ in: { cell: d.f32 }, out: d.location(0, d.vec4f) })
-  .does((input) => {
-    if (input.cell === -1) {
-      return d.vec4f(0.5, 0.5, 0.5, 1);
-    }
-    if (input.cell === -2) {
-      return d.vec4f(0, 1, 0, 1);
-    }
-    if (input.cell === -3) {
-      return d.vec4f(1, 0, 0, 1);
-    }
+const fragment = tgpu['~unstable'].fragmentFn({
+  in: { cell: d.f32 },
+  out: d.location(0, d.vec4f),
+})((input) => {
+  if (input.cell === -1) {
+    return d.vec4f(0.5, 0.5, 0.5, 1);
+  }
+  if (input.cell === -2) {
+    return d.vec4f(0, 1, 0, 1);
+  }
+  if (input.cell === -3) {
+    return d.vec4f(1, 0, 0, 1);
+  }
 
-    const normalized = std.min(input.cell / d.f32(0xff), 1);
+  const normalized = std.min(input.cell / d.f32(0xff), 1);
 
-    if (normalized === 0) {
-      return d.vec4f();
-    }
+  if (normalized === 0) {
+    return d.vec4f();
+  }
 
-    const res = 1 / (1 + std.exp(-(normalized - 0.2) * 10));
-    return d.vec4f(0, 0, std.max(0.5, res), res);
-  });
+  const res = 1 / (1 + std.exp(-(normalized - 0.2) * 10));
+  return d.vec4f(0, 0, std.max(0.5, res), res);
+});
 
 const vertexInstanceLayout = tgpu.vertexLayout(
   (n: number) => d.arrayOf(d.u32, n),
@@ -350,14 +359,12 @@ let renderChanges: () => void;
 function resetGameData() {
   drawCanvasData = [];
 
-  const compute = tgpu['~unstable']
-    .computeFn({
-      in: { gid: d.builtin.globalInvocationId },
-      workgroupSize: [options.workgroupSize, options.workgroupSize],
-    })
-    .does((input) => {
-      decideWaterLevel(input.gid.x, input.gid.y);
-    });
+  const compute = tgpu['~unstable'].computeFn({
+    in: { gid: d.builtin.globalInvocationId },
+    workgroupSize: [options.workgroupSize, options.workgroupSize],
+  })((input) => {
+    decideWaterLevel(input.gid.x, input.gid.y);
+  });
 
   const computePipeline = root['~unstable']
     .withCompute(compute)

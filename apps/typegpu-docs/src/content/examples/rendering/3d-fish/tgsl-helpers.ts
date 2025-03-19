@@ -3,8 +3,10 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
 export const hsvToRgb = tgpu['~unstable']
-  .fn([d.vec3f], d.vec3f)
-  .does((hsv) => {
+  .fn(
+    [d.vec3f],
+    d.vec3f,
+  )((hsv) => {
     const h = hsv.x;
     const s = hsv.y;
     const v = hsv.z;
@@ -48,8 +50,10 @@ export const hsvToRgb = tgpu['~unstable']
   .$name('hsv to rgb');
 
 export const rgbToHsv = tgpu['~unstable']
-  .fn([d.vec3f], d.vec3f)
-  .does((rgb) => {
+  .fn(
+    [d.vec3f],
+    d.vec3f,
+  )((rgb) => {
     const r = rgb.x;
     const g = rgb.y;
     const b = rgb.z;
@@ -90,8 +94,10 @@ export const rgbToHsv = tgpu['~unstable']
   .$name('rgb to hsv');
 
 export const distanceVectorFromLine = tgpu['~unstable']
-  .fn([d.vec3f, d.vec3f, d.vec3f], d.vec3f)
-  .does((lineStart, lineEnd, point) => {
+  .fn(
+    [d.vec3f, d.vec3f, d.vec3f],
+    d.vec3f,
+  )((lineStart, lineEnd, point) => {
     const lineDirection = std.normalize(std.sub(lineEnd, lineStart));
     const pointVector = std.sub(point, lineStart);
     const projection = std.dot(pointVector, lineDirection);

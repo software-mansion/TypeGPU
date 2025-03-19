@@ -18,7 +18,7 @@ const MAX_GRID_SIZE = 1024;
 
 const randSeed = tgpu['~unstable'].privateVar(d.vec2f);
 
-const setupRandomSeed = tgpu['~unstable'].fn([d.vec2f]).does((coord) => {
+const setupRandomSeed = tgpu['~unstable'].fn([d.vec2f])((coord) => {
   randSeed.value = coord;
 });
 
@@ -26,7 +26,10 @@ const setupRandomSeed = tgpu['~unstable'].fn([d.vec2f]).does((coord) => {
  * Yoinked from https://www.cg.tuwien.ac.at/research/publications/2023/PETER-2023-PSW/PETER-2023-PSW-.pdf
  * "Particle System in WebGPU" by Benedikt Peter
  */
-const rand01 = tgpu['~unstable'].fn([], d.f32).does(() => {
+const rand01 = tgpu['~unstable'].fn(
+  [],
+  d.f32,
+)(() => {
   const a = std.dot(randSeed.value, d.vec2f(23.14077926, 232.61690225));
   const b = std.dot(randSeed.value, d.vec2f(54.47856553, 345.84153136));
   randSeed.value.x = std.fract(std.cos(a) * 136.8168);
@@ -76,124 +79,127 @@ const obstaclesBuffer = root
 
 const obstaclesReadonly = obstaclesBuffer.as('readonly');
 
-const isValidCoord = tgpu['~unstable']
-  .fn([d.i32, d.i32], d.bool)
-  .does(
-    (x, y) =>
-      x < gridSizeUniform.value &&
-      x >= 0 &&
-      y < gridSizeUniform.value &&
-      y >= 0,
-  );
+const isValidCoord = tgpu['~unstable'].fn(
+  [d.i32, d.i32],
+  d.bool,
+)(
+  (x, y) =>
+    x < gridSizeUniform.value && x >= 0 && y < gridSizeUniform.value && y >= 0,
+);
 
-const coordsToIndex = tgpu['~unstable']
-  .fn([d.i32, d.i32], d.i32)
-  .does((x, y) => x + y * gridSizeUniform.value);
+const coordsToIndex = tgpu['~unstable'].fn(
+  [d.i32, d.i32],
+  d.i32,
+)((x, y) => x + y * gridSizeUniform.value);
 
-const getCell = tgpu['~unstable']
-  .fn([d.i32, d.i32], d.vec4f)
-  .does((x, y) => inputGridSlot.value[coordsToIndex(x, y)]);
+const getCell = tgpu['~unstable'].fn(
+  [d.i32, d.i32],
+  d.vec4f,
+)((x, y) => inputGridSlot.value[coordsToIndex(x, y)]);
 
-const setCell = tgpu['~unstable']
-  .fn([d.i32, d.i32, d.vec4f])
-  .does((x, y, value) => {
-    const index = coordsToIndex(x, y);
-    outputGridSlot.value[index] = value;
-  });
+const setCell = tgpu['~unstable'].fn([d.i32, d.i32, d.vec4f])((x, y, value) => {
+  const index = coordsToIndex(x, y);
+  outputGridSlot.value[index] = value;
+});
 
-const setVelocity = tgpu['~unstable']
-  .fn([d.i32, d.i32, d.vec2f])
-  .does((x, y, velocity) => {
+const setVelocity = tgpu['~unstable'].fn([d.i32, d.i32, d.vec2f])(
+  (x, y, velocity) => {
     const index = coordsToIndex(x, y);
     outputGridSlot.value[index].x = velocity.x;
     outputGridSlot.value[index].y = velocity.y;
-  });
+  },
+);
 
-const addDensity = tgpu['~unstable']
-  .fn([d.i32, d.i32, d.f32])
-  .does((x, y, density) => {
+const addDensity = tgpu['~unstable'].fn([d.i32, d.i32, d.f32])(
+  (x, y, density) => {
     const index = coordsToIndex(x, y);
     outputGridSlot.value[index].z = inputGridSlot.value[index].z + density;
-  });
+  },
+);
 
-const flowFromCell = tgpu['~unstable']
-  .fn([d.i32, d.i32, d.i32, d.i32], d.f32)
-  .does((my_x, my_y, x, y) => {
-    if (!isValidCoord(x, y)) {
-      return 0;
-    }
-    const src = getCell(x, y);
-
-    const destPos = d.vec2i(x + d.i32(src.x), y + d.i32(src.y));
-    const dest = getCell(destPos.x, destPos.y);
-    const diff = src.z - dest.z;
-    let outFlow = std.min(std.max(0.01, 0.3 + diff * 0.1), src.z);
-
-    if (std.length(src.xy) < 0.5) {
-      outFlow = 0;
-    }
-
-    if (my_x === x && my_y === y) {
-      // 'src.z - outFlow' is how much is left in the src
-      return src.z - outFlow;
-    }
-
-    if (destPos.x === my_x && destPos.y === my_y) {
-      return outFlow;
-    }
-
+const flowFromCell = tgpu['~unstable'].fn(
+  [d.i32, d.i32, d.i32, d.i32],
+  d.f32,
+)((my_x, my_y, x, y) => {
+  if (!isValidCoord(x, y)) {
     return 0;
-  });
+  }
+  const src = getCell(x, y);
+
+  const destPos = d.vec2i(x + d.i32(src.x), y + d.i32(src.y));
+  const dest = getCell(destPos.x, destPos.y);
+  const diff = src.z - dest.z;
+  let outFlow = std.min(std.max(0.01, 0.3 + diff * 0.1), src.z);
+
+  if (std.length(src.xy) < 0.5) {
+    outFlow = 0;
+  }
+
+  if (my_x === x && my_y === y) {
+    // 'src.z - outFlow' is how much is left in the src
+    return src.z - outFlow;
+  }
+
+  if (destPos.x === my_x && destPos.y === my_y) {
+    return outFlow;
+  }
+
+  return 0;
+});
 
 const timeBuffer = root.createBuffer(d.f32).$usage('uniform');
 const timeUniform = timeBuffer.as('uniform');
 
-const isInsideObstacle = tgpu['~unstable']
-  .fn([d.i32, d.i32], d.bool)
-  .does((x, y) => {
-    for (let obs_idx = 0; obs_idx < MAX_OBSTACLES; obs_idx += 1) {
-      const obs = obstaclesReadonly.value[obs_idx];
+const isInsideObstacle = tgpu['~unstable'].fn(
+  [d.i32, d.i32],
+  d.bool,
+)((x, y) => {
+  for (let obs_idx = 0; obs_idx < MAX_OBSTACLES; obs_idx += 1) {
+    const obs = obstaclesReadonly.value[obs_idx];
 
-      if (obs.enabled === 0) {
-        continue;
-      }
-
-      const min_x = std.max(0, d.i32(obs.center.x) - d.i32(obs.size.x) / 2);
-      const max_x = std.min(
-        d.i32(gridSize),
-        d.i32(obs.center.x) + d.i32(obs.size.x) / 2,
-      );
-      const min_y = std.max(0, d.i32(obs.center.y) - d.i32(obs.size.y) / 2);
-      const max_y = std.min(
-        d.i32(gridSize),
-        d.i32(obs.center.y) + d.i32(obs.size.y) / 2,
-      );
-
-      if (x >= min_x && x <= max_x && y >= min_y && y <= max_y) {
-        return true;
-      }
+    if (obs.enabled === 0) {
+      continue;
     }
 
+    const min_x = std.max(0, d.i32(obs.center.x) - d.i32(obs.size.x) / 2);
+    const max_x = std.min(
+      d.i32(gridSize),
+      d.i32(obs.center.x) + d.i32(obs.size.x) / 2,
+    );
+    const min_y = std.max(0, d.i32(obs.center.y) - d.i32(obs.size.y) / 2);
+    const max_y = std.min(
+      d.i32(gridSize),
+      d.i32(obs.center.y) + d.i32(obs.size.y) / 2,
+    );
+
+    if (x >= min_x && x <= max_x && y >= min_y && y <= max_y) {
+      return true;
+    }
+  }
+
+  return false;
+});
+
+const isValidFlowOut = tgpu['~unstable'].fn(
+  [d.i32, d.i32],
+  d.bool,
+)((x, y) => {
+  if (!isValidCoord(x, y)) {
     return false;
-  });
+  }
 
-const isValidFlowOut = tgpu['~unstable']
-  .fn([d.i32, d.i32], d.bool)
-  .does((x, y) => {
-    if (!isValidCoord(x, y)) {
-      return false;
-    }
+  if (isInsideObstacle(x, y)) {
+    return false;
+  }
 
-    if (isInsideObstacle(x, y)) {
-      return false;
-    }
-
-    return true;
-  });
+  return true;
+});
 
 const computeVelocity = tgpu['~unstable']
-  .fn([d.i32, d.i32], d.vec2f)
-  .does(/* wgsl */ `(x: i32, y: i32) -> vec2f {
+  .fn(
+    [d.i32, d.i32],
+    d.vec2f,
+  )(/* wgsl */ `(x: i32, y: i32) -> vec2f {
     let gravity_cost = 0.5;
 
     let neighbor_offsets = array<vec2i, 4>(
@@ -240,31 +246,31 @@ const computeVelocity = tgpu['~unstable']
   }`)
   .$uses({ getCell, isValidFlowOut, isValidCoord, rand01 });
 
-const mainInitWorld = tgpu['~unstable']
-  .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })
-  .does((input) => {
-    const x = d.i32(input.gid.x);
-    const y = d.i32(input.gid.y);
-    const index = coordsToIndex(x, y);
+const mainInitWorld = tgpu['~unstable'].computeFn({
+  in: { gid: d.builtin.globalInvocationId },
+  workgroupSize: [1],
+})((input) => {
+  const x = d.i32(input.gid.x);
+  const y = d.i32(input.gid.y);
+  const index = coordsToIndex(x, y);
 
-    let value = d.vec4f();
+  let value = d.vec4f();
 
-    if (!isValidFlowOut(x, y)) {
-      value = d.vec4f(0, 0, 0, 0);
-    } else {
-      // Ocean
-      if (y < d.i32(gridSizeUniform.value) / 2) {
-        const depth = 1 - d.f32(y) / (d.f32(gridSizeUniform.value) / 2);
-        value = d.vec4f(0, 0, 10 + depth * 10, 0);
-      }
+  if (!isValidFlowOut(x, y)) {
+    value = d.vec4f(0, 0, 0, 0);
+  } else {
+    // Ocean
+    if (y < d.i32(gridSizeUniform.value) / 2) {
+      const depth = 1 - d.f32(y) / (d.f32(gridSizeUniform.value) / 2);
+      value = d.vec4f(0, 0, 10 + depth * 10, 0);
     }
+  }
 
-    outputGridSlot.value[index] = value;
-  });
+  outputGridSlot.value[index] = value;
+});
 
-const mainMoveObstacles = tgpu['~unstable']
-  .computeFn({ workgroupSize: [1] })
-  .does(() => {
+const mainMoveObstacles = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+  () => {
     for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx += 1) {
       const obs = prevObstacleReadonly.value[obsIdx];
       const nextObs = obstaclesReadonly.value[obsIdx];
@@ -382,7 +388,8 @@ const mainMoveObstacles = tgpu['~unstable']
         setVelocity(nextMaxX + 2, y, newVel);
       }
     }
-  });
+  },
+);
 
 let sourceIntensity = 0.1;
 let sourceRadius = 0.01;
@@ -398,59 +405,55 @@ const sourceParamsBuffer = root
   .$usage('uniform');
 const sourceParamsUniform = sourceParamsBuffer.as('uniform');
 
-const getMinimumInFlow = tgpu['~unstable']
-  .fn([d.i32, d.i32], d.f32)
-  .does((x, y) => {
-    const gridSizeF = d.f32(gridSizeUniform.value);
-    const sourceRadius = std.max(
-      1,
-      sourceParamsUniform.value.radius * gridSizeF,
-    );
-    const sourcePos = d.vec2f(
-      sourceParamsUniform.value.center.x * gridSizeF,
-      sourceParamsUniform.value.center.y * gridSizeF,
-    );
+const getMinimumInFlow = tgpu['~unstable'].fn(
+  [d.i32, d.i32],
+  d.f32,
+)((x, y) => {
+  const gridSizeF = d.f32(gridSizeUniform.value);
+  const sourceRadius = std.max(1, sourceParamsUniform.value.radius * gridSizeF);
+  const sourcePos = d.vec2f(
+    sourceParamsUniform.value.center.x * gridSizeF,
+    sourceParamsUniform.value.center.y * gridSizeF,
+  );
 
-    if (
-      std.length(d.vec2f(d.f32(x) - sourcePos.x, d.f32(y) - sourcePos.y)) <
-      sourceRadius
-    ) {
-      return sourceParamsUniform.value.intensity;
-    }
+  if (
+    std.length(d.vec2f(d.f32(x) - sourcePos.x, d.f32(y) - sourcePos.y)) <
+    sourceRadius
+  ) {
+    return sourceParamsUniform.value.intensity;
+  }
 
-    return 0;
-  });
+  return 0;
+});
 
-const mainCompute = tgpu['~unstable']
-  .computeFn({
-    in: { gid: d.builtin.globalInvocationId },
-    workgroupSize: [8, 8],
-  })
-  .does((input) => {
-    const x = d.i32(input.gid.x);
-    const y = d.i32(input.gid.y);
-    const index = coordsToIndex(x, y);
+const mainCompute = tgpu['~unstable'].computeFn({
+  in: { gid: d.builtin.globalInvocationId },
+  workgroupSize: [8, 8],
+})((input) => {
+  const x = d.i32(input.gid.x);
+  const y = d.i32(input.gid.y);
+  const index = coordsToIndex(x, y);
 
-    setupRandomSeed(d.vec2f(d.f32(index), timeUniform.value));
+  setupRandomSeed(d.vec2f(d.f32(index), timeUniform.value));
 
-    const next = getCell(x, y);
-    const nextVelocity = computeVelocity(x, y);
-    next.x = nextVelocity.x;
-    next.y = nextVelocity.y;
+  const next = getCell(x, y);
+  const nextVelocity = computeVelocity(x, y);
+  next.x = nextVelocity.x;
+  next.y = nextVelocity.y;
 
-    // Processing in-flow
+  // Processing in-flow
 
-    next.z = flowFromCell(x, y, x, y);
-    next.z += flowFromCell(x, y, x, y + 1);
-    next.z += flowFromCell(x, y, x, y - 1);
-    next.z += flowFromCell(x, y, x + 1, y);
-    next.z += flowFromCell(x, y, x - 1, y);
+  next.z = flowFromCell(x, y, x, y);
+  next.z += flowFromCell(x, y, x, y + 1);
+  next.z += flowFromCell(x, y, x, y - 1);
+  next.z += flowFromCell(x, y, x + 1, y);
+  next.z += flowFromCell(x, y, x - 1, y);
 
-    const min_inflow = getMinimumInFlow(x, y);
-    next.z = std.max(min_inflow, next.z);
+  const min_inflow = getMinimumInFlow(x, y);
+  next.z = std.max(min_inflow, next.z);
 
-    outputGridSlot.value[index] = next;
-  });
+  outputGridSlot.value[index] = next;
+});
 
 const OBSTACLE_BOX = 0;
 const OBSTACLE_LEFT_WALL = 1;
@@ -485,12 +488,10 @@ const limitedBoxX = () => {
 let boxY = 0.2;
 let leftWallX = 0;
 
-const vertexMain = tgpu['~unstable']
-  .vertexFn({
-    in: { idx: d.builtin.vertexIndex },
-    out: { pos: d.builtin.position, uv: d.vec2f },
-  })
-  .does(/* wgsl */ `(input: VertexInput) -> VertexOut {
+const vertexMain = tgpu['~unstable'].vertexFn({
+  in: { idx: d.builtin.vertexIndex },
+  out: { pos: d.builtin.position, uv: d.vec2f },
+})(/* wgsl */ `(input: VertexInput) -> VertexOut {
     var pos = array<vec2f, 4>(
       vec2(1, 1), // top-right
       vec2(-1, 1), // top-left
@@ -511,54 +512,55 @@ const vertexMain = tgpu['~unstable']
     return output;
   }`);
 
-const fragmentMain = tgpu['~unstable']
-  .fragmentFn({ in: { uv: d.vec2f }, out: d.vec4f })
-  .does((input) => {
-    const x = d.i32(input.uv.x * d.f32(gridSizeUniform.value));
-    const y = d.i32(input.uv.y * d.f32(gridSizeUniform.value));
+const fragmentMain = tgpu['~unstable'].fragmentFn({
+  in: { uv: d.vec2f },
+  out: d.vec4f,
+})((input) => {
+  const x = d.i32(input.uv.x * d.f32(gridSizeUniform.value));
+  const y = d.i32(input.uv.y * d.f32(gridSizeUniform.value));
 
-    const index = coordsToIndex(x, y);
-    const cell = inputGridSlot.value[index];
-    const density = std.max(0, cell.z);
+  const index = coordsToIndex(x, y);
+  const cell = inputGridSlot.value[index];
+  const density = std.max(0, cell.z);
 
-    const obstacleColor = d.vec4f(0.1, 0.1, 0.1, 1);
+  const obstacleColor = d.vec4f(0.1, 0.1, 0.1, 1);
 
-    const background = d.vec4f(0.9, 0.9, 0.9, 1);
-    const first_color = d.vec4f(0.2, 0.6, 1, 1);
-    const second_color = d.vec4f(0.2, 0.3, 0.6, 1);
-    const third_color = d.vec4f(0.1, 0.2, 0.4, 1);
+  const background = d.vec4f(0.9, 0.9, 0.9, 1);
+  const first_color = d.vec4f(0.2, 0.6, 1, 1);
+  const second_color = d.vec4f(0.2, 0.3, 0.6, 1);
+  const third_color = d.vec4f(0.1, 0.2, 0.4, 1);
 
-    const firstThreshold = d.f32(2);
-    const secondThreshold = d.f32(10);
-    const thirdThreshold = d.f32(20);
+  const firstThreshold = d.f32(2);
+  const secondThreshold = d.f32(10);
+  const thirdThreshold = d.f32(20);
 
-    if (isInsideObstacle(x, y)) {
-      return obstacleColor;
-    }
+  if (isInsideObstacle(x, y)) {
+    return obstacleColor;
+  }
 
-    if (density <= 0) {
-      return background;
-    }
+  if (density <= 0) {
+    return background;
+  }
 
-    if (density <= firstThreshold) {
-      const t = 1 - std.pow(1 - density / firstThreshold, 2);
-      return std.mix(background, first_color, t);
-    }
+  if (density <= firstThreshold) {
+    const t = 1 - std.pow(1 - density / firstThreshold, 2);
+    return std.mix(background, first_color, t);
+  }
 
-    if (density <= secondThreshold) {
-      return std.mix(
-        first_color,
-        second_color,
-        (density - firstThreshold) / (secondThreshold - firstThreshold),
-      );
-    }
-
+  if (density <= secondThreshold) {
     return std.mix(
+      first_color,
       second_color,
-      third_color,
-      std.min((density - secondThreshold) / thirdThreshold, 1),
+      (density - firstThreshold) / (secondThreshold - firstThreshold),
     );
-  });
+  }
+
+  return std.mix(
+    second_color,
+    third_color,
+    std.min((density - secondThreshold) / thirdThreshold, 1),
+  );
+});
 
 function makePipelines(
   inputGridReadonly: TgpuBufferReadonly<GridData>,

@@ -7,8 +7,10 @@ import { parseResolved } from './utils/parseResolved';
 describe('tgpu.fn with raw string WGSL implementation', () => {
   it('is namable', () => {
     const getX = tgpu['~unstable']
-      .fn([], d.f32)
-      .does(`() {
+      .fn(
+        [],
+        d.f32,
+      )(`() {
         return 3.0f;
       }`)
       .$name('get_x');
@@ -18,8 +20,10 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
 
   it('resolves rawFn to WGSL', () => {
     const getY = tgpu['~unstable']
-      .fn([], d.f32)
-      .does(`() {
+      .fn(
+        [],
+        d.f32,
+      )(`() {
         return 3.0f;
       }`)
       .$name('get_y');
@@ -37,16 +41,20 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
 
   it('resolves externals and replaces their usages in code', () => {
     const getColor = tgpu['~unstable']
-      .fn([], d.vec3f)
-      .does(`() {
+      .fn(
+        [],
+        d.vec3f,
+      )(`() {
         let color = vec3f();
         return color;
       }`)
       .$name('get_color');
 
     const getX = tgpu['~unstable']
-      .fn([], d.f32)
-      .does(`() {
+      .fn(
+        [],
+        d.f32,
+      )(`() {
         let color = get_color();
         return 3.0f;
       }`)
@@ -54,8 +62,10 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       .$uses({ get_color: getColor });
 
     const getY = tgpu['~unstable']
-      .fn([], d.f32)
-      .does(`() {
+      .fn(
+        [],
+        d.f32,
+      )(`() {
         let c = color();
         return getX();
       }`)
@@ -86,15 +96,19 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
 
   it('replaces external usage just for exact identifier matches', () => {
     const getx = tgpu['~unstable']
-      .fn([], d.f32)
-      .does(`() {
+      .fn(
+        [],
+        d.f32,
+      )(`() {
         return 3.0f;
       }`)
       .$name('external');
 
     const getY = tgpu['~unstable']
-      .fn([], d.f32)
-      .does(`() {
+      .fn(
+        [],
+        d.f32,
+      )(`() {
         let x = getx();
         let y = getx() + getx();
         let z = hellogetx();
@@ -178,8 +192,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       .vertexFn({
         in: { vertexIndex: d.builtin.vertexIndex },
         out: { outPos: d.builtin.position },
-      })
-      .does(/* wgsl */ `(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+      })(/* wgsl */ `(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
     var pos = array<vec2f, 6>(
       vec2<f32>( 1,  1),
       vec2<f32>( 1, -1),
@@ -213,8 +226,7 @@ struct vertex_fn_Output {
       .fragmentFn({
         in: { position: d.builtin.position },
         out: { a: d.vec4f, b: d.builtin.fragDepth },
-      })
-      .does(/* wgsl */ `(@builtin(position) position: vec4f) -> Output {
+      })(/* wgsl */ `(@builtin(position) position: vec4f) -> Output {
     var out: Output;
     out.a = vec4f(1.0);
     out.b = 1;
@@ -238,8 +250,10 @@ struct fragment_Output {
 
   it('properly handles fragment functions with a single output argument', () => {
     const fragmentFunction = tgpu['~unstable']
-      .fragmentFn({ in: { position: d.builtin.position }, out: d.vec4f })
-      .does(/* wgsl */ `(input: FragmentIn) -> @location(0) vec4f {
+      .fragmentFn({
+        in: { position: d.builtin.position },
+        out: d.vec4f,
+      })(/* wgsl */ `(input: FragmentIn) -> @location(0) vec4f {
         return vec4f(1.0f);
       }`)
       .$name('fragment');
@@ -264,8 +278,10 @@ struct fragment_Output {
     });
 
     const func = tgpu['~unstable']
-      .fn([d.vec4f, Point], undefined)
-      .does(/* wgsl */ `(a: vec4f, b: Point) {
+      .fn(
+        [d.vec4f, Point],
+        undefined,
+      )(/* wgsl */ `(a: vec4f, b: Point) {
     var newPoint: Point;
     newPoint = b;
   }`)
@@ -294,8 +310,10 @@ struct fragment_Output {
       .$name('P');
 
     const func = tgpu['~unstable']
-      .fn([d.vec4f, Point], d.vec2f)
-      .does(/* wgsl */ `(
+      .fn(
+        [d.vec4f, Point],
+        d.vec2f,
+      )(/* wgsl */ `(
         a: vec4f,
         b : PointStruct ,
     ) -> vec2f {
@@ -327,8 +345,10 @@ struct fragment_Output {
       .$name('P');
 
     const func = tgpu['~unstable']
-      .fn([d.vec4f], Point)
-      .does(/* wgsl */ `(a: vec4f) -> PointStruct {
+      .fn(
+        [d.vec4f],
+        Point,
+      )(/* wgsl */ `(a: vec4f) -> PointStruct {
     var newPoint: PointStruct;
     newPoint = b;
     return newPoint;
@@ -352,16 +372,20 @@ struct fragment_Output {
 
   it('resolves object externals and replaces their usages in code', () => {
     const getColor = tgpu['~unstable']
-      .fn([], d.vec3f)
-      .does(`() {
+      .fn(
+        [],
+        d.vec3f,
+      )(`() {
         let color = vec3f();
         return color;
       }`)
       .$name('get_color');
 
     const main = tgpu['~unstable']
-      .fn([], d.f32)
-      .does(`() {
+      .fn(
+        [],
+        d.f32,
+      )(`() {
         let c = functions.getColor();
         return c;
       }`)

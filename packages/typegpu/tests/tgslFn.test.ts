@@ -8,8 +8,10 @@ import { parseResolved } from './utils/parseResolved';
 describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {
     const getX = tgpu['~unstable']
-      .fn([], f32)
-      .does(() => {
+      .fn(
+        [],
+        f32,
+      )(() => {
         return 3;
       })
       .$name('get_x');
@@ -19,8 +21,10 @@ describe('TGSL tgpu.fn function', () => {
 
   it('resolves fn to WGSL', () => {
     const getY = tgpu['~unstable']
-      .fn([], f32)
-      .does(() => {
+      .fn(
+        [],
+        f32,
+      )(() => {
         return 3;
       })
       .$name('getY');
@@ -38,8 +42,10 @@ describe('TGSL tgpu.fn function', () => {
   it('resolves externals', () => {
     const v = vec3f; // necessary workaround until we finish implementation of member access in the generator
     const getColor = tgpu['~unstable']
-      .fn([], vec3f)
-      .does(() => {
+      .fn(
+        [],
+        vec3f,
+      )(() => {
         const color = v();
         const color2 = v(1, 2, 3);
         return color;
@@ -48,8 +54,10 @@ describe('TGSL tgpu.fn function', () => {
       .$name('get_color');
 
     const getX = tgpu['~unstable']
-      .fn([], f32)
-      .does(() => {
+      .fn(
+        [],
+        f32,
+      )(() => {
         const color = getColor();
         return 3;
       })
@@ -57,8 +65,10 @@ describe('TGSL tgpu.fn function', () => {
       .$uses({ getColor });
 
     const getY = tgpu['~unstable']
-      .fn([], f32)
-      .does(() => {
+      .fn(
+        [],
+        f32,
+      )(() => {
         const c = getColor();
         return getX();
       })
@@ -95,8 +105,10 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     const createGradient = tgpu['~unstable']
-      .fn([], Gradient)
-      .does(() => {
+      .fn(
+        [],
+        Gradient,
+      )(() => {
         return Gradient({ to: vec3f(1, 2, 3), from: vec3f(4, 5, 6) });
       })
       .$name('create_gradient');
@@ -133,8 +145,10 @@ describe('TGSL tgpu.fn function', () => {
     }).$name('C');
 
     const pureConfusion = tgpu['~unstable']
-      .fn([], A)
-      .does(() => {
+      .fn(
+        [],
+        A,
+      )(() => {
         return C({ a: A({ b: 3 }), b: B({ a: A({ b: 4 }), c: 5 }) }).a;
       })
       .$name('pure_confusion');
@@ -176,8 +190,7 @@ describe('TGSL tgpu.fn function', () => {
           pos: builtin.position,
           uv: vec2f,
         },
-      })
-      .does((input) => {
+      })((input) => {
         const vi = input.vi;
         const ii = input.ii;
         const color = input.color;
@@ -218,8 +231,7 @@ describe('TGSL tgpu.fn function', () => {
       .computeFn({
         in: { gid: builtin.globalInvocationId },
         workgroupSize: [24],
-      })
-      .does((input) => {
+      })((input) => {
         const index = input.gid.x;
         const iterationF = f32(0);
         const sign = 0;
@@ -250,7 +262,7 @@ describe('TGSL tgpu.fn function', () => {
     const u = tgpu['~unstable'];
 
     // @ts-expect-error
-    u.computeFn({ in: { vid: builtin.vertexIndex }, workgroupSize: [24] }).does(
+    u.computeFn({ in: { vid: builtin.vertexIndex }, workgroupSize: [24] })(
       () => {},
     );
 
@@ -258,7 +270,7 @@ describe('TGSL tgpu.fn function', () => {
     u.computeFn({
       in: { gid: builtin.globalInvocationId, random: f32 },
       workgroupSize: [24],
-    }).does(() => {});
+    })(() => {});
   });
 
   it('resolves fragmentFn', () => {
@@ -274,8 +286,7 @@ describe('TGSL tgpu.fn function', () => {
           fragDepth: builtin.fragDepth,
           out: location(0, vec4f),
         },
-      })
-      .does((input) => {
+      })((input) => {
         const pos = input.pos;
         const out = {
           out: vec4f(0, 0, 0, 0),
@@ -322,8 +333,7 @@ describe('TGSL tgpu.fn function', () => {
 
   it('resolves fragmentFn with a single output', () => {
     const fragmentFn = tgpu['~unstable']
-      .fragmentFn({ in: { pos: builtin.position }, out: vec4f })
-      .does((input) => {
+      .fragmentFn({ in: { pos: builtin.position }, out: vec4f })((input) => {
         return input.pos;
       })
       .$name('fragment_fn');
@@ -348,7 +358,7 @@ describe('TGSL tgpu.fn function', () => {
   // it('resolves a function with a pointer parameter', () => {
   //   const addOnes = tgpu['~unstable']
   //     .fn([ptrStorage(vec3f, 'read-write')])
-  //     .does((ptr) => {
+  //     ((ptr) => {
   //       ptr.x += 1;
   //       ptr.y += 1;
   //       ptr.z += 1;

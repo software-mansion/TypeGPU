@@ -29,28 +29,22 @@ import type { Implementation, InferArgs, InferReturn } from './fnTypes';
 /**
  * Describes a function signature (its arguments and return type)
  */
-export interface TgpuFnShell<
+export type TgpuFnShellHeader<
   Args extends AnyWgslData[] = AnyWgslData[],
   Return extends AnyWgslData | undefined = AnyWgslData | undefined,
-> {
+> = {
   readonly argTypes: Args;
   readonly returnType: Return | undefined;
+};
 
-  /**
-   * Creates a type-safe implementation of this signature
-   */
-  does(
+export type TgpuFnShell<
+  Args extends AnyWgslData[] = AnyWgslData[],
+  Return extends AnyWgslData | undefined = AnyWgslData | undefined,
+> = TgpuFnShellHeader<Args, Return> &
+  ((
     implementation: (...args: InferArgs<Args>) => InferReturn<Return>,
-  ): TgpuFn<Args, Return>;
-
-  /**
-   * @param implementation
-   *   Raw WGSL function implementation with header and body
-   *   without `fn` keyword and function name
-   *   e.g. `"(x: f32) -> f32 { return x; }"`;
-   */
-  does(implementation: string): TgpuFn<Args, Return>;
-}
+  ) => TgpuFn<Args, Return>) &
+  ((implementation: string) => TgpuFn<Args, Return>);
 
 interface TgpuFnBase<
   Args extends AnyWgslData[],
@@ -58,7 +52,7 @@ interface TgpuFnBase<
 > extends TgpuNamable,
     Labelled {
   readonly resourceType: 'function';
-  readonly shell: TgpuFnShell<Args, Return>;
+  readonly shell: TgpuFnShellHeader<Args, Return>;
   readonly '~providing'?: Providing | undefined;
 
   $uses(dependencyMap: Record<string, unknown>): this;
@@ -93,16 +87,18 @@ export function fn<
   Args extends AnyWgslData[],
   Return extends AnyWgslData | undefined = undefined,
 >(argTypes: Args, returnType?: Return): TgpuFnShell<Args, Return> {
-  return {
+  const shell: TgpuFnShellHeader<Args, Return> = {
     argTypes,
     returnType,
-
-    does(
-      implementation: Implementation<InferArgs<Args>, InferReturn<Return>>,
-    ): TgpuFn<Args, Return> {
-      return createFn(this, implementation as Implementation);
-    },
   };
+
+  const call = (
+    implementation: Implementation<InferArgs<Args>, InferReturn<Return>>,
+  ): TgpuFn<Args, Return> => {
+    return createFn(shell, implementation as Implementation);
+  };
+
+  return Object.assign(call, shell);
 }
 
 export function isTgpuFn<
@@ -124,7 +120,7 @@ function createFn<
   Args extends AnyWgslData[],
   Return extends AnyWgslData | undefined,
 >(
-  shell: TgpuFnShell<Args, Return>,
+  shell: TgpuFnShellHeader<Args, Return>,
   implementation: Implementation,
 ): TgpuFn<Args, Return> {
   type This = TgpuFnBase<Args, Return> & SelfResolvable;
