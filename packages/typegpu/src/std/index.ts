@@ -31,6 +31,7 @@ export {
 export {
   // comparison
   eq,
+  neq,
   lessThan,
   lessThanOrEqual,
   greaterThan,

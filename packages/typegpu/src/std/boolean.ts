@@ -49,6 +49,18 @@ export const eq: AnyToBooleanComponentWise = createDualImpl(
   }),
 );
 
+export const neq: AnyToBooleanComponentWise = createDualImpl(
+  // CPU implementation
+  (<T extends AnyVecInstance>(lhs: T, rhs: T) => {
+    return neg(VectorOps.eq[lhs.kind](lhs, rhs));
+  }) as AnyToBooleanComponentWise,
+  // GPU implementation
+  (lhs, rhs) => ({
+    value: `(${lhs.value} != ${rhs.value})`,
+    dataType: correspondingBooleanVectorSchema(lhs),
+  }),
+);
+
 export type NumericToBooleanComponentWise = {
   <T extends AnyNumericVec2Instance>(s: T, v: T): v2b;
   <T extends AnyNumericVec3Instance>(s: T, v: T): v3b;
