@@ -1,2 +1,2 @@
 export { hsvToRgb, rgbToHsv } from './hsv.js';
-export { rgbToYCbCr, rgbToYcbcrMatrix } from './ycbcr.js';
+export { rgbToYcbcr, rgbToYcbcrMatrix } from './ycbcr.js';

@@ -27,6 +27,6 @@ export const rgbToYcbcrMatrix = tgpu['~unstable'].const(
   ),
 );
 
-export const rgbToYCbCr = tgpu['~unstable'].fn([vec3f], vec3f).does((rgb) => {
+export const rgbToYcbcr = tgpu['~unstable'].fn([vec3f], vec3f).does((rgb) => {
   return mul(rgb, rgbToYcbcrMatrix.value);
 });
