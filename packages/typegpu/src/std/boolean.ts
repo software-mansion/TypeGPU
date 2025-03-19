@@ -29,6 +29,8 @@ function correspondingBooleanVectorSchema(value: Resource) {
   return vec4b;
 }
 
+// comparison
+
 export type AnyToBooleanComponentWise = {
   <T extends AnyVec2Instance>(s: T, v: T): v2b;
   <T extends AnyVec3Instance>(s: T, v: T): v3b;
@@ -80,6 +82,8 @@ export const lessThanOrEqual: NumericToBooleanComponentWise = createDualImpl(
   }),
 );
 
+// logical ops
+
 export const neg = createDualImpl(
   // CPU implementation
   (value: AnyBooleanVecInstance) => {
@@ -104,6 +108,20 @@ export const or = createDualImpl(
   }),
 );
 
+export const and = createDualImpl(
+  // CPU implementation
+  <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) => {
+    return neg(or(neg(lhs), neg(rhs)));
+  },
+  // GPU implementation
+  (lhs, rhs) => ({
+    value: `(${lhs.value} && ${rhs.value})`,
+    dataType: lhs.dataType,
+  }),
+);
+
+// logical aggregation
+
 export const all = createDualImpl(
   // CPU implementation
   (value: AnyBooleanVecInstance) => {
@@ -127,6 +145,8 @@ export const any = createDualImpl(
     dataType: bool,
   }),
 );
+
+// other
 
 /**
  * Checks whether the given elements differ by at most 0.01.

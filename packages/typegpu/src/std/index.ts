@@ -29,13 +29,18 @@ export {
 } from './numeric.js';
 
 export {
+  // comparison
   eq,
   lessThan,
   lessThanOrEqual,
+  // logical ops
   neg,
   or,
+  and,
+  // logical aggregation
   all,
   any,
+  // other
   isCloseTo,
 } from './boolean.js';
 
