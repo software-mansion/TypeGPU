@@ -19,7 +19,7 @@ import {
 /**
  * Describes a vertex entry function signature (its arguments and return type)
  */
-export type TgpuVertexFnShellHeader<
+type TgpuVertexFnShellHeader<
   VertexIn extends IOLayout,
   VertexOut extends IOLayout,
 > = {
@@ -91,12 +91,11 @@ export function vertexFn<
     argTypes: [createStructFromIO(options.in ?? {})],
   };
 
-  const call = ((
+  const call = (
     implementation: (input: InferIO<VertexIn>) => InferIO<VertexOut> | string,
-    // biome-ignore lint/suspicious/noExplicitAny: <shorter than repeating type>
-  ) => createVertexFn(shell, implementation as Implementation)) as any;
+  ) => createVertexFn(shell, implementation as Implementation);
 
-  return Object.assign(call, shell);
+  return Object.assign(call, shell) as TgpuVertexFnShell<VertexIn, VertexOut>;
 }
 
 // --------------

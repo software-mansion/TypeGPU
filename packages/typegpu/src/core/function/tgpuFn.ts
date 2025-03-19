@@ -29,7 +29,7 @@ import type { Implementation, InferArgs, InferReturn } from './fnTypes';
 /**
  * Describes a function signature (its arguments and return type)
  */
-export type TgpuFnShellHeader<
+type TgpuFnShellHeader<
   Args extends AnyWgslData[] = AnyWgslData[],
   Return extends AnyWgslData | undefined = AnyWgslData | undefined,
 > = {
@@ -94,9 +94,7 @@ export function fn<
 
   const call = (
     implementation: Implementation<InferArgs<Args>, InferReturn<Return>>,
-  ): TgpuFn<Args, Return> => {
-    return createFn(shell, implementation as Implementation);
-  };
+  ): TgpuFn<Args, Return> => createFn(shell, implementation as Implementation);
 
   return Object.assign(call, shell);
 }

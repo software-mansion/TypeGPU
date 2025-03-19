@@ -13,7 +13,7 @@ import { createStructFromIO } from './ioOutputType';
 /**
  * Describes a compute entry function signature (its arguments and return type)
  */
-export type TgpuComputeFnShellHeader<
+type TgpuComputeFnShellHeader<
   ComputeIn extends Record<string, AnyComputeBuiltin>,
 > = {
   readonly argTypes: [AnyWgslStruct];
@@ -89,17 +89,14 @@ export function computeFn<
     ],
   };
 
-  const call = ((
-    implementation: (input: InferIO<ComputeIn>) => undefined | string,
-  ) =>
+  const call = (implementation: Implementation) =>
     createComputeFn(
       shell,
       options.workgroupSize,
       implementation as Implementation,
-      // biome-ignore lint/suspicious/noExplicitAny: <shorter>
-    )) as any;
+    );
 
-  return Object.assign(call, shell);
+  return Object.assign(call, shell) as TgpuComputeFnShell<ComputeIn>;
 }
 
 // --------------

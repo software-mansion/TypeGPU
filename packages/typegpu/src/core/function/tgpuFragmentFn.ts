@@ -39,7 +39,7 @@ export type FragmentInConstrained = IORecord<
 /**
  * Describes a fragment entry function signature (its arguments and return type)
  */
-export type TgpuFragmentFnShellHeader<
+type TgpuFragmentFnShellHeader<
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
 > = {
@@ -122,10 +122,12 @@ export function fragmentFn<
     implementation:
       | ((input: InferIO<FragmentIn>) => InferIO<FragmentOut>)
       | string,
-    // biome-ignore lint/suspicious/noExplicitAny: <the usual>
-  ) => createFragmentFn(shell, implementation as Implementation) as any;
+  ) => createFragmentFn(shell, implementation as Implementation);
 
-  return Object.assign(call, shell);
+  return Object.assign(call, shell) as TgpuFragmentFnShell<
+    FragmentIn,
+    FragmentOut
+  >;
 }
 
 // --------------
