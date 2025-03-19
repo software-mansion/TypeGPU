@@ -82,7 +82,7 @@ export const computeShader = tgpu['~unstable']
       const limit = p.fishMouseRayRepulsionDistance;
       const str =
         std.pow(2, std.clamp(limit - std.length(distanceVector), 0, limit)) - 1;
-      rayRepulsion = std.mul(str, std.normalize(distanceVector) as d.v3f);
+      rayRepulsion = std.mul(str, std.normalize(distanceVector));
     }
 
     fishData.direction = std.add(

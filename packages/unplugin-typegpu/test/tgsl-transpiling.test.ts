@@ -91,7 +91,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
             .$usage('storage');
         const counter = counterBuffer.as('mutable');
         
-        const increment = tgpu['~unstable']
+        const increment = tgpu
             .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })((input) => {
             const tmp = counter.value.x;
             counter.value.x = counter.value.y;
@@ -109,7 +109,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                   .$usage('storage');
               const counter = counterBuffer.as('mutable');
               
-              tgpu['~unstable']
+              tgpu
                   .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })(tgpu.__assignAst((input) => {
                   const tmp = counter.value.x;
                   counter.value.x = counter.value.y;
