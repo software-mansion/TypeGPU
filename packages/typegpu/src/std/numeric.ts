@@ -3,7 +3,7 @@ import { VectorOps } from '../data/vectorOps';
 import type {
   AnyFloatVecInstance,
   AnyMatInstance,
-  AnyVecInstance,
+  AnyNumericVecInstance,
   AnyWgslData,
   v3f,
   v3i,
@@ -27,7 +27,7 @@ export function isNumeric(element: Resource) {
 
 export const add = createDualImpl(
   // CPU implementation
-  <T extends AnyVecInstance>(lhs: T, rhs: T): T =>
+  <T extends AnyNumericVecInstance>(lhs: T, rhs: T): T =>
     VectorOps.add[lhs.kind](lhs, rhs),
   // GPU implementation
   (lhs, rhs) => ({
@@ -38,7 +38,7 @@ export const add = createDualImpl(
 
 export const sub = createDualImpl(
   // CPU implementation
-  <T extends AnyVecInstance>(lhs: T, rhs: T): T =>
+  <T extends AnyNumericVecInstance>(lhs: T, rhs: T): T =>
     VectorOps.sub[lhs.kind](lhs, rhs),
   // GPU implementation
   (lhs, rhs) => ({
@@ -50,15 +50,15 @@ export const sub = createDualImpl(
 type MulOverload = {
   <T extends AnyMatInstance, TVec extends vBaseForMat<T>>(s: T, v: TVec): TVec;
   <T extends AnyMatInstance, TVec extends vBaseForMat<T>>(s: TVec, v: T): TVec;
-  <T extends AnyVecInstance | AnyMatInstance>(s: number | T, v: T): T;
+  <T extends AnyNumericVecInstance | AnyMatInstance>(s: number | T, v: T): T;
 };
 
 export const mul: MulOverload = createDualImpl(
   // CPU implementation
   (
-    s: number | AnyVecInstance | AnyMatInstance,
-    v: AnyVecInstance | AnyMatInstance,
-  ): AnyVecInstance | AnyMatInstance => {
+    s: number | AnyNumericVecInstance | AnyMatInstance,
+    v: AnyNumericVecInstance | AnyMatInstance,
+  ): AnyNumericVecInstance | AnyMatInstance => {
     if (typeof s === 'number') {
       // Scalar * Vector/Matrix case
       return VectorOps.mulSxV[v.kind](s, v);
@@ -108,7 +108,7 @@ export const mul: MulOverload = createDualImpl(
 
 export const abs = createDualImpl(
   // CPU implementation
-  <T extends AnyVecInstance | number>(value: T): T => {
+  <T extends AnyNumericVecInstance | number>(value: T): T => {
     if (typeof value === 'number') {
       return Math.abs(value) as T;
     }
@@ -183,14 +183,14 @@ export const ceil = createDualImpl(
  */
 export const clamp = createDualImpl(
   // CPU implementation
-  <T extends AnyVecInstance | number>(value: T, low: T, high: T): T => {
+  <T extends AnyNumericVecInstance | number>(value: T, low: T, high: T): T => {
     if (typeof value === 'number') {
       return Math.min(Math.max(low as number, value), high as number) as T;
     }
     return VectorOps.clamp[value.kind](
       value,
-      low as AnyVecInstance,
-      high as AnyVecInstance,
+      low as AnyNumericVecInstance,
+      high as AnyNumericVecInstance,
     ) as T;
   },
   // GPU implementation
@@ -235,7 +235,7 @@ export const cross = createDualImpl(
  */
 export const dot = createDualImpl(
   // CPU implementation
-  <T extends AnyVecInstance>(lhs: T, rhs: T): number =>
+  <T extends AnyNumericVecInstance>(lhs: T, rhs: T): number =>
     VectorOps.dot[lhs.kind](lhs, rhs),
   // GPU implementation
   (lhs, rhs) => ({ value: `dot(${lhs.value}, ${rhs.value})`, dataType: f32 }),
@@ -298,11 +298,11 @@ export const length = createDualImpl(
  */
 export const max = createDualImpl(
   // CPU implementation
-  <T extends AnyVecInstance | number>(a: T, b: T): T => {
+  <T extends AnyNumericVecInstance | number>(a: T, b: T): T => {
     if (typeof a === 'number') {
       return Math.max(a, b as number) as T;
     }
-    return VectorOps.max[a.kind](a, b as AnyVecInstance) as T;
+    return VectorOps.max[a.kind](a, b as AnyNumericVecInstance) as T;
   },
   // GPU implementation
   (a, b) => ({ value: `max(${a.value}, ${b.value})`, dataType: a.dataType }),
@@ -314,11 +314,11 @@ export const max = createDualImpl(
  */
 export const min = createDualImpl(
   // CPU implementation
-  <T extends AnyVecInstance | number>(a: T, b: T): T => {
+  <T extends AnyNumericVecInstance | number>(a: T, b: T): T => {
     if (typeof a === 'number') {
       return Math.min(a, b as number) as T;
     }
-    return VectorOps.min[a.kind](a, b as AnyVecInstance) as T;
+    return VectorOps.min[a.kind](a, b as AnyNumericVecInstance) as T;
   },
   // GPU implementation
   (a, b) => ({ value: `min(${a.value}, ${b.value})`, dataType: a.dataType }),

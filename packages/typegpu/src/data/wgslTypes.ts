@@ -542,18 +542,23 @@ export type AnyIntegerVecInstance = v2i | v2u | v3i | v3u | v4i | v4u;
 
 export type AnyBooleanVecInstance = v2b | v3b | v4b;
 
-export type AnyVecInstance =
-  | AnyFloatVecInstance
-  | AnyIntegerVecInstance
-  | AnyBooleanVecInstance;
-
 export type AnyNumericVec2Instance = v2f | v2h | v2i | v2u;
 export type AnyNumericVec3Instance = v3f | v3h | v3i | v3u;
 export type AnyNumericVec4Instance = v4f | v4h | v4i | v4u;
 
-export type AnyVec2Instance = AnyNumericVec2Instance | v2b;
-export type AnyVec3Instance = AnyNumericVec3Instance | v3b;
-export type AnyVec4Instance = AnyNumericVec4Instance | v4b;
+export type AnyNumericVecInstance =
+  | AnyNumericVec2Instance
+  | AnyNumericVec3Instance
+  | AnyNumericVec4Instance;
+
+export type AnyVec2Instance = v2f | v2h | v2i | v2u | v2b;
+export type AnyVec3Instance = v3f | v3h | v3i | v3u | v3b;
+export type AnyVec4Instance = v4f | v4h | v4i | v4u | v4b;
+
+export type AnyVecInstance =
+  | AnyVec2Instance
+  | AnyVec3Instance
+  | AnyVec4Instance;
 
 export type VecKind = AnyVecInstance['kind'];
 
@@ -735,7 +740,6 @@ export interface Vec2u {
   (x: number, y: number): v2u;
   (xy: number): v2u;
   (): v2u;
-  // AAA to jest sus
   (v: AnyNumericVec2Instance): v2u;
 }
 
