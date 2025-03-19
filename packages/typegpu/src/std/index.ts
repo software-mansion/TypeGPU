@@ -34,6 +34,7 @@ export {
   lessThan,
   lessThanOrEqual,
   greaterThan,
+  greaterThanOrEqual,
   // logical ops
   neg,
   or,
