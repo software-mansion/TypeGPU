@@ -33,6 +33,7 @@ export {
   eq,
   lessThan,
   lessThanOrEqual,
+  greaterThan,
   // logical ops
   neg,
   or,
