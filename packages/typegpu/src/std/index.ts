@@ -30,6 +30,7 @@ export {
 
 export {
   eq,
+  lessThan,
   neg,
   or,
   all,

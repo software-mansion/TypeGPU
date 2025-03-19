@@ -3,6 +3,10 @@ import { VectorOps } from '../data/vectorOps';
 import type {
   AnyBooleanVecInstance,
   AnyFloatVecInstance,
+  AnyNumericVec2Instance,
+  AnyNumericVec3Instance,
+  AnyNumericVec4Instance,
+  AnyNumericVecInstance,
   AnyVec2Instance,
   AnyVec3Instance,
   AnyVec4Instance,
@@ -15,12 +19,6 @@ import { createDualImpl } from '../shared/generators';
 import type { Resource } from '../types';
 import { isNumeric, sub } from './numeric';
 
-export type EqOverload = {
-  <T extends AnyVec2Instance>(s: T, v: T): v2b;
-  <T extends AnyVec3Instance>(s: T, v: T): v3b;
-  <T extends AnyVec4Instance>(s: T, v: T): v4b;
-};
-
 function correspondingBooleanVectorSchema(value: Resource) {
   if (value.dataType.type.includes('2')) {
     return vec2b;
@@ -31,14 +29,38 @@ function correspondingBooleanVectorSchema(value: Resource) {
   return vec4b;
 }
 
-export const eq: EqOverload = createDualImpl(
+export type AnyToBooleanComponentWise = {
+  <T extends AnyVec2Instance>(s: T, v: T): v2b;
+  <T extends AnyVec3Instance>(s: T, v: T): v3b;
+  <T extends AnyVec4Instance>(s: T, v: T): v4b;
+};
+
+export const eq: AnyToBooleanComponentWise = createDualImpl(
   // CPU implementation
   (<T extends AnyVecInstance>(lhs: T, rhs: T) => {
     return VectorOps.eq[lhs.kind](lhs, rhs);
-  }) as EqOverload,
+  }) as AnyToBooleanComponentWise,
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} == ${rhs.value})`,
+    dataType: correspondingBooleanVectorSchema(lhs),
+  }),
+);
+
+export type NumericToBooleanComponentWise = {
+  <T extends AnyNumericVec2Instance>(s: T, v: T): v2b;
+  <T extends AnyNumericVec3Instance>(s: T, v: T): v3b;
+  <T extends AnyNumericVec4Instance>(s: T, v: T): v4b;
+};
+
+export const lessThan: NumericToBooleanComponentWise = createDualImpl(
+  // CPU implementation
+  (<T extends AnyNumericVecInstance>(lhs: T, rhs: T) => {
+    return VectorOps.lessThan[lhs.kind](lhs, rhs);
+  }) as NumericToBooleanComponentWise,
+  // GPU implementation
+  (lhs, rhs) => ({
+    value: `(${lhs.value} < ${rhs.value})`,
     dataType: correspondingBooleanVectorSchema(lhs),
   }),
 );
@@ -89,7 +111,9 @@ export const any = createDualImpl(
     value: `any(${value.value})`,
     dataType: bool,
   }),
-); /**
+);
+
+/**
  * Checks whether the given elements differ by at most 0.01.
  * Component-wise if arguments are vectors.
  * @example
@@ -98,7 +122,6 @@ export const any = createDualImpl(
  *
  * @param {number} precision argument that specifies the maximum allowed difference, 0.01 by default.
  */
-
 export const isCloseTo = createDualImpl(
   // CPU implementation
   <T extends AnyFloatVecInstance | number>(e1: T, e2: T, precision = 0.01) => {
@@ -132,3 +155,11 @@ export const isCloseTo = createDualImpl(
     };
   },
 );
+
+// AAA wszystkie compare funkcje
+// AAA js docsy do wszystkich funkcji
+// AAA sprawdź konstruktory (vec2f(vec2b))
+// AAA sprawdź, co się dzieje z boolem w buforze
+// AAA jak nic, to dopisz errora
+// AAA skopiuj zachowanie z boola do vecNb
+// AAA test example dla tych wszystkich funkcji
