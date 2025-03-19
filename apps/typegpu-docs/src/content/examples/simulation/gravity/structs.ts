@@ -21,7 +21,7 @@ export const centerObjectbindGroupLayout = tgpu.bindGroupLayout({
   object: { uniform: ObjectStruct },
 });
 
-export const bindGroupLayout = tgpu.bindGroupLayout({
+export const cameraBindGroupLayout = tgpu.bindGroupLayout({
   camera: { uniform: CameraStruct },
   // texture: { texture: 'float' },
   sampler: { sampler: 'filtering' },
@@ -37,7 +37,7 @@ export const CelectialBodyStruct = d.struct({
 export const CelestialBodyArray = (n: number) =>
   d.arrayOf(CelectialBodyStruct, n);
 
-export const celestialBodyBindGroup = tgpu.bindGroupLayout({
+export const celestialBodyLayout = tgpu.bindGroupLayout({
   inState: { uniform: CelestialBodyArray(1), access: 'readonly' },
   outState: { uniform: CelestialBodyArray(1), access: 'writeonly' },
 });

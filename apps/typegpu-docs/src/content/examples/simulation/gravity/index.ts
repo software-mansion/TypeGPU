@@ -4,7 +4,8 @@ import * as m from 'wgpu-matrix';
 import { mainFragment, mainVertex } from './main-shaders';
 import { cubeModel, vertices } from './cube';
 import { cameraInitialPos, cubePos, cubeVelocity, G, target } from './env';
-import { bindGroupLayout, CameraStruct, centerObjectbindGroupLayout, ObjectStruct, VertexStruct, CelectialBodyStruct } from './structs';
+import { cameraBindGroupLayout, CameraStruct, centerObjectbindGroupLayout, ObjectStruct, VertexStruct, CelectialBodyStruct, celestialBodyLayout } from './structs';
+import { computeShader } from './compute-shaders';
 
 
 const vertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(VertexStruct, n));
@@ -73,7 +74,7 @@ const centerObjectBindGroup = root.createBindGroup(centerObjectbindGroupLayout, 
   object: centerObjectBuffer,
 });
 
-const cameraBindGroup = root.createBindGroup(bindGroupLayout, {
+const cameraBindGroup = root.createBindGroup(cameraBindGroupLayout, {
   camera: cameraBuffer,
   // cube: cubeBuffer,
   sampler,
@@ -92,18 +93,40 @@ const celestialBodiesBufferB = root.createBuffer(d.arrayOf(CelectialBodyStruct, 
   mass: 1,
 }]).$usage('uniform');
 
-// biome-ignore lint/style/useConst: <explanation>
-let flip = false;
 
-// Render pipeline
+let flip = false;
+const celestialBodiesBindGroupA = root.createBindGroup(celestialBodyLayout, {
+  inState:  celestialBodiesBufferA,
+  outState: celestialBodiesBufferB,
+});
+
+const celestialBodiesBindGroupB = root.createBindGroup(celestialBodyLayout, {
+  inState:  celestialBodiesBufferB,
+  outState: celestialBodiesBufferA,
+});
+
+// Pipelines
+const computePipeline = root['~unstable']
+.withCompute(computeShader)
+.createPipeline()
+.$name('compute pipeline');
+
 const renderPipeline = root['~unstable']
   .withVertex(mainVertex, vertexLayout.attrib)
   .withFragment(mainFragment, { format: presentationFormat })
   .withPrimitive({ topology: 'triangle-list', cullMode: 'back' })
   .createPipeline();
 
+
 function render() {
-  renderPipeline
+  flip = !flip;
+
+  computePipeline
+    .with(celestialBodyLayout, flip ? celestialBodiesBindGroupA : celestialBodiesBindGroupB)
+    .dispatchWorkgroups(1); // count of celestial bodies
+    
+    
+    renderPipeline
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       loadOp: 'clear',
@@ -111,11 +134,12 @@ function render() {
       clearValue: [1, 1, 1, 1],
     })
     .with(vertexLayout, vertexBuffer)
-    .with(bindGroupLayout, cameraBindGroup)
+    .with(cameraBindGroupLayout, cameraBindGroup)
     .with(centerObjectbindGroupLayout, centerObjectBindGroup)
+    .with(celestialBodyLayout, flip ? celestialBodiesBindGroupA : celestialBodiesBindGroupB)
     .draw(36);
-
-  root['~unstable'].flush();
+    
+    root['~unstable'].flush();
 }
 
 console.log('Cube position:', await vertexBuffer.read());
@@ -150,7 +174,7 @@ function frame() {
     return;
   }
   requestAnimationFrame(frame);
-  updateCubePhysics();
+  // updateCubePhysics();
   render();
 }
 

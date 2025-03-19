@@ -2,15 +2,15 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
 import * as std from 'typegpu/std';
-import { celestialBodyBindGroup } from './structs';
+import { celestialBodyLayout } from './structs';
 import { G } from './env';
-import { centerObjectBuffer } from '.';
 
-const celestialBodiesBindGroup = celestialBodyBindGroup.bound;
 
-export const cubeComputeShader = tgpu['~unstable']
+const celestialBodiesBindGroup = celestialBodyLayout.bound;
+
+export const computeShader = tgpu['~unstable']
   .computeFn({
-    workgroupSize: [1, 1, 1],
+    workgroupSize: [1],
   })
   .does((input) => {
     const dt = 0.016;
@@ -37,7 +37,7 @@ export const cubeComputeShader = tgpu['~unstable']
   
     m.mat4.identity(modelMatrix);
     m.mat4.translate(modelMatrix, position, modelMatrix);
-    centerObjectBuffer.write({ modelMatrix: modelMatrix });
+    
 
     celestialBodiesBindGroup.outState.value[0] = {
       position: position,
