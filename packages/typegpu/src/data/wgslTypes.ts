@@ -1143,6 +1143,15 @@ export type FlatInterpolatableData =
   | Vec4i
   | Vec4u;
 
+export type ScalarData =
+  | Bool
+  | F32
+  | F16
+  | I32
+  | U32
+  | AbstractInt
+  | AbstractFloat;
+
 export type AnyWgslData =
   | Bool
   | F32

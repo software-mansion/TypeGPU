@@ -11,6 +11,7 @@ import type {
   AnyVec3Instance,
   AnyVec4Instance,
   AnyVecInstance,
+  ScalarData,
   v2b,
   v3b,
   v4b,
@@ -230,7 +231,38 @@ export const isCloseTo = createDualImpl(
   },
 );
 
-// AAA wszystkie compare funkcje
+export type SelectOverload = {
+  <T extends ScalarData | AnyVecInstance>(f: T, t: T, cond: boolean): T;
+  <T extends AnyVec2Instance>(f: T, t: T, cond: v2b): T;
+  <T extends AnyVec3Instance>(f: T, t: T, cond: v3b): T;
+  <T extends AnyVec4Instance>(f: T, t: T, cond: v4b): T;
+};
+
+export const select: SelectOverload = createDualImpl(
+  // CPU implementation
+  <T extends AnyVecInstance | ScalarData>(
+    f: T,
+    t: T,
+    cond: AnyBooleanVecInstance | boolean,
+  ) => {
+    if (typeof cond === 'boolean') {
+      return cond ? t : f;
+    }
+    return VectorOps.select[(f as AnyVecInstance).kind](
+      f as AnyVecInstance,
+      t as AnyVecInstance,
+      cond,
+    );
+  },
+  // GPU implementation
+  (f, t, cond) => ({
+    value: `select(${f.value}, ${t.value}, ${cond.value})`,
+    dataType: f.dataType,
+  }),
+);
+
+// AAA konstruktory z innych typów?
+// AAA select ??
 // AAA js docsy do wszystkich funkcji
 // AAA sprawdź konstruktory (vec2f(vec2b))
 // AAA sprawdź, co się dzieje z boolem w buforze

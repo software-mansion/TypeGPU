@@ -1008,4 +1008,42 @@ export const VectorOps = {
       Math.abs(v.z) <= n &&
       Math.abs(v.w) <= n,
   } as Record<VecKind, <T extends vBase>(v: T, n: number) => boolean>,
+
+  select: {
+    vec2f: (f: wgsl.v2f, t: wgsl.v2f, c: wgsl.v2b) =>
+      vec2f(c.x ? t.x : f.x, c.y ? t.y : f.y),
+    vec2h: (f: wgsl.v2h, t: wgsl.v2h, c: wgsl.v2b) =>
+      vec2h(c.x ? t.x : f.x, c.y ? t.y : f.y),
+    vec2i: (f: wgsl.v2i, t: wgsl.v2i, c: wgsl.v2b) =>
+      vec2i(c.x ? t.x : f.x, c.y ? t.y : f.y),
+    vec2u: (f: wgsl.v2u, t: wgsl.v2u, c: wgsl.v2b) =>
+      vec2u(c.x ? t.x : f.x, c.y ? t.y : f.y),
+    vec2b: (f: wgsl.v2b, t: wgsl.v2b, c: wgsl.v2b) =>
+      vec2b(c.x ? t.x : f.x, c.y ? t.y : f.y),
+
+    vec3f: (f: wgsl.v3f, t: wgsl.v3f, c: wgsl.v3b) =>
+      vec3f(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z),
+    vec3h: (f: wgsl.v3h, t: wgsl.v3h, c: wgsl.v3b) =>
+      vec3h(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z),
+    vec3i: (f: wgsl.v3i, t: wgsl.v3i, c: wgsl.v3b) =>
+      vec3i(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z),
+    vec3u: (f: wgsl.v3u, t: wgsl.v3u, c: wgsl.v3b) =>
+      vec3u(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z),
+    vec3b: (f: wgsl.v3b, t: wgsl.v3b, c: wgsl.v3b) =>
+      vec3b(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z),
+
+    vec4f: (f: wgsl.v4f, t: wgsl.v4f, c: wgsl.v4b) =>
+      vec4f(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z, c.w ? t.w : f.w),
+    vec4h: (f: wgsl.v4h, t: wgsl.v4h, c: wgsl.v4b) =>
+      vec4h(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z, c.w ? t.w : f.w),
+    vec4i: (f: wgsl.v4i, t: wgsl.v4i, c: wgsl.v4b) =>
+      vec4i(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z, c.w ? t.w : f.w),
+    vec4u: (f: wgsl.v4u, t: wgsl.v4u, c: wgsl.v4b) =>
+      vec4u(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z, c.w ? t.w : f.w),
+    vec4b: (f: wgsl.v4b, t: wgsl.v4b, c: wgsl.v4b) =>
+      vec4b(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z, c.w ? t.w : f.w),
+  } as Record<
+    VecKind,
+    <T extends vBase>(f: T, t: T, c: wgsl.AnyBooleanVecInstance) => T
+  >,
 };
