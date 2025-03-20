@@ -414,7 +414,7 @@ const mainCompute = tgpu['~unstable']
     const y = d.i32(input.gid.y);
     const index = coordsToIndex(x, y);
 
-    randf.seed(d.vec4f(d.f32(index), timeUniform.value, 0, 0));
+    randf.seed2(d.vec2f(d.f32(index), timeUniform.value));
 
     const next = getCell(x, y);
     const nextVelocity = computeVelocity(x, y);
