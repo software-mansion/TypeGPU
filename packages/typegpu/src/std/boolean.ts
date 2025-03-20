@@ -39,12 +39,32 @@ export type AnyToBooleanComponentWise = {
 };
 
 /**
+ * Checks whether `lhs == rhs` on all components.
+ * Equivalent to `all(eq(lhs, rhs))`.
+ * @example
+ * allEq(vec2f(0.0, 1.0), vec2f(0.0, 2.0)) // returns false
+ * allEq(vec3u(0, 1, 2), vec3u(0, 1, 2)) // returns true
+ */
+export const allEq = createDualImpl(
+  // CPU implementation
+  <T extends AnyVecInstance>(lhs: T, rhs: T) => {
+    return all(VectorOps.eq[lhs.kind](lhs, rhs));
+  },
+  // GPU implementation
+  (lhs, rhs) => ({
+    value: `all(${lhs.value} == ${rhs.value})`,
+    dataType: bool,
+  }),
+);
+
+/**
  * Checks **component-wise** whether `lhs == rhs`.
- * This function does **not** return `bool`, for that use-case, wrap the result in `all`.
+ * This function does **not** return `bool`, for that use-case, wrap the result in `all`, or use `allEq`.
  * @example
  * eq(vec2f(0.0, 1.0), vec2f(0.0, 2.0)) // returns vec2b(true, false)
  * eq(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(false, true, false)
  * all(eq(vec4i(4, 3, 2, 1), vec4i(4, 3, 2, 1))) // returns true
+ * allEq(vec4i(4, 3, 2, 1), vec4i(4, 3, 2, 1)) // returns true
  */
 export const eq: AnyToBooleanComponentWise = createDualImpl(
   // CPU implementation
@@ -350,8 +370,6 @@ export const select: SelectOverload = createDualImpl(
   }),
 );
 
-// &&=
-// allEq
 // AAA konstruktory z innych typów?
 // AAA sprawdź konstruktory (vec2f(vec2b))
 // AAA sprawdź, co się dzieje z boolem w buforze

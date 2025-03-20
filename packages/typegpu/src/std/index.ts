@@ -30,6 +30,7 @@ export {
 
 export {
   // comparison
+  allEq,
   eq,
   neq,
   lessThan,
