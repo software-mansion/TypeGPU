@@ -1,5 +1,4 @@
 import { createJiti } from 'jiti';
-import nearleyRedirectPlugin from 'tgpu-wgsl-parser/nearley-redirect-plugin';
 import type TypeGPUPlugin from 'unplugin-typegpu/rollup';
 import { defineConfig } from 'vitest/config';
 
@@ -10,8 +9,5 @@ const typegpu = await jiti.import<typeof TypeGPUPlugin>(
 );
 
 export default defineConfig({
-  plugins: [
-    typegpu({ include: [/.*\.test\.ts/], forceTgpuAlias: 'tgpu' }),
-    nearleyRedirectPlugin(),
-  ],
+  plugins: [typegpu({ include: [/.*\.test\.ts/], forceTgpuAlias: 'tgpu' })],
 });

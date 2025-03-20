@@ -21,7 +21,6 @@ import {
   vec3f,
 } from '../src/data';
 import './utils/webgpuGlobals';
-import { parse } from 'tgpu-wgsl-parser';
 import { comparisonSampler, sampler } from '../src/core/sampler/sampler';
 import {
   MissingBindingError,
@@ -31,6 +30,7 @@ import {
   type UnwrapRuntimeConstructor,
 } from '../src/tgpuBindGroupLayout';
 import { it } from './utils/extendedIt';
+import { parse } from './utils/parseResolved';
 
 const DEFAULT_READONLY_VISIBILITY_FLAGS =
   GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;

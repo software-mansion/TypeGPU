@@ -1,7 +1,7 @@
-import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
 import tgpu from '../src';
 import * as d from '../src/data';
+import { parse } from './utils/parseResolved';
 import { parseResolved } from './utils/parseResolved';
 
 describe('tgpu.declare', () => {
