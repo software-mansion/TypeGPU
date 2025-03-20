@@ -12,8 +12,7 @@ import * as wgslGenerator from '../../src/smol/wgslGenerator';
 import * as std from '../../src/std';
 import { Void } from '../../src/types';
 import { it } from '../utils/extendedIt';
-import { parse } from '../utils/parseResolved';
-import { parseResolved } from '../utils/parseResolved';
+import { parse, parseResolved } from '../utils/parseResolved';
 
 const transpiler = new JitTranspiler();
 
@@ -598,7 +597,10 @@ describe('wgslGenerator', () => {
   });
 
   it('generates correct code for array expressions', () => {
-    const testFn = tgpu['~unstable'].fn([], d.u32).does(() => {
+    const testFn = tgpu['~unstable'].fn(
+      [],
+      d.u32,
+    )(() => {
       const arr = [1, 2, 3];
       return arr[1] as number;
     });
@@ -649,7 +651,10 @@ describe('wgslGenerator', () => {
       })
       .$name('TestStruct');
 
-    const testFn = tgpu['~unstable'].fn([], d.f32).does(() => {
+    const testFn = tgpu['~unstable'].fn(
+      [],
+      d.f32,
+    )(() => {
       const arr = [testStruct({ x: 1, y: 2 }), testStruct({ x: 3, y: 4 })];
       return (arr[1] as { x: number; y: number }).y;
     });
@@ -704,8 +709,10 @@ describe('wgslGenerator', () => {
     );
 
     const testFn = tgpu['~unstable']
-      .fn([], d.f32)
-      .does(() => {
+      .fn(
+        [],
+        d.f32,
+      )(() => {
         const arr = [derived.value, std.mul(derived.value, d.vec2f(2, 2))];
         return (arr[1] as { x: number; y: number }).y;
       })
