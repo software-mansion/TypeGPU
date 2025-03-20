@@ -1,5 +1,4 @@
 import { JitTranspiler } from 'tgpu-jit';
-import { parse } from 'tgpu-wgsl-parser';
 import type * as smol from 'tinyest';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
 import tgpu, { StrictNameRegistry } from '../../src';
@@ -13,6 +12,7 @@ import * as wgslGenerator from '../../src/smol/wgslGenerator';
 import * as std from '../../src/std';
 import { Void } from '../../src/types';
 import { it } from '../utils/extendedIt';
+import { parse } from '../utils/parseResolved';
 import { parseResolved } from '../utils/parseResolved';
 
 const transpiler = new JitTranspiler();
@@ -595,5 +595,209 @@ describe('wgslGenerator', () => {
     );
 
     expect(res.dataType).toEqual(d.f32);
+  });
+
+  it('generates correct code for array expressions', () => {
+    const testFn = tgpu['~unstable'].fn([], d.u32).does(() => {
+      const arr = [1, 2, 3];
+      return arr[1] as number;
+    });
+
+    expect(parseResolved({ testFn })).toEqual(
+      parse(`
+      fn testFn() -> u32 {
+        var arr = array<u32, 3>(1, 2, 3);
+        return arr[1];
+      }`),
+    );
+
+    const astInfo = getPrebuiltAstFor(
+      testFn[$internal].implementation as (...args: unknown[]) => unknown,
+    );
+
+    if (!astInfo) {
+      throw new Error('Expected prebuilt AST to be present');
+    }
+
+    // biome-ignore format: <it's better that way>
+    const expectedAst = { b: [{ c: ['arr', { 'y': [{ n: '1' }, { n: '2' }, { n: '3' }] },] }, { r: { i: ['arr', { n: '1' }] }, },], } as const;
+
+    expect(astInfo.ast.body).toEqual(expectedAst);
+
+    ctx[$internal].itemStateStack.pushFunctionScope(
+      [],
+      d.u32,
+      astInfo.externals ?? {},
+    );
+
+    // Check for: var arr = array<u32, 3>(1, 2, 3);
+    //             ^ this should be an array<u32, 3>
+    const res = wgslGenerator.generateExpression(
+      ctx,
+      (astInfo.ast.body as unknown as typeof expectedAst).b[0]
+        .c[1] as unknown as smol.Expression,
+    );
+
+    expect(res.dataType).toEqual(d.arrayOf(d.u32, 3));
+  });
+
+  it('generates correct code for array expressions with struct elements', () => {
+    const testStruct = d
+      .struct({
+        x: d.u32,
+        y: d.f32,
+      })
+      .$name('TestStruct');
+
+    const testFn = tgpu['~unstable'].fn([], d.f32).does(() => {
+      const arr = [testStruct({ x: 1, y: 2 }), testStruct({ x: 3, y: 4 })];
+      return (arr[1] as { x: number; y: number }).y;
+    });
+
+    expect(parseResolved({ testFn })).toEqual(
+      parse(`
+      struct TestStruct {
+        x: u32,
+        y: f32,
+      }
+
+      fn testFn() -> f32 {
+        var arr = array<TestStruct, 2>(TestStruct(1, 2), TestStruct(3, 4));
+        return arr[1].y;
+      }`),
+    );
+
+    const astInfo = getPrebuiltAstFor(
+      testFn[$internal].implementation as (...args: unknown[]) => unknown,
+    );
+
+    if (!astInfo) {
+      throw new Error('Expected prebuilt AST to be present');
+    }
+
+    // biome-ignore format: <it's better that way>
+    const expectedAst = { b: [{ c: ['arr', { y: [{ f: ['testStruct', [{ o: { x: { n: '1', }, y: { n: '2', }, }, },], ], }, { f: ['testStruct', [{ o: { x: { n: '3', }, y: { n: '4', }, }, },], ], },], }, ], }, { r: { a: [{ i: ['arr', { n: '1', }, ], }, 'y', ], }, }, ], } as const;
+
+    expect(astInfo.ast.body).toEqual(expectedAst);
+
+    ctx[$internal].itemStateStack.pushFunctionScope(
+      [],
+      d.f32,
+      astInfo.externals ?? {},
+    );
+
+    // Check for: var arr = array<TestStruct, 2>(TestStruct(1, 2), TestStruct(3, 4));
+    //            ^ this should be an array<TestStruct, 2>
+    const res = wgslGenerator.generateExpression(
+      ctx,
+      (astInfo.ast.body as unknown as typeof expectedAst).b[0]
+        .c[1] as unknown as smol.Expression,
+    );
+
+    expect(res.dataType).toEqual(d.arrayOf(testStruct, 2));
+  });
+
+  it('generates correct code for array expressions with derived elements', () => {
+    const numberSlot = tgpu['~unstable'].slot(44);
+    const derived = tgpu['~unstable'].derived(() =>
+      std.mul(d.f32(numberSlot.value), d.vec2f(1, 2)),
+    );
+
+    const testFn = tgpu['~unstable']
+      .fn([], d.f32)
+      .does(() => {
+        const arr = [derived.value, std.mul(derived.value, d.vec2f(2, 2))];
+        return (arr[1] as { x: number; y: number }).y;
+      })
+      .$name('testFn');
+
+    expect(parseResolved({ testFn })).toEqual(
+      parse(`
+      fn testFn() -> f32 {
+        var arr = array<vec2f, 2>(vec2f(44, 88), (vec2f(44, 88) * vec2f(2, 2)));
+        return arr[1].y;
+      }`),
+    );
+
+    const astInfo = getPrebuiltAstFor(
+      testFn[$internal].implementation as (...args: unknown[]) => unknown,
+    );
+
+    if (!astInfo) {
+      throw new Error('Expected prebuilt AST to be present');
+    }
+
+    expect(astInfo.ast.body).toMatchInlineSnapshot(`
+      {
+        "b": [
+          {
+            "c": [
+              "arr",
+              {
+                "y": [
+                  {
+                    "a": [
+                      "derived",
+                      "value",
+                    ],
+                  },
+                  {
+                    "f": [
+                      {
+                        "a": [
+                          "std",
+                          "mul",
+                        ],
+                      },
+                      [
+                        {
+                          "a": [
+                            "derived",
+                            "value",
+                          ],
+                        },
+                        {
+                          "f": [
+                            {
+                              "a": [
+                                "d",
+                                "vec2f",
+                              ],
+                            },
+                            [
+                              {
+                                "n": "2",
+                              },
+                              {
+                                "n": "2",
+                              },
+                            ],
+                          ],
+                        },
+                      ],
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            "r": {
+              "a": [
+                {
+                  "i": [
+                    "arr",
+                    {
+                      "n": "1",
+                    },
+                  ],
+                },
+                "y",
+              ],
+            },
+          },
+        ],
+      }
+    `);
   });
 });

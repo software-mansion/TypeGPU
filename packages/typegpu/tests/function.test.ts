@@ -1,9 +1,9 @@
-import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import tgpu from '../src';
 import type { IOLayout, InferIO } from '../src/core/function/fnTypes';
 import type { TgpuFn, TgpuFnShell } from '../src/core/function/tgpuFn';
 import * as d from '../src/data';
+import { parse } from './utils/parseResolved';
 import { parseResolved } from './utils/parseResolved';
 
 describe('tgpu.fn', () => {

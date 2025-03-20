@@ -146,6 +146,10 @@ export type ObjectExpression = {
   o: Record<string, Expression>;
 };
 
+export type ArrayExpression = {
+  y: Expression[];
+};
+
 export type MemberAccess = {
   a: [object: Expression, member: string];
 };
@@ -185,6 +189,7 @@ export type Expression =
   | ObjectExpression
   | MemberAccess
   | IndexAccess
+  | ArrayExpression
   | Update
   | Call
   | Literal;
