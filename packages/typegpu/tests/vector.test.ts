@@ -127,6 +127,62 @@ describe('vec2i', () => {
   });
 });
 
+describe('vec2b', () => {
+  it('should create a zero 2d vector', () => {
+    const zero = d.vec2b();
+    expect(zero.x).toEqual(false);
+    expect(zero.y).toEqual(false);
+  });
+
+  it('should create a 2d vector with the given elements', () => {
+    const vec = d.vec2b(false, true);
+    expect(vec.x).toEqual(false);
+    expect(vec.y).toEqual(true);
+  });
+
+  it('should create a 2d vector from the given scalar element', () => {
+    const vec = d.vec2b(true);
+    expect(vec.x).toEqual(true);
+    expect(vec.y).toEqual(true);
+  });
+
+  it('is not host shareable', () => {
+    const buffer = new ArrayBuffer(d.sizeOf(d.vec2f));
+
+    expect(() =>
+      writeData(new BufferWriter(buffer), d.vec2b, d.vec2b()),
+    ).toThrow();
+    expect(() => readData(new BufferReader(buffer), d.vec2b)).toThrow();
+  });
+
+  it('differs in type from other vector schemas', () => {
+    const acceptsVec2fSchema = (_schema: d.Vec2b) => {};
+
+    acceptsVec2fSchema(d.vec2b);
+    // @ts-expect-error
+    acceptsVec2fSchema(d.vec2u);
+    // @ts-expect-error
+    acceptsVec2fSchema(d.vec2i);
+    // @ts-expect-error
+    acceptsVec2fSchema(d.vec3f);
+    // @ts-expect-error
+    acceptsVec2fSchema(d.vec4f);
+  });
+
+  it('can be indexed into', () => {
+    const vec = d.vec2b(false, true);
+    expect(vec[0]).toEqual(false);
+    expect(vec[1]).toEqual(true);
+  });
+
+  it('can be modified via index', () => {
+    const vec = d.vec2b(false, true);
+    vec[0] = true;
+    vec[1] = false;
+    expect(vec).toEqual(d.vec2b(true, false));
+  });
+});
+
 describe('vec3f', () => {
   it('should span 12 bytes', () => {
     expect(sizeOf(d.vec3f)).toEqual(12);
@@ -503,6 +559,43 @@ describe('v4f', () => {
           var three = vec4f(0.1, vec3f(0.2, 0.3, 0.4));
         }
       `),
+      );
+    });
+  });
+});
+
+describe('v4b', () => {
+  describe('(v3b, bool) constructor', () => {
+    it('works in JS', () => {
+      const vecA = d.vec3b(true, false, true);
+      const vecB = d.vec4b(vecA, false);
+      expect(vecB).toEqual(d.vec4b(true, false, true, false));
+    });
+
+    it('works in TGSL', () => {
+      const vecExternal = d.vec3b(true, false, true);
+
+      const main = tgpu['~unstable']
+        .fn([])
+        .does(() => {
+          const vecLocal = d.vec3b(true, true, true);
+
+          const one = d.vec4b(vecExternal, true); // external
+          const two = d.vec4b(vecLocal, false); // local variable
+          const three = d.vec4b(d.vec3b(false, false, true), true); // literal
+        })
+        .$name('main');
+
+      expect(parseResolved({ main })).toEqual(
+        parse(`
+          fn main() {
+            var vecLocal = vec3<bool>(true, true, true);
+            
+            var one = vec4<bool>(vec3b(true, false, true), true);
+            var two = vec4<bool>(vecLocal, false);
+            var three = vec4<bool>(vec3<bool>(false, false, true), true);
+          }
+        `),
       );
     });
   });
