@@ -16,6 +16,7 @@ export {
   dot,
   floor,
   fract,
+  identity,
   length,
   max,
   min,

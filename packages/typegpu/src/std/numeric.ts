@@ -1,3 +1,4 @@
+import { mat4x4f } from 'src/data';
 import { bool, f32 } from '../data/numeric';
 import { VectorOps } from '../data/vectorOps';
 import type {
@@ -488,4 +489,24 @@ export const isCloseTo = createDualImpl(
       dataType: bool,
     };
   },
+);
+
+/**
+ * Generates a 4x4 identity matrix.
+ */
+export const identity = createDualImpl(
+  // CPU implementation
+  () => {
+    return mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+  },
+  // GPU implementation
+  () => ({
+    value: `mat4x4<f32>(
+      1.0, 0.0, 0.0, 0.0,
+      0.0, 1.0, 0.0, 0.0,
+      0.0, 0.0, 1.0, 0.0,
+      0.0, 0.0, 0.0, 1.0
+    )`,
+    dataType: mat4x4f,
+  }),
 );
