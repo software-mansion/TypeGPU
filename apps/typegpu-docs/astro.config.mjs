@@ -126,6 +126,10 @@ export default defineConfig({
               slug: 'integration/webgpu-interoperability',
             },
             {
+              label: 'WESL Interoperability',
+              slug: 'integration/wesl-interoperability',
+            },
+            {
               label: 'Working with wgpu-matrix',
               slug: 'integration/working-with-wgpu-matrix',
             },
