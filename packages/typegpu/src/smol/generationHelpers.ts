@@ -48,21 +48,21 @@ const swizzleableTypes = [
   'vec2h',
   'vec2i',
   'vec2u',
-  // 'vec2<bool>',
+  'vec2<bool>',
   'vec3f',
   'vec3h',
   'vec3i',
   'vec3u',
-  // 'vec3<bool>',
+  'vec3<bool>',
   'vec4f',
   'vec4h',
   'vec4i',
   'vec4u',
-  // 'vec4<bool>',
+  'vec4<bool>',
   'struct',
 ] as const;
 
-type SwizzleableType = 'f' | 'h' | 'i' | 'u';
+type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
 
 const swizzleLenToType: Record<
@@ -92,6 +92,12 @@ const swizzleLenToType: Record<
     2: vec2u,
     3: vec3u,
     4: vec4u,
+  },
+  b: {
+    1: bool,
+    2: vec2b,
+    3: vec3b,
+    4: vec4b,
   },
 } as const;
 
@@ -185,7 +191,9 @@ export function getTypeForPropAccess(
     propLength >= 1 &&
     propLength <= 4
   ) {
-    const swizzleTypeChar = targetTypeStr[4] as SwizzleableType;
+    const swizzleTypeChar = targetTypeStr.includes('bool')
+      ? 'b'
+      : (targetTypeStr[4] as SwizzleableType);
     const swizzleType =
       swizzleLenToType[swizzleTypeChar][propLength as SwizzleLength];
     if (swizzleType) {
