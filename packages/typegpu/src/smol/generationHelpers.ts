@@ -34,7 +34,7 @@ import {
 import { getResolutionCtx } from '../gpuMode';
 import { $internal } from '../shared/symbols';
 import {
-  type Resource,
+  type Snippet,
   UnknownData,
   type Wgsl,
   hasInternalDataType,
@@ -227,7 +227,7 @@ export function getTypeFromWgsl(resource: Wgsl): BaseData | UnknownData {
   return isWgslData(resource) ? resource : UnknownData;
 }
 
-export function numericLiteralToResource(value: string): Resource | undefined {
+export function numericLiteralToResource(value: string): Snippet | undefined {
   // Hex literals
   if (/^0x[0-9a-f]+$/i.test(value)) {
     return { value, dataType: abstractInt };

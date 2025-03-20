@@ -1,6 +1,6 @@
 import type { AnyWgslData } from '../../data/wgslTypes';
 import { MissingLinksError } from '../../errors';
-import type { ResolutionCtx, Resource } from '../../types';
+import type { ResolutionCtx, Snippet } from '../../types';
 import {
   type ExternalMap,
   addArgTypesToExternals,
@@ -91,7 +91,7 @@ export function createFnCore(
           throw new MissingLinksError(this.label, missingExternals);
         }
 
-        const args: Resource[] = ast.argNames.map((name, idx) => ({
+        const args: Snippet[] = ast.argNames.map((name, idx) => ({
           value: name,
           dataType: shell.argTypes[idx] as AnyWgslData,
         }));
