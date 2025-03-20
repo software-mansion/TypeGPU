@@ -2,7 +2,7 @@ import { Measurer } from 'typed-binary';
 import { roundUp } from '../mathUtils';
 import alignIO from './alignIO';
 import { alignmentOf, customAlignmentOf } from './alignmentOf';
-import { type Unstruct, isUnstruct } from './dataTypes';
+import { type AnyUnstruct, type Unstruct, isUnstruct } from './dataTypes';
 import { sizeOf } from './sizeOf';
 import type { AnyWgslStruct, WgslStruct } from './struct';
 import type { BaseData } from './wgslTypes';
@@ -14,7 +14,7 @@ export interface OffsetInfo {
 }
 
 const cachedOffsets = new WeakMap<
-  AnyWgslStruct | Unstruct,
+  AnyWgslStruct | AnyUnstruct,
   Record<string, OffsetInfo>
 >();
 

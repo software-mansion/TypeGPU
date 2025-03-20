@@ -78,7 +78,7 @@ export const Void = {
 };
 export type Void = typeof Void;
 
-export type Resource = {
+export type Snippet = {
   value: unknown;
   dataType: AnyWgslData | UnknownData | AbstractInt | AbstractFloat | Void;
 };
@@ -86,7 +86,7 @@ export type Resource = {
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
 export interface FnToWgslOptions {
-  args: Resource[];
+  args: Snippet[];
   returnType: AnyWgslData;
   body: Block;
   externalMap: Record<string, unknown>;
@@ -106,7 +106,7 @@ export interface ItemStateStack {
   pushSlotBindings(pairs: SlotValuePair<unknown>[]): void;
   popSlotBindings(): void;
   pushFunctionScope(
-    args: Resource[],
+    args: Snippet[],
     returnType: AnyWgslData | undefined,
     externalMap: Record<string, unknown>,
   ): void;
@@ -115,8 +115,8 @@ export interface ItemStateStack {
   popBlockScope(): void;
   pop(type?: 'functionScope' | 'blockScope' | 'slotBinding' | 'item'): void;
   readSlot<T>(slot: TgpuSlot<T>): T | undefined;
-  getResourceById(id: string): Resource | undefined;
-  defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Resource;
+  getResourceById(id: string): Snippet | undefined;
+  defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Snippet;
 }
 
 /**
