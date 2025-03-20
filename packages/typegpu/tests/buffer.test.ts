@@ -421,7 +421,7 @@ describe('TgpuBuffer', () => {
     ]);
   });
 
-  it('should be able to write to a buffer with deorated data', ({
+  it('should be able to write to a buffer with decorated data', ({
     root,
     device,
   }) => {
