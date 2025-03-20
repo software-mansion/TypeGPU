@@ -38,6 +38,14 @@ export type AnyToBooleanComponentWise = {
   <T extends AnyVec4Instance>(s: T, v: T): v4b;
 };
 
+/**
+ * Checks **component-wise** whether `lhs == rhs`.
+ * This function does **not** return `bool`, for that use-case, wrap the result in `all`.
+ * @example
+ * eq(vec2f(0.0, 1.0), vec2f(0.0, 2.0)) // returns vec2b(true, false)
+ * eq(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(false, true, false)
+ * all(eq(vec4i(4, 3, 2, 1), vec4i(4, 3, 2, 1))) // returns true
+ */
 export const eq: AnyToBooleanComponentWise = createDualImpl(
   // CPU implementation
   (<T extends AnyVecInstance>(lhs: T, rhs: T) => {
@@ -50,6 +58,14 @@ export const eq: AnyToBooleanComponentWise = createDualImpl(
   }),
 );
 
+/**
+ * Checks **component-wise** whether `lhs != rhs`.
+ * This function does **not** return `bool`, for that use-case, wrap the result in `any`.
+ * @example
+ * neq(vec2f(0.0, 1.0), vec2f(0.0, 2.0)) // returns vec2b(false, true)
+ * neq(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, false, true)
+ * any(neq(vec4i(4, 3, 2, 1), vec4i(4, 2, 2, 1))) // returns true
+ */
 export const neq: AnyToBooleanComponentWise = createDualImpl(
   // CPU implementation
   (<T extends AnyVecInstance>(lhs: T, rhs: T) => {
@@ -68,6 +84,14 @@ export type NumericToBooleanComponentWise = {
   <T extends AnyNumericVec4Instance>(s: T, v: T): v4b;
 };
 
+/**
+ * Checks **component-wise** whether `lhs < rhs`.
+ * This function does **not** return `bool`, for that use-case, wrap the result in `all`.
+ * @example
+ * lessThan(vec2f(0.0, 0.0), vec2f(0.0, 1.0)) // returns vec2b(false, true)
+ * lessThan(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, false, false)
+ * all(lessThan(vec4i(1, 2, 3, 4), vec4i(2, 3, 4, 5))) // returns true
+ */
 export const lessThan: NumericToBooleanComponentWise = createDualImpl(
   // CPU implementation
   (<T extends AnyNumericVecInstance>(lhs: T, rhs: T) => {
@@ -80,6 +104,14 @@ export const lessThan: NumericToBooleanComponentWise = createDualImpl(
   }),
 );
 
+/**
+ * Checks **component-wise** whether `lhs <= rhs`.
+ * This function does **not** return `bool`, for that use-case, wrap the result in `all`.
+ * @example
+ * lessThanOrEqual(vec2f(0.0, 0.0), vec2f(0.0, 1.0)) // returns vec2b(true, true)
+ * lessThanOrEqual(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, true, false)
+ * all(lessThanOrEqual(vec4i(1, 2, 3, 4), vec4i(2, 3, 3, 5))) // returns true
+ */
 export const lessThanOrEqual: NumericToBooleanComponentWise = createDualImpl(
   // CPU implementation
   (<T extends AnyNumericVecInstance>(lhs: T, rhs: T) => {
@@ -95,6 +127,14 @@ export const lessThanOrEqual: NumericToBooleanComponentWise = createDualImpl(
   }),
 );
 
+/**
+ * Checks **component-wise** whether `lhs > rhs`.
+ * This function does **not** return `bool`, for that use-case, wrap the result in `all`.
+ * @example
+ * greaterThan(vec2f(0.0, 0.0), vec2f(0.0, 1.0)) // returns vec2b(false, false)
+ * greaterThan(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(false, false, true)
+ * all(greaterThan(vec4i(2, 3, 4, 5), vec4i(1, 2, 3, 4))) // returns true
+ */
 export const greaterThan: NumericToBooleanComponentWise = createDualImpl(
   // CPU implementation
   (<T extends AnyNumericVecInstance>(lhs: T, rhs: T) => {
@@ -110,6 +150,14 @@ export const greaterThan: NumericToBooleanComponentWise = createDualImpl(
   }),
 );
 
+/**
+ * Checks **component-wise** whether `lhs >= rhs`.
+ * This function does **not** return `bool`, for that use-case, wrap the result in `all`.
+ * @example
+ * greaterThanOrEqual(vec2f(0.0, 0.0), vec2f(0.0, 1.0)) // returns vec2b(true, false)
+ * greaterThanOrEqual(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(false, true, true)
+ * all(greaterThanOrEqual(vec4i(2, 2, 4, 5), vec4i(1, 2, 3, 4))) // returns true
+ */
 export const greaterThanOrEqual: NumericToBooleanComponentWise = createDualImpl(
   // CPU implementation
   (<T extends AnyNumericVecInstance>(lhs: T, rhs: T) => {
@@ -124,6 +172,12 @@ export const greaterThanOrEqual: NumericToBooleanComponentWise = createDualImpl(
 
 // logical ops
 
+/**
+ * Returns **component-wise** `!value`.
+ * @example
+ * not(vec2b(false, true)) // returns vec2b(true, false)
+ * not(vec3b(true, true, false)) // returns vec3b(false, false, true)
+ */
 export const not = createDualImpl(
   // CPU implementation
   (value: AnyBooleanVecInstance) => {
@@ -136,6 +190,12 @@ export const not = createDualImpl(
   }),
 );
 
+/**
+ * Returns **component-wise** `lhs | rhs`.
+ * @example
+ * or(vec2b(false, true), vec2b(false, false)) // returns vec2b(true, false)
+ * or(vec3b(true, true, false), vec3b(false, true, false)) // returns vec3b(true, true, false)
+ */
 export const or = createDualImpl(
   // CPU implementation
   <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) => {
@@ -143,11 +203,17 @@ export const or = createDualImpl(
   },
   // GPU implementation
   (lhs, rhs) => ({
-    value: `(${lhs.value} || ${rhs.value})`,
+    value: `(${lhs.value} | ${rhs.value})`,
     dataType: lhs.dataType,
   }),
 );
 
+/**
+ * Returns **component-wise** `lhs & rhs`.
+ * @example
+ * and(vec2b(false, true), vec2b(true, true)) // returns vec2b(true, false)
+ * and(vec3b(true, true, false), vec3b(false, true, false)) // returns vec3b(false, true, false)
+ */
 export const and = createDualImpl(
   // CPU implementation
   <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) => {
@@ -155,13 +221,19 @@ export const and = createDualImpl(
   },
   // GPU implementation
   (lhs, rhs) => ({
-    value: `(${lhs.value} && ${rhs.value})`,
+    value: `(${lhs.value} & ${rhs.value})`,
     dataType: lhs.dataType,
   }),
 );
 
 // logical aggregation
 
+/**
+ * Returns `true` if each component of `value` is true.
+ * @example
+ * all(vec2b(false, true)) // returns false
+ * all(vec3b(true, true, true)) // returns true
+ */
 export const all = createDualImpl(
   // CPU implementation
   (value: AnyBooleanVecInstance) => {
@@ -174,6 +246,12 @@ export const all = createDualImpl(
   }),
 );
 
+/**
+ * Returns `true` if any component of `value` is true.
+ * @example
+ * any(vec2b(false, true)) // returns true
+ * any(vec3b(false, false, false)) // returns false
+ */
 export const any = createDualImpl(
   // CPU implementation
   (value: AnyBooleanVecInstance) => {
@@ -190,7 +268,7 @@ export const any = createDualImpl(
 
 /**
  * Checks whether the given elements differ by at most 0.01.
- * Component-wise if arguments are vectors.
+ * Checks all elements of `lhs` and `rhs` if arguments are vectors.
  * @example
  * isCloseTo(0, 0.1) // returns false
  * isCloseTo(vec3f(0, 0, 0), vec3f(0.002, -0.009, 0)) // returns true
@@ -199,28 +277,32 @@ export const any = createDualImpl(
  */
 export const isCloseTo = createDualImpl(
   // CPU implementation
-  <T extends AnyFloatVecInstance | number>(e1: T, e2: T, precision = 0.01) => {
-    if (typeof e1 === 'number' && typeof e2 === 'number') {
-      return Math.abs(e1 - e2) < precision;
+  <T extends AnyFloatVecInstance | number>(
+    lhs: T,
+    rhs: T,
+    precision = 0.01,
+  ) => {
+    if (typeof lhs === 'number' && typeof rhs === 'number') {
+      return Math.abs(lhs - rhs) < precision;
     }
-    if (typeof e1 !== 'number' && typeof e2 !== 'number') {
-      return VectorOps.isCloseToZero[e1.kind](sub(e1, e2), precision);
+    if (typeof lhs !== 'number' && typeof rhs !== 'number') {
+      return VectorOps.isCloseToZero[lhs.kind](sub(lhs, rhs), precision);
     }
     return false;
   },
   // GPU implementation
-  (e1, e2, precision = { value: 0.01, dataType: f32 }) => {
-    if (isNumeric(e1) && isNumeric(e2)) {
+  (lhs, rhs, precision = { value: 0.01, dataType: f32 }) => {
+    if (isNumeric(lhs) && isNumeric(rhs)) {
       return {
-        value: `(abs(f32(${e1.value})-f32(${e2.value})) <= ${precision.value})`,
+        value: `(abs(f32(${lhs.value})-f32(${rhs.value})) <= ${precision.value})`,
         dataType: bool,
       };
     }
-    if (!isNumeric(e1) && !isNumeric(e2)) {
+    if (!isNumeric(lhs) && !isNumeric(rhs)) {
       return {
         // https://www.w3.org/TR/WGSL/#vector-multi-component:~:text=Binary%20arithmetic%20expressions%20with%20mixed%20scalar%20and%20vector%20operands
         // (a-a)+prec creates a vector of a.length elements, all equal to prec
-        value: `all(abs(${e1.value}-${e2.value}) <= (${e1.value} - ${e1.value})+${precision.value})`,
+        value: `all(abs(${lhs.value}-${rhs.value}) <= (${lhs.value} - ${lhs.value})+${precision.value})`,
         dataType: bool,
       };
     }
@@ -238,6 +320,13 @@ export type SelectOverload = {
   <T extends AnyVec4Instance>(f: T, t: T, cond: v4b): T;
 };
 
+/**
+ * Returns `t` if `cond` is `true`, and `f` otherwise.
+ * Component-wise if `cond` is a vector.
+ * @example
+ * select(vec2i(1, 2), vec2i(3, 4), true) // returns vec2i(3, 4)
+ * select(vec2i(1, 2), vec2i(3, 4), vec2b(false, true)) // returns vec2i(1, 4)
+ */
 export const select: SelectOverload = createDualImpl(
   // CPU implementation
   <T extends AnyVecInstance | ScalarData>(
@@ -262,8 +351,6 @@ export const select: SelectOverload = createDualImpl(
 );
 
 // AAA konstruktory z innych typów?
-// AAA select ??
-// AAA js docsy do wszystkich funkcji
 // AAA sprawdź konstruktory (vec2f(vec2b))
 // AAA sprawdź, co się dzieje z boolem w buforze
 // AAA jak nic, to dopisz errora
