@@ -370,9 +370,6 @@ export const select: SelectOverload = createDualImpl(
   }),
 );
 
-// AAA konstruktory z innych typów?
-// AAA sprawdź konstruktory (vec2f(vec2b))
 // AAA sprawdź, co się dzieje z boolem w buforze
 // AAA jak nic, to dopisz errora
 // AAA skopiuj zachowanie z boola do vecNb
-// AAA test example dla tych wszystkich funkcji

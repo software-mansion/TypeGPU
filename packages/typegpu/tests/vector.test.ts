@@ -128,6 +128,14 @@ describe('vec2i', () => {
 });
 
 describe('vec2<bool>', () => {
+  it('should span 8 bytes', () => {
+    expect(sizeOf(d.vec2b)).toEqual(8);
+  });
+
+  it('should align to 8 bytes', () => {
+    expect(d.alignmentOf(d.vec2b)).toEqual(8);
+  });
+
   it('should create a zero 2d vector', () => {
     const zero = d.vec2b();
     expect(zero.x).toEqual(false);

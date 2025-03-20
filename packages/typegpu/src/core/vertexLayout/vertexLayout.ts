@@ -1,13 +1,13 @@
 import { alignmentOf, customAlignmentOf } from '../../data/alignmentOf';
+import type { Disarray } from '../../data/dataTypes';
 import {
   getCustomLocation,
   isLooseDecorated,
   isUnstruct,
 } from '../../data/dataTypes';
-import type { Disarray } from '../../data/dataTypes';
 import { sizeOf } from '../../data/sizeOf';
-import { isDecorated, isWgslStruct } from '../../data/wgslTypes';
 import type { BaseData, WgslArray } from '../../data/wgslTypes';
+import { isDecorated, isWgslStruct } from '../../data/wgslTypes';
 import { roundUp } from '../../mathUtils';
 import type { TgpuNamable } from '../../namable';
 import {
