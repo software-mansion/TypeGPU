@@ -1,8 +1,7 @@
-import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
 import tgpu from '../src';
 import * as d from '../src/data';
-import { parseResolved } from './utils/parseResolved';
+import { parse, parseResolved } from './utils/parseResolved';
 
 describe('tgpu.fn with raw string WGSL implementation', () => {
   it('is namable', () => {
@@ -297,7 +296,7 @@ struct fragment_Output {
       .fn([d.vec4f, Point], d.vec2f)
       .does(/* wgsl */ `(
         a: vec4f,
-        b : PointStruct ,
+        b : PointStruct
     ) -> vec2f {
     var newPoint: PointStruct;
     newPoint = b;
