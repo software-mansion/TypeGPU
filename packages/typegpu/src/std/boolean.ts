@@ -180,7 +180,7 @@ export const greaterThanOrEqual: NumericToBooleanComponentWise = createDualImpl(
  */
 export const not = createDualImpl(
   // CPU implementation
-  (value: AnyBooleanVecInstance) => {
+  <T extends AnyBooleanVecInstance>(value: T): T => {
     return VectorOps.neg[value.kind](value);
   },
   // GPU implementation
@@ -350,6 +350,8 @@ export const select: SelectOverload = createDualImpl(
   }),
 );
 
+// &&=
+// allEq
 // AAA konstruktory z innych typów?
 // AAA sprawdź konstruktory (vec2f(vec2b))
 // AAA sprawdź, co się dzieje z boolem w buforze
