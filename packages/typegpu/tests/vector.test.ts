@@ -127,7 +127,7 @@ describe('vec2i', () => {
   });
 });
 
-describe('vec2b', () => {
+describe('vec2<bool>', () => {
   it('should create a zero 2d vector', () => {
     const zero = d.vec2b();
     expect(zero.x).toEqual(false);
@@ -591,7 +591,7 @@ describe('v4b', () => {
           fn main() {
             var vecLocal = vec3<bool>(true, true, true);
             
-            var one = vec4<bool>(vec3b(true, false, true), true);
+            var one = vec4<bool>(vec3<bool>(true, false, true), true);
             var two = vec4<bool>(vecLocal, false);
             var three = vec4<bool>(vec3<bool>(false, false, true), true);
           }

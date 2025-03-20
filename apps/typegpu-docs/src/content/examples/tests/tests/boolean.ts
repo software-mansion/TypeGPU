@@ -28,6 +28,10 @@ import {
 
 // TODO: replace `s = s &&` with `s &&=` when implemented
 export const booleanTests = tgpu['~unstable'].fn([], bool).does(() => {
+  // const a = vec2b(true, false);
+  // const b = vec2b(true, a[0]);
+  // const c = vec2b(a.xy);
+
   let s = true;
 
   s = s && eq(vec2i(1, 3), vec2i(1, 3)).x === true;

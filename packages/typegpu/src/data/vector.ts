@@ -265,17 +265,17 @@ const vecTypeToConstructor = {
   vec2h,
   vec2i,
   vec2u,
-  vec2b,
+  'vec2<bool>': vec2b,
   vec3f,
   vec3h,
   vec3i,
   vec3u,
-  vec3b,
+  'vec3<bool>': vec3b,
   vec4f,
   vec4h,
   vec4i,
   vec4u,
-  vec4b,
+  'vec4<bool>': vec4b,
 } as const;
 
 type VecSchemaBase<TValue> = {
@@ -313,7 +313,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
       );
     },
     (...args) => ({
-      value: `${type.replace('b', '<bool>')}(${args.map((v) => v.value).join(', ')})`,
+      value: `${type}(${args.map((v) => v.value).join(', ')})`,
       dataType: vecTypeToConstructor[type],
     }),
   );

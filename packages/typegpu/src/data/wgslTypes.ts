@@ -406,7 +406,7 @@ export interface v2u extends NumberArrayView, Swizzle2<v2u, v3u, v4u> {
  */
 export interface v2b extends BooleanArrayView, Swizzle2<v2b, v3b, v4b> {
   /** use to distinguish between vectors of the same size on the type level */
-  readonly kind: 'vec2b';
+  readonly kind: 'vec2<bool>';
   x: boolean;
   y: boolean;
 }
@@ -465,7 +465,7 @@ export interface v3u extends NumberArrayView, Swizzle3<v2u, v3u, v4u> {
  */
 export interface v3b extends BooleanArrayView, Swizzle2<v2b, v3b, v4b> {
   /** use to distinguish between vectors of the same size on the type level */
-  readonly kind: 'vec3b';
+  readonly kind: 'vec3<bool>';
   x: boolean;
   y: boolean;
   z: boolean;
@@ -529,7 +529,7 @@ export interface v4u extends NumberArrayView, Swizzle4<v2u, v3u, v4u> {
  */
 export interface v4b extends BooleanArrayView, Swizzle2<v2b, v3b, v4b> {
   /** use to distinguish between vectors of the same size on the type level */
-  readonly kind: 'vec4b';
+  readonly kind: 'vec4<bool>';
   x: boolean;
   y: boolean;
   z: boolean;
@@ -748,7 +748,7 @@ export interface Vec2u {
  * Cannot be used inside buffers as it is not host-shareable.
  */
 export interface Vec2b {
-  readonly type: 'vec2b';
+  readonly type: 'vec2<bool>';
   /** Type-token, not available at runtime */
   readonly '~repr': v2b;
 
@@ -827,7 +827,7 @@ export interface Vec3u {
  * Cannot be used inside buffers as it is not host-shareable.
  */
 export interface Vec3b {
-  readonly type: 'vec3b';
+  readonly type: 'vec3<bool>';
   /** Type-token, not available at runtime */
   readonly '~repr': v3b;
 
@@ -924,7 +924,7 @@ export interface Vec4u {
  * Cannot be used inside buffers as it is not host-shareable.
  */
 export interface Vec4b {
-  readonly type: 'vec4b';
+  readonly type: 'vec4<bool>';
   /** Type-token, not available at runtime */
   readonly '~repr': v4b;
 
@@ -1097,17 +1097,17 @@ export const wgslTypeLiterals = [
   'vec2h',
   'vec2i',
   'vec2u',
-  'vec2b',
+  'vec2<bool>',
   'vec3f',
   'vec3h',
   'vec3i',
   'vec3u',
-  'vec3b',
+  'vec3<bool>',
   'vec4f',
   'vec4h',
   'vec4i',
   'vec4u',
-  'vec4b',
+  'vec4<bool>',
   'mat2x2f',
   'mat3x3f',
   'mat4x4f',

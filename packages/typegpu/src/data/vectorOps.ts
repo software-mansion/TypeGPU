@@ -114,7 +114,8 @@ export const VectorOps = {
     vec2h: (e1: wgsl.v2h, e2: wgsl.v2h) => vec2b(e1.x === e2.x, e1.y === e2.y),
     vec2i: (e1: wgsl.v2i, e2: wgsl.v2i) => vec2b(e1.x === e2.x, e1.y === e2.y),
     vec2u: (e1: wgsl.v2u, e2: wgsl.v2u) => vec2b(e1.x === e2.x, e1.y === e2.y),
-    vec2b: (e1: wgsl.v2b, e2: wgsl.v2b) => vec2b(e1.x === e2.x, e1.y === e2.y),
+    'vec2<bool>': (e1: wgsl.v2b, e2: wgsl.v2b) =>
+      vec2b(e1.x === e2.x, e1.y === e2.y),
 
     vec3f: (e1: wgsl.v3f, e2: wgsl.v3f) =>
       vec3b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z),
@@ -124,7 +125,7 @@ export const VectorOps = {
       vec3b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z),
     vec3u: (e1: wgsl.v3u, e2: wgsl.v3u) =>
       vec3b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z),
-    vec3b: (e1: wgsl.v3b, e2: wgsl.v3b) =>
+    'vec3<bool>': (e1: wgsl.v3b, e2: wgsl.v3b) =>
       vec3b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z),
 
     vec4f: (e1: wgsl.v4f, e2: wgsl.v4f) =>
@@ -135,7 +136,7 @@ export const VectorOps = {
       vec4b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z, e1.w === e2.w),
     vec4u: (e1: wgsl.v4u, e2: wgsl.v4u) =>
       vec4b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z, e1.w === e2.w),
-    vec4b: (e1: wgsl.v4b, e2: wgsl.v4b) =>
+    'vec4<bool>': (e1: wgsl.v4b, e2: wgsl.v4b) =>
       vec4b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z, e1.w === e2.w),
   } as Record<
     VecKind,
@@ -174,16 +175,17 @@ export const VectorOps = {
   >,
 
   neg: {
-    vec2b: (e: wgsl.v2b) => vec2b(!e.x, !e.y),
-    vec3b: (e: wgsl.v3b) => vec3b(!e.x, !e.y, !e.z),
-    vec4b: (e: wgsl.v4b) => vec4b(!e.x, !e.y, !e.z, !e.w),
+    'vec2<bool>': (e: wgsl.v2b) => vec2b(!e.x, !e.y),
+    'vec3<bool>': (e: wgsl.v3b) => vec3b(!e.x, !e.y, !e.z),
+    'vec4<bool>': (e: wgsl.v4b) => vec4b(!e.x, !e.y, !e.z, !e.w),
   } as Record<VecKind, <T extends wgsl.AnyBooleanVecInstance>(v: T) => T>,
 
   or: {
-    vec2b: (e1: wgsl.v2b, e2: wgsl.v2b) => vec2b(e1.x || e2.x, e1.y || e2.y),
-    vec3b: (e1: wgsl.v3b, e2: wgsl.v3b) =>
+    'vec2<bool>': (e1: wgsl.v2b, e2: wgsl.v2b) =>
+      vec2b(e1.x || e2.x, e1.y || e2.y),
+    'vec3<bool>': (e1: wgsl.v3b, e2: wgsl.v3b) =>
       vec3b(e1.x || e2.x, e1.y || e2.y, e1.z || e2.z),
-    vec4b: (e1: wgsl.v4b, e2: wgsl.v4b) =>
+    'vec4<bool>': (e1: wgsl.v4b, e2: wgsl.v4b) =>
       vec4b(e1.x || e2.x, e1.y || e2.y, e1.z || e2.z, e1.w || e2.w),
   } as Record<
     VecKind,
@@ -191,15 +193,15 @@ export const VectorOps = {
   >,
 
   all: {
-    vec2b: (e: wgsl.v2b) => e.x && e.y,
-    vec3b: (e: wgsl.v3b) => e.x && e.y && e.z,
-    vec4b: (e: wgsl.v4b) => e.x && e.y && e.z && e.w,
+    'vec2<bool>': (e: wgsl.v2b) => e.x && e.y,
+    'vec3<bool>': (e: wgsl.v3b) => e.x && e.y && e.z,
+    'vec4<bool>': (e: wgsl.v4b) => e.x && e.y && e.z && e.w,
   } as Record<VecKind, (v: wgsl.AnyBooleanVecInstance) => boolean>,
 
   any: {
-    vec2b: (e: wgsl.v2b) => e.x || e.y,
-    vec3b: (e: wgsl.v3b) => e.x || e.y || e.z,
-    vec4b: (e: wgsl.v4b) => e.x || e.y || e.z || e.w,
+    'vec2<bool>': (e: wgsl.v2b) => e.x || e.y,
+    'vec3<bool>': (e: wgsl.v3b) => e.x || e.y || e.z,
+    'vec4<bool>': (e: wgsl.v4b) => e.x || e.y || e.z || e.w,
   } as Record<VecKind, (v: wgsl.AnyBooleanVecInstance) => boolean>,
 
   abs: {
@@ -1018,7 +1020,7 @@ export const VectorOps = {
       vec2i(c.x ? t.x : f.x, c.y ? t.y : f.y),
     vec2u: (f: wgsl.v2u, t: wgsl.v2u, c: wgsl.v2b) =>
       vec2u(c.x ? t.x : f.x, c.y ? t.y : f.y),
-    vec2b: (f: wgsl.v2b, t: wgsl.v2b, c: wgsl.v2b) =>
+    'vec2<bool>': (f: wgsl.v2b, t: wgsl.v2b, c: wgsl.v2b) =>
       vec2b(c.x ? t.x : f.x, c.y ? t.y : f.y),
 
     vec3f: (f: wgsl.v3f, t: wgsl.v3f, c: wgsl.v3b) =>
@@ -1029,7 +1031,7 @@ export const VectorOps = {
       vec3i(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z),
     vec3u: (f: wgsl.v3u, t: wgsl.v3u, c: wgsl.v3b) =>
       vec3u(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z),
-    vec3b: (f: wgsl.v3b, t: wgsl.v3b, c: wgsl.v3b) =>
+    'vec3<bool>': (f: wgsl.v3b, t: wgsl.v3b, c: wgsl.v3b) =>
       vec3b(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z),
 
     vec4f: (f: wgsl.v4f, t: wgsl.v4f, c: wgsl.v4b) =>
@@ -1040,7 +1042,7 @@ export const VectorOps = {
       vec4i(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z, c.w ? t.w : f.w),
     vec4u: (f: wgsl.v4u, t: wgsl.v4u, c: wgsl.v4b) =>
       vec4u(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z, c.w ? t.w : f.w),
-    vec4b: (f: wgsl.v4b, t: wgsl.v4b, c: wgsl.v4b) =>
+    'vec4<bool>': (f: wgsl.v4b, t: wgsl.v4b, c: wgsl.v4b) =>
       vec4b(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z, c.w ? t.w : f.w),
   } as Record<
     VecKind,

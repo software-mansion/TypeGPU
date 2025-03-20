@@ -92,7 +92,7 @@ const dataWriters = {
     output.writeUint32(value.y);
   },
 
-  vec2b() {
+  'vec2<bool>'() {
     throw new Error('Booleans are not host-shareable');
   },
 
@@ -120,7 +120,7 @@ const dataWriters = {
     output.writeUint32(value.z);
   },
 
-  vec3b() {
+  'vec3<bool>'() {
     throw new Error('Booleans are not host-shareable');
   },
 
@@ -152,7 +152,7 @@ const dataWriters = {
     output.writeUint32(value.w);
   },
 
-  vec4b() {
+  'vec4<bool>'() {
     throw new Error('Booleans are not host-shareable');
   },
 
@@ -550,15 +550,15 @@ const dataReaders = {
     );
   },
 
-  vec2b() {
+  'vec2<bool>'() {
     throw new Error('Booleans are not host-shareable');
   },
 
-  vec3b() {
+  'vec3<bool>'() {
     throw new Error('Booleans are not host-shareable');
   },
 
-  vec4b() {
+  'vec4<bool>'() {
     throw new Error('Booleans are not host-shareable');
   },
 
