@@ -101,6 +101,8 @@ export function gatherTgpuAliases(
   }
 }
 
+const fnShellFunctionNames = ['fn', 'vertexFn', 'fragmentFn', 'computeFn'];
+
 export function isShellImplementationCall(
   node: acorn.CallExpression | babel.CallExpression,
   ctx: Context,
@@ -108,6 +110,8 @@ export function isShellImplementationCall(
   return (
     node.callee.type === 'CallExpression' &&
     node.callee.callee.type === 'MemberExpression' &&
+    node.callee.callee.property.type === 'Identifier' &&
+    fnShellFunctionNames.includes(node.callee.callee.property.name) &&
     node.arguments.length === 1 &&
     (node.callee.callee.object.type === 'MemberExpression'
       ? isTgpu(ctx, node.callee.callee.object.object)

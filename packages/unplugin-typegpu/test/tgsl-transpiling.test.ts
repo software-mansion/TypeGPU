@@ -78,6 +78,21 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       const d = tgpu['~unstable'].fn([])('() {}');"
     `);
   });
+
+  it('transpiles only function shell invocations', () => {
+    const code = `\
+        import tgpu from 'typegpu';
+        import * as d from 'typegpu/data';
+
+        tgpu.x()((n) => d.arrayOf(d.u32, n));
+    `;
+
+    expect(babelTransform(code)).toMatchInlineSnapshot(`
+      "import tgpu from 'typegpu';
+      import * as d from 'typegpu/data';
+      tgpu.x()(n => d.arrayOf(d.u32, n));"
+    `);
+  });
 });
 
 describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
@@ -151,6 +166,23 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
               tgpu['~unstable'].fn([])(tgpu.__assignAst(() => cx, {"argNames":[],"body":{"b":[{"r":"cx"}]},"externalNames":["cx"]}, {cx}));
 
               tgpu['~unstable'].fn([])('() {}');
+      "
+    `);
+  });
+
+  it('transpiles only function shell invocations', async () => {
+    const code = `\
+        import tgpu from 'typegpu';
+        import * as d from 'typegpu/data';
+
+        tgpu.x()((n) => d.arrayOf(d.u32, n));
+    `;
+
+    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
+      "import tgpu from 'typegpu';
+      import * as d from 'typegpu/data';
+
+      tgpu.x()((n) => d.arrayOf(d.u32, n));
       "
     `);
   });
