@@ -37,6 +37,11 @@ type TgpuFnShellHeader<
   readonly returnType: Return | undefined;
 };
 
+/**
+ * Describes a function signature (its arguments and return type).
+ * Allows creating tgpu functions by calling this shell
+ * and passing the implementation (as WGSL string or JS function) as the argument.
+ */
 export type TgpuFnShell<
   Args extends AnyWgslData[] = AnyWgslData[],
   Return extends AnyWgslData | undefined = AnyWgslData | undefined,

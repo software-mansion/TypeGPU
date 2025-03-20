@@ -17,7 +17,7 @@ import {
 // ----------
 
 /**
- * Describes a vertex entry function signature (its arguments and return type)
+ * Describes a vertex entry function signature (its arguments, return type and attributes)
  */
 type TgpuVertexFnShellHeader<
   VertexIn extends IOLayout,
@@ -28,6 +28,11 @@ type TgpuVertexFnShellHeader<
   readonly attributes: [VertexIn];
 };
 
+/**
+ * Describes a vertex entry function signature (its arguments, return type and attributes).
+ * Allows creating tgpu vertex functions by calling this shell
+ * and passing the implementation (as WGSL string or JS function) as the argument.
+ */
 export type TgpuVertexFnShell<
   VertexIn extends IOLayout,
   VertexOut extends IOLayout,

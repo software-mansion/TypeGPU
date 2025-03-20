@@ -11,7 +11,7 @@ import { createStructFromIO } from './ioOutputType';
 // ----------
 
 /**
- * Describes a compute entry function signature (its arguments and return type)
+ * Describes a compute entry function signature (its arguments, return type and workgroup size)
  */
 type TgpuComputeFnShellHeader<
   ComputeIn extends Record<string, AnyComputeBuiltin>,
@@ -21,6 +21,11 @@ type TgpuComputeFnShellHeader<
   readonly workgroupSize: [number, number, number];
 };
 
+/**
+ * Describes a compute entry function signature (its arguments, return type and workgroup size).
+ * Allows creating tgpu compute functions by calling this shell
+ * and passing the implementation (as WGSL string or JS function) as the argument.
+ */
 export type TgpuComputeFnShell<
   ComputeIn extends Record<string, AnyComputeBuiltin>,
 > = TgpuComputeFnShellHeader<ComputeIn> /**

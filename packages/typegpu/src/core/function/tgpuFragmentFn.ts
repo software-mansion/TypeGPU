@@ -37,7 +37,7 @@ export type FragmentInConstrained = IORecord<
 >;
 
 /**
- * Describes a fragment entry function signature (its arguments and return type)
+ * Describes a fragment entry function signature (its arguments, return type and targets)
  */
 type TgpuFragmentFnShellHeader<
   FragmentIn extends FragmentInConstrained,
@@ -48,6 +48,11 @@ type TgpuFragmentFnShellHeader<
   readonly returnType: FragmentOut;
 };
 
+/**
+ * Describes a fragment entry function signature (its arguments, return type and targets).
+ * Allows creating tgpu fragment functions by calling this shell
+ * and passing the implementation (as WGSL string or JS function) as the argument.
+ */
 export type TgpuFragmentFnShell<
   FragmentIn extends FragmentInConstrained,
   FragmentOut extends FragmentOutConstrained,
