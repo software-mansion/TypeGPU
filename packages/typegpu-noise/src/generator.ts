@@ -1,6 +1,11 @@
 import tgpu, { type TgpuFnShell, type TgpuFn, type TgpuSlot } from 'typegpu';
-import { type F32, type Vec2f, f32, vec2f } from 'typegpu/data';
+import { type F32, type Vec4f, f32, vec2f, vec4f } from 'typegpu/data';
 import { cos, dot, fract } from 'typegpu/std';
+
+export interface StatefulGenerator {
+  seed: TgpuFn<[Vec4f], undefined>;
+  sample: TgpuFn<[], F32>;
+}
 
 export const randomGeneratorShell: TgpuFnShell<[], F32> = tgpu['~unstable'].fn(
   [],
@@ -8,18 +13,15 @@ export const randomGeneratorShell: TgpuFnShell<[], F32> = tgpu['~unstable'].fn(
 );
 
 /**
- * Yoinked from https://www.cg.tuwien.ac.at/research/publications/2023/PETER-2023-PSW/PETER-2023-PSW-.pdf
+ * Incorporated from https://www.cg.tuwien.ac.at/research/publications/2023/PETER-2023-PSW/PETER-2023-PSW-.pdf
  * "Particle System in WebGPU" by Benedikt Peter
  */
-export const BPETER: {
-  seed: TgpuFn<[Vec2f], undefined>;
-  sample: TgpuFn<[], F32>;
-} = (() => {
+export const BPETER: StatefulGenerator = (() => {
   const seed = tgpu['~unstable'].privateVar(vec2f);
 
   return {
-    seed: tgpu['~unstable'].fn([vec2f]).does((value) => {
-      seed.value = value;
+    seed: tgpu['~unstable'].fn([vec4f]).does((value) => {
+      seed.value = value.xy;
     }),
 
     sample: randomGeneratorShell.does(() => {
@@ -33,11 +35,7 @@ export const BPETER: {
 })();
 
 // The default (Can change between releases to improve uniformity).
-export const DefaultGenerator: {
-  seed: TgpuFn<[Vec2f], undefined>;
-  sample: TgpuFn<[], F32>;
-} = BPETER;
+export const DefaultGenerator: StatefulGenerator = BPETER;
 
-export const randomGeneratorSlot: TgpuSlot<TgpuFn<[], F32>> = tgpu[
-  '~unstable'
-].slot(DefaultGenerator.sample);
+export const randomGeneratorSlot: TgpuSlot<StatefulGenerator> =
+  tgpu['~unstable'].slot(DefaultGenerator);

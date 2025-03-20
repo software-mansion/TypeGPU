@@ -3,14 +3,14 @@ import { entries, fromEntries, map, pipe } from 'remeda';
 import dtsWebGPU from '@webgpu/types/dist/index.d.ts?raw';
 import dtsWgpuMatrix from 'wgpu-matrix/dist/3.x/wgpu-matrix.d.ts?raw';
 
-interface SandboxModuleDefinition<TModuleType> {
+interface SandboxModuleDefinition {
   typeDef: { filename?: string; content: string } | { reroute: string[] };
 }
 
 function dtsFileToModule(
   [filepath, content]: [string, string],
   baseUrl: string,
-): [moduleKey: string, moduleDef: SandboxModuleDefinition<unknown>] {
+): [moduleKey: string, moduleDef: SandboxModuleDefinition] {
   const filename = filepath.replace(baseUrl, '');
 
   return [
@@ -51,10 +51,7 @@ const mediacaptureModules = pipe(
   fromEntries(),
 );
 
-export const SANDBOX_MODULES: Record<
-  string,
-  SandboxModuleDefinition<unknown>
-> = {
+export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
   ...allPackagesSrcFiles,
   ...mediacaptureModules,
 

@@ -1,4 +1,4 @@
-import { BPETER, rand } from '@typegpu/noise';
+import { randf } from '@typegpu/noise';
 import tgpu, { type TgpuBufferMutable, type TgpuBufferReadonly } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
@@ -221,7 +221,7 @@ const computeVelocity = tgpu['~unstable']
     let least_cost_dir = dir_choices[u32(rand01() * f32(dir_choice_count))];
     return least_cost_dir;
   }`)
-  .$uses({ getCell, isValidFlowOut, isValidCoord, rand01: rand.float01 });
+  .$uses({ getCell, isValidFlowOut, isValidCoord, rand01: randf.sample });
 
 const mainInitWorld = tgpu['~unstable']
   .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })
@@ -414,7 +414,7 @@ const mainCompute = tgpu['~unstable']
     const y = d.i32(input.gid.y);
     const index = coordsToIndex(x, y);
 
-    BPETER.seed(d.vec2f(d.f32(index), timeUniform.value));
+    randf.seed(d.vec4f(d.f32(index), timeUniform.value, 0, 0));
 
     const next = getCell(x, y);
     const nextVelocity = computeVelocity(x, y);

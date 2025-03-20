@@ -4,16 +4,19 @@ import {
   randInUnitCube,
   randOnUnitHemisphere,
   randOnUnitSphere,
+  randSeed,
 } from './random.js';
 
-export const rand: {
-  float01: typeof randFloat01;
+export const randf: {
+  sample: typeof randFloat01;
+  seed: typeof randSeed;
   inUnitCircle: typeof randInUnitCircle;
   inUnitCube: typeof randInUnitCube;
   onHemisphere: typeof randOnUnitHemisphere;
   onUnitSphere: typeof randOnUnitSphere;
 } = {
-  float01: randFloat01,
+  seed: randSeed,
+  sample: randFloat01,
   inUnitCircle: randInUnitCircle,
   inUnitCube: randInUnitCube,
   onHemisphere: randOnUnitHemisphere,
