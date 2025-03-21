@@ -15,7 +15,7 @@ import {
 
 type TgslFunctionDef = {
   implementation: acorn.AnyNode;
-  functionDeclarationName?: string | undefined;
+  functionDeclarationName?: string | undefined; // name of the function, but only if it was declared via a function declaration (statement)
 };
 
 function isKernelMarkedFunction(
