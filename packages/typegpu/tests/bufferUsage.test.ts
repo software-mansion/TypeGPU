@@ -1,5 +1,5 @@
-import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, expectTypeOf } from 'vitest';
+import { parse } from './utils/parseResolved';
 
 import tgpu from '../src';
 

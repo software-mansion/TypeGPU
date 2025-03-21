@@ -1,10 +1,26 @@
-import { type Main, parse } from 'tgpu-wgsl-parser';
+import { WeslStream } from 'wesl';
 import tgpu from '../../src';
 import type { TgpuResolveOptions } from '../../src/core/resolve/tgpuResolve';
 
+export function parse(code: string): string {
+  const stream = new WeslStream(code);
+  const firstToken = stream.nextToken();
+  if (firstToken === null) {
+    return '';
+  }
+
+  let result = firstToken.text;
+  let token = stream.nextToken();
+  while (token !== null) {
+    result += ` ${token.text}`;
+    token = stream.nextToken();
+  }
+  return result;
+}
+
 export function parseResolved(
   resolvable: TgpuResolveOptions['externals'],
-): Main {
+): string {
   const resolved = tgpu.resolve({
     externals: resolvable,
     names: 'strict',

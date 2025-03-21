@@ -1,8 +1,8 @@
-import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect } from 'vitest';
 import tgpu from '../src';
 import * as d from '../src/data';
 import { it } from './utils/extendedIt';
+import { parse } from './utils/parseResolved';
 import { parseResolved } from './utils/parseResolved';
 
 const RED = 'vec3f(1., 0., 0.)';

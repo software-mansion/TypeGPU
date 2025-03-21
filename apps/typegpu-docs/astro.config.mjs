@@ -23,7 +23,7 @@ export default defineConfig({
   site: 'https://docs.swmansion.com',
   base: 'TypeGPU',
   vite: {
-    plugins: [typegpu({ include: [/content\/examples.+\.ts/] })],
+    plugins: [typegpu({})],
   },
   integrations: [
     starlight({
@@ -124,6 +124,10 @@ export default defineConfig({
             {
               label: 'WebGPU Interoperability',
               slug: 'integration/webgpu-interoperability',
+            },
+            {
+              label: 'WESL Interoperability',
+              slug: 'integration/wesl-interoperability',
             },
             {
               label: 'Working with wgpu-matrix',

@@ -1,10 +1,10 @@
-import { parse } from 'tgpu-wgsl-parser';
 import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, it } from 'vitest';
 import tgpu from '../src';
 import * as d from '../src/data';
 import { readData, writeData } from '../src/data/dataIO';
 import { sizeOf } from '../src/data/sizeOf';
+import { parse } from './utils/parseResolved';
 import { parseResolved } from './utils/parseResolved';
 
 describe('vec2f', () => {
@@ -607,7 +607,7 @@ describe('v3f', () => {
         parse(`
           fn main() {
             var planarPosLocal = vec2f(1, 2);
-            
+
             var one = vec3f(vec2f(1, 2), 12);
             var two = vec3f(planarPosLocal, 12);
             var three = vec3f(vec2f(1, 2), 12);
@@ -644,7 +644,7 @@ describe('v4f', () => {
         parse(`
           fn main() {
             var green = vec3f(0, 1, 0);
-            
+
             var one = vec4f(vec3f(0.9, 0.2, 0.1), 1);
             var two = vec4f(green, 1);
             var three = vec4f(vec3f(0, 0, 1), 1);
@@ -679,7 +679,7 @@ describe('v4f', () => {
         parse(`
         fn main() {
           var fooLocal = vec3f(0.2, 0.3, 0.4);
-          
+
           var one = vec4f(0.1, vec3f(0.2, 0.3, 0.4));
           var two = vec4f(0.1, fooLocal);
           var three = vec4f(0.1, vec3f(0.2, 0.3, 0.4));

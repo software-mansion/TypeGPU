@@ -131,12 +131,14 @@ export function buildWriter(
     return code;
   }
 
+  let unwrappedNode = node;
+
+  while (wgsl.isAtomic(unwrappedNode) || wgsl.isDecorated(unwrappedNode)) {
+    unwrappedNode = unwrappedNode.inner;
+  }
+
   const primitive =
-    typeToPrimitive[
-      wgsl.isAtomic(node)
-        ? node.inner.type
-        : (node.type as keyof typeof typeToPrimitive)
-    ];
+    typeToPrimitive[unwrappedNode.type as keyof typeof typeToPrimitive];
   return `output.${primitiveToWriteFunction[primitive]}(${offsetExpr}, ${valueExpr}, littleEndian);\n`;
 }
 
