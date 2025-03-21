@@ -155,7 +155,7 @@ describe('vec2<bool>', () => {
   });
 
   it('is not host shareable', () => {
-    const buffer = new ArrayBuffer(d.sizeOf(d.vec2f));
+    const buffer = new ArrayBuffer(d.sizeOf(d.vec2b));
 
     expect(() =>
       writeData(new BufferWriter(buffer), d.vec2b, d.vec2b()),
@@ -164,17 +164,19 @@ describe('vec2<bool>', () => {
   });
 
   it('differs in type from other vector schemas', () => {
-    const acceptsVec2fSchema = (_schema: d.Vec2b) => {};
+    const acceptsVec2bSchema = (_schema: d.Vec2b) => {};
 
-    acceptsVec2fSchema(d.vec2b);
+    acceptsVec2bSchema(d.vec2b);
     // @ts-expect-error
-    acceptsVec2fSchema(d.vec2u);
+    acceptsVec2bSchema(d.vec2f);
     // @ts-expect-error
-    acceptsVec2fSchema(d.vec2i);
+    acceptsVec2bSchema(d.vec2u);
     // @ts-expect-error
-    acceptsVec2fSchema(d.vec3f);
+    acceptsVec2bSchema(d.vec2i);
     // @ts-expect-error
-    acceptsVec2fSchema(d.vec4f);
+    acceptsVec2bSchema(d.vec3b);
+    // @ts-expect-error
+    acceptsVec2bSchema(d.vec4b);
   });
 
   it('can be indexed into', () => {
@@ -188,6 +190,27 @@ describe('vec2<bool>', () => {
     vec[0] = true;
     vec[1] = false;
     expect(vec).toEqual(d.vec2b(true, false));
+  });
+
+  it('should create a vector using identity swizzle', () => {
+    const vec = d.vec2b(false, true);
+    const swizzled = vec.xy;
+    expect(swizzled.x).toEqual(false);
+    expect(swizzled.y).toEqual(true);
+  });
+
+  it('should create a vector using mixed swizzle', () => {
+    const vec = d.vec2b(false, true);
+    const swizzled = vec.yx;
+    expect(swizzled.x).toEqual(true);
+    expect(swizzled.y).toEqual(false);
+  });
+
+  it('should create a vector using swizzle with repeats', () => {
+    const vec = d.vec2b(false, true);
+    const swizzled = vec.yy;
+    expect(swizzled.x).toEqual(true);
+    expect(swizzled.y).toEqual(true);
   });
 });
 
@@ -318,6 +341,101 @@ describe('vec3i', () => {
     vec[1] = 5;
     vec[2] = 6;
     expect(vec).toEqual(d.vec3i(4, 5, 6));
+  });
+});
+
+describe('vec3<bool>', () => {
+  it('should span 12 bytes', () => {
+    expect(sizeOf(d.vec3b)).toEqual(12);
+  });
+
+  it('should align to 16 bytes', () => {
+    expect(d.alignmentOf(d.vec3b)).toEqual(16);
+  });
+
+  it('should create a zero 3d vector', () => {
+    const zero = d.vec3b();
+    expect(zero.x).toEqual(false);
+    expect(zero.y).toEqual(false);
+    expect(zero.z).toEqual(false);
+  });
+
+  it('should create a 3d vector with the given elements', () => {
+    const vec = d.vec3b(false, true, false);
+    expect(vec.x).toEqual(false);
+    expect(vec.y).toEqual(true);
+    expect(vec.z).toEqual(false);
+  });
+
+  it('should create a 3d vector from the given scalar element', () => {
+    const vec = d.vec3b(true);
+    expect(vec.x).toEqual(true);
+    expect(vec.y).toEqual(true);
+    expect(vec.z).toEqual(true);
+  });
+
+  it('is not host shareable', () => {
+    const buffer = new ArrayBuffer(d.sizeOf(d.vec3b));
+
+    expect(() =>
+      writeData(new BufferWriter(buffer), d.vec3b, d.vec3b()),
+    ).toThrow();
+    expect(() => readData(new BufferReader(buffer), d.vec3b)).toThrow();
+  });
+
+  it('differs in type from other vector schemas', () => {
+    const acceptsVec3bSchema = (_schema: d.Vec3b) => {};
+
+    acceptsVec3bSchema(d.vec3b);
+    // @ts-expect-error
+    acceptsVec3bSchema(d.vec3f);
+    // @ts-expect-error
+    acceptsVec3bSchema(d.vec3u);
+    // @ts-expect-error
+    acceptsVec3bSchema(d.vec3i);
+    // @ts-expect-error
+    acceptsVec3bSchema(d.vec2b);
+    // @ts-expect-error
+    acceptsVec3bSchema(d.vec4b);
+  });
+
+  it('can be indexed into', () => {
+    const vec = d.vec3b(false, true, false);
+    expect(vec[0]).toEqual(false);
+    expect(vec[1]).toEqual(true);
+    expect(vec[2]).toEqual(false);
+  });
+
+  it('can be modified via index', () => {
+    const vec = d.vec3b(false, true, false);
+    vec[0] = true;
+    vec[1] = false;
+    vec[2] = true;
+    expect(vec).toEqual(d.vec3b(true, false, true));
+  });
+
+  it('should create a vector using identity swizzle', () => {
+    const vec = d.vec3b(false, true, true);
+    const swizzled = vec.xyz;
+    expect(swizzled.x).toEqual(false);
+    expect(swizzled.y).toEqual(true);
+    expect(swizzled.z).toEqual(true);
+  });
+
+  it('should create a vector using mixed swizzle', () => {
+    const vec = d.vec3b(false, true, true);
+    const swizzled = vec.zyx;
+    expect(swizzled.x).toEqual(true);
+    expect(swizzled.y).toEqual(true);
+    expect(swizzled.z).toEqual(false);
+  });
+
+  it('should create a vector using swizzle with repeats', () => {
+    const vec = d.vec3b(false, true, true);
+    const swizzled = vec.yyx;
+    expect(swizzled.x).toEqual(true);
+    expect(swizzled.y).toEqual(true);
+    expect(swizzled.z).toEqual(false);
   });
 });
 
@@ -573,35 +691,6 @@ describe('v4f', () => {
 });
 
 describe('v4b', () => {
-  describe('swizzles', () => {
-    it('should create a vector using identity swizzle', () => {
-      const vec = d.vec4b(false, true, true, false);
-      const swizzled = vec.xyzw;
-      expect(swizzled.x).toEqual(false);
-      expect(swizzled.y).toEqual(true);
-      expect(swizzled.z).toEqual(true);
-      expect(swizzled.w).toEqual(false);
-    });
-
-    it('should create a vector using mixed swizzle', () => {
-      const vec = d.vec4b(false, true, true, false);
-      const swizzled = vec.zywx;
-      expect(swizzled.x).toEqual(true);
-      expect(swizzled.y).toEqual(true);
-      expect(swizzled.z).toEqual(false);
-      expect(swizzled.w).toEqual(false);
-    });
-
-    it('should create a vector using swizzle with repeats', () => {
-      const vec = d.vec4b(false, true, true, false);
-      const swizzled = vec.yyww;
-      expect(swizzled.x).toEqual(true);
-      expect(swizzled.y).toEqual(true);
-      expect(swizzled.z).toEqual(false);
-      expect(swizzled.w).toEqual(false);
-    });
-  });
-
   describe('(v3b, bool) constructor', () => {
     it('works in JS', () => {
       const vecA = d.vec3b(true, false, true);

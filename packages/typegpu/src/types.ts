@@ -61,7 +61,6 @@ export type ResolvableObject =
   | TgpuTexture
   | TgpuAnyTextureView
   | TgpuVar
-  // AAA AnyVec czy AnyNumericVec?
   | AnyVecInstance
   | AnyMatInstance
   | AnyData
