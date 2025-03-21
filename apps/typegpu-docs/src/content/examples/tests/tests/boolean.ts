@@ -34,7 +34,11 @@ const Schema = struct({
   bool,
 });
 
-const negate = tgpu['~unstable'].fn([Schema], Schema).does((input) => {
+const negate = tgpu['~unstable'].fn([vec3b], vec3b).does((input) => {
+  return vec3b(!input.x, !input.y, !input.z);
+});
+
+const negateStruct = tgpu['~unstable'].fn([Schema], Schema).does((input) => {
   const result = Schema({
     vec2b: not(input.vec2b),
     vec4b: not(input.vec4b),
@@ -127,6 +131,9 @@ export const booleanTests = tgpu['~unstable'].fn([], bool).does(() => {
       vec4i(1, 2, -3, -4),
     );
 
+  const vec = vec3b(true, false, true);
+  s = s && allEq(not(vec), negate(vec));
+
   const struct = Schema({
     vec2b: vec2b(false, true),
     vec4b: vec4b(false, true, false, true),
@@ -134,19 +141,11 @@ export const booleanTests = tgpu['~unstable'].fn([], bool).does(() => {
     bool: true,
   });
 
-  const negStruct = Schema({
-    vec2b: vec2b(true, false),
-    vec4b: vec4b(true, false, true, false),
-    vec3b: vec3b(false, false, true),
-    bool: false,
-  });
-
-  const result = negate(struct);
-
-  s = s && allEq(negStruct.vec2b, result.vec2b);
-  s = s && allEq(negStruct.vec4b, result.vec4b);
-  s = s && allEq(negStruct.vec3b, result.vec3b);
-  s = s && negStruct.bool === result.bool;
+  const resultStruct = negateStruct(struct);
+  s = s && allEq(not(struct.vec2b), resultStruct.vec2b);
+  s = s && allEq(not(struct.vec4b), resultStruct.vec4b);
+  s = s && allEq(not(struct.vec3b), resultStruct.vec3b);
+  s = s && !struct.bool === resultStruct.bool;
 
   return s;
 });
