@@ -41,9 +41,7 @@ function functionToTranspiled(
     return null;
   }
 
-  const implementation = node;
-
-  const { argNames, body, externalNames } = transpileFn(implementation);
+  const { argNames, body, externalNames } = transpileFn(node);
   const tgpuAlias = ctx.tgpuAliases.values().next().value;
   if (tgpuAlias === undefined) {
     throw new Error(
@@ -54,7 +52,7 @@ function functionToTranspiled(
   return types.callExpression(
     template.expression(`${tgpuAlias}.__assignAst`)(),
     [
-      implementation,
+      node,
       template.expression`${embedJSON({ argNames, body, externalNames })}`(),
       types.objectExpression(
         externalNames.map((name) =>
