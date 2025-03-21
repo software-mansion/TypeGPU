@@ -8,8 +8,7 @@ describe('tgpu.const', () => {
   it('should inject const declaration when used in functions', () => {
     const x = tgpu['~unstable'].const(d.u32, 2);
     const fn1 = tgpu['~unstable']
-      .fn([])
-      .does(`() {
+      .fn([])(`() {
         return x;
       }`)
       .$uses({ x })
@@ -40,7 +39,7 @@ describe('tgpu.const', () => {
       })
       .$name('boid');
 
-    const func = tgpu['~unstable'].fn([]).does(() => {
+    const func = tgpu['~unstable'].fn([])(() => {
       const pos = boidConst.value;
       const vel = boidConst.value.vel;
       const velX = boidConst.value.vel.x;

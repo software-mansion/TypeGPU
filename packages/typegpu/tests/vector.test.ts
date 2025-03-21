@@ -411,8 +411,7 @@ describe('v3f', () => {
       const planarPos = d.vec2f(1, 2);
 
       const main = tgpu['~unstable']
-        .fn([])
-        .does(() => {
+        .fn([])(() => {
           const planarPosLocal = d.vec2f(1, 2);
 
           const one = d.vec3f(planarPos, 12); // external
@@ -448,8 +447,7 @@ describe('v4f', () => {
       const red = d.vec3f(0.9, 0.2, 0.1);
 
       const main = tgpu['~unstable']
-        .fn([])
-        .does(() => {
+        .fn([])(() => {
           const green = d.vec3f(0, 1, 0);
 
           const one = d.vec4f(red, 1); // external
@@ -483,8 +481,7 @@ describe('v4f', () => {
       const foo = d.vec3f(0.2, 0.3, 0.4);
 
       const main = tgpu['~unstable']
-        .fn([])
-        .does(() => {
+        .fn([])(() => {
           const fooLocal = d.vec3f(0.2, 0.3, 0.4);
 
           const one = d.vec4f(0.1, foo); // external

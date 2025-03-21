@@ -8,7 +8,7 @@ import {
   type TypegpuPluginOptions,
   embedJSON,
   gatherTgpuAliases,
-  isDoesCall,
+  isShellImplementationCall,
   shouldSkipFile,
 } from './common';
 
@@ -29,7 +29,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
     CallExpression(path) {
       const node = path.node;
 
-      if (isDoesCall(node, ctx)) {
+      if (isShellImplementationCall(node, ctx)) {
         const implementation = node.arguments[0];
 
         if (

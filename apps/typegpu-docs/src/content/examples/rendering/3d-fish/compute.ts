@@ -12,8 +12,7 @@ export const computeShader = tgpu['~unstable']
   .computeFn({
     in: { gid: d.builtin.globalInvocationId },
     workgroupSize: [p.workGroupSize],
-  })
-  .does((input) => {
+  })((input) => {
     const fishIndex = input.gid.x;
     const fishData = currentFishData.value[fishIndex];
     let separation = d.vec3f();
