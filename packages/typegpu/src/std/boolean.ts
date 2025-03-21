@@ -370,6 +370,7 @@ export const select: SelectOverload = createDualImpl(
   }),
 );
 
+// AAA sprawdź, czy structy mozna przekazywać w funkcjach
 // AAA sprawdź, co się dzieje z boolem w buforze
 // AAA jak nic, to dopisz errora
 // AAA skopiuj zachowanie z boola do vecNb
