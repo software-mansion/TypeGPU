@@ -27,7 +27,7 @@ const setupRandomSeed = tgpu['~unstable'].fn([d.vec2f])((coord) => {
  * "Particle System in WebGPU" by Benedikt Peter
  */
 const rand01 = tgpu['~unstable'].fn(
-  [],
+  {},
   d.f32,
 )(() => {
   const a = std.dot(randSeed.value, d.vec2f(23.14077926, 232.61690225));
@@ -80,53 +80,61 @@ const obstaclesBuffer = root
 const obstaclesReadonly = obstaclesBuffer.as('readonly');
 
 const isValidCoord = tgpu['~unstable'].fn(
-  [d.i32, d.i32],
+  { x: d.i32, y: d.i32 },
   d.bool,
-)(
-  (x, y) =>
-    x < gridSizeUniform.value && x >= 0 && y < gridSizeUniform.value && y >= 0,
-);
-
-const coordsToIndex = tgpu['~unstable'].fn(
-  [d.i32, d.i32],
-  d.i32,
-)((x, y) => x + y * gridSizeUniform.value);
-
-const getCell = tgpu['~unstable'].fn(
-  [d.i32, d.i32],
-  d.vec4f,
-)((x, y) => inputGridSlot.value[coordsToIndex(x, y)]);
-
-const setCell = tgpu['~unstable'].fn([d.i32, d.i32, d.vec4f])((x, y, value) => {
-  const index = coordsToIndex(x, y);
-  outputGridSlot.value[index] = value;
+)((args) => {
+  return (
+    args.x < gridSizeUniform.value &&
+    args.x >= 0 &&
+    args.y < gridSizeUniform.value &&
+    args.y >= 0
+  );
 });
 
-const setVelocity = tgpu['~unstable'].fn([d.i32, d.i32, d.vec2f])(
-  (x, y, velocity) => {
-    const index = coordsToIndex(x, y);
-    outputGridSlot.value[index].x = velocity.x;
-    outputGridSlot.value[index].y = velocity.y;
+const coordsToIndex = tgpu['~unstable'].fn(
+  { x: d.i32, y: d.i32 },
+  d.i32,
+)((args) => args.x + args.y * gridSizeUniform.value);
+
+const getCell = tgpu['~unstable'].fn(
+  { x: d.i32, y: d.i32 },
+  d.vec4f,
+)((args) => inputGridSlot.value[coordsToIndex(args)]);
+
+const setCell = tgpu['~unstable'].fn({ x: d.i32, y: d.i32, value: d.vec4f })(
+  (args) => {
+    const index = coordsToIndex(args);
+    outputGridSlot.value[index] = args.value;
   },
 );
 
-const addDensity = tgpu['~unstable'].fn([d.i32, d.i32, d.f32])(
-  (x, y, density) => {
-    const index = coordsToIndex(x, y);
-    outputGridSlot.value[index].z = inputGridSlot.value[index].z + density;
+const setVelocity = tgpu['~unstable'].fn({
+  x: d.i32,
+  y: d.i32,
+  velocity: d.vec2f,
+})((args) => {
+  const index = coordsToIndex(args);
+  outputGridSlot.value[index].x = args.velocity.x;
+  outputGridSlot.value[index].y = args.velocity.y;
+});
+
+const addDensity = tgpu['~unstable'].fn({ x: d.i32, y: d.i32, density: d.f32 })(
+  (args) => {
+    const index = coordsToIndex(args);
+    outputGridSlot.value[index].z = inputGridSlot.value[index].z + args.density;
   },
 );
 
 const flowFromCell = tgpu['~unstable'].fn(
-  [d.i32, d.i32, d.i32, d.i32],
+  { myX: d.i32, myY: d.i32, x: d.i32, y: d.i32 },
   d.f32,
-)((myX, myY, x, y) => {
-  if (!isValidCoord(x, y)) {
+)((args) => {
+  if (!isValidCoord(args)) {
     return 0;
   }
-  const src = getCell(x, y);
+  const src = getCell(args);
 
-  const destPos = d.vec2i(x + d.i32(src.x), y + d.i32(src.y));
+  const destPos = d.vec2i(args.x + d.i32(src.x), args.y + d.i32(src.y));
   const dest = getCell(destPos.x, destPos.y);
   const diff = src.z - dest.z;
   let outFlow = std.min(std.max(0.01, 0.3 + diff * 0.1), src.z);
@@ -135,12 +143,12 @@ const flowFromCell = tgpu['~unstable'].fn(
     outFlow = 0;
   }
 
-  if (myX === x && myY === y) {
+  if (args.myX === args.x && AbortSignal.myY === args.y) {
     // 'src.z - outFlow' is how much is left in the src
     return src.z - outFlow;
   }
 
-  if (destPos.x === myX && destPos.y === myY) {
+  if (destPos.x === args.myX && destPos.y === AbortSignal.myY) {
     return outFlow;
   }
 
@@ -151,9 +159,9 @@ const timeBuffer = root.createBuffer(d.f32).$usage('uniform');
 const timeUniform = timeBuffer.as('uniform');
 
 const isInsideObstacle = tgpu['~unstable'].fn(
-  [d.i32, d.i32],
+  { x: d.i32, y: d.i32 },
   d.bool,
-)((x, y) => {
+)((args) => {
   for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
     const obs = obstaclesReadonly.value[obsIdx];
 
@@ -172,7 +180,7 @@ const isInsideObstacle = tgpu['~unstable'].fn(
       d.i32(obs.center.y) + d.i32(obs.size.y) / 2,
     );
 
-    if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+    if (args.x >= minX && args.x <= maxX && args.y >= minY && args.y <= maxY) {
       return true;
     }
   }
@@ -181,14 +189,14 @@ const isInsideObstacle = tgpu['~unstable'].fn(
 });
 
 const isValidFlowOut = tgpu['~unstable'].fn(
-  [d.i32, d.i32],
+  { x: d.i32, y: d.i32 },
   d.bool,
-)((x, y) => {
-  if (!isValidCoord(x, y)) {
+)((args) => {
+  if (!isValidCoord(args)) {
     return false;
   }
 
-  if (isInsideObstacle(x, y)) {
+  if (isInsideObstacle(args)) {
     return false;
   }
 
@@ -196,9 +204,9 @@ const isValidFlowOut = tgpu['~unstable'].fn(
 });
 
 const computeVelocity = tgpu['~unstable'].fn(
-  [d.i32, d.i32],
+  { x: d.i32, y: d.i32 },
   d.vec2f,
-)((x, y) => {
+)((args) => {
   const gravityCost = 0.5;
 
   const neighborOffsets = [
@@ -208,7 +216,7 @@ const computeVelocity = tgpu['~unstable'].fn(
     d.vec2i(-1, 0),
   ];
 
-  const cell = getCell(x, y);
+  const cell = getCell(args);
   let leastCost = cell.z;
 
   const dirChoices = [
@@ -224,7 +232,7 @@ const computeVelocity = tgpu['~unstable'].fn(
     const neighborDensity = getCell(x + offset.x, y + offset.y);
     const cost = neighborDensity.z + d.f32(offset.y) * gravityCost;
 
-    if (!isValidFlowOut(x + offset.x, y + offset.y)) {
+    if (!isValidFlowOut({ x: args.x + offset.x, y: args.y + offset.y })) {
       continue;
     }
 
@@ -252,7 +260,7 @@ const mainInitWorld = tgpu['~unstable'].computeFn({
 
   let value = d.vec4f();
 
-  if (!isValidFlowOut(x, y)) {
+  if (!isValidFlowOut({ x, y })) {
     value = d.vec4f(0, 0, 0, 0);
   } else {
     // Ocean
@@ -402,9 +410,9 @@ const sourceParamsBuffer = root
 const sourceParamsUniform = sourceParamsBuffer.as('uniform');
 
 const getMinimumInFlow = tgpu['~unstable'].fn(
-  [d.i32, d.i32],
+  { x: d.i32, y: d.i32 },
   d.f32,
-)((x, y) => {
+)((args) => {
   const gridSizeF = d.f32(gridSizeUniform.value);
   const sourceRadius = std.max(1, sourceParamsUniform.value.radius * gridSizeF);
   const sourcePos = d.vec2f(
@@ -413,8 +421,9 @@ const getMinimumInFlow = tgpu['~unstable'].fn(
   );
 
   if (
-    std.length(d.vec2f(d.f32(x) - sourcePos.x, d.f32(y) - sourcePos.y)) <
-    sourceRadius
+    std.length(
+      d.vec2f(d.f32(args.x) - sourcePos.x, d.f32(args.y) - sourcePos.y),
+    ) < sourceRadius
   ) {
     return sourceParamsUniform.value.intensity;
   }
@@ -428,24 +437,24 @@ const mainCompute = tgpu['~unstable'].computeFn({
 })((input) => {
   const x = d.i32(input.gid.x);
   const y = d.i32(input.gid.y);
-  const index = coordsToIndex(x, y);
+  const index = coordsToIndex({ x, y });
 
   setupRandomSeed(d.vec2f(d.f32(index), timeUniform.value));
 
-  const next = getCell(x, y);
+  const next = getCell({ x, y });
   const nextVelocity = computeVelocity(x, y);
   next.x = nextVelocity.x;
   next.y = nextVelocity.y;
 
   // Processing in-flow
 
-  next.z = flowFromCell(x, y, x, y);
-  next.z += flowFromCell(x, y, x, y + 1);
-  next.z += flowFromCell(x, y, x, y - 1);
-  next.z += flowFromCell(x, y, x + 1, y);
-  next.z += flowFromCell(x, y, x - 1, y);
+  next.z = flowFromCell({ myX: x, myY: y, x, y });
+  next.z += flowFromCell({ myX: x, myY: y, x, y: y + 1 });
+  next.z += flowFromCell({ myX: x, myY: y, x, y: y - 1 });
+  next.z += flowFromCell({ myX: x, myY: y, x: x + 1, y });
+  next.z += flowFromCell({ myX: x, myY: y, x: x - 1, y });
 
-  const minInflow = getMinimumInFlow(x, y);
+  const minInflow = getMinimumInFlow({ x, y });
   next.z = std.max(minInflow, next.z);
 
   outputGridSlot.value[index] = next;
@@ -504,7 +513,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   const x = d.i32(input.uv.x * d.f32(gridSizeUniform.value));
   const y = d.i32(input.uv.y * d.f32(gridSizeUniform.value));
 
-  const index = coordsToIndex(x, y);
+  const index = coordsToIndex({ x, y });
   const cell = inputGridSlot.value[index];
   const density = std.max(0, cell.z);
 
