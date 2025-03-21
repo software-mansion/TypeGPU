@@ -39,6 +39,26 @@ function isKernelMarkedFunction(
   return false;
 }
 
+function removeKernelDirectiveFromFunction(
+  node:
+    | acorn.FunctionDeclaration
+    | acorn.AnonymousFunctionDeclaration
+    | acorn.FunctionExpression
+    | acorn.ArrowFunctionExpression,
+) {
+  if (node.body.type === 'BlockStatement') {
+    node.body.body = node.body.body.filter(
+      (statement) =>
+        !(
+          statement.type === 'ExpressionStatement' &&
+          statement.directive === 'kernel'
+        ),
+    );
+  }
+
+  return node;
+}
+
 const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
   options: TypegpuPluginOptions,
 ) => ({
@@ -88,7 +108,7 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
         if (node.type === 'ArrowFunctionExpression') {
           if (isKernelMarkedFunction(node)) {
             tgslFunctionDefs.push({
-              implementation: node,
+              implementation: removeKernelDirectiveFromFunction(node),
             });
           }
         }
@@ -96,7 +116,7 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
         if (node.type === 'FunctionExpression') {
           if (isKernelMarkedFunction(node)) {
             tgslFunctionDefs.push({
-              implementation: node,
+              implementation: removeKernelDirectiveFromFunction(node),
             });
           }
         }
@@ -104,7 +124,7 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
         if (node.type === 'FunctionDeclaration') {
           if (isKernelMarkedFunction(node)) {
             tgslFunctionDefs.push({
-              implementation: node,
+              implementation: removeKernelDirectiveFromFunction(node),
               functionDeclarationName: node.id?.name,
             });
           }
