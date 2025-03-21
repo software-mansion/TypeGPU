@@ -275,7 +275,7 @@ export const all = createDualImpl(
 export const any = createDualImpl(
   // CPU implementation
   (value: AnyBooleanVecInstance) => {
-    return VectorOps.any[value.kind](value);
+    return !all(not(value));
   },
   // GPU implementation
   (value) => ({

@@ -6,8 +6,7 @@ import type {
   AnyNumericVecInstance,
   AnyWgslData,
   v3f,
-  v3i,
-  v3u,
+  v3h,
   vBaseForMat,
 } from '../data/wgslTypes';
 import { createDualImpl } from '../shared/generators';
@@ -224,7 +223,7 @@ export const cos = createDualImpl(
  */
 export const cross = createDualImpl(
   // CPU implementation
-  <T extends v3f | v3i | v3u>(a: T, b: T): T => VectorOps.cross[a.kind](a, b),
+  <T extends v3f | v3h>(a: T, b: T): T => VectorOps.cross[a.kind](a, b),
   // GPU implementation
   (a, b) => ({ value: `cross(${a.value}, ${b.value})`, dataType: a.dataType }),
 );

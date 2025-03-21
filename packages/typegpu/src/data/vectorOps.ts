@@ -198,12 +198,6 @@ export const VectorOps = {
     'vec4<bool>': (e: wgsl.v4b) => e.x && e.y && e.z && e.w,
   } as Record<VecKind, (v: wgsl.AnyBooleanVecInstance) => boolean>,
 
-  any: {
-    'vec2<bool>': (e: wgsl.v2b) => e.x || e.y,
-    'vec3<bool>': (e: wgsl.v3b) => e.x || e.y || e.z,
-    'vec4<bool>': (e: wgsl.v4b) => e.x || e.y || e.z || e.w,
-  } as Record<VecKind, (v: wgsl.AnyBooleanVecInstance) => boolean>,
-
   abs: {
     vec2f: unary2f(Math.abs),
     vec2h: unary2h(Math.abs),
@@ -750,23 +744,9 @@ export const VectorOps = {
         a.x * b.y - a.y * b.x,
       );
     },
-    vec3i: (a: wgsl.v3i, b: wgsl.v3i) => {
-      return vec3i(
-        a.y * b.z - a.z * b.y,
-        a.z * b.x - a.x * b.z,
-        a.x * b.y - a.y * b.x,
-      );
-    },
-    vec3u: (a: wgsl.v3u, b: wgsl.v3u) => {
-      return vec3u(
-        a.y * b.z - a.z * b.y,
-        a.z * b.x - a.x * b.z,
-        a.x * b.y - a.y * b.x,
-      );
-    },
   } as Record<
-    'vec3f' | 'vec3i' | 'vec3u',
-    <T extends wgsl.v3f | wgsl.v3i | wgsl.v3u>(a: T, b: T) => T
+    'vec3f' | 'vec3h',
+    <T extends wgsl.v3f | wgsl.v3h>(a: T, b: T) => T
   >,
 
   floor: {
