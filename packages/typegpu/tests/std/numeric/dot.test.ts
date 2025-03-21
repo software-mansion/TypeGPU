@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3f } from '../../src/data';
-import { dot } from '../../src/std';
+import { vec2f, vec3f } from '../../../src/data';
+import { dot } from '../../../src/std';
 
 describe('dot', () => {
   it('computes dot product of two vec2f', () => {

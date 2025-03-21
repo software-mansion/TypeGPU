@@ -10,11 +10,14 @@ import {
   struct,
   u32,
   type v3u,
+  vec2b,
   vec2h,
   vec2u,
+  vec3b,
   vec3f,
   vec3h,
   vec3u,
+  vec4b,
 } from '../src/data';
 import { readData, writeData } from '../src/data/dataIO';
 import type { Infer } from '../src/shared/repr';
@@ -224,6 +227,17 @@ describe('struct', () => {
 
     writeData(new BufferWriter(buffer2), TestStruct2, value2);
     expect(readData(new BufferReader(buffer2), TestStruct2)).toEqual(value2);
+  });
+
+  it('supports boolean vectors', () => {
+    const TestStruct = struct({
+      a: vec2b,
+      b: vec3b,
+      c: vec4b,
+    });
+
+    expect(sizeOf(TestStruct)).toEqual(48);
+    expect(alignmentOf(TestStruct)).toEqual(16);
   });
 
   it('can be called to create an object', () => {

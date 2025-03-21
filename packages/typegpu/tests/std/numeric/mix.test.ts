@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3f, vec4h } from '../../src/data';
-import { mix } from '../../src/std';
+import { vec2f, vec3f, vec4h } from '../../../src/data';
+import { mix } from '../../../src/std';
 
 describe('mix', () => {
   it('should blend scalar values correctly', () => {
