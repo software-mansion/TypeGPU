@@ -1,4 +1,4 @@
-import type { AnyNode, CallExpression } from 'acorn';
+import type * as acorn from 'acorn';
 import { type Node, walk } from 'estree-walker';
 import MagicString from 'magic-string';
 import { transpileFn } from 'tinyest-for-wgsl';
@@ -14,9 +14,50 @@ import {
 } from './common';
 
 type TgslFunctionDef = {
-  varDecl: CallExpression;
-  implementation: AnyNode;
+  implementation: acorn.AnyNode;
+  functionDeclarationName?: string | undefined; // name of the function, but only if it was declared via a function declaration (statement)
 };
+
+function isKernelMarkedFunction(
+  node:
+    | acorn.FunctionDeclaration
+    | acorn.AnonymousFunctionDeclaration
+    | acorn.FunctionExpression
+    | acorn.ArrowFunctionExpression,
+) {
+  if (node.body.type === 'BlockStatement') {
+    for (const statement of node.body.body) {
+      if (
+        statement.type === 'ExpressionStatement' &&
+        statement.directive === 'kernel'
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function removeKernelDirectiveFromFunction(
+  node:
+    | acorn.FunctionDeclaration
+    | acorn.AnonymousFunctionDeclaration
+    | acorn.FunctionExpression
+    | acorn.ArrowFunctionExpression,
+) {
+  if (node.body.type === 'BlockStatement') {
+    node.body.body = node.body.body.filter(
+      (statement) =>
+        !(
+          statement.type === 'ExpressionStatement' &&
+          statement.directive === 'kernel'
+        ),
+    );
+  }
+
+  return node;
+}
 
 const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
   options: TypegpuPluginOptions,
@@ -42,7 +83,7 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
 
     walk(ast, {
       enter(_node, _parent, prop, index) {
-        const node = _node as AnyNode;
+        const node = _node as acorn.AnyNode;
 
         if (node.type === 'ImportDeclaration') {
           gatherTgpuAliases(node, ctx);
@@ -58,10 +99,34 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
               !(implementation.type === 'Literal')
             ) {
               tgslFunctionDefs.push({
-                varDecl: node,
                 implementation,
               });
             }
+          }
+        }
+
+        if (node.type === 'ArrowFunctionExpression') {
+          if (isKernelMarkedFunction(node)) {
+            tgslFunctionDefs.push({
+              implementation: removeKernelDirectiveFromFunction(node),
+            });
+          }
+        }
+
+        if (node.type === 'FunctionExpression') {
+          if (isKernelMarkedFunction(node)) {
+            tgslFunctionDefs.push({
+              implementation: removeKernelDirectiveFromFunction(node),
+            });
+          }
+        }
+
+        if (node.type === 'FunctionDeclaration') {
+          if (isKernelMarkedFunction(node)) {
+            tgslFunctionDefs.push({
+              implementation: removeKernelDirectiveFromFunction(node),
+              functionDeclarationName: node.id?.name,
+            });
           }
         }
       },
@@ -84,7 +149,7 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
       // Wrap the implementation in a call to `tgpu.__assignAst` to associate the AST with the implementation.
       magicString.appendLeft(
         expr.implementation.start,
-        `${tgpuAlias}.__assignAst(`,
+        `${expr.functionDeclarationName ? `const ${expr.functionDeclarationName} = ` : ''}${tgpuAlias}.__assignAst(`,
       );
       magicString.appendRight(
         expr.implementation.end,
@@ -97,7 +162,10 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
           `, {${externalNames.join(', ')}})`,
         );
       } else {
-        magicString.appendRight(expr.implementation.end, ')');
+        magicString.appendRight(
+          expr.implementation.end,
+          `)${expr.functionDeclarationName ? ';' : ''}`,
+        );
       }
     }
 
