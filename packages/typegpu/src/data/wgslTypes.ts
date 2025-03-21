@@ -463,7 +463,7 @@ export interface v3u extends NumberArrayView, Swizzle3<v2u, v3u, v4u> {
  * Interface representing its WGSL vector type counterpart: `vec3<bool>`.
  * A vector with 3 elements of type `bool`
  */
-export interface v3b extends BooleanArrayView, Swizzle2<v2b, v3b, v4b> {
+export interface v3b extends BooleanArrayView, Swizzle3<v2b, v3b, v4b> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3<bool>';
   x: boolean;
@@ -527,7 +527,7 @@ export interface v4u extends NumberArrayView, Swizzle4<v2u, v3u, v4u> {
  * Interface representing its WGSL vector type counterpart: `vec4<bool>`.
  * A vector with 4 elements of type `bool`
  */
-export interface v4b extends BooleanArrayView, Swizzle2<v2b, v3b, v4b> {
+export interface v4b extends BooleanArrayView, Swizzle4<v2b, v3b, v4b> {
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4<bool>';
   x: boolean;

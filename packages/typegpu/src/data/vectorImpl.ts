@@ -373,14 +373,15 @@ type Tuple4<S> = [S, S, S, S];
 
 abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
   declare readonly length = 2;
+  abstract getDefaultValue(): S;
 
   0: S;
   1: S;
 
-  constructor(defaultValue: S, x?: S, y?: S) {
+  constructor(x?: S, y?: S) {
     super(2);
-    this[0] = x ?? defaultValue;
-    this[1] = y ?? x ?? defaultValue;
+    this[0] = x ?? this.getDefaultValue();
+    this[1] = y ?? x ?? this.getDefaultValue();
   }
 
   get x() {
@@ -402,16 +403,17 @@ abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
 
 abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
   declare readonly length = 3;
+  abstract getDefaultValue(): S;
 
   0: S;
   1: S;
   2: S;
 
-  constructor(defaultValue: S, x?: S, y?: S, z?: S) {
+  constructor(x?: S, y?: S, z?: S) {
     super(3);
-    this[0] = x ?? defaultValue;
-    this[1] = y ?? x ?? defaultValue;
-    this[2] = z ?? x ?? defaultValue;
+    this[0] = x ?? this.getDefaultValue();
+    this[1] = y ?? x ?? this.getDefaultValue();
+    this[2] = z ?? x ?? this.getDefaultValue();
   }
 
   get x() {
@@ -441,18 +443,19 @@ abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
 
 abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
   declare readonly length = 4;
+  abstract getDefaultValue(): S;
 
   0: S;
   1: S;
   2: S;
   3: S;
 
-  constructor(defaultValue: S, x?: S, y?: S, z?: S, w?: S) {
+  constructor(x?: S, y?: S, z?: S, w?: S) {
     super(4);
-    this[0] = x ?? defaultValue;
-    this[1] = y ?? x ?? defaultValue;
-    this[2] = z ?? x ?? defaultValue;
-    this[3] = w ?? x ?? defaultValue;
+    this[0] = x ?? this.getDefaultValue();
+    this[1] = y ?? x ?? this.getDefaultValue();
+    this[2] = z ?? x ?? this.getDefaultValue();
+    this[3] = w ?? x ?? this.getDefaultValue();
   }
 
   get x() {
@@ -489,6 +492,10 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
 }
 
 export class Vec2fImpl extends Vec2<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec2f' as const;
   }
@@ -505,6 +512,10 @@ export class Vec2fImpl extends Vec2<number> {
 }
 
 export class Vec2hImpl extends Vec2<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec2h' as const;
   }
@@ -521,6 +532,10 @@ export class Vec2hImpl extends Vec2<number> {
 }
 
 export class Vec2iImpl extends Vec2<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec2i' as const;
   }
@@ -537,6 +552,10 @@ export class Vec2iImpl extends Vec2<number> {
 }
 
 export class Vec2uImpl extends Vec2<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec2u' as const;
   }
@@ -553,6 +572,10 @@ export class Vec2uImpl extends Vec2<number> {
 }
 
 export class Vec2bImpl extends Vec2<boolean> {
+  getDefaultValue() {
+    return false;
+  }
+
   get kind() {
     return 'vec2<bool>' as const;
   }
@@ -569,6 +592,10 @@ export class Vec2bImpl extends Vec2<boolean> {
 }
 
 export class Vec3fImpl extends Vec3<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec3f' as const;
   }
@@ -585,6 +612,10 @@ export class Vec3fImpl extends Vec3<number> {
 }
 
 export class Vec3hImpl extends Vec3<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec3h' as const;
   }
@@ -601,6 +632,10 @@ export class Vec3hImpl extends Vec3<number> {
 }
 
 export class Vec3iImpl extends Vec3<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec3i' as const;
   }
@@ -617,6 +652,10 @@ export class Vec3iImpl extends Vec3<number> {
 }
 
 export class Vec3uImpl extends Vec3<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec3u' as const;
   }
@@ -633,6 +672,10 @@ export class Vec3uImpl extends Vec3<number> {
 }
 
 export class Vec3bImpl extends Vec3<boolean> {
+  getDefaultValue() {
+    return false;
+  }
+
   get kind() {
     return 'vec3<bool>' as const;
   }
@@ -649,6 +692,10 @@ export class Vec3bImpl extends Vec3<boolean> {
 }
 
 export class Vec4fImpl extends Vec4<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec4f' as const;
   }
@@ -665,6 +712,10 @@ export class Vec4fImpl extends Vec4<number> {
 }
 
 export class Vec4hImpl extends Vec4<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec4h' as const;
   }
@@ -681,6 +732,10 @@ export class Vec4hImpl extends Vec4<number> {
 }
 
 export class Vec4iImpl extends Vec4<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec4i' as const;
   }
@@ -697,6 +752,10 @@ export class Vec4iImpl extends Vec4<number> {
 }
 
 export class Vec4uImpl extends Vec4<number> {
+  getDefaultValue() {
+    return 0;
+  }
+
   get kind() {
     return 'vec4u' as const;
   }
@@ -713,6 +772,10 @@ export class Vec4uImpl extends Vec4<number> {
 }
 
 export class Vec4bImpl extends Vec4<boolean> {
+  getDefaultValue() {
+    return false;
+  }
+
   get kind() {
     return 'vec4<bool>' as const;
   }

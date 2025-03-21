@@ -53,7 +53,7 @@ import type {
  * @example
  * const buffer = root.createBuffer(d.vec2f, d.vec2f(0, 1)); // buffer holding a d.vec2f value, with an initial value of vec2f(0, 1);
  */
-export const vec2f = makeVecSchema(Vec2fImpl, 0) as Vec2f;
+export const vec2f = makeVecSchema(Vec2fImpl) as Vec2f;
 
 /**
  *
@@ -68,7 +68,7 @@ export const vec2f = makeVecSchema(Vec2fImpl, 0) as Vec2f;
  * @example
  * const buffer = root.createBuffer(d.vec2h, d.vec2h(0, 1)); // buffer holding a d.vec2h value, with an initial value of vec2h(0, 1);
  */
-export const vec2h = makeVecSchema(Vec2hImpl, 0) as Vec2h;
+export const vec2h = makeVecSchema(Vec2hImpl) as Vec2h;
 
 /**
  *
@@ -83,7 +83,7 @@ export const vec2h = makeVecSchema(Vec2hImpl, 0) as Vec2h;
  * @example
  * const buffer = root.createBuffer(d.vec2i, d.vec2i(0, 1)); // buffer holding a d.vec2i value, with an initial value of vec2i(0, 1);
  */
-export const vec2i = makeVecSchema(Vec2iImpl, 0) as Vec2i;
+export const vec2i = makeVecSchema(Vec2iImpl) as Vec2i;
 
 /**
  *
@@ -98,7 +98,7 @@ export const vec2i = makeVecSchema(Vec2iImpl, 0) as Vec2i;
  * @example
  * const buffer = root.createBuffer(d.vec2u, d.vec2u(0, 1)); // buffer holding a d.vec2u value, with an initial value of vec2u(0, 1);
  */
-export const vec2u = makeVecSchema(Vec2uImpl, 0) as Vec2u;
+export const vec2u = makeVecSchema(Vec2uImpl) as Vec2u;
 
 /**
  *
@@ -110,7 +110,7 @@ export const vec2u = makeVecSchema(Vec2uImpl, 0) as Vec2u;
  * const vector = d.vec2b(true); // (true, true)
  * const vector = d.vec2b(false, true); // (false, true)
  */
-export const vec2b = makeVecSchema(Vec2bImpl, false) as Vec2b;
+export const vec2b = makeVecSchema(Vec2bImpl) as Vec2b;
 
 /**
  *
@@ -125,7 +125,7 @@ export const vec2b = makeVecSchema(Vec2bImpl, false) as Vec2b;
  * @example
  * const buffer = root.createBuffer(d.vec3f, d.vec3f(0, 1, 2)); // buffer holding a d.vec3f value, with an initial value of vec3f(0, 1, 2);
  */
-export const vec3f = makeVecSchema(Vec3fImpl, 0) as Vec3f;
+export const vec3f = makeVecSchema(Vec3fImpl) as Vec3f;
 
 /**
  *
@@ -140,7 +140,7 @@ export const vec3f = makeVecSchema(Vec3fImpl, 0) as Vec3f;
  * @example
  * const buffer = root.createBuffer(d.vec3h, d.vec3h(0, 1, 2)); // buffer holding a d.vec3h value, with an initial value of vec3h(0, 1, 2);
  */
-export const vec3h = makeVecSchema(Vec3hImpl, 0) as Vec3h;
+export const vec3h = makeVecSchema(Vec3hImpl) as Vec3h;
 
 /**
  *
@@ -155,7 +155,7 @@ export const vec3h = makeVecSchema(Vec3hImpl, 0) as Vec3h;
  * @example
  * const buffer = root.createBuffer(d.vec3i, d.vec3i(0, 1, 2)); // buffer holding a d.vec3i value, with an initial value of vec3i(0, 1, 2);
  */
-export const vec3i = makeVecSchema(Vec3iImpl, 0) as Vec3i;
+export const vec3i = makeVecSchema(Vec3iImpl) as Vec3i;
 
 /**
  *
@@ -170,7 +170,7 @@ export const vec3i = makeVecSchema(Vec3iImpl, 0) as Vec3i;
  * @example
  * const buffer = root.createBuffer(d.vec3u, d.vec3u(0, 1, 2)); // buffer holding a d.vec3u value, with an initial value of vec3u(0, 1, 2);
  */
-export const vec3u = makeVecSchema(Vec3uImpl, 0) as Vec3u;
+export const vec3u = makeVecSchema(Vec3uImpl) as Vec3u;
 
 /**
  *
@@ -182,7 +182,7 @@ export const vec3u = makeVecSchema(Vec3uImpl, 0) as Vec3u;
  * const vector = d.vec3b(true); // (true, true, true)
  * const vector = d.vec3b(false, true, false); // (false, true, false)
  */
-export const vec3b = makeVecSchema(Vec3bImpl, false) as Vec3b;
+export const vec3b = makeVecSchema(Vec3bImpl) as Vec3b;
 
 /**
  *
@@ -197,7 +197,7 @@ export const vec3b = makeVecSchema(Vec3bImpl, false) as Vec3b;
  * @example
  * const buffer = root.createBuffer(d.vec4f, d.vec4f(0, 1, 2, 3)); // buffer holding a d.vec4f value, with an initial value of vec4f(0, 1, 2, 3);
  */
-export const vec4f = makeVecSchema(Vec4fImpl, 0) as Vec4f;
+export const vec4f = makeVecSchema(Vec4fImpl) as Vec4f;
 
 /**
  *
@@ -212,7 +212,7 @@ export const vec4f = makeVecSchema(Vec4fImpl, 0) as Vec4f;
  * @example
  * const buffer = root.createBuffer(d.vec4h, d.vec4h(0, 1, 2, 3)); // buffer holding a d.vec4h value, with an initial value of vec4h(0, 1, 2, 3);
  */
-export const vec4h = makeVecSchema(Vec4hImpl, 0) as Vec4h;
+export const vec4h = makeVecSchema(Vec4hImpl) as Vec4h;
 
 /**
  *
@@ -227,7 +227,7 @@ export const vec4h = makeVecSchema(Vec4hImpl, 0) as Vec4h;
  * @example
  * const buffer = root.createBuffer(d.vec4i, d.vec4i(0, 1, 2, 3)); // buffer holding a d.vec4i value, with an initial value of vec4i(0, 1, 2, 3);
  */
-export const vec4i = makeVecSchema(Vec4iImpl, 0) as Vec4i;
+export const vec4i = makeVecSchema(Vec4iImpl) as Vec4i;
 
 /**
  *
@@ -242,7 +242,7 @@ export const vec4i = makeVecSchema(Vec4iImpl, 0) as Vec4i;
  * @example
  * const buffer = root.createBuffer(d.vec4u, d.vec4u(0, 1, 2, 3)); // buffer holding a d.vec4u value, with an initial value of vec4u(0, 1, 2, 3);
  */
-export const vec4u = makeVecSchema(Vec4uImpl, 0) as Vec4u;
+export const vec4u = makeVecSchema(Vec4uImpl) as Vec4u;
 
 /**
  *
@@ -254,7 +254,7 @@ export const vec4u = makeVecSchema(Vec4uImpl, 0) as Vec4u;
  * const vector = d.vec4b(true); // (true, true, true, true)
  * const vector = d.vec4b(false, true, false, true); // (false, true, false, true)
  */
-export const vec4b = makeVecSchema(Vec4bImpl, false) as Vec4b;
+export const vec4b = makeVecSchema(Vec4bImpl) as Vec4b;
 
 // --------------
 // Implementation
@@ -285,7 +285,6 @@ type VecSchemaBase<TValue> = {
 
 function makeVecSchema<TValue, S extends number | boolean>(
   VecImpl: new (...args: S[]) => VecBase<S>,
-  defaultValue: S,
 ): VecSchemaBase<TValue> & ((...args: (S | AnyVecInstance)[]) => TValue) {
   const { kind: type, length: componentCount } = new VecImpl();
 
@@ -305,7 +304,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
       }
 
       if (values.length <= 1 || values.length === componentCount) {
-        return new VecImpl(defaultValue, ...values) as TValue;
+        return new VecImpl(...values) as TValue;
       }
 
       throw new Error(

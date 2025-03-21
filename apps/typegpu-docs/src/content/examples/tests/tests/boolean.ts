@@ -150,5 +150,3 @@ export const booleanTests = tgpu['~unstable'].fn([], bool).does(() => {
 
   return s;
 });
-
-console.log(tgpu.resolve({ externals: { booleanTests } }));

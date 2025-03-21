@@ -573,6 +573,35 @@ describe('v4f', () => {
 });
 
 describe('v4b', () => {
+  describe('swizzles', () => {
+    it('should create a vector using identity swizzle', () => {
+      const vec = d.vec4b(false, true, true, false);
+      const swizzled = vec.xyzw;
+      expect(swizzled.x).toEqual(false);
+      expect(swizzled.y).toEqual(true);
+      expect(swizzled.z).toEqual(true);
+      expect(swizzled.w).toEqual(false);
+    });
+
+    it('should create a vector using mixed swizzle', () => {
+      const vec = d.vec4b(false, true, true, false);
+      const swizzled = vec.zywx;
+      expect(swizzled.x).toEqual(true);
+      expect(swizzled.y).toEqual(true);
+      expect(swizzled.z).toEqual(false);
+      expect(swizzled.w).toEqual(false);
+    });
+
+    it('should create a vector using swizzle with repeats', () => {
+      const vec = d.vec4b(false, true, true, false);
+      const swizzled = vec.yyww;
+      expect(swizzled.x).toEqual(true);
+      expect(swizzled.y).toEqual(true);
+      expect(swizzled.z).toEqual(false);
+      expect(swizzled.w).toEqual(false);
+    });
+  });
+
   describe('(v3b, bool) constructor', () => {
     it('works in JS', () => {
       const vecA = d.vec3b(true, false, true);
