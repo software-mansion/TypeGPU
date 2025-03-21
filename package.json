@@ -39,7 +39,7 @@
     "@webgpu/types": "catalog:",
     "@types/node": "^22.13.4",
     "dpdm": "^3.14.0",
-    "pkg-pr-new": "^0.0.39",
+    "pkg-pr-new": "^0.0.41",
     "tsup": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
