@@ -39,7 +39,7 @@
     "motion": "^12.4.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "remeda": "^2.3.0",
+    "remeda": "^2.21.2",
     "sharp": "^0.32.5",
     "starlight-blog": "^0.17.3",
     "starlight-typedoc": "^0.19.0",
