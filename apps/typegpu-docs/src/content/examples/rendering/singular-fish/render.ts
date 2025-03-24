@@ -9,8 +9,56 @@ import {
 } from './schemas';
 import { hsvToRgb, rgbToHsv } from './tgsl-helpers';
 
-const { camera, modelTexture, sampler, modelData } =
+const { camera, modelTexture, sampler, modelData, currentTime } =
   renderBindGroupLayout.bound;
+
+const ApplySinWaveReturnSchema = d.struct({
+  position: d.vec3f,
+  normal: d.vec3f,
+});
+
+const applySinWave = tgpu['~unstable']
+  .fn([d.u32, d.vec3f, d.vec3f], ApplySinWaveReturnSchema)
+  .does((time, position, normal) => {
+    const timeFactor = d.f32(time) / 1000;
+
+    const positionModification = d.vec3f(
+      0,
+      0,
+      std.sin(timeFactor + position.x),
+    );
+
+    // add the vector orthogonal to the sin wave, keep the Y angle as it was
+    const modelNormal = normal;
+    const modelNormalXZ = std.normalize(
+      d.vec3f(modelNormal.x, 0, modelNormal.z),
+    );
+
+    const coeff = std.cos(timeFactor + position.x);
+    let normalModificationXZ = std.normalize(d.vec3f(-coeff, 0, 1));
+    if (std.dot(normalModificationXZ, normal) < 0) {
+      normalModificationXZ = std.mul(-1, normalModificationXZ);
+    }
+    const newNormalXZ = std.normalize(
+      std.add(std.mul(1.1, modelNormalXZ), normalModificationXZ),
+    );
+
+    const cosTheta = std.dot(modelNormal, modelNormalXZ);
+    const wavedNormal = std.normalize(
+      d.vec3f(
+        newNormalXZ.x,
+        std.pow(1 / cosTheta / cosTheta - 1, 0.5),
+        newNormalXZ.z,
+      ),
+    );
+
+    const wavedPosition = std.add(position, positionModification);
+
+    return ApplySinWaveReturnSchema({
+      position: wavedPosition,
+      normal: wavedNormal,
+    });
+  });
 
 export const vertexShader = tgpu['~unstable']
   .vertexFn({
@@ -22,7 +70,17 @@ export const vertexShader = tgpu['~unstable']
     // https://simple.wikipedia.org/wiki/Pitch,_yaw,_and_roll
     const currentModelData = modelData.value[input.instanceIndex];
 
-    const modelPosition = input.modelPosition;
+    // apply sin wave
+
+    const wavedResults = applySinWave(
+      currentTime.value,
+      input.modelPosition,
+      input.modelNormal,
+    );
+    const wavedPosition = wavedResults.position;
+    const wavedNormal = wavedResults.normal;
+
+    // rotate model
 
     const direction = std.normalize(currentModelData.direction);
 
@@ -45,14 +103,14 @@ export const vertexShader = tgpu['~unstable']
     const worldPosition = std.add(
       std.mul(
         yawMatrix,
-        std.mul(pitchMatrix, std.mul(currentModelData.scale, modelPosition)),
+        std.mul(pitchMatrix, std.mul(currentModelData.scale, wavedPosition)),
       ),
       currentModelData.position,
     );
 
     // calculate where the normal vector points to
     const worldNormal = std.normalize(
-      std.mul(pitchMatrix, std.mul(yawMatrix, input.modelNormal)),
+      std.mul(pitchMatrix, std.mul(yawMatrix, wavedNormal)),
     );
 
     // project the world position into the camera

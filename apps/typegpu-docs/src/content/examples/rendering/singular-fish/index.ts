@@ -238,29 +238,6 @@ function frame(timestamp: DOMHighResTimeStamp) {
       depthLoadOp: 'clear',
       depthStoreOp: 'store',
     })
-    .with(modelVertexLayout, oceanFloorModel.vertexBuffer)
-    .with(renderInstanceLayout, oceanFloorDataBuffer)
-    .with(renderBindGroupLayout, renderOceanFloorBindGroup)
-    .draw(oceanFloorModel.polygonCount, 1);
-
-  renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      clearValue: [
-        p.backgroundColor.x,
-        p.backgroundColor.y,
-        p.backgroundColor.z,
-        1,
-      ],
-      loadOp: 'load' as const,
-      storeOp: 'store' as const,
-    })
-    .withDepthStencilAttachment({
-      view: depthTexture.createView(),
-      depthClearValue: 1,
-      depthLoadOp: 'load',
-      depthStoreOp: 'store',
-    })
     .with(modelVertexLayout, fishModel.vertexBuffer)
     .with(renderInstanceLayout, fishDataBuffers[odd ? 1 : 0])
     .with(renderBindGroupLayout, renderFishBindGroups[odd ? 1 : 0])
