@@ -63,6 +63,7 @@ export const renderBindGroupLayout = tgpu
     modelTexture: { texture: 'float' },
     camera: { uniform: Camera },
     sampler: { sampler: 'filtering' },
+    currentTime: { uniform: d.u32 },
   })
   .$name('render bind group layout');
 
@@ -75,6 +76,5 @@ export const computeBindGroupLayout = tgpu
     },
     mouseRay: { uniform: MouseRay },
     timePassed: { uniform: d.u32 },
-    currentTime: { uniform: d.u32 },
   })
   .$name('compute bind group layout');

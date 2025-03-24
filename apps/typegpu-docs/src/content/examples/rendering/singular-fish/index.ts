@@ -177,6 +177,7 @@ const renderFishBindGroups = [0, 1].map((idx) =>
     camera: cameraBuffer,
     modelTexture: fishModel.texture,
     sampler: sampler,
+    currentTime: currentTimeBuffer,
   }),
 );
 
@@ -185,6 +186,7 @@ const renderOceanFloorBindGroup = root.createBindGroup(renderBindGroupLayout, {
   camera: cameraBuffer,
   modelTexture: oceanFloorModel.texture,
   sampler: sampler,
+  currentTime: currentTimeBuffer,
 });
 
 const computeBindGroups = [0, 1].map((idx) =>
@@ -193,7 +195,6 @@ const computeBindGroups = [0, 1].map((idx) =>
     nextFishData: fishDataBuffers[1 - idx],
     mouseRay: mouseRayBuffer,
     timePassed: timePassedBuffer,
-    currentTime: currentTimeBuffer,
   }),
 );
 
@@ -289,25 +290,24 @@ let cameraYaw =
   Math.PI;
 let cameraPitch = Math.asin(p.cameraInitialPosition.y / cameraRadius);
 
-function updateCameraTarget(cx: number, cy: number) {
-  // make it so the drag does the same movement regardless of size
-  const box = canvas.getBoundingClientRect();
-  const dx = cx / box.width;
-  const dy = cy / box.height;
+function updateCameraOrbit(dx: number, dy: number) {
+  const orbitSensitivity = 0.005;
+  cameraYaw += -dx * orbitSensitivity;
+  cameraPitch += dy * orbitSensitivity;
+  // if we didn't limit pitch, it would lead to flipping the camera which is disorienting.
+  const maxPitch = Math.PI / 2 - 0.01;
+  if (cameraPitch > maxPitch) cameraPitch = maxPitch;
+  if (cameraPitch < -maxPitch) cameraPitch = -maxPitch;
+  // basically converting spherical coordinates to cartesian.
+  // like sampling points on a unit sphere and then scaling them by the radius.
+  const newCamX = 0.25 * Math.sin(cameraYaw) * Math.cos(cameraPitch);
+  const newCamY = 0.25 * Math.sin(cameraPitch);
+  const newCamZ = 0.25 * Math.cos(cameraYaw) * Math.cos(cameraPitch);
+  const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
 
-  cameraYaw += dx * 2.5;
-  cameraPitch += dy * 2.5;
-
-  cameraYaw = std.clamp(cameraYaw, (Math.PI / 4) * -0.2, (Math.PI / 4) * 2.2);
-  cameraPitch = std.clamp(cameraPitch, -Math.PI / 4, Math.PI / 4);
-
-  const newCamX = cameraRadius * Math.sin(cameraYaw) * Math.cos(cameraPitch);
-  const newCamY = cameraRadius * Math.sin(cameraPitch);
-  const newCamZ = cameraRadius * Math.cos(cameraYaw) * Math.cos(cameraPitch);
-
-  camera.targetPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
+  camera.position = d.vec4f(newCamX, newCamY, newCamZ, 1);
   camera.view = m.mat4.lookAt(
-    p.cameraInitialPosition,
+    newCameraPos,
     camera.targetPos,
     d.vec3f(0, 1, 0),
     d.mat4x4f(),
@@ -382,7 +382,8 @@ window.addEventListener('mousemove', (event) => {
   previousMouseY = event.clientY;
 
   if (isLeftPressed) {
-    updateCameraTarget(dx, dy);
+    // updateCameraTarget(dx, dy);
+    updateCameraOrbit(dx, dy);
   }
 
   if (isRightPressed) {
