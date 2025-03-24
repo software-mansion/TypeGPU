@@ -183,8 +183,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/unplugin-typegpu
       wgpu-matrix:
-        specifier: ^3.3.0
-        version: 3.3.0
+        specifier: ^3.4.0
+        version: 3.4.0
     devDependencies:
       '@types/babel__standalone':
         specifier: ^7.1.9
@@ -382,8 +382,8 @@ importers:
         specifier: 0.6.0-rc1
         version: 0.6.0-rc1
       wgpu-matrix:
-        specifier: ^3.3.0
-        version: 3.3.0
+        specifier: ^3.4.0
+        version: 3.4.0
     publishDirectory: dist
 
   packages/typegpu-color:
@@ -4902,8 +4902,8 @@ packages:
   wesl@0.6.0-rc1:
     resolution: {integrity: sha512-jP/VGaBxaqz+zKrgUkCgRmtO9GcT+JDFn7NgLtVg0xF7nxfX52RybMuSNuwyPB1qJwCMH/yjmeHK71v98GXwbg==}
 
-  wgpu-matrix@3.3.0:
-    resolution: {integrity: sha512-MRdywXdzTwX9pVbO5Z/oRX9l7464Wkfv28glG1c7t7s5v/0Dvts6yV8b4AOTOTl1UDGq9KUEAoSN6KW5P12ruQ==}
+  wgpu-matrix@3.4.0:
+    resolution: {integrity: sha512-kXHrbAPKEn9A32Wf4wVldyx9MmnzwhuB5p8GCqoJP3ItU5+iDT4J3aTQwPZWkfb153hwGtqZtUwR2M+ipJKadg==}
 
   wgsl_reflect@https://codeload.github.com/mhawryluk/wgsl_reflect/tar.gz/85994fdc8d8a3abbb4f79baf3891e54eed0c1c63:
     resolution: {tarball: https://codeload.github.com/mhawryluk/wgsl_reflect/tar.gz/85994fdc8d8a3abbb4f79baf3891e54eed0c1c63}
@@ -10122,7 +10122,7 @@ snapshots:
     dependencies:
       mini-parse: 0.6.0-rc1
 
-  wgpu-matrix@3.3.0: {}
+  wgpu-matrix@3.4.0: {}
 
   wgsl_reflect@https://codeload.github.com/mhawryluk/wgsl_reflect/tar.gz/85994fdc8d8a3abbb4f79baf3891e54eed0c1c63: {}
 
