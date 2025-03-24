@@ -790,4 +790,84 @@ describe('wgslGenerator', () => {
       }
     `);
   });
+
+  it('allows for member access on values returned from function calls', () => {
+    const TestStruct = d.struct({
+      x: d.u32,
+      y: d.vec3f,
+    });
+
+    const fnOne = tgpu['~unstable'].fn([], TestStruct).does(() => {
+      return TestStruct({ x: 1, y: d.vec3f(1, 2, 3) });
+    });
+
+    const fnTwo = tgpu['~unstable'].fn([], d.f32).does(() => {
+      return fnOne().y.x;
+    });
+
+    expect(parseResolved({ fnTwo })).toEqual(
+      parse(`
+      struct TestStruct {
+        x: u32,
+        y: vec3f,
+      }
+
+      fn fnOne() -> TestStruct {
+        return TestStruct(1, vec3f(1, 2, 3));
+      }
+
+      fn fnTwo() -> f32 {
+        return fnOne().y.x;
+      }`),
+    );
+
+    const astInfo = getPrebuiltAstFor(
+      fnTwo[$internal].implementation as (...args: unknown[]) => unknown,
+    );
+
+    if (!astInfo) {
+      throw new Error('Expected prebuilt AST to be present');
+    }
+
+    expect(astInfo.ast.body).toMatchInlineSnapshot(`
+      {
+        "b": [
+          {
+            "r": {
+              "a": [
+                {
+                  "a": [
+                    {
+                      "f": [
+                        "fnOne",
+                        [],
+                      ],
+                    },
+                    "y",
+                  ],
+                },
+                "x",
+              ],
+            },
+          },
+        ],
+      }
+    `);
+
+    ctx[$internal].itemStateStack.pushFunctionScope(
+      [],
+      d.f32,
+      astInfo.externals ?? {},
+    );
+
+    // Check for: return fnOne().y.x;
+    //                     ^ this should be a f32
+    const res = wgslGenerator.generateExpression(
+      ctx,
+      // biome-ignore lint/suspicious/noExplicitAny: <sue me>
+      (astInfo.ast.body as any).b[0].r as smol.Expression,
+    );
+
+    expect(res.dataType).toEqual(d.f32);
+  });
 });
