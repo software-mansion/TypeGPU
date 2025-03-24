@@ -19,6 +19,7 @@ export {
   floor,
   fract,
   isCloseTo,
+  identity,
   length,
   max,
   min,

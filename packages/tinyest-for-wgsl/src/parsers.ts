@@ -230,6 +230,16 @@ const Transpilers: Partial<{
     return { f: [callee, args] };
   },
 
+  ArrayExpression(ctx, node) {
+    const elements = node.elements.map((elem) => {
+      if (!elem || elem.type === 'SpreadElement') {
+        throw new Error('Spread elements are not supported in TGSL.');
+      }
+      return transpile(ctx, elem) as smol.Expression;
+    });
+    return { y: elements };
+  },
+
   VariableDeclaration(ctx, node) {
     if (node.declarations.length !== 1 || !node.declarations[0]) {
       throw new Error(

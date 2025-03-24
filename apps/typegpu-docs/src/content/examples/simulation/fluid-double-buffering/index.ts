@@ -118,7 +118,7 @@ const addDensity = tgpu['~unstable']
 
 const flowFromCell = tgpu['~unstable']
   .fn([d.i32, d.i32, d.i32, d.i32], d.f32)
-  .does((my_x, my_y, x, y) => {
+  .does((myX, myY, x, y) => {
     if (!isValidCoord(x, y)) {
       return 0;
     }
@@ -133,12 +133,12 @@ const flowFromCell = tgpu['~unstable']
       outFlow = 0;
     }
 
-    if (my_x === x && my_y === y) {
+    if (myX === x && myY === y) {
       // 'src.z - outFlow' is how much is left in the src
       return src.z - outFlow;
     }
 
-    if (destPos.x === my_x && destPos.y === my_y) {
+    if (destPos.x === myX && destPos.y === myY) {
       return outFlow;
     }
 
@@ -151,25 +151,25 @@ const timeUniform = timeBuffer.as('uniform');
 const isInsideObstacle = tgpu['~unstable']
   .fn([d.i32, d.i32], d.bool)
   .does((x, y) => {
-    for (let obs_idx = 0; obs_idx < MAX_OBSTACLES; obs_idx += 1) {
-      const obs = obstaclesReadonly.value[obs_idx];
+    for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
+      const obs = obstaclesReadonly.value[obsIdx];
 
       if (obs.enabled === 0) {
         continue;
       }
 
-      const min_x = std.max(0, d.i32(obs.center.x) - d.i32(obs.size.x) / 2);
-      const max_x = std.min(
+      const minX = std.max(0, d.i32(obs.center.x) - d.i32(obs.size.x) / 2);
+      const maxX = std.min(
         d.i32(gridSize),
         d.i32(obs.center.x) + d.i32(obs.size.x) / 2,
       );
-      const min_y = std.max(0, d.i32(obs.center.y) - d.i32(obs.size.y) / 2);
-      const max_y = std.min(
+      const minY = std.max(0, d.i32(obs.center.y) - d.i32(obs.size.y) / 2);
+      const maxY = std.min(
         d.i32(gridSize),
         d.i32(obs.center.y) + d.i32(obs.size.y) / 2,
       );
 
-      if (x >= min_x && x <= max_x && y >= min_y && y <= max_y) {
+      if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
         return true;
       }
     }
@@ -193,52 +193,49 @@ const isValidFlowOut = tgpu['~unstable']
 
 const computeVelocity = tgpu['~unstable']
   .fn([d.i32, d.i32], d.vec2f)
-  .does(/* wgsl */ `(x: i32, y: i32) -> vec2f {
-    let gravity_cost = 0.5;
+  .does((x, y) => {
+    const gravityCost = 0.5;
 
-    let neighbor_offsets = array<vec2i, 4>(
-      vec2i( 0,  1),
-      vec2i( 0, -1),
-      vec2i( 1,  0),
-      vec2i(-1,  0),
-    );
+    const neighborOffsets = [
+      d.vec2i(0, 1),
+      d.vec2i(0, -1),
+      d.vec2i(1, 0),
+      d.vec2i(-1, 0),
+    ];
 
-    let cell = getCell(x, y);
-    var least_cost = cell.z;
+    const cell = getCell(x, y);
+    let leastCost = cell.z;
 
-    // Direction choices of the same cost, one is chosen
-    // randomly at the end of the process.
-    var dir_choices: array<vec2f, 4>;
-    var dir_choice_count: u32 = 1;
-    dir_choices[0] = vec2f(0., 0.);
+    const dirChoices = [
+      d.vec2f(0, 0),
+      d.vec2f(0, 0),
+      d.vec2f(0, 0),
+      d.vec2f(0, 0),
+    ];
+    let dirChoiceCount = 1;
 
-    for (var i = 0; i < 4; i++) {
-      let offset = neighbor_offsets[i];
-      let neighbor_density = getCell(x + offset.x, y + offset.y).z;
-      let cost = neighbor_density + f32(offset.y) * gravity_cost;
-      let is_valid_flow_out = isValidFlowOut(x + offset.x, y + offset.y);
+    for (let i = 0; i < 4; i++) {
+      const offset = neighborOffsets[i];
+      const neighborDensity = getCell(x + offset.x, y + offset.y);
+      const cost = neighborDensity.z + d.f32(offset.y) * gravityCost;
 
-      if (!is_valid_flow_out) {
+      if (!isValidFlowOut(x + offset.x, y + offset.y)) {
         continue;
       }
 
-      if (cost == least_cost) {
-        // another valid direction
-        dir_choices[dir_choice_count] = vec2f(f32(offset.x), f32(offset.y));
-        dir_choice_count++;
-      }
-      else if (cost < least_cost) {
-        // new best choice
-        least_cost = cost;
-        dir_choices[0] = vec2f(f32(offset.x), f32(offset.y));
-        dir_choice_count = 1;
+      if (cost === leastCost) {
+        dirChoices[dirChoiceCount] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
+        dirChoiceCount++;
+      } else if (cost < leastCost) {
+        leastCost = cost;
+        dirChoices[0] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
+        dirChoiceCount = 1;
       }
     }
 
-    let least_cost_dir = dir_choices[u32(rand01() * f32(dir_choice_count))];
-    return least_cost_dir;
-  }`)
-  .$uses({ getCell, isValidFlowOut, isValidCoord, rand01 });
+    const leastCostDir = dirChoices[d.u32(rand01() * d.f32(dirChoiceCount))];
+    return leastCostDir;
+  });
 
 const mainInitWorld = tgpu['~unstable']
   .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })
@@ -265,7 +262,7 @@ const mainInitWorld = tgpu['~unstable']
 const mainMoveObstacles = tgpu['~unstable']
   .computeFn({ workgroupSize: [1] })
   .does(() => {
-    for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx += 1) {
+    for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
       const obs = prevObstacleReadonly.value[obsIdx];
       const nextObs = obstaclesReadonly.value[obsIdx];
 
@@ -278,13 +275,13 @@ const mainMoveObstacles = tgpu['~unstable']
         d.vec2i(d.i32(obs.center.x), d.i32(obs.center.y)),
       );
 
-      const min_x = std.max(0, d.i32(obs.center.x) - d.i32(obs.size.x) / 2);
-      const max_x = std.min(
+      const minX = std.max(0, d.i32(obs.center.x) - d.i32(obs.size.x) / 2);
+      const maxX = std.min(
         d.i32(gridSize),
         d.i32(obs.center.x) + d.i32(obs.size.x) / 2,
       );
-      const min_y = std.max(0, d.i32(obs.center.y) - d.i32(obs.size.y) / 2);
-      const max_y = std.min(
+      const minY = std.max(0, d.i32(obs.center.y) - d.i32(obs.size.y) / 2);
+      const maxY = std.min(
         d.i32(gridSize),
         d.i32(obs.center.y) + d.i32(obs.size.y) / 2,
       );
@@ -308,9 +305,9 @@ const mainMoveObstacles = tgpu['~unstable']
 
       // does it move right
       if (diff.x > 0) {
-        for (let y = min_y; y <= max_y; y += 1) {
+        for (let y = minY; y <= maxY; y++) {
           let rowDensity = d.f32(0);
-          for (let x = max_x; x <= nextMaxX; x += 1) {
+          for (let x = maxX; x <= nextMaxX; x++) {
             const cell = getCell(x, y);
             rowDensity += cell.z;
             cell.z = 0;
@@ -323,9 +320,9 @@ const mainMoveObstacles = tgpu['~unstable']
 
       // does it move left
       if (diff.x < 0) {
-        for (let y = min_y; y <= max_y; y += 1) {
+        for (let y = minY; y <= maxY; y++) {
           let rowDensity = d.f32(0);
-          for (let x = nextMinX; x < min_x; x += 1) {
+          for (let x = nextMinX; x < minX; x++) {
             const cell = getCell(x, y);
             rowDensity += cell.z;
             cell.z = 0;
@@ -338,9 +335,9 @@ const mainMoveObstacles = tgpu['~unstable']
 
       // does it move up
       if (diff.y > 0) {
-        for (let x = min_x; x <= max_x; x += 1) {
+        for (let x = minX; x <= maxX; x++) {
           let colDensity = d.f32(0);
-          for (let y = max_y; y <= nextMaxY; y += 1) {
+          for (let y = maxY; y <= nextMaxY; y++) {
             const cell = getCell(x, y);
             colDensity += cell.z;
             cell.z = 0;
@@ -352,9 +349,9 @@ const mainMoveObstacles = tgpu['~unstable']
       }
 
       // does it move down
-      for (let x = min_x; x <= max_x; x += 1) {
+      for (let x = minX; x <= maxX; x++) {
         let colDensity = d.f32(0);
-        for (let y = nextMinY; y < min_y; y += 1) {
+        for (let y = nextMinY; y < minY; y++) {
           const cell = getCell(x, y);
           colDensity += cell.z;
           cell.z = 0;
@@ -367,7 +364,7 @@ const mainMoveObstacles = tgpu['~unstable']
       // Recompute velocity around the obstacle so that no cells end up inside it on the next tick.
 
       // left column
-      for (let y = nextMinY; y <= nextMaxY; y += 1) {
+      for (let y = nextMinY; y <= nextMaxY; y++) {
         const newVel = computeVelocity(nextMinX - 1, y);
         setVelocity(nextMinX - 1, y, newVel);
       }
@@ -376,7 +373,7 @@ const mainMoveObstacles = tgpu['~unstable']
       for (
         let y = std.max(1, nextMinY);
         y <= std.min(nextMaxY, gridSize - 2);
-        y += 1
+        y++
       ) {
         const newVel = computeVelocity(nextMaxX + 2, y);
         setVelocity(nextMaxX + 2, y, newVel);
@@ -446,8 +443,8 @@ const mainCompute = tgpu['~unstable']
     next.z += flowFromCell(x, y, x + 1, y);
     next.z += flowFromCell(x, y, x - 1, y);
 
-    const min_inflow = getMinimumInFlow(x, y);
-    next.z = std.max(min_inflow, next.z);
+    const minInflow = getMinimumInFlow(x, y);
+    next.z = std.max(minInflow, next.z);
 
     outputGridSlot.value[index] = next;
   });
@@ -490,26 +487,20 @@ const vertexMain = tgpu['~unstable']
     in: { idx: d.builtin.vertexIndex },
     out: { pos: d.builtin.position, uv: d.vec2f },
   })
-  .does(/* wgsl */ `(input: VertexInput) -> VertexOut {
-    var pos = array<vec2f, 4>(
-      vec2(1, 1), // top-right
-      vec2(-1, 1), // top-left
-      vec2(1, -1), // bottom-right
-      vec2(-1, -1) // bottom-left
-    );
+  .does((input) => {
+    const pos = [
+      d.vec2f(1, 1),
+      d.vec2f(-1, 1),
+      d.vec2f(1, -1),
+      d.vec2f(-1, -1),
+    ];
+    const uv = [d.vec2f(1, 1), d.vec2f(0, 1), d.vec2f(1, 0), d.vec2f(0, 0)];
 
-    var uv = array<vec2f, 4>(
-      vec2(1., 1.), // top-right
-      vec2(0., 1.), // top-left
-      vec2(1., 0.), // bottom-right
-      vec2(0., 0.) // bottom-left
-    );
-
-    var output: VertexOut;
-    output.pos = vec4f(pos[input.idx].x, pos[input.idx].y, 0.0, 1.0);
-    output.uv = uv[input.idx];
-    return output;
-  }`);
+    return {
+      pos: d.vec4f(pos[input.idx].x, pos[input.idx].y, 0.0, 1.0),
+      uv: uv[input.idx],
+    };
+  });
 
 const fragmentMain = tgpu['~unstable']
   .fragmentFn({ in: { uv: d.vec2f }, out: d.vec4f })
@@ -524,9 +515,9 @@ const fragmentMain = tgpu['~unstable']
     const obstacleColor = d.vec4f(0.1, 0.1, 0.1, 1);
 
     const background = d.vec4f(0.9, 0.9, 0.9, 1);
-    const first_color = d.vec4f(0.2, 0.6, 1, 1);
-    const second_color = d.vec4f(0.2, 0.3, 0.6, 1);
-    const third_color = d.vec4f(0.1, 0.2, 0.4, 1);
+    const firstColor = d.vec4f(0.2, 0.6, 1, 1);
+    const secondColor = d.vec4f(0.2, 0.3, 0.6, 1);
+    const thirdColor = d.vec4f(0.1, 0.2, 0.4, 1);
 
     const firstThreshold = d.f32(2);
     const secondThreshold = d.f32(10);
@@ -542,20 +533,20 @@ const fragmentMain = tgpu['~unstable']
 
     if (density <= firstThreshold) {
       const t = 1 - std.pow(1 - density / firstThreshold, 2);
-      return std.mix(background, first_color, t);
+      return std.mix(background, firstColor, t);
     }
 
     if (density <= secondThreshold) {
       return std.mix(
-        first_color,
-        second_color,
+        firstColor,
+        secondColor,
         (density - firstThreshold) / (secondThreshold - firstThreshold),
       );
     }
 
     return std.mix(
-      second_color,
-      third_color,
+      secondColor,
+      thirdColor,
       std.min((density - secondThreshold) / thirdThreshold, 1),
     );
   });

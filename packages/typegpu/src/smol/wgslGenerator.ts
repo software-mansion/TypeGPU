@@ -315,6 +315,45 @@ export function generateExpression(
     };
   }
 
+  if ('y' in expression) {
+    // Array Expression
+    const values = expression.y.map((value) => {
+      return generateExpression(ctx, value);
+    });
+    if (values.length === 0) {
+      throw new Error('Cannot create empty array literal.');
+    }
+
+    let type = values[0]?.dataType;
+    const mismatchedType = values.find((value) => value.dataType !== type);
+    if (mismatchedType) {
+      throw new Error(
+        `Cannot mix types in array literal. Type ${mismatchedType.dataType.type} does not match expected type ${type?.type}.`,
+      );
+    }
+
+    if (!wgsl.isWgslData(type)) {
+      throw new Error('Cannot use non-WGSL data types in array literals.');
+    }
+
+    type =
+      type.type === 'abstractInt'
+        ? d.u32
+        : type.type === 'abstractFloat'
+          ? d.f32
+          : type;
+
+    const typeId = ctx.resolve(type);
+
+    const arrayType = `array<${typeId}, ${values.length}>`;
+    const arrayValues = values.map((value) => resolveRes(ctx, value));
+
+    return {
+      value: `${arrayType}( ${arrayValues.join(', ')} )`,
+      dataType: d.arrayOf(type as d.AnyWgslData, values.length),
+    };
+  }
+
   if ('s' in expression) {
     throw new Error('Cannot use string literals in TGSL.');
   }

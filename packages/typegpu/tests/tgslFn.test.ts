@@ -1,8 +1,8 @@
-import { parse } from 'tgpu-wgsl-parser';
 import { describe, expect, it } from 'vitest';
 import tgpu from '../src';
 import { builtin } from '../src/builtin';
 import { f32, location, struct, vec2f, vec3f, vec4f } from '../src/data';
+import { parse } from './utils/parseResolved';
 import { parseResolved } from './utils/parseResolved';
 
 describe('TGSL tgpu.fn function', () => {
