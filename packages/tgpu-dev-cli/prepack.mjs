@@ -12,8 +12,11 @@ import color from './colors.mjs';
 import { FAIL, IN_PROGRESS, SUCCESS } from './icons.mjs';
 import { Frog } from './log.mjs';
 import { progress } from './progress.mjs';
+import { verifyPublishTag } from './verify-publish-tag.mjs';
 
 const cwd = new URL(`file:${process.cwd()}/`);
+
+verifyPublishTag();
 
 /**
  * @param {*} value

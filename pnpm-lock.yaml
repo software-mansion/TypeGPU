@@ -210,6 +210,9 @@ importers:
       arg:
         specifier: ^5.0.2
         version: 5.0.2
+      arktype:
+        specifier: ^2.1.0
+        version: 2.1.0
       consola:
         specifier: ^3.4.0
         version: 3.4.0
@@ -217,6 +220,9 @@ importers:
         specifier: ^9.5.2
         version: 9.5.2
       is-unicode-supported:
+        specifier: ^2.1.0
+        version: 2.1.0
+      pkg-types:
         specifier: ^2.1.0
         version: 2.1.0
       remeda:
