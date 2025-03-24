@@ -143,12 +143,12 @@ const flowFromCell = tgpu['~unstable'].fn(
     outFlow = 0;
   }
 
-  if (args.myX === args.x && AbortSignal.myY === args.y) {
+  if (args.myX === args.x && args.myY === args.y) {
     // 'src.z - outFlow' is how much is left in the src
     return src.z - outFlow;
   }
 
-  if (destPos.x === args.myX && destPos.y === AbortSignal.myY) {
+  if (destPos.x === args.myX && destPos.y === args.myY) {
     return outFlow;
   }
 
