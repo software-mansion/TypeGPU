@@ -147,8 +147,8 @@ importers:
         specifier: ^19.0.0
         version: 19.0.0(react@19.0.0)
       remeda:
-        specifier: ^2.3.0
-        version: 2.20.2
+        specifier: ^2.21.2
+        version: 2.21.2
       sharp:
         specifier: ^0.32.5
         version: 0.32.6
@@ -220,8 +220,8 @@ importers:
         specifier: ^2.1.0
         version: 2.1.0
       remeda:
-        specifier: ^2.3.0
-        version: 2.20.2
+        specifier: ^2.21.2
+        version: 2.21.2
 
   packages/tgpu-gen:
     dependencies:
@@ -235,8 +235,8 @@ importers:
         specifier: ^11.0.0
         version: 11.0.1
       remeda:
-        specifier: ^2.3.0
-        version: 2.20.2
+        specifier: ^2.21.2
+        version: 2.21.2
       wgsl_reflect:
         specifier: git://github.com/mhawryluk/wgsl_reflect.git#85994fdc8d8a3abbb4f79baf3891e54eed0c1c63
         version: https://codeload.github.com/mhawryluk/wgsl_reflect/tar.gz/85994fdc8d8a3abbb4f79baf3891e54eed0c1c63
@@ -4080,8 +4080,8 @@ packages:
   remark-stringify@11.0.0:
     resolution: {integrity: sha512-1OSmLd3awB/t8qdoEOMazZkNsfVTeY4fTsgzcQFdXNq8ToTN4ZGwrMnlda4K6smTFKD+GRV6O48i6Z4iKgPPpw==}
 
-  remeda@2.20.2:
-    resolution: {integrity: sha512-38pfm5aUq6mUkNYbt7TdY2WEk9mSqRVV+6UsoTjabwmbu8obLbh8sYYSX2WQ3W4u6EYp3XxUKqIiwGFZu+OY9g==}
+  remeda@2.21.2:
+    resolution: {integrity: sha512-wdhkMDou8HRpD7RnxKJ/FHJWEGXRH7jV/pb0NsdLLSoBo+G9RjtxcY41hVhogLfEMkThk6aySKjs+Yd6PnpzBA==}
 
   request-light@0.5.8:
     resolution: {integrity: sha512-3Zjgh+8b5fhRJBQZoy+zbVKpAQGLyka0MPgW3zruTF4dFFJ8Fqcfu9YsAvi/rvdcaTeWG3MkbZv4WKxAn/84Lg==}
@@ -4484,8 +4484,8 @@ packages:
     resolution: {integrity: sha512-Acylog8/luQ8L7il+geoSxhEkazvkslg7PSNKOX59mbB9cOveP5aq9h74Y7YU8yDpJwetzQQrfIwtf4Wp4LKcw==}
     engines: {node: '>=4'}
 
-  type-fest@4.35.0:
-    resolution: {integrity: sha512-2/AwEFQDFEy30iOLjrvHDIH7e4HEWH+f1Yl1bI5XMqzuoCUqwYCdxachgsgv0og/JdVZUhbfjcJAoHj5L1753A==}
+  type-fest@4.38.0:
+    resolution: {integrity: sha512-2dBz5D5ycHIoliLYLi0Q2V7KRaDlH0uWIvmk7TYlAg5slqwiPv1ezJdZm1QEM0xgk29oYWMCbIG7E6gHpvChlg==}
     engines: {node: '>=16'}
 
   typed-binary@4.3.2:
@@ -6844,7 +6844,7 @@ snapshots:
       chalk: 5.4.1
       cli-boxes: 3.0.0
       string-width: 7.2.0
-      type-fest: 4.35.0
+      type-fest: 4.38.0
       widest-line: 5.0.0
       wrap-ansi: 9.0.0
 
@@ -9229,9 +9229,9 @@ snapshots:
       mdast-util-to-markdown: 2.1.2
       unified: 11.0.5
 
-  remeda@2.20.2:
+  remeda@2.21.2:
     dependencies:
-      type-fest: 4.35.0
+      type-fest: 4.38.0
 
   request-light@0.5.8: {}
 
@@ -9725,7 +9725,7 @@ snapshots:
 
   type-detect@4.1.0: {}
 
-  type-fest@4.35.0: {}
+  type-fest@4.38.0: {}
 
   typed-binary@4.3.2: {}
 
