@@ -70,7 +70,23 @@ export type TgpuFragmentFnShell<
    */
   ((
     implementation: string,
-  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>);
+  ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>) & {
+    /**
+     * @deprecated Invoke the shell as a function instead.
+     */
+    does: ((
+      implementation: (input: InferIO<FragmentIn>) => InferIO<FragmentOut>,
+    ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>) &
+      /**
+       * @param implementation
+       *   Raw WGSL function implementation with header and body
+       *   without `fn` keyword and function name
+       *   e.g. `"(x: f32) -> f32 { return x; }"`;
+       */
+      ((
+        implementation: string,
+      ) => TgpuFragmentFn<OmitBuiltins<FragmentIn>, OmitBuiltins<FragmentOut>>);
+  };
 
 export interface TgpuFragmentFn<
   Varying extends FragmentInConstrained = FragmentInConstrained,
@@ -129,10 +145,9 @@ export function fragmentFn<
       | string,
   ) => createFragmentFn(shell, implementation as Implementation);
 
-  return Object.assign(call, shell) as TgpuFragmentFnShell<
-    FragmentIn,
-    FragmentOut
-  >;
+  return Object.assign(Object.assign(call, shell), {
+    does: call,
+  }) as TgpuFragmentFnShell<FragmentIn, FragmentOut>;
 }
 
 // --------------
