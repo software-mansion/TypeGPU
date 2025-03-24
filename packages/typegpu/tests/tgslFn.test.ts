@@ -344,6 +344,92 @@ describe('TGSL tgpu.fn function', () => {
     expect(actual).toEqual(expected);
   });
 
+  it('allows for an object based on return type struct to be returned', () => {
+    const TestStruct = struct({
+      a: f32,
+      b: f32,
+      c: vec2f,
+    }).$name('TestStruct');
+
+    const fn = tgpu['~unstable']
+      .fn([], TestStruct)
+      .does(() => {
+        return {
+          a: 1,
+          b: 2,
+          c: vec2f(3, 4),
+        };
+      })
+      .$name('test_struct');
+
+    const actual = parseResolved({ fn });
+
+    const expected = parse(`
+      struct TestStruct {
+        a: f32,
+        b: f32,
+        c: vec2f,
+      }
+
+      fn test_struct() -> TestStruct {
+        return TestStruct(1, 2, vec2f(3, 4));
+      }
+    `);
+
+    expect(actual).toEqual(expected);
+  });
+
+  it('correctly handles object based on return type struct with a function call inside another function', () => {
+    const TestStruct = struct({
+      a: f32,
+      b: f32,
+      c: vec2f,
+    }).$name('TestStruct');
+
+    const fn = tgpu['~unstable']
+      .fn([], TestStruct)
+      .does(() => {
+        return {
+          a: 1,
+          b: 2,
+          c: vec2f(3, 4),
+        };
+      })
+      .$name('test_struct');
+
+    const fn2 = tgpu['~unstable']
+      .computeFn({
+        in: { gid: builtin.globalInvocationId },
+        workgroupSize: [24],
+      })
+      .does(() => {
+        const testStruct = fn();
+      });
+
+    const actual = parseResolved({ fn2 });
+
+    const expected = parse(`
+      struct TestStruct {
+        a: f32,
+        b: f32,
+        c: vec2f,
+      }
+
+      fn test_struct() -> TestStruct {
+        return TestStruct(1, 2, vec2f(3, 4));
+      }
+
+      struct compute_fn_Input {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
+      @compute @workgroup_size(24)
+      fn compute_fn(input: compute_fn_Input) {
+        var testStruct = test_struct();
+      }
+    `);
+  });
+
   // TODO: Add this back when we can properly infer ast types (and implement appropriate behavior for pointers)
   // it('resolves a function with a pointer parameter', () => {
   //   const addOnes = tgpu['~unstable']
