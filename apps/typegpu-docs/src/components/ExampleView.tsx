@@ -100,13 +100,13 @@ export function ExampleView({ example }: Props) {
         <div
           className={cs(
             'flex-1 grid gap-4',
-            codeEditorShowing ? 'md:grid-rows-2' : '',
+            codeEditorShowing ? 'md:grid-rows-[2fr_3fr]' : '',
           )}
         >
           {isGPUSupported ? (
             <div
               style={{
-                scrollbarGutter: 'stable',
+                scrollbarGutter: 'stable both-edges',
               }}
               className={cs(
                 'flex justify-evenly items-center flex-wrap h-full box-border flex-col md:flex-row md:gap-4',
@@ -133,29 +133,39 @@ export function ExampleView({ example }: Props) {
                 'absolute bg-tameplum-50 z-20 md:relative h-[calc(100%-2rem)] w-[calc(100%-2rem)] md:w-full md:h-full',
               )}
             >
-              <div className="absolute inset-1">
-                <div className="flex overflow-auto border-gray-300 pt-16 md:pt-0">
-                  {editorTabsList.map((fileName) => (
-                    <button
-                      key={fileName}
-                      type="button"
-                      onClick={() => setCurrentFile(fileName)}
-                      className={cs(
-                        'px-4 py-2',
-                        currentFile === fileName
-                          ? 'rounded-t-lg rounded-bl-none rounded-br-none bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
-                          : 'rounded-t-lg rounded-bl-none rounded-br-none bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
-                      )}
-                    >
-                      {fileName}
-                    </button>
-                  ))}
+              <div className="absolute inset-0 flex flex-col justify-between">
+                <div className="h-12 pt-16 md:pt-0">
+                  <div className="flex overflow-x-auto border-gray-300 h-full">
+                    {editorTabsList.map((fileName) => (
+                      <button
+                        key={fileName}
+                        type="button"
+                        onClick={() => setCurrentFile(fileName)}
+                        className={cs(
+                          'px-4 rounded-t-lg rounded-b-none text-nowrap',
+                          currentFile === fileName
+                            ? 'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
+                            : 'bg-white border-tameplum-100 border-2 hover:bg-tameplum-20',
+                        )}
+                      >
+                        {fileName}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                {currentFile === 'index.html' ? (
-                  <HtmlCodeEditor shown code={htmlCode} />
-                ) : (
-                  <TsCodeEditor shown code={tsCodes[currentFile]} />
-                )}
+
+                <HtmlCodeEditor
+                  shown={currentFile === 'index.html'}
+                  code={htmlCode}
+                />
+
+                {Object.entries(tsCodes).map(([key, value]) => (
+                  <TsCodeEditor
+                    shown={key === currentFile}
+                    code={value}
+                    key={key}
+                  />
+                ))}
               </div>
             </div>
           ) : null}
@@ -207,15 +217,20 @@ function useResizableCanvas(
       frame.appendChild(newCanvas);
       container.appendChild(frame);
 
-      const aspectRatio = canvas.dataset.aspectRatio ?? '1';
-
       container.className =
         'flex flex-1 justify-center items-center w-full md:h-full md:w-auto';
       container.style.containerType = 'size';
 
       frame.className = 'relative';
-      frame.style.aspectRatio = aspectRatio;
-      frame.style.height = `min(calc(min(100cqw, 100cqh)/(${aspectRatio})), min(100cqw, 100cqh))`;
+
+      if (canvas.dataset.fitToContainer !== undefined) {
+        frame.style.width = '100%';
+        frame.style.height = '100%';
+      } else {
+        const aspectRatio = canvas.dataset.aspectRatio ?? '1';
+        frame.style.aspectRatio = aspectRatio;
+        frame.style.height = `min(calc(min(100cqw, 100cqh)/(${aspectRatio})), min(100cqw, 100cqh))`;
+      }
 
       for (const prop of canvas.style) {
         // @ts-ignore

@@ -55,7 +55,9 @@ export class ResolutionError extends Error {
       entries = [...entries.slice(0, 11), '...', ...entries.slice(-10)];
     }
 
-    super(`Resolution of the following tree failed: \n${entries.join('\n')}`);
+    super(
+      `Resolution of the following tree failed: \n${entries.join('\n')}: ${cause && typeof cause === 'object' && 'message' in cause ? cause.message : cause}`,
+    );
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, ResolutionError.prototype);

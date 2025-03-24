@@ -68,6 +68,5 @@ setTimeout(() => {
     })
     .draw(3);
 
-  root['~unstable'].flush();
   root.destroy();
 }, 100);

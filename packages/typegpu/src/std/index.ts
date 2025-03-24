@@ -5,24 +5,29 @@ export {
   sub,
   mul,
   // builtin functions
-  abs,
+  acos,
+  asin,
   atan2,
+  abs,
   ceil,
   clamp,
   cos,
   cross,
+  distance,
   dot,
+  exp,
   floor,
   fract,
+  isCloseTo,
   length,
   max,
   min,
   normalize,
-  sin,
-  exp,
   mix,
   pow,
   reflect,
+  sin,
+  translate,
 } from './numeric.js';
 
 export {
@@ -40,3 +45,5 @@ export {
   storageBarrier,
   textureBarrier,
 } from './atomic.js';
+
+export { arrayLength } from './array.js';

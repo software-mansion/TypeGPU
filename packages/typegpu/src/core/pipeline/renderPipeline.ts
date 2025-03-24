@@ -382,6 +382,7 @@ class TgpuRenderPipelineImpl
     pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
 
     pass.end();
+    branch.flush();
   }
 }
 

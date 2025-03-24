@@ -189,6 +189,15 @@ const Transpilers: Partial<{
     return { a: [object, property] };
   },
 
+  UpdateExpression(ctx, node) {
+    const operator = node.operator;
+    const argument = transpile(ctx, node.argument) as smol.Expression;
+    if (node.prefix) {
+      throw new Error('Prefix update expressions are not supported in WGSL.');
+    }
+    return { p: [operator, argument] };
+  },
+
   Literal(ctx, node) {
     if (typeof node.value === 'boolean') {
       return node.value;
@@ -201,6 +210,14 @@ const Transpilers: Partial<{
 
   NumericLiteral(ctx, node) {
     return { n: String(node.value) ?? '' };
+  },
+
+  BooleanLiteral(ctx, node) {
+    return node.value;
+  },
+
+  StringLiteral(ctx, node) {
+    return { s: node.value };
   },
 
   CallExpression(ctx, node) {

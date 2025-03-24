@@ -1,6 +1,5 @@
 import type * as smol from 'tinyest';
 import * as d from '../data';
-import { abstractFloat, abstractInt } from '../data/numeric';
 import * as wgsl from '../data/wgslTypes';
 import {
   type ResolutionCtx,
@@ -9,6 +8,12 @@ import {
   type Wgsl,
   isWgsl,
 } from '../types';
+import {
+  getTypeForIndexAccess,
+  getTypeForPropAccess,
+  getTypeFromWgsl,
+  numericLiteralToResource,
+} from './generationHelpers';
 
 const parenthesizedOps = [
   '==',
@@ -31,24 +36,27 @@ const parenthesizedOps = [
   '||',
 ];
 
-function binaryOperatorToType<
+const binaryLogicalOps = ['&&', '||', '==', '!=', '<', '<=', '>', '>='];
+
+type Operator =
+  | smol.BinaryOperator
+  | smol.AssignmentOperator
+  | smol.LogicalOperator
+  | smol.UnaryOperator;
+
+function operatorToType<
   TL extends wgsl.AnyWgslData | UnknownData,
   TR extends wgsl.AnyWgslData | UnknownData,
->(
-  lhs: TL,
-  op: smol.BinaryOperator | smol.AssignmentOperator | smol.LogicalOperator,
-  rhs: TR,
-): TL | TR | wgsl.Bool {
-  if (
-    op === '==' ||
-    op === '!=' ||
-    op === '<' ||
-    op === '<=' ||
-    op === '>' ||
-    op === '>=' ||
-    op === '&&' ||
-    op === '||'
-  ) {
+>(lhs: TL, op: Operator, rhs?: TR): TL | TR | wgsl.Bool {
+  if (!rhs) {
+    if (op === '!' || op === '~') {
+      return d.bool;
+    }
+
+    return lhs;
+  }
+
+  if (binaryLogicalOps.includes(op)) {
     return d.bool;
   }
 
@@ -74,7 +82,7 @@ export type GenerationCtx = ResolutionCtx & {
 };
 
 export function resolveRes(ctx: GenerationCtx, res: Resource): string {
-  if (isWgsl(res.value) || wgsl.isWgslData(res.value)) {
+  if (isWgsl(res.value)) {
     return ctx.resolve(res.value);
   }
 
@@ -88,9 +96,7 @@ function assertExhaustive(value: never): never {
 }
 
 export function generateBoolean(ctx: GenerationCtx, value: boolean): Resource {
-  return value
-    ? { value: 'true', dataType: d.bool }
-    : { value: 'false', dataType: d.bool };
+  return { value: value ? 'true' : 'false', dataType: d.bool };
 }
 
 export function generateBlock(ctx: GenerationCtx, value: smol.Block): string {
@@ -128,21 +134,19 @@ export function generateExpression(
   if (typeof expression === 'string') {
     return generateIdentifier(ctx, expression);
   }
-
   if (typeof expression === 'boolean') {
     return generateBoolean(ctx, expression);
   }
 
   if ('x' in expression) {
     // Logical/Binary/Assignment Expression
-
     const [lhs, op, rhs] = expression.x;
     const lhsExpr = generateExpression(ctx, lhs);
-    const lhsStr = resolveRes(ctx, lhsExpr);
     const rhsExpr = generateExpression(ctx, rhs);
-    const rhsStr = resolveRes(ctx, rhsExpr);
 
-    const type = binaryOperatorToType(lhsExpr.dataType, op, rhsExpr.dataType);
+    const lhsStr = resolveRes(ctx, lhsExpr);
+    const rhsStr = resolveRes(ctx, rhsExpr);
+    const type = operatorToType(lhsExpr.dataType, op, rhsExpr.dataType);
 
     return {
       value: parenthesizedOps.includes(op)
@@ -152,114 +156,91 @@ export function generateExpression(
     };
   }
 
+  if ('p' in expression) {
+    // Update Expression
+    const [op, arg] = expression.p;
+    const argExpr = generateExpression(ctx, arg);
+    const argStr = resolveRes(ctx, argExpr);
+
+    return {
+      value: `${argStr}${op}`,
+      dataType: argExpr.dataType,
+    };
+  }
+
   if ('u' in expression) {
     // Unary Expression
-
     const [op, arg] = expression.u;
-    const argExpr = resolveRes(ctx, generateExpression(ctx, arg));
+    const argExpr = generateExpression(ctx, arg);
+    const argStr = resolveRes(ctx, argExpr);
+
+    const type = operatorToType(argExpr.dataType, op);
     return {
-      value: `${op}${argExpr}`,
-      // TODO: Infer data type from expression type and arguments.
-      dataType: UnknownData,
+      value: `${op}${argStr}`,
+      dataType: type,
     };
   }
 
   if ('a' in expression) {
     // Member Access
-
     const [targetId, property] = expression.a;
     const target = generateExpression(ctx, targetId);
-    const propertyStr = resolveRes(ctx, generateExpression(ctx, property));
 
     if (typeof target.value === 'string') {
       return {
-        value: `${target.value}.${propertyStr}`,
-        // TODO: Infer data type
-        dataType: UnknownData,
+        value: `${target.value}.${property}`,
+        dataType: getTypeForPropAccess(target.dataType as Wgsl, property),
       };
     }
+    // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
+    const propValue = (target.value as any)[property];
 
     if (isWgsl(target.value)) {
       return {
-        // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
-        value: (target.value as any)[propertyStr],
-        // TODO: Infer data type
-        dataType: UnknownData,
+        value: propValue,
+        dataType: getTypeForPropAccess(target.value as d.AnyWgslData, property),
       };
     }
 
     if (typeof target.value === 'object') {
+      const dataType = isWgsl(propValue)
+        ? getTypeFromWgsl(propValue)
+        : UnknownData;
+
       return {
-        // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
-        value: (target.value as any)[propertyStr],
-        // TODO: Infer data type
-        dataType: UnknownData,
+        value: propValue,
+        dataType,
       };
     }
 
-    throw new Error(`Cannot access member ${propertyStr} of ${target.value}`);
+    throw new Error(`Cannot access member ${property} of ${target.value}`);
   }
 
   if ('i' in expression) {
     // Index Access
-
     const [target, property] = expression.i;
-    const targetStr = resolveRes(ctx, generateExpression(ctx, target));
-    const propertyStr = resolveRes(ctx, generateExpression(ctx, property));
+    const targetExpr = generateExpression(ctx, target);
+    const propertyExpr = generateExpression(ctx, property);
+    const targetStr = resolveRes(ctx, targetExpr);
+    const propertyStr = resolveRes(ctx, propertyExpr);
 
     return {
       value: `${targetStr}[${propertyStr}]`,
-      // TODO: Infer data type
-      dataType: UnknownData,
+      dataType: getTypeForIndexAccess(targetExpr.dataType as d.AnyWgslData),
     };
   }
 
   if ('n' in expression) {
     // Numeric Literal
-    const value = expression.n;
-
-    // Hex literals (since JS does not have float hex literals, we'll assume it's an int)
-    const hexRegex = /^0x[0-9a-f]+$/i;
-    if (hexRegex.test(value)) {
-      return { value: value, dataType: abstractInt };
+    const type = numericLiteralToResource(expression.n);
+    if (!type) {
+      throw new Error(`Invalid numeric literal ${expression.n}`);
     }
-
-    // Binary literals
-    const binRegex = /^0b[01]+$/i;
-    if (binRegex.test(value)) {
-      // Since wgsl doesn't support binary literals, we'll convert it to a decimal number
-      return {
-        value: `${Number.parseInt(value.slice(2), 2)}`,
-        dataType: abstractInt,
-      };
-    }
-
-    const floatRegex = /^-?(?:\d+\.\d*|\d*\.\d+)$/;
-    if (floatRegex.test(value)) {
-      return { value, dataType: abstractFloat };
-    }
-
-    // Floating point literals with scientific notation
-    const sciFloatRegex = /^-?\d+\.\d+e-?\d+$/;
-    if (sciFloatRegex.test(value)) {
-      return {
-        value: value,
-        dataType: abstractFloat,
-      };
-    }
-
-    // Integer literals
-    const intRegex = /^-?\d+$/;
-    if (intRegex.test(value)) {
-      return { value: value, dataType: abstractInt };
-    }
-
-    throw new Error(`Invalid numeric literal ${value}`);
+    return type;
   }
 
   if ('f' in expression) {
     // Function Call
-
     const [callee, args] = expression.f;
     const id = generateExpression(ctx, callee);
     const idValue = id.value;
@@ -267,36 +248,38 @@ export function generateExpression(
     ctx.callStack.push(idValue);
 
     const argResources = args.map((arg) => generateExpression(ctx, arg));
-    const argValues = argResources.map((res) => resolveRes(ctx, res));
+    const resolvedResources = argResources.map((res) => ({
+      value: resolveRes(ctx, res),
+      dataType: res.dataType,
+    }));
+    const argValues = resolvedResources.map((res) => res.value);
 
     ctx.callStack.pop();
 
     if (typeof idValue === 'string') {
       return {
         value: `${idValue}(${argValues.join(', ')})`,
-        dataType: UnknownData,
+        dataType: id.dataType,
       };
     }
 
     if (wgsl.isWgslStruct(idValue)) {
-      const id = ctx.resolve(idValue);
+      const resolvedId = ctx.resolve(idValue);
 
       return {
-        value: `${id}(${argValues.join(', ')})`,
-        dataType: UnknownData,
+        value: `${resolvedId}(${argValues.join(', ')})`,
+        dataType: id.dataType,
       };
     }
 
     // Assuming that `id` is callable
-    // TODO: Pass in resources, not just values.
-    const result = (idValue as unknown as (...args: unknown[]) => unknown)(
-      ...argValues,
-    ) as Wgsl;
-    // TODO: Make function calls return resources instead of just values.
-    return { value: result, dataType: UnknownData };
+    return (idValue as unknown as (...args: unknown[]) => unknown)(
+      ...resolvedResources,
+    ) as Resource;
   }
 
   if ('o' in expression) {
+    // Object Literal
     const obj = expression.o;
     const callee = ctx.callStack[ctx.callStack.length - 1];
 
@@ -369,7 +352,10 @@ export function generateStatement(
 
     return statement.r === null
       ? `${ctx.pre}return;`
-      : `${ctx.pre}return ${resolveRes(ctx, generateExpression(ctx, statement.r))};`;
+      : `${ctx.pre}return ${resolveRes(
+          ctx,
+          generateExpression(ctx, statement.r),
+        )};`;
   }
 
   if ('q' in statement) {

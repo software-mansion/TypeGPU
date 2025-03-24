@@ -18,6 +18,7 @@ import {
   type Eventual,
   type SlotValuePair,
   type TgpuAccessor,
+  type TgpuSlot,
   isDerived,
   isProviding,
   isSlot,
@@ -37,6 +38,7 @@ import {
 } from './data/wgslTypes';
 import type { NameRegistry } from './nameRegistry';
 import type { Infer } from './shared/repr';
+import { $internal } from './shared/symbols';
 import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
@@ -71,10 +73,14 @@ export const UnknownData = {
   type: 'unknown',
 };
 export type UnknownData = typeof UnknownData;
+export const Void = {
+  type: 'void' as const,
+};
+export type Void = typeof Void;
 
 export type Resource = {
   value: unknown;
-  dataType: AnyWgslData | UnknownData | AbstractInt | AbstractFloat;
+  dataType: AnyWgslData | UnknownData | AbstractInt | AbstractFloat | Void;
 };
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
@@ -84,6 +90,33 @@ export interface FnToWgslOptions {
   returnType: AnyWgslData;
   body: Block;
   externalMap: Record<string, unknown>;
+}
+
+export type ItemLayer = {
+  type: 'item';
+  usedSlots: Set<TgpuSlot<unknown>>;
+};
+
+export interface ItemStateStack {
+  readonly itemDepth: number;
+  readonly topItem: ItemLayer;
+
+  pushItem(): void;
+  popItem(): void;
+  pushSlotBindings(pairs: SlotValuePair<unknown>[]): void;
+  popSlotBindings(): void;
+  pushFunctionScope(
+    args: Resource[],
+    returnType: AnyWgslData | undefined,
+    externalMap: Record<string, unknown>,
+  ): void;
+  popFunctionScope(): void;
+  pushBlockScope(): void;
+  popBlockScope(): void;
+  pop(type?: 'functionScope' | 'blockScope' | 'slotBinding' | 'item'): void;
+  readSlot<T>(slot: TgpuSlot<T>): T | undefined;
+  getResourceById(id: string): Resource | undefined;
+  defineBlockVariable(id: string, type: AnyWgslData | UnknownData): Resource;
 }
 
 /**
@@ -133,6 +166,10 @@ export interface ResolutionCtx {
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;
     body: Wgsl;
+  };
+
+  [$internal]: {
+    itemStateStack: ItemStateStack;
   };
 }
 
@@ -186,4 +223,14 @@ export function isBufferUsage<
     | TgpuBufferMutable<BaseData>,
 >(value: T | unknown): value is T {
   return (value as T)?.resourceType === 'buffer-usage';
+}
+
+export function hasInternalDataType(
+  value: unknown,
+): value is { [$internal]: { dataType: BaseData } } {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    !!(value as { [$internal]: { dataType: BaseData } })?.[$internal]?.dataType
+  );
 }

@@ -7,10 +7,12 @@ export type Context = {
    * need to catch that and act accordingly.
    */
   tgpuAliases: Set<string>;
+  fileId?: string | undefined;
 };
 
 export interface TypegpuPluginOptions {
   include?: 'all' | RegExp[];
+  forceTgpuAlias?: string;
 }
 
 export function embedJSON(jsValue: unknown) {
@@ -47,9 +49,9 @@ function isTgpu(ctx: Context, node: babel.Node | acorn.AnyNode): boolean {
   return ctx.tgpuAliases.has(path);
 }
 
-const typegpuImportRegex = /import.*from\s*['"]typegpu.*['"]/g;
-const typegpuDynamicImportRegex = /import\s*\(\s*['"]\s*typegpu.*['"]/g;
-const typegpuRequireRegex = /require\s*\(\s*['"]\s*typegpu.*['"]\s*\)/g;
+const typegpuImportRegex = /import.*from\s*['"]typegpu.*['"]/;
+const typegpuDynamicImportRegex = /import\s*\(\s*['"]\s*typegpu.*['"]/;
+const typegpuRequireRegex = /require\s*\(\s*['"]\s*typegpu.*['"]\s*\)/;
 
 export function shouldSkipFile(
   options: TypegpuPluginOptions | undefined,

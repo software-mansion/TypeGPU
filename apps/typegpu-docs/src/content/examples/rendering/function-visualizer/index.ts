@@ -429,7 +429,10 @@ async function tryRecreateComputePipeline(
 }
 
 function queuePropertiesBufferUpdate() {
-  properties.inverseTransformation = mat4.inverse(properties.transformation);
+  properties.inverseTransformation = mat4.inverse(
+    properties.transformation,
+    d.mat4x4f(),
+  );
   propertiesBuffer.write(properties);
 }
 
