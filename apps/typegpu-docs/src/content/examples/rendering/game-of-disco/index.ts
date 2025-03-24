@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import tgpu, { type TgpuBuffer, type VertexFlag } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
@@ -13,6 +13,14 @@ import {
 } from './dataTypes';
 import { createIcosphere } from './icosphere';
 
+// Initialize cache for vertex buffers
+const vertexBufferCache = new Map<
+  string,
+  {
+    buffer: TgpuBuffer<d.Disarray<typeof Vertex>> & VertexFlag;
+  }
+>();
+
 const root = await tgpu.init();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -25,19 +33,39 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-const subdivisions = 5;
-const vertices = createIcosphere(subdivisions, true);
-console.log(`Icosphere vertices: ${vertices.length}`);
+let smoothNormals = true;
+let subdivisions = 4;
+
+// Function to get or create cached vertex buffer
+function getOrCreateVertexBuffer(subdivisions: number, smoothNormals: boolean) {
+  const cacheKey = `${subdivisions}-${smoothNormals}`;
+  let cached = vertexBufferCache.get(cacheKey);
+
+  if (!cached) {
+    const vertices = createIcosphere(subdivisions, smoothNormals);
+    const buffer = root
+      .createBuffer(d.disarrayOf(Vertex, vertices.length), vertices)
+      .$usage('vertex');
+
+    cached = {
+      buffer,
+    };
+    vertexBufferCache.set(cacheKey, cached);
+    console.log(`Created new buffer for ${cacheKey}`);
+  }
+
+  return cached;
+}
+
+// Initialize with default values
+const initialCache = getOrCreateVertexBuffer(subdivisions, smoothNormals);
+let vertexBuffer = initialCache.buffer;
 
 const cubeVertexBuffer = root
   .createBuffer(d.arrayOf(CubeVertex, cubeVertices.length), cubeVertices)
   .$usage('vertex');
 
-const vertexBuffer = root
-  .createBuffer(d.disarrayOf(Vertex, vertices.length), vertices)
-  .$usage('vertex');
-
-const cameraPosition = d.vec4f(0, 0, 5, 1); // Camera position for specular lighting
+const cameraPosition = d.vec4f(0, 0, 5, 1);
 const cameraInitialPos = d.vec3f(0, 1, 5);
 const cameraBuffer = root
   .createBuffer(Camera, {
@@ -72,7 +100,8 @@ const materialBuffer = root
   .$usage('uniform');
 
 const cubemapTexture = await loadCubemap(root);
-const cubemapSampler = tgpu['~unstable'].sampler({
+const cubemap = cubemapTexture.createView('sampled', { dimension: 'cube' });
+const sampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -81,17 +110,13 @@ const renderLayout = tgpu.bindGroupLayout({
   camera: { uniform: Camera },
   light: { uniform: DirectionalLight },
   material: { uniform: Material },
-  cubemap: { texture: 'float', viewDimension: 'cube' },
-  sampler: { sampler: 'filtering' },
 });
-const { camera, light, material, cubemap, sampler } = renderLayout.bound;
+const { camera, light, material } = renderLayout.bound;
 
 const renderBindGroup = root.createBindGroup(renderLayout, {
   camera: cameraBuffer,
   light: lightBuffer,
   material: materialBuffer,
-  cubemap: cubemapTexture.createView('sampled', { dimension: 'cube' }),
-  sampler: cubemapSampler,
 });
 
 const vertexLayout = tgpu.vertexLayout((n: number) => d.disarrayOf(Vertex, n));
@@ -248,7 +273,7 @@ function render() {
     })
     .with(vertexLayout, vertexBuffer)
     .with(renderLayout, renderBindGroup)
-    .draw(vertices.length);
+    .draw(vertexBuffer.dataType.elementCount);
 
   root['~unstable'].flush();
 }
@@ -333,7 +358,35 @@ canvas.addEventListener('mousemove', (event) => {
   }
 });
 
+export const controls = {
+  subdivisions: {
+    initial: 4,
+    min: 0,
+    max: 8,
+    step: 1,
+    onSliderChange(value: number) {
+      subdivisions = value;
+      const cached = getOrCreateVertexBuffer(subdivisions, smoothNormals);
+      vertexBuffer = cached.buffer;
+    },
+  },
+  'smooth normals': {
+    initial: true,
+    onToggleChange: (value: boolean) => {
+      smoothNormals = value;
+      const cached = getOrCreateVertexBuffer(subdivisions, value);
+      vertexBuffer = cached.buffer;
+    },
+  },
+};
+
 export function onCleanup() {
+  // Clean up cached buffers
+  for (const cached of vertexBufferCache.values()) {
+    cached.buffer.destroy();
+  }
+  vertexBufferCache.clear();
+
   cubemapTexture.destroy();
   root.destroy();
 }
