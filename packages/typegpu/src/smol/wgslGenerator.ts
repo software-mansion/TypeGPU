@@ -195,6 +195,20 @@ export function generateExpression(
     // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
     const propValue = (target.value as any)[property];
 
+    if (isWgsl(target.dataType)) {
+      if (target.dataType.type.startsWith('mat') && property === 'columns') {
+        return {
+          value: target.value,
+          dataType: target.dataType,
+        };
+      }
+
+      return {
+        value: propValue,
+        dataType: getTypeForPropAccess(target.dataType, property),
+      };
+    }
+
     if (isWgsl(target.value)) {
       return {
         value: propValue,
@@ -273,9 +287,14 @@ export function generateExpression(
     }
 
     // Assuming that `id` is callable
-    return (idValue as unknown as (...args: unknown[]) => unknown)(
+    const fnRes = (idValue as unknown as (...args: unknown[]) => unknown)(
       ...resolvedResources,
     ) as Resource;
+
+    return {
+      value: resolveRes(ctx, fnRes),
+      dataType: fnRes.dataType,
+    };
   }
 
   if ('o' in expression) {
