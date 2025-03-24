@@ -151,7 +151,7 @@ function createVertex(
   position: d.v4f,
   normal: d.v4f,
 ): ReturnType<typeof Vertex> {
-  const color = d.vec4f(0.8, 1, 1, 1); // White color
+  const color = d.vec4f(1, 1, 1, 1);
 
   return Vertex({
     position,
