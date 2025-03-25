@@ -60,16 +60,8 @@ const randomizeFishPositions = () => {
   const positions: d.Infer<typeof ModelData>[] = Array.from(
     { length: p.fishAmount },
     () => ({
-      position: d.vec3f(
-        Math.random() * p.aquariumSize.x - p.aquariumSize.x / 2,
-        Math.random() * p.aquariumSize.y - p.aquariumSize.y / 2,
-        Math.random() * p.aquariumSize.z - p.aquariumSize.z / 2,
-      ),
-      direction: d.vec3f(
-        Math.random() * 0.1 - 0.05,
-        Math.random() * 0.1 - 0.05,
-        Math.random() * 0.1 - 0.05,
-      ),
+      position: d.vec3f(0, 0, 0),
+      direction: d.vec3f(1, 0, 0),
       scale: p.fishModelScale * (1 + (Math.random() - 0.5) * 0.8),
       applySeaFog: 1,
       applySeaDesaturation: 1,

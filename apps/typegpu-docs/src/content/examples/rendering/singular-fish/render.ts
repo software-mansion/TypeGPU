@@ -28,28 +28,23 @@ const applySinWave = tgpu['~unstable']
       std.sin(timeFactor + position.x),
     );
 
-    // add the vector orthogonal to the sin wave, keep the Y angle as it was
     const modelNormal = normal;
-    const modelNormalXZ = std.normalize(
-      d.vec3f(modelNormal.x, 0, modelNormal.z),
-    );
+    const normalXZ = d.vec3f(modelNormal.x, 0, modelNormal.z);
 
+    // const coeff = d.f32(0);
     const coeff = std.cos(timeFactor + position.x);
-    let normalModificationXZ = std.normalize(d.vec3f(-coeff, 0, 1));
-    if (std.dot(normalModificationXZ, normal) < 0) {
-      normalModificationXZ = std.mul(-1, normalModificationXZ);
-    }
-    const newNormalXZ = std.normalize(
-      std.add(std.mul(1.1, modelNormalXZ), normalModificationXZ),
+    const newOX = std.normalize(d.vec3f(1, 0, coeff));
+    let newOZ = d.vec3f(-newOX.z, 0, newOX.x);
+    // if (std.dot(newOZ, normal) < 0) {
+    //   newOZ = std.mul(-1, newOZ);
+    // }
+    const newNormalXZ = std.add(
+      std.mul(newOX, d.vec3f(normalXZ.x, 0, 0)),
+      std.mul(newOZ, d.vec3f(0, 0, normalXZ.z)),
     );
 
-    const cosTheta = std.dot(modelNormal, modelNormalXZ);
     const wavedNormal = std.normalize(
-      d.vec3f(
-        newNormalXZ.x,
-        std.pow(1 / cosTheta / cosTheta - 1, 0.5),
-        newNormalXZ.z,
-      ),
+      d.vec3f(newNormalXZ.x, modelNormal.y, newNormalXZ.z),
     );
 
     const wavedPosition = std.add(position, positionModification);
@@ -72,13 +67,16 @@ export const vertexShader = tgpu['~unstable']
 
     // apply sin wave
 
-    const wavedResults = applySinWave(
-      currentTime.value,
-      input.modelPosition,
-      input.modelNormal,
-    );
-    const wavedPosition = wavedResults.position;
-    const wavedNormal = wavedResults.normal;
+    // const wavedResults = applySinWave(
+    //   currentTime.value,
+    //   input.modelPosition,
+    //   input.modelNormal,
+    // );
+    // const wavedPosition = wavedResults.position;
+    // const wavedNormal = wavedResults.normal;
+
+    const wavedPosition = input.modelPosition;
+    const wavedNormal = input.modelNormal;
 
     // rotate model
 
@@ -149,36 +147,32 @@ export const fragmentShader = tgpu['~unstable']
     // https://en.wikipedia.org/wiki/Phong_reflection_model
     // then apply sea fog and sea desaturation
 
-    const viewDirection = std.normalize(
-      std.sub(camera.value.position.xyz, input.worldPosition),
-    );
     const textureColorWithAlpha = sampleTexture(input.textureUV); // base color
     const textureColor = textureColorWithAlpha.xyz;
 
-    let diffuse = d.vec3f();
-    let specular = d.vec3f();
     const ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));
 
-    const cosTheta = std.max(0.0, std.dot(input.worldNormal, p.lightDirection));
-    if (cosTheta > 0) {
-      diffuse = std.mul(cosTheta, std.mul(textureColor, p.lightColor));
+    const cosTheta = std.dot(input.worldNormal, p.lightDirection);
+    const diffuse = std.mul(
+      std.max(0, cosTheta),
+      std.mul(textureColor, p.lightColor),
+    );
 
-      const reflectionDirection = std.reflect(
-        std.mul(-1, p.lightDirection),
-        input.worldNormal,
-      );
-
-      specular = std.mul(
-        0.5,
-        std.mul(
-          textureColor,
-          std.mul(std.dot(reflectionDirection, viewDirection), p.lightColor),
-        ),
-      );
-    }
+    const viewSource = std.normalize(
+      std.sub(camera.value.position.xyz, input.worldPosition),
+    );
+    const reflectSource = std.normalize(
+      std.reflect(std.mul(-1, p.lightDirection), input.worldNormal),
+    );
+    const specularStrength = std.pow(
+      std.max(0, std.dot(viewSource, reflectSource)),
+      16,
+    );
+    const specular = std.mul(specularStrength, p.lightColor);
 
     const lightedColor = std.add(ambient, std.add(diffuse, specular));
 
+    // apply desaturation
     const distanceFromCamera = std.length(
       std.sub(camera.value.position.xyz, input.worldPosition),
     );
