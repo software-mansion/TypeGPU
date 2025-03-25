@@ -498,7 +498,7 @@ export const isCloseTo = createDualImpl(
  * @param {v3f} vector - The vector by which to translate the matrix.
  * @returns {m4x4f} - The translated matrix.
  */
-export const translate = createDualImpl(
+export const translate4x4 = createDualImpl(
   // CPU implementation
   (matrix: m4x4f, vector: v3f) => {
     const v4 = mat4x4f(

@@ -27,7 +27,7 @@ export {
   pow,
   reflect,
   sin,
-  translate,
+  translate4x4,
 } from './numeric.js';
 
 export {
