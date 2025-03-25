@@ -59,6 +59,10 @@ export const TypeCatalog = {
   m4x4f: 302,
   atomicU32: 400,
   atomicI32: 401,
+
+  // TypeGPU resources
+  Buffer: 1000,
+  BufferUsage: 1000,
 } as const;
 
 export type TypeCatalog = typeof TypeCatalog;

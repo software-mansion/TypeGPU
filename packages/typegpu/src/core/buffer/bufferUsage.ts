@@ -3,8 +3,8 @@ import type { AnyWgslData, BaseData } from '../../data/wgslTypes';
 import { type StorageFlag, isUsableAsStorage } from '../../extension';
 import { inGPUMode } from '../../gpuMode';
 import type { TgpuNamable } from '../../namable';
+import { $internal } from '../../shared/internalMeta';
 import type { Infer, InferGPU } from '../../shared/repr';
-import { $internal } from '../../shared/symbols';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout';
 import type {
   BindableBufferUsage,
@@ -24,11 +24,12 @@ export interface TgpuBufferUsage<
 > {
   readonly resourceType: 'buffer-usage';
   readonly usage: TUsage;
-  readonly '~repr': Infer<TData>;
   value: InferGPU<TData>;
 
   readonly [$internal]: {
     readonly dataType: TData;
+    /** Type-token, not available at runtime */
+    readonly '~repr': Infer<TData>;
   };
 }
 
