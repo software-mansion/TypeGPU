@@ -7,53 +7,10 @@ import {
   ModelVertexOutput,
   renderBindGroupLayout,
 } from './schemas';
-import { hsvToRgb, rgbToHsv } from './tgsl-helpers';
+import { applySinWave, hsvToRgb, rgbToHsv } from './tgsl-helpers';
 
 const { camera, modelTexture, sampler, modelData, currentTime } =
   renderBindGroupLayout.bound;
-
-const ApplySinWaveReturnSchema = d.struct({
-  position: d.vec3f,
-  normal: d.vec3f,
-});
-
-const applySinWave = tgpu['~unstable']
-  .fn([d.u32, d.vec3f, d.vec3f], ApplySinWaveReturnSchema)
-  .does((time, position, normal) => {
-    const timeFactor = d.f32(time) / 1000;
-
-    const positionModification = d.vec3f(
-      0,
-      0,
-      std.sin(timeFactor + position.x),
-    );
-
-    const modelNormal = normal;
-    const normalXZ = d.vec3f(modelNormal.x, 0, modelNormal.z);
-
-    // const coeff = d.f32(0);
-    const coeff = std.cos(timeFactor + position.x);
-    const newOX = std.normalize(d.vec3f(1, 0, coeff));
-    let newOZ = d.vec3f(-newOX.z, 0, newOX.x);
-    // if (std.dot(newOZ, normal) < 0) {
-    //   newOZ = std.mul(-1, newOZ);
-    // }
-    const newNormalXZ = std.add(
-      std.mul(newOX, d.vec3f(normalXZ.x, 0, 0)),
-      std.mul(newOZ, d.vec3f(0, 0, normalXZ.z)),
-    );
-
-    const wavedNormal = std.normalize(
-      d.vec3f(newNormalXZ.x, modelNormal.y, newNormalXZ.z),
-    );
-
-    const wavedPosition = std.add(position, positionModification);
-
-    return ApplySinWaveReturnSchema({
-      position: wavedPosition,
-      normal: wavedNormal,
-    });
-  });
 
 export const vertexShader = tgpu['~unstable']
   .vertexFn({
@@ -67,16 +24,13 @@ export const vertexShader = tgpu['~unstable']
 
     // apply sin wave
 
-    // const wavedResults = applySinWave(
-    //   currentTime.value,
-    //   input.modelPosition,
-    //   input.modelNormal,
-    // );
-    // const wavedPosition = wavedResults.position;
-    // const wavedNormal = wavedResults.normal;
-
-    const wavedPosition = input.modelPosition;
-    const wavedNormal = input.modelNormal;
+    const wavedResults = applySinWave(
+      currentTime.value,
+      input.modelPosition,
+      input.modelNormal,
+    );
+    const wavedPosition = wavedResults.position;
+    const wavedNormal = wavedResults.normal;
 
     // rotate model
 
