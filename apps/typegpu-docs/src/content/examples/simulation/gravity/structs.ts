@@ -1,5 +1,5 @@
-import * as d from 'typegpu/data';
 import tgpu from 'typegpu';
+import * as d from 'typegpu/data';
 
 export const VertexStruct = d.struct({
   position: d.vec3f,
@@ -38,6 +38,6 @@ export const CelestialBodyArray = (n: number) =>
   d.arrayOf(CelectialBodyStruct, n);
 
 export const celestialBodyLayout = tgpu.bindGroupLayout({
-  inState: { uniform: CelestialBodyArray(1), access: 'readonly' },
-  outState: { uniform: CelestialBodyArray(1), access: 'writeonly' },
+  inState: { storage: CelestialBodyArray(1), access: 'readonly' },
+  outState: { storage: CelestialBodyArray(1), access: 'mutable' },
 });

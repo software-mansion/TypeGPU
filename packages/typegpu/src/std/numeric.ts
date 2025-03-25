@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import { mat4x4f } from 'src/data/matrix';
-=======
-import { mat4x4f } from 'src/data';
->>>>>>> feat/std-identity
+import { mat4x4f } from '../data/matrix';
 import { bool, f32 } from '../data/numeric';
 import { VectorOps } from '../data/vectorOps';
 import type {
@@ -528,7 +524,7 @@ export const translate = createDualImpl(
   // GPU implementation
   (matrix, vector) => {
     return {
-      value: `(${matrix.value} * mat4x4<f32>(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${vector.value}.x, ${vector.value}.y, ${vector.value}.z, 1)`,
+      value: `${matrix.value} * mat4x4<f32>(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${vector.value}.x, ${vector.value}.y, ${vector.value}.z, 1)`,
       dataType: matrix.dataType,
     };
   },
