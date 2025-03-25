@@ -28,8 +28,6 @@ import type { TgpuAnyTextureView, TgpuTexture } from './core/texture/texture';
 import type { TgpuVar } from './core/variable/tgpuVariable';
 import type { AnyData } from './data';
 import {
-  type AbstractFloat,
-  type AbstractInt,
   type AnyMatInstance,
   type AnyVecInstance,
   type AnyWgslData,
@@ -70,17 +68,13 @@ export type ResolvableObject =
 export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
 
 export const UnknownData = {
-  type: 'unknown',
+  type: 'unknown' as const,
 };
 export type UnknownData = typeof UnknownData;
-export const Void = {
-  type: 'void' as const,
-};
-export type Void = typeof Void;
 
 export type Resource = {
   value: unknown;
-  dataType: AnyWgslData | UnknownData | AbstractInt | AbstractFloat | Void;
+  dataType: AnyData | UnknownData;
 };
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';

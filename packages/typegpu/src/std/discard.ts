@@ -1,5 +1,5 @@
+import { Void } from '../data/wgslTypes.js';
 import { createDualImpl } from '../shared/generators.js';
-import { Void } from '../types.js';
 
 export const discard = createDualImpl(
   // CPU
