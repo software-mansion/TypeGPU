@@ -493,8 +493,9 @@ export const isCloseTo = createDualImpl(
 
 /**
  * Generates a 4x4 identity matrix.
+ * @returns {mat4x4f} 4x4 identity matrix
  */
-export const identity = createDualImpl(
+export const identity4x4 = createDualImpl(
   // CPU implementation
   () => {
     return mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
