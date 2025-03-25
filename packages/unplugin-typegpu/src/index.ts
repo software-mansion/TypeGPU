@@ -13,18 +13,13 @@ import {
   shouldSkipFile,
 } from './common';
 
-type TgslFunctionDef = {
-  implementation: acorn.AnyNode;
-  functionDeclarationName?: string | undefined; // name of the function, but only if it was declared via a function declaration (statement)
-};
+type FunctionNode =
+  | acorn.FunctionDeclaration
+  | acorn.AnonymousFunctionDeclaration
+  | acorn.FunctionExpression
+  | acorn.ArrowFunctionExpression;
 
-function isKernelMarkedFunction(
-  node:
-    | acorn.FunctionDeclaration
-    | acorn.AnonymousFunctionDeclaration
-    | acorn.FunctionExpression
-    | acorn.ArrowFunctionExpression,
-) {
+function isKernelMarkedFunction(node: FunctionNode) {
   if (node.body.type === 'BlockStatement') {
     for (const statement of node.body.body) {
       if (
@@ -39,13 +34,7 @@ function isKernelMarkedFunction(
   return false;
 }
 
-function removeKernelDirectiveFromFunction(
-  node:
-    | acorn.FunctionDeclaration
-    | acorn.AnonymousFunctionDeclaration
-    | acorn.FunctionExpression
-    | acorn.ArrowFunctionExpression,
-) {
+function removeKernelDirective(node: FunctionNode) {
   if (node.body.type === 'BlockStatement') {
     node.body.body = node.body.body.filter(
       (statement) =>
@@ -79,7 +68,7 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
       allowReturnOutsideFunction: true,
     }) as Node;
 
-    const tgslFunctionDefs: TgslFunctionDef[] = [];
+    const tgslFunctionDefs: FunctionNode[] = [];
 
     walk(ast, {
       enter(_node, _parent, prop, index) {
@@ -95,39 +84,21 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
 
             if (
               implementation &&
-              !(implementation.type === 'TemplateLiteral') &&
-              !(implementation.type === 'Literal')
+              (implementation.type === 'FunctionExpression' ||
+                implementation.type === 'ArrowFunctionExpression')
             ) {
-              tgslFunctionDefs.push({
-                implementation,
-              });
+              tgslFunctionDefs.push(implementation);
             }
           }
         }
 
-        if (node.type === 'ArrowFunctionExpression') {
-          if (isKernelMarkedFunction(node)) {
-            tgslFunctionDefs.push({
-              implementation: removeKernelDirectiveFromFunction(node),
-            });
-          }
-        }
-
-        if (node.type === 'FunctionExpression') {
-          if (isKernelMarkedFunction(node)) {
-            tgslFunctionDefs.push({
-              implementation: removeKernelDirectiveFromFunction(node),
-            });
-          }
-        }
-
-        if (node.type === 'FunctionDeclaration') {
-          if (isKernelMarkedFunction(node)) {
-            tgslFunctionDefs.push({
-              implementation: removeKernelDirectiveFromFunction(node),
-              functionDeclarationName: node.id?.name,
-            });
-          }
+        if (
+          (node.type === 'ArrowFunctionExpression' ||
+            node.type === 'FunctionExpression' ||
+            node.type === 'FunctionDeclaration') &&
+          isKernelMarkedFunction(node)
+        ) {
+          tgslFunctionDefs.push(removeKernelDirective(node));
         }
       },
     });
@@ -141,30 +112,28 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
       );
     }
 
-    for (const expr of tgslFunctionDefs) {
-      const { argNames, body, externalNames } = transpileFn(
-        expr.implementation,
-      );
+    for (const def of tgslFunctionDefs) {
+      const { argNames, body, externalNames } = transpileFn(def);
+
+      const functionStatementName =
+        def.type === 'FunctionDeclaration' ? def.id?.name : undefined;
 
       // Wrap the implementation in a call to `tgpu.__assignAst` to associate the AST with the implementation.
       magicString.appendLeft(
-        expr.implementation.start,
-        `${expr.functionDeclarationName ? `const ${expr.functionDeclarationName} = ` : ''}${tgpuAlias}.__assignAst(`,
+        def.start,
+        `${functionStatementName ? `const ${functionStatementName} = ` : ''}${tgpuAlias}.__assignAst(`,
       );
       magicString.appendRight(
-        expr.implementation.end,
+        def.end,
         `, ${embedJSON({ argNames, body, externalNames })}`,
       );
 
       if (externalNames.length > 0) {
-        magicString.appendRight(
-          expr.implementation.end,
-          `, {${externalNames.join(', ')}})`,
-        );
+        magicString.appendRight(def.end, `, {${externalNames.join(', ')}})`);
       } else {
         magicString.appendRight(
-          expr.implementation.end,
-          `)${expr.functionDeclarationName ? ';' : ''}`,
+          def.end,
+          `)${functionStatementName ? ';' : ''}`,
         );
       }
     }
