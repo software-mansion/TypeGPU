@@ -42,6 +42,14 @@ export type Vec3InstanceTypeID = (typeof Vec3InstanceTypeID)[number];
 export type Vec4InstanceTypeID = (typeof Vec4InstanceTypeID)[number];
 export type VecInstanceTypeID = (typeof VecInstanceTypeID)[number];
 
+export const MatTypeID = [
+  TypeCatalog.Mat2x2f,
+  TypeCatalog.Mat3x3f,
+  TypeCatalog.Mat4x4f,
+];
+
+export type MatTypeID = (typeof MatTypeID)[number];
+
 export const MatInstanceTypeID = [
   TypeCatalog.m2x2f,
   TypeCatalog.m3x3f,
@@ -633,6 +641,8 @@ export type AnyVec4Instance = v4f | v4h | v4i | v4u;
 
 export type vBase = {
   readonly [$internal]: { readonly type: VecInstanceTypeID };
+  readonly length: number;
+  [n: number]: number;
 };
 
 export interface matBase<TColumn> extends NumberArrayView {

@@ -31,8 +31,6 @@ import type {
 import type { TgpuVar } from './core/variable/tgpuVariable.js';
 import type { AnyData } from './data/dataTypes.js';
 import {
-  type AbstractFloat,
-  type AbstractInt,
   type AnyMatInstance,
   type AnyVecInstance,
   type AnyWgslData,
@@ -88,7 +86,7 @@ export type Void = typeof Void;
 
 export type Resource = {
   value: unknown;
-  dataType: AnyWgslData | UnknownData | AbstractInt | AbstractFloat | Void;
+  dataType: BaseData | UnknownData | Void;
 };
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';

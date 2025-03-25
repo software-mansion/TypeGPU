@@ -1,11 +1,12 @@
-import { createDualImpl } from '../shared/generators';
-import type { SelfResolvable } from '../types';
-import { vec2f, vec3f, vec4f } from './vector';
+import { createDualImpl } from '../shared/generators.js';
+import { $internal, TypeCatalog, type TypeID } from '../shared/internalMeta.js';
+import type { SelfResolvable } from '../types.js';
+import { vec2f, vec3f, vec4f } from './vector.js';
 import type {
   Mat2x2f,
   Mat3x3f,
   Mat4x4f,
-  VecKind,
+  MatTypeID,
   m2x2f,
   m3x3f,
   m4x4f,
@@ -16,20 +17,16 @@ import type {
   v2f,
   v3f,
   v4f,
-} from './wgslTypes';
+  vBase,
+} from './wgslTypes.js';
 
 // --------------
 // Implementation
 // --------------
 
-type vBase = {
-  kind: VecKind;
-  length: number;
-  [n: number]: number;
-};
-
-interface MatSchemaOptions<TType extends string, ValueType> {
+interface MatSchemaOptions<TType extends TypeID, ValueType> {
   type: TType;
+  typeStr: string;
   rows: number;
   columns: number;
   makeFromElements(...elements: number[]): ValueType;
@@ -41,17 +38,23 @@ type MatConstructor<
 > = (...args: (number | ColumnType)[]) => ValueType;
 
 function createMatSchema<
-  TType extends string,
+  TType extends MatTypeID,
   ValueType extends matBase<ColumnType>,
   ColumnType extends vBase,
 >(
   options: MatSchemaOptions<TType, ValueType>,
-): { type: TType; '~repr': ValueType } & MatConstructor<ValueType, ColumnType> {
+): { [$internal]: { type: TType; '~repr': ValueType } } & MatConstructor<
+  ValueType,
+  ColumnType
+> {
   const MatSchema = {
-    /** Type-token, not available at runtime */
-    '~repr': undefined as unknown as ValueType,
-    type: options.type,
+    type: options.typeStr,
     label: options.type,
+    [$internal]: {
+      type: options.type,
+      /** Type-token, not available at runtime */
+      '~repr': undefined as unknown as ValueType,
+    },
   };
 
   const construct = createDualImpl(
@@ -79,15 +82,17 @@ function createMatSchema<
     // GPU implementation
     (...args) => {
       return {
-        value: `${MatSchema.type}(${args.map((v) => v.value).join(', ')})`,
+        value: `${options.typeStr}(${args.map((v) => v.value).join(', ')})`,
         dataType: MatSchema,
       };
     },
   );
 
   return Object.assign(construct, MatSchema) as unknown as {
-    type: TType;
-    '~repr': ValueType;
+    readonly [$internal]: {
+      type: TType;
+      '~repr': ValueType;
+    };
   } & MatConstructor<ValueType, ColumnType>;
 }
 
@@ -96,8 +101,10 @@ abstract class mat2x2Impl<TColumn extends v2f>
 {
   public readonly columns: readonly [TColumn, TColumn];
   public readonly length = 4;
-  public abstract readonly kind: string;
   [n: number]: number;
+  /** @deprecated */
+  public abstract readonly kind: string;
+  public abstract readonly [$internal]: { type: TypeID };
 
   constructor(...elements: number[]) {
     this.columns = [
@@ -148,20 +155,28 @@ abstract class mat2x2Impl<TColumn extends v2f>
 }
 
 class mat2x2fImpl extends mat2x2Impl<v2f> implements m2x2f {
+  /** @deprecated */
   public readonly kind = 'mat2x2f';
+  declare [$internal]: { type: TypeCatalog['m2x2f'] };
 
   makeColumn(e0: number, e1: number): v2f {
     return vec2f(e0, e1);
   }
 }
 
+mat2x2fImpl.prototype[$internal] = {
+  type: TypeCatalog.m2x2f,
+};
+
 abstract class mat3x3Impl<TColumn extends v3f>
   implements mat3x3<TColumn>, SelfResolvable
 {
   public readonly columns: readonly [TColumn, TColumn, TColumn];
   public readonly length = 12;
-  public abstract readonly kind: string;
   [n: number]: number;
+  /** @deprecated */
+  public abstract readonly kind: string;
+  public abstract [$internal]: { type: TypeID };
 
   constructor(...elements: number[]) {
     this.columns = [
@@ -282,16 +297,26 @@ abstract class mat3x3Impl<TColumn extends v3f>
 
 class mat3x3fImpl extends mat3x3Impl<v3f> implements m3x3f {
   public readonly kind = 'mat3x3f';
+  public declare [$internal]: { type: TypeCatalog['m3x3f'] };
+
   makeColumn(x: number, y: number, z: number): v3f {
     return vec3f(x, y, z);
   }
 }
 
+mat3x3fImpl.prototype[$internal] = {
+  type: TypeCatalog.m3x3f,
+};
+
 abstract class mat4x4Impl<TColumn extends v4f>
   implements mat4x4<TColumn>, SelfResolvable
 {
   public readonly columns: readonly [TColumn, TColumn, TColumn, TColumn];
+  public readonly length = 16;
+  [n: number]: number;
+  /** @deprecated */
   public abstract readonly kind: string;
+  public abstract readonly [$internal]: { type: TypeID };
 
   constructor(...elements: number[]) {
     this.columns = [
@@ -323,9 +348,6 @@ abstract class mat4x4Impl<TColumn extends v4f>
   }
 
   abstract makeColumn(x: number, y: number, z: number, w: number): TColumn;
-
-  public readonly length = 16;
-  [n: number]: number;
 
   get [0]() {
     return this.columns[0].x;
@@ -464,11 +486,16 @@ abstract class mat4x4Impl<TColumn extends v4f>
 
 class mat4x4fImpl extends mat4x4Impl<v4f> implements m4x4f {
   public readonly kind = 'mat4x4f';
+  public declare [$internal]: { type: TypeCatalog['m4x4f'] };
 
   makeColumn(x: number, y: number, z: number, w: number): v4f {
     return vec4f(x, y, z, w);
   }
 }
+
+mat4x4fImpl.prototype[$internal] = {
+  type: TypeCatalog.m4x4f,
+};
 
 // ----------
 // Public API
@@ -496,8 +523,9 @@ class mat4x4fImpl extends mat4x4Impl<v4f> implements m4x4f {
  * @example
  * const buffer = root.createBuffer(d.mat2x2f, d.mat2x2f(0, 1, 2, 3)); // buffer holding a d.mat2x2f value, with an initial value of ((0, 1), (2, 3))
  */
-export const mat2x2f = createMatSchema<'mat2x2f', m2x2f, v2f>({
-  type: 'mat2x2f',
+export const mat2x2f = createMatSchema<TypeCatalog['Mat2x2f'], m2x2f, v2f>({
+  type: TypeCatalog.Mat2x2f,
+  typeStr: 'mat2x2f',
   rows: 2,
   columns: 2,
   makeFromElements: (...elements: number[]) => new mat2x2fImpl(...elements),
@@ -527,8 +555,9 @@ export const mat2x2f = createMatSchema<'mat2x2f', m2x2f, v2f>({
  * @example
  * const buffer = root.createBuffer(d.mat3x3f, d.mat3x3f()); // buffer holding a d.mat3x3f value, with an initial value of mat3x3f filled with zeros
  */
-export const mat3x3f = createMatSchema<'mat3x3f', m3x3f, v3f>({
-  type: 'mat3x3f',
+export const mat3x3f = createMatSchema<TypeCatalog['Mat3x3f'], m3x3f, v3f>({
+  type: TypeCatalog.Mat3x3f,
+  typeStr: 'mat3x3f',
   rows: 3,
   columns: 3,
   makeFromElements: (...elements: number[]) => new mat3x3fImpl(...elements),
@@ -560,8 +589,9 @@ export const mat3x3f = createMatSchema<'mat3x3f', m3x3f, v3f>({
  * @example
  * const buffer = root.createBuffer(d.mat4x4f, d.mat4x4f()); // buffer holding a d.mat4x4f value, with an initial value of mat4x4f filled with zeros
  */
-export const mat4x4f = createMatSchema<'mat4x4f', m4x4f, v4f>({
-  type: 'mat4x4f',
+export const mat4x4f = createMatSchema<TypeCatalog['Mat4x4f'], m4x4f, v4f>({
+  type: TypeCatalog.Mat4x4f,
+  typeStr: 'mat4x4f',
   rows: 4,
   columns: 4,
   makeFromElements: (...elements: number[]) => new mat4x4fImpl(...elements),
