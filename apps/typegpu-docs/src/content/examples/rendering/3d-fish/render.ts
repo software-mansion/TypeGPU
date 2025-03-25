@@ -8,8 +8,9 @@ import {
   ModelVertexOutput,
   renderBindGroupLayout,
 } from './schemas';
+import { applySinWave } from './tgsl-helpers';
 
-const { camera, modelTexture, sampler, modelData } =
+const { camera, modelTexture, sampler, modelData, currentTime } =
   renderBindGroupLayout.bound;
 
 export const vertexShader = tgpu['~unstable']
@@ -22,7 +23,17 @@ export const vertexShader = tgpu['~unstable']
     // https://simple.wikipedia.org/wiki/Pitch,_yaw,_and_roll
     const currentModelData = modelData.value[input.instanceIndex];
 
-    const modelPosition = input.modelPosition;
+    // apply sin wave
+
+    const wavedResults = applySinWave(
+      currentTime.value,
+      input.modelPosition,
+      input.modelNormal,
+    );
+    const wavedPosition = wavedResults.position;
+    const wavedNormal = wavedResults.normal;
+
+    // rotate model
 
     const direction = std.normalize(currentModelData.direction);
 
@@ -45,14 +56,14 @@ export const vertexShader = tgpu['~unstable']
     const worldPosition = std.add(
       std.mul(
         yawMatrix,
-        std.mul(pitchMatrix, std.mul(currentModelData.scale, modelPosition)),
+        std.mul(pitchMatrix, std.mul(currentModelData.scale, wavedPosition)),
       ),
       currentModelData.position,
     );
 
     // calculate where the normal vector points to
     const worldNormal = std.normalize(
-      std.mul(pitchMatrix, std.mul(yawMatrix, input.modelNormal)),
+      std.mul(pitchMatrix, std.mul(yawMatrix, wavedNormal)),
     );
 
     // project the world position into the camera
@@ -91,36 +102,32 @@ export const fragmentShader = tgpu['~unstable']
     // https://en.wikipedia.org/wiki/Phong_reflection_model
     // then apply sea fog and sea desaturation
 
-    const viewDirection = std.normalize(
-      std.sub(camera.value.position.xyz, input.worldPosition),
-    );
     const textureColorWithAlpha = sampleTexture(input.textureUV); // base color
     const textureColor = textureColorWithAlpha.xyz;
 
-    let diffuse = d.vec3f();
-    let specular = d.vec3f();
     const ambient = std.mul(0.5, std.mul(textureColor, p.lightColor));
 
-    const cosTheta = std.max(0.0, std.dot(input.worldNormal, p.lightDirection));
-    if (cosTheta > 0) {
-      diffuse = std.mul(cosTheta, std.mul(textureColor, p.lightColor));
+    const cosTheta = std.dot(input.worldNormal, p.lightDirection);
+    const diffuse = std.mul(
+      std.max(0, cosTheta),
+      std.mul(textureColor, p.lightColor),
+    );
 
-      const reflectionDirection = std.reflect(
-        std.mul(-1, p.lightDirection),
-        input.worldNormal,
-      );
-
-      specular = std.mul(
-        0.5,
-        std.mul(
-          textureColor,
-          std.mul(std.dot(reflectionDirection, viewDirection), p.lightColor),
-        ),
-      );
-    }
+    const viewSource = std.normalize(
+      std.sub(camera.value.position.xyz, input.worldPosition),
+    );
+    const reflectSource = std.normalize(
+      std.reflect(std.mul(-1, p.lightDirection), input.worldNormal),
+    );
+    const specularStrength = std.pow(
+      std.max(0, std.dot(viewSource, reflectSource)),
+      16,
+    );
+    const specular = std.mul(specularStrength, p.lightColor);
 
     const lightedColor = std.add(ambient, std.add(diffuse, specular));
 
+    // apply desaturation
     const distanceFromCamera = std.length(
       std.sub(camera.value.position.xyz, input.worldPosition),
     );

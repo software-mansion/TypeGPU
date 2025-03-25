@@ -119,6 +119,11 @@ const timePassedBuffer = root
   .$usage('uniform')
   .$name('time passed buffer');
 
+const currentTimeBuffer = root
+  .createBuffer(d.u32)
+  .$usage('uniform')
+  .$name('current time buffer');
+
 const oceanFloorDataBuffer = root
   .createBuffer(ModelDataArray(1), [
     {
@@ -172,6 +177,7 @@ const renderFishBindGroups = [0, 1].map((idx) =>
     camera: cameraBuffer,
     modelTexture: fishModel.texture,
     sampler: sampler,
+    currentTime: currentTimeBuffer,
   }),
 );
 
@@ -180,6 +186,7 @@ const renderOceanFloorBindGroup = root.createBindGroup(renderBindGroupLayout, {
   camera: cameraBuffer,
   modelTexture: oceanFloorModel.texture,
   sampler: sampler,
+  currentTime: currentTimeBuffer,
 });
 
 const computeBindGroups = [0, 1].map((idx) =>
@@ -203,6 +210,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
   }
   odd = !odd;
 
+  currentTimeBuffer.write(timestamp);
   timePassedBuffer.write(timestamp - lastTimestamp);
   lastTimestamp = timestamp;
   cameraBuffer.write(camera);
