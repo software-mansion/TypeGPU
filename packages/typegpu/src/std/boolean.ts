@@ -32,12 +32,6 @@ function correspondingBooleanVectorSchema(value: Resource) {
 
 // comparison
 
-export type AnyToBooleanComponentWise = {
-  <T extends AnyVec2Instance>(s: T, v: T): v2b;
-  <T extends AnyVec3Instance>(s: T, v: T): v3b;
-  <T extends AnyVec4Instance>(s: T, v: T): v4b;
-};
-
 /**
  * Checks whether `lhs == rhs` on all components.
  * Equivalent to `all(eq(lhs, rhs))`.
@@ -66,11 +60,11 @@ export const allEq = createDualImpl(
  * all(eq(vec4i(4, 3, 2, 1), vec4i(4, 3, 2, 1))) // returns true
  * allEq(vec4i(4, 3, 2, 1), vec4i(4, 3, 2, 1)) // returns true
  */
-export const eq: AnyToBooleanComponentWise = createDualImpl(
+export const eq = createDualImpl(
   // CPU implementation
-  (<T extends AnyVecInstance>(lhs: T, rhs: T) => {
+  <T extends AnyVecInstance>(lhs: T, rhs: T) => {
     return VectorOps.eq[lhs.kind](lhs, rhs);
-  }) as AnyToBooleanComponentWise,
+  },
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} == ${rhs.value})`,
@@ -86,11 +80,11 @@ export const eq: AnyToBooleanComponentWise = createDualImpl(
  * neq(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, false, true)
  * any(neq(vec4i(4, 3, 2, 1), vec4i(4, 2, 2, 1))) // returns true
  */
-export const neq: AnyToBooleanComponentWise = createDualImpl(
+export const neq = createDualImpl(
   // CPU implementation
-  (<T extends AnyVecInstance>(lhs: T, rhs: T) => {
-    return not(VectorOps.eq[lhs.kind](lhs, rhs));
-  }) as AnyToBooleanComponentWise,
+  <T extends AnyVecInstance>(lhs: T, rhs: T) => {
+    return not(eq(lhs, rhs));
+  },
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} != ${rhs.value})`,

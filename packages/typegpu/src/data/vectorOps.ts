@@ -140,7 +140,14 @@ export const VectorOps = {
       vec4b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z, e1.w === e2.w),
   } as Record<
     VecKind,
-    <T extends wgsl.AnyVecInstance>(e1: T, e2: T) => wgsl.AnyBooleanVecInstance
+    <T extends wgsl.AnyVecInstance>(
+      e1: T,
+      e2: T,
+    ) => T extends wgsl.AnyVec2Instance
+      ? wgsl.v2b
+      : T extends wgsl.AnyVec3Instance
+        ? wgsl.v3b
+        : wgsl.v4b
   >,
 
   lessThan: {
