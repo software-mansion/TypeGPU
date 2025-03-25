@@ -2,7 +2,11 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { add, dot, max, mul, normalize, pow, sub } from 'typegpu/std';
 import { lightDirection, lightPosition } from './env';
-import { cameraBindGroupLayout, celestialBodyLayout, centerObjectbindGroupLayout } from './structs';
+import {
+  cameraBindGroupLayout,
+  celestialBodyLayout,
+  centerObjectbindGroupLayout,
+} from './structs';
 
 export const EXT = cameraBindGroupLayout.bound;
 export const extObject = centerObjectbindGroupLayout.bound;
@@ -17,13 +21,18 @@ const VertexOutput = {
 
 export const mainVertex = tgpu['~unstable']
   .vertexFn({
-    in: { position: d.vec4f, normal: d.vec3f, uv: d.vec2f },
+    in: {
+      position: d.vec4f,
+      normal: d.vec3f,
+      uv: d.vec2f,
+      instanceIdx: d.builtin.instanceIndex,
+    },
     out: VertexOutput,
   })
   .does((input) => {
     const camera = EXT.camera.value;
-    const object = extCelestialBody.inState.value[0];
-    // const object = extObject.object.value; 
+    const object = extCelestialBody.inState.value[input.instanceIdx];
+    // const object = extObject.object.value;
     const worldPosition = mul(object.modelMatrix, input.position);
     const relativeToCamera = mul(camera.view, worldPosition);
     return {

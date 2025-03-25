@@ -103,7 +103,7 @@ const celestialBodiesBufferA = root
   .createBuffer(d.arrayOf(CelectialBodyStruct, 1), [
     {
       modelMatrix: d.mat4x4f(),
-      position: d.vec3f(0, 0, 0),
+      position: d.vec3f(0, 10, 0),
       velocity: d.vec3f(0, 0, 0),
       mass: 1,
     },
