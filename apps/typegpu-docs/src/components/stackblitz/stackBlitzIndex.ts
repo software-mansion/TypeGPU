@@ -1,6 +1,3 @@
-// @ts-ignore
-import * as example from './src/index.ts';
-
 const body = document.querySelector('body') as HTMLBodyElement;
 body.style.display = 'flex';
 body.style.flexDirection = 'column';
@@ -66,6 +63,10 @@ if (body.firstChild) {
 } else {
   body.appendChild(controlsPanel);
 }
+
+// Execute example
+// @ts-ignore
+const example = import('./src/index.ts');
 
 // Create example controls
 for (const controls of Object.values(example)) {
