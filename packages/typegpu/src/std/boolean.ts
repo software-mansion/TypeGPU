@@ -178,9 +178,9 @@ export const not = createDualImpl(
 );
 
 /**
- * Returns **component-wise** `lhs | rhs`.
+ * Returns **component-wise** logical `or` result.
  * @example
- * or(vec2b(false, true), vec2b(false, false)) // returns vec2b(true, false)
+ * or(vec2b(false, true), vec2b(false, false)) // returns vec2b(false, true)
  * or(vec3b(true, true, false), vec3b(false, true, false)) // returns vec3b(true, true, false)
  */
 export const or = createDualImpl(
@@ -195,9 +195,9 @@ export const or = createDualImpl(
 );
 
 /**
- * Returns **component-wise** `lhs & rhs`.
+ * Returns **component-wise** logical `and` result.
  * @example
- * and(vec2b(false, true), vec2b(true, true)) // returns vec2b(true, false)
+ * and(vec2b(false, true), vec2b(true, true)) // returns vec2b(false, true)
  * and(vec3b(true, true, false), vec3b(false, true, false)) // returns vec3b(false, true, false)
  */
 export const and = createDualImpl(
@@ -248,7 +248,7 @@ export const any = createDualImpl(
 // other
 
 /**
- * Checks whether the given elements differ by at most 0.01.
+ * Checks whether the given elements differ by at most the `precision` value.
  * Checks all elements of `lhs` and `rhs` if arguments are vectors.
  * @example
  * isCloseTo(0, 0.1) // returns false
@@ -275,7 +275,7 @@ export const isCloseTo = createDualImpl(
   (lhs, rhs, precision = { value: 0.01, dataType: f32 }) => {
     if (isNumeric(lhs) && isNumeric(rhs)) {
       return {
-        value: `(abs(f32(${lhs.value})-f32(${rhs.value})) <= ${precision.value})`,
+        value: `(abs(f32(${lhs.value}) - f32(${rhs.value})) <= ${precision.value})`,
         dataType: bool,
       };
     }
@@ -283,7 +283,7 @@ export const isCloseTo = createDualImpl(
       return {
         // https://www.w3.org/TR/WGSL/#vector-multi-component:~:text=Binary%20arithmetic%20expressions%20with%20mixed%20scalar%20and%20vector%20operands
         // (a-a)+prec creates a vector of a.length elements, all equal to prec
-        value: `all(abs(${lhs.value}-${rhs.value}) <= (${lhs.value} - ${lhs.value})+${precision.value})`,
+        value: `all(abs(${lhs.value} - ${rhs.value}) <= (${lhs.value} - ${lhs.value}) + ${precision.value})`,
         dataType: bool,
       };
     }
