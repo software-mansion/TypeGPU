@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { identity4x4 } from '../../src/std';
-import { mat4x4f } from '../../src/data/matrix';
 import { vec4f } from '../../src/data';
+import { mat4x4f } from '../../src/data/matrix';
+import { identity4x4 } from '../../src/std';
 
 describe('identity', () => {
   it('returns identity matrix of size 4x4', () => {
