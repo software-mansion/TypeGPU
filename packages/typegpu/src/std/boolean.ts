@@ -3,13 +3,9 @@ import { VectorOps } from '../data/vectorOps';
 import type {
   AnyBooleanVecInstance,
   AnyFloatVecInstance,
-  AnyNumericVec2Instance,
-  AnyNumericVec3Instance,
-  AnyNumericVec4Instance,
   AnyNumericVecInstance,
   AnyVec2Instance,
   AnyVec3Instance,
-  AnyVec4Instance,
   AnyVecInstance,
   ScalarData,
   v2b,
@@ -91,12 +87,6 @@ export const neq = createDualImpl(
     dataType: correspondingBooleanVectorSchema(lhs),
   }),
 );
-
-export type NumericToBooleanComponentWise = {
-  <T extends AnyNumericVec2Instance>(s: T, v: T): v2b;
-  <T extends AnyNumericVec3Instance>(s: T, v: T): v3b;
-  <T extends AnyNumericVec4Instance>(s: T, v: T): v4b;
-};
 
 /**
  * Checks **component-wise** whether `lhs < rhs`.
@@ -323,9 +313,15 @@ export const isCloseTo = createDualImpl(
 
 export type SelectOverload = {
   <T extends ScalarData | AnyVecInstance>(f: T, t: T, cond: boolean): T;
-  <T extends AnyVec2Instance>(f: T, t: T, cond: v2b): T;
-  <T extends AnyVec3Instance>(f: T, t: T, cond: v3b): T;
-  <T extends AnyVec4Instance>(f: T, t: T, cond: v4b): T;
+  <T extends AnyVecInstance>(
+    f: T,
+    t: T,
+    cond: T extends AnyVec2Instance
+      ? v2b
+      : T extends AnyVec3Instance
+        ? v3b
+        : v4b,
+  ): T;
 };
 
 /**

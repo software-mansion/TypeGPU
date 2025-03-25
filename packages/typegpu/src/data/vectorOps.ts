@@ -832,19 +832,7 @@ export const VectorOps = {
       ),
   } as Record<
     'vec2f' | 'vec3f' | 'vec4f' | 'vec2h' | 'vec3h' | 'vec4h' | 'number',
-    <
-      T extends
-        | wgsl.v2f
-        | wgsl.v3f
-        | wgsl.v4f
-        | wgsl.v2h
-        | wgsl.v3h
-        | wgsl.v4h
-        | number,
-    >(
-      a: T,
-      b: T,
-    ) => T
+    <T extends wgsl.AnyFloatVecInstance | number>(a: T, b: T) => T
   >,
 
   mix: {
@@ -1037,6 +1025,14 @@ export const VectorOps = {
       vec4b(c.x ? t.x : f.x, c.y ? t.y : f.y, c.z ? t.z : f.z, c.w ? t.w : f.w),
   } as Record<
     VecKind,
-    <T extends vBase>(f: T, t: T, c: wgsl.AnyBooleanVecInstance) => T
+    <T extends wgsl.AnyVecInstance>(
+      f: T,
+      t: T,
+      c: T extends wgsl.AnyVec2Instance
+        ? wgsl.v2b
+        : T extends wgsl.AnyVec3Instance
+          ? wgsl.v3b
+          : wgsl.v4b,
+    ) => T
   >,
 };
