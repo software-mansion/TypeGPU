@@ -248,5 +248,9 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
     throw new Error('Abstract types have no concrete representation in WGSL');
   }
 
+  if (data.type === 'void') {
+    throw new Error('Void has no representation in WGSL');
+  }
+
   assertExhaustive(data, 'resolveData');
 }

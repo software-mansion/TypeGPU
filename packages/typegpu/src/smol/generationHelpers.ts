@@ -1,4 +1,5 @@
 import { isDerived, isSlot } from '../core/slot/slotTypes';
+import type { AnyData } from '../data/dataTypes';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix';
 import {
   abstractFloat,
@@ -24,8 +25,6 @@ import {
   vec4u,
 } from '../data/vector';
 import {
-  type AnyWgslData,
-  type BaseData,
   type WgslStruct,
   isDecorated,
   isWgslArray,
@@ -61,7 +60,7 @@ type SwizzleLength = 1 | 2 | 3 | 4;
 
 const swizzleLenToType: Record<
   SwizzleableType,
-  Record<SwizzleLength, AnyWgslData>
+  Record<SwizzleLength, AnyData>
 > = {
   f: {
     1: f32,
@@ -128,7 +127,7 @@ const indexableTypeToResult = {
 export function getTypeForPropAccess(
   targetType: Wgsl,
   propName: string,
-): BaseData | UnknownData {
+): AnyData | UnknownData {
   if (
     typeof targetType === 'string' ||
     typeof targetType === 'number' ||
@@ -146,23 +145,25 @@ export function getTypeForPropAccess(
     }
     const unwrapped = ctx.unwrap(targetType);
 
-    return getTypeFromWgsl(unwrapped as Wgsl) as BaseData;
+    return getTypeFromWgsl(unwrapped);
   }
 
-  let target = targetType as BaseData;
+  let target = targetType as AnyData;
 
   if (hasInternalDataType(target)) {
-    target = target[$internal].dataType;
+    target = target[$internal].dataType as AnyData;
   }
   while (isDecorated(target)) {
-    target = target.inner;
+    target = target.inner as AnyData;
   }
 
   const targetTypeStr =
     'kind' in target ? (target.kind as string) : target.type;
 
   if (targetTypeStr === 'struct') {
-    return (target as WgslStruct).propTypes[propName] ?? UnknownData;
+    return (
+      ((target as WgslStruct).propTypes[propName] as AnyData) ?? UnknownData
+    );
   }
 
   const propLength = propName.length;
@@ -184,11 +185,11 @@ export function getTypeForPropAccess(
   return isWgslData(target) ? target : UnknownData;
 }
 
-export function getTypeForIndexAccess(resource: Wgsl): BaseData | UnknownData {
+export function getTypeForIndexAccess(resource: Wgsl): AnyData | UnknownData {
   if (isWgslData(resource)) {
     // array
     if (isWgslArray(resource)) {
-      return resource.elementType;
+      return resource.elementType as AnyData;
     }
 
     // vector or matrix
@@ -202,7 +203,7 @@ export function getTypeForIndexAccess(resource: Wgsl): BaseData | UnknownData {
   return UnknownData;
 }
 
-export function getTypeFromWgsl(resource: Wgsl): BaseData | UnknownData {
+export function getTypeFromWgsl(resource: Wgsl): AnyData | UnknownData {
   if (isDerived(resource) || isSlot(resource)) {
     return getTypeFromWgsl(resource.value as Wgsl);
   }
