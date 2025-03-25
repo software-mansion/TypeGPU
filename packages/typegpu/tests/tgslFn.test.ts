@@ -402,9 +402,10 @@ describe('TGSL tgpu.fn function', () => {
         in: { gid: builtin.globalInvocationId },
         workgroupSize: [24],
       })
-      .does(() => {
+      .does((input) => {
         const testStruct = fn();
-      });
+      })
+      .$name('compute_fn');
 
     const actual = parseResolved({ fn2 });
 
@@ -428,6 +429,8 @@ describe('TGSL tgpu.fn function', () => {
         var testStruct = test_struct();
       }
     `);
+
+    expect(actual).toEqual(expected);
   });
 
   // TODO: Add this back when we can properly infer ast types (and implement appropriate behavior for pointers)
