@@ -1,14 +1,12 @@
 export { discard } from './discard.js';
 export {
-  // ops
-  add,
-  sub,
-  mul,
+  abs,
   // builtin functions
   acos,
+  // ops
+  add,
   asin,
   atan2,
-  abs,
   ceil,
   clamp,
   cos,
@@ -22,28 +20,30 @@ export {
   length,
   max,
   min,
-  normalize,
   mix,
+  mul,
+  normalize,
   pow,
   reflect,
   sin,
+  sub,
   translate4x4,
 } from './numeric.js';
 
 export {
-  atomicLoad,
-  atomicStore,
   atomicAdd,
-  atomicSub,
+  atomicAnd,
+  atomicLoad,
   atomicMax,
   atomicMin,
-  atomicAnd,
   atomicOr,
+  atomicStore,
+  atomicSub,
   atomicXor,
-  // synchronization
-  workgroupBarrier,
   storageBarrier,
   textureBarrier,
+  // synchronization
+  workgroupBarrier,
 } from './atomic.js';
 
 export { arrayLength } from './array.js';
