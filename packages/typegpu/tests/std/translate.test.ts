@@ -1,6 +1,6 @@
-import { vec3f } from 'packages/typegpu/src/data';
-import { mat4x4f } from 'packages/typegpu/src/data/matrix';
-import { translate } from 'packages/typegpu/src/std';
+import { vec3f } from '../../src/data';
+import { mat4x4f } from '../../src/data/matrix';
+import { translate } from '../../src/std';
 import { describe, expect, it } from 'vitest';
 
 describe('translate', () => {
@@ -9,9 +9,10 @@ describe('translate', () => {
     const T = vec3f(1, 2, 3);
     const result = translate(M, T);
     expect(result).toEqual([
-      [1, 0, 2],
-      [0, 1, 3],
-      [0, 0, 1],
+      [1, 0, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 1, 0],
+      [1, 2, 3, 1],
     ]);
   });
 
