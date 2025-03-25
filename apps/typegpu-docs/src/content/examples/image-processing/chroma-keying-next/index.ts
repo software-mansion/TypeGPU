@@ -1,3 +1,4 @@
+import { rgbToYcbcrMatrix } from '@typegpu/color';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 
@@ -45,12 +46,6 @@ fn main_vert(@builtin(vertex_index) idx: u32) -> VertexOutput {
   return output;
 }
 
-const rgbToYcbcrMatrix = mat3x3f(
-  0.299,     0.587,     0.114,
- -0.168736, -0.331264,  0.5,
-  0.5,      -0.418688, -0.081312,
-);
-
 @fragment
 fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
   var col = textureSampleBaseClampToEdge(inputTexture, sampling, uv);
@@ -74,6 +69,7 @@ fn main_frag(@location(0) uv: vec2f) -> @location(0) vec4f {
     ...rareLayout.bound,
     ...frequentLayout.bound,
     VertexOutput,
+    rgbToYcbcrMatrix,
   },
 });
 
