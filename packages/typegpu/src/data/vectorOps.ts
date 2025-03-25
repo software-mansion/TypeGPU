@@ -1,4 +1,5 @@
-import { mat2x2f, mat3x3f, mat4x4f } from './matrix';
+import { TypeCatalog } from '../shared/internalMeta.js';
+import { mat2x2f, mat3x3f, mat4x4f } from './matrix.js';
 import {
   vec2f,
   vec2h,
@@ -13,15 +14,12 @@ import {
   vec4i,
   vec4u,
 } from './vector';
-import type * as wgsl from './wgslTypes';
-import type { VecKind } from './wgslTypes';
+import type { vBase } from './wgslTypes.js';
+import type * as wgsl from './wgslTypes.js';
 
-type vBase = { kind: VecKind };
 type v2 = wgsl.v2f | wgsl.v2h | wgsl.v2i | wgsl.v2u;
 type v3 = wgsl.v3f | wgsl.v3h | wgsl.v3i | wgsl.v3u;
 type v4 = wgsl.v4f | wgsl.v4h | wgsl.v4i | wgsl.v4u;
-
-type MatKind = 'mat2x2f' | 'mat3x3f' | 'mat4x4f';
 
 const lengthVec2 = (v: v2) => Math.sqrt(v.x ** 2 + v.y ** 2);
 const lengthVec3 = (v: v3) => Math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2);
@@ -107,238 +105,261 @@ const binaryComponentWise4u = (op: BinaryOp) => (a: wgsl.v4u, b: wgsl.v4u) =>
 
 export const VectorOps = {
   abs: {
-    vec2f: unary2f(Math.abs),
-    vec2h: unary2h(Math.abs),
-    vec2i: unary2i(Math.abs),
-    vec2u: unary2u(Math.abs),
+    [TypeCatalog.v2f]: unary2f(Math.abs),
+    [TypeCatalog.v2h]: unary2h(Math.abs),
+    [TypeCatalog.v2i]: unary2i(Math.abs),
+    [TypeCatalog.v2u]: unary2u(Math.abs),
 
-    vec3f: unary3f(Math.abs),
-    vec3h: unary3h(Math.abs),
-    vec3i: unary3i(Math.abs),
-    vec3u: unary3u(Math.abs),
+    [TypeCatalog.v3f]: unary3f(Math.abs),
+    [TypeCatalog.v3h]: unary3h(Math.abs),
+    [TypeCatalog.v3i]: unary3i(Math.abs),
+    [TypeCatalog.v3u]: unary3u(Math.abs),
 
-    vec4f: unary4f(Math.abs),
-    vec4h: unary4h(Math.abs),
-    vec4i: unary4i(Math.abs),
-    vec4u: unary4u(Math.abs),
-  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+    [TypeCatalog.v4f]: unary4f(Math.abs),
+    [TypeCatalog.v4h]: unary4h(Math.abs),
+    [TypeCatalog.v4i]: unary4i(Math.abs),
+    [TypeCatalog.v4u]: unary4u(Math.abs),
+  } as Record<wgsl.VecInstanceTypeID, <T extends vBase>(v: T) => T>,
 
   atan2: {
-    vec2f: binaryComponentWise2f(Math.atan2),
-    vec2h: binaryComponentWise2h(Math.atan2),
-    vec2i: binaryComponentWise2i(Math.atan2),
-    vec2u: binaryComponentWise2u(Math.atan2),
+    [TypeCatalog.v2f]: binaryComponentWise2f(Math.atan2),
+    [TypeCatalog.v2h]: binaryComponentWise2h(Math.atan2),
+    [TypeCatalog.v2i]: binaryComponentWise2i(Math.atan2),
+    [TypeCatalog.v2u]: binaryComponentWise2u(Math.atan2),
 
-    vec3f: binaryComponentWise3f(Math.atan2),
-    vec3h: binaryComponentWise3h(Math.atan2),
-    vec3i: binaryComponentWise3i(Math.atan2),
-    vec3u: binaryComponentWise3u(Math.atan2),
+    [TypeCatalog.v3f]: binaryComponentWise3f(Math.atan2),
+    [TypeCatalog.v3h]: binaryComponentWise3h(Math.atan2),
+    [TypeCatalog.v3i]: binaryComponentWise3i(Math.atan2),
+    [TypeCatalog.v3u]: binaryComponentWise3u(Math.atan2),
 
-    vec4f: binaryComponentWise4f(Math.atan2),
-    vec4h: binaryComponentWise4h(Math.atan2),
-    vec4i: binaryComponentWise4i(Math.atan2),
-    vec4u: binaryComponentWise4u(Math.atan2),
-  } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
+    [TypeCatalog.v4f]: binaryComponentWise4f(Math.atan2),
+    [TypeCatalog.v4h]: binaryComponentWise4h(Math.atan2),
+    [TypeCatalog.v4i]: binaryComponentWise4i(Math.atan2),
+    [TypeCatalog.v4u]: binaryComponentWise4u(Math.atan2),
+  } as Record<wgsl.VecInstanceTypeID, <T extends vBase>(a: T, b: T) => T>,
 
   acos: {
-    vec2f: unary2f(Math.acos),
-    vec2h: unary2h(Math.acos),
-    vec2i: unary2i(Math.acos),
-    vec2u: unary2u(Math.acos),
+    [TypeCatalog.v2f]: unary2f(Math.acos),
+    [TypeCatalog.v2h]: unary2h(Math.acos),
+    [TypeCatalog.v2i]: unary2i(Math.acos),
+    [TypeCatalog.v2u]: unary2u(Math.acos),
 
-    vec3f: unary3f(Math.acos),
-    vec3h: unary3h(Math.acos),
-    vec3i: unary3i(Math.acos),
-    vec3u: unary3u(Math.acos),
+    [TypeCatalog.v3f]: unary3f(Math.acos),
+    [TypeCatalog.v3h]: unary3h(Math.acos),
+    [TypeCatalog.v3i]: unary3i(Math.acos),
+    [TypeCatalog.v3u]: unary3u(Math.acos),
 
-    vec4f: unary4f(Math.acos),
-    vec4h: unary4h(Math.acos),
-    vec4i: unary4i(Math.acos),
-    vec4u: unary4u(Math.acos),
-  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+    [TypeCatalog.v4f]: unary4f(Math.acos),
+    [TypeCatalog.v4h]: unary4h(Math.acos),
+    [TypeCatalog.v4i]: unary4i(Math.acos),
+    [TypeCatalog.v4u]: unary4u(Math.acos),
+  } as Record<wgsl.VecInstanceTypeID, <T extends vBase>(v: T) => T>,
 
   asin: {
-    vec2f: unary2f(Math.asin),
-    vec2h: unary2h(Math.asin),
-    vec2i: unary2i(Math.asin),
-    vec2u: unary2u(Math.asin),
+    [TypeCatalog.v2f]: unary2f(Math.asin),
+    [TypeCatalog.v2h]: unary2h(Math.asin),
+    [TypeCatalog.v2i]: unary2i(Math.asin),
+    [TypeCatalog.v2u]: unary2u(Math.asin),
 
-    vec3f: unary3f(Math.asin),
-    vec3h: unary3h(Math.asin),
-    vec3i: unary3i(Math.asin),
-    vec3u: unary3u(Math.asin),
+    [TypeCatalog.v3f]: unary3f(Math.asin),
+    [TypeCatalog.v3h]: unary3h(Math.asin),
+    [TypeCatalog.v3i]: unary3i(Math.asin),
+    [TypeCatalog.v3u]: unary3u(Math.asin),
 
-    vec4f: unary4f(Math.asin),
-    vec4h: unary4h(Math.asin),
-    vec4i: unary4i(Math.asin),
-    vec4u: unary4u(Math.asin),
-  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+    [TypeCatalog.v4f]: unary4f(Math.asin),
+    [TypeCatalog.v4h]: unary4h(Math.asin),
+    [TypeCatalog.v4i]: unary4i(Math.asin),
+    [TypeCatalog.v4u]: unary4u(Math.asin),
+  } as Record<wgsl.VecInstanceTypeID, <T extends vBase>(v: T) => T>,
 
   ceil: {
-    vec2f: unary2f(Math.ceil),
-    vec2h: unary2h(Math.ceil),
-    vec2i: unary2i(Math.ceil),
-    vec2u: unary2u(Math.ceil),
+    [TypeCatalog.v2f]: unary2f(Math.ceil),
+    [TypeCatalog.v2h]: unary2h(Math.ceil),
+    [TypeCatalog.v2i]: unary2i(Math.ceil),
+    [TypeCatalog.v2u]: unary2u(Math.ceil),
 
-    vec3f: unary3f(Math.ceil),
-    vec3h: unary3h(Math.ceil),
-    vec3i: unary3i(Math.ceil),
-    vec3u: unary3u(Math.ceil),
+    [TypeCatalog.v3f]: unary3f(Math.ceil),
+    [TypeCatalog.v3h]: unary3h(Math.ceil),
+    [TypeCatalog.v3i]: unary3i(Math.ceil),
+    [TypeCatalog.v3u]: unary3u(Math.ceil),
 
-    vec4f: unary4f(Math.ceil),
-    vec4h: unary4h(Math.ceil),
-    vec4i: unary4i(Math.ceil),
-    vec4u: unary4u(Math.ceil),
-  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+    [TypeCatalog.v4f]: unary4f(Math.ceil),
+    [TypeCatalog.v4h]: unary4h(Math.ceil),
+    [TypeCatalog.v4i]: unary4i(Math.ceil),
+    [TypeCatalog.v4u]: unary4u(Math.ceil),
+  } as Record<wgsl.VecInstanceTypeID, <T extends vBase>(v: T) => T>,
 
   clamp: {
-    vec2f: (v: wgsl.v2f, low: wgsl.v2f, high: wgsl.v2f) =>
+    [TypeCatalog.v2f]: (v: wgsl.v2f, low: wgsl.v2f, high: wgsl.v2f) =>
       vec2f(clamp(v.x, low.x, high.x), clamp(v.y, low.y, high.y)),
-    vec2h: (v: wgsl.v2h, low: wgsl.v2h, high: wgsl.v2h) =>
+    [TypeCatalog.v2h]: (v: wgsl.v2h, low: wgsl.v2h, high: wgsl.v2h) =>
       vec2h(clamp(v.x, low.x, high.x), clamp(v.y, low.y, high.y)),
-    vec2i: (v: wgsl.v2i, low: wgsl.v2i, high: wgsl.v2i) =>
+    [TypeCatalog.v2i]: (v: wgsl.v2i, low: wgsl.v2i, high: wgsl.v2i) =>
       vec2i(clamp(v.x, low.x, high.x), clamp(v.y, low.y, high.y)),
-    vec2u: (v: wgsl.v2u, low: wgsl.v2u, high: wgsl.v2u) =>
+    [TypeCatalog.v2u]: (v: wgsl.v2u, low: wgsl.v2u, high: wgsl.v2u) =>
       vec2u(clamp(v.x, low.x, high.x), clamp(v.y, low.y, high.y)),
 
-    vec3f: (v: wgsl.v3f, low: wgsl.v3f, high: wgsl.v3f) =>
+    [TypeCatalog.v3f]: (v: wgsl.v3f, low: wgsl.v3f, high: wgsl.v3f) =>
       vec3f(
         clamp(v.x, low.x, high.x),
         clamp(v.y, low.y, high.y),
         clamp(v.z, low.z, high.z),
       ),
-    vec3h: (v: wgsl.v3h, low: wgsl.v3h, high: wgsl.v3h) =>
+    [TypeCatalog.v3h]: (v: wgsl.v3h, low: wgsl.v3h, high: wgsl.v3h) =>
       vec3h(
         clamp(v.x, low.x, high.x),
         clamp(v.y, low.y, high.y),
         clamp(v.z, low.z, high.z),
       ),
-    vec3i: (v: wgsl.v3i, low: wgsl.v3i, high: wgsl.v3f) =>
+    [TypeCatalog.v3i]: (v: wgsl.v3i, low: wgsl.v3i, high: wgsl.v3f) =>
       vec3i(
         clamp(v.x, low.x, high.x),
         clamp(v.y, low.y, high.y),
         clamp(v.z, low.z, high.z),
       ),
-    vec3u: (v: wgsl.v3u, low: wgsl.v3u, high: wgsl.v3f) =>
+    [TypeCatalog.v3u]: (v: wgsl.v3u, low: wgsl.v3u, high: wgsl.v3f) =>
       vec3u(
         clamp(v.x, low.x, high.x),
         clamp(v.y, low.y, high.y),
         clamp(v.z, low.z, high.z),
       ),
 
-    vec4f: (v: wgsl.v4f, low: wgsl.v4f, high: wgsl.v4f) =>
+    [TypeCatalog.v4f]: (v: wgsl.v4f, low: wgsl.v4f, high: wgsl.v4f) =>
       vec4f(
         clamp(v.x, low.x, high.x),
         clamp(v.y, low.y, high.y),
         clamp(v.z, low.z, high.z),
         clamp(v.w, low.w, high.w),
       ),
-    vec4h: (v: wgsl.v4h, low: wgsl.v4h, high: wgsl.v4h) =>
+    [TypeCatalog.v4h]: (v: wgsl.v4h, low: wgsl.v4h, high: wgsl.v4h) =>
       vec4h(
         clamp(v.x, low.x, high.x),
         clamp(v.y, low.y, high.y),
         clamp(v.z, low.z, high.z),
         clamp(v.w, low.w, high.w),
       ),
-    vec4i: (v: wgsl.v4i, low: wgsl.v4i, high: wgsl.v4i) =>
+    [TypeCatalog.v4i]: (v: wgsl.v4i, low: wgsl.v4i, high: wgsl.v4i) =>
       vec4i(
         clamp(v.x, low.x, high.x),
         clamp(v.y, low.y, high.y),
         clamp(v.z, low.z, high.z),
         clamp(v.w, low.w, high.w),
       ),
-    vec4u: (v: wgsl.v4u, low: wgsl.v4u, high: wgsl.v4u) =>
+    [TypeCatalog.v4u]: (v: wgsl.v4u, low: wgsl.v4u, high: wgsl.v4u) =>
       vec4u(
         clamp(v.x, low.x, high.x),
         clamp(v.y, low.y, high.y),
         clamp(v.z, low.z, high.z),
         clamp(v.w, low.w, high.w),
       ),
-  } as Record<VecKind, <T extends vBase>(v: T, low: T, high: T) => T>,
+  } as Record<
+    wgsl.VecInstanceTypeID,
+    <T extends vBase>(v: T, low: T, high: T) => T
+  >,
 
   length: {
-    vec2f: lengthVec2,
-    vec2h: lengthVec2,
-    vec2i: lengthVec2,
-    vec2u: lengthVec2,
-    vec3f: lengthVec3,
-    vec3h: lengthVec3,
-    vec3i: lengthVec3,
-    vec3u: lengthVec3,
-    vec4f: lengthVec4,
-    vec4h: lengthVec4,
-    vec4i: lengthVec4,
-    vec4u: lengthVec4,
-  } as Record<VecKind, (v: vBase) => number>,
+    [TypeCatalog.v2f]: lengthVec2,
+    [TypeCatalog.v2h]: lengthVec2,
+    [TypeCatalog.v2i]: lengthVec2,
+    [TypeCatalog.v2u]: lengthVec2,
+    [TypeCatalog.v3f]: lengthVec3,
+    [TypeCatalog.v3h]: lengthVec3,
+    [TypeCatalog.v3i]: lengthVec3,
+    [TypeCatalog.v3u]: lengthVec3,
+    [TypeCatalog.v4f]: lengthVec4,
+    [TypeCatalog.v4h]: lengthVec4,
+    [TypeCatalog.v4i]: lengthVec4,
+    [TypeCatalog.v4u]: lengthVec4,
+  } as Record<wgsl.VecInstanceTypeID, (v: vBase) => number>,
 
   add: {
-    vec2f: (a: wgsl.v2f, b: wgsl.v2f) => vec2f(a.x + b.x, a.y + b.y),
-    vec2h: (a: wgsl.v2h, b: wgsl.v2h) => vec2h(a.x + b.x, a.y + b.y),
-    vec2i: (a: wgsl.v2i, b: wgsl.v2i) => vec2i(a.x + b.x, a.y + b.y),
-    vec2u: (a: wgsl.v2u, b: wgsl.v2u) => vec2u(a.x + b.x, a.y + b.y),
+    [TypeCatalog.v2f]: (a: wgsl.v2f, b: wgsl.v2f) =>
+      vec2f(a.x + b.x, a.y + b.y),
+    [TypeCatalog.v2h]: (a: wgsl.v2h, b: wgsl.v2h) =>
+      vec2h(a.x + b.x, a.y + b.y),
+    [TypeCatalog.v2i]: (a: wgsl.v2i, b: wgsl.v2i) =>
+      vec2i(a.x + b.x, a.y + b.y),
+    [TypeCatalog.v2u]: (a: wgsl.v2u, b: wgsl.v2u) =>
+      vec2u(a.x + b.x, a.y + b.y),
 
-    vec3f: (a: wgsl.v3f, b: wgsl.v3f) => vec3f(a.x + b.x, a.y + b.y, a.z + b.z),
-    vec3h: (a: wgsl.v3h, b: wgsl.v3h) => vec3h(a.x + b.x, a.y + b.y, a.z + b.z),
-    vec3i: (a: wgsl.v3i, b: wgsl.v3i) => vec3i(a.x + b.x, a.y + b.y, a.z + b.z),
-    vec3u: (a: wgsl.v3u, b: wgsl.v3u) => vec3u(a.x + b.x, a.y + b.y, a.z + b.z),
+    [TypeCatalog.v3f]: (a: wgsl.v3f, b: wgsl.v3f) =>
+      vec3f(a.x + b.x, a.y + b.y, a.z + b.z),
+    [TypeCatalog.v3h]: (a: wgsl.v3h, b: wgsl.v3h) =>
+      vec3h(a.x + b.x, a.y + b.y, a.z + b.z),
+    [TypeCatalog.v3i]: (a: wgsl.v3i, b: wgsl.v3i) =>
+      vec3i(a.x + b.x, a.y + b.y, a.z + b.z),
+    [TypeCatalog.v3u]: (a: wgsl.v3u, b: wgsl.v3u) =>
+      vec3u(a.x + b.x, a.y + b.y, a.z + b.z),
 
-    vec4f: (a: wgsl.v4f, b: wgsl.v4f) =>
+    [TypeCatalog.v4f]: (a: wgsl.v4f, b: wgsl.v4f) =>
       vec4f(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w),
-    vec4h: (a: wgsl.v4h, b: wgsl.v4h) =>
+    [TypeCatalog.v4h]: (a: wgsl.v4h, b: wgsl.v4h) =>
       vec4h(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w),
-    vec4i: (a: wgsl.v4i, b: wgsl.v4i) =>
+    [TypeCatalog.v4i]: (a: wgsl.v4i, b: wgsl.v4i) =>
       vec4i(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w),
-    vec4u: (a: wgsl.v4u, b: wgsl.v4u) =>
+    [TypeCatalog.v4u]: (a: wgsl.v4u, b: wgsl.v4u) =>
       vec4u(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w),
-  } as Record<VecKind, <T extends vBase>(lhs: T, rhs: T) => T>,
+  } as Record<wgsl.VecInstanceTypeID, <T extends vBase>(lhs: T, rhs: T) => T>,
 
   sub: {
-    vec2f: (a: wgsl.v2f, b: wgsl.v2f) => vec2f(a.x - b.x, a.y - b.y),
-    vec2h: (a: wgsl.v2h, b: wgsl.v2h) => vec2h(a.x - b.x, a.y - b.y),
-    vec2i: (a: wgsl.v2i, b: wgsl.v2i) => vec2i(a.x - b.x, a.y - b.y),
-    vec2u: (a: wgsl.v2u, b: wgsl.v2u) => vec2u(a.x - b.x, a.y - b.y),
+    [TypeCatalog.v2f]: (a: wgsl.v2f, b: wgsl.v2f) =>
+      vec2f(a.x - b.x, a.y - b.y),
+    [TypeCatalog.v2h]: (a: wgsl.v2h, b: wgsl.v2h) =>
+      vec2h(a.x - b.x, a.y - b.y),
+    [TypeCatalog.v2i]: (a: wgsl.v2i, b: wgsl.v2i) =>
+      vec2i(a.x - b.x, a.y - b.y),
+    [TypeCatalog.v2u]: (a: wgsl.v2u, b: wgsl.v2u) =>
+      vec2u(a.x - b.x, a.y - b.y),
 
-    vec3f: (a: wgsl.v3f, b: wgsl.v3f) => vec3f(a.x - b.x, a.y - b.y, a.z - b.z),
-    vec3h: (a: wgsl.v3h, b: wgsl.v3h) => vec3h(a.x - b.x, a.y - b.y, a.z - b.z),
-    vec3i: (a: wgsl.v3i, b: wgsl.v3i) => vec3i(a.x - b.x, a.y - b.y, a.z - b.z),
-    vec3u: (a: wgsl.v3u, b: wgsl.v3u) => vec3u(a.x - b.x, a.y - b.y, a.z - b.z),
+    [TypeCatalog.v3f]: (a: wgsl.v3f, b: wgsl.v3f) =>
+      vec3f(a.x - b.x, a.y - b.y, a.z - b.z),
+    [TypeCatalog.v3h]: (a: wgsl.v3h, b: wgsl.v3h) =>
+      vec3h(a.x - b.x, a.y - b.y, a.z - b.z),
+    [TypeCatalog.v3i]: (a: wgsl.v3i, b: wgsl.v3i) =>
+      vec3i(a.x - b.x, a.y - b.y, a.z - b.z),
+    [TypeCatalog.v3u]: (a: wgsl.v3u, b: wgsl.v3u) =>
+      vec3u(a.x - b.x, a.y - b.y, a.z - b.z),
 
-    vec4f: (a: wgsl.v4f, b: wgsl.v4f) =>
+    [TypeCatalog.v4f]: (a: wgsl.v4f, b: wgsl.v4f) =>
       vec4f(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w),
-    vec4h: (a: wgsl.v4h, b: wgsl.v4h) =>
+    [TypeCatalog.v4h]: (a: wgsl.v4h, b: wgsl.v4h) =>
       vec4h(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w),
-    vec4i: (a: wgsl.v4i, b: wgsl.v4i) =>
+    [TypeCatalog.v4i]: (a: wgsl.v4i, b: wgsl.v4i) =>
       vec4i(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w),
-    vec4u: (a: wgsl.v4u, b: wgsl.v4u) =>
+    [TypeCatalog.v4u]: (a: wgsl.v4u, b: wgsl.v4u) =>
       vec4u(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w),
-  } as Record<VecKind, <T extends vBase>(lhs: T, rhs: T) => T>,
+  } as Record<wgsl.VecInstanceTypeID, <T extends vBase>(lhs: T, rhs: T) => T>,
 
   mulSxV: {
-    vec2f: (s: number, v: wgsl.v2f) => vec2f(s * v.x, s * v.y),
-    vec2h: (s: number, v: wgsl.v2h) => vec2h(s * v.x, s * v.y),
-    vec2i: (s: number, v: wgsl.v2i) => vec2i(s * v.x, s * v.y),
-    vec2u: (s: number, v: wgsl.v2u) => vec2u(s * v.x, s * v.y),
+    [TypeCatalog.v2f]: (s: number, v: wgsl.v2f) => vec2f(s * v.x, s * v.y),
+    [TypeCatalog.v2h]: (s: number, v: wgsl.v2h) => vec2h(s * v.x, s * v.y),
+    [TypeCatalog.v2i]: (s: number, v: wgsl.v2i) => vec2i(s * v.x, s * v.y),
+    [TypeCatalog.v2u]: (s: number, v: wgsl.v2u) => vec2u(s * v.x, s * v.y),
 
-    vec3f: (s: number, v: wgsl.v3f) => vec3f(s * v.x, s * v.y, s * v.z),
-    vec3h: (s: number, v: wgsl.v3h) => vec3h(s * v.x, s * v.y, s * v.z),
-    vec3i: (s: number, v: wgsl.v3i) => vec3i(s * v.x, s * v.y, s * v.z),
-    vec3u: (s: number, v: wgsl.v3u) => vec3u(s * v.x, s * v.y, s * v.z),
+    [TypeCatalog.v3f]: (s: number, v: wgsl.v3f) =>
+      vec3f(s * v.x, s * v.y, s * v.z),
+    [TypeCatalog.v3h]: (s: number, v: wgsl.v3h) =>
+      vec3h(s * v.x, s * v.y, s * v.z),
+    [TypeCatalog.v3i]: (s: number, v: wgsl.v3i) =>
+      vec3i(s * v.x, s * v.y, s * v.z),
+    [TypeCatalog.v3u]: (s: number, v: wgsl.v3u) =>
+      vec3u(s * v.x, s * v.y, s * v.z),
 
-    vec4f: (s: number, v: wgsl.v4f) =>
+    [TypeCatalog.v4f]: (s: number, v: wgsl.v4f) =>
       vec4f(s * v.x, s * v.y, s * v.z, s * v.w),
-    vec4h: (s: number, v: wgsl.v4h) =>
+    [TypeCatalog.v4h]: (s: number, v: wgsl.v4h) =>
       vec4h(s * v.x, s * v.y, s * v.z, s * v.w),
-    vec4i: (s: number, v: wgsl.v4i) =>
+    [TypeCatalog.v4i]: (s: number, v: wgsl.v4i) =>
       vec4i(s * v.x, s * v.y, s * v.z, s * v.w),
-    vec4u: (s: number, v: wgsl.v4u) =>
+    [TypeCatalog.v4u]: (s: number, v: wgsl.v4u) =>
       vec4u(s * v.x, s * v.y, s * v.z, s * v.w),
 
-    mat2x2f: (s: number, m: wgsl.m2x2f) => {
+    [TypeCatalog.m2x2f]: (s: number, m: wgsl.m2x2f) => {
       const m_ = m.columns as [wgsl.v2f, wgsl.v2f];
       return mat2x2f(s * m_[0].x, s * m_[0].y, s * m_[1].x, s * m_[1].y);
     },
 
-    mat3x3f: (s: number, m: wgsl.m3x3f) => {
+    [TypeCatalog.m3x3f]: (s: number, m: wgsl.m3x3f) => {
       const m_ = m.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
       return mat3x3f(
         s * m_[0].x,
@@ -355,7 +376,7 @@ export const VectorOps = {
       );
     },
 
-    mat4x4f: (s: number, m: wgsl.m4x4f) => {
+    [TypeCatalog.m4x4f]: (s: number, m: wgsl.m4x4f) => {
       const m_ = m.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
       return mat4x4f(
         s * m_[0].x,
@@ -380,31 +401,39 @@ export const VectorOps = {
       );
     },
   } as Record<
-    VecKind | MatKind,
+    wgsl.VecInstanceTypeID | wgsl.MatInstanceTypeID,
     <T extends vBase | wgsl.AnyMatInstance>(s: number, v: T) => T
   >,
 
   mulVxV: {
-    vec2f: (a: wgsl.v2f, b: wgsl.v2f) => vec2f(a.x * b.x, a.y * b.y),
-    vec2h: (a: wgsl.v2h, b: wgsl.v2h) => vec2h(a.x * b.x, a.y * b.y),
-    vec2i: (a: wgsl.v2i, b: wgsl.v2i) => vec2i(a.x * b.x, a.y * b.y),
-    vec2u: (a: wgsl.v2u, b: wgsl.v2u) => vec2u(a.x * b.x, a.y * b.y),
+    [TypeCatalog.v2f]: (a: wgsl.v2f, b: wgsl.v2f) =>
+      vec2f(a.x * b.x, a.y * b.y),
+    [TypeCatalog.v2h]: (a: wgsl.v2h, b: wgsl.v2h) =>
+      vec2h(a.x * b.x, a.y * b.y),
+    [TypeCatalog.v2i]: (a: wgsl.v2i, b: wgsl.v2i) =>
+      vec2i(a.x * b.x, a.y * b.y),
+    [TypeCatalog.v2u]: (a: wgsl.v2u, b: wgsl.v2u) =>
+      vec2u(a.x * b.x, a.y * b.y),
 
-    vec3f: (a: wgsl.v3f, b: wgsl.v3f) => vec3f(a.x * b.x, a.y * b.y, a.z * b.z),
-    vec3h: (a: wgsl.v3h, b: wgsl.v3h) => vec3h(a.x * b.x, a.y * b.y, a.z * b.z),
-    vec3i: (a: wgsl.v3i, b: wgsl.v3i) => vec3i(a.x * b.x, a.y * b.y, a.z * b.z),
-    vec3u: (a: wgsl.v3u, b: wgsl.v3u) => vec3u(a.x * b.x, a.y * b.y, a.z * b.z),
+    [TypeCatalog.v3f]: (a: wgsl.v3f, b: wgsl.v3f) =>
+      vec3f(a.x * b.x, a.y * b.y, a.z * b.z),
+    [TypeCatalog.v3h]: (a: wgsl.v3h, b: wgsl.v3h) =>
+      vec3h(a.x * b.x, a.y * b.y, a.z * b.z),
+    [TypeCatalog.v3i]: (a: wgsl.v3i, b: wgsl.v3i) =>
+      vec3i(a.x * b.x, a.y * b.y, a.z * b.z),
+    [TypeCatalog.v3u]: (a: wgsl.v3u, b: wgsl.v3u) =>
+      vec3u(a.x * b.x, a.y * b.y, a.z * b.z),
 
-    vec4f: (a: wgsl.v4f, b: wgsl.v4f) =>
+    [TypeCatalog.v4f]: (a: wgsl.v4f, b: wgsl.v4f) =>
       vec4f(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w),
-    vec4h: (a: wgsl.v4h, b: wgsl.v4h) =>
+    [TypeCatalog.v4h]: (a: wgsl.v4h, b: wgsl.v4h) =>
       vec4h(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w),
-    vec4i: (a: wgsl.v4i, b: wgsl.v4i) =>
+    [TypeCatalog.v4i]: (a: wgsl.v4i, b: wgsl.v4i) =>
       vec4i(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w),
-    vec4u: (a: wgsl.v4u, b: wgsl.v4u) =>
+    [TypeCatalog.v4u]: (a: wgsl.v4u, b: wgsl.v4u) =>
       vec4u(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w),
 
-    mat2x2f: (a: wgsl.m2x2f, b: wgsl.m2x2f) => {
+    [TypeCatalog.m2x2f]: (a: wgsl.m2x2f, b: wgsl.m2x2f) => {
       const a_ = a.columns as [wgsl.v2f, wgsl.v2f];
       const b_ = b.columns as [wgsl.v2f, wgsl.v2f];
 
@@ -417,7 +446,7 @@ export const VectorOps = {
       );
     },
 
-    mat3x3f: (a: wgsl.m3x3f, b: wgsl.m3x3f) => {
+    [TypeCatalog.m3x3f]: (a: wgsl.m3x3f, b: wgsl.m3x3f) => {
       const a_ = a.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
       const b_ = b.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
 
@@ -436,7 +465,7 @@ export const VectorOps = {
       );
     },
 
-    mat4x4f: (a: wgsl.m4x4f, b: wgsl.m4x4f) => {
+    [TypeCatalog.m4x4f]: (a: wgsl.m4x4f, b: wgsl.m4x4f) => {
       const a_ = a.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
       const b_ = b.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
 
@@ -511,12 +540,12 @@ export const VectorOps = {
       );
     },
   } as Record<
-    VecKind | MatKind,
+    wgsl.VecInstanceTypeID | wgsl.MatInstanceTypeID,
     <T extends vBase | wgsl.AnyMatInstance>(lhs: T, rhs: T) => T
   >,
 
   mulMxV: {
-    mat2x2f: (m: wgsl.m2x2f, v: wgsl.v2f) => {
+    [TypeCatalog.m2x2f]: (m: wgsl.m2x2f, v: wgsl.v2f) => {
       const m_ = m.columns as [wgsl.v2f, wgsl.v2f];
       return vec2f(
         m_[0].x * v.x + m_[1].x * v.y,
@@ -524,7 +553,7 @@ export const VectorOps = {
       );
     },
 
-    mat3x3f: (m: wgsl.m3x3f, v: wgsl.v3f) => {
+    [TypeCatalog.m3x3f]: (m: wgsl.m3x3f, v: wgsl.v3f) => {
       const m_ = m.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
       return vec3f(
         m_[0].x * v.x + m_[1].x * v.y + m_[2].x * v.z,
@@ -533,7 +562,7 @@ export const VectorOps = {
       );
     },
 
-    mat4x4f: (m: wgsl.m4x4f, v: wgsl.v4f) => {
+    [TypeCatalog.m4x4f]: (m: wgsl.m4x4f, v: wgsl.v4f) => {
       const m_ = m.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
       return vec4f(
         m_[0].x * v.x + m_[1].x * v.y + m_[2].x * v.z + m_[3].x * v.w,
@@ -543,7 +572,7 @@ export const VectorOps = {
       );
     },
   } as Record<
-    MatKind,
+    wgsl.MatInstanceTypeID,
     <T extends wgsl.AnyMatInstance>(
       m: T,
       v: wgsl.vBaseForMat<T>,
@@ -551,7 +580,7 @@ export const VectorOps = {
   >,
 
   mulVxM: {
-    mat2x2f: (v: wgsl.v2f, m: wgsl.m2x2f) => {
+    [TypeCatalog.m2x2f]: (v: wgsl.v2f, m: wgsl.m2x2f) => {
       const m_ = m.columns as [wgsl.v2f, wgsl.v2f];
       return vec2f(
         v.x * m_[0].x + v.y * m_[0].y,
@@ -559,7 +588,7 @@ export const VectorOps = {
       );
     },
 
-    mat3x3f: (v: wgsl.v3f, m: wgsl.m3x3f) => {
+    [TypeCatalog.m3x3f]: (v: wgsl.v3f, m: wgsl.m3x3f) => {
       const m_ = m.columns as [wgsl.v3f, wgsl.v3f, wgsl.v3f];
       return vec3f(
         v.x * m_[0].x + v.y * m_[0].y + v.z * m_[0].z,
@@ -568,7 +597,7 @@ export const VectorOps = {
       );
     },
 
-    mat4x4f: (v: wgsl.v4f, m: wgsl.m4x4f) => {
+    [TypeCatalog.m4x4f]: (v: wgsl.v4f, m: wgsl.m4x4f) => {
       const m_ = m.columns as [wgsl.v4f, wgsl.v4f, wgsl.v4f, wgsl.v4f];
       return vec4f(
         v.x * m_[0].x + v.y * m_[0].y + v.z * m_[0].z + v.w * m_[0].w,
@@ -578,7 +607,7 @@ export const VectorOps = {
       );
     },
   } as Record<
-    MatKind,
+    wgsl.MatInstanceTypeID,
     <T extends wgsl.AnyMatInstance>(
       v: wgsl.vBaseForMat<T>,
       m: T,
@@ -586,96 +615,99 @@ export const VectorOps = {
   >,
 
   dot: {
-    vec2f: dotVec2,
-    vec2h: dotVec2,
-    vec2i: dotVec2,
-    vec2u: dotVec2,
-    vec3f: dotVec3,
-    vec3h: dotVec3,
-    vec3i: dotVec3,
-    vec3u: dotVec3,
-    vec4f: dotVec4,
-    vec4h: dotVec4,
-    vec4i: dotVec4,
-    vec4u: dotVec4,
-  } as Record<VecKind, <T extends vBase>(lhs: T, rhs: T) => number>,
+    [TypeCatalog.v2f]: dotVec2,
+    [TypeCatalog.v2h]: dotVec2,
+    [TypeCatalog.v2i]: dotVec2,
+    [TypeCatalog.v2u]: dotVec2,
+    [TypeCatalog.v3f]: dotVec3,
+    [TypeCatalog.v3h]: dotVec3,
+    [TypeCatalog.v3i]: dotVec3,
+    [TypeCatalog.v3u]: dotVec3,
+    [TypeCatalog.v4f]: dotVec4,
+    [TypeCatalog.v4h]: dotVec4,
+    [TypeCatalog.v4i]: dotVec4,
+    [TypeCatalog.v4u]: dotVec4,
+  } as Record<
+    wgsl.VecInstanceTypeID,
+    <T extends vBase>(lhs: T, rhs: T) => number
+  >,
 
   normalize: {
-    vec2f: (v: wgsl.v2f) => {
+    [TypeCatalog.v2f]: (v: wgsl.v2f) => {
       const len = lengthVec2(v);
       return vec2f(v.x / len, v.y / len);
     },
-    vec2h: (v: wgsl.v2h) => {
+    [TypeCatalog.v2h]: (v: wgsl.v2h) => {
       const len = lengthVec2(v);
       return vec2h(v.x / len, v.y / len);
     },
-    vec2i: (v: wgsl.v2i) => {
+    [TypeCatalog.v2i]: (v: wgsl.v2i) => {
       const len = lengthVec2(v);
       return vec2i(v.x / len, v.y / len);
     },
-    vec2u: (v: wgsl.v2u) => {
+    [TypeCatalog.v2u]: (v: wgsl.v2u) => {
       const len = lengthVec2(v);
       return vec2u(v.x / len, v.y / len);
     },
 
-    vec3f: (v: wgsl.v3f) => {
+    [TypeCatalog.v3f]: (v: wgsl.v3f) => {
       const len = lengthVec3(v);
       return vec3f(v.x / len, v.y / len, v.z / len);
     },
-    vec3h: (v: wgsl.v3h) => {
+    [TypeCatalog.v3h]: (v: wgsl.v3h) => {
       const len = lengthVec3(v);
       return vec3h(v.x / len, v.y / len, v.z / len);
     },
-    vec3i: (v: wgsl.v3i) => {
+    [TypeCatalog.v3i]: (v: wgsl.v3i) => {
       const len = lengthVec3(v);
       return vec3i(v.x / len, v.y / len, v.z / len);
     },
-    vec3u: (v: wgsl.v3u) => {
+    [TypeCatalog.v3u]: (v: wgsl.v3u) => {
       const len = lengthVec3(v);
       return vec3u(v.x / len, v.y / len, v.z / len);
     },
 
-    vec4f: (v: wgsl.v4f) => {
+    [TypeCatalog.v4f]: (v: wgsl.v4f) => {
       const len = lengthVec4(v);
       return vec4f(v.x / len, v.y / len, v.z / len, v.w / len);
     },
-    vec4h: (v: wgsl.v4h) => {
+    [TypeCatalog.v4h]: (v: wgsl.v4h) => {
       const len = lengthVec4(v);
       return vec4h(v.x / len, v.y / len, v.z / len, v.w / len);
     },
-    vec4i: (v: wgsl.v4i) => {
+    [TypeCatalog.v4i]: (v: wgsl.v4i) => {
       const len = lengthVec4(v);
       return vec4i(v.x / len, v.y / len, v.z / len, v.w / len);
     },
-    vec4u: (v: wgsl.v4u) => {
+    [TypeCatalog.v4u]: (v: wgsl.v4u) => {
       const len = lengthVec4(v);
       return vec4u(v.x / len, v.y / len, v.z / len, v.w / len);
     },
-  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+  } as Record<wgsl.VecInstanceTypeID, <T extends vBase>(v: T) => T>,
 
   cross: {
-    vec3f: (a: wgsl.v3f, b: wgsl.v3f) => {
+    [TypeCatalog.v3f]: (a: wgsl.v3f, b: wgsl.v3f) => {
       return vec3f(
         a.y * b.z - a.z * b.y,
         a.z * b.x - a.x * b.z,
         a.x * b.y - a.y * b.x,
       );
     },
-    vec3h: (a: wgsl.v3h, b: wgsl.v3h) => {
+    [TypeCatalog.v3h]: (a: wgsl.v3h, b: wgsl.v3h) => {
       return vec3h(
         a.y * b.z - a.z * b.y,
         a.z * b.x - a.x * b.z,
         a.x * b.y - a.y * b.x,
       );
     },
-    vec3i: (a: wgsl.v3i, b: wgsl.v3i) => {
+    [TypeCatalog.v3i]: (a: wgsl.v3i, b: wgsl.v3i) => {
       return vec3i(
         a.y * b.z - a.z * b.y,
         a.z * b.x - a.x * b.z,
         a.x * b.y - a.y * b.x,
       );
     },
-    vec3u: (a: wgsl.v3u, b: wgsl.v3u) => {
+    [TypeCatalog.v3u]: (a: wgsl.v3u, b: wgsl.v3u) => {
       return vec3u(
         a.y * b.z - a.z * b.y,
         a.z * b.x - a.x * b.z,
@@ -683,60 +715,60 @@ export const VectorOps = {
       );
     },
   } as Record<
-    'vec3f' | 'vec3i' | 'vec3u',
+    TypeCatalog['v3f'] | TypeCatalog['v3i'] | TypeCatalog['v3u'],
     <T extends wgsl.v3f | wgsl.v3i | wgsl.v3u>(a: T, b: T) => T
   >,
 
   floor: {
-    vec2f: unary2f(Math.floor),
-    vec2h: unary2h(Math.floor),
-    vec2i: unary2i(Math.floor),
-    vec2u: unary2u(Math.floor),
+    [TypeCatalog.v2f]: unary2f(Math.floor),
+    [TypeCatalog.v2h]: unary2h(Math.floor),
+    [TypeCatalog.v2i]: unary2i(Math.floor),
+    [TypeCatalog.v2u]: unary2u(Math.floor),
 
-    vec3f: unary3f(Math.floor),
-    vec3h: unary3h(Math.floor),
-    vec3i: unary3i(Math.floor),
-    vec3u: unary3u(Math.floor),
+    [TypeCatalog.v3f]: unary3f(Math.floor),
+    [TypeCatalog.v3h]: unary3h(Math.floor),
+    [TypeCatalog.v3i]: unary3i(Math.floor),
+    [TypeCatalog.v3u]: unary3u(Math.floor),
 
-    vec4f: unary4f(Math.floor),
-    vec4h: unary4h(Math.floor),
-    vec4i: unary4i(Math.floor),
-    vec4u: unary4u(Math.floor),
-  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+    [TypeCatalog.v4f]: unary4f(Math.floor),
+    [TypeCatalog.v4h]: unary4h(Math.floor),
+    [TypeCatalog.v4i]: unary4i(Math.floor),
+    [TypeCatalog.v4u]: unary4u(Math.floor),
+  } as Record<wgsl.VecInstanceTypeID, <T extends vBase>(v: T) => T>,
 
   max: {
-    vec2f: binaryComponentWise2f(Math.max),
-    vec2h: binaryComponentWise2h(Math.max),
-    vec2i: binaryComponentWise2i(Math.max),
-    vec2u: binaryComponentWise2u(Math.max),
+    [TypeCatalog.v2f]: binaryComponentWise2f(Math.max),
+    [TypeCatalog.v2h]: binaryComponentWise2h(Math.max),
+    [TypeCatalog.v2i]: binaryComponentWise2i(Math.max),
+    [TypeCatalog.v2u]: binaryComponentWise2u(Math.max),
 
-    vec3f: binaryComponentWise3f(Math.max),
-    vec3h: binaryComponentWise3h(Math.max),
-    vec3i: binaryComponentWise3i(Math.max),
-    vec3u: binaryComponentWise3u(Math.max),
+    [TypeCatalog.v3f]: binaryComponentWise3f(Math.max),
+    [TypeCatalog.v3h]: binaryComponentWise3h(Math.max),
+    [TypeCatalog.v3i]: binaryComponentWise3i(Math.max),
+    [TypeCatalog.v3u]: binaryComponentWise3u(Math.max),
 
-    vec4f: binaryComponentWise4f(Math.max),
-    vec4h: binaryComponentWise4h(Math.max),
-    vec4i: binaryComponentWise4i(Math.max),
-    vec4u: binaryComponentWise4u(Math.max),
-  } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
+    [TypeCatalog.v4f]: binaryComponentWise4f(Math.max),
+    [TypeCatalog.v4h]: binaryComponentWise4h(Math.max),
+    [TypeCatalog.v4i]: binaryComponentWise4i(Math.max),
+    [TypeCatalog.v4u]: binaryComponentWise4u(Math.max),
+  } as Record<wgsl.VecInstanceTypeID, <T extends vBase>(a: T, b: T) => T>,
 
   min: {
-    vec2f: binaryComponentWise2f(Math.min),
-    vec2h: binaryComponentWise2h(Math.min),
-    vec2i: binaryComponentWise2i(Math.min),
-    vec2u: binaryComponentWise2u(Math.min),
+    [TypeCatalog.v2f]: binaryComponentWise2f(Math.min),
+    [TypeCatalog.v2h]: binaryComponentWise2h(Math.min),
+    [TypeCatalog.v2i]: binaryComponentWise2i(Math.min),
+    [TypeCatalog.v2u]: binaryComponentWise2u(Math.min),
 
-    vec3f: binaryComponentWise3f(Math.min),
-    vec3h: binaryComponentWise3h(Math.min),
-    vec3i: binaryComponentWise3i(Math.min),
-    vec3u: binaryComponentWise3u(Math.min),
+    [TypeCatalog.v3f]: binaryComponentWise3f(Math.min),
+    [TypeCatalog.v3h]: binaryComponentWise3h(Math.min),
+    [TypeCatalog.v3i]: binaryComponentWise3i(Math.min),
+    [TypeCatalog.v3u]: binaryComponentWise3u(Math.min),
 
-    vec4f: binaryComponentWise4f(Math.min),
-    vec4h: binaryComponentWise4h(Math.min),
-    vec4i: binaryComponentWise4i(Math.min),
-    vec4u: binaryComponentWise4u(Math.min),
-  } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
+    [TypeCatalog.v4f]: binaryComponentWise4f(Math.min),
+    [TypeCatalog.v4h]: binaryComponentWise4h(Math.min),
+    [TypeCatalog.v4i]: binaryComponentWise4i(Math.min),
+    [TypeCatalog.v4u]: binaryComponentWise4u(Math.min),
+  } as Record<wgsl.VecInstanceTypeID, <T extends vBase>(a: T, b: T) => T>,
 
   pow: {
     vec2f: (base: wgsl.v2f, exponent: wgsl.v2f) =>
@@ -781,7 +813,7 @@ export const VectorOps = {
   >,
 
   mix: {
-    vec2f: (e1: wgsl.v2f, e2: wgsl.v2f, e3: wgsl.v2f | number) => {
+    [TypeCatalog.v2f]: (e1: wgsl.v2f, e2: wgsl.v2f, e3: wgsl.v2f | number) => {
       if (typeof e3 === 'number') {
         return vec2f(e1.x * (1 - e3) + e2.x * e3, e1.y * (1 - e3) + e2.y * e3);
       }
@@ -790,7 +822,7 @@ export const VectorOps = {
         e1.y * (1 - e3.y) + e2.y * e3.y,
       );
     },
-    vec2h: (e1: wgsl.v2h, e2: wgsl.v2h, e3: wgsl.v2h | number) => {
+    [TypeCatalog.v2h]: (e1: wgsl.v2h, e2: wgsl.v2h, e3: wgsl.v2h | number) => {
       if (typeof e3 === 'number') {
         return vec2h(e1.x * (1 - e3) + e2.x * e3, e1.y * (1 - e3) + e2.y * e3);
       }
@@ -800,7 +832,7 @@ export const VectorOps = {
       );
     },
 
-    vec3f: (e1: wgsl.v3f, e2: wgsl.v3f, e3: wgsl.v3f | number) => {
+    [TypeCatalog.v3f]: (e1: wgsl.v3f, e2: wgsl.v3f, e3: wgsl.v3f | number) => {
       if (typeof e3 === 'number') {
         return vec3f(
           e1.x * (1 - e3) + e2.x * e3,
@@ -814,7 +846,7 @@ export const VectorOps = {
         e1.z * (1 - e3.z) + e2.z * e3.z,
       );
     },
-    vec3h: (e1: wgsl.v3h, e2: wgsl.v3h, e3: wgsl.v3h | number) => {
+    [TypeCatalog.v3h]: (e1: wgsl.v3h, e2: wgsl.v3h, e3: wgsl.v3h | number) => {
       if (typeof e3 === 'number') {
         return vec3h(
           e1.x * (1 - e3) + e2.x * e3,
@@ -829,7 +861,7 @@ export const VectorOps = {
       );
     },
 
-    vec4f: (e1: wgsl.v4f, e2: wgsl.v4f, e3: wgsl.v4f | number) => {
+    [TypeCatalog.v4f]: (e1: wgsl.v4f, e2: wgsl.v4f, e3: wgsl.v4f | number) => {
       if (typeof e3 === 'number') {
         return vec4f(
           e1.x * (1 - e3) + e2.x * e3,
@@ -845,7 +877,7 @@ export const VectorOps = {
         e1.w * (1 - e3.w) + e2.w * e3.w,
       );
     },
-    vec4h: (e1: wgsl.v4h, e2: wgsl.v4h, e3: wgsl.v4h | number) => {
+    [TypeCatalog.v4h]: (e1: wgsl.v4h, e2: wgsl.v4h, e3: wgsl.v4h | number) => {
       if (typeof e3 === 'number') {
         return vec4h(
           e1.x * (1 - e3) + e2.x * e3,
@@ -862,7 +894,12 @@ export const VectorOps = {
       );
     },
   } as Record<
-    'vec2f' | 'vec3f' | 'vec4f' | 'vec2h' | 'vec3h' | 'vec4h',
+    | TypeCatalog['v2f']
+    | TypeCatalog['v3f']
+    | TypeCatalog['v4f']
+    | TypeCatalog['v2h']
+    | TypeCatalog['v3h']
+    | TypeCatalog['v4h'],
     <T extends wgsl.v2f | wgsl.v3f | wgsl.v4f | wgsl.v2h | wgsl.v3h | wgsl.v4h>(
       a: T,
       b: T,
@@ -871,91 +908,96 @@ export const VectorOps = {
   >,
 
   sin: {
-    vec2f: unary2f(Math.sin),
-    vec2h: unary2h(Math.sin),
-    vec2i: unary2i(Math.sin),
-    vec2u: unary2u(Math.sin),
+    [TypeCatalog.v2f]: unary2f(Math.sin),
+    [TypeCatalog.v2h]: unary2h(Math.sin),
+    [TypeCatalog.v2i]: unary2i(Math.sin),
+    [TypeCatalog.v2u]: unary2u(Math.sin),
 
-    vec3f: unary3f(Math.sin),
-    vec3h: unary3h(Math.sin),
-    vec3i: unary3i(Math.sin),
-    vec3u: unary3u(Math.sin),
+    [TypeCatalog.v3f]: unary3f(Math.sin),
+    [TypeCatalog.v3h]: unary3h(Math.sin),
+    [TypeCatalog.v3i]: unary3i(Math.sin),
+    [TypeCatalog.v3u]: unary3u(Math.sin),
 
-    vec4f: unary4f(Math.sin),
-    vec4h: unary4h(Math.sin),
-    vec4i: unary4i(Math.sin),
-    vec4u: unary4u(Math.sin),
-  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+    [TypeCatalog.v4f]: unary4f(Math.sin),
+    [TypeCatalog.v4h]: unary4h(Math.sin),
+    [TypeCatalog.v4i]: unary4i(Math.sin),
+    [TypeCatalog.v4u]: unary4u(Math.sin),
+  } as Record<wgsl.VecInstanceTypeID, <T extends vBase>(v: T) => T>,
 
   cos: {
-    vec2f: unary2f(Math.cos),
-    vec2h: unary2h(Math.cos),
-    vec2i: unary2i(Math.cos),
-    vec2u: unary2u(Math.cos),
+    [TypeCatalog.v2f]: unary2f(Math.cos),
+    [TypeCatalog.v2h]: unary2h(Math.cos),
+    [TypeCatalog.v2i]: unary2i(Math.cos),
+    [TypeCatalog.v2u]: unary2u(Math.cos),
 
-    vec3f: unary3f(Math.cos),
-    vec3h: unary3h(Math.cos),
-    vec3i: unary3i(Math.cos),
-    vec3u: unary3u(Math.cos),
+    [TypeCatalog.v3f]: unary3f(Math.cos),
+    [TypeCatalog.v3h]: unary3h(Math.cos),
+    [TypeCatalog.v3i]: unary3i(Math.cos),
+    [TypeCatalog.v3u]: unary3u(Math.cos),
 
-    vec4f: unary4f(Math.cos),
-    vec4h: unary4h(Math.cos),
-    vec4i: unary4i(Math.cos),
-    vec4u: unary4u(Math.cos),
-  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+    [TypeCatalog.v4f]: unary4f(Math.cos),
+    [TypeCatalog.v4h]: unary4h(Math.cos),
+    [TypeCatalog.v4i]: unary4i(Math.cos),
+    [TypeCatalog.v4u]: unary4u(Math.cos),
+  } as Record<wgsl.VecInstanceTypeID, <T extends vBase>(v: T) => T>,
 
   exp: {
-    vec2f: unary2f(Math.exp),
-    vec2h: unary2h(Math.exp),
-    vec2i: unary2i(Math.exp),
-    vec2u: unary2u(Math.exp),
+    [TypeCatalog.v2f]: unary2f(Math.exp),
+    [TypeCatalog.v2h]: unary2h(Math.exp),
+    [TypeCatalog.v2i]: unary2i(Math.exp),
+    [TypeCatalog.v2u]: unary2u(Math.exp),
 
-    vec3f: unary3f(Math.exp),
-    vec3h: unary3h(Math.exp),
-    vec3i: unary3i(Math.exp),
-    vec3u: unary3u(Math.exp),
+    [TypeCatalog.v3f]: unary3f(Math.exp),
+    [TypeCatalog.v3h]: unary3h(Math.exp),
+    [TypeCatalog.v3i]: unary3i(Math.exp),
+    [TypeCatalog.v3u]: unary3u(Math.exp),
 
-    vec4f: unary4f(Math.exp),
-    vec4h: unary4h(Math.exp),
-    vec4i: unary4i(Math.exp),
-    vec4u: unary4u(Math.exp),
-  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+    [TypeCatalog.v4f]: unary4f(Math.exp),
+    [TypeCatalog.v4h]: unary4h(Math.exp),
+    [TypeCatalog.v4i]: unary4i(Math.exp),
+    [TypeCatalog.v4u]: unary4u(Math.exp),
+  } as Record<wgsl.VecInstanceTypeID, <T extends vBase>(v: T) => T>,
 
   fract: {
-    vec2f: unary2f((value) => value - Math.floor(value)),
-    vec2h: unary2h((value) => value - Math.floor(value)),
-    vec2i: unary2i((value) => value - Math.floor(value)),
-    vec2u: unary2u((value) => value - Math.floor(value)),
+    [TypeCatalog.v2f]: unary2f((value) => value - Math.floor(value)),
+    [TypeCatalog.v2h]: unary2h((value) => value - Math.floor(value)),
+    [TypeCatalog.v2i]: unary2i((value) => value - Math.floor(value)),
+    [TypeCatalog.v2u]: unary2u((value) => value - Math.floor(value)),
 
-    vec3f: unary3f((value) => value - Math.floor(value)),
-    vec3h: unary3h((value) => value - Math.floor(value)),
-    vec3i: unary3i((value) => value - Math.floor(value)),
-    vec3u: unary3u((value) => value - Math.floor(value)),
+    [TypeCatalog.v3f]: unary3f((value) => value - Math.floor(value)),
+    [TypeCatalog.v3h]: unary3h((value) => value - Math.floor(value)),
+    [TypeCatalog.v3i]: unary3i((value) => value - Math.floor(value)),
+    [TypeCatalog.v3u]: unary3u((value) => value - Math.floor(value)),
 
-    vec4f: unary4f((value) => value - Math.floor(value)),
-    vec4h: unary4h((value) => value - Math.floor(value)),
-    vec4i: unary4i((value) => value - Math.floor(value)),
-    vec4u: unary4u((value) => value - Math.floor(value)),
-  } as Record<VecKind, <T extends vBase>(v: T) => T>,
+    [TypeCatalog.v4f]: unary4f((value) => value - Math.floor(value)),
+    [TypeCatalog.v4h]: unary4h((value) => value - Math.floor(value)),
+    [TypeCatalog.v4i]: unary4i((value) => value - Math.floor(value)),
+    [TypeCatalog.v4u]: unary4u((value) => value - Math.floor(value)),
+  } as Record<wgsl.VecInstanceTypeID, <T extends vBase>(v: T) => T>,
 
   isCloseToZero: {
-    vec2f: (v: wgsl.v2f, n: number) => Math.abs(v.x) <= n && Math.abs(v.y) <= n,
-    vec2h: (v: wgsl.v2h, n: number) => Math.abs(v.x) <= n && Math.abs(v.y) <= n,
+    [TypeCatalog.v2f]: (v: wgsl.v2f, n: number) =>
+      Math.abs(v.x) <= n && Math.abs(v.y) <= n,
+    [TypeCatalog.v2h]: (v: wgsl.v2h, n: number) =>
+      Math.abs(v.x) <= n && Math.abs(v.y) <= n,
 
-    vec3f: (v: wgsl.v3f, n: number) =>
+    [TypeCatalog.v3f]: (v: wgsl.v3f, n: number) =>
       Math.abs(v.x) <= n && Math.abs(v.y) <= n && Math.abs(v.z) <= n,
-    vec3h: (v: wgsl.v3h, n: number) =>
+    [TypeCatalog.v3h]: (v: wgsl.v3h, n: number) =>
       Math.abs(v.x) <= n && Math.abs(v.y) <= n && Math.abs(v.z) <= n,
 
-    vec4f: (v: wgsl.v4f, n: number) =>
+    [TypeCatalog.v4f]: (v: wgsl.v4f, n: number) =>
       Math.abs(v.x) <= n &&
       Math.abs(v.y) <= n &&
       Math.abs(v.z) <= n &&
       Math.abs(v.w) <= n,
-    vec4h: (v: wgsl.v4h, n: number) =>
+    [TypeCatalog.v4h]: (v: wgsl.v4h, n: number) =>
       Math.abs(v.x) <= n &&
       Math.abs(v.y) <= n &&
       Math.abs(v.z) <= n &&
       Math.abs(v.w) <= n,
-  } as Record<VecKind, <T extends vBase>(v: T, n: number) => boolean>,
+  } as Record<
+    wgsl.VecInstanceTypeID,
+    <T extends vBase>(v: T, n: number) => boolean
+  >,
 };

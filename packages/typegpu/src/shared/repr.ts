@@ -1,4 +1,5 @@
-import type { AnyData } from '../data/dataTypes';
+import type { AnyData } from '../data/dataTypes.js';
+import type { $internal } from './internalMeta.js';
 
 /**
  * Extracts the inferred representation of a resource.
@@ -6,7 +7,12 @@ import type { AnyData } from '../data/dataTypes';
  * type A = Infer<F32> // => number
  * type B = Infer<WgslArray<F32>> // => number[]
  */
-export type Infer<T> = T extends { readonly '~repr': infer TRepr } ? TRepr : T;
+export type Infer<T> = T extends {
+  readonly [$internal]: { '~repr': infer TRepr };
+}
+  ? TRepr
+  : T;
+
 export type InferPartial<T> = T extends { readonly '~reprPartial': infer TRepr }
   ? TRepr
   : T extends { readonly '~repr': infer TRepr }
