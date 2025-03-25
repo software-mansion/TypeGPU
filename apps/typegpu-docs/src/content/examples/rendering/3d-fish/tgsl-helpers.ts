@@ -19,21 +19,23 @@ const ApplySinWaveReturnSchema = d.struct({
 });
 
 export const applySinWave = tgpu['~unstable']
-  .fn([d.u32, d.vec3f, d.vec3f], ApplySinWaveReturnSchema)
-  .does((time, position, normal) => {
-    // z += sin(time / 100 + x) / 5
-    const timeFactor = d.f32(time) / 100;
+  .fn([d.u32, d.u32, d.vec3f, d.vec3f], ApplySinWaveReturnSchema)
+  .does((index, time, position, normal) => {
+    const a = 50.1;
+    const b = 1.2;
+    const c = 5.1;
+    // z += sin(index + (time / a + x) / b) / c
 
     const positionModification = d.vec3f(
       0,
       0,
-      std.sin(timeFactor + position.x) / 5,
+      std.sin(d.f32(index) + (d.f32(time) / a + position.x) / b) / c,
     );
 
     const modelNormal = normal;
     const normalXZ = d.vec3f(modelNormal.x, 0, modelNormal.z);
 
-    const coeff = std.cos(timeFactor + position.x) / 5;
+    const coeff = std.cos(d.f32(index) + (d.f32(time) + position.x) / b) / c;
     const newOX = std.normalize(d.vec3f(1, 0, coeff));
     const newOZ = d.vec3f(-newOX.z, 0, newOX.x);
     const newNormalXZ = std.add(

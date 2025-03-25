@@ -29,6 +29,7 @@ export const vertexShader = tgpu['~unstable']
     let wavedNormal = input.modelNormal;
     if (currentModelData.applySinWave === 1) {
       const wavedResults = applySinWave(
+        input.instanceIndex,
         currentTime.value,
         input.modelPosition,
         input.modelNormal,
