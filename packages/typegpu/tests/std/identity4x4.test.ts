@@ -1,6 +1,7 @@
-import { mat4x4f, vec4f } from 'packages/typegpu/src/data';
 import { describe, expect, it } from 'vitest';
-import { identity4x4 } from 'packages/typegpu/src/std';
+import { identity4x4 } from '../../src/std';
+import { mat4x4f } from '../../src/data/matrix';
+import { vec4f } from '../../src/data';
 
 describe('identity', () => {
   it('returns identity matrix of size 4x4', () => {
