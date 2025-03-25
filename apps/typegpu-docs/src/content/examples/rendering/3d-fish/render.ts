@@ -25,13 +25,17 @@ export const vertexShader = tgpu['~unstable']
 
     // apply sin wave
 
-    const wavedResults = applySinWave(
-      currentTime.value,
-      input.modelPosition,
-      input.modelNormal,
-    );
-    const wavedPosition = wavedResults.position;
-    const wavedNormal = wavedResults.normal;
+    let wavedPosition = input.modelPosition;
+    let wavedNormal = input.modelNormal;
+    if (currentModelData.applySinWave === 1) {
+      const wavedResults = applySinWave(
+        currentTime.value,
+        input.modelPosition,
+        input.modelNormal,
+      );
+      wavedPosition = wavedResults.position;
+      wavedNormal = wavedResults.normal;
+    }
 
     // rotate model
 

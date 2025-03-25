@@ -17,6 +17,7 @@ export const ModelData = d
     position: d.vec3f,
     direction: d.vec3f, // in case of the fish, this is also the velocity
     scale: d.f32,
+    applySinWave: d.u32, // bool
     applySeaFog: d.u32, // bool
     applySeaDesaturation: d.u32, // bool
   })
