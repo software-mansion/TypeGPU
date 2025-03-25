@@ -1,4 +1,4 @@
-import { mat4x4f } from 'src/data';
+import { mat4x4f } from '../data';
 import { bool, f32 } from '../data/numeric';
 import { VectorOps } from '../data/vectorOps';
 import type {
