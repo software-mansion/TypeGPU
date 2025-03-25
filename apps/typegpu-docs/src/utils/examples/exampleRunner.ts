@@ -4,7 +4,7 @@ import type { ExampleState } from './exampleState';
 type Labelless<T> = T extends unknown ? Omit<T, 'label'> : never;
 
 export async function executeExample(
-  exampleSources: Record<string, () => void>,
+  tsImport: () => unknown,
 ): Promise<ExampleState> {
   const cleanupCallbacks: (() => unknown)[] = [];
   let disposed = false;
@@ -77,7 +77,7 @@ export async function executeExample(
     );
   }
 
-  const entryExampleFile = await noCacheImport(exampleSources['index.ts']);
+  const entryExampleFile = await noCacheImport(tsImport);
   const { controls, onCleanup } = entryExampleFile as {
     controls?: Record<string, Labelless<ExampleControlParam>> | undefined;
     onCleanup?: () => void;

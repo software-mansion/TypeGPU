@@ -389,4 +389,72 @@ describe('TgpuBuffer', () => {
     // @ts-expect-error
     buffer3.copyFrom(copy32);
   });
+
+  it('should be able to write to a buffer with atomic data', ({
+    root,
+    device,
+  }) => {
+    const buffer = root.createBuffer(d.arrayOf(d.atomic(d.u32), 3));
+    const NestedSchema = d.struct({
+      a: d.struct({
+        aa: d.arrayOf(d.atomic(d.u32), 3),
+        ab: d.atomic(d.u32),
+      }),
+      b: d.atomic(d.u32),
+    });
+    const nestedBuffer = root.createBuffer(NestedSchema);
+
+    buffer.write([1, 2, 3]);
+    nestedBuffer.write({
+      a: { aa: [4, 5, 6], ab: 7 },
+      b: 8,
+    });
+
+    const rawBuffer = root.unwrap(buffer);
+    expect(rawBuffer).toBeDefined();
+    const rawNestedBuffer = root.unwrap(nestedBuffer);
+    expect(rawNestedBuffer).toBeDefined();
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 0, new Uint32Array([1, 2, 3]).buffer, 0, 12],
+      [rawNestedBuffer, 0, new Uint32Array([4, 5, 6, 7, 8]).buffer, 0, 20],
+    ]);
+  });
+
+  it('should be able to write to a buffer with decorated data', ({
+    root,
+    device,
+  }) => {
+    const DecoratedSchema = d.struct({
+      a: d.size(12, d.f32),
+      b: d.align(16, d.u32),
+      c: d.arrayOf(d.u32, 3),
+    });
+
+    const decoratedBuffer = root.createBuffer(DecoratedSchema);
+
+    decoratedBuffer.write({
+      a: 1.0,
+      b: 2,
+      c: [3, 4, 5],
+    });
+
+    const rawDecoratedBuffer = root.unwrap(decoratedBuffer);
+    expect(rawDecoratedBuffer).toBeDefined();
+
+    const expectedBuffer = new ArrayBuffer(32);
+    const floatView = new Float32Array(expectedBuffer, 0, 1);
+    floatView[0] = 1.0;
+    const uint32View1 = new Uint32Array(expectedBuffer, 16, 1);
+    uint32View1[0] = 2;
+    const uint32View2 = new Uint32Array(expectedBuffer, 20, 3);
+    uint32View2[0] = 3;
+    uint32View2[1] = 4;
+    uint32View2[2] = 5;
+    const expectedData = new Uint8Array(expectedBuffer);
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawDecoratedBuffer, 0, expectedData.buffer, 0, 32],
+    ]);
+  });
 });
