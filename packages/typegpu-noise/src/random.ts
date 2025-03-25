@@ -26,19 +26,27 @@ const sign = tgpu['~unstable'].fn([f32], f32).does(`(value: f32) -> f32 {
 
 export const randSeed: TgpuFn<[F32], undefined> = tgpu['~unstable']
   .fn([f32])
-  .does((seed) => randomGeneratorSlot.value.seed(seed));
+  .does((seed) => {
+    randomGeneratorSlot.value.seed(seed);
+  });
 
 export const randSeed2: TgpuFn<[Vec2f], undefined> = tgpu['~unstable']
   .fn([vec2f])
-  .does((seed) => randomGeneratorSlot.value.seed2(seed));
+  .does((seed) => {
+    randomGeneratorSlot.value.seed2(seed);
+  });
 
 export const randSeed3: TgpuFn<[Vec3f], undefined> = tgpu['~unstable']
   .fn([vec3f])
-  .does((seed) => randomGeneratorSlot.value.seed3(seed));
+  .does((seed) => {
+    randomGeneratorSlot.value.seed3(seed);
+  });
 
 export const randSeed4: TgpuFn<[Vec4f], undefined> = tgpu['~unstable']
   .fn([vec4f])
-  .does((seed) => randomGeneratorSlot.value.seed4(seed));
+  .does((seed) => {
+    randomGeneratorSlot.value.seed4(seed);
+  });
 
 export const randFloat01: TgpuFn<[], F32> = tgpu['~unstable']
   .fn([], f32)
