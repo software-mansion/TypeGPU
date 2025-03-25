@@ -118,6 +118,19 @@ const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
       const functionStatementName =
         def.type === 'FunctionDeclaration' ? def.id?.name : undefined;
 
+      if (
+        functionStatementName &&
+        code
+          .slice(0, def.start)
+          .search(
+            new RegExp(`(?<![\\w_.])${functionStatementName}(?![\\w_])`),
+          ) !== -1
+      ) {
+        throw new Error(
+          `File ${id}: function "${functionStatementName}", containing "kernel" directive, is referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
+        );
+      }
+
       // Wrap the implementation in a call to `tgpu.__assignAst` to associate the AST with the implementation.
       magicString.appendLeft(
         def.start,
