@@ -4,23 +4,23 @@ import { all } from '../../../src/std/boolean';
 
 describe('all', () => {
   it('calculates for 2 element vectors', () => {
-    expect(all(vec2b(false, false))).toBeFalsy();
-    expect(all(vec2b(true, false))).toBeFalsy();
-    expect(all(vec2b(true, true))).toBeTruthy();
+    expect(all(vec2b(false, false))).toBe(false);
+    expect(all(vec2b(true, false))).toBe(false);
+    expect(all(vec2b(true, true))).toBe(true);
   });
 
   it('calculates for 3 element vectors', () => {
-    expect(all(vec3b(false, false, false))).toBeFalsy();
-    expect(all(vec3b(false, false, true))).toBeFalsy();
-    expect(all(vec3b(true, true, false))).toBeFalsy();
-    expect(all(vec3b(true, true, true))).toBeTruthy();
+    expect(all(vec3b(false, false, false))).toBe(false);
+    expect(all(vec3b(false, false, true))).toBe(false);
+    expect(all(vec3b(true, true, false))).toBe(false);
+    expect(all(vec3b(true, true, true))).toBe(true);
   });
 
   it('calculates for 4 element vectors', () => {
-    expect(all(vec4b(false, false, false, false))).toBeFalsy();
-    expect(all(vec4b(false, false, true, false))).toBeFalsy();
-    expect(all(vec4b(true, true, false, false))).toBeFalsy();
-    expect(all(vec4b(true, true, false, true))).toBeFalsy();
-    expect(all(vec4b(true, true, true, true))).toBeTruthy();
+    expect(all(vec4b(false, false, false, false))).toBe(false);
+    expect(all(vec4b(false, false, true, false))).toBe(false);
+    expect(all(vec4b(true, true, false, false))).toBe(false);
+    expect(all(vec4b(true, true, false, true))).toBe(false);
+    expect(all(vec4b(true, true, true, true))).toBe(true);
   });
 });

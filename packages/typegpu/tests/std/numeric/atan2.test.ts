@@ -16,6 +16,6 @@ describe('atan2', () => {
         atan2(vec4f(0, 1, 0, -1), vec4f(1, 0, -1, 0)),
         vec4f(0, Math.PI / 2, Math.PI, -Math.PI / 2),
       ),
-    ).toBeTruthy();
+    ).toBe(true);
   });
 });
