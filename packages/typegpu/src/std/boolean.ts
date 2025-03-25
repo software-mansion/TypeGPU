@@ -37,9 +37,7 @@ function correspondingBooleanVectorSchema(value: Resource) {
  */
 export const allEq = createDualImpl(
   // CPU implementation
-  <T extends AnyVecInstance>(lhs: T, rhs: T) => {
-    return all(eq(lhs, rhs));
-  },
+  <T extends AnyVecInstance>(lhs: T, rhs: T) => all(eq(lhs, rhs)),
   // GPU implementation
   (lhs, rhs) => ({
     value: `all(${lhs.value} == ${rhs.value})`,
@@ -58,9 +56,8 @@ export const allEq = createDualImpl(
  */
 export const eq = createDualImpl(
   // CPU implementation
-  <T extends AnyVecInstance>(lhs: T, rhs: T) => {
-    return VectorOps.eq[lhs.kind](lhs, rhs);
-  },
+  <T extends AnyVecInstance>(lhs: T, rhs: T) =>
+    VectorOps.eq[lhs.kind](lhs, rhs),
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} == ${rhs.value})`,
@@ -78,9 +75,7 @@ export const eq = createDualImpl(
  */
 export const neq = createDualImpl(
   // CPU implementation
-  <T extends AnyVecInstance>(lhs: T, rhs: T) => {
-    return not(eq(lhs, rhs));
-  },
+  <T extends AnyVecInstance>(lhs: T, rhs: T) => not(eq(lhs, rhs)),
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} != ${rhs.value})`,
@@ -98,9 +93,8 @@ export const neq = createDualImpl(
  */
 export const lessThan = createDualImpl(
   // CPU implementation
-  <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => {
-    return VectorOps.lessThan[lhs.kind](lhs, rhs);
-  },
+  <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
+    VectorOps.lessThan[lhs.kind](lhs, rhs),
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} < ${rhs.value})`,
@@ -118,9 +112,8 @@ export const lessThan = createDualImpl(
  */
 export const lessThanOrEqual = createDualImpl(
   // CPU implementation
-  <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => {
-    return or(lessThan(lhs, rhs), eq(lhs, rhs));
-  },
+  <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
+    or(lessThan(lhs, rhs), eq(lhs, rhs)),
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} <= ${rhs.value})`,
@@ -138,9 +131,8 @@ export const lessThanOrEqual = createDualImpl(
  */
 export const greaterThan = createDualImpl(
   // CPU implementation
-  <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => {
-    return and(not(lessThan(lhs, rhs)), not(eq(lhs, rhs)));
-  },
+  <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
+    and(not(lessThan(lhs, rhs)), not(eq(lhs, rhs))),
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} > ${rhs.value})`,
@@ -158,9 +150,7 @@ export const greaterThan = createDualImpl(
  */
 export const greaterThanOrEqual = createDualImpl(
   // CPU implementation
-  <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => {
-    return not(lessThan(lhs, rhs));
-  },
+  <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => not(lessThan(lhs, rhs)),
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} >= ${rhs.value})`,
@@ -178,9 +168,8 @@ export const greaterThanOrEqual = createDualImpl(
  */
 export const not = createDualImpl(
   // CPU implementation
-  <T extends AnyBooleanVecInstance>(value: T): T => {
-    return VectorOps.neg[value.kind](value);
-  },
+  <T extends AnyBooleanVecInstance>(value: T): T =>
+    VectorOps.neg[value.kind](value),
   // GPU implementation
   (value) => ({
     value: `!(${value.value})`,
@@ -196,9 +185,8 @@ export const not = createDualImpl(
  */
 export const or = createDualImpl(
   // CPU implementation
-  <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) => {
-    return VectorOps.or[lhs.kind](lhs, rhs);
-  },
+  <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
+    VectorOps.or[lhs.kind](lhs, rhs),
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} | ${rhs.value})`,
@@ -214,9 +202,8 @@ export const or = createDualImpl(
  */
 export const and = createDualImpl(
   // CPU implementation
-  <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) => {
-    return not(or(not(lhs), not(rhs)));
-  },
+  <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
+    not(or(not(lhs), not(rhs))),
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} & ${rhs.value})`,
@@ -234,9 +221,7 @@ export const and = createDualImpl(
  */
 export const all = createDualImpl(
   // CPU implementation
-  (value: AnyBooleanVecInstance) => {
-    return VectorOps.all[value.kind](value);
-  },
+  (value: AnyBooleanVecInstance) => VectorOps.all[value.kind](value),
   // GPU implementation
   (value) => ({
     value: `all(${value.value})`,
@@ -252,9 +237,7 @@ export const all = createDualImpl(
  */
 export const any = createDualImpl(
   // CPU implementation
-  (value: AnyBooleanVecInstance) => {
-    return !all(not(value));
-  },
+  (value: AnyBooleanVecInstance) => !all(not(value)),
   // GPU implementation
   (value) => ({
     value: `any(${value.value})`,

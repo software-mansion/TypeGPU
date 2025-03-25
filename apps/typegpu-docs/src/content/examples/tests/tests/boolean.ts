@@ -121,18 +121,18 @@ export const booleanTests = tgpu['~unstable'].fn([], d.bool).does(() => {
   const vec = d.vec3b(true, false, true);
   s = s && std.allEq(std.not(vec), negate(vec));
 
-  const struct = Schema({
+  const inputStruct = Schema({
     vec2b: d.vec2b(false, true),
     vec4b: d.vec4b(false, true, false, true),
     vec3b: d.vec3b(true, true, false),
     bool: true,
   });
 
-  const resultStruct = negateStruct(struct);
-  s = s && std.allEq(std.not(struct.vec2b), resultStruct.vec2b);
-  s = s && std.allEq(std.not(struct.vec4b), resultStruct.vec4b);
-  s = s && std.allEq(std.not(struct.vec3b), resultStruct.vec3b);
-  s = s && !struct.bool === resultStruct.bool;
+  const resultStruct = negateStruct(inputStruct);
+  s = s && std.allEq(std.not(inputStruct.vec2b), resultStruct.vec2b);
+  s = s && std.allEq(std.not(inputStruct.vec4b), resultStruct.vec4b);
+  s = s && std.allEq(std.not(inputStruct.vec3b), resultStruct.vec3b);
+  s = s && !inputStruct.bool === resultStruct.bool;
 
   return s;
 });
