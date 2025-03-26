@@ -47,7 +47,7 @@ export const mainFragment = tgpu['~unstable']
     const normal = normalize(input.normals);
     // Directional lighting
     const directionalLightIntensity = max(dot(normal, lightDirection), 0.0);
-    const directionalComponent = 0.4 * directionalLightIntensity;
+    const directionalComponent = 0.3 * directionalLightIntensity;
 
     // Point Lighting
     const surfaceToLight = normalize(sub(lightPosition, input.worldPosition));
@@ -63,7 +63,7 @@ export const mainFragment = tgpu['~unstable']
     );
 
     const halfVector = normalize(add(surfaceToLight, surfaceToCamera));
-    const specular = pow(max(dot(normal, halfVector), 0.0), 3);
+    const specular = pow(max(dot(normal, halfVector), 0.0), 0.5);
     return d.vec4f(
       albedo.x * lighting * specular,
       albedo.y * lighting * specular,

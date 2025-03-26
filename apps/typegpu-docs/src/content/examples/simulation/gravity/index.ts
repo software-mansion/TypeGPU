@@ -164,7 +164,7 @@ function render() {
       view: context.getCurrentTexture().createView(),
       loadOp: 'clear',
       storeOp: 'store',
-      clearValue: [1, 1, 1, 1],
+      clearValue: [0, 0, 0, 1], // background color
     })
     .with(vertexLayout, vertexBuffer)
     .with(cameraBindGroupLayout, cameraBindGroup)
