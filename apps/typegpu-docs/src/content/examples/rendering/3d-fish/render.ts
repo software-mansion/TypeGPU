@@ -85,6 +85,7 @@ export const vertexShader = tgpu['~unstable']
       worldPosition: worldPosition,
       applySeaFog: currentModelData.applySeaFog,
       applySeaDesaturation: currentModelData.applySeaDesaturation,
+      variant: currentModelData.variant,
     };
   })
   .$name('vertex shader');
@@ -144,6 +145,7 @@ export const fragmentShader = tgpu['~unstable']
       const hsv = rgbToHsv(desaturatedColor);
       hsv.y += desaturationFactor / 2;
       hsv.z += desaturationFactor;
+      hsv.x += (input.variant - 0.5) * 0.2;
       desaturatedColor = hsvToRgb(hsv);
     }
 

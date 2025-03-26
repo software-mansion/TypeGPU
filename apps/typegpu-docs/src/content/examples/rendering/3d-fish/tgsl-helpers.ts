@@ -21,9 +21,9 @@ const ApplySinWaveReturnSchema = d.struct({
 export const applySinWave = tgpu['~unstable']
   .fn([d.u32, d.u32, d.vec3f, d.vec3f], ApplySinWaveReturnSchema)
   .does((index, time, position, normal) => {
-    const a = 50.1;
-    const b = 1.2;
-    const c = 5.1;
+    const a = 60.1;
+    const b = 0.8;
+    const c = 10.1;
     // z += sin(index + (time / a + x) / b) / c
 
     const positionModification = d.vec3f(
@@ -32,21 +32,16 @@ export const applySinWave = tgpu['~unstable']
       std.sin(d.f32(index) + (d.f32(time) / a + position.x) / b) / c,
     );
 
-    const modelNormal = normal;
-    const normalXZ = d.vec3f(modelNormal.x, 0, modelNormal.z);
-
-    const coeff = std.cos(d.f32(index) + (d.f32(time) + position.x) / b) / c;
+    const coeff =
+      std.cos(d.f32(index) + (d.f32(time) / a + position.x) / b) / c;
     const newOX = std.normalize(d.vec3f(1, 0, coeff));
-    const newOZ = d.vec3f(-newOX.z, 0, newOX.x);
+    const newOZ = d.vec3f(-coeff, 0, 1);
     const newNormalXZ = std.add(
-      std.mul(newOX, d.vec3f(normalXZ.x, 0, 0)),
-      std.mul(newOZ, d.vec3f(0, 0, normalXZ.z)),
+      std.mul(normal.x, newOX),
+      std.mul(normal.z, newOZ),
     );
 
-    const wavedNormal = std.normalize(
-      d.vec3f(newNormalXZ.x, modelNormal.y, newNormalXZ.z),
-    );
-
+    const wavedNormal = d.vec3f(newNormalXZ.x, normal.y, newNormalXZ.z);
     const wavedPosition = std.add(position, positionModification);
 
     return ApplySinWaveReturnSchema({

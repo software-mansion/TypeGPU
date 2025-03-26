@@ -17,6 +17,7 @@ export const ModelData = d
     position: d.vec3f,
     direction: d.vec3f, // in case of the fish, this is also the velocity
     scale: d.f32,
+    variant: d.f32, // (0-1)
     applySinWave: d.u32, // bool
     applySeaFog: d.u32, // bool
     applySeaDesaturation: d.u32, // bool
@@ -35,6 +36,7 @@ export const ModelVertexOutput = {
   worldPosition: d.vec3f,
   worldNormal: d.vec3f,
   canvasPosition: d.builtin.position,
+  variant: d.f32,
   textureUV: d.vec2f,
   applySeaFog: d.interpolate('flat', d.u32), // bool
   applySeaDesaturation: d.interpolate('flat', d.u32), // bool
