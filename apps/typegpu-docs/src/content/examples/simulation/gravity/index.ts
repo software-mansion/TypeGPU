@@ -3,7 +3,7 @@ import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
 import { computeShader } from './compute-shaders';
 import { cubeModel, vertices } from './cube';
-import { G, cameraInitialPos, cubePos, cubeVelocity, target } from './env';
+import { cameraInitialPos, cubePos, target } from './env';
 import { mainFragment, mainVertex } from './main-shaders';
 import {
   CameraStruct,
@@ -71,7 +71,6 @@ const cameraBuffer = root
   .createBuffer(CameraStruct, cameraInitial)
   .$usage('uniform');
 
-let lastTime = performance.now();
 const cubeModelMatrix = d.mat4x4f();
 m.mat4.identity(cubeModelMatrix);
 m.mat4.translate(
@@ -104,7 +103,19 @@ const celestialBodiesBufferA = root
     {
       modelMatrix: d.mat4x4f(),
       position: d.vec3f(0, 10, 0),
+      velocity: d.vec3f(0, 0, 50),
+      mass: 1,
+    },
+    {
+      modelMatrix: d.mat4x4f(),
+      position: d.vec3f(0, 20, 0),
       velocity: d.vec3f(0, 0, 0),
+      mass: 1,
+    },
+    {
+      modelMatrix: d.mat4x4f(),
+      position: d.vec3f(0, -10, 0),
+      velocity: d.vec3f(0, 0, -50),
       mass: 1,
     },
   ])
@@ -113,8 +124,8 @@ const celestialBodiesBufferB = root
   .createBuffer(d.arrayOf(CelectialBodyStruct, 1), [
     {
       modelMatrix: d.mat4x4f(),
-      position: d.vec3f(0, 0, 0),
-      velocity: d.vec3f(0, 0, 0),
+      position: d.vec3f(0, 10, 0),
+      velocity: d.vec3f(0, 0, 50),
       mass: 1,
     },
   ])
@@ -130,7 +141,6 @@ const celestialBodiesBindGroupB = root.createBindGroup(celestialBodyLayout, {
   inState: celestialBodiesBufferB,
   outState: celestialBodiesBufferA,
 });
-console.log('dupa');
 console.log(tgpu.resolve({ externals: { computeShader } }));
 
 // Pipelines
@@ -169,50 +179,19 @@ function render() {
       celestialBodyLayout,
       flip ? celestialBodiesBindGroupA : celestialBodiesBindGroupB,
     )
-    .draw(36);
+    .draw(36, 3);
 
   root['~unstable'].flush();
 }
 
 console.log('Cube position:', await vertexBuffer.read());
-
 let destroyed = false;
-
-function updateCubePhysics() {
-  const now = performance.now();
-  const dt = (now - lastTime) / 1000;
-  lastTime = now;
-
-  const dist = Math.hypot(cubePos.x, cubePos.y, cubePos.z);
-  const normDir = dist
-    ? { x: cubePos.x / dist, y: cubePos.y / dist, z: cubePos.z / dist }
-    : { x: 0, y: 0, z: 0 };
-
-  for (const axis of ['x', 'y', 'z'] as const) {
-    cubeVelocity[axis] += -G * normDir[axis] * dt;
-    cubePos[axis] += cubeVelocity[axis] * dt;
-    cubeVelocity[axis] *= 0.99;
-  }
-
-  console.log('Cube position:', cubePos);
-  console.log('Cube velocity:', cubeVelocity);
-
-  m.mat4.identity(cubeModelMatrix);
-  m.mat4.translate(
-    cubeModelMatrix,
-    d.vec3f(cubePos.x, cubePos.y, cubePos.z),
-    cubeModelMatrix,
-  );
-  centerObjectBuffer.write({ modelMatrix: cubeModelMatrix });
-}
-
 // Frame loop
 function frame() {
   if (destroyed) {
     return;
   }
   requestAnimationFrame(frame);
-  // updateCubePhysics();
   render();
 }
 

@@ -38,6 +38,6 @@ export const CelestialBodyArray = (n: number) =>
   d.arrayOf(CelectialBodyStruct, n);
 
 export const celestialBodyLayout = tgpu.bindGroupLayout({
-  inState: { storage: CelestialBodyArray(1), access: 'readonly' },
-  outState: { storage: CelestialBodyArray(1), access: 'mutable' },
+  inState: { storage: CelestialBodyArray, access: 'readonly' },
+  outState: { storage: CelestialBodyArray, access: 'mutable' },
 });
