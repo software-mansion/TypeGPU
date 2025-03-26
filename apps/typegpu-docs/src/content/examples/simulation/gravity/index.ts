@@ -3,16 +3,15 @@ import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
 import { computeShader } from './compute-shaders';
 import { cubeModel, vertices } from './cube';
-import { cameraInitialPos, cubePos, target } from './env';
+import { cameraInitialPos, target } from './env';
 import { mainFragment, mainVertex } from './main-shaders';
 import {
   CameraStruct,
   CelectialBodyStruct,
-  ObjectStruct,
+  // ObjectStruct,
   VertexStruct,
   cameraBindGroupLayout,
   celestialBodyLayout,
-  centerObjectbindGroupLayout,
 } from './structs';
 
 const vertexLayout = tgpu.vertexLayout((n: number) =>
@@ -71,26 +70,26 @@ const cameraBuffer = root
   .createBuffer(CameraStruct, cameraInitial)
   .$usage('uniform');
 
-const cubeModelMatrix = d.mat4x4f();
-m.mat4.identity(cubeModelMatrix);
-m.mat4.translate(
-  cubeModelMatrix,
-  d.vec3f(cubePos.x, cubePos.y, cubePos.z),
-  cubeModelMatrix,
-);
+// const cubeModelMatrix = d.mat4x4f();
+// m.mat4.identity(cubeModelMatrix);
+// m.mat4.translate(
+//   cubeModelMatrix,
+//   d.vec3f(cubePos.x, cubePos.y, cubePos.z),
+//   cubeModelMatrix,
+// );
 
-export const centerObjectBuffer = root
-  .createBuffer(ObjectStruct, {
-    modelMatrix: cubeModelMatrix,
-  })
-  .$usage('uniform');
+// export const centerObjectBuffer = root
+//   .createBuffer(ObjectStruct, {
+//     modelMatrix: cubeModelMatrix,
+//   })
+//   .$usage('uniform');
 
-const centerObjectBindGroup = root.createBindGroup(
-  centerObjectbindGroupLayout,
-  {
-    object: centerObjectBuffer,
-  },
-);
+// const centerObjectBindGroup = root.createBindGroup(
+//   centerObjectbindGroupLayout,
+//   {
+//     object: centerObjectBuffer,
+//   },
+// );
 
 const cameraBindGroup = root.createBindGroup(cameraBindGroupLayout, {
   camera: cameraBuffer,
@@ -98,37 +97,32 @@ const cameraBindGroup = root.createBindGroup(cameraBindGroupLayout, {
   sampler,
 });
 
+const CelestialBodyMaxArray = d.arrayOf(CelectialBodyStruct, 3);
+
 const celestialBodiesBufferA = root
-  .createBuffer(d.arrayOf(CelectialBodyStruct, 1), [
+  .createBuffer(CelestialBodyMaxArray, [
     {
       modelMatrix: d.mat4x4f(),
       position: d.vec3f(0, 10, 0),
-      velocity: d.vec3f(0, 0, 50),
+      velocity: d.vec3f(0, 0, 3),
       mass: 1,
     },
     {
       modelMatrix: d.mat4x4f(),
       position: d.vec3f(0, 20, 0),
-      velocity: d.vec3f(0, 0, 0),
+      velocity: d.vec3f(0, 0, 2),
       mass: 1,
     },
     {
       modelMatrix: d.mat4x4f(),
       position: d.vec3f(0, -10, 0),
-      velocity: d.vec3f(0, 0, -50),
+      velocity: d.vec3f(0, 0, -3),
       mass: 1,
     },
   ])
   .$usage('storage');
 const celestialBodiesBufferB = root
-  .createBuffer(d.arrayOf(CelectialBodyStruct, 1), [
-    {
-      modelMatrix: d.mat4x4f(),
-      position: d.vec3f(0, 10, 0),
-      velocity: d.vec3f(0, 0, 50),
-      mass: 1,
-    },
-  ])
+  .createBuffer(CelestialBodyMaxArray)
   .$usage('storage');
 
 let flip = false;
@@ -163,7 +157,7 @@ function render() {
       celestialBodyLayout,
       flip ? celestialBodiesBindGroupA : celestialBodiesBindGroupB,
     )
-    .dispatchWorkgroups(1); // count of celestial bodies
+    .dispatchWorkgroups(3); // count of celestial bodies
 
   renderPipeline
     .withColorAttachment({
@@ -174,7 +168,7 @@ function render() {
     })
     .with(vertexLayout, vertexBuffer)
     .with(cameraBindGroupLayout, cameraBindGroup)
-    .with(centerObjectbindGroupLayout, centerObjectBindGroup)
+    // .with(centerObjectbindGroupLayout, centerObjectBindGroup)
     .with(
       celestialBodyLayout,
       flip ? celestialBodiesBindGroupA : celestialBodiesBindGroupB,
