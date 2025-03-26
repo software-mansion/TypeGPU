@@ -42,7 +42,17 @@ export type TgpuVertexFnShell<
   ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) &
   ((
     implementation: string,
-  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>);
+  ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) & {
+    /**
+     * @deprecated Invoke the shell as a function instead.
+     */
+    does: ((
+      implementation: (input: InferIO<VertexIn>) => InferIO<VertexOut>,
+    ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>) &
+      ((
+        implementation: string,
+      ) => TgpuVertexFn<OmitBuiltins<VertexIn>, OmitBuiltins<VertexOut>>);
+  };
 
 export interface TgpuVertexFn<
   VertexIn extends IOLayout = IOLayout,
@@ -100,7 +110,9 @@ export function vertexFn<
     implementation: (input: InferIO<VertexIn>) => InferIO<VertexOut> | string,
   ) => createVertexFn(shell, implementation as Implementation);
 
-  return Object.assign(call, shell) as TgpuVertexFnShell<VertexIn, VertexOut>;
+  return Object.assign(Object.assign(call, shell), {
+    does: call,
+  }) as TgpuVertexFnShell<VertexIn, VertexOut>;
 }
 
 // --------------

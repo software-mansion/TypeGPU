@@ -40,7 +40,21 @@ export type TgpuComputeFnShell<
    *   without `fn` keyword and function name
    *   e.g. `"(x: f32) -> f32 { return x; }"`;
    */
-  ((implementation: string) => TgpuComputeFn<ComputeIn>);
+  ((implementation: string) => TgpuComputeFn<ComputeIn>) & {
+    /**
+     * @deprecated Invoke the shell as a function instead.
+     */
+    does: ((
+      implementation: (input: InferIO<ComputeIn>) => undefined,
+    ) => TgpuComputeFn<ComputeIn>) &
+      /**
+       * @param implementation
+       *   Raw WGSL function implementation with header and body
+       *   without `fn` keyword and function name
+       *   e.g. `"(x: f32) -> f32 { return x; }"`;
+       */
+      ((implementation: string) => TgpuComputeFn<ComputeIn>);
+  };
 
 export interface TgpuComputeFn<
   ComputeIn extends Record<string, AnyComputeBuiltin> = Record<
@@ -101,7 +115,9 @@ export function computeFn<
       implementation as Implementation,
     );
 
-  return Object.assign(call, shell) as TgpuComputeFnShell<ComputeIn>;
+  return Object.assign(Object.assign(call, shell), {
+    does: call,
+  }) as TgpuComputeFnShell<ComputeIn>;
 }
 
 // --------------

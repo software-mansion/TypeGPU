@@ -49,7 +49,15 @@ export type TgpuFnShell<
   ((
     implementation: (...args: InferArgs<Args>) => InferReturn<Return>,
   ) => TgpuFn<Args, Return>) &
-  ((implementation: string) => TgpuFn<Args, Return>);
+  ((implementation: string) => TgpuFn<Args, Return>) & {
+    /**
+     * @deprecated Invoke the shell as a function instead.
+     */
+    does: ((
+      implementation: (...args: InferArgs<Args>) => InferReturn<Return>,
+    ) => TgpuFn<Args, Return>) &
+      ((implementation: string) => TgpuFn<Args, Return>);
+  };
 
 interface TgpuFnBase<
   Args extends AnyWgslData[],
@@ -101,7 +109,7 @@ export function fn<
     implementation: Implementation<InferArgs<Args>, InferReturn<Return>>,
   ): TgpuFn<Args, Return> => createFn(shell, implementation as Implementation);
 
-  return Object.assign(call, shell);
+  return Object.assign(Object.assign(call, shell), { does: call });
 }
 
 export function isTgpuFn<

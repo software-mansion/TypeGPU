@@ -337,7 +337,7 @@ const fragment = tgpu['~unstable'].fragmentFn({
   }
 
   const res = 1 / (1 + std.exp(-(normalized - 0.2) * 10));
-  return d.vec4f(0, 0, std.max(0.5, res), res);
+  return d.vec4f(0, 0, res, res);
 });
 
 const vertexInstanceLayout = tgpu.vertexLayout(
