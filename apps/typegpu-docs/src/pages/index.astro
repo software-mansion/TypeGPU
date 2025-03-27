@@ -1,24 +1,24 @@
 ---
 import { Image } from 'astro:assets';
-import FeatureCard from '../components/FeatureCard.astro';
-import GetStartedButton from '../components/GetStartedButton.astro';
-import FooterLink from '../components/FooterLink.astro';
-import PageLayout from '../layouts/PageLayout.astro';
 import DiscordIconSvg from '../assets/discord-icon.svg';
+import GiantTypeGPULogo from '../assets/giant-typegpu.svg';
 import GithubIconSvg from '../assets/github-icon.svg';
-import SwmLogomarkSvg from '../assets/swm-logomark.svg';
+import Illustration from '../assets/illustration.svg';
 import SwmLogoSvg from '../assets/swm-logo.svg';
+import SwmLogomarkSvg from '../assets/swm-logomark.svg';
 import TypeGPULogoLight from '../assets/typegpu-logo-light.svg';
 import TypeGPULogomarkMonolight from '../assets/typegpu-logomark-monolight.svg';
-import GiantTypeGPULogo from '../assets/giant-typegpu.svg';
-import Illustration from '../assets/illustration.svg';
-import RoadMapStep from '../components/roadmap/RoadMapStep.astro';
-import MilestoneBuffersBadge from '../components/roadmap/MilestoneBuffersBadge.astro';
+import FeatureCard from '../components/FeatureCard.astro';
+import FooterLink from '../components/FooterLink.astro';
+import GetStartedButton from '../components/GetStartedButton.astro';
 import MilestoneBindGroupsBadge from '../components/roadmap/MilestoneBindGroupsBadge.astro';
-import MilestoneFunctionsBadge from '../components/roadmap/MilestoneFunctionsBadge.astro';
-import MilestonePipelinesBadge from '../components/roadmap/MilestonePipelinesBadge.astro';
+import MilestoneBuffersBadge from '../components/roadmap/MilestoneBuffersBadge.astro';
 import MilestoneCodeBadge from '../components/roadmap/MilestoneCodeBadge.astro';
+import MilestoneFunctionsBadge from '../components/roadmap/MilestoneFunctionsBadge.astro';
 import MilestoneLinkerBadge from '../components/roadmap/MilestoneLinkerBadge.astro';
+import MilestonePipelinesBadge from '../components/roadmap/MilestonePipelinesBadge.astro';
+import RoadMapStep from '../components/roadmap/RoadMapStep.astro';
+import PageLayout from '../layouts/PageLayout.astro';
 
 const showcaseVideoResolution = [2048, 1200];
 ---
@@ -98,10 +98,11 @@ const showcaseVideoResolution = [2048, 1200];
             aspectRatio:
               showcaseVideoResolution[0] / showcaseVideoResolution[1],
           }}
-          autoplay="true"
-          loop="true"
-          muted="true"
-          controls="true"
+          autoplay
+          loop
+          muted
+          controls
+          playsinline
           class="w-full lg:rounded-[2.5rem] md:rounded-[1.875rem] rounded-2xl shadow-tameplum-800/50 shadow-lg"
         ></video>
       </div>
