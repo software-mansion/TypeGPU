@@ -46,3 +46,10 @@ export {
 } from './atomic.js';
 
 export { arrayLength } from './array.js';
+
+export {
+  pack4x8unorm,
+  pack2x16float,
+  unpack4x8unorm,
+  unpack2x16float,
+} from './packing.js';

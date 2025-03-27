@@ -3,7 +3,7 @@ import * as d from '../data';
 import * as wgsl from '../data/wgslTypes';
 import {
   type ResolutionCtx,
-  type Resource,
+  type Snippet,
   UnknownData,
   type Wgsl,
   isWgsl,
@@ -74,14 +74,11 @@ export type GenerationCtx = ResolutionCtx & {
   dedent(): string;
   pushBlockScope(): void;
   popBlockScope(): void;
-  getById(id: string): Resource | null;
-  defineVariable(
-    id: string,
-    dataType: wgsl.AnyWgslData | UnknownData,
-  ): Resource;
+  getById(id: string): Snippet | null;
+  defineVariable(id: string, dataType: wgsl.AnyWgslData | UnknownData): Snippet;
 };
 
-export function resolveRes(ctx: GenerationCtx, res: Resource): string {
+export function resolveRes(ctx: GenerationCtx, res: Snippet): string {
   if (isWgsl(res.value)) {
     return ctx.resolve(res.value);
   }
@@ -95,7 +92,7 @@ function assertExhaustive(value: never): never {
   );
 }
 
-export function generateBoolean(ctx: GenerationCtx, value: boolean): Resource {
+export function generateBoolean(ctx: GenerationCtx, value: boolean): Snippet {
   return { value: value ? 'true' : 'false', dataType: d.bool };
 }
 
@@ -114,11 +111,11 @@ export function registerBlockVariable(
   ctx: GenerationCtx,
   id: string,
   dataType: wgsl.AnyWgslData | UnknownData,
-): Resource {
+): Snippet {
   return ctx.defineVariable(id, dataType);
 }
 
-export function generateIdentifier(ctx: GenerationCtx, id: string): Resource {
+export function generateIdentifier(ctx: GenerationCtx, id: string): Snippet {
   const res = ctx.getById(id);
   if (!res) {
     throw new Error(`Identifier ${id} not found`);
@@ -130,7 +127,7 @@ export function generateIdentifier(ctx: GenerationCtx, id: string): Resource {
 export function generateExpression(
   ctx: GenerationCtx,
   expression: smol.Expression,
-): Resource {
+): Snippet {
   if (typeof expression === 'string') {
     return generateIdentifier(ctx, expression);
   }
@@ -194,6 +191,20 @@ export function generateExpression(
     }
     // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
     const propValue = (target.value as any)[property];
+
+    if (isWgsl(target.dataType)) {
+      if (target.dataType.type.startsWith('mat') && property === 'columns') {
+        return {
+          value: target.value,
+          dataType: target.dataType,
+        };
+      }
+
+      return {
+        value: propValue,
+        dataType: getTypeForPropAccess(target.dataType, property),
+      };
+    }
 
     if (isWgsl(target.value)) {
       return {
@@ -275,7 +286,7 @@ export function generateExpression(
     // Assuming that `id` is callable
     return (idValue as unknown as (...args: unknown[]) => unknown)(
       ...resolvedResources,
-    ) as Resource;
+    ) as Snippet;
   }
 
   if ('o' in expression) {
