@@ -3,7 +3,7 @@ import { Vertex } from './dataTypes';
 
 /**
  * Creates an icosphere with the specified level of subdivision
- * @param subdivisions Number of recursive subdivisions to apply
+ * @param subdivisions Number of subdivisions to apply
  * @param useNormalizedNormals Whether to use normalized vertex normals (true) or face normals (false)
  * @returns Array of vertices defining the icosphere triangles
  */
@@ -69,67 +69,60 @@ export function createIcosphere(
   // Container for the final vertex list
   const vertices: d.Infer<typeof Vertex>[] = [];
 
-  // Subdivide each face recursively
+  // Create triangles of initial icosahedron
+  const triangles: { v1: d.v4f; v2: d.v4f; v3: d.v4f; depth: number }[] = [];
+
   for (const [i1, i2, i3] of faces) {
-    subdivideTriangle(
-      initialVertices[i1],
-      initialVertices[i2],
-      initialVertices[i3],
-      subdivisions,
-      vertices,
-      useNormalizedNormals,
-    );
+    triangles.push({
+      v1: initialVertices[i1],
+      v2: initialVertices[i2],
+      v3: initialVertices[i3],
+      depth: subdivisions,
+    });
+  }
+
+  while (triangles.length > 0) {
+    // biome-ignore lint/style/noNonNullAssertion: <look at the line above>
+    const triangle = triangles.pop()!;
+    const { v1, v2, v3, depth } = triangle;
+
+    if (depth === 0) {
+      // Base case: add the triangle vertices
+      if (useNormalizedNormals) {
+        vertices.push(createVertex(v1, v1));
+        vertices.push(createVertex(v2, v2));
+        vertices.push(createVertex(v3, v3));
+      } else {
+        // Calculate face normal
+        const edge1 = d.vec4f(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z, 0);
+        const edge2 = d.vec4f(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z, 0);
+        const faceNormal = normalizeSafely(
+          d.vec4f(
+            edge1.y * edge2.z - edge1.z * edge2.y,
+            edge1.z * edge2.x - edge1.x * edge2.z,
+            edge1.x * edge2.y - edge1.y * edge2.x,
+            0,
+          ),
+        );
+        vertices.push(createVertex(v1, faceNormal));
+        vertices.push(createVertex(v2, faceNormal));
+        vertices.push(createVertex(v3, faceNormal));
+      }
+    } else {
+      // Calculate midpoints of each edge and project them onto the unit sphere
+      const v12 = normalizeSafely(calculateMidpoint(v1, v2));
+      const v23 = normalizeSafely(calculateMidpoint(v2, v3));
+      const v31 = normalizeSafely(calculateMidpoint(v3, v1));
+
+      // Add four new triangles to the stack (instead of recursive calls)
+      triangles.push({ v1, v2: v12, v3: v31, depth: depth - 1 });
+      triangles.push({ v1: v2, v2: v23, v3: v12, depth: depth - 1 });
+      triangles.push({ v1: v3, v2: v31, v3: v23, depth: depth - 1 });
+      triangles.push({ v1: v12, v2: v23, v3: v31, depth: depth - 1 });
+    }
   }
 
   return vertices;
-}
-
-/**
- * Recursively subdivides a triangle until desired depth is reached
- */
-function subdivideTriangle(
-  v1: d.v4f,
-  v2: d.v4f,
-  v3: d.v4f,
-  depth: number,
-  vertices: ReturnType<typeof Vertex>[],
-  useNormalizedNormals: boolean,
-): void {
-  if (depth === 0) {
-    // Base case: add the triangle vertices
-    if (useNormalizedNormals) {
-      vertices.push(createVertex(v1, v1));
-      vertices.push(createVertex(v2, v2));
-      vertices.push(createVertex(v3, v3));
-    } else {
-      // Calculate face normal
-      const edge1 = d.vec4f(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z, 0);
-      const edge2 = d.vec4f(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z, 0);
-      const faceNormal = normalizeSafely(
-        d.vec4f(
-          edge1.y * edge2.z - edge1.z * edge2.y,
-          edge1.z * edge2.x - edge1.x * edge2.z,
-          edge1.x * edge2.y - edge1.y * edge2.x,
-          0,
-        ),
-      );
-      vertices.push(createVertex(v1, faceNormal));
-      vertices.push(createVertex(v2, faceNormal));
-      vertices.push(createVertex(v3, faceNormal));
-    }
-    return;
-  }
-
-  // Calculate midpoints of each edge and project them onto the unit sphere
-  const v12 = normalizeSafely(calculateMidpoint(v1, v2));
-  const v23 = normalizeSafely(calculateMidpoint(v2, v3));
-  const v31 = normalizeSafely(calculateMidpoint(v3, v1));
-
-  // Recursively subdivide the four resulting triangles
-  subdivideTriangle(v1, v12, v31, depth - 1, vertices, useNormalizedNormals);
-  subdivideTriangle(v2, v23, v12, depth - 1, vertices, useNormalizedNormals);
-  subdivideTriangle(v3, v31, v23, depth - 1, vertices, useNormalizedNormals);
-  subdivideTriangle(v12, v23, v31, depth - 1, vertices, useNormalizedNormals);
 }
 
 /**
