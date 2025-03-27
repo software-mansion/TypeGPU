@@ -3,12 +3,10 @@ import * as d from 'typegpu/data';
 import { booleanTests } from './boolean';
 
 const root = await tgpu.init();
-
-const resultBuffer = root.createBuffer(d.i32, 0).$usage('storage');
-const result = resultBuffer.as('mutable');
+const result = root['~unstable'].createMutable(d.i32, 0);
 
 const computeRunTests = tgpu['~unstable']
-  .computeFn({ in: { num: d.builtin.numWorkgroups }, workgroupSize: [1] })
+  .computeFn({ workgroupSize: [1] })
   .does(() => {
     let s = true;
     s = s && booleanTests();
@@ -26,17 +24,19 @@ const pipeline = root['~unstable']
 
 async function runTests() {
   pipeline.dispatchWorkgroups(1);
-  return await resultBuffer.read();
+  return await resultBuffer.buffer.read();
 }
 
 // #region Example controls and cleanup
 
 export const controls = {
   'Run tests': {
-    onButtonClick: async () => {
-      const result = await runTests();
-      const table = document.querySelector('.result') as HTMLDivElement;
-      table.innerText = result === 0 ? 'Tests failed.' : 'Tests succeeded!';
+    async onButtonClick() {
+      const table = document.querySelector<HTMLDivElement>('.result');
+      if (!table) {
+        throw new Error('Nowhere to display the results');
+      }
+      table.innerText = await runTests() ? 'Tests succeeded!' : 'Tests failed.';
     },
   },
 };
