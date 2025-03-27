@@ -12,7 +12,6 @@ import type { BaseData, WgslTypeLiteral } from './wgslTypes';
 import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes';
 
 const knownSizesMap: Record<string, number> = {
-  bool: 4,
   f32: 4,
   f16: 2,
   i32: 4,
@@ -21,17 +20,14 @@ const knownSizesMap: Record<string, number> = {
   vec2h: 4,
   vec2i: 8,
   vec2u: 8,
-  'vec2<bool>': 8,
   vec3f: 12,
   vec3h: 6,
   vec3i: 12,
   vec3u: 12,
-  'vec3<bool>': 12,
   vec4f: 16,
   vec4h: 8,
   vec4i: 16,
   vec4u: 16,
-  'vec4<bool>': 16,
   mat2x2f: 16,
   mat3x3f: 48,
   mat4x4f: 64,

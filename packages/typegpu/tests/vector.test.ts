@@ -146,7 +146,7 @@ describe('vec2<bool>', () => {
   });
 
   it('is not host shareable', () => {
-    const buffer = new ArrayBuffer(d.sizeOf(d.vec2b));
+    const buffer = new ArrayBuffer(8);
 
     expect(() =>
       writeData(new BufferWriter(buffer), d.vec2b, d.vec2b()),
@@ -358,7 +358,7 @@ describe('vec3<bool>', () => {
   });
 
   it('is not host shareable', () => {
-    const buffer = new ArrayBuffer(d.sizeOf(d.vec3b));
+    const buffer = new ArrayBuffer(16);
 
     expect(() =>
       writeData(new BufferWriter(buffer), d.vec3b, d.vec3b()),
