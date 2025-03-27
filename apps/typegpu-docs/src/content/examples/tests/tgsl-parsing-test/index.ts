@@ -1,6 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { booleanTests } from './boolean';
+import { logicalExpressionTests } from './logical-expressions';
 
 const root = await tgpu.init();
 const result = root['~unstable'].createMutable(d.i32, 0);
@@ -9,7 +9,7 @@ const computeRunTests = tgpu['~unstable']
   .computeFn({ workgroupSize: [1] })
   .does(() => {
     let s = true;
-    s = s && booleanTests();
+    s = s && logicalExpressionTests();
 
     if (s) {
       result.value = 1;
