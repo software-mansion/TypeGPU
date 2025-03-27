@@ -88,6 +88,13 @@ export const compiledWriteSuite = createSuite(
           opacity: number;
         }>,
       },
+      dataVec: null as unknown as v3f,
+      dataVectorless: null as unknown as {
+        x: number;
+        y: number;
+        z: number;
+        opacity: number;
+      },
     };
 
     ctx.bench = new Bench({
@@ -126,61 +133,19 @@ export const compiledWriteSuite = createSuite(
         for (const size of ['small', 'medium', 'large'] as const) {
           const amountOfBoids = sizes[size];
           const BoidArray = d.arrayOf(Boid, amountOfBoids);
-          const data = new ArrayBuffer(d.sizeOf(BoidArray));
-          const fView = new Float32Array(data);
+          ctx.webgpuData[size] = new ArrayBuffer(d.sizeOf(BoidArray));
 
-          for (let i = 0; i < amountOfBoids; ++i) {
-            fView[i * 8 + 0] = 1;
-            fView[i * 8 + 1] = 2;
-            fView[i * 8 + 2] = 3;
-
-            fView[i * 8 + 4] = 4;
-            fView[i * 8 + 5] = 5;
-            fView[i * 8 + 6] = 6;
-          }
-
-          ctx.webgpuData[size] = data;
-        }
-
-        for (const size of ['small', 'medium', 'large'] as const) {
-          const amountOfBoids = sizes[size];
           const ParticleArray = d.arrayOf(Particle, amountOfBoids);
-          const data = new ArrayBuffer(d.sizeOf(ParticleArray));
-          const fView = new Float32Array(data);
-
-          for (let i = 0; i < amountOfBoids; ++i) {
-            fView[i * 4 + 0] = 1;
-            fView[i * 4 + 1] = 2;
-            fView[i * 4 + 2] = 3;
-            fView[i * 4 + 3] = 4;
-          }
-
-          ctx.webgpuVectorlessData[size] = data;
-        }
-
-        for (const size of ['small', 'medium', 'large'] as const) {
-          const amountOfBoids = sizes[size];
-          ctx.typegpuBoidData[size] = Array.from(
-            { length: amountOfBoids },
-            () => ({
-              pos: d.vec3f(1, 2, 3),
-              vel: d.vec3f(4, 5, 6),
-            }),
+          ctx.webgpuVectorlessData[size] = new ArrayBuffer(
+            d.sizeOf(ParticleArray),
           );
+
+          ctx.typegpuBoidData[size] = new Array(amountOfBoids);
+          ctx.typegpuParticleData[size] = new Array(amountOfBoids);
         }
 
-        for (const size of ['small', 'medium', 'large'] as const) {
-          const amountOfBoids = sizes[size];
-          ctx.typegpuParticleData[size] = Array.from(
-            { length: amountOfBoids },
-            () => ({
-              x: 1,
-              y: 2,
-              z: 3,
-              opacity: 4,
-            }),
-          );
-        }
+        ctx.dataVec = d.vec3f(1, 2, 3);
+        ctx.dataVectorless = { x: 1, y: 2, z: 3, opacity: 4 };
       },
       teardown() {
         ctx.root.destroy();
@@ -191,98 +156,180 @@ export const compiledWriteSuite = createSuite(
   },
   {
     'WebGPU reference (32 elements)': (getCtx) => async () => {
-      const { root, buffers, webgpuData } = getCtx();
-      root.device.queue.writeBuffer(
-        root.unwrap(buffers.small),
-        0,
-        webgpuData.small,
-      );
+      const { root, buffers, webgpuData, sizes } = getCtx();
+      const len = sizes.small;
+      const data = webgpuData.small;
+      const fView = new DataView(data);
+
+      for (let i = 0; i < len; ++i) {
+        fView.setFloat32(i * 32 + 0, 1, true);
+        fView.setFloat32(i * 32 + 4, 2, true);
+        fView.setFloat32(i * 32 + 8, 3, true);
+        fView.setFloat32(i * 32 + 16, 4, true);
+        fView.setFloat32(i * 32 + 20, 5, true);
+        fView.setFloat32(i * 32 + 24, 6, true);
+      }
+
+      root.device.queue.writeBuffer(root.unwrap(buffers.small), 0, data);
       await root.device.queue.onSubmittedWorkDone();
     },
 
     'WebGPU reference (32² elements)': (getCtx) => async () => {
-      const { root, buffers, webgpuData } = getCtx();
-      root.device.queue.writeBuffer(
-        root.unwrap(buffers.medium),
-        0,
-        webgpuData.medium,
-      );
+      const { root, buffers, webgpuData, sizes } = getCtx();
+      const len = sizes.medium;
+      const data = webgpuData.medium;
+      const fView = new DataView(data);
+
+      for (let i = 0; i < len; ++i) {
+        fView.setFloat32(i * 32 + 0, 1, true);
+        fView.setFloat32(i * 32 + 4, 2, true);
+        fView.setFloat32(i * 32 + 8, 3, true);
+        fView.setFloat32(i * 32 + 16, 4, true);
+        fView.setFloat32(i * 32 + 20, 5, true);
+        fView.setFloat32(i * 32 + 24, 6, true);
+      }
+      root.device.queue.writeBuffer(root.unwrap(buffers.medium), 0, data);
       await root.device.queue.onSubmittedWorkDone();
     },
 
     'WebGPU reference (32³ elements)': (getCtx) => async () => {
-      const { root, buffers, webgpuData } = getCtx();
-      root.device.queue.writeBuffer(
-        root.unwrap(buffers.large),
-        0,
-        webgpuData.large,
-      );
+      const { root, buffers, webgpuData, sizes } = getCtx();
+      const len = sizes.large;
+      const data = webgpuData.large;
+      const fView = new DataView(data);
+
+      for (let i = 0; i < len; ++i) {
+        fView.setFloat32(i * 32 + 0, 1, true);
+        fView.setFloat32(i * 32 + 4, 2, true);
+        fView.setFloat32(i * 32 + 8, 3, true);
+        fView.setFloat32(i * 32 + 16, 4, true);
+        fView.setFloat32(i * 32 + 20, 5, true);
+        fView.setFloat32(i * 32 + 24, 6, true);
+      }
+      root.device.queue.writeBuffer(root.unwrap(buffers.large), 0, data);
       await root.device.queue.onSubmittedWorkDone();
     },
 
     'TypeGPU (32 elements)': (getCtx) => async () => {
-      const { root, buffers, typegpuBoidData } = getCtx();
-      buffers.small.write(typegpuBoidData.small);
+      const { root, buffers, typegpuBoidData, dataVec } = getCtx();
+      const data = typegpuBoidData.small;
+      for (let i = 0; i < data.length; ++i) {
+        data[i] = { pos: dataVec, vel: dataVec };
+      }
+      buffers.small.write(data);
       await root.device.queue.onSubmittedWorkDone();
     },
 
     'TypeGPU (32² elements)': (getCtx) => async () => {
-      const { root, buffers, typegpuBoidData } = getCtx();
-      buffers.medium.write(typegpuBoidData.medium);
+      const { root, buffers, typegpuBoidData, dataVec } = getCtx();
+      const data = typegpuBoidData.medium;
+      for (let i = 0; i < data.length; ++i) {
+        data[i] = { pos: dataVec, vel: dataVec };
+      }
+      buffers.medium.write(data);
       await root.device.queue.onSubmittedWorkDone();
     },
 
     'TypeGPU (32³ elements)': (getCtx) => async () => {
-      const { root, buffers, typegpuBoidData } = getCtx();
-      buffers.large.write(typegpuBoidData.large);
+      const { root, buffers, typegpuBoidData, dataVec } = getCtx();
+      const data = typegpuBoidData.large;
+      for (let i = 0; i < data.length; ++i) {
+        data[i] = { pos: dataVec, vel: dataVec };
+      }
+      buffers.large.write(data);
       await root.device.queue.onSubmittedWorkDone();
     },
 
     'WebGPU reference vectorless (32 elements)': (getCtx) => async () => {
-      const { root, vectorlessBuffers, webgpuVectorlessData } = getCtx();
+      const { root, vectorlessBuffers, webgpuVectorlessData, sizes } = getCtx();
+      const amountOfBoids = sizes.small;
+      const data = webgpuVectorlessData.small;
+      const fView = new DataView(data);
+
+      for (let i = 0; i < amountOfBoids; ++i) {
+        fView.setFloat32(i * 16 + 0, 1, true);
+        fView.setFloat32(i * 16 + 4, 2, true);
+        fView.setFloat32(i * 16 + 8, 3, true);
+        fView.setFloat32(i * 16 + 12, 4, true);
+      }
       root.device.queue.writeBuffer(
         root.unwrap(vectorlessBuffers.small),
         0,
-        webgpuVectorlessData.small,
+        data,
       );
       await root.device.queue.onSubmittedWorkDone();
     },
 
     'WebGPU reference vectorless (32² elements)': (getCtx) => async () => {
-      const { root, vectorlessBuffers, webgpuVectorlessData } = getCtx();
+      const { root, vectorlessBuffers, webgpuVectorlessData, sizes } = getCtx();
+      const amountOfBoids = sizes.medium;
+      const data = webgpuVectorlessData.medium;
+      const fView = new DataView(data);
+
+      for (let i = 0; i < amountOfBoids; ++i) {
+        fView.setFloat32(i * 16 + 0, 1, true);
+        fView.setFloat32(i * 16 + 4, 2, true);
+        fView.setFloat32(i * 16 + 8, 3, true);
+        fView.setFloat32(i * 16 + 12, 4, true);
+      }
       root.device.queue.writeBuffer(
         root.unwrap(vectorlessBuffers.medium),
         0,
-        webgpuVectorlessData.medium,
+        data,
       );
       await root.device.queue.onSubmittedWorkDone();
     },
 
     'WebGPU reference vectorless (32³ elements)': (getCtx) => async () => {
-      const { root, vectorlessBuffers, webgpuVectorlessData } = getCtx();
+      const { root, vectorlessBuffers, webgpuVectorlessData, sizes } = getCtx();
+      const amountOfBoids = sizes.large;
+      const data = webgpuVectorlessData.large;
+      const fView = new DataView(data);
+
+      for (let i = 0; i < amountOfBoids; ++i) {
+        fView.setFloat32(i * 16 + 0, 1, true);
+        fView.setFloat32(i * 16 + 4, 2, true);
+        fView.setFloat32(i * 16 + 8, 3, true);
+        fView.setFloat32(i * 16 + 12, 4, true);
+      }
       root.device.queue.writeBuffer(
         root.unwrap(vectorlessBuffers.large),
         0,
-        webgpuVectorlessData.large,
+        data,
       );
       await root.device.queue.onSubmittedWorkDone();
     },
 
     'TypeGPU vectorless (32 elements)': (getCtx) => async () => {
-      const { root, vectorlessBuffers, typegpuParticleData } = getCtx();
-      vectorlessBuffers.small.write(typegpuParticleData.small);
+      const { root, vectorlessBuffers, typegpuParticleData, dataVectorless } =
+        getCtx();
+      const data = typegpuParticleData.small;
+      for (let i = 0; i < data.length; ++i) {
+        data[i] = dataVectorless;
+      }
+      vectorlessBuffers.small.write(data);
       await root.device.queue.onSubmittedWorkDone();
     },
 
     'TypeGPU vectorless (32² elements)': (getCtx) => async () => {
-      const { root, vectorlessBuffers, typegpuParticleData } = getCtx();
-      vectorlessBuffers.medium.write(typegpuParticleData.medium);
+      const { root, vectorlessBuffers, typegpuParticleData, dataVectorless } =
+        getCtx();
+      const data = typegpuParticleData.medium;
+      for (let i = 0; i < data.length; ++i) {
+        data[i] = dataVectorless;
+      }
+      vectorlessBuffers.medium.write(data);
       await root.device.queue.onSubmittedWorkDone();
     },
 
     'TypeGPU vectorless (32³ elements)': (getCtx) => async () => {
-      const { root, vectorlessBuffers, typegpuParticleData } = getCtx();
-      vectorlessBuffers.large.write(typegpuParticleData.large);
+      const { root, vectorlessBuffers, typegpuParticleData, dataVectorless } =
+        getCtx();
+      const data = typegpuParticleData.large;
+      for (let i = 0; i < data.length; ++i) {
+        data[i] = dataVectorless;
+      }
+      vectorlessBuffers.large.write(data);
       await root.device.queue.onSubmittedWorkDone();
     },
   },

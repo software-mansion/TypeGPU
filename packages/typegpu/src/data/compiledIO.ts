@@ -106,7 +106,7 @@ export function buildWriter(
     const count = wgsl.isVec2(node) ? 2 : wgsl.isVec3(node) ? 3 : 4;
 
     for (let i = 0; i < count; i++) {
-      code += `output.${writeFunc}((${offsetExpr} + ${i * 4}), ${valueExpr}.${components[i]}, littleEndian);\n`;
+      code += `output.${writeFunc}((${offsetExpr} + ${i * 4}), ${valueExpr}[${i}], littleEndian);\n`;
     }
     return code;
   }
@@ -125,7 +125,7 @@ export function buildWriter(
       const rowIndex = i % matSize;
       const byteOffset = colIndex * rowStride + rowIndex * 4;
 
-      code += `output.${writeFunc}((${offsetExpr} + ${byteOffset}), ${valueExpr}.columns[${colIndex}].${['x', 'y', 'z', 'w'][rowIndex]}, littleEndian);\n`;
+      code += `output.${writeFunc}((${offsetExpr} + ${byteOffset}), ${valueExpr}.columns[${colIndex}][${rowIndex}], littleEndian);\n`;
     }
 
     return code;
@@ -160,6 +160,8 @@ export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
   }
 
   const body = buildWriter(schema, 'offset', 'value');
+
+  console.log(body);
 
   const fn = new Function(
     'output',
