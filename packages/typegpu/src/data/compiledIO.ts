@@ -102,7 +102,6 @@ export function buildWriter(
     const primitive = typeToPrimitive[node.type];
     let code = '';
     const writeFunc = primitiveToWriteFunction[primitive];
-    const components = ['x', 'y', 'z', 'w'];
     const count = wgsl.isVec2(node) ? 2 : wgsl.isVec3(node) ? 3 : 4;
 
     for (let i = 0; i < count; i++) {
