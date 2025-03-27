@@ -145,6 +145,7 @@ export const fragmentShader = tgpu['~unstable']
       const hsv = rgbToHsv(desaturatedColor);
       hsv.y += desaturationFactor / 2;
       hsv.z += desaturationFactor;
+      // Hue shift
       hsv.x += (input.variant - 0.5) * 0.2;
       desaturatedColor = hsvToRgb(hsv);
     }
