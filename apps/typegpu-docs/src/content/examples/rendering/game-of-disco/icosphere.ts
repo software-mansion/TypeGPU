@@ -263,7 +263,23 @@ export function createIcosphereShader(
   subdivisions: number,
   smooth: boolean,
   root: TgpuRoot,
+  maxBufferSize?: number,
 ): TgpuBuffer<d.Disarray<typeof Vertex>> & VertexFlag {
+  if (maxBufferSize) {
+    const vertexSize = getVertexAmount(subdivisions) * d.sizeOf(Vertex);
+    if (vertexSize > maxBufferSize) {
+      console.warn(
+        `Requested icosphere of size ${vertexSize} exceeds max buffer size of ${maxBufferSize} - reducing subdivisions`,
+      );
+      return createIcosphereShader(
+        subdivisions - 1,
+        smooth,
+        root,
+        maxBufferSize,
+      );
+    }
+  }
+
   const key = `${subdivisions}-${smooth}`;
   const cached = icoshpereCache.get(key);
   if (cached) {
@@ -362,7 +378,6 @@ function subdivide(
     .fn([d.vec4f, d.vec4f, d.vec4f, d.u32, d.vec4f], d.vec4f)
     .does((v1, v2, v3, smooth, vertexPos) => {
       if (smooth === 1) {
-        // For smooth shading on a sphere, the normal is the same as the normalized position
         return vertexPos;
       }
       const edge1 = d.vec4f(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z, 0);
@@ -446,7 +461,6 @@ function subdivide(
       ];
 
       const baseIndexNext = triangleIndex * d.u32(12);
-      // For each of the 12 new vertices, compute and store their values.
       for (let i = d.u32(0); i < 12; i++) {
         const reprojectedVertex = newVertices[i];
 
@@ -468,8 +482,6 @@ function subdivide(
 
   const pipeline = root['~unstable'].withCompute(computeFn).createPipeline();
 
-  // Calculate the appropriate workgroup dispatch dimensions, splitting across X and Y
-  // when needed to stay within the 65535 limit
   const triangleCount = getVertexAmount(wantedSubdivisions - 1) / 3;
   const xGroups = Math.min(triangleCount, 65535);
   const yGroups = Math.ceil(triangleCount / 65535);
