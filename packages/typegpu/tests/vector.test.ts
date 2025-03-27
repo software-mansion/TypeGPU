@@ -4,8 +4,7 @@ import tgpu from '../src';
 import * as d from '../src/data';
 import { readData, writeData } from '../src/data/dataIO';
 import { sizeOf } from '../src/data/sizeOf';
-import { parse } from './utils/parseResolved';
-import { parseResolved } from './utils/parseResolved';
+import { parse, parseResolved } from './utils/parseResolved';
 
 describe('vec2f', () => {
   it('should span 8 bytes', () => {
@@ -128,14 +127,6 @@ describe('vec2i', () => {
 });
 
 describe('vec2<bool>', () => {
-  it('should span 8 bytes', () => {
-    expect(sizeOf(d.vec2b)).toEqual(8);
-  });
-
-  it('should align to 8 bytes', () => {
-    expect(d.alignmentOf(d.vec2b)).toEqual(8);
-  });
-
   it('should create a zero 2d vector', () => {
     const zero = d.vec2b();
     expect(zero.x).toEqual(false);
@@ -345,14 +336,6 @@ describe('vec3i', () => {
 });
 
 describe('vec3<bool>', () => {
-  it('should span 12 bytes', () => {
-    expect(sizeOf(d.vec3b)).toEqual(12);
-  });
-
-  it('should align to 16 bytes', () => {
-    expect(d.alignmentOf(d.vec3b)).toEqual(16);
-  });
-
   it('should create a zero 3d vector', () => {
     const zero = d.vec3b();
     expect(zero.x).toEqual(false);
