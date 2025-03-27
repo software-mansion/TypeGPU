@@ -11,7 +11,7 @@ import {
   Material,
   Vertex,
 } from './dataTypes';
-import { createIcosphere } from './icosphere';
+import { createIcosphereShader } from './icosphere';
 
 // Initialize cache for vertex buffers
 const vertexBufferCache = new Map<
@@ -21,7 +21,21 @@ const vertexBufferCache = new Map<
   }
 >();
 
-const root = await tgpu.init();
+const adapter = await navigator.gpu.requestAdapter();
+if (!adapter) {
+  throw new Error('WebGPU not supported');
+}
+
+const maxBufferSize = adapter.limits.maxStorageBufferBindingSize;
+const maxStorageBufferBindingSize = adapter.limits.maxStorageBufferBindingSize;
+const maxSize = Math.min(maxBufferSize, maxStorageBufferBindingSize);
+const device = await adapter.requestDevice({
+  requiredLimits: {
+    maxStorageBufferBindingSize: maxSize,
+    maxBufferSize: maxSize,
+  },
+});
+const root = tgpu.initFromDevice({ device });
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -33,33 +47,11 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-let smoothNormals = true;
-let subdivisions = 4;
-
-// Function to get or create cached vertex buffer
-function getOrCreateVertexBuffer(subdivisions: number, smoothNormals: boolean) {
-  const cacheKey = `${subdivisions}-${smoothNormals}`;
-  let cached = vertexBufferCache.get(cacheKey);
-
-  if (!cached) {
-    const vertices = createIcosphere(subdivisions, smoothNormals);
-    const buffer = root
-      .createBuffer(d.disarrayOf(Vertex, vertices.length), vertices)
-      .$usage('vertex');
-
-    cached = {
-      buffer,
-    };
-    vertexBufferCache.set(cacheKey, cached);
-    console.log(`Created new buffer for ${cacheKey}`);
-  }
-
-  return cached;
-}
+let smoothNormals = false;
+let subdivisions = 2;
 
 // Initialize with default values
-const initialCache = getOrCreateVertexBuffer(subdivisions, smoothNormals);
-let vertexBuffer = initialCache.buffer;
+let vertexBuffer = createIcosphereShader(subdivisions, smoothNormals, root);
 
 const cubeVertexBuffer = root
   .createBuffer(d.arrayOf(CubeVertex, cubeVertices.length), cubeVertices)
@@ -129,12 +121,10 @@ const vertexFn = tgpu['~unstable']
   .vertexFn({
     in: {
       position: d.vec4f,
-      color: d.vec4f,
       normal: d.vec4f,
     },
     out: {
       pos: d.builtin.position,
-      color: d.vec4f,
       normal: d.vec4f,
       worldPos: d.vec4f,
     },
@@ -144,7 +134,6 @@ const vertexFn = tgpu['~unstable']
     const pos = std.mul(camera.value.view, input.position);
     return {
       pos: std.mul(camera.value.projection, pos),
-      color: input.color,
       normal: input.normal,
       worldPos: worldPos,
     };
@@ -153,7 +142,6 @@ const vertexFn = tgpu['~unstable']
 const fragmentFn = tgpu['~unstable']
   .fragmentFn({
     in: {
-      color: d.vec4f,
       normal: d.vec4f,
       worldPos: d.vec4f,
     },
@@ -182,7 +170,7 @@ const fragmentFn = tgpu['~unstable']
     let envColor = textureSample(cubemap, sampler, reflView);
 
     // Combine direct lighting with environmental reflection
-    let directLighting = (ambient + diffuse + specular) * input.color.xyz;
+    let directLighting = ambient + diffuse + specular;
     let finalColor = mix(directLighting, envColor.xyz, material.reflectivity);
 
     return vec4f(finalColor, 1.0);
@@ -360,22 +348,20 @@ canvas.addEventListener('mousemove', (event) => {
 
 export const controls = {
   subdivisions: {
-    initial: 4,
+    initial: 2,
     min: 0,
-    max: 8,
+    max: 10,
     step: 1,
     onSliderChange(value: number) {
       subdivisions = value;
-      const cached = getOrCreateVertexBuffer(subdivisions, smoothNormals);
-      vertexBuffer = cached.buffer;
+      vertexBuffer = createIcosphereShader(value, smoothNormals, root);
     },
   },
   'smooth normals': {
-    initial: true,
+    initial: false,
     onToggleChange: (value: boolean) => {
       smoothNormals = value;
-      const cached = getOrCreateVertexBuffer(subdivisions, value);
-      vertexBuffer = cached.buffer;
+      vertexBuffer = createIcosphereShader(subdivisions, value, root);
     },
   },
 };

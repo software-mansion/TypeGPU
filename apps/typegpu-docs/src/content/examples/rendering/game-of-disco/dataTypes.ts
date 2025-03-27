@@ -8,8 +8,12 @@ export const Camera = d.struct({
 
 export const Vertex = d.unstruct({
   position: d.float16x4,
-  color: d.unorm8x4,
   normal: d.float16x4,
+});
+
+export const ComputeVertex = d.struct({
+  position: d.vec2u, // 2x16 float
+  normal: d.vec2u, // 2x16 float
 });
 
 export const CubeVertex = d.struct({
