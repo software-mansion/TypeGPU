@@ -140,8 +140,8 @@ export const compiledWriteSuite = createSuite(
             d.sizeOf(ParticleArray),
           );
 
-          ctx.typegpuBoidData[size] = new Array(amountOfBoids);
-          ctx.typegpuParticleData[size] = new Array(amountOfBoids);
+          ctx.typegpuBoidData[size] = Array(amountOfBoids).fill(null);
+          ctx.typegpuParticleData[size] = Array(amountOfBoids).fill(null);
         }
 
         ctx.dataVec = d.vec3f(1, 2, 3);
