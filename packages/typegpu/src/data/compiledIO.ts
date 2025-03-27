@@ -161,8 +161,6 @@ export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
 
   const body = buildWriter(schema, 'offset', 'value');
 
-  console.log(body);
-
   const fn = new Function(
     'output',
     'offset',
