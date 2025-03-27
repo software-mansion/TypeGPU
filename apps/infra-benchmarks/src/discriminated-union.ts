@@ -1,3 +1,9 @@
+/*
+ * This benchmark is used to find the fastest way to discriminate
+ * types of objects that are hidden under a symbol. This information
+ * will be used to best discriminate TypeGPU resources.
+ */
+
 import { Bench } from 'tinybench';
 
 const bench = new Bench({
