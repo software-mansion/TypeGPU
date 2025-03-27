@@ -211,7 +211,7 @@ export function generateExpression(
     // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
     const propValue = (target.value as any)[property];
 
-    if (isWgsl(target.value)) {
+    if (isWgsl(target.dataType)) {
       if (target.dataType.type.startsWith('mat') && property === 'columns') {
         return {
           value: target.value,
@@ -219,6 +219,13 @@ export function generateExpression(
         };
       }
 
+      return {
+        value: propValue,
+        dataType: getTypeForPropAccess(target.dataType, property),
+      };
+    }
+
+    if (isWgsl(target.value)) {
       return {
         value: propValue,
         dataType: getTypeForPropAccess(target.value as d.AnyWgslData, property),
