@@ -51,7 +51,12 @@ let smoothNormals = false;
 let subdivisions = 2;
 
 // Initialize with default values
-let vertexBuffer = createIcosphereShader(subdivisions, smoothNormals, root);
+let vertexBuffer = createIcosphereShader(
+  subdivisions,
+  smoothNormals,
+  root,
+  maxSize,
+);
 
 const cubeVertexBuffer = root
   .createBuffer(d.arrayOf(CubeVertex, cubeVertices.length), cubeVertices)
@@ -354,14 +359,14 @@ export const controls = {
     step: 1,
     onSliderChange(value: number) {
       subdivisions = value;
-      vertexBuffer = createIcosphereShader(value, smoothNormals, root);
+      vertexBuffer = createIcosphereShader(value, smoothNormals, root, maxSize);
     },
   },
   'smooth normals': {
     initial: false,
     onToggleChange: (value: boolean) => {
       smoothNormals = value;
-      vertexBuffer = createIcosphereShader(subdivisions, value, root);
+      vertexBuffer = createIcosphereShader(subdivisions, value, root, maxSize);
     },
   },
 };
