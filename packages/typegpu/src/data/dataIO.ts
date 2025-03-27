@@ -52,7 +52,7 @@ type CompleteDataReaders = {
 };
 
 const dataWriters = {
-  bool(output, _schema: wgsl.Bool, value: boolean) {
+  bool() {
     throw new Error('Booleans are not host-shareable');
   },
 
@@ -462,7 +462,7 @@ export function writeData<TData extends wgsl.BaseData>(
 }
 
 const dataReaders = {
-  bool(input: ISerialInput): boolean {
+  bool(): boolean {
     throw new Error('Booleans are not host-shareable');
   },
 
