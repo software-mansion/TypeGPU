@@ -120,7 +120,7 @@
     "@types/babel__template": "^7.4.4",
     "@types/babel__traverse": "^7.20.6",
     "acorn": "^8.12.1",
-    "rollup": "~4.22.4",
+    "rollup": "~4.37.0",
     "tsup": "catalog:",
     "typescript": "catalog:"
   }
