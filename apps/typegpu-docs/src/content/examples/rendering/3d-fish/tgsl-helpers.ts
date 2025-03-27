@@ -35,7 +35,7 @@ export const applySinWave = tgpu['~unstable']
     const coeff =
       std.cos(d.f32(index) + (d.f32(time) / a + position.x) / b) / c;
     const newOX = std.normalize(d.vec3f(1, 0, coeff));
-    const newOZ = d.vec3f(-coeff, 0, 1);
+    const newOZ = d.vec3f(-newOX.z, 0, newOX.x);
     const newNormalXZ = std.add(
       std.mul(normal.x, newOX),
       std.mul(normal.z, newOZ),
