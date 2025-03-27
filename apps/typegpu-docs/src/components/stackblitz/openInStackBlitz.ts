@@ -33,7 +33,7 @@ export const openInStackBlitz = (example: Example) => {
       template: 'node',
       title: example.metadata.title,
       files: {
-        'index.ts': index.slice('// @ts-ignore\n'.length),
+        'index.ts': index.replaceAll(/\/\/\s*@ts-ignore\s*\n/g, ''),
         ...tsFiles,
         'index.html': `\
 <!DOCTYPE html>

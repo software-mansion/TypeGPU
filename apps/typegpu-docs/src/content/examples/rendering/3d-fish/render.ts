@@ -1,3 +1,4 @@
+import { hsvToRgb, rgbToHsv } from '@typegpu/color';
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
@@ -7,7 +8,6 @@ import {
   ModelVertexOutput,
   renderBindGroupLayout,
 } from './schemas';
-import { hsvToRgb, rgbToHsv } from './tgsl-helpers';
 
 const { camera, modelTexture, sampler, modelData } =
   renderBindGroupLayout.bound;
