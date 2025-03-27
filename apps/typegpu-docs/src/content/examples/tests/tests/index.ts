@@ -24,7 +24,7 @@ const pipeline = root['~unstable']
 
 async function runTests() {
   pipeline.dispatchWorkgroups(1);
-  return await resultBuffer.buffer.read();
+  return await result.buffer.read();
 }
 
 // #region Example controls and cleanup
@@ -36,7 +36,9 @@ export const controls = {
       if (!table) {
         throw new Error('Nowhere to display the results');
       }
-      table.innerText = await runTests() ? 'Tests succeeded!' : 'Tests failed.';
+      table.innerText = (await runTests())
+        ? 'Tests succeeded!'
+        : 'Tests failed.';
     },
   },
 };
