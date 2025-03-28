@@ -3,6 +3,7 @@ packages:
   - 'apps/*'
 
 catalog:
+  arktype: ^2.1.15
   typescript: ^5.8.2
   tsup: ^8.4.0
   unbuild: ^3.5.0

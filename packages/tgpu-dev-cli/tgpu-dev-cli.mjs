@@ -13,7 +13,7 @@ if (!process.env.npm_config_user_agent.startsWith('pnpm')) {
   process.exit(1);
 }
 
-const args = arg({});
+const args = arg({}, { permissive: true });
 
 const COMMANDS = {
   prepack: {
