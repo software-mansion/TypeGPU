@@ -89,11 +89,19 @@ export type TgpuFn<
   Return extends AnyWgslData | undefined = AnyWgslData | undefined,
 > = TgpuFnBase<Args, Return> &
   ((
-    ...args: Args extends AnyWgslData[] ? InferArgs<Args> : [InferIO<Args>]
+    ...args: Args extends AnyWgslData[]
+      ? InferArgs<Args>
+      : Args extends Record<string, never>
+        ? []
+        : [InferIO<Args>]
   ) => InferReturn<Return>) & {
     readonly [$internal]: {
       implementation: Implementation<
-        Args extends AnyWgslData[] ? InferArgs<Args> : [InferIO<Args>],
+        Args extends AnyWgslData[]
+          ? InferArgs<Args>
+          : Args extends Record<string, never>
+            ? []
+            : [InferIO<Args>],
         InferReturn<Return>
       >;
     };
@@ -255,7 +263,11 @@ function createBoundFunction<
 
   const call = createDualImpl(
     (
-      ...args: Args extends AnyWgslData[] ? InferArgs<Args> : [InferIO<Args>]
+      ...args: Args extends AnyWgslData[]
+        ? InferArgs<Args>
+        : Args extends Record<string, never>
+          ? []
+          : [InferIO<Args>]
     ): unknown => innerFn(...args),
     (...args) => {
       return {
