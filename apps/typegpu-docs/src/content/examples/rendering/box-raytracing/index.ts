@@ -107,8 +107,10 @@ const renderBindGroup = root.createBindGroup(renderBindGroupLayout, {
 // functions
 
 const getBoxIntersection = tgpu['~unstable']
-  .fn([d.vec3f, d.vec3f, RayStruct], IntersectionStruct)
-  .does(/* wgsl */ `(
+  .fn(
+    [d.vec3f, d.vec3f, RayStruct],
+    IntersectionStruct,
+  )(/* wgsl */ `(
   boundMin: vec3f,
   boundMax: vec3f,
   ray: RayStruct
@@ -182,8 +184,7 @@ const vertexFunction = tgpu['~unstable']
   .vertexFn({
     in: { vertexIndex: d.builtin.vertexIndex },
     out: { outPos: d.builtin.position },
-  })
-  .does(/* wgsl */ `(input: VertexInput) -> VertexOutput {
+  })(/* wgsl */ `(input: VertexInput) -> VertexOutput {
   var pos = array<vec2f, 6>(
     vec2<f32>( 1,  1),
     vec2<f32>( 1, -1),
@@ -203,8 +204,10 @@ const boxSizeAccessor = tgpu['~unstable'].accessor(d.u32);
 const canvasDimsAccessor = tgpu['~unstable'].accessor(CanvasDimsStruct);
 
 const fragmentFunction = tgpu['~unstable']
-  .fragmentFn({ in: { position: d.builtin.position }, out: d.vec4f })
-  .does(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
+  .fragmentFn({
+    in: { position: d.builtin.position },
+    out: d.vec4f,
+  })(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
   let minDim = f32(min(canvasDims.width, canvasDims.height));
 
   var ray: RayStruct;
@@ -275,8 +278,10 @@ const pipeline = root['~unstable']
   .with(
     boxSizeAccessor,
     tgpu['~unstable']
-      .fn([], d.u32)
-      .does('() -> u32 { return boxSize; }')
+      .fn(
+        [],
+        d.u32,
+      )('() -> u32 { return boxSize; }')
       .$uses({ boxSize: boxSizeUniform }),
   )
   .with(canvasDimsAccessor, canvasDimsUniform)

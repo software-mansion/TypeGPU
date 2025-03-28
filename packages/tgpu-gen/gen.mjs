@@ -127,7 +127,9 @@ export function generate(
   const exports_ = generateExports(options);
 
   return `/* generated via tgpu-gen by TypeGPU */
-${[imports, structs, aliases, bindGroupLayouts, functions, exports_].filter((generated) => generated && generated.trim() !== '').join('\n')}
+${[imports, structs, aliases, bindGroupLayouts, functions, exports_]
+  .filter((generated) => generated && generated.trim() !== '')
+  .join('\n')}
 `;
 }
 
@@ -154,7 +156,9 @@ function generateStruct(struct, options) {
       ? `(${LENGTH_VAR}${options.toTs ? ': number' : ''}) => `
       : ''
   }d.struct({
-  ${struct.members.map((member) => generateStructMember(member, options)).join('\n  ')}
+  ${struct.members
+    .map((member) => generateStructMember(member, options))
+    .join('\n  ')}
 });`;
 }
 
@@ -182,7 +186,10 @@ function generateAliases(aliases, options) {
 ${aliases
   .map(
     (alias) =>
-      `${declareConst(alias.name, options)} = ${generateType(alias.type, options)};`,
+      `${declareConst(alias.name, options)} = ${generateType(
+        alias.type,
+        options,
+      )};`,
   )
   .join('\n')}`
     : '';
@@ -214,7 +221,9 @@ function generateType(type_, options) {
     type_ instanceof StructInfo
       ? type_.name
       : type_ instanceof ArrayInfo
-        ? `d.arrayOf(${generateType(type_.format, options)}, ${type_.count > 0 ? type_.count : LENGTH_VAR})`
+        ? `d.arrayOf(${generateType(type_.format, options)}, ${
+            type_.count > 0 ? type_.count : LENGTH_VAR
+          })`
         : type_ instanceof TemplateInfo &&
             type_.name === 'atomic' &&
             type_.format
@@ -445,7 +454,11 @@ function generateFunctions(functions, wgsl, options) {
 ${functions
   .map(
     (func) =>
-      `${declareConst(func.name, options)} = ${generateFunction(func, wgsl, options)};`,
+      `${declareConst(func.name, options)} = ${generateFunction(
+        func,
+        wgsl,
+        options,
+      )};`,
   )
   .join('\n\n')}`
     : '';
@@ -485,8 +498,11 @@ function generateFunction(func, wgsl, options) {
     : null;
 
   return `tgpu
-  .${funcType}(${inputs}${output ? `, ${output}` : ''})
-  .does(/* wgsl */ \`${implementation.slice(implementation.indexOf(func.name) + func.name.length)}\`)`;
+  .${funcType}(${inputs}${
+    output ? `, ${output}` : ''
+  })(/* wgsl */ \`${implementation.slice(
+    implementation.indexOf(func.name) + func.name.length,
+  )}\`)`;
 }
 
 /**
@@ -500,7 +516,9 @@ function declareConst(ident, options) {
     options.declaredIdentifiers.add(ident);
   }
 
-  return `${options.moduleSyntax === 'esmodule' ? 'export ' : ''}const ${ident}`;
+  return `${
+    options.moduleSyntax === 'esmodule' ? 'export ' : ''
+  }const ${ident}`;
 }
 
 /**
@@ -529,7 +547,9 @@ function generateImports(options) {
  */
 function generateExports(options) {
   return options.moduleSyntax === 'commonjs'
-    ? `\nmodule.exports = {${[...(options.declaredIdentifiers ?? [])].join(', ')}};`
+    ? `\nmodule.exports = {${[...(options.declaredIdentifiers ?? [])].join(
+        ', ',
+      )}};`
     : '';
 }
 

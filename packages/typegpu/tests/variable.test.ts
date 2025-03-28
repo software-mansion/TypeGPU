@@ -9,8 +9,7 @@ describe('var', () => {
   it('should inject variable declaration when used in functions', () => {
     const x = tgpu['~unstable'].privateVar(d.u32, 2);
     const fn1 = tgpu['~unstable']
-      .fn([])
-      .does(`() {
+      .fn([])(`() {
         let y = x;
         return x;
       }`)
@@ -115,7 +114,7 @@ describe('var', () => {
       })
       .$name('boid');
 
-    const func = tgpu['~unstable'].fn([]).does(() => {
+    const func = tgpu['~unstable'].fn([])(() => {
       const pos = boidVariable.value;
       const vel = boidVariable.value.vel;
       const velX = boidVariable.value.vel.x;

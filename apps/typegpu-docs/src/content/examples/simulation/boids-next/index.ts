@@ -5,7 +5,10 @@ import * as std from 'typegpu/std';
 const triangleAmount = 1000;
 const triangleSize = 0.03;
 
-const rotate = tgpu['~unstable'].fn([d.vec2f, d.f32], d.vec2f).does(/* wgsl */ `
+const rotate = tgpu['~unstable'].fn(
+  [d.vec2f, d.f32],
+  d.vec2f,
+)(/* wgsl */ `
   (v: vec2f, angle: f32) -> vec2f {
     let pos = vec2(
       (v.x * cos(angle)) - (v.y * sin(angle)),
@@ -16,9 +19,10 @@ const rotate = tgpu['~unstable'].fn([d.vec2f, d.f32], d.vec2f).does(/* wgsl */ `
   }
 `);
 
-const getRotationFromVelocity = tgpu['~unstable']
-  .fn([d.vec2f], d.f32)
-  .does(/* wgsl */ `
+const getRotationFromVelocity = tgpu['~unstable'].fn(
+  [d.vec2f],
+  d.f32,
+)(/* wgsl */ `
   (velocity: vec2f) -> f32 {
     return -atan2(velocity.x, velocity.y);
   }
@@ -45,8 +49,7 @@ const mainVert = tgpu['~unstable']
   .vertexFn({
     in: { v: d.vec2f, center: d.vec2f, velocity: d.vec2f },
     out: VertexOutput,
-  })
-  .does(/* wgsl */ `(input: VertexInput) -> VertexOutput {
+  })(/* wgsl */ `(input: VertexInput) -> VertexOutput {
     let angle = getRotationFromVelocity(input.velocity);
     let rotated = rotate(input.v, angle);
 
@@ -67,9 +70,10 @@ const mainVert = tgpu['~unstable']
     rotate,
   });
 
-const mainFrag = tgpu['~unstable']
-  .fragmentFn({ in: VertexOutput, out: d.vec4f })
-  .does(/* wgsl */ `
+const mainFrag = tgpu['~unstable'].fragmentFn({
+  in: VertexOutput,
+  out: d.vec4f,
+})(/* wgsl */ `
   (input: FragmentInput) -> @location(0) vec4f {
     return input.color;
   }
@@ -212,82 +216,80 @@ const computeBindGroupLayout = tgpu
 
 const { currentTrianglePos, nextTrianglePos } = computeBindGroupLayout.bound;
 
-const mainCompute = tgpu['~unstable']
-  .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })
-  .does((input) => {
-    const index = input.gid.x;
-    const instanceInfo = currentTrianglePos.value[index];
-    let separation = d.vec2f();
-    let alignment = d.vec2f();
-    let cohesion = d.vec2f();
-    let alignmentCount = 0;
-    let cohesionCount = 0;
+const mainCompute = tgpu['~unstable'].computeFn({
+  in: { gid: d.builtin.globalInvocationId },
+  workgroupSize: [1],
+})((input) => {
+  const index = input.gid.x;
+  const instanceInfo = currentTrianglePos.value[index];
+  let separation = d.vec2f();
+  let alignment = d.vec2f();
+  let cohesion = d.vec2f();
+  let alignmentCount = 0;
+  let cohesionCount = 0;
 
-    for (let i = d.u32(0); i < std.arrayLength(currentTrianglePos.value); i++) {
-      if (i === index) {
-        continue;
-      }
-      const other = currentTrianglePos.value[i];
-      const dist = std.distance(instanceInfo.position, other.position);
-      if (dist < params.value.separationDistance) {
-        separation = std.add(
-          separation,
-          std.sub(instanceInfo.position, other.position),
-        );
-      }
-      if (dist < params.value.alignmentDistance) {
-        alignment = std.add(alignment, other.velocity);
-        alignmentCount++;
-      }
-      if (dist < params.value.cohesionDistance) {
-        cohesion = std.add(cohesion, other.position);
-        cohesionCount++;
-      }
+  for (let i = d.u32(0); i < std.arrayLength(currentTrianglePos.value); i++) {
+    if (i === index) {
+      continue;
     }
-    if (alignmentCount > 0) {
-      alignment = std.mul(1.0 / d.f32(alignmentCount), alignment);
+    const other = currentTrianglePos.value[i];
+    const dist = std.distance(instanceInfo.position, other.position);
+    if (dist < params.value.separationDistance) {
+      separation = std.add(
+        separation,
+        std.sub(instanceInfo.position, other.position),
+      );
     }
-    if (cohesionCount > 0) {
-      cohesion = std.mul(1.0 / d.f32(cohesionCount), cohesion);
-      cohesion = std.sub(cohesion, instanceInfo.position);
+    if (dist < params.value.alignmentDistance) {
+      alignment = std.add(alignment, other.velocity);
+      alignmentCount++;
     }
+    if (dist < params.value.cohesionDistance) {
+      cohesion = std.add(cohesion, other.position);
+      cohesionCount++;
+    }
+  }
+  if (alignmentCount > 0) {
+    alignment = std.mul(1.0 / d.f32(alignmentCount), alignment);
+  }
+  if (cohesionCount > 0) {
+    cohesion = std.mul(1.0 / d.f32(cohesionCount), cohesion);
+    cohesion = std.sub(cohesion, instanceInfo.position);
+  }
 
-    let velocity = std.mul(params.value.separationStrength, separation);
-    velocity = std.add(
-      velocity,
-      std.mul(params.value.alignmentStrength, alignment),
-    );
-    velocity = std.add(
-      velocity,
-      std.mul(params.value.cohesionStrength, cohesion),
-    );
+  let velocity = std.mul(params.value.separationStrength, separation);
+  velocity = std.add(
+    velocity,
+    std.mul(params.value.alignmentStrength, alignment),
+  );
+  velocity = std.add(
+    velocity,
+    std.mul(params.value.cohesionStrength, cohesion),
+  );
 
-    instanceInfo.velocity = std.add(instanceInfo.velocity, velocity);
-    instanceInfo.velocity = std.mul(
-      std.clamp(std.length(instanceInfo.velocity), 0, 0.01),
-      std.normalize(instanceInfo.velocity),
-    );
+  instanceInfo.velocity = std.add(instanceInfo.velocity, velocity);
+  instanceInfo.velocity = std.mul(
+    std.clamp(std.length(instanceInfo.velocity), 0, 0.01),
+    std.normalize(instanceInfo.velocity),
+  );
 
-    if (instanceInfo.position.x > 1.0 + triangleSize) {
-      instanceInfo.position.x = -1.0 - triangleSize;
-    }
-    if (instanceInfo.position.y > 1.0 + triangleSize) {
-      instanceInfo.position.y = -1.0 - triangleSize;
-    }
-    if (instanceInfo.position.x < -1.0 - triangleSize) {
-      instanceInfo.position.x = 1.0 + triangleSize;
-    }
-    if (instanceInfo.position.y < -1.0 - triangleSize) {
-      instanceInfo.position.y = 1.0 + triangleSize;
-    }
+  if (instanceInfo.position.x > 1.0 + triangleSize) {
+    instanceInfo.position.x = -1.0 - triangleSize;
+  }
+  if (instanceInfo.position.y > 1.0 + triangleSize) {
+    instanceInfo.position.y = -1.0 - triangleSize;
+  }
+  if (instanceInfo.position.x < -1.0 - triangleSize) {
+    instanceInfo.position.x = 1.0 + triangleSize;
+  }
+  if (instanceInfo.position.y < -1.0 - triangleSize) {
+    instanceInfo.position.y = 1.0 + triangleSize;
+  }
 
-    instanceInfo.position = std.add(
-      instanceInfo.position,
-      instanceInfo.velocity,
-    );
+  instanceInfo.position = std.add(instanceInfo.position, instanceInfo.velocity);
 
-    nextTrianglePos.value[index] = instanceInfo;
-  });
+  nextTrianglePos.value[index] = instanceInfo;
+});
 
 const computePipeline = root['~unstable']
   .withCompute(mainCompute)

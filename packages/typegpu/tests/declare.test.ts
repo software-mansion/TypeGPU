@@ -11,8 +11,7 @@ describe('tgpu.declare', () => {
     );
 
     const fn = tgpu['~unstable']
-      .fn([])
-      .does(`() {
+      .fn([])(`() {
         // do nothing
       }`)
       .$uses({ declaration })
@@ -33,8 +32,7 @@ describe('tgpu.declare', () => {
     );
 
     const fn = tgpu['~unstable']
-      .fn([])
-      .does(`() {
+      .fn([])(`() {
         declaration
         // do nothing
       }`)
@@ -52,8 +50,7 @@ describe('tgpu.declare', () => {
 
   it('should inject all provided declarations', () => {
     const fn = tgpu['~unstable']
-      .fn([])
-      .does(`() {
+      .fn([])(`() {
         // do nothing
       }`)
       .$uses({
@@ -92,8 +89,7 @@ describe('tgpu.declare', () => {
       });
 
     const fn = tgpu['~unstable']
-      .fn([])
-      .does(`() {
+      .fn([])(`() {
         // do nothing
       }`)
       .$uses({ declaration })
@@ -122,8 +118,7 @@ describe('tgpu.declare', () => {
       .$uses({ Output });
 
     const fn = tgpu['~unstable']
-      .fn([])
-      .does(`() {
+      .fn([])(`() {
         // do nothing
       }`)
       .$uses({ declaration })
@@ -148,8 +143,10 @@ describe('tgpu.declare', () => {
     );
 
     const main = tgpu['~unstable']
-      .fn([], d.f32)
-      .does(() => {
+      .fn(
+        [],
+        d.f32,
+      )(() => {
         declaration;
         return 2;
       })
