@@ -55,8 +55,6 @@ bench
           count += 4;
         }
       }
-
-      console.log(count);
     },
     {
       beforeEach() {
@@ -83,8 +81,6 @@ bench
           count += 4;
         }
       }
-
-      console.log(count);
     },
     {
       beforeEach() {
@@ -111,8 +107,6 @@ bench
           count += 4;
         }
       }
-
-      console.log(count);
     },
     {
       beforeEach() {
@@ -139,8 +133,6 @@ bench
           count += 4;
         }
       }
-
-      console.log(count);
     },
     {
       beforeEach() {
@@ -167,8 +159,6 @@ bench
           count += 4;
         }
       }
-
-      console.log(count);
     },
     {
       beforeEach() {
