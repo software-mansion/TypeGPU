@@ -28,9 +28,11 @@ export const computeShader = tgpu['~unstable']
     }
 
     for (let i = 0; i < 3; i++) {
-      velocity[i] = velocity[i] + -G * normDirection[i] * dt;
-      position[i] = position[i] + velocity[i] * dt;
-      // velocity[i] = velocity[i] * 0.99; // damping
+      const distance = std.length(position);
+      const acceleration = -G * mass * normDirection[i] / (distance * distance);
+      position[i] = position[i] + velocity[i] * dt + 0.5 * acceleration * dt * dt;
+      velocity[i] = velocity[i] + acceleration * dt;
+      velocity[i] = velocity[i] * 0.99; // damping
     }
 
     modelMatrix = std.identity();
