@@ -749,7 +749,7 @@ const dataReaders = {
 
   disarray(input, schema: Disarray) {
     const alignment = alignmentOf(schema);
-    const elements: wgsl.BaseData[] = [];
+    const elements: unknown[] = [];
 
     for (let i = 0; i < schema.elementCount; i++) {
       alignIO(input, alignment);

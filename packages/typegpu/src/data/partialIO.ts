@@ -54,7 +54,7 @@ export function getWriteInstructions<TData extends wgsl.BaseData>(
         if (childValue !== undefined) {
           gatherAndWrite(
             subSchema,
-            childValue as wgsl.BaseData,
+            childValue,
             offset + propOffset.offset,
             propOffset.padding ?? padding,
           );
