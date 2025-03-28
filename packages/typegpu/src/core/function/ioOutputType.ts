@@ -58,7 +58,7 @@ export function createOutputType<T extends IOData>(returnType: IOLayout<T>) {
       ? getCustomLocation(returnType) !== undefined
         ? returnType
         : location(0, returnType)
-      : struct(withLocations(returnType as IORecord<T>) as Record<string, T>)
+      : struct(withLocations(returnType) as Record<string, T>)
   ) as IOLayoutToSchema<IOLayout<T>>;
 }
 

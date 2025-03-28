@@ -187,7 +187,7 @@ const dataWriters = {
     const beginning = output.currentByteOffset;
     for (let i = 0; i < Math.min(schema.elementCount, value.length); i++) {
       alignIO(output, alignment);
-      writeData(output, schema.elementType, value[i] as wgsl.BaseData);
+      writeData(output, schema.elementType, value[i]);
     }
     output.seekTo(beginning + sizeOf(schema));
   },
