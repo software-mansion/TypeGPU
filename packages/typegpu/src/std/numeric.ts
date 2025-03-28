@@ -1,11 +1,9 @@
-import { mat4x4f } from '../data';
 import { bool, f32 } from '../data/numeric';
 import { VectorOps } from '../data/vectorOps';
 import type {
   AnyMatInstance,
   AnyWgslData,
   VecKind,
-  m4x4f,
   v2f,
   v2h,
   v3f,
@@ -490,63 +488,4 @@ export const isCloseTo = createDualImpl(
       dataType: bool,
     };
   },
-);
-
-/**
- * Translates a matrix by a given vector.
- * @param {m4x4f} matrix - The matrix to be translated.
- * @param {v3f} vector - The vector by which to translate the matrix.
- * @returns {m4x4f} - The translated matrix.
- */
-export const translate4x4 = createDualImpl(
-  // CPU implementation
-  (matrix: m4x4f, vector: v3f) => {
-    const v4 = mat4x4f(
-      1,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      vector.x,
-      vector.y,
-      vector.z,
-      1,
-    );
-    return mul(matrix, v4);
-  },
-  // GPU implementation
-  (matrix, vector) => {
-    return {
-      value: `${matrix.value} * mat4x4<f32>(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${vector.value}.x, ${vector.value}.y, ${vector.value}.z, 1)`,
-      dataType: matrix.dataType,
-    };
-  },
-);
-
-/**
- * Generates a 4x4 identity matrix.
- * @returns {m4x4f} - The identity matrix.
- */
-export const identity4x4 = createDualImpl(
-  // CPU implementation
-  () => {
-    return mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-  },
-  // GPU implementation
-  () => ({
-    value: `mat4x4<f32>(
-      1.0, 0.0, 0.0, 0.0,
-      0.0, 1.0, 0.0, 0.0,
-      0.0, 0.0, 1.0, 0.0,
-      0.0, 0.0, 0.0, 1.0
-    )`,
-    dataType: mat4x4f,
-  }),
 );

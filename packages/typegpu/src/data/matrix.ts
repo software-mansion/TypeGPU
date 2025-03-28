@@ -1,7 +1,9 @@
+import { mul } from 'src/std';
 import { createDualImpl } from '../shared/generators';
 import type { SelfResolvable } from '../types';
 import { vec2f, vec3f, vec4f } from './vector';
 import type {
+  AnyMatInstance,
   Mat2x2f,
   Mat3x3f,
   Mat4x4f,
@@ -30,8 +32,8 @@ type vBase = {
 
 interface MatSchemaOptions<TType extends string, ValueType> {
   type: TType;
-  rows: number;
-  columns: number;
+  rows: 2 | 3 | 4;
+  columns: 2 | 3 | 4;
   makeFromElements(...elements: number[]): ValueType;
 }
 
@@ -39,6 +41,128 @@ type MatConstructor<
   ValueType extends matBase<ColumnType>,
   ColumnType extends vBase,
 > = (...args: (number | ColumnType)[]) => ValueType;
+
+// Identity matrices
+export const identity4x4 = createDualImpl(
+  // CPU implementation
+  () => {
+    return mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+  },
+  // GPU implementation
+  () => ({
+    value: `mat4x4<f32>(
+      1.0, 0.0, 0.0, 0.0,
+      0.0, 1.0, 0.0, 0.0,
+      0.0, 0.0, 1.0, 0.0,
+      0.0, 0.0, 0.0, 1.0
+    )`,
+    dataType: mat4x4f,
+  }),
+);
+
+export const identity3x3 = createDualImpl(
+  // CPU implementation
+  () => {
+    return mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1);
+  },
+  // GPU implementation
+  () => ({
+    value: `mat4x4<f32>(
+      1.0, 0.0, 0.0,
+      0.0, 1.0, 0.0,
+      0.0, 0.0, 1.0,
+    )`,
+    dataType: mat3x3f,
+  }),
+);
+
+export const identity2x2 = createDualImpl(
+  // CPU implementation
+  () => {
+    return mat2x2f(1, 0, 0, 1);
+  },
+  // GPU implementation
+  () => ({
+    value: `mat4x4<f32>(
+      1.0, 0.0,
+      0.0, 1.0
+    )`,
+    dataType: mat2x2f,
+  }),
+);
+const IdentityFunctions: Record<number, () => AnyMatInstance> = {
+  2: identity2x2,
+  3: identity3x3,
+  4: identity4x4,
+};
+
+export const translate4x4 = createDualImpl(
+  // CPU implementation
+  (matrix: m4x4f, vector: v3f) => {
+    const v4 = mat4x4f(
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      vector.x,
+      vector.y,
+      vector.z,
+      1,
+    );
+    return mul(matrix, v4);
+  },
+  // GPU implementation
+  (matrix, vector) => {
+    return {
+      value: `${matrix.value} * mat4x4<f32>(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${vector.value}.x, ${vector.value}.y, ${vector.value}.z, 1)`,
+      dataType: matrix.dataType,
+    };
+  },
+);
+
+export const translate3x3 = createDualImpl(
+  // CPU implementation
+  (matrix: m3x3f, vector: v2f) => {
+    const v3 = mat3x3f(1, 0, 0, 0, 1, 0, vector.x, vector.y, 1);
+    return mul(matrix, v3);
+  },
+  // GPU implementation
+  (matrix, vector) => {
+    return {
+      value: `${matrix.value} * mat4x4<f32>(1, 0, 0, 0, 1, 0, ${vector.value}.x, ${vector.value}.y, 1)`,
+      dataType: matrix.dataType,
+    };
+  },
+);
+
+export const translate2x2 = createDualImpl(
+  // CPU implementation
+  (matrix: m2x2f, vector: v2f) => {
+    const v2 = mat2x2f(1, 0, vector.x, 1);
+    return mul(matrix, v2);
+  },
+  // GPU implementation
+  (matrix, vector) => {
+    return {
+      value: `${matrix.value} * mat4x4<f32>(1, 0, ${vector.value}.x, 1)`,
+      dataType: matrix.dataType,
+    };
+  },
+);
+
+const TranslateFunctions = {
+  2: translate2x2,
+  3: translate3x3,
+  4: translate4x4,
+};
 
 function createMatSchema<
   TType extends string,
@@ -52,6 +176,8 @@ function createMatSchema<
     '~repr': undefined as unknown as ValueType,
     type: options.type,
     label: options.type,
+    identity: IdentityFunctions[options.columns],
+    translate: TranslateFunctions[options.columns],
   };
 
   const construct = createDualImpl(
