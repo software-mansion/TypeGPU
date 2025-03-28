@@ -9,6 +9,9 @@ catalogs:
     '@webgpu/types':
       specifier: ^0.1.54
       version: 0.1.54
+    arktype:
+      specifier: ^2.1.15
+      version: 2.1.15
     tsup:
       specifier: ^8.4.0
       version: 8.4.0
@@ -111,8 +114,8 @@ importers:
         specifier: ^19.0.4
         version: 19.0.4(@types/react@19.0.10)
       arktype:
-        specifier: ^2.1.0
-        version: 2.1.0
+        specifier: 'catalog:'
+        version: 2.1.15
       astro:
         specifier: ^5.3.1
         version: 5.3.1(@types/node@22.13.4)(jiti@2.4.2)(rollup@4.34.8)(tsx@4.19.3)(typescript@5.7.3)(yaml@2.7.0)
@@ -211,8 +214,8 @@ importers:
         specifier: ^5.0.2
         version: 5.0.2
       arktype:
-        specifier: ^2.1.0
-        version: 2.1.0
+        specifier: 'catalog:'
+        version: 2.1.15
       consola:
         specifier: ^3.4.0
         version: 3.4.0
@@ -505,11 +508,11 @@ packages:
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
 
-  '@ark/schema@0.40.0':
-    resolution: {integrity: sha512-vD78TCZkoMWYDVfJVyoBI4ndxaR5jGUeYQuhFNZHXV8Ve2pKrwb4vQFD/VHg7GgF8Pd1pxy0CPouerKNR3y79g==}
+  '@ark/schema@0.45.5':
+    resolution: {integrity: sha512-RW25FuQRcn4Mc33auOkEL1CLuyj86LmI5YGeuhYYrxEQqK23D99m5T+MGBuOSAbECBtQ8VnI4BaC5Hbb7Ly6tQ==}
 
-  '@ark/util@0.40.0':
-    resolution: {integrity: sha512-YN+qWGs1q5Pl19VcnCWZMUpDEKW9aST6kuSOs0iAswDDe494xjgmg+DJeX0OF2MspH5yY03VqitNcvkywqXNpw==}
+  '@ark/util@0.45.5':
+    resolution: {integrity: sha512-BbuDOKJJYZ2dzZDNhBavkhgGD2hv4/idEhXpEPA5weOlE9/kU7XwAvEWn74tCuySHrD7peDqe2Ct/EDUlM40qg==}
 
   '@astrojs/check@0.9.4':
     resolution: {integrity: sha512-IOheHwCtpUfvogHHsvu0AbeRZEnjJg3MopdLddkJE70mULItS/Vh37BHcI00mcOJcH1vhD3odbpvWokpxam7xA==}
@@ -2076,8 +2079,8 @@ packages:
     resolution: {integrity: sha512-COROpnaoap1E2F000S62r6A60uHZnmlvomhfyT2DlTcrY1OrBKn2UhH7qn5wTC9zMvD0AY7csdPSNwKP+7WiQw==}
     engines: {node: '>= 0.4'}
 
-  arktype@2.1.0:
-    resolution: {integrity: sha512-BjXPbh4S8nBSuHmlakrQ+ViiGIhTcxAw7dWuJjW3nlHdY8wGktuuKfP52eWjmC3Y/Og1BbbRYEDGr/H0Kg26Mg==}
+  arktype@2.1.15:
+    resolution: {integrity: sha512-ro31NmDxOEFysUjSQL4O9Q12sQuobImqXyqQbWzK7LNB/gvfflnZyeNBsysZYf5HP3pY39P9EgynMYiyqbJQ1g==}
 
   array-iterate@2.0.1:
     resolution: {integrity: sha512-I1jXZMjAgCMmxT4qxXfPXa6SthSoE8h6gkSI9BGGNv8mP8G/v0blc+qFnZu6K42vTOiuME596QaLO0TP3Lk0xg==}
@@ -5024,11 +5027,11 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.8
       '@jridgewell/trace-mapping': 0.3.25
 
-  '@ark/schema@0.40.0':
+  '@ark/schema@0.45.5':
     dependencies:
-      '@ark/util': 0.40.0
+      '@ark/util': 0.45.5
 
-  '@ark/util@0.40.0': {}
+  '@ark/util@0.45.5': {}
 
   '@astrojs/check@0.9.4(typescript@5.7.3)':
     dependencies:
@@ -6632,10 +6635,10 @@ snapshots:
 
   aria-query@5.3.2: {}
 
-  arktype@2.1.0:
+  arktype@2.1.15:
     dependencies:
-      '@ark/schema': 0.40.0
-      '@ark/util': 0.40.0
+      '@ark/schema': 0.45.5
+      '@ark/util': 0.45.5
 
   array-iterate@2.0.1: {}
 

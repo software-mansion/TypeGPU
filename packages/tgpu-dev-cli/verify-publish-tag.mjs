@@ -3,16 +3,19 @@
 import { type } from 'arktype';
 import { readPackageJSON } from 'pkg-types';
 
-const PublishTag = type('"alpha" | "beta" | undefined');
+const PublishTags = /** @type {const} */ (['alpha', 'beta']);
+
+const PublishTag = type.or(
+  'undefined',
+  ...PublishTags.map((tag) => /** @type {const} */ (`"${tag}"`)),
+);
 
 const packageJSON = await readPackageJSON();
 const chosenPublishTag = PublishTag.assert(process.env.npm_config_tag);
 
 export function verifyPublishTag() {
   let tagVerified = false;
-  for (const { unit: tag } of /** @type {{ unit: string }[]} */ (
-    PublishTag.json
-  )) {
+  for (const tag of PublishTags) {
     if (packageJSON.version?.includes(tag)) {
       if (tag !== chosenPublishTag) {
         throw new Error(
@@ -25,7 +28,7 @@ export function verifyPublishTag() {
     }
   }
 
-  if (!tagVerified) {
+  if (!tagVerified && chosenPublishTag !== undefined) {
     throw new Error(
       `Publishing under a mismatched tag "${chosenPublishTag}" for version ${packageJSON.version}.`,
     );
