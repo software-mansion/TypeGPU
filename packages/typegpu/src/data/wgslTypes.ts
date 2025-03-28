@@ -37,6 +37,12 @@ export interface AbstractFloat {
   readonly '~repr': number;
 }
 
+export interface Void {
+  readonly type: 'void';
+  readonly '~repr': undefined;
+}
+export const Void: Void = { type: 'void', '~repr': undefined };
+
 interface Swizzle2<T2, T3, T4> {
   readonly xx: T2;
   readonly xy: T2;
@@ -1015,6 +1021,7 @@ export const wgslTypeLiterals = [
   'decorated',
   'abstractInt',
   'abstractFloat',
+  'void',
 ] as const;
 
 export type WgslTypeLiteral = (typeof wgslTypeLiterals)[number];
@@ -1067,7 +1074,8 @@ export type AnyWgslData =
   | Atomic
   | Decorated
   | AbstractInt
-  | AbstractFloat;
+  | AbstractFloat
+  | Void;
 
 // #endregion
 

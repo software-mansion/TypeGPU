@@ -1,11 +1,11 @@
 import type * as smol from 'tinyest';
 import * as d from '../data';
+import type { AnyData } from '../data/dataTypes';
 import * as wgsl from '../data/wgslTypes';
 import {
   type ResolutionCtx,
   type Resource,
   UnknownData,
-  type Wgsl,
   isWgsl,
 } from '../types';
 import {
@@ -45,8 +45,8 @@ type Operator =
   | smol.UnaryOperator;
 
 function operatorToType<
-  TL extends wgsl.AnyWgslData | UnknownData,
-  TR extends wgsl.AnyWgslData | UnknownData,
+  TL extends AnyData | UnknownData,
+  TR extends AnyData | UnknownData,
 >(lhs: TL, op: Operator, rhs?: TR): TL | TR | wgsl.Bool {
   if (!rhs) {
     if (op === '!' || op === '~') {
@@ -189,16 +189,32 @@ export function generateExpression(
     if (typeof target.value === 'string') {
       return {
         value: `${target.value}.${property}`,
-        dataType: getTypeForPropAccess(target.dataType as Wgsl, property),
+        dataType: isWgsl(target.dataType)
+          ? getTypeForPropAccess(target.dataType, property)
+          : UnknownData,
       };
     }
     // biome-ignore lint/suspicious/noExplicitAny: <sorry TypeScript>
     const propValue = (target.value as any)[property];
 
+    if (target.dataType.type !== 'unknown') {
+      if (target.dataType.type.startsWith('mat') && property === 'columns') {
+        return {
+          value: target.value,
+          dataType: target.dataType,
+        };
+      }
+
+      return {
+        value: propValue,
+        dataType: getTypeForPropAccess(target.dataType, property),
+      };
+    }
+
     if (isWgsl(target.value)) {
       return {
         value: propValue,
-        dataType: getTypeForPropAccess(target.value as d.AnyWgslData, property),
+        dataType: getTypeForPropAccess(target.value, property),
       };
     }
 
@@ -226,7 +242,9 @@ export function generateExpression(
 
     return {
       value: `${targetStr}[${propertyStr}]`,
-      dataType: getTypeForIndexAccess(targetExpr.dataType as d.AnyWgslData),
+      dataType: isWgsl(targetExpr.dataType)
+        ? getTypeForIndexAccess(targetExpr.dataType)
+        : UnknownData,
     };
   }
 
@@ -273,9 +291,14 @@ export function generateExpression(
     }
 
     // Assuming that `id` is callable
-    return (idValue as unknown as (...args: unknown[]) => unknown)(
+    const fnRes = (idValue as unknown as (...args: unknown[]) => unknown)(
       ...resolvedResources,
     ) as Resource;
+
+    return {
+      value: resolveRes(ctx, fnRes),
+      dataType: fnRes.dataType,
+    };
   }
 
   if ('o' in expression) {
@@ -350,7 +373,7 @@ export function generateExpression(
 
     return {
       value: `${arrayType}( ${arrayValues.join(', ')} )`,
-      dataType: d.arrayOf(type as d.AnyWgslData, values.length),
+      dataType: d.arrayOf(type, values.length) as d.AnyWgslData,
     };
   }
 
@@ -428,6 +451,10 @@ ${alternate}`;
 
     if (!eq || !rawValue) {
       throw new Error('Cannot create variable without an initial value.');
+    }
+
+    if (d.isLooseData(eq.dataType)) {
+      throw new Error('Cannot create variable with loose data type.');
     }
 
     registerBlockVariable(ctx, rawId, eq.dataType);
