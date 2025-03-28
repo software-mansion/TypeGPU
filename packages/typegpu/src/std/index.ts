@@ -16,7 +16,6 @@ export {
   exp,
   floor,
   fract,
-  identity4x4,
   isCloseTo,
   length,
   max,
@@ -28,7 +27,6 @@ export {
   reflect,
   sin,
   sub,
-  translate4x4,
 } from './numeric.js';
 
 export {

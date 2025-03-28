@@ -851,6 +851,7 @@ export interface Mat2x2f {
   (...elements: number[]): m2x2f;
   (...columns: v2f[]): m2x2f;
   (): m2x2f;
+  identity(): m2x2f;
 }
 
 /**
@@ -864,6 +865,7 @@ export interface Mat3x3f {
   (...elements: number[]): m3x3f;
   (...columns: v3f[]): m3x3f;
   (): m3x3f;
+  identity(): m3x3f;
 }
 
 /**
@@ -877,6 +879,8 @@ export interface Mat4x4f {
   (...elements: number[]): m4x4f;
   (...columns: v4f[]): m4x4f;
   (): m4x4f;
+  identity(): m4x4f;
+  translate(matrix: m4x4f, vec: v3f): m4x4f;
 }
 
 /**

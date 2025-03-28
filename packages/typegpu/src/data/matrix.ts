@@ -128,42 +128,6 @@ export const translate4x4 = createDualImpl(
   },
 );
 
-export const translate3x3 = createDualImpl(
-  // CPU implementation
-  (matrix: m3x3f, vector: v2f) => {
-    const v3 = mat3x3f(1, 0, 0, 0, 1, 0, vector.x, vector.y, 1);
-    return mul(matrix, v3);
-  },
-  // GPU implementation
-  (matrix, vector) => {
-    return {
-      value: `${matrix.value} * mat4x4<f32>(1, 0, 0, 0, 1, 0, ${vector.value}.x, ${vector.value}.y, 1)`,
-      dataType: matrix.dataType,
-    };
-  },
-);
-
-export const translate2x2 = createDualImpl(
-  // CPU implementation
-  (matrix: m2x2f, vector: v2f) => {
-    const v2 = mat2x2f(1, 0, vector.x, 1);
-    return mul(matrix, v2);
-  },
-  // GPU implementation
-  (matrix, vector) => {
-    return {
-      value: `${matrix.value} * mat4x4<f32>(1, 0, ${vector.value}.x, 1)`,
-      dataType: matrix.dataType,
-    };
-  },
-);
-
-const TranslateFunctions = {
-  2: translate2x2,
-  3: translate3x3,
-  4: translate4x4,
-};
-
 function createMatSchema<
   TType extends string,
   ValueType extends matBase<ColumnType>,
@@ -177,7 +141,7 @@ function createMatSchema<
     type: options.type,
     label: options.type,
     identity: IdentityFunctions[options.columns],
-    translate: TranslateFunctions[options.columns],
+    translate: options.columns === 4 ? translate4x4 : undefined,
   };
 
   const construct = createDualImpl(
