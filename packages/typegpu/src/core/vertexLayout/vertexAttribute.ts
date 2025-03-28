@@ -1,6 +1,5 @@
 import type { Disarray, Unstruct } from '../../data/dataTypes';
-import type { AnyWgslStruct } from '../../data/struct';
-import type { Decorated, WgslArray } from '../../data/wgslTypes';
+import type { AnyWgslStruct, Decorated, WgslArray } from '../../data/wgslTypes';
 import type {
   KindToAcceptedAttribMap,
   KindToDefaultFormatMap,

@@ -1,5 +1,5 @@
 import { getResolutionCtx } from '../../gpuMode';
-import type { Infer } from '../../shared/repr';
+import type { $repr, Infer } from '../../shared/repr.js';
 import { unwrapProxy } from '../valueProxyUtils';
 import type { TgpuSlot } from './slotTypes';
 
@@ -16,9 +16,10 @@ export function slot<T>(defaultValue?: T): TgpuSlot<T> {
 // --------------
 
 class TgpuSlotImpl<T> implements TgpuSlot<T> {
-  readonly resourceType = 'slot';
+  public readonly resourceType = 'slot';
   public label?: string | undefined;
-  '~repr' = undefined as Infer<T>;
+  /** Type-token, not available at runtime */
+  public declare readonly [$repr]: Infer<T>;
 
   constructor(public defaultValue: T | undefined = undefined) {}
 

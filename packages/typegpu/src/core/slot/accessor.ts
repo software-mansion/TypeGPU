@@ -1,6 +1,6 @@
 import type { AnyWgslData } from '../../data';
 import { getResolutionCtx } from '../../gpuMode';
-import type { Infer } from '../../shared/repr';
+import type { $repr, Infer } from '../../shared/repr.js';
 import { $internal } from '../../shared/symbols';
 import {
   type ResolutionCtx,
@@ -31,8 +31,8 @@ export function accessor<T extends AnyWgslData>(
 export class TgpuAccessorImpl<T extends AnyWgslData>
   implements TgpuAccessor<T>, SelfResolvable
 {
-  readonly resourceType = 'accessor';
-  '~repr' = undefined as Infer<T>;
+  public readonly resourceType = 'accessor';
+  public declare readonly [$repr]: Infer<T>;
   public label?: string | undefined;
   public slot: TgpuSlot<TgpuFn<[], T> | TgpuBufferUsage<T> | Infer<T>>;
 

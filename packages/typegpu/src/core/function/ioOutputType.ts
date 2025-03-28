@@ -1,4 +1,3 @@
-import { type WgslStruct, isBuiltin, struct } from '../../data';
 import {
   type Decorate,
   type HasCustomLocation,
@@ -6,8 +5,10 @@ import {
   attribute,
   location,
 } from '../../data/attributes';
+import { isBuiltin } from '../../data/attributes';
 import { getCustomLocation, isData } from '../../data/dataTypes';
-import type { BaseData, Location } from '../../data/wgslTypes';
+import { struct } from '../../data/struct';
+import type { BaseData, Location, WgslStruct } from '../../data/wgslTypes';
 import type { IOData, IOLayout, IORecord } from './fnTypes';
 
 export type WithLocations<T extends IORecord> = {

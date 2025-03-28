@@ -4,8 +4,7 @@ import alignIO from './alignIO';
 import { alignmentOf, customAlignmentOf } from './alignmentOf';
 import { type Unstruct, isUnstruct } from './dataTypes';
 import { sizeOf } from './sizeOf';
-import type { AnyWgslStruct, WgslStruct } from './struct';
-import type { BaseData } from './wgslTypes';
+import type { AnyWgslStruct, BaseData, WgslStruct } from './wgslTypes';
 
 export interface OffsetInfo {
   offset: number;

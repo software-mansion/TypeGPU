@@ -1,5 +1,5 @@
-import type { Infer, MemIdentity } from '../shared/repr';
-import type { Atomic, I32, U32, atomicI32, atomicU32 } from './wgslTypes';
+import type { $repr, Infer, MemIdentity } from '../shared/repr.js';
+import type { Atomic, I32, U32, atomicI32, atomicU32 } from './wgslTypes.js';
 
 // ----------
 // Public API
@@ -27,7 +27,7 @@ export function atomic<TSchema extends U32 | I32>(
 class AtomicImpl<TSchema extends U32 | I32> implements Atomic<TSchema> {
   public readonly type = 'atomic';
   /** Type-token, not available at runtime */
-  public readonly '~repr'!: Infer<TSchema>;
+  public declare readonly [$repr]: Infer<TSchema>;
   /** Type-token, not available at runtime */
   public readonly '~memIdent'!: MemIdentity<TSchema>;
   /** Type-token, not available at runtime */
