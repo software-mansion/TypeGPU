@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as m from 'wgpu-matrix';
 import { computeShader } from './compute-shaders';
-import { cubeModel, vertices } from './cube';
+import { cubeModel, cubeVerticesArray } from './cube';
 import { cameraInitialPos, target } from './env';
 import { mainFragment, mainVertex } from './main-shaders';
 import {
@@ -46,7 +46,7 @@ const vertexBuffer = root
   )
   .$usage('vertex')
   .$name('vertex');
-vertexBuffer.write(vertices);
+vertexBuffer.write(cubeVerticesArray);
 console.log(cubeModel.attributes);
 
 const sampler = device.createSampler({
