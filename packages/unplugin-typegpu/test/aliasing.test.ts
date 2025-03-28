@@ -16,7 +16,7 @@ describe('[BABEL] tgpu alias gathering', () => {
       "import hello from 'typegpu';
       const increment = hello['~unstable'].fn([])(hello.__assignAst(() => {
         const x = 2 + 2;
-      }, {"argNames":[],"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}, {}));"
+      }, {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}, {}));"
     `);
   });
 
@@ -56,7 +56,7 @@ describe('[BABEL] tgpu alias gathering', () => {
       "import { tgpu as t } from 'typegpu';
       const increment = t['~unstable'].fn([])(t.__assignAst(() => {
         const x = 2 + 2;
-      }, {"argNames":[],"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}, {}));"
+      }, {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}, {}));"
     `);
   });
 
@@ -74,7 +74,7 @@ describe('[BABEL] tgpu alias gathering', () => {
       "import * as t from 'typegpu';
       const increment = t.tgpu['~unstable'].fn([])(t.tgpu.__assignAst(() => {
         const x = 2 + 2;
-      }, {"argNames":[],"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}, {}));"
+      }, {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}, {}));"
     `);
   });
 });
@@ -95,7 +95,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
 
       hello['~unstable']
               .fn([])(hello.__assignAst(() => {
-              }, {"argNames":[],"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}));
+              }, {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}));
       "
     `);
   });
@@ -141,7 +141,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
 
       tgpu['~unstable']
               .fn([])(tgpu.__assignAst(() => {
-              }, {"argNames":[],"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}));
+              }, {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}));
       "
     `);
   });
@@ -161,7 +161,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
 
       t.tgpu['~unstable']
               .fn([])(t.tgpu.__assignAst(() => {
-              }, {"argNames":[],"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}));
+              }, {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}));
       "
     `);
   });

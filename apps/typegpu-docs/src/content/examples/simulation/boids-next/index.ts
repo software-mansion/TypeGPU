@@ -6,7 +6,7 @@ const triangleAmount = 1000;
 const triangleSize = 0.03;
 
 const rotate = tgpu['~unstable'].fn(
-  [d.vec2f, d.f32],
+  { v: d.vec2f, angle: d.f32 },
   d.vec2f,
 )(/* wgsl */ `
   (v: vec2f, angle: f32) -> vec2f {
@@ -20,7 +20,7 @@ const rotate = tgpu['~unstable'].fn(
 `);
 
 const getRotationFromVelocity = tgpu['~unstable'].fn(
-  [d.vec2f],
+  { velocity: d.vec2f },
   d.f32,
 )(/* wgsl */ `
   (velocity: vec2f) -> f32 {

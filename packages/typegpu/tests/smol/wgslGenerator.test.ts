@@ -314,7 +314,11 @@ describe('wgslGenerator', () => {
     } as const;
     expect(astInfo.ast.body).toEqual(expectedAst);
 
-    const args = astInfo.ast.argNames.map((name) => ({
+    if (astInfo.ast.argNames.type !== 'identifiers') {
+      throw new Error('Expected arguments as identifier names in ast');
+    }
+
+    const args = astInfo.ast.argNames.names.map((name) => ({
       value: name,
       dataType: d.u32,
     }));

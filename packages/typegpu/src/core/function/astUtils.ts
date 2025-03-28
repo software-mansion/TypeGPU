@@ -1,7 +1,7 @@
-import type { Block } from 'tinyest';
+import type { ArgNames, Block } from 'tinyest';
 
 export type Ast = {
-  argNames: string[];
+  argNames: ArgNames;
   body: Block;
   externalNames: string[];
 };

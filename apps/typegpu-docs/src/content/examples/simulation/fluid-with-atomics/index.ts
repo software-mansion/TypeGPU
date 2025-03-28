@@ -134,9 +134,9 @@ const persistFlags = tgpu['~unstable'].fn([d.u32, d.u32])((x, y) => {
 });
 
 const getStableStateBelow = tgpu['~unstable'].fn(
-  [d.u32, d.u32],
+  { upper: d.u32, lower: d.u32 },
   d.u32,
-)((upper, lower) => {
+)(({ upper, lower }) => {
   const totalMass = upper + lower;
   if (totalMass <= MAX_WATER_LEVEL_UNPRESSURIZED.value) {
     return totalMass;
@@ -224,7 +224,10 @@ const decideWaterLevel = tgpu['~unstable'].fn([d.u32, d.u32])((x, y) => {
 
   if (!isWall(x, y - 1)) {
     const waterLevelBelow = getWaterLevel(x, y - 1);
-    const stable = getStableStateBelow(remainingWater, waterLevelBelow);
+    const stable = getStableStateBelow({
+      upper: remainingWater,
+      lower: waterLevelBelow,
+    });
     if (waterLevelBelow < stable) {
       const change = stable - waterLevelBelow;
       const flow = std.min(change, viscosityUniform.value);
@@ -270,7 +273,10 @@ const decideWaterLevel = tgpu['~unstable'].fn([d.u32, d.u32])((x, y) => {
   }
 
   if (!isWall(x, y + 1)) {
-    const stable = getStableStateBelow(getWaterLevel(x, y + 1), remainingWater);
+    const stable = getStableStateBelow({
+      upper: getWaterLevel(x, y + 1),
+      lower: remainingWater,
+    });
     if (stable < remainingWater) {
       const flow = std.min(remainingWater - stable, viscosityUniform.value);
       subtractFromCell(x, y, flow);

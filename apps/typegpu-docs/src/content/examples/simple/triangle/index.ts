@@ -18,7 +18,7 @@ context.configure({
 
 const getGradientColor = tgpu['~unstable']
   .fn(
-    [d.f32],
+    { ratio: d.f32 },
     d.vec4f,
   )(/* wgsl */ `(ratio: f32) -> vec4f {
     let color = mix(purple, blue, ratio);
