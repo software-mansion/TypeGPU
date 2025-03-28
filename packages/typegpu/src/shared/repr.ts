@@ -2,18 +2,6 @@ export const $repr = Symbol(
   'Type token for the inferred (CPU & GPU) representation of a resource',
 );
 
-export const $gpuRepr = Symbol(
-  'Type token for the inferred (GPU) representation of a resource',
-);
-
-export const $partialRepr = Symbol(
-  'Type token for the inferred partial representation of a resource',
-);
-
-export const $memIdentity = Symbol(
-  'Type token for union of all compatible data-types on the byte level',
-);
-
 /**
  * Extracts the inferred representation of a resource.
  * @example
@@ -21,21 +9,17 @@ export const $memIdentity = Symbol(
  * type B = Infer<WgslArray<F32>> // => number[]
  */
 export type Infer<T> = T extends { readonly [$repr]: infer TRepr } ? TRepr : T;
-export type InferPartial<T> = T extends { readonly [$partialRepr]: infer TRepr }
+export type InferPartial<T> = T extends { readonly '~reprPartial': infer TRepr }
   ? TRepr
-  : T extends { readonly '~reprPartial': infer TRepr }
-    ? TRepr
-    : T extends { readonly [$repr]: infer TRepr }
-      ? TRepr | undefined
-      : T extends Record<string | number | symbol, unknown>
-        ? InferPartialRecord<T>
-        : T;
+  : T extends { readonly [$repr]: infer TRepr }
+    ? TRepr | undefined
+    : T extends Record<string | number | symbol, unknown>
+      ? InferPartialRecord<T>
+      : T;
 
-export type InferGPU<T> = T extends { readonly [$gpuRepr]: infer TRepr }
+export type InferGPU<T> = T extends { readonly '~gpuRepr': infer TRepr }
   ? TRepr
-  : T extends { readonly '~gpuRepr': infer TRepr }
-    ? TRepr
-    : Infer<T>;
+  : Infer<T>;
 
 export type InferRecord<T extends Record<string | number | symbol, unknown>> = {
   [Key in keyof T]: Infer<T[Key]>;
@@ -54,14 +38,10 @@ export type InferGPURecord<
 };
 
 export type MemIdentity<T> = T extends {
-  readonly [$memIdentity]: infer TMemIdent;
+  readonly '~memIdent': infer TMemIdent;
 }
   ? TMemIdent
-  : T extends {
-        readonly '~memIdent': infer TMemIdent;
-      }
-    ? TMemIdent
-    : T;
+  : T;
 
 export type MemIdentityRecord<
   T extends Record<string | number | symbol, unknown>,

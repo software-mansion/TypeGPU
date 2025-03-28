@@ -1,8 +1,5 @@
 import type { TgpuNamable } from '../namable.js';
 import type {
-  $gpuRepr,
-  $memIdentity,
-  $partialRepr,
   $repr,
   Infer,
   InferGPU,
@@ -930,11 +927,11 @@ export interface WgslStruct<
   /** Type-token, not available at runtime */
   readonly [$repr]: Prettify<InferRecord<TProps>>;
   /** Type-token, not available at runtime */
-  readonly [$gpuRepr]: Prettify<InferGPURecord<TProps>>;
+  readonly '~gpuRepr': Prettify<InferGPURecord<TProps>>;
   /** Type-token, not available at runtime */
-  readonly [$memIdentity]: WgslStruct<MemIdentityRecord<TProps>>;
+  readonly '~memIdentity': WgslStruct<MemIdentityRecord<TProps>>;
   /** Type-token, not available at runtime */
-  readonly [$partialRepr]: Prettify<Partial<InferPartialRecord<TProps>>>;
+  readonly '~reprPartial': Prettify<Partial<InferPartialRecord<TProps>>>;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: <we need the type to be broader than WgslStruct<Record<string, BaseWgslData>>
