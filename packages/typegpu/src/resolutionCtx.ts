@@ -607,7 +607,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   resolveValue<T extends BaseData>(
-    value: Infer<T>,
+    value: unknown,
     schema?: T | undefined,
   ): string {
     if (isWgsl(value)) {

@@ -11,7 +11,6 @@ import type {
 } from './dataTypes';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix';
 import { sizeOf } from './sizeOf';
-import type { WgslStruct } from './struct';
 import {
   vec2f,
   vec2h,
@@ -164,7 +163,7 @@ const dataWriters = {
 
   struct(
     output,
-    schema: WgslStruct,
+    schema: wgsl.WgslStruct,
     value: InferRecord<Record<string, wgsl.BaseData>>,
   ) {
     const alignment = alignmentOf(schema);
@@ -188,7 +187,7 @@ const dataWriters = {
     const beginning = output.currentByteOffset;
     for (let i = 0; i < Math.min(schema.elementCount, value.length); i++) {
       alignIO(output, alignment);
-      writeData(output, schema.elementType, value[i]);
+      writeData(output, schema.elementType, value[i] as wgsl.BaseData);
     }
     output.seekTo(beginning + sizeOf(schema));
   },
@@ -593,7 +592,7 @@ const dataReaders = {
     );
   },
 
-  struct(input: ISerialInput, schema: WgslStruct) {
+  struct(input: ISerialInput, schema: wgsl.WgslStruct) {
     const alignment = alignmentOf(schema);
     alignIO(input, alignment);
     const result = {} as Record<string, unknown>;
@@ -750,7 +749,7 @@ const dataReaders = {
 
   disarray(input, schema: Disarray) {
     const alignment = alignmentOf(schema);
-    const elements: unknown[] = [];
+    const elements: wgsl.BaseData[] = [];
 
     for (let i = 0; i < schema.elementCount; i++) {
       alignIO(input, alignment);
