@@ -52,8 +52,8 @@ type CompleteDataReaders = {
 };
 
 const dataWriters = {
-  bool(output, _schema: wgsl.Bool, value: boolean) {
-    output.writeBool(value);
+  bool() {
+    throw new Error('Booleans are not host-shareable');
   },
 
   f32(output, _schema: wgsl.F32, value: number) {
@@ -92,6 +92,10 @@ const dataWriters = {
     output.writeUint32(value.y);
   },
 
+  'vec2<bool>'() {
+    throw new Error('Booleans are not host-shareable');
+  },
+
   vec3f(output, _, value: wgsl.v3f) {
     output.writeFloat32(value.x);
     output.writeFloat32(value.y);
@@ -114,6 +118,10 @@ const dataWriters = {
     output.writeUint32(value.x);
     output.writeUint32(value.y);
     output.writeUint32(value.z);
+  },
+
+  'vec3<bool>'() {
+    throw new Error('Booleans are not host-shareable');
   },
 
   vec4f(output, _, value: wgsl.v4f) {
@@ -142,6 +150,10 @@ const dataWriters = {
     output.writeUint32(value.y);
     output.writeUint32(value.z);
     output.writeUint32(value.w);
+  },
+
+  'vec4<bool>'() {
+    throw new Error('Booleans are not host-shareable');
   },
 
   mat2x2f(output, _, value: wgsl.m2x2f) {
@@ -450,8 +462,8 @@ export function writeData<TData extends wgsl.BaseData>(
 }
 
 const dataReaders = {
-  bool(input: ISerialInput): boolean {
-    return input.readBool();
+  bool(): boolean {
+    throw new Error('Booleans are not host-shareable');
   },
 
   f32(input: ISerialInput): number {
@@ -536,6 +548,18 @@ const dataReaders = {
       input.readUint32(),
       input.readUint32(),
     );
+  },
+
+  'vec2<bool>'() {
+    throw new Error('Booleans are not host-shareable');
+  },
+
+  'vec3<bool>'() {
+    throw new Error('Booleans are not host-shareable');
+  },
+
+  'vec4<bool>'() {
+    throw new Error('Booleans are not host-shareable');
   },
 
   mat2x2f(input: ISerialInput): wgsl.m2x2f {

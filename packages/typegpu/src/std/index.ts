@@ -26,8 +26,28 @@ export {
   mix,
   pow,
   reflect,
-  isCloseTo,
 } from './numeric.js';
+
+export {
+  // comparison
+  allEq,
+  eq,
+  neq,
+  lessThan,
+  lessThanOrEqual,
+  greaterThan,
+  greaterThanOrEqual,
+  // logical ops
+  not,
+  or,
+  and,
+  // logical aggregation
+  all,
+  any,
+  // other
+  isCloseTo,
+  select,
+} from './boolean.js';
 
 export {
   atomicLoad,

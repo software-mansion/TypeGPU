@@ -9,8 +9,8 @@ import {
   vec4f,
   vec4i,
   vec4u,
-} from '../../src/data';
-import { add } from '../../src/std';
+} from '../../../src/data';
+import { add } from '../../../src/std';
 
 describe('add', () => {
   it('computes sum of two vec2f', () => {

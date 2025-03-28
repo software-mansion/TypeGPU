@@ -1,23 +1,18 @@
-import { bool, f32 } from '../data/numeric';
+import { f32 } from '../data/numeric';
 import { VectorOps } from '../data/vectorOps';
 import type {
+  AnyFloatVecInstance,
   AnyMatInstance,
+  AnyNumericVecInstance,
   AnyWgslData,
-  VecKind,
-  v2f,
-  v2h,
   v3f,
   v3h,
-  v3i,
-  v3u,
-  v4f,
-  v4h,
   vBaseForMat,
 } from '../data/wgslTypes';
 import { createDualImpl } from '../shared/generators';
 import type { Resource } from '../types';
 
-function isNumeric(element: Resource) {
+export function isNumeric(element: Resource) {
   const type = element.dataType.type;
   return (
     type === 'abstractInt' ||
@@ -29,11 +24,10 @@ function isNumeric(element: Resource) {
   );
 }
 
-type vBase = { kind: VecKind };
-
 export const add = createDualImpl(
   // CPU implementation
-  <T extends vBase>(lhs: T, rhs: T): T => VectorOps.add[lhs.kind](lhs, rhs),
+  <T extends AnyNumericVecInstance>(lhs: T, rhs: T): T =>
+    VectorOps.add[lhs.kind](lhs, rhs),
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} + ${rhs.value})`,
@@ -43,7 +37,8 @@ export const add = createDualImpl(
 
 export const sub = createDualImpl(
   // CPU implementation
-  <T extends vBase>(lhs: T, rhs: T): T => VectorOps.sub[lhs.kind](lhs, rhs),
+  <T extends AnyNumericVecInstance>(lhs: T, rhs: T): T =>
+    VectorOps.sub[lhs.kind](lhs, rhs),
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} - ${rhs.value})`,
@@ -54,15 +49,15 @@ export const sub = createDualImpl(
 type MulOverload = {
   <T extends AnyMatInstance, TVec extends vBaseForMat<T>>(s: T, v: TVec): TVec;
   <T extends AnyMatInstance, TVec extends vBaseForMat<T>>(s: TVec, v: T): TVec;
-  <T extends vBase | AnyMatInstance>(s: number | T, v: T): T;
+  <T extends AnyNumericVecInstance | AnyMatInstance>(s: number | T, v: T): T;
 };
 
 export const mul: MulOverload = createDualImpl(
   // CPU implementation
   (
-    s: number | vBase | AnyMatInstance,
-    v: vBase | AnyMatInstance,
-  ): vBase | AnyMatInstance => {
+    s: number | AnyNumericVecInstance | AnyMatInstance,
+    v: AnyNumericVecInstance | AnyMatInstance,
+  ): AnyNumericVecInstance | AnyMatInstance => {
     if (typeof s === 'number') {
       // Scalar * Vector/Matrix case
       return VectorOps.mulSxV[v.kind](s, v);
@@ -112,7 +107,7 @@ export const mul: MulOverload = createDualImpl(
 
 export const abs = createDualImpl(
   // CPU implementation
-  <T extends vBase | number>(value: T): T => {
+  <T extends AnyNumericVecInstance | number>(value: T): T => {
     if (typeof value === 'number') {
       return Math.abs(value) as T;
     }
@@ -124,11 +119,14 @@ export const abs = createDualImpl(
 
 export const atan2 = createDualImpl(
   // CPU implementation
-  <T extends vBase | number>(y: T, x: T): T => {
+  <T extends AnyFloatVecInstance | number>(y: T, x: T): T => {
     if (typeof y === 'number' && typeof x === 'number') {
       return Math.atan2(y, x) as T;
     }
-    return VectorOps.atan2[(y as vBase).kind](y as never, x as never) as T;
+    return VectorOps.atan2[(y as AnyFloatVecInstance).kind](
+      y as never,
+      x as never,
+    ) as T;
   },
   // GPU implementation
   (y, x) => ({ value: `atan2(${y.value}, ${x.value})`, dataType: y.dataType }),
@@ -136,11 +134,13 @@ export const atan2 = createDualImpl(
 
 export const acos = createDualImpl(
   // CPU implementation
-  <T extends vBase | number>(value: T): T => {
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
     if (typeof value === 'number') {
       return Math.acos(value) as T;
     }
-    return VectorOps.acos[(value as vBase).kind](value as never) as T;
+    return VectorOps.acos[(value as AnyFloatVecInstance).kind](
+      value as never,
+    ) as T;
   },
   // GPU implementation
   (value) => ({ value: `acos(${value.value})`, dataType: value.dataType }),
@@ -148,11 +148,13 @@ export const acos = createDualImpl(
 
 export const asin = createDualImpl(
   // CPU implementation
-  <T extends vBase | number>(value: T): T => {
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
     if (typeof value === 'number') {
       return Math.asin(value) as T;
     }
-    return VectorOps.asin[(value as vBase).kind](value as never) as T;
+    return VectorOps.asin[(value as AnyFloatVecInstance).kind](
+      value as never,
+    ) as T;
   },
   // GPU implementation
   (value) => ({ value: `asin(${value.value})`, dataType: value.dataType }),
@@ -164,7 +166,7 @@ export const asin = createDualImpl(
  */
 export const ceil = createDualImpl(
   // CPU implementation
-  <T extends vBase | number>(value: T): T => {
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
     if (typeof value === 'number') {
       return Math.ceil(value) as T;
     }
@@ -180,11 +182,15 @@ export const ceil = createDualImpl(
  */
 export const clamp = createDualImpl(
   // CPU implementation
-  <T extends vBase | number>(value: T, low: T, high: T): T => {
+  <T extends AnyNumericVecInstance | number>(value: T, low: T, high: T): T => {
     if (typeof value === 'number') {
       return Math.min(Math.max(low as number, value), high as number) as T;
     }
-    return VectorOps.clamp[value.kind](value, low as vBase, high as vBase) as T;
+    return VectorOps.clamp[value.kind](
+      value,
+      low as AnyNumericVecInstance,
+      high as AnyNumericVecInstance,
+    ) as T;
   },
   // GPU implementation
   (value, low, high) => {
@@ -201,7 +207,7 @@ export const clamp = createDualImpl(
  */
 export const cos = createDualImpl(
   // CPU implementation
-  <T extends vBase | number>(value: T): T => {
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
     if (typeof value === 'number') {
       return Math.cos(value) as T;
     }
@@ -217,7 +223,7 @@ export const cos = createDualImpl(
  */
 export const cross = createDualImpl(
   // CPU implementation
-  <T extends v3f | v3i | v3u>(a: T, b: T): T => VectorOps.cross[a.kind](a, b),
+  <T extends v3f | v3h>(a: T, b: T): T => VectorOps.cross[a.kind](a, b),
   // GPU implementation
   (a, b) => ({ value: `cross(${a.value}, ${b.value})`, dataType: a.dataType }),
 );
@@ -228,7 +234,7 @@ export const cross = createDualImpl(
  */
 export const dot = createDualImpl(
   // CPU implementation
-  <T extends vBase>(lhs: T, rhs: T): number =>
+  <T extends AnyNumericVecInstance>(lhs: T, rhs: T): number =>
     VectorOps.dot[lhs.kind](lhs, rhs),
   // GPU implementation
   (lhs, rhs) => ({ value: `dot(${lhs.value}, ${rhs.value})`, dataType: f32 }),
@@ -236,7 +242,7 @@ export const dot = createDualImpl(
 
 export const normalize = createDualImpl(
   // CPU implementation
-  <T extends vBase>(v: T): T => VectorOps.normalize[v.kind](v),
+  <T extends AnyFloatVecInstance>(v: T): T => VectorOps.normalize[v.kind](v),
   // GPU implementation
   (v) => ({ value: `normalize(${v.value})`, dataType: v.dataType }),
 );
@@ -247,7 +253,7 @@ export const normalize = createDualImpl(
  */
 export const floor = createDualImpl(
   // CPU implementation
-  <T extends vBase | number>(value: T): T => {
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
     if (typeof value === 'number') {
       return Math.floor(value) as T;
     }
@@ -259,7 +265,7 @@ export const floor = createDualImpl(
 
 export const fract = createDualImpl(
   // CPU implementation
-  <T extends vBase | number>(a: T): T => {
+  <T extends AnyFloatVecInstance | number>(a: T): T => {
     if (typeof a === 'number') {
       return (a - Math.floor(a)) as T;
     }
@@ -275,7 +281,7 @@ export const fract = createDualImpl(
  */
 export const length = createDualImpl(
   // CPU implementation
-  <T extends vBase | number>(value: T): number => {
+  <T extends AnyFloatVecInstance | number>(value: T): number => {
     if (typeof value === 'number') {
       return Math.abs(value);
     }
@@ -291,11 +297,11 @@ export const length = createDualImpl(
  */
 export const max = createDualImpl(
   // CPU implementation
-  <T extends vBase | number>(a: T, b: T): T => {
+  <T extends AnyNumericVecInstance | number>(a: T, b: T): T => {
     if (typeof a === 'number') {
       return Math.max(a, b as number) as T;
     }
-    return VectorOps.max[a.kind](a, b as vBase) as T;
+    return VectorOps.max[a.kind](a, b as AnyNumericVecInstance) as T;
   },
   // GPU implementation
   (a, b) => ({ value: `max(${a.value}, ${b.value})`, dataType: a.dataType }),
@@ -307,11 +313,11 @@ export const max = createDualImpl(
  */
 export const min = createDualImpl(
   // CPU implementation
-  <T extends vBase | number>(a: T, b: T): T => {
+  <T extends AnyNumericVecInstance | number>(a: T, b: T): T => {
     if (typeof a === 'number') {
       return Math.min(a, b as number) as T;
     }
-    return VectorOps.min[a.kind](a, b as vBase) as T;
+    return VectorOps.min[a.kind](a, b as AnyNumericVecInstance) as T;
   },
   // GPU implementation
   (a, b) => ({ value: `min(${a.value}, ${b.value})`, dataType: a.dataType }),
@@ -323,7 +329,7 @@ export const min = createDualImpl(
  */
 export const sin = createDualImpl(
   // CPU implementation
-  <T extends vBase | number>(value: T): T => {
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
     if (typeof value === 'number') {
       return Math.sin(value) as T;
     }
@@ -339,7 +345,7 @@ export const sin = createDualImpl(
  */
 export const exp = createDualImpl(
   // CPU implementation
-  <T extends vBase | number>(value: T): T => {
+  <T extends AnyFloatVecInstance | number>(value: T): T => {
     if (typeof value === 'number') {
       return Math.exp(value) as T;
     }
@@ -351,15 +357,12 @@ export const exp = createDualImpl(
 
 type PowOverload = {
   (base: number, exponent: number): number;
-  <T extends v2f | v3f | v4f | v2h | v3h | v4h>(base: T, exponent: T): T;
+  <T extends AnyFloatVecInstance>(base: T, exponent: T): T;
 };
 
 export const pow: PowOverload = createDualImpl(
   // CPU implementation
-  <T extends v2f | v3f | v4f | v2h | v3h | v4h | number>(
-    base: T,
-    exponent: T,
-  ): T => {
+  <T extends AnyFloatVecInstance | number>(base: T, exponent: T): T => {
     if (typeof base === 'number' && typeof exponent === 'number') {
       return (base ** exponent) as T;
     }
@@ -384,17 +387,13 @@ export const pow: PowOverload = createDualImpl(
 
 type MixOverload = {
   (e1: number, e2: number, e3: number): number;
-  <T extends v2f | v3f | v4f | v2h | v3h | v4h>(e1: T, e2: T, e3: number): T;
-  <T extends v2f | v3f | v4f | v2h | v3h | v4h>(e1: T, e2: T, e3: T): T;
+  <T extends AnyFloatVecInstance>(e1: T, e2: T, e3: number): T;
+  <T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T;
 };
 
 export const mix: MixOverload = createDualImpl(
   // CPU implementation
-  <T extends v2f | v3f | v4f | v2h | v3h | v4h | number>(
-    e1: T,
-    e2: T,
-    e3: T | number,
-  ): T => {
+  <T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: T | number): T => {
     if (typeof e1 === 'number') {
       if (typeof e3 !== 'number' || typeof e2 !== 'number') {
         throw new Error(
@@ -421,7 +420,8 @@ export const mix: MixOverload = createDualImpl(
 
 export const reflect = createDualImpl(
   // CPU implementation
-  <T extends vBase>(e1: T, e2: T): T => sub(e1, mul(2 * dot(e2, e1), e2)),
+  <T extends AnyFloatVecInstance>(e1: T, e2: T): T =>
+    sub(e1, mul(2 * dot(e2, e1), e2)),
   // GPU implementation
   (e1, e2) => {
     return {
@@ -433,59 +433,14 @@ export const reflect = createDualImpl(
 
 export const distance = createDualImpl(
   // CPU implementation
-  <T extends vBase | number>(a: T, b: T): number => {
+  <T extends AnyFloatVecInstance | number>(a: T, b: T): number => {
     if (typeof a === 'number' && typeof b === 'number') {
       return Math.abs(a - b);
     }
-    return length(sub(a as vBase, b as vBase)) as number;
+    return length(
+      sub(a as AnyFloatVecInstance, b as AnyFloatVecInstance),
+    ) as number;
   },
   // GPU implementation
   (a, b) => ({ value: `distance(${a.value}, ${b.value})`, dataType: f32 }),
-);
-
-/**
- * Checks whether the given elements differ by at most 0.01.
- * Component-wise if arguments are vectors.
- * @example
- * isCloseTo(0, 0.1) // returns false
- * isCloseTo(vec3f(0, 0, 0), vec3f(0.002, -0.009, 0)) // returns true
- *
- * @param {number} precision argument that specifies the maximum allowed difference, 0.01 by default.
- */
-export const isCloseTo = createDualImpl(
-  // CPU implementation
-  <T extends v2f | v3f | v4f | v2h | v3h | v4h | number>(
-    e1: T,
-    e2: T,
-    precision = 0.01,
-  ) => {
-    if (typeof e1 === 'number' && typeof e2 === 'number') {
-      return Math.abs(e1 - e2) < precision;
-    }
-    if (typeof e1 !== 'number' && typeof e2 !== 'number') {
-      return VectorOps.isCloseToZero[e1.kind](sub(e1, e2), precision);
-    }
-    return false;
-  },
-  // GPU implementation
-  (e1, e2, precision = { value: 0.01, dataType: f32 }) => {
-    if (isNumeric(e1) && isNumeric(e2)) {
-      return {
-        value: `abs(f32(${e1.value})-f32(${e2.value})) <= ${precision.value}`,
-        dataType: bool,
-      };
-    }
-    if (!isNumeric(e1) && !isNumeric(e2)) {
-      return {
-        // https://www.w3.org/TR/WGSL/#vector-multi-component:~:text=Binary%20arithmetic%20expressions%20with%20mixed%20scalar%20and%20vector%20operands
-        // (a-a)+prec creates a vector of a.length elements, all equal to prec
-        value: `all(abs(${e1.value}-${e2.value}) <= (${e1.value} - ${e1.value})+${precision.value})`,
-        dataType: bool,
-      };
-    }
-    return {
-      value: 'false',
-      dataType: bool,
-    };
-  },
 );

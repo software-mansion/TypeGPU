@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fract } from '../../src/std';
+import { fract } from '../../../src/std';
 
 describe('fract', () => {
   it('computes fractional part of a number', () => {

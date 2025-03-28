@@ -13,6 +13,7 @@ export const exampleCategories = [
   { key: 'image-processing', label: 'Image processing' },
   { key: 'simulation', label: 'Simulation' },
   { key: 'algorithms', label: 'Algorithms' },
+  { key: 'tests', label: 'Tests' },
 ];
 
 export type Example = {
