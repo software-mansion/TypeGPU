@@ -11,7 +11,10 @@ import {
 import { getPrebuiltAstFor } from './astUtils';
 import type { Implementation } from './fnTypes';
 
-export interface TgpuFnShellBase<Args extends unknown[], Return> {
+export interface TgpuFnShellBase<
+  Args extends unknown[] | Record<string, unknown>,
+  Return,
+> {
   readonly argTypes: Args;
   readonly returnType: Return | undefined;
 }
@@ -23,7 +26,7 @@ export interface FnCore {
 }
 
 export function createFnCore(
-  shell: TgpuFnShellBase<unknown[], unknown>,
+  shell: TgpuFnShellBase<unknown[] | Record<string, unknown>, unknown>,
   implementation: Implementation<unknown[], unknown>,
 ): FnCore {
   /**
@@ -35,8 +38,12 @@ export function createFnCore(
   const externalsToApply: ExternalMap[] = [];
 
   if (typeof implementation === 'string') {
-    addArgTypesToExternals(implementation, shell.argTypes, (externals) =>
-      externalsToApply.push(externals),
+    addArgTypesToExternals(
+      implementation,
+      Array.isArray(shell.argTypes)
+        ? shell.argTypes
+        : Object.values(shell.argTypes),
+      (externals) => externalsToApply.push(externals),
     );
     addReturnTypeToExternals(implementation, shell.returnType, (externals) =>
       externalsToApply.push(externals),
@@ -82,6 +89,27 @@ export function createFnCore(
         }
         const ast = pluginData?.ast ?? ctx.transpileFn(String(implementation));
 
+        if (ast.argNames.type === 'destructured-object') {
+          applyExternals(
+            externalMap,
+            Object.fromEntries(
+              ast.argNames.props.map(({ prop, alias }) => [alias, prop]),
+            ),
+          );
+        }
+
+        if (
+          !Array.isArray(shell.argTypes) &&
+          ast.argNames.type === 'identifiers' &&
+          ast.argNames.names[0] !== undefined
+        ) {
+          applyExternals(externalMap, {
+            [ast.argNames.names[0]]: Object.fromEntries(
+              Object.keys(shell.argTypes).map((arg) => [arg, arg]),
+            ),
+          });
+        }
+
         // Verifying all required externals are present.
         const missingExternals = ast.externalNames.filter(
           (name) => !(name in externalMap),
@@ -91,10 +119,17 @@ export function createFnCore(
           throw new MissingLinksError(this.label, missingExternals);
         }
 
-        const args: Resource[] = ast.argNames.map((name, idx) => ({
-          value: name,
-          dataType: shell.argTypes[idx] as AnyWgslData,
-        }));
+        const args: Resource[] = Array.isArray(shell.argTypes)
+          ? ast.argNames.type === 'identifiers'
+            ? ast.argNames.names.map((name, idx) => ({
+                value: name,
+                dataType: (shell.argTypes as unknown[])[idx] as AnyWgslData,
+              }))
+            : []
+          : Object.entries(shell.argTypes).map(([name, dataType]) => ({
+              value: name,
+              dataType: dataType as AnyWgslData,
+            }));
 
         const { head, body } = ctx.fnToWgsl({
           args,

@@ -1,4 +1,4 @@
-import type { Block } from 'tinyest';
+import type { ArgNames, Block } from 'tinyest';
 import { resolveData } from './core/resolve/resolveData';
 import {
   type Eventual,
@@ -363,7 +363,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   transpileFn(fn: string): {
-    argNames: string[];
+    argNames: ArgNames;
     body: Block;
     externalNames: string[];
   } {
