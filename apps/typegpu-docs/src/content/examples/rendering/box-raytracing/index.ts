@@ -108,7 +108,7 @@ const renderBindGroup = root.createBindGroup(renderBindGroupLayout, {
 
 const getBoxIntersection = tgpu['~unstable']
   .fn(
-    [d.vec3f, d.vec3f, RayStruct],
+    { boundMin: d.vec3f, boundMax: d.vec3f, ray: RayStruct },
     IntersectionStruct,
   )(/* wgsl */ `(
   boundMin: vec3f,

@@ -74,7 +74,7 @@ export const vertexShader = tgpu['~unstable']
 
 const sampleTexture = tgpu['~unstable']
   .fn(
-    [d.vec2f],
+    { uv: d.vec2f },
     d.vec4f,
   )(/* wgsl */ `(uv: vec2f) -> vec4f {
     return textureSample(shaderTexture, shaderSampler, uv);
@@ -94,7 +94,7 @@ export const fragmentShader = tgpu['~unstable']
     const viewDirection = std.normalize(
       std.sub(camera.value.position.xyz, input.worldPosition),
     );
-    const textureColorWithAlpha = sampleTexture(input.textureUV); // base color
+    const textureColorWithAlpha = sampleTexture({ uv: input.textureUV }); // base color
     const textureColor = textureColorWithAlpha.xyz;
 
     let diffuse = d.vec3f();
