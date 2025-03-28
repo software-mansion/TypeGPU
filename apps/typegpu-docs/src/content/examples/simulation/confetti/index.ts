@@ -90,8 +90,7 @@ const dataLayout = tgpu
 const rotate = tgpu['~unstable'].fn(
   { v: d.vec2f, angle: d.f32 },
   d.vec2f,
-)(/* wgsl */ `
-  (v: vec2f, angle: f32) -> vec2f {
+)(/* wgsl */ ` {
     let pos = vec2(
       (v.x * cos(angle)) - (v.y * sin(angle)),
       (v.x * sin(angle)) + (v.y * cos(angle))

@@ -76,7 +76,7 @@ const sampleTexture = tgpu['~unstable']
   .fn(
     { uv: d.vec2f },
     d.vec4f,
-  )(/* wgsl */ `(uv: vec2f) -> vec4f {
+  )(/* wgsl */ `{
     return textureSample(shaderTexture, shaderSampler, uv);
   }`)
   .$uses({ shaderTexture: modelTexture, shaderSampler: sampler })

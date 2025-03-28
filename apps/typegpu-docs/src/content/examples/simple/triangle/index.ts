@@ -20,7 +20,7 @@ const getGradientColor = tgpu['~unstable']
   .fn(
     { ratio: d.f32 },
     d.vec4f,
-  )(/* wgsl */ `(ratio: f32) -> vec4f {
+  )(/* wgsl */ `{
     let color = mix(purple, blue, ratio);
     return color;
   }`)
