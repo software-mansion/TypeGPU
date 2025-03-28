@@ -1,4 +1,5 @@
 import type { TgpuNamable } from '../namable.js';
+import { $internal, type TypeCatalog } from '../shared/internalMeta.js';
 import type {
   Infer,
   InferPartial,
@@ -19,11 +20,18 @@ import * as wgsl from './wgslTypes.js';
  * via `d.align` function.
  */
 export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
+  /** @deprecated */
   readonly type: 'disarray';
   readonly elementCount: number;
   readonly elementType: TElement;
-  readonly '~repr': Infer<TElement>[];
-  readonly '~reprPartial': { idx: number; value: InferPartial<TElement> }[];
+
+  readonly [$internal]: {
+    readonly type: TypeCatalog['Disarray'];
+    /** Type-token, not available at runtime */
+    readonly '~repr': Infer<TElement>[];
+    /** Type-token, not available at runtime */
+    readonly '~reprPartial': { idx: number; value: InferPartial<TElement> }[];
+  };
 }
 
 /**
@@ -37,21 +45,34 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
 export interface Unstruct<
   TProps extends Record<string, wgsl.BaseData> = Record<string, wgsl.BaseData>,
 > extends TgpuNamable {
-  readonly label?: string | undefined;
+  /** @deprecated */
   readonly type: 'unstruct';
+  readonly label?: string | undefined;
   readonly propTypes: TProps;
-  readonly '~repr': Prettify<InferRecord<TProps>>;
-  readonly '~reprPartial': Prettify<Partial<InferPartialRecord<TProps>>>;
+
+  readonly [$internal]: {
+    readonly type: TypeCatalog['Unstruct'];
+    /** Type-token, not available at runtime */
+    readonly '~repr': Prettify<InferRecord<TProps>>;
+    /** Type-token, not available at runtime */
+    readonly '~reprPartial': Prettify<Partial<InferPartialRecord<TProps>>>;
+  };
 }
 
 export interface LooseDecorated<
   TInner extends wgsl.BaseData = wgsl.BaseData,
   TAttribs extends unknown[] = unknown[],
 > {
+  /** @deprecated */
   readonly type: 'loose-decorated';
   readonly inner: TInner;
   readonly attribs: TAttribs;
-  readonly '~repr': Infer<TInner>;
+
+  readonly [$internal]: {
+    readonly type: TypeCatalog['LooseDecorated'];
+    /** Type-token, not available at runtime */
+    readonly '~repr': Infer<TInner>;
+  };
 }
 
 const looseTypeLiterals = [

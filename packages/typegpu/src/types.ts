@@ -4,16 +4,16 @@ import type {
   TgpuBufferReadonly,
   TgpuBufferUniform,
   TgpuBufferUsage,
-} from './core/buffer/bufferUsage';
-import type { TgpuConst } from './core/constant/tgpuConstant';
-import type { TgpuDeclare } from './core/declare/tgpuDeclare';
-import type { TgpuComputeFn } from './core/function/tgpuComputeFn';
-import type { TgpuFn } from './core/function/tgpuFn';
-import type { TgpuFragmentFn } from './core/function/tgpuFragmentFn';
-import type { TgpuVertexFn } from './core/function/tgpuVertexFn';
-import type { TgpuComputePipeline } from './core/pipeline/computePipeline';
-import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline';
-import type { TgpuSampler } from './core/sampler/sampler';
+} from './core/buffer/bufferUsage.js';
+import type { TgpuConst } from './core/constant/tgpuConstant.js';
+import type { TgpuDeclare } from './core/declare/tgpuDeclare.js';
+import type { TgpuComputeFn } from './core/function/tgpuComputeFn.js';
+import type { TgpuFn } from './core/function/tgpuFn.js';
+import type { TgpuFragmentFn } from './core/function/tgpuFragmentFn.js';
+import type { TgpuVertexFn } from './core/function/tgpuVertexFn.js';
+import type { TgpuComputePipeline } from './core/pipeline/computePipeline.js';
+import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.js';
+import type { TgpuSampler } from './core/sampler/sampler.js';
 import {
   type Eventual,
   type SlotValuePair,
@@ -22,27 +22,28 @@ import {
   isDerived,
   isProviding,
   isSlot,
-} from './core/slot/slotTypes';
-import type { TgpuExternalTexture } from './core/texture/externalTexture';
-import type { TgpuAnyTextureView, TgpuTexture } from './core/texture/texture';
-import type { TgpuVar } from './core/variable/tgpuVariable';
-import type { AnyData } from './data';
+} from './core/slot/slotTypes.js';
+import type { TgpuExternalTexture } from './core/texture/externalTexture.js';
+import type {
+  TgpuAnyTextureView,
+  TgpuTexture,
+} from './core/texture/texture.js';
+import type { TgpuVar } from './core/variable/tgpuVariable.js';
+import type { AnyData } from './data/dataTypes.js';
 import {
-  type AbstractFloat,
-  type AbstractInt,
   type AnyMatInstance,
   type AnyVecInstance,
   type AnyWgslData,
   type BaseData,
   isWgslData,
-} from './data/wgslTypes';
-import type { NameRegistry } from './nameRegistry';
-import type { Infer } from './shared/repr';
-import { $internal } from './shared/symbols';
+} from './data/wgslTypes.js';
+import type { NameRegistry } from './nameRegistry.js';
+import { $internal, TypeCatalog } from './shared/internalMeta.js';
+import type { Infer } from './shared/repr.js';
 import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
-} from './tgpuBindGroupLayout';
+} from './tgpuBindGroupLayout.js';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -70,17 +71,22 @@ export type ResolvableObject =
 export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
 
 export const UnknownData = {
-  type: 'unknown',
-};
+  [$internal]: {
+    type: TypeCatalog.Unknown,
+  },
+} as const;
+
 export type UnknownData = typeof UnknownData;
 export const Void = {
-  type: 'void' as const,
+  [$internal]: {
+    type: TypeCatalog.Void,
+  } as const,
 };
 export type Void = typeof Void;
 
 export type Resource = {
   value: unknown;
-  dataType: AnyWgslData | UnknownData | AbstractInt | AbstractFloat | Void;
+  dataType: BaseData | UnknownData | Void;
 };
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';

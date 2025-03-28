@@ -1,39 +1,43 @@
-import { bool, f32 } from '../data/numeric';
-import { VectorOps } from '../data/vectorOps';
-import type {
-  AnyMatInstance,
-  AnyWgslData,
-  VecKind,
-  v2f,
-  v2h,
-  v3f,
-  v3h,
-  v3i,
-  v3u,
-  v4f,
-  v4h,
-  vBaseForMat,
-} from '../data/wgslTypes';
-import { createDualImpl } from '../shared/generators';
-import type { Resource } from '../types';
+import { bool, f32 } from '../data/numeric.js';
+import { VectorOps } from '../data/vectorOps.js';
+import {
+  type AnyMatInstance,
+  type AnyWgslData,
+  isMat,
+  isMatInstance,
+  type v2f,
+  type v2h,
+  type v3f,
+  type v3h,
+  type v3i,
+  type v3u,
+  type v4f,
+  type v4h,
+  type vBase,
+  type vBaseForMat,
+} from '../data/wgslTypes.js';
+import { createDualImpl } from '../shared/generators.js';
+import { $internal, TypeCatalog, type TypeID } from '../shared/internalMeta.js';
+import type { Resource } from '../types.js';
+
+const numericTypeIDs: TypeID[] = [
+  TypeCatalog.AbstractInt,
+  TypeCatalog.AbstractFloat,
+  TypeCatalog.F32,
+  TypeCatalog.F16,
+  TypeCatalog.I32,
+  TypeCatalog.U32,
+];
 
 function isNumeric(element: Resource) {
-  const type = element.dataType.type;
-  return (
-    type === 'abstractInt' ||
-    type === 'abstractFloat' ||
-    type === 'f32' ||
-    type === 'f16' ||
-    type === 'i32' ||
-    type === 'u32'
-  );
+  const type = element.dataType[$internal].type;
+  return numericTypeIDs.includes(type);
 }
-
-type vBase = { kind: VecKind };
 
 export const add = createDualImpl(
   // CPU implementation
-  <T extends vBase>(lhs: T, rhs: T): T => VectorOps.add[lhs.kind](lhs, rhs),
+  <T extends vBase>(lhs: T, rhs: T): T =>
+    VectorOps.add[lhs[$internal].type](lhs, rhs),
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} + ${rhs.value})`,
@@ -43,7 +47,8 @@ export const add = createDualImpl(
 
 export const sub = createDualImpl(
   // CPU implementation
-  <T extends vBase>(lhs: T, rhs: T): T => VectorOps.sub[lhs.kind](lhs, rhs),
+  <T extends vBase>(lhs: T, rhs: T): T =>
+    VectorOps.sub[lhs[$internal].type](lhs, rhs),
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} - ${rhs.value})`,
@@ -65,7 +70,7 @@ export const mul: MulOverload = createDualImpl(
   ): vBase | AnyMatInstance => {
     if (typeof s === 'number') {
       // Scalar * Vector/Matrix case
-      return VectorOps.mulSxV[v.kind](s, v);
+      return VectorOps.mulSxV[v[$internal].type](s, v);
     }
     if (
       typeof s === 'object' &&
@@ -73,35 +78,35 @@ export const mul: MulOverload = createDualImpl(
       'kind' in s &&
       'kind' in v
     ) {
-      const sIsVector = !s.kind.startsWith('mat');
-      const vIsVector = !v.kind.startsWith('mat');
+      const sIsVector = !isMatInstance(s);
+      const vIsVector = !isMatInstance(v);
       if (!sIsVector && vIsVector) {
         // Matrix * Vector case
-        return VectorOps.mulMxV[(s as AnyMatInstance).kind](
+        return VectorOps.mulMxV[(s as AnyMatInstance)[$internal].type](
           s as AnyMatInstance,
           v as vBaseForMat<AnyMatInstance>,
         );
       }
       if (sIsVector && !vIsVector) {
         // Vector * Matrix case
-        return VectorOps.mulVxM[(v as AnyMatInstance).kind](
+        return VectorOps.mulVxM[(v as AnyMatInstance)[$internal].type](
           s as vBaseForMat<AnyMatInstance>,
           v as AnyMatInstance,
         );
       }
     }
     // Vector * Vector or Matrix * Matrix case
-    return VectorOps.mulVxV[v.kind](s, v);
+    return VectorOps.mulVxV[v[$internal].type](s, v);
   },
   // GPU implementation
   (s, v) => {
     const returnType = isNumeric(s)
       ? // Scalar * Vector/Matrix
         (v.dataType as AnyWgslData)
-      : !s.dataType.type.startsWith('mat')
+      : !isMat(s.dataType)
         ? // Vector * Matrix
           (s.dataType as AnyWgslData)
-        : !v.dataType.type.startsWith('mat')
+        : !isMat(v.dataType)
           ? // Matrix * Vector
             (v.dataType as AnyWgslData)
           : // Vector * Vector or Matrix * Matrix
@@ -116,7 +121,7 @@ export const abs = createDualImpl(
     if (typeof value === 'number') {
       return Math.abs(value) as T;
     }
-    return VectorOps.abs[value.kind](value) as T;
+    return VectorOps.abs[value[$internal].type](value) as T;
   },
   // GPU implementation
   (value) => ({ value: `abs(${value.value})`, dataType: value.dataType }),
@@ -128,7 +133,10 @@ export const atan2 = createDualImpl(
     if (typeof y === 'number' && typeof x === 'number') {
       return Math.atan2(y, x) as T;
     }
-    return VectorOps.atan2[(y as vBase).kind](y as never, x as never) as T;
+    return VectorOps.atan2[(y as vBase)[$internal].type](
+      y as never,
+      x as never,
+    ) as T;
   },
   // GPU implementation
   (y, x) => ({ value: `atan2(${y.value}, ${x.value})`, dataType: y.dataType }),
@@ -140,7 +148,9 @@ export const acos = createDualImpl(
     if (typeof value === 'number') {
       return Math.acos(value) as T;
     }
-    return VectorOps.acos[(value as vBase).kind](value as never) as T;
+    return VectorOps.acos[(value as vBase)[$internal].type](
+      value as never,
+    ) as T;
   },
   // GPU implementation
   (value) => ({ value: `acos(${value.value})`, dataType: value.dataType }),
@@ -152,7 +162,9 @@ export const asin = createDualImpl(
     if (typeof value === 'number') {
       return Math.asin(value) as T;
     }
-    return VectorOps.asin[(value as vBase).kind](value as never) as T;
+    return VectorOps.asin[(value as vBase)[$internal].type](
+      value as never,
+    ) as T;
   },
   // GPU implementation
   (value) => ({ value: `asin(${value.value})`, dataType: value.dataType }),
@@ -168,7 +180,7 @@ export const ceil = createDualImpl(
     if (typeof value === 'number') {
       return Math.ceil(value) as T;
     }
-    return VectorOps.ceil[value.kind](value) as T;
+    return VectorOps.ceil[value[$internal].type](value) as T;
   },
   // GPU implementation
   (value) => ({ value: `ceil(${value.value})`, dataType: value.dataType }),
@@ -184,7 +196,11 @@ export const clamp = createDualImpl(
     if (typeof value === 'number') {
       return Math.min(Math.max(low as number, value), high as number) as T;
     }
-    return VectorOps.clamp[value.kind](value, low as vBase, high as vBase) as T;
+    return VectorOps.clamp[value[$internal].type](
+      value,
+      low as vBase,
+      high as vBase,
+    ) as T;
   },
   // GPU implementation
   (value, low, high) => {
@@ -205,7 +221,7 @@ export const cos = createDualImpl(
     if (typeof value === 'number') {
       return Math.cos(value) as T;
     }
-    return VectorOps.cos[value.kind](value) as T;
+    return VectorOps.cos[value[$internal].type](value) as T;
   },
   // GPU implementation
   (value) => ({ value: `cos(${value.value})`, dataType: value.dataType }),
@@ -217,7 +233,8 @@ export const cos = createDualImpl(
  */
 export const cross = createDualImpl(
   // CPU implementation
-  <T extends v3f | v3i | v3u>(a: T, b: T): T => VectorOps.cross[a.kind](a, b),
+  <T extends v3f | v3i | v3u>(a: T, b: T): T =>
+    VectorOps.cross[a[$internal].type](a, b),
   // GPU implementation
   (a, b) => ({ value: `cross(${a.value}, ${b.value})`, dataType: a.dataType }),
 );
@@ -229,14 +246,14 @@ export const cross = createDualImpl(
 export const dot = createDualImpl(
   // CPU implementation
   <T extends vBase>(lhs: T, rhs: T): number =>
-    VectorOps.dot[lhs.kind](lhs, rhs),
+    VectorOps.dot[lhs[$internal].type](lhs, rhs),
   // GPU implementation
   (lhs, rhs) => ({ value: `dot(${lhs.value}, ${rhs.value})`, dataType: f32 }),
 );
 
 export const normalize = createDualImpl(
   // CPU implementation
-  <T extends vBase>(v: T): T => VectorOps.normalize[v.kind](v),
+  <T extends vBase>(v: T): T => VectorOps.normalize[v[$internal].type](v),
   // GPU implementation
   (v) => ({ value: `normalize(${v.value})`, dataType: v.dataType }),
 );
@@ -251,7 +268,7 @@ export const floor = createDualImpl(
     if (typeof value === 'number') {
       return Math.floor(value) as T;
     }
-    return VectorOps.floor[value.kind](value) as T;
+    return VectorOps.floor[value[$internal].type](value) as T;
   },
   // GPU implementation
   (value) => ({ value: `floor(${value.value})`, dataType: value.dataType }),
@@ -263,7 +280,7 @@ export const fract = createDualImpl(
     if (typeof a === 'number') {
       return (a - Math.floor(a)) as T;
     }
-    return VectorOps.fract[a.kind](a) as T;
+    return VectorOps.fract[a[$internal].type](a) as T;
   },
   // GPU implementation
   (a) => ({ value: `fract(${a.value})`, dataType: a.dataType }),
@@ -279,7 +296,7 @@ export const length = createDualImpl(
     if (typeof value === 'number') {
       return Math.abs(value);
     }
-    return VectorOps.length[value.kind](value);
+    return VectorOps.length[value[$internal].type](value);
   },
   // GPU implementation
   (value) => ({ value: `length(${value.value})`, dataType: f32 }),
@@ -295,7 +312,7 @@ export const max = createDualImpl(
     if (typeof a === 'number') {
       return Math.max(a, b as number) as T;
     }
-    return VectorOps.max[a.kind](a, b as vBase) as T;
+    return VectorOps.max[a[$internal].type](a, b as vBase) as T;
   },
   // GPU implementation
   (a, b) => ({ value: `max(${a.value}, ${b.value})`, dataType: a.dataType }),
@@ -311,7 +328,7 @@ export const min = createDualImpl(
     if (typeof a === 'number') {
       return Math.min(a, b as number) as T;
     }
-    return VectorOps.min[a.kind](a, b as vBase) as T;
+    return VectorOps.min[a[$internal].type](a, b as vBase) as T;
   },
   // GPU implementation
   (a, b) => ({ value: `min(${a.value}, ${b.value})`, dataType: a.dataType }),
@@ -327,7 +344,7 @@ export const sin = createDualImpl(
     if (typeof value === 'number') {
       return Math.sin(value) as T;
     }
-    return VectorOps.sin[value.kind](value) as T;
+    return VectorOps.sin[value[$internal].type](value) as T;
   },
   // GPU implementation
   (value) => ({ value: `sin(${value.value})`, dataType: value.dataType }),
@@ -343,7 +360,7 @@ export const exp = createDualImpl(
     if (typeof value === 'number') {
       return Math.exp(value) as T;
     }
-    return VectorOps.exp[value.kind](value) as T;
+    return VectorOps.exp[value[$internal].type](value) as T;
   },
   // GPU implementation
   (value) => ({ value: `exp(${value.value})`, dataType: value.dataType }),
@@ -408,7 +425,7 @@ export const mix: MixOverload = createDualImpl(
       throw new Error('e1 and e2 need to both be vectors of the same kind.');
     }
 
-    return VectorOps.mix[e1.kind](e1, e2, e3) as T;
+    return VectorOps.mix[e1[$internal].type](e1, e2, e3) as T;
   },
   // GPU implementation
   (e1, e2, e3) => {
@@ -463,7 +480,10 @@ export const isCloseTo = createDualImpl(
       return Math.abs(e1 - e2) < precision;
     }
     if (typeof e1 !== 'number' && typeof e2 !== 'number') {
-      return VectorOps.isCloseToZero[e1.kind](sub(e1, e2), precision);
+      return VectorOps.isCloseToZero[e1[$internal].type](
+        sub(e1, e2),
+        precision,
+      );
     }
     return false;
   },
