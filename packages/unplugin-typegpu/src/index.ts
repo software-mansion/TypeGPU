@@ -19,7 +19,7 @@ type TgslFunctionDef = {
 };
 
 const typegpu: UnpluginFactory<TypegpuPluginOptions> = (
-  options: TypegpuPluginOptions,
+  options: TypegpuPluginOptions = {},
 ) => ({
   name: 'unplugin-typegpu' as const,
   transform(code, id) {
