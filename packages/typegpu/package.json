@@ -66,7 +66,7 @@
   "homepage": "https://typegpu.com",
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
-    "@types/node": "^22.13.4",
+    "@types/node": "^22.13.14",
     "@webgpu/types": "catalog:",
     "jiti": "^2.4.2",
     "unplugin-typegpu": "workspace:*",
