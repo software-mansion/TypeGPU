@@ -54,7 +54,7 @@
     "@babel/parser": "^7.26.10",
     "@babel/types": "7.26.5",
     "@typegpu/tgpu-dev-cli": "workspace:*",
-    "acorn": "^8.12.1",
+    "acorn": "^8.14.1",
     "tsup": "catalog:",
     "typescript": "catalog:"
   },
