@@ -1,5 +1,5 @@
-import { mul } from 'src/std';
 import { createDualImpl } from '../shared/generators';
+import { mul } from '../std';
 import type { SelfResolvable } from '../types';
 import { vec2f, vec3f, vec4f } from './vector';
 import type {
