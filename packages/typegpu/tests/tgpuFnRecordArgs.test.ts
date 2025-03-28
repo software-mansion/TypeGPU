@@ -38,6 +38,23 @@ describe('tgpu.fn function with arguments passed in a record', () => {
     );
   });
 
+  it('allows using only subset of arguments', () => {
+    const add = tgpu['~unstable'].fn(
+      { a: d.u32, b: d.u32, c: d.u32 },
+      d.u32,
+    )(({ a, b }) => {
+      return a + b;
+    });
+
+    expect(parseResolved({ add })).toEqual(
+      parse(`
+        fn add(a: u32, b: u32, c: u32) -> u32 {
+          return (a + b);
+        }
+    `),
+    );
+  });
+
   it('allows aliasing arguments in implementation', () => {
     const add = tgpu['~unstable'].fn(
       { a: d.u32, b: d.u32 },
@@ -104,6 +121,36 @@ describe('tgpu.fn function with arguments passed in a record', () => {
           var x = add(2, 3);
         }
     `),
+    );
+  });
+
+  it('automatically adds struct definitions of argument types when resolving TGSL record argTypes functions', () => {
+    const Point = d
+      .struct({
+        a: d.u32,
+        b: d.u32,
+      })
+      .$name('Point');
+
+    const func = tgpu['~unstable']
+      .fn(
+        { a: d.vec4f, b: Point },
+        undefined,
+      )(({ b }) => {
+        const newPoint = b;
+      })
+      .$name('newPointF');
+
+    expect(parseResolved({ func })).toEqual(
+      parse(`
+      struct Point {
+        a: u32,
+        b: u32,
+      }
+  
+      fn newPointF(a: vec4f, b: Point) {
+        var newPoint = b;
+      }`),
     );
   });
 });
