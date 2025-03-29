@@ -92,13 +92,13 @@ const boxSizeUniform = root['~unstable']
 
 // bind groups and layouts
 
-const renderBindGroupLayout = tgpu.bindGroupLayout({
+const renderLayout = tgpu.bindGroupLayout({
   boxMatrix: { storage: boxMatrixBuffer.dataType },
   cameraPosition: { storage: cameraPositionBuffer.dataType },
   cameraAxes: { storage: cameraAxesBuffer.dataType },
 });
 
-const renderBindGroup = root.createBindGroup(renderBindGroupLayout, {
+const renderBindGroup = root.createBindGroup(renderLayout, {
   boxMatrix: boxMatrixBuffer,
   cameraPosition: cameraPositionBuffer,
   cameraAxes: cameraAxesBuffer,
@@ -256,7 +256,7 @@ const fragmentFunction = tgpu['~unstable']
   return color;
 }`)
   .$uses({
-    ...renderBindGroupLayout.bound,
+    ...renderLayout.bound,
     RayStruct,
     getBoxIntersection,
     X,
@@ -283,7 +283,7 @@ const pipeline = root['~unstable']
   .withVertex(vertexFunction, {})
   .withFragment(fragmentFunction, { format: presentationFormat })
   .createPipeline()
-  .with(renderBindGroupLayout, renderBindGroup);
+  .with(renderLayout, renderBindGroup);
 
 // UI
 

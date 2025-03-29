@@ -2,11 +2,8 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as p from './params';
-import { computeBindGroupLayout } from './schemas';
+import { computeBindGroupLayout as layout } from './schemas';
 import { distanceVectorFromLine } from './tgsl-helpers';
-
-const { currentFishData, nextFishData, mouseRay, timePassed } =
-  computeBindGroupLayout.bound;
 
 export const computeShader = tgpu['~unstable']
   .computeFn({
@@ -15,7 +12,7 @@ export const computeShader = tgpu['~unstable']
   })
   .does((input) => {
     const fishIndex = input.gid.x;
-    const fishData = currentFishData.value[fishIndex];
+    const fishData = layout.$.currentFishData[fishIndex];
     let separation = d.vec3f();
     let alignment = d.vec3f();
     let alignmentCount = 0;
@@ -29,7 +26,7 @@ export const computeShader = tgpu['~unstable']
         continue;
       }
 
-      const other = currentFishData.value[i];
+      const other = layout.$.currentFishData[i];
       const dist = std.length(std.sub(fishData.position, other.position));
       if (dist < p.fishSeparationDistance) {
         separation = std.add(
@@ -74,10 +71,10 @@ export const computeShader = tgpu['~unstable']
       }
     }
 
-    if (mouseRay.value.activated === 1) {
+    if (layout.$.mouseRay.activated === 1) {
       const distanceVector = distanceVectorFromLine(
-        mouseRay.value.pointX,
-        mouseRay.value.pointY,
+        layout.$.mouseRay.pointX,
+        layout.$.mouseRay.pointY,
         fishData.position,
       );
       const limit = p.fishMouseRayRepulsionDistance;
@@ -113,10 +110,10 @@ export const computeShader = tgpu['~unstable']
     );
 
     const translation = std.mul(
-      d.f32(std.min(999, timePassed.value)) / 8,
+      d.f32(std.min(999, layout.$.timePassed)) / 8,
       fishData.direction,
     );
     fishData.position = std.add(fishData.position, translation);
-    nextFishData.value[fishIndex] = fishData;
+    layout.$.nextFishData[fishIndex] = fishData;
   })
   .$name('compute shader');
