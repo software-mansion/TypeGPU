@@ -758,7 +758,7 @@ export interface Vec2u {
 export interface Vec2b {
   readonly type: 'vec2<bool>';
   /** Type-token, not available at runtime */
-  readonly '~repr': v2b;
+  readonly [$repr]: v2b;
 
   (x: boolean, y: boolean): v2b;
   (xy: boolean): v2b;
@@ -837,7 +837,7 @@ export interface Vec3u {
 export interface Vec3b {
   readonly type: 'vec3<bool>';
   /** Type-token, not available at runtime */
-  readonly '~repr': v3b;
+  readonly [$repr]: v3b;
 
   (x: boolean, y: boolean, z: boolean): v3b;
   (xyz: boolean): v3b;
@@ -934,7 +934,7 @@ export interface Vec4u {
 export interface Vec4b {
   readonly type: 'vec4<bool>';
   /** Type-token, not available at runtime */
-  readonly '~repr': v4b;
+  readonly [$repr]: v4b;
 
   (x: boolean, y: boolean, z: boolean, w: boolean): v4b;
   (xyzw: boolean): v4b;
