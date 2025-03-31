@@ -271,19 +271,21 @@ struct fragment_Output {
   });
 
   it('automatically adds struct definitions of argument types when resolving wgsl-defined functions', () => {
-    const Point = d.struct({
-      a: d.u32,
-      b: d.u32,
-    });
+    const Point = d
+      .struct({
+        a: d.u32,
+        b: d.u32,
+      })
+      .$name('Point');
 
     const func = tgpu['~unstable']
       .fn(
         [d.vec4f, Point],
         undefined,
       )(/* wgsl */ `(a: vec4f, b: Point) {
-    var newPoint: Point;
-    newPoint = b;
-  }`)
+        var newPoint: Point;
+        newPoint = b;
+      }`)
       .$name('newPointF');
 
     expect(parseResolved({ func })).toEqual(
@@ -301,16 +303,18 @@ struct fragment_Output {
   });
 
   it('automatically adds struct definitions of argument types when resolving wgsl-defined record argTypes functions', () => {
-    const Point = d.struct({
-      a: d.u32,
-      b: d.u32,
-    });
+    const Point = d
+      .struct({
+        a: d.u32,
+        b: d.u32,
+      })
+      .$name('Point');
 
     const func = tgpu['~unstable']
       .fn(
         { a: d.vec4f, b: Point },
         undefined,
-      )(/* wgsl */ `(a: vec4f, b: Point) {
+      )(/* wgsl */ `{
         var newPoint: Point;
         newPoint = b;
       }`)
@@ -341,41 +345,6 @@ struct fragment_Output {
     const func = tgpu['~unstable']
       .fn(
         [d.vec4f, Point],
-        d.vec2f,
-      )(/* wgsl */ `(
-          a: vec4f,
-          b : PointStruct
-        ) -> vec2f {
-          var newPoint: PointStruct;
-          newPoint = b;
-        }`)
-      .$name('newPointF');
-
-    expect(parseResolved({ func })).toEqual(
-      parse(`
-    struct P {
-      a: u32,
-      b: u32,
-    }
-
-    fn newPointF(a: vec4f, b: P) -> vec2f {
-      var newPoint: P;
-      newPoint = b;
-    }`),
-    );
-  });
-
-  it('replaces references when adding struct definitions of argument types when resolving wgsl-defined record argTypes functions', () => {
-    const Point = d
-      .struct({
-        a: d.u32,
-        b: d.u32,
-      })
-      .$name('P');
-
-    const func = tgpu['~unstable']
-      .fn(
-        { a: d.vec4f, b: Point },
         d.vec2f,
       )(/* wgsl */ `(
           a: vec4f,
