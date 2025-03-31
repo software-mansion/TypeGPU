@@ -1,5 +1,5 @@
 import { bool, f32 } from '../data/numeric';
-import { VectorOps } from '../data/vectorOps';
+import { VectorOps } from '../data/vectorOps.js';
 import type {
   AnyMatInstance,
   AnyWgslData,
