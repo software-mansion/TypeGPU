@@ -150,7 +150,7 @@ export const VectorOps = {
         : wgsl.v4b
   >,
 
-  lessThan: {
+  lt: {
     vec2f: (e1: wgsl.v2f, e2: wgsl.v2f) => vec2b(e1.x < e2.x, e1.y < e2.y),
     vec2h: (e1: wgsl.v2h, e2: wgsl.v2h) => vec2b(e1.x < e2.x, e1.y < e2.y),
     vec2i: (e1: wgsl.v2i, e2: wgsl.v2i) => vec2b(e1.x < e2.x, e1.y < e2.y),

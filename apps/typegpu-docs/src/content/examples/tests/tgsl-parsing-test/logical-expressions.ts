@@ -53,31 +53,28 @@ export const logicalExpressionTests = tgpu['~unstable']
     s =
       s &&
       std.allEq(
-        std.lessThan(d.vec3f(1.0, -1.0, 0.0), d.vec3f(1.0, 1.0, -1.0)),
+        std.lt(d.vec3f(1.0, -1.0, 0.0), d.vec3f(1.0, 1.0, -1.0)),
         d.vec3b(false, true, false),
       );
 
     s =
       s &&
       std.allEq(
-        std.lessThanOrEqual(d.vec3f(1.0, -1.0, 0.0), d.vec3f(1.0, 1.0, -1.0)),
+        std.lte(d.vec3f(1.0, -1.0, 0.0), d.vec3f(1.0, 1.0, -1.0)),
         d.vec3b(true, true, false),
       );
 
     s =
       s &&
       std.allEq(
-        std.greaterThan(d.vec3f(1.0, -1.0, 0.0), d.vec3f(1.0, 1.0, -1.0)),
+        std.gt(d.vec3f(1.0, -1.0, 0.0), d.vec3f(1.0, 1.0, -1.0)),
         d.vec3b(false, false, true),
       );
 
     s =
       s &&
       std.allEq(
-        std.greaterThanOrEqual(
-          d.vec3f(1.0, -1.0, 0.0),
-          d.vec3f(1.0, 1.0, -1.0),
-        ),
+        std.gte(d.vec3f(1.0, -1.0, 0.0), d.vec3f(1.0, 1.0, -1.0)),
         d.vec3b(true, false, true),
       );
 

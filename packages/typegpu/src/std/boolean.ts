@@ -87,14 +87,14 @@ export const neq = createDualImpl(
  * Checks **component-wise** whether `lhs < rhs`.
  * This function does **not** return `bool`, for that use-case, wrap the result in `all`.
  * @example
- * lessThan(vec2f(0.0, 0.0), vec2f(0.0, 1.0)) // returns vec2b(false, true)
- * lessThan(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, false, false)
- * all(lessThan(vec4i(1, 2, 3, 4), vec4i(2, 3, 4, 5))) // returns true
+ * lt(vec2f(0.0, 0.0), vec2f(0.0, 1.0)) // returns vec2b(false, true)
+ * lt(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, false, false)
+ * all(lt(vec4i(1, 2, 3, 4), vec4i(2, 3, 4, 5))) // returns true
  */
-export const lessThan = createDualImpl(
+export const lt = createDualImpl(
   // CPU implementation
   <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
-    VectorOps.lessThan[lhs.kind](lhs, rhs),
+    VectorOps.lt[lhs.kind](lhs, rhs),
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} < ${rhs.value})`,
@@ -106,14 +106,14 @@ export const lessThan = createDualImpl(
  * Checks **component-wise** whether `lhs <= rhs`.
  * This function does **not** return `bool`, for that use-case, wrap the result in `all`.
  * @example
- * lessThanOrEqual(vec2f(0.0, 0.0), vec2f(0.0, 1.0)) // returns vec2b(true, true)
- * lessThanOrEqual(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, true, false)
- * all(lessThanOrEqual(vec4i(1, 2, 3, 4), vec4i(2, 3, 3, 5))) // returns true
+ * lte(vec2f(0.0, 0.0), vec2f(0.0, 1.0)) // returns vec2b(true, true)
+ * lte(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, true, false)
+ * all(lte(vec4i(1, 2, 3, 4), vec4i(2, 3, 3, 5))) // returns true
  */
-export const lessThanOrEqual = createDualImpl(
+export const lte = createDualImpl(
   // CPU implementation
   <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
-    or(lessThan(lhs, rhs), eq(lhs, rhs)),
+    or(lt(lhs, rhs), eq(lhs, rhs)),
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} <= ${rhs.value})`,
@@ -125,14 +125,14 @@ export const lessThanOrEqual = createDualImpl(
  * Checks **component-wise** whether `lhs > rhs`.
  * This function does **not** return `bool`, for that use-case, wrap the result in `all`.
  * @example
- * greaterThan(vec2f(0.0, 0.0), vec2f(0.0, 1.0)) // returns vec2b(false, false)
- * greaterThan(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(false, false, true)
- * all(greaterThan(vec4i(2, 3, 4, 5), vec4i(1, 2, 3, 4))) // returns true
+ * gt(vec2f(0.0, 0.0), vec2f(0.0, 1.0)) // returns vec2b(false, false)
+ * gt(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(false, false, true)
+ * all(gt(vec4i(2, 3, 4, 5), vec4i(1, 2, 3, 4))) // returns true
  */
-export const greaterThan = createDualImpl(
+export const gt = createDualImpl(
   // CPU implementation
   <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
-    and(not(lessThan(lhs, rhs)), not(eq(lhs, rhs))),
+    and(not(lt(lhs, rhs)), not(eq(lhs, rhs))),
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} > ${rhs.value})`,
@@ -144,13 +144,13 @@ export const greaterThan = createDualImpl(
  * Checks **component-wise** whether `lhs >= rhs`.
  * This function does **not** return `bool`, for that use-case, wrap the result in `all`.
  * @example
- * greaterThanOrEqual(vec2f(0.0, 0.0), vec2f(0.0, 1.0)) // returns vec2b(true, false)
- * greaterThanOrEqual(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(false, true, true)
- * all(greaterThanOrEqual(vec4i(2, 2, 4, 5), vec4i(1, 2, 3, 4))) // returns true
+ * gte(vec2f(0.0, 0.0), vec2f(0.0, 1.0)) // returns vec2b(true, false)
+ * gte(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(false, true, true)
+ * all(gte(vec4i(2, 2, 4, 5), vec4i(1, 2, 3, 4))) // returns true
  */
-export const greaterThanOrEqual = createDualImpl(
+export const gte = createDualImpl(
   // CPU implementation
-  <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => not(lessThan(lhs, rhs)),
+  <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => not(lt(lhs, rhs)),
   // GPU implementation
   (lhs, rhs) => ({
     value: `(${lhs.value} >= ${rhs.value})`,
