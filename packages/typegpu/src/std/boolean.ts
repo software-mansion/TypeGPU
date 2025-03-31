@@ -69,11 +69,11 @@ export const eq = createDualImpl(
  * Checks **component-wise** whether `lhs != rhs`.
  * This function does **not** return `bool`, for that use-case, wrap the result in `any`.
  * @example
- * neq(vec2f(0.0, 1.0), vec2f(0.0, 2.0)) // returns vec2b(false, true)
- * neq(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, false, true)
- * any(neq(vec4i(4, 3, 2, 1), vec4i(4, 2, 2, 1))) // returns true
+ * ne(vec2f(0.0, 1.0), vec2f(0.0, 2.0)) // returns vec2b(false, true)
+ * ne(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, false, true)
+ * any(ne(vec4i(4, 3, 2, 1), vec4i(4, 2, 2, 1))) // returns true
  */
-export const neq = createDualImpl(
+export const ne = createDualImpl(
   // CPU implementation
   <T extends AnyVecInstance>(lhs: T, rhs: T) => not(eq(lhs, rhs)),
   // GPU implementation
@@ -106,11 +106,11 @@ export const lt = createDualImpl(
  * Checks **component-wise** whether `lhs <= rhs`.
  * This function does **not** return `bool`, for that use-case, wrap the result in `all`.
  * @example
- * lte(vec2f(0.0, 0.0), vec2f(0.0, 1.0)) // returns vec2b(true, true)
- * lte(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, true, false)
- * all(lte(vec4i(1, 2, 3, 4), vec4i(2, 3, 3, 5))) // returns true
+ * le(vec2f(0.0, 0.0), vec2f(0.0, 1.0)) // returns vec2b(true, true)
+ * le(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, true, false)
+ * all(le(vec4i(1, 2, 3, 4), vec4i(2, 3, 3, 5))) // returns true
  */
-export const lte = createDualImpl(
+export const le = createDualImpl(
   // CPU implementation
   <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
     or(lt(lhs, rhs), eq(lhs, rhs)),
@@ -144,11 +144,11 @@ export const gt = createDualImpl(
  * Checks **component-wise** whether `lhs >= rhs`.
  * This function does **not** return `bool`, for that use-case, wrap the result in `all`.
  * @example
- * gte(vec2f(0.0, 0.0), vec2f(0.0, 1.0)) // returns vec2b(true, false)
- * gte(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(false, true, true)
- * all(gte(vec4i(2, 2, 4, 5), vec4i(1, 2, 3, 4))) // returns true
+ * ge(vec2f(0.0, 0.0), vec2f(0.0, 1.0)) // returns vec2b(true, false)
+ * ge(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(false, true, true)
+ * all(ge(vec4i(2, 2, 4, 5), vec4i(1, 2, 3, 4))) // returns true
  */
-export const gte = createDualImpl(
+export const ge = createDualImpl(
   // CPU implementation
   <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => not(lt(lhs, rhs)),
   // GPU implementation

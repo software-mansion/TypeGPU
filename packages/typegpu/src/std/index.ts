@@ -32,11 +32,11 @@ export {
   // comparison
   allEq,
   eq,
-  neq,
+  ne,
   lt,
-  lte,
+  le,
   gt,
-  gte,
+  ge,
   // logical ops
   not,
   or,

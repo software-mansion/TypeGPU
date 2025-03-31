@@ -46,7 +46,7 @@ export const logicalExpressionTests = tgpu['~unstable']
     s =
       s &&
       std.allEq(
-        std.neq(d.vec3i(1, 2, 3), d.vec3i(1, 2, 4)),
+        std.ne(d.vec3i(1, 2, 3), d.vec3i(1, 2, 4)),
         d.vec3b(false, false, true),
       );
 
@@ -60,7 +60,7 @@ export const logicalExpressionTests = tgpu['~unstable']
     s =
       s &&
       std.allEq(
-        std.lte(d.vec3f(1.0, -1.0, 0.0), d.vec3f(1.0, 1.0, -1.0)),
+        std.le(d.vec3f(1.0, -1.0, 0.0), d.vec3f(1.0, 1.0, -1.0)),
         d.vec3b(true, true, false),
       );
 
@@ -74,7 +74,7 @@ export const logicalExpressionTests = tgpu['~unstable']
     s =
       s &&
       std.allEq(
-        std.gte(d.vec3f(1.0, -1.0, 0.0), d.vec3f(1.0, 1.0, -1.0)),
+        std.ge(d.vec3f(1.0, -1.0, 0.0), d.vec3f(1.0, 1.0, -1.0)),
         d.vec3b(true, false, true),
       );
 
