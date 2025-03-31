@@ -506,7 +506,6 @@ export const translate4x4 = createDualImpl(
   // GPU implementation
   (matrix, vector) => {
     return {
-      // value: `${matrix.value} * mat4x4<f32>(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${vector.value}.x, ${vector.value}.y, ${vector.value}.z, 1)`,
       value: `${matrix.value} * ${mat4x4f.translation(vector.value as v3f)}`,
       dataType: matrix.dataType,
     };
