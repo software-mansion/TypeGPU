@@ -25,7 +25,7 @@ import type { Infer } from '../../shared/repr';
  * Information extracted from transpiling a JS function.
  */
 export type TranspilationResult = {
-  argNames: string[];
+  argNames: smol.ArgNames;
   body: smol.Block;
   /**
    * All identifiers found in the function code that are not declared in the

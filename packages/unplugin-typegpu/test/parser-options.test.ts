@@ -16,7 +16,7 @@ describe('[BABEL] parser options', () => {
       "import tgpu from 'typegpu';
       const increment = tgpu['~unstable'].fn([])(tgpu.__assignAst(() => {
         const x = 2 + 2;
-      }, {"argNames":[],"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}, {}));"
+      }, {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}, {}));"
     `);
 
     const codeWithoutImport = `\
@@ -52,7 +52,7 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
 
       const increment = tgpu['~unstable']
               .fn([])(tgpu.__assignAst(() => {
-              }, {"argNames":[],"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}));
+              }, {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"c":["x",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}));
 
             console.log(increment);
       "

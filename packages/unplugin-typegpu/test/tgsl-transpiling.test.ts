@@ -36,7 +36,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         counter.value.x = counter.value.y;
         counter.value.y += tmp;
         counter.value.z += d.f32(input.num.x);
-      }, {"argNames":["input"],"body":{"b":[{"c":["tmp",{"a":[{"a":["counter","value"]},"x"]}]},{"x":[{"a":[{"a":["counter","value"]},"x"]},"=",{"a":[{"a":["counter","value"]},"y"]}]},{"x":[{"a":[{"a":["counter","value"]},"y"]},"+=","tmp"]},{"x":[{"a":[{"a":["counter","value"]},"z"]},"+=",{"f":[{"a":["d","f32"]},[{"a":[{"a":["input","num"]},"x"]}]]}]}]},"externalNames":["counter","d"]}, {
+      }, {"argNames":{"type":"identifiers","names":["input"]},"body":{"b":[{"c":["tmp",{"a":[{"a":["counter","value"]},"x"]}]},{"x":[{"a":[{"a":["counter","value"]},"x"]},"=",{"a":[{"a":["counter","value"]},"y"]}]},{"x":[{"a":[{"a":["counter","value"]},"y"]},"+=","tmp"]},{"x":[{"a":[{"a":["counter","value"]},"z"]},"+=",{"f":[{"a":["d","f32"]},[{"a":[{"a":["input","num"]},"x"]}]]}]}]},"externalNames":["counter","d"]}, {
         counter: counter,
         d: d
       }));"
@@ -67,12 +67,12 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         workgroupSize: [1]
       })(tgpu.__assignAst(input => {
         const x = true;
-      }, {"argNames":["input"],"body":{"b":[{"c":["x",true]}]},"externalNames":[]}, {}));
+      }, {"argNames":{"type":"identifiers","names":["input"]},"body":{"b":[{"c":["x",true]}]},"externalNames":[]}, {}));
       const b = tgpu['~unstable'].fn([])(tgpu.__assignAst(() => {
         const y = 2 + 2;
-      }, {"argNames":[],"body":{"b":[{"c":["y",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}, {}));
+      }, {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"c":["y",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}, {}));
       const cx = 2;
-      const c = tgpu['~unstable'].fn([])(tgpu.__assignAst(() => cx, {"argNames":[],"body":{"b":[{"r":"cx"}]},"externalNames":["cx"]}, {
+      const c = tgpu['~unstable'].fn([])(tgpu.__assignAst(() => cx, {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"r":"cx"}]},"externalNames":["cx"]}, {
         cx: cx
       }));
       const d = tgpu['~unstable'].fn([])('() {}');"
@@ -130,7 +130,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                   counter.value.x = counter.value.y;
                   counter.value.y += tmp;
                   counter.value.z += d.f32(input.num.x);
-                  }, {"argNames":["input"],"body":{"b":[{"c":["tmp",{"a":[{"a":["counter","value"]},"x"]}]},{"x":[{"a":[{"a":["counter","value"]},"x"]},"=",{"a":[{"a":["counter","value"]},"y"]}]},{"x":[{"a":[{"a":["counter","value"]},"y"]},"+=","tmp"]},{"x":[{"a":[{"a":["counter","value"]},"z"]},"+=",{"f":[{"a":["d","f32"]},[{"a":[{"a":["input","num"]},"x"]}]]}]}]},"externalNames":["counter","d"]}, {counter, d}));
+                  }, {"argNames":{"type":"identifiers","names":["input"]},"body":{"b":[{"c":["tmp",{"a":[{"a":["counter","value"]},"x"]}]},{"x":[{"a":[{"a":["counter","value"]},"x"]},"=",{"a":[{"a":["counter","value"]},"y"]}]},{"x":[{"a":[{"a":["counter","value"]},"y"]},"+=","tmp"]},{"x":[{"a":[{"a":["counter","value"]},"z"]},"+=",{"f":[{"a":["d","f32"]},[{"a":[{"a":["input","num"]},"x"]}]]}]}]},"externalNames":["counter","d"]}, {counter, d}));
       "
     `);
   });
@@ -157,13 +157,13 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
       "import tgpu from 'typegpu';
 
       tgpu['~unstable'].computeFn({ workgroupSize: [1] })(tgpu.__assignAst((input) => {
-              }, {"argNames":["input"],"body":{"b":[{"c":["x",true]}]},"externalNames":[]}));
+              }, {"argNames":{"type":"identifiers","names":["input"]},"body":{"b":[{"c":["x",true]}]},"externalNames":[]}));
 
               tgpu['~unstable'].fn([])(tgpu.__assignAst(() => {
-              }, {"argNames":[],"body":{"b":[{"c":["y",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}));
+              }, {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"c":["y",{"x":[{"n":"2"},"+",{"n":"2"}]}]}]},"externalNames":[]}));
 
               const cx = 2;
-              tgpu['~unstable'].fn([])(tgpu.__assignAst(() => cx, {"argNames":[],"body":{"b":[{"r":"cx"}]},"externalNames":["cx"]}, {cx}));
+              tgpu['~unstable'].fn([])(tgpu.__assignAst(() => cx, {"argNames":{"type":"identifiers","names":[]},"body":{"b":[{"r":"cx"}]},"externalNames":["cx"]}, {cx}));
 
               tgpu['~unstable'].fn([])('() {}');
       "
