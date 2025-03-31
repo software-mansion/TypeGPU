@@ -252,7 +252,7 @@ struct fragment_Output {
       .fragmentFn({
         in: { position: d.builtin.position },
         out: d.vec4f,
-      })(/* wgsl */ `(input: FragmentIn) -> @location(0) vec4f {
+      })(/* wgsl */ `{
         return vec4f(1.0f);
       }`)
       .$name('fragment');
@@ -264,7 +264,7 @@ struct fragment_Output {
     }
 
     @fragment
-    fn fragment(input: fragment_Input) -> @location(0) vec4f {
+    fn fragment(in: fragment_Input) -> @location(0) vec4f {
       return vec4f(1.0f);
     }`),
     );

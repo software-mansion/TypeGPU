@@ -47,11 +47,11 @@ const mainVert = tgpu['~unstable']
   .vertexFn({
     in: { v: d.vec2f, center: d.vec2f, velocity: d.vec2f },
     out: VertexOutput,
-  })(/* wgsl */ `(input: VertexInput) -> VertexOutput {
-    let angle = getRotationFromVelocity(input.velocity);
-    let rotated = rotate(input.v, angle);
+  })(/* wgsl */ `{
+    let angle = getRotationFromVelocity(in.velocity);
+    let rotated = rotate(in.v, angle);
 
-    let pos = vec4(rotated + input.center, 0.0, 1.0);
+    let pos = vec4(rotated + in.center, 0.0, 1.0);
 
     let color = vec4(
         sin(angle + colorPalette.r) * 0.45 + 0.45,
@@ -59,7 +59,7 @@ const mainVert = tgpu['~unstable']
         sin(angle + colorPalette.b) * 0.45 + 0.45,
         1.0);
 
-    return VertexOutput(pos, color);
+    return Out(pos, color);
   }`)
   .$uses({
     trianglePos,
@@ -71,9 +71,8 @@ const mainVert = tgpu['~unstable']
 const mainFrag = tgpu['~unstable'].fragmentFn({
   in: VertexOutput,
   out: d.vec4f,
-})(/* wgsl */ `
-  (input: FragmentInput) -> @location(0) vec4f {
-    return input.color;
+})(/* wgsl */ `{
+    return in.color;
   }
 `);
 
