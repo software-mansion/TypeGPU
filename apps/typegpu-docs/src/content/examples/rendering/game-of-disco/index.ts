@@ -1,4 +1,4 @@
-import tgpu, { type TgpuBuffer, type VertexFlag } from 'typegpu';
+import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import * as m from 'wgpu-matrix';
@@ -11,15 +11,7 @@ import {
   Material,
   Vertex,
 } from './dataTypes';
-import { createIcosphereShader } from './icosphere';
-
-// Initialize cache for vertex buffers
-const vertexBufferCache = new Map<
-  string,
-  {
-    buffer: TgpuBuffer<d.Disarray<typeof Vertex>> & VertexFlag;
-  }
->();
+import { IcosphereGenerator } from './icosphere';
 
 const adapter = await navigator.gpu.requestAdapter();
 if (!adapter) {
@@ -37,6 +29,8 @@ const device = await adapter.requestDevice({
 });
 const root = tgpu.initFromDevice({ device });
 
+const icosphereGenerator = new IcosphereGenerator(root, maxSize);
+
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -51,11 +45,9 @@ let smoothNormals = false;
 let subdivisions = 2;
 
 // Initialize with default values
-let vertexBuffer = createIcosphereShader(
+let vertexBuffer = icosphereGenerator.createIcosphere(
   subdivisions,
   smoothNormals,
-  root,
-  maxSize,
 );
 
 const cubeVertexBuffer = root
@@ -152,40 +144,50 @@ const fragmentFn = tgpu['~unstable']
     },
     out: d.vec4f,
   })
-  .does(`(input: vi) -> @location(0) vec4f {
-    // Calculate normalized vectors for lighting
-    let norm = normalize(input.normal.xyz);
-    let lDir = normalize(light.direction);
+  .does((input) => {
+    const norm = std.normalize(input.normal.xyz);
+    const lDir = std.normalize(light.value.direction);
 
-    // Ambient component
-    let ambient = material.ambient * light.color * light.intensity;
+    const ambient = std.mul(
+      material.value.ambient,
+      std.mul(light.value.intensity, light.value.color),
+    );
+    const diffFactor = std.max(std.dot(norm, lDir), 0.0);
+    const diffuse = std.mul(
+      diffFactor,
+      std.mul(
+        material.value.diffuse,
+        std.mul(light.value.intensity, light.value.color),
+      ),
+    );
 
-    // Diffuse component
-    let diffFactor = max(dot(norm, lDir), 0.0);
-    let diffuse = diffFactor * material.diffuse * light.color * light.intensity;
+    const vDir = std.normalize(
+      std.sub(camera.value.position.xyz, input.worldPos.xyz),
+    );
 
-    // Specular component
-    let vDir = normalize(camera.position.xyz - input.worldPos.xyz);
-    let rDir = reflect(-lDir, norm);
-    let specFactor = pow(max(dot(vDir, rDir), 0.0), material.shininess);
-    let specular = specFactor * material.specular * light.color * light.intensity;
+    const rDir = std.reflect(d.vec3f(-lDir.x, -lDir.y, -lDir.z), norm);
+    const specFactor = std.pow(
+      std.max(std.dot(vDir, rDir), 0.0),
+      material.value.shininess,
+    );
+    const specular = std.mul(
+      specFactor,
+      std.mul(
+        material.value.specular,
+        std.mul(light.value.intensity, light.value.color),
+      ),
+    );
 
-    // Environment reflection
-    let reflView = reflect(-vDir, norm);
-    let envColor = textureSample(cubemap, sampler, reflView);
+    const reflView = std.reflect(d.vec3f(-vDir.x, -vDir.y, -vDir.z), norm);
+    const envColor = std.textureSample(cubemap, sampler, reflView);
 
-    // Combine direct lighting with environmental reflection
-    let directLighting = ambient + diffuse + specular;
-    let finalColor = mix(directLighting, envColor.xyz, material.reflectivity);
-
-    return vec4f(finalColor, 1.0);
-  }`)
-  .$uses({
-    camera,
-    light,
-    material,
-    cubemap,
-    sampler,
+    const directLighting = std.add(ambient, std.add(diffuse, specular));
+    const finalColor = std.mix(
+      directLighting,
+      envColor.xyz,
+      material.value.reflectivity,
+    );
+    return d.vec4f(finalColor, 1.0);
   });
 
 const cubeVertexFn = tgpu['~unstable']
@@ -220,13 +222,9 @@ const cubeFragmentFn = tgpu['~unstable']
     },
     out: d.vec4f,
   })
-  .does(`(input: vi) -> @location(0) vec4f {
-    let dir = normalize(input.texCoord);
-    return textureSample(cubemap, sampler, dir);
-  }`)
-  .$uses({
-    cubemap,
-    sampler,
+  .does((input) => {
+    const dir = std.normalize(input.texCoord);
+    return std.textureSample(cubemap, sampler, dir);
   });
 
 const cubePipeline = root['~unstable']
@@ -359,25 +357,26 @@ export const controls = {
     step: 1,
     onSliderChange(value: number) {
       subdivisions = value;
-      vertexBuffer = createIcosphereShader(value, smoothNormals, root, maxSize);
+      vertexBuffer = icosphereGenerator.createIcosphere(
+        subdivisions,
+        smoothNormals,
+      );
     },
   },
   'smooth normals': {
     initial: false,
     onToggleChange: (value: boolean) => {
       smoothNormals = value;
-      vertexBuffer = createIcosphereShader(subdivisions, value, root, maxSize);
+      vertexBuffer = icosphereGenerator.createIcosphere(
+        subdivisions,
+        smoothNormals,
+      );
     },
   },
 };
 
 export function onCleanup() {
-  // Clean up cached buffers
-  for (const cached of vertexBufferCache.values()) {
-    cached.buffer.destroy();
-  }
-  vertexBufferCache.clear();
-
+  icosphereGenerator.destroy();
   cubemapTexture.destroy();
   root.destroy();
 }

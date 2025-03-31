@@ -53,3 +53,5 @@ export {
   unpack4x8unorm,
   unpack2x16float,
 } from './packing.js';
+
+export { textureSample } from './texture.js';
