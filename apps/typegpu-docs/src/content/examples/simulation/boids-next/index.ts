@@ -30,11 +30,10 @@ const TriangleData = d.struct({
 });
 
 const renderBindGroupLayout = tgpu.bindGroupLayout({
-  trianglePos: { uniform: d.arrayOf(TriangleData, triangleAmount) },
   colorPalette: { uniform: d.vec3f },
 });
 
-const { trianglePos, colorPalette } = renderBindGroupLayout.bound;
+const { colorPalette } = renderBindGroupLayout.bound;
 
 const VertexOutput = {
   position: d.builtin.position,
@@ -61,7 +60,6 @@ const mainVert = tgpu['~unstable']
     return VertexOutput(pos, color);
   }`)
   .$uses({
-    trianglePos,
     colorPalette,
     getRotationFromVelocity,
     rotate,
@@ -223,7 +221,7 @@ const mainCompute = tgpu['~unstable']
     let alignmentCount = 0;
     let cohesionCount = 0;
 
-    for (let i = d.u32(0); i < std.arrayLength(currentTrianglePos.value); i++) {
+    for (let i = d.u32(0); i < currentTrianglePos.value.length; i++) {
       if (i === index) {
         continue;
       }
@@ -295,7 +293,6 @@ const computePipeline = root['~unstable']
 
 const renderBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(renderBindGroupLayout, {
-    trianglePos: trianglePosBuffers[idx],
     colorPalette: colorPaletteBuffer,
   }),
 );
