@@ -1,4 +1,5 @@
 import { createDualImpl } from '../shared/generators';
+import { $repr } from '../shared/repr.js';
 import {
   Vec2bImpl,
   Vec2fImpl,
@@ -280,7 +281,7 @@ const vecTypeToConstructor = {
 
 type VecSchemaBase<TValue> = {
   readonly type: string;
-  readonly '~repr': TValue;
+  readonly [$repr]: TValue;
 };
 
 function makeVecSchema<TValue, S extends number | boolean>(
@@ -317,5 +318,5 @@ function makeVecSchema<TValue, S extends number | boolean>(
     }),
   );
 
-  return Object.assign(construct, { type, '~repr': undefined as TValue });
+  return Object.assign(construct, { type, [$repr]: undefined as TValue });
 }

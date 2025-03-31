@@ -5,7 +5,6 @@ import {
   type Unstruct,
   isLooseData,
 } from '../../data/dataTypes';
-import type { WgslStruct } from '../../data/struct';
 import { formatToWGSLType } from '../../data/vertexFormatData';
 import type {
   AnyWgslData,
@@ -34,6 +33,7 @@ import type {
   Vec4i,
   Vec4u,
   WgslArray,
+  WgslStruct,
 } from '../../data/wgslTypes';
 import { assertExhaustive } from '../../shared/utilityTypes';
 import type { ResolutionCtx } from '../../types';

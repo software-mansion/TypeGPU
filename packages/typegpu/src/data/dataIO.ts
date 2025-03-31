@@ -11,7 +11,6 @@ import type {
 } from './dataTypes';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix';
 import { sizeOf } from './sizeOf';
-import type { WgslStruct } from './struct';
 import {
   vec2f,
   vec2h,
@@ -176,7 +175,7 @@ const dataWriters = {
 
   struct(
     output,
-    schema: WgslStruct,
+    schema: wgsl.WgslStruct,
     value: InferRecord<Record<string, wgsl.BaseData>>,
   ) {
     const alignment = alignmentOf(schema);
@@ -617,7 +616,7 @@ const dataReaders = {
     );
   },
 
-  struct(input: ISerialInput, schema: WgslStruct) {
+  struct(input: ISerialInput, schema: wgsl.WgslStruct) {
     const alignment = alignmentOf(schema);
     alignIO(input, alignment);
     const result = {} as Record<string, unknown>;

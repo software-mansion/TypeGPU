@@ -9,7 +9,6 @@ import {
   i32,
   u32,
 } from '../data/numeric';
-import type { WgslStruct } from '../data/struct';
 import {
   vec2b,
   vec2f,
@@ -30,6 +29,7 @@ import {
 import {
   type AnyWgslData,
   type BaseData,
+  type WgslStruct,
   isDecorated,
   isWgslArray,
   isWgslData,
