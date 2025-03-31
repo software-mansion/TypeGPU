@@ -1,9 +1,10 @@
 import type {
+  $repr,
   Infer,
   InferGPU,
   InferPartial,
   MemIdentity,
-} from '../shared/repr';
+} from '../shared/repr.js';
 import { sizeOf } from './sizeOf';
 import type { AnyWgslData, BaseData, WgslArray } from './wgslTypes';
 
@@ -36,7 +37,7 @@ export function arrayOf<TElement extends AnyWgslData>(
 class WgslArrayImpl<TElement extends BaseData> implements WgslArray<TElement> {
   public readonly type = 'array';
   /** Type-token, not available at runtime */
-  public readonly '~repr'!: Infer<TElement>[];
+  public declare readonly [$repr]: Infer<TElement>[];
   /** Type-token, not available at runtime */
   public readonly '~gpuRepr'!: InferGPU<TElement>[];
   /** Type-token, not available at runtime */

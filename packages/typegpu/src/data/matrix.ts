@@ -1,6 +1,7 @@
-import { createDualImpl } from '../shared/generators.js';
-import type { SelfResolvable } from '../types.js';
-import { vec2f, vec3f, vec4f } from './vector.js';
+import { createDualImpl } from '../shared/generators';
+import { $repr } from '../shared/repr.js';
+import type { SelfResolvable } from '../types';
+import { vec2f, vec3f, vec4f } from './vector';
 import type {
   AnyMatInstance,
   Mat2x2f,
@@ -132,10 +133,10 @@ function createMatSchema<
   ColumnType extends vBase,
 >(
   options: MatSchemaOptions<TType, ValueType>,
-): { type: TType; '~repr': ValueType } & MatConstructor<ValueType, ColumnType> {
+): { type: TType; [$repr]: ValueType } & MatConstructor<ValueType, ColumnType> {
   const MatSchema = {
     /** Type-token, not available at runtime */
-    '~repr': undefined as unknown as ValueType,
+    [$repr]: undefined as unknown as ValueType,
     type: options.type,
     label: options.type,
     identity: IdentityFunctions[options.columns],
@@ -175,7 +176,7 @@ function createMatSchema<
 
   return Object.assign(construct, MatSchema) as unknown as {
     type: TType;
-    '~repr': ValueType;
+    [$repr]: ValueType;
   } & MatConstructor<ValueType, ColumnType>;
 }
 
