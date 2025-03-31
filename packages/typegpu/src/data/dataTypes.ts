@@ -6,10 +6,18 @@ import type {
   InferPartialRecord,
   InferRecord,
 } from '../shared/repr.js';
+import { $internal } from '../shared/symbols.js';
 import type { Prettify } from '../shared/utilityTypes.js';
 import { vertexFormats } from '../shared/vertexFormat.js';
 import type { PackedData } from './vertexFormatData.js';
 import * as wgsl from './wgslTypes.js';
+
+export type TgpuDualFn<TImpl extends (...args: unknown[]) => unknown> =
+  TImpl & {
+    [$internal]: {
+      implementation: TImpl | string;
+    };
+  };
 
 /**
  * Array schema constructed via `d.disarrayOf` function.

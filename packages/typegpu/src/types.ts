@@ -228,3 +228,13 @@ export function hasInternalDataType(
     !!(value as { [$internal]: { dataType: BaseData } })?.[$internal]?.dataType
   );
 }
+
+export function isMarkedInternal(
+  value: unknown,
+): value is { [$internal]: Record<string, unknown> } {
+  return (
+    !!value &&
+    (typeof value === 'object' || typeof value === 'function') &&
+    $internal in (value as object)
+  );
+}

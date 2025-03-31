@@ -6,6 +6,7 @@ import {
   type ResolutionCtx,
   type Resource,
   UnknownData,
+  isMarkedInternal,
   isWgsl,
 } from '../types';
 import {
@@ -294,6 +295,10 @@ export function generateExpression(
     const fnRes = (idValue as unknown as (...args: unknown[]) => unknown)(
       ...resolvedResources,
     ) as Resource;
+
+    if (!isMarkedInternal(idValue)) {
+      throw new Error(`Function ${String(idValue)} is not marked as internal.`);
+    }
 
     return {
       value: resolveRes(ctx, fnRes),

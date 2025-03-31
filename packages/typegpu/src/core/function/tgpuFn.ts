@@ -192,11 +192,7 @@ function createFn<
     }),
   );
 
-  Object.defineProperty(call, $internal, {
-    value: {
-      implementation,
-    },
-  });
+  call[$internal].implementation = implementation;
 
   const fn = Object.assign(call, fnBase as This) as unknown as TgpuFn<
     Args,
@@ -277,11 +273,7 @@ function createBoundFunction<
     },
   });
 
-  Object.defineProperty(fn, $internal, {
-    value: {
-      implementation: innerFn[$internal].implementation,
-    },
-  });
+  fn[$internal].implementation = innerFn[$internal].implementation;
 
   return fn;
 }
