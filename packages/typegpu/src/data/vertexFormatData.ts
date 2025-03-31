@@ -1,4 +1,4 @@
-import type { Infer } from '../shared/repr';
+import { $repr, type Infer } from '../shared/repr.js';
 import type { VertexFormat } from '../shared/vertexFormat';
 import { f32, i32, u32 } from './numeric';
 import {
@@ -17,15 +17,16 @@ export type FormatToWGSLType<T extends VertexFormat> =
   (typeof formatToWGSLType)[T];
 
 export interface TgpuVertexFormatData<T extends VertexFormat> {
-  readonly '~repr': Infer<FormatToWGSLType<T>>;
   readonly type: T;
+  /** Type-token, not available at runtime */
+  readonly [$repr]: Infer<FormatToWGSLType<T>>;
 }
 
 class TgpuVertexFormatDataImpl<T extends VertexFormat>
   implements TgpuVertexFormatData<T>
 {
   /** Used as a type-token for the `Infer<T>` functionality. */
-  public readonly '~repr'!: Infer<FormatToWGSLType<T>>;
+  public declare readonly [$repr]: Infer<FormatToWGSLType<T>>;
 
   constructor(public readonly type: T) {}
 }
