@@ -1,5 +1,6 @@
 import type { TgpuNamable } from '../namable.js';
 import type {
+  $repr,
   Infer,
   InferPartial,
   InferPartialRecord,
@@ -22,7 +23,7 @@ export interface Disarray<TElement extends wgsl.BaseData = wgsl.BaseData> {
   readonly type: 'disarray';
   readonly elementCount: number;
   readonly elementType: TElement;
-  readonly '~repr': Infer<TElement>[];
+  readonly [$repr]: Infer<TElement>[];
   readonly '~reprPartial': { idx: number; value: InferPartial<TElement> }[];
 }
 
@@ -40,7 +41,7 @@ export interface Unstruct<
   readonly label?: string | undefined;
   readonly type: 'unstruct';
   readonly propTypes: TProps;
-  readonly '~repr': Prettify<InferRecord<TProps>>;
+  readonly [$repr]: Prettify<InferRecord<TProps>>;
   readonly '~reprPartial': Prettify<Partial<InferPartialRecord<TProps>>>;
 }
 
@@ -51,7 +52,7 @@ export interface LooseDecorated<
   readonly type: 'loose-decorated';
   readonly inner: TInner;
   readonly attribs: TAttribs;
-  readonly '~repr': Infer<TInner>;
+  readonly [$repr]: Infer<TInner>;
 }
 
 const looseTypeLiterals = [
