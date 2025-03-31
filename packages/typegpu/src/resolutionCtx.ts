@@ -384,20 +384,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     );
 
     try {
-      const str = generateFunction(this, options.body);
-
-      const argList = options.args
-        .map(
-          (arg) => `${arg.value}: ${this.resolve(arg.dataType as AnyWgslData)}`,
-        )
-        .join(', ');
-
       return {
-        head:
-          options.returnType !== undefined
-            ? `(${argList}) -> ${getAttributesString(options.returnType)} ${this.resolve(options.returnType)}`
-            : `(${argList})`,
-        body: str,
+        head: resolveFunctionHeader(this, options.args, options.returnType),
+        body: generateFunction(this, options.body),
       };
     } finally {
       this._itemStateStack.popFunctionScope();
@@ -696,4 +685,18 @@ export function resolve(
     bindGroupLayouts,
     catchall,
   };
+}
+
+export function resolveFunctionHeader(
+  ctx: ResolutionCtx,
+  args: Resource[],
+  returnType: AnyWgslData,
+) {
+  const argList = args
+    .map((arg) => `${arg.value}: ${ctx.resolve(arg.dataType as AnyWgslData)}`)
+    .join(', ');
+
+  return returnType !== undefined
+    ? `(${argList}) -> ${getAttributesString(returnType)} ${ctx.resolve(returnType)}`
+    : `(${argList})`;
 }

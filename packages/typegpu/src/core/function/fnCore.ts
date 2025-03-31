@@ -1,5 +1,6 @@
 import type { AnyWgslData } from '../../data/wgslTypes';
 import { MissingLinksError } from '../../errors';
+import { resolveFunctionHeader } from '../../resolutionCtx';
 import type { ResolutionCtx, Resource } from '../../types';
 import {
   type ExternalMap,
@@ -69,11 +70,14 @@ export function createFnCore(
       if (typeof implementation === 'string') {
         const header = Array.isArray(shell.argTypes)
           ? ''
-          : `(${Object.entries(shell.argTypes)
-              .map(([name, dataType]) => `${name}: ${ctx.resolve(dataType)}`)
-              .join(
-                ', ',
-              )}) ${shell.returnType ? `-> ${ctx.resolve(shell.returnType)}` : ''}`;
+          : resolveFunctionHeader(
+              ctx,
+              Object.entries(shell.argTypes).map(([value, dataType]) => ({
+                value,
+                dataType: dataType as AnyWgslData,
+              })),
+              shell.returnType as AnyWgslData,
+            );
 
         const replacedImpl = replaceExternalsInWgsl(
           ctx,
