@@ -27,6 +27,7 @@ export {
   reflect,
   sin,
   sub,
+  translate4x4,
 } from './numeric.js';
 
 export {

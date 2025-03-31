@@ -373,23 +373,3 @@ describe('Tests identity matrx', () => {
     );
   });
 });
-
-describe('Tests mat4x4 translation with a vector', () => {
-  it('translates a matrix by a vec3f vector', () => {
-    const M = d.mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-    const T = d.vec3f(1, 2, 3);
-    const result = d.mat4x4f.translate(M, T);
-    expect(result).toEqual(
-      d.mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 2, 3, 1),
-    );
-  });
-
-  it('translates a matrix by a vec3f vector', () => {
-    const M = d.mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1);
-    const T = d.vec3f(2, 2, 4);
-    const result = d.mat4x4f.translate(M, T);
-    expect(result).toEqual(
-      d.mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 6, 3, 4, 3),
-    );
-  });
-});

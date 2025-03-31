@@ -880,7 +880,7 @@ export interface Mat4x4f {
   (...columns: v4f[]): m4x4f;
   (): m4x4f;
   identity(): m4x4f;
-  translate(matrix: m4x4f, vec: v3f): m4x4f;
+  translation(vec: v3f): m4x4f;
 }
 
 /**

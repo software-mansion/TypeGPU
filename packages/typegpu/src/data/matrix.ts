@@ -1,5 +1,4 @@
 import { createDualImpl } from '../shared/generators.js';
-import { mul } from '../std/numeric.js';
 import type { SelfResolvable } from '../types.js';
 import { vec2f, vec3f, vec4f } from './vector.js';
 import type {
@@ -96,10 +95,10 @@ const IdentityFunctions: Record<number, () => AnyMatInstance> = {
   4: identity4x4,
 };
 
-export const translate4x4 = createDualImpl(
+export const translation4x4 = createDualImpl(
   // CPU implementation
-  (matrix: m4x4f, vector: v3f) => {
-    const v4 = mat4x4f(
+  (vector: v3f) => {
+    return mat4x4f(
       1,
       0,
       0,
@@ -117,13 +116,12 @@ export const translate4x4 = createDualImpl(
       vector.z,
       1,
     );
-    return mul(matrix, v4);
   },
   // GPU implementation
-  (matrix, vector) => {
+  (vector) => {
     return {
-      value: `${matrix.value} * mat4x4<f32>(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${vector.value}.x, ${vector.value}.y, ${vector.value}.z, 1)`,
-      dataType: matrix.dataType,
+      value: `mat4x4<f32>(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${vector.value}.x, ${vector.value}.y, ${vector.value}.z, 1)`,
+      dataType: mat4x4f,
     };
   },
 );
@@ -141,7 +139,7 @@ function createMatSchema<
     type: options.type,
     label: options.type,
     identity: IdentityFunctions[options.columns],
-    translate: options.columns === 4 ? translate4x4 : undefined,
+    translation: options.columns === 4 ? translation4x4 : undefined,
   };
 
   const construct = createDualImpl(
