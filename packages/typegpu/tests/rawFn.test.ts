@@ -20,9 +20,9 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   it('resolves rawFn to WGSL', () => {
     const getY = tgpu['~unstable']
       .fn(
-        [],
+        {},
         d.f32,
-      )(`() {
+      )(`{
         return 3.0f;
       }`)
       .$name('get_y');
@@ -30,7 +30,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
     const actual = parseResolved({ getY });
 
     const expected = parse(`
-      fn get_y() {
+      fn get_y() -> f32 {
         return 3.0f;
       }
     `);
@@ -41,9 +41,9 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   it('resolves externals and replaces their usages in code', () => {
     const getColor = tgpu['~unstable']
       .fn(
-        [],
+        {},
         d.vec3f,
-      )(`() {
+      )(`{
         let color = vec3f();
         return color;
       }`)
@@ -51,9 +51,9 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
 
     const getX = tgpu['~unstable']
       .fn(
-        [],
+        {},
         d.f32,
-      )(`() {
+      )(`{
         let color = get_color();
         return 3.0f;
       }`)
@@ -62,9 +62,9 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
 
     const getY = tgpu['~unstable']
       .fn(
-        [],
+        {},
         d.f32,
-      )(`() {
+      )(`{
         let c = color();
         return getX();
       }`)
@@ -74,17 +74,17 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
     const actual = parseResolved({ getY });
 
     const expected = parse(`
-      fn get_color() {
+      fn get_color() -> vec3f {
         let color = vec3f();
         return color;
       }
 
-      fn get_x() {
+      fn get_x() -> f32 {
         let color = get_color();
         return 3.0f;
       }
 
-      fn get_y() {
+      fn get_y() -> f32 {
         let c = get_color();
         return get_x();
       }
@@ -96,18 +96,18 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   it('replaces external usage just for exact identifier matches', () => {
     const getx = tgpu['~unstable']
       .fn(
-        [],
+        {},
         d.f32,
-      )(`() {
+      )(` {
         return 3.0f;
       }`)
       .$name('external');
 
     const getY = tgpu['~unstable']
       .fn(
-        [],
+        {},
         d.f32,
-      )(`() {
+      )(`{
         let x = getx();
         let y = getx() + getx();
         let z = hellogetx();
@@ -122,11 +122,11 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
     const actual = parseResolved({ getY });
 
     const expected = parse(`
-      fn external() {
+      fn external() -> f32 {
         return 3.0f;
       }
 
-      fn get_y() {
+      fn get_y() -> f32 {
         let x = external();
         let y = external() + external();
         let z = hellogetx();
@@ -191,7 +191,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       .vertexFn({
         in: { vertexIndex: d.builtin.vertexIndex },
         out: { outPos: d.builtin.position },
-      })(/* wgsl */ `(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
+      })(/* wgsl */ `{
     var pos = array<vec2f, 6>(
       vec2<f32>( 1,  1),
       vec2<f32>( 1, -1),
@@ -201,7 +201,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       vec2<f32>(-1,  1)
     );
 
-    var output: VertexOutput;
+    var output: Out;
     output.outPos = vec4f(pos[vertexIndex], 0, 1);
     return output;
   }`)
@@ -225,12 +225,12 @@ struct vertex_fn_Output {
       .fragmentFn({
         in: { position: d.builtin.position },
         out: { a: d.vec4f, b: d.builtin.fragDepth },
-      })(/* wgsl */ `(@builtin(position) position: vec4f) -> Output {
-    var out: Output;
-    out.a = vec4f(1.0);
-    out.b = 1;
-    return out;
-  }`)
+      })(/* wgsl */ `{
+        var out: Out;
+        out.a = vec4f(1.0);
+        out.b = 1;
+        return out;
+      }`)
       .$name('fragment');
 
     const resolved = tgpu.resolve({
@@ -244,7 +244,7 @@ struct fragment_Output {
   @builtin(frag_depth) b: f32,
 }`);
     expect(resolved).toContain('-> fragment_Output {');
-    expect(resolved).not.toContain(' Output');
+    expect(resolved).not.toContain(' Out');
   });
 
   it('properly handles fragment functions with a single output argument', () => {
@@ -382,10 +382,10 @@ struct fragment_Output {
         [d.vec4f],
         Point,
       )(/* wgsl */ `(a: vec4f) -> PointStruct {
-    var newPoint: PointStruct;
-    newPoint = b;
-    return newPoint;
-  }`)
+        var newPoint: PointStruct;
+        newPoint = b;
+        return newPoint;
+      }`)
       .$name('newPointF');
 
     expect(parseResolved({ func })).toEqual(
