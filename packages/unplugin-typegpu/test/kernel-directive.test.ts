@@ -22,7 +22,7 @@ describe('[BABEL] "kernel" directive', () => {
         'kernel';
 
         return a + b;
-      }, {"argNames":["a","b"],"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {});
+      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {});
       const addCPU = (a, b) => {
         return a + b;
       };"
@@ -52,7 +52,7 @@ describe('[BABEL] "kernel" directive', () => {
         'kernel';
 
         return a + b;
-      }, {"argNames":["a","b"],"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {}));
+      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {}));
       shell((a, b) => {
         return a + b;
       });"
@@ -82,7 +82,7 @@ describe('[BABEL] "kernel" directive', () => {
         'kernel';
 
         return a + b;
-      }, {"argNames":["a","b"],"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {}));
+      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {}));
       shell(function (a, b) {
         return a + b;
       });"
@@ -112,7 +112,7 @@ describe('[BABEL] "kernel" directive', () => {
         'kernel';
 
         return a + b;
-      }, {"argNames":["a","b"],"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {}));
+      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {}));
       shell(function addCPU(a, b) {
         return a + b;
       });"
@@ -139,7 +139,7 @@ describe('[BABEL] "kernel" directive', () => {
         'kernel';
 
         return a + b;
-      }, {"argNames":["a","b"],"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {});
+      }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}, {});
       function addCPU(a, b) {
         return a + b;
       }"
@@ -172,7 +172,7 @@ describe('[ROLLUP] "kernel" directive', () => {
       const addGPU = tgpu.__assignAst((a, b) => {
               'kernel';
               return a + b;
-            }, {"argNames":["a","b"],"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]});
+            }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]});
 
             console.log(addGPU);
 
@@ -209,7 +209,7 @@ describe('[ROLLUP] "kernel" directive', () => {
             shell(tgpu.__assignAst((a, b) => {
                 'kernel';
                 return a + b;
-            }, {"argNames":["a","b"],"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}));
+            }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}));
 
             shell((a, b) => {
                 return a + b;
@@ -241,7 +241,7 @@ describe('[ROLLUP] "kernel" directive', () => {
             shell(tgpu.__assignAst(function(a, b){
                 'kernel';
                 return a + b;
-            }, {"argNames":["a","b"],"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}));
+            }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}));
 
             shell(function(a, b) {
                 return a + b;
@@ -274,7 +274,7 @@ describe('[ROLLUP] "kernel" directive', () => {
             shell(tgpu.__assignAst(function addGPU(a, b){
                 'kernel';
                 return a + b;
-            }, {"argNames":["a","b"],"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}));
+            }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]}));
 
             shell(function addCPU(a, b) {
                 return a + b;
@@ -307,7 +307,7 @@ describe('[ROLLUP] "kernel" directive', () => {
       const addGPU = tgpu.__assignAst(function addGPU(a, b) {
               'kernel';
               return a + b;
-            }, {"argNames":["a","b"],"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]});
+            }, {"argNames":{"type":"identifiers","names":["a","b"]},"body":{"b":[{"r":{"x":["a","+","b"]}}]},"externalNames":[]});
 
             console.log(addGPU);
 
