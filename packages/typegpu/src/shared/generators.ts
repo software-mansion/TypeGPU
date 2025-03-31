@@ -39,7 +39,7 @@ export function createDualImpl<T extends (...args: any[]) => any>(
 
   Object.defineProperty(impl, $internal, {
     value: {
-      implementation: gpuImpl,
+      implementation: jsImpl,
     },
   });
 
