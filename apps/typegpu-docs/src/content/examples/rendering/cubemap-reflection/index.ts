@@ -43,6 +43,13 @@ context.configure({
 
 let smoothNormals = false;
 let subdivisions = 2;
+const materialProps = {
+  shininess: 32,
+  reflectivity: 0.7,
+  ambient: d.vec3f(0.1, 0.1, 0.1),
+  diffuse: d.vec3f(0.3, 0.3, 0.3),
+  specular: d.vec3f(0.8, 0.8, 0.8),
+};
 
 // Initialize with default values
 let vertexBuffer = icosphereGenerator.createIcosphere(
@@ -80,11 +87,11 @@ const lightBuffer = root
 
 const materialBuffer = root
   .createBuffer(Material, {
-    ambient: d.vec3f(0.1, 0.1, 0.1),
-    diffuse: d.vec3f(0.3, 0.3, 0.3),
-    specular: d.vec3f(0.8, 0.8, 0.8),
-    shininess: 32,
-    reflectivity: 0.7,
+    ambient: materialProps.ambient,
+    diffuse: materialProps.diffuse,
+    specular: materialProps.specular,
+    shininess: materialProps.shininess,
+    reflectivity: materialProps.reflectivity,
   })
   .$usage('uniform');
 
@@ -371,6 +378,56 @@ export const controls = {
         subdivisions,
         smoothNormals,
       );
+    },
+  },
+  'ambient color': {
+    initial: materialProps.ambient,
+    min: d.vec3f(0, 0, 0),
+    max: d.vec3f(1, 1, 1),
+    step: d.vec3f(0.01, 0.01, 0.01),
+    onVectorSliderChange: (value: d.v3f) => {
+      materialProps.ambient = value;
+      materialBuffer.writePartial({ ambient: value });
+    },
+  },
+  'diffuse color': {
+    initial: materialProps.diffuse,
+    min: d.vec3f(0, 0, 0),
+    max: d.vec3f(1, 1, 1),
+    step: d.vec3f(0.01, 0.01, 0.01),
+    onVectorSliderChange: (value: d.v3f) => {
+      materialProps.diffuse = value;
+      materialBuffer.writePartial({ diffuse: value });
+    },
+  },
+  'specular color': {
+    initial: materialProps.specular,
+    min: d.vec3f(0, 0, 0),
+    max: d.vec3f(1, 1, 1),
+    step: d.vec3f(0.01, 0.01, 0.01),
+    onVectorSliderChange: (value: d.v3f) => {
+      materialProps.specular = value;
+      materialBuffer.writePartial({ specular: value });
+    },
+  },
+  shininess: {
+    initial: materialProps.shininess,
+    min: 1,
+    max: 128,
+    step: 1,
+    onSliderChange: (value: number) => {
+      materialProps.shininess = value;
+      materialBuffer.writePartial({ shininess: value });
+    },
+  },
+  reflectivity: {
+    initial: materialProps.reflectivity,
+    min: 0,
+    max: 1,
+    step: 0.1,
+    onSliderChange: (value: number) => {
+      materialProps.reflectivity = value;
+      materialBuffer.writePartial({ reflectivity: value });
     },
   },
 };

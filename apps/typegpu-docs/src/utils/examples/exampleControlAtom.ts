@@ -1,4 +1,5 @@
 import { atom } from 'jotai';
+import type * as d from 'typegpu/data';
 
 export type SelectControlParam = {
   onSelectChange: (newValue: string) => void;
@@ -22,6 +23,15 @@ export type SliderControlParam = {
   label: string;
 };
 
+export type VectorSLiderControlParam<T extends d.AnyVecInstance> = {
+  onVectorSliderChange: (newValue: T) => void;
+  initial?: T;
+  min: T;
+  max: T;
+  step: T;
+  label: string;
+};
+
 export type ButtonControlParam = {
   onButtonClick: (() => void) | (() => Promise<void>);
   label: string;
@@ -38,6 +48,7 @@ export type ExampleControlParam =
   | ToggleControlParam
   | SliderControlParam
   | ButtonControlParam
-  | TextAreaControlParam;
+  | TextAreaControlParam
+  | VectorSLiderControlParam<d.AnyVecInstance>;
 
 export const exampleControlsAtom = atom<ExampleControlParam[]>([]);

@@ -56,6 +56,7 @@ export type {
   Location,
   Interpolate,
   AnyWgslData,
+  AnyVecInstance,
   v2f,
   v2i,
   v2u,
