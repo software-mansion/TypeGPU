@@ -61,11 +61,12 @@ export type TgpuFnShell<
     /**
      * @deprecated Invoke the shell as a function instead.
      */
-    does: (
+    does: ((
       implementation: (
         ...args: Args extends AnyWgslData[] ? InferArgs<Args> : [InferIO<Args>]
       ) => InferReturn<Return>,
-    ) => TgpuFn<Args, Return>;
+    ) => TgpuFn<Args, Return>) &
+      ((implementation: string) => TgpuFn<Args, Return>);
   };
 
 interface TgpuFnBase<

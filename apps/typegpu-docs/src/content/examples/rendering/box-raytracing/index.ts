@@ -172,8 +172,7 @@ const getBoxIntersection = tgpu['~unstable']
   output.tMin = tMin;
   output.tMax = tMax;
   return output;
-}
-`)
+}`)
   .$name('box_intersection');
 
 const vertexFunction = tgpu['~unstable']
