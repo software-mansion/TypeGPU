@@ -38,6 +38,7 @@ export const mainVertex = tgpu['~unstable']
   })
   .$name('mainVertex');
 
+
 export const mainFragment = tgpu['~unstable']
   .fragmentFn({
     in: VertexOutput,

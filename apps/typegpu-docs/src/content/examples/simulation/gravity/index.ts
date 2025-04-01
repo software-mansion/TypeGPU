@@ -15,7 +15,7 @@ import {
 } from './structs';
 
 const vertexLayout = tgpu.vertexLayout((n: number) =>
-  d.arrayOf(VertexStruct, n),
+  d.arrayOf(VertexStruct, n) //, 'instance'
 );
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -28,17 +28,6 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-// const cubeTexture = root['~unstable']
-//   .createTexture({
-//     size: [imageBitmap.width, imageBitmap.height],
-//     format: 'rgba8unorm',
-//   })
-//   .$usage('sampled', 'render');
-// device.queue.copyExternalImageToTexture(
-//   { source: imageBitmap },
-//   { texture: root.unwrap(cubeTexture) },
-//   [imageBitmap.width, imageBitmap.height],
-// );
 
 const vertexBuffer = root
   .createBuffer(
@@ -70,17 +59,17 @@ const cameraBuffer = root
   .createBuffer(CameraStruct, cameraInitial)
   .$usage('uniform');
 
-// const cubeModelMatrix = d.mat4x4f();
-// m.mat4.identity(cubeModelMatrix);
+// const sphereModelMatrix = d.mat4x4f();
+// m.mat4.identity(sphereModelMatrix);
 // m.mat4.translate(
-//   cubeModelMatrix,
-//   d.vec3f(cubePos.x, cubePos.y, cubePos.z),
-//   cubeModelMatrix,
+//   sphereModelMatrix,
+//   d.vec3f(spherePos.x, spherePos.y, spherePos.z),
+//   sphereModelMatrix,
 // );
 
 // export const centerObjectBuffer = root
 //   .createBuffer(ObjectStruct, {
-//     modelMatrix: cubeModelMatrix,
+//     modelMatrix: sphereModelMatrix,
 //   })
 //   .$usage('uniform');
 
@@ -97,7 +86,7 @@ const cameraBindGroup = root.createBindGroup(cameraBindGroupLayout, {
   sampler,
 });
 
-const CelestialBodyMaxArray = d.arrayOf(CelectialBodyStruct, 3);
+const CelestialBodyMaxArray = d.arrayOf(CelectialBodyStruct, 4);
 
 const celestialBodiesBufferA = root
   .createBuffer(CelestialBodyMaxArray, [
@@ -119,6 +108,12 @@ const celestialBodiesBufferA = root
       velocity: d.vec3f(0, 0, -3),
       mass: 1,
     },
+    {
+      modelMatrix: d.mat4x4f(),
+      position: d.vec3f(5, 0, 0),
+      velocity: d.vec3f(0, 0, 0),
+      mass: 1,
+    }
   ])
   .$usage('storage');
 const celestialBodiesBufferB = root
@@ -157,7 +152,7 @@ function render() {
       celestialBodyLayout,
       flip ? celestialBodiesBindGroupA : celestialBodiesBindGroupB,
     )
-    .dispatchWorkgroups(3); // count of celestial bodies
+    .dispatchWorkgroups(4); // count of celestial bodies
 
   renderPipeline
     .withColorAttachment({
@@ -168,17 +163,27 @@ function render() {
     })
     .with(vertexLayout, vertexBuffer)
     .with(cameraBindGroupLayout, cameraBindGroup)
-    // .with(centerObjectbindGroupLayout, centerObjectBindGroup)
     .with(
       celestialBodyLayout,
       flip ? celestialBodiesBindGroupA : celestialBodiesBindGroupB,
     )
-    .draw(36, 3);
+    .draw(36, 4);
+
+  // renderPipeline
+  //   .withColorAttachment({
+  //     view: context.getCurrentTexture().createView(),
+  //     loadOp: 'load',
+  //     storeOp: 'store',
+  //     clearValue: [0, 0, 0, 1], // background color
+  //   })
+  //   .with(centerObjectbindGroupLayout, centerObjectBindGroup)
+  //   .draw(150, 1);
+    
 
   root['~unstable'].flush();
 }
 
-console.log('Cube position:', await vertexBuffer.read());
+// console.log('Cube position:', await vertexBuffer.read());
 let destroyed = false;
 // Frame loop
 function frame() {
