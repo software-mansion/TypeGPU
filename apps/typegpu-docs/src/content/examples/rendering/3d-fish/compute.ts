@@ -12,8 +12,7 @@ export const computeShader = tgpu['~unstable']
   .computeFn({
     in: { gid: d.builtin.globalInvocationId },
     workgroupSize: [p.workGroupSize],
-  })
-  .does((input) => {
+  })((input) => {
     const fishIndex = input.gid.x;
     const fishData = currentFishData.value[fishIndex];
     let separation = d.vec3f();
@@ -75,11 +74,11 @@ export const computeShader = tgpu['~unstable']
     }
 
     if (mouseRay.value.activated === 1) {
-      const distanceVector = distanceVectorFromLine(
-        mouseRay.value.pointX,
-        mouseRay.value.pointY,
-        fishData.position,
-      );
+      const distanceVector = distanceVectorFromLine({
+        lineStart: mouseRay.value.pointX,
+        lineEnd: mouseRay.value.pointY,
+        point: fishData.position,
+      });
       const limit = p.fishMouseRayRepulsionDistance;
       const str =
         std.pow(2, std.clamp(limit - std.length(distanceVector), 0, limit)) - 1;
