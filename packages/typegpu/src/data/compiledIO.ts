@@ -61,6 +61,10 @@ export function buildWriter(
   offsetExpr: string,
   valueExpr: string,
 ): string {
+  if (wgsl.isAtomic(node) || wgsl.isDecorated(node)) {
+    return buildWriter(node.inner, offsetExpr, valueExpr);
+  }
+
   if (wgsl.isWgslStruct(node) || isUnstruct(node)) {
     const propOffsets = offsetsForProps(node);
     const sortedProps = Object.entries(propOffsets).sort(
@@ -130,14 +134,7 @@ export function buildWriter(
     return code;
   }
 
-  let unwrappedNode = node;
-
-  while (wgsl.isAtomic(unwrappedNode) || wgsl.isDecorated(unwrappedNode)) {
-    unwrappedNode = unwrappedNode.inner;
-  }
-
-  const primitive =
-    typeToPrimitive[unwrappedNode.type as keyof typeof typeToPrimitive];
+  const primitive = typeToPrimitive[node.type as keyof typeof typeToPrimitive];
   return `output.${primitiveToWriteFunction[primitive]}(${offsetExpr}, ${valueExpr}, littleEndian);\n`;
 }
 

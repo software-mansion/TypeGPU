@@ -92,8 +92,7 @@ const VertexOutput = d.ioStruct({
 });
 
 const vertexMain = tgpu
-  .vertexFn([tgpu.builtin.vertexIndex], VertexOutput)
-  .does((idx) => {
+  .vertexFn([tgpu.builtin.vertexIndex], VertexOutput)((idx) => {
     const vertices = [
       vec2f(0, 0.5),
       vec2f(-0.5, -0.5),
@@ -108,8 +107,7 @@ const vertexMain = tgpu
   });
 
 const fragmentMain = tgpu
-  .fragmentFn([], vec4f)
-  .does(() => {
+  .fragmentFn([], vec4f)(() => {
     // let's go with a simple purple for now
     return vec4f(0.7686, 0.3922, 1.0, 1.0);
   });
@@ -122,8 +120,7 @@ what arguments it accepts, and what it should return:
 
 ```ts
 const vertexMain = tgpu
-  .vertexFn([tgpu.builtin.vertexIndex], VertexOutput)
-  .does(/* accept parameter of type (p0: number) => { position: vec4f } */);
+  .vertexFn([tgpu.builtin.vertexIndex], VertexOutput)(/* accept parameter of type (p0: number) => { position: vec4f } */);
 ```
 
 
@@ -1503,3 +1500,4 @@ import step9webgpu from 'code/step9-webgpu.ts?raw';
 
 Congratulations! You've successfully implemented the boids flocking algorithm in WebGPU using TypeGPU.
 Along the way, you learned about creating and using a TypeGPU runtime, writing shader code, managing buffers, creating pipelines, and using slots. For more information, refer to the TypeGPU documentation. Thank you for following along and happy coding!
+

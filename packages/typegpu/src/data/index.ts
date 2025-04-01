@@ -46,6 +46,7 @@ export type {
   Mat3x3f,
   Mat4x4f,
   WgslArray,
+  WgslStruct,
   Ptr,
   Atomic,
   Decorated,
@@ -68,10 +69,7 @@ export type {
   m3x3f,
   m4x4f,
 } from './wgslTypes';
-export {
-  type WgslStruct,
-  struct,
-} from './struct';
+export { struct } from './struct';
 export { arrayOf } from './array';
 export {
   ptrFn,
