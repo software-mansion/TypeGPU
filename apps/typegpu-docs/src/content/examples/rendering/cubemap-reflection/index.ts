@@ -13,6 +13,7 @@ import {
 } from './dataTypes';
 import { IcosphereGenerator } from './icosphere';
 
+// Initialization
 const adapter = await navigator.gpu.requestAdapter();
 if (!adapter) {
   throw new Error('WebGPU not supported');
@@ -29,7 +30,7 @@ const device = await adapter.requestDevice({
 });
 const root = tgpu.initFromDevice({ device });
 
-const icosphereGenerator = new IcosphereGenerator(root, maxSize);
+// Canvas Setup
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -41,6 +42,8 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
+// Geometry & Material Setup
+
 let smoothNormals = false;
 let subdivisions = 2;
 const materialProps = {
@@ -51,15 +54,16 @@ const materialProps = {
   specular: d.vec3f(0.8, 0.8, 0.8),
 };
 
-// Initialize with default values
+const icosphereGenerator = new IcosphereGenerator(root, maxSize);
 let vertexBuffer = icosphereGenerator.createIcosphere(
   subdivisions,
   smoothNormals,
 );
-
 const cubeVertexBuffer = root
   .createBuffer(d.arrayOf(CubeVertex, cubeVertices.length), cubeVertices)
   .$usage('vertex');
+
+// Camera Setup
 
 const cameraPosition = d.vec4f(0, 0, 5, 1);
 const cameraInitialPos = d.vec3f(0, 1, 5);
@@ -76,6 +80,8 @@ const cameraBuffer = root
     position: cameraPosition,
   })
   .$usage('uniform');
+
+// Light & Material Buffers
 
 const lightBuffer = root
   .createBuffer(DirectionalLight, {
@@ -95,12 +101,16 @@ const materialBuffer = root
   })
   .$usage('uniform');
 
+// Textures & Samplers
+
 const cubemapTexture = await loadCubemap(root);
 const cubemap = cubemapTexture.createView('sampled', { dimension: 'cube' });
 const sampler = tgpu['~unstable'].sampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
+
+// Bind Groups & Layouts
 
 const renderLayout = tgpu.bindGroupLayout({
   camera: { uniform: Camera },
@@ -116,10 +126,11 @@ const renderBindGroup = root.createBindGroup(renderLayout, {
 });
 
 const vertexLayout = tgpu.vertexLayout((n: number) => d.disarrayOf(Vertex, n));
-
 const cubeVertexLayout = tgpu.vertexLayout((n: number) =>
   d.arrayOf(CubeVertex, n),
 );
+
+// Shader Functions
 
 const vertexFn = tgpu['~unstable']
   .vertexFn({
@@ -234,6 +245,8 @@ const cubeFragmentFn = tgpu['~unstable']
     return std.textureSample(cubemap, sampler, dir);
   });
 
+// Pipeline Setup
+
 const cubePipeline = root['~unstable']
   .withVertex(cubeVertexFn, cubeVertexLayout.attrib)
   .withFragment(cubeFragmentFn, { format: presentationFormat })
@@ -249,6 +262,8 @@ const pipeline = root['~unstable']
     cullMode: 'back',
   })
   .createPipeline();
+
+// Render Functions
 
 function render() {
   cubePipeline
