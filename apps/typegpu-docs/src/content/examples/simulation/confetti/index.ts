@@ -90,8 +90,7 @@ const dataLayout = tgpu
 const rotate = tgpu['~unstable'].fn(
   { v: d.vec2f, angle: d.f32 },
   d.vec2f,
-)(/* wgsl */ `
-  (v: vec2f, angle: f32) -> vec2f {
+)(/* wgsl */ `{
     let pos = vec2(
       (v.x * cos(angle)) - (v.y * sin(angle)),
       (v.x * sin(angle)) + (v.y * cos(angle))
@@ -112,16 +111,16 @@ const mainVert = tgpu['~unstable']
     },
     out: VertexOutput,
   })(
-    /* wgsl */ `(input: VertexInput) -> VertexOutput {
-    let width = input.tilt;
-    let height = input.tilt / 2;
+    /* wgsl */ `{
+    let width = in.tilt;
+    let height = in.tilt / 2;
 
     var pos = rotate(array<vec2f, 4>(
       vec2f(0, 0),
       vec2f(width, 0),
       vec2f(0, height),
       vec2f(width, height),
-    )[input.index] / 350, input.angle) + input.center;
+    )[in.index] / 350, in.angle) + in.center;
 
     if (canvasAspectRatio < 1) {
       pos.x /= canvasAspectRatio;
@@ -129,7 +128,7 @@ const mainVert = tgpu['~unstable']
       pos.y *= canvasAspectRatio;
     }
 
-    return VertexOutput(vec4f(pos, 0.0, 1.0), input.color);
+    return Out(vec4f(pos, 0.0, 1.0), in.color);
   }`,
   )
   .$uses({
@@ -140,15 +139,14 @@ const mainVert = tgpu['~unstable']
 const mainFrag = tgpu['~unstable'].fragmentFn({
   in: VertexOutput,
   out: d.vec4f,
-})(/* wgsl */ `
-  (input: FragmentInput) -> @location(0) vec4f {
-    return input.color;
+})(/* wgsl */ `{
+    return in.color;
   }`);
 
 const mainCompute = tgpu['~unstable']
   .computeFn({ in: { gid: d.builtin.globalInvocationId }, workgroupSize: [1] })(
-    /* wgsl */ `(input: ComputeInput) {
-    let index = input.gid.x;
+    /* wgsl */ `{
+    let index = in.gid.x;
     if index == 0 {
       time += deltaTime;
     }

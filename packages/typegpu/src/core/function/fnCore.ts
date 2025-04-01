@@ -1,5 +1,11 @@
-import type { AnyWgslData } from '../../data/wgslTypes';
+import { getAttributesString } from '../../data/attributes';
+import {
+  type AnyWgslData,
+  isWgslData,
+  isWgslStruct,
+} from '../../data/wgslTypes';
 import { MissingLinksError } from '../../errors';
+import { resolveFunctionHeader } from '../../resolutionCtx';
 import type { ResolutionCtx, Resource } from '../../types';
 import {
   type ExternalMap,
@@ -48,6 +54,14 @@ export function createFnCore(
     addReturnTypeToExternals(implementation, shell.returnType, (externals) =>
       externalsToApply.push(externals),
     );
+
+    if (Array.isArray(shell.argTypes) && isWgslStruct(shell.argTypes[0])) {
+      externalsToApply.push({ In: shell.argTypes[0] });
+    }
+
+    if (isWgslStruct(shell.returnType)) {
+      externalsToApply.push({ Out: shell.returnType });
+    }
   }
 
   return {
@@ -67,10 +81,43 @@ export function createFnCore(
       const id = ctx.names.makeUnique(this.label);
 
       if (typeof implementation === 'string') {
+        let header = '';
+
+        if (fnAttribute === '') {
+          // non-entry function
+          header = Array.isArray(shell.argTypes)
+            ? ''
+            : resolveFunctionHeader(
+                ctx,
+                Object.entries(shell.argTypes).map(([value, dataType]) => ({
+                  value,
+                  dataType: dataType as AnyWgslData,
+                })),
+                shell.returnType as AnyWgslData,
+              );
+        } else {
+          // entry function
+          const input =
+            Array.isArray(shell.argTypes) && isWgslStruct(shell.argTypes[0])
+              ? '(in: In)'
+              : '()';
+
+          const attributes = isWgslData(shell.returnType)
+            ? getAttributesString(shell.returnType)
+            : '';
+          const output =
+            shell.returnType !== undefined
+              ? isWgslStruct(shell.returnType)
+                ? '-> Out'
+                : `-> ${attributes !== '' ? attributes : '@location(0)'} ${ctx.resolve(shell.returnType)}`
+              : '';
+          header = `${input} ${output} `;
+        }
+
         const replacedImpl = replaceExternalsInWgsl(
           ctx,
           externalMap,
-          implementation.trim(),
+          `${header}${implementation.trim()}`,
         );
 
         ctx.addDeclaration(`${fnAttribute}fn ${id}${replacedImpl}`);

@@ -20,7 +20,7 @@ const getGradientColor = tgpu['~unstable']
   .fn(
     { ratio: d.f32 },
     d.vec4f,
-  )(/* wgsl */ `(ratio: f32) -> vec4f {
+  )(/* wgsl */ `{
     let color = mix(purple, blue, ratio);
     return color;
   }`)
@@ -30,7 +30,7 @@ const getGradientColor = tgpu['~unstable']
 const mainVertex = tgpu['~unstable'].vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { outPos: d.builtin.position, uv: d.vec2f },
-})(/* wgsl */ `(input: VertexInput) -> VertexOutput {
+})(/* wgsl */ `{
     var pos = array<vec2f, 3>(
       vec2(0.0, 0.5),
       vec2(-0.5, -0.5),
@@ -43,15 +43,15 @@ const mainVertex = tgpu['~unstable'].vertexFn({
       vec2(1.0, 0.0),
     );
 
-    return VertexOutput(vec4f(pos[input.vertexIndex], 0.0, 1.0), uv[input.vertexIndex]);
+    return Out(vec4f(pos[in.vertexIndex], 0.0, 1.0), uv[in.vertexIndex]);
   }`);
 
 const mainFragment = tgpu['~unstable']
   .fragmentFn({
     in: { uv: d.vec2f },
     out: d.vec4f,
-  })(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
-    return getGradientColor((input.uv[0] + input.uv[1]) / 2);
+  })(/* wgsl */ `{
+    return getGradientColor((in.uv[0] + in.uv[1]) / 2);
   }`)
   .$uses({ getGradientColor });
 

@@ -110,12 +110,8 @@ const getBoxIntersection = tgpu['~unstable']
   .fn(
     { boundMin: d.vec3f, boundMax: d.vec3f, ray: RayStruct },
     IntersectionStruct,
-  )(/* wgsl */ `(
-  boundMin: vec3f,
-  boundMax: vec3f,
-  ray: RayStruct
-) -> IntersectionStruct {
-  var output: IntersectionStruct;
+  )(/* wgsl */ `{
+  var output: Out;
 
   var tMin: f32;
   var tMax: f32;
@@ -184,7 +180,7 @@ const vertexFunction = tgpu['~unstable']
   .vertexFn({
     in: { vertexIndex: d.builtin.vertexIndex },
     out: { outPos: d.builtin.position },
-  })(/* wgsl */ `(input: VertexInput) -> VertexOutput {
+  })(/* wgsl */ `{
   var pos = array<vec2f, 6>(
     vec2<f32>( 1,  1),
     vec2<f32>( 1, -1),
@@ -194,9 +190,7 @@ const vertexFunction = tgpu['~unstable']
     vec2<f32>(-1,  1)
   );
 
-  var output: VertexOutput;
-  output.outPos = vec4f(pos[input.vertexIndex], 0, 1);
-  return output;
+  return Out(vec4f(pos[in.vertexIndex], 0, 1));
 }`)
   .$name('vertex_main');
 
@@ -207,13 +201,13 @@ const fragmentFunction = tgpu['~unstable']
   .fragmentFn({
     in: { position: d.builtin.position },
     out: d.vec4f,
-  })(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
+  })(/* wgsl */ `{
   let minDim = f32(min(canvasDims.width, canvasDims.height));
 
   var ray: RayStruct;
   ray.origin = cameraPosition;
-  ray.direction += cameraAxes.right * (input.position.x - f32(canvasDims.width)/2)/minDim;
-  ray.direction += cameraAxes.up * (input.position.y - f32(canvasDims.height)/2)/minDim;
+  ray.direction += cameraAxes.right * (in.position.x - f32(canvasDims.width)/2)/minDim;
+  ray.direction += cameraAxes.up * (in.position.y - f32(canvasDims.height)/2)/minDim;
   ray.direction += cameraAxes.forward;
   ray.direction = normalize(ray.direction);
 

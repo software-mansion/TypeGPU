@@ -106,9 +106,9 @@ describe('tgpu.fn function with arguments passed in a record', () => {
     });
 
     const f = tgpu['~unstable']
-      .fn({})(`() {
-      var x = add(2, 3);
-    }`)
+      .fn({})(`{
+        var x = add(2, 3);
+      }`)
       .$uses({ add });
 
     expect(parseResolved({ f })).toEqual(

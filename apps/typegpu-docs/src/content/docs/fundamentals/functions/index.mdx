@@ -25,7 +25,7 @@ The following code defines a function that accepts one argument and returns one 
 
 ```ts
 const getGradientColor = tgpu['~unstable']
-  .fn([d.f32], d.vec4f)(`(ratio: f32) -> vec4f {
+  .fn({ ratio: d.f32 }, d.vec4f)(`{
     let color = mix(vec4f(0.769, 0.392, 1.0, 1), d.vec4f(0.114, 0.447, 0.941, 1), ratio);
     return color;
   }`)
@@ -41,12 +41,14 @@ Externals can be any value or TypeGPU resource that can be resolved to WGSL (fun
 
 ```ts
 const getBlue = tgpu['~unstable']
-  .fn([], d.f32)('() -> f32 { return 0.941; }');
+  .fn({}, d.vec4f)(`{ 
+    return vec4f(0.114, 0.447, 0.941, 1); 
+  }`);
 
 const purple = d.vec4f(0.769, 0.392, 1.0, 1);
 
 const getGradientColor = tgpu['~unstable']
-  .fn([d.f32], d.vec4f)(`(ratio: f32) -> vec4f {
+  .fn({ ratio: d.f32 }, d.vec4f)(`{
     let color = mix(purple, getBlue(), ratio);
     return color;
   }`)
@@ -57,7 +59,9 @@ const getGradientColor = tgpu['~unstable']
 The `getGradientColor` function, when resolved to WGSL, includes the definitions of all used external resources:
 
 ```wgsl
-fn getBlue_1() -> f32 { return 0.941; }
+fn getBlue_1() -> vec4f { 
+  return vec4f(0.114, 0.447, 0.941, 1); 
+}
 
 fn getGradientColor_0(ratio: f32) -> vec4f {
   let color = mix(vec4f(0.769, 0.392, 1, 1), getBlue_1(), ratio);
@@ -79,7 +83,7 @@ const mainVertex = tgpu['~unstable']
   .vertexFn({
     in: { vertexIndex: d.builtin.vertexIndex },
     out: { outPos: d.builtin.position, uv: d.vec2f },
-  })(/* wgsl */ `(input: VertexInput) -> VertexOutput {
+  })(/* wgsl */ `{
     var pos = array<vec2f, 3>(
       vec2(0.0, 0.5),
       vec2(-0.5, -0.5),
@@ -92,18 +96,19 @@ const mainVertex = tgpu['~unstable']
       vec2(1.0, 0.0),
     );
 
-    return VertexOutput(vec4f(pos[input.vertexIndex], 0.0, 1.0), uv[input.vertexIndex]);
+    return Out(vec4f(pos[in.vertexIndex], 0.0, 1.0), uv[in.vertexIndex]);
   }`);
 
 const mainFragment = tgpu['~unstable']
-  .fragmentFn({ in: { uv: d.vec2f }, out: d.vec4f })(/* wgsl */ `(input: FragmentInput) -> @location(0) vec4f {
-    return getGradientColor((input.uv[0] + input.uv[1]) / 2);
+  .fragmentFn({ in: { uv: d.vec2f }, out: d.vec4f })(/* wgsl */ `{
+    return getGradientColor((in.uv[0] + in.uv[1]) / 2);
   }`)
   .$uses({ getGradientColor });
 ```
 
-When entry function inputs or outputs are specified as objects containing builtins and inter-stage variables, the WGSL implementations need to access these arguments as passed in via structs (see *VertexInput*, *VertexOutput*, *FragmentInput*). 
-TypeGPU schemas for these structs are created automatically by the library and their definitions are included when resolving the functions. The names referenced in the implementations do not matter.
+When entry function inputs or outputs are specified as objects containing builtins and inter-stage variables, the WGSL implementations need to access these arguments as passed in via structs. 
+TypeGPU schemas for these structs are created automatically by the library and their definitions are included when resolving the functions. 
+Input values are accessible through the `in` keyword, while the automatically created structs for input and output shall be referenced in implementation as `In` and `Out` respectively.
 
 ## Usage in pipelines
 
