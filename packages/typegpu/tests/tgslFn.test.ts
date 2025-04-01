@@ -362,8 +362,10 @@ describe('TGSL tgpu.fn function', () => {
     }).$name('TestStruct');
 
     const fn = tgpu['~unstable']
-      .fn([], TestStruct)
-      .does(() => {
+      .fn(
+        [],
+        TestStruct,
+      )(() => {
         return {
           a: 1,
           b: 2,
@@ -397,8 +399,10 @@ describe('TGSL tgpu.fn function', () => {
     }).$name('TestStruct');
 
     const fn = tgpu['~unstable']
-      .fn([], TestStruct)
-      .does(() => {
+      .fn(
+        [],
+        TestStruct,
+      )(() => {
         return {
           a: 1,
           b: 2,
@@ -411,8 +415,7 @@ describe('TGSL tgpu.fn function', () => {
       .computeFn({
         in: { gid: builtin.globalInvocationId },
         workgroupSize: [24],
-      })
-      .does((input) => {
+      })((input) => {
         const testStruct = fn();
       })
       .$name('compute_fn');
@@ -420,6 +423,10 @@ describe('TGSL tgpu.fn function', () => {
     const actual = parseResolved({ fn2 });
 
     const expected = parse(`
+      struct compute_fn_Input {
+        @builtin(global_invocation_id) gid: vec3u,
+      }
+
       struct TestStruct {
         a: f32,
         b: f32,
@@ -428,10 +435,6 @@ describe('TGSL tgpu.fn function', () => {
 
       fn test_struct() -> TestStruct {
         return TestStruct(1, 2, vec2f(3, 4));
-      }
-
-      struct compute_fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
       }
 
       @compute @workgroup_size(24)

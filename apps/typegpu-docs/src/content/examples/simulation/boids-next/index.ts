@@ -10,8 +10,8 @@ const rotate = tgpu['~unstable'].fn(
   d.vec2f,
 )(/* wgsl */ `{
   let pos = vec2(
-    (in.v.x * cos(in.angle)) - (in.v.y * sin(in.angle)),
-    (in.v.x * sin(in.angle)) + (in.v.y * cos(in.angle))
+    (v.x * cos(angle)) - (v.y * sin(angle)),
+    (v.x * sin(angle)) + (v.y * cos(angle))
   );
 
   return pos;
