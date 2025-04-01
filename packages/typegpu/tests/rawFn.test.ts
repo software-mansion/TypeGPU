@@ -315,8 +315,7 @@ struct fragment_Output {
         { a: d.vec4f, b: Point },
         undefined,
       )(/* wgsl */ `{
-        var newPoint: Point;
-        newPoint = b;
+        let x = a;
       }`)
       .$name('newPointF');
 
@@ -328,8 +327,7 @@ struct fragment_Output {
     }
 
     fn newPointF(a: vec4f, b: Point) {
-      var newPoint: Point;
-      newPoint = b;
+      let x = a;
     }`),
     );
   });
