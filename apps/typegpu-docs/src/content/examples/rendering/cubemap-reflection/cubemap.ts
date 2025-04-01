@@ -1,163 +1,65 @@
 import type { TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
-import type { CubeVertex } from './dataTypes';
+import { CubeVertex } from './dataTypes';
+
+function vert(
+  position: [number, number, number, number],
+  uv: [number, number],
+) {
+  return CubeVertex({
+    position: d.vec4f(...position),
+    uv: d.vec2f(...uv),
+  });
+}
 
 export const cubeVertices: d.Infer<typeof CubeVertex>[] = [
   // Bottom face
-  {
-    position: d.vec4f(1, -1, 1, 1),
-    uv: d.vec2f(0, 1),
-  },
-  {
-    position: d.vec4f(-1, -1, 1, 1),
-    uv: d.vec2f(1, 1),
-  },
-  {
-    position: d.vec4f(-1, -1, -1, 1),
-    uv: d.vec2f(1, 0),
-  },
-  {
-    position: d.vec4f(1, -1, -1, 1),
-    uv: d.vec2f(0, 0),
-  },
-  {
-    position: d.vec4f(1, -1, 1, 1),
-    uv: d.vec2f(0, 1),
-  },
-  {
-    position: d.vec4f(-1, -1, -1, 1),
-    uv: d.vec2f(1, 0),
-  },
+  vert([-1, -1, -1, 1], [0, 0]),
+  vert([-1, -1, 1, 1], [1, 1]),
+  vert([-1, -1, -1, 1], [1, 0]),
+  vert([1, -1, -1, 1], [0, 0]),
+  vert([1, -1, 1, 1], [0, 1]),
+  vert([-1, -1, -1, 1], [1, 0]),
 
   // Right face
-  {
-    position: d.vec4f(1, 1, 1, 1),
-    uv: d.vec2f(0, 1),
-  },
-  {
-    position: d.vec4f(1, -1, 1, 1),
-    uv: d.vec2f(1, 1),
-  },
-  {
-    position: d.vec4f(1, -1, -1, 1),
-    uv: d.vec2f(1, 0),
-  },
-  {
-    position: d.vec4f(1, 1, -1, 1),
-    uv: d.vec2f(0, 0),
-  },
-  {
-    position: d.vec4f(1, 1, 1, 1),
-    uv: d.vec2f(0, 1),
-  },
-  {
-    position: d.vec4f(1, -1, -1, 1),
-    uv: d.vec2f(1, 0),
-  },
+  vert([1, 1, 1, 1], [0, 1]),
+  vert([1, -1, 1, 1], [1, 1]),
+  vert([1, -1, -1, 1], [1, 0]),
+  vert([1, 1, -1, 1], [0, 0]),
+  vert([1, 1, 1, 1], [0, 1]),
+  vert([1, -1, -1, 1], [1, 0]),
 
   // Top face
-  {
-    position: d.vec4f(-1, 1, 1, 1),
-    uv: d.vec2f(0, 1),
-  },
-  {
-    position: d.vec4f(1, 1, 1, 1),
-    uv: d.vec2f(1, 1),
-  },
-  {
-    position: d.vec4f(1, 1, -1, 1),
-    uv: d.vec2f(1, 0),
-  },
-  {
-    position: d.vec4f(-1, 1, -1, 1),
-    uv: d.vec2f(0, 0),
-  },
-  {
-    position: d.vec4f(-1, 1, 1, 1),
-    uv: d.vec2f(0, 1),
-  },
-  {
-    position: d.vec4f(1, 1, -1, 1),
-    uv: d.vec2f(1, 0),
-  },
+  vert([-1, 1, 1, 1], [0, 1]),
+  vert([1, 1, 1, 1], [1, 1]),
+  vert([1, 1, -1, 1], [1, 0]),
+  vert([-1, 1, -1, 1], [0, 0]),
+  vert([-1, 1, 1, 1], [0, 1]),
+  vert([1, 1, -1, 1], [1, 0]),
 
   // Left face
-  {
-    position: d.vec4f(-1, -1, 1, 1),
-    uv: d.vec2f(0, 1),
-  },
-  {
-    position: d.vec4f(-1, 1, 1, 1),
-    uv: d.vec2f(1, 1),
-  },
-  {
-    position: d.vec4f(-1, 1, -1, 1),
-    uv: d.vec2f(1, 0),
-  },
-  {
-    position: d.vec4f(-1, -1, -1, 1),
-    uv: d.vec2f(0, 0),
-  },
-  {
-    position: d.vec4f(-1, -1, 1, 1),
-    uv: d.vec2f(0, 1),
-  },
-  {
-    position: d.vec4f(-1, 1, -1, 1),
-    uv: d.vec2f(1, 0),
-  },
+  vert([-1, -1, 1, 1], [0, 1]),
+  vert([-1, 1, 1, 1], [1, 1]),
+  vert([-1, 1, -1, 1], [1, 0]),
+  vert([-1, -1, -1, 1], [0, 0]),
+  vert([-1, -1, 1, 1], [0, 1]),
+  vert([-1, 1, -1, 1], [1, 0]),
 
   // Front face
-  {
-    position: d.vec4f(1, 1, 1, 1),
-    uv: d.vec2f(0, 1),
-  },
-  {
-    position: d.vec4f(-1, 1, 1, 1),
-    uv: d.vec2f(1, 1),
-  },
-  {
-    position: d.vec4f(-1, -1, 1, 1),
-    uv: d.vec2f(1, 0),
-  },
-  {
-    position: d.vec4f(-1, -1, 1, 1),
-    uv: d.vec2f(1, 0),
-  },
-  {
-    position: d.vec4f(1, -1, 1, 1),
-    uv: d.vec2f(0, 0),
-  },
-  {
-    position: d.vec4f(1, 1, 1, 1),
-    uv: d.vec2f(0, 1),
-  },
+  vert([1, 1, 1, 1], [0, 1]),
+  vert([-1, 1, 1, 1], [1, 1]),
+  vert([-1, -1, 1, 1], [1, 0]),
+  vert([-1, -1, 1, 1], [1, 0]),
+  vert([1, -1, 1, 1], [0, 0]),
+  vert([1, 1, 1, 1], [0, 1]),
 
   // Back face
-  {
-    position: d.vec4f(1, -1, -1, 1),
-    uv: d.vec2f(0, 1),
-  },
-  {
-    position: d.vec4f(-1, -1, -1, 1),
-    uv: d.vec2f(1, 1),
-  },
-  {
-    position: d.vec4f(-1, 1, -1, 1),
-    uv: d.vec2f(1, 0),
-  },
-  {
-    position: d.vec4f(1, 1, -1, 1),
-    uv: d.vec2f(0, 0),
-  },
-  {
-    position: d.vec4f(1, -1, -1, 1),
-    uv: d.vec2f(0, 1),
-  },
-  {
-    position: d.vec4f(-1, 1, -1, 1),
-    uv: d.vec2f(1, 0),
-  },
+  vert([1, -1, -1, 1], [0, 1]),
+  vert([-1, -1, -1, 1], [1, 1]),
+  vert([-1, 1, -1, 1], [1, 0]),
+  vert([1, 1, -1, 1], [0, 0]),
+  vert([1, -1, -1, 1], [0, 1]),
+  vert([-1, 1, -1, 1], [1, 0]),
 ];
 
 const cubemapUrls = [
@@ -174,14 +76,13 @@ export async function loadCubemap(
   urls: string[] = cubemapUrls,
 ) {
   const size = 2048;
-
   const texture = root['~unstable']
     .createTexture({
       dimension: '2d',
       size: [size, size, 6],
       format: 'rgba8unorm',
     })
-    .$usage('sampled', 'render', 'storage');
+    .$usage('sampled', 'render');
 
   await Promise.all(
     urls.map(async (url, i) => {
