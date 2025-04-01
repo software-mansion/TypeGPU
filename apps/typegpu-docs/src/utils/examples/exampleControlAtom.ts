@@ -23,7 +23,7 @@ export type SliderControlParam = {
   label: string;
 };
 
-export type VectorSLiderControlParam<T extends d.AnyVecInstance> = {
+export type VectorSliderControlParam<T extends d.AnyVecInstance> = {
   onVectorSliderChange: (newValue: T) => void;
   initial?: T;
   min: T;
